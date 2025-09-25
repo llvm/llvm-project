@@ -1206,14 +1206,14 @@ TEST_F(QualifierFixerTest, QualifierOrderingAfterPreprocessorDirectives) {
                "#endif\n"
                "\n"
                "const int var2;\n"
-               "const int var3;\n",
+               "const int var3;",
                "#if 1\n"
                "void foo(int const par);\n"
                "int const var1;\n"
                "#endif\n"
                "\n"
                "int const var2;\n"
-               "int const var3;\n",
+               "int const var3;",
                Style);
   verifyFormat("#if defined(FOO)\n"
                "static const int x = 1;\n"
