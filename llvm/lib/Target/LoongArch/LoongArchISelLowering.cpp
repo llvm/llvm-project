@@ -1122,6 +1122,10 @@ SDValue LoongArchTargetLowering::lowerBITREVERSE(SDValue Op,
   SDValue Src = Op->getOperand(0);
   SDLoc DL(Op);
 
+  // LoongArchISD::BITREV_8B is not supported on LA32.
+  if (!Subtarget.is64Bit() && (ResTy == MVT::v16i8 || ResTy == MVT::v32i8))
+    return SDValue();
+
   EVT NewVT = ResTy.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
   unsigned int OrigEltNum = ResTy.getVectorNumElements();
   unsigned int NewEltNum = NewVT.getVectorNumElements();
@@ -1135,8 +1139,6 @@ SDValue LoongArchTargetLowering::lowerBITREVERSE(SDValue Op,
     unsigned RevOp = (ResTy == MVT::v16i8 || ResTy == MVT::v32i8)
                          ? (unsigned)LoongArchISD::BITREV_8B
                          : (unsigned)ISD::BITREVERSE;
-    if (!Subtarget.is64Bit() && RevOp == LoongArchISD::BITREV_8B)
-      return SDValue();
     Ops.push_back(DAG.getNode(RevOp, DL, MVT::i64, Op));
   }
   SDValue Res =
@@ -3119,15 +3121,15 @@ LoongArchTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     MVT PairVTy = MVT::getVectorVT(MVT::i32, NumElts * 2);
     for (unsigned i = 0; i < NumElts; ++i) {
       RawIndices.push_back(Op2);
-      RawIndices.push_back(DAG.getConstant(0, DL, Subtarget.getGRLenVT()));
+      RawIndices.push_back(DAG.getConstant(0, DL, MVT::i32));
     }
     SplatIdx = DAG.getBuildVector(PairVTy, DL, RawIndices);
     SplatIdx = DAG.getBitcast(IdxVTy, SplatIdx);
 
     RawIndices.clear();
     for (unsigned i = 0; i < NumElts; ++i) {
-      RawIndices.push_back(DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
-      RawIndices.push_back(DAG.getConstant(0, DL, Subtarget.getGRLenVT()));
+      RawIndices.push_back(DAG.getConstant(i, DL, MVT::i32));
+      RawIndices.push_back(DAG.getConstant(0, DL, MVT::i32));
     }
     Indices = DAG.getBuildVector(PairVTy, DL, RawIndices);
     Indices = DAG.getBitcast(IdxVTy, Indices);
