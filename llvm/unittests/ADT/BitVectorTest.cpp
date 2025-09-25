@@ -1179,7 +1179,7 @@ TYPED_TEST(BitVectorTest, Iterators) {
 }
 
 TYPED_TEST(BitVectorTest, BidirectionalIterator) {
-  // Test decrement operators
+  // Test decrement operators.
   TypeParam Vec(100, false);
   Vec.set(10);
   Vec.set(20);
