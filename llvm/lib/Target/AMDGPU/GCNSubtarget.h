@@ -285,6 +285,8 @@ protected:
   bool UseBlockVGPROpsForCSR = false;
   bool HasGloballyAddressableScratch = false;
 
+  bool Has45BitNumRecordsBufferResource = false;
+
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
 
@@ -1839,6 +1841,22 @@ public:
   /// \returns true if the subtarget requires a wait for xcnt before atomic
   /// flat/global stores & rmw.
   bool requiresWaitXCntBeforeAtomicStores() const { return GFX1250Insts; }
+
+  /// \returns the number of significant bits in the immediate field of the
+  /// S_NOP instruction.
+  unsigned getSNopBits() const {
+    if (getGeneration() >= AMDGPUSubtarget::GFX12)
+      return 7;
+    if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+      return 4;
+    return 3;
+  }
+
+  /// \returns true if the sub-target supports buffer resource (V#) with 45-bit
+  /// num_records.
+  bool has45BitNumRecordsBufferResource() const {
+    return Has45BitNumRecordsBufferResource;
+  }
 };
 
 class GCNUserSGPRUsageInfo {

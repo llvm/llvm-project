@@ -60,8 +60,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_rewrite_vgpr_mfma(ptr addrsp
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31]
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[32:63], a0, a1, v[0:31]
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    s_nop 7
+; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v32
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v33
@@ -96,8 +95,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_rewrite_vgpr_mfma(ptr addrsp
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 0
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], a0, a1, v[0:31]
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    s_nop 7
+; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:96
 ; CHECK-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:112
@@ -143,8 +141,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_rewrite_vgpr_mfma_noshuffle(
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31]
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31]
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 0
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    s_nop 7
+; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:96
 ; CHECK-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:112
@@ -178,8 +175,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_rewrite_vgpr_mfma_imm0_src2(
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31]
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    s_nop 7
+; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:112
 ; CHECK-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:96
 ; CHECK-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:80
@@ -212,8 +208,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_rewrite_vgpr_mfma_imm1_src2(
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31]
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    s_nop 7
+; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:112
 ; CHECK-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:96
 ; CHECK-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:80
@@ -351,8 +346,7 @@ define void @test_rewrite_mfma_subreg_extract2(float %arg0, float %arg1, ptr add
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 a[0:31], v0, v1, a[0:31]
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    s_nop 7
+; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a0, a1
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a1, a2
@@ -717,8 +711,7 @@ define amdgpu_kernel void @test_rewrite_mfma_direct_copy_from_agpr_class_chain(p
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 a[0:31], v1, v34, a[0:31]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    s_nop 7
+; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_store_dwordx4 v0, a[28:31], s[0:1] offset:112
 ; CHECK-NEXT:    global_store_dwordx4 v0, a[24:27], s[0:1] offset:96
@@ -777,8 +770,7 @@ define void @test_rewrite_mfma_copy_from_agpr_class_f64_4x4x4f64_chain(double %a
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    v_lshl_add_u64 v[2:3], v[8:9], 0, v[2:3]
 ; CHECK-NEXT:    v_mfma_f64_4x4x4_4b_f64 a[0:1], v[4:5], v[6:7], a[0:1]
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    s_nop 8
 ; CHECK-NEXT:    global_store_dwordx2 v[2:3], a[0:1], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

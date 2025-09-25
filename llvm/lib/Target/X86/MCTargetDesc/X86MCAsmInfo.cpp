@@ -68,7 +68,7 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
 void X86MCAsmInfoDarwin::anchor() { }
 
 X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
-  bool is64Bit = T.getArch() == Triple::x86_64;
+  bool is64Bit = T.isX86_64();
   if (is64Bit)
     CodePointerSize = CalleeSaveStackSlotSize = 8;
 
@@ -113,7 +113,7 @@ X86_64MCAsmInfoDarwin::X86_64MCAsmInfoDarwin(const Triple &Triple)
 void X86ELFMCAsmInfo::anchor() { }
 
 X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
-  bool is64Bit = T.getArch() == Triple::x86_64;
+  bool is64Bit = T.isX86_64();
   bool isX32 = T.isX32();
 
   // For ELF, x86-64 pointer size depends on the ABI.
@@ -149,7 +149,7 @@ X86_64MCAsmInfoDarwin::getExprForPersonalitySymbol(const MCSymbol *Sym,
 void X86MCAsmInfoMicrosoft::anchor() { }
 
 X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
-  if (Triple.getArch() == Triple::x86_64) {
+  if (Triple.isX86_64()) {
     PrivateGlobalPrefix = ".L";
     PrivateLabelPrefix = ".L";
     CodePointerSize = 8;
@@ -189,7 +189,7 @@ void X86MCAsmInfoGNUCOFF::anchor() { }
 X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
   assert((Triple.isOSWindows() || Triple.isUEFI()) &&
          "Windows and UEFI are the only supported COFF targets");
-  if (Triple.getArch() == Triple::x86_64) {
+  if (Triple.isX86_64()) {
     PrivateGlobalPrefix = ".L";
     PrivateLabelPrefix = ".L";
     CodePointerSize = 8;
