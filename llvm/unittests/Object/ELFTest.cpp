@@ -354,36 +354,28 @@ Sections:
   ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
   ELFFile<ELF64LE> Obj = ElfOrErr.get().getELFFile();
 
+  auto CheckOverflow = [&](auto &&PhdrOrShdr, uint64_t Offset, uint64_t Size) {
+    Error Err = Error::success();
+    Obj.notes(PhdrOrShdr, Err);
+
+    std::string ErrMessage;
+    handleAllErrors(std::move(Err),
+                    [&](const ErrorInfoBase &EI) { ErrMessage = EI.message(); });
+
+    EXPECT_EQ(ErrMessage, ("invalid offset (0x" + Twine::utohexstr(Offset) +
+                           ") or size (0x" + Twine::utohexstr(Size) + ")")
+                              .str());
+  };
+
   auto PhdrsOrErr = Obj.program_headers();
   EXPECT_FALSE(!PhdrsOrErr);
-  std::string ErrMessage;
-  Error PErr = Error::success();
-  for (auto P : *PhdrsOrErr) {
-    if (P.p_type == ELF::PT_NOTE) {
-      Obj.notes(P, PErr);
-      handleAllErrors(std::move(PErr), [&](const ErrorInfoBase &EI) {
-        ErrMessage = EI.message();
-      });
-      EXPECT_EQ(ErrMessage,
-                ("invalid offset (0x" + Twine::utohexstr(P.p_offset) +
-                 ") or size (0x" + Twine::utohexstr(P.p_filesz) + ")")
-                    .str());
-    }
-  }
+  for (auto P : *PhdrsOrErr)
+    if (P.p_type == ELF::PT_NOTE)
+      CheckOverflow(P, P.p_offset, P.p_filesz);
 
   auto ShdrsOrErr = Obj.sections();
   EXPECT_FALSE(!ShdrsOrErr);
-  Error SErr = Error::success();
-  for (auto S : *ShdrsOrErr) {
-    if (S.sh_type == ELF::SHT_NOTE) {
-      Obj.notes(S, SErr);
-      handleAllErrors(std::move(SErr), [&](const ErrorInfoBase &EI) {
-        ErrMessage = EI.message();
-      });
-      EXPECT_EQ(ErrMessage,
-                ("invalid offset (0x" + Twine::utohexstr(S.sh_offset) +
-                 ") or size (0x" + Twine::utohexstr(S.sh_size) + ")")
-                    .str());
-    }
-  }
+  for (auto S : *ShdrsOrErr)
+    if (S.sh_type == ELF::SHT_NOTE)
+      CheckOverflow(S, S.sh_offset, S.sh_size);
 }
