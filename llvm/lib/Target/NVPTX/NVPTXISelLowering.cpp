@@ -2853,8 +2853,6 @@ static SDValue lowerCvtRSIntrinsics(SDValue Op, SelectionDAG &DAG) {
 
   unsigned IntrinsicID = N->getConstantOperandVal(0);
 
-  uint32_t CvtModeFlag = NVPTX::PTXCvtMode::CvtMode::RS;
-
   // Extract the 4 float elements from the vector
   SmallVector<SDValue, 6> Ops;
   for (unsigned i = 0; i < 4; ++i) {
@@ -2862,29 +2860,36 @@ static SDValue lowerCvtRSIntrinsics(SDValue Op, SelectionDAG &DAG) {
                               DAG.getIntPtrConstant(i, DL)));
   }
 
-  auto OpSignature =
-      [&]() -> std::pair<NVPTXISD::NodeType, MVT::SimpleValueType> {
+  using NVPTX::PTXCvtMode::CvtMode;
+
+  auto [OpCode, RetTy, CvtModeFlag] =
+      [&]() -> std::tuple<NVPTXISD::NodeType, MVT::SimpleValueType, uint32_t> {
     switch (IntrinsicID) {
     case Intrinsic::nvvm_f32x4_to_e4m3x4_rs_relu_satfinite:
-      CvtModeFlag |= NVPTX::PTXCvtMode::CvtMode::RELU_FLAG;
+      return {NVPTXISD::CVT_E4M3X4_F32X4_RS_SF, MVT::v4i8,
+              CvtMode::RS | CvtMode::RELU_FLAG};
     case Intrinsic::nvvm_f32x4_to_e4m3x4_rs_satfinite:
-      return {NVPTXISD::CVT_E4M3X4_F32X4_RS_SF, MVT::v4i8};
+      return {NVPTXISD::CVT_E4M3X4_F32X4_RS_SF, MVT::v4i8, CvtMode::RS};
     case Intrinsic::nvvm_f32x4_to_e5m2x4_rs_relu_satfinite:
-      CvtModeFlag |= NVPTX::PTXCvtMode::CvtMode::RELU_FLAG;
+      return {NVPTXISD::CVT_E5M2X4_F32X4_RS_SF, MVT::v4i8,
+              CvtMode::RS | CvtMode::RELU_FLAG};
     case Intrinsic::nvvm_f32x4_to_e5m2x4_rs_satfinite:
-      return {NVPTXISD::CVT_E5M2X4_F32X4_RS_SF, MVT::v4i8};
+      return {NVPTXISD::CVT_E5M2X4_F32X4_RS_SF, MVT::v4i8, CvtMode::RS};
     case Intrinsic::nvvm_f32x4_to_e2m3x4_rs_relu_satfinite:
-      CvtModeFlag |= NVPTX::PTXCvtMode::CvtMode::RELU_FLAG;
+      return {NVPTXISD::CVT_E2M3X4_F32X4_RS_SF, MVT::v4i8,
+              CvtMode::RS | CvtMode::RELU_FLAG};
     case Intrinsic::nvvm_f32x4_to_e2m3x4_rs_satfinite:
-      return {NVPTXISD::CVT_E2M3X4_F32X4_RS_SF, MVT::v4i8};
+      return {NVPTXISD::CVT_E2M3X4_F32X4_RS_SF, MVT::v4i8, CvtMode::RS};
     case Intrinsic::nvvm_f32x4_to_e3m2x4_rs_relu_satfinite:
-      CvtModeFlag |= NVPTX::PTXCvtMode::CvtMode::RELU_FLAG;
+      return {NVPTXISD::CVT_E3M2X4_F32X4_RS_SF, MVT::v4i8,
+              CvtMode::RS | CvtMode::RELU_FLAG};
     case Intrinsic::nvvm_f32x4_to_e3m2x4_rs_satfinite:
-      return {NVPTXISD::CVT_E3M2X4_F32X4_RS_SF, MVT::v4i8};
+      return {NVPTXISD::CVT_E3M2X4_F32X4_RS_SF, MVT::v4i8, CvtMode::RS};
     case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite:
-      CvtModeFlag |= NVPTX::PTXCvtMode::CvtMode::RELU_FLAG;
+      return {NVPTXISD::CVT_E2M1X4_F32X4_RS_SF, MVT::i16,
+              CvtMode::RS | CvtMode::RELU_FLAG};
     case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_satfinite:
-      return {NVPTXISD::CVT_E2M1X4_F32X4_RS_SF, MVT::i16};
+      return {NVPTXISD::CVT_E2M1X4_F32X4_RS_SF, MVT::i16, CvtMode::RS};
     default:
       llvm_unreachable("unsupported/unhandled intrinsic");
     }
@@ -2893,7 +2898,7 @@ static SDValue lowerCvtRSIntrinsics(SDValue Op, SelectionDAG &DAG) {
   Ops.push_back(RBits);
   Ops.push_back(DAG.getConstant(CvtModeFlag, DL, MVT::i32));
 
-  return DAG.getNode(OpSignature.first, DL, OpSignature.second, Ops);
+  return DAG.getNode(OpCode, DL, RetTy, Ops);
 }
 
 static SDValue lowerPrmtIntrinsic(SDValue Op, SelectionDAG &DAG) {
