@@ -839,6 +839,7 @@ set(files
   __type_traits/is_floating_point.h
   __type_traits/is_function.h
   __type_traits/is_fundamental.h
+  __type_traits/is_generic_transparent_comparator.h
   __type_traits/is_implicit_lifetime.h
   __type_traits/is_implicitly_default_constructible.h
   __type_traits/is_integral.h
@@ -881,6 +882,7 @@ set(files
   __type_traits/make_32_64_or_128_bit.h
   __type_traits/make_const_lvalue_ref.h
   __type_traits/make_signed.h
+  __type_traits/make_transparent.h
   __type_traits/make_unsigned.h
   __type_traits/maybe_const.h
   __type_traits/nat.h
