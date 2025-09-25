@@ -2932,6 +2932,8 @@ static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
   default:
     return Op;
 
+  // These tcgen05 intrinsics return a v2i32, which is legal, so we have to
+  // lower them through LowerOperation() instead of ReplaceNodeResults().
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
@@ -6487,21 +6489,18 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
     return;
   }
 
-  case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
-  case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x32:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x64:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x128:
-  case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x2:
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x4:
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x8:
@@ -6520,7 +6519,6 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
     }
     return;
 
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2:
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4:
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8:
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16:
