@@ -6610,16 +6610,43 @@ AST_MATCHER(QualType, isSignedInteger) {
     return Node->isSignedIntegerType();
 }
 
-/// Matches QualType nodes that are of character type.
+/// Matches QualType nodes that are of char type.
 ///
 /// Given
 /// \code
 ///   void a(char);
 ///   void b(wchar_t);
-///   void c(double);
+///   void c(char8_t);
+///   void d(double);
+/// \endcode
+/// functionDecl(hasAnyParameter(hasType(isChar())))
+/// matches "a(char)", but not "b(wchar_t)", "c(char8_t)", or "d(double)"
+AST_MATCHER(QualType, isChar) { return Node->isCharType(); }
+
+/// Matches QualType nodes that are of wide char type.
+///
+/// Given
+/// \code
+///   void a(char);
+///   void b(wchar_t);
+///   void c(char8_t);
+///   void d(double);
+/// \endcode
+/// functionDecl(hasAnyParameter(hasType(isWideChar())))
+/// matches "b(wchar_t)", but not "a(char)", "c(char8_t)", or "d(double)"
+AST_MATCHER(QualType, isWideChar) { return Node->isWideCharType(); }
+
+/// Matches QualType nodes that are of any character type.
+///
+/// Given
+/// \code
+///   void a(char);
+///   void b(wchar_t);
+///   void c(char8_t);
+///   void d(double);
 /// \endcode
 /// functionDecl(hasAnyParameter(hasType(isAnyCharacter())))
-/// matches "a(char)", "b(wchar_t)", but not "c(double)".
+/// matches "a(char)", "b(wchar_t)", "c(char8_t)", but not "d(double)".
 AST_MATCHER(QualType, isAnyCharacter) {
     return Node->isAnyCharacterType();
 }
