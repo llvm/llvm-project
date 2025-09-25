@@ -774,8 +774,8 @@ TEST_P(ImportType, ImportDependentTemplateSpecialization) {
              "  typename A<T>::template B<T> a;"
              "};",
              Lang_CXX03, "", Lang_CXX03, Verifier,
-             classTemplateDecl(has(cxxRecordDecl(has(
-                 fieldDecl(hasType(dependentTemplateSpecializationType())))))));
+             classTemplateDecl(has(cxxRecordDecl(
+                 has(fieldDecl(hasType(templateSpecializationType())))))));
 }
 
 TEST_P(ImportType, ImportDeducedTemplateSpecialization) {

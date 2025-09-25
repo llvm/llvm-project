@@ -2354,12 +2354,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   // and let's try to sink `(sub 0, b)` into `b` itself. But only if this isn't
   // a pure negation used by a select that looks like abs/nabs.
   bool IsNegation = match(Op0, m_ZeroInt());
-  if (!IsNegation || none_of(I.users(), [&I, Op1](const User *U) {
-        const Instruction *UI = dyn_cast<Instruction>(U);
-        if (!UI)
-          return false;
-        return match(UI, m_c_Select(m_Specific(Op1), m_Specific(&I)));
-      })) {
+  if (!IsNegation || none_of(I.users(), match_fn(m_c_Select(m_Specific(Op1),
+                                                            m_Specific(&I))))) {
     if (Value *NegOp1 = Negator::Negate(IsNegation, /* IsNSW */ IsNegation &&
                                                         I.hasNoSignedWrap(),
                                         Op1, *this))
@@ -3154,16 +3150,6 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
 
   Value *X, *Y;
   Constant *C;
-
-  // B = fsub A, 0.0
-  // Z = Op B
-  // can be transformed into
-  // Z = Op A
-  // Where Op is such that we can ignore sign of 0 in fsub
-  Value *A;
-  if (match(&I, m_OneUse(m_FSub(m_Value(A), m_AnyZeroFP()))) &&
-      canIgnoreSignBitOfZero(*I.use_begin()))
-    return replaceInstUsesWith(I, A);
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   // If Op0 is not -0.0 or we can ignore -0.0: Z - (X - Y) --> Z + (Y - X)

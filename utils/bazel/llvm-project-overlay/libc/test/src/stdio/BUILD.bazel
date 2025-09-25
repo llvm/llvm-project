@@ -48,6 +48,16 @@ libc_test(
 )
 
 libc_test(
+    name = "asprintf_test",
+    srcs = ["asprintf_test.cpp"],
+    deps = [
+        "//libc:asprintf",
+        "//libc:memset",
+        "//libc:sprintf",
+    ],
+)
+
+libc_test(
     name = "sprintf_test",
     srcs = ["sprintf_test.cpp"],
     deps = [
@@ -78,6 +88,15 @@ libc_test(
     srcs = ["fprintf_test.cpp"],
     deps = [
         "//libc:fprintf",
+    ],
+)
+
+libc_test(
+    name = "vasprintf_test",
+    srcs = ["vasprintf_test.cpp"],
+    deps = [
+        "//libc:memset",
+        "//libc:vasprintf",
     ],
 )
 
@@ -122,7 +141,6 @@ libc_test(
         "//libc:mkdirat",
         "//libc:open",
         "//libc:remove",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 

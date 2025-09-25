@@ -6,17 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "src/__support/CPP/array.h"
-#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/libc_errno.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-
-// TODO: clean this up.
-//  1. Change from optional to ErrorOr, and return the errno instead of setting
-//    it here.
-//  2. Replace inline memcpy with __builtin_memcpy
 
 // TODO: Get PATH_MAX via https://github.com/llvm/llvm-project/issues/85121
 #include <linux/limits.h>
@@ -28,24 +23,18 @@ namespace shm_common {
 LIBC_INLINE_VAR constexpr cpp::string_view SHM_PREFIX = "/dev/shm/";
 using SHMPath = cpp::array<char, NAME_MAX + SHM_PREFIX.size() + 1>;
 
-LIBC_INLINE cpp::optional<SHMPath> translate_name(cpp::string_view name) {
+LIBC_INLINE ErrorOr<SHMPath> translate_name(cpp::string_view name) {
   // trim leading slashes
   size_t offset = name.find_first_not_of('/');
-  if (offset == cpp::string_view::npos) {
-    libc_errno = EINVAL;
-    return cpp::nullopt;
-  }
+  if (offset == cpp::string_view::npos)
+    return Error(EINVAL);
   name = name.substr(offset);
 
   // check the name
-  if (name.size() > NAME_MAX) {
-    libc_errno = ENAMETOOLONG;
-    return cpp::nullopt;
-  }
-  if (name == "." || name == ".." || name.contains('/')) {
-    libc_errno = EINVAL;
-    return cpp::nullopt;
-  }
+  if (name.size() > NAME_MAX)
+    return Error(ENAMETOOLONG);
+  if (name == "." || name == ".." || name.contains('/'))
+    return Error(EINVAL);
 
   // prepend the prefix
   SHMPath buffer;
