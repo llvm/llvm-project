@@ -137,9 +137,10 @@ mapParallelOp(ParallelOp parallelOp, MappingLevel mappingLevel = MapGrid,
   SmallVector<ParallelLoopDimMappingAttr, 4> attrs;
   attrs.reserve(numLoops);
 
-  for (int i = 0, e = numLoops; i < e; ++i) {
+  for (int i = 0; i < numLoops; ++i) {
 
     // Determine the mapping to use for this loop.
+    // If the are more loops to map than HW IDs map to map to sequential.
     int hwMapping = kNumHardwareIds;
     if (i < loopsToMap) {
       hwMapping = (mappingPolicy == MappingPolicy::OutermostFirst)
