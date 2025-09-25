@@ -930,7 +930,7 @@ RootSignatureParser::parseStaticSamplerParams() {
         return std::nullopt;
       Params.Visibility = Visibility;
     } else if (tryConsumeExpectedToken(TokenKind::kw_flags)) {
-      // `flags` `=` UINT_BORDER_COLOR
+      // `flags` `=` STATIC_SAMPLE_FLAGS
       if (Params.Flags.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
