@@ -531,6 +531,25 @@ lowering from MLIR because:
 The use of special intrinsics in a `1-D` LLVM world is still available thanks to
 an explicit `vector.cast` op.
 
+## Key Transformations
+
+### NaiveConvertVectorToLLVM
+
+This pass primarily targets direct converting from Vector to LLVM. Higher-level
+Vector ops such as `vector.contract` may be lowered as well, but the intent is
+not to progressively lower higher-level Vector ops into lower-level Vector ops
+first. That functionality will be split into a dedicated pass.
+
+At present, the pass also contains some conversions from `Virtual Vectors`
+(Vector dialect) to `Hardware Vectors` (e.g., ArmSME, AMX). These conversions
+are temporary and will be extracted into dedicated passes.
+
+Notes
+* No target-specific optimization is attempted.
+* Useful as a baseline or fallback lowering when target-aware vector pipelines
+  are unavailable or have been disabled.
+* Expect performance trade-offs compared to hardware-tuned pipelines.
+
 ## Operations
 
 [include "Dialects/VectorOps.md"]
