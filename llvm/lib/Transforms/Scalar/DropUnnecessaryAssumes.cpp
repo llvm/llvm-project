@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/DropUnnecessaryAssumes.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -17,13 +18,44 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 static bool affectedValuesAreEphemeral(ArrayRef<Value *> Affected) {
-  // If all the affected uses have only one use (part of the assume), then
-  // the assume does not provide useful information. Note that additional
-  // users may appear as a result of inlining and CSE, so we should only
-  // make this assumption late in the optimization pipeline.
-  // TODO: Handle dead cyclic usages.
-  // TODO: Handle multiple dead assumes on the same value.
-  return all_of(Affected, match_fn(m_OneUse(m_Value())));
+  // Check whether all the uses are ephemeral, i.e. recursively only used
+  // by assumes. In that case, the assume does not provide useful information.
+  // Note that additional users may appear as a result of inlining and CSE,
+  // so we should only make this assumption late in the optimization pipeline.
+  SmallSetVector<User *, 16> Worklist;
+  auto AddUser = [&](User *U) {
+    // Bail out if we need to inspect too many users.
+    if (Worklist.size() >= 32)
+      return false;
+    Worklist.insert(U);
+    return true;
+  };
+
+  for (Value *V : Affected)
+    for (User *U : V->users())
+      if (!AddUser(U))
+        return false;
+
+  for (unsigned Idx = 0; Idx < Worklist.size(); ++Idx) {
+    auto *I = dyn_cast<Instruction>(Worklist[Idx]);
+    if (!I)
+      return false;
+
+    // Use in assume is ephemeral.
+    if (isa<AssumeInst>(I))
+      continue;
+
+    // Use in side-effecting instruction is non-ephemeral.
+    if (I->mayHaveSideEffects() || I->isTerminator())
+      return false;
+
+    // Otherwise, recursively look at the users.
+    for (User *NestedU : I->users())
+      if (!AddUser(NestedU))
+        return false;
+  }
+
+  return true;
 }
 
 PreservedAnalyses
