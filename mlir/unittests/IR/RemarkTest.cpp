@@ -330,10 +330,6 @@ TEST(Remark, TestRemarkFinal) {
   const auto *pass4Msg = "I succeeded too";
 
   std::string categoryLoopunroll("LoopUnroll");
-  std::string myPassname1("myPass1");
-  std::string myPassname2("myPass2");
-  std::string myPassname3("myPass3");
-  std::string funcName("myFunc");
 
   std::string seenMsg = "";
 
@@ -357,27 +353,24 @@ TEST(Remark, TestRemarkFinal) {
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // Remark 1: failure
-    remark::failed(loc, remark::RemarkOpts::name("Unroller")
-                            .category(categoryLoopunroll)
-                            .subCategory(myPassname1))
+    remark::failed(
+        loc, remark::RemarkOpts::name("Unroller").category(categoryLoopunroll))
         << pass1Msg;
 
     // Remark 2: failure
-    remark::missed(loc, remark::RemarkOpts::name("Unroller")
-                            .category(categoryLoopunroll)
-                            .subCategory(myPassname2))
+    remark::missed(
+        loc, remark::RemarkOpts::name("Unroller").category(categoryLoopunroll))
         << remark::reason(pass2Msg);
 
     // Remark 3: pass
-    remark::passed(loc, remark::RemarkOpts::name("Unroller")
-                            .category(categoryLoopunroll)
-                            .subCategory(myPassname3))
+    remark::passed(
+        loc, remark::RemarkOpts::name("Unroller").category(categoryLoopunroll))
         << pass3Msg;
 
     // Remark 4: pass
-    remark::passed(locOther, remark::RemarkOpts::name("Unroller")
-                                 .category(categoryLoopunroll)
-                                 .subCategory(myPassname3))
+    remark::passed(
+        locOther,
+        remark::RemarkOpts::name("Unroller").category(categoryLoopunroll))
         << pass4Msg;
   }
 
