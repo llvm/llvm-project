@@ -1836,8 +1836,9 @@ TYPE_PARSER(
 
 // 2.8.2 Declare Simd construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareSimdConstruct>(
-    verbatim("DECLARE SIMD"_tok) || verbatim("DECLARE_SIMD"_tok),
-    maybe(parenthesized(name)), Parser<OmpClauseList>{})))
+    predicated(Parser<OmpDirectiveName>{},
+        IsDirective(llvm::omp::Directive::OMPD_declare_simd)) >=
+    Parser<OmpDirectiveSpecification>{})))
 
 TYPE_PARSER(sourced( //
     construct<OpenMPGroupprivate>(
