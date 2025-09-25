@@ -521,10 +521,9 @@ struct SincosOpLowering : public ConvertOpToLLVMPattern<math::SincosOp> {
 
 private:
   Value maybeExt(Value operand, PatternRewriter &rewriter) const {
-    if (isa<Float16Type, BFloat16Type>(operand.getType())) {
+    if (isa<Float16Type, BFloat16Type>(operand.getType()))
       return rewriter.create<LLVM::FPExtOp>(
           operand.getLoc(), Float32Type::get(rewriter.getContext()), operand);
-    }
     return operand;
   }
 

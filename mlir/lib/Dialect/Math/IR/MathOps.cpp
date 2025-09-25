@@ -293,9 +293,8 @@ LogicalResult math::SincosOp::verify() {
   Type sinType = getSin().getType();
   Type cosType = getCos().getType();
 
-  if (operandType != sinType || operandType != cosType) {
+  if (operandType != sinType || operandType != cosType)
     return emitOpError("result types must match operand type");
-  }
 
   return success();
 }
