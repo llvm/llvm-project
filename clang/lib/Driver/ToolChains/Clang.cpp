@@ -486,7 +486,7 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
   }
 
   if (ProfileUseArg) {
-    SmallString<128> Path;
+    SmallString<128> UsePathBuf;
     StringRef UsePath;
     if (ProfileUseArg->getOption().matches(options::OPT_fprofile_instr_use_EQ))
       UsePath = ProfileUseArg->getValue();
@@ -494,13 +494,12 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
                   options::OPT_fprofile_use_EQ) ||
               ProfileUseArg->getOption().matches(
                   options::OPT_fprofile_instr_use))) {
-      Path =
+      UsePathBuf =
           ProfileUseArg->getNumValues() == 0 ? "" : ProfileUseArg->getValue();
-      if (Path.empty() || llvm::sys::fs::is_directory(Path))
-        llvm::sys::path::append(Path, "default.profdata");
-      UsePath = Path;
+      if (UsePathBuf.empty() || llvm::sys::fs::is_directory(UsePathBuf))
+        llvm::sys::path::append(UsePathBuf, "default.profdata");
+      UsePath = UsePathBuf;
     }
-    StringRef UseKind;
     auto ReaderOrErr =
         llvm::IndexedInstrProfReader::create(UsePath, D.getVFS());
     if (auto E = ReaderOrErr.takeError()) {
@@ -509,25 +508,26 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
       llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
         D.Diag(DiagID) << UsePath.str() << EI.message();
       });
-      return;
-    }
-    std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader =
-        std::move(ReaderOrErr.get());
-    // Currently memprof profiles are only added at the IR level. Mark the
-    // profile type as IR in that case as well and the subsequent matching needs
-    // to detect which is available (might be one or both).
-    if (PGOReader->isIRLevelProfile() || PGOReader->hasMemoryProfile()) {
-      if (PGOReader->hasCSIRLevelProfile())
-        UseKind = "csllvm";
-      else
-        UseKind = "llvm";
-    } else
-      UseKind = "clang";
+    } else {
+      std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader =
+          std::move(ReaderOrErr.get());
+      StringRef UseKind;
+      // Currently memprof profiles are only added at the IR level. Mark the
+      // profile type as IR in that case as well and the subsequent matching
+      // needs to detect which is available (might be one or both).
+      if (PGOReader->isIRLevelProfile() || PGOReader->hasMemoryProfile()) {
+        if (PGOReader->hasCSIRLevelProfile())
+          UseKind = "csllvm";
+        else
+          UseKind = "llvm";
+      } else
+        UseKind = "clang";
 
-    CmdArgs.push_back(
-        Args.MakeArgString("-fprofile-instrument-use=" + UseKind));
-    CmdArgs.push_back(
-        Args.MakeArgString("-fprofile-instrument-use-path=" + UsePath));
+      CmdArgs.push_back(
+          Args.MakeArgString("-fprofile-instrument-use=" + UseKind));
+      CmdArgs.push_back(
+          Args.MakeArgString("-fprofile-instrument-use-path=" + UsePath));
+    }
   }
 
   bool EmitCovNotes = Args.hasFlag(options::OPT_ftest_coverage,
