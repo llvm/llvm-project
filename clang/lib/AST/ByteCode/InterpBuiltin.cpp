@@ -2893,6 +2893,42 @@ static bool interp__builtin_elementwise_triop(
     return true;
   }
 
+  static bool interp__builtin_byteshift(
+      InterpState & S, CodePtr OpPC, const CallExpr *Call, uint32_t BuiltinID) {
+    APSInt Amt;
+    if (!EvaluateInteger(Call->getArg(1), Amt, S.getCtx()))
+      return false;
+    unsigned ShiftVal = (unsigned)Amt.getZExtValue() & 0xff;
+
+    APValue Vec;
+    if (!Evaluate(Vec, S.getCtx(), Call->getArg(0)) || !Vec.isVector())
+      return false;
+
+    unsigned NumElts = Vec.getVectorLength();
+    const unsigned LaneBytes = 16;
+    assert(NumElts % LaneBytes == 0);
+
+    SmallVector<APValue, 64> Result(NumElts, APValue(0));
+    bool IsLeft = (BuiltinID == clang::X86::BI__builtin_ia32_pslldqi128 ||
+                   BuiltinID == clang::X86::BI__builtin_ia32_pslldqi256 ||
+                   BuiltinID == clang::X86::BI__builtin_ia32_pslldqi512);
+
+    if (ShiftVal >= LaneBytes)
+      return Success(APValue(Result.data(), Result.size()), Call);
+
+    for (unsigned LaneBase = 0; LaneBase < NumElts; LaneBase += LaneBytes) {
+      for (unsigned I = 0; I < LaneBytes; ++I) {
+        int src = IsLeft ? (I + ShiftVal) : (int)I - (int)ShiftVal;
+        if (src >= 0 && (unsigned)src < LaneBytes)
+          Result[LaneBase + I] = Vec.getVectorElt(LaneBase + (unsigned)src);
+        else
+          Result[LaneBase + I] = APValue(0);
+      }
+    }
+
+    return Success(APValue(Result.data(), Result.size()), Call);
+  }
+
   // Vector type.
   const Pointer &Op2 = S.Stk.pop<Pointer>();
   const Pointer &Op1 = S.Stk.pop<Pointer>();
@@ -3574,21 +3610,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pslldqi128:
   case clang::X86::BI__builtin_ia32_pslldqi256:
   case clang::X86::BI__builtin_ia32_pslldqi512:
-    return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
-          unsigned ShiftAmt = RHS.getZExtValue();
-          return LHS.shl(ShiftAmt * 8);
-        });
-
   case clang::X86::BI__builtin_ia32_psrldqi128:
   case clang::X86::BI__builtin_ia32_psrldqi256:
   case clang::X86::BI__builtin_ia32_psrldqi512:
-    return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
-          unsigned ShiftAmt = RHS.getZExtValue();
-          return LHS.lshr(ShiftAmt * 8);
-        });
-
+    return interp__builtin_byteshift(S, OpPC, Call, BuiltinID);
+    
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)
