@@ -45,7 +45,7 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
 }
 
 llvm::Expected<lldb::TypeSystemSP>
-DILGetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
   SymbolContext symbol_context =
       ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
   lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
@@ -102,17 +102,13 @@ ResolveTypeByName(const std::string &name,
   for (uint32_t i = 0; i < result_type_list.size(); ++i) {
     CompilerType type = result_type_list[i];
     llvm::StringRef type_name_ref = type.GetTypeName().GetStringRef();
-    ;
 
-    if (type_name_ref == name_ref)
-      full_match = type;
-    else if (type_name_ref.ends_with(name_ref))
+    if (type_name_ref == name_ref && type.IsValid())
+      return type;
+
+    if (type_name_ref.ends_with(name_ref))
       partial_matches.push_back(type);
   }
-
-  // Full match is always correct.
-  if (full_match.IsValid())
-    return full_match;
 
   // If we have partial matches, pick a "random" one.
   if (partial_matches.size() > 0)
@@ -198,8 +194,6 @@ ASTNodeUP DILParser::ParseCastExpression() {
       m_dil_lexer.Advance();
       auto rhs = ParseCastExpression();
 
-      // return BuildCStyleCast(type_id.value(), std::move(rhs),
-      //                        token.GetLocation());
       return std::make_unique<CStyleCastNode>(
           loc, type_id.value(), std::move(rhs), CStyleCastKind::eNone);
     }
@@ -436,7 +430,7 @@ std::optional<CompilerType> DILParser::ParseTypeId(bool must_be_type_id) {
   CompilerType type;
   if (type_decl.m_is_builtin) {
     llvm::Expected<lldb::TypeSystemSP> type_system =
-        DILGetTypeSystemFromCU(m_ctx_scope);
+        GetTypeSystemFromCU(m_ctx_scope);
     if (!type_system)
       return {};
     // type = GetBasicType(m_ctx_scope, type_decl.GetBasicType());
@@ -751,11 +745,7 @@ bool DILParser::HandleSimpleTypeSpecifier(TypeDeclaration *type_decl) {
   uint32_t loc = CurToken().GetLocation();
   std::string kind = CurToken().GetSpelling();
 
-  // switch (kind) {
   if (kind == "int") {
-    // case Token::kw_int: {
-    //  "int" can have signedness and be combined with "short", "long" and
-    //  "long long" (but not with another "int").
     if (type_decl->m_has_int_specifier) {
       BailOut("cannot combine with previous 'int' declaration specifier", loc,
               CurToken().GetSpelling().length());

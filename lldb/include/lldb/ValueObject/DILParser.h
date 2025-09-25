@@ -33,7 +33,7 @@ enum class ErrorCode : unsigned char {
 };
 
 llvm::Expected<lldb::TypeSystemSP>
-DILGetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx);
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx);
 
 // The following is modeled on class OptionParseError.
 class DILDiagnosticError

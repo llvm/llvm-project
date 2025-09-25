@@ -586,7 +586,7 @@ Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const IntegerLiteralNode *node) {
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      DILGetTypeSystemFromCU(m_exe_ctx_scope);
+      GetTypeSystemFromCU(m_exe_ctx_scope);
   if (!type_system)
     return type_system.takeError();
 
@@ -610,7 +610,7 @@ Interpreter::Visit(const IntegerLiteralNode *node) {
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const FloatLiteralNode *node) {
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      DILGetTypeSystemFromCU(m_exe_ctx_scope);
+      GetTypeSystemFromCU(m_exe_ctx_scope);
   if (!type_system)
     return type_system.takeError();
 
