@@ -1003,7 +1003,7 @@ def testVariadicResultAccess():
             assert type(op_res_variadic.res) is OpResultList
 
 
-# CHECK-LABEL: TEST: testVariadicAndNormalRegion
+# CHECK-LABEL: TEST: testVariadicAndNormalRegionOp
 @run
 def testVariadicAndNormalRegionOp():
     with Context() as ctx, Location.unknown(ctx):
