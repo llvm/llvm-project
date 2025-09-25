@@ -1965,25 +1965,25 @@ multiclass CVT_F32X4_TO_FPX4_RS_SF_VEC<string FPName, VTVec RetTy> {
   def : Pat<(RetTy (CVT_F32X4_TO_FPX4_RS_SF_NODE<!toupper(FPName),
                       SDT_CVT_F32X4_TO_FPX4_RS_VEC>
                    f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS)),
-            (!cast<NVPTXInst>(CVT_ # FPName # "x4_f32x4_rs_sf") 
+            (!cast<NVPTXInst>("CVT_" # FPName # "x4_f32x4_rs_sf") 
               $f1, $f2, $f3, $f4, $rbits, CvtRS)>;
   
   def : Pat<(RetTy (CVT_F32X4_TO_FPX4_RS_SF_NODE<!toupper(FPName), 
                       SDT_CVT_F32X4_TO_FPX4_RS_VEC>
                    f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS_RELU)),
-            (!cast<NVPTXInst>(CVT_ # FPName # "x4_f32x4_rs_sf") 
+            (!cast<NVPTXInst>("CVT_" # FPName # "x4_f32x4_rs_sf") 
               $f1, $f2, $f3, $f4, $rbits, CvtRS_RELU)>;
 }
 
 // RS rounding mode conversions
 let Predicates = [hasPTX<87>, hasSM100aOrSM103a] in {
 // FP8x4 conversions
-def : CVT_F32X4_TO_FPX4_RS_SF_VEC<"E4M3", v4i8>;
-def : CVT_F32X4_TO_FPX4_RS_SF_VEC<"E5M2", v4i8>;
+defm : CVT_F32X4_TO_FPX4_RS_SF_VEC<"e4m3", v4i8>;
+defm : CVT_F32X4_TO_FPX4_RS_SF_VEC<"e5m2", v4i8>;
 
 // FP6x4 conversions
-def : CVT_F32X4_TO_FPX4_RS_SF_VEC<"E2M3", v4i8>;
-def : CVT_F32X4_TO_FPX4_RS_SF_VEC<"E3M2", v4i8>;
+defm : CVT_F32X4_TO_FPX4_RS_SF_VEC<"e2m3", v4i8>;
+defm : CVT_F32X4_TO_FPX4_RS_SF_VEC<"e3m2", v4i8>;
 
 // FP4x4 conversions
 def : Pat<(i16 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E2M1", 
