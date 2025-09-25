@@ -691,8 +691,8 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
         break;
       }
 
-      setComplexRange(D, LastComplexRangeOption, Range,
-                      Args.MakeArgString(A->getSpelling() + Val), NewRange);
+      setComplexRange(D, Args.MakeArgString(A->getSpelling() + Val), NewRange,
+                      LastComplexRangeOption, Range);
       break;
     }
     case options::OPT_fhonor_infinities:
@@ -741,8 +741,9 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       ApproxFunc = true;
       SignedZeros = false;
       FPContract = "fast";
-      setComplexRange(D, LastComplexRangeOption, Range, A->getSpelling(),
-                      LangOptions::ComplexRangeKind::CX_Basic);
+      setComplexRange(D, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Basic,
+                      LastComplexRangeOption, Range);
       break;
     case options::OPT_fno_fast_math:
       HonorINFs = true;
@@ -756,8 +757,9 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       // --ffp-contract=off -fno-fast-math --> -ffp-contract=off
       if (FPContract == "fast")
         FPContract = "";
-      setComplexRange(D, LastComplexRangeOption, Range, A->getSpelling(),
-                      LangOptions::ComplexRangeKind::CX_None);
+      setComplexRange(D, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_None,
+                      LastComplexRangeOption, Range);
       break;
     }
 

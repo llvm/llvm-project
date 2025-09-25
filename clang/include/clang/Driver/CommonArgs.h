@@ -295,9 +295,9 @@ std::string complexRangeKindToStr(LangOptions::ComplexRangeKind Range);
 std::string renderComplexRangeOption(LangOptions::ComplexRangeKind Range);
 
 // Set the complex range and output a warning as needed.
-void setComplexRange(const Driver &D, StringRef &LastOpt,
-                     LangOptions::ComplexRangeKind &Range, StringRef NewOpt,
-                     LangOptions::ComplexRangeKind NewRange);
+void setComplexRange(const Driver &D, StringRef NewOpt,
+                     LangOptions::ComplexRangeKind NewRange, StringRef &LastOpt,
+                     LangOptions::ComplexRangeKind &Range);
 
 } // end namespace tools
 } // end namespace driver

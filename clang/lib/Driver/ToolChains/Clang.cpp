@@ -2805,13 +2805,14 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     if (Aggressive) {
       HonorINFs = false;
       HonorNaNs = false;
-      setComplexRange(D, LastComplexRangeOption, Range, CallerOption,
-                      LangOptions::ComplexRangeKind::CX_Basic);
+      setComplexRange(D, CallerOption, LangOptions::ComplexRangeKind::CX_Basic,
+                      LastComplexRangeOption, Range);
     } else {
       HonorINFs = true;
       HonorNaNs = true;
-      setComplexRange(D, LastComplexRangeOption, Range, CallerOption,
-                      LangOptions::ComplexRangeKind::CX_Promoted);
+      setComplexRange(D, CallerOption,
+                      LangOptions::ComplexRangeKind::CX_Promoted,
+                      LastComplexRangeOption, Range);
     }
     MathErrno = false;
     AssociativeMath = true;
@@ -2863,20 +2864,24 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     default: continue;
 
     case options::OPT_fcx_limited_range:
-      setComplexRange(D, LastComplexRangeOption, Range, A->getSpelling(),
-                      LangOptions::ComplexRangeKind::CX_Basic);
+      setComplexRange(D, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Basic,
+                      LastComplexRangeOption, Range);
       break;
     case options::OPT_fno_cx_limited_range:
-      setComplexRange(D, LastComplexRangeOption, Range, A->getSpelling(),
-                      LangOptions::ComplexRangeKind::CX_Full);
+      setComplexRange(D, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Full,
+                      LastComplexRangeOption, Range);
       break;
     case options::OPT_fcx_fortran_rules:
-      setComplexRange(D, LastComplexRangeOption, Range, A->getSpelling(),
-                      LangOptions::ComplexRangeKind::CX_Improved);
+      setComplexRange(D, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Improved,
+                      LastComplexRangeOption, Range);
       break;
     case options::OPT_fno_cx_fortran_rules:
-      setComplexRange(D, LastComplexRangeOption, Range, A->getSpelling(),
-                      LangOptions::ComplexRangeKind::CX_Full);
+      setComplexRange(D, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Full,
+                      LastComplexRangeOption, Range);
       break;
     case options::OPT_fcomplex_arithmetic_EQ: {
       LangOptions::ComplexRangeKind RangeVal;
@@ -2894,8 +2899,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
             << A->getSpelling() << Val;
         break;
       }
-      setComplexRange(D, LastComplexRangeOption, Range,
-                      Args.MakeArgString(A->getSpelling() + Val), RangeVal);
+      setComplexRange(D, Args.MakeArgString(A->getSpelling() + Val), RangeVal,
+                      LastComplexRangeOption, Range);
       break;
     }
     case options::OPT_ffp_model_EQ: {
@@ -2935,9 +2940,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         FPModel = Val;
         FPContract = "on";
         LastFpContractOverrideOption = "-ffp-model=precise";
-        setComplexRange(D, LastComplexRangeOption, Range,
-                        Args.MakeArgString(A->getSpelling() + Val),
-                        LangOptions::ComplexRangeKind::CX_Full);
+        setComplexRange(D, Args.MakeArgString(A->getSpelling() + Val),
+                        LangOptions::ComplexRangeKind::CX_Full,
+                        LastComplexRangeOption, Range);
       } else if (Val == "strict") {
         StrictFPModel = true;
         FPExceptionBehavior = "strict";
@@ -2946,9 +2951,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         LastFpContractOverrideOption = "-ffp-model=strict";
         TrappingMath = true;
         RoundingFPMath = true;
-        setComplexRange(D, LastComplexRangeOption, Range,
-                        Args.MakeArgString(A->getSpelling() + Val),
-                        LangOptions::ComplexRangeKind::CX_Full);
+        setComplexRange(D, Args.MakeArgString(A->getSpelling() + Val),
+                        LangOptions::ComplexRangeKind::CX_Full,
+                        LastComplexRangeOption, Range);
       } else
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << Val;
@@ -3155,8 +3160,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       SignedZeros = true;
       restoreFPContractState();
       if (Range != LangOptions::ComplexRangeKind::CX_Full)
-        setComplexRange(D, LastComplexRangeOption, Range, A->getSpelling(),
-                        LangOptions::ComplexRangeKind::CX_None);
+        setComplexRange(D, A->getSpelling(),
+                        LangOptions::ComplexRangeKind::CX_None,
+                        LastComplexRangeOption, Range);
       else
         Range = LangOptions::ComplexRangeKind::CX_None;
       LastComplexRangeOption = "";

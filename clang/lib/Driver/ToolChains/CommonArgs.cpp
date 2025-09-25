@@ -3567,10 +3567,10 @@ static void emitComplexRangeDiag(const Driver &D, StringRef LastOpt,
       << complexRangeKindToStr(NewRange);
 }
 
-void tools::setComplexRange(const Driver &D, StringRef &LastOpt,
-                            LangOptions::ComplexRangeKind &Range,
-                            StringRef NewOpt,
-                            LangOptions::ComplexRangeKind NewRange) {
+void tools::setComplexRange(const Driver &D, StringRef NewOpt,
+                            LangOptions::ComplexRangeKind NewRange,
+                            StringRef &LastOpt,
+                            LangOptions::ComplexRangeKind &Range) {
   // Warn if user overrides the previously set complex number
   // multiplication/division option.
   if (Range != LangOptions::ComplexRangeKind::CX_None && Range != NewRange)
