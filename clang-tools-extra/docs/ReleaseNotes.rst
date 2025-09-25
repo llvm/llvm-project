@@ -203,6 +203,11 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`performance-lost-std-move
+  <clang-tidy/checks/performance/lost-std-move>` check.
+
+  Warns if copy constructor is used instead of ``std::move()`` and suggests a fix.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
