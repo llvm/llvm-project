@@ -45,7 +45,10 @@ def testKnobOp(target):
     heads = tune.KnobOp(any_param, "coin", options=[True, False], selected=True)
     # CHECK: transform.tune.knob<"animal"> = "dog" from options = ["cat", "dog", unit] -> !transform.any_param
     tune.KnobOp(
-        any_param, name="animal", options=["cat", "dog", ir.UnitAttr.get()], selected="dog"
+        any_param,
+        name="animal",
+        options=["cat", "dog", ir.UnitAttr.get()],
+        selected="dog",
     )
     # CHECK: transform.tune.knob<"tile_size"> = 8 : i64 from options = [2, 4, 8, 16, 24, 32] -> !transform.any_param
     tune.KnobOp(any_param, "tile_size", [2, 4, 8, 16, 24, 32], selected=8)
@@ -71,13 +74,16 @@ def testKnobOp(target):
         selected=4,
     )
 
+
 # CHECK-LABEL: TEST: testAlternativesOp
 @run
 def testAlternativesOp(target):
     any_param = transform.AnyParamType.get()
 
     # CHECK: %[[LEFT_OR_RIGHT_OUTCOME:.*]] = transform.tune.alternatives<"left_or_right"> -> !transform.any_param {
-    left_or_right = tune.AlternativesOp([transform.AnyParamType.get()], "left_or_right", 2)
+    left_or_right = tune.AlternativesOp(
+        [transform.AnyParamType.get()], "left_or_right", 2
+    )
     with ir.InsertionPoint(left_or_right.alternatives[_left := 0].blocks[0]):
         # CHECK: %[[C0:.*]] = transform.param.constant 0
         i32_0 = ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 0)
@@ -95,7 +101,9 @@ def testAlternativesOp(target):
     outcome_of_left_or_right_decision = left_or_right.results[0]
 
     # CHECK: transform.tune.alternatives<"fork_in_the_road"> selected_region = 0 -> !transform.any_param {
-    fork_in_the_road = tune.AlternativesOp([transform.AnyParamType.get()], "fork_in_the_road", 2, selected_region=0)
+    fork_in_the_road = tune.AlternativesOp(
+        [transform.AnyParamType.get()], "fork_in_the_road", 2, selected_region=0
+    )
     with ir.InsertionPoint(fork_in_the_road.alternatives[_left := 0].blocks[0]):
         # CHECK: %[[C0:.*]] = transform.param.constant 0
         i32_0 = ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 0)
@@ -112,7 +120,12 @@ def testAlternativesOp(target):
     # CHECK-NEXT: }
 
     # CHECK: transform.tune.alternatives<"left_or_right_as_before"> selected_region = %[[LEFT_OR_RIGHT_OUTCOME]] : !transform.any_param {
-    left_or_right_as_before = tune.AlternativesOp([], "left_or_right_as_before", 2, selected_region=outcome_of_left_or_right_decision)
+    left_or_right_as_before = tune.AlternativesOp(
+        [],
+        "left_or_right_as_before",
+        2,
+        selected_region=outcome_of_left_or_right_decision,
+    )
     with ir.InsertionPoint(left_or_right_as_before.alternatives[_left := 0].blocks[0]):
         # CHECK: transform.param.constant 1337
         i32_1337 = ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 1337)
