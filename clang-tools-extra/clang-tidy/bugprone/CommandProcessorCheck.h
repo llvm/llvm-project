@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_COMMAND_PROCESSOR_CHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_COMMAND_PROCESSOR_CHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_COMMANDPROCESSORCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_COMMANDPROCESSORCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
 /// Execution of a command processor can lead to security vulnerabilities,
 /// and is generally not required. Instead, prefer to launch executables
@@ -19,7 +19,7 @@ namespace clang::tidy::cert {
 /// actually launched.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/cert/env33-c.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/command-processor.html
 class CommandProcessorCheck : public ClangTidyCheck {
 public:
   CommandProcessorCheck(StringRef Name, ClangTidyContext *Context)
@@ -28,6 +28,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_COMMAND_PROCESSOR_CHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_COMMANDPROCESSORCHECK_H

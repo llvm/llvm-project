@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cert-env33-c %t
+// RUN: %check_clang_tidy %s bugprone-command-processor %t
 
 typedef struct FILE {} FILE;
 
@@ -11,7 +11,7 @@ void f(void) {
   system(0);
 
   system("test");
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: calling 'system' uses a command processor [cert-env33-c]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: calling 'system' uses a command processor [bugprone-command-processor]
 
   popen("test", "test");
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: calling 'popen' uses a command processor
