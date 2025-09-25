@@ -90,10 +90,16 @@ void MachineSSAContext::getPhiInputs(
     SmallVectorImpl<const MachineBasicBlock *> &Blocks) const {
   if (!Phi.isPHI())
     return;
+
+  const MachineRegisterInfo &MRI = Phi.getMF()->getRegInfo();
+  // const Register DstReg = Phi.getOperand(0).getReg();
   for (unsigned Idx = 1, End = Phi.getNumOperands(); Idx < End; Idx += 2) {
-    // FIXME: ideally we would turn undef values into ValueRefNull.
-    // This could reduce number of PHIs marked in taintAndPushPhiNodes().
-    Values.push_back(Phi.getOperand(Idx).getReg());
+    Register Incoming = Phi.getOperand(Idx).getReg();
+    MachineInstr *Def = MRI.getVRegDef(Incoming);
+    // FIXME: should this also consider Incoming == DstReg undef?
+    if (Def && isUndef(*Def))
+      Incoming = ValueRefNull;
+    Values.push_back(Incoming);
     Blocks.push_back(Phi.getOperand(Idx + 1).getMBB());
   }
 }

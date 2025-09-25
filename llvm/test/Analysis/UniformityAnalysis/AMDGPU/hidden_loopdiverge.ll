@@ -172,9 +172,9 @@ X:
 ; CHECK: DIVERGENT: %div.merge.x =
 
 Y:
-  %div.merge.y = phi i32 [ 42, %X ], [ %b, %B ]
+  %merge.y = phi i32 [ 42, %X ], [ %b, %B ]
   ret void
-; CHECK: DIVERGENT: %div.merge.y =
+; CHECK-NOT: DIVERGENT: %merge.y =
 }
 
 ; divergent loop (G<header>, L<exiting to D>) contained inside a uniform loop (H<header>, B, G, L , D<exiting to x>)
