@@ -4,3 +4,11 @@
 
 from .._vector_transform_enum_gen import *
 from .._vector_transform_ops_gen import *
+from ..._mlir_libs import get_dialect_registry as _get_dialect_registry
+from ..._mlir_libs._capi import (
+    register_transform_dialect_extension as _register_transform_dialect_extension,
+)
+
+_register_transform_dialect_extension(
+    "mlirVectorRegisterTransformDialectExtension", _get_dialect_registry()
+)

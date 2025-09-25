@@ -50,7 +50,7 @@ from pathlib import Path
 from typing import Optional, List
 
 import mlir.dialects.arith as arith
-from mlir.dialects import transform
+from mlir.dialects import transform, func, memref
 from mlir.ir import Context, Location, Module, IntegerType, InsertionPoint
 
 

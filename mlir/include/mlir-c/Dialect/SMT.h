@@ -104,6 +104,9 @@ mlirSMTAttrGetBVCmpPredicate(MlirContext ctx, MlirStringRef str);
 MLIR_CAPI_EXPORTED MlirAttribute mlirSMTAttrGetIntPredicate(MlirContext ctx,
                                                             MlirStringRef str);
 
+MLIR_CAPI_EXPORTED void
+mlirSMTRegisterTransformDialectExtension(MlirDialectRegistry registry);
+
 #ifdef __cplusplus
 }
 #endif

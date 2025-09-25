@@ -4,6 +4,7 @@ import gc
 import io
 import itertools
 from mlir.ir import *
+import mlir.dialects.func
 
 
 def run(f):

@@ -24,6 +24,7 @@ def construct_and_print_in_module(f):
             module = f(module)
         if module is not None:
             print(module)
+            module.operation.verify()
     return f
 
 

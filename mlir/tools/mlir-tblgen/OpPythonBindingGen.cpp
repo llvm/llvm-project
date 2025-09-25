@@ -44,6 +44,13 @@ from ._ods_common import (
 _ods_ir = _ods_cext.ir
 _ods_cext.globals.register_traceback_file_exclusion(__file__)
 
+from .._mlir_libs import get_dialect_registry as _get_dialect_registry
+from .._mlir_libs._capi import register_dialect as _register_dialect
+
+_dialect_registry = _get_dialect_registry()
+if "{0}" not in _dialect_registry.dialect_names:
+    _register_dialect("mlirGetDialectHandle__{0}__", _dialect_registry)
+
 import builtins
 from typing import Sequence as _Sequence, Union as _Union, Optional as _Optional
 
@@ -1191,7 +1198,7 @@ static bool emitAllOps(const RecordKeeper &records, raw_ostream &os) {
   if (clDialectName.empty())
     llvm::PrintFatalError("dialect name not provided");
 
-  os << fileHeader;
+  os << formatv(fileHeader, clDialectName.getValue());
   if (!clDialectExtensionName.empty())
     os << formatv(dialectExtensionTemplate, clDialectName.getValue());
   else

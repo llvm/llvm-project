@@ -29,6 +29,9 @@ MLIR_CAPI_EXPORTED MlirType mlirNVGPUTensorMapDescriptorTypeGet(
     MlirContext ctx, MlirType tensorMemrefType, int swizzle, int l2promo,
     int oobFill, int interleave);
 
+MLIR_CAPI_EXPORTED void
+mlirNVGPURegisterTransformDialectExtension(MlirDialectRegistry registry);
+
 #ifdef __cplusplus
 }
 #endif

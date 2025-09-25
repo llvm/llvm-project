@@ -107,6 +107,9 @@ mlirSparseTensorEncodingAttrBuildLvlType(
     const enum MlirSparseTensorLevelPropertyNondefault *properties,
     unsigned propSize, unsigned n, unsigned m);
 
+MLIR_CAPI_EXPORTED void
+mlirSparseTensorRegisterTransformDialectExtension(MlirDialectRegistry registry);
+
 #ifdef __cplusplus
 }
 #endif

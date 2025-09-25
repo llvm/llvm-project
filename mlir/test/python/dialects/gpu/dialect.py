@@ -2,6 +2,7 @@
 
 from mlir.ir import *
 import mlir.dialects.gpu as gpu
+import mlir.dialects.nvvm as nvvm
 import mlir.dialects.gpu.passes
 from mlir.passmanager import *
 
