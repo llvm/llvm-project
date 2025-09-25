@@ -22,7 +22,7 @@ Example
 Currently this check does not take into account the precedence of operations.
 Even if the expression within the parentheses has a higher priority than that
 outside the parentheses. In other words, removing the parentheses will not
-affect the semantic.
+affect the semantics.
 
 .. code-block:: c++
 
