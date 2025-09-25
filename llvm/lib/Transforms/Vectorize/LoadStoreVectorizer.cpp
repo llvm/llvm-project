@@ -365,7 +365,7 @@ private:
   /// deleted before the end of the pass.
   ChainElem createExtraElementAfter(const ChainElem &PrevElem, APInt Offset,
                                     StringRef Prefix,
-                                    Align Alignment = Align(1));
+                                    Align Alignment = Align());
 
   /// Delete dead GEPs and extra Load/Store instructions created by
   /// createExtraElementAfter
