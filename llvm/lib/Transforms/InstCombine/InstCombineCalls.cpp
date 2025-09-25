@@ -2411,10 +2411,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *InnerOp;
       const APInt *ShAmtInnerC, *ShAmtOuterC;
       if (match(Op0, m_FShl(m_Value(InnerOp), m_Deferred(InnerOp),
-                            m_APInt(ShAmtInnerC))) && match(ShAmtC, m_APInt(ShAmtOuterC)) &&
-          Op0 == Op1) {
-        APInt Sum =
-            *ShAmtOuterC + *ShAmtInnerC;
+                            m_APInt(ShAmtInnerC))) &&
+          match(ShAmtC, m_APInt(ShAmtOuterC)) && Op0 == Op1) {
+        APInt Sum = *ShAmtOuterC + *ShAmtInnerC;
         APInt Modulo = Sum.urem(APInt(Sum.getBitWidth(), BitWidth));
         if (Modulo.isZero())
           return replaceInstUsesWith(*II, InnerOp);
