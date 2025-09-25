@@ -4041,20 +4041,13 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
         UsesRex = true;
     }
 
-    if (HReg) {
-      if (Enc == X86II::EVEX || ForcedOpcodePrefix == OpcodePrefix_REX2 ||
-          ForcedOpcodePrefix == OpcodePrefix_REX) {
-        StringRef RegName = X86IntelInstPrinter::getRegisterName(HReg);
-        return Error(Ops[0]->getStartLoc(),
-                     "can't encode '" + RegName.str() +
-                         "' in an instruction requiring EVEX/REX2/REX prefix");
-      }
-      if (UsesRex) {
-        StringRef RegName = X86IntelInstPrinter::getRegisterName(HReg);
-        return Error(Ops[0]->getStartLoc(),
-                     "can't encode '" + RegName +
-                         "' in an instruction requiring REX prefix");
-      }
+    if (HReg &&
+        (Enc == X86II::EVEX || ForcedOpcodePrefix == OpcodePrefix_REX2 ||
+         ForcedOpcodePrefix == OpcodePrefix_REX || UsesRex)) {
+      StringRef RegName = X86IntelInstPrinter::getRegisterName(HReg);
+      return Error(Ops[0]->getStartLoc(),
+                   "can't encode '" + RegName.str() +
+                       "' in an instruction requiring EVEX/REX2/REX prefix");
     }
   }
 
