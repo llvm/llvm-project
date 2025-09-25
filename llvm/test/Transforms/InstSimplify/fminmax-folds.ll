@@ -47,8 +47,8 @@ define void @minmax_snan_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %mi
 ; CHECK-NEXT:    store float 0x7FFC000000000000, ptr [[MAXIMUM_RES:%.*]], align 4
 ; CHECK-NEXT:    store float 0x7FFC000000000000, ptr [[MINIMUM_RES1:%.*]], align 4
 ; CHECK-NEXT:    store float 0x7FFC000000000000, ptr [[MAXIMUM_RES1:%.*]], align 4
-; CHECK-NEXT:    store float [[MINIMUMNUM:%.*]], ptr [[MINIMUMNUM_RES:%.*]], align 4
-; CHECK-NEXT:    store float [[MINIMUMNUM]], ptr [[MAXIMUMNUM_RES:%.*]], align 4
+; CHECK-NEXT:    store float [[X:%.*]], ptr [[MINIMUMNUM_RES:%.*]], align 4
+; CHECK-NEXT:    store float [[X]], ptr [[MAXIMUMNUM_RES:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %minnum = call float @llvm.minnum.f32(float %x, float 0x7FF4000000000000)
@@ -102,8 +102,8 @@ define void @minmax_snan_nxv2f64_op1(<vscale x 2 x double> %x, ptr %minnum_res, 
 ; CHECK-NEXT:    store <vscale x 2 x double> splat (double 0x7FFC00DEAD00DEAD), ptr [[MAXIMUM_RES:%.*]], align 16
 ; CHECK-NEXT:    store <vscale x 2 x double> splat (double 0x7FFC00DEAD00DEAD), ptr [[MINIMUM_RES1:%.*]], align 16
 ; CHECK-NEXT:    store <vscale x 2 x double> splat (double 0x7FFC00DEAD00DEAD), ptr [[MAXIMUM_RES1:%.*]], align 16
-; CHECK-NEXT:    store <vscale x 2 x double> [[MINIMUMNUM:%.*]], ptr [[MINIMUMNUM_RES:%.*]], align 16
-; CHECK-NEXT:    store <vscale x 2 x double> [[MINIMUMNUM]], ptr [[MAXIMUMNUM_RES:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 2 x double> [[X:%.*]], ptr [[MINIMUMNUM_RES:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 2 x double> [[X]], ptr [[MAXIMUMNUM_RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %minnum = call <vscale x 2 x double> @llvm.minnum.nxv2f64(<vscale x 2 x double> splat (double 0x7FF400DEAD00DEAD), <vscale x 2 x double> %x)
@@ -127,14 +127,14 @@ define void @minmax_snan_nxv2f64_op1(<vscale x 2 x double> %x, ptr %minnum_res, 
 ; return <%x0, QNaN> and InstSimplify cannot create the extra instructions required to construct this.
 define void @minmax_mixed_snan_qnan_v2f64(<2 x double> %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_mixed_snan_qnan_v2f64(
-; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double 0x7FF400DEAD00DEAD, double 0x7FF8000FEED00000>, <2 x double> [[MINIMUMNUM:%.*]])
-; CHECK-NEXT:    store <2 x double> [[X]], ptr [[MINNUM_RES:%.*]], align 16
-; CHECK-NEXT:    [[MAXNUM:%.*]] = call <2 x double> @llvm.maxnum.v2f64(<2 x double> <double 0x7FF400DEAD00DEAD, double 0x7FF8000FEED00000>, <2 x double> [[MINIMUMNUM]])
+; CHECK-NEXT:    [[MINNUM:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double 0x7FF400DEAD00DEAD, double 0x7FF8000FEED00000>, <2 x double> [[X:%.*]])
+; CHECK-NEXT:    store <2 x double> [[MINNUM]], ptr [[MINNUM_RES:%.*]], align 16
+; CHECK-NEXT:    [[MAXNUM:%.*]] = call <2 x double> @llvm.maxnum.v2f64(<2 x double> <double 0x7FF400DEAD00DEAD, double 0x7FF8000FEED00000>, <2 x double> [[X]])
 ; CHECK-NEXT:    store <2 x double> [[MAXNUM]], ptr [[MAXNUM_RES:%.*]], align 16
 ; CHECK-NEXT:    store <2 x double> <double 0x7FFC00DEAD00DEAD, double 0x7FF8000FEED00000>, ptr [[MINIMUM_RES:%.*]], align 16
 ; CHECK-NEXT:    store <2 x double> <double 0x7FFC00DEAD00DEAD, double 0x7FF8000FEED00000>, ptr [[MAXIMUM_RES:%.*]], align 16
-; CHECK-NEXT:    store <2 x double> [[MINIMUMNUM]], ptr [[MINIMUMNUM_RES:%.*]], align 16
-; CHECK-NEXT:    store <2 x double> [[MINIMUMNUM]], ptr [[MAXIMUMNUM_RES:%.*]], align 16
+; CHECK-NEXT:    store <2 x double> [[X]], ptr [[MINIMUMNUM_RES:%.*]], align 16
+; CHECK-NEXT:    store <2 x double> [[X]], ptr [[MAXIMUMNUM_RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %minnum = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double 0x7FF400DEAD00DEAD, double 0x7FF8000FEED00000>, <2 x double> %x)
