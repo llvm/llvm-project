@@ -2126,10 +2126,10 @@ bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (Ptr.isUnknownSizeArray())
+  const Descriptor *Desc = Ptr.getFieldDesc();
+  if (Desc->isUnknownSizeArray())
     return false;
 
-  const Descriptor *Desc = Ptr.getFieldDesc();
   // In the unlikely event that we're initializing the first item of
   // a non-array, skip the atIndex().
   if (Idx == 0 && !Desc->isArray()) {
@@ -2160,10 +2160,10 @@ bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isUnknownSizeArray())
+  const Descriptor *Desc = Ptr.getFieldDesc();
+  if (Desc->isUnknownSizeArray())
     return false;
 
-  const Descriptor *Desc = Ptr.getFieldDesc();
   // In the unlikely event that we're initializing the first item of
   // a non-array, skip the atIndex().
   if (Idx == 0 && !Desc->isArray()) {
