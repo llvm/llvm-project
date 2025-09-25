@@ -45,6 +45,8 @@ struct olMemcpyRectTest : OffloadQueueTest {
     ASSERT_SUCCESS(
         olMemcpy(nullptr, DevicePtr2, Device, Buff.data(), Host, BYTES));
 
+    Buff.fill('u');
+
     SrcRect.offset = DstRect.offset = COPY_OFFSET;
     SrcRect.pitch = DstRect.pitch = FULL_SIZE.x;
     SrcRect.slice = DstRect.slice = FULL_SIZE.y * FULL_SIZE.x;
@@ -155,6 +157,55 @@ TEST_P(olMemcpyRectTest, SuccessHtoD) {
   // clang-format on
 }
 
+TEST_P(olMemcpyRectTest, SuccessUtoD) {
+  DstRect.buffer = DevicePtr;
+  SrcRect.buffer = Buff.data();
+
+  ASSERT_SUCCESS(
+      olMemcpyRect(Queue, DstRect, Device, SrcRect, Host, COPY_SIZE));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+
+  // clang-format off
+  checkPattern(DevicePtr,
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddduuuudddd"
+    "dddddddduuuudddd"
+    "dddddddduuuudddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddduuuudddd"
+    "dddddddduuuudddd"
+    "dddddddduuuudddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+  );
+  // clang-format on
+}
+
 TEST_P(olMemcpyRectTest, SuccessDtoH) {
   DstRect.buffer = HostPtr;
   SrcRect.buffer = DevicePtr;
@@ -200,6 +251,55 @@ TEST_P(olMemcpyRectTest, SuccessDtoH) {
     "hhhhhhhhhhhhhhhh"
     "hhhhhhhhhhhhhhhh"
     "hhhhhhhhhhhhhhhh"
+  );
+  // clang-format on
+}
+
+TEST_P(olMemcpyRectTest, SuccessDtoU) {
+  DstRect.buffer = Buff.data();
+  SrcRect.buffer = DevicePtr;
+
+  ASSERT_SUCCESS(
+      olMemcpyRect(Queue, DstRect, Host, SrcRect, Device, COPY_SIZE));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+
+  // clang-format off
+  checkPattern(Buff.data(),
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuudddduuuu"
+    "uuuuuuuudddduuuu"
+    "uuuuuuuudddduuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuudddduuuu"
+    "uuuuuuuudddduuuu"
+    "uuuuuuuudddduuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
+    "uuuuuuuuuuuuuuuu"
   );
   // clang-format on
 }
@@ -343,20 +443,4 @@ TEST_P(olMemcpyRectTest, InvalidSrcSliceAlign) {
 
   ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
                olMemcpyRect(Queue, DstRect, Host, SrcRect, Device, COPY_SIZE));
-}
-
-TEST_P(olMemcpyRectTest, InvalidDstUnalloc) {
-  DstRect.buffer = Buff.data();
-  SrcRect.buffer = DevicePtr;
-
-  ASSERT_ERROR(OL_ERRC_INVALID_VALUE,
-               olMemcpyRect(Queue, DstRect, Host, SrcRect, Device, COPY_SIZE));
-}
-
-TEST_P(olMemcpyRectTest, InvalidSrcUnalloc) {
-  DstRect.buffer = DevicePtr;
-  SrcRect.buffer = Buff.data();
-
-  ASSERT_ERROR(OL_ERRC_INVALID_VALUE,
-               olMemcpyRect(Queue, DstRect, Device, SrcRect, Host, COPY_SIZE));
 }

@@ -131,7 +131,6 @@ def olMemcpyRect : Function {
         "If a queue is specified, at least one device must be a non-host device",
         "For both the source and destination, the base pointer, pitch and slice must all be aligned to 4 bytes",
         "For 2D copies (where `Size.z` is 1), the slice value is ignored",
-        "Both the source and destination must have been allocated via `olMemAlloc`",
         "Either the source or destination (or both) must have a non-host device",
         "If a queue is not specified, the memcpy happens synchronously",
     ];
@@ -156,9 +155,6 @@ def olMemcpyRect : Function {
       Return<"OL_ERRC_INVALID_NULL_POINTER", [
         "`DstRect.buffer == NULL`",
         "`SrcRect.buffer == NULL`",
-      ]>,
-      Return<"OL_ERRC_INVALID_VALUE", [
-        "Either the source or destination was not allocated via `olMemAlloc`",
       ]>,
       Return<"OL_ERRC_INVALID_ARGUMENT", [
         "Both arguments are the host device",
