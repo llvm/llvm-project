@@ -2600,14 +2600,23 @@ public:
   StringRef getDirectory() const { return getScope()->getDirectory(); }
   std::optional<StringRef> getSource() const { return getScope()->getSource(); }
 
+  /// Get the location where this is inlined
+  ///
+  /// Walk through \a getInlinedAt() and return the \a DILocation where this is
+  /// inlined.
+  const DILocation *getInlinedAtLocation() const {
+    const DILocation *Current = this, *Next = nullptr;
+    while (Next = Current->getInlinedAt())
+      Current = Next;
+    return Current;
+  }
+
   /// Get the scope where this is inlined.
   ///
   /// Walk through \a getInlinedAt() and return \a getScope() from the deepest
   /// location.
   DILocalScope *getInlinedAtScope() const {
-    if (auto *IA = getInlinedAt())
-      return IA->getInlinedAtScope();
-    return getScope();
+    return getInlinedAtLocation()->getScope();
   }
 
   /// Get the DWARF discriminator.
