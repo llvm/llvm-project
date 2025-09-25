@@ -38,7 +38,6 @@ struct ConstructId {
     static constexpr llvm::omp::Directive id{Id}; \
   }
 
-MAKE_CONSTR_ID(OmpDeclareVariantDirective, D::OMPD_declare_variant);
 MAKE_CONSTR_ID(OpenMPDeclarativeAllocate, D::OMPD_allocate);
 MAKE_CONSTR_ID(OpenMPDeclarativeAssumes, D::OMPD_assumes);
 MAKE_CONSTR_ID(OpenMPDeclareReductionConstruct, D::OMPD_declare_reduction);
@@ -92,8 +91,7 @@ struct DirectiveNameScope {
     } else if constexpr (TupleTrait<T>) {
       if constexpr (std::is_base_of_v<OmpBlockConstruct, T>) {
         return std::get<OmpBeginDirective>(x.t).DirName();
-      } else if constexpr (std::is_same_v<T, OmpDeclareVariantDirective> ||
-          std::is_same_v<T, OpenMPDeclarativeAllocate> ||
+      } else if constexpr (std::is_same_v<T, OpenMPDeclarativeAllocate> ||
           std::is_same_v<T, OpenMPDeclarativeAssumes> ||
           std::is_same_v<T, OpenMPDeclareReductionConstruct> ||
           std::is_same_v<T, OpenMPDeclareSimdConstruct> ||
