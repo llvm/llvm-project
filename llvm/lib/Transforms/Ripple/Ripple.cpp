@@ -5800,7 +5800,7 @@ Ripple::ConstructedSeries Ripple::getLinearSeriesFor(Instruction *I) {
                          GEP->getSourceElementType(),
                          ArrayRef(IndicesProcessed).drop_back())
                          ->isStructTy();
-      if (IndexingStructField && IdxSeries->hasSlope())
+      if (IndexingStructField && !IdxSeries->hasZeroSlopes())
         llvm_unreachable(
             "Ripple vector access to a structure field is undefined");
       // For pointers, the base is GEP() and the integer slope indexes a bytes
