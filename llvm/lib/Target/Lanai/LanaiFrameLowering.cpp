@@ -186,10 +186,10 @@ void LanaiFrameLowering::emitEpilogue(MachineFunction & /*MF*/,
       .addImm(LPAC::ADD);
 }
 
-void LanaiFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                              BitVector &SavedRegs,
-                                              RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void LanaiFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                    BitVector &SavedRegs,
+                                                    RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const LanaiRegisterInfo *LRI = STI.getRegisterInfo();

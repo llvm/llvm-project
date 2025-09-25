@@ -511,7 +511,7 @@ public:
     // well enough to initialize the scavenger with some emergency spillslots
     // for the target.
     BitVector SavedRegs;
-    TFL.determineCalleeSaves(MF, SavedRegs, &RS);
+    TFL.determinePrologCalleeSaves(MF, SavedRegs, &RS);
     TFL.processFunctionBeforeFrameFinalized(MF, &RS);
 
     // Let's scavenge the current function

@@ -77,7 +77,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   unsigned TailCallReservedStack = 0;
 
   /// HasStackFrame - True if this function has a stack frame. Set by
-  /// determineCalleeSaves().
+  /// determinePrologCalleeSaves().
   bool HasStackFrame = false;
 
   /// Amount of stack frame size, not including callee-saved registers.
@@ -379,7 +379,7 @@ public:
 #ifndef NDEBUG
     // Make sure the calculated size derived from the CalleeSavedInfo
     // equals the cached size that was calculated elsewhere (e.g. in
-    // determineCalleeSaves).
+    // determinePrologCalleeSaves).
     ValidateCalleeSavedStackSize = HasCalleeSavedStackSize;
 #endif
 

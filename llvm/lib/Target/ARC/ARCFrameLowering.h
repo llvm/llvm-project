@@ -37,8 +37,8 @@ public:
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
   /// Add explicit callee save registers.
-  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
-                            RegScavenger *RS) const override;
+  void determinePrologCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                                  RegScavenger *RS) const override;
 
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,

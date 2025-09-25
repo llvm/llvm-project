@@ -2482,9 +2482,9 @@ void AArch64FrameLowering::determineStackHazardSlot(
   }
 }
 
-void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                                BitVector &SavedRegs,
-                                                RegScavenger *RS) const {
+void AArch64FrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                      BitVector &SavedRegs,
+                                                      RegScavenger *RS) const {
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
@@ -2654,7 +2654,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 
   LLVM_DEBUG({
-    dbgs() << "*** determineCalleeSaves\nSaved CSRs:";
+    dbgs() << "*** determinePrologCalleeSaves\nSaved CSRs:";
     for (unsigned Reg : SavedRegs.set_bits())
       dbgs() << ' ' << printReg(MCRegister(Reg), RegInfo);
     dbgs() << "\n";

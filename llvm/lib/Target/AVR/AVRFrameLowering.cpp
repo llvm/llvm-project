@@ -414,10 +414,10 @@ MachineBasicBlock::iterator AVRFrameLowering::eliminateCallFramePseudoInstr(
   return MBB.erase(MI);
 }
 
-void AVRFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                            BitVector &SavedRegs,
-                                            RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void AVRFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                  BitVector &SavedRegs,
+                                                  RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
 
   // If we have a frame pointer, the Y register needs to be saved as well.
   if (hasFP(MF)) {

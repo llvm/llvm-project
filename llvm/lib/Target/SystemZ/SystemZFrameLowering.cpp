@@ -228,10 +228,9 @@ bool SystemZELFFrameLowering::assignCalleeSavedSpillSlots(
   return true;
 }
 
-void SystemZELFFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                                   BitVector &SavedRegs,
-                                                   RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void SystemZELFFrameLowering::determinePrologCalleeSaves(
+    MachineFunction &MF, BitVector &SavedRegs, RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
 
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
@@ -1093,10 +1092,9 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
   return true;
 }
 
-void SystemZXPLINKFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                                      BitVector &SavedRegs,
-                                                      RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void SystemZXPLINKFrameLowering::determinePrologCalleeSaves(
+    MachineFunction &MF, BitVector &SavedRegs, RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
 
   bool HasFP = hasFP(MF);
   const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();

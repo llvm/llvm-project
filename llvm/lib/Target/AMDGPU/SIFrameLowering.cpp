@@ -1691,9 +1691,9 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
 }
 
 // Only report VGPRs to generic code.
-void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                           BitVector &SavedVGPRs,
-                                           RegScavenger *RS) const {
+void SIFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                 BitVector &SavedVGPRs,
+                                                 RegScavenger *RS) const {
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   // If this is a function with the amdgpu_cs_chain[_preserve] calling
@@ -1702,7 +1702,7 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (MFI->isChainFunction() && !MF.getFrameInfo().hasTailCall())
     return;
 
-  TargetFrameLowering::determineCalleeSaves(MF, SavedVGPRs, RS);
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedVGPRs, RS);
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
@@ -1797,10 +1797,10 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedVGPRs.reset(Reg.first);
 }
 
-void SIFrameLowering::determineCalleeSavesSGPR(MachineFunction &MF,
-                                               BitVector &SavedRegs,
-                                               RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void SIFrameLowering::determinePrologCalleeSavesSGPR(MachineFunction &MF,
+                                                     BitVector &SavedRegs,
+                                                     RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   if (MFI->isEntryFunction())
     return;

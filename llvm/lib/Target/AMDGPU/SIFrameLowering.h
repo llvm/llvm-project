@@ -30,10 +30,10 @@ public:
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
 
-  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
-                            RegScavenger *RS = nullptr) const override;
-  void determineCalleeSavesSGPR(MachineFunction &MF, BitVector &SavedRegs,
-                                RegScavenger *RS = nullptr) const;
+  void determinePrologCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                                  RegScavenger *RS = nullptr) const override;
+  void determinePrologCalleeSavesSGPR(MachineFunction &MF, BitVector &SavedRegs,
+                                      RegScavenger *RS = nullptr) const;
   void determinePrologEpilogSGPRSaves(MachineFunction &MF, BitVector &SavedRegs,
                                       bool NeedExecCopyReservedReg) const;
   void emitCSRSpillStores(MachineFunction &MF, MachineBasicBlock &MBB,

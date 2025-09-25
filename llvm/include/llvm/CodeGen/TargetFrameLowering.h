@@ -375,8 +375,8 @@ public:
   virtual StackOffset getFrameIndexReferenceFromSP(const MachineFunction &MF,
                                                    int FI) const;
 
-  /// Returns the callee-saved registers as computed by determineCalleeSaves
-  /// in the BitVector \p SavedRegs.
+  /// Returns the callee-saved registers as computed by
+  /// determinePrologCalleeSaves in the BitVector \p SavedRegs.
   virtual void getCalleeSaves(const MachineFunction &MF,
                                   BitVector &SavedRegs) const;
 

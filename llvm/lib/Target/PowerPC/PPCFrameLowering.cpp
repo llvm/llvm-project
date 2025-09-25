@@ -1967,10 +1967,10 @@ void PPCFrameLowering::createTailCallBranchInstr(MachineBasicBlock &MBB) const {
   }
 }
 
-void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                            BitVector &SavedRegs,
-                                            RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void PPCFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                  BitVector &SavedRegs,
+                                                  RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
   if (Subtarget.isAIXABI())
     updateCalleeSaves(MF, SavedRegs);
 

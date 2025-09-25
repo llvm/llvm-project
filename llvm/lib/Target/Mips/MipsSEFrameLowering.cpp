@@ -812,10 +812,10 @@ static void setAliasRegs(MachineFunction &MF, BitVector &SavedRegs,
     SavedRegs.set(*AI);
 }
 
-void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                               BitVector &SavedRegs,
-                                               RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void MipsSEFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                     BitVector &SavedRegs,
+                                                     RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
   MipsABIInfo ABI = STI.getABI();

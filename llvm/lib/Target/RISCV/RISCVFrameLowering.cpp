@@ -1557,12 +1557,12 @@ void RISCVFrameLowering::determineUncondPrologCalleeSaves(MachineFunction &MF, c
   TargetFrameLowering::determineUncondPrologCalleeSaves(MF, CSRegs, UncondPrologCSRs);
 }
 
-void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
+void RISCVFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
                                               BitVector &SavedRegs,
                                               RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
 
-  // In TargetFrameLowering::determineCalleeSaves, any vector register is marked
+  // In TargetFrameLowering::determinePrologCalleeSaves, any vector register is marked
   // as saved if any of its subregister is clobbered, this is not correct in
   // vector registers. We only want the vector register to be marked as saved
   // if all of its subregisters are clobbered.

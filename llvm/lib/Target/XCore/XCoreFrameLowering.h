@@ -46,8 +46,8 @@ namespace llvm {
     eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I) const override;
 
-    void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
-                              RegScavenger *RS = nullptr) const override;
+    void determinePrologCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                                    RegScavenger *RS = nullptr) const override;
 
     void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                      RegScavenger *RS = nullptr) const override;

@@ -856,9 +856,10 @@ static void emitAligningInstructions(MachineFunction &MF, ARMFunctionInfo *AFI,
 /// We need the offset of the frame pointer relative to other MachineFrameInfo
 /// offsets which are encoded relative to SP at function begin.
 /// See also emitPrologue() for how the FP is set up.
-/// Unfortunately we cannot determine this value in determineCalleeSaves() yet
-/// as assignCalleeSavedSpillSlots() hasn't run at this point. Instead we use
-/// this to produce a conservative estimate that we check in an assert() later.
+/// Unfortunately we cannot determine this value in determinePrologCalleeSaves()
+/// yet as assignCalleeSavedSpillSlots() hasn't run at this point. Instead we
+/// use this to produce a conservative estimate that we check in an assert()
+/// later.
 static int getMaxFPOffset(const ARMSubtarget &STI, const ARMFunctionInfo &AFI,
                           const MachineFunction &MF) {
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
@@ -2510,10 +2511,10 @@ static bool canSpillOnFrameIndexAccess(const MachineFunction &MF,
   return false;
 }
 
-void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                            BitVector &SavedRegs,
-                                            RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void ARMFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                  BitVector &SavedRegs,
+                                                  RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
   // This tells PEI to spill the FP as if it is any other callee-save register
   // to take advantage the eliminateFrameIndex machinery. This also ensures it
   // is spilled in the order specified by getCalleeSavedRegs() to make it easier

@@ -38,8 +38,8 @@ public:
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
-  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
-                            RegScavenger *RS) const override;
+  void determinePrologCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                                  RegScavenger *RS) const override;
 };
 
 } // End llvm namespace

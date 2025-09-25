@@ -35,8 +35,8 @@ public:
                                 MachineBasicBlock::iterator I) const override;
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
-  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
-                            RegScavenger *RS = nullptr) const override;
+  void determinePrologCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                                  RegScavenger *RS = nullptr) const override;
 
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;

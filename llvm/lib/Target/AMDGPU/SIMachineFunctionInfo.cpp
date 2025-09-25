@@ -388,8 +388,8 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
       SpillPhysVGPRs[Idx] = NewReg;
     }
 
-    // The generic `determineCalleeSaves` might have set the old register if it
-    // is in the CSR range.
+    // The generic `determinePrologCalleeSaves` might have set the old register
+    // if it is in the CSR range.
     SavedVGPRs.reset(Reg);
 
     for (MachineBasicBlock &MBB : MF) {

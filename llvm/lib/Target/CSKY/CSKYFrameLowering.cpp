@@ -354,10 +354,10 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
   return Limit;
 }
 
-void CSKYFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                             BitVector &SavedRegs,
-                                             RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void CSKYFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                   BitVector &SavedRegs,
+                                                   RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
 
   CSKYMachineFunctionInfo *CFI = MF.getInfo<CSKYMachineFunctionInfo>();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();

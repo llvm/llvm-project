@@ -480,10 +480,10 @@ bool VEFrameLowering::isLeafProc(MachineFunction &MF) const {
          && !hasFP(MF);                  // Don't need %fp
 }
 
-void VEFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                           BitVector &SavedRegs,
-                                           RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void VEFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                 BitVector &SavedRegs,
+                                                 RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
 
   // Functions having BP need to emit prologue and epilogue to allocate local
   // buffer on the stack even if the function is a leaf function.

@@ -27,10 +27,10 @@ void BPFFrameLowering::emitPrologue(MachineFunction &MF,
 void BPFFrameLowering::emitEpilogue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {}
 
-void BPFFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                            BitVector &SavedRegs,
-                                            RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void BPFFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                  BitVector &SavedRegs,
+                                                  RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
   SavedRegs.reset(BPF::R6);
   SavedRegs.reset(BPF::R7);
   SavedRegs.reset(BPF::R8);
