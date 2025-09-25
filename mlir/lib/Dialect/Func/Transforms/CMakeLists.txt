@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRFuncTransforms
+  EliminateFunctionParameter.cpp
   DuplicateFunctionElimination.cpp
   FuncConversions.cpp
 

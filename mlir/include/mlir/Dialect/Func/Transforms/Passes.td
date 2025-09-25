@@ -21,4 +21,12 @@ def DuplicateFunctionEliminationPass : Pass<"duplicate-function-elimination",
   }];
 }
 
+def EliminateFunctionParameterPass : Pass<"eliminate-function-parameter",
+  "ModuleOp"> {
+  let summary = "Eliminate function parameter";
+  let description = [{
+    Eliminate function parameter is used to remove unnecessary parameters passed
+    to a function, then update the function call.
+  }];
+}
 #endif // MLIR_DIALECT_FUNC_TRANSFORMS_PASSES_TD
