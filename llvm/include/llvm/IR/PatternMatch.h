@@ -2685,6 +2685,81 @@ m_UAddWithOverflow(const LHS_t &L, const RHS_t &R, const Sum_t &S) {
   return UAddWithOverflow_match<LHS_t, RHS_t, Sum_t>(L, R, S);
 }
 
+template <typename LHS_t, typename RHS_t, typename Diff_t>
+struct USubWithOverflow_match {
+  LHS_t L;
+  RHS_t R;
+  Diff_t S;
+
+  USubWithOverflow_match(const LHS_t &L, const RHS_t &R, const Diff_t &S)
+      : L(L), R(R), S(S) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    Value *ICmpLHS = nullptr, *ICmpRHS = nullptr;
+    CmpPredicate Pred;
+    if (!m_ICmp(Pred, m_Value(ICmpLHS), m_Value(ICmpRHS)).match(V))
+      return false;
+
+    Value *SubLHS = nullptr, *SubRHS = nullptr;
+    auto SubExpr = m_Sub(m_Value(SubLHS), m_Value(SubRHS));
+
+    Value *AddLHS = nullptr, *AddRHS = nullptr;
+    auto AddExpr = m_Add(m_Value(AddLHS), m_Value(AddRHS));
+
+    // (a - b) >u a   OR   (a + (-c)) >u a  (allow add-canonicalized forms
+    // but only where the RHS is a constant APInt that is negative)
+    if (Pred == ICmpInst::ICMP_UGT) {
+      if (SubExpr.match(ICmpLHS) && ICmpRHS == SubLHS)
+        return L.match(SubLHS) && R.match(SubRHS) && S.match(ICmpLHS);
+
+      if (AddExpr.match(ICmpLHS)) {
+        const APInt *AddC = nullptr;
+        if (m_APInt(AddC).match(AddRHS) && ICmpRHS == AddLHS) {
+          APInt NegC = -(*AddC);
+          Constant *NegConst = ConstantInt::get(AddRHS->getType(), NegC);
+          return L.match(AddLHS) && R.match(NegConst) && S.match(ICmpLHS);
+        }
+      }
+    }
+
+    // a <u (a - b)   OR   a <u (a + (-c))
+    if (Pred == ICmpInst::ICMP_ULT) {
+      if (SubExpr.match(ICmpRHS) && ICmpLHS == SubLHS)
+        return L.match(SubLHS) && R.match(SubRHS) && S.match(ICmpRHS);
+
+      if (AddExpr.match(ICmpRHS)) {
+        const APInt *AddC = nullptr;
+        if (m_APInt(AddC).match(AddRHS) && ICmpLHS == AddLHS) {
+          APInt NegC = -(*AddC);
+          Constant *NegConst = ConstantInt::get(AddRHS->getType(), NegC);
+          return L.match(AddLHS) && R.match(NegConst) && S.match(ICmpRHS);
+        }
+      }
+    }
+
+    // Special-case for 0 - a != 0 (common canonicalization)
+    if (Pred == ICmpInst::ICMP_NE) {
+      // (0 - a) != 0
+      if (SubExpr.match(ICmpLHS) && m_Zero().match(ICmpRHS) &&
+          m_Zero().match(SubLHS))
+        return L.match(SubLHS) && R.match(SubRHS) && S.match(ICmpLHS);
+
+      // 0 != (0 - a)
+      if (m_Zero().match(ICmpLHS) && SubExpr.match(ICmpRHS) &&
+          m_Zero().match(SubLHS))
+        return L.match(SubLHS) && R.match(SubRHS) && S.match(ICmpRHS);
+    }
+
+    return false;
+  }
+};
+
+template <typename LHS_t, typename RHS_t, typename Diff_t>
+USubWithOverflow_match<LHS_t, RHS_t, Diff_t>
+m_USubWithOverflow(const LHS_t &L, const RHS_t &R, const Diff_t &S) {
+  return USubWithOverflow_match<LHS_t, RHS_t, Diff_t>(L, R, S);
+}
+
 template <typename Opnd_t> struct Argument_match {
   unsigned OpI;
   Opnd_t Val;
