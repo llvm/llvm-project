@@ -1027,6 +1027,70 @@ struct WgToSgVectorShapeCastOp
   }
 };
 
+/// Pattern for lowering vector.multi_reduction op to subgroup level.
+/// Current limitation: the sg_layout in the reduced dimension being 1
+/// so that reduction is local to subgroup & no cross-subgroup communication is
+/// needed.
+/// TODO: Add cases to handle more general situations which require SLM access.
+struct WgToSgMultiDimReductionOp
+    : public OpConversionPattern<vector::MultiDimReductionOp> {
+  using OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::MultiDimReductionOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType srcType = op.getSourceVectorType();
+    VectorType dstType = dyn_cast<VectorType>(op.getResult().getType());
+    if (!dstType)
+      return failure();
+
+    auto srcShape = srcType.getShape();
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op.getResult());
+    if (!layout || !layout.isForWorkgroup())
+      return failure();
+
+    auto reductionDims = llvm::to_vector(op.getReductionDims());
+
+    SmallVector<int64_t> sgLayout = llvm::cast<xegpu::SliceAttr>(layout)
+                                        .getParent()
+                                        .getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> sgData = llvm::cast<xegpu::SliceAttr>(layout)
+                                      .getParent()
+                                      .getEffectiveSgDataAsInt();
+
+    // Check that the sgLayout in the reduced dimension is 1 and
+    // each sg gets the entire slice to reduce.
+    for (int64_t dim : reductionDims) {
+      if (sgLayout[dim] != 1 || sgData[dim] != srcShape[dim])
+        return rewriter.notifyMatchFailure(
+            op,
+            "sgLayout in each reduced dimension must be 1 and sgData in the "
+            "reduced dim must match srcShape in that dim");
+    }
+
+    SmallVector<int64_t> sgShape = getSgShapeAndCount(srcShape, layout).first;
+
+    VectorType newDstType =
+        VectorType::get({sgShape}, dstType.getElementType());
+
+    SmallVector<Value> newReductions;
+    for (auto sgSrc : adaptor.getSource()) {
+      auto newOp = rewriter.create<vector::MultiDimReductionOp>(
+          op.getLoc(), newDstType, op.getKind(), sgSrc, adaptor.getAcc()[0],
+          op.getReductionDims());
+      if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
+          !layout.getEffectiveInstDataAsInt().empty())
+        xegpu::setDistributeLayoutAttr(newOp->getResult(0),
+                                       layout.dropSgLayoutAndData());
+      newReductions.push_back(newOp.getResult());
+    }
+
+    rewriter.replaceOpWithMultiple(op, {newReductions});
+    return success();
+  }
+};
+
 // This pattern transforms vector.transpose ops to work at subgroup level.
 struct WgToSgVectorTransposeOp
     : public OpConversionPattern<vector::TransposeOp> {
@@ -1079,8 +1143,7 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
            WgToSgArithConstantOp, WgToSgLoadGatherOpWithOffset,
            WgToSgStoreScatterOpWithOffset, WgToSgLoadMatrixOp,
            WgToSgStoreMatrixOp, WgToSgVectorStepOp, WgToSgVectorShapeCastOp,
-           WgToSgVectorTransposeOp>(
-          patterns.getContext());
+           WgToSgMultiDimReductionOp, WgToSgVectorTransposeOp>(patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -1228,6 +1291,16 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
         if (!layout)
           return true;
         return isLegal(layout);
+      });
+
+  target.addDynamicallyLegalOp<vector::BroadcastOp>(
+      [=](vector::BroadcastOp op) -> bool {
+        return isLegal(xegpu::getDistributeLayoutAttr(op.getResult()));
+      });
+
+  target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
+      [=](vector::MultiDimReductionOp op) -> bool {
+        return isLegal(xegpu::getDistributeLayoutAttr(op.getResult()));
       });
 
   target.addDynamicallyLegalOp<xegpu::ConvertLayoutOp>(
