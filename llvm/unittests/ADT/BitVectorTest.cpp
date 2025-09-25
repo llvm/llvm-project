@@ -1186,7 +1186,7 @@ TYPED_TEST(BitVectorTest, BidirectionalIterator) {
   Vec.set(30);
   Vec.set(40);
 
-  // Test that we can decrement from end()
+  // Test that we can decrement from end().
   auto EndIt = Vec.set_bits_end();
   auto LastIt = EndIt;
   --LastIt;
