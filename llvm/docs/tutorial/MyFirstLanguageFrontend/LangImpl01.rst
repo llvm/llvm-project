@@ -105,6 +105,7 @@ from standard input. Its definition starts as:
       // Skip any whitespace.
       while (isspace(LastChar))
         LastChar = getchar();
+    }
 
 ``gettok`` works by calling the C ``getchar()`` function to read
 characters one at a time from standard input. It eats them as it
