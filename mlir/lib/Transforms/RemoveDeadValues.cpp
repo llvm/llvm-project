@@ -771,39 +771,42 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
   // 4. Operands
   LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
   for (OperationToCleanup &o : list.operands) {
-    if (auto call = dyn_cast<CallOpInterface>(o.op)) {
-      // Use the stored callee reference if available, avoiding expensive symbol
-      // lookup
-      if (o.callee) {
-        auto it = erasedFuncArgs.find(o.callee);
-        if (it != erasedFuncArgs.end()) {
-          const BitVector &deadArgIdxs = it->second;
-          MutableOperandRange args = call.getArgOperandsMutable();
-          // First, erase the call arguments corresponding to erased callee
-          // args.
-          for (int i = static_cast<int>(args.size()) - 1; i >= 0; --i) {
-            if (i < static_cast<int>(deadArgIdxs.size()) && deadArgIdxs.test(i))
-              args.erase(i);
-          }
-          // If this operand cleanup entry also has a generic nonLive bitvector,
-          // clear bits for call arguments we already erased above to avoid
-          // double-erasing (which could impact other segments of ops with
-          // AttrSizedOperandSegments).
-          if (o.nonLive.any()) {
-            // Map the argument logical index to the operand number(s) recorded.
-            int operandOffset = call.getArgOperands().getBeginOperandIndex();
-            for (int argIdx : deadArgIdxs.set_bits()) {
-              int operandNumber = operandOffset + argIdx;
-              if (operandNumber < static_cast<int>(o.nonLive.size()))
-                o.nonLive.reset(operandNumber);
-            }
+    // Handle call-specific cleanup only when we have a cached callee reference.
+    // This avoids expensive symbol lookup and is defensive against future changes.
+    bool handledAsCall = false;
+    if (o.callee && isa<CallOpInterface>(o.op)) {
+      auto call = cast<CallOpInterface>(o.op);
+      auto it = erasedFuncArgs.find(o.callee);
+      if (it != erasedFuncArgs.end()) {
+        const BitVector &deadArgIdxs = it->second;
+        MutableOperandRange args = call.getArgOperandsMutable();
+        // First, erase the call arguments corresponding to erased callee
+        // args.
+        for (int i = static_cast<int>(args.size()) - 1; i >= 0; --i) {
+          if (i < static_cast<int>(deadArgIdxs.size()) && deadArgIdxs.test(i))
+            args.erase(i);
+        }
+        // If this operand cleanup entry also has a generic nonLive bitvector,
+        // clear bits for call arguments we already erased above to avoid
+        // double-erasing (which could impact other segments of ops with
+        // AttrSizedOperandSegments).
+        if (o.nonLive.any()) {
+          // Map the argument logical index to the operand number(s) recorded.
+          int operandOffset = call.getArgOperands().getBeginOperandIndex();
+          for (int argIdx : deadArgIdxs.set_bits()) {
+            int operandNumber = operandOffset + argIdx;
+            if (operandNumber < static_cast<int>(o.nonLive.size()))
+              o.nonLive.reset(operandNumber);
           }
         }
+        handledAsCall = true;
       }
     }
-    // Only perform generic operand erasure for non-call ops; for call ops we
-    // already handled argument removals via the segment-aware path above.
-    if (!isa<CallOpInterface>(o.op) && o.nonLive.any()) {
+    // Perform generic operand erasure for:
+    // - Non-call operations
+    // - Call operations without cached callee (where handledAsCall is false)
+    // But skip call operations that were already handled via segment-aware path
+    if (!handledAsCall && o.nonLive.any()) {
       o.op->eraseOperands(o.nonLive);
     }
   }
