@@ -1575,14 +1575,14 @@ def HIPManaged : InheritableAttr {
 def CUDAClusterDims : InheritableAttr {
   let Spellings = [GNU<"cluster_dims">, Declspec<"__cluster_dims__">];
   let Args = [ExprArgument<"X">, ExprArgument<"Y", 1>, ExprArgument<"Z", 1>];
-  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+  let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
   let LangOpts = [CUDA];
   let Documentation = [CUDAClusterDimsAttrDoc];
 }
 
 def CUDANoCluster : InheritableAttr {
   let Spellings = [GNU<"no_cluster">, Declspec<"__no_cluster__">];
-  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+  let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
   let LangOpts = [CUDA];
   let Documentation = [CUDANoClusterAttrDoc];
 }
