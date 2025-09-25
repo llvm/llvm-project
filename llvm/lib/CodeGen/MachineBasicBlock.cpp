@@ -1802,6 +1802,12 @@ bool MachineBasicBlock::sizeWithoutDebugLargerThan(unsigned Limit) const {
   return false;
 }
 
+void MachineBasicBlock::removePHIsIncomingValuesForPredecessor(
+    const MachineBasicBlock &PredMBB) {
+  for (MachineInstr &Phi : phis())
+    Phi.removePHIIncomingValueFor(PredMBB);
+}
+
 const MBBSectionID MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);
 const MBBSectionID
     MBBSectionID::ExceptionSectionID(MBBSectionID::SectionType::Exception);
