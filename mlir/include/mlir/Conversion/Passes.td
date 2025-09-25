@@ -801,7 +801,8 @@ def ConvertMathToSPIRVPass : Pass<"convert-math-to-spirv"> {
 //===----------------------------------------------------------------------===//
 
 def ConvertMathToXeVM : Pass<"convert-math-to-xevm", "ModuleOp"> {
-  let summary = "Convert (fast) math operations to native XeVM/SPIRV equivalents";
+  let summary =
+      "Convert (fast) math operations to native XeVM/SPIRV equivalents";
   let description = [{
     This pass converts supported math ops marked with the `afn` fastmath flag
     to function calls for OpenCL `native_` math intrinsics: These intrinsics
@@ -810,10 +811,9 @@ def ConvertMathToXeVM : Pass<"convert-math-to-xevm", "ModuleOp"> {
     are implementation-defined, and thus math ops are only converted when they
     have the `afn` fastmath flag enabled.
   }];
-  let options = [
-    Option<"convertArith", "convert-arith", "bool", /*default=*/"true",
-    "Convert supported Arith ops (e.g. arith.divf) as well.">
-  ];
+  let options = [Option<
+      "convertArith", "convert-arith", "bool", /*default=*/"true",
+      "Convert supported Arith ops (e.g. arith.divf) as well.">];
   let dependentDialects = [
     "arith::ArithDialect",
     "func::FuncDialect",

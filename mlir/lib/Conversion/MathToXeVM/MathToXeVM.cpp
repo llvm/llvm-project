@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/MathToXeVM/MathToXeVM.h"
+#include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -63,8 +63,8 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
       operandTypes.push_back(operand.getType());
     }
     LLVM::LLVMFuncOp funcOp = appendOrGetFuncOp(op, operandTypes);
-    auto callOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, funcOp,
-                                              adaptor.getOperands());
+    auto callOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
+        op, funcOp, adaptor.getOperands());
     arith::AttrConvertFastMathToLLVM<Op, LLVM::CallOp> fastAttrConverter(op);
     mlir::NamedAttribute fastAttr = fastAttrConverter.getAttrs()[0];
     callOp->setAttr(fastAttr.getName(), fastAttr.getValue());
@@ -138,32 +138,33 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
   const StringRef nativeFunc;
 };
 
-void mlir::populateMathToXeVMConversionPatterns(RewritePatternSet &patterns, bool convertArith) {
+void mlir::populateMathToXeVMConversionPatterns(RewritePatternSet &patterns,
+                                                bool convertArith) {
   patterns.add<ConvertNativeFuncPattern<math::ExpOp>>(patterns.getContext(),
                                                       "__spirv_ocl_native_exp");
   patterns.add<ConvertNativeFuncPattern<math::CosOp>>(patterns.getContext(),
                                                       "__spirv_ocl_native_cos");
-  patterns.add<ConvertNativeFuncPattern<math::Exp2Op>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_exp2");
+  patterns.add<ConvertNativeFuncPattern<math::Exp2Op>>(
+      patterns.getContext(), "__spirv_ocl_native_exp2");
   patterns.add<ConvertNativeFuncPattern<math::LogOp>>(patterns.getContext(),
                                                       "__spirv_ocl_native_log");
-  patterns.add<ConvertNativeFuncPattern<math::Log2Op>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_log2");
-  patterns.add<ConvertNativeFuncPattern<math::Log10Op>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_log10");
-  patterns.add<ConvertNativeFuncPattern<math::PowFOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_powr");
-  patterns.add<ConvertNativeFuncPattern<math::RsqrtOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_rsqrt");
+  patterns.add<ConvertNativeFuncPattern<math::Log2Op>>(
+      patterns.getContext(), "__spirv_ocl_native_log2");
+  patterns.add<ConvertNativeFuncPattern<math::Log10Op>>(
+      patterns.getContext(), "__spirv_ocl_native_log10");
+  patterns.add<ConvertNativeFuncPattern<math::PowFOp>>(
+      patterns.getContext(), "__spirv_ocl_native_powr");
+  patterns.add<ConvertNativeFuncPattern<math::RsqrtOp>>(
+      patterns.getContext(), "__spirv_ocl_native_rsqrt");
   patterns.add<ConvertNativeFuncPattern<math::SinOp>>(patterns.getContext(),
                                                       "__spirv_ocl_native_sin");
-  patterns.add<ConvertNativeFuncPattern<math::SqrtOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_sqrt");
+  patterns.add<ConvertNativeFuncPattern<math::SqrtOp>>(
+      patterns.getContext(), "__spirv_ocl_native_sqrt");
   patterns.add<ConvertNativeFuncPattern<math::TanOp>>(patterns.getContext(),
                                                       "__spirv_ocl_native_tan");
   if (convertArith)
-    patterns.add<ConvertNativeFuncPattern<arith::DivFOp>>(patterns.getContext(),
-                                                          "__spirv_ocl_native_divide");
+    patterns.add<ConvertNativeFuncPattern<arith::DivFOp>>(
+        patterns.getContext(), "__spirv_ocl_native_divide");
 }
 
 namespace {
