@@ -1,7 +1,7 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize64 -o - %s | FileCheck -check-prefix=GFX1250 %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -mattr=+wavefrontsize32 -o - %s | FileCheck -check-prefix=GFX900 %s
 
-// Both are supported, but not at the same time
+// Both sure setting both modes is supported at the same time.
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,+wavefrontsize64 %s | FileCheck -check-prefixes=GFX10 %s
 
 // Test that there is no assertion when using an explicit

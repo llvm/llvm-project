@@ -1238,7 +1238,7 @@ def FeatureSetPrioIncWgInst : SubtargetFeature<"setprio-inc-wg-inst",
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
 
-// Ugly hack to accomodate an assembling modules with mixed
+// Ugly hack to accomodate assembling modules with mixed
 // wavesizes. Ideally we would have a mapping symbol in assembly which
 // would keep track of which sections of code should be treated as
 // wave32 and wave64. Instead what users do is assemble with both

@@ -97,7 +97,7 @@ createAMDGPUMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
                            ? AMDGPU::FeatureWavefrontSize32
                            : AMDGPU::FeatureWavefrontSize64);
   } else if (IsWave64 && IsWave32) {
-    // The wave size is mutually exclusive. If both somehow end up set, wave64
+    // The wave size is mutually exclusive. If both somehow end up set, wave32
     // wins if supported.
     STI->ToggleFeature(AMDGPU::supportsWave32(*STI)
                            ? AMDGPU::FeatureWavefrontSize64
