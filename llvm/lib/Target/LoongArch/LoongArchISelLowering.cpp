@@ -2356,7 +2356,9 @@ static SDValue lowerVECTOR_SHUFFLE_XVSHUF(const SDLoc &DL, ArrayRef<int> Mask,
 /// The first case is the closest to LoongArch instructions and the other
 /// cases need to be converted to it for processing.
 ///
-/// This function may modify V1, V2 and Mask
+/// This function will return true for the last three cases above and will
+/// modify V1, V2 and Mask. Otherwise, return false for the first case and
+/// cross-lane shuffle cases.
 static bool canonicalizeShuffleVectorByLane(
     const SDLoc &DL, MutableArrayRef<int> Mask, MVT VT, SDValue &V1,
     SDValue &V2, SelectionDAG &DAG, const LoongArchSubtarget &Subtarget) {
