@@ -487,8 +487,9 @@ struct DistinctObjectsOpLowering
     for (auto [origOperand, newOperand] :
          llvm::zip_equal(op.getOperands(), operands)) {
       auto memrefType = cast<MemRefType>(origOperand.getType());
-      Value ptr = getStridedElementPtr(rewriter, loc, memrefType, newOperand,
-                                       /*indices=*/{});
+      MemRefDescriptor memRefDescriptor(newOperand);
+      Value ptr = memRefDescriptor.bufferPtr(rewriter, loc, *getTypeConverter(),
+                                             memrefType);
       ptrs.push_back(ptr);
     }
 
