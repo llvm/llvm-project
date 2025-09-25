@@ -2235,8 +2235,8 @@ public:
   ///       may not be necessary.
   bool isLoadCombineCandidate(ArrayRef<Value *> Stores) const;
   bool isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
-                     Align Alignment, int64_t Diff, Value *Ptr0, Value *PtrN,
-                     StridedPtrInfo &SPtrInfo) const;
+                     Align Alignment, const int64_t Diff, Value *Ptr0,
+                     Value *PtrN, StridedPtrInfo &SPtrInfo) const;
 
   /// Checks if the given array of loads can be represented as a vectorized,
   /// scatter or just simple gather.
@@ -6817,7 +6817,7 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 /// current graph (for masked gathers extra extractelement instructions
 /// might be required).
 bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
-                            Align Alignment, int64_t Diff, Value *Ptr0,
+                            Align Alignment, const int64_t Diff, Value *Ptr0,
                             Value *PtrN, StridedPtrInfo &SPtrInfo) const {
   const size_t Sz = PointerOps.size();
   if (Diff % (Sz - 1) != 0)
