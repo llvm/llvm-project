@@ -63,17 +63,17 @@ _mm_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
   return (__m128h)(__v8hf){__h8, __h7, __h6, __h5, __h4, __h3, __h2, __h1};
 }
 
-static __inline __m256h __DEFAULT_FN_ATTRS256
+static __inline __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_set1_pch(_Float16 _Complex h) {
   return (__m256h)_mm256_set1_ps(__builtin_bit_cast(float, h));
 }
 
-static __inline __m128h __DEFAULT_FN_ATTRS128
+static __inline __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_set1_pch(_Float16 _Complex h) {
   return (__m128h)_mm_set1_ps(__builtin_bit_cast(float, h));
 }
 
-static __inline __m256h __DEFAULT_FN_ATTRS256
+static __inline __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
               _Float16 __h5, _Float16 __h6, _Float16 __h7, _Float16 __h8,
               _Float16 __h9, _Float16 __h10, _Float16 __h11, _Float16 __h12,
@@ -83,13 +83,13 @@ _mm256_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
                             __h4,  __h3,  __h2,  __h1};
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_setr_ph(_Float16 e0, _Float16 e1, _Float16 e2, _Float16 e3, _Float16 e4,
             _Float16 e5, _Float16 e6, _Float16 e7) {
   return _mm_set_ph(e7, e6, e5, e4, e3, e2, e1, e0);
 }
 
-static __inline__ __m256h __DEFAULT_FN_ATTRS256
+static __inline__ __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_setr_ph(_Float16 e0, _Float16 e1, _Float16 e2, _Float16 e3, _Float16 e4,
                _Float16 e5, _Float16 e6, _Float16 e7, _Float16 e8, _Float16 e9,
                _Float16 e10, _Float16 e11, _Float16 e12, _Float16 e13,
