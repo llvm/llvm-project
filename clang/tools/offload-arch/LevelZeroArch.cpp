@@ -89,7 +89,7 @@ extern cl::opt<bool> Verbose;
       return ZE_RESULT_ERROR_UNKNOWN;                                          \
     }                                                                          \
     return reinterpret_cast<NAME##_ty *>(NAME##Ptr)(args...);                  \
-  };
+  }
 
 DEFINE_WRAPPER(zeInitDrivers)
 DEFINE_WRAPPER(zeDeviceGet)
@@ -169,8 +169,9 @@ int printGPUsByLevelZero() {
     CALL_ZE_AND_CHECK(zeDeviceGet, Driver, &DeviceCount, Devices.data());
 
     for (auto Device : Devices) {
-      ze_device_properties_t DeviceProperties{
-          ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+      ze_device_properties_t DeviceProperties = {};
+      DeviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+      DeviceProperties.pNext = nullptr;
       CALL_ZE_AND_CHECK(zeDeviceGetProperties, Device, &DeviceProperties);
       llvm::outs() << DeviceProperties.name << '\n';
     }
