@@ -77,7 +77,10 @@ void SSAContext::getPhiInputs(
     for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
       const Value *Incoming = Phi->getIncomingValue(I);
       const BasicBlock *Block = Phi->getIncomingBlock(I);
-      Values.push_back(!isa<UndefValue>(Incoming) ? Incoming : ValueRefNull);
+      // FIXME: should this also consider Incoming == &Instr undef?
+      if (isa<UndefValue>(Incoming))
+        Incoming = ValueRefNull;
+      Values.push_back(Incoming);
       Blocks.push_back(Block);
     }
   }

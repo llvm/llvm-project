@@ -447,7 +447,7 @@ private:
   void taintAndPushAllDefs(const BlockT &JoinBlock);
 
   /// \brief Mark phi nodes in \p JoinBlock as divergent and push them on
-  /// the worklist if they are divergent over the by the path \p JoinBlock
+  /// the worklist if they are divergent over the path from \p JoinBlock
   /// to \p DivTermBlock.
   void taintAndPushPhiNodes(const BlockT &JoinBlock, const BlockT &DivTermBlock,
                             const DivergenceDescriptorT &DivDesc);
@@ -909,18 +909,8 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushPhiNodes(
   LLVM_DEBUG(dbgs() << "taintAndPushPhiNodes in " << Context.print(&JoinBlock)
                     << "\n");
   for (const auto &Phi : JoinBlock.phis()) {
-    // FIXME: The non-undef value is not constant per se; it just happens to be
-    // uniform and may not dominate this PHI. So assuming that the same value
-    // reaches along all incoming edges may itself be undefined behaviour. This
-    // particular interpretation of the undef value was added to
-    // DivergenceAnalysis in the following review:
-    //
-    // https://reviews.llvm.org/D19013
-    if (ContextT::isConstantOrUndefValuePhi(Phi))
-      continue;
-
     // Attempt to maintain uniformity for PHIs by considering control
-    // dependencies.
+    // dependencies before marking them.
     SmallVector<ConstValueRefT> Values;
     SmallVector<const BlockT *> Blocks;
     Context.getPhiInputs(Phi, Values, Blocks);
@@ -932,24 +922,24 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushPhiNodes(
 
     std::optional<ConstValueRefT> CommonValue;
     for (unsigned I = 0; I < Blocks.size() && Uniform; ++I) {
-      if (DivDesc.CycleDivBlocks.contains(Blocks[I])) {
-        // If PHI is reachable via divergent exit it is divergent.
-        Uniform = false;
-      } else if (DT.dominates(&DivTermBlock, Blocks[I]) ||
-                 DivDesc.BlockLabels.lookup_or(Blocks[I], nullptr)) {
-        // If all edges from the marked path share a common value then
-        // uniformity is preserved when the value is itself uniform.
-        if (!CommonValue)
-          CommonValue = Values[I];
-        else
-          Uniform = Values[I] == *CommonValue;
-      }
-      // Ignore undefined values when checking definitions.
+      // FIXME: We assume undefs are uniform and/or do not dominate the PHI
+      // in the presence of other constant or uniform values.
+      // This particular interpretation of the undef value was added to
+      // DivergenceAnalysis in the following review:
+      //
+      // https://reviews.llvm.org/D19013
       if (!Values[I])
         continue;
-      // Any value defined on the divergent path is divergent.
-      const BlockT *DefBlock = Context.getDefBlock(Values[I]);
-      if (DivDesc.BlockLabels.lookup_or(DefBlock, nullptr))
+
+      // Only consider predecessors on divergent path.
+      if (Blocks[I] != &DivTermBlock &&
+          !DivDesc.BlockLabels.lookup_or(Blocks[I], nullptr))
+        continue;
+
+      // Phi uniformity is maintained if all values on divergent path match.
+      if (!CommonValue)
+        CommonValue = Values[I];
+      else if (Values[I] != *CommonValue)
         Uniform = false;
     }
     if (Uniform)
