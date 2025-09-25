@@ -41,24 +41,19 @@ template <typename BitVectorT> class const_set_bits_iterator_impl {
   }
 
   void retreat() {
-    // For bidirectional iteration to work with reverse_iterator,
-    // we need to handle the case where Current might be at end (-1)
-    // or at a position where we need to find the previous set bit.
     if (Current == -1) {
-      // If we're at the end, go to the last set bit
       Current = Parent.find_last();
     } else {
-      // Otherwise find the previous set bit before Current
       Current = Parent.find_prev(Current);
     }
   }
 
 public:
   using iterator_category = std::bidirectional_iterator_tag;
-  using difference_type   = std::ptrdiff_t;
-  using value_type        = unsigned;
-  using pointer           = const value_type*;
-  using reference         = value_type;
+  using difference_type = std::ptrdiff_t;
+  using value_type = unsigned;
+  using pointer = const value_type *;
+  using reference = value_type;
 
   const_set_bits_iterator_impl(const BitVectorT &Parent, int Current)
       : Parent(Parent), Current(Current) {}
