@@ -23,6 +23,7 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
   ADD_TO_PARENT MLIRPythonSources.Core
   SOURCES
     _mlir_libs/__init__.py
+    _mlir_libs/_capi.py
     _mlir_libs/_mlir/py.typed
     ir.py
     passmanager.py
@@ -370,14 +371,16 @@ declare_mlir_dialect_python_bindings(
     dialects/rocdl.py
   DIALECT_NAME rocdl)
 
-declare_mlir_python_sources(
-  MLIRPythonSources.Dialects.quant
+declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/QuantOps.td
   GEN_ENUM_BINDINGS
   SOURCES
     dialects/quant.py
-    _mlir_libs/_mlir/dialects/quant.pyi)
+    _mlir_libs/_mlir/dialects/quant.pyi
+  DIALECT_NAME quant
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -858,6 +861,10 @@ add_mlir_python_common_capi_library(MLIRPythonCAPI
     MLIRPythonSources
     MLIRPythonExtension.RegisterEverything
     ${_ADDL_TEST_SOURCES}
+  EMBED_LIBS
+    MLIRCAPIArith
+    MLIRCAPIQuant
+    MLIRCAPIMath
 )
 
 ################################################################################

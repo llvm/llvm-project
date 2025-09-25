@@ -32,7 +32,7 @@ NB_MODULE(_standaloneDialectsNanobind, m) {
         mlirDialectHandleRegisterDialect(standaloneHandle, context);
         if (load) {
           mlirDialectHandleLoadDialect(arithHandle, context);
-          mlirDialectHandleRegisterDialect(standaloneHandle, context);
+          mlirDialectHandleLoadDialect(standaloneHandle, context);
         }
       },
       nb::arg("context").none() = nb::none(), nb::arg("load") = true,

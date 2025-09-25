@@ -150,6 +150,18 @@ void mlirDialectRegistryDestroy(MlirDialectRegistry registry) {
   delete unwrap(registry);
 }
 
+int64_t mlirDialectRegistryGetNumDialectNames(MlirDialectRegistry registry) {
+  auto dialectNames = unwrap(registry)->getDialectNames();
+  return std::distance(dialectNames.begin(), dialectNames.end());
+}
+
+void mlirDialectRegistryGetDialectNames(MlirDialectRegistry registry,
+                                        MlirStringRef *dialectNames) {
+  for (auto [i, location] :
+       llvm::enumerate(unwrap(registry)->getDialectNames()))
+    dialectNames[i] = wrap(location);
+}
+
 //===----------------------------------------------------------------------===//
 // AsmState API.
 //===----------------------------------------------------------------------===//

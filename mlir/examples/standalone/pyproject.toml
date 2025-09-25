@@ -37,6 +37,8 @@ cmake.source-dir = "."
 # This is for installing/distributing the python bindings target and only the python bindings target.
 build.targets = ["StandalonePythonModules"]
 install.components = ["StandalonePythonModules"]
+# This is the default but make it explicit to highlight that this option exists (turn off for debug symbols).
+install.strip = true
 
 [tool.scikit-build.cmake.define]
 # Optional
@@ -51,6 +53,9 @@ LLVM_USE_LINKER = { env = "LLVM_USE_LINKER", default = "" }
 CMAKE_VISIBILITY_INLINES_HIDDEN = "ON"
 CMAKE_C_VISIBILITY_PRESET = "hidden"
 CMAKE_CXX_VISIBILITY_PRESET = "hidden"
+# Disables generation of "version soname" (i.e. libFoo.so.<version>),
+# which causes pure duplication of various shlibs for Python wheels.
+CMAKE_PLATFORM_NO_VERSIONED_SONAME = "ON"
 
 # Non-optional (alternatively you could use CMAKE_PREFIX_PATH here).
 MLIR_DIR = { env = "MLIR_DIR", default = "" }
