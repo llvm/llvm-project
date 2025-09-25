@@ -69,13 +69,12 @@ std::optional<InstructionKind> parseInstructionKind(llvm::StringRef str) {
 // struct and add more fields as needed
 struct Instruction {
   // @TODO: Add more fields as needed
-  Instruction(InstructionKind kind, std::string desc, InstructionScope scope)
-      : instKind(kind), description(std::move(desc)), scope(scope) {}
+  Instruction(InstructionKind kind, InstructionScope scope)
+      : instKind(kind), scope(scope) {}
 
   virtual ~Instruction() = default;
   // Get methods
   InstructionKind getInstructionKind() { return instKind; }
-  std::string getDescription() { return description; }
   InstructionScope getScope() { return scope; }
 
 protected:
@@ -143,7 +142,7 @@ protected:
 // - the name of the uArch,
 // - the description of the uArch,
 // - uArch hierarchy
-// - Rgister File information
+// - Register File information
 // - Cache information
 // - the set of instructions supported by the uArch,
 struct uArch {
