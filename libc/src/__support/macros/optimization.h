@@ -34,6 +34,9 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 #elif defined(LIBC_COMPILER_IS_GCC)
 #define LIBC_LOOP_NOUNROLL _Pragma("GCC unroll 0")
 #define LIBC_LOOP_UNROLL _Pragma("GCC unroll 2048")
+#elif defined(LIBC_COMPILER_IS_MSVC)
+#define LIBC_LOOP_NOUNROLL
+#define LIBC_LOOP_UNROLL
 #else
 #error "Unhandled compiler"
 #endif

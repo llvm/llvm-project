@@ -31,7 +31,7 @@ cbuffer CB : register(b0) {
 // CHECK: define internal void @_init_buffer_CB.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CB.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 176, 16, 168, 88))
-// CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBs_176_16_168_88tt(i32 3, i32 1, i32 1, i32 0, i1 false, ptr @CB.str)
+// CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBs_176_16_168_88tt(i32 3, i32 1, i32 1, i32 0, ptr @CB.str)
 
 float foo() {
   // CHECK: load float, ptr addrspace(2) @a, align 4

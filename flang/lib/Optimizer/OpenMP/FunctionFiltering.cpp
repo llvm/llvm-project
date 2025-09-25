@@ -95,8 +95,9 @@ public:
           return WalkResult::skip();
         }
         if (declareTargetOp)
-          declareTargetOp.setDeclareTarget(declareType,
-                                           omp::DeclareTargetCaptureClause::to);
+          declareTargetOp.setDeclareTarget(
+              declareType, omp::DeclareTargetCaptureClause::to,
+              declareTargetOp.getDeclareTargetAutomap());
       }
       return WalkResult::advance();
     });

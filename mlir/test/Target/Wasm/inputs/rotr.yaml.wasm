@@ -1,0 +1,33 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:
+          - I32
+      - Index:           1
+        ParamTypes:      []
+        ReturnTypes:
+          - I64
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 1 ]
+  - Type:            EXPORT
+    Exports:
+      - Name:            rotr_i32
+        Kind:            FUNCTION
+        Index:           0
+      - Name:            rotr_i64
+        Kind:            FUNCTION
+        Index:           1
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            410A4103780B
+      - Index:           1
+        Locals:          []
+        Body:            420A42038A0B
+...

@@ -3,20 +3,20 @@
 
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
+declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind
+declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind
 declare void @llvm.memset.p0.i8(ptr nocapture, i8, i8, i1) nounwind
 
 define void @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca i8
 
   store i8 0, ptr %A  ;; Written to by memset
-  call void @llvm.lifetime.end.p0(i64 1, ptr %A)
+  call void @llvm.lifetime.end.p0(ptr %A)
 
   call void @llvm.memset.p0.i8(ptr %A, i8 0, i8 -1, i1 false)
 
@@ -26,14 +26,14 @@ define void @test1() {
 define void @test2(ptr %P) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[Q]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[Q]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[Q]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[Q]])
 ; CHECK-NEXT:    ret void
 ;
   %Q = alloca i32
-  call void @llvm.lifetime.start.p0(i64 4, ptr %Q)
+  call void @llvm.lifetime.start.p0(ptr %Q)
   store i32 0, ptr %Q  ;; This store is dead.
-  call void @llvm.lifetime.end.p0(i64 4, ptr %Q)
+  call void @llvm.lifetime.end.p0(ptr %Q)
   ret void
 }
 

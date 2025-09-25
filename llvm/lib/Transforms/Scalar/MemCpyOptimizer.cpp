@@ -915,7 +915,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // move the bitcast as well, which we don't handle.
   if (SkippedLifetimeStart) {
     auto *LifetimeArg =
-        dyn_cast<Instruction>(SkippedLifetimeStart->getOperand(1));
+        dyn_cast<Instruction>(SkippedLifetimeStart->getOperand(0));
     if (LifetimeArg && LifetimeArg->getParent() == C->getParent() &&
         C->comesBefore(LifetimeArg))
       return false;
@@ -1010,7 +1010,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
       // Lifetime of srcAlloca ends at lifetime.end.
       if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
         if (II->getIntrinsicID() == Intrinsic::lifetime_end &&
-            II->getArgOperand(1) == srcAlloca)
+            II->getArgOperand(0) == srcAlloca)
           break;
       }
 
@@ -1393,7 +1393,7 @@ static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
   if (auto *II = dyn_cast_or_null<IntrinsicInst>(Def->getMemoryInst()))
     if (II->getIntrinsicID() == Intrinsic::lifetime_start)
       if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V)))
-        return II->getArgOperand(1) == Alloca;
+        return II->getArgOperand(0) == Alloca;
 
   return false;
 }
@@ -1530,7 +1530,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   // to remove them.
 
   SmallVector<Instruction *, 4> LifetimeMarkers;
-  SmallSet<Instruction *, 4> AAMetadataInstrs;
+  SmallPtrSet<Instruction *, 4> AAMetadataInstrs;
   bool SrcNotDom = false;
 
   auto CaptureTrackingWithModRef =
@@ -1540,7 +1540,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     Worklist.push_back(AI);
     unsigned MaxUsesToExplore = getDefaultMaxUsesToExploreForCaptureTracking();
     Worklist.reserve(MaxUsesToExplore);
-    SmallSet<const Use *, 20> Visited;
+    SmallPtrSet<const Use *, 20> Visited;
     while (!Worklist.empty()) {
       Instruction *I = Worklist.pop_back_val();
       for (const Use &U : I->uses()) {

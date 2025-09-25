@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck -check-prefixes=GFX68,GFX8 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 | FileCheck -check-prefixes=GFX11 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 | FileCheck -check-prefixes=GFX12 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 | FileCheck -check-prefixes=GFX12 %s
 
 define amdgpu_ps void @buffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <4 x float>) {
 ; GFX68-LABEL: buffer_store:

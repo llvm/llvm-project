@@ -460,10 +460,11 @@ llvm.func @assume_without_opbundles(%cond: i1) {
 }
 
 // CHECK-LABEL: @assume_with_opbundles
-llvm.func @assume_with_opbundles(%cond: i1, %p: !llvm.ptr) {
+llvm.func @assume_with_opbundles(%p: !llvm.ptr) {
+  %true = llvm.mlir.constant(true) : i1
   %0 = llvm.mlir.constant(8 : i32) : i32
-  // CHECK: call void @llvm.assume(i1 %{{.+}}) [ "align"(ptr %{{.+}}, i32 8) ]
-  llvm.intr.assume %cond ["align"(%p, %0 : !llvm.ptr, i32)] : i1
+  // CHECK: call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i32 8) ]
+  llvm.intr.assume %true ["align"(%p, %0 : !llvm.ptr, i32)] : i1
   llvm.return
 }
 
@@ -577,6 +578,17 @@ llvm.func @masked_expand_compress_intrinsics(%ptr: !llvm.ptr, %mask: vector<7xi1
   llvm.return
 }
 
+// CHECK-LABEL: @masked_expand_compress_intrinsics_with_alignment
+llvm.func @masked_expand_compress_intrinsics_with_alignment(%ptr: !llvm.ptr, %mask: vector<7xi1>, %passthru: vector<7xf32>) {
+  // CHECK: call <7 x float> @llvm.masked.expandload.v7f32(ptr align 8 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
+  %0 = "llvm.intr.masked.expandload"(%ptr, %mask, %passthru) {arg_attrs = [{llvm.align = 8 : i32}, {}, {}]}
+    : (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> (vector<7xf32>)
+  // CHECK: call void @llvm.masked.compressstore.v7f32(<7 x float> %{{.*}}, ptr align 8 %{{.*}}, <7 x i1> %{{.*}})
+  "llvm.intr.masked.compressstore"(%0, %ptr, %mask) {arg_attrs = [{}, {llvm.align = 8 : i32}, {}]}
+    : (vector<7xf32>, !llvm.ptr, vector<7xi1>) -> ()
+  llvm.return
+}
+
 // CHECK-LABEL: @annotate_intrinsics
 llvm.func @annotate_intrinsics(%var: !llvm.ptr, %int: i16, %ptr: !llvm.ptr, %annotation: !llvm.ptr, %fileName: !llvm.ptr, %line: i32, %attr: !llvm.ptr) {
   // CHECK: call void @llvm.var.annotation.p0.p0(ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i32 %{{.*}}, ptr %{{.*}})
@@ -596,6 +608,13 @@ llvm.func @trap_intrinsics() {
   "llvm.intr.debugtrap"() : () -> ()
   // CHECK: call void @llvm.ubsantrap(i8 1)
   "llvm.intr.ubsantrap"() {failureKind = 1 : i8} : () -> ()
+
+  // CHECK: call void @llvm.trap()
+  llvm.intr.trap
+  // CHECK: call void @llvm.debugtrap()
+  llvm.intr.debugtrap
+  // CHECK: call void @llvm.ubsantrap(i8 1)
+  llvm.intr.ubsantrap <{failureKind = 1 : i8}>
   llvm.return
 }
 
@@ -828,8 +847,8 @@ llvm.func @coro_suspend(%arg0: i32, %arg1 : i1, %arg2 : !llvm.ptr) {
 // CHECK-LABEL: @coro_end
 llvm.func @coro_end(%arg0: !llvm.ptr, %arg1 : i1) {
   %none = llvm.mlir.none : !llvm.token
-  // CHECK: call i1 @llvm.coro.end
-  %0 = llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, !llvm.token) -> i1
+  // CHECK: call void @llvm.coro.end
+  llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, !llvm.token) -> !llvm.void
   llvm.return
 }
 
@@ -1104,9 +1123,9 @@ llvm.func @lifetime() {
   %c = llvm.mlir.constant(16 : i64) : i64
   %a = llvm.alloca %c x i8 : (i64) -> !llvm.ptr
   // CHECK: call void @llvm.lifetime.start
-  llvm.intr.lifetime.start 16, %a : !llvm.ptr
+  llvm.intr.lifetime.start %a : !llvm.ptr
   // CHECK: call void @llvm.lifetime.end
-  llvm.intr.lifetime.end 16, %a : !llvm.ptr
+  llvm.intr.lifetime.end %a : !llvm.ptr
   llvm.return
 }
 
@@ -1356,7 +1375,7 @@ llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
 // CHECK-DAG: declare i32 @llvm.coro.size.i32()
 // CHECK-DAG: declare token @llvm.coro.save(ptr)
 // CHECK-DAG: declare i8 @llvm.coro.suspend(token, i1)
-// CHECK-DAG: declare i1 @llvm.coro.end(ptr, i1, token)
+// CHECK-DAG: declare void @llvm.coro.end(ptr, i1, token)
 // CHECK-DAG: declare ptr @llvm.coro.free(token, ptr readonly captures(none))
 // CHECK-DAG: declare void @llvm.coro.resume(ptr)
 // CHECK-DAG: declare ptr @llvm.coro.promise(ptr captures(none), i32, i1)
@@ -1418,8 +1437,8 @@ llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
 // CHECK-DAG: declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32>, i64 immarg)
 // CHECK-DAG: declare { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double>)
 // CHECK-DAG: declare { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32>)
-// CHECK-DAG: declare void @llvm.lifetime.start.p0(i64 immarg, ptr captures(none))
-// CHECK-DAG: declare void @llvm.lifetime.end.p0(i64 immarg, ptr captures(none))
+// CHECK-DAG: declare void @llvm.lifetime.start.p0(ptr captures(none))
+// CHECK-DAG: declare void @llvm.lifetime.end.p0(ptr captures(none))
 // CHECK-DAG: declare ptr @llvm.invariant.start.p0(i64 immarg, ptr captures(none))
 // CHECK-DAG: declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr captures(none))
 

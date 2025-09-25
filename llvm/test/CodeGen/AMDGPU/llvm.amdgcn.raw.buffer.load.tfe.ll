@@ -6,6 +6,7 @@
 ; RUN: llc -mcpu=gfx1010 -mtriple=amdgcn-- < %s | FileCheck %s -check-prefixes=GFX910,GFX10
 ; RUN: llc -mcpu=gfx1100 -mtriple=amdgcn-- < %s | FileCheck %s -check-prefix=GFX11
 ; RUN: llc -mcpu=gfx1200 -mtriple=amdgcn-- < %s | FileCheck %s -check-prefix=GFX12
+; RUN: llc -mcpu=gfx1250 -mtriple=amdgcn-- < %s | FileCheck %s -check-prefix=GFX12
 
 define amdgpu_ps void @raw_buffer_load_i8_tfe(<4 x i32> inreg %rsrc, ptr addrspace(1) %data_addr, ptr addrspace(1) %tfe_addr) {
 ; GFX67-LABEL: raw_buffer_load_i8_tfe:

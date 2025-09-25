@@ -118,6 +118,7 @@ DEF_INSTR(Cast,   OPCODES(\
                           OP(FPToUI)        \
                           OP(FPToSI)        \
                           OP(FPExt)         \
+                          OP(PtrToAddr)     \
                           OP(PtrToInt)      \
                           OP(IntToPtr)      \
                           OP(SIToFP)        \

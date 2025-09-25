@@ -900,6 +900,23 @@ print *, [(j,j=1,10)]
   since these default values need to be available to process incomplete
   structure constructors.
 
+* When an `ALLOCATE` or `DEALLOCATE` statement with multiple variables
+  has a `STAT=` specifier that allows the program to continue execution
+  after an error, the variables after the one with the error are left
+  deallocated (or allocated).  This interpretation allows the program to
+  identify the variable that encountered the problem while avoiding any
+  ambiguity in the case of multiple errors with distinct status codes.
+  Some compilers work differently; for maximum portability, avoid
+  `ALLOCATE` and `DEALLOCATE` statements with error recovery for
+  multiple variables.
+
+* When a "null" value is encountered in list-directed input, the
+  corresponding effective item in the data list is left unchanged,
+  even when it has a derived type with a defined `READ(FORMATTED)`
+  subroutine.  This is the most literal reading of F'2023 13.10.3.2p2
+  and the portable interpretation across the most common Fortran
+  compilers.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
@@ -913,3 +930,6 @@ print *, [(j,j=1,10)]
   or contiguous array can be used as the initial element of a storage
   sequence.  For example, "&GRP A(1)=1. 2. 3./" is treated as if had been
   "&GRP A(1:)=1. 2. 3./".
+  This extension is necessarily disabled when the type of the array
+  has an accessible defined formatted READ subroutine.
+

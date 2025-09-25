@@ -13,6 +13,8 @@
 
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/TimeProfiler.h"
+
 using namespace llvm;
 
 /// Uses the "source_filename" instead of a Module hash ID for the suffix of
@@ -370,6 +372,7 @@ void FunctionImportGlobalProcessing::run() { processGlobalsForThinLTO(); }
 void llvm::renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index,
                                   bool ClearDSOLocalOnDeclarations,
                                   SetVector<GlobalValue *> *GlobalsToImport) {
+  llvm::TimeTraceScope timeScope("Rename module for ThinLTO");
   FunctionImportGlobalProcessing ThinLTOProcessing(M, Index, GlobalsToImport,
                                                    ClearDSOLocalOnDeclarations);
   ThinLTOProcessing.run();

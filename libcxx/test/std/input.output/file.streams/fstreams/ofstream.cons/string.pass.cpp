@@ -13,8 +13,6 @@
 
 // explicit basic_ofstream(const string& s, ios_base::openmode mode = ios_base::out);
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <fstream>
 #include <cassert>
 #include <ios>

@@ -1,4 +1,4 @@
-//===--- AvoidReturnWithVoidValueCheck.cpp - clang-tidy -------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,9 +23,8 @@ static const bool StrictModeDefault = true;
 AvoidReturnWithVoidValueCheck::AvoidReturnWithVoidValueCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(
-          Options.getLocalOrGlobal(IgnoreMacrosName, IgnoreMacrosDefault)),
-      StrictMode(Options.getLocalOrGlobal(StrictModeName, StrictModeDefault)) {}
+      IgnoreMacros(Options.get(IgnoreMacrosName, IgnoreMacrosDefault)),
+      StrictMode(Options.get(StrictModeName, StrictModeDefault)) {}
 
 void AvoidReturnWithVoidValueCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(

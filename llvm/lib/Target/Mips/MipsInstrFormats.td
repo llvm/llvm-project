@@ -107,8 +107,6 @@ class MipsInst<dag outs, dag ins, string asmstr, list<dag> pattern,
   let TSFlags{6}     = hasFCCRegOperand;
 
   let DecoderNamespace = "Mips";
-
-  field bits<32> SoftFail = 0;
 }
 
 // Mips32/64 Instruction Format

@@ -11,31 +11,31 @@ entry:
 ; CHECK: %y = alloca i32, align 4
 ; CHECK-NEXT: Alive: <>
   %z = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %z)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.start.p0(ptr %z)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %z)
 ; CHECK-NEXT: Alive: <z>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x z>
 
   call void @capture32(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT: Alive: <z>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <y z>
 
   call void @capture32(ptr %y)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %y)
 ; CHECK-NEXT: Alive: <z>
 
   call void @capture32(ptr %z)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %z)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.end.p0(ptr %z)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %z)
 ; CHECK-NEXT: Alive: <>
 
   ret void
@@ -48,13 +48,13 @@ entry:
 ; CHECK-NEXT: Alive: <y>
   %x = alloca i32, align 4
   %y = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x y>
 
   call void @capture32(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT: Alive: <y>
 
   call void @capture32(ptr %y)
@@ -69,31 +69,31 @@ entry:
   %x = alloca i32, align 4
   %y = alloca i32, align 4
   %z = alloca i64, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <x y>
 
   call void @capture32(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT: Alive: <y>
 
   call void @capture32(ptr %y)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %y)
 ; CHECK-NEXT: Alive: <>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %z)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.start.p0(ptr %z)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %z)
 ; CHECK-NEXT: Alive: <z>
 
   call void @capture64(ptr %z)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %z)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.end.p0(ptr %z)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %z)
 ; CHECK-NEXT: Alive: <>
 
   ret void
@@ -111,31 +111,31 @@ entry:
 ; CHECK-NEXT: Alive: <>
   %z = alloca i64, align 4
   %y = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <x y>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %z)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.start.p0(ptr %z)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %z)
 ; CHECK-NEXT: Alive: <x y z>
 
   call void @capture32(ptr %x)
   call void @capture32(ptr %y)
   call void @capture64(ptr %z)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT: Alive: <y z>
 
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %y)
 ; CHECK-NEXT: Alive: <z>
 
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %z)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.end.p0(ptr %z)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %z)
 ; CHECK-NEXT: Alive: <>
 
   ret void
@@ -154,12 +154,12 @@ entry:
   %z = alloca i64, align 8
   %z1 = alloca i64, align 8
   %z2 = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x1)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %x1)
+  call void @llvm.lifetime.start.p0(ptr %x1)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x1)
 ; CHECK-NEXT: Alive: <x1>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x2)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %x2)
+  call void @llvm.lifetime.start.p0(ptr %x2)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x2)
 ; CHECK-NEXT: Alive: <x1 x2>
 
   call void @capture64(ptr nonnull %x1)
@@ -171,8 +171,8 @@ entry:
 if.then:                                          ; preds = %entry
 ; CHECK: if.then:
 ; CHECK-NEXT: Alive: <x1 x2>
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <x1 x2 y>
 
   call void @capture64(ptr nonnull %y)
@@ -181,13 +181,13 @@ if.then:                                          ; preds = %entry
 if.then3:                                         ; preds = %if.then
 ; CHECK: if.then3:
 ; CHECK-NEXT: Alive: <x1 x2 y>
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y1)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %y1)
+  call void @llvm.lifetime.start.p0(ptr %y1)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y1)
 ; CHECK-NEXT: Alive: <x1 x2 y y1>
 
   call void @capture64(ptr nonnull %y1)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y1)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %y1)
+  call void @llvm.lifetime.end.p0(ptr %y1)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %y1)
 ; CHECK-NEXT: Alive: <x1 x2 y>
 
   br label %if.end
@@ -195,13 +195,13 @@ if.then3:                                         ; preds = %if.then
 if.else:                                          ; preds = %if.then
 ; CHECK: if.else:
 ; CHECK-NEXT: Alive: <x1 x2 y>
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y2)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %y2)
+  call void @llvm.lifetime.start.p0(ptr %y2)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y2)
 ; CHECK-NEXT: Alive: <x1 x2 y y2>
 
   call void @capture64(ptr nonnull %y2)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y2)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %y2)
+  call void @llvm.lifetime.end.p0(ptr %y2)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %y2)
 ; CHECK-NEXT: Alive: <x1 x2 y>
 
   br label %if.end
@@ -209,8 +209,8 @@ if.else:                                          ; preds = %if.then
 if.end:                                           ; preds = %if.else, %if.then3
 ; CHECK: if.end:
 ; CHECK-NEXT: Alive: <x1 x2 y>
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %y)
 ; CHECK-NEXT: Alive: <x1 x2>
 
   br label %if.end9
@@ -222,8 +222,8 @@ if.else4:                                         ; preds = %entry
 ; CHECK: %z.cast = bitcast ptr %z to ptr
 ; CHECK-NEXT: Alive: <x1 x2>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %z)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.start.p0(ptr %z)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %z)
 ; CHECK-NEXT: Alive: <x1 x2 z>
 
   call void @capture64(ptr nonnull %z)
@@ -232,13 +232,13 @@ if.else4:                                         ; preds = %entry
 if.then6:                                         ; preds = %if.else4
 ; CHECK: if.then6:
 ; CHECK-NEXT: Alive: <x1 x2 z>
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %z1)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %z1)
+  call void @llvm.lifetime.start.p0(ptr %z1)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %z1)
 ; CHECK-NEXT: Alive: <x1 x2 z z1>
 
   call void @capture64(ptr nonnull %z1)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %z1)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %z1)
+  call void @llvm.lifetime.end.p0(ptr %z1)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %z1)
 ; CHECK-NEXT: Alive: <x1 x2 z>
 
   br label %if.end8
@@ -246,13 +246,13 @@ if.then6:                                         ; preds = %if.else4
 if.else7:                                         ; preds = %if.else4
 ; CHECK: if.else7:
 ; CHECK-NEXT: Alive: <x1 x2 z>
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %z2)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %z2)
+  call void @llvm.lifetime.start.p0(ptr %z2)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %z2)
 ; CHECK-NEXT: Alive: <x1 x2 z z2>
 
   call void @capture64(ptr nonnull %z2)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %z2)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %z2)
+  call void @llvm.lifetime.end.p0(ptr %z2)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %z2)
 ; CHECK-NEXT: Alive: <x1 x2 z>
 
   br label %if.end8
@@ -260,8 +260,8 @@ if.else7:                                         ; preds = %if.else4
 if.end8:                                          ; preds = %if.else7, %if.then6
 ; CHECK: if.end8:
 ; CHECK-NEXT: Alive: <x1 x2 z>
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %z)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.end.p0(ptr %z)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %z)
 ; CHECK-NEXT: Alive: <x1 x2>
 
   br label %if.end9
@@ -269,12 +269,12 @@ if.end8:                                          ; preds = %if.else7, %if.then6
 if.end9:                                          ; preds = %if.end8, %if.end
 ; CHECK: if.end9:
 ; CHECK-NEXT: Alive: <x1 x2>
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x2)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %x2)
+  call void @llvm.lifetime.end.p0(ptr %x2)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x2)
 ; CHECK-NEXT: Alive: <x1>
 
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x1)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %x1)
+  call void @llvm.lifetime.end.p0(ptr %x1)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x1)
 ; CHECK-NEXT: Alive: <>
 
   ret void
@@ -287,8 +287,8 @@ entry:
 ; CHECK-NEXT: Alive: <>
   %x = alloca i32, align 4
   %y = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x>
 
   call void @capture32(ptr %x)
@@ -297,17 +297,17 @@ entry:
 bb2:                                              ; preds = %entry
 ; CHECK: bb2:
 ; CHECK-NEXT: Alive: <x>
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <x y>
 
   call void @capture32(ptr %y)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %y)
 ; CHECK-NEXT: Alive: <x>
 
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT: Alive: <>
 
   ret void
@@ -315,8 +315,8 @@ bb2:                                              ; preds = %entry
 bb3:                                              ; preds = %entry
 ; CHECK: bb3:
 ; CHECK-NEXT: Alive: <x>
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT: Alive: <>
 
   ret void
@@ -329,13 +329,13 @@ entry:
 ; CHECK-NEXT: Alive: <>
   %x = alloca i32, align 4
   %y = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x>
 
   call void @capture32(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT: Alive: <>
 
   br i1 %d, label %bb2, label %bb3
@@ -343,13 +343,13 @@ entry:
 bb2:                                              ; preds = %entry
 ; CHECK: bb2:
 ; CHECK-NEXT: Alive: <>
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <y>
 
   call void @capture32(ptr %y)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %y)
 ; CHECK-NEXT: Alive: <>
 
   ret void
@@ -367,13 +367,13 @@ entry:
 ; CHECK-NEXT: Alive: <>
   %x = alloca i32, align 4
   %y = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x>
 
   call void @capture32(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT: Alive: <>
 
   br i1 %d, label %bb2, label %bb3
@@ -381,8 +381,8 @@ entry:
 bb2:                                              ; preds = %entry
 ; CHECK: bb2:
 ; CHECK-NEXT: Alive: <>
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <y>
 
   call void @capture32(ptr %y)
@@ -401,8 +401,8 @@ entry:
 ; CHECK-NEXT: Alive: <>
   %x = alloca i32, align 4
   %y = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x>
 
   call void @capture32(ptr %x)
@@ -411,12 +411,12 @@ entry:
 bb2:                                              ; preds = %entry
 ; CHECK: bb2:
 ; CHECK-NEXT: Alive: <x>
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT: Alive: <>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <y>
 
   call void @capture32(ptr %y)
@@ -436,8 +436,8 @@ entry:
   %x = alloca i32, align 4
   %y = alloca i32, align 4
   call void @capture32(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x>
 
   br i1 %d, label %bb2, label %bb3
@@ -445,8 +445,8 @@ entry:
 bb2:                                              ; preds = %entry
 ; CHECK: bb2:
 ; CHECK-NEXT: Alive: <x>
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <x y>
 
   call void @capture32(ptr %y)
@@ -467,12 +467,12 @@ entry:
   %B.i2 = alloca [100 x i32], align 4
   %A.i = alloca [100 x i32], align 4
   %B.i = alloca [100 x i32], align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i)
+  call void @llvm.lifetime.start.p0(ptr %A.i)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %A.i)
 ; CHECK-NEXT: Alive: <A.i>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %B.i)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %B.i)
+  call void @llvm.lifetime.start.p0(ptr %B.i)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %B.i)
 ; CHECK-NEXT: Alive: <A.i B.i>
 
   call void @capture100x32(ptr %A.i)
@@ -480,30 +480,30 @@ entry:
 ; CHECK-NEXT: Alive: <A.i B.i>
 
   call void @capture100x32(ptr %B.i)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i)
+  call void @llvm.lifetime.end.p0(ptr %A.i)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %A.i)
 ; CHECK-NEXT: Alive: <B.i>
 
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %B.i)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %B.i)
+  call void @llvm.lifetime.end.p0(ptr %B.i)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %B.i)
 ; CHECK-NEXT: Alive: <>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i1)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i1)
+  call void @llvm.lifetime.start.p0(ptr %A.i1)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %A.i1)
 ; CHECK-NEXT: Alive: <A.i1>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %B.i2)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %B.i2)
+  call void @llvm.lifetime.start.p0(ptr %B.i2)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %B.i2)
 ; CHECK-NEXT: Alive: <A.i1 B.i2>
 
   call void @capture100x32(ptr %A.i1)
   call void @capture100x32(ptr %B.i2)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i1)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i1)
+  call void @llvm.lifetime.end.p0(ptr %A.i1)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %A.i1)
 ; CHECK-NEXT: Alive: <B.i2>
 
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %B.i2)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %B.i2)
+  call void @llvm.lifetime.end.p0(ptr %B.i2)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %B.i2)
 ; CHECK-NEXT: Alive: <>
 
   ret void
@@ -516,20 +516,20 @@ entry:
 ; CHECK-NEXT: Alive: <>
   %buf1 = alloca i8, i32 100000, align 16
   %buf2 = alloca i8, i32 100000, align 16
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %buf1)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %buf1)
+  call void @llvm.lifetime.start.p0(ptr %buf1)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %buf1)
 ; CHECK-NEXT: Alive: <buf1>
 
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %buf1)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %buf1)
+  call void @llvm.lifetime.end.p0(ptr %buf1)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %buf1)
 ; CHECK-NEXT: Alive: <>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %buf1)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %buf1)
+  call void @llvm.lifetime.start.p0(ptr %buf1)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %buf1)
 ; CHECK-NEXT: Alive: <buf1>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %buf2)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %buf2)
+  call void @llvm.lifetime.start.p0(ptr %buf2)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %buf2)
 ; CHECK-NEXT: Alive: <buf1 buf2>
 
   call void @capture8(ptr %buf1)
@@ -546,22 +546,22 @@ entry:
   %B.i2 = alloca [100 x i32], align 4
   %A.i = alloca [100 x i32], align 4
   %B.i = alloca [100 x i32], align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i)
+  call void @llvm.lifetime.start.p0(ptr %A.i)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %A.i)
 ; CHECK-NEXT: Alive: <A.i A.i1 B.i2>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %B.i)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %B.i)
+  call void @llvm.lifetime.start.p0(ptr %B.i)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %B.i)
 ; CHECK-NEXT: Alive: <A.i A.i1 B.i B.i2>
 
   call void @capture100x32(ptr %A.i)
   call void @capture100x32(ptr %B.i)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i)
+  call void @llvm.lifetime.end.p0(ptr %A.i)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %A.i)
 ; CHECK-NEXT: Alive: <A.i1 B.i B.i2>
 
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %B.i)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %B.i)
+  call void @llvm.lifetime.end.p0(ptr %B.i)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %B.i)
 ; CHECK-NEXT: Alive: <A.i1 B.i2>
 
   br label %block2
@@ -583,23 +583,23 @@ entry:
 ; CHECK-NEXT: Alive: <>
   %a.i = alloca [4 x %struct.Klass], align 16
   %b.i = alloca [4 x %struct.Klass], align 16
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %a.i)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %a.i)
+  call void @llvm.lifetime.start.p0(ptr %a.i)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %a.i)
 ; CHECK-NEXT: Alive: <a.i>
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %b.i)
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %b.i)
+  call void @llvm.lifetime.start.p0(ptr %b.i)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %b.i)
 ; CHECK-NEXT: Alive: <a.i b.i>
 
   call void @capture8(ptr %a.i)
   call void @capture8(ptr %b.i)
   %z3 = load i32, ptr %a.i, align 16
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %a.i)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %a.i)
+  call void @llvm.lifetime.end.p0(ptr %a.i)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %a.i)
 ; CHECK-NEXT: Alive: <b.i>
 
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %b.i)
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %b.i)
+  call void @llvm.lifetime.end.p0(ptr %b.i)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %b.i)
 ; CHECK-NEXT: Alive: <>
 
   ret i32 %z3
@@ -611,8 +611,8 @@ entry:
 ; CHECK: entry:
 ; CHECK-NEXT: Alive: <>
   %x = alloca i8, align 4
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x>
 
   br label %l2
@@ -622,8 +622,8 @@ l2:                                               ; preds = %l2, %entry
 ; MAY-NEXT: Alive: <x>
 ; MUST-NEXT: Alive: <>
   call void @capture8(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT: Alive: <>
 
   br label %l2
@@ -636,8 +636,8 @@ entry:
 ; CHECK-NEXT: Alive: <>
   %x = alloca i8, align 4
   %y = alloca i8, align 4
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x>
 
   br label %l2
@@ -645,17 +645,17 @@ entry:
 l2:                                               ; preds = %l2, %entry
 ; CHECK: l2:
 ; CHECK-NEXT: Alive: <x>
-  call void @llvm.lifetime.start.p0(i64 1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <x y>
 
   call void @capture8(ptr %y)
-  call void @llvm.lifetime.end.p0(i64 1, ptr %y)
-; CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %y)
 ; CHECK-NEXT: Alive: <x>
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x>
 
   call void @capture8(ptr %x)
@@ -677,24 +677,24 @@ entry:
 if.then:                                          ; preds = %entry
 ; CHECK: if.then:
 ; CHECK-NEXT: Alive: <>
-  call void @llvm.lifetime.start.p0(i64 500, ptr nonnull %a)
-; CHECK: call void @llvm.lifetime.start.p0(i64 500, ptr nonnull %a)
+  call void @llvm.lifetime.start.p0(ptr nonnull %a)
+; CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %a)
 ; CHECK-NEXT: Alive: <a>
   tail call void @capture8(ptr %a)
-  call void @llvm.lifetime.end.p0(i64 500, ptr nonnull %a)
-; CHECK: call void @llvm.lifetime.end.p0(i64 500, ptr nonnull %a)
+  call void @llvm.lifetime.end.p0(ptr nonnull %a)
+; CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %a)
 ; CHECK-NEXT: Alive: <>
   br label %if.end
 
 if.else:                                          ; preds = %entry
 ; CHECK: if.else:
 ; CHECK-NEXT: Alive: <>
-  call void @llvm.lifetime.start.p0(i64 500, ptr nonnull %b)
-; CHECK: call void @llvm.lifetime.start.p0(i64 500, ptr nonnull %b)
+  call void @llvm.lifetime.start.p0(ptr nonnull %b)
+; CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %b)
 ; CHECK-NEXT: Alive: <b>
   tail call void @capture8(ptr %b)
-  call void @llvm.lifetime.end.p0(i64 500, ptr nonnull %b)
-; CHECK: call void @llvm.lifetime.end.p0(i64 500, ptr nonnull %b)
+  call void @llvm.lifetime.end.p0(ptr nonnull %b)
+; CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %b)
 ; CHECK-NEXT: Alive: <>
   br label %if.end
 
@@ -719,8 +719,8 @@ entry:
 if.then:
 ; CHECK: if.then:
 ; CHECK-NEXT: Alive: <>
-  call void @llvm.lifetime.start.p0(i64 1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <y>
 
   br label %if.end
@@ -730,12 +730,12 @@ if.then:
 if.else:
 ; CHECK: if.else:
 ; CHECK-NEXT: Alive: <>
-  call void @llvm.lifetime.start.p0(i64 1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <y>
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x y>
 
   br label %if.end
@@ -758,12 +758,12 @@ entry:
   %x = alloca i8, align 4
   %y = alloca i8, align 4
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <y>
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x y>
 
   br label %end
@@ -773,7 +773,7 @@ entry:
 dead:
 ; CHECK: dead:
 ; CHECK-NOT: Alive:
-  call void @llvm.lifetime.start.p0(i64 4, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
 
   br label %end
 ; CHECK: br label %end
@@ -792,20 +792,20 @@ entry:
 ; CHECK: entry:
 ; CHECK-NEXT: Alive: <>
   %x = alloca i8
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x>
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x>
 
-  call void @llvm.lifetime.end.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT: Alive: <>
 
-  call void @llvm.lifetime.end.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT: Alive: <>
 
   ret void
@@ -827,8 +827,8 @@ if.then:
 ; CHECK: if.then:
 ; MAY-NEXT: Alive: <x y>
 ; MUST-NEXT: Alive: <>
-  call void @llvm.lifetime.end.p0(i64 1, ptr %y)
-; CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %y)
 ; MAY-NEXT: Alive: <x>
 ; MUST-NEXT: Alive: <>
 
@@ -840,12 +840,12 @@ if.then:
 if.else:
 ; CHECK: if.else:
 ; CHECK-NEXT: Alive: <>
-  call void @llvm.lifetime.start.p0(i64 1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <y>
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x y>
 
   br label %if.then
@@ -868,8 +868,8 @@ entry:
   %x = alloca i8, align 4
   %y = alloca i8, align 4
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x>
 
   br i1 %a, label %if.then, label %if.else
@@ -880,8 +880,8 @@ if.then:
 ; CHECK: if.then:
 ; MAY-NEXT: Alive: <x>
 ; MUST-NEXT: Alive: <>
-  call void @llvm.lifetime.start.p0(i64 1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; MAY-NEXT: Alive: <x y>
 ; MUST-NEXT: Alive: <y>
 
@@ -893,12 +893,12 @@ if.then:
 if.else:
 ; CHECK: if.else:
 ; CHECK-NEXT: Alive: <x>
-  call void @llvm.lifetime.end.p0(i64 1, ptr %y)
-; CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %y)
 ; CHECK-NEXT: Alive: <x>
 
-  call void @llvm.lifetime.end.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT: Alive: <>
 
   br label %if.then
@@ -921,8 +921,8 @@ entry:
   %x = alloca i8, align 4
   %y = alloca i8, align 4
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK-NEXT: Alive: <x>
 
   br i1 %a, label %if.then, label %if.end
@@ -933,8 +933,8 @@ if.then:
 ; CHECK: if.then:
 ; MAY-NEXT: Alive: <x y>
 ; MUST-NEXT: Alive: <x>
-  call void @llvm.lifetime.start.p0(i64 1, ptr %y)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
+; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK-NEXT: Alive: <x y>
 
   br i1 %a, label %if.then, label %if.end
@@ -949,8 +949,8 @@ if.end:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr captures(none))
-declare void @llvm.lifetime.end.p0(i64, ptr captures(none))
+declare void @llvm.lifetime.start.p0(ptr captures(none))
+declare void @llvm.lifetime.end.p0(ptr captures(none))
 declare void @capture8(ptr)
 declare void @capture32(ptr)
 declare void @capture64(ptr)

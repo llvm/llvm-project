@@ -59,6 +59,7 @@ public:
     FT_Org,
     FT_Dwarf,
     FT_DwarfFrame,
+    FT_SFrame,
     FT_BoundaryAlign,
     FT_SymbolId,
     FT_CVInlineLines,
@@ -143,6 +144,12 @@ private:
       // .loc dwarf directives.
       int64_t LineDelta;
     } dwarf;
+    struct {
+      // This FRE describes unwind info at AddrDelta from function start.
+      const MCExpr *AddrDelta;
+      // Fragment that records how many bytes of AddrDelta to emit.
+      MCFragment *FDEFragment;
+    } sframe;
   } u{};
 
 public:
@@ -296,6 +303,24 @@ public:
     assert(Kind == FT_Dwarf);
     u.dwarf.LineDelta = LineDelta;
   }
+
+  //== FT_SFrame functions
+  const MCExpr &getSFrameAddrDelta() const {
+    assert(Kind == FT_SFrame);
+    return *u.sframe.AddrDelta;
+  }
+  void setSFrameAddrDelta(const MCExpr *E) {
+    assert(Kind == FT_SFrame);
+    u.sframe.AddrDelta = E;
+  }
+  MCFragment *getSFrameFDE() const {
+    assert(Kind == FT_SFrame);
+    return u.sframe.FDEFragment;
+  }
+  void setSFrameFDE(MCFragment *F) {
+    assert(Kind == FT_SFrame);
+    u.sframe.FDEFragment = F;
+  }
 };
 
 // MCFragment subclasses do not use the fixed-size part or variable-size tail of
@@ -307,7 +332,6 @@ class MCFillFragment : public MCFragment {
   uint64_t Value;
   /// The number of bytes to insert.
   const MCExpr &NumValues;
-  uint64_t Size = 0;
 
   /// Source location of the directive that this fragment was created for.
   SMLoc Loc;
@@ -321,8 +345,6 @@ public:
   uint64_t getValue() const { return Value; }
   uint8_t getValueSize() const { return ValueSize; }
   const MCExpr &getNumValues() const { return NumValues; }
-  uint64_t getSize() const { return Size; }
-  void setSize(uint64_t Value) { Size = Value; }
 
   SMLoc getLoc() const { return Loc; }
 
@@ -371,16 +393,12 @@ class MCOrgFragment : public MCFragment {
   /// Source location of the directive that this fragment was created for.
   SMLoc Loc;
 
-  uint64_t Size = 0;
-
 public:
   MCOrgFragment(const MCExpr &Offset, int8_t Value, SMLoc Loc)
       : MCFragment(FT_Org), Value(Value), Offset(&Offset), Loc(Loc) {}
 
   const MCExpr &getOffset() const { return *Offset; }
   uint8_t getValue() const { return Value; }
-  uint64_t getSize() const { return Size; }
-  void setSize(uint64_t Value) { Size = Value; }
 
   SMLoc getLoc() const { return Loc; }
 
@@ -534,6 +552,10 @@ private:
   Align Alignment;
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
+  // If not -1u, the first linker-relaxable fragment's order within the
+  // subsection. When present, the offset between two locations crossing this
+  // fragment may not be fully resolved.
+  unsigned FirstLinkerRelaxable = -1u;
 
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
@@ -542,10 +564,6 @@ private:
 
   bool IsText : 1;
   bool IsBss : 1;
-
-  /// Whether the section contains linker-relaxable fragments. If true, the
-  /// offset between two locations may not be fully resolved.
-  bool LinkerRelaxable : 1;
 
   MCFragment DummyFragment;
 
@@ -601,8 +619,9 @@ public:
   bool isRegistered() const { return IsRegistered; }
   void setIsRegistered(bool Value) { IsRegistered = Value; }
 
-  bool isLinkerRelaxable() const { return LinkerRelaxable; }
-  void setLinkerRelaxable() { LinkerRelaxable = true; }
+  unsigned firstLinkerRelaxable() const { return FirstLinkerRelaxable; }
+  bool isLinkerRelaxable() const { return FirstLinkerRelaxable != -1u; }
+  void setFirstLinkerRelaxable(unsigned Order) { FirstLinkerRelaxable = Order; }
 
   MCFragment &getDummyFragment() { return DummyFragment; }
 

@@ -258,7 +258,7 @@ define i32 @test_br_cc(fp128 %lhs, fp128 %rhs) {
 ; CHECK-SD-NEXT:    mov w8, #29 // =0x1d
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    mov w9, #42 // =0x2a
-; CHECK-SD-NEXT:    csel w0, w9, w8, lt
+; CHECK-SD-NEXT:    csel w0, w9, w8, mi
 ; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
 ;
@@ -271,7 +271,7 @@ define i32 @test_br_cc(fp128 %lhs, fp128 %rhs) {
 ; CHECK-GI-NEXT:    mov w8, #29 // =0x1d
 ; CHECK-GI-NEXT:    mov w9, #42 // =0x2a
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel w0, w9, w8, lt
+; CHECK-GI-NEXT:    csel w0, w9, w8, mi
 ; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
   %cond = fcmp olt fp128 %lhs, %rhs

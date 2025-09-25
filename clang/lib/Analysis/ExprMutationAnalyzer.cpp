@@ -703,7 +703,8 @@ ExprMutationAnalyzer::Analyzer::findFunctionArgMutation(const Expr *Exp) {
     // definition and see whether the param is mutated inside.
     if (const auto *RefType = ParmType->getAs<RValueReferenceType>()) {
       if (!RefType->getPointeeType().getQualifiers() &&
-          RefType->getPointeeType()->getAs<TemplateTypeParmType>()) {
+          isa<TemplateTypeParmType>(
+              RefType->getPointeeType().getCanonicalType())) {
         FunctionParmMutationAnalyzer *Analyzer =
             FunctionParmMutationAnalyzer::getFunctionParmMutationAnalyzer(
                 *Func, Context, Memorized);
