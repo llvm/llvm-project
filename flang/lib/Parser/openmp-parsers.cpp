@@ -315,15 +315,56 @@ TYPE_PARSER( //
     construct<OmpLocator>(Parser<OmpObject>{}) ||
     construct<OmpLocator>(Parser<FunctionReference>{}))
 
-TYPE_PARSER(sourced( //
-    construct<OmpArgument>(Parser<OmpMapperSpecifier>{}) ||
-    construct<OmpArgument>(Parser<OmpReductionSpecifier>{}) ||
-    construct<OmpArgument>(Parser<OmpLocator>{})))
+TYPE_PARSER(construct<OmpBaseVariantNames>(
+    Parser<OmpObject>{} / ":", Parser<OmpObject>{}))
+
+// Make the parsing of OmpArgument directive-sensitive. The issue is that
+// name1:name2 can match either OmpBaseVariantNames or OmpReductionSpecifier.
+// In the former case, "name2" is a name of a function, in the latter, of a
+// type. To resolve the conflict we need information provided by name
+// resolution, but by that time we can't modify the AST anymore, and the
+// name resolution may have implicitly declared a symbol, or issued a message.
+template <llvm::omp::Directive Id = llvm::omp::Directive::OMPD_unknown>
+struct OmpArgumentParser {
+  using resultType = OmpArgument;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    constexpr auto parser{sourced(first( //
+        construct<OmpArgument>(Parser<OmpMapperSpecifier>{}),
+        // By default, prefer OmpReductionSpecifier over OmpBaseVariantNames.
+        construct<OmpArgument>(Parser<OmpReductionSpecifier>{}),
+        construct<OmpArgument>(Parser<OmpLocator>{})))};
+    return parser.Parse(state);
+  }
+};
+
+template <>
+struct OmpArgumentParser<llvm::omp::Directive::OMPD_declare_variant> {
+  using resultType = OmpArgument;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    constexpr auto parser{sourced(first( //
+        construct<OmpArgument>(Parser<OmpMapperSpecifier>{}),
+        // In DECLARE_VARIANT parse OmpBaseVariantNames instead of
+        // OmpReductionSpecifier.
+        construct<OmpArgument>(Parser<OmpBaseVariantNames>{}),
+        construct<OmpArgument>(Parser<OmpLocator>{})))};
+    return parser.Parse(state);
+  }
+};
 
 TYPE_PARSER(construct<OmpLocatorList>(nonemptyList(Parser<OmpLocator>{})))
 
-TYPE_PARSER(sourced( //
-    construct<OmpArgumentList>(nonemptyList(Parser<OmpArgument>{}))))
+template <llvm::omp::Directive Id = llvm::omp::Directive::OMPD_unknown>
+struct OmpArgumentListParser {
+  using resultType = OmpArgumentList;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    return sourced(
+        construct<OmpArgumentList>(nonemptyList(OmpArgumentParser<Id>{})))
+        .Parse(state);
+  }
+};
 
 TYPE_PARSER( //
     construct<OmpTypeSpecifier>(Parser<DeclarationTypeSpec>{}) ||
@@ -1312,12 +1353,23 @@ TYPE_PARSER(
         applyFunction<OmpDirectiveSpecification>(makeFlushFromOldSyntax,
             verbatim("FLUSH"_tok) / !lookAhead("("_tok),
             maybe(Parser<OmpClauseList>{}),
-            maybe(parenthesized(Parser<OmpArgumentList>{})),
+            maybe(parenthesized(
+                OmpArgumentListParser<llvm::omp::Directive::OMPD_flush>{})),
             pure(OmpDirectiveSpecification::Flags::DeprecatedSyntax)))) ||
+    // Parse DECLARE_VARIANT individually, because the "[base:]variant"
+    // argument will conflict with DECLARE_REDUCTION's "ident:types...".
+    predicated(Parser<OmpDirectiveName>{},
+        IsDirective(llvm::omp::Directive::OMPD_declare_variant)) >=
+        sourced(construct<OmpDirectiveSpecification>(
+            sourced(OmpDirectiveNameParser{}),
+            maybe(parenthesized(OmpArgumentListParser<
+                llvm::omp::Directive::OMPD_declare_variant>{})),
+            maybe(Parser<OmpClauseList>{}),
+            pure(OmpDirectiveSpecification::Flags::None))) ||
     // Parse the standard syntax: directive [(arguments)] [clauses]
     sourced(construct<OmpDirectiveSpecification>( //
         sourced(OmpDirectiveNameParser{}),
-        maybe(parenthesized(Parser<OmpArgumentList>{})),
+        maybe(parenthesized(OmpArgumentListParser<>{})),
         maybe(Parser<OmpClauseList>{}),
         pure(OmpDirectiveSpecification::Flags::None))))
 
@@ -1711,8 +1763,9 @@ TYPE_PARSER(construct<OmpInitializerClause>(
 
 // OpenMP 5.2: 7.5.4 Declare Variant directive
 TYPE_PARSER(sourced(construct<OmpDeclareVariantDirective>(
-    verbatim("DECLARE VARIANT"_tok) || verbatim("DECLARE_VARIANT"_tok),
-    "(" >> maybe(name / ":"), name / ")", Parser<OmpClauseList>{})))
+    predicated(Parser<OmpDirectiveName>{},
+        IsDirective(llvm::omp::Directive::OMPD_declare_variant)) >=
+    Parser<OmpDirectiveSpecification>{})))
 
 // 2.16 Declare Reduction Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareReductionConstruct>(
@@ -1783,8 +1836,9 @@ TYPE_PARSER(
 
 // 2.8.2 Declare Simd construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareSimdConstruct>(
-    verbatim("DECLARE SIMD"_tok) || verbatim("DECLARE_SIMD"_tok),
-    maybe(parenthesized(name)), Parser<OmpClauseList>{})))
+    predicated(Parser<OmpDirectiveName>{},
+        IsDirective(llvm::omp::Directive::OMPD_declare_simd)) >=
+    Parser<OmpDirectiveSpecification>{})))
 
 TYPE_PARSER(sourced( //
     construct<OpenMPGroupprivate>(

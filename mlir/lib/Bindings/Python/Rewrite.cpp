@@ -40,6 +40,15 @@ static nb::object objectFromPDLValue(MlirPDLValue value) {
   throw std::runtime_error("unsupported PDL value type");
 }
 
+static std::vector<nb::object> objectsFromPDLValues(size_t nValues,
+                                                    MlirPDLValue *values) {
+  std::vector<nb::object> args;
+  args.reserve(nValues);
+  for (size_t i = 0; i < nValues; ++i)
+    args.push_back(objectFromPDLValue(values[i]));
+  return args;
+}
+
 // Convert the Python object to a boolean.
 // If it evaluates to False, treat it as success;
 // otherwise, treat it as failure.
@@ -74,11 +83,22 @@ public:
            size_t nValues, MlirPDLValue *values,
            void *userData) -> MlirLogicalResult {
           nb::handle f = nb::handle(static_cast<PyObject *>(userData));
-          std::vector<nb::object> args;
-          args.reserve(nValues);
-          for (size_t i = 0; i < nValues; ++i)
-            args.push_back(objectFromPDLValue(values[i]));
-          return logicalResultFromObject(f(rewriter, results, args));
+          return logicalResultFromObject(
+              f(rewriter, results, objectsFromPDLValues(nValues, values)));
+        },
+        fn.ptr());
+  }
+
+  void registerConstraintFunction(const std::string &name,
+                                  const nb::callable &fn) {
+    mlirPDLPatternModuleRegisterConstraintFunction(
+        get(), mlirStringRefCreate(name.data(), name.size()),
+        [](MlirPatternRewriter rewriter, MlirPDLResultList results,
+           size_t nValues, MlirPDLValue *values,
+           void *userData) -> MlirLogicalResult {
+          nb::handle f = nb::handle(static_cast<PyObject *>(userData));
+          return logicalResultFromObject(
+              f(rewriter, results, objectsFromPDLValues(nValues, values)));
         },
         fn.ptr());
   }
@@ -198,6 +218,13 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           [](PyPDLPatternModule &self, const std::string &name,
              const nb::callable &fn) {
             self.registerRewriteFunction(name, fn);
+          },
+          nb::keep_alive<1, 3>())
+      .def(
+          "register_constraint_function",
+          [](PyPDLPatternModule &self, const std::string &name,
+             const nb::callable &fn) {
+            self.registerConstraintFunction(name, fn);
           },
           nb::keep_alive<1, 3>());
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
