@@ -929,6 +929,30 @@ void no_throw_in_lambda_by_reference_capture(const copy_constructor_throws& a) n
   [&a] {};
 }
 
+void throw_in_lambda_init_capture() noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_in_lambda_init_capture' which should not throw exceptions
+  [a = [] { throw 42; return 0; }()] {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator()' here
+  // CHECK-MESSAGES: :[[@LINE-2]]:34: note: frame #1: function 'throw_in_lambda_init_capture' calls function 'operator()' here
+}
+
+void throw_from_nested_lambda() noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_from_nested_lambda' which should not throw exceptions
+  [] { [] { throw 42; }(); }();
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator()' here
+  // CHECK-MESSAGES: :[[@LINE-2]]:24: note: frame #1: function 'operator()' calls function 'operator()' here
+  // CHECK-MESSAGES: :[[@LINE-3]]:29: note: frame #2: function 'throw_from_nested_lambda' calls function 'operator()' here
+}
+
 const auto throw_in_noexcept_lambda = [] () noexcept { throw 42; };
 // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
 // CHECK-MESSAGES: :[[@LINE-2]]:56: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator()' here
+
+void thrower() {
+  throw 42;
+}
+
+const auto indirect_throw_in_noexcept_lambda = [] () noexcept { thrower(); };
+// CHECK-MESSAGES: :[[@LINE-1]]:48: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
+// CHECK-MESSAGES: :[[@LINE-5]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
+// CHECK-MESSAGES: :[[@LINE-3]]:65: note: frame #1: function 'operator()' calls function 'thrower' here
