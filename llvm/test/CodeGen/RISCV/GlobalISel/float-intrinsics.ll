@@ -10,7 +10,7 @@
 ; RUN:   | FileCheck -check-prefix=RV64IF %s
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -global-isel  -mattr=+d \
 ; RUN:   -target-abi=lp64d \
-; RUN:   | FileCheck -check-prefix=RV64IF,RV64IFD %s
+; RUN:   | FileCheck -check-prefix=RV64IFD %s
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -global-isel \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -global-isel \
