@@ -5,12 +5,11 @@
 ; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefixes=GISEL-X86
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefixes=GISEL-X64
 
-; FIXME: crash
-; define i64 @test_lround_i64_f16(half %x) nounwind {
-; entry:
-;   %0 = tail call i64 @llvm.lround.i64.f16(half %x)
-;   ret i64 %0
-; }
+define i64 @test_lround_i64_f16(half %x) nounwind {
+entry:
+  %0 = tail call i64 @llvm.lround.i64.f16(half %x)
+  ret i64 %0
+}
 
 define i64 @test_lround_i64_f32(float %x) nounwind {
 ; X86-NOSSE-LABEL: test_lround_i64_f32:
