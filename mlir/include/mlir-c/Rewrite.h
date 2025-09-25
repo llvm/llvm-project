@@ -37,6 +37,7 @@ DEFINE_C_API_STRUCT(MlirRewriterBase, void);
 DEFINE_C_API_STRUCT(MlirFrozenRewritePatternSet, void);
 DEFINE_C_API_STRUCT(MlirGreedyRewriteDriverConfig, void);
 DEFINE_C_API_STRUCT(MlirRewritePatternSet, void);
+DEFINE_C_API_STRUCT(MlirPatternRewriter, void);
 
 //===----------------------------------------------------------------------===//
 /// RewriterBase API inherited from OpBuilder
@@ -301,6 +302,10 @@ mlirFreezeRewritePattern(MlirRewritePatternSet op);
 MLIR_CAPI_EXPORTED void
 mlirFrozenRewritePatternSetDestroy(MlirFrozenRewritePatternSet op);
 
+MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPatternsAndFoldGreedilyWithOp(
+    MlirOperation op, MlirFrozenRewritePatternSet patterns,
+    MlirGreedyRewriteDriverConfig);
+
 MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPatternsAndFoldGreedily(
     MlirModule op, MlirFrozenRewritePatternSet patterns,
     MlirGreedyRewriteDriverConfig);
@@ -311,6 +316,8 @@ MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPatternsAndFoldGreedily(
 
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 DEFINE_C_API_STRUCT(MlirPDLPatternModule, void);
+DEFINE_C_API_STRUCT(MlirPDLValue, const void);
+DEFINE_C_API_STRUCT(MlirPDLResultList, void);
 
 MLIR_CAPI_EXPORTED MlirPDLPatternModule
 mlirPDLPatternModuleFromModule(MlirModule op);
@@ -319,6 +326,69 @@ MLIR_CAPI_EXPORTED void mlirPDLPatternModuleDestroy(MlirPDLPatternModule op);
 
 MLIR_CAPI_EXPORTED MlirRewritePatternSet
 mlirRewritePatternSetFromPDLPatternModule(MlirPDLPatternModule op);
+
+/// Cast the MlirPDLValue to an MlirValue.
+/// Return a null value if the cast fails, just like llvm::dyn_cast.
+MLIR_CAPI_EXPORTED MlirValue mlirPDLValueAsValue(MlirPDLValue value);
+
+/// Cast the MlirPDLValue to an MlirType.
+/// Return a null value if the cast fails, just like llvm::dyn_cast.
+MLIR_CAPI_EXPORTED MlirType mlirPDLValueAsType(MlirPDLValue value);
+
+/// Cast the MlirPDLValue to an MlirOperation.
+/// Return a null value if the cast fails, just like llvm::dyn_cast.
+MLIR_CAPI_EXPORTED MlirOperation mlirPDLValueAsOperation(MlirPDLValue value);
+
+/// Cast the MlirPDLValue to an MlirAttribute.
+/// Return a null value if the cast fails, just like llvm::dyn_cast.
+MLIR_CAPI_EXPORTED MlirAttribute mlirPDLValueAsAttribute(MlirPDLValue value);
+
+/// Push the MlirValue into the given MlirPDLResultList.
+MLIR_CAPI_EXPORTED void
+mlirPDLResultListPushBackValue(MlirPDLResultList results, MlirValue value);
+
+/// Push the MlirType into the given MlirPDLResultList.
+MLIR_CAPI_EXPORTED void mlirPDLResultListPushBackType(MlirPDLResultList results,
+                                                      MlirType value);
+
+/// Push the MlirOperation into the given MlirPDLResultList.
+MLIR_CAPI_EXPORTED void
+mlirPDLResultListPushBackOperation(MlirPDLResultList results,
+                                   MlirOperation value);
+
+/// Push the MlirAttribute into the given MlirPDLResultList.
+MLIR_CAPI_EXPORTED void
+mlirPDLResultListPushBackAttribute(MlirPDLResultList results,
+                                   MlirAttribute value);
+
+/// This function type is used as callbacks for PDL native rewrite functions.
+/// Input values can be accessed by `values` with its size `nValues`;
+/// output values can be added into `results` by `mlirPDLResultListPushBack*`
+/// APIs. And the return value indicates whether the rewrite succeeds.
+typedef MlirLogicalResult (*MlirPDLRewriteFunction)(
+    MlirPatternRewriter rewriter, MlirPDLResultList results, size_t nValues,
+    MlirPDLValue *values, void *userData);
+
+/// Register a rewrite function into the given PDL pattern module.
+/// `userData` will be provided as an argument to the rewrite function.
+MLIR_CAPI_EXPORTED void mlirPDLPatternModuleRegisterRewriteFunction(
+    MlirPDLPatternModule pdlModule, MlirStringRef name,
+    MlirPDLRewriteFunction rewriteFn, void *userData);
+
+/// This function type is used as callbacks for PDL native constraint functions.
+/// Input values can be accessed by `values` with its size `nValues`;
+/// output values can be added into `results` by `mlirPDLResultListPushBack*`
+/// APIs. And the return value indicates whether the constraint holds.
+typedef MlirLogicalResult (*MlirPDLConstraintFunction)(
+    MlirPatternRewriter rewriter, MlirPDLResultList results, size_t nValues,
+    MlirPDLValue *values, void *userData);
+
+/// Register a constraint function into the given PDL pattern module.
+/// `userData` will be provided as an argument to the constraint function.
+MLIR_CAPI_EXPORTED void mlirPDLPatternModuleRegisterConstraintFunction(
+    MlirPDLPatternModule pdlModule, MlirStringRef name,
+    MlirPDLConstraintFunction constraintFn, void *userData);
+
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
 #undef DEFINE_C_API_STRUCT

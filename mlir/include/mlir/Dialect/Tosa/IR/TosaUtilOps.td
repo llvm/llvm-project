@@ -55,7 +55,7 @@ def Tosa_ApplyScaleOp :
     std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
   }];
 
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//

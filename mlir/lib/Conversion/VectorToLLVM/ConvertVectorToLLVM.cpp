@@ -247,6 +247,7 @@ public:
     MemRefType memRefTy = loadOrStoreOp.getMemRefType();
 
     // Resolve alignment.
+    // Explicit alignment takes priority over use-vector-alignment.
     unsigned align = loadOrStoreOp.getAlignment().value_or(0);
     if (!align &&
         failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vectorTy,
@@ -299,8 +300,10 @@ public:
     }
 
     // Resolve alignment.
-    unsigned align;
-    if (failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vType,
+    // Explicit alignment takes priority over use-vector-alignment.
+    unsigned align = gather.getAlignment().value_or(0);
+    if (!align &&
+        failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vType,
                                         memRefType, align, useVectorAlignment)))
       return rewriter.notifyMatchFailure(gather, "could not resolve alignment");
 
@@ -354,8 +357,10 @@ public:
     }
 
     // Resolve alignment.
-    unsigned align;
-    if (failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vType,
+    // Explicit alignment takes priority over use-vector-alignment.
+    unsigned align = scatter.getAlignment().value_or(0);
+    if (!align &&
+        failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vType,
                                         memRefType, align, useVectorAlignment)))
       return rewriter.notifyMatchFailure(scatter,
                                          "could not resolve alignment");
@@ -399,8 +404,14 @@ public:
     Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
                                      adaptor.getBase(), adaptor.getIndices());
 
+    // From:
+    // https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics
+    //   The pointer alignment defaults to 1.
+    uint64_t alignment = expand.getAlignment().value_or(1);
+
     rewriter.replaceOpWithNewOp<LLVM::masked_expandload>(
-        expand, vtype, ptr, adaptor.getMask(), adaptor.getPassThru());
+        expand, vtype, ptr, adaptor.getMask(), adaptor.getPassThru(),
+        alignment);
     return success();
   }
 };
@@ -421,8 +432,13 @@ public:
     Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
                                      adaptor.getBase(), adaptor.getIndices());
 
+    // From:
+    // https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics
+    //   The pointer alignment defaults to 1.
+    uint64_t alignment = compress.getAlignment().value_or(1);
+
     rewriter.replaceOpWithNewOp<LLVM::masked_compressstore>(
-        compress, adaptor.getValueToStore(), ptr, adaptor.getMask());
+        compress, adaptor.getValueToStore(), ptr, adaptor.getMask(), alignment);
     return success();
   }
 };
@@ -1115,7 +1131,7 @@ public:
       positionVec.push_back(rewriter.getZeroAttr(idxType));
     }
 
-    Value extracted = adaptor.getVector();
+    Value extracted = adaptor.getSource();
     if (extractsAggregate) {
       ArrayRef<OpFoldResult> position(positionVec);
       if (extractsScalar) {
@@ -1837,7 +1853,7 @@ struct VectorDeinterleaveOpLowering
                                          "DeinterleaveOp not rank 1");
 
     if (resultType.isScalable()) {
-      auto llvmTypeConverter = this->getTypeConverter();
+      const auto *llvmTypeConverter = this->getTypeConverter();
       auto deinterleaveResults = deinterleaveOp.getResultTypes();
       auto packedOpResults =
           llvmTypeConverter->packOperationResults(deinterleaveResults);
@@ -1971,17 +1987,13 @@ struct VectorScalableStepOpLowering
 ///    %e = add %c, %d
 /// ```
 /// `vector.matrix_multiply` later lowers to `llvm.matrix.multiply`.
-//
-/// This only kicks in when vectorContractLowering is set to Matmul and
-/// the vector.contract op is a row-major matrix multiply.
 class ContractionOpToMatmulOpLowering
     : public vector::MaskableOpRewritePattern<vector::ContractionOp> {
 public:
   using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  ContractionOpToMatmulOpLowering(
-      vector::VectorContractLowering vectorContractLowering,
-      MLIRContext *context, PatternBenefit benefit = 100)
+  ContractionOpToMatmulOpLowering(MLIRContext *context,
+                                  PatternBenefit benefit = 100)
       : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit) {}
 
   FailureOr<Value>
@@ -1989,23 +2001,22 @@ public:
                             PatternRewriter &rewriter) const override;
 };
 
-/// Progressively lower a `vector.contract %a, %b, %c` with row-major matmul
-/// semantics to:
+/// Lower a qualifying `vector.contract %a, %b, %c` (with row-major matmul
+/// semantics directly into `llvm.intr.matrix.multiply`:
+/// BEFORE:
+/// ```mlir
+///  %res = vector.contract #matmat_trait %lhs, %rhs, %acc
+///    : vector<2x4xf32>, vector<4x3xf32> into vector<2x3xf32>
 /// ```
-///    %mta = maybe_transpose
-///    %mtb = maybe_transpose
-///    %flattened_a = vector.shape_cast %mta
-///    %flattened_b = vector.shape_cast %mtb
-///    %flattened_d = llvm.intr.matrix.multiply %flattened_a, %flattened_b
-///    %mtd = vector.shape_cast %flattened_d
-///    %d = maybe_untranspose %mtd
-///    %e = add %c, %d
+///
+/// AFTER:
+/// ```mlir
+///   %lhs = vector.shape_cast %arg0 : vector<2x4xf32> to vector<8xf32>
+///   %rhs = vector.shape_cast %arg1 : vector<4x3xf32> to vector<12xf32>
+///   %matmul = llvm.intr.matrix.multiply %lhs, %rhs
+///   %res = arith.addf %acc, %matmul : vector<2x3xf32>
 /// ```
 //
-/// This only kicks in when vectorContractLowering is set to `Matmul`.
-/// vector.transpose operations are inserted if the vector.contract op is not a
-/// row-major matrix multiply.
-///
 /// Scalable vectors are not supported.
 FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
     vector::ContractionOp op, MaskingOpInterface maskOp,
@@ -2100,7 +2111,19 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
   return res;
 }
 
-/// Lowers vector.transpose to llvm.intr.matrix.transpose
+/// Lowers vector.transpose directly to llvm.intr.matrix.transpose
+///
+/// BEFORE:
+/// ```mlir
+///  %tr = vector.transpose %vec, [1, 0] : vector<2x4xf32> to vector<4x2xf32>
+/// ```
+/// AFTER:
+/// ```mlir
+///  %vec_cs = vector.shape_cast %vec : vector<2x4xf32> to vector<8xf32>
+///  %tr = llvm.intr.matrix.transpose %vec_sc
+///    {columns = 2 : i32, rows = 4 : i32} : vector<8xf32> into vector<8xf32>
+///  %res = vector.shape_cast %tr : vector<8xf32> to vector<4x2xf32>
+/// ```
 class TransposeOpToMatrixTransposeOpLowering
     : public OpRewritePattern<vector::TransposeOp> {
 public:

@@ -2,13 +2,13 @@
 ; RUN: llc < %s -mcpu=sm_80 -mattr=+ptx70 -O0 \
 ; RUN:      -disable-post-ra -verify-machineinstrs \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-SM80 %s
-; RUN: %if ptxas-12.9 %{ llc < %s -mcpu=sm_80 -mattr=+ptx70 -O0 \
+; RUN: %if ptxas-sm_80 && ptxas-isa-7.0 %{ llc < %s -mcpu=sm_80 -mattr=+ptx70 -O0 \
 ; RUN:      -disable-post-ra -verify-machineinstrs \
 ; RUN: | %ptxas-verify -arch=sm_80 %}
 ; RUN: llc < %s -mcpu=sm_100 -mattr=+ptx88 -O0 \
 ; RUN:      -disable-post-ra -verify-machineinstrs \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-SM100 %s
-; RUN: %if ptxas-12.9 %{ llc < %s -mcpu=sm_100 -mattr=+ptx88 -O0 \
+; RUN: %if ptxas-sm_100 && ptxas-isa-8.8 %{ llc < %s -mcpu=sm_100 -mattr=+ptx88 -O0 \
 ; RUN:      -disable-post-ra -verify-machineinstrs \
 ; RUN: | %ptxas-verify -arch=sm_100 %}
 target triple = "nvptx64-nvidia-cuda"

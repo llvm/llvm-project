@@ -146,14 +146,22 @@ private:
 class SymMap {
 public:
   using AcDoVar = llvm::StringRef;
+  /// Descriptor of a symbol's storage consists of the base address
+  /// of the storage and the offset within that storage.
+  using StorageDesc = std::pair<mlir::Value, std::uint64_t>;
 
   SymMap() { pushScope(); }
   SymMap(const SymMap &) = delete;
 
-  void pushScope() { symbolMapStack.emplace_back(); }
+  void pushScope() {
+    symbolMapStack.emplace_back();
+    storageMapStack.emplace_back();
+  }
   void popScope() {
     symbolMapStack.pop_back();
     assert(symbolMapStack.size() >= 1);
+    storageMapStack.pop_back();
+    assert(storageMapStack.size() >= 1);
   }
 
   /// Add an extended value to the symbol table.
@@ -287,6 +295,8 @@ public:
     symbolMapStack.emplace_back();
     assert(symbolMapStack.size() == 1);
     impliedDoStack.clear();
+    storageMapStack.clear();
+    storageMapStack.emplace_back();
   }
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
@@ -315,6 +325,16 @@ public:
     return std::nullopt;
   }
 
+  /// Register the symbol's storage at the innermost level
+  /// of the symbol table. If the storage is already registered,
+  /// it will be replaced.
+  void registerStorage(semantics::SymbolRef sym, StorageDesc storage);
+  /// Lookup the symbol's storage at the innermost level of the symbol table.
+  StorageDesc lookupStorage(semantics::SymbolRef sym);
+  StorageDesc lookupStorage(const semantics::Symbol *sym) {
+    return lookupStorage(*sym);
+  }
+
 private:
   /// Bind `box` to `symRef` in the symbol map.
   void makeSym(semantics::SymbolRef symRef, const SymbolBox &box,
@@ -332,6 +352,10 @@ private:
   // Implied DO induction variables are not represented as Se::Symbol in
   // Ev::Expr. Keep the variable markers in their own stack.
   llvm::SmallVector<std::pair<AcDoVar, mlir::Value>> impliedDoStack;
+
+  // A stack of maps between the symbols and their storage descriptors.
+  llvm::SmallVector<llvm::DenseMap<const semantics::Symbol *, StorageDesc>>
+      storageMapStack;
 };
 
 /// RAII wrapper for SymMap.

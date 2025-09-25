@@ -3326,8 +3326,12 @@ func.func @from_elements_to_elements_shuffle(%a: vector<4x2xf32>) -> vector<4x2x
 
 // -----
 
-// CHECK-LABEL: func @from_elements_all_elements_constant(
-func.func @from_elements_all_elements_constant() -> vector<2x2xi32> {
+// +---------------------------------------------------------------------------
+// Tests for foldFromElementsToConstant
+// +---------------------------------------------------------------------------
+
+// CHECK-LABEL: func @from_elements_to_constant(
+func.func @from_elements_to_constant() -> vector<2x2xi32> {
   %c0_i32 = arith.constant 0 : i32
   %c1_i32 = arith.constant 1 : i32
   %c2_i32 = arith.constant 2 : i32
@@ -3340,9 +3344,11 @@ func.func @from_elements_all_elements_constant() -> vector<2x2xi32> {
 
 // -----
 
-// CHECK-LABEL: func @from_elements_partial_elements_constant(
+// One of the elements is not a constant, the folder should fail.
+
+// CHECK-LABEL: func @negative_from_elements_to_constant(
 // CHECK-SAME:     %[[A:.*]]: f32
-func.func @from_elements_partial_elements_constant(%arg0: f32) -> vector<2xf32> {
+func.func @negative_from_elements_to_constant(%arg0: f32) -> vector<2xf32> {
   // CHECK: %[[C:.*]] = arith.constant 1.000000e+00 : f32
   %c = arith.constant 1.0 : f32
   // CHECK: %[[RES:.*]] = vector.from_elements %[[A]], %[[C]] : vector<2xf32>
@@ -3353,10 +3359,138 @@ func.func @from_elements_partial_elements_constant(%arg0: f32) -> vector<2xf32> 
 
 // -----
 
-// CHECK-LABEL: func @vector_insert_const_regression(
+// While all inputs in this example are constant, we cannot create a
+// DenselElemAttr containing llvm.mlir.addressof. Instead,
+// `foldFromElementsToConstant` bails out. Note that in this case, a different
+// folder is applied (`rewriteFromElementsAsBroadcast`).
+llvm.mlir.global constant @my_symbol() : i32
+
+// CHECK-LABEL: func @negative_from_elements_to_constant
+//       CHECK:   %[[A:.*]] = llvm.mlir.addressof @my_symbol
+//       CHECK:   %[[B:.*]] = vector.broadcast %[[A]] : !llvm.ptr to vector<1x!llvm.ptr>
+//       CHECK:   return %[[B]]
+func.func @negative_from_elements_to_constant() -> vector<1x!llvm.ptr> {
+  %a = llvm.mlir.addressof @my_symbol : !llvm.ptr
+  %b = vector.from_elements %a : vector<1x!llvm.ptr>
+  return %b : vector<1x!llvm.ptr>
+}
+
+// -----
+
+// CHECK-LABEL: @negative_from_elements_poison
+//       CHECK:   %[[VAL:.*]] = ub.poison : vector<2xf32>
+//       CHECK:   return %[[VAL]] : vector<2xf32>
+func.func @negative_from_elements_poison_f32() -> vector<2xf32> {
+  %0 = ub.poison : f32
+  %1 = vector.from_elements %0, %0 : vector<2xf32>
+  return %1 : vector<2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @negative_from_elements_poison_i32
+//       CHECK:   %[[VAL:.*]] = ub.poison : vector<2xi32>
+//       CHECK:   return %[[VAL]] : vector<2xi32>
+func.func @negative_from_elements_poison_i32() -> vector<2xi32> {
+  %0 = ub.poison : i32
+  %1 = vector.from_elements %0, %0 : vector<2xi32>
+  return %1 : vector<2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @negative_from_elements_poison_constant_mix
+//       CHECK:   %[[POISON:.*]] = ub.poison : f32
+//       CHECK:   %[[CONST:.*]] = arith.constant 1.000000e+00 : f32
+//       CHECK:   %[[RES:.*]] = vector.from_elements %[[POISON]], %[[CONST]] : vector<2xf32>
+//       CHECK:   return %[[RES]] : vector<2xf32>
+func.func @negative_from_elements_poison_constant_mix() -> vector<2xf32> {
+  %0 = ub.poison : f32
+  %c = arith.constant 1.0 : f32
+  %1 = vector.from_elements %0, %c : vector<2xf32>
+  return %1 : vector<2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @from_elements_float8_to_i8_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 56, -72, 69, 127, -1]> : vector<6xi8>
+// CHECK-NEXT:    return %[[CST]] : vector<6xi8>
+func.func @from_elements_float8_to_i8_conversion() -> vector<6xi8> {
+  %cst0 = llvm.mlir.constant(0.0 : f8E4M3FN) : i8
+  %cst1 = llvm.mlir.constant(1.0 : f8E4M3FN) : i8
+  %cst_neg1 = llvm.mlir.constant(-1.0 : f8E4M3FN) : i8
+  %cst_pi = llvm.mlir.constant(3.14 : f8E4M3FN) : i8
+  %cst_inf = llvm.mlir.constant(0x7F : f8E4M3FN) : i8
+  %cst_neg_inf = llvm.mlir.constant(0xFF : f8E4M3FN) : i8
+  %v = vector.from_elements %cst0, %cst1, %cst_neg1, %cst_pi, %cst_inf, %cst_neg_inf : vector<6xi8>
+  return %v : vector<6xi8>
+}
+
+// CHECK-LABEL: func @from_elements_float16_to_i16_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 15360, -17408, 16968, 31743, -1025]> : vector<6xi16>
+// CHECK-NEXT:    return %[[CST]] : vector<6xi16>
+func.func @from_elements_float16_to_i16_conversion() -> vector<6xi16> {
+  %cst0 = llvm.mlir.constant(0.0 : f16) : i16
+  %cst1 = llvm.mlir.constant(1.0 : f16) : i16
+  %cst_neg1 = llvm.mlir.constant(-1.0 : f16) : i16
+  %cst_pi = llvm.mlir.constant(3.14 : f16) : i16
+  %cst_max = llvm.mlir.constant(65504.0	: f16) : i16
+  %cst_min = llvm.mlir.constant(-65504.0 : f16) : i16
+  %v = vector.from_elements %cst0, %cst1, %cst_neg1, %cst_pi, %cst_max, %cst_min : vector<6xi16>
+  return %v : vector<6xi16>
+}
+
+// CHECK-LABEL: func @from_elements_f64_to_i64_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 4607182418800017408, -4616189618054758400, 4614253070214989087, 9218868437227405311, -4503599627370497]> : vector<6xi64>
+// CHECK-NEXT:    return %[[CST]] : vector<6xi64>
+func.func @from_elements_f64_to_i64_conversion() -> vector<6xi64> {
+  %cst0 = llvm.mlir.constant(0.0 : f64) : i64
+  %cst1 = llvm.mlir.constant(1.0 : f64) : i64
+  %cst_neg1 = llvm.mlir.constant(-1.0 : f64) : i64
+  %cst_pi = llvm.mlir.constant(3.14 : f64) : i64
+  %cst_max = llvm.mlir.constant(1.7976931348623157e+308 : f64) : i64
+  %cst_min = llvm.mlir.constant(-1.7976931348623157e+308 : f64) : i64
+  %v = vector.from_elements %cst0, %cst1, %cst_neg1, %cst_pi, %cst_max, %cst_min : vector<6xi64>
+  return %v : vector<6xi64>
+}
+
+// -----
+
+// CHECK-LABEL: func @from_elements_i1_to_i8_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<0> : vector<1xi8>
+// CHECK-NEXT:    return %[[CST]] : vector<1xi8>
+func.func @from_elements_i1_to_i8_conversion() -> vector<1xi8> {
+  %cst = llvm.mlir.constant(0: i1) : i8
+  %v = vector.from_elements %cst : vector<1xi8>
+  return %v : vector<1xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @from_elements_index_to_i64_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 1, 42]> : vector<3xi64>
+// CHECK-NEXT:    return %[[CST]] : vector<3xi64>
+func.func @from_elements_index_to_i64_conversion() -> vector<3xi64> {
+  %cst0 = llvm.mlir.constant(0 : index) : i64
+  %cst1 = llvm.mlir.constant(1 : index) : i64
+  %cst42 = llvm.mlir.constant(42 : index) : i64
+  %v = vector.from_elements %cst0, %cst1, %cst42 : vector<3xi64>
+  return %v : vector<3xi64>
+}
+
+// +---------------------------------------------------------------------------
+// End of  Tests for foldFromElementsToConstant
+// +---------------------------------------------------------------------------
+
+// -----
+
+// Not a DenseElementsAttr, don't fold.
+
+// CHECK-LABEL: func @negative_insert_llvm_undef(
 //       CHECK:   llvm.mlir.undef
 //       CHECK:   vector.insert
-func.func @vector_insert_const_regression(%arg0: i8) -> vector<4xi8> {
+func.func @negative_insert_llvm_undef(%arg0: i8) -> vector<4xi8> {
   %0 = llvm.mlir.undef : vector<4xi8>
   %1 = vector.insert %arg0, %0 [0] : i8 into vector<4xi8>
   return %1 : vector<4xi8>
@@ -3725,18 +3859,4 @@ func.func @no_fold_insert_use_chain_mismatch_static_position(%arg : vector<4xf32
   %v_0 = vector.insert %val, %arg[0] : f32 into vector<4xf32>
   %v_1 = vector.insert %val, %v_0[1] : f32 into vector<4xf32>
   return %v_1 : vector<4xf32>
-}
-
-// -----
-
-llvm.mlir.global constant @my_symbol() : i32
-
-// CHECK-LABEL: func @from_address_of_regression
-//       CHECK:   %[[a:.*]] = llvm.mlir.addressof @my_symbol
-//       CHECK:   %[[b:.*]] = vector.broadcast %[[a]] : !llvm.ptr to vector<1x!llvm.ptr>
-//       CHECK:   return %[[b]]
-func.func @from_address_of_regression() -> vector<1x!llvm.ptr> {
-  %a = llvm.mlir.addressof @my_symbol : !llvm.ptr
-  %b = vector.from_elements %a : vector<1x!llvm.ptr>
-  return %b : vector<1x!llvm.ptr>
 }

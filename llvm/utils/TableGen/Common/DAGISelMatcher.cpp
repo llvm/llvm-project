@@ -284,7 +284,7 @@ void EmitNodeXFormMatcher::printImpl(raw_ostream &OS, indent Indent) const {
 void EmitNodeMatcherCommon::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent;
   OS << (isa<MorphNodeToMatcher>(this) ? "MorphNodeTo: " : "EmitNode: ")
-     << CGI.Namespace << "::" << CGI.TheDef->getName() << ": <todo flags> ";
+     << CGI.Namespace << "::" << CGI.getName() << ": <todo flags> ";
 
   for (MVT::SimpleValueType VT : VTs)
     OS << ' ' << getEnumName(VT);

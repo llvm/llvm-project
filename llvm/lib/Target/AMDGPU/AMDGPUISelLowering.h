@@ -418,6 +418,7 @@ enum NodeType : unsigned {
   CALL,
   TC_RETURN,
   TC_RETURN_GFX,
+  TC_RETURN_GFX_WholeWave,
   TC_RETURN_CHAIN,
   TC_RETURN_CHAIN_DVGPR,
   TRAP,

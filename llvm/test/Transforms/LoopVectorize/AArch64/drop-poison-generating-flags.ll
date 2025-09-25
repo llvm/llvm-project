@@ -9,7 +9,7 @@ define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %ds
 ; CHECK-LABEL: define void @check_widen_intrinsic_with_nnan(
 ; CHECK-SAME: ptr noalias [[DST_0:%.*]], ptr noalias [[DST_1:%.*]], ptr noalias [[SRC_1:%.*]], ptr [[SRC_2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -54,22 +54,18 @@ define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %ds
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE6]]
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP24:%.*]] = phi <4 x double> [ [[TMP20]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP23]], %[[PRED_LOAD_IF5]] ]
-; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[INDEX]], -1
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[DST_0]], i64 [[TMP25]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> zeroinitializer, ptr [[TMP26]], i32 8, <4 x i1> [[TMP4]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> zeroinitializer, ptr [[TMP7]], i32 8, <4 x i1> [[TMP4]])
 ; CHECK-NEXT:    [[TMP28:%.*]] = fcmp oeq <4 x double> [[TMP24]], zeroinitializer
 ; CHECK-NEXT:    [[TMP29:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP28]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP30:%.*]] = or <4 x i1> [[TMP5]], [[TMP29]]
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i1> [[TMP29]], i32 0
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP31]], i64 [[TMP25]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i32, ptr [[DST_1]], i64 [[PREDPHI]]
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i32, ptr [[DST_1]], i64 [[TMP6]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> splat (i32 10), ptr [[TMP32]], i32 4, <4 x i1> [[TMP30]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP34]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK:       [[SCALAR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
@@ -98,7 +94,7 @@ define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %ds
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

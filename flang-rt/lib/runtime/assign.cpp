@@ -288,7 +288,7 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
     if (mustDeallocateLHS) {
       // Convert the LHS into a temporary, then make it look deallocated.
       toDeallocate_ = &tempDescriptor_.descriptor();
-      std::memcpy(
+      runtime::memcpy(
           reinterpret_cast<void *>(toDeallocate_), &to_, to_.SizeInBytes());
       to_.set_base_addr(nullptr);
       if (toDerived_ && (flags_ & NeedFinalization)) {
@@ -307,7 +307,7 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
       auto descBytes{from_->SizeInBytes()};
       Descriptor &newFrom{tempDescriptor_.descriptor()};
       persist_ = true; // tempDescriptor_ state must outlive child tickets
-      std::memcpy(reinterpret_cast<void *>(&newFrom), from_, descBytes);
+      runtime::memcpy(reinterpret_cast<void *>(&newFrom), from_, descBytes);
       // Pretend the temporary descriptor is for an ALLOCATABLE
       // entity, otherwise, the Deallocate() below will not
       // free the descriptor memory.
@@ -648,7 +648,8 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
         }
       }
       break;
-    case typeInfo::Component::Genre::Pointer: {
+    case typeInfo::Component::Genre::Pointer:
+    case typeInfo::Component::Genre::PointerDevice: {
       std::size_t componentByteSize{
           this->component_->SizeInBytes(this->instance_)};
       if (IS_COMPONENTWISE && toIsContiguous_ && fromIsContiguous_) {
@@ -680,6 +681,7 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
       }
     } break;
     case typeInfo::Component::Genre::Allocatable:
+    case typeInfo::Component::Genre::AllocatableDevice:
     case typeInfo::Component::Genre::Automatic: {
       auto *toDesc{reinterpret_cast<Descriptor *>(
           this->instance_.template Element<char>(this->subscripts_) +

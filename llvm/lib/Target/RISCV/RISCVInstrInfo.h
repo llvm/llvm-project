@@ -62,7 +62,7 @@ enum RISCVMachineCombinerPattern : unsigned {
 class RISCVInstrInfo : public RISCVGenInstrInfo {
 
 public:
-  explicit RISCVInstrInfo(RISCVSubtarget &STI);
+  explicit RISCVInstrInfo(const RISCVSubtarget &STI);
 
   MCInst getNop() const override;
 
@@ -75,7 +75,7 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               TypeSize &MemBytes) const override;
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
   bool shouldBreakCriticalEdgeToSink(MachineInstr &MI) const override {
     return MI.getOpcode() == RISCV::ADDI && MI.getOperand(1).isReg() &&

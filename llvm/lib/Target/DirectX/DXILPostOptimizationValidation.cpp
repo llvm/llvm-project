@@ -25,21 +25,6 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-static ResourceClass toResourceClass(dxbc::DescriptorRangeType RangeType) {
-  using namespace dxbc;
-  switch (RangeType) {
-  case DescriptorRangeType::SRV:
-    return ResourceClass::SRV;
-  case DescriptorRangeType::UAV:
-    return ResourceClass::UAV;
-  case DescriptorRangeType::CBV:
-    return ResourceClass::CBuffer;
-  case DescriptorRangeType::Sampler:
-    return ResourceClass::Sampler;
-  }
-  llvm_unreachable("Unknown DescriptorRangeType");
-}
-
 static ResourceClass toResourceClass(dxbc::RootParameterType Type) {
   using namespace dxbc;
   switch (Type) {
@@ -118,6 +103,17 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
                        "true, yet no overlapping binding was found");
 }
 
+static void reportInvalidHandleTyError(Module &M, ResourceClass RC,
+                                       ResourceInfo::ResourceBinding Binding) {
+  SmallString<160> Message;
+  raw_svector_ostream OS(Message);
+  StringRef RCName = getResourceClassName(RC);
+  OS << RCName << " at register " << Binding.LowerBound << " and space "
+     << Binding.Space << " is bound to a texture or typed buffer. " << RCName
+     << " root descriptors can only be Raw or Structured buffers.";
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
 static void reportOverlappingRegisters(Module &M, const llvm::hlsl::Binding &R1,
                                        const llvm::hlsl::Binding &R2) {
   SmallString<128> Message;
@@ -182,7 +178,7 @@ static void validateRootSignature(Module &M,
     dxbc::RootParameterType ParamType = dxbc::RootParameterType(ParamInfo.Type);
     switch (ParamType) {
     case dxbc::RootParameterType::Constants32Bit: {
-      dxbc::RTS0::v1::RootConstants Const =
+      mcdxbc::RootConstants Const =
           RSD.ParametersContainer.getConstant(ParamInfo.Location);
       Builder.trackBinding(dxil::ResourceClass::CBuffer, Const.RegisterSpace,
                            Const.ShaderRegister, Const.ShaderRegister,
@@ -193,7 +189,7 @@ static void validateRootSignature(Module &M,
     case dxbc::RootParameterType::SRV:
     case dxbc::RootParameterType::UAV:
     case dxbc::RootParameterType::CBV: {
-      dxbc::RTS0::v2::RootDescriptor Desc =
+      mcdxbc::RootDescriptor Desc =
           RSD.ParametersContainer.getRootDescriptor(ParamInfo.Location);
       Builder.trackBinding(toResourceClass(ParamInfo.Type), Desc.RegisterSpace,
                            Desc.ShaderRegister, Desc.ShaderRegister,
@@ -205,23 +201,20 @@ static void validateRootSignature(Module &M,
       const mcdxbc::DescriptorTable &Table =
           RSD.ParametersContainer.getDescriptorTable(ParamInfo.Location);
 
-      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+      for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
         uint32_t UpperBound =
             Range.NumDescriptors == ~0U
                 ? Range.BaseShaderRegister
                 : Range.BaseShaderRegister + Range.NumDescriptors - 1;
-        Builder.trackBinding(
-            toResourceClass(
-                static_cast<dxbc::DescriptorRangeType>(Range.RangeType)),
-            Range.RegisterSpace, Range.BaseShaderRegister, UpperBound,
-            &ParamInfo);
+        Builder.trackBinding(Range.RangeType, Range.RegisterSpace,
+                             Range.BaseShaderRegister, UpperBound, &ParamInfo);
       }
       break;
     }
     }
   }
 
-  for (const dxbc::RTS0::v1::StaticSampler &S : RSD.StaticSamplers)
+  for (const mcdxbc::StaticSampler &S : RSD.StaticSamplers)
     Builder.trackBinding(dxil::ResourceClass::Sampler, S.RegisterSpace,
                          S.ShaderRegister, S.ShaderRegister, &S);
 
@@ -235,10 +228,29 @@ static void validateRootSignature(Module &M,
   const hlsl::BoundRegs &BoundRegs = Builder.takeBoundRegs();
   for (const ResourceInfo &RI : DRM) {
     const ResourceInfo::ResourceBinding &Binding = RI.getBinding();
-    ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
-    if (!BoundRegs.isBound(RC, Binding.Space, Binding.LowerBound,
-                           Binding.LowerBound + Binding.Size - 1))
+    const dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
+    dxil::ResourceClass RC = RTI.getResourceClass();
+    dxil::ResourceKind RK = RTI.getResourceKind();
+
+    const llvm::hlsl::Binding *Reg =
+        BoundRegs.findBoundReg(RC, Binding.Space, Binding.LowerBound,
+                               Binding.LowerBound + Binding.Size - 1);
+
+    if (Reg != nullptr) {
+      const auto *ParamInfo =
+          static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
+
+      if (RC != ResourceClass::SRV && RC != ResourceClass::UAV)
+        continue;
+
+      if (ParamInfo->Type == dxbc::RootParameterType::DescriptorTable)
+        continue;
+
+      if (RK != ResourceKind::RawBuffer && RK != ResourceKind::StructuredBuffer)
+        reportInvalidHandleTyError(M, RC, Binding);
+    } else {
       reportRegNotBound(M, RC, Binding);
+    }
   }
 }
 

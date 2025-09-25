@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mcpu=sm_100 -mattr=+ptx88 -O3 -disable-post-ra               \
 ; RUN: -frame-pointer=all -verify-machineinstrs                               \
 ; RUN: | FileCheck %s --check-prefixes=CHECK-F32X2
-; RUN: %if ptxas-12.7 %{                                                      \
+; RUN: %if ptxas-sm_100 && ptxas-isa-8.8 %{                                                      \
 ; RUN:  llc < %s -mcpu=sm_100 -mattr=+ptx88 -O3 -disable-post-ra              \
 ; RUN:  -frame-pointer=all -verify-machineinstrs | %ptxas-verify -arch=sm_100 \
 ; RUN: %}

@@ -50,6 +50,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -307,7 +308,19 @@ void llvm::spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
 
   // Move instructions to new block.
   BasicBlock *Old = IP.getBlock();
-  New->splice(New->begin(), Old, IP.getPoint(), Old->end());
+  // If the `Old` block is empty then there are no instructions to move. But in
+  // the new debug scheme, it could have trailing debug records which will be
+  // moved to `New` in `spliceDebugInfoEmptyBlock`. We dont want that for 2
+  // reasons:
+  // 1. If `New` is also empty, `BasicBlock::splice` crashes.
+  // 2. Even if `New` is not empty, the rationale to move those records to `New`
+  // (in `spliceDebugInfoEmptyBlock`) does not apply here. That function
+  // assumes that `Old` is optimized out and is going away. This is not the case
+  // here. The `Old` block is still being used e.g. a branch instruction is
+  // added to it later in this function.
+  // So we call `BasicBlock::splice` only when `Old` is not empty.
+  if (!Old->empty())
+    New->splice(New->begin(), Old, IP.getPoint(), Old->end());
 
   if (CreateBranch) {
     auto *NewBr = BranchInst::Create(New, Old);
@@ -903,6 +916,13 @@ Constant *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
                              ConstantInt::get(Int32, uint32_t(LocFlags)),
                              ConstantInt::get(Int32, Reserve2Flags),
                              ConstantInt::get(Int32, SrcLocStrSize), SrcLocStr};
+
+    size_t SrcLocStrArgIdx = 4;
+    if (OpenMPIRBuilder::Ident->getElementType(SrcLocStrArgIdx)
+            ->getPointerAddressSpace() !=
+        IdentData[SrcLocStrArgIdx]->getType()->getPointerAddressSpace())
+      IdentData[SrcLocStrArgIdx] = ConstantExpr::getAddrSpaceCast(
+          SrcLocStr, OpenMPIRBuilder::Ident->getElementType(SrcLocStrArgIdx));
     Constant *Initializer =
         ConstantStruct::get(OpenMPIRBuilder::Ident, IdentData);
 
@@ -943,8 +963,9 @@ Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(StringRef LocStr,
           GV.getInitializer() == Initializer)
         return SrcLocStr = ConstantExpr::getPointerCast(&GV, Int8Ptr);
 
-    SrcLocStr = Builder.CreateGlobalString(LocStr, /* Name */ "",
-                                           /* AddressSpace */ 0, &M);
+    SrcLocStr = Builder.CreateGlobalString(
+        LocStr, /*Name=*/"", M.getDataLayout().getDefaultGlobalsAddressSpace(),
+        &M);
   }
   return SrcLocStr;
 }
@@ -3486,6 +3507,8 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
         return AfterIP.takeError();
       if (!Builder.GetInsertBlock())
         return ReductionFunc;
+
+      Builder.restoreIP(*AfterIP);
       Builder.CreateStore(Reduced, LHSPtr);
     }
   }
@@ -3730,6 +3753,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
           RI.ReductionGen(Builder.saveIP(), RHSValue, LHSValue, Reduced);
       if (!AfterIP)
         return AfterIP.takeError();
+      Builder.restoreIP(*AfterIP);
       Builder.CreateStore(Reduced, LHS, false);
     }
   }
@@ -7370,9 +7394,8 @@ static void FixupDebugInfoForOutlinedFunction(
   // The location and scope of variable intrinsics and records still point to
   // the parent function of the target region. Update them.
   for (Instruction &I : instructions(Func)) {
-    if (auto *DDI = dyn_cast<llvm::DbgVariableIntrinsic>(&I))
-      UpdateDebugRecord(DDI);
-
+    assert(!isa<llvm::DbgVariableIntrinsic>(&I) &&
+           "Unexpected debug intrinsic");
     for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
       UpdateDebugRecord(&DVR);
   }
@@ -7390,6 +7413,12 @@ static void FixupDebugInfoForOutlinedFunction(
     DB.insertDeclare(&(*Func->arg_begin()), Var, DB.createExpression(), Loc,
                      &(*Func->begin()));
   }
+}
+
+static Value *removeASCastIfPresent(Value *V) {
+  if (Operator::getOpcode(V) == Instruction::AddrSpaceCast)
+    return cast<Operator>(V)->getOperand(0);
+  return V;
 }
 
 static Expected<Function *> createOutlinedFunction(
@@ -7555,7 +7584,8 @@ static Expected<Function *> createOutlinedFunction(
     // preceding mapped arguments that refer to the same global that may be
     // seperate segments. To prevent this, we defer global processing until all
     // other processing has been performed.
-    if (isa<GlobalValue>(Input)) {
+    if (llvm::isa<llvm::GlobalValue, llvm::GlobalObject, llvm::GlobalVariable>(
+            removeASCastIfPresent(Input))) {
       DeferredReplacement.push_back(std::make_pair(Input, InputCopy));
       continue;
     }
@@ -10006,12 +10036,16 @@ OpenMPIRBuilder::createDistribute(const LocationDescription &Loc,
   if (Error Err = BodyGenCB(AllocaIP, CodeGenIP))
     return Err;
 
-  OutlineInfo OI;
-  OI.OuterAllocaBB = OuterAllocaIP.getBlock();
-  OI.EntryBB = AllocaBB;
-  OI.ExitBB = ExitBB;
+  // When using target we use different runtime functions which require a
+  // callback.
+  if (Config.isTargetDevice()) {
+    OutlineInfo OI;
+    OI.OuterAllocaBB = OuterAllocaIP.getBlock();
+    OI.EntryBB = AllocaBB;
+    OI.ExitBB = ExitBB;
 
-  addOutlineInfo(std::move(OI));
+    addOutlineInfo(std::move(OI));
+  }
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
 
   return Builder.saveIP();
@@ -10036,19 +10070,20 @@ OpenMPIRBuilder::createOffloadMapnames(SmallVectorImpl<llvm::Constant *> &Names,
 void OpenMPIRBuilder::initializeTypes(Module &M) {
   LLVMContext &Ctx = M.getContext();
   StructType *T;
+  unsigned DefaultTargetAS = Config.getDefaultTargetAS();
 #define OMP_TYPE(VarName, InitValue) VarName = InitValue;
 #define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
   VarName##Ty = ArrayType::get(ElemTy, ArraySize);                             \
-  VarName##PtrTy = PointerType::getUnqual(Ctx);
+  VarName##PtrTy = PointerType::get(Ctx, DefaultTargetAS);
 #define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
   VarName = FunctionType::get(ReturnType, {__VA_ARGS__}, IsVarArg);            \
-  VarName##Ptr = PointerType::getUnqual(Ctx);
+  VarName##Ptr = PointerType::get(Ctx, DefaultTargetAS);
 #define OMP_STRUCT_TYPE(VarName, StructName, Packed, ...)                      \
   T = StructType::getTypeByName(Ctx, StructName);                              \
   if (!T)                                                                      \
     T = StructType::create(Ctx, {__VA_ARGS__}, StructName, Packed);            \
   VarName = T;                                                                 \
-  VarName##Ptr = PointerType::getUnqual(Ctx);
+  VarName##Ptr = PointerType::get(Ctx, DefaultTargetAS);
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 }
 
@@ -10512,11 +10547,12 @@ void OpenMPIRBuilder::loadOffloadInfoMetadata(Module &M) {
   }
 }
 
-void OpenMPIRBuilder::loadOffloadInfoMetadata(StringRef HostFilePath) {
+void OpenMPIRBuilder::loadOffloadInfoMetadata(vfs::FileSystem &VFS,
+                                              StringRef HostFilePath) {
   if (HostFilePath.empty())
     return;
 
-  auto Buf = MemoryBuffer::getFile(HostFilePath);
+  auto Buf = VFS.getBufferForFile(HostFilePath);
   if (std::error_code Err = Buf.getError()) {
     report_fatal_error(("error opening host file from host file path inside of "
                         "OpenMPIRBuilder: " +

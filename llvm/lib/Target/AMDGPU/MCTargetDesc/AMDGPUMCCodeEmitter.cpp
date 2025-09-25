@@ -88,7 +88,7 @@ private:
 
   /// Encode an fp or int literal.
   std::optional<uint64_t>
-  getLitEncoding(const MCOperand &MO, const MCOperandInfo &OpInfo,
+  getLitEncoding(const MCInstrDesc &Desc, const MCOperand &MO, unsigned OpNo,
                  const MCSubtargetInfo &STI,
                  bool HasMandatoryLiteral = false) const;
 
@@ -219,8 +219,8 @@ static uint32_t getLit16IntEncoding(uint32_t Val, const MCSubtargetInfo &STI) {
   return getLit32Encoding(Val, STI);
 }
 
-static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI,
-                                 bool IsFP) {
+static uint32_t getLit64Encoding(const MCInstrDesc &Desc, uint64_t Val,
+                                 const MCSubtargetInfo &STI, bool IsFP) {
   uint32_t IntImm = getIntInlineImmEncoding(static_cast<int64_t>(Val));
   if (IntImm != 0)
     return IntImm;
@@ -255,20 +255,21 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI,
 
   // The rest part needs to align with AMDGPUInstPrinter::printLiteral64.
 
+  bool CanUse64BitLiterals =
+      STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+      !(Desc.TSFlags & (SIInstrFlags::VOP3 | SIInstrFlags::VOP3P));
   if (IsFP) {
-    return STI.hasFeature(AMDGPU::Feature64BitLiterals) && Lo_32(Val) ? 254
-                                                                      : 255;
+    return CanUse64BitLiterals && Lo_32(Val) ? 254 : 255;
   }
 
-  return STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-                 (!isInt<32>(Val) || !isUInt<32>(Val))
-             ? 254
-             : 255;
+  return CanUse64BitLiterals && (!isInt<32>(Val) || !isUInt<32>(Val)) ? 254
+                                                                      : 255;
 }
 
 std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
-    const MCOperand &MO, const MCOperandInfo &OpInfo,
+    const MCInstrDesc &Desc, const MCOperand &MO, unsigned OpNo,
     const MCSubtargetInfo &STI, bool HasMandatoryLiteral) const {
+  const MCOperandInfo &OpInfo = Desc.operands()[OpNo];
   int64_t Imm;
   if (MO.isExpr()) {
     if (!MO.getExpr()->evaluateAsAbsolute(Imm))
@@ -296,14 +297,14 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
-    return getLit64Encoding(static_cast<uint64_t>(Imm), STI, false);
+    return getLit64Encoding(Desc, static_cast<uint64_t>(Imm), STI, false);
 
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-    return getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
+    return getLit64Encoding(Desc, static_cast<uint64_t>(Imm), STI, true);
 
   case AMDGPU::OPERAND_REG_IMM_FP64: {
-    auto Enc = getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
+    auto Enc = getLit64Encoding(Desc, static_cast<uint64_t>(Imm), STI, true);
     return (HasMandatoryLiteral && Enc == 255) ? 254 : Enc;
   }
 
@@ -344,7 +345,7 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
   case AMDGPU::OPERAND_KIMM64:
-    return MO.getImm();
+    return Imm;
   default:
     llvm_unreachable("invalid operand size");
   }
@@ -402,7 +403,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
   if (AMDGPU::isGFX10Plus(STI) && isVCMPX64(Desc)) {
     assert((Encoding & 0xFF) == 0);
     Encoding |= MRI.getEncodingValue(AMDGPU::EXEC_LO) &
-                AMDGPU::HWEncoding::REG_IDX_MASK;
+                AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
   }
 
   for (unsigned i = 0; i < bytes; i++) {
@@ -444,7 +445,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
 
     // Is this operand a literal immediate?
     const MCOperand &Op = MI.getOperand(i);
-    auto Enc = getLitEncoding(Op, Desc.operands()[i], STI);
+    auto Enc = getLitEncoding(Desc, Op, i, STI);
     if (!Enc || (*Enc != 255 && *Enc != 254))
       continue;
 
@@ -456,6 +457,8 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     else if (Op.isExpr()) {
       if (const auto *C = dyn_cast<MCConstantExpr>(Op.getExpr()))
         Imm = C->getValue();
+      else if (AMDGPU::isLitExpr(Op.getExpr()))
+        Imm = AMDGPU::getLitValue(Op.getExpr());
     } else // Exprs will be replaced with a fixup value.
       llvm_unreachable("Must be immediate or expr");
 
@@ -463,8 +466,9 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
       assert(STI.hasFeature(AMDGPU::Feature64BitLiterals));
       support::endian::write<uint64_t>(CB, Imm, llvm::endianness::little);
     } else {
-      if (Desc.operands()[i].OperandType == AMDGPU::OPERAND_REG_IMM_FP64)
-        Imm = Hi_32(Imm);
+      auto OpType =
+          static_cast<AMDGPU::OperandType>(Desc.operands()[i].OperandType);
+      Imm = AMDGPU::encode32BitLiteral(Imm, OpType);
       support::endian::write<uint32_t>(CB, Imm, llvm::endianness::little);
     }
 
@@ -518,7 +522,7 @@ void AMDGPUMCCodeEmitter::getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
     return;
   } else {
     const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
-    auto Enc = getLitEncoding(MO, Desc.operands()[OpNo], STI);
+    auto Enc = getLitEncoding(Desc, MO, OpNo, STI);
     if (Enc && *Enc != 255) {
       Op = *Enc | SDWA9EncValues::SRC_SGPR_MASK;
       return;
@@ -551,7 +555,7 @@ void AMDGPUMCCodeEmitter::getAVOperandEncoding(
     SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
   MCRegister Reg = MI.getOperand(OpNo).getReg();
   unsigned Enc = MRI.getEncodingValue(Reg);
-  unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+  unsigned Idx = Enc & AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
   bool IsVGPROrAGPR =
       Enc & (AMDGPU::HWEncoding::IS_VGPR | AMDGPU::HWEncoding::IS_AGPR);
 
@@ -593,7 +597,7 @@ void AMDGPUMCCodeEmitter::getMachineOpValue(const MCInst &MI,
                                             const MCSubtargetInfo &STI) const {
   if (MO.isReg()){
     unsigned Enc = MRI.getEncodingValue(MO.getReg());
-    unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+    unsigned Idx = Enc & AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
     bool IsVGPROrAGPR =
         Enc & (AMDGPU::HWEncoding::IS_VGPR | AMDGPU::HWEncoding::IS_AGPR);
     Op = Idx | (IsVGPROrAGPR << 8);
@@ -656,7 +660,7 @@ void AMDGPUMCCodeEmitter::getMachineOpValueT16Lo128(
   const MCOperand &MO = MI.getOperand(OpNo);
   if (MO.isReg()) {
     uint16_t Encoding = MRI.getEncodingValue(MO.getReg());
-    unsigned RegIdx = Encoding & AMDGPU::HWEncoding::REG_IDX_MASK;
+    unsigned RegIdx = Encoding & AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
     bool IsHi = Encoding & AMDGPU::HWEncoding::IS_HI16;
     bool IsVGPR = Encoding & AMDGPU::HWEncoding::IS_VGPR;
     assert((!IsVGPR || isUInt<7>(RegIdx)) && "VGPR0-VGPR127 expected!");
@@ -701,8 +705,7 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
   if (AMDGPU::isSISrcOperand(Desc, OpNo)) {
     bool HasMandatoryLiteral =
         AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::imm);
-    if (auto Enc = getLitEncoding(MO, Desc.operands()[OpNo], STI,
-                                  HasMandatoryLiteral)) {
+    if (auto Enc = getLitEncoding(Desc, MO, OpNo, STI, HasMandatoryLiteral)) {
       Op = *Enc;
       return;
     }

@@ -109,10 +109,12 @@ def hlfir_DeclareOp
     attr-dict `:` functional-type(operands, results)
   }];
 
-  let builders = [
-    OpBuilder<(ins "mlir::Value":$memref, "llvm::StringRef":$uniq_name,
-      CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
+  let builders = [OpBuilder<(ins "mlir::Value":$memref,
+      "llvm::StringRef":$uniq_name, CArg<"mlir::Value", "{}">:$shape,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"mlir::Value", "{}">:$dummy_scope,
+      CArg<"mlir::Value", "{}">:$storage,
+      CArg<"std::uint64_t", "0">:$storage_offset,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs,
       CArg<"cuf::DataAttributeAttr", "{}">:$data_attr)>];
 
@@ -370,6 +372,44 @@ def hlfir_CmpCharOp : hlfir_Op<"cmpchar",
 
   let assemblyFormat = [{
       $predicate $lchr $rchr attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def hlfir_CharTrimOp
+    : hlfir_Op<
+          "char_trim", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "trim character";
+  let description = [{ Trim a character string. }];
+
+  let arguments = (ins AnyScalarCharacterEntity:$chr);
+
+  let results = (outs AnyScalarCharacterExpr);
+
+  let assemblyFormat = [{
+      $chr attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [OpBuilder<(ins "mlir::Value":$chr)>];
+}
+
+def hlfir_IndexOp
+    : hlfir_Op<"index", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "index transformational intrinsic";
+  let description = [{
+    Search for a substring position within a string, optionally backward
+    if back is set to true.
+  }];
+
+  let arguments = (ins AnyScalarCharacterEntity:$substr,
+      AnyScalarCharacterEntity:$str,
+      Optional<Type<AnyLogicalLike.predicate>>:$back);
+
+  let results = (outs AnyIntegerType);
+
+  let assemblyFormat = [{
+      $substr `in` $str  (`back` $back^)? attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;

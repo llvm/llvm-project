@@ -140,6 +140,12 @@ public:
 
   std::optional<PdbCompilandSymId> FindSymbolScope(PdbCompilandSymId id);
 
+  /// Find the mangled name for a function
+  ///
+  /// \param id A symbol ID of a S_LPROC32/S_GPROC32 record
+  /// \returns The mangled name of the function (if available)
+  std::optional<llvm::StringRef> FindMangledFunctionName(PdbCompilandSymId id);
+
   void FindTypes(const lldb_private::TypeQuery &match,
                  lldb_private::TypeResults &results) override;
 
@@ -157,7 +163,8 @@ public:
 
   PdbIndex &GetIndex() { return *m_index; };
 
-  void DumpClangAST(Stream &s, llvm::StringRef filter) override;
+  void DumpClangAST(Stream &s, llvm::StringRef filter,
+                    bool show_color) override;
 
   std::optional<llvm::codeview::TypeIndex>
   GetParentType(llvm::codeview::TypeIndex ti);
@@ -260,10 +267,15 @@ private:
 
   std::vector<CompilerContext> GetContextForType(llvm::codeview::TypeIndex ti);
 
-  void CacheFunctionNames();
+  /// Caches the basenames of symbols found in the globals stream.
+  ///
+  /// This includes functions and global variables
+  void CacheGlobalBaseNames();
 
   void CacheUdtDeclarations();
   llvm::Expected<Declaration> ResolveUdtDeclaration(PdbTypeSymId type_id);
+
+  std::optional<llvm::StringRef> FindMangledSymbol(SegmentOffset so);
 
   llvm::BumpPtrAllocator m_allocator;
 
@@ -306,6 +318,9 @@ private:
   lldb_private::UniqueCStringMap<uint32_t> m_func_base_names;
   /// method basename -> Global ID(s)
   lldb_private::UniqueCStringMap<uint32_t> m_func_method_names;
+
+  /// global variable basename -> Global ID(s)
+  lldb_private::UniqueCStringMap<uint32_t> m_global_variable_base_names;
 };
 
 } // namespace npdb
