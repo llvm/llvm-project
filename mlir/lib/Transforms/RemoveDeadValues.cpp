@@ -772,7 +772,8 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
   LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
   for (OperationToCleanup &o : list.operands) {
     // Handle call-specific cleanup only when we have a cached callee reference.
-    // This avoids expensive symbol lookup and is defensive against future changes.
+    // This avoids expensive symbol lookup and is defensive against future
+    // changes.
     bool handledAsCall = false;
     if (o.callee && isa<CallOpInterface>(o.op)) {
       auto call = cast<CallOpInterface>(o.op);
@@ -781,11 +782,9 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
         const BitVector &deadArgIdxs = it->second;
         MutableOperandRange args = call.getArgOperandsMutable();
         // First, erase the call arguments corresponding to erased callee
-        // args.
-        for (int i = static_cast<int>(args.size()) - 1; i >= 0; --i) {
-          if (i < static_cast<int>(deadArgIdxs.size()) && deadArgIdxs.test(i))
-            args.erase(i);
-        }
+        // args. We iterate backwards to preserve indices.
+        for (unsigned argIdx : llvm::reverse(deadArgIdxs.set_bits()))
+          args.erase(argIdx);
         // If this operand cleanup entry also has a generic nonLive bitvector,
         // clear bits for call arguments we already erased above to avoid
         // double-erasing (which could impact other segments of ops with
