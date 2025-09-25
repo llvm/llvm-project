@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: void builtin_cast
 func.func @builtin_cast(%arg0: !emitc.ptr<f32>){
-    // CHECK : float (*v2)[1][3][4][4] = (float(*)[1][3][4][4])v1
+    // CHECK : float (*v2)[1][3][4][4] = (float (*)[1][3][4][4])v1
   %1 = builtin.unrealized_conversion_cast %arg0 : !emitc.ptr<f32> to !emitc.array<1x3x4x4xf32>
 return
 }

@@ -862,7 +862,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
     if (failed(emitter.emitType(op.getLoc(), destArrayType.getElementType())))
       return failure();
 
-    os << "(*)"; // Pointer to array
+    os << " (*)"; // Pointer to array
 
     for (int64_t dim : destArrayType.getShape()) {
       os << "[" << dim << "]";
