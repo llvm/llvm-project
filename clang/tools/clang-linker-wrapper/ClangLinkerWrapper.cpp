@@ -719,9 +719,9 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
     break;
   case OFK_SYCL: {
     // TODO: fill these options once the Driver supports them.
-    offloading::SYCLWrappingOptions WrappingOptions;
+    offloading::SYCLJITOptions Options;
     if (Error Err =
-            offloading::wrapSYCLBinaries(M, BuffersToWrap, WrappingOptions))
+            offloading::wrapSYCLBinaries(M, BuffersToWrap.front(), Options))
       return std::move(Err);
     break;
   }
@@ -765,31 +765,14 @@ bundleOpenMP(ArrayRef<OffloadingImage> Images) {
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleSYCL(ArrayRef<OffloadingImage> Images) {
   SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
-  if (DryRun) {
-    // In dry-run mode there is an empty input which is insufficient for
-    // the testing. Therefore, we insert a stub value.
-    OffloadBinary::OffloadingImage Image;
-    Image.TheOffloadKind = OffloadKind::OFK_SYCL;
-    Image.Image = MemoryBuffer::getMemBufferCopy("");
-    SmallString<0> SerializedImage = OffloadBinary::write(Image);
-    Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(SerializedImage));
-    return Buffers;
+  for (const OffloadingImage &Image : Images) {
+    // clang-sycl-linker packs outputs into one binary blob. Therefore, it is
+    // passed to Offload Wrapper as is.
+    StringRef S(Image.Image->getBufferStart(), Image.Image->getBufferSize());
+    Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(S));
   }
 
-  for (const OffloadingImage &TheImage : Images) {
-    SmallVector<OffloadFile> OffloadBinaries;
-    if (Error E = extractOffloadBinaries(*TheImage.Image, OffloadBinaries))
-      return E;
-
-    for (const OffloadFile &File : OffloadBinaries) {
-      const OffloadBinary &Binary = *File.getBinary();
-      SmallString<0> SerializedImage =
-          OffloadBinary::write(Binary.getOffloadingImage());
-      Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(SerializedImage));
-    }
-  }
-
-  return Buffers;
+  return std::move(Buffers);
 }
 
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>

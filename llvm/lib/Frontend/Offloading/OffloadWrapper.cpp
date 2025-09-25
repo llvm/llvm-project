@@ -640,13 +640,13 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
 struct SYCLWrapper {
   Module &M;
   LLVMContext &C;
-  SYCLWrappingOptions Options;
+  SYCLJITOptions Options;
 
   StructType *EntryTy = nullptr;
   StructType *SyclDeviceImageTy = nullptr;
   StructType *SyclBinDescTy = nullptr;
 
-  SYCLWrapper(Module &M, const SYCLWrappingOptions &Options)
+  SYCLWrapper(Module &M, const SYCLJITOptions &Options)
       : M(M), C(M.getContext()), Options(Options) {
     EntryTy = offloading::getEntryTy(M);
     SyclDeviceImageTy = getSyclDeviceImageTy();
@@ -812,11 +812,12 @@ struct SYCLWrapper {
     std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
         Entries, /*BufferName*/ "", /*RequiresNullTerminator*/ false);
     for (line_iterator LI(*MB); !LI.is_at_eof(); ++LI) {
-      Constant *C = addStringToModule(*LI, "__sycl_offload_entry_name");
-      GlobalVariable *GV =
-          emitOffloadingEntry(M, /*Kind*/ OffloadKind::OFK_SYCL, C,
-                              /*Name*/ "__sycl_offload_entry_name", /*Size*/ 0,
-                              /*Flags*/ 0, /*Data*/ 0);
+      GlobalVariable *GV = emitOffloadingEntry(
+          M, /*Kind*/ OffloadKind::OFK_SYCL,
+          Constant::getNullValue(PointerType::getUnqual(C)),
+          /*Name*/ *LI, /*Size*/ 0,
+          ///*Name*/ "__sycl_offload_entry_name", /*Size*/ 0,
+          /*Flags*/ 0, /*Data*/ 0);
       EntriesInits.push_back(GV->getInitializer());
     }
 
@@ -1079,22 +1080,30 @@ Error offloading::wrapHIPBinary(Module &M, ArrayRef<char> Image,
   return Error::success();
 }
 
-Error llvm::offloading::wrapSYCLBinaries(llvm::Module &M,
-                                         ArrayRef<ArrayRef<char>> Buffers,
-                                         SYCLWrappingOptions Options) {
+Error llvm::offloading::wrapSYCLBinaries(llvm::Module &M, ArrayRef<char> Buffer,
+                                         SYCLJITOptions Options) {
   SYCLWrapper W(M, Options);
-  SmallVector<std::unique_ptr<OffloadBinary>> OffloadBinaries;
-  OffloadBinaries.reserve(Buffers.size());
-  SmallVector<OffloadingImage> Images;
-  Images.reserve(Buffers.size());
-  for (auto Buf : Buffers) {
-    MemoryBufferRef MBR(StringRef(Buf.begin(), Buf.size()), /*Identifier*/ "");
-    auto OffloadBinaryOrErr = OffloadBinary::create(MBR);
-    if (!OffloadBinaryOrErr)
-      return OffloadBinaryOrErr.takeError();
+  MemoryBufferRef MBR(StringRef(Buffer.begin(), Buffer.size()),
+                      /*Identifier*/ "");
+  SmallVector<OffloadFile> OffloadFiles;
+  if (Error E = extractOffloadBinaries(MBR, OffloadFiles))
+    return E;
 
-    OffloadBinaries.emplace_back(std::move(*OffloadBinaryOrErr));
-    Images.emplace_back(OffloadBinaries.back()->getOffloadingImage());
+  SmallVector<OffloadingImage> Images;
+  Images.reserve(OffloadFiles.size());
+  for (OffloadFile &File : OffloadFiles) {
+    OffloadBinary &Binary = *File.getBinary();
+    OffloadingImage OI;
+    OI.TheImageKind = Binary.getImageKind();
+    OI.TheOffloadKind = Binary.getOffloadKind();
+    OI.Flags = Binary.getFlags();
+    OI.StringData["arch"] = Binary.getString("arch");
+    OI.StringData["triple"] = Binary.getString("triple");
+    OI.StringData["symbols"] = Binary.getString("symbols");
+    OI.Image = MemoryBuffer::getMemBuffer(
+        MemoryBufferRef(Binary.getImage(), /*Identifier*/ ""),
+        /*RequiresNullTerminator*/ false);
+    Images.emplace_back(std::move(OI));
   }
 
   GlobalVariable *Desc = W.createFatbinDesc(Images);

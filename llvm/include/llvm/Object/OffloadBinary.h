@@ -85,8 +85,6 @@ public:
   /// Serialize the contents of \p File to a binary buffer to be read later.
   LLVM_ABI static SmallString<0> write(const OffloadingImage &);
 
-  OffloadingImage getOffloadingImage() const;
-
   static uint64_t getAlignment() { return 8; }
 
   ImageKind getImageKind() const { return TheEntry->TheImageKind; }

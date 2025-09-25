@@ -55,7 +55,7 @@ LLVM_ABI llvm::Error wrapHIPBinary(llvm::Module &M, llvm::ArrayRef<char> Images,
                                    llvm::StringRef Suffix = "",
                                    bool EmitSurfacesAndTextures = true);
 
-struct SYCLWrappingOptions {
+struct SYCLJITOptions {
   // Target/compiler specific options that are suggested to use to "compile"
   // program at runtime.
   std::string CompileOptions;
@@ -66,10 +66,10 @@ struct SYCLWrappingOptions {
 
 /// Wraps OffloadBinaries in the given \p Buffers into the module \p M
 /// as global symbols and registers the images with the SYCL Runtime.
-/// \param Options Settings that allows to turn on optional data and settings.
-llvm::Error LLVM_ABI
-wrapSYCLBinaries(llvm::Module &M, llvm::ArrayRef<llvm::ArrayRef<char>> Buffers,
-                 SYCLWrappingOptions Options = SYCLWrappingOptions());
+/// \param Options Data that needs to be encoded for the later use in a runtime.
+LLVM_ABI llvm::Error
+wrapSYCLBinaries(llvm::Module &M, llvm::ArrayRef<char> Buffer,
+                 SYCLJITOptions Options = SYCLJITOptions());
 
 } // namespace offloading
 } // namespace llvm
