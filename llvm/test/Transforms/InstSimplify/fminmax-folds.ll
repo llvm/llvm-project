@@ -585,6 +585,80 @@ define void @minmax_neg_largest_nxv2f32_nnan_ninf(<vscale x 2 x float> %x, ptr %
 }
 
 ;###############################################################
+;#                  Mixed Constant Vector Elements             #
+;###############################################################
+; Tests elementwise handling of different combinations of the above optimizable constants
+
+; Test with vector variants (v2f64) with +Inf and poison
+; Poison element allows for flexibility to choose either X or <poison, +Inf> where applicable
+define void @minmax_mixed_pos_inf_poison_v2f64_nnan(<2 x double> %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
+; CHECK-LABEL: @minmax_mixed_pos_inf_poison_v2f64_nnan(
+; CHECK-NEXT:    store <2 x double> [[X:%.*]], ptr [[MINNUM_RES:%.*]], align 16
+; CHECK-NEXT:    store <2 x double> <double poison, double 0x7FF0000000000000>, ptr [[MAXNUM_RES:%.*]], align 16
+; CHECK-NEXT:    store <2 x double> [[X]], ptr [[MINIMUM_RES:%.*]], align 16
+; CHECK-NEXT:    store <2 x double> <double poison, double 0x7FF0000000000000>, ptr [[MAXIMUM_RES:%.*]], align 16
+; CHECK-NEXT:    store <2 x double> [[X]], ptr [[MINIMUMNUM_RES:%.*]], align 16
+; CHECK-NEXT:    store <2 x double> <double poison, double 0x7FF0000000000000>, ptr [[MAXIMUMNUM_RES:%.*]], align 16
+; CHECK-NEXT:    ret void
+;
+  %minnum = call nnan <2 x double> @llvm.minnum.v2f64(<2 x double> <double poison, double 0x7FF0000000000000>, <2 x double> %x)
+  store <2 x double> %minnum, ptr %minnum_res
+  %maxnum = call nnan <2 x double> @llvm.maxnum.v2f64(<2 x double> <double poison, double 0x7FF0000000000000>, <2 x double> %x)
+  store <2 x double> %maxnum, ptr %maxnum_res
+
+  %minimum = call nnan <2 x double> @llvm.minimum.v2f64(<2 x double> <double poison, double 0x7FF0000000000000>, <2 x double> %x)
+  store <2 x double> %minimum, ptr %minimum_res
+  %maximum = call nnan <2 x double> @llvm.maximum.v2f64(<2 x double> <double poison, double 0x7FF0000000000000>, <2 x double> %x)
+  store <2 x double> %maximum, ptr %maximum_res
+
+  %minimumnum = call nnan <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double poison, double 0x7FF0000000000000>, <2 x double> %x)
+  store <2 x double> %minimumnum, ptr %minimumnum_res
+  %maximumnum = call nnan <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double poison, double 0x7FF0000000000000>, <2 x double> %x)
+  store <2 x double> %maximumnum, ptr %maximumnum_res
+  ret void
+}
+
+; Tests to show that we can optimize different classes of constatn (inf/nan/poison) in different vector elements.
+; We can only optimize if the result would be choosing all elements of the input X, or all constant elements though
+; (where poison allows us to choose either).
+;
+; nnan minnum(<poison, +Inf, SNaN>, X) = <???, X1, QNaN> (Cannot mix elements from X and constant vector)
+; nnan maxnum(<poison, +Inf, SNaN>, X) = <poison +Inf, QNaN>
+; nnan minimum(<poison, +Inf, SNaN>, X) = <???, X1, QNaN> (Cannot mix elements from X and constant vector)
+; nnan maximum(<poison, +Inf, SNaN>, X) = <poison +Inf, QNaN>
+; nnan minimumnum(<poison, +Inf, SNaN>, X) = <X0, X1, X2> (Poison can be either X or constant value)
+; nnan maximumnum(<poison, +Inf, SNaN>, X) = <???, +Inf, X2>
+define void @minmax_mixed_pos_inf_poison_snan_v3f32(<3 x float> %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
+; CHECK-LABEL: @minmax_mixed_pos_inf_poison_snan_v3f32(
+; CHECK-NEXT:    [[MINNUM:%.*]] = call nnan <3 x float> @llvm.minnum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> [[X:%.*]])
+; CHECK-NEXT:    store <3 x float> [[MINNUM]], ptr [[MINNUM_RES:%.*]], align 16
+; CHECK-NEXT:    store <3 x float> <float poison, float 0x7FF0000000000000, float 0x7FFC000000000000>, ptr [[MAXNUM_RES:%.*]], align 16
+; CHECK-NEXT:    [[MINIMUM:%.*]] = call nnan <3 x float> @llvm.minimum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> [[X]])
+; CHECK-NEXT:    store <3 x float> [[MINIMUM]], ptr [[MINIMUM_RES:%.*]], align 16
+; CHECK-NEXT:    store <3 x float> <float poison, float 0x7FF0000000000000, float 0x7FFC000000000000>, ptr [[MAXIMUM_RES:%.*]], align 16
+; CHECK-NEXT:    store <3 x float> [[X]], ptr [[MINIMUMNUM_RES:%.*]], align 16
+; CHECK-NEXT:    [[MAXIMUMNUM:%.*]] = call nnan <3 x float> @llvm.maximumnum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> [[X]])
+; CHECK-NEXT:    store <3 x float> [[MAXIMUMNUM]], ptr [[MAXIMUMNUM_RES:%.*]], align 16
+; CHECK-NEXT:    ret void
+;
+  %minnum = call nnan <3 x float> @llvm.minnum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> %x)
+  store <3 x float> %minnum, ptr %minnum_res
+  %maxnum = call nnan <3 x float> @llvm.maxnum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> %x)
+  store <3 x float> %maxnum, ptr %maxnum_res
+
+  %minimum = call nnan <3 x float> @llvm.minimum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> %x)
+  store <3 x float> %minimum, ptr %minimum_res
+  %maximum = call nnan <3 x float> @llvm.maximum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> %x)
+  store <3 x float> %maximum, ptr %maximum_res
+
+  %minimumnum = call nnan <3 x float> @llvm.minimumnum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> %x)
+  store <3 x float> %minimumnum, ptr %minimumnum_res
+  %maximumnum = call nnan <3 x float> @llvm.maximumnum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> %x)
+  store <3 x float> %maximumnum, ptr %maximumnum_res
+  ret void
+}
+
+;###############################################################
 ;#                    Min(x, x) / Max(x, x)                    #
 ;###############################################################
 ; min(x, x) -> x and max(x, x) -> x for all variants (ignoring SNaN quieting)
