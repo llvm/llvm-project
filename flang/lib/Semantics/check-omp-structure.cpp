@@ -1353,12 +1353,12 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareSimdConstruct &x) {
   const parser::OmpArgument &arg{args.v.front()};
   if (auto *sym{GetArgumentSymbol(arg)}) {
     if (!IsProcedure(*sym) && !IsFunction(*sym)) {
-      context_.Say(arg.source,
-          "The name '%s' should refer to a procedure"_err_en_US, sym->name());
-    }
-    if (sym->test(Symbol::Flag::Implicit)) {
-      context_.Say(arg.source,
-          "The name '%s' has been implicitly declared"_err_en_US, sym->name());
+      auto &msg{context_.Say(arg.source,
+          "The name '%s' should refer to a procedure"_err_en_US, sym->name())};
+      if (sym->test(Symbol::Flag::Implicit)) {
+        msg.Attach(arg.source,
+            "The name '%s' has been implicitly declared"_en_US, sym->name());
+      }
     }
   } else {
     context_.Say(arg.source,
@@ -1389,13 +1389,13 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareVariantDirective &x) {
   auto CheckSymbol{[&](const Symbol *sym, parser::CharBlock source) {
     if (sym) {
       if (!IsProcedure(*sym) && !IsFunction(*sym)) {
-        context_.Say(source,
-            "The name '%s' should refer to a procedure"_err_en_US, sym->name());
-      }
-      if (sym->test(Symbol::Flag::Implicit)) {
-        context_.Say(source,
-            "The name '%s' has been implicitly declared"_err_en_US,
-            sym->name());
+        auto &msg{context_.Say(source,
+            "The name '%s' should refer to a procedure"_err_en_US,
+            sym->name())};
+        if (sym->test(Symbol::Flag::Implicit)) {
+          msg.Attach(source, "The name '%s' has been implicitly declared"_en_US,
+              sym->name());
+        }
       }
     } else {
       InvalidArgument(source);

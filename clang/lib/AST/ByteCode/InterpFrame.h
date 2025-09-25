@@ -104,11 +104,19 @@ public:
   /// Returns a pointer to an argument - lazily creates a block.
   Pointer getParamPointer(unsigned Offset);
 
+  bool hasThisPointer() const { return Func && Func->hasThisPointer(); }
   /// Returns the 'this' pointer.
-  const Pointer &getThis() const { return This; }
+  const Pointer &getThis() const {
+    assert(hasThisPointer());
+    return stackRef<Pointer>(ThisPointerOffset);
+  }
 
   /// Returns the RVO pointer, if the Function has one.
-  const Pointer &getRVOPtr() const { return RVOPtr; }
+  const Pointer &getRVOPtr() const {
+    assert(Func);
+    assert(Func->hasRVO());
+    return stackRef<Pointer>(0);
+  }
 
   /// Checks if the frame is a root frame - return should quit the interpreter.
   bool isRoot() const { return !Func; }
@@ -163,10 +171,8 @@ private:
   unsigned Depth;
   /// Reference to the function being executed.
   const Function *Func;
-  /// Current object pointer for methods.
-  Pointer This;
-  /// Pointer the non-primitive return value gets constructed in.
-  Pointer RVOPtr;
+  /// Offset of the instance pointer. Use with stackRef<>().
+  unsigned ThisPointerOffset;
   /// Return address.
   CodePtr RetPC;
   /// The size of all the arguments.
