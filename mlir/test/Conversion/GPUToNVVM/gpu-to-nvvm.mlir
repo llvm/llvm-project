@@ -1125,9 +1125,9 @@ gpu.module @test_module_56 {
     // CHECK-COUNT-2: llvm.fptrunc
     // CHECK: llvm.call @__nv_sincosf(%[[ARG_f32]], %{{.+}}, %{{.+}}) : (f32, !llvm.ptr, !llvm.ptr) -> ()
     // CHECK: llvm.call @__nv_sincos(%[[ARG_f64]], %{{.+}}, %{{.+}}) : (f64, !llvm.ptr, !llvm.ptr) -> ()
-    %sin16, %cos16 = math.sincos %arg_f16 : f16 -> f16, f16
-    %sin32, %cos32 = math.sincos %arg_f32 : f32 -> f32, f32
-    %sin64, %cos64 = math.sincos %arg_f64 : f64 -> f64, f64
+    %sin16, %cos16 = math.sincos %arg_f16 : f16
+    %sin32, %cos32 = math.sincos %arg_f32 : f32
+    %sin64, %cos64 = math.sincos %arg_f64 : f64
     func.return %sin16, %cos16, %sin32, %cos32, %sin64, %cos64 : f16, f16, f32, f32, f64, f64
   }
 
@@ -1142,9 +1142,9 @@ gpu.module @test_module_56 {
     // CHECK-COUNT-2: llvm.fptrunc
     // CHECK: llvm.call @__nv_fast_sincosf(%[[ARG_f32]], %{{.+}}, %{{.+}}) : (f32, !llvm.ptr, !llvm.ptr) -> ()
     // CHECK: llvm.call @__nv_sincos(%[[ARG_f64]], %{{.+}}, %{{.+}}) : (f64, !llvm.ptr, !llvm.ptr) -> ()
-    %sin16, %cos16 = math.sincos %arg_f16 fastmath<afn> : f16 -> f16, f16
-    %sin32, %cos32 = math.sincos %arg_f32 fastmath<afn> : f32 -> f32, f32
-    %sin64, %cos64 = math.sincos %arg_f64 fastmath<afn> : f64 -> f64, f64
+    %sin16, %cos16 = math.sincos %arg_f16 fastmath<afn> : f16
+    %sin32, %cos32 = math.sincos %arg_f32 fastmath<afn> : f32
+    %sin64, %cos64 = math.sincos %arg_f64 fastmath<afn> : f64
     func.return %sin16, %cos16, %sin32, %cos32, %sin64, %cos64 : f16, f16, f32, f32, f64, f64
   }
 }

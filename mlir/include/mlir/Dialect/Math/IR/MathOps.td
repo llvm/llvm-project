@@ -516,7 +516,8 @@ def Math_SinhOp : Math_FloatUnaryOp<"sinh"> {
 
 def Math_SincosOp : Math_Op<"sincos",
     [SameOperandsAndResultShape,
-     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+     DeclareOpInterfaceMethods<ArithFastMathInterface>,
+     AllTypesMatch<["operand", "sin", "cos"]>]> {
   let summary = "sine and cosine of the specified value";
   let description = [{
     The `sincos` operation computes both the sine and cosine of a given value
@@ -529,7 +530,7 @@ def Math_SincosOp : Math_Op<"sincos",
 
     ```mlir
     // Scalar sine and cosine values.
-    %sin, %cos = math.sincos %input : f64 `->` f64, f64
+    %sin, %cos = math.sincos %input : f64
     ```
   }];
 
@@ -539,7 +540,7 @@ def Math_SincosOp : Math_Op<"sincos",
   let results = (outs FloatLike:$sin, FloatLike:$cos);
 
   let assemblyFormat = [{ $operand (`fastmath` `` $fastmath^)?
-                          attr-dict `:` type($operand) `->` type($sin) `,` type($cos) }];
+                          attr-dict `:` type($operand) }];
 
   let extraClassDeclaration = [{
     std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();

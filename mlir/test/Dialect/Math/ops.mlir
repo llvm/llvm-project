@@ -66,11 +66,11 @@ func.func @sin(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
 // CHECK-SAME:            %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
 func.func @sincos(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
   // CHECK: %{{.*}} = math.sincos %[[F]] : f32
-  %0:2 = math.sincos %f : f32 -> f32, f32
+  %0:2 = math.sincos %f : f32
   // CHECK: %{{.*}} = math.sincos %[[V]] : vector<4xf32>
-  %1:2 = math.sincos %v : vector<4xf32> -> vector<4xf32>, vector<4xf32>
+  %1:2 = math.sincos %v : vector<4xf32>
   // CHECK: %{{.*}} = math.sincos %[[T]] : tensor<4x4x?xf32>
-  %2:2 = math.sincos %t : tensor<4x4x?xf32> -> tensor<4x4x?xf32>, tensor<4x4x?xf32>
+  %2:2 = math.sincos %t : tensor<4x4x?xf32>
   return
 }
 
