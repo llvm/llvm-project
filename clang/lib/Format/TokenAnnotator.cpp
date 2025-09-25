@@ -3802,7 +3802,7 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
   const auto *Prev = Current.getPreviousNonComment();
   assert(Prev);
 
-  if (Prev->is(tok::coloncolon))
+  if (Prev->is(tok::coloncolon) && Prev->hasWhitespaceBefore())
     Prev = Prev->Previous;
 
   if (!Prev)
