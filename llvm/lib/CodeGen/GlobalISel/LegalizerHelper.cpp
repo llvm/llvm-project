@@ -3386,21 +3386,13 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   case TargetOpcode::G_FMODF: {
+    Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_FPEXT);
 
-    Register DstFrac = MI.getOperand(0).getReg();
-    Register DstInt = MI.getOperand(1).getReg();
-
-    Register DstFracWide = MRI.createGenericVirtualRegister(WideTy);
-    Register DstIntWide = MRI.createGenericVirtualRegister(WideTy);
-    Register SrcWide = MI.getOperand(2).getReg();
-
-    MIRBuilder.buildInstr(TargetOpcode::G_FMODF, {DstFracWide, DstIntWide},
-                          {SrcWide});
-
-    MIRBuilder.buildFPTrunc(DstFrac, DstFracWide);
-    MIRBuilder.buildFPTrunc(DstInt, DstIntWide);
-    MI.eraseFromParent();
+    widenScalarDst(MI, WideTy, 1, TargetOpcode::G_FPTRUNC);
+    MIRBuilder.setInsertPt(MIRBuilder.getMBB(), --MIRBuilder.getInsertPt());
+    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    Observer.changedInstr(MI);
     return Legalized;
   }
   case TargetOpcode::G_FPOWI:
