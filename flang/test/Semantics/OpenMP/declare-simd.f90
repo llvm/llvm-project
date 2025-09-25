@@ -3,7 +3,6 @@
 module m
 
 !ERROR: The name 'x' should refer to a procedure
-!ERROR: The name 'x' has been implicitly declared
 !$omp declare_simd(x)
 
 !ERROR: DECLARE_SIMD directive should have at most one argument
