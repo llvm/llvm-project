@@ -896,9 +896,7 @@ void AArch64PassConfig::addPostBBSections() {
 void AArch64PassConfig::addPreEmitPass2() {
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.
-  addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
-    return MF.getFunction().hasFnAttribute("ct-select");
-  }));
+  addPass(createUnpackMachineBundles(nullptr));
 }
 
 bool AArch64PassConfig::addRegAssignAndRewriteOptimized() {

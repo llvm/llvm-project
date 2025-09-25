@@ -656,61 +656,73 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
   Register TrueVal = MI.getOperand(4).getReg();  // false_value
   X86::CondCode CC = X86::CondCode(MI.getOperand(5).getImm()); // condition
 
+  MachineInstr *FirstInstr = nullptr;
+  MachineInstr *LastInstr = nullptr;
+  auto recordInstr = [&](MachineInstrBuilder MIB) {
+    MachineInstr *NewMI = MIB.getInstr();
+    LastInstr = NewMI;
+    if (!FirstInstr)
+      FirstInstr = NewMI;
+  };
+
   // Create scalar mask in tempGPR and broadcast to vector mask
-  auto FirstNewMI = BuildMI(*MBB, MI, DL, get(X86::MOV32ri), TmpGPR)
-      .addImm(0)
-      .setMIFlags(MachineInstr::MIFlag::NoMerge);
+  recordInstr(BuildMI(*MBB, MI, DL, get(X86::MOV32ri), TmpGPR)
+                  .addImm(0)
+                  .setMIFlags(MachineInstr::MIFlag::NoMerge));
 
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   auto SubReg = TRI->getSubReg(TmpGPR, X86::sub_8bit);
-  BuildMI(*MBB, MI, DL, get(X86::SETCCr))
-      .addReg(SubReg)
-      .addImm(CC)
-      .setMIFlags(MachineInstr::MIFlag::NoMerge);
+  recordInstr(BuildMI(*MBB, MI, DL, get(X86::SETCCr))
+                  .addReg(SubReg)
+                  .addImm(CC)
+                  .setMIFlags(MachineInstr::MIFlag::NoMerge));
 
   // Zero-extend byte to 32-bit register (movzbl %al, %eax)
-  BuildMI(*MBB, MI, DL, get(X86::MOVZX32rr8), TmpGPR)
-      .addReg(SubReg)
-      .setMIFlags(MachineInstr::MIFlag::NoMerge);
+  recordInstr(BuildMI(*MBB, MI, DL, get(X86::MOVZX32rr8), TmpGPR)
+                  .addReg(SubReg)
+                  .setMIFlags(MachineInstr::MIFlag::NoMerge));
 
   if (Instruction.UseBlendInstr && Subtarget.hasSSE41()) {
     // Shift left 31 bits to convert 1 -> 0x80000000, 0 -> 0x00000000 (shll $31,
     // %eax)
-    BuildMI(*MBB, MI, DL, get(X86::SHL32ri), TmpGPR).addReg(TmpGPR).addImm(31);
+    recordInstr(BuildMI(*MBB, MI, DL, get(X86::SHL32ri), TmpGPR)
+                    .addReg(TmpGPR)
+                    .addImm(31));
   } else {
     // Negate to convert 1 -> 0xFFFFFFFF, 0 -> 0x00000000 (negl %eax)
-    BuildMI(*MBB, MI, DL, get(X86::NEG32r), TmpGPR).addReg(TmpGPR);
+    recordInstr(BuildMI(*MBB, MI, DL, get(X86::NEG32r), TmpGPR)
+                    .addReg(TmpGPR));
   }
 
   // Broadcast to TmpX (vector mask)
-  BuildMI(*MBB, MI, DL, get(X86::PXORrr), MaskReg)
-      .addReg(MaskReg)
-      .addReg(MaskReg)
-      .setMIFlags(MachineInstr::MIFlag::NoMerge);
+  recordInstr(BuildMI(*MBB, MI, DL, get(X86::PXORrr), MaskReg)
+                  .addReg(MaskReg)
+                  .addReg(MaskReg)
+                  .setMIFlags(MachineInstr::MIFlag::NoMerge));
 
   // Move scalar mask to vector register
-  BuildMI(*MBB, MI, DL, get(Instruction.IntMoveOpc), MaskReg)
-      .addReg(TmpGPR)
-      .setMIFlags(MachineInstr::MIFlag::NoMerge);
+  recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.IntMoveOpc), MaskReg)
+                  .addReg(TmpGPR)
+                  .setMIFlags(MachineInstr::MIFlag::NoMerge));
 
   if (Instruction.Use256) {
     // Broadcast to 256-bit vector register
-    BuildMI(*MBB, MI, DL, get(Instruction.BroadcastOpc), MaskReg)
-        .addReg(MaskReg)
-        .addImm(0)
-        .setMIFlags(MachineInstr::MIFlag::NoMerge);
+    recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.BroadcastOpc), MaskReg)
+                    .addReg(MaskReg)
+                    .addImm(0)
+                    .setMIFlags(MachineInstr::MIFlag::NoMerge));
   } else {
     if (Subtarget.hasSSE2() || Subtarget.hasAVX()) {
-      BuildMI(*MBB, MI, DL, get(Instruction.BroadcastOpc), MaskReg)
-          .addReg(MaskReg)
-          .addImm(0x00)
-          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+      recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.BroadcastOpc), MaskReg)
+                      .addReg(MaskReg)
+                      .addImm(0x00)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
     } else {
-      BuildMI(*MBB, MI, DL, get(Instruction.BroadcastOpc), MaskReg)
-          .addReg(MaskReg)
-          .addReg(MaskReg)
-          .addImm(0x00)
-          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+      recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.BroadcastOpc), MaskReg)
+                      .addReg(MaskReg)
+                      .addReg(MaskReg)
+                      .addImm(0x00)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
     }
   }
 
@@ -739,9 +751,9 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
 
       // if XMM0 is one of the source registers, it will not match with Dst
       // registers, so we need to move it to Dst register
-      BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
-          .addReg(SrcXMM0)
-          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+      recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
+                      .addReg(SrcXMM0)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
 
       // update FalseVal and TrueVal to Dst register
       if (FalseVal == X86::XMM0)
@@ -759,9 +771,9 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
 
       // if XMM0 is not allocated for any of the register, we stil need to save
       // and restore it after using as mask register
-      BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
-          .addReg(X86::XMM0)
-          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+      recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
+                      .addReg(X86::XMM0)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
       SavedXMM0 = Dst;
       DidSaveXMM0 = true;
     }
@@ -769,75 +781,76 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
     if (MaskReg != X86::XMM0) {
       // BLENDV uses XMM0 as implicit mask register
       // https://www.felixcloutier.com/x86/pblendvb
-      BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), X86::XMM0)
-          .addReg(MaskReg)
-          .setMIFlag(MachineInstr::MIFlag::NoMerge);
+      recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), X86::XMM0)
+                      .addReg(MaskReg)
+                      .setMIFlag(MachineInstr::MIFlag::NoMerge));
 
       // move FalseVal to mask (use MaskReg as the dst of the blend)
-      BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), MaskReg)
-          .addReg(FalseVal)
-          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+      recordInstr(BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), MaskReg)
+                      .addReg(FalseVal)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
 
       // MaskReg := blend(MaskReg /*false*/, TrueVal /*true*/)  ; mask in
       // xmm0
-      BuildMI(*MBB, MI, DL, get(BlendOpc), MaskReg)
-          .addReg(MaskReg)
-          .addReg(TrueVal)
-          .addReg(X86::XMM0)
-          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+      recordInstr(BuildMI(*MBB, MI, DL, get(BlendOpc), MaskReg)
+                      .addReg(MaskReg)
+                      .addReg(TrueVal)
+                      .addReg(X86::XMM0)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
 
       // restore XMM0 from SavedXMM0 if we saved it into Dst
       if (DidSaveXMM0) {
-        BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), X86::XMM0)
-            .addReg(SavedXMM0)
-            .setMIFlags(MachineInstr::MIFlag::NoMerge);
+        recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), X86::XMM0)
+                        .addReg(SavedXMM0)
+                        .setMIFlags(MachineInstr::MIFlag::NoMerge));
       }
       // dst = result (now in MaskReg)
-      BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
-          .addReg(MaskReg)
-          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+      recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
+                      .addReg(MaskReg)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
     } else {
       // move FalseVal to Dst register since MaskReg is XMM0 and Dst is not
-      BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
-          .addReg(FalseVal)
-          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+      recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
+                      .addReg(FalseVal)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
 
       // Dst := blend(Dst /*false*/, TrueVal /*true*/)  ; mask in
       // xmm0
-      BuildMI(*MBB, MI, DL, get(BlendOpc), Dst)
-          .addReg(Dst)
-          .addReg(TrueVal)
-          .addReg(X86::XMM0)
-          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+      recordInstr(BuildMI(*MBB, MI, DL, get(BlendOpc), Dst)
+                      .addReg(Dst)
+                      .addReg(TrueVal)
+                      .addReg(X86::XMM0)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
     }
   } else {
 
     // dst = mask
-    BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
-        .addReg(MaskReg)
-        .setMIFlags(MachineInstr::MIFlag::NoMerge);
+    recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
+                    .addReg(MaskReg)
+                    .setMIFlags(MachineInstr::MIFlag::NoMerge));
 
     // mask &= true_val
-    BuildMI(*MBB, MI, DL, get(X86::PANDrr), MaskReg)
-        .addReg(MaskReg)
-        .addReg(TrueVal)
-        .setMIFlags(MachineInstr::MIFlag::NoMerge);
+    recordInstr(BuildMI(*MBB, MI, DL, get(X86::PANDrr), MaskReg)
+                    .addReg(MaskReg)
+                    .addReg(TrueVal)
+                    .setMIFlags(MachineInstr::MIFlag::NoMerge));
 
     // dst = ~mask & false_val
-    BuildMI(*MBB, MI, DL, get(X86::PANDNrr), Dst)
-        .addReg(Dst)
-        .addReg(FalseVal)
-        .setMIFlags(MachineInstr::MIFlag::NoMerge);
+    recordInstr(BuildMI(*MBB, MI, DL, get(X86::PANDNrr), Dst)
+                    .addReg(Dst)
+                    .addReg(FalseVal)
+                    .setMIFlags(MachineInstr::MIFlag::NoMerge));
 
     // dst |= mask; (mask & t) | (~mask & f)
-    BuildMI(*MBB, MI, DL, get(X86::PORrr), Dst)
-        .addReg(Dst)
-        .addReg(MaskReg)
-        .setMIFlags(MachineInstr::MIFlag::NoMerge);
+    recordInstr(BuildMI(*MBB, MI, DL, get(X86::PORrr), Dst)
+                    .addReg(Dst)
+                    .addReg(MaskReg)
+                    .setMIFlags(MachineInstr::MIFlag::NoMerge));
   }
 
-  // Add instruction bundling using the original pseudo as the exclusive end
-  finalizeBundle(*MBB, FirstNewMI->getIterator(), MI.getIterator());
+  assert(FirstInstr && LastInstr && "Expected at least one expanded instruction");
+  auto BundleEnd = LastInstr->getIterator();
+  finalizeBundle(*MBB, FirstInstr->getIterator(), std::next(BundleEnd));
 
   MI.eraseFromParent();
 

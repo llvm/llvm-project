@@ -1676,7 +1676,7 @@ bool ARMBaseInstrInfo::expandCtSelectThumb(MachineInstr &MI) const {
     .add(predOps(ARMCC::AL))
     .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
-      // Add instruction bundling
+  // Add instruction bundling
   auto BundleStart = FirstNewMI->getIterator();
   finalizeBundle(*MBB, BundleStart, std::next(LastMI->getIterator()));
 
