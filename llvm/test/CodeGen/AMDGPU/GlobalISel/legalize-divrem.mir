@@ -51,8 +51,8 @@ body: |
     ; GFX8-NEXT: [[XOR4:%[0-9]+]]:_(s32) = G_XOR [[SELECT3]], [[ASHR]]
     ; GFX8-NEXT: [[SUB5:%[0-9]+]]:_(s32) = G_SUB [[XOR4]], [[ASHR]]
     ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[SUB4]](s32)
-    ; GFX8-NEXT: S_NOP 0, implicit [[TRUNC]](s16), implicit %5(s16)
     ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SUB5]](s32)
+    ; GFX8-NEXT: S_NOP 0, implicit [[TRUNC]](s16), implicit [[TRUNC1]](s16)
     ; GFX8-NEXT: $vgpr0 = COPY [[SUB4]](s32)
     ; GFX8-NEXT: $vgpr0 = COPY [[SUB5]](s32)
     %0:_(s32) = COPY $vgpr0
@@ -107,8 +107,8 @@ body: |
     ; GFX8-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[SELECT1]], [[AND1]]
     ; GFX8-NEXT: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[SUB3]], [[SELECT1]]
     ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[SELECT2]](s32)
-    ; GFX8-NEXT: S_NOP 0, implicit [[TRUNC]](s16), implicit %5(s16)
     ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SELECT3]](s32)
+    ; GFX8-NEXT: S_NOP 0, implicit [[TRUNC]](s16), implicit [[TRUNC1]](s16)
     ; GFX8-NEXT: $vgpr0 = COPY [[SELECT2]](s32)
     ; GFX8-NEXT: $vgpr0 = COPY [[SELECT3]](s32)
     %0:_(s32) = COPY $vgpr0
