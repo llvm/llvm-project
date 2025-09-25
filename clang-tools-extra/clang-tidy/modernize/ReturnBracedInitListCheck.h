@@ -17,7 +17,7 @@ namespace clang::tidy::modernize {
 /// repeating the return type name.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/return-braced-init-list.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/return-braced-init-list.html
 class ReturnBracedInitListCheck : public ClangTidyCheck {
 public:
   ReturnBracedInitListCheck(StringRef Name, ClangTidyContext *Context)

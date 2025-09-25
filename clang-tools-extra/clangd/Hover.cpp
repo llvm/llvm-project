@@ -1309,7 +1309,9 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
       }
     } else if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype) {
       HoverCountMetric.record(1, "keyword");
-      if (auto Deduced = getDeducedType(AST.getASTContext(), Tok.location())) {
+      if (auto Deduced =
+              getDeducedType(AST.getASTContext(), AST.getHeuristicResolver(),
+                             Tok.location())) {
         HI = getDeducedTypeHoverContents(*Deduced, Tok, AST.getASTContext(), PP,
                                          Index);
         HighlightRange = Tok.range(SM).toCharRange(SM);

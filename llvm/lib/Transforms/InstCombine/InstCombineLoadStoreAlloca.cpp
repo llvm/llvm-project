@@ -338,8 +338,18 @@ bool PointerReplacer::collectUsers() {
       if (!TryPushInstOperand(TrueInst) || !TryPushInstOperand(FalseInst))
         return false;
     } else if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
-      UsersToReplace.insert(GEP);
-      PushUsersToWorklist(GEP);
+      auto *PtrOp = dyn_cast<Instruction>(GEP->getPointerOperand());
+      if (!PtrOp)
+        return false;
+      if (isAvailable(PtrOp)) {
+        UsersToReplace.insert(GEP);
+        PushUsersToWorklist(GEP);
+        continue;
+      }
+
+      Worklist.emplace_back(GEP);
+      if (!TryPushInstOperand(PtrOp))
+        return false;
     } else if (auto *MI = dyn_cast<MemTransferInst>(Inst)) {
       if (MI->isVolatile())
         return false;

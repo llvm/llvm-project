@@ -57,12 +57,6 @@ def MicroMipsMemGPRMM16AsmOperand : AsmOperandClass {
   let PredicateMethod = "isMemWithGRPMM16Base";
 }
 
-// Define the classes of pointers used by microMIPS.
-// The numbers must match those in MipsRegisterInfo::MipsPtrClass.
-def ptr_gpr16mm_rc : PointerLikeRegClass<1>;
-def ptr_sp_rc : PointerLikeRegClass<2>;
-def ptr_gp_rc : PointerLikeRegClass<3>;
-
 class mem_mm_4_generic : Operand<i32> {
   let PrintMethod = "printMemOperand";
   let MIOperandInfo = (ops ptr_gpr16mm_rc, simm4);
@@ -114,7 +108,7 @@ def mem_mm_gp_simm7_lsl2 : Operand<i32> {
 
 def mem_mm_9 : Operand<i32> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, simm9);
+  let MIOperandInfo = (ops mips_ptr_rc, simm9);
   let EncoderMethod = "getMemEncodingMMImm9";
   let ParserMatchClass = MipsMemSimmAsmOperand<9>;
   let OperandType = "OPERAND_MEMORY";
@@ -130,7 +124,7 @@ def mem_mm_11 : Operand<i32> {
 
 def mem_mm_12 : Operand<i32> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, simm12);
+  let MIOperandInfo = (ops mips_ptr_rc, simm12);
   let EncoderMethod = "getMemEncodingMMImm12";
   let ParserMatchClass = MipsMemAsmOperand;
   let OperandType = "OPERAND_MEMORY";
@@ -138,7 +132,7 @@ def mem_mm_12 : Operand<i32> {
 
 def mem_mm_16 : Operand<i32> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, simm16);
+  let MIOperandInfo = (ops mips_ptr_rc, simm16);
   let EncoderMethod = "getMemEncodingMMImm16";
   let DecoderMethod = "DecodeMemMMImm16";
   let ParserMatchClass = MipsMemSimmAsmOperand<16>;

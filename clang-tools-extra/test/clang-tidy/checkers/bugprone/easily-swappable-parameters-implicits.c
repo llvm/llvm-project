@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-easily-swappable-parameters %t \
+// RUN: %check_clang_tidy %s --extra-arg=-Wno-error=incompatible-pointer-types bugprone-easily-swappable-parameters %t \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-easily-swappable-parameters.MinimumLength: 2, \
 // RUN:     bugprone-easily-swappable-parameters.IgnoredParameterNames: "", \
