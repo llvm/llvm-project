@@ -1,4 +1,7 @@
+! RUN: %flang -ffast-real-mod -### -c %s 2>&1 | FileCheck %s -check-prefix CHECK-FAST-REAL-MOD
 ! RUN: %flang_fc1 -ffast-real-mod -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
+
+! CHECK-FAST-REAL-MOD: "-ffast-real-mod"
 
 ! CHECK: module attributes {{{.*}}fir.fast_real_mod = true{{.*}}}
 
