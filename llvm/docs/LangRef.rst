@@ -8767,7 +8767,7 @@ Example:
 The rename key may be attached to a global variable definition that has an
 explicit section attribute. It is used as a flag so the associated node
 must be empty. It only takes effect when function sections is enabled, and
-only on XCOFF targets. The metadata will casue the global to be emitted to a
+only on XCOFF targets. The metadata will cause the global to be emitted to a
 control section (CSECT) with a name that is an amalgamation of both the section
 attribute and the global variables identifier. After the control section is
 defined it will be renamed to match the name of the section attribute. This
