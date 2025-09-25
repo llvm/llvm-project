@@ -1914,9 +1914,12 @@ void populateElementwiseOpsFusionPatterns(
 using ControlPropagationFn = std::function<bool(OpOperand *opOperand)>;
 
 /// Patterns to bubble up or down data layout ops across other operations.
+/// The function also has an option to allow the patterns to propagate with
+/// poison padding if requested by the caller.
 void populateDataLayoutPropagationPatterns(
     RewritePatternSet &patterns,
-    const ControlPropagationFn &controlPackUnPackPropagation);
+    const ControlPropagationFn &controlPackUnPackPropagation,
+    bool PoisonPaddingOk = false);
 
 /// Patterns to sink extract slice across other operations.
 void populateExtractSliceSinkingPatterns(
