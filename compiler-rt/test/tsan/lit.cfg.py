@@ -56,6 +56,13 @@ clang_tsan_cflags = (
     + extra_cflags
     + ["-I%s" % tsan_incdir]
 )
+# Setup escape analysis if enabled
+tsan_enable_escape = getattr(config, "tsan_enable_escape_analysis", "False") == "True"
+if tsan_enable_escape:
+    config.name += " (escape-analysis)"
+    ea_flags = ["-mllvm", "-tsan-use-escape-analysis"]
+    clang_tsan_cflags += ea_flags
+
 clang_tsan_cxxflags = (
     config.cxx_mode_flags + clang_tsan_cflags + ["-std=c++11"] + ["-I%s" % tsan_incdir]
 )
