@@ -45,79 +45,59 @@ multiclass XOForm_RTAB5_L1r<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
   }
 }
 
-class VXForm_VRTB5<bits<11> xo, bits<5> R, dag OOL, dag IOL, string asmstr,
-                   list<dag> pattern> : I<4, OOL, IOL, asmstr, NoItinerary> {
+class VXForm_VRTB5_Base<bits<11> xo, dag OOL, dag IOL, string asmstr,
+                        list<dag> pattern>
+    : I<4, OOL, IOL, asmstr, NoItinerary> {
   bits<5> VRT;
   bits<5> VRB;
 
   let Pattern = pattern;
 
   let Inst{6...10} = VRT;
-  let Inst{11...15} = R;
   let Inst{16...20} = VRB;
   let Inst{21...31} = xo;
+}
+
+class VXForm_VRTB5<bits<11> xo, bits<5> R, dag OOL, dag IOL, string asmstr,
+                   list<dag> pattern>
+    : VXForm_VRTB5_Base<xo, OOL, IOL, asmstr, pattern> {
+
+  let Inst{11...15} = R;
 }
 
 class VXForm_VRTB5_UIM2<bits<11> xo, bits<3> R, dag OOL, dag IOL, string asmstr,
                         list<dag> pattern>
-    : I<4, OOL, IOL, asmstr, NoItinerary> {
-  bits<5> VRT;
-  bits<5> VRB;
+    : VXForm_VRTB5_Base<xo, OOL, IOL, asmstr, pattern> {
   bits<2> UIM;
 
-  let Pattern = pattern;
-
-  let Inst{6...10} = VRT;
   let Inst{11...13} = R;
   let Inst{14...15} = UIM;
-  let Inst{16...20} = VRB;
-  let Inst{21...31} = xo;
 }
 
 class VXForm_VRTB5_UIM1<bits<11> xo, bits<4> R, dag OOL, dag IOL, string asmstr,
                         list<dag> pattern>
-    : I<4, OOL, IOL, asmstr, NoItinerary> {
-  bits<5> VRT;
-  bits<5> VRB;
+    : VXForm_VRTB5_Base<xo, OOL, IOL, asmstr, pattern> {
   bits<1> UIM;
 
-  let Pattern = pattern;
-
-  let Inst{6...10} = VRT;
   let Inst{11...14} = R;
   let Inst{15} = UIM;
-  let Inst{16...20} = VRB;
-  let Inst{21...31} = xo;
 }
 
 class VXForm_VRTB5_UIM3<bits<11> xo, bits<2> R, dag OOL, dag IOL, string asmstr,
                         list<dag> pattern>
-    : I<4, OOL, IOL, asmstr, NoItinerary> {
-  bits<5> VRT;
-  bits<5> VRB;
+    : VXForm_VRTB5_Base<xo, OOL, IOL, asmstr, pattern> {
   bits<3> UIM;
 
-  let Pattern = pattern;
-
-  let Inst{6...10} = VRT;
   let Inst{11...12} = R;
   let Inst{13...15} = UIM;
-  let Inst{16...20} = VRB;
-  let Inst{21...31} = xo;
 }
 
 class VXForm_VRTAB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
-                    list<dag> pattern> : I<4, OOL, IOL, asmstr, NoItinerary> {
-  bits<5> VRT;
+                    list<dag> pattern>
+    : VXForm_VRTB5_Base<xo, OOL, IOL, asmstr, pattern> {
   bits<5> VRA;
-  bits<5> VRB;
 
-  let Pattern = pattern;
-
-  let Inst{6...10} = VRT;
   let Inst{11...15} = VRA;
-  let Inst{16...20} = VRB;
-  let Inst{21...31} = xo;
 }
 
 class XX3Form_XTBp5_M2<bits<9> xo, dag OOL, dag IOL, string asmstr,
@@ -178,6 +158,25 @@ class XX3Form_XTAB6_P1<bits<5> xo, dag OOL, dag IOL, string asmstr,
   let Inst{21...22} = 3;
   let Inst{23} = P;
   let Inst{24...28} = xo;
+  let Inst{29} = XA{5};
+  let Inst{30} = XB{5};
+  let Inst{31} = XT{5};
+}
+
+class XX3Form_XTAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
+                    list<dag> pattern>
+    : I<opcode, OOL, IOL, asmstr, NoItinerary> {
+
+  bits<6> XT;
+  bits<6> XA;
+  bits<6> XB;
+
+  let Pattern = pattern;
+
+  let Inst{6...10} = XT{4...0};
+  let Inst{11...15} = XA{4...0};
+  let Inst{16...20} = XB{4...0};
+  let Inst{21...28} = xo;
   let Inst{29} = XA{5};
   let Inst{30} = XB{5};
   let Inst{31} = XT{5};
@@ -273,6 +272,28 @@ let Predicates = [HasVSX, IsISAFuture] in {
   def XXGFMUL128 : XX3Form_XTAB6_P1<26, (outs vsrc:$XT),
                                     (ins vsrc:$XA, vsrc:$XB, u1imm:$P),
                                     "xxgfmul128 $XT, $XA, $XB, $P", []>;
+
+  // VSX Vector Integer Arithmetic Instructions
+  def XVADDUWM : XX3Form_XTAB6<60, 131, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                               "xvadduwm $XT, $XA, $XB", []>;
+  def XVADDUHM : XX3Form_XTAB6<60, 139, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                               "xvadduhm $XT, $XA, $XB", []>;
+  def XVSUBUWM: XX3Form_XTAB6<60, 147, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvsubuwm $XT, $XA, $XB", []>;
+  def XVSUBUHM: XX3Form_XTAB6<60, 155, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvsubuhm $XT, $XA, $XB", []>;
+  def XVMULUWM: XX3Form_XTAB6<60, 163, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvmuluwm $XT, $XA, $XB", []>;
+  def XVMULUHM: XX3Form_XTAB6<60, 171, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvmuluhm $XT, $XA, $XB", []>;
+  def XVMULHSW: XX3Form_XTAB6<60, 179, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvmulhsw $XT, $XA, $XB", []>;
+  def XVMULHSH: XX3Form_XTAB6<60, 187, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvmulhsh $XT, $XA, $XB", []>;
+  def XVMULHUW: XX3Form_XTAB6<60, 114, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvmulhuw $XT, $XA, $XB", []>;
+  def XVMULHUH: XX3Form_XTAB6<60, 122, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvmulhuh $XT, $XA, $XB", []>;
 }
 
 //---------------------------- Anonymous Patterns ----------------------------//
