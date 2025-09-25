@@ -35,8 +35,8 @@ enum ze_structure_type_t {
 
 enum ze_init_driver_type_flags_t { ZE_INIT_DRIVER_TYPE_FLAG_GPU = 1 };
 
-typedef uint32_t ze_device_type_t;
-typedef uint32_t ze_device_property_flags_t;
+using ze_device_type_t = uint32_t;
+using ze_device_property_flags_t = uint32_t;
 
 struct ze_init_driver_type_desc_t {
   ze_structure_type_t stype;
@@ -44,11 +44,11 @@ struct ze_init_driver_type_desc_t {
   ze_init_driver_type_flags_t flags;
 };
 
-typedef struct _ze_device_uuid_t {
+struct ze_device_uuid_t {
   uint8_t id[ZE_MAX_DEVICE_UUID_SIZE];
-} ze_device_uuid_t;
+};
 
-typedef struct _ze_device_properties_t {
+struct ze_device_properties_t {
   ze_structure_type_t stype;
   void *pNext;
   ze_device_type_t type;
@@ -70,7 +70,7 @@ typedef struct _ze_device_properties_t {
   uint32_t kernelTimestampValidBits;
   ze_device_uuid_t uuid;
   char name[ZE_MAX_DEVICE_NAME];
-} ze_device_properties_t;
+};
 
 ze_result_t zeInitDrivers(uint32_t *pCount, ze_driver_handle_t *phDrivers,
                           ze_init_driver_type_desc_t *desc);
