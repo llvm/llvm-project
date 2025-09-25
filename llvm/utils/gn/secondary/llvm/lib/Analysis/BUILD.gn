@@ -7,8 +7,8 @@ static_library("Analysis") {
   deps = [
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/BinaryFormat",
-    "//llvm/lib/IR",
     "//llvm/lib/Frontend/HLSL",
+    "//llvm/lib/IR",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",

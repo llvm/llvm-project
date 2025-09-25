@@ -125,6 +125,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_groupprivate:
   case OMPC_flush:
   case OMPC_depobj:
   case OMPC_read:
@@ -223,6 +224,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_groupprivate:
   case OMPC_flush:
   case OMPC_depobj:
   case OMPC_read:
@@ -1203,8 +1205,12 @@ OMPClauseMappableExprCommon::findAttachPtrExpr(
   // stripping away one component at a time, until we reach a pointer Expr
   // (that is not a binary operator). The first such pointer should be the
   // attach base-pointer for the component list.
-  for (size_t I = 1; I < Components.size(); ++I) {
-    const Expr *CurExpr = Components[I].getAssociatedExpression();
+  for (auto [I, Component] : llvm::enumerate(Components)) {
+    // Skip past the first component.
+    if (I == 0)
+      continue;
+
+    const Expr *CurExpr = Component.getAssociatedExpression();
     if (!CurExpr)
       break;
 
@@ -1979,8 +1985,13 @@ void OMPClausePrinter::VisitOMPDetachClause(OMPDetachClause *Node) {
 void OMPClausePrinter::VisitOMPDefaultClause(OMPDefaultClause *Node) {
   OS << "default("
      << getOpenMPSimpleClauseTypeName(OMPC_default,
-                                      unsigned(Node->getDefaultKind()))
-     << ")";
+                                      unsigned(Node->getDefaultKind()));
+  if (Version >= 60 && Node->getDefaultVC() != OMPC_DEFAULT_VC_all) {
+    OS << ":"
+       << getOpenMPDefaultVariableCategoryName(unsigned(Node->getDefaultVC()));
+  }
+
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPProcBindClause(OMPProcBindClause *Node) {
