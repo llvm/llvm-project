@@ -19,4 +19,4 @@ struct is_clock<int> : std::false_type {}; // expected-error@*:* {{'is_clock' ca
 template <>
 constexpr bool is_clock_v<float> = false; // expected-error@*:* {{'is_clock_v' cannot be specialized}}
 
-}
+} // namespace std::chrono
