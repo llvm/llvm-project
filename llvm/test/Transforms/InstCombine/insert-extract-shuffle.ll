@@ -831,7 +831,7 @@ bb5:
   br i1 %arg2, label %bb6, label %bb8
 
 bb6:
-  %extractelement = extractelement <1 x i8> zeroinitializer, i64 %arg4
+  %extractelement = extractelement <2 x i8> zeroinitializer, i64 %arg4
   br label %bb5
 
 bb8:
