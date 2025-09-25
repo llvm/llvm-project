@@ -24,22 +24,18 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace chrono {
 
-template <class>
-struct is_clock : std::false_type {};
+template <class _Tp>
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_clock_v = requires {
+  typename _Tp::rep;
+  typename _Tp::period;
+  typename _Tp::duration;
+  typename _Tp::time_point;
+  _Tp::is_steady;
+  _Tp::now();
+};
 
 template <class _Tp>
-  requires requires {
-    typename _Tp::rep;
-    typename _Tp::period;
-    typename _Tp::duration;
-    typename _Tp::time_point;
-    _Tp::is_steady;
-    _Tp::now();
-  }
-struct is_clock<_Tp> : std::true_type {};
-
-template <class _Tp>
-_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_clock_v = is_clock<_Tp>::value;
+struct _LIBCPP_NO_SPECIALIZATIONS is_clock : bool_constant<is_clock_v<_Tp>> {};
 
 } // namespace chrono
 
