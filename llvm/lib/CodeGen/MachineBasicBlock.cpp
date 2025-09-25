@@ -1403,15 +1403,17 @@ bool MachineBasicBlock::canSplitCriticalEdge(const MachineBasicBlock *Succ,
   const MachineFunction *MF = getParent();
   // Performance might be harmed on HW that implements branching using exec mask
   // where both sides of the branches are always executed.
-  // However, if `Succ` is a loop header, splitting the critical edge will not
-  // break structured CFG.
-  bool SuccIsLoopHeader = false;
-  if (MLI) {
-    const MachineLoop *L = MLI->getLoopFor(Succ);
-    SuccIsLoopHeader = L && L->getHeader() == Succ;
-  }
-  if (MF->getTarget().requiresStructuredCFG() && !SuccIsLoopHeader)
+
+  if (MF->getTarget().requiresStructuredCFG()) {
+    // If `Succ` is a loop header, splitting the critical edge will not
+    // break structured CFG.
+    if (MLI) {
+       const MachineLoop *L = MLI->getLoopFor(Succ);
+       return L && L->getHeader() == Succ;
+    }
+
     return false;
+  }
 
   // Do we have an Indirect jump with a jumptable that we can rewrite?
   int JTI = findJumpTableIndex(*this);
