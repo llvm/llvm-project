@@ -1763,8 +1763,9 @@ TYPE_PARSER(construct<OmpInitializerClause>(
 
 // OpenMP 5.2: 7.5.4 Declare Variant directive
 TYPE_PARSER(sourced(construct<OmpDeclareVariantDirective>(
-    verbatim("DECLARE VARIANT"_tok) || verbatim("DECLARE_VARIANT"_tok),
-    "(" >> maybe(name / ":"), name / ")", Parser<OmpClauseList>{})))
+    predicated(Parser<OmpDirectiveName>{},
+        IsDirective(llvm::omp::Directive::OMPD_declare_variant)) >=
+    Parser<OmpDirectiveSpecification>{})))
 
 // 2.16 Declare Reduction Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareReductionConstruct>(

@@ -4933,10 +4933,14 @@ struct OpenMPSectionsConstruct {
       t;
 };
 
+// Ref: [4.5:58-60], [5.0:58-60], [5.1:63-68], [5.2:197-198], [6.0:334-336]
+//
+// declare-variant-directive ->
+//    DECLARE_VARIANT([base-name:]variant-name)     // since 4.5
 struct OmpDeclareVariantDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpDeclareVariantDirective);
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpDeclareVariantDirective, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>, Name, OmpClauseList> t;
 };
 
 // 2.10.6 declare-target -> DECLARE TARGET (extended-list) |
