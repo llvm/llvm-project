@@ -37,7 +37,6 @@ struct XeCoreInfo {
   uint32_t num_vector_units;
   uint32_t num_matrix_units;
 
-  // Constructor
   XeCoreInfo(uint32_t num_threads, const SharedMemory &shared_memory,
              uint32_t num_vector_units, uint32_t num_matrix_units)
       : num_threads(num_threads), shared_memory(shared_memory),
@@ -60,10 +59,7 @@ struct Xe2Plus : public uArch {
 // struct to represent DPAS instruction
 struct DPASInstruction : public Instruction, public MMAInstructionInterface {
   DPASInstruction()
-      : Instruction(InstructionKind::DPAS, // name
-                    "Dot Product Accumulate",
-                    InstructionScope::Subgroup) // description
-  {}
+      : Instruction(InstructionKind::DPAS, InstructionScope::Subgroup) {}
 
   // Override all virtuals from MatrixOpInterface
   virtual llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>
