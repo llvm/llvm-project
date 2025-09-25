@@ -7014,7 +7014,8 @@ static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
   auto fastmathFlags = mlir::arith::FastMathFlags::contract;
   auto fastmathAttr =
       mlir::arith::FastMathFlagsAttr::get(builder.getContext(), fastmathFlags);
-  mlir::Value divResult = mlir::arith::DivFOp::create(builder, loc, a, p, fastmathAttr);
+  mlir::Value divResult =
+      mlir::arith::DivFOp::create(builder, loc, a, p, fastmathAttr);
   mlir::Type intType = builder.getIntegerType(
       a.getType().getIntOrFloatBitWidth(), /*signed=*/true);
   mlir::Value intResult = builder.createConvert(loc, intType, divResult);
