@@ -40,6 +40,10 @@
 #    error "__cpp_lib_string_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_string_view
 #    error "__cpp_lib_string_view should not be defined before c++17"
 #  endif
@@ -66,6 +70,10 @@
 #    error "__cpp_lib_string_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_string_view
 #    error "__cpp_lib_string_view should not be defined before c++17"
 #  endif
@@ -90,6 +98,10 @@
 
 #  ifdef __cpp_lib_string_contains
 #    error "__cpp_lib_string_contains should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_string_view
@@ -134,6 +146,10 @@
 
 #  ifdef __cpp_lib_string_contains
 #    error "__cpp_lib_string_contains should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_string_view
@@ -181,6 +197,10 @@
 #  endif
 #  if __cpp_lib_string_contains != 202011L
 #    error "__cpp_lib_string_contains should have the value 202011L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_string_view
@@ -237,6 +257,13 @@
 #  endif
 #  if __cpp_lib_string_contains != 202011L
 #    error "__cpp_lib_string_contains should have the value 202011L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should be defined in c++26"
+#  endif
+#  if __cpp_lib_string_subview != 202506L
+#    error "__cpp_lib_string_subview should have the value 202506L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_string_view
