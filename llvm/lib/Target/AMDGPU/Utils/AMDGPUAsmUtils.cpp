@@ -33,9 +33,10 @@ static StringRef getNameFromOperandTable(const CustomOperand (&Table)[N],
                        });
 
   // Search through entries with the same encoding to find the first valid one
-  for (auto It = First; It != Table + N && It->Encoding == Encoding; ++It)
+  for (auto It = First; It != Table + N && It->Encoding == Encoding; ++It) {
     if (It->Encoding == Encoding && (!It->Cond || It->Cond(STI)))
       return It->Name;
+  }
 
   return "";
 }
