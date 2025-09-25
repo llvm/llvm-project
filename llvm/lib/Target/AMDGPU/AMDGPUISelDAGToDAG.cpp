@@ -1089,10 +1089,17 @@ void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
   for (SDNode::user_iterator UI = N->user_begin(), E = N->user_end(); UI != E;
        ++UI)
     if (UI.getUse().getResNo() == 1) {
-      if ((IsAdd && (UI->getOpcode() != ISD::UADDO_CARRY)) ||
-          (!IsAdd && (UI->getOpcode() != ISD::USUBO_CARRY))) {
-        IsVALU = true;
-        break;
+      if (UI->isMachineOpcode()) {
+        if (UI->getMachineOpcode() !=
+            (IsAdd ? AMDGPU::S_ADD_CO_PSEUDO : AMDGPU::S_SUB_CO_PSEUDO)) {
+          IsVALU = true;
+          break;
+        }
+      } else {
+        if (UI->getOpcode() != (IsAdd ? ISD::UADDO_CARRY : ISD::USUBO_CARRY)) {
+          IsVALU = true;
+          break;
+        }
       }
     }
 

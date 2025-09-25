@@ -211,6 +211,11 @@ New check aliases
   <clang-tidy/checks/modernize/avoid-variadic-functions>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-env33-c <clang-tidy/checks/cert/env33-c>` to
+  :doc:`bugprone-command-processor
+  <clang-tidy/checks/bugprone/command-processor>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-err34-c <clang-tidy/checks/cert/err34-c>` to
   :doc:`bugprone-unchecked-string-to-number-conversion
   <clang-tidy/checks/bugprone/unchecked-string-to-number-conversion>`
@@ -259,6 +264,10 @@ Changes in existing checks
   positive when enums or unions from system header files or the ``std``
   namespace are treated as the tag or the data part of a user-defined
   tagged union respectively.
+
+- Improved :doc:`bugprone-throw-keyword-missing
+  <clang-tidy/checks/bugprone/throw-keyword-missing>` check by only considering
+  the canonical types of base classes as written.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting

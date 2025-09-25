@@ -99,6 +99,7 @@ protected:
   bool EnableDS128 = false;
   bool EnablePRTStrictNull = false;
   bool DumpCode = false;
+  bool AssemblerPermissiveWavesize = false;
 
   // Subtarget statically properties set by tablegen
   bool FP64 = false;
