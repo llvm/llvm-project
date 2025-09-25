@@ -278,7 +278,7 @@ bool CodeGenAction::beginSourceFileAction() {
   }
 
   if (ci.getInvocation().getLangOpts().FastRealMod) {
-    auto mod = lb.getModule();
+    mlir::ModuleOp mod = lb.getModule();
     mod.getOperation()->setAttr(
         mlir::StringAttr::get(mod.getContext(),
                               llvm::Twine{"fir.fast_real_mod"}),

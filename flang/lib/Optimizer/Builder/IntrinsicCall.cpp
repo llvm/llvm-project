@@ -7045,11 +7045,9 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
   if (mlir::isa<mlir::IntegerType>(resultType))
     return mlir::arith::RemSIOp::create(builder, loc, args[0], args[1]);
 
-  if (useFastRealMod) {
+  if (useFastRealMod && resultType.isFloat()) {
     // If fast MOD for REAL has been requested, generate less precise,
     // but faster code directly.
-    assert(resultType.isFloat() &&
-           "non floating-point type hit for fast real MOD");
     return builder.createConvert(loc, resultType,
                                  genFastMod(builder, loc, args[0], args[1]));
   } else {
