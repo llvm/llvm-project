@@ -24,3 +24,23 @@ For example,
   }
 }
 ```
+
+## Development
+
+For getting started with making changes to this backport, use the
+[MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) to run the
+binary.
+
+In one terminal, start the lldb server:
+
+```
+$ lldb
+(lldb) command script import --allow-reload server.py
+(lldb) start_mcp --log-file=/tmp/lldb-mcp-server.log
+```
+
+Then launch the inspector to run specific operations.
+
+```sh
+$ npx @modelcontextprotocol/inspector ./lldb-mcp --log-file=/tmp/lldb-mcp.log
+```
