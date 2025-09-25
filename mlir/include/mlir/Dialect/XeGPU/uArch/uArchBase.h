@@ -23,6 +23,7 @@
 #include <tuple>
 
 #include "mlir/IR/Types.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
 namespace xegpu {
@@ -31,11 +32,25 @@ namespace uArch {
 // An enum class to represent the scope of an instruction
 enum class InstructionScope { WorkItem, Subgroup, Workgroup, Cluster };
 
-enum class InstructionName {
-  DPAS, // Dot Product Accumulate Systolic (DPAS) is a matrix multiply-add
-        // operation
+enum class InstructionKind {
+  DPAS, // Dot Product Accumulate Systolic (DPAS) is a matrix
+        // multiply-add operation
   // Add more instructions as needed
 };
+
+llvm::StringRef toString(InstructionKind name) {
+  switch (name) {
+  case InstructionKind::DPAS:
+    return "dpas";
+  }
+  llvm_unreachable("Unknown InstructionKind");
+}
+
+std::optional<InstructionKind> parseInstructionKind(llvm::StringRef str) {
+  if (str.equals_insensitive("dpas"))
+    return InstructionKind::DPAS;
+  return std::nullopt;
+}
 
 // A struct to represent basic information about an instruction
 // This struct is used to represent the information about an instruction in the
@@ -56,17 +71,17 @@ enum class InstructionName {
 
 struct Instruction {
   // @TODO: Add more fields as needed
-  Instruction(std::string name, std::string desc)
-      : name(std::move(name)), description(std::move(desc)) {}
+  Instruction(InstructionKind kind, std::string desc, InstructionScope scope)
+      : instKind(kind), description(std::move(desc)), scope(scope) {}
 
   virtual ~Instruction() = default;
   // Get methods
-  std::string getName() { return name; }
+  InstructionKind getInstructionKind() { return instKind; }
   std::string getDescription() { return description; }
   InstructionScope getScope() { return scope; }
 
 protected:
-  std::string name;
+  InstructionKind instKind;
   std::string description;
   InstructionScope scope;
 };
@@ -78,23 +93,25 @@ enum class RegisterFileType : uint8_t { GRF, ARF };
 struct RegisterFileInfo {
   // Constructor
   RegisterFileInfo() = default;
-  RegisterFileInfo(uint32_t size, const std::vector<RegisterFileMode> &mode,
-                   const std::vector<uint32_t> &numRegs)
+  RegisterFileInfo(uint32_t size,
+                   const llvm::SmallVector<RegisterFileMode, 4> &mode,
+                   const llvm::SmallVector<uint32_t, 4> &numRegs)
       : size(size), mode(mode), numRegsPerThreadPerMode(numRegs) {}
 
   uint32_t getSize() const { return size; }
-  const std::vector<RegisterFileMode> &getModes() const { return mode; }
-  const std::vector<uint32_t> &getNumRegsPerThreadPerMode() const {
+  const llvm::SmallVector<RegisterFileMode, 4> &getModes() const {
+    return mode;
+  }
+  const llvm::SmallVector<uint32_t, 4> &getNumRegsPerThreadPerMode() const {
     return numRegsPerThreadPerMode;
   }
 
 protected:
-  uint32_t size;                      // size per register in bits
-  std::vector<RegisterFileMode> mode; // e.g., "small", "large" GRF modes
-  std::vector<uint32_t>
+  uint32_t size; // size per register in bits
+  llvm::SmallVector<RegisterFileMode, 4>
+      mode; // e.g., "small", "large" GRF modes
+  llvm::SmallVector<uint32_t, 4>
       numRegsPerThreadPerMode; // number of registers per thread per mode
-  // TODO: Add more fields as needed (e.g., num_banks, bank_size, num_ports,
-  // port_width, bank_conflicts)
 };
 
 enum class CacheHierarchyLevel { L1 = 1, L2 = 2, L3 = 3 };
@@ -136,8 +153,8 @@ struct uArch {
   uArch(const std::string &name, const std::string &description,
         const std::map<RegisterFileType, RegisterFileInfo> &register_file_info =
             {},
-        const std::vector<CacheInfo> &cache_info = {},
-        const std::map<std::string, std::shared_ptr<Instruction>>
+        const llvm::SmallVector<CacheInfo, 4> &cache_info = {},
+        const std::map<InstructionKind, std::shared_ptr<Instruction>>
             &instructions = {})
       : name(name), description(description),
         registerFileInfo(register_file_info), cacheInfo(cache_info),
@@ -153,34 +170,36 @@ struct uArch {
     return registerFileInfo;
   }
 
-  const std::vector<CacheInfo> &getCacheInfo() const { return cacheInfo; }
+  const llvm::SmallVector<CacheInfo, 4> &getCacheInfo() const {
+    return cacheInfo;
+  }
 
-  const std::map<std::string, std::shared_ptr<Instruction>> &
+  const std::map<InstructionKind, std::shared_ptr<Instruction>> &
   getInstructions() const {
     return instructions;
   }
 
   // Get the name of the supported instruction names for that
   // architecture. It returns the names of the instructions added to the uArch.
-  std::vector<std::string> getSupportedInstructionNames() const {
-    std::vector<std::string> instructionNames;
+  llvm::SmallVector<StringRef, 8> getSupportedInstructionNames() const {
+    llvm::SmallVector<StringRef, 8> instructionNames;
     for (const auto &inst : instructions) {
-      instructionNames.push_back(inst.first);
+      instructionNames.push_back(toString(inst.first));
     }
     return instructionNames;
   }
 
   // Checks if an instruction is supported in this uArch
-  bool checkSupportedInstruction(const std::string &instructionName) const {
-    return instructions.find(instructionName) != instructions.end();
+  bool checkSupportedInstruction(InstructionKind instr) const {
+    return instructions.find(instr) != instructions.end();
   }
 
 protected:
   std::string name; // Similar to target triple
   std::string description;
   std::map<RegisterFileType, RegisterFileInfo> registerFileInfo;
-  std::vector<CacheInfo> cacheInfo;
-  std::map<std::string, std::shared_ptr<Instruction>> instructions;
+  llvm::SmallVector<CacheInfo, 4> cacheInfo;
+  std::map<InstructionKind, std::shared_ptr<Instruction>> instructions;
 };
 
 // A struct to represent shared memory information
@@ -205,7 +224,7 @@ protected:
 enum class MMAOpndKind { MatrixA, MatrixB, MatrixC, MatrixD };
 struct MMAInstructionInterface {
   // Get supported Matrix shapes
-  virtual std::vector<std::pair<uint32_t, uint32_t>>
+  virtual llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>
   getSupportedShapes(Type dataType, MMAOpndKind matrixType) = 0;
   // @TODO: This method takes an context object as a parameter, this is to
   // create the Type objects from the same context. Since type objects are
@@ -220,8 +239,8 @@ struct MMAInstructionInterface {
   //
   // Untill we have a better solution, we stick to passing context object to
   // this method.
-  virtual std::vector<Type> getSupportedTypes(MLIRContext &context,
-                                              MMAOpndKind matrixType) = 0;
+  virtual llvm::SmallVector<Type, 8>
+  getSupportedTypes(MLIRContext &context, MMAOpndKind matrixType) = 0;
   virtual bool
   checkSupportedShapesAndTypes(std::pair<uint32_t, uint32_t> AShape,
                                std::pair<uint32_t, uint32_t> BShape,
@@ -235,9 +254,9 @@ struct MMAInstructionInterface {
                         std::pair<uint32_t, uint32_t> CShape,
                         std::pair<uint32_t, uint32_t> DShape, Type AType,
                         Type BType, Type CType, Type DType) = 0;
-  virtual std::vector<uint32_t> getSupportedM(Type type) = 0;
-  virtual std::vector<uint32_t> getSupportedK(Type type) = 0;
-  virtual std::vector<uint32_t> getSupportedN(Type type) = 0;
+  virtual llvm::SmallVector<uint32_t, 8> getSupportedM(Type type) = 0;
+  virtual llvm::SmallVector<uint32_t, 8> getSupportedK(Type type) = 0;
+  virtual llvm::SmallVector<uint32_t, 8> getSupportedN(Type type) = 0;
 
   virtual ~MMAInstructionInterface() = default;
 };
