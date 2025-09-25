@@ -291,8 +291,7 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
   // already live it should not be a problem to increase the scheduled
   // latency given the OOO execution.
   // TODO: Try scheduling small (DFSResult) subtrees as a unit.
-  bool SchedLow = IsLoad && ((PreservesSchedLat && UsesLivePrio) ||
-                             (HasDistToTop && UsesLiveAll));
+  bool SchedLow = IsLoad && UsesLivePrio && (PreservesSchedLat || HasDistToTop);
 
   // This handles regions with many chained stores of the same depth at the
   // bottom in the input order (cactus). Push them upwards during scheduling.
