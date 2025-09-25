@@ -352,6 +352,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     SmallVector<Value *> Args{OrderID, SpaceOp, RangeOp, IndexOp, Name};
     return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
   }
+  case Builtin::BI__builtin_hlsl_resource_nonuniformindex: {
+    Value *IndexOp = EmitScalarExpr(E->getArg(0));
+    llvm::Type *RetTy = ConvertType(E->getType());
+    return Builder.CreateIntrinsic(
+        RetTy, CGM.getHLSLRuntime().getNonUniformResourceIndexIntrinsic(),
+        ArrayRef<Value *>{IndexOp});
+  }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
