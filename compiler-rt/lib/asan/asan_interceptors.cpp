@@ -583,10 +583,10 @@ INTERCEPTOR(wchar_t *, wcscpy, wchar_t *to, const wchar_t *from) {
   if (!TryAsanInitFromRtl())
     return REAL(wcscpy)(to, from);
   if (flags()->replace_str) {
-    uptr from_size = (internal_wcslen(from) + 1) * sizeof(wchar_t);
-    CHECK_RANGES_OVERLAP("wcscpy", to, from_size, from, from_size);
-    ASAN_READ_RANGE(ctx, from, from_size);
-    ASAN_WRITE_RANGE(ctx, to, from_size);
+    uptr size = (internal_wcslen(from) + 1) * sizeof(wchar_t);
+    CHECK_RANGES_OVERLAP("wcscpy", to, size, from, size);
+    ASAN_READ_RANGE(ctx, from, size);
+    ASAN_WRITE_RANGE(ctx, to, size);
   }
   return REAL(wcscpy)(to, from);
 }
