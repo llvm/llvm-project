@@ -68,9 +68,6 @@
 // of the function.  These must be kept in sync with the predicates in the
 // Builtin::Context class.  Note: In the descriptions below, {num} is a
 // placeholder for an integer.  Currently we have:
-//
-// (In the descriptions below, {num} is a placeholder for an integer)
-//
 //  n -> nothrow
 //  r -> noreturn
 //  U -> pure
