@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/Transforms/OpenMPOffloadPrivatizationPrepare.h"
+#include "mlir/Dialect/OpenMP/Transforms/OpenMPOffloadPrivatizationPrepare.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
@@ -31,12 +31,12 @@
 #define DEBUG_TYPE "omp-prepare-for-offload-privatization"
 
 namespace mlir {
-namespace LLVM {
+namespace omp {
 
 #define GEN_PASS_DEF_PREPAREFOROMPOFFLOADPRIVATIZATIONPASS
-#include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
+#include "mlir/Dialect/OpenMP/Transforms/Passes.h.inc"
 
-} // namespace LLVM
+} // namespace omp
 } // namespace mlir
 
 using namespace mlir;
@@ -47,7 +47,7 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 class PrepareForOMPOffloadPrivatizationPass
-    : public LLVM::impl::PrepareForOMPOffloadPrivatizationPassBase<
+  : public omp::impl::PrepareForOMPOffloadPrivatizationPassBase<
           PrepareForOMPOffloadPrivatizationPass> {
 
   void runOnOperation() override {

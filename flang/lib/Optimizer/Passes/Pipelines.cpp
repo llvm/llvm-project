@@ -10,7 +10,7 @@
 /// common to flang and the test tools.
 
 #include "flang/Optimizer/Passes/Pipelines.h"
-#include "mlir/Dialect/LLVMIR/Transforms/OpenMPOffloadPrivatizationPrepare.h"
+#include "mlir/Dialect/OpenMP/Transforms/OpenMPOffloadPrivatizationPrepare.h"
 #include "llvm/Support/CommandLine.h"
 
 /// Force setting the no-alias attribute on fuction arguments when possible.
@@ -417,7 +417,7 @@ void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
   // context of deferred target tasks.
   addNestedPassConditionally<mlir::LLVM::LLVMFuncOp>(
       pm, disableFirToLlvmIr, [&]() {
-        return mlir::LLVM::createPrepareForOMPOffloadPrivatizationPass();
+        return mlir::omp::createPrepareForOMPOffloadPrivatizationPass();
       });
 }
 

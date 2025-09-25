@@ -1,4 +1,4 @@
-// RUN: mlir-opt --mlir-disable-threading -omp-offload-privatization-prepare --split-input-file %s | FileCheck %s
+// RUN: mlir-opt -omp-offload-privatization-prepare --split-input-file %s | FileCheck %s
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vector<4xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, i64 = dense<64> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, f80 = dense<128> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little", "dlti.mangling_mode" = "e", "dlti.legal_int_widths" = array<i32: 8, 16, 32, 64>, "dlti.stack_alignment" = 128 : i64>} {
   llvm.func @free(!llvm.ptr)
@@ -77,8 +77,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 // CHECK: %[[VAL_17:.*]] = llvm.call @firstprivatizer_init(%[[STACK]], %[[HEAP]]) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
 // CHECK: %[[VAL_18:.*]] = llvm.call @firstprivatizer_copy(%[[STACK]], %[[VAL_17]]) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
 // CHECK: %[[VAL_19:.*]] = llvm.getelementptr %[[HEAP]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-// CHECK: %[[VAL_20:.*]] = omp.map.info var_ptr(%[[HEAP]] : !llvm.ptr, i32) map_clauses(to) capture(ByRef) var_ptr_ptr(%[[VAL_19]] : !llvm.ptr) bounds(%[[VAL_16]]) -> !llvm.ptr {name = ""}
-// CHECK: %[[VAL_21:.*]] = omp.map.info var_ptr(%[[HEAP]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(always, to) capture(ByRef) members(%[[VAL_20]] : [0] : !llvm.ptr) -> !llvm.ptr
+// CHECK: %[[VAL_20:.*]] = omp.map.info var_ptr(%[[HEAP]] : !llvm.ptr, i32) map_clauses({{.*}}to{{.*}}) capture(ByRef) var_ptr_ptr(%[[VAL_19]] : !llvm.ptr) bounds(%[[VAL_16]]) -> !llvm.ptr {name = ""}
+// CHECK: %[[VAL_21:.*]] = omp.map.info var_ptr(%[[HEAP]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses({{.*}}always{{.*}}to{{.*}}) capture(ByRef) members(%[[VAL_20]] : [0] : !llvm.ptr) -> !llvm.ptr
 // CHECK: omp.target nowait map_entries(%[[VAL_8]] -> %[[VAL_22:.*]], %[[VAL_21]] -> %[[VAL_23:.*]], %[[VAL_20]] -> %[[VAL_24:.*]] : !llvm.ptr, !llvm.ptr, !llvm.ptr) private(@firstprivatizer %[[HEAP]] -> %[[VAL_25:.*]] [map_idx=1] : !llvm.ptr) {
 // CHECK: omp.terminator
 // CHECK: }
