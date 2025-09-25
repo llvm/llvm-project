@@ -101,7 +101,8 @@ define amdgpu_kernel void @s_add_co_br_user(i32 %i) {
 ; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e64 v0, s[0:1], s2, s2
+; GFX7-NEXT:    s_add_u32 s0, s2, s2
+; GFX7-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX7-NEXT:    s_or_b32 s0, s0, s1
 ; GFX7-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX7-NEXT:    s_addc_u32 s0, s2, 0
@@ -126,7 +127,8 @@ define amdgpu_kernel void @s_add_co_br_user(i32 %i) {
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dword s2, s[8:9], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_add_co_u32_e64 v0, s[0:1], s2, s2
+; GFX9-NEXT:    s_add_u32 s0, s2, s2
+; GFX9-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX9-NEXT:    s_addc_u32 s0, s2, 0
 ; GFX9-NEXT:    s_cselect_b64 s[0:1], -1, 0
@@ -150,7 +152,8 @@ define amdgpu_kernel void @s_add_co_br_user(i32 %i) {
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_add_co_u32 v0, s1, s0, s0
+; GFX10-NEXT:    s_add_u32 s1, s0, s0
+; GFX10-NEXT:    s_cselect_b32 s1, -1, 0
 ; GFX10-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX10-NEXT:    s_addc_u32 s0, s0, 0
 ; GFX10-NEXT:    s_cselect_b32 s0, -1, 0
@@ -174,11 +177,12 @@ define amdgpu_kernel void @s_add_co_br_user(i32 %i) {
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_add_co_u32 v0, s1, s0, s0
+; GFX11-NEXT:    s_add_u32 s1, s0, s0
+; GFX11-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-NEXT:    s_addc_u32 s0, s0, 0
 ; GFX11-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB1_2
 ; GFX11-NEXT:  ; %bb.1: ; %bb0
