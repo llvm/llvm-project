@@ -6884,7 +6884,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
           if (OptResult == MinMaxOptResult::UseNewConstVal)
             NewConst = ConstantVector::getSplat(ElemCount, NewConst);
 
-        } else if (auto *FVty = dyn_cast<FixedVectorType>(VTy)) {
+        } else if (ElemCount.isFixed()) {
           // Storage to build up new const return value (with NaNs quieted)
           SmallVector<Constant *, 16> NewC(ElemCount.getFixedValue());
 
