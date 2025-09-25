@@ -1734,12 +1734,9 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
   FirstRegion->replaceEntryRecursive(NewEntryBlock);
   BasicBlock *PreEntryBlock = EntryBlock;
 
-  // Move static allocas into the pre-entry block so they stay static. Do not
-  // move allocas that have not moved from the entry block as otherwise we
-  // might end up moving them after users.
+  // Move static allocas into the pre-entry block so they stay static.
   for (AllocaInst *AI : StaticAllocas)
-    if (AI->getParent() != EntryBlock)
-      AI->moveBefore(EntryBlock->getTerminator()->getIterator());
+    AI->moveBefore(EntryBlock->begin()->getIterator());
 
   if (ExitBlock) {
     // Insert a trivial phi at the exit block (where the CHR hot path and the

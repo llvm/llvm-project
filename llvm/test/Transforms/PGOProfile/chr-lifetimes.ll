@@ -10,9 +10,9 @@ declare void @baz(i64)
 define void @test_chr_with_lifetimes(ptr %i) !prof !14 {
 ; CHECK-LABEL: @test_chr_with_lifetimes(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TEST:%.*]] = alloca i32, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
-; CHECK-NEXT:    [[TEST:%.*]] = alloca i32, align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = freeze i1 [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 true, i1 [[TMP9]], i1 false
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze i1 [[TMP1]]
