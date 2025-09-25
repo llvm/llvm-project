@@ -113,6 +113,14 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const llvm::dxbc::StaticSamplerFlags &Flags) {
+  printFlags(OS, Flags, dxbc::getStaticSamplerFlags());
+
+  return OS;
+}
+
+
 raw_ostream &operator<<(raw_ostream &OS, const dxbc::RootFlags &Flags) {
   OS << "RootFlags(";
   printFlags(OS, Flags, dxbc::getRootFlags());
