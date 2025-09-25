@@ -150,6 +150,23 @@ namespace ptr_to_ptr_to_retained {
 @property(nonatomic, readonly) NSString *prop_string4;
 @end
 
+@interface InterfaceOnlyObject2 : NSObject
+@property(nonatomic, strong) NSString *prop_string1;
+@property(nonatomic, assign) NSString *prop_string2;
+@property(nonatomic, unsafe_unretained) NSString *prop_string3;
+// expected-warning@-1{{Property 'prop_string3' in 'DerivedObject2' is a raw pointer to retainable type 'NSString'}}
+@property(nonatomic, readonly) NSString *prop_string4;
+@end
+
+@interface DerivedObject2 : InterfaceOnlyObject2
+@property(nonatomic, readonly) NSString *prop_string5;
+// expected-warning@-1{{Property 'prop_string5' in 'DerivedObject2' is a raw pointer to retainable type 'NSString'}}
+@end
+
+@implementation DerivedObject2
+@synthesize prop_string3;
+@end
+
 NS_REQUIRES_PROPERTY_DEFINITIONS
 @interface NoSynthObject : NSObject {
   NSString *ns_string;
