@@ -18,10 +18,10 @@
 #include "mlir/Dialect/XeGPU/uArch/uArchBase.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DebugLog.h"
 #include <map>
 #include <string>
-#include <vector>
 
 #define DEBUG_TYPE "xegpu-uarch"
 
@@ -47,12 +47,12 @@ struct XeCoreInfo {
 
 struct Xe2Plus : public uArch {
   XeCoreInfo xe_core;
-  Xe2Plus(
-      const std::string &archName, const std::string &archDescription,
-      const XeCoreInfo &xeCore,
-      const std::map<RegisterFileType, RegisterFileInfo> &regInfo = {},
-      const std::vector<CacheInfo> &cacheInfo = {},
-      const std::map<std::string, std::shared_ptr<Instruction>> &instrs = {})
+  Xe2Plus(const std::string &archName, const std::string &archDescription,
+          const XeCoreInfo &xeCore,
+          const std::map<RegisterFileType, RegisterFileInfo> &regInfo = {},
+          const llvm::SmallVector<CacheInfo, 4> &cacheInfo = {},
+          const std::map<InstructionKind, std::shared_ptr<Instruction>>
+              &instrs = {})
       : uArch(archName, archDescription, regInfo, cacheInfo, instrs),
         xe_core(xeCore) {}
 };
@@ -60,15 +60,16 @@ struct Xe2Plus : public uArch {
 // struct to represent DPAS instruction
 struct DPASInstruction : public Instruction, public MMAInstructionInterface {
   DPASInstruction()
-      : Instruction("dpas",                   // name
-                    "Dot Product Accumulate") // description
+      : Instruction(InstructionKind::DPAS, // name
+                    "Dot Product Accumulate",
+                    InstructionScope::Subgroup) // description
   {}
 
   // Override all virtuals from MatrixOpInterface
-  virtual std::vector<std::pair<uint32_t, uint32_t>>
+  virtual llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>
   getSupportedShapes(Type dataType, MMAOpndKind matrixType) override;
-  virtual std::vector<Type> getSupportedTypes(MLIRContext &context,
-                                              MMAOpndKind matrixType) override;
+  virtual llvm::SmallVector<Type, 8>
+  getSupportedTypes(MLIRContext &context, MMAOpndKind matrixType) override;
   virtual bool
   checkSupportedShapesAndTypes(std::pair<uint32_t, uint32_t> AShape,
                                std::pair<uint32_t, uint32_t> BShape,
@@ -82,14 +83,14 @@ struct DPASInstruction : public Instruction, public MMAInstructionInterface {
                         std::pair<uint32_t, uint32_t> CShape,
                         std::pair<uint32_t, uint32_t> DShape, Type AType,
                         Type BType, Type CType, Type DType) override;
-  virtual std::vector<uint32_t> getSupportedM(Type type) override;
-  virtual std::vector<uint32_t> getSupportedK(Type type) override;
-  virtual std::vector<uint32_t> getSupportedN(Type type) override;
+  virtual llvm::SmallVector<uint32_t, 8> getSupportedM(Type type) override;
+  virtual llvm::SmallVector<uint32_t, 8> getSupportedK(Type type) override;
+  virtual llvm::SmallVector<uint32_t, 8> getSupportedN(Type type) override;
 };
 
 struct PVCuArch : public Xe2Plus {
   // Maintaines ownership of the instructions owned by PVUarch
-  std::vector<std::shared_ptr<Instruction>> owned_instructions;
+  llvm::SmallVector<std::shared_ptr<Instruction>, 8> owned_instructions;
   PVCuArch()
       : Xe2Plus("pvc",                        // archName
                 "Ponte Vecchio Architecture", // archDescription
@@ -115,17 +116,16 @@ struct PVCuArch : public Xe2Plus {
     this->cacheInfo.push_back(
         CacheInfo(512 * 1024, 64, CacheHierarchyLevel::L2));
 
-    // Add the instructions
+    // Add the instructions-
     auto dpas = std::make_shared<DPASInstruction>();
-    instructions.emplace(dpas->getName(), dpas);
-    // instructions[dpas->name] = dpas.get();
+    instructions.emplace(dpas->getInstructionKind(), dpas);
     owned_instructions.push_back(dpas);
   }
 };
 
 struct BMGuArch : public Xe2Plus {
   // Maintaines ownership of the instructions owned by PVUarch
-  std::vector<std::shared_ptr<Instruction>> owned_instructions;
+  llvm::SmallVector<std::shared_ptr<Instruction>, 8> owned_instructions;
   BMGuArch()
       : Xe2Plus("bmg",                     // archName
                 "Battlemage Architecture", // archDescription
@@ -151,8 +151,7 @@ struct BMGuArch : public Xe2Plus {
 
     // Add the instructions
     auto dpas = std::make_shared<DPASInstruction>();
-    instructions.emplace(dpas->getName(), dpas);
-    // instructions[dpas->name] = dpas.get();
+    instructions.emplace(dpas->getInstructionKind(), dpas);
     owned_instructions.push_back(dpas);
   }
 };
@@ -160,12 +159,12 @@ struct BMGuArch : public Xe2Plus {
 } // namespace xegpu
 } // namespace mlir
 
-inline std::vector<std::pair<uint32_t, uint32_t>>
+inline llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>
 DPASInstruction::getSupportedShapes(Type dataType, MMAOpndKind matrixType) {
-  auto combineVectors = [](const std::vector<uint32_t> &a,
-                           const std::vector<uint32_t> &b)
-      -> std::vector<std::pair<uint32_t, uint32_t>> {
-    std::vector<std::pair<uint32_t, uint32_t>> result;
+  auto combineVectors = [](const llvm::SmallVector<uint32_t, 8> &a,
+                           const llvm::SmallVector<uint32_t, 8> &b)
+      -> llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16> {
+    llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16> result;
     for (unsigned x : a) {
       for (unsigned y : b) {
         result.emplace_back(x, y);
@@ -177,7 +176,7 @@ DPASInstruction::getSupportedShapes(Type dataType, MMAOpndKind matrixType) {
   auto M = getSupportedM(dataType);
   auto K = getSupportedK(dataType);
   auto N = getSupportedN(dataType);
-  std::vector<std::pair<unsigned, unsigned>> resultMatrix;
+  llvm::SmallVector<std::pair<unsigned, unsigned>, 16> resultMatrix;
 
   switch (matrixType) {
   case MMAOpndKind::MatrixA:
@@ -196,7 +195,7 @@ DPASInstruction::getSupportedShapes(Type dataType, MMAOpndKind matrixType) {
   return resultMatrix;
 }
 
-inline std::vector<Type>
+inline llvm::SmallVector<Type, 8>
 DPASInstruction::getSupportedTypes(MLIRContext &context,
                                    MMAOpndKind matrixType) {
   Type bf16Type = BFloat16Type::get(&context);
@@ -207,17 +206,14 @@ DPASInstruction::getSupportedTypes(MLIRContext &context,
   switch (matrixType) {
   case MMAOpndKind::MatrixA:
     return {bf16Type, f16Type, tf32Type};
-    break;
   case MMAOpndKind::MatrixB:
     return {bf16Type, f16Type, tf32Type};
-    break;
   case MMAOpndKind::MatrixC:
     return {bf16Type, f16Type, f32Type};
-    break;
   case MMAOpndKind::MatrixD:
     return {bf16Type, f16Type, f32Type};
-    break;
   }
+  return {};
 }
 
 inline bool DPASInstruction::checkSupportedTypes(Type AType, Type BType,
@@ -276,11 +272,13 @@ inline bool DPASInstruction::validate(std::pair<uint32_t, uint32_t> AShape,
                                       BType, CType, DType);
 }
 
-inline std::vector<uint32_t> DPASInstruction::getSupportedM(Type type) {
+inline llvm::SmallVector<uint32_t, 8>
+DPASInstruction::getSupportedM(Type type) {
   return {1, 2, 3, 4, 5, 6, 7, 8};
 }
 
-inline std::vector<uint32_t> DPASInstruction::getSupportedK(Type type) {
+inline llvm::SmallVector<uint32_t, 8>
+DPASInstruction::getSupportedK(Type type) {
   // assert if data type is not int or float type
   assert(type.isIntOrFloat() && "Matrix type must be int or float");
   auto bitWidth = type.getIntOrFloatBitWidth();
@@ -307,8 +305,9 @@ inline std::vector<uint32_t> DPASInstruction::getSupportedK(Type type) {
   return {kSize};
 }
 
-inline std::vector<uint32_t> DPASInstruction::getSupportedN(Type type) {
+inline llvm::SmallVector<uint32_t, 8>
+DPASInstruction::getSupportedN(Type type) {
   return {16};
 }
 
-#endif // MLIR_DIALECT_XEGPU_UARCH_INTELGPUXE2H
+#endif // MLIR_DIALECT_XEGPU_UARCH_INTELGPUXE2_H
