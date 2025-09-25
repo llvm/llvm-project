@@ -280,15 +280,31 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
     return !order || isIdentityPermutation(llvm::to_vector_of<int64_t>(
                          llvm::reverse(order.asArrayRef())));
   };
-  if (!hasDefaultOrder())
-    return mlir::emitError(loc, "order attribute is currently not supported.");
 
   auto dims =
       llvm::map_to_vector(getEffectiveSgLayoutAsInt(), [&](int64_t d) -> Value {
         return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
       });
 
-  return affine::delinearizeIndex(builder, loc, linearId, dims);
+  if (hasDefaultOrder())
+    return affine::delinearizeIndex(builder, loc, linearId, dims);
+  else if (getOrder() && getOrder().size() == 2 &&
+           getOrder().asArrayRef()[0] == 0 && getOrder().asArrayRef()[1] == 1) {
+    // If order is [0, 1], reverse the dims for delinearization, then reverse
+    // the result.
+    // This is a temporary solution for 2D sg_layout with order [0, 1].
+    // A complete solution requires generating more affine maps for
+    // delinearization based on the order attribute.
+    assert(dims.size() == 2 && "expected 2D sg_layout.");
+    SmallVector<Value> reversedDims = {dims[1], dims[0]};
+    auto maybeIds =
+        affine::delinearizeIndex(builder, loc, linearId, reversedDims);
+    if (failed(maybeIds))
+      return failure();
+    SmallVector<Value> ids = maybeIds.value();
+    std::reverse(ids.begin(), ids.end());
+    return ids;
+  }
 }
 
 /// Implements DistributeLayoutAttr::getOffsets to generate
@@ -309,55 +325,14 @@ LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
       return failure();
   }
 
-  // Get the order attribute, default to row-major if not present
-  SmallVector<int64_t> order;
-  if (getOrder()) {
-    order = llvm::map_to_vector(getOrder().asArrayRef(), [](int v) { return static_cast<int64_t>(v); });
-  } else {
-    auto range = llvm::reverse(llvm::seq<int64_t>(0, sgLayout.size()));
-    order = llvm::to_vector(range);
-  }
+  // delinearize Ids
+  auto maybeIds = delinearizeSubgroupId(builder, loc, linearId);
+  if (failed(maybeIds))
+    return failure();
+  SmallVector<Value> sgIds = *maybeIds;
 
-  // Check if order is default row-major (reverse identity)
-  bool isRowMajor = true;
-  for (size_t i = 0, n = order.size(); i < n; ++i)
-    if (order[i] != static_cast<int64_t>(n) - 1 - static_cast<int64_t>(i))
-      isRowMajor = false;
-
-  SmallVector<Value> sgIds;
-  if (isRowMajor) {
-    // Use original delinearization for row-major
-    auto maybeIds = affine::delinearizeIndex(
-        builder, loc, linearId,
-        llvm::map_to_vector(sgLayout, [&](int64_t d) -> Value {
-          return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
-        }));
-    if (failed(maybeIds))
-      return failure();
-    sgIds = maybeIds.value();
-  } else {
-    // Permute sgLayout according to order for delinearization
-    SmallVector<int64_t> permutedLayout(order.size());
-    for (size_t i = 0; i < order.size(); ++i)
-      permutedLayout[i] = sgLayout[order[i]];
-
-    // Delinearize the linear subgroup id in the requested order
-    auto maybePermutedSgId = affine::delinearizeIndex(
-        builder, loc, linearId,
-        llvm::map_to_vector(permutedLayout, [&](int64_t d) -> Value {
-          return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
-        }));
-    if (failed(maybePermutedSgId))
-      return failure();
-    SmallVector<Value> permutedSgId = maybePermutedSgId.value();
-
-    // Compute the inverse permutation to map back to physical order
-    sgIds.resize(order.size());
-    for (size_t i = 0; i < order.size(); ++i)
-      sgIds[order[i]] = permutedSgId[i];
-  }
-
-  return genOffsetsComputingInsts(builder, loc, sgIds, sgLayout, sgShape, shape);
+  return genOffsetsComputingInsts(builder, loc, sgIds, sgLayout, sgShape,
+                                  shape);
 }
 
 //===----------------------------------------------------------------------===//
