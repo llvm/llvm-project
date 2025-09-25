@@ -8,8 +8,6 @@
 
 ; ERROR: error: isel-set-invalid-rounding:3:3: in function foo void (): rounding mode is not supported by X86 hardware
 
-source_filename = "isel-set-invalid-rounding"
-
 define dso_local void @foo() local_unnamed_addr !dbg !9 {
 entry:
   tail call void @llvm.set.rounding(i32 99), !dbg !12
