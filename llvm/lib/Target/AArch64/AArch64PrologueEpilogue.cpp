@@ -1435,6 +1435,17 @@ void AArch64EpilogueEmitter::emitEpilogue() {
     --SEHEpilogueStartI;
   }
 
+  // Determine the ranges of SVE callee-saves. This is done before emitting any
+  // code at the end of the epilogue (for Swift async), which can get in the way
+  // of finding SVE callee-saves with CalleeSavesAboveFrameRecord.
+  auto [PPR, ZPR] = getSVEStackFrameSizes();
+  auto [PPRRange, ZPRRange] = partitionSVECS(
+      MBB,
+      SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord
+          ? MBB.getFirstTerminator()
+          : FirstGPRRestoreI,
+      PPR.CalleeSavesSize, ZPR.CalleeSavesSize, /*IsEpilogue=*/true);
+
   if (HasFP && AFI->hasSwiftAsyncContext())
     emitSwiftAsyncContextFramePointer(EpilogueEndI, DL);
 
@@ -1456,14 +1467,6 @@ void AArch64EpilogueEmitter::emitEpilogue() {
 
   NumBytes -= PrologueSaveSize;
   assert(NumBytes >= 0 && "Negative stack allocation size!?");
-
-  auto [PPR, ZPR] = getSVEStackFrameSizes();
-  auto [PPRRange, ZPRRange] = partitionSVECS(
-      MBB,
-      SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord
-          ? MBB.getFirstTerminator()
-          : FirstGPRRestoreI,
-      PPR.CalleeSavesSize, ZPR.CalleeSavesSize, /*IsEpilogue=*/true);
 
   StackOffset SVECalleeSavesSize = ZPR.CalleeSavesSize + PPR.CalleeSavesSize;
   StackOffset SVEStackSize =

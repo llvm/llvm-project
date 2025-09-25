@@ -1560,3 +1560,53 @@ define tailcc void @f15(double %d, <vscale x 4 x i32> %vs, [9 x i64], i32 %i) {
   store i32 %i, ptr %a
   ret void
 }
+
+declare ptr @llvm.swift.async.context.addr()
+
+define void @f16(ptr swiftasync %ctx, <vscale x 2 x i64> %foo) {
+; CHECK-LABEL: f16:
+; CHECK:       .seh_proc f16
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    orr x29, x29, #0x1000000000000000
+; CHECK-NEXT:    .seh_nop
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .seh_allocz 1
+; CHECK-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    .seh_save_zreg z8, 0
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    stp x29, x30, [sp, #8] // 16-byte Folded Spill
+; CHECK-NEXT:    .seh_save_fplr 8
+; CHECK-NEXT:    str x22, [sp]
+; CHECK-NEXT:    .seh_nop
+; CHECK-NEXT:    add x29, sp, #8
+; CHECK-NEXT:    .seh_add_fp 8
+; CHECK-NEXT:    .seh_endprologue
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    //APP
+; CHECK-NEXT:    //NO_APP
+; CHECK-NEXT:    ldr x8, [x22]
+; CHECK-NEXT:    stur x8, [x29, #-8]
+; CHECK-NEXT:    .seh_startepilogue
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    ldp x29, x30, [sp, #8] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    .seh_save_fplr 8
+; CHECK-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    .seh_save_zreg z8, 0
+; CHECK-NEXT:    and x29, x29, #0xefffffffffffffff
+; CHECK-NEXT:    .seh_nop
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    .seh_allocz 1
+; CHECK-NEXT:    .seh_endepilogue
+; CHECK-NEXT:    ret
+; CHECK-NEXT:    .seh_endfunclet
+; CHECK-NEXT:    .seh_endproc
+  tail call void asm sideeffect "", "~{z8}"()
+  %1 = load ptr, ptr %ctx, align 8
+  %2 = tail call ptr @llvm.swift.async.context.addr()
+  store ptr %1, ptr %2, align 8
+  ret void
+}
