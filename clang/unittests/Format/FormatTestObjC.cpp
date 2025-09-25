@@ -763,6 +763,12 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
       "                  backing:NSBackingStoreBuffered\n"
       "                    defer:NO]);\n"
       "}");
+  verifyFormat(R"(- (void)test {
+  if ([object
+          respondsToSelector:@selector(
+                                 selectorNameThatIsReallyLong:param1:param2:)])
+    return;
+})");
   verifyFormat("[contentsContainer replaceSubview:[subviews objectAtIndex:0]\n"
                "                             with:contentsNativeView];");
 
