@@ -9,8 +9,7 @@ RUN: %msan_compiler %S/SleepOneSecondTest.cpp -o %t/LFSIGINT
 # The line below needs the " | env" at the end, in order to make the
 # script continue executing, rather than waiting (forever) for the
 # 'nohup run...' command to finish.
-RUN: bash -c "nohup %run %t/LFSIGINT 2> %t/log &" | env
-RUN: ps aux | grep LFSIGINT | grep -v "grep" | awk '{print $2}' | tr -d '\n' > %t2
+RUN: bash -c "nohup %run %t/LFSIGINT 2> %t/log & echo -n $! > %t2" | env
 RUN: sleep 2
 RUN: kill -SIGINT %{readfile:%t2}
 RUN: sleep 3

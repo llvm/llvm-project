@@ -8,8 +8,7 @@ RUN: %cpp_compiler %S/SleepOneSecondTest.cpp -o %t/ForkSIGUSR
 # The line below needs the " | env" at the end, in order to make the
 # script continue executing, rather than waiting (forever) for the
 # 'nohup run...' command to finish.
-RUN: bash -c "nohup %run %t/ForkSIGUSR -fork=3 -ignore_crashes=1 2>%t/log &" | env
-RUN: ps aux | grep ForkSIGUSR | grep -v "grep" | awk '{print $2}' | tr -d '\n' > %t2
+RUN: bash -c "nohup %run %t/ForkSIGUSR -fork=3 -ignore_crashes=1 2>%t/log & echo -n $! > %t2" | env
 RUN: sleep 3
 RUN: kill -SIGUSR2 %{readfile:%t2}
 RUN: sleep 6
