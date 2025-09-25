@@ -25985,9 +25985,12 @@ static SDValue reassociateCSELOperandsForCSE(SDNode *N, SelectionDAG &DAG) {
     // Try again with the operands of the SUBS instruction and the condition
     // swapped. Due to canonicalization, this only helps for non-constant
     // operands of the SUBS instruction.
-    std::swap(CmpOpToMatch, CmpOpOther);
-    if (SDValue R = Fold(getSwappedCondition(CC), CmpOpToMatch, CmpOpToMatch))
-      return R;
+    auto NewCC = getSwappedCondition(CC);
+    if (NewCC != AArch64CC::AL) {
+      std::swap(CmpOpToMatch, CmpOpOther);
+      if (SDValue R = Fold(NewCC, CmpOpToMatch, CmpOpToMatch))
+        return R;
+    }
     return SDValue();
   }
 
