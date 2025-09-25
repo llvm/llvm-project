@@ -7374,6 +7374,7 @@ def emit_mlir : Flag<["-"], "emit-mlir">, Alias<emit_fir>;
 
 def emit_hlfir : Flag<["-"], "emit-hlfir">, Group<Action_Group>,
   HelpText<"Build the parse tree, then lower it to HLFIR">;
+
 } // let Visibility = [FC1Option]
 
 //===----------------------------------------------------------------------===//
