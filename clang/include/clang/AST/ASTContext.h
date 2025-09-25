@@ -25,6 +25,7 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/SYCLKernelInfo.h"
 #include "clang/AST/TemplateName.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
@@ -53,7 +54,7 @@ struct fltSemantics;
 template <typename T, unsigned N> class SmallPtrSet;
 
 struct ScalableVecTyKey {
-  uintptr_t EltTy;
+  clang::QualType EltTy;
   unsigned NumElts;
   unsigned NumFields;
 
@@ -67,13 +68,14 @@ struct ScalableVecTyKey {
 // as a key in DenseMap.
 template <> struct DenseMapInfo<ScalableVecTyKey> {
   static inline ScalableVecTyKey getEmptyKey() {
-    return {DenseMapInfo<uintptr_t>::getEmptyKey(), ~0U, ~0U};
+    return {DenseMapInfo<clang::QualType>::getEmptyKey(), ~0U, ~0U};
   }
   static inline ScalableVecTyKey getTombstoneKey() {
-    return {DenseMapInfo<uintptr_t>::getTombstoneKey(), ~0U, ~0U};
+    return {DenseMapInfo<clang::QualType>::getTombstoneKey(), ~0U, ~0U};
   }
   static unsigned getHashValue(const ScalableVecTyKey &Val) {
-    return hash_combine(Val.EltTy, Val.NumElts, Val.NumFields);
+    return hash_combine(DenseMapInfo<clang::QualType>::getHashValue(Val.EltTy),
+                        Val.NumElts, Val.NumFields);
   }
   static bool isEqual(const ScalableVecTyKey &LHS,
                       const ScalableVecTyKey &RHS) {

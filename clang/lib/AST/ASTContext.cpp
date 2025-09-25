@@ -4567,8 +4567,7 @@ QualType ASTContext::getWebAssemblyExternrefType() const {
 /// type.
 QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
                                            unsigned NumFields) const {
-  auto K = llvm::ScalableVecTyKey{
-      reinterpret_cast<uintptr_t>(EltTy.getAsOpaquePtr()), NumElts, NumFields};
+  auto K = llvm::ScalableVecTyKey{EltTy, NumElts, NumFields};
   if (auto It = ScalableVecTyMap.find(K); It != ScalableVecTyMap.end())
     return It->second;
 
