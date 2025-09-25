@@ -281,6 +281,6 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
   }
 }
 
-// CHECK-LABEL: func.func @_QQxxx()
+// CHECK-LABEL: llvm.func @_QQxxx()
 // CHECK: llvm.alloca %{{.*}} x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
 // CHECK-NOT: llvm.call @_FortranACUFAllocDescriptor
