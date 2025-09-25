@@ -1782,8 +1782,10 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   for (MachineInstr &MI : make_early_inc_range(reverse(MBB))) {
     // TODO: Support XSfmm.
     if (RISCVII::hasTWidenOp(MI.getDesc().TSFlags) ||
-        RISCVInstrInfo::isXSfmmVectorConfigInstr(MI))
+        RISCVInstrInfo::isXSfmmVectorConfigInstr(MI)) {
+      NextMI = nullptr;
       continue;
+    }
 
     if (!RISCVInstrInfo::isVectorConfigInstr(MI)) {
       Used.doUnion(getDemanded(MI, ST));
