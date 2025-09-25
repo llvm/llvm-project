@@ -456,6 +456,10 @@ def OMPC_Relaxed : Clause<[Spelling<"relaxed">]> {
 def OMPC_Release : Clause<[Spelling<"release">]> {
   let clangClass = "OMPReleaseClause";
 }
+def OMPC_Replayable : Clause<[Spelling<"replayable">]> {
+  let flangClass = "OmpReplayableClause";
+  let isValueOptional = true;
+}
 def OMPC_ReverseOffload : Clause<[Spelling<"reverse_offload">]> {
   let clangClass = "OMPReverseOffloadClause";
 }
@@ -516,12 +520,19 @@ def OMPC_ThreadLimit : Clause<[Spelling<"thread_limit">]> {
 def OMPC_ThreadPrivate : Clause<[Spelling<"threadprivate">]> {
   let isImplicit = true;
 }
+def OMPC_GroupPrivate : Clause<[Spelling<"groupprivate">]> { 
+  let isImplicit = true;
+}
 def OMPC_Threads : Clause<[Spelling<"threads">]> {
   let clangClass = "OMPThreadsClause";
 }
 def OMPC_To : Clause<[Spelling<"to">]> {
   let clangClass = "OMPToClause";
   let flangClass = "OmpToClause";
+}
+def OMPC_Transparent : Clause<[Spelling<"transparent">]> {
+  let flangClass = "OmpTransparentClause";
+  let isValueOptional = true;
 }
 def OMPC_UnifiedAddress : Clause<[Spelling<"unified_address">]> {
   let clangClass = "OMPUnifiedAddressClause";
@@ -1128,6 +1139,7 @@ def OMP_Target : Directive<[Spelling<"target">]> {
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_OMPX_Bare>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];
   let association = AS_Block;
@@ -1139,6 +1151,7 @@ def OMP_TargetData : Directive<[Spelling<"target data", 1, 52>,
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Default, 60>,
+    VersionedClause<OMPC_Transparent, 60>,
   ];
   let requiredClauses = [
     VersionedClause<OMPC_Map>,
@@ -1157,6 +1170,7 @@ def OMP_TargetEnterData : Directive<[Spelling<"target enter data", 1, 52>,
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_NoWait>,
+    VersionedClause<OMPC_Replayable, 60>,
   ];
   let requiredClauses = [
     VersionedClause<OMPC_Map>,
@@ -1173,6 +1187,7 @@ def OMP_TargetExitData : Directive<[Spelling<"target exit data", 1, 52>,
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_NoWait>,
+    VersionedClause<OMPC_Replayable, 60>,
   ];
   let requiredClauses = [
     VersionedClause<OMPC_Map>,
@@ -1191,6 +1206,7 @@ def OMP_TargetUpdate : Directive<[Spelling<"target update", 1, 52>,
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_NoWait>,
+    VersionedClause<OMPC_Replayable, 60>,
   ];
   let association = AS_None;
   let category = CA_Executable;
@@ -1213,6 +1229,8 @@ def OMP_Task : Directive<[Spelling<"task">]> {
     VersionedClause<OMPC_Final>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_Replayable, 60>,
+    VersionedClause<OMPC_Transparent, 60>,
   ];
   let association = AS_Block;
   let category = CA_Executable;
@@ -1254,6 +1272,8 @@ def OMP_TaskLoop : Directive<[Spelling<"taskloop">]> {
     VersionedClause<OMPC_Final>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_Replayable, 60>,
+    VersionedClause<OMPC_Transparent, 60>,
   ];
   let allowedExclusiveClauses = [
     VersionedClause<OMPC_GrainSize>,
@@ -1266,6 +1286,9 @@ def OMP_TaskWait : Directive<[Spelling<"taskwait">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Depend, 50>,
     VersionedClause<OMPC_NoWait, 51>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Replayable, 60>,
   ];
   let association = AS_None;
   let category = CA_Executable;

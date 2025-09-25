@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 def isWave32 : Predicate<"Subtarget->isWave32()">,
-  AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
+  AssemblerPredicate <(any_of FeatureWavefrontSize32,
+                              FeatureAssemblerPermissiveWavesize)>;
 def isWave64 : Predicate<"Subtarget->isWave64()">,
-  AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
+  AssemblerPredicate <(any_of FeatureWavefrontSize64,
+                              FeatureAssemblerPermissiveWavesize)>;
 
 class AMDGPUMnemonicAlias<string From, string To, string VariantName = "">
     : MnemonicAlias<From, To, VariantName>, PredicateControl;
@@ -1353,7 +1355,7 @@ def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
 def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
 
 def ScaleSel : NamedIntOperand<"scale_sel"> {
-  let Validator = "isUInt<3>";
+  let Validator = "isUInt<4>";
 }
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
@@ -1969,6 +1971,7 @@ class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
   RegisterOperand ret =
   !cond(!eq(VT, i1)     : SSrc_i1,
         !eq(VT, i16)    : !if (IsFake16, VCSrc_b16, VCSrcT_b16),
+        !eq(VT, i64)    : VCSrc_b64,
         !eq(VT, f16)    : !if (IsFake16, VCSrc_f16, VCSrcT_f16),
         !eq(VT, bf16)   : !if (IsFake16, VCSrc_bf16, VCSrcT_bf16),
         !eq(VT, v2i16)  : VCSrc_v2b16,
@@ -2596,28 +2599,46 @@ class getAlign2RegOp<RegisterOperand RC> {
   RegisterOperand ret =
     !cond(!eq(RC, VGPROp_16) : VGPROp_16,
           !eq(RC, VGPROp_32) : VGPROp_32,
+
           !eq(RC, VGPROp_64) : VGPROp_64_Align2,
           !eq(RC, VGPROp_64_Align1) : VGPROp_64_Align2,
+          !eq(RC, VGPROp_64_Align2) : VGPROp_64_Align2,
+
           !eq(RC, VGPROp_96) : VGPROp_96_Align2,
           !eq(RC, VGPROp_96_Align1) : VGPROp_96_Align2,
+          !eq(RC, VGPROp_96_Align2) : VGPROp_96_Align2,
+
           !eq(RC, VGPROp_128) : VGPROp_128_Align2,
           !eq(RC, VGPROp_128_Align1) : VGPROp_128_Align2,
+          !eq(RC, VGPROp_128_Align2) : VGPROp_128_Align2,
+
           !eq(RC, VGPROp_160) : VGPROp_160_Align2,
           !eq(RC, VGPROp_160_Align1) : VGPROp_160_Align2,
+          !eq(RC, VGPROp_160_Align2) : VGPROp_160_Align2,
+
           !eq(RC, VGPROp_1024) : VGPROp_1024_Align2,
           !eq(RC, VGPROp_1024_Align1) : VGPROp_1024_Align2,
+          !eq(RC, VGPROp_1024_Align2) : VGPROp_1024_Align2,
+
           !eq(RC, AVLdSt_32) : AVLdSt_32,
+          !eq(RC, AVLdSt_64_Align1) : AVLdSt_64_Align2,
           !eq(RC, AVLdSt_64) : AVLdSt_64_Align2,
+
           !eq(RC, AVLdSt_96) : AVLdSt_96_Align2,
+          !eq(RC, AVLdSt_96_Align1) : AVLdSt_96_Align1,
           !eq(RC, AVLdSt_96_Align1) : AVLdSt_96_Align2,
+
           !eq(RC, AVLdSt_128) : AVLdSt_128_Align2,
           !eq(RC, AVLdSt_128_Align1) : AVLdSt_128_Align2,
+          !eq(RC, AVLdSt_128_Align2) : AVLdSt_128_Align2,
+
           !eq(RC, AVLdSt_160) : AVLdSt_160_Align2,
-          !eq(RC, AVLdSt_160_Align1) : AVLdSt_160_Align2);
+          !eq(RC, AVLdSt_160_Align1) : AVLdSt_160_Align2,
+          !eq(RC, AVLdSt_160_Align2) : AVLdSt_160_Align2);
 }
 
 class getEquivalentAGPROperand<RegisterOperand RC> {
-  defvar Size = RC.RegClass.Size;
+  defvar Size = !cast<RegisterClass>(RC.RegClass).Size;
   RegisterOperand ret =
     !cond(!eq(Size, 32)   : RegisterOperand<AGPR_32>,
           !eq(Size, 64)   : RegisterOperand<AReg_64>,
@@ -2628,7 +2649,7 @@ class getEquivalentAGPROperand<RegisterOperand RC> {
 }
 
 class getEquivalentVGPROperand<RegisterOperand RC> {
-  defvar Size = RC.RegClass.Size;
+  defvar Size = !cast<RegisterClass>(RC.RegClass).Size;
   RegisterOperand ret =
     !cond(!eq(Size, 32)   : RegisterOperand<VGPR_32>,
           !eq(Size, 64)   : RegisterOperand<VReg_64>,

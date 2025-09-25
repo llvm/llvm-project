@@ -227,6 +227,12 @@ public:
   /// Builds a new OpenMPThreadPrivateDecl and checks its correctness.
   OMPThreadPrivateDecl *CheckOMPThreadPrivateDecl(SourceLocation Loc,
                                                   ArrayRef<Expr *> VarList);
+  /// Called on well-formed '#pragma omp groupprivate'.
+  DeclGroupPtrTy ActOnOpenMPGroupPrivateDirective(SourceLocation Loc,
+                                                  ArrayRef<Expr *> VarList);
+  /// Builds a new OpenMPGroupPrivateDecl and checks its correctness.
+  OMPGroupPrivateDecl *CheckOMPGroupPrivateDecl(SourceLocation Loc,
+                                                ArrayRef<Expr *> VarList);
   /// Called on well-formed '#pragma omp allocate'.
   DeclGroupPtrTy ActOnOpenMPAllocateDirective(SourceLocation Loc,
                                               ArrayRef<Expr *> VarList,
@@ -951,11 +957,11 @@ public:
                                    SourceLocation LParenLoc,
                                    SourceLocation EndLoc);
   /// Called on well-formed 'default' clause.
-  OMPClause *ActOnOpenMPDefaultClause(llvm::omp::DefaultKind Kind,
-                                      SourceLocation KindLoc,
-                                      SourceLocation StartLoc,
-                                      SourceLocation LParenLoc,
-                                      SourceLocation EndLoc);
+  OMPClause *
+  ActOnOpenMPDefaultClause(llvm::omp::DefaultKind M, SourceLocation MLoc,
+                           OpenMPDefaultClauseVariableCategory VCKind,
+                           SourceLocation VCKindLoc, SourceLocation StartLoc,
+                           SourceLocation LParenLoc, SourceLocation EndLoc);
   /// Called on well-formed 'proc_bind' clause.
   OMPClause *ActOnOpenMPProcBindClause(llvm::omp::ProcBindKind Kind,
                                        SourceLocation KindLoc,

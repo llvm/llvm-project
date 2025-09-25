@@ -157,8 +157,8 @@ is usually the associated section's comdat.
    1. It must be a COMDAT section.
    2. It cannot be another associative COMDAT section.
 
-In the following example the symbol ``sym`` is the comdat symbol of ``.foo``
-and ``.bar`` is associated to ``.foo``.
+In the following example, the symbol ``sym`` is the comdat symbol of ``.foo``,
+and ``.bar`` is associated with ``.foo``.
 
 .. code-block:: gas
 
@@ -177,9 +177,9 @@ MC supports these flags in the COFF ``.section`` directive:
   - ``y``: Not readable
   - ``D``: Discardable (``IMAGE_SCN_MEM_DISCARDABLE``)
 
-These flags are all compatible with gas, with the exception of the ``D`` flag,
-which gnu as does not support. For gas compatibility, sections with a name
-starting with ".debug" are implicitly discardable.
+These flags are all compatible with GNU as, with the exception of the ``D`` flag,
+which GNU as does not support. For compatibility with GNU as, sections with a name
+starting with ``.debug`` are implicitly discardable.
 
 
 ARM64/COFF-Dependent
@@ -213,7 +213,7 @@ ELF-Dependent
 ^^^^^^^^^^^^^^^^^^^^^^
 
 In order to support creating multiple sections with the same name and comdat,
-it is possible to add an unique number at the end of the ``.section`` directive.
+it is possible to add a unique number at the end of the ``.section`` directive.
 For example, the following code creates two sections named ``.text``.
 
 .. code-block:: gas
@@ -228,9 +228,9 @@ For example, the following code creates two sections named ``.text``.
 The unique number is not present in the resulting object at all. It is just used
 in the assembler to differentiate the sections.
 
-The 'o' flag is mapped to SHF_LINK_ORDER. If it is present, a symbol
-must be given that identifies the section to be placed is the
-.sh_link.
+The 'o' flag is mapped to ``SHF_LINK_ORDER``. If it is present, a symbol
+must be given that identifies the section to be placed in the
+``.sh_link``.
 
 .. code-block:: gas
 
@@ -238,7 +238,7 @@ must be given that identifies the section to be placed is the
         .Ltmp:
         .section .bar,"ao",@progbits,.Ltmp
 
-which is equivalent to just
+which is equivalent to:
 
 .. code-block:: gas
 
@@ -251,7 +251,7 @@ which is equivalent to just
 In order to support passing linker options from the frontend to the linker, a
 special section of type ``SHT_LLVM_LINKER_OPTIONS`` (usually named
 ``.linker-options`` though the name is not significant as it is identified by
-the type).  The contents of this section is a simple pair-wise encoding of
+the type).  The contents of this section are a simple pair-wise encoding of
 directives for consideration by the linker.  The strings are encoded as standard
 null-terminated UTF-8 strings.  They are emitted inline to avoid having the
 linker traverse the object file for retrieving the value.  The linker is
@@ -262,7 +262,7 @@ The section has type ``SHT_LLVM_LINKER_OPTIONS`` and has the ``SHF_EXCLUDE``
 flag to ensure that the section is treated as opaque by linkers which do not
 support the feature and will not be emitted into the final linked binary.
 
-This would be equivalent to the follow raw assembly:
+This would be equivalent to the following raw assembly:
 
 .. code-block:: gas
 
@@ -398,7 +398,7 @@ the symbol that belongs to the partition. It may be constructed as follows:
 
 ``SHT_LLVM_BB_ADDR_MAP`` Section (basic block address map)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-This section stores the binary address of basic blocks along with other related
+This section stores the binary addresses of basic blocks along with other related
 metadata. This information can be used to map binary profiles (like perf
 profiles) directly to machine basic blocks.
 This section is emitted with ``-basic-block-address-map`` and will contain
@@ -480,7 +480,7 @@ PGO related analysis data can be emitted after each function within the
 Supported analyses currently are Function Entry Count, Basic Block Frequencies,
 and Branch Probabilities.
 
-Each analysis is enabled or disabled via a bit in the feature byte. Currently
+Each analysis is enabled or disabled via a bit in the feature byte. Currently,
 those bits are:
 
 #. Function Entry Count - Number of times the function was called as taken
@@ -627,9 +627,9 @@ Syntax:
 
 ``.cv_loc`` Directive
 ^^^^^^^^^^^^^^^^^^^^^
-The first number is a file number, must have been previously assigned with a
-``.file`` directive, the second number is the line number and optionally the
-third number is a column position (zero if not specified).  The remaining
+The first number is a file number, which must have been previously assigned with a
+``.file`` directive. The second number is the line number, and the
+optional third number is a column position (zero if not specified).  The remaining
 optional items are ``.loc`` sub-directives.
 
 Syntax:

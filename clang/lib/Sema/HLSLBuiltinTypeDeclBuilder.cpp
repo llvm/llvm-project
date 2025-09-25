@@ -17,6 +17,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
@@ -47,6 +48,14 @@ static FunctionDecl *lookupBuiltinFunction(Sema &S, StringRef Name) {
   assert(R.isSingleResult() &&
          "Since this is a builtin it should always resolve!");
   return cast<FunctionDecl>(R.getFoundDecl());
+}
+
+CXXConstructorDecl *lookupCopyConstructor(QualType ResTy) {
+  assert(ResTy->isRecordType() && "not a CXXRecord type");
+  for (auto *CD : ResTy->getAsCXXRecordDecl()->ctors())
+    if (CD->isCopyConstructor())
+      return CD;
+  return nullptr;
 }
 } // namespace
 
@@ -580,6 +589,23 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnValue(T ReturnValue) {
 
   Expr *ReturnValueExpr = convertPlaceholder(ReturnValue);
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+
+  QualType Ty = ReturnValueExpr->getType();
+  if (Ty->isRecordType()) {
+    // For record types, create a call to copy constructor to ensure proper copy
+    // semantics.
+    auto *ICE =
+        ImplicitCastExpr::Create(AST, Ty.withConst(), CK_NoOp, ReturnValueExpr,
+                                 nullptr, VK_XValue, FPOptionsOverride());
+    CXXConstructorDecl *CD = lookupCopyConstructor(Ty);
+    assert(CD && "no copy constructor found");
+    ReturnValueExpr = CXXConstructExpr::Create(
+        AST, Ty, SourceLocation(), CD, /*Elidable=*/false, {ICE},
+        /*HadMultipleCandidates=*/false, /*ListInitialization=*/false,
+        /*StdInitListInitialization=*/false,
+        /*ZeroInitListInitialization=*/false, CXXConstructionKind::Complete,
+        SourceRange());
+  }
   StmtsList.push_back(
       ReturnStmt::Create(AST, SourceLocation(), ReturnValueExpr, nullptr));
   return *this;
@@ -722,8 +748,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
 // Adds default constructor to the resource class:
 // Resource::Resource()
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
-  if (Record->isCompleteDefinition())
-    return *this;
+  assert(!Record->isCompleteDefinition() && "record is already complete");
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   QualType HandleType = getResourceHandleField()->getType();
@@ -731,49 +756,6 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
                                   false, true)
       .callBuiltin("__builtin_hlsl_resource_uninitializedhandle", HandleType,
                    PH::Handle)
-      .assign(PH::Handle, PH::LastStmt)
-      .finalize();
-}
-
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addHandleConstructorFromBinding() {
-  if (Record->isCompleteDefinition())
-    return *this;
-
-  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
-  ASTContext &AST = SemaRef.getASTContext();
-  QualType HandleType = getResourceHandleField()->getType();
-
-  return BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true)
-      .addParam("registerNo", AST.UnsignedIntTy)
-      .addParam("spaceNo", AST.UnsignedIntTy)
-      .addParam("range", AST.IntTy)
-      .addParam("index", AST.UnsignedIntTy)
-      .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
-      .callBuiltin("__builtin_hlsl_resource_handlefrombinding", HandleType,
-                   PH::Handle, PH::_0, PH::_1, PH::_2, PH::_3, PH::_4)
-      .assign(PH::Handle, PH::LastStmt)
-      .finalize();
-}
-
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addHandleConstructorFromImplicitBinding() {
-  if (Record->isCompleteDefinition())
-    return *this;
-
-  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
-  ASTContext &AST = SemaRef.getASTContext();
-  QualType HandleType = getResourceHandleField()->getType();
-
-  return BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true)
-      .addParam("spaceNo", AST.UnsignedIntTy)
-      .addParam("range", AST.IntTy)
-      .addParam("index", AST.UnsignedIntTy)
-      .addParam("orderId", AST.UnsignedIntTy)
-      .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
-      .callBuiltin("__builtin_hlsl_resource_handlefromimplicitbinding",
-                   HandleType, PH::Handle, PH::_3, PH::_0, PH::_1, PH::_2,
-                   PH::_4)
       .assign(PH::Handle, PH::LastStmt)
       .finalize();
 }
@@ -790,8 +772,7 @@ BuiltinTypeDeclBuilder::addHandleConstructorFromImplicitBinding() {
 //   return tmp;
 // }
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromBinding() {
-  if (Record->isCompleteDefinition())
-    return *this;
+  assert(!Record->isCompleteDefinition() && "record is already complete");
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();
@@ -828,8 +809,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromBinding() {
 //   return tmp;
 // }
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromImplicitBinding() {
-  if (Record->isCompleteDefinition())
-    return *this;
+  assert(!Record->isCompleteDefinition() && "record is already complete");
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();
@@ -855,8 +835,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromImplicitBinding() {
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
-  if (Record->isCompleteDefinition())
-    return *this;
+  assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &AST = SemaRef.getASTContext();
   QualType RecordType = AST.getCanonicalTagType(Record);
@@ -874,8 +853,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
-  if (Record->isCompleteDefinition())
-    return *this;
+  assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &AST = SemaRef.getASTContext();
   QualType RecordType = AST.getCanonicalTagType(Record);
@@ -906,8 +884,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
-  if (Record->isCompleteDefinition())
-    return *this;
+  assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &AST = Record->getASTContext();
   IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
@@ -947,12 +924,6 @@ BuiltinTypeDeclBuilder::getResourceAttrs() const {
   QualType HandleType = getResourceHandleField()->getType();
   return cast<HLSLAttributedResourceType>(HandleType)->getAttrs();
 }
-
-// BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::startDefinition() {
-//   assert(!Record->isCompleteDefinition() && "record is already complete");
-//   Record->startDefinition();
-//   return *this;
-// }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::completeDefinition() {
   assert(!Record->isCompleteDefinition() && "record is already complete");
