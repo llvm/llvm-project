@@ -131,6 +131,9 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &) const override;
 
+  const TargetRegisterClass *
+  getNoV0RegClass(const TargetRegisterClass *RC) const;
+
   void getOffsetOpcodes(const StackOffset &Offset,
                         SmallVectorImpl<uint64_t> &Ops) const override;
 
