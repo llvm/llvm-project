@@ -215,7 +215,8 @@ static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
 
 static bool sinkUnusedInvariantsFromPreheaderToExit(
     Loop *L, AAResults *AA, ICFLoopSafetyInfo *SafetyInfo,
-    MemorySSAUpdater &MSSAU, ScalarEvolution *SE);
+    MemorySSAUpdater &MSSAU, ScalarEvolution *SE, DominatorTree *DT,
+    SinkAndHoistLICMFlags &SinkFlags);
 
 static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
                                 function_ref<void(Instruction *)> Fn);
@@ -545,16 +546,17 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
   assert((L->isOutermost() || L->getParentLoop()->isLCSSAForm(*DT)) &&
          "Parent loop not left in LCSSA form after LICM!");
 
+  // sink pre-header defs that are unused in-loop into the unique exit to reduce
+  // pressure.
+  Flags.setIsSink(true);
+  Changed |= sinkUnusedInvariantsFromPreheaderToExit(L, AA, &SafetyInfo, MSSAU,
+                                                     SE, DT, Flags);
+
   if (VerifyMemorySSA)
     MSSA->verifyMemorySSA();
 
   if (Changed && SE)
     SE->forgetLoopDispositions();
-
-  // sink pre-header defs that are unused in-loop into the unique exit to reduce
-  // pressure.
-  Changed |=
-      sinkUnusedInvariantsFromPreheaderToExit(L, AA, &SafetyInfo, MSSAU, SE);
 
   return Changed;
 }
@@ -1484,7 +1486,8 @@ static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
 // to reduce register pressure in the loop.
 static bool sinkUnusedInvariantsFromPreheaderToExit(
     Loop *L, AAResults *AA, ICFLoopSafetyInfo *SafetyInfo,
-    MemorySSAUpdater &MSSAU, ScalarEvolution *SE) {
+    MemorySSAUpdater &MSSAU, ScalarEvolution *SE, DominatorTree *DT,
+    SinkAndHoistLICMFlags &SinkFlags) {
   BasicBlock *ExitBlock = L->getExitBlock();
   if (!ExitBlock)
     return false;
@@ -1512,42 +1515,7 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
     if (I.mayHaveSideEffects())
       continue;
 
-    // Don't sink reads unless MemorySSA says the location is not clobbered
-    // within the loop.
-    if (I.mayReadFromMemory()) {
-      auto *LI = dyn_cast<LoadInst>(&I);
-      // Only handle loads here; be conservative for other memory-reading ops.
-      if (!LI)
-        continue;
-      // Do not move volatile or ordered/atomic loads.
-      if (!LI->isUnordered() || LI->isAtomic())
-        continue;
-
-      MemorySSA *MSSA = MSSAU.getMemorySSA();
-      auto *MU = dyn_cast_or_null<MemoryUse>(MSSA->getMemoryAccess(LI));
-      if (!MU)
-        // Conservatively skip if MSSA has no use for this load.
-        continue;
-
-      SinkAndHoistLICMFlags Flags(SetLicmMssaOptCap,
-                                  SetLicmMssaNoAccForPromotionCap,
-                                  /*IsSink=*/true, *L, *MSSA);
-      bool InvariantGroup = LI->hasMetadata(LLVMContext::MD_invariant_group);
-
-      // If the pointer could be invalidated in the loop, do not sink.
-      if (pointerInvalidatedByLoop(MSSA, MU, L, I, Flags, InvariantGroup))
-        continue;
-    }
-
-    // Skip debug/pseudo and EH pad.
-    if (I.isDebugOrPseudoInst() || I.isEHPad())
-      continue;
-
-    // Don't sink alloca: we never want to sink static alloca's out of the
-    // entry block, and correctly sinking dynamic alloca's requires
-    // checks for stacksave/stackrestore intrinsics.
-    // FIXME: Refactor this check somehow?
-    if (isa<AllocaInst>(&I))
+    if (!canSinkOrHoistInst(I, AA, DT, L, MSSAU, true, SinkFlags, nullptr))
       continue;
 
     // Determine if there is a use in or before the loop (direct or
@@ -1559,7 +1527,7 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
       if (auto *PN = dyn_cast<PHINode>(UserI)) {
         unsigned OpIdx =
             PHINode::getIncomingValueNumForOperand(U.getOperandNo());
-        UseBB = PN->getIncomingBlock(OpIdx);
+        UseBB = PN->getIncomingBlock(U);
       }
       if (UseBB == Preheader || L->contains(UseBB)) {
         UsedInLoopOrPreheader = true;
