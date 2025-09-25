@@ -369,18 +369,6 @@ define <4 x i16> @unary_shuffle_sext_v8i8_v4i16(<8 x i8> %a0) {
   ret <4 x i16> %vec.shuffle
 }
 
-define <4 x i16> @unary_shuffle_sext_v8i8_v4i16_undef(<8 x i8> %a0) {
-; CHECK-LABEL: define <4 x i16> @unary_shuffle_sext_v8i8_v4i16_undef(
-; CHECK-SAME: <8 x i8> [[A0:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT: [[VEC_SHUFFLE:%.*]] = shufflevector <8 x i8> [[A0]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT: [[X1:%.*]] = sext <4 x i8> [[VEC_SHUFFLE]] to <4 x i16>
-; CHECK-NEXT: ret <4 x i16> [[X1]]
-;
-  %x1 = sext <8 x i8> %a0 to <8 x i16>
-  %vec.shuffle = shufflevector <8 x i16> %x1, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  ret <4 x i16> %vec.shuffle
-}
-
 ; negative - avoid loop with foldBitcastOfShuffle
 
 define <2 x i32> @unary_shuffle_bitcast_v8i8_v2i32(<8 x i8> %a0) {
