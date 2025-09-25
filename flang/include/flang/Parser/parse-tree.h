@@ -4987,9 +4987,9 @@ struct OpenMPDeclareReductionConstruct {
 // 2.8.2 declare-simd -> DECLARE SIMD [(proc-name)] [declare-simd-clause[ [,]
 //                                                   declare-simd-clause]...]
 struct OpenMPDeclareSimdConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDeclareSimdConstruct);
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPDeclareSimdConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>, OmpClauseList> t;
 };
 
 // ref: [6.0:301-303]
