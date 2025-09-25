@@ -2937,13 +2937,13 @@ static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
-    if (auto Pair = lowerTcgen05Ld(Op.getNode(), DAG))
-      return DAG.getMergeValues({Pair->first, Pair->second}, SDLoc(Op));
+    if (auto Res = lowerTcgen05Ld(Op.getNode(), DAG))
+      return DAG.getMergeValues({Res->first, Res->second}, SDLoc(Op));
     return SDValue();
 
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2:
-    if (auto Pair = lowerTcgen05Ld(Op.getNode(), DAG, /*HasOffset=*/true))
-      return DAG.getMergeValues({Pair->first, Pair->second}, SDLoc(Op));
+    if (auto Res = lowerTcgen05Ld(Op.getNode(), DAG, /*HasOffset=*/true))
+      return DAG.getMergeValues({Res->first, Res->second}, SDLoc(Op));
     return SDValue();
   }
 }
@@ -6513,9 +6513,9 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x8:
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x16:
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x32:
-    if (auto Pair = lowerTcgen05Ld(N, DAG)) {
-      Results.push_back(Pair->first);
-      Results.push_back(Pair->second);
+    if (auto Res = lowerTcgen05Ld(N, DAG)) {
+      Results.push_back(Res->first);
+      Results.push_back(Res->second);
     }
     return;
 
@@ -6525,9 +6525,9 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32:
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64:
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128:
-    if (auto Pair = lowerTcgen05Ld(N, DAG, /*HasOffset=*/true)) {
-      Results.push_back(Pair->first);
-      Results.push_back(Pair->second);
+    if (auto Res = lowerTcgen05Ld(N, DAG, /*HasOffset=*/true)) {
+      Results.push_back(Res->first);
+      Results.push_back(Res->second);
     }
     return;
   }
