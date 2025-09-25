@@ -256,9 +256,18 @@ Error initPlugins(OffloadContext &Context) {
           pluginNameToBackend(#Name)});                                        \
   } while (false);
 #include "Shared/Targets.def"
+  // Host platform must be added before initializing plugin devices because
+  // devices contain a pointer back to the owning platform, and modifying the
+  // Platforms vector risks reallocating the underlying storage, thus invalidating
+  // all the platform pointers.
+  Context.Platforms.emplace_back(
+    ol_platform_impl_t{nullptr, OL_PLATFORM_BACKEND_HOST});
 
   // Preemptively initialize all devices in the plugin
   for (auto &Platform : Context.Platforms) {
+    if (Platform.BackendType == OL_PLATFORM_BACKEND_HOST)
+      continue;
+
     auto Err = Platform.Plugin->init();
     [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
     for (auto DevNum = 0; DevNum < Platform.Plugin->number_of_devices();
@@ -273,10 +282,11 @@ Error initPlugins(OffloadContext &Context) {
       }
     }
   }
+  // The Context.Platforms cannot be modified after this point without updating
+  // all the Device.Platform pointers.
 
   // Add the special host device
-  auto &HostPlatform = Context.Platforms.emplace_back(
-      ol_platform_impl_t{nullptr, OL_PLATFORM_BACKEND_HOST});
+  auto &HostPlatform = Context.Platforms.back();
   HostPlatform.Devices.emplace_back(
       std::make_unique<ol_device_impl_t>(-1, nullptr, nullptr, InfoTreeNode{}));
   Context.HostDevice()->Platform = &HostPlatform;
