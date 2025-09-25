@@ -6047,7 +6047,7 @@ static SDValue isSaturatingMinMax(SDValue N0, SDValue N1, SDValue N2,
   }
 
   if (MaxC == 0 && MinCPlus1.isPowerOf2()) {
-    BW = MinCPlus1.exactLogBase2();
+    BW = std::max(MinCPlus1.exactLogBase2(), 1);
     Unsigned = true;
     return N02;
   }

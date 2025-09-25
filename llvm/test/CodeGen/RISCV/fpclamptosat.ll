@@ -3829,6 +3829,45 @@ entry:
   ret i64 %conv6
 }
 
+define i32 @ustest_f16const_i32() {
+; CHECK-LABEL: ustest_f16const_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cvttss2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ecx
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    andl %ecx, %eax
+; CHECK-NEXT:    cmovlel %edx, %eax
+; CHECK-NEXT:    retq
+; RV32-LABEL: ustest_f16const_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a0, 523264
+; RV32-NEXT:    fmv.w.x fa5, a0
+; RV32-NEXT:    fcvt.w.s a0, fa5, rtz
+; RV32-NEXT:    srai a1, a0, 31
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    sgtz a1, a0
+; RV32-NEXT:    neg a1, a1
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: ustest_f16const_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a0, 523264
+; RV64-NEXT:    fmv.w.x fa5, a0
+; RV64-NEXT:    fcvt.l.s a0, fa5, rtz
+; RV64-NEXT:    srai a1, a0, 63
+; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    sgtz a1, a0
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    ret
+  %1 = fptosi half 0xH7E00 to i32
+  %2 = call i32 @llvm.smin.i32(i32 0, i32 %1)
+  %3 = call i32 @llvm.smax.i32(i32 %2, i32 0)
+  ret i32 %3
+}
+
 declare i32 @llvm.smin.i32(i32, i32)
 declare i32 @llvm.smax.i32(i32, i32)
 declare i32 @llvm.umin.i32(i32, i32)

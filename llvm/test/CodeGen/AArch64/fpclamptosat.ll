@@ -1026,6 +1026,30 @@ entry:
   ret i64 %conv6
 }
 
+define i32 @ustest_f16const_i32() {
+; CHECK-CVT-LABEL: ustest_f16const_i32:
+; CHECK-CVT:       // %bb.0:
+; CHECK-CVT-NEXT:    mov w8, #2143289344 // =0x7fc00000
+; CHECK-CVT-NEXT:    fmov s0, w8
+; CHECK-CVT-NEXT:    fcvtzs w8, s0
+; CHECK-CVT-NEXT:    and w8, w8, w8, asr #31
+; CHECK-CVT-NEXT:    bic w0, w8, w8, asr #31
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-FP16-LABEL: ustest_f16const_i32:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    mov w8, #32256 // =0x7e00
+; CHECK-FP16-NEXT:    fmov h0, w8
+; CHECK-FP16-NEXT:    fcvtzs w8, h0
+; CHECK-FP16-NEXT:    and w8, w8, w8, asr #31
+; CHECK-FP16-NEXT:    bic w0, w8, w8, asr #31
+; CHECK-FP16-NEXT:    ret
+  %1 = fptosi half 0xH7E00 to i32
+  %2 = call i32 @llvm.smin.i32(i32 0, i32 %1)
+  %3 = call i32 @llvm.smax.i32(i32 %2, i32 0)
+  ret i32 %3
+}
+
 declare i32 @llvm.smin.i32(i32, i32)
 declare i32 @llvm.smax.i32(i32, i32)
 declare i32 @llvm.umin.i32(i32, i32)
