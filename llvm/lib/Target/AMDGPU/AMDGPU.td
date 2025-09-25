@@ -580,6 +580,12 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
   "Use true 16-bit registers"
 >;
 
+def FeatureD16Writes32BitVgpr : SubtargetFeature<"d16-write-vgpr32",
+  "EnableD16Writes32BitVgpr",
+  "true",
+  "D16 instructions potentially have 32-bit data dependencies"
+>;
+
 def FeatureBF16TransInsts : SubtargetFeature<"bf16-trans-insts",
   "HasBF16TransInsts",
   "true",
@@ -1437,6 +1443,12 @@ def FeatureLdsBarrierArriveAtomic : SubtargetFeature< "lds-barrier-arrive-atomic
   "Has LDS barrier-arrive atomic instructions"
 >;
 
+def Feature45BitNumRecordsBufferResource : SubtargetFeature< "45-bit-num-records-buffer-resource",
+  "Has45BitNumRecordsBufferResource",
+  "true",
+  "The buffer resource (V#) supports 45-bit num_records"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1928,7 +1940,9 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureMemoryAtomicFAddF32DenormalSupport,
-   FeatureRealTrue16Insts]>;
+   FeatureRealTrue16Insts,
+   FeatureD16Writes32BitVgpr,
+]>;
 
 // There are few workarounds that need to be
 // added to all targets. This pessimizes codegen
@@ -2098,7 +2112,12 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureMadU32Inst,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
+   Feature45BitNumRecordsBufferResource,
 ]>;
+
+def FeatureISAVersion12_51 : FeatureSet<
+  !listconcat(FeatureISAVersion12_50.Features,
+  [FeatureDPALU_DPP])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
@@ -2562,6 +2581,11 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
   // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
   // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
+
+def HasD16Writes32BitVgpr: Predicate<"Subtarget->hasD16Writes32BitVgpr()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, FeatureD16Writes32BitVgpr)>;
+def NotHasD16Writes32BitVgpr: Predicate<"!Subtarget->hasD16Writes32BitVgpr()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, (not FeatureD16Writes32BitVgpr))>;
 
 def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
   AssemblerPredicate<(all_of FeatureBF16TransInsts)>;

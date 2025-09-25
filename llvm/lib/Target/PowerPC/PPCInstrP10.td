@@ -2326,6 +2326,91 @@ multiclass XXEvalTernarySelectC<ValueType Vt>{
   def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), Vt:$vC), 94>;
 }
 
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectXor
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : XOR(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {B, C, AND(B,C), OR(B,C), NOR(B,C)} 
+// - XOR(B,C) is the "false" case op on vectors B and C
+// =============================================================================
+multiclass XXEvalTernarySelectXor<ValueType Vt> {
+  // Pattern: A ? AND(B,C) : XOR(B,C) XXEVAL immediate value: 97
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VXor Vt:$vB, Vt:$vC)),
+            97>;
+  
+  // Pattern: A ? B : XOR(B,C) XXEVAL immediate value: 99
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, Vt:$vB, (VXor Vt:$vB, Vt:$vC)),
+            99>;
+  
+  // Pattern: A ? C : XOR(B,C) XXEVAL immediate value: 101
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, Vt:$vC, (VXor Vt:$vB, Vt:$vC)),
+            101>;
+  
+  // Pattern: A ? OR(B,C) : XOR(B,C) XXEVAL immediate value: 103
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VXor Vt:$vB, Vt:$vC)),
+            103>;
+  
+  // Pattern: A ? NOR(B,C) : XOR(B,C) XXEVAL immediate value: 104
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VNor Vt:$vB, Vt:$vC), (VXor Vt:$vB, Vt:$vC)),
+            104>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectOr
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : OR(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {B, C, AND(B,C), EQV(B,C), NOT(B), 
+//   NOT(C), NAND(B,C)} 
+// - OR(B,C) is the "false" case op on vectors B and C
+// =============================================================================
+multiclass XXEvalTernarySelectOr<ValueType Vt> {
+  // Pattern: A ? AND(B,C) : OR(B,C) XXEVAL immediate value: 113
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VOr Vt:$vB, Vt:$vC)),
+            113>;
+  
+  // Pattern: A ? B : OR(B,C) XXEVAL immediate value: 115
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, Vt:$vB, (VOr Vt:$vB, Vt:$vC)),
+            115>;
+  
+  // Pattern: A ? C : OR(B,C) XXEVAL immediate value: 117
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, Vt:$vC, (VOr Vt:$vB, Vt:$vC)),
+            117>;
+  
+  // Pattern: A ? EQV(B,C) : OR(B,C) XXEVAL immediate value: 121
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VEqv Vt:$vB, Vt:$vC), (VOr Vt:$vB, Vt:$vC)),
+            121>;
+  
+  // Pattern: A ? NOT(C) : OR(B,C) XXEVAL immediate value: 122
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VNot Vt:$vC), (VOr Vt:$vB, Vt:$vC)),
+            122>;
+  
+  // Pattern: A ? NOT(B) : OR(B,C) XXEVAL immediate value: 124
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VNot Vt:$vB), (VOr Vt:$vB, Vt:$vC)),
+            124>;
+  
+  // Pattern: A ? NAND(B,C) : OR(B,C) XXEVAL immediate value: 126
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VOr Vt:$vB, Vt:$vC)),
+            126>;
+}
+
 let Predicates = [PrefixInstrs, HasP10Vector] in {
   let AddedComplexity = 400 in {
     def : Pat<(v4i32 (build_vector i32immNonAllOneNonZero:$A,
@@ -2438,7 +2523,9 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     foreach Ty = [v4i32, v2i64, v8i16, v16i8] in {
         defm : XXEvalTernarySelectAnd<Ty>;
         defm : XXEvalTernarySelectB<Ty>;
-        defm : XXEvalTernarySelectC<Ty>; 
+        defm : XXEvalTernarySelectC<Ty>;
+        defm : XXEvalTernarySelectXor<Ty>;
+        defm : XXEvalTernarySelectOr<Ty>;
     }
 
     // Anonymous patterns to select prefixed VSX loads and stores.

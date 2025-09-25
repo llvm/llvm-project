@@ -100,22 +100,21 @@ public:
   virtual llvm::Expected<MainLoop::ReadHandleUP>
   RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) = 0;
 
-  // FIXME: Refactor mcp::Server to not directly access log on the transport.
-  // protected:
+protected:
   template <typename... Ts> inline auto Logv(const char *Fmt, Ts &&...Vals) {
     Log(llvm::formatv(Fmt, std::forward<Ts>(Vals)...).str());
   }
   virtual void Log(llvm::StringRef message) = 0;
 };
 
-/// A JSONTransport will encode and decode messages using JSON.
+/// An IOTransport sends and receives messages using an IOObject.
 template <typename Req, typename Resp, typename Evt>
-class JSONTransport : public Transport<Req, Resp, Evt> {
+class IOTransport : public Transport<Req, Resp, Evt> {
 public:
   using Transport<Req, Resp, Evt>::Transport;
   using MessageHandler = typename Transport<Req, Resp, Evt>::MessageHandler;
 
-  JSONTransport(lldb::IOObjectSP in, lldb::IOObjectSP out)
+  IOTransport(lldb::IOObjectSP in, lldb::IOObjectSP out)
       : m_in(in), m_out(out) {}
 
   llvm::Error Send(const Evt &evt) override { return Write(evt); }
@@ -127,7 +126,7 @@ public:
     Status status;
     MainLoop::ReadHandleUP read_handle = loop.RegisterReadObject(
         m_in,
-        std::bind(&JSONTransport::OnRead, this, std::placeholders::_1,
+        std::bind(&IOTransport::OnRead, this, std::placeholders::_1,
                   std::ref(handler)),
         status);
     if (status.Fail()) {
@@ -203,9 +202,9 @@ private:
 
 /// A transport class for JSON with a HTTP header.
 template <typename Req, typename Resp, typename Evt>
-class HTTPDelimitedJSONTransport : public JSONTransport<Req, Resp, Evt> {
+class HTTPDelimitedJSONTransport : public IOTransport<Req, Resp, Evt> {
 public:
-  using JSONTransport<Req, Resp, Evt>::JSONTransport;
+  using IOTransport<Req, Resp, Evt>::IOTransport;
 
 protected:
   /// Encodes messages based on
@@ -270,9 +269,9 @@ protected:
 
 /// A transport class for JSON RPC.
 template <typename Req, typename Resp, typename Evt>
-class JSONRPCTransport : public JSONTransport<Req, Resp, Evt> {
+class JSONRPCTransport : public IOTransport<Req, Resp, Evt> {
 public:
-  using JSONTransport<Req, Resp, Evt>::JSONTransport;
+  using IOTransport<Req, Resp, Evt>::IOTransport;
 
 protected:
   std::string Encode(const llvm::json::Value &message) override {
