@@ -1531,8 +1531,8 @@ class PrivateArgumentManagerTy {
   ///  ...}
   /// ```
   /// `(1)` maps the pointee `px[1].
-  /// `(2)` attaches it to the mapped version of `px`. It can be controlled by the
-  /// user based on the `attach(auto/always/never)` map-type modifier.
+  /// `(2)` attaches it to the mapped version of `px`. It can be controlled by
+  /// the user based on the `attach(auto/always/never)` map-type modifier.
   /// `(3)` privatizes and initializes the private pointer `px`, and passes it
   /// into the kernel as the argument `%px`. Can be skipped if `px` is not
   /// referenced in the target construct.
