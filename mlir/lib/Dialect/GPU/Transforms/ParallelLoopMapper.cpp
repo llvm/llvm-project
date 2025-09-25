@@ -67,10 +67,11 @@ static MappingLevel &operator++(MappingLevel &mappingLevel) {
 }
 
 // Map the policy string to a typed mapping policy.
+// TODO: Revisit this and possibly use a loop interchange pass instead.
 static FailureOr<MappingPolicy> getMappingPolicyFromStr(StringRef policy) {
   std::string policyCanonical = policy.trim().lower();
 
-  auto option =
+  std::optional<MappingPolicy> option =
       llvm::StringSwitch<std::optional<MappingPolicy>>(policyCanonical)
           .Case("innermost-first", MappingPolicy::InnermostFirst)
           .Case("outermost-first", MappingPolicy::OutermostFirst)
@@ -169,7 +170,8 @@ struct GpuMapParallelLoopsPass
 
   void runOnOperation() override {
     // Parse the mapping policy.
-    auto policyOrFailure = getMappingPolicyFromStr(mappingPolicyStr);
+    FailureOr<MappingPolicy> policyOrFailure =
+        getMappingPolicyFromStr(mappingPolicyStr);
     if (failed(policyOrFailure)) {
       getOperation()->emitError() << "Invalid mapping policy specified.";
       return signalPassFailure();
