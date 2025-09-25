@@ -260,10 +260,7 @@ static void query(const MachineInstr &MI, bool &Read, bool &Write,
 // Test whether Def is safe and profitable to rematerialize.
 static bool shouldRematerialize(const MachineInstr &Def,
                                 const WebAssemblyInstrInfo *TII) {
-  return Def.isAsCheapAsAMove() && TII->isTriviallyReMaterializable(Def) &&
-         llvm::all_of(Def.all_uses(), [](const MachineOperand &MO) {
-           return MO.getReg().isVirtual();
-         });
+  return Def.isAsCheapAsAMove() && TII->isTriviallyReMaterializable(Def);
 }
 
 // Identify the definition for this register at this point. This is a

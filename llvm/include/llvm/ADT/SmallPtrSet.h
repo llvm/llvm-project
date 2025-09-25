@@ -136,12 +136,12 @@ public:
   }
 
 protected:
-  static void *getTombstoneMarker() { return reinterpret_cast<void*>(-2); }
+  static void *getTombstoneMarker() { return reinterpret_cast<void *>(-2); }
 
   static void *getEmptyMarker() {
     // Note that -1 is chosen to make clear() efficiently implementable with
     // memset and because it's not a valid pointer value.
-    return reinterpret_cast<void*>(-1);
+    return reinterpret_cast<void *>(-1);
   }
 
   const void **EndPointer() const {
@@ -190,7 +190,7 @@ protected:
   /// return true, otherwise return false.  This is hidden from the client so
   /// that the derived class can check that the right type of pointer is passed
   /// in.
-  bool erase_imp(const void * Ptr) {
+  bool erase_imp(const void *Ptr) {
     if (isSmall()) {
       for (const void *&Bucket : small_buckets()) {
         if (Bucket == Ptr) {
@@ -218,7 +218,7 @@ protected:
   /// Returns the raw pointer needed to construct an iterator.  If element not
   /// found, this will be EndPointer.  Otherwise, it will be a pointer to the
   /// slot which stores Ptr;
-  const void *const * find_imp(const void * Ptr) const {
+  const void *const *find_imp(const void *Ptr) const {
     if (isSmall()) {
       // Linear search for the item.
       for (const void *const &Bucket : small_buckets())
@@ -251,7 +251,7 @@ private:
   LLVM_ABI std::pair<const void *const *, bool> insert_imp_big(const void *Ptr);
 
   LLVM_ABI const void *const *doFind(const void *Ptr) const;
-  const void * const *FindBucketFor(const void *Ptr) const;
+  const void *const *FindBucketFor(const void *Ptr) const;
   LLVM_ABI void shrink_and_clear();
 
   /// Grow - Allocate a larger backing store for the buckets and move it over.
@@ -285,8 +285,8 @@ protected:
   const void *const *End;
 
 public:
-  explicit SmallPtrSetIteratorImpl(const void *const *BP, const void*const *E)
-    : Bucket(BP), End(E) {
+  explicit SmallPtrSetIteratorImpl(const void *const *BP, const void *const *E)
+      : Bucket(BP), End(E) {
     if (shouldReverseIterate()) {
       RetreatIfNotValid();
       return;
@@ -349,10 +349,10 @@ public:
       return PtrTraits::getFromVoidPointer(const_cast<void *>(Bucket[-1]));
     }
     assert(Bucket < End);
-    return PtrTraits::getFromVoidPointer(const_cast<void*>(*Bucket));
+    return PtrTraits::getFromVoidPointer(const_cast<void *>(*Bucket));
   }
 
-  inline SmallPtrSetIterator& operator++() {          // Preincrement
+  inline SmallPtrSetIterator &operator++() { // Preincrement
     assert(isHandleInSync() && "invalid iterator access!");
     if (shouldReverseIterate()) {
       --Bucket;
@@ -364,7 +364,7 @@ public:
     return *this;
   }
 
-  SmallPtrSetIterator operator++(int) {        // Postincrement
+  SmallPtrSetIterator operator++(int) { // Postincrement
     SmallPtrSetIterator tmp = *this;
     ++*this;
     return tmp;
@@ -376,8 +376,7 @@ public:
 ///
 /// This is particularly useful for passing around between interface boundaries
 /// to avoid encoding a particular small size in the interface boundary.
-template <typename PtrType>
-class SmallPtrSetImpl : public SmallPtrSetImplBase {
+template <typename PtrType> class SmallPtrSetImpl : public SmallPtrSetImplBase {
   using ConstPtrType = typename add_const_past_pointer<PtrType>::type;
   using PtrTraits = PointerLikeTypeTraits<PtrType>;
   using ConstPtrTraits = PointerLikeTypeTraits<ConstPtrType>;
@@ -406,9 +405,7 @@ public:
   /// Insert the given pointer with an iterator hint that is ignored. This is
   /// identical to calling insert(Ptr), but allows SmallPtrSet to be used by
   /// std::insert_iterator and std::inserter().
-  iterator insert(iterator, PtrType Ptr) {
-    return insert(Ptr).first;
-  }
+  iterator insert(iterator, PtrType Ptr) { return insert(Ptr).first; }
 
   /// Remove pointer from the set.
   ///
@@ -431,8 +428,7 @@ public:
   /// Returns whether anything was removed. It is safe to read the set inside
   /// the predicate function. However, the predicate must not modify the set
   /// itself, only indicate a removal by returning true.
-  template <typename UnaryPredicate>
-  bool remove_if(UnaryPredicate P) {
+  template <typename UnaryPredicate> bool remove_if(UnaryPredicate P) {
     bool Removed = false;
     if (isSmall()) {
       auto Buckets = small_buckets();
@@ -477,8 +473,7 @@ public:
     return contains_imp(ConstPtrTraits::getAsVoidPointer(Ptr));
   }
 
-  template <typename IterT>
-  void insert(IterT I, IterT E) {
+  template <typename IterT> void insert(IterT I, IterT E) {
     for (; I != E; ++I)
       insert(*I);
   }
@@ -537,7 +532,7 @@ bool operator!=(const SmallPtrSetImpl<PtrType> &LHS,
 /// SmallSize or less elements.  This internally rounds up SmallSize to the next
 /// power of two if it is not already a power of two.  See the comments above
 /// SmallPtrSetImplBase for details of the algorithm.
-template<class PtrType, unsigned SmallSize>
+template <class PtrType, unsigned SmallSize>
 class SmallPtrSet : public SmallPtrSetImpl<PtrType> {
   // In small mode SmallPtrSet uses linear search for the elements, so it is
   // not a good idea to choose this value too high. You may consider using a
@@ -568,7 +563,7 @@ public:
       : BaseT(SmallStorage, SmallSizePowTwo, that.SmallStorage,
               std::move(that)) {}
 
-  template<typename It>
+  template <typename It>
   SmallPtrSet(It I, It E) : BaseT(SmallStorage, SmallSizePowTwo) {
     this->insert(I, E);
   }
@@ -610,16 +605,16 @@ public:
   }
 };
 
-} // end namespace llvm
+} // namespace llvm
 
 namespace std {
 
-  /// Implement std::swap in terms of SmallPtrSet swap.
-  template<class T, unsigned N>
-  inline void swap(llvm::SmallPtrSet<T, N> &LHS, llvm::SmallPtrSet<T, N> &RHS) {
-    LHS.swap(RHS);
-  }
+/// Implement std::swap in terms of SmallPtrSet swap.
+template <class T, unsigned N>
+inline void swap(llvm::SmallPtrSet<T, N> &LHS, llvm::SmallPtrSet<T, N> &RHS) {
+  LHS.swap(RHS);
+}
 
-} // end namespace std
+} // namespace std
 
 #endif // LLVM_ADT_SMALLPTRSET_H

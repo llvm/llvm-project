@@ -130,6 +130,8 @@ namespace std {
       size_type copy(charT* s, size_type n, size_type pos = 0) const;  // constexpr in C++20
 
       constexpr basic_string_view substr(size_type pos = 0, size_type n = npos) const;
+      constexpr basic_string_view subview(size_type pos = 0,
+                                          size_type n = npos) const;      // freestanding-deleted, since C++26
       constexpr int compare(basic_string_view s) const noexcept;
       constexpr int compare(size_type pos1, size_type n1, basic_string_view s) const;
       constexpr int compare(size_type pos1, size_type n1,
@@ -464,6 +466,13 @@ public:
     return __pos > size() ? (__throw_out_of_range("string_view::substr"), basic_string_view())
                           : basic_string_view(__assume_valid(), data() + __pos, std::min(__n, size() - __pos));
   }
+
+#  if _LIBCPP_STD_VER >= 26
+  [[nodiscard]]
+  _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view subview(size_type __pos = 0, size_type __n = npos) const {
+    return substr(__pos, __n);
+  }
+#  endif
 
   _LIBCPP_CONSTEXPR_SINCE_CXX14 int compare(basic_string_view __sv) const _NOEXCEPT {
     size_type __rlen = std::min(size(), __sv.size());
