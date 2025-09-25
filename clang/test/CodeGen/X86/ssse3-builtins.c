@@ -102,6 +102,7 @@ __m128i test_mm_mulhrs_epi16(__m128i a, __m128i b) {
   // CHECK: call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_mulhrs_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v4si(_mm_mulhrs_epi16((__m128i)(__v4si){+1, -2, +3, -4}, (__m128i)(__v4si){-10, +8, +6, -4}), 2, 2, 0, 0));
 
 __m128i test_mm_shuffle_epi8(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_shuffle_epi8

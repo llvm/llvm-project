@@ -11679,7 +11679,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   }
 
   case Builtin::BI__builtin_elementwise_add_sat:
-  case Builtin::BI__builtin_elementwise_sub_sat:
+  case Builtin::BI__builtin_elementwise_sub_sat:  
+  case clang::X86::BI__builtin_ia32_pmulhrsw128: 
+  case clang::X86::BI__builtin_ia32_pmulhrsw256:
+  case clang::X86::BI__builtin_ia32_pmulhrsw512:
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
   case clang::X86::BI__builtin_ia32_pmulhuw512:
@@ -11813,6 +11816,19 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             APSInt(LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS),
                    DestUnsigned)));
         break;
+
+      case clang::X86::BI__builtin_ia32_pmulhrsw128:
+      case clang::X86::BI__builtin_ia32_pmulhrsw256:
+      case clang::X86::BI__builtin_ia32_pmulhrsw512: {
+        QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+        unsigned width = Info.Ctx.getIntWidth(DestEltTy);
+
+        APInt mul = llvm::APIntOps::mulhs(LHS, RHS);
+        mul = mul.relativeLShr(14);
+        mul = mul.sadd_sat(APInt(width, 1, true));
+        ResultElements.push_back(APValue(APSInt(mul.relativeLShr(1))));
+        break;
+      }
       case clang::X86::BI__builtin_ia32_pmulhuw128:
       case clang::X86::BI__builtin_ia32_pmulhuw256:
       case clang::X86::BI__builtin_ia32_pmulhuw512:
@@ -11825,6 +11841,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         ResultElements.push_back(APValue(APSInt(llvm::APIntOps::mulhs(LHS, RHS),
                                                 /*isUnsigned=*/false)));
         break;
+
       case clang::X86::BI__builtin_ia32_psllv2di:
       case clang::X86::BI__builtin_ia32_psllv4di:
       case clang::X86::BI__builtin_ia32_psllv4si:

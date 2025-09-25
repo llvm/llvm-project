@@ -987,6 +987,7 @@ __m256i test_mm256_mulhrs_epi16(__m256i a, __m256i b) {
   // CHECK: call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_mulhrs_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v16hi(_mm256_mulhrs_epi16((__m256i)(__v16hi){+1, -2, +3, -4, +5, -6, +7, -8, +9, -10, +11, -12, +13, -14, +15, -16}, (__m256i)(__v16hi){-32, -30, +28, +26, -24, -22, +20, +18, -16, -14, +12, +10, -8, +6, -4, +2}), 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 2, 2, 2));
 
 __m256i test_mm256_mullo_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_mullo_epi16

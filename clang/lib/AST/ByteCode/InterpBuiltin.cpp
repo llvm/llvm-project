@@ -8,6 +8,7 @@
 #include "../ExprConstShared.h"
 #include "Boolean.h"
 #include "EvalEmitter.h"
+#include "FixedPoint.h"
 #include "Interp.h"
 #include "InterpBuiltinBitCast.h"
 #include "PrimType.h"
@@ -3310,6 +3311,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
           return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
         });
+
+  
+  case clang::X86::BI__builtin_ia32_pmulhrsw128:
+  case clang::X86::BI__builtin_ia32_pmulhrsw256:
+  case clang::X86::BI__builtin_ia32_pmulhrsw512:
+    return interp__builtin_elementwise_int_binop(
+      S, OpPC, Call, BuiltinID,[](const APSInt &LHS, const APSInt &RHS) {        
+        unsigned width = LHS.getBitWidth();
+
+        APInt mul = llvm::APIntOps::mulhs(LHS, RHS);
+        mul = mul.relativeLShr(14);
+        mul = mul.sadd_sat(APInt(width, 1, true));
+        return APInt(mul.relativeLShr(1));
+      });
 
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:

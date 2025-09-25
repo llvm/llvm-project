@@ -426,6 +426,7 @@ __m64 test_mm_mulhrs_pi16(__m64 a, __m64 b) {
   // CHECK: call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(
   return _mm_mulhrs_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_mulhrs_pi16((__m64)(__v4hi){+1, -2, +3, -4}, (__m64)(__v4hi){-10, +8, +6, -4}), 2, 2, 0, 0));
 
 __m64 test_mm_mullo_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_mullo_pi16
