@@ -5,33 +5,33 @@
 
 // RUN: %clang -x c-header %t/prefix.h -target x86_64-apple-macos12 -o %t/prefix.pch -fdepscan=inline -fdepscan-include-tree -Xclang -fcas-path -Xclang %t/cas
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-include-tree -cas-path %t/cas > %t/result.txt
-// RUN: FileCheck %s -input-file %t/result.txt -DPREFIX=%/t
+// RUN: cat %t/result.txt | %PathSanitizingFileCheck --sanitize PREFIX=%/t %s
 
-// CHECK:      {{.*}} - [[PREFIX]]/t.c
+// CHECK:      {{.*}} - PREFIX{{/|\\}}t.c
 // CHECK-NEXT: (PCH)
-// CHECK-NEXT: [[PREFIX]]/t.c
+// CHECK-NEXT: PREFIX{{/|\\}}t.c
 // CHECK-NEXT: 1:1 <built-in>
-// CHECK-NEXT: [[PREFIX]]/t.h
+// CHECK-NEXT: PREFIX{{/|\\}}t.h
 // CHECK-NEXT: Files:
-// CHECK-NEXT: [[PREFIX]]/t.c
-// CHECK-NEXT: [[PREFIX]]/t.h
-// CHECK-NEXT: [[PREFIX]]/prefix.h
-// CHECK-NEXT: [[PREFIX]]/n1.h
-// CHECK-NEXT: [[PREFIX]]/n2.h
-// CHECK-NEXT: [[PREFIX]]/n3.h
-// CHECK-NOT: [[PREFIX]]
+// CHECK-NEXT: PREFIX{{/|\\}}t.c
+// CHECK-NEXT: PREFIX{{/|\\}}t.h
+// CHECK-NEXT: PREFIX{{/|\\}}prefix.h
+// CHECK-NEXT: PREFIX{{/|\\}}n1.h
+// CHECK-NEXT: PREFIX{{/|\\}}n2.h
+// CHECK-NEXT: PREFIX{{/|\\}}n3.h
+// CHECK-NOT: PREFIX
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-include-tree-full -cas-path %t/cas > %t/deps.json
 
 // RUN: cat %t/result.txt > %t/full.txt
 // RUN: echo "FULL DEPS START" >> %t/full.txt
-// RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' >> %t/full.txt
+// RUN: cat %t/deps.json >> %t/full.txt
 
-// RUN: FileCheck %s -DPREFIX=%/t -DCLANG=%clang -check-prefix=FULL -input-file %t/full.txt
+// RUN: cat %t/full.txt | %PathSanitizingFileCheck --sanitize PREFIX=%/t --sanitize CLANG=%/clang --enable-yaml-compatibility -check-prefix=FULL %s
 
 // Capture the tree id from experimental-include-tree ; ensure that it matches
 // the result from experimental-full.
-// FULL: [[TREE_ID:llvmcas://[[:xdigit:]]+]] - [[PREFIX]]/t.c
+// FULL: [[TREE_ID:llvmcas://[[:xdigit:]]+]] - PREFIX{{/|\\}}t.c
 // FULL: FULL DEPS START
 
 // FULL-NEXT: {
@@ -44,7 +44,7 @@
 // FULL:                "command-line": [
 // FULL-NEXT:             "-cc1"
 // FULL:                  "-fcas-path"
-// FULL-NEXT:             "[[PREFIX]]/cas"
+// FULL-NEXT:             "PREFIX{{/|\\\\}}cas"
 // FULL:                  "-disable-free"
 // FULL:                  "-fcas-include-tree"
 // FULL-NEXT:             "[[TREE_ID]]"
@@ -57,13 +57,13 @@
 // FULL-NEXT:             "t.c"
 // FULL-NOT:              "t.c"
 // FULL:                ]
-// FULL:                "executable": "[[CLANG]]"
+// FULL:                "executable": "CLANG"
 // FULL:                "file-deps": [
-// FULL-NEXT:             "[[PREFIX]]/t.c"
-// FULL-NEXT:             "[[PREFIX]]/t.h"
-// FULL-NEXT:             "[[PREFIX]]/prefix.pch"
+// FULL-NEXT:             "PREFIX{{/|\\\\}}t.c"
+// FULL-NEXT:             "PREFIX{{/|\\\\}}t.h"
+// FULL-NEXT:             "PREFIX{{/|\\\\}}prefix.pch"
 // FULL-NEXT:           ]
-// FULL:                "input-file": "[[PREFIX]]/t.c"
+// FULL:                "input-file": "PREFIX{{/|\\\\}}t.c"
 // FULL:              }
 // FULL:            ]
 // FULL:          }
