@@ -31,7 +31,6 @@ namespace uArch {
 
 // An enum class to represent the scope of an instruction
 enum class InstructionScope { WorkItem, Subgroup, Workgroup, Cluster };
-
 enum class InstructionKind {
   DPAS, // Dot Product Accumulate Systolic (DPAS) is a matrix
         // multiply-add operation
@@ -68,7 +67,6 @@ std::optional<InstructionKind> parseInstructionKind(llvm::StringRef str) {
 // represent information about an instruction and to use this information to
 // generate the uArch. Specifc instruction in a uArch can inherit from this
 // struct and add more fields as needed
-
 struct Instruction {
   // @TODO: Add more fields as needed
   Instruction(InstructionKind kind, std::string desc, InstructionScope scope)
@@ -115,6 +113,7 @@ protected:
 };
 
 enum class CacheHierarchyLevel { L1 = 1, L2 = 2, L3 = 3 };
+
 // A struct to represent cache information
 struct CacheInfo {
   // Constructor
