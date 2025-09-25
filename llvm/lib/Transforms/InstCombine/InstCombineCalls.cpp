@@ -2408,20 +2408,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       // R = fshl(X, X, C2)
       // fshl(R, R, C1) --> fshl(X, X, (C1 + C2) % bitsize)
-      Value *InnerOp0;
-      Value *InnerOp1;
+      Value *InnerOp;
       Constant *ShAmtInnerC;
-      if (match(Op0, m_FShl(m_Value(InnerOp0), m_Value(InnerOp1),
+      if (match(Op0, m_FShl(m_Value(InnerOp), m_Deferred(InnerOp),
                             m_ImmConstant(ShAmtInnerC))) &&
-          Op0 == Op1 && InnerOp0 == InnerOp1) {
+          Op0 == Op1) {
         APInt Sum =
             ShAmtC->getUniqueInteger() + ShAmtInnerC->getUniqueInteger();
         APInt Modulo = Sum.urem(APInt(Sum.getBitWidth(), BitWidth));
         if (Modulo.isZero())
-          return replaceInstUsesWith(*II, InnerOp0);
+          return replaceInstUsesWith(*II, InnerOp);
         Constant *ModuloC = ConstantInt::get(Ty, Modulo);
         return CallInst::Create(cast<IntrinsicInst>(Op0)->getCalledFunction(),
-                                {InnerOp0, InnerOp1, ModuloC});
+                                {InnerOp, InnerOp, ModuloC});
       }
     }
 
