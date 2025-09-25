@@ -3268,9 +3268,8 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
   // Otherwise, a phi node for the scalar value is needed.
   if (State.hasVectorValue(getOperand(0))) {
     auto *VecI = cast<Instruction>(State.get(getOperand(0)));
-    assert(isa<InsertElementInst>(VecI) ||
-           isa<InsertValueInst>(VecI) &&
-               "Packed operands must generate an insertelement or insertvalue");
+    assert((isa<InsertElementInst, InsertValueInst>(VecI)) &&
+           "Packed operands must generate an insertelement or insertvalue");
 
     // If VectorI is a struct, it will be a sequence like:
     // %1       = insertvalue %unmodified, %x, 0
