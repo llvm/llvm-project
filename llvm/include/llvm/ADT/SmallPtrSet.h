@@ -281,16 +281,17 @@ private:
 /// instances of SmallPtrSetIterator.
 class SmallPtrSetIteratorImpl {
 protected:
-  const void *const *Bucket;
-  const void *const *End;
+  using BucketItTy =
+      std::conditional_t<shouldReverseIterate(),
+                         std::reverse_iterator<const void *const *>,
+                         const void *const *>;
+
+  BucketItTy Bucket;
+  BucketItTy End;
 
 public:
   explicit SmallPtrSetIteratorImpl(const void *const *BP, const void *const *E)
       : Bucket(BP), End(E) {
-    if (shouldReverseIterate()) {
-      RetreatIfNotValid();
-      return;
-    }
     AdvanceIfNotValid();
   }
 
@@ -311,14 +312,6 @@ protected:
            (*Bucket == SmallPtrSetImplBase::getEmptyMarker() ||
             *Bucket == SmallPtrSetImplBase::getTombstoneMarker()))
       ++Bucket;
-  }
-  void RetreatIfNotValid() {
-    assert(Bucket >= End);
-    while (Bucket != End &&
-           (Bucket[-1] == SmallPtrSetImplBase::getEmptyMarker() ||
-            Bucket[-1] == SmallPtrSetImplBase::getTombstoneMarker())) {
-      --Bucket;
-    }
   }
 };
 
@@ -344,21 +337,12 @@ public:
 
   const PtrTy operator*() const {
     assert(isHandleInSync() && "invalid iterator access!");
-    if (shouldReverseIterate()) {
-      assert(Bucket > End);
-      return PtrTraits::getFromVoidPointer(const_cast<void *>(Bucket[-1]));
-    }
     assert(Bucket < End);
     return PtrTraits::getFromVoidPointer(const_cast<void *>(*Bucket));
   }
 
   inline SmallPtrSetIterator &operator++() { // Preincrement
     assert(isHandleInSync() && "invalid iterator access!");
-    if (shouldReverseIterate()) {
-      --Bucket;
-      RetreatIfNotValid();
-      return *this;
-    }
     ++Bucket;
     AdvanceIfNotValid();
     return *this;

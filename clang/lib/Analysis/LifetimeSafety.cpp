@@ -910,13 +910,10 @@ template <typename T>
 static llvm::ImmutableSet<T> join(llvm::ImmutableSet<T> A,
                                   llvm::ImmutableSet<T> B,
                                   typename llvm::ImmutableSet<T>::Factory &F) {
-  if (A == B)
-    return A;
   if (A.getHeight() < B.getHeight())
     std::swap(A, B);
   for (const T &E : B)
-    if (!A.contains(E))
-      A = F.add(A, E);
+    A = F.add(A, E);
   return A;
 }
 
@@ -950,11 +947,10 @@ join(llvm::ImmutableMap<K, V> A, llvm::ImmutableMap<K, V> B,
   for (const auto &Entry : B) {
     const K &Key = Entry.first;
     const V &ValB = Entry.second;
-    const V *ValA = A.lookup(Key);
-    if (!ValA)
-      A = F.add(A, Key, ValB);
-    else if (*ValA != ValB)
+    if (const V *ValA = A.lookup(Key))
       A = F.add(A, Key, JoinValues(*ValA, ValB));
+    else
+      A = F.add(A, Key, ValB);
   }
   return A;
 }
@@ -970,9 +966,11 @@ using ExpiredLoanMap = llvm::ImmutableMap<LoanID, const ExpireFact *>;
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
-  OriginLoanMap::Factory OriginMapFactory;
-  LoanSet::Factory LoanSetFactory;
-  ExpiredLoanMap::Factory ExpiredLoanMapFactory;
+  llvm::BumpPtrAllocator Allocator;
+  OriginLoanMap::Factory OriginMapFactory{Allocator, /*canonicalize=*/false};
+  LoanSet::Factory LoanSetFactory{Allocator, /*canonicalize=*/false};
+  ExpiredLoanMap::Factory ExpiredLoanMapFactory{Allocator,
+                                                /*canonicalize=*/false};
 };
 
 /// Represents the dataflow lattice for loan propagation.
