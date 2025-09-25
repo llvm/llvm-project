@@ -359,8 +359,9 @@ Sections:
     Obj.notes(PhdrOrShdr, Err);
 
     std::string ErrMessage;
-    handleAllErrors(std::move(Err),
-                    [&](const ErrorInfoBase &EI) { ErrMessage = EI.message(); });
+    handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
+      ErrMessage = EI.message();
+    });
 
     EXPECT_EQ(ErrMessage, ("invalid offset (0x" + Twine::utohexstr(Offset) +
                            ") or size (0x" + Twine::utohexstr(Size) + ")")
