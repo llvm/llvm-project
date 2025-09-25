@@ -804,7 +804,7 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
       Check(MDs.size() == 1,
             "global value cannot have more then 1 rename metadata", GO);
       Check(MDs[0]->getNumOperands() == 0,
-            "rename metadata must have no operands", GO);
+            "rename metadata must have no operands", GO, MDs[0]);
 
       Check(GO->hasSection(),
             "global value with rename metadata must have section attribute", GO);
