@@ -14,8 +14,9 @@ define amdgpu_kernel void @alignbit_shr_pat(ptr addrspace(1) nocapture readonly 
 ; GCN-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-NEXT:    s_mov_b32 s4, s2
 ; GCN-NEXT:    s_mov_b32 s5, s3
+; GCN-NEXT:    s_and_b32 s0, s8, 31
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_alignbit_b32 v0, v1, v0, s8
+; GCN-NEXT:    v_lshr_b64 v[0:1], v[0:1], s0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 bb:
@@ -128,7 +129,7 @@ define amdgpu_kernel void @alignbit_shr_pat_const30(ptr addrspace(1) nocapture r
 ; GCN-NEXT:    s_mov_b32 s4, s2
 ; GCN-NEXT:    s_mov_b32 s5, s3
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_alignbit_b32 v0, v1, v0, 30
+; GCN-NEXT:    v_lshr_b64 v[0:1], v[0:1], 30
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 bb:
