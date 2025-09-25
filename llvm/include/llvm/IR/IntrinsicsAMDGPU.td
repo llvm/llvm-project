@@ -967,7 +967,6 @@ class AMDGPUDimProps<bits<3> enc, string name, string asmsuffix,
   bits<8> NumGradients = !size(GradientArgs);
 }
 
-def AMDGPUImageDescRsrcTy : LLVMType<v8i32>;
 def AMDGPUDim1D : AMDGPUDimProps<0x0, "1d", "1D", ["s"], []>;
 def AMDGPUDim2D : AMDGPUDimProps<0x1, "2d", "2D", ["s", "t"], []>;
 def AMDGPUDim3D : AMDGPUDimProps<0x2, "3d", "3D", ["s", "t", "r"], []>;
