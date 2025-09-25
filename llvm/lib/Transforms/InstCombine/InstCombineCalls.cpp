@@ -2414,7 +2414,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                             m_ImmConstant(ShAmtInnerC))) &&
           Op0 == Op1) {
         APInt Sum =
-            ShAmtC->getUniqueInteger() + ShAmtInnerC->getUniqueInteger();
+            *ShAmtOuterC + *ShAmtInnerC;
         APInt Modulo = Sum.urem(APInt(Sum.getBitWidth(), BitWidth));
         if (Modulo.isZero())
           return replaceInstUsesWith(*II, InnerOp);
