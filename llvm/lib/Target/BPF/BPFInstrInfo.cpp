@@ -12,6 +12,7 @@
 
 #include "BPFInstrInfo.h"
 #include "BPF.h"
+#include "BPFSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -25,8 +26,8 @@
 
 using namespace llvm;
 
-BPFInstrInfo::BPFInstrInfo()
-    : BPFGenInstrInfo(BPF::ADJCALLSTACKDOWN, BPF::ADJCALLSTACKUP) {}
+BPFInstrInfo::BPFInstrInfo(const BPFSubtarget &STI)
+    : BPFGenInstrInfo(STI, BPF::ADJCALLSTACKDOWN, BPF::ADJCALLSTACKUP) {}
 
 void BPFInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
@@ -181,6 +182,11 @@ bool BPFInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     if (!isUnpredicatedTerminator(*I))
       break;
 
+    // From base method doc: ... returning true if it cannot be understood ...
+    // Indirect branch has multiple destinations and no true/false concepts.
+    if (I->isIndirectBranch())
+      return true;
+
     // A terminator that isn't a branch can't easily be handled
     // by this analysis.
     if (!I->isBranch())
@@ -258,4 +264,44 @@ unsigned BPFInstrInfo::removeBranch(MachineBasicBlock &MBB,
   }
 
   return Count;
+}
+
+int BPFInstrInfo::getJumpTableIndex(const MachineInstr &MI) const {
+  if (MI.getOpcode() != BPF::JX)
+    return -1;
+
+  // The pattern looks like:
+  // %0 = LD_imm64 %jump-table.0   ; load jump-table address
+  // %1 = ADD_rr %0, $another_reg  ; address + offset
+  // %2 = LDD %1, 0                ; load the actual label
+  // JX %2
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  Register Reg = MI.getOperand(0).getReg();
+  if (!Reg.isVirtual())
+    return -1;
+  MachineInstr *Ldd = MRI.getUniqueVRegDef(Reg);
+  if (Ldd == nullptr || Ldd->getOpcode() != BPF::LDD)
+    return -1;
+
+  Reg = Ldd->getOperand(1).getReg();
+  if (!Reg.isVirtual())
+    return -1;
+  MachineInstr *Add = MRI.getUniqueVRegDef(Reg);
+  if (Add == nullptr || Add->getOpcode() != BPF::ADD_rr)
+    return -1;
+
+  Reg = Add->getOperand(1).getReg();
+  if (!Reg.isVirtual())
+    return -1;
+  MachineInstr *LDimm64 = MRI.getUniqueVRegDef(Reg);
+  if (LDimm64 == nullptr || LDimm64->getOpcode() != BPF::LD_imm64)
+    return -1;
+
+  const MachineOperand &MO = LDimm64->getOperand(1);
+  if (!MO.isJTI())
+    return -1;
+
+  return MO.getIndex();
 }

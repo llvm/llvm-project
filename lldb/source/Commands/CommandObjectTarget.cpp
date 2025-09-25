@@ -2210,7 +2210,9 @@ protected:
 
     const char *clang_args[] = {"clang", pcm_path};
     clang::CompilerInstance compiler(clang::createInvocation(clang_args));
-    compiler.createDiagnostics(*FileSystem::Instance().GetVirtualFileSystem());
+    compiler.setVirtualFileSystem(
+        FileSystem::Instance().GetVirtualFileSystem());
+    compiler.createDiagnostics();
 
     // Pass empty deleter to not attempt to free memory that was allocated
     // outside of the current scope, possibly statically.
@@ -2275,7 +2277,8 @@ protected:
         if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted dumping clang ast"))
           break;
         if (SymbolFile *sf = module_sp->GetSymbolFile())
-          sf->DumpClangAST(result.GetOutputStream(), filter);
+          sf->DumpClangAST(result.GetOutputStream(), filter,
+                           GetCommandInterpreter().GetDebugger().GetUseColor());
       }
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return;
@@ -2304,7 +2307,8 @@ protected:
 
         Module *m = module_list.GetModulePointerAtIndex(i);
         if (SymbolFile *sf = m->GetSymbolFile())
-          sf->DumpClangAST(result.GetOutputStream(), filter);
+          sf->DumpClangAST(result.GetOutputStream(), filter,
+                           GetCommandInterpreter().GetDebugger().GetUseColor());
       }
     }
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -2420,7 +2424,7 @@ protected:
     result.GetErrorStream().SetAddressByteSize(addr_byte_size);
 
     if (command.GetArgumentCount() == 0) {
-      result.AppendError("file option must be specified.");
+      result.AppendError("file option must be specified");
       return;
     } else {
       // Dump specified images (by basename or fullpath)
@@ -3565,13 +3569,13 @@ protected:
 
     ThreadList threads(process->GetThreadList());
     if (threads.GetSize() == 0) {
-      result.AppendError("The process must be paused to use this command.");
+      result.AppendError("the process must be paused to use this command");
       return;
     }
 
     ThreadSP thread(threads.GetThreadAtIndex(0));
     if (!thread) {
-      result.AppendError("The process must be paused to use this command.");
+      result.AppendError("the process must be paused to use this command");
       return;
     }
 
@@ -5294,7 +5298,8 @@ protected:
     // Go over every scratch TypeSystem and dump to the command output.
     for (lldb::TypeSystemSP ts : GetTarget().GetScratchTypeSystems())
       if (ts)
-        ts->Dump(result.GetOutputStream().AsRawOstream(), "");
+        ts->Dump(result.GetOutputStream().AsRawOstream(), "",
+                 GetCommandInterpreter().GetDebugger().GetUseColor());
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }

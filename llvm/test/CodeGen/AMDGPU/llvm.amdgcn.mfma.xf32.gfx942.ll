@@ -133,8 +133,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4xf32(ptr addrspace(1) %arg) #0 {
 ; GFX942-SDAG-NEXT:    s_nop 1
 ; GFX942-SDAG-NEXT:    v_mfma_f32_32x32x4_xf32 a[0:15], v[2:3], v[0:1], a[0:15] cbsz:1 abid:2 blgp:3
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-SDAG-NEXT:    s_nop 7
-; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    s_nop 9
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v0, a[12:15], s[16:17] offset:48
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v0, a[8:11], s[16:17] offset:32
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v0, a[4:7], s[16:17] offset:16
@@ -172,8 +171,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4xf32(ptr addrspace(1) %arg) #0 {
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_mfma_f32_32x32x4_xf32 a[0:15], v[0:1], v[2:3], a[0:15] cbsz:1 abid:2 blgp:3
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-GISEL-NEXT:    s_nop 7
-; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    s_nop 9
 ; GFX942-GISEL-NEXT:    global_store_dwordx4 v0, a[0:3], s[16:17]
 ; GFX942-GISEL-NEXT:    global_store_dwordx4 v0, a[4:7], s[16:17] offset:16
 ; GFX942-GISEL-NEXT:    global_store_dwordx4 v0, a[8:11], s[16:17] offset:32
@@ -208,8 +206,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4xf32_vgprcd(ptr addrspace(1) %ar
 ; GFX942-SDAG-NEXT:    s_nop 1
 ; GFX942-SDAG-NEXT:    v_mfma_f32_32x32x4_xf32 v[0:15], v[16:17], v[18:19], v[0:15] cbsz:1 abid:2 blgp:3
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v16, 0
-; GFX942-SDAG-NEXT:    s_nop 7
-; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    s_nop 9
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v16, v[12:15], s[16:17] offset:48
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v16, v[8:11], s[16:17] offset:32
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v16, v[4:7], s[16:17] offset:16
@@ -239,8 +236,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4xf32_vgprcd(ptr addrspace(1) %ar
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_mfma_f32_32x32x4_xf32 v[0:15], v[16:17], v[18:19], v[0:15] cbsz:1 abid:2 blgp:3
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v16, 0
-; GFX942-GISEL-NEXT:    s_nop 7
-; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    s_nop 9
 ; GFX942-GISEL-NEXT:    global_store_dwordx4 v16, v[0:3], s[16:17]
 ; GFX942-GISEL-NEXT:    global_store_dwordx4 v16, v[4:7], s[16:17] offset:16
 ; GFX942-GISEL-NEXT:    global_store_dwordx4 v16, v[8:11], s[16:17] offset:32

@@ -538,6 +538,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     // Add O2 optimizer pass pipeline.
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    config.SkipConvertComplexPow = targetMachine.getTargetTriple().isAMDGCN();
     if (enableOpenMP)
       config.EnableOpenMP = true;
     config.NSWOnLoopVarInc = !integerWrapAround;

@@ -53,9 +53,9 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const SPIRVTargetMachine &TM)
     : SPIRVGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
-      PointerSize(TM.getPointerSizeInBits(/* AS= */ 0)), InstrInfo(),
-      FrameLowering(initSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
-      TargetTriple(TT) {
+      PointerSize(TM.getPointerSizeInBits(/* AS= */ 0)),
+      InstrInfo(initSubtargetDependencies(CPU, FS)), FrameLowering(*this),
+      TLInfo(TM, *this), TargetTriple(TT) {
   switch (TT.getSubArch()) {
   case Triple::SPIRVSubArch_v10:
     SPIRVVersion = VersionTuple(1, 0);
@@ -89,6 +89,10 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
     Env = Kernel;
   else
     Env = Unknown;
+
+  // Set the default extensions based on the target triple.
+  if (TargetTriple.getVendor() == Triple::Intel)
+    Extensions.insert(SPIRV::Extension::SPV_INTEL_function_pointers);
 
   // The order of initialization is important.
   initAvailableExtensions(Extensions);

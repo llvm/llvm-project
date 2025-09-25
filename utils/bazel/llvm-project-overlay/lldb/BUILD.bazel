@@ -62,6 +62,14 @@ selects.config_setting_group(
     ],
 )
 
+selects.config_setting_group(
+    name = "needs_libbsd",
+    match_all = [
+        ":libedit_enabled_setting",
+        "@platforms//os:linux",
+    ],
+)
+
 _VERSION_SUBSTITUTIONS = {
     "@LLDB_VERSION@": PACKAGE_VERSION,
     "@LLDB_VERSION_MAJOR@": LLVM_VERSION_MAJOR,
@@ -457,6 +465,7 @@ cc_library(
         ":TargetHeaders",
         ":Utility",
         ":UtilityPrivateHeaders",
+        "//llvm:BinaryFormat",
         "//llvm:DebugInfo",
         "//llvm:DebugInfoDWARF",
         "//llvm:DebugInfoDWARFLowLevel",
@@ -560,6 +569,11 @@ cc_library(
     }) + select({
         ":libedit_enabled": [
             "-ledit",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        ":needs_libbsd": [
+            "-lbsd",
         ],
         "//conditions:default": [],
     }),

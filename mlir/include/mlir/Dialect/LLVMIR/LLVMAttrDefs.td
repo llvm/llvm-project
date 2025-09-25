@@ -30,6 +30,7 @@ class LLVM_Attr<string name, string attrMnemonic,
 
 def LLVM_AddressSpaceAttr :
     LLVM_Attr<"AddressSpace", "address_space", [
+    LLVM_LLVMAddrSpaceAttrInterface,
     DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
   ]> {
   let summary = "LLVM address space";
@@ -1230,6 +1231,47 @@ def LLVM_TBAATagArrayAttr
     : TypedArrayAttrBase<LLVM_TBAATagAttr,
                          LLVM_TBAATagAttr.summary # " array"> {
   let constBuilderCall = ?;
+}
+
+//===----------------------------------------------------------------------===//
+// MMRATagAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_MMRATagAttr : LLVM_Attr<"MMRATag", "mmra_tag"> {
+  let parameters = (ins
+    StringRefParameter<>:$prefix,
+    StringRefParameter<>:$suffix
+  );
+
+  let summary = "MLIR wrapper around a prefix:suffix MMRA tag";
+
+  let description = [{
+    Defines a single memory model relaxation annotation (MMRA) entry
+    with prefix `$prefix` and suffix `$suffix`. This corresponds directly
+    to a LLVM `!{prefix, suffix}` metadata tuple, which is often written
+    `prefix:shuffix` as shorthand.
+
+    Example:
+    ```mlir
+    #mmra_tag = #llvm.mmmra_tag<"amdgpu-synchronize-as":"local">
+    #mmra_tag1 = #llvm.mmra_tag<"foo":"bar">
+    ```
+
+    Either one MMRA tag or an array of them may be added to any LLVM
+    operation that operates on memory.
+
+    ```mlir
+    %v = llvm.load %ptr {llvm.mmra = #mmra_tag} : !llvm.ptr -> i8
+    llvm.store %v, %ptr2 {llvm.mmra [#mmra_tag, #mmra_tag1]} : i8, !llvm.ptr
+    ```
+
+    See the following link for more details:
+    https://llvm.org/docs/MemoryModelRelaxationAnnotations.html
+  }];
+
+  let assemblyFormat = "`<` $prefix `` `:` `` $suffix `>`";
+
+  let genMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//

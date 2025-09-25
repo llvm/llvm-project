@@ -256,9 +256,9 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-ZCMP-VSETVLI-NEXT:    add sp, sp, a0
 ; SPILL-O2-ZCMP-VSETVLI-NEXT:    cm.popret {ra, s0}, 32
 {
-   %x = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %a, <vscale x 1 x double> %b, i64 7, i64 %gvl)
+   %x = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> poison, <vscale x 1 x double> %a, <vscale x 1 x double> %b, i64 7, i64 %gvl)
    %call = call signext i32 @puts(ptr @.str)
-   %z = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %a, <vscale x 1 x double> %x, i64 7, i64 %gvl)
+   %z = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> poison, <vscale x 1 x double> %a, <vscale x 1 x double> %x, i64 7, i64 %gvl)
    ret <vscale x 1 x double> %z
 }
 

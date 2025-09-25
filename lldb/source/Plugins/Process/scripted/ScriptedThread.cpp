@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ScriptedThread.h"
+#include "ScriptedFrame.h"
 
 #include "Plugins/Process/Utility/RegisterContextThreadMemory.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
@@ -173,27 +174,31 @@ bool ScriptedThread::LoadArtificialStackFrames() {
             .str(),
         error, LLDBLog::Thread);
 
-  StackFrameListSP frames = GetStackFrameList();
-
-  for (size_t idx = 0; idx < arr_size; idx++) {
+  auto create_frame_from_dict =
+      [this, arr_sp](size_t idx) -> llvm::Expected<StackFrameSP> {
+    Status error;
     std::optional<StructuredData::Dictionary *> maybe_dict =
         arr_sp->GetItemAtIndexAsDictionary(idx);
-    if (!maybe_dict)
-      return ScriptedInterface::ErrorWithMessage<bool>(
+    if (!maybe_dict) {
+      ScriptedInterface::ErrorWithMessage<bool>(
           LLVM_PRETTY_FUNCTION,
           llvm::Twine(
               "Couldn't get artificial stackframe dictionary at index (" +
               llvm::Twine(idx) + llvm::Twine(") from stackframe array."))
               .str(),
           error, LLDBLog::Thread);
+      return error.ToError();
+    }
     StructuredData::Dictionary *dict = *maybe_dict;
 
     lldb::addr_t pc;
-    if (!dict->GetValueForKeyAsInteger("pc", pc))
-      return ScriptedInterface::ErrorWithMessage<bool>(
+    if (!dict->GetValueForKeyAsInteger("pc", pc)) {
+      ScriptedInterface::ErrorWithMessage<bool>(
           LLVM_PRETTY_FUNCTION,
           "Couldn't find value for key 'pc' in stackframe dictionary.", error,
           LLDBLog::Thread);
+      return error.ToError();
+    }
 
     Address symbol_addr;
     symbol_addr.SetLoadAddress(pc, &this->GetProcess()->GetTarget());
@@ -205,10 +210,65 @@ bool ScriptedThread::LoadArtificialStackFrames() {
     SymbolContext sc;
     symbol_addr.CalculateSymbolContext(&sc);
 
-    StackFrameSP synth_frame_sp = std::make_shared<StackFrame>(
-        this->shared_from_this(), idx, idx, cfa, cfa_is_valid, pc,
-        StackFrame::Kind::Synthetic, artificial, behaves_like_zeroth_frame,
-        &sc);
+    return std::make_shared<StackFrame>(this->shared_from_this(), idx, idx, cfa,
+                                        cfa_is_valid, pc,
+                                        StackFrame::Kind::Synthetic, artificial,
+                                        behaves_like_zeroth_frame, &sc);
+  };
+
+  auto create_frame_from_script_object =
+      [this, arr_sp](size_t idx) -> llvm::Expected<StackFrameSP> {
+    Status error;
+    StructuredData::ObjectSP object_sp = arr_sp->GetItemAtIndex(idx);
+    if (!object_sp || !object_sp->GetAsGeneric()) {
+      ScriptedInterface::ErrorWithMessage<bool>(
+          LLVM_PRETTY_FUNCTION,
+          llvm::Twine("Couldn't get artificial stackframe object at index (" +
+                      llvm::Twine(idx) +
+                      llvm::Twine(") from stackframe array."))
+              .str(),
+          error, LLDBLog::Thread);
+      return error.ToError();
+    }
+
+    auto frame_or_error =
+        ScriptedFrame::Create(*this, nullptr, object_sp->GetAsGeneric());
+
+    if (!frame_or_error) {
+      ScriptedInterface::ErrorWithMessage<bool>(
+          LLVM_PRETTY_FUNCTION, toString(frame_or_error.takeError()), error);
+      return error.ToError();
+    }
+
+    StackFrameSP frame_sp = frame_or_error.get();
+    lldbassert(frame_sp && "Couldn't initialize scripted frame.");
+
+    return frame_sp;
+  };
+
+  StackFrameListSP frames = GetStackFrameList();
+
+  for (size_t idx = 0; idx < arr_size; idx++) {
+    StackFrameSP synth_frame_sp = nullptr;
+
+    auto frame_from_dict_or_err = create_frame_from_dict(idx);
+    if (!frame_from_dict_or_err) {
+      auto frame_from_script_obj_or_err = create_frame_from_script_object(idx);
+
+      if (!frame_from_script_obj_or_err) {
+        return ScriptedInterface::ErrorWithMessage<bool>(
+            LLVM_PRETTY_FUNCTION,
+            llvm::Twine("Couldn't add artificial frame (" + llvm::Twine(idx) +
+                        llvm::Twine(") to ScriptedThread StackFrameList."))
+                .str(),
+            error, LLDBLog::Thread);
+      } else {
+        llvm::consumeError(frame_from_dict_or_err.takeError());
+        synth_frame_sp = *frame_from_script_obj_or_err;
+      }
+    } else {
+      synth_frame_sp = *frame_from_dict_or_err;
+    }
 
     if (!frames->SetFrameAtIndex(static_cast<uint32_t>(idx), synth_frame_sp))
       return ScriptedInterface::ErrorWithMessage<bool>(

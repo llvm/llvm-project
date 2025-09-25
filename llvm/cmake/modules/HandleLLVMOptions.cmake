@@ -144,12 +144,6 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
 endif()
 
-# If we are targeting a GPU architecture in a runtimes build we want to ignore
-# all the standard flag handling.
-if(LLVM_RUNTIMES_GPU_BUILD)
-  return()
-endif()
-
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   # When LLVM_ENABLE_EXPENSIVE_CHECKS is ON, LLVM will intercept errors
   # using assert(). An explicit check is performed here.
@@ -876,30 +870,44 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   append_if(USE_NO_UNINITIALIZED "-Wno-uninitialized" CMAKE_CXX_FLAGS)
   append_if(USE_NO_MAYBE_UNINITIALIZED "-Wno-maybe-uninitialized" CMAKE_CXX_FLAGS)
 
-  # Disable -Wnonnull for GCC warning as it is emitting a lot of false positives.
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable -Wnonnull for GCC warning as it is emitting a lot of false positives.
     append("-Wno-nonnull" CMAKE_CXX_FLAGS)
-  endif()
 
-  # Disable -Wclass-memaccess, a C++-only warning from GCC 8 that fires on
-  # LLVM's ADT classes.
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable -Wclass-memaccess, a C++-only warning from GCC 8 that fires on
+    # LLVM's ADT classes.
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 8.1)
       append("-Wno-class-memaccess" CMAKE_CXX_FLAGS)
     endif()
-  endif()
 
-  # Disable -Wredundant-move and -Wpessimizing-move on GCC>=9. GCC wants to
-  # remove std::move in code like
-  # "A foo(ConvertibleToA a) { return std::move(a); }",
-  # but this code does not compile (or uses the copy
-  # constructor instead) on clang<=3.8. Clang also has a -Wredundant-move and
-  # -Wpessimizing-move, but they only fire when the types match exactly, so we
-  # can keep them here.
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable -Wdangling-reference, a C++-only warning from GCC 13 that seems
+    # to produce a large number of false positives.
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13.1)
+      append("-Wno-dangling-reference" CMAKE_CXX_FLAGS)
+    endif()
+
+    # Disable -Wredundant-move and -Wpessimizing-move on GCC>=9. GCC wants to
+    # remove std::move in code like
+    # "A foo(ConvertibleToA a) { return std::move(a); }",
+    # but this code does not compile (or uses the copy
+    # constructor instead) on clang<=3.8. Clang also has a -Wredundant-move and
+    # -Wpessimizing-move, but they only fire when the types match exactly, so we
+    # can keep them here.
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 9.1)
       append("-Wno-redundant-move" CMAKE_CXX_FLAGS)
       append("-Wno-pessimizing-move" CMAKE_CXX_FLAGS)
+    endif()
+
+    # Disable -Warray-bounds on GCC; this warning exists since a very long time,
+    # but since GCC 11, it produces a lot of very noisy, seemingly false positive
+    # warnings (potentially originating in libstdc++).
+    append("-Wno-array-bounds" CMAKE_CXX_FLAGS)
+
+    # Disable -Wstringop-overread on GCC; this warning produces a number of very
+    # noisy diagnostics when -Warray-bounds is disabled above; this option exists
+    # since GCC 11.
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11.1)
+      append("-Wno-stringop-overread" CMAKE_CXX_FLAGS)
     endif()
   endif()
 
@@ -1133,7 +1141,7 @@ if (UNIX AND
 endif()
 
 # lld doesn't print colored diagnostics when invoked from Ninja
-if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja")
+if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja" AND NOT "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
   include(CheckLinkerFlag)
   check_linker_flag(CXX "-Wl,--color-diagnostics" LINKER_SUPPORTS_COLOR_DIAGNOSTICS)
   append_if(LINKER_SUPPORTS_COLOR_DIAGNOSTICS "-Wl,--color-diagnostics"
@@ -1455,3 +1463,11 @@ if(LLVM_ENABLE_LLVM_LIBC)
     message(WARNING "Unable to link against LLVM libc. LLVM will be built without linking against the LLVM libc overlay.")
   endif()
 endif()
+
+check_symbol_exists(flock "sys/file.h" HAVE_FLOCK)
+set(LLVM_ENABLE_ONDISK_CAS_default OFF)
+if(HAVE_FLOCK OR LLVM_ON_WIN32)
+  # LLVM OnDisk CAS currently requires flock on Unix.
+  set(LLVM_ENABLE_ONDISK_CAS_default ON)
+endif()
+option(LLVM_ENABLE_ONDISK_CAS "Build OnDiskCAS." ${LLVM_ENABLE_ONDISK_CAS_default})

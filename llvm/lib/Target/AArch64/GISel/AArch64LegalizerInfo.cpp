@@ -222,7 +222,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s64, v2s64)
       .moreElementsToNextPow2(0)
       .minScalarSameAs(1, 0)
-      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
+      .minScalarEltSameAsIf(isVector(0), 1, 0)
+      .maxScalarEltSameAsIf(isVector(0), 1, 0);
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, s64}, {v2p0, v2s64}})
@@ -1346,6 +1348,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
+      .scalarize(1)
       .lower();
 
   getActionDefinitionsBuilder(G_VECREDUCE_MUL)

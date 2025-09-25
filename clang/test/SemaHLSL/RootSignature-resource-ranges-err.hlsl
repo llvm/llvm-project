@@ -117,3 +117,36 @@ void bad_root_signature_14() {}
 // expected-note@+1 {{overlapping resource range here}}
 [RootSignature(DuplicatesRootSignature)]
 void valid_root_signature_15() {}
+
+#define AppendingToUnbound \
+  "DescriptorTable(CBV(b1, numDescriptors = unbounded), CBV(b0))"
+
+// expected-error@+1 {{offset appends to unbounded descriptor range}}
+[RootSignature(AppendingToUnbound)]
+void append_to_unbound_signature() {}
+
+#define DirectOffsetOverflow \
+  "DescriptorTable(CBV(b0, offset = 4294967294 , numDescriptors = 6))"
+
+// expected-error@+1 {{descriptor range offset overflows [4294967294, 4294967299]}}
+[RootSignature(DirectOffsetOverflow)]
+void direct_offset_overflow_signature() {}
+
+#define AppendOffsetOverflow \
+  "DescriptorTable(CBV(b0, offset = 4294967292), CBV(b1, numDescriptors = 7))"
+
+// expected-error@+1 {{descriptor range offset overflows [4294967293, 4294967299]}}
+[RootSignature(AppendOffsetOverflow)]
+void append_offset_overflow_signature() {}
+
+// expected-error@+1 {{descriptor range offset overflows [4294967292, 4294967296]}}
+[RootSignature("DescriptorTable(CBV(b0, offset = 4294967292, numDescriptors = 5))")]
+void offset_overflow() {}
+
+// expected-error@+1 {{descriptor range offset overflows [4294967295, 4294967296]}}
+[RootSignature("DescriptorTable(CBV(b0, offset = 4294967294), CBV(b1, numDescriptors = 2))")]
+void appended_offset_overflow() {}
+
+// expected-error@+1 {{descriptor range offset overflows [4294967296, 4294967296]}}
+[RootSignature("DescriptorTable(CBV(b0, offset = 4294967294), CBV(b1), CBV(b2))")]
+void multiple_appended_offset_overflow() {}

@@ -859,7 +859,7 @@ define <vscale x 2 x i1> @select_undef_undef_F(<vscale x 2 x i1> %x, i32 zeroext
 ; CHECK-LABEL: select_undef_undef_F:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> poison, <vscale x 2 x i1> undef, <vscale x 2 x i1> %x, i32 %evl)
+  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> poison, <vscale x 2 x i1> poison, <vscale x 2 x i1> %x, i32 %evl)
   ret <vscale x 2 x i1> %a
 }
 
@@ -869,7 +869,7 @@ define <vscale x 2 x i1> @select_unknown_undef_F(<vscale x 2 x i1> %x, <vscale x
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> undef, <vscale x 2 x i1> %y, i32 %evl)
+  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> poison, <vscale x 2 x i1> %y, i32 %evl)
   ret <vscale x 2 x i1> %a
 }
 
