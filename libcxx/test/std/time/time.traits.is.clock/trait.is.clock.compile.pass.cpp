@@ -87,7 +87,9 @@ int main(int, char**) {
 
   // Test standard clock types
   static_assert(std::chrono::is_clock_v<std::chrono::system_clock>);
+#ifdef _LIBCPP_HAS_MONOTONIC_CLOCK
   static_assert(std::chrono::is_clock_v<std::chrono::steady_clock>);
+#endif
   static_assert(std::chrono::is_clock_v<std::chrono::high_resolution_clock>);
 
   // Test non-clock types
@@ -95,7 +97,9 @@ int main(int, char**) {
   static_assert(!std::chrono::is_clock_v<int>);
   static_assert(!std::chrono::is_clock_v<void>);
   static_assert(!std::chrono::is_clock_v<std::chrono::system_clock::time_point>);
+#ifdef _LIBCPP_HAS_MONOTONIC_CLOCK
   static_assert(!std::chrono::is_clock_v<std::chrono::steady_clock::time_point>);
+#endif
   static_assert(!std::chrono::is_clock_v<std::chrono::seconds>);
   static_assert(!std::chrono::is_clock_v<std::chrono::milliseconds>);
 
