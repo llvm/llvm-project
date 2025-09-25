@@ -626,9 +626,10 @@ struct DenseMapInfo<mlir::remark::detail::Remark> {
 
   /// Compute the hash value of the remark
   static unsigned getHashValue(const mlir::remark::detail::Remark &remark) {
-    return llvm::hash_combine(remark.getLocation().getAsOpaquePointer(),
-                              llvm::hash_value(remark.getRemarkName()),
-                              llvm::hash_value(remark.getCategoryName()));
+    return llvm::hash_combine(
+        remark.getLocation().getAsOpaquePointer(),
+        llvm::hash_value(remark.getRemarkName()),
+        llvm::hash_value(remark.getCombinedCategoryName()));
   }
 
   static bool isEqual(const mlir::remark::detail::Remark &lhs,
@@ -644,7 +645,7 @@ struct DenseMapInfo<mlir::remark::detail::Remark> {
     // For regular remarks, compare key identifying fields
     return lhs.getLocation() == rhs.getLocation() &&
            lhs.getRemarkName() == rhs.getRemarkName() &&
-           lhs.getCategoryName() == rhs.getCategoryName();
+           lhs.getCombinedCategoryName() == rhs.getCombinedCategoryName();
   }
 };
 } // namespace llvm
