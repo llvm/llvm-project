@@ -2845,19 +2845,6 @@ static SDValue LowerClusterLaunchControlQueryCancel(SDValue Op,
                      {TryCancelResponse0, TryCancelResponse1});
 }
 
-bool isCvtRSReluIntrinsic(Intrinsic::ID ID) {
-  switch (ID) {
-  case Intrinsic::nvvm_f32x4_to_e4m3x4_rs_relu_satfinite:
-  case Intrinsic::nvvm_f32x4_to_e5m2x4_rs_relu_satfinite:
-  case Intrinsic::nvvm_f32x4_to_e2m3x4_rs_relu_satfinite:
-  case Intrinsic::nvvm_f32x4_to_e3m2x4_rs_relu_satfinite:
-  case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite:
-    return true;
-  default:
-    return false;
-  }
-}
-
 static SDValue lowerCvtRSIntrinsics(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   SDLoc DL(N);
@@ -2867,34 +2854,35 @@ static SDValue lowerCvtRSIntrinsics(SDValue Op, SelectionDAG &DAG) {
   unsigned IntrinsicID = N->getConstantOperandVal(0);
 
   uint32_t CvtModeFlag = NVPTX::PTXCvtMode::CvtMode::RS;
-  if (isCvtRSReluIntrinsic(IntrinsicID))
-    CvtModeFlag |= NVPTX::PTXCvtMode::CvtMode::RELU_FLAG;
 
-  SDValue Float1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, F32Vec,
-                               DAG.getIntPtrConstant(0, DL));
-  SDValue Float2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, F32Vec,
-                               DAG.getIntPtrConstant(1, DL));
-  SDValue Float3 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, F32Vec,
-                               DAG.getIntPtrConstant(2, DL));
-  SDValue Float4 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, F32Vec,
-                               DAG.getIntPtrConstant(3, DL));
+  // Extract the 4 float elements from the vector
+  SmallVector<SDValue, 6> Ops;
+  for (unsigned i = 0; i < 4; ++i) {
+    Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, F32Vec,
+                              DAG.getIntPtrConstant(i, DL)));
+  }
 
   auto OpSignature =
       [&]() -> std::pair<NVPTXISD::NodeType, MVT::SimpleValueType> {
     switch (IntrinsicID) {
     case Intrinsic::nvvm_f32x4_to_e4m3x4_rs_relu_satfinite:
+      CvtModeFlag |= NVPTX::PTXCvtMode::CvtMode::RELU_FLAG;
     case Intrinsic::nvvm_f32x4_to_e4m3x4_rs_satfinite:
       return {NVPTXISD::CVT_E4M3X4_F32X4_RS_SF, MVT::v4i8};
     case Intrinsic::nvvm_f32x4_to_e5m2x4_rs_relu_satfinite:
+      CvtModeFlag |= NVPTX::PTXCvtMode::CvtMode::RELU_FLAG;
     case Intrinsic::nvvm_f32x4_to_e5m2x4_rs_satfinite:
       return {NVPTXISD::CVT_E5M2X4_F32X4_RS_SF, MVT::v4i8};
     case Intrinsic::nvvm_f32x4_to_e2m3x4_rs_relu_satfinite:
+      CvtModeFlag |= NVPTX::PTXCvtMode::CvtMode::RELU_FLAG;
     case Intrinsic::nvvm_f32x4_to_e2m3x4_rs_satfinite:
       return {NVPTXISD::CVT_E2M3X4_F32X4_RS_SF, MVT::v4i8};
     case Intrinsic::nvvm_f32x4_to_e3m2x4_rs_relu_satfinite:
+      CvtModeFlag |= NVPTX::PTXCvtMode::CvtMode::RELU_FLAG;
     case Intrinsic::nvvm_f32x4_to_e3m2x4_rs_satfinite:
       return {NVPTXISD::CVT_E3M2X4_F32X4_RS_SF, MVT::v4i8};
     case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite:
+      CvtModeFlag |= NVPTX::PTXCvtMode::CvtMode::RELU_FLAG;
     case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_satfinite:
       return {NVPTXISD::CVT_E2M1X4_F32X4_RS_SF, MVT::i16};
     default:
@@ -2902,8 +2890,8 @@ static SDValue lowerCvtRSIntrinsics(SDValue Op, SelectionDAG &DAG) {
     }
   }();
 
-  SDValue Ops[] = {Float1, Float2, Float3,
-                   Float4, RBits,  DAG.getConstant(CvtModeFlag, DL, MVT::i32)};
+  Ops.push_back(RBits);
+  Ops.push_back(DAG.getConstant(CvtModeFlag, DL, MVT::i32));
 
   return DAG.getNode(OpSignature.first, DL, OpSignature.second, Ops);
 }
