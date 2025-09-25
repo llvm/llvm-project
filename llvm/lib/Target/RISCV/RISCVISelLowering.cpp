@@ -24788,7 +24788,7 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
   return true;
 }
 
-bool RISCVTargetLowering::isLegalFaultFirstLoad(EVT DataType,
+bool RISCVTargetLowering::isLegalFirstFaultLoad(EVT DataType,
                                                 Align Alignment) const {
   if (!Subtarget.hasVInstructions())
     return false;

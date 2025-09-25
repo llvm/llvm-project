@@ -1617,7 +1617,7 @@ public:
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
 
   /// \return The cost of vp intrinsic vp.load.ff.
-  LLVM_ABI InstructionCost getFaultFirstLoadCost(
+  LLVM_ABI InstructionCost getFirstFaultLoadCost(
       Type *DataTy, Align Alignment,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 

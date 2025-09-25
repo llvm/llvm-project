@@ -427,7 +427,7 @@ public:
 
   /// Return true if a fault-only-first load of the given result type and
   /// alignment is legal.
-  bool isLegalFaultFirstLoad(EVT DataType, Align Alignment) const;
+  bool isLegalFirstFaultLoad(EVT DataType, Align Alignment) const;
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 8; }
 
