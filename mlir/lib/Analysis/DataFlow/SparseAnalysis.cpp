@@ -17,6 +17,7 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/DebugLog.h"
@@ -505,12 +506,18 @@ AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
       // If the call invokes an external function (or a function treated as
       // external due to config), defer to the corresponding extension hook.
       // By default, it just does `visitCallOperand` for all operands.
+      //
+      // If callable is a public function, treat it as an external function.
+      // Transforms like RemoveDeadValues cannot change the arguments or returns
+      // of it.
       OperandRange argOperands = call.getArgOperands();
       MutableArrayRef<OpOperand> argOpOperands =
           operandsToOpOperands(argOperands);
       Region *region = callable.getCallableRegion();
+      bool isPublicFunc = isa<FunctionOpInterface>(callableOp)
+                       && cast<FunctionOpInterface>(callableOp).isPublic();
       if (!region || region->empty() ||
-          !getSolverConfig().isInterprocedural()) {
+          !getSolverConfig().isInterprocedural() || isPublicFunc) {
         visitExternalCallImpl(call, operandLattices, resultLattices);
         return success();
       }
