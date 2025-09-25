@@ -51,8 +51,8 @@ void test_masked_scatter(int *p, v8i idx, v8b mask, v2b mask2, v8i val) {
   __builtin_masked_scatter(p, p, p, p); // expected-error {{1st argument must be a vector of boolean types (was 'int *')}}
   __builtin_masked_scatter(mask, p, p, p); // expected-error {{2nd argument must be a vector of integer types (was 'int *')}}
   __builtin_masked_scatter(mask, idx, mask, p); // expected-error {{last two arguments to '__builtin_masked_scatter' must have the same type}}
-  __builtin_masked_scatter(mask, idx, val, idx); // expected-error {{3rd argument must be a scalar pointer}}
-  __builtin_masked_scatter(mask, idx, val, &idx); // expected-error {{3rd argument must be a scalar pointer}}
+  __builtin_masked_scatter(mask, idx, val, idx); // expected-error {{4th argument must be a scalar pointer}}
+  __builtin_masked_scatter(mask, idx, val, &idx); // expected-error {{4th argument must be a scalar pointer}}
 }
 
 void a(v8b mask, v8i v, const int *ptr) {

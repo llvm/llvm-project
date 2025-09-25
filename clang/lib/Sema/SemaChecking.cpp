@@ -2296,14 +2296,11 @@ static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
   return false;
 }
 
-static bool ConvertMaskedBuiltinArgs(Sema &S, CallExpr *TheCall,
-                                     unsigned PtrArg) {
+static bool ConvertMaskedBuiltinArgs(Sema &S, CallExpr *TheCall) {
   bool TypeDependent = false;
   for (unsigned Arg = 0, E = TheCall->getNumArgs(); Arg != E; ++Arg) {
     ExprResult Converted =
-        Arg == PtrArg
-            ? S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(Arg))
-            : S.DefaultLvalueConversion(TheCall->getArg(Arg));
+        S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(Arg));
     if (Converted.isInvalid())
       return true;
     TheCall->setArg(Arg, Converted.get());
@@ -2319,7 +2316,7 @@ static ExprResult BuiltinMaskedLoad(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCountRange(TheCall, 2, 3))
     return ExprError();
 
-  if (ConvertMaskedBuiltinArgs(S, TheCall, /*PtrArg=*/1))
+  if (ConvertMaskedBuiltinArgs(S, TheCall))
     return ExprError();
 
   Expr *MaskArg = TheCall->getArg(0);
@@ -2355,7 +2352,7 @@ static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 3))
     return ExprError();
 
-  if (ConvertMaskedBuiltinArgs(S, TheCall, /*PtrArg=*/2))
+  if (ConvertMaskedBuiltinArgs(S, TheCall))
     return ExprError();
 
   Expr *MaskArg = TheCall->getArg(0);
@@ -2397,7 +2394,7 @@ static ExprResult BuiltinMaskedGather(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCountRange(TheCall, 3, 4))
     return ExprError();
 
-  if (ConvertMaskedBuiltinArgs(S, TheCall, /*PtrArg=*/2))
+  if (ConvertMaskedBuiltinArgs(S, TheCall))
     return ExprError();
 
   Expr *MaskArg = TheCall->getArg(0);
@@ -2447,7 +2444,7 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 4))
     return ExprError();
 
-  if (ConvertMaskedBuiltinArgs(S, TheCall, /*PtrArg=*/3))
+  if (ConvertMaskedBuiltinArgs(S, TheCall))
     return ExprError();
 
   Expr *MaskArg = TheCall->getArg(0);
