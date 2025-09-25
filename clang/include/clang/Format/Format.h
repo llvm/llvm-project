@@ -732,6 +732,12 @@ struct FormatStyle {
   /// \version 18
   BreakBeforeNoexceptSpecifierStyle AllowBreakBeforeNoexceptSpecifier;
 
+  /// Allow breaking before ``Q_Property`` keywords ``READ``, ``WRITE``, etc. as
+  /// if they were preceded by a comma (``,``). This allows them to be formatted
+  /// according to ``BinPackParameters``.
+  /// \version 22
+  bool AllowBreakBeforeQtProperty;
+
   /// Different styles for merging short blocks containing at most one
   /// statement.
   enum ShortBlockStyle : int8_t {
@@ -2976,7 +2982,19 @@ struct FormatStyle {
     ///      #endif
     ///    #endif
     /// \endcode
-    PPDIS_BeforeHash
+    PPDIS_BeforeHash,
+    /// Leaves indentation of directives as-is.
+    /// \note
+    ///  Ignores ``PPIndentWidth``.
+    /// \endnote
+    /// \code
+    ///   #if FOO
+    ///     #if BAR
+    ///   #include <foo>
+    ///     #endif
+    ///   #endif
+    /// \endcode
+    PPDIS_Leave
   };
 
   /// The preprocessor directive indenting style to use.
@@ -3557,6 +3575,73 @@ struct FormatStyle {
   /// For example: TESTSUITE
   /// \version 9
   std::vector<std::string> NamespaceMacros;
+
+  /// Control over each component in a numeric literal.
+  enum NumericLiteralComponentStyle : int8_t {
+    /// Leave this component of the literal as is.
+    NLCS_Leave,
+    /// Format this component with uppercase characters.
+    NLCS_Upper,
+    /// Format this component with lowercase characters.
+    NLCS_Lower,
+  };
+
+  /// Separate control for each numeric literal component.
+  ///
+  /// For example, the config below will leave exponent letters alone, reformat
+  /// hexadecimal digits in lowercase, reformat numeric literal prefixes in
+  /// uppercase, and reformat suffixes in lowercase.
+  /// \code
+  ///   NumericLiteralCase:
+  ///     ExponentLetter: Leave
+  ///     HexDigit: Lower
+  ///     Prefix: Upper
+  ///     Suffix: Lower
+  /// \endcode
+  struct NumericLiteralCaseStyle {
+    /// Format floating point exponent separator letter case.
+    /// \code
+    ///   float a = 6.02e23 + 1.0E10; // Leave
+    ///   float a = 6.02E23 + 1.0E10; // Upper
+    ///   float a = 6.02e23 + 1.0e10; // Lower
+    /// \endcode
+    NumericLiteralComponentStyle ExponentLetter;
+    /// Format hexadecimal digit case.
+    /// \code
+    ///   a = 0xaBcDeF; // Leave
+    ///   a = 0xABCDEF; // Upper
+    ///   a = 0xabcdef; // Lower
+    /// \endcode
+    NumericLiteralComponentStyle HexDigit;
+    /// Format integer prefix case.
+    /// \code
+    ///    a = 0XF0 | 0b1; // Leave
+    ///    a = 0XF0 | 0B1; // Upper
+    ///    a = 0xF0 | 0b1; // Lower
+    /// \endcode
+    NumericLiteralComponentStyle Prefix;
+    /// Format suffix case. This option excludes case-sensitive reserved
+    /// suffixes, such as ``min`` in C++.
+    /// \code
+    ///   a = 1uLL; // Leave
+    ///   a = 1ULL; // Upper
+    ///   a = 1ull; // Lower
+    /// \endcode
+    NumericLiteralComponentStyle Suffix;
+
+    bool operator==(const NumericLiteralCaseStyle &R) const {
+      return ExponentLetter == R.ExponentLetter && HexDigit == R.HexDigit &&
+             Prefix == R.Prefix && Suffix == R.Suffix;
+    }
+
+    bool operator!=(const NumericLiteralCaseStyle &R) const {
+      return !(*this == R);
+    }
+  };
+
+  /// Capitalization style for numeric literals.
+  /// \version 22
+  NumericLiteralCaseStyle NumericLiteralCase;
 
   /// Controls bin-packing Objective-C protocol conformance list
   /// items into as few lines as possible when they go over ``ColumnLimit``.
@@ -5379,6 +5464,7 @@ struct FormatStyle {
                R.AllowAllParametersOfDeclarationOnNextLine &&
            AllowBreakBeforeNoexceptSpecifier ==
                R.AllowBreakBeforeNoexceptSpecifier &&
+           AllowBreakBeforeQtProperty == R.AllowBreakBeforeQtProperty &&
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
            AllowShortCaseExpressionOnASingleLine ==
                R.AllowShortCaseExpressionOnASingleLine &&
@@ -5469,6 +5555,7 @@ struct FormatStyle {
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&
            NamespaceIndentation == R.NamespaceIndentation &&
            NamespaceMacros == R.NamespaceMacros &&
+           NumericLiteralCase == R.NumericLiteralCase &&
            ObjCBinPackProtocolList == R.ObjCBinPackProtocolList &&
            ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
            ObjCBreakBeforeNestedBlockParam ==

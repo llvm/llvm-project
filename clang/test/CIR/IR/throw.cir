@@ -1,0 +1,63 @@
+// RUN: cir-opt %s | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module  {
+
+cir.func @throw_with_no_return() {
+  cir.throw
+  cir.unreachable
+}
+
+// CHECK: cir.func @throw_with_no_return() {
+// CHECK:  cir.throw
+// CHECK:  cir.unreachable
+// CHECK: }
+
+cir.func @throw_with_no_return_2(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+  %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+  %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+  %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  cir.store %arg1, %1 : !s32i, !cir.ptr<!s32i>
+  cir.scope {
+    %7 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+    %8 = cir.const #cir.int<0> : !s32i
+    %9 = cir.cmp(eq, %7, %8) : !s32i, !cir.bool
+    cir.if %9 {
+      cir.throw
+      cir.unreachable
+    }
+  }
+  %3 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+  %4 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+  %5 = cir.binop(div, %3, %4) : !s32i
+  cir.store %5, %2 : !s32i, !cir.ptr<!s32i>
+  %6 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+  cir.return %6 : !s32i
+}
+
+// CHECK: cir.func @throw_with_no_return_2(%[[ARG_0:.*]]: !s32i, %[[ARG_1:.*]]: !s32i) -> !s32i {
+// CHECK:  %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CHECK:  %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CHECK:  %[[RES_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CHECK:  cir.store %[[ARG_0]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:  cir.store %[[ARG_1]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:  cir.scope {
+// CHECK:    %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!s32i>, !s32i
+// CHECK:    %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:    %[[IS_B_ZERO:.*]] = cir.cmp(eq, %[[TMP_B]], %[[CONST_0]]) : !s32i, !cir.bool
+// CHECK:    cir.if %[[IS_B_ZERO]] {
+// CHECK:      cir.throw
+// CHECK:      cir.unreachable
+// CHECK:    }
+// CHECK:  }
+// CHECK:  %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
+// CHECK:  %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!s32i>, !s32i
+// CHECK:  %[[DIV_A_B:.*]] = cir.binop(div, %[[TMP_A:.*]], %[[TMP_B:.*]]) : !s32i
+// CHECK:  cir.store %[[DIV_A_B]], %[[RES_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:  %[[RESULT:.*]] = cir.load %[[RES_ADDR]] : !cir.ptr<!s32i>, !s32i
+// CHECK:  cir.return %[[RESULT]] : !s32i
+// CHECK: }
+
+}

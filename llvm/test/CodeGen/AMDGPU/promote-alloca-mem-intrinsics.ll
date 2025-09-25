@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -passes=amdgpu-promote-alloca < %s | FileCheck --enable-var-scope %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -passes=amdgpu-promote-alloca -amdgpu-promote-alloca-to-vector-max-regs=16 < %s | FileCheck --enable-var-scope %s
 
 declare void @llvm.memcpy.p5.p1.i32(ptr addrspace(5) nocapture, ptr addrspace(1) nocapture, i32, i1) #0
 declare void @llvm.memcpy.p1.p5.i32(ptr addrspace(1) nocapture, ptr addrspace(5) nocapture, i32, i1) #0

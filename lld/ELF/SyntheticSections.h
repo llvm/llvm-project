@@ -88,10 +88,10 @@ private:
                              llvm::DenseSet<size_t> &ciesWithLSDA,
                              llvm::function_ref<void(InputSection &)> fn);
 
-  template <class ELFT, class RelTy>
+  template <class RelTy>
   CieRecord *addCie(EhSectionPiece &piece, ArrayRef<RelTy> rels);
 
-  template <class ELFT, class RelTy>
+  template <class RelTy>
   Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<RelTy> rels);
 
   uint64_t getFdePc(uint8_t *buf, size_t off, uint8_t enc) const;

@@ -697,6 +697,33 @@ func.func @_QPeoshift7(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
 // CHECK:           return
 // CHECK:         }
 
+// Test UNSIGNED data type.
+// The default value of the BOUNDARY must be an integer 0
+// converted to ui32 type.
+// subroutine eoshift8(array)
+//   unsigned :: array(:,:)
+//   array = EOSHIFT(array, shift=1, dim=2)
+// end subroutine
+func.func @_QPeoshift8(%arg0: !fir.box<!fir.array<?x?xui32>> {fir.bindc_name = "array"}) {
+  %c2_i32 = arith.constant 2 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift8Earray"} : (!fir.box<!fir.array<?x?xui32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xui32>>, !fir.box<!fir.array<?x?xui32>>)
+  %2 = hlfir.eoshift %1#0 %c1_i32 dim %c2_i32 : (!fir.box<!fir.array<?x?xui32>>, i32, i32) -> !hlfir.expr<?x?xui32>
+  hlfir.assign %2 to %1#0 : !hlfir.expr<?x?xui32>, !fir.box<!fir.array<?x?xui32>>
+  hlfir.destroy %2 : !hlfir.expr<?x?xui32>
+  return
+}
+// CHECK-LABEL:   func.func @_QPeoshift8(
+// CHECK-DAG:           hlfir.elemental %{{.*}} unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xui32> {
+// CHECK-DAG:               %[[VAL_24:.*]] = fir.load %{{.*}} : !fir.ref<ui32>
+// CHECK-DAG:               fir.result %[[VAL_24]] : ui32
+// CHECK-DAG:             } else {
+// CHECK-DAG:               fir.result %[[VAL_12:.*]] : ui32
+// CHECK-DAG:             }
+// CHECK-DAG:           %[[VAL_12]] = fir.convert %[[VAL_1:.*]] : (i32) -> ui32
+// CHECK-DAG:           %[[VAL_1]] = arith.constant 0 : i32
+
 // ! Tests for CHARACTER type (lowered via hlfir.elemental).
 
 // ! Test contiguous 1D array with statically absent boundary.

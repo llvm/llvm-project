@@ -243,29 +243,6 @@ bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type sdk_type,
   return false;
 }
 
-bool XcodeSDK::SupportsSwift() const {
-  XcodeSDK::Info info = Parse();
-  switch (info.type) {
-  case Type::MacOSX:
-    return info.version.empty() || info.version >= llvm::VersionTuple(10, 10);
-  case Type::iPhoneOS:
-  case Type::iPhoneSimulator:
-    return info.version.empty() || info.version >= llvm::VersionTuple(8);
-  case Type::AppleTVSimulator:
-  case Type::AppleTVOS:
-    return info.version.empty() || info.version >= llvm::VersionTuple(9);
-  case Type::WatchSimulator:
-  case Type::watchOS:
-    return info.version.empty() || info.version >= llvm::VersionTuple(2);
-  case Type::XROS:
-  case Type::XRSimulator:
-  case Type::Linux:
-    return true;
-  default:
-    return false;
-  }
-}
-
 bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type desired_type,
                                   const FileSpec &sdk_path) {
   ConstString last_path_component = sdk_path.GetFilename();

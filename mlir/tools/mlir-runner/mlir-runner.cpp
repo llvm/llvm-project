@@ -32,7 +32,7 @@ using namespace mlir;
 // TODO: Consider removing this linking functionality from the SPIR-V CPU Runner
 //       flow in favour of a more proper host/device split like other runners.
 //       https://github.com/llvm/llvm-project/issues/115348
-static llvm::cl::opt<bool> LinkNestedModules(
+static llvm::cl::opt<bool> linkNestedModules(
     "link-nested-modules",
     llvm::cl::desc("Link two nested MLIR modules into a single LLVM IR module. "
                    "Useful if both the host and device code can be run on the "
@@ -56,7 +56,7 @@ convertMLIRModule(Operation *op, llvm::LLVMContext &context) {
     return op->emitError("op must be a 'builtin.module"), nullptr;
 
   std::unique_ptr<llvm::Module> kernelModule;
-  if (LinkNestedModules) {
+  if (linkNestedModules) {
     // Verify that there is only one nested module.
     auto modules = module.getOps<ModuleOp>();
     if (!llvm::hasSingleElement(modules)) {
@@ -73,7 +73,7 @@ convertMLIRModule(Operation *op, llvm::LLVMContext &context) {
   std::unique_ptr<llvm::Module> mainModule =
       translateModuleToLLVMIR(module, context);
 
-  if (LinkNestedModules)
+  if (linkNestedModules)
     llvm::Linker::linkModules(*mainModule, std::move(kernelModule));
 
   return mainModule;

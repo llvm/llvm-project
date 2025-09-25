@@ -138,10 +138,6 @@ class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
   string ConstraintsY = !if(hasSrc2AccY, "$src2Y = $vdstY", "");
   let Constraints =
       ConstraintsX # !if(!and(hasSrc2AccX, hasSrc2AccY), ", ", "") # ConstraintsY;
-  string DisableEncodingX = !if(hasSrc2AccX, "$src2X", "");
-  string DisableEncodingY = !if(hasSrc2AccY, "$src2Y", "");
-  let DisableEncoding =
-      DisableEncodingX # !if(!and(hasSrc2AccX, hasSrc2AccY), ", ", "") # DisableEncodingY;
 
   let Uses = RegListUnion<VDX.Uses, VDY.Uses>.ret;
   let Defs = RegListUnion<VDX.Defs, VDY.Defs>.ret;
@@ -228,7 +224,7 @@ foreach Gen = [GFX11GenD, GFX12GenD, GFX1250GenD] in {
       defvar isOpXMADK = !or(!eq(x, "V_FMAAK_F32"), !eq(x, "V_FMAMK_F32"));
       defvar isOpYMADK = !or(!eq(y, "V_FMAAK_F32"), !eq(y, "V_FMAMK_F32"));
       defvar OpName = "V_DUAL_" # !substr(x,2) # "_X_" # !substr(y,2) # Gen.Suffix;
-      defvar outs = (outs VGPRSrc_32:$vdstX, VOPDDstYOperand:$vdstY);
+      defvar outs = (outs VGPROp_32:$vdstX, VOPDDstYOperand:$vdstY);
       if !or(isOpXMADK, isOpYMADK) then {
         // If Both X and Y are MADK, the mandatory literal of X additionally must
         // use an alternate operand format which defers to the 'real' Y literal.

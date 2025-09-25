@@ -68,7 +68,7 @@ struct test_atomic<T, /*Integral=*/true, false, false> {
 };
 
 template <class T>
-struct test_atomic<T, false, /*Foating=*/true, false> {
+struct test_atomic<T, false, /*Floating=*/true, false> {
   test_atomic() {
     using A = std::atomic<T>;
     A a;

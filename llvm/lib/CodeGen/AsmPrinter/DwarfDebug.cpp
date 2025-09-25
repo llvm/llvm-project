@@ -558,18 +558,14 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
 
   // Find the subprogram's DwarfCompileUnit in the SPMap in case the subprogram
   // was inlined from another compile unit.
-  if (useSplitDwarf() && !shareAcrossDWOCUs() && !SP->getUnit()->getSplitDebugInlining())
-    // Avoid building the original CU if it won't be used
-    SrcCU.constructAbstractSubprogramScopeDIE(Scope);
-  else {
-    auto &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
-    if (auto *SkelCU = CU.getSkeleton()) {
-      (shareAcrossDWOCUs() ? CU : SrcCU)
-          .constructAbstractSubprogramScopeDIE(Scope);
-      if (CU.getCUNode()->getSplitDebugInlining())
-        SkelCU->constructAbstractSubprogramScopeDIE(Scope);
-    } else
-      CU.constructAbstractSubprogramScopeDIE(Scope);
+  auto &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
+  if (auto *SkelCU = CU.getSkeleton()) {
+    (shareAcrossDWOCUs() ? CU : SrcCU)
+        .constructAbstractSubprogramScopeDIE(Scope);
+    if (CU.getCUNode()->getSplitDebugInlining())
+      SkelCU->constructAbstractSubprogramScopeDIE(Scope);
+  } else {
+    CU.constructAbstractSubprogramScopeDIE(Scope);
   }
 }
 
@@ -3111,8 +3107,10 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                             &AP](const DbgValueLocEntry &Entry,
                                  DIExpressionCursor &Cursor) -> bool {
     if (Entry.isInt()) {
-      if (BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
-                 BT->getEncoding() == dwarf::DW_ATE_signed_char))
+      if (BT && (BT->getEncoding() == dwarf::DW_ATE_boolean))
+        DwarfExpr.addBooleanConstant(Entry.getInt());
+      else if (BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
+                      BT->getEncoding() == dwarf::DW_ATE_signed_char))
         DwarfExpr.addSignedConstant(Entry.getInt());
       else
         DwarfExpr.addUnsignedConstant(Entry.getInt());

@@ -187,14 +187,14 @@ define i64 @bittest_31_i64(i64 %a) nounwind {
 ;
 ; RV64ZBS-LABEL: bittest_31_i64:
 ; RV64ZBS:       # %bb.0:
-; RV64ZBS-NEXT:    srliw a0, a0, 31
-; RV64ZBS-NEXT:    xori a0, a0, 1
+; RV64ZBS-NEXT:    sraiw a0, a0, 31
+; RV64ZBS-NEXT:    seqz a0, a0
 ; RV64ZBS-NEXT:    ret
 ;
 ; RV64XTHEADBS-LABEL: bittest_31_i64:
 ; RV64XTHEADBS:       # %bb.0:
-; RV64XTHEADBS-NEXT:    srliw a0, a0, 31
-; RV64XTHEADBS-NEXT:    xori a0, a0, 1
+; RV64XTHEADBS-NEXT:    sraiw a0, a0, 31
+; RV64XTHEADBS-NEXT:    seqz a0, a0
 ; RV64XTHEADBS-NEXT:    ret
   %shr = lshr i64 %a, 31
   %not = xor i64 %shr, -1
@@ -3512,13 +3512,13 @@ define i32 @bittest_31_andeq0_i64(i64 %x) {
 ; RV32-LABEL: bittest_31_andeq0_i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a0, a0, 31
-; RV32-NEXT:    xori a0, a0, 1
+; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bittest_31_andeq0_i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srliw a0, a0, 31
-; RV64-NEXT:    xori a0, a0, 1
+; RV64-NEXT:    sraiw a0, a0, 31
+; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    ret
   %and = and i64 %x, 2147483648
   %cmp = icmp eq i64 %and, 0
@@ -3530,13 +3530,13 @@ define i32 @bittest_63_andeq0_i64(i64 %x) {
 ; RV32-LABEL: bittest_63_andeq0_i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a1, a1, 31
-; RV32-NEXT:    xori a0, a1, 1
+; RV32-NEXT:    seqz a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bittest_63_andeq0_i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    srli a0, a0, 63
-; RV64-NEXT:    xori a0, a0, 1
+; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    ret
   %and = and i64 %x, 9223372036854775808
   %cmp = icmp eq i64 %and, 0

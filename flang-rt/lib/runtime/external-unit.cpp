@@ -57,7 +57,7 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreate(
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
-    Direction dir, Fortran::common::optional<bool> isUnformatted,
+    Direction dir, common::optional<bool> isUnformatted,
     IoErrorHandler &handler) {
   // Make sure that the returned anonymous unit has been opened,
   // not just created in the unitMap.
@@ -109,8 +109,8 @@ ExternalFileUnit &ExternalFileUnit::NewUnit(
   return unit;
 }
 
-bool ExternalFileUnit::OpenUnit(Fortran::common::optional<OpenStatus> status,
-    Fortran::common::optional<Action> action, Position position,
+bool ExternalFileUnit::OpenUnit(common::optional<OpenStatus> status,
+    common::optional<Action> action, Position position,
     OwningPtr<char> &&newPath, std::size_t newPathLength, Convert convert,
     IoErrorHandler &handler) {
   if (convert == Convert::Unknown) {
@@ -122,7 +122,7 @@ bool ExternalFileUnit::OpenUnit(Fortran::common::optional<OpenStatus> status,
   bool impliedClose{false};
   if (IsConnected()) {
     bool isSamePath{newPath.get() && path() && pathLength() == newPathLength &&
-        std::memcmp(path(), newPath.get(), newPathLength) == 0};
+        runtime::memcmp(path(), newPath.get(), newPathLength) == 0};
     if (status && *status != OpenStatus::Old && isSamePath) {
       handler.SignalError("OPEN statement for connected unit may not have "
                           "explicit STATUS= other than 'OLD'");
@@ -131,6 +131,7 @@ bool ExternalFileUnit::OpenUnit(Fortran::common::optional<OpenStatus> status,
     if (!newPath.get() || isSamePath) {
       // OPEN of existing unit, STATUS='OLD' or unspecified, not new FILE=
       newPath.reset();
+      Open(status.value_or(OpenStatus::Old), action, position, handler);
       return impliedClose;
     }
     // Otherwise, OPEN on open unit with new FILE= implies CLOSE
@@ -194,16 +195,15 @@ bool ExternalFileUnit::OpenUnit(Fortran::common::optional<OpenStatus> status,
   return impliedClose;
 }
 
-bool ExternalFileUnit::OpenAnonymousUnit(
-    Fortran::common::optional<OpenStatus> status,
-    Fortran::common::optional<Action> action, Position position,
-    Convert convert, IoErrorHandler &handler) {
+bool ExternalFileUnit::OpenAnonymousUnit(common::optional<OpenStatus> status,
+    common::optional<Action> action, Position position, Convert convert,
+    IoErrorHandler &handler) {
   // I/O to an unconnected unit reads/creates a local file, e.g. fort.7
   std::size_t pathMaxLen{32};
   auto path{SizedNew<char>{handler}(pathMaxLen)};
   std::snprintf(path.get(), pathMaxLen, "fort.%d", unitNumber_);
-  OpenUnit(status, action, position, std::move(path), std::strlen(path.get()),
-      convert, handler);
+  OpenUnit(status, action, position, std::move(path),
+      runtime::strlen(path.get()), convert, handler);
   return IsConnected();
 }
 

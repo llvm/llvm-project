@@ -147,8 +147,20 @@ mlir::Value fir::FirOpBuilder::createIntegerConstant(mlir::Location loc,
   assert((cst >= 0 || mlir::isa<mlir::IndexType>(ty) ||
           mlir::cast<mlir::IntegerType>(ty).getWidth() <= 64) &&
          "must use APint");
-  return mlir::arith::ConstantOp::create(*this, loc, ty,
-                                         getIntegerAttr(ty, cst));
+
+  mlir::Type cstType = ty;
+  if (auto intType = mlir::dyn_cast<mlir::IntegerType>(ty)) {
+    // Signed and unsigned constants must be encoded as signless
+    // arith.constant followed by fir.convert cast.
+    if (intType.isUnsigned())
+      cstType = mlir::IntegerType::get(getContext(), intType.getWidth());
+    else if (intType.isSigned())
+      TODO(loc, "signed integer constant");
+  }
+
+  mlir::Value cstValue = mlir::arith::ConstantOp::create(
+      *this, loc, cstType, getIntegerAttr(cstType, cst));
+  return createConvert(loc, ty, cstValue);
 }
 
 mlir::Value fir::FirOpBuilder::createAllOnesInteger(mlir::Location loc,
@@ -411,10 +423,11 @@ mlir::Value fir::FirOpBuilder::genTempDeclareOp(
     llvm::ArrayRef<mlir::Value> typeParams,
     fir::FortranVariableFlagsAttr fortranAttrs) {
   auto nameAttr = mlir::StringAttr::get(builder.getContext(), name);
-  return fir::DeclareOp::create(builder, loc, memref.getType(), memref, shape,
-                                typeParams,
-                                /*dummy_scope=*/nullptr, nameAttr, fortranAttrs,
-                                cuf::DataAttributeAttr{});
+  return fir::DeclareOp::create(
+      builder, loc, memref.getType(), memref, shape, typeParams,
+      /*dummy_scope=*/nullptr,
+      /*storage=*/nullptr,
+      /*storage_offset=*/0, nameAttr, fortranAttrs, cuf::DataAttributeAttr{});
 }
 
 mlir::Value fir::FirOpBuilder::genStackSave(mlir::Location loc) {

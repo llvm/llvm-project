@@ -283,6 +283,16 @@ Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
       });
 }
 
+bool RecordType::isLayoutIdentical(const RecordType &other) {
+  if (getImpl() == other.getImpl())
+    return true;
+
+  if (getPacked() != other.getPacked())
+    return false;
+
+  return getMembers() == other.getMembers();
+}
+
 //===----------------------------------------------------------------------===//
 // Data Layout information for types
 //===----------------------------------------------------------------------===//

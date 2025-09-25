@@ -1,0 +1,129 @@
+RUN: yaml2obj %p/Inputs/sectionlayout.yaml -o %t.obj
+
+## Error on non-exist input layout file
+RUN: not lld-link /entry:main /sectionlayout:doesnotexist.txt %t.obj
+
+## Order in 1 -> 3 -> 2
+RUN: echo ".text1" > %t.layout.txt
+RUN: echo ".text3" >> %t.layout.txt
+RUN: echo ".text2" >> %t.layout.txt
+RUN: lld-link /out:%t.exe /entry:main /sectionlayout:%t.layout.txt %t.obj
+RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK1 %s
+
+## While /sectionlayout:abc is valid, /sectionlayout:@abc is also accepted (to align with MS link.exe)
+RUN: lld-link /out:%t.exe /entry:main /sectionlayout:@%t.layout.txt %t.obj
+RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK1 %s
+
+## Ensure tokens after section name is ignored (for now, to align with MS link.exe)
+RUN: echo ".text1 ALIGN=1" > %t.layout.txt
+RUN: echo ".text3" >> %t.layout.txt
+RUN: echo ".text2" >> %t.layout.txt
+RUN: lld-link /out:%t.exe /entry:main /sectionlayout:@%t.layout.txt %t.obj
+RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK1 %s
+
+CHECK1: Sections [
+CHECK1:   Section {
+CHECK1:     Number: 1
+CHECK1:     Name: .text1
+CHECK1:   }
+CHECK1:   Section {
+CHECK1:     Number: 2
+CHECK1:     Name: .text3
+CHECK1:   }
+CHECK1:   Section {
+CHECK1:     Number: 3
+CHECK1:     Name: .text2
+CHECK1:   }
+CHECK1: ]
+
+## Order in 3 -> 2 -> 1
+RUN: echo ".text3" > %t.layout.txt
+RUN: echo ".text2" >> %t.layout.txt
+RUN: echo ".text1" >> %t.layout.txt
+RUN: lld-link /out:%t.exe /entry:main /sectionlayout:%t.layout.txt %t.obj
+RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK2 %s
+
+CHECK2: Sections [
+CHECK2:   Section {
+CHECK2:     Number: 1
+CHECK2:     Name: .text3
+CHECK2:   }
+CHECK2:   Section {
+CHECK2:     Number: 2
+CHECK2:     Name: .text2
+CHECK2:   }
+CHECK2:   Section {
+CHECK2:     Number: 3
+CHECK2:     Name: .text1
+CHECK2:   }
+CHECK2: ]
+
+## Put non-exisist section in layout file has no effect; original order is respected
+RUN: echo "notexist" > %t.layout.txt
+RUN: lld-link /out:%t.exe /entry:main /sectionlayout:%t.layout.txt %t.obj
+RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK3 %s
+
+## Empty layout file has no effect
+RUN: echo "" > %t.layout.txt
+RUN: lld-link /out:%t.exe /entry:main /sectionlayout:%t.layout.txt %t.obj
+RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK3 %s
+
+## Empty layout file has no effect
+RUN: echo " " > %t.layout.txt
+RUN: echo " " >> %t.layout.txt
+RUN: lld-link /out:%t.exe /entry:main /sectionlayout:%t.layout.txt %t.obj
+RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK3 %s
+
+CHECK3: Sections [
+CHECK3:   Section {
+CHECK3:     Number: 1
+CHECK3:     Name: .text1
+CHECK3:   }
+CHECK3:   Section {
+CHECK3:     Number: 2
+CHECK3:     Name: .text2
+CHECK3:   }
+CHECK3:   Section {
+CHECK3:     Number: 3
+CHECK3:     Name: .text3
+CHECK3:   }
+CHECK3: ]
+
+## Order in 3 -> 1, but 2 remains unspecified
+RUN: echo ".text3" > %t.layout.txt
+RUN: echo ".text1" >> %t.layout.txt
+RUN: lld-link /out:%t.exe /entry:main /sectionlayout:%t.layout.txt %t.obj
+RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK4 %s
+
+CHECK4: Sections [
+CHECK4:   Section {
+CHECK4:     Number: 1
+CHECK4:     Name: .text3
+CHECK4:   }
+CHECK4:   Section {
+CHECK4:     Number: 2
+CHECK4:     Name: .text1
+CHECK4:   }
+CHECK4:   Section {
+CHECK4:     Number: 3
+CHECK4:     Name: .text2
+CHECK4:   }
+CHECK4: ]
+
+## Order in 3 -> 2, but 1 remains unspecified.
+## 1 should be the first, as the original order (1 -> 2 -> 3) is respected
+RUN: echo ".text3" > %t.layout.txt
+RUN: echo ".text2" >> %t.layout.txt
+RUN: lld-link /out:%t.exe /entry:main /sectionlayout:%t.layout.txt %t.obj
+RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK2 %s
+
+## Order in 3 -> 2 -> 1, multiple specification has no effect (the first one is used)
+RUN: echo ".text3" > %t.layout.txt
+RUN: echo ".text3" >> %t.layout.txt
+RUN: echo ".text3" >> %t.layout.txt
+RUN: echo ".text2" >> %t.layout.txt
+RUN: echo ".text2" >> %t.layout.txt
+RUN: echo ".text1" >> %t.layout.txt
+RUN: echo ".text3" >> %t.layout.txt
+RUN: lld-link /out:%t.exe /entry:main /sectionlayout:%t.layout.txt %t.obj
+RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK2 %s
