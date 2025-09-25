@@ -214,7 +214,7 @@ constexpr bool test_ref() {
   {
     int i = 42;
     std::optional<int&> opt{i};
-    std::same_as<std::optional<int>> decltype(auto) o2 = opt.transform([](int i) { return i + 2; });
+    std::same_as<std::optional<int>> decltype(auto) o2 = opt.transform([](int j) { return j + 2; });
 
     assert(*o2 == 44);
   }
