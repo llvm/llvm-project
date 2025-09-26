@@ -1353,10 +1353,6 @@ mlir::LogicalResult cir::GlobalOp::verify() {
   // not empty.
   auto &ctorRegion = getCtorRegion();
   if (!ctorRegion.empty()) {
-    if (!ctorRegion.hasOneBlock()) {
-      return emitError() << "ctor region must have exactly one block.";
-    }
-
     auto &block = ctorRegion.front();
     if (block.empty()) {
       return emitError() << "ctor region shall not be empty.";
@@ -1367,10 +1363,6 @@ mlir::LogicalResult cir::GlobalOp::verify() {
   // not empty.
   auto &dtorRegion = getDtorRegion();
   if (!dtorRegion.empty()) {
-    if (!dtorRegion.hasOneBlock()) {
-      return emitError() << "dtor region must have exactly one block.";
-    }
-
     auto &block = dtorRegion.front();
     if (block.empty()) {
       return emitError() << "dtor region shall not be empty.";

@@ -1809,7 +1809,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        UnitAttr:$dso_local,
                        OptionalAttr<I64Attr>:$alignment);
 
-  let regions = (region AnyRegion:$ctorRegion, AnyRegion:$dtorRegion);
+  let regions = (region MaxSizedRegion<1>:$ctorRegion,
+                        MaxSizedRegion<1>:$dtorRegion);
 
   let assemblyFormat = [{
     ($sym_visibility^)?
@@ -1840,7 +1841,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
       CArg<"bool", "false">:$isConstant,
       // CIR defaults to external linkage.
       CArg<"cir::GlobalLinkageKind",
-      "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
+           "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
       CArg<"llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>",
            "nullptr">:$ctorBuilder,
       CArg<"llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>",
