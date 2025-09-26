@@ -1640,9 +1640,6 @@ ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
   class_template_decl->init(template_cxx_decl);
   template_cxx_decl->setDescribedClassTemplate(class_template_decl);
   SetOwningModule(class_template_decl, owning_module);
-  ast.getInjectedClassNameType(
-      template_cxx_decl,
-      class_template_decl->getInjectedClassNameSpecialization());
 
   if (access_type != eAccessNone)
     class_template_decl->setAccess(
