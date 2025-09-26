@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DependencyScanner.h"
+#include "DependencyScannerImpl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSerialization.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -40,32 +40,6 @@ private:
   StringRef WorkingDirectory;
   std::unique_ptr<DependencyOutputOptions> Opts;
   DependencyConsumer &C;
-};
-
-class ScanningDependencyDirectivesGetter : public DependencyDirectivesGetter {
-  DependencyScanningWorkerFilesystem *DepFS;
-
-public:
-  ScanningDependencyDirectivesGetter(FileManager &FileMgr) : DepFS(nullptr) {
-    FileMgr.getVirtualFileSystem().visit([&](llvm::vfs::FileSystem &FS) {
-      auto *DFS = llvm::dyn_cast<DependencyScanningWorkerFilesystem>(&FS);
-      if (DFS) {
-        assert(!DepFS && "Found multiple scanning VFSs");
-        DepFS = DFS;
-      }
-    });
-    assert(DepFS && "Did not find scanning VFS");
-  }
-
-  std::unique_ptr<DependencyDirectivesGetter>
-  cloneFor(FileManager &FileMgr) override {
-    return std::make_unique<ScanningDependencyDirectivesGetter>(FileMgr);
-  }
-
-  std::optional<ArrayRef<dependency_directives_scan::Directive>>
-  operator()(FileEntryRef File) override {
-    return DepFS->getDirectiveTokens(File.getName());
-  }
 };
 
 static bool checkHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
@@ -207,6 +181,42 @@ private:
   const ArrayRef<StringRef> StableDirs;
 };
 
+/// Visit the given prebuilt module and collect all of the modules it
+/// transitively imports and contributing input files.
+static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
+                                CompilerInstance &CI,
+                                PrebuiltModuleFilesT &ModuleFiles,
+                                PrebuiltModulesAttrsMap &PrebuiltModulesASTMap,
+                                DiagnosticsEngine &Diags,
+                                const ArrayRef<StringRef> StableDirs) {
+  // List of module files to be processed.
+  llvm::SmallVector<std::string> Worklist;
+
+  PrebuiltModuleListener Listener(ModuleFiles, Worklist, PrebuiltModulesASTMap,
+                                  CI.getHeaderSearchOpts(), CI.getLangOpts(),
+                                  Diags, StableDirs);
+
+  Listener.visitModuleFile(PrebuiltModuleFilename,
+                           serialization::MK_ExplicitModule);
+  if (ASTReader::readASTFileControlBlock(
+          PrebuiltModuleFilename, CI.getFileManager(), CI.getModuleCache(),
+          CI.getPCHContainerReader(),
+          /*FindModuleFileExtensions=*/false, Listener,
+          /*ValidateDiagnosticOptions=*/false, ASTReader::ARR_OutOfDate))
+    return true;
+
+  while (!Worklist.empty()) {
+    Listener.visitModuleFile(Worklist.back(), serialization::MK_ExplicitModule);
+    if (ASTReader::readASTFileControlBlock(
+            Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
+            CI.getPCHContainerReader(),
+            /*FindModuleFileExtensions=*/false, Listener,
+            /*ValidateDiagnosticOptions=*/false))
+      return true;
+  }
+  return false;
+}
+
 /// Transform arbitrary file name into an object-like file name.
 static std::string makeObjFileName(StringRef FileName) {
   SmallString<128> ObjFileName(FileName);
@@ -297,42 +307,31 @@ static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
   std::swap(PPOpts.Macros, NewMacros);
 }
 
-/// Visit the given prebuilt module and collect all of the modules it
-/// transitively imports and contributing input files.
-static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
-                                CompilerInstance &CI,
-                                PrebuiltModuleFilesT &ModuleFiles,
-                                PrebuiltModulesAttrsMap &PrebuiltModulesASTMap,
-                                DiagnosticsEngine &Diags,
-                                const ArrayRef<StringRef> StableDirs) {
-  // List of module files to be processed.
-  llvm::SmallVector<std::string> Worklist;
+class ScanningDependencyDirectivesGetter : public DependencyDirectivesGetter {
+  DependencyScanningWorkerFilesystem *DepFS;
 
-  PrebuiltModuleListener Listener(ModuleFiles, Worklist, PrebuiltModulesASTMap,
-                                  CI.getHeaderSearchOpts(), CI.getLangOpts(),
-                                  Diags, StableDirs);
-
-  Listener.visitModuleFile(PrebuiltModuleFilename,
-                           serialization::MK_ExplicitModule);
-  if (ASTReader::readASTFileControlBlock(
-          PrebuiltModuleFilename, CI.getFileManager(), CI.getModuleCache(),
-          CI.getPCHContainerReader(),
-          /*FindModuleFileExtensions=*/false, Listener,
-          /*ValidateDiagnosticOptions=*/false, ASTReader::ARR_OutOfDate))
-    return true;
-
-  while (!Worklist.empty()) {
-    Listener.visitModuleFile(Worklist.back(), serialization::MK_ExplicitModule);
-    if (ASTReader::readASTFileControlBlock(
-            Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
-            CI.getPCHContainerReader(),
-            /*FindModuleFileExtensions=*/false, Listener,
-            /*ValidateDiagnosticOptions=*/false))
-      return true;
+public:
+  ScanningDependencyDirectivesGetter(FileManager &FileMgr) : DepFS(nullptr) {
+    FileMgr.getVirtualFileSystem().visit([&](llvm::vfs::FileSystem &FS) {
+      auto *DFS = llvm::dyn_cast<DependencyScanningWorkerFilesystem>(&FS);
+      if (DFS) {
+        assert(!DepFS && "Found multiple scanning VFSs");
+        DepFS = DFS;
+      }
+    });
+    assert(DepFS && "Did not find scanning VFS");
   }
-  return false;
-}
 
+  std::unique_ptr<DependencyDirectivesGetter>
+  cloneFor(FileManager &FileMgr) override {
+    return std::make_unique<ScanningDependencyDirectivesGetter>(FileMgr);
+  }
+
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
+  operator()(FileEntryRef File) override {
+    return DepFS->getDirectiveTokens(File.getName());
+  }
+};
 } // namespace
 
 /// Sanitize diagnostic options for dependency scan.

@@ -10,7 +10,7 @@ add_clang_library(clangDependencyScanning
   DependencyScanningService.cpp
   DependencyScanningWorker.cpp
   DependencyScanningTool.cpp
-  DependencyScanner.cpp
+  DependencyScannerImpl.cpp
   InProcessModuleCache.cpp
   ModuleDepCollector.cpp
 
