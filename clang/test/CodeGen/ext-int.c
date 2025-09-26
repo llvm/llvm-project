@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c23 -triple x86_64-gnu-linux -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK64,LIN64
+// RUN: %clang_cc1 -std=c23 -triple x86_64-gnu-linux -O3 -load-bool-from-mem=nonzero -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK64,LIN64
 // RUN: %clang_cc1 -std=c23 -triple x86_64-windows-pc -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK64,WIN64
 // RUN: %clang_cc1 -std=c23 -triple i386-gnu-linux -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN32
 // RUN: %clang_cc1 -std=c23 -triple i386-windows-pc -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN32
