@@ -356,8 +356,8 @@ CommandObjectDisassemble::GetCurrentLineRanges() {
 
   LineEntry pc_line_entry(
       frame->GetSymbolContext(eSymbolContextLineEntry).line_entry);
-  if (pc_line_entry.IsValid())
-    return std::vector<AddressRange>{pc_line_entry.range};
+  if (pc_line_entry.IsValid() && pc_line_entry.HasValidRange())
+    return std::vector<AddressRange>{pc_line_entry.GetRange()};
 
   // No line entry, so just disassemble around the current pc
   m_options.show_mixed = false;

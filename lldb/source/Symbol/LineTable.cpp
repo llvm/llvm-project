@@ -244,19 +244,20 @@ bool LineTable::ConvertEntryAtIndexToLineEntry(uint32_t idx,
   if (entry.is_terminal_entry)
     --file_addr;
 
-  if (!module_sp->ResolveFileAddress(file_addr,
-                                     line_entry.range.GetBaseAddress()))
+  AddressRange range;
+  if (!module_sp->ResolveFileAddress(file_addr, range.GetBaseAddress()))
     return false;
 
   // Now undo the decrement above.
-  if (entry.is_terminal_entry)
-    line_entry.range.GetBaseAddress().Slide(1);
+  if (entry.is_terminal_entry) {
+    range.GetBaseAddress().Slide(1);
+  }
 
   if (!entry.is_terminal_entry && idx + 1 < m_entries.size())
-    line_entry.range.SetByteSize(m_entries[idx + 1].file_addr -
-                                 entry.file_addr);
+    range.SetByteSize(m_entries[idx + 1].file_addr - entry.file_addr);
   else
-    line_entry.range.SetByteSize(0);
+    range.SetByteSize(0);
+  line_entry.SetRange(range);
 
   line_entry.file_sp =
       m_comp_unit->GetSupportFiles().GetSupportFileAtIndex(entry.file_idx);

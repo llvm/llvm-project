@@ -956,7 +956,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
               continue;
 
             auto file_vm_addr =
-                sc.line_entry.range.GetBaseAddress().GetFileAddress();
+                sc.line_entry.GetRange().GetBaseAddress().GetFileAddress();
             if (file_vm_addr == LLDB_INVALID_ADDRESS || file_vm_addr == 0)
               continue;
 

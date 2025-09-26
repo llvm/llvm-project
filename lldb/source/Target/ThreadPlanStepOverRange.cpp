@@ -265,7 +265,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
                           SupportFile::eEqualFileSpecAndChecksumIfSet)) {
                     SymbolContext prev_sc;
                     Address prev_address =
-                        prev_line_entry.range.GetBaseAddress();
+                        prev_line_entry.GetRange().GetBaseAddress();
                     prev_address.CalculateSymbolContext(&prev_sc);
                     if (prev_sc.block) {
                       Block *inlined_block =
@@ -290,7 +290,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
                     // Make sure we haven't wandered out of the function we
                     // started from...
                     Address next_line_address =
-                        next_line_entry.range.GetBaseAddress();
+                        next_line_entry.GetRange().GetBaseAddress();
                     Function *next_line_function =
                         next_line_address.CalculateSymbolContextFunction();
                     if (next_line_function != m_addr_context.function)
