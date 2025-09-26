@@ -1,237 +1,264 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa < %s
+; RUN: opt -S -mtriple=amdgcn-- -mcpu=gfx942 -amdgpu-lower-module-lds < %s 2>&1 | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-- -mcpu=gfx942 -passes=amdgpu-lower-module-lds < %s 2>&1 | FileCheck %s
 
-%"struct.rocprim::ROCPRIM_400000_NS::detail::raw_storage" = type { [1056 x i8] }
-%"struct.rocprim::ROCPRIM_400000_NS::detail::raw_storage.17" = type { [4 x i8] }
-%"struct.rocprim::ROCPRIM_400000_NS::detail::raw_storage.43" = type { [16 x i8] }
+; This test has the following kernels with following GV access pattern
+; EN32 kernels
+; EN32_compress_wrapperIhm - GV's 1, 2, 3, 4, 5, 6, 7
+; EN32_compress_wrapperItm - GV's 8, 9, 10, 11, 12, 13, 7
+; EN32_compress_wrapperIjm - GV's 15, 16, 17, 18, 19, 20, 7
+; EN32_compress_wrapperImm - GV's 21, 22, 23, 24, 25, 26, 27, 7
+; EN64 kernels
+; EN64_compress_wrapperIhm - GV's 1, 2, 3, 4, 5, 6, 7
+; EN64_compress_wrapperItm - GV's 8, 9, 10, 11, 12, 13, 7
+; EN64_compress_wrapperIjm - GV's 15, 16, 17, 18, 19, 20, 7
+; EN64_compress_wrapperImm - GV's 21, 22, 23, 24, 25, 26, 27, 7
 
-@_ZZN7hipcomp30do_cascaded_compression_kernelIhmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_0 = addrspace(3) global [1026 x i32] undef
-@_ZZN7hipcomp30do_cascaded_compression_kernelIhmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_1 = addrspace(3) global [1026 x i32] undef
-@_ZZN7hipcomp30do_cascaded_compression_kernelIhmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE19shared_count_buffer = external addrspace(3) global [2048 x i32]
-@_ZZN7hipcomp30do_cascaded_compression_kernelIhmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE17shared_tmp_buffer = addrspace(3) global [2050 x i32] undef
-@_ZZN7hipcomp30do_cascaded_compression_kernelIhmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE14chunk_metadata = addrspace(3) global [16 x i32] undef
-@_ZZN7hipcomp18block_rle_compressIhmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_E12temp_storage = external addrspace(3) global %"struct.rocprim::ROCPRIM_400000_NS::detail::raw_storage"
-@_ZZN7hipcomp16get_for_bitwidthItmLi128EEEvPKT_T0_PS1_PjE12temp_storage = addrspace(3) global %"struct.rocprim::ROCPRIM_400000_NS::detail::raw_storage.17" undef
-@_ZZN7hipcomp30do_cascaded_compression_kernelItmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_0 = addrspace(3) global [1026 x i32] undef
-@_ZZN7hipcomp30do_cascaded_compression_kernelItmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_1 = addrspace(3) global [1026 x i32] undef
-@_ZZN7hipcomp30do_cascaded_compression_kernelItmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE19shared_count_buffer = external addrspace(3) global [1024 x i32]
-@_ZZN7hipcomp30do_cascaded_compression_kernelItmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE17shared_tmp_buffer = addrspace(3) global [1026 x i32] undef
-@_ZZN7hipcomp30do_cascaded_compression_kernelItmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE14chunk_metadata = external addrspace(3) global [16 x i32]
-@_ZZN7hipcomp18block_rle_compressItmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_E12temp_storage = external addrspace(3) global %"struct.rocprim::ROCPRIM_400000_NS::detail::raw_storage"
-@_ZZ23HlifCompressBatchKernelILi32EN7hipcomp25cascaded_compress_wrapperIjmLi128ELi4096EEERK28hipcompBatchedCascadedOpts_tLi1EENSt9enable_ifIXsr3std10is_base_ofI21hlif_compress_wrapperT0_EE5valueEvE4typeE12CompressArgsT1_E13output_status = external addrspace(3) global [1 x i32]
-@_ZZN7hipcomp30do_cascaded_compression_kernelIjmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_0 = addrspace(3) global [1026 x i32] undef
-@_ZZN7hipcomp30do_cascaded_compression_kernelIjmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_1 = addrspace(3) global [1026 x i32] undef
-@_ZZN7hipcomp30do_cascaded_compression_kernelIjmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE19shared_count_buffer = external addrspace(3) global [512 x i32]
-@_ZZN7hipcomp30do_cascaded_compression_kernelIjmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE17shared_tmp_buffer = addrspace(3) global [514 x i32] undef
-@_ZZN7hipcomp30do_cascaded_compression_kernelIjmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE14chunk_metadata = external addrspace(3) global [16 x i32]
-@_ZZN7hipcomp18block_rle_compressIjmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_E12temp_storage = external addrspace(3) global %"struct.rocprim::ROCPRIM_400000_NS::detail::raw_storage"
-@_ZZN7hipcomp30do_cascaded_compression_kernelImmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_0 = external addrspace(3) global [514 x i64]
-@_ZZN7hipcomp30do_cascaded_compression_kernelImmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_1 = external addrspace(3) global [514 x i64]
-@_ZZN7hipcomp30do_cascaded_compression_kernelImmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE19shared_count_buffer = external addrspace(3) global [256 x i32]
-@_ZZN7hipcomp30do_cascaded_compression_kernelImmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE17shared_tmp_buffer = external addrspace(3) global [258 x i32]
-@_ZZN7hipcomp30do_cascaded_compression_kernelImmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE14chunk_metadata = external addrspace(3) global [16 x i32]
-@_ZZN7hipcomp18block_rle_compressImmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_E12temp_storage = external addrspace(3) global %"struct.rocprim::ROCPRIM_400000_NS::detail::raw_storage"
-@_ZZN7hipcomp16get_for_bitwidthImmLi128EEEvPKT_T0_PS1_PjE12temp_storage = external addrspace(3) global %"struct.rocprim::ROCPRIM_400000_NS::detail::raw_storage.43"
+; CHECK: define amdgpu_kernel void @EN32_compress_wrapperIhm() #0
+; CHECK: define amdgpu_kernel void @EN32_compress_wrapperItm() #2
+; CHECK: define amdgpu_kernel void @EN32_compress_wrapperIjm() #3
+; CHECK: define amdgpu_kernel void @EN32_compress_wrapperImm() #4
+; CHECK: define amdgpu_kernel void @EN64_compress_wrapperIhm() #0
+; CHECK: define amdgpu_kernel void @EN64_compress_wrapperItm() #2
+; CHECK: define amdgpu_kernel void @EN64_compress_wrapperIjm() #3
+; CHECK: define amdgpu_kernel void @EN64_compress_wrapperImm() #4
 
-define amdgpu_kernel void @_Z23HlifCompressBatchKernelILi32EN7hipcomp25cascaded_compress_wrapperIhmLi128ELi4096EEERK28hipcompBatchedCascadedOpts_tLi1EENSt9enable_ifIXsr3std10is_base_ofI21hlif_compress_wrapperT0_EE5valueEvE4typeE12CompressArgsT1_() {
+; CHECK: attributes #0 = { "amdgpu-lds-size"="25760" "target-cpu"="gfx942" }
+; CHECK: attributes #2 = { "amdgpu-lds-size"="17560" "target-cpu"="gfx942" }
+; CHECK: attributes #3 = { "amdgpu-lds-size"="13464" "target-cpu"="gfx942" }
+; CHECK: attributes #4 = { "amdgpu-lds-size"="11424" "target-cpu"="gfx942" }
+
+%RawStorage1 = type { [1056 x i8] }
+%RawStorage2 = type { [4 x i8] }
+%RawStorage3 = type { [16 x i8] }
+
+@one = addrspace(3) global [1026 x i32] poison
+@two = addrspace(3) global [1026 x i32] poison
+@three = external addrspace(3) global [2048 x i32]
+@four = addrspace(3) global [2050 x i32] poison
+@five = addrspace(3) global [16 x i32] poison
+@six = external addrspace(3) global %RawStorage1
+@seven = addrspace(3) global %RawStorage2 poison
+@eight = addrspace(3) global [1026 x i32] poison
+@nine = addrspace(3) global [1026 x i32] poison
+@ten = external addrspace(3) global [1024 x i32]
+@eleven = addrspace(3) global [1026 x i32] poison
+@twelve = external addrspace(3) global [16 x i32]
+@thirteen = external addrspace(3) global %RawStorage1
+@fourteen = external addrspace(3) global [1 x i32]
+@fifteen = addrspace(3) global [1026 x i32] poison
+@sixteen = addrspace(3) global [1026 x i32] poison
+@seventeen = external addrspace(3) global [512 x i32]
+@eighteen = addrspace(3) global [514 x i32] poison
+@nineteen = external addrspace(3) global [16 x i32]
+@twenty = external addrspace(3) global %RawStorage1
+@twentyone = external addrspace(3) global [514 x i64]
+@twentytwo = external addrspace(3) global [514 x i64]
+@twentythree = external addrspace(3) global [256 x i32]
+@twentyfour = external addrspace(3) global [258 x i32]
+@twentyfive = external addrspace(3) global [16 x i32]
+@twentysix = external addrspace(3) global %RawStorage1
+@twentyseven = external addrspace(3) global %RawStorage3
+
+define amdgpu_kernel void @EN32_compress_wrapperIhm() {
 entry:
-  %0 = call i32 @_Z17HlifCompressBatchILi1ERN7hipcomp25cascaded_compress_wrapperIhmLi128ELi4096EEERN18cooperative_groups12thread_blockEEvRK12CompressArgsOT0_OT1_()
+  %0 = call i32 @Ihm_one()
   ret void
 }
 
-define i32 @_Z17HlifCompressBatchILi1ERN7hipcomp25cascaded_compress_wrapperIhmLi128ELi4096EEERN18cooperative_groups12thread_blockEEvRK12CompressArgsOT0_OT1_() {
+define i32 @Ihm_one() {
 entry:
-  %0 = call i32 @_ZN7hipcomp25cascaded_compress_wrapperIhmLi128ELi4096EE14compress_chunkEPhPKhmmPm()
+  %0 = call i32 @Ihm_chunk()
   ret i32 %0
 }
 
-define i32 @_ZN7hipcomp25cascaded_compress_wrapperIhmLi128ELi4096EE14compress_chunkEPhPKhmmPm() {
+define i32 @Ihm_chunk() {
 entry:
-  %0 = call i32 @_ZN7hipcomp30do_cascaded_compression_kernelIhmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_t()
+  %0 = call i32 @Ihm_CascadedOpts()
   ret i32 %0
 }
 
-define i32 @_ZN7hipcomp30do_cascaded_compression_kernelIhmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_t() {
+define i32 @Ihm_CascadedOpts() {
 entry:
-  store ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelIhmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_0 to ptr), ptr null, align 8
-  store ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelIhmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_1 to ptr), ptr null, align 8
-  %add.ptr = getelementptr i32, ptr getelementptr inbounds (i32, ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelIhmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE14chunk_metadata to ptr), i64 1), i64 0
-  call void @_ZN7hipcomp18block_rle_compressIhmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_()
-  %call69 = call i32 @_ZN7hipcomp11block_writeItmLi128EEENS_13BlockIOStatusEPKT_T0_PjPKjPS5_S6_b(ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelIhmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE19shared_count_buffer to ptr), ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelIhmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE17shared_tmp_buffer to ptr))
+  store ptr addrspacecast (ptr addrspace(3) @one to ptr), ptr null, align 8
+  store ptr addrspacecast (ptr addrspace(3) @two to ptr), ptr null, align 8
+  %add.ptr = getelementptr i32, ptr getelementptr inbounds (i32, ptr addrspacecast (ptr addrspace(3) @five to ptr), i64 1), i64 0
+  call void @Ihm_PS1_PT1_PS4_S7()
+  %call69 = call i32 @foo(ptr addrspacecast (ptr addrspace(3) @three to ptr), ptr addrspacecast (ptr addrspace(3) @four to ptr))
   ret i32 %call69
 }
 
-define void @_ZN7hipcomp18block_rle_compressIhmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_() {
+define void @Ihm_PS1_PT1_PS4_S7() {
 entry:
-  store ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp18block_rle_compressIhmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_E12temp_storage to ptr), ptr null, align 8
+  store ptr addrspacecast (ptr addrspace(3) @six to ptr), ptr null, align 8
   ret void
 }
 
-define i32 @_ZN7hipcomp11block_writeItmLi128EEENS_13BlockIOStatusEPKT_T0_PjPKjPS5_S6_b(ptr %input, ptr %temp_storage) {
+define i32 @foo(ptr %input, ptr %temp_storage) {
 entry:
-  call void @_ZN7hipcomp13block_bitpackItmLi128EEEvPKT_T0_PjPS4_()
+  call void @Itm_PjPS4()
   ret i32 0
 }
 
-define void @_ZN7hipcomp13block_bitpackItmLi128EEEvPKT_T0_PjPS4_() {
+define void @Itm_PjPS4() {
 entry:
-  call void @_ZN7hipcomp16get_for_bitwidthItmLi128EEEvPKT_T0_PS1_Pj()
+  call void @Itm_PS1_Pj()
   ret void
 }
 
-define void @_ZN7hipcomp16get_for_bitwidthItmLi128EEEvPKT_T0_PS1_Pj() {
+define void @Itm_PS1_Pj() {
 entry:
-  store ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp16get_for_bitwidthItmLi128EEEvPKT_T0_PS1_PjE12temp_storage to ptr), ptr null, align 8
+  store ptr addrspacecast (ptr addrspace(3) @seven to ptr), ptr null, align 8
   ret void
 }
 
-define amdgpu_kernel void @_Z23HlifCompressBatchKernelILi32EN7hipcomp25cascaded_compress_wrapperItmLi128ELi4096EEERK28hipcompBatchedCascadedOpts_tLi1EENSt9enable_ifIXsr3std10is_base_ofI21hlif_compress_wrapperT0_EE5valueEvE4typeE12CompressArgsT1_() {
+define amdgpu_kernel void @EN32_compress_wrapperItm() {
 entry:
-  %0 = call i32 @_Z17HlifCompressBatchILi1ERN7hipcomp25cascaded_compress_wrapperItmLi128ELi4096EEERN18cooperative_groups12thread_blockEEvRK12CompressArgsOT0_OT1_()
+  %0 = call i32 @Itm_one()
   ret void
 }
 
-define i32 @_Z17HlifCompressBatchILi1ERN7hipcomp25cascaded_compress_wrapperItmLi128ELi4096EEERN18cooperative_groups12thread_blockEEvRK12CompressArgsOT0_OT1_() {
+define i32 @Itm_one() {
 entry:
-  %0 = call i32 @_ZN7hipcomp25cascaded_compress_wrapperItmLi128ELi4096EE14compress_chunkEPhPKhmmPm()
+  %0 = call i32 @Itm_chunk()
   ret i32 %0
 }
 
-define i32 @_ZN7hipcomp25cascaded_compress_wrapperItmLi128ELi4096EE14compress_chunkEPhPKhmmPm() {
+define i32 @Itm_chunk() {
 entry:
-  %0 = call i32 @_ZN7hipcomp30do_cascaded_compression_kernelItmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_t()
+  %0 = call i32 @Itm_CascadedOpts()
   ret i32 %0
 }
 
-define i32 @_ZN7hipcomp30do_cascaded_compression_kernelItmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_t() {
+define i32 @Itm_CascadedOpts() {
 entry:
-  store ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelItmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_0 to ptr), ptr null, align 8
-  store ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelItmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_1 to ptr), ptr null, align 8
-  %add.ptr = getelementptr i32, ptr getelementptr inbounds (i32, ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelItmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE14chunk_metadata to ptr), i64 1), i64 0
-  call void @_ZN7hipcomp18block_rle_compressItmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_()
-  %call69 = call i32 @_ZN7hipcomp11block_writeItmLi128EEENS_13BlockIOStatusEPKT_T0_PjPKjPS5_S6_b(ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelItmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE19shared_count_buffer to ptr), ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelItmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE17shared_tmp_buffer to ptr))
+  store ptr addrspacecast (ptr addrspace(3) @eight to ptr), ptr null, align 8
+  store ptr addrspacecast (ptr addrspace(3) @nine to ptr), ptr null, align 8
+  %add.ptr = getelementptr i32, ptr getelementptr inbounds (i32, ptr addrspacecast (ptr addrspace(3) @twelve to ptr), i64 1), i64 0
+  call void @Itm_PS1_PT1_PS4_S7()
+  %call69 = call i32 @foo(ptr addrspacecast (ptr addrspace(3) @ten to ptr), ptr addrspacecast (ptr addrspace(3) @eleven to ptr))
   ret i32 %call69
 }
 
-define void @_ZN7hipcomp18block_rle_compressItmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_() {
+define void @Itm_PS1_PT1_PS4_S7() {
 entry:
-  store ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp18block_rle_compressItmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_E12temp_storage to ptr), ptr null, align 8
+  store ptr addrspacecast (ptr addrspace(3) @thirteen to ptr), ptr null, align 8
   ret void
 }
 
-define amdgpu_kernel void @_Z23HlifCompressBatchKernelILi32EN7hipcomp25cascaded_compress_wrapperIjmLi128ELi4096EEERK28hipcompBatchedCascadedOpts_tLi1EENSt9enable_ifIXsr3std10is_base_ofI21hlif_compress_wrapperT0_EE5valueEvE4typeE12CompressArgsT1_() {
+define amdgpu_kernel void @EN32_compress_wrapperIjm() {
 entry:
-  %arrayidx = getelementptr [1 x i32], ptr addrspacecast (ptr addrspace(3) @_ZZ23HlifCompressBatchKernelILi32EN7hipcomp25cascaded_compress_wrapperIjmLi128ELi4096EEERK28hipcompBatchedCascadedOpts_tLi1EENSt9enable_ifIXsr3std10is_base_ofI21hlif_compress_wrapperT0_EE5valueEvE4typeE12CompressArgsT1_E13output_status to ptr), i64 0, i64 0
-  %0 = call i32 @_Z17HlifCompressBatchILi1ERN7hipcomp25cascaded_compress_wrapperIjmLi128ELi4096EEERN18cooperative_groups12thread_blockEEvRK12CompressArgsOT0_OT1_()
+  %arrayidx = getelementptr [1 x i32], ptr addrspacecast (ptr addrspace(3) @fourteen to ptr), i64 0, i64 0
+  %0 = call i32 @Ijm_one()
   ret void
 }
 
-define i32 @_Z17HlifCompressBatchILi1ERN7hipcomp25cascaded_compress_wrapperIjmLi128ELi4096EEERN18cooperative_groups12thread_blockEEvRK12CompressArgsOT0_OT1_() {
+define i32 @Ijm_one() {
 entry:
-  %0 = call i32 @_ZN7hipcomp25cascaded_compress_wrapperIjmLi128ELi4096EE14compress_chunkEPhPKhmmPm()
+  %0 = call i32 @Ijm_chunk()
   ret i32 %0
 }
 
-define i32 @_ZN7hipcomp25cascaded_compress_wrapperIjmLi128ELi4096EE14compress_chunkEPhPKhmmPm() {
+define i32 @Ijm_chunk() {
 entry:
-  %0 = call i32 @_ZN7hipcomp30do_cascaded_compression_kernelIjmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_t()
+  %0 = call i32 @Ijm_CascadedOpts()
   ret i32 %0
 }
 
-define i32 @_ZN7hipcomp30do_cascaded_compression_kernelIjmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_t() {
+define i32 @Ijm_CascadedOpts() {
 entry:
-  store ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelIjmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_0 to ptr), ptr null, align 8
-  store ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelIjmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_1 to ptr), ptr null, align 8
-  %add.ptr = getelementptr i32, ptr getelementptr inbounds (i32, ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelIjmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE14chunk_metadata to ptr), i64 1), i64 0
-  call void @_ZN7hipcomp18block_rle_compressIjmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_()
-  %call69 = call i32 @_ZN7hipcomp11block_writeItmLi128EEENS_13BlockIOStatusEPKT_T0_PjPKjPS5_S6_b(ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelIjmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE19shared_count_buffer to ptr), ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelIjmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE17shared_tmp_buffer to ptr))
+  store ptr addrspacecast (ptr addrspace(3) @fifteen to ptr), ptr null, align 8
+  store ptr addrspacecast (ptr addrspace(3) @sixteen to ptr), ptr null, align 8
+  %add.ptr = getelementptr i32, ptr getelementptr inbounds (i32, ptr addrspacecast (ptr addrspace(3) @nineteen to ptr), i64 1), i64 0
+  call void @Ijm_PS1_PT1_PS4_S7()
+  %call69 = call i32 @foo(ptr addrspacecast (ptr addrspace(3) @seventeen to ptr), ptr addrspacecast (ptr addrspace(3) @eighteen to ptr))
   ret i32 %call69
 }
 
-define void @_ZN7hipcomp18block_rle_compressIjmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_() {
+define void @Ijm_PS1_PT1_PS4_S7() {
 entry:
-  store ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp18block_rle_compressIjmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_E12temp_storage to ptr), ptr null, align 8
+  store ptr addrspacecast (ptr addrspace(3) @twenty to ptr), ptr null, align 8
   ret void
 }
 
-define amdgpu_kernel void @_Z23HlifCompressBatchKernelILi32EN7hipcomp25cascaded_compress_wrapperImmLi128ELi4096EEERK28hipcompBatchedCascadedOpts_tLi1EENSt9enable_ifIXsr3std10is_base_ofI21hlif_compress_wrapperT0_EE5valueEvE4typeE12CompressArgsT1_() {
+define amdgpu_kernel void @EN32_compress_wrapperImm() {
 entry:
-  %0 = call i32 @_Z17HlifCompressBatchILi1ERN7hipcomp25cascaded_compress_wrapperImmLi128ELi4096EEERN18cooperative_groups12thread_blockEEvRK12CompressArgsOT0_OT1_()
+  %0 = call i32 @Imm_one()
   ret void
 }
 
-define i32 @_Z17HlifCompressBatchILi1ERN7hipcomp25cascaded_compress_wrapperImmLi128ELi4096EEERN18cooperative_groups12thread_blockEEvRK12CompressArgsOT0_OT1_() {
+define i32 @Imm_one() {
 entry:
-  %0 = call i32 @_ZN7hipcomp25cascaded_compress_wrapperImmLi128ELi4096EE14compress_chunkEPhPKhmmPm()
+  %0 = call i32 @Imm_chunk()
   ret i32 %0
 }
 
-define i32 @_ZN7hipcomp25cascaded_compress_wrapperImmLi128ELi4096EE14compress_chunkEPhPKhmmPm() {
+define i32 @Imm_chunk() {
 entry:
-  %0 = call i32 @_ZN7hipcomp30do_cascaded_compression_kernelImmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_t()
+  %0 = call i32 @Imm_CascadedOpts()
   ret i32 %0
 }
 
-define i32 @_ZN7hipcomp30do_cascaded_compression_kernelImmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_t() {
+define i32 @Imm_CascadedOpts() {
 entry:
-  store ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelImmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_0 to ptr), ptr null, align 8
-  store ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelImmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE24shared_element_storage_1 to ptr), ptr null, align 8
-  %add.ptr = getelementptr i32, ptr getelementptr inbounds (i32, ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelImmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE14chunk_metadata to ptr), i64 1), i64 0
+  store ptr addrspacecast (ptr addrspace(3) @twentyone to ptr), ptr null, align 8
+  store ptr addrspacecast (ptr addrspace(3) @twentytwo to ptr), ptr null, align 8
+  %add.ptr = getelementptr i32, ptr getelementptr inbounds (i32, ptr addrspacecast (ptr addrspace(3) @twentyfive to ptr), i64 1), i64 0
   br i1 false, label %for.body65, label %for.end102
 
-for.body65:                                       ; preds = %entry
-  call void @_ZN7hipcomp18block_rle_compressImmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_()
-  %call69 = call i32 @_ZN7hipcomp11block_writeItmLi128EEENS_13BlockIOStatusEPKT_T0_PjPKjPS5_S6_b(ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelImmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE19shared_count_buffer to ptr), ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp30do_cascaded_compression_kernelImmLi128ELi4096EEEviiiPKPKT_PKT0_PKPvPS6_28hipcompBatchedCascadedOpts_tE17shared_tmp_buffer to ptr))
+for.body65:
+  call void @Imm_PS1_PT1_PS4_S7()
+  %call69 = call i32 @foo(ptr addrspacecast (ptr addrspace(3) @twentythree to ptr), ptr addrspacecast (ptr addrspace(3) @twentyfour to ptr))
   ret i32 %call69
 
-for.end102:                                       ; preds = %entry
-  %call106 = call i32 @_ZN7hipcomp11block_writeImmLi128EEENS_13BlockIOStatusEPKT_T0_PjPKjPS5_S6_b()
+for.end102:
+  %call106 = call i32 @Imm_PjPKjPS5_S6_b()
   ret i32 0
 }
 
-define void @_ZN7hipcomp18block_rle_compressImmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_() {
+define void @Imm_PS1_PT1_PS4_S7() {
 entry:
-  store ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp18block_rle_compressImmtLi128EEEvPKT_T0_PS1_PT1_PS4_S7_E12temp_storage to ptr), ptr null, align 8
+  store ptr addrspacecast (ptr addrspace(3) @twentysix to ptr), ptr null, align 8
   ret void
 }
 
-define i32 @_ZN7hipcomp11block_writeImmLi128EEENS_13BlockIOStatusEPKT_T0_PjPKjPS5_S6_b() {
+define i32 @Imm_PjPKjPS5_S6_b() {
 entry:
-  call void @_ZN7hipcomp13block_bitpackImmLi128EEEvPKT_T0_PjPS4_()
+  call void @Imm_PjPS4()
   ret i32 0
 }
 
-define void @_ZN7hipcomp13block_bitpackImmLi128EEEvPKT_T0_PjPS4_() {
+define void @Imm_PjPS4() {
 entry:
-  call void @_ZN7hipcomp16get_for_bitwidthImmLi128EEEvPKT_T0_PS1_Pj()
+  call void @Imm_PS1_Pj()
   ret void
 }
 
-define void @_ZN7hipcomp16get_for_bitwidthImmLi128EEEvPKT_T0_PS1_Pj() {
+define void @Imm_PS1_Pj() {
 entry:
-  store ptr addrspacecast (ptr addrspace(3) @_ZZN7hipcomp16get_for_bitwidthImmLi128EEEvPKT_T0_PS1_PjE12temp_storage to ptr), ptr null, align 8
+  store ptr addrspacecast (ptr addrspace(3) @twentyseven to ptr), ptr null, align 8
   ret void
 }
 
-define amdgpu_kernel void @_Z23HlifCompressBatchKernelILi64EN7hipcomp25cascaded_compress_wrapperIhmLi128ELi4096EEERK28hipcompBatchedCascadedOpts_tLi1EENSt9enable_ifIXsr3std10is_base_ofI21hlif_compress_wrapperT0_EE5valueEvE4typeE12CompressArgsT1_() {
+define amdgpu_kernel void @EN64_compress_wrapperIhm() {
 entry:
-  %0 = call i32 @_Z17HlifCompressBatchILi1ERN7hipcomp25cascaded_compress_wrapperIhmLi128ELi4096EEERN18cooperative_groups12thread_blockEEvRK12CompressArgsOT0_OT1_()
+  %0 = call i32 @Ihm_one()
   ret void
 }
 
-define amdgpu_kernel void @_Z23HlifCompressBatchKernelILi64EN7hipcomp25cascaded_compress_wrapperItmLi128ELi4096EEERK28hipcompBatchedCascadedOpts_tLi1EENSt9enable_ifIXsr3std10is_base_ofI21hlif_compress_wrapperT0_EE5valueEvE4typeE12CompressArgsT1_() {
+define amdgpu_kernel void @EN64_compress_wrapperItm() {
 entry:
-  %0 = call i32 @_Z17HlifCompressBatchILi1ERN7hipcomp25cascaded_compress_wrapperItmLi128ELi4096EEERN18cooperative_groups12thread_blockEEvRK12CompressArgsOT0_OT1_()
+  %0 = call i32 @Itm_one()
   ret void
 }
 
-define amdgpu_kernel void @_Z23HlifCompressBatchKernelILi64EN7hipcomp25cascaded_compress_wrapperIjmLi128ELi4096EEERK28hipcompBatchedCascadedOpts_tLi1EENSt9enable_ifIXsr3std10is_base_ofI21hlif_compress_wrapperT0_EE5valueEvE4typeE12CompressArgsT1_() {
+define amdgpu_kernel void @EN64_compress_wrapperIjm() {
 entry:
-  %0 = call i32 @_Z17HlifCompressBatchILi1ERN7hipcomp25cascaded_compress_wrapperIjmLi128ELi4096EEERN18cooperative_groups12thread_blockEEvRK12CompressArgsOT0_OT1_()
+  %0 = call i32 @Ijm_one()
   ret void
 }
 
-define amdgpu_kernel void @_Z23HlifCompressBatchKernelILi64EN7hipcomp25cascaded_compress_wrapperImmLi128ELi4096EEERK28hipcompBatchedCascadedOpts_tLi1EENSt9enable_ifIXsr3std10is_base_ofI21hlif_compress_wrapperT0_EE5valueEvE4typeE12CompressArgsT1_() {
+define amdgpu_kernel void @EN64_compress_wrapperImm() {
 entry:
-  %0 = call i32 @_Z17HlifCompressBatchILi1ERN7hipcomp25cascaded_compress_wrapperImmLi128ELi4096EEERN18cooperative_groups12thread_blockEEvRK12CompressArgsOT0_OT1_()
+  %0 = call i32 @Imm_one()
   ret void
 }

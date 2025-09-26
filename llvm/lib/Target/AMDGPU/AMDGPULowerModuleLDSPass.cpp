@@ -649,10 +649,13 @@ public:
         } else if (K.second.size() == 1) {
           KernelAccessVariables.insert(GV);
         } else if (set_is_subset(K.second, HybridModuleRootKernels)) {
+          // If the struct holding module scope variables exceeds the maximum
+          // number of bytes of LDS that can be allocated to a single workgroup
+          // then switch to table strategy
           uint64_t LocalMemLimit = 0;
-          for (Function &F : M) {
-            if (!F.isDeclaration()) {
-              const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+          for (Function *F : K.second) {
+            if (!F->isDeclaration()) {
+              const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*F);
               LocalMemLimit = ST.getAddressableLocalMemorySize();
               break;
             }
