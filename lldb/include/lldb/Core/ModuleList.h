@@ -476,7 +476,6 @@ public:
 
   static Status
   GetSharedModule(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                  const FileSpecList *module_search_paths_ptr,
                   llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                   bool *did_create_ptr, bool always_create = false);
 

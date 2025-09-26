@@ -163,11 +163,12 @@ Platform::LocateExecutableScriptingResources(Target *target, Module &module,
 
 Status Platform::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
   if (IsHost())
-    return ModuleList::GetSharedModule(module_spec, module_sp,
-                                       module_search_paths_ptr, old_modules,
+    // Note: module_search_paths_ptr functionality is now handled internally
+    // by getting target from module_spec and calling
+    // target->GetExecutableSearchPaths()
+    return ModuleList::GetSharedModule(module_spec, module_sp, old_modules,
                                        did_create_ptr, false);
 
   // Module resolver lambda.
@@ -180,16 +181,14 @@ Status Platform::GetSharedModule(
       resolved_spec = spec;
       resolved_spec.GetFileSpec().PrependPathComponent(m_sdk_sysroot);
       // Try to get shared module with resolved spec.
-      error = ModuleList::GetSharedModule(resolved_spec, module_sp,
-                                          module_search_paths_ptr, old_modules,
+      error = ModuleList::GetSharedModule(resolved_spec, module_sp, old_modules,
                                           did_create_ptr, false);
     }
     // If we don't have sysroot or it didn't work then
     // try original module spec.
     if (!error.Success()) {
       resolved_spec = spec;
-      error = ModuleList::GetSharedModule(resolved_spec, module_sp,
-                                          module_search_paths_ptr, old_modules,
+      error = ModuleList::GetSharedModule(resolved_spec, module_sp, old_modules,
                                           did_create_ptr, false);
     }
     if (error.Success() && module_sp)
@@ -731,10 +730,8 @@ bool Platform::SetOSVersion(llvm::VersionTuple version) {
   return false;
 }
 
-Status
-Platform::ResolveExecutable(const ModuleSpec &module_spec,
-                            lldb::ModuleSP &exe_module_sp,
-                            const FileSpecList *module_search_paths_ptr) {
+Status Platform::ResolveExecutable(const ModuleSpec &module_spec,
+                                   lldb::ModuleSP &exe_module_sp) {
 
   // We may connect to a process and use the provided executable (Don't use
   // local $PATH).
@@ -750,20 +747,16 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
 
   if (resolved_module_spec.GetArchitecture().IsValid() ||
       resolved_module_spec.GetUUID().IsValid()) {
-    // Call locate module callback first to give it a chance to find/register
-    // symbol file specs for the main executable, similar to how shared
-    // libraries are handled in Platform::GetRemoteSharedModule()
-    FileSpec symbol_file_spec;
-    CallLocateModuleCallbackIfSet(resolved_module_spec, exe_module_sp,
-                                  symbol_file_spec, nullptr);
+    Status error =
+        ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
+                                    nullptr, nullptr);
 
     Status error;
     if (!exe_module_sp) {
       // If locate module callback didn't provide a module, fallback to standard
       // path
       error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          module_search_paths_ptr, nullptr,
-                                          nullptr);
+                                          nullptr, nullptr);
     }
 
     if (exe_module_sp && exe_module_sp->GetObjectFile()) {
@@ -785,6 +778,7 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
   Status error;
   for (const ArchSpec &arch : GetSupportedArchitectures(process_host_arch)) {
     resolved_module_spec.GetArchitecture() = arch;
+<<<<<<< Updated upstream
 
     // Call locate module callback first, then fallback to standard path
     FileSpec symbol_file_spec;
@@ -793,10 +787,14 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
 
     if (!exe_module_sp) {
       error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          module_search_paths_ptr, nullptr,
-                                          nullptr);
+                                          nullptr, nullptr);
     }
 
+=======
+    error =
+        ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
+                                    nullptr, nullptr);
+>>>>>>> Stashed changes
     if (error.Success()) {
       if (exe_module_sp && exe_module_sp->GetObjectFile()) {
         // Set the symbol file if locate module callback returned one
@@ -1478,16 +1476,13 @@ const std::vector<ConstString> &Platform::GetTrapHandlerSymbolNames() {
   return m_trap_handlers;
 }
 
-Status
-Platform::GetCachedExecutable(ModuleSpec &module_spec,
-                              lldb::ModuleSP &module_sp,
-                              const FileSpecList *module_search_paths_ptr) {
+Status Platform::GetCachedExecutable(ModuleSpec &module_spec,
+                                     lldb::ModuleSP &module_sp) {
   FileSpec platform_spec = module_spec.GetFileSpec();
   Status error = GetRemoteSharedModule(
       module_spec, nullptr, module_sp,
       [&](const ModuleSpec &spec) {
-        return Platform::ResolveExecutable(spec, module_sp,
-                                           module_search_paths_ptr);
+        return Platform::ResolveExecutable(spec, module_sp);
       },
       nullptr);
   if (error.Success()) {
@@ -1529,7 +1524,7 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
     for (const ArchSpec &arch : GetSupportedArchitectures(process_host_arch)) {
       arch_module_spec.GetArchitecture() = arch;
       error = ModuleList::GetSharedModule(arch_module_spec, module_sp, nullptr,
-                                          nullptr, nullptr);
+                                          nullptr);
       // Did we find an executable using one of the
       if (error.Success() && module_sp)
         break;
@@ -1709,7 +1704,7 @@ void Platform::CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
   cached_module_spec.SetObjectOffset(0);
 
   error = ModuleList::GetSharedModule(cached_module_spec, module_sp, nullptr,
-                                      nullptr, did_create_ptr, false);
+                                      did_create_ptr, false);
   if (error.Success() && module_sp) {
     // Succeeded to load the module file.
     LLDB_LOGF(log, "%s: locate module callback succeeded: module=%s symbol=%s",

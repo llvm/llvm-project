@@ -19,6 +19,7 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpecList.h"
@@ -1029,7 +1030,6 @@ size_t ModuleList::RemoveOrphanSharedModules(bool mandatory) {
 
 Status
 ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
-                            const FileSpecList *module_search_paths_ptr,
                             llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                             bool *did_create_ptr, bool always_create) {
   ModuleList &shared_module_list = GetSharedModuleList();
@@ -1112,6 +1112,16 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
     }
   } else {
     module_sp.reset();
+  }
+
+  // Get module search paths from the target if available
+  ModuleSpec module_spec_copy(module_spec);
+  Target *target = module_spec_copy.GetTargetPtr();
+  FileSpecList module_search_paths;
+  FileSpecList *module_search_paths_ptr = nullptr;
+  if (target) {
+    module_search_paths = target->GetExecutableSearchPaths();
+    module_search_paths_ptr = &module_search_paths;
   }
 
   if (module_search_paths_ptr) {
