@@ -223,7 +223,7 @@ DependencyFileGenerator::DependencyFileGenerator(
       PhonyTarget(Opts.UsePhonyTargets),
       AddMissingHeaderDeps(Opts.AddMissingHeaderDeps), SeenMissingHeader(false),
       IncludeModuleFiles(Opts.IncludeModuleFiles),
-      OutputFormat(Opts.OutputFormat), InputFileIndex(0) {
+      OutputFormat(Opts.OutputFormat), MSCompatible(false), InputFileIndex(0) {
   for (const auto &ExtraDep : Opts.ExtraDeps) {
     if (addDependency(ExtraDep.first))
       ++InputFileIndex;
@@ -234,6 +234,8 @@ void DependencyFileGenerator::attachToPreprocessor(Preprocessor &PP) {
   // Disable the "file not found" diagnostic if the -MG option was given.
   if (AddMissingHeaderDeps)
     PP.SetSuppressIncludeNotFoundError(true);
+
+  MSCompatible = PP.getLangOpts().MicrosoftExt;
 
   DependencyCollector::attachToPreprocessor(PP);
 }
@@ -312,11 +314,20 @@ void DependencyFileGenerator::finishedMainFile(DiagnosticsEngine &Diags) {
 /// https://msdn.microsoft.com/en-us/library/dd9y37ha.aspx for NMake info,
 /// https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
 /// for Windows file-naming info.
-static void PrintFilename(raw_ostream &OS, StringRef Filename,
-                          DependencyOutputFormat OutputFormat) {
-  // Convert filename to platform native path
+///
+/// Whether backslashes in the filename are treated as path separators or
+/// ordinary characters depends on whether the Clang invocation is MS-compatible
+/// (-fms-compatibility). If it is, backslashes are treated as path separators,
+/// and are converted to the native path separator (backslash on Windows,
+/// forward slash on other platforms); if not, backslashes are treated as
+/// ordinary characters, and are not converted.
+void DependencyFileGenerator::outputDependencyFilename(
+    raw_ostream &OS, StringRef Filename) const {
   llvm::SmallString<256> NativePath;
-  llvm::sys::path::native(Filename.str(), NativePath);
+  if (MSCompatible)
+    llvm::sys::path::native(Filename.str(), NativePath);
+  else
+    NativePath = Filename;
 
   if (OutputFormat == DependencyOutputFormat::NMake) {
     // Add quotes if needed. These are the characters listed as "special" to
@@ -400,7 +411,7 @@ void DependencyFileGenerator::outputDependencyFile(llvm::raw_ostream &OS) {
       Columns = 2;
     }
     OS << ' ';
-    PrintFilename(OS, File, OutputFormat);
+    outputDependencyFilename(OS, File);
     Columns += N + 1;
   }
   OS << '\n';
@@ -411,7 +422,7 @@ void DependencyFileGenerator::outputDependencyFile(llvm::raw_ostream &OS) {
     for (auto I = Files.begin(), E = Files.end(); I != E; ++I) {
       if (Index++ == InputFileIndex)
         continue;
-      PrintFilename(OS, *I, OutputFormat);
+      outputDependencyFilename(OS, *I);
       OS << ":\n";
     }
   }
