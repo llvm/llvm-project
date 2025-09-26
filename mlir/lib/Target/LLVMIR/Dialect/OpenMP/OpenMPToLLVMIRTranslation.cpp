@@ -3598,7 +3598,7 @@ getDeclareTargetRefPtrSuffix(LLVM::GlobalOp globalOp,
     auto vfs = llvm::vfs::getRealFileSystem();
     os << llvm::format(
         "_%x",
-        ompBuilder.getTargetEntryUniqueInfo(*vfs, fileInfoCallBack).FileID);
+        ompBuilder.getTargetEntryUniqueInfo(fileInfoCallBack, *vfs).FileID);
   }
   os << "_decl_tgt_ref_ptr";
 
@@ -5894,7 +5894,7 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
 
       ompBuilder->registerTargetGlobalVariable(
           captureClause, deviceClause, isDeclaration, isExternallyVisible,
-          ompBuilder->getTargetEntryUniqueInfo(*vfs, fileInfoCallBack),
+          ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, *vfs),
           mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
           /*GlobalInitializer*/ nullptr, /*VariableLinkage*/ nullptr,
           gVal->getType(), gVal);
@@ -5905,7 +5905,7 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
            ompBuilder->Config.hasRequiresUnifiedSharedMemory())) {
         ompBuilder->getAddrOfDeclareTargetVar(
             captureClause, deviceClause, isDeclaration, isExternallyVisible,
-            ompBuilder->getTargetEntryUniqueInfo(*vfs, fileInfoCallBack),
+            ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, *vfs),
             mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
             gVal->getType(), /*GlobalInitializer*/ nullptr,
             /*VariableLinkage*/ nullptr);
