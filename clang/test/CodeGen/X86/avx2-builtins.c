@@ -466,6 +466,8 @@ __m128i test0_mm256_extracti128_si256_0(__m256i a) {
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> poison, <2 x i32> <i32 0, i32 1>
   return _mm256_extracti128_si256(a, 0);
 }
+TEST_CONSTEXPR(match_m128i(_mm256_extracti128_si256(((__m256i){1ULL, 2ULL, 3ULL, 4ULL}), 0),
+                 1ULL, 2ULL));
 
 __m128i test1_mm256_extracti128_si256_1(__m256i a) {
   // CHECK-LABEL: test1_mm256_extracti128_si256
@@ -479,8 +481,6 @@ __m128i test2_mm256_extracti128_si256(__m256i a) {
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> poison, <2 x i32> <i32 0, i32 1>
   return _mm256_extracti128_si256(a, 0);
 }
-TEST_CONSTEXPR(match_m128i(_mm256_extracti128_si256(((__m256i){1ULL, 2ULL, 3ULL, 4ULL}), 0),
-                 1ULL, 2ULL));
 
 __m256i test_mm256_hadd_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_hadd_epi16
