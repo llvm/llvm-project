@@ -4326,7 +4326,7 @@ rnb_err_t RNBRemote::HandlePacket_MemoryRegionInfo(const char *p) {
       ostrm << "flags:";
       for (size_t i = 0; i < region_info.flags.size(); i++) {
         if (i != 0)
-          ostrm << " ";  // Separator is whitespace
+          ostrm << " "; // Separator is whitespace
         ostrm << region_info.flags[i];
       }
       ostrm << ";";

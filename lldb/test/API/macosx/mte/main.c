@@ -11,7 +11,7 @@ uint8_t *allocate(void) { return my_malloc(); }
 void my_free(void *ptr) { free(ptr); }
 void deallocate(void *ptr) { my_free(ptr); }
 
-void touch_memory(uint8_t *ptr) { ptr[7] = 1; }  // invalid access
+void touch_memory(uint8_t *ptr) { ptr[7] = 1; } // invalid access
 void modify(uint8_t *ptr) { touch_memory(ptr); }
 
 int main() {
@@ -19,11 +19,11 @@ int main() {
   printf("ptr: %p\n", ptr);
 
   strcpy((char *)ptr, "Hello");
-  strcpy((char *)ptr+16, "World");
+  strcpy((char *)ptr + 16, "World");
 
-  deallocate(ptr);  // before free
+  deallocate(ptr); // before free
 
-  modify(ptr);  // use-after-free
+  modify(ptr); // use-after-free
 
   return 0;
 }

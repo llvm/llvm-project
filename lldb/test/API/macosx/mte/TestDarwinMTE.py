@@ -26,7 +26,10 @@ class TestDarwinMTE(TestBase):
 
         self.expect(
             "thread info",
-            substrs=["stop reason = EXC_ARM_MTE_TAG_FAULT", "MTE tag mismatch detected"],
+            substrs=[
+                "stop reason = EXC_ARM_MTE_TAG_FAULT",
+                "MTE tag mismatch detected",
+            ],
         )
 
     @skipUnlessFeature(cpu_feature.AArch64.MTE)
@@ -44,7 +47,8 @@ class TestDarwinMTE(TestBase):
         self.expect(
             "memory read ptr-16 ptr+48 --show-tags",
             substrs=[" Hello...........", " World..........."],
-            patterns=[r"(.*\(tag: 0x[0-9a-f]\)\n){4}"])
+            patterns=[r"(.*\(tag: 0x[0-9a-f]\)\n){4}"],
+        )
 
     def _parse_pointer_tag(self):
         return re.search(r"Logical tag: (0x[0-9a-f])", self.res.GetOutput()).group(1)
@@ -71,7 +75,7 @@ class TestDarwinMTE(TestBase):
         self.expect(
             "memory tag read ptr-1 ptr+33",
             substrs=["Logical tag: 0x", "Allocation tags:", "(mismatch)"],
-            patterns=[r"(\[.*\): 0x[0-9a-f].*\n){4}"]
+            patterns=[r"(\[.*\): 0x[0-9a-f].*\n){4}"],
         )
         self.assertEqual(self.res.GetOutput().count("(mismatch)"), 2)
         ptr_tag = self._parse_pointer_tag()
