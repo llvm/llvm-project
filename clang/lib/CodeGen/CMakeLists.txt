@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   AggressiveInstCombine
+  ABI
   Analysis
   BitReader
   BitWriter
@@ -115,6 +116,7 @@ add_clang_library(clangCodeGen
   ModuleBuilder.cpp
   ObjectFilePCHContainerWriter.cpp
   PatternInit.cpp
+  QualTypeMapper.cpp
   SanitizerMetadata.cpp
   SwiftCallingConv.cpp
   TargetBuiltins/ARM.cpp
