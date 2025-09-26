@@ -711,7 +711,6 @@ struct UnrealizedConversionCastOpPattern
   }
 };
 
-// This pattern distributes arith.constant op into subgroup-level constants
 struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
   using OpConversionPattern<arith::ConstantOp>::OpConversionPattern;
 
@@ -720,7 +719,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto vecAttr = dyn_cast<DenseElementsAttr>(op.getValue());
     auto vecType = dyn_cast<VectorType>(op.getType());
-    if (!vecAttr || !vecAttr.isSplat() || !vecType)
+    if (!vecAttr || !vecType)
       return failure();
 
     xegpu::DistributeLayoutAttr layout =
@@ -733,22 +732,114 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     int count;
     std::tie(sgShape, count) = getSgShapeAndCount(wgShape, layout);
 
-    // Current limitation: constant of vector with single value.
-    // TODO: support more complex cases, e.g., vector with multiple values.
-    Attribute singleVal = vecAttr.getSplatValue<Attribute>();
-
     auto newType = VectorType::get(sgShape, vecType.getElementType());
-    auto sgAttr = DenseElementsAttr::get(newType, singleVal);
-    auto cstOp =
-        arith::ConstantOp::create(rewriter, op.getLoc(), newType, sgAttr);
-    if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
-        !layout.getEffectiveInstDataAsInt().empty())
-      xegpu::setDistributeLayoutAttr(cstOp->getResult(0),
-                                     layout.dropSgLayoutAndData());
-    SmallVector<Value> newConsts(count, cstOp);
+    Location loc = op.getLoc();
+    auto eltType = vecType.getElementType();
 
-    rewriter.replaceOpWithMultiple(op, {newConsts});
-    return success();
+    auto setLayoutIfNeeded = [&](Value val) {
+      if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
+          !layout.getEffectiveInstDataAsInt().empty()) {
+        xegpu::setDistributeLayoutAttr(llvm::dyn_cast<OpResult>(val),
+                                       layout.dropSgLayoutAndData());
+      }
+    };
+
+    if (vecAttr.isSplat()) {
+      // Splat: single value for all subgroups
+      Attribute singleVal = vecAttr.getSplatValue<Attribute>();
+      auto sgAttr = DenseElementsAttr::get(newType, singleVal);
+      auto cstOp = arith::ConstantOp::create(rewriter, loc, newType, sgAttr);
+      setLayoutIfNeeded(cstOp->getResult(0));
+      rewriter.replaceOp(op, cstOp);
+      return success();
+    } else if (sgShape == wgShape) { // if the entire vector is shared by all
+                                     // threads...don't distribute
+      auto newConstOp =
+          arith::ConstantOp::create(rewriter, op.getLoc(), vecType, vecAttr);
+      setLayoutIfNeeded(newConstOp->getResult(0));
+      rewriter.replaceOp(op, newConstOp);
+      return success();
+    } else {
+      // Non-splat constant: use baseValue/stride logic for runtime indexing,
+      // with wrap-around
+      if (wgShape.size() >= 2 && wgShape[0] != 1 && wgShape[1] != 1)
+        return rewriter.notifyMatchFailure(
+            op, "Only 1D or 2D vector constant supported");
+      SmallVector<Attribute> values(vecAttr.getValues<Attribute>());
+      int64_t stride = 0;
+      if (values.size() > 1) {
+        stride = cast<IntegerAttr>(values[1]).getInt() -
+                 cast<IntegerAttr>(values[0]).getInt();
+        for (size_t i = 2; i < values.size(); ++i) {
+          int64_t diff = cast<IntegerAttr>(values[i]).getInt() -
+                         cast<IntegerAttr>(values[i - 1]).getInt();
+          if (diff != stride)
+            return rewriter.notifyMatchFailure(
+                op, "Non-constant stride in non-splat constant op.");
+        }
+      }
+
+      // Create a constant for the first tile
+      SmallVector<Attribute> tileValues;
+      int sgData = 1;
+      if (sgShape.size() == 1) {
+        sgData = static_cast<int>(sgShape[0]);
+      } else if (sgShape.size() == 2) {
+        // If shape is [1, n] or [n, 1], pick the non-1 dimension (n).
+        if (sgShape[0] == 1 && sgShape[1] != 1)
+          sgData = static_cast<int>(sgShape[1]);
+        else
+          sgData = static_cast<int>(sgShape[0]);
+      } else {
+        return rewriter.notifyMatchFailure(
+            op, "Only 1D or 2D vector constant supported");
+      }
+
+      for (int i = 0; i < sgData; ++i)
+        tileValues.push_back(values[i]);
+      auto tileAttr = DenseElementsAttr::get(VectorType::get({sgData}, eltType),
+                                             tileValues);
+      auto baseConstVec = rewriter.create<arith::ConstantOp>(loc, tileAttr);
+
+      // Get subgroup/thread id
+      Value sgId =
+          gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
+
+      // Compute baseValue: baseValue = (sgId % numTiles) * stride * sgData
+      int64_t nonUnitDim = 0;
+      if (wgShape.size() == 2)
+        nonUnitDim = wgShape[0] != 1 ? 0 : 1;
+      // For 1D, just use the first dim
+      int64_t numTiles = wgShape[nonUnitDim] / sgShape[nonUnitDim];
+      auto numTileConst =
+          rewriter.create<arith::ConstantIndexOp>(loc, numTiles);
+      Value remsiOp = rewriter.create<arith::RemSIOp>(
+          loc, rewriter.getIndexType(), sgId, numTileConst);
+      auto baseValueConst =
+          rewriter.create<arith::ConstantIndexOp>(loc, stride * sgData);
+      Value baseValue = rewriter.create<arith::MulIOp>(
+          loc, rewriter.getIndexType(), remsiOp, baseValueConst);
+
+      // Broadcast baseValue to vector
+      auto splatBaseValue = rewriter.create<vector::SplatOp>(
+          loc, VectorType::get({sgData}, rewriter.getIndexType()), baseValue);
+
+      // Add baseValue to baseConstantVec constant
+      Value finalTile = rewriter.create<arith::AddIOp>(
+          loc, splatBaseValue->getResult(0), baseConstVec);
+
+      // Cast to final type if needed
+      Value result;
+      if (eltType.isIndex()) {
+        result = finalTile;
+      } else {
+        result = rewriter.create<arith::IndexCastOp>(loc, newType, finalTile);
+      }
+
+      setLayoutIfNeeded(result);
+      rewriter.replaceOp(op, result);
+      return success();
+    }
   }
 };
 
