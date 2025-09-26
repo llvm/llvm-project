@@ -3495,7 +3495,9 @@ protected:
 
   AdjustedType(TypeClass TC, QualType OriginalTy, QualType AdjustedTy,
                QualType CanonicalPtr)
-      : Type(TC, CanonicalPtr, OriginalTy->getDependence()),
+      : Type(TC, CanonicalPtr,
+             AdjustedTy->getDependence() |
+                 (OriginalTy->getDependence() & ~TypeDependence::Dependent)),
         OriginalTy(OriginalTy), AdjustedTy(AdjustedTy) {}
 
 public:
