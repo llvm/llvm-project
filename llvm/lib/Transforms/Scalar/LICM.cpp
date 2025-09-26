@@ -209,14 +209,15 @@ static Instruction *cloneInstructionInExitBlock(
 static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
                              MemorySSAUpdater &MSSAU);
 
-static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
-                                  ICFLoopSafetyInfo &SafetyInfo,
-                                  MemorySSAUpdater &MSSAU, ScalarEvolution *SE);
+static void moveInstructionBefore(
+    Instruction &I, BasicBlock::iterator Dest, ICFLoopSafetyInfo &SafetyInfo,
+    MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
+    MemorySSA::InsertionPlace Point = MemorySSA::BeforeTerminator);
 
 static bool sinkUnusedInvariantsFromPreheaderToExit(
     Loop *L, AAResults *AA, ICFLoopSafetyInfo *SafetyInfo,
     MemorySSAUpdater &MSSAU, ScalarEvolution *SE, DominatorTree *DT,
-    SinkAndHoistLICMFlags &SinkFlags);
+    SinkAndHoistLICMFlags &SinkFlags, OptimizationRemarkEmitter *ORE);
 
 static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
                                 function_ref<void(Instruction *)> Fn);
@@ -550,7 +551,7 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
   // pressure.
   Flags.setIsSink(true);
   Changed |= sinkUnusedInvariantsFromPreheaderToExit(L, AA, &SafetyInfo, MSSAU,
-                                                     SE, DT, Flags);
+                                                     SE, DT, Flags, ORE);
 
   if (VerifyMemorySSA)
     MSSA->verifyMemorySSA();
@@ -1468,15 +1469,14 @@ static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
 
 static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
                                   ICFLoopSafetyInfo &SafetyInfo,
-                                  MemorySSAUpdater &MSSAU,
-                                  ScalarEvolution *SE) {
+                                  MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
+                                  MemorySSA::InsertionPlace Point) {
   SafetyInfo.removeInstruction(&I);
   SafetyInfo.insertInstructionTo(&I, Dest->getParent());
   I.moveBefore(*Dest->getParent(), Dest);
   if (MemoryUseOrDef *OldMemAcc = cast_or_null<MemoryUseOrDef>(
           MSSAU.getMemorySSA()->getMemoryAccess(&I)))
-    MSSAU.moveToPlace(OldMemAcc, Dest->getParent(),
-                      MemorySSA::BeforeTerminator);
+    MSSAU.moveToPlace(OldMemAcc, Dest->getParent(), Point);
   if (SE)
     SE->forgetBlockAndLoopDispositions(&I);
 }
@@ -1487,7 +1487,7 @@ static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
 static bool sinkUnusedInvariantsFromPreheaderToExit(
     Loop *L, AAResults *AA, ICFLoopSafetyInfo *SafetyInfo,
     MemorySSAUpdater &MSSAU, ScalarEvolution *SE, DominatorTree *DT,
-    SinkAndHoistLICMFlags &SinkFlags) {
+    SinkAndHoistLICMFlags &SinkFlags, OptimizationRemarkEmitter *ORE) {
   BasicBlock *ExitBlock = L->getExitBlock();
   if (!ExitBlock)
     return false;
@@ -1536,7 +1536,7 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
       continue;
 
     moveInstructionBefore(I, ExitBlock->getFirstInsertionPt(), *SafetyInfo,
-                          MSSAU, SE);
+                          MSSAU, SE, MemorySSA::Beginning);
     MadeAnyChanges = true;
   }
 

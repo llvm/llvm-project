@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=licm -S | FileCheck %s
+; RUN: opt < %s -passes=licm -verify-memoryssa -S | FileCheck %s
 
 declare i1 @b()
 
