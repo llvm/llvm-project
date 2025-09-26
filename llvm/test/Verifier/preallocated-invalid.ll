@@ -72,6 +72,14 @@ define void @preallocated_setup_constant() {
     ret void
 }
 
+; CHECK: llvm.call.preallocated.alloc arg index must be a constant
+define void @preallocated_arg_constant() {
+    %ac = call i32 @blackbox()
+    %cs = call token @llvm.call.preallocated.setup(i32 3)
+    call token @llvm.call.preallocated.arg(token %cs, i32 %ac)
+    ret void
+}
+
 ; CHECK: must be between 0 and corresponding
 define void @preallocated_setup_arg_index_in_bounds() {
     %cs = call token @llvm.call.preallocated.setup(i32 2)
