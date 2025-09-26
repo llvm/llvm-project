@@ -274,6 +274,7 @@ void ThreadRegistry::JoinThread(u32 tid, void *arg) {
     {
       ThreadRegistryLock l(this);
       ThreadContextBase *tctx = threads_[tid];
+
       CHECK_NE(tctx, 0);
       if (tctx->status == ThreadStatusInvalid) {
         Report("%s: Join of non-existent thread\n", SanitizerToolName);
@@ -357,17 +358,19 @@ ThreadContextBase *ThreadRegistry::QuarantinePop() {
   return tctx;
 }
 
-u32 ThreadRegistry::ConsumeThreadUserId(uptr user_id) {
+bool ThreadRegistry::ConsumeThreadUserId(uptr user_id, u32 *tid_out) {
   ThreadRegistryLock l(this);
-  u32 tid;
   auto *t = live_.find(user_id);
-  CHECK(t);
-  tid = t->second;
+  if (!t) {
+    return false;
+  }
+  u32 tid = t->second;
   live_.erase(t);
   auto *tctx = threads_[tid];
   CHECK_EQ(tctx->user_id, user_id);
   tctx->user_id = 0;
-  return tid;
+  *tid_out = tid;
+  return true;
 }
 
 void ThreadRegistry::SetThreadUserId(u32 tid, uptr user_id) {
