@@ -394,11 +394,7 @@ public:
   ///
   /// This pointer points into a memory buffer, where the on-disk hash
   /// table for header file information actually lives.
-  const char *HeaderFileInfoTableData = nullptr;
-
-  /// The on-disk hash table that contains information about each of
-  /// the header files.
-  void *HeaderFileInfoTable = nullptr;
+  const unsigned char *HeaderFileInfoTableData = nullptr;
 
   // === Submodule information ===
 
