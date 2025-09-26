@@ -984,6 +984,52 @@ public:
   ArrayRef<MCDCRecord> getMCDCRecords() const { return MCDCRecords; }
 };
 
+/// Represents a set of available capabilities
+class CoverageCapabilities {
+  uint32_t Capabilities;
+
+public:
+  enum CovInstrLevel {
+    Region = (1 << 0),
+    Branch = (1 << 1),
+    MCDC = (1 << 2),
+  };
+
+  CoverageCapabilities(uint32_t Capabilities) : Capabilities(Capabilities){};
+
+  static CoverageCapabilities all() {
+    return CoverageCapabilities(Region | Branch | MCDC);
+  }
+
+  static CoverageCapabilities none() {
+    return CoverageCapabilities(0);
+  }
+
+  bool hasCapability(CovInstrLevel Lvl) const {
+    return (this->Capabilities & Lvl) != 0;
+  }
+
+  /// Returns true if this includes all the capabilities of Other.
+  bool includes(const CoverageCapabilities &Other) const {
+    return (this->Capabilities & Other.Capabilities) == Other.Capabilities;
+  }
+
+  std::string toString() const {
+    std::stringstream SS;
+    SS << std::oct << this->Capabilities;
+    return SS.str();
+  }
+
+  CoverageCapabilities& operator |= (const CoverageCapabilities &Rhs) {
+    this->Capabilities |= Rhs.Capabilities;
+    return *this;
+  }
+
+  CoverageCapabilities operator | (const CoverageCapabilities &Rhs) const {
+    return CoverageCapabilities(this->Capabilities | Rhs.Capabilities);
+  }
+};
+
 /// The mapping of profile information to coverage data.
 ///
 /// This is the main interface to get coverage information, using a profile to
@@ -993,6 +1039,10 @@ class CoverageMapping {
   std::vector<FunctionRecord> Functions;
   DenseMap<size_t, SmallVector<unsigned, 0>> FilenameHash2RecordIndices;
   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;
+
+  /// Keep track of the coverage capabilities of the loaded object file,
+  /// which depends on the parameters used to compile it.
+  CoverageCapabilities AvailableInstrLevels = CoverageCapabilities::none();
 
   std::optional<bool> SingleByteCoverage;
 
@@ -1011,6 +1061,7 @@ class CoverageMapping {
                std::optional<std::reference_wrapper<IndexedInstrProfReader>>
                    &ProfileReader,
                CoverageMapping &Coverage, bool &DataFound,
+               CoverageCapabilities RequestedCapabilities,
                SmallVectorImpl<object::BuildID> *FoundBinaryIDs = nullptr);
 
   /// Add a function record corresponding to \p Record.
@@ -1034,7 +1085,8 @@ public:
   LLVM_ABI static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
        std::optional<std::reference_wrapper<IndexedInstrProfReader>>
-           &ProfileReader);
+           &ProfileReader,
+       CoverageCapabilities RequestCapabilities = CoverageCapabilities::none());
 
   /// Load the coverage mapping from the given object files and profile. If
   /// \p Arches is non-empty, it must specify an architecture for each object.
@@ -1044,7 +1096,8 @@ public:
        std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
        ArrayRef<StringRef> Arches = {}, StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
-       bool CheckBinaryIDs = false);
+       bool CheckBinaryIDs = false,
+       CoverageCapabilities RequestCapabilities = CoverageCapabilities::none());
 
   /// The number of functions that couldn't have their profiles mapped.
   ///
@@ -1430,6 +1483,10 @@ struct CovMapHeader {
   template <llvm::endianness Endian> uint32_t getVersion() const {
     return support::endian::byte_swap<uint32_t, Endian>(Version);
   }
+
+  template <llvm::endianness Endian> uint32_t getCovInstrLevels() const {
+    return support::endian::byte_swap<uint32_t, Endian>(CovInstrLevels);
+  }
 };
 
 LLVM_PACKED_END
@@ -1452,6 +1509,8 @@ enum CovMapVersion {
   Version6 = 5,
   // Branch regions extended and Decision Regions added for MC/DC.
   Version7 = 6,
+  // Covmap header tracks the instrumentation level
+  Version8 = 7,
   // The current version is Version7.
   CurrentVersion = INSTR_PROF_COVMAP_VERSION
 };
