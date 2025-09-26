@@ -18371,9 +18371,75 @@ ARMTargetLowering::PerformBRCONDCombine(SDNode *N, SelectionDAG &DAG) const {
   return SDValue();
 }
 
+static SDValue foldCMOVOfCMOV(SDNode *Op, SelectionDAG &DAG) {
+  // (cmov A, B, CC1, (cmov C, D, CC2, Flags))
+  // -> (cmov (cmov A, B, CC1, C), (cmov A, B, CC1, D), CC2, Flags)
+  SDValue L = Op->getOperand(0);
+  SDValue R = Op->getOperand(1);
+  ARMCC::CondCodes OpCC =
+      static_cast<ARMCC::CondCodes>(Op->getConstantOperandVal(2));
+
+  SDValue OpCmp = Op->getOperand(3);
+  if (OpCmp.getOpcode() != ARMISD::CMPZ && OpCmp.getOpcode() != ARMISD::CMP)
+    // Only looking at EQ and NE cases.
+    return SDValue();
+
+  SDValue CmpLHS = OpCmp.getOperand(0);
+  SDValue CmpRHS = OpCmp.getOperand(1);
+
+  if (CmpRHS.getOpcode() == ARMISD::CMOV)
+    std::swap(CmpLHS, CmpRHS);
+  else if (CmpLHS.getOpcode() != ARMISD::CMOV)
+    return SDValue();
+
+  SDValue X = CmpLHS->getOperand(0);
+  SDValue Y = CmpLHS->getOperand(1);
+  if (!isa<ConstantSDNode>(X) || !isa<ConstantSDNode>(Y) || X == Y)
+    return SDValue();
+
+  ConstantSDNode *CX = cast<ConstantSDNode>(X);
+  ConstantSDNode *CY = cast<ConstantSDNode>(Y);
+  if (CX->getAPIntValue() == CY->getAPIntValue())
+    return SDValue();
+
+  ARMCC::CondCodes CC =
+      static_cast<ARMCC::CondCodes>(CmpLHS->getConstantOperandVal(2));
+  SDValue CondFlags = CmpLHS->getOperand(3);
+
+  if (CmpRHS == Y) {
+    // If the compare uses the second constant, flip the condition.
+    // VERIFY: getOppositeCondition does the same flip as AArch64's
+    // getInvertedCondCode.
+    CC = ARMCC::getOppositeCondition(CC);
+  } else if (CmpRHS != X) {
+    return SDValue();
+  }
+
+  if (OpCC == ARMCC::NE) {
+    // Outer NE inverts the sense.
+    CC = ARMCC::getOppositeCondition(CC);
+  } else if (OpCC != ARMCC::EQ) {
+    return SDValue();
+  }
+
+  SDLoc DL(Op);
+  EVT VT = Op->getValueType(0);
+  // CMOV takes (falseVal, trueVal, CC, Flags). To match (CSEL L,R,CC), pass
+  // (R,L).
+  SDValue CCValue = DAG.getConstant(CC, DL, FlagsVT);
+  return DAG.getNode(ARMISD::CMOV, DL, VT, R, L, CCValue, CondFlags);
+}
+
 /// PerformCMOVCombine - Target-specific DAG combining for ARMISD::CMOV.
 SDValue
 ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
+  // CMOV x, x, cc -> x
+  if (N->getOperand(0) == N->getOperand(1))
+    return N->getOperand(0);
+
+  if (SDValue R = foldCMOVOfCMOV(N, DAG))
+    return R;
+
   SDValue Cmp = N->getOperand(3);
   if (Cmp.getOpcode() != ARMISD::CMPZ)
     // Only looking at EQ and NE cases.

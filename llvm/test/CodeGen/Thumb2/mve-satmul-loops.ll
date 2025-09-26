@@ -94,7 +94,8 @@ define arm_aapcs_vfpcc void @ssatmul_s_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    csel r4, r5, r0, lt
 ; CHECK-NEXT:    subs r5, r2, r3
 ; CHECK-NEXT:    sbcs r4, r4, #0
-; CHECK-NEXT:    csel r2, r2, r3, lt
+; CHECK-NEXT:    it ge
+; CHECK-NEXT:    mvnge r2, #-2147483648
 ; CHECK-NEXT:    str r2, [r10], #4
 ; CHECK-NEXT:    le lr, .LBB0_7
 ; CHECK-NEXT:  .LBB0_8: @ %for.cond.cleanup
@@ -323,8 +324,9 @@ define arm_aapcs_vfpcc void @ssatmul_4_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    csel r1, r1, r0, lt
 ; CHECK-NEXT:    subs r5, r4, r2
 ; CHECK-NEXT:    sbcs r1, r1, #0
-; CHECK-NEXT:    csel r1, r4, r2, lt
-; CHECK-NEXT:    str r1, [r11], #4
+; CHECK-NEXT:    it ge
+; CHECK-NEXT:    mvnge r4, #-2147483648
+; CHECK-NEXT:    str r4, [r11], #4
 ; CHECK-NEXT:    le lr, .LBB1_7
 ; CHECK-NEXT:  .LBB1_8: @ %for.cond.cleanup
 ; CHECK-NEXT:    add sp, #16

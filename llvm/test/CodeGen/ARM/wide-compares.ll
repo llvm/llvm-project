@@ -8,9 +8,9 @@ define i32 @test_slt1(i64 %a, i64 %b) {
 ; CHECK-ARM-LABEL: test_slt1:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    subs r0, r0, r2
-; CHECK-ARM-NEXT:    mov r12, #2
+; CHECK-ARM-NEXT:    mov r12, #1
 ; CHECK-ARM-NEXT:    sbcs r0, r1, r3
-; CHECK-ARM-NEXT:    movwlt r12, #1
+; CHECK-ARM-NEXT:    movwge r12, #2
 ; CHECK-ARM-NEXT:    mov r0, r12
 ; CHECK-ARM-NEXT:    bx lr
 ;
@@ -41,10 +41,10 @@ define i32 @test_slt1(i64 %a, i64 %b) {
 ; CHECK-THUMB2-LABEL: test_slt1:
 ; CHECK-THUMB2:       @ %bb.0: @ %entry
 ; CHECK-THUMB2-NEXT:    subs r0, r0, r2
-; CHECK-THUMB2-NEXT:    mov.w r12, #2
+; CHECK-THUMB2-NEXT:    mov.w r12, #1
 ; CHECK-THUMB2-NEXT:    sbcs.w r0, r1, r3
-; CHECK-THUMB2-NEXT:    it lt
-; CHECK-THUMB2-NEXT:    movlt.w r12, #1
+; CHECK-THUMB2-NEXT:    it ge
+; CHECK-THUMB2-NEXT:    movge.w r12, #2
 ; CHECK-THUMB2-NEXT:    mov r0, r12
 ; CHECK-THUMB2-NEXT:    bx lr
 entry:
