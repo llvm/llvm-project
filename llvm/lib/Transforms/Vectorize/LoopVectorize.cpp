@@ -7487,7 +7487,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     VPSingleDefRecipe *VectorPtr;
     if (Reverse) {
       // When folding the tail, we may compute an address that we don't in the
-      // original scalar loop: use none in this case.
+      // original scalar loop: drop the GEP no-wrap flags in this case.
       GEPNoWrapFlags Flags =
           CM.foldTailByMasking() || !GEP
               ? GEPNoWrapFlags::none()
