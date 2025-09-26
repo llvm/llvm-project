@@ -1169,8 +1169,7 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
                                                const InterpFrame *Frame,
                                                const CallExpr *Call,
                                                unsigned BuiltinOp) {
-  PrimType AlignmentT = *S.Ctx.classify(Call->getArg(1));
-  const APSInt &Alignment = popToAPSInt(S.Stk, AlignmentT);
+  const APSInt &Alignment = popToAPSInt(S, Call->getArg(1));
 
   if (Alignment < 0 || !Alignment.isPowerOf2()) {
     S.FFDiag(Call, diag::note_constexpr_invalid_alignment) << Alignment;
@@ -1184,8 +1183,7 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // The first parameter is either an integer or a pointer (but not a function
-  // pointer).
+  // The first parameter is either an integer or a pointer.
   PrimType FirstArgT = *S.Ctx.classify(Call->getArg(0));
 
   if (isIntegralType(FirstArgT)) {
@@ -1204,12 +1202,12 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
     }
     return true;
   }
-
   assert(FirstArgT == PT_Ptr);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (!Ptr.isBlockPointer())
+    return false;
 
-  unsigned PtrOffset = Ptr.getByteOffset();
-  PtrOffset = Ptr.getIndex();
+  unsigned PtrOffset = Ptr.getIndex();
   CharUnits BaseAlignment =
       S.getASTContext().getDeclAlign(Ptr.getDeclDesc()->asValueDecl());
   CharUnits PtrAlign =
