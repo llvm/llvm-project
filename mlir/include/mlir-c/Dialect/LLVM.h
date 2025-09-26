@@ -307,7 +307,7 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompileUnitAttrGet(
     MlirContext ctx, MlirAttribute id, unsigned int sourceLanguage,
     MlirAttribute file, MlirAttribute producer, bool isOptimized,
     MlirLLVMDIEmissionKind emissionKind, MlirLLVMDINameTableKind nameTableKind,
-    MlirAttribute splitDwarfFile);
+    MlirAttribute splitDebugFilename);
 
 /// Creates a LLVM DIFlags attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIFlagsAttrGet(MlirContext ctx,

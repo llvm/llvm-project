@@ -434,10 +434,10 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
       "StringAttr":$producer, "bool":$isOptimized,
       "DIEmissionKind":$emissionKind,
       CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind,
-      CArg<"StringAttr", "{}">:$splitDwarfFile
+      CArg<"StringAttr", "{}">:$splitDebugFilename
     ), [{
       return $_get(id.getContext(), id, sourceLanguage, file, producer,
-                   isOptimized, emissionKind, nameTableKind, splitDwarfFile);
+                   isOptimized, emissionKind, nameTableKind, splitDebugFilename);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";

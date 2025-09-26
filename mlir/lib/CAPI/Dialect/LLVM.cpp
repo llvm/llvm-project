@@ -257,12 +257,12 @@ MlirAttribute mlirLLVMDICompileUnitAttrGet(
     MlirContext ctx, MlirAttribute id, unsigned int sourceLanguage,
     MlirAttribute file, MlirAttribute producer, bool isOptimized,
     MlirLLVMDIEmissionKind emissionKind, MlirLLVMDINameTableKind nameTableKind,
-    MlirAttribute splitDwarfFile) {
+    MlirAttribute splitDebugFilename) {
   return wrap(DICompileUnitAttr::get(
       unwrap(ctx), cast<DistinctAttr>(unwrap(id)), sourceLanguage,
       cast<DIFileAttr>(unwrap(file)), cast<StringAttr>(unwrap(producer)),
       isOptimized, DIEmissionKind(emissionKind), DINameTableKind(nameTableKind),
-      cast<StringAttr>(unwrap(splitDwarfFile))));
+      cast<StringAttr>(unwrap(splitDebugFilename))));
 }
 
 MlirAttribute mlirLLVMDIFlagsAttrGet(MlirContext ctx, uint64_t value) {
