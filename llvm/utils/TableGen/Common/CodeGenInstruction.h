@@ -268,6 +268,7 @@ public:
   bool hasChain_Inferred : 1;
   bool variadicOpsAreDefs : 1;
   bool isAuthenticated : 1;
+  bool mayHaveChain : 1;
 
   std::string DeprecatedReason;
   bool HasComplexDeprecationPredicate;

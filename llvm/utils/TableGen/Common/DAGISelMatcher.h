@@ -53,14 +53,15 @@ class Matcher {
 public:
   enum KindTy {
     // Matcher state manipulation.
-    Scope,            // Push a checking scope.
-    RecordNode,       // Record the current node.
-    RecordChild,      // Record a child of the current node.
-    RecordMemRef,     // Record the memref in the current node.
-    CaptureGlueInput, // If the current node has an input glue, save it.
-    MoveChild,        // Move current node to specified child.
-    MoveSibling,      // Move current node to specified sibling.
-    MoveParent,       // Move current node to parent.
+    Scope,               // Push a checking scope.
+    RecordNode,          // Record the current node.
+    RecordChild,         // Record a child of the current node.
+    RecordMemRef,        // Record the memref in the current node.
+    RecordOptionalChain, // If the current node has input chain, record it.
+    CaptureGlueInput,    // If the current node has an input glue, save it.
+    MoveChild,           // Move current node to specified child.
+    MoveSibling,         // Move current node to specified sibling.
+    MoveParent,          // Move current node to parent.
 
     // Predicate checking.
     CheckSame,      // Fail if not same as prev match.
@@ -315,6 +316,20 @@ public:
 
   static bool classof(const Matcher *N) {
     return N->getKind() == CaptureGlueInput;
+  }
+
+private:
+  void printImpl(raw_ostream &OS, indent Indent) const override;
+  bool isEqualImpl(const Matcher *M) const override { return true; }
+};
+
+///
+class RecordOptionalChainMatcher : public Matcher {
+public:
+  RecordOptionalChainMatcher() : Matcher(RecordOptionalChain) {}
+
+  static bool classof(const Matcher *N) {
+    return N->getKind() == RecordOptionalChain;
   }
 
 private:
@@ -1030,7 +1045,7 @@ class EmitNodeMatcherCommon : public Matcher {
   const CodeGenInstruction &CGI;
   const SmallVector<MVT::SimpleValueType, 3> VTs;
   const SmallVector<unsigned, 6> Operands;
-  bool HasChain, HasInGlue, HasOutGlue, HasMemRefs;
+  bool HasChain, HasInGlue, HasOutGlue, HasMemRefs, MayHaveChain;
 
   /// NumFixedArityOperands - If this is a fixed arity node, this is set to -1.
   /// If this is a varidic node, this is set to the number of fixed arity
@@ -1042,10 +1057,12 @@ public:
                         ArrayRef<MVT::SimpleValueType> vts,
                         ArrayRef<unsigned> operands, bool hasChain,
                         bool hasInGlue, bool hasOutGlue, bool hasmemrefs,
-                        int numfixedarityoperands, bool isMorphNodeTo)
+                        bool mayHaveChain, int numfixedarityoperands,
+                        bool isMorphNodeTo)
       : Matcher(isMorphNodeTo ? MorphNodeTo : EmitNode), CGI(cgi), VTs(vts),
         Operands(operands), HasChain(hasChain), HasInGlue(hasInGlue),
         HasOutGlue(hasOutGlue), HasMemRefs(hasmemrefs),
+        MayHaveChain(mayHaveChain),
         NumFixedArityOperands(numfixedarityoperands) {}
 
   const CodeGenInstruction &getInstruction() const { return CGI; }
@@ -1069,6 +1086,7 @@ public:
   bool hasInGlue() const { return HasInGlue; }
   bool hasOutGlue() const { return HasOutGlue; }
   bool hasMemRefs() const { return HasMemRefs; }
+  bool mayHaveChain() const { return MayHaveChain; }
   int getNumFixedArityOperands() const { return NumFixedArityOperands; }
 
   static bool classof(const Matcher *N) {
@@ -1089,11 +1107,11 @@ public:
   EmitNodeMatcher(const CodeGenInstruction &cgi,
                   ArrayRef<MVT::SimpleValueType> vts,
                   ArrayRef<unsigned> operands, bool hasChain, bool hasInGlue,
-                  bool hasOutGlue, bool hasmemrefs, int numfixedarityoperands,
-                  unsigned firstresultslot)
+                  bool hasOutGlue, bool hasmemrefs, bool mayHaveChain,
+                  int numfixedarityoperands, unsigned firstresultslot)
       : EmitNodeMatcherCommon(cgi, vts, operands, hasChain, hasInGlue,
-                              hasOutGlue, hasmemrefs, numfixedarityoperands,
-                              false),
+                              hasOutGlue, hasmemrefs, mayHaveChain,
+                              numfixedarityoperands, false),
         FirstResultSlot(firstresultslot) {}
 
   unsigned getFirstResultSlot() const { return FirstResultSlot; }
@@ -1109,11 +1127,11 @@ public:
   MorphNodeToMatcher(const CodeGenInstruction &cgi,
                      ArrayRef<MVT::SimpleValueType> vts,
                      ArrayRef<unsigned> operands, bool hasChain, bool hasInGlue,
-                     bool hasOutGlue, bool hasmemrefs,
+                     bool hasOutGlue, bool hasmemrefs, bool mayHaveChain,
                      int numfixedarityoperands, const PatternToMatch &pattern)
       : EmitNodeMatcherCommon(cgi, vts, operands, hasChain, hasInGlue,
-                              hasOutGlue, hasmemrefs, numfixedarityoperands,
-                              true),
+                              hasOutGlue, hasmemrefs, mayHaveChain,
+                              numfixedarityoperands, true),
         Pattern(pattern) {}
 
   const PatternToMatch &getPattern() const { return Pattern; }

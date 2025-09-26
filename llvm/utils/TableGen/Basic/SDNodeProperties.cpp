@@ -28,6 +28,7 @@ unsigned llvm::parseSDPatternOperatorProperties(const Record *R) {
                       .Case("SDNPSideEffect", SDNPSideEffect)
                       .Case("SDNPMemOperand", SDNPMemOperand)
                       .Case("SDNPVariadic", SDNPVariadic)
+                      .Case("SDNPMayHaveChain", SDNPMayHaveChain)
                       .Default(-1u);
     if (Offset != -1u)
       Properties |= 1 << Offset;

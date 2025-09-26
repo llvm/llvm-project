@@ -2836,9 +2836,9 @@ HandleMergeInputChains(SmallVectorImpl<SDNode*> &ChainNodesMatched,
 }
 
 /// MorphNode - Handle morphing a node in place for the selector.
-SDNode *SelectionDAGISel::
-MorphNode(SDNode *Node, unsigned TargetOpc, SDVTList VTList,
-          ArrayRef<SDValue> Ops, unsigned EmitNodeInfo) {
+SDNode *SelectionDAGISel::MorphNode(SDNode *Node, unsigned TargetOpc,
+                                    SDVTList VTList, ArrayRef<SDValue> Ops,
+                                    unsigned EmitNodeInfo, bool OptionalChain) {
   // It is possible we're using MorphNodeTo to replace a node with no
   // normal results with one that has a normal result (or we could be
   // adding a chain) and the input could have glue and chains as well.
@@ -2880,7 +2880,7 @@ MorphNode(SDNode *Node, unsigned TargetOpc, SDVTList VTList,
     --ResNumResults;
 
   // Move the chain reference if needed.
-  if ((EmitNodeInfo & OPFL_Chain) && OldChainResultNo != -1 &&
+  if ((EmitNodeInfo & OPFL_Chain || OptionalChain) && OldChainResultNo != -1 &&
       static_cast<unsigned>(OldChainResultNo) != ResNumResults - 1)
     ReplaceUses(SDValue(Node, OldChainResultNo),
                 SDValue(Res, ResNumResults - 1));
@@ -3385,6 +3385,12 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
   // update the chain results when the pattern is complete.
   SmallVector<SDNode*, 3> ChainNodesMatched;
 
+  bool HasNodesWithOptionalChain = false;
+
+  // List of pattern matches nodes that may have input/output chains and
+  // actually have them.
+  SmallVector<SDNode *, 8> OptionalChainNodes;
+
   LLVM_DEBUG(dbgs() << "ISEL: Starting pattern match\n");
 
   // Determine where to start the interpreter.  Normally we start at opcode #0,
@@ -3505,7 +3511,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_RecordChild2: case OPC_RecordChild3:
     case OPC_RecordChild4: case OPC_RecordChild5:
     case OPC_RecordChild6: case OPC_RecordChild7: {
-      unsigned ChildNo = Opcode-OPC_RecordChild0;
+      unsigned ChildNo =
+          Opcode - OPC_RecordChild0 + !OptionalChainNodes.empty();
       if (ChildNo >= N.getNumOperands())
         break;  // Match fails if out of range child #.
 
@@ -3523,6 +3530,17 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
 
       continue;
 
+    case OPC_RecordOptionalChain:
+      HasNodesWithOptionalChain = true;
+      // If the current node has input chain, record it.
+      if (N->getNumOperands() != 0) {
+        SDValue FirstOperand = N->getOperand(0);
+        if (FirstOperand.getValueType() == MVT::Other) {
+          OptionalChainNodes.push_back(N.getNode());
+        }
+      }
+      continue;
+
     case OPC_CaptureGlueInput:
       // If the current node has an input glue, capture it in InputGlue.
       if (N->getNumOperands() != 0 &&
@@ -3531,7 +3549,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
 
     case OPC_MoveChild: {
-      unsigned ChildNo = MatcherTable[MatcherIndex++];
+      unsigned ChildNo =
+          MatcherTable[MatcherIndex++] + !OptionalChainNodes.empty();
       if (ChildNo >= N.getNumOperands())
         break;  // Match fails if out of range child #.
       N = N.getOperand(ChildNo);
@@ -3543,7 +3562,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_MoveChild2: case OPC_MoveChild3:
     case OPC_MoveChild4: case OPC_MoveChild5:
     case OPC_MoveChild6: case OPC_MoveChild7: {
-      unsigned ChildNo = Opcode-OPC_MoveChild0;
+      unsigned ChildNo = Opcode - OPC_MoveChild0 + !OptionalChainNodes.empty();
       if (ChildNo >= N.getNumOperands())
         break;  // Match fails if out of range child #.
       N = N.getOperand(ChildNo);
@@ -3568,6 +3587,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       unsigned SiblingNo = Opcode == OPC_MoveSibling
                                ? MatcherTable[MatcherIndex++]
                                : Opcode - OPC_MoveSibling0;
+      SiblingNo += !OptionalChainNodes.empty();
       if (SiblingNo >= N.getNumOperands())
         break; // Match fails if out of range sibling #.
       N = N.getOperand(SiblingNo);
@@ -3998,10 +4018,15 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // Ignore these because the newly token factored chain should not refer to
       // the old nodes.
       unsigned NumChains = MatcherTable[MatcherIndex++];
-      assert(NumChains != 0 && "Can't TF zero chains");
+      assert((NumChains != 0 || HasNodesWithOptionalChain) &&
+             "Can't TF zero chains");
 
       assert(ChainNodesMatched.empty() &&
              "Should only have one EmitMergeInputChains per match");
+
+      if (NumChains == 0 && HasNodesWithOptionalChain &&
+          OptionalChainNodes.empty())
+        continue;
 
       // Read all of the chained nodes.
       for (unsigned i = 0; i != NumChains; ++i) {
@@ -4019,6 +4044,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
           break;
         }
       }
+
+      ChainNodesMatched.append(OptionalChainNodes);
 
       // If the inner loop broke out, the match fails.
       if (ChainNodesMatched.empty())
@@ -4164,7 +4191,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         VTs.push_back(VT);
       }
 
-      if (EmitNodeInfo & OPFL_Chain)
+      if (EmitNodeInfo & OPFL_Chain || !OptionalChainNodes.empty())
         VTs.push_back(MVT::Other);
       if (EmitNodeInfo & OPFL_GlueOutput)
         VTs.push_back(MVT::Glue);
@@ -4186,6 +4213,10 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         unsigned RecNo = MatcherTable[MatcherIndex++];
         if (RecNo & 128)
           RecNo = GetVBR(RecNo, MatcherTable, MatcherIndex);
+        if (HasNodesWithOptionalChain) {
+          assert(RecNo > 0);
+          RecNo--;
+        }
 
         assert(RecNo < RecordedNodes.size() && "Invalid EmitNode");
         Ops.push_back(RecordedNodes[RecNo].first);
@@ -4209,7 +4240,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       }
 
       // If this has chain/glue inputs, add them.
-      if (EmitNodeInfo & OPFL_Chain)
+      if (EmitNodeInfo & OPFL_Chain || !OptionalChainNodes.empty())
         Ops.push_back(InputChain);
       if ((EmitNodeInfo & OPFL_GlueInput) && InputGlue.getNode() != nullptr)
         Ops.push_back(InputGlue);
@@ -4219,7 +4250,12 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // We need to perform this check before potentially modifying one of the
       // nodes via MorphNode.
       bool MayRaiseFPException =
-          llvm::any_of(ChainNodesMatched, [this](SDNode *N) {
+          llvm::any_of(ChainNodesMatched,
+                       [this](SDNode *N) {
+                         return mayRaiseFPException(N) &&
+                                !N->getFlags().hasNoFPExcept();
+                       }) ||
+          llvm::any_of(OptionalChainNodes, [this](SDNode *N) {
             return mayRaiseFPException(N) && !N->getFlags().hasNoFPExcept();
           });
 
@@ -4251,8 +4287,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
                  "Chain node replaced during MorphNode");
           llvm::erase(Chain, N);
         });
-        Res = cast<MachineSDNode>(MorphNode(NodeToMatch, TargetOpc, VTList,
-                                            Ops, EmitNodeInfo));
+        Res = cast<MachineSDNode>(MorphNode(NodeToMatch, TargetOpc, VTList, Ops,
+                                            EmitNodeInfo,
+                                            !OptionalChainNodes.empty()));
       }
 
       // Set the NoFPExcept flag when no original matched node could
@@ -4264,9 +4301,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // chain and glue.
       if (EmitNodeInfo & OPFL_GlueOutput) {
         InputGlue = SDValue(Res, VTs.size()-1);
-        if (EmitNodeInfo & OPFL_Chain)
+        if (EmitNodeInfo & OPFL_Chain || !OptionalChainNodes.empty())
           InputChain = SDValue(Res, VTs.size()-2);
-      } else if (EmitNodeInfo & OPFL_Chain)
+      } else if (EmitNodeInfo & OPFL_Chain || !OptionalChainNodes.empty())
         InputChain = SDValue(Res, VTs.size()-1);
 
       // If the OPFL_MemRefs glue is set on this node, slap all of the
@@ -4430,7 +4467,7 @@ bool SelectionDAGISel::mayRaiseFPException(SDNode *N) const {
     const SelectionDAGTargetInfo &TSI = CurDAG->getSelectionDAGInfo();
     return TSI.mayRaiseFPException(N->getOpcode());
   }
-  return N->isStrictFPOpcode();
+  return N->isStrictFPOpcode() || N->isFPOperation();
 }
 
 bool SelectionDAGISel::isOrEquivalentToAdd(const SDNode *N) const {

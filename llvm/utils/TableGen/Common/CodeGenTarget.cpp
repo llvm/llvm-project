@@ -406,6 +406,8 @@ ComplexPattern::ComplexPattern(const Record *R) {
       Properties |= 1 << SDNPMemOperand;
     } else if (Prop->getName() == "SDNPVariadic") {
       Properties |= 1 << SDNPVariadic;
+    } else if (Prop->getName() == "SDNPMayHaveChain") {
+      Properties |= 1 << SDNPMayHaveChain;
     } else {
       PrintFatalError(R->getLoc(),
                       "Unsupported SD Node property '" + Prop->getName() +

@@ -67,7 +67,8 @@ static bool haveCompatibleDescriptions(const SDNodeInfo &N1,
   // and sometimes differ between nodes sharing the same enum name.
   constexpr unsigned PropMask = (1 << SDNPHasChain) | (1 << SDNPOutGlue) |
                                 (1 << SDNPInGlue) | (1 << SDNPOptInGlue) |
-                                (1 << SDNPMemOperand) | (1 << SDNPVariadic);
+                                (1 << SDNPMemOperand) | (1 << SDNPVariadic) |
+                                (1 << SDNPMayHaveChain);
 
   return (N1.getProperties() & PropMask) == (N2.getProperties() & PropMask);
 }
@@ -312,6 +313,8 @@ static void emitDesc(raw_ostream &OS, StringRef EnumName,
     OS << "|1<<SDNPVariadic";
   if (Properties & (1 << SDNPMemOperand))
     OS << "|1<<SDNPMemOperand";
+  if (Properties & (1 << SDNPMayHaveChain))
+    OS << "|1<<SDNPMayHaveChain";
 
   OS << ", 0";
   if (N.isStrictFP())

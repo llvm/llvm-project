@@ -287,7 +287,7 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
           MatcherPtr->reset(new MorphNodeToMatcher(
               EN->getInstruction(), VTs, Operands, EN->hasChain(),
               EN->hasInGlue(), EN->hasOutGlue(), EN->hasMemRefs(),
-              EN->getNumFixedArityOperands(), Pattern));
+              EN->mayHaveChain(), EN->getNumFixedArityOperands(), Pattern));
           return;
         }
       }
