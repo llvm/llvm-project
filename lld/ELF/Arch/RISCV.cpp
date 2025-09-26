@@ -41,6 +41,8 @@ public:
   RelType getDynRel(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
+  RelExpr getVendorRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
+                           StringRef vendor) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
@@ -338,6 +340,8 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SET_ULEB128:
   case R_RISCV_SUB_ULEB128:
     return RE_RISCV_LEB128;
+  case R_RISCV_VENDOR:
+    return R_NONE;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
@@ -553,6 +557,15 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   default:
     llvm_unreachable("unknown relocation");
   }
+}
+
+RelExpr RISCV::getVendorRelExpr(const RelType type, const Symbol &s,
+                                const uint8_t *loc, StringRef vendor) const {
+  // TODO: Dispatch to vendor-specific relocation handling.
+  Err(ctx) << getErrorLoc(ctx, loc) << "unknown vendor-specific relocation ("
+           << type.v << ") in vendor namespace \"" << vendor
+           << "\" against symbol " << &s;
+  return R_NONE;
 }
 
 static bool relaxable(ArrayRef<Relocation> relocs, size_t i) {
