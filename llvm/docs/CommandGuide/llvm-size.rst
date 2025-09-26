@@ -44,7 +44,7 @@ OPTIONS
 .. option:: --exclude-pagezero
 
  Do not include the ``__PAGEZERO`` segment when calculating size information
- for Mach-O files. ``__PAGEZERO`` segment is a virtual memory region used
+ for Mach-O files. The ``__PAGEZERO`` segment is a virtual memory region used
  for memory protection that does not contribute to actual size, and excluding
  can provide a better representation of actual size.
 

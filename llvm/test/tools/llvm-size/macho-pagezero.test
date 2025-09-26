@@ -8,21 +8,15 @@
 
 # RUN: yaml2obj %s --docnum=2 -o %t-pagezero32.o
 # RUN: llvm-size %t-pagezero32.o | \
-# RUN:   FileCheck %s --check-prefix=NORMAL32 --match-full-lines
+# RUN:   FileCheck %s --check-prefix=NORMAL --match-full-lines
 # RUN: llvm-size --exclude-pagezero %t-pagezero32.o | \
-# RUN:   FileCheck %s --check-prefix=SKIP32 --match-full-lines
+# RUN:   FileCheck %s --check-prefix=SKIP --match-full-lines
 
 # NORMAL:__TEXT	__DATA	__OBJC	others	dec	hex
 # NORMAL-NEXT:20	100	0	4096	4216	1078
 
 # SKIP:__TEXT	__DATA	__OBJC	others	dec	hex
 # SKIP-NEXT:20	100	0	0	120	78
-
-# NORMAL32:__TEXT	__DATA	__OBJC	others	dec	hex
-# NORMAL32-NEXT:20	100	0	4096	4216	1078
-
-# SKIP32:__TEXT	__DATA	__OBJC	others	dec	hex
-# SKIP32-NEXT:20	100	0	0	120	78
 
 --- !mach-o
 FileHeader:
