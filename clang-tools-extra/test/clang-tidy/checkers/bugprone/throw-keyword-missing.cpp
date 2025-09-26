@@ -20,6 +20,7 @@ typedef basic_string<char> string;
 typedef basic_string<wchar_t> wstring;
 
 // std::exception and std::runtime_error declaration.
+// CHECK-MESSAGES-DAG: [[#EXCEPTION_LINE:@LINE + 1]]:8
 struct exception {
   exception();
   exception(const exception &other);
@@ -50,12 +51,13 @@ struct RegularException {
 
 void stdExceptionNotTrownTest(int i) {
   if (i < 0)
-    // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious exception object created but not thrown; did you mean 'throw {{.*}}'? [bugprone-throw-keyword-missing]
+    // CHECK-MESSAGES-DAG: :[[@LINE+1]]:5: warning: suspicious exception object created but not thrown; did you mean 'throw {{.*}}'? [bugprone-throw-keyword-missing]
     std::exception();
 
   if (i > 0)
-    // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious exception
+    // CHECK-MESSAGES-DAG: :[[@LINE+1]]:5: warning: suspicious exception
     std::runtime_error("Unexpected argument");
+    // CHECK-MESSAGES: note: object type inherits from base class declared here
 }
 
 void stdExceptionThrownTest(int i) {
@@ -181,6 +183,7 @@ class RegularError : public ERROR_BASE {};
 void typedefTest() {
   // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: suspicious exception
   RegularError();
+  // CHECK-MESSAGES: :[[#EXCEPTION_LINE]]:8: note: object type inherits from base class declared here
 }
 
 struct ExceptionRAII {

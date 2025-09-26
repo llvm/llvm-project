@@ -84,6 +84,10 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
             M, BuffersToWrap.front(), offloading::getOffloadEntryArray(M)))
       return Err;
     break;
+  case llvm::object::OFK_SYCL:
+    if (Error Err = offloading::wrapSYCLBinaries(M, BuffersToWrap.front()))
+      return Err;
+    break;
   default:
     return createStringError(getOffloadKindName(Kind) +
                              " wrapping is not supported");

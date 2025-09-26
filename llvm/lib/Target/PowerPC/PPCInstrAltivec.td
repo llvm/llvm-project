@@ -343,7 +343,6 @@ class VXCR_Int_Ty<bits<11> xo, string opc, Intrinsic IntID, ValueType Ty>
 //===----------------------------------------------------------------------===//
 // Instruction Definitions.
 
-def HasAltivec : Predicate<"Subtarget->hasAltivec()">;
 let Predicates = [HasAltivec] in {
 
 def DSS      : DSS_Form<0, 822, (outs), (ins u5imm:$STRM),
@@ -1193,8 +1192,6 @@ class VX_VT5_VA5_VB5_XO9_o<bits<9> xo, string opc, list<dag> pattern>
   let PS = 0;
 }
 
-def HasP8Altivec : Predicate<"Subtarget->hasP8Altivec()">;
-def HasP8Crypto : Predicate<"Subtarget->hasP8Crypto()">;
 let Predicates = [HasP8Altivec] in {
 
 let isCommutable = 1 in {
@@ -1420,7 +1417,6 @@ def VSBOX : VXBX_Int_Ty<1480, "vsbox", int_ppc_altivec_crypto_vsbox, v2i64>;
 } // HasP8Crypto
 
 // The following altivec instructions were introduced in Power ISA 3.0
-def HasP9Altivec : Predicate<"Subtarget->hasP9Altivec()">;
 let Predicates = [HasP9Altivec] in {
 
 // Vector Multiply-Sum

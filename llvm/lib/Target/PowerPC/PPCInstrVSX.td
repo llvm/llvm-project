@@ -116,20 +116,6 @@ def PPCSToV : SDNode<"PPCISD::SCALAR_TO_VECTOR_PERMUTED",
                      SDTypeProfile<1, 1, []>, []>;
 
 def PPCxxperm : SDNode<"PPCISD::XXPERM", SDT_PPCxxperm, []>;
-//-------------------------- Predicate definitions ---------------------------//
-def HasVSX : Predicate<"Subtarget->hasVSX()">;
-def IsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
-def IsBigEndian : Predicate<"!Subtarget->isLittleEndian()">;
-def IsPPC64 : Predicate<"Subtarget->isPPC64()">;
-def HasOnlySwappingMemOps : Predicate<"!Subtarget->hasP9Vector()">;
-def NoP8Vector : Predicate<"!Subtarget->hasP8Vector()">;
-def HasP8Vector : Predicate<"Subtarget->hasP8Vector()">;
-def HasDirectMove : Predicate<"Subtarget->hasDirectMove()">;
-def NoP9Vector : Predicate<"!Subtarget->hasP9Vector()">;
-def HasP9Vector : Predicate<"Subtarget->hasP9Vector()">;
-def NoP9Altivec : Predicate<"!Subtarget->hasP9Altivec()">;
-def NoP10Vector: Predicate<"!Subtarget->hasP10Vector()">;
-def HasP10Vector: Predicate<"Subtarget->hasP10Vector()">;
 
 def PPCldsplatAlign16 : PatFrag<(ops node:$ptr), (PPCldsplat node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getAlign() >= Align(16) &&
@@ -1293,13 +1279,13 @@ let Predicates = [HasVSX, HasP8Vector] in {
   def MFVSRD : XX1_RS6_RD5_XO<31, 51, (outs g8rc:$RA), (ins vsfrc:$XT),
                               "mfvsrd $RA, $XT", IIC_VecGeneral,
                               [(set i64:$RA, (PPCmfvsr f64:$XT))]>,
-      Requires<[In64BitMode]>;
+      Requires<[IsPPC64]>;
   // FIXME: Setting the hasSideEffects flag here to match current behaviour.
   let isCodeGenOnly = 1, hasSideEffects = 1 in
   def MFVRD : XX1_RS6_RD5_XO<31, 51, (outs g8rc:$RA), (ins vsrc:$XT),
                              "mfvsrd $RA, $XT", IIC_VecGeneral,
                              []>,
-      Requires<[In64BitMode]>;
+      Requires<[IsPPC64]>;
   def MFVSRWZ : XX1_RS6_RD5_XO<31, 115, (outs gprc:$RA), (ins vsfrc:$XT),
                                "mfvsrwz $RA, $XT", IIC_VecGeneral,
                                [(set i32:$RA, (PPCmfvsr f64:$XT))]>, ZExt32To64;
@@ -1311,13 +1297,13 @@ let Predicates = [HasVSX, HasP8Vector] in {
   def MTVSRD : XX1_RS6_RD5_XO<31, 179, (outs vsfrc:$XT), (ins g8rc:$RA),
                               "mtvsrd $XT, $RA", IIC_VecGeneral,
                               [(set f64:$XT, (PPCmtvsra i64:$RA))]>,
-      Requires<[In64BitMode]>;
+      Requires<[IsPPC64]>;
   // FIXME: Setting the hasSideEffects flag here to match current behaviour.
   let isCodeGenOnly = 1, hasSideEffects = 1 in
   def MTVRD : XX1_RS6_RD5_XO<31, 179, (outs vsrc:$XT), (ins g8rc:$RA),
                               "mtvsrd $XT, $RA", IIC_VecGeneral,
                               []>,
-      Requires<[In64BitMode]>;
+      Requires<[IsPPC64]>;
   def MTVSRWA : XX1_RS6_RD5_XO<31, 211, (outs vsfrc:$XT), (ins gprc:$RA),
                                "mtvsrwa $XT, $RA", IIC_VecGeneral,
                                [(set f64:$XT, (PPCmtvsra i32:$RA))]>;
@@ -1344,11 +1330,11 @@ def MTVSRWS: XX1_RS6_RD5_XO<31, 403, (outs vsrc:$XT), (ins gprc:$RA),
 
 def MTVSRDD: XX1Form<31, 435, (outs vsrc:$XT), (ins g8rc_nox0:$RA, g8rc:$RB),
                      "mtvsrdd $XT, $RA, $RB", IIC_VecGeneral,
-                     []>, Requires<[In64BitMode]>;
+                     []>, Requires<[IsPPC64]>;
 
 def MFVSRLD: XX1_RS6_RD5_XO<31, 307, (outs g8rc:$RA), (ins vsrc:$XT),
                             "mfvsrld $RA, $XT", IIC_VecGeneral,
-                            []>, Requires<[In64BitMode]>;
+                            []>, Requires<[IsPPC64]>;
 
 } // HasVSX, IsISA3_0, HasDirectMove
 
