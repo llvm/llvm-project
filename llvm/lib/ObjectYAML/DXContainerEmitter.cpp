@@ -343,6 +343,9 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
         NewSampler.RegisterSpace = Param.RegisterSpace;
         NewSampler.ShaderVisibility = Param.ShaderVisibility;
 
+        if (RS.Version > 2)
+          NewSampler.Flags = Param.getEncodedFlags();
+
         RS.StaticSamplers.push_back(NewSampler);
       }
 

@@ -1247,7 +1247,7 @@ private:
   /// return false if no parsing errors occurred, true otherwise.
   bool HandleAVX512Operand(OperandVector &Operands);
 
-  bool ParseZ(std::unique_ptr<X86Operand> &Z, const SMLoc &StartLoc);
+  bool ParseZ(std::unique_ptr<X86Operand> &Z, SMLoc StartLoc);
 
   bool is64BitMode() const {
     // FIXME: Can tablegen auto-generate this?
@@ -2907,8 +2907,7 @@ X86::CondCode X86AsmParser::ParseConditionCode(StringRef CC) {
 
 // true on failure, false otherwise
 // If no {z} mark was found - Parser doesn't advance
-bool X86AsmParser::ParseZ(std::unique_ptr<X86Operand> &Z,
-                          const SMLoc &StartLoc) {
+bool X86AsmParser::ParseZ(std::unique_ptr<X86Operand> &Z, SMLoc StartLoc) {
   MCAsmParser &Parser = getParser();
   // Assuming we are just pass the '{' mark, quering the next token
   // Searched for {z}, but none was found. Return false, as no parsing error was

@@ -84,7 +84,7 @@ end subroutine
 ! CHECK:           %[[VAL_30:.*]] = arith.muli %[[VAL_29]], %[[VAL_4]] overflow<nsw> : i32
 ! CHECK:           %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (i32) -> index
 ! CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_26]] : (index) -> i32
-! CHECK:           %[[VAL_33:.*]]:2 = fir.do_loop %[[VAL_34:.*]] = %[[VAL_26]] to %[[VAL_28]] step %[[VAL_31]] iter_args(%[[VAL_35:.*]] = %[[VAL_32]]) -> (index, i32) {
+! CHECK:           %[[VAL_33:.*]] = fir.do_loop %[[VAL_34:.*]] = %[[VAL_26]] to %[[VAL_28]] step %[[VAL_31]] iter_args(%[[VAL_35:.*]] = %[[VAL_32]]) -> (i32) {
 
 subroutine loop_params2(a,lb,ub,st)
   integer :: i, lb, ub, st

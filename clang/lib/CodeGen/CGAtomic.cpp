@@ -734,7 +734,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
         CGF.emitAtomicRMWInst(llvm::AtomicRMWInst::Xchg, Ptr,
                               CGF.Builder.getInt8(1), Order, Scope, E);
     RMWI->setVolatile(E->isVolatile());
-    llvm::Value *Result = CGF.Builder.CreateIsNotNull(RMWI, "tobool");
+    llvm::Value *Result = CGF.EmitToMemory(
+        CGF.Builder.CreateIsNotNull(RMWI, "tobool"), E->getType());
     auto *I = CGF.Builder.CreateStore(Result, Dest);
     CGF.addInstToCurrentSourceAtom(I, Result);
     return;
