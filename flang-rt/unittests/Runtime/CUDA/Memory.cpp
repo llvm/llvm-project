@@ -35,6 +35,12 @@ TEST(MemoryCUFTest, SimpleAllocTramsferFree) {
   RTNAME(CUFMemFree)((void *)dev, kMemTypeDevice, __FILE__, __LINE__);
 }
 
+TEST(MemoryCUFTest, AllocZero) {
+  int *dev = (int *)RTNAME(CUFMemAlloc)(0, kMemTypeDevice, __FILE__, __LINE__);
+  EXPECT_TRUE(dev != 0);
+  RTNAME(CUFMemFree)((void *)dev, kMemTypeDevice, __FILE__, __LINE__);
+}
+
 static OwningPtr<Descriptor> createAllocatable(
     Fortran::common::TypeCategory tc, int kind, int rank = 1) {
   return Descriptor::Create(TypeCode{tc, kind}, kind, nullptr, rank, nullptr,
