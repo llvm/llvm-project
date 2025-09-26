@@ -517,13 +517,15 @@ endfunction(set_windows_version_resource_properties)
 #   PLUGIN_TOOL
 #     The tool (i.e. cmake target) that this plugin will link against
 #   COMPONENT_LIB
-#      This is used to specify that this is a component library of
-#      LLVM which means that the source resides in llvm/lib/ and it is a
-#      candidate for inclusion into libLLVM.so.
+#     This is used to specify that this is a component library of
+#     LLVM which means that the source resides in llvm/lib/ and it is a
+#     candidate for inclusion into libLLVM.so.
+#   MERGE_INTO_LLVM_DYLIB
+#     Embed this foreign project library (mainly Polly) into libLLVM.so.
 #   )
 function(llvm_add_library name)
   cmake_parse_arguments(ARG
-    "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH;COMPONENT_LIB"
+    "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH;COMPONENT_LIB;MERGE_INTO_LLVM_DYLIB"
     "OUTPUT_NAME;PLUGIN_TOOL;ENTITLEMENTS;BUNDLE_PATH"
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
     ${ARGN})
@@ -657,10 +659,12 @@ function(llvm_add_library name)
     endif()
   endif()
 
-  if(ARG_COMPONENT_LIB)
-    set_target_properties(${name} PROPERTIES LLVM_COMPONENT TRUE)
+  if(ARG_COMPONENT_LIB OR ARG_MERGE_INTO_LLVM_DYLIB)
     if(LLVM_BUILD_LLVM_DYLIB OR BUILD_SHARED_LIBS)
       target_compile_definitions(${name} PRIVATE LLVM_EXPORTS)
+      if(TARGET ${obj_name})
+        target_compile_definitions(${obj_name} PRIVATE LLVM_EXPORTS)
+      endif()
     endif()
 
     # When building shared objects for each target there are some internal APIs
@@ -675,7 +679,10 @@ function(llvm_add_library name)
                             CXX_VISIBILITY_PRESET hidden
                             VISIBILITY_INLINES_HIDDEN YES)
     endif()
-    set_property(GLOBAL APPEND PROPERTY LLVM_COMPONENT_LIBS ${name})
+    if (ARG_COMPONENT_LIB)
+      set_target_properties(${name} PROPERTIES LLVM_COMPONENT TRUE)
+      set_property(GLOBAL APPEND PROPERTY LLVM_COMPONENT_LIBS ${name})
+    endif()
   endif()
 
   if(NOT ARG_NO_INSTALL_RPATH)
@@ -770,7 +777,7 @@ function(llvm_add_library name)
     # On DLL platforms symbols are imported from the tool by linking against it.
     set(llvm_libs ${ARG_PLUGIN_TOOL})
   elseif (NOT ARG_COMPONENT_LIB)
-    if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+    if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB AND NOT ARG_MERGE_INTO_LLVM_DYLIB)
       set(llvm_libs LLVM)
     else()
       if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
@@ -1196,17 +1203,11 @@ function(add_llvm_pass_plugin name)
   endif()
   option(LLVM_${name_upper}_LINK_INTO_TOOLS "Statically link ${name} into tools (if available)" ${link_into_tools_default})
 
-  # If we statically link the plugin, don't use llvm dylib because we're going
-  # to be part of it.
-  if(LLVM_${name_upper}_LINK_INTO_TOOLS)
-      list(APPEND ARG_UNPARSED_ARGUMENTS DISABLE_LLVM_LINK_LLVM_DYLIB)
-  endif()
-
   if(LLVM_${name_upper}_LINK_INTO_TOOLS)
     list(REMOVE_ITEM ARG_UNPARSED_ARGUMENTS BUILDTREE_ONLY)
     # process_llvm_pass_plugins takes care of the actual linking, just create an
     # object library as of now
-    add_llvm_library(${name} OBJECT ${ARG_UNPARSED_ARGUMENTS})
+    add_llvm_library(${name} OBJECT MERGE_INTO_LLVM_DYLIB ${ARG_UNPARSED_ARGUMENTS})
     target_compile_definitions(${name} PRIVATE LLVM_${name_upper}_LINK_INTO_TOOLS)
     set_property(TARGET ${name} APPEND PROPERTY COMPILE_DEFINITIONS LLVM_LINK_INTO_TOOLS)
     if (TARGET intrinsics_gen)
