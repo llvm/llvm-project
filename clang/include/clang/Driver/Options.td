@@ -2745,7 +2745,7 @@ defm sanitize_alloc_token_extended : BoolOption<"f", "sanitize-alloc-token-exten
 } // end -f[no-]sanitize* flags
 
 def falloc_token_max_EQ : Joined<["-"], "falloc-token-max=">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<N>">,
   HelpText<"Limit to maximum N allocation tokens (0 = no max)">;
 
