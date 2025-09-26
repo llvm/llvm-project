@@ -385,6 +385,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
     }
+    for (MVT VT : {MVT::v2i64, MVT::v4i32, MVT::v8i16}) {
+      setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, VT, Legal);
+      setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Legal);
+    }
   }
 
   // Set operations for 'LASX' feature.
@@ -445,6 +449,15 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                          ISD::SETUGE, ISD::SETUGT},
                         VT, Expand);
       setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Legal);
+    }
+    for (MVT VT : {MVT::v4i64, MVT::v8i32, MVT::v16i16}) {
+      setOperationAction(ISD::SIGN_EXTEND, VT, Legal);
+      setOperationAction(ISD::ZERO_EXTEND, VT, Legal);
+    }
+    for (MVT VT :
+         {MVT::v2i64, MVT::v4i32, MVT::v4i64, MVT::v8i16, MVT::v8i32}) {
+      setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, VT, Legal);
+      setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Legal);
     }
   }
 

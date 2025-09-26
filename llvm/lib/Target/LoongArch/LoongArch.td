@@ -59,6 +59,7 @@ def FeatureExtLSX
     : SubtargetFeature<"lsx", "HasExtLSX", "true",
                        "'LSX' (Loongson SIMD Extension)", [FeatureBasicD]>;
 def HasExtLSX : Predicate<"Subtarget->hasExtLSX()">;
+def IsExtLSX : Predicate<"Subtarget->hasExtLSX() && !Subtarget->hasExtLASX()">;
 
 // Loongson Advanced SIMD eXtension (LASX)
 def FeatureExtLASX
