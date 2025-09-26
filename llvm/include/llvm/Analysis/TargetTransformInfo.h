@@ -25,6 +25,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/InterestingMemoryOperand.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
@@ -87,6 +88,8 @@ struct MemIntrinsicInfo {
   bool ReadMem = false;
   bool WriteMem = false;
   bool IsVolatile = false;
+
+  SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
 
   bool isUnordered() const {
     return (Ordering == AtomicOrdering::NotAtomic ||
@@ -1615,6 +1618,11 @@ public:
       Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
+
+  /// \return The cost of vp intrinsic vp.load.ff.
+  LLVM_ABI InstructionCost getFirstFaultLoadCost(
+      Type *DataTy, Align Alignment,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// A helper function to determine the type of reduction algorithm used
   /// for a given \p Opcode and set of FastMathFlags \p FMF.

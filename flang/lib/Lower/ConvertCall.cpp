@@ -571,6 +571,8 @@ Fortran::lower::genCallOpAndResult(
         !cuf::isCUDADeviceContext(builder.getRegion())) {
       for (auto [oper, arg] :
            llvm::zip(operands, caller.getPassedArguments())) {
+        if (arg.testTKR(Fortran::common::IgnoreTKR::Contiguous))
+          continue;
         if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(oper.getType())) {
           const Fortran::semantics::Symbol *sym = caller.getDummySymbol(arg);
           if (sym && Fortran::evaluate::IsCUDADeviceSymbol(*sym))
