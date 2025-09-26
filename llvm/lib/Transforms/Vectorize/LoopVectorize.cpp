@@ -1763,6 +1763,8 @@ class GeneratedRTChecks {
   /// If it is nullptr no memory runtime checks have been generated.
   Value *MemRuntimeCheckCond = nullptr;
 
+  /// True if memory checks are outer-loop invariant (hoistable).
+  /// Used to discount check cost for inner loops.
   bool AllChecksHoisted = false;
 
   DominatorTree *DT;
@@ -1808,10 +1810,6 @@ public:
 
     BasicBlock *LoopHeader = L->getHeader();
     BasicBlock *Preheader = L->getLoopPreheader();
-
-    // Outer loop is used as part of later cost calculations (e.g. to
-    // determine if runtime checks are loop-invariant and can be hoisted).
-    OuterLoop = L->getParentLoop();
 
     // Use SplitBlock to create blocks for SCEV & memory runtime checks to
     // ensure the blocks are properly added to LoopInfo & DominatorTree. Those
@@ -1895,6 +1893,9 @@ public:
       DT->eraseNode(SCEVCheckBlock);
       LI->removeBlock(SCEVCheckBlock);
     }
+
+    // Outer loop is used as part of the later cost calculations.
+    OuterLoop = L->getParentLoop();
   }
 
   InstructionCost getCost() {

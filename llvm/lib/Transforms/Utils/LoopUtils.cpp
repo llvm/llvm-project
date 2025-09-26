@@ -2073,7 +2073,6 @@ Value *llvm::addRuntimeChecks(
     //  IsConflict = bound0 & bound1
     Value *Cmp0 = ChkBuilder.CreateICmpULT(A.Start, B.End, "bound0");
     Value *Cmp1 = ChkBuilder.CreateICmpULT(B.Start, A.End, "bound1");
-
     Value *IsConflict = ChkBuilder.CreateAnd(Cmp0, Cmp1, "found.conflict");
     if (A.StrideToCheck) {
       Value *IsNegativeStride = ChkBuilder.CreateICmpSLT(
