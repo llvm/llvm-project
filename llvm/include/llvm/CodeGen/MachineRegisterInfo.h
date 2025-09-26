@@ -867,13 +867,13 @@ public:
     return RegAllocHints.inBounds(VReg) ? &RegAllocHints[VReg] : nullptr;
   }
 
-  /// setRegAllocationAntiHint - Add a register allocation anti-hint for the
+  /// addRegAllocAntiHint - Add a register allocation anti-hint for the
   /// specified virtual register. This tells the allocator to avoid allocating
   /// VReg to the same physical register as AntiHintVReg (or overlapping ones).
-  void setRegAllocationAntiHint(Register VReg, Register AntiHintVReg) {
+  void addRegAllocAntiHint(Register VReg, Register AntiHintVReg) {
     assert(VReg.isVirtual() && "Anti-hints are only for virtual registers");
     assert(AntiHintVReg.isVirtual() && "Anti-hint target must be virtual");
-    AntiHintRegs.grow(Register::index2VirtReg(getNumVirtRegs()));
+    AntiHintRegs.grow(VReg);
     SmallVector<Register, 4> &AntiHints = AntiHintRegs[VReg];
     // Avoid duplicates
     if (llvm::find(AntiHints, AntiHintVReg) == AntiHints.end())
@@ -884,7 +884,7 @@ public:
   void addRegAllocationAntiHints(Register VReg,
                                  ArrayRef<Register> AntiHintVRegs) {
     for (Register AntiHint : AntiHintVRegs)
-      setRegAllocationAntiHint(VReg, AntiHint);
+      addRegAllocAntiHint(VReg, AntiHint);
   }
 
   /// clearRegAllocationAntiHints - Clear all anti-hints for a register.
@@ -915,7 +915,7 @@ public:
   /// VRM is the current virtual register map showing allocations made so far.
   void getPhysRegAntiHints(Register VReg,
                            SmallVectorImpl<MCPhysReg> &PhysAntiHints,
-                           const VirtRegMap *VRM) const;
+                           const VirtRegMap &VRM) const;
 
   /// markUsesInDebugValueAsUndef - Mark every DBG_VALUE referencing the
   /// specified register as undefined which causes the DBG_VALUE to be
