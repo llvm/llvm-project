@@ -505,6 +505,11 @@ public:
   LLVM_ABI void removeLiveIn(MCRegister Reg,
                              LaneBitmask LaneMask = LaneBitmask::getAll());
 
+  /// Remove the specified register from any overlapped live in. The method is
+  /// subreg-aware and removes Reg and its subregs from the live in set. It also
+  /// clears the corresponding bitmask from its live-in super registers.
+  LLVM_ABI void removeLiveInOverlappedWith(MCRegister Reg);
+
   /// Return true if the specified register is in the live in set.
   LLVM_ABI bool isLiveIn(MCRegister Reg,
                          LaneBitmask LaneMask = LaneBitmask::getAll()) const;
