@@ -220,6 +220,58 @@ public:
   }
 };
 
+/// Rewriter for REG_SEQUENCE source operands.  This class is used for
+/// rewriting uses of REG_SEQUENCE operands in arbitrary instructions
+/// whereas the RegSequenceRewriter is used for rewriting REG_SEQUENCE
+/// instructions.
+class RegSequenceSrcRewriter : public Rewriter {
+private:
+  MachineRegisterInfo &MRI;
+  const MachineOperand &MODef;
+
+public:
+  RegSequenceSrcRewriter(MachineInstr &MI, MachineRegisterInfo &MRI)
+      : Rewriter(MI), MRI(MRI), MODef(CopyLike.getOperand(0)) {
+    assert(MODef.isReg() && !MODef.getReg().isPhysical());
+  }
+  virtual ~RegSequenceSrcRewriter() = default;
+
+  bool getNextRewritableSource(RegSubRegPair &Src,
+                               RegSubRegPair &Dst) override {
+    long NumOperands = static_cast<long>(CopyLike.getNumOperands());
+    const MachineOperand &MODef = CopyLike.getOperand(0);
+    Dst = RegSubRegPair(MODef.getReg(), MODef.getSubReg());
+
+    for (CurrentSrcIdx++; CurrentSrcIdx < NumOperands; CurrentSrcIdx++) {
+      MachineOperand &Op = CopyLike.getOperand(CurrentSrcIdx);
+      if (!Op.isReg())
+        continue;
+
+      Register Reg = Op.getReg();
+      if (!Reg.isVirtual() || !MRI.getUniqueVRegDef(Reg)->isRegSequence())
+        continue;
+
+      break;
+    }
+
+    if (CurrentSrcIdx == NumOperands)
+      return false;
+
+    MachineOperand &Op = CopyLike.getOperand(CurrentSrcIdx);
+
+    Src = RegSubRegPair(Op.getReg(), Op.getSubReg());
+
+    return true;
+  }
+
+  bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
+    MachineOperand &MOSrc = CopyLike.getOperand(CurrentSrcIdx);
+    MOSrc.setReg(NewReg);
+    MOSrc.setSubReg(NewSubReg);
+    return true;
+  }
+};
+
 /// Helper class to rewrite uncoalescable copy like instructions
 /// into new COPY (coalescable friendly) instructions.
 class UncoalescableRewriter : public Rewriter {
@@ -453,6 +505,7 @@ private:
 
   bool optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter);
   bool optimizeCoalescableCopy(MachineInstr &MI);
+  bool optimizeRegSequenceUses(MachineInstr &MI, MachineRegisterInfo &MRI);
   bool optimizeUncoalescableCopy(MachineInstr &MI,
                                  SmallPtrSetImpl<MachineInstr *> &LocalMIs);
   bool optimizeRecurrence(MachineInstr &PHI);
@@ -1258,6 +1311,20 @@ bool PeepholeOptimizer::optimizeCoalescableCopy(MachineInstr &MI) {
   }
 }
 
+bool PeepholeOptimizer::optimizeRegSequenceUses(MachineInstr &MI,
+                                                MachineRegisterInfo &MRI) {
+  if (MI.getNumOperands() < 1)
+    return false;
+
+  const MachineOperand &MODef = MI.getOperand(0);
+
+  // Do not rewrite physical definitions.
+  if (!MODef.isReg() || MODef.getReg().isPhysical())
+    return false;
+
+  return optimizeCoalescableCopyImpl(RegSequenceSrcRewriter(MI, MRI));
+}
+
 /// Rewrite the source found through \p Def, by using the \p RewriteMap
 /// and create a new COPY instruction. More info about RewriteMap in
 /// PeepholeOptimizer::findNextSource. Right now this is only used to handle
@@ -1805,6 +1872,11 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
         MI->eraseFromParent();
         Changed = true;
         continue;
+      }
+
+      if (!MI->isCopy() && optimizeRegSequenceUses(*MI, *MRI)) {
+        LLVM_DEBUG(dbgs() << "Optimized REG_SEQUENCE uses: " << *MI << '\n');
+        Changed = true;
       }
 
       if (isMoveImmediate(*MI, ImmDefRegs, ImmDefMIs)) {
