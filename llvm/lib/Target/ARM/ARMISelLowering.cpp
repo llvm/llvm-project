@@ -19951,14 +19951,11 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     }
     break;
   case ARMISD::CMOV: {
-    // Bits are known zero/one if known on the LHS and RHS.
-    Known = DAG.computeKnownBits(Op.getOperand(0), Depth+1);
-    if (Known.isUnknown())
-      return;
-
-    KnownBits KnownRHS = DAG.computeKnownBits(Op.getOperand(1), Depth+1);
-    Known = Known.intersectWith(KnownRHS);
-    return;
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
+    Known2 = DAG.computeKnownBits(Op->getOperand(1), Depth + 1);
+    Known = Known.intersectWith(Known2);
+    break;
   }
   case ISD::INTRINSIC_W_CHAIN: {
     Intrinsic::ID IntID =
