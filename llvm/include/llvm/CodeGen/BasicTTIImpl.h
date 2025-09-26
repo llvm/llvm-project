@@ -2929,7 +2929,7 @@ public:
                                       CostKind);
 
       EVT VT = TLI->getValueType(DL, CmpTy, true);
-      if (TLI->shouldExpandCmpUsingSelects(VT)) {
+      if (TLI->preferSelectsOverBooleanArithmetic(VT)) {
         // x < y ? -1 : (x > y ? 1 : 0)
         Cost += 2 * thisT()->getCmpSelInstrCost(
                         BinaryOperator::Select, RetTy, CondTy,

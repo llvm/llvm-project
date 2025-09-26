@@ -1915,8 +1915,7 @@ RValue CIRGenFunction::convertTempToRValue(Address addr, clang::QualType type,
   LValue lvalue = makeAddrLValue(addr, type, AlignmentSource::Decl);
   switch (getEvaluationKind(type)) {
   case cir::TEK_Complex:
-    cgm.errorNYI(loc, "convertTempToRValue: complex type");
-    return RValue::get(nullptr);
+    return RValue::getComplex(emitLoadOfComplex(lvalue, loc));
   case cir::TEK_Aggregate:
     cgm.errorNYI(loc, "convertTempToRValue: aggregate type");
     return RValue::get(nullptr);

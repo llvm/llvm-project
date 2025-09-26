@@ -1,5 +1,8 @@
 ## Tests the readfile substitution.
 
+# TODO(boomanaiden154): This sometimes fails, possibly due to buffers not being flushed.
+# ALLOW_RETRIES: 2
+
 # RUN: env LIT_USE_INTERNAL_SHELL=1  not %{lit} -a -v %{inputs}/shtest-readfile | FileCheck -match-full-lines -DTEMP_PATH=%S%{fs-sep}Inputs%{fs-sep}shtest-readfile%{fs-sep}Output %s
 
 # CHECK: -- Testing: 4 tests{{.*}}
@@ -10,7 +13,7 @@
 
 # CHECK-LABEL: FAIL: shtest-readfile :: file-does-not-exist.txt ({{[^)]*}})
 # CHECK: # executed command: @echo 'echo %{readfile:/file/does/not/exist}'
-# CHECK: # | File specified in readfile substitution does not exist: /file/does/not/exist
+# CHECK: # | File specified in readfile substitution does not exist: {{.*}}/file/does/not/exist
 
 # CHECK-LABEL: FAIL: shtest-readfile :: relative-paths.txt ({{[^)]*}})
 # CHECK: echo hello

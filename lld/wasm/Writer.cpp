@@ -576,7 +576,7 @@ void Writer::populateTargetFeatures() {
 
   if (ctx.isPic) {
     // This should not be necessary because all PIC objects should
-    // contain the mutable-globals feature.
+    // contain the `mutable-globals` feature.
     // TODO (https://github.com/llvm/llvm-project/issues/51681)
     allowed.insert("mutable-globals");
   }
@@ -703,10 +703,12 @@ void Writer::checkImportExportTargetFeatures() {
       }
     }
     for (const Symbol *sym : out.exportSec->exportedSymbols) {
-      if (isa<GlobalSymbol>(sym)) {
-        error(Twine("mutable global exported but 'mutable-globals' feature "
-                    "not present in inputs: `") +
-              toString(*sym) + "`. Use --no-check-features to suppress.");
+      if (auto *global = dyn_cast<GlobalSymbol>(sym)) {
+        if (global->getGlobalType()->Mutable) {
+          error(Twine("mutable global exported but 'mutable-globals' feature "
+                      "not present in inputs: `") +
+                toString(*sym) + "`. Use --no-check-features to suppress.");
+        }
       }
     }
   }

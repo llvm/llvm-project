@@ -139,8 +139,8 @@ public:
     if (!IsNativeReaderRequested()) {
       static std::once_flag g_warning_shown;
       Debugger::ReportWarning(
-          "The DIA PDB reader was explicitly requested, but LLDB was built "
-          "without the DIA SDK. The native reader will be used instead.",
+          "the DIA PDB reader was explicitly requested, but LLDB was built "
+          "without the DIA SDK. The native reader will be used instead",
           {}, &g_warning_shown);
     }
     return true;

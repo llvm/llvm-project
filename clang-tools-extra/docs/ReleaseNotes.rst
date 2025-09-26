@@ -203,12 +203,22 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check.
+
+  Detect redundant parentheses.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
 - Renamed :doc:`cert-dcl50-cpp <clang-tidy/checks/cert/dcl50-cpp>` to
   :doc:`modernize-avoid-variadic-functions
   <clang-tidy/checks/modernize/avoid-variadic-functions>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-env33-c <clang-tidy/checks/cert/env33-c>` to
+  :doc:`bugprone-command-processor
+  <clang-tidy/checks/bugprone/command-processor>`
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-err34-c <clang-tidy/checks/cert/err34-c>` to
@@ -260,6 +270,10 @@ Changes in existing checks
   namespace are treated as the tag or the data part of a user-defined
   tagged union respectively.
 
+- Improved :doc:`bugprone-throw-keyword-missing
+  <clang-tidy/checks/bugprone/throw-keyword-missing>` check by only considering
+  the canonical types of base classes as written.
+
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
   ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to
@@ -300,6 +314,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash on
   uses of non-standard ``enable_if`` with a signature different from
   ``std::enable_if`` (such as ``boost::enable_if``).
+
+- Improved :doc:`modernize-use-default-member-init
+  <clang-tidy/checks/modernize/use-default-member-init>` check to
+  enhance the robustness of the member initializer detection.
 
 - Improved :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check to

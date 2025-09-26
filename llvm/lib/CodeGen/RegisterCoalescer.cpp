@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
@@ -294,10 +295,10 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   /// We found a copy which can be moved to its less frequent predecessor.
   bool removePartialRedundancy(const CoalescerPair &CP, MachineInstr &CopyMI);
 
-  /// If the source of a copy is defined by a
-  /// trivial computation, replace the copy by rematerialize the definition.
-  bool reMaterializeTrivialDef(const CoalescerPair &CP, MachineInstr *CopyMI,
-                               bool &IsDefCopy);
+  /// If the source of a copy is defined by a CheapAsAMove computation,
+  /// replace the copy by rematerialize the definition.
+  bool reMaterializeDef(const CoalescerPair &CP, MachineInstr *CopyMI,
+                        bool &IsDefCopy);
 
   /// Return true if a copy involving a physreg should be joined.
   bool canJoinPhys(const CoalescerPair &CP);
@@ -1297,9 +1298,9 @@ static bool definesFullReg(const MachineInstr &MI, Register Reg) {
   return false;
 }
 
-bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
-                                                MachineInstr *CopyMI,
-                                                bool &IsDefCopy) {
+bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
+                                         MachineInstr *CopyMI,
+                                         bool &IsDefCopy) {
   IsDefCopy = false;
   Register SrcReg = CP.isFlipped() ? CP.getDstReg() : CP.getSrcReg();
   unsigned SrcIdx = CP.isFlipped() ? CP.getDstIdx() : CP.getSrcIdx();
@@ -1325,7 +1326,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (!TII->isAsCheapAsAMove(*DefMI))
     return false;
 
-  if (!TII->isTriviallyReMaterializable(*DefMI))
+  if (!TII->isReMaterializable(*DefMI))
     return false;
 
   if (!definesFullReg(*DefMI, SrcReg))
@@ -1393,10 +1394,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     }
   }
 
-  SmallVector<Register, 8> NewRegs;
-  LiveRangeEdit Edit(&SrcInt, NewRegs, *MF, *LIS, nullptr, this);
-  SlotIndex DefIdx = LIS->getInstructionIndex(*DefMI);
-  if (!Edit.allUsesAvailableAt(DefMI, DefIdx, CopyIdx))
+  if (!VirtRegAuxInfo::allUsesAvailableAt(DefMI, CopyIdx, *LIS, *MRI, *TII))
     return false;
 
   DebugLoc DL = CopyMI->getDebugLoc();
@@ -1405,6 +1403,8 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
       std::next(MachineBasicBlock::iterator(CopyMI));
   LiveRangeEdit::Remat RM(ValNo);
   RM.OrigMI = DefMI;
+  SmallVector<Register, 8> NewRegs;
+  LiveRangeEdit Edit(&SrcInt, NewRegs, *MF, *LIS, nullptr, this);
   Edit.rematerializeAt(*MBB, MII, DstReg, RM, *TRI, false, SrcIdx, CopyMI);
   MachineInstr &NewMI = *std::prev(MII);
   NewMI.setDebugLoc(DL);
@@ -2128,10 +2128,10 @@ bool RegisterCoalescer::joinCopy(
                       << printReg(CP.getSrcReg(), TRI) << " with "
                       << printReg(CP.getDstReg(), TRI, CP.getSrcIdx()) << '\n');
     if (!canJoinPhys(CP)) {
-      // Before giving up coalescing, if definition of source is defined by
-      // trivial computation, try rematerializing it.
+      // Before giving up coalescing, try rematerializing the source of
+      // the copy instead if it is cheap.
       bool IsDefCopy = false;
-      if (reMaterializeTrivialDef(CP, CopyMI, IsDefCopy))
+      if (reMaterializeDef(CP, CopyMI, IsDefCopy))
         return true;
       if (IsDefCopy)
         Again = true; // May be possible to coalesce later.
@@ -2167,10 +2167,9 @@ bool RegisterCoalescer::joinCopy(
   if (!joinIntervals(CP)) {
     // Coalescing failed.
 
-    // If definition of source is defined by trivial computation, try
-    // rematerializing it.
+    // Try rematerializing the definition of the source if it is cheap.
     bool IsDefCopy = false;
-    if (reMaterializeTrivialDef(CP, CopyMI, IsDefCopy))
+    if (reMaterializeDef(CP, CopyMI, IsDefCopy))
       return true;
 
     // If we can eliminate the copy without merging the live segments, do so

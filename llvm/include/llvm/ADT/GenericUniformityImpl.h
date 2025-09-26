@@ -310,7 +310,7 @@ public:
   const DivergenceDescriptor &getJoinBlocks(const BlockT *DivTermBlock);
 
 private:
-  static DivergenceDescriptor EmptyDivergenceDesc;
+  static inline DivergenceDescriptor EmptyDivergenceDesc;
 
   ModifiedPO CyclePO;
 
@@ -740,10 +740,6 @@ public:
     return std::move(DivDesc);
   }
 };
-
-template <typename ContextT>
-typename llvm::GenericSyncDependenceAnalysis<ContextT>::DivergenceDescriptor
-    llvm::GenericSyncDependenceAnalysis<ContextT>::EmptyDivergenceDesc;
 
 template <typename ContextT>
 llvm::GenericSyncDependenceAnalysis<ContextT>::GenericSyncDependenceAnalysis(

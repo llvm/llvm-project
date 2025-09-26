@@ -2730,7 +2730,7 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
           HasVMemStore = true;
       }
       for (const MachineOperand &Op : MI.all_uses()) {
-        if (!TRI->isVectorRegister(*MRI, Op.getReg()))
+        if (Op.isDebug() || !TRI->isVectorRegister(*MRI, Op.getReg()))
           continue;
         RegInterval Interval = Brackets.getRegInterval(&MI, MRI, TRI, Op);
         // Vgpr use
