@@ -34,6 +34,7 @@ mlir::Block *OpenACCRecipeBuilderBase::createRecipeBlock(mlir::Region &region,
   llvm::SmallVector<mlir::Location> locs{types.size(), loc};
   return builder.createBlock(&region, region.end(), types, locs);
 }
+
 mlir::Value
 OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
                                            mlir::Value bound,
@@ -215,6 +216,11 @@ void OpenACCRecipeBuilderBase::createRecipeDestroySection(
 
   mlir::acc::YieldOp::create(builder, locEnd);
 }
+
+// TODO: OpenACC: When we get this implemented for the reduction/firstprivate,
+// this might end up re-merging with createRecipeInitCopy.  For now, keep it
+// separate until we're sure what everything looks like to keep this as clean
+// as possible.
 void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
     mlir::Location loc, mlir::Location locEnd, SourceRange exprRange,
     mlir::Value mainOp, mlir::acc::PrivateRecipeOp recipe, size_t numBounds,
@@ -257,6 +263,7 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
 
   mlir::acc::YieldOp::create(builder, locEnd);
 }
+
 void OpenACCRecipeBuilderBase::createFirstprivateRecipeCopy(
     mlir::Location loc, mlir::Location locEnd, mlir::Value mainOp,
     CIRGenFunction::AutoVarEmission tempDeclEmission,
