@@ -11,6 +11,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cctype>
+#include <optional>
 #include <sstream>
 
 #define DEBUG_TYPE "mustache"
@@ -367,14 +368,14 @@ static Tag findNextTag(StringRef Template, size_t StartPos, StringRef Open,
   return Result;
 }
 
-static void processTag(const Tag &T, SmallVectorImpl<Token> &Tokens,
-                       SmallString<8> &Open, SmallString<8> &Close) {
+static std::optional<std::pair<StringRef, StringRef>>
+processTag(const Tag &T, SmallVectorImpl<Token> &Tokens) {
   LLVM_DEBUG(dbgs() << "  Found tag: \"" << T.FullMatch << "\", Content: \""
                     << T.Content << "\"\n");
   if (T.TagKind == Tag::Kind::Triple) {
     Tokens.emplace_back(T.FullMatch.str(), "&" + T.Content.str(), '&');
     LLVM_DEBUG(dbgs() << "  Created UnescapeVariable token.\n");
-    return;
+    return std::nullopt;
   }
   StringRef Interpolated = T.Content;
   std::string RawBody = T.FullMatch.str();
@@ -382,7 +383,7 @@ static void processTag(const Tag &T, SmallVectorImpl<Token> &Tokens,
     char Front = Interpolated.empty() ? ' ' : Interpolated.trim().front();
     Tokens.emplace_back(RawBody, Interpolated.str(), Front);
     LLVM_DEBUG(dbgs() << "  Created tag token of type '" << Front << "'\n");
-    return;
+    return std::nullopt;
   }
   Tokens.emplace_back(RawBody, Interpolated.str(), '=');
   StringRef DelimSpec = Interpolated.trim();
@@ -391,11 +392,9 @@ static void processTag(const Tag &T, SmallVectorImpl<Token> &Tokens,
   DelimSpec = DelimSpec.trim();
 
   auto [NewOpen, NewClose] = DelimSpec.split(' ');
-  Open = NewOpen;
-  Close = NewClose;
-
-  LLVM_DEBUG(dbgs() << "  Found Set Delimiter tag. NewOpen='" << Open
-                    << "', NewClose='" << Close << "'\n");
+  LLVM_DEBUG(dbgs() << "  Found Set Delimiter tag. NewOpen='" << NewOpen
+                    << "', NewClose='" << NewClose << "'\n");
+  return std::make_pair(NewOpen, NewClose);
 }
 
 // Simple tokenizer that splits the template into tokens.
@@ -429,7 +428,9 @@ static SmallVector<Token> tokenize(StringRef Template) {
       LLVM_DEBUG(dbgs() << "  Created Text token: \"" << Text << "\"\n");
     }
 
-    processTag(T, Tokens, Open, Close);
+    if (auto NewDelims = processTag(T, Tokens)) {
+      std::tie(Open, Close) = *NewDelims;
+    }
 
     // Move past the tag.
     Start = T.StartPosition + T.FullMatch.size();
