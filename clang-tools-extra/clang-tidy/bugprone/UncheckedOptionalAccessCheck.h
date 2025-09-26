@@ -20,7 +20,7 @@ namespace clang::tidy::bugprone {
 /// value.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unchecked-optional-access.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/unchecked-optional-access.html
 class UncheckedOptionalAccessCheck : public ClangTidyCheck {
 public:
   UncheckedOptionalAccessCheck(StringRef Name, ClangTidyContext *Context)

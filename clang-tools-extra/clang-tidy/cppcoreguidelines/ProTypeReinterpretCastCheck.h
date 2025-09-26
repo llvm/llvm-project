@@ -16,7 +16,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// Flags all occurrences of reinterpret_cast
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-type-reinterpret-cast.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-type-reinterpret-cast.html
 class ProTypeReinterpretCastCheck : public ClangTidyCheck {
 public:
   ProTypeReinterpretCastCheck(StringRef Name, ClangTidyContext *Context)

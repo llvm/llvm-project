@@ -291,6 +291,7 @@ public:
 
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
   bool isTargetKFreeBSD() const { return TargetTriple.isOSKFreeBSD(); }
+  bool isTargetHurd() const { return TargetTriple.isOSHurd(); }
   bool isTargetGlibc() const { return TargetTriple.isOSGlibc(); }
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
   bool isTargetMCU() const { return TargetTriple.isOSIAMCU(); }

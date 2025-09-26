@@ -44,6 +44,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
+#include <atomic>
 #include <optional>
 
 using namespace llvm;
@@ -755,7 +756,7 @@ static bool regIsPICBase(Register BaseReg, const MachineRegisterInfo &MRI) {
   return isPICBase;
 }
 
-bool X86InstrInfo::isReallyTriviallyReMaterializable(
+bool X86InstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
@@ -951,7 +952,7 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(
     break;
   }
   }
-  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+  return TargetInstrInfo::isReMaterializableImpl(MI);
 }
 
 void X86InstrInfo::reMaterialize(MachineBasicBlock &MBB,
@@ -2573,10 +2574,13 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VCMPPSZ256rri:
   case X86::VCMPPDZrrik:
   case X86::VCMPPSZrrik:
+  case X86::VCMPPHZrrik:
   case X86::VCMPPDZ128rrik:
   case X86::VCMPPSZ128rrik:
+  case X86::VCMPPHZ128rrik:
   case X86::VCMPPDZ256rrik:
   case X86::VCMPPSZ256rrik:
+  case X86::VCMPPHZ256rrik:
     WorkingMI = CloneIfNew(MI);
     WorkingMI->getOperand(MI.getNumExplicitOperands() - 1)
         .setImm(X86::getSwappedVCMPImm(
@@ -2830,10 +2834,13 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case X86::VCMPPSZ256rri:
   case X86::VCMPPDZrrik:
   case X86::VCMPPSZrrik:
+  case X86::VCMPPHZrrik:
   case X86::VCMPPDZ128rrik:
   case X86::VCMPPSZ128rrik:
+  case X86::VCMPPHZ128rrik:
   case X86::VCMPPDZ256rrik:
-  case X86::VCMPPSZ256rrik: {
+  case X86::VCMPPSZ256rrik:
+  case X86::VCMPPHZ256rrik: {
     unsigned OpOffset = X86II::isKMasked(Desc.TSFlags) ? 1 : 0;
 
     // Float comparison can be safely commuted for

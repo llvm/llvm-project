@@ -74,7 +74,7 @@ endif()
 if (NOT LLVM_FOUND)
   set(LLVM_TOOLS_BINARY_DIR ${LLVM_BINARY_DIR}/bin)
   set(LLVM_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
-  set(LLVM_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
+  set(LLVM_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
 endif()
 
 # Setting these variables will allow the sub-build to put their outputs into

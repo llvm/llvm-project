@@ -11575,6 +11575,46 @@ static bool handleVectorElementCast(EvalInfo &Info, const FPOptions FPO,
   return false;
 }
 
+static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
+                            llvm::function_ref<APInt(const APSInt &)> PackFn) {
+  APValue LHS, RHS;
+  if (!EvaluateAsRValue(Info, E->getArg(0), LHS) ||
+      !EvaluateAsRValue(Info, E->getArg(1), RHS))
+    return false;
+
+  unsigned LHSVecLen = LHS.getVectorLength();
+  unsigned RHSVecLen = RHS.getVectorLength();
+
+  assert(LHSVecLen != 0 && LHSVecLen == RHSVecLen &&
+         "pack builtin LHSVecLen must equal to RHSVecLen");
+
+  const VectorType *VT0 = E->getArg(0)->getType()->castAs<VectorType>();
+  const unsigned SrcBits = Info.Ctx.getIntWidth(VT0->getElementType());
+
+  const VectorType *DstVT = E->getType()->castAs<VectorType>();
+  QualType DstElemTy = DstVT->getElementType();
+  const bool DstIsUnsigned = DstElemTy->isUnsignedIntegerType();
+
+  const unsigned SrcPerLane = 128 / SrcBits;
+  const unsigned Lanes = LHSVecLen * SrcBits / 128;
+
+  SmallVector<APValue, 64> Out;
+  Out.reserve(LHSVecLen + RHSVecLen);
+
+  for (unsigned Lane = 0; Lane != Lanes; ++Lane) {
+    unsigned base = Lane * SrcPerLane;
+    for (unsigned I = 0; I != SrcPerLane; ++I)
+      Out.emplace_back(APValue(
+          APSInt(PackFn(LHS.getVectorElt(base + I).getInt()), DstIsUnsigned)));
+    for (unsigned I = 0; I != SrcPerLane; ++I)
+      Out.emplace_back(APValue(
+          APSInt(PackFn(RHS.getVectorElt(base + I).getInt()), DstIsUnsigned)));
+  }
+
+  Result = APValue(Out.data(), Out.size());
+  return true;
+}
+
 bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -11768,7 +11808,29 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       }
       return LHS.lshr(RHS.getZExtValue());
     });
-
+  case X86::BI__builtin_ia32_packsswb128:
+  case X86::BI__builtin_ia32_packsswb256:
+  case X86::BI__builtin_ia32_packsswb512:
+  case X86::BI__builtin_ia32_packssdw128:
+  case X86::BI__builtin_ia32_packssdw256:
+  case X86::BI__builtin_ia32_packssdw512:
+    return evalPackBuiltin(E, Info, Result, [](const APSInt &Src) {
+      return APSInt(Src).truncSSat(Src.getBitWidth() / 2);
+    });
+  case X86::BI__builtin_ia32_packusdw128:
+  case X86::BI__builtin_ia32_packusdw256:
+  case X86::BI__builtin_ia32_packusdw512:
+  case X86::BI__builtin_ia32_packuswb128:
+  case X86::BI__builtin_ia32_packuswb256:
+  case X86::BI__builtin_ia32_packuswb512:
+    return evalPackBuiltin(E, Info, Result, [](const APSInt &Src) {
+      unsigned DstBits = Src.getBitWidth() / 2;
+      if (Src.isNegative())
+        return APInt::getZero(DstBits);
+      if (Src.isIntN(DstBits))
+        return APInt((Src).trunc(DstBits));
+      return APInt::getAllOnes(DstBits);
+    });
   case clang::X86::BI__builtin_ia32_pmuldq128:
   case clang::X86::BI__builtin_ia32_pmuldq256:
   case clang::X86::BI__builtin_ia32_pmuldq512:
@@ -13588,6 +13650,20 @@ static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
 
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
+
+  auto HandleMaskBinOp =
+      [&](llvm::function_ref<APSInt(const APSInt &, const APSInt &)> Fn)
+      -> bool {
+    APValue LHS, RHS;
+    if (!Evaluate(LHS, Info, E->getArg(0)) ||
+        !Evaluate(RHS, Info, E->getArg(1)))
+      return false;
+
+    APSInt ResultInt = Fn(LHS.getInt(), RHS.getInt());
+
+    return Success(APValue(ResultInt), E);
+  };
+
   switch (BuiltinOp) {
   default:
     return false;
@@ -14686,6 +14762,65 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       if (Msk[I])
         Result.setBitVal(P++, Val[I]);
     return Success(Result, E);
+  }
+
+  case X86::BI__builtin_ia32_kandqi:
+  case X86::BI__builtin_ia32_kandhi:
+  case X86::BI__builtin_ia32_kandsi:
+  case X86::BI__builtin_ia32_kanddi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS & RHS; });
+  }
+
+  case X86::BI__builtin_ia32_kandnqi:
+  case X86::BI__builtin_ia32_kandnhi:
+  case X86::BI__builtin_ia32_kandnsi:
+  case X86::BI__builtin_ia32_kandndi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return ~LHS & RHS; });
+  }
+
+  case X86::BI__builtin_ia32_korqi:
+  case X86::BI__builtin_ia32_korhi:
+  case X86::BI__builtin_ia32_korsi:
+  case X86::BI__builtin_ia32_kordi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS | RHS; });
+  }
+
+  case X86::BI__builtin_ia32_kxnorqi:
+  case X86::BI__builtin_ia32_kxnorhi:
+  case X86::BI__builtin_ia32_kxnorsi:
+  case X86::BI__builtin_ia32_kxnordi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return ~(LHS ^ RHS); });
+  }
+
+  case X86::BI__builtin_ia32_kxorqi:
+  case X86::BI__builtin_ia32_kxorhi:
+  case X86::BI__builtin_ia32_kxorsi:
+  case X86::BI__builtin_ia32_kxordi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS ^ RHS; });
+  }
+
+  case X86::BI__builtin_ia32_knotqi:
+  case X86::BI__builtin_ia32_knothi:
+  case X86::BI__builtin_ia32_knotsi:
+  case X86::BI__builtin_ia32_knotdi: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+    APSInt Result = ~Val;
+    return Success(APValue(Result), E);
+  }
+
+  case X86::BI__builtin_ia32_kaddqi:
+  case X86::BI__builtin_ia32_kaddhi:
+  case X86::BI__builtin_ia32_kaddsi:
+  case X86::BI__builtin_ia32_kadddi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
   }
   }
 }
@@ -18770,9 +18905,15 @@ std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
   uint64_t Result;
   std::string StringResult;
 
+  if (Info.EnableNewConstInterp) {
+    if (!Info.Ctx.getInterpContext().evaluateString(Info, this, StringResult))
+      return std::nullopt;
+    return StringResult;
+  }
+
   if (EvaluateBuiltinStrLen(this, Result, Info, &StringResult))
     return StringResult;
-  return {};
+  return std::nullopt;
 }
 
 template <typename T>

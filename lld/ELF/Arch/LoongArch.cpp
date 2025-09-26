@@ -41,7 +41,7 @@ public:
   bool relaxOnce(int pass) const override;
   bool synthesizeAlign(uint64_t &dot, InputSection *sec) override;
   RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
-  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
   void finalizeRelax(int passes) const override;
 
 private:
@@ -1395,13 +1395,9 @@ static bool pairForGotRels(ArrayRef<Relocation> relocs) {
   return i == size;
 }
 
-void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+void LoongArch::relocateAlloc(InputSection &sec, uint8_t *buf) const {
   const unsigned bits = ctx.arg.is64 ? 64 : 32;
-  uint64_t secAddr = sec.getOutputSection()->addr;
-  if (auto *s = dyn_cast<InputSection>(&sec))
-    secAddr += s->outSecOff;
-  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
-    secAddr += ehIn->getParent()->outSecOff;
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
   bool isExtreme = false, isRelax = false;
   const MutableArrayRef<Relocation> relocs = sec.relocs();
   const bool isPairForGotRels = pairForGotRels(relocs);

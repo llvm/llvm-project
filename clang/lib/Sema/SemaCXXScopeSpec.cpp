@@ -220,10 +220,11 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
 ///
 bool Sema::RequireCompleteEnumDecl(EnumDecl *EnumD, SourceLocation L,
                                    CXXScopeSpec *SS) {
-  if (EnumD->isCompleteDefinition()) {
+  if (EnumDecl *Def = EnumD->getDefinition();
+      Def && Def->isCompleteDefinition()) {
     // If we know about the definition but it is not visible, complain.
     NamedDecl *SuggestedDef = nullptr;
-    if (!hasReachableDefinition(EnumD, &SuggestedDef,
+    if (!hasReachableDefinition(Def, &SuggestedDef,
                                 /*OnlyNeedComplete*/ false)) {
       // If the user is going to see an error here, recover by making the
       // definition visible.

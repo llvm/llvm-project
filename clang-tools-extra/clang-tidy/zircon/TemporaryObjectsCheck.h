@@ -18,7 +18,7 @@ namespace clang::tidy::zircon {
 /// discouraged.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/zircon/temporary-objects.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/zircon/temporary-objects.html
 class TemporaryObjectsCheck : public ClangTidyCheck {
 public:
   TemporaryObjectsCheck(StringRef Name, ClangTidyContext *Context)

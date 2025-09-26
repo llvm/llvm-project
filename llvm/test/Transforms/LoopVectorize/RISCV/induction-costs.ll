@@ -69,8 +69,7 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[DOTSPLAT25:%.*]] = shufflevector <vscale x 8 x i64> [[DOTSPLATINSERT24]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP59:%.*]] = getelementptr i16, ptr [[A]], <vscale x 8 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x ptr> align 2 [[TMP59]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP27]]), !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
-; CHECK-NEXT:    [[TMP47:%.*]] = zext i32 [[TMP27]] to i64
-; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP47]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP28]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i64> [[VEC_IND]], [[DOTSPLAT25]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -91,7 +90,7 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 3
 ; CHECK-NEXT:    [[TMP64]] = trunc i64 [[IV_NEXT]] to i32
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV]], 99
-; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -128,9 +127,8 @@ attributes #0 = { "target-features"="+64bit,+v,+zvl256b" }
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]], [[META5:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META2]]}
 ; CHECK: [[META5]] = distinct !{[[META5]], [[META2]]}
-; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META7:![0-9]+]], [[META8:![0-9]+]], [[META9:![0-9]+]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
 ; CHECK: [[META7]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META8]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
-; CHECK: [[META9]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META7]]}
+; CHECK: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META7]]}
 ;.

@@ -1590,7 +1590,7 @@ MachineTraceStrategy TargetInstrInfo::getMachineCombinerTraceStrategy() const {
   return MachineTraceStrategy::TS_MinInstrCount;
 }
 
-bool TargetInstrInfo::isReallyTriviallyReMaterializable(
+bool TargetInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();

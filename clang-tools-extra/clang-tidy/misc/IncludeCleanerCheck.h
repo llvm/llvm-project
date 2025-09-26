@@ -29,7 +29,7 @@ namespace clang::tidy::misc {
 /// Findings correspond to https://clangd.llvm.org/design/include-cleaner.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/include-cleaner.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/include-cleaner.html
 class IncludeCleanerCheck : public ClangTidyCheck {
 public:
   IncludeCleanerCheck(StringRef Name, ClangTidyContext *Context);

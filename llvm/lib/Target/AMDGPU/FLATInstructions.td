@@ -2009,8 +2009,8 @@ let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predi
   defm : FlatLoadPats_D16_t16<FLAT_LOAD_SBYTE_D16_t16, atomic_load_sext_8_flat, i16>;
   defm : FlatStorePats_t16 <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
   defm : FlatStorePats_t16 <FLAT_STORE_SHORT, store_flat, i16>;
-  def : FlatStorePat <FLAT_STORE_BYTE_t16, atomic_store_8_flat, i16>;
-  def : FlatStorePat <FLAT_STORE_SHORT_t16, atomic_store_16_flat, i16>;
+  defm : FlatStorePats_t16 <FLAT_STORE_BYTE, atomic_store_8_flat, i16>;
+  defm : FlatStorePats_t16 <FLAT_STORE_SHORT, atomic_store_16_flat, i16>;
 } // End let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predicate = UseRealTrue16Insts
 
 defm : FlatLoadPats <FLAT_LOAD_DWORD, atomic_load_nonext_32_flat, i32>;

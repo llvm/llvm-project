@@ -63,23 +63,109 @@ define i32 @multiple_live2(i32 %x, i32 %y) {
   ret i32 %y
 }
 
-define void @operand_bundle_dead(ptr %x) {
-; CHECK-LABEL: define void @operand_bundle_dead(
+define void @operand_bundle_one_dead(ptr %x) {
+; CHECK-LABEL: define void @operand_bundle_one_dead(
 ; CHECK-SAME: ptr [[X:%.*]]) {
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[X]], i64 8) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) ["align"(ptr %x, i64 8)]
   ret void
 }
 
-define ptr @operand_bundle_live(ptr %x) {
-; CHECK-LABEL: define ptr @operand_bundle_live(
+define ptr @operand_bundle_one_live(ptr %x) {
+; CHECK-LABEL: define ptr @operand_bundle_one_live(
 ; CHECK-SAME: ptr [[X:%.*]]) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[X]], i64 8) ]
 ; CHECK-NEXT:    ret ptr [[X]]
 ;
   call void @llvm.assume(i1 true) ["align"(ptr %x, i64 8)]
+  ret ptr %x
+}
+
+define void @operand_bundle_multiple_dead(ptr %x, ptr %y) {
+; CHECK-LABEL: define void @operand_bundle_multiple_dead(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["align"(ptr %x, i64 8), "align"(ptr %y, i64 8)]
+  ret void
+}
+
+define ptr @operand_bundle_one_live_one_dead(ptr %x, ptr %y) {
+; CHECK-LABEL: define ptr @operand_bundle_one_live_one_dead(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[Y]], i64 8) ]
+; CHECK-NEXT:    ret ptr [[Y]]
+;
+  call void @llvm.assume(i1 true) ["align"(ptr %x, i64 8), "align"(ptr %y, i64 8)]
+  ret ptr %y
+}
+
+define i64 @operand_bundle_ignore_unaffected_operands(ptr %x, i64 %align) {
+; CHECK-LABEL: define i64 @operand_bundle_ignore_unaffected_operands(
+; CHECK-SAME: ptr [[X:%.*]], i64 [[ALIGN:%.*]]) {
+; CHECK-NEXT:    ret i64 [[ALIGN]]
+;
+  call void @llvm.assume(i1 true) ["align"(ptr %x, i64 %align)]
+  ret i64 %align
+}
+
+define void @operand_bundle_remove_dead_insts(ptr %x) {
+; CHECK-LABEL: define void @operand_bundle_remove_dead_insts(
+; CHECK-SAME: ptr [[X:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  %gep = getelementptr i8, ptr %x, i64 8
+  call void @llvm.assume(i1 true) ["align"(ptr %gep, i64 8)]
+  ret void
+}
+
+define void @operand_bundle_no_args() {
+; CHECK-LABEL: define void @operand_bundle_no_args() {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "cold"() ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["cold"()]
+  ret void
+}
+
+; Can always drop ignore bundles, regardless of uses.
+define ptr @operand_bundle_ignore(ptr %x) {
+; CHECK-LABEL: define ptr @operand_bundle_ignore(
+; CHECK-SAME: ptr [[X:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[X]]) ]
+; CHECK-NEXT:    ret ptr [[X]]
+;
+  call void @llvm.assume(i1 true) ["ignore"(), "ignore"(ptr %x), "nonnull"(ptr %x)]
+  ret ptr %x
+}
+
+define void @operand_bundle_separate_storage_both_dead(ptr %x, ptr %y) {
+; CHECK-LABEL: define void @operand_bundle_separate_storage_both_dead(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["separate_storage"(ptr %x, ptr %y)]
+  ret void
+}
+
+define ptr @operand_bundle_separate_storage_one_live1(ptr %x, ptr %y) {
+; CHECK-LABEL: define ptr @operand_bundle_separate_storage_one_live1(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "separate_storage"(ptr [[X]], ptr [[Y]]) ]
+; CHECK-NEXT:    ret ptr [[Y]]
+;
+  call void @llvm.assume(i1 true) ["separate_storage"(ptr %x, ptr %y)]
+  ret ptr %y
+}
+
+define ptr @operand_bundle_separate_storage_one_live2(ptr %x, ptr %y) {
+; CHECK-LABEL: define ptr @operand_bundle_separate_storage_one_live2(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "separate_storage"(ptr [[X]], ptr [[Y]]) ]
+; CHECK-NEXT:    ret ptr [[X]]
+;
+  call void @llvm.assume(i1 true) ["separate_storage"(ptr %x, ptr %y)]
   ret ptr %x
 }
 

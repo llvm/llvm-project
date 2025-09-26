@@ -17,7 +17,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// they make the class non-copy-assignable.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-const-or-ref-data-members.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-const-or-ref-data-members.html
 class AvoidConstOrRefDataMembersCheck : public ClangTidyCheck {
 public:
   AvoidConstOrRefDataMembersCheck(StringRef Name, ClangTidyContext *Context)

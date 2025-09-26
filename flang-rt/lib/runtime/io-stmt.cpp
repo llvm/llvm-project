@@ -905,8 +905,8 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   if (imaginaryPart_) { // can't repeat components
     return edit;
   }
-  if (*ch >= '0' && *ch <= '9' && fastField.MightHaveAsterisk()) {
-    // look for "r*" repetition count
+  if (*ch >= '0' && *ch <= '9' && fastField.MightBeRepetitionCount()) {
+    // There's decimal digits followed by '*'.
     auto start{fastField.connection().positionInRecord};
     int r{0};
     do {

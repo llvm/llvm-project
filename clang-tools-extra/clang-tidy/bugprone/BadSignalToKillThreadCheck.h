@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// Finds ``pthread_kill`` function calls when thread is terminated by
 /// ``SIGTERM`` signal.
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/bad-signal-to-kill-thread.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/bad-signal-to-kill-thread.html
 class BadSignalToKillThreadCheck : public ClangTidyCheck {
 public:
   BadSignalToKillThreadCheck(StringRef Name, ClangTidyContext *Context)

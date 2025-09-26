@@ -404,7 +404,11 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                                         const Archive::Symbol &sym,
                                         StringRef parentName) {
 
-  auto reportBufferError = [=](Error &&e, StringRef childName) {
+  auto reportBufferError = [=](Error &&e) {
+    StringRef childName =
+      CHECK(c.getName(),
+            "could not get child name for archive " + parentName +
+            " while loading symbol " + toCOFFString(ctx, sym));
     Fatal(ctx) << "could not get the buffer for the member defining symbol "
                << &sym << ": " << parentName << "(" << childName
                << "): " << std::move(e);
@@ -414,7 +418,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
     uint64_t offsetInArchive = c.getChildOffset();
     Expected<MemoryBufferRef> mbOrErr = c.getMemoryBufferRef();
     if (!mbOrErr)
-      reportBufferError(mbOrErr.takeError(), check(c.getFullName()));
+      reportBufferError(mbOrErr.takeError());
     MemoryBufferRef mb = mbOrErr.get();
     enqueueTask([=]() {
       llvm::TimeTraceScope timeScope("Archive: ", mb.getBufferIdentifier());
@@ -433,7 +437,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
   enqueueTask([=]() {
     auto mbOrErr = future->get();
     if (mbOrErr.second)
-      reportBufferError(errorCodeToError(mbOrErr.second), childName);
+      reportBufferError(errorCodeToError(mbOrErr.second));
     llvm::TimeTraceScope timeScope("Archive: ",
                                    mbOrErr.first->getBufferIdentifier());
     ctx.driver.addThinArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),

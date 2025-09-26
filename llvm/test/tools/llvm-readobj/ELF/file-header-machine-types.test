@@ -480,6 +480,9 @@
 # RUN: yaml2obj %s -o %t.ve.o -D MACHINE=EM_VE
 # RUN: llvm-readelf --file-headers %t.ve.o | FileCheck %s -DMACHINE="NEC SX-Aurora Vector Engine"
 
+# RUN: yaml2obj %s -o %t.igt.o -D MACHINE=EM_INTELGT
+# RUN: llvm-readelf --file-headers %t.igt.o | FileCheck %s -DMACHINE="Intel Graphics Technology"
+
 # CHECK: Machine: [[MACHINE]]
 
 --- !ELF

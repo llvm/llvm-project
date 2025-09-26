@@ -21,7 +21,7 @@ namespace clang::tidy::altera {
 /// they cannot be fully unrolled, and should be partially unrolled.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/altera/unroll-loops.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/altera/unroll-loops.html
 class UnrollLoopsCheck : public ClangTidyCheck {
 public:
   UnrollLoopsCheck(StringRef Name, ClangTidyContext *Context);

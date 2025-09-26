@@ -424,6 +424,7 @@ def Saturate : DXILOp<7, unary> {
 
 def IsNaN : DXILOp<8, isSpecialFloat> {
   let Doc = "Determines if the specified value is NaN.";
+  let intrinsics = [IntrinSelect<int_dx_isnan>];
   let arguments = [OverloadTy];
   let result = Int1Ty;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];

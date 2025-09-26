@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 /// ambiguity in the variable's value.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/inc-dec-in-conditions.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/inc-dec-in-conditions.html
 class IncDecInConditionsCheck : public ClangTidyCheck {
 public:
   IncDecInConditionsCheck(StringRef Name, ClangTidyContext *Context)

@@ -1369,7 +1369,8 @@ bool SemaHLSL::handleRootSignatureElements(
              "Number of unbound elements must match the number of clauses");
       bool HasAnySampler = false;
       bool HasAnyNonSampler = false;
-      uint32_t Offset = 0;
+      uint64_t Offset = 0;
+      bool IsPrevUnbound = false;
       for (const auto &[Clause, ClauseElem] : UnboundClauses) {
         SourceLocation Loc = ClauseElem->getLocation();
         if (Clause->Type == llvm::dxil::ResourceClass::Sampler)
@@ -1386,32 +1387,28 @@ bool SemaHLSL::handleRootSignatureElements(
         if (Clause->NumDescriptors == 0)
           return true;
 
-        if (Clause->Offset !=
-            llvm::hlsl::rootsig::DescriptorTableOffsetAppend) {
-          // Manually specified the offset
+        bool IsAppending =
+            Clause->Offset == llvm::hlsl::rootsig::DescriptorTableOffsetAppend;
+        if (!IsAppending)
           Offset = Clause->Offset;
-        }
 
         uint64_t RangeBound = llvm::hlsl::rootsig::computeRangeBound(
             Offset, Clause->NumDescriptors);
 
-        if (!llvm::hlsl::rootsig::verifyBoundOffset(Offset)) {
-          // Trying to append onto unbound offset
+        if (IsPrevUnbound && IsAppending)
           Diag(Loc, diag::err_hlsl_appending_onto_unbound);
-        } else if (!llvm::hlsl::rootsig::verifyNoOverflowedOffset(RangeBound)) {
-          // Upper bound overflows maximum offset
+        else if (!llvm::hlsl::rootsig::verifyNoOverflowedOffset(RangeBound))
           Diag(Loc, diag::err_hlsl_offset_overflow) << Offset << RangeBound;
-        }
 
-        Offset = RangeBound == llvm::hlsl::rootsig::NumDescriptorsUnbounded
-                     ? uint32_t(RangeBound)
-                     : uint32_t(RangeBound + 1);
+        // Update offset to be 1 past this range's bound
+        Offset = RangeBound + 1;
+        IsPrevUnbound = Clause->NumDescriptors ==
+                        llvm::hlsl::rootsig::NumDescriptorsUnbounded;
 
         // Compute the register bounds and track resource binding
         uint32_t LowerBound(Clause->Reg.Number);
-        uint32_t UpperBound = Clause->NumDescriptors == ~0u
-                                  ? ~0u
-                                  : LowerBound + Clause->NumDescriptors - 1;
+        uint32_t UpperBound = llvm::hlsl::rootsig::computeRangeBound(
+            LowerBound, Clause->NumDescriptors);
 
         BindingChecker.trackBinding(
             Table->Visibility,
@@ -3093,7 +3090,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_elementwise_isinf: {
+  case Builtin::BI__builtin_hlsl_elementwise_isinf:
+  case Builtin::BI__builtin_hlsl_elementwise_isnan: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
@@ -3294,7 +3292,6 @@ static void BuildFlattenedTypeList(QualType BaseTy,
   while (!WorkList.empty()) {
     QualType T = WorkList.pop_back_val();
     T = T.getCanonicalType().getUnqualifiedType();
-    assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
     if (const auto *AT = dyn_cast<ConstantArrayType>(T)) {
       llvm::SmallVector<QualType, 16> ElementFields;
       // Generally I've avoided recursion in this algorithm, but arrays of
@@ -3326,7 +3323,8 @@ static void BuildFlattenedTypeList(QualType BaseTy,
 
       llvm::SmallVector<QualType, 16> FieldTypes;
       for (const auto *FD : RD->fields())
-        FieldTypes.push_back(FD->getType());
+        if (!FD->isUnnamedBitField())
+          FieldTypes.push_back(FD->getType());
       // Reverse the newly added sub-range.
       std::reverse(FieldTypes.begin(), FieldTypes.end());
       llvm::append_range(WorkList, FieldTypes);
@@ -4161,6 +4159,8 @@ class InitListTransformer {
       while (!RecordDecls.empty()) {
         CXXRecordDecl *RD = RecordDecls.pop_back_val();
         for (auto *FD : RD->fields()) {
+          if (FD->isUnnamedBitField())
+            continue;
           DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
           DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
           ExprResult Res = S.BuildFieldReferenceExpr(
@@ -4210,7 +4210,8 @@ class InitListTransformer {
       while (!RecordDecls.empty()) {
         CXXRecordDecl *RD = RecordDecls.pop_back_val();
         for (auto *FD : RD->fields())
-          Inits.push_back(generateInitListsImpl(FD->getType()));
+          if (!FD->isUnnamedBitField())
+            Inits.push_back(generateInitListsImpl(FD->getType()));
       }
     }
     auto *NewInit = new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(),
@@ -4283,6 +4284,9 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   }
   size_t ExpectedSize = ILT.DestTypes.size();
   size_t ActualSize = ILT.ArgExprs.size();
+  if (ExpectedSize == 0 && ActualSize == 0)
+    return true;
+
   // For incomplete arrays it is completely arbitrary to choose whether we think
   // the user intended fewer or more elements. This implementation assumes that
   // the user intended more, and errors that there are too few initializers to

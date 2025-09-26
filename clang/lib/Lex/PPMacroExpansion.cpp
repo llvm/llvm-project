@@ -1282,11 +1282,13 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
 
   SmallString<128> FilenameBuffer;
   StringRef Filename = this->getSpelling(FilenameTok, FilenameBuffer);
+  if (Filename.empty())
+    return EmbedResult::Empty;
+
   bool isAngled =
       this->GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
   // error.
-  assert(!Filename.empty());
   const FileEntry *LookupFromFile =
       this->getCurrentFileLexer() ? *this->getCurrentFileLexer()->getFileEntry()
                                   : static_cast<FileEntry *>(nullptr);

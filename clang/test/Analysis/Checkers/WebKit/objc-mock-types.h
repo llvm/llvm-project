@@ -160,6 +160,7 @@ __attribute__((objc_root_class))
 - (int)intValue;
 - (id)initWithInt:(int)value;
 + (NSNumber *)numberWithInt:(int)value;
++ (NSNumber *)numberWithBool:(BOOL)value;
 @end
 
 @interface SomeObj : NSObject

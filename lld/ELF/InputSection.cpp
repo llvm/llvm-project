@@ -1171,7 +1171,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
 }
 
 template <class ELFT>
-void InputSectionBase::relocate(Ctx &ctx, uint8_t *buf, uint8_t *bufEnd) {
+void InputSection::relocate(Ctx &ctx, uint8_t *buf, uint8_t *bufEnd) {
   if ((flags & SHF_EXECINSTR) && LLVM_UNLIKELY(getFile<ELFT>()->splitStack))
     adjustSplitStackFunctionPrologues<ELFT>(ctx, buf, bufEnd);
 

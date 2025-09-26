@@ -168,10 +168,22 @@ public:
   /// registers so that the instructions result is independent of the place
   /// in the function.
   bool isTriviallyReMaterializable(const MachineInstr &MI) const {
+    if (!isReMaterializable(MI))
+      return false;
+    for (const MachineOperand &MO : MI.all_uses()) {
+      if (MO.getReg().isVirtual())
+        return false;
+    }
+    return true;
+  }
+
+  /// Return true if the instruction would be materializable at a point
+  /// in the containing function where all virtual register uses were
+  /// known to be live and available in registers.
+  bool isReMaterializable(const MachineInstr &MI) const {
     return (MI.getOpcode() == TargetOpcode::IMPLICIT_DEF &&
             MI.getNumOperands() == 1) ||
-           (MI.getDesc().isRematerializable() &&
-            isReallyTriviallyReMaterializable(MI));
+           (MI.getDesc().isRematerializable() && isReMaterializableImpl(MI));
   }
 
   /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
@@ -194,11 +206,10 @@ public:
 protected:
   /// For instructions with opcodes for which the M_REMATERIALIZABLE flag is
   /// set, this hook lets the target specify whether the instruction is actually
-  /// trivially rematerializable, taking into consideration its operands. This
+  /// rematerializable, taking into consideration its operands. This
   /// predicate must return false if the instruction has any side effects other
-  /// than producing a value, or if it requres any address registers that are
-  /// not always available.
-  virtual bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const;
+  /// than producing a value.
+  virtual bool isReMaterializableImpl(const MachineInstr &MI) const;
 
   /// This method commutes the operands of the given machine instruction MI.
   /// The operands to be commuted are specified by their indices OpIdx1 and

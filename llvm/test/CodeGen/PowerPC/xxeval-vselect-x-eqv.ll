@@ -174,10 +174,9 @@ define <4 x i32> @ternary_A_not_C_eqv_BC_4x32(<4 x i1> %A, <4 x i32> %B, <4 x i3
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxleqv v5, v5, v5
 ; CHECK-NEXT:    xxlnor vs0, v4, v4
-; CHECK-NEXT:    xxleqv vs1, v4, v3
 ; CHECK-NEXT:    vslw v2, v2, v5
 ; CHECK-NEXT:    vsraw v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, vs0, v3, 99
 ; CHECK-NEXT:    blr
 entry:
   %not = xor <4 x i32> %C, <i32 -1, i32 -1, i32 -1, i32 -1>  ; Vector not operation

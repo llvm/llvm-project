@@ -575,3 +575,25 @@ void func12() {
 // LLVM: %[[ARR:.*]] = alloca [4 x %struct.Point], i64 1, align 16
 
 // OGCG: %[[ARR:.*]] = alloca [4 x %struct.Point], align 16
+
+void array_with_complex_elements() {
+  _Complex float arr[2] = {{1.1f, 2.2f}, {3.3f, 4.4f}};
+}
+
+// CIR: %[[ARR_ADDR:.*]] = cir.alloca !cir.array<!cir.complex<!cir.float> x 2>, !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>, ["arr", init]
+// CIR: %[[ARR_0:.*]] = cir.cast(array_to_ptrdecay, %[[ARR_ADDR]] : !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>), !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[CONST_COMPLEX_0:.*]] = cir.const #cir.const_complex<#cir.fp<1.100000e+00> : !cir.float, #cir.fp<2.200000e+00> : !cir.float> : !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[CONST_COMPLEX_0]], %[[ARR_0]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[IDX_1:.*]] = cir.const #cir.int<1> : !s64i
+// CIR: %[[ARR_1:.*]] = cir.ptr_stride(%1 : !cir.ptr<!cir.complex<!cir.float>>, %[[IDX_1]] : !s64i), !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[CONST_COMPLEX_1:.*]] = cir.const #cir.const_complex<#cir.fp<3.300000e+00> : !cir.float, #cir.fp<4.400000e+00> : !cir.float> : !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[CONST_COMPLEX_1]], %[[ARR_1]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// LLVM: %[[ARR_ADDR:.*]] = alloca [2 x { float, float }], i64 1, align 16
+// LLVM: %[[ARR_0:.*]] = getelementptr { float, float }, ptr %[[ARR_ADDR]], i32 0
+// LLVM: store { float, float } { float 0x3FF19999A0000000, float 0x40019999A0000000 }, ptr %[[ARR_0]], align 8
+// LLVM: %[[ARR_1:.*]] = getelementptr { float, float }, ptr %[[ARR_0]], i64 1
+// LLVM: store { float, float } { float 0x400A666660000000, float 0x40119999A0000000 }, ptr %[[ARR_1]], align 8
+
+// OGCG: %[[ARR_ADDR:.*]] = alloca [2 x { float, float }], align 16
+// OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[ARR_ADDR]], ptr align 16 @__const._Z27array_with_complex_elementsv.arr, i64 16, i1 false)

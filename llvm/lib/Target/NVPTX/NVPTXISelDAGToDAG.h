@@ -45,6 +45,7 @@ class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   bool useF32FTZ() const;
   bool allowFMA() const;
   bool doRsqrtOpt() const;
+  bool doMADWideOpt() const;
 
   NVPTXScopes Scopes{};
 
