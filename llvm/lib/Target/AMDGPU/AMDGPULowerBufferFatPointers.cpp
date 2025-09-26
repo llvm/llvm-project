@@ -2562,7 +2562,7 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
   for (Function *F : NeedsPostProcess)
     Splitter.processFunction(*F);
   for (Function *F : Intrinsics) {
-    // use_empty() can also occor with cases like masked load, which will
+    // use_empty() can also occur with cases like masked load, which will
     // have been rewritten out of the module by now but not erased.
     if (F->use_empty() || isRemovablePointerIntrinsic(F->getIntrinsicID())) {
       F->eraseFromParent();
