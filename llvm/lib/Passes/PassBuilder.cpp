@@ -1353,16 +1353,29 @@ Expected<ScalarizerPassOptions> parseScalarizerOptions(StringRef Params) {
 }
 
 Expected<SROAOptions> parseSROAOptions(StringRef Params) {
-  if (Params.empty() || Params == "modify-cfg")
-    return SROAOptions::ModifyCFG;
-  if (Params == "preserve-cfg")
-    return SROAOptions::PreserveCFG;
-  return make_error<StringError>(
-      formatv("invalid SROA pass parameter '{}' (either preserve-cfg or "
-              "modify-cfg can be specified)",
-              Params)
-          .str(),
-      inconvertibleErrorCode());
+  SROAOptions::PreserveCFGOption PreserveCFG = SROAOptions::ModifyCFG;
+  SROAOptions::DecomposeStructsOption DecomposeStructs =
+      SROAOptions::NoDecomposeStructs;
+
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName.consume_front("preserve-cfg"))
+      PreserveCFG = SROAOptions::PreserveCFG;
+    else if (ParamName.consume_front("modify-cfg"))
+      PreserveCFG = SROAOptions::ModifyCFG;
+    else if (ParamName.consume_front("no-decompose-structs"))
+      DecomposeStructs = SROAOptions::NoDecomposeStructs;
+    else if (ParamName.consume_front("decompose-structs"))
+      DecomposeStructs = SROAOptions::DecomposeStructs;
+    else
+      return make_error<StringError>(
+          formatv("invalid SROA pass option '{}'", ParamName).str(),
+          inconvertibleErrorCode());
+  }
+
+  return SROAOptions(PreserveCFG, DecomposeStructs);
 }
 
 Expected<StackLifetime::LivenessType>

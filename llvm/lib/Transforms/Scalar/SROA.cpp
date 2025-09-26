@@ -174,6 +174,7 @@ class SROA {
   DomTreeUpdater *const DTU;
   AssumptionCache *const AC;
   const bool PreserveCFG;
+  const bool DecomposeStructs;
 
   /// Worklist of alloca instructions to simplify.
   ///
@@ -236,9 +237,10 @@ class SROA {
 
 public:
   SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
-       SROAOptions PreserveCFG_)
+       const SROAOptions &Options)
       : C(C), DTU(DTU), AC(AC),
-        PreserveCFG(PreserveCFG_ == SROAOptions::PreserveCFG) {}
+        PreserveCFG(Options.PCFGOption == SROAOptions::PreserveCFG),
+        DecomposeStructs(Options.DSOption == SROAOptions::DecomposeStructs) {}
 
   /// Main run method used by both the SROAPass and by the legacy pass.
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runSROA(Function &F);
@@ -6040,7 +6042,7 @@ PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   auto [Changed, CFGChanged] =
-      SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+      SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -6054,23 +6056,29 @@ void SROAPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<SROAPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  OS << (PreserveCFG == SROAOptions::PreserveCFG ? "<preserve-cfg>"
-                                                 : "<modify-cfg>");
+  OS << (Options.PCFGOption == SROAOptions::PreserveCFG
+             ? "<preserve-cfg>"
+             : "<modify-cfg>");
 }
 
-SROAPass::SROAPass(SROAOptions PreserveCFG) : PreserveCFG(PreserveCFG) {}
+SROAPass::SROAPass(SROAOptions::PreserveCFGOption PreserveCFG)
+    : Options({PreserveCFG, SROAOptions::NoDecomposeStructs}) {}
+SROAPass::SROAPass(const SROAOptions &Options) : Options(Options) {}
 
 namespace {
 
 /// A legacy pass for the legacy pass manager that wraps the \c SROA pass.
 class SROALegacyPass : public FunctionPass {
-  SROAOptions PreserveCFG;
+  SROAOptions Options;
 
 public:
   static char ID;
 
-  SROALegacyPass(SROAOptions PreserveCFG = SROAOptions::PreserveCFG)
-      : FunctionPass(ID), PreserveCFG(PreserveCFG) {
+  SROALegacyPass(
+      const SROAOptions &Options =
+          {SROAOptions::PreserveCFGOption::PreserveCFG,
+           SROAOptions::DecomposeStructsOption::NoDecomposeStructs})
+      : FunctionPass(ID), Options(Options) {
     initializeSROALegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -6083,7 +6091,7 @@ public:
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
     auto [Changed, _] =
-        SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+        SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
     return Changed;
   }
 
@@ -6101,9 +6109,11 @@ public:
 
 char SROALegacyPass::ID = 0;
 
-FunctionPass *llvm::createSROAPass(bool PreserveCFG) {
-  return new SROALegacyPass(PreserveCFG ? SROAOptions::PreserveCFG
-                                        : SROAOptions::ModifyCFG);
+FunctionPass *llvm::createSROAPass(bool PreserveCFG, bool DecomposeStructs) {
+  return new SROALegacyPass(
+      {PreserveCFG ? SROAOptions::PreserveCFG : SROAOptions::ModifyCFG,
+       DecomposeStructs ? SROAOptions::DecomposeStructs
+                        : SROAOptions::NoDecomposeStructs});
 }
 
 INITIALIZE_PASS_BEGIN(SROALegacyPass, "sroa",

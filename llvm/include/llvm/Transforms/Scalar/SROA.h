@@ -21,15 +21,31 @@ namespace llvm {
 
 class Function;
 
-enum class SROAOptions : bool { ModifyCFG, PreserveCFG };
+struct SROAOptions {
+  enum PreserveCFGOption : bool { ModifyCFG, PreserveCFG };
+  enum DecomposeStructsOption : bool { NoDecomposeStructs, DecomposeStructs };
+  PreserveCFGOption PCFGOption;
+  DecomposeStructsOption DSOption;
+  SROAOptions(PreserveCFGOption PCFGOption)
+      : PCFGOption(PCFGOption), DSOption(NoDecomposeStructs) {}
+  SROAOptions(PreserveCFGOption PCFGOption, DecomposeStructsOption DSOption)
+      : PCFGOption(PCFGOption), DSOption(DSOption) {}
+};
 
 class SROAPass : public PassInfoMixin<SROAPass> {
-  const SROAOptions PreserveCFG;
+  const SROAOptions Options;
 
 public:
   /// If \p PreserveCFG is set, then the pass is not allowed to modify CFG
   /// in any way, even if it would update CFG analyses.
-  SROAPass(SROAOptions PreserveCFG);
+  SROAPass(SROAOptions::PreserveCFGOption PreserveCFG);
+
+  /// If \p Options.PreserveCFG is set, then the pass is not allowed to modify
+  /// CFG in any way, even if it would update CFG analyses.
+  /// If \p Options.DecomposeStructs is set, then the pass will decompose
+  /// structs allocas into its constituent components regardless of whether or
+  /// not pointer offsets into them are known at compile time.
+  SROAPass(const SROAOptions &Options);
 
   /// Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
