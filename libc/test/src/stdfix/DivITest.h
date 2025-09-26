@@ -11,8 +11,6 @@
 #include "src/__support/fixed_point/fx_rep.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdio.h>
-
 template <typename XType> XType get_epsilon() = delete;
 template <> fract get_epsilon() { return FRACT_EPSILON; }
 template <> unsigned fract get_epsilon() { return UFRACT_EPSILON; }
@@ -61,6 +59,9 @@ public:
     EXPECT_LT(func(1, INT_MAX) - 0.r, epsilon);
     // This results in 1.1739, which should be saturated to FRACT_MAX
     EXPECT_EQ(func(27, 23), FRACT_MAX);
+
+    EXPECT_EQ(func(INT_MIN, 1), FRACT_MIN);
+    EXPECT_LT(func(1, INT_MIN) - 0.r, epsilon);
   }
 };
 

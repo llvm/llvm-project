@@ -22,6 +22,8 @@
 
 #include "fx_rep.h"
 
+#include <stdio.h>
+
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 
 namespace LIBC_NAMESPACE_DECL {
@@ -246,13 +248,21 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   }
   bool result_is_negative = ((n < 0) != (d < 0));
 
-  unsigned int nv = static_cast<unsigned int>(n < 0 ? -n : n);
-  unsigned int dv = static_cast<unsigned int>(d < 0 ? -d : d);
-  unsigned int clz = cpp::countl_zero<unsigned int>(dv) - 1;
-  unsigned long int scaled_val = dv << clz;
+  int64_t n64 = static_cast<int64_t>(n);
+  int64_t d64 = static_cast<int64_t>(d);
+
+  uint64_t nv = static_cast<uint64_t>(n64 < 0 ? -n64 : n64);
+  uint64_t dv = static_cast<uint64_t>(d64 < 0 ? -d64 : d64);
+
+  if (d == INT_MIN) {
+    dv = dv - 1; // Two's complement
+  }
+  
+  uint32_t clz = cpp::countl_zero<uint32_t>(static_cast<uint32_t>(dv)) - 1;
+  uint64_t scaled_val = dv << clz;
   // Scale denominator to be in the range of [0.5,1]
   FXBits<long accum> d_scaled{scaled_val};
-  unsigned long int scaled_val_n = nv << clz;
+  uint64_t scaled_val_n = nv << clz;
   // Scale the numerator as much as the denominator to maintain correctness of
   // the original equation
   FXBits<long accum> n_scaled{scaled_val_n};
