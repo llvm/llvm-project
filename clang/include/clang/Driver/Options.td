@@ -9489,7 +9489,7 @@ def fdx_rootsignature_version :
   Values<"rootsig_1_0,rootsig_1_1,rootsig_1_2">,
   NormalizedValuesScope<"llvm::dxbc::RootSignatureVersion">,
   NormalizedValues<["V1_0", "V1_1", "V1_2"]>,
-  MarshallingInfoEnum<LangOpts<"HLSLRootSigVer">, "V1_2">;
+  MarshallingInfoEnum<LangOpts<"HLSLRootSigVer">, "V1_1">;
 def dxc_rootsig_ver :
   Separate<["/", "-"], "force-rootsig-ver">,
   Alias<fdx_rootsignature_version>,

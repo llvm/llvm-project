@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-rootsignature -ast-dump \
-// RUN:  -fdx-rootsignature-version=rootsig_1_1 \
-// RUN:  -hlsl-entry EntryRootSig -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-V1_1
-
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-rootsignature -ast-dump \
 // RUN:  -fdx-rootsignature-version=rootsig_1_0 \
 // RUN:  -hlsl-entry EntryRootSig -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-V1_0
+
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-rootsignature -ast-dump \
+// RUN:  -fdx-rootsignature-version=rootsig_1_1 \
+// RUN:  -hlsl-entry EntryRootSig -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-V1_1
 
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-rootsignature -ast-dump \
 // RUN:  -fdx-rootsignature-version=rootsig_1_2 \
