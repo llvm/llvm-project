@@ -1279,8 +1279,10 @@ void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
   PrintingPolicy Policy(CGM.getContext().getLangOpts());
   Policy.SuppressTagKeyword = true;
   Policy.FullyQualifiedName = true;
-  std::string TypeName = AllocType.getCanonicalType().getAsString(Policy);
-  auto *TypeMDS = llvm::MDString::get(CGM.getLLVMContext(), TypeName);
+  SmallString<64> TypeName;
+  llvm::raw_svector_ostream TypeNameOS(TypeName);
+  AllocType.getCanonicalType().print(TypeNameOS, Policy);
+  auto *TypeMDS = llvm::MDString::get(CGM.getLLVMContext(), TypeNameOS.str());
 
   // Format: !{<type-name>}
   auto *MDN = llvm::MDNode::get(CGM.getLLVMContext(), {TypeMDS});
