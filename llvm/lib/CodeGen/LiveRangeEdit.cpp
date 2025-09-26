@@ -75,11 +75,11 @@ void LiveRangeEdit::scanRemattable() {
     Register Original = VRM->getOriginal(getReg());
     LiveInterval &OrigLI = LIS.getInterval(Original);
     VNInfo *OrigVNI = OrigLI.getVNInfoAt(VNI->def);
-    assert(OrigVNI && "Corrupt interval mapping?");
-    if (OrigVNI->isPHIDef())
+    if (!OrigVNI)
       continue;
     MachineInstr *DefMI = LIS.getInstructionFromIndex(OrigVNI->def);
-    assert(DefMI && "Missing instruction for def slot");
+    if (!DefMI)
+      continue;
     if (TII.isReMaterializable(*DefMI))
       Remattable.insert(OrigVNI);
   }
