@@ -751,22 +751,8 @@ Status Platform::ResolveExecutable(const ModuleSpec &module_spec,
         ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                     nullptr, nullptr);
 
-    Status error;
-    if (!exe_module_sp) {
-      // If locate module callback didn't provide a module, fallback to standard
-      // path
-      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          nullptr, nullptr);
-    }
-
-    if (exe_module_sp && exe_module_sp->GetObjectFile()) {
-      // Set the symbol file if locate module callback returned one
-      if (symbol_file_spec) {
-        exe_module_sp->SetSymbolFileFileSpec(symbol_file_spec);
-      }
-      return error; // Return the actual status from GetSharedModule (or success
-                    // from callback)
-    }
+    if (exe_module_sp && exe_module_sp->GetObjectFile())
+      return error;
     exe_module_sp.reset();
   }
   // No valid architecture was specified or the exact arch wasn't found.
@@ -778,7 +764,6 @@ Status Platform::ResolveExecutable(const ModuleSpec &module_spec,
   Status error;
   for (const ArchSpec &arch : GetSupportedArchitectures(process_host_arch)) {
     resolved_module_spec.GetArchitecture() = arch;
-<<<<<<< Updated upstream
 
     // Call locate module callback first, then fallback to standard path
     FileSpec symbol_file_spec;
@@ -790,19 +775,12 @@ Status Platform::ResolveExecutable(const ModuleSpec &module_spec,
                                           nullptr, nullptr);
     }
 
-=======
     error =
         ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                     nullptr, nullptr);
->>>>>>> Stashed changes
     if (error.Success()) {
-      if (exe_module_sp && exe_module_sp->GetObjectFile()) {
-        // Set the symbol file if locate module callback returned one
-        if (symbol_file_spec) {
-          exe_module_sp->SetSymbolFileFileSpec(symbol_file_spec);
-        }
+      if (exe_module_sp && exe_module_sp->GetObjectFile())
         break;
-      }
       error = Status::FromErrorString("no exe object file");
     }
 
