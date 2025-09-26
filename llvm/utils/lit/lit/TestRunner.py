@@ -1443,6 +1443,7 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
             ("%{fs-src-root}", pathlib.Path(sourcedir).anchor),
             ("%{fs-tmp-root}", pathlib.Path(tmpBase).anchor),
             ("%{fs-sep}", os.path.sep),
+            ("%{fs-sep-yaml}", "\\\\\\\\\\\\\\\\" if kIsWindows else "/"),
         ]
     )
 

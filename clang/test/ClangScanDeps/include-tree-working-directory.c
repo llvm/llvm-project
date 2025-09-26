@@ -20,18 +20,18 @@
 // CACHE-HIT: remark: compile job cache hit
 
 // RUN: cat %t/tu.rsp | sed -E 's|.*"-fcas-include-tree" "(llvmcas://[[:xdigit:]]+)".*|\1|' > %t/tu.casid
-// RUN: clang-cas-test -cas %t/cas -print-include-tree @%t/tu.casid | FileCheck %s -DPREFIX=%/t
+// RUN: clang-cas-test -cas %t/cas -print-include-tree @%t/tu.casid | %PathSanitizingFileCheck --sanitize PREFIX=%/t %s
 
-// CHECK: [[PREFIX]]/t.c llvmcas://
+// CHECK: PREFIX{{/|\\}}t.c llvmcas://
 // CHECK: 1:1 <built-in> llvmcas://
-// CHECK: 2:1 [[PREFIX]]/relative/h1.h llvmcas://
+// CHECK: 2:1 PREFIX{{/|\\}}relative{{/|\\}}h1.h llvmcas://
 // CHECK: Files:
-// CHECK: [[PREFIX]]/t.c llvmcas://
-// CHECK: [[PREFIX]]/relative/h1.h llvmcas://
+// CHECK: PREFIX{{/|\\}}t.c llvmcas://
+// CHECK: PREFIX{{/|\\}}relative{{/|\\}}h1.h llvmcas://
 
 /// Using a different working directory should cache hit as well.
 /// FIXME: Working directory affects some codegen options added by clang driver, preserve them to make sure the cache hit.
-// RUN: sed -e "s|DIR|%/t|g" %t/cdb2.json.template > %t/cdb2.json
+// RUN: sed -e "s|DIR|%/t|g" %t/cdb2.json.template | sed -e "s|SEP|%{fs-sep-yaml}|g" > %t/cdb2.json
 // RUN: clang-scan-deps -compilation-database %t/cdb2.json -format experimental-include-tree-full -cas-path %t/cas \
 // RUN:   > %t/deps2.json
 // RUN: %deps-to-rsp %t/deps2.json --tu-index 0 > %t/tu2.rsp
@@ -48,7 +48,7 @@
 //--- cdb2.json.template
 [{
   "directory": "DIR/other",
-  "command": "clang -c DIR/t.c -I DIR/relative -working-directory DIR/other -o DIR/t2.o -MD -serialize-diagnostics DIR/t2.dia -fdebug-compilation-dir=DIR -fcoverage-compilation-dir=DIR",
+  "command": "clang -c DIRSEPt.c -I DIRSEPrelative -working-directory DIR/other -o DIR/t2.o -MD -serialize-diagnostics DIR/t2.dia -fdebug-compilation-dir=DIR -fcoverage-compilation-dir=DIR",
   "file": "DIR/t.c"
 }]
 
