@@ -2546,8 +2546,8 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, Mask, VT, V1, V2, DAG,
                                                Subtarget)))
       return Result;
-    if ((Result = lowerVECTOR_SHUFFLE_XVPERM(DL, Mask, VT, V1, V2, DAG,
-                                             Subtarget)))
+    if ((Result =
+             lowerVECTOR_SHUFFLE_XVPERM(DL, Mask, VT, V1, V2, DAG, Subtarget)))
       return Result;
 
     // TODO: This comment may be enabled in the future to better match the
