@@ -233,10 +233,10 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor,
   // See:
   // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#exceptions
   if (__arm_za_disable) {
-    // FIXME: Is SME is available and `__arm_za_disable` is not, this should
-    // abort.
     __arm_za_disable();
   } else {
+    // FIXME: If SME is available and `__arm_za_disable` is not, this should
+    // abort.
     _LIBUNWIND_DEBUG_LOG("failed to call __arm_za_disable in %s", __FUNCTION__);
   }
 #endif
