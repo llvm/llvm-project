@@ -1,15 +1,17 @@
 # FIXME: Disabled on Windows for now because of reliance on posix only features
 # (eg: export, "&", pkill).
-REQUIRES: shell
 UNSUPPORTED: darwin, target={{.*windows.*}}
 # Check that libFuzzer honors SIGUSR1/SIGUSR2
 RUN: rm -rf %t
 RUN: mkdir -p %t
 RUN: %cpp_compiler %S/SleepOneSecondTest.cpp -o %t/LFSIGUSR
 
-RUN: %run %t/LFSIGUSR 2> %t/log & export PID=$!
+# The line below needs the " | env" at the end, in order to make the
+# script continue executing, rather than waiting (forever) for the
+# 'nohup run...' command to finish.
+RUN: bash -c "nohup %run %t/LFSIGUSR 2> %t/log & echo -n $! > %t2"| env
 RUN: sleep 2
-RUN: kill -SIGUSR1 $PID
+RUN: kill -SIGUSR1 %{readfile:%t2}
 RUN: sleep 3
 RUN: cat %t/log | FileCheck %s
 

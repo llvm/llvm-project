@@ -561,14 +561,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  void *allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
     if (Size == 0)
       return nullptr;
 
-    if (auto Err = setContext()) {
-      REPORT("Failure to alloc memory: %s\n", toString(std::move(Err)).data());
-      return nullptr;
-    }
+    if (auto Err = setContext())
+      return std::move(Err);
 
     void *MemAlloc = nullptr;
     CUdeviceptr DevicePtr;
@@ -589,23 +587,18 @@ struct CUDADeviceTy : public GenericDeviceTy {
       break;
     }
 
-    if (auto Err =
-            Plugin::check(Res, "error in cuMemAlloc[Host|Managed]: %s")) {
-      REPORT("Failure to alloc memory: %s\n", toString(std::move(Err)).data());
-      return nullptr;
-    }
+    if (auto Err = Plugin::check(Res, "error in cuMemAlloc[Host|Managed]: %s"))
+      return std::move(Err);
     return MemAlloc;
   }
 
   /// Deallocate memory on the device or related to the device.
-  int free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, TargetAllocTy Kind) override {
     if (TgtPtr == nullptr)
-      return OFFLOAD_SUCCESS;
+      return Plugin::success();
 
-    if (auto Err = setContext()) {
-      REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
-      return OFFLOAD_FAIL;
-    }
+    if (auto Err = setContext())
+      return Err;
 
     CUresult Res;
     switch (Kind) {
@@ -619,11 +612,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
       break;
     }
 
-    if (auto Err = Plugin::check(Res, "error in cuMemFree[Host]: %s")) {
-      REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
-      return OFFLOAD_FAIL;
-    }
-    return OFFLOAD_SUCCESS;
+    return Plugin::check(Res, "error in cuMemFree[Host]: %s");
   }
 
   /// Synchronize current thread with the pending operations on the async info.
@@ -1310,8 +1299,12 @@ private:
 
     // Allocate a buffer to store all of the known constructor / destructor
     // functions in so we can iterate them on the device.
-    void *Buffer =
+    auto BufferOrErr =
         allocate(Funcs.size() * sizeof(void *), nullptr, TARGET_ALLOC_DEVICE);
+    if (!BufferOrErr)
+      return BufferOrErr.takeError();
+
+    void *Buffer = *BufferOrErr;
     if (!Buffer)
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "failed to allocate memory for global buffer");
@@ -1360,12 +1353,10 @@ private:
 
     Error Err = Plugin::success();
     AsyncInfoWrapper.finalize(Err);
+    if (Err)
+      return Err;
 
-    if (free(Buffer, TARGET_ALLOC_DEVICE) != OFFLOAD_SUCCESS)
-      return Plugin::error(ErrorCode::UNKNOWN,
-                           "failed to free memory for global buffer");
-
-    return Err;
+    return free(Buffer, TARGET_ALLOC_DEVICE);
   }
 
   /// Stream manager for CUDA streams.

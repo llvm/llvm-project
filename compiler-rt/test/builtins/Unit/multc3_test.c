@@ -1,12 +1,12 @@
+// XFAIL: target=aarch64-{{.*}}-windows-{{.*}}
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_multc3
 
 #include <stdio.h>
 
+#if _ARCH_PPC || __aarch64__ || __arm64ec__
+
 #include "int_lib.h"
-
-#if defined(CRT_HAS_128BIT) && defined(CRT_HAS_F128)
-
 #include <math.h>
 #include <complex.h>
 
@@ -348,7 +348,7 @@ long double x[][2] =
 
 int main()
 {
-#if defined(CRT_HAS_128BIT) && defined(CRT_HAS_F128)
+#if _ARCH_PPC || __aarch64__ || __arm64ec__
     const unsigned N = sizeof(x) / sizeof(x[0]);
     unsigned i, j;
     for (i = 0; i < N; ++i)

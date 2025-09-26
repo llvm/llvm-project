@@ -1,14 +1,16 @@
 # Check that libFuzzer honors SIGUSR1/SIGUSR2
 # Disabled on Windows which does not have SIGUSR1/SIGUSR2.
-REQUIRES: shell
 UNSUPPORTED: darwin, target={{.*windows.*}}, target=aarch64{{.*}}
 RUN: rm -rf %t
 RUN: mkdir -p %t
 RUN: %cpp_compiler %S/SleepOneSecondTest.cpp -o %t/ForkSIGUSR
 
-RUN: %run %t/ForkSIGUSR -fork=3 -ignore_crashes=1 2>%t/log & export PID=$!
+# The line below needs the " | env" at the end, in order to make the
+# script continue executing, rather than waiting (forever) for the
+# 'nohup run...' command to finish.
+RUN: bash -c "nohup %run %t/ForkSIGUSR -fork=3 -ignore_crashes=1 2>%t/log & echo -n $! > %t2" | env
 RUN: sleep 3
-RUN: kill -SIGUSR2 $PID
+RUN: kill -SIGUSR2 %{readfile:%t2}
 RUN: sleep 6
 RUN: cat %t/log | FileCheck %s --dump-input=fail
 
