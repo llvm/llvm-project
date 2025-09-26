@@ -173,7 +173,7 @@ void generateSysCall(long SyscallNumber, std::vector<MCInst> &GeneratedCode) {
 }
 
 /// Functions to save/restore system call registers
-#ifdef __linux__
+#if defined(__linux__) && defined(HAVE_LIBPFM)
 constexpr std::array<unsigned, 8> SyscallArgumentRegisters{
     AArch64::X0, AArch64::X1, AArch64::X2, AArch64::X3,
     AArch64::X4, AArch64::X5, AArch64::X6, AArch64::X7,
@@ -203,7 +203,7 @@ static void restoreSyscallRegisters(std::vector<MCInst> &GeneratedCode,
   }
   generateRegisterStackPop(AArch64::X8, GeneratedCode);
 }
-#endif // __linux__
+#endif // __linux__ && HAVE_LIBPFM
 #include "AArch64GenExegesis.inc"
 
 namespace {
@@ -470,10 +470,10 @@ std::vector<MCInst>
 ExegesisAArch64Target::configurePerfCounter(long Request,
                                             bool SaveRegisters) const {
   std::vector<MCInst> ConfigurePerfCounterCode;
+#ifdef HAVE_LIBPFM
   if (SaveRegisters)
     saveSyscallRegisters(ConfigurePerfCounterCode, 3);
 
-#ifdef HAVE_LIBPFM
   // Load actual file descriptor from auxiliary memory location [address + 0]
   // CounterFileDescriptor was stored at AuxiliaryMemoryMapping[0]
   ConfigurePerfCounterCode.push_back(
@@ -489,10 +489,10 @@ ExegesisAArch64Target::configurePerfCounter(long Request,
   ConfigurePerfCounterCode.push_back(
       loadImmediate(AArch64::X2, 64, APInt(64, PERF_IOC_FLAG_GROUP))); // arg
   generateSysCall(SYS_ioctl, ConfigurePerfCounterCode); // SYS_ioctl is 29
-#endif
 
   if (SaveRegisters)
     restoreSyscallRegisters(ConfigurePerfCounterCode, 3);
+#endif
   return ConfigurePerfCounterCode;
 }
 
