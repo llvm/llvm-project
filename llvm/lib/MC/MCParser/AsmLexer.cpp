@@ -878,7 +878,16 @@ AsmToken AsmLexer::LexToken() {
   case ' ':
   case '\t':
     IsAtStartOfStatement = OldIsAtStartOfStatement;
-    while (*CurPtr == ' ' || *CurPtr == '\t')
+#ifdef LLVM_DEBUG
+    // This block is for the purpose of out-of-bounds read being testable.
+    // CurPtr being a simple pointer doesn't contain any overhead verifying
+    // whether the memory where a read is attempted is valid.
+    // StringRef [] operator is used instead.
+    while (CurPtr != CurBuf.end() && (CurBuf[CurPtr - CurBuf.begin()] == ' ' ||
+                                      CurBuf[CurPtr - CurBuf.begin()] == '\t'))
+#else  // LLVM_DEBUG
+    while (CurPtr != CurBuf.end() && (*CurPtr == ' ' || *CurPtr == '\t'))
+#endif // LLVM_DEBUG
       CurPtr++;
     if (SkipSpace)
       return LexToken(); // Ignore whitespace.
