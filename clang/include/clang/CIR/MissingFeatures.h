@@ -39,7 +39,6 @@ struct MissingFeatures {
   static bool opGlobalUsedOrCompilerUsed() { return false; }
   static bool opGlobalAnnotations() { return false; }
   static bool opGlobalDtorLowering() { return false; }
-  static bool opGlobalCtorAttr() { return false; }
   static bool opGlobalCtorPriority() { return false; }
   static bool opGlobalCtorList() { return false; }
   static bool setDSOLocal() { return false; }
