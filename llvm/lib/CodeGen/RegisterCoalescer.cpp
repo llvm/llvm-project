@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
@@ -294,10 +295,10 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   /// We found a copy which can be moved to its less frequent predecessor.
   bool removePartialRedundancy(const CoalescerPair &CP, MachineInstr &CopyMI);
 
-  /// If the source of a copy is defined by a
-  /// trivial computation, replace the copy by rematerialize the definition.
-  bool reMaterializeTrivialDef(const CoalescerPair &CP, MachineInstr *CopyMI,
-                               bool &IsDefCopy);
+  /// If the source of a copy is defined by a CheapAsAMove computation,
+  /// replace the copy by rematerialize the definition.
+  bool reMaterializeDef(const CoalescerPair &CP, MachineInstr *CopyMI,
+                        bool &IsDefCopy);
 
   /// Return true if a copy involving a physreg should be joined.
   bool canJoinPhys(const CoalescerPair &CP);
@@ -1297,9 +1298,9 @@ static bool definesFullReg(const MachineInstr &MI, Register Reg) {
   return false;
 }
 
-bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
-                                                MachineInstr *CopyMI,
-                                                bool &IsDefCopy) {
+bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
+                                         MachineInstr *CopyMI,
+                                         bool &IsDefCopy) {
   IsDefCopy = false;
   Register SrcReg = CP.isFlipped() ? CP.getDstReg() : CP.getSrcReg();
   unsigned SrcIdx = CP.isFlipped() ? CP.getDstIdx() : CP.getSrcIdx();
@@ -1325,9 +1326,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (!TII->isAsCheapAsAMove(*DefMI))
     return false;
 
-  SmallVector<Register, 8> NewRegs;
-  LiveRangeEdit Edit(&SrcInt, NewRegs, *MF, *LIS, nullptr, this);
-  if (!Edit.checkRematerializable(ValNo, DefMI))
+  if (!TII->isReMaterializable(*DefMI))
     return false;
 
   if (!definesFullReg(*DefMI, SrcReg))
@@ -1374,7 +1373,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   }
 
   const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
-  const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI, *MF);
+  const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI);
   if (!DefMI->isImplicitDef()) {
     if (DstReg.isPhysical()) {
       Register NewDstReg = DstReg;
@@ -1395,15 +1394,17 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     }
   }
 
-  LiveRangeEdit::Remat RM(ValNo);
-  RM.OrigMI = DefMI;
-  if (!Edit.canRematerializeAt(RM, ValNo, CopyIdx))
+  if (!VirtRegAuxInfo::allUsesAvailableAt(DefMI, CopyIdx, *LIS, *MRI, *TII))
     return false;
 
   DebugLoc DL = CopyMI->getDebugLoc();
   MachineBasicBlock *MBB = CopyMI->getParent();
   MachineBasicBlock::iterator MII =
       std::next(MachineBasicBlock::iterator(CopyMI));
+  LiveRangeEdit::Remat RM(ValNo);
+  RM.OrigMI = DefMI;
+  SmallVector<Register, 8> NewRegs;
+  LiveRangeEdit Edit(&SrcInt, NewRegs, *MF, *LIS, nullptr, this);
   Edit.rematerializeAt(*MBB, MII, DstReg, RM, *TRI, false, SrcIdx, CopyMI);
   MachineInstr &NewMI = *std::prev(MII);
   NewMI.setDebugLoc(DL);
@@ -1474,10 +1475,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   //
   // The implicit-def of the super register may have been reduced to
   // subregisters depending on the uses.
-
-  bool NewMIDefinesFullReg = false;
-
-  SmallVector<MCRegister, 4> NewMIImplDefs;
+  SmallVector<std::pair<unsigned, Register>, 4> NewMIImplDefs;
   for (unsigned i = NewMI.getDesc().getNumOperands(),
                 e = NewMI.getNumOperands();
        i != e; ++i) {
@@ -1485,9 +1483,6 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     if (MO.isReg() && MO.isDef()) {
       assert(MO.isImplicit());
       if (MO.getReg().isPhysical()) {
-        if (MO.getReg() == DstReg)
-          NewMIDefinesFullReg = true;
-
         assert(MO.isImplicit() && MO.getReg().isPhysical() &&
                (MO.isDead() ||
                 (DefSubIdx &&
@@ -1495,7 +1490,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
                    MCRegister((unsigned)NewMI.getOperand(0).getReg())) ||
                   TRI->isSubRegisterEq(NewMI.getOperand(0).getReg(),
                                        MO.getReg())))));
-        NewMIImplDefs.push_back(MO.getReg().asMCReg());
+        NewMIImplDefs.push_back({i, MO.getReg()});
       } else {
         assert(MO.getReg() == NewMI.getOperand(0).getReg());
 
@@ -1640,12 +1635,30 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     // been asked for. If so it must implicitly define the whole thing.
     assert(DstReg.isPhysical() &&
            "Only expect virtual or physical registers in remat");
+
+    // When we're rematerializing into a not-quite-right register we already add
+    // the real definition as an implicit-def, but we should also be marking the
+    // "official" register as dead, since nothing else is going to use it as a
+    // result of this remat. Not doing this can affect pressure tracking.
     NewMI.getOperand(0).setIsDead(true);
 
-    if (!NewMIDefinesFullReg) {
+    bool HasDefMatchingCopy = false;
+    for (auto [OpIndex, Reg] : NewMIImplDefs) {
+      if (Reg != DstReg)
+        continue;
+      // Also, if CopyDstReg is a sub-register of DstReg (and it is defined), we
+      // must mark DstReg as dead since it is not going to used as a result of
+      // this remat.
+      if (DstReg != CopyDstReg)
+        NewMI.getOperand(OpIndex).setIsDead(true);
+      else
+        HasDefMatchingCopy = true;
+    }
+
+    // If NewMI does not already have an implicit-def CopyDstReg add one now.
+    if (!HasDefMatchingCopy)
       NewMI.addOperand(MachineOperand::CreateReg(
           CopyDstReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/));
-    }
 
     // Record small dead def live-ranges for all the subregisters
     // of the destination register.
@@ -1676,8 +1689,8 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     NewMI.addOperand(MO);
 
   SlotIndex NewMIIdx = LIS->getInstructionIndex(NewMI);
-  for (MCRegister Reg : NewMIImplDefs) {
-    for (MCRegUnit Unit : TRI->regunits(Reg))
+  for (Register Reg : make_second_range(NewMIImplDefs)) {
+    for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
       if (LiveRange *LR = LIS->getCachedRegUnit(Unit))
         LR->createDeadDef(NewMIIdx.getRegSlot(), LIS->getVNInfoAllocator());
   }
@@ -2127,10 +2140,10 @@ bool RegisterCoalescer::joinCopy(
                       << printReg(CP.getSrcReg(), TRI) << " with "
                       << printReg(CP.getDstReg(), TRI, CP.getSrcIdx()) << '\n');
     if (!canJoinPhys(CP)) {
-      // Before giving up coalescing, if definition of source is defined by
-      // trivial computation, try rematerializing it.
+      // Before giving up coalescing, try rematerializing the source of
+      // the copy instead if it is cheap.
       bool IsDefCopy = false;
-      if (reMaterializeTrivialDef(CP, CopyMI, IsDefCopy))
+      if (reMaterializeDef(CP, CopyMI, IsDefCopy))
         return true;
       if (IsDefCopy)
         Again = true; // May be possible to coalesce later.
@@ -2166,10 +2179,9 @@ bool RegisterCoalescer::joinCopy(
   if (!joinIntervals(CP)) {
     // Coalescing failed.
 
-    // If definition of source is defined by trivial computation, try
-    // rematerializing it.
+    // Try rematerializing the definition of the source if it is cheap.
     bool IsDefCopy = false;
-    if (reMaterializeTrivialDef(CP, CopyMI, IsDefCopy))
+    if (reMaterializeDef(CP, CopyMI, IsDefCopy))
       return true;
 
     // If we can eliminate the copy without merging the live segments, do so

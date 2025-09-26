@@ -141,6 +141,8 @@ public:
     return false;
   }
 
+  bool shouldConsiderVectorizationRegPressure() const override { return true; }
+
   InstructionCost
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,
@@ -157,6 +159,9 @@ public:
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP) const override;
+
+  bool getTgtMemIntrinsic(IntrinsicInst *Inst,
+                          MemIntrinsicInfo &Info) const override;
 
   unsigned getMinVectorRegisterBitWidth() const override {
     return ST->useRVVForFixedLengthVectors() ? 16 : 0;
@@ -185,6 +190,10 @@ public:
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const override;
+
+  InstructionCost
+  getFirstFaultLoadCost(Type *DataTy, Align Alignment,
+                        TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
