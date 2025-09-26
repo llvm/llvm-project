@@ -20,6 +20,10 @@ using namespace llvm;
 using namespace remarks;
 using namespace llvm::remarkutil;
 
+// Note: Avoid using the identifier "filter" in this file, as it is prone to
+// namespace collision with headers that might get included e.g.
+// curses.h.
+
 static cl::SubCommand FilterSub("filter",
                                 "Filter remarks based on specified criteria.");
 
