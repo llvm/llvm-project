@@ -922,7 +922,6 @@ body: |
     $vgpr2 = V_MOV_B32_e32 1, implicit $exec
 ...
 
-# FIXME: Missing S_WAIT_XCNT before overwriting vgpr0.
 ---
 name: wait_kmcnt_with_outstanding_vmem
 tracksRegLiveness: true
@@ -946,7 +945,6 @@ body: |
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
 ...
 
-# FIXME: Missing S_WAIT_XCNT before overwriting sgpr0.
 ---
 name: wait_loadcnt_with_outstanding_smem
 tracksRegLiveness: true
@@ -970,7 +968,6 @@ body: |
     $sgpr0 = S_MOV_B32 0
 ...
 
-# TODO: Unnecessary wait before overwriting vgpr0.
 ---
 name: overwrite_vgpr_after_smem
 tracksRegLiveness: true
@@ -990,7 +987,6 @@ body: |
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
 ...
 
-# TODO: Unnecessary wait before overwriting sgpr0.
 ---
 name: overwrite_sgpr_after_vmem
 tracksRegLiveness: true
