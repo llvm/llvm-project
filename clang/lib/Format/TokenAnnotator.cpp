@@ -1313,6 +1313,8 @@ private:
     }
     FormatToken *Tok = CurrentToken;
     next();
+    if (!Scopes.empty() && Scopes.back() == ST_Class)
+      Tok->IsInClassScope = true;
     // In Verilog primitives' state tables, `:`, `?`, and `-` aren't normal
     // operators.
     if (Tok->is(TT_VerilogTableItem))

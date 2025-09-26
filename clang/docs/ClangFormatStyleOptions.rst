@@ -396,6 +396,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFreeVariableDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether non-member variable
+    declarations are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int v1;
+      float        v2;
+      size_t       v3;
+
+      false:
+      unsigned int v1;
+      float v2;
+      size_t v3;
+
   * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     are aligned.
 
@@ -427,6 +442,21 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool AlignMemberVariableDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether class/struct member
+    variable declarations are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int member1;
+      float        member2;
+      size_t       member3;
+
+      false:
+      unsigned int member1;
+      float member2;
+      size_t member3;
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -554,6 +584,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFreeVariableDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether non-member variable
+    declarations are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int v1;
+      float        v2;
+      size_t       v3;
+
+      false:
+      unsigned int v1;
+      float v2;
+      size_t v3;
+
   * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     are aligned.
 
@@ -585,6 +630,21 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool AlignMemberVariableDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether class/struct member
+    variable declarations are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int member1;
+      float        member2;
+      size_t       member3;
+
+      false:
+      unsigned int member1;
+      float member2;
+      size_t member3;
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -712,6 +772,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFreeVariableDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether non-member variable
+    declarations are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int v1;
+      float        v2;
+      size_t       v3;
+
+      false:
+      unsigned int v1;
+      float v2;
+      size_t v3;
+
   * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     are aligned.
 
@@ -743,6 +818,21 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool AlignMemberVariableDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether class/struct member
+    variable declarations are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int member1;
+      float        member2;
+      size_t       member3;
+
+      false:
+      unsigned int member1;
+      float member2;
+      size_t member3;
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -871,6 +961,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFreeVariableDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether non-member variable
+    declarations are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int v1;
+      float        v2;
+      size_t       v3;
+
+      false:
+      unsigned int v1;
+      float v2;
+      size_t v3;
+
   * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     are aligned.
 
@@ -902,6 +1007,21 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool AlignMemberVariableDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether class/struct member
+    variable declarations are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int member1;
+      float        member2;
+      size_t       member3;
+
+      false:
+      unsigned int member1;
+      float member2;
+      size_t member3;
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -1149,6 +1269,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFreeVariableDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether non-member variable
+    declarations are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int v1;
+      float        v2;
+      size_t       v3;
+
+      false:
+      unsigned int v1;
+      float v2;
+      size_t v3;
+
   * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     are aligned.
 
@@ -1180,6 +1315,21 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool AlignMemberVariableDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether class/struct member
+    variable declarations are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int member1;
+      float        member2;
+      size_t       member3;
+
+      false:
+      unsigned int member1;
+      float member2;
+      size_t member3;
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -1305,6 +1455,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFreeVariableDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether non-member variable
+    declarations are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int v1;
+      float        v2;
+      size_t       v3;
+
+      false:
+      unsigned int v1;
+      float v2;
+      size_t v3;
+
   * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     are aligned.
 
@@ -1336,6 +1501,21 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool AlignMemberVariableDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether class/struct member
+    variable declarations are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int member1;
+      float        member2;
+      size_t       member3;
+
+      false:
+      unsigned int member1;
+      float member2;
+      size_t member3;
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -1461,6 +1641,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFreeVariableDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether non-member variable
+    declarations are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int v1;
+      float        v2;
+      size_t       v3;
+
+      false:
+      unsigned int v1;
+      float v2;
+      size_t v3;
+
   * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     are aligned.
 
@@ -1492,6 +1687,21 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool AlignMemberVariableDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether class/struct member
+    variable declarations are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int member1;
+      float        member2;
+      size_t       member3;
+
+      false:
+      unsigned int member1;
+      float member2;
+      size_t member3;
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
