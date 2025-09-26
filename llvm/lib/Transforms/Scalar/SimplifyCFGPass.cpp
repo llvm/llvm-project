@@ -355,6 +355,8 @@ void SimplifyCFGPass::printPipeline(
   OS << (Options.ForwardSwitchCondToPhi ? "" : "no-") << "forward-switch-cond;";
   OS << (Options.ConvertSwitchRangeToICmp ? "" : "no-")
      << "switch-range-to-icmp;";
+  OS << (Options.ConvertSwitchToArithmetic ? "" : "no-")
+     << "switch-to-arithmetic;";
   OS << (Options.ConvertSwitchToLookupTable ? "" : "no-")
      << "switch-to-lookup;";
   OS << (Options.NeedCanonicalLoop ? "" : "no-") << "keep-loops;";

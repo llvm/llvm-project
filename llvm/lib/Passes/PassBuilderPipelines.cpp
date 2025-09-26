@@ -778,6 +778,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
                                   .convertSwitchRangeToICmp(true)
+                                  .convertSwitchToArithmetic(true)
                                   .hoistCommonInsts(true)
                                   .sinkCommonInsts(true)));
   FPM.addPass(InstCombinePass());
@@ -1374,6 +1375,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
                                   .forwardSwitchCondToPhi(true)
                                   .convertSwitchRangeToICmp(true)
+                                  .convertSwitchToArithmetic(true)
                                   .convertSwitchToLookupTable(true)
                                   .needCanonicalLoops(false)
                                   .hoistCommonInsts(true)
@@ -1600,6 +1602,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   OptimizePM.addPass(
       SimplifyCFGPass(SimplifyCFGOptions()
                           .convertSwitchRangeToICmp(true)
+                          .convertSwitchToArithmetic(true)
                           .speculateUnpredictables(true)
                           .hoistLoadsStoresWithCondFaulting(true)));
 
@@ -2183,6 +2186,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Delete basic blocks, which optimization passes may have killed.
   LateFPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
                                       .convertSwitchRangeToICmp(true)
+                                      .convertSwitchToArithmetic(true)
                                       .hoistCommonInsts(true)
                                       .speculateUnpredictables(true)));
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(LateFPM)));
