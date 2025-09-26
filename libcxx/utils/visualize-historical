@@ -117,12 +117,12 @@ def create_plot(data, metric, subtitle=None):
     Create a plot object showing the evolution of each benchmark throughout the given commits for
     the given metric.
     """
-    data = data.sort_values(by=['date', 'benchmark'])
+    data = data.sort_values(by=['revlist_order', 'benchmark'])
     revlist = pandas.unique(data['commit']) # list of all commits in chronological order
     hover_info = {c: truncate_lines(c.show(), 30, marker='...').replace('\n', '<br>') for c in revlist}
     figure = plotly.express.scatter(data, title=f"{revlist[0].shortrev} to {revlist[-1].shortrev}",
                                           subtitle=subtitle,
-                                          x='date', y=metric,
+                                          x='revlist_order', y=metric,
                                           symbol='benchmark',
                                           color='benchmark',
                                           hover_name=[hover_info[c] for c in data['commit']],
