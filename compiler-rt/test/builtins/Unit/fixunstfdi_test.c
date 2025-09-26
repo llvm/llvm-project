@@ -1,15 +1,13 @@
-// XFAIL: target=aarch64-{{.*}}-windows-{{.*}}
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_fixunstfdi
 
 #include <stdio.h>
+#include "int_lib.h"
 
 #if defined(CRT_HAS_TF_MODE)
 
 #define QUAD_PRECISION
 #include "fp_lib.h"
-
-#include "int_lib.h"
 
 // Returns: convert a to a unsigned long long, rounding toward zero.
 //          Negative values all become zero.
