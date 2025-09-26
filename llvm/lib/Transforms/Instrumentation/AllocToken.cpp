@@ -40,8 +40,8 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/xxhash.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -176,7 +176,7 @@ private:
 };
 
 /// Implementation for TokenMode::TypeHash. The implementation ensures
-/// hashes are stable across different compiler invocations. Uses xxHash as the
+/// hashes are stable across different compiler invocations. Uses SipHash as the
 /// hash function.
 class TypeHashMode : public ModeBase {
 public:
@@ -185,7 +185,7 @@ public:
   uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
     if (MDNode *N = getAllocTokenMetadata(CB)) {
       MDString *S = cast<MDString>(N->getOperand(0));
-      return boundedToken(xxHash64(S->getString()));
+      return boundedToken(getStableSipHash(S->getString()));
     }
     remarkNoMetadata(CB, ORE);
     return ClFallbackToken;
