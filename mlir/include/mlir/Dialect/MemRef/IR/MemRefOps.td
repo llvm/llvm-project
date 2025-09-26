@@ -1239,7 +1239,7 @@ def LoadOp : MemRef_Op<"load",
                    CArg<"bool", "false">:$nontemporal,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, memref, indices, nontemporal,
-                   alignment ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>,
     OpBuilder<(ins "Type":$resultType,
@@ -1248,7 +1248,7 @@ def LoadOp : MemRef_Op<"load",
                    CArg<"bool", "false">:$nontemporal,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultType, memref, indices, nontemporal,
-                   alignment ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
@@ -1257,7 +1257,7 @@ def LoadOp : MemRef_Op<"load",
                    CArg<"bool", "false">:$nontemporal,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultTypes, memref, indices, nontemporal,
-                   alignment ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>
   ];
@@ -1973,7 +1973,7 @@ def MemRef_StoreOp : MemRef_Op<"store",
                    CArg<"bool", "false">:$nontemporal,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, valueToStore, memref, indices, nontemporal,
-                   alignment ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>,
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref), [{
