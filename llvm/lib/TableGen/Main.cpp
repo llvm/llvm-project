@@ -39,13 +39,11 @@
 #include <utility>
 using namespace llvm;
 
-static cl::opt<std::string>
-OutputFilename("o", cl::desc("Output filename"), cl::value_desc("filename"),
+static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
+                                           cl::value_desc("filename"),
                                            cl::init("-"));
 
-static cl::opt<std::string>
-DependFilename("d",
-               cl::desc("Dependency filename"),
+static cl::opt<std::string> DependFilename("d", cl::desc("Dependency filename"),
                                            cl::value_desc("filename"),
                                            cl::init(""));
 
