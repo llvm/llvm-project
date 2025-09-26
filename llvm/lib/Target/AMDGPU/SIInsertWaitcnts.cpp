@@ -117,12 +117,12 @@ struct HardwareLimits {
   DECL(VMEM_BVH_READ_ACCESS)     /* vmem BVH read (gfx12+ only) */             \
   DECL(VMEM_WRITE_ACCESS)        /* vmem write that is not scratch */          \
   DECL(SCRATCH_WRITE_ACCESS)     /* vmem write that may be scratch */          \
-  DECL(VMEM_GROUP) /**Bit:7 in Pending events */               /* vmem group */                              \
+  DECL(VMEM_GROUP)               /* vmem group */                              \
   DECL(LDS_ACCESS)               /* lds read & write */                        \
   DECL(GDS_ACCESS)               /* gds read & write */                        \
   DECL(SQ_MESSAGE)               /* send message */                            \
   DECL(SMEM_ACCESS)              /* scalar-memory read & write */              \
-  DECL(SMEM_GROUP) /**Bit:12 */               /* scalar-memory group */                     \
+  DECL(SMEM_GROUP)               /* scalar-memory group */                     \
   DECL(EXP_GPR_LOCK)             /* export holding on its data src */          \
   DECL(GDS_GPR_LOCK)             /* GDS holding on its data and addr src */    \
   DECL(EXP_POS_ACCESS)           /* write to export position */                \
@@ -830,7 +830,7 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
   RegInterval Result;
 
   MCRegister MCReg = AMDGPU::getMCReg(Op.getReg(), *Context->ST);
-  unsigned RegIdx = TRI->getHWRegIndex(MCReg); // regidx = 2 iff vgpr2
+  unsigned RegIdx = TRI->getHWRegIndex(MCReg);
 
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
   unsigned Size = TRI->getRegSizeInBits(*RC);
@@ -911,7 +911,6 @@ bool WaitcntBrackets::hasPointSamplePendingVmemTypes(
 template <size_t N>
 static unsigned getMaxVal(unsigned (&arr)[N]) {
   unsigned max = arr[0];
-  // size_t size = sizeof(arr)/sizeof(unsigned);
   for(size_t i = 0; i < N; i++) {
     if(arr[i] > max) max = arr[i];
   }
@@ -925,7 +924,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
   InstCounterType T = eventCounter(Context->WaitEventMaskForInst, E);
 
   unsigned UB = getScoreUB(T);
-  unsigned CurrScore = UB + 1; // there is one more of this type of event in the queue.
+  unsigned CurrScore = UB + 1;
   if (CurrScore == 0)
     report_fatal_error("InsertWaitcnt score wraparound");
   // PendingEvents and ScoreUB need to be update regardless if this event
@@ -1013,16 +1012,33 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
           setScoreByOperand(&Inst, TRI, MRI, Op, EXP_CNT, CurrScore);
       }
     }
-  } else if (T == X_CNT) { // Here would be a good place to add check for interleaved smem vmem access. something like: 1) alternate_wait_mask = E == SMEM_GROUP ? VMEM_GROUP : SMEM_GROUP; (2)checkflag = PendingEvents & alternate_wait_mask; (3) if(checkflag != 0) this means that we already have a pending wait event for the alternate group(ie, if we are currently checking for SMEM_GROUP, then this is telling us that we already have a pending VMEM_GROUP event, or vica versa. Since there is an implicit hardware xcnt in between them, we can remove this previous event => (3a)clear that bit in pending events (3b)update the sgpr/vgpr scores for that event.)
+  } else if (T == X_CNT) {
+    // Here would be a good place to add check for interleaved
+    // smem vmem access. something like: 
+    // 1) alternate_wait_mask = E == SMEM_GROUP ? VMEM_GROUP : SMEM_GROUP; 
+    // (2)checkflag = PendingEvents & alternate_wait_mask; 
+    // (3) if(checkflag != 0) this means that we already have a pending 
+    //          wait event for the alternate group(ie, if we are currently 
+    //          checking for SMEM_GROUP, then this is telling us that we 
+    //          already have a pending VMEM_GROUP event, or vica versa. 
+    //          Since there is an implicit hardware xcnt in between them, 
+    //          we can remove this previous event => 
+    //    (3a)clear that bit in pending events 
+    //    (3b)update the sgpr/vgpr scores for that event.)
     WaitEventType alt = E == SMEM_GROUP ? VMEM_GROUP : SMEM_GROUP;
     bool altEventIsActive = (PendingEvents & (1 << alt)) != 0;
     if(altEventIsActive) {
       // Hardware inserts an implicit xcnt between SMEM
       // and VMEM operations. so no need to insert here.
-      // Mark the previous Operation as completed.
+      // Mark the previous mem Operation as completed.
+
+      // LB and UB scores are a sliding window about the total
+      // number of mem operations launched, vs number of mem ops
+      // completed uptil this point.
+      // set the new lower bound as the previous upper bound
+      // to clear that event.
       unsigned max = E == SMEM_GROUP ? getMaxVal(VgprScores[T])
                                      : getMaxVal(SgprScores[1]);
-      // unsigned newLB = getScoreLB(T); /*getLB score of alt envent type*/
       setScoreLB(T, max);
       PendingEvents &= ~(1 << alt);
     }
@@ -1233,7 +1249,7 @@ void WaitcntBrackets::determineWait(InstCounterType T, RegInterval Interval,
       } else {
         // If a counter has been maxed out avoid overflow by waiting for
         // MAX(CounterType) - 1 instead.
-        unsigned NeededWait = // we need to wait till the counter is this value. for eg: if needtowait = 0; -> means: S_WAIT_XCNT 0
+        unsigned NeededWait =
             std::min(UB - ScoreToWait, Context->getWaitCountMax(T) - 1);
         addWait(Wait, T, NeededWait);
       }
@@ -1262,7 +1278,7 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
     setScoreLB(T, std::max(getScoreLB(T), UB - Count));
   } else {
     setScoreLB(T, UB); // LB and UB are a sort of sliding window over the number of wait events which need to be completed.
-    PendingEvents &= ~Context->WaitEventMaskForInst[T]; // mark this event as no longer pending // i think the issue is, when we apply xcnt for say SMEM, we also wipe out the pending events mask for vmem
+    PendingEvents &= ~Context->WaitEventMaskForInst[T]; // mark this event as no longer pending
   }
 }
 
@@ -1270,7 +1286,7 @@ void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
   // Wait on XCNT is redundant if we are already waiting for a load to complete.
   // SMEM can return out of order, so only omit XCNT wait if we are waiting till
   // zero.
-  if (Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP)) // i cant understand this? if we have kmcnt = 0, that means we are waiting till the smem load will be complete. so then we dont need the xcnt right? or maybe we apply this for now, and then it gets merged with the kmcnt later.
+  if (Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP))
     return applyWaitcnt(X_CNT, 0);
 
   // If we have pending store we cannot optimize XCnt because we do not wait for
@@ -2001,7 +2017,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           // RAW always needs an s_waitcnt. WAW needs an s_waitcnt unless the
           // previous write and this write are the same type of VMEM
           // instruction, in which case they are (in some architectures)
-          // guaranteed to write their results in order anyway. // I feel this would be a good point to insert the logic that hardware adds an implicit xcnt between vmem and smem. Still need to figure out how to know if the previous op was an smem or vmem?
+          // guaranteed to write their results in order anyway.
           // Additionally check instructions where Point Sample Acceleration
           // might be applied.
           if (Op.isUse() || !updateVMCntOnly(MI) ||
@@ -2023,7 +2039,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           ScoreBrackets.determineWait(SmemAccessCounter, Interval, Wait);
         }
 
-        if (hasXcnt() && Op.isDef()) //here i can maybe add something like: if(MI.isVMEM && xcnt != 0)clear(xcnt) if(MI.isSMEM && xcnt != 0)clear(xcnt)
+        if (hasXcnt() && Op.isDef())
           ScoreBrackets.determineWait(X_CNT, Interval, Wait);
       }
     }
@@ -2103,7 +2119,7 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
 
   if (OldWaitcntInstr)
     // Try to merge the required wait with preexisting waitcnt instructions.
-    // Also erase redundant waitcnt. // check how xcnt is being merged. maybe this is leading to some issues.
+    // Also erase redundant waitcnt.
     Modified =
         WCG->applyPreexistingWaitcnt(ScoreBrackets, *OldWaitcntInstr, Wait, It);
 
@@ -2379,7 +2395,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   if (!hasXcnt())
     return;
 
-  if (IsVMEMAccess) // this might also be a good place to add the logic for implicit xcnt inserted by the hardware. 
+  if (IsVMEMAccess)
     ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_GROUP, Inst);
 
   if (IsSMEMAccess)
