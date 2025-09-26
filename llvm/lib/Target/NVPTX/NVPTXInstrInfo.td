@@ -756,8 +756,10 @@ def : Pat<(vt (select i1:$p, vt:$a, vt:$b)),
           (SELP_b32rr $a, $b, $p)>;
 }
 
-def : Pat<(v2f32 (select i1:$p, v2f32:$a, v2f32:$b)),
+foreach vt = [v2f32, v2i32] in {
+def : Pat<(vt (select i1:$p, vt:$a, vt:$b)),
           (SELP_b64rr $a, $b, $p)>;
+}
 
 //-----------------------------------
 // Test Instructions
@@ -2101,8 +2103,8 @@ foreach vt = [v2f16, v2bf16, v2i16] in {
             (V2I16toI32 $a, $b)>;
 }
 
-// Same thing for the 64-bit type v2f32.
-foreach vt = [v2f32] in {
+// Handle extracting one element from the pair (64-bit types)
+foreach vt = [v2f32, v2i32] in {
   def : Pat<(extractelt vt:$src, 0), (I64toI32L_Sink $src)>, Requires<[hasPTX<71>]>;
   def : Pat<(extractelt vt:$src, 1), (I64toI32H_Sink $src)>, Requires<[hasPTX<71>]>;
 

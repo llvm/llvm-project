@@ -1773,23 +1773,11 @@ TYPE_PARSER(sourced(construct<OpenMPDeclareReductionConstruct>(
         IsDirective(llvm::omp::Directive::OMPD_declare_reduction)) >=
     Parser<OmpDirectiveSpecification>{})))
 
-// declare-target with list
-TYPE_PARSER(sourced(construct<OmpDeclareTargetWithList>(
-    parenthesized(Parser<OmpObjectList>{}))))
-
-// declare-target with clause
-TYPE_PARSER(
-    sourced(construct<OmpDeclareTargetWithClause>(Parser<OmpClauseList>{})))
-
-// declare-target-specifier
-TYPE_PARSER(
-    construct<OmpDeclareTargetSpecifier>(Parser<OmpDeclareTargetWithList>{}) ||
-    construct<OmpDeclareTargetSpecifier>(Parser<OmpDeclareTargetWithClause>{}))
-
 // 2.10.6 Declare Target Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareTargetConstruct>(
-    verbatim("DECLARE TARGET"_tok) || verbatim("DECLARE_TARGET"_tok),
-    Parser<OmpDeclareTargetSpecifier>{})))
+    predicated(Parser<OmpDirectiveName>{},
+        IsDirective(llvm::omp::Directive::OMPD_declare_target)) >=
+    Parser<OmpDirectiveSpecification>{})))
 
 static OmpMapperSpecifier ConstructOmpMapperSpecifier(
     std::optional<Name> &&mapperName, TypeSpec &&typeSpec, Name &&varName) {
