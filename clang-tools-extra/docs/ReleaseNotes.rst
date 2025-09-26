@@ -364,6 +364,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
   literal suffixes added in C++23 and C23.
 
+- Improved :doc:`bugprone-suspicious-include
+  <clang-tidy/checks/bugprone/suspicious-include>` check by adding
+  ``IgnoredRegex`` option.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
