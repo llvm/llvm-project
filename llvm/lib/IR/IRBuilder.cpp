@@ -990,14 +990,14 @@ CallInst *IRBuilderBase::CreateConstrainedFPCmp(
 CallInst *IRBuilderBase::CreateConstrainedFPCall(
     Function *Callee, ArrayRef<Value *> Args, const Twine &Name,
     std::optional<RoundingMode> Rounding,
-    std::optional<fp::ExceptionBehavior> Except) {
+    std::optional<fp::ExceptionBehavior> Except, FastMathFlags *FMF) {
   llvm::SmallVector<Value *, 6> UseArgs(Args);
 
   if (Intrinsic::hasConstrainedFPRoundingModeOperand(Callee->getIntrinsicID()))
     UseArgs.push_back(getConstrainedFPRounding(Rounding));
   UseArgs.push_back(getConstrainedFPExcept(Except));
 
-  CallInst *C = CreateCall(Callee, UseArgs, Name);
+  CallInst *C = CreateCall(Callee, UseArgs, Name, nullptr, FMF);
   setConstrainedFPCallAttr(C);
   return C;
 }
