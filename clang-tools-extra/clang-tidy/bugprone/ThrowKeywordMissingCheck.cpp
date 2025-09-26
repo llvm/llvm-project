@@ -17,8 +17,10 @@ namespace clang::tidy::bugprone {
 void ThrowKeywordMissingCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxConstructExpr(
-          hasType(cxxRecordDecl(
-              isSameOrDerivedFrom(matchesName("[Ee]xception|EXCEPTION")))),
+          hasType(cxxRecordDecl(anyOf(
+              matchesName("[Ee]xception|EXCEPTION"),
+              hasAnyBase(hasType(hasCanonicalType(recordType(hasDeclaration(
+                  cxxRecordDecl(matchesName("[Ee]xception|EXCEPTION")))))))))),
           unless(anyOf(
               hasAncestor(
                   stmt(anyOf(cxxThrowExpr(), callExpr(), returnStmt()))),

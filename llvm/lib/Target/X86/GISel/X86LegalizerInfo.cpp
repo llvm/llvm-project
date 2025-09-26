@@ -905,6 +905,7 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
     int FieldVal = X86::getRoundingModeX86(RM);
 
     if (FieldVal == X86::rmInvalid) {
+      FieldVal = X86::rmToNearest;
       LLVMContext &C = MF.getFunction().getContext();
       C.diagnose(DiagnosticInfoUnsupported(
           MF.getFunction(), "rounding mode is not supported by X86 hardware",

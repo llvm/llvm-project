@@ -5970,9 +5970,9 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .add(Src1);
     // clang-format on
 
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CSELECT_B64), Dest1.getReg())
-        .addImm(1)
-        .addImm(0);
+    unsigned SelOpc =
+        Subtarget->isWave64() ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
+    BuildMI(*BB, MI, DL, TII->get(SelOpc), Dest1.getReg()).addImm(-1).addImm(0);
 
     MI.eraseFromParent();
     return BB;

@@ -28714,11 +28714,11 @@ SDValue X86TargetLowering::LowerSET_ROUNDING(SDValue Op,
     int FieldVal = X86::getRoundingModeX86(RM);
 
     if (FieldVal == X86::rmInvalid) {
+      FieldVal = X86::rmToNearest;
       LLVMContext &C = MF.getFunction().getContext();
       C.diagnose(DiagnosticInfoUnsupported(
           MF.getFunction(), "rounding mode is not supported by X86 hardware",
           DiagnosticLocation(DL.getDebugLoc()), DS_Error));
-      return {};
     }
     RMBits = DAG.getConstant(FieldVal, DL, MVT::i16);
   } else {
