@@ -435,24 +435,28 @@ main_body:
 }
 
 define amdgpu_ps <4 x float> @buffer_load_negative_offset(<4 x i32> inreg, i32 %ofs) {
+; PREGFX10-LABEL: buffer_load_negative_offset:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], -16 offen
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    ; return to shader part epilog
+;
 ; GFX10-LABEL: buffer_load_negative_offset:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, -16, v0
-; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], -16 offen
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: buffer_load_negative_offset:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_add_nc_u32_e32 v0, -16, v0
-; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], -16 offen
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: buffer_load_negative_offset:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_add_nc_u32_e32 v0, -16, v0
-; GFX12-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
+; GFX12-NEXT:    s_mov_b32 s{{[0-9]+}}, -16
+; GFX12-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], s{{[0-9]+}} offen
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
