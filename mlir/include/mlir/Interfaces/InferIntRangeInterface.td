@@ -33,6 +33,9 @@ def InferIntRangeInterface : OpInterface<"InferIntRangeInterface"> {
       When operations take non-integer inputs, the
      `inferResultRangesFromOptional` method should be implemented instead.
 
+      If any of the operands have poison ranges, they will be propagated to the
+      results automatically after the metdod returns.
+
       When called on an op that also implements the RegionBranchOpInterface
       or BranchOpInterface, this method should not attempt to infer the values
       of the branch results, as this will be handled by the analyses that use
@@ -59,6 +62,10 @@ def InferIntRangeInterface : OpInterface<"InferIntRangeInterface"> {
       those case), the method should call `setValueRange` with that `Value`
       as an argument. When implemented, `setValueRange` should be called on
       all result values for the operation.
+
+      Unlike `inferResultRanges` this method does not automatically propagate
+      poison from the inputs. This allows more precise poison semantics
+      control.
 
       This method allows for more precise implementations when operations
       want to reason about inputs which may be undefined during the analysis.
