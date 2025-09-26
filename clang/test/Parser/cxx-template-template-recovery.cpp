@@ -19,8 +19,10 @@ template <typename T>
 concept C3 = true; // #C3
 template <typename T>
 auto V3 = true; // #V3
-template <template <typename T> typename C>
-constexpr bool test = true;
+
+template <template <typename T>
+  typename C> // expected-note 6{{template parameter is declared here}}
+    constexpr bool test = true;
 
 static_assert(test<a::C1>); // expected-error {{template argument does not refer to a class or alias template, or template template parameter}} \
                             // expected-note@#C1 {{here}}

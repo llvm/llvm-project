@@ -19,11 +19,11 @@ void test() {
 // RUN: %clang_cc1 -fsyntax-only -verify -ftemplate-depth=5 -ftemplate-backtrace-limit=4 -std=c++11 -DNOEXCEPT %s
 
 template<typename T> struct S {
+// expected-error@-1 {{recursive template instantiation exceeded maximum depth of 5}}
+// expected-note@-2  {{use -ftemplate-depth=N to increase recursive template instantiation depth}}
   S() noexcept(noexcept(S<S>())); \
-// expected-error{{recursive template instantiation exceeded maximum depth of 5}} \
 // expected-note 3 {{in instantiation of exception spec}} \
-// expected-note {{skipping 2 contexts in backtrace}} \
-// expected-note {{use -ftemplate-depth=N to increase recursive template instantiation depth}}
+// expected-note {{skipping 2 contexts in backtrace}}
 };
 S<void> t; // expected-note {{in instantiation of exception spec}}
 

@@ -433,6 +433,16 @@ Bug Fixes to C++ Support
   object type. (#GH151531)
 - Suppress ``-Wdouble-promotion`` when explicitly asked for with C++ list initialization (#GH33409).
 
+Improvements to C++ diagnostics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now more consistently adds a note pointing to the relevant template
+  parameter. Some diagnostics are reworded to better take advantage of this.
+- Template Template Parameter diagnostics now stop referring to template
+  parameters as template arguments, in some circumstances, better hiding
+  from the users template template parameter partial ordering arcana.
+
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix incorrect name qualifiers applied to alias CTAD. (#GH136624)

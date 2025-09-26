@@ -242,7 +242,8 @@ namespace GH150705 {
 
 namespace DependentRequiresExpr {
   template <class T,
-            bool = []() -> bool { // both-error {{not a constant expression}}
+            bool = // both-note {{template parameter is declared here}}
+              []() -> bool { // both-error {{not a constant expression}}
               if (requires { T::type; })
                 return true;
               return false;

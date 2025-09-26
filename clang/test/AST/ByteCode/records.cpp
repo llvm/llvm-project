@@ -1738,7 +1738,7 @@ namespace CtorOfInvalidClass {
                                                // both-error {{must be initialized by a constant expression}}
 
 #if __cplusplus >= 202002L
-  template <typename T, auto Q>
+  template <typename T, auto Q>// both-note {{template parameter is declared here}}
   concept ReferenceOf = Q;
   /// This calls a valid and constexpr copy constructor of InvalidCtor,
   /// but should still be rejected.

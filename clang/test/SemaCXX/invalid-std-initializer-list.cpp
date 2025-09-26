@@ -2,7 +2,9 @@
 
 namespace std {
 
-template<class T, class = T::x> // expected-error 2 {{type 'int' cannot be used prior to '::' because it has no members}}
+template<class T,
+  class = // expected-note 2 {{template parameter is declared here}}
+    T::x> // expected-error 2 {{type 'int' cannot be used prior to '::' because it has no members}}
 class initializer_list;
 
 }

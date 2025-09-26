@@ -79,10 +79,11 @@ namespace cwg602 { // cwg602: 2.7
 } // namespace cwg602
 
 namespace cwg603 { // cwg603: 3.1
-  template<unsigned char> struct S {};
+  template<unsigned char> struct S {}; // #cwg603-S
   typedef S<'\001'> S1;
   typedef S<(1ul << __CHAR_BIT__) + 1> S1;
   // since-cxx11-error@-1 {{non-type template argument evaluates to 257, which cannot be narrowed to type 'unsigned char'}}
+  //   since-cxx11-note@#cwg603-S {{template parameter is declared here}}
 } // namespace cwg603
 
 // cwg604: na
