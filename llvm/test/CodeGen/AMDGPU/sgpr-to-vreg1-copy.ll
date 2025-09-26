@@ -18,12 +18,11 @@ define amdgpu_kernel void @copy_to_vreg_1(i32 %0) {
 ; GCN-NEXT:    s_addc_u32 s0, 1, 0
 ; GCN-NEXT:    v_readfirstlane_b32 s2, v1
 ; GCN-NEXT:    s_cmp_ge_u32 s3, s4
-; GCN-NEXT:    s_cselect_b32 s4, s0, s2
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    s_cmp_lg_u64 0, 0
+; GCN-NEXT:    s_cselect_b32 s4, s0, s2
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
-; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GCN-NEXT:    s_mov_b64 s[2:3], 0
 ; GCN-NEXT:    s_branch .LBB0_3
 ; GCN-NEXT:  .LBB0_1: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB0_3 Depth=1
@@ -33,9 +32,9 @@ define amdgpu_kernel void @copy_to_vreg_1(i32 %0) {
 ; GCN-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_and_b64 s[4:5], exec, s[8:9]
-; GCN-NEXT:    s_or_b64 s[0:1], s[4:5], s[0:1]
+; GCN-NEXT:    s_or_b64 s[2:3], s[4:5], s[2:3]
 ; GCN-NEXT:    s_mov_b32 s4, 0
-; GCN-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GCN-NEXT:    s_andn2_b64 exec, exec, s[2:3]
 ; GCN-NEXT:    s_cbranch_execz .LBB0_8
 ; GCN-NEXT:  .LBB0_3: ; %.lr.ph27
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -57,7 +56,7 @@ define amdgpu_kernel void @copy_to_vreg_1(i32 %0) {
 ; GCN-NEXT:    s_cbranch_execz .LBB0_2
 ; GCN-NEXT:  ; %bb.6: ; %pred.store.continue
 ; GCN-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; GCN-NEXT:    s_and_saveexec_b64 s[6:7], s[2:3]
+; GCN-NEXT:    s_and_saveexec_b64 s[6:7], s[0:1]
 ; GCN-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
 ; GCN-NEXT:    s_cbranch_execz .LBB0_1
 ; GCN-NEXT:  ; %bb.7: ; %pred.store.if41
