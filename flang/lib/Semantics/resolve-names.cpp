@@ -24,6 +24,7 @@
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -1572,51 +1573,41 @@ public:
   }
   void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
   bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
-    const auto &spec{std::get<parser::OmpDeclareTargetSpecifier>(x.t)};
-    auto populateDeclareTargetNames{[this](const parser::OmpObjectList
-                                            &objectList) {
-      for (const auto &ompObject : objectList.v) {
-        common::visit(
-            common::visitors{
-                [&](const parser::Designator &designator) {
-                  if (const auto *name{
-                          semantics::getDesignatorNameIfDataRef(designator)}) {
-                    specPartState_.declareTargetNames.insert(name->source);
-                  }
-                },
-                [&](const parser::Name &name) {
-                  specPartState_.declareTargetNames.insert(name.source);
-                },
-                [&](const parser::OmpObject::Invalid &invalid) {
-                  switch (invalid.v) {
-                    SWITCH_COVERS_ALL_CASES
-                  case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
-                    context().Say(invalid.source,
-                        "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
-                    break;
-                  }
-                },
-            },
-            ompObject.u);
-      }
+    auto addObjectName{[&](const parser::OmpObject &object) {
+      common::visit(
+          common::visitors{
+              [&](const parser::Designator &designator) {
+                if (const auto *name{
+                        semantics::getDesignatorNameIfDataRef(designator)}) {
+                  specPartState_.declareTargetNames.insert(name->source);
+                }
+              },
+              [&](const parser::Name &name) {
+                specPartState_.declareTargetNames.insert(name.source);
+              },
+              [&](const parser::OmpObject::Invalid &invalid) {
+                switch (invalid.v) {
+                  SWITCH_COVERS_ALL_CASES
+                case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
+                  context().Say(invalid.source,
+                      "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
+                  break;
+                }
+              },
+          },
+          object.u);
     }};
 
-    if (const auto *objectList{parser::Unwrap<parser::OmpObjectList>(spec.u)}) {
-      populateDeclareTargetNames(*objectList);
-    } else if (const auto *clauseList{
-                   parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
-      for (const auto &clause : clauseList->v) {
-        if (const auto *toClause{
-                std::get_if<parser::OmpClause::To>(&clause.u)}) {
-          populateDeclareTargetNames(
-              std::get<parser::OmpObjectList>(toClause->v.t));
-        } else if (const auto *linkClause{
-                       std::get_if<parser::OmpClause::Link>(&clause.u)}) {
-          populateDeclareTargetNames(linkClause->v);
-        } else if (const auto *enterClause{
-                       std::get_if<parser::OmpClause::Enter>(&clause.u)}) {
-          populateDeclareTargetNames(
-              std::get<parser::OmpObjectList>(enterClause->v.t));
+    for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+      if (auto *object{omp::GetArgumentObject(arg)}) {
+        addObjectName(*object);
+      }
+    }
+
+    for (const parser::OmpClause &clause : x.v.Clauses().v) {
+      if (auto *objects{parser::omp::GetOmpObjectList(clause)}) {
+        for (const parser::OmpObject &object : objects->v) {
+          addObjectName(object);
         }
       }
     }
