@@ -167,17 +167,15 @@ class PrepareForOMPOffloadPrivatizationPass
         //        Type varType = getElemType(varPtr);
         Type varType = mapInfoOp.getVarType();
 
-        // Create a llvm.func for 'region' that is marked always_inline and call it.
-        auto createAlwaysInlineFuncAndCallIt = [&](Region &region,
-                                                   llvm::StringRef funcName,
-                                                   Value mold,
-                                                   Value arg1) -> Value {
+        // Create a llvm.func for 'region' that is marked always_inline and call
+        // it.
+        auto createAlwaysInlineFuncAndCallIt =
+            [&](Region &region, llvm::StringRef funcName,
+                llvm::ArrayRef<Value> args) -> Value {
           assert(!region.empty() && "region cannot be empty");
-          LLVM::LLVMFuncOp func = createFuncOpForRegion(
-              loc, mod, region,
-              funcName,
-              firstOp, rewriter);
-          auto call = rewriter.create<LLVM::CallOp>(loc, func, ValueRange{mold, arg1});
+          LLVM::LLVMFuncOp func =
+              createFuncOpForRegion(loc, mod, region, funcName, rewriter);
+          auto call = rewriter.create<LLVM::CallOp>(loc, func, args);
           return call.getResult();
         };
 
@@ -195,7 +193,7 @@ class PrepareForOMPOffloadPrivatizationPass
           initializedVal = createAlwaysInlineFuncAndCallIt(
             privatizer.getInitRegion(),
             llvm::formatv("{0}_{1}", privatizer.getSymName(), "init").str(),
-            moldArg, newArg);
+            {moldArg, newArg});
         else
           initializedVal = newArg;
 
@@ -203,7 +201,7 @@ class PrepareForOMPOffloadPrivatizationPass
           initializedVal = createAlwaysInlineFuncAndCallIt(
               privatizer.getCopyRegion(),
               llvm::formatv("{0}_{1}", privatizer.getSymName(), "copy").str(),
-              moldArg, initializedVal);
+              {moldArg, initializedVal});
 
         if (isPrivatizedByValue)
           (void)rewriter.create<LLVM::StoreOp>(loc, initializedVal, heapMem);
@@ -394,21 +392,17 @@ private:
   LLVM::LLVMFuncOp createFuncOpForRegion(Location loc, ModuleOp mod,
                                          Region &srcRegion,
                                          llvm::StringRef funcName,
-                                         Operation *insertPt,
                                          IRRewriter &rewriter) {
 
     OpBuilder::InsertionGuard guard(rewriter);
-    MLIRContext *ctx = mod.getContext();
     rewriter.setInsertionPoint(mod.getBody(), mod.getBody()->end());
     Region clonedRegion;
     IRMapping mapper;
     srcRegion.cloneInto(&clonedRegion, mapper);
-    SmallVector<Type> paramTypes = {srcRegion.getArgument(0).getType(),
-                                    srcRegion.getArgument(1).getType()};
-    Type resultType = srcRegion.getArgument(0).getType();
-    LDBG() << "paramTypes are \n"
-           << srcRegion.getArgument(0).getType() << "\n"
-           << srcRegion.getArgument(1).getType() << "\n";
+
+    SmallVector<Type> paramTypes;
+    llvm::copy(srcRegion.getArgumentTypes(), std::back_inserter(paramTypes));
+    Type resultType =  srcRegion.getArgument(0).getType();
     LLVM::LLVMFunctionType funcType =
         LLVM::LLVMFunctionType::get(resultType, paramTypes);
 
@@ -422,8 +416,9 @@ private:
       if (isa<omp::YieldOp>(block.getTerminator())) {
         omp::YieldOp yieldOp = cast<omp::YieldOp>(block.getTerminator());
         rewriter.setInsertionPoint(yieldOp);
-        rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(yieldOp, TypeRange(),
-                                                    yieldOp.getResults().front());
+        if (!isa<LLVM::LLVMVoidType>(resultType))
+          rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(yieldOp, TypeRange(),
+                                                      yieldOp.getOperands());
       }
     }
     LDBG() << funcName << " is \n" << func << "\n";
