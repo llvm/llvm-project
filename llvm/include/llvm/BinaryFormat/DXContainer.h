@@ -822,6 +822,7 @@ struct DescriptorRange {
   }
 };
 } // namespace v2
+
 namespace v3 {
 struct StaticSampler : public v1::StaticSampler {
   uint32_t Flags;

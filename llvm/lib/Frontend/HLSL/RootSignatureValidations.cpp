@@ -113,6 +113,25 @@ bool verifyDescriptorRangeFlag(uint32_t Version, dxil::ResourceClass Type,
   return (Flags & ~Mask) == FlagT::None;
 }
 
+bool verifyStaticSamplerFlags(uint32_t Version, uint32_t FlagsNumber) {
+  uint32_t LargestValue = llvm::to_underlying(
+      dxbc::StaticSamplerFlags::LLVM_BITMASK_LARGEST_ENUMERATOR);
+  if (FlagsNumber >= NextPowerOf2(LargestValue))
+    return false;
+
+  dxbc::StaticSamplerFlags Flags = dxbc::StaticSamplerFlags(FlagsNumber);
+  if (Version <= 2)
+    return Flags == dxbc::StaticSamplerFlags::None;
+
+  assert(Version == 3 && "Provided invalid root signature version");
+
+  dxbc::StaticSamplerFlags Mask =
+      dxbc::StaticSamplerFlags::NonNormalizedCoordinates |
+      dxbc::StaticSamplerFlags::UintBorderColor |
+      dxbc::StaticSamplerFlags::None;
+  return (Flags | Mask) == Mask;
+}
+
 bool verifyNumDescriptors(uint32_t NumDescriptors) {
   return NumDescriptors > 0;
 }
@@ -138,7 +157,6 @@ uint64_t computeRangeBound(uint64_t Offset, uint32_t Size) {
 
   return Offset + uint64_t(Size) - 1;
 }
-
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm
