@@ -154,9 +154,10 @@ void LoongArchDAGToDAGISel::Select(SDNode *Node) {
 
     // Select appropriate [x]vldi instructions for some special constant splats,
     // where the immediate value `imm[12] == 1` for used [x]vldi instructions.
+    const auto &TLI =
+        *static_cast<const LoongArchTargetLowering *>(getTargetLowering());
     std::pair<bool, uint64_t> ConvertVLDI =
-        LoongArchTargetLowering::isImmVLDILegalForMode1(SplatValue,
-                                                        SplatBitSize);
+        TLI.isImmVLDILegalForMode1(SplatValue, SplatBitSize);
     if (ConvertVLDI.first) {
       Op = Is256Vec ? LoongArch::XVLDI : LoongArch::VLDI;
       SDValue Imm = CurDAG->getSignedTargetConstant(

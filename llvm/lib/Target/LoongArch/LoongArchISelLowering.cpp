@@ -8512,9 +8512,8 @@ SDValue LoongArchTargetLowering::LowerReturn(
 // Note: The following prefixes are excluded:
 //   imm[11:8] == 4'b0000, 4'b0100, 4'b1000
 // as they can be represented using [x]vrepli.[whb]
-std::pair<bool, uint64_t>
-LoongArchTargetLowering::isImmVLDILegalForMode1(const APInt &SplatValue,
-                                                const unsigned SplatBitSize) {
+std::pair<bool, uint64_t> LoongArchTargetLowering::isImmVLDILegalForMode1(
+    const APInt &SplatValue, const unsigned SplatBitSize) const {
   uint64_t RequiredImm = 0;
   uint64_t V = SplatValue.getZExtValue();
   if (SplatBitSize == 16 && !(V & 0x00FF)) {
