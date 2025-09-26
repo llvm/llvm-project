@@ -217,7 +217,7 @@ The checker can detect the following cases:
     integer value.
   - ``p - x`` where ``p`` is a null pointer and ``x`` is a nonzero integer
     value.
-  - ``p1`` - ``p2`` where one of ``p1`` and ``p2`` is null and the other a
+  - ``p1 - p2`` where one of ``p1`` and ``p2`` is null and the other a
     non-null pointer.
 
 Result of these operations is undefined according to the standard.
