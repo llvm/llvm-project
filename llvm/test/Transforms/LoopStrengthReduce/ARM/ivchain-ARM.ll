@@ -299,10 +299,10 @@ define hidden void @testNeon(ptr %ref_data, i32 %ref_stride, i32 %limit, ptr noc
 ; A9-NEXT:    cmp r2, #1
 ; A9-NEXT:    blt .LBB4_4
 ; A9-NEXT:  @ %bb.1: @ %.lr.ph
-; A9-NEXT:    movs r5, #0
 ; A9-NEXT:    movw r4, #64464
-; A9-NEXT:    sub.w r12, r5, r2, lsl #6
-; A9-NEXT:    sub.w lr, r1, r1, lsl #4
+; A9-NEXT:    lsls r5, r2, #6
+; A9-NEXT:    sub.w r12, r1, r1, lsl #4
+; A9-NEXT:    rsb.w lr, r5, #0
 ; A9-NEXT:    movt r4, #65535
 ; A9-NEXT:    mov r5, r3
 ; A9-NEXT:  .LBB4_2: @ =>This Inner Loop Header: Depth=1
@@ -319,13 +319,13 @@ define hidden void @testNeon(ptr %ref_data, i32 %ref_stride, i32 %limit, ptr noc
 ; A9-NEXT:    vst1.8 {d22, d23}, [r5]!
 ; A9-NEXT:    vld1.64 {d20}, [r0], r1
 ; A9-NEXT:    vadd.i8 q9, q9, q11
-; A9-NEXT:    vld1.64 {d21}, [r0], lr
+; A9-NEXT:    vld1.64 {d21}, [r0], r12
 ; A9-NEXT:    vadd.i8 q9, q9, q10
 ; A9-NEXT:    vadd.i8 q8, q8, q9
 ; A9-NEXT:    vst1.8 {d20, d21}, [r5], r4
 ; A9-NEXT:    bne .LBB4_2
 ; A9-NEXT:  @ %bb.3: @ %._crit_edge
-; A9-NEXT:    add.w r3, r3, r12, lsl #4
+; A9-NEXT:    add.w r3, r3, lr, lsl #4
 ; A9-NEXT:  .LBB4_4:
 ; A9-NEXT:    vst1.32 {d16, d17}, [r3]
 ; A9-NEXT:    pop {r4, r5, r7, pc}
