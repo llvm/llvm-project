@@ -10,7 +10,7 @@ entry:
   %a.wide = fpext <vscale x 8 x half> %a to <vscale x 8 x float>
   %b.wide = fpext <vscale x 8 x half> %b to <vscale x 8 x float>
   %mult = fmul <vscale x 8 x float> %a.wide, %b.wide
-  %partial.reduce = call reassoc <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %mult)
+  %partial.reduce = call <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %mult)
   ret <vscale x 4 x float> %partial.reduce
 }
 
@@ -40,7 +40,7 @@ entry:
   %a.wide = fpext <16 x half> %a to <16 x float>
   %b.wide = fpext <16 x half> %b to <16 x float>
   %mult = fmul <16 x float> %a.wide, %b.wide
-  %partial.reduce = call reassoc <8 x float> @llvm.vector.partial.reduce.fadd(<8 x float> %acc, <16 x float> %mult)
+  %partial.reduce = call <8 x float> @llvm.vector.partial.reduce.fadd(<8 x float> %acc, <16 x float> %mult)
   store <8 x float> %partial.reduce, ptr %accptr
   ret void
 }
@@ -61,7 +61,7 @@ entry:
   %a.wide = fpext <8 x half> %a to <8 x float>
   %b.wide = fpext <8 x half> %b to <8 x float>
   %mult = fmul <8 x float> %a.wide, %b.wide
-  %partial.reduce = call reassoc <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %mult)
+  %partial.reduce = call <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %mult)
   ret <4 x float> %partial.reduce
 }
 
@@ -72,7 +72,7 @@ define <8 x half> @partial_reduce_half(<8 x half> %acc, <16 x half> %a) {
 ; CHECK-NEXT:    fadd v0.8h, v0.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
-  %partial.reduce = call reassoc <8 x half> @llvm.vector.partial.reduce.fadd(<8 x half> %acc, <16 x half> %a)
+  %partial.reduce = call <8 x half> @llvm.vector.partial.reduce.fadd(<8 x half> %acc, <16 x half> %a)
   ret <8 x half> %partial.reduce
 }
 
@@ -83,7 +83,7 @@ define <4 x float> @partial_reduce_float(<4 x float> %acc, <8 x float> %a) {
 ; CHECK-NEXT:    fadd v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
-  %partial.reduce = call reassoc <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %a)
+  %partial.reduce = call <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %a)
   ret <4 x float> %partial.reduce
 }
 
@@ -94,7 +94,7 @@ define <2 x double> @partial_reduce_double(<2 x double> %acc, <4 x double> %a) {
 ; CHECK-NEXT:    fadd v0.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    ret
 entry:
-  %partial.reduce = call reassoc <2 x double> @llvm.vector.partial.reduce.fadd(<2 x double> %acc, <4 x double> %a)
+  %partial.reduce = call <2 x double> @llvm.vector.partial.reduce.fadd(<2 x double> %acc, <4 x double> %a)
   ret <2 x double> %partial.reduce
 }
 
@@ -105,7 +105,7 @@ define <vscale x 8 x half> @partial_reduce_half_vl128(<vscale x 8 x half> %acc, 
 ; CHECK-NEXT:    fadd z0.h, z0.h, z2.h
 ; CHECK-NEXT:    ret
 entry:
-  %partial.reduce = call reassoc <vscale x 8 x half> @llvm.vector.partial.reduce.fadd(<vscale x 8 x half> %acc, <vscale x 16 x half> %a)
+  %partial.reduce = call <vscale x 8 x half> @llvm.vector.partial.reduce.fadd(<vscale x 8 x half> %acc, <vscale x 16 x half> %a)
   ret <vscale x 8 x half> %partial.reduce
 }
 
@@ -116,7 +116,7 @@ define <vscale x 4 x float> @partial_reduce_float_vl128(<vscale x 4 x float> %ac
 ; CHECK-NEXT:    fadd z0.s, z0.s, z2.s
 ; CHECK-NEXT:    ret
 entry:
-  %partial.reduce = call reassoc <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %a)
+  %partial.reduce = call <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %a)
   ret <vscale x 4 x float> %partial.reduce
 }
 
@@ -127,6 +127,6 @@ define <vscale x 2 x double> @partial_reduce_double_vl128(<vscale x 2 x double> 
 ; CHECK-NEXT:    fadd z0.d, z0.d, z2.d
 ; CHECK-NEXT:    ret
 entry:
-  %partial.reduce = call reassoc <vscale x 2 x double> @llvm.vector.partial.reduce.fadd(<vscale x 2 x double> %acc, <vscale x 4 x double> %a)
+  %partial.reduce = call <vscale x 2 x double> @llvm.vector.partial.reduce.fadd(<vscale x 2 x double> %acc, <vscale x 4 x double> %a)
   ret <vscale x 2 x double> %partial.reduce
 }
