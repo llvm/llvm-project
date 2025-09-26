@@ -216,13 +216,14 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         llvm::cl::desc("Specify the format for remark output."),
         cl::location(remarkFormatFlag),
         llvm::cl::value_desc("format"),
-        llvm::cl::init(REMARK_FORMAT_STDOUT),
-        llvm::cl::values(
-            clEnumValN(REMARK_FORMAT_STDOUT, "emitRemark",
-                       "Print as emitRemark to command-line"),
-            clEnumValN(REMARK_FORMAT_YAML, "yaml", "Print yaml file"),
-            clEnumValN(REMARK_FORMAT_BITSTREAM, "bitstream",
-                       "Print bitstream file")),
+        llvm::cl::init(RemarkFormat::REMARK_FORMAT_STDOUT),
+        llvm::cl::values(clEnumValN(RemarkFormat::REMARK_FORMAT_STDOUT,
+                                    "emitRemark",
+                                    "Print as emitRemark to command-line"),
+                         clEnumValN(RemarkFormat::REMARK_FORMAT_YAML, "yaml",
+                                    "Print yaml file"),
+                         clEnumValN(RemarkFormat::REMARK_FORMAT_BITSTREAM,
+                                    "bitstream", "Print bitstream file")),
         llvm::cl::cat(remarkCategory)};
 
     static cl::opt<std::string, /*ExternalStorage=*/true> remarksAll(
@@ -525,13 +526,13 @@ performActions(raw_ostream &os,
   mlir::MLIRContext &ctx = *context;
 
   switch (config.getRemarkFormat()) {
-  case REMARK_FORMAT_STDOUT:
+  case RemarkFormat::REMARK_FORMAT_STDOUT:
     if (failed(mlir::remark::enableOptimizationRemarks(
             ctx, nullptr, cats, true /*printAsEmitRemarks*/)))
       return failure();
     break;
 
-  case REMARK_FORMAT_YAML: {
+  case RemarkFormat::REMARK_FORMAT_YAML: {
     std::string file = config.getRemarksOutputFile().empty()
                            ? "mlir-remarks.yaml"
                            : config.getRemarksOutputFile();
@@ -541,7 +542,7 @@ performActions(raw_ostream &os,
     break;
   }
 
-  case REMARK_FORMAT_BITSTREAM: {
+  case RemarkFormat::REMARK_FORMAT_BITSTREAM: {
     std::string file = config.getRemarksOutputFile().empty()
                            ? "mlir-remarks.bitstream"
                            : config.getRemarksOutputFile();

@@ -4175,6 +4175,24 @@ Decl *TemplateDeclInstantiator::VisitOMPThreadPrivateDecl(
   return TD;
 }
 
+Decl *
+TemplateDeclInstantiator::VisitOMPGroupPrivateDecl(OMPGroupPrivateDecl *D) {
+  SmallVector<Expr *, 5> Vars;
+  for (auto *I : D->varlist()) {
+    Expr *Var = SemaRef.SubstExpr(I, TemplateArgs).get();
+    assert(isa<DeclRefExpr>(Var) && "groupprivate arg is not a DeclRefExpr");
+    Vars.push_back(Var);
+  }
+
+  OMPGroupPrivateDecl *TD =
+      SemaRef.OpenMP().CheckOMPGroupPrivateDecl(D->getLocation(), Vars);
+
+  TD->setAccess(AS_public);
+  Owner->addDecl(TD);
+
+  return TD;
+}
+
 Decl *TemplateDeclInstantiator::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
   SmallVector<Expr *, 5> Vars;
   for (auto *I : D->varlist()) {

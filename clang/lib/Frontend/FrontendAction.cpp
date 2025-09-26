@@ -864,7 +864,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         InputFile, CI.getPCHContainerReader(), ASTUnit::LoadPreprocessorOnly,
-        nullptr, ASTDiags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
+        CI.getVirtualFileSystemPtr(), nullptr, ASTDiags, CI.getFileSystemOpts(),
+        CI.getHeaderSearchOpts());
     if (!AST)
       return false;
 
@@ -876,6 +877,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
+    CI.setVirtualFileSystem(AST->getFileManager().getVirtualFileSystemPtr());
     CI.setFileManager(AST->getFileManagerPtr());
     CI.createSourceManager(CI.getFileManager());
     CI.getSourceManager().initializeForReplay(AST->getSourceManager());
@@ -930,9 +932,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     StringRef InputFile = Input.getFile();
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
-        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, nullptr,
-        Diags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts(),
-        &CI.getLangOpts());
+        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything,
+        CI.getVirtualFileSystemPtr(), nullptr, Diags, CI.getFileSystemOpts(),
+        CI.getHeaderSearchOpts(), &CI.getLangOpts());
 
     if (!AST)
       return false;
@@ -966,7 +968,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     return true;
   }
 
-  // Set up the file and source managers, if needed.
+  // Set up the file system, file and source managers, if needed.
+  if (!CI.hasVirtualFileSystem())
+    CI.createVirtualFileSystem();
   if (!CI.hasFileManager()) {
     if (!CI.createFileManager()) {
       return false;

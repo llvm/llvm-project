@@ -207,8 +207,8 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
 
   auto Ins = std::make_unique<CompilerInstance>(std::move(Inv));
 
-  Ins->createDiagnostics(*llvm::vfs::getRealFileSystem(), DC.release(),
-                         /*ShouldOwnClient=*/true);
+  Ins->createVirtualFileSystem(llvm::vfs::getRealFileSystem(), DC.get());
+  Ins->createDiagnostics(DC.release(), /*ShouldOwnClient=*/true);
 
   TargetInfo *TI = TargetInfo::CreateTargetInfo(
       Ins->getDiagnostics(), Ins->getInvocation().getTargetOpts());

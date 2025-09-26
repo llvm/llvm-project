@@ -484,6 +484,10 @@ public:
   /// \param Name - The symbol name, which must be unique across all symbols.
   LLVM_ABI MCSymbol *getOrCreateSymbol(const Twine &Name);
 
+  /// Variant of getOrCreateSymbol that handles backslash-escaped symbols.
+  /// For example, parse "a\"b\\" as a"\.
+  LLVM_ABI MCSymbol *parseSymbol(const Twine &Name);
+
   /// Gets a symbol that will be defined to the final stack offset of a local
   /// variable after codegen.
   ///

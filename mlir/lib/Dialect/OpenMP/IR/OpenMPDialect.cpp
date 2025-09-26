@@ -2111,6 +2111,31 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
       });
 }
 
+/// Check if we can promote SPMD kernel to No-Loop kernel.
+static bool canPromoteToNoLoop(Operation *capturedOp, TeamsOp teamsOp,
+                               WsloopOp *wsLoopOp) {
+  // num_teams clause can break no-loop teams/threads assumption.
+  if (teamsOp.getNumTeamsUpper())
+    return false;
+
+  // Reduction kernels are slower in no-loop mode.
+  if (teamsOp.getNumReductionVars())
+    return false;
+  if (wsLoopOp->getNumReductionVars())
+    return false;
+
+  // Check if the user allows the promotion of kernels to no-loop mode.
+  OffloadModuleInterface offloadMod =
+      capturedOp->getParentOfType<omp::OffloadModuleInterface>();
+  if (!offloadMod)
+    return false;
+  auto ompFlags = offloadMod.getFlags();
+  if (!ompFlags)
+    return false;
+  return ompFlags.getAssumeTeamsOversubscription() &&
+         ompFlags.getAssumeThreadsOversubscription();
+}
+
 TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
   // A non-null captured op is only valid if it resides inside of a TargetOp
   // and is the result of calling getInnermostCapturedOmpOp() on it.
@@ -2139,7 +2164,8 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
 
   // Detect target-teams-distribute-parallel-wsloop[-simd].
   if (numWrappers == 2) {
-    if (!isa<WsloopOp>(innermostWrapper))
+    WsloopOp *wsloopOp = dyn_cast<WsloopOp>(innermostWrapper);
+    if (!wsloopOp)
       return TargetRegionFlags::generic;
 
     innermostWrapper = std::next(innermostWrapper);
@@ -2150,12 +2176,17 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
     if (!isa_and_present<ParallelOp>(parallelOp))
       return TargetRegionFlags::generic;
 
-    Operation *teamsOp = parallelOp->getParentOp();
-    if (!isa_and_present<TeamsOp>(teamsOp))
+    TeamsOp teamsOp = dyn_cast<TeamsOp>(parallelOp->getParentOp());
+    if (!teamsOp)
       return TargetRegionFlags::generic;
 
-    if (teamsOp->getParentOp() == targetOp.getOperation())
-      return TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+    if (teamsOp->getParentOp() == targetOp.getOperation()) {
+      TargetRegionFlags result =
+          TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+      if (canPromoteToNoLoop(capturedOp, teamsOp, wsloopOp))
+        result = result | TargetRegionFlags::no_loop;
+      return result;
+    }
   }
   // Detect target-teams-distribute[-simd] and target-teams-loop.
   else if (isa<DistributeOp, LoopOp>(innermostWrapper)) {

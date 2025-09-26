@@ -82,8 +82,10 @@ Support for the device library comes from a separate build of the OpenMP library
 that targets the GPU architecture. Building it requires enabling the runtime
 targets, or setting the target manually when doing a standalone build. This is
 done with the ``LLVM_RUNTIME_TARGETS`` option and then enabling the OpenMP
-runtime for the GPU target. ``RUNTIMES_<triple>_LLVM_ENABLE_RUNTIMES``. Refer to
-the cache file for the specific invocation.
+runtime for the GPU target via ``RUNTIMES_<triple>_LLVM_ENABLE_RUNTIMES``.
+It's possible to set different flags for each device library by using
+``RUNTIMES_<triple>_CMAKE_CXX_FLAGS``. Refer to the cache file for the specific
+invocation.
 
 For Nvidia offload, please see :ref:`build_nvidia_offload_capable_compiler`.
 For AMDGPU offload, please see :ref:`build_amdgpu_offload_capable_compiler`.

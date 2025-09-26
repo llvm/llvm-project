@@ -663,7 +663,7 @@ def int_amdgcn_cvt_sr_bf8_f16 : DefaultAttrsIntrinsic<
   [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]
 >, ClangBuiltin<"__builtin_amdgcn_cvt_sr_bf8_f16">;
 
-// llvm.amdgcn.cvt.scale.pk32.f16.bf6 v32f16 vdst, v6i32 src0, i32 scale_sel [0..7]
+// llvm.amdgcn.cvt.scale.pk32.f16.bf6 v32f16 vdst, v6i32 src0, i32 scale_sel [0..15]
 class AMDGPUCvtScaleIntrinsic<LLVMType DstTy, LLVMType Src0Ty, string name> : DefaultAttrsIntrinsic<
   [DstTy], [Src0Ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
@@ -1431,7 +1431,7 @@ def int_amdgcn_make_buffer_rsrc : DefaultAttrsIntrinsic <
   [llvm_anyptr_ty],
   [llvm_anyptr_ty, // base
    llvm_i16_ty,    // stride (and swizzle control)
-   llvm_i32_ty,    // NumRecords / extent
+   llvm_i64_ty,    // NumRecords / extent
    llvm_i32_ty],   // flags
   // Attributes lifted from ptrmask + some extra argument attributes.
   [IntrNoMem, ReadNone<ArgIndex<0>>,
@@ -3691,6 +3691,10 @@ def int_amdgcn_ashr_pk_u8_i32 : ClangBuiltin<"__builtin_amdgcn_ashr_pk_u8_i32">,
 // gfx1250 intrinsics
 // ===----------------------------------------------------------------------===//
 
+// Vanilla cluster sync-barrier
+def int_amdgcn_s_cluster_barrier : ClangBuiltin<"__builtin_amdgcn_s_cluster_barrier">,
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+
 // Async waits decrement ASYNCcnt and tensor waits decrement TENSORcnt which is
 // modeled as InaccessibleMem.
 class AMDGPUWaitAsyncIntrinsic :
@@ -3804,6 +3808,7 @@ class AMDGPUCooperativeAtomicLoad<LLVMType Ty> : Intrinsic <
   [SDNPMemOperand, SDNPMayLoad]
 >;
 
+// TODO: We may want to drop _relaxed and use an atomic ordering operand instead.
 def int_amdgcn_cooperative_atomic_load_32x4B : AMDGPUCooperativeAtomicLoad<llvm_i32_ty>;
 def int_amdgcn_cooperative_atomic_store_32x4B : AMDGPUCooperativeAtomicStore<llvm_i32_ty>;
 def int_amdgcn_cooperative_atomic_load_16x8B : AMDGPUCooperativeAtomicLoad<llvm_v2i32_ty>;

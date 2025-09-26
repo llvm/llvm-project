@@ -1554,8 +1554,8 @@ TEST(TransferTest, BaseClassInitializerFromSiblingDerivedInstance) {
     struct DerivedTwo : public Base {
       int DerivedTwoField;
 
-      DerivedTwo(const DerivedOne& d1)
-          : Base(d1), DerivedTwoField(d1.DerivedOneField) {
+      DerivedTwo(const DerivedOne& D1)
+          : Base(D1), DerivedTwoField(D1.DerivedOneField) {
           (void)BaseField;
           }
     };
@@ -1565,7 +1565,34 @@ TEST(TransferTest, BaseClassInitializerFromSiblingDerivedInstance) {
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
         // Regression test only; we used to crash when transferring the base
-        // class initializer from the DerivedToBase-cast `d1`.
+        // class initializer from the DerivedToBase-cast `D1`.
+      },
+      LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "DerivedTwo");
+}
+
+TEST(TransferTest, CopyAssignmentToDerivedToBase) {
+  std::string Code = R"cc(
+  struct Base {};
+
+struct DerivedOne : public Base {
+    int DerivedOneField;
+};
+
+struct DerivedTwo : public Base {
+    int DerivedTwoField;
+
+    explicit DerivedTwo(const DerivedOne& D1) {
+        *static_cast<Base*>(this) = D1;
+    }
+};
+)cc";
+
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // Regression test only; we used to crash when transferring the copy
+        // assignment operator in the constructor for `DerivedTwo`.
       },
       LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "DerivedTwo");
 }

@@ -107,8 +107,10 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
     Clang->getHeaderSearchOpts().ResourceDir =
         CompilerInvocation::GetResourcesPath(Argv[0], nullptr);
 
+  Clang->createVirtualFileSystem();
+
   // Create the actual diagnostics engine.
-  Clang->createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Clang->createDiagnostics();
   if (!Clang->hasDiagnostics())
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Initialization failed. "
@@ -475,7 +477,8 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
       std::make_unique<llvm::vfs::OverlayFileSystem>(
           llvm::vfs::getRealFileSystem());
   OverlayVFS->pushOverlay(IMVFS);
-  CI->createFileManager(OverlayVFS);
+  CI->createVirtualFileSystem(OverlayVFS);
+  CI->createFileManager();
 
   llvm::Expected<std::unique_ptr<Interpreter>> InterpOrErr =
       Interpreter::create(std::move(CI));

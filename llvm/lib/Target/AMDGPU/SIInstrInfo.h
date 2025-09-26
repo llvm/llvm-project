@@ -244,7 +244,7 @@ public:
     return ST;
   }
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
   bool isIgnorableUse(const MachineOperand &MO) const override;
 
@@ -1202,6 +1202,8 @@ public:
                          const MachineOperand &MO) const {
     return isImmOperandLegal(MI.getDesc(), OpNo, MO);
   }
+
+  bool isNeverCoissue(MachineInstr &MI) const;
 
   /// Check if this immediate value can be used for AV_MOV_B64_IMM_PSEUDO.
   bool isLegalAV64PseudoImm(uint64_t Imm) const;

@@ -366,8 +366,8 @@ define i8 @masked_min_reduction(ptr %data, ptr %mask) {
 ; CHECK-NEXT:    [[TMP19]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI3]], <32 x i8> [[TMP15]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 128
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       middle.block:
+; CHECK-NEXT:    br i1 [[TMP20]], label [[EXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       exit:
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[TMP16]], <32 x i8> [[TMP17]])
 ; CHECK-NEXT:    [[RDX_MINMAX11:%.*]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[RDX_MINMAX]], <32 x i8> [[TMP18]])
 ; CHECK-NEXT:    [[RDX_MINMAX12:%.*]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[RDX_MINMAX11]], <32 x i8> [[TMP19]])

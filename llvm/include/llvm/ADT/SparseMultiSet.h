@@ -400,7 +400,7 @@ public:
   RangePair equal_range(const KeyT &K) {
     iterator B = find(K);
     iterator E = iterator(this, SMSNode::INVALID, B.SparseIdx);
-    return std::make_pair(B, E);
+    return {B, E};
   }
 
   /// Insert a new element at the tail of the subset list. Returns an iterator

@@ -510,7 +510,7 @@ extern "C" int optMain(
   if (!DisableDITypeMap)
     Context.enableDebugTypeODRUniquing();
 
-  Expected<std::unique_ptr<ToolOutputFile>> RemarksFileOrErr =
+  Expected<LLVMRemarkFileHandle> RemarksFileOrErr =
       setupLLVMOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
                                    RemarksFormat, RemarksWithHotness,
                                    RemarksHotnessThreshold);
@@ -518,7 +518,7 @@ extern "C" int optMain(
     errs() << toString(std::move(E)) << '\n';
     return 1;
   }
-  std::unique_ptr<ToolOutputFile> RemarksFile = std::move(*RemarksFileOrErr);
+  LLVMRemarkFileHandle RemarksFile = std::move(*RemarksFileOrErr);
 
   // Load the input module...
   auto SetDataLayout = [&](StringRef IRTriple,

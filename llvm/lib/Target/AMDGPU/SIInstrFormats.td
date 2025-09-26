@@ -321,7 +321,7 @@ def CPolBit {
   int SCAL = 11;
 }
 
-class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst">;
+class VOPDstOperand<RegisterClassLike rc> : RegisterOperand<rc, "printVOPDst">;
 
 def VOPDstOperand_t16 : VOPDstOperand <VGPR_16> {
   let EncoderMethod = "getMachineOpValueT16";

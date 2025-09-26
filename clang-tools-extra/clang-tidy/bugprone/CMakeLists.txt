@@ -15,10 +15,12 @@ add_clang_library(clangTidyBugproneModule STATIC
   CapturingThisInMemberVariableCheck.cpp
   CastingThroughVoidCheck.cpp
   ChainedComparisonCheck.cpp
+  CommandProcessorCheck.cpp
   ComparePointerToMemberVirtualFunctionCheck.cpp
   CopyConstructorInitCheck.cpp
   CrtpConstructorAccessibilityCheck.cpp
   DanglingHandleCheck.cpp
+  DerivedMethodShadowingBaseMethodCheck.cpp
   DynamicStaticInitializersCheck.cpp
   EasilySwappableParametersCheck.cpp
   EmptyCatchCheck.cpp
@@ -89,6 +91,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   TaggedUnionMemberCountCheck.cpp
   TerminatingContinueCheck.cpp
   ThrowKeywordMissingCheck.cpp
+  ThrowingStaticInitializationCheck.cpp
   TooSmallLoopVariableCheck.cpp
   UncheckedOptionalAccessCheck.cpp
   UncheckedStringToNumberConversionCheck.cpp

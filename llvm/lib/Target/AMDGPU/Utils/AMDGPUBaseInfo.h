@@ -1568,6 +1568,11 @@ bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
+
+inline bool supportsWave32(const MCSubtargetInfo &STI) {
+  return AMDGPU::isGFX10Plus(STI) && !AMDGPU::isGFX1250(STI);
+}
+
 int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
@@ -1718,6 +1723,9 @@ bool isInlinableLiteralV2F16(uint32_t Literal);
 LLVM_READNONE
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64);
 
+LLVM_READNONE
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type);
+
 bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
@@ -1827,7 +1835,7 @@ public:
 
   bool isFixedDims() const { return getKind() == Kind::FixedDims; }
 
-  bool isVariableedDims() const { return getKind() == Kind::VariableDims; }
+  bool isVariableDims() const { return getKind() == Kind::VariableDims; }
 
   void setUnknown() { *this = ClusterDimsAttr(Kind::Unknown); }
 

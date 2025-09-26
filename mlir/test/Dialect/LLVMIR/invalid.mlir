@@ -1720,37 +1720,6 @@ llvm.func @foo(%arg: !llvm.ptr) {
 
 // -----
 
-func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
-  // expected-error@+1 {{to use im2col mode, the tensor has to be at least 3-dimensional}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr
-  return
-}
-// -----
-
-func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
-  // expected-error@+1 {{im2col offsets must be 2 less than number of coordinates}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr
-  return
-}
-
-// -----
-
-func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
-  // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[]: !llvm.ptr<3>, !llvm.ptr
-  return
-}
-
-// -----
-
-func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
-  // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd0,%crd1,%crd2,%crd3]: !llvm.ptr<3>, !llvm.ptr
-  return
-}
-
-// -----
-
 // expected-error @below {{no_inline and always_inline attributes are incompatible}}
 llvm.func @alwaysinline_noinline() attributes { always_inline, no_inline } {
   llvm.return
@@ -1973,6 +1942,20 @@ llvm.func @invalid_xevm_prefetch(%arg0: !llvm.ptr) {
 }
 
 // -----
+llvm.func @invalid_xevm_blockload(%arg0: !llvm.ptr<1>) {
+  // expected-error@+1 {{op vector size must be 1, 2, 4 or 8 for element type > 8 bits}}
+  %0 = xevm.blockload %arg0 : (!llvm.ptr<1>) -> vector<3xi16>
+  llvm.return
+}
+
+// -----
+llvm.func @invalid_xevm_blockstore(%arg0: !llvm.ptr<1>, %arg1: vector<5xi8>) {
+  // expected-error@+1 {{op vector size must be 1, 2, 4, 8 or 16 for 8-bit element type}}
+  xevm.blockstore %arg0, %arg1 : (!llvm.ptr<1>, vector<5xi8>)
+  llvm.return
+}
+
+// -----
 
 llvm.func @invalid_xevm_mma(%loaded_c_casted: vector<4xf32>, %loaded_a: vector<8xi16>, %loaded_b_casted: vector<8xi32>) -> vector<8xf32> {
   // expected-error@+1 {{op type of C operand must match result type}}
@@ -2031,3 +2014,24 @@ llvm.mlir.alias external @alias_resolver : !llvm.ptr {
 }
 // expected-error@+1 {{'llvm.mlir.ifunc' op must have a function resolver}}
 llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @alias_resolver {dso_local}
+
+// -----
+
+llvm.func @invalid_sincos_nonhomogeneous_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f64)>
+}
+
+// -----
+
+llvm.func @invalid_sincos_non_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  llvm.intr.sincos(%f) : (f32) -> f32
+}
+
+// -----
+
+llvm.func @invalid_sincos_gt_2_element_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
+}

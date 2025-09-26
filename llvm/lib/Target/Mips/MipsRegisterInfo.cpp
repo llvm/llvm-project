@@ -46,20 +46,8 @@ unsigned MipsRegisterInfo::getPICCallReg() { return Mips::T9; }
 
 const TargetRegisterClass *
 MipsRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  MipsPtrClass PtrClassKind = static_cast<MipsPtrClass>(Kind);
-
-  switch (PtrClassKind) {
-  case MipsPtrClass::Default:
-    return ArePtrs64bit ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
-  case MipsPtrClass::GPR16MM:
-    return &Mips::GPRMM16RegClass;
-  case MipsPtrClass::StackPointer:
-    return ArePtrs64bit ? &Mips::SP64RegClass : &Mips::SP32RegClass;
-  case MipsPtrClass::GlobalPointer:
-    return ArePtrs64bit ? &Mips::GP64RegClass : &Mips::GP32RegClass;
-  }
-
-  llvm_unreachable("Unknown pointer kind");
+  assert(Kind == 0 && "this should only be used for default case");
+  return ArePtrs64bit ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
 }
 
 unsigned

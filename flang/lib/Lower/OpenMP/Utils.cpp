@@ -616,16 +616,11 @@ static void processTileSizesFromOpenMPConstruct(
             &(nestedOptional.value()));
     if (innerConstruct) {
       const auto &innerLoopDirective = innerConstruct->value();
-      const auto &innerBegin =
-          std::get<parser::OmpBeginLoopDirective>(innerLoopDirective.t);
-      const auto &innerDirective =
-          std::get<parser::OmpLoopDirective>(innerBegin.t).v;
-
-      if (innerDirective == llvm::omp::Directive::OMPD_tile) {
+      const parser::OmpDirectiveSpecification &innerBeginSpec =
+          innerLoopDirective.BeginDir();
+      if (innerBeginSpec.DirId() == llvm::omp::Directive::OMPD_tile) {
         // Get the size values from parse tree and convert to a vector.
-        const auto &innerClauseList{
-            std::get<parser::OmpClauseList>(innerBegin.t)};
-        for (const auto &clause : innerClauseList.v) {
+        for (const auto &clause : innerBeginSpec.Clauses().v) {
           if (const auto tclause{
                   std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
             processFun(tclause);

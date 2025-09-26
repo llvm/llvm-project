@@ -47,9 +47,7 @@ define <2 x i64> @lsx_vbitclr_d(<2 x i64> %va, <2 x i64> %vb) nounwind {
 ; LA32-NEXT:    vand.v $vr1, $vr1, $vr2
 ; LA32-NEXT:    vrepli.d $vr2, 1
 ; LA32-NEXT:    vsll.d $vr1, $vr2, $vr1
-; LA32-NEXT:    vrepli.b $vr2, -1
-; LA32-NEXT:    vxor.v $vr1, $vr1, $vr2
-; LA32-NEXT:    vand.v $vr0, $vr0, $vr1
+; LA32-NEXT:    vandn.v $vr0, $vr1, $vr0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: lsx_vbitclr_d:

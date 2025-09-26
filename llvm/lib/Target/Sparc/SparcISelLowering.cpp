@@ -115,7 +115,8 @@ static bool Analyze_CC_Sparc64_Full(bool IsReturn, unsigned &ValNo, MVT &ValVT,
 
   // Stack space is allocated for all arguments starting from [%fp+BIAS+128].
   unsigned size      = (LocVT == MVT::f128) ? 16 : 8;
-  Align alignment = (LocVT == MVT::f128) ? Align(16) : Align(8);
+  Align alignment =
+      (LocVT == MVT::f128 || ArgFlags.isSplit()) ? Align(16) : Align(8);
   unsigned Offset = State.AllocateStack(size, alignment);
   unsigned Reg = 0;
 

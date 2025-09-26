@@ -220,7 +220,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsVectorDecreasingCstPHIWithLoop) {
   GISelValueTracking Info(*MF, /*MaxDepth=*/24);
   KnownBits Res = Info.getKnownBits(SrcReg);
   EXPECT_EQ((uint64_t)0, Res.One.getZExtValue());
-  EXPECT_EQ((uint64_t)0xC0, Res.Zero.getZExtValue());
+  EXPECT_EQ((uint64_t)0xFC, Res.Zero.getZExtValue());
 
   KnownBits Res2 = Info.getKnownBits(DstReg);
   EXPECT_EQ(Res.One.getZExtValue(), Res2.One.getZExtValue());

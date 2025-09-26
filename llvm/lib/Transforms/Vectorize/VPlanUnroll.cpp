@@ -238,7 +238,7 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
         if (Part != 1)
           continue;
         VPValue *StartV;
-        if (match(VPI->getOperand(2), m_SpecificInt(1))) {
+        if (match(VPI->getOperand(2), m_One())) {
           StartV = VPI->getOperand(1);
         } else {
           auto *C = VPI->clone();
@@ -317,8 +317,8 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     // requiring it.
     if (isa<VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe,
             VPVectorPointerRecipe, VPVectorEndPointerRecipe>(Copy) ||
-        match(Copy, m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
-                        m_VPValue())))
+        match(Copy,
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
       Copy->addOperand(getConstantVPV(Part));
 
     if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(R))

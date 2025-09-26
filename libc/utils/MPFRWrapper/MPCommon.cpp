@@ -393,6 +393,12 @@ MPFRNumber MPFRNumber::rint(mpfr_rnd_t rnd) const {
   return result;
 }
 
+MPFRNumber MPFRNumber::rsqrt() const {
+  MPFRNumber result(*this);
+  mpfr_rec_sqrt(result.value, value, mpfr_rounding);
+  return result;
+}
+
 MPFRNumber MPFRNumber::mod_2pi() const {
   MPFRNumber result(0.0, 1280);
   MPFRNumber _2pi(0.0, 1280);

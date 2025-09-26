@@ -132,7 +132,7 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
 
     // Create a Noop function that does nothing.
     Function *NoopFn = Function::createWithDefaultAttr(
-        FnTy, GlobalValue::LinkageTypes::PrivateLinkage,
+        FnTy, GlobalValue::LinkageTypes::InternalLinkage,
         M.getDataLayout().getProgramAddressSpace(), "__NoopCoro_ResumeDestroy",
         &M);
     NoopFn->setCallingConv(CallingConv::Fast);

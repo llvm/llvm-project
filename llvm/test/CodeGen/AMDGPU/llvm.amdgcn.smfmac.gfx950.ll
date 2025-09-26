@@ -199,8 +199,7 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x32_f16__vgpr(ptr addrspace(1) %
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    v_smfmac_f32_32x32x32_f16 v[0:15], v[24:27], v[16:23], v28 cbsz:1 abid:2
 ; SDAG-NEXT:    v_mov_b32_e32 v16, 0
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 2
+; SDAG-NEXT:    s_nop 10
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[8:11], s[6:7] offset:32
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[12:15], s[6:7] offset:48
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[0:3], s[6:7]
@@ -232,8 +231,7 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x32_f16__vgpr(ptr addrspace(1) %
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    v_smfmac_f32_32x32x32_f16 v[0:15], v[24:27], v[16:23], v28 cbsz:1 abid:2
 ; GISEL-NEXT:    v_mov_b32_e32 v16, 0
-; GISEL-NEXT:    s_nop 7
-; GISEL-NEXT:    s_nop 2
+; GISEL-NEXT:    s_nop 10
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[0:3], s[6:7]
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[4:7], s[6:7] offset:16
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[8:11], s[6:7] offset:32
@@ -253,8 +251,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_f16(<8 x half> %arg0, <16 x half> 
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x32_f16 v[12:27], v[0:3], v[4:11], v28
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -316,8 +313,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_f16__flags0(<8 x half> %arg0, <16 
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x32_f16 v[12:27], v[0:3], v[4:11], v28 cbsz:1 abid:3
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -379,8 +375,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_f16__flags1(<8 x half> %arg0, <16 
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x32_f16 v[12:27], v[0:3], v[4:11], v28 cbsz:3 abid:1
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -471,8 +466,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_f16__sgpr(<8 x half> inreg %arg0, 
 ; SDAG-NEXT:    v_mov_b32_e32 v27, v9
 ; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    v_smfmac_f32_32x32x32_f16 v[12:27], v[36:39], v[28:35], v10
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -685,8 +679,7 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x32_bf16__vgpr(ptr addrspace(1) 
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    v_smfmac_f32_32x32x32_bf16 v[0:15], v[24:27], v[16:23], v28 cbsz:1 abid:2
 ; GCN-NEXT:    v_mov_b32_e32 v16, 0
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 2
+; GCN-NEXT:    s_nop 10
 ; GCN-NEXT:    global_store_dwordx4 v16, v[8:11], s[6:7] offset:32
 ; GCN-NEXT:    global_store_dwordx4 v16, v[12:15], s[6:7] offset:48
 ; GCN-NEXT:    global_store_dwordx4 v16, v[0:3], s[6:7]
@@ -706,8 +699,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_bf16(<8 x bfloat> %arg0, <16 x bfl
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_smfmac_f32_32x32x32_bf16 v[12:27], v[0:3], v[4:11], v28
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 3
+; GCN-NEXT:    s_nop 11
 ; GCN-NEXT:    v_mov_b32_e32 v0, v12
 ; GCN-NEXT:    v_mov_b32_e32 v1, v13
 ; GCN-NEXT:    v_mov_b32_e32 v2, v14
@@ -734,8 +726,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_bf16__flags0(<8 x bfloat> %arg0, <
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_smfmac_f32_32x32x32_bf16 v[12:27], v[0:3], v[4:11], v28 cbsz:1 abid:3
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 3
+; GCN-NEXT:    s_nop 11
 ; GCN-NEXT:    v_mov_b32_e32 v0, v12
 ; GCN-NEXT:    v_mov_b32_e32 v1, v13
 ; GCN-NEXT:    v_mov_b32_e32 v2, v14
@@ -762,8 +753,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_bf16__flags1(<8 x bfloat> %arg0, <
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_smfmac_f32_32x32x32_bf16 v[12:27], v[0:3], v[4:11], v28 cbsz:3 abid:1
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 3
+; GCN-NEXT:    s_nop 11
 ; GCN-NEXT:    v_mov_b32_e32 v0, v12
 ; GCN-NEXT:    v_mov_b32_e32 v1, v13
 ; GCN-NEXT:    v_mov_b32_e32 v2, v14
@@ -819,8 +809,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_bf16__sgpr(<8 x bfloat> inreg %arg
 ; GCN-NEXT:    v_mov_b32_e32 v27, v9
 ; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_smfmac_f32_32x32x32_bf16 v[12:27], v[36:39], v[28:35], v10
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 3
+; GCN-NEXT:    s_nop 11
 ; GCN-NEXT:    v_mov_b32_e32 v0, v12
 ; GCN-NEXT:    v_mov_b32_e32 v1, v13
 ; GCN-NEXT:    v_mov_b32_e32 v2, v14
@@ -1049,8 +1038,7 @@ define amdgpu_kernel void @test_smfmac_i32_32x32x64_i8__vgpr(ptr addrspace(1) %a
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    v_smfmac_i32_32x32x64_i8 v[0:15], v[24:27], v[16:23], v28 cbsz:1 abid:2
 ; SDAG-NEXT:    v_mov_b32_e32 v16, 0
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 2
+; SDAG-NEXT:    s_nop 10
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[8:11], s[6:7] offset:32
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[12:15], s[6:7] offset:48
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[0:3], s[6:7]
@@ -1082,8 +1070,7 @@ define amdgpu_kernel void @test_smfmac_i32_32x32x64_i8__vgpr(ptr addrspace(1) %a
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    v_smfmac_i32_32x32x64_i8 v[0:15], v[24:27], v[16:23], v28 cbsz:1 abid:2
 ; GISEL-NEXT:    v_mov_b32_e32 v16, 0
-; GISEL-NEXT:    s_nop 7
-; GISEL-NEXT:    s_nop 2
+; GISEL-NEXT:    s_nop 10
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[0:3], s[0:1]
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[4:7], s[0:1] offset:16
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[8:11], s[0:1] offset:32
@@ -1103,8 +1090,7 @@ define <16 x i32> @test_smfmac_i32_32x32x64_i8(<4 x i32> %arg0, <8 x i32> %arg1,
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_i32_32x32x64_i8 v[12:27], v[0:3], v[4:11], v28
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -1166,8 +1152,7 @@ define <16 x i32> @test_smfmac_i32_32x32x64_i8__flags0(<4 x i32> %arg0, <8 x i32
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_i32_32x32x64_i8 v[12:27], v[0:3], v[4:11], v28 cbsz:1 abid:3
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -1229,8 +1214,7 @@ define <16 x i32> @test_smfmac_i32_32x32x64_i8__flags1(<4 x i32> %arg0, <8 x i32
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_i32_32x32x64_i8 v[12:27], v[0:3], v[4:11], v28 cbsz:3 abid:1
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -1321,8 +1305,7 @@ define <16 x i32> @test_smfmac_i32_32x32x64_i8__sgpr(<4 x i32> inreg %arg0, <8 x
 ; SDAG-NEXT:    v_mov_b32_e32 v27, v9
 ; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    v_smfmac_i32_32x32x64_i8 v[12:27], v[36:39], v[28:35], v10
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -2098,8 +2081,7 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x64_bf8_bf8__vgpr(ptr addrspace(
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_bf8_bf8 v[0:15], v[24:27], v[16:23], v28 cbsz:1 abid:2
 ; SDAG-NEXT:    v_mov_b32_e32 v16, 0
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 2
+; SDAG-NEXT:    s_nop 10
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[8:11], s[6:7] offset:32
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[12:15], s[6:7] offset:48
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[0:3], s[6:7]
@@ -2131,8 +2113,7 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x64_bf8_bf8__vgpr(ptr addrspace(
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    v_smfmac_f32_32x32x64_bf8_bf8 v[0:15], v[24:27], v[16:23], v28 cbsz:1 abid:2
 ; GISEL-NEXT:    v_mov_b32_e32 v16, 0
-; GISEL-NEXT:    s_nop 7
-; GISEL-NEXT:    s_nop 2
+; GISEL-NEXT:    s_nop 10
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[0:3], s[0:1]
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[4:7], s[0:1] offset:16
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[8:11], s[0:1] offset:32
@@ -2152,8 +2133,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8(<4 x i32> %arg0, <8 x i32>
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_bf8_bf8 v[12:27], v[0:3], v[4:11], v28
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -2215,8 +2195,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__flags0(<4 x i32> %arg0, <
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_bf8_bf8 v[12:27], v[0:3], v[4:11], v28 cbsz:1 abid:3
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -2278,8 +2257,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__flags1(<4 x i32> %arg0, <
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_bf8_bf8 v[12:27], v[0:3], v[4:11], v28 cbsz:3 abid:1
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -2370,8 +2348,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__sgpr(<4 x i32> inreg %arg
 ; SDAG-NEXT:    v_mov_b32_e32 v27, v9
 ; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_bf8_bf8 v[12:27], v[36:39], v[28:35], v10
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -2471,8 +2448,7 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x64_bf8_fp8__vgpr(ptr addrspace(
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_bf8_fp8 v[0:15], v[24:27], v[16:23], v28 cbsz:1 abid:2
 ; SDAG-NEXT:    v_mov_b32_e32 v16, 0
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 2
+; SDAG-NEXT:    s_nop 10
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[8:11], s[6:7] offset:32
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[12:15], s[6:7] offset:48
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[0:3], s[6:7]
@@ -2504,8 +2480,7 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x64_bf8_fp8__vgpr(ptr addrspace(
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    v_smfmac_f32_32x32x64_bf8_fp8 v[0:15], v[24:27], v[16:23], v28 cbsz:1 abid:2
 ; GISEL-NEXT:    v_mov_b32_e32 v16, 0
-; GISEL-NEXT:    s_nop 7
-; GISEL-NEXT:    s_nop 2
+; GISEL-NEXT:    s_nop 10
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[0:3], s[0:1]
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[4:7], s[0:1] offset:16
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[8:11], s[0:1] offset:32
@@ -2525,8 +2500,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8(<4 x i32> %arg0, <8 x i32>
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_bf8_fp8 v[12:27], v[0:3], v[4:11], v28
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -2588,8 +2562,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__flags0(<4 x i32> %arg0, <
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_bf8_fp8 v[12:27], v[0:3], v[4:11], v28 cbsz:1 abid:3
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -2651,8 +2624,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__flags1(<4 x i32> %arg0, <
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_bf8_fp8 v[12:27], v[0:3], v[4:11], v28 cbsz:3 abid:1
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -2743,8 +2715,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__sgpr(<4 x i32> inreg %arg
 ; SDAG-NEXT:    v_mov_b32_e32 v27, v9
 ; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_bf8_fp8 v[12:27], v[36:39], v[28:35], v10
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -2844,8 +2815,7 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x64_fp8_bf8__vgpr(ptr addrspace(
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_fp8_bf8 v[0:15], v[24:27], v[16:23], v28 cbsz:1 abid:2
 ; SDAG-NEXT:    v_mov_b32_e32 v16, 0
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 2
+; SDAG-NEXT:    s_nop 10
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[8:11], s[6:7] offset:32
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[12:15], s[6:7] offset:48
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[0:3], s[6:7]
@@ -2877,8 +2847,7 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x64_fp8_bf8__vgpr(ptr addrspace(
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    v_smfmac_f32_32x32x64_fp8_bf8 v[0:15], v[24:27], v[16:23], v28 cbsz:1 abid:2
 ; GISEL-NEXT:    v_mov_b32_e32 v16, 0
-; GISEL-NEXT:    s_nop 7
-; GISEL-NEXT:    s_nop 2
+; GISEL-NEXT:    s_nop 10
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[0:3], s[0:1]
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[4:7], s[0:1] offset:16
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[8:11], s[0:1] offset:32
@@ -2898,8 +2867,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8(<4 x i32> %arg0, <8 x i32>
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_fp8_bf8 v[12:27], v[0:3], v[4:11], v28
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -2961,8 +2929,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__flags0(<4 x i32> %arg0, <
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_fp8_bf8 v[12:27], v[0:3], v[4:11], v28 cbsz:1 abid:3
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -3024,8 +2991,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__flags1(<4 x i32> %arg0, <
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_fp8_bf8 v[12:27], v[0:3], v[4:11], v28 cbsz:3 abid:1
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -3116,8 +3082,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__sgpr(<4 x i32> inreg %arg
 ; SDAG-NEXT:    v_mov_b32_e32 v27, v9
 ; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_fp8_bf8 v[12:27], v[36:39], v[28:35], v10
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -3217,8 +3182,7 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x64_fp8_fp8__vgpr(ptr addrspace(
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_fp8_fp8 v[0:15], v[24:27], v[16:23], v28 cbsz:1 abid:2
 ; SDAG-NEXT:    v_mov_b32_e32 v16, 0
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 2
+; SDAG-NEXT:    s_nop 10
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[8:11], s[6:7] offset:32
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[12:15], s[6:7] offset:48
 ; SDAG-NEXT:    global_store_dwordx4 v16, v[0:3], s[6:7]
@@ -3250,8 +3214,7 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x64_fp8_fp8__vgpr(ptr addrspace(
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    v_smfmac_f32_32x32x64_fp8_fp8 v[0:15], v[24:27], v[16:23], v28 cbsz:1 abid:2
 ; GISEL-NEXT:    v_mov_b32_e32 v16, 0
-; GISEL-NEXT:    s_nop 7
-; GISEL-NEXT:    s_nop 2
+; GISEL-NEXT:    s_nop 10
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[0:3], s[0:1]
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[4:7], s[0:1] offset:16
 ; GISEL-NEXT:    global_store_dwordx4 v16, v[8:11], s[0:1] offset:32
@@ -3271,8 +3234,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8(<4 x i32> %arg0, <8 x i32>
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_fp8_fp8 v[12:27], v[0:3], v[4:11], v28
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -3334,8 +3296,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__flags0(<4 x i32> %arg0, <
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_fp8_fp8 v[12:27], v[0:3], v[4:11], v28 cbsz:1 abid:3
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -3397,8 +3358,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__flags1(<4 x i32> %arg0, <
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_fp8_fp8 v[12:27], v[0:3], v[4:11], v28 cbsz:3 abid:1
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14
@@ -3489,8 +3449,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__sgpr(<4 x i32> inreg %arg
 ; SDAG-NEXT:    v_mov_b32_e32 v27, v9
 ; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    v_smfmac_f32_32x32x64_fp8_fp8 v[12:27], v[36:39], v[28:35], v10
-; SDAG-NEXT:    s_nop 7
-; SDAG-NEXT:    s_nop 3
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v12
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v14

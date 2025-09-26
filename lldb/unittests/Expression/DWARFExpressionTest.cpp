@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/DWARFExpression.h"
+#ifdef ARCH_AARCH64
+#include "Plugins/ABI/AArch64/ABISysV_arm64.h"
+#endif
 #include "Plugins/ObjectFile/wasm/ObjectFileWasm.h"
 #include "Plugins/Platform/Linux/PlatformLinux.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
@@ -21,10 +24,12 @@
 #include "lldb/Core/dwarf.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -198,6 +203,26 @@ public:
     FileSystem::Terminate();
   }
 };
+
+struct PlatformTargetDebugger {
+  lldb::PlatformSP platform_sp;
+  lldb::TargetSP target_sp;
+  lldb::DebuggerSP debugger_sp;
+};
+
+/// A helper function to create <Platform, Target, Debugger> objects with the
+/// "aarch64-pc-linux" ArchSpec.
+static PlatformTargetDebugger CreateTarget() {
+  ArchSpec arch("aarch64-pc-linux");
+  Platform::SetHostPlatform(
+      platform_linux::PlatformLinux::CreateInstance(true, &arch));
+  lldb::PlatformSP platform_sp;
+  lldb::TargetSP target_sp;
+  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
+  debugger_sp->GetTargetList().CreateTarget(
+      *debugger_sp, "", arch, eLoadDependentsNo, platform_sp, target_sp);
+  return PlatformTargetDebugger{platform_sp, target_sp, debugger_sp};
+}
 
 // NB: This class doesn't use the override keyword to avoid
 // -Winconsistent-missing-override warnings from the compiler. The
@@ -1134,4 +1159,97 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
   ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
   ASSERT_EQ(result->GetValueType(), Value::ValueType::HostAddress);
   ASSERT_THAT(result->GetBuffer().GetData(), ElementsAre(0x11, 0x22));
+}
+
+/// A Process whose `ReadMemory` override queries a DenseMap.
+struct MockProcessWithMemRead : Process {
+  using addr_t = lldb::addr_t;
+
+  llvm::DenseMap<addr_t, addr_t> memory_map;
+
+  MockProcessWithMemRead(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
+                         llvm::DenseMap<addr_t, addr_t> &&memory_map)
+      : Process(target_sp, listener_sp), memory_map(memory_map) {}
+  size_t DoReadMemory(addr_t vm_addr, void *buf, size_t size,
+                      Status &error) override {
+    assert(memory_map.contains(vm_addr));
+    assert(size == sizeof(addr_t));
+    *reinterpret_cast<addr_t *>(buf) = memory_map[vm_addr];
+    return sizeof(addr_t);
+  }
+  size_t ReadMemory(addr_t addr, void *buf, size_t size,
+                    Status &status) override {
+    return DoReadMemory(addr, buf, size, status);
+  }
+  bool CanDebug(lldb::TargetSP, bool) override { return true; }
+  Status DoDestroy() override { return Status(); }
+  llvm::StringRef GetPluginName() override { return ""; }
+  void RefreshStateAfterStop() override {}
+  bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
+};
+
+class DWARFExpressionMockProcessTestWithAArch
+    : public DWARFExpressionMockProcessTest {
+public:
+  void SetUp() override {
+    DWARFExpressionMockProcessTest::SetUp();
+#ifdef ARCH_AARCH64
+    LLVMInitializeAArch64TargetInfo();
+    LLVMInitializeAArch64TargetMC();
+    ABISysV_arm64::Initialize();
+#endif
+  }
+  void TearDown() override {
+    DWARFExpressionMockProcessTest::TearDown();
+#ifdef ARCH_AARCH64
+    ABISysV_arm64::Terminate();
+#endif
+  }
+};
+
+/// Sets the value of register x22 to "42".
+/// Creates a process whose memory address 42 contains the value
+///   memory[42] = ((0xffULL) << 56) | 0xabcdef;
+/// The expression DW_OP_breg22, 0, DW_OP_deref should produce that same value,
+/// without clearing the top byte 0xff.
+TEST_F(DWARFExpressionMockProcessTestWithAArch, DW_op_deref_no_ptr_fixing) {
+  llvm::DenseMap<lldb::addr_t, lldb::addr_t> memory;
+  constexpr lldb::addr_t expected_value = ((0xffULL) << 56) | 0xabcdefULL;
+  constexpr lldb::addr_t addr = 42;
+  memory[addr] = expected_value;
+
+  PlatformTargetDebugger test_setup = CreateTarget();
+  lldb::ProcessSP process_sp = std::make_shared<MockProcessWithMemRead>(
+      test_setup.target_sp, Listener::MakeListener("dummy"), std::move(memory));
+  auto thread = std::make_shared<MockThread>(*process_sp);
+  lldb::RegisterContextSP reg_ctx_sp =
+      std::make_shared<MockRegisterContext>(*thread, RegisterValue(addr));
+  thread->SetRegisterContext(reg_ctx_sp);
+  process_sp->GetThreadList().AddThread(thread);
+
+  auto evaluate_expr = [&](auto &expr_data) {
+    DataExtractor extractor(expr_data, sizeof(expr_data),
+                            lldb::eByteOrderLittle,
+                            /*addr_size*/ 8);
+    DWARFExpression expr(extractor);
+
+    ExecutionContext exe_ctx(process_sp);
+    llvm::Expected<Value> result = DWARFExpression::Evaluate(
+        &exe_ctx, reg_ctx_sp.get(), /*module_sp*/ nullptr, extractor,
+        /*unit*/ nullptr, lldb::eRegisterKindLLDB,
+        /*initial_value_ptr=*/nullptr,
+        /*object_address_ptr=*/nullptr);
+    return result;
+  };
+
+  uint8_t expr_reg[] = {DW_OP_breg22, 0};
+  llvm::Expected<Value> result_reg = evaluate_expr(expr_reg);
+  ASSERT_THAT_EXPECTED(result_reg, llvm::Succeeded());
+  ASSERT_EQ(result_reg->GetValueType(), Value::ValueType::LoadAddress);
+  ASSERT_EQ(result_reg->GetScalar().ULongLong(), addr);
+
+  uint8_t expr_deref[] = {DW_OP_breg22, 0, DW_OP_deref};
+  llvm::Expected<Value> result_deref = evaluate_expr(expr_deref);
+  ASSERT_THAT_EXPECTED(result_deref, llvm::Succeeded());
+  ASSERT_EQ(result_deref->GetScalar().ULongLong(), expected_value);
 }

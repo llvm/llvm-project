@@ -196,7 +196,7 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class FPLoad_r<bits<3> funct3, string opcodestr, DAGOperand rty,
                SchedWrite sw>
     : RVInstI<funct3, OPC_LOAD_FP, (outs rty:$rd),
-              (ins GPRMem:$rs1, simm12:$imm12),
+              (ins GPRMem:$rs1, simm12_lo:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">,
       Sched<[sw, ReadFMemBase]>;
 
@@ -204,7 +204,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class FPStore_r<bits<3> funct3, string opcodestr, DAGOperand rty,
                 SchedWrite sw>
     : RVInstS<funct3, OPC_STORE_FP, (outs),
-              (ins rty:$rs2, GPRMem:$rs1, simm12:$imm12),
+              (ins rty:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">,
       Sched<[sw, ReadFStoreData, ReadFMemBase]>;
 
@@ -655,6 +655,7 @@ foreach Ext = FExts in {
   defm : PatFprFpr_m<fmaximumnum, FMAX_S, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_S, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_S, Ext>;
+  let Predicates = Ext.Predicates in
   def : Pat<(f32 (fcanonicalize FPR32:$rs1)), (FMIN_S $rs1, $rs1)>;
 }
 

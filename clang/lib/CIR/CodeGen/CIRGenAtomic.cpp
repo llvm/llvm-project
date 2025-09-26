@@ -341,6 +341,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   }
 
   assert(!cir::MissingFeatures::atomicSyncScopeID());
+  llvm::StringRef opName;
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = cgf.getLoc(expr->getSourceRange());
@@ -400,6 +401,12 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     return;
   }
 
+  case AtomicExpr::AO__c11_atomic_exchange:
+  case AtomicExpr::AO__atomic_exchange_n:
+  case AtomicExpr::AO__atomic_exchange:
+    opName = cir::AtomicXchg::getOperationName();
+    break;
+
   case AtomicExpr::AO__opencl_atomic_init:
 
   case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
@@ -421,11 +428,8 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__scoped_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store_n:
 
-  case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__hip_atomic_exchange:
   case AtomicExpr::AO__opencl_atomic_exchange:
-  case AtomicExpr::AO__atomic_exchange_n:
-  case AtomicExpr::AO__atomic_exchange:
   case AtomicExpr::AO__scoped_atomic_exchange_n:
   case AtomicExpr::AO__scoped_atomic_exchange:
 
@@ -503,8 +507,23 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
 
   case AtomicExpr::AO__atomic_clear:
     cgf.cgm.errorNYI(expr->getSourceRange(), "emitAtomicOp: expr op NYI");
-    break;
+    return;
   }
+
+  assert(!opName.empty() && "expected operation name to build");
+  mlir::Value loadVal1 = builder.createLoad(loc, val1);
+
+  SmallVector<mlir::Value> atomicOperands = {ptr.getPointer(), loadVal1};
+  SmallVector<mlir::Type> atomicResTys = {loadVal1.getType()};
+  mlir::Operation *rmwOp = builder.create(loc, builder.getStringAttr(opName),
+                                          atomicOperands, atomicResTys);
+
+  rmwOp->setAttr("mem_order", orderAttr);
+  if (expr->isVolatile())
+    rmwOp->setAttr("is_volatile", builder.getUnitAttr());
+
+  mlir::Value result = rmwOp->getResult(0);
+  builder.createStore(loc, result, dest);
 }
 
 static bool isMemOrderValid(uint64_t order, bool isStore, bool isLoad) {
@@ -572,6 +591,11 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
     val1 = emitPointerWithAlignment(e->getVal1());
     break;
 
+  case AtomicExpr::AO__atomic_exchange:
+    val1 = emitPointerWithAlignment(e->getVal1());
+    dest = emitPointerWithAlignment(e->getVal2());
+    break;
+
   case AtomicExpr::AO__atomic_compare_exchange:
   case AtomicExpr::AO__atomic_compare_exchange_n:
   case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
@@ -590,7 +614,9 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
       isWeakExpr = e->getWeak();
     break;
 
+  case AtomicExpr::AO__atomic_exchange_n:
   case AtomicExpr::AO__atomic_store_n:
+  case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__c11_atomic_store:
     val1 = emitValToTemp(*this, e->getVal1());
     break;

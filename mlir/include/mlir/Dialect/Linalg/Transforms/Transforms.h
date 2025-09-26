@@ -1858,6 +1858,7 @@ void populateDecomposePadPatterns(RewritePatternSet &patterns);
 
 /// Populates patterns to transform linalg.conv_2d_xxx operations into
 /// linalg.generic (for img2col packing) and linalg.matmul.
+/// Note: currently limited to Tensor semantics only.
 /// \see rewriteInIm2Col for more details.
 void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns);
 
@@ -1914,9 +1915,12 @@ void populateElementwiseOpsFusionPatterns(
 using ControlPropagationFn = std::function<bool(OpOperand *opOperand)>;
 
 /// Patterns to bubble up or down data layout ops across other operations.
+/// The function also has an option to allow the patterns to propagate with
+/// poison padding if requested by the caller.
 void populateDataLayoutPropagationPatterns(
     RewritePatternSet &patterns,
-    const ControlPropagationFn &controlPackUnPackPropagation);
+    const ControlPropagationFn &controlPackUnPackPropagation,
+    bool PoisonPaddingOk = false);
 
 /// Patterns to sink extract slice across other operations.
 void populateExtractSliceSinkingPatterns(

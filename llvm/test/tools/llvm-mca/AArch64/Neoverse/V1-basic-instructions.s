@@ -2688,7 +2688,7 @@ drps
 # CHECK-NEXT:  1      1     0.25                        movk	x7, #0, lsl #32
 # CHECK-NEXT:  1      1     0.25                        movz	x8, #0, lsl #48
 # CHECK-NEXT:  1      1     0.25                        movk	x9, #0, lsl #48
-# CHECK-NEXT:  1      1     0.07                  U     msr	DAIFSet, #0
+# CHECK-NEXT:  1      1     0.13                  U     msr	DAIFSet, #0
 # CHECK-NEXT:  1      1     0.25                        adr	x2, #1600
 # CHECK-NEXT:  1      1     0.25                        adrp	x21, #6553600
 # CHECK-NEXT:  1      1     0.25                        adr	x0, #262144

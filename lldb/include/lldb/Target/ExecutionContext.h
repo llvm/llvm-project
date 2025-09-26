@@ -92,9 +92,20 @@ public:
 
   /// Construct using the target and all the selected items inside of it (the
   /// process and its selected thread, and the thread's selected frame). If
-  /// there is no selected thread, default to the first thread If there is no
+  /// there is no selected thread, default to the first thread. If there is no
   /// selected frame, default to the first frame.
   ExecutionContextRef(Target *target, bool adopt_selected);
+
+  /// Construct using the process and all the selected items inside of it (
+  /// the selected thread, and the thread's selected frame). If
+  /// there is no selected thread, default to the first thread. If there is no
+  /// selected frame, default to the first frame.
+  ExecutionContextRef(Process *process, bool adopt_selected);
+
+  /// Construct using the thread and all the selected items inside of it ( the
+  /// selected frame). If there is no selected frame, default to the first
+  /// frame.
+  ExecutionContextRef(Thread *thread, bool adopt_selected);
 
   /// Construct using an execution context scope.
   ///
@@ -199,9 +210,9 @@ public:
 
   void SetTargetPtr(Target *target, bool adopt_selected);
 
-  void SetProcessPtr(Process *process);
+  void SetProcessPtr(Process *process, bool adopt_selected = false);
 
-  void SetThreadPtr(Thread *thread);
+  void SetThreadPtr(Thread *thread, bool adopt_selected = false);
 
   void SetFramePtr(StackFrame *frame);
 

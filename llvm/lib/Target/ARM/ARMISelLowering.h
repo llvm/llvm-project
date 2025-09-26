@@ -605,7 +605,7 @@ class VectorType;
 
     bool preferZeroCompareBranch() const override { return true; }
 
-    bool shouldExpandCmpUsingSelects(EVT VT) const override;
+    bool preferSelectsOverBooleanArithmetic(EVT VT) const override;
 
     bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
@@ -908,6 +908,7 @@ class VectorType;
                    SelectionDAG &DAG) const;
     SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerCMP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
 
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;

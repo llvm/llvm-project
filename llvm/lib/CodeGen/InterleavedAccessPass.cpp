@@ -312,10 +312,9 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
       continue;
     }
     if (auto *BI = dyn_cast<BinaryOperator>(User)) {
-      if (!BI->user_empty() && all_of(BI->users(), [](auto *U) {
-            auto *SVI = dyn_cast<ShuffleVectorInst>(U);
-            return SVI && isa<UndefValue>(SVI->getOperand(1));
-          })) {
+      using namespace PatternMatch;
+      if (!BI->user_empty() &&
+          all_of(BI->users(), match_fn(m_Shuffle(m_Value(), m_Undef())))) {
         for (auto *SVI : BI->users())
           BinOpShuffles.insert(cast<ShuffleVectorInst>(SVI));
         continue;

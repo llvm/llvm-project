@@ -168,6 +168,9 @@ public:
   MachineBasicBlock *EmitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const;
 
+  MachineBasicBlock *EmitCheckMatchingVL(MachineInstr &MI,
+                                         MachineBasicBlock *MBB) const;
+
   MachineBasicBlock *EmitTileLoad(unsigned Opc, unsigned BaseReg,
                                   MachineInstr &MI,
                                   MachineBasicBlock *BB) const;
@@ -432,7 +435,7 @@ public:
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
-  bool shouldExpandCmpUsingSelects(EVT VT) const override;
+  bool preferSelectsOverBooleanArithmetic(EVT VT) const override;
 
   bool isComplexDeinterleavingSupported() const override;
   bool isComplexDeinterleavingOperationSupported(
@@ -520,9 +523,6 @@ public:
 
   bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
 
-  bool
-  shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const override;
-
   bool shouldExpandCttzElements(EVT VT) const override;
 
   bool shouldExpandVectorMatch(EVT VT, unsigned SearchSize) const override;
@@ -532,8 +532,8 @@ public:
   /// node. \p Condition should be one of the enum values from
   /// AArch64SME::ToggleCondition.
   SDValue changeStreamingMode(SelectionDAG &DAG, SDLoc DL, bool Enable,
-                              SDValue Chain, SDValue InGlue,
-                              unsigned Condition) const;
+                              SDValue Chain, SDValue InGlue, unsigned Condition,
+                              bool InsertVectorLengthCheck = false) const;
 
   bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
 

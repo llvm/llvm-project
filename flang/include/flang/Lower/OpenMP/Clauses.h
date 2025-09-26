@@ -328,11 +328,14 @@ struct MemoryOrder {
 struct Threadprivate {
   using EmptyTrait = std::true_type;
 };
+struct Groupprivate {
+  using EmptyTrait = std::true_type;
+};
 
 using ClauseBase = tomp::ClauseT<TypeTy, IdTy, ExprTy,
                                  // Extras...
                                  CancellationConstructType, Depobj, Flush,
-                                 MemoryOrder, Threadprivate>;
+                                 MemoryOrder, Threadprivate, Groupprivate>;
 
 struct Clause : public ClauseBase {
   Clause(ClauseBase &&base, const parser::CharBlock source = {})

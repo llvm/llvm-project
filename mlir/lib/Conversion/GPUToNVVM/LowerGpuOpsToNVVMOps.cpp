@@ -372,7 +372,7 @@ struct LowerGpuOpsToNVVMOpsPass final
       populateGpuRewritePatterns(patterns);
       // Transform N-D vector.from_elements to 1-D vector.from_elements before
       // conversion.
-      vector::populateVectorFromElementsLoweringPatterns(patterns);
+      vector::populateVectorFromElementsUnrollPatterns(patterns);
       if (failed(applyPatternsGreedily(m, std::move(patterns))))
         return signalPassFailure();
     }
@@ -451,16 +451,14 @@ void mlir::configureGpuToNVVMTypeConverter(LLVMTypeConverter &converter) {
       converter, [](gpu::AddressSpace space) -> unsigned {
         switch (space) {
         case gpu::AddressSpace::Global:
-          return static_cast<unsigned>(
-              NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
         case gpu::AddressSpace::Workgroup:
-          return static_cast<unsigned>(
-              NVVM::NVVMMemorySpace::kSharedMemorySpace);
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
         case gpu::AddressSpace::Private:
           return 0;
         }
         llvm_unreachable("unknown address space enum value");
-        return 0;
+        return static_cast<unsigned>(NVVM::NVVMMemorySpace::Generic);
       });
   // Lowering for MMAMatrixType.
   converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
@@ -648,7 +646,7 @@ void mlir::populateGpuToNVVMConversionPatterns(
       GPUFuncOpLoweringOptions{
           /*allocaAddrSpace=*/0,
           /*workgroupAddrSpace=*/
-          static_cast<unsigned>(NVVM::NVVMMemorySpace::kSharedMemorySpace),
+          static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared),
           StringAttr::get(&converter.getContext(),
                           NVVM::NVVMDialect::getKernelFuncAttrName()),
           StringAttr::get(&converter.getContext(),

@@ -1770,18 +1770,9 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
   rewriter.setInsertionPoint(packOp);
 
   Location loc = packOp.getLoc();
-  auto padValue = packOp.getPaddingValue();
-  if (!padValue) {
-    padValue = arith::ConstantOp::create(
-        rewriter, loc,
-        rewriter.getZeroAttr(packOp.getSourceType().getElementType()));
-  }
-  ReifiedRankedShapedTypeDims reifiedReturnShapes;
-  LogicalResult status =
-      cast<ReifyRankedShapedTypeOpInterface>(packOp.getOperation())
-          .reifyResultShapes(rewriter, reifiedReturnShapes);
-  (void)status; // prevent unused variable warning on non-assert builds.
-  assert(succeeded(status) && "failed to reify result shapes");
+  std::optional<Value> padValue = packOp.getPaddingValue()
+                                      ? std::optional(packOp.getPaddingValue())
+                                      : std::nullopt;
 
   // If the input vector sizes are not provided, then the vector sizes are
   // determined by the result tensor shape. In case the vector sizes aren't
@@ -1823,11 +1814,8 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
       rewriter, loc, shapeCastOp.getResult(), destPermutation);
 
   // Create TransferWriteOp.
-  Value dest = tensor::EmptyOp::create(
-      rewriter, loc, reifiedReturnShapes[0],
-      transposeOp.getResult().getType().getElementType());
-  Operation *write =
-      createWriteOrMaskedWrite(rewriter, loc, transposeOp.getResult(), dest);
+  Operation *write = createWriteOrMaskedWrite(
+      rewriter, loc, transposeOp.getResult(), packOp.getDest());
   newResults.push_back(write->getResult(0));
   return success();
 }
@@ -1945,11 +1933,8 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   }
 
   // -- Generate the read operation --
-  auto padValue = arith::ConstantOp::create(
-      rewriter, loc,
-      rewriter.getZeroAttr(unpackOp.getSourceType().getElementType()));
   Value readResult = vector::createReadOrMaskedRead(
-      rewriter, loc, unpackOp.getSource(), readVectorSizes, padValue,
+      rewriter, loc, unpackOp.getSource(), readVectorSizes, std::nullopt,
       useInBoundsInsteadOfMasking, readScalableVectorFlags);
 
   // -- Generate the transpose operation --

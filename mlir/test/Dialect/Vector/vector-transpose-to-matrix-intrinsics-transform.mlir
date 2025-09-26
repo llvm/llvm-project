@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-vector-to-llvm='vector-transpose-lowering=flat' --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --convert-vector-to-llvm='vector-transpose-lowering=llvmintr' --split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @transpose(
 func.func @transpose(%arg0: vector<2x4xf32>) -> vector<4x2xf32> {

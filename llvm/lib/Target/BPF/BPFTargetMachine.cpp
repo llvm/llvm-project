@@ -12,6 +12,7 @@
 
 #include "BPFTargetMachine.h"
 #include "BPF.h"
+#include "BPFTargetLoweringObjectFile.h"
 #include "BPFTargetTransformInfo.h"
 #include "MCTargetDesc/BPFMCAsmInfo.h"
 #include "TargetInfo/BPFTargetInfo.h"
@@ -72,7 +73,7 @@ BPFTargetMachine::BPFTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
+      TLOF(std::make_unique<BPFTargetLoweringObjectFileELF>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this) {
   if (!DisableCheckUnreachable) {
     this->Options.TrapUnreachable = true;

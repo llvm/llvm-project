@@ -29,12 +29,13 @@ struct MinSequenceContainer {
   template <class It>
   explicit TEST_CONSTEXPR_CXX20 MinSequenceContainer(It first, It last) : data_(first, last) {}
   TEST_CONSTEXPR_CXX20 MinSequenceContainer(std::initializer_list<T> il) : data_(il) {}
+#if TEST_STD_VER >= 23
   template <class Range>
-  TEST_CONSTEXPR_CXX20 MinSequenceContainer(std::from_range_t, Range&& rg)
-      : data_(std::from_range, std::forward<Range>(rg)) {}
+  constexpr MinSequenceContainer(std::from_range_t, Range&& rg) : data_(std::from_range, std::forward<Range>(rg)) {}
+#endif
   TEST_CONSTEXPR_CXX20 MinSequenceContainer(size_type n, T value) : data_(n, value) {}
 
-  MinSequenceContainer& operator=(std::initializer_list<T> il) { data_ = il; }
+  TEST_CONSTEXPR_CXX20 MinSequenceContainer& operator=(std::initializer_list<T> il) { data_ = il; }
 
   template <class It>
   TEST_CONSTEXPR_CXX20 void assign(It first, It last) {
@@ -42,10 +43,12 @@ struct MinSequenceContainer {
   }
   TEST_CONSTEXPR_CXX20 void assign(std::initializer_list<T> il) { data_.assign(il); }
   TEST_CONSTEXPR_CXX20 void assign(size_type n, value_type t) { data_.assign(n, t); }
+#if TEST_STD_VER >= 23
   template <class Range>
-  TEST_CONSTEXPR_CXX20 void assign_range(Range&& rg) {
+  constexpr void assign_range(Range&& rg) {
     data_.assign_range(std::forward<Range>(rg));
   }
+#endif
   TEST_CONSTEXPR_CXX20 iterator begin() { return iterator(data_.data()); }
   TEST_CONSTEXPR_CXX20 const_iterator begin() const { return const_iterator(data_.data()); }
   TEST_CONSTEXPR_CXX20 const_iterator cbegin() const { return const_iterator(data_.data()); }
@@ -73,10 +76,12 @@ struct MinSequenceContainer {
     return from_vector_iterator(data_.insert(to_vector_iterator(p), il));
   }
 
+#if TEST_STD_VER >= 23
   template <class Range>
-  TEST_CONSTEXPR_CXX20 iterator insert_range(const_iterator p, Range&& rg) {
+  constexpr iterator insert_range(const_iterator p, Range&& rg) {
     return from_vector_iterator(data_.insert_range(to_vector_iterator(p), std::forward<Range>(rg)));
   }
+#endif
 
   TEST_CONSTEXPR_CXX20 iterator erase(const_iterator first, const_iterator last) {
     return from_vector_iterator(data_.erase(to_vector_iterator(first), to_vector_iterator(last)));

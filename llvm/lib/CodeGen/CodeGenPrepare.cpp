@@ -583,23 +583,23 @@ bool CodeGenPrepare::_run(Function &F) {
   // if requested.
   if (BBSectionsGuidedSectionPrefix && BBSectionsProfileReader &&
       BBSectionsProfileReader->isFunctionHot(F.getName())) {
-    F.setSectionPrefix("hot");
+    (void)F.setSectionPrefix("hot");
   } else if (ProfileGuidedSectionPrefix) {
     // The hot attribute overwrites profile count based hotness while profile
     // counts based hotness overwrite the cold attribute.
     // This is a conservative behabvior.
     if (F.hasFnAttribute(Attribute::Hot) ||
         PSI->isFunctionHotInCallGraph(&F, *BFI))
-      F.setSectionPrefix("hot");
+      (void)F.setSectionPrefix("hot");
     // If PSI shows this function is not hot, we will placed the function
     // into unlikely section if (1) PSI shows this is a cold function, or
     // (2) the function has a attribute of cold.
     else if (PSI->isFunctionColdInCallGraph(&F, *BFI) ||
              F.hasFnAttribute(Attribute::Cold))
-      F.setSectionPrefix("unlikely");
+      (void)F.setSectionPrefix("unlikely");
     else if (ProfileUnknownInSpecialSection && PSI->hasPartialSampleProfile() &&
              PSI->isFunctionHotnessUnknown(F))
-      F.setSectionPrefix("unknown");
+      (void)F.setSectionPrefix("unknown");
   }
 
   /// This optimization identifies DIV instructions that can be
@@ -1747,6 +1747,12 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
   if (!TLI->shouldFormOverflowOp(ISD::USUBO,
                                  TLI->getValueType(*DL, Sub->getType()),
                                  Sub->hasNUsesOrMore(1)))
+    return false;
+
+  // We don't want to move around uses of condition values this late, so we
+  // check if it is legal to create the call to the intrinsic in the basic
+  // block containing the icmp.
+  if (Sub->getParent() != Cmp->getParent() && !Sub->hasOneUse())
     return false;
 
   if (!replaceMathCmpWithIntrinsic(Sub, Sub->getOperand(0), Sub->getOperand(1),
@@ -5593,6 +5599,19 @@ static bool FindAllMemoryUses(
       if (U.getOperandNo() != AtomicCmpXchgInst::getPointerOperandIndex())
         return true; // Storing addr, not into addr.
       MemoryUses.push_back({&U, CmpX->getCompareOperand()->getType()});
+      continue;
+    }
+
+    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(UserI)) {
+      SmallVector<Value *, 2> PtrOps;
+      Type *AccessTy;
+      if (!TLI.getAddrModeArguments(II, PtrOps, AccessTy))
+        return true;
+
+      if (!find(PtrOps, U.get()))
+        return true;
+
+      MemoryUses.push_back({&U, AccessTy});
       continue;
     }
 
