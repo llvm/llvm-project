@@ -48,7 +48,7 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
 
   // Get anti-hints
   SmallVector<MCPhysReg, 16> AntiHintedPhysRegs;
-  MRI.getPhysRegAntiHints(VirtReg, AntiHintedPhysRegs, &VRM);
+  MRI.getPhysRegAntiHints(VirtReg, AntiHintedPhysRegs, VRM);
 
   LLVM_DEBUG({
     if (!AntiHintedPhysRegs.empty()) {
@@ -84,29 +84,34 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
 
 void AllocationOrder::applyAntiHints(ArrayRef<MCPhysReg> AntiHintedPhysRegs,
                                      const TargetRegisterInfo *TRI) {
+  // Helper to check if a register overlaps with any anti-hint
+  auto isAntiHinted = [&](MCPhysReg Reg) {
+    return std::any_of(
+        AntiHintedPhysRegs.begin(), AntiHintedPhysRegs.end(),
+        [&](MCPhysReg AntiHint) { return TRI->regsOverlap(Reg, AntiHint); });
+  };
+
   // Create filtered order
   FilteredOrderStorage.clear();
-  FilteredOrderStorage.reserve(Order.size());
+  FilteredOrderStorage.assign(Order.begin(), Order.end());
 
-  // Add non-anti-hinted registers first
-  for (MCPhysReg PhysReg : Order) {
-    if (!is_contained(AntiHintedPhysRegs, PhysReg)) {
-      FilteredOrderStorage.push_back(PhysReg);
-    }
-  }
-
-  // Add anti-hinted registers at the end as last resort
-  for (MCPhysReg PhysReg : Order) {
-    if (is_contained(AntiHintedPhysRegs, PhysReg)) {
-      FilteredOrderStorage.push_back(PhysReg);
-    }
-  }
+  // Partition: non-anti-hinted registers go first
+  auto PartitionPoint = std::stable_partition(
+      FilteredOrderStorage.begin(), FilteredOrderStorage.end(),
+      [&](MCPhysReg Reg) { return !isAntiHinted(Reg); });
 
   // Update Order
   Order = FilteredOrderStorage;
 
   LLVM_DEBUG({
-    dbgs() << "moved " << AntiHintedPhysRegs.size()
-           << " anti-hinted registers to end of allocation order\n";
+    size_t NonAntiHintedCount =
+        std::distance(FilteredOrderStorage.begin(), PartitionPoint);
+    size_t AntiHintedCount =
+        std::distance(PartitionPoint, FilteredOrderStorage.end());
+    dbgs() << "    Added " << NonAntiHintedCount
+           << " non-anti-hinted registers first\n"
+           << "    Added " << AntiHintedCount
+           << " anti-hinted registers at the end\n"
+           << "  Anti-hint filtering complete\n";
   });
 }
