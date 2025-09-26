@@ -2795,33 +2795,28 @@ VPExpressionRecipe::VPExpressionRecipe(
   // the expression. The original operands are added as operands of the
   // VPExpressionRecipe itself.
 
-  // This map caches the temporary placeholders so duplicates aren't created in
-  // the case that recipes share operands.
   SmallMapVector<VPValue *, VPValue *, 4> OperandPlaceholders;
-
   for (auto *R : ExpressionRecipes) {
     for (const auto &[Idx, Op] : enumerate(R->operands())) {
       auto *Def = Op->getDefiningRecipe();
       if (Def && ExpressionRecipesAsSetOfUsers.contains(Def))
         continue;
       addOperand(Op);
-      if (OperandPlaceholders.find(Op) == OperandPlaceholders.end())
-        OperandPlaceholders[Op] = new VPValue();
-      LiveInPlaceholders.push_back(OperandPlaceholders[Op]);
+      VPValue *Tmp = new VPValue();
+      OperandPlaceholders[Op] = Tmp;
+      LiveInPlaceholders.push_back(Tmp);
     }
   }
 
-  for (auto *R : ExpressionRecipes) {
-    for (const auto &[Idx, Op] : enumerate(R->operands())) {
-      auto *Entry = OperandPlaceholders.find(Op);
-      if (Entry != OperandPlaceholders.end())
-        R->setOperand(Idx, Entry->second);
-    }
-  }
+  for (auto *R : ExpressionRecipes)
+    for (auto &Entry : OperandPlaceholders)
+      R->replaceUsesOfWith(Entry.first, Entry.second);
 }
 
 void VPExpressionRecipe::decompose() {
   for (auto *R : ExpressionRecipes)
+    // Since the list could contain duplicates, make sure the recipe hasn't
+    // already been inserted.
     if (!R->getParent())
       R->insertBefore(this);
 
