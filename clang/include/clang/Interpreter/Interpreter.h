@@ -1,4 +1,5 @@
 //===--- Interpreter.h - Incremental Compilation and Execution---*- C++ -*-===//
+
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,12 +20,15 @@
 #include "clang/Interpreter/Value.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -32,6 +36,7 @@ namespace orc {
 class LLJIT;
 class LLJITBuilder;
 class ThreadSafeContext;
+class JITTargetMachineBuilder;
 } // namespace orc
 } // namespace llvm
 
@@ -132,18 +137,26 @@ public:
     /// Representing the slab allocation size for memory management in kb.
     unsigned SlabAllocateSize = 0;
     /// Path to the ORC runtime library.
-    std::string OrcRuntimePath = "";
+    std::optional<std::string> OrcRuntimePath;
     /// PID of the out-of-process JIT executor.
     uint32_t ExecutorPID = 0;
     /// Custom lambda to be executed inside child process/executor
     std::function<void()> CustomizeFork = nullptr;
-    /// An optional code model to provide to the JITTargetMachineBuilder
-    std::optional<llvm::CodeModel::Model> CM = std::nullopt;
+    /// Factory function for creating LLJITBuilder instances.
+    /// This allows clients to customize JIT builder creation while still
+    /// providing sensible defaults.
+    std::function<llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>(
+        const JITConfig &)>
+        MakeJITBuilder = makeDefaultJITBuilder;
 
     JITConfig()
         : IsOutOfProcess(false), OOPExecutor(""), OOPExecutorConnect(""),
-          UseSharedMemory(false), SlabAllocateSize(0), OrcRuntimePath(""),
-          ExecutorPID(0), CustomizeFork(nullptr), CM(std::nullopt) {}
+          UseSharedMemory(false), SlabAllocateSize(0), OrcRuntimePath(),
+          ExecutorPID(0) {}
+
+    /// Default JIT builder factory function
+    static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
+    makeDefaultJITBuilder(const JITConfig &Config);
   };
 
 protected:
