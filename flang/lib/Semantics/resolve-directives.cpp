@@ -3032,7 +3032,7 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
             "List items must be declared in the same scoping unit in which the %s directive appears"_err_en_US,
             parser::ToUpperCaseLetters(
                 llvm::omp::getOpenMPDirectiveName(directive, version)));
-        }
+      }
     }
     if (ompFlag == Symbol::Flag::OmpReduction) {
       // Using variables inside of a namelist in OpenMP reductions
