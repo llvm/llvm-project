@@ -251,8 +251,15 @@ function (add_flangrt_library name)
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
         )
     elseif (APPLE)
+      # Clang on Darwin enables non-POSIX extensions by default.
+      # This causes some macros to leak, such as HUGE from <math.h>, which
+      # causes some conflicts with Flang symbols (but not with Flang-RT, for
+      # now).
+      # It also causes some Flang-RT extensions to be disabled, such as fdate,
+      # that checks for _POSIX_C_SOURCE.
+      # Setting _POSIX_C_SOURCE avoids these issues.
       target_compile_options(${tgtname} PRIVATE
-          $<$<COMPILE_LANGUAGE:CXX>:${DARWIN_osx_BUILTIN_MIN_VER_FLAG}>
+          $<$<COMPILE_LANGUAGE:CXX>:${DARWIN_osx_BUILTIN_MIN_VER_FLAG} -D_POSIX_C_SOURCE=200809>
         )
     endif ()
 
