@@ -34,6 +34,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -3567,7 +3568,8 @@ void SparcTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 Instruction *SparcTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
                                                    AtomicOrdering Ord) const {
-  bool HasStoreSemantics = isa<AtomicRMWInst>(Inst) || isa<StoreInst>(Inst);
+  bool HasStoreSemantics =
+      isa<AtomicCmpXchgInst, AtomicRMWInst, StoreInst>(Inst);
   if (HasStoreSemantics && isReleaseOrStronger(Ord))
     return Builder.CreateFence(AtomicOrdering::Release);
   return nullptr;
@@ -3578,7 +3580,7 @@ Instruction *SparcTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     AtomicOrdering Ord) const {
   // V8 loads already come with implicit acquire barrier so there's no need to
   // emit it again.
-  bool HasLoadSemantics = isa<AtomicRMWInst>(Inst) || isa<LoadInst>(Inst);
+  bool HasLoadSemantics = isa<AtomicCmpXchgInst, AtomicRMWInst, LoadInst>(Inst);
   if (Subtarget->isV9() && HasLoadSemantics && isAcquireOrStronger(Ord))
     return Builder.CreateFence(AtomicOrdering::Acquire);
 

@@ -281,3 +281,166 @@ define i32 @rmw_sc(ptr %0, i32 %1) nounwind {
   %3 = atomicrmw xchg ptr %0, i32 %1 seq_cst, align 4
   ret i32 %3
 }
+
+define i32 @cas_acq(ptr %0, i32 %1, i32 %2) nounwind {
+; SPARC32-LABEL: cas_acq:
+; SPARC32:       ! %bb.0:
+; SPARC32-NEXT:    save %sp, -96, %sp
+; SPARC32-NEXT:    mov %i2, %o2
+; SPARC32-NEXT:    mov %i0, %o0
+; SPARC32-NEXT:    st %i1, [%fp+-4]
+; SPARC32-NEXT:    add %fp, -4, %o1
+; SPARC32-NEXT:    mov 2, %o3
+; SPARC32-NEXT:    call __atomic_compare_exchange_4
+; SPARC32-NEXT:    mov %o3, %o4
+; SPARC32-NEXT:    ld [%fp+-4], %i0
+; SPARC32-NEXT:    ret
+; SPARC32-NEXT:    restore
+;
+; SPARC32-LEON4-LABEL: cas_acq:
+; SPARC32-LEON4:       ! %bb.0:
+; SPARC32-LEON4-NEXT:    casa [%o0] 10, %o1, %o2
+; SPARC32-LEON4-NEXT:    retl
+; SPARC32-LEON4-NEXT:    mov %o2, %o0
+;
+; SPARC32-V9-LABEL: cas_acq:
+; SPARC32-V9:       ! %bb.0:
+; SPARC32-V9-NEXT:    cas [%o0], %o1, %o2
+; SPARC32-V9-NEXT:    membar #LoadLoad | #LoadStore
+; SPARC32-V9-NEXT:    retl
+; SPARC32-V9-NEXT:    mov %o2, %o0
+;
+; SPARC64-LABEL: cas_acq:
+; SPARC64:       ! %bb.0:
+; SPARC64-NEXT:    cas [%o0], %o1, %o2
+; SPARC64-NEXT:    membar #LoadLoad | #LoadStore
+; SPARC64-NEXT:    retl
+; SPARC64-NEXT:    mov %o2, %o0
+  %4 = cmpxchg ptr %0, i32 %1, i32 %2 acquire acquire, align 4
+  %5 = extractvalue { i32, i1 } %4, 0
+  ret i32 %5
+}
+
+define i32 @cas_rel(ptr %0, i32 %1, i32 %2) nounwind {
+; SPARC32-LABEL: cas_rel:
+; SPARC32:       ! %bb.0:
+; SPARC32-NEXT:    save %sp, -96, %sp
+; SPARC32-NEXT:    mov %i2, %o2
+; SPARC32-NEXT:    mov %i0, %o0
+; SPARC32-NEXT:    st %i1, [%fp+-4]
+; SPARC32-NEXT:    add %fp, -4, %o1
+; SPARC32-NEXT:    mov 3, %o3
+; SPARC32-NEXT:    call __atomic_compare_exchange_4
+; SPARC32-NEXT:    mov %g0, %o4
+; SPARC32-NEXT:    ld [%fp+-4], %i0
+; SPARC32-NEXT:    ret
+; SPARC32-NEXT:    restore
+;
+; SPARC32-LEON4-LABEL: cas_rel:
+; SPARC32-LEON4:       ! %bb.0:
+; SPARC32-LEON4-NEXT:    stbar
+; SPARC32-LEON4-NEXT:    casa [%o0] 10, %o1, %o2
+; SPARC32-LEON4-NEXT:    retl
+; SPARC32-LEON4-NEXT:    mov %o2, %o0
+;
+; SPARC32-V9-LABEL: cas_rel:
+; SPARC32-V9:       ! %bb.0:
+; SPARC32-V9-NEXT:    membar #LoadStore | #StoreStore
+; SPARC32-V9-NEXT:    cas [%o0], %o1, %o2
+; SPARC32-V9-NEXT:    retl
+; SPARC32-V9-NEXT:    mov %o2, %o0
+;
+; SPARC64-LABEL: cas_rel:
+; SPARC64:       ! %bb.0:
+; SPARC64-NEXT:    membar #LoadStore | #StoreStore
+; SPARC64-NEXT:    cas [%o0], %o1, %o2
+; SPARC64-NEXT:    retl
+; SPARC64-NEXT:    mov %o2, %o0
+  %4 = cmpxchg ptr %0, i32 %1, i32 %2 release monotonic, align 4
+  %5 = extractvalue { i32, i1 } %4, 0
+  ret i32 %5
+}
+
+define i32 @cas_acq_rel(ptr %0, i32 %1, i32 %2) nounwind {
+; SPARC32-LABEL: cas_acq_rel:
+; SPARC32:       ! %bb.0:
+; SPARC32-NEXT:    save %sp, -96, %sp
+; SPARC32-NEXT:    mov %i2, %o2
+; SPARC32-NEXT:    mov %i0, %o0
+; SPARC32-NEXT:    st %i1, [%fp+-4]
+; SPARC32-NEXT:    add %fp, -4, %o1
+; SPARC32-NEXT:    mov 4, %o3
+; SPARC32-NEXT:    call __atomic_compare_exchange_4
+; SPARC32-NEXT:    mov 2, %o4
+; SPARC32-NEXT:    ld [%fp+-4], %i0
+; SPARC32-NEXT:    ret
+; SPARC32-NEXT:    restore
+;
+; SPARC32-LEON4-LABEL: cas_acq_rel:
+; SPARC32-LEON4:       ! %bb.0:
+; SPARC32-LEON4-NEXT:    stbar
+; SPARC32-LEON4-NEXT:    casa [%o0] 10, %o1, %o2
+; SPARC32-LEON4-NEXT:    retl
+; SPARC32-LEON4-NEXT:    mov %o2, %o0
+;
+; SPARC32-V9-LABEL: cas_acq_rel:
+; SPARC32-V9:       ! %bb.0:
+; SPARC32-V9-NEXT:    membar #LoadStore | #StoreStore
+; SPARC32-V9-NEXT:    cas [%o0], %o1, %o2
+; SPARC32-V9-NEXT:    membar #LoadLoad | #LoadStore
+; SPARC32-V9-NEXT:    retl
+; SPARC32-V9-NEXT:    mov %o2, %o0
+;
+; SPARC64-LABEL: cas_acq_rel:
+; SPARC64:       ! %bb.0:
+; SPARC64-NEXT:    membar #LoadStore | #StoreStore
+; SPARC64-NEXT:    cas [%o0], %o1, %o2
+; SPARC64-NEXT:    membar #LoadLoad | #LoadStore
+; SPARC64-NEXT:    retl
+; SPARC64-NEXT:    mov %o2, %o0
+  %4 = cmpxchg ptr %0, i32 %1, i32 %2 acq_rel acquire, align 4
+  %5 = extractvalue { i32, i1 } %4, 0
+  ret i32 %5
+}
+
+define i32 @cas_sc(ptr %0, i32 %1, i32 %2) nounwind {
+; SPARC32-LABEL: cas_sc:
+; SPARC32:       ! %bb.0:
+; SPARC32-NEXT:    save %sp, -96, %sp
+; SPARC32-NEXT:    mov %i2, %o2
+; SPARC32-NEXT:    mov %i0, %o0
+; SPARC32-NEXT:    st %i1, [%fp+-4]
+; SPARC32-NEXT:    add %fp, -4, %o1
+; SPARC32-NEXT:    mov 5, %o3
+; SPARC32-NEXT:    call __atomic_compare_exchange_4
+; SPARC32-NEXT:    mov %o3, %o4
+; SPARC32-NEXT:    ld [%fp+-4], %i0
+; SPARC32-NEXT:    ret
+; SPARC32-NEXT:    restore
+;
+; SPARC32-LEON4-LABEL: cas_sc:
+; SPARC32-LEON4:       ! %bb.0:
+; SPARC32-LEON4-NEXT:    stbar
+; SPARC32-LEON4-NEXT:    casa [%o0] 10, %o1, %o2
+; SPARC32-LEON4-NEXT:    retl
+; SPARC32-LEON4-NEXT:    mov %o2, %o0
+;
+; SPARC32-V9-LABEL: cas_sc:
+; SPARC32-V9:       ! %bb.0:
+; SPARC32-V9-NEXT:    membar #LoadStore | #StoreStore
+; SPARC32-V9-NEXT:    cas [%o0], %o1, %o2
+; SPARC32-V9-NEXT:    membar #LoadLoad | #LoadStore
+; SPARC32-V9-NEXT:    retl
+; SPARC32-V9-NEXT:    mov %o2, %o0
+;
+; SPARC64-LABEL: cas_sc:
+; SPARC64:       ! %bb.0:
+; SPARC64-NEXT:    membar #LoadStore | #StoreStore
+; SPARC64-NEXT:    cas [%o0], %o1, %o2
+; SPARC64-NEXT:    membar #LoadLoad | #LoadStore
+; SPARC64-NEXT:    retl
+; SPARC64-NEXT:    mov %o2, %o0
+  %4 = cmpxchg ptr %0, i32 %1, i32 %2 seq_cst seq_cst, align 4
+  %5 = extractvalue { i32, i1 } %4, 0
+  ret i32 %5
+}
