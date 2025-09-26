@@ -535,6 +535,7 @@ private:
   void visitDIAssignIDMetadata(Instruction &I, MDNode *MD);
   void visitMMRAMetadata(Instruction &I, MDNode *MD);
   void visitAnnotationMetadata(MDNode *Annotation);
+  void visitAllocTokenMetadata(Instruction &I, MDNode *MD);
   void visitAliasScopeMetadata(const MDNode *MD);
   void visitAliasScopeListMetadata(const MDNode *MD);
   void visitAccessGroupMetadata(const MDNode *MD);
@@ -5332,6 +5333,14 @@ void Verifier::visitAccessGroupMetadata(const MDNode *MD) {
   }
 }
 
+void Verifier::visitAllocTokenMetadata(Instruction &I, MDNode *MD) {
+  Check(isa<CallBase>(I), "!alloc_token should only exist on calls", &I);
+  Check(MD->getNumOperands() == 2, "!alloc_token must have 2 operands", MD);
+  Check(isa<MDString>(MD->getOperand(0)), "expected string", MD);
+  Check(mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(1)),
+        "expected integer constant", MD);
+}
+
 /// verifyInstruction - Verify that an instruction is well formed.
 ///
 void Verifier::visitInstruction(Instruction &I) {
@@ -5558,6 +5567,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *Annotation = I.getMetadata(LLVMContext::MD_annotation))
     visitAnnotationMetadata(Annotation);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_alloc_token))
+    visitAllocTokenMetadata(I, MD);
 
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);

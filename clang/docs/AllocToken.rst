@@ -70,7 +70,7 @@ example:
     // Instrumented:
     ptr = __alloc_token_malloc(size, <token id>);
 
-In addition, it is typically recommended to configure the following:
+The following command-line options affect generated token IDs:
 
 * ``-falloc-token-max=<N>``
     Configures the maximum number of tokens. No max by default (tokens bounded
