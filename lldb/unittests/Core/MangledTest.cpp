@@ -114,6 +114,23 @@ TEST(MangledTest, SameForInvalidDLangPrefixedName) {
   EXPECT_STREQ("_DDD", the_demangled.GetCString());
 }
 
+TEST(MangledTest, ResultForValidMingw32Name) {
+  ConstString mangled_name("__Z7recursei");
+  Mangled the_mangled(mangled_name);
+  ConstString the_demangled = the_mangled.GetDemangledName();
+
+  ConstString expected_result("recurse(int)");
+  EXPECT_STREQ(expected_result.GetCString(), the_demangled.GetCString());
+}
+
+TEST(MangledTest, EmptyForInvalidMingw32Name) {
+  ConstString mangled_name("__Zzrecursei");
+  Mangled the_mangled(mangled_name);
+  ConstString the_demangled = the_mangled.GetDemangledName();
+
+  EXPECT_STREQ("", the_demangled.GetCString());
+}
+
 TEST(MangledTest, RecognizeSwiftMangledNames) {
   llvm::StringRef valid_swift_mangled_names[] = {
       "_TtC4main7MyClass",   // Mangled objc class name
