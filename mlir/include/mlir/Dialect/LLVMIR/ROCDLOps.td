@@ -569,7 +569,7 @@ def ROCDL_MakeBufferRsrcOp :
   ROCDL_IntrOp<"make.buffer.rsrc", [0], [0], [Pure], 1>,
   Arguments<(ins LLVM_AnyPointer:$base,
                  I16:$stride,
-                 I32:$numRecords,
+                 I64:$numRecords,
                  I32:$flags)> {
   let results = (outs LLVM_AnyPointer:$res);
   let assemblyFormat = "operands attr-dict `:` type($base) `to` type($res)";
