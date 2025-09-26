@@ -16,7 +16,6 @@
 #include <__algorithm/min.h>
 #include <__algorithm/move.h>
 #include <__algorithm/move_backward.h>
-#include <__algorithm/ranges_copy_n.h>
 #include <__algorithm/rotate.h>
 #include <__assert>
 #include <__config>
@@ -628,8 +627,7 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __assign_with_size(_Iterator __first, _Sentinel __last, difference_type __n);
 
-  template <class _Iterator,
-            __enable_if_t<!is_same<decltype(*std::declval<_Iterator&>())&&, value_type&&>::value, int> = 0>
+  template <class _Iterator, __enable_if_t<!is_same<__iter_value_t<_Iterator>, value_type>::value, int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __insert_assign_n_unchecked(_Iterator __first, difference_type __n, pointer __position) {
     for (pointer __end_position = __position + __n; __position != __end_position; ++__position, (void)++__first) {
@@ -638,18 +636,10 @@ private:
     }
   }
 
-  template <class _Iterator,
-            __enable_if_t<is_same<decltype(*std::declval<_Iterator&>())&&, value_type&&>::value, int> = 0>
+  template <class _Iterator, __enable_if_t<is_same<__iter_value_t<_Iterator>, value_type>::value, int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __insert_assign_n_unchecked(_Iterator __first, difference_type __n, pointer __position) {
-#if _LIBCPP_STD_VER >= 23
-    if constexpr (!forward_iterator<_Iterator>) { // Handles input-only sized ranges for insert_range
-      ranges::copy_n(std::move(__first), __n, __position);
-    } else
-#endif
-    {
-      std::copy_n(__first, __n, __position);
-    }
+    std::__copy_n(std::move(__first), __n, __position);
   }
 
   template <class _InputIterator, class _Sentinel>
@@ -1083,14 +1073,8 @@ vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel __last,
   size_type __new_size = static_cast<size_type>(__n);
   if (__new_size <= capacity()) {
     if (__new_size > size()) {
-#if _LIBCPP_STD_VER >= 23
-      auto __mid = ranges::copy_n(std::move(__first), size(), this->__begin_).in;
+      auto __mid = std::__copy_n(std::move(__first), size(), this->__begin_).first;
       __construct_at_end(std::move(__mid), std::move(__last), __new_size - size());
-#else
-      _Iterator __mid = std::next(__first, size());
-      std::copy(__first, __mid, this->__begin_);
-      __construct_at_end(__mid, __last, __new_size - size());
-#endif
     } else {
       pointer __m = std::__copy(std::move(__first), __last, this->__begin_).second;
       this->__destruct_at_end(__m);
