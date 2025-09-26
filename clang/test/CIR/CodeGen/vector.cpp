@@ -1364,3 +1364,29 @@ void logical_not() {
 // OGCG: %[[RESULT:.*]] = icmp eq <4 x i32> %[[TMP_A]], zeroinitializer
 // OGCG: %[[RESULT_VI4:.*]] = sext <4 x i1> %[[RESULT]] to <4 x i32>
 // OGCG: store <4 x i32> %[[RESULT_VI4]], ptr %[[B_ADDR]], align 16
+
+void logical_not_float() {
+  vf4 a;
+  vi4 b = !a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["b", init]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
+// CIR: %[[CONST_V0:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.float>
+// CIR: %[[RESULT:.*]] = cir.vec.cmp(eq, %[[TMP_A]], %[[CONST_V0]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x float>, i64 1, align 16
+// LLVM: %[[B_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x float>, ptr %[[A_ADDR]], align 16
+// LLVM: %[[RESULT:.*]] = fcmp oeq <4 x float> %[[TMP_A]], zeroinitializer
+// LLVM: %[[RESULT_VI4:.*]] = sext <4 x i1> %[[RESULT]] to <4 x i32>
+// LLVM: store <4 x i32> %[[RESULT_VI4]], ptr %[[B_ADDR]], align 16
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x float>, align 16
+// OGCG: %[[B_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x float>, ptr %[[A_ADDR]], align 16
+// OGCG: %[[RESULT:.*]] = fcmp oeq <4 x float> %[[TMP_A]], zeroinitializer
+// OGCG: %[[RESULT_VI4:.*]] = sext <4 x i1> %[[RESULT]] to <4 x i32>
+// OGCG: store <4 x i32> %[[RESULT_VI4]], ptr %[[B_ADDR]], align 16
