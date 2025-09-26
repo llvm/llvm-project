@@ -154,7 +154,7 @@ std::error_code ModuleDependencyCollector::copyToRoot(StringRef Src,
   } else {
     // When collecting entries from input vfsoverlays, copy the external
     // contents into the cache but still map from the source.
-    if (!fs::exists(Dst))
+    if (!Canonicalizer.getFileSystem().exists(Dst))
       return std::error_code();
     path::append(CacheDst, Dst);
     Paths.CopyFrom = Dst;
