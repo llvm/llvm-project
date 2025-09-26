@@ -369,16 +369,16 @@ LLVM_ABI bool setLoopEstimatedTripCount(
 /// - An unknown probability if the implementation is unable to handle the loop
 ///   form of \p L (e.g., \p L must have a latch block that controls the loop
 ///   exit).
-/// - Else, the estimated probability that, at the end of any iteration, the
-///   latch of \p L will start another iteration.  The result \c P is such that
-///   `0 <= P <= 1`, and `1 - P` is the probability of exiting the loop.
+/// - The probability \c P that, at the end of any iteration, the latch of \p L
+///   will start another iteration such that `1 - P` is the probability of
+///   exiting the loop.
 BranchProbability getLoopProbability(Loop *L);
 
 /// Set branch weight metadata for the latch of \p L to indicate that, at the
-/// end of any iteration, its estimated probability of starting another
-/// iteration is \p P.  Return false if the implementation is unable to handle
-/// the loop form of \p L (e.g., \p L must have a latch block that controls the
-/// loop exit).  Otherwise, return true.
+/// end of any iteration, \p P and `1 - P` are the probabilities of starting
+/// another iteration and exiting the loop, respectively.  Return false if the
+/// implementation is unable to handle the loop form of \p L (e.g., \p L must
+/// have a latch block that controls the loop exit).  Otherwise, return true.
 bool setLoopProbability(Loop *L, BranchProbability P);
 
 /// Based on branch weight metadata, return either:
