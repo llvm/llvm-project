@@ -267,6 +267,22 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // operands' VLs.
   bit ReadsPastVL = 0;
   let TSFlags{26} = ReadsPastVL;
+
+  // 0 -> Don't care about altfmt bit in VTYPE.
+  // 1 -> Is not altfmt.
+  // 2 -> Is altfmt(BF16).
+  bits<2> AltFmtType = 0;
+  let TSFlags{28-27} = AltFmtType;
+
+  // XSfmmbase
+  bit HasTWidenOp = 0;
+  let TSFlags{29} = HasTWidenOp;
+
+  bit HasTmOp = 0;
+  let TSFlags{30} = HasTmOp;
+
+  bit HasTkOp = 0;
+  let TSFlags{31} = HasTkOp;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,

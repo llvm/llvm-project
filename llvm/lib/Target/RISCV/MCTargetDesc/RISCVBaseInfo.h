@@ -142,6 +142,22 @@ enum {
 
   ReadsPastVLShift = DestEEWShift + 2,
   ReadsPastVLMask = 1ULL << ReadsPastVLShift,
+
+  // 0 -> Don't care about altfmt bit in VTYPE.
+  // 1 -> Is not altfmt.
+  // 2 -> Is altfmt(BF16).
+  AltFmtTypeShift = ReadsPastVLShift + 1,
+  AltFmtTypeMask = 3ULL << AltFmtTypeShift,
+
+  // XSfmmbase
+  HasTWidenOpShift = AltFmtTypeShift + 2,
+  HasTWidenOpMask = 1ULL << HasTWidenOpShift,
+
+  HasTMOpShift = HasTWidenOpShift + 1,
+  HasTMOpMask = 1ULL << HasTMOpShift,
+
+  HasTKOpShift = HasTMOpShift + 1,
+  HasTKOpMask = 1ULL << HasTKOpShift,
 };
 
 // Helper functions to read TSFlags.
@@ -183,6 +199,11 @@ static inline bool hasRoundModeOp(uint64_t TSFlags) {
   return TSFlags & HasRoundModeOpMask;
 }
 
+enum class AltFmtType { DontCare, NotAltFmt, AltFmt };
+static inline AltFmtType getAltFmtType(uint64_t TSFlags) {
+  return static_cast<AltFmtType>((TSFlags & AltFmtTypeMask) >> AltFmtTypeShift);
+}
+
 /// \returns true if this instruction uses vxrm
 static inline bool usesVXRM(uint64_t TSFlags) { return TSFlags & UsesVXRMMask; }
 
@@ -204,11 +225,47 @@ static inline bool readsPastVL(uint64_t TSFlags) {
   return TSFlags & ReadsPastVLMask;
 }
 
+// XSfmmbase
+static inline bool hasTWidenOp(uint64_t TSFlags) {
+  return TSFlags & HasTWidenOpMask;
+}
+
+static inline bool hasTMOp(uint64_t TSFlags) { return TSFlags & HasTMOpMask; }
+
+static inline bool hasTKOp(uint64_t TSFlags) { return TSFlags & HasTKOpMask; }
+
+static inline unsigned getTNOpNum(const MCInstrDesc &Desc) {
+  const uint64_t TSFlags = Desc.TSFlags;
+  assert(hasTWidenOp(TSFlags) && hasVLOp(TSFlags));
+  unsigned Offset = 3;
+  if (hasTKOp(TSFlags))
+    Offset = 4;
+  return Desc.getNumOperands() - Offset;
+}
+
+static inline unsigned getTMOpNum(const MCInstrDesc &Desc) {
+  const uint64_t TSFlags = Desc.TSFlags;
+  assert(hasTWidenOp(TSFlags) && hasTMOp(TSFlags));
+  if (hasTKOp(TSFlags))
+    return Desc.getNumOperands() - 5;
+  // vtzero.t
+  return Desc.getNumOperands() - 4;
+}
+
+static inline unsigned getTKOpNum(const MCInstrDesc &Desc) {
+  const uint64_t TSFlags = Desc.TSFlags;
+  assert(hasTWidenOp(TSFlags) && hasTKOp(TSFlags));
+  return Desc.getNumOperands() - 3;
+}
+
 static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
   // This method is only called if we expect to have a VL operand, and all
   // instructions with VL also have SEW.
   assert(hasSEWOp(TSFlags) && hasVLOp(TSFlags));
+  // In Xsfmmbase, TN is an alias for VL, so here we use the same TSFlags bit.
+  if (hasTWidenOp(TSFlags))
+    return getTNOpNum(Desc);
   unsigned Offset = 2;
   if (hasVecPolicyOp(TSFlags))
     Offset = 3;
@@ -226,7 +283,7 @@ static inline unsigned getSEWOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
   assert(hasSEWOp(TSFlags));
   unsigned Offset = 1;
-  if (hasVecPolicyOp(TSFlags))
+  if (hasVecPolicyOp(TSFlags) || hasTWidenOp(TSFlags))
     Offset = 2;
   return Desc.getNumOperands() - Offset;
 }
@@ -242,6 +299,9 @@ static inline int getFRMOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
   if (!hasRoundModeOp(TSFlags) || usesVXRM(TSFlags))
     return -1;
+
+  if (hasTWidenOp(TSFlags) && hasTMOp(TSFlags))
+    return getTMOpNum(Desc) - 1;
 
   // The operand order
   // --------------------------------------
@@ -385,7 +445,9 @@ enum OperandType : unsigned {
   OPERAND_SEW_MASK,
   // Vector rounding mode for VXRM or FRM.
   OPERAND_VEC_RM,
-  OPERAND_LAST_RISCV_IMM = OPERAND_VEC_RM,
+  // Vtype operand for XSfmm extension.
+  OPERAND_XSFMM_VTYPE,
+  OPERAND_LAST_RISCV_IMM = OPERAND_XSFMM_VTYPE,
   // Operand is either a register or uimm5, this is used by V extension pseudo
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.
