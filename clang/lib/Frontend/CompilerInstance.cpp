@@ -390,8 +390,8 @@ void CompilerInstance::createFileManager() {
 // Source Manager
 
 void CompilerInstance::createSourceManager() {
-  assert(Diagnostics && "FileManager needed for creating SourceManager");
-  assert(FileMgr && "DiagnosticsEngine needed for creating SourceManager");
+  assert(Diagnostics && "DiagnosticsEngine needed for creating SourceManager");
+  assert(FileMgr && "FileManager needed for creating SourceManager");
   SourceMgr = llvm::makeIntrusiveRefCnt<SourceManager>(getDiagnostics(),
                                                        getFileManager());
 }
