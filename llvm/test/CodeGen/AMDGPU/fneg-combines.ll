@@ -6721,12 +6721,12 @@ define amdgpu_kernel void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, ptr addrs
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; SI-NEXT:    s_cmp_lg_u32 s0, 0
 ; SI-NEXT:    v_mul_f32_e32 v3, v7, v3
-; SI-NEXT:    s_cbranch_scc0 .LBB106_2
+; SI-NEXT:    s_cbranch_scc0 .LBB105_2
 ; SI-NEXT:  ; %bb.1: ; %endif
 ; SI-NEXT:    flat_store_dword v[0:1], v3
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_endpgm
-; SI-NEXT:  .LBB106_2: ; %if
+; SI-NEXT:  .LBB105_2: ; %if
 ; SI-NEXT:    v_xor_b32_e32 v4, 0x80000000, v3
 ; SI-NEXT:    v_mul_f32_e32 v2, v4, v2
 ; SI-NEXT:    flat_store_dword v[0:1], v2
@@ -6761,12 +6761,12 @@ define amdgpu_kernel void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, ptr addrs
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    s_cmp_lg_u32 s0, 0
 ; VI-NEXT:    v_mul_f32_e32 v3, v7, v3
-; VI-NEXT:    s_cbranch_scc0 .LBB106_2
+; VI-NEXT:    s_cbranch_scc0 .LBB105_2
 ; VI-NEXT:  ; %bb.1: ; %endif
 ; VI-NEXT:    flat_store_dword v[0:1], v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
-; VI-NEXT:  .LBB106_2: ; %if
+; VI-NEXT:  .LBB105_2: ; %if
 ; VI-NEXT:    v_xor_b32_e32 v4, 0x80000000, v3
 ; VI-NEXT:    v_mul_f32_e32 v2, v4, v2
 ; VI-NEXT:    flat_store_dword v[0:1], v2

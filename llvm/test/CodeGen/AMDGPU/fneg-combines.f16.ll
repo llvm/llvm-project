@@ -5128,7 +5128,7 @@ define void @v_fneg_copytoreg_f16(ptr addrspace(1) %out, half %a, half %b, half 
 ; SI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; SI-NEXT:    s_cbranch_execz .LBB82_2
+; SI-NEXT:    s_cbranch_execz .LBB81_2
 ; SI-NEXT:  ; %bb.1: ; %if
 ; SI-NEXT:    v_cvt_f16_f32_e64 v3, -v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
@@ -5138,7 +5138,7 @@ define void @v_fneg_copytoreg_f16(ptr addrspace(1) %out, half %a, half %b, half 
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; SI-NEXT:    flat_store_short v[0:1], v3
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:  .LBB82_2: ; %endif
+; SI-NEXT:  .LBB81_2: ; %endif
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-NEXT:    flat_store_short v[0:1], v2
@@ -5155,12 +5155,12 @@ define void @v_fneg_copytoreg_f16(ptr addrspace(1) %out, half %a, half %b, half 
 ; VI-NEXT:    v_mul_f16_e32 v2, v2, v3
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; VI-NEXT:    s_cbranch_execz .LBB82_2
+; VI-NEXT:    s_cbranch_execz .LBB81_2
 ; VI-NEXT:  ; %bb.1: ; %if
 ; VI-NEXT:    v_mul_f16_e64 v3, -v2, v4
 ; VI-NEXT:    flat_store_short v[0:1], v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:  .LBB82_2: ; %endif
+; VI-NEXT:  .LBB81_2: ; %endif
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -5178,12 +5178,12 @@ define void @v_fneg_copytoreg_f16(ptr addrspace(1) %out, half %a, half %b, half 
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    v_cmpx_eq_u32_e32 0, v5
-; GFX11-NEXT:    s_cbranch_execz .LBB82_2
+; GFX11-NEXT:    s_cbranch_execz .LBB81_2
 ; GFX11-NEXT:  ; %bb.1: ; %if
 ; GFX11-NEXT:    v_mul_f16_e64 v3, -v2, v4
 ; GFX11-NEXT:    global_store_b16 v[0:1], v3, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:  .LBB82_2: ; %endif
+; GFX11-NEXT:  .LBB81_2: ; %endif
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
