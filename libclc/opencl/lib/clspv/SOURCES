@@ -1,6 +1,5 @@
 math/fma.cl
 shared/vstore_half.cl
-subnormal_config.cl
 ../generic/geometric/distance.cl
 ../generic/geometric/length.cl
 ../generic/math/acos.cl
