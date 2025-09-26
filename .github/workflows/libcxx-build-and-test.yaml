@@ -188,13 +188,13 @@ jobs:
       matrix:
         include:
         - config: generic-cxx03
-          os: macos-15
+          os: macos-26
         - config: generic-cxx23
-          os: macos-15
+          os: macos-26
         - config: generic-modules
-          os: macos-15
+          os: macos-26
         - config: apple-configuration
-          os: macos-15
+          os: macos-26
         # TODO: These jobs are intended to test back-deployment (building against ToT libc++ but running against an
         #       older system-provided libc++.dylib). Doing this properly would require building the test suite on a
         #       recent macOS using a recent Clang (hence recent Xcode), and then running the actual test suite on an
@@ -206,16 +206,16 @@ jobs:
         #       macOS versions as a way to avoid rotting that configuration, but it doesn't provide a lot of additional
         #       coverage.
         - config: apple-system
-          os: macos-15
+          os: macos-26
         - config: apple-system-hardened
-          os: macos-15
+          os: macos-26
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
         with:
           # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
-          xcode-version: '16.3'
+          xcode-version: '26.0'
       - uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
       - name: Build and test
         run: |
