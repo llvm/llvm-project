@@ -50,12 +50,10 @@ class NextUseResult {
     using Record = std::pair<LaneBitmask, int64_t>;
     struct CompareByDist {
       bool operator()(const Record &LHS, const Record &RHS) const {
-        if (LHS.first ==
-            RHS.first) // Same LaneBitmask → prefer furthest distance
-          return LHS.second > RHS.second;
+        if (LHS.second != RHS.second)     // Different distances
+          return LHS.second < RHS.second; // Closest first
         return LHS.first.getAsInteger() <
-               RHS.first.getAsInteger(); // Otherwise sort by LaneBitmask so
-                                         // that smaller Mask first
+               RHS.first.getAsInteger(); // Tiebreaker
       }
     };
 
@@ -96,25 +94,48 @@ class NextUseResult {
         SortedRecords &Dists = NextUseMap[VMP.getVReg()];
 
         if (!Dists.contains(R)) {
-          for (auto D : Dists) {
-            if (D.first == R.first) {
-              if (D.second > R.second) {
-                // Change to record with less distance
-                Dists.erase(D);
-                return Dists.insert(R).second;
+          SmallVector<SortedRecords::iterator, 4> ToErase;
+
+          for (auto It = Dists.begin(); It != Dists.end(); ++It) {
+            const Record &D = *It;
+
+            // Check if existing use covers the new use
+            if ((R.first & D.first) == R.first) {
+              // Existing use covers new use
+              if (D.second <= R.second) {
+                // Existing use is closer or equal → reject new use
+                return false;
+              }
+              // Existing use is further → continue (might replace it)
+            }
+
+            // Check if new use covers existing use
+            if ((D.first & R.first) == D.first) {
+              // New use covers existing use
+              if (R.second <= D.second) {
+                // New use is closer → mark existing for removal
+                ToErase.push_back(It);
               } else {
+                // New use is further → reject it
                 return false;
               }
             }
           }
-          // add new record
+
+          // Remove all records that the new use supersedes
+          for (auto It : ToErase) {
+            Dists.erase(It);
+          }
+
+          // Add new record
           return Dists.insert(R).second;
         } else {
-          // record already exists!
+          // Record already exists!
           return false;
         }
-      } else
+      } else {
         return NextUseMap[VMP.getVReg()].insert(R).second;
+      }
     }
 
     void clear(VRegMaskPair VMP) {

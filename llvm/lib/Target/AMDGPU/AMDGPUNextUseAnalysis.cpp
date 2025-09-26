@@ -130,6 +130,23 @@ void NextUseResult::analyze(const MachineFunction &MF) {
                    dbgs() << "\nSucc:";
                    printVregDistances(SuccDist, EntryOff[SuccNum], EdgeWeight));
 
+        // Filter out successor's PHI operands with SourceBlock != MBB
+        // PHI operands are only live on their specific incoming edge
+        for (auto &PHI : Succ->phis()) {
+          // Check each PHI operand pair (value, source block)
+          for (unsigned OpIdx = 1; OpIdx < PHI.getNumOperands(); OpIdx += 2) {
+            const MachineOperand &UseOp = PHI.getOperand(OpIdx);
+            const MachineOperand &BlockOp = PHI.getOperand(OpIdx + 1);
+
+            // Skip if this operand doesn't come from current MBB
+            if (BlockOp.getMBB() != MBB) {
+              VRegMaskPair PhiVMP(UseOp, TRI, MRI);
+              // Remove this PHI operand from the successor distances
+              SuccDist.clear(PhiVMP);
+            }
+          }
+        }
+
         Curr.merge(SuccDist, EntryOff[SuccNum], EdgeWeight);
         LLVM_DEBUG(dbgs() << "\nCurr after merge:"; printVregDistances(Curr));
       }
@@ -139,15 +156,19 @@ void NextUseResult::analyze(const MachineFunction &MF) {
       for (auto &MI : make_range(MBB->rbegin(), MBB->rend())) {
 
         for (auto &MO : MI.operands()) {
-          if (MO.isReg() && MO.getReg().isVirtual()) {
-            VRegMaskPair P(MO, TRI, MRI);
-            if (MO.isUse()) {
-              Curr.insert(P, -(int64_t)Offset);
-              UsedInBlock[MBB->getNumber()].insert(P);
-            } else if (MO.isDef()) {
-              Curr.clear(P);
-              UsedInBlock[MBB->getNumber()].remove(P);
-            }
+
+          // Only process virtual register operands
+          // Undef operands don't represent real uses
+          if (!MO.isReg() || !MO.getReg().isVirtual() || MO.isUndef())
+            continue;
+
+          VRegMaskPair P(MO, TRI, MRI);
+          if (MO.isUse()) {
+            Curr.insert(P, -(int64_t)Offset);
+            UsedInBlock[MBB->getNumber()].insert(P);
+          } else if (MO.isDef()) {
+            Curr.clear(P);
+            UsedInBlock[MBB->getNumber()].remove(P);
           }
         }
         NextUseMap[MBBNum].InstrDist[&MI] = Curr;
@@ -198,7 +219,7 @@ void NextUseResult::getFromSortedRecords(
 
     // Require full coverage: a use contributes only if it covers the queried
     // lanes.
-    if ((UseMask & Mask) == UseMask) {
+    if ((Mask & UseMask) == Mask) {
       // Use materializeForRank for three-tier ranking system
       int64_t Stored = static_cast<int64_t>(P.second);
       D = materializeForRank(Stored, SnapshotOffset);
