@@ -507,8 +507,10 @@ AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
       // external due to config), defer to the corresponding extension hook.
       // By default, it just does `visitCallOperand` for all operands.
       //
-      // If callable is a public function, the signature is immutable.
-      // We need to be conservative and consider all arguments Live.
+      // If callable is a public function, treat it as external.
+      // This is because a public function has potential callers we can't
+      // visit, and thus we need to be conservative and consider all
+      // arguments live.
       OperandRange argOperands = call.getArgOperands();
       MutableArrayRef<OpOperand> argOpOperands =
           operandsToOpOperands(argOperands);
