@@ -67,7 +67,7 @@ class Value;
 class IntrinsicInst;
 class raw_ostream;
 
-enum PredicateType { PT_Branch, PT_Assume, PT_Switch };
+enum PredicateType { PT_Branch, PT_Assume, PT_Switch, PT_PHI };
 
 /// Constraint for a predicate of the form "cmp Pred Op, OtherOp", where Op
 /// is the value the constraint applies to (the bitcast result).
@@ -169,6 +169,19 @@ public:
   static bool classof(const PredicateBase *PB) {
     return PB->Type == PT_Switch;
   }
+};
+
+class PredicatePHI : public PredicateBase {
+public:
+  BasicBlock *PHIBlock;
+  SmallVector<std::pair<BasicBlock *, PredicateBase *>, 4> IncomingPredicates;
+
+  PredicatePHI(Value *Op, BasicBlock *PHIBB)
+      : PredicateBase(PT_PHI, Op, nullptr), PHIBlock(PHIBB) {}
+  PredicatePHI() = delete;
+  static bool classof(const PredicateBase *PB) { return PB->Type == PT_PHI; }
+
+  LLVM_ABI std::optional<PredicateConstraint> getConstraint() const;
 };
 
 /// Encapsulates PredicateInfo, including all data associated with memory
