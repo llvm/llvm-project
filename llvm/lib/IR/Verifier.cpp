@@ -6581,12 +6581,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     }
     break;
   }
-  case Intrinsic::vector_partial_reduce_fadd: {
-    Check(Call.hasAllowReassoc(),
-          "vector_partial_reduce_fadd requires reassociation to be allowed.");
-    // Fall through to perform the same verification checks as for integers.
-    [[fallthrough]];
-  }
   case Intrinsic::vector_partial_reduce_add: {
     VectorType *AccTy = cast<VectorType>(Call.getArgOperand(0)->getType());
     VectorType *VecTy = cast<VectorType>(Call.getArgOperand(1)->getType());
