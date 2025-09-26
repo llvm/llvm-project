@@ -3746,4 +3746,47 @@ def TestOpWithSuccessorRef : TEST_Op<"dummy_op_with_successor_ref"> {
   }];
 }
 
+def CallWithSegmentsOp : TEST_Op<"call_with_segments",
+    [AttrSizedOperandSegments,
+  DeclareOpInterfaceMethods<CallOpInterface>]> {
+  let summary = "test call op with segmented args";
+  let arguments = (ins
+    FlatSymbolRefAttr:$callee,
+    Variadic<AnyType>:$prefix,   // non-arg segment (e.g., 'in')
+    Variadic<AnyType>:$args,     // <-- the call *arguments* segment
+    Variadic<AnyType>:$suffix    // non-arg segment (e.g., 'out')
+  );
+  let results = (outs);
+  let assemblyFormat = [{
+    $callee `(` $prefix `:` type($prefix) `)`
+            `(` $args `:` type($args) `)`
+            `(` $suffix `:` type($suffix) `)` attr-dict
+  }];
+
+  // Provide stub implementations for the ArgAndResultAttrsOpInterface.
+  let extraClassDeclaration = [{
+    ::mlir::ArrayAttr getArgAttrsAttr() { return {}; }
+    ::mlir::ArrayAttr getResAttrsAttr() { return {}; }
+    void setArgAttrsAttr(::mlir::ArrayAttr) {}
+    void setResAttrsAttr(::mlir::ArrayAttr) {}
+    ::mlir::Attribute removeArgAttrsAttr() { return {}; }
+    ::mlir::Attribute removeResAttrsAttr() { return {}; }
+  }];
+
+  let extraClassDefinition = [{
+    ::mlir::CallInterfaceCallable $cppClass::getCallableForCallee() {
+      if (auto sym = (*this)->getAttrOfType<::mlir::SymbolRefAttr>("callee"))
+        return ::mlir::CallInterfaceCallable(sym);
+      return ::mlir::CallInterfaceCallable();
+    }
+    void $cppClass::setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
+      if (auto sym = callee.dyn_cast<::mlir::SymbolRefAttr>())
+        (*this)->setAttr("callee", sym);
+      else
+        (*this)->removeAttr("callee");
+    }
+  }];
+}
+
+
 #endif // TEST_OPS
