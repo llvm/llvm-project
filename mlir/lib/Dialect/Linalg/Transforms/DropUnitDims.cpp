@@ -868,7 +868,9 @@ struct LinalgFoldUnitExtentDimsPass
           RankReductionStrategy::ExtractInsertSlice;
     }
     linalg::populateFoldUnitExtentDimsPatterns(patterns, options);
-    populateMoveInitOperandsToInputPattern(patterns);
+    if (enableMoveInitOperandsToInput) {
+      populateMoveInitOperandsToInputPattern(patterns);
+    }
     (void)applyPatternsGreedily(op, std::move(patterns));
   }
 };
