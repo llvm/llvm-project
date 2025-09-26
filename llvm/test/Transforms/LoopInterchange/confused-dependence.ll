@@ -1,6 +1,6 @@
-; REQUIRES: asserts
-; RUN: opt < %s -passes=loop-interchange -verify-dom-info -verify-loop-info \
-; RUN:     -disable-output -debug 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-interchange -pass-remarks-output=%t \
+; RUN:     -disable-output
+; RUN: FileCheck -input-file %t %s
 
 ;; In the following case, p0 and p1 may alias, so the direction vector must be [* *].
 ;;
@@ -10,9 +10,13 @@
 ;;       p0[4 * i + j] = p1[4 * j + i];
 ;; }
 
-; CHECK:      Dependency matrix before interchange:
-; CHECK-NEXT: * *
-; CHECK-NEXT: Processing InnerLoopId = 1 and OuterLoopId = 0
+; CHECK:      --- !Missed
+; CHECK-NEXT: Pass:            loop-interchange
+; CHECK-NEXT: Name:            Dependence
+; CHECK-NEXT: Function:        may_alias
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          All loops have dependencies in all directions.
+; CHECK-NEXT: ...
 define void @may_alias(ptr %p0, ptr %p1) {
 entry:
   br label %for.i.header
