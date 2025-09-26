@@ -37,6 +37,11 @@ struct MissingFeatures {
   static bool opGlobalDLLImportExport() { return false; }
   static bool opGlobalPartition() { return false; }
   static bool opGlobalUsedOrCompilerUsed() { return false; }
+  static bool opGlobalAnnotations() { return false; }
+  static bool opGlobalDtorLowering() { return false; }
+  static bool opGlobalCtorAttr() { return false; }
+  static bool opGlobalCtorPriority() { return false; }
+  static bool opGlobalCtorList() { return false; }
   static bool setDSOLocal() { return false; }
   static bool setComdat() { return false; }
 
