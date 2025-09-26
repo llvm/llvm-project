@@ -190,11 +190,9 @@ exit:
 
 define i32 @wrapping_known_range(i8 range(i8 0, 6) %arg) {
 ; CHECK-LABEL: @wrapping_known_range(
-; CHECK-NEXT:    switch i8 [[ARG:%.*]], label [[ELSE:%.*]] [
-; CHECK-NEXT:      i8 0, label [[IF:%.*]]
-; CHECK-NEXT:      i8 4, label [[IF]]
-; CHECK-NEXT:      i8 5, label [[IF]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[ARG_OFF:%.*]] = add i8 [[ARG:%.*]], -1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[ARG_OFF]], 3
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[ELSE:%.*]], label [[IF:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[I0:%.*]], [[IF]] ], [ [[I1:%.*]], [[ELSE]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
@@ -222,12 +220,9 @@ else:
 
 define i32 @wrapping_range(i8 %arg) {
 ; CHECK-LABEL: @wrapping_range(
-; CHECK-NEXT:    switch i8 [[ARG:%.*]], label [[ELSE:%.*]] [
-; CHECK-NEXT:      i8 0, label [[IF:%.*]]
-; CHECK-NEXT:      i8 -3, label [[IF]]
-; CHECK-NEXT:      i8 -2, label [[IF]]
-; CHECK-NEXT:      i8 -1, label [[IF]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[ARG_OFF:%.*]] = add i8 [[ARG:%.*]], -1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[ARG_OFF]], -4
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[ELSE:%.*]], label [[IF:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[I0:%.*]], [[IF]] ], [ [[I1:%.*]], [[ELSE]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
