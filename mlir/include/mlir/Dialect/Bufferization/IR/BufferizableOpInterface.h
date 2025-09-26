@@ -272,6 +272,9 @@ struct BufferizationOptions {
   // Produce a MemorySpace attribute from a tensor type
   using DefaultMemorySpaceFn =
       std::function<std::optional<Attribute>(TensorType t)>;
+  /// Construct a MemRefLayoutAttrInterface from a tensor type.
+  using ConstructMemRefLayoutFn =
+      std::function<MemRefLayoutAttrInterface(TensorType t)>;
 
   BufferizationOptions();
 
@@ -363,6 +366,12 @@ struct BufferizationOptions {
   // failure to determine memory space for a tensor type).
   DefaultMemorySpaceFn defaultMemorySpaceFn =
       [](TensorType t) -> std::optional<Attribute> { return Attribute(); };
+
+  /// Construction function used to determine the memref layout based on the
+  /// original tensor type. Can be used to specialize tensor encoding -> memref
+  /// layout conversion. By default, it is unset, making the layout construction
+  /// behavior depend on the place where it is used.
+  ConstructMemRefLayoutFn constructMemRefLayoutFn = nullptr;
 
   /// If set to `true`, the analysis is skipped. A buffer is copied before every
   /// write. This flag cannot be used together with `testAnalysisOnly = true`.
