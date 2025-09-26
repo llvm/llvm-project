@@ -22,8 +22,6 @@
 
 #include "fx_rep.h"
 
-#include <stdio.h>
-
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 
 namespace LIBC_NAMESPACE_DECL {
@@ -255,7 +253,8 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   uint64_t dv = static_cast<uint64_t>(d64 < 0 ? -d64 : d64);
 
   if (d == INT_MIN) {
-    dv = dv - 1; // Two's complement
+    nv <<= 1;
+    dv >>= 1;
   }
 
   uint32_t clz = cpp::countl_zero<uint32_t>(static_cast<uint32_t>(dv)) - 1;

@@ -62,6 +62,8 @@ public:
 
     EXPECT_EQ(func(INT_MIN, 1), FRACT_MIN);
     EXPECT_LT(func(1, INT_MIN) - 0.r, epsilon);
+
+    EXPECT_EQ(func(INT_MIN, INT_MIN), 1.r);
   }
 };
 
