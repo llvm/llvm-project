@@ -78,6 +78,7 @@ public:
   bool liveAtAddress(object::SectionedAddress Addr) const override;
   void print(raw_ostream &OS, const MCRegisterInfo &MRI) const override;
   void dump(raw_ostream &OS) const override;
+  const DWARFLocationExpression &getLocExpr() const { return LocExpr; }
 };
 
 /// Helper class for printing source locations for variables and inlined
@@ -97,11 +98,22 @@ class LiveElementPrinter {
         std::numeric_limits<unsigned>::max();
   };
 
-  // All live elements we know about in the object/image file.
+  // Vector that owns all LiveElement objects for memory management.
   std::vector<std::unique_ptr<LiveElement>> LiveElements;
-
-  // The columns we are currently drawing.
-  IndexedMap<Column> ActiveCols;
+  // Map for fast lookup of live elements by their starting address (LowPC).
+  std::unordered_multimap<uint64_t, LiveElement *> LiveElementsByAddress;
+  // Map for fast lookup of live elements by their ending address (HighPC).
+  std::unordered_multimap<uint64_t, LiveElement *> LiveElementsByEndAddress;
+  // Map from a LiveElement pointer to its index in the LiveElements vector.
+  std::unordered_map<LiveElement *, unsigned> ElementPtrToIndex;
+  // Map from a live element index to column index for efficient lookup.
+  std::unordered_map<unsigned, unsigned> ElementToColumn;
+  // Vector of columns currently used for printing live ranges.
+  std::vector<Column> ActiveCols;
+  // Set of available column indices kept sorted for efficient reuse.
+  std::set<unsigned> FreeCols;
+  // Vector of available column indices that can be reused.
+  std::vector<unsigned> ColumnsToFreeNextCycle;
 
   const MCRegisterInfo &MRI;
   const MCSubtargetInfo &STI;
@@ -122,11 +134,19 @@ class LiveElementPrinter {
   // put live element lines. Pick a less overloaded word.
   unsigned moveToFirstVarColumn(formatted_raw_ostream &OS);
 
-  unsigned findFreeColumn();
+  // Get an existing column for a live element, or find a free one.
+  unsigned getOrCreateColumn(unsigned ElementIdx);
+
+  // Free a column when its element is no longer live.
+  void freeColumn(unsigned ColIdx);
+
+  // Returns the indices of all currently active elements, sorted by their DWARF
+  // discovery order (ElementIdx).
+  std::vector<unsigned> getSortedActiveElementIndices() const;
 
 public:
   LiveElementPrinter(const MCRegisterInfo &MRI, const MCSubtargetInfo &STI)
-      : ActiveCols(Column()), MRI(MRI), STI(STI) {}
+      : MRI(MRI), STI(STI) {}
 
   void dump() const;
 
