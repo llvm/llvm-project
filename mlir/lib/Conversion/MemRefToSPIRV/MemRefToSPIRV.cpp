@@ -512,7 +512,7 @@ calculateMemoryRequirements(Value accessedPtr, bool isNontemporal,
   if (!sizeInBytes.has_value())
     return failure();
 
-  memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
+  memoryAccess |= spirv::MemoryAccess::Aligned;
   auto memAccessAttr = spirv::MemoryAccessAttr::get(ctx, memoryAccess);
   auto alignmentValue = preferredAlignment ? preferredAlignment : *sizeInBytes;
   auto alignment = IntegerAttr::get(IntegerType::get(ctx, 32), alignmentValue);

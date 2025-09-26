@@ -299,8 +299,6 @@ RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
   // The framework doesn't visit operations in dead blocks, so we need to
   // explicitly mark them as dead.
   op->walk([&](Operation *op) {
-    if (op->getNumResults() == 0)
-      return;
     for (auto result : llvm::enumerate(op->getResults())) {
       if (getLiveness(result.value()))
         continue;
