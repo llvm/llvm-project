@@ -624,19 +624,9 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_assumes);
     return false;
   }
-  bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
-    checker_(
-        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_declare_simd);
-    return false;
-  }
   bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
     checker_(
         std::get<parser::Verbatim>(x.t).source, Directive::OMPD_declare_target);
-    return false;
-  }
-  bool Pre(const parser::OmpDeclareVariantDirective &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source,
-        Directive::OMPD_declare_variant);
     return false;
   }
   bool Pre(const parser::OpenMPGroupprivate &x) {
@@ -1361,8 +1351,32 @@ void OmpStructureChecker::Leave(const parser::OpenMPThreadprivate &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPDeclareSimdConstruct &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_declare_simd);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
+
+  const parser::OmpArgumentList &args{x.v.Arguments()};
+  if (args.v.empty()) {
+    return;
+  } else if (args.v.size() > 1) {
+    context_.Say(args.source,
+        "DECLARE_SIMD directive should have at most one argument"_err_en_US);
+    return;
+  }
+
+  const parser::OmpArgument &arg{args.v.front()};
+  if (auto *sym{GetArgumentSymbol(arg)}) {
+    if (!IsProcedure(*sym) && !IsFunction(*sym)) {
+      auto &msg{context_.Say(arg.source,
+          "The name '%s' should refer to a procedure"_err_en_US, sym->name())};
+      if (sym->test(Symbol::Flag::Implicit)) {
+        msg.Attach(arg.source,
+            "The name '%s' has been implicitly declared"_en_US, sym->name());
+      }
+    }
+  } else {
+    context_.Say(arg.source,
+        "The argument to the DECLARE_SIMD directive should be a procedure name"_err_en_US);
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPDeclareSimdConstruct &) {
@@ -1370,9 +1384,50 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareSimdConstruct &) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpDeclareVariantDirective &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(
-      dir.source, llvm::omp::Directive::OMPD_declare_variant);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
+
+  const parser::OmpArgumentList &args{x.v.Arguments()};
+  if (args.v.size() != 1) {
+    context_.Say(args.source,
+        "DECLARE_VARIANT directive should have a single argument"_err_en_US);
+    return;
+  }
+
+  auto InvalidArgument{[&](parser::CharBlock source) {
+    context_.Say(source,
+        "The argument to the DECLARE_VARIANT directive should be [base-name:]variant-name"_err_en_US);
+  }};
+
+  auto CheckSymbol{[&](const Symbol *sym, parser::CharBlock source) {
+    if (sym) {
+      if (!IsProcedure(*sym) && !IsFunction(*sym)) {
+        auto &msg{context_.Say(source,
+            "The name '%s' should refer to a procedure"_err_en_US,
+            sym->name())};
+        if (sym->test(Symbol::Flag::Implicit)) {
+          msg.Attach(source, "The name '%s' has been implicitly declared"_en_US,
+              sym->name());
+        }
+      }
+    } else {
+      InvalidArgument(source);
+    }
+  }};
+
+  const parser::OmpArgument &arg{args.v.front()};
+  common::visit( //
+      common::visitors{
+          [&](const parser::OmpBaseVariantNames &y) {
+            CheckSymbol(GetObjectSymbol(std::get<0>(y.t)), arg.source);
+            CheckSymbol(GetObjectSymbol(std::get<1>(y.t)), arg.source);
+          },
+          [&](const parser::OmpLocator &y) {
+            CheckSymbol(GetArgumentSymbol(arg), arg.source);
+          },
+          [&](auto &&y) { InvalidArgument(arg.source); },
+      },
+      arg.u);
 }
 
 void OmpStructureChecker::Leave(const parser::OmpDeclareVariantDirective &) {
