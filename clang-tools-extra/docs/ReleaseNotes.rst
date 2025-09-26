@@ -203,6 +203,11 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check.
+
+  Detect redundant parentheses.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -264,6 +269,10 @@ Changes in existing checks
   positive when enums or unions from system header files or the ``std``
   namespace are treated as the tag or the data part of a user-defined
   tagged union respectively.
+
+- Improved :doc:`bugprone-throw-keyword-missing
+  <clang-tidy/checks/bugprone/throw-keyword-missing>` check by only considering
+  the canonical types of base classes as written.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting

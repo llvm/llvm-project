@@ -356,7 +356,7 @@ TrieRawHashMapHandle::getOrCreateRoot(MappedFileRegionArena &Alloc) {
     return LazyRoot.takeError();
   if (H->RootTrieOffset.compare_exchange_strong(
           Race, LazyRoot->getOffset().asSubtrie()))
-    return LazyRoot;
+    return *LazyRoot;
 
   // There was a race. Return the other root.
   //

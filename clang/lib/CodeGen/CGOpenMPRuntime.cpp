@@ -6804,7 +6804,7 @@ public:
   /// they were computed by collectAttachPtrExprInfo(), if they are semantically
   /// different.
   struct AttachPtrExprComparator {
-    const MappableExprsHandler *Handler;
+    const MappableExprsHandler *Handler = nullptr;
     // Cache of previous equality comparison results.
     mutable llvm::DenseMap<std::pair<const Expr *, const Expr *>, bool>
         CachedEqualityComparisons;
@@ -6817,8 +6817,8 @@ public:
         return false;
 
       // First, compare by complexity (depth)
-      auto ItLHS = Handler->AttachPtrComponentDepthMap.find(LHS);
-      auto ItRHS = Handler->AttachPtrComponentDepthMap.find(RHS);
+      const auto ItLHS = Handler->AttachPtrComponentDepthMap.find(LHS);
+      const auto ItRHS = Handler->AttachPtrComponentDepthMap.find(RHS);
 
       std::optional<size_t> DepthLHS =
           (ItLHS != Handler->AttachPtrComponentDepthMap.end()) ? ItLHS->second
@@ -6856,7 +6856,7 @@ public:
     /// results, if available, otherwise does a recursive semantic comparison.
     bool areEqual(const Expr *LHS, const Expr *RHS) const {
       // Check cache first for faster lookup
-      auto CachedResultIt = CachedEqualityComparisons.find({LHS, RHS});
+      const auto CachedResultIt = CachedEqualityComparisons.find({LHS, RHS});
       if (CachedResultIt != CachedEqualityComparisons.end())
         return CachedResultIt->second;
 
@@ -7142,7 +7142,7 @@ public:
   const Expr *getAttachPtrExpr(
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components)
       const {
-    auto It = AttachPtrExprMap.find(Components);
+    const auto It = AttachPtrExprMap.find(Components);
     if (It != AttachPtrExprMap.end())
       return It->second;
 
@@ -8478,8 +8478,9 @@ private:
     } else if (auto *ME = dyn_cast<MemberExpr>(PointerExpr)) {
       AttachPtrAddr = CGF.EmitMemberExpr(ME).getAddress();
     } else if (auto *UO = dyn_cast<UnaryOperator>(PointerExpr)) {
-      if (UO->getOpcode() == UO_Deref)
-        AttachPtrAddr = CGF.EmitLValue(UO).getAddress();
+      assert(UO->getOpcode() == UO_Deref &&
+             "Unexpected unary-operator on attach-ptr-expr");
+      AttachPtrAddr = CGF.EmitLValue(UO).getAddress();
     }
     assert(AttachPtrAddr.isValid() &&
            "Failed to get address for attach pointer expression");
@@ -8524,12 +8525,10 @@ private:
 
     // Pointer attachment is needed at map-entering time or for declare
     // mappers.
-    if (!isa<const OMPDeclareMapperDecl *>(CurDir) &&
-        !isOpenMPTargetMapEnteringDirective(
-            cast<const OMPExecutableDirective *>(CurDir)->getDirectiveKind()))
-      return false;
-
-    return true;
+    return isa<const OMPDeclareMapperDecl *>(CurDir) ||
+           isOpenMPTargetMapEnteringDirective(
+               cast<const OMPExecutableDirective *>(CurDir)
+                   ->getDirectiveKind());
   }
 
   /// Computes the attach-ptr expr for \p Components, and updates various maps
