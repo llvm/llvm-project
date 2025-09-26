@@ -44,7 +44,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
   struct IncludeMarker {
-    std::string Replacement;
+    StringRef Replacement;
     StringRef FileName;
     SourceRange ReplacementRange;
     SourceLocation DiagLoc;
