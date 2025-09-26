@@ -8571,8 +8571,12 @@ EVT LoongArchTargetLowering::getSetCCResultType(const DataLayout &DL,
 }
 
 bool LoongArchTargetLowering::hasAndNot(SDValue Y) const {
-  // TODO: Support vectors.
-  return Y.getValueType().isScalarInteger() && !isa<ConstantSDNode>(Y);
+  EVT VT = Y.getValueType();
+
+  if (VT.isVector())
+    return Subtarget.hasExtLSX() && VT.isInteger();
+
+  return VT.isScalarInteger() && !isa<ConstantSDNode>(Y);
 }
 
 bool LoongArchTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
