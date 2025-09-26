@@ -12,6 +12,9 @@ class HashClass {}
 //--- file$with$dollar.td
 class DollarClass {}
 
+//--- file\with\escape.td
+class EscapeClass {}
+
 //--- file with escape\ before spaces.td
 class EscapeBeforeSpacesClass {}
 
@@ -20,12 +23,15 @@ include "normal-file.td"
 include "file with spaces.td"
 include "file#with#hash.td"
 include "file$with$dollar.td"
-include "file with escape\\ before spaces.td" // backslash itself needs escaping
+// backslash itself needs escaping
+include "file\\with\\escape.td"
+include "file with escape\\ before spaces.td"
 
 def Normal : NormalClass;
 def Spaces : SpaceClass;
 def Hash : HashClass;
 def Dollar : DollarClass;
+def Escape : EscapeClass;
 def EscapeBeforeSpaces : EscapeBeforeSpacesClass;
 
 // RUN: llvm-tblgen -I %t -d %t.d -o %t.out %t/main.td
@@ -35,4 +41,5 @@ def EscapeBeforeSpaces : EscapeBeforeSpacesClass;
 // CHECK-DAG: file\ with\ spaces.td
 // CHECK-DAG: file\#with\#hash.td
 // CHECK-DAG: file$$with$$dollar.td
+// CHECK-DAG: file\with\escape.td
 // CHECK-DAG: file\ with\ escape\\\ before\ spaces.td
