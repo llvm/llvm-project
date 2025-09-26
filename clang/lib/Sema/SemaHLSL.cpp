@@ -3090,7 +3090,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_elementwise_isinf: {
+  case Builtin::BI__builtin_hlsl_elementwise_isinf:
+  case Builtin::BI__builtin_hlsl_elementwise_isnan: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
