@@ -20,8 +20,6 @@ using namespace llvm;
 using namespace remarks;
 using namespace llvm::remarkutil;
 
-namespace filter {
-
 static cl::SubCommand FilterSub("filter",
                                 "Filter remarks based on specified criteria.");
 
@@ -80,5 +78,3 @@ static Error tryFilter() {
 }
 
 static CommandRegistration FilterReg(&FilterSub, tryFilter);
-
-} // namespace filter
