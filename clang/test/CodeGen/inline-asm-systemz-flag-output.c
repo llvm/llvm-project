@@ -16,25 +16,10 @@ int test(int x) {
   return cc;
 }
 
-// CHECK-LABEL: define dso_local signext range(i32 0, 4) i32 @test_assume_boolean_flag(
-// CHECK-SAME: i32 noundef signext [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm "ahi $0,42\0A", "=d,={@cc},0"(i32 [[X]]) #[[ATTR2]], !srcloc [[META3:![0-9]+]]
-// CHECK-NEXT:    [[ASMRESULT1:%.*]] = extractvalue { i32, i32 } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[ASMRESULT1]], 4
-// CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP1]])
-// CHECK-NEXT:    ret i32 [[ASMRESULT1]]
-//
-int test_assume_boolean_flag(int x) {
-  int cc;
-  asm ("ahi %[x],42\n" : [x] "+d"(x), "=@cc" (cc));
-  return cc;
-}
-
 // CHECK-LABEL: define dso_local signext range(i32 0, 2) i32 @test_low_high_transformation(
 // CHECK-SAME: i32 noundef signext [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm "ahi $0,42\0A", "=d,={@cc},0"(i32 [[X]]) #[[ATTR2]], !srcloc [[META4:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm "ahi $0,42\0A", "=d,={@cc},0"(i32 [[X]]) #[[ATTR2]], !srcloc [[META3:![0-9]+]]
 // CHECK-NEXT:    [[ASMRESULT1:%.*]] = extractvalue { i32, i32 } [[TMP0]], 1
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[ASMRESULT1]], 4
 // CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP1]])
@@ -52,7 +37,7 @@ int test_low_high_transformation(int x) {
 // CHECK-LABEL: define dso_local signext range(i32 0, 2) i32 @test_equal_high_transformation(
 // CHECK-SAME: i32 noundef signext [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm "ahi $0,42\0A", "=d,={@cc},0"(i32 [[X]]) #[[ATTR2]], !srcloc [[META5:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm "ahi $0,42\0A", "=d,={@cc},0"(i32 [[X]]) #[[ATTR2]], !srcloc [[META4:![0-9]+]]
 // CHECK-NEXT:    [[ASMRESULT1:%.*]] = extractvalue { i32, i32 } [[TMP0]], 1
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[ASMRESULT1]], 4
 // CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP1]])
@@ -67,7 +52,6 @@ int test_equal_high_transformation(int x) {
 }
 //.
 // CHECK: [[META2]] = !{i64 788}
-// CHECK: [[META3]] = !{i64 1483}
-// CHECK: [[META4]] = !{i64 2365}
-// CHECK: [[META5]] = !{i64 3200}
+// CHECK: [[META3]] = !{i64 1670}
+// CHECK: [[META4]] = !{i64 2505}
 //.
