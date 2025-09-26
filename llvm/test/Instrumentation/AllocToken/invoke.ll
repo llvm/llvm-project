@@ -2,7 +2,6 @@
 ; RUN: opt < %s -passes=inferattrs,alloc-token -alloc-token-mode=increment -S | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 define ptr @test_invoke_malloc() sanitize_alloc_token personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define ptr @test_invoke_malloc(

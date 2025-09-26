@@ -4,15 +4,14 @@
 ; RUN: opt < %s -passes=inferattrs,alloc-token -S | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 declare ptr @strdup(ptr)
 declare ptr @__strdup(ptr)
 declare ptr @strndup(ptr, i64)
 declare ptr @__strndup(ptr, i64)
 
-define ptr @test_ignorable_allocation_functions(ptr %ptr) sanitize_alloc_token {
-; CHECK-LABEL: define ptr @test_ignorable_allocation_functions(
+define ptr @test_ignored_allocation_functions(ptr %ptr) sanitize_alloc_token {
+; CHECK-LABEL: define ptr @test_ignored_allocation_functions(
 ; CHECK-SAME: ptr [[PTR:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[PTR1:%.*]] = call ptr @strdup(ptr [[PTR]])
