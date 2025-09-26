@@ -77,17 +77,13 @@ class MapInfoFinalizationPass
   ///      |                  |
   std::map<mlir::Operation *, mlir::Value> localBoxAllocas;
 
-  /// Return true if two index paths are equal.
-  static bool pathsEqual(llvm::ArrayRef<int64_t> a, llvm::ArrayRef<int64_t> b) {
-    return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin());
-  }
-
   /// Return true if the given path exists in a list of paths.
   static bool
   containsPath(const llvm::SmallVectorImpl<llvm::SmallVector<int64_t>> &paths,
                llvm::ArrayRef<int64_t> path) {
     return llvm::any_of(paths, [&](const llvm::SmallVector<int64_t> &p) {
-      return pathsEqual(p, path);
+      return p.size() == path.size() &&
+             std::equal(p.begin(), p.end(), path.begin());
     });
   }
 
