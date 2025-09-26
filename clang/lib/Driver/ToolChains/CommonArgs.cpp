@@ -69,6 +69,20 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
+static bool addRPathIfExists(const llvm::opt::ArgList &Args,
+                             ArgStringList &CmdArgs,
+                             const std::string pathCandidate) {
+  SmallString<0> simplifiedPathCandidate(pathCandidate);
+  llvm::sys::path::remove_dots(simplifiedPathCandidate, true);
+
+  if (!llvm::sys::fs::exists(simplifiedPathCandidate))
+    return false;
+
+  CmdArgs.push_back("-rpath");
+  CmdArgs.push_back(Args.MakeArgString(simplifiedPathCandidate));
+  return true;
+}
+
 static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
                                               const llvm::Triple &Triple) {
   if (Args.hasArg(clang::driver::options::OPT_pg) &&
@@ -1386,12 +1400,8 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
   // one of the LIBRARY_PATH directories.
   ArgStringList EnvLibraryPaths;
   addDirectoryList(Args, EnvLibraryPaths, "", "LIBRARY_PATH");
-  for (auto &EnvLibraryPath : EnvLibraryPaths) {
-    if (llvm::sys::fs::exists(EnvLibraryPath)) {
-      CmdArgs.push_back("-rpath");
-      CmdArgs.push_back(Args.MakeArgString(EnvLibraryPath));
-    }
-  }
+  for (auto &EnvLibraryPath : EnvLibraryPaths)
+    addRPathIfExists(Args, CmdArgs, EnvLibraryPath);
 
   if (Args.hasFlag(options::OPT_fopenmp_implicit_rpath,
                    options::OPT_fno_openmp_implicit_rpath, true)) {
@@ -1400,46 +1410,31 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
     SmallString<256> DefaultLibPath =
         llvm::sys::path::parent_path(TC.getDriver().Dir);
     llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
-    if (TC.getSanitizerArgs(Args).needsAsanRt()) {
-      CmdArgs.push_back("-rpath");
-      CmdArgs.push_back(Args.MakeArgString(TC.getCompilerRTPath()));
-    }
+    if (TC.getSanitizerArgs(Args).needsAsanRt())
+      addRPathIfExists(Args, CmdArgs, TC.getCompilerRTPath());
 
     // In case LibSuffix was not built, try lib
     std::string CandidateRPath_suf = D.Dir + "/../" + LibSuffix;
-    CmdArgs.push_back("-rpath");
-    CmdArgs.push_back(Args.MakeArgString(CandidateRPath_suf.c_str()));
-
     // Add lib directory in case LibSuffix does not exist
     std::string CandidateRPath_lib = D.Dir + "/../lib";
-    if ((!llvm::sys::fs::exists(CandidateRPath_suf)) &&
-        (llvm::sys::fs::exists(CandidateRPath_lib))) {
-      CmdArgs.push_back("-rpath");
-      CmdArgs.push_back(Args.MakeArgString(CandidateRPath_lib.c_str()));
-    }
+    if (!addRPathIfExists(Args, CmdArgs, CandidateRPath_suf))
+      addRPathIfExists(Args, CmdArgs, CandidateRPath_lib);
 
     std::string rocmPath =
         Args.getLastArgValue(clang::driver::options::OPT_rocm_path_EQ).str();
     if (rocmPath.size() != 0) {
       std::string rocmPath_lib = rocmPath + "/lib";
       std::string rocmPath_suf = rocmPath + "/" + LibSuffix;
-      if (llvm::sys::fs::exists(rocmPath_suf)) {
-        CmdArgs.push_back("-rpath");
-        CmdArgs.push_back(Args.MakeArgString(rocmPath_suf.c_str()));
-      } else if (llvm::sys::fs::exists(rocmPath_lib)) {
-        CmdArgs.push_back("-rpath");
-        CmdArgs.push_back(Args.MakeArgString(rocmPath_lib.c_str()));
-      }
+      if (!addRPathIfExists(Args, CmdArgs, rocmPath_suf))
+        addRPathIfExists(Args, CmdArgs, rocmPath_lib);
     }
 
     // Add Default lib path to ensure llvm dynamic library is picked up for
     // lib-debug/lib-perf
-    if (LibSuffix != "lib" && llvm::sys::fs::exists(DefaultLibPath)){
-      CmdArgs.push_back("-rpath");
-      CmdArgs.push_back(Args.MakeArgString(DefaultLibPath.c_str()));
-    }
+    if (LibSuffix != "lib")
+      addRPathIfExists(Args, CmdArgs, DefaultLibPath.c_str());
 
-     if (llvm::find_if(CmdArgs, [](StringRef str) {
+    if (llvm::find_if(CmdArgs, [](StringRef str) {
           return !str.compare("--enable-new-dtags");
         }) == CmdArgs.end())
       CmdArgs.push_back("--disable-new-dtags");
@@ -1479,10 +1474,8 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
     CandidateRPaths.emplace_back(*CandidateRPath);
 
   for (const auto &CandidateRPath : CandidateRPaths) {
-    if (TC.getVFS().exists(CandidateRPath)) {
-      CmdArgs.push_back("-rpath");
-      CmdArgs.push_back(Args.MakeArgString(CandidateRPath));
-    }
+    if (TC.getVFS().exists(CandidateRPath))
+      addRPathIfExists(Args, CmdArgs, CandidateRPath);
   }
 }
 
