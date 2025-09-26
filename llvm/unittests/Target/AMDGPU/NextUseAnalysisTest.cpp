@@ -322,27 +322,24 @@ protected:
     return patterns;
   }
 
-  std::unique_ptr<Module> parseMIRFile(const std::string &FilePath,
-                                       LLVMContext &Ctx,
-                                       const TargetMachine &TM,
-                                       legacy::PassManager &PM) {
+  std::unique_ptr<Module> parseMIRString(const std::string &MIRContent,
+                                         LLVMContext &Ctx,
+                                         const TargetMachine &TM,
+                                         legacy::PassManager &PM) {
     // 1) Add MMI wrapper first, get a handle to its MMI
     auto *MMIWP = new MachineModuleInfoWrapperPass(&TM);
     PM.add(MMIWP);
     MMI = &MMIWP->getMMI();
 
-    // 2) Parse MIR
-    ErrorOr<std::unique_ptr<MemoryBuffer>> FileBuffer = MemoryBuffer::getFile(FilePath);
-    if (!FileBuffer) {
-      return nullptr;
-    }
-    
+    // 2) Parse MIR from string
+    auto MemBuffer = MemoryBuffer::getMemBuffer(MIRContent, "inline_mir");
+
     SMDiagnostic Err;
-    auto MIRParser = createMIRParser(std::move(FileBuffer.get()), Ctx);
+    auto MIRParser = createMIRParser(std::move(MemBuffer), Ctx);
     if (!MIRParser) {
       return nullptr;
     }
-    
+
     auto M = MIRParser->parseIRModule();
     if (!M) {
       return nullptr;
@@ -355,6 +352,21 @@ protected:
     if (MIRParser->parseMachineFunctions(*M, *MMI))
       return nullptr;
     return M;
+  }
+
+  std::unique_ptr<Module> parseMIRFile(const std::string &FilePath,
+                                       LLVMContext &Ctx,
+                                       const TargetMachine &TM,
+                                       legacy::PassManager &PM) {
+    // Read file content
+    ErrorOr<std::unique_ptr<MemoryBuffer>> FileBuffer =
+        MemoryBuffer::getFile(FilePath);
+    if (!FileBuffer) {
+      return nullptr;
+    }
+
+    // Reuse parseMIRString with file content
+    return parseMIRString(FileBuffer.get()->getBuffer().str(), Ctx, TM, PM);
   }
 
   NextUseResult &runNextUseAnalysis(MachineFunction &MF,
@@ -400,6 +412,36 @@ std::string getTestDirectory() {
   }
 
   return ""; // Not found
+}
+
+// Generate test parameters from available .mir files
+std::vector<std::string> getMirFiles() {
+  const char *testFileEnv = std::getenv("AMDGPU_NUA_TEST_FILE");
+
+  // If specific file is requested, test only that
+  if (testFileEnv) {
+    return {std::string(testFileEnv)};
+  }
+
+  // Use the same directory resolution as the test
+  std::string testDir = getTestDirectory();
+
+  // If no test directory found, return empty vector
+  if (testDir.empty()) {
+    return {};
+  }
+
+  // Find all .mir files in the directory
+  std::vector<std::string> mirFiles;
+
+  for (const auto &entry : std::filesystem::directory_iterator(testDir)) {
+    if (entry.is_regular_file() && entry.path().extension() == ".mir") {
+      mirFiles.push_back(entry.path().filename().string());
+    }
+  }
+
+  std::sort(mirFiles.begin(), mirFiles.end());
+  return mirFiles;
 }
 
 TEST_P(NextUseAnalysisParameterizedTest, ProcessMirFile) {
@@ -468,37 +510,168 @@ TEST_P(NextUseAnalysisParameterizedTest, ProcessMirFile) {
       }
     }
   }
-  
 }
 
-// Generate test parameters from available .mir files
-std::vector<std::string> getMirFiles() {
-  const char *testFileEnv = std::getenv("AMDGPU_NUA_TEST_FILE");
+// Test getSortedSubregUses API with minimal SSA MIR pattern
+TEST_F(NextUseAnalysisParameterizedTest, GetSortedSubregUsesDistanceOrdering) {
+  // Minimal MIR pattern based on real SSA spiller case:
+  // Large register with sub-register accesses at different distances
+  // sub0 is accessed last (furthest distance) and should appear first in sorted
+  // result
+  const char *MIR = R"MIR(
+--- |
+  target triple = "amdgcn"
+  define void @getSortedSubregUses_test() { ret void }
 
-  // If specific file is requested, test only that
-  if (testFileEnv) {
-    return {std::string(testFileEnv)};
+---
+name: getSortedSubregUses_test
+body: |
+  bb.0:
+    ; Create large register with all 32 sub-registers
+    %0:vreg_1024 = IMPLICIT_DEF
+    
+    ; Query point: %0 is now live and has upcoming sub-register uses
+    %1:vgpr_32 = COPY $vgpr0      ; Query getSortedSubregUses here
+    
+    ; Multiple sub-register accesses in reverse order (sub31 -> sub0)
+    ; This creates different next-use distances for each sub-register
+    %10:vgpr_32 = COPY %0.sub31   ; Distance = 1 (closest)
+    %11:vgpr_32 = COPY %0.sub30   ; Distance = 2  
+    %12:vgpr_32 = COPY %0.sub29   ; Distance = 3
+    %13:vgpr_32 = COPY %0.sub28   ; Distance = 4
+    
+    ; Create REG_SEQUENCE with some of the copied values
+    %20:vreg_128 = REG_SEQUENCE %13, %subreg.sub0, %12, %subreg.sub1, %11, %subreg.sub2, %10, %subreg.sub3
+    
+    ; Continue with more sub-register accesses
+    %14:vgpr_32 = COPY %0.sub3    ; Distance = 6
+    %15:vgpr_32 = COPY %0.sub2    ; Distance = 7
+    %16:vgpr_32 = COPY %0.sub1    ; Distance = 8
+    %17:vgpr_32 = COPY %0.sub0    ; Distance = 9 (furthest)
+    
+    ; Use the copied sub-registers
+    %21:vreg_128 = REG_SEQUENCE %17, %subreg.sub0, %16, %subreg.sub1, %15, %subreg.sub2, %14, %subreg.sub3
+    
+    ; Store to make them live
+    GLOBAL_STORE_DWORDX4 undef %30:vreg_64, %20, 0, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4 undef %31:vreg_64, %21, 0, 0, implicit $exec :: (store (s128), addrspace 1)
+
+...
+)MIR";
+
+  // Parse MIR from string using the new helper function
+  LLVMContext Ctx;
+  legacy::PassManager PM;
+  auto Module = parseMIRString(MIR, Ctx, *TM, PM);
+  ASSERT_TRUE(Module) << "Failed to parse MIR";
+
+  // Get the MachineFunction
+  auto &F = *Module->functions().begin();
+  MachineFunction *MF = MMI->getMachineFunction(F);
+  ASSERT_TRUE(MF) << "MachineFunction not found";
+
+  // Initialize TRI and MRI if not already done
+  if (!TRI) {
+    TRI = MF->getSubtarget<GCNSubtarget>().getRegisterInfo();
+    MRI = &MF->getRegInfo();
   }
 
-  // Use the same directory resolution as the test
-  std::string testDir = getTestDirectory();
+  // Run NextUseAnalysis using the existing method
+  NextUseResult &NU = runNextUseAnalysis(*MF, PM);
 
-  // If no test directory found, return empty vector
-  if (testDir.empty()) {
-    return {};
-  }
+  // Find the COPY instruction (our query point where %0 is live but not yet
+  // used)
+  MachineBasicBlock &MBB = *MF->begin();
+  auto QueryIt =
+      std::find_if(MBB.begin(), MBB.end(), [](const MachineInstr &MI) {
+        return MI.getOpcode() == TargetOpcode::COPY &&
+               MI.getOperand(0).isReg() &&
+               MI.getOperand(0).getReg() == Register::index2VirtReg(1); // %1
+      });
+  ASSERT_NE(QueryIt, MBB.end())
+      << "Could not find COPY instruction for query point";
 
-  // Find all .mir files in the directory
-  std::vector<std::string> mirFiles;
+  // Get the virtual register number for %0 (defined by the previous
+  // IMPLICIT_DEF)
+  auto ImplicitDefIt =
+      std::find_if(MBB.begin(), MBB.end(), [](const MachineInstr &MI) {
+        return MI.getOpcode() == TargetOpcode::IMPLICIT_DEF;
+      });
+  ASSERT_NE(ImplicitDefIt, MBB.end())
+      << "Could not find IMPLICIT_DEF instruction";
 
-  for (const auto &entry : std::filesystem::directory_iterator(testDir)) {
-    if (entry.is_regular_file() && entry.path().extension() == ".mir") {
-      mirFiles.push_back(entry.path().filename().string());
+  Register VReg = ImplicitDefIt->getOperand(0).getReg();
+  ASSERT_TRUE(VReg.isVirtual()) << "Expected virtual register";
+
+  // Test getSortedSubregUses at the COPY instruction (after %0 is defined,
+  // before it's used)
+  LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(VReg);
+  VRegMaskPair VMP(VReg, FullMask);
+
+  SmallVector<VRegMaskPair> SortedUses = NU.getSortedSubregUses(QueryIt, VMP);
+
+  // Verify that we got results
+  ASSERT_FALSE(SortedUses.empty())
+      << "getSortedSubregUses should return sub-register uses";
+
+  // The key test: sub0 (accessed last at distance 9) should appear first
+  // in the sorted result since getSortedSubregUses returns furthest uses first
+  bool FoundSub0First = false;
+  if (!SortedUses.empty()) {
+    // Get the lane mask for sub0
+    LaneBitmask Sub0Mask = TRI->getSubRegIndexLaneMask(AMDGPU::sub0);
+
+    // Check if the first entry corresponds to sub0
+    if (SortedUses[0].getLaneMask() == Sub0Mask) {
+      FoundSub0First = true;
     }
   }
 
-  std::sort(mirFiles.begin(), mirFiles.end());
-  return mirFiles;
+  EXPECT_TRUE(FoundSub0First) << "sub0 (furthest use) should appear first in "
+                                 "getSortedSubregUses result";
+
+  // Verify that we got results
+  ASSERT_FALSE(SortedUses.empty())
+      << "getSortedSubregUses should return sub-register uses";
+
+  // Verify we have exactly 8 sub-register uses (sub0, sub1, sub2, sub3, sub28,
+  // sub29, sub30, sub31)
+  ASSERT_EQ(SortedUses.size(), 8u)
+      << "Expected exactly 8 sub-register uses, got " << SortedUses.size();
+
+  // Define expected sub-registers in order of decreasing distance (furthest
+  // first) Based on our MIR: sub0 (dist 9), sub1 (dist 8), sub2 (dist 7), sub3
+  // (dist 6),
+  //                   sub28 (dist 4), sub29 (dist 3), sub30 (dist 2), sub31
+  //                   (dist 1)
+  std::vector<unsigned> expectedSubRegs = {
+      AMDGPU::sub0,  // Distance 9 (furthest)
+      AMDGPU::sub1,  // Distance 8
+      AMDGPU::sub2,  // Distance 7
+      AMDGPU::sub3,  // Distance 6
+      AMDGPU::sub28, // Distance 4
+      AMDGPU::sub29, // Distance 3
+      AMDGPU::sub30, // Distance 2
+      AMDGPU::sub31  // Distance 1 (closest)
+  };
+
+  // Verify exact order: furthest uses first
+  for (size_t i = 0; i < expectedSubRegs.size(); ++i) {
+    LaneBitmask ExpectedMask = TRI->getSubRegIndexLaneMask(expectedSubRegs[i]);
+    LaneBitmask ActualMask = SortedUses[i].getLaneMask();
+
+    EXPECT_EQ(ActualMask, ExpectedMask)
+        << "Position " << i << ": Expected sub-register "
+        << TRI->getSubRegIndexName(expectedSubRegs[i]) << " (mask "
+        << ExpectedMask.getAsInteger() << "), "
+        << "but got mask " << ActualMask.getAsInteger();
+  }
+
+  // Additional verification: all entries should reference the same VReg (%0)
+  for (const auto &Use : SortedUses) {
+    EXPECT_EQ(Use.getVReg(), VReg)
+        << "All sorted uses should reference the same virtual register";
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(
