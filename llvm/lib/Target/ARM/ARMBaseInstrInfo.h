@@ -181,6 +181,11 @@ public:
 
   bool isPredicable(const MachineInstr &MI) const override;
 
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
+
+  bool useMachineCombiner() const override;
+
   // CPSR defined in instruction
   static bool isCPSRDefined(const MachineInstr &MI);
 
