@@ -257,7 +257,7 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   if (d == INT_MIN) {
     dv = dv - 1; // Two's complement
   }
-  
+
   uint32_t clz = cpp::countl_zero<uint32_t>(static_cast<uint32_t>(dv)) - 1;
   uint64_t scaled_val = dv << clz;
   // Scale denominator to be in the range of [0.5,1]
