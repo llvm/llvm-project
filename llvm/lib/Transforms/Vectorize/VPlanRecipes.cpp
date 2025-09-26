@@ -2840,10 +2840,10 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
                                           Ctx.CostKind);
 
   case ExpressionTypes::ExtNegatedMulAccReduction:
-  case ExpressionTypes::ExtMulAccReduction: {
-    if (ExpressionType == ExpressionTypes::ExtNegatedMulAccReduction &&
-        Opcode == Instruction::Add)
+    if (Opcode == Instruction::Add)
       Opcode = Instruction::Sub;
+    LLVM_FALLTHROUGH;
+  case ExpressionTypes::ExtMulAccReduction: {
     return Ctx.TTI.getMulAccReductionCost(
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
             Instruction::ZExt,
