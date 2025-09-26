@@ -282,11 +282,12 @@ public:
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
                      DependencyActionController &Controller,
                      CompilerInvocation OriginalCI,
-                     const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
+                     const PrebuiltModulesAttrsMap &PrebuiltModulesASTMap,
                      const ArrayRef<StringRef> StableDirs);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
+  PPCallbacks *getPPCallback() override { return CollectorPPPtr; }
 
   /// Apply any changes implied by the discovered dependencies to the given
   /// invocation, (e.g. disable implicit modules, add explicit module paths).
@@ -305,7 +306,7 @@ private:
   DependencyActionController &Controller;
   /// Mapping from prebuilt AST filepaths to their attributes referenced during
   /// dependency collecting.
-  const PrebuiltModulesAttrsMap PrebuiltModulesASTMap;
+  const PrebuiltModulesAttrsMap &PrebuiltModulesASTMap;
   /// Directory paths known to be stable through an active development and build
   /// cycle.
   const ArrayRef<StringRef> StableDirs;
@@ -338,6 +339,10 @@ private:
 
   std::optional<P1689ModuleInfo> ProvidedStdCXXModule;
   std::vector<P1689ModuleInfo> RequiredStdCXXModules;
+
+  /// A pointer to the preprocessor callback so we can invoke it directly
+  /// if needed.
+  ModuleDepCollectorPP *CollectorPPPtr = nullptr;
 
   /// Checks whether the module is known as being prebuilt.
   bool isPrebuiltModule(const Module *M);

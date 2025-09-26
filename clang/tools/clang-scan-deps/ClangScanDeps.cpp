@@ -661,6 +661,18 @@ static bool handleModuleResult(StringRef ModuleName,
   return false;
 }
 
+static void handleCompilerInstanceWithContextError(StringRef Info,
+                                                   llvm::Error E,
+                                                   SharedStream &OS,
+                                                   SharedStream &Errs) {
+  llvm::handleAllErrors(std::move(E), [&Info, &Errs](llvm::StringError &Err) {
+    Errs.applyLocked([&](raw_ostream &OS) {
+      OS << "Error: " << Info << ":\n";
+      OS << Err.getMessage();
+    });
+  });
+}
+
 class P1689Deps {
 public:
   void printDependencies(raw_ostream &OS) {
@@ -1075,12 +1087,27 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
             HadErrors = true;
         }
       } else if (ModuleName) {
-        auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
-            *ModuleName, Input->CommandLine, CWD, AlreadySeenModules,
-            LookupOutput);
+        if (llvm::Error Err = WorkerTool.initializeCompilerInstacneWithContext(
+                CWD, Input->CommandLine)) {
+          handleCompilerInstanceWithContextError(
+              "Compiler instance with context setup error", std::move(Err),
+              DependencyOS, Errs);
+          HadErrors = true;
+          continue;
+        }
+        auto MaybeModuleDepsGraph =
+            WorkerTool.computeDependenciesByNameWithContext(
+                *ModuleName, AlreadySeenModules, LookupOutput);
         if (handleModuleResult(*ModuleName, MaybeModuleDepsGraph, *FD,
                                LocalIndex, DependencyOS, Errs))
           HadErrors = true;
+        if (llvm::Error Err =
+                WorkerTool.finalizeCompilerInstanceWithContext()) {
+          handleCompilerInstanceWithContextError(
+              "Compiler instance with context finialization error",
+              std::move(Err), DependencyOS, Errs);
+          HadErrors = true;
+        }
       } else {
         std::unique_ptr<llvm::MemoryBuffer> TU;
         std::optional<llvm::MemoryBufferRef> TUBuffer;
