@@ -269,18 +269,29 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
         // Handle MFMA instructions
         if (SIInstrInfo::isMFMA(MI)) {
           SmallVector<Register, 4> MFMARegisters;
-          auto collectMFMARegister = [&](unsigned OpIdx) {
-            if (OpIdx >= MI.getNumOperands())
+          // Helper to get named operand
+          auto collectNamedOperand = [&](AMDGPU::OpName OpName,
+                                         const char *OpNameStr) {
+            unsigned Opc = MI.getOpcode();
+            int OpIdx = AMDGPU::getNamedOperandIdx(Opc, OpName);
+            if (OpIdx == -1) {
+              LLVM_DEBUG(dbgs() << "    Named operand " << OpNameStr
+                                << " not found\n");
               return;
-
+            }
             const MachineOperand &MO = MI.getOperand(OpIdx);
-            if (MO.isReg() && MO.getReg().isVirtual())
+            if (MO.isReg() && MO.getReg().isVirtual()) {
               MFMARegisters.push_back(MO.getReg());
+              LLVM_DEBUG(dbgs()
+                         << "    Collected " << OpNameStr << " (Op" << OpIdx
+                         << "): " << printReg(MO.getReg(), TRI) << "\n");
+            }
           };
-          // Only collect Matrix C (operand 3) and destination (operand 0)
-          // registers
-          collectMFMARegister(0);
-          collectMFMARegister(3);
+
+          // Collect destination and source C registers
+          collectNamedOperand(AMDGPU::OpName::vdst, "vdst"); // Destination
+          collectNamedOperand(AMDGPU::OpName::src2,
+                              "src2"); // Matrix C (accumulator)
 
           if (!MFMARegisters.empty()) {
             RecentMFMAs.emplace_back(CurrentSlot, std::move(MFMARegisters));

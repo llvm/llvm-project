@@ -915,7 +915,7 @@ public:
   /// VRM is the current virtual register map showing allocations made so far.
   void getPhysRegAntiHints(Register VReg,
                            SmallVectorImpl<MCPhysReg> &PhysAntiHints,
-                           const VirtRegMap *VRM) const;
+                           const VirtRegMap &VRM) const;
 
   /// markUsesInDebugValueAsUndef - Mark every DBG_VALUE referencing the
   /// specified register as undefined which causes the DBG_VALUE to be
