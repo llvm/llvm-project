@@ -357,6 +357,7 @@ public:
     VPWidenStoreSC,
     VPWidenSC,
     VPWidenSelectSC,
+    VPWidenSelectVectorSC,
     VPBlendSC,
     VPHistogramSC,
     // START: Phi-like recipes. Need to be kept together.
