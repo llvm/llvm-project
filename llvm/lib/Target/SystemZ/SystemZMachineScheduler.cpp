@@ -87,23 +87,15 @@ void SystemZPreRASchedStrategy::initializePressureSets(
     const TargetRegisterInfo *TRI) {
 
   // Based on the nature of the Vector/FP and GPR register classes, TableGen
-  // defines a set of PressureSets that reflects the overlap of register
+  // defines a list of PressureSets that reflects the overlap of register
   // classes: FP regs affect both FP16Bit and VR16Bit PressureSets, while VR
-  // regs affect only VR16Bit. Similarly, GR64 affects GRX32Bit (with a
+  // regs affect only VR16Bit. Similarly, GR64 affects only GRX32Bit (with a
   // weight of 2), while GR32 affects both GR32Bit and GRX32Bit.
   //
-  // This SchedStrategy doesn't use these PressureSets quite in the way
-  // originally intended, but rather just to check if use operands are
-  // already live or not in interesting cases. The distinctions between
-  // Vector/FP registers or GR64Bit/GR32Bit are not made when a defining
-  // instruction is scheduled low only if no uses are also becoming live.
-  // Therefore only the common PressureSets are relevant. For example, this
-  // instruction will always have 'FP16Bit -1':
-  //
-  //   %14:vf128bit = VREPF %7:vr128bit, 1
-  //
-  // If %7 is already live, there would also be 'VR16Bit -1', which is the
-  // interesting case.
+  // When an instruction defines a register the question is if any used
+  // registers will become live when scheduling it. This can be checked by
+  // looking at the PressureSets that are shared between overlapping register
+  // classes.
   //
   // misched-prera-pdiffs.mir tests against any future change in the
   // PressureSets, so simply hard-code them here:
@@ -225,6 +217,7 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
   const MachineOperand &MO0 = MI->getOperand(0);
   assert(!isPhysRegDef(MO0) && "Did not expect physreg def!");
   bool IsLoad = isRegDef(MO0) && !MO0.isDead() && !IsRedefining[SU->NodeNum];
+  bool IsPrioLoad = IsLoad && isPrioVirtReg(MO0.getReg(), &DAG->MRI);
   bool PreservesSchedLat = SU->getHeight() <= Zone->getScheduledLatency();
   const unsigned Cycles = 2;
   unsigned Margin = SchedModel->getIssueWidth() * (Cycles + SU->Latency - 1);
@@ -233,34 +226,18 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
     !DAG->getBotRPTracker().isRegLive(MO0.getReg());
 
   // Before pulling down a load (to close the live range), the liveness of
-  // the other operands are checked: only if no use register would become
-  // live is the load pulled down. This can be checked either by looking at
-  // the operands of MI and checking if the reg is live, or the PDiff of the
-  // SU can be used to infer the same answers. Both methods seem to give the
-  // same identical result, at least when building the benchmarks.
+  // the use operands is checked. This can be checked either by looking at
+  // the operands of MI, or at the PDiff of the SU.
   bool UsesLivePrio = false, UsesLiveAll = false;
   if (!WITHPDIFFS) {
     // Find uses of registers that are not already live (kills).
     bool PrioKill = false;
     bool GPRKill = false;
-    bool HasPrioUse = false;
-    for (unsigned I = 0; I < MI->getDesc().getNumOperands(); ++I) {
-      const MachineOperand &MO = MI->getOperand(I);
-      if (!isVirtRegUse(MO))
-        continue;
-      HasPrioUse |= isPrioVirtReg(MO.getReg(), &DAG->MRI);
-      if (DAG->getBotRPTracker().isRegLive(MO.getReg()))
-        continue;
-      if (isPrioVirtReg(MO.getReg(), &DAG->MRI))
-        PrioKill = true;
-      else
-        GPRKill = true;
-    }
-
-    // Find the interesting properties.
-    // Prioritize FP: Ignore GPR/Addr kills with an FP def.
-    UsesLivePrio = IsLoad && !PrioKill &&
-                   (isPrioVirtReg(MO0.getReg(), &DAG->MRI) || !GPRKill);
+    for (auto &MO : MI->explicit_uses())
+      if (isVirtRegUse(MO) && !DAG->getBotRPTracker().isRegLive(MO.getReg()))
+        (isPrioVirtReg(MO.getReg(), &DAG->MRI) ? PrioKill : GPRKill) = true;
+    // Prioritize FP: Ignore GPR/Addr regs with an FP def.
+    UsesLivePrio = !PrioKill && (IsPrioLoad || !GPRKill);
     UsesLiveAll = !PrioKill && !GPRKill;
   } else if (MO0.isReg() && MO0.getReg().isVirtual()) {
     int PrioPressureChange = 0;
