@@ -2851,9 +2851,10 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
     if (SplatBitSize == 64 && !Subtarget.is64Bit()) {
       // We can only handle 64-bit elements that are within
-      // the signed 10-bit range on 32-bit targets.
+      // the signed 10-bit range or match vldi patterns on 32-bit targets.
       // See the BUILD_VECTOR case in LoongArchDAGToDAGISel::Select().
-      if (!SplatValue.isSignedIntN(10))
+      if (!SplatValue.isSignedIntN(10) &&
+          !isImmVLDILegalForMode1(SplatValue, SplatBitSize).first)
         return SDValue();
       if ((Is128Vec && ResTy == MVT::v4i32) ||
           (Is256Vec && ResTy == MVT::v8i32))
@@ -8541,6 +8542,87 @@ SDValue LoongArchTargetLowering::LowerReturn(
     RetOps.push_back(Glue);
 
   return DAG.getNode(LoongArchISD::RET, DL, MVT::Other, RetOps);
+}
+
+// Check if a constant splat can be generated using [x]vldi, where imm[12] == 1.
+// Note: The following prefixes are excluded:
+//   imm[11:8] == 4'b0000, 4'b0100, 4'b1000
+// as they can be represented using [x]vrepli.[whb]
+std::pair<bool, uint64_t> LoongArchTargetLowering::isImmVLDILegalForMode1(
+    const APInt &SplatValue, const unsigned SplatBitSize) const {
+  uint64_t RequiredImm = 0;
+  uint64_t V = SplatValue.getZExtValue();
+  if (SplatBitSize == 16 && !(V & 0x00FF)) {
+    // 4'b0101
+    RequiredImm = (0b10101 << 8) | (V >> 8);
+    return {true, RequiredImm};
+  } else if (SplatBitSize == 32) {
+    // 4'b0001
+    if (!(V & 0xFFFF00FF)) {
+      RequiredImm = (0b10001 << 8) | (V >> 8);
+      return {true, RequiredImm};
+    }
+    // 4'b0010
+    if (!(V & 0xFF00FFFF)) {
+      RequiredImm = (0b10010 << 8) | (V >> 16);
+      return {true, RequiredImm};
+    }
+    // 4'b0011
+    if (!(V & 0x00FFFFFF)) {
+      RequiredImm = (0b10011 << 8) | (V >> 24);
+      return {true, RequiredImm};
+    }
+    // 4'b0110
+    if ((V & 0xFFFF00FF) == 0xFF) {
+      RequiredImm = (0b10110 << 8) | (V >> 8);
+      return {true, RequiredImm};
+    }
+    // 4'b0111
+    if ((V & 0xFF00FFFF) == 0xFFFF) {
+      RequiredImm = (0b10111 << 8) | (V >> 16);
+      return {true, RequiredImm};
+    }
+    // 4'b1010
+    if ((V & 0x7E07FFFF) == 0x3E000000 || (V & 0x7E07FFFF) == 0x40000000) {
+      RequiredImm =
+          (0b11010 << 8) | (((V >> 24) & 0xC0) ^ 0x40) | ((V >> 19) & 0x3F);
+      return {true, RequiredImm};
+    }
+  } else if (SplatBitSize == 64) {
+    // 4'b1011
+    if ((V & 0xFFFFFFFF7E07FFFFULL) == 0x3E000000ULL ||
+        (V & 0xFFFFFFFF7E07FFFFULL) == 0x40000000ULL) {
+      RequiredImm =
+          (0b11011 << 8) | (((V >> 24) & 0xC0) ^ 0x40) | ((V >> 19) & 0x3F);
+      return {true, RequiredImm};
+    }
+    // 4'b1100
+    if ((V & 0x7FC0FFFFFFFFFFFFULL) == 0x4000000000000000ULL ||
+        (V & 0x7FC0FFFFFFFFFFFFULL) == 0x3FC0000000000000ULL) {
+      RequiredImm =
+          (0b11100 << 8) | (((V >> 56) & 0xC0) ^ 0x40) | ((V >> 48) & 0x3F);
+      return {true, RequiredImm};
+    }
+    // 4'b1001
+    auto sameBitsPreByte = [](uint64_t x) -> std::pair<bool, uint8_t> {
+      uint8_t res = 0;
+      for (int i = 0; i < 8; ++i) {
+        uint8_t byte = x & 0xFF;
+        if (byte == 0 || byte == 0xFF)
+          res |= ((byte & 1) << i);
+        else
+          return {false, 0};
+        x >>= 8;
+      }
+      return {true, res};
+    };
+    auto [IsSame, Suffix] = sameBitsPreByte(V);
+    if (IsSame) {
+      RequiredImm = (0b11001 << 8) | Suffix;
+      return {true, RequiredImm};
+    }
+  }
+  return {false, RequiredImm};
 }
 
 bool LoongArchTargetLowering::isFPImmVLDILegal(const APFloat &Imm,
