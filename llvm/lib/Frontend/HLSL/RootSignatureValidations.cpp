@@ -136,7 +136,6 @@ uint64_t computeRangeBound(uint64_t Offset, uint32_t Size) {
 
   return Offset + uint64_t(Size) - 1;
 }
-
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm
