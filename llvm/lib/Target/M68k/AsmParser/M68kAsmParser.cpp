@@ -32,7 +32,6 @@ static cl::opt<bool> RegisterPrefixOptional(
 namespace {
 /// Parses M68k assembly from a stream.
 class M68kAsmParser : public MCTargetAsmParser {
-  const MCSubtargetInfo &STI;
   MCAsmParser &Parser;
   const MCRegisterInfo *MRI;
 
@@ -40,9 +39,9 @@ class M68kAsmParser : public MCTargetAsmParser {
 #include "M68kGenAsmMatcher.inc"
 
   // Helpers for Match&Emit.
-  bool invalidOperand(const SMLoc &Loc, const OperandVector &Operands,
+  bool invalidOperand(SMLoc Loc, const OperandVector &Operands,
                       const uint64_t &ErrorInfo);
-  bool missingFeature(const SMLoc &Loc, const uint64_t &ErrorInfo);
+  bool missingFeature(SMLoc Loc, const uint64_t &ErrorInfo);
   bool emit(MCInst &Inst, SMLoc const &Loc, MCStreamer &Out) const;
   bool parseRegisterName(MCRegister &RegNo, SMLoc Loc, StringRef RegisterName);
   ParseStatus parseRegister(MCRegister &RegNo);
@@ -58,7 +57,7 @@ class M68kAsmParser : public MCTargetAsmParser {
 public:
   M68kAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                 const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), STI(STI), Parser(Parser) {
+      : MCTargetAsmParser(Options, STI, MII), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
@@ -1024,7 +1023,7 @@ bool M68kAsmParser::missingFeature(llvm::SMLoc const &Loc,
 bool M68kAsmParser::emit(MCInst &Inst, SMLoc const &Loc,
                          MCStreamer &Out) const {
   Inst.setLoc(Loc);
-  Out.emitInstruction(Inst, STI);
+  Out.emitInstruction(Inst, *STI);
 
   return false;
 }

@@ -109,36 +109,35 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> poison, double [[TMP9]], i32 0
 ; TFA_INTERLEAVE-NEXT:    [[TMP12:%.*]] = insertelement <2 x double> [[TMP11]], double [[TMP9]], i32 1
 ; TFA_INTERLEAVE-NEXT:    [[TMP14:%.*]] = fcmp ogt <2 x double> [[TMP12]], zeroinitializer
-; TFA_INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP14]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
 ; TFA_INTERLEAVE-NEXT:    [[PREDPHI3:%.*]] = select <2 x i1> [[TMP14]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
 ; TFA_INTERLEAVE-NEXT:    [[TMP19:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i32 0
 ; TFA_INTERLEAVE-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; TFA_INTERLEAVE:       pred.store.if:
-; TFA_INTERLEAVE-NEXT:    [[TMP20:%.*]] = extractelement <2 x double> [[PREDPHI]], i32 0
+; TFA_INTERLEAVE-NEXT:    [[TMP20:%.*]] = extractelement <2 x double> [[PREDPHI3]], i32 0
 ; TFA_INTERLEAVE-NEXT:    store double [[TMP20]], ptr [[P:%.*]], align 8
 ; TFA_INTERLEAVE-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; TFA_INTERLEAVE:       pred.store.continue:
 ; TFA_INTERLEAVE-NEXT:    [[TMP29:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i32 1
 ; TFA_INTERLEAVE-NEXT:    br i1 [[TMP29]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
-; TFA_INTERLEAVE:       pred.store.if4:
-; TFA_INTERLEAVE-NEXT:    [[TMP22:%.*]] = extractelement <2 x double> [[PREDPHI]], i32 1
+; TFA_INTERLEAVE:       pred.store.if3:
+; TFA_INTERLEAVE-NEXT:    [[TMP22:%.*]] = extractelement <2 x double> [[PREDPHI3]], i32 1
 ; TFA_INTERLEAVE-NEXT:    store double [[TMP22]], ptr [[P]], align 8
 ; TFA_INTERLEAVE-NEXT:    br label [[PRED_STORE_CONTINUE5]]
-; TFA_INTERLEAVE:       pred.store.continue5:
+; TFA_INTERLEAVE:       pred.store.continue4:
 ; TFA_INTERLEAVE-NEXT:    [[TMP31:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK2]], i32 0
 ; TFA_INTERLEAVE-NEXT:    br i1 [[TMP31]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7:%.*]]
-; TFA_INTERLEAVE:       pred.store.if6:
+; TFA_INTERLEAVE:       pred.store.if5:
 ; TFA_INTERLEAVE-NEXT:    [[TMP32:%.*]] = extractelement <2 x double> [[PREDPHI3]], i32 0
 ; TFA_INTERLEAVE-NEXT:    store double [[TMP32]], ptr [[P]], align 8
 ; TFA_INTERLEAVE-NEXT:    br label [[PRED_STORE_CONTINUE7]]
-; TFA_INTERLEAVE:       pred.store.continue7:
+; TFA_INTERLEAVE:       pred.store.continue6:
 ; TFA_INTERLEAVE-NEXT:    [[TMP25:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK2]], i32 1
 ; TFA_INTERLEAVE-NEXT:    br i1 [[TMP25]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9]]
-; TFA_INTERLEAVE:       pred.store.if8:
+; TFA_INTERLEAVE:       pred.store.if7:
 ; TFA_INTERLEAVE-NEXT:    [[TMP34:%.*]] = extractelement <2 x double> [[PREDPHI3]], i32 1
 ; TFA_INTERLEAVE-NEXT:    store double [[TMP34]], ptr [[P]], align 8
 ; TFA_INTERLEAVE-NEXT:    br label [[PRED_STORE_CONTINUE9]]
-; TFA_INTERLEAVE:       pred.store.continue9:
+; TFA_INTERLEAVE:       pred.store.continue8:
 ; TFA_INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; TFA_INTERLEAVE-NEXT:    [[TMP27:%.*]] = add i64 [[INDEX]], 2
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX]], i64 [[TMP3]])

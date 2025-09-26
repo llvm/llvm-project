@@ -1795,6 +1795,14 @@ public:
         }
       }
 
+      if (ICA.getID() == Intrinsic::vp_load_ff) {
+        Type *RetTy = ICA.getReturnType();
+        Type *DataTy = cast<StructType>(RetTy)->getElementType(0);
+        Align Alignment;
+        if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+          Alignment = VPI->getPointerAlignment().valueOrOne();
+        return thisT()->getFirstFaultLoadCost(DataTy, Alignment, CostKind);
+      }
       if (ICA.getID() == Intrinsic::vp_scatter) {
         if (ICA.isTypeBasedOnly()) {
           IntrinsicCostAttributes MaskedScatter(
@@ -2929,7 +2937,7 @@ public:
                                       CostKind);
 
       EVT VT = TLI->getValueType(DL, CmpTy, true);
-      if (TLI->shouldExpandCmpUsingSelects(VT)) {
+      if (TLI->preferSelectsOverBooleanArithmetic(VT)) {
         // x < y ? -1 : (x > y ? 1 : 0)
         Cost += 2 * thisT()->getCmpSelInstrCost(
                         BinaryOperator::Select, RetTy, CondTy,
