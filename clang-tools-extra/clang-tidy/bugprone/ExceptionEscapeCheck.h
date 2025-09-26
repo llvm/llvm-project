@@ -21,7 +21,7 @@ namespace clang::tidy::bugprone {
 /// given as option to the checker.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/exception-escape.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/exception-escape.html
 class ExceptionEscapeCheck : public ClangTidyCheck {
 public:
   ExceptionEscapeCheck(StringRef Name, ClangTidyContext *Context);
