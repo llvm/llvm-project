@@ -1,3 +1,4 @@
+## This test checks updating debuginfo via dwarf4 dwp file
 # RUN: rm -rf %t && mkdir -p %t && cd %t
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown --split-dwarf-file=main.exe-main.dwo %t/main.s -o %t/main.o
@@ -8,52 +9,19 @@
 
 # CHECK-NOT: Assertion
 
-#--- main.cpp
-int callee(int x);
-int main() { return callee(0); }
-#--- callee.cpp
-int callee(int x) { return x; }
-#--- gen
-clang++ --target=aarch64-unknown-unknown -c -g -gdwarf-4 -gsplit-dwarf -fdebug-compilation-dir=. -Xclang -split-dwarf-file -Xclang main.exe-main.dwo -S main.cpp -o -
-echo '#--- callee.s'
-clang++ --target=aarch64-unknown-unknown -c -g -gdwarf-4 -gsplit-dwarf -fdebug-compilation-dir=. -Xclang -split-dwarf-file -Xclang main.exe-callee.dwo -S callee.cpp -o -
 #--- main.s
 	.file	"main.cpp"
-	.text
 	.globl	main                            // -- Begin function main
-	.p2align	2
 	.type	main,@function
 main:                                   // @main
 .Lfunc_begin0:
 	.file	1 "." "main.cpp"
 	.loc	1 2 0                           // main.cpp:2:0
-	.cfi_startproc
-// %bb.0:                               // %entry
-	sub	sp, sp, #32
-	.cfi_def_cfa_offset 32
-	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
-	add	x29, sp, #16
-	.cfi_def_cfa w29, 16
-	.cfi_offset w30, -8
-	.cfi_offset w29, -16
-	mov	w0, wzr
-	stur	wzr, [x29, #-4]
-.Ltmp0:
 	.loc	1 2 21 prologue_end             // main.cpp:2:21
-	bl	_Z6calleei
-	.cfi_def_cfa wsp, 32
 	.loc	1 2 14 epilogue_begin is_stmt 0 // main.cpp:2:14
-	ldp	x29, x30, [sp, #16]             // 16-byte Folded Reload
-	add	sp, sp, #32
-	.cfi_def_cfa_offset 0
-	.cfi_restore w30
-	.cfi_restore w29
 	ret
-.Ltmp1:
 .Lfunc_end0:
 	.size	main, .Lfunc_end0-main
-	.cfi_endproc
-                                        // -- End function
 	.section	.debug_abbrev,"",@progbits
 	.byte	1                               // Abbreviation Code
 	.byte	17                              // DW_TAG_compile_unit
@@ -225,31 +193,17 @@ main:                                   // @main
 .Lline_table_start0:
 #--- callee.s
 	.file	"callee.cpp"
-	.text
 	.globl	_Z6calleei                      // -- Begin function _Z6calleei
-	.p2align	2
 	.type	_Z6calleei,@function
 _Z6calleei:                             // @_Z6calleei
 .Lfunc_begin0:
 	.file	1 "." "callee.cpp"
 	.loc	1 1 0                           // callee.cpp:1:0
-	.cfi_startproc
-// %bb.0:                               // %entry
-	sub	sp, sp, #16
-	.cfi_def_cfa_offset 16
-	str	w0, [sp, #12]
-.Ltmp1:
 	.loc	1 1 28 prologue_end             // callee.cpp:1:28
-	ldr	w0, [sp, #12]
 	.loc	1 1 21 epilogue_begin is_stmt 0 // callee.cpp:1:21
-	add	sp, sp, #16
-	.cfi_def_cfa_offset 0
 	ret
-.Ltmp2:
 .Lfunc_end0:
 	.size	_Z6calleei, .Lfunc_end0-_Z6calleei
-	.cfi_endproc
-                                        // -- End function
 	.section	.debug_abbrev,"",@progbits
 	.byte	1                               // Abbreviation Code
 	.byte	17                              // DW_TAG_compile_unit

@@ -1,53 +1,25 @@
+## This test checks updating debuginfo via dwarf4 dwp file
 # RUN: rm -rf %t && mkdir -p %t && cd %t
 # RUN: split-file %s %t
-# RUN: %clangxx -g -gdwarf-4 -gsplit-dwarf %t/main.s %t/callee.s -o main.exe
+# RUN: %clangxx %cxxflags -g -gdwarf-4 -gsplit-dwarf %t/main.s %t/callee.s -o main.exe
 # RUN: llvm-dwp -e %t/main.exe -o %t/main.exe.dwp
 # RUN: llvm-bolt %t/main.exe -o %t/main.exe.bolt -update-debug-sections  2>&1 | FileCheck %s
 
 # CHECK-NOT: Assertion
 
-#--- main.cpp
-int callee(int x);
-int main() { return callee(0); }
-#--- callee.cpp
-int callee(int x) { return x; }
-#--- gen
-clang++ -c -g -gdwarf-4 -gsplit-dwarf -fdebug-compilation-dir=. -Xclang -split-dwarf-file -Xclang main.exe-main.dwo -S main.cpp -o -
-echo '#--- callee.s'
-clang++ -c -g -gdwarf-4 -gsplit-dwarf -fdebug-compilation-dir=. -Xclang -split-dwarf-file -Xclang main.exe-callee.dwo -S callee.cpp -o -
 #--- main.s
 	.file	"main.cpp"
-	.text
 	.globl	main                            # -- Begin function main
-	.p2align	4
 	.type	main,@function
 main:                                   # @main
 .Lfunc_begin0:
 	.file	1 "." "main.cpp"
 	.loc	1 2 0                           # main.cpp:2:0
-	.cfi_startproc
-# %bb.0:                                # %entry
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register %rbp
-	subq	$16, %rsp
-	movl	$0, -4(%rbp)
-.Ltmp0:
 	.loc	1 2 21 prologue_end             # main.cpp:2:21
-	xorl	%edi, %edi
-	callq	_Z6calleei@PLT
 	.loc	1 2 14 epilogue_begin is_stmt 0 # main.cpp:2:14
-	addq	$16, %rsp
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
 	retq
-.Ltmp1:
 .Lfunc_end0:
 	.size	main, .Lfunc_end0-main
-	.cfi_endproc
-                                        # -- End function
 	.section	.debug_abbrev,"",@progbits
 	.byte	1                               # Abbreviation Code
 	.byte	17                              # DW_TAG_compile_unit
@@ -219,34 +191,17 @@ main:                                   # @main
 .Lline_table_start0:
 #--- callee.s
 	.file	"callee.cpp"
-	.text
 	.globl	_Z6calleei                      # -- Begin function _Z6calleei
-	.p2align	4
 	.type	_Z6calleei,@function
 _Z6calleei:                             # @_Z6calleei
 .Lfunc_begin0:
 	.file	1 "." "callee.cpp"
 	.loc	1 1 0                           # callee.cpp:1:0
-	.cfi_startproc
-# %bb.0:                                # %entry
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register %rbp
-	movl	%edi, -4(%rbp)
-.Ltmp0:
 	.loc	1 1 28 prologue_end             # callee.cpp:1:28
-	movl	-4(%rbp), %eax
 	.loc	1 1 21 epilogue_begin is_stmt 0 # callee.cpp:1:21
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
 	retq
-.Ltmp1:
 .Lfunc_end0:
 	.size	_Z6calleei, .Lfunc_end0-_Z6calleei
-	.cfi_endproc
-                                        # -- End function
 	.section	.debug_abbrev,"",@progbits
 	.byte	1                               # Abbreviation Code
 	.byte	17                              # DW_TAG_compile_unit
