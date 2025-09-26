@@ -70,7 +70,7 @@ static void printArgs(llvm::raw_ostream &os, llvm::ArrayRef<Remark::Arg> args) {
 void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
   // Header: [Type] pass:remarkName
   StringRef type = getRemarkTypeString();
-  StringRef categoryName = getFullCategoryName();
+  StringRef categoryName = getCombinedCategoryName();
   StringRef name = remarkName;
 
   os << '[' << type << "] ";
@@ -140,7 +140,7 @@ llvm::remarks::Remark Remark::generateRemark() const {
   r.RemarkType = getRemarkType();
   r.RemarkName = getRemarkName();
   // MLIR does not use passes; instead, it has categories and sub-categories.
-  r.PassName = getFullCategoryName();
+  r.PassName = getCombinedCategoryName();
   r.FunctionName = getFunction();
   r.Loc = locLambda();
   for (const Remark::Arg &arg : getArgs()) {
@@ -157,7 +157,7 @@ llvm::remarks::Remark Remark::generateRemark() const {
 
 InFlightRemark::~InFlightRemark() {
   if (remark && owner)
-    owner->report(std::move(*remark));
+    owner->report(*remark);
   owner = nullptr;
 }
 
@@ -225,7 +225,7 @@ InFlightRemark RemarkEngine::emitOptimizationRemarkAnalysis(Location loc,
 // RemarkEngine
 //===----------------------------------------------------------------------===//
 
-void RemarkEngine::report(const Remark &&remark) {
+void RemarkEngine::reportImpl(const Remark &remark) {
   // Stream the remark
   if (remarkStreamer)
     remarkStreamer->streamOptimizationRemark(remark);
@@ -235,7 +235,25 @@ void RemarkEngine::report(const Remark &&remark) {
     emitRemark(remark.getLocation(), remark.getMsg());
 }
 
+void RemarkEngine::report(const Remark &remark) {
+  // Postponed remarks are deferred to the end of pipeline.
+  if (remark.isPostponed()) {
+    postponedRemarks.insert(remark);
+    return;
+  }
+
+  reportImpl(remark);
+}
+
+void RemarkEngine::emitPostponedRemarks() {
+  for (auto &remark : postponedRemarks)
+    reportImpl(remark);
+  postponedRemarks.clear();
+}
+
 RemarkEngine::~RemarkEngine() {
+  emitPostponedRemarks();
+
   if (remarkStreamer)
     remarkStreamer->finalize();
 }
