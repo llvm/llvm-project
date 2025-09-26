@@ -719,6 +719,12 @@ Error MetadataParser::validateRootSignature(
           joinErrors(std::move(DeferredErrs),
                      make_error<RootSignatureValidationError<uint32_t>>(
                          "RegisterSpace", Sampler.RegisterSpace));
+
+    if (!hlsl::rootsig::verifyStaticSamplerFlags(RSD.Version, Sampler.Flags))
+      DeferredErrs =
+          joinErrors(std::move(DeferredErrs),
+                     make_error<RootSignatureValidationError<uint32_t>>(
+                         "Static Sampler Flag", Sampler.Flags));
   }
 
   return DeferredErrs;
