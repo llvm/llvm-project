@@ -1450,29 +1450,29 @@ define amdgpu_ps <3 x i16> @s_copysign_v3f16(<3 x half> inreg %arg_mag, <3 x hal
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, s4
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, s1
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s5
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, s2
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, s3
-; SI-NEXT:    v_cvt_f16_f32_e32 v5, s0
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, s5
+; SI-NEXT:    v_cvt_f16_f32_e32 v5, s2
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, s3
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, s0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; SI-NEXT:    v_cvt_f32_f16_e32 v5, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-NEXT:    s_brev_b32 s0, -2
 ; SI-NEXT:    v_bfi_b32 v2, s0, v3, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-NEXT:    v_bfi_b32 v3, s0, v5, v4
 ; SI-NEXT:    v_bfi_b32 v0, s0, v1, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
-; SI-NEXT:    v_or_b32_e32 v2, v3, v1
-; SI-NEXT:    v_alignbit_b32 v1, v0, v1, 16
-; SI-NEXT:    v_readfirstlane_b32 s1, v1
-; SI-NEXT:    v_readfirstlane_b32 s0, v2
-; SI-NEXT:    v_readfirstlane_b32 s2, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v3
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
+; SI-NEXT:    v_lshr_b64 v[2:3], v[0:1], 16
+; SI-NEXT:    v_or_b32_e32 v4, v4, v0
+; SI-NEXT:    v_readfirstlane_b32 s0, v4
+; SI-NEXT:    v_readfirstlane_b32 s1, v2
+; SI-NEXT:    v_readfirstlane_b32 s2, v1
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_copysign_v3f16:

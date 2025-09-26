@@ -397,6 +397,7 @@ private:
   void CollectRecordFields(const RecordDecl *Decl, llvm::DIFile *F,
                            SmallVectorImpl<llvm::Metadata *> &E,
                            llvm::DICompositeType *RecordTy);
+  llvm::StringRef GetLambdaCaptureName(const LambdaCapture &Capture);
 
   /// If the C++ class has vtable info then insert appropriate debug
   /// info entry in EltTys vector.
