@@ -7571,7 +7571,8 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
 
   /// Motion-modifiers for the 'to' clause.
   OpenMPMotionModifierKind MotionModifiers[NumberOfOMPMotionModifiers] = {
-      OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown};
+      OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown,
+      OMPC_MOTION_MODIFIER_unknown};
 
   /// Location of motion-modifiers for the 'to' clause.
   SourceLocation MotionModifiersLoc[NumberOfOMPMotionModifiers];
@@ -7643,6 +7644,9 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
     MotionModifiersLoc[I] = TLoc;
   }
 
+  void setIteratorModifier(Expr *IteratorModifier) {
+    getTrailingObjects<Expr *>()[2 * varlist_size()] = IteratorModifier;
+  }
   /// Set colon location.
   void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
 
@@ -7651,7 +7655,7 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
   size_t numTrailingObjects(OverloadToken<Expr *>) const {
     // There are varlist_size() of expressions, and varlist_size() of
     // user-defined mappers.
-    return 2 * varlist_size();
+    return 2 * varlist_size() + 1;
   }
   size_t numTrailingObjects(OverloadToken<ValueDecl *>) const {
     return getUniqueDeclarationsNum();
@@ -7677,15 +7681,14 @@ public:
   /// \param UDMQualifierLoc C++ nested name specifier for the associated
   /// user-defined mapper.
   /// \param MapperId The identifier of associated user-defined mapper.
-  static OMPToClause *Create(const ASTContext &C, const OMPVarListLocTy &Locs,
-                             ArrayRef<Expr *> Vars,
-                             ArrayRef<ValueDecl *> Declarations,
-                             MappableExprComponentListsRef ComponentLists,
-                             ArrayRef<Expr *> UDMapperRefs,
-                             ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
-                             ArrayRef<SourceLocation> MotionModifiersLoc,
-                             NestedNameSpecifierLoc UDMQualifierLoc,
-                             DeclarationNameInfo MapperId);
+  static OMPToClause *
+  Create(const ASTContext &C, const OMPVarListLocTy &Locs,
+         ArrayRef<Expr *> Vars, ArrayRef<ValueDecl *> Declarations,
+         MappableExprComponentListsRef ComponentLists,
+         ArrayRef<Expr *> UDMapperRefs, Expr *IteratorModifier,
+         ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+         ArrayRef<SourceLocation> MotionModifiersLoc,
+         NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId);
 
   /// Creates an empty clause with the place for \a NumVars variables.
   ///
@@ -7706,7 +7709,9 @@ public:
            "Requested modifier exceeds the total number of modifiers.");
     return MotionModifiers[Cnt];
   }
-
+  Expr *getIteratorModifier() {
+    return getTrailingObjects<Expr *>()[2 * varlist_size()];
+  }
   /// Fetches the motion-modifier location at 'Cnt' index of array of modifiers'
   /// locations.
   ///
@@ -7772,7 +7777,8 @@ class OMPFromClause final
 
   /// Motion-modifiers for the 'from' clause.
   OpenMPMotionModifierKind MotionModifiers[NumberOfOMPMotionModifiers] = {
-      OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown};
+      OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown,
+      OMPC_MOTION_MODIFIER_unknown};
 
   /// Location of motion-modifiers for the 'from' clause.
   SourceLocation MotionModifiersLoc[NumberOfOMPMotionModifiers];
@@ -7833,7 +7839,9 @@ class OMPFromClause final
            "Unexpected index to store motion modifier, exceeds array size.");
     MotionModifiers[I] = T;
   }
-
+  void setIteratorModifier(Expr *IteratorModifier) {
+    getTrailingObjects<Expr *>()[2 * varlist_size()] = IteratorModifier;
+  }
   /// Set location for the motion-modifier.
   ///
   /// \param I index for motion-modifier location.
@@ -7852,7 +7860,7 @@ class OMPFromClause final
   size_t numTrailingObjects(OverloadToken<Expr *>) const {
     // There are varlist_size() of expressions, and varlist_size() of
     // user-defined mappers.
-    return 2 * varlist_size();
+    return 2 * varlist_size() + 1;
   }
   size_t numTrailingObjects(OverloadToken<ValueDecl *>) const {
     return getUniqueDeclarationsNum();
@@ -7882,7 +7890,7 @@ public:
   Create(const ASTContext &C, const OMPVarListLocTy &Locs,
          ArrayRef<Expr *> Vars, ArrayRef<ValueDecl *> Declarations,
          MappableExprComponentListsRef ComponentLists,
-         ArrayRef<Expr *> UDMapperRefs,
+         ArrayRef<Expr *> UDMapperRefs, Expr *IteratorExpr,
          ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
          ArrayRef<SourceLocation> MotionModifiersLoc,
          NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId);
@@ -7906,7 +7914,9 @@ public:
            "Requested modifier exceeds the total number of modifiers.");
     return MotionModifiers[Cnt];
   }
-
+  Expr *getIteratorModifier() {
+    return getTrailingObjects<Expr *>()[2 * varlist_size()];
+  }
   /// Fetches the motion-modifier location at 'Cnt' index of array of modifiers'
   /// locations.
   ///
