@@ -1,7 +1,10 @@
 # RUN: yaml2obj --docnum=1 %s -o %t01234567890234567789.obj
 # RUN: yaml2obj --docnum=2 %s -o %t-ec.obj
 # RUN: env SYM64_THRESHOLD=100 llvm-lib -machine:amd64 -out:%t.lib %t01234567890234567789.obj
-# RUN: llvm-readobj %t.lib
+# RUN: llvm-nm --print-armap %t.lib | FileCheck --check-prefix=ARMAP %s
+# ARMAP:      Archive map
+# ARMAP-NEXT: sym
+
 # RUN: env SYM64_THRESHOLD=100 not llvm-lib -machine:arm64x -out:%t-ec.lib %t-ec.obj %t01234567890234567789.obj 2>&1 | FileCheck %s
 # CHECK: Archive is too large: ARM64X does not support archives larger than 4GB
 
