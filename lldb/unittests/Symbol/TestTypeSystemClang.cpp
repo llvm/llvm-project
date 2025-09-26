@@ -685,9 +685,7 @@ TEST_F(TestCreateClassTemplateDecl, FindExistingTemplates) {
   // The behaviour should follow the C++ rules for redeclaring templates
   // (e.g., parameter names can be changed/omitted.)
 
-  // Test an empty template parameter list: <>
-  // This first expect causes an assert. rdar://159893045
-  // ExpectNewTemplate("<>", {{}, {}});
+  ExpectNewTemplate("<>", {{}, {}});
 
   clang::TemplateArgument intArg(m_ast->getASTContext().IntTy);
   clang::TemplateArgument int47Arg(m_ast->getASTContext(),
