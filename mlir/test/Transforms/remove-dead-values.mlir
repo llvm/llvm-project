@@ -576,7 +576,7 @@ module @return_void_with_unused_argument {
   // CHECK-LABEL: func.func @main2
   // CHECK: %[[UNUSED:.*]] = arith.constant 0 : i32
   // CHECK: call @public_fn_with_unused_argument(%[[UNUSED]]) : (i32) -> ()
-  func.func @main2(%arg0: i32) -> () {
+  func.func @main2() -> () {
     %zero = arith.constant 0 : i32
     call @public_fn_with_unused_argument(%zero) : (i32) -> ()
     return
