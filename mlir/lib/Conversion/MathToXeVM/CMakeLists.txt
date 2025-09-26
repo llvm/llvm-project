@@ -1,4 +1,3 @@
-# TODO check if everything here is needed
 add_mlir_conversion_library(MLIRMathToXeVM
   MathToXeVM.cpp
 
@@ -12,13 +11,9 @@ add_mlir_conversion_library(MLIRMathToXeVM
   Core
 
   LINK_LIBS PUBLIC
-  MLIRDialectUtils
-  MLIRFuncDialect
-  MLIRGPUToGPURuntimeTransforms
   MLIRMathDialect
   MLIRLLVMCommonConversion
   MLIRPass
   MLIRTransformUtils
   MLIRVectorDialect
-  MLIRVectorUtils
   )

@@ -113,9 +113,6 @@ module @test_module {
 
     // Check all other math operations:
 
-    // native_divide(gentype x, gentype y)
-    // TODO: convert arith.divf to arith/native_divide if option is enabled
-
     // CHECK: llvm.call @_Z22__spirv_ocl_native_cosDh(%{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f16) -> f16
     %cos_afn_f16 = math.cos %c1_f16 fastmath<afn> : f16
 
