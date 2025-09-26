@@ -281,8 +281,6 @@ void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
   // to OpenCL can be removed from the following line.
   setAddressSpaceMap((Opts.OpenCL && !Opts.OpenCLGenericAddressSpace) ||
                      !isAMDGCN(getTriple()));
-
-  AtomicOpts = AtomicOptions(Opts);
 }
 
 llvm::SmallVector<Builtin::InfosShard>
