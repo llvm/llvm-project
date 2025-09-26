@@ -427,6 +427,9 @@ def LGDT32m : I<0x01, MRM2m, (outs), (ins opaquemem:$src),
                 "lgdt{l|d}\t$src", []>, OpSize32, TB, Requires<[Not64BitMode]>;
 def LGDT64m : I<0x01, MRM2m, (outs), (ins opaquemem:$src),
                 "lgdt{q}\t$src", []>, TB, Requires<[In64BitMode]>;
+// Special variant with data16 prefix (OpSize16) for 64-bit mode
+def LGDT64m_16 : I<0x01, MRM2m, (outs), (ins opaquemem:$src),
+                 "lgdt{q}\t$src", []>, TB, OpSize16, Requires<[In64BitMode]>;
 def LIDT16m : I<0x01, MRM3m, (outs), (ins opaquemem:$src),
                 "lidtw\t$src", []>, TB, OpSize16, Requires<[Not64BitMode]>;
 def LIDT32m : I<0x01, MRM3m, (outs), (ins opaquemem:$src),
