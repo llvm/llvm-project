@@ -130,6 +130,14 @@ EVAL_EXPR(47, &x < &x + 1 ? 1 : -1)
 EVAL_EXPR(48, &x != &x - 1 ? 1 : -1)
 EVAL_EXPR(49, &x < &x - 100 ? 1 : -1) // ref-error {{not an integer constant expression}}
 
+
+/// Offset wraps.
+EVAL_EXPR(59, (&x  + ((__UINTPTR_MAX__ - 35)/ 4)) == &x - 9 ? 1 : -1)
+
+EVAL_EXPR(60, &x != &x - 9 ? 1 : -1)
+EVAL_EXPR(61, (&x - 10 + 11) > &x ? 1 : -1)
+EVAL_EXPR(62, (g17 - 10 + 11) > g17 ? 1 : -1)
+
 extern struct Test50S Test50;
 EVAL_EXPR(50, &Test50 < (struct Test50S*)((unsigned long)&Test50 + 10)) // both-error {{not an integer constant expression}}
 

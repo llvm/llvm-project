@@ -57,6 +57,9 @@ Pointer::Pointer(const Pointer &P)
   case Storage::Typeid:
     Typeid = P.Typeid;
     break;
+  case Storage::Degen:
+    DP = P.DP;
+    break;
   }
 }
 
@@ -75,6 +78,9 @@ Pointer::Pointer(Pointer &&P) : Offset(P.Offset), StorageKind(P.StorageKind) {
     break;
   case Storage::Typeid:
     Typeid = P.Typeid;
+    break;
+  case Storage::Degen:
+    DP = P.DP;
     break;
   }
 }
@@ -110,20 +116,26 @@ Pointer &Pointer::operator=(const Pointer &P) {
   StorageKind = P.StorageKind;
   Offset = P.Offset;
 
-  if (P.isBlockPointer()) {
+  switch (StorageKind) {
+  case Storage::Int:
+    Int = P.Int;
+    break;
+  case Storage::Block:
     BS = P.BS;
-
     if (BS.Pointee)
       BS.Pointee->addPointer(this);
-  } else if (P.isIntegralPointer()) {
-    Int = P.Int;
-  } else if (P.isFunctionPointer()) {
+    break;
+  case Storage::Fn:
     Fn = P.Fn;
-  } else if (P.isTypeidPointer()) {
+    break;
+  case Storage::Typeid:
     Typeid = P.Typeid;
-  } else {
-    assert(false && "Unhandled storage kind");
+    break;
+  case Storage::Degen:
+    DP = P.DP;
+    break;
   }
+
   return *this;
 }
 
@@ -147,21 +159,35 @@ Pointer &Pointer::operator=(Pointer &&P) {
   StorageKind = P.StorageKind;
   Offset = P.Offset;
 
-  if (P.isBlockPointer()) {
+  switch (StorageKind) {
+  case Storage::Int:
+    Int = P.Int;
+    break;
+  case Storage::Block:
     BS = P.BS;
-
     if (BS.Pointee)
       BS.Pointee->addPointer(this);
-  } else if (P.isIntegralPointer()) {
-    Int = P.Int;
-  } else if (P.isFunctionPointer()) {
+    break;
+  case Storage::Fn:
     Fn = P.Fn;
-  } else if (P.isTypeidPointer()) {
+    break;
+  case Storage::Typeid:
     Typeid = P.Typeid;
-  } else {
-    assert(false && "Unhandled storage kind");
+    break;
+  case Storage::Degen:
+    DP = P.DP;
+    break;
   }
+
   return *this;
+}
+
+static QualType getPointeeOrElemType(QualType T) {
+  if (const ArrayType *AT = T->getAsArrayTypeUnsafe())
+    return AT->getElementType();
+  if (T->isPointerOrReferenceType())
+    return T->getPointeeType();
+  return T;
 }
 
 APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
@@ -192,6 +218,26 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    CharUnits::Zero(), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
   }
+
+  if (isDegenPointer()) {
+    assert(!isZero());
+    QualType PtrType = getType();
+    if (PtrType->isArrayType() || PtrType->isPointerOrReferenceType()) {
+      QualType ElemType = getPointeeOrElemType(PtrType);
+      CharUnits ByteOffset = Offset * ASTCtx.getTypeSizeInChars(ElemType);
+      Path.push_back(
+          APValue::LValuePathEntry::ArrayIndex(ByteOffset.getQuantity()));
+      return APValue(DP.Pointee->getDescriptor()->asVarDecl(), ByteOffset, Path,
+                     /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
+    }
+    // No LValuePath.
+    CharUnits ByteOffset = Offset * ASTCtx.getTypeSizeInChars(PtrType);
+    return APValue(
+        APValue::LValueBase(DP.Pointee->getDescriptor()->asVarDecl()),
+        ByteOffset, APValue::NoLValuePath());
+  }
+
+  assert(isBlockPointer());
 
   // Build the lvalue base from the block.
   const Descriptor *Desc = getDeclDesc();
@@ -354,6 +400,9 @@ void Pointer::print(llvm::raw_ostream &OS) const {
     OS << "(Typeid) { " << (const void *)asTypeidPointer().TypePtr << ", "
        << (const void *)asTypeidPointer().TypeInfoType << " + " << Offset
        << "}";
+    break;
+  case Storage::Degen:
+    OS << "(Degen) { " << DP.Pointee << " + " << Offset << "}";
   }
 }
 
@@ -362,6 +411,10 @@ size_t Pointer::computeOffsetForComparison() const {
     return asIntPointer().Value + Offset;
   if (isTypeidPointer())
     return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
+  if (isDegenPointer()) {
+    uint64_t ByteOffset = (Offset * elemSize());
+    return ByteOffset;
+  }
 
   if (!isBlockPointer())
     return Offset;
@@ -426,6 +479,7 @@ std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
   if (isFunctionPointer())
     return asFunctionPointer().toDiagnosticString(Ctx);
 
+  toAPValue(Ctx).dump();
   return toAPValue(Ctx).getAsString(Ctx, getType());
 }
 
@@ -635,10 +689,13 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
   if (A.isTypeidPointer() && B.isTypeidPointer())
     return true;
 
-  if (A.StorageKind != B.StorageKind)
+  if (!A.isBlockPointer() && !A.isDegenPointer() && !B.isBlockPointer() &&
+      !B.isDegenPointer())
     return false;
 
-  return A.asBlockPointer().Pointee == B.asBlockPointer().Pointee;
+  const Block *BlockA = A.isBlockPointer() ? A.BS.Pointee : A.DP.Pointee;
+  const Block *BlockB = B.isBlockPointer() ? B.BS.Pointee : B.DP.Pointee;
+  return BlockA == BlockB;
 }
 
 bool Pointer::pointToSameBlock(const Pointer &A, const Pointer &B) {

@@ -2236,7 +2236,7 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
   }
 
   // Arrays of unknown bounds cannot have pointers into them.
-  if (!CheckArray(S, OpPC, Ptr))
+  if (S.getLangOpts().CPlusPlus && !CheckArray(S, OpPC, Ptr))
     return std::nullopt;
 
   // This is much simpler for integral pointers, so handle them first.
@@ -2247,7 +2247,8 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
       return Pointer(V + O, Ptr.asIntPointer().Desc);
     else
       return Pointer(V - O, Ptr.asIntPointer().Desc);
-  } else if (Ptr.isFunctionPointer()) {
+  }
+  if (Ptr.isFunctionPointer()) {
     uint64_t O = static_cast<uint64_t>(Offset);
     uint64_t N;
     if constexpr (Op == ArithOp::Add)
@@ -2260,8 +2261,17 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
           << N << /*non-array*/ true << 0;
     return Pointer(Ptr.asFunctionPointer().getFunction(), N);
   }
+  if (Ptr.isUnknownSizeArray()) {
+    // Everything on unknown size arrays is invalid anyway. Compute it here
+    // manually and return a degenerate pointer.
+    assert(!Ptr.isZero());
+    if constexpr (Op == ArithOp::Add)
+      return Pointer(DegenPointer{Ptr.block()}, static_cast<uint64_t>(Offset));
+    else
+      return Pointer(DegenPointer{Ptr.block()}, static_cast<uint64_t>(-Offset));
+  }
 
-  assert(Ptr.isBlockPointer());
+  assert(Ptr.isBlockPointer() || Ptr.isDegenPointer());
 
   uint64_t MaxIndex = static_cast<uint64_t>(Ptr.getNumElems());
   uint64_t Index;
@@ -2307,10 +2317,6 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
     }
   }
 
-  if (Invalid && S.getLangOpts().CPlusPlus)
-    return std::nullopt;
-
-  // Offset is valid - compute it on unsigned.
   int64_t WideIndex = static_cast<int64_t>(Index);
   int64_t WideOffset = static_cast<int64_t>(Offset);
   int64_t Result;
@@ -2319,6 +2325,12 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
   else
     Result = WideIndex - WideOffset;
 
+  if (Invalid) {
+    if (S.getLangOpts().CPlusPlus)
+      return std::nullopt;
+
+    return Pointer(DegenPointer{Ptr.block()}, Result);
+  }
   // When the pointer is one-past-end, going back to index 0 is the only
   // useful thing we can do. Any other index has been diagnosed before and
   // we don't get here.
@@ -2327,6 +2339,9 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
       return Ptr.atIndex(0);
     return Pointer(Ptr.asBlockPointer().Pointee, Ptr.asBlockPointer().Base);
   }
+
+  if (Ptr.isDegenPointer())
+    return Pointer(DegenPointer{Ptr.block()}, Result);
 
   return Ptr.atIndex(static_cast<uint64_t>(Result));
 }
@@ -2440,16 +2455,16 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
     }
   }
 
-  int64_t A64 =
-      LHS.isBlockPointer()
-          ? (LHS.isElementPastEnd() ? LHS.getNumElems() : LHS.getIndex())
-          : LHS.getIntegerRepresentation();
+  int64_t A64;
+  int64_t B64;
 
-  int64_t B64 =
-      RHS.isBlockPointer()
-          ? (RHS.isElementPastEnd() ? RHS.getNumElems() : RHS.getIndex())
-          : RHS.getIntegerRepresentation();
-
+  if (LHS.isBlockPointer() && RHS.isBlockPointer()) {
+    A64 = (LHS.isElementPastEnd() ? LHS.getNumElems() : LHS.getIndex());
+    B64 = (RHS.isElementPastEnd() ? RHS.getNumElems() : RHS.getIndex());
+  } else {
+    A64 = LHS.getIntegerRepresentation();
+    B64 = RHS.getIntegerRepresentation();
+  }
   int64_t R64 = A64 - B64;
   if (static_cast<int64_t>(T::from(R64)) != R64)
     return handleOverflow(S, OpPC, R64);
@@ -3196,7 +3211,7 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
 inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isZero()) {
+  if (Ptr.isZero() || Ptr.isDegenPointer()) {
     S.Stk.push<Pointer>(Ptr);
     return true;
   }

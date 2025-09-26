@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
 // CHECK: @g1 ={{.*}} global [2 x ptr] [ptr getelementptr (i8, ptr @g0, i64 -2), ptr getelementptr (i8, ptr @g0, i64 -46)], align 16
 // CHECK: @g2 ={{.*}} global [2 x ptr] [ptr getelementptr (i8, ptr @g0, i64 -2), ptr getelementptr (i8, ptr @g0, i64 -46)], align 16
