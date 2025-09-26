@@ -36,7 +36,7 @@ if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   list(APPEND DEFAULT_PROJECTS "bolt")
 endif()
 
-set (DEFAULT_RUNTIMES "compiler-rt;libcxx")
+set (DEFAULT_RUNTIMES "compiler-rt;libcxx;openmp;flang-rt")
 if (NOT WIN32)
   list(APPEND DEFAULT_RUNTIMES "libcxxabi" "libunwind")
 endif()
