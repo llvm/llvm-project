@@ -2746,7 +2746,7 @@ static bool interp_builtin_horizontal_int_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
   assert(Call->getNumArgs() == 2);
- 
+
   assert(Call->getArg(0)->getType()->isVectorType() &&
          Call->getArg(1)->getType()->isVectorType());
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
@@ -2810,8 +2810,7 @@ static bool interp_builtin_horizontal_fp_binop(
     using T = PrimConv<PT_Float>::T;
     APFloat Elem1 = LHS.elem<T>(I).getAPFloat();
     APFloat Elem2 = LHS.elem<T>(I + 1).getAPFloat();
-    Dst.elem<T>(DstElem++) =
-        static_cast<T>(APFloat(Fn(Elem1, Elem2, RM)));
+    Dst.elem<T>(DstElem++) = static_cast<T>(APFloat(Fn(Elem1, Elem2, RM)));
   }
   for (unsigned I = 0; I != SourceLen; I += 2) {
     using T = PrimConv<PT_Float>::T;
@@ -3539,7 +3538,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_phaddd128:
   case clang::X86::BI__builtin_ia32_phaddd256:
     return interp_builtin_horizontal_int_binop(
-        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {return LHS + RHS;});
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
   case clang::X86::BI__builtin_ia32_phaddsw128:
   case clang::X86::BI__builtin_ia32_phaddsw256:
     return interp_builtin_horizontal_int_binop(
@@ -3551,7 +3551,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_phsubd128:
   case clang::X86::BI__builtin_ia32_phsubd256:
     return interp_builtin_horizontal_int_binop(
-        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) { return LHS - RHS; });
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS - RHS; });
   case clang::X86::BI__builtin_ia32_phsubsw128:
   case clang::X86::BI__builtin_ia32_phsubsw256:
     return interp_builtin_horizontal_int_binop(
