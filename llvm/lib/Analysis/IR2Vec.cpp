@@ -216,6 +216,8 @@ void SymbolicEmbedder::computeEmbeddings(const BasicBlock &BB) const {
       ArgEmb += Vocab[*Op];
     auto InstVector =
         Vocab[I.getOpcode()] + Vocab[I.getType()->getTypeID()] + ArgEmb;
+    if (const auto *IC = dyn_cast<CmpInst>(&I))
+      InstVector += Vocab[IC->getPredicate()];
     InstVecMap[&I] = InstVector;
     BBVector += InstVector;
   }
@@ -250,6 +252,9 @@ void FlowAwareEmbedder::computeEmbeddings(const BasicBlock &BB) const {
     // embeddings
     auto InstVector =
         Vocab[I.getOpcode()] + Vocab[I.getType()->getTypeID()] + ArgEmb;
+    // Add compare predicate embedding as an additional operand if applicable
+    if (const auto *IC = dyn_cast<CmpInst>(&I))
+      InstVector += Vocab[IC->getPredicate()];
     InstVecMap[&I] = InstVector;
     BBVector += InstVector;
   }
@@ -278,7 +283,17 @@ unsigned Vocabulary::getSlotIndex(Type::TypeID TypeID) {
 unsigned Vocabulary::getSlotIndex(const Value &Op) {
   unsigned Index = static_cast<unsigned>(getOperandKind(&Op));
   assert(Index < MaxOperandKinds && "Invalid OperandKind");
-  return MaxOpcodes + MaxCanonicalTypeIDs + Index;
+  return OperandBaseOffset + Index;
+}
+
+unsigned Vocabulary::getSlotIndex(CmpInst::Predicate P) {
+  unsigned PU = static_cast<unsigned>(P);
+  unsigned FirstFC = static_cast<unsigned>(CmpInst::FIRST_FCMP_PREDICATE);
+  unsigned FirstIC = static_cast<unsigned>(CmpInst::FIRST_ICMP_PREDICATE);
+
+  unsigned PredIdx =
+      (PU >= FirstIC) ? (NumFCmpPredicates + (PU - FirstIC)) : (PU - FirstFC);
+  return PredicateBaseOffset + PredIdx;
 }
 
 const Embedding &Vocabulary::operator[](unsigned Opcode) const {
@@ -291,6 +306,10 @@ const Embedding &Vocabulary::operator[](Type::TypeID TypeID) const {
 
 const ir2vec::Embedding &Vocabulary::operator[](const Value &Arg) const {
   return Vocab[getSlotIndex(Arg)];
+}
+
+const ir2vec::Embedding &Vocabulary::operator[](CmpInst::Predicate P) const {
+  return Vocab[getSlotIndex(P)];
 }
 
 StringRef Vocabulary::getVocabKeyForOpcode(unsigned Opcode) {
@@ -338,18 +357,41 @@ Vocabulary::OperandKind Vocabulary::getOperandKind(const Value *Op) {
   return OperandKind::VariableID;
 }
 
+CmpInst::Predicate Vocabulary::getPredicate(unsigned Index) {
+  assert(Index < MaxPredicateKinds && "Invalid predicate index");
+  unsigned PredEnumVal =
+      (Index < NumFCmpPredicates)
+          ? (static_cast<unsigned>(CmpInst::FIRST_FCMP_PREDICATE) + Index)
+          : (static_cast<unsigned>(CmpInst::FIRST_ICMP_PREDICATE) +
+             (Index - NumFCmpPredicates));
+  return static_cast<CmpInst::Predicate>(PredEnumVal);
+}
+
+StringRef Vocabulary::getVocabKeyForPredicate(CmpInst::Predicate Pred) {
+  static SmallString<16> PredNameBuffer;
+  if (Pred < CmpInst::FIRST_ICMP_PREDICATE)
+    PredNameBuffer = "FCMP_";
+  else
+    PredNameBuffer = "ICMP_";
+  PredNameBuffer += CmpInst::getPredicateName(Pred);
+  return PredNameBuffer;
+}
+
 StringRef Vocabulary::getStringKey(unsigned Pos) {
   assert(Pos < NumCanonicalEntries && "Position out of bounds in vocabulary");
   // Opcode
   if (Pos < MaxOpcodes)
     return getVocabKeyForOpcode(Pos + 1);
   // Type
-  if (Pos < MaxOpcodes + MaxCanonicalTypeIDs)
+  if (Pos < OperandBaseOffset)
     return getVocabKeyForCanonicalTypeID(
         static_cast<CanonicalTypeID>(Pos - MaxOpcodes));
   // Operand
-  return getVocabKeyForOperandKind(
-      static_cast<OperandKind>(Pos - MaxOpcodes - MaxCanonicalTypeIDs));
+  if (Pos < PredicateBaseOffset)
+    return getVocabKeyForOperandKind(
+        static_cast<OperandKind>(Pos - OperandBaseOffset));
+  // Predicates
+  return getVocabKeyForPredicate(getPredicate(Pos - PredicateBaseOffset));
 }
 
 // For now, assume vocabulary is stable unless explicitly invalidated.
@@ -363,11 +405,9 @@ Vocabulary::VocabVector Vocabulary::createDummyVocabForTest(unsigned Dim) {
   VocabVector DummyVocab;
   DummyVocab.reserve(NumCanonicalEntries);
   float DummyVal = 0.1f;
-  // Create a dummy vocabulary with entries for all opcodes, types, and
-  // operands
-  for ([[maybe_unused]] unsigned _ :
-       seq(0u, Vocabulary::MaxOpcodes + Vocabulary::MaxCanonicalTypeIDs +
-                   Vocabulary::MaxOperandKinds)) {
+  // Create a dummy vocabulary with entries for all opcodes, types, operands
+  // and predicates
+  for ([[maybe_unused]] unsigned _ : seq(0u, Vocabulary::NumCanonicalEntries)) {
     DummyVocab.push_back(Embedding(Dim, DummyVal));
     DummyVal += 0.1f;
   }
@@ -510,6 +550,24 @@ void IR2VecVocabAnalysis::generateNumMappedVocab() {
   }
   Vocab.insert(Vocab.end(), NumericArgEmbeddings.begin(),
                NumericArgEmbeddings.end());
+
+  // Handle Predicates: part of Operands section. We look up predicate keys
+  // in ArgVocab.
+  std::vector<Embedding> NumericPredEmbeddings(Vocabulary::MaxPredicateKinds,
+                                               Embedding(Dim, 0));
+  NumericPredEmbeddings.reserve(Vocabulary::MaxPredicateKinds);
+  for (unsigned PK : seq(0u, Vocabulary::MaxPredicateKinds)) {
+    StringRef VocabKey =
+        Vocabulary::getVocabKeyForPredicate(Vocabulary::getPredicate(PK));
+    auto It = ArgVocab.find(VocabKey.str());
+    if (It != ArgVocab.end()) {
+      NumericPredEmbeddings[PK] = It->second;
+      continue;
+    }
+    handleMissingEntity(VocabKey.str());
+  }
+  Vocab.insert(Vocab.end(), NumericPredEmbeddings.begin(),
+               NumericPredEmbeddings.end());
 }
 
 IR2VecVocabAnalysis::IR2VecVocabAnalysis(const VocabVector &Vocab)
