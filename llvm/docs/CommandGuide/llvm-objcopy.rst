@@ -62,6 +62,11 @@ multiple file formats.
  example, file and section symbols in ELF objects will not be discarded.
  Additionally, remove all debug sections.
 
+.. option:: --dump-offload-bundle=<URI>
+
+ Dump the HIP Offload Bundle entry specified by the URI syntax given, into a 
+ code object file.
+
 .. option:: --dump-section <section>=<file>
 
  Dump the contents of section ``<section>`` into the file ``<file>``. Can be

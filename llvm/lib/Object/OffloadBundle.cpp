@@ -199,8 +199,8 @@ Error object::extractOffloadBundleFatBinary(
   return Error::success();
 }
 
-Error object::extractCodeObject(const ObjectFile &Source, int64_t Offset,
-                                int64_t Size, StringRef OutputFileName) {
+Error object::extractCodeObject(const ObjectFile &Source, size_t Offset,
+                                size_t Size, StringRef OutputFileName) {
   Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(OutputFileName, Size);
 
@@ -211,12 +211,23 @@ Error object::extractCodeObject(const ObjectFile &Source, int64_t Offset,
   if (Error Err = InputBuffOrErr.takeError())
     return Err;
 
+  if (Size > InputBuffOrErr->getBufferSize())
+    return createStringError(inconvertibleErrorCode(),
+                             "size in URI is larger than source");
+  if (Offset > InputBuffOrErr->getBufferSize())
+    return createStringError(inconvertibleErrorCode(),
+                             "offset in URI is beyond the size of the source");
+  if (Offset + Size > InputBuffOrErr->getBufferSize())
+    return createStringError(
+        inconvertibleErrorCode(),
+        "offset + size in URI is beyond the size of the source");
+
   std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
   std::copy(InputBuffOrErr->getBufferStart() + Offset,
             InputBuffOrErr->getBufferStart() + Offset + Size,
             Buf->getBufferStart());
   if (Error E = Buf->commit())
-    return E;
+    return createFileError(OutputFileName, std::move(E));
 
   return Error::success();
 }
@@ -238,7 +249,7 @@ Error object::extractOffloadBundleByURI(StringRef URIstr) {
   // Create an ObjectFile object from uri.file_uri
   auto ObjOrErr = ObjectFile::createObjectFile(Uri.FileName);
   if (!ObjOrErr)
-    return ObjOrErr.takeError();
+    return createFileError(Uri.FileName, ObjOrErr.takeError());
 
   auto Obj = ObjOrErr->getBinary();
   if (Error Err =
