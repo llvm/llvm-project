@@ -368,13 +368,13 @@ Sections:
                               .str());
   };
 
-  auto PhdrsOrErr = Obj.program_headers();
+  Expected<ELFFile<ELF64LE>::Elf_Phdr_Range> PhdrsOrErr = Obj.program_headers();
   EXPECT_FALSE(!PhdrsOrErr);
   for (auto P : *PhdrsOrErr)
     if (P.p_type == ELF::PT_NOTE)
       CheckOverflow(P, P.p_offset, P.p_filesz);
 
-  auto ShdrsOrErr = Obj.sections();
+  Expected<ELFFile<ELF64LE>::Elf_Shdr_Range> ShdrsOrErr = Obj.sections();
   EXPECT_FALSE(!ShdrsOrErr);
   for (auto S : *ShdrsOrErr)
     if (S.sh_type == ELF::SHT_NOTE)
