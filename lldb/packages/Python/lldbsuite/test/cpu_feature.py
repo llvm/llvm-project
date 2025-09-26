@@ -40,13 +40,10 @@ class CPUFeature:
             return output, False
 
         # Assume that every processor presents the same features.
-        # Look for the first "Features: ...." line.
-        for line in output.splitlines():
-            line = line.strip()
-            if line.startswith("Features"):
-                # Feature names are space separated.
-                features = line.split(":")[1].strip().split()
-                return None, (self.cpu_info_flag in features)
+        # Look for the first "Features: ...." line. Features are space separated.
+        if m := re.search(r"Features\s*: (.*)\n", output):
+            features = m.group(1).split()
+            return None, (self.cpu_info_flag in features)
 
         return f'No "Features:" line found in /proc/cpuinfo', False
 
