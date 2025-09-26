@@ -6,7 +6,7 @@
 ; RUN: llc < %s -mtriple=i686-linux -global-isel -global-isel-abort=2  | FileCheck %s -check-prefixes=X86
 ; RUN: llc < %s -mtriple=x86_64-linux -global-isel -global-isel-abort=2  | FileCheck %s -check-prefixes=X64,X64-GISEL
 
-define i1 @isnone_f(float %x) {
+define i1 @isnone_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: isnone_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    xorl %eax, %eax
@@ -33,7 +33,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @isany_f(float %x) {
+define i1 @isany_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: isany_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movb $1, %al
@@ -60,7 +60,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @issignaling_f(float %x) {
+define i1 @issignaling_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: issignaling_f:
 ; X86-SDAGISEL:       # %bb.0:
 ; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -86,7 +86,6 @@ define i1 @issignaling_f(float %x) {
 ; X86-FASTISEL-LABEL: issignaling_f:
 ; X86-FASTISEL:       # %bb.0:
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -97,7 +96,6 @@ define i1 @issignaling_f(float %x) {
 ; X86-FASTISEL-NEXT:    setge %al
 ; X86-FASTISEL-NEXT:    andb %cl, %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
 ;
 ; X86-LABEL: issignaling_f:
@@ -114,7 +112,7 @@ define i1 @issignaling_f(float %x) {
    ret i1 %a0
 }
 
- define i1 @isquiet_f(float %x) {
+ define i1 @isquiet_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: isquiet_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -134,7 +132,6 @@ define i1 @issignaling_f(float %x) {
 ; X86-FASTISEL-LABEL: isquiet_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -142,7 +139,6 @@ define i1 @issignaling_f(float %x) {
 ; X86-FASTISEL-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
 ; X86-FASTISEL-NEXT:    setge %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
 ;
 ; X86-LABEL: isquiet_f:
@@ -157,7 +153,7 @@ define i1 @issignaling_f(float %x) {
    ret i1 %0
 }
 
-define i1 @not_isquiet_f(float %x) {
+define i1 @not_isquiet_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: not_isquiet_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -177,7 +173,6 @@ define i1 @not_isquiet_f(float %x) {
 ; X86-FASTISEL-LABEL: not_isquiet_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -185,7 +180,6 @@ define i1 @not_isquiet_f(float %x) {
 ; X86-FASTISEL-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
 ; X86-FASTISEL-NEXT:    setl %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
 ;
 ; X86-LABEL: not_isquiet_f:
@@ -200,7 +194,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @isinf_f(float %x) {
+define i1 @isinf_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: isinf_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -220,7 +214,6 @@ define i1 @isinf_f(float %x) {
 ; X86-FASTISEL-LABEL: isinf_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -228,7 +221,6 @@ define i1 @isinf_f(float %x) {
 ; X86-FASTISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X86-FASTISEL-NEXT:    sete %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
 ;
 ; X86-LABEL: isinf_f:
@@ -243,7 +235,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @not_isinf_f(float %x) {
+define i1 @not_isinf_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: not_isinf_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -263,7 +255,6 @@ define i1 @not_isinf_f(float %x) {
 ; X86-FASTISEL-LABEL: not_isinf_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -271,7 +262,6 @@ define i1 @not_isinf_f(float %x) {
 ; X86-FASTISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X86-FASTISEL-NEXT:    setne %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
 ;
 ; X86-LABEL: not_isinf_f:
@@ -286,7 +276,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @is_plus_inf_f(float %x) {
+define i1 @is_plus_inf_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: is_plus_inf_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    cmpl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
@@ -303,13 +293,11 @@ define i1 @is_plus_inf_f(float %x) {
 ; X86-FASTISEL-LABEL: is_plus_inf_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    cmpl $2139095040, (%esp) # imm = 0x7F800000
 ; X86-FASTISEL-NEXT:    sete %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
 ;
 ; X86-LABEL: is_plus_inf_f:
@@ -322,7 +310,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @is_minus_inf_f(float %x) {
+define i1 @is_minus_inf_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: is_minus_inf_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    cmpl $-8388608, {{[0-9]+}}(%esp) # imm = 0xFF800000
@@ -339,13 +327,11 @@ define i1 @is_minus_inf_f(float %x) {
 ; X86-FASTISEL-LABEL: is_minus_inf_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    cmpl $-8388608, (%esp) # imm = 0xFF800000
 ; X86-FASTISEL-NEXT:    sete %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
 ;
 ; X86-LABEL: is_minus_inf_f:
@@ -358,7 +344,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @not_is_minus_inf_f(float %x) {
+define i1 @not_is_minus_inf_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: not_is_minus_inf_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    cmpl $-8388608, {{[0-9]+}}(%esp) # imm = 0xFF800000
@@ -375,13 +361,11 @@ define i1 @not_is_minus_inf_f(float %x) {
 ; X86-FASTISEL-LABEL: not_is_minus_inf_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    cmpl $-8388608, (%esp) # imm = 0xFF800000
 ; X86-FASTISEL-NEXT:    setne %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
 ;
 ; X86-LABEL: not_is_minus_inf_f:
@@ -394,7 +378,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @isfinite_f(float %x) {
+define i1 @isfinite_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: isfinite_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -414,7 +398,6 @@ define i1 @isfinite_f(float %x) {
 ; X86-FASTISEL-LABEL: isfinite_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -422,7 +405,6 @@ define i1 @isfinite_f(float %x) {
 ; X86-FASTISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X86-FASTISEL-NEXT:    setl %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
 ;
 ; X86-LABEL: isfinite_f:
@@ -437,7 +419,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @not_isfinite_f(float %x) {
+define i1 @not_isfinite_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: not_isfinite_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -457,7 +439,6 @@ define i1 @not_isfinite_f(float %x) {
 ; X86-FASTISEL-LABEL: not_isfinite_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -465,7 +446,6 @@ define i1 @not_isfinite_f(float %x) {
 ; X86-FASTISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X86-FASTISEL-NEXT:    setge %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
 ;
 ; X86-LABEL: not_isfinite_f:
@@ -480,7 +460,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @is_plus_finite_f(float %x) {
+define i1 @is_plus_finite_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: is_plus_finite_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    cmpl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
@@ -497,13 +477,11 @@ define i1 @is_plus_finite_f(float %x) {
 ; X86-FASTISEL-LABEL: is_plus_finite_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    cmpl $2139095040, (%esp) # imm = 0x7F800000
 ; X86-FASTISEL-NEXT:    setb %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
 ;
 ; X86-LABEL: is_plus_finite_f:
