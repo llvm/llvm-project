@@ -58,23 +58,23 @@ define i8 @scmp_8_128(i128 %x, i128 %y) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r11, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-NEXT:    ldr r4, [sp, #24]
-; CHECK-NEXT:    mov r5, #0
-; CHECK-NEXT:    ldr r6, [sp, #28]
-; CHECK-NEXT:    subs r7, r0, r4
-; CHECK-NEXT:    ldr r12, [sp, #32]
-; CHECK-NEXT:    sbcs r7, r1, r6
-; CHECK-NEXT:    ldr lr, [sp, #36]
-; CHECK-NEXT:    sbcs r7, r2, r12
-; CHECK-NEXT:    sbcs r7, r3, lr
+; CHECK-NEXT:    ldr r5, [sp, #24]
+; CHECK-NEXT:    mov r6, #0
+; CHECK-NEXT:    ldr r4, [sp, #28]
+; CHECK-NEXT:    subs r7, r0, r5
+; CHECK-NEXT:    ldr lr, [sp, #32]
+; CHECK-NEXT:    sbcs r7, r1, r4
+; CHECK-NEXT:    ldr r12, [sp, #36]
+; CHECK-NEXT:    sbcs r7, r2, lr
+; CHECK-NEXT:    sbcs r7, r3, r12
 ; CHECK-NEXT:    mov r7, #0
 ; CHECK-NEXT:    movwlt r7, #1
-; CHECK-NEXT:    subs r0, r4, r0
-; CHECK-NEXT:    sbcs r0, r6, r1
-; CHECK-NEXT:    sbcs r0, r12, r2
-; CHECK-NEXT:    sbcs r0, lr, r3
-; CHECK-NEXT:    movwlt r5, #1
-; CHECK-NEXT:    sub r0, r5, r7
+; CHECK-NEXT:    subs r0, r5, r0
+; CHECK-NEXT:    sbcs r0, r4, r1
+; CHECK-NEXT:    sbcs r0, lr, r2
+; CHECK-NEXT:    sbcs r0, r12, r3
+; CHECK-NEXT:    movwlt r6, #1
+; CHECK-NEXT:    sub r0, r6, r7
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, r11, pc}
   %1 = call i8 @llvm.scmp(i128 %x, i128 %y)
   ret i8 %1

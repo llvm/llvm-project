@@ -522,16 +522,28 @@ define i32 @freeze_scmp(i32 %a0) nounwind {
 }
 
 define i32 @freeze_ucmp(i32 %a0) nounwind {
-; CHECK-LABEL: freeze_ucmp:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2 // =0x2
-; CHECK-NEXT:    cmp w8, w0
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    csinv w8, w8, wzr, hs
-; CHECK-NEXT:    cmp w8, #1
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    csinv w0, w8, wzr, hs
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_ucmp:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #2 // =0x2
+; CHECK-SD-NEXT:    cmp w8, w0
+; CHECK-SD-NEXT:    cset w8, hi
+; CHECK-SD-NEXT:    csinv w8, w8, wzr, hs
+; CHECK-SD-NEXT:    cmp w8, #1
+; CHECK-SD-NEXT:    cset w8, hi
+; CHECK-SD-NEXT:    csinv w0, w8, wzr, hs
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_ucmp:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #2 // =0x2
+; CHECK-GI-NEXT:    mov w9, #1 // =0x1
+; CHECK-GI-NEXT:    cmp w8, w0
+; CHECK-GI-NEXT:    cset w8, hi
+; CHECK-GI-NEXT:    csinv w8, w8, wzr, hs
+; CHECK-GI-NEXT:    cmp w8, w9
+; CHECK-GI-NEXT:    cset w8, hi
+; CHECK-GI-NEXT:    csinv w0, w8, wzr, hs
+; CHECK-GI-NEXT:    ret
   %x = call i32 @llvm.ucmp.i32(i32 2, i32 %a0)
   %y = freeze i32 %x
   %z = call i32 @llvm.ucmp.i32(i32 %y, i32 1)
