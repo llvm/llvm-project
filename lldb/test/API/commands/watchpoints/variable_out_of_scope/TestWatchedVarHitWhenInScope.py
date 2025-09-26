@@ -7,6 +7,7 @@ import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class WatchedVariableHitWhenInScopeTestCase(TestBase):
@@ -29,7 +30,19 @@ class WatchedVariableHitWhenInScopeTestCase(TestBase):
     # Test hangs due to a kernel bug, see fdfeff0f in the linux kernel for details
     @skipIfTargetAndroid(api_levels=list(range(25 + 1)), archs=["aarch64", "arm$"])
     @skip
-    def test_watched_var_should_only_hit_when_in_scope(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_hardware_watched_var_should_only_hit_when_in_scope(self):
+        self.do_watched_var_should_only_hit_when_in_scope(
+            WatchpointType.WRITE, lldb.eWatchpointModeHardware
+        )
+
+    @skip
+    def test_software_watched_var_should_only_hit_when_in_scope(self):
+        self.do_watched_var_should_only_hit_when_in_scope(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+
+    def do_watched_var_should_only_hit_when_in_scope(self, wp_type, wp_mode):
         """Test that a variable watchpoint should only hit when in scope."""
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
@@ -54,9 +67,9 @@ class WatchedVariableHitWhenInScopeTestCase(TestBase):
         # Now let's set a watchpoint for 'c.a'.
         # There should be only one watchpoint hit (see main.c).
         self.expect(
-            "watchpoint set variable c.a",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} c.a",
             WATCHPOINT_CREATED,
-            substrs=["Watchpoint created", "size = 4", "type = w"],
+            substrs=["Watchpoint created", "size = 4", f"type = {wp_type.value[0]}"],
         )
 
         # Use the '-v' option to do verbose listing of the watchpoint.

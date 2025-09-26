@@ -4,6 +4,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class TestWatchpointEvents(TestBase):
@@ -16,7 +17,15 @@ class TestWatchpointEvents(TestBase):
         self.main_source = "main.c"
 
     @add_test_categories(["pyapi"])
-    def test_with_python_api(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_hw_watchpoint_with_python_api(self):
+        self.do_with_python_api(WatchpointType.MODIFY, lldb.eWatchpointModeHardware)
+
+    @add_test_categories(["pyapi"])
+    def test_sw_watchpoint_with_python_api(self):
+        self.do_with_python_api(WatchpointType.MODIFY, lldb.eWatchpointModeSoftware)
+
+    def do_with_python_api(self, wp_type, wp_mode):
         """Test that adding, deleting and modifying watchpoints sends the appropriate events."""
         self.build()
         target = self.createTestTarget()
@@ -54,7 +63,7 @@ class TestWatchpointEvents(TestBase):
         )
 
         error = lldb.SBError()
-        local_watch = local_var.Watch(True, False, True, error)
+        local_watch = set_watchpoint_at_value(local_var, wp_type, wp_mode, error)
         if not error.Success():
             self.fail(
                 "Failed to make watchpoint for local_var: %s" % (error.GetCString())
@@ -88,7 +97,7 @@ class TestWatchpointEvents(TestBase):
         )
 
         # Re-create it so that we can check DeleteAllWatchpoints
-        local_watch = local_var.Watch(True, False, True, error)
+        local_watch = set_watchpoint_at_value(local_var, wp_type, wp_mode, error)
         if not error.Success():
             self.fail(
                 "Failed to make watchpoint for local_var: %s" % (error.GetCString())
