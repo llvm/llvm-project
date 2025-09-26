@@ -1807,7 +1807,8 @@ private:
                   const OperandVector &Operands) const;
   SMLoc getInstLoc(const OperandVector &Operands) const;
 
-  bool validateInstruction(const MCInst &Inst, const SMLoc &IDLoc, const OperandVector &Operands);
+  bool validateInstruction(const MCInst &Inst, SMLoc IDLoc,
+                           const OperandVector &Operands);
   bool validateOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateFlatOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSMEMOffset(const MCInst &Inst, const OperandVector &Operands);
@@ -1824,8 +1825,8 @@ private:
   bool validateMIMGAtomicDMask(const MCInst &Inst);
   bool validateMIMGGatherDMask(const MCInst &Inst);
   bool validateMovrels(const MCInst &Inst, const OperandVector &Operands);
-  bool validateMIMGDataSize(const MCInst &Inst, const SMLoc &IDLoc);
-  bool validateMIMGAddrSize(const MCInst &Inst, const SMLoc &IDLoc);
+  bool validateMIMGDataSize(const MCInst &Inst, SMLoc IDLoc);
+  bool validateMIMGAddrSize(const MCInst &Inst, SMLoc IDLoc);
   bool validateMIMGD16(const MCInst &Inst);
   bool validateMIMGDim(const MCInst &Inst, const OperandVector &Operands);
   bool validateTensorR128(const MCInst &Inst);
@@ -1847,7 +1848,7 @@ private:
   bool validateDivScale(const MCInst &Inst);
   bool validateWaitCnt(const MCInst &Inst, const OperandVector &Operands);
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
-                             const SMLoc &IDLoc);
+                             SMLoc IDLoc);
   bool validateTHAndScopeBits(const MCInst &Inst, const OperandVector &Operands,
                               const unsigned CPol);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
@@ -1864,7 +1865,7 @@ private:
   bool isSupportedMnemo(StringRef Mnemo,
                         const FeatureBitset &FBS,
                         ArrayRef<unsigned> Variants);
-  bool checkUnsupportedInstruction(StringRef Name, const SMLoc &IDLoc);
+  bool checkUnsupportedInstruction(StringRef Name, SMLoc IDLoc);
 
   bool isId(const StringRef Id) const;
   bool isId(const AsmToken &Token, const StringRef Id) const;
@@ -4087,8 +4088,7 @@ bool AMDGPUAsmParser::validateIntClampSupported(const MCInst &Inst) {
 constexpr uint64_t MIMGFlags =
     SIInstrFlags::MIMG | SIInstrFlags::VIMAGE | SIInstrFlags::VSAMPLE;
 
-bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst,
-                                           const SMLoc &IDLoc) {
+bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst, SMLoc IDLoc) {
 
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
@@ -4135,8 +4135,7 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst,
   return false;
 }
 
-bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst,
-                                           const SMLoc &IDLoc) {
+bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst, SMLoc IDLoc) {
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
 
@@ -5344,7 +5343,7 @@ bool AMDGPUAsmParser::validateGWS(const MCInst &Inst,
 
 bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
                                             const OperandVector &Operands,
-                                            const SMLoc &IDLoc) {
+                                            SMLoc IDLoc) {
   int CPolPos = AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
                                            AMDGPU::OpName::cpol);
   if (CPolPos == -1)
@@ -5541,8 +5540,7 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
          validateFmt(AMDGPU::OpName::matrix_b_fmt, AMDGPU::OpName::src1);
 }
 
-bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
-                                          const SMLoc &IDLoc,
+bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
                                           const OperandVector &Operands) {
   if (!validateLdsDirect(Inst, Operands))
     return false;
@@ -5704,7 +5702,7 @@ bool AMDGPUAsmParser::isSupportedMnemo(StringRef Mnemo,
 }
 
 bool AMDGPUAsmParser::checkUnsupportedInstruction(StringRef Mnemo,
-                                                  const SMLoc &IDLoc) {
+                                                  SMLoc IDLoc) {
   FeatureBitset FBS = ComputeAvailableFeatures(getFeatureBits());
 
   // Check if requested instruction variant is supported.

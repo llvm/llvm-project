@@ -1213,7 +1213,8 @@ void CodeGenAction::ExecuteAction() {
     TheModule->setTargetTriple(Triple(TargetOpts.Triple));
   }
 
-  EmbedObject(TheModule.get(), CodeGenOpts, Diagnostics);
+  EmbedObject(TheModule.get(), CodeGenOpts, CI.getVirtualFileSystem(),
+              Diagnostics);
   EmbedBitcode(TheModule.get(), CodeGenOpts, *MainFile);
 
   LLVMContext &Ctx = TheModule->getContext();
