@@ -195,7 +195,7 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstackAndPbt) {
   // This entry has a TakenCount = 2, as we have two samples for
   // this entry (0x0,d123) in our input. It has MispredsCount = 0,
   // as it lacks prediction information.
-  // It also has no infromation about source branch address therefore
+  // It also has no information about source branch address therefore
   // the 'From' field filled with zero (0x0).
   // TraceTo = 0xc456, means the execution jumped from 0xc123 to 0xc456.
   std::vector<std::pair<Trace, TakenBranchInfo>> ExpectedSamples = {
