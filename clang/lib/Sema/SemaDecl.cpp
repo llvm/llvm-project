@@ -17142,7 +17142,7 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
     }
 
     SmallVector<int, 4> Indxs;
-    if (Context.BuiltinInfo.IsNonNull(BuiltinID, Indxs) &&
+    if (Context.BuiltinInfo.isNonNull(BuiltinID, Indxs) &&
         !FD->hasAttr<NonNullAttr>()) {
       llvm::SmallVector<ParamIdx, 4> ParamIndxs;
       for (int I : Indxs)

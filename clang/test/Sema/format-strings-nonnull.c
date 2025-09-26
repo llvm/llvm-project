@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wnonnull -Wno-format-security %s
+// RUN: %clang_cc1 -fsyntax-only --std=c23 -verify -Wnonnull -Wno-format-security %s
 
-#include <stdarg.h>
-#include <stddef.h>
+#define NULL  (void*)0
 
 typedef struct _FILE FILE;
-
+typedef __SIZE_TYPE__ size_t;
+typedef __builtin_va_list va_list;
 int printf(char const* restrict, ...);
 int __builtin_printf(char const* restrict, ...);
 int fprintf(FILE* restrict, char const* restrict, ...);
@@ -48,7 +48,7 @@ void check_format_string(FILE *fp, va_list ap) {
     vfprintf(fp, 0, ap);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
 
-    vsprintf(buf, NULL, ap);
+    vsprintf(buf, nullptr, ap);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
 
     vsnprintf(buf, 10, fmt, ap);
@@ -57,7 +57,7 @@ void check_format_string(FILE *fp, va_list ap) {
     scanf(NULL);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
 
-    fscanf(fp, NULL);
+    fscanf(fp, nullptr);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
 
     sscanf(buf, fmt);
