@@ -23,15 +23,18 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "GCNSchedStrategy.h"
 #include "AMDGPUIGroupLP.h"
 #include "GCNRegPressure.h"
+#include "GCNSchedStrategy.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/ErrorHandling.h"
+
+#include <cmath>
+#include <limits>
 
 #define DEBUG_TYPE "machine-scheduler"
 
@@ -69,6 +72,79 @@ static cl::opt<bool> GCNTrackers(
     cl::init(false));
 
 const unsigned ScheduleMetrics::ScaleFactor = 100;
+
+//===----------------------------------------------------------------------===//
+// Optional cost-function mode: command line switches
+//===----------------------------------------------------------------------===//
+
+static cl::opt<bool> UseSchedCostFunction(
+    "amdgpu-use-cost-function", cl::Hidden,
+    cl::desc("Enable cost-function-based evaluation to compare candidate"
+             " schedules in GCNSchedStrategy."),
+    cl::init(false));
+
+static cl::opt<double> SchedCostWeightOccupancy(
+    "amdgpu-sched-cost-weight-occupancy", cl::Hidden,
+    cl::desc("Weight for occupancy term in AMDGPU scheduler cost function"),
+    cl::init(1.0));
+static cl::opt<double> SchedCostWeightLength(
+    "amdgpu-sched-cost-weight-length", cl::Hidden,
+    cl::desc("Weight for schedule length term (cycles) in cost function"),
+    cl::init(1.0));
+static cl::opt<double> SchedCostWeightSpill(
+    "amdgpu-sched-cost-weight-spill", cl::Hidden,
+    cl::desc("Weight for spill term; typically much larger than length"),
+    cl::init(100.0));
+
+// Shape the occupancy term: reciprocal exponent and low-occupancy penalty.
+static cl::opt<double> SchedCostOccExponent(
+  "amdgpu-sched-cost-occ-exponent", cl::Hidden,
+  cl::desc("Exponent for occupancy diminishing-returns curve (cost ~ 1/W^exp)"),
+  cl::init(1.0));
+static cl::opt<unsigned> SchedCostLowOccFloor(
+  "amdgpu-sched-cost-lowocc-floor", cl::Hidden,
+  cl::desc("Preferred minimum waves; waves below this get extra penalty"),
+  cl::init(2));
+static cl::opt<double> SchedCostLowOccPenalty(
+  "amdgpu-sched-cost-lowocc-penalty", cl::Hidden,
+  cl::desc("Penalty weight multiplied by (floor - waves) when below floor"),
+  cl::init(0.0));
+
+static cl::opt<bool> UseStageCostDecision(
+  "amdgpu-use-stage-cost-decision", cl::Hidden,
+  cl::desc("Defer cost decisions to end of stage using block-frequency"
+       " weighted totals, instead of per-region immediate reverts"),
+  cl::init(false));
+
+// Helper: concave occupancy utility. Map waves -> diminishing cost reduction.
+static inline double occupancyCost(unsigned Waves, double Exp) {
+  if (Waves == 0)
+    return std::numeric_limits<double>::infinity();
+  // Use reciprocal to get a simple concave utility: higher waves -> smaller cost.
+  // We scale by a constant so typical ranges produce reasonable magnitudes.
+  return 1.0 / std::pow(static_cast<double>(Waves), Exp);
+}
+
+double AMDGPUSchedCostFunction::score(unsigned Waves, unsigned LengthCycles,
+                                      unsigned SpillUnits,
+                                      double BlockFreq) const {
+  // BlockFreq defaults to 1.0 if unknown; scale length proportionally.
+  double Freq = BlockFreq > 0.0 ? BlockFreq : 1.0;
+
+  // Occupancy cost: lower if more waves. Concave via reciprocal.
+  double OccTerm = OccW * occupancyCost(Waves, OccExp);
+  if (LowOccPenalty > 0.0 && Waves < LowOccFloor)
+    OccTerm += LowOccPenalty * static_cast<double>(LowOccFloor - Waves);
+
+  // Length cost: cycles weighted by block frequency.
+  double LenTerm = LenW * (static_cast<double>(LengthCycles) * Freq);
+
+  // Spill cost: heavy penalty. Interpret SpillUnits as an estimated count;
+  // could be number of excess registers or estimated bytes; we keep generic.
+  double SpillTerm = SpillW * static_cast<double>(SpillUnits);
+
+  return OccTerm + LenTerm + SpillTerm;
+}
 
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
     : GenericScheduler(C), TargetOccupancy(0), MF(nullptr),
@@ -1032,6 +1108,12 @@ bool GCNSchedStage::initGCNSchedStage() {
     return false;
 
   LLVM_DEBUG(dbgs() << "Starting scheduling stage: " << StageID << "\n");
+  if (UseSchedCostFunction && UseStageCostDecision) {
+    StageCostBefore = 0.0;
+    StageCostAfter = 0.0;
+    StageSavedOrder.clear();
+    StageSavedPressure.clear();
+  }
   return true;
 }
 
@@ -1136,6 +1218,21 @@ bool PreRARematStage::initGCNSchedStage() {
 void GCNSchedStage::finalizeGCNSchedStage() {
   DAG.finishBlock();
   LLVM_DEBUG(dbgs() << "Ending scheduling stage: " << StageID << "\n");
+
+  if (UseSchedCostFunction && UseStageCostDecision) {
+    if (StageCostAfter > StageCostBefore) {
+      LLVM_DEBUG(dbgs() << "[CostFunction] Reverting entire stage: cost before="
+                        << StageCostBefore << ", cost after=" << StageCostAfter
+                        << "\n");
+      for (const auto &It : StageSavedOrder) {
+        unsigned R = It.getFirst();
+        const std::vector<MachineInstr *> &Order = It.getSecond();
+        revertRegionToOrder(R, Order);
+        if (auto P = StageSavedPressure.find(R); P != StageSavedPressure.end())
+          DAG.Pressure[R] = P->second;
+      }
+    }
+  }
 }
 
 void UnclusteredHighRPStage::finalizeGCNSchedStage() {
@@ -1266,6 +1363,54 @@ void GCNSchedStage::finalizeGCNRegion() {
   // reason that the original schedule is better.
   checkScheduling();
 
+  // If deferring cost decision to the end of stage, accumulate per-region
+  // costs now. Functional reverts still happen in checkScheduling().
+  if (UseSchedCostFunction && UseStageCostDecision) {
+    if (!StageSavedOrder.contains(RegionIdx))
+      StageSavedOrder[RegionIdx] = Unsched;
+    if (!StageSavedPressure.contains(RegionIdx))
+      StageSavedPressure[RegionIdx] = PressureBefore;
+
+    ScheduleMetrics MAfter = getScheduleMetrics(DAG);
+    ScheduleMetrics MBefore = getScheduleMetrics(DAG.SUnits);
+    unsigned LengthAfter = MAfter.getLength();
+    unsigned LengthBefore = MBefore.getLength();
+
+    auto EstimateSpill = [&](const GCNRegPressure &P) -> unsigned {
+      unsigned Spill = 0;
+      unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
+      unsigned MaxArchVGPRs = std::min(MaxVGPRs, ST.getAddressableNumArchVGPRs());
+      unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
+      unsigned VG = P.getVGPRNum(ST.hasGFX90AInsts());
+      unsigned AG = P.getAGPRNum();
+      unsigned AV = P.getArchVGPRNum();
+      unsigned SG = P.getSGPRNum();
+      if (VG > MaxVGPRs) Spill += VG - MaxVGPRs;
+      if (AV > MaxArchVGPRs) Spill += AV - MaxArchVGPRs;
+      if (AG > MaxArchVGPRs) Spill += AG - MaxArchVGPRs;
+      if (SG > MaxSGPRs) Spill += SG - MaxSGPRs;
+      return Spill;
+    };
+
+    unsigned DynamicVGPRBlockSize = DAG.MFI.getDynamicVGPRBlockSize();
+    unsigned TargetOcc = std::min(
+        S.getTargetOccupancy(), ST.getOccupancyWithWorkGroupSizes(MF).second);
+    unsigned WavesBefore = std::min(
+        TargetOcc, PressureBefore.getOccupancy(ST, DynamicVGPRBlockSize));
+    unsigned WavesAfter = std::min(
+        TargetOcc, PressureAfter.getOccupancy(ST, DynamicVGPRBlockSize));
+    unsigned SpillBefore = EstimateSpill(PressureBefore);
+    unsigned SpillAfter = EstimateSpill(PressureAfter);
+
+    double BlockFreq = 1.0; // TODO: wire MBFI when available
+  AMDGPUSchedCostFunction CF(SchedCostWeightOccupancy,
+                 SchedCostWeightLength, SchedCostWeightSpill,
+                 SchedCostOccExponent, SchedCostLowOccFloor,
+                 SchedCostLowOccPenalty);
+    StageCostBefore += CF.score(WavesBefore, LengthBefore, SpillBefore, BlockFreq);
+    StageCostAfter += CF.score(WavesAfter, LengthAfter, SpillAfter, BlockFreq);
+  }
+
   if (DAG.RegionsWithIGLPInstrs[RegionIdx] &&
       StageID != GCNSchedStageID::UnclusteredHighRPReschedule)
     SavedMutations.swap(DAG.Mutations);
@@ -1340,7 +1485,70 @@ void GCNSchedStage::checkScheduling() {
 
   // Revert if this region's schedule would cause a drop in occupancy or
   // spilling.
-  if (shouldRevertScheduling(WavesAfter))
+  bool Revert = shouldRevertScheduling(WavesAfter);
+
+  // Optional: cost-function evaluation. Compare previous vs new schedule
+  // and retain whichever has lower total cost. This only triggers if
+  // enabled by flag; default behavior remains unchanged.
+  if (!Revert && UseSchedCostFunction) {
+    // Compute a simple schedule length estimate using existing metric helper.
+    // We reuse the bubble/length estimator for the current DAG versus the
+    // previously saved unscheduled order (DAG.SUnits captures pre-schedule).
+    ScheduleMetrics MAfter = getScheduleMetrics(DAG);
+    ScheduleMetrics MBefore = getScheduleMetrics(DAG.SUnits);
+
+    unsigned LengthAfter = MAfter.getLength();
+    unsigned LengthBefore = MBefore.getLength();
+
+    // Estimate spill cost as excess over hardware maxima as a proxy.
+    // When in doubt, use the RegionsWithExcessRP bit as an indicator.
+    auto EstimateSpill = [&](const GCNRegPressure &P) -> unsigned {
+      unsigned Spill = 0;
+      // Excess over addressable limits captures risk of spills.
+      unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
+      unsigned MaxArchVGPRs = std::min(MaxVGPRs, ST.getAddressableNumArchVGPRs());
+      unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
+      unsigned VG = P.getVGPRNum(ST.hasGFX90AInsts());
+      unsigned AG = P.getAGPRNum();
+      unsigned AV = P.getArchVGPRNum();
+      unsigned SG = P.getSGPRNum();
+      if (VG > MaxVGPRs)
+        Spill += VG - MaxVGPRs;
+      if (AV > MaxArchVGPRs)
+        Spill += AV - MaxArchVGPRs;
+      if (AG > MaxArchVGPRs)
+        Spill += AG - MaxArchVGPRs;
+      if (SG > MaxSGPRs)
+        Spill += SG - MaxSGPRs;
+      return Spill;
+    };
+
+    unsigned SpillAfter = EstimateSpill(PressureAfter);
+    unsigned SpillBefore = EstimateSpill(PressureBefore);
+
+    // Occupancy for before/after.
+    unsigned WavesBeforeOcc = std::min(
+        TargetOccupancy,
+        PressureBefore.getOccupancy(ST, DynamicVGPRBlockSize));
+    unsigned WavesAfterOcc = std::min(
+        TargetOccupancy, PressureAfter.getOccupancy(ST, DynamicVGPRBlockSize));
+
+    // Block frequency weighting: use MBFI if available, else 1.0. The
+    // MachineSchedContext does not expose MBFI here, so default to 1.0.
+    double BlockFreq = 1.0;
+
+  AMDGPUSchedCostFunction CF(SchedCostWeightOccupancy,
+                 SchedCostWeightLength, SchedCostWeightSpill,
+                 SchedCostOccExponent, SchedCostLowOccFloor,
+                 SchedCostLowOccPenalty);
+    double CostBefore = CF.score(WavesBeforeOcc, LengthBefore, SpillBefore, BlockFreq);
+    double CostAfter = CF.score(WavesAfterOcc, LengthAfter, SpillAfter, BlockFreq);
+
+    if (CostAfter > CostBefore)
+      Revert = true;
+  }
+
+  if (Revert)
     revertScheduling();
   else
     DAG.Pressure[RegionIdx] = PressureAfter;
@@ -1631,6 +1839,20 @@ void GCNSchedStage::revertScheduling() {
   DAG.placeDebugValues();
 
   DAG.Regions[RegionIdx] = std::pair(DAG.RegionBegin, DAG.RegionEnd);
+}
+
+void GCNSchedStage::revertRegionToOrder(
+    unsigned RIdx, const std::vector<MachineInstr *> &SavedOrder) {
+  auto &Bounds = DAG.Regions[RIdx];
+  RegionIdx = RIdx;
+  DAG.RegionBegin = Bounds.first;
+  DAG.RegionEnd = Bounds.second;
+
+  std::vector<MachineInstr *> OrigUnsched;
+  OrigUnsched.swap(Unsched);
+  Unsched = SavedOrder;
+  revertScheduling();
+  Unsched.swap(OrigUnsched);
 }
 
 bool PreRARematStage::allUsesAvailableAt(const MachineInstr *InstToRemat,

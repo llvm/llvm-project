@@ -133,6 +133,58 @@ public:
   GCNUpwardRPTracker *getUpwardTracker() { return &UpwardTracker; }
 };
 
+/// Cost-function based schedule evaluation (optional, off by default).
+///
+/// Purpose
+///  - Provide a scalar score to compare candidate schedules using
+///    tunable weights rather than purely greedy heuristics.
+///
+/// Inputs
+///  - Occupancy in waves (unsigned)
+///  - Estimated schedule length in cycles (unsigned)
+///  - Estimated spill cost (unsigned units; 0 when no spill is expected)
+///  - Block execution frequency (double; typically normalized, defaults to 1)
+///
+/// Behavior
+///  - Occupancy has diminishing returns: the cost contribution decreases
+///    concavely with more waves, so increasing 1→2 waves is more valuable
+///    than 8→9.
+///  - Spills dominate the cost: each unit of spill is penalized very heavily
+///    relative to a single cycle of schedule length.
+///  - Schedule length is weighted by basic block execution frequency, so hot
+///    blocks count more.
+///
+/// Configuration
+///  - Weights are controllable via command-line flags:
+///      - `-amdgpu-sched-cost-weight-occupancy`
+///      - `-amdgpu-sched-cost-weight-length`
+///      - `-amdgpu-sched-cost-weight-spill`
+///  - Lower scores are better.
+class AMDGPUSchedCostFunction {
+  double OccW = 1.0;
+  double LenW = 1.0;
+  double SpillW = 100.0;
+  // Shape of diminishing returns for occupancy: cost ~ 1 / Waves^OccExp.
+  double OccExp = 1.0;
+  // Extra penalty applied when Waves < LowOccFloor to emphasize that
+  // very low occupancy is particularly harmful (linear deficit penalty).
+  unsigned LowOccFloor = 2; // e.g. heavily prefer 2+ waves over 1
+  double LowOccPenalty = 0.0;
+
+public:
+  AMDGPUSchedCostFunction() = default;
+  AMDGPUSchedCostFunction(double OccWeight, double LenWeight, double SpillWeight,
+                          double OccExponent, unsigned LowOccPrefFloor,
+                          double LowOccPenaltyWeight)
+      : OccW(OccWeight), LenW(LenWeight), SpillW(SpillWeight),
+        OccExp(OccExponent), LowOccFloor(LowOccPrefFloor),
+        LowOccPenalty(LowOccPenaltyWeight) {}
+
+  /// Compute the total schedule score. Lower is better.
+  double score(unsigned Waves, unsigned LengthCycles, unsigned SpillUnits,
+               double BlockFreq) const;
+};
+
 /// The goal of this scheduling strategy is to maximize kernel occupancy (i.e.
 /// maximum number of waves per simd).
 class GCNMaxOccupancySchedStrategy final : public GCNSchedStrategy {
@@ -338,6 +390,12 @@ protected:
 
   std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
 
+  // Stage-level cost aggregation and saved state for potential rollback.
+  double StageCostBefore = 0.0;
+  double StageCostAfter = 0.0;
+  DenseMap<unsigned, std::vector<MachineInstr *>> StageSavedOrder;
+  DenseMap<unsigned, GCNRegPressure> StageSavedPressure;
+
   GCNSchedStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG);
 
 public:
@@ -384,6 +442,10 @@ public:
 
   // Attempt to revert scheduling for this region.
   void revertScheduling();
+
+  // Revert region at index RegionIdx to a previously saved instruction order.
+  void revertRegionToOrder(unsigned RegionIdx,
+                           const std::vector<MachineInstr *> &SavedOrder);
 
   void advanceRegion() { RegionIdx++; }
 
