@@ -2064,7 +2064,9 @@ int test_mm256_testnzc_pd(__m256d A, __m256d B) {
   // CHECK: call {{.*}}i32 @llvm.x86.avx.vtestnzc.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_testnzc_pd(A, B);
 }
-TEST_CONSTEXPR(_mm256_testnzc_pd((__m256d)(__v4df){-1.0, 2.0, 3.0, -4.0}, (__m256d)(__v4df){-5.0, -6.0, 7.0, 8.0}) == 1); TEST_CONSTEXPR(_mm256_testnzc_pd((__m256d)(__v4df){1.0, 2.0, 3.0, 4.0}, (__m256d)(__v4df){-1.0, 6.0, 7.0, 8.0}) == 0); TEST_CONSTEXPR(_mm256_testnzc_pd((__m256d)(__v4df){-1.0, -2.0, -3.0, -4.0}, (__m256d)(__v4df){-5.0, 6.0, 7.0, 8.0}) == 0);  
+TEST_CONSTEXPR(_mm256_testnzc_pd((__m256d)(__v4df){-1.0, 2.0, 3.0, -4.0}, (__m256d)(__v4df){-5.0, -6.0, 7.0, 8.0}) == 1);
+TEST_CONSTEXPR(_mm256_testnzc_pd((__m256d)(__v4df){1.0, 2.0, 3.0, 4.0}, (__m256d)(__v4df){-1.0, 6.0, 7.0, 8.0}) == 0);
+TEST_CONSTEXPR(_mm256_testnzc_pd((__m256d)(__v4df){-1.0, -2.0, -3.0, -4.0}, (__m256d)(__v4df){-5.0, 6.0, 7.0, 8.0}) == 0);
 
 int test_mm_testnzc_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_testnzc_ps
@@ -2090,6 +2092,7 @@ int test_mm256_testnzc_si256(__m256i A, __m256i B) {
   return _mm256_testnzc_si256(A, B);
 }
 TEST_CONSTEXPR(_mm256_testnzc_si256((__m256i)(__v4di){-1,0,0,0}, (__m256i)(__v4di){478329848,23438,2343,-3483}) == 1);
+TEST_CONSTEXPR(_mm256_testnzc_si256((__m256i)(__v4di){1,0,0,0}, (__m256i)(__v4di){3,0,0,0}) == 1);
 TEST_CONSTEXPR(_mm256_testnzc_si256((__m256i)(__v4di){-1,239483,-1,0}, (__m256i)(__v4di){3849234,0,-2,0}) == 0);
 TEST_CONSTEXPR(_mm256_testnzc_si256((__m256i)(__v4di){-1,0,-1,3}, (__m256i)(__v4di){1,0,9999999,1}) == 0);
 
