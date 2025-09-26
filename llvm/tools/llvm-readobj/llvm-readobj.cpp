@@ -97,6 +97,7 @@ static bool Addrsig;
 static bool All;
 static bool ArchSpecificInfo;
 static bool BBAddrMap;
+static bool CallGraphInfo;
 static bool PrettyPGOAnalysisMap;
 bool ExpandRelocs;
 static bool CGProfile;
@@ -216,6 +217,7 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::All = Args.hasArg(OPT_all);
   opts::ArchSpecificInfo = Args.hasArg(OPT_arch_specific);
   opts::BBAddrMap = Args.hasArg(OPT_bb_addr_map);
+  opts::CallGraphInfo = Args.hasArg(OPT_call_graph_info);
   opts::PrettyPGOAnalysisMap = Args.hasArg(OPT_pretty_pgo_analysis_map);
   if (opts::PrettyPGOAnalysisMap && !opts::BBAddrMap)
     WithColor::warning(errs(), ToolName)
@@ -474,6 +476,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
       Dumper->printHashHistograms();
     if (opts::CGProfile)
       Dumper->printCGProfile();
+    if (opts::CallGraphInfo)
+      Dumper->printCallGraphInfo();
     if (opts::BBAddrMap)
       Dumper->printBBAddrMaps(opts::PrettyPGOAnalysisMap);
     if (opts::Addrsig)
