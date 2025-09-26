@@ -1603,7 +1603,7 @@ static SDValue lowerVECTOR_SHUFFLEAsZeroOrAnyExtend(const SDLoc &DL,
 /// value is necessary in order to fit the above form.
 static SDValue
 lowerVECTOR_SHUFFLE_VREPLVEI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
-                             SDValue V1, SDValue V2, SelectionDAG &DAG,
+                             SDValue V1, SelectionDAG &DAG,
                              const LoongArchSubtarget &Subtarget) {
   int SplatIndex = -1;
   for (const auto &M : Mask) {
@@ -1996,8 +1996,8 @@ static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   SDValue Result;
   // TODO: Add more comparison patterns.
   if (V2.isUndef()) {
-    if ((Result = lowerVECTOR_SHUFFLE_VREPLVEI(DL, Mask, VT, V1, V2, DAG,
-                                               Subtarget)))
+    if ((Result =
+             lowerVECTOR_SHUFFLE_VREPLVEI(DL, Mask, VT, V1, DAG, Subtarget)))
       return Result;
     if ((Result =
              lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG, Subtarget)))
@@ -2053,7 +2053,7 @@ static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
 /// value is necessary in order to fit the above form.
 static SDValue
 lowerVECTOR_SHUFFLE_XVREPLVEI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
-                              SDValue V1, SDValue V2, SelectionDAG &DAG,
+                              SDValue V1, SelectionDAG &DAG,
                               const LoongArchSubtarget &Subtarget) {
   int SplatIndex = -1;
   for (const auto &M : Mask) {
@@ -2096,10 +2096,29 @@ lowerVECTOR_SHUFFLE_XVSHUF4I(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   return lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG, Subtarget);
 }
 
+/// Lower VECTOR_SHUFFLE into XVPERMI (if possible).
+static SDValue
+lowerVECTOR_SHUFFLE_XVPERMI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
+                            SDValue V1, SelectionDAG &DAG,
+                            const LoongArchSubtarget &Subtarget) {
+  // Only consider XVPERMI_D.
+  if (Mask.size() != 4 || (VT != MVT::v4i64 && VT != MVT::v4f64))
+    return SDValue();
+
+  unsigned MaskImm = 0;
+  for (unsigned i = 0; i < Mask.size(); ++i) {
+    if (Mask[i] == -1)
+      continue;
+    MaskImm |= Mask[i] << (i * 2);
+  }
+
+  return DAG.getNode(LoongArchISD::XVPERMI, DL, VT, V1,
+                     DAG.getConstant(MaskImm, DL, Subtarget.getGRLenVT()));
+}
+
 /// Lower VECTOR_SHUFFLE into XVPERM (if possible).
 static SDValue lowerVECTOR_SHUFFLE_XVPERM(const SDLoc &DL, ArrayRef<int> Mask,
-                                          MVT VT, SDValue V1, SDValue V2,
-                                          SelectionDAG &DAG,
+                                          MVT VT, SDValue V1, SelectionDAG &DAG,
                                           const LoongArchSubtarget &Subtarget) {
   // LoongArch LASX only have XVPERM_W.
   if (Mask.size() != 8 || (VT != MVT::v8i32 && VT != MVT::v8f32))
@@ -2540,14 +2559,16 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   SDValue Result;
   // TODO: Add more comparison patterns.
   if (V2.isUndef()) {
-    if ((Result = lowerVECTOR_SHUFFLE_XVREPLVEI(DL, Mask, VT, V1, V2, DAG,
-                                                Subtarget)))
+    if ((Result =
+             lowerVECTOR_SHUFFLE_XVREPLVEI(DL, Mask, VT, V1, DAG, Subtarget)))
       return Result;
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, Mask, VT, V1, V2, DAG,
                                                Subtarget)))
       return Result;
     if ((Result =
-             lowerVECTOR_SHUFFLE_XVPERM(DL, Mask, VT, V1, V2, DAG, Subtarget)))
+             lowerVECTOR_SHUFFLE_XVPERMI(DL, Mask, VT, V1, DAG, Subtarget)))
+      return Result;
+    if ((Result = lowerVECTOR_SHUFFLE_XVPERM(DL, Mask, VT, V1, DAG, Subtarget)))
       return Result;
 
     // TODO: This comment may be enabled in the future to better match the
