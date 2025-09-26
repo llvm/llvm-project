@@ -769,6 +769,8 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
   if (Args.hasArg(options::OPT_ffast_real_mod))
     CmdArgs.push_back("-ffast-real-mod");
+  if (Args.hasArg(options::OPT_fno_fast_real_mod))
+    CmdArgs.push_back("-fno-fast-real-mod");
 }
 
 static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,

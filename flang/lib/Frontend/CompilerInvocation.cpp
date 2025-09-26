@@ -1426,6 +1426,8 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
 
   if (args.hasArg(clang::driver::options::OPT_ffast_real_mod))
     opts.FastRealMod = true;
+  if (args.hasArg(clang::driver::options::OPT_fno_fast_real_mod))
+    opts.FastRealMod = false;
 
   return true;
 }
