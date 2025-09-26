@@ -51,17 +51,7 @@ const unsigned indices[] = {
 // are fewer potential primes to search, and fewer potential primes to divide
 // against.
 
-inline void __check_for_overflow(size_t N) {
-  if constexpr (sizeof(size_t) == 4) {
-    if (N > 0xFFFFFFFB)
-      std::__throw_overflow_error("__next_prime overflow");
-  } else {
-    if (N > 0xFFFFFFFFFFFFFFC5ull)
-      std::__throw_overflow_error("__next_prime overflow");
-  }
-}
-
-size_t __next_prime(size_t n) {
+size_t __next_prime_impl(size_t n) noexcept {
   const size_t L = 210;
   const size_t N = sizeof(small_primes) / sizeof(small_primes[0]);
   // If n is small enough, search in small_primes
@@ -445,5 +435,7 @@ size_t __next_prime(size_t n) {
     n = L * k0 + indices[in];
   }
 }
+
+_LIBCPP_EXPORTED_FROM_ABI size_t __next_prime(size_t n) { return __get_next_prime(n); }
 
 _LIBCPP_END_NAMESPACE_STD
