@@ -629,7 +629,7 @@ define i1 @or_cmp_eq_i64(i64 %x, i64 %y) {
 ; NOBMI-LABEL: or_cmp_eq_i64:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    notq %rdi
-; NOBMI-NEXT:    testq %rsi, %rdi
+; NOBMI-NEXT:    testq %rdi, %rsi
 ; NOBMI-NEXT:    sete %al
 ; NOBMI-NEXT:    retq
 ;
@@ -647,7 +647,7 @@ define i1 @or_cmp_ne_i32(i32 %x, i32 %y) {
 ; NOBMI-LABEL: or_cmp_ne_i32:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    notl %esi
-; NOBMI-NEXT:    testl %edi, %esi
+; NOBMI-NEXT:    testl %esi, %edi
 ; NOBMI-NEXT:    setne %al
 ; NOBMI-NEXT:    retq
 ;
@@ -665,7 +665,7 @@ define i1 @or_cmp_eq_i16(i16 zeroext %x, i16 zeroext %y) {
 ; NOBMI-LABEL: or_cmp_eq_i16:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    notl %edi
-; NOBMI-NEXT:    testl %esi, %edi
+; NOBMI-NEXT:    testl %edi, %esi
 ; NOBMI-NEXT:    sete %al
 ; NOBMI-NEXT:    retq
 ;
@@ -683,7 +683,7 @@ define i1 @or_cmp_ne_i8(i8 zeroext %x, i8 zeroext %y) {
 ; CHECK-LABEL: or_cmp_ne_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    testb %dil, %sil
+; CHECK-NEXT:    testb %sil, %dil
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %o = or i8 %x, %y
