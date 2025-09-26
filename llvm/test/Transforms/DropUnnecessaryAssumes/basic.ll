@@ -287,3 +287,30 @@ define i32 @affected_value_has_side_effect_and_is_used() {
   call void @llvm.assume(i1 %cond)
   ret i32 %x
 }
+
+@g = external global i8
+@g2 = external global i8
+
+define void @assume_on_global() {
+; CHECK-LABEL: define void @assume_on_global() {
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["align"(ptr @g, i64 8)]
+  ret void
+}
+
+define void @assume_on_global_used_in_other_func() {
+; CHECK-LABEL: define void @assume_on_global_used_in_other_func() {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr @g2, i64 8) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["align"(ptr @g2, i64 8)]
+  ret void
+}
+
+define ptr @other_func() {
+; CHECK-LABEL: define ptr @other_func() {
+; CHECK-NEXT:    ret ptr @g2
+;
+  ret ptr @g2
+}
