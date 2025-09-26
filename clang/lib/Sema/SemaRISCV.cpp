@@ -1664,7 +1664,8 @@ bool SemaRISCV::isValidFMVExtension(StringRef Ext) {
 }
 
 bool SemaRISCV::checkTargetVersionAttr(const StringRef Param,
-                                       const SourceLocation Loc) {
+                                       const SourceLocation Loc,
+                                       SmallString<64> &NewParam) {
   using namespace DiagAttrParams;
 
   llvm::SmallVector<StringRef, 8> AttrStrs;
@@ -1710,6 +1711,7 @@ bool SemaRISCV::checkTargetVersionAttr(const StringRef Param,
     return Diag(Loc, diag::warn_unsupported_target_attribute)
            << Unsupported << None << Param << TargetVersion;
 
+  NewParam = Param;
   return false;
 }
 
