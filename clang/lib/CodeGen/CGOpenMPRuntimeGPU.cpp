@@ -902,7 +902,7 @@ void CGOpenMPRuntimeGPU::emitProcBindClause(CodeGenFunction &CGF,
 llvm::Value *CGOpenMPRuntimeGPU::emitMessageClause(CodeGenFunction &CGF,
                                                    const Expr *Message,
                                                    SourceLocation Loc) {
-  CGM.getDiags().Report(Loc, diag::err_omp_gpu_unsupported_clause)
+  CGM.getDiags().Report(Loc, diag::warn_omp_gpu_unsupported_clause)
       << getOpenMPClauseName(OMPC_message);
   return nullptr;
 }
@@ -910,7 +910,7 @@ llvm::Value *CGOpenMPRuntimeGPU::emitMessageClause(CodeGenFunction &CGF,
 llvm::Value *
 CGOpenMPRuntimeGPU::emitSeverityClause(OpenMPSeverityClauseKind Severity,
                                        SourceLocation Loc) {
-  CGM.getDiags().Report(Loc, diag::err_omp_gpu_unsupported_clause)
+  CGM.getDiags().Report(Loc, diag::warn_omp_gpu_unsupported_clause)
       << getOpenMPClauseName(OMPC_severity);
   return nullptr;
 }
@@ -922,7 +922,7 @@ void CGOpenMPRuntimeGPU::emitNumThreadsClause(
     SourceLocation MessageLoc) {
   if (Modifier == OMPC_NUMTHREADS_strict) {
     CGM.getDiags().Report(Loc,
-                          diag::err_omp_gpu_unsupported_modifier_for_clause)
+                          diag::warn_omp_gpu_unsupported_modifier_for_clause)
         << "strict" << getOpenMPClauseName(OMPC_num_threads);
     return;
   }
