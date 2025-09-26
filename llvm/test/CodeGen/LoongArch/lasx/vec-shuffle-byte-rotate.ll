@@ -127,9 +127,7 @@ define <4 x i64> @byte_rotate_v4i64_2(<4 x i64> %a, <4 x i64> %b) nounwind {
 define <4 x i64> @byte_rotate_v4i64_3(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: byte_rotate_v4i64_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvbsrl.v $xr1, $xr0, 8
-; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 8
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 177
 ; CHECK-NEXT:    ret
     %shuffle = shufflevector <4 x i64> %a, <4 x i64> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
     ret <4 x i64> %shuffle
