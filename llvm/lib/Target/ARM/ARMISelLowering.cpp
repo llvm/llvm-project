@@ -5729,9 +5729,9 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   SDNodeFlags Flags = Op->getFlags();
-  if ((getTargetMachine().Options.UnsafeFPMath || Flags.hasNoNaNs()) &&
-      (DAG.getDenormalMode(MVT::f32) == DenormalMode::getIEEE() &&
-       DAG.getDenormalMode(MVT::f64) == DenormalMode::getIEEE()) &&
+  if (Flags.hasNoNaNs() &&
+      DAG.getDenormalMode(MVT::f32) == DenormalMode::getIEEE() &&
+      DAG.getDenormalMode(MVT::f64) == DenormalMode::getIEEE() &&
       (CC == ISD::SETEQ || CC == ISD::SETOEQ || CC == ISD::SETNE ||
        CC == ISD::SETUNE)) {
     if (SDValue Result = OptimizeVFPBrcond(Op, DAG))
