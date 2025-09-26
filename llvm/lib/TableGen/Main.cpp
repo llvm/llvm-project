@@ -95,17 +95,15 @@ static std::string escapeDependencyFilename(StringRef Filename) {
   sys::path::native(Filename, NativePath);
 
   for (unsigned I = 0, E = NativePath.size(); I != E; ++I) {
-    if (NativePath[I] == '#') {
+    if (NativePath[I] == '#')
       OS << '\\';
-    } else if (NativePath[I] == ' ') {
+    else if (NativePath[I] == ' ') {
       OS << '\\';
       unsigned J = I;
-      while (J > 0 && NativePath[--J] == '\\') {
+      while (J > 0 && NativePath[--J] == '\\')
         OS << '\\';
-      }
-    } else if (NativePath[I] == '$') {
+    } else if (NativePath[I] == '$')
       OS << '$';
-    }
     OS << NativePath[I];
   }
 
