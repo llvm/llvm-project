@@ -896,6 +896,26 @@ define i32 @mask_z1z3_v16i8(<16 x i8> %a0) {
   ret i32 %4
 }
 
+define <16 x i8> @freeze_pshufb_v16i8(<16 x i8> %a0) {
+; SSE-LABEL: freeze_pshufb_v16i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; SSE-NEXT:    pshufb %xmm1, %xmm0
+; SSE-NEXT:    pshufb %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: freeze_pshufb_v16i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %s0 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+  %f0 = freeze <16 x i8> %s0
+  %s1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %f0, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+  ret <16 x i8> %s1
+}
+
 define i32 @PR22415(double %a0) {
 ; SSE-LABEL: PR22415:
 ; SSE:       # %bb.0:
