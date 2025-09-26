@@ -8,7 +8,7 @@ define <4 x double> @shufflevector_v4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: shufflevector_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvpickve.d $xr2, $xr1, 3
-; CHECK-NEXT:    xvpermi.d $xr3, $xr0, 78
+; CHECK-NEXT:    xvpermi.d $xr3, $xr0, 238
 ; CHECK-NEXT:    xvrepl128vei.d $xr3, $xr3, 1
 ; CHECK-NEXT:    vextrins.d $vr3, $vr2, 16
 ; CHECK-NEXT:    xvpickve.d $xr1, $xr1, 2
