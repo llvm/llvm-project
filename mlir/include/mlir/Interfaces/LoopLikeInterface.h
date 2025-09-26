@@ -14,6 +14,7 @@
 #define MLIR_INTERFACES_LOOPLIKEINTERFACE_H_
 
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 
 namespace mlir {
 class RewriterBase;

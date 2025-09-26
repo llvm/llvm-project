@@ -14,6 +14,7 @@
 #ifndef MLIR_INTERFACES_SIDEEFFECTINTERFACES_H
 #define MLIR_INTERFACES_SIDEEFFECTINTERFACES_H
 
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/OpDefinition.h"
 
 namespace mlir {
@@ -346,6 +347,20 @@ struct AlwaysSpeculatableImplTrait
 //===----------------------------------------------------------------------===//
 
 namespace MemoryEffects {
+/// Defines the priority of the different memory effects.
+///
+/// Sorting/ordering memory effects of an operation is done based on
+/// their defined stage and priority, in that order. If stage values for two
+/// effect instances are equal, they are then sorted by priority. Lower priority
+/// values indicate higher precedence.
+enum Priority {
+  DefaultPriority = 0,
+  AllocPriority = 1,
+  FreePriority = 2,
+  ReadPriority = 3,
+  WritePriority = 4
+};
+
 /// This class represents the base class used for memory effects.
 struct Effect : public SideEffects::Effect {
   using SideEffects::Effect::Effect;
@@ -355,28 +370,50 @@ struct Effect : public SideEffects::Effect {
   using Base = SideEffects::Effect::Base<DerivedEffect, Effect>;
 
   static bool classof(const SideEffects::Effect *effect);
+
+  /// Return the priority associated with this memory effect.
+  Priority getPriority() const { return priority; }
+
+protected:
+  /// Priority value for this effect. Lower numbers indicate higher precedence.
+  Priority priority = Priority::DefaultPriority;
 };
 using EffectInstance = SideEffects::EffectInstance<Effect>;
+
+/// Returns vector of the op's memory effects sorted in increasing stage order
+/// and in increasing priority order within each stage.
+llvm::SmallVector<MemoryEffects::EffectInstance>
+getMemoryEffectsSorted(Operation *op);
 
 /// The following effect indicates that the operation allocates from some
 /// resource. An 'allocate' effect implies only allocation of the resource, and
 /// not any visible mutation or dereference.
-struct Allocate : public Effect::Base<Allocate> {};
+struct Allocate : public Effect::Base<Allocate> {
+  Allocate() : Effect::Base<Allocate>() {
+    this->priority = Priority::AllocPriority;
+  }
+};
 
 /// The following effect indicates that the operation frees some resource that
 /// has been allocated. An 'allocate' effect implies only de-allocation of the
 /// resource, and not any visible allocation, mutation or dereference.
-struct Free : public Effect::Base<Free> {};
+struct Free : public Effect::Base<Free> {
+  Free() : Effect::Base<Free>() { this->priority = Priority::FreePriority; }
+};
 
 /// The following effect indicates that the operation reads from some resource.
 /// A 'read' effect implies only dereferencing of the resource, and not any
 /// visible mutation.
-struct Read : public Effect::Base<Read> {};
+struct Read : public Effect::Base<Read> {
+  Read() : Effect::Base<Read>() { this->priority = Priority::ReadPriority; }
+};
 
 /// The following effect indicates that the operation writes to some resource. A
 /// 'write' effect implies only mutating a resource, and not any visible
 /// dereference or read.
-struct Write : public Effect::Base<Write> {};
+struct Write : public Effect::Base<Write> {
+  Write() : Effect::Base<Write>() { this->priority = Priority::WritePriority; }
+};
 } // namespace MemoryEffects
 
 //===----------------------------------------------------------------------===//
