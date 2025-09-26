@@ -88,7 +88,8 @@ public:
     return nullptr;
   }
 
-  /// Computes the address of the instruction (or offset from base for PIC).
+  /// Computes the original address of the instruction (or offset from base
+  /// for PIC), assuming the containing function was not modified.
   ///
   /// This function is intended for the use cases like debug printing, as it
   /// is only as precise as BinaryContext::computeCodeSize() is and requires
