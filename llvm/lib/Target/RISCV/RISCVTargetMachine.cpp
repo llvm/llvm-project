@@ -155,10 +155,9 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSBinFormatELF())
     return std::make_unique<RISCVELFTargetObjectFile>();
-  else if (TT.isOSBinFormatMachO())
+  if (TT.isOSBinFormatMachO())
     return std::make_unique<TargetLoweringObjectFileMachO>();
-  else
-    return std::unique_ptr<TargetLoweringObjectFile>();
+  return std::unique_ptr<TargetLoweringObjectFile>();
 }
 
 RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
