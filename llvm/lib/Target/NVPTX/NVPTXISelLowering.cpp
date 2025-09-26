@@ -2855,10 +2855,9 @@ static SDValue lowerCvtRSIntrinsics(SDValue Op, SelectionDAG &DAG) {
 
   // Extract the 4 float elements from the vector
   SmallVector<SDValue, 6> Ops;
-  for (unsigned i = 0; i < 4; ++i) {
+  for (unsigned i = 0; i < 4; ++i)
     Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, F32Vec,
                               DAG.getIntPtrConstant(i, DL)));
-  }
 
   using NVPTX::PTXCvtMode::CvtMode;
 
