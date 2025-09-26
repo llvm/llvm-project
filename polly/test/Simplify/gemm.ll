@@ -24,10 +24,11 @@
 ; CHECK-NEXT:            new: { Stmt_bb13[i0, i1, i2] -> MemRef_C[i0, i1] };
 ; CHECK-NEXT: }
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-linux-gnu"
+@A = common global [1024 x [1024 x double]] zeroinitializer
+@B = common global [1024 x [1024 x double]] zeroinitializer
+@C = common global [1024 x [1024 x double]] zeroinitializer
 
-define void @gemm(ptr %A, ptr %B, ptr %C) {
+define void @gemm() {
 bb:
   br label %bb3
 
@@ -51,7 +52,7 @@ bb7:                                              ; preds = %bb6
   br label %bb25
 
 bb8:                                              ; preds = %bb6
-  %tmp = getelementptr inbounds [1024 x float], ptr %C, i64 %i.0, i64 %j.0
+  %tmp = getelementptr inbounds [1024 x float], ptr @C, i64 %i.0, i64 %j.0
   %tmp9 = load float, ptr %tmp, align 4, !tbaa !1
   br label %bb10
 
@@ -69,9 +70,9 @@ bb12:                                             ; preds = %bb10
   br label %bb13
 
 bb13:                                             ; preds = %bb12
-  %tmp14 = getelementptr inbounds [1024 x float], ptr %A, i64 %i.0, i64 %k.0
+  %tmp14 = getelementptr inbounds [1024 x float], ptr @A, i64 %i.0, i64 %k.0
   %tmp15 = load float, ptr %tmp14, align 4, !tbaa !1
-  %tmp16 = getelementptr inbounds [1024 x float], ptr %B, i64 %k.0, i64 %j.0
+  %tmp16 = getelementptr inbounds [1024 x float], ptr @B, i64 %k.0, i64 %j.0
   %tmp17 = load float, ptr %tmp16, align 4, !tbaa !1
   %tmp18 = fmul float %tmp15, %tmp17
   %tmp19 = fadd float %tmp.0, %tmp18
@@ -79,7 +80,7 @@ bb13:                                             ; preds = %bb12
   br label %bb10
 
 bb21:                                             ; preds = %bb11
-  %tmp22 = getelementptr inbounds [1024 x float], ptr %C, i64 %i.0, i64 %j.0
+  %tmp22 = getelementptr inbounds [1024 x float], ptr @C, i64 %i.0, i64 %j.0
   store float %tmp.0.lcssa, ptr %tmp22, align 4, !tbaa !1
   br label %bb23
 

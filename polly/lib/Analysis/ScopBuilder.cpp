@@ -1449,33 +1449,14 @@ bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, ScopStmt *Stmt) {
   Value *Address = Inst.getPointerOperand();
   const SCEV *AccessFunction =
       SE.getSCEVAtScope(Address, LI.getLoopFor(Inst->getParent()));
-  const SCEVUnknown *BasePointer =
-      dyn_cast<SCEVUnknown>(SE.getPointerBase(AccessFunction));
   enum MemoryAccess::AccessType AccType =
       isa<LoadInst>(Inst) ? MemoryAccess::READ : MemoryAccess::MUST_WRITE;
 
-  if (auto *BitCast = dyn_cast<BitCastInst>(Address))
-    Address = BitCast->getOperand(0);
-
-  auto *GEP = dyn_cast<GetElementPtrInst>(Address);
-  if (!GEP || DL.getTypeAllocSize(GEP->getResultElementType()) !=
-                  DL.getTypeAllocSize(ElementType))
-    return false;
-
   SmallVector<const SCEV *, 4> Subscripts;
-  SmallVector<int, 4> Sizes;
-  getIndexExpressionsFromGEP(SE, GEP, Subscripts, Sizes);
-  auto *BasePtr = GEP->getOperand(0);
-
-  if (auto *BasePtrCast = dyn_cast<BitCastInst>(BasePtr))
-    BasePtr = BasePtrCast->getOperand(0);
-
-  // Check for identical base pointers to ensure that we do not miss index
-  // offsets that have been added before this GEP is applied.
-  if (BasePtr != BasePointer->getValue())
+  SmallVector<const SCEV *, 4> Sizes;
+  if (!delinearizeUsingArrayInfo(SE, AccessFunction, Subscripts, Sizes,
+                                 SE.getElementSize(&*Inst)))
     return false;
-
-  std::vector<const SCEV *> SizesSCEV;
 
   const InvariantLoadsSetTy &ScopRIL = scop->getRequiredInvariantLoads();
 
@@ -1491,17 +1472,39 @@ bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, ScopStmt *Stmt) {
         return false;
   }
 
-  if (Sizes.empty())
-    return false;
+  // Remove the element size. This information is already provided by the
+  // ElementSize parameter.
+  Sizes.pop_back();
+  const SCEVUnknown *BasePointer =
+      dyn_cast<SCEVUnknown>(SE.getPointerBase(AccessFunction));
 
-  SizesSCEV.push_back(nullptr);
+  // Get or create the ScopArrayInfo and mark it as using array_info
+  // delinearization.
+  LLVM_DEBUG(dbgs() << "buildAccessMultiDimFixed: BasePointer="
+                    << *BasePointer->getValue() << "\n");
+  auto *SAI = scop->getOrCreateScopArrayInfo(
+      BasePointer->getValue(), ElementType, Sizes, MemoryKind::Array);
+  SAI->setUsedArrayInfoDelinearization(true);
 
-  for (auto V : Sizes)
-    SizesSCEV.push_back(SE.getSCEV(
-        ConstantInt::get(IntegerType::getInt64Ty(BasePtr->getContext()), V)));
+  LLVM_DEBUG({
+    dbgs() << "buildAccessMultiDimFixed for "
+           << BasePointer->getValue()->getName() << ": Subscripts=[";
+    for (unsigned i = 0; i < Subscripts.size(); i++) {
+      if (i > 0)
+        dbgs() << ", ";
+      dbgs() << *Subscripts[i];
+    }
+    dbgs() << "], Sizes=[";
+    for (unsigned i = 0; i < Sizes.size(); i++) {
+      if (i > 0)
+        dbgs() << ", ";
+      dbgs() << *Sizes[i];
+    }
+    dbgs() << "]\n";
+  });
 
   addArrayAccess(Stmt, Inst, AccType, BasePointer->getValue(), ElementType,
-                 true, Subscripts, SizesSCEV, Val);
+                 true, Subscripts, Sizes, Val);
   return true;
 }
 
@@ -2306,6 +2309,13 @@ void ScopBuilder::updateAccessDimensionality() {
 
       if (Array->getNumberOfDimensions() != 1)
         continue;
+
+      // Skip divisibility optimization for arrays delinearized using
+      // array_info, as they produce proper array indices rather than byte
+      // offsets.
+      if (Array->usedArrayInfoDelinearization())
+        continue;
+
       unsigned DivisibleSize = Array->getElemSizeInBytes();
       const SCEV *Subscript = Access->getSubscript(0);
       while (!isDivisible(Subscript, DivisibleSize, SE))
@@ -2576,11 +2586,31 @@ bool checkCandidatePairAccesses(MemoryAccess *LoadMA, MemoryAccess *StoreMA,
   }
 
   if (Valid) {
-    // Finally, check if they are no other instructions accessing this memory
+    // Finally, check if they are no other instructions accessing this memory.
+    // For multidimensional arrays with known bounds, be less strict about
+    // overlaps to preserve reduction detection for legitimate array reduction
+    // patterns.
     isl::map AllAccsRel = LoadAccs.unite(StoreAccs);
     AllAccsRel = AllAccsRel.intersect_domain(Domain);
     isl::set AllAccs = AllAccsRel.range();
-    Valid = !hasIntersectingAccesses(AllAccs, LoadMA, StoreMA, Domain, MemAccs);
+
+    bool hasOtherAccesses =
+        hasIntersectingAccesses(AllAccs, LoadMA, StoreMA, Domain, MemAccs);
+
+    // For arrays delinearized with array_info (multidimensional with known
+    // bounds), allow reductions even if there might be overlapping accesses
+    // from other reductions in the same statement, as these represent
+    // legitimate reduction patterns.
+    auto *SAI = LoadMA->getScopArrayInfo();
+    if (hasOtherAccesses && SAI->usedArrayInfoDelinearization() &&
+        SAI->getNumberOfDimensions() > 1) {
+      POLLY_DEBUG(dbgs() << " == Allowing potential overlap for "
+                            "multidimensional array reduction\n");
+      Valid = true;
+    } else {
+      Valid = !hasOtherAccesses;
+    }
+
     POLLY_DEBUG(dbgs() << " == The accessed memory is " << (Valid ? "not " : "")
                        << "accessed by other instructions!\n");
   }

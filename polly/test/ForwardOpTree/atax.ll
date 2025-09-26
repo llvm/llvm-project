@@ -1,8 +1,8 @@
 ; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -polly-optree-normalize-phi=true '-passes=print<polly-optree>' -disable-output < %s | FileCheck %s -match-full-lines
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+@A = common global [100 x [2100 x double]] zeroinitializer
 
-define internal fastcc void @kernel_atax(ptr nocapture readonly %A, ptr nocapture readonly %x, ptr nocapture %y, ptr nocapture %tmp) unnamed_addr #0 {
+define internal fastcc void @kernel_atax(ptr nocapture readonly %x, ptr nocapture %y, ptr nocapture %tmp) {
 entry:
   br label %entry.split
 
@@ -19,7 +19,7 @@ for.body3:                                        ; preds = %for.inc40, %entry.s
 for.body8:                                        ; preds = %for.body8, %for.body3
   %0 = phi double [ 0.000000e+00, %for.body3 ], [ %add, %for.body8 ]
   %indvars.iv = phi i64 [ 0, %for.body3 ], [ %indvars.iv.next, %for.body8 ]
-  %arrayidx14 = getelementptr inbounds [2100 x double], ptr %A, i64 %indvars.iv8, i64 %indvars.iv
+  %arrayidx14 = getelementptr inbounds [2100 x double], ptr @A, i64 %indvars.iv8, i64 %indvars.iv
   %1 = load double, ptr %arrayidx14, align 8, !tbaa !6
   %arrayidx16 = getelementptr inbounds double, ptr %x, i64 %indvars.iv
   %2 = load double, ptr %arrayidx16, align 8, !tbaa !6
@@ -38,7 +38,7 @@ for.body24:                                       ; preds = %for.body24.for.body
   %indvars.iv5 = phi i64 [ 0, %for.end21 ], [ %indvars.iv.next6, %for.body24.for.body24_crit_edge ]
   %arrayidx26 = getelementptr inbounds double, ptr %y, i64 %indvars.iv5
   %4 = load double, ptr %arrayidx26, align 8, !tbaa !6
-  %arrayidx30 = getelementptr inbounds [2100 x double], ptr %A, i64 %indvars.iv8, i64 %indvars.iv5
+  %arrayidx30 = getelementptr inbounds [2100 x double], ptr @A, i64 %indvars.iv8, i64 %indvars.iv5
   %5 = load double, ptr %arrayidx30, align 8, !tbaa !6
   %mul33 = fmul double %5, %3
   %add34 = fadd double %4, %mul33
@@ -61,10 +61,7 @@ for.end42:                                        ; preds = %for.inc40
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i32, i1) #1
-
-attributes #0 = { noinline norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { argmemonly nounwind }
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i32, i1)
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}
@@ -89,15 +86,15 @@ attributes #1 = { argmemonly nounwind }
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 { Stmt_for_body3[i0] -> MemRef_tmp[i0] };
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:                 { Stmt_for_body3[i0] -> MemRef1__phi[] };
+; CHECK-NEXT:                 { Stmt_for_body3[i0] -> MemRef2__phi[] };
 ; CHECK-NEXT:             Instructions {
 ; CHECK-NEXT:                   store double 0.000000e+00, ptr %arrayidx5, align 8, !tbaa !2
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_for_body8
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:                 { Stmt_for_body8[i0, i1] -> MemRef1__phi[] };
+; CHECK-NEXT:                 { Stmt_for_body8[i0, i1] -> MemRef2__phi[] };
 ; CHECK-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:                 { Stmt_for_body8[i0, i1] -> MemRef1__phi[] };
+; CHECK-NEXT:                 { Stmt_for_body8[i0, i1] -> MemRef2__phi[] };
 ; CHECK-NEXT:            new: { Stmt_for_body8[i0, i1] -> MemRef_tmp[i0] };
 ; CHECK-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 { Stmt_for_body8[i0, i1] -> MemRef_A[i0, i1] };
