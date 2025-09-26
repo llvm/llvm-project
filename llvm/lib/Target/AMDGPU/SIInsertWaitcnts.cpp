@@ -908,11 +908,11 @@ bool WaitcntBrackets::hasPointSamplePendingVmemTypes(
   return hasOtherPendingVmemTypes(Interval, VMEM_NOSAMPLER);
 }
 
-template <size_t N>
-static unsigned getMaxVal(unsigned (&arr)[N]) {
+template <size_t N> static unsigned getMaxVal(unsigned (&arr)[N]) {
   unsigned max = arr[0];
-  for(size_t i = 0; i < N; i++) {
-    if(arr[i] > max) max = arr[i];
+  for (size_t i = 0; i < N; i++) {
+    if (arr[i] > max)
+      max = arr[i];
   }
   return max;
 }
@@ -1014,20 +1014,20 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
     }
   } else if (T == X_CNT) {
     // Here would be a good place to add check for interleaved
-    // smem vmem access. something like: 
-    // 1) alternate_wait_mask = E == SMEM_GROUP ? VMEM_GROUP : SMEM_GROUP; 
-    // (2)checkflag = PendingEvents & alternate_wait_mask; 
-    // (3) if(checkflag != 0) this means that we already have a pending 
-    //          wait event for the alternate group(ie, if we are currently 
-    //          checking for SMEM_GROUP, then this is telling us that we 
-    //          already have a pending VMEM_GROUP event, or vica versa. 
-    //          Since there is an implicit hardware xcnt in between them, 
-    //          we can remove this previous event => 
-    //    (3a)clear that bit in pending events 
+    // smem vmem access. something like:
+    // 1) alternate_wait_mask = E == SMEM_GROUP ? VMEM_GROUP : SMEM_GROUP;
+    // (2)checkflag = PendingEvents & alternate_wait_mask;
+    // (3) if(checkflag != 0) this means that we already have a pending
+    //          wait event for the alternate group(ie, if we are currently
+    //          checking for SMEM_GROUP, then this is telling us that we
+    //          already have a pending VMEM_GROUP event, or vica versa.
+    //          Since there is an implicit hardware xcnt in between them,
+    //          we can remove this previous event =>
+    //    (3a)clear that bit in pending events
     //    (3b)update the sgpr/vgpr scores for that event.)
     WaitEventType alt = E == SMEM_GROUP ? VMEM_GROUP : SMEM_GROUP;
     bool altEventIsActive = (PendingEvents & (1 << alt)) != 0;
-    if(altEventIsActive) {
+    if (altEventIsActive) {
       // Hardware inserts an implicit xcnt between SMEM
       // and VMEM operations. so no need to insert here.
       // Mark the previous mem Operation as completed.
@@ -1037,8 +1037,8 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       // completed uptil this point.
       // set the new lower bound as the previous upper bound
       // to clear that event.
-      unsigned max = E == SMEM_GROUP ? getMaxVal(VgprScores[T])
-                                     : getMaxVal(SgprScores[1]);
+      unsigned max =
+          E == SMEM_GROUP ? getMaxVal(VgprScores[T]) : getMaxVal(SgprScores[1]);
       setScoreLB(T, max);
       PendingEvents &= ~(1 << alt);
     }
@@ -1277,8 +1277,11 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
       return;
     setScoreLB(T, std::max(getScoreLB(T), UB - Count));
   } else {
-    setScoreLB(T, UB); // LB and UB are a sort of sliding window over the number of wait events which need to be completed.
-    PendingEvents &= ~Context->WaitEventMaskForInst[T]; // mark this event as no longer pending
+    setScoreLB(T, UB); // LB and UB are a sort of sliding window over the number
+                       // of wait events which need to be completed.
+    PendingEvents &=
+        ~Context
+             ->WaitEventMaskForInst[T]; // mark this event as no longer pending
   }
 }
 
@@ -2294,7 +2297,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
                                                WaitcntBrackets *ScoreBrackets) {
   // Now look at the instruction opcode. If it is a memory access
   // instruction, update the upper-bound of the appropriate counter's
-  // bracket and the destination operand scores. // add comment about if this is xcnt then we need to update the source opernads as well.
+  // bracket and the destination operand scores. // add comment about if this is
+  // xcnt then we need to update the source opernads as well.
   // TODO: Use the (TSFlags & SIInstrFlags::DS_CNT) property everywhere.
 
   bool IsVMEMAccess = false;
