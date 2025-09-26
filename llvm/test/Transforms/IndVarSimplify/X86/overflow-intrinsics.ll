@@ -144,8 +144,8 @@ for.body:                                         ; preds = %entry, %cont
 ; represent non-unsigned-wrapping subtraction operations.
 
 ; CHECK: for.body:
-; CHECK:  [[COND:%[^ ]+]] = extractvalue { i32, i1 } %1, 1
-; CHECK-NEXT:  br i1 [[COND]], label %trap, label %cont, !nosanitize !0
+; CHECK-NOT: @llvm.usub.with.overflow.i32
+; CHECK: br i1 true, label %trap, label %cont, !nosanitize !0
   br i1 %1, label %trap, label %cont, !nosanitize !{}
 
 trap:                                             ; preds = %for.body
