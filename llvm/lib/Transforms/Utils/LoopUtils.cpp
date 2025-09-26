@@ -972,6 +972,49 @@ bool llvm::setLoopEstimatedTripCount(
   return true;
 }
 
+BranchProbability llvm::getLoopProbability(Loop *L) {
+  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  if (!LatchBranch)
+    return BranchProbability::getUnknown();
+  bool FirstTargetIsLoop = LatchBranch->getSuccessor(0) == L->getHeader();
+  return getBranchProbability(LatchBranch, FirstTargetIsLoop);
+}
+
+bool llvm::setLoopProbability(Loop *L, BranchProbability P) {
+  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  if (!LatchBranch)
+    return false;
+  bool FirstTargetIsLoop = LatchBranch->getSuccessor(0) == L->getHeader();
+  return setBranchProbability(LatchBranch, P, FirstTargetIsLoop);
+}
+
+BranchProbability llvm::getBranchProbability(BranchInst *B,
+                                             bool ForFirstTarget) {
+  if (B->getNumSuccessors() != 2)
+    return BranchProbability::getUnknown();
+  uint64_t Weight0, Weight1;
+  if (!extractBranchWeights(*B, Weight0, Weight1))
+    return BranchProbability::getUnknown();
+  if (!ForFirstTarget)
+    std::swap(Weight0, Weight1);
+  return BranchProbability::getBranchProbability(Weight0, Weight0 + Weight1);
+}
+
+bool llvm::setBranchProbability(BranchInst *B, BranchProbability P,
+                                bool ForFirstTarget) {
+  if (B->getNumSuccessors() != 2)
+    return false;
+  BranchProbability Prob0 = P;
+  BranchProbability Prob1 = P.getCompl();
+  if (!ForFirstTarget)
+    std::swap(Prob0, Prob1);
+  MDBuilder MDB(B->getContext());
+  B->setMetadata(
+      LLVMContext::MD_prof,
+      MDB.createBranchWeights(Prob0.getNumerator(), Prob1.getNumerator()));
+  return true;
+}
+
 bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
                                               ScalarEvolution &SE) {
   Loop *OuterL = InnerLoop->getParentLoop();
