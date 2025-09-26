@@ -39,9 +39,9 @@ class M68kAsmParser : public MCTargetAsmParser {
 #include "M68kGenAsmMatcher.inc"
 
   // Helpers for Match&Emit.
-  bool invalidOperand(const SMLoc &Loc, const OperandVector &Operands,
+  bool invalidOperand(SMLoc Loc, const OperandVector &Operands,
                       const uint64_t &ErrorInfo);
-  bool missingFeature(const SMLoc &Loc, const uint64_t &ErrorInfo);
+  bool missingFeature(SMLoc Loc, const uint64_t &ErrorInfo);
   bool emit(MCInst &Inst, SMLoc const &Loc, MCStreamer &Out) const;
   bool parseRegisterName(MCRegister &RegNo, SMLoc Loc, StringRef RegisterName);
   ParseStatus parseRegister(MCRegister &RegNo);
