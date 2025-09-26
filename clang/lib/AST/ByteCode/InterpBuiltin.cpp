@@ -2909,9 +2909,8 @@ static bool interp__builtin_ia32_test_op(
 
   if (ElemQT->isIntegerType()) {
     APInt FirstElem;
-    INT_TYPE_SWITCH_NO_BOOL(*ElemPT, {
-      FirstElem = LHS.elem<T>(0).toAPSInt();
-    });
+    INT_TYPE_SWITCH_NO_BOOL(*ElemPT,
+                            { FirstElem = LHS.elem<T>(0).toAPSInt(); });
     const unsigned LaneWidth = FirstElem.getBitWidth();
 
     APInt AWide(LaneWidth * SourceLen, 0);
@@ -3716,9 +3715,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vtestzpd256:
     return interp__builtin_ia32_test_op(
         S, OpPC, Call,
-        [](const APInt &A, const APInt &B) {
-          return (A & B) == 0;
-        });
+        [](const APInt &A, const APInt &B) { return (A & B) == 0; });
   case X86::BI__builtin_ia32_ptestc128:
   case X86::BI__builtin_ia32_ptestc256:
   case X86::BI__builtin_ia32_vtestcps:
@@ -3727,9 +3724,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vtestcpd256:
     return interp__builtin_ia32_test_op(
         S, OpPC, Call,
-        [](const APInt &A, const APInt &B) {
-          return (~A & B) == 0;
-        });
+        [](const APInt &A, const APInt &B) { return (~A & B) == 0; });
   case X86::BI__builtin_ia32_ptestnzc128:
   case X86::BI__builtin_ia32_ptestnzc256:
   case X86::BI__builtin_ia32_vtestnzcps:
@@ -3737,8 +3732,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vtestnzcpd:
   case X86::BI__builtin_ia32_vtestnzcpd256:
     return interp__builtin_ia32_test_op(
-        S, OpPC, Call,
-        [](const APInt &A, const APInt &B) {
+        S, OpPC, Call, [](const APInt &A, const APInt &B) {
           return ((A & B) != 0) && ((~A & B) != 0);
         });
   case X86::BI__builtin_ia32_selectb_128:

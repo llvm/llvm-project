@@ -13651,7 +13651,7 @@ static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
   auto EvalTestOp =
-      [&](llvm::function_ref<bool(const APInt &, const APInt &)>Fn) {
+      [&](llvm::function_ref<bool(const APInt &, const APInt &)> Fn) {
         APValue SourceLHS, SourceRHS;
         if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
             !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
@@ -13666,7 +13666,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         QualType ElemQT = VT->getElementType();
 
         if (ElemQT->isIntegerType()) {
-          const unsigned LaneWidth = SourceLHS.getVectorElt(0).getInt().getBitWidth();
+          const unsigned LaneWidth =
+              SourceLHS.getVectorElt(0).getInt().getBitWidth();
           APInt AWide(LaneWidth * SourceLen, 0);
           APInt BWide(LaneWidth * SourceLen, 0);
 
@@ -14815,24 +14816,22 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(Result, E);
   }
   case X86::BI__builtin_ia32_ptestz128:
-  case X86::BI__builtin_ia32_ptestz256: 
+  case X86::BI__builtin_ia32_ptestz256:
   case X86::BI__builtin_ia32_vtestzps:
   case X86::BI__builtin_ia32_vtestzps256:
   case X86::BI__builtin_ia32_vtestzpd:
   case X86::BI__builtin_ia32_vtestzpd256: {
-    return EvalTestOp([](const APInt &A, const APInt &B) {
-      return (A & B) == 0;
-    });
+    return EvalTestOp(
+        [](const APInt &A, const APInt &B) { return (A & B) == 0; });
   }
   case X86::BI__builtin_ia32_ptestc128:
-  case X86::BI__builtin_ia32_ptestc256: 
+  case X86::BI__builtin_ia32_ptestc256:
   case X86::BI__builtin_ia32_vtestcps:
   case X86::BI__builtin_ia32_vtestcps256:
   case X86::BI__builtin_ia32_vtestcpd:
   case X86::BI__builtin_ia32_vtestcpd256: {
-    return EvalTestOp([](const APInt &A, const APInt &B) {
-      return (~A & B) == 0;
-    });
+    return EvalTestOp(
+        [](const APInt &A, const APInt &B) { return (~A & B) == 0; });
   }
   case X86::BI__builtin_ia32_ptestnzc128:
   case X86::BI__builtin_ia32_ptestnzc256:
@@ -14840,9 +14839,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case X86::BI__builtin_ia32_vtestnzcps256:
   case X86::BI__builtin_ia32_vtestnzcpd:
   case X86::BI__builtin_ia32_vtestnzcpd256: {
-       return EvalTestOp([](const APInt &A, const APInt &B) {
-    return ((A & B) != 0) && ((~A & B) != 0);
-       });
+    return EvalTestOp([](const APInt &A, const APInt &B) {
+      return ((A & B) != 0) && ((~A & B) != 0);
+    });
   }
   case X86::BI__builtin_ia32_kandqi:
   case X86::BI__builtin_ia32_kandhi:
