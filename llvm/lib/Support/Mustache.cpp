@@ -549,10 +549,33 @@ private:
                      llvm::StringMap<SectionLambda> &SectionLambdas,
                      EscapeMap &Escapes);
 
+  void parseSection(ASTNode *Parent, ASTNode::Type Ty, const Accessor &A,
+                    llvm::StringMap<AstPtr> &Partials,
+                    llvm::StringMap<Lambda> &Lambdas,
+                    llvm::StringMap<SectionLambda> &SectionLambdas,
+                    EscapeMap &Escapes);
+
   SmallVector<Token> Tokens;
   size_t CurrentPtr;
   StringRef TemplateStr;
 };
+
+void Parser::parseSection(ASTNode *Parent, ASTNode::Type Ty, const Accessor &A,
+                          llvm::StringMap<AstPtr> &Partials,
+                          llvm::StringMap<Lambda> &Lambdas,
+                          llvm::StringMap<SectionLambda> &SectionLambdas,
+                          EscapeMap &Escapes) {
+  AstPtr CurrentNode =
+      createNode(Ty, A, Parent, Partials, Lambdas, SectionLambdas, Escapes);
+  size_t Start = CurrentPtr;
+  parseMustache(CurrentNode.get(), Partials, Lambdas, SectionLambdas, Escapes);
+  const size_t End = CurrentPtr - 1;
+  std::string RawBody;
+  for (std::size_t I = Start; I < End; I++)
+    RawBody += Tokens[I].RawBody;
+  CurrentNode->setRawBody(std::move(RawBody));
+  Parent->addChild(std::move(CurrentNode));
+}
 
 AstPtr Parser::parse(llvm::StringMap<AstPtr> &Partials,
                      llvm::StringMap<Lambda> &Lambdas,
@@ -603,31 +626,13 @@ void Parser::parseMustache(ASTNode *Parent, llvm::StringMap<AstPtr> &Partials,
       break;
     }
     case Token::Type::SectionOpen: {
-      CurrentNode = createNode(ASTNode::Section, A, Parent, Partials, Lambdas,
-                               SectionLambdas, Escapes);
-      size_t Start = CurrentPtr;
-      parseMustache(CurrentNode.get(), Partials, Lambdas, SectionLambdas,
-                    Escapes);
-      const size_t End = CurrentPtr - 1;
-      std::string RawBody;
-      for (std::size_t I = Start; I < End; I++)
-        RawBody += Tokens[I].RawBody;
-      CurrentNode->setRawBody(std::move(RawBody));
-      Parent->addChild(std::move(CurrentNode));
+      parseSection(Parent, ASTNode::Section, A, Partials, Lambdas,
+                   SectionLambdas, Escapes);
       break;
     }
     case Token::Type::InvertSectionOpen: {
-      CurrentNode = createNode(ASTNode::InvertSection, A, Parent, Partials,
-                               Lambdas, SectionLambdas, Escapes);
-      size_t Start = CurrentPtr;
-      parseMustache(CurrentNode.get(), Partials, Lambdas, SectionLambdas,
-                    Escapes);
-      const size_t End = CurrentPtr - 1;
-      std::string RawBody;
-      for (size_t Idx = Start; Idx < End; Idx++)
-        RawBody += Tokens[Idx].RawBody;
-      CurrentNode->setRawBody(std::move(RawBody));
-      Parent->addChild(std::move(CurrentNode));
+      parseSection(Parent, ASTNode::InvertSection, A, Partials, Lambdas,
+                   SectionLambdas, Escapes);
       break;
     }
     case Token::Type::Comment:
