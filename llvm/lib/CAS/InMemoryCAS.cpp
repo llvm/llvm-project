@@ -57,6 +57,9 @@ public:
   InMemoryObject() = delete;
   InMemoryObject(InMemoryObject &&) = delete;
   InMemoryObject(const InMemoryObject &) = delete;
+  InMemoryObject &operator=(const InMemoryObject &) = delete;
+  InMemoryObject &operator=(InMemoryObject &&) = delete;
+  virtual ~InMemoryObject() = default;
 
 protected:
   InMemoryObject(Kind K, const InMemoryIndexValueT &I) : IndexAndKind(&I, K) {}

@@ -92,6 +92,8 @@ private:
 
 public:
   SymbolSet() = default;
+  SymbolSet(const SymbolSet &other) = delete;
+  SymbolSet &operator=(const SymbolSet &other) = delete;
   LLVM_ABI ~SymbolSet();
   LLVM_ABI Symbol *addGlobal(EncodeKind Kind, StringRef Name, SymbolFlags Flags,
                              const Target &Targ);
