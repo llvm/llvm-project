@@ -1901,6 +1901,17 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
         m_ast.CreateClassTemplateSpecializationDecl(
             containing_decl_ctx, GetOwningClangModule(die), class_template_decl,
             tag_decl_kind, template_param_infos);
+    if (!class_specialization_decl) {
+      if (log) {
+        dwarf->GetObjectFile()->GetModule()->LogMessage(
+            log,
+            "SymbolFileDWARF({0:p}) - Failed to create specialization for "
+            "clang::ClassTemplateDecl({1}, {2:p}).",
+            this, llvm::StringRef(attrs.name), class_template_decl);
+      }
+      return TypeSP();
+    }
+
     clang_type =
         m_ast.CreateClassTemplateSpecializationType(class_specialization_decl);
 
