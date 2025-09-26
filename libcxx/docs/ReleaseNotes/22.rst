@@ -64,6 +64,8 @@ Improvements and New Features
 - Multiple internal types have been refactored to use ``[[no_unique_address]]``, resulting in faster compile times and
   reduced debug information.
 
+- The ``num_get::do_get`` integral overloads have been optimized, resulting in a performance improvement of up to 2.8x.
+
 Deprecations and Removals
 -------------------------
 
