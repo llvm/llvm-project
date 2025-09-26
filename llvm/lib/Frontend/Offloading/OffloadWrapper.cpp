@@ -812,12 +812,11 @@ struct SYCLWrapper {
     std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
         Entries, /*BufferName*/ "", /*RequiresNullTerminator*/ false);
     for (line_iterator LI(*MB); !LI.is_at_eof(); ++LI) {
-      GlobalVariable *GV = emitOffloadingEntry(
-          M, /*Kind*/ OffloadKind::OFK_SYCL,
-          Constant::getNullValue(PointerType::getUnqual(C)),
-          /*Name*/ *LI, /*Size*/ 0,
-          ///*Name*/ "__sycl_offload_entry_name", /*Size*/ 0,
-          /*Flags*/ 0, /*Data*/ 0);
+      GlobalVariable *GV =
+          emitOffloadingEntry(M, /*Kind*/ OffloadKind::OFK_SYCL,
+                              Constant::getNullValue(PointerType::getUnqual(C)),
+                              /*Name*/ *LI, /*Size*/ 0,
+                              /*Flags*/ 0, /*Data*/ 0);
       EntriesInits.push_back(GV->getInitializer());
     }
 
@@ -825,7 +824,7 @@ struct SYCLWrapper {
                                    EntriesInits);
     auto *EntriesGV = new GlobalVariable(M, Arr->getType(), /*isConstant*/ true,
                                          GlobalVariable::InternalLinkage, Arr,
-                                         "__sycl_offload_entries_arr");
+                                         ".sycl_offloading.entries_arr");
 
     auto *EntriesB = ConstantExpr::getGetElementPtr(
         EntriesGV->getValueType(), EntriesGV, getSizetConstPair(0, 0));

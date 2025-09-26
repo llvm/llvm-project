@@ -276,10 +276,17 @@
 //      SYCL: %__sycl.tgt_device_image = type { i16, i8, i8, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
 // SYCL-NEXT: %__sycl.tgt_bin_desc = type { i16, i16, ptr, ptr, ptr }
 
-//      SYCL: @.sycl_offloading.device_images = internal unnamed_addr constant [0 x %__sycl.tgt_device_image] zeroinitializer
-// SYCL-NEXT: @.sycl_offloading.descriptor = internal constant %__sycl.tgt_bin_desc { i16 1, i16 0, ptr @.sycl_offloading.device_images, ptr null, ptr null }
-// SYCL-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @sycl.descriptor_reg, ptr null }]
-// SYCL-NEXT: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @sycl.descriptor_unreg, ptr null }]
+//      SYCL: @.sycl_offloading.target.0 = internal unnamed_addr constant [1 x i8] zeroinitializer
+// SYCL-NEXT: @.sycl_offloading.opts.compile.0 = internal unnamed_addr constant [1 x i8] zeroinitializer
+// SYCL-NEXT: @.sycl_offloading.opts.link.0 = internal unnamed_addr constant [1 x i8] zeroinitializer
+// SYCL-NEXT: @.sycl_offloading.0.data = internal unnamed_addr constant [0 x i8] zeroinitializer, section ".llvm.offloading"
+// SYCL-NEXT: @.offloading.entry_name = internal unnamed_addr constant [5 x i8] c"stub\00", section ".llvm.rodata.offloading", align 1
+// SYCL-NEXT: @.offloading.entry.stub = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 8, i32 0, ptr null, ptr @.offloading.entry_name, i64 0, i64 0, ptr null }, section "llvm_offload_entries", align 8
+// SYCL-NEXT: @.sycl_offloading.entries_arr = internal constant [1 x %struct.__tgt_offload_entry] [%struct.__tgt_offload_entry { i64 0, i16 1, i16 8, i32 0, ptr null, ptr @.offloading.entry_name, i64 0, i64 0, ptr null }]
+// SYCL-NEXT: @.sycl_offloading.0.info = internal local_unnamed_addr constant [2 x i64] [i64 ptrtoint (ptr @.sycl_offloading.0.data to i64), i64 0], section ".tgtimg", align 16
+// SYCL-NEXT: @llvm.used = appending global [1 x ptr] [ptr @.sycl_offloading.0.info], section "llvm.metadata"
+// SYCL-NEXT: @.sycl_offloading.device_images = internal unnamed_addr constant [1 x %__sycl.tgt_device_image] [%__sycl.tgt_device_image { i16 3, i8 8, i8 0, ptr @.sycl_offloading.target.0, ptr @.sycl_offloading.opts.compile.0, ptr @.sycl_offloading.opts.link.0, ptr @.sycl_offloading.0.data, ptr @.sycl_offloading.0.data, ptr @.sycl_offloading.entries_arr, ptr getelementptr ([1 x %struct.__tgt_offload_entry], ptr @.sycl_offloading.entries_arr, i64 0, i64 1), ptr null, ptr null }]
+// SYCL-NEXT: @.sycl_offloading.descriptor = internal constant %__sycl.tgt_bin_desc { i16 1, i16 1, ptr @.sycl_offloading.device_images, ptr null, ptr null }
 
 //      SYCL: define internal void @sycl.descriptor_reg() section ".text.startup" {
 // SYCL-NEXT: entry:
