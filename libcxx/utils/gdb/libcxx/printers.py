@@ -13,6 +13,7 @@ These should work for objects compiled with either the stable ABI or the unstabl
 from __future__ import print_function
 
 import re
+import sys
 import gdb
 import gdb.printing
 
@@ -351,17 +352,28 @@ class StdVectorPrinter(object):
         """Set val, length, capacity, and iterator for bool and normal vectors."""
         self.val = val
         self.typename = _remove_generics(_prettify_typename(val.type))
-        begin = self.val["__begin_"]
         if self.val.type.template_argument(0).code == gdb.TYPE_CODE_BOOL:
+            begin = self.val["__begin_"]
             self.typename += "<bool>"
             self.length = self.val["__size_"]
             bits_per_word = self.val["__bits_per_word"]
             self.capacity = self.val["__cap_"] * bits_per_word
             self.iterator = self._VectorBoolIterator(begin, self.length, bits_per_word)
         else:
-            end = self.val["__end_"]
+            for i in val.type.fields():
+                if i.is_base_class:
+                    base = val[i]
+                    break
+
+            begin = base["__begin_"]
+            end = base["__end_"]
             self.length = end - begin
-            self.capacity = self.val["__cap_"] - begin
+            for i in base.type.fields():
+                if i.name == "__cap_":
+                    self.capacity = base["__cap_"] - begin
+                elif i.name == None:
+                    self.capacity = base[i]["__cap_"] - begin
+                    break
             self.iterator = self._VectorIterator(begin, end)
 
     def to_string(self):
