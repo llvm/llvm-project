@@ -482,7 +482,7 @@ struct SincosOpLowering : public ConvertOpToLLVMPattern<math::SincosOp> {
     if (isa<Float32Type>(computeType)) {
       const arith::FastMathFlags flag = op.getFastmath();
       const bool useApprox =
-          ((uint32_t)arith::FastMathFlags::afn & (uint32_t)flag);
+          mlir::arith::bitEnumContainsAny(flag, arith::FastMathFlags::afn);
       sincosFunc = useApprox ? "__nv_fast_sincosf" : "__nv_sincosf";
     } else if (isa<Float64Type>(computeType)) {
       sincosFunc = "__nv_sincos";

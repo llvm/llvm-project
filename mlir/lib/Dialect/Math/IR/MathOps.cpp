@@ -285,19 +285,8 @@ OpFoldResult math::SinhOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
-// SinCosOp verifier and getShapeForUnroll
+// SinCosOp getShapeForUnroll
 //===----------------------------------------------------------------------===//
-
-LogicalResult math::SincosOp::verify() {
-  Type operandType = getOperand().getType();
-  Type sinType = getSin().getType();
-  Type cosType = getCos().getType();
-
-  if (operandType != sinType || operandType != cosType)
-    return emitOpError("result types must match operand type");
-
-  return success();
-}
 
 std::optional<SmallVector<int64_t, 4>> math::SincosOp::getShapeForUnroll() {
   if (auto vt = mlir::dyn_cast_or_null<VectorType>(getOperand().getType()))

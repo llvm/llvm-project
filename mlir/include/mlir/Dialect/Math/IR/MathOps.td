@@ -545,8 +545,6 @@ def Math_SincosOp : Math_Op<"sincos",
   let extraClassDeclaration = [{
     std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
   }];
-
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
