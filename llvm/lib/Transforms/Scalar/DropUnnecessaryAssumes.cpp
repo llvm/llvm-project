@@ -22,24 +22,28 @@ static bool affectedValuesAreEphemeral(ArrayRef<Value *> Affected) {
   // by assumes. In that case, the assume does not provide useful information.
   // Note that additional users may appear as a result of inlining and CSE,
   // so we should only make this assumption late in the optimization pipeline.
-  SmallSetVector<User *, 16> Worklist;
+  SmallSetVector<Instruction *, 16> Worklist;
   auto AddUser = [&](User *U) {
     // Bail out if we need to inspect too many users.
     if (Worklist.size() >= 32)
       return false;
-    Worklist.insert(U);
+    Worklist.insert(cast<Instruction>(U));
     return true;
   };
 
-  for (Value *V : Affected)
+  for (Value *V : Affected) {
+    // Do not handle assumes on globals for now. The use list for them may
+    // contain uses in other functions.
+    if (!isa<Instruction, Argument>(V))
+      return false;
+
     for (User *U : V->users())
       if (!AddUser(U))
         return false;
+  }
 
   for (unsigned Idx = 0; Idx < Worklist.size(); ++Idx) {
-    auto *I = dyn_cast<Instruction>(Worklist[Idx]);
-    if (!I)
-      return false;
+    Instruction *I = Worklist[Idx];
 
     // Use in assume is ephemeral.
     if (isa<AssumeInst>(I))

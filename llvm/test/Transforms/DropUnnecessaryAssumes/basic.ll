@@ -291,8 +291,10 @@ define i32 @affected_value_has_side_effect_and_is_used() {
 @g = external global i8
 @g2 = external global i8
 
+; Assumes on globals are currently not supported.
 define void @assume_on_global() {
 ; CHECK-LABEL: define void @assume_on_global() {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr @g, i64 8) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) ["align"(ptr @g, i64 8)]
