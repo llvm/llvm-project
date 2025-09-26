@@ -807,7 +807,7 @@ struct SYCLWrapper {
   ///
   /// \returns Pointers to the beginning and end of the array.
   std::pair<Constant *, Constant *>
-  initOffloadEntriesPerImage(StringRef Entries) {
+  initOffloadEntriesPerImage(StringRef Entries, const Twine &OffloadKindTag) {
     SmallVector<Constant *> EntriesInits;
     std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
         Entries, /*BufferName*/ "", /*RequiresNullTerminator*/ false);
@@ -824,7 +824,7 @@ struct SYCLWrapper {
                                    EntriesInits);
     auto *EntriesGV = new GlobalVariable(M, Arr->getType(), /*isConstant*/ true,
                                          GlobalVariable::InternalLinkage, Arr,
-                                         ".sycl_offloading.entries_arr");
+                                         OffloadKindTag + "entries_arr");
 
     auto *EntriesB = ConstantExpr::getGetElementPtr(
         EntriesGV->getValueType(), EntriesGV, getSizetConstPair(0, 0));
@@ -857,7 +857,7 @@ struct SYCLWrapper {
     appendToUsed(M, ImgInfoVar);
   }
 
-  Constant *wrapImage(const OffloadingImage &OI, const Twine &ImageID,
+  Constant *wrapImage(const OffloadBinary &OB, const Twine &ImageID,
                       StringRef OffloadKindTag) {
     // Note: Intel DPC++ compiler had 2 versions of this structure
     // and clang++ has a third different structure. To avoid ABI incompatibility
@@ -866,10 +866,10 @@ struct SYCLWrapper {
     Constant *Version =
         ConstantInt::get(Type::getInt16Ty(C), DeviceImageStructVersion);
     Constant *OffloadKindConstant = ConstantInt::get(
-        Type::getInt8Ty(C), static_cast<uint8_t>(OI.TheOffloadKind));
+        Type::getInt8Ty(C), static_cast<uint8_t>(OB.getOffloadKind()));
     Constant *ImageKindConstant = ConstantInt::get(
-        Type::getInt8Ty(C), static_cast<uint8_t>(OI.TheImageKind));
-    StringRef Triple = OI.StringData.lookup("triple");
+        Type::getInt8Ty(C), static_cast<uint8_t>(OB.getImageKind()));
+    StringRef Triple = OB.getString("triple");
     Constant *TripleConstant =
         addStringToModule(Triple, Twine(OffloadKindTag) + "target." + ImageID);
     Constant *CompileOptions =
@@ -883,21 +883,21 @@ struct SYCLWrapper {
         Constant::getNullValue(PointerType::getUnqual(C)),
         Constant::getNullValue(PointerType::getUnqual(C))};
 
-    const MemoryBuffer &RawImage = *OI.Image;
+    StringRef RawImage = OB.getImage();
     std::pair<Constant *, Constant *> Binary = addArrayToModule(
-        ArrayRef<char>(RawImage.getBufferStart(), RawImage.getBufferEnd()),
+        ArrayRef<char>(RawImage.begin(), RawImage.end()),
         Twine(OffloadKindTag) + ImageID + ".data", ".llvm.offloading");
 
     // For SYCL images offload entries are defined here per image.
     std::pair<Constant *, Constant *> ImageEntriesPtrs =
-        initOffloadEntriesPerImage(OI.StringData.lookup("symbols"));
+        initOffloadEntriesPerImage(OB.getString("symbols"), OffloadKindTag);
     Constant *WrappedBinary = ConstantStruct::get(
         SyclDeviceImageTy, Version, OffloadKindConstant, ImageKindConstant,
         TripleConstant, CompileOptions, LinkOptions, Binary.first,
         Binary.second, ImageEntriesPtrs.first, ImageEntriesPtrs.second,
         PropertiesConstants.first, PropertiesConstants.second);
 
-    emitRegistrationFunctions(Binary.first, RawImage.getBufferSize(), ImageID,
+    emitRegistrationFunctions(Binary.first, RawImage.size(), ImageID,
                               OffloadKindTag);
 
     return WrappedBinary;
@@ -983,12 +983,13 @@ struct SYCLWrapper {
   /// \endcode
   ///
   /// \returns Global variable that represents FatbinDesc.
-  GlobalVariable *createFatbinDesc(ArrayRef<OffloadingImage> Images) {
+  GlobalVariable *createFatbinDesc(ArrayRef<OffloadFile> OffloadFiles) {
     StringRef OffloadKindTag = ".sycl_offloading.";
     SmallVector<Constant *> WrappedImages;
-    WrappedImages.reserve(Images.size());
-    for (size_t I = 0, E = Images.size(); I != E; ++I)
-      WrappedImages.push_back(wrapImage(Images[I], Twine(I), OffloadKindTag));
+    WrappedImages.reserve(OffloadFiles.size());
+    for (size_t I = 0, E = OffloadFiles.size(); I != E; ++I)
+      WrappedImages.push_back(
+          wrapImage(*OffloadFiles[I].getBinary(), Twine(I), OffloadKindTag));
 
     return combineWrappedImages(WrappedImages, OffloadKindTag);
   }
@@ -1088,24 +1089,7 @@ Error llvm::offloading::wrapSYCLBinaries(llvm::Module &M, ArrayRef<char> Buffer,
   if (Error E = extractOffloadBinaries(MBR, OffloadFiles))
     return E;
 
-  SmallVector<OffloadingImage> Images;
-  Images.reserve(OffloadFiles.size());
-  for (OffloadFile &File : OffloadFiles) {
-    OffloadBinary &Binary = *File.getBinary();
-    OffloadingImage OI;
-    OI.TheImageKind = Binary.getImageKind();
-    OI.TheOffloadKind = Binary.getOffloadKind();
-    OI.Flags = Binary.getFlags();
-    OI.StringData["arch"] = Binary.getString("arch");
-    OI.StringData["triple"] = Binary.getString("triple");
-    OI.StringData["symbols"] = Binary.getString("symbols");
-    OI.Image = MemoryBuffer::getMemBuffer(
-        MemoryBufferRef(Binary.getImage(), /*Identifier*/ ""),
-        /*RequiresNullTerminator*/ false);
-    Images.emplace_back(std::move(OI));
-  }
-
-  GlobalVariable *Desc = W.createFatbinDesc(Images);
+  GlobalVariable *Desc = W.createFatbinDesc(OffloadFiles);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
                              "No binary descriptors created.");
