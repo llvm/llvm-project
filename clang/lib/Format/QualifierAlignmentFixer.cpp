@@ -175,6 +175,18 @@ static bool isQualifier(const FormatToken *const Tok) {
   case tok::kw___ptr32:
   case tok::kw___ptr64:
   case tok::kw___funcref:
+  case tok::kw_typedef:
+  case tok::kw_consteval:
+  case tok::kw_constinit:
+  case tok::kw_thread_local:
+  case tok::kw_extern:
+  case tok::kw_mutable:
+  case tok::kw_signed:
+  case tok::kw_unsigned:
+  case tok::kw_long:
+  case tok::kw_short:
+  case tok::kw_decltype:
+  case tok::kw_explicit:
     return true;
   default:
     return false;
@@ -544,6 +556,18 @@ tok::TokenKind LeftRightQualifierAlignmentFixer::getTokenFromQualifier(
       .Case("constexpr", tok::kw_constexpr)
       .Case("restrict", tok::kw_restrict)
       .Case("friend", tok::kw_friend)
+      .Case("typedef", tok::kw_typedef)
+      .Case("consteval", tok::kw_consteval)
+      .Case("constinit", tok::kw_constinit)
+      .Case("thread_local", tok::kw_thread_local)
+      .Case("extern", tok::kw_extern)
+      .Case("mutable", tok::kw_mutable)
+      .Case("signed", tok::kw_signed)
+      .Case("unsigned", tok::kw_unsigned)
+      .Case("long", tok::kw_long)
+      .Case("short", tok::kw_short)
+      .Case("decltype", tok::kw_decltype)
+      .Case("explicit", tok::kw_explicit)
       .Default(tok::identifier);
 }
 
