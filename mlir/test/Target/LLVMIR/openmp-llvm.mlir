@@ -3590,3 +3590,104 @@ llvm.func @nested_task_with_deps() {
 
 // CHECK:         ret void
 // CHECK:       }
+
+// -----
+
+module attributes {omp.is_target_device = false} {
+llvm.mlir.global internal @any() : i32
+llvm.mlir.global internal @host() : i32
+llvm.mlir.global internal @nohost() : i32
+llvm.func @omp_groupprivate_host() {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.addressof @any : !llvm.ptr
+  %2 = omp.groupprivate %1 : !llvm.ptr, device_type(any) -> !llvm.ptr
+  llvm.store %0, %2 : i32, !llvm.ptr
+
+  %3 = llvm.mlir.addressof @host : !llvm.ptr
+  %4 = omp.groupprivate %3 : !llvm.ptr, device_type(host) -> !llvm.ptr
+  llvm.store %0, %4 : i32, !llvm.ptr
+
+  %5 = llvm.mlir.addressof @nohost : !llvm.ptr
+  %6 = omp.groupprivate %5 : !llvm.ptr, device_type(nohost) -> !llvm.ptr
+  llvm.store %0, %6 : i32, !llvm.ptr
+  llvm.return
+}
+}
+
+// CHECK: @any = internal global i32 undef
+// CHECK: @host = internal global i32 undef
+// CHECK: @nohost = internal global i32 undef
+// CHECK-LABEL: @omp_groupprivate_host
+// CHECK:  [[TMP1:%.*]] = call ptr @__kmpc_alloc_shared(i64 4)
+// CHECK:  store i32 1, ptr [[TMP1]], align 4
+// CHECK:  [[TMP2:%.*]] = call ptr @__kmpc_alloc_shared(i64 4)
+// CHECK:  store i32 1, ptr [[TMP2]], align 4
+// CHECK:  store i32 1, ptr @nohost, align 4
+
+// -----
+
+module attributes {omp.is_target_device = true} {
+llvm.mlir.global internal @any() : i32
+llvm.mlir.global internal @host() : i32
+llvm.mlir.global internal @nohost() : i32
+llvm.func @omp_groupprivate_device() {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.addressof @any : !llvm.ptr
+  %2 = omp.groupprivate %1 : !llvm.ptr, device_type(any) -> !llvm.ptr
+  llvm.store %0, %2 : i32, !llvm.ptr
+
+  %3 = llvm.mlir.addressof @host : !llvm.ptr
+  %4 = omp.groupprivate %3 : !llvm.ptr, device_type(host) -> !llvm.ptr
+  llvm.store %0, %4 : i32, !llvm.ptr
+
+  %5 = llvm.mlir.addressof @nohost : !llvm.ptr
+  %6 = omp.groupprivate %5 : !llvm.ptr, device_type(nohost) -> !llvm.ptr
+  llvm.store %0, %6 : i32, !llvm.ptr
+  llvm.return
+}
+}
+
+// CHECK: @any = internal global i32 undef
+// CHECK: @host = internal global i32 undef
+// CHECK: @nohost = internal global i32 undef
+// CHECK-LABEL: @omp_groupprivate_device
+// CHECK:  [[TMP1:%.*]] = call ptr @__kmpc_alloc_shared(i64 4)
+// CHECK:  store i32 1, ptr [[TMP1]], align 4
+// CHECK:  store i32 1, ptr @host, align 4
+// CHECK:  [[TMP2:%.*]] = call ptr @__kmpc_alloc_shared(i64 4)
+// CHECK:  store i32 1, ptr [[TMP2]], align 4
+
+// -----
+
+module attributes {omp.is_target_device = false} {
+llvm.mlir.global internal @any1() : i32
+llvm.mlir.global internal @host1() : i32
+llvm.mlir.global internal @nohost1() : i32
+llvm.func @omp_groupprivate_host() {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.addressof @any1 : !llvm.ptr
+  %2 = omp.groupprivate %1 : !llvm.ptr, device_type(any) -> !llvm.ptr
+  llvm.store %0, %2 : i32, !llvm.ptr
+
+  %3 = llvm.mlir.addressof @host1 : !llvm.ptr
+  %4 = omp.groupprivate %3 : !llvm.ptr, device_type(host) -> !llvm.ptr
+  llvm.store %0, %4 : i32, !llvm.ptr
+
+  %5 = llvm.mlir.addressof @nohost1 : !llvm.ptr
+  %6 = omp.groupprivate %5 : !llvm.ptr, device_type(nohost) -> !llvm.ptr
+  llvm.store %0, %6 : i32, !llvm.ptr
+  llvm.return
+}
+}
+
+// CHECK: @any1 = internal global i32 undef
+// CHECK: @host1 = internal global i32 undef
+// CHECK: @nohost1 = internal global i32 undef
+// CHECK-LABEL: @omp_groupprivate_host
+// CHECK:  [[TMP1:%.*]] = call ptr @__kmpc_alloc_shared(i64 4)
+// CHECK:  store i32 1, ptr [[TMP1]], align 4
+// CHECK:  [[TMP2:%.*]] = call ptr @__kmpc_alloc_shared(i64 4)
+// CHECK:  store i32 1, ptr [[TMP2]], align 4
+// CHECK:  store i32 1, ptr @nohost1, align 4
+
+// -----
