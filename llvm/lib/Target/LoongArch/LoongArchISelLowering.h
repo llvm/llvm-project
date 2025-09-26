@@ -339,6 +339,12 @@ public:
 
   bool shouldScalarizeBinop(SDValue VecOp) const override;
 
+  /// Check if a constant splat can be generated using [x]vldi, where imm[12]
+  /// is 1.
+  std::pair<bool, uint64_t>
+  isImmVLDILegalForMode1(const APInt &SplatValue,
+                         const unsigned SplatBitSize) const;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
