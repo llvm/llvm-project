@@ -38,6 +38,7 @@ public:
   void lower(const MachineInstr *MI, MCInst &OutMI) const;
 
   void lowerT16D16Helper(const MachineInstr *MI, MCInst &OutMI) const;
+  void lowerT16FmaMixFP16(const MachineInstr *MI, MCInst &OutMI) const;
 };
 
 namespace {
