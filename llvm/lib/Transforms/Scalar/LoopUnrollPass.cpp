@@ -1358,8 +1358,9 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   ULO.AddAdditionalAccumulators = UP.AddAdditionalAccumulators;
   LoopUnrollResult UnrollResult = UnrollLoop(
       L, ULO, LI, &SE, &DT, &AC, &TTI, &ORE, PreserveLCSSA, &RemainderLoop, AA);
-  if (UnrollResult == LoopUnrollResult::Unmodified)
-    return LoopUnrollResult::Unmodified;
+  if (UnrollResult == LoopUnrollResult::Unmodified ||
+      UnrollResult == LoopUnrollResult::Modified)
+    return UnrollResult;
 
   if (RemainderLoop) {
     std::optional<MDNode *> RemainderLoopID =
