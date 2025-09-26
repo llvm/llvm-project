@@ -126,34 +126,36 @@ public:
     return LK.first != TargetLoweringBase::TypeLegal;
   }
 
-  bool isOpLegal(Instruction *I) {
+  bool isOpLegal(const Instruction *I) {
     if (dyn_cast<IntrinsicInst>(I))
-      return true; // FIXME: narrow to known native intrinsics
-                   // (DOT/MFMA/tbuffer) or use TTI cost.
+      return true; 
+/*    if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
+      Intrinsic::ID ID = II->getIntrinsicID();
+      if (Intrinsic::isTargetIntrinsic(ID))
+        return true; // FIXME: optionally narrow to specific amdgcn intrinsics
+    }*/
 
     // Any store is a profitable sink (prevents flip-flopping)
     if (isa<StoreInst>(I))
       return true;
 
     if (auto *BO = dyn_cast<BinaryOperator>(I)) {
-      if (auto *VTy = dyn_cast<VectorType>(BO->getType())) {
-        Type *Elt = VTy->getElementType();
-        // Treat small-int vector binops as profitable when SDWA is available.
-        // We explicitly gate to 8/16-bit to avoid i1 vectors and keep behavior
-        // tight.
-        // Require SDWA for both i8 and i16, and keep vectors within 32 bits.
-        std::optional<unsigned> Bits = VTy->getPrimitiveSizeInBits();
-        if (ST.hasSDWA() && Bits && *Bits <= 32 &&
-            (Elt->isIntegerTy(8) || Elt->isIntegerTy(16))) {
-          switch (BO->getOpcode()) {
-          case Instruction::Add:
-          case Instruction::Sub:
-          case Instruction::And:
-          case Instruction::Or:
-          case Instruction::Xor:
-            return true;
-          default:
-            break;
+      if (auto *VT = dyn_cast<FixedVectorType>(BO->getType())) {
+        if (const auto *IT = dyn_cast<IntegerType>(VT->getElementType())) {
+          unsigned EB = IT->getBitWidth();
+          unsigned EC = VT->getNumElements();
+          // Check for SDWA-compatible operation
+          if ((EB == 8 || EB == 16) && ST.hasSDWA() && EC * EB <= 32) {
+            switch (BO->getOpcode()) {
+              case Instruction::Add:
+              case Instruction::Sub:
+              case Instruction::And:
+              case Instruction::Or:
+              case Instruction::Xor:
+                return true;
+              default:
+                break;
+            }
           }
         }
       }
