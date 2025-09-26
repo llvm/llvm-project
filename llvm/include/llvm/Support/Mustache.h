@@ -85,6 +85,14 @@ using SectionLambda = std::function<llvm::json::Value(std::string)>;
 
 class ASTNode;
 using AstPtr = std::unique_ptr<ASTNode>;
+using EscapeMap = DenseMap<char, std::string>;
+
+struct MustacheContext {
+  StringMap<AstPtr> Partials;
+  StringMap<Lambda> Lambdas;
+  StringMap<SectionLambda> SectionLambdas;
+  EscapeMap Escapes;
+};
 
 // A Template represents the container for the AST and the partials
 // and Lambdas that are registered with it.
@@ -118,10 +126,7 @@ public:
   LLVM_ABI void overrideEscapeCharacters(DenseMap<char, std::string> Escapes);
 
 private:
-  StringMap<AstPtr> Partials;
-  StringMap<Lambda> Lambdas;
-  StringMap<SectionLambda> SectionLambdas;
-  DenseMap<char, std::string> Escapes;
+  MustacheContext Ctx;
   AstPtr Tree;
 };
 } // namespace llvm::mustache
