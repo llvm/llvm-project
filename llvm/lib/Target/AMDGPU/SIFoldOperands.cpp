@@ -717,10 +717,10 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
     if (New->getSubReg()) {
       ConstrainRC =
           TRI->getMatchingSuperRegClass(NewRC, OpRC, New->getSubReg());
-    }
 
-    if (!ConstrainRC)
-      return false;
+      if (!ConstrainRC)
+        return false;
+    }
 
     if (!MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
       LLVM_DEBUG(dbgs() << "Cannot constrain " << printReg(New->getReg(), TRI)
