@@ -2419,8 +2419,10 @@ VarDecl *SemaOpenMP::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
       return VD ? VD : Info.second;
     DSAStackTy::DSAVarData DVarTop =
         DSAStack->getTopDSA(D, DSAStack->isClauseParsingMode());
+
     if (DVarTop.CKind != OMPC_unknown && isOpenMPPrivate(DVarTop.CKind) &&
-        (!VD || VD->hasLocalStorage() || !DVarTop.AppliedToPointee))
+        (!VD || VD->hasLocalStorage() ||
+         !(DVarTop.AppliedToPointee && DVarTop.CKind != OMPC_reduction)))
       return VD ? VD : cast<VarDecl>(DVarTop.PrivateCopy->getDecl());
     // Threadprivate variables must not be captured.
     if (isOpenMPThreadPrivate(DVarTop.CKind))
