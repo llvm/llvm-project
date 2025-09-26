@@ -59,6 +59,9 @@ public:
 
   uint32_t GetDefaultMemoryCacheLineSize() override;
 
+  uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
+                         ProcessInstanceInfoList &proc_infos) override;
+
 protected:
   const char *GetCacheHostname() override;
 
