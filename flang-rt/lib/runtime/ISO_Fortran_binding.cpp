@@ -297,6 +297,12 @@ RT_API_ATTRS int CFI_setpointer(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   return CFI_SUCCESS;
 }
 
+RT_API_ATTRS void CFI_show(const CFI_cdesc_t *descr) {
+  if (descr) {
+    reinterpret_cast<const Fortran::runtime::Descriptor *>(descr)->Dump(stderr);
+  }
+}
+
 RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::ISO
