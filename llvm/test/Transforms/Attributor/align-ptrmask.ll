@@ -154,3 +154,63 @@ define <2 x ptr> @ptrmask_v2p0_v2i64(<2 x ptr> align 2 %ptr, i64 %a) {
   store i64 %a, ptr %ptr2, align 16
   ret <2 x ptr> %result
 }
+
+define ptr @align_ptrmask_forward_mask_positive(ptr align 4 %x, i64 %y, i1 %cmp1, i1 %cmp2) {
+; CHECK-LABEL: define align 4 ptr @align_ptrmask_forward_mask_positive(
+; CHECK-SAME: ptr nofree readnone align 4 [[X:%.*]], i64 [[Y:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[P:%.*]] = tail call align 4 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef 2) #[[ATTR4]]
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %p = tail call ptr @llvm.ptrmask.p0.i64(ptr %x, i64 2)
+  ret ptr %p
+}
+
+define ptr @align_ptrmask_forward_mask_poison(ptr align 4 %x, i64 %y, i1 %cmp1, i1 %cmp2) {
+; CHECK-LABEL: define align 4 ptr @align_ptrmask_forward_mask_poison(
+; CHECK-SAME: ptr nofree readnone align 4 [[X:%.*]], i64 [[Y:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[P:%.*]] = tail call align 4 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 poison) #[[ATTR4]]
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %p = tail call ptr @llvm.ptrmask.p0.i64(ptr %x, i64 poison)
+  ret ptr %p
+}
+
+define ptr @align_ptrmask_forward_mask_undef(ptr align 4 %x, i64 %y, i1 %cmp1, i1 %cmp2) {
+; CHECK-LABEL: define align 4 ptr @align_ptrmask_forward_mask_undef(
+; CHECK-SAME: ptr nofree readnone align 4 [[X:%.*]], i64 [[Y:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[P:%.*]] = tail call align 4 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 undef) #[[ATTR4]]
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %p = tail call ptr @llvm.ptrmask.p0.i64(ptr %x, i64 undef)
+  ret ptr %p
+}
+
+define ptr @align_ptrmask_forward_mask_max(ptr align 4 %x, i64 %y, i1 %cmp1, i1 %cmp2) {
+; CHECK-LABEL: define align 4294967296 ptr @align_ptrmask_forward_mask_max(
+; CHECK-SAME: ptr nofree readnone align 4 [[X:%.*]], i64 [[Y:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[P:%.*]] = tail call align 4294967296 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef -4294967296) #[[ATTR4]]
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %p = tail call ptr @llvm.ptrmask.p0.i64(ptr %x, i64 -4294967296)
+  ret ptr %p
+}
+
+define ptr @align_ptrmask_forward_mask_max_plus_one(ptr align 4 %x, i64 %y, i1 %cmp1, i1 %cmp2) {
+; CHECK-LABEL: define align 4294967296 ptr @align_ptrmask_forward_mask_max_plus_one(
+; CHECK-SAME: ptr nofree readnone align 4 [[X:%.*]], i64 [[Y:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[P:%.*]] = tail call align 4294967296 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef -8589934592) #[[ATTR4]]
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %p = tail call ptr @llvm.ptrmask.p0.i64(ptr %x, i64 -8589934592)
+  ret ptr %p
+}
+
+define ptr @align_ptrmask_back_callsite(ptr align 4 %x, i64 %y, i1 %cmp1, i1 %cmp2) {
+; CHECK-LABEL: define align 16 ptr @align_ptrmask_back_callsite(
+; CHECK-SAME: ptr nofree readnone align 16 [[X:%.*]], i64 [[Y:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[P:%.*]] = tail call align 16 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef -4) #[[ATTR4]]
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %p = tail call align 16 ptr @llvm.ptrmask.p0.i64(ptr %x, i64 -4)
+  ret ptr %p
+}
