@@ -469,52 +469,56 @@ entry:
 define i16 @use_in_diff_bb() nounwind {
 ; X86-LABEL: use_in_diff_bb:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzwl v16, %esi
+; X86-NEXT:    movzwl v16, %eax
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB17_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    movl %esi, %ecx
+; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    orl $1, %ecx
-; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    lock cmpxchgw %cx, v16
-; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB17_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    testb %al, %al
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    testb %cl, %cl
 ; X86-NEXT:    jne .LBB17_4
 ; X86-NEXT:  # %bb.3:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    calll foo@PLT
-; X86-NEXT:  .LBB17_4:
-; X86-NEXT:    andl $1, %esi
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .LBB17_4:
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: use_in_diff_bb:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    movzwl v16(%rip), %ebx
+; X64-NEXT:    movzwl v16(%rip), %eax
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB17_1: # %atomicrmw.start
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movl %ebx, %ecx
+; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    orl $1, %ecx
-; X64-NEXT:    movl %ebx, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    lock cmpxchgw %cx, v16(%rip)
-; X64-NEXT:    movl %eax, %ebx
+; X64-NEXT:    # kill: def $ax killed $ax def $eax
 ; X64-NEXT:    jne .LBB17_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testb %al, %al
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    testb %cl, %cl
 ; X64-NEXT:    jne .LBB17_4
 ; X64-NEXT:  # %bb.3:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movl %eax, %ebx
 ; X64-NEXT:    callq foo@PLT
-; X64-NEXT:  .LBB17_4:
-; X64-NEXT:    andl $1, %ebx
 ; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    popq %rbx
+; X64-NEXT:  .LBB17_4:
+; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
   %0 = atomicrmw or ptr @v16, i16 1 monotonic, align 2
