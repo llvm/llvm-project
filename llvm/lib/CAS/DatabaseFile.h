@@ -88,17 +88,17 @@ private:
 /// - Sets up a MappedFileRegionArena for allocation.
 ///
 /// Top-level layout:
-/// - 8-bytes: Magic
-/// - 8-bytes: Version
-/// - 8-bytes: RootTable (16-bits: Kind; 48-bits: Offset)
-/// - 8-bytes: BumpPtr
+/// - 4-bytes: Magic
+/// - 4-bytes: Version
+/// - 8-bytes: RootTableOffset (16-bits: Kind; 48-bits: Offset)
+/// - 8-bytes: BumpPtr from MappedFileRegionArena
 class DatabaseFile {
 public:
-  static constexpr uint64_t getMagic() { return 0x00FFDA7ABA53FF00ULL; }
-  static constexpr uint64_t getVersion() { return 1ULL; }
+  static constexpr uint32_t getMagic() { return 0xDA7ABA53UL; }
+  static constexpr uint32_t getVersion() { return 1UL; }
   struct Header {
-    uint64_t Magic;
-    uint64_t Version;
+    uint32_t Magic;
+    uint32_t Version;
     std::atomic<int64_t> RootTableOffset;
   };
 
