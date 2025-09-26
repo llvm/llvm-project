@@ -11,6 +11,7 @@
 namespace clang {
 namespace ast_matchers {
 namespace absl_matchers {
+
 DeclarationMatcher statusOrClass() {
   return classTemplateSpecializationDecl(
       hasName("::absl::StatusOr"),
