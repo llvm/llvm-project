@@ -113,9 +113,13 @@ bool verifyDescriptorRangeFlag(uint32_t Version, dxil::ResourceClass Type,
   return (Flags & ~Mask) == FlagT::None;
 }
 
-bool verifyStaticSamplerFlags(uint32_t Version,
-                              dxbc::StaticSamplerFlags Flags) {
+bool verifyStaticSamplerFlags(uint32_t Version, uint32_t FlagsNumber) {
+  uint32_t LargestValue = llvm::to_underlying(
+      dxbc::StaticSamplerFlags::LLVM_BITMASK_LARGEST_ENUMERATOR);
+  if (FlagsNumber >= NextPowerOf2(LargestValue))
+    return false;
 
+  dxbc::StaticSamplerFlags Flags = dxbc::StaticSamplerFlags(FlagsNumber);
   if (Version <= 2)
     return Flags == dxbc::StaticSamplerFlags::None;
 
