@@ -3,6 +3,7 @@ add_clang_unittest(ASTMatchersTests
   ASTMatchersNodeTest.cpp
   ASTMatchersNarrowingTest.cpp
   ASTMatchersTraversalTest.cpp
+  AbslMatchersTest.cpp
   GtestMatchersTest.cpp
   CLANG_LIBS
   clangAST
