@@ -10,8 +10,8 @@
 # RUN:   -o "image list" \
 # RUN:   | FileCheck %s
 
-# CHECK: Current executable set to '{{.*/tools/lldb/test/Shell/ObjectFile/ELF/Output/elf-no-shdrs-pt-notes.yaml.tmp}}' (x86_64).
-# CHECK: [  0] 7F1F56D6-7DBB-17BA-C9A3-4417DB52F097-2548414F 0x0000000000000000 {{.*/tools/lldb/test/Shell/ObjectFile/ELF/Output/elf-no-shdrs-pt-notes.yaml.tmp}}
+# CHECK: Current executable set to '{{.*}}elf-no-shdrs-pt-notes.yaml.tmp' (x86_64).
+# CHECK: [  0] 7F1F56D6-7DBB-17BA-C9A3-4417DB52F097-2548414F 0x0000000000000000 {{.*}}elf-no-shdrs-pt-notes.yaml.tmp
 
 --- !ELF
 FileHeader:

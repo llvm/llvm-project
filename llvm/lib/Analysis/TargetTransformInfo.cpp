@@ -1219,6 +1219,15 @@ InstructionCost TargetTransformInfo::getInterleavedMemoryOpCost(
 }
 
 InstructionCost
+TargetTransformInfo::getFirstFaultLoadCost(Type *DataTy, Align Alignment,
+                                           TTI::TargetCostKind CostKind) const {
+  InstructionCost Cost =
+      TTIImpl->getFirstFaultLoadCost(DataTy, Alignment, CostKind);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
+InstructionCost
 TargetTransformInfo::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                            TTI::TargetCostKind CostKind) const {
   InstructionCost Cost = TTIImpl->getIntrinsicInstrCost(ICA, CostKind);
