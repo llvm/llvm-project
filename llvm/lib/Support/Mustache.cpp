@@ -181,6 +181,14 @@ private:
 
   const llvm::json::Value *findContext();
 
+  void renderRoot(const json::Value &CurrentCtx, raw_ostream &OS);
+  void renderText(raw_ostream &OS);
+  void renderPartial(const json::Value &CurrentCtx, raw_ostream &OS);
+  void renderVariable(const json::Value &CurrentCtx, raw_ostream &OS);
+  void renderUnescapeVariable(const json::Value &CurrentCtx, raw_ostream &OS);
+  void renderSection(const json::Value &CurrentCtx, raw_ostream &OS);
+  void renderInvertSection(const json::Value &CurrentCtx, raw_ostream &OS);
+
   StringMap<AstPtr> &Partials;
   StringMap<Lambda> &Lambdas;
   StringMap<SectionLambda> &SectionLambdas;
@@ -675,75 +683,95 @@ static void toMustacheString(const json::Value &Data, raw_ostream &OS) {
   }
 }
 
+void ASTNode::renderRoot(const json::Value &CurrentCtx, raw_ostream &OS) {
+  renderChild(CurrentCtx, OS);
+}
+
+void ASTNode::renderText(raw_ostream &OS) { OS << Body; }
+
+void ASTNode::renderPartial(const json::Value &CurrentCtx, raw_ostream &OS) {
+  auto Partial = Partials.find(AccessorValue[0]);
+  if (Partial != Partials.end())
+    renderPartial(CurrentCtx, OS, Partial->getValue().get());
+}
+
+void ASTNode::renderVariable(const json::Value &CurrentCtx, raw_ostream &OS) {
+  auto Lambda = Lambdas.find(AccessorValue[0]);
+  if (Lambda != Lambdas.end()) {
+    renderLambdas(CurrentCtx, OS, Lambda->getValue());
+  } else if (const json::Value *ContextPtr = findContext()) {
+    EscapeStringStream ES(OS, Escapes);
+    toMustacheString(*ContextPtr, ES);
+  }
+}
+
+void ASTNode::renderUnescapeVariable(const json::Value &CurrentCtx,
+                                     raw_ostream &OS) {
+  auto Lambda = Lambdas.find(AccessorValue[0]);
+  if (Lambda != Lambdas.end()) {
+    renderLambdas(CurrentCtx, OS, Lambda->getValue());
+  } else if (const json::Value *ContextPtr = findContext()) {
+    toMustacheString(*ContextPtr, OS);
+  }
+}
+
+void ASTNode::renderSection(const json::Value &CurrentCtx, raw_ostream &OS) {
+  auto SectionLambda = SectionLambdas.find(AccessorValue[0]);
+  if (SectionLambda != SectionLambdas.end()) {
+    renderSectionLambdas(CurrentCtx, OS, SectionLambda->getValue());
+    return;
+  }
+
+  const json::Value *ContextPtr = findContext();
+  if (isContextFalsey(ContextPtr))
+    return;
+
+  if (const json::Array *Arr = ContextPtr->getAsArray()) {
+    for (const json::Value &V : *Arr)
+      renderChild(V, OS);
+    return;
+  }
+  renderChild(*ContextPtr, OS);
+}
+
+void ASTNode::renderInvertSection(const json::Value &CurrentCtx,
+                                  raw_ostream &OS) {
+  bool IsLambda = SectionLambdas.contains(AccessorValue[0]);
+  const json::Value *ContextPtr = findContext();
+  if (isContextFalsey(ContextPtr) && !IsLambda) {
+    renderChild(CurrentCtx, OS);
+  }
+}
+
 void ASTNode::render(const json::Value &CurrentCtx, raw_ostream &OS) {
   if (Ty != Root && Ty != Text && AccessorValue.empty())
     return;
   // Set the parent context to the incoming context so that we
   // can walk up the context tree correctly in findContext().
   ParentContext = &CurrentCtx;
-  const json::Value *ContextPtr = Ty == Root ? ParentContext : findContext();
 
   switch (Ty) {
   case Root:
-    renderChild(CurrentCtx, OS);
+    renderRoot(CurrentCtx, OS);
     return;
   case Text:
-    OS << Body;
+    renderText(OS);
     return;
-  case Partial: {
-    auto Partial = Partials.find(AccessorValue[0]);
-    if (Partial != Partials.end())
-      renderPartial(CurrentCtx, OS, Partial->getValue().get());
+  case Partial:
+    renderPartial(CurrentCtx, OS);
     return;
-  }
-  case Variable: {
-    auto Lambda = Lambdas.find(AccessorValue[0]);
-    if (Lambda != Lambdas.end()) {
-      renderLambdas(CurrentCtx, OS, Lambda->getValue());
-    } else if (ContextPtr) {
-      EscapeStringStream ES(OS, Escapes);
-      toMustacheString(*ContextPtr, ES);
-    }
+  case Variable:
+    renderVariable(CurrentCtx, OS);
     return;
-  }
-  case UnescapeVariable: {
-    auto Lambda = Lambdas.find(AccessorValue[0]);
-    if (Lambda != Lambdas.end()) {
-      renderLambdas(CurrentCtx, OS, Lambda->getValue());
-    } else if (ContextPtr) {
-      toMustacheString(*ContextPtr, OS);
-    }
+  case UnescapeVariable:
+    renderUnescapeVariable(CurrentCtx, OS);
     return;
-  }
-  case Section: {
-    auto SectionLambda = SectionLambdas.find(AccessorValue[0]);
-    bool IsLambda = SectionLambda != SectionLambdas.end();
-
-    if (IsLambda) {
-      renderSectionLambdas(CurrentCtx, OS, SectionLambda->getValue());
-      return;
-    }
-
-    if (isContextFalsey(ContextPtr))
-      return;
-
-    if (const json::Array *Arr = ContextPtr->getAsArray()) {
-      for (const json::Value &V : *Arr)
-        renderChild(V, OS);
-      return;
-    }
-    renderChild(*ContextPtr, OS);
+  case Section:
+    renderSection(CurrentCtx, OS);
     return;
-  }
-  case InvertSection: {
-    bool IsLambda = SectionLambdas.contains(AccessorValue[0]);
-    if (isContextFalsey(ContextPtr) && !IsLambda) {
-      // The context for the children remains unchanged from the parent's, so
-      // we pass this node's original incoming context.
-      renderChild(CurrentCtx, OS);
-    }
+  case InvertSection:
+    renderInvertSection(CurrentCtx, OS);
     return;
-  }
   }
   llvm_unreachable("Invalid ASTNode type");
 }
