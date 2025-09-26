@@ -202,6 +202,10 @@ unwind_phase1(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
 }
 extern int __unw_step_stage2(unw_cursor_t *);
 
+#if defined(__aarch64__)
+extern void __attribute__((weak)) __arm_za_disable(void);
+#endif
+
 #if defined(_LIBUNWIND_USE_GCS)
 // Enable the GCS target feature to permit gcspop instructions to be used.
 __attribute__((target("+gcs")))
@@ -213,6 +217,29 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor,
 
   _LIBUNWIND_TRACE_UNWINDING("unwind_phase2(ex_obj=%p)",
                              (void *)exception_object);
+
+#if defined(__aarch64__)
+  // The platform must ensure that all the following conditions are true on
+  // entry to EH:
+  //
+  // - PSTATE.SM is 0.
+  // - PSTATE.ZA is 0.
+  // - TPIDR2_EL0 is null.
+  //
+  // The first point is ensured by routines for throwing exceptions having a
+  // non-streaming interface. TPIDR2_EL0 is set to null and ZA disabled by
+  // calling __arm_za_disable.
+  //
+  // See:
+  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#exceptions
+  if (__arm_za_disable) {
+    // FIXME: Is SME is available and `__arm_za_disable` is not, this should
+    // abort.
+    __arm_za_disable();
+  } else {
+    _LIBUNWIND_DEBUG_LOG("failed to call __arm_za_disable in %s", __FUNCTION__);
+  }
+#endif
 
   // uc is initialized by __unw_getcontext in the parent frame. The first stack
   // frame walked is unwind_phase2.
