@@ -106,15 +106,14 @@ def LoopVectorizeAttr : LLVM_Attr<"LoopVectorize", "loop_vectorize"> {
     the "!llvm.loop.vectorize" metadata.
   }];
 
-  let parameters = (ins
-    OptionalParameter<"BoolAttr">:$disable,
-    OptionalParameter<"BoolAttr">:$predicateEnable,
-    OptionalParameter<"BoolAttr">:$scalableEnable,
-    OptionalParameter<"IntegerAttr">:$width,
-    OptionalParameter<"LoopAnnotationAttr">:$followupVectorized,
-    OptionalParameter<"LoopAnnotationAttr">:$followupEpilogue,
-    OptionalParameter<"LoopAnnotationAttr">:$followupAll
-  );
+  let parameters = (ins OptionalParameter<"BoolAttr">:$disable,
+      OptionalParameter<"BoolAttr">:$predicateEnable,
+      OptionalParameter<"BoolAttr">:$scalableEnable,
+      OptionalParameter<"BoolAttr">:$ivdepEnable,
+      OptionalParameter<"IntegerAttr">:$width,
+      OptionalParameter<"LoopAnnotationAttr">:$followupVectorized,
+      OptionalParameter<"LoopAnnotationAttr">:$followupEpilogue,
+      OptionalParameter<"LoopAnnotationAttr">:$followupAll);
 
   let assemblyFormat = "`<` struct(params) `>`";
 
