@@ -45,7 +45,7 @@ class CPUFeature:
             features = m.group(1).split()
             return None, (self.cpu_info_flag in features)
 
-        return f'No "Features:" line found in /proc/cpuinfo', False
+        return 'No "Features:" line found in /proc/cpuinfo', False
 
     def _is_supported_darwin(self, cmd_runner):
         if not self.sysctl_key:
