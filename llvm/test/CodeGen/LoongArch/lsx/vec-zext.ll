@@ -7,10 +7,9 @@ define void @load_zext_2i8_to_2i64(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.h $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vsllwil.hu.bu $vr0, $vr0, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr0, $vr0, 0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -25,9 +24,8 @@ define void @load_zext_2i16_to_2i64(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr0, $vr0, 0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -42,9 +40,9 @@ define void @load_zext_2i32_to_2i64(ptr %ptr, ptr %dst) {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    ld.w $a2, $a0, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vrepli.b $vr0, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 2
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    vsllwil.du.wu $vr0, $vr0, 0
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
@@ -52,8 +50,7 @@ define void @load_zext_2i32_to_2i64(ptr %ptr, ptr %dst) {
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    ld.d $a0, $a0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    vrepli.b $vr1, 0
-; LA64-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; LA64-NEXT:    vsllwil.du.wu $vr0, $vr0, 0
 ; LA64-NEXT:    vst $vr0, $a1, 0
 ; LA64-NEXT:    ret
 entry:
@@ -68,9 +65,8 @@ define void @load_zext_4i8_to_4i32(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vsllwil.hu.bu $vr0, $vr0, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -85,13 +81,15 @@ define void @load_zext_4i8_to_4i64(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.w $vr2, $vr1, $vr0
-; CHECK-NEXT:    vilvh.w $vr0, $vr1, $vr0
-; CHECK-NEXT:    vst $vr0, $a1, 16
-; CHECK-NEXT:    vst $vr2, $a1, 0
+; CHECK-NEXT:    vshuf4i.b $vr1, $vr0, 14
+; CHECK-NEXT:    vsllwil.hu.bu $vr1, $vr1, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr1, $vr1, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr1, $vr1, 0
+; CHECK-NEXT:    vsllwil.hu.bu $vr0, $vr0, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr0, $vr0, 0
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    vst $vr1, $a1, 16
 ; CHECK-NEXT:    ret
 entry:
   %A = load <4 x i8>, ptr %ptr
@@ -107,8 +105,7 @@ define void @load_zext_4i16_to_4i32(ptr %ptr, ptr %dst) {
 ; LA32-NEXT:    ld.w $a0, $a0, 4
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vrepli.b $vr1, 0
-; LA32-NEXT:    vilvl.h $vr0, $vr1, $vr0
+; LA32-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
@@ -116,8 +113,7 @@ define void @load_zext_4i16_to_4i32(ptr %ptr, ptr %dst) {
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    ld.d $a0, $a0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    vrepli.b $vr1, 0
-; LA64-NEXT:    vilvl.h $vr0, $vr1, $vr0
+; LA64-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
 ; LA64-NEXT:    vst $vr0, $a1, 0
 ; LA64-NEXT:    ret
 entry:
@@ -131,14 +127,13 @@ define void @load_zext_4i16_to_4i64(ptr %ptr, ptr %dst) {
 ; LA32-LABEL: load_zext_4i16_to_4i64:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    ld.w $a2, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vrepli.b $vr1, 0
-; LA32-NEXT:    vilvl.h $vr0, $vr1, $vr0
-; LA32-NEXT:    vilvl.w $vr0, $vr1, $vr0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a0, 0
-; LA32-NEXT:    vilvl.h $vr2, $vr1, $vr2
-; LA32-NEXT:    vilvl.w $vr1, $vr1, $vr2
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
+; LA32-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; LA32-NEXT:    vsllwil.du.wu $vr0, $vr0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 0
+; LA32-NEXT:    vsllwil.wu.hu $vr1, $vr1, 0
+; LA32-NEXT:    vsllwil.du.wu $vr1, $vr1, 0
 ; LA32-NEXT:    vst $vr1, $a1, 16
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
@@ -147,12 +142,13 @@ define void @load_zext_4i16_to_4i64(ptr %ptr, ptr %dst) {
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    ld.d $a0, $a0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    vrepli.b $vr1, 0
-; LA64-NEXT:    vilvl.h $vr0, $vr1, $vr0
-; LA64-NEXT:    vilvl.w $vr2, $vr1, $vr0
-; LA64-NEXT:    vilvh.w $vr0, $vr1, $vr0
-; LA64-NEXT:    vst $vr0, $a1, 16
-; LA64-NEXT:    vst $vr2, $a1, 0
+; LA64-NEXT:    vshuf4i.h $vr1, $vr0, 14
+; LA64-NEXT:    vsllwil.wu.hu $vr1, $vr1, 0
+; LA64-NEXT:    vsllwil.du.wu $vr1, $vr1, 0
+; LA64-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; LA64-NEXT:    vsllwil.du.wu $vr0, $vr0, 0
+; LA64-NEXT:    vst $vr0, $a1, 0
+; LA64-NEXT:    vst $vr1, $a1, 16
 ; LA64-NEXT:    ret
 entry:
   %A = load <4 x i16>, ptr %ptr
@@ -165,11 +161,11 @@ define void @load_zext_4i32_to_4i64(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_zext_4i32_to_4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.w $vr2, $vr1, $vr0
-; CHECK-NEXT:    vilvh.w $vr0, $vr1, $vr0
-; CHECK-NEXT:    vst $vr0, $a1, 16
-; CHECK-NEXT:    vst $vr2, $a1, 0
+; CHECK-NEXT:    vshuf4i.w $vr1, $vr0, 14
+; CHECK-NEXT:    vsllwil.du.wu $vr1, $vr1, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr0, $vr0, 0
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    vst $vr1, $a1, 16
 ; CHECK-NEXT:    ret
 entry:
   %A = load <4 x i32>, ptr %ptr
@@ -185,8 +181,7 @@ define void @load_zext_8i8_to_8i16(ptr %ptr, ptr %dst) {
 ; LA32-NEXT:    ld.w $a0, $a0, 4
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vrepli.b $vr1, 0
-; LA32-NEXT:    vilvl.b $vr0, $vr1, $vr0
+; LA32-NEXT:    vsllwil.hu.bu $vr0, $vr0, 0
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
@@ -194,8 +189,7 @@ define void @load_zext_8i8_to_8i16(ptr %ptr, ptr %dst) {
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    ld.d $a0, $a0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    vrepli.b $vr1, 0
-; LA64-NEXT:    vilvl.b $vr0, $vr1, $vr0
+; LA64-NEXT:    vsllwil.hu.bu $vr0, $vr0, 0
 ; LA64-NEXT:    vst $vr0, $a1, 0
 ; LA64-NEXT:    ret
 entry:
@@ -209,14 +203,13 @@ define void @load_zext_8i8_to_8i32(ptr %ptr, ptr %dst) {
 ; LA32-LABEL: load_zext_8i8_to_8i32:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    ld.w $a2, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vrepli.b $vr1, 0
-; LA32-NEXT:    vilvl.b $vr0, $vr1, $vr0
-; LA32-NEXT:    vilvl.h $vr0, $vr1, $vr0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a0, 0
-; LA32-NEXT:    vilvl.b $vr2, $vr1, $vr2
-; LA32-NEXT:    vilvl.h $vr1, $vr1, $vr2
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
+; LA32-NEXT:    vsllwil.hu.bu $vr0, $vr0, 0
+; LA32-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 0
+; LA32-NEXT:    vsllwil.hu.bu $vr1, $vr1, 0
+; LA32-NEXT:    vsllwil.wu.hu $vr1, $vr1, 0
 ; LA32-NEXT:    vst $vr1, $a1, 16
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
@@ -225,12 +218,13 @@ define void @load_zext_8i8_to_8i32(ptr %ptr, ptr %dst) {
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    ld.d $a0, $a0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    vrepli.b $vr1, 0
-; LA64-NEXT:    vilvl.b $vr0, $vr1, $vr0
-; LA64-NEXT:    vilvl.h $vr2, $vr1, $vr0
-; LA64-NEXT:    vilvh.h $vr0, $vr1, $vr0
-; LA64-NEXT:    vst $vr0, $a1, 16
-; LA64-NEXT:    vst $vr2, $a1, 0
+; LA64-NEXT:    vsrli.d $vr1, $vr0, 32
+; LA64-NEXT:    vsllwil.hu.bu $vr1, $vr1, 0
+; LA64-NEXT:    vsllwil.wu.hu $vr1, $vr1, 0
+; LA64-NEXT:    vsllwil.hu.bu $vr0, $vr0, 0
+; LA64-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; LA64-NEXT:    vst $vr0, $a1, 0
+; LA64-NEXT:    vst $vr1, $a1, 16
 ; LA64-NEXT:    ret
 entry:
   %A = load <8 x i8>, ptr %ptr
@@ -246,36 +240,50 @@ define void @load_zext_8i8_to_8i64(ptr %ptr, ptr %dst) {
 ; LA32-NEXT:    ld.w $a0, $a0, 4
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vrepli.b $vr1, 0
-; LA32-NEXT:    vilvl.b $vr0, $vr1, $vr0
-; LA32-NEXT:    vilvl.h $vr2, $vr1, $vr0
-; LA32-NEXT:    vilvl.w $vr3, $vr1, $vr2
-; LA32-NEXT:    vilvh.w $vr2, $vr1, $vr2
-; LA32-NEXT:    vilvh.h $vr0, $vr1, $vr0
-; LA32-NEXT:    vilvl.w $vr4, $vr1, $vr0
-; LA32-NEXT:    vilvh.w $vr0, $vr1, $vr0
-; LA32-NEXT:    vst $vr0, $a1, 48
-; LA32-NEXT:    vst $vr4, $a1, 32
-; LA32-NEXT:    vst $vr2, $a1, 16
-; LA32-NEXT:    vst $vr3, $a1, 0
+; LA32-NEXT:    vshuf4i.b $vr1, $vr0, 14
+; LA32-NEXT:    vsllwil.hu.bu $vr1, $vr1, 0
+; LA32-NEXT:    vsllwil.wu.hu $vr1, $vr1, 0
+; LA32-NEXT:    vsllwil.du.wu $vr1, $vr1, 0
+; LA32-NEXT:    vsrli.d $vr2, $vr0, 32
+; LA32-NEXT:    vsllwil.hu.bu $vr2, $vr2, 0
+; LA32-NEXT:    vsllwil.wu.hu $vr2, $vr2, 0
+; LA32-NEXT:    vsllwil.du.wu $vr2, $vr2, 0
+; LA32-NEXT:    vsrli.d $vr3, $vr0, 48
+; LA32-NEXT:    vsllwil.hu.bu $vr3, $vr3, 0
+; LA32-NEXT:    vsllwil.wu.hu $vr3, $vr3, 0
+; LA32-NEXT:    vsllwil.du.wu $vr3, $vr3, 0
+; LA32-NEXT:    vsllwil.hu.bu $vr0, $vr0, 0
+; LA32-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; LA32-NEXT:    vsllwil.du.wu $vr0, $vr0, 0
+; LA32-NEXT:    vst $vr0, $a1, 0
+; LA32-NEXT:    vst $vr3, $a1, 48
+; LA32-NEXT:    vst $vr2, $a1, 32
+; LA32-NEXT:    vst $vr1, $a1, 16
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_zext_8i8_to_8i64:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    ld.d $a0, $a0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    vrepli.b $vr1, 0
-; LA64-NEXT:    vilvl.b $vr0, $vr1, $vr0
-; LA64-NEXT:    vilvl.h $vr2, $vr1, $vr0
-; LA64-NEXT:    vilvl.w $vr3, $vr1, $vr2
-; LA64-NEXT:    vilvh.w $vr2, $vr1, $vr2
-; LA64-NEXT:    vilvh.h $vr0, $vr1, $vr0
-; LA64-NEXT:    vilvl.w $vr4, $vr1, $vr0
-; LA64-NEXT:    vilvh.w $vr0, $vr1, $vr0
-; LA64-NEXT:    vst $vr0, $a1, 48
-; LA64-NEXT:    vst $vr4, $a1, 32
-; LA64-NEXT:    vst $vr2, $a1, 16
-; LA64-NEXT:    vst $vr3, $a1, 0
+; LA64-NEXT:    vshuf4i.b $vr1, $vr0, 14
+; LA64-NEXT:    vsllwil.hu.bu $vr1, $vr1, 0
+; LA64-NEXT:    vsllwil.wu.hu $vr1, $vr1, 0
+; LA64-NEXT:    vsllwil.du.wu $vr1, $vr1, 0
+; LA64-NEXT:    vsrli.d $vr2, $vr0, 32
+; LA64-NEXT:    vsllwil.hu.bu $vr2, $vr2, 0
+; LA64-NEXT:    vsllwil.wu.hu $vr2, $vr2, 0
+; LA64-NEXT:    vsllwil.du.wu $vr2, $vr2, 0
+; LA64-NEXT:    vsrli.d $vr3, $vr0, 48
+; LA64-NEXT:    vsllwil.hu.bu $vr3, $vr3, 0
+; LA64-NEXT:    vsllwil.wu.hu $vr3, $vr3, 0
+; LA64-NEXT:    vsllwil.du.wu $vr3, $vr3, 0
+; LA64-NEXT:    vsllwil.hu.bu $vr0, $vr0, 0
+; LA64-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; LA64-NEXT:    vsllwil.du.wu $vr0, $vr0, 0
+; LA64-NEXT:    vst $vr0, $a1, 0
+; LA64-NEXT:    vst $vr3, $a1, 48
+; LA64-NEXT:    vst $vr2, $a1, 32
+; LA64-NEXT:    vst $vr1, $a1, 16
 ; LA64-NEXT:    ret
 entry:
   %A = load <8 x i8>, ptr %ptr
@@ -288,11 +296,11 @@ define void @load_zext_8i16_to_8i32(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_zext_8i16_to_8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.h $vr2, $vr1, $vr0
-; CHECK-NEXT:    vilvh.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vst $vr0, $a1, 16
-; CHECK-NEXT:    vst $vr2, $a1, 0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 8
+; CHECK-NEXT:    vsllwil.wu.hu $vr1, $vr1, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    vst $vr1, $a1, 16
 ; CHECK-NEXT:    ret
 entry:
   %A = load <8 x i16>, ptr %ptr
@@ -305,17 +313,21 @@ define void @load_zext_8i16_to_8i64(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_zext_8i16_to_8i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.h $vr2, $vr1, $vr0
-; CHECK-NEXT:    vilvl.w $vr3, $vr1, $vr2
-; CHECK-NEXT:    vilvh.w $vr2, $vr1, $vr2
-; CHECK-NEXT:    vilvh.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.w $vr4, $vr1, $vr0
-; CHECK-NEXT:    vilvh.w $vr0, $vr1, $vr0
-; CHECK-NEXT:    vst $vr0, $a1, 48
-; CHECK-NEXT:    vst $vr4, $a1, 32
-; CHECK-NEXT:    vst $vr2, $a1, 16
-; CHECK-NEXT:    vst $vr3, $a1, 0
+; CHECK-NEXT:    vshuf4i.h $vr1, $vr0, 14
+; CHECK-NEXT:    vsllwil.wu.hu $vr1, $vr1, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr1, $vr1, 0
+; CHECK-NEXT:    vbsrl.v $vr2, $vr0, 8
+; CHECK-NEXT:    vsllwil.wu.hu $vr2, $vr2, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr2, $vr2, 0
+; CHECK-NEXT:    vbsrl.v $vr3, $vr0, 12
+; CHECK-NEXT:    vsllwil.wu.hu $vr3, $vr3, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr3, $vr3, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr0, $vr0, 0
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    vst $vr3, $a1, 48
+; CHECK-NEXT:    vst $vr2, $a1, 32
+; CHECK-NEXT:    vst $vr1, $a1, 16
 ; CHECK-NEXT:    ret
 entry:
   %A = load <8 x i16>, ptr %ptr
@@ -329,15 +341,16 @@ define void @load_zext_8i32_to_8i64(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vld $vr1, $a0, 16
-; CHECK-NEXT:    vrepli.b $vr2, 0
-; CHECK-NEXT:    vilvl.w $vr3, $vr2, $vr0
-; CHECK-NEXT:    vilvh.w $vr0, $vr2, $vr0
-; CHECK-NEXT:    vilvl.w $vr4, $vr2, $vr1
-; CHECK-NEXT:    vilvh.w $vr1, $vr2, $vr1
-; CHECK-NEXT:    vst $vr1, $a1, 48
-; CHECK-NEXT:    vst $vr4, $a1, 32
-; CHECK-NEXT:    vst $vr0, $a1, 16
-; CHECK-NEXT:    vst $vr3, $a1, 0
+; CHECK-NEXT:    vshuf4i.w $vr2, $vr0, 14
+; CHECK-NEXT:    vsllwil.du.wu $vr2, $vr2, 0
+; CHECK-NEXT:    vshuf4i.w $vr3, $vr1, 14
+; CHECK-NEXT:    vsllwil.du.wu $vr3, $vr3, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr0, $vr0, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr1, $vr1, 0
+; CHECK-NEXT:    vst $vr1, $a1, 32
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    vst $vr3, $a1, 48
+; CHECK-NEXT:    vst $vr2, $a1, 16
 ; CHECK-NEXT:    ret
 entry:
   %A = load <8 x i32>, ptr %ptr
@@ -350,11 +363,11 @@ define void @load_zext_16i8_to_16i16(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_zext_16i8_to_16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.b $vr2, $vr1, $vr0
-; CHECK-NEXT:    vilvh.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vst $vr0, $a1, 16
-; CHECK-NEXT:    vst $vr2, $a1, 0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 8
+; CHECK-NEXT:    vsllwil.hu.bu $vr1, $vr1, 0
+; CHECK-NEXT:    vsllwil.hu.bu $vr0, $vr0, 0
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    vst $vr1, $a1, 16
 ; CHECK-NEXT:    ret
 entry:
   %A = load <16 x i8>, ptr %ptr
@@ -367,17 +380,21 @@ define void @load_zext_16i8_to_16i32(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_zext_16i8_to_16i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.b $vr2, $vr1, $vr0
-; CHECK-NEXT:    vilvl.h $vr3, $vr1, $vr2
-; CHECK-NEXT:    vilvh.h $vr2, $vr1, $vr2
-; CHECK-NEXT:    vilvh.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.h $vr4, $vr1, $vr0
-; CHECK-NEXT:    vilvh.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vst $vr0, $a1, 48
-; CHECK-NEXT:    vst $vr4, $a1, 32
-; CHECK-NEXT:    vst $vr2, $a1, 16
-; CHECK-NEXT:    vst $vr3, $a1, 0
+; CHECK-NEXT:    vsrli.d $vr1, $vr0, 32
+; CHECK-NEXT:    vsllwil.hu.bu $vr1, $vr1, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr1, $vr1, 0
+; CHECK-NEXT:    vbsrl.v $vr2, $vr0, 8
+; CHECK-NEXT:    vsllwil.hu.bu $vr2, $vr2, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr2, $vr2, 0
+; CHECK-NEXT:    vbsrl.v $vr3, $vr0, 12
+; CHECK-NEXT:    vsllwil.hu.bu $vr3, $vr3, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr3, $vr3, 0
+; CHECK-NEXT:    vsllwil.hu.bu $vr0, $vr0, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    vst $vr3, $a1, 48
+; CHECK-NEXT:    vst $vr2, $a1, 32
+; CHECK-NEXT:    vst $vr1, $a1, 16
 ; CHECK-NEXT:    ret
 entry:
   %A = load <16 x i8>, ptr %ptr
@@ -390,29 +407,45 @@ define void @load_zext_16i8_to_16i64(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_zext_16i8_to_16i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.b $vr2, $vr1, $vr0
-; CHECK-NEXT:    vilvl.h $vr3, $vr1, $vr2
-; CHECK-NEXT:    vilvl.w $vr4, $vr1, $vr3
-; CHECK-NEXT:    vilvh.w $vr3, $vr1, $vr3
-; CHECK-NEXT:    vilvh.h $vr2, $vr1, $vr2
-; CHECK-NEXT:    vilvl.w $vr5, $vr1, $vr2
-; CHECK-NEXT:    vilvh.w $vr2, $vr1, $vr2
-; CHECK-NEXT:    vilvh.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.h $vr6, $vr1, $vr0
-; CHECK-NEXT:    vilvl.w $vr7, $vr1, $vr6
-; CHECK-NEXT:    vilvh.w $vr6, $vr1, $vr6
-; CHECK-NEXT:    vilvh.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.w $vr8, $vr1, $vr0
-; CHECK-NEXT:    vilvh.w $vr0, $vr1, $vr0
-; CHECK-NEXT:    vst $vr0, $a1, 112
-; CHECK-NEXT:    vst $vr8, $a1, 96
-; CHECK-NEXT:    vst $vr6, $a1, 80
-; CHECK-NEXT:    vst $vr7, $a1, 64
-; CHECK-NEXT:    vst $vr2, $a1, 48
-; CHECK-NEXT:    vst $vr5, $a1, 32
-; CHECK-NEXT:    vst $vr3, $a1, 16
-; CHECK-NEXT:    vst $vr4, $a1, 0
+; CHECK-NEXT:    vshuf4i.b $vr1, $vr0, 14
+; CHECK-NEXT:    vsllwil.hu.bu $vr1, $vr1, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr1, $vr1, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr1, $vr1, 0
+; CHECK-NEXT:    vsrli.d $vr2, $vr0, 32
+; CHECK-NEXT:    vsllwil.hu.bu $vr2, $vr2, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr2, $vr2, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr2, $vr2, 0
+; CHECK-NEXT:    vsrli.d $vr3, $vr0, 48
+; CHECK-NEXT:    vsllwil.hu.bu $vr3, $vr3, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr3, $vr3, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr3, $vr3, 0
+; CHECK-NEXT:    vbsrl.v $vr4, $vr0, 8
+; CHECK-NEXT:    vsllwil.hu.bu $vr4, $vr4, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr4, $vr4, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr4, $vr4, 0
+; CHECK-NEXT:    vbsrl.v $vr5, $vr0, 10
+; CHECK-NEXT:    vsllwil.hu.bu $vr5, $vr5, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr5, $vr5, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr5, $vr5, 0
+; CHECK-NEXT:    vbsrl.v $vr6, $vr0, 12
+; CHECK-NEXT:    vsllwil.hu.bu $vr6, $vr6, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr6, $vr6, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr6, $vr6, 0
+; CHECK-NEXT:    vbsrl.v $vr7, $vr0, 14
+; CHECK-NEXT:    vsllwil.hu.bu $vr7, $vr7, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr7, $vr7, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr7, $vr7, 0
+; CHECK-NEXT:    vsllwil.hu.bu $vr0, $vr0, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr0, $vr0, 0
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    vst $vr7, $a1, 112
+; CHECK-NEXT:    vst $vr6, $a1, 96
+; CHECK-NEXT:    vst $vr5, $a1, 80
+; CHECK-NEXT:    vst $vr4, $a1, 64
+; CHECK-NEXT:    vst $vr3, $a1, 48
+; CHECK-NEXT:    vst $vr2, $a1, 32
+; CHECK-NEXT:    vst $vr1, $a1, 16
 ; CHECK-NEXT:    ret
 entry:
   %A = load <16 x i8>, ptr %ptr
@@ -426,15 +459,16 @@ define void @load_zext_16i16_to_16i32(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vld $vr1, $a0, 16
-; CHECK-NEXT:    vrepli.b $vr2, 0
-; CHECK-NEXT:    vilvl.h $vr3, $vr2, $vr0
-; CHECK-NEXT:    vilvh.h $vr0, $vr2, $vr0
-; CHECK-NEXT:    vilvl.h $vr4, $vr2, $vr1
-; CHECK-NEXT:    vilvh.h $vr1, $vr2, $vr1
-; CHECK-NEXT:    vst $vr1, $a1, 48
-; CHECK-NEXT:    vst $vr4, $a1, 32
-; CHECK-NEXT:    vst $vr0, $a1, 16
-; CHECK-NEXT:    vst $vr3, $a1, 0
+; CHECK-NEXT:    vbsrl.v $vr2, $vr0, 8
+; CHECK-NEXT:    vsllwil.wu.hu $vr2, $vr2, 0
+; CHECK-NEXT:    vbsrl.v $vr3, $vr1, 8
+; CHECK-NEXT:    vsllwil.wu.hu $vr3, $vr3, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr1, $vr1, 0
+; CHECK-NEXT:    vst $vr1, $a1, 32
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    vst $vr3, $a1, 48
+; CHECK-NEXT:    vst $vr2, $a1, 16
 ; CHECK-NEXT:    ret
 entry:
   %A = load <16 x i16>, ptr %ptr
@@ -448,27 +482,36 @@ define void @load_zext_16i16_to_16i64(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vld $vr1, $a0, 16
-; CHECK-NEXT:    vrepli.b $vr2, 0
-; CHECK-NEXT:    vilvl.h $vr3, $vr2, $vr0
-; CHECK-NEXT:    vilvl.w $vr4, $vr2, $vr3
-; CHECK-NEXT:    vilvh.w $vr3, $vr2, $vr3
-; CHECK-NEXT:    vilvh.h $vr0, $vr2, $vr0
-; CHECK-NEXT:    vilvl.w $vr5, $vr2, $vr0
-; CHECK-NEXT:    vilvh.w $vr0, $vr2, $vr0
-; CHECK-NEXT:    vilvl.h $vr6, $vr2, $vr1
-; CHECK-NEXT:    vilvl.w $vr7, $vr2, $vr6
-; CHECK-NEXT:    vilvh.w $vr6, $vr2, $vr6
-; CHECK-NEXT:    vilvh.h $vr1, $vr2, $vr1
-; CHECK-NEXT:    vilvl.w $vr8, $vr2, $vr1
-; CHECK-NEXT:    vilvh.w $vr1, $vr2, $vr1
-; CHECK-NEXT:    vst $vr1, $a1, 112
-; CHECK-NEXT:    vst $vr8, $a1, 96
-; CHECK-NEXT:    vst $vr6, $a1, 80
-; CHECK-NEXT:    vst $vr7, $a1, 64
-; CHECK-NEXT:    vst $vr0, $a1, 48
-; CHECK-NEXT:    vst $vr5, $a1, 32
-; CHECK-NEXT:    vst $vr3, $a1, 16
-; CHECK-NEXT:    vst $vr4, $a1, 0
+; CHECK-NEXT:    vshuf4i.h $vr2, $vr0, 14
+; CHECK-NEXT:    vsllwil.wu.hu $vr2, $vr2, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr2, $vr2, 0
+; CHECK-NEXT:    vbsrl.v $vr3, $vr0, 8
+; CHECK-NEXT:    vsllwil.wu.hu $vr3, $vr3, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr3, $vr3, 0
+; CHECK-NEXT:    vbsrl.v $vr4, $vr0, 12
+; CHECK-NEXT:    vsllwil.wu.hu $vr4, $vr4, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr4, $vr4, 0
+; CHECK-NEXT:    vshuf4i.h $vr5, $vr1, 14
+; CHECK-NEXT:    vsllwil.wu.hu $vr5, $vr5, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr5, $vr5, 0
+; CHECK-NEXT:    vbsrl.v $vr6, $vr1, 8
+; CHECK-NEXT:    vsllwil.wu.hu $vr6, $vr6, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr6, $vr6, 0
+; CHECK-NEXT:    vbsrl.v $vr7, $vr1, 12
+; CHECK-NEXT:    vsllwil.wu.hu $vr7, $vr7, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr7, $vr7, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr0, $vr0, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr0, $vr0, 0
+; CHECK-NEXT:    vsllwil.wu.hu $vr1, $vr1, 0
+; CHECK-NEXT:    vsllwil.du.wu $vr1, $vr1, 0
+; CHECK-NEXT:    vst $vr1, $a1, 64
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    vst $vr7, $a1, 112
+; CHECK-NEXT:    vst $vr6, $a1, 96
+; CHECK-NEXT:    vst $vr5, $a1, 80
+; CHECK-NEXT:    vst $vr4, $a1, 48
+; CHECK-NEXT:    vst $vr3, $a1, 32
+; CHECK-NEXT:    vst $vr2, $a1, 16
 ; CHECK-NEXT:    ret
 entry:
   %A = load <16 x i16>, ptr %ptr

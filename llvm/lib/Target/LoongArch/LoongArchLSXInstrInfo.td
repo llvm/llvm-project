@@ -2174,6 +2174,32 @@ def : Pat<(loongarch_vmsknez (v16i8 LSX128:$vj)), (PseudoVMSKNEZ_B LSX128:$vj)>;
 
 } // Predicates = [HasExtLSX]
 
+let Predicates = [IsExtLSX] in {
+
+// Sign extensions
+def : Pat<(v2i64 (sext_invec v16i8:$vj)),
+          (v2i64 (VSLLWIL_D_W (VSLLWIL_W_H (VSLLWIL_H_B v16i8:$vj, 0), 0), 0))>;
+def : Pat<(v2i64 (sext_invec v8i16:$vj)),
+          (v2i64 (VSLLWIL_D_W (VSLLWIL_W_H v8i16:$vj, 0), 0))>;
+def : Pat<(v2i64 (sext_invec v4i32:$vj)), (v2i64 (VSLLWIL_D_W v4i32:$vj, 0))>;
+def : Pat<(v4i32 (sext_invec v16i8:$vj)),
+          (v4i32 (VSLLWIL_W_H (VSLLWIL_H_B v16i8:$vj, 0), 0))>;
+def : Pat<(v4i32 (sext_invec v8i16:$vj)), (v4i32 (VSLLWIL_W_H v8i16:$vj, 0))>;
+def : Pat<(v8i16 (sext_invec v16i8:$vj)), (v8i16 (VSLLWIL_H_B v16i8:$vj, 0))>;
+
+// Zero extensions
+def : Pat<(v2i64 (zext_invec v16i8:$vj)),
+          (v2i64 (VSLLWIL_DU_WU (VSLLWIL_WU_HU (VSLLWIL_HU_BU v16i8:$vj, 0), 0), 0))>;
+def : Pat<(v2i64 (zext_invec v8i16:$vj)),
+          (v2i64 (VSLLWIL_DU_WU (VSLLWIL_WU_HU v8i16:$vj, 0), 0))>;
+def : Pat<(v2i64 (zext_invec v4i32:$vj)), (v2i64 (VSLLWIL_DU_WU v4i32:$vj, 0))>;
+def : Pat<(v4i32 (zext_invec v16i8:$vj)),
+          (v4i32 (VSLLWIL_WU_HU (VSLLWIL_HU_BU v16i8:$vj, 0), 0))>;
+def : Pat<(v4i32 (zext_invec v8i16:$vj)), (v4i32 (VSLLWIL_WU_HU v8i16:$vj, 0))>;
+def : Pat<(v8i16 (zext_invec v16i8:$vj)), (v8i16 (VSLLWIL_HU_BU v16i8:$vj, 0))>;
+
+} // Predicates = [IsExtLSX]
+
 /// Intrinsic pattern
 
 class deriveLSXIntrinsic<string Inst> {

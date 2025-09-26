@@ -2063,6 +2063,66 @@ defm : subvector_subreg_lowering<LSX128, v2f64, LASX256, v4f64,  2,  sub_128>;
 defm : subvector_subreg_lowering<LSX128, v8i16, LASX256, v16i16, 8,  sub_128>;
 defm : subvector_subreg_lowering<LSX128, v16i8, LASX256, v32i8,  16, sub_128>;
 
+// Sign extensions
+def : Pat<(v4i64 (sext v4i32:$vj)),
+          (v4i64 (VEXT2XV_D_W (SUBREG_TO_REG (i64 0), v4i32:$vj, sub_128)))>;
+def : Pat<(v8i32 (sext v8i16:$vj)),
+          (v8i32 (VEXT2XV_W_H (SUBREG_TO_REG (i64 0), v8i16:$vj, sub_128)))>;
+def : Pat<(v16i16 (sext v16i8:$vj)),
+          (v16i16 (VEXT2XV_H_B (SUBREG_TO_REG (i64 0), v16i8:$vj, sub_128)))>;
+
+def : Pat<(v2i64 (sext_invec v16i8:$vj)),
+          (v2i64 (EXTRACT_SUBREG (VEXT2XV_D_B (SUBREG_TO_REG (i64 0), v16i8:$vj, sub_128)),
+                                 sub_128))>;
+def : Pat<(v2i64 (sext_invec v8i16:$vj)),
+          (v2i64 (EXTRACT_SUBREG (VEXT2XV_D_H (SUBREG_TO_REG (i64 0), v8i16:$vj, sub_128)),
+                                 sub_128))>;
+def : Pat<(v2i64 (sext_invec v4i32:$vj)),
+          (v2i64 (EXTRACT_SUBREG (VEXT2XV_D_W (SUBREG_TO_REG (i64 0), v4i32:$vj, sub_128)),
+                                 sub_128))>;
+def : Pat<(v4i32 (sext_invec v16i8:$vj)),
+          (v4i32 (EXTRACT_SUBREG (VEXT2XV_W_B (SUBREG_TO_REG (i64 0), v16i8:$vj, sub_128)),
+                                 sub_128))>;
+def : Pat<(v4i32 (sext_invec v8i16:$vj)),
+          (v4i32 (EXTRACT_SUBREG (VEXT2XV_W_H (SUBREG_TO_REG (i64 0), v8i16:$vj, sub_128)),
+                                 sub_128))>;
+def : Pat<(v4i64 (sext_invec v32i8:$xj)), (v4i64 (VEXT2XV_D_B v32i8:$xj))>;
+def : Pat<(v4i64 (sext_invec v16i16:$xj)), (v4i64 (VEXT2XV_D_H v16i16:$xj))>;
+def : Pat<(v8i16 (sext_invec v16i8:$vj)),
+          (v8i16 (EXTRACT_SUBREG (VEXT2XV_H_B (SUBREG_TO_REG (i64 0), v16i8:$vj, sub_128)),
+                                 sub_128))>;
+def : Pat<(v8i32 (sext_invec v32i8:$xj)), (v8i32 (VEXT2XV_W_B v32i8:$xj))>;
+
+// Zero extensions
+def : Pat<(v4i64 (zext v4i32:$vj)),
+          (v4i64 (VEXT2XV_DU_WU (SUBREG_TO_REG (i64 0), v4i32:$vj, sub_128)))>;
+def : Pat<(v8i32 (zext v8i16:$vj)),
+          (v8i32 (VEXT2XV_WU_HU (SUBREG_TO_REG (i64 0), v8i16:$vj, sub_128)))>;
+def : Pat<(v16i16 (zext v16i8:$vj)),
+          (v16i16 (VEXT2XV_HU_BU (SUBREG_TO_REG (i64 0), v16i8:$vj, sub_128)))>;
+
+def : Pat<(v2i64 (zext_invec v16i8:$vj)),
+          (v2i64 (EXTRACT_SUBREG (VEXT2XV_DU_BU (SUBREG_TO_REG (i64 0), v16i8:$vj, sub_128)),
+                                 sub_128))>;
+def : Pat<(v2i64 (zext_invec v8i16:$vj)),
+          (v2i64 (EXTRACT_SUBREG (VEXT2XV_DU_HU (SUBREG_TO_REG (i64 0), v8i16:$vj, sub_128)),
+                                 sub_128))>;
+def : Pat<(v2i64 (zext_invec v4i32:$vj)),
+          (v2i64 (EXTRACT_SUBREG (VEXT2XV_DU_WU (SUBREG_TO_REG (i64 0), v4i32:$vj, sub_128)),
+                                 sub_128))>;
+def : Pat<(v4i32 (zext_invec v16i8:$vj)),
+          (v4i32 (EXTRACT_SUBREG (VEXT2XV_WU_BU (SUBREG_TO_REG (i64 0), v16i8:$vj, sub_128)),
+                                 sub_128))>;
+def : Pat<(v4i32 (zext_invec v8i16:$vj)),
+          (v4i32 (EXTRACT_SUBREG (VEXT2XV_WU_HU (SUBREG_TO_REG (i64 0), v8i16:$vj, sub_128)),
+                                 sub_128))>;
+def : Pat<(v4i64 (zext_invec v32i8:$xj)), (v4i64 (VEXT2XV_DU_BU v32i8:$xj))>;
+def : Pat<(v4i64 (zext_invec v16i16:$xj)), (v4i64 (VEXT2XV_DU_HU v16i16:$xj))>;
+def : Pat<(v8i16 (zext_invec v16i8:$vj)),
+          (v8i16 (EXTRACT_SUBREG (VEXT2XV_HU_BU (SUBREG_TO_REG (i64 0), v16i8:$vj, sub_128)),
+                                 sub_128))>;
+def : Pat<(v8i32 (zext_invec v32i8:$xj)), (v8i32 (VEXT2XV_WU_BU v32i8:$xj))>;
+
 } // Predicates = [HasExtLASX]
 
 /// Intrinsic pattern

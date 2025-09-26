@@ -7,10 +7,7 @@ define void @load_zext_2i8_to_2i64(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.h $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vext2xv.du.bu $xr0, $xr0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -25,9 +22,7 @@ define void @load_zext_2i16_to_2i64(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vext2xv.du.hu $xr0, $xr0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -42,9 +37,9 @@ define void @load_zext_2i32_to_2i64(ptr %ptr, ptr %dst) {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    ld.w $a2, $a0, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vrepli.b $vr0, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 2
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    vext2xv.du.wu $xr0, $xr0
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
@@ -52,8 +47,7 @@ define void @load_zext_2i32_to_2i64(ptr %ptr, ptr %dst) {
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    ld.d $a0, $a0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    vrepli.b $vr1, 0
-; LA64-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; LA64-NEXT:    vext2xv.du.wu $xr0, $xr0
 ; LA64-NEXT:    vst $vr0, $a1, 0
 ; LA64-NEXT:    ret
 entry:
@@ -68,9 +62,7 @@ define void @load_zext_4i8_to_4i32(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vext2xv.wu.bu $xr0, $xr0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -85,24 +77,8 @@ define void @load_zext_4i8_to_4i64(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    xvrepli.b $xr1, 0
-; CHECK-NEXT:    xvreplgr2vr.b $xr2, $a0
-; CHECK-NEXT:    xvpermi.q $xr2, $xr1, 18
-; CHECK-NEXT:    xvextrins.b $xr1, $xr2, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    xvreplgr2vr.b $xr2, $a0
-; CHECK-NEXT:    xvpermi.q $xr2, $xr1, 18
-; CHECK-NEXT:    xvextrins.b $xr1, $xr2, 136
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    xvreplgr2vr.b $xr2, $a0
-; CHECK-NEXT:    xvpermi.q $xr2, $xr1, 48
-; CHECK-NEXT:    xvextrins.b $xr1, $xr2, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    xvreplgr2vr.b $xr0, $a0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 48
-; CHECK-NEXT:    xvextrins.b $xr1, $xr0, 136
-; CHECK-NEXT:    xvst $xr1, $a1, 0
+; CHECK-NEXT:    vext2xv.du.bu $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
   %A = load <4 x i8>, ptr %ptr
@@ -118,8 +94,7 @@ define void @load_zext_4i16_to_4i32(ptr %ptr, ptr %dst) {
 ; LA32-NEXT:    ld.w $a0, $a0, 4
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vrepli.b $vr1, 0
-; LA32-NEXT:    vilvl.h $vr0, $vr1, $vr0
+; LA32-NEXT:    vext2xv.wu.hu $xr0, $xr0
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
@@ -127,8 +102,7 @@ define void @load_zext_4i16_to_4i32(ptr %ptr, ptr %dst) {
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    ld.d $a0, $a0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    vrepli.b $vr1, 0
-; LA64-NEXT:    vilvl.h $vr0, $vr1, $vr0
+; LA64-NEXT:    vext2xv.wu.hu $xr0, $xr0
 ; LA64-NEXT:    vst $vr0, $a1, 0
 ; LA64-NEXT:    ret
 entry:
@@ -145,48 +119,16 @@ define void @load_zext_4i16_to_4i64(ptr %ptr, ptr %dst) {
 ; LA32-NEXT:    ld.w $a0, $a0, 4
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA32-NEXT:    xvrepli.b $xr1, 0
-; LA32-NEXT:    xvreplgr2vr.h $xr2, $a0
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 18
-; LA32-NEXT:    xvextrins.h $xr1, $xr2, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; LA32-NEXT:    xvreplgr2vr.h $xr2, $a0
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 18
-; LA32-NEXT:    xvextrins.h $xr1, $xr2, 68
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; LA32-NEXT:    xvreplgr2vr.h $xr2, $a0
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 48
-; LA32-NEXT:    xvextrins.h $xr1, $xr2, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; LA32-NEXT:    xvreplgr2vr.h $xr0, $a0
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA32-NEXT:    xvextrins.h $xr1, $xr0, 68
-; LA32-NEXT:    xvst $xr1, $a1, 0
+; LA32-NEXT:    vext2xv.du.hu $xr0, $xr0
+; LA32-NEXT:    xvst $xr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_zext_4i16_to_4i64:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    ld.d $a0, $a0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA64-NEXT:    xvrepli.b $xr1, 0
-; LA64-NEXT:    xvreplgr2vr.h $xr2, $a0
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 18
-; LA64-NEXT:    xvextrins.h $xr1, $xr2, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; LA64-NEXT:    xvreplgr2vr.h $xr2, $a0
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 18
-; LA64-NEXT:    xvextrins.h $xr1, $xr2, 68
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; LA64-NEXT:    xvreplgr2vr.h $xr2, $a0
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 48
-; LA64-NEXT:    xvextrins.h $xr1, $xr2, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; LA64-NEXT:    xvreplgr2vr.h $xr0, $a0
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA64-NEXT:    xvextrins.h $xr1, $xr0, 68
-; LA64-NEXT:    xvst $xr1, $a1, 0
+; LA64-NEXT:    vext2xv.du.hu $xr0, $xr0
+; LA64-NEXT:    xvst $xr0, $a1, 0
 ; LA64-NEXT:    ret
 entry:
   %A = load <4 x i16>, ptr %ptr
@@ -196,39 +138,12 @@ entry:
 }
 
 define void @load_zext_4i32_to_4i64(ptr %ptr, ptr %dst) {
-; LA32-LABEL: load_zext_4i32_to_4i64:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    xvrepli.b $xr1, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr1, $a0, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; LA32-NEXT:    xvinsgr2vr.w $xr1, $a0, 2
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA32-NEXT:    xvinsgr2vr.w $xr1, $a0, 4
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 3
-; LA32-NEXT:    xvinsgr2vr.w $xr1, $a0, 6
-; LA32-NEXT:    xvst $xr1, $a1, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: load_zext_4i32_to_4i64:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vld $vr0, $a0, 0
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 0
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 3
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 1
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 1
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 2
-; LA64-NEXT:    xvst $xr2, $a1, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: load_zext_4i32_to_4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a1, 0
+; CHECK-NEXT:    ret
 entry:
   %A = load <4 x i32>, ptr %ptr
   %B = zext <4 x i32> %A to <4 x i64>
@@ -243,8 +158,7 @@ define void @load_zext_8i8_to_8i16(ptr %ptr, ptr %dst) {
 ; LA32-NEXT:    ld.w $a0, $a0, 4
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vrepli.b $vr1, 0
-; LA32-NEXT:    vilvl.b $vr0, $vr1, $vr0
+; LA32-NEXT:    vext2xv.hu.bu $xr0, $xr0
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
@@ -252,8 +166,7 @@ define void @load_zext_8i8_to_8i16(ptr %ptr, ptr %dst) {
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    ld.d $a0, $a0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    vrepli.b $vr1, 0
-; LA64-NEXT:    vilvl.b $vr0, $vr1, $vr0
+; LA64-NEXT:    vext2xv.hu.bu $xr0, $xr0
 ; LA64-NEXT:    vst $vr0, $a1, 0
 ; LA64-NEXT:    ret
 entry:
@@ -270,80 +183,16 @@ define void @load_zext_8i8_to_8i32(ptr %ptr, ptr %dst) {
 ; LA32-NEXT:    ld.w $a0, $a0, 4
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; LA32-NEXT:    xvrepli.b $xr1, 0
-; LA32-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 18
-; LA32-NEXT:    xvextrins.b $xr1, $xr2, 0
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; LA32-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 18
-; LA32-NEXT:    xvextrins.b $xr1, $xr2, 68
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; LA32-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 18
-; LA32-NEXT:    xvextrins.b $xr1, $xr2, 136
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; LA32-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 18
-; LA32-NEXT:    xvextrins.b $xr1, $xr2, 204
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; LA32-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 48
-; LA32-NEXT:    xvextrins.b $xr1, $xr2, 0
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; LA32-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 48
-; LA32-NEXT:    xvextrins.b $xr1, $xr2, 68
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; LA32-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 48
-; LA32-NEXT:    xvextrins.b $xr1, $xr2, 136
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; LA32-NEXT:    xvreplgr2vr.b $xr0, $a0
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA32-NEXT:    xvextrins.b $xr1, $xr0, 204
-; LA32-NEXT:    xvst $xr1, $a1, 0
+; LA32-NEXT:    vext2xv.wu.bu $xr0, $xr0
+; LA32-NEXT:    xvst $xr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_zext_8i8_to_8i32:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    ld.d $a0, $a0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; LA64-NEXT:    xvrepli.b $xr1, 0
-; LA64-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 18
-; LA64-NEXT:    xvextrins.b $xr1, $xr2, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; LA64-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 18
-; LA64-NEXT:    xvextrins.b $xr1, $xr2, 68
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; LA64-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 18
-; LA64-NEXT:    xvextrins.b $xr1, $xr2, 136
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; LA64-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 18
-; LA64-NEXT:    xvextrins.b $xr1, $xr2, 204
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; LA64-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 48
-; LA64-NEXT:    xvextrins.b $xr1, $xr2, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; LA64-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 48
-; LA64-NEXT:    xvextrins.b $xr1, $xr2, 68
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; LA64-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 48
-; LA64-NEXT:    xvextrins.b $xr1, $xr2, 136
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; LA64-NEXT:    xvreplgr2vr.b $xr0, $a0
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA64-NEXT:    xvextrins.b $xr1, $xr0, 204
-; LA64-NEXT:    xvst $xr1, $a1, 0
+; LA64-NEXT:    vext2xv.wu.bu $xr0, $xr0
+; LA64-NEXT:    xvst $xr0, $a1, 0
 ; LA64-NEXT:    ret
 entry:
   %A = load <8 x i8>, ptr %ptr
@@ -356,46 +205,15 @@ define void @load_zext_8i8_to_8i64(ptr %ptr, ptr %dst) {
 ; LA32-LABEL: load_zext_8i8_to_8i64:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    ld.w $a2, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vpickve2gr.b $a2, $vr0, 0
-; LA32-NEXT:    vpickve2gr.b $a3, $vr0, 1
-; LA32-NEXT:    vpickve2gr.b $a4, $vr0, 2
-; LA32-NEXT:    vpickve2gr.b $a5, $vr0, 3
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
+; LA32-NEXT:    vext2xv.du.bu $xr1, $xr0
+; LA32-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vreplvei.w $vr0, $vr0, 1
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; LA32-NEXT:    xvrepli.b $xr1, 0
-; LA32-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 18
-; LA32-NEXT:    xvori.b $xr3, $xr1, 0
-; LA32-NEXT:    xvextrins.b $xr3, $xr2, 0
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; LA32-NEXT:    xvreplgr2vr.b $xr2, $a0
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; LA32-NEXT:    xvreplgr2vr.b $xr4, $a0
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; LA32-NEXT:    xvreplgr2vr.b $xr0, $a0
-; LA32-NEXT:    xvpermi.q $xr2, $xr3, 18
-; LA32-NEXT:    xvextrins.b $xr3, $xr2, 136
-; LA32-NEXT:    xvreplgr2vr.b $xr2, $a2
-; LA32-NEXT:    xvpermi.q $xr4, $xr3, 48
-; LA32-NEXT:    xvextrins.b $xr3, $xr4, 0
-; LA32-NEXT:    xvreplgr2vr.b $xr4, $a3
-; LA32-NEXT:    xvpermi.q $xr0, $xr3, 48
-; LA32-NEXT:    xvextrins.b $xr3, $xr0, 136
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 18
-; LA32-NEXT:    xvextrins.b $xr1, $xr2, 0
-; LA32-NEXT:    xvpermi.q $xr4, $xr1, 18
-; LA32-NEXT:    xvextrins.b $xr1, $xr4, 136
-; LA32-NEXT:    xvreplgr2vr.b $xr0, $a4
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA32-NEXT:    xvextrins.b $xr1, $xr0, 0
-; LA32-NEXT:    xvreplgr2vr.b $xr0, $a5
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA32-NEXT:    xvextrins.b $xr1, $xr0, 136
+; LA32-NEXT:    vext2xv.du.bu $xr0, $xr0
 ; LA32-NEXT:    xvst $xr1, $a1, 0
-; LA32-NEXT:    xvst $xr3, $a1, 32
+; LA32-NEXT:    xvst $xr0, $a1, 32
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_zext_8i8_to_8i64:
@@ -403,42 +221,10 @@ define void @load_zext_8i8_to_8i64(ptr %ptr, ptr %dst) {
 ; LA64-NEXT:    ld.d $a0, $a0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vsrli.d $vr1, $vr0, 32
-; LA64-NEXT:    vpickve2gr.b $a0, $vr1, 0
-; LA64-NEXT:    xvrepli.b $xr2, 0
-; LA64-NEXT:    xvreplgr2vr.b $xr3, $a0
-; LA64-NEXT:    xvpermi.q $xr3, $xr2, 18
-; LA64-NEXT:    xvori.b $xr4, $xr2, 0
-; LA64-NEXT:    xvextrins.b $xr4, $xr3, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr1, 1
-; LA64-NEXT:    xvreplgr2vr.b $xr3, $a0
-; LA64-NEXT:    xvpermi.q $xr3, $xr4, 18
-; LA64-NEXT:    xvextrins.b $xr4, $xr3, 136
-; LA64-NEXT:    vpickve2gr.b $a0, $vr1, 2
-; LA64-NEXT:    xvreplgr2vr.b $xr3, $a0
-; LA64-NEXT:    xvpermi.q $xr3, $xr4, 48
-; LA64-NEXT:    xvextrins.b $xr4, $xr3, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr1, 3
-; LA64-NEXT:    xvreplgr2vr.b $xr1, $a0
-; LA64-NEXT:    xvpermi.q $xr1, $xr4, 48
-; LA64-NEXT:    xvextrins.b $xr4, $xr1, 136
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; LA64-NEXT:    xvreplgr2vr.b $xr1, $a0
-; LA64-NEXT:    xvpermi.q $xr1, $xr2, 18
-; LA64-NEXT:    xvextrins.b $xr2, $xr1, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; LA64-NEXT:    xvreplgr2vr.b $xr1, $a0
-; LA64-NEXT:    xvpermi.q $xr1, $xr2, 18
-; LA64-NEXT:    xvextrins.b $xr2, $xr1, 136
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; LA64-NEXT:    xvreplgr2vr.b $xr1, $a0
-; LA64-NEXT:    xvpermi.q $xr1, $xr2, 48
-; LA64-NEXT:    xvextrins.b $xr2, $xr1, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; LA64-NEXT:    xvreplgr2vr.b $xr0, $a0
-; LA64-NEXT:    xvpermi.q $xr0, $xr2, 48
-; LA64-NEXT:    xvextrins.b $xr2, $xr0, 136
-; LA64-NEXT:    xvst $xr2, $a1, 0
-; LA64-NEXT:    xvst $xr4, $a1, 32
+; LA64-NEXT:    vext2xv.du.bu $xr1, $xr1
+; LA64-NEXT:    vext2xv.du.bu $xr0, $xr0
+; LA64-NEXT:    xvst $xr0, $a1, 0
+; LA64-NEXT:    xvst $xr1, $a1, 32
 ; LA64-NEXT:    ret
 entry:
   %A = load <8 x i8>, ptr %ptr
@@ -448,67 +234,12 @@ entry:
 }
 
 define void @load_zext_8i16_to_8i32(ptr %ptr, ptr %dst) {
-; LA32-LABEL: load_zext_8i16_to_8i32:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 1
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 2
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 3
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a0, 1
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a0, 2
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a0, 3
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 2
-; LA32-NEXT:    xvst $xr2, $a1, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: load_zext_8i16_to_8i32:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vld $vr0, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a0, 1
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a0, 2
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a0, 3
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a0, 1
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a0, 2
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a0, 3
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 2
-; LA64-NEXT:    xvst $xr2, $a1, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: load_zext_8i16_to_8i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a1, 0
+; CHECK-NEXT:    ret
 entry:
   %A = load <8 x i16>, ptr %ptr
   %B = zext <8 x i16> %A to <8 x i32>
@@ -517,79 +248,16 @@ entry:
 }
 
 define void @load_zext_8i16_to_8i64(ptr %ptr, ptr %dst) {
-; LA32-LABEL: load_zext_8i16_to_8i64:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA32-NEXT:    xvrepli.b $xr1, 0
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvori.b $xr2, $xr1, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 2
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 4
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 6
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr1, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr1, $a0, 2
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr1, $a0, 4
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr1, $a0, 6
-; LA32-NEXT:    xvst $xr1, $a1, 32
-; LA32-NEXT:    xvst $xr2, $a1, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: load_zext_8i16_to_8i64:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vld $vr0, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 1
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 1
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 2
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 1
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr3, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr3, $a0, 1
-; LA64-NEXT:    xvpermi.q $xr3, $xr1, 2
-; LA64-NEXT:    xvst $xr3, $a1, 32
-; LA64-NEXT:    xvst $xr2, $a1, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: load_zext_8i16_to_8i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vext2xv.du.wu $xr1, $xr1
+; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a1, 0
+; CHECK-NEXT:    xvst $xr1, $a1, 32
+; CHECK-NEXT:    ret
 entry:
   %A = load <8 x i16>, ptr %ptr
   %B = zext <8 x i16> %A to <8 x i64>
@@ -598,65 +266,15 @@ entry:
 }
 
 define void @load_zext_8i32_to_8i64(ptr %ptr, ptr %dst) {
-; LA32-LABEL: load_zext_8i32_to_8i64:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    xvpermi.q $xr1, $xr0, 1
-; LA32-NEXT:    xvrepli.b $xr2, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 0
-; LA32-NEXT:    xvori.b $xr3, $xr2, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr3, $a0, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 1
-; LA32-NEXT:    xvinsgr2vr.w $xr3, $a0, 2
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 2
-; LA32-NEXT:    xvinsgr2vr.w $xr3, $a0, 4
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 3
-; LA32-NEXT:    xvinsgr2vr.w $xr3, $a0, 6
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 2
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 4
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 3
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 6
-; LA32-NEXT:    xvst $xr2, $a1, 0
-; LA32-NEXT:    xvst $xr3, $a1, 32
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: load_zext_8i32_to_8i64:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 1
-; LA64-NEXT:    vpickve2gr.w $a0, $vr1, 2
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.w $a0, $vr1, 3
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 1
-; LA64-NEXT:    vpickve2gr.w $a0, $vr1, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr3, $a0, 0
-; LA64-NEXT:    vpickve2gr.w $a0, $vr1, 1
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr3, $a0, 1
-; LA64-NEXT:    xvpermi.q $xr3, $xr2, 2
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 0
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 3
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 1
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 1
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 2
-; LA64-NEXT:    xvst $xr2, $a1, 0
-; LA64-NEXT:    xvst $xr3, $a1, 32
-; LA64-NEXT:    ret
+; CHECK-LABEL: load_zext_8i32_to_8i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a0, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vext2xv.du.wu $xr1, $xr1
+; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a1, 0
+; CHECK-NEXT:    xvst $xr1, $a1, 32
+; CHECK-NEXT:    ret
 entry:
   %A = load <8 x i32>, ptr %ptr
   %B = zext <8 x i32> %A to <8 x i64>
@@ -668,56 +286,8 @@ define void @load_zext_16i8_to_16i16(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_zext_16i8_to_16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 1
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 2
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 3
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 4
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 5
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 6
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 7
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 1
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 2
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 3
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 4
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 5
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 6
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 7
-; CHECK-NEXT:    xvpermi.q $xr2, $xr1, 2
-; CHECK-NEXT:    xvst $xr2, $a1, 0
+; CHECK-NEXT:    vext2xv.hu.bu $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
   %A = load <16 x i8>, ptr %ptr
@@ -730,58 +300,12 @@ define void @load_zext_16i8_to_16i32(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_zext_16i8_to_16i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 1
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 2
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 3
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a0, 1
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a0, 2
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a0, 3
-; CHECK-NEXT:    xvpermi.q $xr2, $xr1, 2
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 1
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 2
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 3
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr3, $a0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr3, $a0, 1
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr3, $a0, 2
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    vinsgr2vr.w $vr3, $a0, 3
-; CHECK-NEXT:    xvpermi.q $xr3, $xr1, 2
-; CHECK-NEXT:    xvst $xr3, $a1, 32
-; CHECK-NEXT:    xvst $xr2, $a1, 0
+; CHECK-NEXT:    vext2xv.hu.bu $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vext2xv.wu.hu $xr1, $xr1
+; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a1, 0
+; CHECK-NEXT:    xvst $xr1, $a1, 32
 ; CHECK-NEXT:    ret
 entry:
   %A = load <16 x i8>, ptr %ptr
@@ -791,143 +315,24 @@ entry:
 }
 
 define void @load_zext_16i8_to_16i64(ptr %ptr, ptr %dst) {
-; LA32-LABEL: load_zext_16i8_to_16i64:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    vld $vr1, $a0, 0
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 0
-; LA32-NEXT:    xvrepli.b $xr2, 0
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvori.b $xr0, $xr2, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 1
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 2
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 2
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 4
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 3
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 6
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 4
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvori.b $xr3, $xr2, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr3, $a0, 0
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 5
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvinsgr2vr.w $xr3, $a0, 2
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 6
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvinsgr2vr.w $xr3, $a0, 4
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 7
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvinsgr2vr.w $xr3, $a0, 6
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 8
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvori.b $xr4, $xr2, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr4, $a0, 0
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 9
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvinsgr2vr.w $xr4, $a0, 2
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 10
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvinsgr2vr.w $xr4, $a0, 4
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 11
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvinsgr2vr.w $xr4, $a0, 6
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 12
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 0
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 13
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 2
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 14
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 4
-; LA32-NEXT:    vpickve2gr.b $a0, $vr1, 15
-; LA32-NEXT:    andi $a0, $a0, 255
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 6
-; LA32-NEXT:    xvst $xr2, $a1, 96
-; LA32-NEXT:    xvst $xr4, $a1, 64
-; LA32-NEXT:    xvst $xr3, $a1, 32
-; LA32-NEXT:    xvst $xr0, $a1, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: load_zext_16i8_to_16i64:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vld $vr0, $a0, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 1
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 1
-; LA64-NEXT:    xvpermi.q $xr1, $xr2, 2
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 1
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr3, $a0, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr3, $a0, 1
-; LA64-NEXT:    xvpermi.q $xr3, $xr2, 2
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 1
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr4, $a0, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr4, $a0, 1
-; LA64-NEXT:    xvpermi.q $xr4, $xr2, 2
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 1
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr5, $a0, 0
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; LA64-NEXT:    andi $a0, $a0, 255
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr5, $a0, 1
-; LA64-NEXT:    xvpermi.q $xr5, $xr2, 2
-; LA64-NEXT:    xvst $xr5, $a1, 96
-; LA64-NEXT:    xvst $xr4, $a1, 64
-; LA64-NEXT:    xvst $xr3, $a1, 32
-; LA64-NEXT:    xvst $xr1, $a1, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: load_zext_16i8_to_16i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vext2xv.hu.bu $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vext2xv.wu.hu $xr1, $xr1
+; CHECK-NEXT:    xvpermi.q $xr2, $xr1, 1
+; CHECK-NEXT:    vext2xv.du.wu $xr2, $xr2
+; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr3, $xr0, 1
+; CHECK-NEXT:    vext2xv.du.wu $xr3, $xr3
+; CHECK-NEXT:    vext2xv.du.wu $xr1, $xr1
+; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a1, 0
+; CHECK-NEXT:    xvst $xr1, $a1, 64
+; CHECK-NEXT:    xvst $xr3, $a1, 32
+; CHECK-NEXT:    xvst $xr2, $a1, 96
+; CHECK-NEXT:    ret
 entry:
   %A = load <16 x i8>, ptr %ptr
   %B = zext <16 x i8> %A to <16 x i64>
@@ -936,121 +341,15 @@ entry:
 }
 
 define void @load_zext_16i16_to_16i32(ptr %ptr, ptr %dst) {
-; LA32-LABEL: load_zext_16i16_to_16i32:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    xvpermi.q $xr1, $xr0, 1
-; LA32-NEXT:    vpickve2gr.h $a0, $vr1, 4
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr1, 5
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a0, 1
-; LA32-NEXT:    vpickve2gr.h $a0, $vr1, 6
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a0, 2
-; LA32-NEXT:    vpickve2gr.h $a0, $vr1, 7
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a0, 3
-; LA32-NEXT:    vpickve2gr.h $a0, $vr1, 0
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr3, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr1, 1
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr3, $a0, 1
-; LA32-NEXT:    vpickve2gr.h $a0, $vr1, 2
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr3, $a0, 2
-; LA32-NEXT:    vpickve2gr.h $a0, $vr1, 3
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr3, $a0, 3
-; LA32-NEXT:    xvpermi.q $xr3, $xr2, 2
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 1
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 2
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 3
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a0, 1
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a0, 2
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a0, 3
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 2
-; LA32-NEXT:    xvst $xr2, $a1, 0
-; LA32-NEXT:    xvst $xr3, $a1, 32
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: load_zext_16i16_to_16i32:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 1
-; LA64-NEXT:    vpickve2gr.h $a0, $vr1, 4
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr1, 5
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a0, 1
-; LA64-NEXT:    vpickve2gr.h $a0, $vr1, 6
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a0, 2
-; LA64-NEXT:    vpickve2gr.h $a0, $vr1, 7
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a0, 3
-; LA64-NEXT:    vpickve2gr.h $a0, $vr1, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr3, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr1, 1
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr3, $a0, 1
-; LA64-NEXT:    vpickve2gr.h $a0, $vr1, 2
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr3, $a0, 2
-; LA64-NEXT:    vpickve2gr.h $a0, $vr1, 3
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr3, $a0, 3
-; LA64-NEXT:    xvpermi.q $xr3, $xr2, 2
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a0, 1
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a0, 2
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a0, 3
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a0, 1
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a0, 2
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a0, 3
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 2
-; LA64-NEXT:    xvst $xr2, $a1, 0
-; LA64-NEXT:    xvst $xr3, $a1, 32
-; LA64-NEXT:    ret
+; CHECK-LABEL: load_zext_16i16_to_16i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a0, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vext2xv.wu.hu $xr1, $xr1
+; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a1, 0
+; CHECK-NEXT:    xvst $xr1, $a1, 32
+; CHECK-NEXT:    ret
 entry:
   %A = load <16 x i16>, ptr %ptr
   %B = zext <16 x i16> %A to <16 x i32>
@@ -1059,145 +358,23 @@ entry:
 }
 
 define void @load_zext_16i16_to_16i64(ptr %ptr, ptr %dst) {
-; LA32-LABEL: load_zext_16i16_to_16i64:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    xvpermi.q $xr3, $xr0, 1
-; LA32-NEXT:    vpickve2gr.h $a0, $vr3, 0
-; LA32-NEXT:    xvrepli.b $xr2, 0
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvori.b $xr1, $xr2, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr1, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr3, 1
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr1, $a0, 2
-; LA32-NEXT:    vpickve2gr.h $a0, $vr3, 2
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr1, $a0, 4
-; LA32-NEXT:    vpickve2gr.h $a0, $vr3, 3
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr1, $a0, 6
-; LA32-NEXT:    vpickve2gr.h $a0, $vr3, 4
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvori.b $xr4, $xr2, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr4, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr3, 5
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr4, $a0, 2
-; LA32-NEXT:    vpickve2gr.h $a0, $vr3, 6
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr4, $a0, 4
-; LA32-NEXT:    vpickve2gr.h $a0, $vr3, 7
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr4, $a0, 6
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvori.b $xr3, $xr2, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr3, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr3, $a0, 2
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr3, $a0, 4
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr3, $a0, 6
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 2
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 4
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a0, 6
-; LA32-NEXT:    xvst $xr2, $a1, 32
-; LA32-NEXT:    xvst $xr3, $a1, 0
-; LA32-NEXT:    xvst $xr4, $a1, 96
-; LA32-NEXT:    xvst $xr1, $a1, 64
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: load_zext_16i16_to_16i64:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    xvpermi.q $xr2, $xr0, 1
-; LA64-NEXT:    vpickve2gr.h $a0, $vr2, 2
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr3, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr2, 3
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr3, $a0, 1
-; LA64-NEXT:    vpickve2gr.h $a0, $vr2, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr2, 1
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 1
-; LA64-NEXT:    xvpermi.q $xr1, $xr3, 2
-; LA64-NEXT:    vpickve2gr.h $a0, $vr2, 6
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr3, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr2, 7
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr3, $a0, 1
-; LA64-NEXT:    vpickve2gr.h $a0, $vr2, 4
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr4, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr2, 5
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr4, $a0, 1
-; LA64-NEXT:    xvpermi.q $xr4, $xr3, 2
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 1
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr3, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr3, $a0, 1
-; LA64-NEXT:    xvpermi.q $xr3, $xr2, 2
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 1
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr5, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    vinsgr2vr.d $vr5, $a0, 1
-; LA64-NEXT:    xvpermi.q $xr5, $xr2, 2
-; LA64-NEXT:    xvst $xr5, $a1, 32
-; LA64-NEXT:    xvst $xr3, $a1, 0
-; LA64-NEXT:    xvst $xr4, $a1, 96
-; LA64-NEXT:    xvst $xr1, $a1, 64
-; LA64-NEXT:    ret
+; CHECK-LABEL: load_zext_16i16_to_16i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a0, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vext2xv.wu.hu $xr1, $xr1
+; CHECK-NEXT:    xvpermi.q $xr2, $xr1, 1
+; CHECK-NEXT:    vext2xv.du.wu $xr2, $xr2
+; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr3, $xr0, 1
+; CHECK-NEXT:    vext2xv.du.wu $xr3, $xr3
+; CHECK-NEXT:    vext2xv.du.wu $xr1, $xr1
+; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a1, 0
+; CHECK-NEXT:    xvst $xr1, $a1, 64
+; CHECK-NEXT:    xvst $xr3, $a1, 32
+; CHECK-NEXT:    xvst $xr2, $a1, 96
+; CHECK-NEXT:    ret
 entry:
   %A = load <16 x i16>, ptr %ptr
   %B = zext <16 x i16> %A to <16 x i64>
