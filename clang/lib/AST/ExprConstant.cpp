@@ -13657,9 +13657,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
             !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
           return false;
 
-        // QualType ResultType = E->getType();
-        // unsigned BitWidth = Info.Ctx.getIntWidth(ResultType);
-        // bool ResultSigned = ResultType->isUnsignedIntegerOrEnumerationType();
         unsigned SourceLen = SourceLHS.getVectorLength();
 
         const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
@@ -13697,9 +13694,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         } else { // Must be integer or float type
           return false;
         }
-        // APSInt Result(APInt(BitWidth, Fn(SourceLHS, SourceRHS, SourceLen)),
-        //               ResultSigned);
-        // return Success(Result, E);
       };
 
   auto HandleMaskBinOp =
