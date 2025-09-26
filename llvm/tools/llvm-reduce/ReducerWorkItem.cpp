@@ -62,12 +62,12 @@ static cl::opt<bool> TmpFilesAsBitcode(
     cl::desc("Always write temporary files as bitcode instead of textual IR"),
     cl::init(false), cl::cat(LLVMReduceOptions));
 
-static SmallVector<MachineBasicBlock *> constructSaveRestorePoints(
-    ArrayRef<MachineBasicBlock *> SRPoints,
+static SaveRestorePoints constructSaveRestorePoints(
+    const SaveRestorePoints &SRPoints,
     const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
-  SmallVector<MachineBasicBlock *> Pts;
+  SaveRestorePoints Pts{};
   for (auto &Src : SRPoints)
-    Pts.push_back(BBMap.find(Src)->second);
+    Pts.insert({BBMap.find(Src.first)->second, Src.second});
   return Pts;
 }
 

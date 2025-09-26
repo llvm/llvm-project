@@ -2089,6 +2089,11 @@ public:
   // OpenMP Clauses & Directives
   void Unparse(const OmpArgumentList &x) { Walk(x.v, ", "); }
 
+  void Unparse(const OmpBaseVariantNames &x) {
+    Walk(std::get<0>(x.t)); // OmpObject
+    Put(":");
+    Walk(std::get<1>(x.t)); // OmpObject
+  }
   void Unparse(const OmpTypeNameList &x) { //
     Walk(x.v, ",");
   }
@@ -2106,7 +2111,7 @@ public:
     Walk(std::get<OmpReductionIdentifier>(x.t));
     Put(":");
     Walk(std::get<OmpTypeNameList>(x.t));
-    Walk(":", std::get<std::optional<OmpReductionCombiner>>(x.t));
+    Walk(": ", std::get<std::optional<OmpReductionCombiner>>(x.t));
   }
   void Unparse(const llvm::omp::Directive &x) {
     unsigned ompVersion{langOpts_.OpenMPVersion};
@@ -2500,18 +2505,24 @@ public:
     // Don't let the visitor go to the normal AssignmentStmt Unparse function,
     // it adds an extra newline that we don't want.
     if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
-      Walk(assignment->t, "=");
+      Walk(assignment->t, " = ");
+    } else {
+      Walk(x.u);
+    }
+  }
+  void Unparse(const OmpReductionCombiner &x) {
+    // Don't let the visitor go to the normal AssignmentStmt Unparse function,
+    // it adds an extra newline that we don't want.
+    if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
+      Walk(assignment->t, " = ");
     } else {
       Walk(x.u);
     }
   }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE REDUCTION ");
-    Put("(");
-    Walk(std::get<common::Indirection<OmpReductionSpecifier>>(x.t));
-    Put(")");
-    Walk(std::get<std::optional<OmpClauseList>>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2528,12 +2539,8 @@ public:
   }
   void Unparse(const OmpDeclareVariantDirective &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE VARIANT ");
-    Put("(");
-    Walk(std::get<std::optional<Name>>(x.t), ":");
-    Walk(std::get<Name>(x.t));
-    Put(")");
-    Walk(std::get<OmpClauseList>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2559,29 +2566,17 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareMapperConstruct &z) {
+  void Unparse(const OpenMPDeclareMapperConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE MAPPER (");
-    const auto &spec{std::get<OmpMapperSpecifier>(z.t)};
-    const auto &mapperName{std::get<std::string>(spec.t)};
-    if (mapperName.find(llvm::omp::OmpDefaultMapperName) == std::string::npos) {
-      Walk(mapperName);
-      Put(":");
-    }
-    Walk(std::get<TypeSpec>(spec.t));
-    Put("::");
-    Walk(std::get<Name>(spec.t));
-    Put(")");
-
-    Walk(std::get<OmpClauseList>(z.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareSimdConstruct &y) {
+  void Unparse(const OpenMPDeclareSimdConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE SIMD ");
-    Walk("(", std::get<std::optional<Name>>(y.t), ")");
-    Walk(std::get<OmpClauseList>(y.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
