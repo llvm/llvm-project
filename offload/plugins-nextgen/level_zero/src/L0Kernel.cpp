@@ -397,13 +397,13 @@ int32_t L0KernelTy::decideLoopKernelGroupArguments(
   return OFFLOAD_SUCCESS;
 }
 
-int32_t L0KernelTy::getGroupsShape(L0DeviceTy &SubDevice, int32_t NumTeams,
+int32_t L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
                                    int32_t ThreadLimit, uint32_t *GroupSizes,
                                    ze_group_count_t &GroupCounts,
                                    void *LoopDesc,
                                    bool &AllowCooperative) const {
 
-  const auto SubId = SubDevice.getDeviceId();
+  const auto DeviceId = Device.getDeviceId();
   const auto &KernelPR = getProperties();
 
   // Detect if we need to reduce available HW threads. We need this adjustment
@@ -419,13 +419,13 @@ int32_t L0KernelTy::getGroupsShape(L0DeviceTy &SubDevice, int32_t NumTeams,
   // Read the most recent global thread limit and max teams.
   auto [NumTeamsICV, ThreadLimitICV] = readTeamsThreadLimit();
 
-  bool IsXeHPG = SubDevice.isDeviceArch(DeviceArchTy::DeviceArch_XeHPG);
+  bool IsXeHPG = Device.isDeviceArch(DeviceArchTy::DeviceArch_XeHPG);
   bool HalfNumThreads = ZeDebugEnabled && IsXeHPG;
   uint32_t KernelWidth = KernelPR.Width;
   uint32_t SIMDWidth = KernelPR.SIMDWidth;
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, SubId,
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Assumed kernel SIMD width is %" PRIu32 "\n", SIMDWidth);
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, SubId,
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Preferred team size is multiple of %" PRIu32 "\n", KernelWidth);
   assert(SIMDWidth <= KernelWidth && "Invalid SIMD width.");
 
@@ -439,10 +439,10 @@ int32_t L0KernelTy::getGroupsShape(L0DeviceTy &SubDevice, int32_t NumTeams,
     DP("Max team size is set to %" PRId32 " (thread-limit-icv)\n", ThreadLimit);
   }
 
-  size_t MaxThreadLimit = SubDevice.getMaxGroupSize();
+  size_t MaxThreadLimit = Device.getMaxGroupSize();
   // Set correct max group size if the kernel was compiled with explicit SIMD
   if (SIMDWidth == 1) {
-    MaxThreadLimit = SubDevice.getNumThreadsPerSubslice();
+    MaxThreadLimit = Device.getNumThreadsPerSubslice();
   }
 
   if (KernelPR.MaxThreadGroupSize < MaxThreadLimit) {
@@ -463,7 +463,7 @@ int32_t L0KernelTy::getGroupsShape(L0DeviceTy &SubDevice, int32_t NumTeams,
          NumTeams);
     } else if (NumTeamsICV > 0) {
       // OMP_NUM_TEAMS only matters, if num_teams() clause is absent.
-      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, SubId,
+      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
            "OMP_NUM_TEAMS(%" PRId32 ") is ignored\n", NumTeamsICV);
 
       NumTeams = NumTeamsICV;
@@ -473,7 +473,7 @@ int32_t L0KernelTy::getGroupsShape(L0DeviceTy &SubDevice, int32_t NumTeams,
 
     bool UseLoopTC = LoopDesc;
     decideKernelGroupArguments(
-        SubDevice, (uint32_t)NumTeams, (uint32_t)ThreadLimit,
+        Device, (uint32_t)NumTeams, (uint32_t)ThreadLimit,
         UseLoopTC ? (TgtNDRangeDescTy *)LoopDesc : nullptr, GroupSizes,
         GroupCounts, HalfNumThreads, false);
     AllowCooperative = false;

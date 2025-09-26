@@ -147,7 +147,7 @@ public:
     return zeKernel;
   }
 
-  int32_t getGroupsShape(L0DeviceTy &SubDevice, int32_t NumTeams,
+  int32_t getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
                          int32_t ThreadLimit, uint32_t *GroupSizes,
                          ze_group_count_t &GroupCounts, void *LoopDesc,
                          bool &AllowCooperative) const;

@@ -445,7 +445,7 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
                          " not implemented yet\n",
                          __func__);
   }
-  int32_t RC = synchronize(&AsyncInfo);
+  int32_t RC = synchronize(&AsyncInfo, ReleaseQueue);
   return Plugin::check(RC, "Error in synchronizeImpl %d", RC);
 }
 

@@ -25,9 +25,6 @@ namespace plugin {
 
 /// All thread-local data used by the Plugin
 class L0ThreadTLSTy {
-  /// Subdevice encoding
-  int64_t SubDeviceCode = 0;
-
   /// Async info tracking
   static constexpr int32_t PerThreadQueues = 10;
   AsyncQueueTy AsyncQueues[PerThreadQueues];
@@ -42,10 +39,6 @@ public:
   ~L0ThreadTLSTy() {}
 
   void clear() {}
-
-  int64_t getSubDeviceCode() { return SubDeviceCode; }
-
-  void setSubDeviceCode(int64_t Code) { SubDeviceCode = Code; }
 
   AsyncQueueTy *getAsyncQueue() {
     AsyncQueueTy *ret = nullptr;
