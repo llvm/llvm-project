@@ -886,6 +886,12 @@ public:
   }
 
   virtual InstructionCost
+  getFirstFaultLoadCost(Type *DataTy, Align Alignment,
+                        TTI::TargetCostKind CostKind) const {
+    return InstructionCost::getInvalid();
+  }
+
+  virtual InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const {
     switch (ICA.getID()) {
