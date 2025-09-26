@@ -13,13 +13,14 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CAS_ONDISKHASHMAPPEDTRIE_H
-#define LLVM_CAS_ONDISKHASHMAPPEDTRIE_H
+#ifndef LLVM_CAS_ONDISKTRIERAWHASHMAP_H
+#define LLVM_CAS_ONDISKTRIERAWHASHMAP_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CAS/FileOffset.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 
@@ -28,21 +29,6 @@ namespace llvm {
 class raw_ostream;
 
 namespace cas {
-
-/// FileOffset is a wrapper around `uint64_t` to represent the offset of data
-/// from the beginning of the file.
-class FileOffset {
-public:
-  uint64_t get() const { return Offset; }
-
-  explicit operator bool() const { return Offset; }
-
-  FileOffset() = default;
-  explicit FileOffset(uint64_t Offset) : Offset(Offset) {}
-
-private:
-  uint64_t Offset = 0;
-};
 
 /// OnDiskTrieRawHashMap is a persistent trie data structure used as hash maps.
 /// The keys are fixed length, and are expected to be binary hashes with a
@@ -244,73 +230,7 @@ private:
   std::unique_ptr<ImplType> Impl;
 };
 
-/// Sink for data. Stores variable length data with 8-byte alignment. Does not
-/// track size of data, which is assumed to known from context, or embedded.
-/// Uses 0-padding but does not guarantee 0-termination.
-class OnDiskDataAllocator {
-public:
-  using ValueProxy = MutableArrayRef<char>;
-
-  /// An iterator-like return value for data insertion. Maybe it should be
-  /// called \c iterator, but it has no increment.
-  class pointer {
-  public:
-    FileOffset getOffset() const { return Offset; }
-    explicit operator bool() const { return bool(getOffset()); }
-    const ValueProxy &operator*() const {
-      assert(Offset && "Null dereference");
-      return Value;
-    }
-    const ValueProxy *operator->() const {
-      assert(Offset && "Null dereference");
-      return &Value;
-    }
-
-    pointer() = default;
-
-  private:
-    friend class OnDiskDataAllocator;
-    pointer(FileOffset Offset, ValueProxy Value)
-        : Offset(Offset), Value(Value) {}
-    FileOffset Offset;
-    ValueProxy Value;
-  };
-
-  /// Look up the data stored at the given offset.
-  const char *beginData(FileOffset Offset) const;
-
-  /// Allocate at least \p Size with 8-byte alignment.
-  Expected<pointer> allocate(size_t Size);
-
-  /// \returns the buffer that was allocated at \p create time, with size
-  /// \p UserHeaderSize.
-  MutableArrayRef<uint8_t> getUserHeader();
-
-  size_t size() const;
-  size_t capacity() const;
-
-  static Expected<OnDiskDataAllocator>
-  create(const Twine &Path, const Twine &TableName, uint64_t MaxFileSize,
-         std::optional<uint64_t> NewFileInitialSize,
-         uint32_t UserHeaderSize = 0,
-         function_ref<void(void *)> UserHeaderInit = nullptr);
-
-  OnDiskDataAllocator(OnDiskDataAllocator &&RHS);
-  OnDiskDataAllocator &operator=(OnDiskDataAllocator &&RHS);
-
-  // No copy. Just call \a create() again.
-  OnDiskDataAllocator(const OnDiskDataAllocator &) = delete;
-  OnDiskDataAllocator &operator=(const OnDiskDataAllocator &) = delete;
-
-  ~OnDiskDataAllocator();
-
-private:
-  struct ImplType;
-  explicit OnDiskDataAllocator(std::unique_ptr<ImplType> Impl);
-  std::unique_ptr<ImplType> Impl;
-};
-
 } // namespace cas
 } // namespace llvm
 
-#endif // LLVM_CAS_ONDISKHASHMAPPEDTRIE_H
+#endif // LLVM_CAS_ONDISKTRIERAWHASHMAP_H

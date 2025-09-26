@@ -1,12 +1,17 @@
-//===- OnDiskTrieRawHashMap.cpp -------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file Implements OnDiskTrieRawHashMap.
+///
+//===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/OnDiskTrieRawHashMap.h"
+#include "DatabaseFile.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TrieHashIndexGenerator.h"
 #include "llvm/CAS/MappedFileRegionArena.h"
@@ -17,231 +22,9 @@
 
 using namespace llvm;
 using namespace llvm::cas;
+using namespace llvm::cas::ondisk;
 
 #if LLVM_ENABLE_ONDISK_CAS
-
-//===----------------------------------------------------------------------===//
-// Generic database data structures.
-//===----------------------------------------------------------------------===//
-namespace {
-using MappedFileRegion = MappedFileRegionArena::RegionT;
-
-/// Generic handle for a table.
-///
-/// Generic table header layout:
-/// - 2-bytes: TableKind
-/// - 2-bytes: TableNameSize
-/// - 4-bytes: TableNameRelOffset (relative to header)
-class TableHandle {
-public:
-  enum class TableKind : uint16_t {
-    TrieRawHashMap = 1,
-    DataAllocator = 2,
-  };
-  struct Header {
-    TableKind Kind;
-    uint16_t NameSize;
-    int32_t NameRelOffset; ///< Relative to Header.
-  };
-
-  explicit operator bool() const { return H; }
-  const Header &getHeader() const { return *H; }
-  MappedFileRegion &getRegion() const { return *Region; }
-
-  template <class T> static void check() {
-    static_assert(
-        std::is_same<decltype(T::Header::GenericHeader), Header>::value,
-        "T::GenericHeader should be of type TableHandle::Header");
-    static_assert(offsetof(typename T::Header, GenericHeader) == 0,
-                  "T::GenericHeader must be the head of T::Header");
-  }
-  template <class T> bool is() const { return T::Kind == H->Kind; }
-  template <class T> T dyn_cast() const {
-    check<T>();
-    if (is<T>())
-      return T(*Region, *reinterpret_cast<typename T::Header *>(H));
-    return T();
-  }
-  template <class T> T cast() const {
-    assert(is<T>());
-    return dyn_cast<T>();
-  }
-
-  StringRef getName() const {
-    auto *Begin = reinterpret_cast<const char *>(H) + H->NameRelOffset;
-    return StringRef(Begin, H->NameSize);
-  }
-
-  TableHandle() = default;
-  TableHandle(MappedFileRegion &Region, Header &H) : Region(&Region), H(&H) {}
-  TableHandle(MappedFileRegion &Region, intptr_t HeaderOffset)
-      : TableHandle(Region,
-                    *reinterpret_cast<Header *>(Region.data() + HeaderOffset)) {
-  }
-
-private:
-  MappedFileRegion *Region = nullptr;
-  Header *H = nullptr;
-};
-
-/// Encapsulate a database file, which:
-/// - Sets/checks magic.
-/// - Sets/checks version.
-/// - Points at an arbitrary root table.
-/// - Sets up a MappedFileRegionArena for allocation.
-///
-/// Top-level layout:
-/// - 8-bytes: Magic
-/// - 8-bytes: Version
-/// - 8-bytes: RootTable (16-bits: Kind; 48-bits: Offset)
-/// - 8-bytes: BumpPtr
-class DatabaseFile {
-public:
-  static constexpr uint64_t getMagic() { return 0x00FFDA7ABA53FF00ULL; }
-  static constexpr uint64_t getVersion() { return 1ULL; }
-  struct Header {
-    uint64_t Magic;
-    uint64_t Version;
-    std::atomic<int64_t> RootTableOffset;
-  };
-
-  const Header &getHeader() { return *H; }
-  MappedFileRegionArena &getAlloc() { return Alloc; }
-  MappedFileRegion &getRegion() { return Alloc.getRegion(); }
-
-  /// Add a table. This is currently not thread safe and should be called inside
-  /// NewDBConstructor.
-  Error addTable(TableHandle Table);
-
-  /// Find a table. May return null.
-  std::optional<TableHandle> findTable(StringRef Name);
-
-  /// Create the DatabaseFile at Path with Capacity.
-  static Expected<DatabaseFile>
-  create(const Twine &Path, uint64_t Capacity,
-         function_ref<Error(DatabaseFile &)> NewDBConstructor);
-
-  size_t size() const { return Alloc.size(); }
-
-private:
-  static Expected<DatabaseFile>
-  get(std::unique_ptr<MappedFileRegionArena> Alloc) {
-    if (Error E = validate(Alloc->getRegion()))
-      return std::move(E);
-    return DatabaseFile(std::move(Alloc));
-  }
-
-  static Error validate(MappedFileRegion &Region);
-
-  DatabaseFile(MappedFileRegionArena &Alloc)
-      : H(reinterpret_cast<Header *>(Alloc.data())), Alloc(Alloc) {}
-  DatabaseFile(std::unique_ptr<MappedFileRegionArena> Alloc)
-      : DatabaseFile(*Alloc) {
-    OwnedAlloc = std::move(Alloc);
-  }
-
-  Header *H = nullptr;
-  MappedFileRegionArena &Alloc;
-  std::unique_ptr<MappedFileRegionArena> OwnedAlloc;
-};
-
-} // end anonymous namespace
-
-static Error createTableConfigError(std::errc ErrC, StringRef Path,
-                                    StringRef TableName, const Twine &Msg) {
-  return createStringError(make_error_code(ErrC),
-                           Path + "[" + TableName + "]: " + Msg);
-}
-
-Expected<DatabaseFile>
-DatabaseFile::create(const Twine &Path, uint64_t Capacity,
-                     function_ref<Error(DatabaseFile &)> NewDBConstructor) {
-  // Constructor for if the file doesn't exist.
-  auto NewFileConstructor = [&](MappedFileRegionArena &Alloc) -> Error {
-    if (Alloc.capacity() <
-        sizeof(Header) + sizeof(MappedFileRegionArena::Header))
-      return createTableConfigError(std::errc::argument_out_of_domain,
-                                    Path.str(), "datafile",
-                                    "Allocator too small for header");
-    (void)new (Alloc.data()) Header{getMagic(), getVersion(), {0}};
-    DatabaseFile DB(Alloc);
-    return NewDBConstructor(DB);
-  };
-
-  // Get or create the file.
-  MappedFileRegionArena Alloc;
-  if (Error E = MappedFileRegionArena::create(Path, Capacity, sizeof(Header),
-                                              NewFileConstructor)
-                    .moveInto(Alloc))
-    return std::move(E);
-
-  return DatabaseFile::get(
-      std::make_unique<MappedFileRegionArena>(std::move(Alloc)));
-}
-
-Error DatabaseFile::addTable(TableHandle Table) {
-  assert(Table);
-  assert(&Table.getRegion() == &getRegion());
-  int64_t ExistingRootOffset = 0;
-  const int64_t NewOffset =
-      reinterpret_cast<const char *>(&Table.getHeader()) - getRegion().data();
-  if (H->RootTableOffset.compare_exchange_strong(ExistingRootOffset, NewOffset))
-    return Error::success();
-
-  // Silently ignore attempts to set the root to itself.
-  if (ExistingRootOffset == NewOffset)
-    return Error::success();
-
-  // Return an proper error message.
-  TableHandle Root(getRegion(), ExistingRootOffset);
-  if (Root.getName() == Table.getName())
-    return createStringError(
-        make_error_code(std::errc::not_supported),
-        "collision with existing table of the same name '" + Table.getName() +
-            "'");
-
-  return createStringError(make_error_code(std::errc::not_supported),
-                           "cannot add new table '" + Table.getName() +
-                               "'"
-                               " to existing root '" +
-                               Root.getName() + "'");
-}
-
-std::optional<TableHandle> DatabaseFile::findTable(StringRef Name) {
-  int64_t RootTableOffset = H->RootTableOffset.load();
-  if (!RootTableOffset)
-    return std::nullopt;
-
-  TableHandle Root(getRegion(), RootTableOffset);
-  if (Root.getName() == Name)
-    return Root;
-
-  return std::nullopt;
-}
-
-Error DatabaseFile::validate(MappedFileRegion &Region) {
-  if (Region.size() < sizeof(Header))
-    return createStringError(std::errc::invalid_argument,
-                             "database: missing header");
-
-  // Check the magic and version.
-  auto *H = reinterpret_cast<Header *>(Region.data());
-  if (H->Magic != getMagic())
-    return createStringError(std::errc::invalid_argument,
-                             "database: bad magic");
-  if (H->Version != getVersion())
-    return createStringError(std::errc::invalid_argument,
-                             "database: wrong version");
-
-  auto *MFH = reinterpret_cast<MappedFileRegionArena::Header *>(Region.data() +
-                                                                sizeof(Header));
-  // Check the bump-ptr, which should point past the header.
-  if (MFH->BumpPtr.load() < (int64_t)sizeof(Header))
-    return createStringError(std::errc::invalid_argument,
-                             "database: corrupt bump-ptr");
-
-  return Error::success();
-}
 
 //===----------------------------------------------------------------------===//
 // TrieRawHashMap data structures.
@@ -820,6 +603,11 @@ void OnDiskTrieRawHashMap::print(
   Impl->Trie.print(OS, PrintRecordData);
 }
 
+Error OnDiskTrieRawHashMap::validate(
+    function_ref<Error(FileOffset, ConstValueProxy)> RecordVerifier) const {
+  return Impl->Trie.validate(RecordVerifier);
+}
+
 // Helper function that prints hexdigit and have a sub-byte starting position.
 static void printHexDigits(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
                            size_t StartBit, size_t NumBits) {
@@ -900,16 +688,6 @@ static Expected<size_t> checkParameter(StringRef Label, size_t Max,
   return createTableConfigError(
       std::errc::argument_out_of_domain, Path, TableName,
       "invalid " + Label + ": " + Twine(*Value) + " (max: " + Twine(Max) + ")");
-}
-
-static Error checkTable(StringRef Label, size_t Expected, size_t Observed,
-                        StringRef Path, StringRef TrieName) {
-  if (Expected == Observed)
-    return Error::success();
-  return createTableConfigError(std::errc::invalid_argument, Path, TrieName,
-                                "mismatched " + Label +
-                                    " (expected: " + Twine(Expected) +
-                                    ", observed: " + Twine(Observed) + ")");
 }
 
 size_t OnDiskTrieRawHashMap::size() const { return Impl->File.size(); }
@@ -1019,7 +797,7 @@ static Error createInvalidTrieError(uint64_t Offset, const Twine &Msg) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// A vistior to traverse the Trie and it can be multi-threaded.
+/// A multi-threaded vistior to traverse the Trie.
 ///
 /// TODO: add more sanity checks that isn't just plain data corruption. For
 /// example, some ill-formed data can be constructed to form a cycle using
@@ -1256,9 +1034,11 @@ Error TrieVisitor::validateSubTrie(SubtrieHandle Node, bool IsRoot) {
       Trie.getRegion().data() + Trie.getRegion().size())
     return createInvalidTrieError(Offset, "subtrie node spans out of bound");
 
-  if (Node.getStartBit() + Node.getNumBits() > Trie.getNumHashBits())
+  if (!IsRoot &&
+      Node.getStartBit() + Node.getNumBits() > Trie.getNumHashBits()) {
     return createInvalidTrieError(Offset,
                                   "subtrie represents too many hash bits");
+  }
 
   if (IsRoot) {
     if (Node.getStartBit() != 0)
@@ -1339,176 +1119,6 @@ Error TrieRawHashMapHandle::validate(
   return Verifier.visit();
 }
 
-//===----------------------------------------------------------------------===//
-// DataAllocator data structures.
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// DataAllocator table layout:
-/// - [8-bytes: Generic table header]
-/// - 8-bytes: AllocatorOffset (reserved for implementing free lists)
-/// - 8-bytes: Size for user data header
-/// - <user data buffer>
-///
-/// Record layout:
-/// - <data>
-class DataAllocatorHandle {
-public:
-  static constexpr TableHandle::TableKind Kind =
-      TableHandle::TableKind::DataAllocator;
-
-  struct Header {
-    TableHandle::Header GenericHeader;
-    std::atomic<int64_t> AllocatorOffset;
-    const uint64_t UserHeaderSize;
-  };
-
-  operator TableHandle() const {
-    if (!H)
-      return TableHandle();
-    return TableHandle(*Region, H->GenericHeader);
-  }
-
-  Expected<MutableArrayRef<char>> allocate(MappedFileRegionArena &Alloc,
-                                           size_t DataSize) {
-    assert(&Alloc.getRegion() == Region);
-    auto Ptr = Alloc.allocate(DataSize);
-    if (LLVM_UNLIKELY(!Ptr))
-      return Ptr.takeError();
-    return MutableArrayRef(*Ptr, DataSize);
-  }
-
-  explicit operator bool() const { return H; }
-  const Header &getHeader() const { return *H; }
-  MappedFileRegion &getRegion() const { return *Region; }
-
-  MutableArrayRef<uint8_t> getUserHeader() {
-    return MutableArrayRef(reinterpret_cast<uint8_t *>(H + 1),
-                           H->UserHeaderSize);
-  }
-
-  static Expected<DataAllocatorHandle>
-  create(MappedFileRegionArena &Alloc, StringRef Name, uint32_t UserHeaderSize);
-
-  DataAllocatorHandle() = default;
-  DataAllocatorHandle(MappedFileRegion &Region, Header &H)
-      : Region(&Region), H(&H) {}
-  DataAllocatorHandle(MappedFileRegion &Region, intptr_t HeaderOffset)
-      : DataAllocatorHandle(
-            Region, *reinterpret_cast<Header *>(Region.data() + HeaderOffset)) {
-  }
-
-private:
-  MappedFileRegion *Region = nullptr;
-  Header *H = nullptr;
-};
-
-} // end anonymous namespace
-
-struct OnDiskDataAllocator::ImplType {
-  DatabaseFile File;
-  DataAllocatorHandle Store;
-};
-
-Expected<DataAllocatorHandle>
-DataAllocatorHandle::create(MappedFileRegionArena &Alloc, StringRef Name,
-                            uint32_t UserHeaderSize) {
-  // Allocate.
-  auto Offset =
-      Alloc.allocateOffset(sizeof(Header) + UserHeaderSize + Name.size() + 1);
-  if (LLVM_UNLIKELY(!Offset))
-    return Offset.takeError();
-
-  // Construct the header and the name.
-  assert(Name.size() <= UINT16_MAX && "Expected smaller table name");
-  auto *H = new (Alloc.getRegion().data() + *Offset)
-      Header{{TableHandle::TableKind::DataAllocator, (uint16_t)Name.size(),
-              (int32_t)(sizeof(Header) + UserHeaderSize)},
-             /*AllocatorOffset=*/{0},
-             /*UserHeaderSize=*/UserHeaderSize};
-  memset(H + 1, 0, UserHeaderSize);
-  char *NameStorage = reinterpret_cast<char *>(H + 1) + UserHeaderSize;
-  llvm::copy(Name, NameStorage);
-  NameStorage[Name.size()] = 0;
-  return DataAllocatorHandle(Alloc.getRegion(), *H);
-}
-
-Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
-    const Twine &PathTwine, const Twine &TableNameTwine, uint64_t MaxFileSize,
-    std::optional<uint64_t> NewFileInitialSize, uint32_t UserHeaderSize,
-    function_ref<void(void *)> UserHeaderInit) {
-  assert(!UserHeaderSize || UserHeaderInit);
-  SmallString<128> PathStorage;
-  StringRef Path = PathTwine.toStringRef(PathStorage);
-  SmallString<128> TableNameStorage;
-  StringRef TableName = TableNameTwine.toStringRef(TableNameStorage);
-
-  // Constructor for if the file doesn't exist.
-  auto NewDBConstructor = [&](DatabaseFile &DB) -> Error {
-    auto Store =
-        DataAllocatorHandle::create(DB.getAlloc(), TableName, UserHeaderSize);
-    if (LLVM_UNLIKELY(!Store))
-      return Store.takeError();
-
-    if (auto E = DB.addTable(*Store))
-      return E;
-
-    if (UserHeaderSize)
-      UserHeaderInit(Store->getUserHeader().data());
-    return Error::success();
-  };
-
-  // Get or create the file.
-  Expected<DatabaseFile> File =
-      DatabaseFile::create(Path, MaxFileSize, NewDBConstructor);
-  if (!File)
-    return File.takeError();
-
-  // Find the table and validate it.
-  std::optional<TableHandle> Table = File->findTable(TableName);
-  if (!Table)
-    return createTableConfigError(std::errc::argument_out_of_domain, Path,
-                                  TableName, "table not found");
-  if (Error E = checkTable("table kind", (size_t)DataAllocatorHandle::Kind,
-                           (size_t)Table->getHeader().Kind, Path, TableName))
-    return std::move(E);
-  auto Store = Table->cast<DataAllocatorHandle>();
-  assert(Store && "Already checked the kind");
-
-  // Success.
-  OnDiskDataAllocator::ImplType Impl{DatabaseFile(std::move(*File)), Store};
-  return OnDiskDataAllocator(std::make_unique<ImplType>(std::move(Impl)));
-}
-
-Expected<OnDiskDataAllocator::pointer>
-OnDiskDataAllocator::allocate(size_t Size) {
-  auto Data = Impl->Store.allocate(Impl->File.getAlloc(), Size);
-  if (LLVM_UNLIKELY(!Data))
-    return Data.takeError();
-
-  return pointer(FileOffset(Data->data() - Impl->Store.getRegion().data()),
-                 *Data);
-}
-
-const char *OnDiskDataAllocator::beginData(FileOffset Offset) const {
-  assert(Offset);
-  assert(Impl);
-  assert(Offset.get() < Impl->File.getAlloc().size());
-  return Impl->File.getRegion().data() + Offset.get();
-}
-
-MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() {
-  return Impl->Store.getUserHeader();
-}
-
-size_t OnDiskDataAllocator::size() const { return Impl->File.size(); }
-size_t OnDiskDataAllocator::capacity() const {
-  return Impl->File.getRegion().size();
-}
-
-OnDiskDataAllocator::OnDiskDataAllocator(std::unique_ptr<ImplType> Impl)
-    : Impl(std::move(Impl)) {}
-
 #else // !LLVM_ENABLE_ONDISK_CAS
 
 struct OnDiskTrieRawHashMap::ImplType {};
@@ -1557,31 +1167,6 @@ Error OnDiskTrieRawHashMap::validate(
 size_t OnDiskTrieRawHashMap::size() const { return 0; }
 size_t OnDiskTrieRawHashMap::capacity() const { return 0; }
 
-struct OnDiskDataAllocator::ImplType {};
-
-Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
-    const Twine &Path, const Twine &TableName, uint64_t MaxFileSize,
-    std::optional<uint64_t> NewFileInitialSize, uint32_t UserHeaderSize,
-    function_ref<void(void *)> UserHeaderInit) {
-  return createStringError(make_error_code(std::errc::not_supported),
-                           "OnDiskDataAllocator is not supported");
-}
-
-Expected<OnDiskDataAllocator::pointer>
-OnDiskDataAllocator::allocate(size_t Size) {
-  return createStringError(make_error_code(std::errc::not_supported),
-                           "OnDiskDataAllocator is not supported");
-}
-
-const char *OnDiskDataAllocator::beginData(FileOffset Offset) const {
-  return nullptr;
-}
-
-MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() { return {}; }
-
-size_t OnDiskDataAllocator::size() const { return 0; }
-size_t OnDiskDataAllocator::capacity() const { return 0; }
-
 #endif // LLVM_ENABLE_ONDISK_CAS
 
 OnDiskTrieRawHashMap::OnDiskTrieRawHashMap(std::unique_ptr<ImplType> Impl)
@@ -1591,8 +1176,3 @@ OnDiskTrieRawHashMap::OnDiskTrieRawHashMap(OnDiskTrieRawHashMap &&RHS) =
 OnDiskTrieRawHashMap &
 OnDiskTrieRawHashMap::operator=(OnDiskTrieRawHashMap &&RHS) = default;
 OnDiskTrieRawHashMap::~OnDiskTrieRawHashMap() = default;
-
-OnDiskDataAllocator::OnDiskDataAllocator(OnDiskDataAllocator &&RHS) = default;
-OnDiskDataAllocator &
-OnDiskDataAllocator::operator=(OnDiskDataAllocator &&RHS) = default;
-OnDiskDataAllocator::~OnDiskDataAllocator() = default;

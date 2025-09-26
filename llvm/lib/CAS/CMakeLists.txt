@@ -2,6 +2,7 @@ add_llvm_component_library(LLVMCAS
   ActionCache.cpp
   ActionCaches.cpp
   BuiltinCAS.cpp
+  DatabaseFile.cpp
   InMemoryCAS.cpp
   MappedFileRegionArena.cpp
   ObjectStore.cpp
