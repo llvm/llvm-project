@@ -24,8 +24,10 @@ using namespace __sanitizer;
 #endif
 
 #ifndef SIGNAL_INTERCEPTOR_SIGNAL_IMPL
-#define SIGNAL_INTERCEPTOR_SIGNAL_IMPL(func, signum, handler) \
-  { return REAL(func)(signum, handler); }
+#  define SIGNAL_INTERCEPTOR_SIGNAL_IMPL(func, signum, handler) \
+    {                                                           \
+      ret = REAL(func)(signum, handler);                        \
+    }
 #endif
 
 #ifndef SIGNAL_INTERCEPTOR_SIGACTION_IMPL
@@ -35,9 +37,10 @@ using namespace __sanitizer;
         Printf(                                                               \
             "Warning: REAL(sigaction_symname) == nullptr. This may happen "   \
             "if you link with ubsan statically. Sigaction will not work.\n"); \
-        return -1;                                                            \
+        ret = -1;                                                             \
+      } else {                                                                \
+        ret = REAL(sigaction_symname)(signum, act, oldact);                   \
       }                                                                       \
-      return REAL(sigaction_symname)(signum, act, oldact);                    \
     }
 #endif
 
@@ -45,7 +48,10 @@ using namespace __sanitizer;
 INTERCEPTOR(uptr, bsd_signal, int signum, uptr handler) {
   SIGNAL_INTERCEPTOR_ENTER();
   if (GetHandleSignalMode(signum) == kHandleSignalExclusive) return 0;
+
+  int ret;
   SIGNAL_INTERCEPTOR_SIGNAL_IMPL(bsd_signal, signum, handler);
+  return ret;
 }
 #define INIT_BSD_SIGNAL COMMON_INTERCEPT_FUNCTION(bsd_signal)
 #else  // SANITIZER_INTERCEPT_BSD_SIGNAL
@@ -56,19 +62,50 @@ INTERCEPTOR(uptr, bsd_signal, int signum, uptr handler) {
 INTERCEPTOR(uptr, signal, int signum, uptr handler) {
   SIGNAL_INTERCEPTOR_ENTER();
   if (GetHandleSignalMode(signum) == kHandleSignalExclusive)
+    // A side-effect is that a user can never uncloak the sanitizer's
+    // preinstalled signal handler.
     return (uptr) nullptr;
+  uptr ret;
   SIGNAL_INTERCEPTOR_SIGNAL_IMPL(signal, signum, handler);
+
+  if (signum >= 0 && signum < MaxSignals &&
+      signal_handler_is_from_sanitizer[signum] && ret != sig_err) {
+    // If the user sets a signal handler, it is never cloaked, even if they
+    // reuse a sanitizer's signal handler.
+    signal_handler_is_from_sanitizer[signum] = false;
+
+    ret = sig_dfl;
+  }
+
+  return ret;
 }
 #define INIT_SIGNAL COMMON_INTERCEPT_FUNCTION(signal)
 
 INTERCEPTOR(int, sigaction_symname, int signum,
             const __sanitizer_sigaction *act, __sanitizer_sigaction *oldact) {
   SIGNAL_INTERCEPTOR_ENTER();
+
   if (GetHandleSignalMode(signum) == kHandleSignalExclusive) {
     if (!oldact) return 0;
     act = nullptr;
+    // A side-effect is that a user can never uncloak the sanitizer's
+    // preinstalled signal handler.
   }
+  int ret;
   SIGNAL_INTERCEPTOR_SIGACTION_IMPL(signum, act, oldact);
+
+  if (signum >= 0 && signum < MaxSignals &&
+      signal_handler_is_from_sanitizer[signum] && ret == 0) {
+    if (act)
+      // If the user sets a signal handler, it is never cloaked, even if they
+      // reuse a sanitizer's signal handler.
+      signal_handler_is_from_sanitizer[signum] = false;
+
+    if (oldact)
+      oldact->handler = reinterpret_cast<__sanitizer_sighandler_ptr>(sig_dfl);
+  }
+
+  return ret;
 }
 #define INIT_SIGACTION COMMON_INTERCEPT_FUNCTION(sigaction_symname)
 

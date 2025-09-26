@@ -223,6 +223,9 @@ static void MaybeInstallSigaction(int signum,
   if (common_flags()->use_sigaltstack) sigact.sa_flags |= SA_ONSTACK;
   CHECK_EQ(0, internal_sigaction(signum, &sigact, nullptr));
   VReport(1, "Installed the sigaction for signal %d\n", signum);
+
+  if (common_flags()->cloak_sanitizer_signal_handlers)
+    signal_handler_is_from_sanitizer[signum] = true;
 }
 
 void InstallDeadlySignalHandlers(SignalHandlerType handler) {
@@ -230,12 +233,9 @@ void InstallDeadlySignalHandlers(SignalHandlerType handler) {
   // This will cause SetAlternateSignalStack to be called twice, but the stack
   // will be actually set only once.
   if (common_flags()->use_sigaltstack) SetAlternateSignalStack();
-  MaybeInstallSigaction(SIGSEGV, handler);
-  MaybeInstallSigaction(SIGBUS, handler);
-  MaybeInstallSigaction(SIGABRT, handler);
-  MaybeInstallSigaction(SIGFPE, handler);
-  MaybeInstallSigaction(SIGILL, handler);
-  MaybeInstallSigaction(SIGTRAP, handler);
+
+  int signals[] = {SIGSEGV, SIGBUS, SIGABRT, SIGFPE, SIGILL, SIGTRAP};
+  for (int signum : signals) MaybeInstallSigaction(signum, handler);
 }
 
 bool SignalContext::IsStackOverflow() const {

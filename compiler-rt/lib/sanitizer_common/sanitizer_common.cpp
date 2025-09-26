@@ -24,6 +24,8 @@ namespace __sanitizer {
 
 const char *SanitizerToolName = "SanitizerTool";
 
+bool signal_handler_is_from_sanitizer[MaxSignals] = {0};
+
 atomic_uint32_t current_verbosity;
 uptr PageSizeCached;
 u32 NumberOfCPUsCached;
@@ -414,6 +416,12 @@ int __sanitizer_install_malloc_and_free_hooks(void (*malloc_hook)(const void *,
                                                                   uptr),
                                               void (*free_hook)(const void *)) {
   return InstallMallocFreeHooks(malloc_hook, free_hook);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_uncloak_preinstalled_signal_handlers() {
+  internal_memset(signal_handler_is_from_sanitizer, 0,
+                  sizeof(signal_handler_is_from_sanitizer));
 }
 
 // Provide default (no-op) implementation of malloc hooks.

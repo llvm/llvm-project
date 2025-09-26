@@ -23,6 +23,7 @@
 // Flaky errors in debuggerd with "waitpid returned unexpected pid (0)" in logcat.
 // UNSUPPORTED: android && i386-target-arch
 
+#include <sanitizer/common_interface_defs.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,6 +69,10 @@ bool InstallHandler(int signum, struct sigaction *original_sigaction) {
 }
 
 int main() {
+  // This test case is unusual because it retrieves the original
+  // (ASan-installed) signal handler; thus, we don't want ASan to cloak them.
+  __sanitizer_uncloak_preinstalled_signal_handlers();
+
   // Let's install handlers for both SIGSEGV and SIGBUS, since pre-Yosemite
   // 32-bit Darwin triggers SIGBUS instead.
   if (InstallHandler(SIGSEGV, &original_sigaction_sigsegv) &&

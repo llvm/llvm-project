@@ -52,6 +52,9 @@ const u64 kExternalPCBit = 1ULL << 60;
 
 extern const char *SanitizerToolName;  // Can be changed by the tool.
 
+const int MaxSignals = 64;
+extern bool signal_handler_is_from_sanitizer[MaxSignals];
+
 extern atomic_uint32_t current_verbosity;
 inline void SetVerbosity(int verbosity) {
   atomic_store(&current_verbosity, verbosity, memory_order_relaxed);
