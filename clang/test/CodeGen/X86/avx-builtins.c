@@ -1070,7 +1070,6 @@ __m128d test_mm256_extractf128_pd(__m256d A) {
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> poison, <2 x i32> <i32 2, i32 3>
   return _mm256_extractf128_pd(A, 1);
 }
-
 TEST_CONSTEXPR(match_m128d(_mm256_extractf128_pd(((__m256d){0.0, 1.0, 2.0, 3.0}), 1),
               2.0, 3.0));
 
@@ -1079,7 +1078,6 @@ __m128 test_mm256_extractf128_ps(__m256 A) {
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   return _mm256_extractf128_ps(A, 1);
 }
-
 TEST_CONSTEXPR(match_m128(_mm256_extractf128_ps(((__m256){0,1,2,3,4,5,6,7}), 1),
              4.0f, 5.0f, 6.0f, 7.0f));
 
@@ -1088,9 +1086,8 @@ __m128i test_mm256_extractf128_si256(__m256i A) {
   // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   return _mm256_extractf128_si256(A, 1);
 }
-
-TEST_CONSTEXPR(match_m128i(_mm256_extractf128_si256(((__m256i){0,1,2,3,4,5,6,7}), 1),
-              4, 5, 6, 7));
+TEST_CONSTEXPR(match_m128i(_mm256_extractf128_si256(((__m256i){0ULL, 1ULL, 2ULL, 3ULL}), 1),
+              2ULL, 3ULL));
   
 __m256d test_mm256_floor_pd(__m256d x) {
   // CHECK-LABEL: test_mm256_floor_pd
