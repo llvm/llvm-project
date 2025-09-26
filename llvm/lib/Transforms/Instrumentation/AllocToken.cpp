@@ -236,10 +236,13 @@ public:
   bool instrumentFunction(Function &F);
 
 private:
-  /// Returns true for !isAllocationFn() functions that are also eligible for
-  /// instrumentation.
-  static bool isInstrumentableLibFunc(LibFunc Func, const Value *V,
-                                      const TargetLibraryInfo *TLI);
+  /// Returns the LibFunc (or NotLibFunc) if this call should be instrumented.
+  std::optional<LibFunc>
+  shouldInstrumentCall(const CallBase &CB, const TargetLibraryInfo &TLI) const;
+
+  /// Returns true for functions that are eligible for instrumentation.
+  static bool isInstrumentableLibFunc(LibFunc Func, const CallBase &CB,
+                                      const TargetLibraryInfo &TLI);
 
   /// Returns true for isAllocationFn() functions that we should ignore.
   static bool ignoreInstrumentableLibFunc(LibFunc Func);
@@ -291,21 +294,8 @@ bool AllocToken::instrumentFunction(Function &F) {
     auto *CB = dyn_cast<CallBase>(&I);
     if (!CB)
       continue;
-    const Function *Callee = CB->getCalledFunction();
-    if (!Callee)
-      continue;
-    // Ignore nobuiltin of the CallBase, so that we can cover nobuiltin libcalls
-    // if requested via isInstrumentableLibFunc(). Note that isAllocationFn() is
-    // returning false for nobuiltin calls.
-    LibFunc Func;
-    if (TLI.getLibFunc(*Callee, Func)) {
-      if (ignoreInstrumentableLibFunc(Func))
-        continue;
-      if (isInstrumentableLibFunc(Func, CB, &TLI))
-        AllocCalls.emplace_back(CB, Func);
-    } else if (Options.Extended && getAllocTokenMetadata(*CB)) {
-      AllocCalls.emplace_back(CB, NotLibFunc);
-    }
+    if (std::optional<LibFunc> Func = shouldInstrumentCall(*CB, TLI))
+      AllocCalls.emplace_back(CB, Func.value());
   }
 
   bool Modified = false;
@@ -317,18 +307,46 @@ bool AllocToken::instrumentFunction(Function &F) {
   return Modified;
 }
 
-bool AllocToken::isInstrumentableLibFunc(LibFunc Func, const Value *V,
-                                         const TargetLibraryInfo *TLI) {
-  if (isAllocationFn(V, TLI))
+std::optional<LibFunc>
+AllocToken::shouldInstrumentCall(const CallBase &CB,
+                                 const TargetLibraryInfo &TLI) const {
+  const Function *Callee = CB.getCalledFunction();
+  if (!Callee)
+    return std::nullopt;
+
+  // Ignore nobuiltin of the CallBase, so that we can cover nobuiltin libcalls
+  // if requested via isInstrumentableLibFunc(). Note that isAllocationFn() is
+  // returning false for nobuiltin calls.
+  LibFunc Func;
+  if (TLI.getLibFunc(*Callee, Func)) {
+    if (isInstrumentableLibFunc(Func, CB, TLI))
+      return Func;
+  } else if (Options.Extended && getAllocTokenMetadata(CB)) {
+    return NotLibFunc;
+  }
+
+  return std::nullopt;
+}
+
+bool AllocToken::isInstrumentableLibFunc(LibFunc Func, const CallBase &CB,
+                                         const TargetLibraryInfo &TLI) {
+  if (ignoreInstrumentableLibFunc(Func))
+    return false;
+
+  if (isAllocationFn(&CB, &TLI))
     return true;
 
   switch (Func) {
+  // These libfuncs don't return normal pointers, and are therefore not handled
+  // by isAllocationFn().
   case LibFunc_posix_memalign:
   case LibFunc_size_returning_new:
   case LibFunc_size_returning_new_hot_cold:
   case LibFunc_size_returning_new_aligned:
   case LibFunc_size_returning_new_aligned_hot_cold:
     return true;
+
+  // See comment above ClCoverReplaceableNew.
   case LibFunc_Znwj:
   case LibFunc_ZnwjRKSt9nothrow_t:
   case LibFunc_ZnwjSt11align_val_t:
@@ -354,6 +372,7 @@ bool AllocToken::isInstrumentableLibFunc(LibFunc Func, const Value *V,
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
     return ClCoverReplaceableNew;
+
   default:
     return false;
   }
@@ -390,7 +409,7 @@ bool AllocToken::replaceAllocationCall(CallBase *CB, LibFunc Func,
   IRBuilder<> IRB(CB);
   // Original args.
   SmallVector<Value *, 4> NewArgs{CB->args()};
-  // Add token ID.
+  // Add token ID, truncated to IntPtrTy width.
   NewArgs.push_back(ConstantInt::get(IntPtrTy, TokenID));
   assert(TokenAlloc.getFunctionType()->getNumParams() == NewArgs.size());
 
@@ -420,7 +439,7 @@ FunctionCallee AllocToken::getTokenAllocFunction(const CallBase &CB,
   if (OriginalFunc != NotLibFunc) {
     Key = std::make_pair(OriginalFunc, Options.FastABI ? TokenID : 0);
     auto It = TokenAllocFunctions.find(*Key);
-    if (LLVM_LIKELY(It != TokenAllocFunctions.end()))
+    if (It != TokenAllocFunctions.end())
       return It->second;
   }
 
@@ -459,7 +478,7 @@ PreservedAnalyses AllocTokenPass::run(Module &M, ModuleAnalysisManager &MAM) {
   bool Modified = false;
 
   for (Function &F : M) {
-    if (LLVM_LIKELY(F.empty()))
+    if (F.empty())
       continue; // declaration
     Modified |= Pass.instrumentFunction(F);
   }
