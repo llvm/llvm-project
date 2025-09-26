@@ -2830,13 +2830,13 @@ static bool interp_builtin_horizontal_fp_binop(
     using T = PrimConv<PT_Float>::T;
     APFloat Elem1 = LHS.elem<T>(I).getAPFloat();
     APFloat Elem2 = LHS.elem<T>(I + 1).getAPFloat();
-    Dst.elem<T>(DstElem++) = static_cast<T>(APFloat(Fn(Elem1, Elem2, RM)));
+    Dst.elem<T>(DstElem++) = static_cast<T>(Fn(Elem1, Elem2, RM));
   }
   for (unsigned I = 0; I != SourceLen; I += 2) {
     using T = PrimConv<PT_Float>::T;
     APFloat Elem1 = RHS.elem<T>(I).getAPFloat();
     APFloat Elem2 = RHS.elem<T>(I + 1).getAPFloat();
-    Dst.elem<T>(DstElem++) = static_cast<T>(APFloat(Fn(Elem1, Elem2, RM)));
+    Dst.elem<T>(DstElem++) = static_cast<T>(Fn(Elem1, Elem2, RM));
   }
   Dst.initializeAllElements();
   return true;
