@@ -65,7 +65,7 @@ define i32@foo5(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: foo5:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    subs w8, w0, w1
-; CHECK-NEXT:    cneg w0, w8, mi
+; CHECK-NEXT:    cneg w0, w8, lt
 ; CHECK-NEXT:    ret
 entry:
   %sub = sub nsw i32 %a, %b
@@ -98,7 +98,7 @@ define i32 @foo7(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: foo7:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    subs w8, w0, w1
-; CHECK-NEXT:    cneg w9, w8, mi
+; CHECK-NEXT:    cneg w9, w8, lt
 ; CHECK-NEXT:    cmn w8, #1
 ; CHECK-NEXT:    csel w8, w9, w0, lt
 ; CHECK-NEXT:    csel w0, w8, w9, gt
