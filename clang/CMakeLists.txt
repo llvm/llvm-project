@@ -80,6 +80,12 @@ if(CLANG_BUILT_STANDALONE)
   include(GetErrcMessages)
   include(LLVMDistributionSupport)
 
+  if(CMAKE_CROSSCOMPILING)
+    set(LLVM_USE_HOST_TOOLS ON)
+    include(CrossCompile)
+    llvm_create_cross_target(Clang NATIVE "" Release)
+  endif()
+
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
   set(BUG_REPORT_URL "${LLVM_PACKAGE_BUGREPORT}" CACHE STRING
     "Default URL where bug reports are to be submitted.")

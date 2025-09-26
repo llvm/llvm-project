@@ -14,7 +14,8 @@
 #define LLVM_CLANG_AST_INTERP_INTERPFRAME_H
 
 #include "Frame.h"
-#include "Program.h"
+#include "InterpBlock.h"
+#include "Pointer.h"
 
 namespace clang {
 namespace interp {
@@ -93,7 +94,7 @@ public:
     auto Pt = Params.find(Offset);
     if (Pt == Params.end())
       return stackRef<T>(Offset);
-    return Pointer(reinterpret_cast<Block *>(Pt->second.get())).deref<T>();
+    return reinterpret_cast<const Block *>(Pt->second.get())->deref<T>();
   }
 
   /// Mutates a local copy of a parameter.
@@ -151,7 +152,7 @@ private:
 
   /// Returns an offset to a local.
   template <typename T> T &localRef(unsigned Offset) const {
-    return getLocalPointer(Offset).deref<T>();
+    return localBlock(Offset)->deref<T>();
   }
 
   /// Returns a pointer to a local's block.
