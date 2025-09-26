@@ -2100,6 +2100,9 @@ Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   if (CGF.SanOpts.has(SanitizerKind::ArrayBounds))
     CGF.EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, /*Accessed*/true);
 
+  // Emit array bounds constraints for vector element access.
+  CGF.EmitArrayBoundsConstraints(E, Idx);
+
   return Builder.CreateExtractElement(Base, Idx, "vecext");
 }
 
