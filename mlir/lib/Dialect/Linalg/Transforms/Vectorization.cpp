@@ -524,6 +524,23 @@ VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
 
   if (!mask) {
     LDBG() << "No mask required";
+    if (assumeDynamicDimsMatchVecSizes) {
+      LDBG() << "Assuming dynamic dimensions match vector sizes!";
+      // Set inbounds to all-true.
+      llvm::TypeSwitch<Operation *>(opToMask)
+          .Case<vector::TransferReadOp, vector::TransferWriteOp>(
+              [&](auto xferOp) {
+                SmallVector<bool> inBoundsMap(xferOp.getInBounds().size(),
+                                              true);
+                rewriter.modifyOpInPlace(xferOp, [&]() {
+                  xferOp.setInBoundsAttr(
+                      rewriter.getBoolArrayAttr(inBoundsMap));
+                });
+              })
+          .Default([](Operation *op) {
+            // No-op if the operation is not an xfer read or write.
+          });
+    }
     return opToMask;
   }
 
