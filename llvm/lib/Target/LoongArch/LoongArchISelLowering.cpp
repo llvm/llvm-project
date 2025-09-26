@@ -8571,8 +8571,12 @@ EVT LoongArchTargetLowering::getSetCCResultType(const DataLayout &DL,
 }
 
 bool LoongArchTargetLowering::hasAndNot(SDValue Y) const {
-  // TODO: Support vectors.
-  return Y.getValueType().isScalarInteger() && !isa<ConstantSDNode>(Y);
+  EVT VT = Y.getValueType();
+
+  if (VT.isVector())
+    return Subtarget.hasExtLSX() && VT.isInteger();
+
+  return VT.isScalarInteger() && !isa<ConstantSDNode>(Y);
 }
 
 bool LoongArchTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
@@ -9415,4 +9419,23 @@ bool LoongArchTargetLowering::SimplifyDemandedBitsForTargetNode(
 
   return TargetLowering::SimplifyDemandedBitsForTargetNode(
       Op, OriginalDemandedBits, OriginalDemandedElts, Known, TLO, Depth);
+}
+
+bool LoongArchTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
+  unsigned Opc = VecOp.getOpcode();
+
+  // Assume target opcodes can't be scalarized.
+  // TODO - do we have any exceptions?
+  if (Opc >= ISD::BUILTIN_OP_END || !isBinOp(Opc))
+    return false;
+
+  // If the vector op is not supported, try to convert to scalar.
+  EVT VecVT = VecOp.getValueType();
+  if (!isOperationLegalOrCustomOrPromote(Opc, VecVT))
+    return true;
+
+  // If the vector op is supported, but the scalar op is not, the transform may
+  // not be worthwhile.
+  EVT ScalarVT = VecVT.getScalarType();
+  return isOperationLegalOrCustomOrPromote(Opc, ScalarVT);
 }
