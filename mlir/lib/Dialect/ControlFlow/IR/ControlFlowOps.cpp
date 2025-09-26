@@ -123,14 +123,16 @@ static LogicalResult collapseBranch(Block *&successor,
   if (successorDest == successor)
     return failure();
   // Don't try to collapse branches which participate in a cycle.
-  BranchOp nextBranch = dyn_cast<BranchOp>(successorDest->getTerminator());
+  Block *currBlock = successorDest;
+  BranchOp nextBranch = dyn_cast<BranchOp>(currBlock->getTerminator());
   while (nextBranch) {
     Block *nextBranchDest = nextBranch.getDest();
-    if (!nextBranchDest)
+    if (!nextBranchDest || nextBranchDest == currBlock)
       break;
     else if (nextBranchDest == successor)
       return failure();
-    nextBranch = dyn_cast<BranchOp>(nextBranchDest->getTerminator());
+    currBlock = nextBranchDest;
+    nextBranch = dyn_cast<BranchOp>(currBlock->getTerminator());
   }
 
   // Update the operands to the successor. If the branch parent has no

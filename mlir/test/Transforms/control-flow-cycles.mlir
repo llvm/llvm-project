@@ -79,3 +79,15 @@ func.func @delayed_3_cycle() {
   ^bb5:
     cf.br ^bb3
 }
+
+// CHECK-LABEL:   @cycle_1_block
+// CHECK:           cf.br ^bb1
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb1
+func.func @cycle_1_block() {
+  cf.br ^bb1
+  ^bb1:
+    cf.br ^bb2
+  ^bb2:
+    cf.br ^bb2
+}
