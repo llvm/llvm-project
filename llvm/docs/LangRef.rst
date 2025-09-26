@@ -8400,6 +8400,14 @@ functions, and contains richer semantic information about the type of the
 allocation. This information is consumed by the ``alloc-token`` pass to
 instrument such calls with allocation token IDs.
 
+The metadata contains a string with the type of an allocation.
+
+.. code-block:: none
+
+  call ptr @malloc(i64 64), !alloc_token !0
+
+  !0 = !{!"<type-name>"}
+
 Module Flags Metadata
 =====================
 
