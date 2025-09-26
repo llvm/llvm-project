@@ -3026,8 +3026,11 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_alloc_token:
-        // Preserve !alloc_token if both K and J have it.
-        K->setMetadata(Kind, JMD);
+        // Preserve !alloc_token if both K and J have it, and they are equal.
+        if (KMD == JMD)
+          K->setMetadata(Kind, JMD);
+        else
+          K->setMetadata(Kind, nullptr);
         break;
       }
   }
