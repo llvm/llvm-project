@@ -607,6 +607,29 @@ AssumeAlignmentOp::bubbleDownCasts(OpBuilder &builder) {
 }
 
 //===----------------------------------------------------------------------===//
+// DistinctObjectsOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult DistinctObjectsOp::verify() {
+  if (getOperandTypes() != getResultTypes())
+    return emitOpError("operand types and result types must match");
+
+  if (getOperandTypes().empty())
+    return emitOpError("expected at least one operand");
+
+  return success();
+}
+
+LogicalResult DistinctObjectsOp::inferReturnTypes(
+    MLIRContext * /*context*/, std::optional<Location> /*location*/,
+    ValueRange operands, DictionaryAttr /*attributes*/,
+    OpaqueProperties /*properties*/, RegionRange /*regions*/,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  llvm::copy(operands.getTypes(), std::back_inserter(inferredReturnTypes));
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
 

@@ -465,6 +465,50 @@ struct AssumeAlignmentOpLowering
   }
 };
 
+struct DistinctObjectsOpLowering
+    : public ConvertOpToLLVMPattern<memref::DistinctObjectsOp> {
+  using ConvertOpToLLVMPattern<
+      memref::DistinctObjectsOp>::ConvertOpToLLVMPattern;
+  explicit DistinctObjectsOpLowering(const LLVMTypeConverter &converter)
+      : ConvertOpToLLVMPattern<memref::DistinctObjectsOp>(converter) {}
+
+  LogicalResult
+  matchAndRewrite(memref::DistinctObjectsOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    ValueRange operands = adaptor.getOperands();
+    if (operands.size() <= 1) {
+      // Fast path.
+      rewriter.replaceOp(op, operands);
+      return success();
+    }
+
+    Location loc = op.getLoc();
+    SmallVector<Value> ptrs;
+    for (auto [origOperand, newOperand] :
+         llvm::zip_equal(op.getOperands(), operands)) {
+      auto memrefType = cast<MemRefType>(origOperand.getType());
+      Value ptr = getStridedElementPtr(rewriter, loc, memrefType, newOperand,
+                                       /*indices=*/{});
+      ptrs.push_back(ptr);
+    }
+
+    auto cond =
+        LLVM::ConstantOp::create(rewriter, loc, rewriter.getI1Type(), 1);
+    // Generate separate_storage assumptions for each pair of pointers.
+    for (auto i : llvm::seq<size_t>(ptrs.size() - 1)) {
+      for (auto j : llvm::seq<size_t>(i + 1, ptrs.size())) {
+        Value ptr1 = ptrs[i];
+        Value ptr2 = ptrs[j];
+        LLVM::AssumeOp::create(rewriter, loc, cond,
+                               LLVM::AssumeSeparateStorageTag{}, ptr1, ptr2);
+      }
+    }
+
+    rewriter.replaceOp(op, operands);
+    return success();
+  }
+};
+
 // A `dealloc` is converted into a call to `free` on the underlying data buffer.
 // The memref descriptor being an SSA value, there is no need to clean it up
 // in any way.
@@ -878,6 +922,18 @@ struct GetGlobalMemrefOpLowering
   }
 };
 
+static SmallVector<std::pair<StringAttr, Attribute>>
+copyImportantAttrs(Operation *op) {
+  SmallVector<std::pair<StringAttr, Attribute>> attrs;
+  for (StringRef attrName : {LLVM::LLVMDialect::getAliasScopesAttrName(),
+                             LLVM::LLVMDialect::getNoAliasAttrName()}) {
+    auto nameAttr = StringAttr::get(op->getContext(), attrName);
+    if (auto attr = op->getAttr(nameAttr))
+      attrs.emplace_back(nameAttr, attr);
+  }
+  return attrs;
+}
+
 // Load operation is lowered to obtaining a pointer to the indexed element
 // and loading it.
 struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
@@ -888,15 +944,22 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = loadOp.getMemRefType();
 
+    SmallVector<std::pair<StringAttr, Attribute>> importantAttrs =
+        copyImportantAttrs(loadOp);
+
     // Per memref.load spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
     Value dataPtr = getStridedElementPtr(rewriter, loadOp.getLoc(), type,
                                          adaptor.getMemref(),
                                          adaptor.getIndices(), kNoWrapFlags);
-    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+    auto newOp = rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         loadOp, typeConverter->convertType(type.getElementType()), dataPtr,
         loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal());
+
+    for (auto [nameAttr, attr] : importantAttrs)
+      newOp->setAttr(nameAttr, attr);
+
     return success();
   }
 };
@@ -911,15 +974,22 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = op.getMemRefType();
 
+    SmallVector<std::pair<StringAttr, Attribute>> importantAttrs =
+        copyImportantAttrs(op);
+
     // Per memref.store spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
     Value dataPtr =
         getStridedElementPtr(rewriter, op.getLoc(), type, adaptor.getMemref(),
                              adaptor.getIndices(), kNoWrapFlags);
-    rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr,
-                                               op.getAlignment().value_or(0),
-                                               false, op.getNontemporal());
+    auto newOp = rewriter.replaceOpWithNewOp<LLVM::StoreOp>(
+        op, adaptor.getValue(), dataPtr, op.getAlignment().value_or(0), false,
+        op.getNontemporal());
+
+    for (auto [nameAttr, attr] : importantAttrs)
+      newOp->setAttr(nameAttr, attr);
+
     return success();
   }
 };
@@ -1997,22 +2067,23 @@ void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
   patterns.add<
       AllocaOpLowering,
       AllocaScopeOpLowering,
-      AtomicRMWOpLowering,
       AssumeAlignmentOpLowering,
+      AtomicRMWOpLowering,
       ConvertExtractAlignedPointerAsIndex,
       DimOpLowering,
+      DistinctObjectsOpLowering,
       ExtractStridedMetadataOpLowering,
       GenericAtomicRMWOpLowering,
       GetGlobalMemrefOpLowering,
       LoadOpLowering,
       MemRefCastOpLowering,
-      MemorySpaceCastOpLowering,
       MemRefReinterpretCastOpLowering,
       MemRefReshapeOpLowering,
+      MemorySpaceCastOpLowering,
       PrefetchOpLowering,
       RankOpLowering,
-      ReassociatingReshapeOpConversion<memref::ExpandShapeOp>,
       ReassociatingReshapeOpConversion<memref::CollapseShapeOp>,
+      ReassociatingReshapeOpConversion<memref::ExpandShapeOp>,
       StoreOpLowering,
       SubViewOpLowering,
       TransposeOpLowering,
