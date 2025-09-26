@@ -36,8 +36,6 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::offloading;
 
-using OffloadingImage = OffloadBinary::OffloadingImage;
-
 namespace {
 /// Magic number that begins the section containing the CUDA fatbinary.
 constexpr unsigned CudaFatMagic = 0x466243b1;
@@ -834,29 +832,6 @@ struct SYCLWrapper {
     return std::make_pair(EntriesB, EntriesE);
   }
 
-  /// Emits a global array that contains \p Address and \P Size. Also add
-  /// it into llvm.used to force it to be emitted in the object file.
-  void emitRegistrationFunctions(Constant *Address, size_t Size,
-                                 const Twine &ImageID,
-                                 StringRef OffloadKindTag) {
-    Type *IntPtrTy = M.getDataLayout().getIntPtrType(C);
-    auto *ImgInfoArr =
-        ConstantArray::get(ArrayType::get(IntPtrTy, 2),
-                           {ConstantExpr::getPointerCast(Address, IntPtrTy),
-                            ConstantInt::get(IntPtrTy, Size)});
-    auto *ImgInfoVar = new GlobalVariable(
-        M, ImgInfoArr->getType(), true, GlobalVariable::InternalLinkage,
-        ImgInfoArr, Twine(OffloadKindTag) + ImageID + ".info");
-    ImgInfoVar->setAlignment(
-        MaybeAlign(M.getDataLayout().getTypeStoreSize(IntPtrTy) * 2u));
-    ImgInfoVar->setUnnamedAddr(GlobalValue::UnnamedAddr::Local);
-    ImgInfoVar->setSection(".tgtimg");
-
-    // Add image info to the used list to force it to be emitted to the
-    // object.
-    appendToUsed(M, ImgInfoVar);
-  }
-
   Constant *wrapImage(const OffloadBinary &OB, const Twine &ImageID,
                       StringRef OffloadKindTag) {
     // Note: Intel DPC++ compiler had 2 versions of this structure
@@ -896,9 +871,6 @@ struct SYCLWrapper {
         TripleConstant, CompileOptions, LinkOptions, Binary.first,
         Binary.second, ImageEntriesPtrs.first, ImageEntriesPtrs.second,
         PropertiesConstants.first, PropertiesConstants.second);
-
-    emitRegistrationFunctions(Binary.first, RawImage.size(), ImageID,
-                              OffloadKindTag);
 
     return WrappedBinary;
   }
