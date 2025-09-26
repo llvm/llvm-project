@@ -45,23 +45,23 @@ void *sink;
 // CHECK-O0-LABEL: define dso_local void @test_malloc_like(
 // CHECK-O0-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-O0-NEXT:  [[ENTRY:.*:]]
-// CHECK-O0-NEXT:    [[TMP0:%.*]] = call noalias ptr @__alloc_token_malloc(i64 noundef 4, i64 6985720287680550851) #[[ATTR9:[0-9]+]], !alloc_token [[META2:![0-9]+]]
+// CHECK-O0-NEXT:    [[TMP0:%.*]] = call noalias ptr @__alloc_token_malloc(i64 noundef 4, i64 2689373973731826898) #[[ATTR9:[0-9]+]], !alloc_token [[META2:![0-9]+]]
 // CHECK-O0-NEXT:    store ptr [[TMP0]], ptr @sink, align 8
-// CHECK-O0-NEXT:    [[TMP1:%.*]] = call noalias ptr @__alloc_token_calloc(i64 noundef 3, i64 noundef 4, i64 6985720287680550851) #[[ATTR10:[0-9]+]], !alloc_token [[META2]]
+// CHECK-O0-NEXT:    [[TMP1:%.*]] = call noalias ptr @__alloc_token_calloc(i64 noundef 3, i64 noundef 4, i64 2689373973731826898) #[[ATTR10:[0-9]+]], !alloc_token [[META2]]
 // CHECK-O0-NEXT:    store ptr [[TMP1]], ptr @sink, align 8
 // CHECK-O0-NEXT:    [[TMP2:%.*]] = load ptr, ptr @sink, align 8
-// CHECK-O0-NEXT:    [[TMP3:%.*]] = call noalias ptr @__alloc_token_realloc(ptr noundef [[TMP2]], i64 noundef 8, i64 7197320093703244725) #[[ATTR11:[0-9]+]], !alloc_token [[META3:![0-9]+]]
+// CHECK-O0-NEXT:    [[TMP3:%.*]] = call noalias ptr @__alloc_token_realloc(ptr noundef [[TMP2]], i64 noundef 8, i64 1746326344452541503) #[[ATTR11:[0-9]+]], !alloc_token [[META3:![0-9]+]]
 // CHECK-O0-NEXT:    store ptr [[TMP3]], ptr @sink, align 8
 // CHECK-O0-NEXT:    [[TMP4:%.*]] = load ptr, ptr @sink, align 8
-// CHECK-O0-NEXT:    [[TMP5:%.*]] = call noalias ptr @__alloc_token_reallocarray(ptr noundef [[TMP4]], i64 noundef 5, i64 noundef 8, i64 7197320093703244725), !alloc_token [[META3]]
+// CHECK-O0-NEXT:    [[TMP5:%.*]] = call noalias ptr @__alloc_token_reallocarray(ptr noundef [[TMP4]], i64 noundef 5, i64 noundef 8, i64 1746326344452541503), !alloc_token [[META3]]
 // CHECK-O0-NEXT:    store ptr [[TMP5]], ptr @sink, align 8
-// CHECK-O0-NEXT:    [[TMP6:%.*]] = call noalias align 128 ptr @__alloc_token_aligned_alloc(i64 noundef 128, i64 noundef 4, i64 6985720287680550851) #[[ATTR11]], !alloc_token [[META2]]
+// CHECK-O0-NEXT:    [[TMP6:%.*]] = call noalias align 128 ptr @__alloc_token_aligned_alloc(i64 noundef 128, i64 noundef 4, i64 2689373973731826898) #[[ATTR11]], !alloc_token [[META2]]
 // CHECK-O0-NEXT:    store ptr [[TMP6]], ptr @sink, align 8
-// CHECK-O0-NEXT:    [[TMP7:%.*]] = call noalias align 16 ptr @__alloc_token_memalign(i64 noundef 16, i64 noundef 4, i64 6985720287680550851) #[[ATTR11]], !alloc_token [[META2]]
+// CHECK-O0-NEXT:    [[TMP7:%.*]] = call noalias align 16 ptr @__alloc_token_memalign(i64 noundef 16, i64 noundef 4, i64 2689373973731826898) #[[ATTR11]], !alloc_token [[META2]]
 // CHECK-O0-NEXT:    store ptr [[TMP7]], ptr @sink, align 8
-// CHECK-O0-NEXT:    [[TMP8:%.*]] = call noalias ptr @__alloc_token_valloc(i64 noundef 4, i64 6985720287680550851), !alloc_token [[META2]]
+// CHECK-O0-NEXT:    [[TMP8:%.*]] = call noalias ptr @__alloc_token_valloc(i64 noundef 4, i64 2689373973731826898), !alloc_token [[META2]]
 // CHECK-O0-NEXT:    store ptr [[TMP8]], ptr @sink, align 8
-// CHECK-O0-NEXT:    [[TMP9:%.*]] = call noalias ptr @__alloc_token_pvalloc(i64 noundef 4, i64 6985720287680550851), !alloc_token [[META2]]
+// CHECK-O0-NEXT:    [[TMP9:%.*]] = call noalias ptr @__alloc_token_pvalloc(i64 noundef 4, i64 2689373973731826898), !alloc_token [[META2]]
 // CHECK-O0-NEXT:    store ptr [[TMP9]], ptr @sink, align 8
 // CHECK-O0-NEXT:    [[TMP10:%.*]] = call i32 @__alloc_token_posix_memalign(ptr noundef @sink, i64 noundef 64, i64 noundef 4, i64 0)
 // CHECK-O0-NEXT:    ret void
@@ -69,21 +69,21 @@ void *sink;
 // CHECK-O1-LABEL: define dso_local void @test_malloc_like(
 // CHECK-O1-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-O1-NEXT:  [[ENTRY:.*:]]
-// CHECK-O1-NEXT:    [[TMP0:%.*]] = tail call noalias dereferenceable_or_null(4) ptr @__alloc_token_malloc(i64 noundef 4, i64 6985720287680550851) #[[ATTR9:[0-9]+]], !alloc_token [[META2:![0-9]+]]
+// CHECK-O1-NEXT:    [[TMP0:%.*]] = tail call noalias dereferenceable_or_null(4) ptr @__alloc_token_malloc(i64 noundef 4, i64 2689373973731826898) #[[ATTR9:[0-9]+]], !alloc_token [[META2:![0-9]+]]
 // CHECK-O1-NEXT:    store ptr [[TMP0]], ptr @sink, align 8, !tbaa [[TBAA3:![0-9]+]]
-// CHECK-O1-NEXT:    [[TMP1:%.*]] = tail call noalias dereferenceable_or_null(12) ptr @__alloc_token_calloc(i64 noundef 3, i64 noundef 4, i64 6985720287680550851) #[[ATTR10:[0-9]+]], !alloc_token [[META2]]
+// CHECK-O1-NEXT:    [[TMP1:%.*]] = tail call noalias dereferenceable_or_null(12) ptr @__alloc_token_calloc(i64 noundef 3, i64 noundef 4, i64 2689373973731826898) #[[ATTR10:[0-9]+]], !alloc_token [[META2]]
 // CHECK-O1-NEXT:    store ptr [[TMP1]], ptr @sink, align 8, !tbaa [[TBAA3]]
-// CHECK-O1-NEXT:    [[TMP2:%.*]] = tail call noalias dereferenceable_or_null(8) ptr @__alloc_token_realloc(ptr noundef [[TMP1]], i64 noundef 8, i64 7197320093703244725) #[[ATTR11:[0-9]+]], !alloc_token [[META7:![0-9]+]]
+// CHECK-O1-NEXT:    [[TMP2:%.*]] = tail call noalias dereferenceable_or_null(8) ptr @__alloc_token_realloc(ptr noundef [[TMP1]], i64 noundef 8, i64 1746326344452541503) #[[ATTR11:[0-9]+]], !alloc_token [[META7:![0-9]+]]
 // CHECK-O1-NEXT:    store ptr [[TMP2]], ptr @sink, align 8, !tbaa [[TBAA3]]
-// CHECK-O1-NEXT:    [[TMP3:%.*]] = tail call noalias dereferenceable_or_null(40) ptr @__alloc_token_reallocarray(ptr noundef [[TMP2]], i64 noundef 5, i64 noundef 8, i64 7197320093703244725), !alloc_token [[META7]]
+// CHECK-O1-NEXT:    [[TMP3:%.*]] = tail call noalias dereferenceable_or_null(40) ptr @__alloc_token_reallocarray(ptr noundef [[TMP2]], i64 noundef 5, i64 noundef 8, i64 1746326344452541503), !alloc_token [[META7]]
 // CHECK-O1-NEXT:    store ptr [[TMP3]], ptr @sink, align 8, !tbaa [[TBAA3]]
-// CHECK-O1-NEXT:    [[TMP4:%.*]] = tail call noalias align 128 dereferenceable_or_null(4) ptr @__alloc_token_aligned_alloc(i64 noundef 128, i64 noundef 4, i64 6985720287680550851) #[[ATTR11]], !alloc_token [[META2]]
+// CHECK-O1-NEXT:    [[TMP4:%.*]] = tail call noalias align 128 dereferenceable_or_null(4) ptr @__alloc_token_aligned_alloc(i64 noundef 128, i64 noundef 4, i64 2689373973731826898) #[[ATTR11]], !alloc_token [[META2]]
 // CHECK-O1-NEXT:    store ptr [[TMP4]], ptr @sink, align 8, !tbaa [[TBAA3]]
-// CHECK-O1-NEXT:    [[TMP5:%.*]] = tail call noalias align 16 dereferenceable_or_null(4) ptr @__alloc_token_memalign(i64 noundef 16, i64 noundef 4, i64 6985720287680550851) #[[ATTR11]], !alloc_token [[META2]]
+// CHECK-O1-NEXT:    [[TMP5:%.*]] = tail call noalias align 16 dereferenceable_or_null(4) ptr @__alloc_token_memalign(i64 noundef 16, i64 noundef 4, i64 2689373973731826898) #[[ATTR11]], !alloc_token [[META2]]
 // CHECK-O1-NEXT:    store ptr [[TMP5]], ptr @sink, align 8, !tbaa [[TBAA3]]
-// CHECK-O1-NEXT:    [[TMP6:%.*]] = tail call noalias dereferenceable_or_null(4) ptr @__alloc_token_valloc(i64 noundef 4, i64 6985720287680550851), !alloc_token [[META2]]
+// CHECK-O1-NEXT:    [[TMP6:%.*]] = tail call noalias dereferenceable_or_null(4) ptr @__alloc_token_valloc(i64 noundef 4, i64 2689373973731826898), !alloc_token [[META2]]
 // CHECK-O1-NEXT:    store ptr [[TMP6]], ptr @sink, align 8, !tbaa [[TBAA3]]
-// CHECK-O1-NEXT:    [[TMP7:%.*]] = tail call noalias ptr @__alloc_token_pvalloc(i64 noundef 4, i64 6985720287680550851), !alloc_token [[META2]]
+// CHECK-O1-NEXT:    [[TMP7:%.*]] = tail call noalias ptr @__alloc_token_pvalloc(i64 noundef 4, i64 2689373973731826898), !alloc_token [[META2]]
 // CHECK-O1-NEXT:    store ptr [[TMP7]], ptr @sink, align 8, !tbaa [[TBAA3]]
 // CHECK-O1-NEXT:    [[TMP8:%.*]] = tail call i32 @__alloc_token_posix_memalign(ptr noundef nonnull @sink, i64 noundef 64, i64 noundef 4, i64 0) #[[ATTR12:[0-9]+]]
 // CHECK-O1-NEXT:    ret void

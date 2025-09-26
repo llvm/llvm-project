@@ -24,18 +24,18 @@ void *sink;
 // CHECK-O0-LABEL: define dso_local void @test_nonlibcall_alloc(
 // CHECK-O0-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-O0-NEXT:  [[ENTRY:.*:]]
-// CHECK-O0-NEXT:    [[TMP0:%.*]] = call noalias ptr @__alloc_token_custom_malloc(i64 noundef 4, i64 6985720287680550851), !alloc_token [[META2:![0-9]+]]
+// CHECK-O0-NEXT:    [[TMP0:%.*]] = call noalias ptr @__alloc_token_custom_malloc(i64 noundef 4, i64 2689373973731826898), !alloc_token [[META2:![0-9]+]]
 // CHECK-O0-NEXT:    store ptr [[TMP0]], ptr @sink, align 8
-// CHECK-O0-NEXT:    [[TMP1:%.*]] = call ptr @__alloc_token___kmalloc(i64 noundef 4, i64 noundef 0, i64 6985720287680550851) #[[ATTR3:[0-9]+]], !alloc_token [[META2]]
+// CHECK-O0-NEXT:    [[TMP1:%.*]] = call ptr @__alloc_token___kmalloc(i64 noundef 4, i64 noundef 0, i64 2689373973731826898) #[[ATTR3:[0-9]+]], !alloc_token [[META2]]
 // CHECK-O0-NEXT:    store ptr [[TMP1]], ptr @sink, align 8
 // CHECK-O0-NEXT:    ret void
 //
 // CHECK-O1-LABEL: define dso_local void @test_nonlibcall_alloc(
 // CHECK-O1-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-O1-NEXT:  [[ENTRY:.*:]]
-// CHECK-O1-NEXT:    [[TMP0:%.*]] = tail call noalias ptr @__alloc_token_custom_malloc(i64 noundef 4, i64 6985720287680550851) #[[ATTR3:[0-9]+]], !alloc_token [[META2:![0-9]+]]
+// CHECK-O1-NEXT:    [[TMP0:%.*]] = tail call noalias ptr @__alloc_token_custom_malloc(i64 noundef 4, i64 2689373973731826898) #[[ATTR3:[0-9]+]], !alloc_token [[META2:![0-9]+]]
 // CHECK-O1-NEXT:    store ptr [[TMP0]], ptr @sink, align 8, !tbaa [[TBAA3:![0-9]+]]
-// CHECK-O1-NEXT:    [[TMP1:%.*]] = tail call dereferenceable_or_null(4) ptr @__alloc_token___kmalloc(i64 noundef 4, i64 noundef 0, i64 6985720287680550851) #[[ATTR4:[0-9]+]], !alloc_token [[META2]]
+// CHECK-O1-NEXT:    [[TMP1:%.*]] = tail call dereferenceable_or_null(4) ptr @__alloc_token___kmalloc(i64 noundef 4, i64 noundef 0, i64 2689373973731826898) #[[ATTR4:[0-9]+]], !alloc_token [[META2]]
 // CHECK-O1-NEXT:    store ptr [[TMP1]], ptr @sink, align 8, !tbaa [[TBAA3]]
 // CHECK-O1-NEXT:    ret void
 //

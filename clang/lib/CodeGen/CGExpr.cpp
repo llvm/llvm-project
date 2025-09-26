@@ -1313,7 +1313,7 @@ typeContainsPointer(QualType T,
     // For C++ classes, also check base classes.
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
       // Polymorphic types require a vptr.
-      if (CXXRD->isPolymorphic())
+      if (CXXRD->isDynamicClass())
         return true;
       for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
         if (typeContainsPointer(Base.getType(), VisitedRD, IncompleteType))
