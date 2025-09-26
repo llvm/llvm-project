@@ -18,7 +18,7 @@
 // ensure the types are target-dependent.
 
 // CHECK: TypedefDecl {{.*}} implicit __dmr2048 '__dmr2048'
-//  CHECK: `-BuiltinType {{.*}} '__dmr2048'
+// CHECK: `-BuiltinType {{.*}} '__dmr2048'
 // CHECK: TypedefDecl {{.*}} implicit __dmr1024 '__dmr1024'
 // CHECK: `-BuiltinType {{.*}} '__dmr1024'
 // CHECK: TypedefDecl {{.*}} implicit __vector_quad '__vector_quad'
