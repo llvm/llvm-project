@@ -98,14 +98,17 @@ class PrepareForOMPOffloadPrivatizationPass
         // Allocate heap memory that corresponds to the type of memory
         // pointed to by varPtr
         // For boxchars this won't be a pointer. But, MapsForPrivatizedSymbols
-        // should have mapped the pointer the boxchar so use that as varPtr.
+        // should have mapped the pointer to the boxchar so use that as varPtr.
         Value varPtr = privVar;
-        bool isPrivatizedByValue = !isa<LLVM::LLVMPointerType>(privVar.getType());
+        Type varType = mapInfoOp.getVarType();
+        bool isPrivatizedByValue =
+            !isa<LLVM::LLVMPointerType>(privVar.getType());
         if (isPrivatizedByValue)
           varPtr = mapInfoOp.getVarPtr();
 
         assert(isa<LLVM::LLVMPointerType>(varPtr.getType()));
-        Value heapMem = allocateHeapMem(targetOp, varPtr, mapInfoOp.getVarType(), mod, rewriter);
+        Value heapMem = allocateHeapMem(targetOp, varPtr,
+                                        varType, mod, rewriter);
         if (!heapMem)
           targetOp.emitError(
               "Unable to allocate heap memory when trying to move "
@@ -123,6 +126,8 @@ class PrepareForOMPOffloadPrivatizationPass
         if (!isPrivatizedByValue)
           newPrivVars.push_back(heapMem);
 
+        // We now need to copy the original private variable into the newly
+        // allocated location in the heap.
         // Find the earliest insertion point for the copy. This will be before
         // the first in the list of omp::MapInfoOp instances that use varPtr.
         // After the copy these omp::MapInfoOp instances will refer to heapMem
@@ -136,10 +141,10 @@ class PrepareForOMPOffloadPrivatizationPass
           auto blockArg = cast<BlockArgument>(varPtr);
           users.insert(blockArg.user_begin(), blockArg.user_end());
         }
-
         auto usesVarPtr = [&users](Operation *op) -> bool {
           return users.count(op);
         };
+
         SmallVector<Operation *> chainOfOps;
         chainOfOps.push_back(mapInfoOperation);
         if (!mapInfoOp.getMembers().empty()) {
@@ -164,8 +169,6 @@ class PrepareForOMPOffloadPrivatizationPass
 
         Operation *firstOp = chainOfOps.front();
         Location loc = firstOp->getLoc();
-        //        Type varType = getElemType(varPtr);
-        Type varType = mapInfoOp.getVarType();
 
         // Create a llvm.func for 'region' that is marked always_inline and call
         // it.
@@ -206,6 +209,8 @@ class PrepareForOMPOffloadPrivatizationPass
         if (isPrivatizedByValue)
           (void)rewriter.create<LLVM::StoreOp>(loc, initializedVal, heapMem);
 
+        // clone origOp, replace all uses of varPtr with heapMem and
+        // erase origOp.
         auto cloneModifyAndErase = [&](Operation *origOp) -> Operation * {
           Operation *clonedOp = rewriter.clone(*origOp);
           rewriter.replaceAllOpUsesWith(origOp, clonedOp);
@@ -216,6 +221,9 @@ class PrepareForOMPOffloadPrivatizationPass
           return clonedOp;
         };
 
+        // Now that we have set up the heap-allocated copy of the private
+        // variable, rewrite all the uses of the original variable with
+        // the heap-allocated variable.
         rewriter.setInsertionPoint(targetOp);
         rewriter.setInsertionPoint(cloneModifyAndErase(mapInfoOperation));
 
@@ -280,25 +288,6 @@ private:
     return privatizer;
   }
 
-  template <typename OpType>
-  Type getElemType(OpType op) const {
-    return op.getElemType();
-  }
-
-  Type getElemType(Value varPtr) const {
-    Operation *definingOp = unwrapAddrSpaceCast(varPtr.getDefiningOp());
-    assert((isa<LLVM::AllocaOp, LLVM::GEPOp>(definingOp)) &&
-           "getElemType in PrepareForOMPOffloadPrivatizationPass can deal only "
-           "with Alloca or GEP for now");
-    if (auto allocaOp = dyn_cast<LLVM::AllocaOp>(definingOp))
-      return getElemType(allocaOp);
-    // TODO: get rid of this because GEPOp.getElemType() is not the right thing
-    // to use.
-    if (auto gepOp = dyn_cast<LLVM::GEPOp>(definingOp))
-      return getElemType(gepOp);
-    return Type{};
-  }
-
   Operation *unwrapAddrSpaceCast(Operation *op) const {
     if (!isa<LLVM::AddrSpaceCastOp>(op))
       return op;
@@ -353,9 +342,8 @@ private:
     return mallocCall.value();
   }
 
-  template <typename OpTy>
-  Value allocateHeapMem(OpTy targetOp, Value privVar, Type varType, ModuleOp mod,
-                        IRRewriter &rewriter) const {
+  Value allocateHeapMem(omp::TargetOp targetOp, Value privVar, Type varType,
+                        ModuleOp mod, IRRewriter &rewriter) const {
     OpBuilder::InsertionGuard guard(rewriter);
     Value varPtr = privVar;
     Operation *definingOp = varPtr.getDefiningOp();
@@ -369,7 +357,6 @@ private:
     Location loc = definingOp ? definingOp->getLoc() : blockArg.getLoc();
     LLVM::LLVMFuncOp mallocFn = getMalloc(mod, rewriter);
 
-    // Type varType = getElemType(varPtr);
     assert(mod.getDataLayoutSpec() &&
            "MLIR module with no datalayout spec not handled yet");
 
@@ -384,11 +371,6 @@ private:
     return mallocCallOp.getResult();
   }
 
-  LLVM::CallOp allocateHeapMem(Location loc, Value size,
-                               ModuleOp mod, IRRewriter &rewriter) const {
-    LLVM::LLVMFuncOp mallocFn = getMalloc(mod, rewriter);
-    return rewriter.create<LLVM::CallOp>(loc, mallocFn, ValueRange{size});
-  }
   LLVM::LLVMFuncOp createFuncOpForRegion(Location loc, ModuleOp mod,
                                          Region &srcRegion,
                                          llvm::StringRef funcName,
