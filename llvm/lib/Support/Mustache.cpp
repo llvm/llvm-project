@@ -397,19 +397,32 @@ class EscapeStringStream : public raw_ostream {
 public:
   explicit EscapeStringStream(llvm::raw_ostream &WrappedStream,
                               EscapeMap &Escape)
-      : Escape(Escape), WrappedStream(WrappedStream) {
+      : Escape(Escape), EscapeChars(Escape.keys().begin(), Escape.keys().end()),
+        WrappedStream(WrappedStream) {
     SetUnbuffered();
   }
 
 protected:
   void write_impl(const char *Ptr, size_t Size) override {
-    llvm::StringRef Data(Ptr, Size);
-    for (char C : Data) {
-      auto It = Escape.find(C);
-      if (It != Escape.end())
-        WrappedStream << It->getSecond();
-      else
-        WrappedStream << C;
+    StringRef Data(Ptr, Size);
+    size_t Start = 0;
+    while (Start < Size) {
+      // Find the next character that needs to be escaped.
+      size_t Next = Data.find_first_of(EscapeChars.str(), Start);
+
+      // If no escapable characters are found, write the rest of the string.
+      if (Next == StringRef::npos) {
+        WrappedStream << Data.substr(Start);
+        return;
+      }
+
+      // Write the chunk of text before the escapable character.
+      if (Next > Start)
+        WrappedStream << Data.substr(Start, Next - Start);
+
+      // Look up and write the escaped version of the character.
+      WrappedStream << Escape[Data[Next]];
+      Start = Next + 1;
     }
   }
 
@@ -417,6 +430,7 @@ protected:
 
 private:
   EscapeMap &Escape;
+  SmallString<8> EscapeChars;
   llvm::raw_ostream &WrappedStream;
 };
 

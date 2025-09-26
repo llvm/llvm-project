@@ -65,7 +65,7 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   else
     fileName = llvm::StringRef(D->getName().str() + ".model");
 
-  if (!llvm::sys::fs::exists(fileName.str())) {
+  if (!CI.getVirtualFileSystem().exists(fileName)) {
     Bodies[D->getName()] = nullptr;
     return;
   }
