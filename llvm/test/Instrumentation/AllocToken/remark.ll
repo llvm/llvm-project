@@ -12,7 +12,7 @@ define ptr @test_has_metadata() sanitize_alloc_token {
 ; CHECK-LABEL: define ptr @test_has_metadata(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__alloc_token_malloc(i64 64, i64 6985720287680550851), !alloc_token [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__alloc_token_malloc(i64 64, i64 2689373973731826898), !alloc_token [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[TMP0]]
 ;
 entry:
