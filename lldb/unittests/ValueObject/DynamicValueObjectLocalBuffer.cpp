@@ -58,9 +58,7 @@ struct MockLanguageRuntime : public LanguageRuntime {
                            TypeAndOrName &class_type_or_name, Address &address,
                            Value::ValueType &value_type,
                            llvm::ArrayRef<uint8_t> &local_buffer) override {
-    auto ast = in_value.GetCompilerType()
-                   .GetTypeSystem()
-                   .dyn_cast_or_null<TypeSystemClang>();
+    auto ast = in_value.GetCompilerType().GetTypeSystem<TypeSystemClang>();
 
     auto int_type = createRecordWithField(
         *ast, "TypeWitInt", ast->GetBasicType(lldb::BasicType::eBasicTypeInt),

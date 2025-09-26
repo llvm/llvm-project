@@ -8,8 +8,8 @@
 ; Additionally, we check that the newly added bitcast instruction is excluded in
 ; further extractions.
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define void @outline_bitcast_base() {
 entry:
@@ -38,11 +38,11 @@ entry:
   %al = load i32, ptr %a
   %bl = load i32, ptr %b
   %cl = load i32, ptr %c
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %d)
+  call void @llvm.lifetime.start.p0(ptr %d)
   %am = load i32, ptr %b
   %bm = load i32, ptr %a
   %cm = load i32, ptr %c
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %d)
+  call void @llvm.lifetime.end.p0(ptr %d)
   ret void
 }
 
@@ -61,8 +61,8 @@ entry:
   %am = add i32 %a, %b
   %bm = add i32 %b, %a
   %cm = add i32 %b, %c
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %d)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %d)
+  call void @llvm.lifetime.start.p0(ptr %d)
+  call void @llvm.lifetime.end.p0(ptr %d)
   ret void
 }
 
@@ -114,13 +114,13 @@ entry:
 ; CHECK-LABEL: @outlined_ir_func_1(
 ; CHECK-NEXT:  newFuncRoot:
 ; CHECK-NEXT:    [[D:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[D]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[D]])
 ; CHECK-NEXT:    br label [[ENTRY_TO_OUTLINE:%.*]]
 ; CHECK:       entry_to_outline:
 ; CHECK-NEXT:    [[AL:%.*]] = add i32 [[TMP0:%.*]], [[TMP1:%.*]]
 ; CHECK-NEXT:    [[BL:%.*]] = add i32 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[CL:%.*]] = add i32 [[TMP1]], [[TMP2:%.*]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[D]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[D]])
 ; CHECK-NEXT:    br label [[ENTRY_AFTER_OUTLINE_EXITSTUB:%.*]]
 ; CHECK:       entry_after_outline.exitStub:
 ; CHECK-NEXT:    ret void

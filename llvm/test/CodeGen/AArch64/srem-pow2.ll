@@ -45,7 +45,7 @@ define i32 @fold_srem_2_i64(i32 %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0x1
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cneg w0, w8, lt
+; CHECK-NEXT:    cneg w0, w8, mi
 ; CHECK-NEXT:    ret
   %1 = srem i32 %x, 2
   ret i32 %1
@@ -56,7 +56,7 @@ define i64 @fold_srem_2_i32(i64 %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and x8, x0, #0x1
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cneg x0, x8, lt
+; CHECK-NEXT:    cneg x0, x8, mi
 ; CHECK-NEXT:    ret
   %1 = srem i64 %x, 2
   ret i64 %1

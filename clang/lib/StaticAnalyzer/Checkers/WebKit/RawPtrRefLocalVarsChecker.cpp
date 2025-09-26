@@ -295,7 +295,7 @@ public:
                 if (isa<CXXThisExpr>(InitArgOrigin))
                   return true;
 
-                if (isa<CXXNullPtrLiteralExpr>(InitArgOrigin))
+                if (isNullPtr(InitArgOrigin))
                   return true;
 
                 if (isa<IntegerLiteral>(InitArgOrigin))
@@ -356,7 +356,7 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    if (dyn_cast<ParmVarDecl>(V)) {
+    if (isa<ParmVarDecl>(V)) {
       Os << "Assignment to an " << ptrKind() << " parameter ";
       printQuotedQualifiedName(Os, V);
       Os << " is unsafe.";
@@ -417,6 +417,9 @@ public:
   bool isSafePtrType(const QualType type) const final {
     return isRefOrCheckedPtrType(type);
   }
+  bool isSafeExpr(const Expr *E) const final {
+    return isExprToGetCheckedPtrCapableMember(E);
+  }
   const char *ptrKind() const final { return "unchecked"; }
 };
 
@@ -431,10 +434,10 @@ public:
     return RTC->isUnretained(T);
   }
   bool isSafePtr(const CXXRecordDecl *Record) const final {
-    return isRetainPtr(Record);
+    return isRetainPtrOrOSPtr(Record);
   }
   bool isSafePtrType(const QualType type) const final {
-    return isRetainPtrType(type);
+    return isRetainPtrOrOSPtrType(type);
   }
   bool isSafeExpr(const Expr *E) const final {
     return ento::cocoa::isCocoaObjectRef(E->getType()) &&

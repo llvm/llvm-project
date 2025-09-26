@@ -12,9 +12,11 @@
 
 // Test CTAD on cases where deduction should fail.
 
+#include <array>
 #include <flat_map>
 #include <functional>
 #include <utility>
+#include <tuple>
 
 using P  = std::pair<int, long>;
 using PC = std::pair<const int, long>;
@@ -49,5 +51,17 @@ void test() {
     // since we have parens, not braces, this deliberately does not find the initializer_list constructor
     std::flat_map m(PC{1, 1L});
     // expected-error-re@-1{{{{no viable constructor or deduction guide for deduction of template arguments of '.*flat_map'}}}}
+  }
+  {
+    // cannot deduce from tuple-like objects without proper iterator
+    std::tuple<int, double> t{1, 2.0};
+    std::flat_map m(t);
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}flat_map'}}
+  }
+  {
+    // cannot deduce from array-like objects without proper iterator
+    std::array<int, 2> arr{1, 2};
+    std::flat_map m(arr);
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}flat_map'}}
   }
 }

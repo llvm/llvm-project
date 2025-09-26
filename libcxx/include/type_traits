@@ -463,9 +463,8 @@ namespace std
 #else
 #  include <__config>
 #  include <__type_traits/add_cv_quals.h>
-#  include <__type_traits/add_lvalue_reference.h>
 #  include <__type_traits/add_pointer.h>
-#  include <__type_traits/add_rvalue_reference.h>
+#  include <__type_traits/add_reference.h>
 #  include <__type_traits/aligned_storage.h>
 #  include <__type_traits/aligned_union.h>
 #  include <__type_traits/alignment_of.h>
@@ -549,7 +548,6 @@ namespace std
 #    include <__type_traits/common_reference.h>
 #    include <__type_traits/is_bounded_array.h>
 #    include <__type_traits/is_constant_evaluated.h>
-#    include <__type_traits/is_nothrow_convertible.h>
 #    include <__type_traits/is_unbounded_array.h>
 #    include <__type_traits/type_identity.h>
 #    include <__type_traits/unwrap_ref.h>

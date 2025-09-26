@@ -51,9 +51,37 @@ class DirectiveLanguage {
   string flangClauseBaseClass = "";
 }
 
-// Information about values accepted by enum-like clauses
-class ClauseVal<string n, int v, bit uv> {
-  // Name of the clause value.
+// Base class for versioned entities.
+class Versioned<int min = 0, int max = 0x7FFFFFFF> {
+  // Mininum version number where this object is valid.
+  int minVersion = min;
+
+  // Maximum version number where this object is valid.
+  int maxVersion = max;
+}
+
+class Spelling<string s, int min = 0, int max = 0x7FFFFFFF>
+    : Versioned<min, max> {
+  string spelling = s;
+}
+
+// Some clauses take an argument from a predefined list of allowed keyword
+// values. For example, assume a clause "someclause" with an argument from
+// the list "foo", "bar", "baz". In the user source code this would look
+// like "someclause(foo)", whereas in the compiler the values would be
+// represented as
+// enum someclause.enumClauseValue {
+//   Xyz_foo = v_foo,
+//   Xyz_bar = v_bar,
+//   Xyz_baz = v_baz,
+// }
+// The "Xyz_..." are the _record_ names of EnumVal's:
+// def Xyz_foo = EnumVal<"foo", v_foo>;
+// def Xyz_bar = EnumVal<"bar", v_bar>;
+// def Xyz_baz = EnumVal<"baz", v_baz>;
+//
+class EnumVal<string n, int v, bit uv> {
+  // Spelling of the value.
   string name = n;
 
   // Integer value of the clause.
@@ -67,21 +95,18 @@ class ClauseVal<string n, int v, bit uv> {
 }
 
 // Information about a specific clause.
-class Clause<string c> {
-  // Name of the clause.
-  string name = c;
-
-  // Define an alternative name return in get<LanguageName>ClauseName function.
-  string alternativeName = "";
-
-  // Define aliases used in the parser.
-  list<string> aliases = [];
+class Clause<list<Spelling> ss> {
+  // Spellings of the clause.
+  list<Spelling> spellings = ss;
 
   // Optional class holding value of the clause in clang AST.
   string clangClass = "";
 
   // Optional class holding value of the clause in flang AST.
   string flangClass = "";
+
+  // If set to true, don't emit flang Unparser.
+  bit skipFlangUnparser = false;
 
   // If set to true, value is optional. Not optional by default.
   bit isValueOptional = false;
@@ -90,7 +115,7 @@ class Clause<string c> {
   string enumClauseValue = "";
 
   // List of allowed clause values
-  list<ClauseVal> allowedClauseValues = [];
+  list<EnumVal> allowedClauseValues = [];
 
   // If set to true, value class is part of a list. Single class by default.
   bit isValueList = false;
@@ -113,18 +138,16 @@ class Clause<string c> {
   // Set the prefix as optional.
   // `clause([prefix]: value)`
   bit isPrefixOptional = true;
+
+  // When necessary because it isn't covered by rules, the name used in the
+  // clause in the clang::OpenACCClauseKind enum.
+  string clangAccSpelling = "";
 }
 
 // Hold information about clause validity by version.
-class VersionedClause<Clause c, int min = 1, int max = 0x7FFFFFFF> {
-  // Actual clause.
+class VersionedClause<Clause c, int min = 1, int max = 0x7FFFFFFF>
+    : Versioned<min, max> {
   Clause clause = c;
-
-  // Mininum version number where this clause is valid.
-  int minVersion = min;
-
-  // Maximum version number where this clause is valid.
-  int maxVersion = max;
 }
 
 // Kinds of directive associations.
@@ -168,14 +191,19 @@ def CA_Meta: Category<"Meta"> {}
 def CA_Subsidiary: Category<"Subsidiary"> {}
 def CA_Utility: Category<"Utility"> {}
 
-// Information about a specific directive.
-class Directive<string d> {
-  // Name of the directive. Can be composite directive sepearted by whitespace.
-  string name = d;
+class SourceLanguage<string n> {
+  string name = n;  // Name of the enum value in enum class Association.
+}
 
-  // Define an alternative name return in get<LanguageName>DirectiveName
-  // function.
-  string alternativeName = "";
+// The C language also implies C++ until there is a reason to add C++
+// separately.
+def L_C : SourceLanguage<"C"> {}
+def L_Fortran : SourceLanguage<"Fortran"> {}
+
+// Information about a specific directive.
+class Directive<list<Spelling> ss> {
+  // Spellings of the directive.
+  list<Spelling> spellings = ss;
 
   // Clauses cannot appear twice in the three allowed lists below. Also, since
   // required implies allowed, the same clause cannot appear in both the
@@ -205,4 +233,7 @@ class Directive<string d> {
 
   // The category of the directive.
   Category category = ?;
+
+  // The languages that allow this directive. Default: all languages.
+  list<SourceLanguage> languages = [L_C, L_Fortran];
 }

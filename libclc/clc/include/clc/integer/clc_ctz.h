@@ -14,7 +14,6 @@
 
 #include <clc/integer/gentype.inc>
 
-#undef __CLC_BODY
 #undef __CLC_FUNCTION
 
 #endif // __CLC_INTEGER_CLC_CTZ_H__

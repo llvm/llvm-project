@@ -79,6 +79,62 @@ define float @test_maximum(float %x, float %y) {
   ret float %val
 }
 
+define float @test_minimumnum(float %x, float %y) {
+  ; CHECK-LABEL: name: test_minimumnum
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $s0, $s1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $s1
+  ; CHECK-NEXT:   [[FMINIMUMNUM:%[0-9]+]]:_(s32) = G_FMINIMUMNUM [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $s0 = COPY [[FMINIMUMNUM]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  %val = call float @llvm.minimumnum.f32(float %x, float %y)
+  ret float %val
+}
+
+define float @test_minimumnum_nnan(float %x, float %y) {
+  ; CHECK-LABEL: name: test_minimumnum_nnan
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $s0, $s1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $s1
+  ; CHECK-NEXT:   [[FMINIMUMNUM:%[0-9]+]]:_(s32) = nnan G_FMINIMUMNUM [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $s0 = COPY [[FMINIMUMNUM]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  %val = call nnan float @llvm.minimumnum.f32(float %x, float %y)
+  ret float %val
+}
+
+define float @test_maximumnum(float %x, float %y) {
+  ; CHECK-LABEL: name: test_maximumnum
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $s0, $s1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $s1
+  ; CHECK-NEXT:   [[FMAXIMUMNUM:%[0-9]+]]:_(s32) = G_FMAXIMUMNUM [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $s0 = COPY [[FMAXIMUMNUM]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  %val = call float @llvm.maximumnum.f32(float %x, float %y)
+  ret float %val
+}
+
+define float @test_maximumnum_nnan(float %x, float %y) {
+  ; CHECK-LABEL: name: test_maximumnum_nnan
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $s0, $s1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $s1
+  ; CHECK-NEXT:   [[FMAXIMUMNUM:%[0-9]+]]:_(s32) = nnan G_FMAXIMUMNUM [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $s0 = COPY [[FMAXIMUMNUM]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  %val = call nnan float @llvm.maximumnum.f32(float %x, float %y)
+  ret float %val
+}
+
 declare float @llvm.minnum.f32(float, float) #0
 declare float @llvm.maxnum.f32(float, float) #0
 

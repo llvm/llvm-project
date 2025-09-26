@@ -1,3 +1,4 @@
+#include "attach.h"
 #include <atomic>
 #include <cassert>
 #include <chrono>

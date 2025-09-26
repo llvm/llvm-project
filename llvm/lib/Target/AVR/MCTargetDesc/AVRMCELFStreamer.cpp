@@ -23,23 +23,21 @@ using namespace llvm;
 void AVRMCELFStreamer::emitValueForModiferKind(
     const MCSymbol *Sym, unsigned SizeInBytes, SMLoc Loc,
     AVRMCExpr::Specifier ModifierKind) {
-  AVRMCExpr::Specifier Kind = AVRMCExpr::VK_AVR_NONE;
-  if (ModifierKind == AVRMCExpr::VK_AVR_NONE) {
-    Kind = AVRMCExpr::VK_DIFF8;
+  AVRMCExpr::Specifier Kind = AVR::S_AVR_NONE;
+  if (ModifierKind == AVR::S_AVR_NONE) {
+    Kind = AVR::S_DIFF8;
     if (SizeInBytes == SIZE_LONG)
-      Kind = AVRMCExpr::VK_DIFF32;
+      Kind = AVR::S_DIFF32;
     else if (SizeInBytes == SIZE_WORD)
-      Kind = AVRMCExpr::VK_DIFF16;
-  } else if (ModifierKind == AVRMCExpr::VK_LO8)
-    Kind = AVRMCExpr::VK_LO8;
-  else if (ModifierKind == AVRMCExpr::VK_HI8)
-    Kind = AVRMCExpr::VK_HI8;
-  else if (ModifierKind == AVRMCExpr::VK_HH8)
-    Kind = AVRMCExpr::VK_HH8;
-  MCELFStreamer::emitValue(
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VariantKind(Kind),
-                              getContext()),
-      SizeInBytes, Loc);
+      Kind = AVR::S_DIFF16;
+  } else if (ModifierKind == AVR::S_LO8)
+    Kind = AVR::S_LO8;
+  else if (ModifierKind == AVR::S_HI8)
+    Kind = AVR::S_HI8;
+  else if (ModifierKind == AVR::S_HH8)
+    Kind = AVR::S_HH8;
+  MCELFStreamer::emitValue(MCSymbolRefExpr::create(Sym, Kind, getContext()),
+                           SizeInBytes, Loc);
 }
 
 namespace llvm {

@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fopenmp -fdebug-dump-parse-tree %s | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -fdebug-dump-parse-tree %s | FileCheck %s --check-prefix=PARSE-TREE
 ! RUN: %flang_fc1 -fopenmp -fdebug-unparse %s | FileCheck %s --check-prefix="UNPARSE"
 
 integer function func(a, b, c)
@@ -12,40 +12,57 @@ subroutine sub(x)
   integer :: r
   type(c_ptr) :: x
   integer :: a = 14, b = 7, c = 21
+
 !UNPARSE: !$OMP DISPATCH DEVICE(3_4) NOWAIT NOCONTEXT(.false._4) NOVARIANTS(.true._4)
-!CHECK: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPDispatchConstruct
-!CHECK-NEXT: | | | OmpDispatchDirective
-!CHECK: | | | | OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
-!CHECK-NEXT: | | | | | Scalar -> Integer -> Expr = '3_4'
-!CHECK-NEXT: | | | | | | LiteralConstant -> IntLiteralConstant = '3'
-!CHECK-NEXT: | | | | OmpClause -> Nowait
-!CHECK-NEXT: | | | | OmpClause -> Nocontext -> Scalar -> Logical -> Expr = '.false._4'
-!CHECK-NEXT: | | | | | LiteralConstant -> LogicalLiteralConstant
-!CHECK-NEXT: | | | | | | bool = 'false'
-!CHECK-NEXT: | | | | OmpClause -> Novariants -> Scalar -> Logical -> Expr = '.true._4'
-!CHECK-NEXT: | | | | | EQ
-!CHECK-NEXT: | | | | | | Expr = '1_4'
-!CHECK-NEXT: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
-!CHECK-NEXT: | | | | | | Expr = '1_4'
-!CHECK-NEXT: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
-!CHECK-NEXT: | | | Block
- 
+!UNPARSE:   r=func(a,b,c)
+!UNPARSE: !$OMP END DISPATCH
+
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPDispatchConstruct
+!PARSE-TREE: | OmpBeginDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = dispatch
+!PARSE-TREE: | | OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
+!PARSE-TREE: | | | Scalar -> Integer -> Expr = '3_4'
+!PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '3'
+!PARSE-TREE: | | OmpClause -> Nowait
+!PARSE-TREE: | | OmpClause -> Nocontext -> Scalar -> Logical -> Expr = '.false._4'
+!PARSE-TREE: | | | LiteralConstant -> LogicalLiteralConstant
+!PARSE-TREE: | | | | bool = 'false'
+!PARSE-TREE: | | OmpClause -> Novariants -> Scalar -> Logical -> Expr = '.true._4'
+!PARSE-TREE: | | | EQ
+!PARSE-TREE: | | | | Expr = '1_4'
+!PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!PARSE-TREE: | | | | Expr = '1_4'
+!PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | Block
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt
+![...]
+!PARSE-TREE: | OmpEndDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = dispatch
+!PARSE-TREE: | | OmpClauseList ->
+!PARSE-TREE: | | Flags = None
+
   !$omp dispatch device(3) nowait nocontext(.false.) novariants(1.eq.1)
   r = func(a, b, c)
-!UNPARSE: !$OMP END DISPATCH
-!CHECK: | | | OmpEndDispatchDirective
   !$omp end dispatch
 
 !! Test the "no end dispatch" option.
-!UNPARSE: !$OMP DISPATCH  DEVICE(3_4) IS_DEVICE_PTR(x)
-!CHECK: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPDispatchConstruct
-!CHECK-NEXT: | | | OmpDispatchDirective
-!CHECK: | | | | OmpClause -> IsDevicePtr ->  OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'  
+!UNPARSE: !$OMP DISPATCH DEVICE(3_4) IS_DEVICE_PTR(x)
+!UNPARSE:   r=func(a+1_4,b+2_4,c+3_4)
+
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPDispatchConstruct
+!PARSE-TREE: | OmpBeginDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = dispatch
+!PARSE-TREE: | | OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
+!PARSE-TREE: | | | Scalar -> Integer -> Expr = '3_4'
+!PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '3'
+!PARSE-TREE: | | OmpClause -> IsDevicePtr -> OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | Block
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt
+!PARSE-TREE-NOT: OmpEndDirective
+
   !$omp dispatch device(3) is_device_ptr(x)
   r = func(a+1, b+2, c+3)
-!CHECK-NOT: | | | OmpEndDispatchDirective
 
 end subroutine sub
-
-
-

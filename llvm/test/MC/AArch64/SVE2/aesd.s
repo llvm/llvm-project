@@ -17,5 +17,5 @@
 aesd z0.b, z0.b, z31.b
 // CHECK-INST: aesd z0.b, z0.b, z31.b
 // CHECK-ENCODING: [0xe0,0xe7,0x22,0x45]
-// CHECK-ERROR: instruction requires: sve2 or ssve-aes sve-aes
+// CHECK-ERROR: instruction requires: sve or ssve-aes sve-aes
 // CHECK-UNKNOWN: 4522e7e0 <unknown>

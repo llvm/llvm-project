@@ -92,8 +92,7 @@ public:
   bool optimizeBlock(MachineBasicBlock *MBB);
   bool runOnMachineFunction(MachineFunction &MF) override;
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
   StringRef getPassName() const override {
     return "AArch64 Redundant Copy Elimination";

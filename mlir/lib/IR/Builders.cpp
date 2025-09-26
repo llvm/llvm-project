@@ -12,11 +12,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/SmallVectorExtras.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 
@@ -33,6 +30,8 @@ Location Builder::getFusedLoc(ArrayRef<Location> locs, Attribute metadata) {
 //===----------------------------------------------------------------------===//
 // Types.
 //===----------------------------------------------------------------------===//
+
+FloatType Builder::getF8E8M0Type() { return Float8E8M0FNUType::get(context); }
 
 FloatType Builder::getBF16Type() { return BFloat16Type::get(context); }
 
@@ -75,6 +74,10 @@ IntegerType Builder::getIntegerType(unsigned width, bool isSigned) {
 
 FunctionType Builder::getFunctionType(TypeRange inputs, TypeRange results) {
   return FunctionType::get(context, inputs, results);
+}
+
+GraphType Builder::getGraphType(TypeRange inputs, TypeRange results) {
+  return GraphType::get(context, inputs, results);
 }
 
 TupleType Builder::getTupleType(TypeRange elementTypes) {
@@ -465,8 +468,9 @@ Operation *OpBuilder::create(Location loc, StringAttr opName,
   return create(state);
 }
 
-LogicalResult OpBuilder::tryFold(Operation *op,
-                                 SmallVectorImpl<Value> &results) {
+LogicalResult
+OpBuilder::tryFold(Operation *op, SmallVectorImpl<Value> &results,
+                   SmallVectorImpl<Operation *> *materializedConstants) {
   assert(results.empty() && "expected empty results");
   ResultRange opResults = op->getResults();
 
@@ -527,6 +531,10 @@ LogicalResult OpBuilder::tryFold(Operation *op,
   // If we were successful, insert any generated constants.
   for (Operation *cst : generatedConstants)
     insert(cst);
+
+  // Return materialized constant operations.
+  if (materializedConstants)
+    *materializedConstants = std::move(generatedConstants);
 
   return success();
 }

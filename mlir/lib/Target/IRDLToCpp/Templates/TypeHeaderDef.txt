@@ -1,0 +1,9 @@
+R"(
+__NAMESPACE_OPEN__
+
+bool __DIALECT_BASE_TYPE_NAME__::classof(Type type) {
+  return llvm::isa<__DIALECT_CPP_NAME__>(type.getDialect());
+}
+
+__NAMESPACE_CLOSE__
+)"

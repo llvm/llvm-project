@@ -18,6 +18,7 @@
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointName.h"
 #include "lldb/Breakpoint/WatchpointList.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Architecture.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/ModuleList.h"
@@ -723,7 +724,7 @@ public:
   lldb::BreakpointSP CreateBreakpoint(lldb::addr_t load_addr, bool internal,
                                       bool request_hardware);
 
-  // Use this to create a breakpoint from a load address and a module file spec
+  // Use this to create a breakpoint from a file address and a module file spec
   lldb::BreakpointSP CreateAddressInModuleBreakpoint(lldb::addr_t file_addr,
                                                      bool internal,
                                                      const FileSpec &file_spec,
@@ -752,8 +753,8 @@ public:
       const FileSpecList *containingModules,
       const FileSpecList *containingSourceFiles, const char *func_name,
       lldb::FunctionNameType func_name_type_mask, lldb::LanguageType language,
-      lldb::addr_t offset, LazyBool skip_prologue, bool internal,
-      bool request_hardware);
+      lldb::addr_t offset, bool offset_is_insn_count, LazyBool skip_prologue,
+      bool internal, bool request_hardware);
 
   lldb::BreakpointSP
   CreateExceptionBreakpoint(enum lldb::LanguageType language, bool catch_bp,
@@ -1093,7 +1094,7 @@ public:
 
   Architecture *GetArchitecturePlugin() const { return m_arch.GetPlugin(); }
 
-  Debugger &GetDebugger() { return m_debugger; }
+  Debugger &GetDebugger() const { return m_debugger; }
 
   size_t ReadMemoryFromFileCache(const Address &addr, void *dst, size_t dst_len,
                                  Status &error);
@@ -1110,10 +1111,16 @@ public:
   // 2 - if there is a process, then read from memory
   // 3 - if there is no process, then read from the file cache
   //
+  // If did_read_live_memory is provided, will indicate if the read was from
+  // live memory, or from file contents. A caller which needs to treat these two
+  // sources differently should use this argument to disambiguate where the data
+  // was read from.
+  //
   // The method is virtual for mocking in the unit tests.
   virtual size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
                             Status &error, bool force_live_memory = false,
-                            lldb::addr_t *load_addr_ptr = nullptr);
+                            lldb::addr_t *load_addr_ptr = nullptr,
+                            bool *did_read_live_memory = nullptr);
 
   size_t ReadCStringFromMemory(const Address &addr, std::string &out_str,
                                Status &error, bool force_live_memory = false);
@@ -1157,6 +1164,11 @@ public:
                                      bool is_signed, Scalar &scalar,
                                      Status &error,
                                      bool force_live_memory = false);
+
+  int64_t ReadSignedIntegerFromMemory(const Address &addr,
+                                      size_t integer_byte_size,
+                                      int64_t fail_value, Status &error,
+                                      bool force_live_memory = false);
 
   uint64_t ReadUnsignedIntegerFromMemory(const Address &addr,
                                          size_t integer_byte_size,
@@ -1323,6 +1335,10 @@ public:
                                const lldb_private::RegisterFlags &flags,
                                uint32_t byte_size);
 
+  llvm::Expected<lldb::DisassemblerSP>
+  ReadInstructions(const Address &start_addr, uint32_t count,
+                   const char *flavor_string = nullptr);
+
   // Target Stop Hooks
   class StopHook : public UserID {
   public:
@@ -1370,6 +1386,12 @@ public:
 
     bool GetAutoContinue() const { return m_auto_continue; }
 
+    void SetRunAtInitialStop(bool at_initial_stop) {
+      m_at_initial_stop = at_initial_stop;
+    }
+
+    bool GetRunAtInitialStop() const { return m_at_initial_stop; }
+
     void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
     virtual void GetSubclassDescription(Stream &s,
                                         lldb::DescriptionLevel level) const = 0;
@@ -1380,6 +1402,7 @@ public:
     std::unique_ptr<ThreadSpec> m_thread_spec_up;
     bool m_active = true;
     bool m_auto_continue = false;
+    bool m_at_initial_stop = true;
 
     StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid);
   };
@@ -1446,7 +1469,9 @@ public:
 
   // Runs the stop hooks that have been registered for this target.
   // Returns true if the stop hooks cause the target to resume.
-  bool RunStopHooks();
+  // Pass at_initial_stop if this is the stop where lldb gains
+  // control over the process for the first time.
+  bool RunStopHooks(bool at_initial_stop = false);
 
   size_t GetStopHookSize();
 

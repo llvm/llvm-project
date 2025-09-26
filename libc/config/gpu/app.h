@@ -9,10 +9,9 @@
 #ifndef LLVM_LIBC_CONFIG_GPU_APP_H
 #define LLVM_LIBC_CONFIG_GPU_APP_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -432,6 +432,16 @@ bool MachineRegisterInfo::hasOneNonDBGUser(Register RegNo) const {
   return hasSingleElement(use_nodbg_instructions(RegNo));
 }
 
+MachineOperand *MachineRegisterInfo::getOneNonDBGUse(Register RegNo) const {
+  auto RegNoDbgUses = use_nodbg_operands(RegNo);
+  return hasSingleElement(RegNoDbgUses) ? &*RegNoDbgUses.begin() : nullptr;
+}
+
+MachineInstr *MachineRegisterInfo::getOneNonDBGUser(Register RegNo) const {
+  auto RegNoDbgUsers = use_nodbg_instructions(RegNo);
+  return hasSingleElement(RegNoDbgUsers) ? &*RegNoDbgUsers.begin() : nullptr;
+}
+
 bool MachineRegisterInfo::hasAtMostUserInstrs(Register Reg,
                                               unsigned MaxUsers) const {
   return hasNItemsOrLess(use_instr_nodbg_begin(Reg), use_instr_nodbg_end(),

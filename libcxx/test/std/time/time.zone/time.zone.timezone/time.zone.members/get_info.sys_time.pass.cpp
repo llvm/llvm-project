@@ -34,7 +34,7 @@
 // The data in the tests can be validated by using the zdump tool. For
 // example
 //   zdump -v Asia/Hong_Kong
-// show all transistions in the Hong Kong time zone. Or
+// show all transitions in the Hong Kong time zone. Or
 //   zdump -c1970,1980 -v Asia/Hong_Kong
 // shows all transitions in Hong Kong between 1970 and 1980.
 
@@ -177,7 +177,7 @@ static void test_antarctica_syowa() {
   // This change uses an ON field with a day number
   //
   // There don't seem to be rule-less zones that use last day or a
-  // contrained day
+  // constrained day
 
   // Z Antarctica/Syowa 0 - -00 1957 Ja 29
   // 3 - +03
@@ -605,8 +605,8 @@ static void test_europe_berlin() {
 
 static void test_america_st_johns() {
   // A more typical entry,
-  // Uses letters both when DST is ative and not and has multiple
-  // letters. Uses negetive offsets.
+  // Uses letters both when DST is active and not and has multiple
+  // letters. Uses negative offsets.
   // Switches several times between their own and Canadian rules
   // Switches the stdoff from -3:30:52 to -3:30 while observing the same rule
 
@@ -1036,7 +1036,7 @@ static void test_africa_freetown() {
   using namespace std::literals::chrono_literals;
   const std::chrono::time_zone* tz = std::chrono::locate_zone("Africa/Freetown");
 
-  // When a continuation has a named rule, the tranisition time determined by
+  // When a continuation has a named rule, the transition time determined by
   // the active rule can be wrong. The next continuation may set the clock to an
   // earlier time. This is tested for San Luis. This tests the rule is not used
   // when the rule is not a named rule.

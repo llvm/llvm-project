@@ -8,7 +8,7 @@
 // CHECK-LABEL: func @buffer_not_deallocated(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
 func.func @buffer_not_deallocated(%t : tensor<?xf32>, %c : i1) -> tensor<?xf32> {
-  // CHECK: %[[m:.*]] = bufferization.to_memref %[[t]]
+  // CHECK: %[[m:.*]] = bufferization.to_buffer %[[t]]
   // CHECK: %[[r:.*]] = scf.if %{{.*}} {
   %r = scf.if %c -> tensor<?xf32> {
     // CHECK: %[[some_op:.*]] = "test.some_op"
@@ -37,7 +37,7 @@ func.func @write_to_alloc_tensor_or_readonly_tensor(%arg0: tensor<i32>,
                                                     %cond: i1, %val: i32)
   -> tensor<i32>
 {
-  // CHECK: %[[arg0_m:.*]] = bufferization.to_memref %[[arg0]]
+  // CHECK: %[[arg0_m:.*]] = bufferization.to_buffer %[[arg0]]
   // CHECK: %[[r:.*]] = scf.if {{.*}} {
   // CHECK:   scf.yield %[[arg0_m]]
   // CHECK: } else {

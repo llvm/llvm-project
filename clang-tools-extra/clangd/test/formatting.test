@@ -135,10 +135,65 @@
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": []
 ---
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///foo.c","version":9},"contentChanges":[{"text":"int foo(  int x){\n  x=x+1;\nreturn x;\n}"}]}}
+---
+{"jsonrpc":"2.0","id":5,"method":"textDocument/rangesFormatting","params":{"textDocument":{"uri":"test:///foo.c"},"ranges":[{"start":{"line":0,"character":0},"end":{"line":0,"character":15}}, {"start":{"line":2,"character":0},"end":{"line":2,"character":5}}]}}
+---
+#      CHECK:   "id": 5,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "newText": "",
+# CHECK-NEXT:      "range": {
+# CHECK-NEXT:        "end": {
+# CHECK-NEXT:          "character": 10,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "start": {
+# CHECK-NEXT:          "character": 8,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        }
+# CHECK-NEXT:      }
+# CHECK-NEXT:    },
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "newText": " ",
+# CHECK-NEXT:      "range": {
+# CHECK-NEXT:        "end": {
+# CHECK-NEXT:          "character": 16,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "start": {
+# CHECK-NEXT:          "character": 16,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        }
+# CHECK-NEXT:      }
+# CHECK-NEXT:    },
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "newText": "\n  ",
+# CHECK-NEXT:      "range": {
+# CHECK-NEXT:        "end": {
+# CHECK-NEXT:          "character": 0,
+# CHECK-NEXT:          "line": 2
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "start": {
+# CHECK-NEXT:          "character": 8,
+# CHECK-NEXT:          "line": 1
+# CHECK-NEXT:        }
+# CHECK-NEXT:      }
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
+---
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///foo.c","version":9},"contentChanges":[{"text":"int foo(int x) {\n  x=x+1;\n  return x;\n}"}]}}
+---
+{"jsonrpc":"2.0","id":6,"method":"textDocument/rangesFormatting","params":{"textDocument":{"uri":"test:///foo.c"},"ranges":[{"start":{"line":0,"character":0},"end":{"line":0,"character":15}}, {"start":{"line":2,"character":0},"end":{"line":2,"character":5}}]}}
+#      CHECK:  "id": 6,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": []
+---
 {"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///foo.c","version":5},"contentChanges":[{"text":"int x=\n"}]}}
 ---
-{"jsonrpc":"2.0","id":5,"method":"textDocument/onTypeFormatting","params":{"textDocument":{"uri":"test:///foo.c"},"position":{"line":1,"character":0},"ch":"\n"}}
-#      CHECK:  "id": 5,
+{"jsonrpc":"2.0","id":7,"method":"textDocument/onTypeFormatting","params":{"textDocument":{"uri":"test:///foo.c"},"position":{"line":1,"character":0},"ch":"\n"}}
+#      CHECK:  "id": 7,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": [
 # CHECK-NEXT:    {

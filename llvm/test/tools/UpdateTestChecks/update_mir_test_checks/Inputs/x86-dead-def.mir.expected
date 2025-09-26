@@ -18,5 +18,6 @@ body:             |
     ; CHECK-NEXT: undef [[C2:%[0-9]+]].sub_32bit:gr64(s32) = G_CONSTANT i32 2
     dead %0:gr32(s32) = G_CONSTANT i32 0
     dead undef %1.sub_32bit:gr64(s32) = G_CONSTANT i32 1
+    ; Keep meaningful comment.
     undef %2.sub_32bit:gr64(s32) = G_CONSTANT i32 2
 ...

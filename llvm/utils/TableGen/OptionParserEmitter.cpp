@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
@@ -23,9 +24,9 @@ using namespace llvm;
 static std::string getOptionName(const Record &R) {
   // Use the record name unless EnumName is defined.
   if (isa<UnsetInit>(R.getValueInit("EnumName")))
-    return std::string(R.getName());
+    return R.getName().str();
 
-  return std::string(R.getValueAsString("EnumName"));
+  return R.getValueAsString("EnumName").str();
 }
 
 static raw_ostream &writeStrTableOffset(raw_ostream &OS,
@@ -232,17 +233,8 @@ static void emitHelpTextsForVariants(
     assert(Visibilities.size() <= MaxVisibilityPerHelp &&
            "Too many visibilities to store in an "
            "OptTable::HelpTextsForVariants entry");
-    OS << "{std::array<unsigned, " << MaxVisibilityPerHelp << ">{{";
-
-    auto VisibilityEnd = Visibilities.cend();
-    for (auto Visibility = Visibilities.cbegin(); Visibility != VisibilityEnd;
-         ++Visibility) {
-      OS << *Visibility;
-      if (std::next(Visibility) != VisibilityEnd)
-        OS << ", ";
-    }
-
-    OS << "}}, ";
+    OS << "{std::array<unsigned, " << MaxVisibilityPerHelp << ">{{"
+       << llvm::interleaved(Visibilities) << "}}, ";
 
     if (Help.size())
       writeCstring(OS, Help);
@@ -272,11 +264,11 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   typedef SmallVector<SmallString<2>, 2> PrefixKeyT;
   typedef std::map<PrefixKeyT, unsigned> PrefixesT;
   PrefixesT Prefixes;
-  Prefixes.insert({PrefixKeyT(), 0});
+  Prefixes.try_emplace(PrefixKeyT(), 0);
   for (const Record &R : llvm::make_pointee_range(Opts)) {
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     PrefixKeyT PrefixKey(RPrefixes.begin(), RPrefixes.end());
-    Prefixes.insert({PrefixKey, 0});
+    Prefixes.try_emplace(PrefixKey, 0);
   }
 
   DenseSet<StringRef> PrefixesUnionSet;
@@ -299,7 +291,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "/////////\n";
   OS << "// String table\n\n";
   OS << "#ifdef OPTTABLE_STR_TABLE_CODE\n";
-  Table.EmitStringTableDef(OS, "OptionStrTable", /*Indent=*/"");
+  Table.EmitStringTableDef(OS, "OptionStrTable");
   OS << "#endif // OPTTABLE_STR_TABLE_CODE\n\n";
 
   // Dump prefixes.
@@ -397,8 +389,9 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       OS << ",\n";
       OS << "       ";
       writeCstring(OS, R.getValueAsString("HelpText"));
-    } else
+    } else {
       OS << ", nullptr";
+    }
 
     // Not using Visibility specific text for group help.
     emitHelpTextsForVariants(OS, {});
@@ -436,8 +429,9 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       GroupFlags = DI->getDef()->getValueAsListInit("Flags");
       GroupVis = DI->getDef()->getValueAsListInit("Visibility");
       OS << getOptionName(*DI->getDef());
-    } else
+    } else {
       OS << "INVALID";
+    }
 
     // The option alias (if any).
     OS << ", ";
@@ -498,15 +492,16 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       OS << ",\n";
       OS << "       ";
       writeCstring(OS, R.getValueAsString("HelpText"));
-    } else
+    } else {
       OS << ", nullptr";
+    }
 
     std::vector<std::pair<std::vector<std::string>, StringRef>>
         HelpTextsForVariants;
     for (const Record *VisibilityHelp :
          R.getValueAsListOfDefs("HelpTextsForVariants")) {
       ArrayRef<const Init *> Visibilities =
-          VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
+          VisibilityHelp->getValueAsListInit("Visibilities")->getElements();
 
       std::vector<std::string> VisibilityNames;
       for (const Init *Visibility : Visibilities)
@@ -528,9 +523,9 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ", ";
     if (!isa<UnsetInit>(R.getValueInit("Values")))
       writeCstring(OS, R.getValueAsString("Values"));
-    else if (!isa<UnsetInit>(R.getValueInit("ValuesCode"))) {
+    else if (!isa<UnsetInit>(R.getValueInit("ValuesCode")))
       OS << getOptionName(R) << "_Values";
-    } else
+    else
       OS << "nullptr";
   };
 

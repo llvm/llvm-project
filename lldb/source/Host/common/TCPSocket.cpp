@@ -52,6 +52,32 @@ TCPSocket::TCPSocket(NativeSocket socket, bool should_close)
 
 TCPSocket::~TCPSocket() { CloseListenSockets(); }
 
+llvm::Expected<TCPSocket::Pair> TCPSocket::CreatePair() {
+  auto listen_socket_up = std::make_unique<TCPSocket>(true);
+  if (Status error = listen_socket_up->Listen("localhost:0", 5); error.Fail())
+    return error.takeError();
+
+  std::string connect_address =
+      llvm::StringRef(listen_socket_up->GetListeningConnectionURI()[0])
+          .split("://")
+          .second.str();
+
+  auto connect_socket_up = std::make_unique<TCPSocket>(true);
+  if (Status error = connect_socket_up->Connect(connect_address); error.Fail())
+    return error.takeError();
+
+  // Connection has already been made above, so a short timeout is sufficient.
+  Socket *accept_socket;
+  if (Status error =
+          listen_socket_up->Accept(std::chrono::seconds(1), accept_socket);
+      error.Fail())
+    return error.takeError();
+
+  return Pair(
+      std::move(connect_socket_up),
+      std::unique_ptr<TCPSocket>(static_cast<TCPSocket *>(accept_socket)));
+}
+
 bool TCPSocket::IsValid() const {
   return m_socket != kInvalidSocketValue || m_listen_sockets.size() != 0;
 }
@@ -169,7 +195,8 @@ Status TCPSocket::Connect(llvm::StringRef name) {
     return error;
   }
 
-  error = Status::FromErrorString("Failed to connect port");
+  error = Status::FromErrorStringWithFormatv(
+      "Failed to connect to {0}:{1}", host_port->hostname, host_port->port);
   return error;
 }
 

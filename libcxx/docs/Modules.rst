@@ -24,7 +24,7 @@ Overview
 
 The module sources are stored in ``.cppm`` files. Modules need to be available
 as BMIs, which are ``.pcm`` files for Clang. BMIs are not portable, they depend
-on the compiler used and its compilation flags. Therefore there needs to be a
+on the compiler and the compilation flags used. Therefore there needs to be a
 way to distribute the ``.cppm`` files to the user and offer a way for them to
 build and use the ``.pcm`` files. It is expected this will be done by build
 systems in the future. To aid early adaptor and build system vendors libc++
@@ -72,7 +72,7 @@ Some of the current limitations
  * Clang:
     * Including headers after importing the ``std`` module may fail. This is
       hard to solve and there is a work-around by first including all headers
-      `bug report <https://github.com/llvm/llvm-project/issues/61465>`__.
+      `bug report <https://llvm.org/PR61465>`__.
 
 Blockers
 ~~~~~~~~
@@ -88,8 +88,7 @@ Blockers
 
   * Clang
 
-    * Some concepts do not work properly
-      `bug report <https://github.com/llvm/llvm-project/issues/62943>`__.
+    * Some concepts do not work properly `bug report <https://llvm.org/PR61465>`__.
 
 
 Using in external projects

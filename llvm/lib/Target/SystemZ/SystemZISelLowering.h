@@ -510,10 +510,11 @@ public:
                                       MachineMemOperand::Flags Flags,
                                       unsigned *Fast) const override;
   bool
-  findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
-                           const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+  findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
+                           unsigned Limit, const MemOp &Op, unsigned DstAS,
+                           unsigned SrcAS,
                            const AttributeList &FuncAttributes) const override;
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
   bool isTruncateFree(Type *, Type *) const override;
   bool isTruncateFree(EVT, EVT) const override;
@@ -522,12 +523,14 @@ public:
                             bool MathUsed) const override {
     // Form add and sub with overflow intrinsics regardless of any extra
     // users of the math result.
-    return VT == MVT::i32 || VT == MVT::i64;
+    return VT == MVT::i32 || VT == MVT::i64 || VT == MVT::i128;
   }
 
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
 
-  bool shouldExpandCmpUsingSelects(EVT VT) const override { return true; }
+  bool preferSelectsOverBooleanArithmetic(EVT VT) const override {
+    return true;
+  }
 
   const char *getTargetNodeName(unsigned Opcode) const override;
   std::pair<unsigned, const TargetRegisterClass *>
@@ -671,6 +674,7 @@ public:
   }
 
   unsigned getStackProbeSize(const MachineFunction &MF) const;
+  bool hasAndNot(SDValue Y) const override;
 
 private:
   const SystemZSubtarget &Subtarget;
@@ -777,6 +781,7 @@ private:
   SDValue combineFP_ROUND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineFP_EXTEND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineINT_TO_FP(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineFCOPYSIGN(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBSWAP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSETCC(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;

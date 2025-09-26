@@ -27,13 +27,13 @@
 // no-warning@* {{ignoring '-fno-raw-string-literals'}}
 
 void f() {
-  (void) R"foo()foo"; // unsupported-error {{use of undeclared identifier 'R'}} cxx-unsupported-error {{expected ';' after expression}}
-  (void) LR"foo()foo"; // unsupported-error {{use of undeclared identifier 'LR'}} cxx-unsupported-error {{expected ';' after expression}}
+  (void) R"foo()foo"; // unsupported-error {{use of undeclared identifier 'R'}}
+  (void) LR"foo()foo"; // unsupported-error {{use of undeclared identifier 'LR'}}
 
 #ifdef UNICODE
-  (void) uR"foo()foo"; // unsupported-error {{use of undeclared identifier 'uR'}} cxx-unsupported-error {{expected ';' after expression}}
-  (void) u8R"foo()foo"; // unsupported-error {{use of undeclared identifier 'u8R'}} cxx-unsupported-error {{expected ';' after expression}}
-  (void) UR"foo()foo"; // unsupported-error {{use of undeclared identifier 'UR'}} cxx-unsupported-error {{expected ';' after expression}}
+  (void) uR"foo()foo"; // unsupported-error {{use of undeclared identifier 'uR'}}
+  (void) u8R"foo()foo"; // unsupported-error {{use of undeclared identifier 'u8R'}}
+  (void) UR"foo()foo"; // unsupported-error {{use of undeclared identifier 'UR'}}
 #endif
 }
 

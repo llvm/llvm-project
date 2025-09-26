@@ -33,23 +33,23 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %6 = getelementptr inbounds %struct.s, ptr %obj, i64 0, i32 2, i64 %i, i64 %j
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %2 = getelementptr inbounds %struct.s, ptr %obj, i64 0, i32 0, i64 %j
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP1]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %6 = getelementptr inbounds %struct.s, ptr %obj, i64 0, i32 2, i64 %i, i64 %j
-; CHECK-NEXT:        Against group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %1 = getelementptr inbounds %struct.s, ptr %obj, i64 0, i32 1, i64 %i
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: {(256 + %obj)<nuw>,+,128}<nuw><%.outer.preheader> High: {(256 + (4 * %z) + %obj),+,128}<nw><%.outer.preheader>)
 ; CHECK-NEXT:            Member: {{\{\{}}(256 + %obj)<nuw>,+,128}<nuw><%.outer.preheader>,+,4}<nuw><%.inner>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %obj High: ((4 * %z) + %obj))
 ; CHECK-NEXT:            Member: {%obj,+,4}<nuw><%.inner>
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: {(128 + %obj)<nuw>,+,4}<nuw><%.outer.preheader> High: {(132 + %obj),+,4}<nw><%.outer.preheader>)
 ; CHECK-NEXT:            Member: {(128 + %obj)<nuw>,+,4}<nuw><%.outer.preheader>
 ; CHECK-EMPTY:

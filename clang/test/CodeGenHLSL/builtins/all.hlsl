@@ -2,20 +2,20 @@
 // RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \ 
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF \
-// RUN:   -DFNATTRS="spir_func noundef" -DTARGET=spv
+// RUN:   -DFNATTRS="hidden spir_func noundef" -DTARGET=spv
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK \
-// RUN:   -DFNATTRS="spir_func noundef" -DTARGET=spv
+// RUN:   -DFNATTRS="hidden spir_func noundef" -DTARGET=spv
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \ 
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF \
-// RUN:   -DFNATTRS=noundef -DTARGET=dx
+// RUN:   -DFNATTRS="hidden noundef" -DTARGET=dx
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK \
-// RUN:   -DFNATTRS=noundef -DTARGET=dx
+// RUN:   -DFNATTRS="hidden noundef" -DTARGET=dx
 
 #ifdef __HLSL_ENABLE_16_BIT
 // NATIVE_HALF: define [[FNATTRS]] i1 @

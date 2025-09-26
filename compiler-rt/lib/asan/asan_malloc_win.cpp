@@ -69,7 +69,7 @@ __declspec(noinline) size_t _msize_base(void *ptr) { return _msize(ptr); }
 
 __declspec(noinline) void free(void *ptr) {
   GET_STACK_TRACE_FREE;
-  return asan_free(ptr, &stack, FROM_MALLOC);
+  return asan_free(ptr, &stack);
 }
 
 __declspec(noinline) void _free_dbg(void *ptr, int) { free(ptr); }
@@ -252,7 +252,7 @@ INTERCEPTOR_WINAPI(BOOL, HeapFree, HANDLE hHeap, DWORD dwFlags, LPVOID lpMem) {
     CHECK((HEAP_FREE_UNSUPPORTED_FLAGS & dwFlags) != 0 && "unsupported flags");
   }
   GET_STACK_TRACE_FREE;
-  asan_free(lpMem, &stack, FROM_MALLOC);
+  asan_free(lpMem, &stack);
   return true;
 }
 
@@ -306,7 +306,7 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
         if (replacement_alloc) {
           size_t old_size = heapSizeFunc(hHeap, dwFlags, lpMem);
           if (old_size == ((size_t)0) - 1) {
-            asan_free(replacement_alloc, &stack, FROM_MALLOC);
+            asan_free(replacement_alloc, &stack);
             return nullptr;
           }
           REAL(memcpy)(replacement_alloc, lpMem, old_size);
@@ -322,6 +322,22 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
       }
     }
 
+    if (dwFlags & HEAP_REALLOC_IN_PLACE_ONLY) {
+      size_t old_usable_size = asan_malloc_usable_size(lpMem, pc, bp);
+      if (dwBytes == old_usable_size) {
+        // Nothing to change, return the current pointer.
+        return lpMem;
+      } else if (dwBytes >= old_usable_size) {
+        // Growing with HEAP_REALLOC_IN_PLACE_ONLY is not supported.
+        return nullptr;
+      } else {
+        // Shrinking with HEAP_REALLOC_IN_PLACE_ONLY is not yet supported.
+        // For now return the current pointer and
+        // leave the allocation size as it is.
+        return lpMem;
+      }
+    }
+
     if (ownershipState == ASAN && !only_asan_supported_flags) {
       // Conversion to unsupported flags allocation,
       // transfer this allocation back to the original allocator.
@@ -331,7 +347,7 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
         old_usable_size = asan_malloc_usable_size(lpMem, pc, bp);
         REAL(memcpy)(replacement_alloc, lpMem,
                      Min<size_t>(dwBytes, old_usable_size));
-        asan_free(lpMem, &stack, FROM_MALLOC);
+        asan_free(lpMem, &stack);
       }
       return replacement_alloc;
     }
@@ -429,7 +445,7 @@ INTERCEPTOR_WINAPI(BOOL, RtlFreeHeap, HANDLE HeapHandle, DWORD Flags,
     return REAL(RtlFreeHeap)(HeapHandle, Flags, BaseAddress);
   }
   GET_STACK_TRACE_FREE;
-  asan_free(BaseAddress, &stack, FROM_MALLOC);
+  asan_free(BaseAddress, &stack);
   return true;
 }
 

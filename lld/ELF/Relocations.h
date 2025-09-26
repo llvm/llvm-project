@@ -110,6 +110,7 @@ enum RelExpr {
   RE_MIPS_GOT_LOCAL_PAGE,
   RE_MIPS_GOT_OFF,
   RE_MIPS_GOT_OFF32,
+  RE_MIPS_OSEC_LOCAL_PAGE,
   RE_MIPS_TLSGD,
   RE_MIPS_TLSLD,
   RE_PPC32_PLTREL,
@@ -131,6 +132,7 @@ enum RelExpr {
   RE_LOONGARCH_GOT_PAGE_PC,
   RE_LOONGARCH_TLSGD_PAGE_PC,
   RE_LOONGARCH_TLSDESC_PAGE_PC,
+  RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC,
 };
 
 // Architecture-neutral representation of relocation.
@@ -162,6 +164,8 @@ void addGotEntry(Ctx &ctx, Symbol &sym);
 
 void hexagonTLSSymbolUpdate(Ctx &ctx);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
+
+bool isAbsolute(const Symbol &sym);
 
 class ThunkSection;
 class Thunk;

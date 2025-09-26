@@ -9,7 +9,7 @@ define void @test_nounwind_invoke() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    invoke void @foo(ptr [[TMP]])
 ; CHECK-NEXT:    to label [[BB1:%.*]] unwind label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[ABCTMP1:%.*]] = landingpad { ptr, i32 }
@@ -26,7 +26,7 @@ bb:
   to label %bb1 unwind label %bb2
 
 bb1:                                              ; preds = %bb
-  call void @llvm.lifetime.end.p0(i64 4, ptr %tmp)
+  call void @llvm.lifetime.end.p0(ptr %tmp)
   ret void
 
 bb2:                                              ; preds = %bb
@@ -36,7 +36,7 @@ bb2:                                              ; preds = %bb
 }
 
 ; Function Attrs: argmemonly nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #0
+declare void @llvm.lifetime.end.p0(ptr nocapture) #0
 ; Function Attrs: argmemonly nounwind willreturn
 declare void @foo(ptr) #1
 declare i32 @__gxx_personality_v0(...)

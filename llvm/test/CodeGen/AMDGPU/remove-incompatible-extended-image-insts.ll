@@ -2,12 +2,12 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions %s -o - 2>%t | FileCheck -check-prefix=EXTIMG %s
 ; RUN: FileCheck -allow-empty --check-prefix=WARN-EXTIMG %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s
 
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions %s -o - 2>%t | FileCheck -check-prefix=NOEXTIMG %s
 ; RUN: FileCheck --check-prefix=WARN-NOEXTIMG %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a < %s
 
 ; Note: This test checks the IR, but also has a run line to codegen the file just to check we
 ; do not crash when trying to select those functions.

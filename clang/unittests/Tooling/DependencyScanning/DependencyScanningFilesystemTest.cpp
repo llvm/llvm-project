@@ -186,19 +186,81 @@ TEST(DependencyScanningFilesystem, DiagnoseStaleStatFailures) {
   DependencyScanningFilesystemSharedCache SharedCache;
   DependencyScanningWorkerFilesystem DepFS(SharedCache, InMemoryFS);
 
-  bool Path1Exists = DepFS.exists("/path1");
-  EXPECT_EQ(Path1Exists, false);
+  bool Path1Exists = DepFS.exists("/path1.suffix");
+  ASSERT_EQ(Path1Exists, false);
 
   // Adding a file that has been stat-ed,
-  InMemoryFS->addFile("/path1", 0, llvm::MemoryBuffer::getMemBuffer(""));
-  Path1Exists = DepFS.exists("/path1");
+  InMemoryFS->addFile("/path1.suffix", 0, llvm::MemoryBuffer::getMemBuffer(""));
+  Path1Exists = DepFS.exists("/path1.suffix");
   // Due to caching in SharedCache, path1 should not exist in
   // DepFS's eyes.
-  EXPECT_EQ(Path1Exists, false);
+  ASSERT_EQ(Path1Exists, false);
 
-  std::vector<llvm::StringRef> InvalidPaths =
-      SharedCache.getInvalidNegativeStatCachedPaths(*InMemoryFS.get());
+  auto InvalidEntries = SharedCache.getOutOfDateEntries(*InMemoryFS);
 
-  EXPECT_EQ(InvalidPaths.size(), 1u);
-  ASSERT_STREQ("/path1", InvalidPaths[0].str().c_str());
+  EXPECT_EQ(InvalidEntries.size(), 1u);
+  ASSERT_STREQ("/path1.suffix", InvalidEntries[0].Path);
+}
+
+TEST(DependencyScanningFilesystem, DiagnoseCachedFileSizeChange) {
+  auto InMemoryFS1 = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  auto InMemoryFS2 = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  InMemoryFS1->setCurrentWorkingDirectory("/");
+  InMemoryFS2->setCurrentWorkingDirectory("/");
+
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InMemoryFS1);
+
+  InMemoryFS1->addFile("/path1.suffix", 0,
+                       llvm::MemoryBuffer::getMemBuffer(""));
+  bool Path1Exists = DepFS.exists("/path1.suffix");
+  ASSERT_EQ(Path1Exists, true);
+
+  // Add a file to a new FS that has the same path but different content.
+  InMemoryFS2->addFile("/path1.suffix", 1,
+                       llvm::MemoryBuffer::getMemBuffer("        "));
+
+  // Check against the new file system. InMemoryFS2 could be the underlying
+  // physical system in the real world.
+  auto InvalidEntries = SharedCache.getOutOfDateEntries(*InMemoryFS2);
+
+  ASSERT_EQ(InvalidEntries.size(), 1u);
+  ASSERT_STREQ("/path1.suffix", InvalidEntries[0].Path);
+  auto SizeInfo = std::get_if<
+      DependencyScanningFilesystemSharedCache::OutOfDateEntry::SizeChangedInfo>(
+      &InvalidEntries[0].Info);
+  ASSERT_TRUE(SizeInfo);
+  ASSERT_EQ(SizeInfo->CachedSize, 0u);
+  ASSERT_EQ(SizeInfo->ActualSize, 8u);
+}
+
+TEST(DependencyScanningFilesystem, DoNotDiagnoseDirSizeChange) {
+  llvm::SmallString<128> Dir;
+  ASSERT_FALSE(llvm::sys::fs::createUniqueDirectory("tmp", Dir));
+
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
+      llvm::vfs::createPhysicalFileSystem();
+
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, FS);
+
+  // Trigger the file system cache.
+  ASSERT_EQ(DepFS.exists(Dir), true);
+
+  // Add a file to the FS to change its size.
+  // It seems that directory sizes reported are not meaningful,
+  // and should not be used to check for size changes.
+  // This test is setup only to trigger a size change so that we
+  // know we are excluding directories from reporting.
+  llvm::SmallString<128> FilePath = Dir;
+  llvm::sys::path::append(FilePath, "file.h");
+  {
+    std::error_code EC;
+    llvm::raw_fd_ostream TempFile(FilePath, EC);
+    ASSERT_FALSE(EC);
+  }
+
+  // We do not report directory size changes.
+  auto InvalidEntries = SharedCache.getOutOfDateEntries(*FS);
+  EXPECT_EQ(InvalidEntries.size(), 0u);
 }

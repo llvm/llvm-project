@@ -247,11 +247,11 @@ define <2 x i1> @test13_vector2(i64 %X, <2 x ptr> %P) nounwind {
 
 define <2 x i1> @test13_fixed_fixed(i64 %X, ptr %P, <2 x i64> %y) nounwind {
 ; CHECK-LABEL: @test13_fixed_fixed(
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 3, i64 0>
-; CHECK-NEXT:    [[A_IDX:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw <2 x i64> [[Y:%.*]], splat (i64 4)
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i64> [[A_IDX]], [[B_IDX]]
+; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[A1]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x ptr> [[DOTSPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds <2 x i64>, ptr [[P]], <2 x i64> [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x ptr> [[DOTSPLAT]], [[B]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds <2 x i64>, ptr %P, <2 x i64> zeroinitializer, i64 %X
@@ -266,7 +266,7 @@ define <2 x i1> @test13_fixed_scalable(i64 %X, ptr %P, <2 x i64> %y) nounwind {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 3, i64 0>
 ; CHECK-NEXT:    [[A_IDX:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[B_IDX:%.*]] = mul nsw <2 x i64> [[Y:%.*]], [[DOTSPLAT]]
@@ -282,10 +282,10 @@ define <2 x i1> @test13_fixed_scalable(i64 %X, ptr %P, <2 x i64> %y) nounwind {
 define <vscale x 2 x i1> @test13_scalable_scalable(i64 %X, ptr %P, <vscale x 2 x i64> %y) nounwind {
 ; CHECK-LABEL: @test13_scalable_scalable(
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[X:%.*]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[A_IDX:%.*]] = shl nsw <vscale x 2 x i64> [[DOTSPLAT]], splat (i64 3)
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw <vscale x 2 x i64> [[DOTSPLATINSERT]], splat (i64 3)
+; CHECK-NEXT:    [[A_IDX:%.*]] = shufflevector <vscale x 2 x i64> [[TMP3]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[B_IDX:%.*]] = mul nsw <vscale x 2 x i64> [[Y:%.*]], [[DOTSPLAT2]]
@@ -356,7 +356,7 @@ define i1 @test13_i16(i16 %X, ptr %P) {
 
 define i1 @test13_i128(i128 %X, ptr %P) {
 ; CHECK-LABEL: @test13_i128(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i128 [[X:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i128 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -412,7 +412,7 @@ define ptr @test_index_canon_inbounds(ptr %X, i32 %Idx) {
 
 define ptr @test_index_canon_nusw_nuw(ptr %X, i32 %Idx) {
 ; CHECK-LABEL: @test_index_canon_nusw_nuw(
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[IDX:%.*]] to i64
 ; CHECK-NEXT:    [[R:%.*]] = getelementptr nusw nuw i32, ptr [[X:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
@@ -568,7 +568,7 @@ define i32 @test20(ptr %P, i32 %A, i32 %B) {
 
 define i32 @test20_as1(ptr addrspace(1) %P, i32 %A, i32 %B) {
 ; CHECK-LABEL: @test20_as1(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[A:%.*]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i32 [[A:%.*]] to i16
 ; CHECK-NEXT:    [[T6:%.*]] = icmp eq i16 [[TMP1]], 0
 ; CHECK-NEXT:    [[T7:%.*]] = zext i1 [[T6]] to i32
 ; CHECK-NEXT:    ret i32 [[T7]]
@@ -580,13 +580,11 @@ define i32 @test20_as1(ptr addrspace(1) %P, i32 %A, i32 %B) {
 }
 
 
-define i32 @test21() {
+define i32 @test21(ptr %pbob1) {
 ; CHECK-LABEL: @test21(
-; CHECK-NEXT:    [[PBOB1:%.*]] = alloca [[INTSTRUCT:%.*]], align 8
-; CHECK-NEXT:    [[RVAL:%.*]] = load i32, ptr [[PBOB1]], align 4
+; CHECK-NEXT:    [[RVAL:%.*]] = load i32, ptr [[PBOB1:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[RVAL]]
 ;
-  %pbob1 = alloca %intstruct
   %pbob2 = getelementptr %intstruct, ptr %pbob1
   %rval = load i32, ptr %pbob2
   ret i32 %rval
@@ -654,18 +652,16 @@ define i1 @test26(ptr %arr) {
   %struct.siginfo_t = type { i32, i32, i32, { { i32, i32, [0 x i8], %struct.sigval_t, i32 }, [88 x i8] } }
   %struct.sigval_t = type { ptr }
 
-define i32 @test27(ptr %to, ptr %from) {
+define i32 @test27(ptr %to, ptr %from, ptr %from_addr) {
 ; CHECK-LABEL: @test27(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[FROM_ADDR:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    [[T344:%.*]] = load ptr, ptr [[FROM_ADDR]], align 8
+; CHECK-NEXT:    [[T344:%.*]] = load ptr, ptr [[FROM_ADDR:%.*]], align 8
 ; CHECK-NEXT:    [[T348:%.*]] = getelementptr i8, ptr [[T344]], i64 24
 ; CHECK-NEXT:    [[T351:%.*]] = load i32, ptr [[T348]], align 8
 ; CHECK-NEXT:    [[T360:%.*]] = call i32 asm sideeffect "...", "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"(i32 [[T351]], ptr elementtype([[STRUCT___LARGE_STRUCT:%.*]]) null, i32 -14, i32 0) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  %from_addr = alloca ptr
   %t344 = load ptr, ptr %from_addr, align 8
   %t345 = getelementptr %struct.siginfo_t, ptr %t344, i32 0, i32 3
   %t346 = getelementptr { { i32, i32, [0 x i8], %struct.sigval_t, i32 }, [88 x i8] }, ptr %t345, i32 0, i32 0
@@ -686,15 +682,15 @@ define i32 @test28() nounwind  {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ORIENTATIONS:%.*]] = alloca [1 x [1 x %struct.x]], align 8
 ; CHECK-NEXT:    [[T3:%.*]] = call i32 @puts(ptr noundef nonnull dereferenceable(1) @.str) #[[ATTR0]]
-; CHECK-NEXT:    [[T45:%.*]] = getelementptr inbounds nuw i8, ptr [[ORIENTATIONS]], i64 1
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[BB10]] ]
 ; CHECK-NEXT:    [[T12_REC:%.*]] = xor i32 [[INDVAR]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[T12_REC]] to i64
-; CHECK-NEXT:    [[T12:%.*]] = getelementptr inbounds [[STRUCT_X:%.*]], ptr [[T45]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[T12:%.*]] = getelementptr inbounds i8, ptr [[ORIENTATIONS]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[T16:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str1, ptr nonnull [[T12]]) #[[ATTR0]]
-; CHECK-NEXT:    [[T84:%.*]] = icmp eq ptr [[T12]], [[ORIENTATIONS]]
+; CHECK-NEXT:    [[T84:%.*]] = icmp eq i64 [[TMP1]], 0
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
 ; CHECK-NEXT:    br i1 [[T84]], label [[BB17:%.*]], label [[BB10]]
 ; CHECK:       bb17:
@@ -764,7 +760,7 @@ define i32 @test30(i32 %m, i32 %n) nounwind {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, i64 [[TMP0]], align 4
 ; CHECK-NEXT:    call void @test30f(ptr nonnull [[TMP1]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[M:%.*]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [0 x i32], ptr [[TMP1]], i64 0, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[TMP1]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
@@ -1345,10 +1341,7 @@ declare noalias ptr @malloc(i64) nounwind allockind("alloc,uninitialized") alloc
 define i32 @test_gep_bitcast_malloc(ptr %a) {
 ; CHECK-LABEL: @test_gep_bitcast_malloc(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(16) ptr @malloc(i64 16)
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr i8, ptr [[CALL]], i64 12
-; CHECK-NEXT:    [[A_C:%.*]] = load i32, ptr [[G3]], align 4
-; CHECK-NEXT:    ret i32 [[A_C]]
+; CHECK-NEXT:    ret i32 undef
 ;
 entry:
   %call = call noalias ptr @malloc(i64 16) #2
@@ -1387,7 +1380,7 @@ define ptr @gep_of_gep_multiuse_var_and_var(ptr %p, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_of_gep_multiuse_var_and_var(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr [4 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]]
 ; CHECK-NEXT:    call void @use(ptr [[GEP1]])
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr [4 x i32], ptr [[P]], i64 [[IDX]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, ptr [[GEP1]], i64 [[IDX2:%.*]]
 ; CHECK-NEXT:    ret ptr [[GEP2]]
 ;
   %gep1 = getelementptr [4 x i32], ptr %p, i64 %idx
@@ -1929,8 +1922,9 @@ define ptr @gep_merge_nusw(ptr %p, i64 %x, i64 %y) {
 
 define ptr @gep_merge_nuw_add_zero(ptr %p, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_merge_nuw_add_zero(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]], i64 [[IDX2:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw [2 x i32], ptr [[GEP_SPLIT:%.*]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i32, ptr [[GEP]], i64 [[IDX3:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP1]]
 ;
   %gep1 = getelementptr nuw [2 x i32], ptr %p, i64 %idx
   %gep = getelementptr nuw [2 x i32], ptr %gep1, i64 0, i64 %idx2
@@ -1942,7 +1936,8 @@ define ptr @gep_merge_nuw_add_zero(ptr %p, i64 %idx, i64 %idx2) {
 ; after the merge.
 define ptr @gep_merge_nusw_add_zero(ptr %p, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_merge_nusw_add_zero(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nusw [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw i32, ptr [[GEP1]], i64 [[IDX2:%.*]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep1 = getelementptr nusw [2 x i32], ptr %p, i64 %idx
@@ -1952,7 +1947,8 @@ define ptr @gep_merge_nusw_add_zero(ptr %p, i64 %idx, i64 %idx2) {
 
 define ptr @gep_merge_nuw_const(ptr %p, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_merge_nuw_const(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]], i64 1
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[GEP1]], i64 4
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep1 = getelementptr nuw [2 x i32], ptr %p, i64 %idx
@@ -1975,11 +1971,102 @@ define ptr @gep_merge_nuw_const_neg(ptr %p, i64 %idx, i64 %idx2) {
 ; does not overflow.
 define ptr @gep_merge_nusw_const(ptr %p, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_merge_nusw_const(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]], i64 1
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nusw [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw nuw i8, ptr [[GEP1]], i64 4
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep1 = getelementptr nusw [2 x i32], ptr %p, i64 %idx
   %gep = getelementptr nusw i8, ptr %gep1, i64 4
+  ret ptr %gep
+}
+
+define ptr @gep_index_trunc_nothing(ptr %p, i128 %idx) {
+; CHECK-LABEL: @gep_index_trunc_nothing(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i128 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr i8, ptr %p, i128 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_index_trunc_nuw(ptr %p, i128 %idx) {
+; CHECK-LABEL: @gep_index_trunc_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i128 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr nuw i8, ptr %p, i128 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_index_trunc_nusw(ptr %p, i128 %idx) {
+; CHECK-LABEL: @gep_index_trunc_nusw(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i128 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr nusw i8, ptr %p, i128 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_index_trunc_inbounds(ptr %p, i128 %idx) {
+; CHECK-LABEL: @gep_index_trunc_inbounds(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i128 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr inbounds i8, ptr %p, i128 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_index_trunc_nusw_nuw(ptr %p, i128 %idx) {
+; CHECK-LABEL: @gep_index_trunc_nusw_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i128 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw nuw i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr nusw nuw i8, ptr %p, i128 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_index_ext_nothing(ptr %p, i32 %idx) {
+; CHECK-LABEL: @gep_index_ext_nothing(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr i8, ptr %p, i32 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_index_ext_nuw(ptr %p, i32 %idx) {
+; CHECK-LABEL: @gep_index_ext_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr nuw i8, ptr %p, i32 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_index_ext_nusw(ptr %p, i32 %idx) {
+; CHECK-LABEL: @gep_index_ext_nusw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr nuw i8, ptr %p, i32 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_index_ext_nusw_nuw(ptr %p, i32 %idx) {
+; CHECK-LABEL: @gep_index_ext_nusw_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw nuw i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr nusw nuw i8, ptr %p, i32 %idx
   ret ptr %gep
 }
 

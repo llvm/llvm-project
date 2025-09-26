@@ -73,6 +73,97 @@ TEST(NativeProcessProtocolTest, SetBreakpointFailVerify) {
                     llvm::Failed());
 }
 
+TEST(NativeProcessProtocolTest, RemoveSoftwareBreakpoint) {
+  NiceMock<MockDelegate> DummyDelegate;
+  MockProcess<NativeProcessProtocol> Process(DummyDelegate,
+                                             ArchSpec("x86_64-pc-linux"));
+  auto Trap = cantFail(Process.GetSoftwareBreakpointTrapOpcode(1));
+  auto Original = std::vector<uint8_t>{0xbb};
+
+  // Set up a breakpoint.
+  {
+    InSequence S;
+    EXPECT_CALL(Process, ReadMemory(0x47, 1))
+        .WillOnce(Return(ByMove(Original)));
+    EXPECT_CALL(Process, WriteMemory(0x47, Trap)).WillOnce(Return(ByMove(1)));
+    EXPECT_CALL(Process, ReadMemory(0x47, 1)).WillOnce(Return(ByMove(Trap)));
+    EXPECT_THAT_ERROR(Process.SetBreakpoint(0x47, 0, false).ToError(),
+                      llvm::Succeeded());
+  }
+
+  // Remove the breakpoint for the first time. This should remove the breakpoint
+  // from m_software_breakpoints.
+  //
+  // Should succeed.
+  {
+    InSequence S;
+    EXPECT_CALL(Process, ReadMemory(0x47, 1)).WillOnce(Return(ByMove(Trap)));
+    EXPECT_CALL(Process, WriteMemory(0x47, llvm::ArrayRef(Original)))
+        .WillOnce(Return(ByMove(1)));
+    EXPECT_CALL(Process, ReadMemory(0x47, 1))
+        .WillOnce(Return(ByMove(Original)));
+    EXPECT_THAT_ERROR(Process.RemoveBreakpoint(0x47, false).ToError(),
+                      llvm::Succeeded());
+  }
+
+  // Remove the breakpoint for the second time.
+  //
+  // Should fail. None of the ReadMemory() or WriteMemory() should be called,
+  // because the function should early return when seeing that the breakpoint
+  // isn't in m_software_breakpoints.
+  {
+    EXPECT_CALL(Process, ReadMemory(_, _)).Times(0);
+    EXPECT_CALL(Process, WriteMemory(_, _)).Times(0);
+    EXPECT_THAT_ERROR(Process.RemoveBreakpoint(0x47, false).ToError(),
+                      llvm::Failed());
+  }
+}
+
+TEST(NativeProcessProtocolTest, RemoveSoftwareBreakpointMemoryError) {
+  NiceMock<MockDelegate> DummyDelegate;
+  MockProcess<NativeProcessProtocol> Process(DummyDelegate,
+                                             ArchSpec("x86_64-pc-linux"));
+  auto Trap = cantFail(Process.GetSoftwareBreakpointTrapOpcode(1));
+  auto Original = std::vector<uint8_t>{0xbb};
+  auto SomethingElse = std::vector<uint8_t>{0xaa};
+
+  // Set up a breakpoint.
+  {
+    InSequence S;
+    EXPECT_CALL(Process, ReadMemory(0x47, 1))
+        .WillOnce(Return(ByMove(Original)));
+    EXPECT_CALL(Process, WriteMemory(0x47, Trap)).WillOnce(Return(ByMove(1)));
+    EXPECT_CALL(Process, ReadMemory(0x47, 1)).WillOnce(Return(ByMove(Trap)));
+    EXPECT_THAT_ERROR(Process.SetBreakpoint(0x47, 0, false).ToError(),
+                      llvm::Succeeded());
+  }
+
+  // Remove the breakpoint for the first time, with an unexpected value read by
+  // the first ReadMemory(). This should cause an early return, with the
+  // breakpoint removed from m_software_breakpoints.
+  //
+  // Should fail.
+  {
+    InSequence S;
+    EXPECT_CALL(Process, ReadMemory(0x47, 1))
+        .WillOnce(Return(ByMove(SomethingElse)));
+    EXPECT_THAT_ERROR(Process.RemoveBreakpoint(0x47, false).ToError(),
+                      llvm::Failed());
+  }
+
+  // Remove the breakpoint for the second time.
+  //
+  // Should fail. None of the ReadMemory() or WriteMemory() should be called,
+  // because the function should early return when seeing that the breakpoint
+  // isn't in m_software_breakpoints.
+  {
+    EXPECT_CALL(Process, ReadMemory(_, _)).Times(0);
+    EXPECT_CALL(Process, WriteMemory(_, _)).Times(0);
+    EXPECT_THAT_ERROR(Process.RemoveBreakpoint(0x47, false).ToError(),
+                      llvm::Failed());
+  }
+}
+
 TEST(NativeProcessProtocolTest, ReadMemoryWithoutTrap) {
   NiceMock<MockDelegate> DummyDelegate;
   MockProcess<NativeProcessProtocol> Process(DummyDelegate,

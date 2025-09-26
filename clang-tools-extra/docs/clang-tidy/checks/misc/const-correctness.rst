@@ -52,8 +52,9 @@ Note that there is the check
 :doc:`cppcoreguidelines-avoid-non-const-global-variables <../cppcoreguidelines/avoid-non-const-global-variables>`
 to enforce ``const`` correctness on all globals.
 
-Known Limitations
------------------
+
+Limitations
+-----------
 
 The check does not run on `C` code.
 

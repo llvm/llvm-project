@@ -3,10 +3,10 @@
 
 define void @foo(ptr %a) {
 ; CHECK: .func foo
-; CHECK: ld.v2.u32
-; CHECK-NEXT: ld.v2.u32
-; CHECK-NEXT: ld.v2.u32
-; CHECK-NEXT: ld.v2.u32
+; CHECK: ld.v2.b32
+; CHECK-NEXT: ld.v2.b32
+; CHECK-NEXT: ld.v2.b32
+; CHECK-NEXT: ld.v2.b32
 ; CHECK-NEXT: add.s32
 ; CHECK-NEXT: add.s32
 ; CHECK-NEXT: add.s32

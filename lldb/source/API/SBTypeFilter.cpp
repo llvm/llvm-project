@@ -19,7 +19,7 @@ using namespace lldb_private;
 SBTypeFilter::SBTypeFilter() { LLDB_INSTRUMENT_VA(this); }
 
 SBTypeFilter::SBTypeFilter(uint32_t options)
-    : m_opaque_sp(TypeFilterImplSP(new TypeFilterImpl(options))) {
+    : m_opaque_sp(std::make_shared<TypeFilterImpl>(options)) {
   LLDB_INSTRUMENT_VA(this, options);
 }
 

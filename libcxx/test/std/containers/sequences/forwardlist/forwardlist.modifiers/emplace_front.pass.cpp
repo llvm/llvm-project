@@ -10,7 +10,7 @@
 
 // <forward_list>
 
-// template <class... Args> reference emplace_front(Args&&... args);
+// template <class... Args> reference emplace_front(Args&&... args); // constexpr since C++26
 // return type is 'reference' in C++17; 'void' before
 
 #include <forward_list>
@@ -21,7 +21,7 @@
 #include "../../../Emplaceable.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef Emplaceable T;
     typedef std::forward_list<T> C;
@@ -66,6 +66,15 @@ int main(int, char**) {
     assert(*std::next(c.begin()) == Emplaceable());
     assert(std::distance(c.begin(), c.end()) == 2);
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

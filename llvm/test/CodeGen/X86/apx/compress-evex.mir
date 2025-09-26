@@ -1,5 +1,6 @@
 # RUN: llc %s -mtriple=x86_64-unknown -mattr=+ndd,+egpr -start-before=x86-compress-evex -show-mc-encoding -o - | FileCheck --check-prefixes=CHECK,NDD %s
 # RUN: llc %s -mtriple=x86_64-unknown -mattr=+ndd,+egpr,+nf -start-before=x86-compress-evex -show-mc-encoding -o - | FileCheck --check-prefixes=CHECK,NDD-NF %s
+# RUN: llc %s -mtriple=x86_64-unknown -mattr=+ndd,+egpr,+nf -x86-enable-apx-for-relocation=true -start-before=x86-compress-evex -show-mc-encoding -o - | FileCheck --check-prefixes=CHECK,NDD-NF %s
 
 ...
 ---

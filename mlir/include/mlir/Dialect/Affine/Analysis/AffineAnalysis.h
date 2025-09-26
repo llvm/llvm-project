@@ -81,13 +81,13 @@ LogicalResult getIndexSet(MutableArrayRef<Operation *> ops,
 /// Encapsulates a memref load or store access information.
 struct MemRefAccess {
   Value memref;
-  Operation *opInst;
+  Operation *opInst = nullptr;
   SmallVector<Value, 4> indices;
 
-  /// Constructs a MemRefAccess from a load or store operation.
-  // TODO: add accessors to standard op's load, store, DMA op's to return
-  // MemRefAccess, i.e., loadOp->getAccess(), dmaOp->getRead/WriteAccess.
-  explicit MemRefAccess(Operation *opInst);
+  /// Constructs a MemRefAccess from an affine read/write operation.
+  explicit MemRefAccess(Operation *memOp);
+
+  MemRefAccess() = default;
 
   // Returns the rank of the memref associated with this access.
   unsigned getRank() const;
@@ -126,10 +126,12 @@ struct MemRefAccess {
   /// time (considering the memrefs, their respective affine access maps  and
   /// operands). The equality of access functions + operands is checked by
   /// subtracting fully composed value maps, and then simplifying the difference
-  /// using the expression flattener.
-  /// TODO: this does not account for aliasing of memrefs.
+  /// using the expression flattener. This does not account for aliasing of
+  /// memrefs.
   bool operator==(const MemRefAccess &rhs) const;
   bool operator!=(const MemRefAccess &rhs) const { return !(*this == rhs); }
+
+  explicit operator bool() const { return !!memref; }
 };
 
 // DependenceComponent contains state about the direction of a dependence as an

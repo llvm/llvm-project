@@ -72,6 +72,16 @@ def : Joined<["--", "-"], "plugin-opt=emit-llvm">,
   Flags<[WrapperOnlyOption]>, Alias<lto_emit_llvm>;
 def : Joined<["--", "-"], "plugin-opt=emit-asm">,
   Flags<[WrapperOnlyOption]>, Alias<lto_emit_asm>;
+
+def opt_remarks_filename : Joined<["--", "-"], "plugin-opt=opt-remarks-filename=">,
+  Flags<[WrapperOnlyOption]>, HelpText<"YAML output file for optimization remarks">;
+def opt_remarks_format : Joined<["--", "-"], "plugin-opt=opt-remarks-format=">,
+  Flags<[WrapperOnlyOption]>, HelpText<"The format used for serializing remarks (default: YAML)">;
+def opt_remarks_filter : Joined<["--", "-"], "plugin-opt=opt-remarks-filter=">, 
+  Flags<[WrapperOnlyOption]>, HelpText<"Regex for the passes that need to be serialized to the output file">;
+def opt_remarks_with_hotness : Flag<["--", "-"], "plugin-opt=opt-remarks-with-hotness">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Include hotness information in the optimization remarks file">;
+
 def plugin_opt : Joined<["--", "-"], "plugin-opt=">, Flags<[WrapperOnlyOption]>,
   HelpText<"Options passed to LLVM, not including the Clang invocation. Use "
            "'--plugin-opt=--help' for a list of options.">;

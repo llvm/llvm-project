@@ -12,7 +12,7 @@ void DeleteInHeader::operator delete(void *ptr) {
 
   ::operator delete(ptr);
 
-  self->data = 2; // expected-warning {{Use of memory after it is freed [cplusplus.NewDelete]}}
+  self->data = 2; // expected-warning {{Use of memory after it is released [cplusplus.NewDelete]}}
 }
 
 #endif // OVERLOADED_DELETE_IN_SYSTEM_HEADER

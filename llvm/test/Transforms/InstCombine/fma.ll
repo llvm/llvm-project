@@ -802,6 +802,67 @@ define <2 x float> @fma_unary_shuffle_ops_narrowing(<3 x float> %x, <3 x float> 
   ret <2 x float> %r
 }
 
+define <2 x float> @fma_unary_shuffle_ops_1_const(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fma_unary_shuffle_ops_1_const(
+; CHECK-NEXT:    [[Y:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[X:%.*]], <2 x float> <float 2.000000e+00, float 1.000000e+00>, <2 x float> [[Y1:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <2 x float> [[Y]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    ret <2 x float> [[B]]
+;
+  %a = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+  %b = shufflevector <2 x float> %y, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+  %r = call <2 x float> @llvm.fma(<2 x float> %a, <2 x float> <float 1.0, float 2.0>, <2 x float> %b)
+  ret <2 x float> %r
+}
+
+define <2 x float> @fma_unary_shuffle_ops_2_const(<2 x float> %x) {
+; CHECK-LABEL: @fma_unary_shuffle_ops_2_const(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> <float 2.000000e+00, float 1.000000e+00>, <2 x float> <float 2.000000e+00, float 1.000000e+00>, <2 x float> [[X1:%.*]])
+; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x float> [[X]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    ret <2 x float> [[A]]
+;
+  %a = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+  %r = call <2 x float> @llvm.fma(<2 x float> <float 1.0, float 2.0>, <2 x float> <float 1.0, float 2.0>, <2 x float> %a)
+  ret <2 x float> %r
+}
+
+define <vscale x 2 x float> @fma_unary_shuffle_ops_1_const_scalable(<vscale x 2 x float> %x, <vscale x 2 x float> %y) {
+; CHECK-LABEL: @fma_unary_shuffle_ops_1_const_scalable(
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 2 x float> @llvm.fma.nxv2f32(<vscale x 2 x float> [[A:%.*]], <vscale x 2 x float> splat (float 4.200000e+01), <vscale x 2 x float> [[B:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = shufflevector <vscale x 2 x float> [[R]], <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x float> [[R1]]
+;
+  %a = shufflevector <vscale x 2 x float> %x, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
+  %b = shufflevector <vscale x 2 x float> %y, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
+  %r = call <vscale x 2 x float> @llvm.fma(<vscale x 2 x float> %a, <vscale x 2 x float> splat (float 42.0), <vscale x 2 x float> %b)
+  ret <vscale x 2 x float> %r
+}
+
+define <vscale x 2 x float> @fma_unary_shuffle_ops_2_const_scalable(<vscale x 2 x float> %x) {
+; CHECK-LABEL: @fma_unary_shuffle_ops_2_const_scalable(
+; CHECK-NEXT:    [[X:%.*]] = call <vscale x 2 x float> @llvm.fma.nxv2f32(<vscale x 2 x float> splat (float 4.200000e+01), <vscale x 2 x float> splat (float 4.200000e+01), <vscale x 2 x float> [[X1:%.*]])
+; CHECK-NEXT:    [[A:%.*]] = shufflevector <vscale x 2 x float> [[X]], <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x float> [[A]]
+;
+  %a = shufflevector <vscale x 2 x float> %x, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
+  %r = call <vscale x 2 x float> @llvm.fma(<vscale x 2 x float> splat (float 42.0), <vscale x 2 x float> splat (float 42.0), <vscale x 2 x float> %a)
+  ret <vscale x 2 x float> %r
+}
+
+define <3 x float> @fma_unary_shuffle_ops_widening_1_const(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fma_unary_shuffle_ops_widening_1_const(
+; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <3 x i32> <i32 1, i32 0, i32 poison>
+; CHECK-NEXT:    call void @use_vec3(<3 x float> [[A]])
+; CHECK-NEXT:    [[Y:%.*]] = call fast <2 x float> @llvm.fma.v2f32(<2 x float> [[X]], <2 x float> splat (float 4.200000e+01), <2 x float> [[Y1:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <2 x float> [[Y]], <2 x float> poison, <3 x i32> <i32 1, i32 0, i32 poison>
+; CHECK-NEXT:    ret <3 x float> [[B]]
+;
+  %a = shufflevector <2 x float> %x, <2 x float> poison, <3 x i32> <i32 1, i32 0, i32 poison>
+  call void @use_vec3(<3 x float> %a)
+  %b = shufflevector <2 x float> %y, <2 x float> poison, <3 x i32> <i32 1, i32 0, i32 poison>
+  %r = call fast <3 x float> @llvm.fma(<3 x float> %a, <3 x float> splat (float 42.0), <3 x float> %b)
+  ret <3 x float> %r
+}
+
 ; negative test - must have 3 shuffles
 
 define <2 x float> @fma_unary_shuffle_ops_unshuffled(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
@@ -909,6 +970,19 @@ define <2 x half> @fma_negone_vec_partial_undef(<2 x half> %x, <2 x half> %y) {
 ;
   %sub = call <2 x half> @llvm.fma.v2f16(<2 x half> %x, <2 x half> <half undef, half -1.0>, <2 x half> %y)
   ret <2 x half> %sub
+}
+
+define <2 x float> @fmuladd_unary_shuffle_ops(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
+; CHECK-LABEL: @fmuladd_unary_shuffle_ops(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <2 x float> [[C:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = shufflevector <2 x float> [[R]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    ret <2 x float> [[R1]]
+;
+  %a = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+  %b = shufflevector <2 x float> %y, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+  %c = shufflevector <2 x float> %z, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+  %r = call <2 x float> @llvm.fmuladd(<2 x float> %a, <2 x float> %b, <2 x float> %c)
+  ret <2 x float> %r
 }
 
 ; negative tests

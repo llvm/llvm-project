@@ -156,8 +156,8 @@ define i32 @tailcall_two_branches(i1 %0) "sign-return-address"="all" {
 ; COMMON:            str x30, [sp, #-16]!
 ; COMMON:            bl callee2
 ; COMMON:            ldr x30, [sp], #16
-; COMMON-NEXT:       [[AUTIASP]]
 ; COMMON-NEXT:     .[[ELSE]]:
+; COMMON-NEXT:       [[AUTIASP]]
 
 ; LDR-NEXT:          ldr w16, [x30]
 ;

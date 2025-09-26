@@ -71,7 +71,7 @@ define half @fadd_h(half %a, half %b) nounwind {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
@@ -153,7 +153,7 @@ define half @fsub_h(half %a, half %b) nounwind {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
@@ -235,7 +235,7 @@ define half @fmul_h(half %a, half %b) nounwind {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
@@ -317,7 +317,7 @@ define half @fdiv_h(half %a, half %b) nounwind {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
@@ -546,7 +546,7 @@ define i32 @fneg_h(half %a, half %b) nounwind {
 ; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s1, a1, -1
+; RV64I-NEXT:    addi s1, a1, -1
 ; RV64I-NEXT:    and a0, a0, s1
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
@@ -667,7 +667,7 @@ define half @fsgnjn_h(half %a, half %b) nounwind {
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s3, a0, -1
+; RV64I-NEXT:    addi s3, a0, -1
 ; RV64I-NEXT:    and a0, s1, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
@@ -831,7 +831,7 @@ define half @fabs_h(half %a, half %b) nounwind {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
@@ -972,7 +972,7 @@ define half @fmin_h(half %a, half %b) nounwind {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
@@ -1056,7 +1056,7 @@ define half @fmax_h(half %a, half %b) nounwind {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
@@ -1149,7 +1149,7 @@ define half @fmadd_h(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    mv s0, a2
 ; RV64I-NEXT:    mv s1, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s3, a1, -1
+; RV64I-NEXT:    addi s3, a1, -1
 ; RV64I-NEXT:    and a0, a0, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
@@ -1261,7 +1261,7 @@ define half @fmsub_h(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s3, a0, -1
+; RV64I-NEXT:    addi s3, a0, -1
 ; RV64I-NEXT:    and a0, a2, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
@@ -1416,7 +1416,7 @@ define half @fnmadd_h(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    mv s1, a2
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui s3, 16
-; RV64I-NEXT:    addiw s3, s3, -1
+; RV64I-NEXT:    addi s3, s3, -1
 ; RV64I-NEXT:    and a0, a0, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
@@ -1596,7 +1596,7 @@ define half @fnmadd_h_2(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    mv s1, a2
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    lui s3, 16
-; RV64I-NEXT:    addiw s3, s3, -1
+; RV64I-NEXT:    addi s3, s3, -1
 ; RV64I-NEXT:    and a0, a1, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
@@ -1761,7 +1761,7 @@ define half @fnmadd_h_3(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    mv s0, a2
 ; RV64I-NEXT:    mv s1, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s3, a1, -1
+; RV64I-NEXT:    addi s3, a1, -1
 ; RV64I-NEXT:    and a0, a0, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
@@ -1882,7 +1882,7 @@ define half @fnmadd_nsz(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    mv s0, a2
 ; RV64I-NEXT:    mv s1, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s3, a1, -1
+; RV64I-NEXT:    addi s3, a1, -1
 ; RV64I-NEXT:    and a0, a0, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
@@ -2003,7 +2003,7 @@ define half @fnmsub_h(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    mv s0, a2
 ; RV64I-NEXT:    mv s1, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s3, a1, -1
+; RV64I-NEXT:    addi s3, a1, -1
 ; RV64I-NEXT:    and a0, a0, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
@@ -2140,7 +2140,7 @@ define half @fnmsub_h_2(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    mv s0, a2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s3, a0, -1
+; RV64I-NEXT:    addi s3, a0, -1
 ; RV64I-NEXT:    and a0, a1, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
@@ -2269,7 +2269,7 @@ define half @fmadd_h_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    mv s0, a2
 ; RV64I-NEXT:    mv s1, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s3, a1, -1
+; RV64I-NEXT:    addi s3, a1, -1
 ; RV64I-NEXT:    and a0, a0, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
@@ -2393,7 +2393,7 @@ define half @fmsub_h_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s3, a0, -1
+; RV64I-NEXT:    addi s3, a0, -1
 ; RV64I-NEXT:    and a0, a2, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
@@ -2552,7 +2552,7 @@ define half @fnmadd_h_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    mv s0, a2
 ; RV64I-NEXT:    mv s1, a1
 ; RV64I-NEXT:    lui s3, 16
-; RV64I-NEXT:    addiw s3, s3, -1
+; RV64I-NEXT:    addi s3, s3, -1
 ; RV64I-NEXT:    and a0, a0, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
@@ -2737,7 +2737,7 @@ define half @fnmsub_h_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    mv s0, a2
 ; RV64I-NEXT:    mv s1, a1
 ; RV64I-NEXT:    lui s3, 16
-; RV64I-NEXT:    addiw s3, s3, -1
+; RV64I-NEXT:    addi s3, s3, -1
 ; RV64I-NEXT:    and a0, a0, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
@@ -2871,7 +2871,7 @@ define half @fsgnjx_f16(half %x, half %y) nounwind {
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    lui a0, 12
-; RV64I-NEXT:    addiw a0, a0, -1024
+; RV64I-NEXT:    addi a0, a0, -1024
 ; RV64I-NEXT:    and a0, s1, a0
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, s0
@@ -2883,39 +2883,20 @@ define half @fsgnjx_f16(half %x, half %y) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV32IZFHMIN-LABEL: fsgnjx_f16:
-; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    lui a0, %hi(.LCPI23_0)
-; RV32IZFHMIN-NEXT:    lhu a0, %lo(.LCPI23_0)(a0)
-; RV32IZFHMIN-NEXT:    fmv.x.h a1, fa0
-; RV32IZFHMIN-NEXT:    lui a2, 1048568
-; RV32IZFHMIN-NEXT:    and a1, a1, a2
-; RV32IZFHMIN-NEXT:    slli a0, a0, 17
-; RV32IZFHMIN-NEXT:    srli a0, a0, 17
-; RV32IZFHMIN-NEXT:    or a0, a0, a1
-; RV32IZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; RV32IZFHMIN-NEXT:    fmul.s fa5, fa5, fa4
-; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV32IZFHMIN-NEXT:    ret
-;
-; RV64IZFHMIN-LABEL: fsgnjx_f16:
-; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    lui a0, %hi(.LCPI23_0)
-; RV64IZFHMIN-NEXT:    lhu a0, %lo(.LCPI23_0)(a0)
-; RV64IZFHMIN-NEXT:    fmv.x.h a1, fa0
-; RV64IZFHMIN-NEXT:    lui a2, 1048568
-; RV64IZFHMIN-NEXT:    and a1, a1, a2
-; RV64IZFHMIN-NEXT:    slli a0, a0, 49
-; RV64IZFHMIN-NEXT:    srli a0, a0, 49
-; RV64IZFHMIN-NEXT:    or a0, a0, a1
-; RV64IZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; RV64IZFHMIN-NEXT:    fmul.s fa5, fa5, fa4
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV64IZFHMIN-NEXT:    ret
+; CHECKIZFHMIN-LABEL: fsgnjx_f16:
+; CHECKIZFHMIN:       # %bb.0:
+; CHECKIZFHMIN-NEXT:    fmv.x.h a0, fa0
+; CHECKIZFHMIN-NEXT:    lui a1, 1048568
+; CHECKIZFHMIN-NEXT:    and a0, a0, a1
+; CHECKIZFHMIN-NEXT:    li a1, 15
+; CHECKIZFHMIN-NEXT:    slli a1, a1, 10
+; CHECKIZFHMIN-NEXT:    or a0, a0, a1
+; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
+; CHECKIZFHMIN-NEXT:    fmul.s fa5, fa5, fa4
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKIZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: fsgnjx_f16:
 ; CHECKIZHINXMIN:       # %bb.0:

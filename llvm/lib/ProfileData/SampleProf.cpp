@@ -20,6 +20,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <system_error>
@@ -46,6 +47,24 @@ bool FunctionSamples::ProfileIsPreInlined = false;
 bool FunctionSamples::UseMD5 = false;
 bool FunctionSamples::HasUniqSuffix = true;
 bool FunctionSamples::ProfileIsFS = false;
+
+std::error_code
+serializeTypeMap(const TypeCountMap &Map,
+                 const MapVector<FunctionId, uint32_t> &NameTable,
+                 raw_ostream &OS) {
+  encodeULEB128(Map.size(), OS);
+  for (const auto &[TypeName, SampleCount] : Map) {
+    if (auto NameIndexIter = NameTable.find(TypeName);
+        NameIndexIter != NameTable.end()) {
+      encodeULEB128(NameIndexIter->second, OS);
+    } else {
+      // If the type is not in the name table, we cannot serialize it.
+      return sampleprof_error::truncated_name_table;
+    }
+    encodeULEB128(SampleCount, OS);
+  }
+  return sampleprof_error::success;
+}
 } // namespace sampleprof
 } // namespace llvm
 
@@ -90,6 +109,8 @@ class SampleProfErrorCategoryType : public std::error_category {
       return "Zlib is unavailable";
     case sampleprof_error::hash_mismatch:
       return "Function hash mismatch";
+    case sampleprof_error::illegal_line_offset:
+      return "Illegal line offset in sample profile data";
     }
     llvm_unreachable("A value of sampleprof_error has no message.");
   }
@@ -126,9 +147,33 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
   return Result;
 }
 
+std::error_code SampleRecord::serialize(
+    raw_ostream &OS, const MapVector<FunctionId, uint32_t> &NameTable) const {
+  encodeULEB128(getSamples(), OS);
+  encodeULEB128(getCallTargets().size(), OS);
+  for (const auto &J : getSortedCallTargets()) {
+    FunctionId Callee = J.first;
+    uint64_t CalleeSamples = J.second;
+    if (auto NameIndexIter = NameTable.find(Callee);
+        NameIndexIter != NameTable.end()) {
+      encodeULEB128(NameIndexIter->second, OS);
+    } else {
+      // If the callee is not in the name table, we cannot serialize it.
+      return sampleprof_error::truncated_name_table;
+    }
+    encodeULEB128(CalleeSamples, OS);
+  }
+  return sampleprof_error::success;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LineLocation::dump() const { print(dbgs()); }
 #endif
+
+void LineLocation::serialize(raw_ostream &OS) const {
+  encodeULEB128(LineOffset, OS);
+  encodeULEB128(Discriminator, OS);
+}
 
 /// Print the sample record to the stream \p OS indented by \p Indent.
 void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {
@@ -151,6 +196,17 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
   return OS;
 }
 
+static void printTypeCountMap(raw_ostream &OS, LineLocation Loc,
+                              const TypeCountMap &TypeCountMap) {
+  if (TypeCountMap.empty()) {
+    return;
+  }
+  OS << Loc << ": vtables: ";
+  for (const auto &[Type, Count] : TypeCountMap)
+    OS << Type << ":" << Count << " ";
+  OS << "\n";
+}
+
 /// Print the samples collected for a function on stream \p OS.
 void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   if (getFunctionHash())
@@ -165,7 +221,13 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     SampleSorter<LineLocation, SampleRecord> SortedBodySamples(BodySamples);
     for (const auto &SI : SortedBodySamples.get()) {
       OS.indent(Indent + 2);
+      const auto &Loc = SI->first;
       OS << SI->first << ": " << SI->second;
+      if (const TypeCountMap *TypeCountMap =
+              this->findCallsiteTypeSamplesAt(Loc)) {
+        OS.indent(Indent + 2);
+        printTypeCountMap(OS, Loc, *TypeCountMap);
+      }
     }
     OS.indent(Indent);
     OS << "}\n";
@@ -178,12 +240,19 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     OS << "Samples collected in inlined callsites {\n";
     SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
         CallsiteSamples);
-    for (const auto &CS : SortedCallsiteSamples.get()) {
-      for (const auto &FS : CS->second) {
+    for (const auto *Element : SortedCallsiteSamples.get()) {
+      // Element is a pointer to a pair of LineLocation and FunctionSamplesMap.
+      const auto &[Loc, FunctionSampleMap] = *Element;
+      for (const FunctionSamples &FuncSample :
+           llvm::make_second_range(FunctionSampleMap)) {
         OS.indent(Indent + 2);
-        OS << CS->first << ": inlined callee: " << FS.second.getFunction()
-           << ": ";
-        FS.second.print(OS, Indent + 4);
+        OS << Loc << ": inlined callee: " << FuncSample.getFunction() << ": ";
+        FuncSample.print(OS, Indent + 4);
+      }
+      auto TypeSamplesIter = VirtualCallsiteTypeCounts.find(Loc);
+      if (TypeSamplesIter != VirtualCallsiteTypeCounts.end()) {
+        OS.indent(Indent + 2);
+        printTypeCountMap(OS, Loc, TypeSamplesIter->second);
       }
     }
     OS.indent(Indent);

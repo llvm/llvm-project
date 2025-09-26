@@ -7,4 +7,4 @@ define void @load_extern(%externref %ref) {
   ret void
 }
 
-; CHECK-ERROR: error: loading unsized types is not allowed
+; CHECK-ERROR: error: load operand must be a pointer to a first class type

@@ -10,8 +10,8 @@ function time_test()
   !CHECK:     %[[call_result:.*]] = fir.call @_FortranAtime()
   !CHECK-SAME:  -> i64
 
-  !CHECK-DAG:   hlfir.assign %[[call_result]] to %[[func_result_decl]]#[[func_result]] : i64, !fir.ref<i64>
-  !CHECK-DAG:   %[[load_result:.*]] = fir.load %[[func_result_decl]]#[[func_result]] : !fir.ref<i64>
+  !CHECK-DAG:   hlfir.assign %[[call_result]] to %[[func_result_decl]]#0 : i64, !fir.ref<i64>
+  !CHECK-DAG:   %[[load_result:.*]] = fir.load %[[func_result_decl]]#0 : !fir.ref<i64>
   !CHECK:     return %[[load_result]] : i64
   time_test = time()
 end function time_test

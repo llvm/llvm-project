@@ -47,9 +47,9 @@ entry:
   call fastcc void @"\01?fin$0@0@test2@@"(ptr %tmp0)
   ret void
 ; CHECK-LABEL: test2:
-; CHECK:	.set Ltest2$frame_escape_0, 8
-; CHECK:	.set Ltest2$frame_escape_1, 4
-; CHECK:	.set Ltest2$frame_escape_2, 0
+; CHECK:	Ltest2$frame_escape_0 = 8
+; CHECK:	Ltest2$frame_escape_1 = 4
+; CHECK:	Ltest2$frame_escape_2 = 0
 ; CHECK:	calll "?fin$0@0@test2@@"
 }
 

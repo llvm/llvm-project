@@ -127,6 +127,11 @@ def GPRT : GPRRegisterClass<(add // a0...a7, t0...t8
 // prediction.
 def GPRJR : GPRRegisterClass<(sub GPR, R1)>;
 
+// Don't use R0 or R1 for the rj operand of [G]CSRXCHG, because when rj is
+// encoded as 0 or 1, the instruction is interpreted as [G]CSRRD or [G]CSRWR,
+// respectively, rather than [G]CSRXCHG.
+def GPRNoR0R1 : GPRRegisterClass<(sub GPR, R0, R1)>;
+
 // Floating point registers
 
 let RegAltNameIndices = [RegAliasName] in {

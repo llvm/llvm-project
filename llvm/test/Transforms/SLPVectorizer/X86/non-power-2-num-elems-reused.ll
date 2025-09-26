@@ -6,7 +6,7 @@ define i64 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[OR54_I_I_6:%.*]] = or i32 0, 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i32> poison, i32 [[OR54_I_I_6]], i32 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i32> @llvm.vector.insert.v16i32.v8i32(<16 x i32> [[TMP0]], <8 x i32> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[TMP1]], <16 x i32> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 7, i32 7, i32 8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <16 x i32> [[TMP2]] to <16 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vector.reduce.or.v16i64(<16 x i64> [[TMP3]])

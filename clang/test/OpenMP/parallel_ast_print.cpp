@@ -13,10 +13,26 @@
 // RUN: %clang_cc1 -DOMP51 -verify -Wno-vla -fopenmp-simd -ast-print %s | FileCheck -check-prefixes=CHECK,OMP51 %s
 // RUN: %clang_cc1 -DOMP51 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -DOMP51 -fopenmp-simd -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck -check-prefixes=CHECK,OMP51 %s
+
+// RUN: %clang_cc1 -DOMP60 -verify -Wno-vla -fopenmp -fopenmp-version=60 -ast-print %s | FileCheck -check-prefixes=CHECK,OMP60 %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp -fopenmp-version=60 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp -fopenmp-version=60 -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck -check-prefixes=CHECK,OMP60 %s
+
+// RUN: %clang_cc1 -DOMP60 -verify -Wno-vla -fopenmp-simd -fopenmp-version=60 -ast-print %s | FileCheck -check-prefixes=CHECK,OMP60 %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp-version=60 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp-version=60 -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck -check-prefixes=CHECK,OMP60 %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp-version=60 -std=c++11 -verify -Wno-vla %s -ast-dump | FileCheck -check-prefixes=OMP60_DUMP %s
 // expected-no-diagnostics
 
 #ifndef HEADER
 #define HEADER
+
+#ifdef OMP60
+int global;
+int global2;
+
+void bar(int j) { };
+#endif
 
 void foo() {}
 
@@ -164,10 +180,44 @@ T tmain(T argc, T *argv) {
 #pragma omp parallel default(none), private(argc,b) firstprivate(argv) shared (d) if (parallel:argc > 0) num_threads(C) copyin(S<T>::TS, thrp) proc_bind(primary) reduction(+:c, arr1[argc]) reduction(max:e, arr[:C][0:10])
   foo();
 #endif
+#ifdef OMP60
+#pragma omp parallel default(none), private(argc,b) firstprivate(argv) shared (d) if (parallel:argc > 0) num_threads(strict: C) copyin(S<T>::TS, thrp) proc_bind(primary) reduction(+:c, arr1[argc]) reduction(max:e, arr[:C][0:10]) message("msg") severity(fatal)
+  foo();
+#endif
 #pragma omp parallel if (C) num_threads(s) proc_bind(close) reduction(^:e, f, arr[0:C][:argc]) reduction(default, && : g) reduction(task,+:argc)
   foo();
+#ifdef OMP60
+#pragma omp parallel if (C) num_threads(strict: s) proc_bind(close) reduction(^:e, f, arr[0:C][:argc]) reduction(default, && : g) reduction(task,+:argc) message("msg") severity(warning)
+  foo();
+#endif
   return 0;
 }
+
+
+#ifdef OMP60
+// OMP60_DUMP: FunctionDecl {{.*}}mainVC {{.*}}
+// OMP60_DUMP: OMPParallelDirective {{.*}}
+// OMP60_DUMP-NEXT: OMPSharedClause{{.*}}
+// OMP60_DUMP-NEXT: {{.*}}DeclRefExpr{{.*}} 'global' 'int'{{.*}}
+// OMP60_DUMP-NEXT: OMPDefaultClause {{.*}}
+// OMP60_DUMP-NEXT: OMPFirstprivateClause{{.*}}
+// OMP60_DUMP-NEXT: {{.*}}DeclRefExpr{{.*}} 'h' 'int[20]'{{.*}}
+// OMP60_DUMP: OMPParallelDirective {{.*}}
+// OMP60_DUMP-NEXT: OMPPrivateClause{{.*}}
+// OMP60_DUMP-NEXT: {{.*}}DeclRefExpr{{.*}} 'global2' 'int'{{.*}}
+// OMP60_DUMP-NEXT: OMPDefaultClause {{.*}}
+// OMP60_DUMP-NEXT: OMPPrivateClause {{.*}}
+// OMP60_DUMP-NEXT: {{.*}}DeclRefExpr{{.*}} 'j' 'int'{{.*}}
+int mainVC(int argc, int *argv) {
+  int h[20];
+  int j;
+#pragma omp parallel shared(global) default(firstprivate: aggregate)
+  bar(h[1]), h[1] = global;
+#pragma omp parallel private(global2) default(private: scalar)
+  bar(global2), j = global2;
+  return 0;
+}
+#endif
 
 // CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
 // CHECK-NEXT: T b = argc, c, d, e, f, g;
@@ -180,8 +230,12 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo()
 // OMP51-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(C) copyin(S<T>::TS,thrp) proc_bind(primary) reduction(+: c,arr1[argc]) reduction(max: e,arr[:C][0:10])
 // OMP51-NEXT: foo()
+// OMP60-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(strict: C) copyin(S<T>::TS,thrp) proc_bind(primary) reduction(+: c,arr1[argc]) reduction(max: e,arr[:C][0:10]) message("msg") severity(fatal)
+// OMP60-NEXT: foo()
 // CHECK-NEXT: #pragma omp parallel if(C) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:C][:argc]) reduction(default, &&: g) reduction(task, +: argc)
 // CHECK-NEXT: foo()
+// OMP60-NEXT: #pragma omp parallel if(C) num_threads(strict: s) proc_bind(close) reduction(^: e,f,arr[0:C][:argc]) reduction(default, &&: g) reduction(task, +: argc) message("msg") severity(warning)
+// OMP60-NEXT: foo()
 // CHECK: template<> int tmain<int, 5>(int argc, int *argv) {
 // CHECK-NEXT: int b = argc, c, d, e, f, g;
 // CHECK-NEXT: static int a;
@@ -193,8 +247,12 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo()
 // OMP51-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(5) copyin(S<int>::TS,thrp) proc_bind(primary) reduction(+: c,arr1[argc]) reduction(max: e,arr[:5][0:10])
 // OMP51-NEXT: foo()
+// OMP60-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(strict: 5) copyin(S<int>::TS,thrp) proc_bind(primary) reduction(+: c,arr1[argc]) reduction(max: e,arr[:5][0:10]) message("msg") severity(fatal)
+// OMP60-NEXT: foo()
 // CHECK-NEXT: #pragma omp parallel if(5) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:5][:argc]) reduction(default, &&: g) reduction(task, +: argc)
 // CHECK-NEXT: foo()
+// OMP60-NEXT: #pragma omp parallel if(5) num_threads(strict: s) proc_bind(close) reduction(^: e,f,arr[0:5][:argc]) reduction(default, &&: g) reduction(task, +: argc) message("msg") severity(warning)
+// OMP60-NEXT: foo()
 // CHECK: template<> long tmain<long, 1>(long argc, long *argv) {
 // CHECK-NEXT: long b = argc, c, d, e, f, g;
 // CHECK-NEXT: static long a;
@@ -206,8 +264,20 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo()
 // OMP51-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(1) copyin(S<long>::TS,thrp) proc_bind(primary) reduction(+: c,arr1[argc]) reduction(max: e,arr[:1][0:10])
 // OMP51-NEXT: foo()
+// OMP60-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(strict: 1) copyin(S<long>::TS,thrp) proc_bind(primary) reduction(+: c,arr1[argc]) reduction(max: e,arr[:1][0:10]) message("msg") severity(fatal)
+// OMP60-NEXT: foo()
 // CHECK-NEXT: #pragma omp parallel if(1) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:1][:argc]) reduction(default, &&: g) reduction(task, +: argc)
 // CHECK-NEXT: foo()
+// OMP60-NEXT: #pragma omp parallel if(1) num_threads(strict: s) proc_bind(close) reduction(^: e,f,arr[0:1][:argc]) reduction(default, &&: g) reduction(task, +: argc) message("msg") severity(warning)
+// OMP60-NEXT: foo()
+
+// OMP60: int mainVC(int argc, int *argv) {
+// OMP60-NEXT: int h[20];
+// OMP60-NEXT: int j;
+// OMP60-NEXT: #pragma omp parallel shared(global) default(firstprivate:aggregate)
+// OMP60-NEXT: bar(h[1]) , h[1] = global;
+// OMP60-NEXT: #pragma omp parallel private(global2) default(private:scalar)
+// OMP60-NEXT: bar(global2) , j = global2;
 
 enum Enum { };
 
@@ -227,10 +297,22 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) if(parallel: argc > 0) num_threads(ee) copyin(a) proc_bind(spread) reduction(|: c,d,arr1[argc]) reduction(*: e,arr[:10][0:argc]) allocate(e)
   foo();
 // CHECK-NEXT: foo();
-// CHECK-NEXT: #pragma omp parallel allocate(e) if(b) num_threads(c) proc_bind(close) reduction(^: e,f) reduction(&&: g,arr[0:argc][:10])
-// CHECK-NEXT: foo()
-#pragma omp parallel allocate(e) if (b) num_threads(c) proc_bind(close) reduction(^:e, f) reduction(&& : g, arr[0:argc][:10])
+#ifdef OMP60
+#pragma omp parallel default(none), private(argc,b) firstprivate(argv) if (parallel: argc > 0) num_threads(strict: ee) copyin(a) proc_bind(spread) reduction(| : c, d, arr1[argc]) reduction(* : e, arr[:10][0:argc]) allocate(e) message("msg") severity(fatal)
+// OMP60-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) if(parallel: argc > 0) num_threads(strict: ee) copyin(a) proc_bind(spread) reduction(|: c,d,arr1[argc]) reduction(*: e,arr[:10][0:argc]) allocate(e) message("msg") severity(fatal)
   foo();
+// OMP60-NEXT: foo();
+#endif
+#pragma omp parallel allocate(e) if (b) num_threads(c) proc_bind(close) reduction(^:e, f) reduction(&& : g, arr[0:argc][:10])
+// CHECK-NEXT: #pragma omp parallel allocate(e) if(b) num_threads(c) proc_bind(close) reduction(^: e,f) reduction(&&: g,arr[0:argc][:10])
+  foo();
+// CHECK-NEXT: foo()
+#ifdef OMP60
+#pragma omp parallel allocate(e) if (b) num_threads(strict: c) proc_bind(close) reduction(^:e, f) reduction(&& : g, arr[0:argc][:10]) message("msg") severity(warning)
+// OMP60-NEXT: #pragma omp parallel allocate(e) if(b) num_threads(strict: c) proc_bind(close) reduction(^: e,f) reduction(&&: g,arr[0:argc][:10]) message("msg") severity(warning)
+  foo();
+// OMP60-NEXT: foo()
+#endif
   return tmain<int, 5>(b, &b) + tmain<long, 1>(x, &x);
 }
 

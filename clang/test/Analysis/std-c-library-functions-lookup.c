@@ -6,7 +6,7 @@
 // RUN:   -analyzer-config eagerly-assume=false \
 // RUN:   -triple i686-unknown-linux 2>&1 | FileCheck %s
 
-// CHECK: Loaded summary for: unsigned int fread(void *restrict, size_t, size_t, FILE *restrict)
+// CHECK: Loaded summary for: __size_t fread(void *restrict, size_t, size_t, FILE *restrict)
 
 typedef typeof(sizeof(int)) size_t;
 typedef struct FILE FILE;

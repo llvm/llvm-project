@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-apple-darwin9 -verify %s
 // RUN: %clang_cc1 -DDYNAMIC -fsyntax-only -triple x86_64-apple-darwin9 -verify %s
 
+// RUN: %clang_cc1 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -triple x86_64-apple-darwin9 -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -DDYNAMIC -fsyntax-only -triple x86_64-apple-darwin9 -verify %s -fexperimental-new-constant-interpreter
+
 #ifndef DYNAMIC
 #define OBJECT_SIZE_BUILTIN __builtin_object_size
 #else

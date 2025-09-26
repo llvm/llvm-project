@@ -49,9 +49,6 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // HOST:         call void{{.*}}@__kmpc_fork_teams({{.*}}, ptr @[[TEAMS_OUTLINE:.*]], {{.*}})
 
 // HOST:       define internal void @[[TEAMS_OUTLINE]]
-// HOST:         call void @[[DISTRIBUTE_OUTLINE:.*]]({{.*}})
-
-// HOST:       define internal void @[[DISTRIBUTE_OUTLINE]]
 // HOST:         call void @__kmpc_for_static_init{{.*}}(ptr {{.*}}, i32 {{.*}}, i32 92, ptr {{.*}}, ptr {{.*}}, ptr {{.*}}, ptr {{.*}}, i32 {{.*}}, i32 {{.*}})
 // HOST:         call void (ptr, i32, ptr, ...) @__kmpc_fork_call({{.*}}, ptr @[[PARALLEL_OUTLINE:.*]], {{.*}})
 
@@ -60,7 +57,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
 //--- device.mlir
 
-module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.is_gpu = true} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.is_gpu = true} {
   llvm.func @main(%arg0 : !llvm.ptr) {
     %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(to) capture(ByCopy) -> !llvm.ptr
     omp.target map_entries(%0 -> %ptr : !llvm.ptr) {

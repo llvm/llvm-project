@@ -66,8 +66,8 @@ if.then52:                                        ; preds = %land.lhs.true49
   br label %cleanup
 
 cleanup:                                          ; preds = %if.then52, %land.lhs.true49, %entry.split
-  call void @llvm.lifetime.end(i64 24, i8* %0)
+  call void @dummy(ptr %0)
   ret void
 }
 
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @dummy(ptr)

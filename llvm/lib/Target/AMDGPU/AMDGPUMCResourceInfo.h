@@ -31,6 +31,7 @@ public:
     RIK_NumVGPR,
     RIK_NumAGPR,
     RIK_NumSGPR,
+    RIK_NumNamedBarrier,
     RIK_PrivateSegSize,
     RIK_UsesVCC,
     RIK_UsesFlatScratch,
@@ -43,6 +44,7 @@ private:
   int32_t MaxVGPR = 0;
   int32_t MaxAGPR = 0;
   int32_t MaxSGPR = 0;
+  int32_t MaxNamedBarrier = 0;
 
   // Whether the MCResourceInfo has been finalized through finalize(MCContext
   // &). Should only be called once, at the end of AsmPrinting to assign MaxXGPR
@@ -58,6 +60,12 @@ private:
   // Assigns expression for Max S/V/A-GPRs to the referenced symbols.
   void assignMaxRegs(MCContext &OutContext);
 
+  // Take flattened max of cyclic function calls' knowns. For example, for
+  // a cycle A->B->C->D->A, take max(A, B, C, D) for A and have B, C, D have the
+  // propgated value from A.
+  const MCExpr *flattenedCycleMax(MCSymbol *RecSym, ResourceInfoKind RIK,
+                                  MCContext &OutContext);
+
 public:
   MCResourceInfo() = default;
   void addMaxVGPRCandidate(int32_t candidate) {
@@ -68,6 +76,9 @@ public:
   }
   void addMaxSGPRCandidate(int32_t candidate) {
     MaxSGPR = std::max(MaxSGPR, candidate);
+  }
+  void addMaxNamedBarrierCandidate(int32_t candidate) {
+    MaxNamedBarrier = std::max(MaxNamedBarrier, candidate);
   }
 
   MCSymbol *getSymbol(StringRef FuncName, ResourceInfoKind RIK,
@@ -84,6 +95,7 @@ public:
   MCSymbol *getMaxVGPRSymbol(MCContext &OutContext);
   MCSymbol *getMaxAGPRSymbol(MCContext &OutContext);
   MCSymbol *getMaxSGPRSymbol(MCContext &OutContext);
+  MCSymbol *getMaxNamedBarrierSymbol(MCContext &OutContext);
 
   /// AMDGPUResourceUsageAnalysis gathers resource usage on a per-function
   /// granularity. However, some resource info has to be assigned the call
@@ -92,7 +104,7 @@ public:
   /// functions with indirect calls should be assigned the module level maximum.
   void gatherResourceInfo(
       const MachineFunction &MF,
-      const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &FRI,
+      const AMDGPUResourceUsageAnalysisWrapperPass::FunctionResourceInfo &FRI,
       MCContext &OutContext);
 
   const MCExpr *createTotalNumVGPRs(const MachineFunction &MF, MCContext &Ctx);

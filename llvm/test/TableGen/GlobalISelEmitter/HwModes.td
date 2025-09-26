@@ -1,5 +1,5 @@
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=false %s -o %T/hwmode-non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK -input-file=%T/hwmode-non-optimized.cpp
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=false %s -o %t.hwmode-non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK -input-file=%t.hwmode-non-optimized.cpp
 
 include "llvm/Target/Target.td"
 
@@ -13,8 +13,8 @@ class MyTargetGenericInstruction : GenericInstruction {
 //def Has32 : Predicate<"Subtarget->has32()">;
 def Has64 : Predicate<"Subtarget->has64()">;
 
-//def Mode32 : HwMode<"+a", [Has32]>;
-def Mode64 : HwMode<"+b", [Has64]>;
+//def Mode32 : HwMode<[Has32]>;
+def Mode64 : HwMode<[Has64]>;
 
 def ModeVT : ValueTypeByHwMode<[DefaultMode, Mode64],
                                [i32,  i64]>;
@@ -54,6 +54,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:    bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat &Imm) const override;
 // CHECK-NEXT:    const uint8_t *getMatchTable() const override;
 // CHECK-NEXT:    bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI, const MatcherState &State) const override;
+// CHECK-NEXT:    bool testMOPredicate_MO(unsigned PredicateID, const MachineOperand &MO, const MatcherState &State) const override;
 // CHECK-NEXT:    bool testSimplePredicate(unsigned PredicateID) const override;
 // CHECK-NEXT:    bool runCustomAction(unsigned FnID, const MatcherState &State, NewMIVector &OutMIs) const override;
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL

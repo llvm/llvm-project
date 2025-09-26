@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GPRIDX %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
-; RUN: not --crash llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not --crash llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; FIXME: Need constant bus fixup pre-gfx10 for movrel
 ; ERR: Bad machine code: VOP* instruction violates constant bus restriction
@@ -2498,21 +2498,19 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v_add_1(<8 x double> %vec, do
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s1, 7, v18
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, v16, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, v3, v17, s0
-; GFX11-NEXT:    v_cndmask_b32_e32 v5, v5, v17, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s0, 3, v18
-; GFX11-NEXT:    v_cndmask_b32_e32 v4, v4, v16, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v4, v4, v16 :: v_dual_cndmask_b32 v5, v5, v17
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v18
 ; GFX11-NEXT:    v_cndmask_b32_e64 v14, v14, v16, s1
-; GFX11-NEXT:    v_cndmask_b32_e64 v15, v15, v17, s1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v6, v6, v16, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v7, v7, v17, s0
-; GFX11-NEXT:    v_cndmask_b32_e32 v9, v9, v17, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s0, 5, v18
-; GFX11-NEXT:    v_cndmask_b32_e32 v8, v8, v16, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v8, v8, v16 :: v_dual_cndmask_b32 v9, v9, v17
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v18
+; GFX11-NEXT:    v_cndmask_b32_e64 v15, v15, v17, s1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v10, v10, v16, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v11, v11, v17, s0
-; GFX11-NEXT:    v_dual_cndmask_b32 v13, v13, v17 :: v_dual_cndmask_b32 v12, v12, v16
+; GFX11-NEXT:    v_dual_cndmask_b32 v12, v12, v16 :: v_dual_cndmask_b32 v13, v13, v17
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off dlc
@@ -6507,4 +6505,48 @@ define amdgpu_ps <5 x double> @dyn_insertelement_v5f64_v_v_v(<5 x double> %vec, 
 entry:
   %insert = insertelement <5 x double> %vec, double %val, i32 %idx
   ret <5 x double> %insert
+}
+
+; Found by fuzzer, reduced with llvm-reduce.
+define void @insert_very_small_from_very_large(<32 x i16> %L3, ptr %ptr) {
+; GPRIDX-LABEL: insert_very_small_from_very_large:
+; GPRIDX:       ; %bb.0: ; %bb
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    v_lshrrev_b32_e32 v0, 1, v0
+; GPRIDX-NEXT:    v_and_b32_e32 v0, 1, v0
+; GPRIDX-NEXT:    v_lshlrev_b16_e32 v0, 1, v0
+; GPRIDX-NEXT:    v_and_b32_e32 v0, 3, v0
+; GPRIDX-NEXT:    flat_store_byte v[16:17], v0
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: insert_very_small_from_very_large:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 1, v0
+; GFX10-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX10-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX10-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX10-NEXT:    flat_store_byte v[16:17], v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: insert_very_small_from_very_large:
+; GFX11:       ; %bb.0: ; %bb
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_lshrrev_b16 v0.l, 1, v0.l
+; GFX11-NEXT:    v_and_b16 v0.l, v0.l, 1
+; GFX11-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
+; GFX11-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX11-NEXT:    flat_store_b8 v[16:17], v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %a = bitcast <32 x i16> %L3 to i512
+  %b = trunc i512 %a to i8
+  %c = trunc i8 %b to i2
+  %d = bitcast i2 %c to <2 x i1>
+  %insert = insertelement <2 x i1> %d, i1 false, i32 0
+  store <2 x i1> %insert, ptr %ptr, align 1
+  ret void
 }

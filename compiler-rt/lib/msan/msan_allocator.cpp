@@ -56,7 +56,7 @@ struct MsanMapUnmapCallback {
 const uptr kMaxAllowedMallocSize = 2UL << 30;
 
 struct AP32 {
-  static const uptr kSpaceBeg = 0;
+  static const uptr kSpaceBeg = SANITIZER_MMAP_BEGIN;
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
   static const uptr kMetadataSize = sizeof(Metadata);
   using SizeClassMap = __sanitizer::CompactSizeClassMap;
@@ -230,6 +230,12 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
       __msan_set_origin(allocated, size, o.raw_id());
     }
   }
+
+  uptr actually_allocated_size = allocator.GetActuallyAllocatedSize(allocated);
+  // For compatibility, the allocator converted 0-sized allocations into 1 byte
+  if (size == 0 && actually_allocated_size > 0 && flags()->poison_in_malloc)
+    __msan_poison(allocated, 1);
+
   UnpoisonParam(2);
   RunMallocHooks(allocated, size);
   return allocated;

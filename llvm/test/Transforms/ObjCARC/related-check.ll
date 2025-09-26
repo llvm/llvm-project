@@ -52,9 +52,9 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 
 for.body:                                         ; preds = %for.body.lr.ph, %if.end19
   %i.032 = phi i32 [ 1, %for.body.lr.ph ], [ %inc, %if.end19 ]
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %persistent) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %persistent) #4
   store i32 0, ptr %persistent, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %personalized) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %personalized) #4
   store i32 0, ptr %personalized, align 4
   %call = call zeroext i1 @lookupType(ptr noundef nonnull %persistent, ptr noundef nonnull %personalized) #8, !clang.arc.no_objc_arc_exceptions !15
   br i1 %call, label %if.then, label %if.end19
@@ -110,18 +110,18 @@ if.end18:                                         ; preds = %if.else, %if.then13
   br label %if.end19
 
 if.end19:                                         ; preds = %if.end18, %for.body
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %personalized) #4
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %persistent) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %personalized) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %persistent) #4
   %inc = add nuw nsw i32 %i.032, 1
   %exitcond.not = icmp eq i32 %inc, %argc
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 }
 
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(ptr nocapture) #2
 
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(ptr nocapture) #2
 
 ; Function Attrs: inaccessiblememonly mustprogress nocallback nofree nosync nounwind willreturn
 declare void @llvm.objc.clang.arc.noop.use(...) #5

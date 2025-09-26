@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
 ; RUN: llc < %s -mtriple=i386-pc-win32 | FileCheck %s -check-prefix=CHECK-WIN
 
-define float @call_ldexpf(float %a, i32 %b) {
+define float @call_ldexpf(float %a, i32 %b) nounwind {
 ; CHECK-LABEL: call_ldexpf:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    jmp ldexpf@PLT # TAILCALL
@@ -21,7 +21,7 @@ define float @call_ldexpf(float %a, i32 %b) {
   ret float %result
 }
 
-define double @call_ldexp(double %a, i32 %b) {
+define double @call_ldexp(double %a, i32 %b) nounwind {
 ; CHECK-LABEL: call_ldexp:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    jmp ldexp@PLT # TAILCALL
@@ -40,16 +40,14 @@ define double @call_ldexp(double %a, i32 %b) {
   ret double %result
 }
 
-define x86_fp80 @call_ldexpl(x86_fp80 %a, i32 %b) {
+define x86_fp80 @call_ldexpl(x86_fp80 %a, i32 %b) nounwind {
 ; CHECK-LABEL: call_ldexpl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt (%rsp)
 ; CHECK-NEXT:    callq ldexpl@PLT
 ; CHECK-NEXT:    addq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIN-LABEL: call_ldexpl:

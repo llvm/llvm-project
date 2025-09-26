@@ -33,6 +33,7 @@ clang_diag_gen(Parse)
 clang_diag_gen(Refactoring)
 clang_diag_gen(Sema)
 clang_diag_gen(Serialization)
+clang_diag_gen(Trap)
 clang_tablegen(DiagnosticGroups.inc -gen-clang-diag-groups
   SOURCE Diagnostic.td
   TARGET ClangDiagnosticGroups)
@@ -79,6 +80,12 @@ clang_tablegen(CXX11AttributeInfo.inc -gen-cxx11-attribute-info
   TARGET CXX11AttributeInfo
   )
 
+  clang_tablegen(AttributeSpellingList.inc -gen-attribute-spelling-list
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET AttributeSpellingList
+  )
+
 clang_tablegen(Builtins.inc -gen-clang-builtins
   SOURCE Builtins.td
   TARGET ClangBuiltins)
@@ -103,9 +110,17 @@ clang_tablegen(BuiltinsRISCV.inc -gen-clang-builtins
   SOURCE BuiltinsRISCV.td
   TARGET ClangBuiltinsRISCV)
 
-clang_tablegen(BuiltinsSPIRV.inc -gen-clang-builtins
-  SOURCE BuiltinsSPIRV.td
-  TARGET ClangBuiltinsSPIRV)
+clang_tablegen(BuiltinsSPIRVCommon.inc -gen-clang-builtins
+  SOURCE BuiltinsSPIRVCommon.td
+  TARGET ClangBuiltinsSPIRVCommon)
+
+clang_tablegen(BuiltinsSPIRVVK.inc -gen-clang-builtins
+  SOURCE BuiltinsSPIRVVK.td
+  TARGET ClangBuiltinsSPIRVVK)
+
+clang_tablegen(BuiltinsSPIRVCL.inc -gen-clang-builtins
+  SOURCE BuiltinsSPIRVCL.td
+  TARGET ClangBuiltinsSPIRVCL)
 
 clang_tablegen(BuiltinsX86.inc -gen-clang-builtins
   SOURCE BuiltinsX86.td
@@ -201,3 +216,12 @@ clang_tablegen(riscv_sifive_vector_builtin_cg.inc -gen-riscv-sifive-vector-built
 clang_tablegen(riscv_sifive_vector_builtin_sema.inc -gen-riscv-sifive-vector-builtin-sema
   SOURCE riscv_sifive_vector.td
   TARGET ClangRISCVSiFiveVectorBuiltinSema)
+clang_tablegen(riscv_andes_vector_builtins.inc -gen-riscv-andes-vector-builtins
+  SOURCE riscv_andes_vector.td
+  TARGET ClangRISCVAndesVectorBuiltins)
+clang_tablegen(riscv_andes_vector_builtin_cg.inc -gen-riscv-andes-vector-builtin-codegen
+  SOURCE riscv_andes_vector.td
+  TARGET ClangRISCVAndesVectorBuiltinCG)
+clang_tablegen(riscv_andes_vector_builtin_sema.inc -gen-riscv-andes-vector-builtin-sema
+  SOURCE riscv_andes_vector.td
+  TARGET ClangRISCVAndesVectorBuiltinSema)

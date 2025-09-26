@@ -68,6 +68,24 @@ func.func @transfer_write_unroll(%mem : memref<4x4xf32>, %vec : vector<4x4xf32>)
 
 // -----
 
+// Ensure that cases with mismatched target and source shape ranks
+// do not lead to a crash.
+// Note: The vector unrolling target shape in `test-vector-transfer-unrolling-patterns`
+// is currently hard-coded to [2, 2].
+
+// CHECK-LABEL: func @negative_transfer_write
+//   CHECK-NOT:   vector.extract_strided_slice
+//       CHECK:   vector.transfer_write
+//       CHECK:   return
+func.func @negative_transfer_write(%vec: vector<6x34x62xi8>) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<6x34x62xi8>
+  vector.transfer_write %vec, %alloc[%c0, %c0, %c0]: vector<6x34x62xi8>, memref<6x34x62xi8>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @transfer_readwrite_unroll
 // CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index

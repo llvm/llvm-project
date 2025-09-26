@@ -182,8 +182,11 @@ bool RT_API_ATTRS EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
     leadingSpaces = 1;
   } else if (!edit.width) {
     // Bare 'I' and 'G' are interpreted with various default widths in the
-    // compilers that support them, so there's always some leading space.
-    leadingSpaces = std::max(1, leadingSpaces);
+    // compilers that support them, so there's always some leading space
+    // after column 1.
+    if (io.GetConnectionState().positionInRecord > 0) {
+      leadingSpaces = 1;
+    }
   }
   return EmitRepeated(io, ' ', leadingSpaces) &&
       EmitAscii(io, n < 0 ? "-" : "+", signChars) &&

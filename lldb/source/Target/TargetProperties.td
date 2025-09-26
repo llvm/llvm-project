@@ -5,8 +5,8 @@ let Definition = "target_experimental" in {
     Global, DefaultTrue,
     Desc<"If true, inject local variables explicitly into the expression text. This will fix symbol resolution when there are name collisions between ivars and local variables. But it can make expressions run much more slowly.">;
   def UseDIL : Property<"use-DIL", "Boolean">,
-    Global, DefaultFalse,
-    Desc<"If true, use the alternative DIL implementation for frame variable evaluation.">;
+    Global, DefaultTrue,
+    Desc<"If true, use the DIL implementation for frame variable evaluation.">;
 }
 
 let Definition = "target" in {
@@ -96,10 +96,10 @@ let Definition = "target" in {
     DefaultUnsignedValue<6>,
     Desc<"The maximum number of zeroes to insert when displaying a very small float before falling back to scientific notation.">;
   def MaxChildrenCount: Property<"max-children-count", "UInt64">,
-    DefaultUnsignedValue<256>,
+    DefaultUnsignedValue<24>,
     Desc<"Maximum number of children to expand in any level of depth.">;
   def MaxChildrenDepth: Property<"max-children-depth", "UInt64">,
-    DefaultUnsignedValue<0xFFFFFFFF>,
+    DefaultUnsignedValue<4>,
     Desc<"Maximum depth to expand children.">;
   def MaxSummaryLength: Property<"max-string-summary-length", "UInt64">,
     DefaultUnsignedValue<1024>,
@@ -299,6 +299,9 @@ let Definition = "process" in {
     DefaultEnumValue<"eFollowParent">,
     EnumValues<"OptionEnumValues(g_follow_fork_mode_values)">,
     Desc<"Debugger's behavior upon fork or vfork.">;
+  def TrackMemoryCacheChanges: Property<"track-memory-cache-changes", "Boolean">,
+    DefaultTrue,
+    Desc<"If true, memory cache modifications (which happen often during expressions evaluation) will bump process state ID (and invalidate all synthetic children). Disabling this option helps to avoid synthetic children reevaluation when pretty printers heavily use expressions. The downside of disabled setting is that convenience variables won't reevaluate synthetic children automatically.">;
 }
 
 let Definition = "platform" in {

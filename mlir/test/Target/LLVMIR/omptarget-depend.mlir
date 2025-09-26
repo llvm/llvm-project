@@ -126,7 +126,8 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK-DAG:  %[[DEP_ARRAY:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
 
 // CHECK: %[[TASKDATA:.+]] = call ptr @__kmpc_omp_task_alloc({{.+}}, ptr @.omp_target_task_proxy_func)
-// CHECK: %[[SHARED_DATA:.+]] = load ptr, ptr %[[TASKDATA]], align 8
+// CHECK: %[[SHARED_PTR:.+]] = getelementptr inbounds nuw %struct.kmp_task_ompbuilder_t, ptr %[[TASKDATA]], i32 0, i32 0
+// CHECK: %[[SHARED_DATA:.+]] = load ptr, ptr %[[SHARED_PTR]], align 8
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[SHARED_DATA]], ptr align 1 %[[STRUCTARG]], i64 24, i1 false)
 
 // CHECK: %[[DEP_INFO:.+]]  = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[DEP_ARRAY]], i64 0, i64 0

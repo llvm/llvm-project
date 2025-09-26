@@ -26,10 +26,10 @@ enum class Access { Sequential, Direct, Stream };
 // established in an OPEN statement.
 struct ConnectionAttributes {
   Access access{Access::Sequential}; // ACCESS='SEQUENTIAL', 'DIRECT', 'STREAM'
-  Fortran::common::optional<bool> isUnformatted; // FORM='UNFORMATTED' if true
+  common::optional<bool> isUnformatted; // FORM='UNFORMATTED' if true
   bool isUTF8{false}; // ENCODING='UTF-8'
   unsigned char internalIoCharKind{0}; // 0->external, 1/2/4->internal
-  Fortran::common::optional<std::int64_t> openRecl; // RECL= on OPEN
+  common::optional<std::int64_t> openRecl; // RECL= on OPEN
 
   RT_API_ATTRS bool IsRecordFile() const {
     // Formatted stream files are viewed as having records, at least on input
@@ -82,15 +82,14 @@ struct ConnectionState : public ConnectionAttributes {
     unterminatedRecord = false;
   }
 
-  RT_API_ATTRS Fortran::common::optional<std::int64_t>
-  EffectiveRecordLength() const {
+  RT_API_ATTRS common::optional<std::int64_t> EffectiveRecordLength() const {
     // When an input record is longer than an explicit RECL= from OPEN
     // it is effectively truncated on input.
     return openRecl && recordLength && *openRecl < *recordLength ? openRecl
                                                                  : recordLength;
   }
 
-  Fortran::common::optional<std::int64_t> recordLength;
+  common::optional<std::int64_t> recordLength;
 
   std::int64_t currentRecordNumber{1}; // 1 is first
 
@@ -106,12 +105,11 @@ struct ConnectionState : public ConnectionAttributes {
   std::int64_t furthestPositionInRecord{0}; // max(position+bytes)
 
   // Set at end of non-advancing I/O data transfer
-  Fortran::common::optional<std::int64_t>
-      leftTabLimit; // offset in current record
+  common::optional<std::int64_t> leftTabLimit; // offset in current record
 
   // currentRecordNumber value captured after ENDFILE/REWIND/BACKSPACE statement
   // or an end-of-file READ condition on a sequential access file
-  Fortran::common::optional<std::int64_t> endfileRecordNumber;
+  common::optional<std::int64_t> endfileRecordNumber;
 
   // Mutable modes set at OPEN() that can be overridden in READ/WRITE & FORMAT
   MutableModes modes; // BLANK=, DECIMAL=, SIGN=, ROUND=, PAD=, DELIM=, kP

@@ -475,6 +475,8 @@ static void testLTOModule(const TargetOptions &Options) {
         printLTOSymbolAttributes(Module->getSymbolAttributes(I));
         outs() << "\n";
       }
+      for (int I = 0, E = Module->getAsmUndefSymbolCount(); I != E; ++I)
+        outs() << Module->getAsmUndefSymbolName(I) << "    { asm extern }\n";
     }
     if (QueryHasCtorDtor)
       outs() << Filename
@@ -1136,7 +1138,6 @@ int main(int argc, char **argv) {
     if (SaveLinkedModuleFile) {
       std::string ModuleFilename = OutputFilename;
       ModuleFilename += ".linked.bc";
-      std::string ErrMsg;
 
       if (!CodeGen.writeMergedModules(ModuleFilename))
         error("writing linked module failed.");
@@ -1150,7 +1151,6 @@ int main(int argc, char **argv) {
     if (SaveModuleFile) {
       std::string ModuleFilename = OutputFilename;
       ModuleFilename += ".merged.bc";
-      std::string ErrMsg;
 
       if (!CodeGen.writeMergedModules(ModuleFilename))
         error("writing merged module failed.");

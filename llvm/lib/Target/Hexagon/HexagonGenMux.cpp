@@ -73,8 +73,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
   private:
@@ -245,8 +244,7 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
       F = CM.end();
     }
     if (F == CM.end()) {
-      auto It = CM.insert(std::make_pair(DR, CondsetInfo()));
-      F = It.first;
+      F = CM.try_emplace(DR).first;
       F->second.PredR = PR;
     }
     CondsetInfo &CI = F->second;

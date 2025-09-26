@@ -14,6 +14,7 @@
 #ifndef LLVM_PROFILEDATA_ITANIUMMANGLINGCANONICALIZER_H
 #define LLVM_PROFILEDATA_ITANIUMMANGLINGCANONICALIZER_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -34,10 +35,10 @@ class StringRef;
 /// different manglings.
 class ItaniumManglingCanonicalizer {
 public:
-  ItaniumManglingCanonicalizer();
+  LLVM_ABI ItaniumManglingCanonicalizer();
   ItaniumManglingCanonicalizer(const ItaniumManglingCanonicalizer &) = delete;
   void operator=(const ItaniumManglingCanonicalizer &) = delete;
-  ~ItaniumManglingCanonicalizer();
+  LLVM_ABI ~ItaniumManglingCanonicalizer();
 
   enum class EquivalenceError {
     Success,
@@ -65,8 +66,8 @@ public:
 
   /// Add an equivalence between \p First and \p Second. Both manglings must
   /// live at least as long as the canonicalizer.
-  EquivalenceError addEquivalence(FragmentKind Kind, StringRef First,
-                                  StringRef Second);
+  LLVM_ABI EquivalenceError addEquivalence(FragmentKind Kind, StringRef First,
+                                           StringRef Second);
 
   using Key = uintptr_t;
 
@@ -78,11 +79,11 @@ public:
   /// ABI mangling.
   ///
   /// The string denoted by Mangling must live as long as the canonicalizer.
-  Key canonicalize(StringRef Mangling);
+  LLVM_ABI Key canonicalize(StringRef Mangling);
 
   /// Find a canonical key for the specified mangling, if one has already been
   /// formed. Otherwise returns Key().
-  Key lookup(StringRef Mangling);
+  LLVM_ABI Key lookup(StringRef Mangling);
 
 private:
   struct Impl;

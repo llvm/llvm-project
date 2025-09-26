@@ -23,7 +23,7 @@ define <4 x i32> @reassociate_and_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> 
 ; AVX512-LABEL: reassociate_and_v4i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogd $128, %xmm2, %xmm3, %xmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 & xmm3 & xmm2
 ; AVX512-NEXT:    retq
 
   %t0 = add <4 x i32> %x0, %x1
@@ -50,7 +50,7 @@ define <4 x i32> @reassociate_or_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %
 ; AVX512-LABEL: reassociate_or_v4i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogd $254, %xmm2, %xmm3, %xmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 | xmm3 | xmm2
 ; AVX512-NEXT:    retq
 
   %t0 = add <4 x i32> %x0, %x1
@@ -77,7 +77,7 @@ define <4 x i32> @reassociate_xor_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> 
 ; AVX512-LABEL: reassociate_xor_v4i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogd $150, %xmm2, %xmm3, %xmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 ^ xmm3 ^ xmm2
 ; AVX512-NEXT:    retq
 
   %t0 = add <4 x i32> %x0, %x1
@@ -109,7 +109,7 @@ define <8 x i32> @reassociate_and_v8i32(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> 
 ; AVX512-LABEL: reassociate_and_v8i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpternlogd $128, %ymm2, %ymm3, %ymm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 & ymm3 & ymm2
 ; AVX512-NEXT:    retq
 
   %t0 = add <8 x i32> %x0, %x1
@@ -139,7 +139,7 @@ define <8 x i32> @reassociate_or_v8i32(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %
 ; AVX512-LABEL: reassociate_or_v8i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpternlogd $254, %ymm2, %ymm3, %ymm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 | ymm3 | ymm2
 ; AVX512-NEXT:    retq
 
   %t0 = add <8 x i32> %x0, %x1
@@ -169,7 +169,7 @@ define <8 x i32> @reassociate_xor_v8i32(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> 
 ; AVX512-LABEL: reassociate_xor_v8i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpternlogd $150, %ymm2, %ymm3, %ymm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ ymm3 ^ ymm2
 ; AVX512-NEXT:    retq
 
   %t0 = add <8 x i32> %x0, %x1
@@ -211,7 +211,7 @@ define <16 x i32> @reassociate_and_v16i32(<16 x i32> %x0, <16 x i32> %x1, <16 x 
 ; AVX512-LABEL: reassociate_and_v16i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpternlogd $128, %zmm2, %zmm3, %zmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 & zmm3 & zmm2
 ; AVX512-NEXT:    retq
 
   %t0 = add <16 x i32> %x0, %x1
@@ -250,7 +250,7 @@ define <16 x i32> @reassociate_or_v16i32(<16 x i32> %x0, <16 x i32> %x1, <16 x i
 ; AVX512-LABEL: reassociate_or_v16i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpternlogd $254, %zmm2, %zmm3, %zmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 | zmm3 | zmm2
 ; AVX512-NEXT:    retq
 
   %t0 = add <16 x i32> %x0, %x1
@@ -289,7 +289,7 @@ define <16 x i32> @reassociate_xor_v16i32(<16 x i32> %x0, <16 x i32> %x1, <16 x 
 ; AVX512-LABEL: reassociate_xor_v16i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpternlogd $150, %zmm2, %zmm3, %zmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ zmm3 ^ zmm2
 ; AVX512-NEXT:    retq
 
   %t0 = add <16 x i32> %x0, %x1
@@ -425,7 +425,7 @@ define <2 x i64> @reassociate_umax_v2i64(<2 x i64> %x0, <2 x i64> %x1, <2 x i64>
 ; AVX2-LABEL: reassociate_umax_v2i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm1, %xmm2, %xmm4
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm5
 ; AVX2-NEXT:    vpcmpgtq %xmm5, %xmm4, %xmm4
@@ -723,7 +723,7 @@ define <2 x i64> @reassociate_umin_v2i64(<2 x i64> %x0, <2 x i64> %x1, <2 x i64>
 ; AVX2-LABEL: reassociate_umin_v2i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm1, %xmm2, %xmm4
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm5
 ; AVX2-NEXT:    vpcmpgtq %xmm4, %xmm5, %xmm4

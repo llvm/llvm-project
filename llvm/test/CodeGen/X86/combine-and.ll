@@ -37,7 +37,7 @@ define <4 x i32> @test1(<4 x i32> %A) {
 ; AVX-LABEL: test1:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
   %1 = and <4 x i32> %A, <i32 -1, i32 0, i32 0, i32 0>
   ret <4 x i32> %1
@@ -127,7 +127,7 @@ define <4 x i32> @test7(<4 x i32> %A) {
 ; SSE-LABEL: test7:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test7:
@@ -189,13 +189,13 @@ define <4 x i32> @test11(<4 x i32> %A) {
 ; SSE-LABEL: test11:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test11:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    retq
   %1 = and <4 x i32> %A, <i32 0, i32 -1, i32 -1, i32 -1>
   ret <4 x i32> %1

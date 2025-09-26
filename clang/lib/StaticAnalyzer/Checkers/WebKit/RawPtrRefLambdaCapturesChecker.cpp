@@ -9,7 +9,6 @@
 #include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -127,13 +126,23 @@ public:
         return true;
       }
 
-      // WTF::switchOn(T, F... f) is a variadic template function and couldn't
-      // be annotated with NOESCAPE. We hard code it here to workaround that.
-      bool shouldTreatAllArgAsNoEscape(FunctionDecl *Decl) {
-        auto *NsDecl = Decl->getParent();
-        if (!NsDecl || !isa<NamespaceDecl>(NsDecl))
-          return false;
-        return safeGetName(NsDecl) == "WTF" && safeGetName(Decl) == "switchOn";
+      bool shouldTreatAllArgAsNoEscape(FunctionDecl *FDecl) {
+        std::string PreviousName = safeGetName(FDecl);
+        for (auto *Decl = FDecl->getParent(); Decl; Decl = Decl->getParent()) {
+          if (!isa<NamespaceDecl>(Decl) && !isa<CXXRecordDecl>(Decl))
+            return false;
+          auto Name = safeGetName(Decl);
+          // WTF::switchOn(T, F... f) is a variadic template function and
+          // couldn't be annotated with NOESCAPE. We hard code it here to
+          // workaround that.
+          if (Name == "WTF" && PreviousName == "switchOn")
+            return true;
+          // Treat every argument of functions in std::ranges as noescape.
+          if (Name == "std" && PreviousName == "ranges")
+            return true;
+          PreviousName = Name;
+        }
+        return false;
       }
 
       bool VisitCXXConstructExpr(CXXConstructExpr *CE) override {
@@ -159,23 +168,32 @@ public:
 
       bool VisitCallExpr(CallExpr *CE) override {
         checkCalleeLambda(CE);
-        if (auto *Callee = CE->getDirectCallee()) {
-          unsigned ArgIndex = isa<CXXOperatorCallExpr>(CE);
-          bool TreatAllArgsAsNoEscape = shouldTreatAllArgAsNoEscape(Callee);
-          for (auto *Param : Callee->parameters()) {
-            if (ArgIndex >= CE->getNumArgs())
-              return true;
-            auto *Arg = CE->getArg(ArgIndex)->IgnoreParenCasts();
-            if (auto *L = findLambdaInArg(Arg)) {
-              LambdasToIgnore.insert(L);
-              if (!Param->hasAttr<NoEscapeAttr>() && !TreatAllArgsAsNoEscape)
-                Checker->visitLambdaExpr(
-                    L, shouldCheckThis() && !hasProtectedThis(L), ClsType);
-            }
-            ++ArgIndex;
+        if (auto *Callee = CE->getDirectCallee())
+          checkParameters(CE, Callee);
+        else if (auto *CalleeE = CE->getCallee()) {
+          if (auto *DRE = dyn_cast<DeclRefExpr>(CalleeE->IgnoreParenCasts())) {
+            if (auto *Callee = dyn_cast_or_null<FunctionDecl>(DRE->getDecl()))
+              checkParameters(CE, Callee);
           }
         }
         return true;
+      }
+
+      void checkParameters(CallExpr *CE, FunctionDecl *Callee) {
+        unsigned ArgIndex = isa<CXXOperatorCallExpr>(CE);
+        bool TreatAllArgsAsNoEscape = shouldTreatAllArgAsNoEscape(Callee);
+        for (auto *Param : Callee->parameters()) {
+          if (ArgIndex >= CE->getNumArgs())
+            return;
+          auto *Arg = CE->getArg(ArgIndex)->IgnoreParenCasts();
+          if (auto *L = findLambdaInArg(Arg)) {
+            LambdasToIgnore.insert(L);
+            if (!Param->hasAttr<NoEscapeAttr>() && !TreatAllArgsAsNoEscape)
+              Checker->visitLambdaExpr(
+                  L, shouldCheckThis() && !hasProtectedThis(L), ClsType);
+          }
+          ++ArgIndex;
+        }
       }
 
       LambdaExpr *findLambdaInArg(Expr *E) {
@@ -224,14 +242,11 @@ public:
         if (!Init)
           return nullptr;
         if (auto *Lambda = dyn_cast<LambdaExpr>(Init)) {
+          DeclRefExprsToIgnore.insert(DRE);
           updateIgnoreList();
           return Lambda;
         }
-        TempExpr = dyn_cast<CXXBindTemporaryExpr>(Init->IgnoreParenCasts());
-        if (!TempExpr)
-          return nullptr;
-        updateIgnoreList();
-        return dyn_cast_or_null<LambdaExpr>(TempExpr->getSubExpr());
+        return nullptr;
       }
 
       void checkCalleeLambda(CallExpr *CE) {
@@ -263,8 +278,6 @@ public:
           return;
         DeclRefExprsToIgnore.insert(ArgRef);
         LambdasToIgnore.insert(L);
-        Checker->visitLambdaExpr(L, shouldCheckThis() && !hasProtectedThis(L),
-                                 ClsType, /* ignoreParamVarDecl */ true);
       }
 
       bool hasProtectedThis(LambdaExpr *L) {
@@ -383,6 +396,9 @@ public:
         }
         QualType CapturedVarQualType = CapturedVar->getType();
         auto IsUncountedPtr = isUnsafePtr(CapturedVar->getType());
+        if (C.getCaptureKind() == LCK_ByCopy &&
+            CapturedVarQualType->isReferenceType())
+          continue;
         if (IsUncountedPtr && *IsUncountedPtr)
           reportBug(C, CapturedVar, CapturedVarQualType, L);
       } else if (C.capturesThis() && shouldCheckThis) {
@@ -484,7 +500,7 @@ public:
   }
 
   virtual bool isPtrType(const std::string &Name) const final {
-    return isRetainPtr(Name);
+    return isRetainPtrOrOSPtr(Name);
   }
 
   const char *ptrKind(QualType QT) const final { return "unretained"; }

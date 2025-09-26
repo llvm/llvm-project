@@ -1,12 +1,14 @@
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -std=c++26 -fexceptions -fcxx-exceptions    -fsized-deallocation    -faligned-allocation -Wno-non-c-typedef-for-linkage -DDEFAULT_DELETE=1
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -std=c++26 -fexceptions -fcxx-exceptions -fno-sized-deallocation    -faligned-allocation -Wno-non-c-typedef-for-linkage -DDEFAULT_DELETE=0
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -std=c++26 -fexceptions -fcxx-exceptions    -fsized-deallocation -fno-aligned-allocation -Wno-non-c-typedef-for-linkage -DDEFAULT_DELETE=1
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -std=c++26 -fexceptions -fcxx-exceptions -fno-sized-deallocation -fno-aligned-allocation -Wno-non-c-typedef-for-linkage -DDEFAULT_DELETE=0
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -fcxx-exceptions    -fsized-deallocation    -faligned-allocation -Wno-non-c-typedef-for-linkage -DDEFAULT_DELETE=1
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -fcxx-exceptions -fno-sized-deallocation    -faligned-allocation -Wno-non-c-typedef-for-linkage -DDEFAULT_DELETE=0
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -fcxx-exceptions    -fsized-deallocation -fno-aligned-allocation -Wno-non-c-typedef-for-linkage -DDEFAULT_DELETE=1
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -fcxx-exceptions -fno-sized-deallocation -fno-aligned-allocation -Wno-non-c-typedef-for-linkage -DDEFAULT_DELETE=0
 
 namespace std {
   template <class T> struct type_identity {};
   enum class align_val_t : __SIZE_TYPE__ {};
 }
+
+static_assert(__has_extension(cxx_type_aware_allocators), "Verifying the type aware extension flag is set");
 
 using size_t = __SIZE_TYPE__;
 

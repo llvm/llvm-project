@@ -10,6 +10,7 @@ add_mlir_dialect_library(MLIRMLProgramTransforms
 
   LINK_LIBS PUBLIC
   MLIRBufferizationDialect
+  MLIRBufferizationTransforms
   MLIRIR
   MLIRMLProgramDialect
   MLIRPass

@@ -432,6 +432,10 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::BreakpointSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::ProcessSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
@@ -452,6 +456,10 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(const SymbolContext &arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::StreamSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg.get());
   }
@@ -463,7 +471,6 @@ protected:
   template <typename T, typename U>
   void ReverseTransform(T &original_arg, U transformed_arg, Status &error) {
     // If U is not a PythonObject, don't touch it!
-    return;
   }
 
   template <typename T>
@@ -554,6 +561,11 @@ Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
 
 template <>
 Event *ScriptedPythonInterface::ExtractValueFromPythonObject<Event *>(
+    python::PythonObject &p, Status &error);
+
+template <>
+SymbolContext
+ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
     python::PythonObject &p, Status &error);
 
 template <>

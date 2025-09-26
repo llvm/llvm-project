@@ -1,4 +1,4 @@
-# RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -run-pass=none %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -run-pass=none %s -filetype=null 2>&1 | FileCheck %s
 ---
 name:            foo
 tracksRegLiveness: true

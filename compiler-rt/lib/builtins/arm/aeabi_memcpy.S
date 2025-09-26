@@ -18,6 +18,9 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_memcpy)
         bl      memcpy
         pop     {r7, pc}
 #else
+#if defined(__ARM_FEATURE_BTI_DEFAULT)
+        bti
+#endif
         b       memcpy
 #endif
 END_COMPILERRT_FUNCTION(__aeabi_memcpy)

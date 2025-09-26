@@ -94,16 +94,14 @@ enum AccessKind {
 
 /// This enum distinguishes between different situations where we warn due to
 /// inconsistent locking.
-/// \enum SK_LockedSomeLoopIterations -- a mutex is locked for some but not all
-/// loop iterations.
-/// \enum SK_LockedSomePredecessors -- a mutex is locked in some but not all
-/// predecessors of a CFGBlock.
-/// \enum SK_LockedAtEndOfFunction -- a mutex is still locked at the end of a
-/// function.
 enum LockErrorKind {
+  /// A capability is locked for some but not all loop iterations.
   LEK_LockedSomeLoopIterations,
+  /// A capability is locked in some but not all predecessors of a CFGBlock.
   LEK_LockedSomePredecessors,
+  /// A capability is still locked at the end of a function.
   LEK_LockedAtEndOfFunction,
+  /// Expecting a capability to be held at the end of function.
   LEK_NotLockedAtEndOfFunction
 };
 
@@ -168,10 +166,12 @@ public:
   /// \param LocEndOfScope -- The location of the end of the scope where the
   ///               mutex is no longer held
   /// \param LEK -- which of the three above cases we should warn for
+  /// \param ReentrancyMismatch -- mismatching reentrancy depth
   virtual void handleMutexHeldEndOfScope(StringRef Kind, Name LockName,
                                          SourceLocation LocLocked,
                                          SourceLocation LocEndOfScope,
-                                         LockErrorKind LEK) {}
+                                         LockErrorKind LEK,
+                                         bool ReentrancyMismatch = false) {}
 
   /// Warn when a mutex is held exclusively and shared at the same point. For
   /// example, if a mutex is locked exclusively during an if branch and shared

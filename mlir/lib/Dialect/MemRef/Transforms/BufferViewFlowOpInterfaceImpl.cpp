@@ -21,9 +21,9 @@ namespace {
 struct ReallocOpInterface
     : public BufferViewFlowOpInterface::ExternalModel<ReallocOpInterface,
                                                       ReallocOp> {
-  void
-  populateDependencies(Operation *op,
-                       RegisterDependenciesFn registerDependenciesFn) const {
+  void populateDependencies(
+      Operation *op,
+      const RegisterDependenciesFn &registerDependenciesFn) const {
     auto reallocOp = cast<ReallocOp>(op);
     // memref.realloc may return the source operand.
     registerDependenciesFn(reallocOp.getSource(), reallocOp.getResult());

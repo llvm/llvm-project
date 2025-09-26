@@ -4,21 +4,21 @@
 
 void func() {
 
-  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
+  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete', or 'detach' clause}}
 #pragma acc exit data finalize
 
-  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
+  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete', or 'detach' clause}}
 #pragma acc exit data finalize finalize
 
-  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
+  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete', or 'detach' clause}}
   // expected-error@+1{{invalid OpenACC clause 'invalid'}}
 #pragma acc exit data finalize invalid
 
-  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
+  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete', or 'detach' clause}}
   // expected-error@+1{{invalid OpenACC clause 'invalid'}}
 #pragma acc exit data finalize invalid invalid finalize
 
-  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
+  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete', or 'detach' clause}}
 #pragma acc exit data wait finalize
 
   // expected-error@+1{{OpenACC 'host_data' construct must have at least one 'use_device' clause}}
@@ -27,42 +27,42 @@ void func() {
   // expected-error@+1{{OpenACC 'host_data' construct must have at least one 'use_device' clause}}
 #pragma acc host_data if_present, if_present
 
-  // expected-error@+4{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+3{{previous clause is here}}
-  // expected-error@+2{{OpenACC clause 'auto' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+4{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+3{{previous 'seq' clause is here}}
+  // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq independent auto
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+4{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+3{{previous clause is here}}
-  // expected-error@+2{{OpenACC clause 'auto' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+4{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+3{{previous 'seq' clause is here}}
+  // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq, independent auto
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+4{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+3{{previous clause is here}}
-  // expected-error@+2{{OpenACC clause 'auto' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+4{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+3{{previous 'seq' clause is here}}
+  // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq independent, auto
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+3{{OpenACC clause 'independent' on 'kernels loop' construct conflicts with previous data dependence clause}}
-  // expected-error@+2{{OpenACC clause 'auto' on 'kernels loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1 2{{previous clause is here}}
+  // expected-error@+3{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'kernels loop' construct}}
+  // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'kernels loop' construct}}
+  // expected-note@+1 2{{previous 'seq' clause is here}}
 #pragma acc kernels loop seq independent auto
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+3{{OpenACC clause 'independent' on 'serial loop' construct conflicts with previous data dependence clause}}
-  // expected-error@+2{{OpenACC clause 'auto' on 'serial loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1 2{{previous clause is here}}
+  // expected-error@+3{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'serial loop' construct}}
+  // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'serial loop' construct}}
+  // expected-note@+1 2{{previous 'seq' clause is here}}
 #pragma acc serial loop seq, independent auto
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+3{{OpenACC clause 'independent' on 'parallel loop' construct conflicts with previous data dependence clause}}
-  // expected-error@+2{{OpenACC clause 'auto' on 'parallel loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1 2{{previous clause is here}}
+  // expected-error@+3{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'parallel loop' construct}}
+  // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'parallel loop' construct}}
+  // expected-note@+1 2{{previous 'seq' clause is here}}
 #pragma acc parallel loop seq independent, auto
   for(int i = 0; i < 5;++i) {}
 
@@ -347,9 +347,7 @@ void SelfUpdate() {
 #pragma acc update host(s) self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+3{{use of undeclared identifier 'zero'}}
-  // expected-error@+2{{expected ','}}
-  // expected-error@+1{{expected expression}}
+  // expected-error@+1{{use of undeclared identifier 'zero'}}
 #pragma acc update self(zero : s.array[s.value : 5], s.value), if_present
   for(int i = 0; i < 5;++i) {}
 
@@ -453,8 +451,6 @@ void VarListClauses() {
 #pragma acc parallel copy(always, alwaysin, always: HasMem.MemArr[3:]) self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+3{{use of undeclared identifier 'always'}}
-  // expected-error@+2{{use of undeclared identifier 'alwaysin'}}
   // expected-error@+1{{use of undeclared identifier 'always'}}
 #pragma acc parallel copy(always, alwaysin, always, HasMem.MemArr[3:]) self
   for(int i = 0; i < 5;++i) {}
@@ -591,8 +587,7 @@ void VarListClauses() {
 #pragma acc serial copyout(zero : s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{use of undeclared identifier 'zero'}}
-  // expected-error@+1{{expected ','}}
+  // expected-error@+1{{use of undeclared identifier 'zero'}}
 #pragma acc serial copyout(zero s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
@@ -608,8 +603,7 @@ void VarListClauses() {
 #pragma acc serial copyout(invalid:s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{use of undeclared identifier 'invalid'}}
-  // expected-error@+1{{expected ','}}
+  // expected-error@+1{{use of undeclared identifier 'invalid'}}
 #pragma acc serial copyout(invalid s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
@@ -657,8 +651,7 @@ void VarListClauses() {
 #pragma acc serial create(zero : s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{use of undeclared identifier 'zero'}}
-  // expected-error@+1{{expected ','}}
+  // expected-error@+1{{use of undeclared identifier 'zero'}}
 #pragma acc serial create(zero s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
@@ -674,8 +667,7 @@ void VarListClauses() {
 #pragma acc serial create(invalid:s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{use of undeclared identifier 'invalid'}}
-  // expected-error@+1{{expected ','}}
+  // expected-error@+1{{use of undeclared identifier 'invalid'}}
 #pragma acc serial create(invalid s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
@@ -700,8 +692,7 @@ void VarListClauses() {
 #pragma acc serial copyin(readonly : s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{use of undeclared identifier 'readonly'}}
-  // expected-error@+1{{expected ','}}
+  // expected-error@+1{{use of undeclared identifier 'readonly'}}
 #pragma acc serial copyin(readonly s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
@@ -717,8 +708,7 @@ void VarListClauses() {
 #pragma acc serial copyin(invalid:s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{use of undeclared identifier 'invalid'}}
-  // expected-error@+1{{expected ','}}
+  // expected-error@+1{{use of undeclared identifier 'invalid'}}
 #pragma acc serial copyin(invalid s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
@@ -733,7 +723,7 @@ void VarListClauses() {
 }
 
 void ReductionClauseParsing() {
-  char *Begin, *End;
+  char Begin, End;
   // expected-error@+1{{expected '('}}
 #pragma acc serial reduction
   for(int i = 0; i < 5;++i) {}
@@ -860,20 +850,20 @@ void IntExprParsing() {
 #pragma acc init device_num(returns_int())
 
   // expected-error@+2{{expected '('}}
-  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
+  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', or 'device_type' clause}}
 #pragma acc set default_async
 
   // expected-error@+2{{expected expression}}
-  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
+  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', or 'device_type' clause}}
 #pragma acc set default_async()
 
   // expected-error@+2{{use of undeclared identifier 'invalid'}}
-  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
+  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', or 'device_type' clause}}
 #pragma acc set default_async(invalid)
 
   // expected-error@+3{{expected ')'}}
   // expected-note@+2{{to match this '('}}
-  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
+  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', or 'device_type' clause}}
 #pragma acc set default_async(5, 4)
 
 #pragma acc set default_async(5)
@@ -1326,16 +1316,16 @@ void Gang() {
 }
 
   // expected-error@+4{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
-  // expected-note@+3{{previous clause is here}}
+  // expected-note@+3{{previous 'worker' clause is here}}
   // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'worker' clause is here}}
 #pragma acc routine worker, vector, seq, nohost
 void bar();
 
   // expected-error@+4{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
-  // expected-note@+3{{previous clause is here}}
+  // expected-note@+3{{previous 'worker' clause is here}}
   // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'worker' clause is here}}
 #pragma acc routine(bar) worker, vector, seq, nohost
 
 
@@ -1345,8 +1335,14 @@ void bar();
 #pragma acc routine seq bind
 void BCP1();
 
-  // expected-error@+1{{expected identifier or string literal}}
+  // expected-error@+1{{expected identifier or string literal in OpenACC 'bind' clause}}
 #pragma acc routine(BCP1) seq bind()
+
+  // expected-error@+1{{expected identifier or string literal in OpenACC 'bind' clause}}
+#pragma acc routine(BCP1) seq bind(1)
+
+  // expected-error@+1{{expected identifier or string literal in OpenACC 'bind' clause}}
+#pragma acc routine(BCP1) gang bind(0xF)
 
 // expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
 #pragma acc routine seq bind("ReductionClauseParsing")

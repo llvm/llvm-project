@@ -23,6 +23,10 @@ public:
   TCPSocket(NativeSocket socket, bool should_close);
   ~TCPSocket() override;
 
+  using Pair =
+      std::pair<std::unique_ptr<TCPSocket>, std::unique_ptr<TCPSocket>>;
+  static llvm::Expected<Pair> CreatePair();
+
   // returns port number or 0 if error
   uint16_t GetLocalPortNumber() const;
 

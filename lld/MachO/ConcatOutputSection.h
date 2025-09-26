@@ -80,7 +80,7 @@ public:
   }
 
 private:
-  uint64_t estimateStubsInRangeVA(size_t callIdx) const;
+  uint64_t estimateBranchTargetThresholdVA(size_t callIdx) const;
 
   std::vector<ConcatInputSection *> thunks;
 };

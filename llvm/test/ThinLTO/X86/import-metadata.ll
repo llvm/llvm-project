@@ -12,11 +12,12 @@
 
 ; CHECK: !llvm.dbg.cu = !{![[#CU1:]], ![[#CU2:]]}
 ;; Note that MD1 comes from the current module. MD2 is from the imported module. 
-;; We are checking if the imported MD2 doesn't end up having a null operand.
-; CHECK: !llvm.md = !{![[#MD1:]], ![[#MD2:]]}
+;; We are checking that MD2 is unified with MD1 and the imported MD2 doesn't
+;; end up having a null operand.
+; CHECK: !llvm.md = !{![[#MD1:]]}
 ; CHECK: ![[#MD3:]] = !{}
 ; CHECK: ![[#CU2]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: ![[#FILE2:]], isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
-; CHECK: ![[#MD2]] = !{![[#MD3]]}
+; CHECK: ![[#MD1]] = !{![[#MD3]]}
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-scei-ps4"
@@ -32,9 +33,13 @@ define i32 @main() {
 !llvm.module.flags = !{!2, !3}
 !llvm.md = !{!5}
 
+; IRLinker shouldn't assert about duplicated operands.
+!llvm.ident = !{!6, !6}
+
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, enums: !4)
 !1 = !DIFile(filename: "main.cpp", directory: "tmp")
 !2 = !{i32 2, !"Dwarf Version", i32 4}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{}
 !5 = !{!4}
+!6 = !{!"foo"}

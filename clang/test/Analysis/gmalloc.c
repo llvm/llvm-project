@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.Malloc -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -verify %s
 
 #include "Inputs/system-header-simulator.h"
 
@@ -41,7 +41,7 @@ void f1(void) {
 
   g_free(g1);
   g_free(g2);
-  g_free(g2); // expected-warning{{Attempt to free released memory}}
+  g_free(g2); // expected-warning{{Attempt to release already released memory}}
 }
 
 void f2(void) {
@@ -61,7 +61,7 @@ void f2(void) {
   g_free(g1);
   g_free(g2);
   g_free(g3);
-  g3 = g_memdup(g3, n_bytes); // expected-warning{{Use of memory after it is freed}}
+  g3 = g_memdup(g3, n_bytes); // expected-warning{{Use of memory after it is released}}
 }
 
 void f3(void) {

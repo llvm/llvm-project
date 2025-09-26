@@ -122,7 +122,7 @@ public:
     unsigned m = llvm::countr_zero(storage);
     return m == 64 ? -1 : m;
   }
-  unsigned max() const { return 64 - llvm::countl_zero(storage); }
+  unsigned max() const { return llvm::bit_width(storage); }
   unsigned count() const { return llvm::popcount(storage); }
   bool empty() const { return storage == 0; }
 };

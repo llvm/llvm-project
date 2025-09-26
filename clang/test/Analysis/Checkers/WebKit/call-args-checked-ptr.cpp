@@ -173,14 +173,14 @@ namespace param_formarding_function {
 
   namespace casts {
 
-  CheckedObj* downcast(CheckedObj*) { return nullptr; }
-
-  template<class T>
-  T* bitwise_cast(T*) { return nullptr; }
+  CheckedObj* downcast(CheckedObj*);
+  template<class T> T* bitwise_cast(T*);
+  template<class T> T* bit_cast(T*);
 
     void foo(CheckedObj* param) {
       consume_ref_countable_ptr(downcast(param));
       consume_ref_countable_ptr(bitwise_cast(param));
+      consume_ref_countable_ptr(bit_cast(param));
      }
   }
 }

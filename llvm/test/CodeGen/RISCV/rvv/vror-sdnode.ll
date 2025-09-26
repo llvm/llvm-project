@@ -1626,7 +1626,7 @@ define <vscale x 1 x i64> @vror_vx_nxv1i64(<vscale x 1 x i64> %a, i64 %b) {
 ; CHECK-RV64-LABEL: vror_vx_nxv1i64:
 ; CHECK-RV64:       # %bb.0:
 ; CHECK-RV64-NEXT:    andi a1, a0, 63
-; CHECK-RV64-NEXT:    negw a0, a0
+; CHECK-RV64-NEXT:    neg a0, a0
 ; CHECK-RV64-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
 ; CHECK-RV64-NEXT:    vsrl.vx v9, v8, a1
 ; CHECK-RV64-NEXT:    andi a0, a0, 63
@@ -1728,7 +1728,7 @@ define <vscale x 2 x i64> @vror_vx_nxv2i64(<vscale x 2 x i64> %a, i64 %b) {
 ; CHECK-RV64-LABEL: vror_vx_nxv2i64:
 ; CHECK-RV64:       # %bb.0:
 ; CHECK-RV64-NEXT:    andi a1, a0, 63
-; CHECK-RV64-NEXT:    negw a0, a0
+; CHECK-RV64-NEXT:    neg a0, a0
 ; CHECK-RV64-NEXT:    vsetvli a2, zero, e64, m2, ta, ma
 ; CHECK-RV64-NEXT:    vsrl.vx v10, v8, a1
 ; CHECK-RV64-NEXT:    andi a0, a0, 63
@@ -1830,7 +1830,7 @@ define <vscale x 4 x i64> @vror_vx_nxv4i64(<vscale x 4 x i64> %a, i64 %b) {
 ; CHECK-RV64-LABEL: vror_vx_nxv4i64:
 ; CHECK-RV64:       # %bb.0:
 ; CHECK-RV64-NEXT:    andi a1, a0, 63
-; CHECK-RV64-NEXT:    negw a0, a0
+; CHECK-RV64-NEXT:    neg a0, a0
 ; CHECK-RV64-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
 ; CHECK-RV64-NEXT:    vsrl.vx v12, v8, a1
 ; CHECK-RV64-NEXT:    andi a0, a0, 63
@@ -1932,7 +1932,7 @@ define <vscale x 8 x i64> @vror_vx_nxv8i64(<vscale x 8 x i64> %a, i64 %b) {
 ; CHECK-RV64-LABEL: vror_vx_nxv8i64:
 ; CHECK-RV64:       # %bb.0:
 ; CHECK-RV64-NEXT:    andi a1, a0, 63
-; CHECK-RV64-NEXT:    negw a0, a0
+; CHECK-RV64-NEXT:    neg a0, a0
 ; CHECK-RV64-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vsrl.vx v16, v8, a1
 ; CHECK-RV64-NEXT:    andi a0, a0, 63

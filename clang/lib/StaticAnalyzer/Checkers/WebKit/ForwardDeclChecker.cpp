@@ -9,7 +9,6 @@
 #include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -21,7 +20,6 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/SaveAndRestore.h"
-#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -164,7 +162,7 @@ public:
     // Ref-counted smartpointers actually have raw-pointer to uncounted type as
     // a member but we trust them to handle it correctly.
     auto R = llvm::dyn_cast_or_null<CXXRecordDecl>(RD);
-    if (!R || isRefCounted(R) || isCheckedPtr(R) || isRetainPtr(R))
+    if (!R || isRefCounted(R) || isCheckedPtr(R) || isRetainPtrOrOSPtr(R))
       return;
 
     for (auto *Member : RD->fields()) {
@@ -274,7 +272,7 @@ public:
           ArgExpr = ArgExpr->IgnoreParenCasts();
       }
     }
-    if (isa<CXXNullPtrLiteralExpr>(ArgExpr) || isa<IntegerLiteral>(ArgExpr) ||
+    if (isNullPtr(ArgExpr) || isa<IntegerLiteral>(ArgExpr) ||
         isa<CXXDefaultArgExpr>(ArgExpr))
       return;
     if (auto *DRE = dyn_cast<DeclRefExpr>(ArgExpr)) {

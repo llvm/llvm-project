@@ -1,0 +1,384 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc public headers.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "assert_test",
+    srcs = ["assert_test.cpp"],
+    deps = ["//libc:public_headers_deps"],
+)
+
+libc_test(
+    name = "complex_test",
+    srcs = ["complex_test.cpp"],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "fpclassify_test",
+    srcs = [
+        "FpClassifyTest.h",
+        "fpclassify_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "fpclassifyf_test",
+    srcs = [
+        "FpClassifyTest.h",
+        "fpclassifyf_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "fpclassifyl_test",
+    srcs = [
+        "FpClassifyTest.h",
+        "fpclassifyl_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "fpclassify_c_test",
+    srcs = ["fpclassify_test.c"],
+    use_test_framework = False,
+    deps = ["//libc:public_headers_deps"],
+)
+
+libc_test(
+    name = "isfinite_test",
+    srcs = [
+        "IsFiniteTest.h",
+        "isfinite_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "isfinitef_test",
+    srcs = [
+        "IsFiniteTest.h",
+        "isfinitef_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "isfinitel_test",
+    srcs = [
+        "IsFiniteTest.h",
+        "isfinitel_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "isfinite_c_test",
+    srcs = ["isfinite_test.c"],
+    use_test_framework = False,
+    deps = ["//libc:public_headers_deps"],
+)
+
+libc_test(
+    name = "isinf_test",
+    srcs = [
+        "IsInfTest.h",
+        "isinf_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "isinff_test",
+    srcs = [
+        "IsInfTest.h",
+        "isinff_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "isinfl_test",
+    srcs = [
+        "IsInfTest.h",
+        "isinfl_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "isinf_c_test",
+    srcs = ["isinf_test.c"],
+    use_test_framework = False,
+    deps = ["//libc:public_headers_deps"],
+)
+
+libc_test(
+    name = "isnan_test",
+    srcs = [
+        "IsNanTest.h",
+        "isnan_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "isnanf_test",
+    srcs = [
+        "IsNanTest.h",
+        "isnanf_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "isnanl_test",
+    srcs = [
+        "IsNanTest.h",
+        "isnanl_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "isnan_c_test",
+    srcs = ["isnan_test.c"],
+    use_test_framework = False,
+    deps = ["//libc:public_headers_deps"],
+)
+
+libc_test(
+    name = "isnormal_test",
+    srcs = [
+        "IsNormalTest.h",
+        "isnormal_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "isnormalf_test",
+    srcs = [
+        "IsNormalTest.h",
+        "isnormalf_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "isnormall_test",
+    srcs = [
+        "IsNormalTest.h",
+        "isnormall_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "isnormal_c_test",
+    srcs = ["isnormal_test.c"],
+    use_test_framework = False,
+    deps = ["//libc:public_headers_deps"],
+)
+
+libc_test(
+    name = "issubnormal_c_test",
+    srcs = ["issubnormal_test.c"],
+    use_test_framework = False,
+    deps = ["//libc:public_headers_deps"],
+)
+
+libc_test(
+    name = "iszero_test",
+    srcs = [
+        "IsZeroTest.h",
+        "iszero_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "iszerof_test",
+    srcs = [
+        "IsZeroTest.h",
+        "iszerof_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "iszerol_test",
+    srcs = [
+        "IsZeroTest.h",
+        "iszerol_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "iszero_c_test",
+    srcs = ["iszero_test.c"],
+    use_test_framework = False,
+    deps = ["//libc:public_headers_deps"],
+)
+
+libc_test(
+    name = "signbit_test",
+    srcs = [
+        "SignbitTest.h",
+        "signbit_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "signbitf_test",
+    srcs = [
+        "SignbitTest.h",
+        "signbitf_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "signbitl_test",
+    srcs = [
+        "SignbitTest.h",
+        "signbitl_test.cpp",
+    ],
+    full_build = True,
+    deps = [
+        "//libc:public_headers_deps",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "stdbit_test",
+    srcs = [
+        "stdbit_stub.h",
+        "stdbit_test.cpp",
+    ],
+    full_build = True,
+    deps = ["//libc:public_headers_deps"],
+)
+
+libc_test(
+    name = "signbit_c_test",
+    srcs = ["signbit_test.c"],
+    use_test_framework = False,
+    deps = ["//libc:public_headers_deps"],
+)
+
+libc_test(
+    name = "stdckdint_test",
+    srcs = ["stdckdint_test.cpp"],
+    full_build = True,
+    deps = ["//libc:public_headers_deps"],
+)
+
+libc_test(
+    name = "sys_queue_test",
+    srcs = ["sys/queue_test.cpp"],
+    full_build = True,
+    deps = [
+        "//libc:__support_char_vector",
+        "//libc:__support_cpp_string",
+        "//libc:public_headers_deps",
+    ],
+)

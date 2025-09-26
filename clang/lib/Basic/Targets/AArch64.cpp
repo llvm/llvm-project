@@ -17,7 +17,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
@@ -126,79 +125,6 @@ static constexpr auto BuiltinAArch64Infos =
 #include "clang/Basic/BuiltinsAArch64.def"
     });
 
-void AArch64TargetInfo::setArchFeatures() {
-  if (*ArchInfo == llvm::AArch64::ARMV8R) {
-    HasDotProd = true;
-    HasDIT = true;
-    HasFlagM = true;
-    HasRCPC = true;
-    FPU |= NeonMode;
-    HasCCPP = true;
-    HasCRC = true;
-    HasLSE = true;
-    HasRDM = true;
-  } else if (ArchInfo->Version.getMajor() == 8) {
-    if (ArchInfo->Version.getMinor() >= 7u) {
-      HasWFxT = true;
-    }
-    if (ArchInfo->Version.getMinor() >= 6u) {
-      HasBFloat16 = true;
-      HasMatMul = true;
-    }
-    if (ArchInfo->Version.getMinor() >= 5u) {
-      HasAlternativeNZCV = true;
-      HasFRInt3264 = true;
-      HasSSBS = true;
-      HasSB = true;
-      HasPredRes = true;
-      HasBTI = true;
-    }
-    if (ArchInfo->Version.getMinor() >= 4u) {
-      HasDotProd = true;
-      HasDIT = true;
-      HasFlagM = true;
-    }
-    if (ArchInfo->Version.getMinor() >= 3u) {
-      HasRCPC = true;
-      FPU |= NeonMode;
-    }
-    if (ArchInfo->Version.getMinor() >= 2u) {
-      HasCCPP = true;
-    }
-    if (ArchInfo->Version.getMinor() >= 1u) {
-      HasCRC = true;
-      HasLSE = true;
-      HasRDM = true;
-    }
-  } else if (ArchInfo->Version.getMajor() == 9) {
-    if (ArchInfo->Version.getMinor() >= 2u) {
-      HasWFxT = true;
-    }
-    if (ArchInfo->Version.getMinor() >= 1u) {
-      HasBFloat16 = true;
-      HasMatMul = true;
-    }
-    FPU |= SveMode;
-    HasSVE2 = true;
-    HasFullFP16 = true;
-    HasAlternativeNZCV = true;
-    HasFRInt3264 = true;
-    HasSSBS = true;
-    HasSB = true;
-    HasPredRes = true;
-    HasBTI = true;
-    HasDotProd = true;
-    HasDIT = true;
-    HasFlagM = true;
-    HasRCPC = true;
-    FPU |= NeonMode;
-    HasCCPP = true;
-    HasCRC = true;
-    HasLSE = true;
-    HasRDM = true;
-  }
-}
-
 AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
                                      const TargetOptions &Opts)
     : TargetInfo(Triple), ABI("aapcs") {
@@ -216,7 +142,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   AddrSpaceMap = &ARM64AddrSpaceMap;
 
   // All AArch64 implementations support ARMv8 FP, which makes half a legal type.
-  HasLegalHalfType = true;
+  HasFastHalfType = true;
   HalfArgsAndReturns = true;
   HasFloat16 = true;
   HasStrictFP = true;
@@ -240,15 +166,15 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   // Make __builtin_ms_va_list available.
   HasBuiltinMSVaList = true;
 
-  // Make the SVE types available.  Note that this deliberately doesn't
-  // depend on SveMode, since in principle it should be possible to turn
+  // Make the Neon ACLE and SVE types available.  Note that this deliberately
+  // doesn't depend on SveMode, since in principle it should be possible to turn
   // SVE on and off within a translation unit.  It should also be possible
   // to compile the global declaration:
   //
   // __SVInt8_t *ptr;
   //
   // even without SVE.
-  HasAArch64SVETypes = true;
+  HasAArch64ACLETypes = true;
 
   // {} in inline assembly are neon specifiers, not assembly variant
   // specifiers.
@@ -596,8 +522,38 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSMEB16B16)
     Builder.defineMacro("__ARM_FEATURE_SME_B16B16", "1");
 
+  if (HasFP8)
+    Builder.defineMacro("__ARM_FEATURE_FP8", "1");
+
+  if (HasFP8FMA)
+    Builder.defineMacro("__ARM_FEATURE_FP8FMA", "1");
+
+  if (HasFP8DOT2)
+    Builder.defineMacro("__ARM_FEATURE_FP8DOT2", "1");
+
+  if (HasFP8DOT4)
+    Builder.defineMacro("__ARM_FEATURE_FP8DOT4", "1");
+
+  if (HasSSVE_FP8DOT2)
+    Builder.defineMacro("__ARM_FEATURE_SSVE_FP8DOT2", "1");
+
+  if (HasSSVE_FP8DOT4)
+    Builder.defineMacro("__ARM_FEATURE_SSVE_FP8DOT4", "1");
+
+  if (HasSSVE_FP8FMA)
+    Builder.defineMacro("__ARM_FEATURE_SSVE_FP8FMA", "1");
+
+  if (HasSME_F8F32)
+    Builder.defineMacro("__ARM_FEATURE_SME_F8F32", "1");
+
+  if (HasSME_F8F16)
+    Builder.defineMacro("__ARM_FEATURE_SME_F8F16", "1");
+
   if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
+
+  if (HasCSSC)
+    Builder.defineMacro("__ARM_FEATURE_CSSC", "1");
 
   if (HasRCPC3)
     Builder.defineMacro("__ARM_FEATURE_RCPC", "3");
@@ -794,18 +750,44 @@ AArch64TargetInfo::getTargetBuiltins() const {
 
 std::optional<std::pair<unsigned, unsigned>>
 AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts,
-                                  bool IsArmStreamingFunction) const {
-  if (LangOpts.VScaleMin || LangOpts.VScaleMax)
+                                  ArmStreamingKind Mode,
+                                  llvm::StringMap<bool> *FeatureMap) const {
+  if (Mode == ArmStreamingKind::NotStreaming &&
+      (LangOpts.VScaleMin || LangOpts.VScaleMax))
     return std::pair<unsigned, unsigned>(
-        LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax);
+        LangOpts.VScaleMin ? LangOpts.VScaleMin : 1,
+        LangOpts.VScaleMax ? LangOpts.VScaleMax : 16);
 
-  if (hasFeature("sve") || (IsArmStreamingFunction && hasFeature("sme")))
+  if (Mode == ArmStreamingKind::Streaming &&
+      (LangOpts.VScaleStreamingMin || LangOpts.VScaleStreamingMax))
+    return std::pair<unsigned, unsigned>(
+        LangOpts.VScaleStreamingMin ? LangOpts.VScaleStreamingMin : 1,
+        LangOpts.VScaleStreamingMax ? LangOpts.VScaleStreamingMax : 16);
+
+  if (Mode == ArmStreamingKind::StreamingCompatible &&
+      ((LangOpts.VScaleMin && LangOpts.VScaleStreamingMin) ||
+       (LangOpts.VScaleMax && LangOpts.VScaleStreamingMax))) {
+    unsigned Min =
+        std::min(LangOpts.VScaleMin ? LangOpts.VScaleMin : 1,
+                 LangOpts.VScaleStreamingMin ? LangOpts.VScaleStreamingMin : 1);
+    unsigned Max = std::max(
+        LangOpts.VScaleMax ? LangOpts.VScaleMax : 16,
+        LangOpts.VScaleStreamingMax ? LangOpts.VScaleStreamingMax : 16);
+    return std::pair(Min, Max);
+  }
+
+  if (hasFeature("sve") || (FeatureMap && (FeatureMap->lookup("sve"))))
+    return std::pair<unsigned, unsigned>(1, 16);
+
+  if (Mode == ArmStreamingKind::Streaming &&
+      (hasFeature("sme") || (FeatureMap && (FeatureMap->lookup("sme")))))
     return std::pair<unsigned, unsigned>(1, 16);
 
   return std::nullopt;
 }
 
-uint64_t AArch64TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+llvm::APInt
+AArch64TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
   return llvm::AArch64::getFMVPriority(Features);
 }
 
@@ -843,6 +825,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("rdm", HasRDM)
       .Case("lse", HasLSE)
       .Case("crc", HasCRC)
+      .Case("cssc", HasCSSC)
       .Case("sha2", HasSHA2)
       .Case("sha3", HasSHA3)
       .Cases("aes", "pmull", HasAES)
@@ -880,6 +863,15 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Cases("ls64", "ls64_v", "ls64_accdata", HasLS64)
       .Case("wfxt", HasWFxT)
       .Case("rcpc3", HasRCPC3)
+      .Case("fp8", HasFP8)
+      .Case("fp8fma", HasFP8FMA)
+      .Case("fp8dot2", HasFP8DOT2)
+      .Case("fp8dot4", HasFP8DOT4)
+      .Case("ssve-fp8dot2", HasSSVE_FP8DOT2)
+      .Case("ssve-fp8dot4", HasSSVE_FP8DOT4)
+      .Case("ssve-fp8fma", HasSSVE_FP8FMA)
+      .Case("sme-f8f32", HasSME_F8F32)
+      .Case("sme-f8f16", HasSME_F8F16)
       .Default(false);
 }
 
@@ -1041,6 +1033,25 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSVEB16B16 = true;
       HasSMEB16B16 = true;
     }
+
+    if (Feature == "+fp8")
+      HasFP8 = true;
+    if (Feature == "+fp8fma")
+      HasFP8FMA = true;
+    if (Feature == "+fp8dot2")
+      HasFP8DOT2 = true;
+    if (Feature == "+fp8dot4")
+      HasFP8DOT4 = true;
+    if (Feature == "+ssve-fp8dot2")
+      HasSSVE_FP8DOT2 = true;
+    if (Feature == "+ssve-fp8dot4")
+      HasSSVE_FP8DOT4 = true;
+    if (Feature == "+ssve-fp8fma")
+      HasSSVE_FP8FMA = true;
+    if (Feature == "+sme-f8f32")
+      HasSME_F8F32 = true;
+    if (Feature == "+sme-f8f16")
+      HasSME_F8F16 = true;
     if (Feature == "+sb")
       HasSB = true;
     if (Feature == "+predres")
@@ -1190,6 +1201,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasPAuthLR = true;
       HasPAuth = true;
     }
+    if (Feature == "+cssc")
+      HasCSSC = true;
   }
 
   // Check features that are manually disabled by command line options.
@@ -1201,7 +1214,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   }
 
   setDataLayout();
-  setArchFeatures();
 
   if (HasNoFP) {
     FPU &= ~FPUMode;
@@ -1341,7 +1353,7 @@ AArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_PreserveNone:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
   case CC_AArch64VectorCall:
   case CC_AArch64SVEPCS:
   case CC_Win64:
@@ -1699,7 +1711,7 @@ WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_X86FastCall:
     return CCCR_Ignore;
   case CC_C:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_PreserveNone:

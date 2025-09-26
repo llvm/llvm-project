@@ -1,12 +1,11 @@
-// XFAIL: target=aarch64-{{.*}}-windows-{{.*}}
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_fixunstfdi
 
 #include <stdio.h>
 
-#if _ARCH_PPC || __aarch64__
-
 #include "int_lib.h"
+
+#if defined(CRT_HAS_TF_MODE)
 
 // Returns: convert a to a unsigned long long, rounding toward zero.
 //          Negative values all become zero.
@@ -35,7 +34,7 @@ char assumption_3[sizeof(long double)*CHAR_BIT == 128] = {0};
 
 int main()
 {
-#if _ARCH_PPC || __aarch64__
+#if defined(CRT_HAS_TF_MODE)
     if (test__fixunstfdi(0.0, 0))
         return 1;
 

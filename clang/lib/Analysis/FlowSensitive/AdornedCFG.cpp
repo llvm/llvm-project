@@ -16,7 +16,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Error.h"

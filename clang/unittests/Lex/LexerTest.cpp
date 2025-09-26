@@ -41,14 +41,11 @@ using testing::ElementsAre;
 class LexerTest : public ::testing::Test {
 protected:
   LexerTest()
-    : FileMgr(FileMgrOpts),
-      DiagID(new DiagnosticIDs()),
-      Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
-      SourceMgr(Diags, FileMgr),
-      TargetOpts(new TargetOptions)
-  {
+      : FileMgr(FileMgrOpts),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   std::unique_ptr<Preprocessor> CreatePP(StringRef Source,
@@ -64,6 +61,8 @@ protected:
         PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
         /*IILookup =*/nullptr,
         /*OwnsHeaderSearch =*/false);
+    if (!PreDefines.empty())
+      PP->setPredefines(PreDefines);
     PP->Initialize(*Target);
     PP->EnterMainSourceFile();
     return PP;
@@ -103,13 +102,14 @@ protected:
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;
   std::shared_ptr<TargetOptions> TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> Target;
   std::unique_ptr<Preprocessor> PP;
+  std::string PreDefines;
 };
 
 TEST_F(LexerTest, GetSourceTextExpandsToMaximumInMacroArgument) {
@@ -521,15 +521,14 @@ TEST_F(LexerTest, GetBeginningOfTokenWithEscapedNewLine) {
   std::vector<Token> LexedTokens = CheckLex(TextToLex, ExpectedTokens);
 
   for (const Token &Tok : LexedTokens) {
-    std::pair<FileID, unsigned> OriginalLocation =
+    FileIDAndOffset OriginalLocation =
         SourceMgr.getDecomposedLoc(Tok.getLocation());
     for (unsigned Offset = 0; Offset < IdentifierLength; ++Offset) {
       SourceLocation LookupLocation =
           Tok.getLocation().getLocWithOffset(Offset);
 
-      std::pair<FileID, unsigned> FoundLocation =
-          SourceMgr.getDecomposedExpansionLoc(
-              Lexer::GetBeginningOfToken(LookupLocation, SourceMgr, LangOpts));
+      FileIDAndOffset FoundLocation = SourceMgr.getDecomposedExpansionLoc(
+          Lexer::GetBeginningOfToken(LookupLocation, SourceMgr, LangOpts));
 
       // Check that location returned by the GetBeginningOfToken
       // is the same as original token location reported by Lexer.
@@ -771,4 +770,50 @@ TEST(LexerPreambleTest, PreambleBounds) {
   }
 }
 
+TEST_F(LexerTest, CheckFirstPPToken) {
+  LangOpts.CPlusPlusModules = true;
+  {
+    TrivialModuleLoader ModLoader;
+    auto PP = CreatePP("// This is a comment\n"
+                       "int a;",
+                       ModLoader);
+    Token Tok;
+    PP->Lex(Tok);
+    EXPECT_TRUE(Tok.is(tok::kw_int));
+    EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc().isValid());
+    EXPECT_EQ(PP->getMainFileFirstPPTokenLoc(), Tok.getLocation());
+  }
+  {
+    TrivialModuleLoader ModLoader;
+    auto PP = CreatePP("// This is a comment\n"
+                       "#define FOO int\n"
+                       "FOO a;",
+                       ModLoader);
+    Token Tok;
+    PP->Lex(Tok);
+    EXPECT_TRUE(Tok.is(tok::kw_int));
+    EXPECT_FALSE(Lexer::getRawToken(PP->getMainFileFirstPPTokenLoc(), Tok,
+                                    PP->getSourceManager(), PP->getLangOpts(),
+                                    /*IgnoreWhiteSpace=*/false));
+    EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc() == Tok.getLocation());
+    EXPECT_TRUE(Tok.is(tok::hash));
+  }
+
+  {
+    PreDefines = "#define FOO int\n";
+    TrivialModuleLoader ModLoader;
+    auto PP = CreatePP("// This is a comment\n"
+                       "FOO a;",
+                       ModLoader);
+    Token Tok;
+    PP->Lex(Tok);
+    EXPECT_TRUE(Tok.is(tok::kw_int));
+    EXPECT_FALSE(Lexer::getRawToken(PP->getMainFileFirstPPTokenLoc(), Tok,
+                                    PP->getSourceManager(), PP->getLangOpts(),
+                                    /*IgnoreWhiteSpace=*/false));
+    EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc() == Tok.getLocation());
+    EXPECT_TRUE(Tok.is(tok::raw_identifier));
+    EXPECT_TRUE(Tok.getRawIdentifier() == "FOO");
+  }
+}
 } // anonymous namespace

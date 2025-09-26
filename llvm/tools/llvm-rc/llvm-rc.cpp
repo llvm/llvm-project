@@ -201,7 +201,7 @@ std::string getMingwTriple() {
   Triple T(sys::getDefaultTargetTriple());
   if (!isUsableArch(T.getArch()))
     T.setArch(getDefaultFallbackArch());
-  if (T.isWindowsGNUEnvironment())
+  if (T.isOSCygMing())
     return T.str();
   // Write out the literal form of the vendor/env here, instead of
   // constructing them with enum values (which end up with them in

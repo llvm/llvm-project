@@ -17,7 +17,7 @@ define i32 @main() {
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    pcalau12i $r4, %pc_hi20(.str_1)
 ; LA32-NEXT:    addi.w $r4, $r4, %pc_lo12(.str_1)
-; LA32-NEXT:    bl %plt(printf)
+; LA32-NEXT:    bl printf
 ; LA32-NEXT:    move $r4, $r0
 ; LA32-NEXT:    ld.w $r1, $r3, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $r3, $r3, 16

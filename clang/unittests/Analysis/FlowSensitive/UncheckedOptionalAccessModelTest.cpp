@@ -1388,10 +1388,9 @@ protected:
             unsigned Line = SrcMgr.getPresumedLineNumber(Diag.Range.getBegin());
             DiagnosticLines.insert(Line);
             if (!AnnotationLines.contains(Line)) {
-              IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(
-                  new DiagnosticOptions());
+              DiagnosticOptions DiagOpts;
               TextDiagnostic TD(llvm::errs(), AO.ASTCtx.getLangOpts(),
-                                DiagOpts.get());
+                                DiagOpts);
               TD.emitDiagnostic(FullSourceLoc(Diag.Range.getBegin(), SrcMgr),
                                 DiagnosticsEngine::Error,
                                 "unexpected diagnostic", {Diag.Range}, {});

@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-unknown-linux-gnu -verify=expected,cxx2c,post2b -fcxx-exceptions
 // RUN: not %clang_cc1 -std=c++17 %s -triple x86_64-unknown-linux-gnu -emit-llvm-only -fcxx-exceptions
 
-struct S { int a, b, c; };
+struct S { int a, b, c; }; // expected-note 2 {{'S::a' declared here}}
 
 // A simple-declaration can be a decompsition declaration.
 namespace SimpleDecl {
@@ -32,7 +32,7 @@ namespace ForRangeDecl {
 namespace OtherDecl {
   // A parameter-declaration is not a simple-declaration.
   // This parses as an array declaration.
-  void f(auto [a, b, c]); // cxx17-error {{'auto' not allowed in function prototype}} expected-error {{'a'}}
+  void f(auto [a, b, c]); // cxx17-error {{'auto' not allowed in function prototype}} expected-error 1+{{'a'}}
 
   void g() {
     // A condition is allowed as a Clang extension.
@@ -46,7 +46,7 @@ namespace OtherDecl {
 
     // An exception-declaration is not a simple-declaration.
     try {}
-    catch (auto [a, b, c]) {} // expected-error {{'auto' not allowed in exception declaration}} expected-error {{'a'}}
+    catch (auto [a, b, c]) {} // expected-error {{'auto' not allowed in exception declaration}} expected-error 1+{{'a'}}
   }
 
   // A member-declaration is not a simple-declaration.
@@ -83,11 +83,19 @@ namespace BadSpecifiers {
       friend auto &[g] = n; // expected-error {{'auto' not allowed}} expected-error {{friends can only be classes or functions}}
     };
     typedef auto &[h] = n; // expected-error {{cannot be declared 'typedef'}}
-    constexpr auto &[i] = n; // expected-error {{cannot be declared 'constexpr'}}
+    constexpr auto &[i] = n; // pre2c-error {{cannot be declared 'constexpr'}}
   }
 
-  static constexpr inline thread_local auto &[j1] = n; // expected-error {{cannot be declared with 'constexpr inline' specifiers}}
-  static thread_local auto &[j2] = n; // cxx17-warning {{declared with 'static thread_local' specifiers is a C++20 extension}}
+  static constexpr inline thread_local auto &[j1] = n;
+  // pre2c-error@-1 {{cannot be declared 'constexpr'}} \
+  // expected-error@-1 {{cannot be declared 'inline'}} \
+  // cxx17-warning@-1 {{declared 'static' is a C++20 extension}} \
+  // cxx17-warning@-1 {{declared 'thread_local' is a C++20 extension}}
+
+  static thread_local auto &[j2] = n;
+  // cxx17-warning@-1 {{declared 'static' is a C++20 extension}}\
+  // cxx17-warning@-1 {{declared 'thread_local' is a C++20 extension}}
+
 
   inline auto &[k] = n; // expected-error {{cannot be declared 'inline'}}
 

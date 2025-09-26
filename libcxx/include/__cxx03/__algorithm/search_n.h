@@ -29,7 +29,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Pred, class _Iter, class _Sent, class _SizeT, class _Type, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter> __search_n_forward_impl(
+_LIBCPP_HIDE_FROM_ABI pair<_Iter, _Iter> __search_n_forward_impl(
     _Iter __first, _Sent __last, _SizeT __count, const _Type& __value, _Pred& __pred, _Proj& __proj) {
   if (__count <= 0)
     return std::make_pair(__first, __first);
@@ -66,7 +66,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter> __search_
 }
 
 template <class _AlgPolicy, class _Pred, class _Iter, class _Sent, class _SizeT, class _Type, class _Proj, class _DiffT>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 std::pair<_Iter, _Iter> __search_n_random_access_impl(
+_LIBCPP_HIDE_FROM_ABI std::pair<_Iter, _Iter> __search_n_random_access_impl(
     _Iter __first, _Sent __last, _SizeT __count, const _Type& __value, _Pred& __pred, _Proj& __proj, _DiffT __size1) {
   using difference_type = typename iterator_traits<_Iter>::difference_type;
   if (__count == 0)
@@ -113,7 +113,7 @@ template <class _Iter,
           class _Pred,
           class _Proj,
           __enable_if_t<__has_random_access_iterator_category<_Iter>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
+_LIBCPP_HIDE_FROM_ABI pair<_Iter, _Iter>
 __search_n_impl(_Iter __first, _Sent __last, _DiffT __count, const _Type& __value, _Pred& __pred, _Proj& __proj) {
   return std::__search_n_random_access_impl<_ClassicAlgPolicy>(
       __first, __last, __count, __value, __pred, __proj, __last - __first);
@@ -128,13 +128,13 @@ template <class _Iter1,
           __enable_if_t<__has_forward_iterator_category<_Iter1>::value &&
                             !__has_random_access_iterator_category<_Iter1>::value,
                         int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1>
+_LIBCPP_HIDE_FROM_ABI pair<_Iter1, _Iter1>
 __search_n_impl(_Iter1 __first, _Sent1 __last, _DiffT __count, const _Type& __value, _Pred& __pred, _Proj& __proj) {
   return std::__search_n_forward_impl<_ClassicAlgPolicy>(__first, __last, __count, __value, __pred, __proj);
 }
 
 template <class _ForwardIterator, class _Size, class _Tp, class _BinaryPredicate>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator search_n(
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator search_n(
     _ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value, _BinaryPredicate __pred) {
   static_assert(
       __is_callable<_BinaryPredicate, decltype(*__first), const _Tp&>::value, "BinaryPredicate has to be callable");
@@ -143,7 +143,7 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Fo
 }
 
 template <class _ForwardIterator, class _Size, class _Tp>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
 search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value) {
   return std::search_n(__first, __last, std::__convert_to_integral(__count), __value, __equal_to());
 }

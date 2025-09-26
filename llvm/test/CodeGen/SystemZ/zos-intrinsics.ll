@@ -30,7 +30,9 @@ declare double @llvm.sin.f64(double)
 declare fp128 @llvm.exp2.f128(fp128)
 
 ; Check the calls in the ADA.
-; CHECK: .section ".ada"
+; CHECK: stdin#C CSECT
+; CHECK: C_WSA64 CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(stdin#S)
+; CHECK: stdin#S XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 
 ; Check that there is no call to sqrt.
 ; CHECK-NOT:  .quad   R(@@WSQT@B)

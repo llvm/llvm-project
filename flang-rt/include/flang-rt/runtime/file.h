@@ -27,6 +27,7 @@ class OpenFile {
 public:
   using FileOffset = std::int64_t;
 
+  int fd() const { return fd_; }
   const char *path() const { return path_.get(); }
   std::size_t pathLength() const { return pathLength_; }
   void set_path(OwningPtr<char> &&, std::size_t bytes);
@@ -37,11 +38,10 @@ public:
   void set_mayAsynchronous(bool yes) { mayAsynchronous_ = yes; }
   bool isTerminal() const { return isTerminal_; }
   bool isWindowsTextFile() const { return isWindowsTextFile_; }
-  Fortran::common::optional<FileOffset> knownSize() const { return knownSize_; }
+  common::optional<FileOffset> knownSize() const { return knownSize_; }
 
   bool IsConnected() const { return fd_ >= 0; }
-  void Open(OpenStatus, Fortran::common::optional<Action>, Position,
-      IoErrorHandler &);
+  void Open(OpenStatus, common::optional<Action>, Position, IoErrorHandler &);
   void Predefine(int fd);
   void Close(CloseStatus, IoErrorHandler &);
 
@@ -68,7 +68,7 @@ public:
   void WaitAll(IoErrorHandler &);
 
   // INQUIRE(POSITION=)
-  Position InquirePosition() const;
+  Position InquirePosition(FileOffset offset) const;
 
 private:
   struct Pending {
@@ -80,7 +80,7 @@ private:
   void CheckOpen(const Terminator &);
   bool Seek(FileOffset, IoErrorHandler &);
   bool RawSeek(FileOffset);
-  bool RawSeekToEnd();
+  bool SeekToEnd(IoErrorHandler &);
   int PendingResult(const Terminator &, int);
   void SetPosition(FileOffset pos) {
     position_ = pos;
@@ -95,10 +95,10 @@ private:
   bool mayWrite_{false};
   bool mayPosition_{false};
   bool mayAsynchronous_{false};
-  Fortran::common::optional<Position>
+  common::optional<Position>
       openPosition_; // from Open(); reset after positioning
   FileOffset position_{0};
-  Fortran::common::optional<FileOffset> knownSize_;
+  common::optional<FileOffset> knownSize_;
   bool isTerminal_{false};
   bool isWindowsTextFile_{false}; // expands LF to CR+LF on write
 

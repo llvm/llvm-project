@@ -8,25 +8,24 @@
 
 #include "Watchpoint.h"
 #include "DAP.h"
-#include "JSONUtils.h"
+#include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <string>
 
 namespace lldb_dap {
-Watchpoint::Watchpoint(DAP &d, const llvm::json::Object &obj)
-    : BreakpointBase(d, obj) {
-  llvm::StringRef dataId = GetString(obj, "dataId").value_or("");
-  std::string accessType = GetString(obj, "accessType").value_or("").str();
+Watchpoint::Watchpoint(DAP &d, const protocol::DataBreakpoint &breakpoint)
+    : BreakpointBase(d, breakpoint.condition, breakpoint.hitCondition) {
+  llvm::StringRef dataId = breakpoint.dataId;
   auto [addr_str, size_str] = dataId.split('/');
   llvm::to_integer(addr_str, m_addr, 16);
   llvm::to_integer(size_str, m_size);
-  m_options.SetWatchpointTypeRead(accessType != "write");
-  if (accessType != "read")
+  m_options.SetWatchpointTypeRead(breakpoint.accessType !=
+                                  protocol::eDataBreakpointAccessTypeWrite);
+  if (breakpoint.accessType != protocol::eDataBreakpointAccessTypeRead)
     m_options.SetWatchpointTypeWrite(lldb::eWatchpointWriteTypeOnModify);
 }
 
@@ -38,14 +37,17 @@ void Watchpoint::SetHitCondition() {
     m_wp.SetIgnoreCount(hitCount - 1);
 }
 
-void Watchpoint::CreateJsonObject(llvm::json::Object &object) {
+protocol::Breakpoint Watchpoint::ToProtocolBreakpoint() {
+  protocol::Breakpoint breakpoint;
   if (!m_error.IsValid() || m_error.Fail()) {
-    object.try_emplace("verified", false);
+    breakpoint.verified = false;
     if (m_error.Fail())
-      EmplaceSafeString(object, "message", m_error.GetCString());
+      breakpoint.message = m_error.GetCString();
   } else {
-    object.try_emplace("verified", true);
+    breakpoint.verified = true;
   }
+
+  return breakpoint;
 }
 
 void Watchpoint::SetWatchpoint() {

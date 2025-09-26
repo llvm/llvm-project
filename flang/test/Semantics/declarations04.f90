@@ -20,7 +20,7 @@ module ext4
 end
 
 block data ext3
-  !PORTABILITY: Global name 'ext4' conflicts with a module
+  !PORTABILITY: Global name 'ext4' conflicts with a module [-Wbenign-name-clash]
   common /ext4/ x
 end
 

@@ -8,3 +8,8 @@
 ! CHECK-LABEL: "-fc1"
 ! CHECK: -ffp-contract=off
 ! CHECK: -O3
+
+! RUN: %flang -### -S -fprofile-generate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE-LLVM %s
+! CHECK-PROFILE-GENERATE-LLVM: "-fprofile-generate"
+! RUN: %flang -### -S -fprofile-use=%S %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-DIR %s
+! CHECK-PROFILE-USE-DIR: "-fprofile-use={{.*}}"

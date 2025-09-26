@@ -439,9 +439,7 @@ public:
 
   // Returns true if the value already has a shadow (including if the value is a
   // constant). If true, calling getShadow() is valid.
-  bool hasShadow(Value *V) const {
-    return isa<Constant>(V) || (Map.find(V) != Map.end());
-  }
+  bool hasShadow(Value *V) const { return isa<Constant>(V) || Map.contains(V); }
 
   // Returns the shadow value for a given value. Asserts that the value has
   // a shadow value. Lazily creates shadows for constant values.
@@ -470,7 +468,8 @@ private:
       // Floating-point constants.
       Type *Ty = Config.getExtendedFPType(CFP->getType());
       return ConstantFP::get(
-          Ty, extendConstantFP(CFP->getValueAPF(), Ty->getFltSemantics()));
+          Ty, extendConstantFP(CFP->getValueAPF(),
+                               Ty->getScalarType()->getFltSemantics()));
     }
     // Vector, array, or aggregate constants.
     if (C->getType()->isVectorTy()) {
@@ -644,11 +643,11 @@ NumericalStabilitySanitizerPass::run(Module &M, ModuleAnalysisManager &MAM) {
 }
 
 static GlobalValue *createThreadLocalGV(const char *Name, Module &M, Type *Ty) {
-  return dyn_cast<GlobalValue>(M.getOrInsertGlobal(Name, Ty, [&M, Ty, Name] {
+  return M.getOrInsertGlobal(Name, Ty, [&M, Ty, Name] {
     return new GlobalVariable(M, Ty, false, GlobalVariable::ExternalLinkage,
                               nullptr, Name, nullptr,
                               GlobalVariable::InitialExecTLSModel);
-  }));
+  });
 }
 
 NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
@@ -2042,8 +2041,6 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   // the module constructor.
   if (F.getName() == kNsanModuleCtorName)
     return false;
-  SmallVector<Instruction *, 8> AllLoadsAndStores;
-  SmallVector<Instruction *, 8> LocalLoadsAndStores;
 
   // The instrumentation maintains:
   //  - for each IR value `v` of floating-point (or vector floating-point) type

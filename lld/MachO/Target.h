@@ -49,7 +49,7 @@ public:
     pageZeroSize = LP::pageZeroSize;
     headerSize = sizeof(typename LP::mach_header);
     wordSize = LP::wordSize;
-    p2WordSize = llvm::CTLog2<LP::wordSize>();
+    p2WordSize = llvm::ConstantLog2<LP::wordSize>();
   }
 
   virtual ~TargetInfo() = default;
@@ -123,8 +123,6 @@ public:
                                  uint8_t *loc) const {
     llvm_unreachable("Unsupported architecture for dtrace symbols");
   }
-
-  virtual void applyOptimizationHints(uint8_t *, const ObjFile &) const {};
 
   uint32_t magic;
   llvm::MachO::CPUType cpuType;

@@ -58,7 +58,9 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
     for (VPRecipeBase &VPI : *VPBB) {
       if (isa<VPWidenPHIRecipe>(&VPI))
         continue;
-      auto *VPInst = cast<VPInstruction>(&VPI);
+      auto *VPInst = dyn_cast<VPInstruction>(&VPI);
+      if (!VPInst)
+        continue;
       auto *Inst = dyn_cast_or_null<Instruction>(VPInst->getUnderlyingValue());
       if (!Inst)
         continue;

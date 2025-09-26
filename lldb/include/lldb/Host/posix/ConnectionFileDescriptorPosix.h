@@ -18,13 +18,10 @@
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Connection.h"
-#include "lldb/Utility/IOObject.h"
 
 namespace lldb_private {
 
 class Status;
-class Socket;
-class SocketAddress;
 
 class ConnectionFileDescriptor : public Connection {
 public:
@@ -35,7 +32,7 @@ public:
 
   ConnectionFileDescriptor(int fd, bool owns_fd);
 
-  ConnectionFileDescriptor(Socket *socket);
+  ConnectionFileDescriptor(std::unique_ptr<Socket> socket_up);
 
   ~ConnectionFileDescriptor() override;
 
@@ -136,8 +133,6 @@ protected:
   std::string m_uri;
 
 private:
-  void InitializeSocket(Socket *socket);
-
   ConnectionFileDescriptor(const ConnectionFileDescriptor &) = delete;
   const ConnectionFileDescriptor &
   operator=(const ConnectionFileDescriptor &) = delete;

@@ -1,7 +1,7 @@
 ; RUN: opt -S -mtriple=amdgcn-- -codegenprepare < %s | FileCheck -check-prefix=OPT %s
 ; RUN: opt -S -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -codegenprepare < %s | FileCheck -check-prefix=OPT %s
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
 
 ; This particular case will actually be worse in terms of code size
 ; from sinking into both.
@@ -116,21 +116,15 @@ ret:
 ; OPT: store
 ; OPT: ret
 
-; For GFX8: since i16 is legal type, we cannot sink lshr into .LBBs.
-
 ; GCN-LABEL: {{^}}sink_ubfe_i16:
 ; GCN-NOT: lshr
-; VI: s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x2c
-; VI: s_bfe_u32 [[BFE:s[0-9]+]], [[ARG]], 0xc0004
 ; GCN: s_cbranch_scc{{[0-1]}}
 
 ; GCN: ; %bb.1:
-; SI: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70004
-; VI: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7f
+; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70004
 
 ; GCN: .LBB2_2:
-; SI: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80004
-; VI: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0xff
+; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80004
 
 ; GCN: buffer_store_short
 ; GCN: s_endpgm

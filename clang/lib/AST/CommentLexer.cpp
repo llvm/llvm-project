@@ -214,7 +214,7 @@ bool isCommandNameStartCharacter(char C) {
 }
 
 bool isCommandNameCharacter(char C) {
-  return isAlphanumeric(C);
+  return isAsciiIdentifierContinue(C, false);
 }
 
 const char *skipCommandName(const char *BufferPtr, const char *BufferEnd) {
@@ -904,7 +904,7 @@ again:
 StringRef Lexer::getSpelling(const Token &Tok,
                              const SourceManager &SourceMgr) const {
   SourceLocation Loc = Tok.getLocation();
-  std::pair<FileID, unsigned> LocInfo = SourceMgr.getDecomposedLoc(Loc);
+  FileIDAndOffset LocInfo = SourceMgr.getDecomposedLoc(Loc);
 
   bool InvalidTemp = false;
   StringRef File = SourceMgr.getBufferData(LocInfo.first, &InvalidTemp);

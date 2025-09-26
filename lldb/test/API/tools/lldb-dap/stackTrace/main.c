@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <unistd.h>
 
 int recurse(int x) {
   if (x <= 1)

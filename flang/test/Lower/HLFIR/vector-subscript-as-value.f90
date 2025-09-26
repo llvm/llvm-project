@@ -209,10 +209,9 @@ end subroutine
 ! CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_4]], %[[VAL_11]])  : (!fir.class<!fir.array<?x?xnone>>, index, i64) -> !fir.class<none>
 ! CHECK:             hlfir.yield_element %[[VAL_12]] : !fir.class<none>
 ! CHECK:           }
-! CHECK:           %[[VAL_13:.*]]:3 = hlfir.associate %[[VAL_8]](%[[VAL_7]]) {adapt.valuebyref} : (!hlfir.expr<?xnone?>, !fir.shape<1>) -> (!fir.class<!fir.heap<!fir.array<?xnone>>>, !fir.class<!fir.heap<!fir.array<?xnone>>>, i1)
-! CHECK:           %[[VAL_14:.*]] = fir.rebox %[[VAL_13]]#0 : (!fir.class<!fir.heap<!fir.array<?xnone>>>) -> !fir.class<!fir.array<?xnone>>
-! CHECK:           fir.call @_QPdo_something(%[[VAL_14]]) fastmath<contract> : (!fir.class<!fir.array<?xnone>>) -> ()
-! CHECK:           hlfir.end_associate %[[VAL_13]]#0, %[[VAL_13]]#2 : !fir.class<!fir.heap<!fir.array<?xnone>>>, i1
+! CHECK:           %[[VAL_13:.*]]:3 = hlfir.associate %[[VAL_8]](%[[VAL_7]]) {adapt.valuebyref} : (!hlfir.expr<?xnone?>, !fir.shape<1>) -> (!fir.class<!fir.array<?xnone>>, !fir.class<!fir.array<?xnone>>, i1)
+! CHECK:           fir.call @_QPdo_something(%[[VAL_13]]#0) fastmath<contract> : (!fir.class<!fir.array<?xnone>>) -> ()
+! CHECK:           hlfir.end_associate %[[VAL_13]]#0, %[[VAL_13]]#2 : !fir.class<!fir.array<?xnone>>, i1
 ! CHECK:           hlfir.destroy %[[VAL_8]] : !hlfir.expr<?xnone?>
 ! CHECK:           return
 ! CHECK:         }

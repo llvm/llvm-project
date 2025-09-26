@@ -39,6 +39,12 @@ cl::opt<bool> ignoreMissingTypeDescriptors(
              "translating FIR to LLVM"),
     cl::init(false), cl::Hidden);
 
+cl::opt<bool> skipExternalRttiDefinition(
+    "skip-external-rtti-definition", llvm::cl::init(false),
+    llvm::cl::desc("do not define rtti static objects for types belonging to "
+                   "other compilation units"),
+    cl::Hidden);
+
 OptimizationLevel defaultOptLevel{OptimizationLevel::O0};
 
 codegenoptions::DebugInfoKind noDebugInfo{codegenoptions::NoDebugInfo};

@@ -15,7 +15,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -52,7 +51,7 @@ GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
       *M, StrConstant->getType(), true, GlobalValue::PrivateLinkage,
       StrConstant, Name, nullptr, GlobalVariable::NotThreadLocal, AddressSpace);
   GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  GV->setAlignment(Align(1));
+  GV->setAlignment(M->getDataLayout().getPrefTypeAlign(getInt8Ty()));
   return GV;
 }
 
@@ -61,19 +60,12 @@ Type *IRBuilderBase::getCurrentFunctionReturnType() const {
   return BB->getParent()->getReturnType();
 }
 
-DebugLoc IRBuilderBase::getCurrentDebugLocation() const {
-  for (auto &KV : MetadataToCopy)
-    if (KV.first == LLVMContext::MD_dbg)
-      return {cast<DILocation>(KV.second)};
-
-  return {};
-}
+DebugLoc IRBuilderBase::getCurrentDebugLocation() const { return StoredDL; }
 void IRBuilderBase::SetInstDebugLocation(Instruction *I) const {
-  for (const auto &KV : MetadataToCopy)
-    if (KV.first == LLVMContext::MD_dbg) {
-      I->setDebugLoc(DebugLoc(KV.second));
-      return;
-    }
+  // We prefer to set our current debug location if any has been set, but if
+  // our debug location is empty and I has a valid location, we shouldn't
+  // overwrite it.
+  I->setDebugLoc(StoredDL.orElse(I->getDebugLoc()));
 }
 
 Value *IRBuilderBase::CreateAggregateCast(Value *V, Type *DestTy) {
@@ -120,23 +112,26 @@ IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
   return CI;
 }
 
-Value *IRBuilderBase::CreateVScale(Constant *Scaling, const Twine &Name) {
-  assert(isa<ConstantInt>(Scaling) && "Expected constant integer");
-  if (cast<ConstantInt>(Scaling)->isZero())
-    return Scaling;
-  CallInst *CI =
-      CreateIntrinsic(Intrinsic::vscale, {Scaling->getType()}, {}, {}, Name);
-  return cast<ConstantInt>(Scaling)->isOne() ? CI : CreateMul(CI, Scaling);
+static Value *CreateVScaleMultiple(IRBuilderBase &B, Type *Ty, uint64_t Scale) {
+  Value *VScale = B.CreateVScale(Ty);
+  if (Scale == 1)
+    return VScale;
+
+  return B.CreateNUWMul(VScale, ConstantInt::get(Ty, Scale));
 }
 
-Value *IRBuilderBase::CreateElementCount(Type *DstType, ElementCount EC) {
-  Constant *MinEC = ConstantInt::get(DstType, EC.getKnownMinValue());
-  return EC.isScalable() ? CreateVScale(MinEC) : MinEC;
+Value *IRBuilderBase::CreateElementCount(Type *Ty, ElementCount EC) {
+  if (EC.isFixed() || EC.isZero())
+    return ConstantInt::get(Ty, EC.getKnownMinValue());
+
+  return CreateVScaleMultiple(*this, Ty, EC.getKnownMinValue());
 }
 
-Value *IRBuilderBase::CreateTypeSize(Type *DstType, TypeSize Size) {
-  Constant *MinSize = ConstantInt::get(DstType, Size.getKnownMinValue());
-  return Size.isScalable() ? CreateVScale(MinSize) : MinSize;
+Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
+  if (Size.isFixed() || Size.isZero())
+    return ConstantInt::get(Ty, Size.getKnownMinValue());
+
+  return CreateVScaleMultiple(*this, Ty, Size.getKnownMinValue());
 }
 
 Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
@@ -169,8 +164,7 @@ Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
 
 CallInst *IRBuilderBase::CreateMemSet(Value *Ptr, Value *Val, Value *Size,
                                       MaybeAlign Align, bool isVolatile,
-                                      MDNode *TBAATag, MDNode *ScopeTag,
-                                      MDNode *NoAliasTag) {
+                                      const AAMDNodes &AAInfo) {
   Value *Ops[] = {Ptr, Val, Size, getInt1(isVolatile)};
   Type *Tys[] = {Ptr->getType(), Size->getType()};
 
@@ -178,49 +172,28 @@ CallInst *IRBuilderBase::CreateMemSet(Value *Ptr, Value *Val, Value *Size,
 
   if (Align)
     cast<MemSetInst>(CI)->setDestAlignment(*Align);
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
+  CI->setAAMetadata(AAInfo);
   return CI;
 }
 
 CallInst *IRBuilderBase::CreateMemSetInline(Value *Dst, MaybeAlign DstAlign,
                                             Value *Val, Value *Size,
-                                            bool IsVolatile, MDNode *TBAATag,
-                                            MDNode *ScopeTag,
-                                            MDNode *NoAliasTag) {
+                                            bool IsVolatile,
+                                            const AAMDNodes &AAInfo) {
   Value *Ops[] = {Dst, Val, Size, getInt1(IsVolatile)};
   Type *Tys[] = {Dst->getType(), Size->getType()};
 
   CallInst *CI = CreateIntrinsic(Intrinsic::memset_inline, Tys, Ops);
 
   if (DstAlign)
-    cast<MemSetInlineInst>(CI)->setDestAlignment(*DstAlign);
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
+    cast<MemSetInst>(CI)->setDestAlignment(*DstAlign);
+  CI->setAAMetadata(AAInfo);
   return CI;
 }
 
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemSet(
     Value *Ptr, Value *Val, Value *Size, Align Alignment, uint32_t ElementSize,
-    MDNode *TBAATag, MDNode *ScopeTag, MDNode *NoAliasTag) {
+    const AAMDNodes &AAInfo) {
 
   Value *Ops[] = {Ptr, Val, Size, getInt32(ElementSize)};
   Type *Tys[] = {Ptr->getType(), Size->getType()};
@@ -228,25 +201,16 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemSet(
   CallInst *CI =
       CreateIntrinsic(Intrinsic::memset_element_unordered_atomic, Tys, Ops);
 
-  cast<AtomicMemSetInst>(CI)->setDestAlignment(Alignment);
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
+  cast<AnyMemSetInst>(CI)->setDestAlignment(Alignment);
+  CI->setAAMetadata(AAInfo);
   return CI;
 }
 
-CallInst *IRBuilderBase::CreateMemTransferInst(
-    Intrinsic::ID IntrID, Value *Dst, MaybeAlign DstAlign, Value *Src,
-    MaybeAlign SrcAlign, Value *Size, bool isVolatile, MDNode *TBAATag,
-    MDNode *TBAAStructTag, MDNode *ScopeTag, MDNode *NoAliasTag) {
+CallInst *IRBuilderBase::CreateMemTransferInst(Intrinsic::ID IntrID, Value *Dst,
+                                               MaybeAlign DstAlign, Value *Src,
+                                               MaybeAlign SrcAlign, Value *Size,
+                                               bool isVolatile,
+                                               const AAMDNodes &AAInfo) {
   assert((IntrID == Intrinsic::memcpy || IntrID == Intrinsic::memcpy_inline ||
           IntrID == Intrinsic::memmove) &&
          "Unexpected intrinsic ID");
@@ -260,28 +224,13 @@ CallInst *IRBuilderBase::CreateMemTransferInst(
     MCI->setDestAlignment(*DstAlign);
   if (SrcAlign)
     MCI->setSourceAlignment(*SrcAlign);
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  // Set the TBAA Struct info if present.
-  if (TBAAStructTag)
-    CI->setMetadata(LLVMContext::MD_tbaa_struct, TBAAStructTag);
-
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
+  MCI->setAAMetadata(AAInfo);
   return CI;
 }
 
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
     Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
-    uint32_t ElementSize, MDNode *TBAATag, MDNode *TBAAStructTag,
-    MDNode *ScopeTag, MDNode *NoAliasTag) {
+    uint32_t ElementSize, const AAMDNodes &AAInfo) {
   assert(DstAlign >= ElementSize &&
          "Pointer alignment must be at least element size");
   assert(SrcAlign >= ElementSize &&
@@ -293,24 +242,10 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
       CreateIntrinsic(Intrinsic::memcpy_element_unordered_atomic, Tys, Ops);
 
   // Set the alignment of the pointer args.
-  auto *AMCI = cast<AtomicMemCpyInst>(CI);
+  auto *AMCI = cast<AnyMemCpyInst>(CI);
   AMCI->setDestAlignment(DstAlign);
   AMCI->setSourceAlignment(SrcAlign);
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  // Set the TBAA Struct info if present.
-  if (TBAAStructTag)
-    CI->setMetadata(LLVMContext::MD_tbaa_struct, TBAAStructTag);
-
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
+  AMCI->setAAMetadata(AAInfo);
   return CI;
 }
 
@@ -394,8 +329,7 @@ CallInst *IRBuilderBase::CreateFree(Value *Source,
 
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
     Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
-    uint32_t ElementSize, MDNode *TBAATag, MDNode *TBAAStructTag,
-    MDNode *ScopeTag, MDNode *NoAliasTag) {
+    uint32_t ElementSize, const AAMDNodes &AAInfo) {
   assert(DstAlign >= ElementSize &&
          "Pointer alignment must be at least element size");
   assert(SrcAlign >= ElementSize &&
@@ -409,21 +343,7 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
   // Set the alignment of the pointer args.
   CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), DstAlign));
   CI->addParamAttr(1, Attribute::getWithAlignment(CI->getContext(), SrcAlign));
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  // Set the TBAA Struct info if present.
-  if (TBAAStructTag)
-    CI->setMetadata(LLVMContext::MD_tbaa_struct, TBAAStructTag);
-
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
+  CI->setAAMetadata(AAInfo);
   return CI;
 }
 
@@ -491,28 +411,16 @@ CallInst *IRBuilderBase::CreateFPMinimumReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_fminimum, Src);
 }
 
-CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr, ConstantInt *Size) {
+CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr) {
   assert(isa<PointerType>(Ptr->getType()) &&
          "lifetime.start only applies to pointers.");
-  if (!Size)
-    Size = getInt64(-1);
-  else
-    assert(Size->getType() == getInt64Ty() &&
-           "lifetime.start requires the size to be an i64");
-  Value *Ops[] = { Size, Ptr };
-  return CreateIntrinsic(Intrinsic::lifetime_start, {Ptr->getType()}, Ops);
+  return CreateIntrinsic(Intrinsic::lifetime_start, {Ptr->getType()}, {Ptr});
 }
 
-CallInst *IRBuilderBase::CreateLifetimeEnd(Value *Ptr, ConstantInt *Size) {
+CallInst *IRBuilderBase::CreateLifetimeEnd(Value *Ptr) {
   assert(isa<PointerType>(Ptr->getType()) &&
          "lifetime.end only applies to pointers.");
-  if (!Size)
-    Size = getInt64(-1);
-  else
-    assert(Size->getType() == getInt64Ty() &&
-           "lifetime.end requires the size to be an i64");
-  Value *Ops[] = { Size, Ptr };
-  return CreateIntrinsic(Intrinsic::lifetime_end, {Ptr->getType()}, Ops);
+  return CreateIntrinsic(Intrinsic::lifetime_end, {Ptr->getType()}, {Ptr});
 }
 
 CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
@@ -532,10 +440,10 @@ CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
 }
 
 static MaybeAlign getAlign(Value *Ptr) {
-  if (auto *O = dyn_cast<GlobalObject>(Ptr))
-    return O->getAlign();
+  if (auto *V = dyn_cast<GlobalVariable>(Ptr))
+    return V->getAlign();
   if (auto *A = dyn_cast<GlobalAlias>(Ptr))
-    return A->getAliaseeObject()->getAlign();
+    return getAlign(A->getAliaseeObject());
   return {};
 }
 
@@ -1224,9 +1132,32 @@ Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
   return CreateShuffleVector(V, Zeros, Name + ".splat");
 }
 
-Value *IRBuilderBase::CreatePreserveArrayAccessIndex(
-    Type *ElTy, Value *Base, unsigned Dimension, unsigned LastIndex,
-    MDNode *DbgInfo) {
+Value *IRBuilderBase::CreateVectorInterleave(ArrayRef<Value *> Ops,
+                                             const Twine &Name) {
+  assert(Ops.size() >= 2 && Ops.size() <= 8 &&
+         "Unexpected number of operands to interleave");
+
+  // Make sure all operands are the same type.
+  assert(isa<VectorType>(Ops[0]->getType()) && "Unexpected type");
+
+#ifndef NDEBUG
+  for (unsigned I = 1; I < Ops.size(); I++) {
+    assert(Ops[I]->getType() == Ops[0]->getType() &&
+           "Vector interleave expects matching operand types!");
+  }
+#endif
+
+  unsigned IID = Intrinsic::getInterleaveIntrinsicID(Ops.size());
+  auto *SubvecTy = cast<VectorType>(Ops[0]->getType());
+  Type *DestTy = VectorType::get(SubvecTy->getElementType(),
+                                 SubvecTy->getElementCount() * Ops.size());
+  return CreateIntrinsic(IID, {DestTy}, Ops, {}, Name);
+}
+
+Value *IRBuilderBase::CreatePreserveArrayAccessIndex(Type *ElTy, Value *Base,
+                                                     unsigned Dimension,
+                                                     unsigned LastIndex,
+                                                     MDNode *DbgInfo) {
   auto *BaseType = Base->getType();
   assert(isa<PointerType>(BaseType) &&
          "Invalid Base ptr type for preserve.array.access.index.");

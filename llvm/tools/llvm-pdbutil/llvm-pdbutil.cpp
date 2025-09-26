@@ -38,6 +38,7 @@
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
+#include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
@@ -49,6 +50,7 @@
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/GSIStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InputFile.h"
@@ -880,6 +882,24 @@ static void yamlToPdb(StringRef Path) {
     IpiBuilder.addTypeRecord(Type.RecordData, std::nullopt);
   }
 
+  if (YamlObj.PublicsStream) {
+    auto &GsiBuilder = Builder.getGsiBuilder();
+    std::vector<BulkPublic> BulkPublics;
+    for (const auto &P : YamlObj.PublicsStream->PubSyms) {
+      CVSymbol CV = P.toCodeViewSymbol(Allocator, CodeViewContainer::Pdb);
+      auto PS = cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(CV));
+
+      BulkPublic BP;
+      BP.Name = PS.Name.data();
+      BP.NameLen = PS.Name.size();
+      BP.setFlags(PS.Flags);
+      BP.Offset = PS.Offset;
+      BP.Segment = PS.Segment;
+      BulkPublics.emplace_back(BP);
+    }
+    GsiBuilder.addPublicSymbols(std::move(BulkPublics));
+  }
+
   Builder.getStringTableBuilder().setStrings(*Strings.strings());
 
   codeview::GUID IgnoredOutGuid;
@@ -1375,7 +1395,6 @@ static void mergePdbs() {
 }
 
 static void explain() {
-  std::unique_ptr<IPDBSession> Session;
   InputFile IF =
       ExitOnErr(InputFile::open(opts::explain::InputFilename.front(), true));
 

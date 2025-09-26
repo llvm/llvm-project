@@ -8,7 +8,7 @@
 
 ## Check patching of negative addends
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/addend.s -o %t/addend.o
-# RUN: not ld.lld --section-start=.text=0x0 %t/addend.o -o /dev/null 2>&1 | FileCheck %s --check-prefix RANGE
+# RUN: not ld.lld --image-base=0 --section-start=.text=0x0 %t/addend.o -o /dev/null 2>&1 | FileCheck %s --check-prefix RANGE
 
 # RANGE: relocation R_X86_64_32 out of range
 

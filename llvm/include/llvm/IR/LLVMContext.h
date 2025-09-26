@@ -17,6 +17,7 @@
 #include "llvm-c/Types.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -67,10 +68,10 @@ enum {
 class LLVMContext {
 public:
   LLVMContextImpl *const pImpl;
-  LLVMContext();
+  LLVM_ABI LLVMContext();
   LLVMContext(const LLVMContext &) = delete;
   LLVMContext &operator=(const LLVMContext &) = delete;
-  ~LLVMContext();
+  LLVM_ABI ~LLVMContext();
 
   // Pinned metadata names, which always have the same value.  This is a
   // compile-time performance optimization, not a correctness optimization.
@@ -96,72 +97,75 @@ public:
     OB_ptrauth = 7,                // "ptrauth"
     OB_kcfi = 8,                   // "kcfi"
     OB_convergencectrl = 9,        // "convergencectrl"
+    OB_align = 10,                 // "align"
+    OB_LastBundleID = OB_align     // Marker for last bundle ID
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
   /// This ID is uniqued across modules in the current LLVMContext.
-  unsigned getMDKindID(StringRef Name) const;
+  LLVM_ABI unsigned getMDKindID(StringRef Name) const;
 
   /// getMDKindNames - Populate client supplied SmallVector with the name for
   /// custom metadata IDs registered in this LLVMContext.
-  void getMDKindNames(SmallVectorImpl<StringRef> &Result) const;
+  LLVM_ABI void getMDKindNames(SmallVectorImpl<StringRef> &Result) const;
 
   /// getOperandBundleTags - Populate client supplied SmallVector with the
   /// bundle tags registered in this LLVMContext.  The bundle tags are ordered
   /// by increasing bundle IDs.
   /// \see LLVMContext::getOperandBundleTagID
-  void getOperandBundleTags(SmallVectorImpl<StringRef> &Result) const;
+  LLVM_ABI void getOperandBundleTags(SmallVectorImpl<StringRef> &Result) const;
 
   /// getOrInsertBundleTag - Returns the Tag to use for an operand bundle of
   /// name TagName.
-  StringMapEntry<uint32_t> *getOrInsertBundleTag(StringRef TagName) const;
+  LLVM_ABI StringMapEntry<uint32_t> *
+  getOrInsertBundleTag(StringRef TagName) const;
 
   /// getOperandBundleTagID - Maps a bundle tag to an integer ID.  Every bundle
   /// tag registered with an LLVMContext has an unique ID.
-  uint32_t getOperandBundleTagID(StringRef Tag) const;
+  LLVM_ABI uint32_t getOperandBundleTagID(StringRef Tag) const;
 
   /// getOrInsertSyncScopeID - Maps synchronization scope name to
   /// synchronization scope ID.  Every synchronization scope registered with
   /// LLVMContext has unique ID except pre-defined ones.
-  SyncScope::ID getOrInsertSyncScopeID(StringRef SSN);
+  LLVM_ABI SyncScope::ID getOrInsertSyncScopeID(StringRef SSN);
 
   /// getSyncScopeNames - Populates client supplied SmallVector with
   /// synchronization scope names registered with LLVMContext.  Synchronization
   /// scope names are ordered by increasing synchronization scope IDs.
-  void getSyncScopeNames(SmallVectorImpl<StringRef> &SSNs) const;
+  LLVM_ABI void getSyncScopeNames(SmallVectorImpl<StringRef> &SSNs) const;
 
   /// getSyncScopeName - Returns the name of a SyncScope::ID
   /// registered with LLVMContext, if any.
-  std::optional<StringRef> getSyncScopeName(SyncScope::ID Id) const;
+  LLVM_ABI std::optional<StringRef> getSyncScopeName(SyncScope::ID Id) const;
 
   /// Define the GC for a function
-  void setGC(const Function &Fn, std::string GCName);
+  LLVM_ABI void setGC(const Function &Fn, std::string GCName);
 
   /// Return the GC for a function
-  const std::string &getGC(const Function &Fn);
+  LLVM_ABI const std::string &getGC(const Function &Fn);
 
   /// Remove the GC for a function
-  void deleteGC(const Function &Fn);
+  LLVM_ABI void deleteGC(const Function &Fn);
 
   /// Return true if the Context runtime configuration is set to discard all
   /// value names. When true, only GlobalValue names will be available in the
   /// IR.
-  bool shouldDiscardValueNames() const;
+  LLVM_ABI bool shouldDiscardValueNames() const;
 
   /// Set the Context runtime configuration to discard all value name (but
   /// GlobalValue). Clients can use this flag to save memory and runtime,
   /// especially in release mode.
-  void setDiscardValueNames(bool Discard);
+  LLVM_ABI void setDiscardValueNames(bool Discard);
 
   /// Whether there is a string map for uniquing debug info
   /// identifiers across the context.  Off by default.
-  bool isODRUniquingDebugTypes() const;
-  void enableDebugTypeODRUniquing();
-  void disableDebugTypeODRUniquing();
+  LLVM_ABI bool isODRUniquingDebugTypes() const;
+  LLVM_ABI void enableDebugTypeODRUniquing();
+  LLVM_ABI void disableDebugTypeODRUniquing();
 
   /// generateMachineFunctionNum - Get a unique number for MachineFunction
   /// that associated with the given Function.
-  unsigned generateMachineFunctionNum(Function &);
+  LLVM_ABI unsigned generateMachineFunctionNum(Function &);
 
   /// Defines the type of a yield callback.
   /// \see LLVMContext::setYieldCallback.
@@ -175,7 +179,7 @@ public:
   ///
   /// LLVMContext doesn't take ownership or interpret either of these
   /// pointers.
-  void setDiagnosticHandlerCallBack(
+  LLVM_ABI void setDiagnosticHandlerCallBack(
       DiagnosticHandler::DiagnosticHandlerTy DiagHandler,
       void *DiagContext = nullptr, bool RespectFilters = false);
 
@@ -186,36 +190,38 @@ public:
   /// expects enabled diagnostics.
   ///
   /// Ownership of this pointer is moved to LLVMContextImpl.
-  void setDiagnosticHandler(std::unique_ptr<DiagnosticHandler> &&DH,
-                            bool RespectFilters = false);
+  LLVM_ABI void setDiagnosticHandler(std::unique_ptr<DiagnosticHandler> &&DH,
+                                     bool RespectFilters = false);
 
   /// getDiagnosticHandlerCallBack - Return the diagnostic handler call back set by
   /// setDiagnosticHandlerCallBack.
-  DiagnosticHandler::DiagnosticHandlerTy getDiagnosticHandlerCallBack() const;
+  LLVM_ABI DiagnosticHandler::DiagnosticHandlerTy
+  getDiagnosticHandlerCallBack() const;
 
   /// getDiagnosticContext - Return the diagnostic context set by
   /// setDiagnosticContext.
-  void *getDiagnosticContext() const;
+  LLVM_ABI void *getDiagnosticContext() const;
 
   /// getDiagHandlerPtr - Returns const raw pointer of DiagnosticHandler set by
   /// setDiagnosticHandler.
-  const DiagnosticHandler *getDiagHandlerPtr() const;
+  LLVM_ABI const DiagnosticHandler *getDiagHandlerPtr() const;
 
   /// getDiagnosticHandler - transfers ownership of DiagnosticHandler unique_ptr
   /// to caller.
-  std::unique_ptr<DiagnosticHandler> getDiagnosticHandler();
+  LLVM_ABI std::unique_ptr<DiagnosticHandler> getDiagnosticHandler();
 
   /// Return if a code hotness metric should be included in optimization
   /// diagnostics.
-  bool getDiagnosticsHotnessRequested() const;
+  LLVM_ABI bool getDiagnosticsHotnessRequested() const;
   /// Set if a code hotness metric should be included in optimization
   /// diagnostics.
-  void setDiagnosticsHotnessRequested(bool Requested);
+  LLVM_ABI void setDiagnosticsHotnessRequested(bool Requested);
 
-  bool getMisExpectWarningRequested() const;
-  void setMisExpectWarningRequested(bool Requested);
-  void setDiagnosticsMisExpectTolerance(std::optional<uint32_t> Tolerance);
-  uint32_t getDiagnosticsMisExpectTolerance() const;
+  LLVM_ABI bool getMisExpectWarningRequested() const;
+  LLVM_ABI void setMisExpectWarningRequested(bool Requested);
+  LLVM_ABI void
+  setDiagnosticsMisExpectTolerance(std::optional<uint32_t> Tolerance);
+  LLVM_ABI uint32_t getDiagnosticsMisExpectTolerance() const;
 
   /// Return the minimum hotness value a diagnostic would need in order
   /// to be included in optimization diagnostics.
@@ -227,14 +233,15 @@ public:
   ///                profile summary. Note that in case of missing profile
   ///                summary, threshold will be kept at "MAX", effectively
   ///                suppresses all remarks output.
-  uint64_t getDiagnosticsHotnessThreshold() const;
+  LLVM_ABI uint64_t getDiagnosticsHotnessThreshold() const;
 
   /// Set the minimum hotness value a diagnostic needs in order to be
   /// included in optimization diagnostics.
-  void setDiagnosticsHotnessThreshold(std::optional<uint64_t> Threshold);
+  LLVM_ABI void
+  setDiagnosticsHotnessThreshold(std::optional<uint64_t> Threshold);
 
   /// Return if hotness threshold is requested from PSI.
-  bool isDiagnosticsHotnessThresholdSetFromPSI() const;
+  LLVM_ABI bool isDiagnosticsHotnessThresholdSetFromPSI() const;
 
   /// The "main remark streamer" used by all the specialized remark streamers.
   /// This streamer keeps generic remark metadata in memory throughout the life
@@ -243,9 +250,9 @@ public:
   ///
   /// All specialized remark streamers should convert remarks to
   /// llvm::remarks::Remark and emit them through this streamer.
-  remarks::RemarkStreamer *getMainRemarkStreamer();
-  const remarks::RemarkStreamer *getMainRemarkStreamer() const;
-  void setMainRemarkStreamer(
+  LLVM_ABI remarks::RemarkStreamer *getMainRemarkStreamer();
+  LLVM_ABI const remarks::RemarkStreamer *getMainRemarkStreamer() const;
+  LLVM_ABI void setMainRemarkStreamer(
       std::unique_ptr<remarks::RemarkStreamer> MainRemarkStreamer);
 
   /// The "LLVM remark streamer" used by LLVM to serialize remark diagnostics
@@ -253,14 +260,15 @@ public:
   ///
   /// If it does not exist, diagnostics are not saved in a file but only emitted
   /// via the diagnostic handler.
-  LLVMRemarkStreamer *getLLVMRemarkStreamer();
-  const LLVMRemarkStreamer *getLLVMRemarkStreamer() const;
-  void
+  LLVM_ABI LLVMRemarkStreamer *getLLVMRemarkStreamer();
+  LLVM_ABI const LLVMRemarkStreamer *getLLVMRemarkStreamer() const;
+  LLVM_ABI void
   setLLVMRemarkStreamer(std::unique_ptr<LLVMRemarkStreamer> RemarkStreamer);
 
   /// Get the prefix that should be printed in front of a diagnostic of
   ///        the given \p Severity
-  static const char *getDiagnosticMessagePrefix(DiagnosticSeverity Severity);
+  LLVM_ABI static const char *
+  getDiagnosticMessagePrefix(DiagnosticSeverity Severity);
 
   /// Report a message to the currently installed diagnostic handler.
   ///
@@ -272,7 +280,7 @@ public:
   /// The diagnostic message will be implicitly prefixed with a severity keyword
   /// according to \p DI.getSeverity(), i.e., "error: " for \a DS_Error,
   /// "warning: " for \a DS_Warning, and "note: " for \a DS_Note.
-  void diagnose(const DiagnosticInfo &DI);
+  LLVM_ABI void diagnose(const DiagnosticInfo &DI);
 
   /// Registers a yield callback with the given context.
   ///
@@ -291,33 +299,33 @@ public:
   /// yield callback are allowed to be used. Any other API calls into the
   /// context are not supported until the yield callback function returns
   /// control to LLVM. Other LLVM contexts are unaffected by this restriction.
-  void setYieldCallback(YieldCallbackTy Callback, void *OpaqueHandle);
+  LLVM_ABI void setYieldCallback(YieldCallbackTy Callback, void *OpaqueHandle);
 
   /// Calls the yield callback (if applicable).
   ///
   /// This transfers control of the current thread back to the client, which may
   /// suspend the current thread. Only call this method when LLVM doesn't hold
   /// any global mutex or cannot block the execution in another LLVM context.
-  void yield();
+  LLVM_ABI void yield();
 
   /// emitError - Emit an error message to the currently installed error handler
   /// with optional location information.  This function returns, so code should
   /// be prepared to drop the erroneous construct on the floor and "not crash".
   /// The generated code need not be correct.  The error message will be
   /// implicitly prefixed with "error: " and should not end with a ".".
-  void emitError(const Instruction *I, const Twine &ErrorStr);
-  void emitError(const Twine &ErrorStr);
+  LLVM_ABI void emitError(const Instruction *I, const Twine &ErrorStr);
+  LLVM_ABI void emitError(const Twine &ErrorStr);
 
   /// Access the object which can disable optional passes and individual
   /// optimizations at compile time.
-  OptPassGate &getOptPassGate() const;
+  LLVM_ABI OptPassGate &getOptPassGate() const;
 
   /// Set the object which can disable optional passes and individual
   /// optimizations at compile time.
   ///
   /// The lifetime of the object must be guaranteed to extend as long as the
   /// LLVMContext is used by compilation.
-  void setOptPassGate(OptPassGate&);
+  LLVM_ABI void setOptPassGate(OptPassGate &);
 
   /// Get or set the current "default" target CPU (target-cpu function
   /// attribute). The intent is that compiler frontends will set this to a value
@@ -328,12 +336,20 @@ public:
   /// Function::createWithDefaultAttr() will create functions with this
   /// attribute. This function should only be called by passes that run at
   /// compile time and not by the backend or LTO passes.
-  StringRef getDefaultTargetCPU();
-  void setDefaultTargetCPU(StringRef CPU);
+  LLVM_ABI StringRef getDefaultTargetCPU();
+  LLVM_ABI void setDefaultTargetCPU(StringRef CPU);
 
   /// Similar to {get,set}DefaultTargetCPU() but for default target-features.
-  StringRef getDefaultTargetFeatures();
-  void setDefaultTargetFeatures(StringRef Features);
+  LLVM_ABI StringRef getDefaultTargetFeatures();
+  LLVM_ABI void setDefaultTargetFeatures(StringRef Features);
+
+  /// Key Instructions: update the highest number atom group emitted for any
+  /// function.
+  LLVM_ABI void updateDILocationAtomGroupWaterline(uint64_t G);
+
+  /// Key Instructions: get the next free atom group number and increment
+  /// the global tracker.
+  LLVM_ABI uint64_t incNextDILocationAtomGroup();
 
 private:
   // Module needs access to the add/removeModule methods.

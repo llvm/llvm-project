@@ -1,7 +1,7 @@
 ; RUN: opt -S %s -passes=lowertypetests | FileCheck %s
 
 ; CHECK: @badfileops = internal global %struct.f { ptr @bad_f, ptr @bad_f }
-; CHECK: @bad_f = internal alias void (), ptr @.cfi.jumptable
+; CHECK: @bad_f = internal alias [8 x i8], ptr @.cfi.jumptable
 ; CHECK: define internal void @bad_f.cfi() !type !0 {
 ; CHECK-NEXT:  ret void
 

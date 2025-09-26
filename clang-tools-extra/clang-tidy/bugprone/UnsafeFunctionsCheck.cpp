@@ -1,4 +1,4 @@
-//===--- UnsafeFunctionsCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -248,7 +248,7 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
     FunctionNames.reserve(CustomFunctions.size());
 
     for (const auto &Entry : CustomFunctions)
-      FunctionNames.push_back(Entry.Name);
+      FunctionNames.emplace_back(Entry.Name);
 
     auto CustomFunctionsMatcher = matchers::matchesAnyListedName(FunctionNames);
 

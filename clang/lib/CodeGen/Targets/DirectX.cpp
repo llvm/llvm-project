@@ -52,7 +52,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
       return nullptr;
 
     // convert element type
-    llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
+    llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
 
     llvm::StringRef TypeName =
         ResAttrs.RawBuffer ? "dx.RawBuffer" : "dx.TypedBuffer";
@@ -77,7 +77,8 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
 
     llvm::Type *BufferLayoutTy =
         HLSLBufferLayoutBuilder(CGM, "dx.Layout")
-            .createLayoutType(ContainedTy->getAsStructureType(), Packoffsets);
+            .createLayoutType(ContainedTy->castAsCanonical<RecordType>(),
+                              Packoffsets);
     if (!BufferLayoutTy)
       return nullptr;
 

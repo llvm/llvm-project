@@ -15,6 +15,7 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -36,7 +37,7 @@ public:
   /// second to PC-begin, third (if present) to LSDA.
   ///
   /// It is illegal to call this function on a block with four or more edges.
-  static EHFrameCFIBlockInspector FromEdgeScan(Block &B);
+  LLVM_ABI static EHFrameCFIBlockInspector FromEdgeScan(Block &B);
 
   /// Returns true if this frame is an FDE, false for a CIE.
   bool isFDE() const { return CIEEdge != nullptr; }
@@ -85,7 +86,7 @@ private:
 
 /// Returns a pointer to the DWARF eh-frame section if the graph contains a
 /// non-empty one, otherwise returns null.
-Section *getEHFrameSection(LinkGraph &G);
+LLVM_ABI Section *getEHFrameSection(LinkGraph &G);
 
 } // end namespace jitlink
 } // end namespace llvm

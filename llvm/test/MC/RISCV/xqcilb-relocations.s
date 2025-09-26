@@ -1,42 +1,117 @@
-# RUN: llvm-mc -triple riscv32 -mattr=+experimental-xqcilb %s -show-encoding \
-# RUN:     | FileCheck -check-prefix=INSTR %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcilb %s -o %t.o
-# RUN: llvm-readobj -r %t.o | FileCheck -check-prefix=RELOC %s
+# RUN: llvm-mc -triple riscv32 -mattr=+experimental-xqcilb %s \
+# RUN:     | FileCheck -check-prefix=ASM %s
+# RUN: llvm-mc -triple riscv32 -mattr=+experimental-xqcilb %s \
+# RUN:     -filetype=obj -o - \
+# RUN:     | llvm-objdump -dr --mattr=+experimental-xqcilb - \
+# RUN:     | FileCheck -check-prefix=OBJ %s
 
-# Check prefixes:
-# RELOC - Check the relocation in the object.
-# INSTR - Check the instruction is handled properly by the ASMPrinter.
+## This test checks that we emit the right relocations for Xqcilb
+## relative jumps. These can be resolved within the same section
+## (when relaxations are disabled) but otherwise require a
+## vendor-specific relocation pair.
 
-.text
+# This is required so that the conditional jumps are not compressed
+# by the assembler
+.option exact
 
-qc.e.j foo
-# RELOC: R_RISCV_CUSTOM195 foo 0x0
-# INSTR: qc.e.j foo
+# ASM-LABEL: this_section:
+# OBJ-LABEL: <this_section>:
+this_section:
 
-qc.e.jal foo
-# RELOC: R_RISCV_CUSTOM195 foo 0x0
-# INSTR: qc.e.jal foo
+# ASM: qc.e.j undef
+# OBJ: qc.e.j 0x0 <this_section>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 undef{{$}}
+qc.e.j undef
 
-# Check that a label in a different section is handled similar to an undefined symbol
-qc.e.j .bar
-# RELOC: R_RISCV_CUSTOM195 .bar 0x0
-# INSTR: qc.e.j .bar
+# ASM: qc.e.jal undef
+# OBJ-NEXT: qc.e.jal 0x6 <this_section+0x6>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 undef{{$}}
+qc.e.jal undef
 
-qc.e.jal .bar
-# RELOC: R_RISCV_CUSTOM195 .bar 0x0
-# INSTR: qc.e.jal .bar
 
-# Check that jumps to a defined symbol are handled correctly
-qc.e.j .L1
-# INSTR:qc.e.j .L1
+# ASM: qc.e.j same_section
+# OBJ-NEXT: qc.e.j 0x30 <same_section>
+qc.e.j same_section
 
-qc.e.jal .L1
-# INSTR:qc.e.jal .L1
+# ASM: qc.e.jal same_section
+# OBJ-NEXT: qc.e.jal 0x30 <same_section>
+qc.e.jal same_section
 
-.L1:
-  ret
+# ASM: qc.e.j same_section_extern
+# OBJ-NEXT: qc.e.j 0x18 <this_section+0x18>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 same_section_extern{{$}}
+qc.e.j same_section_extern
 
-.section .t2
+# ASM: qc.e.jal same_section_extern
+# OBJ-NEXT: qc.e.jal 0x1e <this_section+0x1e>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 same_section_extern{{$}}
+qc.e.jal same_section_extern
 
-.bar:
-  ret
+
+# ASM: qc.e.j other_section
+# OBJ-NEXT: qc.e.j 0x24 <this_section+0x24>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 other_section{{$}}
+qc.e.j other_section
+
+# ASM: qc.e.jal other_section
+# OBJ-NEXT: qc.e.jal 0x2a <this_section+0x2a>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 other_section{{$}}
+qc.e.jal other_section
+
+
+# ASM-LABEL: same_section:
+# OBJ-LABEL: <same_section>:
+same_section:
+  nop
+
+# ASM-LABEL: same_section_extern:
+# OBJ-LABEL: <same_section_extern>:
+  .global same_section_extern
+same_section_extern:
+  nop
+
+.option relax
+
+# ASM: qc.e.j same_section
+# OBJ: qc.e.j 0x38 <same_section_extern+0x4>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 same_section{{$}}
+# OBJ-NEXT: R_RISCV_RELAX
+qc.e.j same_section
+
+# ASM: qc.e.jal same_section
+# OBJ-NEXT: qc.e.jal 0x3e <same_section_extern+0xa>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 same_section{{$}}
+# OBJ-NEXT: R_RISCV_RELAX
+qc.e.jal same_section
+
+## Enable compression/relaxation to check how symbols are handled.
+.option noexact
+
+qc.e.j undef
+# ASM: j undef
+# OBJ: qc.e.j 0x44 <same_section_extern+0x10>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 undef{{$}}
+# OBJ-NEXT: R_RISCV_RELAX
+
+qc.e.jal undef
+# ASM: jal undef
+# OBJ: qc.e.jal 0x4a <same_section_extern+0x16>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 undef{{$}}
+# OBJ-NEXT: R_RISCV_RELAX
+
+.section .text.other, "ax", @progbits
+
+# ASM-LABEL: other_section:
+# OBJ-LABEL: <other_section>:
+other_section:
+  nop

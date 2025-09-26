@@ -32,7 +32,8 @@ def ApplyVectorToLLVMConversionPatternsOp : Op<Transform_Dialect,
 
   let arguments = (ins
       DefaultValuedAttr<BoolAttr, "false">:$reassociate_fp_reductions,
-      DefaultValuedAttr<BoolAttr, "true">:$force_32bit_vector_indices);
+      DefaultValuedAttr<BoolAttr, "true">:$force_32bit_vector_indices,
+      DefaultValuedAttr<BoolAttr, "false">:$use_vector_alignment);
   let assemblyFormat = "attr-dict";
 }
 
@@ -79,6 +80,20 @@ def ApplyDropUnitDimWithShapeCastPatternsOp : Op<Transform_Dialect,
 
     Excludes patterns for vector.transfer Ops. This is complemented by
     shape_cast folding patterns.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyDropInnerMostUnitDimsFromXferOpsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.drop_inner_most_unit_dims_from_xfer_ops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Apply vector patterns to drop the inner most unit dims from
+    vector.transfer_read and vector.transfer_write Ops by taking a subview (via
+    memref.subview) of the original source/destination MemRef. Since it
+    requires the input/ouptu to be MemRefs, this Op is only helpful
+    past-bufferization.
   }];
 
   let assemblyFormat = "attr-dict";
@@ -248,6 +263,28 @@ def ApplyLowerGatherPatternsOp : Op<Transform_Dialect,
   let description = [{
     Indicates that vector.gather operations should be lowered to
     finer-grained vector primitives.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyUnrollFromElementsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.unroll_from_elements",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector from_elements operations should be unrolled
+    along the outermost dimension.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyUnrollToElementsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.unroll_to_elements",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector to_elements operations should be unrolled
+    along the outermost dimension.
   }];
 
   let assemblyFormat = "attr-dict";
@@ -458,7 +495,9 @@ def ApplySinkVectorPatternsOp : Op<Transform_Dialect,
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Patterns that remove redundant Vector Ops by re-ordering them with
-    e.g. elementwise Ops:
+    e.g. elementwise Ops.
+
+    Example:
     ```
     %at = vector.transpose %a, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
     %bt = vector.transpose %b, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
@@ -469,8 +508,32 @@ def ApplySinkVectorPatternsOp : Op<Transform_Dialect,
     %0 = arith.addf %a, %b : vector<4x2xf32>
     %r = vector.transpose %0, [1, 0] : vector<2x4xf32>
     ```
-    At the moment, these patterns are limited to vector.broadcast and
-    vector.transpose.
+    At the moment, these patterns are limited to vector.broadcast,
+    vector.transpose and vector.extract.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplySinkVectorMemPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.sink_mem_ops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Patterns that replace redundant Vector Ops (followed by
+    `vector.load`/`vector.store`) with either vector.load/vector.store or
+    `memref.load`/`memref.store`. Currently limited to 1-element vectors.
+
+    Example:
+    ```
+    vector.load %arg0[%arg1] : memref<?xf32>, vector<4xf32>
+    vector.extract %0[1] : f32 from vector<4xf32>
+    ```
+    Gets converted to:
+    ```
+    %c1 = arith.constant 1 : index
+    %0 = arith.addi %arg1, %c1 overflow<nsw> : index
+    %1 = memref.load %arg0[%0] : memref<?xf32>
+    ```
   }];
 
   let assemblyFormat = "attr-dict";

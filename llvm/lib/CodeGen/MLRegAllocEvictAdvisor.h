@@ -17,6 +17,7 @@
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 
 namespace llvm {
@@ -32,7 +33,7 @@ struct LRStartEndInfo {
   size_t Pos = 0;
 };
 
-void extractInstructionFeatures(
+LLVM_ABI_FOR_TEST void extractInstructionFeatures(
     llvm::SmallVectorImpl<LRStartEndInfo> &LRPosInfo,
     MLModelRunner *RegallocRunner, function_ref<int(SlotIndex)> GetOpcode,
     function_ref<float(SlotIndex)> GetMBBFreq,
@@ -41,13 +42,12 @@ void extractInstructionFeatures(
     const int MBBFreqIndex, const int MBBMappingIndex,
     const SlotIndex LastIndex);
 
-void extractMBBFrequency(const SlotIndex CurrentIndex,
-                         const size_t CurrentInstructionIndex,
-                         std::map<MachineBasicBlock *, size_t> &VisitedMBBs,
-                         function_ref<float(SlotIndex)> GetMBBFreq,
-                         MachineBasicBlock *CurrentMBBReference,
-                         MLModelRunner *RegallocRunner, const int MBBFreqIndex,
-                         const int MBBMappingIndex);
+LLVM_ABI_FOR_TEST void extractMBBFrequency(
+    const SlotIndex CurrentIndex, const size_t CurrentInstructionIndex,
+    std::map<MachineBasicBlock *, size_t> &VisitedMBBs,
+    function_ref<float(SlotIndex)> GetMBBFreq,
+    MachineBasicBlock *CurrentMBBReference, MLModelRunner *RegallocRunner,
+    const int MBBFreqIndex, const int MBBMappingIndex);
 
 // This is the maximum number of interfererring ranges. That's the number of
 // distinct AllocationOrder values, which comes from MCRegisterClass::RegsSize.

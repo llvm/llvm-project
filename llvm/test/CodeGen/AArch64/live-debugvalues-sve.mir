@@ -120,8 +120,10 @@ frameInfo:
   adjustsStack:    true
   hasCalls:        true
   maxCallFrameSize: 0
-  savePoint:       '%bb.1'
-  restorePoint:    '%bb.1'
+  savePoint:
+  - point: '%bb.1'
+  restorePoint:
+  - point: '%bb.1'
 stack:
   - { id: 0, size: 16, alignment: 16, stack-id: scalable-vector }
 machineFunctionInfo: {}

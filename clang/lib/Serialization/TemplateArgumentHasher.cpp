@@ -15,6 +15,7 @@
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
 
@@ -65,7 +66,9 @@ void TemplateArgumentHasher::AddTemplateArgument(TemplateArgument TA) {
 
   switch (Kind) {
   case TemplateArgument::Null:
-    llvm_unreachable("Expected valid TemplateArgument");
+    // These can occur in incomplete substitutions performed with code
+    // completion (see PartialOverloading).
+    break;
   case TemplateArgument::Type:
     AddQualType(TA.getAsType());
     break;
@@ -317,7 +320,7 @@ public:
 
   void VisitMemberPointerType(const MemberPointerType *T) {
     AddQualType(T->getPointeeType());
-    AddType(T->getQualifier()->getAsType());
+    AddType(T->getQualifier().getAsType());
     if (auto *RD = T->getMostRecentCXXRecordDecl())
       AddDecl(RD->getCanonicalDecl());
   }
@@ -355,7 +358,7 @@ public:
     AddQualType(T->getReplacementType());
   }
 
-  void VisitTagType(const TagType *T) { AddDecl(T->getDecl()); }
+  void VisitTagType(const TagType *T) { AddDecl(T->getOriginalDecl()); }
 
   void VisitRecordType(const RecordType *T) { VisitTagType(T); }
   void VisitEnumType(const EnumType *T) { VisitTagType(T); }
@@ -375,10 +378,6 @@ public:
   }
 
   void VisitTypedefType(const TypedefType *T) { AddDecl(T->getDecl()); }
-
-  void VisitElaboratedType(const ElaboratedType *T) {
-    AddQualType(T->getNamedType());
-  }
 
   void VisitUnaryTransformType(const UnaryTransformType *T) {
     AddQualType(T->getUnderlyingType());
@@ -403,6 +402,7 @@ void TemplateArgumentHasher::AddType(const Type *T) {
 
 unsigned clang::serialization::StableHashForTemplateArguments(
     llvm::ArrayRef<TemplateArgument> Args) {
+  llvm::TimeTraceScope TimeScope("Stable Hash for Template Arguments");
   TemplateArgumentHasher Hasher;
   Hasher.AddInteger(Args.size());
   for (TemplateArgument Arg : Args)

@@ -26,6 +26,16 @@ template <class _From, class _To>
 _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_convertible_v = __is_convertible(_From, _To);
 #endif
 
+#if _LIBCPP_STD_VER >= 20
+
+template <class _Tp, class _Up>
+struct _LIBCPP_NO_SPECIALIZATIONS is_nothrow_convertible : bool_constant<__is_nothrow_convertible(_Tp, _Up)> {};
+
+template <class _Tp, class _Up>
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_nothrow_convertible_v = __is_nothrow_convertible(_Tp, _Up);
+
+#endif // _LIBCPP_STD_VER >= 20
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___TYPE_TRAITS_IS_CONVERTIBLE_H

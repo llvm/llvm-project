@@ -14,6 +14,8 @@ add_lldb_unittest(TargetTests
   SummaryStatisticsTest.cpp
   FindFileTest.cpp
 
+  LINK_COMPONENTS
+      Support
   LINK_LIBS
       lldbCore
       lldbHost
@@ -28,8 +30,6 @@ add_lldb_unittest(TargetTests
       lldbSymbol
       lldbUtility
       lldbUtilityHelpers
-    LINK_COMPONENTS
-      Support
   )
 
 set(test_inputs

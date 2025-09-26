@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
 
 declare float @llvm.amdgcn.rcp.f32(float) #0
 declare double @llvm.amdgcn.rcp.f64(double) #0
@@ -51,7 +51,7 @@ define amdgpu_kernel void @safe_no_fp32_denormals_rcp_f32(ptr addrspace(1) %out,
 ; SI-NOT: [[RESULT]]
 ; SI: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @safe_f32_denormals_rcp_pat_f32(ptr addrspace(1) %out, float %src) #4 {
-  %rcp = fdiv float 1.0, %src, !fpmath !0
+  %rcp = fdiv afn float 1.0, %src, !fpmath !0
   store float %rcp, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -105,8 +105,8 @@ define amdgpu_kernel void @safe_rsq_rcp_pat_amdgcn_sqrt_f32_nocontract(ptr addrs
 ; SI: v_sqrt_f32_e32
 ; SI: v_rcp_f32_e32
 define amdgpu_kernel void @unsafe_rsq_rcp_pat_f32(ptr addrspace(1) %out, float %src) #2 {
-  %sqrt = call float @llvm.sqrt.f32(float %src)
-  %rcp = call float @llvm.amdgcn.rcp.f32(float %sqrt)
+  %sqrt = call afn float @llvm.sqrt.f32(float %src)
+  %rcp = call afn float @llvm.amdgcn.rcp.f32(float %sqrt)
   store float %rcp, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -148,7 +148,7 @@ define amdgpu_kernel void @rcp_pat_f64(ptr addrspace(1) %out, double %src) #1 {
 ; SI: v_fma_f64
 ; SI: v_fma_f64
 define amdgpu_kernel void @unsafe_rcp_pat_f64(ptr addrspace(1) %out, double %src) #2 {
-  %rcp = fdiv double 1.0, %src
+  %rcp = fdiv afn double 1.0, %src
   store double %rcp, ptr addrspace(1) %out, align 8
   ret void
 }
@@ -214,9 +214,9 @@ define amdgpu_kernel void @unsafe_amdgcn_sqrt_rsq_rcp_pat_f64(ptr addrspace(1) %
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #2 = { nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #3 = { nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="ieee,ieee" }
-attributes #4 = { nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="ieee,ieee" }
+attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #2 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #3 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
+attributes #4 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
 
 !0 = !{float 2.500000e+00}

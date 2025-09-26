@@ -73,6 +73,9 @@ static bool shouldReduceOperand(Use &Op) {
     if (&CB->getCalledOperandUse() == &Op)
       return false;
   }
+  // lifetime intrinsic argument must be an alloca.
+  if (isa<LifetimeIntrinsic>(Op.getUser()))
+    return false;
   return true;
 }
 

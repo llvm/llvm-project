@@ -88,6 +88,122 @@ define void @flat_to_private_nonnull_arg(ptr nonnull %ptr) {
   ret void
 }
 
+define void @local_to_flat_nonnull_load(ptr %p) {
+; OPT-LABEL: define void @local_to_flat_nonnull_load(
+; OPT-SAME: ptr [[P:%.*]]) {
+; OPT-NEXT:    [[PTR:%.*]] = load ptr addrspace(3), ptr [[P]], align 4, !nonnull [[META0:![0-9]+]]
+; OPT-NEXT:    [[X:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) [[PTR]])
+; OPT-NEXT:    store volatile i32 7, ptr [[X]], align 4
+; OPT-NEXT:    ret void
+;
+; ASM-LABEL: local_to_flat_nonnull_load:
+; ASM:       ; %bb.0:
+; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; ASM-NEXT:    flat_load_dword v0, v[0:1]
+; ASM-NEXT:    s_mov_b64 s[4:5], src_shared_base
+; ASM-NEXT:    v_mov_b32_e32 v1, s5
+; ASM-NEXT:    v_mov_b32_e32 v2, 7
+; ASM-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; ASM-NEXT:    flat_store_dword v[0:1], v2
+; ASM-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; ASM-NEXT:    s_setpc_b64 s[30:31]
+  %ptr = load ptr addrspace(3), ptr %p, !nonnull !{}
+  %x = addrspacecast ptr addrspace(3) %ptr to ptr
+  store volatile i32 7, ptr %x
+  ret void
+}
+
+define void @private_to_flat_nonnull_load(ptr %p) {
+; OPT-LABEL: define void @private_to_flat_nonnull_load(
+; OPT-SAME: ptr [[P:%.*]]) {
+; OPT-NEXT:    [[PTR:%.*]] = load ptr addrspace(5), ptr [[P]], align 4, !nonnull [[META0]]
+; OPT-NEXT:    [[X:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p5(ptr addrspace(5) [[PTR]])
+; OPT-NEXT:    store volatile i32 7, ptr [[X]], align 4
+; OPT-NEXT:    ret void
+;
+; ASM-LABEL: private_to_flat_nonnull_load:
+; ASM:       ; %bb.0:
+; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; ASM-NEXT:    flat_load_dword v0, v[0:1]
+; ASM-NEXT:    s_mov_b64 s[4:5], src_private_base
+; ASM-NEXT:    v_mov_b32_e32 v1, s5
+; ASM-NEXT:    v_mov_b32_e32 v2, 7
+; ASM-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; ASM-NEXT:    flat_store_dword v[0:1], v2
+; ASM-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; ASM-NEXT:    s_setpc_b64 s[30:31]
+  %ptr = load ptr addrspace(5), ptr %p, !nonnull !{}
+  %x = addrspacecast ptr addrspace(5) %ptr to ptr
+  store volatile i32 7, ptr %x
+  ret void
+}
+
+define void @flat_to_local_nonnull_load(ptr %p) {
+; OPT-LABEL: define void @flat_to_local_nonnull_load(
+; OPT-SAME: ptr [[P:%.*]]) {
+; OPT-NEXT:    [[PTR:%.*]] = load ptr, ptr [[P]], align 8, !nonnull [[META0]]
+; OPT-NEXT:    [[X:%.*]] = call ptr addrspace(3) @llvm.amdgcn.addrspacecast.nonnull.p3.p0(ptr [[PTR]])
+; OPT-NEXT:    store volatile i32 7, ptr addrspace(3) [[X]], align 4
+; OPT-NEXT:    ret void
+;
+; DAGISEL-ASM-LABEL: flat_to_local_nonnull_load:
+; DAGISEL-ASM:       ; %bb.0:
+; DAGISEL-ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; DAGISEL-ASM-NEXT:    flat_load_dword v0, v[0:1]
+; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v1, 7
+; DAGISEL-ASM-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; DAGISEL-ASM-NEXT:    ds_write_b32 v0, v1
+; DAGISEL-ASM-NEXT:    s_waitcnt lgkmcnt(0)
+; DAGISEL-ASM-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-ASM-LABEL: flat_to_local_nonnull_load:
+; GISEL-ASM:       ; %bb.0:
+; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-ASM-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
+; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GISEL-ASM-NEXT:    v_mov_b32_e32 v1, 7
+; GISEL-ASM-NEXT:    ds_write_b32 v0, v1
+; GISEL-ASM-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-ASM-NEXT:    s_setpc_b64 s[30:31]
+  %ptr = load ptr, ptr %p, !nonnull !{}
+  %x = addrspacecast ptr %ptr to ptr addrspace(3)
+  store volatile i32 7, ptr addrspace(3) %x
+  ret void
+}
+
+define void @flat_to_private_nonnull_load(ptr %p) {
+; OPT-LABEL: define void @flat_to_private_nonnull_load(
+; OPT-SAME: ptr [[P:%.*]]) {
+; OPT-NEXT:    [[PTR:%.*]] = load ptr, ptr [[P]], align 8, !nonnull [[META0]]
+; OPT-NEXT:    [[X:%.*]] = call ptr addrspace(5) @llvm.amdgcn.addrspacecast.nonnull.p5.p0(ptr [[PTR]])
+; OPT-NEXT:    store volatile i32 7, ptr addrspace(5) [[X]], align 4
+; OPT-NEXT:    ret void
+;
+; DAGISEL-ASM-LABEL: flat_to_private_nonnull_load:
+; DAGISEL-ASM:       ; %bb.0:
+; DAGISEL-ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; DAGISEL-ASM-NEXT:    flat_load_dword v0, v[0:1]
+; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v1, 7
+; DAGISEL-ASM-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; DAGISEL-ASM-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
+; DAGISEL-ASM-NEXT:    s_waitcnt vmcnt(0)
+; DAGISEL-ASM-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-ASM-LABEL: flat_to_private_nonnull_load:
+; GISEL-ASM:       ; %bb.0:
+; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-ASM-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
+; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GISEL-ASM-NEXT:    v_mov_b32_e32 v1, 7
+; GISEL-ASM-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
+; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-ASM-NEXT:    s_setpc_b64 s[30:31]
+  %ptr = load ptr, ptr %p, !nonnull !{}
+  %x = addrspacecast ptr %ptr to ptr addrspace(5)
+  store volatile i32 7, ptr addrspace(5) %x
+  ret void
+}
+
 define void @private_alloca_to_flat(ptr %ptr) {
 ; OPT-LABEL: define void @private_alloca_to_flat(
 ; OPT-SAME: ptr [[PTR:%.*]]) {
@@ -110,9 +226,8 @@ define void @private_alloca_to_flat(ptr %ptr) {
 ; GISEL-ASM-LABEL: private_alloca_to_flat:
 ; GISEL-ASM:       ; %bb.0:
 ; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-ASM-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GISEL-ASM-NEXT:    s_lshr_b32 s4, s32, 6
-; GISEL-ASM-NEXT:    s_mov_b64 s[6:7], src_private_base
-; GISEL-ASM-NEXT:    s_mov_b32 s5, s7
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v0, s4
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v1, s5
@@ -214,21 +329,21 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; DAGISEL-ASM-NEXT:    v_and_b32_e32 v0, 0xffff, v1
 ; DAGISEL-ASM-NEXT:  ; %bb.2: ; %finallyendcf.split
 ; DAGISEL-ASM-NEXT:    s_or_b64 exec, exec, s[4:5]
-; DAGISEL-ASM-NEXT:    s_xor_b64 s[6:7], vcc, -1
-; DAGISEL-ASM-NEXT:    s_mov_b64 s[4:5], 0
-; DAGISEL-ASM-NEXT:    s_mov_b64 s[8:9], src_private_base
+; DAGISEL-ASM-NEXT:    s_mov_b64 s[4:5], src_private_base
+; DAGISEL-ASM-NEXT:    s_xor_b64 s[8:9], vcc, -1
+; DAGISEL-ASM-NEXT:    s_mov_b64 s[6:7], 0
 ; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
-; DAGISEL-ASM-NEXT:  .LBB7_3: ; %finally
+; DAGISEL-ASM-NEXT:  .LBB11_3: ; %finally
 ; DAGISEL-ASM-NEXT:    ; =>This Inner Loop Header: Depth=1
-; DAGISEL-ASM-NEXT:    s_and_b64 s[10:11], exec, s[6:7]
-; DAGISEL-ASM-NEXT:    s_or_b64 s[4:5], s[10:11], s[4:5]
-; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v1, s9
+; DAGISEL-ASM-NEXT:    s_and_b64 s[10:11], exec, s[8:9]
+; DAGISEL-ASM-NEXT:    s_or_b64 s[6:7], s[10:11], s[6:7]
+; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v1, s5
 ; DAGISEL-ASM-NEXT:    flat_store_dword v[0:1], v2
 ; DAGISEL-ASM-NEXT:    s_waitcnt vmcnt(0)
-; DAGISEL-ASM-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; DAGISEL-ASM-NEXT:    s_cbranch_execnz .LBB7_3
+; DAGISEL-ASM-NEXT:    s_andn2_b64 exec, exec, s[6:7]
+; DAGISEL-ASM-NEXT:    s_cbranch_execnz .LBB11_3
 ; DAGISEL-ASM-NEXT:  ; %bb.4: ; %end
-; DAGISEL-ASM-NEXT:    s_or_b64 exec, exec, s[4:5]
+; DAGISEL-ASM-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; DAGISEL-ASM-NEXT:    s_waitcnt lgkmcnt(0)
 ; DAGISEL-ASM-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -249,14 +364,14 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; GISEL-ASM-NEXT:    s_mov_b64 s[6:7], 0
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v1, s9
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
-; GISEL-ASM-NEXT:  .LBB7_3: ; %finally
+; GISEL-ASM-NEXT:  .LBB11_3: ; %finally
 ; GISEL-ASM-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-ASM-NEXT:    s_and_b64 s[8:9], exec, s[4:5]
 ; GISEL-ASM-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
 ; GISEL-ASM-NEXT:    flat_store_dword v[0:1], v2
 ; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-ASM-NEXT:    s_andn2_b64 exec, exec, s[6:7]
-; GISEL-ASM-NEXT:    s_cbranch_execnz .LBB7_3
+; GISEL-ASM-NEXT:    s_cbranch_execnz .LBB11_3
 ; GISEL-ASM-NEXT:  ; %bb.4: ; %end
 ; GISEL-ASM-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GISEL-ASM-NEXT:    s_waitcnt lgkmcnt(0)

@@ -576,3 +576,53 @@ int f() {
   //expected-note@-2 {{read of non-const variable 'a' is not allowed in a constant expression}}
 }
 }
+
+#if __cplusplus >= 202302L
+namespace GH135281 {
+  struct B {
+    const void* p;
+    consteval B() : p{this} {}
+  };
+  B b;
+  B b2{};
+  B &&b3{};
+  void f() {
+    static B b4;
+    B b5; // expected-error {{call to consteval function 'GH135281::B::B' is not a constant expression}} \
+          // expected-note {{pointer to temporary is not a constant expression}} \
+          // expected-note {{temporary created here}}
+  }
+  template<typename T> T temp_var_uninit;
+  template<typename T> T temp_var_brace_init{};
+  B* b6 = &temp_var_uninit<B>;
+  B* b7 = &temp_var_brace_init<B>;
+  B* b8 = &temp_var_brace_init<B&&>;
+  template<typename T> void f2() {
+    static T b9;
+    T b10; // expected-error {{call to consteval function 'GH135281::B::B' is not a constant expression}} \
+           // expected-note {{pointer to temporary is not a constant expression}} \
+           // expected-note {{temporary created here}}
+    static B b11;
+    B b12; // expected-error 2 {{call to consteval function 'GH135281::B::B' is not a constant expression}} \
+           // expected-note 2 {{pointer to temporary is not a constant expression}} \
+           // expected-note 2 {{temporary created here}}
+  }
+  void (*ff)() = f2<B>; // expected-note {{instantiation of function template specialization}}
+}
+#endif
+
+namespace GH145776 {
+
+void runtime_only() {}
+consteval void comptime_only() {}
+
+void fn() {
+  []() {
+    runtime_only();
+    []() {
+      &comptime_only;
+    }();
+  }();
+}
+
+}

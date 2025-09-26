@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fexceptions -fcxx-exceptions -Wno-dynamic-exception-spec %std_cxx11- %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fexceptions -fcxx-exceptions -Wno-dynamic-exception-spec -pedantic %std_cxx11- %s
 
 template void *; // expected-error{{expected unqualified-id}}
 
@@ -10,7 +10,7 @@ template int v0; // expected-error{{does not refer}}
 template<typename T>
 struct X0 {
   static T value;
-  
+
   T f0(T x) {
     return x + 1;  // expected-error{{invalid operands}}
   }
@@ -45,7 +45,7 @@ template MemPtr X0<MemPtr>::f0(MemPtr); // expected-note{{requested here}}
 
 struct X2 {
   int f0(int); // expected-note{{refers here}}
-  
+
   template<typename T> T f1(T) { return T(); }
   template<typename T> T* f1(T*) { return 0; }
 
@@ -185,3 +185,12 @@ template<typename T> struct LambdaInDefaultMemberInitInExplicitInstantiation {
 template struct LambdaInDefaultMemberInitInExplicitInstantiation<int>;
 LambdaInDefaultMemberInitInExplicitInstantiation<float> x;
 #endif
+
+namespace Qualified {
+  template <class> struct C {
+    struct D {
+      void f();
+    };
+  };
+  extern template void C<int>::D::f();
+}

@@ -14,20 +14,20 @@ body:             |
     liveins: $d0, $d1
 
     ; 2 elts -> need 1 match.
-    ;
     ; Matched M[0] = 0 -> G_INSERT_VECTOR_ELT should use %left.
     ; DstLane (G_INSERT_VECTOR_ELT) : 1, because M[1] != 1.
     ; SrcLane (G_EXTRACT_VECTOR_ELT) : M[DstLane] = 0
 
     ; CHECK-LABEL: name: v2s32_match_left_0
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: %left:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %left(<2 x s32>), [[C]](s64)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %left, [[EVEC]](s32), [[C1]](s64)
-    ; CHECK: $d0 = COPY %shuf(<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %left:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %left(<2 x s32>), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %left, [[EVEC]](s32), [[C1]](s64)
+    ; CHECK-NEXT: $d0 = COPY %shuf(<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %left:_(<2 x s32>) = COPY $d0
     %right:_(<2 x s32>) = COPY $d1
     %shuf:_(<2 x s32>) = G_SHUFFLE_VECTOR %left(<2 x s32>), %right, shufflemask(0, 0)
@@ -44,20 +44,20 @@ body:             |
     liveins: $d0, $d1
 
     ; 2 elts -> need 1 match.
-    ;
     ; Matched M[1] = 1 -> G_INSERT_VECTOR_ELT should use %left.
     ; DstLane (G_INSERT_VECTOR_ELT) : 0, because M[0] != 0.
     ; SrcLane (G_EXTRACT_VECTOR_ELT) : M[0] = 1
 
     ; CHECK-LABEL: name: v2s32_match_left_1
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: %left:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %left(<2 x s32>), [[C]](s64)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %left, [[EVEC]](s32), [[C1]](s64)
-    ; CHECK: $d0 = COPY %shuf(<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %left:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %left(<2 x s32>), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %left, [[EVEC]](s32), [[C1]](s64)
+    ; CHECK-NEXT: $d0 = COPY %shuf(<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %left:_(<2 x s32>) = COPY $d0
     %right:_(<2 x s32>) = COPY $d1
     %shuf:_(<2 x s32>) = G_SHUFFLE_VECTOR %left(<2 x s32>), %right, shufflemask(1, 1)
@@ -74,21 +74,21 @@ body:             |
     liveins: $d0, $d1
 
     ; 2 elts -> need 1 match.
-    ;
     ; Matched M[0] = 1 -> G_INSERT_VECTOR_ELT should use %left.
     ; DstLane (G_INSERT_VECTOR_ELT) : 1, because M[1] != 1.
     ; SrcLane (G_EXTRACT_VECTOR_ELT) : M[1] = 3 - 2 = 1
 
     ; CHECK-LABEL: name: v2s32_match_left_3
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: %left:_(<2 x s32>) = COPY $d0
-    ; CHECK: %right:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %right(<2 x s32>), [[C]](s64)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %left, [[EVEC]](s32), [[C1]](s64)
-    ; CHECK: $d0 = COPY %shuf(<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %left:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: %right:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %right(<2 x s32>), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %left, [[EVEC]](s32), [[C1]](s64)
+    ; CHECK-NEXT: $d0 = COPY %shuf(<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %left:_(<2 x s32>) = COPY $d0
     %right:_(<2 x s32>) = COPY $d1
     %shuf:_(<2 x s32>) = G_SHUFFLE_VECTOR %left(<2 x s32>), %right, shufflemask(0, 3)
@@ -106,21 +106,21 @@ body:             |
     liveins: $d0, $d1
 
     ; 2 elts -> need 1 match.
-    ;
     ; Matched M[1] = 1 + 2 -> G_INSERT_VECTOR_ELT should use %right.
     ; DstLane (G_INSERT_VECTOR_ELT) : 0, because M[0] != 2.
     ; SrcLane (G_EXTRACT_VECTOR_ELT) : M[0] = 1
 
     ; CHECK-LABEL: name: v2s32_match_right_3
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: %left:_(<2 x s32>) = COPY $d0
-    ; CHECK: %right:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %left(<2 x s32>), [[C]](s64)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %right, [[EVEC]](s32), [[C1]](s64)
-    ; CHECK: $d0 = COPY %shuf(<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %left:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: %right:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %left(<2 x s32>), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %right, [[EVEC]](s32), [[C1]](s64)
+    ; CHECK-NEXT: $d0 = COPY %shuf(<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %left:_(<2 x s32>) = COPY $d0
     %right:_(<2 x s32>) = COPY $d1
     %shuf:_(<2 x s32>) = G_SHUFFLE_VECTOR %left(<2 x s32>), %right, shufflemask(1, 3)
@@ -137,21 +137,21 @@ body:             |
     liveins: $d0, $d1
 
     ; 2 elts -> need 1 match.
-    ;
     ; Matched M[0] = 0 + 2 -> G_INSERT_VECTOR_ELT should use %right.
     ; DstLane (G_INSERT_VECTOR_ELT) : 1, because M[1] != 3.
     ; SrcLane (G_EXTRACT_VECTOR_ELT) : M[1] = 0
 
     ; CHECK-LABEL: name: v2s32_match_right_2
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: %left:_(<2 x s32>) = COPY $d0
-    ; CHECK: %right:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %left(<2 x s32>), [[C]](s64)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %right, [[EVEC]](s32), [[C1]](s64)
-    ; CHECK: $d0 = COPY %shuf(<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %left:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: %right:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %left(<2 x s32>), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %right, [[EVEC]](s32), [[C1]](s64)
+    ; CHECK-NEXT: $d0 = COPY %shuf(<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %left:_(<2 x s32>) = COPY $d0
     %right:_(<2 x s32>) = COPY $d1
     %shuf:_(<2 x s32>) = G_SHUFFLE_VECTOR %left(<2 x s32>), %right, shufflemask(2, 0)
@@ -168,16 +168,16 @@ body:             |
     liveins: $d0, $d1
 
     ; 2 elts -> need 1 match.
-    ;
     ; Matched M[0] = 0 + 2, M[1] = 1 + 2 -> too many matches.
 
     ; CHECK-LABEL: name: dont_combine_too_many_matches_right
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: %left:_(<2 x s32>) = COPY $d0
-    ; CHECK: %right:_(<2 x s32>) = COPY $d1
-    ; CHECK: %shuf:_(<2 x s32>) = G_SHUFFLE_VECTOR %left(<2 x s32>), %right, shufflemask(2, 3)
-    ; CHECK: $d0 = COPY %shuf(<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %left:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: %right:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: %shuf:_(<2 x s32>) = G_SHUFFLE_VECTOR %left(<2 x s32>), %right, shufflemask(2, 3)
+    ; CHECK-NEXT: $d0 = COPY %shuf(<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %left:_(<2 x s32>) = COPY $d0
     %right:_(<2 x s32>) = COPY $d1
     %shuf:_(<2 x s32>) = G_SHUFFLE_VECTOR %left(<2 x s32>), %right, shufflemask(2, 3)
@@ -195,21 +195,21 @@ body:             |
 
     ; Matched the correct amount on the left and right.
     ; Use left as a tiebreaker.
-    ;
     ; Matched M[1] = 1 -> G_INSERT_VECTOR_ELT should use %left.
     ; DstLane (G_INSERT_VECTOR_ELT) : 0, because M[0] != 0.
     ; SrcLane (G_EXTRACT_VECTOR_ELT) : M[0] = 2 - 2 = 0
 
     ; CHECK-LABEL: name: tiebreaker
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: %left:_(<2 x s32>) = COPY $d0
-    ; CHECK: %right:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %right(<2 x s32>), [[C]](s64)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %left, [[EVEC]](s32), [[C1]](s64)
-    ; CHECK: $d0 = COPY %shuf(<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %left:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: %right:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %right(<2 x s32>), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %left, [[EVEC]](s32), [[C1]](s64)
+    ; CHECK-NEXT: $d0 = COPY %shuf(<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %left:_(<2 x s32>) = COPY $d0
     %right:_(<2 x s32>) = COPY $d1
     %shuf:_(<2 x s32>) = G_SHUFFLE_VECTOR %left(<2 x s32>), %right, shufflemask(2, 1)
@@ -226,21 +226,21 @@ body:             |
     liveins: $d0, $d1
 
     ; Undef counts as a match for left and right.
-    ;
     ; Matched M[1] = -1 -> G_INSERT_VECTOR_ELT should use %left.
     ; DstLane (G_INSERT_VECTOR_ELT) : 0, because M[0] != 0.
     ; SrcLane (G_EXTRACT_VECTOR_ELT) : M[0] = 2 - 2 = 0
 
     ; CHECK-LABEL: name: tiebreaker_undef
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: %left:_(<2 x s32>) = COPY $d0
-    ; CHECK: %right:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %right(<2 x s32>), [[C]](s64)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %left, [[EVEC]](s32), [[C1]](s64)
-    ; CHECK: $d0 = COPY %shuf(<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %left:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: %right:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %right(<2 x s32>), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %left, [[EVEC]](s32), [[C1]](s64)
+    ; CHECK-NEXT: $d0 = COPY %shuf(<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %left:_(<2 x s32>) = COPY $d0
     %right:_(<2 x s32>) = COPY $d1
     %shuf:_(<2 x s32>) = G_SHUFFLE_VECTOR %left(<2 x s32>), %right, shufflemask(2, -1)
@@ -257,21 +257,21 @@ body:             |
     liveins: $d0, $d1
 
     ; Undef counts as a match for left and right.
-    ;
     ; Matched M[1] = -1 -> G_INSERT_VECTOR_ELT should use %left.
     ; DstLane (G_INSERT_VECTOR_ELT) : 0, because M[0] != 0.
     ; SrcLane (G_EXTRACT_VECTOR_ELT) : M[0] = 3 - 2 = 1
 
     ; CHECK-LABEL: name: match_left_undef
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: %left:_(<2 x s32>) = COPY $d0
-    ; CHECK: %right:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %right(<2 x s32>), [[C]](s64)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %left, [[EVEC]](s32), [[C1]](s64)
-    ; CHECK: $d0 = COPY %shuf(<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %left:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: %right:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %right(<2 x s32>), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %shuf:_(<2 x s32>) = G_INSERT_VECTOR_ELT %left, [[EVEC]](s32), [[C1]](s64)
+    ; CHECK-NEXT: $d0 = COPY %shuf(<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %left:_(<2 x s32>) = COPY $d0
     %right:_(<2 x s32>) = COPY $d1
     %shuf:_(<2 x s32>) = G_SHUFFLE_VECTOR %left(<2 x s32>), %right, shufflemask(3, -1)
@@ -288,20 +288,20 @@ body:             |
     liveins: $q0, $q1
 
     ; Matched M[0] = 0 + 4, undef, undef => 3 matches on the right.
-    ;
     ; DstLane (G_INSERT_VECTOR_ELT) : 3, because M[3] != 7.
     ; SrcLane (G_EXTRACT_VECTOR_ELT) : M[3] = 2
 
     ; CHECK-LABEL: name: match_right_undef
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: %left:_(<4 x s32>) = COPY $q0
-    ; CHECK: %right:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %left(<4 x s32>), [[C]](s64)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
-    ; CHECK: %shuf:_(<4 x s32>) = G_INSERT_VECTOR_ELT %right, [[EVEC]](s32), [[C1]](s64)
-    ; CHECK: $q0 = COPY %shuf(<4 x s32>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %left:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: %right:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT %left(<4 x s32>), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+    ; CHECK-NEXT: %shuf:_(<4 x s32>) = G_INSERT_VECTOR_ELT %right, [[EVEC]](s32), [[C1]](s64)
+    ; CHECK-NEXT: $q0 = COPY %shuf(<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %left:_(<4 x s32>) = COPY $q0
     %right:_(<4 x s32>) = COPY $q1
     %shuf:_(<4 x s32>) = G_SHUFFLE_VECTOR %left(<4 x s32>), %right, shufflemask(4, -1, -1, 2)

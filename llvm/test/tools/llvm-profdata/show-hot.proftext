@@ -1,0 +1,35 @@
+# RUN: llvm-profdata show %s --hot-func-list | FileCheck %s
+
+# CHECK: # Hot count threshold: 101
+# CHECK: hot_b
+# CHECK: hot_a
+# CHECK: hot_c
+
+:ir
+hot_a
+# Func Hash:
+0x1234
+# Num Counters:
+1
+# Counter Values:
+101
+
+hot_b
+0x5678
+1
+202
+
+hot_c
+0x5678
+1
+101
+
+cold_d
+0xabcd
+1
+1
+
+cold_e
+0xefff
+1
+0

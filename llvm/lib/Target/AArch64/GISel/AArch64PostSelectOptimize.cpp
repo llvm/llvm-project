@@ -292,12 +292,9 @@ bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
 }
 
 bool AArch64PostSelectOptimize::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
-  assert(MF.getProperties().hasProperty(
-             MachineFunctionProperties::Property::Selected) &&
-         "Expected a selected MF");
+  assert(MF.getProperties().hasSelected() && "Expected a selected MF");
 
   bool Changed = false;
   for (auto &BB : MF) {

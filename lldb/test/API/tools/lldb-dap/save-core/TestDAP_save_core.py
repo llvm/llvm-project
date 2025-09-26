@@ -32,13 +32,7 @@ class TestDAP_save_core(lldbdap_testcase.DAPTestCaseBase):
         # Getting dap stack trace may trigger __lldb_caller_function JIT module to be created.
         self.get_stackFrames(startFrame=0)
 
-        # Evaluating an expression that cause "_$__lldb_valid_pointer_check" JIT module to be created.
-        expression = 'printf("this is a test")'
-        self.dap_server.request_evaluate(expression, context="watch")
-
-        # Verify "_$__lldb_valid_pointer_check" JIT module is created.
         modules = self.dap_server.get_modules()
-        self.assertTrue(modules["_$__lldb_valid_pointer_check"])
         thread_count = len(self.dap_server.get_threads())
 
         core_stack = self.getBuildArtifact("core.stack.dmp")

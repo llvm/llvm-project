@@ -24,6 +24,7 @@ class RecordKeeper;
 
 namespace clang {
 
+void EmitCIRLowering(const llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
 void EmitClangDeclContext(const llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
 /**
   @param PriorizeIfSubclassOf These classes should be prioritized in the output.
@@ -51,6 +52,8 @@ void EmitClangAttrSubjectMatchRulesParserStringSwitches(
     const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitCXX11AttributeInfo(const llvm::RecordKeeper &Records,
                             llvm::raw_ostream &OS);
+void EmitAttributeSpellingList(const llvm::RecordKeeper &Records,
+                               llvm::raw_ostream &OS);
 void EmitClangAttrClass(const llvm::RecordKeeper &Records,
                         llvm::raw_ostream &OS);
 void EmitClangAttrImpl(const llvm::RecordKeeper &Records,

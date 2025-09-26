@@ -16,10 +16,10 @@
 #include "pthread_attr_getstack.h"
 
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/threads/thread.h"
-#include "src/errno/libc_errno.h"
 
 #include <pthread.h> // For pthread_* type definitions.
 

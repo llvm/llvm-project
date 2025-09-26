@@ -143,6 +143,10 @@ static cl::opt<bool>
 static cl::opt<bool> ShowMCEncoding("show-mc-encoding", cl::Hidden,
                                     cl::desc("Show encoding in .s output"));
 
+static cl::opt<unsigned>
+    OutputAsmVariant("output-asm-variant",
+                     cl::desc("Syntax variant to use for output printing"));
+
 static cl::opt<bool>
     DwarfDirectory("dwarf-directory", cl::Hidden,
                    cl::desc("Use .file directives with an explicit directory"),
@@ -383,13 +387,13 @@ int main(int argc, char **argv) {
   // Set a diagnostic handler that doesn't exit on the first error
   Context.setDiagnosticHandler(std::make_unique<LLCDiagnosticHandler>());
 
-  Expected<std::unique_ptr<ToolOutputFile>> RemarksFileOrErr =
+  Expected<LLVMRemarkFileHandle> RemarksFileOrErr =
       setupLLVMOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
                                    RemarksFormat, RemarksWithHotness,
                                    RemarksHotnessThreshold);
   if (Error E = RemarksFileOrErr.takeError())
     reportError(std::move(E), RemarksFilename);
-  std::unique_ptr<ToolOutputFile> RemarksFile = std::move(*RemarksFileOrErr);
+  LLVMRemarkFileHandle RemarksFile = std::move(*RemarksFileOrErr);
 
   if (InputLanguage != "" && InputLanguage != "ir" && InputLanguage != "mir")
     reportError("input language must be '', 'IR' or 'MIR'");
@@ -500,6 +504,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
     Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
     Options.MCOptions.AsmVerbose = AsmVerbose;
     Options.MCOptions.PreserveAsmComments = PreserveComments;
+    if (OutputAsmVariant.getNumOccurrences())
+      Options.MCOptions.OutputAsmVariant = OutputAsmVariant;
     Options.MCOptions.IASSearchPaths = IncludeDirs;
     Options.MCOptions.InstPrinterOptions = InstPrinterOptions;
     Options.MCOptions.SplitDwarfFile = SplitDwarfFile;
@@ -727,8 +733,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
         reportError("target does not support generation of this file type");
     }
 
-    const_cast<TargetLoweringObjectFile *>(Target->getObjFileLowering())
-        ->Initialize(MMIWP->getMMI().getContext(), *Target);
+    Target->getObjFileLowering()->Initialize(MMIWP->getMMI().getContext(),
+                                             *Target);
     if (MIR) {
       assert(MMIWP && "Forgot to create MMIWP?");
       if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))

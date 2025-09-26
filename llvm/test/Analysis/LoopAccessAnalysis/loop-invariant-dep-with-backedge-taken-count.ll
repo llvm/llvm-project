@@ -181,10 +181,10 @@ define void @test_btc_is_unknown_value(ptr %a, i32 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1:0x[0-9a-f]+]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (400 + %a) High: (404 + %a))
 ; CHECK-NEXT:            Member: (400 + %a)
-; CHECK-NEXT:        Group [[GRP2:0x[0-9a-f]+]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %a High: (4 + (4 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nw><%loop>
 ; CHECK-EMPTY:
