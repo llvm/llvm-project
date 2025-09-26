@@ -66,6 +66,4 @@ bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
   }
 }
 
-bool DirectXTTIImpl::shouldDecomposeStructAllocas() const {
-  return true;
-}
+bool DirectXTTIImpl::shouldDecomposeStructAllocas() const { return true; }

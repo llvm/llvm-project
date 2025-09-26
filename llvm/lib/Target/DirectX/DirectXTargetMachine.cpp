@@ -48,6 +48,7 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/SROA.h"
 #include "llvm/Transforms/Scalar/Scalarizer.h"
 #include <optional>
 
@@ -107,6 +108,10 @@ public:
 
   FunctionPass *createTargetRegisterAllocator(bool) override { return nullptr; }
   void addCodeGenPrepare() override {
+    // Clang does not apply SROA with -O0, but it is required for DXIL. So we
+    // add SROA here when -O0 is given.
+    if (getOptLevel() == CodeGenOptLevel::None)
+      addPass(createSROAPass(/*PreserveCFG=*/true, /*DecomposeStructs=*/true));
     addPass(createDXILFinalizeLinkageLegacyPass());
     addPass(createGlobalDCEPass());
     addPass(createDXILResourceAccessLegacyPass());
