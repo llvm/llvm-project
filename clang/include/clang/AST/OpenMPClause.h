@@ -1168,14 +1168,14 @@ class OMPLoopRangeClause final : public OMPClause {
   SourceLocation FirstLoc, CountLoc;
 
   /// Number of looprange arguments (always 2: first, count)
-  static constexpr unsigned NumArgs = 2;
+  enum { FirstExpr, CountExpr, NumArgs };
   Stmt *Args[NumArgs] = {nullptr, nullptr};
 
   /// Set looprange 'first' expression
-  void setFirst(Expr *E) { Args[0] = E; }
+  void setFirst(Expr *E) { Args[FirstExpr] = E; }
 
   /// Set looprange 'count' expression
-  void setCount(Expr *E) { Args[1] = E; }
+  void setCount(Expr *E) { Args[CountExpr] = E; }
 
   /// Build an empty clause for deserialization.
   explicit OMPLoopRangeClause()
@@ -1201,10 +1201,10 @@ public:
   void setCountLoc(SourceLocation Loc) { CountLoc = Loc; }
 
   /// Get looprange 'first' expression
-  Expr *getFirst() const { return cast_or_null<Expr>(Args[0]); }
+  Expr *getFirst() const { return cast_or_null<Expr>(Args[FirstExpr]); }
 
   /// Get looprange 'count' expression
-  Expr *getCount() const { return cast_or_null<Expr>(Args[1]); }
+  Expr *getCount() const { return cast_or_null<Expr>(Args[CountExpr]); }
 
   child_range children() { return child_range(Args, Args + NumArgs); }
   const_child_range children() const {
