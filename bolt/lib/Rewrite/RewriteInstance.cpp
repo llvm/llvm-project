@@ -1826,6 +1826,72 @@ void RewriteInstance::disassemblePLTSectionX86(BinarySection &Section,
   }
 }
 
+void RewriteInstance::disassemblePLTSectionPPC64(BinarySection &Section) {
+  const uint64_t Base = Section.getAddress();
+  const uint64_t Size = Section.getSize();
+
+  uint64_t Off = 0;
+  // Locate new plt entry
+  while (Off < Size) {
+    InstructionListType Insns;
+    uint64_t EntryOff = Off;
+    uint64_t EntrySize = 0;
+
+    bool FoundTerminator = false;
+    // Loop through entry instructions
+    while (Off < Size) {
+      MCInst MI;
+      uint64_t MISz = 0;
+
+      disassemblePLTInstruction(Section, Off, MI, MISz);
+      if (MISz == 0) {
+        FoundTerminator = false;
+        break;
+      }
+      // Update entry size
+      EntrySize += MISz;
+
+      if (!BC->MIB->isIndirectBranch(MI)) {
+        Insns.emplace_back(MI);
+        Off += MISz;
+        continue;
+      }
+
+      const uint64_t EntryAddr = Base + EntryOff;
+      const uint64_t TargetAddr =
+          BC->MIB->analyzePLTEntry(MI, Insns.begin(), Insns.end(), EntryAddr);
+
+      createPLTBinaryFunction(TargetAddr, EntryAddr, EntrySize);
+
+      Off += MISz;
+      FoundTerminator = true;
+      break;
+    }
+
+    // If we didn’t find a terminator, advance minimally to avoid stalling.
+    if (!FoundTerminator) {
+      if (EntrySize == 0) {
+        // Skip 4 bytes to avoid infinite loop on undecodable garbage.
+        Off += 4;
+      }
+      // else Off already advanced by the last disassembly
+    }
+
+    // Skip any padding NOPs between PLT entries.
+    while (Off < Size) {
+      MCInst MI;
+      uint64_t MISz = 0;
+      disassemblePLTInstruction(Section, Off, MI, MISz);
+      if (MISz == 0) {
+        break;
+      }
+      if (!BC->MIB->isNoop(MI))
+        break;
+      Off += MISz;
+    }
+  }
+}
+
 void RewriteInstance::disassemblePLT() {
   auto analyzeOnePLTSection = [&](BinarySection &Section, uint64_t EntrySize) {
     if (BC->isAArch64())
@@ -1834,6 +1900,8 @@ void RewriteInstance::disassemblePLT() {
       return disassemblePLTSectionRISCV(Section);
     if (BC->isX86())
       return disassemblePLTSectionX86(Section, EntrySize);
+    if (BC->isPPC64())
+      return disassemblePLTSectionPPC64(Section);
     llvm_unreachable("Unmplemented PLT");
   };
 
