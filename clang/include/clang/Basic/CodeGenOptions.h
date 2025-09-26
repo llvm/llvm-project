@@ -214,7 +214,7 @@ public:
               ///< larger debug info than `Basic`.
   };
 
-  enum BoolFromMem {
+  enum class BoolFromMem {
     Strict,   ///< In-memory bool values are assumed to be 0 or 1, and any other
               ///< value is UB.
     Truncate, ///< Convert in-memory bools to i1 by checking if the least
