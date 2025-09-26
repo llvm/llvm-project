@@ -606,6 +606,26 @@ void MachineBasicBlock::removeLiveIn(MCRegister Reg, LaneBitmask LaneMask) {
     LiveIns.erase(I);
 }
 
+void MachineBasicBlock::removeLiveInOverlappedWith(MCRegister Reg) {
+  const MachineFunction *MF = getParent();
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  // Remove Reg and its subregs from live in set.
+  for (MCPhysReg S : TRI->subregs_inclusive(Reg))
+    removeLiveIn(S);
+
+  // Remove live-in bitmask in super registers as well.
+  for (MCPhysReg Super : TRI->superregs(Reg)) {
+    for (MCSubRegIndexIterator SRI(Super, TRI); SRI.isValid(); ++SRI) {
+      if (Reg == SRI.getSubReg()) {
+        unsigned SubRegIndex = SRI.getSubRegIndex();
+        LaneBitmask SubRegLaneMask = TRI->getSubRegIndexLaneMask(SubRegIndex);
+        removeLiveIn(Super, SubRegLaneMask);
+        break;
+      }
+    }
+  }
+}
+
 MachineBasicBlock::livein_iterator
 MachineBasicBlock::removeLiveIn(MachineBasicBlock::livein_iterator I) {
   // Get non-const version of iterator.
