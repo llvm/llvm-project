@@ -348,32 +348,32 @@ struct WhileLowering : public OpConversionPattern<WhileOp> {
     Location loc = whileOp.getLoc();
     MLIRContext *context = loc.getContext();
 
-    // Create variable storage for loop-carried values to enable imperative
-    // updates while maintaining SSA semantics at conversion boundaries.
-    SmallVector<Value> variables;
-    if (failed(createVariablesForLoopCarriedValues(whileOp, rewriter, variables,
-                                                   loc, context)))
-      return failure();
-
-    if (failed(lowerDoWhile(whileOp, variables, context, rewriter, loc)))
-      return failure();
-
     // Create an emitc::variable op for each result. These variables will be
     // assigned to by emitc::assign ops within the loop body.
     SmallVector<Value> resultVariables;
     if (failed(createVariablesForResults(whileOp, getTypeConverter(), rewriter,
-                                         resultVariables))) {
+                                         resultVariables)))
       return rewriter.notifyMatchFailure(whileOp,
                                          "Failed to create result variables");
-    }
+
+    // Create variable storage for loop-carried values to enable imperative
+    // updates while maintaining SSA semantics at conversion boundaries.
+    SmallVector<Value> loopVariables;
+    if (failed(createVariablesForLoopCarriedValues(
+            whileOp, rewriter, loopVariables, loc, context)))
+      return failure();
+
+    if (failed(lowerDoWhile(whileOp, loopVariables, resultVariables, context,
+                            rewriter, loc)))
+      return failure();
 
     rewriter.setInsertionPointAfter(whileOp);
 
-    // Transfer final loop state to result variables and get final SSA results.
+    // Load the final result values from result variables.
     SmallVector<Value> finalResults =
-        finalizeLoopResults(resultVariables, variables, rewriter, loc);
-
+        loadValues(resultVariables, rewriter, loc);
     rewriter.replaceOp(whileOp, finalResults);
+
     return success();
   }
 
@@ -382,7 +382,7 @@ private:
   // across iterations without SSA argument passing.
   LogicalResult createVariablesForLoopCarriedValues(
       WhileOp whileOp, ConversionPatternRewriter &rewriter,
-      SmallVectorImpl<Value> &outVars, Location loc,
+      SmallVectorImpl<Value> &loopVars, Location loc,
       MLIRContext *context) const {
     emitc::OpaqueAttr noInit = emitc::OpaqueAttr::get(context, "");
 
@@ -394,42 +394,15 @@ private:
       emitc::VariableOp var = rewriter.create<emitc::VariableOp>(
           loc, emitc::LValueType::get(convertedType), noInit);
       rewriter.create<emitc::AssignOp>(loc, var.getResult(), init);
-      outVars.push_back(var.getResult());
+      loopVars.push_back(var.getResult());
     }
 
     return success();
   }
 
-  // Transfers final loop state from mutable variables to result variables,
-  // then returns the final SSA values to replace the original scf::while
-  // results.
-  static SmallVector<Value>
-  finalizeLoopResults(ArrayRef<Value> resultVariables,
-                      ArrayRef<Value> loopVariables,
-                      ConversionPatternRewriter &rewriter, Location loc) {
-    // Transfer final loop state to result variables to bridge imperative loop
-    // variables with SSA result expectations of the original op.
-    for (auto [resultVar, var] : llvm::zip(resultVariables, loopVariables)) {
-      Type loadedType = cast<emitc::LValueType>(var.getType()).getValueType();
-      Value load = rewriter.create<emitc::LoadOp>(loc, loadedType, var);
-      rewriter.create<emitc::AssignOp>(loc, resultVar, load);
-    }
-
-    // Replace op with loaded values to integrate with converted SSA graph.
-    SmallVector<Value> finalResults;
-    for (Value resultVar : resultVariables) {
-      Type loadedType =
-          cast<emitc::LValueType>(resultVar.getType()).getValueType();
-      finalResults.push_back(
-          rewriter.create<emitc::LoadOp>(loc, loadedType, resultVar));
-    }
-
-    return finalResults;
-  }
-
   // Lower scf.while to emitc.do.
-  LogicalResult lowerDoWhile(WhileOp whileOp, ArrayRef<Value> vars,
-                             MLIRContext *context,
+  LogicalResult lowerDoWhile(WhileOp whileOp, ArrayRef<Value> loopVars,
+                             ArrayRef<Value> resultVars, MLIRContext *context,
                              ConversionPatternRewriter &rewriter,
                              Location loc) const {
     // Create a global boolean variable to store the loop condition state.
@@ -457,14 +430,22 @@ private:
 
     // Load current variable values to use as initial arguments for the
     // condition block.
-    SmallVector<Value> replacingValues = loadValues(vars, rewriter, loc);
+    SmallVector<Value> replacingValues = loadValues(loopVars, rewriter, loc);
     rewriter.mergeBlocks(beforeBlock, bodyBlock, replacingValues);
 
-    // Convert scf.condition to condition variable assignment.
     Operation *condTerminator =
         loweredDo.getBodyRegion().back().getTerminator();
     scf::ConditionOp condOp = cast<scf::ConditionOp>(condTerminator);
     rewriter.setInsertionPoint(condOp);
+
+    // Update result variables with values from scf::condition.
+    SmallVector<Value> conditionArgs;
+    for (Value arg : condOp.getArgs()) {
+      conditionArgs.push_back(rewriter.getRemappedValue(arg));
+    }
+    assignValues(conditionArgs, resultVars, rewriter, loc);
+
+    // Convert scf.condition to condition variable assignment.
     Value condition = rewriter.getRemappedValue(condOp.getCondition());
     rewriter.create<emitc::AssignOp>(loc, conditionVal, condition);
 
@@ -484,7 +465,7 @@ private:
 
       rewriter.mergeBlocks(afterBlock, ifBodyBlock, afterReplacingValues);
 
-      if (failed(lowerYield(whileOp, vars, rewriter,
+      if (failed(lowerYield(whileOp, loopVars, rewriter,
                             cast<scf::YieldOp>(ifBodyBlock->getTerminator()))))
         return failure();
     }
