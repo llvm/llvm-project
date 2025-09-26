@@ -195,6 +195,26 @@ countls(T f) {
   return cpp::countl_zero(value_bits) - FXRep::SIGN_LEN;
 }
 
+// Multiply an integer with a fixed-point value and return an integer.
+// Overflow behavior is undefined, per ISO 8037.
+template <typename FixedPointT, typename IntT>
+LIBC_INLINE constexpr cpp::enable_if_t <cpp::is_fixed_point_v<FixedPointT> && cpp::is_integral_v<IntT>, IntT > 
+muli(FixedPointT f, IntT i) {
+  
+  using FXRep = FXRep<FixedPointT>;
+  using BitType = typename FXRep::StorageType;
+  BitType fixed_bits = FXBits<FixedPointT>(f).get_bits();
+
+  // Safely promote types to unsigned for multiplication to avoid signed overflow
+  using UnsignedIntT = cpp::make_unsigned_t<IntT>;
+  using UnsignedFixedT = cpp::make_unsigned_t<BitType>;
+
+  auto product = static_cast<UnsignedIntT>(i) * static_cast<UnsignedFixedT>(fixed_bits);
+
+  // Shift back to remove fractional bits
+  return static_cast<IntT>(product >> FXRep::FRAC_LEN);
+}
+
 // fixed-point to integer conversion
 template <typename T, typename XType>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, XType>
