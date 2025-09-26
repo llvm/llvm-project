@@ -150,6 +150,10 @@ C++ Language Changes
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Started the implementation of `P2686R5 <https://wg21.link/P2686R5>`_ Constexpr structured bindings.
+  At this timem, references to constexpr and decomposition of *tuple-like* types are not supported
+  (only arrays and aggregates are).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -267,6 +271,9 @@ Attribute Changes in Clang
 - The definition of a function declaration with ``[[clang::cfi_unchecked_callee]]`` inherits this
   attribute, allowing the attribute to only be attached to the declaration. Prior, this would be
   treated as an error where the definition and declaration would have differing types.
+
+- New format attributes ``gnu_printf``, ``gnu_scanf``, ``gnu_strftime`` and ``gnu_strfmon`` are added
+  as aliases for ``printf``, ``scanf``, ``strftime`` and ``strfmon``. (#GH16219)
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -422,6 +429,7 @@ Bug Fixes to C++ Support
   ``__builtin_addressof``, and related issues with builtin arguments. (#GH154034)
 - Fix an assertion failure when taking the address on a non-type template parameter argument of
   object type. (#GH151531)
+- Suppress ``-Wdouble-promotion`` when explicitly asked for with C++ list initialization (#GH33409).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -558,6 +566,7 @@ Crash and bug fixes
 - Fixed a crash in the static analyzer that when the expression in an
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 - Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
+- Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
 
 Improvements
 ^^^^^^^^^^^^
@@ -572,7 +581,9 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
-- Exposed `clang_getCursorLanguage` via `Cursor.language`.
+- Exposed ``clang_getCursorLanguage`` via ``Cursor.language``.
+- Add all missing ``CursorKind``s, ``TypeKind``s and
+  ``ExceptionSpecificationKind``s from ``Index.h``
 
 OpenMP Support
 --------------
