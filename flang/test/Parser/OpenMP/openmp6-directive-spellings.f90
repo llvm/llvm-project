@@ -111,12 +111,13 @@ subroutine f03
 end
 
 !UNPARSE: SUBROUTINE f03
-!UNPARSE: !$OMP DECLARE SIMD
+!UNPARSE: !$OMP DECLARE_SIMD
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareSimdConstruct
-!PARSE-TREE: | Verbatim
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareSimdConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare simd
 !PARSE-TREE: | OmpClauseList ->
+!PARSE-TREE: | Flags = None
 
 subroutine f04
   !$omp declare_target
