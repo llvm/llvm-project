@@ -933,6 +933,26 @@ entry:
   ret i32 %tmp6
 }
 
+define <8 x float> @freeze_permps(<8 x float> %a0) {
+; AVX2-LABEL: freeze_permps:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = [7,6,5,4,3,2,1,0]
+; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: freeze_permps:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [7,6,5,4,3,2,1,0]
+; AVX512-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    ret{{[l|q]}}
+  %s0 = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %a0, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>)
+  %f0 = freeze <8 x float> %s0
+  %s1 = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %f0, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>)
+  ret <8 x float> %s1
+}
+
 define <32 x i8> @PR27320(<8 x i32> %a0) {
 ; CHECK-LABEL: PR27320:
 ; CHECK:       # %bb.0:
