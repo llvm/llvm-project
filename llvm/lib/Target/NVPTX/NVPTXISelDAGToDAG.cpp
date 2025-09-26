@@ -1027,6 +1027,7 @@ pickOpcodeForVT(MVT::SimpleValueType VT, std::optional<unsigned> Opcode_i16,
   case MVT::f32:
     return Opcode_i32;
   case MVT::v2f32:
+  case MVT::v2i32:
   case MVT::i64:
   case MVT::f64:
     return Opcode_i64;

@@ -244,6 +244,11 @@ Changes in existing checks
   correcting a spelling mistake on its option
   ``NamePrefixSuffixSilenceDissimilarityTreshold``.
 
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
+  exceptions from captures are now diagnosed, exceptions in the bodies of
+  lambdas that aren't actually invoked are not.
+
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
   variables introduced by structured bindings.
