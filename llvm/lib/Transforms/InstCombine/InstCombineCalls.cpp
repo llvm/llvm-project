@@ -1416,9 +1416,7 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
 
   // At least 1 operand must be a shuffle with 1 use because we are creating 2
   // instructions.
-  if (none_of(II->args(), [](Value *V) {
-        return isa<ShuffleVectorInst>(V) && V->hasOneUse();
-      }))
+  if (none_of(II->args(), match_fn(m_OneUse(m_Shuffle(m_Value(), m_Value())))))
     return nullptr;
 
   // See if all arguments are shuffled with the same mask.
@@ -3413,6 +3411,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (!RK || RK.AttrKind != Attribute::Alignment ||
             !isPowerOf2_64(RK.ArgValue) || !isa<ConstantInt>(RK.IRArgValue))
           continue;
+
+        // Remove align 1 bundles; they don't add any useful information.
+        if (RK.ArgValue == 1)
+          return CallBase::removeOperandBundle(II, OBU.getTagID());
 
         // Don't try to remove align assumptions for pointers derived from
         // arguments. We might lose information if the function gets inline and

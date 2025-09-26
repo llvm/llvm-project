@@ -1,4 +1,4 @@
-//===--- CloexecFopenCheck.h - clang-tidy------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,7 @@ namespace clang::tidy::android {
 /// This check only works when corresponding argument is StringLiteral. No
 /// constant propagation.
 ///
-/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-fopen.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-fopen.html
 class CloexecFopenCheck : public CloexecCheck {
 public:
   CloexecFopenCheck(StringRef Name, ClangTidyContext *Context)

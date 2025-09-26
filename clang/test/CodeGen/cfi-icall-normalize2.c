@@ -32,12 +32,12 @@ union Union {
 void uni(void (*fn)(union Union), union Union arg1) {
     // CHECK-LABEL: define{{.*}}uni
     // CHECK-SAME: {{.*}}!type ![[TYPE4:[0-9]+]] !type !{{[0-9]+}}
-    // CHECK: call i1 @llvm.type.test({{i8\*|ptr}} {{%f|%0}}, metadata !"_ZTSFv5UnionE.normalized")
+    // CHECK: call i1 @llvm.type.test({{i8\*|ptr}} {{%f|%0}}, metadata !"_ZTSFvPu2i8E.normalized")
     fn(arg1);
 }
 
 // CHECK: ![[TYPE1]] = !{i64 0, !"_ZTSFvPFvu3i32ES_E.normalized"}
 // CHECK: ![[TYPE2]] = !{i64 0, !"_ZTSFvPFvu3i32S_ES_S_E.normalized"}
 // CHECK: ![[TYPE3]] = !{i64 0, !"_ZTSFvPFvu3i32S_S_ES_S_S_E.normalized"}
-// CHECK: ![[TYPE4]] = !{i64 0, !"_ZTSFvPFv5UnionES_E.normalized"}
+// CHECK: ![[TYPE4]] = !{i64 0, !"_ZTSFvPFv5UnionEPu2i8E.normalized"}
 

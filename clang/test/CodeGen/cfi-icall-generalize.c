@@ -22,14 +22,14 @@ union Union {
 
 // CHECK: define{{.*}} void @uni({{.*}} !type [[TYPE2:![0-9]+]] !type [[TYPE2_GENERALIZED:![0-9]+]]
 void uni(void (*fn)(union Union), union Union arg1) {
-  // UNGENERALIZED: call i1 @llvm.type.test(ptr {{.*}}, metadata !"_ZTSFv5UnionE")
-  // GENERALIZED: call i1 @llvm.type.test(ptr {{.*}}, metadata !"_ZTSFv5UnionE.generalized")
+  // UNGENERALIZED: call i1 @llvm.type.test(ptr {{.*}}, metadata !"_ZTSFvPcE")
+  // GENERALIZED: call i1 @llvm.type.test(ptr {{.*}}, metadata !"_ZTSFvPvE.generalized")
     fn(arg1);
 }
 
 // CHECK: [[TYPE]] = !{i64 0, !"_ZTSFPPiPKcPS2_E"}
 // CHECK: [[TYPE_GENERALIZED]] = !{i64 0, !"_ZTSFPvPKvS_E.generalized"}
 
-// CHECK: [[TYPE2]] = !{i64 0, !"_ZTSFvPFv5UnionES_E"}
-// CHECK: [[TYPE2_GENERALIZED]] = !{i64 0, !"_ZTSFvPv5UnionE.generalized"}
+// CHECK: [[TYPE2]] = !{i64 0, !"_ZTSFvPFv5UnionEPcE"}
+// CHECK: [[TYPE2_GENERALIZED]] = !{i64 0, !"_ZTSFvPvS_E.generalized"}
 

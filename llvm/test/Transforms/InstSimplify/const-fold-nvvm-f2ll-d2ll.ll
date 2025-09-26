@@ -334,8 +334,7 @@ define i64 @test_neg_1_5_d2ll_rz() {
 ;+-------------------------------------------------------------+
 define i64 @test_neg_1_5_f2ull_rm() {
 ; CHECK-LABEL: define i64 @test_neg_1_5_f2ull_rm() {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.nvvm.f2ull.rm(float -1.500000e+00)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
   %res = call i64 @llvm.nvvm.f2ull.rm(float -1.5)
   ret i64 %res
@@ -343,8 +342,7 @@ define i64 @test_neg_1_5_f2ull_rm() {
 
 define i64 @test_neg_1_5_f2ull_rn() {
 ; CHECK-LABEL: define i64 @test_neg_1_5_f2ull_rn() {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.nvvm.f2ull.rn(float -1.500000e+00)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
   %res = call i64 @llvm.nvvm.f2ull.rn(float -1.5)
   ret i64 %res
@@ -353,8 +351,7 @@ define i64 @test_neg_1_5_f2ull_rn() {
 
 define i64 @test_neg_1_5_f2ull_rp() {
 ; CHECK-LABEL: define i64 @test_neg_1_5_f2ull_rp() {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.nvvm.f2ull.rp(float -1.500000e+00)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
   %res = call i64 @llvm.nvvm.f2ull.rp(float -1.5)
   ret i64 %res
@@ -362,8 +359,7 @@ define i64 @test_neg_1_5_f2ull_rp() {
 
 define i64 @test_neg_1_5_f2ull_rz() {
 ; CHECK-LABEL: define i64 @test_neg_1_5_f2ull_rz() {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.nvvm.f2ull.rz(float -1.500000e+00)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
   %res = call i64 @llvm.nvvm.f2ull.rz(float -1.5)
   ret i64 %res
@@ -374,8 +370,7 @@ define i64 @test_neg_1_5_f2ull_rz() {
 ;+-------------------------------------------------------------+
 define i64 @test_neg_1_5_f2ull_rm_ftz() {
 ; CHECK-LABEL: define i64 @test_neg_1_5_f2ull_rm_ftz() {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.nvvm.f2ull.rm.ftz(float -1.500000e+00)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
   %res = call i64 @llvm.nvvm.f2ull.rm.ftz(float -1.5)
   ret i64 %res
@@ -383,8 +378,7 @@ define i64 @test_neg_1_5_f2ull_rm_ftz() {
 
 define i64 @test_neg_1_5_f2ull_rn_ftz() {
 ; CHECK-LABEL: define i64 @test_neg_1_5_f2ull_rn_ftz() {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.nvvm.f2ull.rn.ftz(float -1.500000e+00)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
   %res = call i64 @llvm.nvvm.f2ull.rn.ftz(float -1.5)
   ret i64 %res
@@ -392,8 +386,7 @@ define i64 @test_neg_1_5_f2ull_rn_ftz() {
 
 define i64 @test_neg_1_5_f2ull_rp_ftz() {
 ; CHECK-LABEL: define i64 @test_neg_1_5_f2ull_rp_ftz() {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.nvvm.f2ull.rp.ftz(float -1.500000e+00)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
   %res = call i64 @llvm.nvvm.f2ull.rp.ftz(float -1.5)
   ret i64 %res
@@ -401,8 +394,7 @@ define i64 @test_neg_1_5_f2ull_rp_ftz() {
 
 define i64 @test_neg_1_5_f2ull_rz_ftz() {
 ; CHECK-LABEL: define i64 @test_neg_1_5_f2ull_rz_ftz() {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.nvvm.f2ull.rz.ftz(float -1.500000e+00)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
   %res = call i64 @llvm.nvvm.f2ull.rz.ftz(float -1.5)
   ret i64 %res
@@ -412,8 +404,7 @@ define i64 @test_neg_1_5_f2ull_rz_ftz() {
 ;+-------------------------------------------------------------+
 define i64 @test_neg_1_5_d2ull_rm() {
 ; CHECK-LABEL: define i64 @test_neg_1_5_d2ull_rm() {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.nvvm.d2ull.rm(double -1.500000e+00)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
   %res = call i64 @llvm.nvvm.d2ull.rm(double -1.5)
   ret i64 %res
@@ -421,8 +412,7 @@ define i64 @test_neg_1_5_d2ull_rm() {
 
 define i64 @test_neg_1_5_d2ull_rn() {
 ; CHECK-LABEL: define i64 @test_neg_1_5_d2ull_rn() {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.nvvm.d2ull.rn(double -1.500000e+00)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
   %res = call i64 @llvm.nvvm.d2ull.rn(double -1.5)
   ret i64 %res
@@ -431,8 +421,7 @@ define i64 @test_neg_1_5_d2ull_rn() {
 
 define i64 @test_neg_1_5_d2ull_rp() {
 ; CHECK-LABEL: define i64 @test_neg_1_5_d2ull_rp() {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.nvvm.d2ull.rp(double -1.500000e+00)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
   %res = call i64 @llvm.nvvm.d2ull.rp(double -1.5)
   ret i64 %res
@@ -440,8 +429,7 @@ define i64 @test_neg_1_5_d2ull_rp() {
 
 define i64 @test_neg_1_5_d2ull_rz() {
 ; CHECK-LABEL: define i64 @test_neg_1_5_d2ull_rz() {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.nvvm.d2ull.rz(double -1.500000e+00)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
   %res = call i64 @llvm.nvvm.d2ull.rz(double -1.5)
   ret i64 %res
@@ -456,7 +444,7 @@ define i64 @test_neg_1_5_d2ull_rz() {
 ;+-------------------------------------------------------------+
 define i64 @test_nan_f2ll_rm() {
 ; CHECK-LABEL: define i64 @test_nan_f2ll_rm() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ll.rm(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -464,7 +452,7 @@ define i64 @test_nan_f2ll_rm() {
 
 define i64 @test_nan_f2ll_rn() {
 ; CHECK-LABEL: define i64 @test_nan_f2ll_rn() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ll.rn(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -473,7 +461,7 @@ define i64 @test_nan_f2ll_rn() {
 
 define i64 @test_nan_f2ll_rp() {
 ; CHECK-LABEL: define i64 @test_nan_f2ll_rp() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ll.rp(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -481,7 +469,7 @@ define i64 @test_nan_f2ll_rp() {
 
 define i64 @test_nan_f2ll_rz() {
 ; CHECK-LABEL: define i64 @test_nan_f2ll_rz() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ll.rz(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -492,7 +480,7 @@ define i64 @test_nan_f2ll_rz() {
 ;+-------------------------------------------------------------+
 define i64 @test_nan_f2ll_rm_ftz() {
 ; CHECK-LABEL: define i64 @test_nan_f2ll_rm_ftz() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ll.rm.ftz(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -500,7 +488,7 @@ define i64 @test_nan_f2ll_rm_ftz() {
 
 define i64 @test_nan_f2ll_rn_ftz() {
 ; CHECK-LABEL: define i64 @test_nan_f2ll_rn_ftz() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ll.rn.ftz(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -508,7 +496,7 @@ define i64 @test_nan_f2ll_rn_ftz() {
 
 define i64 @test_nan_f2ll_rp_ftz() {
 ; CHECK-LABEL: define i64 @test_nan_f2ll_rp_ftz() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ll.rp.ftz(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -516,7 +504,7 @@ define i64 @test_nan_f2ll_rp_ftz() {
 
 define i64 @test_nan_f2ll_rz_ftz() {
 ; CHECK-LABEL: define i64 @test_nan_f2ll_rz_ftz() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ll.rz.ftz(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -526,7 +514,7 @@ define i64 @test_nan_f2ll_rz_ftz() {
 ;+-------------------------------------------------------------+
 define i64 @test_nan_d2ll_rm() {
 ; CHECK-LABEL: define i64 @test_nan_d2ll_rm() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.d2ll.rm(double 0xFFF8000000000000)
   ret i64 %res
@@ -534,7 +522,7 @@ define i64 @test_nan_d2ll_rm() {
 
 define i64 @test_nan_d2ll_rn() {
 ; CHECK-LABEL: define i64 @test_nan_d2ll_rn() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.d2ll.rn(double 0xFFF8000000000000)
   ret i64 %res
@@ -543,7 +531,7 @@ define i64 @test_nan_d2ll_rn() {
 
 define i64 @test_nan_d2ll_rp() {
 ; CHECK-LABEL: define i64 @test_nan_d2ll_rp() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.d2ll.rp(double 0xFFF8000000000000)
   ret i64 %res
@@ -551,7 +539,7 @@ define i64 @test_nan_d2ll_rp() {
 
 define i64 @test_nan_d2ll_rz() {
 ; CHECK-LABEL: define i64 @test_nan_d2ll_rz() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.d2ll.rz(double 0xFFF8000000000000)
   ret i64 %res
@@ -562,7 +550,7 @@ define i64 @test_nan_d2ll_rz() {
 ;+-------------------------------------------------------------+
 define i64 @test_nan_f2ull_rm() {
 ; CHECK-LABEL: define i64 @test_nan_f2ull_rm() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ull.rm(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -570,7 +558,7 @@ define i64 @test_nan_f2ull_rm() {
 
 define i64 @test_nan_f2ull_rn() {
 ; CHECK-LABEL: define i64 @test_nan_f2ull_rn() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ull.rn(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -579,7 +567,7 @@ define i64 @test_nan_f2ull_rn() {
 
 define i64 @test_nan_f2ull_rp() {
 ; CHECK-LABEL: define i64 @test_nan_f2ull_rp() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ull.rp(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -587,7 +575,7 @@ define i64 @test_nan_f2ull_rp() {
 
 define i64 @test_nan_f2ull_rz() {
 ; CHECK-LABEL: define i64 @test_nan_f2ull_rz() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ull.rz(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -598,7 +586,7 @@ define i64 @test_nan_f2ull_rz() {
 ;+-------------------------------------------------------------+
 define i64 @test_nan_f2ull_rm_ftz() {
 ; CHECK-LABEL: define i64 @test_nan_f2ull_rm_ftz() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ull.rm.ftz(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -606,7 +594,7 @@ define i64 @test_nan_f2ull_rm_ftz() {
 
 define i64 @test_nan_f2ull_rn_ftz() {
 ; CHECK-LABEL: define i64 @test_nan_f2ull_rn_ftz() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ull.rn.ftz(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -614,7 +602,7 @@ define i64 @test_nan_f2ull_rn_ftz() {
 
 define i64 @test_nan_f2ull_rp_ftz() {
 ; CHECK-LABEL: define i64 @test_nan_f2ull_rp_ftz() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ull.rp.ftz(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -622,7 +610,7 @@ define i64 @test_nan_f2ull_rp_ftz() {
 
 define i64 @test_nan_f2ull_rz_ftz() {
 ; CHECK-LABEL: define i64 @test_nan_f2ull_rz_ftz() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.f2ull.rz.ftz(float 0x7FFFFF0000000000)
   ret i64 %res
@@ -632,7 +620,7 @@ define i64 @test_nan_f2ull_rz_ftz() {
 ;+-------------------------------------------------------------+
 define i64 @test_nan_d2ull_rm() {
 ; CHECK-LABEL: define i64 @test_nan_d2ull_rm() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.d2ull.rm(double 0xFFF8000000000000)
   ret i64 %res
@@ -640,7 +628,7 @@ define i64 @test_nan_d2ull_rm() {
 
 define i64 @test_nan_d2ull_rn() {
 ; CHECK-LABEL: define i64 @test_nan_d2ull_rn() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.d2ull.rn(double 0xFFF8000000000000)
   ret i64 %res
@@ -649,7 +637,7 @@ define i64 @test_nan_d2ull_rn() {
 
 define i64 @test_nan_d2ull_rp() {
 ; CHECK-LABEL: define i64 @test_nan_d2ull_rp() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.d2ull.rp(double 0xFFF8000000000000)
   ret i64 %res
@@ -657,7 +645,7 @@ define i64 @test_nan_d2ull_rp() {
 
 define i64 @test_nan_d2ull_rz() {
 ; CHECK-LABEL: define i64 @test_nan_d2ull_rz() {
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %res = call i64 @llvm.nvvm.d2ull.rz(double 0xFFF8000000000000)
   ret i64 %res
@@ -994,8 +982,7 @@ define i64 @test_neg_subnormal_d2ll_rz() {
 ;+-------------------------------------------------------------+
 define i64 @test_neg_subnormal_f2ull_rm() {
 ; CHECK-LABEL: define i64 @test_neg_subnormal_f2ull_rm() {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.nvvm.f2ull.rm(float 0xB80FFFFFC0000000)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
   %res = call i64 @llvm.nvvm.f2ull.rm(float 0xB80FFFFFC0000000)
   ret i64 %res
@@ -1065,8 +1052,7 @@ define i64 @test_neg_subnormal_f2ull_rz_ftz() {
 ;+-------------------------------------------------------------+
 define i64 @test_neg_subnormal_d2ull_rm() {
 ; CHECK-LABEL: define i64 @test_neg_subnormal_d2ull_rm() {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.nvvm.d2ull.rm(double 0x800FFFFFFFFFFFFF)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
   %res = call i64 @llvm.nvvm.d2ull.rm(double 0x800fffffffffffff)
   ret i64 %res
