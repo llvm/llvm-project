@@ -4231,6 +4231,16 @@ public:
   /// More limited version of SimplifyDemandedBits that can be used to "look
   /// through" ops that don't contribute to the DemandedBits/DemandedElts -
   /// bitwise ops etc.
+  /// Vector elements that aren't demanded can be turned into poison unless the
+  /// corresponding bit in the \p DoNotPoisonEltMask is set.
+  SDValue SimplifyMultipleUseDemandedBits(SDValue Op, const APInt &DemandedBits,
+                                          const APInt &DemandedElts,
+                                          const APInt &DoNotPoisonEltMask,
+                                          SelectionDAG &DAG,
+                                          unsigned Depth = 0) const;
+
+  /// Helper wrapper around SimplifyMultipleUseDemandedBits, with
+  /// DoNotPoisonEltMask being set to zero.
   SDValue SimplifyMultipleUseDemandedBits(SDValue Op, const APInt &DemandedBits,
                                           const APInt &DemandedElts,
                                           SelectionDAG &DAG,
@@ -4246,6 +4256,7 @@ public:
   /// bits from only some vector elements.
   SDValue SimplifyMultipleUseDemandedVectorElts(SDValue Op,
                                                 const APInt &DemandedElts,
+                                                const APInt &DoNotPoisonEltMask,
                                                 SelectionDAG &DAG,
                                                 unsigned Depth = 0) const;
 

@@ -41402,10 +41402,11 @@ static SDValue combineX86ShufflesRecursively(
     // The Op itself may be of different VT, so we need to scale the mask.
     unsigned NumOpElts = Op.getValueType().getVectorNumElements();
     APInt OpScaledDemandedElts = APIntOps::ScaleBitMask(OpDemandedElts, NumOpElts);
+    APInt DoNotPoisonElts = APInt::getZero(NumOpElts);
 
     // Can this operand be simplified any further, given it's demanded elements?
     if (SDValue NewOp = TLI.SimplifyMultipleUseDemandedVectorElts(
-            Op, OpScaledDemandedElts, DAG))
+            Op, OpScaledDemandedElts, DoNotPoisonElts, DAG))
       Op = NewOp;
   }
   // FIXME: should we rerun resolveTargetShuffleInputsAndMask() now?
@@ -43418,12 +43419,13 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     // Aggressively peek through ops to get at the demanded elts.
     if (!DemandedElts.isAllOnes()) {
       unsigned NumSrcElts = LHS.getValueType().getVectorNumElements();
-      APInt DemandedSrcElts =
-          APIntOps::ScaleBitMask(DemandedElts | DoNotPoisonEltMask, NumSrcElts);
+      APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
+      APInt DoNotPoisonSrcElts =
+          APIntOps::ScaleBitMask(DoNotPoisonEltMask, NumSrcElts);
       SDValue NewLHS = SimplifyMultipleUseDemandedVectorElts(
-          LHS, DemandedSrcElts, TLO.DAG, Depth + 1);
+          LHS, DemandedSrcElts, DoNotPoisonSrcElts, TLO.DAG, Depth + 1);
       SDValue NewRHS = SimplifyMultipleUseDemandedVectorElts(
-          RHS, DemandedSrcElts, TLO.DAG, Depth + 1);
+          RHS, DemandedSrcElts, DoNotPoisonSrcElts, TLO.DAG, Depth + 1);
       if (NewLHS || NewRHS) {
         NewLHS = NewLHS ? NewLHS : LHS;
         NewRHS = NewRHS ? NewRHS : RHS;
@@ -43476,7 +43478,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     // Aggressively peek through ops to get at the demanded elts.
     if (!DemandedElts.isAllOnes())
       if (SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(
-              Src, DemandedElts | DoNotPoisonEltMask, TLO.DAG, Depth + 1))
+              Src, DemandedElts, DoNotPoisonEltMask, TLO.DAG, Depth + 1))
         return TLO.CombineTo(
             Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewSrc, Op.getOperand(1)));
     break;
@@ -43723,9 +43725,9 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     // TODO - we should do this for all target/faux shuffles ops.
     if (!DemandedElts.isAllOnes()) {
       SDValue NewN0 = SimplifyMultipleUseDemandedVectorElts(
-          N0, DemandedLHS | DoNotPoisonLHS, TLO.DAG, Depth + 1);
+          N0, DemandedLHS, DoNotPoisonLHS, TLO.DAG, Depth + 1);
       SDValue NewN1 = SimplifyMultipleUseDemandedVectorElts(
-          N1, DemandedRHS | DoNotPoisonRHS, TLO.DAG, Depth + 1);
+          N1, DemandedRHS, DoNotPoisonRHS, TLO.DAG, Depth + 1);
       if (NewN0 || NewN1) {
         NewN0 = NewN0 ? NewN0 : N0;
         NewN1 = NewN1 ? NewN1 : N1;
@@ -43763,9 +43765,9 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     // TODO: Handle repeated operands.
     if (N0 != N1 && !DemandedElts.isAllOnes()) {
       SDValue NewN0 = SimplifyMultipleUseDemandedVectorElts(
-          N0, DemandedLHS | DoNotPoisonLHS, TLO.DAG, Depth + 1);
+          N0, DemandedLHS, DoNotPoisonLHS, TLO.DAG, Depth + 1);
       SDValue NewN1 = SimplifyMultipleUseDemandedVectorElts(
-          N1, DemandedRHS | DoNotPoisonRHS, TLO.DAG, Depth + 1);
+          N1, DemandedRHS, DoNotPoisonRHS, TLO.DAG, Depth + 1);
       if (NewN0 || NewN1) {
         NewN0 = NewN0 ? NewN0 : N0;
         NewN1 = NewN1 ? NewN1 : N1;
@@ -43863,6 +43865,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       break;
     APInt SrcUndef, SrcZero;
     APInt SrcElts = APInt::getOneBitSet(SrcVT.getVectorNumElements(), 0);
+    // VBROADCAST only uses element zero. Allow poison in other elements.
     APInt DoNotPoisonSrcElts = APInt::getZero(SrcVT.getVectorNumElements());
     if (SimplifyDemandedVectorElts(Src, SrcElts, DoNotPoisonSrcElts, SrcUndef, SrcZero, TLO,
                                    Depth + 1))
@@ -43870,7 +43873,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     // Aggressively peek through src to get at the demanded elt.
     // TODO - we should do this for all target/faux shuffles ops.
     if (SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(
-            Src, SrcElts, TLO.DAG, Depth + 1))
+            Src, SrcElts, DoNotPoisonSrcElts, TLO.DAG, Depth + 1))
       return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewSrc));
     break;
   }
