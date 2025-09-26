@@ -55,3 +55,15 @@ else()
       LEVEL_ZERO_LIBRARY="${LEVEL_ZERO_LIBRARY_NAME}")
   target_sources(omptarget.rtl.level_zero PRIVATE src/L0DynWrapper.cpp)
 endif()
+
+option(LIBOMPTARGET_FORCE_LEVELZERO_TESTS "Build Level Zero libomptarget tests" OFF)
+if (LIBOMPTARGET_FOUND_INTELGPU_GPU OR LIBOMPTARGET_FORCE_LEVELZERO_TESTS)
+  # Report to the parent scope that we are building a plugin for intelgpu
+  set(LIBOMPTARGET_SYSTEM_TARGETS
+      "${LIBOMPTARGET_SYSTEM_TARGETS} spirv64" PARENT_SCOPE)
+  list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.level_zero")
+  set(LIBOMPTARGET_TESTED_PLUGINS "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
+else()
+  message(STATUS "Not generating Level Zero tests, no supported devices detected."
+                   " Use 'LIBOMPTARGET_FORCE_INTELGPU_TESTS' to override.")
+endif()

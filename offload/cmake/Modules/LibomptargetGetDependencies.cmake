@@ -43,6 +43,16 @@ find_package(FFI QUIET)
 set(LIBOMPTARGET_DEP_LIBFFI_FOUND ${FFI_FOUND})
 
 ################################################################################
+# Looking for offload-arch...
+################################################################################
+if(TARGET offload-arch)
+  get_property(LIBOMPTARGET_OFFLOAD_ARCH TARGET offload-arch PROPERTY LOCATION)
+else()
+  find_program(LIBOMPTARGET_OFFLOAD_ARCH NAMES offload-arch
+               PATHS ${LLVM_TOOLS_BINARY_DIR})
+endif()
+
+################################################################################
 # Looking for NVIDIA GPUs...
 ################################################################################
 set(LIBOMPTARGET_DEP_CUDA_ARCH "sm_35")
@@ -99,6 +109,17 @@ if(NOT LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR)
 else()
   set(LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND TRUE)
   find_library(LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY NAMES ze_loader)
+endif()
+
+if(LIBOMPTARGET_OFFLOAD_ARCH)
+  execute_process(COMMAND ${LIBOMPTARGET_OFFLOAD_ARCH} "--only=intel"
+                  OUTPUT_VARIABLE LIBOMPTARGET_INTELGPU_ARCH_OUTPUT
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REPLACE "\n" ";" intelgpu_arch_list "${LIBOMPTARGET_INTELGPU_ARCH_OUTPUT}")
+  if(intelgpu_arch_list)
+    set(LIBOMPTARGET_FOUND_INTELGPU_GPU TRUE)
+    set(LIBOMPTARGET_INTELGPU_DETECTED_ARCH_LIST "${intelgpu_arch_list}")
+  endif()
 endif()
 
 set(OPENMP_PTHREAD_LIB ${LLVM_PTHREAD_LIB})
