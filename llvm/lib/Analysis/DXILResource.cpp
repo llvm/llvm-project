@@ -380,13 +380,6 @@ StructType *ResourceTypeInfo::createElementStruct(StringRef CBufferName) {
       Name.append(CBufferName);
     }
 
-    // TODO: Remove this when we update the frontend to use explicit padding.
-    if (LayoutExtType *LayoutType =
-            dyn_cast<LayoutExtType>(RTy->getResourceType())) {
-      StructType *Ty = cast<StructType>(LayoutType->getWrappedType());
-      return StructType::create(Ty->elements(), Name);
-    }
-
     return getOrCreateElementStruct(
         getTypeWithoutPadding(RTy->getResourceType()), Name);
   }
@@ -498,13 +491,7 @@ ResourceTypeInfo::UAVInfo ResourceTypeInfo::getUAV() const {
 
 uint32_t ResourceTypeInfo::getCBufferSize(const DataLayout &DL) const {
   assert(isCBuffer() && "Not a CBuffer");
-
   Type *ElTy = cast<CBufferExtType>(HandleTy)->getResourceType();
-
-  // TODO: Remove this when we update the frontend to use explicit padding.
-  if (auto *LayoutTy = dyn_cast<LayoutExtType>(ElTy))
-    return LayoutTy->getSize();
-
   return DL.getTypeAllocSize(ElTy);
 }
 
