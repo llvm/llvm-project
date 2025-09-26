@@ -91,8 +91,15 @@ static std::string escapeDependencyFilename(StringRef Filename) {
   std::string Res;
   raw_string_ostream OS(Res);
 
+  // Only transform the path to native on Windows, where backslashes are valid
+  // path separators. On non-Windows platforms, we don't want backslashes in
+  // filenames to be incorrectly treated as path separators.
+#ifdef _WIN32
   SmallString<256> NativePath;
   sys::path::native(Filename, NativePath);
+#else
+  StringRef NativePath = Filename;
+#endif
 
   for (unsigned I = 0, E = NativePath.size(); I != E; ++I) {
     if (NativePath[I] == '#')
