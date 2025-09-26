@@ -22,12 +22,14 @@ static bool affectedValuesAreEphemeral(ArrayRef<Value *> Affected) {
   // by assumes. In that case, the assume does not provide useful information.
   // Note that additional users may appear as a result of inlining and CSE,
   // so we should only make this assumption late in the optimization pipeline.
-  SmallSetVector<Instruction *, 16> Worklist;
-  auto AddUser = [&](User *U) {
-    // Bail out if we need to inspect too many users.
-    if (Worklist.size() >= 32)
-      return false;
-    Worklist.insert(cast<Instruction>(U));
+  SmallSetVector<Instruction *, 32> Worklist;
+  auto AddUsers = [&](Value *V) {
+    for (User *U : V->users()) {
+      // Bail out if we need to inspect too many users.
+      if (Worklist.size() >= 32)
+        return false;
+      Worklist.insert(cast<Instruction>(U));
+    }
     return true;
   };
 
@@ -37,9 +39,8 @@ static bool affectedValuesAreEphemeral(ArrayRef<Value *> Affected) {
     if (!isa<Instruction, Argument>(V))
       return false;
 
-    for (User *U : V->users())
-      if (!AddUser(U))
-        return false;
+    if (!AddUsers(V))
+      return false;
   }
 
   for (unsigned Idx = 0; Idx < Worklist.size(); ++Idx) {
@@ -54,9 +55,8 @@ static bool affectedValuesAreEphemeral(ArrayRef<Value *> Affected) {
       return false;
 
     // Otherwise, recursively look at the users.
-    for (User *NestedU : I->users())
-      if (!AddUser(NestedU))
-        return false;
+    if (!AddUsers(I))
+      return false;
   }
 
   return true;
