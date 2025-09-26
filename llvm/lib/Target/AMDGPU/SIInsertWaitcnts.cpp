@@ -1277,11 +1277,8 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
       return;
     setScoreLB(T, std::max(getScoreLB(T), UB - Count));
   } else {
-    setScoreLB(T, UB); // LB and UB are a sort of sliding window over the number
-                       // of wait events which need to be completed.
-    PendingEvents &=
-        ~Context
-             ->WaitEventMaskForInst[T]; // mark this event as no longer pending
+    setScoreLB(T, UB);
+    PendingEvents &= ~Context->WaitEventMaskForInst[T];
   }
 }
 
@@ -2297,8 +2294,9 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
                                                WaitcntBrackets *ScoreBrackets) {
   // Now look at the instruction opcode. If it is a memory access
   // instruction, update the upper-bound of the appropriate counter's
-  // bracket and the destination operand scores. // add comment about if this is
-  // xcnt then we need to update the source opernads as well.
+  // bracket and the destination operand scores.
+  // For architectures with X_CNT, mark the source address operands
+  //  with the appropriate counter values.
   // TODO: Use the (TSFlags & SIInstrFlags::DS_CNT) property everywhere.
 
   bool IsVMEMAccess = false;
