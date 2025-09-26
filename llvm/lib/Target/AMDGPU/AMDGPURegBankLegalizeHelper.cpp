@@ -461,6 +461,16 @@ void RegBankLegalizeHelper::lowerUnpackBitShift(MachineInstr &MI) {
     Hi = B.buildAShr(SgprRB_S32, Val1, Amt1).getReg(0);
     break;
   }
+  case AMDGPU::G_FSHR: {
+    auto [X0, X1] = unpackAExt(MI.getOperand(1).getReg());
+    auto [Y0, Y1] = unpackAExt(MI.getOperand(2).getReg());
+    auto [S0, S1] = unpackZExt(MI.getOperand(3).getReg());
+
+    const RegisterBank *DstRB = MRI.getRegBank(MI.getOperand(0).getReg());
+    Lo = B.buildInstr(AMDGPU::G_FSHR, {{DstRB, S32}}, {X0, Y0, S0}).getReg(0);
+    Hi = B.buildInstr(AMDGPU::G_FSHR, {{DstRB, S32}}, {X1, Y1, S1}).getReg(0);
+    break;
+  }
   default:
     llvm_unreachable("Unpack lowering not implemented");
   }
