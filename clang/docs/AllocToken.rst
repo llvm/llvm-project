@@ -31,12 +31,17 @@ Token Assignment Mode
 
 The default mode to calculate tokens is:
 
-* ``typehash``: This mode assigns a token ID based on the hash of the allocated
-  type's name.
+* ``typehashpointersplit``: This mode assigns a token ID based on the hash of
+  the allocated type's name, where the top half ID-space is reserved for types
+  that contain pointers and the bottom half for types that do not contain
+  pointers.
 
 Other token ID assignment modes are supported, but they may be subject to
 change or removal. These may (experimentally) be selected with ``-mllvm
 -alloc-token-mode=<mode>``:
+
+* ``typehash``: This mode assigns a token ID based on the hash of the allocated
+  type's name.
 
 * ``random``: This mode assigns a statically-determined random token ID to each
   allocation site.

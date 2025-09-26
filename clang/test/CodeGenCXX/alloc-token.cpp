@@ -297,6 +297,6 @@ TestClass *test_new_class_array() {
   return arr;
 }
 //.
-// CHECK: [[META2]] = !{!"int"}
-// CHECK: [[META3]] = !{!"TestClass"}
+// CHECK: [[META2]] = !{!"int", i1 false}
+// CHECK: [[META3]] = !{!"TestClass", i1 true}
 //.
