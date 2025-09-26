@@ -3429,7 +3429,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         KnownBits Known = computeKnownBits(RK.WasOn, /*CtxI=*/nullptr);
         unsigned TZ = std::min(Known.countMinTrailingZeros(),
                                Value::MaxAlignmentExponent);
-        if ((1ULL << TZ) > -RK.ArgValue)
+        if ((1ULL << TZ) > RK.ArgValue)
           return CallBase::removeOperandBundle(II, OBU.getTagID());
 
         auto *LI = dyn_cast<LoadInst>(OBU.Inputs[0]);
