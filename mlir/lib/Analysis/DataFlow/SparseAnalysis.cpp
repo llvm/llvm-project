@@ -507,17 +507,18 @@ AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
       // external due to config), defer to the corresponding extension hook.
       // By default, it just does `visitCallOperand` for all operands.
       //
-      // If callable is a public function, treat it as an external function.
-      // Transforms like RemoveDeadValues cannot change the arguments or returns
-      // of it.
+      // If callable is a public function, the signature is immutable.
+      // We need to be conservative and consider all arguments Live.
       OperandRange argOperands = call.getArgOperands();
       MutableArrayRef<OpOperand> argOpOperands =
           operandsToOpOperands(argOperands);
       Region *region = callable.getCallableRegion();
-      bool isPublicFunc = isa<FunctionOpInterface>(callableOp) &&
-                          cast<FunctionOpInterface>(callableOp).isPublic();
-      if (!region || region->empty() ||
-          !getSolverConfig().isInterprocedural() || isPublicFunc) {
+      auto isPublicFunction = [&]() {
+        auto funcOp = dyn_cast<FunctionOpInterface>(callableOp);
+        return funcOp && funcOp.isPublic();
+      };
+      if (!getSolverConfig().isInterprocedural() || !region ||
+          region->empty() || isPublicFunction()) {
         visitExternalCallImpl(call, operandLattices, resultLattices);
         return success();
       }

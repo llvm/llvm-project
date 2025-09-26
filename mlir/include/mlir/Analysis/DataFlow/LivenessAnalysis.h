@@ -36,7 +36,7 @@ namespace mlir::dataflow {
 ///
 /// A value is considered "live" iff it:
 ///   (1) has memory effects OR
-///   (2) is an argument of or is returned by a public function OR
+///   (2) is returned by a public function OR
 ///   (3) is used to compute a value of type (1) or (2).
 /// It is also to be noted that a value could be of multiple types (1/2/3) at
 /// the same time.

@@ -52,7 +52,7 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 ///
 /// A value is considered "live" iff it:
 ///   (1) has memory effects OR
-///   (2) is an argument of or is returned by a public function OR
+///   (2) is returned by a public function OR
 ///   (3) is used to compute a value of type (1) or (2) OR
 ///   (4) is returned by a return-like op whose parent isn't a callable
 ///       nor a RegionBranchOpInterface (e.g.: linalg.yield, gpu.yield,...)
