@@ -6073,9 +6073,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineOperand &Src0 = MI.getOperand(2);
     MachineOperand &Src1 = MI.getOperand(3);
     MachineOperand &Src2 = MI.getOperand(4);
-
-    bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_CO_PSEUDO);
-
     if (Src0.isReg() && TRI->isVectorRegister(MRI, Src0.getReg())) {
       Register RegOp0 = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
       BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp0)
@@ -6095,20 +6092,13 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       Src2.setReg(RegOp2);
     }
 
-    const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2.getReg());
-    unsigned WaveSize = TRI->getRegSizeInBits(*Src2RC);
-    assert(WaveSize == 64 || WaveSize == 32);
-
-    unsigned SelectOpc =
-        (WaveSize == 64) ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
-    unsigned AddcSubbOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
-
-    if (WaveSize == 64) {
+    if (ST.isWave64()) {
       if (ST.hasScalarCompareEq64()) {
         BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
             .addReg(Src2.getReg())
             .addImm(0);
       } else {
+        const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2.getReg());
         const TargetRegisterClass *SubRC =
             TRI->getSubRegisterClass(Src2RC, AMDGPU::sub0);
         MachineOperand Src2Sub0 = TII->buildExtractSubRegOrImm(
@@ -6125,17 +6115,22 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
             .addReg(Src2_32, RegState::Kill)
             .addImm(0);
       }
-      } else {
-        BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U32))
-            .addReg(Src2.getReg())
-            .addImm(0);
-      }
+    } else {
+      BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U32))
+          .addReg(Src2.getReg())
+          .addImm(0);
+    }
 
-    BuildMI(*BB, MII, DL, TII->get(AddcSubbOpc), Dest.getReg())
-        .add(Src0)
-        .add(Src1);
+    unsigned Opc = (MI.getOpcode() == AMDGPU::S_ADD_CO_PSEUDO)
+                       ? AMDGPU::S_ADDC_U32
+                       : AMDGPU::S_SUBB_U32;
 
-    BuildMI(*BB, MII, DL, TII->get(SelectOpc), CarryDest.getReg())
+    BuildMI(*BB, MII, DL, TII->get(Opc), Dest.getReg()).add(Src0).add(Src1);
+
+    unsigned SelOpc =
+        ST.isWave64() ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
+
+    BuildMI(*BB, MII, DL, TII->get(SelOpc), CarryDest.getReg())
         .addImm(-1)
         .addImm(0);
 
