@@ -75,14 +75,14 @@ define i64 @and_select_neg_to_blsi_i64(i1 %a0, i64 %a1) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    negl %eax
-; X86-NEXT:    sbbl %esi, %edx
-; X86-NEXT:    andl %esi, %edx
-; X86-NEXT:    andl %ecx, %eax
+; X86-NEXT:    sbbl %ecx, %edx
+; X86-NEXT:    andl %ecx, %edx
+; X86-NEXT:    andl %esi, %eax
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    cmovel %esi, %edx
-; X86-NEXT:    cmovel %ecx, %eax
+; X86-NEXT:    cmovel %ecx, %edx
+; X86-NEXT:    cmovel %esi, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
@@ -399,15 +399,15 @@ define i64 @and_select_sub_1_to_blsr_i64(i1 %a0, i64 %a1) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $-1, %eax
-; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    adcl $-1, %edx
-; X86-NEXT:    andl %esi, %edx
-; X86-NEXT:    andl %ecx, %eax
+; X86-NEXT:    andl %ecx, %edx
+; X86-NEXT:    andl %esi, %eax
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    cmovel %ecx, %eax
-; X86-NEXT:    cmovel %esi, %edx
+; X86-NEXT:    cmovel %esi, %eax
+; X86-NEXT:    cmovel %ecx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
@@ -691,15 +691,15 @@ define i64 @xor_select_sub_1_to_blsmsk_i64(i1 %a0, i64 %a1) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $-1, %eax
-; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    adcl $-1, %edx
-; X86-NEXT:    xorl %esi, %edx
-; X86-NEXT:    xorl %ecx, %eax
+; X86-NEXT:    xorl %ecx, %edx
+; X86-NEXT:    xorl %esi, %eax
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    cmovel %ecx, %eax
-; X86-NEXT:    cmovel %esi, %edx
+; X86-NEXT:    cmovel %esi, %eax
+; X86-NEXT:    cmovel %ecx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
