@@ -364,6 +364,9 @@ getAllBitsUnsetCase(llvm::ArrayRef<EnumCase> cases) {
 // inline constexpr <enum-type> operator|(<enum-type> a, <enum-type> b);
 // inline constexpr <enum-type> operator&(<enum-type> a, <enum-type> b);
 // inline constexpr <enum-type> operator^(<enum-type> a, <enum-type> b);
+// inline constexpr <enum-type> &operator|=(<enum-type> &a, <enum-type> b);
+// inline constexpr <enum-type> &operator&=(<enum-type> &a, <enum-type> b);
+// inline constexpr <enum-type> &operator^=(<enum-type> &a, <enum-type> b);
 // inline constexpr <enum-type> operator~(<enum-type> bits);
 // inline constexpr bool bitEnumContainsAll(<enum-type> bits, <enum-type> bit);
 // inline constexpr bool bitEnumContainsAny(<enum-type> bits, <enum-type> bit);
@@ -384,6 +387,15 @@ inline constexpr {0} operator&({0} a, {0} b) {{
 }
 inline constexpr {0} operator^({0} a, {0} b) {{
   return static_cast<{0}>(static_cast<{1}>(a) ^ static_cast<{1}>(b));
+}
+inline constexpr {0} &operator|=({0} &a, {0} b) {{
+    return a = a | b;
+}
+inline constexpr {0} &operator&=({0} &a, {0} b) {{
+    return a = a & b;
+}
+inline constexpr {0} &operator^=({0} &a, {0} b) {{
+    return a = a ^ b;
 }
 inline constexpr {0} operator~({0} bits) {{
   // Ensure only bits that can be present in the enum are set
