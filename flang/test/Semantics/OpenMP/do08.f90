@@ -61,6 +61,7 @@ program omp
   !$omp end do
 
 
+  !ERROR: Canonical loop nest must be perfectly nested.
   !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
   !$omp do collapse(3)
   do 60 i=2,200,2
