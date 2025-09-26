@@ -121,6 +121,10 @@ static cl::opt<unsigned> MIVMaxLevelThreshold(
     cl::desc("Maximum depth allowed for the recursive algorithm used to "
              "explore MIV direction vectors."));
 
+static cl::opt<bool> EnableConstraintPropagation(
+    "da-enable-constraint-propagation", cl::init(false), cl::Hidden,
+    cl::desc("Enable constraint propagation in dependence analysis."));
+
 //===----------------------------------------------------------------------===//
 // basics
 
@@ -3918,7 +3922,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
           for (unsigned SJ : Mivs.set_bits()) {
             // SJ is an MIV subscript that's part of the current coupled group
             LLVM_DEBUG(dbgs() << "\tSJ = " << SJ << "\n");
-            if (propagate(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops,
+            if (EnableConstraintPropagation &&
+                propagate(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops,
                           Constraints, Result.Consistent)) {
               LLVM_DEBUG(dbgs() << "\t    Changed\n");
               ++DeltaPropagations;
@@ -4233,7 +4238,8 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
       // propagate, possibly creating new SIVs and ZIVs
       for (unsigned SJ : Mivs.set_bits()) {
         // SJ is an MIV subscript that's part of the current coupled group
-        if (!propagate(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops, Constraints,
+        if (!EnableConstraintPropagation ||
+            !propagate(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops, Constraints,
                        Result.Consistent))
           continue;
         Pair[SJ].Classification = classifyPair(
