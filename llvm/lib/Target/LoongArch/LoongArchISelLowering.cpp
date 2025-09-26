@@ -2068,7 +2068,10 @@ lowerVECTOR_SHUFFLE_XVREPLVEI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
 
   const auto &Begin = Mask.begin();
   const auto &End = Mask.end();
-  unsigned HalfSize = Mask.size() / 2;
+  int HalfSize = Mask.size() / 2;
+
+  if (SplatIndex >= HalfSize)
+    return SDValue();
 
   assert(SplatIndex < (int)Mask.size() && "Out of bounds mask index");
   if (fitsRegularPattern<int>(Begin, 1, End - HalfSize, SplatIndex, 0) &&
@@ -2363,8 +2366,10 @@ static SDValue lowerVECTOR_SHUFFLE_XVSHUF(const SDLoc &DL, ArrayRef<int> Mask,
 /// The first case is the closest to LoongArch instructions and the other
 /// cases need to be converted to it for processing.
 ///
-/// This function may modify V1, V2 and Mask
-static void canonicalizeShuffleVectorByLane(
+/// This function will return true for the last three cases above and will
+/// modify V1, V2 and Mask. Otherwise, return false for the first case and
+/// cross-lane shuffle cases.
+static bool canonicalizeShuffleVectorByLane(
     const SDLoc &DL, MutableArrayRef<int> Mask, MVT VT, SDValue &V1,
     SDValue &V2, SelectionDAG &DAG, const LoongArchSubtarget &Subtarget) {
 
@@ -2388,15 +2393,15 @@ static void canonicalizeShuffleVectorByLane(
     preMask = LowLaneTy;
 
   if (std::all_of(Mask.begin() + HalfSize, Mask.end(), [&](int M) {
-        return M < 0 || (M >= 0 && M < HalfSize) ||
-               (M >= MaskSize && M < MaskSize + HalfSize);
+        return M < 0 || (M >= HalfSize && M < MaskSize) ||
+               (M >= MaskSize + HalfSize && M < MaskSize * 2);
       }))
-    postMask = HighLaneTy;
-  else if (std::all_of(Mask.begin() + HalfSize, Mask.end(), [&](int M) {
-             return M < 0 || (M >= HalfSize && M < MaskSize) ||
-                    (M >= MaskSize + HalfSize && M < MaskSize * 2);
-           }))
     postMask = LowLaneTy;
+  else if (std::all_of(Mask.begin() + HalfSize, Mask.end(), [&](int M) {
+             return M < 0 || (M >= 0 && M < HalfSize) ||
+                    (M >= MaskSize && M < MaskSize + HalfSize);
+           }))
+    postMask = HighLaneTy;
 
   // The pre-half of mask is high lane type, and the post-half of mask
   // is low lane type, which is closest to the LoongArch instructions.
@@ -2405,7 +2410,7 @@ static void canonicalizeShuffleVectorByLane(
   // to the lower 128-bit of vector register, and the low lane of mask
   // corresponds the higher 128-bit of vector register.
   if (preMask == HighLaneTy && postMask == LowLaneTy) {
-    return;
+    return false;
   }
   if (preMask == LowLaneTy && postMask == HighLaneTy) {
     V1 = DAG.getBitcast(MVT::v4i64, V1);
@@ -2459,8 +2464,10 @@ static void canonicalizeShuffleVectorByLane(
       *it = *it < 0 ? *it : *it + HalfSize;
     }
   } else { // cross-lane
-    return;
+    return false;
   }
+
+  return true;
 }
 
 /// Lower VECTOR_SHUFFLE as lane permute and then shuffle (if possible).
@@ -2526,28 +2533,21 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   assert(Mask.size() % 2 == 0 && "Expected even mask size.");
   assert(Mask.size() >= 4 && "Mask size is less than 4.");
 
-  // canonicalize non cross-lane shuffle vector
-  SmallVector<int> NewMask(Mask);
-  canonicalizeShuffleVectorByLane(DL, NewMask, VT, V1, V2, DAG, Subtarget);
-
   APInt KnownUndef, KnownZero;
-  computeZeroableShuffleElements(NewMask, V1, V2, KnownUndef, KnownZero);
+  computeZeroableShuffleElements(Mask, V1, V2, KnownUndef, KnownZero);
   APInt Zeroable = KnownUndef | KnownZero;
 
   SDValue Result;
   // TODO: Add more comparison patterns.
   if (V2.isUndef()) {
-    if ((Result = lowerVECTOR_SHUFFLE_XVREPLVEI(DL, NewMask, VT, V1, V2, DAG,
+    if ((Result = lowerVECTOR_SHUFFLE_XVREPLVEI(DL, Mask, VT, V1, V2, DAG,
                                                 Subtarget)))
       return Result;
-    if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, NewMask, VT, V1, V2, DAG,
+    if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, Mask, VT, V1, V2, DAG,
                                                Subtarget)))
       return Result;
-    if ((Result = lowerVECTOR_SHUFFLE_XVPERM(DL, NewMask, VT, V1, V2, DAG,
-                                             Subtarget)))
-      return Result;
-    if ((Result = lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(DL, NewMask, VT,
-                                                             V1, V2, DAG)))
+    if ((Result =
+             lowerVECTOR_SHUFFLE_XVPERM(DL, Mask, VT, V1, V2, DAG, Subtarget)))
       return Result;
 
     // TODO: This comment may be enabled in the future to better match the
@@ -2557,24 +2557,39 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
 
   // It is recommended not to change the pattern comparison order for better
   // performance.
-  if ((Result = lowerVECTOR_SHUFFLE_XVPACKEV(DL, NewMask, VT, V1, V2, DAG)))
+  if ((Result = lowerVECTOR_SHUFFLE_XVPACKEV(DL, Mask, VT, V1, V2, DAG)))
     return Result;
-  if ((Result = lowerVECTOR_SHUFFLE_XVPACKOD(DL, NewMask, VT, V1, V2, DAG)))
+  if ((Result = lowerVECTOR_SHUFFLE_XVPACKOD(DL, Mask, VT, V1, V2, DAG)))
     return Result;
-  if ((Result = lowerVECTOR_SHUFFLE_XVILVH(DL, NewMask, VT, V1, V2, DAG)))
+  if ((Result = lowerVECTOR_SHUFFLE_XVILVH(DL, Mask, VT, V1, V2, DAG)))
     return Result;
-  if ((Result = lowerVECTOR_SHUFFLE_XVILVL(DL, NewMask, VT, V1, V2, DAG)))
+  if ((Result = lowerVECTOR_SHUFFLE_XVILVL(DL, Mask, VT, V1, V2, DAG)))
     return Result;
-  if ((Result = lowerVECTOR_SHUFFLE_XVPICKEV(DL, NewMask, VT, V1, V2, DAG)))
+  if ((Result = lowerVECTOR_SHUFFLE_XVPICKEV(DL, Mask, VT, V1, V2, DAG)))
     return Result;
-  if ((Result = lowerVECTOR_SHUFFLE_XVPICKOD(DL, NewMask, VT, V1, V2, DAG)))
+  if ((Result = lowerVECTOR_SHUFFLE_XVPICKOD(DL, Mask, VT, V1, V2, DAG)))
     return Result;
-  if ((Result = lowerVECTOR_SHUFFLEAsShift(DL, NewMask, VT, V1, V2, DAG,
-                                           Subtarget, Zeroable)))
+  if ((Result = lowerVECTOR_SHUFFLEAsShift(DL, Mask, VT, V1, V2, DAG, Subtarget,
+                                           Zeroable)))
     return Result;
-  if ((Result = lowerVECTOR_SHUFFLEAsByteRotate(DL, NewMask, VT, V1, V2, DAG,
+  if ((Result = lowerVECTOR_SHUFFLEAsByteRotate(DL, Mask, VT, V1, V2, DAG,
                                                 Subtarget)))
     return Result;
+
+  // canonicalize non cross-lane shuffle vector
+  SmallVector<int> NewMask(Mask);
+  if (canonicalizeShuffleVectorByLane(DL, NewMask, VT, V1, V2, DAG, Subtarget))
+    return lower256BitShuffle(DL, NewMask, VT, V1, V2, DAG, Subtarget);
+
+  // FIXME: Handling the remaining cases earlier can degrade performance
+  // in some situations. Further analysis is required to enable more
+  // effective optimizations.
+  if (V2.isUndef()) {
+    if ((Result = lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(DL, NewMask, VT,
+                                                             V1, V2, DAG)))
+      return Result;
+  }
+
   if (SDValue NewShuffle = widenShuffleMask(DL, NewMask, VT, V1, V2, DAG))
     return NewShuffle;
   if ((Result = lowerVECTOR_SHUFFLE_XVSHUF(DL, NewMask, VT, V1, V2, DAG)))
