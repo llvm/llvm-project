@@ -7565,10 +7565,14 @@ The ``__cluster_dims__`` and `__no_cluster__`` attributes are mutually exclusive
 def CUDANoClusterAttrDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
-In CUDA/HIP programming, the LLVM/Clang-exclusive ``__no_cluster__`` attribute can be applied to
-a kernel function to indicate that the thread block cluster feature will not be enabled at both
-compile time and kernel launch time. The ``__cluster_dims__`` and `__no_cluster__`` attributes
-are mutually exclusive.
+In CUDA/HIP programming, a kernel function can still be launched with the cluster feature
+enabled at runtime, even without the ``__cluster_dims__`` attribute. The LLVM/Clang-exclusive
+``__no_cluster__`` attribute can be applied to a kernel function to explicitly indicate that
+the cluster feature will not be enabled either at compile time or at kernel launch time. This
+allows the compiler to apply certain optimizations without assuming that clustering could be
+enabled at runtime. It is undefined behavior to launch a kernel with the ``__no_cluster__``
+attribute if the cluster feature is enabled at runtime. The ``__cluster_dims__`` and
+``__no_cluster__`` attributes are mutually exclusive.
 
 .. code::
 
