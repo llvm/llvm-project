@@ -694,7 +694,9 @@ void AddDebugInfoPass::runOnOperation() {
   mlir::LLVM::DICompileUnitAttr cuAttr = mlir::LLVM::DICompileUnitAttr::get(
       mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
-      isOptimized, debugLevel);
+      isOptimized, debugLevel,
+      /*nameTableKind=*/mlir::LLVM::DINameTableKind::Default,
+      /*splitDebugFilename=*/mlir::StringAttr());
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     handleFuncOp(funcOp, fileAttr, cuAttr, typeGen, &symbolTable);

@@ -43,7 +43,7 @@ llvm.func @func_no_debug() {
 #cu = #llvm.di_compile_unit<
   id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
   producer = "MLIR", isOptimized = true, emissionKind = Full,
-  nameTableKind = None
+  nameTableKind = None, splitDebugFilename = "test.dwo"
 >
 #composite = #llvm.di_composite_type<
   tag = DW_TAG_structure_type, name = "composite", file = #file,
@@ -140,7 +140,7 @@ llvm.func @empty_types() {
   llvm.return
 } loc(fused<#sp1>["foo.mlir":2:1])
 
-// CHECK: ![[CU_LOC:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[CU_FILE_LOC:.*]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, nameTableKind: None)
+// CHECK: ![[CU_LOC:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[CU_FILE_LOC:.*]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, splitDebugFilename: "test.dwo", emissionKind: FullDebug, nameTableKind: None)
 // CHECK: ![[CU_FILE_LOC]] = !DIFile(filename: "foo.mlir", directory: "/test/")
 
 // CHECK: ![[FUNC_LOC]] = distinct !DISubprogram(name: "func_with_debug", linkageName: "func_with_debug", scope: ![[NESTED_NAMESPACE:.*]], file: ![[CU_FILE_LOC]], line: 3, type: ![[FUNC_TYPE:.*]], scopeLine: 3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: ![[CU_LOC]])
