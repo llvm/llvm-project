@@ -18793,7 +18793,7 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   });
 
   auto MaskEC = N->getValueType(0).getVectorElementCount();
-  if (NumExts == 0 || !MaskEC.isKnownMultipleOf(NumExts))
+  if (!MaskEC.isKnownMultipleOf(NumExts))
     return SDValue();
 
   ElementCount ExtMinEC = MaskEC.divideCoefficientBy(NumExts);
@@ -18839,7 +18839,7 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   DCI.CombineTo(Extracts[0], R.getValue(0));
   DCI.CombineTo(Extracts[1], R.getValue(1));
   SmallVector<SDValue> Concats = {DAG.getNode(
-      ISD::CONCAT_VECTORS, DL, DoubleExtVT, {R.getValue(0), R.getValue(1)})};
+      ISD::CONCAT_VECTORS, DL, DoubleExtVT, R.getValue(0), R.getValue(1))};
 
   if (NumExts == 2) {
     assert(N->getValueType(0) == DoubleExtVT);
@@ -18855,7 +18855,7 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     DCI.CombineTo(Extracts[I], R.getValue(0));
     DCI.CombineTo(Extracts[I + 1], R.getValue(1));
     Concats.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, DoubleExtVT,
-                                  {R.getValue(0), R.getValue(1)}));
+                                  R.getValue(0), R.getValue(1)));
   }
 
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0), Concats);
