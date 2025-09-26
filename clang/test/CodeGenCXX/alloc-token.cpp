@@ -3,14 +3,14 @@
 
 #include "../Analysis/Inputs/system-header-simulator-cxx.h"
 extern "C" {
-void *aligned_alloc(size_t alignment, size_t size);
-void *malloc(size_t size);
-void *calloc(size_t num, size_t size);
-void *realloc(void *ptr, size_t size);
-void *reallocarray(void *ptr, size_t nmemb, size_t size);
-void *memalign(size_t alignment, size_t size);
-void *valloc(size_t size);
-void *pvalloc(size_t size);
+void *aligned_alloc(size_t alignment, size_t size) __attribute__((malloc));
+void *malloc(size_t size) __attribute__((malloc));
+void *calloc(size_t num, size_t size) __attribute__((malloc));
+void *realloc(void *ptr, size_t size) __attribute__((malloc));
+void *reallocarray(void *ptr, size_t nmemb, size_t size) __attribute__((malloc));
+void *memalign(size_t alignment, size_t size) __attribute__((malloc));
+void *valloc(size_t size) __attribute__((malloc));
+void *pvalloc(size_t size) __attribute__((malloc));
 int posix_memalign(void **memptr, size_t alignment, size_t size);
 
 struct __sized_ptr_t {
@@ -29,23 +29,23 @@ void *sink; // prevent optimizations from removing the calls
 // CHECK-LABEL: define dso_local void @_Z16test_malloc_likev(
 // CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 noundef 4) #[[ATTR10:[0-9]+]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 noundef 4) #[[ATTR10:[0-9]+]], !alloc_token [[META2:![0-9]+]]
 // CHECK-NEXT:    store ptr [[CALL]], ptr @sink, align 8
-// CHECK-NEXT:    [[CALL1:%.*]] = call ptr @calloc(i64 noundef 3, i64 noundef 4) #[[ATTR11:[0-9]+]]
+// CHECK-NEXT:    [[CALL1:%.*]] = call noalias ptr @calloc(i64 noundef 3, i64 noundef 4) #[[ATTR11:[0-9]+]], !alloc_token [[META2]]
 // CHECK-NEXT:    store ptr [[CALL1]], ptr @sink, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @sink, align 8
-// CHECK-NEXT:    [[CALL2:%.*]] = call ptr @realloc(ptr noundef [[TMP0]], i64 noundef 8) #[[ATTR12:[0-9]+]]
+// CHECK-NEXT:    [[CALL2:%.*]] = call noalias ptr @realloc(ptr noundef [[TMP0]], i64 noundef 8) #[[ATTR12:[0-9]+]], !alloc_token [[META3:![0-9]+]]
 // CHECK-NEXT:    store ptr [[CALL2]], ptr @sink, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @sink, align 8
-// CHECK-NEXT:    [[CALL3:%.*]] = call ptr @reallocarray(ptr noundef [[TMP1]], i64 noundef 5, i64 noundef 8)
+// CHECK-NEXT:    [[CALL3:%.*]] = call noalias ptr @reallocarray(ptr noundef [[TMP1]], i64 noundef 5, i64 noundef 8), !alloc_token [[META3]]
 // CHECK-NEXT:    store ptr [[CALL3]], ptr @sink, align 8
-// CHECK-NEXT:    [[CALL4:%.*]] = call align 128 ptr @aligned_alloc(i64 noundef 128, i64 noundef 1024) #[[ATTR12]]
+// CHECK-NEXT:    [[CALL4:%.*]] = call noalias align 128 ptr @aligned_alloc(i64 noundef 128, i64 noundef 4) #[[ATTR12]], !alloc_token [[META2]]
 // CHECK-NEXT:    store ptr [[CALL4]], ptr @sink, align 8
-// CHECK-NEXT:    [[CALL5:%.*]] = call ptr @memalign(i64 noundef 16, i64 noundef 256)
+// CHECK-NEXT:    [[CALL5:%.*]] = call noalias ptr @memalign(i64 noundef 16, i64 noundef 4), !alloc_token [[META2]]
 // CHECK-NEXT:    store ptr [[CALL5]], ptr @sink, align 8
-// CHECK-NEXT:    [[CALL6:%.*]] = call ptr @valloc(i64 noundef 4096)
+// CHECK-NEXT:    [[CALL6:%.*]] = call noalias ptr @valloc(i64 noundef 4), !alloc_token [[META2]]
 // CHECK-NEXT:    store ptr [[CALL6]], ptr @sink, align 8
-// CHECK-NEXT:    [[CALL7:%.*]] = call ptr @pvalloc(i64 noundef 8192)
+// CHECK-NEXT:    [[CALL7:%.*]] = call noalias ptr @pvalloc(i64 noundef 4), !alloc_token [[META2]]
 // CHECK-NEXT:    store ptr [[CALL7]], ptr @sink, align 8
 // CHECK-NEXT:    [[CALL8:%.*]] = call i32 @posix_memalign(ptr noundef @sink, i64 noundef 64, i64 noundef 4)
 // CHECK-NEXT:    ret void
@@ -55,19 +55,40 @@ void test_malloc_like() {
   sink = calloc(3, sizeof(int));
   sink = realloc(sink, sizeof(long));
   sink = reallocarray(sink, 5, sizeof(long));
-  sink = aligned_alloc(128, 1024);
-  sink = memalign(16, 256);
-  sink = valloc(4096);
-  sink = pvalloc(8192);
-  posix_memalign(&sink, 64, sizeof(int));
+  sink = aligned_alloc(128, sizeof(int));
+  sink = memalign(16, sizeof(int));
+  sink = valloc(sizeof(int));
+  sink = pvalloc(sizeof(int));
+  posix_memalign(&sink, 64, sizeof(int)); // FIXME: support posix_memalign
+}
+
+class ForwardDecl;
+
+// CHECK-LABEL: define dso_local void @_Z21test_malloc_like_castv(
+// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 noundef 64) #[[ATTR10]], !alloc_token [[META2]]
+// CHECK-NEXT:    store ptr [[CALL]], ptr @sink, align 8
+// CHECK-NEXT:    [[CALL1:%.*]] = call noalias ptr @malloc(i64 noundef 64) #[[ATTR10]], !alloc_token [[META2]]
+// CHECK-NEXT:    store ptr [[CALL1]], ptr @sink, align 8
+// CHECK-NEXT:    [[CALL2:%.*]] = call noalias ptr @malloc(i64 noundef 64) #[[ATTR10]]
+// CHECK-NEXT:    store ptr [[CALL2]], ptr @sink, align 8
+// CHECK-NEXT:    ret void
+//
+void test_malloc_like_cast() {
+  sink = (int *)malloc(64);
+  sink = reinterpret_cast<int *>(malloc(64));
+
+  // Always fails to assign token ID for incomplete types.
+  sink = reinterpret_cast<ForwardDecl *>(malloc(64));
 }
 
 // CHECK-LABEL: define dso_local void @_Z17test_operator_newv(
 // CHECK-SAME: ) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #[[ATTR13:[0-9]+]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #[[ATTR13:[0-9]+]], !alloc_token [[META2]]
 // CHECK-NEXT:    store ptr [[CALL]], ptr @sink, align 8
-// CHECK-NEXT:    [[CALL1:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #[[ATTR10]]
+// CHECK-NEXT:    [[CALL1:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #[[ATTR10]], !alloc_token [[META2]]
 // CHECK-NEXT:    store ptr [[CALL1]], ptr @sink, align 8
 // CHECK-NEXT:    ret void
 //
@@ -79,9 +100,9 @@ void test_operator_new() {
 // CHECK-LABEL: define dso_local void @_Z25test_operator_new_nothrowv(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr noundef nonnull align 1 dereferenceable(1) @_ZSt7nothrow) #[[ATTR14:[0-9]+]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr noundef nonnull align 1 dereferenceable(1) @_ZSt7nothrow) #[[ATTR14:[0-9]+]], !alloc_token [[META2]]
 // CHECK-NEXT:    store ptr [[CALL]], ptr @sink, align 8
-// CHECK-NEXT:    [[CALL1:%.*]] = call noalias noundef ptr @_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr noundef nonnull align 1 dereferenceable(1) @_ZSt7nothrow) #[[ATTR15:[0-9]+]]
+// CHECK-NEXT:    [[CALL1:%.*]] = call noalias noundef ptr @_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr noundef nonnull align 1 dereferenceable(1) @_ZSt7nothrow) #[[ATTR15:[0-9]+]], !alloc_token [[META2]]
 // CHECK-NEXT:    store ptr [[CALL1]], ptr @sink, align 8
 // CHECK-NEXT:    ret void
 //
@@ -93,7 +114,7 @@ void test_operator_new_nothrow() {
 // CHECK-LABEL: define dso_local noundef ptr @_Z8test_newv(
 // CHECK-SAME: ) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #[[ATTR13]], !alloc_token [[META2:![0-9]+]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #[[ATTR13]], !alloc_token [[META2]]
 // CHECK-NEXT:    ret ptr [[CALL]]
 //
 int *test_new() {
@@ -180,6 +201,7 @@ int *test_new_array_nothrow() {
 // CHECK-NEXT:    ret void
 //
 void test_size_returning_new() {
+  // FIXME: Support __size_returning_new variants.
   sink = __size_returning_new(sizeof(long)).p;
   sink = __size_returning_new_hot_cold(sizeof(long), __hot_cold_t{1}).p;
   sink = __size_returning_new_aligned(sizeof(long), std::align_val_t{32}).p;
@@ -203,7 +225,7 @@ void may_throw();
 // CHECK-NEXT:    [[EXN_SLOT:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[CALL:%.*]] = invoke noalias noundef nonnull ptr @_Znwm(i64 noundef 72) #[[ATTR13]]
-// CHECK-NEXT:            to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]], !alloc_token [[META3:![0-9]+]]
+// CHECK-NEXT:            to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]], !alloc_token [[META4:![0-9]+]]
 // CHECK:       [[INVOKE_CONT]]:
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[CALL]], i8 0, i64 72, i1 false)
 // CHECK-NEXT:    call void @_ZN9TestClassC1Ev(ptr noundef nonnull align 8 dereferenceable(72) [[CALL]]) #[[ATTR16:[0-9]+]]
@@ -249,7 +271,7 @@ TestClass *test_exception_handling_new() {
 // CHECK-SAME: ) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[OBJ:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 72) #[[ATTR13]], !alloc_token [[META3]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 72) #[[ATTR13]], !alloc_token [[META4]]
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[CALL]], i8 0, i64 72, i1 false)
 // CHECK-NEXT:    call void @_ZN9TestClassC1Ev(ptr noundef nonnull align 8 dereferenceable(72) [[CALL]]) #[[ATTR16]]
 // CHECK-NEXT:    store ptr [[CALL]], ptr [[OBJ]], align 8
@@ -270,7 +292,7 @@ TestClass *test_new_class() {
 // CHECK-SAME: ) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[ARR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znam(i64 noundef 728) #[[ATTR13]], !alloc_token [[META3]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znam(i64 noundef 728) #[[ATTR13]], !alloc_token [[META4]]
 // CHECK-NEXT:    store i64 10, ptr [[CALL]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 8
 // CHECK-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[CLASS_TESTCLASS:%.*]], ptr [[TMP0]], i64 10
@@ -296,7 +318,22 @@ TestClass *test_new_class_array() {
   arr[0].data[0] = 123;
   return arr;
 }
+
+// We should not be touching malloc-attributed non-libcall functions: there
+// might be an arbitrary number of these, and a compatible allocator will only
+// implement standard allocation functions.
+void *nonstandard_malloc(size_t size) __attribute__((malloc));
+// CHECK-LABEL: define dso_local noundef ptr @_Z22test_nonlibcall_mallocv(
+// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_Z18nonstandard_mallocm(i64 noundef 4), !alloc_token [[META2]]
+// CHECK-NEXT:    ret ptr [[CALL]]
+//
+void *test_nonlibcall_malloc() {
+  return nonstandard_malloc(sizeof(int));
+}
 //.
 // CHECK: [[META2]] = !{!"int", i1 false}
-// CHECK: [[META3]] = !{!"TestClass", i1 true}
+// CHECK: [[META3]] = !{!"long", i1 false}
+// CHECK: [[META4]] = !{!"TestClass", i1 true}
 //.

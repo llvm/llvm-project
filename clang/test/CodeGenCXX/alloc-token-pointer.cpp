@@ -6,14 +6,16 @@
 typedef __UINTPTR_TYPE__ uintptr_t;
 
 extern "C" {
-void *malloc(size_t size);
+void *malloc(size_t size) __attribute__((malloc));
 }
+
+void *sink; // prevent optimizations from removing the calls
 
 // CHECK-LABEL: define dso_local noundef ptr @_Z15test_malloc_intv(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 noundef 4) #[[ATTR4:[0-9]+]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 noundef 4) #[[ATTR4:[0-9]+]], !alloc_token [[META2:![0-9]+]]
 // CHECK-NEXT:    store ptr [[CALL]], ptr [[A]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A]], align 8
 // CHECK-NEXT:    store i32 42, ptr [[TMP0]], align 4
@@ -30,7 +32,7 @@ void *test_malloc_int() {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 noundef 8) #[[ATTR4]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 noundef 8) #[[ATTR4]], !alloc_token [[META3:![0-9]+]]
 // CHECK-NEXT:    store ptr [[CALL]], ptr [[A]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A]], align 8
 // CHECK-NEXT:    store ptr null, ptr [[TMP0]], align 8
@@ -46,7 +48,7 @@ int **test_malloc_ptr() {
 // CHECK-LABEL: define dso_local noundef ptr @_Z12test_new_intv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #[[ATTR5:[0-9]+]], !alloc_token [[META2:![0-9]+]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #[[ATTR5:[0-9]+]], !alloc_token [[META2]]
 // CHECK-NEXT:    ret ptr [[CALL]]
 //
 int *test_new_int() {
@@ -56,7 +58,7 @@ int *test_new_int() {
 // CHECK-LABEL: define dso_local noundef ptr @_Z20test_new_ulong_arrayv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znam(i64 noundef 80) #[[ATTR5]], !alloc_token [[META3:![0-9]+]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znam(i64 noundef 80) #[[ATTR5]], !alloc_token [[META4:![0-9]+]]
 // CHECK-NEXT:    ret ptr [[CALL]]
 //
 unsigned long *test_new_ulong_array() {
@@ -66,7 +68,7 @@ unsigned long *test_new_ulong_array() {
 // CHECK-LABEL: define dso_local noundef ptr @_Z12test_new_ptrv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 8) #[[ATTR5]], !alloc_token [[META4:![0-9]+]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 8) #[[ATTR5]], !alloc_token [[META3]]
 // CHECK-NEXT:    ret ptr [[CALL]]
 //
 int **test_new_ptr() {
@@ -76,7 +78,7 @@ int **test_new_ptr() {
 // CHECK-LABEL: define dso_local noundef ptr @_Z18test_new_ptr_arrayv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znam(i64 noundef 80) #[[ATTR5]], !alloc_token [[META4]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znam(i64 noundef 80) #[[ATTR5]], !alloc_token [[META3]]
 // CHECK-NEXT:    ret ptr [[CALL]]
 //
 int **test_new_ptr_array() {
@@ -91,42 +93,69 @@ struct ContainsPtr {
 // CHECK-LABEL: define dso_local noundef ptr @_Z27test_malloc_struct_with_ptrv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[C:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 noundef 16) #[[ATTR4]]
-// CHECK-NEXT:    store ptr [[CALL]], ptr [[C]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C]], align 8
-// CHECK-NEXT:    ret ptr [[TMP0]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 noundef 16) #[[ATTR4]], !alloc_token [[META5:![0-9]+]]
+// CHECK-NEXT:    ret ptr [[CALL]]
 //
-ContainsPtr *test_malloc_struct_with_ptr() {
-  ContainsPtr *c = (ContainsPtr *)malloc(sizeof(ContainsPtr));
-  return c;
+void *test_malloc_struct_with_ptr() {
+  return malloc(sizeof(ContainsPtr));
 }
 
 // CHECK-LABEL: define dso_local noundef ptr @_Z33test_malloc_struct_array_with_ptrv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[C:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 noundef 160) #[[ATTR4]]
-// CHECK-NEXT:    store ptr [[CALL]], ptr [[C]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C]], align 8
-// CHECK-NEXT:    ret ptr [[TMP0]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 noundef 160) #[[ATTR4]], !alloc_token [[META5]]
+// CHECK-NEXT:    ret ptr [[CALL]]
 //
-ContainsPtr *test_malloc_struct_array_with_ptr() {
-  ContainsPtr *c = (ContainsPtr *)malloc(10 * sizeof(ContainsPtr));
-  return c;
+void *test_malloc_struct_array_with_ptr() {
+  return malloc(10 * sizeof(ContainsPtr));
+}
+
+// CHECK-LABEL: define dso_local noundef ptr @_Z31test_malloc_with_ptr_sizeof_vari(
+// CHECK-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[SIZE:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4
+// CHECK-NEXT:    store i64 16, ptr [[SIZE]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP0]] to i64
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[SIZE]], align 8
+// CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[TMP1]], [[CONV]]
+// CHECK-NEXT:    store i64 [[MUL]], ptr [[SIZE]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[SIZE]], align 8
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 noundef [[TMP2]]) #[[ATTR4]], !alloc_token [[META5]]
+// CHECK-NEXT:    ret ptr [[CALL]]
+//
+void *test_malloc_with_ptr_sizeof_var(int x) {
+  unsigned long size = sizeof(ContainsPtr);
+  size *= x;
+  return malloc(size);
+}
+
+// CHECK-LABEL: define dso_local noundef ptr @_Z29test_malloc_with_ptr_castonlyv(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 noundef 4096) #[[ATTR4]], !alloc_token [[META5]]
+// CHECK-NEXT:    ret ptr [[CALL]]
+//
+ContainsPtr *test_malloc_with_ptr_castonly() {
+  return (ContainsPtr *)malloc(4096);
 }
 
 // CHECK-LABEL: define dso_local noundef ptr @_Z32test_operatornew_struct_with_ptrv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[C:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 16) #[[ATTR5]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 16) #[[ATTR5]], !alloc_token [[META5]]
 // CHECK-NEXT:    store ptr [[CALL]], ptr [[C]], align 8
+// CHECK-NEXT:    [[CALL1:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 16) #[[ATTR4]], !alloc_token [[META5]]
+// CHECK-NEXT:    store ptr [[CALL1]], ptr @sink, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C]], align 8
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
 ContainsPtr *test_operatornew_struct_with_ptr() {
   ContainsPtr *c = (ContainsPtr *)__builtin_operator_new(sizeof(ContainsPtr));
+  sink = ::operator new(sizeof(ContainsPtr));
   return c;
 }
 
@@ -134,13 +163,16 @@ ContainsPtr *test_operatornew_struct_with_ptr() {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[C:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 160) #[[ATTR5]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 160) #[[ATTR5]], !alloc_token [[META5]]
 // CHECK-NEXT:    store ptr [[CALL]], ptr [[C]], align 8
+// CHECK-NEXT:    [[CALL1:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 160) #[[ATTR4]], !alloc_token [[META5]]
+// CHECK-NEXT:    store ptr [[CALL1]], ptr @sink, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C]], align 8
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
 ContainsPtr *test_operatornew_struct_array_with_ptr() {
   ContainsPtr *c = (ContainsPtr *)__builtin_operator_new(10 * sizeof(ContainsPtr));
+  sink = ::operator new(10 * sizeof(ContainsPtr));
   return c;
 }
 
@@ -148,13 +180,16 @@ ContainsPtr *test_operatornew_struct_array_with_ptr() {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[C:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 16) #[[ATTR5]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 16) #[[ATTR5]], !alloc_token [[META5]]
 // CHECK-NEXT:    store ptr [[CALL]], ptr [[C]], align 8
+// CHECK-NEXT:    [[CALL1:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 16) #[[ATTR4]], !alloc_token [[META5]]
+// CHECK-NEXT:    store ptr [[CALL1]], ptr @sink, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C]], align 8
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
 ContainsPtr *test_operatornew_struct_with_ptr2() {
   ContainsPtr *c = (ContainsPtr *)__builtin_operator_new(sizeof(*c));
+  sink = ::operator new(sizeof(*c));
   return c;
 }
 
@@ -162,20 +197,23 @@ ContainsPtr *test_operatornew_struct_with_ptr2() {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[C:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 160) #[[ATTR5]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 160) #[[ATTR5]], !alloc_token [[META5]]
 // CHECK-NEXT:    store ptr [[CALL]], ptr [[C]], align 8
+// CHECK-NEXT:    [[CALL1:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 160) #[[ATTR4]], !alloc_token [[META5]]
+// CHECK-NEXT:    store ptr [[CALL1]], ptr @sink, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C]], align 8
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
 ContainsPtr *test_operatornew_struct_array_with_ptr2() {
   ContainsPtr *c = (ContainsPtr *)__builtin_operator_new(10 * sizeof(*c));
+  sink = ::operator new(10 * sizeof(*c));
   return c;
 }
 
 // CHECK-LABEL: define dso_local noundef ptr @_Z24test_new_struct_with_ptrv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 16) #[[ATTR5]], !alloc_token [[META5:![0-9]+]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 16) #[[ATTR5]], !alloc_token [[META5]]
 // CHECK-NEXT:    ret ptr [[CALL]]
 //
 ContainsPtr *test_new_struct_with_ptr() {
@@ -291,8 +329,8 @@ uptr *test_uintptr_isptr2() {
 }
 //.
 // CHECK: [[META2]] = !{!"int", i1 false}
-// CHECK: [[META3]] = !{!"unsigned long", i1 false}
-// CHECK: [[META4]] = !{!"int *", i1 true}
+// CHECK: [[META3]] = !{!"int *", i1 true}
+// CHECK: [[META4]] = !{!"unsigned long", i1 false}
 // CHECK: [[META5]] = !{!"ContainsPtr", i1 true}
 // CHECK: [[META6]] = !{!"TestClass", i1 false}
 // CHECK: [[META7]] = !{!"VirtualTestClass", i1 true}
