@@ -45189,6 +45189,7 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
   case X86ISD::VPERMILPI:
+  case X86ISD::VPERMV:
   case X86ISD::VPERMV3: {
     SmallVector<int, 8> Mask;
     SmallVector<SDValue, 2> Ops;
@@ -45255,6 +45256,7 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
   case X86ISD::VPERMILPI:
+  case X86ISD::VPERMV:
   case X86ISD::VPERMV3:
     return false;
   // SSE comparisons handle all icmp/fcmp cases.
