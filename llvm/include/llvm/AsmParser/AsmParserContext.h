@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ASMPARSER_ASMPARSER_STATE_H
-#define LLVM_ASMPARSER_ASMPARSER_STATE_H
+#ifndef LLVM_ASMPARSER_ASMPARSERCONTEXT_H
+#define LLVM_ASMPARSER_ASMPARSERCONTEXT_H
 
 #include "FileLoc.h"
 #include "llvm/ADT/DenseMap.h"
