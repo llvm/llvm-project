@@ -631,11 +631,15 @@ static bool checkDenormalAttributeConsistency(const Module &M,
 
 // Returns true if all functions have different denormal modes.
 static bool checkDenormalAttributeInconsistency(const Module &M) {
-  if (M.functions().empty())
+  auto F = M.functions().begin();
+  auto E = M.functions().end();
+  if (F == E)
     return false;
-  DenormalMode Value = M.functions().begin()->getDenormalModeRaw();
-  return any_of(
-      M, [&](const Function &F) { return F.getDenormalModeRaw() != Value; });
+  DenormalMode Value = F->getDenormalModeRaw();
+  ++F;
+  return std::any_of(F, E, [&](const Function &F) {
+    return !F.isDeclaration() && F.getDenormalModeRaw() != Value;
+  });
 }
 
 void ARMAsmPrinter::emitAttributes() {
