@@ -153,6 +153,36 @@ static cl::opt<unsigned> MisfetchCost(
 static cl::opt<unsigned> JumpInstCost("jump-inst-cost",
                                       cl::desc("Cost of jump instructions."),
                                       cl::init(1), cl::Hidden);
+
+// This enum controls how to optimize two-way branches (a conditional branch
+// immediately followed by an unconditional one). The goal is to optimize for
+// branch prediction and instruction cache efficiency.
+enum class TwoWayBranchOptStrategy {
+  // Do not reverse the condition. Leave the branch code as is.
+  None,
+  // For a two-way branch, make the hot path the fallthrough path. This is more
+  // friendly to static branch prediction (predict not-taken).
+  HotPathFallthrough,
+  // For a two-way branch, make the cold path the fallthrough path. This
+  // improves
+  // i-cache efficiency as the unconditional branch is fetched less often.
+  ColdPathFallthrough
+};
+
+static cl::opt<TwoWayBranchOptStrategy> TwoWayBranchOpt(
+    "two-way-branch-opt", cl::Hidden,
+    cl::desc("Select the optimization strategy for two-way conditional branches:"),
+    cl::values(
+        clEnumValN(TwoWayBranchOptStrategy::None, "none",
+                   "Avoid optimizing the two-way branches."),
+        clEnumValN(
+            TwoWayBranchOptStrategy::HotPathFallthrough, "hot-fallthrough",
+            "Make the hot path the fallthrough path for two-way branches"),
+        clEnumValN(
+            TwoWayBranchOptStrategy::ColdPathFallthrough, "cold-fallthrough",
+            "Make the cold path the fallthrough path for two-way branches")),
+    cl::init(TwoWayBranchOptStrategy::ColdPathFallthrough));
+
 static cl::opt<bool>
     TailDupPlacement("tail-dup-placement",
                      cl::desc("Perform tail duplication during placement. "
@@ -2979,10 +3009,17 @@ void MachineBlockPlacement::optimizeBranches() {
     // instructions which will benefit ICF.
     if (llvm::shouldOptimizeForSize(ChainBB, PSI, MBFI.get()))
       continue;
-    // If ChainBB has a two-way branch, try to re-order the branches
-    // such that we branch to the successor with higher probability first.
-    if (MBPI->getEdgeProbability(ChainBB, TBB) >=
-        MBPI->getEdgeProbability(ChainBB, FBB))
+    // ChainBB has a two-way branch. Reorder the branch based on
+    // `-two-way-branch-opt`;
+    auto TBBProb = MBPI->getEdgeProbability(ChainBB, TBB);
+    auto FBBProb = MBPI->getEdgeProbability(ChainBB, FBB);
+    bool ReverseBranch =
+        (TwoWayBranchOpt ==
+             TwoWayBranchOptStrategy::ColdPathFallthrough &&
+         (FBBProb > TBBProb)) ||
+        (TwoWayBranchOpt == TwoWayBranchOptStrategy::HotPathFallthrough &&
+         (TBBProb > FBBProb));
+    if (!ReverseBranch)
       continue;
     if (TII->reverseBranchCondition(Cond))
       continue;
