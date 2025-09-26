@@ -41,17 +41,8 @@ static cl::opt<SystemZSched::LatencyReduction> PreRALatRed(
                    "Use GenericSched cycle based decisions for reduction of "
                    "scheduled latency.")));
 
-// EXPERIMENTAL
-static cl::opt<bool>
-    WITHPDIFFS("with-pdiffs", cl::init(false),
-               cl::desc("Use SU PDiff instead of checking liveness of regs"));
-
 static bool isRegDef(const MachineOperand &MO) {
   return MO.isReg() && MO.isDef();
-}
-
-static bool isVirtRegDef(const MachineOperand &MO) {
-  return isRegDef(MO) && MO.getReg().isVirtual();
 }
 
 static bool isPhysRegDef(const MachineOperand &MO) {
@@ -60,50 +51,6 @@ static bool isPhysRegDef(const MachineOperand &MO) {
 
 static bool isVirtRegUse(const MachineOperand &MO) {
   return MO.isReg() && MO.isUse() && MO.readsReg() && MO.getReg().isVirtual();
-}
-
-void SystemZPreRASchedStrategy::initializePrioRegClasses(
-    const TargetRegisterInfo *TRI) {
-  if (WITHPDIFFS)
-    return;
-  for (const TargetRegisterClass *RC : TRI->regclasses()) {
-    for (MVT VT : MVT::fp_valuetypes())
-      if (TRI->isTypeLegalForClass(*RC, VT)) {
-        PrioRegClasses.insert(RC->getID());
-        break;
-      }
-
-    // On SystemZ vector and FP registers overlap: add any vector RC.
-    if (!PrioRegClasses.count(RC->getID()))
-      for (MVT VT : MVT::fp_fixedlen_vector_valuetypes())
-        if (TRI->isTypeLegalForClass(*RC, VT)) {
-          PrioRegClasses.insert(RC->getID());
-          break;
-        }
-  }
-}
-
-void SystemZPreRASchedStrategy::initializePressureSets(
-    const TargetRegisterInfo *TRI) {
-
-  // Based on the nature of the Vector/FP and GPR register classes, TableGen
-  // defines a list of PressureSets that reflects the overlap of register
-  // classes: FP regs affect both FP16Bit and VR16Bit PressureSets, while VR
-  // regs affect only VR16Bit. Similarly, GR64 affects only GRX32Bit (with a
-  // weight of 2), while GR32 affects both GR32Bit and GRX32Bit.
-  //
-  // When an instruction defines a register the question is if any used
-  // registers will become live when scheduling it. This can be checked by
-  // looking at the PressureSets that are shared between overlapping register
-  // classes.
-  //
-  // misched-prera-pdiffs.mir tests against any future change in the
-  // PressureSets, so simply hard-code them here:
-
-  if (!WITHPDIFFS)
-    return;
-  PrioPressureSet = SystemZ::VR16Bit;
-  GPRPressureSet = SystemZ::GRX32Bit;
 }
 
 bool SystemZPreRASchedStrategy::shouldReduceLatency(SchedBoundary *Zone) const {
@@ -207,69 +154,56 @@ static int biasPhysRegExtra(const SUnit *SU) {
 
 int SystemZPreRASchedStrategy::computeSULivenessScore(
     SchedCandidate &C, ScheduleDAGMILive *DAG, SchedBoundary *Zone) const {
-  // Not all data deps are modelled around the SUnit - some data edges near
-  // boundaries are missing: Look directly at the MI operands instead.
   const SUnit *SU = C.SU;
   const MachineInstr *MI = SU->getInstr();
   if (!MI->getNumOperands() || MI->isCopy())
     return 0;
-
   const MachineOperand &MO0 = MI->getOperand(0);
   assert(!isPhysRegDef(MO0) && "Did not expect physreg def!");
-  bool IsLoad = isRegDef(MO0) && !MO0.isDead() && !IsRedefining[SU->NodeNum];
-  bool IsPrioLoad = IsLoad && isPrioVirtReg(MO0.getReg(), &DAG->MRI);
+
   bool PreservesSchedLat = SU->getHeight() <= Zone->getScheduledLatency();
   const unsigned Cycles = 2;
   unsigned Margin = SchedModel->getIssueWidth() * (Cycles + SU->Latency - 1);
   bool HasDistToTop = NumLeft > Margin;
-  bool IsKillingStore = isStoreOfVReg(MI) &&
-    !DAG->getBotRPTracker().isRegLive(MO0.getReg());
 
   // Before pulling down a load (to close the live range), the liveness of
-  // the use operands is checked. This can be checked either by looking at
-  // the operands of MI, or at the PDiff of the SU.
-  bool UsesLivePrio = false, UsesLiveAll = false;
-  if (!WITHPDIFFS) {
-    // Find uses of registers that are not already live (kills).
-    bool PrioKill = false;
-    bool GPRKill = false;
-    for (auto &MO : MI->explicit_uses())
-      if (isVirtRegUse(MO) && !DAG->getBotRPTracker().isRegLive(MO.getReg()))
-        (isPrioVirtReg(MO.getReg(), &DAG->MRI) ? PrioKill : GPRKill) = true;
-    // Prioritize FP: Ignore GPR/Addr regs with an FP def.
-    UsesLivePrio = !PrioKill && (IsPrioLoad || !GPRKill);
-    UsesLiveAll = !PrioKill && !GPRKill;
-  } else if (MO0.isReg() && MO0.getReg().isVirtual()) {
-    int PrioPressureChange = 0;
+  // the use operands is checked.
+  bool UsesLiveVR = false, UsesLiveAll = false;
+  if (isRegDef(MO0)) {
+    // Extract the PressureChanges that all fp/vector or GR64/GR32/GRH32 regs
+    // affect respectively. misched-prera-pdiffs.mir tests against any future
+    // change in the PressureSets modelling, so simply hard-code them here.
+    int VRPressureChange = 0;
     int GPRPressureChange = 0;
     const PressureDiff &PDiff = DAG->getPressureDiff(SU);
     for (const PressureChange &PC : PDiff) {
       if (!PC.isValid())
         break;
-      if (PC.getPSet() == PrioPressureSet)
-        PrioPressureChange += PC.getUnitInc();
-      else if (PC.getPSet() == GPRPressureSet)
-        GPRPressureChange += PC.getUnitInc();
+      if (PC.getPSet() == SystemZ::VR16Bit)
+        VRPressureChange = PC.getUnitInc();
+      else if (PC.getPSet() == SystemZ::GRX32Bit)
+        GPRPressureChange = PC.getUnitInc();
     }
     const TargetRegisterClass *RC = DAG->MRI.getRegClass(MO0.getReg());
     int RegWeight = TRI->getRegClassWeight(RC).RegWeight;
-    if (IsLoad) {
-      bool PrioDefNoKill = PrioPressureChange == -RegWeight;
-      bool GPRDefNoKill = GPRPressureChange == -RegWeight;
-      UsesLivePrio = (PrioDefNoKill || (!PrioPressureChange && GPRDefNoKill));
-      UsesLiveAll = (PrioDefNoKill && !GPRPressureChange) ||
-                    (!PrioPressureChange && GPRDefNoKill);
-    }
+    bool VRDefNoKill = VRPressureChange == -RegWeight;
+    bool GPRDefNoKill = GPRPressureChange == -RegWeight;
+    UsesLiveVR = (VRDefNoKill || (!VRPressureChange && GPRDefNoKill));
+    UsesLiveAll = (VRDefNoKill && !GPRPressureChange) ||
+      (!VRPressureChange && GPRDefNoKill);
   }
 
+  bool IsKillingStore = isStoreOfVReg(MI) &&
+    !DAG->getBotRPTracker().isRegLive(MO0.getReg());
+
   // Pull down a defining SU if it preserves the scheduled latency while not
-  // causing any (prioritized) register uses to become live. If however there
-  // will be relatively many SUs scheduled above this one and all uses are
-  // already live it should not be a problem to increase the scheduled
-  // latency given the OOO execution.
+  // causing any (vector) registers to become live. If however there will be
+  // relatively many SUs scheduled above this one and all uses are already
+  // live it should not be a problem to increase the scheduled latency given
+  // the OOO execution.
   // TODO: Try scheduling small (DFSResult) subtrees as a unit.
-  bool SchedLow = IsLoad && ((PreservesSchedLat && UsesLivePrio) ||
-                             (HasDistToTop && UsesLiveAll));
+  bool SchedLow = (PreservesSchedLat && UsesLiveVR) ||
+                  (HasDistToTop && UsesLiveAll);
 
   // This handles regions with many chained stores of the same depth at the
   // bottom in the input order (cactus). Push them upwards during scheduling.
@@ -418,18 +352,6 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
   }
   LLVM_DEBUG(dbgs() << "Latency scheduling " << (HasDataSequences ? "" : "not ")
                     << "enabled for data sequences.\n";);
-
-  // If MI uses the register it defines, record it one time here.
-  IsRedefining = std::vector<bool>(DAG->SUnits.size(), false);
-  if (!WITHPDIFFS) // This is not needed if using PressureDiffs.
-    for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
-      const MachineInstr *MI = DAG->SUnits[Idx].getInstr();
-      if (MI->getNumOperands()) {
-        const MachineOperand &DefMO = MI->getOperand(0);
-        if (isVirtRegDef(DefMO))
-          IsRedefining[Idx] = MI->readsVirtualRegister(DefMO.getReg());
-      }
-    }
 
   initializeStoresGroup();
   LLVM_DEBUG(if (!StoresGroup.empty()) dbgs()

@@ -36,19 +36,10 @@ namespace llvm {
 
 /// A MachineSchedStrategy implementation for SystemZ pre RA scheduling.
 class SystemZPreRASchedStrategy : public GenericScheduler {
-  // The FP/Vector registers are prioritized during scheduling.
-  std::set<unsigned> PrioRegClasses;
-  void initializePrioRegClasses(const TargetRegisterInfo *TRI);
-  bool isPrioVirtReg(Register Reg, const MachineRegisterInfo *MRI) const {
-    return (Reg.isVirtual() &&
-            PrioRegClasses.count(MRI->getRegClass(Reg)->getID()));
-  }
-
-  unsigned PrioPressureSet;
-  unsigned GPRPressureSet;
-  void initializePressureSets(const TargetRegisterInfo *TRI);
-
-  // A TinyRegion has up to 10 instructions and is scheduled differently.
+  // A TinyRegion has up to 10 instructions and is scheduled less
+  // aggressively. Reordering these are more likely to disrupt copy /
+  // comparison elimination while the potential benefit is less than in
+  // bigger regions.
   bool TinyRegion;
 
   // Num instructions left to schedule.
@@ -64,14 +55,11 @@ class SystemZPreRASchedStrategy : public GenericScheduler {
   // Return true if the scheduled latency should be minimized.
   bool shouldReduceLatency(SchedBoundary *Zone) const;
 
-  // True if MI is also using the register it defines.
-  std::vector<bool> IsRedefining;
-
   // Only call computeRemLatency() once before each scheduled node.
   mutable unsigned RemLat;
   unsigned getRemLat(SchedBoundary *Zone) const;
 
-  // A large group of stores at the bottom is spread upwards.
+  // Make sure a large group of stores do not all end up at the bottom.
   std::set<const SUnit *> StoresGroup;
   bool FirstStoreInGroupScheduled;
   void initializeStoresGroup();
@@ -89,11 +77,7 @@ protected:
 
 public:
   SystemZPreRASchedStrategy(const MachineSchedContext *C)
-      : GenericScheduler(C) {
-    const TargetRegisterInfo *TRI = C->MF->getRegInfo().getTargetRegisterInfo();
-    initializePrioRegClasses(TRI);
-    initializePressureSets(TRI);
-  }
+      : GenericScheduler(C) {}
 
   void initPolicy(MachineBasicBlock::iterator Begin,
                   MachineBasicBlock::iterator End,
