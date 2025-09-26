@@ -1491,8 +1491,8 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
 
     Status rc;
     CompilerType type(value_sp->GetCompilerType());
-    WatchpointSP watchpoint_sp =
-        target_sp->CreateWatchpoint(addr, byte_size, &type, watch_type, rc);
+    WatchpointSP watchpoint_sp = target_sp->CreateWatchpointByAddress(
+        addr, byte_size, &type, watch_type, lldb::eWatchpointModeHardware, rc);
     error.SetError(std::move(rc));
 
     if (watchpoint_sp) {

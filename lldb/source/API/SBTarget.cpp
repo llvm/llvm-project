@@ -1349,8 +1349,8 @@ SBTarget::WatchpointCreateByAddress(lldb::addr_t addr, size_t size,
     Status cw_error;
     // This API doesn't take in a type, so we can't figure out what it is.
     CompilerType *type = nullptr;
-    watchpoint_sp =
-        target_sp->CreateWatchpoint(addr, size, type, watch_type, cw_error);
+    watchpoint_sp = target_sp->CreateWatchpointByAddress(
+        addr, size, type, watch_type, lldb::eWatchpointModeHardware, cw_error);
     error.SetError(std::move(cw_error));
     sb_watchpoint.SetSP(watchpoint_sp);
   }

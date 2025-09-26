@@ -1081,6 +1081,8 @@ enum InstructionControlFlowKind {
 FLAGS_ENUM(WatchpointKind){eWatchpointKindWrite = (1u << 0),
                            eWatchpointKindRead = (1u << 1)};
 
+enum WatchpointMode { eWatchpointModeHardware, eWatchpointModeSoftware };
+
 enum GdbSignal {
   eGdbSignalBadAccess = 0x91,
   eGdbSignalBadInstruction = 0x92,
