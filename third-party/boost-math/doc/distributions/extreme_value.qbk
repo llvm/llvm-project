@@ -1,0 +1,126 @@
+[section:extreme_dist Extreme Value Distribution]
+
+``#include <boost/math/distributions/extreme.hpp>``
+
+   template <class RealType = double, 
+             class ``__Policy``   = ``__policy_class`` >
+   class extreme_value_distribution;
+
+   typedef extreme_value_distribution<> extreme_value;
+
+   template <class RealType, class ``__Policy``>
+   class extreme_value_distribution
+   {
+   public:
+      typedef RealType value_type;
+
+      BOOST_MATH_GPU_ENABLED extreme_value_distribution(RealType location = 0, RealType scale = 1);
+
+      BOOST_MATH_GPU_ENABLED RealType scale()const;
+      BOOST_MATH_GPU_ENABLED RealType location()const;
+   };
+
+There are various
+[@http://mathworld.wolfram.com/ExtremeValueDistribution.html extreme value distributions]
+: this implementation represents the maximum case,
+and is variously known as a Fisher-Tippett distribution, 
+a log-Weibull distribution or a Gumbel distribution. 
+
+Extreme value theory is important for assessing risk for highly unusual events,
+such as 100-year floods.
+
+More information can be found on the 
+[@http://www.itl.nist.gov/div898/handbook/eda/section3/eda366g.htm NIST],
+[@http://en.wikipedia.org/wiki/Extreme_value_distribution Wikipedia],
+[@http://mathworld.wolfram.com/ExtremeValueDistribution.html Mathworld],
+and [@http://en.wikipedia.org/wiki/Extreme_value_theory Extreme value theory]
+websites.
+
+The relationship of the types of extreme value distributions, of which this is but one, is
+discussed by
+[@https://www.google.com/books/edition/Extreme_Value_Distributions/GwBqDQAAQBAJ?hl=en&gbpv=0 Extreme Value Distributions, Theory and Applications
+Samuel Kotz & Saralees Nadarajah].
+
+The distribution has a PDF given by:
+
+[expression f(x) = (1/scale) e[super -(x-location)/scale] e[super -e[super -(x-location)/scale]]]
+
+which in the standard case (scale = 1, location = 0) reduces to:
+
+[expression f(x) = e[super -x]e[super -e[super -x]]]
+
+The following graph illustrates how the PDF varies with the location parameter:
+
+[graph extreme_value_pdf1]
+
+And this graph illustrates how the PDF varies with the shape parameter:
+
+[graph extreme_value_pdf2]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED extreme_value_distribution(RealType location = 0, RealType scale = 1);
+   
+Constructs an Extreme Value distribution with the specified location and scale
+parameters.
+
+Requires `scale > 0`, otherwise calls __domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType location()const;
+   
+Returns the location parameter of the distribution.
+   
+   BOOST_MATH_GPU_ENABLED RealType scale()const;
+   
+Returns the scale parameter of the distribution.
+   
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random parameter is \[-[infin], +[infin]\].
+
+In this distribution the implementation of both `logcdf`, and `logpdf` are specialized
+to improve numerical accuracy.
+
+[h4 Accuracy]
+
+The extreme value distribution is implemented in terms of the 
+standard library `exp` and `log` functions and as such should have very low
+error rates.
+
+[h4 Implementation]
+
+In the following table:
+/a/ is the location parameter, /b/ is the scale parameter,
+/x/ is the random variate, /p/ is the probability and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = exp((a-x)/b) * exp(-exp((a-x)/b)) / b ]]
+[[logpdf][log(pdf) = log(1/b) + e - exp(e) ]]
+[[cdf][Using the relation: p = exp(-exp((a-x)/b)) ]]
+[[logcdf][log(cdf) = -exp((a-x)/b) ]]
+[[cdf complement][Using the relation: q = -expm1(-exp((a-x)/b)) ]]
+[[quantile][Using the relation: a - log(-log(p)) * b]]
+[[quantile from the complement][Using the relation: a - log(-log1p(-q)) * b]]
+[[mean][a + [@http://en.wikipedia.org/wiki/Euler-Mascheroni_constant Euler-Mascheroni-constant] * b]]
+[[standard deviation][pi * b / sqrt(6)]]
+[[mode][The same as the location parameter /a/.]]
+[[skewness][12 * sqrt(6) * zeta(3) / pi[super 3] ]]
+[[kurtosis][27 / 5]]
+[[kurtosis excess][kurtosis - 3 or 12 / 5]]
+]
+
+[endsect] [/section:extreme_dist Extreme Value]
+
+[/ extreme_value.qbk
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

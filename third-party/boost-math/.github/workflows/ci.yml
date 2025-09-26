@@ -1,0 +1,778 @@
+# Copyright 2020 Evan Miller
+# Copyright 2020 Matt Borland
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
+
+name: CI
+on:
+  push:
+    branches:
+      - master
+      - develop
+      - feature/**
+  pull_request:
+  release:
+    types: [published, created, edited]
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  ubuntu-noble:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ g++-14, clang++-16, clang++-17, clang++-18 ]
+        standard: [ c++20 ]
+        suite: [ github_ci_block_1, github_ci_block_2 ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: Set TOOLSET
+        run: echo ${{ matrix.compiler }} | awk '/^g/ { print "TOOLSET=gcc" } /^clang/ { print "TOOLSET=clang" }' >> $GITHUB_ENV
+      - name: Add repository
+        continue-on-error: true
+        id: addrepo
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Retry Add Repo
+        continue-on-error: true
+        id: retry1
+        if: steps.addrepo.outcome=='failure'
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Retry Add Repo 2
+        continue-on-error: true
+        id: retry2
+        if: steps.retry1.outcome=='failure'
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Install packages
+        run: sudo apt-get install -y g++-13 g++-14 clang-16 clang-17 clang-18 libgmp-dev libmpfr-dev libfftw3-dev
+      - name: Checkout main boost
+        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+      - name: Update tools/boostdep
+        run: git submodule update --init tools/boostdep
+        working-directory: ../boost-root
+      - name: Copy files
+        run: cp -r $GITHUB_WORKSPACE/* libs/math
+        working-directory: ../boost-root
+      - name: Install deps
+        run: python tools/boostdep/depinst/depinst.py math -I example -I tools
+        working-directory: ../boost-root
+      - name: Bootstrap
+        run: ./bootstrap.sh
+        working-directory: ../boost-root
+      - name: Generate headers
+        run: ./b2 headers
+        working-directory: ../boost-root
+      - name: Generate user config
+        run: 'echo "using $TOOLSET : : ${{ matrix.compiler }} : <cxxflags>-std=${{ matrix.standard }} ;" > ~/user-config.jam'
+        working-directory: ../boost-root
+      - name: Config info install
+        run: ../../../b2 config_info_travis_install toolset=$TOOLSET
+        working-directory: ../boost-root/libs/config/test
+      - name: Config info
+        run: ./config_info_travis
+        working-directory: ../boost-root/libs/config/test
+      - name: Test
+        run: ../../../b2 toolset=$TOOLSET ${{ matrix.suite }} define=CI_SUPPRESS_KNOWN_ISSUES define=SLOW_COMPILER define=BOOST_MATH_RUN_MP_TESTS
+        working-directory: ../boost-root/libs/math/test
+
+  ubuntu-jammy:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ g++-12, clang++-14, clang++-15 ]
+        standard: [ c++14, c++17 ]
+        suite: [ github_ci_block_1, github_ci_block_2 ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: Set TOOLSET
+        run: echo ${{ matrix.compiler }} | awk '/^g/ { print "TOOLSET=gcc" } /^clang/ { print "TOOLSET=clang" }' >> $GITHUB_ENV
+      - name: Add repository
+        continue-on-error: true
+        id: addrepo
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Retry Add Repo
+        continue-on-error: true
+        id: retry1
+        if: steps.addrepo.outcome=='failure'
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Retry Add Repo 2
+        continue-on-error: true
+        id: retry2
+        if: steps.retry1.outcome=='failure'
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Install packages
+        run: sudo apt-get install -y g++-12 clang-14 clang-15 libgmp-dev libmpfr-dev libfftw3-dev
+      - name: Checkout main boost
+        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+      - name: Update tools/boostdep
+        run: git submodule update --init tools/boostdep
+        working-directory: ../boost-root
+      - name: Copy files
+        run: cp -r $GITHUB_WORKSPACE/* libs/math
+        working-directory: ../boost-root
+      - name: Install deps
+        run: python tools/boostdep/depinst/depinst.py math -I example -I tools
+        working-directory: ../boost-root
+      - name: Bootstrap
+        run: ./bootstrap.sh
+        working-directory: ../boost-root
+      - name: Generate headers
+        run: ./b2 headers
+        working-directory: ../boost-root
+      - name: Generate user config
+        run: 'echo "using $TOOLSET : : ${{ matrix.compiler }} : <cxxflags>-std=${{ matrix.standard }} ;" > ~/user-config.jam'
+        working-directory: ../boost-root
+      - name: Config info install
+        run: ../../../b2 config_info_travis_install toolset=$TOOLSET
+        working-directory: ../boost-root/libs/config/test
+      - name: Config info
+        run: ./config_info_travis
+        working-directory: ../boost-root/libs/config/test
+      - name: Test
+        run: ../../../b2 toolset=$TOOLSET ${{ matrix.suite }} define=CI_SUPPRESS_KNOWN_ISSUES define=SLOW_COMPILER define=BOOST_MATH_RUN_MP_TESTS
+        working-directory: ../boost-root/libs/math/test
+  ubuntu-focal-no-eh:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ g++-9, g++-11, clang++-10 ]
+        standard: [ c++14, c++17, c++2a ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: Set TOOLSET
+        run: echo ${{ matrix.compiler }} | awk '/^g/ { print "TOOLSET=gcc" } /^clang/ { print "TOOLSET=clang" }' >> $GITHUB_ENV
+      - name: Add repository
+        continue-on-error: true
+        id: addrepo
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Retry Add Repo
+        continue-on-error: true
+        id: retry1
+        if: steps.addrepo.outcome=='failure'
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Retry Add Repo 2
+        continue-on-error: true
+        id: retry2
+        if: steps.retry1.outcome=='failure'
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Install packages
+        run: sudo apt-get install -y g++-9 g++-11 clang-9 clang-10 libgmp-dev libmpfr-dev libfftw3-dev
+      - name: Checkout main boost
+        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+      - name: Update tools/boostdep
+        run: git submodule update --init tools/boostdep
+        working-directory: ../boost-root
+      - name: Copy files
+        run: cp -r $GITHUB_WORKSPACE/* libs/math
+        working-directory: ../boost-root
+      - name: Install deps
+        run: python tools/boostdep/depinst/depinst.py math -I example -I tools
+        working-directory: ../boost-root
+      - name: Bootstrap
+        run: ./bootstrap.sh
+        working-directory: ../boost-root
+      - name: Generate headers
+        run: ./b2 headers
+        working-directory: ../boost-root
+      - name: Generate user config
+        run: 'echo "using $TOOLSET : : ${{ matrix.compiler }} : <cxxflags>-std=${{ matrix.standard }} ;" > ~/user-config.jam'
+        working-directory: ../boost-root
+      - name: Config info install
+        run: ../../../b2 config_info_travis_install toolset=$TOOLSET
+        working-directory: ../boost-root/libs/config/test
+      - name: Config info
+        run: ./config_info_travis
+        working-directory: ../boost-root/libs/config/test
+      - name: Test
+        run: ../../../b2 toolset=$TOOLSET no_eh_tests exception-handling=off rtti=off define=CI_SUPPRESS_KNOWN_ISSUES define=SLOW_COMPILER
+        working-directory: ../boost-root/libs/math/test
+  macos:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        toolset: [ clang ]
+        standard: [ 14, 17, 20 ]
+        suite: [ github_ci_block_1, github_ci_block_2 ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: Checkout main boost
+        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+      - name: Update tools/boostdep
+        run: git submodule update --init tools/boostdep
+        working-directory: ../boost-root
+      - name: Copy files
+        run: cp -r $GITHUB_WORKSPACE/* libs/math
+        working-directory: ../boost-root
+      - name: Install deps
+        run: python tools/boostdep/depinst/depinst.py math -I example -I tools
+        working-directory: ../boost-root
+      - name: Bootstrap
+        run: ./bootstrap.sh
+        working-directory: ../boost-root
+      - name: Generate headers
+        run: ./b2 headers
+        working-directory: ../boost-root
+      - name: Config info install
+        run: ../../../b2 config_info_travis_install toolset=${{ matrix.toolset }} cxxstd=${{ matrix.standard }}
+        working-directory: ../boost-root/libs/config/test
+      - name: Config info
+        run: ./config_info_travis
+        working-directory: ../boost-root/libs/config/test
+      - name: Test
+        run: ../../../b2 toolset=${{ matrix.toolset }} cxxstd=${{ matrix.standard }} ${{ matrix.suite }} define=CI_SUPPRESS_KNOWN_ISSUES define=SLOW_COMPILER
+        working-directory: ../boost-root/libs/math/test
+  windows:
+    runs-on: windows-2019
+    defaults:
+      run:
+        shell: cmd
+    env:
+      ARGS: toolset=${{ matrix.toolset }} address-model=64 cxxstd=${{ matrix.standard }}
+      ARGSLATEST: toolset=${{ matrix.toolset }} address-model=64 cxxstd=latest
+    strategy:
+      fail-fast: false
+      matrix:
+        toolset: [ msvc-14.2 ]
+        standard: [ 14, 17 ]
+        suite: [ github_ci_block_1, github_ci_block_2 ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: Checkout main boost
+        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+      - name: Update tools/boostdep
+        run: git submodule update --init tools/boostdep
+        working-directory: ../boost-root
+      - name: Copy files
+        run: xcopy /s /e /q %GITHUB_WORKSPACE% libs\math
+        working-directory: ../boost-root
+      - name: Install deps
+        run: python tools/boostdep/depinst/depinst.py math -I example -I tools
+        working-directory: ../boost-root
+      - name: Bootstrap
+        run: bootstrap
+        working-directory: ../boost-root
+      - name: Generate headers
+        run: b2 headers
+        working-directory: ../boost-root
+      - name: Config info install
+        run: ..\..\..\b2 config_info_travis_install %ARGS%
+        working-directory: ../boost-root/libs/config/test
+      - name: Config info
+        run: config_info_travis
+        working-directory: ../boost-root/libs/config/test
+      - name: Test std-14 vc140 and std-14-17 vc142
+        if: ${{ matrix.toolset != 'msvc-14.0' || matrix.standard != '17' }}
+        run: ..\..\..\b2 --hash %ARGS% define=CI_SUPPRESS_KNOWN_ISSUES debug-symbols=off ${{ matrix.suite }} pch=off
+        working-directory: ../boost-root/libs/math/test
+      - name: Test std-latest vc140
+        if: ${{ matrix.toolset == 'msvc-14.0' && matrix.standard == '17' }}
+        run: ..\..\..\b2 --hash %ARGSLATEST% define=CI_SUPPRESS_KNOWN_ISSUES debug-symbols=off ${{ matrix.suite }} pch=off
+        working-directory: ../boost-root/libs/math/test
+  windows_gcc:
+    runs-on: windows-2019
+    defaults:
+      run:
+        shell: cmd
+    env:
+      ARGS: toolset=${{ matrix.toolset }} address-model=64 cxxstd=${{ matrix.standard }}
+    strategy:
+      fail-fast: false
+      matrix:
+        toolset: [ gcc ]
+        standard: [ 14, 17 ]
+        suite: [ github_ci_block_1, github_ci_block_2 ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: Checkout main boost
+        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+      - name: Update tools/boostdep
+        run: git submodule update --init tools/boostdep
+        working-directory: ../boost-root
+      - name: Copy files
+        run: xcopy /s /e /q %GITHUB_WORKSPACE% libs\math
+        working-directory: ../boost-root
+      - name: Install deps
+        run: python tools/boostdep/depinst/depinst.py math -I example -I tools
+        working-directory: ../boost-root
+      - name: Bootstrap
+        run: bootstrap
+        working-directory: ../boost-root
+      - name: Generate headers
+        run: b2 headers
+        working-directory: ../boost-root
+      - name: Config info install
+        run: ..\..\..\b2 config_info_travis_install %ARGS%
+        working-directory: ../boost-root/libs/config/test
+      - name: Config info
+        run: config_info_travis
+        working-directory: ../boost-root/libs/config/test
+      - name: Test
+        run: ..\..\..\b2 --hash %ARGS% define=CI_SUPPRESS_KNOWN_ISSUES ${{ matrix.suite }}
+        working-directory: ../boost-root/libs/math/test
+  MSVC2022:
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: cmd
+    env:
+      ARGS: address-model=64 cxxstd=${{ matrix.standard }}
+    strategy:
+      fail-fast: false
+      matrix:
+        toolset: [ msvc-14.3, clang-win ]
+        standard: [ 14, 17, latest ]
+        suite: [ github_ci_block_1, github_ci_block_2 ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: Checkout main boost
+        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+      - name: Update tools/boostdep
+        run: git submodule update --init tools/boostdep
+        working-directory: ../boost-root
+      - name: Copy files
+        run: xcopy /s /e /q %GITHUB_WORKSPACE% libs\math
+        working-directory: ../boost-root
+      - name: Install deps
+        run: python tools/boostdep/depinst/depinst.py math -I example -I tools
+        working-directory: ../boost-root
+      - name: Bootstrap
+        run: bootstrap
+        working-directory: ../boost-root
+      - name: Generate headers
+        run: b2 headers
+        working-directory: ../boost-root
+      - name: Config info install
+        run: ..\..\..\b2 config_info_travis_install %ARGS%
+        working-directory: ../boost-root/libs/config/test
+      - name: Config info
+        run: config_info_travis
+        working-directory: ../boost-root/libs/config/test
+      - name: Test
+        run: ..\..\..\b2 --hash %ARGS% define=CI_SUPPRESS_KNOWN_ISSUES ${{ matrix.suite }} pch=off
+        working-directory: ../boost-root/libs/math/test
+  cygwin:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ g++-11 ]
+        standard: [ c++17 ]
+        suite: [ github_ci_block_1, github_ci_block_2 ]
+    env:
+      TOOLSET: gcc
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: Install Cygwin
+        run: choco install -y cygwin
+      - name: Install Package Manager
+        run: choco install -y cyg-get
+      - name: Install Packages
+        run: cyg-get git gcc-core gcc-g++ python39 libgmp-devel libmpfr-devel libfftw3-devel
+      - name: Checkout main boost
+        run: C:\\tools\\cygwin\\bin\\bash -l -c 'cd $(cygpath -u "$GITHUB_WORKSPACE") && git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root'
+      - name: Update tools/boostdep
+        run: C:\\tools\\cygwin\\bin\\bash -l -c 'cd $(cygpath -u "$GITHUB_WORKSPACE")/../boost-root && git submodule update --init tools/boostdep'
+      - name: Copy files
+        run: C:\\tools\\cygwin\\bin\\bash -l -c 'cd $(cygpath -u "$GITHUB_WORKSPACE") && cp -r * ../boost-root/libs/math'
+      - name: Install deps
+        run: C:\\tools\\cygwin\\bin\\bash -l -c 'cd $(cygpath -u "$GITHUB_WORKSPACE")/../boost-root && python tools/boostdep/depinst/depinst.py math -I example -I tools'
+      - name: Bootstrap
+        run: C:\\tools\\cygwin\\bin\\bash -l -c 'cd $(cygpath -u "$GITHUB_WORKSPACE")/../boost-root && ./bootstrap.sh'
+      - name: Generate headers
+        run: C:\\tools\\cygwin\\bin\\bash -l -c 'cd $(cygpath -u "$GITHUB_WORKSPACE")/../boost-root && ./b2 headers'
+      - name: Config info install
+        run: C:\\tools\\cygwin\\bin\\bash -l -c 'cd $(cygpath -u "$GITHUB_WORKSPACE")/../boost-root/libs/config/test && ../../../b2 config_info_travis_install toolset=$TOOLSET'
+      - name: Config info
+        run: C:\\tools\\cygwin\\bin\\bash -l -c 'cd $(cygpath -u "$GITHUB_WORKSPACE")/../boost-root/libs/config/test && ./config_info_travis'
+      - name: Test
+        run: C:\\tools\\cygwin\\bin\\bash -l -c 'cd $(cygpath -u "$GITHUB_WORKSPACE")/../boost-root/libs/math/test && ../../../b2 toolset=$TOOLSET ${{ matrix.suite }} define=CI_SUPPRESS_KNOWN_ISSUES define=SLOW_COMPILER'
+  standalone-compile-tests-gcc:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ g++-10 ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: Add repository
+        continue-on-error: true
+        id: addrepo
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Retry Add Repo
+        continue-on-error: true
+        id: retry1
+        if: steps.addrepo.outcome=='failure'
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Retry Add Repo 2
+        continue-on-error: true
+        id: retry2
+        if: steps.retry1.outcome=='failure'
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Install packages
+        run: sudo apt-get install -y g++-10 libgmp-dev libmpfr-dev libfftw3-dev
+      - name: Checkout main boost
+        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+      - name: Update tools/boostdep
+        run: git submodule update --init tools/boostdep
+        working-directory: ../boost-root
+      - name: Copy files
+        run: cp -r $GITHUB_WORKSPACE/* libs/math
+        working-directory: ../boost-root
+      - name: Run CMake
+        run: cmake -DBUILD_TESTING=1 -DCMAKE_CXX_COMPILER=g++-10 .
+        working-directory: ../boost-root/libs/math
+      - name: Run Compile Tests
+        run: make -j$((`nproc`+1))
+        working-directory: ../boost-root/libs/math
+  standalone-compile-tests-clang:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ clang++-10 ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: Add repository
+        continue-on-error: true
+        id: addrepo
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Retry Add Repo
+        continue-on-error: true
+        id: retry1
+        if: steps.addrepo.outcome=='failure'
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Retry Add Repo 2
+        continue-on-error: true
+        id: retry2
+        if: steps.retry1.outcome=='failure'
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Install packages
+        run: sudo apt-get install -y clang-10 libgmp-dev libmpfr-dev libfftw3-dev libtbb-dev
+      - name: Checkout main boost
+        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+      - name: Update tools/boostdep
+        run: git submodule update --init tools/boostdep
+        working-directory: ../boost-root
+      - name: Copy files
+        run: cp -r $GITHUB_WORKSPACE/* libs/math
+        working-directory: ../boost-root
+      - name: Run CMake
+        run: cmake -DBUILD_TESTING=1 -DCMAKE_CXX_COMPILER=clang++-10 .
+        working-directory: ../boost-root/libs/math
+      - name: Run Compile Tests
+        run: make -j$((`nproc`+1))
+        working-directory: ../boost-root/libs/math
+  standalone-gcc:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ g++-10 ]
+        standard: [ c++14, c++17, c++20 ]
+        suite: [ github_ci_block_1, github_ci_block_2 ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: Set TOOLSET
+        run: echo ${{ matrix.compiler }} | awk '/^g/ { print "TOOLSET=gcc" } /^clang/ { print "TOOLSET=clang" }' >> $GITHUB_ENV
+      - name: Add repository
+        continue-on-error: true
+        id: addrepo
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Retry Add Repo
+        continue-on-error: true
+        id: retry1
+        if: steps.addrepo.outcome=='failure'
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Retry Add Repo 2
+        continue-on-error: true
+        id: retry2
+        if: steps.retry1.outcome=='failure'
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Install packages
+        run: sudo apt-get install -y g++-10 libgmp-dev libmpfr-dev libfftw3-dev
+      - name: Checkout main boost
+        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+      - name: Update tools/boostdep
+        run: git submodule update --init tools/boostdep
+        working-directory: ../boost-root
+      - name: Copy files
+        run: cp -r $GITHUB_WORKSPACE/* libs/math
+        working-directory: ../boost-root
+      - name: Install deps
+        run: python tools/boostdep/depinst/depinst.py math -I example -I tools
+        working-directory: ../boost-root
+      - name: Bootstrap
+        run: ./bootstrap.sh
+        working-directory: ../boost-root
+      - name: Generate headers
+        run: ./b2 headers
+        working-directory: ../boost-root
+      - name: Generate user config
+        run: 'echo "using $TOOLSET : : ${{ matrix.compiler }} : <cxxflags>-std=${{ matrix.standard }} ;" > ~/user-config.jam'
+        working-directory: ../boost-root
+      - name: Config info install
+        run: ../../../b2 config_info_travis_install toolset=$TOOLSET
+        working-directory: ../boost-root/libs/config/test
+      - name: Config info
+        run: ./config_info_travis
+        working-directory: ../boost-root/libs/config/test
+      - name: Test
+        run: ../../../b2 toolset=$TOOLSET ${{ matrix.suite }} define=CI_SUPPRESS_KNOWN_ISSUES define=SLOW_COMPILER define=BOOST_MATH_STANDALONE define=BOOST_MP_STANDALONE
+        working-directory: ../boost-root/libs/math/test
+
+  posix-cmake-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install packages
+        if: matrix.install
+        run: sudo apt install ${{matrix.install}} libgmp-dev libmpfr-dev libfftw3-dev
+
+      - name: Setup Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          LIBRARY=${GITHUB_REPOSITORY#*/}
+          echo LIBRARY: $LIBRARY
+          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          mkdir -p libs/$LIBRARY
+          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+
+      - name: Configure
+        run: |
+          cd ../boost-root
+          mkdir __build__ && cd __build__
+          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_TESTING=ON ..
+
+      - name: Build tests
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target tests
+
+  sycl-cmake-test:
+    strategy:
+      fail-fast: false
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Intel Apt repository
+        timeout-minutes: 1
+        run: |
+          wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+          sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+          rm GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+          echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+          sudo apt-get update
+
+      - name: Install Intel oneAPI compilers
+        timeout-minutes: 5
+        run: sudo apt-get install intel-oneapi-compiler-fortran intel-oneapi-compiler-dpcpp-cpp
+
+      - name: Setup Intel oneAPI environment
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          printenv >> $GITHUB_ENV
+
+      - name: checkout project code
+        uses: actions/checkout@v4
+
+      - name: Install Packages
+        run: |
+          sudo apt-get install -y cmake make
+
+      - name: Setup Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          LIBRARY=${GITHUB_REPOSITORY#*/}
+          echo LIBRARY: $LIBRARY
+          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          mkdir -p libs/$LIBRARY
+          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+          git submodule update --init tools/boostdep
+          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+      - name: Configure
+        run: |
+          cd ../boost-root
+          mkdir __build__ && cd __build__
+          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_TESTING=ON -DBOOST_MATH_ENABLE_SYCL=ON ..
+      - name: Build tests
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target tests -j $(nproc)
+      - name: Run tests
+        run: |
+          cd ../boost-root/__build__
+          ctest --output-on-failure --no-tests=error
+  cuda-cmake-test:
+    strategy:
+      fail-fast: false
+
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: Jimver/cuda-toolkit@v0.2.16
+        id: cuda-toolkit
+        with:
+          cuda: '12.5.0'
+          method: 'network'
+          sub-packages: '["nvcc"]'
+
+      - name: Output CUDA information
+        run: |
+          echo "Installed cuda version is: ${{steps.cuda-toolkit.outputs.cuda}}"+
+          echo "Cuda install location: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
+          nvcc -V
+      - uses: actions/checkout@v4
+
+      - name: Install Packages
+        run: |
+          sudo apt-get install -y cmake make
+      - name: Setup Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          LIBRARY=${GITHUB_REPOSITORY#*/}
+          echo LIBRARY: $LIBRARY
+          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          mkdir -p libs/$LIBRARY
+          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+          git submodule update --init tools/boostdep
+          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+      - name: Configure
+        run: |
+          cd ../boost-root
+          mkdir __build__ && cd __build__
+          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_TESTING=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc -DBOOST_MATH_ENABLE_CUDA=1 -DCMAKE_CUDA_ARCHITECTURES=70 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-12.5 ..
+      - name: Build tests
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target tests -j $(nproc)
+      # Will leave this commented out for now. GHA does not install graphics cards by default
+      #- name: Run tests
+      #  run: |
+      #    cd ../boost-root/__build__
+      #    ctest --output-on-failure --no-tests=error
+  nvrtc-cmake-test:
+    strategy:
+      fail-fast: false
+
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: Jimver/cuda-toolkit@v0.2.16
+        id: cuda-toolkit
+        with:
+          cuda: '12.5.0'
+          method: 'network'
+
+      - name: Output CUDA information
+        run: |
+          echo "Installed cuda version is: ${{steps.cuda-toolkit.outputs.cuda}}"+
+          echo "Cuda install location: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
+          nvcc -V
+      - uses: actions/checkout@v4
+
+      - name: Install Packages
+        run: |
+          sudo apt-get install -y cmake make
+      - name: Setup Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          LIBRARY=${GITHUB_REPOSITORY#*/}
+          echo LIBRARY: $LIBRARY
+          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          mkdir -p libs/$LIBRARY
+          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+          git submodule update --init tools/boostdep
+          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+      - name: Configure
+        run: |
+          cd ../boost-root
+          mkdir __build__ && cd __build__
+          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_TESTING=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc -DBOOST_MATH_ENABLE_NVRTC=1 -DCMAKE_CUDA_ARCHITECTURES=70 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-12.5 -DBOOST_MATH_NVRTC_CI_RUN=1 ..
+          pwd
+      - name: Build tests
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target tests -j $(nproc)
+      # We don't have the ability for runtime right now
+      #- name: Run tests
+      #  run: |
+      #    cd ../boost-root/__build__
+      #    ctest --output-on-failure --no-tests=error

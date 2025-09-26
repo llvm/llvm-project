@@ -1,0 +1,39 @@
+# Copyright ohn Maddock 2012
+# Distributed under the Boost Software License, Version 1.0. 
+# (See accompanying file LICENSE_1_0.txt or copy at 
+# http://www.boost.org/LICENSE_1_0.txt.
+
+import pch ;
+
+project  
+    : requirements 
+      <toolset>acc:<cxxflags>+W2068,2461,2236,4070,4069
+      <toolset>intel-win:<cxxflags>-nologo 
+      <toolset>intel-win:<linkflags>-nologo 
+      #<toolset>intel-linux:<pch>off
+      <toolset>intel-darwin:<pch>off
+      <toolset>msvc:<warnings>all
+      <toolset>msvc:<asynch-exceptions>on
+      <toolset>msvc:<cxxflags>/wd4996
+      <toolset>msvc:<cxxflags>/wd4511 # copy constructor could not be generated 
+      <toolset>msvc:<cxxflags>/wd4512 
+      <toolset>msvc:<cxxflags>/wd4610 
+      <toolset>msvc:<cxxflags>/wd4510 
+      <toolset>msvc:<cxxflags>/wd4127 
+      <toolset>msvc:<cxxflags>/wd4701 # needed for lexical cast - temporary.
+      <toolset>msvc:<cxxflags>/wd4189 # local variable is initialized but not referenced
+      <toolset>msvc-7.1:<pch>off
+      <toolset>borland:<runtime-link>static
+      <include>../../../..
+      # For simplicities sake, make everything a static lib:
+      <link>static
+      <define>BOOST_ALL_NO_LIB=1
+      <include>.
+    ;
+    
+cpp-pch pch : pch.hpp ;
+
+path-constant here : . ;
+
+lib test_instances : [ GLOB $(here) : *.cpp ] pch 
+                   : <link>static ;

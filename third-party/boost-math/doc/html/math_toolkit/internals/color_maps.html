@@ -1,0 +1,174 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Color Maps</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../internals.html" title="Internal tools">
+<link rel="prev" href="test_data.html" title="Graphing, Profiling, and Generating Test Data for Special Functions">
+<link rel="next" href="../../using_udt.html" title="Chapter 21. Use with User-Defined Floating-Point Types - Boost.Multiprecision and others">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="test_data.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../internals.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../../using_udt.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.internals.color_maps"></a><a class="link" href="color_maps.html" title="Color Maps">Color Maps</a>
+</h3></div></div></div>
+<h5>
+<a name="math_toolkit.internals.color_maps.h0"></a>
+        <span class="phrase"><a name="math_toolkit.internals.color_maps.synopsis"></a></span><a class="link" href="color_maps.html#math_toolkit.internals.color_maps.synopsis">Synopsis</a>
+      </h5>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">tools</span><span class="special">/</span><span class="identifier">color_maps</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span> <span class="special">{</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="number">3</span><span class="special">&gt;</span> <span class="identifier">viridis</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="number">3</span><span class="special">&gt;</span> <span class="identifier">plasma</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="number">3</span><span class="special">&gt;</span> <span class="identifier">black_body</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="number">3</span><span class="special">&gt;</span> <span class="identifier">inferno</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="number">3</span><span class="special">&gt;</span> <span class="identifier">smooth_cool_warm</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="number">3</span><span class="special">&gt;</span> <span class="identifier">kindlmann</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="number">3</span><span class="special">&gt;</span> <span class="identifier">extended_kindlmann</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">uint8_t</span><span class="special">,</span> <span class="number">4</span><span class="special">&gt;</span> <span class="identifier">to_8bit_rgba</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="number">3</span><span class="special">&gt;</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">color</span><span class="special">);</span>
+
+<span class="special">}</span> <span class="comment">// namespaces</span>
+</pre>
+<h5>
+<a name="math_toolkit.internals.color_maps.h1"></a>
+        <span class="phrase"><a name="math_toolkit.internals.color_maps.description"></a></span><a class="link" href="color_maps.html#math_toolkit.internals.color_maps.description">Description</a>
+      </h5>
+<p>
+        Abstractly, a color map is any function which maps [0, 1] -&gt; [0, 1]^3.
+        As stated, this definition is too broad to be useful, so in Boost, we restrict
+        our attention to the subset of color maps which are useful for the understanding
+        of scientific data. <a href="https://www.kennethmoreland.com/color-advice/BadColorMaps.pdf" target="_top">Much
+        research</a> has demonstrated that color maps differ wildly in their
+        usefulness for interpreting quantitative data; see <a href="https://www.kennethmoreland.com/color-advice/" target="_top">here</a>
+        for details. In addition, different color maps are useful in different contexts.
+        For example, the <code class="computeroutput"><span class="identifier">smooth_cool_warm</span></code>
+        color map is useful for examining surfaces embedded in 3-space which have
+        scalar fields defined on them, whereas the <code class="computeroutput"><span class="identifier">inferno</span></code>
+        color map is better for understanding 2D data.
+      </p>
+<p>
+        Despite the fact that a color map, per our definition, has a domain of [0,
+        1], we nonetheless do not throw an exception if the value provided falls
+        outside this range. This is for two reasons: First, visualizations are themselves
+        amazing debuggers, and if we threw an exception the calculation would not
+        complete and visual debugging would be inaccessible. Second, often small
+        changes in floating point rounding cause the value provided to be only slightly
+        below zero, or just slightly above 1. Hence, we make a call to <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">clamp</span></code>
+        before interpolating into the color table.
+      </p>
+<p>
+        For an example of how to use these facilites please refer to <a href="../../../../example/color_maps_example.cpp" target="_top"><code class="computeroutput"><span class="identifier">example</span><span class="special">/</span><span class="identifier">color_maps_example</span><span class="special">.</span><span class="identifier">cpp</span></code></a> and <a href="../../../../example/color_maps_sf_example.cpp" target="_top"><code class="computeroutput"><span class="identifier">example</span><span class="special">/</span><span class="identifier">color_maps_sf_example</span><span class="special">.</span><span class="identifier">cpp</span></code></a> Note: To compile the examples
+        directly you will need to have <a href="https://github.com/lvandeve/lodepng" target="_top">lodepng</a>.
+        An example of the viridis color map using <a href="https://en.wikipedia.org/wiki/Newton_fractal" target="_top">the
+        newton fractal</a> is shown below:
+      </p>
+<p>
+        <span class="inlinemediaobject"><img src="../../../images/viridis_newton_fractal.png"></span>
+      </p>
+<p>
+        An example from <a href="../../../../example/color_maps_example.cpp" target="_top"><code class="computeroutput"><span class="identifier">example</span><span class="special">/</span><span class="identifier">color_maps_example</span><span class="special">.</span><span class="identifier">cpp</span></code></a> plots <sub>1</sub>F<sub>1</sub> on a logarithmic scale:
+      </p>
+<p>
+        <span class="inlinemediaobject"><img src="../../../images/extended_kindlmann_1F1.png"></span>
+      </p>
+<p>
+        Swatches of each are listed below:
+      </p>
+<p>
+        <span class="inlinemediaobject"><img src="../../../images/smooth_cool_warm_swatch.png"></span>
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+            Smooth cool warm*
+          </li></ul></div>
+<p>
+        <span class="inlinemediaobject"><img src="../../../images/viridis_swatch.png"></span>
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+            Viridis*
+          </li></ul></div>
+<p>
+        <span class="inlinemediaobject"><img src="../../../images/plasma_swatch.png"></span>
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+            Plasma*
+          </li></ul></div>
+<p>
+        <span class="inlinemediaobject"><img src="../../../images/black_body_swatch.png"></span>
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+            Black body*
+          </li></ul></div>
+<p>
+        <span class="inlinemediaobject"><img src="../../../images/inferno_swatch.png"></span>
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+            Inferno*
+          </li></ul></div>
+<p>
+        <span class="inlinemediaobject"><img src="../../../images/kindlmann_swatch.png"></span>
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+            Kindlmann*
+          </li></ul></div>
+<p>
+        <span class="inlinemediaobject"><img src="../../../images/extended_kindlmann_swatch.png"></span>
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+            Extended Kindlmann*
+          </li></ul></div>
+<h5>
+<a name="math_toolkit.internals.color_maps.h2"></a>
+        <span class="phrase"><a name="math_toolkit.internals.color_maps.references"></a></span><a class="link" href="color_maps.html#math_toolkit.internals.color_maps.references">References</a>
+      </h5>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+            Ken Moreland. <span class="emphasis"><em>Why We Use Bad Color Maps and What You Can Do
+            About it</em></span> .
+          </li></ul></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="test_data.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../internals.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../../using_udt.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

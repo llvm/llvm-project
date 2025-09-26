@@ -1,0 +1,421 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Geometric Distribution Examples</title>
+<link rel="stylesheet" href="../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../weg.html" title="Worked Examples">
+<link rel="prev" href="binom_eg/binom_size_eg.html" title="Estimating Sample Sizes for a Binomial Distribution.">
+<link rel="next" href="neg_binom_eg.html" title="Negative Binomial Distribution Examples">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="binom_eg/binom_size_eg.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../weg.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="neg_binom_eg.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="math_toolkit.stat_tut.weg.geometric_eg"></a><a class="link" href="geometric_eg.html" title="Geometric Distribution Examples">Geometric Distribution
+        Examples</a>
+</h4></div></div></div>
+<p>
+          For this example, we will opt to #define two macros to control the error
+          and discrete handling policies. For this simple example, we want to avoid
+          throwing an exception (the default policy) and just return infinity. We
+          want to treat the distribution as if it was continuous, so we choose a
+          discrete_quantile policy of real, rather than the default policy integer_round_outwards.
+        </p>
+<pre class="programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_OVERFLOW_ERROR_POLICY</span> <span class="identifier">ignore_error</span>
+<span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_DISCRETE_QUANTILE_POLICY</span> <span class="identifier">real</span>
+</pre>
+<div class="caution"><table border="0" summary="Caution">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="../../../../../../../doc/src/images/caution.png"></td>
+<th align="left">Caution</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+            It is vital to #include distributions etc <span class="bold"><strong>after</strong></span>
+            the above #defines
+          </p></td></tr>
+</table></div>
+<p>
+          After that we need some includes to provide easy access to the negative
+          binomial distribution, and we need some std library iostream, of course.
+        </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">geometric</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+  <span class="comment">// for geometric_distribution</span>
+  <span class="keyword">using</span> <span class="special">::</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">geometric_distribution</span><span class="special">;</span> <span class="comment">//</span>
+  <span class="keyword">using</span> <span class="special">::</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">geometric</span><span class="special">;</span> <span class="comment">// typedef provides default type is double.</span>
+  <span class="keyword">using</span>  <span class="special">::</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">pdf</span><span class="special">;</span> <span class="comment">// Probability mass function.</span>
+  <span class="keyword">using</span>  <span class="special">::</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cdf</span><span class="special">;</span> <span class="comment">// Cumulative density function.</span>
+  <span class="keyword">using</span>  <span class="special">::</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">quantile</span><span class="special">;</span>
+
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">negative_binomial</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+  <span class="comment">// for negative_binomial_distribution</span>
+  <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">negative_binomial</span><span class="special">;</span> <span class="comment">// typedef provides default type is double.</span>
+
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">normal</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+  <span class="comment">// for negative_binomial_distribution</span>
+  <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">normal</span><span class="special">;</span> <span class="comment">// typedef provides default type is double.</span>
+
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+  <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">;</span> <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+  <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">noshowpoint</span><span class="special">;</span> <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">fixed</span><span class="special">;</span> <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span><span class="special">;</span> <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">left</span><span class="special">;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iomanip</span><span class="special">&gt;</span>
+  <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setprecision</span><span class="special">;</span> <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">;</span>
+
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">limits</span><span class="special">&gt;</span>
+  <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">;</span>
+</pre>
+<p>
+          It is always sensible to use try and catch blocks because defaults policies
+          are to throw an exception if anything goes wrong.
+        </p>
+<p>
+          Simple try'n'catch blocks (see below) will ensure that you get a helpful
+          error message instead of an abrupt (and silent) program abort.
+        </p>
+<h5>
+<a name="math_toolkit.stat_tut.weg.geometric_eg.h0"></a>
+          <span class="phrase"><a name="math_toolkit.stat_tut.weg.geometric_eg.throwing_a_dice"></a></span><a class="link" href="geometric_eg.html#math_toolkit.stat_tut.weg.geometric_eg.throwing_a_dice">Throwing
+          a dice</a>
+        </h5>
+<p>
+          The Geometric distribution describes the probability (<span class="emphasis"><em>p</em></span>)
+          of a number of failures to get the first success in <span class="emphasis"><em>k</em></span>
+          Bernoulli trials. (A <a href="http://en.wikipedia.org/wiki/Bernoulli_distribution" target="_top">Bernoulli
+          trial</a> is one with only two possible outcomes, success of failure,
+          and <span class="emphasis"><em>p</em></span> is the probability of success).
+        </p>
+<p>
+          Suppose an 'fair' 6-face dice is thrown repeatedly:
+        </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">success_fraction</span> <span class="special">=</span> <span class="number">1.</span><span class="special">/</span><span class="number">6</span><span class="special">;</span> <span class="comment">// success_fraction (p) = 0.1666</span>
+<span class="comment">// (so failure_fraction is 1 - success_fraction = 5./6 = 1- 0.1666 = 0.8333)</span>
+</pre>
+<p>
+          If the dice is thrown repeatedly until the <span class="bold"><strong>first</strong></span>
+          time a <span class="emphasis"><em>three</em></span> appears. The probability distribution
+          of the number of times it is thrown <span class="bold"><strong>not</strong></span>
+          getting a <span class="emphasis"><em>three</em></span> (<span class="emphasis"><em>not-a-threes</em></span>
+          number of failures to get a <span class="emphasis"><em>three</em></span>) is a geometric
+          distribution with the success_fraction = 1/6 = 0.1666 ̇.
+        </p>
+<p>
+          We therefore start by constructing a geometric distribution with the one
+          parameter success_fraction, the probability of success.
+        </p>
+<pre class="programlisting"><span class="identifier">geometric</span> <span class="identifier">g6</span><span class="special">(</span><span class="identifier">success_fraction</span><span class="special">);</span> <span class="comment">// type double by default.</span>
+</pre>
+<p>
+          To confirm, we can echo the success_fraction parameter of the distribution.
+        </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"success fraction of a six-sided dice is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">g6</span><span class="special">.</span><span class="identifier">success_fraction</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+          So the probability of getting a three at the first throw (zero failures)
+          is
+        </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">g6</span><span class="special">,</span> <span class="number">0</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.1667</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">g6</span><span class="special">,</span> <span class="number">0</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.1667</span>
+</pre>
+<p>
+          Note that the cdf and pdf are identical because the is only one throw.
+          If we want the probability of getting the first <span class="emphasis"><em>three</em></span>
+          on the 2nd throw:
+        </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">g6</span><span class="special">,</span> <span class="number">1</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.1389</span>
+</pre>
+<p>
+          If we want the probability of getting the first <span class="emphasis"><em>three</em></span>
+          on the 1st or 2nd throw (allowing one failure):
+        </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"pdf(g6, 0) + pdf(g6, 1) = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">g6</span><span class="special">,</span> <span class="number">0</span><span class="special">)</span> <span class="special">+</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">g6</span><span class="special">,</span> <span class="number">1</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+          Or more conveniently, and more generally, we can use the Cumulative Distribution
+          Function CDF.
+        </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"cdf(g6, 1) = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">g6</span><span class="special">,</span> <span class="number">1</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.3056</span>
+</pre>
+<p>
+          If we allow many more (12) throws, the probability of getting our <span class="emphasis"><em>three</em></span>
+          gets very high:
+        </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"cdf(g6, 12) = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">g6</span><span class="special">,</span> <span class="number">12</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.9065 or 90% probability.</span>
+</pre>
+<p>
+          If we want to be much more confident, say 99%, we can estimate the number
+          of throws to be this sure using the inverse or quantile.
+        </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"quantile(g6, 0.99) = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">g6</span><span class="special">,</span> <span class="number">0.99</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 24.26</span>
+</pre>
+<p>
+          Note that the value returned is not an integer: if you want an integer
+          result you should use either floor, round or ceil functions, or use the
+          policies mechanism.
+        </p>
+<p>
+          See <a class="link" href="../../pol_tutorial/understand_dis_quant.html" title="Understanding Quantiles of Discrete Distributions">understanding
+          discrete quantiles</a>.
+        </p>
+<p>
+          The geometric distribution is related to the negative binomial    <code class="computeroutput"><span class="identifier">negative_binomial_distribution</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">r</span><span class="special">,</span> <span class="identifier">RealType</span>
+          <span class="identifier">p</span><span class="special">);</span></code>
+          with parameter <span class="emphasis"><em>r</em></span> = 1. So we could get the same result
+          using the negative binomial, but using the geometric the results will be
+          faster, and may be more accurate.
+        </p>
+<pre class="programlisting"><span class="identifier">negative_binomial</span> <span class="identifier">nb</span><span class="special">(</span><span class="number">1</span><span class="special">,</span> <span class="identifier">success_fraction</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">nb</span><span class="special">,</span> <span class="number">1</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.1389</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">nb</span><span class="special">,</span> <span class="number">1</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.3056</span>
+</pre>
+<p>
+          We could also the complement to express the required probability as 1 -
+          0.99 = 0.01 (and get the same result):
+        </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"quantile(complement(g6, 1 - p))  "</span> <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">g6</span><span class="special">,</span> <span class="number">0.01</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 24.26</span>
+</pre>
+<p>
+          Note too that Boost.Math geometric distribution is implemented as a continuous
+          function. Unlike other implementations (for example R) it <span class="bold"><strong>uses</strong></span>
+          the number of failures as a <span class="bold"><strong>real</strong></span> parameter,
+          not as an integer. If you want this integer behaviour, you may need to
+          enforce this by rounding the parameter you pass, probably rounding down,
+          to the nearest integer. For example, R returns the success fraction probability
+          for all values of failures from 0 to 0.999999 thus:
+        </p>
+<pre class="programlisting">   R&gt; formatC(pgeom(0.0001,0.5, FALSE), digits=17) "               0.5"
+</pre>
+<p>
+          So in Boost.Math the equivalent is
+        </p>
+<pre class="programlisting">    <span class="identifier">geometric</span> <span class="identifier">g05</span><span class="special">(</span><span class="number">0.5</span><span class="special">);</span>  <span class="comment">// Probability of success = 0.5 or 50%</span>
+    <span class="comment">// Output all potentially significant digits for the type, here double.</span>
+
+<span class="preprocessor">#ifdef</span> <span class="identifier">BOOST_NO_CXX11_NUMERIC_LIMITS</span>
+  <span class="keyword">int</span> <span class="identifier">max_digits10</span> <span class="special">=</span> <span class="number">2</span> <span class="special">+</span> <span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">digits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">policy</span><span class="special">&lt;&gt;</span> <span class="special">&gt;()</span> <span class="special">*</span> <span class="number">30103UL</span><span class="special">)</span> <span class="special">/</span> <span class="number">100000UL</span><span class="special">;</span>
+  <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"BOOST_NO_CXX11_NUMERIC_LIMITS is defined"</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="preprocessor">#else</span>
+  <span class="keyword">int</span> <span class="identifier">max_digits10</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span><span class="special">;</span>
+<span class="preprocessor">#endif</span>
+  <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Show all potentially significant decimal digits std::numeric_limits&lt;double&gt;::max_digits10 = "</span>
+    <span class="special">&lt;&lt;</span> <span class="identifier">max_digits10</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+  <span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">max_digits10</span><span class="special">);</span> <span class="comment">//</span>
+
+    <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">g05</span><span class="special">,</span> <span class="number">0.0001</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// returns 0.5000346561579232, not exact 0.5.</span>
+</pre>
+<p>
+          To get the R discrete behaviour, you simply need to round with, for example,
+          the <code class="computeroutput"><span class="identifier">floor</span></code> function.
+        </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">g05</span><span class="special">,</span> <span class="identifier">floor</span><span class="special">(</span><span class="number">0.0001</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// returns exactly 0.5</span>
+</pre>
+<pre class="programlisting"><code class="computeroutput"><span class="special">&gt;</span> <span class="identifier">formatC</span><span class="special">(</span><span class="identifier">pgeom</span><span class="special">(</span><span class="number">0.9999999</span><span class="special">,</span><span class="number">0.5</span><span class="special">,</span> <span class="identifier">FALSE</span><span class="special">),</span> <span class="identifier">digits</span><span class="special">=</span><span class="number">17</span><span class="special">)</span> <span class="special">[</span><span class="number">1</span><span class="special">]</span> <span class="string">"              0.25"</span></code>
+<code class="computeroutput"><span class="special">&gt;</span> <span class="identifier">formatC</span><span class="special">(</span><span class="identifier">pgeom</span><span class="special">(</span><span class="number">1.999999</span><span class="special">,</span><span class="number">0.5</span><span class="special">,</span> <span class="identifier">FALSE</span><span class="special">),</span> <span class="identifier">digits</span><span class="special">=</span><span class="number">17</span><span class="special">)[</span><span class="number">1</span><span class="special">]</span> <span class="string">"              0.25"</span> <span class="identifier">k</span> <span class="special">=</span> <span class="number">1</span></code>
+<code class="computeroutput"><span class="special">&gt;</span> <span class="identifier">formatC</span><span class="special">(</span><span class="identifier">pgeom</span><span class="special">(</span><span class="number">1.9999999</span><span class="special">,</span><span class="number">0.5</span><span class="special">,</span> <span class="identifier">FALSE</span><span class="special">),</span> <span class="identifier">digits</span><span class="special">=</span><span class="number">17</span><span class="special">)[</span><span class="number">1</span><span class="special">]</span> <span class="string">"0.12500000000000003"</span> <span class="identifier">k</span> <span class="special">=</span> <span class="number">2</span></code>
+</pre>
+<p>
+          shows that R makes an arbitrary round-up decision at about 1e7 from the
+          next integer above. This may be convenient in practice, and could be replicated
+          in C++ if desired.
+        </p>
+<h5>
+<a name="math_toolkit.stat_tut.weg.geometric_eg.h1"></a>
+          <span class="phrase"><a name="math_toolkit.stat_tut.weg.geometric_eg.surveying_customers_to_find_one_"></a></span><a class="link" href="geometric_eg.html#math_toolkit.stat_tut.weg.geometric_eg.surveying_customers_to_find_one_">Surveying
+          customers to find one with a faulty product</a>
+        </h5>
+<p>
+          A company knows from warranty claims that 2% of their products will be
+          faulty, so the 'success_fraction' of finding a fault is 0.02. It wants
+          to interview a purchaser of faulty products to assess their 'user experience'.
+        </p>
+<p>
+          To estimate how many customers they will probably need to contact in order
+          to find one who has suffered from the fault, we first construct a geometric
+          distribution with probability 0.02, and then chose a confidence, say 80%,
+          95%, or 99% to finding a customer with a fault. Finally, we probably want
+          to round up the result to the integer above using the <code class="computeroutput"><span class="identifier">ceil</span></code>
+          function. (We could also use a policy, but that is hardly worthwhile for
+          this simple application.)
+        </p>
+<p>
+          (This also assumes that each customer only buys one product: if customers
+          bought more than one item, the probability of finding a customer with a
+          fault obviously improves.)
+        </p>
+<pre class="programlisting"><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="number">5</span><span class="special">);</span>
+<span class="identifier">geometric</span> <span class="identifier">g</span><span class="special">(</span><span class="number">0.02</span><span class="special">);</span> <span class="comment">// On average, 2 in 100 products are faulty.</span>
+<span class="keyword">double</span> <span class="identifier">c</span> <span class="special">=</span> <span class="number">0.95</span><span class="special">;</span> <span class="comment">// 95% confidence.</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">" quantile(g, "</span> <span class="special">&lt;&lt;</span> <span class="identifier">c</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">g</span><span class="special">,</span> <span class="identifier">c</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"To be "</span> <span class="special">&lt;&lt;</span> <span class="identifier">c</span> <span class="special">*</span> <span class="number">100</span>
+  <span class="special">&lt;&lt;</span> <span class="string">"% confident of finding we customer with a fault, need to survey "</span>
+  <span class="special">&lt;&lt;</span>  <span class="identifier">ceil</span><span class="special">(</span><span class="identifier">quantile</span><span class="special">(</span><span class="identifier">g</span><span class="special">,</span> <span class="identifier">c</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="string">" customers."</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 148</span>
+<span class="identifier">c</span> <span class="special">=</span> <span class="number">0.99</span><span class="special">;</span> <span class="comment">// Very confident.</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"To be "</span> <span class="special">&lt;&lt;</span> <span class="identifier">c</span> <span class="special">*</span> <span class="number">100</span>
+  <span class="special">&lt;&lt;</span> <span class="string">"% confident of finding we customer with a fault, need to survey "</span>
+  <span class="special">&lt;&lt;</span>  <span class="identifier">ceil</span><span class="special">(</span><span class="identifier">quantile</span><span class="special">(</span><span class="identifier">g</span><span class="special">,</span> <span class="identifier">c</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="string">" customers."</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 227</span>
+<span class="identifier">c</span> <span class="special">=</span> <span class="number">0.80</span><span class="special">;</span> <span class="comment">// Only reasonably confident.</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"To be "</span> <span class="special">&lt;&lt;</span> <span class="identifier">c</span> <span class="special">*</span> <span class="number">100</span>
+  <span class="special">&lt;&lt;</span> <span class="string">"% confident of finding we customer with a fault, need to survey "</span>
+  <span class="special">&lt;&lt;</span>  <span class="identifier">ceil</span><span class="special">(</span><span class="identifier">quantile</span><span class="special">(</span><span class="identifier">g</span><span class="special">,</span> <span class="identifier">c</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="string">" customers."</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 79</span>
+</pre>
+<h5>
+<a name="math_toolkit.stat_tut.weg.geometric_eg.h2"></a>
+          <span class="phrase"><a name="math_toolkit.stat_tut.weg.geometric_eg.basket_ball_shooters"></a></span><a class="link" href="geometric_eg.html#math_toolkit.stat_tut.weg.geometric_eg.basket_ball_shooters">Basket
+          Ball Shooters</a>
+        </h5>
+<p>
+          According to Wikipedia, average pro basket ball players get <a href="http://en.wikipedia.org/wiki/Free_throw" target="_top">free
+          throws</a> in the baskets 70 to 80 % of the time, but some get as high
+          as 95%, and others as low as 50%. Suppose we want to compare the probabilities
+          of failing to get a score only on the first or on the fifth shot? To start
+          we will consider the average shooter, say 75%. So we construct a geometric
+          distribution with success_fraction parameter 75/100 = 0.75.
+        </p>
+<pre class="programlisting"><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="number">2</span><span class="special">);</span>
+<span class="identifier">geometric</span> <span class="identifier">gav</span><span class="special">(</span><span class="number">0.75</span><span class="special">);</span> <span class="comment">// Shooter averages 7.5 out of 10 in the basket.</span>
+</pre>
+<p>
+          What is probability of getting 1st try in the basket, that is with no failures?
+        </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of score on 1st try = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">gav</span><span class="special">,</span> <span class="number">0</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.75</span>
+</pre>
+<p>
+          This is, of course, the success_fraction probability 75%. What is the probability
+          that the shooter only scores on the fifth shot? So there are 5-1 = 4 failures
+          before the first success.
+        </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of score on 5th try = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">gav</span><span class="special">,</span> <span class="number">4</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.0029</span>
+</pre>
+<p>
+          Now compare this with the poor and the best players success fraction. We
+          need to constructing new distributions with the different success fractions,
+          and then get the corresponding probability density functions values:
+        </p>
+<pre class="programlisting"><span class="identifier">geometric</span> <span class="identifier">gbest</span><span class="special">(</span><span class="number">0.95</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of score on 5th try = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">gbest</span><span class="special">,</span> <span class="number">4</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 5.9e-6</span>
+<span class="identifier">geometric</span> <span class="identifier">gmediocre</span><span class="special">(</span><span class="number">0.50</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of score on 5th try = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">gmediocre</span><span class="special">,</span> <span class="number">4</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.031</span>
+</pre>
+<p>
+          So we can see the very much smaller chance (0.000006) of 4 failures by
+          the best shooters, compared to the 0.03 of the mediocre.
+        </p>
+<h5>
+<a name="math_toolkit.stat_tut.weg.geometric_eg.h3"></a>
+          <span class="phrase"><a name="math_toolkit.stat_tut.weg.geometric_eg.estimating_failures"></a></span><a class="link" href="geometric_eg.html#math_toolkit.stat_tut.weg.geometric_eg.estimating_failures">Estimating
+          failures</a>
+        </h5>
+<p>
+          Of course one man's failure is an other man's success. So a fault can be
+          defined as a 'success'.
+        </p>
+<p>
+          If a fault occurs once after 100 flights, then one might naively say that
+          the risk of fault is obviously 1 in 100 = 1/100, a probability of 0.01.
+        </p>
+<p>
+          This is the best estimate we can make, but while it is the truth, it is
+          not the whole truth, for it hides the big uncertainty when estimating from
+          a single event. "One swallow doesn't make a summer." To show
+          the magnitude of the uncertainty, the geometric (or the negative binomial)
+          distribution can be used.
+        </p>
+<p>
+          If we chose the popular 95% confidence in the limits, corresponding to
+          an alpha of 0.05, because we are calculating a two-sided interval, we must
+          divide alpha by two.
+        </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">alpha</span> <span class="special">=</span> <span class="number">0.05</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">k</span> <span class="special">=</span> <span class="number">100</span><span class="special">;</span> <span class="comment">// So frequency of occurrence is 1/100.</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability is failure is "</span> <span class="special">&lt;&lt;</span> <span class="number">1</span><span class="special">/</span><span class="identifier">k</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">t</span> <span class="special">=</span> <span class="identifier">geometric</span><span class="special">::</span><span class="identifier">find_lower_bound_on_p</span><span class="special">(</span><span class="identifier">k</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">/</span><span class="number">2</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"geometric::find_lower_bound_on_p("</span> <span class="special">&lt;&lt;</span> <span class="keyword">int</span><span class="special">(</span><span class="identifier">k</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span> <span class="special">&lt;&lt;</span> <span class="identifier">alpha</span><span class="special">/</span><span class="number">2</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">t</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.00025</span>
+<span class="identifier">t</span> <span class="special">=</span> <span class="identifier">geometric</span><span class="special">::</span><span class="identifier">find_upper_bound_on_p</span><span class="special">(</span><span class="identifier">k</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">/</span><span class="number">2</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"geometric::find_upper_bound_on_p("</span> <span class="special">&lt;&lt;</span> <span class="keyword">int</span><span class="special">(</span><span class="identifier">k</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span> <span class="special">&lt;&lt;</span> <span class="identifier">alpha</span><span class="special">/</span><span class="number">2</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">t</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.037</span>
+</pre>
+<p>
+          So while we estimate the probability is 0.01, it might lie between 0.0003
+          and 0.04. Even if we relax our confidence to alpha = 90%, the bounds only
+          contract to 0.0005 and 0.03. And if we require a high confidence, they
+          widen to 0.00005 to 0.05.
+        </p>
+<pre class="programlisting"><span class="identifier">alpha</span> <span class="special">=</span> <span class="number">0.1</span><span class="special">;</span> <span class="comment">// 90% confidence.</span>
+<span class="identifier">t</span> <span class="special">=</span> <span class="identifier">geometric</span><span class="special">::</span><span class="identifier">find_lower_bound_on_p</span><span class="special">(</span><span class="identifier">k</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">/</span><span class="number">2</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"geometric::find_lower_bound_on_p("</span> <span class="special">&lt;&lt;</span> <span class="keyword">int</span><span class="special">(</span><span class="identifier">k</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span> <span class="special">&lt;&lt;</span> <span class="identifier">alpha</span><span class="special">/</span><span class="number">2</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">t</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.0005</span>
+<span class="identifier">t</span> <span class="special">=</span> <span class="identifier">geometric</span><span class="special">::</span><span class="identifier">find_upper_bound_on_p</span><span class="special">(</span><span class="identifier">k</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">/</span><span class="number">2</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"geometric::find_upper_bound_on_p("</span> <span class="special">&lt;&lt;</span> <span class="keyword">int</span><span class="special">(</span><span class="identifier">k</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span> <span class="special">&lt;&lt;</span> <span class="identifier">alpha</span><span class="special">/</span><span class="number">2</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">t</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.03</span>
+
+<span class="identifier">alpha</span> <span class="special">=</span> <span class="number">0.01</span><span class="special">;</span> <span class="comment">// 99% confidence.</span>
+<span class="identifier">t</span> <span class="special">=</span> <span class="identifier">geometric</span><span class="special">::</span><span class="identifier">find_lower_bound_on_p</span><span class="special">(</span><span class="identifier">k</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">/</span><span class="number">2</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"geometric::find_lower_bound_on_p("</span> <span class="special">&lt;&lt;</span> <span class="keyword">int</span><span class="special">(</span><span class="identifier">k</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span> <span class="special">&lt;&lt;</span> <span class="identifier">alpha</span><span class="special">/</span><span class="number">2</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">t</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 5e-005</span>
+<span class="identifier">t</span> <span class="special">=</span> <span class="identifier">geometric</span><span class="special">::</span><span class="identifier">find_upper_bound_on_p</span><span class="special">(</span><span class="identifier">k</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">/</span><span class="number">2</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"geometric::find_upper_bound_on_p("</span> <span class="special">&lt;&lt;</span> <span class="keyword">int</span><span class="special">(</span><span class="identifier">k</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span> <span class="special">&lt;&lt;</span> <span class="identifier">alpha</span><span class="special">/</span><span class="number">2</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span>
+    <span class="special">&lt;&lt;</span> <span class="identifier">t</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0.052</span>
+</pre>
+<p>
+          In real life, there will usually be more than one event (fault or success),
+          when the negative binomial, which has the necessary extra parameter, will
+          be needed.
+        </p>
+<p>
+          As noted above, using a catch block is always a good idea, even if you
+          hope not to use it!
+        </p>
+<pre class="programlisting"><span class="special">}</span>
+<span class="keyword">catch</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">exception</span><span class="special">&amp;</span> <span class="identifier">e</span><span class="special">)</span>
+<span class="special">{</span> <span class="comment">// Since we have set an overflow policy of ignore_error,</span>
+  <span class="comment">// an overflow exception should never be thrown.</span>
+   <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"\nMessage from thrown exception was:\n "</span> <span class="special">&lt;&lt;</span> <span class="identifier">e</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+          For example, without a ignore domain error policy, if we asked for
+        </p>
+<pre class="programlisting"><span class="identifier">pdf</span><span class="special">(</span><span class="identifier">g</span><span class="special">,</span> <span class="special">-</span><span class="number">1</span><span class="special">)</span></pre>
+<p>
+          for example, we would get an unhelpful abort, but with a catch:
+        </p>
+<pre class="programlisting">Message from thrown exception was:
+ Error in function boost::math::pdf(const exponential_distribution&lt;double&gt;&amp;, double):
+ Number of failures argument is -1, but must be &gt;= 0 !
+</pre>
+<p>
+          See full source C++ of this example at <a href="../../../../../example/geometric_examples.cpp" target="_top">geometric_examples.cpp</a>
+        </p>
+<p>
+          <a class="link" href="neg_binom_eg/neg_binom_conf.html" title="Calculating Confidence Limits on the Frequency of Occurrence for the Negative Binomial Distribution">See
+          negative_binomial confidence interval example.</a>
+        </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="binom_eg/binom_size_eg.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../weg.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="neg_binom_eg.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>
