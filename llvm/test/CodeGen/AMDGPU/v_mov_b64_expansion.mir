@@ -100,5 +100,5 @@ body: |
 name: v_mov_b64_misalign
 body: |
   bb.0:
-    $vgpr5_vgpr6 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
+    $vgpr5_vgpr6 = V_MOV_B64_PSEUDO 0, implicit $exec
 ...

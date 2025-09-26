@@ -2146,7 +2146,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     Register DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
     Register DstHi = RI.getSubReg(Dst, AMDGPU::sub1);
 
-    MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
     auto *TRI = MRI.getTargetRegisterInfo();
     const MCInstrDesc &Mov64Desc = get(AMDGPU::V_MOV_B64_e32);
     const TargetRegisterClass *Mov64RC =
