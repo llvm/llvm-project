@@ -52,66 +52,66 @@ cl::opt<bool>
                       cl::desc("Infer counts from stale profile data."),
                       cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned> StaleMatchingMinMatchedBlock(
+cl::opt<unsigned> StaleMatchingMinMatchedBlock(
     "stale-matching-min-matched-block",
     cl::desc("Percentage threshold of matched basic blocks at which stale "
              "profile inference is executed."),
     cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned> StaleMatchingMaxFuncSize(
+cl::opt<unsigned> StaleMatchingMaxFuncSize(
     "stale-matching-max-func-size",
     cl::desc("The maximum size of a function to consider for inference."),
     cl::init(10000), cl::Hidden, cl::cat(BoltOptCategory));
 
 // Parameters of the profile inference algorithm. The default values are tuned
 // on several benchmarks.
-static cl::opt<bool> StaleMatchingEvenFlowDistribution(
+cl::opt<bool> StaleMatchingEvenFlowDistribution(
     "stale-matching-even-flow-distribution",
     cl::desc("Try to evenly distribute flow when there are multiple equally "
              "likely options."),
     cl::init(true), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-static cl::opt<bool> StaleMatchingRebalanceUnknown(
+cl::opt<bool> StaleMatchingRebalanceUnknown(
     "stale-matching-rebalance-unknown",
     cl::desc("Evenly re-distribute flow among unknown subgraphs."),
     cl::init(false), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-static cl::opt<bool> StaleMatchingJoinIslands(
+cl::opt<bool> StaleMatchingJoinIslands(
     "stale-matching-join-islands",
     cl::desc("Join isolated components having positive flow."), cl::init(true),
     cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned> StaleMatchingCostBlockInc(
+cl::opt<unsigned> StaleMatchingCostBlockInc(
     "stale-matching-cost-block-inc",
     cl::desc("The cost of increasing a block count by one."), cl::init(150),
     cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned> StaleMatchingCostBlockDec(
+cl::opt<unsigned> StaleMatchingCostBlockDec(
     "stale-matching-cost-block-dec",
     cl::desc("The cost of decreasing a block count by one."), cl::init(150),
     cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned> StaleMatchingCostJumpInc(
+cl::opt<unsigned> StaleMatchingCostJumpInc(
     "stale-matching-cost-jump-inc",
     cl::desc("The cost of increasing a jump count by one."), cl::init(150),
     cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned> StaleMatchingCostJumpDec(
+cl::opt<unsigned> StaleMatchingCostJumpDec(
     "stale-matching-cost-jump-dec",
     cl::desc("The cost of decreasing a jump count by one."), cl::init(150),
     cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned> StaleMatchingCostBlockUnknownInc(
+cl::opt<unsigned> StaleMatchingCostBlockUnknownInc(
     "stale-matching-cost-block-unknown-inc",
     cl::desc("The cost of increasing an unknown block count by one."),
     cl::init(1), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned> StaleMatchingCostJumpUnknownInc(
+cl::opt<unsigned> StaleMatchingCostJumpUnknownInc(
     "stale-matching-cost-jump-unknown-inc",
     cl::desc("The cost of increasing an unknown jump count by one."),
     cl::init(140), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned> StaleMatchingCostJumpUnknownFTInc(
+cl::opt<unsigned> StaleMatchingCostJumpUnknownFTInc(
     "stale-matching-cost-jump-unknown-ft-inc",
     cl::desc(
         "The cost of increasing an unknown fall-through jump count by one."),
