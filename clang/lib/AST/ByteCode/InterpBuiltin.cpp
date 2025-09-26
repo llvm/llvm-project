@@ -8,7 +8,6 @@
 #include "../ExprConstShared.h"
 #include "Boolean.h"
 #include "EvalEmitter.h"
-#include "Floating.h"
 #include "Interp.h"
 #include "InterpBuiltinBitCast.h"
 #include "PrimType.h"
@@ -20,7 +19,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SipHash.h"
-#include <cassert>
 
 namespace clang {
 namespace interp {
@@ -2744,100 +2742,56 @@ static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp_builtin_ia32ph_add_sub(InterpState &S, CodePtr OpPC,
-                                          const InterpFrame *Frame,
-                                          const CallExpr *Call,
-                                          uint32_t BuiltinID) {
+static bool interp_builtin_horizontal_int_binop(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
+  assert(Call->getNumArgs() == 2);
+ 
   assert(Call->getArg(0)->getType()->isVectorType() &&
          Call->getArg(1)->getType()->isVectorType());
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  assert(VT->getElementType()->isIntegralOrEnumerationType());
+  PrimType ElemT = *S.getContext().classify(VT->getElementType());
+  bool DestUnsigned = Call->getType()->isUnsignedIntegerOrEnumerationType();
+
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
-  PrimType ElemT = *S.getContext().classify(VT->getElementType());
   unsigned SourceLen = VT->getNumElements();
   assert(SourceLen % 2 == 0 &&
          Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements() ==
              SourceLen);
-  PrimType DstElemT = *S.getContext().classify(
-      Call->getType()->castAs<VectorType>()->getElementType());
   unsigned DstElem = 0;
 
-  bool IsAdd = (BuiltinID == clang::X86::BI__builtin_ia32_phaddw128 ||
-                BuiltinID == clang::X86::BI__builtin_ia32_phaddw256 ||
-                BuiltinID == clang::X86::BI__builtin_ia32_phaddd128 ||
-                BuiltinID == clang::X86::BI__builtin_ia32_phaddd256 ||
-                BuiltinID == clang::X86::BI__builtin_ia32_phaddsw128 ||
-                BuiltinID == clang::X86::BI__builtin_ia32_phaddsw256);
-
-  bool IsSaturating = (BuiltinID == clang::X86::BI__builtin_ia32_phaddsw128 ||
-                       BuiltinID == clang::X86::BI__builtin_ia32_phaddsw256 ||
-                       BuiltinID == clang::X86::BI__builtin_ia32_phsubsw128 ||
-                       BuiltinID == clang::X86::BI__builtin_ia32_phsubsw256);
-
   for (unsigned I = 0; I != SourceLen; I += 2) {
-    APSInt Elem1;
-    APSInt Elem2;
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      Elem1 = LHS.elem<T>(I).toAPSInt();
-      Elem2 = LHS.elem<T>(I + 1).toAPSInt();
+      APSInt Elem1 = LHS.elem<T>(I).toAPSInt();
+      APSInt Elem2 = LHS.elem<T>(I + 1).toAPSInt();
+      Dst.elem<T>(DstElem) =
+          static_cast<T>(APSInt(Fn(Elem1, Elem2), DestUnsigned));
     });
-    APSInt Result;
-    if (IsAdd) {
-      if (IsSaturating) {
-        Result =
-            APSInt(Elem1.sadd_sat(Elem2), /*IsUnsigned=*/Elem1.isUnsigned());
-      } else {
-        Result = APSInt(Elem1 + Elem2, /*IsUnsigned=*/Elem1.isUnsigned());
-      }
-    } else {
-      if (IsSaturating) {
-        Result =
-            APSInt(Elem1.ssub_sat(Elem2), /*IsUnsigned=*/Elem1.isUnsigned());
-      } else {
-        Result = APSInt(Elem1 - Elem2, /*IsUnsigned=*/Elem1.isUnsigned());
-      }
-    }
-    INT_TYPE_SWITCH_NO_BOOL(DstElemT,
-                            { Dst.elem<T>(DstElem) = static_cast<T>(Result); });
     ++DstElem;
   }
   for (unsigned I = 0; I != SourceLen; I += 2) {
-    APSInt Elem1;
-    APSInt Elem2;
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      Elem1 = RHS.elem<T>(I).toAPSInt();
-      Elem2 = RHS.elem<T>(I + 1).toAPSInt();
+      APSInt Elem1 = RHS.elem<T>(I).toAPSInt();
+      APSInt Elem2 = RHS.elem<T>(I + 1).toAPSInt();
+      Dst.elem<T>(DstElem) =
+          static_cast<T>(APSInt(Fn(Elem1, Elem2), DestUnsigned));
     });
-    APSInt Result;
-    if (IsAdd) {
-      if (IsSaturating) {
-        Result =
-            APSInt(Elem1.sadd_sat(Elem2), /*IsUnsigned=*/Elem1.isUnsigned());
-      } else {
-        Result = APSInt(Elem1 + Elem2, /*IsUnsigned=*/Elem1.isUnsigned());
-      }
-    } else {
-      if (IsSaturating) {
-        Result =
-            APSInt(Elem1.ssub_sat(Elem2), /*IsUnsigned=*/Elem1.isUnsigned());
-      } else {
-        Result = APSInt(Elem1 - Elem2, /*IsUnsigned=*/Elem1.isUnsigned());
-      }
-    }
-    INT_TYPE_SWITCH_NO_BOOL(DstElemT,
-                            { Dst.elem<T>(DstElem) = static_cast<T>(Result); });
     ++DstElem;
   }
   Dst.initializeAllElements();
   return true;
 }
 
-static bool interp_builtin_floatph_add_sub(InterpState &S, CodePtr OpPC,
-                                           const InterpFrame *Frame,
-                                           const CallExpr *Call,
-                                           uint32_t BuiltinID) {
+static bool interp_builtin_horizontal_fp_binop(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<APFloat(const APFloat &, const APFloat &,
+                               llvm::RoundingMode)>
+        Fn) {
+  assert(Call->getNumArgs() == 2);
   assert(Call->getArg(0)->getType()->isVectorType() &&
          Call->getArg(1)->getType()->isVectorType());
   const Pointer &RHS = S.Stk.pop<Pointer>();
@@ -2852,30 +2806,18 @@ static bool interp_builtin_floatph_add_sub(InterpState &S, CodePtr OpPC,
          Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements() ==
              SourceLen);
   unsigned DstElem = 0;
-  bool IsAdd = (BuiltinID == clang::X86::BI__builtin_ia32_haddpd ||
-                BuiltinID == clang::X86::BI__builtin_ia32_haddpd256 ||
-                BuiltinID == clang::X86::BI__builtin_ia32_haddps ||
-                BuiltinID == clang::X86::BI__builtin_ia32_haddps256);
-  using T = Floating;
   for (unsigned I = 0; I != SourceLen; I += 2) {
+    using T = PrimConv<PT_Float>::T;
     APFloat Elem1 = LHS.elem<T>(I).getAPFloat();
     APFloat Elem2 = LHS.elem<T>(I + 1).getAPFloat();
-    if (IsAdd) {
-      Elem1.add(Elem2, RM);
-    } else {
-      Elem1.subtract(Elem2, RM);
-    }
-    Dst.elem<T>(DstElem++) = Elem1;
+    Dst.elem<T>(DstElem++) =
+        static_cast<T>(APFloat(Fn(Elem1, Elem2, RM)));
   }
   for (unsigned I = 0; I != SourceLen; I += 2) {
+    using T = PrimConv<PT_Float>::T;
     APFloat Elem1 = RHS.elem<T>(I).getAPFloat();
     APFloat Elem2 = RHS.elem<T>(I + 1).getAPFloat();
-    if (IsAdd) {
-      Elem1.add(Elem2, RM);
-    } else {
-      Elem1.subtract(Elem2, RM);
-    }
-    Dst.elem<T>(DstElem++) = Elem1;
+    Dst.elem<T>(DstElem++) = static_cast<T>(APFloat(Fn(Elem1, Elem2, RM)));
   }
   Dst.initializeAllElements();
   return true;
@@ -3596,25 +3538,48 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_phaddw256:
   case clang::X86::BI__builtin_ia32_phaddd128:
   case clang::X86::BI__builtin_ia32_phaddd256:
+    return interp_builtin_horizontal_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {return LHS + RHS;});
   case clang::X86::BI__builtin_ia32_phaddsw128:
   case clang::X86::BI__builtin_ia32_phaddsw256:
+    return interp_builtin_horizontal_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          return LHS.isSigned() ? LHS.sadd_sat(RHS) : LHS.uadd_sat(RHS);
+        });
   case clang::X86::BI__builtin_ia32_phsubw128:
   case clang::X86::BI__builtin_ia32_phsubw256:
   case clang::X86::BI__builtin_ia32_phsubd128:
   case clang::X86::BI__builtin_ia32_phsubd256:
+    return interp_builtin_horizontal_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) { return LHS - RHS; });
   case clang::X86::BI__builtin_ia32_phsubsw128:
   case clang::X86::BI__builtin_ia32_phsubsw256:
-    return interp_builtin_ia32ph_add_sub(S, OpPC, Frame, Call, BuiltinID);
-
+    return interp_builtin_horizontal_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
+        });
   case clang::X86::BI__builtin_ia32_haddpd:
   case clang::X86::BI__builtin_ia32_haddpd256:
   case clang::X86::BI__builtin_ia32_haddps:
   case clang::X86::BI__builtin_ia32_haddps256:
+    return interp_builtin_horizontal_fp_binop(
+        S, OpPC, Call,
+        [](const APFloat &LHS, const APFloat &RHS, llvm::RoundingMode RM) {
+          APFloat F = LHS;
+          F.add(RHS, RM);
+          return F;
+        });
   case clang::X86::BI__builtin_ia32_hsubpd:
   case clang::X86::BI__builtin_ia32_hsubpd256:
   case clang::X86::BI__builtin_ia32_hsubps:
   case clang::X86::BI__builtin_ia32_hsubps256:
-    return interp_builtin_floatph_add_sub(S, OpPC, Frame, Call, BuiltinID);
+    return interp_builtin_horizontal_fp_binop(
+        S, OpPC, Call,
+        [](const APFloat &LHS, const APFloat &RHS, llvm::RoundingMode RM) {
+          APFloat F = LHS;
+          F.subtract(RHS, RM);
+          return F;
+        });
 
   case clang::X86::BI__builtin_ia32_pmuldq128:
   case clang::X86::BI__builtin_ia32_pmuldq256:

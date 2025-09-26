@@ -12332,71 +12332,67 @@ bool VectorExprEvaluator::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
 
 namespace {
   class ArrayExprEvaluator
-  :
-        public
-          ExprEvaluatorBase<ArrayExprEvaluator> {
-            const LValue &This;
-            APValue & Result;
+  : public ExprEvaluatorBase<ArrayExprEvaluator> {
+    const LValue &This;
+    APValue &Result;
+  public:
 
-          public:
-            ArrayExprEvaluator(EvalInfo & Info, const LValue &This,
-                               APValue &Result)
-                : ExprEvaluatorBaseTy(Info), This(This), Result(Result) {}
+    ArrayExprEvaluator(EvalInfo &Info, const LValue &This, APValue &Result)
+      : ExprEvaluatorBaseTy(Info), This(This), Result(Result) {}
 
-            bool Success(const APValue &V, const Expr *E) {
-              assert(V.isArray() && "expected array");
-              Result = V;
-              return true;
-            }
+    bool Success(const APValue &V, const Expr *E) {
+      assert(V.isArray() && "expected array");
+      Result = V;
+      return true;
+    }
 
-            bool ZeroInitialization(const Expr *E) {
-              const ConstantArrayType *CAT =
-                  Info.Ctx.getAsConstantArrayType(E->getType());
-              if (!CAT) {
-                if (E->getType()->isIncompleteArrayType()) {
-                  // We can be asked to zero-initialize a flexible array member;
-                  // this is represented as an ImplicitValueInitExpr of
-                  // incomplete array type. In this case, the array has zero
-                  // elements.
-                  Result = APValue(APValue::UninitArray(), 0, 0);
-                  return true;
-                }
-                // FIXME: We could handle VLAs here.
-                return Error(E);
-              }
+    bool ZeroInitialization(const Expr *E) {
+      const ConstantArrayType *CAT =
+          Info.Ctx.getAsConstantArrayType(E->getType());
+      if (!CAT) {
+        if (E->getType()->isIncompleteArrayType()) {
+          // We can be asked to zero-initialize a flexible array member; this
+          // is represented as an ImplicitValueInitExpr of incomplete array
+          // type. In this case, the array has zero elements.
+          Result = APValue(APValue::UninitArray(), 0, 0);
+          return true;
+        }
+        // FIXME: We could handle VLAs here.
+        return Error(E);
+      }
 
-              Result = APValue(APValue::UninitArray(), 0, CAT->getZExtSize());
-              if (!Result.hasArrayFiller())
-                return true;
+      Result = APValue(APValue::UninitArray(), 0, CAT->getZExtSize());
+      if (!Result.hasArrayFiller())
+        return true;
 
-              // Zero-initialize all elements.
-              LValue Subobject = This;
-              Subobject.addArray(Info, E, CAT);
-              ImplicitValueInitExpr VIE(CAT->getElementType());
-              return EvaluateInPlace(Result.getArrayFiller(), Info, Subobject,
-                                     &VIE);
-            }
+      // Zero-initialize all elements.
+      LValue Subobject = This;
+      Subobject.addArray(Info, E, CAT);
+      ImplicitValueInitExpr VIE(CAT->getElementType());
+      return EvaluateInPlace(Result.getArrayFiller(), Info, Subobject, &VIE);
+    }
 
-            bool VisitCallExpr(const CallExpr *E) {
-              return handleCallExpr(E, Result, &This);
-            }
-            bool VisitInitListExpr(const InitListExpr *E,
-                                   QualType AllocType = QualType());
-            bool VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E);
-            bool VisitCXXConstructExpr(const CXXConstructExpr *E);
-            bool VisitCXXConstructExpr(const CXXConstructExpr *E,
-                                       const LValue &Subobject, APValue *Value,
-                                       QualType Type);
-            bool VisitStringLiteral(const StringLiteral *E,
-                                    QualType AllocType = QualType()) {
-              expandStringLiteral(Info, E, Result, AllocType);
-              return true;
-            }
-            bool VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
-            bool VisitCXXParenListOrInitListExpr(
-                const Expr *ExprToVisit, ArrayRef<Expr *> Args,
-                const Expr *ArrayFiller, QualType AllocType = QualType());
-          };
+    bool VisitCallExpr(const CallExpr *E) {
+      return handleCallExpr(E, Result, &This);
+    }
+    bool VisitInitListExpr(const InitListExpr *E,
+                           QualType AllocType = QualType());
+    bool VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E);
+    bool VisitCXXConstructExpr(const CXXConstructExpr *E);
+    bool VisitCXXConstructExpr(const CXXConstructExpr *E,
+                               const LValue &Subobject,
+                               APValue *Value, QualType Type);
+    bool VisitStringLiteral(const StringLiteral *E,
+                            QualType AllocType = QualType()) {
+      expandStringLiteral(Info, E, Result, AllocType);
+      return true;
+    }
+    bool VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
+    bool VisitCXXParenListOrInitListExpr(const Expr *ExprToVisit,
+                                         ArrayRef<Expr *> Args,
+                                         const Expr *ArrayFiller,
+                                         QualType AllocType = QualType());
+  };
 } // end anonymous namespace
 
 static bool EvaluateArray(const Expr *E, const LValue &This,
