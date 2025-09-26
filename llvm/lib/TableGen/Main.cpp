@@ -50,19 +50,21 @@ static cl::opt<std::string> DependFilename("d", cl::desc("Dependency filename"),
 static cl::opt<std::string>
     InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
 
-static cl::list<std::string>
-IncludeDirs("I", cl::desc("Directory of include files"),
-            cl::value_desc("directory"), cl::Prefix);
+static cl::list<std::string> IncludeDirs("I",
+                                         cl::desc("Directory of include files"),
+                                         cl::value_desc("directory"),
+                                         cl::Prefix);
 
 static cl::list<std::string>
     MacroNames("D", cl::desc("Name of the macro to be defined"),
                cl::value_desc("macro name"), cl::Prefix);
 
 static cl::opt<bool>
-WriteIfChanged("write-if-changed", cl::desc("Only write output if it changed"));
+    WriteIfChanged("write-if-changed",
+                   cl::desc("Only write output if it changed"));
 
-static cl::opt<bool>
-TimePhases("time-phases", cl::desc("Time phases of parser and backend"));
+static cl::opt<bool> TimePhases("time-phases",
+                                cl::desc("Time phases of parser and backend"));
 
 namespace llvm {
 cl::opt<bool> EmitLongStrLiterals(
@@ -85,8 +87,7 @@ static int reportError(const char *ProgName, Twine Msg) {
 
 /// Escape a filename in the dependency file so that it is correctly
 /// interpreted by `make`. This is consistent with Clang, GCC, and lld.
-static TGLexer::DependenciesSetTy::value_type escapeDependencyFilename(
-    const TGLexer::DependenciesSetTy::value_type &Filename) {
+static std::string escapeDependencyFilename(StringRef Filename) {
   std::string Res;
   raw_string_ostream OS(Res);
 
