@@ -4567,6 +4567,10 @@ QualType ASTContext::getWebAssemblyExternrefType() const {
 /// type.
 QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
                                            unsigned NumFields) const {
+  auto K = llvm::ScalableVecTyKey{EltTy, NumElts, NumFields};
+  if (auto It = ScalableVecTyMap.find(K); It != ScalableVecTyMap.end())
+    return It->second;
+
   if (Target->hasAArch64ACLETypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
 
@@ -4575,29 +4579,29 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
   if (EltTy->hasIntegerRepresentation() && !EltTy->isBooleanType() &&          \
       EltTy->hasSignedIntegerRepresentation() == IsSigned &&                   \
       EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
-    return SingletonId;                                                        \
+    return ScalableVecTyMap[K] = SingletonId;                                  \
   }
 #define SVE_VECTOR_TYPE_FLOAT(Name, MangledName, Id, SingletonId, NumEls,      \
                               ElBits, NF)                                      \
   if (EltTy->hasFloatingRepresentation() && !EltTy->isBFloat16Type() &&        \
       EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
-    return SingletonId;                                                        \
+    return ScalableVecTyMap[K] = SingletonId;                                  \
   }
 #define SVE_VECTOR_TYPE_BFLOAT(Name, MangledName, Id, SingletonId, NumEls,     \
                                ElBits, NF)                                     \
   if (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&         \
       EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
-    return SingletonId;                                                        \
+    return ScalableVecTyMap[K] = SingletonId;                                  \
   }
 #define SVE_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls,     \
                                ElBits, NF)                                     \
   if (EltTy->isMFloat8Type() && EltTySize == ElBits &&                         \
       NumElts == (NumEls * NF) && NumFields == 1) {                            \
-    return SingletonId;                                                        \
+    return ScalableVecTyMap[K] = SingletonId;                                  \
   }
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   if (EltTy->isBooleanType() && NumElts == (NumEls * NF) && NumFields == 1)    \
-    return SingletonId;
+    return ScalableVecTyMap[K] = SingletonId;
 #include "clang/Basic/AArch64ACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
@@ -4611,10 +4615,10 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
        (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&       \
         IsBF && !IsFP)) &&                                                     \
       EltTySize == ElBits && NumElts == NumEls && NumFields == NF)             \
-    return SingletonId;
+    return ScalableVecTyMap[K] = SingletonId;
 #define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
   if (EltTy->isBooleanType() && NumElts == NumEls)                             \
-    return SingletonId;
+    return ScalableVecTyMap[K] = SingletonId;
 #include "clang/Basic/RISCVVTypes.def"
   }
   return QualType();
