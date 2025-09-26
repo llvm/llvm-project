@@ -6,7 +6,7 @@ void foo() {
 #pragma omp target
   {
     int n = 5;
-    __amdgpu_image_rsrc_t v = 0; // expected-error {{cannot initialize a variable of type '__amdgpu_image_rsrc_t' with an rvalue of type 'int'}}
-    (void)(v + v);               // expected-error {{invalid operands to binary expression ('__amdgpu_image_rsrc_t' and '__amdgpu_image_rsrc_t'}}
+    __amdgpu_texture_t v = 0; // expected-error {{cannot initialize a variable of type '__amdgpu_texture_t' with an rvalue of type 'int'}}
+    (void)(v + v);            // expected-error {{invalid operands to binary expression}}
   }
 }

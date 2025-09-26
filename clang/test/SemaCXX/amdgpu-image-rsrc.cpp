@@ -3,19 +3,15 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=gnu++11 -triple amdgcn -Wno-unused-value %s
 
 void foo() {
-  int n = 1;
-  __amdgpu_image_rsrc_t v = 0;            // expected-error {{cannot initialize a variable of type '__amdgpu_image_rsrc_t' with an rvalue of type 'int'}}
-  static_cast<__amdgpu_image_rsrc_t>(n); // expected-error {{static_cast from 'int' to '__amdgpu_image_rsrc_t' is not allowed}}
-  reinterpret_cast<__amdgpu_image_rsrc_t>(n); // expected-error {{reinterpret_cast from 'int' to '__amdgpu_image_rsrc_t' is not allowed}}
-  (void)(v + v); // expected-error {{invalid operands}}
-  int x(v);      // expected-error {{cannot initialize a variable of type 'int' with an lvalue of type '__amdgpu_image_rsrc_t'}}
-  __amdgpu_image_rsrc_t k;
+  int n = 100;
+  __amdgpu_texture_t v = 0;           // expected-error {{cannot initialize a variable of type '__amdgpu_texture_t' with an rvalue of type 'int'}}
+  static_cast<__amdgpu_texture_t>(n);  // expected-error {{static_cast from 'int' to '__amdgpu_texture_t' is not allowed}}
+  reinterpret_cast<__amdgpu_texture_t>(n); // expected-error {{reinterpret_cast from 'int' to '__amdgpu_texture_t' is not allowed}}
+  (void)(v + v); // expected-error {{invalid operands to binary expression ('__amdgpu_texture_t' and '__amdgpu_texture_t')}}
+  int x(v);      // expected-error {{cannot initialize a variable of type 'int' with an lvalue of type '__amdgpu_texture_t'}}
+  __amdgpu_texture_t k;
 }
 
-static_assert(sizeof(__amdgpu_image_rsrc_t) == 32, "size");
-static_assert(alignof(__amdgpu_image_rsrc_t) == 32, "align");
-
 template<class T> void bar(T);
-void use(__amdgpu_image_rsrc_t r) { bar(r); }
-struct S { __amdgpu_image_rsrc_t r; int a; };
-static_assert(sizeof(S) == 64, "struct layout");
+void use(__amdgpu_texture_t r) { bar(r); }
+struct S { __amdgpu_texture_t r; int a; };

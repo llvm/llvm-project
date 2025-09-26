@@ -5,14 +5,13 @@
 // CHECK-LABEL: define dso_local void @test_locals(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] !dbg [[DBG6:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[IMG:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[IMG:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[IMG_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[IMG]] to ptr
 // CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[IMG]], [[META11:![0-9]+]], !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), [[META14:![0-9]+]])
-// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[IMG_ASCAST]], align 32, !dbg [[DBG15:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[IMG_ASCAST]], align 32, !dbg [[DBG15:![0-9]+]]
 // CHECK-NEXT:    ret void, !dbg [[DBG16:![0-9]+]]
 //
 void test_locals(void) {
-  __amdgpu_image_rsrc_t img;
+  __amdgpu_texture_t img;
   (void)img;
 }
-

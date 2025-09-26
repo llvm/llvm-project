@@ -5,10 +5,9 @@
 
 void f() {
     int n = 3;
-    __amdgpu_image_rsrc_t v = 0; // expected-error {{initializing '__private __amdgpu_image_rsrc_t' with an expression of incompatible type 'int'}}
-    int k = v;                   // expected-error {{initializing '__private int' with an expression of incompatible type '__private __amdgpu_image_rsrc_t'}}
-    (void)(v + v);               // expected-error {{invalid operands}}
-    __amdgpu_image_rsrc_t r;
-    int *p = (int*)r;            // expected-error {{operand of type '__amdgpu_image_rsrc_t' where arithmetic or pointer type is required}}
-    (void)p;
+    __amdgpu_texture_t v = (__amdgpu_texture_t)0; // expected-error {{used type '__amdgpu_texture_t' where arithmetic or pointer type is required}}
+    int k = v;          // expected-error {{initializing '__private int' with an expression of incompatible type '__private __amdgpu_texture_t'}}
+    (void)(v + v);      // expected-error {{invalid operands}}
+    __amdgpu_texture_t r;
+    int *p = (int*)r;   // expected-error {{operand of type '__amdgpu_texture_t' where arithmetic or pointer type is required}}
 }

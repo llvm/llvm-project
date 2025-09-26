@@ -581,10 +581,6 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case BuiltinType::Id:                                                        \
     return llvm::TargetExtType::get(getLLVMContext(), "amdgcn.named.barrier",  \
                                     {}, {Scope});
-#define AMDGPU_IMAGE_RSRC_TYPE(Name, Id, SingletonId)                          \
-  case BuiltinType::Id:                                                        \
-    return llvm::VectorType::get(llvm::Type::getInt32Ty(getLLVMContext()), 8,  \
-                                 false);
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
