@@ -552,3 +552,11 @@ func.func @subgroup_broadcast(%arg0 : f32, %arg1 : i32) -> (f32, f32) {
   %1 = gpu.subgroup_broadcast %arg0, specific_lane %arg1 : f32
   func.return %0, %1 : f32, f32
 }
+
+// CHECK-LABEL: func @subgroup_uniform
+//  CHECK-SAME: (%[[ARG:.*]]: f32)
+func.func @subgroup_uniform(%arg0 : f32) -> f32 {
+  // CHECK: gpu.subgroup_uniform %[[ARG]] : f32
+  %0 = gpu.subgroup_uniform %arg0 : f32
+  func.return %0 : f32
+}
