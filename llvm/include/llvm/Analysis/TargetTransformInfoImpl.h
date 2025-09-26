@@ -1163,6 +1163,8 @@ public:
 
   virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
 
+  virtual bool shouldDecomposeStructAllocas() const { return false; }
+
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
   // In case of a vector it returns the min required size for one element.

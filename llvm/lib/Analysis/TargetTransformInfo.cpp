@@ -1506,6 +1506,10 @@ bool TargetTransformInfo::allowVectorElementIndexingUsingGEP() const {
   return TTIImpl->allowVectorElementIndexingUsingGEP();
 }
 
+bool TargetTransformInfo::shouldDecomposeStructAllocas() const {
+  return TTIImpl->shouldDecomposeStructAllocas();
+}
+
 TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}

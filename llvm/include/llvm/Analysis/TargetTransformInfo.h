@@ -1977,6 +1977,11 @@ public:
   /// target.
   LLVM_ABI bool allowVectorElementIndexingUsingGEP() const;
 
+  /// \returns True if the target does not support struct allocas and therefore
+  /// requires struct alloca instructions to be scalarized / decomposed into
+  /// its components.
+  LLVM_ABI bool shouldDecomposeStructAllocas() const;
+
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;
 };
