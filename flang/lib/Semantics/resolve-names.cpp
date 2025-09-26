@@ -1540,20 +1540,6 @@ public:
 
   bool Pre(const parser::OmpDeclareVariantDirective &x) {
     AddOmpSourceRange(x.source);
-    auto FindSymbolOrError = [&](const parser::Name &procName) {
-      auto *symbol{FindSymbol(NonDerivedTypeScope(), procName)};
-      if (!symbol) {
-        context().Say(procName.source,
-            "Implicit subroutine declaration '%s' in !$OMP DECLARE VARIANT"_err_en_US,
-            procName.source);
-      }
-    };
-    auto &baseProcName = std::get<std::optional<parser::Name>>(x.t);
-    if (baseProcName) {
-      FindSymbolOrError(*baseProcName);
-    }
-    auto &varProcName = std::get<parser::Name>(x.t);
-    FindSymbolOrError(varProcName);
     return true;
   }
 
@@ -1687,16 +1673,19 @@ public:
       PopScope();
     }
   }
+
+  // These objects are handled explicitly, and the AST traversal should not
+  // reach a point where it calls the Pre functions for them.
   bool Pre(const parser::OmpMapperSpecifier &x) {
-    // OmpMapperSpecifier is handled explicitly, and the AST traversal
-    // should not reach a point where it calls this function.
     llvm_unreachable("This function should not be reached by AST traversal");
   }
   bool Pre(const parser::OmpReductionSpecifier &x) {
-    // OmpReductionSpecifier is handled explicitly, and the AST traversal
-    // should not reach a point where it calls this function.
     llvm_unreachable("This function should not be reached by AST traversal");
   }
+  bool Pre(const parser::OmpBaseVariantNames &x) {
+    llvm_unreachable("This function should not be reached by AST traversal");
+  }
+
   bool Pre(const parser::OmpDirectiveSpecification &x);
   void Post(const parser::OmpDirectiveSpecification &) {
     messageHandler().set_currStmtSource(std::nullopt);
@@ -1997,6 +1986,10 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
             [&](const parser::OmpReductionSpecifier &spec) {
               ProcessReductionSpecifier(spec, clauses);
               visitClauses = false;
+            },
+            [&](const parser::OmpBaseVariantNames &names) {
+              Walk(std::get<0>(names.t));
+              Walk(std::get<1>(names.t));
             },
             [&](const parser::OmpLocator &locator) {
               // Manually resolve names in CRITICAL directives. This is because

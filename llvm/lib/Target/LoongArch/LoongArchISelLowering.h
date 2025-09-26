@@ -337,6 +337,8 @@ public:
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
 
+  bool shouldScalarizeBinop(SDValue VecOp) const override;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,

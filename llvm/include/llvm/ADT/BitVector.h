@@ -40,12 +40,20 @@ template <typename BitVectorT> class const_set_bits_iterator_impl {
     Current = Parent.find_next(Current);
   }
 
+  void retreat() {
+    if (Current == -1) {
+      Current = Parent.find_last();
+    } else {
+      Current = Parent.find_prev(Current);
+    }
+  }
+
 public:
-  using iterator_category = std::forward_iterator_tag;
-  using difference_type   = std::ptrdiff_t;
-  using value_type        = int;
-  using pointer           = value_type*;
-  using reference         = value_type&;
+  using iterator_category = std::bidirectional_iterator_tag;
+  using difference_type = std::ptrdiff_t;
+  using value_type = unsigned;
+  using pointer = const value_type *;
+  using reference = value_type;
 
   const_set_bits_iterator_impl(const BitVectorT &Parent, int Current)
       : Parent(Parent), Current(Current) {}
@@ -61,6 +69,17 @@ public:
 
   const_set_bits_iterator_impl &operator++() {
     advance();
+    return *this;
+  }
+
+  const_set_bits_iterator_impl operator--(int) {
+    auto Prev = *this;
+    retreat();
+    return Prev;
+  }
+
+  const_set_bits_iterator_impl &operator--() {
+    retreat();
     return *this;
   }
 

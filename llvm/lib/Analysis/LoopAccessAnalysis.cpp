@@ -2122,7 +2122,8 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   // dependence.
   TypeSize AStoreSz = DL.getTypeStoreSize(ATy);
   TypeSize BStoreSz = DL.getTypeStoreSize(BTy);
-  if (AStoreSz != BStoreSz && !SE.isKnownNonZero(Dist)) {
+  if (AStoreSz != BStoreSz && SE.isKnownNonPositive(Dist) &&
+      SE.isKnownNonNegative(Dist)) {
     LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence distance with "
                          "different type sizes\n");
     return Dependence::Unknown;

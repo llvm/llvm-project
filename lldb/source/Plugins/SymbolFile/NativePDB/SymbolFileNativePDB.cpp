@@ -501,9 +501,7 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
     return nullptr;
 
   PdbTypeSymId sig_id(proc.FunctionType, false);
-  std::optional<llvm::StringRef> mangled_opt =
-      FindMangledSymbol(SegmentOffset(proc.Segment, proc.CodeOffset));
-  Mangled mangled(mangled_opt.value_or(proc.Name));
+  Mangled mangled(proc.Name);
   FunctionSP func_sp = std::make_shared<Function>(
       &comp_unit, toOpaqueUid(func_id), toOpaqueUid(sig_id), mangled,
       func_type.get(), func_addr,
@@ -2662,31 +2660,6 @@ SymbolFileNativePDB::GetContextForType(TypeIndex ti) {
     break;
   }
   return ctx;
-}
-
-std::optional<llvm::StringRef>
-SymbolFileNativePDB::FindMangledFunctionName(PdbCompilandSymId func_id) {
-  const CompilandIndexItem *cci =
-      m_index->compilands().GetCompiland(func_id.modi);
-  if (!cci)
-    return std::nullopt;
-
-  CVSymbol sym_record = cci->m_debug_stream.readSymbolAtOffset(func_id.offset);
-  if (sym_record.kind() != S_LPROC32 && sym_record.kind() != S_GPROC32)
-    return std::nullopt;
-
-  ProcSym proc(static_cast<SymbolRecordKind>(sym_record.kind()));
-  cantFail(SymbolDeserializer::deserializeAs<ProcSym>(sym_record, proc));
-  return FindMangledSymbol(SegmentOffset(proc.Segment, proc.CodeOffset));
-}
-
-std::optional<llvm::StringRef>
-SymbolFileNativePDB::FindMangledSymbol(SegmentOffset so) {
-  auto symbol = m_index->publics().findByAddress(m_index->symrecords(),
-                                                 so.segment, so.offset);
-  if (!symbol)
-    return std::nullopt;
-  return symbol->first.Name;
 }
 
 void SymbolFileNativePDB::CacheUdtDeclarations() {

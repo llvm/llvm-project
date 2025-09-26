@@ -231,10 +231,10 @@ TEST(BarvinokTest, computeNumTermsCone) {
   // We expect the answer to be
   // (⌊M⌋ + 1)(⌊N⌋ + 1)(⌊P⌋ + 1) =
   // ⌊M⌋⌊N⌋⌊P⌋ + ⌊M⌋⌊N⌋ + ⌊N⌋⌊P⌋ + ⌊M⌋⌊P⌋ + ⌊M⌋ + ⌊N⌋ + ⌊P⌋ + 1.
-  for (unsigned i = 0; i < 2; i++)
+  for (auto &i : count)
     for (unsigned j = 0; j < 2; j++)
       for (unsigned k = 0; k < 2; k++)
-        EXPECT_EQ(count[i][j][k], 1);
+        EXPECT_EQ(i[j][k], 1);
 }
 
 /// We define some simple polyhedra with unimodular tangent cones and verify

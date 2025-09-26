@@ -10,6 +10,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/Analyses/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
@@ -213,10 +214,13 @@ public:
     /// out of scope).
     Expire,
     /// An origin is propagated from a source to a destination (e.g., p = q).
-    AssignOrigin,
+    /// This can also optionally kill the destination origin before flowing into
+    /// it. Otherwise, the source's loan set is merged into the destination's
+    /// loan set.
+    OriginFlow,
     /// An origin escapes the function by flowing into the return value.
     ReturnOfOrigin,
-    /// An origin is used (eg. dereferencing a pointer).
+    /// An origin is used (eg. appears as l-value expression like DeclRefExpr).
     Use,
     /// A marker for a specific point in the code, for testing.
     TestPoint,
@@ -285,25 +289,33 @@ public:
   }
 };
 
-class AssignOriginFact : public Fact {
+class OriginFlowFact : public Fact {
   OriginID OIDDest;
   OriginID OIDSrc;
+  // True if the destination origin should be killed (i.e., its current loans
+  // cleared) before the source origin's loans are flowed into it.
+  bool KillDest;
 
 public:
   static bool classof(const Fact *F) {
-    return F->getKind() == Kind::AssignOrigin;
+    return F->getKind() == Kind::OriginFlow;
   }
 
-  AssignOriginFact(OriginID OIDDest, OriginID OIDSrc)
-      : Fact(Kind::AssignOrigin), OIDDest(OIDDest), OIDSrc(OIDSrc) {}
+  OriginFlowFact(OriginID OIDDest, OriginID OIDSrc, bool KillDest)
+      : Fact(Kind::OriginFlow), OIDDest(OIDDest), OIDSrc(OIDSrc),
+        KillDest(KillDest) {}
+
   OriginID getDestOriginID() const { return OIDDest; }
   OriginID getSrcOriginID() const { return OIDSrc; }
+  bool getKillDest() const { return KillDest; }
+
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override {
-    OS << "AssignOrigin (Dest: ";
+    OS << "OriginFlow (Dest: ";
     OM.dump(getDestOriginID(), OS);
     OS << ", Src: ";
     OM.dump(getSrcOriginID(), OS);
+    OS << (getKillDest() ? "" : ", Merge");
     OS << ")\n";
   }
 };
@@ -454,7 +466,7 @@ public:
       if (const auto *VD = dyn_cast<VarDecl>(D))
         if (hasOrigin(VD))
           if (const Expr *InitExpr = VD->getInit())
-            addAssignOriginFact(*VD, *InitExpr);
+            killAndFlowOrigin(*VD, *InitExpr);
   }
 
   void VisitDeclRefExpr(const DeclRefExpr *DRE) {
@@ -492,9 +504,23 @@ public:
         isa<CXXConversionDecl>(MCE->getCalleeDecl())) {
       // The argument is the implicit object itself.
       handleFunctionCall(MCE, MCE->getMethodDecl(),
-                         {MCE->getImplicitObjectArgument()});
+                         {MCE->getImplicitObjectArgument()},
+                         /*IsGslConstruction=*/true);
     }
-    // FIXME: A more general VisitCallExpr could also be used here.
+    if (const CXXMethodDecl *Method = MCE->getMethodDecl()) {
+      // Construct the argument list, with the implicit 'this' object as the
+      // first argument.
+      llvm::SmallVector<const Expr *, 4> Args;
+      Args.push_back(MCE->getImplicitObjectArgument());
+      Args.append(MCE->getArgs(), MCE->getArgs() + MCE->getNumArgs());
+
+      handleFunctionCall(MCE, Method, Args, /*IsGslConstruction=*/false);
+    }
+  }
+
+  void VisitCallExpr(const CallExpr *CE) {
+    handleFunctionCall(CE, CE->getDirectCallee(),
+                       {CE->getArgs(), CE->getNumArgs()});
   }
 
   void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N) {
@@ -508,7 +534,7 @@ public:
       return;
     // An ImplicitCastExpr node itself gets an origin, which flows from the
     // origin of its sub-expression (after stripping its own parens/casts).
-    addAssignOriginFact(*ICE, *ICE->getSubExpr());
+    killAndFlowOrigin(*ICE, *ICE->getSubExpr());
   }
 
   void VisitUnaryOperator(const UnaryOperator *UO) {
@@ -522,7 +548,7 @@ public:
       // its sub-expression (x). This fact will cause the dataflow analysis
       // to propagate any loans held by the sub-expression's origin to the
       // origin of this UnaryOperator expression.
-      addAssignOriginFact(*UO, *SubExpr);
+      killAndFlowOrigin(*UO, *SubExpr);
     }
   }
 
@@ -542,8 +568,15 @@ public:
   }
 
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
-    if (OCE->isAssignmentOp() && OCE->getNumArgs() == 2)
+    // Assignment operators have special "kill-then-propagate" semantics
+    // and are handled separately.
+    if (OCE->isAssignmentOp() && OCE->getNumArgs() == 2) {
       handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      return;
+    }
+    handleFunctionCall(OCE, OCE->getDirectCallee(),
+                       {OCE->getArgs(), OCE->getNumArgs()},
+                       /*IsGslConstruction=*/false);
   }
 
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *FCE) {
@@ -552,7 +585,7 @@ public:
     if (handleTestPoint(FCE))
       return;
     if (isGslPointerType(FCE->getType()))
-      addAssignOriginFact(*FCE, *FCE->getSubExpr());
+      killAndFlowOrigin(*FCE, *FCE->getSubExpr());
   }
 
   void VisitInitListExpr(const InitListExpr *ILE) {
@@ -561,7 +594,7 @@ public:
     // For list initialization with a single element, like `View{...}`, the
     // origin of the list itself is the origin of its single element.
     if (ILE->getNumInits() == 1)
-      addAssignOriginFact(*ILE, *ILE->getInit(0));
+      killAndFlowOrigin(*ILE, *ILE->getInit(0));
   }
 
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE) {
@@ -569,7 +602,7 @@ public:
       return;
     // A temporary object's origin is the same as the origin of the
     // expression that initializes it.
-    addAssignOriginFact(*MTE, *MTE->getSubExpr());
+    killAndFlowOrigin(*MTE, *MTE->getSubExpr());
   }
 
   void handleDestructor(const CFGAutomaticObjDtor &DtorOpt) {
@@ -624,34 +657,51 @@ private:
     if (CCE->getNumArgs() != 1)
       return;
     if (hasOrigin(CCE->getArg(0)))
-      addAssignOriginFact(*CCE, *CCE->getArg(0));
+      killAndFlowOrigin(*CCE, *CCE->getArg(0));
     else
       // This could be a new borrow.
       handleFunctionCall(CCE, CCE->getConstructor(),
-                         {CCE->getArgs(), CCE->getNumArgs()});
+                         {CCE->getArgs(), CCE->getNumArgs()},
+                         /*IsGslConstruction=*/true);
   }
 
   /// Checks if a call-like expression creates a borrow by passing a value to a
   /// reference parameter, creating an IssueFact if it does.
+  /// \param IsGslConstruction True if this is a GSL construction where all
+  ///   argument origins should flow to the returned origin.
   void handleFunctionCall(const Expr *Call, const FunctionDecl *FD,
-                          ArrayRef<const Expr *> Args) {
-    if (!FD)
+                          ArrayRef<const Expr *> Args,
+                          bool IsGslConstruction = false) {
+    // Ignore functions returning values with no origin.
+    if (!FD || !hasOrigin(Call))
       return;
-    // TODO: Handle more than one arguments.
-    for (unsigned I = 0; I <= 0 /*Args.size()*/; ++I) {
-      const Expr *ArgExpr = Args[I];
-
-      // Propagate origins for CXX this.
-      if (FD->isCXXClassMember() && I == 0) {
-        addAssignOriginFact(*Call, *ArgExpr);
-        continue;
+    auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
+      const ParmVarDecl *PVD = nullptr;
+      if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+          Method && Method->isInstance()) {
+        if (I == 0)
+          // For the 'this' argument, the attribute is on the method itself.
+          return implicitObjectParamIsLifetimeBound(Method);
+        if ((I - 1) < Method->getNumParams())
+          // For explicit arguments, find the corresponding parameter
+          // declaration.
+          PVD = Method->getParamDecl(I - 1);
+      } else if (I < FD->getNumParams())
+        // For free functions or static methods.
+        PVD = FD->getParamDecl(I);
+      return PVD ? PVD->hasAttr<clang::LifetimeBoundAttr>() : false;
+    };
+    if (Args.empty())
+      return;
+    bool killedSrc = false;
+    for (unsigned I = 0; I < Args.size(); ++I)
+      if (IsGslConstruction || IsArgLifetimeBound(I)) {
+        if (!killedSrc) {
+          killedSrc = true;
+          killAndFlowOrigin(*Call, *Args[I]);
+        } else
+          flowOrigin(*Call, *Args[I]);
       }
-      // The parameter is a pointer, reference, or gsl::Pointer.
-      // This is a borrow. We propagate the origin from the argument expression
-      // at the call site to the parameter declaration in the callee.
-      if (hasOrigin(ArgExpr))
-        addAssignOriginFact(*Call, *ArgExpr);
-    }
   }
 
   /// Creates a loan for the storage path of a given declaration reference.
@@ -668,11 +718,19 @@ private:
   }
 
   template <typename Destination, typename Source>
-  void addAssignOriginFact(const Destination &D, const Source &S) {
+  void flowOrigin(const Destination &D, const Source &S) {
+    OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
+    OriginID SrcOID = FactMgr.getOriginMgr().get(S);
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        DestOID, SrcOID, /*KillDest=*/false));
+  }
+
+  template <typename Destination, typename Source>
+  void killAndFlowOrigin(const Destination &D, const Source &S) {
     OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
     OriginID SrcOID = FactMgr.getOriginMgr().get(S);
     CurrentBlockFacts.push_back(
-        FactMgr.createFact<AssignOriginFact>(DestOID, SrcOID));
+        FactMgr.createFact<OriginFlowFact>(DestOID, SrcOID, /*KillDest=*/true));
   }
 
   /// Checks if the expression is a `void("__lifetime_test_point_...")` cast.
@@ -703,12 +761,11 @@ private:
     if (const auto *DRE_LHS =
             dyn_cast<DeclRefExpr>(LHSExpr->IgnoreParenImpCasts())) {
       markUseAsWrite(DRE_LHS);
-      if (const auto *VD_LHS = dyn_cast<ValueDecl>(DRE_LHS->getDecl()))
-        // We are interested in assignments like `ptr1 = ptr2` or `ptr = &var`.
-        // LHS must be a pointer/reference type that can be an origin. RHS must
-        // also represent an origin (either another pointer/ref or an
-        // address-of).
-        addAssignOriginFact(*VD_LHS, *RHSExpr);
+      if (const auto *VD_LHS = dyn_cast<ValueDecl>(DRE_LHS->getDecl())) {
+        // Kill the old loans of the destination origin and flow the new loans
+        // from the source origin.
+        killAndFlowOrigin(*VD_LHS, *RHSExpr);
+      }
     }
   }
 
@@ -882,8 +939,8 @@ private:
       return D->transfer(In, *F->getAs<IssueFact>());
     case Fact::Kind::Expire:
       return D->transfer(In, *F->getAs<ExpireFact>());
-    case Fact::Kind::AssignOrigin:
-      return D->transfer(In, *F->getAs<AssignOriginFact>());
+    case Fact::Kind::OriginFlow:
+      return D->transfer(In, *F->getAs<OriginFlowFact>());
     case Fact::Kind::ReturnOfOrigin:
       return D->transfer(In, *F->getAs<ReturnOfOriginFact>());
     case Fact::Kind::Use:
@@ -897,7 +954,7 @@ private:
 public:
   Lattice transfer(Lattice In, const IssueFact &) { return In; }
   Lattice transfer(Lattice In, const ExpireFact &) { return In; }
-  Lattice transfer(Lattice In, const AssignOriginFact &) { return In; }
+  Lattice transfer(Lattice In, const OriginFlowFact &) { return In; }
   Lattice transfer(Lattice In, const ReturnOfOriginFact &) { return In; }
   Lattice transfer(Lattice In, const UseFact &) { return In; }
   Lattice transfer(Lattice In, const TestPointFact &) { return In; }
@@ -910,13 +967,10 @@ template <typename T>
 static llvm::ImmutableSet<T> join(llvm::ImmutableSet<T> A,
                                   llvm::ImmutableSet<T> B,
                                   typename llvm::ImmutableSet<T>::Factory &F) {
-  if (A == B)
-    return A;
   if (A.getHeight() < B.getHeight())
     std::swap(A, B);
   for (const T &E : B)
-    if (!A.contains(E))
-      A = F.add(A, E);
+    A = F.add(A, E);
   return A;
 }
 
@@ -950,11 +1004,10 @@ join(llvm::ImmutableMap<K, V> A, llvm::ImmutableMap<K, V> B,
   for (const auto &Entry : B) {
     const K &Key = Entry.first;
     const V &ValB = Entry.second;
-    const V *ValA = A.lookup(Key);
-    if (!ValA)
-      A = F.add(A, Key, ValB);
-    else if (*ValA != ValB)
+    if (const V *ValA = A.lookup(Key))
       A = F.add(A, Key, JoinValues(*ValA, ValB));
+    else
+      A = F.add(A, Key, ValB);
   }
   return A;
 }
@@ -970,9 +1023,11 @@ using ExpiredLoanMap = llvm::ImmutableMap<LoanID, const ExpireFact *>;
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
-  OriginLoanMap::Factory OriginMapFactory;
-  LoanSet::Factory LoanSetFactory;
-  ExpiredLoanMap::Factory ExpiredLoanMapFactory;
+  llvm::BumpPtrAllocator Allocator;
+  OriginLoanMap::Factory OriginMapFactory{Allocator, /*canonicalize=*/false};
+  LoanSet::Factory LoanSetFactory{Allocator, /*canonicalize=*/false};
+  ExpiredLoanMap::Factory ExpiredLoanMapFactory{Allocator,
+                                                /*canonicalize=*/false};
 };
 
 /// Represents the dataflow lattice for loan propagation.
@@ -1049,14 +1104,20 @@ public:
         LoanSetFactory.add(LoanSetFactory.getEmptySet(), LID)));
   }
 
-  /// The destination origin's loan set is replaced by the source's.
-  /// This implicitly "resets" the old loans of the destination.
-  Lattice transfer(Lattice In, const AssignOriginFact &F) {
+  /// A flow from source to destination. If `KillDest` is true, this replaces
+  /// the destination's loans with the source's. Otherwise, the source's loans
+  /// are merged into the destination's.
+  Lattice transfer(Lattice In, const OriginFlowFact &F) {
     OriginID DestOID = F.getDestOriginID();
     OriginID SrcOID = F.getSrcOriginID();
+
+    LoanSet DestLoans =
+        F.getKillDest() ? LoanSetFactory.getEmptySet() : getLoans(In, DestOID);
     LoanSet SrcLoans = getLoans(In, SrcOID);
+    LoanSet MergedLoans = utils::join(DestLoans, SrcLoans, LoanSetFactory);
+
     return LoanPropagationLattice(
-        OriginLoanMapFactory.add(In.Origins, DestOID, SrcLoans));
+        OriginLoanMapFactory.add(In.Origins, DestOID, MergedLoans));
   }
 
   LoanSet getLoans(OriginID OID, ProgramPoint P) {

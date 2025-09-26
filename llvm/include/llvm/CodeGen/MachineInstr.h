@@ -2000,6 +2000,15 @@ public:
   /// and point them to \p Reg instead.
   LLVM_ABI void changeDebugValuesDefReg(Register Reg);
 
+  /// Remove all incoming values of Phi instruction for the given block.
+  ///
+  /// Return deleted operands count.
+  ///
+  /// Method does not erase PHI instruction even if it has single income or does
+  /// not have incoming values at all. It is a caller responsibility to make
+  /// decision how to process PHI instruction after incoming values removed.
+  LLVM_ABI unsigned removePHIIncomingValueFor(const MachineBasicBlock &MBB);
+
   /// Sets all register debug operands in this debug value instruction to be
   /// undef.
   void setDebugValueUndef() {

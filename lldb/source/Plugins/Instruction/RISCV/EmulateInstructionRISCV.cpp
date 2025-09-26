@@ -804,7 +804,7 @@ public:
     return transformOptional(
                inst.rs1.ReadI64(m_emu),
                [&](int64_t rs1) {
-                 int64_t result = rs1 + int64_t(SignExt(inst.imm));
+                 uint64_t result = rs1 + uint64_t(SignExt(inst.imm));
                  // Check if this is a stack pointer adjustment.
                  if (inst.rd.rd == RISCV_GPR_SP &&
                      inst.rs1.rs == RISCV_GPR_SP) {

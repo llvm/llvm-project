@@ -128,13 +128,13 @@ getOrderedPossibleShardingAttrs(ArrayRef<Sharding> mustShardings,
       curShardingAttrs.push_back(optionalShardings[i]);
       dfsCreateShardingAttrs(i + 1);
       curShardingAttrs.pop_back();
-      curShardingAttrs.push_back({});
+      curShardingAttrs.emplace_back();
       dfsCreateShardingAttrs(i + 1);
       curShardingAttrs.pop_back();
       return;
     }
 
-    curShardingAttrs.push_back({});
+    curShardingAttrs.emplace_back();
     dfsCreateShardingAttrs(i + 1);
     curShardingAttrs.pop_back();
   };

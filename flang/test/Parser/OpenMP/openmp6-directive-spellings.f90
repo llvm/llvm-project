@@ -111,12 +111,13 @@ subroutine f03
 end
 
 !UNPARSE: SUBROUTINE f03
-!UNPARSE: !$OMP DECLARE SIMD
+!UNPARSE: !$OMP DECLARE_SIMD
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareSimdConstruct
-!PARSE-TREE: | Verbatim
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareSimdConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare simd
 !PARSE-TREE: | OmpClauseList ->
+!PARSE-TREE: | Flags = None
 
 subroutine f04
   !$omp declare_target
@@ -145,12 +146,12 @@ end
 !UNPARSE:   SUBROUTINE g05
 !UNPARSE:   END SUBROUTINE
 !UNPARSE:  END INTERFACE
-!UNPARSE: !$OMP DECLARE VARIANT (g05) MATCH(USER={CONDITION(.true._4)})
+!UNPARSE: !$OMP DECLARE_VARIANT(g05) MATCH(USER={CONDITION(.true._4)})
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | Name = 'g05'
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'g05'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = User
 !PARSE-TREE: | | OmpTraitSelector
@@ -159,6 +160,7 @@ end
 !PARSE-TREE: | | | | OmpTraitProperty -> Scalar -> Expr = '.true._4'
 !PARSE-TREE: | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | bool = 'true'
+!PARSE-TREE: | Flags = None
 
 subroutine f06
   implicit none

@@ -6496,13 +6496,14 @@ void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) const {
                << "):\n";
   const FormatToken *Tok = Line.First;
   while (Tok) {
-    llvm::errs() << " M=" << Tok->MustBreakBefore
+    llvm::errs() << " I=" << Tok->IndentLevel << " M=" << Tok->MustBreakBefore
                  << " C=" << Tok->CanBreakBefore
                  << " T=" << getTokenTypeName(Tok->getType())
                  << " S=" << Tok->SpacesRequiredBefore
                  << " F=" << Tok->Finalized << " B=" << Tok->BlockParameterCount
                  << " BK=" << Tok->getBlockKind() << " P=" << Tok->SplitPenalty
-                 << " Name=" << Tok->Tok.getName() << " L=" << Tok->TotalLength
+                 << " Name=" << Tok->Tok.getName() << " N=" << Tok->NestingLevel
+                 << " L=" << Tok->TotalLength
                  << " PPK=" << Tok->getPackingKind() << " FakeLParens=";
     for (prec::Level LParen : Tok->FakeLParens)
       llvm::errs() << LParen << "/";

@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -155,18 +156,7 @@ bool UnreachableMachineBlockElim::run(MachineFunction &F) {
       if (MDT && MDT->getNode(&BB)) MDT->eraseNode(&BB);
 
       while (!BB.succ_empty()) {
-        MachineBasicBlock* succ = *BB.succ_begin();
-
-        for (MachineInstr &Phi : succ->phis()) {
-          for (unsigned i = Phi.getNumOperands() - 1; i >= 2; i -= 2) {
-            if (Phi.getOperand(i).isMBB() &&
-                Phi.getOperand(i).getMBB() == &BB) {
-              Phi.removeOperand(i);
-              Phi.removeOperand(i - 1);
-            }
-          }
-        }
-
+        (*BB.succ_begin())->removePHIsIncomingValuesForPredecessor(BB);
         BB.removeSuccessor(BB.succ_begin());
       }
     }

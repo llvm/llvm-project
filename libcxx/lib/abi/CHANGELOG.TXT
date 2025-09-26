@@ -13,6 +13,21 @@ To generate a summary, re-generate the new ABI list using the
 New entries should be added directly below the "Version" header.
 
 ------------
+Version 22.0
+------------
+
+* [libc++] Remove __time_get_storage::{__analyze,init} from the ABI
+
+  These functions have never been used outside the dylib, so there is no point in exporting them.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__118__time_get_storageIcE4initERKNS_5ctypeIcEE
+  Symbol removed: _ZNSt3__118__time_get_storageIcE9__analyzeEcRKNS_5ctypeIcEE
+  Symbol removed: _ZNSt3__118__time_get_storageIwE4initERKNS_5ctypeIwEE
+  Symbol removed: _ZNSt3__118__time_get_storageIwE9__analyzeEcRKNS_5ctypeIwEE
+
+------------
 Version 21.0
 ------------
 

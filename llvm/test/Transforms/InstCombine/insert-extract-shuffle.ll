@@ -804,3 +804,49 @@ define <4 x i32> @infloop_D151807(<4 x float> %arg) {
   %i4 = insertelement <4 x i32> zeroinitializer, i32 %i3, i64 0
   ret <4 x i32> %i4
 }
+
+; Make sure we don't crash in this case.
+
+define i64 @pr160507(ptr %arg, i32 %arg1, i1 %arg2, i8 %arg3, i64 %arg4) {
+; CHECK-LABEL: @pr160507(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb5:
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB6:%.*]], label [[BB8:%.*]]
+; CHECK:       bb6:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb8:
+; CHECK-NEXT:    br label [[BB10:%.*]]
+; CHECK:       bb10:
+; CHECK-NEXT:    br label [[BB12:%.*]]
+; CHECK:       bb12:
+; CHECK-NEXT:    store i64 0, ptr [[ARG:%.*]], align 8
+; CHECK-NEXT:    br label [[BB5]]
+;
+bb:
+  br label %bb5
+
+bb5:
+  %phi = phi i8 [ 0, %bb ], [ %extractelement, %bb6 ], [ 0, %bb12 ]
+  br i1 %arg2, label %bb6, label %bb8
+
+bb6:
+  %extractelement = extractelement <2 x i8> zeroinitializer, i64 %arg4
+  br label %bb5
+
+bb8:
+  %insertelement9 = insertelement <2 x i8> <i8 poison, i8 0>, i8 %phi, i64 0
+  %zext = zext <2 x i8> %insertelement9 to <2 x i64>
+  %shufflevector = shufflevector <2 x i64> %zext, <2 x i64> poison, <4 x i32> <i32 poison, i32 1, i32 1, i32 1>
+  br label %bb10
+
+bb10:
+  br label %bb12
+
+bb12:
+  %extractelement11 = extractelement <2 x i64> %zext, i64 1
+  %insertelement13 = insertelement <4 x i64> %shufflevector, i64 %extractelement11, i64 0
+  %extractelement14 = extractelement <4 x i64> %insertelement13, i32 %arg1
+  store i64 %extractelement14, ptr %arg, align 8
+  br label %bb5
+}

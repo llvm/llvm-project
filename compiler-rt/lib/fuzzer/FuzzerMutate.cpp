@@ -413,9 +413,9 @@ size_t ChangeBinaryInteger(uint8_t *Data, size_t Size, Random &Rand) {
     T Add = static_cast<T>(Rand(21));
     Add -= 10;
     if (Rand.RandBool())
-      Val = Bswap(T(Bswap(Val) + Add)); // Add assuming different endiannes.
+      Val = Bswap(T(Bswap(Val) + Add)); // Add assuming different endianness.
     else
-      Val = Val + Add;               // Add assuming current endiannes.
+      Val = Val + Add;               // Add assuming current endianness.
     if (Add == 0 || Rand.RandBool()) // Maybe negate.
       Val = -Val;
   }

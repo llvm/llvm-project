@@ -24586,7 +24586,7 @@ Overview:
 
 The '``llvm.vp.load.ff.*``' intrinsic is similar to
 '``llvm.vp.load.*``', but will not trap if there are not ``evl`` readable
-lanes at the pointer. '``ff``' stands for fault-first or fault-only-first.
+lanes at the pointer. '``ff``' stands for first-fault or fault-only-first.
 
 Arguments:
 """"""""""

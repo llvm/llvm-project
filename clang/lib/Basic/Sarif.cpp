@@ -67,7 +67,7 @@ static std::string percentEncodeURICharacter(char C) {
 /// \param Filename The filename to be represented as URI.
 ///
 /// \return RFC3986 URI representing the input file name.
-static std::string fileNameToURI(StringRef Filename) {
+std::string SarifDocumentWriter::fileNameToURI(StringRef Filename) {
   SmallString<32> Ret = StringRef("file://");
 
   // Get the root name to see if it has a URI authority.
@@ -391,6 +391,11 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
   json::Object Ret{{"message", createMessage(Result.DiagnosticMessage)},
                    {"ruleIndex", static_cast<int64_t>(RuleIdx)},
                    {"ruleId", Rule.Id}};
+
+  if (!Result.HostedViewerURI.empty()) {
+    Ret["hostedViewerUri"] = Result.HostedViewerURI;
+  }
+
   if (!Result.Locations.empty()) {
     json::Array Locs;
     for (auto &Range : Result.Locations) {
@@ -398,6 +403,15 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
     }
     Ret["locations"] = std::move(Locs);
   }
+
+  if (!Result.PartialFingerprints.empty()) {
+    json::Object fingerprints = {};
+    for (auto &pair : Result.PartialFingerprints) {
+      fingerprints[pair.first] = pair.second;
+    }
+    Ret["partialFingerprints"] = std::move(fingerprints);
+  }
+
   if (!Result.ThreadFlows.empty())
     Ret["codeFlows"] = json::Array{createCodeFlow(Result.ThreadFlows)};
 

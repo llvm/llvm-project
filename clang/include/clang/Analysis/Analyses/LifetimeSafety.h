@@ -75,13 +75,14 @@ template <typename Tag> struct ID {
   }
 };
 
-template <typename Tag>
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ID<Tag> ID) {
-  return OS << ID.Value;
-}
-
 using LoanID = ID<struct LoanTag>;
 using OriginID = ID<struct OriginTag>;
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
+  return OS << ID.Value;
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, OriginID ID) {
+  return OS << ID.Value;
+}
 
 // Using LLVM's immutable collections is efficient for dataflow analysis
 // as it avoids deep copies during state transitions.
