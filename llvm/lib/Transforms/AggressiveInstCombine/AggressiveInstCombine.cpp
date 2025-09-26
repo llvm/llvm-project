@@ -1350,6 +1350,11 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
   BB->getTerminator()->eraseFromParent();
   SwitchInst *SI = IRB.CreateSwitch(
       IRB.CreateTrunc(Call->getArgOperand(1), ByteTy), BBNext, N);
+  Function *F = Call->getFunction();
+  assert(F && "Instruction does not belong to a function!");
+  std::optional<Function::ProfileCount> EC = F->getEntryCount();
+  if (EC && EC->getCount() > 0)
+    setExplicitlyUnknownBranchWeights(*SI, DEBUG_TYPE);
   Type *IndexTy = DL.getIndexType(Call->getType());
   SmallVector<DominatorTree::UpdateType, 8> Updates;
 
