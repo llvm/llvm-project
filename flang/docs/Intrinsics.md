@@ -639,6 +639,9 @@ CALL RANDOM_SEED([SIZE, PUT, GET])
 CALL SYSTEM_CLOCK([COUNT, COUNT_RATE, COUNT_MAX])
 ```
 
+`GET_COMMAND`, `GET_COMMAND_ARGUMENT`, and `GET_ENVIRONMENT_VARIABLE` are pure
+procedures in this compiler; the others are impure.
+
 ### Atomic intrinsic subroutines
 ```
 CALL ATOMIC_ADD(ATOM, VALUE [, STAT=])
@@ -1018,6 +1021,7 @@ END PROGRAM
 `HOSTNM(C, STATUS)` returns the host name of the system.
 
 This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
+It is a pure procedure.
 
 *C* and *STATUS* are `INTENT(OUT)` and provide the following:
 
