@@ -623,7 +623,11 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
     assert(MemoryManager && "Invalid memory manager");
     assert(PtrStorage && "Invalid pointer storage");
 
-    *PtrStorage = MemoryManager->allocate(Size, nullptr);
+    auto PtrStorageOrErr = MemoryManager->allocate(Size, nullptr);
+    if (!PtrStorageOrErr)
+      return PtrStorageOrErr.takeError();
+
+    *PtrStorage = *PtrStorageOrErr;
     if (Size && *PtrStorage == nullptr)
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "failure to allocate from AMDGPU memory manager");
@@ -643,15 +647,12 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
 private:
   /// Allocation callback that will be called once the memory manager does not
   /// have more previously allocated buffers.
-  void *allocate(size_t Size, void *HstPtr, TargetAllocTy Kind) override;
+  Expected<void *> allocate(size_t Size, void *HstPtr,
+                            TargetAllocTy Kind) override;
 
   /// Deallocation callback that will be called by the memory manager.
-  int free(void *TgtPtr, TargetAllocTy Kind) override {
-    if (auto Err = MemoryPool->deallocate(TgtPtr)) {
-      consumeError(std::move(Err));
-      return OFFLOAD_FAIL;
-    }
-    return OFFLOAD_SUCCESS;
+  Error free(void *TgtPtr, TargetAllocTy Kind) override {
+    return MemoryPool->deallocate(TgtPtr);
   }
 
   /// The underlying plugin that owns this memory manager.
@@ -3623,12 +3624,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  void *allocate(size_t Size, void *, TargetAllocTy Kind) override;
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override;
 
   /// Deallocate memory on the device or related to the device.
-  int free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, TargetAllocTy Kind) override {
     if (TgtPtr == nullptr)
-      return OFFLOAD_SUCCESS;
+      return Plugin::success();
 
     AMDGPUMemoryPoolTy *MemoryPool = nullptr;
     switch (Kind) {
@@ -3644,17 +3645,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       break;
     }
 
-    if (!MemoryPool) {
-      REPORT("No memory pool for the specified allocation kind\n");
-      return OFFLOAD_FAIL;
-    }
+    if (!MemoryPool)
+      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                           "no memory pool for the specified allocation kind");
 
-    if (Error Err = MemoryPool->deallocate(TgtPtr)) {
-      REPORT("%s\n", toString(std::move(Err)).data());
-      return OFFLOAD_FAIL;
-    }
+    if (auto Err = MemoryPool->deallocate(TgtPtr))
+      return Err;
 
-    return OFFLOAD_SUCCESS;
+    return Plugin::success();
   }
 
   /// Synchronize current thread with the pending operations on the async info.
@@ -5741,14 +5739,13 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   return Plugin::error(OffloadErrCode, ErrFmt, Args..., Desc);
 }
 
-void *AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
-                                      TargetAllocTy Kind) {
+Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
+                                                 TargetAllocTy Kind) {
   // Allocate memory from the pool.
   void *Ptr = nullptr;
-  if (auto Err = MemoryPool->allocate(Size, &Ptr)) {
-    consumeError(std::move(Err));
-    return nullptr;
-  }
+  if (auto Err = MemoryPool->allocate(Size, &Ptr))
+    return std::move(Err);
+
   assert(Ptr && "Invalid pointer");
 
   // Get a list of agents that can access this memory pool.
@@ -5758,14 +5755,13 @@ void *AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
       [&](hsa_agent_t Agent) { return MemoryPool->canAccess(Agent); });
 
   // Allow all valid kernel agents to access the allocation.
-  if (auto Err = MemoryPool->enableAccess(Ptr, Size, Agents)) {
-    REPORT("%s\n", toString(std::move(Err)).data());
-    return nullptr;
-  }
+  if (auto Err = MemoryPool->enableAccess(Ptr, Size, Agents))
+    return std::move(Err);
   return Ptr;
 }
 
-void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
+Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
+                                          TargetAllocTy Kind) {
   if (Size == 0)
     return nullptr;
 
@@ -5789,17 +5785,15 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
     MemoryPool = CoarseGrainedMemoryPools[0];
   }
 
-  if (!MemoryPool) {
-    REPORT("No memory pool for the specified allocation kind\n");
-    return nullptr;
-  }
+  if (!MemoryPool)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "no memory pool for the specified allocation kind");
 
   // Allocate from the corresponding memory pool.
   void *Alloc = nullptr;
-  if (Error Err = MemoryPool->allocate(Size, &Alloc)) {
-    REPORT("%s\n", toString(std::move(Err)).data());
-    return nullptr;
-  }
+  if (auto Err = MemoryPool->allocate(Size, &Alloc))
+    return std::move(Err);
+  
   if (MemoryPool == CoarseGrainedMemoryPools[0] && IsEquippedWithGFX90A &&
       EnableGFX90ACoarseGrainUsmMaps) {
     // Need to register in the coarse grain usm map table
@@ -5822,10 +5816,8 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
                   });
 
     // Enable all valid kernel agents to access the buffer.
-    if (auto Err = MemoryPool->enableAccess(Alloc, Size, Agents)) {
-      REPORT("%s\n", toString(std::move(Err)).data());
-      return nullptr;
-    }
+    if (auto Err = MemoryPool->enableAccess(Alloc, Size, Agents))
+      return std::move(Err);
   }
 
   return Alloc;
