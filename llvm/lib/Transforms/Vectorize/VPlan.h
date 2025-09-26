@@ -2969,7 +2969,8 @@ public:
 /// the expression is elevated to connect the non-expression recipe with the
 /// VPExpressionRecipe itself.
 class VPExpressionRecipe : public VPSingleDefRecipe {
-  /// Recipes included in this VPExpressionRecipe.
+  /// Recipes included in this VPExpressionRecipe. This could contain
+  /// duplicates.
   SmallVector<VPSingleDefRecipe *> ExpressionRecipes;
 
   /// Temporary VPValues used for external operands of the expression, i.e.
@@ -3019,11 +3020,8 @@ public:
       if (ExpressionRecipesSeen.insert(R).second)
         delete R;
     }
-    SmallSet<VPValue *, 4> PlaceholdersSeen;
-    for (VPValue *T : LiveInPlaceholders) {
-      if (PlaceholdersSeen.insert(T).second)
-        delete T;
-    }
+    for (VPValue *T : LiveInPlaceholders)
+      delete T;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPExpressionSC)
