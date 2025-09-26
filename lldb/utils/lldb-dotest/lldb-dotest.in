@@ -58,6 +58,7 @@ if __name__ == '__main__':
         cmd.extend(['--enable-plugin', 'intel-pt'])
     cmd.extend(['--lldb-obj-root', lldb_obj_root])
     cmd.extend(['--cmake-build-type', cmake_build_type])
+    cmd.extend(['--swift-libs-dir', swift_libs_dir])
     cmd.extend(wrapper_args)
     # Invoke dotest.py and return exit code.
     print(' '.join(cmd))
