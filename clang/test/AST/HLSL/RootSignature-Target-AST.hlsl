@@ -30,7 +30,7 @@
 #define EntryRootSig "CBV(b0)"
 
 // CMD: -HLSLRootSignatureDecl 0x{{.*}} {{.*}} implicit [[CMD_RS_DECL:__hlsl_rootsig_decl_\d*]]
-// CMD-SAME: version: 1.2,
+// CMD-SAME: version: 1.1,
 // CMD-SAME: RootElements{
 // CMD-SAME: RootUAV(u0, space = 0, visibility = All, flags = DataVolatile)
 // CMD-SAME: }
