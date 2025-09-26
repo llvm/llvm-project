@@ -1180,7 +1180,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
 MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
     std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU) {
-  if (!canSplitCriticalEdge(Succ))
+  if (!canSplitCriticalEdge(Succ, Analyses.MLI))
     return nullptr;
 
   MachineFunction *MF = getParent();
@@ -1408,8 +1408,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   return NMBB;
 }
 
-bool MachineBasicBlock::canSplitCriticalEdge(
-    const MachineBasicBlock *Succ) const {
+bool MachineBasicBlock::canSplitCriticalEdge(const MachineBasicBlock *Succ,
+                                             const MachineLoopInfo *MLI) const {
   // Splitting the critical edge to a landing pad block is non-trivial. Don't do
   // it in this generic function.
   if (Succ->isEHPad())
@@ -1423,8 +1423,17 @@ bool MachineBasicBlock::canSplitCriticalEdge(
   const MachineFunction *MF = getParent();
   // Performance might be harmed on HW that implements branching using exec mask
   // where both sides of the branches are always executed.
-  if (MF->getTarget().requiresStructuredCFG())
+
+  if (MF->getTarget().requiresStructuredCFG()) {
+    // If `Succ` is a loop header, splitting the critical edge will not
+    // break structured CFG.
+    if (MLI) {
+      const MachineLoop *L = MLI->getLoopFor(Succ);
+      return L && L->getHeader() == Succ;
+    }
+
     return false;
+  }
 
   // Do we have an Indirect jump with a jumptable that we can rewrite?
   int JTI = findJumpTableIndex(*this);

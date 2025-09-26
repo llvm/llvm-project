@@ -1,12 +1,12 @@
-// XFAIL: target=aarch64-{{.*}}-windows-{{.*}}
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_multc3
 
 #include <stdio.h>
 
+#include "int_lib.h"
+
 #if defined(CRT_HAS_128BIT) && defined(CRT_HAS_F128)
 
-#include "int_lib.h"
 #include <math.h>
 #include <complex.h>
 

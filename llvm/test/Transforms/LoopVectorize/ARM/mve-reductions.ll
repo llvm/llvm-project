@@ -1679,8 +1679,7 @@ define i64 @test_std_q31(ptr %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i32> [[TMP1]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4]] = add i64 [[VEC_PHI]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i32> [[TMP1]] to <4 x i64>
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw <4 x i64> [[TMP5]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw <4 x i64> [[TMP2]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = add i64 [[VEC_PHI1]], [[TMP7]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
