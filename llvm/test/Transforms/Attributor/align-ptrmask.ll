@@ -175,16 +175,6 @@ define ptr @align_ptrmask_forward_mask_poison(ptr align 4 %x, i64 %y, i1 %cmp1, 
   ret ptr %p
 }
 
-define ptr @align_ptrmask_forward_mask_undef(ptr align 4 %x, i64 %y, i1 %cmp1, i1 %cmp2) {
-; CHECK-LABEL: define align 4 ptr @align_ptrmask_forward_mask_undef(
-; CHECK-SAME: ptr nofree readnone align 4 [[X:%.*]], i64 [[Y:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[P:%.*]] = tail call align 4 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 undef) #[[ATTR4]]
-; CHECK-NEXT:    ret ptr [[P]]
-;
-  %p = tail call ptr @llvm.ptrmask.p0.i64(ptr %x, i64 undef)
-  ret ptr %p
-}
-
 define ptr @align_ptrmask_forward_mask_max(ptr align 4 %x, i64 %y, i1 %cmp1, i1 %cmp2) {
 ; CHECK-LABEL: define align 4294967296 ptr @align_ptrmask_forward_mask_max(
 ; CHECK-SAME: ptr nofree readnone align 4 [[X:%.*]], i64 [[Y:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR1]] {
