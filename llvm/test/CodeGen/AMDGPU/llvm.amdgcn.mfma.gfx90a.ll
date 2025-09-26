@@ -731,10 +731,10 @@ define amdgpu_kernel void @test_mfma_f64_4x4x4f64(ptr addrspace(1) %arg, double 
 ; GFX90A-VGPR-NEXT:    s_nop 1
 ; GFX90A-VGPR-NEXT:    v_mfma_f64_4x4x4f64 v[0:1], v[2:3], v[4:5], 0
 ; GFX90A-VGPR-NEXT:    s_nop 3
-; GFX90A-VGPR-NEXT:    v_mfma_f64_4x4x4f64 v[0:1], v[2:3], v[4:5], v[0:1] cbsz:1 abid:2 blgp:3
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v2, 0
+; GFX90A-VGPR-NEXT:    v_mfma_f64_4x4x4f64 v[2:3], v[2:3], v[4:5], v[0:1] cbsz:1 abid:2 blgp:3
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX90A-VGPR-NEXT:    s_nop 7
-; GFX90A-VGPR-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX90A-VGPR-NEXT:    global_store_dwordx2 v4, v[2:3], s[0:1]
 ; GFX90A-VGPR-NEXT:    s_endpgm
 ;
 ; GFX942-VGPR-LABEL: test_mfma_f64_4x4x4f64:
@@ -747,10 +747,10 @@ define amdgpu_kernel void @test_mfma_f64_4x4x4f64(ptr addrspace(1) %arg, double 
 ; GFX942-VGPR-NEXT:    s_nop 1
 ; GFX942-VGPR-NEXT:    v_mfma_f64_4x4x4_4b_f64 v[0:1], v[2:3], v[4:5], 0
 ; GFX942-VGPR-NEXT:    s_nop 3
-; GFX942-VGPR-NEXT:    v_mfma_f64_4x4x4_4b_f64 v[0:1], v[2:3], v[4:5], v[0:1] cbsz:1 abid:2 neg:[1,1,0]
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-VGPR-NEXT:    v_mfma_f64_4x4x4_4b_f64 v[2:3], v[2:3], v[4:5], v[0:1] cbsz:1 abid:2 neg:[1,1,0]
+; GFX942-VGPR-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-VGPR-NEXT:    s_nop 7
-; GFX942-VGPR-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX942-VGPR-NEXT:    global_store_dwordx2 v4, v[2:3], s[0:1]
 ; GFX942-VGPR-NEXT:    s_endpgm
 bb:
   %mai.1 = tail call double @llvm.amdgcn.mfma.f64.4x4x4f64(double %a, double %b, double 0.0, i32 0, i32 0, i32 0)
@@ -1629,20 +1629,20 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, d
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v7, 0x3ff00000
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX90A-VGPR-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v10, s2
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v11, s3
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v16, s2
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v17, s3
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v1, v0
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v5, v0
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v6, v0
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v1, v0
-; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[8:9], v[6:7], v[6:7] op_sel:[0,1]
-; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[12:13], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[4:5] op_sel:[0,1]
-; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[2:3] op_sel:[0,1]
-; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[0:1] op_sel:[0,1]
+; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[14:15], v[6:7], v[6:7] op_sel:[0,1]
+; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[18:19], s[6:7], s[6:7] op_sel:[0,1]
+; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[12:13], v[4:5], v[4:5] op_sel:[0,1]
+; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[10:11], v[2:3], v[2:3] op_sel:[0,1]
+; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[8:9], v[0:1], v[0:1] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    s_nop 1
-; GFX90A-VGPR-NEXT:    v_mfma_f64_16x16x4f64 v[2:9], v[10:11], v[12:13], v[2:9]
+; GFX90A-VGPR-NEXT:    v_mfma_f64_16x16x4f64 v[8:15], v[16:17], v[18:19], v[8:15]
 ; GFX90A-VGPR-NEXT:    s_nop 15
 ; GFX90A-VGPR-NEXT:    s_nop 1
 ; GFX90A-VGPR-NEXT:    global_store_dwordx4 v0, v[12:15], s[0:1] offset:16
@@ -1657,20 +1657,20 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, d
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v7, 0x3ff00000
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX942-VGPR-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v10, s2
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v11, s3
+; GFX942-VGPR-NEXT:    v_mov_b32_e32 v16, s2
+; GFX942-VGPR-NEXT:    v_mov_b32_e32 v17, s3
+; GFX942-VGPR-NEXT:    v_mov_b32_e32 v1, v0
+; GFX942-VGPR-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v5, v0
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v6, v0
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v1, v0
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[8:9], v[6:7]
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[6:7]
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[14:15], v[6:7]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[6:7]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[12:13], v[4:5]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[10:11], v[2:3]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[8:9], v[0:1]
 ; GFX942-VGPR-NEXT:    s_nop 1
-; GFX942-VGPR-NEXT:    v_mfma_f64_16x16x4_f64 v[2:9], v[10:11], v[12:13], v[2:9]
+; GFX942-VGPR-NEXT:    v_mfma_f64_16x16x4_f64 v[8:15], v[16:17], v[18:19], v[8:15]
 ; GFX942-VGPR-NEXT:    s_nop 15
 ; GFX942-VGPR-NEXT:    s_nop 1
 ; GFX942-VGPR-NEXT:    global_store_dwordx4 v0, v[12:15], s[0:1] offset:16
@@ -1743,20 +1743,20 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v1, 0x405ec000
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX90A-VGPR-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v10, s2
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v11, s3
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v16, s2
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v17, s3
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v7, v1
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v5, v1
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v6, v0
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v7, v1
-; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[8:9], v[6:7], v[6:7] op_sel:[0,1]
-; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[12:13], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[4:5] op_sel:[0,1]
-; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[2:3] op_sel:[0,1]
-; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[0:1] op_sel:[0,1]
+; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[14:15], v[6:7], v[6:7] op_sel:[0,1]
+; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[18:19], s[6:7], s[6:7] op_sel:[0,1]
+; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[12:13], v[4:5], v[4:5] op_sel:[0,1]
+; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[10:11], v[2:3], v[2:3] op_sel:[0,1]
+; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[8:9], v[0:1], v[0:1] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    s_nop 1
-; GFX90A-VGPR-NEXT:    v_mfma_f64_16x16x4f64 v[2:9], v[10:11], v[12:13], v[2:9]
+; GFX90A-VGPR-NEXT:    v_mfma_f64_16x16x4f64 v[8:15], v[16:17], v[18:19], v[8:15]
 ; GFX90A-VGPR-NEXT:    s_nop 15
 ; GFX90A-VGPR-NEXT:    s_nop 1
 ; GFX90A-VGPR-NEXT:    global_store_dwordx4 v0, v[12:15], s[0:1] offset:16
@@ -1771,20 +1771,20 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v1, 0x405ec000
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX942-VGPR-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v10, s2
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v11, s3
+; GFX942-VGPR-NEXT:    v_mov_b32_e32 v16, s2
+; GFX942-VGPR-NEXT:    v_mov_b32_e32 v17, s3
+; GFX942-VGPR-NEXT:    v_mov_b32_e32 v7, v1
+; GFX942-VGPR-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v5, v1
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v6, v0
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v7, v1
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[8:9], v[6:7]
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[6:7]
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[14:15], v[6:7]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[6:7]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[12:13], v[4:5]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[10:11], v[2:3]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[8:9], v[0:1]
 ; GFX942-VGPR-NEXT:    s_nop 1
-; GFX942-VGPR-NEXT:    v_mfma_f64_16x16x4_f64 v[2:9], v[10:11], v[12:13], v[2:9]
+; GFX942-VGPR-NEXT:    v_mfma_f64_16x16x4_f64 v[8:15], v[16:17], v[18:19], v[8:15]
 ; GFX942-VGPR-NEXT:    s_nop 15
 ; GFX942-VGPR-NEXT:    s_nop 1
 ; GFX942-VGPR-NEXT:    global_store_dwordx4 v0, v[12:15], s[0:1] offset:16

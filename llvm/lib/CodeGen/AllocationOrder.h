@@ -30,6 +30,8 @@ class LiveRegMatrix;
 
 class LLVM_LIBRARY_VISIBILITY AllocationOrder {
   const SmallVector<MCPhysReg, 16> Hints;
+  // Used as storage if the Order received in the constructor needs to be
+  // altered.
   SmallVector<MCPhysReg, 16> FilteredOrderStorage;
   ArrayRef<MCPhysReg> Order;
   // How far into the Order we can iterate. This is 0 if the AllocationOrder is

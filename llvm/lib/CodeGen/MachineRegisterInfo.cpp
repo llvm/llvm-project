@@ -680,22 +680,19 @@ bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
 
 void MachineRegisterInfo::getPhysRegAntiHints(
     Register VReg, SmallVectorImpl<MCPhysReg> &PhysAntiHints,
-    const VirtRegMap *VRM) const {
+    const VirtRegMap &VRM) const {
   assert(VReg.isVirtual());
-  if (!AntiHintRegs.inBounds(VReg) || !VRM)
+  if (!AntiHintRegs.inBounds(VReg))
     return;
 
   const SmallVector<Register, 4> &AntiHints = AntiHintRegs[VReg];
-  const TargetRegisterInfo *TRI = getTargetRegisterInfo();
 
   for (Register AntiHintVReg : AntiHints) {
     // Check if the anti-hinted register has been allocated
-    if (VRM->hasPhys(AntiHintVReg)) {
-      MCPhysReg PhysReg = VRM->getPhys(AntiHintVReg);
-      // Add the physical register and all its aliases
-      for (MCRegAliasIterator AI(PhysReg, TRI, true); AI.isValid(); ++AI) {
-        PhysAntiHints.push_back(*AI);
-      }
+    if (VRM.hasPhys(AntiHintVReg)) {
+      MCPhysReg PhysReg = VRM.getPhys(AntiHintVReg);
+      // Add the physical register
+      PhysAntiHints.push_back(PhysReg);
     }
   }
 

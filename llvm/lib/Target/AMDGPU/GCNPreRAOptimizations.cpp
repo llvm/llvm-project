@@ -37,6 +37,7 @@
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -253,37 +254,45 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
 
   bool Changed = false;
-
-  // Single pass implementation
+  // Add RA anti-hints to reduce MFMA hazard NOPs
   if (EnableAntiHintsForMFMARegs && ST.hasMAIInsts()) {
     // Max lookback window for RAW or WAW hazard
     constexpr unsigned MaxLookbackWindow = 19;
     for (const MachineBasicBlock &MBB : MF) {
-
-      SmallVector<std::pair<SlotIndex, SmallVector<Register, 4>>, 16>
-          RecentMFMAs;
+      SmallVector<SmallVector<Register, 4>, 16> RecentMFMAs;
       for (const MachineInstr &MI : MBB) {
         if (MI.isDebugInstr())
           continue;
-        const SlotIndex CurrentSlot = LIS->getInstructionIndex(MI).getRegSlot();
+
         // Handle MFMA instructions
         if (SIInstrInfo::isMFMA(MI)) {
           SmallVector<Register, 4> MFMARegisters;
-          auto collectMFMARegister = [&](unsigned OpIdx) {
-            if (OpIdx >= MI.getNumOperands())
+          // Helper to get named operand
+          auto collectNamedOperand = [&](AMDGPU::OpName OpName,
+                                         const char *OpNameStr) {
+            const MachineOperand *MO = TII->getNamedOperand(MI, OpName);
+            if (!MO) {
+              LLVM_DEBUG(dbgs() << "    Named operand " << OpNameStr
+                                << " not found\n");
               return;
-
-            const MachineOperand &MO = MI.getOperand(OpIdx);
-            if (MO.isReg() && MO.getReg().isVirtual())
-              MFMARegisters.push_back(MO.getReg());
+            }
+            if (MO->isReg() && MO->getReg().isVirtual()) {
+              Register Reg = MO->getReg();
+              const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+              // Only consider VGPRs
+              if (TRI->hasVGPRs(RC))
+                MFMARegisters.push_back(Reg);
+              LLVM_DEBUG(dbgs() << "    Collected " << OpNameStr << " : "
+                                << printReg(Reg, TRI) << "\n");
+            }
           };
-          // Only collect Matrix C (operand 3) and destination (operand 0)
-          // registers
-          collectMFMARegister(0);
-          collectMFMARegister(3);
 
+          // Collect destination and source C registers
+          collectNamedOperand(AMDGPU::OpName::vdst, "vdst"); // Destination
+          collectNamedOperand(AMDGPU::OpName::src2,
+                              "src2"); // Matrix C (accumulator)
           if (!MFMARegisters.empty()) {
-            RecentMFMAs.emplace_back(CurrentSlot, std::move(MFMARegisters));
+            RecentMFMAs.emplace_back(std::move(MFMARegisters));
             // Maintain window
             if (RecentMFMAs.size() > MaxLookbackWindow)
               RecentMFMAs.erase(RecentMFMAs.begin());
@@ -309,17 +318,13 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
           // Only process VGPR registers
           if (!TRI->isVGPRClass(CandidateRC))
             continue;
-
           for (auto It = RecentMFMAs.rbegin(); It != RecentMFMAs.rend(); ++It) {
-            const SmallVector<Register, 4> &MFMARegs = It->second;
+            const SmallVector<Register, 4> &MFMARegs = *It;
             for (Register MFMAReg : MFMARegs) {
-              // Verify register class compatibility
-              const TargetRegisterClass *MFMARC = MRI->getRegClass(MFMAReg);
-              if (!TRI->hasVGPRs(MFMARC))
-                continue;
-
               // Check if MFMA register is dead at current instruction
               const LiveInterval &MFMAInterval = LIS->getInterval(MFMAReg);
+              const SlotIndex CurrentSlot =
+                  LIS->getInstructionIndex(MI).getRegSlot();
               if (!MFMAInterval.liveAt(CurrentSlot)) {
                 // Add bi-directional anti-hints
                 MRI->addRegAllocationAntiHints(CandidateReg, MFMAReg);
