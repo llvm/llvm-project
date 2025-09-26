@@ -20,7 +20,7 @@ namespace omp {
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h.inc"
 
-} // namespace LLVM
+} // namespace omp
 } // namespace mlir
 
 #endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES_H

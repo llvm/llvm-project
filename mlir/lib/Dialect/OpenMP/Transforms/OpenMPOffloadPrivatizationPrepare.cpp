@@ -47,7 +47,7 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 class PrepareForOMPOffloadPrivatizationPass
-  : public omp::impl::PrepareForOMPOffloadPrivatizationPassBase<
+    : public omp::impl::PrepareForOMPOffloadPrivatizationPassBase<
           PrepareForOMPOffloadPrivatizationPass> {
 
   void runOnOperation() override {
@@ -85,8 +85,7 @@ class PrepareForOMPOffloadPrivatizationPass
         bool isFirstPrivate = privatizer.getDataSharingType() ==
                               omp::DataSharingClauseType::FirstPrivate;
 
-        Value mappedValue =
-            targetOp.getMappedValueForPrivateVar(privVarIdx);
+        Value mappedValue = targetOp.getMappedValueForPrivateVar(privVarIdx);
         Operation *mapInfoOperation = mappedValue.getDefiningOp();
         auto mapInfoOp = cast<omp::MapInfoOp>(mapInfoOperation);
 
@@ -107,8 +106,8 @@ class PrepareForOMPOffloadPrivatizationPass
           varPtr = mapInfoOp.getVarPtr();
 
         assert(isa<LLVM::LLVMPointerType>(varPtr.getType()));
-        Value heapMem = allocateHeapMem(targetOp, varPtr,
-                                        varType, mod, rewriter);
+        Value heapMem =
+            allocateHeapMem(targetOp, varPtr, varType, mod, rewriter);
         if (!heapMem)
           targetOp.emitError(
               "Unable to allocate heap memory when trying to move "
@@ -194,9 +193,9 @@ class PrepareForOMPOffloadPrivatizationPass
         Value initializedVal;
         if (!privatizer.getInitRegion().empty())
           initializedVal = createAlwaysInlineFuncAndCallIt(
-            privatizer.getInitRegion(),
-            llvm::formatv("{0}_{1}", privatizer.getSymName(), "init").str(),
-            {moldArg, newArg});
+              privatizer.getInitRegion(),
+              llvm::formatv("{0}_{1}", privatizer.getSymName(), "init").str(),
+              {moldArg, newArg});
         else
           initializedVal = newArg;
 
@@ -288,18 +287,9 @@ private:
     return privatizer;
   }
 
-  Operation *unwrapAddrSpaceCast(Operation *op) const {
-    if (!isa<LLVM::AddrSpaceCastOp>(op))
-      return op;
-    LLVM::AddrSpaceCastOp addrSpaceCastOp =
-        cast<LLVM::AddrSpaceCastOp>(op);
-    return unwrapAddrSpaceCast(addrSpaceCastOp.getArg().getDefiningOp());
-  }
-
   // Get the (compile-time constant) size of varType as per the
   // given DataLayout dl.
-  std::int64_t getSizeInBytes(const DataLayout &dl,
-                              Type varType) const {
+  std::int64_t getSizeInBytes(const DataLayout &dl, Type varType) const {
     llvm::TypeSize size = dl.getTypeSize(varType);
     unsigned short alignment = dl.getTypeABIAlignment(varType);
     return llvm::alignTo(size, alignment);
@@ -308,11 +298,10 @@ private:
   // Generate code to get the size of data being mapped from the bounds
   // of mapInfoOp
   Value getSizeInBytes(omp::MapInfoOp mapInfoOp, ModuleOp mod,
-                             IRRewriter &rewriter) const {
+                       IRRewriter &rewriter) const {
     Location loc = mapInfoOp.getLoc();
     Type llvmInt64Ty = rewriter.getI64Type();
-    Value constOne =
-        rewriter.create<LLVM::ConstantOp>(loc, llvmInt64Ty, 1);
+    Value constOne = rewriter.create<LLVM::ConstantOp>(loc, llvmInt64Ty, 1);
     Value elementCount = constOne;
     // TODO: Consider using  boundsOp.getExtent() if available.
     for (auto bounds : mapInfoOp.getBounds()) {
@@ -384,7 +373,7 @@ private:
 
     SmallVector<Type> paramTypes;
     llvm::copy(srcRegion.getArgumentTypes(), std::back_inserter(paramTypes));
-    Type resultType =  srcRegion.getArgument(0).getType();
+    Type resultType = srcRegion.getArgument(0).getType();
     LLVM::LLVMFunctionType funcType =
         LLVM::LLVMFunctionType::get(resultType, paramTypes);
 
