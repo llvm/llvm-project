@@ -27,7 +27,6 @@ public:
 
   bool convertJmpToTailCall(MCInst &Inst) override;
 
-  bool isCall(const MCInst &Inst) const override;
   bool isTailCall(const MCInst &Inst) const;
   bool isReturn(const MCInst &Inst) const override;
   bool isConditionalBranch(const MCInst &Inst) const override;
@@ -51,6 +50,13 @@ public:
                      llvm::MCInst *&UncondBr) const override;
 
   bool lowerTailCall(llvm::MCInst &Inst) override;
+
+  uint64_t analyzePLTEntry(MCInst &Instruction, InstructionIterator Begin,
+                           InstructionIterator End,
+                           uint64_t BeginPC) const override;
+
+  void createLongTailCall(std::vector<MCInst> &Seq, const MCSymbol *Target,
+                          MCContext *Ctx) override;
 };
 
 } // namespace bolt

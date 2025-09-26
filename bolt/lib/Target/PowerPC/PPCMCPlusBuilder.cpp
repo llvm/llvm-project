@@ -102,18 +102,6 @@ bool PPCMCPlusBuilder::convertJmpToTailCall(MCInst &Inst) {
   return false;
 }
 
-bool PPCMCPlusBuilder::isCall(const MCInst &I) const {
-  switch (opc(I)) {
-  case PPC::BL:    // branch with link (relative)
-  case PPC::BLA:   // absolute with link
-  case PPC::BCL:   // conditional with link (rare for calls, but safe)
-  case PPC::BCTRL: // branch to CTR with link (indirect call)
-    return true;
-  default:
-    return false;
-  }
-}
-
 bool PPCMCPlusBuilder::isTailCall(const MCInst &I) const {
   (void)I;
   return false;
@@ -214,6 +202,25 @@ bool PPCMCPlusBuilder::analyzeBranch(InstructionIterator Begin,
 }
 
 bool PPCMCPlusBuilder::lowerTailCall(MCInst &Inst) { return false; }
+
+uint64_t PPCMCPlusBuilder::analyzePLTEntry(MCInst &Instruction,
+                                           InstructionIterator Begin,
+                                           InstructionIterator End,
+                                           uint64_t BeginPC) const {
+  (void)Instruction;
+  (void)Begin;
+  (void)End;
+  (void)BeginPC;
+  return 0;
+}
+
+void PPCMCPlusBuilder::createLongTailCall(std::vector<MCInst> &Seq,
+                                          const MCSymbol *Target,
+                                          MCContext *Ctx) {
+  (void)Seq;
+  (void)Target;
+  (void)Ctx;
+}
 
 namespace llvm {
 namespace bolt {
