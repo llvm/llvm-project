@@ -179,6 +179,7 @@
 // CHECK-NOT: __riscv_ztso {{.*$}}
 // CHECK-NOT: __riscv_zvbc32e {{.*$}}
 // CHECK-NOT: __riscv_zvfbfa {{.*$}}
+// CHECK-NOT: __riscv_zvfofp8min {{.*$}}
 // CHECK-NOT: __riscv_zvfbfmin {{.*$}}
 // CHECK-NOT: __riscv_zvfbfwma {{.*$}}
 // CHECK-NOT: __riscv_zvkgs {{.*$}}
@@ -1568,6 +1569,14 @@
 // RUN:   -march=rv64ifzvfbfa0p1 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZVFBFA-EXT %s
 // CHECK-ZVFBFA-EXT: __riscv_zvfbfa 1000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32ifzvfofp8min0p2 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVFOFP8MIN-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64ifzvfofp8min0p2 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVFOFP8MIN-EXT %s
+// CHECK-ZVFOFP8MIN-EXT: __riscv_zvfofp8min 2000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32i_zve32x_zvbc32e0p7 -E -dM %s \
