@@ -9281,6 +9281,7 @@ void AMDGPUAsmParser::cvtVINTERP(MCInst &Inst, const OperandVector &Operands)
 {
   OptionalImmIndexMap OptionalIdx;
   unsigned Opc = Inst.getOpcode();
+  const MCRegisterInfo *MRI = getMRI();
 
   unsigned I = 1;
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
@@ -9322,15 +9323,29 @@ void AMDGPUAsmParser::cvtVINTERP(MCInst &Inst, const OperandVector &Operands)
     int OpIdx = AMDGPU::getNamedOperandIdx(Opc, Ops[J]);
     if (OpIdx == -1)
       break;
+    const MCOperand &SrcOp = Inst.getOperand(OpIdx);
 
     int ModIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
     uint32_t ModVal = Inst.getOperand(ModIdx).getImm();
 
-    if ((OpSel & (1 << J)) != 0)
-      ModVal |= SISrcMods::OP_SEL_0;
-    if (ModOps[J] == AMDGPU::OpName::src0_modifiers &&
-        (OpSel & (1 << 3)) != 0)
-      ModVal |= SISrcMods::DST_OP_SEL;
+    if (SrcOp.isReg() &&
+        MRI->getRegClass(AMDGPU::VGPR_16RegClassID).contains(SrcOp.getReg())) {
+      if (AMDGPU::isHi16Reg(SrcOp.getReg(), *MRI))
+        ModVal |= SISrcMods::OP_SEL_0;
+    } else {
+      if ((OpSel & (1 << J)) != 0)
+        ModVal |= SISrcMods::OP_SEL_0;
+    }
+    if (ModOps[J] == AMDGPU::OpName::src0_modifiers) {
+      int DstIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
+      if (DstIdx == -1)
+        return;
+      const MCOperand &DstOp = Inst.getOperand(DstIdx);
+      if (DstOp.isReg() &&
+          MRI->getRegClass(AMDGPU::VGPR_16RegClassID).contains(DstOp.getReg()))
+        if (AMDGPU::isHi16Reg(DstOp.getReg(), *MRI))
+          ModVal |= SISrcMods::DST_OP_SEL;
+    }
 
     Inst.getOperand(ModIdx).setImm(ModVal);
   }
