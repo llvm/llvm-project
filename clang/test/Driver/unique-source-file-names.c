@@ -9,3 +9,9 @@
 
 // ID: "-cc1"
 // ID: "-funique-source-file-identifier=foo"
+
+// RUN: %clang -funique-source-file-names -funique-source-file-output-paths -o out.o -c -### %s 2> %t
+// RUN: FileCheck --check-prefix=OUTPUT < %t %s
+
+// OUTPUT: "-cc1"
+// OUTPUT: "-funique-source-file-identifier=out.o"
