@@ -64,6 +64,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
@@ -3769,29 +3770,24 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // %4 = tail call i32 @llvm.vector.reduce.add.v4i32(%3)
       // =>
       // %2 = shl i32 %0, 2
-      Value *InputValue;
-      ArrayRef<int> Mask;
-      ConstantInt *InsertionIdx;
       assert(Arg->getType()->isVectorTy() &&
              "The vector.reduce.add intrinsic's argument must be a vector!");
 
-      if (match(Arg, m_Shuffle(m_InsertElt(m_Poison(), m_Value(InputValue),
-                                           m_ConstantInt(InsertionIdx)),
-                               m_Poison(), m_Mask(Mask)))) {
+      if (Value *Splat = getSplatValue(Arg)) {
         // It is only a multiplication if we add the same element over and over.
-        bool AllElementsAreTheSameInMask =
-            std::all_of(Mask.begin(), Mask.end(),
-                        [&Mask](int MaskElt) { return MaskElt == Mask[0]; });
-        unsigned ReducedVectorLength = Mask.size();
-
-        if (AllElementsAreTheSameInMask &&
-            InsertionIdx->getSExtValue() == Mask[0] &&
-            isPowerOf2_32(ReducedVectorLength)) {
-          unsigned Pow2 = Log2_32(ReducedVectorLength);
-          Value *Res = Builder.CreateShl(
-              InputValue, Constant::getIntegerValue(InputValue->getType(),
-                                                    APInt(32, Pow2)));
-          return replaceInstUsesWith(CI, Res);
+        ElementCount ReducedVectorElementCount =
+            static_cast<VectorType *>(Arg->getType())->getElementCount();
+        if (ReducedVectorElementCount.isFixed()) {
+          unsigned VectorSize = ReducedVectorElementCount.getFixedValue();
+          if (isPowerOf2_32(VectorSize)) {
+            unsigned Pow2 = Log2_32(VectorSize);
+            Value *Res = Builder.CreateShl(
+                Splat,
+                Constant::getIntegerValue(
+                    Splat->getType(),
+                    APInt(Splat->getType()->getIntegerBitWidth(), Pow2)));
+            return replaceInstUsesWith(CI, Res);
+          }
         }
       }
     }

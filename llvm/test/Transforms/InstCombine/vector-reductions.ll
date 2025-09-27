@@ -320,6 +320,17 @@ define i32 @constant_multiplied_at_0(i32 %0) {
   ret i32 %4
 }
 
+define i64 @constant_multiplied_at_0_64bits(i64 %0) {
+; CHECK-LABEL: @constant_multiplied_at_0_64bits(
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP0:%.*]], 2
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %2 = insertelement <4 x i64> poison, i64 %0, i64 0
+  %3 = shufflevector <4 x i64> %2, <4 x i64> poison, <4 x i32> zeroinitializer
+  %4 = tail call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %3)
+  ret i64 %4
+}
+
 define i32 @constant_multiplied_at_0_two_pow8(i32 %0) {
 ; CHECK-LABEL: @constant_multiplied_at_0_two_pow8(
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0:%.*]], 3
