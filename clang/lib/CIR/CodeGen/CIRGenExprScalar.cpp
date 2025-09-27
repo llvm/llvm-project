@@ -676,6 +676,10 @@ public:
   mlir::Value VisitRealImag(const UnaryOperator *e,
                             QualType promotionType = QualType());
 
+  mlir::Value VisitUnaryExtension(const UnaryOperator *e) {
+    return Visit(e->getSubExpr());
+  }
+
   mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
     CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
     return Visit(die->getExpr());
