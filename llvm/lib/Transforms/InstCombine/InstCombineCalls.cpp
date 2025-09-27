@@ -3761,6 +3761,39 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             return replaceInstUsesWith(CI, Res);
           }
       }
+
+      // Handle the case where a value is multiplied by a power of two.
+      // For example:
+      // %2 = insertelement <4 x i32> poison, i32 %0, i64 0
+      // %3 = shufflevector <4 x i32> %2, poison, <4 x i32> zeroinitializer
+      // %4 = tail call i32 @llvm.vector.reduce.add.v4i32(%3)
+      // =>
+      // %2 = shl i32 %0, 2
+      Value *InputValue;
+      ArrayRef<int> Mask;
+      ConstantInt *InsertionIdx;
+      assert(Arg->getType()->isVectorTy() &&
+             "The vector.reduce.add intrinsic's argument must be a vector!");
+
+      if (match(Arg, m_Shuffle(m_InsertElt(m_Poison(), m_Value(InputValue),
+                                           m_ConstantInt(InsertionIdx)),
+                               m_Poison(), m_Mask(Mask)))) {
+        // It is only a multiplication if we add the same element over and over.
+        bool AllElementsAreTheSameInMask =
+            std::all_of(Mask.begin(), Mask.end(),
+                        [&Mask](int MaskElt) { return MaskElt == Mask[0]; });
+        unsigned ReducedVectorLength = Mask.size();
+
+        if (AllElementsAreTheSameInMask &&
+            InsertionIdx->getSExtValue() == Mask[0] &&
+            isPowerOf2_32(ReducedVectorLength)) {
+          unsigned Pow2 = Log2_32(ReducedVectorLength);
+          Value *Res = Builder.CreateShl(
+              InputValue, Constant::getIntegerValue(InputValue->getType(),
+                                                    APInt(32, Pow2)));
+          return replaceInstUsesWith(CI, Res);
+        }
+      }
     }
     [[fallthrough]];
   }
