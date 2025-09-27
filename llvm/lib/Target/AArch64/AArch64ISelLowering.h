@@ -250,6 +250,11 @@ public:
   bool isLegalAddScalableImmediate(int64_t) const override;
   bool isLegalICmpImmediate(int64_t) const override;
 
+  /// Add AArch64-specific opcodes to the default list.
+  bool isBinOp(unsigned Opcode) const override;
+
+  bool isCommutativeBinOp(unsigned Opcode) const override;
+
   bool isMulAddWithConstProfitable(SDValue AddNode,
                                    SDValue ConstNode) const override;
 
@@ -910,6 +915,12 @@ private:
   bool hasMultipleConditionRegisters(EVT VT) const override {
     return VT.isScalableVector();
   }
+
+  // Replace a flag-setting operator (eg ANDS) with the generic version
+  // (eg AND) if the flag is unused.
+  SDValue performFlagSettingCombine(SDNode *N,
+                                    TargetLowering::DAGCombinerInfo &DCI,
+                                    unsigned GenericOpcode) const;
 };
 
 namespace AArch64 {
