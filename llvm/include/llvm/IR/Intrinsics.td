@@ -2785,6 +2785,10 @@ def int_vector_partial_reduce_add : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
                                                           [llvm_anyvector_ty, llvm_anyvector_ty],
                                                           [IntrNoMem]>;
 
+def int_vector_partial_reduce_fadd : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                                                           [llvm_anyfloat_ty, llvm_anyfloat_ty],
+                                                           [IntrNoMem]>;
+
 //===----------------- Pointer Authentication Intrinsics ------------------===//
 //
 

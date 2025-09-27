@@ -2040,6 +2040,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SUMLA:
+  case ISD::PARTIAL_REDUCE_FMLA:
                                 return visitPARTIAL_REDUCE_MLA(N);
   case ISD::VECTOR_COMPRESS:    return visitVECTOR_COMPRESS(N);
   case ISD::LIFETIME_END:       return visitLIFETIME_END(N);
@@ -12997,14 +12998,18 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   SDValue Op2 = N->getOperand(2);
 
   APInt C;
-  if (Op1->getOpcode() != ISD::MUL ||
-      !ISD::isConstantSplatVector(Op2.getNode(), C) || !C.isOne())
+  ConstantFPSDNode *CFP;
+  if (!(Op1->getOpcode() == ISD::MUL &&
+        ISD::isConstantSplatVector(Op2.getNode(), C) && C.isOne()) &&
+      !(Op1->getOpcode() == ISD::FMUL &&
+        (CFP = llvm::isConstOrConstSplatFP(Op2, false)) &&
+        CFP->isExactlyValue(1.0)))
     return SDValue();
 
   SDValue LHS = Op1->getOperand(0);
   SDValue RHS = Op1->getOperand(1);
   unsigned LHSOpcode = LHS->getOpcode();
-  if (!ISD::isExtOpcode(LHSOpcode))
+  if (!ISD::isExtOpcode(LHSOpcode) && LHSOpcode != ISD::FP_EXTEND)
     return SDValue();
 
   SDValue LHSExtOp = LHS->getOperand(0);
@@ -13036,7 +13041,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   }
 
   unsigned RHSOpcode = RHS->getOpcode();
-  if (!ISD::isExtOpcode(RHSOpcode))
+  if (!ISD::isExtOpcode(RHSOpcode) && RHSOpcode != ISD::FP_EXTEND)
     return SDValue();
 
   SDValue RHSExtOp = RHS->getOperand(0);
@@ -13053,6 +13058,8 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   else if (LHSOpcode == ISD::ZERO_EXTEND && RHSOpcode == ISD::SIGN_EXTEND) {
     NewOpc = ISD::PARTIAL_REDUCE_SUMLA;
     std::swap(LHSExtOp, RHSExtOp);
+  } else if (LHSOpcode == ISD::FP_EXTEND && RHSOpcode == ISD::FP_EXTEND) {
+    NewOpc = ISD::PARTIAL_REDUCE_FMLA;
   } else
     return SDValue();
   // For a 2-stage extend the signedness of both of the extends must match
@@ -13087,8 +13094,12 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
   SDValue Op2 = N->getOperand(2);
 
   APInt ConstantOne;
-  if (!ISD::isConstantSplatVector(Op2.getNode(), ConstantOne) ||
-      !ConstantOne.isOne())
+  ConstantFPSDNode *C;
+  if (!(N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA &&
+        (C = llvm::isConstOrConstSplatFP(Op2, false)) &&
+        C->isExactlyValue(1.0)) &&
+      !(ISD::isConstantSplatVector(Op2.getNode(), ConstantOne) &&
+        ConstantOne.isOne()))
     return SDValue();
 
   unsigned Op1Opcode = Op1.getOpcode();
@@ -13098,12 +13109,15 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
   bool Op1IsSigned = Op1Opcode == ISD::SIGN_EXTEND;
   bool NodeIsSigned = N->getOpcode() != ISD::PARTIAL_REDUCE_UMLA;
   EVT AccElemVT = Acc.getValueType().getVectorElementType();
-  if (Op1IsSigned != NodeIsSigned &&
+  if (N->getOpcode() != ISD::PARTIAL_REDUCE_FMLA &&
+      Op1IsSigned != NodeIsSigned &&
       Op1.getValueType().getVectorElementType() != AccElemVT)
     return SDValue();
 
-  unsigned NewOpcode =
-      Op1IsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
+  unsigned NewOpcode = N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA
+                           ? ISD::PARTIAL_REDUCE_FMLA
+                       : Op1IsSigned ? ISD::PARTIAL_REDUCE_SMLA
+                                     : ISD::PARTIAL_REDUCE_UMLA;
 
   SDValue UnextOp1 = Op1.getOperand(0);
   EVT UnextOp1VT = UnextOp1.getValueType();
