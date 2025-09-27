@@ -288,7 +288,6 @@ namespace {
     }
 
     void HandleTranslationUnit(ASTContext &Ctx) override {
-
       // Release the Builder when there is no error.
       if (!Diags.hasUnrecoverableErrorOccurred() && Builder)
         Builder->Release();
