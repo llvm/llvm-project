@@ -14,6 +14,8 @@
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "Quality.h"
+#include "Query.h"
+#include "QuerySession.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "URI.h"
@@ -41,6 +43,10 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/ASTMatchers/Dynamic/Diagnostics.h"
+#include "clang/ASTMatchers/Dynamic/Parser.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -52,6 +58,7 @@
 #include "clang/Index/IndexingOptions.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Parse/Parser.h"
 #include "clang/Sema/HeuristicResolver.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -66,6 +73,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cmath>
 #include <optional>
 #include <string>
 #include <vector>
@@ -771,6 +780,57 @@ const syntax::Token *findNearbyIdentifier(const SpelledWord &Word,
         BestTok->location().printToString(SM));
 
   return BestTok;
+}
+
+auto locateASTQuery(ParsedAST &AST, SearchASTArgs const &Query)
+    -> llvm::Expected<std::vector<ast_matchers::BoundNodes>> {
+  using namespace ast_matchers;
+  using namespace ast_matchers::dynamic;
+  using ast_matchers::dynamic::Parser;
+
+  Diagnostics Diag;
+  auto MatcherSource = llvm::StringRef(Query.searchQuery).ltrim();
+
+  std::optional<DynTypedMatcher> Matcher = Parser::parseMatcherExpression(
+      MatcherSource,
+      nullptr /* is this sema instance usefull, to reduce overhead?*/,
+      nullptr /*we currently don't support let*/, &Diag);
+  if (!Matcher) {
+    return error("Not a valid top-level matcher: {}.", Diag.toString());
+  }
+
+  struct CollectBoundNodes : MatchFinder::MatchCallback {
+    std::vector<BoundNodes> *Bindings;
+    CollectBoundNodes(std::vector<BoundNodes> &Bindings)
+        : Bindings(&Bindings) {}
+    void run(const MatchFinder::MatchResult &Result) override {
+      Bindings->push_back(Result.Nodes);
+    }
+  };
+
+  DynTypedMatcher MaybeBoundMatcher = *Matcher;
+  if (Query.BindRoot) {
+    std::optional<DynTypedMatcher> M = Matcher->tryBind("root");
+    if (M)
+      MaybeBoundMatcher = *M;
+  }
+  std::vector<BoundNodes> Matches;
+  CollectBoundNodes Collect(Matches);
+
+  MatchFinder::MatchFinderOptions Opt;
+  Opt.IgnoreSystemHeaders = true;
+  MatchFinder Finder{Opt};
+  if (!Finder.addDynamicMatcher(MaybeBoundMatcher, &Collect)) {
+    return error("Can't add matcher.");
+  }
+
+  ASTContext &Ctx = AST.getASTContext();
+
+  auto OldTK = Ctx.getParentMapContext().getTraversalKind();
+  Ctx.getParentMapContext().setTraversalKind(Query.Tk);
+  Finder.matchAST(Ctx);
+  Ctx.getParentMapContext().setTraversalKind(OldTK);
+  return Matches;
 }
 
 std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
