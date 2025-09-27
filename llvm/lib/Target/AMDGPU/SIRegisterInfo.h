@@ -417,6 +417,9 @@ public:
   const uint32_t *getAllVectorRegMask() const;
   const uint32_t *getAllAllocatableSRegMask() const;
 
+  void determineVGPRsForWwmAlloc(MachineFunction &MF, BitVector &RegMask,
+                                 unsigned NumRegs) const;
+
   // \returns number of 32 bit registers covered by a \p LM
   static unsigned getNumCoveredRegs(LaneBitmask LM) {
     // The assumption is that every lo16 subreg is an even bit and every hi16

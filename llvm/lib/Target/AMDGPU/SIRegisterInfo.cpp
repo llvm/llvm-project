@@ -40,6 +40,11 @@ static cl::opt<bool> EnableSpillCFISavedRegs(
     cl::desc("Enable spilling the registers required for CFI emission"),
     cl::ReallyHidden, cl::init(false), cl::ZeroOrMore);
 
+static cl::opt<unsigned> MaxNumVGPRsForWwmAllocation(
+    "amdgpu-num-vgprs-for-wwm-alloc",
+    cl::desc("Max num VGPRs for whole-wave register allocation."),
+    cl::ReallyHidden, cl::init(10));
+
 std::array<std::vector<int16_t>, 32> SIRegisterInfo::RegSplitParts;
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
 
@@ -727,14 +732,13 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     reserveRegisterTuples(Reserved, MFI->getVGPRForAGPRCopy());
   }
 
-  // During wwm-regalloc, reserve the registers for perlane VGPR allocation. The
-  // MFI->getNonWWMRegMask() field will have a valid bitmask only during
-  // wwm-regalloc and it would be empty otherwise.
-  BitVector NonWWMRegMask = MFI->getNonWWMRegMask();
-  if (!NonWWMRegMask.empty()) {
+  // To mask off the VGPRs as per the VGPR partition strategy to ensure
+  // sufficient registers for the two vector regalloc pipelines.
+  BitVector RegMask = MFI->getVGPRAllocMask();
+  if (!RegMask.empty()) {
     for (unsigned RegI = AMDGPU::VGPR0, RegE = AMDGPU::VGPR0 + MaxNumVGPRs;
          RegI < RegE; ++RegI) {
-      if (NonWWMRegMask.test(RegI))
+      if (RegMask.test(RegI))
         reserveRegisterTuples(Reserved, RegI);
     }
   }
@@ -4076,6 +4080,46 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
 MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {
   // Not a callee saved register.
   return AMDGPU::SGPR30_SGPR31;
+}
+
+void SIRegisterInfo::determineVGPRsForWwmAlloc(MachineFunction &MF,
+                                               BitVector &RegMask,
+                                               unsigned NumRegs) const {
+  // Determine an optimal number of VGPRs for WWM allocation. The complement
+  // list will be available for allocating the perlane VGPR virtual registers.
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  BitVector ReservedRegs = getReservedRegs(MF);
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+
+  // Control the maximum mumber of registers for wwm-alloc via the commandline
+  // switch. It is mainly to avoid unwanted register pressure during perlane
+  // VGPR allocation if too many registers are reserved.
+  // FIXME: If there are performance concerns, the MaxNumVGPRsForWwmAllocation
+  // should be fine tuned to have a balanced allocation for the two vector
+  // register allocation pipelines.
+  NumRegs = std::min(NumRegs, (unsigned)MaxNumVGPRsForWwmAllocation);
+
+  auto [MaxNumVGPRs, MaxNumAGPRs] = ST.getMaxNumVectorRegs(MF.getFunction());
+  // Try to use the highest available registers for now. Later after
+  // perlane vgpr-alloc, they can be shifted to the lowest range during PEI at
+  // `determineCalleeSaves`.
+  unsigned I = 0;
+  for (unsigned Reg = AMDGPU::VGPR0 + MaxNumVGPRs - 1;
+       (I < NumRegs) && (Reg >= AMDGPU::VGPR0); --Reg) {
+    if (ReservedRegs.test(Reg) ||
+        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
+      continue;
+
+    markSuperRegs(RegMask, Reg);
+    ++I;
+  }
+
+  if (I != NumRegs) {
+    // Reserve an arbitrary register and report the error.
+    markSuperRegs(RegMask, AMDGPU::VGPR0);
+    MF.getFunction().getContext().emitError(
+        "cannot find enough VGPRs for wwm-regalloc");
+  }
 }
 
 const TargetRegisterClass *

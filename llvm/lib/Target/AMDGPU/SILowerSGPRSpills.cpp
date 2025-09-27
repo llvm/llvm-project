@@ -34,11 +34,6 @@ using MBBVector = SmallVector<MachineBasicBlock *, 4>;
 
 namespace {
 
-static cl::opt<unsigned> MaxNumVGPRsForWwmAllocation(
-    "amdgpu-num-vgprs-for-wwm-alloc",
-    cl::desc("Max num VGPRs for whole-wave register allocation."),
-    cl::ReallyHidden, cl::init(10));
-
 class SILowerSGPRSpills {
 private:
   const SIRegisterInfo *TRI = nullptr;
@@ -63,7 +58,6 @@ public:
   void updateLaneVGPRDomInstr(
       int FI, MachineBasicBlock *MBB, MachineBasicBlock::iterator InsertPt,
       DenseMap<Register, MachineBasicBlock::iterator> &LaneVGPRDomInstr);
-  void determineRegsForWWMAllocation(MachineFunction &MF, BitVector &RegMask);
 };
 
 class SILowerSGPRSpillsLegacy : public MachineFunctionPass {
@@ -330,43 +324,6 @@ void SILowerSGPRSpills::updateLaneVGPRDomInstr(
   }
 }
 
-void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
-                                                      BitVector &RegMask) {
-  // Determine an optimal number of VGPRs for WWM allocation. The complement
-  // list will be available for allocating other VGPR virtual registers.
-  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  BitVector ReservedRegs = TRI->getReservedRegs(MF);
-  BitVector NonWwmAllocMask(TRI->getNumRegs());
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-
-  // FIXME: MaxNumVGPRsForWwmAllocation should be tuned in to have a balanced
-  // allocation between WWM values and other vector register operands.
-  unsigned NumRegs = MaxNumVGPRsForWwmAllocation;
-  NumRegs =
-      std::min(static_cast<unsigned>(MFI->getSGPRSpillVGPRs().size()), NumRegs);
-
-  auto [MaxNumVGPRs, MaxNumAGPRs] = ST.getMaxNumVectorRegs(MF.getFunction());
-  // Try to use the highest available registers for now. Later after
-  // vgpr-regalloc, they can be shifted to the lowest range.
-  unsigned I = 0;
-  for (unsigned Reg = AMDGPU::VGPR0 + MaxNumVGPRs - 1;
-       (I < NumRegs) && (Reg >= AMDGPU::VGPR0); --Reg) {
-    if (!ReservedRegs.test(Reg) &&
-        !MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true)) {
-      TRI->markSuperRegs(RegMask, Reg);
-      ++I;
-    }
-  }
-
-  if (I != NumRegs) {
-    // Reserve an arbitrary register and report the error.
-    TRI->markSuperRegs(RegMask, AMDGPU::VGPR0);
-    MF.getFunction().getContext().emitError(
-        "cannot find enough VGPRs for wwm-regalloc");
-  }
-}
-
 bool SILowerSGPRSpillsLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
   LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
@@ -490,18 +447,36 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
       }
     }
 
-    // Determine the registers for WWM allocation and also compute the register
-    // mask for non-wwm VGPR allocation.
-    if (FuncInfo->getSGPRSpillVGPRs().size()) {
-      BitVector WwmRegMask(TRI->getNumRegs());
+    if (unsigned NumWwmRegs = FuncInfo->getSGPRSpillVGPRs().size()) {
+      // Identify the VGPRs for wwm-regalloc pipeline.
+      BitVector RegMask(TRI->getNumRegs());
+      if (FuncInfo->getVGPRAllocMask().empty()) {
+        // This is the early wave-transform path with the structurizer and no
+        // vector register allocations are scheduled so far. Now determine the
+        // registers for WWM allocation and then reserve the complement set as a
+        // mask for perlane VGPR allocation.
+        TRI->determineVGPRsForWwmAlloc(MF, RegMask, NumWwmRegs);
+      } else {
+        // The late wave-transform path with the WWM regmask already computed.
+        // Now compute the new mask to reserve the physical registers allocated
+        // earlier during perlane-VGPR pipeline. All free registers found at
+        // this point can be used for wwm-regalloc. This can turn out to be an
+        // advantage in most cases as we see more free registers than we
+        // initially reserved for wwm-alloc.
+        auto [MaxNumVGPRs, MaxNumAGPRs] =
+            ST.getMaxNumVectorRegs(MF.getFunction());
 
-      determineRegsForWWMAllocation(MF, WwmRegMask);
+        for (unsigned RegI = AMDGPU::VGPR0, RegE = AMDGPU::VGPR0 + MaxNumVGPRs;
+             RegI < RegE; ++RegI) {
+          if (MRI.isPhysRegUsed(RegI, /*SkipRegMaskTest=*/true))
+            continue;
 
-      BitVector NonWwmRegMask(WwmRegMask);
-      NonWwmRegMask.flip().clearBitsNotInMask(TRI->getAllVGPRRegMask());
-
-      // The complement set will be the registers for non-wwm vgpr allocation.
-      FuncInfo->updateNonWWMRegMask(NonWwmRegMask);
+          TRI->markSuperRegs(RegMask, RegI);
+        }
+      }
+      // The complement VGPR mask should be saved.
+      RegMask.flip().clearBitsNotInMask(TRI->getAllVGPRRegMask());
+      FuncInfo->updateVGPRAllocMask(RegMask);
     }
 
     for (MachineBasicBlock &MBB : MF) {
@@ -523,11 +498,11 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
       }
     }
 
-    // All those frame indices which are dead by now should be removed from the
-    // function frame. Otherwise, there is a side effect such as re-mapping of
-    // free frame index ids by the later pass(es) like "stack slot coloring"
-    // which in turn could mess-up with the book keeping of "frame index to VGPR
-    // lane".
+    // All those frame indices which are dead by now should be removed from
+    // the function frame. Otherwise, there is a side effect such as
+    // re-mapping of free frame index ids by the later pass(es) like "stack
+    // slot coloring" which in turn could mess-up with the book keeping of
+    // "frame index to VGPR lane".
     FuncInfo->removeDeadFrameIndices(MF, /*ResetSGPRSpillStackIDs*/ false);
 
     MadeChange = true;

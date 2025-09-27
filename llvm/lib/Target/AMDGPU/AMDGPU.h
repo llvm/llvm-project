@@ -59,6 +59,7 @@ ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass(bool IsOptNone);
 FunctionPass *createAMDGPUReserveWWMRegsPass();
+FunctionPass *createAMDGPUPartitionVGPRsForRAPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
@@ -167,6 +168,9 @@ private:
 
 void initializeAMDGPUPrepareAGPRAllocLegacyPass(PassRegistry &);
 extern char &AMDGPUPrepareAGPRAllocLegacyID;
+
+void initializeAMDGPUPartitionVGPRsForRALegacyPass(PassRegistry &);
+extern char &AMDGPUPartitionVGPRsForRALegacyID;
 
 void initializeAMDGPUReserveWWMRegsLegacyPass(PassRegistry &);
 extern char &AMDGPUReserveWWMRegsLegacyID;

@@ -24,6 +24,7 @@
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPULowerVGPREncoding.h"
 #include "AMDGPUMacroFusion.h"
+#include "AMDGPUPartitionVGPRsForRA.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
 #include "AMDGPUPrepareAGPRAlloc.h"
@@ -586,6 +587,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
   initializeAMDGPULowerBufferFatPointersPass(*PR);
   initializeAMDGPULowerIntrinsicsLegacyPass(*PR);
+  initializeAMDGPUPartitionVGPRsForRALegacyPass(*PR);
   initializeAMDGPUReserveWWMRegsLegacyPass(*PR);
   initializeAMDGPURewriteAGPRCopyMFMALegacyPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
@@ -1753,13 +1755,14 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(&GCNPreRALongBranchRegID);
 
   if (WaveTransformCF) {
-    // TODO-WAVETRANSFORM: simple case will work as it is if there are still
-    // VGPRs left for sgpr-spilling and WMM vgprs. In general, We need run
-    // a cost model to estimate the sgpr-spills and reserve some vgprs here
-    // for wwm-regalloc before we can use the rest for vgpr-alloc.
+    // TODO-WAVETRANSFORM: If there are performance concerns, the current
+    // partition strategy has to be improved.
+    addPass(&AMDGPUPartitionVGPRsForRALegacyID);
+
+    // Perlane VGPR allocation pipeline.
     addPass(createVGPRAllocPass(false));
 
-    // Perform the WaveTransform in non-SSA form
+    // Perform the WaveTransform now.
     addPass(createAMDGPUWaveTransformPass());
 
     // TODO-WAVETRANSFORM:
@@ -1789,7 +1792,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(&SILowerWWMCopiesLegacyID);
   addPass(&AMDGPUReserveWWMRegsLegacyID);
 
-  // For allocating regular VGPRs.
+  // For allocating perlane VGPRs.
   if (!WaveTransformCF)
     addPass(createVGPRAllocPass(false));
 
@@ -1811,15 +1814,16 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(&GCNPreRALongBranchRegID);
 
   if (WaveTransformCF) {
-    // TODO-WAVETRANSFORM: simple case will work as it is if there are still
-    // VGPRs left for sgpr-spilling and WMM vgprs. In general, We need run
-    // a cost model to estimate the sgpr-spills and reserve some vgprs here
-    // for wwm-regalloc before we can use the rest for vgpr-alloc.
+    // TODO-WAVETRANSFORM: If there are performance concerns, the current
+    // partition strategy has to be improved.
+    addPass(&AMDGPUPartitionVGPRsForRALegacyID);
+
+    // Perlane VGPR allocation pipeline.
     addPass(createVGPRAllocPass(true));
     addPreRewrite();
     addPass(createVirtRegRewriter(false));
 
-    // Perform the WaveTransform in non-SSA form
+    // Perform the WaveTransform now.
     addPass(createAMDGPUWaveTransformPass());
 
     // TODO-WAVETRANSFORM:
@@ -1865,7 +1869,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(&AMDGPUReserveWWMRegsLegacyID);
 
   if (!WaveTransformCF) {
-    // For allocating regular VGPRs.
+    // Perlane VGPR allocation pipeline.
     addPass(createVGPRAllocPass(true));
 
     addPreRewrite();

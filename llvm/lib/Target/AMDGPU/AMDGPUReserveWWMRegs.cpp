@@ -105,8 +105,8 @@ bool AMDGPUReserveWWMRegs::run(MachineFunction &MF) {
       MO.setIsRenamable(false);
   }
 
-  // Now clear the NonWWMRegMask earlier set during wwm-regalloc.
-  MFI->clearNonWWMRegAllocMask();
+  // Now clear the VGPR register allocation mask.
+  MFI->clearVGPRAllocMask();
 
   return Changed;
 }
