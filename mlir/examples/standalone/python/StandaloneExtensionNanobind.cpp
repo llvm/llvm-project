@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Standalone-c/Dialects.h"
+#include "mlir-c/Dialect/Arith.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
@@ -22,13 +23,21 @@ NB_MODULE(_standaloneDialectsNanobind, m) {
   auto standaloneM = m.def_submodule("standalone");
 
   standaloneM.def(
-      "register_dialect",
+      "register_dialects",
       [](MlirContext context, bool load) {
-        MlirDialectHandle handle = mlirGetDialectHandle__standalone__();
-        mlirDialectHandleRegisterDialect(handle, context);
+        MlirDialectHandle arithHandle = mlirGetDialectHandle__arith__();
+        MlirDialectHandle standaloneHandle =
+            mlirGetDialectHandle__standalone__();
+        mlirDialectHandleRegisterDialect(arithHandle, context);
+        mlirDialectHandleRegisterDialect(standaloneHandle, context);
         if (load) {
-          mlirDialectHandleLoadDialect(handle, context);
+          mlirDialectHandleLoadDialect(arithHandle, context);
+          mlirDialectHandleRegisterDialect(standaloneHandle, context);
         }
       },
-      nb::arg("context").none() = nb::none(), nb::arg("load") = true);
+      nb::arg("context").none() = nb::none(), nb::arg("load") = true,
+      // clang-format off
+      nb::sig("def register_dialects(context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") ", load: bool = True) -> None")
+      // clang-format on
+  );
 }

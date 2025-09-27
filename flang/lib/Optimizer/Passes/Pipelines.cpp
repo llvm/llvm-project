@@ -226,6 +226,8 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
+  if (!pc.SkipConvertComplexPow)
+    pm.addPass(fir::createConvertComplexPow());
   pm.addPass(mlir::createCSEPass());
 
   if (pc.OptLevel.isOptimizingForSpeed())
@@ -243,6 +245,10 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   EnableOpenMP enableOpenMP,
                                   llvm::OptimizationLevel optLevel) {
+  if (optLevel.getSizeLevel() > 0 || optLevel.getSpeedupLevel() > 0) {
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, hlfir::createExpressionSimplification);
+  }
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     addNestedPassToAllTopLevelOperations<PassConstructor>(
