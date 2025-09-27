@@ -1,0 +1,26 @@
+# RUN: yaml2obj %s -o %t.dxbc
+# RUN: not llvm-objcopy --dump-section=FKE0=%t.fek0 %t.dxbc 2>&1 | FileCheck %s --check-prefix=CHECK-EMPTY
+# RUN: not llvm-objcopy --dump-section=FKE3=%t.fek1 %t.dxbc 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING
+# RUN: not llvm-objcopy --dump-section=FKE2=%t/does_not_exist/.fek2 %t.dxbc 2>&1 | FileCheck %s --check-prefix=CHECK-BAD-PATH
+
+# CHECK-EMPTY: error: {{.*}}: part 'FKE0' is empty
+# CHECK-MISSING: error: {{.*}}: part 'FKE3' not found
+# CHECK-BAD-PATH: error: {{.*}}: No such file or directory
+--- !dxcontainer
+Header:
+  Hash:        [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:     1
+    Minor:     0
+  FileSize:    108
+  PartCount:   3
+  PartOffsets: [ 60, 68, 76 ]
+Parts:
+  - Name: FKE0
+    Size: 0
+  - Name: FKE1
+    Size: 0
+  - Name: FKE2
+    Size: 8
+...
