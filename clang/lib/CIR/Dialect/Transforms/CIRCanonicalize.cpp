@@ -134,8 +134,6 @@ void CIRCanonicalizePass::runOnOperation() {
   getOperation()->walk([&](Operation *op) {
     assert(!cir::MissingFeatures::switchOp());
     assert(!cir::MissingFeatures::tryOp());
-    assert(!cir::MissingFeatures::complexRealOp());
-    assert(!cir::MissingFeatures::complexImagOp());
     assert(!cir::MissingFeatures::callOp());
 
     // Many operations are here to perform a manual `fold` in

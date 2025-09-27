@@ -2,7 +2,7 @@
 
 define amdgpu_kernel void @divergent_cycle_1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: UniformityInfo for function 'divergent_cycle_1':
-; CHECK: CYCLES ASSSUMED DIVERGENT:
+; CHECK: CYCLES ASSUMED DIVERGENT:
 ; CHECK:   depth=1: entries(R P) S Q
 ; CHECK: CYCLES WITH DIVERGENT EXIT:
 ; CHECK:   depth=2: entries(S P) Q
@@ -40,7 +40,7 @@ exit:
 
 define amdgpu_kernel void @uniform_cycle_1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: UniformityInfo for function 'uniform_cycle_1':
-; CHECK-NOT: CYCLES ASSSUMED DIVERGENT:
+; CHECK-NOT: CYCLES ASSUMED DIVERGENT:
 ; CHECK-NOT: CYCLES WITH DIVERGENT EXIT:
 entry:
  %cond.uni = icmp slt i32 %a, 0

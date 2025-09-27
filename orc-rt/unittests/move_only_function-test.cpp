@@ -98,6 +98,11 @@ TEST(MoveOnlyFunctionTest, Captures) {
   EXPECT_EQ(C5(), 15);
   Tmp = std::move(C5);
   EXPECT_EQ(Tmp(), 15);
+
+  // Test capture via lvalue.
+  auto Inc = [](int N) { return N + 1; };
+  move_only_function<int(int)> C6(Inc);
+  EXPECT_EQ(C6(1), 2);
 }
 
 TEST(MoveOnlyFunctionTest, MoveOnly) {
@@ -168,4 +173,76 @@ TEST(MoveOnlyFunctionTest, BooleanConversion) {
 
   move_only_function<void()> F = []() {};
   EXPECT_TRUE(F);
+}
+
+class ConstCallCounter {
+public:
+  ConstCallCounter(size_t &NonConst, size_t &Const)
+      : NonConst(NonConst), Const(Const) {}
+  void operator()() { ++NonConst; }
+  void operator()() const { ++Const; }
+
+private:
+  size_t &NonConst;
+  size_t &Const;
+};
+
+TEST(MoveOnlyFunctionTest, Constness) {
+  {
+    // Non-const move-only-function, non-const callable.
+    size_t NonConst = 0;
+    size_t Const = 0;
+    move_only_function<void()> F(ConstCallCounter(NonConst, Const));
+    F();
+    EXPECT_EQ(NonConst, 1U);
+    EXPECT_EQ(Const, 0U);
+  }
+
+  {
+    // const move-only-function, non-const callable.
+    size_t NonConst = 0;
+    size_t Const = 0;
+    const move_only_function<void()> F(ConstCallCounter(NonConst, Const));
+    F();
+    EXPECT_EQ(NonConst, 1U);
+    EXPECT_EQ(Const, 0U);
+  }
+
+  {
+    // Non-const move-only-function, const callable.
+    size_t NonConst = 0;
+    size_t Const = 0;
+    move_only_function<void() const> F(ConstCallCounter(NonConst, Const));
+    F();
+    EXPECT_EQ(NonConst, 0U);
+    EXPECT_EQ(Const, 1U);
+  }
+
+  {
+    // const move-only-function, const callable.
+    size_t NonConst = 0;
+    size_t Const = 0;
+    const move_only_function<void() const> F(ConstCallCounter(NonConst, Const));
+    F();
+    EXPECT_EQ(NonConst, 0U);
+    EXPECT_EQ(Const, 1U);
+  }
+}
+
+TEST(MoveOnlyFunctionTest, ShouldCopyInitialize) {
+  // Check that we don't accidentally move-initialize move_only_functions.
+  class ShouldCopy {
+  public:
+    ShouldCopy(bool &Moved) : Moved(Moved) {}
+    ShouldCopy(const ShouldCopy &) = default;
+    ShouldCopy(ShouldCopy &&Other) : Moved(Other.Moved) { Moved = true; }
+    void operator()() {}
+
+  private:
+    bool &Moved;
+  };
+  bool DidMove = false;
+  ShouldCopy SC(DidMove);
+  move_only_function<void()> F(SC);
+  EXPECT_FALSE(DidMove);
 }

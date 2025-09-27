@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c23 -verify=c -Wimplicit-void-ptr-cast %s
-// RUN: %clang_cc1 -fsyntax-only -std=c23 -verify=c -Wc++-compat %s
-// RUN: %clang_cc1 -fsyntax-only -verify=cxx -x c++ %s
-// RUN: %clang_cc1 -fsyntax-only -std=c23 -verify=good %s
-// RUN: %clang_cc1 -fsyntax-only -std=c23 -verify=good -Wc++-compat -Wno-implicit-void-ptr-cast %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-alloc-size -std=c23 -verify=c -Wimplicit-void-ptr-cast %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-alloc-size -std=c23 -verify=c -Wc++-compat %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-alloc-size -verify=cxx -x c++ %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-alloc-size -std=c23 -verify=good %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-alloc-size -std=c23 -verify=good -Wc++-compat -Wno-implicit-void-ptr-cast %s
 // good-no-diagnostics
 
 typedef __typeof__(sizeof(int)) size_t;

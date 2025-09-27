@@ -26,22 +26,45 @@
 #define ORC_RT_MOVE_ONLY_FUNCTION_H
 
 #include <memory>
+#include <type_traits>
 
 namespace orc_rt {
 
 namespace move_only_function_detail {
 
-template <typename RetT, typename... ArgTs> class Callable {
+template <typename RetT, typename... ArgTs> class GenericCallable {
 public:
-  virtual ~Callable() = default;
+  virtual ~GenericCallable() = default;
   virtual RetT call(ArgTs &&...Args) = 0;
 };
 
 template <typename CallableT, typename RetT, typename... ArgTs>
-class CallableImpl : public Callable<RetT, ArgTs...> {
+class GenericCallableImpl : public GenericCallable<RetT, ArgTs...> {
 public:
-  CallableImpl(CallableT &&Callable) : Callable(std::move(Callable)) {}
+  template <typename CallableInitT>
+  GenericCallableImpl(CallableInitT &&Callable)
+      : Callable(std::forward<CallableInitT>(Callable)) {}
   RetT call(ArgTs &&...Args) override {
+    return Callable(std::forward<ArgTs>(Args)...);
+  }
+
+private:
+  CallableT Callable;
+};
+
+template <typename RetT, typename... ArgTs> class GenericConstCallable {
+public:
+  virtual ~GenericConstCallable() = default;
+  virtual RetT call(ArgTs &&...Args) const = 0;
+};
+
+template <typename CallableT, typename RetT, typename... ArgTs>
+class GenericConstCallableImpl : public GenericConstCallable<RetT, ArgTs...> {
+public:
+  template <typename CallableInitT>
+  GenericConstCallableImpl(CallableInitT &&Callable)
+      : Callable(std::forward<CallableInitT>(Callable)) {}
+  RetT call(ArgTs &&...Args) const override {
     return Callable(std::forward<ArgTs>(Args)...);
   }
 
@@ -55,6 +78,13 @@ template <typename FnT> class move_only_function;
 
 template <typename RetT, typename... ArgTs>
 class move_only_function<RetT(ArgTs...)> {
+private:
+  using GenericCallable =
+      move_only_function_detail::GenericCallable<RetT, ArgTs...>;
+  template <typename CallableT>
+  using GenericCallableImpl =
+      move_only_function_detail::GenericCallableImpl<CallableT, RetT, ArgTs...>;
+
 public:
   move_only_function() = default;
   move_only_function(std::nullptr_t) {}
@@ -65,18 +95,50 @@ public:
 
   template <typename CallableT>
   move_only_function(CallableT &&Callable)
-      : C(std::make_unique<
-            move_only_function_detail::CallableImpl<CallableT, RetT, ArgTs...>>(
+      : C(std::make_unique<GenericCallableImpl<std::decay_t<CallableT>>>(
             std::forward<CallableT>(Callable))) {}
 
-  RetT operator()(ArgTs... Params) {
+  RetT operator()(ArgTs... Params) const {
     return C->call(std::forward<ArgTs>(Params)...);
   }
 
   explicit operator bool() const { return !!C; }
 
 private:
-  std::unique_ptr<move_only_function_detail::Callable<RetT, ArgTs...>> C;
+  std::unique_ptr<GenericCallable> C;
+};
+
+template <typename RetT, typename... ArgTs>
+class move_only_function<RetT(ArgTs...) const> {
+private:
+  using GenericCallable =
+      move_only_function_detail::GenericConstCallable<RetT, ArgTs...>;
+  template <typename CallableT>
+  using GenericCallableImpl =
+      move_only_function_detail::GenericConstCallableImpl<CallableT, RetT,
+                                                          ArgTs...>;
+
+public:
+  move_only_function() = default;
+  move_only_function(std::nullptr_t) {}
+  move_only_function(move_only_function &&) = default;
+  move_only_function(const move_only_function &) = delete;
+  move_only_function &operator=(move_only_function &&) = default;
+  move_only_function &operator=(const move_only_function &) = delete;
+
+  template <typename CallableT>
+  move_only_function(CallableT &&Callable)
+      : C(std::make_unique<const GenericCallableImpl<std::decay_t<CallableT>>>(
+            std::forward<CallableT>(Callable))) {}
+
+  RetT operator()(ArgTs... Params) const {
+    return C->call(std::forward<ArgTs>(Params)...);
+  }
+
+  explicit operator bool() const { return !!C; }
+
+private:
+  std::unique_ptr<const GenericCallable> C;
 };
 
 } // namespace orc_rt

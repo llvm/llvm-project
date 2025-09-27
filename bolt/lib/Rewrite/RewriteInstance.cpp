@@ -1312,7 +1312,9 @@ void RewriteInstance::discoverFileObjects() {
 
   // Annotate functions with code/data markers in AArch64
   for (auto &[Address, Type] : MarkerSymbols) {
-    auto *BF = BC->getBinaryFunctionContainingAddress(Address, true, true);
+    auto *BF = BC->getBinaryFunctionContainingAddress(Address,
+                                                      /*CheckPastEnd*/ false,
+                                                      /*UseMaxSize*/ true);
 
     if (!BF) {
       // Stray marker
@@ -2935,7 +2937,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
         ReferencedSymbol = nullptr;
         ExtractedValue = Address;
       } else if (RefFunctionOffset) {
-        if (ContainingBF && ContainingBF != ReferencedBF) {
+        if (ContainingBF && ContainingBF != ReferencedBF &&
+            !ReferencedBF->isInConstantIsland(Address)) {
           ReferencedSymbol =
               ReferencedBF->addEntryPointAtOffset(RefFunctionOffset);
         } else {

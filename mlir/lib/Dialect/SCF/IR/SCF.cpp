@@ -19,12 +19,18 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/ParallelCombiningOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/DebugLog.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::scf;
@@ -102,6 +108,24 @@ static TerminatorTy verifyAndGetTerminator(Operation *op, Region &region,
   if (terminatorOperation)
     diag.attachNote(terminatorOperation->getLoc()) << "terminator here";
   return nullptr;
+}
+
+/// Helper function to compute the difference between two values. This is used
+/// by the loop implementations to compute the trip count.
+static std::optional<llvm::APSInt> computeUbMinusLb(Value lb, Value ub,
+                                                    bool isSigned) {
+  llvm::APSInt diff;
+  auto addOp = ub.getDefiningOp<arith::AddIOp>();
+  if (!addOp)
+    return std::nullopt;
+  if ((isSigned && !addOp.hasNoSignedWrap()) ||
+      (!isSigned && !addOp.hasNoUnsignedWrap()))
+    return std::nullopt;
+
+  if (addOp.getLhs() != lb ||
+      !matchPattern(addOp.getRhs(), m_ConstantInt(&diff)))
+    return std::nullopt;
+  return diff;
 }
 
 //===----------------------------------------------------------------------===//
@@ -236,6 +260,8 @@ struct MultiBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
 
   LogicalResult matchAndRewrite(ExecuteRegionOp op,
                                 PatternRewriter &rewriter) const override {
+    if (op.getNoInline())
+      return failure();
     if (!isa<FunctionOpInterface, ExecuteRegionOp>(op->getParentOp()))
       return failure();
 
@@ -405,10 +431,18 @@ std::optional<ResultRange> ForOp::getLoopResults() { return getResults(); }
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// it can be determined that the loop has a single iteration.
 LogicalResult ForOp::promoteIfSingleIteration(RewriterBase &rewriter) {
-  std::optional<int64_t> tripCount =
-      constantTripCount(getLowerBound(), getUpperBound(), getStep());
-  if (!tripCount.has_value() || tripCount != 1)
+  std::optional<APInt> tripCount = getStaticTripCount();
+  LDBG() << "promoteIfSingleIteration tripCount is " << tripCount
+         << " for loop "
+         << OpWithFlags(getOperation(), OpPrintingFlags().skipRegions());
+  if (!tripCount.has_value() || tripCount->getSExtValue() > 1)
     return failure();
+
+  if (*tripCount == 0) {
+    rewriter.replaceAllUsesWith(getResults(), getInitArgs());
+    rewriter.eraseOp(*this);
+    return success();
+  }
 
   // Replace all results with the yielded values.
   auto yieldOp = cast<scf::YieldOp>(getBody()->getTerminator());
@@ -643,7 +677,8 @@ SmallVector<Region *> ForallOp::getLoopRegions() { return {&getRegion()}; }
 LogicalResult scf::ForallOp::promoteIfSingleIteration(RewriterBase &rewriter) {
   for (auto [lb, ub, step] :
        llvm::zip(getMixedLowerBound(), getMixedUpperBound(), getMixedStep())) {
-    auto tripCount = constantTripCount(lb, ub, step);
+    auto tripCount =
+        constantTripCount(lb, ub, step, /*isSigned=*/true, computeUbMinusLb);
     if (!tripCount.has_value() || *tripCount != 1)
       return failure();
   }
@@ -681,7 +716,9 @@ void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
   results.reserve(forallOp.getResults().size());
   for (auto &yieldingOp : terminator.getYieldingOps()) {
     auto parallelInsertSliceOp =
-        cast<tensor::ParallelInsertSliceOp>(yieldingOp);
+        dyn_cast<tensor::ParallelInsertSliceOp>(yieldingOp);
+    if (!parallelInsertSliceOp)
+      continue;
 
     Value dst = parallelInsertSliceOp.getDest();
     Value src = parallelInsertSliceOp.getSource();
@@ -998,27 +1035,6 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
   }
 };
 
-/// Util function that tries to compute a constant diff between u and l.
-/// Returns std::nullopt when the difference between two AffineValueMap is
-/// dynamic.
-static std::optional<APInt> computeConstDiff(Value l, Value u) {
-  IntegerAttr clb, cub;
-  if (matchPattern(l, m_Constant(&clb)) && matchPattern(u, m_Constant(&cub))) {
-    llvm::APInt lbValue = clb.getValue();
-    llvm::APInt ubValue = cub.getValue();
-    return ubValue - lbValue;
-  }
-
-  // Else a simple pattern match for x + c or c + x
-  llvm::APInt diff;
-  if (matchPattern(
-          u, m_Op<arith::AddIOp>(matchers::m_Val(l), m_ConstantInt(&diff))) ||
-      matchPattern(
-          u, m_Op<arith::AddIOp>(m_ConstantInt(&diff), matchers::m_Val(l))))
-    return diff;
-  return std::nullopt;
-}
-
 /// Rewriting pattern that erases loops that are known not to iterate, replaces
 /// single-iteration loops with their bodies, and removes empty loops that
 /// iterate at least once and only return values defined outside of the loop.
@@ -1027,34 +1043,21 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
 
   LogicalResult matchAndRewrite(ForOp op,
                                 PatternRewriter &rewriter) const override {
-    // If the upper bound is the same as the lower bound, the loop does not
-    // iterate, just remove it.
-    if (op.getLowerBound() == op.getUpperBound()) {
+    std::optional<APInt> tripCount = op.getStaticTripCount();
+    if (!tripCount.has_value())
+      return rewriter.notifyMatchFailure(op,
+                                         "can't compute constant trip count");
+
+    if (tripCount->isZero()) {
+      LDBG() << "SimplifyTrivialLoops tripCount is 0 for loop "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
       rewriter.replaceOp(op, op.getInitArgs());
       return success();
     }
 
-    std::optional<APInt> diff =
-        computeConstDiff(op.getLowerBound(), op.getUpperBound());
-    if (!diff)
-      return failure();
-
-    // If the loop is known to have 0 iterations, remove it.
-    bool zeroOrLessIterations =
-        diff->isZero() || (!op.getUnsignedCmp() && diff->isNegative());
-    if (zeroOrLessIterations) {
-      rewriter.replaceOp(op, op.getInitArgs());
-      return success();
-    }
-
-    std::optional<llvm::APInt> maybeStepValue = op.getConstantStep();
-    if (!maybeStepValue)
-      return failure();
-
-    // If the loop is known to have 1 iteration, inline its body and remove the
-    // loop.
-    llvm::APInt stepValue = *maybeStepValue;
-    if (stepValue.sge(*diff)) {
+    if (tripCount->getSExtValue() == 1) {
+      LDBG() << "SimplifyTrivialLoops tripCount is 1 for loop "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
       SmallVector<Value, 4> blockArgs;
       blockArgs.reserve(op.getInitArgs().size() + 1);
       blockArgs.push_back(op.getLowerBound());
@@ -1067,11 +1070,14 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
     Block &block = op.getRegion().front();
     if (!llvm::hasSingleElement(block))
       return failure();
-    // If the loop is empty, iterates at least once, and only returns values
+    // The loop is empty and iterates at least once, if it only returns values
     // defined outside of the loop, remove it and replace it with yield values.
     if (llvm::any_of(op.getYieldedValues(),
                      [&](Value v) { return !op.isDefinedOutsideOfLoop(v); }))
       return failure();
+    LDBG() << "SimplifyTrivialLoops empty body loop allows replacement with "
+              "yield operands for loop "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
     rewriter.replaceOp(op, op.getYieldedValues());
     return success();
   }
@@ -1165,6 +1171,11 @@ Speculation::Speculatability ForOp::getSpeculatability() {
   // For Step != 1, the loop may not terminate.  We can add more smarts here if
   // needed.
   return Speculation::NotSpeculatable;
+}
+
+std::optional<APInt> ForOp::getStaticTripCount() {
+  return constantTripCount(getLowerBound(), getUpperBound(), getStep(),
+                           /*isSigned=*/!getUnsignedCmp(), computeUbMinusLb);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1439,12 +1450,9 @@ InParallelOp ForallOp::getTerminator() {
 
 SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
   SmallVector<Operation *> storeOps;
-  InParallelOp inParallelOp = getTerminator();
-  for (Operation &yieldOp : inParallelOp.getYieldingOps()) {
-    if (auto parallelInsertSliceOp =
-            dyn_cast<tensor::ParallelInsertSliceOp>(yieldOp);
-        parallelInsertSliceOp && parallelInsertSliceOp.getDest() == bbArg) {
-      storeOps.push_back(parallelInsertSliceOp);
+  for (Operation *user : bbArg.getUsers()) {
+    if (auto parallelOp = dyn_cast<ParallelCombiningOpInterface>(user)) {
+      storeOps.push_back(parallelOp);
     }
   }
   return storeOps;
@@ -1766,7 +1774,8 @@ struct ForallOpSingleOrZeroIterationDimsFolder
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getMixedLowerBound(), op.getMixedUpperBound(),
                    op.getMixedStep(), op.getInductionVars())) {
-      auto numIterations = constantTripCount(lb, ub, step);
+      auto numIterations =
+          constantTripCount(lb, ub, step, /*isSigned=*/true, computeUbMinusLb);
       if (numIterations.has_value()) {
         // Remove the loop if it performs zero iterations.
         if (*numIterations == 0) {
@@ -1837,7 +1846,8 @@ struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
                    op.getMixedStep(), op.getInductionVars())) {
       if (iv.hasNUses(0))
         continue;
-      auto numIterations = constantTripCount(lb, ub, step);
+      auto numIterations =
+          constantTripCount(lb, ub, step, /*isSigned=*/true, computeUbMinusLb);
       if (!numIterations.has_value() || numIterations.value() != 1) {
         continue;
       }
@@ -1911,8 +1921,10 @@ struct FoldTensorCastOfOutputIntoForallOp
     auto terminator = newForallOp.getTerminator();
     for (auto [yieldingOp, outputBlockArg] : llvm::zip(
              terminator.getYieldingOps(), newForallOp.getRegionIterArgs())) {
-      auto insertSliceOp = cast<tensor::ParallelInsertSliceOp>(yieldingOp);
-      insertSliceOp.getDestMutable().assign(outputBlockArg);
+      if (auto parallelCombingingOp =
+              dyn_cast<ParallelCombiningOpInterface>(yieldingOp)) {
+        parallelCombingingOp.getUpdatedDestinations().assign(outputBlockArg);
+      }
     }
 
     // Cast results back to the original types.
@@ -1971,19 +1983,22 @@ LogicalResult InParallelOp::verify() {
   if (!forallOp)
     return this->emitOpError("expected forall op parent");
 
-  // TODO: InParallelOpInterface.
   for (Operation &op : getRegion().front().getOperations()) {
-    if (!isa<tensor::ParallelInsertSliceOp>(op)) {
-      return this->emitOpError("expected only ")
-             << tensor::ParallelInsertSliceOp::getOperationName() << " ops";
+    auto parallelCombiningOp = dyn_cast<ParallelCombiningOpInterface>(&op);
+    if (!parallelCombiningOp) {
+      return this->emitOpError("expected only ParallelCombiningOpInterface")
+             << " ops";
     }
 
     // Verify that inserts are into out block arguments.
-    Value dest = cast<tensor::ParallelInsertSliceOp>(op).getDest();
+    MutableOperandRange dests = parallelCombiningOp.getUpdatedDestinations();
     ArrayRef<BlockArgument> regionOutArgs = forallOp.getRegionOutArgs();
-    if (!llvm::is_contained(regionOutArgs, dest))
-      return op.emitOpError("may only insert into an output block argument");
+    for (OpOperand &dest : dests) {
+      if (!llvm::is_contained(regionOutArgs, dest.get()))
+        return op.emitOpError("may only insert into an output block argument");
+    }
   }
+
   return success();
 }
 
@@ -2018,12 +2033,17 @@ OpResult InParallelOp::getParentResult(int64_t idx) {
 }
 
 SmallVector<BlockArgument> InParallelOp::getDests() {
-  return llvm::to_vector<4>(
-      llvm::map_range(getYieldingOps(), [](Operation &op) {
-        // Add new ops here as needed.
-        auto insertSliceOp = cast<tensor::ParallelInsertSliceOp>(&op);
-        return llvm::cast<BlockArgument>(insertSliceOp.getDest());
-      }));
+  SmallVector<BlockArgument> updatedDests;
+  for (Operation &yieldingOp : getYieldingOps()) {
+    auto parallelCombiningOp =
+        dyn_cast<ParallelCombiningOpInterface>(&yieldingOp);
+    if (!parallelCombiningOp)
+      continue;
+    for (OpOperand &updatedOperand :
+         parallelCombiningOp.getUpdatedDestinations())
+      updatedDests.push_back(cast<BlockArgument>(updatedOperand.get()));
+  }
+  return updatedDests;
 }
 
 llvm::iterator_range<Block::iterator> InParallelOp::getYieldingOps() {
@@ -2433,6 +2453,65 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
   }
 };
 
+/// Allow the true region of an if to assume the condition is true
+/// and vice versa. For example:
+///
+///   scf.if %cmp {
+///      print(%cmp)
+///   }
+///
+///  becomes
+///
+///   scf.if %cmp {
+///      print(true)
+///   }
+///
+struct ConditionPropagation : public OpRewritePattern<IfOp> {
+  using OpRewritePattern<IfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IfOp op,
+                                PatternRewriter &rewriter) const override {
+    // Early exit if the condition is constant since replacing a constant
+    // in the body with another constant isn't a simplification.
+    if (matchPattern(op.getCondition(), m_Constant()))
+      return failure();
+
+    bool changed = false;
+    mlir::Type i1Ty = rewriter.getI1Type();
+
+    // These variables serve to prevent creating duplicate constants
+    // and hold constant true or false values.
+    Value constantTrue = nullptr;
+    Value constantFalse = nullptr;
+
+    for (OpOperand &use :
+         llvm::make_early_inc_range(op.getCondition().getUses())) {
+      if (op.getThenRegion().isAncestor(use.getOwner()->getParentRegion())) {
+        changed = true;
+
+        if (!constantTrue)
+          constantTrue = rewriter.create<arith::ConstantOp>(
+              op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1));
+
+        rewriter.modifyOpInPlace(use.getOwner(),
+                                 [&]() { use.set(constantTrue); });
+      } else if (op.getElseRegion().isAncestor(
+                     use.getOwner()->getParentRegion())) {
+        changed = true;
+
+        if (!constantFalse)
+          constantFalse = rewriter.create<arith::ConstantOp>(
+              op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0));
+
+        rewriter.modifyOpInPlace(use.getOwner(),
+                                 [&]() { use.set(constantFalse); });
+      }
+    }
+
+    return success(changed);
+  }
+};
+
 /// Remove any statements from an if that are equivalent to the condition
 /// or its negation. For example:
 ///
@@ -2815,8 +2894,9 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
 
 void IfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                        MLIRContext *context) {
-  results.add<CombineIfs, CombineNestedIfs, ConvertTrivialIfToSelect,
-              RemoveEmptyElseBranch, RemoveStaticCondition, RemoveUnusedResults,
+  results.add<CombineIfs, CombineNestedIfs, ConditionPropagation,
+              ConvertTrivialIfToSelect, RemoveEmptyElseBranch,
+              RemoveStaticCondition, RemoveUnusedResults,
               ReplaceIfYieldWithConditionOrValue>(context);
 }
 
@@ -3072,7 +3152,8 @@ struct ParallelOpSingleOrZeroIterationDimsFolder
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getLowerBound(), op.getUpperBound(), op.getStep(),
                    op.getInductionVars())) {
-      auto numIterations = constantTripCount(lb, ub, step);
+      auto numIterations =
+          constantTripCount(lb, ub, step, /*isSigned=*/true, computeUbMinusLb);
       if (numIterations.has_value()) {
         // Remove the loop if it performs zero iterations.
         if (*numIterations == 0) {

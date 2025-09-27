@@ -122,8 +122,9 @@ struct PoolPadFoldAdaptor<tosa::MaxPool2dOp> {
       const APFloat lowestVal =
           APFloat::getLargest(padConstVal.getSemantics(), true);
       return padConstVal == lowestVal;
-    } else if (auto padConstIntAttr =
-                   mlir::dyn_cast<DenseIntElementsAttr>(padConstAttr)) {
+    }
+    if (auto padConstIntAttr =
+            mlir::dyn_cast<DenseIntElementsAttr>(padConstAttr)) {
       const APInt padConstVal = *padConstIntAttr.begin();
       const unsigned int bitWidth = padConstVal.getBitWidth();
       const APInt lowestVal =
@@ -555,7 +556,8 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
     // Check we have a valid NaN propagation combination.
     const auto opNanMode = op.getNanMode();
     const auto clampNanMode = clampOp.getNanMode();
-    if (opNanMode == "IGNORE" && clampNanMode == "PROPAGATE")
+    if (opNanMode == NanPropagationMode::IGNORE &&
+        clampNanMode == NanPropagationMode::PROPAGATE)
       return failure();
 
     auto maxValAttr = op.getMaxValAttr();
@@ -636,10 +638,16 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
       }
     }
 
+    auto newMode = (opNanMode != clampNanMode)
+                       ? tosa::NanPropagationMode::IGNORE
+                       : opNanMode;
+
+    auto newModeAttr =
+        NanPropagationModeAttr::get(rewriter.getContext(), newMode);
+
     rewriter.replaceOpWithNewOp<tosa::ClampOp>(
         op, op.getType(), clampOp.getInput(), newMinValAttr, newMaxValAttr,
-        rewriter.getStringAttr((opNanMode != clampNanMode) ? "IGNORE"
-                                                           : opNanMode));
+        newModeAttr);
     return success();
   }
 };
@@ -1552,26 +1560,6 @@ OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
     return {};
 
   return getInput1();
-}
-
-OpFoldResult tosa::LogOp::fold(FoldAdaptor adaptor) {
-  auto input = getInput1();
-  // Element-wise log(exp(x)) = x
-  if (auto op = input.getDefiningOp<tosa::ExpOp>()) {
-    return op.getInput1();
-  }
-
-  return {};
-}
-
-OpFoldResult tosa::ExpOp::fold(FoldAdaptor adaptor) {
-  auto input = getInput1();
-  // Element-wise exp(log(x)) = x
-  if (auto op = input.getDefiningOp<tosa::LogOp>()) {
-    return op.getInput1();
-  }
-
-  return {};
 }
 
 OpFoldResult tosa::NegateOp::fold(FoldAdaptor adaptor) {

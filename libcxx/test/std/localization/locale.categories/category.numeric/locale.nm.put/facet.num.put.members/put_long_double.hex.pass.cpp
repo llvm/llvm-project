@@ -1858,7 +1858,7 @@ void test2() {
   // 64 mantissa bits are grouped by nibble as they are stored in the long
   // double representation (nibble aligned at the end of the least significant
   // bits). This makes 1.0L to be formatted as "0x8p-3" (where the leading
-  // bit of the mantissa is the higest bit in the 0x8 nibble), and makes
+  // bit of the mantissa is the highest bit in the 0x8 nibble), and makes
   // __LDBL_MAX__ be formatted as "0xf.fffffffffffffffp+16380".
   //
   // FreeBSD normalizes/aligns the leading bit of the mantissa as a separate

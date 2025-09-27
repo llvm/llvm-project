@@ -2927,51 +2927,6 @@ APFloat::opStatus IEEEFloat::convertFromAPInt(const APInt &Val, bool isSigned,
   return convertFromUnsignedParts(api.getRawData(), partCount, rounding_mode);
 }
 
-/* Convert a two's complement integer SRC to a floating point number,
-   rounding according to ROUNDING_MODE.  ISSIGNED is true if the
-   integer is signed, in which case it must be sign-extended.  */
-APFloat::opStatus
-IEEEFloat::convertFromSignExtendedInteger(const integerPart *src,
-                                          unsigned int srcCount, bool isSigned,
-                                          roundingMode rounding_mode) {
-  opStatus status;
-
-  if (isSigned &&
-      APInt::tcExtractBit(src, srcCount * integerPartWidth - 1)) {
-    integerPart *copy;
-
-    /* If we're signed and negative negate a copy.  */
-    sign = true;
-    copy = new integerPart[srcCount];
-    APInt::tcAssign(copy, src, srcCount);
-    APInt::tcNegate(copy, srcCount);
-    status = convertFromUnsignedParts(copy, srcCount, rounding_mode);
-    delete [] copy;
-  } else {
-    sign = false;
-    status = convertFromUnsignedParts(src, srcCount, rounding_mode);
-  }
-
-  return status;
-}
-
-/* FIXME: should this just take a const APInt reference?  */
-APFloat::opStatus
-IEEEFloat::convertFromZeroExtendedInteger(const integerPart *parts,
-                                          unsigned int width, bool isSigned,
-                                          roundingMode rounding_mode) {
-  unsigned int partCount = partCountForBits(width);
-  APInt api = APInt(width, ArrayRef(parts, partCount));
-
-  sign = false;
-  if (isSigned && APInt::tcExtractBit(parts, width - 1)) {
-    sign = true;
-    api = -api;
-  }
-
-  return convertFromUnsignedParts(api.getRawData(), partCount, rounding_mode);
-}
-
 Expected<APFloat::opStatus>
 IEEEFloat::convertFromHexadecimalString(StringRef s,
                                         roundingMode rounding_mode) {
@@ -5648,36 +5603,158 @@ DoubleAPFloat::convertToInteger(MutableArrayRef<integerPart> Input,
   return FS;
 }
 
+APFloat::opStatus DoubleAPFloat::handleOverflow(roundingMode RM) {
+  switch (RM) {
+  case APFloat::rmTowardZero:
+    makeLargest(/*Neg=*/isNegative());
+    break;
+  case APFloat::rmTowardNegative:
+    if (isNegative())
+      makeInf(/*Neg=*/true);
+    else
+      makeLargest(/*Neg=*/false);
+    break;
+  case APFloat::rmTowardPositive:
+    if (isNegative())
+      makeLargest(/*Neg=*/true);
+    else
+      makeInf(/*Neg=*/false);
+    break;
+  case APFloat::rmNearestTiesToAway:
+  case APFloat::rmNearestTiesToEven:
+    makeInf(/*Neg=*/isNegative());
+    break;
+  default:
+    llvm_unreachable("Invalid rounding mode found");
+  }
+  opStatus S = opInexact;
+  if (!getFirst().isFinite())
+    S = static_cast<opStatus>(S | opOverflow);
+  return S;
+}
+
+APFloat::opStatus DoubleAPFloat::convertFromUnsignedParts(
+    const integerPart *Src, unsigned int SrcCount, roundingMode RM) {
+  // Find the most significant bit of the source integer. APInt::tcMSB returns
+  // UINT_MAX for a zero value.
+  const unsigned SrcMSB = APInt::tcMSB(Src, SrcCount);
+  if (SrcMSB == UINT_MAX) {
+    // The source integer is 0.
+    makeZero(/*Neg=*/false);
+    return opOK;
+  }
+
+  // Create a minimally-sized APInt to represent the source value.
+  const unsigned SrcBitWidth = SrcMSB + 1;
+  APSInt SrcInt{APInt{/*numBits=*/SrcBitWidth,
+                      /*numWords=*/SrcCount, Src},
+                /*isUnsigned=*/true};
+
+  // Stage 1: Initial Approximation.
+  // Convert the source integer SrcInt to the Hi part of the DoubleAPFloat.
+  // We use round-to-nearest because it minimizes the initial error, which is
+  // crucial for the subsequent steps.
+  APFloat Hi{getFirst().getSemantics()};
+  Hi.convertFromAPInt(SrcInt, /*IsSigned=*/false, rmNearestTiesToEven);
+
+  // If the first approximation already overflows, the number is too large.
+  // NOTE: The underlying semantics are *more* conservative when choosing to
+  // overflow because their notion of ULP is much larger. As such, it is always
+  // safe to overflow at the DoubleAPFloat level if the APFloat overflows.
+  if (!Hi.isFinite())
+    return handleOverflow(RM);
+
+  // Stage 2: Exact Error Calculation.
+  // Calculate the exact error of the first approximation: Error = SrcInt - Hi.
+  // This is done by converting Hi back to an integer and subtracting it from
+  // the original source.
+  bool HiAsIntIsExact;
+  // Create an integer representation of Hi. Its width is determined by the
+  // exponent of Hi, ensuring it's just large enough. This width can exceed
+  // SrcBitWidth if the conversion to Hi rounded up to a power of two.
+  // accurately when converted back to an integer.
+  APSInt HiAsInt{static_cast<uint32_t>(ilogb(Hi) + 1), /*isUnsigned=*/true};
+  Hi.convertToInteger(HiAsInt, rmNearestTiesToEven, &HiAsIntIsExact);
+  const APInt Error = SrcInt.zext(HiAsInt.getBitWidth()) - HiAsInt;
+
+  // Stage 3: Error Approximation and Rounding.
+  // Convert the integer error into the Lo part of the DoubleAPFloat. This step
+  // captures the remainder of the original number. The rounding mode for this
+  // conversion (LoRM) may need to be adjusted from the user-requested RM to
+  // ensure the final sum (Hi + Lo) rounds correctly.
+  roundingMode LoRM = RM;
+  // Adjustments are only necessary when the initial approximation Hi was an
+  // overestimate, making the Error negative.
+  if (Error.isNegative()) {
+    if (RM == rmNearestTiesToAway) {
+      // For rmNearestTiesToAway, a tie should round away from zero. Since
+      // SrcInt is positive, this means rounding toward +infinity.
+      // A standard conversion of a negative Error would round ties toward
+      // -infinity, causing the final sum Hi + Lo to be smaller. To
+      // counteract this, we detect the tie case and override the rounding
+      // mode for Lo to rmTowardPositive.
+      const unsigned ErrorActiveBits = Error.getSignificantBits() - 1;
+      const unsigned LoPrecision = getSecond().getSemantics().precision;
+      if (ErrorActiveBits > LoPrecision) {
+        const unsigned RoundingBoundary = ErrorActiveBits - LoPrecision;
+        // A tie occurs when the bits to be truncated are of the form 100...0.
+        // This is detected by checking if the number of trailing zeros is
+        // exactly one less than the number of bits being truncated.
+        if (Error.countTrailingZeros() == RoundingBoundary - 1)
+          LoRM = rmTowardPositive;
+      }
+    } else if (RM == rmTowardZero) {
+      // For rmTowardZero, the final positive result must be truncated (rounded
+      // down). When Hi is an overestimate, Error is negative. A standard
+      // rmTowardZero conversion of Error would make it *less* negative,
+      // effectively rounding the final sum Hi + Lo *up*. To ensure the sum
+      // rounds down correctly, we force Lo to round toward -infinity.
+      LoRM = rmTowardNegative;
+    }
+  }
+
+  APFloat Lo{getSecond().getSemantics()};
+  opStatus Status = Lo.convertFromAPInt(Error, /*IsSigned=*/true, LoRM);
+
+  // Renormalize the pair (Hi, Lo) into a canonical DoubleAPFloat form where the
+  // components do not overlap. fastTwoSum performs this operation.
+  std::tie(Hi, Lo) = fastTwoSum(Hi, Lo);
+  Floats[0] = std::move(Hi);
+  Floats[1] = std::move(Lo);
+
+  // A final check for overflow is needed because fastTwoSum can cause a
+  // carry-out from Lo that pushes Hi to infinity.
+  if (!getFirst().isFinite())
+    return handleOverflow(RM);
+
+  // The largest DoubleAPFloat must be canonical. Values which are larger are
+  // not canonical and are equivalent to overflow.
+  if (getFirst().isFiniteNonZero() && Floats[0].isLargest()) {
+    DoubleAPFloat Largest{*Semantics};
+    Largest.makeLargest(/*Neg=*/false);
+    if (compare(Largest) == APFloat::cmpGreaterThan)
+      return handleOverflow(RM);
+  }
+
+  // The final status of the operation is determined by the conversion of the
+  // error term. If Lo could represent Error exactly, the entire conversion
+  // is exact. Otherwise, it's inexact.
+  return Status;
+}
+
 APFloat::opStatus DoubleAPFloat::convertFromAPInt(const APInt &Input,
                                                   bool IsSigned,
                                                   roundingMode RM) {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat Tmp(semPPCDoubleDoubleLegacy);
-  auto Ret = Tmp.convertFromAPInt(Input, IsSigned, RM);
-  *this = DoubleAPFloat(semPPCDoubleDouble, Tmp.bitcastToAPInt());
-  return Ret;
-}
+  const bool NegateInput = IsSigned && Input.isNegative();
+  APInt API = Input;
+  if (NegateInput)
+    API.negate();
 
-APFloat::opStatus
-DoubleAPFloat::convertFromSignExtendedInteger(const integerPart *Input,
-                                              unsigned int InputSize,
-                                              bool IsSigned, roundingMode RM) {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat Tmp(semPPCDoubleDoubleLegacy);
-  auto Ret = Tmp.convertFromSignExtendedInteger(Input, InputSize, IsSigned, RM);
-  *this = DoubleAPFloat(semPPCDoubleDouble, Tmp.bitcastToAPInt());
-  return Ret;
-}
-
-APFloat::opStatus
-DoubleAPFloat::convertFromZeroExtendedInteger(const integerPart *Input,
-                                              unsigned int InputSize,
-                                              bool IsSigned, roundingMode RM) {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat Tmp(semPPCDoubleDoubleLegacy);
-  auto Ret = Tmp.convertFromZeroExtendedInteger(Input, InputSize, IsSigned, RM);
-  *this = DoubleAPFloat(semPPCDoubleDouble, Tmp.bitcastToAPInt());
-  return Ret;
+  const APFloat::opStatus Status =
+      convertFromUnsignedParts(API.getRawData(), API.getNumWords(), RM);
+  if (NegateInput)
+    changeSign();
+  return Status;
 }
 
 unsigned int DoubleAPFloat::convertToHexString(char *DST,

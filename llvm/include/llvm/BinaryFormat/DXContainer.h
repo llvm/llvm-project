@@ -45,7 +45,7 @@ namespace dxbc {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 inline Triple::EnvironmentType getShaderStage(uint32_t Kind) {
-  assert(Kind <= Triple::Amplification - Triple::Pixel &&
+  assert(Kind <= Triple::RootSignature - Triple::Pixel &&
          "Shader kind out of expected range.");
   return static_cast<Triple::EnvironmentType>(Triple::Pixel + Kind);
 }
@@ -185,19 +185,21 @@ enum class DescriptorRangeFlags : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeFlags>> getDescriptorRangeFlags();
 
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag) Enum = Num,
+enum class StaticSamplerFlags : uint32_t {
+#include "DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(NonNormalizedCoordinates)
+};
+
+LLVM_ABI ArrayRef<EnumEntry<StaticSamplerFlags>> getStaticSamplerFlags();
+
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
 enum class RootParameterType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
 LLVM_ABI ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
-
-#define DESCRIPTOR_RANGE(Val, Enum) Enum = Val,
-enum class DescriptorRangeType : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
 
 #define ROOT_PARAMETER(Val, Enum)                                              \
   case Val:                                                                    \
@@ -207,6 +209,10 @@ inline bool isValidParameterType(uint32_t V) {
 #include "DXContainerConstants.def"
   }
   return false;
+}
+
+inline bool isValidRangeType(uint32_t V) {
+  return V <= llvm::to_underlying(dxil::ResourceClass::LastEntry);
 }
 
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,
@@ -231,6 +237,16 @@ enum class SamplerFilter : uint32_t {
 #include "DXContainerConstants.def"
 };
 
+#define FILTER(Val, Enum)                                                      \
+  case Val:                                                                    \
+    return true;
+inline bool isValidSamplerFilter(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
+
 LLVM_ABI ArrayRef<EnumEntry<SamplerFilter>> getSamplerFilters();
 
 #define TEXTURE_ADDRESS_MODE(Val, Enum) Enum = Val,
@@ -240,6 +256,16 @@ enum class TextureAddressMode : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<TextureAddressMode>> getTextureAddressModes();
 
+#define TEXTURE_ADDRESS_MODE(Val, Enum)                                        \
+  case Val:                                                                    \
+    return true;
+inline bool isValidAddress(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
+
 #define COMPARISON_FUNC(Val, Enum) Enum = Val,
 enum class ComparisonFunc : uint32_t {
 #include "DXContainerConstants.def"
@@ -247,10 +273,30 @@ enum class ComparisonFunc : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<ComparisonFunc>> getComparisonFuncs();
 
+#define COMPARISON_FUNC(Val, Enum)                                             \
+  case Val:                                                                    \
+    return true;
+inline bool isValidComparisonFunc(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
+
 #define STATIC_BORDER_COLOR(Val, Enum) Enum = Val,
 enum class StaticBorderColor : uint32_t {
 #include "DXContainerConstants.def"
 };
+
+#define STATIC_BORDER_COLOR(Val, Enum)                                         \
+  case Val:                                                                    \
+    return true;
+inline bool isValidBorderColor(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
 
 LLVM_ABI ArrayRef<EnumEntry<StaticBorderColor>> getStaticBorderColors();
 
@@ -776,6 +822,22 @@ struct DescriptorRange {
   }
 };
 } // namespace v2
+
+namespace v3 {
+struct StaticSampler : public v1::StaticSampler {
+  uint32_t Flags;
+
+  StaticSampler() = default;
+  explicit StaticSampler(v1::StaticSampler &Base)
+      : v1::StaticSampler(Base), Flags(0U) {}
+
+  void swapBytes() {
+    v1::StaticSampler::swapBytes();
+    sys::swapByteOrder(Flags);
+  }
+};
+
+} // namespace v3
 } // namespace RTS0
 
 // D3D_ROOT_SIGNATURE_VERSION

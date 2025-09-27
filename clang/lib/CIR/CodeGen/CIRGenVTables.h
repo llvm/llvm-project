@@ -30,6 +30,22 @@ class CIRGenVTables {
 
   clang::VTableContextBase *vtContext;
 
+  /// Address points for a single vtable.
+  using VTableAddressPointsMapTy = clang::VTableLayout::AddressPointsMapTy;
+  using BaseSubobjectPairTy =
+      std::pair<const clang::CXXRecordDecl *, clang::BaseSubobject>;
+  using SubVTTIndiciesMapTy = llvm::DenseMap<BaseSubobjectPairTy, uint64_t>;
+
+  /// Contains indices into the various sub-VTTs.
+  SubVTTIndiciesMapTy subVTTIndicies;
+
+  using SecondaryVirtualPointerIndicesMapTy =
+      llvm::DenseMap<BaseSubobjectPairTy, uint64_t>;
+
+  /// Contains the secondary virtual pointer
+  /// indices.
+  SecondaryVirtualPointerIndicesMapTy secondaryVirtualPointerIndices;
+
   mlir::Attribute
   getVTableComponent(const VTableLayout &layout, unsigned componentIndex,
                      mlir::Attribute rtti, unsigned &nextVTableThunkIndex,
@@ -54,6 +70,27 @@ public:
   const clang::ItaniumVTableContext &getItaniumVTableContext() const {
     return *llvm::cast<clang::ItaniumVTableContext>(vtContext);
   }
+
+  /// Generate a construction vtable for the given base subobject.
+  cir::GlobalOp
+  generateConstructionVTable(const CXXRecordDecl *rd, const BaseSubobject &base,
+                             bool baseIsVirtual, cir::GlobalLinkageKind linkage,
+                             VTableAddressPointsMapTy &addressPoints);
+
+  /// Get the address of the VTT for the given record decl.
+  cir::GlobalOp getAddrOfVTT(const CXXRecordDecl *rd);
+
+  /// Emit the definition of the given vtable.
+  void emitVTTDefinition(cir::GlobalOp vttOp, cir::GlobalLinkageKind linkage,
+                         const CXXRecordDecl *rd);
+  /// Return the index of the sub-VTT for the base class of the given record
+  /// decl.
+  uint64_t getSubVTTIndex(const CXXRecordDecl *rd, BaseSubobject base);
+
+  /// Return the index in the VTT where the virtual pointer for the given
+  /// subobject is located.
+  uint64_t getSecondaryVirtualPointerIndex(const CXXRecordDecl *rd,
+                                           BaseSubobject base);
 
   /// Emit the associated thunks for the given global decl.
   void emitThunks(GlobalDecl gd);

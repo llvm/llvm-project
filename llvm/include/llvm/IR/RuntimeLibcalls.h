@@ -50,7 +50,8 @@ static inline auto libcalls() {
 }
 
 static inline auto libcall_impls() {
-  return enum_seq(static_cast<RTLIB::LibcallImpl>(1), RTLIB::NumLibcallImpls);
+  return enum_seq(static_cast<RTLIB::LibcallImpl>(1),
+                  static_cast<RTLIB::LibcallImpl>(RTLIB::NumLibcallImpls));
 }
 
 /// A simple container for information about the supported runtime calls.

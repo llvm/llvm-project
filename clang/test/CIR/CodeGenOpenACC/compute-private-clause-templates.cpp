@@ -13,19 +13,9 @@ struct HasDtor {
   ~HasDtor();
 };
 
-// CHECK: acc.private.recipe @privatization__ZTSi : !cir.ptr<!s32i> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!s32i> {{.*}}):
-// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.private.init"]
-// CHECK-NEXT: acc.yield
-// CHECK-NEXT: }
-//
-// CHECK-NEXT: acc.private.recipe @privatization__ZTS7HasDtor : !cir.ptr<!rec_HasDtor> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}):
-// CHECK-NEXT: cir.alloca !rec_HasDtor, !cir.ptr<!rec_HasDtor>, ["openacc.private.init"]
-// CHECK-NEXT: acc.yield
-// CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}):
-// CHECK-NEXT: cir.call @_ZN7HasDtorD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasDtor>) -> ()
+// CHECK: acc.private.recipe @privatization__ZTS13CopyConstruct : !cir.ptr<!rec_CopyConstruct> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}):
+// CHECK-NEXT: cir.alloca !rec_CopyConstruct, !cir.ptr<!rec_CopyConstruct>, ["openacc.private.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
@@ -36,9 +26,19 @@ struct HasDtor {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
-// CHECK-NEXT: acc.private.recipe @privatization__ZTS13CopyConstruct : !cir.ptr<!rec_CopyConstruct> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}):
-// CHECK-NEXT: cir.alloca !rec_CopyConstruct, !cir.ptr<!rec_CopyConstruct>, ["openacc.private.init"]
+// CHECK-NEXT: acc.private.recipe @privatization__ZTS7HasDtor : !cir.ptr<!rec_HasDtor> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}):
+// CHECK-NEXT: cir.alloca !rec_HasDtor, !cir.ptr<!rec_HasDtor>, ["openacc.private.init"]
+// CHECK-NEXT: acc.yield
+// CHECK-NEXT: } destroy {
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}):
+// CHECK-NEXT: cir.call @_ZN7HasDtorD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasDtor>) -> ()
+// CHECK-NEXT: acc.yield
+// CHECK-NEXT: }
+//
+// CHECK-NEXT: acc.private.recipe @privatization__ZTSi : !cir.ptr<!s32i> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!s32i> {{.*}}):
+// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.private.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 

@@ -6,9 +6,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+conditional-cmv-fusion,+c,+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=CMOV,CMOV-ZICOND %s
 ; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND %s
+; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND,SFB-NOZICOND-NOC %s
 ; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt,+c -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND %s
+; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND,SFB-NOZICOND-C %s
 ; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt,+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-ZICOND %s
 
@@ -263,6 +263,24 @@ define i32 @select_xor_2(i32 %A, i32 %B, i8 %cond) {
 ; CMOV-NEXT:  .LBB6_2: # %entry
 ; CMOV-NEXT:    ret
 ;
+; SFB-NOZICOND-NOC-LABEL: select_xor_2:
+; SFB-NOZICOND-NOC:       # %bb.0: # %entry
+; SFB-NOZICOND-NOC-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-NOC-NEXT:    beqz a2, .LBB6_2
+; SFB-NOZICOND-NOC-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-NOC-NEXT:    xor a0, a1, a0
+; SFB-NOZICOND-NOC-NEXT:  .LBB6_2: # %entry
+; SFB-NOZICOND-NOC-NEXT:    ret
+;
+; SFB-NOZICOND-C-LABEL: select_xor_2:
+; SFB-NOZICOND-C:       # %bb.0: # %entry
+; SFB-NOZICOND-C-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-C-NEXT:    beqz a2, .LBB6_2
+; SFB-NOZICOND-C-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-C-NEXT:    xor a0, a0, a1
+; SFB-NOZICOND-C-NEXT:  .LBB6_2: # %entry
+; SFB-NOZICOND-C-NEXT:    ret
+;
 ; SFB-ZICOND-LABEL: select_xor_2:
 ; SFB-ZICOND:       # %bb.0: # %entry
 ; SFB-ZICOND-NEXT:    andi a2, a2, 1
@@ -300,6 +318,24 @@ define i32 @select_xor_2b(i32 %A, i32 %B, i8 %cond) {
 ; CMOV-NEXT:  .LBB7_2: # %entry
 ; CMOV-NEXT:    ret
 ;
+; SFB-NOZICOND-NOC-LABEL: select_xor_2b:
+; SFB-NOZICOND-NOC:       # %bb.0: # %entry
+; SFB-NOZICOND-NOC-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-NOC-NEXT:    beqz a2, .LBB7_2
+; SFB-NOZICOND-NOC-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-NOC-NEXT:    xor a0, a1, a0
+; SFB-NOZICOND-NOC-NEXT:  .LBB7_2: # %entry
+; SFB-NOZICOND-NOC-NEXT:    ret
+;
+; SFB-NOZICOND-C-LABEL: select_xor_2b:
+; SFB-NOZICOND-C:       # %bb.0: # %entry
+; SFB-NOZICOND-C-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-C-NEXT:    beqz a2, .LBB7_2
+; SFB-NOZICOND-C-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-C-NEXT:    xor a0, a0, a1
+; SFB-NOZICOND-C-NEXT:  .LBB7_2: # %entry
+; SFB-NOZICOND-C-NEXT:    ret
+;
 ; SFB-ZICOND-LABEL: select_xor_2b:
 ; SFB-ZICOND:       # %bb.0: # %entry
 ; SFB-ZICOND-NEXT:    andi a2, a2, 1
@@ -334,6 +370,24 @@ define i32 @select_or(i32 %A, i32 %B, i8 %cond) {
 ; CMOV-NEXT:    mv a0, a1
 ; CMOV-NEXT:  .LBB8_2: # %entry
 ; CMOV-NEXT:    ret
+;
+; SFB-NOZICOND-NOC-LABEL: select_or:
+; SFB-NOZICOND-NOC:       # %bb.0: # %entry
+; SFB-NOZICOND-NOC-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-NOC-NEXT:    beqz a2, .LBB8_2
+; SFB-NOZICOND-NOC-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-NOC-NEXT:    or a0, a1, a0
+; SFB-NOZICOND-NOC-NEXT:  .LBB8_2: # %entry
+; SFB-NOZICOND-NOC-NEXT:    ret
+;
+; SFB-NOZICOND-C-LABEL: select_or:
+; SFB-NOZICOND-C:       # %bb.0: # %entry
+; SFB-NOZICOND-C-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-C-NEXT:    beqz a2, .LBB8_2
+; SFB-NOZICOND-C-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-C-NEXT:    or a0, a0, a1
+; SFB-NOZICOND-C-NEXT:  .LBB8_2: # %entry
+; SFB-NOZICOND-C-NEXT:    ret
 ;
 ; SFB-ZICOND-LABEL: select_or:
 ; SFB-ZICOND:       # %bb.0: # %entry
@@ -372,6 +426,24 @@ define i32 @select_or_b(i32 %A, i32 %B, i8 %cond) {
 ; CMOV-NEXT:  .LBB9_2: # %entry
 ; CMOV-NEXT:    ret
 ;
+; SFB-NOZICOND-NOC-LABEL: select_or_b:
+; SFB-NOZICOND-NOC:       # %bb.0: # %entry
+; SFB-NOZICOND-NOC-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-NOC-NEXT:    beqz a2, .LBB9_2
+; SFB-NOZICOND-NOC-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-NOC-NEXT:    or a0, a1, a0
+; SFB-NOZICOND-NOC-NEXT:  .LBB9_2: # %entry
+; SFB-NOZICOND-NOC-NEXT:    ret
+;
+; SFB-NOZICOND-C-LABEL: select_or_b:
+; SFB-NOZICOND-C:       # %bb.0: # %entry
+; SFB-NOZICOND-C-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-C-NEXT:    beqz a2, .LBB9_2
+; SFB-NOZICOND-C-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-C-NEXT:    or a0, a0, a1
+; SFB-NOZICOND-C-NEXT:  .LBB9_2: # %entry
+; SFB-NOZICOND-C-NEXT:    ret
+;
 ; SFB-ZICOND-LABEL: select_or_b:
 ; SFB-ZICOND:       # %bb.0: # %entry
 ; SFB-ZICOND-NEXT:    andi a2, a2, 1
@@ -406,6 +478,24 @@ define i32 @select_or_1(i32 %A, i32 %B, i32 %cond) {
 ; CMOV-NEXT:    mv a0, a1
 ; CMOV-NEXT:  .LBB10_2: # %entry
 ; CMOV-NEXT:    ret
+;
+; SFB-NOZICOND-NOC-LABEL: select_or_1:
+; SFB-NOZICOND-NOC:       # %bb.0: # %entry
+; SFB-NOZICOND-NOC-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-NOC-NEXT:    beqz a2, .LBB10_2
+; SFB-NOZICOND-NOC-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-NOC-NEXT:    or a0, a1, a0
+; SFB-NOZICOND-NOC-NEXT:  .LBB10_2: # %entry
+; SFB-NOZICOND-NOC-NEXT:    ret
+;
+; SFB-NOZICOND-C-LABEL: select_or_1:
+; SFB-NOZICOND-C:       # %bb.0: # %entry
+; SFB-NOZICOND-C-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-C-NEXT:    beqz a2, .LBB10_2
+; SFB-NOZICOND-C-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-C-NEXT:    or a0, a0, a1
+; SFB-NOZICOND-C-NEXT:  .LBB10_2: # %entry
+; SFB-NOZICOND-C-NEXT:    ret
 ;
 ; SFB-ZICOND-LABEL: select_or_1:
 ; SFB-ZICOND:       # %bb.0: # %entry
@@ -443,6 +533,24 @@ define i32 @select_or_1b(i32 %A, i32 %B, i32 %cond) {
 ; CMOV-NEXT:    mv a0, a1
 ; CMOV-NEXT:  .LBB11_2: # %entry
 ; CMOV-NEXT:    ret
+;
+; SFB-NOZICOND-NOC-LABEL: select_or_1b:
+; SFB-NOZICOND-NOC:       # %bb.0: # %entry
+; SFB-NOZICOND-NOC-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-NOC-NEXT:    beqz a2, .LBB11_2
+; SFB-NOZICOND-NOC-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-NOC-NEXT:    or a0, a1, a0
+; SFB-NOZICOND-NOC-NEXT:  .LBB11_2: # %entry
+; SFB-NOZICOND-NOC-NEXT:    ret
+;
+; SFB-NOZICOND-C-LABEL: select_or_1b:
+; SFB-NOZICOND-C:       # %bb.0: # %entry
+; SFB-NOZICOND-C-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-C-NEXT:    beqz a2, .LBB11_2
+; SFB-NOZICOND-C-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-C-NEXT:    or a0, a0, a1
+; SFB-NOZICOND-C-NEXT:  .LBB11_2: # %entry
+; SFB-NOZICOND-C-NEXT:    ret
 ;
 ; SFB-ZICOND-LABEL: select_or_1b:
 ; SFB-ZICOND:       # %bb.0: # %entry

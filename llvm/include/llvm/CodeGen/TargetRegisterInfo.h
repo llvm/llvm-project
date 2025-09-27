@@ -273,9 +273,10 @@ protected:
                      const RegClassInfo *const RCIs,
                      const MVT::SimpleValueType *const RCVTLists,
                      unsigned Mode = 0);
-  virtual ~TargetRegisterInfo();
 
 public:
+  virtual ~TargetRegisterInfo();
+
   /// Return the number of registers for the function. (may overestimate)
   virtual unsigned getNumSupportedRegs(const MachineFunction &) const {
     return getNumRegs();
@@ -677,6 +678,20 @@ public:
   getMatchingSuperRegClass(const TargetRegisterClass *A,
                            const TargetRegisterClass *B, unsigned Idx) const;
 
+  /// Find a common register class that can accomodate both the source and
+  /// destination operands of a copy-like instruction:
+  ///
+  /// DefRC:DefSubReg = COPY SrcRC:SrcSubReg
+  ///
+  /// This is a generalized form of getMatchingSuperRegClass,
+  /// getCommonSuperRegClass, and getCommonSubClass which handles 0, 1, or 2
+  /// subregister indexes. Those utilities should be preferred if the number of
+  /// non-0 subregister indexes is known.
+  const TargetRegisterClass *
+  findCommonRegClass(const TargetRegisterClass *DefRC, unsigned DefSubReg,
+                     const TargetRegisterClass *SrcRC,
+                     unsigned SrcSubReg) const;
+
   // For a copy-like instruction that defines a register of class DefRC with
   // subreg index DefSubReg, reading from another source with class SrcRC and
   // subregister SrcSubReg return true if this is a preferable copy
@@ -684,7 +699,10 @@ public:
   virtual bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
                                     unsigned DefSubReg,
                                     const TargetRegisterClass *SrcRC,
-                                    unsigned SrcSubReg) const;
+                                    unsigned SrcSubReg) const {
+    // If this source does not incur a cross register bank copy, use it.
+    return findCommonRegClass(DefRC, DefSubReg, SrcRC, SrcSubReg) != nullptr;
+  }
 
   /// Returns the largest legal sub-class of RC that
   /// supports the sub-register index Idx.
@@ -882,7 +900,7 @@ public:
   /// If a target supports multiple different pointer register classes,
   /// kind specifies which one is indicated.
   virtual const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF, unsigned Kind=0) const {
+  getPointerRegClass(unsigned Kind = 0) const {
     llvm_unreachable("Target didn't implement getPointerRegClass!");
   }
 

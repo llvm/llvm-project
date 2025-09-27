@@ -365,7 +365,12 @@ public:
   // Linkage helpers (inline). The default linkage is external.
   //===--------------------------------------------------------------------===//
 
-  mlir::StringAttr createCommonLinkage() { return getStringAttr("common"); }
+  static mlir::StringAttr createCommonLinkage(mlir::MLIRContext *context) {
+    return mlir::StringAttr::get(context, "common");
+  }
+  mlir::StringAttr createCommonLinkage() {
+    return createCommonLinkage(getContext());
+  }
 
   mlir::StringAttr createInternalLinkage() { return getStringAttr("internal"); }
 

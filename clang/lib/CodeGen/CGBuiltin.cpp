@@ -997,9 +997,8 @@ static const FieldDecl *FindFlexibleArrayMemberField(CodeGenFunction &CGF,
             /*IgnoreTemplateOrMacroSubstitution=*/true))
       return FD;
 
-    if (auto RT = FD->getType()->getAs<RecordType>())
-      if (const FieldDecl *FD =
-              FindFlexibleArrayMemberField(CGF, Ctx, RT->getAsRecordDecl()))
+    if (const auto *RD = FD->getType()->getAsRecordDecl())
+      if (const FieldDecl *FD = FindFlexibleArrayMemberField(CGF, Ctx, RD))
         return FD;
   }
 
@@ -1025,8 +1024,8 @@ static bool GetFieldOffset(ASTContext &Ctx, const RecordDecl *RD,
       return true;
     }
 
-    if (auto RT = Field->getType()->getAs<RecordType>()) {
-      if (GetFieldOffset(Ctx, RT->getAsRecordDecl(), FD, Offset)) {
+    if (const auto *RD = Field->getType()->getAsRecordDecl()) {
+      if (GetFieldOffset(Ctx, RD, FD, Offset)) {
         Offset += Layout.getFieldOffset(FieldNo);
         return true;
       }
@@ -1693,6 +1692,23 @@ getBitTestAtomicOrdering(BitTest::InterlockingKind I) {
   llvm_unreachable("invalid interlocking");
 }
 
+static llvm::Value *EmitBitCountExpr(CodeGenFunction &CGF, const Expr *E) {
+  llvm::Value *ArgValue = CGF.EmitScalarExpr(E);
+  llvm::Type *ArgType = ArgValue->getType();
+
+  // Boolean vectors can be casted directly to its bitfield representation. We
+  // intentionally do not round up to the next power of two size and let LLVM
+  // handle the trailing bits.
+  if (auto *VT = dyn_cast<llvm::FixedVectorType>(ArgType);
+      VT && VT->getElementType()->isIntegerTy(1)) {
+    llvm::Type *StorageType =
+        llvm::Type::getIntNTy(CGF.getLLVMContext(), VT->getNumElements());
+    ArgValue = CGF.Builder.CreateBitCast(ArgValue, StorageType);
+  }
+
+  return ArgValue;
+}
+
 /// Emit a _bittest* intrinsic. These intrinsics take a pointer to an array of
 /// bits and a bit position and read and optionally modify the bit at that
 /// position. The position index can be arbitrarily large, i.e. it can be larger
@@ -2020,7 +2036,7 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
   assert((Kind == BCK_CLZPassedZero || Kind == BCK_CTZPassedZero) &&
          "Unsupported builtin check kind");
 
-  Value *ArgValue = EmitScalarExpr(E);
+  Value *ArgValue = EmitBitCountExpr(*this, E);
   if (!SanOpts.has(SanitizerKind::Builtin))
     return ArgValue;
 
@@ -3327,14 +3343,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll:
   case Builtin::BI__builtin_ctzg:
-  case Builtin::BI__builtin_elementwise_cttz: {
+  case Builtin::BI__builtin_elementwise_ctzg: {
     bool HasFallback =
         (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_ctzg ||
-         BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_cttz) &&
+         BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_ctzg) &&
         E->getNumArgs() > 1;
 
     Value *ArgValue =
-        HasFallback ? EmitScalarExpr(E->getArg(0))
+        HasFallback ? EmitBitCountExpr(*this, E->getArg(0))
                     : EmitCheckedArgForBuiltin(E->getArg(0), BCK_CTZPassedZero);
 
     llvm::Type *ArgType = ArgValue->getType();
@@ -3344,7 +3360,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // The elementwise builtins always exhibit zero-is-undef behaviour
     Value *ZeroUndef = Builder.getInt1(
         HasFallback || getTarget().isCLZForZeroUndef() ||
-        BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_cttz);
+        BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_ctzg);
     Value *Result = Builder.CreateCall(F, {ArgValue, ZeroUndef});
     if (Result->getType() != ResultType)
       Result =
@@ -3364,14 +3380,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_clzl:
   case Builtin::BI__builtin_clzll:
   case Builtin::BI__builtin_clzg:
-  case Builtin::BI__builtin_elementwise_ctlz: {
+  case Builtin::BI__builtin_elementwise_clzg: {
     bool HasFallback =
         (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_clzg ||
-         BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_ctlz) &&
+         BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_clzg) &&
         E->getNumArgs() > 1;
 
     Value *ArgValue =
-        HasFallback ? EmitScalarExpr(E->getArg(0))
+        HasFallback ? EmitBitCountExpr(*this, E->getArg(0))
                     : EmitCheckedArgForBuiltin(E->getArg(0), BCK_CLZPassedZero);
 
     llvm::Type *ArgType = ArgValue->getType();
@@ -3381,7 +3397,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // The elementwise builtins always exhibit zero-is-undef behaviour
     Value *ZeroUndef = Builder.getInt1(
         HasFallback || getTarget().isCLZForZeroUndef() ||
-        BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_ctlz);
+        BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_clzg);
     Value *Result = Builder.CreateCall(F, {ArgValue, ZeroUndef});
     if (Result->getType() != ResultType)
       Result =
@@ -3456,7 +3472,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_popcountl:
   case Builtin::BI__builtin_popcountll:
   case Builtin::BI__builtin_popcountg: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    Value *ArgValue = EmitBitCountExpr(*this, E->getArg(0));
 
     llvm::Type *ArgType = ArgValue->getType();
     Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ArgType);
@@ -4255,44 +4271,109 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
-  case Builtin::BI__builtin_masked_load: {
+  case Builtin::BI__builtin_masked_load:
+  case Builtin::BI__builtin_masked_expand_load: {
     llvm::Value *Mask = EmitScalarExpr(E->getArg(0));
     llvm::Value *Ptr = EmitScalarExpr(E->getArg(1));
 
     llvm::Type *RetTy = CGM.getTypes().ConvertType(E->getType());
-    CharUnits Align = CGM.getNaturalTypeAlignment(E->getType(), nullptr);
+    llvm::Value *PassThru = llvm::PoisonValue::get(RetTy);
+    if (E->getNumArgs() > 2)
+      PassThru = EmitScalarExpr(E->getArg(2));
+
+    CharUnits Align = CGM.getNaturalTypeAlignment(
+        E->getType()->getAs<VectorType>()->getElementType(), nullptr);
+    llvm::Value *AlignVal =
+        llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
+
+    llvm::Value *Result;
+    if (BuiltinID == Builtin::BI__builtin_masked_load) {
+      Function *F =
+          CGM.getIntrinsic(Intrinsic::masked_load, {RetTy, Ptr->getType()});
+      Result =
+          Builder.CreateCall(F, {Ptr, AlignVal, Mask, PassThru}, "masked_load");
+    } else {
+      Function *F = CGM.getIntrinsic(Intrinsic::masked_expandload, {RetTy});
+      Result =
+          Builder.CreateCall(F, {Ptr, Mask, PassThru}, "masked_expand_load");
+    }
+    return RValue::get(Result);
+  };
+  case Builtin::BI__builtin_masked_gather: {
+    llvm::Value *Mask = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Idx = EmitScalarExpr(E->getArg(1));
+    llvm::Value *Ptr = EmitScalarExpr(E->getArg(2));
+
+    llvm::Type *RetTy = CGM.getTypes().ConvertType(E->getType());
+    CharUnits Align = CGM.getNaturalTypeAlignment(
+        E->getType()->getAs<VectorType>()->getElementType(), nullptr);
     llvm::Value *AlignVal =
         llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
 
     llvm::Value *PassThru = llvm::PoisonValue::get(RetTy);
+    if (E->getNumArgs() > 3)
+      PassThru = EmitScalarExpr(E->getArg(3));
 
+    llvm::Type *ElemTy = CGM.getTypes().ConvertType(
+        E->getType()->getAs<VectorType>()->getElementType());
+    llvm::Value *PtrVec = Builder.CreateGEP(ElemTy, Ptr, Idx);
+
+    llvm::Value *Result;
     Function *F =
-        CGM.getIntrinsic(Intrinsic::masked_load, {RetTy, UnqualPtrTy});
+        CGM.getIntrinsic(Intrinsic::masked_gather, {RetTy, PtrVec->getType()});
 
-    llvm::Value *Result =
-        Builder.CreateCall(F, {Ptr, AlignVal, Mask, PassThru}, "masked_load");
+    Result = Builder.CreateCall(F, {PtrVec, AlignVal, Mask, PassThru},
+                                "masked_gather");
     return RValue::get(Result);
-  };
-  case Builtin::BI__builtin_masked_store: {
+  }
+  case Builtin::BI__builtin_masked_store:
+  case Builtin::BI__builtin_masked_compress_store: {
     llvm::Value *Mask = EmitScalarExpr(E->getArg(0));
     llvm::Value *Val = EmitScalarExpr(E->getArg(1));
     llvm::Value *Ptr = EmitScalarExpr(E->getArg(2));
 
     QualType ValTy = E->getArg(1)->getType();
     llvm::Type *ValLLTy = CGM.getTypes().ConvertType(ValTy);
-    llvm::Type *PtrTy = Ptr->getType();
 
-    CharUnits Align = CGM.getNaturalTypeAlignment(ValTy, nullptr);
+    CharUnits Align = CGM.getNaturalTypeAlignment(
+        E->getArg(1)->getType()->getAs<VectorType>()->getElementType(),
+        nullptr);
     llvm::Value *AlignVal =
         llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
 
-    llvm::Function *F =
-        CGM.getIntrinsic(llvm::Intrinsic::masked_store, {ValLLTy, PtrTy});
-
-    Builder.CreateCall(F, {Val, Ptr, AlignVal, Mask});
+    if (BuiltinID == Builtin::BI__builtin_masked_store) {
+      llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::masked_store,
+                                           {ValLLTy, Ptr->getType()});
+      Builder.CreateCall(F, {Val, Ptr, AlignVal, Mask});
+    } else {
+      llvm::Function *F =
+          CGM.getIntrinsic(llvm::Intrinsic::masked_compressstore, {ValLLTy});
+      Builder.CreateCall(F, {Val, Ptr, Mask});
+    }
     return RValue::get(nullptr);
   }
+  case Builtin::BI__builtin_masked_scatter: {
+    llvm::Value *Mask = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Idx = EmitScalarExpr(E->getArg(1));
+    llvm::Value *Val = EmitScalarExpr(E->getArg(2));
+    llvm::Value *Ptr = EmitScalarExpr(E->getArg(3));
 
+    CharUnits Align = CGM.getNaturalTypeAlignment(
+        E->getArg(2)->getType()->getAs<VectorType>()->getElementType(),
+        nullptr);
+    llvm::Value *AlignVal =
+        llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
+
+    llvm::Type *ElemTy = CGM.getTypes().ConvertType(
+        E->getArg(1)->getType()->getAs<VectorType>()->getElementType());
+    llvm::Value *PtrVec = Builder.CreateGEP(ElemTy, Ptr, Idx);
+
+    Function *F = CGM.getIntrinsic(Intrinsic::masked_scatter,
+                                   {Val->getType(), PtrVec->getType()});
+
+    Builder.CreateCall(F, {Val, PtrVec, AlignVal, Mask});
+    return RValue();
+  }
   case Builtin::BI__builtin_isinf_sign: {
     // isinf_sign(x) -> fabs(x) == infinity ? (signbit(x) ? -1 : 1) : 0
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);

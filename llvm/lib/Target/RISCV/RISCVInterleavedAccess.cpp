@@ -81,6 +81,12 @@ static const Intrinsic::ID FixedVssegIntrIds[] = {
     Intrinsic::riscv_seg6_store_mask, Intrinsic::riscv_seg7_store_mask,
     Intrinsic::riscv_seg8_store_mask};
 
+static const Intrinsic::ID FixedVsssegIntrIds[] = {
+    Intrinsic::riscv_sseg2_store_mask, Intrinsic::riscv_sseg3_store_mask,
+    Intrinsic::riscv_sseg4_store_mask, Intrinsic::riscv_sseg5_store_mask,
+    Intrinsic::riscv_sseg6_store_mask, Intrinsic::riscv_sseg7_store_mask,
+    Intrinsic::riscv_sseg8_store_mask};
+
 static const Intrinsic::ID ScalableVssegIntrIds[] = {
     Intrinsic::riscv_vsseg2_mask, Intrinsic::riscv_vsseg3_mask,
     Intrinsic::riscv_vsseg4_mask, Intrinsic::riscv_vsseg5_mask,
@@ -275,7 +281,16 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 bool RISCVTargetLowering::lowerInterleavedStore(Instruction *Store,
                                                 Value *LaneMask,
                                                 ShuffleVectorInst *SVI,
-                                                unsigned Factor) const {
+                                                unsigned Factor,
+                                                const APInt &GapMask) const {
+  assert(GapMask.getBitWidth() == Factor);
+
+  // We only support cases where the skipped fields are the trailing ones.
+  // TODO: Lower to strided store if there is only a single active field.
+  unsigned MaskFactor = GapMask.popcount();
+  if (MaskFactor < 2 || !GapMask.isMask())
+    return false;
+
   IRBuilder<> Builder(Store);
   const DataLayout &DL = Store->getDataLayout();
   auto Mask = SVI->getShuffleMask();
@@ -287,21 +302,31 @@ bool RISCVTargetLowering::lowerInterleavedStore(Instruction *Store,
 
   Value *Ptr, *VL;
   Align Alignment;
-  if (!getMemOperands(Factor, VTy, XLenTy, Store, Ptr, LaneMask, VL, Alignment))
+  if (!getMemOperands(MaskFactor, VTy, XLenTy, Store, Ptr, LaneMask, VL,
+                      Alignment))
     return false;
 
   Type *PtrTy = Ptr->getType();
   unsigned AS = PtrTy->getPointerAddressSpace();
-  if (!isLegalInterleavedAccessType(VTy, Factor, Alignment, AS, DL))
+  if (!isLegalInterleavedAccessType(VTy, MaskFactor, Alignment, AS, DL))
     return false;
 
-  Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
-      Store->getModule(), FixedVssegIntrIds[Factor - 2], {VTy, PtrTy, XLenTy});
+  Function *SegStoreFunc;
+  if (MaskFactor < Factor)
+    // Strided segmented store.
+    SegStoreFunc = Intrinsic::getOrInsertDeclaration(
+        Store->getModule(), FixedVsssegIntrIds[MaskFactor - 2],
+        {VTy, PtrTy, XLenTy, XLenTy});
+  else
+    // Normal segmented store.
+    SegStoreFunc = Intrinsic::getOrInsertDeclaration(
+        Store->getModule(), FixedVssegIntrIds[Factor - 2],
+        {VTy, PtrTy, XLenTy});
 
   SmallVector<Value *, 10> Ops;
   SmallVector<int, 16> NewShuffleMask;
 
-  for (unsigned i = 0; i < Factor; i++) {
+  for (unsigned i = 0; i < MaskFactor; i++) {
     // Collect shuffle mask for this lane.
     for (unsigned j = 0; j < VTy->getNumElements(); j++)
       NewShuffleMask.push_back(Mask[i + Factor * j]);
@@ -312,8 +337,14 @@ bool RISCVTargetLowering::lowerInterleavedStore(Instruction *Store,
 
     NewShuffleMask.clear();
   }
-  Ops.append({Ptr, LaneMask, VL});
-  Builder.CreateCall(VssegNFunc, Ops);
+  Ops.push_back(Ptr);
+  if (MaskFactor < Factor) {
+    // Insert the stride argument.
+    unsigned ScalarSizeInBytes = DL.getTypeStoreSize(VTy->getElementType());
+    Ops.push_back(ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes));
+  }
+  Ops.append({LaneMask, VL});
+  Builder.CreateCall(SegStoreFunc, Ops);
 
   return true;
 }

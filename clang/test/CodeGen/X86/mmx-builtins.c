@@ -7,6 +7,15 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --implicit-check-not=x86mmx
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --implicit-check-not=x86mmx
 
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
+
 
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
@@ -16,18 +25,21 @@ __m64 test_mm_abs_pi8(__m64 a) {
   // CHECK: call <8 x i8> @llvm.abs.v8i8(
   return _mm_abs_pi8(a);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_abs_pi8((__m64)(__v8qs){-3, +2, -1, 0, +1, -2, +3, -4}), 3, 2, 1, 0, 1, 2, 3, 4));
 
 __m64 test_mm_abs_pi16(__m64 a) {
   // CHECK-LABEL: test_mm_abs_pi16
   // CHECK: call <4 x i16> @llvm.abs.v4i16(
   return _mm_abs_pi16(a);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_abs_pi16((__m64)(__v4hi){+1, -2, +3, -4}), 1, 2, 3, 4));
 
 __m64 test_mm_abs_pi32(__m64 a) {
   // CHECK-LABEL: test_mm_abs_pi32
   // CHECK: call <2 x i32> @llvm.abs.v2i32(
   return _mm_abs_pi32(a);
 }
+TEST_CONSTEXPR(match_v2si(_mm_abs_pi32((__m64)(__v2si){+5, -3}), 5, 3));
 
 __m64 test_mm_add_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_add_pi8
@@ -111,12 +123,14 @@ __m64 test_mm_avg_pu8(__m64 a, __m64 b) {
   // CHECK: call <16 x i8> @llvm.x86.sse2.pavg.b(
   return _mm_avg_pu8(a, b);
 }
+TEST_CONSTEXPR(match_v8qu(_mm_avg_pu8((__m64)(__v8qu){0, 1, 2, 3, 18, 15, 12, 20}, (__m64)(__v8qu){0, 1, 2, 3, 16, 3, 20, 10}), 0, 1, 2, 3, 17, 9, 16, 15));
 
 __m64 test_mm_avg_pu16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_avg_pu16
   // CHECK: call <8 x i16> @llvm.x86.sse2.pavg.w(
   return _mm_avg_pu16(a, b);
 }
+TEST_CONSTEXPR(match_v4hu(_mm_avg_pu16((__m64)(__v4hu){18, 15, 12, 20}, (__m64)(__v4hu){16, 3, 20, 10}), 17, 9, 16, 15));
 
 __m64 test_mm_cmpeq_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_cmpeq_pi8
@@ -357,24 +371,28 @@ __m64 test_mm_max_pi16(__m64 a, __m64 b) {
   // CHECK: call <4 x i16> @llvm.smax.v4i16(
   return _mm_max_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_max_pi16((__m64)(__v4hi){+1, -2, +3, -4}, (__m64)(__v4hi){-1, 2, -3, 4}), 1, 2, 3, 4));
 
 __m64 test_mm_max_pu8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_max_pu8
   // CHECK: call <8 x i8> @llvm.umax.v8i8(
   return _mm_max_pu8(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_max_pu8((__m64)(__v8qs){ 16, 17, 18, -19, -20, 21, -22, -23}, (__m64)(__v8qs){ 1, -2, -3, 4, 5, 0, 7, -8}),  16, -2, -3, -19, -20, 21, -22, -8));
 
 __m64 test_mm_min_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_min_pi16
   // CHECK: call <4 x i16> @llvm.smin.v4i16(
   return _mm_min_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_min_pi16((__m64)(__v4hi){+1, -2, +3, -4}, (__m64)(__v4hi){-1, 2, -3, 4}), -1, -2, -3, -4));
 
 __m64 test_mm_min_pu8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_min_pu8
   // CHECK: call <8 x i8> @llvm.umin.v8i8(
   return _mm_min_pu8(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_min_pu8((__m64)(__v8qs){ 16, 17, 18, -19, -20, 21, -22, -23}, (__m64)(__v8qs){ 1, -2, -3, 4, 5, 0, 7, -8}),  1, 17, 18, 4, 5, 0, 7, -23));
 
 int test_mm_movemask_pi8(__m64 a) {
   // CHECK-LABEL: test_mm_movemask_pi8
@@ -430,18 +448,21 @@ __m64 test_mm_packs_pi16(__m64 a, __m64 b) {
   // CHECK: call <16 x i8> @llvm.x86.sse2.packsswb.128(
   return _mm_packs_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_packs_pi16((__m64)(__v4hi){130, -200, 127, -128}, (__m64)(__v4hi){0, 1, -1, 255}), 127, -128, 127, -128, 0, 1, -1, 127));
 
 __m64 test_mm_packs_pi32(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_packs_pi32
   // CHECK: call <8 x i16> @llvm.x86.sse2.packssdw.128(
   return _mm_packs_pi32(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_packs_pi32((__m64)(__v2si){40000, -50000}, (__m64)(__v2si){0, 70000}), 32767, -32768, 0, 32767));
 
 __m64 test_mm_packs_pu16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_packs_pu16
   // CHECK: call <16 x i8> @llvm.x86.sse2.packuswb.128(
   return _mm_packs_pu16(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_packs_pu16((__m64)(__v4hi){-1, 0, 128, 300}, (__m64)(__v4hi){255, -200, 42, -42}), 0, 0, -128, -1, -1, 0, 42, 0));
 
 __m64 test_mm_sad_pu8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sad_pu8
@@ -605,18 +626,35 @@ __m64 test_mm_slli_pi16(__m64 a) {
   // CHECK: call <8 x i16> @llvm.x86.sse2.pslli.w(
   return _mm_slli_pi16(a, 3);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_slli_pi16((__m64)(__v4hi){0, 1, 2, 3}, 0), 0, 1, 2, 3));
+TEST_CONSTEXPR(match_v4hi(_mm_slli_pi16((__m64)(__v4hi){0, 1, 2, 3}, 1), 0, 0x2, 0x4, 0x6));
+TEST_CONSTEXPR(match_v4hi(_mm_slli_pi16((__m64)(__v4hi){0, 1, 2, 3}, 15), 0, 0x8000, 0x0, 0x8000));
+TEST_CONSTEXPR(match_v4hi(_mm_slli_pi16((__m64)(__v4hi){0, 1, 2, 3}, 16), 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v4hi(_mm_slli_pi16((__m64)(__v4hi){0, 1, 2, 3}, 17), 0, 0, 0, 0));
 
 __m64 test_mm_slli_pi32(__m64 a) {
   // CHECK-LABEL: test_mm_slli_pi32
   // CHECK: call <4 x i32> @llvm.x86.sse2.pslli.d(
   return _mm_slli_pi32(a, 3);
 }
+TEST_CONSTEXPR(match_v2si(_mm_slli_pi32((__m64)(__v2si){0, 1}, 0), 0, 1));
+TEST_CONSTEXPR(match_v2si(_mm_slli_pi32((__m64)(__v2si){0, 1}, 1), 0, 0x2));
+TEST_CONSTEXPR(match_v2si(_mm_slli_pi32((__m64)(__v2si){1, 2}, 2), 0x4, 0x8));
+TEST_CONSTEXPR(match_v2su(_mm_slli_pi32((__m64)(__v2su){1, 1}, 31), 0x80000000, 0x80000000));
+TEST_CONSTEXPR(match_v2si(_mm_slli_pi32((__m64)(__v2si){1, 1}, 32), 0, 0));
+TEST_CONSTEXPR(match_v2si(_mm_slli_pi32((__m64)(__v2si){1, 1}, 33), 0, 0));
 
 __m64 test_mm_slli_si64(__m64 a) {
   // CHECK-LABEL: test_mm_slli_si64
   // CHECK: call <2 x i64> @llvm.x86.sse2.pslli.q(
   return _mm_slli_si64(a, 3);
 }
+TEST_CONSTEXPR(match_v1di(_mm_slli_si64((__m64)(__v1di){0}, 0), 0));
+TEST_CONSTEXPR(match_v1di(_mm_slli_si64((__m64)(__v1di){1}, 1), 0x2));
+TEST_CONSTEXPR(match_v1di(_mm_slli_si64((__m64)(__v1di){2}, 2), 0x8));
+TEST_CONSTEXPR(match_v1du(_mm_slli_si64((__m64)(__v1du){1}, 63), 0x8000000000000000ULL));
+TEST_CONSTEXPR(match_v1di(_mm_slli_si64((__m64)(__v1di){1}, 64), 0));
+TEST_CONSTEXPR(match_v1di(_mm_slli_si64((__m64)(__v1di){1}, 65), 0));
 
 __m64 test_mm_sra_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sra_pi16
@@ -635,12 +673,25 @@ __m64 test_mm_srai_pi16(__m64 a) {
   // CHECK: call <8 x i16> @llvm.x86.sse2.psrai.w(
   return _mm_srai_pi16(a, 3);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_srai_pi16((__m64)(__v4hi){-1, 1, 2, 3}, 1), -1, 0, 1, 1));
+TEST_CONSTEXPR(match_v4hi(_mm_srai_pi16((__m64)(__v4hi){-32768, -1, 1, 2}, 15), -1, -1, 0, 0));
+TEST_CONSTEXPR(match_v4hi(_mm_srai_pi16((__m64)(__v4hi){-32768, -1, 2, 3}, 16), -1, -1, 0, 0));
+TEST_CONSTEXPR(match_v4hi(_mm_srai_pi16((__m64)(__v4hi){-1, 1, 2, 3}, 16), -1, 0, 0, 0));
+TEST_CONSTEXPR(match_v4hi(_mm_srai_pi16((__m64)(__v4hi){-1, 1, 2, 3}, 17), -1, 0, 0, 0));
+TEST_CONSTEXPR(match_v4hi(_mm_srai_pi16((__m64)(__v4hi){-1, 1, -42, -32768}, 100), -1, 0, -1, -1));
+TEST_CONSTEXPR(match_v4hi(_mm_srai_pi16((__m64)(__v4hi){-1, 1, 2, 3}, 200), -1, 0, 0, 0));
+TEST_CONSTEXPR(match_v4hi(_mm_srai_pi16((__m64)(__v4hi){-32768, 32767, -2, 0}, 1), -16384, 16383, -1, 0));
+TEST_CONSTEXPR(match_v4hi(_mm_srai_pi16((__m64)(__v4hi){-32768, 32767, -2, 0}, 15), -1, 0, -1, 0));
+TEST_CONSTEXPR(match_v4hi(_mm_srai_pi16((__m64)(__v4hi){-32768, 32767, -2, 0}, 30), -1, 0, -1, 0));
 
 __m64 test_mm_srai_pi32(__m64 a) {
   // CHECK-LABEL: test_mm_srai_pi32
   // CHECK: call <4 x i32> @llvm.x86.sse2.psrai.d(
   return _mm_srai_pi32(a, 3);
 }
+TEST_CONSTEXPR(match_v2si(_mm_srai_pi32((__m64)(__v2si){-32768, 32767}, 30), -1, 0));
+TEST_CONSTEXPR(match_v2si(_mm_srai_pi32((__m64)(__v2si){-2, 20}, 1), -1, 0xa));
+TEST_CONSTEXPR(match_v2si(_mm_srai_pi32((__m64)(__v2si){-1, 20}, 1), -1, 0xa));
 
 __m64 test_mm_srl_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_srl_pi16
@@ -665,18 +716,25 @@ __m64 test_mm_srli_pi16(__m64 a) {
   // CHECK: call <8 x i16> @llvm.x86.sse2.psrli.w(
   return _mm_srli_pi16(a, 3);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_srli_pi16((__m64)(__v4hi){0, 1, 2, 3}, 1), 0, 0x0, 0x1, 0x1));
+TEST_CONSTEXPR(match_v4hi(_mm_srli_pi16((__m64)(__v4hi){0, 1, 2, 3}, 1), 0, 0x0, 0x1, 0x1));
+TEST_CONSTEXPR(match_v4hi(_mm_srli_pi16((__m64)(__v4hi){-1, 0, 0, 0}, 1), 0x7fff, 0, 0, 0));
+TEST_CONSTEXPR(match_v4hi(_mm_srli_pi16((__m64)(__v4hi){0, 1, 2, 3}, 16), 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v4hi(_mm_srli_pi16((__m64)(__v4hi){0, 1, 2, 3}, 17), 0, 0, 0, 0));
 
 __m64 test_mm_srli_pi32(__m64 a) {
   // CHECK-LABEL: test_mm_srli_pi32
   // CHECK: call <4 x i32> @llvm.x86.sse2.psrli.d(
   return _mm_srli_pi32(a, 3);
 }
+TEST_CONSTEXPR(match_v2si(_mm_srli_pi32((__m64)(__v2si){1, 1025}, 2), 0x0, 0x100));
 
 __m64 test_mm_srli_si64(__m64 a) {
   // CHECK-LABEL: test_mm_srli_si64
   // CHECK: call <2 x i64> @llvm.x86.sse2.psrli.q(
   return _mm_srli_si64(a, 3);
 }
+TEST_CONSTEXPR(match_v1di(_mm_srli_si64((__m64)(__v1di){1025}, 2), 0x100));
 
 void test_mm_stream_pi(__m64 *p, __m64 a) {
   // CHECK-LABEL: test_mm_stream_pi

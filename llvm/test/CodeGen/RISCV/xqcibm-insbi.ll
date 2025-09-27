@@ -4,259 +4,190 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcibm --verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=RV32XQCIBM
 
-define i32 @insbi(i32 %in1) nounwind {
-; RV32I-LABEL: insbi:
+define i32 @insb(i32 %in1, i32 %in2) {
+; RV32I-LABEL: insb:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    xori a1, a0, 176
-; RV32I-NEXT:    andi a1, a1, 496
-; RV32I-NEXT:    xor a0, a1, a0
-; RV32I-NEXT:    ret
-;
-; RV32XQCIBM-LABEL: insbi:
-; RV32XQCIBM:       # %bb.0:
-; RV32XQCIBM-NEXT:    qc.insbi a0, 11, 5, 4
-; RV32XQCIBM-NEXT:    ret
-  %xor1 = xor i32 %in1, 176
-  %and1 = and i32 %xor1, 496
-  %xor2 = xor i32 %and1, %in1
-  ret i32 %xor2
-}
-
-define i32 @insbi_comm_xor(i32 %in1) nounwind {
-; RV32I-LABEL: insbi_comm_xor:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a1, 9
-; RV32I-NEXT:    li a2, 15
-; RV32I-NEXT:    slli a1, a1, 9
-; RV32I-NEXT:    xor a1, a0, a1
-; RV32I-NEXT:    slli a2, a2, 9
-; RV32I-NEXT:    and a1, a1, a2
-; RV32I-NEXT:    xor a0, a1, a0
-; RV32I-NEXT:    ret
-;
-; RV32XQCIBM-LABEL: insbi_comm_xor:
-; RV32XQCIBM:       # %bb.0:
-; RV32XQCIBM-NEXT:    qc.insbi a0, 9, 4, 9
-; RV32XQCIBM-NEXT:    ret
-  %xor1 = xor i32 4608, %in1
-  %and1 = and i32 %xor1, 7680
-  %xor2 = xor i32 %and1, %in1
-  ret i32 %xor2
-}
-
-define i32 @insbi_comm_and(i32 %in1) nounwind {
-; RV32I-LABEL: insbi_comm_and:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a1, 11
-; RV32I-NEXT:    li a2, 15
-; RV32I-NEXT:    slli a1, a1, 9
-; RV32I-NEXT:    xor a1, a0, a1
-; RV32I-NEXT:    slli a2, a2, 9
-; RV32I-NEXT:    and a1, a1, a2
-; RV32I-NEXT:    xor a0, a1, a0
-; RV32I-NEXT:    ret
-;
-; RV32XQCIBM-LABEL: insbi_comm_and:
-; RV32XQCIBM:       # %bb.0:
-; RV32XQCIBM-NEXT:    qc.insbi a0, 11, 4, 9
-; RV32XQCIBM-NEXT:    ret
-  %xor1 = xor i32 %in1, 5632
-  %and1 = and i32 7680, %xor1
-  %xor2 = xor i32 %and1, %in1
-  ret i32 %xor2
-}
-
-define i32 @insbi_comm_xor2(i32 %in1) nounwind {
-; RV32I-LABEL: insbi_comm_xor2:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    xori a1, a0, 176
-; RV32I-NEXT:    andi a1, a1, 496
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    andi a2, a0, -2
+; RV32I-NEXT:    xor a1, a1, a2
 ; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32XQCIBM-LABEL: insbi_comm_xor2:
+; RV32XQCIBM-LABEL: insb:
 ; RV32XQCIBM:       # %bb.0:
-; RV32XQCIBM-NEXT:    qc.insbi a0, 11, 5, 4
-; RV32XQCIBM-NEXT:    ret
-  %xor1 = xor i32 %in1, 176
-  %and1 = and i32 %xor1, 496
-  %xor2 = xor i32 %in1, %and1
-  ret i32 %xor2
-}
-
-define i32 @insbi_immg(i32 %in1) nounwind {
-; RV32I-LABEL: insbi_immg:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    xori a1, a0, 256
-; RV32I-NEXT:    andi a1, a1, 496
-; RV32I-NEXT:    xor a0, a1, a0
-; RV32I-NEXT:    ret
-;
-; RV32XQCIBM-LABEL: insbi_immg:
-; RV32XQCIBM:       # %bb.0:
-; RV32XQCIBM-NEXT:    li a1, 16
-; RV32XQCIBM-NEXT:    qc.insb a0, a1, 5, 4
-; RV32XQCIBM-NEXT:    ret
-  %xor1 = xor i32 %in1, 256
-  %and1 = and i32 %xor1, 496
-  %xor2 = xor i32 %and1, %in1
-  ret i32 %xor2
-}
-
-define i32 @insbi_not_shifted_mask(i32 %in1) nounwind {
-; RV32I-LABEL: insbi_not_shifted_mask:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    xori a1, a0, 128
-; RV32I-NEXT:    andi a1, a1, 716
-; RV32I-NEXT:    xor a0, a1, a0
-; RV32I-NEXT:    ret
-;
-; RV32XQCIBM-LABEL: insbi_not_shifted_mask:
-; RV32XQCIBM:       # %bb.0:
-; RV32XQCIBM-NEXT:    xori a1, a0, 128
-; RV32XQCIBM-NEXT:    andi a1, a1, 716
-; RV32XQCIBM-NEXT:    xor a0, a0, a1
-; RV32XQCIBM-NEXT:    ret
-  %xor1 = xor i32 %in1, 176
-  %and1 = and i32 %xor1, 716
-  %xor2 = xor i32 %and1, %in1
-  ret i32 %xor2
-}
-
-define i32 @insbi_width_z(i32 %in1) nounwind {
-; RV32I-LABEL: insbi_width_z:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a1, a0, 256
-; RV32I-NEXT:    xor a0, a1, a0
-; RV32I-NEXT:    ret
-;
-; RV32XQCIBM-LABEL: insbi_width_z:
-; RV32XQCIBM:       # %bb.0:
-; RV32XQCIBM-NEXT:    andi a1, a0, 256
-; RV32XQCIBM-NEXT:    xor a0, a0, a1
-; RV32XQCIBM-NEXT:    ret
-  %xor1 = xor i32 %in1, 176
-  %and1 = and i32 %xor1, 256
-  %xor2 = xor i32 %and1, %in1
-  ret i32 %xor2
-}
-
-define i32 @insbi_mul_use_and(i32 %in1, i32 %in2) nounwind {
-; RV32I-LABEL: insbi_mul_use_and:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a1, 11
-; RV32I-NEXT:    li a2, 15
-; RV32I-NEXT:    slli a1, a1, 9
-; RV32I-NEXT:    slli a2, a2, 9
-; RV32I-NEXT:    xor a1, a0, a1
-; RV32I-NEXT:    and a1, a1, a2
-; RV32I-NEXT:    xor a2, a1, a0
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    add a0, a0, a2
-; RV32I-NEXT:    ret
-;
-; RV32XQCIBM-LABEL: insbi_mul_use_and:
-; RV32XQCIBM:       # %bb.0:
-; RV32XQCIBM-NEXT:    li a1, 11
-; RV32XQCIBM-NEXT:    li a2, 15
-; RV32XQCIBM-NEXT:    slli a1, a1, 9
-; RV32XQCIBM-NEXT:    slli a2, a2, 9
-; RV32XQCIBM-NEXT:    xor a1, a1, a0
-; RV32XQCIBM-NEXT:    and a1, a1, a2
-; RV32XQCIBM-NEXT:    xor a2, a1, a0
-; RV32XQCIBM-NEXT:    add a0, a0, a1
-; RV32XQCIBM-NEXT:    add a0, a0, a2
-; RV32XQCIBM-NEXT:    ret
-  %xor1 = xor i32 %in1, 5632
-  %and1 = and i32 %xor1, 7680
-  %xor2 = xor i32 %and1, %in1
-  %add1 = add i32 %in1, %and1
-  %add2 = add i32 %add1, %xor2
-  ret i32 %add2
-}
-
-define i32 @insbi_mul_use_xor(i32 %in1, i32 %in2) nounwind {
-; RV32I-LABEL: insbi_mul_use_xor:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    xori a1, a0, 176
-; RV32I-NEXT:    andi a2, a1, 496
-; RV32I-NEXT:    xor a2, a2, a0
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    add a0, a0, a2
-; RV32I-NEXT:    ret
-;
-; RV32XQCIBM-LABEL: insbi_mul_use_xor:
-; RV32XQCIBM:       # %bb.0:
-; RV32XQCIBM-NEXT:    xori a1, a0, 176
-; RV32XQCIBM-NEXT:    andi a2, a1, 496
-; RV32XQCIBM-NEXT:    xor a2, a2, a0
-; RV32XQCIBM-NEXT:    add a0, a0, a1
-; RV32XQCIBM-NEXT:    add a0, a0, a2
-; RV32XQCIBM-NEXT:    ret
-  %xor1 = xor i32 %in1, 176
-  %and1 = and i32 %xor1, 496
-  %xor2 = xor i32 %and1, %in1
-  %add1 = add i32 %in1, %xor1
-  %add2 = add i32 %add1, %xor2
-  ret i32 %add2
-}
-
-define i32 @insbi_imm_too_neg(i32 %in1) nounwind {
-; RV32I-LABEL: insbi_imm_too_neg:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    xori a1, a0, -34
-; RV32I-NEXT:    andi a1, a1, -2
-; RV32I-NEXT:    xor a0, a1, a0
-; RV32I-NEXT:    ret
-;
-; RV32XQCIBM-LABEL: insbi_imm_too_neg:
-; RV32XQCIBM:       # %bb.0:
-; RV32XQCIBM-NEXT:    li a1, -17
+; RV32XQCIBM-NEXT:    qc.ext a1, a1, 31, 0
 ; RV32XQCIBM-NEXT:    qc.insb a0, a1, 31, 1
 ; RV32XQCIBM-NEXT:    ret
-  %xor1 = xor i32 %in1, -34
-  %and1 = and i32 %xor1, -2
-  %xor2 = xor i32 %and1, %in1
+  %shl1 = shl i32 %in2, 1
+  %in1.masked = and i32 %in1, -2
+  %xor1 = xor i32 %shl1, %in1.masked
+  %xor2 = xor i32 %in1, %xor1
   ret i32 %xor2
 }
 
-define i64 @insbi_i64(i64 %in1) nounwind {
-; RV32I-LABEL: insbi_i64:
+define i32 @insb_and_multiple(i32 %in1, i32 %in2) {
+; RV32I-LABEL: insb_and_multiple:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 57344
-; RV32I-NEXT:    lui a3, 1044480
-; RV32I-NEXT:    xor a2, a0, a2
-; RV32I-NEXT:    and a2, a2, a3
-; RV32I-NEXT:    zext.b a3, a1
-; RV32I-NEXT:    xor a1, a3, a1
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    andi a2, a0, -2
+; RV32I-NEXT:    xor a1, a1, a2
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a2
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: insb_and_multiple:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    slli a1, a1, 1
+; RV32XQCIBM-NEXT:    andi a2, a0, -2
+; RV32XQCIBM-NEXT:    xor a1, a1, a2
+; RV32XQCIBM-NEXT:    xor a0, a0, a1
+; RV32XQCIBM-NEXT:    add a0, a0, a2
+; RV32XQCIBM-NEXT:    ret
+  %shl1 = shl i32 %in2, 1
+  %in1.masked = and i32 %in1, -2
+  %xor1 = xor i32 %shl1, %in1.masked
+  %xor2 = xor i32 %in1, %xor1
+  %add1 = add i32 %xor2, %in1.masked
+  ret i32 %add1
+}
+
+define i32 @insb_xor_multiple(i32 %in1, i32 %in2) {
+; RV32I-LABEL: insb_xor_multiple:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    andi a2, a0, -2
+; RV32I-NEXT:    xor a1, a1, a2
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: insb_xor_multiple:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    slli a1, a1, 1
+; RV32XQCIBM-NEXT:    andi a2, a0, -2
+; RV32XQCIBM-NEXT:    xor a1, a1, a2
+; RV32XQCIBM-NEXT:    xor a0, a0, a1
+; RV32XQCIBM-NEXT:    add a0, a0, a1
+; RV32XQCIBM-NEXT:    ret
+  %shl1 = shl i32 %in2, 1
+  %in1.masked = and i32 %in1, -2
+  %xor1 = xor i32 %shl1, %in1.masked
+  %xor2 = xor i32 %in1, %xor1
+  %add1 = add i32 %xor2, %xor1
+  ret i32 %add1
+}
+
+define i32 @insb_shl_multiple(i32 %in1, i32 %in2) {
+; RV32I-LABEL: insb_shl_multiple:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    andi a2, a0, -2
+; RV32I-NEXT:    xor a2, a1, a2
+; RV32I-NEXT:    xor a0, a0, a2
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: insb_shl_multiple:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    slli a1, a1, 1
+; RV32XQCIBM-NEXT:    srai a2, a1, 1
+; RV32XQCIBM-NEXT:    qc.insb a0, a2, 31, 1
+; RV32XQCIBM-NEXT:    add a0, a0, a1
+; RV32XQCIBM-NEXT:    ret
+  %shl1 = shl i32 %in2, 1
+  %in1.masked = and i32 %in1, -2
+  %and1 = xor i32 %shl1, %in1.masked
+  %xor2 = xor i32 %in1, %and1
+  %add1 = add i32 %xor2, %shl1
+  ret i32 %add1
+}
+
+define i32 @insb_comm(i32 %in1, i32 %in2) {
+; RV32I-LABEL: insb_comm:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    andi a2, a0, -2
+; RV32I-NEXT:    xor a1, a2, a1
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: insb_comm:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.ext a1, a1, 31, 0
+; RV32XQCIBM-NEXT:    qc.insb a0, a1, 31, 1
+; RV32XQCIBM-NEXT:    ret
+  %shl1 = shl i32 %in2, 1
+  %in1.masked = and i32 %in1, -2
+  %xor1 = xor i32 %in1.masked, %shl1
+  %xor2 = xor i32 %in1, %xor1
+  ret i32 %xor2
+}
+
+define i32 @insb_comm1(i32 %in1, i32 %in2) {
+; RV32I-LABEL: insb_comm1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    andi a2, a0, -2
+; RV32I-NEXT:    xor a1, a2, a1
+; RV32I-NEXT:    xor a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: insb_comm1:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.ext a1, a1, 31, 0
+; RV32XQCIBM-NEXT:    qc.insb a0, a1, 31, 1
+; RV32XQCIBM-NEXT:    ret
+  %shl1 = shl i32 %in2, 1
+  %in1.masked = and i32 %in1, -2
+  %xor1 = xor i32 %in1.masked, %shl1
+  %xor2 = xor i32 %xor1, %in1
+  ret i32 %xor2
+}
+
+define i64 @insb_i64(i64 %in1, i64 %in2) {
+; RV32I-LABEL: insb_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a1, a2, 31
+; RV32I-NEXT:    slli a3, a3, 1
+; RV32I-NEXT:    slli a2, a2, 1
+; RV32I-NEXT:    or a1, a3, a1
+; RV32I-NEXT:    andi a3, a0, -2
+; RV32I-NEXT:    xor a2, a3, a2
 ; RV32I-NEXT:    xor a0, a2, a0
 ; RV32I-NEXT:    ret
 ;
-; RV32XQCIBM-LABEL: insbi_i64:
+; RV32XQCIBM-LABEL: insb_i64:
 ; RV32XQCIBM:       # %bb.0:
-; RV32XQCIBM-NEXT:    qc.extu a2, a1, 8, 0
-; RV32XQCIBM-NEXT:    xor a1, a1, a2
-; RV32XQCIBM-NEXT:    qc.insbi a0, 14, 8, 24
+; RV32XQCIBM-NEXT:    srli a1, a2, 31
+; RV32XQCIBM-NEXT:    slli a3, a3, 1
+; RV32XQCIBM-NEXT:    qc.ext a2, a2, 31, 0
+; RV32XQCIBM-NEXT:    or a1, a1, a3
+; RV32XQCIBM-NEXT:    qc.insb a0, a2, 31, 1
 ; RV32XQCIBM-NEXT:    ret
-  %xor1 = xor i64 %in1, 234881024
-  %and1 = and i64 %xor1, 1099494850560
-  %xor2 = xor i64 %and1, %in1
+  %shl1 = shl i64 %in2, 1
+  %in1.masked = and i64 %in1, -2
+  %xor1 = xor i64 %in1.masked, %shl1
+  %xor2 = xor i64 %xor1, %in1
   ret i64 %xor2
 }
-define i64 @insbi_i64_large_mask(i64 %in1) nounwind {
-; RV32I-LABEL: insbi_i64_large_mask:
+
+define i8 @tgt2_insb_neg(i8 %x, i8 %y) {
+; RV32I-LABEL: tgt2_insb_neg:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    xori a2, a1, 9
-; RV32I-NEXT:    andi a2, a2, 15
-; RV32I-NEXT:    xor a1, a2, a1
+; RV32I-NEXT:    andi a2, a0, -2
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    xor a0, a0, a2
 ; RV32I-NEXT:    ret
 ;
-; RV32XQCIBM-LABEL: insbi_i64_large_mask:
+; RV32XQCIBM-LABEL: tgt2_insb_neg:
 ; RV32XQCIBM:       # %bb.0:
-; RV32XQCIBM-NEXT:    qc.insbi a1, 9, 4, 0
+; RV32XQCIBM-NEXT:    andi a2, a0, -2
+; RV32XQCIBM-NEXT:    xor a0, a0, a1
+; RV32XQCIBM-NEXT:    xor a0, a0, a2
 ; RV32XQCIBM-NEXT:    ret
-  %xor1 = xor i64 %in1, 38654705664
-  %and1 = and i64 %xor1, 64424509440
-  %xor2 = xor i64 %and1, %in1
-  ret i64 %xor2
+  %and = and i8 %x, -2
+  %xor1 = xor i8 %and, %y
+  %xor2 = xor i8 %x, %xor1
+  ret i8 %xor2
 }
+

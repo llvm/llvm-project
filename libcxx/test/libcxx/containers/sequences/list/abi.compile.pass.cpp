@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+// UNSUPPORTED: libcpp-abi-no-compressed-pair-padding
 
 #include <cstdint>
 #include <list>
@@ -65,7 +65,12 @@ struct user_struct {
 };
 
 #if __SIZE_WIDTH__ == 64
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(user_struct) == 32, "");
+#  else
+static_assert(sizeof(user_struct) == 24, "");
+#  endif
 static_assert(TEST_ALIGNOF(user_struct) == 8, "");
 
 static_assert(sizeof(std::list<int>) == 24, "");
@@ -89,7 +94,12 @@ static_assert(TEST_ALIGNOF(std::list<char, test_allocator<char> >) == 8, "");
 static_assert(TEST_ALIGNOF(std::list<char, small_iter_allocator<char> >) == 2, "");
 
 #elif __SIZE_WIDTH__ == 32
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(user_struct) == 16, "");
+#  else
+static_assert(sizeof(user_struct) == 12, "");
+#  endif
 static_assert(TEST_ALIGNOF(user_struct) == 4, "");
 
 static_assert(sizeof(std::list<int>) == 12, "");
