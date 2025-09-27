@@ -328,9 +328,6 @@ bool AMDGPUDAGToDAGISel::matchLoadD16FromBuildVector(SDNode *N) const {
 }
 
 void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
-  if (!Subtarget->d16PreservesUnusedBits())
-    return;
-
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 
   bool MadeChange = false;
@@ -341,8 +338,23 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
 
     switch (N->getOpcode()) {
     case ISD::BUILD_VECTOR:
-      // TODO: Match load d16 from shl (extload:i16), 16
-      MadeChange |= matchLoadD16FromBuildVector(N);
+      // D16 optimization requires subtarget support
+      if (Subtarget->d16PreservesUnusedBits()) {
+        // TODO: Match load d16 from shl (extload:i16), 16
+        MadeChange |= matchLoadD16FromBuildVector(N);
+      }
+      break;
+    case AMDGPUISD::BUFFER_LOAD:
+    case AMDGPUISD::BUFFER_LOAD_UBYTE:
+    case AMDGPUISD::BUFFER_LOAD_USHORT:
+    case AMDGPUISD::BUFFER_LOAD_BYTE:
+    case AMDGPUISD::BUFFER_LOAD_SHORT:
+      MadeChange |= sinkUniformAddendIntoSOffset(N, false);
+      break;
+    case AMDGPUISD::BUFFER_STORE:
+    case AMDGPUISD::BUFFER_STORE_BYTE:
+    case AMDGPUISD::BUFFER_STORE_SHORT:
+      MadeChange |= sinkUniformAddendIntoSOffset(N, true);
       break;
     default:
       break;
@@ -354,6 +366,72 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
     LLVM_DEBUG(dbgs() << "After PreProcess:\n";
                CurDAG->dump(););
   }
+}
+
+/// Sink uniform addends in buffer address calculations into SOffset.
+///
+/// Transforms buffer loads/stores with voffset = add(uniform, divergent)
+/// into voffset = divergent, soffset = uniform for better address coalescing.
+/// Only applies when the result will use OFFEN addressing mode.
+bool AMDGPUDAGToDAGISel::sinkUniformAddendIntoSOffset(SDNode *N, bool IsStore) {
+
+  // Buffer operand layout:
+  // Load:  (chain, rsrc, vindex, voffset, soffset, offset, cachepolicy, idxen)
+  // Store: (chain, vdata, rsrc, vindex, voffset, soffset, offset, cachepolicy, idxen)
+  const unsigned VIndexIdx = IsStore ? 3 : 2;
+  const unsigned VOffsetIdx = IsStore ? 4 : 3;
+  const unsigned SOffsetIdx = IsStore ? 5 : 4;
+  const unsigned IdxEnIdx = IsStore ? 8 : 7;
+
+  if (N->getNumOperands() <= IdxEnIdx)
+    return false;
+
+  SDValue VIndex = N->getOperand(VIndexIdx);
+  SDValue VOffset = N->getOperand(VOffsetIdx);
+  SDValue SOffset = N->getOperand(SOffsetIdx);
+  SDValue IdxEn = N->getOperand(IdxEnIdx);
+
+  // Only optimize OFFEN mode: vindex=0, idxen=0 guarantees this
+  if (!isNullConstant(VIndex) || !isNullConstant(IdxEn))
+    return false;
+
+  // Only optimize when soffset is currently zero
+  // TODO: Handle non-zero soffset by combining with uniform addend
+  if (!isNullConstant(SOffset))
+    return false;
+
+  // voffset must be ADD of uniform and divergent values
+  if (VOffset.getOpcode() != ISD::ADD)
+    return false;
+
+  // Identify uniform and divergent addends
+  auto IsUniform = [](SDValue V) {
+    return isa<ConstantSDNode>(V) || !V.getNode()->isDivergent();
+  };
+
+  SDValue LHS = VOffset.getOperand(0);
+  SDValue RHS = VOffset.getOperand(1);
+  bool LHSUniform = IsUniform(LHS);
+  bool RHSUniform = IsUniform(RHS);
+
+  // Need exactly one uniform and one divergent operand
+  if (LHSUniform == RHSUniform)
+    return false;
+
+  SDValue UniformAddend = LHSUniform ? LHS : RHS;
+  SDValue DivergentAddend = LHSUniform ? RHS : LHS;
+
+  // Perform the transformation: sink uniform part into soffset
+  // SIFixSGPRCopies will handle any SGPR register class fixups if needed.
+  SmallVector<SDValue, 8> NewOps(N->op_values());
+  NewOps[VOffsetIdx] = DivergentAddend;
+  NewOps[SOffsetIdx] = UniformAddend;
+
+  LLVM_DEBUG(dbgs() << "Sinking uniform addend into SOffset for buffer "
+                    << (IsStore ? "store" : "load") << '\n');
+
+  CurDAG->UpdateNodeOperands(N, NewOps);
+  return true;
 }
 
 bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N) const {
