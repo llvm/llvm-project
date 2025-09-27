@@ -17,6 +17,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/IgnoreExpr.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -403,6 +404,9 @@ class InitListChecker {
                           unsigned &Index,
                           InitListExpr *StructuredList,
                           unsigned &StructuredIndex);
+  void CheckMatrixType(const InitializedEntity &Entity, InitListExpr *IList,
+                       QualType DeclType, unsigned &Index,
+                       InitListExpr *StructuredList, unsigned &StructuredIndex);
   void CheckVectorType(const InitializedEntity &Entity,
                        InitListExpr *IList, QualType DeclType, unsigned &Index,
                        InitListExpr *StructuredList,
@@ -1003,7 +1007,8 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
       return;
 
     if (ElementEntity.getKind() == InitializedEntity::EK_ArrayElement ||
-        ElementEntity.getKind() == InitializedEntity::EK_VectorElement)
+        ElementEntity.getKind() == InitializedEntity::EK_VectorElement ||
+        ElementEntity.getKind() == InitializedEntity::EK_MatrixElement)
       ElementEntity.setElementIndex(Init);
 
     if (Init >= NumInits && (ILE->hasArrayFiller() || SkipEmptyInitChecks))
@@ -1273,6 +1278,7 @@ static void warnBracedScalarInit(Sema &S, const InitializedEntity &Entity,
 
   switch (Entity.getKind()) {
   case InitializedEntity::EK_VectorElement:
+  case InitializedEntity::EK_MatrixElement:
   case InitializedEntity::EK_ComplexElement:
   case InitializedEntity::EK_ArrayElement:
   case InitializedEntity::EK_Parameter:
@@ -1372,11 +1378,12 @@ void InitListChecker::CheckExplicitInitList(const InitializedEntity &Entity,
       SemaRef.Diag(IList->getInit(Index)->getBeginLoc(), DK)
           << T << IList->getInit(Index)->getSourceRange();
     } else {
-      int initKind = T->isArrayType() ? 0 :
-                     T->isVectorType() ? 1 :
-                     T->isScalarType() ? 2 :
-                     T->isUnionType() ? 3 :
-                     4;
+      int initKind = T->isArrayType()    ? 0
+                     : T->isVectorType() ? 1
+                     : T->isMatrixType() ? 2
+                     : T->isScalarType() ? 3
+                     : T->isUnionType()  ? 4
+                                         : 5;
 
       unsigned DK = ExtraInitsIsError ? diag::err_excess_initializers
                                       : diag::ext_excess_initializers;
@@ -1430,6 +1437,9 @@ void InitListChecker::CheckListElementTypes(const InitializedEntity &Entity,
   } else if (DeclType->isVectorType()) {
     CheckVectorType(Entity, IList, DeclType, Index,
                     StructuredList, StructuredIndex);
+  } else if (DeclType->isMatrixType()) {
+    CheckMatrixType(Entity, IList, DeclType, Index, StructuredList,
+                    StructuredIndex);
   } else if (const RecordDecl *RD = DeclType->getAsRecordDecl()) {
     auto Bases =
         CXXRecordDecl::base_class_const_range(CXXRecordDecl::base_class_const_iterator(),
@@ -1877,6 +1887,93 @@ void InitListChecker::CheckReferenceType(const InitializedEntity &Entity,
     AggrDeductionCandidateParamTypes->push_back(DeclType);
 }
 
+void InitListChecker::CheckMatrixType(const InitializedEntity &Entity,
+                                      InitListExpr *IList, QualType DeclType,
+                                      unsigned &Index,
+                                      InitListExpr *StructuredList,
+                                      unsigned &StructuredIndex) {
+  if (!SemaRef.getLangOpts().HLSL)
+    return;
+
+  const ConstantMatrixType *MT = DeclType->castAs<ConstantMatrixType>();
+  QualType ElemTy = MT->getElementType();
+  const unsigned Rows = MT->getNumRows();
+  const unsigned Cols = MT->getNumColumns();
+  const unsigned MaxElts = Rows * Cols;
+
+  unsigned NumEltsInit = 0;
+  InitializedEntity ElemEnt =
+      InitializedEntity::InitializeElement(SemaRef.Context, 0, Entity);
+
+  // A Matrix initalizer should be able to take scalars, vectors, and matrices.
+  auto HandleInit = [&](InitListExpr *List, unsigned &Idx) {
+    Expr *Init = List->getInit(Idx);
+    QualType ITy = Init->getType();
+
+    if (ITy->isVectorType()) {
+      const VectorType *IVT = ITy->castAs<VectorType>();
+      unsigned N = IVT->getNumElements();
+      QualType VTy =
+          ITy->isExtVectorType()
+              ? SemaRef.Context.getExtVectorType(ElemTy, N)
+              : SemaRef.Context.getVectorType(ElemTy, N, IVT->getVectorKind());
+      ElemEnt.setElementIndex(Idx);
+      CheckSubElementType(ElemEnt, List, VTy, Idx, StructuredList,
+                          StructuredIndex);
+      NumEltsInit += N;
+      return;
+    }
+
+    if (ITy->isMatrixType()) {
+      const ConstantMatrixType *IMT = ITy->castAs<ConstantMatrixType>();
+      unsigned N = IMT->getNumRows() * IMT->getNumColumns();
+      QualType MTy = SemaRef.Context.getConstantMatrixType(
+          ElemTy, IMT->getNumRows(), IMT->getNumColumns());
+      ElemEnt.setElementIndex(Idx);
+      CheckSubElementType(ElemEnt, List, MTy, Idx, StructuredList,
+                          StructuredIndex);
+      NumEltsInit += N;
+      return;
+    }
+
+    // Scalar element
+    ElemEnt.setElementIndex(Idx);
+    CheckSubElementType(ElemEnt, List, ElemTy, Idx, StructuredList,
+                        StructuredIndex);
+    ++NumEltsInit;
+  };
+
+  // Column-major: each top-level sublist is treated as a column.
+  while (NumEltsInit < MaxElts && Index < IList->getNumInits()) {
+    Expr *Init = IList->getInit(Index);
+
+    if (auto *SubList = dyn_cast<InitListExpr>(Init)) {
+      unsigned SubIdx = 0;
+      unsigned Row = 0;
+      while (Row < Rows && SubIdx < SubList->getNumInits() &&
+             NumEltsInit < MaxElts) {
+        HandleInit(SubList, SubIdx);
+        ++Row;
+      }
+      ++Index; // advance past this column sublist
+      continue;
+    }
+
+    // Not a sublist: just consume directly.
+    HandleInit(IList, Index);
+  }
+
+  // HLSL requires exactly Rows*Cols initializers after flattening.
+  if (NumEltsInit != MaxElts) {
+    if (!VerifyOnly)
+      SemaRef.Diag(IList->getBeginLoc(),
+                   diag::err_tensor_incorrect_num_elements)
+          << (NumEltsInit < MaxElts) << /*matrix*/ 1 << MaxElts << NumEltsInit
+          << /*initialization*/ 0;
+    hadError = true;
+  }
+}
+
 void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
                                       InitListExpr *IList, QualType DeclType,
                                       unsigned &Index,
@@ -2026,9 +2123,9 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
   if (numEltsInit != maxElements) {
     if (!VerifyOnly)
       SemaRef.Diag(IList->getBeginLoc(),
-                   diag::err_vector_incorrect_num_elements)
-          << (numEltsInit < maxElements) << maxElements << numEltsInit
-          << /*initialization*/ 0;
+                   diag::err_tensor_incorrect_num_elements)
+          << (numEltsInit < maxElements) << /*vector*/ 0 << maxElements
+          << numEltsInit << /*initialization*/ 0;
     hadError = true;
   }
 }
@@ -3639,6 +3736,9 @@ InitializedEntity::InitializedEntity(ASTContext &Context, unsigned Index,
   } else if (const VectorType *VT = Parent.getType()->getAs<VectorType>()) {
     Kind = EK_VectorElement;
     Type = VT->getElementType();
+  } else if (const MatrixType *MT = Parent.getType()->getAs<MatrixType>()) {
+    Kind = EK_MatrixElement;
+    Type = MT->getElementType();
   } else {
     const ComplexType *CT = Parent.getType()->getAs<ComplexType>();
     assert(CT && "Unexpected type");
@@ -3687,6 +3787,7 @@ DeclarationName InitializedEntity::getName() const {
   case EK_Delegating:
   case EK_ArrayElement:
   case EK_VectorElement:
+  case EK_MatrixElement:
   case EK_ComplexElement:
   case EK_BlockElement:
   case EK_LambdaToBlockConversionBlockElement:
@@ -3720,6 +3821,7 @@ ValueDecl *InitializedEntity::getDecl() const {
   case EK_Delegating:
   case EK_ArrayElement:
   case EK_VectorElement:
+  case EK_MatrixElement:
   case EK_ComplexElement:
   case EK_BlockElement:
   case EK_LambdaToBlockConversionBlockElement:
@@ -3753,6 +3855,7 @@ bool InitializedEntity::allowsNRVO() const {
   case EK_Delegating:
   case EK_ArrayElement:
   case EK_VectorElement:
+  case EK_MatrixElement:
   case EK_ComplexElement:
   case EK_BlockElement:
   case EK_LambdaToBlockConversionBlockElement:
@@ -3792,6 +3895,9 @@ unsigned InitializedEntity::dumpImpl(raw_ostream &OS) const {
   case EK_Delegating: OS << "Delegating"; break;
   case EK_ArrayElement: OS << "ArrayElement " << Index; break;
   case EK_VectorElement: OS << "VectorElement " << Index; break;
+  case EK_MatrixElement:
+    OS << "MatrixElement " << Index;
+    break;
   case EK_ComplexElement: OS << "ComplexElement " << Index; break;
   case EK_BlockElement: OS << "Block"; break;
   case EK_LambdaToBlockConversionBlockElement:
@@ -6026,7 +6132,7 @@ static void TryOrBuildParenListInitialization(
     Sequence.SetFailed(InitializationSequence::FK_ParenthesizedListInitFailed);
     if (!VerifyOnly) {
       QualType T = Entity.getType();
-      int InitKind = T->isArrayType() ? 0 : T->isUnionType() ? 3 : 4;
+      int InitKind = T->isArrayType() ? 0 : T->isUnionType() ? 4 : 5;
       SourceRange ExcessInitSR(Args[EntityIndexToProcess]->getBeginLoc(),
                                Args.back()->getEndLoc());
       S.Diag(Kind.getLocation(), diag::err_excess_initializers)
@@ -6847,6 +6953,67 @@ void InitializationSequence::InitializeFrom(Sema &S,
     return;
   }
 
+  if (S.getLangOpts().HLSL && DestType->isMatrixType() &&
+      (SourceType.isNull() ||
+       !Context.hasSameUnqualifiedType(SourceType, DestType))) {
+
+    llvm::SmallVector<Expr *> InitArgs;
+
+    for (Expr *Arg : Args) {
+      QualType AT = Arg->getType();
+
+      // Expand matrix arguments element-by-element (col-major).
+      if (AT->isMatrixType()) {
+        const auto *MTy = AT->castAs<ConstantMatrixType>();
+        unsigned Rows = MTy->getNumRows();
+        unsigned Cols = MTy->getNumColumns();
+        QualType ElemTy = MTy->getElementType();
+
+        for (unsigned c = 0; c < Cols; ++c) {
+          for (unsigned r = 0; r < Rows; ++r) {
+            // row index literal
+            Expr *RowIdx = IntegerLiteral::Create(
+                Context, llvm::APInt(Context.getIntWidth(Context.IntTy), r),
+                Context.IntTy, Arg->getBeginLoc());
+            // column index literal
+            Expr *ColIdx = IntegerLiteral::Create(
+                Context, llvm::APInt(Context.getIntWidth(Context.IntTy), c),
+                Context.IntTy, Arg->getBeginLoc());
+
+            InitArgs.emplace_back(new (Context) MatrixSubscriptExpr(
+                Arg, RowIdx, ColIdx, ElemTy, Arg->getEndLoc()));
+          }
+        }
+
+        // Keep your vector expansion, in case vectors appear in the argument
+        // list.
+      } else if (AT->isExtVectorType()) {
+        const auto *VTy = AT->castAs<ExtVectorType>();
+        unsigned Elm = VTy->getNumElements();
+        for (unsigned Idx = 0; Idx < Elm; ++Idx) {
+          InitArgs.emplace_back(new (Context) ArraySubscriptExpr(
+              Arg,
+              IntegerLiteral::Create(
+                  Context, llvm::APInt(Context.getIntWidth(Context.IntTy), Idx),
+                  Context.IntTy, Arg->getBeginLoc()),
+              VTy->getElementType(), Arg->getValueKind(), Arg->getObjectKind(),
+              Arg->getEndLoc()));
+        }
+
+      } else {
+        // Scalar or other: forward as-is
+        InitArgs.emplace_back(Arg);
+      }
+    }
+
+    InitListExpr *ILE = new (Context) InitListExpr(
+        S.getASTContext(), SourceLocation(), InitArgs, SourceLocation());
+
+    Args[0] = ILE;
+    AddListInitializationStep(DestType);
+    return;
+  }
+
   // The remaining cases all need a source type.
   if (Args.size() > 1) {
     SetFailed(FK_TooManyInitsForScalar);
@@ -6999,6 +7166,7 @@ static AssignmentAction getAssignmentAction(const InitializedEntity &Entity,
   case InitializedEntity::EK_Binding:
   case InitializedEntity::EK_ArrayElement:
   case InitializedEntity::EK_VectorElement:
+  case InitializedEntity::EK_MatrixElement:
   case InitializedEntity::EK_ComplexElement:
   case InitializedEntity::EK_BlockElement:
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
@@ -7024,6 +7192,7 @@ static bool shouldBindAsTemporary(const InitializedEntity &Entity) {
   case InitializedEntity::EK_Base:
   case InitializedEntity::EK_Delegating:
   case InitializedEntity::EK_VectorElement:
+  case InitializedEntity::EK_MatrixElement:
   case InitializedEntity::EK_ComplexElement:
   case InitializedEntity::EK_Exception:
   case InitializedEntity::EK_BlockElement:
@@ -7054,6 +7223,7 @@ static bool shouldDestroyEntity(const InitializedEntity &Entity) {
     case InitializedEntity::EK_Base:
     case InitializedEntity::EK_Delegating:
     case InitializedEntity::EK_VectorElement:
+    case InitializedEntity::EK_MatrixElement:
     case InitializedEntity::EK_ComplexElement:
     case InitializedEntity::EK_BlockElement:
     case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
@@ -7107,6 +7277,7 @@ static SourceLocation getInitializationLoc(const InitializedEntity &Entity,
   case InitializedEntity::EK_Base:
   case InitializedEntity::EK_Delegating:
   case InitializedEntity::EK_VectorElement:
+  case InitializedEntity::EK_MatrixElement:
   case InitializedEntity::EK_ComplexElement:
   case InitializedEntity::EK_BlockElement:
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
@@ -7858,9 +8029,11 @@ ExprResult InitializationSequence::Perform(Sema &S,
 
   // HLSL allows vector initialization to function like list initialization, but
   // use the syntax of a C++-like constructor.
-  bool IsHLSLVectorInit = S.getLangOpts().HLSL && DestType->isExtVectorType() &&
-                          isa<InitListExpr>(Args[0]);
-  (void)IsHLSLVectorInit;
+  bool IsHLSLVectorOrMatrixInit =
+      S.getLangOpts().HLSL &&
+      (DestType->isExtVectorType() || DestType->isMatrixType()) &&
+      isa<InitListExpr>(Args[0]);
+  (void)IsHLSLVectorOrMatrixInit;
 
   // For initialization steps that start with a single initializer,
   // grab the only argument out the Args and place it into the "current"
@@ -7899,7 +8072,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
   case SK_StdInitializerList:
   case SK_OCLSamplerInit:
   case SK_OCLZeroOpaqueType: {
-    assert(Args.size() == 1 || IsHLSLVectorInit);
+    assert(Args.size() == 1 || IsHLSLVectorOrMatrixInit);
     CurInit = Args[0];
     if (!CurInit.get()) return ExprError();
     break;
@@ -9117,7 +9290,7 @@ bool InitializationSequence::Diagnose(Sema &S,
         << R;
     else
       S.Diag(Kind.getLocation(), diag::err_excess_initializers)
-        << /*scalar=*/2 << R;
+          << /*scalar=*/3 << R;
     break;
   }
 
