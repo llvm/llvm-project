@@ -27,6 +27,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  rsqrtf_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    rsqrtf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.rsqrtf
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   sinf_test
   NO_RUN_POSTBUILD
   NEED_MPFR
