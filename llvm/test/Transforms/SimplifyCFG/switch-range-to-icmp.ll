@@ -188,4 +188,102 @@ exit:
   ret void
 }
 
+define i32 @wrapping_known_range(i8 range(i8 0, 6) %arg) {
+; CHECK-LABEL: @wrapping_known_range(
+; CHECK-NEXT:    switch i8 [[ARG:%.*]], label [[ELSE:%.*]] [
+; CHECK-NEXT:      i8 0, label [[IF:%.*]]
+; CHECK-NEXT:      i8 4, label [[IF]]
+; CHECK-NEXT:      i8 5, label [[IF]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[I0:%.*]], [[IF]] ], [ [[I1:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       if:
+; CHECK-NEXT:    [[I0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[I1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  switch i8 %arg, label %else [
+  i8 0, label %if
+  i8 4, label %if
+  i8 5, label %if
+  ]
+
+if:
+  %i0 = call i32 @f(i32 0)
+  ret i32 %i0
+
+else:
+  %i1 = call i32 @f(i32 1)
+  ret i32 %i1
+}
+
+define i32 @wrapping_range(i8 %arg) {
+; CHECK-LABEL: @wrapping_range(
+; CHECK-NEXT:    switch i8 [[ARG:%.*]], label [[ELSE:%.*]] [
+; CHECK-NEXT:      i8 0, label [[IF:%.*]]
+; CHECK-NEXT:      i8 -3, label [[IF]]
+; CHECK-NEXT:      i8 -2, label [[IF]]
+; CHECK-NEXT:      i8 -1, label [[IF]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[I0:%.*]], [[IF]] ], [ [[I1:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       if:
+; CHECK-NEXT:    [[I0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[I1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  switch i8 %arg, label %else [
+  i8 0, label %if
+  i8 -3, label %if
+  i8 -2, label %if
+  i8 -1, label %if
+  ]
+
+if:
+  %i0 = call i32 @f(i32 0)
+  ret i32 %i0
+
+else:
+  %i1 = call i32 @f(i32 1)
+  ret i32 %i1
+}
+
+define i32 @no_continuous_wrapping_range(i8 %arg) {
+; CHECK-LABEL: @no_continuous_wrapping_range(
+; CHECK-NEXT:    switch i8 [[ARG:%.*]], label [[ELSE:%.*]] [
+; CHECK-NEXT:      i8 0, label [[IF:%.*]]
+; CHECK-NEXT:      i8 -3, label [[IF]]
+; CHECK-NEXT:      i8 -1, label [[IF]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[I0:%.*]], [[IF]] ], [ [[I1:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       if:
+; CHECK-NEXT:    [[I0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[I1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  switch i8 %arg, label %else [
+  i8 0, label %if
+  i8 -3, label %if
+  i8 -1, label %if
+  ]
+
+if:
+  %i0 = call i32 @f(i32 0)
+  ret i32 %i0
+
+else:
+  %i1 = call i32 @f(i32 1)
+  ret i32 %i1
+}
+
 declare void @bar(ptr nonnull dereferenceable(4))
