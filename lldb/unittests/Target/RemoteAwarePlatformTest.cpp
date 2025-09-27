@@ -34,9 +34,8 @@ public:
 
   MOCK_METHOD1(ResolveExecutable,
                std::pair<bool, ModuleSP>(const ModuleSpec &));
-  Status
-  ResolveExecutable(const ModuleSpec &module_spec,
-                    lldb::ModuleSP &exe_module_sp) /*override*/
+  Status ResolveExecutable(const ModuleSpec &module_spec,
+                           lldb::ModuleSP &exe_module_sp) /*override*/
   { // NOLINT(modernize-use-override)
     auto pair = ResolveExecutable(module_spec);
     exe_module_sp = pair.second;

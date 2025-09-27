@@ -95,7 +95,7 @@ bool ProcessMachCore::CanDebug(lldb::TargetSP target_sp,
     // header but we should still try to use it -
     // ModuleSpecList::FindMatchingModuleSpec enforces a strict arch mach.
     ModuleSpec core_module_spec(m_core_file);
-    core_module_spec.SetTarget(target_sp.get());
+    core_module_spec.SetTarget(target_sp);
     Status error(ModuleList::GetSharedModule(core_module_spec, m_core_module_sp,
                                              nullptr, nullptr));
 

@@ -789,7 +789,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     // Search for the kext on the local filesystem via the UUID
     if (!m_module_sp && m_uuid.IsValid()) {
       ModuleSpec module_spec;
-      module_spec.SetTarget(&target);
+      module_spec.SetTarget(target.shared_from_this());
       module_spec.GetUUID() = m_uuid;
       if (!m_uuid.IsValid())
         module_spec.GetArchitecture() = target.GetArchitecture();

@@ -1773,7 +1773,7 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
               arch_spec.GetArchitectureName(),
               arch_spec.GetTriple().getTriple().c_str());
     ModuleSpec module_spec(executable_sp->GetFileSpec(), other);
-    module_spec.SetTarget(this);
+    module_spec.SetTarget(this->shared_from_this());
     Status error = ModuleList::GetSharedModule(module_spec, executable_sp,
                                                nullptr, nullptr);
 
@@ -2344,7 +2344,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
 
   // Apply any remappings specified in target.object-map:
   ModuleSpec module_spec(orig_module_spec);
-  module_spec.SetTarget(this);
+  module_spec.SetTarget(this->shared_from_this());
   PathMappingList &obj_mapping = GetObjectPathMap();
   if (std::optional<FileSpec> remapped_obj_file =
           obj_mapping.RemapPath(orig_module_spec.GetFileSpec().GetPath(),
@@ -2403,7 +2403,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
           transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
           transformed_spec.GetFileSpec().SetFilename(
                 module_spec.GetFileSpec().GetFilename());
-          transformed_spec.SetTarget(this);
+          transformed_spec.SetTarget(this->shared_from_this());
           error = ModuleList::GetSharedModule(transformed_spec, module_sp,
                                               &old_modules, &did_create_module);
         }

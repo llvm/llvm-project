@@ -19,6 +19,7 @@
 
 #include "llvm/Support/Chrono.h"
 
+#include <memory>
 #include <mutex>
 #include <vector>
 
@@ -126,11 +127,17 @@ public:
 
   lldb::DataBufferSP GetData() const { return m_data; }
 
-  Target *GetTargetPtr() { return m_target; }
+  Target *GetTargetPtr() {
+    auto locked = m_target.lock();
+    return locked.get();
+  }
 
-  const Target *GetTargetPtr() const { return m_target; }
+  const Target *GetTargetPtr() const {
+    auto locked = m_target.lock();
+    return locked.get();
+  }
 
-  void SetTarget(Target *target) { m_target = target; }
+  void SetTarget(std::shared_ptr<Target> target) { m_target = target; }
 
   void Clear() {
     m_file.Clear();
@@ -143,7 +150,7 @@ public:
     m_object_size = 0;
     m_source_mappings.Clear(false);
     m_object_mod_time = llvm::sys::TimePoint<>();
-    m_target = nullptr;
+    m_target.reset();
   }
 
   explicit operator bool() const {
@@ -272,8 +279,9 @@ protected:
   ArchSpec m_arch;
   UUID m_uuid;
   ConstString m_object_name;
-  Target *m_target; // This is set to take advantage of the target's search path
-                    // and platform's locate module callback
+  std::weak_ptr<Target>
+      m_target; // This is set to take advantage of the target's search path
+                // and platform's locate module callback
   uint64_t m_object_offset = 0;
   uint64_t m_object_size = 0;
   llvm::sys::TimePoint<> m_object_mod_time;

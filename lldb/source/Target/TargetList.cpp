@@ -305,7 +305,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     ModuleSP exe_module_sp;
     if (platform_sp) {
       ModuleSpec module_spec(file, arch);
-      module_spec.SetTarget(target_sp.get());
+      module_spec.SetTarget(target_sp);
       error = platform_sp->ResolveExecutable(module_spec, exe_module_sp);
     }
 

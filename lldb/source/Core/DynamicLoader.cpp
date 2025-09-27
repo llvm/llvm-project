@@ -227,7 +227,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     }
   }
   ModuleSpec module_spec;
-  module_spec.SetTarget(&target);
+  module_spec.SetTarget(target.shared_from_this());
   module_spec.GetUUID() = uuid;
   FileSpec name_filespec(name);
   if (FileSystem::Instance().Exists(name_filespec))
