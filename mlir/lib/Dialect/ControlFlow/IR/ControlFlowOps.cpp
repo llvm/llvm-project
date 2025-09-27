@@ -122,6 +122,18 @@ static LogicalResult collapseBranch(Block *&successor,
   Block *successorDest = successorBranch.getDest();
   if (successorDest == successor)
     return failure();
+  // Don't try to collapse branches which participate in a cycle.
+  BranchOp nextBranch = dyn_cast<BranchOp>(successorDest->getTerminator());
+  llvm::DenseSet<Block *> visited{successorDest};
+  while (nextBranch) {
+    Block *nextBranchDest = nextBranch.getDest();
+    if (nextBranchDest == successor)
+      return failure();
+    else if (visited.contains(nextBranchDest))
+      break;
+    visited.insert(nextBranchDest);
+    nextBranch = dyn_cast<BranchOp>(nextBranchDest->getTerminator());
+  }
 
   // Update the operands to the successor. If the branch parent has no
   // arguments, we can use the branch operands directly.
