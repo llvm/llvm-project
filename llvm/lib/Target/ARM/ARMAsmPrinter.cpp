@@ -632,6 +632,19 @@ static bool checkDenormalAttributeConsistency(const Module &M, StringRef Attr,
   });
 }
 
+// Returns true if all functions have different denormal modes.
+static bool checkDenormalAttributeInconsistency(const Module &M) {
+  auto F = M.functions().begin();
+  auto E = M.functions().end();
+  if (F == E)
+    return false;
+  DenormalMode Value = F->getDenormalModeRaw();
+  ++F;
+  return std::any_of(F, E, [&](const Function &F) {
+    return !F.isDeclaration() && F.getDenormalModeRaw() != Value;
+  });
+}
+
 void ARMAsmPrinter::emitAttributes() {
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
@@ -698,7 +711,9 @@ void ARMAsmPrinter::emitAttributes() {
                                              DenormalMode::getPositiveZero()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::PositiveZero);
-  else if (!TM.Options.UnsafeFPMath)
+  else if (checkDenormalAttributeInconsistency(*MMI->getModule()) ||
+           checkDenormalAttributeConsistency(
+               *MMI->getModule(), "denormal-fp-math", DenormalMode::getIEEE()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::IEEEDenormals);
   else {
@@ -733,7 +748,7 @@ void ARMAsmPrinter::emitAttributes() {
       TM.Options.NoTrappingFPMath)
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions,
                       ARMBuildAttrs::Not_Allowed);
-  else if (!TM.Options.UnsafeFPMath) {
+  else {
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions, ARMBuildAttrs::Allowed);
 
     // If the user has permitted this code to choose the IEEE 754
