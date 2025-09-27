@@ -325,12 +325,10 @@ gpu.module @test_distribution {
     //CHECK: [[l_off_x:%.+]] = index.mul [[id_x]], [[c32_1]]
     //CHECK: [[c0:%.+]] = arith.constant 0 : index
     //CHECK: [[c0_1:%.+]] = arith.constant 0 : index
-    //CHECK: [[l_off_y_0:%.+]] = arith.addi [[l_off_y]], [[c0]] : index
-    //CHECK: [[l_off_x_0:%.+]] = arith.addi [[l_off_x]], [[c0_1]] : index
     //CHECK: [[c64:%.+]] = arith.constant 64 : index
-    //CHECK: [[off_y:%.+]] = index.remu [[l_off_y_0]], [[c64]]
+    //CHECK: [[off_y:%.+]] = index.remu [[l_off_y]], [[c64]]
     //CHECK: [[c128:%.+]] = arith.constant 128 : index
-    //CHECK: [[off_x:%.+]] = index.remu [[l_off_x_0]], [[c128]]
+    //CHECK: [[off_x:%.+]] = index.remu [[l_off_x]], [[c128]]
     //CHECK: xegpu.load_matrix [[mdesc]][[[off_y]], [[off_x]]] <{layout = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}>: !xegpu.mem_desc<64x128xf32>, index, index -> vector<32x32xf32>
     %0 = xegpu.create_mem_desc %arg0 : memref<32768xi8, 3> -> !xegpu.mem_desc<64x128xf32>
     %1 = xegpu.load_matrix %0[0, 0] <{layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [32, 32], lane_layout = [2, 8], lane_data = [1, 1]>}>: !xegpu.mem_desc<64x128xf32> -> vector<64x128xf32>
@@ -349,13 +347,11 @@ gpu.module @test_distribution {
     //CHECK: [[id_y:%.+]] = affine.apply #map()[[[sgid]]]
     //CHECK: [[id_x:%.+]] = affine.apply #map1()[[[sgid]]]
     //CHECK: [[c32:%.+]] = arith.constant 32 : index
-    //CHECK: [[l_off_y_0:%.+]] = index.mul [[id_y]], [[c32]]
+    //CHECK: [[l_off_y:%.+]] = index.mul [[id_y]], [[c32]]
     //CHECK: [[c32_1:%.+]] = arith.constant 32 : index
-    //CHECK: [[l_off_x_0:%.+]] = index.mul [[id_x]], [[c32_1]]
+    //CHECK: [[l_off_x:%.+]] = index.mul [[id_x]], [[c32_1]]
     //CHECK: [[c0:%.+]] = arith.constant 0 : index
     //CHECK: [[c0_2:%.+]] = arith.constant 0 : index
-    //CHECK: [[l_off_y:%.+]] = arith.addi [[l_off_y_0]], [[c0]] : index
-    //CHECK: [[l_off_x:%.+]] = arith.addi [[l_off_x_0]], [[c0_2]] : index
     //CHECK: [[c64:%.+]] = arith.constant 64 : index
     //CHECK: [[off_y:%.+]] = index.remu [[l_off_y]], [[c64]]
     //CHECK: [[c128:%.+]] = arith.constant 128 : index
@@ -412,11 +408,10 @@ gpu.module @test_distribution {
     //CHECK: [[sgId:%.+]] = gpu.subgroup_id : index
     //CHECK-DAG: [[IDY:%.+]] = affine.apply #map2()[[[sgId]]]
     //CHECK-DAG: [[c32:%.+]] = arith.constant 32 : index
-    //CHECK-DAG: [[LOCALY:%.+]] = index.mul [[IDY]], [[c32]]
+    //CHECK-DAG: [[LY:%.+]] = index.mul [[IDY]], [[c32]]
     //CHECK-DAG: [[c0:%.+]] = arith.constant 0 : index
-    //CHECK-DAG: [[Y:%.+]] = arith.addi [[LOCALY]], [[c0]] : index
     //CHECK-DAG: [[c128:%.+]] = arith.constant 128 : index
-    //CHECK-DAG: [[MODY:%.+]] = index.remu [[Y]], [[c128]]
+    //CHECK-DAG: [[MODY:%.+]] = index.remu [[LY]], [[c128]]
     //CHECK-DAG: [[BASE:%.+]] = vector.step : vector<32xindex>
     //CHECK-DAG: [[CAST:%.+]] = vector.broadcast [[MODY]] : index to vector<32xindex>
     //CHECK: [[ADD:%.+]] = arith.addi [[BASE]], [[CAST]] : vector<32xindex>
@@ -430,9 +425,8 @@ gpu.module @test_distribution {
     //CHECK-DAG: [[c8:%.+]] = arith.constant 8 : index
     //CHECK-DAG: [[LOCALY:%.+]] = index.mul [[sgId]], [[c8]]
     //CHECK-DAG: [[c0:%.+]] = arith.constant 0 : index
-    //CHECK-DAG: [[Y:%.+]] = arith.addi [[LOCALY]], [[c0]] : index
     //CHECK-DAG: [[c128:%.+]] = arith.constant 128 : index
-    //CHECK-DAG: [[MODY:%.+]] = index.remu [[Y]], [[c128]]
+    //CHECK-DAG: [[MODY:%.+]] = index.remu [[LOCALY]], [[c128]]
     //CHECK-DAG: [[BASE:%.+]] = vector.step : vector<8xindex>
     //CHECK-DAG: [[CAST:%.+]] = vector.broadcast [[MODY]] : index to vector<8xindex>
     //CHECK: [[ADD:%.+]] = arith.addi [[BASE]], [[CAST]] : vector<8xindex>

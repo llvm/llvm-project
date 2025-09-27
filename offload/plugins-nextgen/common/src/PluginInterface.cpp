@@ -73,11 +73,17 @@ private:
   };
   llvm::SmallVector<GlobalEntry> GlobalEntries{};
 
-  void *suggestAddress(uint64_t MaxMemoryAllocation) {
+  Expected<void *> suggestAddress(uint64_t MaxMemoryAllocation) {
     // Get a valid pointer address for this system
-    void *Addr =
+    auto AddrOrErr =
         Device->allocate(1024, /*HstPtr=*/nullptr, TARGET_ALLOC_DEFAULT);
-    Device->free(Addr);
+    if (!AddrOrErr)
+      return AddrOrErr.takeError();
+
+    void *Addr = *AddrOrErr;
+    if (auto Err = Device->free(Addr))
+      return std::move(Err);
+
     // Align Address to MaxMemoryAllocation
     Addr = (void *)utils::alignPtr((Addr), MaxMemoryAllocation);
     return Addr;
@@ -86,8 +92,12 @@ private:
   Error preAllocateVAMemory(uint64_t MaxMemoryAllocation, void *VAddr) {
     size_t ASize = MaxMemoryAllocation;
 
-    if (!VAddr && isRecording())
-      VAddr = suggestAddress(MaxMemoryAllocation);
+    if (!VAddr && isRecording()) {
+      auto VAddrOrErr = suggestAddress(MaxMemoryAllocation);
+      if (!VAddrOrErr)
+        return VAddrOrErr.takeError();
+      VAddr = *VAddrOrErr;
+    }
 
     DP("Request %ld bytes allocated at %p\n", MaxMemoryAllocation, VAddr);
 
@@ -117,8 +127,11 @@ private:
     constexpr size_t STEP = 1024 * 1024 * 1024ULL;
     MemoryStart = nullptr;
     for (TotalSize = MAX_MEMORY_ALLOCATION; TotalSize > 0; TotalSize -= STEP) {
-      MemoryStart =
+      auto MemoryStartOrErr =
           Device->allocate(TotalSize, /*HstPtr=*/nullptr, TARGET_ALLOC_DEFAULT);
+      if (!MemoryStartOrErr)
+        return MemoryStartOrErr.takeError();
+      MemoryStart = *MemoryStartOrErr;
       if (MemoryStart)
         break;
     }
@@ -352,13 +365,15 @@ public:
     return Plugin::success();
   }
 
-  void deinit() {
+  Error deinit() {
     if (UsedVAMap) {
       if (auto Err = Device->memoryVAUnMap(MemoryStart, TotalSize))
-        report_fatal_error("Error on releasing virtual memory space");
+        return Err;
     } else {
-      Device->free(MemoryStart);
+      if (auto Err = Device->free(MemoryStart))
+        return Err;
     }
+    return Plugin::success();
   }
 };
 } // namespace llvm::omp::target::plugin
@@ -838,7 +853,8 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 
   RecordReplayTy &RecordReplay = Plugin.getRecordReplay();
   if (RecordReplay.isRecordingOrReplaying())
-    RecordReplay.deinit();
+    if (auto Err = RecordReplay.deinit())
+      return Err;
 
   if (RPCServer)
     if (auto Err = RPCServer->deinitDevice(*this))
@@ -1297,7 +1313,10 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
   case TARGET_ALLOC_DEFAULT:
   case TARGET_ALLOC_DEVICE:
     if (MemoryManager) {
-      Alloc = MemoryManager->allocate(Size, HostPtr);
+      auto AllocOrErr = MemoryManager->allocate(Size, HostPtr);
+      if (!AllocOrErr)
+        return AllocOrErr.takeError();
+      Alloc = *AllocOrErr;
       if (!Alloc)
         return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                              "failed to allocate from memory manager");
@@ -1305,11 +1324,15 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
     }
     [[fallthrough]];
   case TARGET_ALLOC_HOST:
-  case TARGET_ALLOC_SHARED:
-    Alloc = allocate(Size, HostPtr, Kind);
+  case TARGET_ALLOC_SHARED: {
+    auto AllocOrErr = allocate(Size, HostPtr, Kind);
+    if (!AllocOrErr)
+      return AllocOrErr.takeError();
+    Alloc = *AllocOrErr;
     if (!Alloc)
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "failed to allocate from device allocator");
+  }
   }
 
   // Report error if the memory manager or the device allocator did not return
@@ -1382,28 +1405,19 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
 #undef DEALLOCATION_ERROR
   }
 
-  int Res;
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
   case TARGET_ALLOC_DEVICE:
     if (MemoryManager) {
-      Res = MemoryManager->free(TgtPtr);
-      if (Res)
-        return Plugin::error(
-            ErrorCode::OUT_OF_RESOURCES,
-            "failure to deallocate device pointer %p via memory manager",
-            TgtPtr);
+      if (auto Err = MemoryManager->free(TgtPtr))
+        return Err;
       break;
     }
     [[fallthrough]];
   case TARGET_ALLOC_HOST:
   case TARGET_ALLOC_SHARED:
-    Res = free(TgtPtr, Kind);
-    if (Res)
-      return Plugin::error(
-          ErrorCode::UNKNOWN,
-          "failure to deallocate device pointer %p via device deallocator",
-          TgtPtr);
+    if (auto Err = free(TgtPtr, Kind))
+      return Err;
   }
 
   // Unregister deallocated pinned memory buffer if the type is host memory.

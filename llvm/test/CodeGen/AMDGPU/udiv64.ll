@@ -721,16 +721,14 @@ define amdgpu_kernel void @s_test_udiv24_i48(ptr addrspace(1) %out, i48 %x, i48 
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_and_b32 s2, s2, 0xff000000
-; GCN-NEXT:    s_and_b32 s4, s4, 0xff000000
-; GCN-NEXT:    s_and_b32 s5, s5, 0xffff
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_alignbit_b32 v0, s5, v0, 24
-; GCN-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; GCN-NEXT:    s_and_b32 s3, s3, 0xffff
-; GCN-NEXT:    v_mov_b32_e32 v1, s2
-; GCN-NEXT:    v_alignbit_b32 v1, s3, v1, 24
-; GCN-NEXT:    v_cvt_f32_u32_e32 v1, v1
+; GCN-NEXT:    s_and_b32 s5, s5, 0xffff
+; GCN-NEXT:    s_and_b32 s4, s4, 0xff000000
+; GCN-NEXT:    s_lshr_b64 s[4:5], s[4:5], 24
+; GCN-NEXT:    v_cvt_f32_u32_e32 v0, s4
+; GCN-NEXT:    s_and_b32 s2, s2, 0xff000000
+; GCN-NEXT:    s_lshr_b64 s[2:3], s[2:3], 24
+; GCN-NEXT:    v_cvt_f32_u32_e32 v1, s2
 ; GCN-NEXT:    v_rcp_iflag_f32_e32 v2, v0
 ; GCN-NEXT:    s_mov_b32 s4, s0
 ; GCN-NEXT:    s_mov_b32 s5, s1
@@ -753,16 +751,14 @@ define amdgpu_kernel void @s_test_udiv24_i48(ptr addrspace(1) %out, i48 %x, i48 
 ; GCN-IR-NEXT:    s_mov_b32 s6, -1
 ; GCN-IR-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-IR-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-IR-NEXT:    s_and_b32 s2, s2, 0xff000000
-; GCN-IR-NEXT:    s_and_b32 s4, s4, 0xff000000
-; GCN-IR-NEXT:    s_and_b32 s5, s5, 0xffff
-; GCN-IR-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-IR-NEXT:    v_alignbit_b32 v0, s5, v0, 24
-; GCN-IR-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; GCN-IR-NEXT:    s_and_b32 s3, s3, 0xffff
-; GCN-IR-NEXT:    v_mov_b32_e32 v1, s2
-; GCN-IR-NEXT:    v_alignbit_b32 v1, s3, v1, 24
-; GCN-IR-NEXT:    v_cvt_f32_u32_e32 v1, v1
+; GCN-IR-NEXT:    s_and_b32 s5, s5, 0xffff
+; GCN-IR-NEXT:    s_and_b32 s4, s4, 0xff000000
+; GCN-IR-NEXT:    s_lshr_b64 s[4:5], s[4:5], 24
+; GCN-IR-NEXT:    v_cvt_f32_u32_e32 v0, s4
+; GCN-IR-NEXT:    s_and_b32 s2, s2, 0xff000000
+; GCN-IR-NEXT:    s_lshr_b64 s[2:3], s[2:3], 24
+; GCN-IR-NEXT:    v_cvt_f32_u32_e32 v1, s2
 ; GCN-IR-NEXT:    v_rcp_iflag_f32_e32 v2, v0
 ; GCN-IR-NEXT:    s_mov_b32 s4, s0
 ; GCN-IR-NEXT:    s_mov_b32 s5, s1
