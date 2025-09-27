@@ -470,7 +470,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}})
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
-      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      // Split 64-bit add/sub into two 32-bit ops on VGPRs
+      .Uni(S64, {{Vgpr64}, {Vgpr64, Vgpr64}, SplitTo32})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}, SplitTo32})
+      .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
+
+  addRulesForGOpcs({G_UADDO, G_USUBO, G_UADDE, G_USUBE}, Standard)
+      .Uni(S32, {{Vgpr32, Vcc}, {Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32, Vcc}, {Vgpr32, Vgpr32}});
 
   addRulesForGOpcs({G_MUL}, Standard).Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
