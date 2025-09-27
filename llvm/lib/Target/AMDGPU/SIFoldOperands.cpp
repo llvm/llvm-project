@@ -1313,6 +1313,15 @@ void SIFoldOperandsImpl::foldOperand(
       if (MovSrcRC) {
         if (UseSubReg)
           MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);
+
+        // FIXME: We should be able to directly check immediate operand legality
+        // for all cases, but gfx908 hacks break.
+        if (MovOp == AMDGPU::AV_MOV_B32_IMM_PSEUDO &&
+            (!OpToFold.isImm() ||
+             !TII->isImmOperandLegal(MovDesc, SrcIdx,
+                                     *OpToFold.getEffectiveImmVal())))
+          break;
+
         if (!MRI->constrainRegClass(SrcReg, MovSrcRC))
           break;
 
