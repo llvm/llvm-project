@@ -313,24 +313,36 @@ public:
   UniqueRef &operator=(T &) { return *this; }
 };
 
-template <typename T>
 class WeakPtrImpl {
 private:
-  void* ptr;
+  void* ptr { nullptr };
+  mutable unsigned m_refCount { 0 };
 
   template <typename U> friend class CanMakeWeakPtr;
   template <typename U> friend class WeakPtr;
 
-  Ref<WeakPtrImpl<T>> create(T& t)
+public:
+  template <typename T>
+  static Ref<WeakPtrImpl> create(T& t)
   {
-    return adoptNS(new WeakPtrImpl<T>(t));
+    return adoptRef(*new WeakPtrImpl(t));
   }
 
+  void ref() const { m_refCount++; }
+  void deref() const {
+    m_refCount--;
+    if (!m_refCount)
+      delete const_cast<WeakPtrImpl*>(this);
+  }
+
+  template <typename T>
   T* get() { return static_cast<T*>(ptr); }
   operator bool() const { return !!ptr; }
   void clear() { ptr = nullptr; }
 
-  WeakPtrImpl(T& t)
+private:
+  template <typename T>
+  WeakPtrImpl(T* t)
     : ptr(static_cast<void*>(t))
   { }
 };
@@ -338,14 +350,14 @@ private:
 template <typename T>
 class CanMakeWeakPtr {
 private:
-  RefPtr<WeakPtrImpl<T>> impl;
+  RefPtr<WeakPtrImpl> impl;
 
   template <typename U> friend class CanMakeWeakPtr;
   template <typename U> friend class WeakPtr;
 
-  Ref<WeakPtrImpl<T>> createWeakPtrImpl() {
+  Ref<WeakPtrImpl> createWeakPtrImpl() {
     if (!impl)
-      impl = WeakPtrImpl<T>::create(static_cast<T>(*this));
+      impl = WeakPtrImpl::create(static_cast<T>(*this));
     return *impl;
   }
 
@@ -353,7 +365,7 @@ public:
   ~CanMakeWeakPtr() {
     if (!impl)
       return;
-    impl->ptr = nullptr;
+    impl->clear();
     impl = nullptr;
   }
 };
@@ -361,7 +373,7 @@ public:
 template <typename T>
 class WeakPtr {
 private:
-  RefPtr<WeakPtrImpl<T>> impl;
+  RefPtr<WeakPtrImpl> impl;
 
 public:
   WeakPtr(T& t) {
@@ -382,7 +394,7 @@ public:
   }
 
   T* get() {
-    return impl ? impl->get() : nullptr;
+    return impl ? impl->get<T>() : nullptr;
   }
 
 };
