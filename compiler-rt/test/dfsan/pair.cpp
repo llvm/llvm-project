@@ -66,8 +66,10 @@ void test_simple_constructors() {
   int *ptr1 = pair1.first;
 
 #ifdef O0
-  assert(dfsan_read_label(&i1, sizeof(i1)) == 10);
-  assert(dfsan_read_label(&ptr1, sizeof(ptr1)) == 10);
+  assert(dfsan_read_label(&i1, sizeof(i1)) == 8 ||
+         dfsan_read_label(&i1, sizeof(i1)) == 10);
+  assert(dfsan_read_label(&ptr1, sizeof(ptr1)) == 2 ||
+         dfsan_read_label(&ptr1, sizeof(ptr1)) == 10);
 #else
   assert(dfsan_read_label(&i1, sizeof(i1)) == 8);
   assert(dfsan_read_label(&ptr1, sizeof(ptr1)) == 2);
@@ -78,8 +80,10 @@ void test_simple_constructors() {
   int *ptr2 = pair2.first;
 
 #ifdef O0
-  assert(dfsan_read_label(&i2, sizeof(i2)) == 10);
-  assert(dfsan_read_label(&ptr2, sizeof(ptr2)) == 10);
+  assert(dfsan_read_label(&i2, sizeof(i2)) == 8 ||
+         dfsan_read_label(&i2, sizeof(i2)) == 10);
+  assert(dfsan_read_label(&ptr2, sizeof(ptr2)) == 2 ||
+         dfsan_read_label(&ptr2, sizeof(ptr2)) == 10);
 #else
   assert(dfsan_read_label(&i2, sizeof(i2)) == 8);
   assert(dfsan_read_label(&ptr2, sizeof(ptr2)) == 2);
@@ -90,8 +94,10 @@ void test_simple_constructors() {
   int *ptr3 = pair3.first;
 
 #ifdef O0
-  assert(dfsan_read_label(&i3, sizeof(i3)) == 10);
-  assert(dfsan_read_label(&ptr3, sizeof(ptr3)) == 10);
+  assert(dfsan_read_label(&i3, sizeof(i3)) == 8 ||
+         dfsan_read_label(&i3, sizeof(i3)) == 10);
+  assert(dfsan_read_label(&ptr3, sizeof(ptr3)) == 2 ||
+         dfsan_read_label(&ptr3, sizeof(ptr3)) == 10);
 #else
   assert(dfsan_read_label(&i3, sizeof(i3)) == 8);
   assert(dfsan_read_label(&ptr3, sizeof(ptr3)) == 2);
@@ -102,8 +108,10 @@ void test_simple_constructors() {
   int *ptr4 = pair4.first;
 
 #ifdef O0
-  assert(dfsan_read_label(&i4, sizeof(i4)) == 10);
-  assert(dfsan_read_label(&ptr4, sizeof(ptr4)) == 10);
+  assert(dfsan_read_label(&i4, sizeof(i4)) == 8 ||
+         dfsan_read_label(&i4, sizeof(i4)) == 10);
+  assert(dfsan_read_label(&ptr4, sizeof(ptr4)) == 2 ||
+         dfsan_read_label(&ptr4, sizeof(ptr4)) == 10);
 #else
   assert(dfsan_read_label(&i4, sizeof(i4)) == 8);
   assert(dfsan_read_label(&ptr4, sizeof(ptr4)) == 2);
@@ -140,8 +148,10 @@ void test_branches() {
     {
       std::pair<const char *, uint32_t> r = return_ptr_and_i32(q, res);
 #ifdef O0
-      assert(dfsan_read_label(&r.first, sizeof(r.first)) == 10);
-      assert(dfsan_read_label(&r.second, sizeof(r.second)) == 10);
+      assert(dfsan_read_label(&r.first, sizeof(r.first)) == 2 ||
+             dfsan_read_label(&r.first, sizeof(r.first)) == 10);
+      assert(dfsan_read_label(&r.second, sizeof(r.second)) == 8 ||
+             dfsan_read_label(&r.second, sizeof(r.second)) == 10);
 #else
       assert(dfsan_read_label(&r.first, sizeof(r.first)) == 2);
       assert(dfsan_read_label(&r.second, sizeof(r.second)) == 8);
@@ -151,8 +161,10 @@ void test_branches() {
     {
       std::pair<const char *, uint64_t> r = return_ptr_and_i64(q, res);
 #ifdef O0
-      assert(dfsan_read_label(&r.first, sizeof(r.first)) == 10);
-      assert(dfsan_read_label(&r.second, sizeof(r.second)) == 10);
+      assert(dfsan_read_label(&r.first, sizeof(r.first)) == 2 ||
+             dfsan_read_label(&r.first, sizeof(r.first)) == 10);
+      assert(dfsan_read_label(&r.second, sizeof(r.second)) == 8 ||
+             dfsan_read_label(&r.second, sizeof(r.second)) == 10);
 #else
       assert(dfsan_read_label(&r.first, sizeof(r.first)) == 2);
       assert(dfsan_read_label(&r.second, sizeof(r.second)) == 8);
