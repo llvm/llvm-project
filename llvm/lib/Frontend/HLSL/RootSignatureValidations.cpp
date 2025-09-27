@@ -40,7 +40,7 @@ bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
   if (Version == 1)
     return Flags == FlagT::DataVolatile;
 
-  assert(Version == 2 && "Provided invalid root signature version");
+  assert((Version <= 3) && "Provided invalid root signature version");
 
   // The data-specific flags are mutually exclusive.
   FlagT DataFlags = FlagT::DataVolatile | FlagT::DataStatic |
