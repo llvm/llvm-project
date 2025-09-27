@@ -966,10 +966,9 @@ define <4 x i32> @absd_int32_ugt_opp(<4 x i32>, <4 x i32>) {
 ;
 ; CHECK-PWR78-LABEL: absd_int32_ugt_opp:
 ; CHECK-PWR78:       # %bb.0:
-; CHECK-PWR78-NEXT:    vcmpgtuw v4, v2, v3
-; CHECK-PWR78-NEXT:    vsubuwm v5, v2, v3
-; CHECK-PWR78-NEXT:    vsubuwm v2, v3, v2
-; CHECK-PWR78-NEXT:    xxsel v2, v5, v2, v4
+; CHECK-PWR78-NEXT:    vmaxuw v4, v2, v3
+; CHECK-PWR78-NEXT:    vminuw v2, v2, v3
+; CHECK-PWR78-NEXT:    vsubuwm v2, v2, v4
 ; CHECK-PWR78-NEXT:    blr
   %3 = icmp ugt <4 x i32> %0, %1
   %4 = sub <4 x i32> %0, %1
