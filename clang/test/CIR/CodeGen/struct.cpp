@@ -93,3 +93,27 @@ void f3() {
 // OGCG:   %[[O:.*]] = alloca %struct.Outer, align 4
 // OGCG:   %[[O_I:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 0
 // OGCG:   %[[O_I_N:.*]] = getelementptr inbounds nuw %struct.Inner, ptr %[[O_I]], i32 0, i32 0
+
+void choose_expr() {
+  CompleteS a;
+  CompleteS b;
+  CompleteS c = __builtin_choose_expr(true, a, b);
+}
+
+// CIR: cir.func{{.*}} @_Z11choose_exprv()
+// CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a"]
+// CIR:   %[[B_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["b"]
+// CIR:   %[[C_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["c", init]
+// CIR:   cir.call @_ZN9CompleteSC1ERKS_(%[[C_ADDR]], %[[A_ADDR]]) nothrow : (!cir.ptr<!rec_CompleteS>, !cir.ptr<!rec_CompleteS>) -> ()
+
+// LLVM: define{{.*}} void @_Z11choose_exprv()
+// LLVM:   %[[A_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
+// LLVM:   %[[B_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
+// LLVM:   %[[C_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
+// LLVM:   call void @_ZN9CompleteSC1ERKS_(ptr %[[C_ADDR]], ptr %[[A_ADDR]])
+
+// OGCG: define{{.*}} void @_Z11choose_exprv()
+// OGCG:   %[[A_ADDR:.*]] = alloca %struct.CompleteS, align 4
+// OGCG:   %[[B_ADDR:.*]] = alloca %struct.CompleteS, align 4
+// OGCG:   %[[C_ADDR:.*]] = alloca %struct.CompleteS, align 4
+// OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[C_ADDR]], ptr align 4 %[[A_ADDR]], i64 8, i1 false)
