@@ -520,6 +520,7 @@ body: |
     ; GCN-NEXT: GLOBAL_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr4_vgpr5, 16, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: $sgpr2 = S_ADD_I32 $sgpr0, 100, implicit-def $scc
+    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 20, implicit $exec
     $sgpr2_sgpr3 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 0, 0 :: (load (s64), addrspace 4)
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
@@ -921,7 +922,6 @@ body: |
     $vgpr2 = V_MOV_B32_e32 1, implicit $exec
 ...
 
-# FIXME: Missing S_WAIT_XCNT before overwriting vgpr0.
 ---
 name: wait_kmcnt_with_outstanding_vmem
 tracksRegLiveness: true
@@ -937,6 +937,7 @@ body: |
     ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: $sgpr2 = S_MOV_B32 $sgpr2
+    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
@@ -944,7 +945,6 @@ body: |
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
 ...
 
-# FIXME: Missing S_WAIT_XCNT before overwriting sgpr0.
 ---
 name: wait_loadcnt_with_outstanding_smem
 tracksRegLiveness: true
@@ -960,6 +960,7 @@ body: |
     ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr2, implicit $exec
+    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $sgpr0 = S_MOV_B32 0
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
@@ -967,7 +968,6 @@ body: |
     $sgpr0 = S_MOV_B32 0
 ...
 
-# TODO: Unnecessary wait before overwriting vgpr0.
 ---
 name: overwrite_vgpr_after_smem
 tracksRegLiveness: true
@@ -981,14 +981,12 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
     ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
 ...
 
-# TODO: Unnecessary wait before overwriting sgpr0.
 ---
 name: overwrite_sgpr_after_vmem
 tracksRegLiveness: true
@@ -1002,7 +1000,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $sgpr0 = S_MOV_B32 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
