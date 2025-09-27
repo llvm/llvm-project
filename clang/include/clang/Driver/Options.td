@@ -4354,6 +4354,8 @@ def unique_source_file_identifier_EQ: Joined<["-"], "funique-source-file-identif
   HelpText<"Specify the source file identifier for -funique-source-file-names; "
            "uses the source file path if not specified">,
   MarshallingInfoString<CodeGenOpts<"UniqueSourceFileIdentifier">>;
+def funique_source_file_output_paths: Joined<["-"], "funique-source-file-output-paths">, Group<f_Group>,
+  HelpText<"Use the output path as the source file identifier for -funique-source-file-names">;
 def funsigned_bitfields : Flag<["-"], "funsigned-bitfields">, Group<f_Group>;
 def funsigned_char : Flag<["-"], "funsigned-char">, Group<f_Group>;
 def fno_unsigned_char : Flag<["-"], "fno-unsigned-char">;

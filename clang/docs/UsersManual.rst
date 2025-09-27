@@ -2341,10 +2341,11 @@ are listed below.
 
    When enabled, allows the compiler to assume that each object file
    passed to the linker has a unique identifier. The identifier for
-   an object file is either the source file path or the value of the
-   argument `-funique-source-file-identifier` if specified. This is
-   useful for reducing link times when doing ThinLTO in combination with
-   whole-program devirtualization or CFI.
+   an object file is either the source file path, the output file path
+   if the ``-funique-source-file-output-paths`` argument is passed, or
+   the value of the argument ``-funique-source-file-identifier`` if
+   specified. This is useful for reducing link times when doing ThinLTO
+   in combination with whole-program devirtualization or CFI.
 
    The full source path or identifier passed to the compiler must be
    unique. This means that, for example, the following is a usage error:
@@ -2371,8 +2372,13 @@ are listed below.
 
 .. option:: -funique-source-file-identifier=IDENTIFIER
 
-   Used with `-funique-source-file-names` to specify a source file
+   Used with ``-funique-source-file-names`` to specify a source file
    identifier.
+
+.. option:: -funique-source-file-output-paths
+
+   Used with ``-funique-source-file-names`` to specify the output path
+   as the source file identifier.
 
 .. option:: -fforce-emit-vtables
 
