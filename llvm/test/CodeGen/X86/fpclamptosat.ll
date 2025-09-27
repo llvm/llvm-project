@@ -1170,6 +1170,22 @@ entry:
   ret i64 %conv6
 }
 
+define i32 @ustest_f16const_i32() {
+; CHECK-LABEL: ustest_f16const_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cvttss2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ecx
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    andl %ecx, %eax
+; CHECK-NEXT:    cmovlel %edx, %eax
+; CHECK-NEXT:    retq
+  %1 = fptosi half 0xH7E00 to i32
+  %2 = call i32 @llvm.smin.i32(i32 0, i32 %1)
+  %3 = call i32 @llvm.smax.i32(i32 %2, i32 0)
+  ret i32 %3
+}
+
 declare i32 @llvm.smin.i32(i32, i32)
 declare i32 @llvm.smax.i32(i32, i32)
 declare i32 @llvm.umin.i32(i32, i32)
