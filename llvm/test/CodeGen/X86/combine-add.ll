@@ -235,10 +235,10 @@ define void @PR52039(ptr %pa, ptr %pb) {
 ; SSE-NEXT:    psubd %xmm1, %xmm3
 ; SSE-NEXT:    psubd %xmm0, %xmm2
 ; SSE-NEXT:    movdqa %xmm2, %xmm0
-; SSE-NEXT:    paddd %xmm2, %xmm0
+; SSE-NEXT:    paddd %xmm0, %xmm0
 ; SSE-NEXT:    paddd %xmm2, %xmm0
 ; SSE-NEXT:    movdqa %xmm3, %xmm1
-; SSE-NEXT:    paddd %xmm3, %xmm1
+; SSE-NEXT:    paddd %xmm1, %xmm1
 ; SSE-NEXT:    paddd %xmm3, %xmm1
 ; SSE-NEXT:    movdqu %xmm3, 16(%rsi)
 ; SSE-NEXT:    movdqu %xmm2, (%rsi)

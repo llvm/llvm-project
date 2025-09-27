@@ -821,10 +821,10 @@ define <16 x i16> @madd_v16i16_3(<16 x i16> %a0, <16 x i16> %a1) nounwind {
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $16, %esp
 ; X86-SSE-NEXT:    movdqa %xmm1, %xmm3
-; X86-SSE-NEXT:    paddw %xmm1, %xmm3
+; X86-SSE-NEXT:    paddw %xmm3, %xmm3
 ; X86-SSE-NEXT:    paddw %xmm3, %xmm1
 ; X86-SSE-NEXT:    movdqa %xmm0, %xmm3
-; X86-SSE-NEXT:    paddw %xmm0, %xmm3
+; X86-SSE-NEXT:    paddw %xmm3, %xmm3
 ; X86-SSE-NEXT:    paddw %xmm2, %xmm0
 ; X86-SSE-NEXT:    paddw %xmm3, %xmm0
 ; X86-SSE-NEXT:    paddw 8(%ebp), %xmm1
@@ -835,9 +835,9 @@ define <16 x i16> @madd_v16i16_3(<16 x i16> %a0, <16 x i16> %a1) nounwind {
 ; X64-SSE-LABEL: madd_v16i16_3:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movdqa %xmm1, %xmm4
-; X64-SSE-NEXT:    paddw %xmm1, %xmm4
+; X64-SSE-NEXT:    paddw %xmm4, %xmm4
 ; X64-SSE-NEXT:    movdqa %xmm0, %xmm5
-; X64-SSE-NEXT:    paddw %xmm0, %xmm5
+; X64-SSE-NEXT:    paddw %xmm5, %xmm5
 ; X64-SSE-NEXT:    paddw %xmm2, %xmm0
 ; X64-SSE-NEXT:    paddw %xmm5, %xmm0
 ; X64-SSE-NEXT:    paddw %xmm3, %xmm1

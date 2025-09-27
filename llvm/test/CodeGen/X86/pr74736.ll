@@ -6,8 +6,8 @@ define void @main(<16 x i32> %0, i32 %1) {
 ; SSE-LABEL: main:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movd %edi, %xmm4
-; SSE-NEXT:    movss {{.*#+}} xmm0 = [1,0,0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm4[1,0]
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = [0,1,0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm4[2,0]
 ; SSE-NEXT:    paddd %xmm0, %xmm0
 ; SSE-NEXT:    paddd %xmm1, %xmm1
 ; SSE-NEXT:    paddd %xmm3, %xmm3
@@ -32,20 +32,20 @@ define void @main(<16 x i32> %0, i32 %1) {
 ; AVX-LABEL: main:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0],xmm0[1,2,3]
 ; AVX-NEXT:    movl $1, %eax
 ; AVX-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
 ; AVX-NEXT:    vpinsrd $3, %edi, %xmm2, %xmm2
-; AVX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; AVX-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
-; AVX-NEXT:    vpaddd %ymm1, %ymm1, %ymm1
-; AVX-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [0,1,1,3,3,5,5,7]
-; AVX-NEXT:    vpermd %ymm0, %ymm2, %ymm2
+; AVX-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm0[4,5,6,7]
+; AVX-NEXT:    vpaddd %ymm2, %ymm2, %ymm2
+; AVX-NEXT:    vpaddd %ymm1, %ymm1, %ymm3
 ; AVX-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
 ; AVX-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[3,3,3,3,7,7,7,7]
-; AVX-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[0,1,1,3,4,5,5,7]
+; AVX-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vpshufd {{.*#+}} ymm1 = ymm3[0,1,1,3,4,5,5,7]
 ; AVX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7]
-; AVX-NEXT:    vpxor %ymm0, %ymm2, %ymm0
+; AVX-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [0,1,1,3,3,5,5,7]
+; AVX-NEXT:    vpermd %ymm2, %ymm1, %ymm1
+; AVX-NEXT:    vpxor %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
