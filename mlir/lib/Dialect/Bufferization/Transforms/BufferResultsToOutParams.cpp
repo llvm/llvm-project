@@ -43,6 +43,52 @@ static bool hasStaticIdentityLayout(MemRefType type) {
   return type.getLayout().isIdentity();
 }
 
+/// Return the dynamic shapes of the `memref` based on the define op. If the
+/// complete dynamic shape fails to be captured, return an empty value.
+/// Currently, only function parameters are supported for capturing.
+static ValueRange getDynamicSize(Value memref, func::FuncOp funcOp) {
+  auto *defOp = memref.getDefiningOp();
+  if (!defOp)
+    return {};
+  auto operands = defOp->getOperands();
+  SmallVector<Value> dynamicSizes;
+  for (Value size : operands) {
+    BlockArgument sizeSrc = mlir::dyn_cast<BlockArgument>(size);
+    if (!sizeSrc)
+      return {};
+
+    bool finded = false;
+    for (BlockArgument argument : funcOp.getArguments()) {
+      if (argument == sizeSrc) {
+        dynamicSizes.push_back(argument);
+        finded = true;
+        break;
+      }
+    }
+    if (!finded)
+      return {};
+  }
+  return dynamicSizes;
+}
+
+/// Returns the dynamic sizes at the callee, through the call relationship
+/// between the caller and callee.
+static ValueRange mapDynamicSizeAtCaller(func::CallOp call, func::FuncOp callee,
+                                         ValueRange dynamicSizes) {
+  SmallVector<Value> mapedDynamicSizes;
+  for (Value size : dynamicSizes) {
+    auto callOperands = call.getOperands();
+    for (size_t i = 0, e = callOperands.size(); i < e; ++i) {
+      Value src = callOperands[i];
+      BlockArgument dst = callee.getArgument(i);
+      if (size != dst)
+        continue;
+      mapedDynamicSizes.push_back(src);
+    }
+  }
+  return mapedDynamicSizes;
+}
+
 // Updates the func op and entry block.
 //
 // Any args appended to the entry block are added to `appendedEntryArgs`.
@@ -109,7 +155,7 @@ updateFuncOp(func::FuncOp func,
 // the given out-params.
 static LogicalResult
 updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
-                const bufferization::BufferResultsToOutParamsOpts &options) {
+                bufferization::BufferResultsToOutParamsOpts &options) {
   auto res = func.walk([&](func::ReturnOp op) {
     SmallVector<Value, 6> copyIntoOutParams;
     SmallVector<Value, 6> keepAsReturnOperands;
@@ -120,12 +166,22 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
         keepAsReturnOperands.push_back(operand);
     }
     OpBuilder builder(op);
+    SmallVector<SmallVector<Value>> dynamicSizes;
     for (auto [orig, arg] : llvm::zip(copyIntoOutParams, appendedEntryArgs)) {
-      if (options.hoistStaticAllocs &&
+      bool hoistStaticAllocs =
+          options.hoistStaticAllocs &&
+          mlir::cast<MemRefType>(orig.getType()).hasStaticShape();
+      bool hoistDynamicAllocs =
+          options.hoistDynamicAllocs &&
+          !mlir::cast<MemRefType>(orig.getType()).hasStaticShape();
+      if ((hoistStaticAllocs || hoistDynamicAllocs) &&
           isa_and_nonnull<bufferization::AllocationOpInterface>(
-              orig.getDefiningOp()) &&
-          mlir::cast<MemRefType>(orig.getType()).hasStaticShape()) {
+              orig.getDefiningOp())) {
         orig.replaceAllUsesWith(arg);
+        if (hoistDynamicAllocs) {
+          SmallVector<Value> dynamicSize = getDynamicSize(orig, func);
+          dynamicSizes.push_back(dynamicSize);
+        }
         orig.getDefiningOp()->erase();
       } else {
         if (failed(options.memCpyFn(builder, op.getLoc(), orig, arg)))
@@ -134,6 +190,10 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
     }
     func::ReturnOp::create(builder, op.getLoc(), keepAsReturnOperands);
     op.erase();
+    auto dynamicSizePair =
+        std::pair<func::FuncOp, SmallVector<SmallVector<Value>>>(func,
+                                                                 dynamicSizes);
+    options.dynamicSizesMap.insert(dynamicSizePair);
     return WalkResult::advance();
   });
   return failure(res.wasInterrupted());
@@ -166,8 +226,16 @@ updateCalls(ModuleOp module,
     }
     SmallVector<Value, 6> outParams;
     OpBuilder builder(op);
+    SmallVector<SmallVector<Value>> dynamicSizes =
+        options.dynamicSizesMap.lookup(callee);
+    size_t dynamicSizesIndex = 0;
     for (Value memref : replaceWithOutParams) {
-      if (!cast<MemRefType>(memref.getType()).hasStaticShape()) {
+      ValueRange dynamicSize = dynamicSizes.size() > dynamicSizesIndex
+                                   ? dynamicSizes[dynamicSizesIndex]
+                                   : SmallVector<Value>();
+      bool memrefStaticShape =
+          cast<MemRefType>(memref.getType()).hasStaticShape();
+      if (!memrefStaticShape && dynamicSize.empty()) {
         op.emitError()
             << "cannot create out param for dynamically shaped result";
         didFail = true;
@@ -177,8 +245,15 @@ updateCalls(ModuleOp module,
       auto allocType =
           MemRefType::get(memrefType.getShape(), memrefType.getElementType(),
                           AffineMap(), memrefType.getMemorySpace());
+
+      if (memrefStaticShape) {
+        dynamicSize = {};
+      } else {
+        ++dynamicSizesIndex;
+        dynamicSize = mapDynamicSizeAtCaller(op, callee, dynamicSize);
+      }
       auto maybeOutParam =
-          options.allocationFn(builder, op.getLoc(), allocType);
+          options.allocationFn(builder, op.getLoc(), allocType, dynamicSize);
       if (failed(maybeOutParam)) {
         op.emitError() << "failed to create allocation op";
         didFail = true;
@@ -211,8 +286,7 @@ updateCalls(ModuleOp module,
 }
 
 LogicalResult mlir::bufferization::promoteBufferResultsToOutParams(
-    ModuleOp module,
-    const bufferization::BufferResultsToOutParamsOpts &options) {
+    ModuleOp module, bufferization::BufferResultsToOutParamsOpts &options) {
   for (auto func : module.getOps<func::FuncOp>()) {
     if (!options.filterFn(&func))
       continue;
@@ -243,6 +317,8 @@ struct BufferResultsToOutParamsPass
       options.addResultAttribute = true;
     if (hoistStaticAllocs)
       options.hoistStaticAllocs = true;
+    if (hoistDynamicAllocs)
+      options.hoistDynamicAllocs = true;
 
     if (failed(bufferization::promoteBufferResultsToOutParams(getOperation(),
                                                               options)))

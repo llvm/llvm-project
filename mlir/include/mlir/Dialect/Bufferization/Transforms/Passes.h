@@ -5,6 +5,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/MapVector.h"
 
 namespace mlir {
 class FunctionOpInterface;
@@ -131,8 +132,8 @@ struct BufferResultsToOutParamsOpts {
   /// Allocator function: Generate a memref allocation with the given type.
   /// Since `promoteBufferResultsToOutParams` doesn't allow dynamically shaped
   /// results, we don't allow passing a range of values for dynamic dims.
-  using AllocationFn =
-      std::function<FailureOr<Value>(OpBuilder &, Location, MemRefType)>;
+  using AllocationFn = std::function<FailureOr<Value>(OpBuilder &, Location,
+                                                      MemRefType, ValueRange)>;
 
   /// Memcpy function: Generate a memcpy between two memrefs.
   using MemCpyFn =
@@ -147,8 +148,9 @@ struct BufferResultsToOutParamsOpts {
   /// Allocation function; used to allocate a memref.
   /// Default memref.alloc is used
   AllocationFn allocationFn = [](OpBuilder &builder, Location loc,
-                                 MemRefType type) {
-    return memref::AllocOp::create(builder, loc, type).getResult();
+                                 MemRefType type, ValueRange dynamicSizes) {
+    return memref::AllocOp::create(builder, loc, type, dynamicSizes)
+        .getResult();
   };
 
   /// Memcpy function; used to create a copy between two memrefs.
@@ -164,15 +166,23 @@ struct BufferResultsToOutParamsOpts {
   bool addResultAttribute = false;
 
   /// If true, the pass eliminates the memref.alloc and memcpy if the returned
-  /// memref is allocated in the current function.
+  /// memref is static allocated in the current function.
   bool hoistStaticAllocs = false;
+
+  /// If true, the pass eliminates the memref.alloc and memcpy if the returned
+  /// memref is dynamic allocated in the current function.
+  bool hoistDynamicAllocs = false;
+
+  /// It maps the shape source of the dynamic shape memref returned by each
+  /// function.
+  llvm::DenseMap<func::FuncOp, SmallVector<SmallVector<Value>>> dynamicSizesMap;
 };
 
 /// Replace buffers that are returned from a function with an out parameter.
 /// Also update all call sites.
 LogicalResult
 promoteBufferResultsToOutParams(ModuleOp module,
-                                const BufferResultsToOutParamsOpts &options);
+                                BufferResultsToOutParamsOpts &options);
 
 /// Drop all memref function results that are equivalent to a function argument.
 LogicalResult dropEquivalentBufferResults(ModuleOp module);
