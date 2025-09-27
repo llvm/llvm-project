@@ -25,10 +25,6 @@
 #include "Shared/Utils.h"
 #include "omptarget.h"
 
-#include "llvm/Support/Error.h"
-
-namespace llvm {
-
 /// Base class of per-device allocator.
 class DeviceAllocatorTy {
 public:
@@ -36,13 +32,11 @@ public:
 
   /// Allocate a memory of size \p Size . \p HstPtr is used to assist the
   /// allocation.
-  virtual Expected<void *>
-  allocate(size_t Size, void *HstPtr,
-           TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
+  virtual void *allocate(size_t Size, void *HstPtr,
+                         TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
 
   /// Delete the pointer \p TgtPtr on the device
-  virtual Error free(void *TgtPtr,
-                     TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
+  virtual int free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
 };
 
 /// Class of memory manager. The memory manager is per-device by using
@@ -140,17 +134,17 @@ class MemoryManagerTy {
   size_t SizeThreshold = 1U << 13;
 
   /// Request memory from target device
-  Expected<void *> allocateOnDevice(size_t Size, void *HstPtr) const {
+  void *allocateOnDevice(size_t Size, void *HstPtr) const {
     return DeviceAllocator.allocate(Size, HstPtr, TARGET_ALLOC_DEVICE);
   }
 
   /// Deallocate data on device
-  Error deleteOnDevice(void *Ptr) const { return DeviceAllocator.free(Ptr); }
+  int deleteOnDevice(void *Ptr) const { return DeviceAllocator.free(Ptr); }
 
   /// This function is called when it tries to allocate memory on device but the
   /// device returns out of memory. It will first free all memory in the
   /// FreeList and try to allocate again.
-  Expected<void *> freeAndAllocate(size_t Size, void *HstPtr) {
+  void *freeAndAllocate(size_t Size, void *HstPtr) {
     std::vector<void *> RemoveList;
 
     // Deallocate all memory in FreeList
@@ -160,8 +154,7 @@ class MemoryManagerTy {
       if (List.empty())
         continue;
       for (const NodeTy &N : List) {
-        if (auto Err = deleteOnDevice(N.Ptr))
-          return Err;
+        deleteOnDevice(N.Ptr);
         RemoveList.push_back(N.Ptr);
       }
       FreeLists[I].clear();
@@ -182,22 +175,14 @@ class MemoryManagerTy {
   /// allocate directly on the device. If a \p nullptr is returned, it might
   /// be because the device is OOM. In that case, it will free all unused
   /// memory and then try again.
-  Expected<void *> allocateOrFreeAndAllocateOnDevice(size_t Size,
-                                                     void *HstPtr) {
-    auto TgtPtrOrErr = allocateOnDevice(Size, HstPtr);
-    if (!TgtPtrOrErr)
-      return TgtPtrOrErr.takeError();
-
-    void *TgtPtr = *TgtPtrOrErr;
+  void *allocateOrFreeAndAllocateOnDevice(size_t Size, void *HstPtr) {
+    void *TgtPtr = allocateOnDevice(Size, HstPtr);
     // We cannot get memory from the device. It might be due to OOM. Let's
     // free all memory in FreeLists and try again.
     if (TgtPtr == nullptr) {
       DP("Failed to get memory on device. Free all memory in FreeLists and "
          "try again.\n");
-      TgtPtrOrErr = freeAndAllocate(Size, HstPtr);
-      if (!TgtPtrOrErr)
-        return TgtPtrOrErr.takeError();
-      TgtPtr = *TgtPtrOrErr;
+      TgtPtr = freeAndAllocate(Size, HstPtr);
     }
 
     if (TgtPtr == nullptr)
@@ -219,17 +204,16 @@ public:
 
   /// Destructor
   ~MemoryManagerTy() {
-    for (auto &PtrToNode : PtrToNodeTable) {
-      assert(PtrToNode.second.Ptr && "nullptr in map table");
-      if (auto Err = deleteOnDevice(PtrToNode.second.Ptr))
-        REPORT("Failure to delete memory: %s\n",
-               toString(std::move(Err)).data());
+    for (auto Itr = PtrToNodeTable.begin(); Itr != PtrToNodeTable.end();
+         ++Itr) {
+      assert(Itr->second.Ptr && "nullptr in map table");
+      deleteOnDevice(Itr->second.Ptr);
     }
   }
 
   /// Allocate memory of size \p Size from target device. \p HstPtr is used to
   /// assist the allocation.
-  Expected<void *> allocate(size_t Size, void *HstPtr) {
+  void *allocate(size_t Size, void *HstPtr) {
     // If the size is zero, we will not bother the target device. Just return
     // nullptr directly.
     if (Size == 0)
@@ -244,14 +228,11 @@ public:
       DP("%zu is greater than the threshold %zu. Allocate it directly from "
          "device\n",
          Size, SizeThreshold);
-      auto TgtPtrOrErr = allocateOrFreeAndAllocateOnDevice(Size, HstPtr);
-      if (!TgtPtrOrErr)
-        return TgtPtrOrErr.takeError();
+      void *TgtPtr = allocateOrFreeAndAllocateOnDevice(Size, HstPtr);
 
-      DP("Got target pointer " DPxMOD ". Return directly.\n",
-         DPxPTR(*TgtPtrOrErr));
+      DP("Got target pointer " DPxMOD ". Return directly.\n", DPxPTR(TgtPtr));
 
-      return *TgtPtrOrErr;
+      return TgtPtr;
     }
 
     NodeTy *NodePtr = nullptr;
@@ -279,11 +260,8 @@ public:
     if (NodePtr == nullptr) {
       DP("Cannot find a node in the FreeLists. Allocate on device.\n");
       // Allocate one on device
-      auto TgtPtrOrErr = allocateOrFreeAndAllocateOnDevice(Size, HstPtr);
-      if (!TgtPtrOrErr)
-        return TgtPtrOrErr.takeError();
+      void *TgtPtr = allocateOrFreeAndAllocateOnDevice(Size, HstPtr);
 
-      void *TgtPtr = *TgtPtrOrErr;
       if (TgtPtr == nullptr)
         return nullptr;
 
@@ -304,7 +282,7 @@ public:
   }
 
   /// Deallocate memory pointed by \p TgtPtr
-  Error free(void *TgtPtr) {
+  int free(void *TgtPtr) {
     DP("MemoryManagerTy::free: target memory " DPxMOD ".\n", DPxPTR(TgtPtr));
 
     NodeTy *P = nullptr;
@@ -336,7 +314,7 @@ public:
       FreeLists[B].insert(*P);
     }
 
-    return Error::success();
+    return OFFLOAD_SUCCESS;
   }
 
   /// Get the size threshold from the environment variable
@@ -365,7 +343,5 @@ public:
 // this part.
 constexpr const size_t MemoryManagerTy::BucketSize[];
 constexpr const int MemoryManagerTy::NumBuckets;
-
-} // namespace llvm
 
 #endif // LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_H

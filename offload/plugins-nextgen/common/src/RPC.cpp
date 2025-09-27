@@ -32,22 +32,15 @@ rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
   switch (Port.get_opcode()) {
   case LIBC_MALLOC: {
     Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
-      auto PtrOrErr =
-          Device.allocate(Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE);
-      void *Ptr = nullptr;
-      if (!PtrOrErr)
-        llvm::consumeError(PtrOrErr.takeError());
-      else
-        Ptr = *PtrOrErr;
-      Buffer->data[0] = reinterpret_cast<uintptr_t>(Ptr);
+      Buffer->data[0] = reinterpret_cast<uintptr_t>(
+          Device.allocate(Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE));
     });
     break;
   }
   case LIBC_FREE: {
     Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
-      if (auto Err = Device.free(reinterpret_cast<void *>(Buffer->data[0]),
-                                 TARGET_ALLOC_DEVICE))
-        llvm::consumeError(std::move(Err));
+      Device.free(reinterpret_cast<void *>(Buffer->data[0]),
+                  TARGET_ALLOC_DEVICE);
     });
     break;
   }
@@ -231,13 +224,9 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
                               plugin::DeviceImageTy &Image) {
   uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
-  auto RPCBufferOrErr = Device.allocate(
+  void *RPCBuffer = Device.allocate(
       rpc::Server::allocation_size(Device.getWarpSize(), NumPorts), nullptr,
       TARGET_ALLOC_HOST);
-  if (!RPCBufferOrErr)
-    return RPCBufferOrErr.takeError();
-
-  void *RPCBuffer = *RPCBufferOrErr;
   if (!RPCBuffer)
     return plugin::Plugin::error(
         error::ErrorCode::UNKNOWN,
@@ -262,8 +251,7 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
 
 Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
   std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
-  if (auto Err = Device.free(Buffers[Device.getDeviceId()], TARGET_ALLOC_HOST))
-    return Err;
+  Device.free(Buffers[Device.getDeviceId()], TARGET_ALLOC_HOST);
   Buffers[Device.getDeviceId()] = nullptr;
   Devices[Device.getDeviceId()] = nullptr;
   return Error::success();
