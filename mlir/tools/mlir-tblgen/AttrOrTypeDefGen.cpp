@@ -513,6 +513,17 @@ getCustomBuilderParams(std::initializer_list<MethodParameter> prefix,
   return builderParams;
 }
 
+static void errorIfPruned(size_t line, Method *m, const Twine &methodName,
+                          const AttrOrTypeDef &def) {
+  if (m)
+    return;
+  PrintFatalError(def.getLoc(), "Unexpected overlap when generating `" +
+                                    methodName + "` for " + def.getName() +
+                                    " (from line " + Twine(line) + ")");
+}
+
+#define ERROR_IF_PRUNED(M, N, O) errorIfPruned(__LINE__, M, N, O)
+
 void DefGen::emitCustomBuilder(const AttrOrTypeBuilder &builder) {
   // Don't emit a body if there isn't one.
   auto props = builder.getBody() ? Method::Static : Method::StaticDeclaration;
@@ -521,6 +532,10 @@ void DefGen::emitCustomBuilder(const AttrOrTypeBuilder &builder) {
     returnType = *builderReturnType;
   Method *m = defCls.addMethod(returnType, "get", props,
                                getCustomBuilderParams({}, builder));
+
+  // If method is pruned, report error and terminate.
+  ERROR_IF_PRUNED(m, "get", def);
+
   if (!builder.getBody())
     return;
 
@@ -552,6 +567,10 @@ void DefGen::emitCheckedCustomBuilder(const AttrOrTypeBuilder &builder) {
       getCustomBuilderParams(
           {{"::llvm::function_ref<::mlir::InFlightDiagnostic()>", "emitError"}},
           builder));
+
+  // If method is pruned, report error and terminate.
+  ERROR_IF_PRUNED(m, "getChecked", def);
+
   if (!builder.getBody())
     return;
 
