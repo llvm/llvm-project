@@ -441,13 +441,13 @@ void AggExprEmitter::EmitWidePointerBitCast(CastExpr *E) {
   RValue SrcRV = CGF.EmitAnyExpr(E->getSubExpr());
   assert(SrcRV.isAggregate());
   Address SrcAddr = SrcRV.getAggregateAddress();
-  EmitWidePointerToDest(E->getType(),
-                        CGF.GetWidePointerElement(SrcAddr, WPIndex::Pointer),
-                        CGF.GetWidePointerElement(SrcAddr, WPIndex::Upper),
-                        E->getType()->isBidiIndexablePointerType()
+  llvm::Value *Ptr = CGF.GetWidePointerElement(SrcAddr, WPIndex::Pointer);
+  llvm::Value *Upper = CGF.GetWidePointerElement(SrcAddr, WPIndex::Upper);
+  llvm::Value *Lower = E->getType()->isBidiIndexablePointerType()
                             ? CGF.GetWidePointerElement(SrcAddr, WPIndex::Lower)
-                            : nullptr,
-                        ElemBitCast);
+                            : nullptr;
+
+  EmitWidePointerToDest(E->getType(), Ptr, Upper, Lower, ElemBitCast);
 }
 
 void AggExprEmitter::EmitWidePointer(LValue DestLV, llvm::Value *Ptr,
@@ -596,13 +596,7 @@ void AggExprEmitter::VisitPredefinedBoundsCheckExpr(
 void AggExprEmitter::VisitMaterializeSequenceExpr(MaterializeSequenceExpr *MSE) {
   if (MSE->isBinding()) {
     for (auto *OVE : MSE->opaquevalues()) {
-      if (CodeGenFunction::OpaqueValueMappingData::shouldBindAsLValue(OVE)) {
-        RValue PtrRV = CGF.EmitAnyExpr(OVE->getSourceExpr());
-        LValue LV = CGF.MakeAddrLValue(PtrRV.getAggregateAddress(), OVE->getType());
-        CodeGenFunction::OpaqueValueMappingData::bind(CGF, OVE, LV);
-      } else {
-        CodeGenFunction::OpaqueValueMappingData::bind(CGF, OVE, OVE->getSourceExpr());
-      }
+      CodeGenFunction::OpaqueValueMappingData::bind(CGF, OVE, OVE->getSourceExpr());
     }
   }
 

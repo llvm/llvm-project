@@ -17,13 +17,9 @@ const Item oidRsa = { _oidRsa, sizeof(_oidRsa)};
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
-// CHECK-NEXT:    [[AGG_TEMP1:%.*]] = alloca [[STRUCT_ITEM:%.*]], align 8
 // CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP1]], ptr align 8 @oidRsa, i64 16, i1 false)
-// CHECK-NEXT:    [[LENGTH:%.*]] = getelementptr inbounds nuw [[STRUCT_ITEM]], ptr [[AGG_TEMP1]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LENGTH]], align 8
-// CHECK-NEXT:    [[DATA:%.*]] = getelementptr inbounds nuw [[STRUCT_ITEM]], ptr [[AGG_TEMP1]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DATA]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds nuw ([[STRUCT_ITEM:%.*]], ptr @oidRsa, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @oidRsa, align 8
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP0]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 0
@@ -46,11 +42,11 @@ const Item oidRsa = { _oidRsa, sizeof(_oidRsa)};
 // CHECK-NEXT:    unreachable
 // CHECK:       cont:
 // CHECK-NEXT:    [[TMP7:%.*]] = icmp uge ptr [[TMP5]], [[WIDE_PTR_LB]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP7]], label [[CONT3:%.*]], label [[TRAP2:%.*]], {{!annotation ![0-9]+}}
-// CHECK:       trap2:
+// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT3:.*]], label %[[TRAP2:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
+// CHECK:       [[TRAP2]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable
-// CHECK:       cont3:
+// CHECK:       [[CONT3]]:
 // CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP5]], align 4
 // CHECK-NEXT:    ret i32 [[TMP8]]
 //

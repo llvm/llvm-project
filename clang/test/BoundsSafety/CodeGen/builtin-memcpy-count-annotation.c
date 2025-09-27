@@ -178,8 +178,8 @@
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR88:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP81]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB89:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR88]], align 8
 // CHECK-NEXT:    [[CMP90:%.*]] = icmp ule ptr [[WIDE_PTR_PTR76]], [[WIDE_PTR_PTR85]]
-// CHECK-NEXT:    br i1 [[CMP90]], label [[LAND_LHS_TRUE91:%.*]], label [[LAND_END144:%.*]]
-// CHECK:       land.lhs.true91:
+// CHECK-NEXT:    br i1 [[CMP90]], label %[[LAND_LHS_TRUE91:.*]], label %[[LAND_END144:.*]],
+// CHECK:       [[LAND_LHS_TRUE91]]:
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP92]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false)
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR93:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP92]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB94:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR93]], align 8
@@ -199,8 +199,8 @@
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR106:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP101]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB107:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR106]], align 8
 // CHECK-NEXT:    [[CMP108:%.*]] = icmp ule ptr [[WIDE_PTR_PTR96]], [[WIDE_PTR_PTR103]]
-// CHECK-NEXT:    br i1 [[CMP108]], label [[LAND_RHS109:%.*]], label [[LAND_END144]]
-// CHECK:       land.rhs109:
+// CHECK-NEXT:    br i1 [[CMP108]], label %[[LAND_RHS109:.*]], label %[[LAND_END144]]
+// CHECK:       [[LAND_RHS109]]:
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP111]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false)
 // CHECK-NEXT:    [[WIDE_PTR_UB_ADDR112:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP111]], i32 0, i32 1
 // CHECK-NEXT:    [[WIDE_PTR_UB113:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR112]], align 8
@@ -246,15 +246,15 @@
 // CHECK-NEXT:    [[SUB_PTR_LHS_CAST140:%.*]] = ptrtoint ptr [[WIDE_PTR_PTR121]] to i64
 // CHECK-NEXT:    [[SUB_PTR_RHS_CAST141:%.*]] = ptrtoint ptr [[WIDE_PTR_PTR135]] to i64
 // CHECK-NEXT:    [[SUB_PTR_SUB142:%.*]] = sub i64 [[SUB_PTR_LHS_CAST140]], [[SUB_PTR_RHS_CAST141]]
-// CHECK-NEXT:    [[CMP143:%.*]] = icmp ule i64 10, [[SUB_PTR_SUB142]]
-// CHECK-NEXT:    br label [[LAND_END144]]
-// CHECK:       land.end144:
-// CHECK-NEXT:    [[TMP25:%.*]] = phi i1 [ false, [[LAND_LHS_TRUE91]] ], [ false, [[CONT]] ], [ [[CMP143]], [[LAND_RHS109]] ], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP25]], label [[CONT146:%.*]], label [[TRAP145:%.*]], {{!annotation ![0-9]+}}
-// CHECK:       trap145:
+// CHECK-NEXT:    [[CMP143:%.*]] = icmp ule i64 10, [[SUB_PTR_SUB142]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br label %[[LAND_END144]]
+// CHECK:       [[LAND_END144]]: {{.*}}
+// CHECK-NEXT:    [[TMP25:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE91]] ], [ false, [[CONT]] ], [ [[CMP143]], %[[LAND_RHS109]] ], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP25]], label %[[CONT146:.*]], label %[[TRAP145:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
+// CHECK:       [[TRAP145]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable
-// CHECK:       cont146:
+// CHECK:       [[CONT146]]:
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP147]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false)
 // CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR148:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP147]], i32 0, i32 0
 // CHECK-NEXT:    [[WIDE_PTR_PTR149:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR148]], align 8

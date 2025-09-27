@@ -2,7 +2,6 @@
 
 
 // RUN: %clang_cc1 -O0  -fbounds-safety -triple arm64e-apple-ios -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -O0  -fbounds-safety -triple arm64e-apple-ios -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck %s
 
 #include <ptrcheck.h>
 
@@ -968,26 +967,24 @@ void shared_flexbase_self_assign_reverse(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
 // CHECK-NEXT:    [[AGG_TEMP1:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
-// CHECK-NEXT:    [[AGG_TEMP2:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
-// CHECK-NEXT:    [[AGG_TEMP5:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
-// CHECK-NEXT:    [[AGG_TEMP16:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
-// CHECK-NEXT:    [[AGG_TEMP23:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
-// CHECK-NEXT:    [[AGG_TEMP26:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
-// CHECK-NEXT:    [[AGG_TEMP29:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
-// CHECK-NEXT:    [[AGG_TEMP37:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
-// CHECK-NEXT:    [[AGG_TEMP40:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
-// CHECK-NEXT:    [[AGG_TEMP52:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
-// CHECK-NEXT:    [[AGG_TEMP59:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
-// CHECK-NEXT:    [[AGG_TEMP71:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
+// CHECK-NEXT:    [[AGG_TEMP4:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
+// CHECK-NEXT:    [[AGG_TEMP15:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
+// CHECK-NEXT:    [[AGG_TEMP22:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
+// CHECK-NEXT:    [[AGG_TEMP25:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
+// CHECK-NEXT:    [[AGG_TEMP28:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
+// CHECK-NEXT:    [[AGG_TEMP36:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
+// CHECK-NEXT:    [[AGG_TEMP39:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
+// CHECK-NEXT:    [[AGG_TEMP51:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
+// CHECK-NEXT:    [[AGG_TEMP58:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
+// CHECK-NEXT:    [[AGG_TEMP70:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
 // CHECK-NEXT:    store ptr [[P]], ptr [[P_INDIRECT_ADDR]], align 8
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P]], ptr align 8 [[P]], i64 24, i1 false)
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP1]], ptr align 8 [[P]], i64 24, i1 false)
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP2]], ptr align 8 [[AGG_TEMP1]], i64 24, i1 false)
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 0
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP1]], i32 0, i32 0
 // CHECK-NEXT:    [[WIDE_PTR_PTR:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 1
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP1]], i32 0, i32 1
 // CHECK-NEXT:    [[WIDE_PTR_UB:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 2
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP1]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_SHARED:%.*]], ptr [[WIDE_PTR_PTR]], i64 1
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[WIDE_PTR_UB]], !annotation [[META2]]
@@ -997,34 +994,34 @@ void shared_flexbase_self_assign_reverse(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[WIDE_PTR_LB]], [[WIDE_PTR_PTR]], !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT4:.*]], label %[[TRAP3:.*]], !prof [[PROF3]], !annotation [[META4]]
-// CHECK:       [[TRAP3]]:
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT3:.*]], label %[[TRAP2:.*]], !prof [[PROF3]], !annotation [[META4]]
+// CHECK:       [[TRAP2]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META4]]
 // CHECK-NEXT:    unreachable, !annotation [[META4]]
-// CHECK:       [[CONT4]]:
+// CHECK:       [[CONT3]]:
 // CHECK-NEXT:    [[LEN:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[LEN]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP5]], ptr align 8 [[AGG_TEMP1]], i64 24, i1 false)
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR6:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP5]], i32 0, i32 0
-// CHECK-NEXT:    [[WIDE_PTR_PTR7:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR6]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR8:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP5]], i32 0, i32 1
-// CHECK-NEXT:    [[WIDE_PTR_UB9:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR8]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR10:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP5]], i32 0, i32 2
-// CHECK-NEXT:    [[WIDE_PTR_LB11:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR10]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR7]], i64 1
-// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[TMP4]], [[WIDE_PTR_UB9]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP5]], label %[[CONT13:.*]], label %[[TRAP12:.*]], !prof [[PROF3]], !annotation [[META2]]
-// CHECK:       [[TRAP12]]:
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP4]], ptr align 8 [[P]], i64 24, i1 false)
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR5:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP4]], i32 0, i32 0
+// CHECK-NEXT:    [[WIDE_PTR_PTR6:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR5]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR7:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP4]], i32 0, i32 1
+// CHECK-NEXT:    [[WIDE_PTR_UB8:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR7]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR9:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP4]], i32 0, i32 2
+// CHECK-NEXT:    [[WIDE_PTR_LB10:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR9]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR6]], i64 1
+// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[TMP4]], [[WIDE_PTR_UB8]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP5]], label %[[CONT12:.*]], label %[[TRAP11:.*]], !prof [[PROF3]], !annotation [[META2]]
+// CHECK:       [[TRAP11]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
-// CHECK:       [[CONT13]]:
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp ule ptr [[WIDE_PTR_LB11]], [[WIDE_PTR_PTR7]], !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP6]], label %[[CONT15:.*]], label %[[TRAP14:.*]], !prof [[PROF3]], !annotation [[META4]]
-// CHECK:       [[TRAP14]]:
+// CHECK:       [[CONT12]]:
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp ule ptr [[WIDE_PTR_LB10]], [[WIDE_PTR_PTR6]], !annotation [[META4]]
+// CHECK-NEXT:    br i1 [[TMP6]], label %[[CONT14:.*]], label %[[TRAP13:.*]], !prof [[PROF3]], !annotation [[META4]]
+// CHECK:       [[TRAP13]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META4]]
 // CHECK-NEXT:    unreachable, !annotation [[META4]]
-// CHECK:       [[CONT15]]:
-// CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR7]], i32 0, i32 1
+// CHECK:       [[CONT14]]:
+// CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR6]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[PTR]], align 8
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP3]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 [[IDX_EXT]]
@@ -1034,111 +1031,111 @@ void shared_flexbase_self_assign_reverse(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    store ptr [[ADD_PTR]], ptr [[TMP9]], align 8
 // CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP]], i32 0, i32 2
 // CHECK-NEXT:    store ptr [[TMP7]], ptr [[TMP10]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP16]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR17:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP16]], i32 0, i32 0, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_PTR18:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR17]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR19:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP16]], i32 0, i32 1, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB20:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR19]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR21:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP16]], i32 0, i32 2, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB22:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR21]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP23]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR24:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP23]], i32 0, i32 1, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB25:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR24]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[WIDE_PTR_PTR18]], [[WIDE_PTR_UB25]], !annotation [[META5]]
-// CHECK-NEXT:    br i1 [[CMP]], label %[[LAND_LHS_TRUE:.*]], label %[[LAND_END49:.*]], !annotation [[META5]]
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP15]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR16:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP15]], i32 0, i32 0, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_PTR17:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR16]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR18:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP15]], i32 0, i32 1, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB19:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR18]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR20:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP15]], i32 0, i32 2, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB21:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR20]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP22]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR23:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP22]], i32 0, i32 1, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB24:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR23]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[WIDE_PTR_PTR17]], [[WIDE_PTR_UB24]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP]], label %[[LAND_LHS_TRUE:.*]], label %[[LAND_END48:.*]], !annotation [[META5]]
 // CHECK:       [[LAND_LHS_TRUE]]:
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP26]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR27:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP26]], i32 0, i32 2, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB28:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR27]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP29]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR30:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP29]], i32 0, i32 0, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_PTR31:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR30]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR32:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP29]], i32 0, i32 1, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB33:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR32]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR34:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP29]], i32 0, i32 2, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB35:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR34]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[CMP36:%.*]] = icmp ule ptr [[WIDE_PTR_LB28]], [[WIDE_PTR_PTR31]], !annotation [[META5]]
-// CHECK-NEXT:    br i1 [[CMP36]], label %[[LAND_RHS:.*]], label %[[LAND_END49]], !annotation [[META5]]
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP25]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR26:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP25]], i32 0, i32 2, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB27:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR26]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP28]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR29:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP28]], i32 0, i32 0, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_PTR30:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR29]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR31:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP28]], i32 0, i32 1, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB32:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR31]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR33:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP28]], i32 0, i32 2, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB34:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR33]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[CMP35:%.*]] = icmp ule ptr [[WIDE_PTR_LB27]], [[WIDE_PTR_PTR30]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP35]], label %[[LAND_RHS:.*]], label %[[LAND_END48]], !annotation [[META5]]
 // CHECK:       [[LAND_RHS]]:
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP37]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR38:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP37]], i32 0, i32 1, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB39:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR38]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP40]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR41:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP40]], i32 0, i32 0, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_PTR42:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR41]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR43:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP40]], i32 0, i32 1, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB44:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR43]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR45:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP40]], i32 0, i32 2, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB46:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR45]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[WIDE_PTR_UB39]] to i64, !annotation [[META5]]
-// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[WIDE_PTR_PTR42]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP36]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR37:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP36]], i32 0, i32 1, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB38:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR37]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP39]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR40:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP39]], i32 0, i32 0, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_PTR41:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR40]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR42:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP39]], i32 0, i32 1, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB43:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR42]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR44:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP39]], i32 0, i32 2, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB45:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR44]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[WIDE_PTR_UB38]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[WIDE_PTR_PTR41]] to i64, !annotation [[META5]]
 // CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !annotation [[META5]]
 // CHECK-NEXT:    [[SUB_PTR_DIV:%.*]] = sdiv exact i64 [[SUB_PTR_SUB]], 4, !annotation [[META5]]
-// CHECK-NEXT:    [[CMP47:%.*]] = icmp sle i64 11, [[SUB_PTR_DIV]], !annotation [[META5]]
-// CHECK-NEXT:    br i1 [[CMP47]], label %[[LAND_RHS48:.*]], label %[[LAND_END:.*]], !annotation [[META5]]
-// CHECK:       [[LAND_RHS48]]:
+// CHECK-NEXT:    [[CMP46:%.*]] = icmp sle i64 11, [[SUB_PTR_DIV]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP46]], label %[[LAND_RHS47:.*]], label %[[LAND_END:.*]], !annotation [[META5]]
+// CHECK:       [[LAND_RHS47]]:
 // CHECK-NEXT:    br label %[[LAND_END]], !annotation [[META5]]
 // CHECK:       [[LAND_END]]:
-// CHECK-NEXT:    [[TMP11:%.*]] = phi i1 [ false, %[[LAND_RHS]] ], [ true, %[[LAND_RHS48]] ]
-// CHECK-NEXT:    br label %[[LAND_END49]], !annotation [[META5]]
-// CHECK:       [[LAND_END49]]:
-// CHECK-NEXT:    [[TMP12:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[CONT15]] ], [ [[TMP11]], %[[LAND_END]] ], !annotation [[META5]]
-// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT51:.*]], label %[[TRAP50:.*]], !prof [[PROF3]], !annotation [[META5]]
-// CHECK:       [[TRAP50]]:
+// CHECK-NEXT:    [[TMP11:%.*]] = phi i1 [ false, %[[LAND_RHS]] ], [ true, %[[LAND_RHS47]] ]
+// CHECK-NEXT:    br label %[[LAND_END48]], !annotation [[META5]]
+// CHECK:       [[LAND_END48]]:
+// CHECK-NEXT:    [[TMP12:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[CONT14]] ], [ [[TMP11]], %[[LAND_END]] ], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT50:.*]], label %[[TRAP49:.*]], !prof [[PROF3]], !annotation [[META5]]
+// CHECK:       [[TRAP49]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META5]]
 // CHECK-NEXT:    unreachable, !annotation [[META5]]
-// CHECK:       [[CONT51]]:
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP52]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false)
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR53:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP52]], i32 0, i32 0
-// CHECK-NEXT:    [[WIDE_PTR_PTR54:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR53]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR55:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP52]], i32 0, i32 1
-// CHECK-NEXT:    [[WIDE_PTR_UB56:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR55]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR57:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP52]], i32 0, i32 2
-// CHECK-NEXT:    [[WIDE_PTR_LB58:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR57]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP59]], ptr align 8 [[P]], i64 24, i1 false)
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR60:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP59]], i32 0, i32 0
-// CHECK-NEXT:    [[WIDE_PTR_PTR61:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR60]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR62:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP59]], i32 0, i32 1
-// CHECK-NEXT:    [[WIDE_PTR_UB63:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR62]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR64:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP59]], i32 0, i32 2
-// CHECK-NEXT:    [[WIDE_PTR_LB65:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR64]], align 8
-// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR61]], i64 1
-// CHECK-NEXT:    [[TMP14:%.*]] = icmp ule ptr [[TMP13]], [[WIDE_PTR_UB63]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP14]], label %[[CONT67:.*]], label %[[TRAP66:.*]], !prof [[PROF3]], !annotation [[META2]]
-// CHECK:       [[TRAP66]]:
+// CHECK:       [[CONT50]]:
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP51]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false)
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR52:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP51]], i32 0, i32 0
+// CHECK-NEXT:    [[WIDE_PTR_PTR53:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR52]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR54:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP51]], i32 0, i32 1
+// CHECK-NEXT:    [[WIDE_PTR_UB55:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR54]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR56:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP51]], i32 0, i32 2
+// CHECK-NEXT:    [[WIDE_PTR_LB57:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR56]], align 8
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP58]], ptr align 8 [[P]], i64 24, i1 false)
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR59:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP58]], i32 0, i32 0
+// CHECK-NEXT:    [[WIDE_PTR_PTR60:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR59]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR61:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP58]], i32 0, i32 1
+// CHECK-NEXT:    [[WIDE_PTR_UB62:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR61]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR63:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP58]], i32 0, i32 2
+// CHECK-NEXT:    [[WIDE_PTR_LB64:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR63]], align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR60]], i64 1
+// CHECK-NEXT:    [[TMP14:%.*]] = icmp ule ptr [[TMP13]], [[WIDE_PTR_UB62]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP14]], label %[[CONT66:.*]], label %[[TRAP65:.*]], !prof [[PROF3]], !annotation [[META2]]
+// CHECK:       [[TRAP65]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
-// CHECK:       [[CONT67]]:
-// CHECK-NEXT:    [[TMP15:%.*]] = icmp ule ptr [[WIDE_PTR_LB65]], [[WIDE_PTR_PTR61]], !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP15]], label %[[CONT69:.*]], label %[[TRAP68:.*]], !prof [[PROF3]], !annotation [[META4]]
-// CHECK:       [[TRAP68]]:
+// CHECK:       [[CONT66]]:
+// CHECK-NEXT:    [[TMP15:%.*]] = icmp ule ptr [[WIDE_PTR_LB64]], [[WIDE_PTR_PTR60]], !annotation [[META4]]
+// CHECK-NEXT:    br i1 [[TMP15]], label %[[CONT68:.*]], label %[[TRAP67:.*]], !prof [[PROF3]], !annotation [[META4]]
+// CHECK:       [[TRAP67]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META4]]
 // CHECK-NEXT:    unreachable, !annotation [[META4]]
-// CHECK:       [[CONT69]]:
-// CHECK-NEXT:    [[PTR70:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR61]], i32 0, i32 1
-// CHECK-NEXT:    store ptr [[WIDE_PTR_PTR54]], ptr [[PTR70]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP71]], ptr align 8 [[P]], i64 24, i1 false)
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR72:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP71]], i32 0, i32 0
-// CHECK-NEXT:    [[WIDE_PTR_PTR73:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR72]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR74:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP71]], i32 0, i32 1
-// CHECK-NEXT:    [[WIDE_PTR_UB75:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR74]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR76:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP71]], i32 0, i32 2
-// CHECK-NEXT:    [[WIDE_PTR_LB77:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR76]], align 8
-// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR73]], i64 1
-// CHECK-NEXT:    [[TMP17:%.*]] = icmp ule ptr [[TMP16]], [[WIDE_PTR_UB75]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP17]], label %[[CONT79:.*]], label %[[TRAP78:.*]], !prof [[PROF3]], !annotation [[META2]]
-// CHECK:       [[TRAP78]]:
+// CHECK:       [[CONT68]]:
+// CHECK-NEXT:    [[PTR69:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR60]], i32 0, i32 1
+// CHECK-NEXT:    store ptr [[WIDE_PTR_PTR53]], ptr [[PTR69]], align 8
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP70]], ptr align 8 [[P]], i64 24, i1 false)
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR71:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP70]], i32 0, i32 0
+// CHECK-NEXT:    [[WIDE_PTR_PTR72:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR71]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR73:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP70]], i32 0, i32 1
+// CHECK-NEXT:    [[WIDE_PTR_UB74:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR73]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR75:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP70]], i32 0, i32 2
+// CHECK-NEXT:    [[WIDE_PTR_LB76:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR75]], align 8
+// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR72]], i64 1
+// CHECK-NEXT:    [[TMP17:%.*]] = icmp ule ptr [[TMP16]], [[WIDE_PTR_UB74]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP17]], label %[[CONT78:.*]], label %[[TRAP77:.*]], !prof [[PROF3]], !annotation [[META2]]
+// CHECK:       [[TRAP77]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
-// CHECK:       [[CONT79]]:
-// CHECK-NEXT:    [[TMP18:%.*]] = icmp ule ptr [[WIDE_PTR_LB77]], [[WIDE_PTR_PTR73]], !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP18]], label %[[CONT81:.*]], label %[[TRAP80:.*]], !prof [[PROF3]], !annotation [[META4]]
-// CHECK:       [[TRAP80]]:
+// CHECK:       [[CONT78]]:
+// CHECK-NEXT:    [[TMP18:%.*]] = icmp ule ptr [[WIDE_PTR_LB76]], [[WIDE_PTR_PTR72]], !annotation [[META4]]
+// CHECK-NEXT:    br i1 [[TMP18]], label %[[CONT80:.*]], label %[[TRAP79:.*]], !prof [[PROF3]], !annotation [[META4]]
+// CHECK:       [[TRAP79]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META4]]
 // CHECK-NEXT:    unreachable, !annotation [[META4]]
-// CHECK:       [[CONT81]]:
-// CHECK-NEXT:    [[LEN82:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR73]], i32 0, i32 0
-// CHECK-NEXT:    store i32 11, ptr [[LEN82]], align 8
+// CHECK:       [[CONT80]]:
+// CHECK-NEXT:    [[LEN81:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR72]], i32 0, i32 0
+// CHECK-NEXT:    store i32 11, ptr [[LEN81]], align 8
 // CHECK-NEXT:    ret void
 //
 void shared_flexbase_self_assign_fr(struct Shared * __bidi_indexable p) {
@@ -1153,26 +1150,24 @@ void shared_flexbase_self_assign_fr(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
 // CHECK-NEXT:    [[AGG_TEMP1:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
-// CHECK-NEXT:    [[AGG_TEMP2:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
-// CHECK-NEXT:    [[AGG_TEMP5:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
-// CHECK-NEXT:    [[AGG_TEMP16:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
-// CHECK-NEXT:    [[AGG_TEMP23:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
-// CHECK-NEXT:    [[AGG_TEMP26:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
-// CHECK-NEXT:    [[AGG_TEMP29:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
-// CHECK-NEXT:    [[AGG_TEMP37:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
-// CHECK-NEXT:    [[AGG_TEMP40:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
-// CHECK-NEXT:    [[AGG_TEMP52:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
-// CHECK-NEXT:    [[AGG_TEMP64:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
-// CHECK-NEXT:    [[AGG_TEMP71:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
+// CHECK-NEXT:    [[AGG_TEMP4:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
+// CHECK-NEXT:    [[AGG_TEMP15:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
+// CHECK-NEXT:    [[AGG_TEMP22:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
+// CHECK-NEXT:    [[AGG_TEMP25:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
+// CHECK-NEXT:    [[AGG_TEMP28:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
+// CHECK-NEXT:    [[AGG_TEMP36:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
+// CHECK-NEXT:    [[AGG_TEMP39:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
+// CHECK-NEXT:    [[AGG_TEMP51:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
+// CHECK-NEXT:    [[AGG_TEMP63:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
+// CHECK-NEXT:    [[AGG_TEMP70:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
 // CHECK-NEXT:    store ptr [[P]], ptr [[P_INDIRECT_ADDR]], align 8
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P]], ptr align 8 [[P]], i64 24, i1 false)
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP1]], ptr align 8 [[P]], i64 24, i1 false)
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP2]], ptr align 8 [[AGG_TEMP1]], i64 24, i1 false)
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 0
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP1]], i32 0, i32 0
 // CHECK-NEXT:    [[WIDE_PTR_PTR:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 1
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP1]], i32 0, i32 1
 // CHECK-NEXT:    [[WIDE_PTR_UB:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 2
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP1]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_SHARED:%.*]], ptr [[WIDE_PTR_PTR]], i64 1
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[WIDE_PTR_UB]], !annotation [[META2]]
@@ -1182,34 +1177,34 @@ void shared_flexbase_self_assign_fr(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[WIDE_PTR_LB]], [[WIDE_PTR_PTR]], !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT4:.*]], label %[[TRAP3:.*]], !prof [[PROF3]], !annotation [[META4]]
-// CHECK:       [[TRAP3]]:
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT3:.*]], label %[[TRAP2:.*]], !prof [[PROF3]], !annotation [[META4]]
+// CHECK:       [[TRAP2]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META4]]
 // CHECK-NEXT:    unreachable, !annotation [[META4]]
-// CHECK:       [[CONT4]]:
+// CHECK:       [[CONT3]]:
 // CHECK-NEXT:    [[LEN:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[LEN]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP5]], ptr align 8 [[AGG_TEMP1]], i64 24, i1 false)
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR6:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP5]], i32 0, i32 0
-// CHECK-NEXT:    [[WIDE_PTR_PTR7:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR6]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR8:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP5]], i32 0, i32 1
-// CHECK-NEXT:    [[WIDE_PTR_UB9:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR8]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR10:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP5]], i32 0, i32 2
-// CHECK-NEXT:    [[WIDE_PTR_LB11:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR10]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR7]], i64 1
-// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[TMP4]], [[WIDE_PTR_UB9]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP5]], label %[[CONT13:.*]], label %[[TRAP12:.*]], !prof [[PROF3]], !annotation [[META2]]
-// CHECK:       [[TRAP12]]:
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP4]], ptr align 8 [[P]], i64 24, i1 false)
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR5:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP4]], i32 0, i32 0
+// CHECK-NEXT:    [[WIDE_PTR_PTR6:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR5]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR7:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP4]], i32 0, i32 1
+// CHECK-NEXT:    [[WIDE_PTR_UB8:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR7]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR9:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP4]], i32 0, i32 2
+// CHECK-NEXT:    [[WIDE_PTR_LB10:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR9]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR6]], i64 1
+// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[TMP4]], [[WIDE_PTR_UB8]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP5]], label %[[CONT12:.*]], label %[[TRAP11:.*]], !prof [[PROF3]], !annotation [[META2]]
+// CHECK:       [[TRAP11]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
-// CHECK:       [[CONT13]]:
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp ule ptr [[WIDE_PTR_LB11]], [[WIDE_PTR_PTR7]], !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP6]], label %[[CONT15:.*]], label %[[TRAP14:.*]], !prof [[PROF3]], !annotation [[META4]]
-// CHECK:       [[TRAP14]]:
+// CHECK:       [[CONT12]]:
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp ule ptr [[WIDE_PTR_LB10]], [[WIDE_PTR_PTR6]], !annotation [[META4]]
+// CHECK-NEXT:    br i1 [[TMP6]], label %[[CONT14:.*]], label %[[TRAP13:.*]], !prof [[PROF3]], !annotation [[META4]]
+// CHECK:       [[TRAP13]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META4]]
 // CHECK-NEXT:    unreachable, !annotation [[META4]]
-// CHECK:       [[CONT15]]:
-// CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR7]], i32 0, i32 1
+// CHECK:       [[CONT14]]:
+// CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR6]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[PTR]], align 8
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP3]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 [[IDX_EXT]]
@@ -1219,111 +1214,111 @@ void shared_flexbase_self_assign_fr(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    store ptr [[ADD_PTR]], ptr [[TMP9]], align 8
 // CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP]], i32 0, i32 2
 // CHECK-NEXT:    store ptr [[TMP7]], ptr [[TMP10]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP16]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR17:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP16]], i32 0, i32 0, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_PTR18:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR17]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR19:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP16]], i32 0, i32 1, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB20:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR19]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR21:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP16]], i32 0, i32 2, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB22:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR21]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP23]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR24:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP23]], i32 0, i32 1, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB25:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR24]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[WIDE_PTR_PTR18]], [[WIDE_PTR_UB25]], !annotation [[META5]]
-// CHECK-NEXT:    br i1 [[CMP]], label %[[LAND_LHS_TRUE:.*]], label %[[LAND_END49:.*]], !annotation [[META5]]
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP15]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR16:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP15]], i32 0, i32 0, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_PTR17:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR16]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR18:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP15]], i32 0, i32 1, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB19:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR18]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR20:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP15]], i32 0, i32 2, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB21:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR20]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP22]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR23:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP22]], i32 0, i32 1, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB24:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR23]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[WIDE_PTR_PTR17]], [[WIDE_PTR_UB24]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP]], label %[[LAND_LHS_TRUE:.*]], label %[[LAND_END48:.*]], !annotation [[META5]]
 // CHECK:       [[LAND_LHS_TRUE]]:
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP26]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR27:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP26]], i32 0, i32 2, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB28:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR27]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP29]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR30:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP29]], i32 0, i32 0, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_PTR31:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR30]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR32:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP29]], i32 0, i32 1, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB33:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR32]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR34:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP29]], i32 0, i32 2, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB35:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR34]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[CMP36:%.*]] = icmp ule ptr [[WIDE_PTR_LB28]], [[WIDE_PTR_PTR31]], !annotation [[META5]]
-// CHECK-NEXT:    br i1 [[CMP36]], label %[[LAND_RHS:.*]], label %[[LAND_END49]], !annotation [[META5]]
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP25]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR26:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP25]], i32 0, i32 2, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB27:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR26]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP28]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR29:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP28]], i32 0, i32 0, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_PTR30:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR29]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR31:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP28]], i32 0, i32 1, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB32:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR31]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR33:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP28]], i32 0, i32 2, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB34:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR33]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[CMP35:%.*]] = icmp ule ptr [[WIDE_PTR_LB27]], [[WIDE_PTR_PTR30]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP35]], label %[[LAND_RHS:.*]], label %[[LAND_END48]], !annotation [[META5]]
 // CHECK:       [[LAND_RHS]]:
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP37]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR38:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP37]], i32 0, i32 1, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB39:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR38]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP40]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR41:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP40]], i32 0, i32 0, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_PTR42:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR41]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR43:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP40]], i32 0, i32 1, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_UB44:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR43]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR45:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP40]], i32 0, i32 2, !annotation [[META5]]
-// CHECK-NEXT:    [[WIDE_PTR_LB46:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR45]], align 8, !annotation [[META5]]
-// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[WIDE_PTR_UB39]] to i64, !annotation [[META5]]
-// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[WIDE_PTR_PTR42]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP36]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR37:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP36]], i32 0, i32 1, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB38:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR37]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP39]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR40:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP39]], i32 0, i32 0, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_PTR41:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR40]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR42:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP39]], i32 0, i32 1, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_UB43:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR42]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR44:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP39]], i32 0, i32 2, !annotation [[META5]]
+// CHECK-NEXT:    [[WIDE_PTR_LB45:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR44]], align 8, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[WIDE_PTR_UB38]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[WIDE_PTR_PTR41]] to i64, !annotation [[META5]]
 // CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !annotation [[META5]]
 // CHECK-NEXT:    [[SUB_PTR_DIV:%.*]] = sdiv exact i64 [[SUB_PTR_SUB]], 4, !annotation [[META5]]
-// CHECK-NEXT:    [[CMP47:%.*]] = icmp sle i64 11, [[SUB_PTR_DIV]], !annotation [[META5]]
-// CHECK-NEXT:    br i1 [[CMP47]], label %[[LAND_RHS48:.*]], label %[[LAND_END:.*]], !annotation [[META5]]
-// CHECK:       [[LAND_RHS48]]:
+// CHECK-NEXT:    [[CMP46:%.*]] = icmp sle i64 11, [[SUB_PTR_DIV]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP46]], label %[[LAND_RHS47:.*]], label %[[LAND_END:.*]], !annotation [[META5]]
+// CHECK:       [[LAND_RHS47]]:
 // CHECK-NEXT:    br label %[[LAND_END]], !annotation [[META5]]
 // CHECK:       [[LAND_END]]:
-// CHECK-NEXT:    [[TMP11:%.*]] = phi i1 [ false, %[[LAND_RHS]] ], [ true, %[[LAND_RHS48]] ]
-// CHECK-NEXT:    br label %[[LAND_END49]], !annotation [[META5]]
-// CHECK:       [[LAND_END49]]:
-// CHECK-NEXT:    [[TMP12:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[CONT15]] ], [ [[TMP11]], %[[LAND_END]] ], !annotation [[META5]]
-// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT51:.*]], label %[[TRAP50:.*]], !prof [[PROF3]], !annotation [[META5]]
-// CHECK:       [[TRAP50]]:
+// CHECK-NEXT:    [[TMP11:%.*]] = phi i1 [ false, %[[LAND_RHS]] ], [ true, %[[LAND_RHS47]] ]
+// CHECK-NEXT:    br label %[[LAND_END48]], !annotation [[META5]]
+// CHECK:       [[LAND_END48]]:
+// CHECK-NEXT:    [[TMP12:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[CONT14]] ], [ [[TMP11]], %[[LAND_END]] ], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT50:.*]], label %[[TRAP49:.*]], !prof [[PROF3]], !annotation [[META5]]
+// CHECK:       [[TRAP49]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META5]]
 // CHECK-NEXT:    unreachable, !annotation [[META5]]
-// CHECK:       [[CONT51]]:
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP52]], ptr align 8 [[P]], i64 24, i1 false)
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR53:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP52]], i32 0, i32 0
-// CHECK-NEXT:    [[WIDE_PTR_PTR54:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR53]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR55:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP52]], i32 0, i32 1
-// CHECK-NEXT:    [[WIDE_PTR_UB56:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR55]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR57:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP52]], i32 0, i32 2
-// CHECK-NEXT:    [[WIDE_PTR_LB58:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR57]], align 8
-// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR54]], i64 1
-// CHECK-NEXT:    [[TMP14:%.*]] = icmp ule ptr [[TMP13]], [[WIDE_PTR_UB56]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP14]], label %[[CONT60:.*]], label %[[TRAP59:.*]], !prof [[PROF3]], !annotation [[META2]]
-// CHECK:       [[TRAP59]]:
+// CHECK:       [[CONT50]]:
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP51]], ptr align 8 [[P]], i64 24, i1 false)
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR52:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP51]], i32 0, i32 0
+// CHECK-NEXT:    [[WIDE_PTR_PTR53:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR52]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR54:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP51]], i32 0, i32 1
+// CHECK-NEXT:    [[WIDE_PTR_UB55:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR54]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR56:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP51]], i32 0, i32 2
+// CHECK-NEXT:    [[WIDE_PTR_LB57:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR56]], align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR53]], i64 1
+// CHECK-NEXT:    [[TMP14:%.*]] = icmp ule ptr [[TMP13]], [[WIDE_PTR_UB55]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP14]], label %[[CONT59:.*]], label %[[TRAP58:.*]], !prof [[PROF3]], !annotation [[META2]]
+// CHECK:       [[TRAP58]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
-// CHECK:       [[CONT60]]:
-// CHECK-NEXT:    [[TMP15:%.*]] = icmp ule ptr [[WIDE_PTR_LB58]], [[WIDE_PTR_PTR54]], !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP15]], label %[[CONT62:.*]], label %[[TRAP61:.*]], !prof [[PROF3]], !annotation [[META4]]
-// CHECK:       [[TRAP61]]:
+// CHECK:       [[CONT59]]:
+// CHECK-NEXT:    [[TMP15:%.*]] = icmp ule ptr [[WIDE_PTR_LB57]], [[WIDE_PTR_PTR53]], !annotation [[META4]]
+// CHECK-NEXT:    br i1 [[TMP15]], label %[[CONT61:.*]], label %[[TRAP60:.*]], !prof [[PROF3]], !annotation [[META4]]
+// CHECK:       [[TRAP60]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META4]]
 // CHECK-NEXT:    unreachable, !annotation [[META4]]
-// CHECK:       [[CONT62]]:
-// CHECK-NEXT:    [[LEN63:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR54]], i32 0, i32 0
-// CHECK-NEXT:    store i32 11, ptr [[LEN63]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP64]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false)
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR65:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP64]], i32 0, i32 0
-// CHECK-NEXT:    [[WIDE_PTR_PTR66:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR65]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR67:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP64]], i32 0, i32 1
-// CHECK-NEXT:    [[WIDE_PTR_UB68:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR67]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR69:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP64]], i32 0, i32 2
-// CHECK-NEXT:    [[WIDE_PTR_LB70:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR69]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP71]], ptr align 8 [[P]], i64 24, i1 false)
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR72:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP71]], i32 0, i32 0
-// CHECK-NEXT:    [[WIDE_PTR_PTR73:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR72]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR74:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP71]], i32 0, i32 1
-// CHECK-NEXT:    [[WIDE_PTR_UB75:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR74]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR76:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP71]], i32 0, i32 2
-// CHECK-NEXT:    [[WIDE_PTR_LB77:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR76]], align 8
-// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR73]], i64 1
-// CHECK-NEXT:    [[TMP17:%.*]] = icmp ule ptr [[TMP16]], [[WIDE_PTR_UB75]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP17]], label %[[CONT79:.*]], label %[[TRAP78:.*]], !prof [[PROF3]], !annotation [[META2]]
-// CHECK:       [[TRAP78]]:
+// CHECK:       [[CONT61]]:
+// CHECK-NEXT:    [[LEN62:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR53]], i32 0, i32 0
+// CHECK-NEXT:    store i32 11, ptr [[LEN62]], align 8
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP63]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false)
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR64:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP63]], i32 0, i32 0
+// CHECK-NEXT:    [[WIDE_PTR_PTR65:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR64]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR66:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP63]], i32 0, i32 1
+// CHECK-NEXT:    [[WIDE_PTR_UB67:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR66]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR68:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP63]], i32 0, i32 2
+// CHECK-NEXT:    [[WIDE_PTR_LB69:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR68]], align 8
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP70]], ptr align 8 [[P]], i64 24, i1 false)
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR71:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP70]], i32 0, i32 0
+// CHECK-NEXT:    [[WIDE_PTR_PTR72:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR71]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR73:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP70]], i32 0, i32 1
+// CHECK-NEXT:    [[WIDE_PTR_UB74:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR73]], align 8
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR75:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP70]], i32 0, i32 2
+// CHECK-NEXT:    [[WIDE_PTR_LB76:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR75]], align 8
+// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR72]], i64 1
+// CHECK-NEXT:    [[TMP17:%.*]] = icmp ule ptr [[TMP16]], [[WIDE_PTR_UB74]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP17]], label %[[CONT78:.*]], label %[[TRAP77:.*]], !prof [[PROF3]], !annotation [[META2]]
+// CHECK:       [[TRAP77]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
-// CHECK:       [[CONT79]]:
-// CHECK-NEXT:    [[TMP18:%.*]] = icmp ule ptr [[WIDE_PTR_LB77]], [[WIDE_PTR_PTR73]], !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP18]], label %[[CONT81:.*]], label %[[TRAP80:.*]], !prof [[PROF3]], !annotation [[META4]]
-// CHECK:       [[TRAP80]]:
+// CHECK:       [[CONT78]]:
+// CHECK-NEXT:    [[TMP18:%.*]] = icmp ule ptr [[WIDE_PTR_LB76]], [[WIDE_PTR_PTR72]], !annotation [[META4]]
+// CHECK-NEXT:    br i1 [[TMP18]], label %[[CONT80:.*]], label %[[TRAP79:.*]], !prof [[PROF3]], !annotation [[META4]]
+// CHECK:       [[TRAP79]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META4]]
 // CHECK-NEXT:    unreachable, !annotation [[META4]]
-// CHECK:       [[CONT81]]:
-// CHECK-NEXT:    [[PTR82:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR73]], i32 0, i32 1
-// CHECK-NEXT:    store ptr [[WIDE_PTR_PTR66]], ptr [[PTR82]], align 8
+// CHECK:       [[CONT80]]:
+// CHECK-NEXT:    [[PTR81:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR72]], i32 0, i32 1
+// CHECK-NEXT:    store ptr [[WIDE_PTR_PTR65]], ptr [[PTR81]], align 8
 // CHECK-NEXT:    ret void
 //
 void shared_flexbase_self_assign_fr_reverse(struct Shared * __bidi_indexable p) {

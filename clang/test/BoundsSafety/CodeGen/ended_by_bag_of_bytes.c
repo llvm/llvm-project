@@ -19,11 +19,8 @@ struct T {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[T:%.*]] = alloca [[STRUCT_T:%.*]], align 8
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
-// CHECK-NEXT:    [[AGG_TEMP1:%.*]] = alloca [[STRUCT_S:%.*]], align 8
 // CHECK-NEXT:    [[AGG_TEMP3:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
-// CHECK-NEXT:    [[AGG_TEMP4:%.*]] = alloca [[STRUCT_T]], align 8
 // CHECK-NEXT:    [[AGG_TEMP5:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
-// CHECK-NEXT:    [[AGG_TEMP6:%.*]] = alloca [[STRUCT_S]], align 8
 // CHECK-NEXT:    [[AGG_TEMP9:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
 // CHECK-NEXT:    [[AGG_TEMP10:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
 // CHECK-NEXT:    [[AGG_TEMP17:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
@@ -35,8 +32,7 @@ struct T {
 // CHECK-NEXT:    store i32 [[T_COERCE0:%.*]], ptr [[TMP0]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i32, ptr }, ptr [[T]], i32 0, i32 1
 // CHECK-NEXT:    store ptr [[T_COERCE1:%.*]], ptr [[TMP1]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP1]], ptr align 8 [[S:%.*]], i64 24, i1 false)
-// CHECK-NEXT:    [[ITER:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[AGG_TEMP1]], i32 0, i32 0
+// CHECK-NEXT:    [[ITER:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[S:%.*]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ITER]], align 8
 // CHECK-NEXT:    [[START:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[START]], align 8
@@ -48,10 +44,9 @@ struct T {
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[TMP6]], align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // CHECK-NEXT:    store ptr [[TMP4]], ptr [[TMP7]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP4]], ptr align 8 [[T]], i64 16, i1 false)
-// CHECK-NEXT:    [[CNT:%.*]] = getelementptr inbounds nuw [[STRUCT_T]], ptr [[AGG_TEMP4]], i32 0, i32 0
+// CHECK-NEXT:    [[CNT:%.*]] = getelementptr inbounds nuw [[STRUCT_T]], ptr [[T]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[CNT]], align 8
-// CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_T]], ptr [[AGG_TEMP4]], i32 0, i32 1
+// CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_T]], ptr [[T]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[PTR]], align 8
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP8]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 [[IDX_EXT]]
@@ -61,8 +56,7 @@ struct T {
 // CHECK-NEXT:    store ptr [[ADD_PTR]], ptr [[TMP11]], align 8
 // CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP3]], i32 0, i32 2
 // CHECK-NEXT:    store ptr [[TMP9]], ptr [[TMP12]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP6]], ptr align 8 [[S]], i64 24, i1 false)
-// CHECK-NEXT:    [[ITER7:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[AGG_TEMP6]], i32 0, i32 0
+// CHECK-NEXT:    [[ITER7:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[ITER7]], align 8
 // CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[END]], align 8

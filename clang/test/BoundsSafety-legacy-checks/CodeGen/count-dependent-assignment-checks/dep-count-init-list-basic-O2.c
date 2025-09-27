@@ -106,7 +106,7 @@ void TestAccessFail() {
 // CHECK:       trap:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont47:
+// CHECK:       cont46:
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 36, ptr nonnull [[ARR]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
