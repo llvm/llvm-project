@@ -33,8 +33,8 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  std::string RawFunctionsThatShouldNotThrow;
-  std::string RawIgnoredExceptions;
+  StringRef RawFunctionsThatShouldNotThrow;
+  StringRef RawIgnoredExceptions;
 
   llvm::StringSet<> FunctionsThatShouldNotThrow;
   utils::ExceptionAnalyzer Tracer;
