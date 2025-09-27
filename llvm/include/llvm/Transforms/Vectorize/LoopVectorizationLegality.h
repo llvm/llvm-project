@@ -64,7 +64,8 @@ class LoopVectorizeHints {
     HK_FORCE,
     HK_ISVECTORIZED,
     HK_PREDICATE,
-    HK_SCALABLE
+    HK_SCALABLE,
+    HK_SCALAREPILOGUE
   };
 
   /// Hint - associates name and validation with the hint value.
@@ -97,6 +98,9 @@ class LoopVectorizeHints {
   /// Says whether we should use fixed width or scalable vectorization.
   Hint Scalable;
 
+  /// Hint specifying how we should lower the scalar epilogue.
+  Hint ScalarEpilogue;
+
   /// Return the loop metadata prefix.
   static StringRef Prefix() { return "llvm.loop."; }
 
@@ -119,6 +123,33 @@ public:
     /// scalable vectors when the cost-model is inconclusive. This is the
     /// default when the scalable.enable hint is enabled through a pragma.
     SK_PreferScalable = 1
+  };
+
+  /// Whether it is allowed to have the original scalar loop execute at least
+  /// once. This may be needed as a fallback loop in case runtime
+  /// aliasing/dependence checks fail, or to handle the tail/remainder
+  /// iterations when the trip count is unknown or doesn't divide by the VF, or
+  /// as a peel-loop to handle gaps in interleave-groups. Under optsize and when
+  /// the trip count is very small we don't allow anyiterations to execute in
+  /// the scalar loop.
+  enum ScalarEpilogueKind {
+    // The default: allowing scalar epilogues.
+    SEK_Allowed,
+
+    // Vectorization with OptForSize: don't allow epilogues.
+    SEK_NotAllowedOptSize,
+
+    // A special case of vectorisation with OptForSize: loops with a very small
+    // trip count are considered for vectorization under OptForSize, thereby
+    // making sure the cost of their loop body is dominant, free of runtime
+    // guards and scalar iteration overheads.
+    SEK_NotAllowedLowTripLoop,
+
+    // Loop hint predicate indicating an epilogue is undesired.
+    SEK_NotNeededUsePredicate,
+
+    // Directive indicating we must either tail fold or not vectorize
+    SEK_NotAllowedUsePredicate
   };
 
   LoopVectorizeHints(const Loop *L, bool InterleaveOnlyWhenForced,
@@ -156,6 +187,21 @@ public:
       return FK_Disabled;
     return (ForceKind)Force.Value;
   }
+  ScalarEpilogueKind getScalarEpilogue() const {
+    return static_cast<ScalarEpilogueKind>(ScalarEpilogue.Value);
+  }
+  bool isScalarEpilogueAllowed() const {
+    return ScalarEpilogue.Value == SEK_Allowed;
+  }
+  void setScalarEpilogue(ScalarEpilogueKind SEK) { ScalarEpilogue.Value = SEK; }
+
+  // Determine how to lower the scalar epilogue and set it. Depends on 1)
+  // optimising for minimum code-size, 2) predicate compiler options, 3) loop
+  // hints forcing predication, and 4) a TTI hook that analyses whether the loop
+  // is suitable for predication.
+  void setScalarEpilogue(ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
+                         TargetLibraryInfo *TLI, LoopVectorizationLegality &LVL,
+                         InterleavedAccessInfo *IAI);
 
   /// \return true if scalable vectorization has been explicitly disabled.
   bool isScalableVectorizationDisabled() const {
@@ -196,6 +242,8 @@ private:
 
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter &ORE;
+
+  const TargetTransformInfo *TTI;
 };
 
 /// This holds vectorization requirements that must be verified late in

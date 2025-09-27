@@ -83,6 +83,34 @@ static cl::opt<bool> EnableHistogramVectorization(
     "enable-histogram-loop-vectorization", cl::init(false), cl::Hidden,
     cl::desc("Enables autovectorization of some loops containing histograms"));
 
+// Option prefer-predicate-over-epilogue indicates that an epilogue is
+// undesired, that predication is preferred, and this lists all options. I.e.,
+// the vectorizer will try to fold the tail-loop (epilogue) into the vector body
+// and predicate the instructions accordingly. If tail-folding fails, there are
+// different fallback strategies depending on these values:
+enum class PreferPredicateTy {
+  ScalarEpilogue = 0,
+  PredicateElseScalarEpilogue,
+  PredicateOrDontVectorize
+};
+
+static cl::opt<PreferPredicateTy> PreferPredicateOverEpilogue(
+    "prefer-predicate-over-epilogue",
+    cl::init(PreferPredicateTy::ScalarEpilogue), cl::Hidden,
+    cl::desc("Tail-folding and predication preferences over creating a scalar "
+             "epilogue loop."),
+    cl::values(
+        clEnumValN(PreferPredicateTy::ScalarEpilogue, "scalar-epilogue",
+                   "Don't tail-predicate loops, create scalar epilogue"),
+        clEnumValN(PreferPredicateTy::PredicateElseScalarEpilogue,
+                   "predicate-else-scalar-epilogue",
+                   "prefer tail-folding, create scalar epilogue if tail "
+                   "folding fails."),
+        clEnumValN(PreferPredicateTy::PredicateOrDontVectorize,
+                   "predicate-dont-vectorize",
+                   "prefers tail-folding, don't attempt vectorization if "
+                   "tail-folding fails.")));
+
 /// Maximum vectorization interleave count.
 static const unsigned MaxInterleaveFactor = 16;
 
@@ -100,6 +128,8 @@ bool LoopVectorizeHints::Hint::validate(unsigned Val) {
   case HK_PREDICATE:
   case HK_SCALABLE:
     return (Val == 0 || Val == 1);
+  case HK_SCALAREPILOGUE:
+    return Val <= SEK_NotAllowedUsePredicate;
   }
   return false;
 }
@@ -114,7 +144,8 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
       IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
       Predicate("vectorize.predicate.enable", FK_Undefined, HK_PREDICATE),
       Scalable("vectorize.scalable.enable", SK_Unspecified, HK_SCALABLE),
-      TheLoop(L), ORE(ORE) {
+      ScalarEpilogue("scalarepilogue", SEK_Allowed, HK_SCALAREPILOGUE),
+      TheLoop(L), ORE(ORE), TTI(TTI) {
   // Populate values with existing loop metadata.
   getHintsFromMetadata();
 
@@ -302,8 +333,8 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
     return;
   unsigned Val = C->getZExtValue();
 
-  Hint *Hints[] = {&Width,        &Interleave, &Force,
-                   &IsVectorized, &Predicate,  &Scalable};
+  Hint *Hints[] = {&Width,     &Interleave, &Force,         &IsVectorized,
+                   &Predicate, &Scalable,   &ScalarEpilogue};
   for (auto *H : Hints) {
     if (Name == H->Name) {
       if (H->validate(Val))
@@ -313,6 +344,63 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
       break;
     }
   }
+}
+
+void LoopVectorizeHints::setScalarEpilogue(ProfileSummaryInfo *PSI,
+                                           BlockFrequencyInfo *BFI,
+                                           TargetLibraryInfo *TLI,
+                                           LoopVectorizationLegality &LVL,
+                                           InterleavedAccessInfo *IAI) {
+  // 1) OptSize takes precedence over all other options, i.e. if this is set,
+  // don't look at hints or options, and don't request a scalar epilogue.
+  // (For PGSO, as shouldOptimizeForSize isn't currently accessible from
+  // LoopAccessInfo (due to code dependency and not being able to reliably get
+  // PSI/BFI from a loop analysis under NPM), we cannot suppress the collection
+  // of strides in LoopAccessInfo::analyzeLoop() and vectorize without
+  // versioning when the vectorization is forced, unlike hasOptSize. So revert
+  // back to the old way and vectorize with versioning when forced. See D81345.)
+  Function *F = TheLoop->getHeader()->getParent();
+  if (F->hasOptSize() ||
+      (llvm::shouldOptimizeForSize(TheLoop->getHeader(), PSI, BFI,
+                                   PGSOQueryType::IRPass) &&
+       getForce() != LoopVectorizeHints::FK_Enabled)) {
+    ScalarEpilogue.Value = LoopVectorizeHints::SEK_NotAllowedOptSize;
+    return;
+  }
+
+  // 2) If set, obey the directives
+  if (PreferPredicateOverEpilogue.getNumOccurrences()) {
+    switch (PreferPredicateOverEpilogue) {
+    case PreferPredicateTy::ScalarEpilogue:
+      ScalarEpilogue.Value = LoopVectorizeHints::SEK_Allowed;
+      return;
+    case PreferPredicateTy::PredicateElseScalarEpilogue:
+      ScalarEpilogue.Value = LoopVectorizeHints::SEK_NotNeededUsePredicate;
+      return;
+    case PreferPredicateTy::PredicateOrDontVectorize:
+      ScalarEpilogue.Value = LoopVectorizeHints::SEK_NotAllowedUsePredicate;
+      return;
+    };
+  }
+
+  // 3) If set, obey the hints
+  switch (getPredicate()) {
+  case LoopVectorizeHints::FK_Enabled:
+    ScalarEpilogue.Value = LoopVectorizeHints::SEK_NotNeededUsePredicate;
+    return;
+  case LoopVectorizeHints::FK_Disabled:
+    ScalarEpilogue.Value = LoopVectorizeHints::SEK_Allowed;
+    return;
+  };
+
+  // 4) if the TTI hook indicates this is profitable, request predication.
+  TailFoldingInfo TFI(TLI, &LVL, IAI);
+  if (TTI->preferPredicateOverEpilogue(&TFI)) {
+    ScalarEpilogue.Value = LoopVectorizeHints::SEK_NotNeededUsePredicate;
+    return;
+  }
+
+  ScalarEpilogue.Value = LoopVectorizeHints::SEK_Allowed;
 }
 
 // Return true if the inner loop \p Lp is uniform with regard to the outer loop
