@@ -55,6 +55,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -12153,6 +12154,145 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       APFloat Result(X);
       (void)Result.fusedMultiplyAdd(Y, Z, RM);
       ResultElements.push_back(APValue(Result));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_phaddw128:
+  case clang::X86::BI__builtin_ia32_phaddw256:
+  case clang::X86::BI__builtin_ia32_phaddd128:
+  case clang::X86::BI__builtin_ia32_phaddd256:
+  case clang::X86::BI__builtin_ia32_phaddsw128:
+  case clang::X86::BI__builtin_ia32_phaddsw256:
+
+  case clang::X86::BI__builtin_ia32_phsubw128:
+  case clang::X86::BI__builtin_ia32_phsubw256:
+  case clang::X86::BI__builtin_ia32_phsubd128:
+  case clang::X86::BI__builtin_ia32_phsubd256:
+  case clang::X86::BI__builtin_ia32_phsubsw128:
+  case clang::X86::BI__builtin_ia32_phsubsw256:{
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+
+      unsigned SourceLen = SourceLHS.getVectorLength();
+      SmallVector<APValue, 4> ResultElements;
+      ResultElements.reserve(SourceLen);
+      for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
+        APSInt LHSA = SourceLHS.getVectorElt(EltNum).getInt();
+        APSInt LHSB = SourceLHS.getVectorElt(EltNum + 1).getInt();
+
+        switch (E->getBuiltinCallee()) {
+        case clang::X86::BI__builtin_ia32_phaddw128:
+        case clang::X86::BI__builtin_ia32_phaddw256:
+        case clang::X86::BI__builtin_ia32_phaddd128:
+        case clang::X86::BI__builtin_ia32_phaddd256:
+        ResultElements.push_back(
+            APValue(APSInt(LHSA+LHSB, DestUnsigned)));
+        break;
+        case clang::X86::BI__builtin_ia32_phaddsw128:
+        case clang::X86::BI__builtin_ia32_phaddsw256:
+          ResultElements.push_back(APValue(APSInt(
+              LHSA.isSigned() ? LHSA.sadd_sat(LHSB) : LHSA.uadd_sat(LHSB),
+              DestUnsigned)));
+          break;
+        case clang::X86::BI__builtin_ia32_phsubw128:
+        case clang::X86::BI__builtin_ia32_phsubw256:
+        case clang::X86::BI__builtin_ia32_phsubd128:
+        case clang::X86::BI__builtin_ia32_phsubd256:
+          ResultElements.push_back(APValue(APSInt(LHSA - LHSB, DestUnsigned)));
+          break;
+        case clang::X86::BI__builtin_ia32_phsubsw128:
+        case clang::X86::BI__builtin_ia32_phsubsw256:
+          ResultElements.push_back(APValue(APSInt(
+              LHSA.isSigned() ? LHSA.ssub_sat(LHSB) : LHSA.usub_sat(LHSB),
+              DestUnsigned)));
+          break;
+      }
+    }
+    for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
+      APSInt RHSA = SourceRHS.getVectorElt(EltNum).getInt();
+      APSInt RHSB = SourceRHS.getVectorElt(EltNum + 1).getInt();
+
+      switch (E->getBuiltinCallee()) {
+      case clang::X86::BI__builtin_ia32_phaddw128:
+      case clang::X86::BI__builtin_ia32_phaddw256:
+      case clang::X86::BI__builtin_ia32_phaddd128:
+      case clang::X86::BI__builtin_ia32_phaddd256:
+        ResultElements.push_back(APValue(APSInt(RHSA + RHSB, DestUnsigned)));
+        break;
+      case clang::X86::BI__builtin_ia32_phaddsw128:
+      case clang::X86::BI__builtin_ia32_phaddsw256:
+        ResultElements.push_back(APValue(
+            APSInt(RHSA.isSigned() ? RHSA.sadd_sat(RHSB) : RHSA.uadd_sat(RHSB),
+                   DestUnsigned)));
+        break;
+      case clang::X86::BI__builtin_ia32_phsubw128:
+      case clang::X86::BI__builtin_ia32_phsubw256:
+      case clang::X86::BI__builtin_ia32_phsubd128:
+      case clang::X86::BI__builtin_ia32_phsubd256:
+        ResultElements.push_back(APValue(APSInt(RHSA - RHSB, DestUnsigned)));
+        break;
+      case clang::X86::BI__builtin_ia32_phsubsw128:
+      case clang::X86::BI__builtin_ia32_phsubsw256:
+        ResultElements.push_back(APValue(
+            APSInt(RHSA.isSigned() ? RHSA.ssub_sat(RHSB) : RHSA.usub_sat(RHSB),
+                   DestUnsigned)));
+        break;
+      }
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case clang::X86::BI__builtin_ia32_haddpd:
+  case clang::X86::BI__builtin_ia32_haddpd256:
+  case clang::X86::BI__builtin_ia32_haddps:
+  case clang::X86::BI__builtin_ia32_haddps256: {
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+    for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
+      APFloat LHSA = SourceLHS.getVectorElt(EltNum).getFloat();
+      APFloat LHSB = SourceLHS.getVectorElt(EltNum + 1).getFloat();
+      LHSA.add(LHSB, APFloat::rmNearestTiesToEven);
+      ResultElements.push_back(APValue(LHSA));
+    }
+    for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
+      APFloat RHSA = SourceRHS.getVectorElt(EltNum).getFloat();
+      APFloat RHSB = SourceRHS.getVectorElt(EltNum + 1).getFloat();
+      RHSA.add(RHSB, APFloat::rmNearestTiesToEven);
+      ResultElements.push_back(APValue(RHSA));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case clang::X86::BI__builtin_ia32_hsubpd:
+  case clang::X86::BI__builtin_ia32_hsubpd256:
+  case clang::X86::BI__builtin_ia32_hsubps:
+  case clang::X86::BI__builtin_ia32_hsubps256: {
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+    for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
+      APFloat LHSA = SourceLHS.getVectorElt(EltNum).getFloat();
+      APFloat LHSB = SourceLHS.getVectorElt(EltNum + 1).getFloat();
+      LHSA.subtract(LHSB, APFloat::rmNearestTiesToEven);
+      ResultElements.push_back(APValue(LHSA));
+    }
+    for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
+      APFloat RHSA = SourceRHS.getVectorElt(EltNum).getFloat();
+      APFloat RHSB = SourceRHS.getVectorElt(EltNum + 1).getFloat();
+      RHSA.subtract(RHSB, APFloat::rmNearestTiesToEven);
+      ResultElements.push_back(APValue(RHSA));
     }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
