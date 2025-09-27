@@ -386,3 +386,11 @@
            xvmulhuh 4, 5, 7
 #CHECK-BE: xvmulhuh 4, 5, 7              # encoding: [0xf0,0x85,0x3b,0xd0]
 #CHECK-LE: xvmulhuh 4, 5, 7              # encoding: [0xd0,0x3b,0x85,0xf0]
+
+           lxvpb32x 2, 15, 16
+#CHECK-BE: lxvpb32x 2, 15, 16            # encoding: [0x7c,0x4f,0x86,0xda]
+#CHECK-LE: lxvpb32x 2, 15, 16            # encoding: [0xda,0x86,0x4f,0x7c]
+
+           stxvpb32x 2, 15, 16
+#CHECK-BE: stxvpb32x 2, 15, 16            # encoding: [0x7c,0x4f,0x87,0xda]
+#CHECK-LE: stxvpb32x 2, 15, 16            # encoding: [0xda,0x87,0x4f,0x7c]
