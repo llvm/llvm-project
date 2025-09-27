@@ -1411,20 +1411,6 @@ def FeatureGloballyAddressableScratch : SubtargetFeature<
   "FLAT instructions can access scratch memory for any thread in any wave"
 >;
 
-// FIXME: Remove after all users are migrated to attribute.
-def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
-  "DynamicVGPR",
-  "true",
-  "Enable dynamic VGPR mode"
->;
-
-// FIXME: Remove after all users are migrated to attribute.
-def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
-  "DynamicVGPRBlockSize32",
-  "true",
-  "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
->;
-
 // Enable the use of SCRATCH_STORE/LOAD_BLOCK instructions for saving and
 // restoring the callee-saved registers.
 def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
