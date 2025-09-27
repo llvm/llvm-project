@@ -24,7 +24,8 @@
 //   returns 0, or a single vtable's function returns 1, replace each virtual
 //   call with a comparison of the vptr against that vtable's address.
 //
-// This pass is intended to be used during the regular and thin LTO pipelines:
+// This pass is intended to be used during the regular/thin and non-LTO
+// pipelines:
 //
 // During regular LTO, the pass determines the best optimization for each
 // virtual call and applies the resolutions directly to virtual calls that are
@@ -48,6 +49,14 @@
 //   is supported.
 // - Import phase: (same as with hybrid case above).
 //
+// During Speculative devirtualization mode -not restricted to LTO-:
+// - The pass applies speculative devirtualization without requiring any type of
+//   visibility.
+// - Skips other features like virtual constant propagation, uniform return
+//   value optimization, unique return value optimization and branch funnels as
+//   they need LTO.
+// - This mode is enabled via 'devirtualize-speculatively' flag.
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
@@ -61,7 +70,9 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -119,6 +130,13 @@ STATISTIC(NumUniqueRetVal, "Number of unique return value optimizations");
 STATISTIC(NumVirtConstProp1Bit,
           "Number of 1 bit virtual constant propagations");
 STATISTIC(NumVirtConstProp, "Number of virtual constant propagations");
+
+// TODO: This option eventually should support any public visibility vtables
+// with/out LTO.
+static cl::opt<bool> ClDevirtualizeSpeculatively(
+    "devirtualize-speculatively",
+    cl::desc("Enable speculative devirtualization optimization"),
+    cl::init(false));
 
 static cl::opt<PassSummaryAction> ClSummaryAction(
     "wholeprogramdevirt-summary-action",
@@ -618,9 +636,11 @@ struct DevirtModule {
   std::map<CallInst *, unsigned> NumUnsafeUsesForTypeTest;
   PatternList FunctionsToSkip;
 
+  const bool DevirtSpeculatively;
   DevirtModule(Module &M, ModuleAnalysisManager &MAM,
                ModuleSummaryIndex *ExportSummary,
-               const ModuleSummaryIndex *ImportSummary)
+               const ModuleSummaryIndex *ImportSummary,
+               bool DevirtSpeculatively)
       : M(M), MAM(MAM),
         FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
         ExportSummary(ExportSummary), ImportSummary(ImportSummary),
@@ -633,7 +653,8 @@ struct DevirtModule {
         RemarksEnabled(areRemarksEnabled()),
         OREGetter([&](Function &F) -> OptimizationRemarkEmitter & {
           return FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-        }) {
+        }),
+        DevirtSpeculatively(DevirtSpeculatively) {
     assert(!(ExportSummary && ImportSummary));
     FunctionsToSkip.init(SkipFunctionNames);
   }
@@ -747,7 +768,8 @@ struct DevirtModule {
 
   // Lower the module using the action and summary passed as command line
   // arguments. For testing purposes only.
-  static bool runForTesting(Module &M, ModuleAnalysisManager &MAM);
+  static bool runForTesting(Module &M, ModuleAnalysisManager &MAM,
+                            bool DevirtSpeculatively);
 };
 
 struct DevirtIndex {
@@ -790,11 +812,22 @@ struct DevirtIndex {
 PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
   if (UseCommandLine) {
-    if (!DevirtModule::runForTesting(M, MAM))
+    if (!DevirtModule::runForTesting(M, MAM, ClDevirtualizeSpeculatively))
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
   }
-  if (!DevirtModule(M, MAM, ExportSummary, ImportSummary).run())
+
+  std::optional<ModuleSummaryIndex> Index;
+  if (!ExportSummary && !ImportSummary && DevirtSpeculatively) {
+    // Build the ExportSummary from the module.
+    assert(!ExportSummary &&
+           "ExportSummary is expected to be empty in non-LTO mode");
+    ProfileSummaryInfo PSI(M);
+    Index.emplace(buildModuleSummaryIndex(M, nullptr, &PSI));
+    ExportSummary = Index.has_value() ? &Index.value() : nullptr;
+  }
+  if (!DevirtModule(M, MAM, ExportSummary, ImportSummary, DevirtSpeculatively)
+           .run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
@@ -990,7 +1023,8 @@ static Error checkCombinedSummaryForTesting(ModuleSummaryIndex *Summary) {
   return ErrorSuccess();
 }
 
-bool DevirtModule::runForTesting(Module &M, ModuleAnalysisManager &MAM) {
+bool DevirtModule::runForTesting(Module &M, ModuleAnalysisManager &MAM,
+                                 bool DevirtSpeculatively) {
   std::unique_ptr<ModuleSummaryIndex> Summary =
       std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
 
@@ -1019,7 +1053,8 @@ bool DevirtModule::runForTesting(Module &M, ModuleAnalysisManager &MAM) {
                    ClSummaryAction == PassSummaryAction::Export ? Summary.get()
                                                                 : nullptr,
                    ClSummaryAction == PassSummaryAction::Import ? Summary.get()
-                                                                : nullptr)
+                                                                : nullptr,
+                   DevirtSpeculatively)
           .run();
 
   if (!ClWriteSummary.empty()) {
@@ -1083,10 +1118,10 @@ bool DevirtModule::tryFindVirtualCallTargets(
     if (!TM.Bits->GV->isConstant())
       return false;
 
-    // We cannot perform whole program devirtualization analysis on a vtable
-    // with public LTO visibility.
-    if (TM.Bits->GV->getVCallVisibility() ==
-        GlobalObject::VCallVisibilityPublic)
+    // Without DevirtSpeculatively, we cannot perform whole program
+    // devirtualization analysis on a vtable with public LTO visibility.
+    if (!DevirtSpeculatively && TM.Bits->GV->getVCallVisibility() ==
+                                    GlobalObject::VCallVisibilityPublic)
       return false;
 
     Function *Fn = nullptr;
@@ -1103,6 +1138,12 @@ bool DevirtModule::tryFindVirtualCallTargets(
     // We can disregard __cxa_pure_virtual as a possible call target, as
     // calls to pure virtuals are UB.
     if (Fn->getName() == "__cxa_pure_virtual")
+      continue;
+
+    // In most cases empty functions will be overridden by the
+    // implementation of the derived class, so we can skip them.
+    if (DevirtSpeculatively && Fn->getReturnType()->isVoidTy() &&
+        Fn->getInstructionCount() <= 1)
       continue;
 
     // We can disregard unreachable functions as possible call targets, as
@@ -1223,10 +1264,11 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         CallTrap->setDebugLoc(CB.getDebugLoc());
       }
 
-      // If fallback checking is enabled, add support to compare the virtual
-      // function pointer to the devirtualized target. In case of a mismatch,
-      // fall back to indirect call.
-      if (DevirtCheckMode == WPDCheckMode::Fallback) {
+      // If fallback checking or speculative devirtualization are enabled,
+      // add support to compare the virtual function pointer to the
+      // devirtualized target. In case of a mismatch, fall back to indirect
+      // call.
+      if (DevirtCheckMode == WPDCheckMode::Fallback || DevirtSpeculatively) {
         MDNode *Weights = MDBuilder(M.getContext()).createLikelyBranchWeights();
         // Version the indirect call site. If the called value is equal to the
         // given callee, 'NewInst' will be executed, otherwise the original call
@@ -1325,10 +1367,10 @@ bool DevirtModule::trySingleImplDevirt(
   if (!IsExported)
     return false;
 
-  // If the only implementation has local linkage, we must promote to external
-  // to make it visible to thin LTO objects. We can only get here during the
-  // ThinLTO export phase.
-  if (TheFn->hasLocalLinkage()) {
+  // Out of speculative devirtualization mode, if the only implementation has
+  // local linkage, we must promote to external to make it visible to thin LTO
+  // objects.
+  if (!DevirtSpeculatively && TheFn->hasLocalLinkage()) {
     std::string NewName = (TheFn->getName() + ".llvm.merged").str();
 
     // Since we are renaming the function, any comdats with the same name must
@@ -2350,6 +2392,11 @@ bool DevirtModule::run() {
 
   Function *TypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
+  // If we are in speculative devirtualization mode, we can work on the public
+  // type test intrinsics.
+  if (!TypeTestFunc && DevirtSpeculatively)
+    TypeTestFunc =
+        Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   Function *TypeCheckedLoadFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load);
   Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
@@ -2472,8 +2519,11 @@ bool DevirtModule::run() {
                  .WPDRes[S.first.ByteOffset];
     if (tryFindVirtualCallTargets(TargetsForSlot, TypeMemberInfos,
                                   S.first.ByteOffset, ExportSummary)) {
-
-      if (!trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res)) {
+      bool SingleImplDevirt =
+          trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res);
+      // Out of speculative devirtualization mode, Try to apply virtual constant
+      // propagation or branch funneling.
+      if (!SingleImplDevirt && !DevirtSpeculatively) {
         DidVirtualConstProp |=
             tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first);
 
