@@ -604,7 +604,7 @@ class QCILICC<bits<3> funct3, bits<2> funct2, DAGOperand InTyRs2, string opcodes
   let Inst{31-25} = {simm, funct2};
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class QCIMVCC<bits<3> funct3, string opcodestr>
     : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, GPRNoX0:$rs3),
@@ -612,7 +612,7 @@ class QCIMVCC<bits<3> funct3, string opcodestr>
   let Constraints = "$rd = $rd_wb";
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class QCIMVCCI<bits<3> funct3, string opcodestr, DAGOperand immType>
     : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, GPRNoX0:$rs1, immType:$imm, GPRNoX0:$rs3),
