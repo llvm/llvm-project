@@ -531,6 +531,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
   RegisterTargetMachine<GCNTargetMachine> Y(getTheGCNTarget());
 
+  initializeAMDGPUVerifier();
+
   PassRegistry *PR = PassRegistry::getPassRegistry();
   initializeR600ClauseMergePassPass(*PR);
   initializeR600ControlFlowFinalizerPass(*PR);

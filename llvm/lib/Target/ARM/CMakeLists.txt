@@ -57,6 +57,7 @@ add_llvm_target(ARMCodeGen
   ARMTargetMachine.cpp
   ARMTargetObjectFile.cpp
   ARMTargetTransformInfo.cpp
+  ARMVerifier.cpp
   MLxExpansionPass.cpp
   MVEGatherScatterLowering.cpp
   MVELaneInterleavingPass.cpp
