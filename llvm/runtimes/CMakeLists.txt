@@ -209,7 +209,7 @@ foreach(entry ${runtimes})
   string(REPLACE "-" "_" canon_name ${name})
   string(TOUPPER ${canon_name} canon_name)
   list(APPEND prefixes ${canon_name})
-  if (${canon_name} STREQUAL "OPENMP")
+  if (${canon_name} STREQUAL "OPENMP" OR ${canon_name} STREQUAL "OFFLOAD")
     list(APPEND prefixes "LIBOMP" "LIBOMPTARGET")
   endif()
   # Many compiler-rt options start with SANITIZER_ and DARWIN_ rather than
