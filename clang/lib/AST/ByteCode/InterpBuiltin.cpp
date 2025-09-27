@@ -11,7 +11,6 @@
 #include "Interp.h"
 #include "InterpBuiltinBitCast.h"
 #include "PrimType.h"
-#include "immintrin.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/Builtins.h"
@@ -2990,28 +2989,28 @@ static bool interp__builtin_x86_vcomish(InterpState &S, CodePtr OpPC,
   bool result = false;
 
   switch (P.getZExtValue()) {
-  case _CMP_EQ_OQ: /* _mm_ucomieq_sh */
-  case _CMP_EQ_OS: /* _mm_comieq_sh */
+  case 0x00: /* _CMP_EQ_OQ */
+  case 0x10: /* _CMP_EQ_OS */
     result = isEq && !A0.isNaN() && !B0.isNaN();
     break;
-  case _CMP_NEQ_US: /* _mm_comineq_sh */
-  case _CMP_NEQ_UQ: /* _mm_ucomineq_sh */
+  case 0x14: /* _CMP_NEQ_US */
+  case 0x04: /* _CMP_NEQ_UQ */
     result = !isEq || A0.isNaN() || B0.isNaN();
     break;
-  case _CMP_GE_OS: /* _mm_comige_sh */
-  case _CMP_GE_OQ: /* _mm_ucomige_sh */
+  case 0x0d: /* _CMP_GE_OS */
+  case 0x1d: /* _CMP_GE_OQ */
     result = !isLt && !A0.isNaN() && !B0.isNaN();
     break;
-  case _CMP_LT_OS: /* _mm_comilt_sh */
-  case _CMP_LT_OQ: /* _mm_ucomilt_sh */
+  case 0x01: /* _CMP_LT_OS */
+  case 0x11: /* _CMP_LT_OQ */
     result = isLt && !A0.isNaN() && !B0.isNaN();
     break;
-  case _CMP_GT_OS: /* _mm_comigt_sh */
-  case _CMP_GT_OQ: /* _mm_ucomigt_sh */
+  case 0x0e: /* _CMP_GT_OS */
+  case 0x1e: /* _CMP_GT_OQ */
     result = isGt && !A0.isNaN() && !B0.isNaN();
     break;
-  case _CMP_LE_OS: /* _mm_comile_sh */
-  case _CMP_LE_OQ: /*_mm_ucomile_sh */
+  case 0x02: /* _CMP_LE_OS */
+  case 0x12: /* _CMP_LE_OQ */
     result = !isGt && !A0.isNaN() && !B0.isNaN();
     break;
   default:
