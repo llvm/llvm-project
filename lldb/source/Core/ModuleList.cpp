@@ -19,6 +19,8 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/Platform.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpecList.h"
@@ -1029,9 +1031,9 @@ size_t ModuleList::RemoveOrphanSharedModules(bool mandatory) {
 
 Status
 ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
-                            const FileSpecList *module_search_paths_ptr,
                             llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                            bool *did_create_ptr, bool always_create) {
+                            bool *did_create_ptr, bool always_create,
+                            bool allow_locate_callback) {
   ModuleList &shared_module_list = GetSharedModuleList();
   std::lock_guard<std::recursive_mutex> guard(
       shared_module_list.m_modules_mutex);
@@ -1087,6 +1089,24 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   if (module_sp)
     return error;
 
+  // Try target's platform locate module callback before second attempt
+  if (allow_locate_callback) {
+    ModuleSpec module_spec_copy(module_spec);
+    Target *target = module_spec_copy.GetTargetPtr();
+    if (target) {
+      Platform *platform = target->GetPlatform().get();
+      if (platform) {
+        FileSpec symbol_file_spec;
+        platform->CallLocateModuleCallbackIfSet(
+            module_spec, module_sp, symbol_file_spec, did_create_ptr);
+        if (module_sp) {
+          // Success! The callback found a module
+          return error;
+        }
+      }
+    }
+  }
+
   module_sp = std::make_shared<Module>(module_spec);
   // Make sure there are a module and an object file since we can specify a
   // valid file path with an architecture that might not be in that file. By
@@ -1112,6 +1132,16 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
     }
   } else {
     module_sp.reset();
+  }
+
+  // Get module search paths from the target if available
+  ModuleSpec module_spec_copy(module_spec);
+  Target *target = module_spec_copy.GetTargetPtr();
+  FileSpecList module_search_paths;
+  FileSpecList *module_search_paths_ptr = nullptr;
+  if (target) {
+    module_search_paths = target->GetExecutableSearchPaths();
+    module_search_paths_ptr = &module_search_paths;
   }
 
   if (module_search_paths_ptr) {

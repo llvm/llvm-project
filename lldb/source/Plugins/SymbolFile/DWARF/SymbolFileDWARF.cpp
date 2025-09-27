@@ -2018,7 +2018,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
     }
 
     Status error = ModuleList::GetSharedModule(dwo_module_spec, module_sp,
-                                               nullptr, nullptr, nullptr);
+                                               nullptr, nullptr);
     if (!module_sp) {
       // ReportWarning also rate-limits based on the warning string,
       // but in a -gmodules build, each object file has a similar DAG
