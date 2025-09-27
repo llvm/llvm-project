@@ -27,10 +27,7 @@ static bool isMessageExpressionInsideMacro(const ObjCMessageExpr *Expr) {
     return true;
 
   SourceLocation SelectorLocation = Expr->getSelectorStartLoc();
-  if (SelectorLocation.isMacroID())
-    return true;
-
-  return false;
+  return SelectorLocation.isMacroID();
 }
 
 // Walk up the class hierarchy looking for an -init method, returning true

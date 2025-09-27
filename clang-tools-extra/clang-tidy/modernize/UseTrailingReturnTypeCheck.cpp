@@ -459,7 +459,7 @@ UseTrailingReturnTypeCheck::UseTrailingReturnTypeCheck(
       TransformFunctions(Options.get("TransformFunctions", true)),
       TransformLambdas(Options.get("TransformLambdas", TransformLambda::All)) {
 
-  if (TransformFunctions == false && TransformLambdas == TransformLambda::None)
+  if (!TransformFunctions && TransformLambdas == TransformLambda::None)
     this->configurationDiag(
         "The check 'modernize-use-trailing-return-type' will not perform any "
         "analysis because 'TransformFunctions' and 'TransformLambdas' are "
