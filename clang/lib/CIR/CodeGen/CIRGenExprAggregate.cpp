@@ -211,9 +211,7 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitAbstractConditionalOperator");
   }
-  void VisitChooseExpr(const ChooseExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitChooseExpr");
-  }
+  void VisitChooseExpr(const ChooseExpr *e) { Visit(e->getChosenSubExpr()); }
   void VisitCXXParenListInitExpr(CXXParenListInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXParenListInitExpr");
