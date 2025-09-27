@@ -60,14 +60,14 @@ void LLVMRemarkStreamer::finalize() {
 namespace mlir::remark {
 LogicalResult enableOptimizationRemarksWithLLVMStreamer(
     MLIRContext &ctx, StringRef path, llvm::remarks::Format fmt,
-    const RemarkCategories &cat, bool printAsEmitRemarks) {
+    const RemarkEngineOpts &opts, bool printAsEmitRemarks) {
 
   FailureOr<std::unique_ptr<detail::MLIRRemarkStreamerBase>> sOr =
       detail::LLVMRemarkStreamer::createToFile(path, fmt);
   if (failed(sOr))
     return failure();
 
-  return remark::enableOptimizationRemarks(ctx, std::move(*sOr), cat,
+  return remark::enableOptimizationRemarks(ctx, std::move(*sOr), opts,
                                            printAsEmitRemarks);
 }
 
