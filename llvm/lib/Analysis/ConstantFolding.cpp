@@ -951,21 +951,21 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
   // If the base value for this address is a literal integer value, fold the
   // getelementptr to the resulting integer value casted to the pointer type.
-  APInt BasePtr(DL.getPointerTypeSizeInBits(Ptr->getType()), 0);
+  APInt BaseIntVal(DL.getPointerTypeSizeInBits(Ptr->getType()), 0);
   if (auto *CE = dyn_cast<ConstantExpr>(Ptr)) {
     if (CE->getOpcode() == Instruction::IntToPtr) {
       if (auto *Base = dyn_cast<ConstantInt>(CE->getOperand(0)))
-        BasePtr = Base->getValue().zextOrTrunc(BasePtr.getBitWidth());
+        BaseIntVal = Base->getValue().zextOrTrunc(BaseIntVal.getBitWidth());
     }
   }
 
-  auto *PTy = cast<PointerType>(Ptr->getType());
-  if ((Ptr->isNullValue() || BasePtr != 0) &&
-      !DL.isNonIntegralPointerType(PTy)) {
+  if ((Ptr->isNullValue() || BaseIntVal != 0) &&
+      !DL.mustNotIntroduceIntToPtr(Ptr->getType())) {
+
     // If the index size is smaller than the pointer size, add to the low
     // bits only.
-    BasePtr.insertBits(BasePtr.trunc(BitWidth) + Offset, 0);
-    Constant *C = ConstantInt::get(Ptr->getContext(), BasePtr);
+    BaseIntVal.insertBits(BaseIntVal.trunc(BitWidth) + Offset, 0);
+    Constant *C = ConstantInt::get(Ptr->getContext(), BaseIntVal);
     return ConstantExpr::getIntToPtr(C, ResTy);
   }
 
