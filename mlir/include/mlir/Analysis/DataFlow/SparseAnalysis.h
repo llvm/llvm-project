@@ -431,6 +431,11 @@ protected:
       CallOpInterface call, ArrayRef<AbstractSparseLattice *> operandLattices,
       ArrayRef<const AbstractSparseLattice *> resultLattices) = 0;
 
+  /// The transfer function for call operations.
+  virtual LogicalResult visitCallOperationImpl(
+      CallOpInterface call, ArrayRef<AbstractSparseLattice *> operandLattices,
+      ArrayRef<const AbstractSparseLattice *> resultLattices) = 0;
+
   // Visit operands on branch instructions that are not forwarded.
   virtual void visitBranchOperand(OpOperand &operand) = 0;
 
@@ -463,21 +468,6 @@ protected:
   virtual LogicalResult
   visitCallableOperation(Operation *op, CallableOpInterface callable,
                          ArrayRef<AbstractSparseLattice *> operandLattices);
-
-  /// Visits a call operation. Given the result lattices, set the operand lattices.
-  //  Performs interprocedural data flow as follows: if the call
-  /// operation targets an external function, or if the solver is not
-  /// interprocedural, attempts to infer the results from the call arguments
-  /// using the user-provided `visitExternalCallImpl`. Otherwise, computes the
-  /// result lattices from the return sites if all return sites are known;
-  /// otherwise, conservatively marks the result lattices as having reached
-  /// their pessimistic fixpoints.
-  /// This method can be overridden to, for example, be less conservative and
-  /// propagate the information even if some return sites are unknown.
-  virtual LogicalResult
-  visitCallOperation(CallOpInterface call,
-                     ArrayRef<AbstractSparseLattice *> operandLattices,
-                     ArrayRef<const AbstractSparseLattice *> resultLattices);
 
 private:
   /// Recursively initialize the analysis on nested operations and blocks.
@@ -515,6 +505,7 @@ private:
   SmallVector<const AbstractSparseLattice *>
   getLatticeElementsFor(ProgramPoint *point, ValueRange values);
 
+protected:
   SymbolTableCollection &symbolTable;
 };
 
@@ -543,6 +534,13 @@ public:
   virtual LogicalResult visitOperation(Operation *op,
                                        ArrayRef<StateT *> operands,
                                        ArrayRef<const StateT *> results) = 0;
+
+  // implementation-specific hook for visitCallOperation.
+  virtual LogicalResult visitCallOperation(CallOpInterface call,
+                                       ArrayRef<StateT *> operands,
+                                       ArrayRef<const StateT *> results) {
+                                        return failure();
+                                       }
 
   /// Visit a call to an external function. This function is expected to set
   /// lattice values of the call operands. By default, calls `visitCallOperand`
@@ -598,6 +596,17 @@ private:
         {reinterpret_cast<const StateT *const *>(resultLattices.begin()),
          resultLattices.size()});
   }
+  LogicalResult visitCallOperationImpl(
+      CallOpInterface call, ArrayRef<AbstractSparseLattice *> operandLattices,
+      ArrayRef<const AbstractSparseLattice *> resultLattices) override {
+    return visitCallOperation(
+        call,
+        {reinterpret_cast<StateT *const *>(operandLattices.begin()),
+         operandLattices.size()},
+        {reinterpret_cast<const StateT *const *>(resultLattices.begin()),
+         resultLattices.size()});
+  }
+
 };
 
 } // end namespace dataflow

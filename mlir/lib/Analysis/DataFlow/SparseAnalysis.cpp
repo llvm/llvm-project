@@ -495,7 +495,50 @@ AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
   // For function calls, connect the arguments of the entry blocks to the
   // operands of the call op that are forwarded to these arguments.
   if (auto call = dyn_cast<CallOpInterface>(op)) {
-    if (visitCallOperation(call, operandLattices, resultLattices).succeeded()) {
+    LDBG() << "Processing CallOpInterface operation";
+
+    if (visitCallOperationImpl(call, operandLattices, resultLattices).succeeded()) {
+      return success();
+    }
+
+    //  Treat any function as external due to config.
+    if (!getSolverConfig().isInterprocedural()) {
+        visitExternalCallImpl(call, operandLattices, resultLattices);
+        return success();
+    }
+
+    Operation *callableOp = call.resolveCallableInTable(&symbolTable);
+    if (auto callable = dyn_cast_or_null<CallableOpInterface>(callableOp)) {
+      // Not all operands of a call op forward to arguments. Such operands are
+      // stored in `unaccounted`.
+      BitVector unaccounted(op->getNumOperands(), true);
+
+      // If the call invokes an external function, defer to the corresponding extension hook.
+      // By default, it just does `visitCallOperand` for all operands.
+      OperandRange argOperands = call.getArgOperands();
+      MutableArrayRef<OpOperand> argOpOperands =
+          operandsToOpOperands(argOperands);
+      Region *region = callable.getCallableRegion();
+      if (!region || region->empty()) {
+        visitExternalCallImpl(call, operandLattices, resultLattices);
+        return success();
+      }
+      // Otherwise, propagate information from the entry point of the function
+      // back to operands whenever possible.
+      Block &block = region->front();
+      for (auto [blockArg, argOpOperand] :
+           llvm::zip(block.getArguments(), argOpOperands)) {
+        meet(getLatticeElement(argOpOperand.get()),
+             *getLatticeElementFor(getProgramPointAfter(op), blockArg));
+        unaccounted.reset(argOpOperand.getOperandNumber());
+      }
+
+      // Handle the operands of the call op that aren't forwarded to any
+      // arguments.
+      for (int index : unaccounted.set_bits()) {
+        OpOperand &opOperand = op->getOpOperand(index);
+        visitCallOperand(opOperand);
+      }
       return success();
     }
   }
@@ -551,56 +594,6 @@ LogicalResult AbstractSparseBackwardDataFlowAnalysis::visitCallableOperation(
     setAllToExitStates(operandLattices);
   }
   return success();
-}
-
-LogicalResult AbstractSparseBackwardDataFlowAnalysis::visitCallOperation(
-    CallOpInterface call,
-    ArrayRef<AbstractSparseLattice *> operandLattices,
-    ArrayRef<const AbstractSparseLattice *> resultLattices) {
-    LDBG() << "Processing CallOpInterface operation";
-
-    //  Treat any function as external due to config.
-    if (!getSolverConfig().isInterprocedural()) {
-        visitExternalCallImpl(call, operandLattices, resultLattices);
-        return success();
-    }
-
-    Operation *callableOp = call.resolveCallableInTable(&symbolTable);
-    if (auto callable = dyn_cast_or_null<CallableOpInterface>(callableOp)) {
-      // Not all operands of a call op forward to arguments. Such operands are
-      // stored in `unaccounted`.
-      BitVector unaccounted(call->getNumOperands(), true);
-
-      // If the call invokes an external function, defer to the corresponding extension hook.
-      // By default, it just does `visitCallOperand` for all operands.
-      OperandRange argOperands = call.getArgOperands();
-      MutableArrayRef<OpOperand> argOpOperands =
-          operandsToOpOperands(argOperands);
-      Region *region = callable.getCallableRegion();
-
-      if (!region || region->empty()) {
-        visitExternalCallImpl(call, operandLattices, resultLattices);
-        return success();
-      }
-      // Otherwise, propagate information from the entry point of the function
-      // back to operands whenever possible.
-      Block &block = region->front();
-      for (auto [blockArg, argOpOperand] :
-           llvm::zip(block.getArguments(), argOpOperands)) {
-        meet(getLatticeElement(argOpOperand.get()),
-             *getLatticeElementFor(getProgramPointAfter(call), blockArg));
-        unaccounted.reset(argOpOperand.getOperandNumber());
-      }
-
-      // Handle the operands of the call op that aren't forwarded to any
-      // arguments.
-      for (int index : unaccounted.set_bits()) {
-        OpOperand &opOperand = call->getOpOperand(index);
-        visitCallOperand(opOperand);
-      }
-      return success();
-    }
-    return failure();
 }
 
 void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
