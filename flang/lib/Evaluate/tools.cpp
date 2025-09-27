@@ -100,7 +100,7 @@ auto IsVariableHelper::operator()(const Substring &x) const -> Result {
 }
 auto IsVariableHelper::operator()(const ProcedureDesignator &x) const
     -> Result {
-  if (const Symbol * symbol{x.GetSymbol()}) {
+  if (const Symbol *symbol{x.GetSymbol()}) {
     const Symbol *result{FindFunctionResult(*symbol)};
     return result && IsPointer(*result) && !IsProcedurePointer(*result);
   }
@@ -903,7 +903,7 @@ bool IsProcedurePointer(const Expr<SomeType> &expr) {
   if (IsNullProcedurePointer(&expr)) {
     return true;
   } else if (const auto *funcRef{UnwrapProcedureRef(expr)}) {
-    if (const Symbol * proc{funcRef->proc().GetSymbol()}) {
+    if (const Symbol *proc{funcRef->proc().GetSymbol()}) {
       const Symbol *result{FindFunctionResult(*proc)};
       return result && IsProcedurePointer(*result);
     } else {
@@ -940,7 +940,7 @@ bool IsObjectPointer(const Expr<SomeType> &expr) {
     return false;
   } else if (const auto *funcRef{UnwrapProcedureRef(expr)}) {
     return IsVariable(*funcRef);
-  } else if (const Symbol * symbol{UnwrapWholeSymbolOrComponentDataRef(expr)}) {
+  } else if (const Symbol *symbol{UnwrapWholeSymbolOrComponentDataRef(expr)}) {
     return IsPointer(symbol->GetUltimate());
   } else {
     return false;
@@ -1294,6 +1294,12 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
   } else if (lhsProcedure->IsPure() && !rhsProcedure->IsPure()) {
     msg = "PURE procedure %s may not be associated with non-PURE"
           " procedure designator '%s'"_err_en_US;
+  } else if (lhsProcedure->IsSimple() && !rhsProcedure->IsSimple()) {
+    msg = "SIMPLE procedure %s may not be associated with non-SIMPLE"
+          " procedure designator '%s'"_err_en_US;
+  } else if (!lhsProcedure->IsSimple() && rhsProcedure->IsSimple()) {
+    msg = "non-SIMPLE procedure %s may not be associated with SIMPLE"
+          " procedure designator '%s'"_err_en_US;
   } else if (lhsProcedure->IsFunction() && rhsProcedure->IsSubroutine()) {
     msg = "Function %s may not be associated with subroutine"
           " designator '%s'"_err_en_US;
@@ -1338,7 +1344,7 @@ const Symbol *UnwrapWholeSymbolDataRef(const std::optional<DataRef> &dataRef) {
 }
 
 const Symbol *UnwrapWholeSymbolOrComponentDataRef(const DataRef &dataRef) {
-  if (const Component * c{std::get_if<Component>(&dataRef.u)}) {
+  if (const Component *c{std::get_if<Component>(&dataRef.u)}) {
     return c->base().Rank() == 0 ? &c->GetLastSymbol() : nullptr;
   } else {
     return UnwrapWholeSymbolDataRef(dataRef);
@@ -1351,7 +1357,7 @@ const Symbol *UnwrapWholeSymbolOrComponentDataRef(
 }
 
 const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(const DataRef &dataRef) {
-  if (const CoarrayRef * c{std::get_if<CoarrayRef>(&dataRef.u)}) {
+  if (const CoarrayRef *c{std::get_if<CoarrayRef>(&dataRef.u)}) {
     return UnwrapWholeSymbolOrComponentOrCoarrayRef(c->base());
   } else {
     return UnwrapWholeSymbolOrComponentDataRef(dataRef);
@@ -1415,7 +1421,7 @@ static std::optional<Expr<SomeType>> DataConstantConversionHelper(
                 auto at{fromConst->lbounds()};
                 auto shape{fromConst->shape()};
                 for (auto n{GetSize(shape)}; n-- > 0;
-                     fromConst->IncrementSubscripts(at)) {
+                    fromConst->IncrementSubscripts(at)) {
                   auto elt{fromConst->At(at)};
                   if constexpr (TO == TypeCategory::Logical) {
                     values.emplace_back(std::move(elt));
@@ -1466,8 +1472,8 @@ bool IsAllocatableOrPointerObject(const Expr<SomeType> &expr) {
 
 bool IsAllocatableDesignator(const Expr<SomeType> &expr) {
   // Allocatable sub-objects are not themselves allocatable (9.5.3.1 NOTE 2).
-  if (const semantics::Symbol *
-      sym{UnwrapWholeSymbolOrComponentOrCoarrayRef(expr)}) {
+  if (const semantics::Symbol *sym{
+          UnwrapWholeSymbolOrComponentOrCoarrayRef(expr)}) {
     return semantics::IsAllocatable(sym->GetUltimate());
   }
   return false;
@@ -1960,7 +1966,7 @@ const Symbol &ResolveAssociations(
   if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
     if (!details->rank() /* not RANK(n) or RANK(*) */ &&
         !(stopAtTypeGuard && details->isTypeGuard())) {
-      if (const Symbol * nested{UnwrapWholeSymbolDataRef(details->expr())}) {
+      if (const Symbol *nested{UnwrapWholeSymbolDataRef(details->expr())}) {
         return ResolveAssociations(*nested);
       }
     }
@@ -1975,7 +1981,7 @@ const Symbol &ResolveAssociations(
 static const Symbol *GetAssociatedVariable(const AssocEntityDetails &details) {
   if (const auto &expr{details.expr()}) {
     if (IsVariable(*expr) && !HasVectorSubscript(*expr)) {
-      if (const Symbol * varSymbol{GetFirstSymbol(*expr)}) {
+      if (const Symbol *varSymbol{GetFirstSymbol(*expr)}) {
         return &GetAssociationRoot(*varSymbol);
       }
     }
@@ -1986,7 +1992,7 @@ static const Symbol *GetAssociatedVariable(const AssocEntityDetails &details) {
 const Symbol &GetAssociationRoot(const Symbol &original, bool stopAtTypeGuard) {
   const Symbol &symbol{ResolveAssociations(original, stopAtTypeGuard)};
   if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
-    if (const Symbol * root{GetAssociatedVariable(*details)}) {
+    if (const Symbol *root{GetAssociatedVariable(*details)}) {
       return *root;
     }
   }
@@ -1996,8 +2002,8 @@ const Symbol &GetAssociationRoot(const Symbol &original, bool stopAtTypeGuard) {
 const Symbol *GetMainEntry(const Symbol *symbol) {
   if (symbol) {
     if (const auto *subpDetails{symbol->detailsIf<SubprogramDetails>()}) {
-      if (const Scope * scope{subpDetails->entryScope()}) {
-        if (const Symbol * main{scope->symbol()}) {
+      if (const Scope *scope{subpDetails->entryScope()}) {
+        if (const Symbol *main{scope->symbol()}) {
           return main;
         }
       }
@@ -2062,6 +2068,15 @@ bool IsPureProcedure(const Symbol &original) {
 bool IsPureProcedure(const Scope &scope) {
   const Symbol *symbol{scope.GetSymbol()};
   return symbol && IsPureProcedure(*symbol);
+}
+
+bool IsSimpleProcedure(const Symbol &original) {
+  return original.attrs().test(Attr::SIMPLE);
+}
+
+bool IsSimpleProcedure(const Scope &scope) {
+  const Symbol *symbol{scope.GetSymbol()};
+  return symbol && IsSimpleProcedure(*symbol);
 }
 
 bool IsExplicitlyImpureProcedure(const Symbol &original) {
@@ -2178,7 +2193,7 @@ bool IsAutomatic(const Symbol &original) {
   const Symbol &symbol{original.GetUltimate()};
   if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
     if (!object->isDummy() && !IsAllocatable(symbol) && !IsPointer(symbol)) {
-      if (const DeclTypeSpec * type{symbol.GetType()}) {
+      if (const DeclTypeSpec *type{symbol.GetType()}) {
         // If a type parameter value is not a constant expression, the
         // object is automatic.
         if (type->category() == DeclTypeSpec::Character) {
@@ -2188,7 +2203,7 @@ bool IsAutomatic(const Symbol &original) {
               return true;
             }
           }
-        } else if (const DerivedTypeSpec * derived{type->AsDerived()}) {
+        } else if (const DerivedTypeSpec *derived{type->AsDerived()}) {
           for (const auto &pair : derived->parameters()) {
             if (const auto &value{pair.second.GetExplicit()}) {
               if (!evaluate::IsConstantExpr(*value)) {
@@ -2513,7 +2528,7 @@ common::IgnoreTKRSet GetIgnoreTKR(const Symbol &symbol) {
   common::IgnoreTKRSet result;
   if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
     result = object->ignoreTKR();
-    if (const Symbol * ownerSymbol{symbol.owner().symbol()}) {
+    if (const Symbol *ownerSymbol{symbol.owner().symbol()}) {
       if (const auto *ownerSubp{ownerSymbol->detailsIf<SubprogramDetails>()}) {
         if (ownerSubp->defaultIgnoreTKR()) {
           result |= common::ignoreTKRAll;
@@ -2527,7 +2542,7 @@ common::IgnoreTKRSet GetIgnoreTKR(const Symbol &symbol) {
 std::optional<int> GetDummyArgumentNumber(const Symbol *symbol) {
   if (symbol) {
     if (IsDummy(*symbol)) {
-      if (const Symbol * subpSym{symbol->owner().symbol()}) {
+      if (const Symbol *subpSym{symbol->owner().symbol()}) {
         if (const auto *subp{subpSym->detailsIf<SubprogramDetails>()}) {
           int j{0};
           for (const Symbol *dummy : subp->dummyArgs()) {
@@ -2552,12 +2567,12 @@ const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule) {
         nameDetails &&
         nameDetails->kind() == semantics::SubprogramKind::Module) {
       const Symbol *next{symInSubmodule->owner().symbol()};
-      while (const Symbol * submodSym{next}) {
+      while (const Symbol *submodSym{next}) {
         next = nullptr;
         if (const auto *modDetails{
                 submodSym->detailsIf<semantics::ModuleDetails>()};
             modDetails && modDetails->isSubmodule() && modDetails->scope()) {
-          if (const semantics::Scope & parent{modDetails->scope()->parent()};
+          if (const semantics::Scope &parent{modDetails->scope()->parent()};
               parent.IsSubmodule() || parent.IsModule()) {
             if (auto iter{parent.find(symInSubmodule->name())};
                 iter != parent.end()) {
