@@ -30,7 +30,6 @@ def construct_and_print_in_module(f):
         with ir.InsertionPoint(module.body):
             f()
         print(module)
-        module.operation.verify()
     return f
 
 

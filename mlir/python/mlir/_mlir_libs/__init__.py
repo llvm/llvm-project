@@ -126,6 +126,9 @@ def _site_initialize():
         if hasattr(m, "register_extensions"):
             logger.debug("Registering extensions from initializer %r", m)
             m.register_extensions(get_dialect_registry())
+        if hasattr(m, "register_external_models"):
+            logger.debug("Registering external models from initializer %r", m)
+            m.register_external_models(get_dialect_registry())
         if hasattr(m, "context_init_hook"):
             logger.debug("Adding context init hook from %r", m)
             post_init_hooks.append(m.context_init_hook)

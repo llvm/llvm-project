@@ -6,6 +6,7 @@ from mlir.ir import *
 from mlir.passmanager import *
 from mlir.execution_engine import *
 from mlir.runtime import *
+from mlir.dialects import func, llvm
 
 
 # Log everything to stderr and flush so that we have a unified stream to match

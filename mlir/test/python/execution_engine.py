@@ -5,6 +5,7 @@ from mlir.ir import *
 from mlir.passmanager import *
 from mlir.execution_engine import *
 from mlir.runtime import *
+from mlir.dialects import func, memref, arith, complex, cf, llvm
 
 try:
     from ml_dtypes import bfloat16, float8_e5m2

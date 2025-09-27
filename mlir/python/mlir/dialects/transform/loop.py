@@ -16,15 +16,6 @@ except ImportError as e:
 
 from typing import Optional, Union
 
-from ..._mlir_libs import get_dialect_registry as _get_dialect_registry
-from ..._mlir_libs._capi import (
-    register_transform_dialect_extension as _register_transform_dialect_extension,
-)
-
-_register_transform_dialect_extension(
-    "mlirLoopRegisterTransformDialectExtension", _get_dialect_registry()
-)
-
 
 @_ods_cext.register_operation(_Dialect, replace=True)
 class LoopOutlineOp(LoopOutlineOp):

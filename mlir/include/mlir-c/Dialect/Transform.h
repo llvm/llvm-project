@@ -76,19 +76,6 @@ MLIR_CAPI_EXPORTED MlirType mlirTransformParamTypeGet(MlirContext ctx,
 
 MLIR_CAPI_EXPORTED MlirType mlirTransformParamTypeGetType(MlirType type);
 
-//===---------------------------------------------------------------------===//
-// Extension Registration
-//===---------------------------------------------------------------------===//
-
-MLIR_CAPI_EXPORTED void
-mlirDebugRegisterTransformDialectExtension(MlirDialectRegistry registry);
-
-MLIR_CAPI_EXPORTED void
-mlirLoopRegisterTransformDialectExtension(MlirDialectRegistry registry);
-
-MLIR_CAPI_EXPORTED void
-mlirTuneRegisterTransformDialectExtension(MlirDialectRegistry registry);
-
 #ifdef __cplusplus
 }
 #endif

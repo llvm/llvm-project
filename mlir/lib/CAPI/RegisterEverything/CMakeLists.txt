@@ -44,3 +44,12 @@ add_mlir_upstream_c_api_library(MLIRCAPIRegisterAllExtensions
   MLIRCAPIIR
   MLIRRegisterAllExtensions
 )
+
+add_mlir_upstream_c_api_library(MLIRCAPIRegisterAllExternalModels
+  RegisterAllExternalModels.cpp
+  PARTIAL_SOURCES_INTENDED
+
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRRegisterAllDialects
+)

@@ -457,14 +457,11 @@ endfunction()
 #     This file is where the *Attrs are defined, not where the *Enums are defined.
 #     **WARNING**: This arg will shortly be removed when the TODO for
 #     declare_mlir_dialect_python_bindings is satisfied. Use at your risk.
-#   EMBED_CAPI_LINK_LIBS: Dependent CAPI libraries that this extension depends
-#     on. These will be collected for all extensions and put into an
-#     aggregate dylib that is linked against.
 function(declare_mlir_dialect_extension_python_bindings)
   cmake_parse_arguments(ARG
     "GEN_ENUM_BINDINGS"
     "ROOT_DIR;ADD_TO_PARENT;TD_FILE;DIALECT_NAME;EXTENSION_NAME"
-    "SOURCES;SOURCES_GLOB;DEPENDS;GEN_ENUM_BINDINGS_TD_FILE;EMBED_CAPI_LINK_LIBS"
+    "SOURCES;SOURCES_GLOB;DEPENDS;GEN_ENUM_BINDINGS_TD_FILE"
     ${ARGN})
   # Source files.
   set(_extension_target "${ARG_ADD_TO_PARENT}.${ARG_EXTENSION_NAME}")
@@ -506,7 +503,6 @@ function(declare_mlir_dialect_extension_python_bindings)
       ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
       ADD_TO_PARENT "${_extension_target}"
       SOURCES ${_sources}
-      EMBED_CAPI_LINK_LIBS "${ARG_EMBED_CAPI_LINK_LIBS}"
     )
   endif()
 endfunction()

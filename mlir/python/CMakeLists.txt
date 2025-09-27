@@ -23,6 +23,7 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
   ADD_TO_PARENT MLIRPythonSources.Core
   SOURCES
     _mlir_libs/__init__.py
+    _mlir_libs/_capi.py
     _mlir_libs/_mlir/py.typed
     ir.py
     passmanager.py
@@ -204,11 +205,7 @@ declare_mlir_dialect_extension_python_bindings(
   SOURCES
     dialects/transform/pdl.py
   DIALECT_NAME transform
-  EXTENSION_NAME transform_pdl_extension
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPITransformDialect
-    MLIRCAPIPDLTransformDialectExtension
-)
+  EXTENSION_NAME transform_pdl_extension)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -217,11 +214,7 @@ declare_mlir_dialect_extension_python_bindings(
   SOURCES
     dialects/transform/smt.py
   DIALECT_NAME transform
-  EXTENSION_NAME transform_smt_extension
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPITransformDialect
-    MLIRCAPISMTTransformDialectExtension
-)
+  EXTENSION_NAME transform_smt_extension)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -277,11 +270,7 @@ declare_mlir_dialect_extension_python_bindings(
   SOURCES
     dialects/transform/bufferization.py
   DIALECT_NAME transform
-  EXTENSION_NAME bufferization_transform
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPITransformDialect
-    MLIRCAPIBufferizationTransformDialectExtension
-  )
+  EXTENSION_NAME bufferization_transform)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -290,11 +279,7 @@ declare_mlir_dialect_extension_python_bindings(
   SOURCES
     dialects/transform/gpu.py
   DIALECT_NAME transform
-  EXTENSION_NAME gpu_transform
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPITransformDialect
-    MLIRCAPIGPUTransformDialectExtension
-)
+  EXTENSION_NAME gpu_transform)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -303,10 +288,7 @@ declare_mlir_dialect_extension_python_bindings(
   SOURCES
     dialects/transform/loop.py
   DIALECT_NAME transform
-  EXTENSION_NAME loop_transform
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPITransformDialect
-)
+  EXTENSION_NAME loop_transform)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -315,11 +297,7 @@ declare_mlir_dialect_extension_python_bindings(
   SOURCES
     dialects/transform/memref.py
   DIALECT_NAME transform
-  EXTENSION_NAME memref_transform
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPITransformDialect
-    MLIRCAPIMemRefTransformDialectExtension
-)
+  EXTENSION_NAME memref_transform)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -328,11 +306,7 @@ declare_mlir_dialect_extension_python_bindings(
   SOURCES
     dialects/transform/nvgpu.py
   DIALECT_NAME transform
-  EXTENSION_NAME nvgpu_transform
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPITransformDialect
-    MLIRCAPINVGPUTransformDialectExtension
-)
+  EXTENSION_NAME nvgpu_transform)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -344,9 +318,6 @@ declare_mlir_dialect_extension_python_bindings(
   EXTENSION_NAME structured_transform
   GEN_ENUM_BINDINGS_TD_FILE
     "../../include/mlir/Dialect/Linalg/TransformOps/LinalgTransformEnums.td"
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPITransformDialect
-    MLIRCAPILinalgTransformDialectExtension
 )
 
 declare_mlir_dialect_extension_python_bindings(
@@ -356,11 +327,7 @@ declare_mlir_dialect_extension_python_bindings(
   SOURCES
     dialects/transform/sparse_tensor.py
   DIALECT_NAME transform
-  EXTENSION_NAME sparse_tensor_transform
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPITransformDialect
-    MLIRCAPISparseTensorTransformDialectExtension
-)
+  EXTENSION_NAME sparse_tensor_transform)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -369,11 +336,7 @@ declare_mlir_dialect_extension_python_bindings(
   SOURCES
     dialects/transform/tensor.py
   DIALECT_NAME transform
-  EXTENSION_NAME tensor_transform
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPITransformDialect
-    MLIRCAPITensorTransformDialectExtension
-)
+  EXTENSION_NAME tensor_transform)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -385,9 +348,6 @@ declare_mlir_dialect_extension_python_bindings(
   EXTENSION_NAME vector_transform
   GEN_ENUM_BINDINGS_TD_FILE
     "../../include/mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPITransformDialect
-    MLIRCAPIVectorTransformDialectExtension
 )
 
 declare_mlir_dialect_python_bindings(
@@ -691,6 +651,7 @@ declare_mlir_python_extension(MLIRPythonExtension.RegisterEverything
     MLIRCAPIRegisterAllPasses
     MLIRCAPIRegisterAllExtensions
     MLIRCAPIRegisterAllLLVMTranslations
+    MLIRCAPIRegisterAllExternalModels
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Pybind
@@ -888,7 +849,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Pybind
     MLIRCAPIIR
     MLIRCAPISMT
     MLIRCAPIExportSMTLIB
-    MLIRCAPISMTTransformDialectExtension
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
@@ -989,20 +949,8 @@ endif()
 # once ready.
 ################################################################################
 
-set(MLIR_PYTHON_CAPI_DYLIB_NAME MLIRPythonCAPI)
-configure_file(
-  "${CMAKE_CURRENT_LIST_DIR}/mlir/_mlir_libs/_capi.py.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/_mlir_libs/_capi.py"
-  @ONLY
-)
-declare_mlir_python_sources(
-  MLIRPythonCAPICTypesBinding
-  ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
-  SOURCES _mlir_libs/_capi.py
-)
-
 set(MLIRPythonModules_ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}")
-add_mlir_python_common_capi_library(${MLIR_PYTHON_CAPI_DYLIB_NAME}
+add_mlir_python_common_capi_library(MLIRPythonCAPI
   INSTALL_COMPONENT MLIRPythonModules
   INSTALL_DESTINATION "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/_mlir_libs"
   OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
@@ -1120,8 +1068,7 @@ endif()
 
 set(_declared_sources
   MLIRPythonSources
-  MLIRPythonExtension.RegisterEverything
-  MLIRPythonCAPICTypesBinding)
+  MLIRPythonExtension.RegisterEverything)
 if(NOT CMAKE_CROSSCOMPILING)
   list(APPEND _declared_sources MLIRPythonExtension.Core.type_stub_gen)
 endif()

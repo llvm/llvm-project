@@ -1,4 +1,4 @@
-//===-- mlir-c/RegisterAllExtensions.h - Register all MLIR Extensions ---*-===//
+//===-- mlir-c/RegisterAllExternalModels.h - Register all MLIR model ----*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_C_REGISTER_EXTENSIONS_H
-#define MLIR_C_REGISTER_EXTENSIONS_H
+#ifndef MLIR_C_REGISTER_EXTERNAL_MODELS_H
+#define MLIR_C_REGISTER_EXTERNAL_MODELS_H
 
 #include "mlir-c/IR.h"
 
@@ -16,11 +16,12 @@
 extern "C" {
 #endif
 
-/// Register all compiler Extensions of MLIR.
-MLIR_CAPI_EXPORTED void mlirRegisterAllExtensions(MlirDialectRegistry registry);
+/// Register all compiler External models of MLIR.
+MLIR_CAPI_EXPORTED void
+mlirRegisterAllExternalModels(MlirDialectRegistry registry);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // MLIR_C_REGISTER_EXTENSIONS_H
+#endif // MLIR_C_REGISTER_EXTERNAL_MODELS_H

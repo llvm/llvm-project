@@ -15,16 +15,6 @@ except ImportError as e:
 from typing import Optional, Sequence, Union, overload
 
 
-from ..._mlir_libs import get_dialect_registry as _get_dialect_registry
-from ..._mlir_libs._capi import (
-    register_transform_dialect_extension as _register_transform_dialect_extension,
-)
-
-_register_transform_dialect_extension(
-    "mlirGPURegisterTransformDialectExtension", _get_dialect_registry()
-)
-
-
 @_ods_cext.register_operation(_Dialect, replace=True)
 class MapForallToBlocks(MapForallToBlocks):
     """Specialization for MapForallToBlocks class."""

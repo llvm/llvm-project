@@ -19,7 +19,6 @@ def run(f):
                 f(sequence.bodyTarget)
                 transform.YieldOp()
         print(module)
-        module.operation.verify()
     return f
 
 

@@ -28,8 +28,8 @@ MLIR_CAPI_EXPORTED void mlirRegisterAllDialects(MlirDialectRegistry registry);
 /// Register all translations to LLVM IR for dialects that can support it.
 MLIR_CAPI_EXPORTED void mlirRegisterAllLLVMTranslations(MlirContext context);
 
-// /// Register all compiler passes of MLIR.
-// MLIR_CAPI_EXPORTED void mlirRegisterAllPasses(void);
+/// Register all compiler passes of MLIR.
+MLIR_CAPI_EXPORTED void mlirRegisterAllPasses(void);
 
 #ifdef __cplusplus
 }

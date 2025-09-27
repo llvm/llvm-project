@@ -19,7 +19,6 @@ def run(f):
             f()
         module.operation.verify()
         print(module)
-        module.operation.verify()
     return f
 
 

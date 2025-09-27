@@ -12,7 +12,6 @@ def run(f):
             print("\nTEST:", f.__name__)
             f(module)
         print(module)
-        module.operation.verify()
     return f
 
 

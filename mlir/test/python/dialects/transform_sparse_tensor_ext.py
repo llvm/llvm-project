@@ -19,7 +19,6 @@ def run(f):
                 transform.YieldOp()
         print("\nTEST:", f.__name__)
         print(module)
-        module.operation.verify()
     return f
 
 

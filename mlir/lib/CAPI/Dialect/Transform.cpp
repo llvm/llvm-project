@@ -9,11 +9,8 @@
 #include "mlir-c/Dialect/Transform.h"
 #include "mlir-c/Support.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/Transform/DebugExtension/DebugExtension.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
-#include "mlir/Dialect/Transform/LoopExtension/LoopExtension.h"
-#include "mlir/Dialect/Transform/TuneExtension/TuneExtension.h"
 
 using namespace mlir;
 
@@ -108,16 +105,4 @@ MlirType mlirTransformParamTypeGet(MlirContext ctx, MlirType type) {
 
 MlirType mlirTransformParamTypeGetType(MlirType type) {
   return wrap(cast<transform::ParamType>(unwrap(type)).getType());
-}
-
-void mlirDebugRegisterTransformDialectExtension(MlirDialectRegistry registry) {
-  mlir::transform::registerDebugExtension(*unwrap(registry));
-}
-
-void mlirLoopRegisterTransformDialectExtension(MlirDialectRegistry registry) {
-  mlir::transform::registerLoopExtension(*unwrap(registry));
-}
-
-void mlirTuneRegisterTransformDialectExtension(MlirDialectRegistry registry) {
-  mlir::transform::registerTuneExtension(*unwrap(registry));
 }
