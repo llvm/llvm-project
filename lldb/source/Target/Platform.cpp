@@ -1667,11 +1667,12 @@ void Platform::CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
   cached_module_spec.GetUUID().Clear(); // Clear UUID since it may contain md5
                                         // content hash instead of real UUID.
   cached_module_spec.GetFileSpec() = module_file_spec;
+  cached_module_spec.GetSymbolFileSpec() = symbol_file_spec;
   cached_module_spec.GetPlatformFileSpec() = module_spec.GetFileSpec();
   cached_module_spec.SetObjectOffset(0);
 
   error = ModuleList::GetSharedModule(cached_module_spec, module_sp, nullptr,
-                                      did_create_ptr, false);
+                                      did_create_ptr, false, false);
   if (error.Success() && module_sp) {
     // Succeeded to load the module file.
     LLDB_LOGF(log, "%s: locate module callback succeeded: module=%s symbol=%s",
