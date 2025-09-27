@@ -274,15 +274,15 @@ void testUnicode(void) {
 
 // Test Objective-C modifier flags.
 void testObjCModifierFlags(void) {
-  NSLog(@"%[]@", @"Foo"); // expected-warning {{missing object format flag}}
-  NSLog(@"%[", @"Foo"); // expected-warning {{incomplete format specifier}}
-  NSLog(@"%[tt", @"Foo");  // expected-warning {{incomplete format specifier}}
+  NSLog(@"%[]@", @"Foo"); // expected-warning {{missing object format flag}} expected-warning{{data argument not used by format string}}
+  NSLog(@"%[", @"Foo"); // expected-warning {{incomplete format specifier}} expected-warning{{data argument not used by format string}}
+  NSLog(@"%[tt", @"Foo");  // expected-warning {{incomplete format specifier}} expected-warning{{data argument not used by format string}}
   NSLog(@"%[tt]@", @"Foo"); // no-warning
   NSLog(@"%[tt]@ %s", @"Foo", "hello"); // no-warning
   NSLog(@"%s %[tt]@", "hello", @"Foo"); // no-warning
-  NSLog(@"%[blark]@", @"Foo"); // expected-warning {{'blark' is not a valid object format flag}}
+  NSLog(@"%[blark]@", @"Foo"); // expected-warning {{'blark' is not a valid object format flag}} expected-warning{{data argument not used by format string}}
   NSLog(@"%2$[tt]@ %1$[tt]@", @"Foo", @"Bar"); // no-warning
-  NSLog(@"%2$[tt]@ %1$[tt]s", @"Foo", @"Bar"); // expected-warning {{object format flags cannot be used with 's' conversion specifier}}
+  NSLog(@"%2$[tt]@ %1$[tt]s", @"Foo", @"Bar"); // expected-warning {{object format flags cannot be used with 's' conversion specifier}} expected-warning{{data argument not used by format string}}
 }
 
 @interface RD23622446_Tester: NSObject
