@@ -200,13 +200,13 @@ private:
 
     /// Map type identifiers to callsite labels. Labels are generated for each
     /// indirect callsite in the function.
-    SmallVector<std::pair<CGTypeId, MCSymbol *>> CallSiteLabels;
+    SmallVector<std::pair<CGTypeId, MCSymbol *>> IndirectCallsites;
     SmallSet<MCSymbol *, 4> DirectCallees;
   };
 
   /// Enumeration of function kinds, and their mapping to function kind values
   /// stored in callgraph section entries.
-  enum class FunctionKind : uint64_t {
+  enum class FunctionKind : uint8_t {
     /// Function cannot be target to indirect calls.
     NOT_INDIRECT_TARGET = 0,
 
@@ -217,7 +217,7 @@ private:
     INDIRECT_TARGET_KNOWN_TID = 2,
   };
 
-  enum CallGraphSectionFormatVersion : uint64_t {
+  enum CallGraphSectionFormatVersion : uint32_t {
     V_0 = 0,
   };
 

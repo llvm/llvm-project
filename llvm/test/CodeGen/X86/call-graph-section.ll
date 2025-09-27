@@ -25,12 +25,12 @@ entry:
 
 ; CHECK: Hex dump of section '.callgraph':
 
-; CHECK-DAG: 2444f731 f5eecb3e
+; CHECK-DAG: 2444f7 31f5eecb 3e
 !0 = !{i64 0, !"_ZTSFvE.generalized"}
 !1 = !{!0}
-; CHECK-DAG: 5486bc59 814b8e30
+; CHECK-DAG: 5486bc 59814b8e 30
 !2 = !{i64 0, !"_ZTSFicE.generalized"}
 !3 = !{!2}
-; CHECK-DAG: 7ade6814 f897fd77
+; CHECK-DAG: 7ade68 14f897fd 77
 !4 = !{!5}
 !5 = !{i64 0, !"_ZTSFPvS_E.generalized"}
