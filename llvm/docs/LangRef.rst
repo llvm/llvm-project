@@ -1489,6 +1489,8 @@ Currently, only the following parameter attributes are defined:
     function, returning a pointer to allocated storage disjoint from the
     storage for any other object accessible to the caller.
 
+.. _captures_attr:
+
 ``captures(...)``
     This attribute restricts the ways in which the callee may capture the
     pointer. This is not a valid attribute for return values. This attribute
@@ -7542,6 +7544,33 @@ dereferenceable or null, otherwise the behavior is undefined.
 The number of bytes known to be dereferenceable is specified by the integer
 value in the metadata node. This is analogous to the ''dereferenceable_or_null''
 attribute on parameters and return values.
+
+'``captures``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``!captures`` metadata can only be applied to ``store`` instructions with
+a pointer-typed value operand. It restricts the capturing behavior of the store
+value operand in the same way the ``captures(...)`` attribute would do on a
+call. See the :ref:`pointer capture section <pointercapture>` for a detailed
+discussion of capture semantics.
+
+The ``!captures`` metadata accepts a non-empty list of strings from the same
+set as the :ref:`captures attribute <captures_attr>`:
+``!"address"``, ``!"address_is_null"``, ``!"provenance"`` and
+``!"read_provenance"``. ``!"none"`` is not supported.
+
+For example ``store ptr %x, ptr %y, !captures !{!"address"}`` indicates that
+the copy of pointer ``%x`` stored to location ``%y`` will only be used to
+inspect its integral address value, and not dereferenced. Dereferencing the
+pointer would result in undefined behavior.
+
+Similarly ``store ptr %x, ptr %y, !captures !{!"address", !"read_provenance"}``
+indicates that while reads through the stored pointer are allowed, writes would
+result in undefined behavior.
+
+The ``!captures`` attribute makes no statement about other uses of ``%x``, or
+uses of the stored-to memory location after it has been overwritten with a
+different value.
 
 .. _llvm.loop:
 
