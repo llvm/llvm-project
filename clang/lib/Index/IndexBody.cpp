@@ -508,7 +508,7 @@ public:
   bool TraverseTypeConstraint(const TypeConstraint *C) {
     IndexCtx.handleReference(C->getNamedConcept(), C->getConceptNameLoc(),
                              Parent, ParentDC);
-    return RecursiveASTVisitor::TraverseTypeConstraint(C);
+    return base::TraverseTypeConstraint(C);
   }
 };
 

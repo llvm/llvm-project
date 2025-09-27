@@ -363,7 +363,7 @@ public:
   ASTVisitor(ParentMap &Map) : Map(Map) {}
 
 private:
-  friend class RecursiveASTVisitor<ASTVisitor>;
+  friend class RecursiveASTVisitorBase<ASTVisitor, false>;
 
   using VisitorBase = RecursiveASTVisitor<ASTVisitor>;
 

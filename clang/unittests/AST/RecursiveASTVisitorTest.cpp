@@ -143,6 +143,82 @@ std::vector<VisitEvent> collectEvents(llvm::StringRef Code,
       Code, FileName);
   return std::move(Visitor).takeEvents();
 }
+class ConstCollectInterestingEvents
+    : public ConstRecursiveASTVisitor<ConstCollectInterestingEvents> {
+public:
+  bool TraverseFunctionDecl(const FunctionDecl *D) {
+    Events.push_back(VisitEvent::StartTraverseFunction);
+    bool Ret = ConstRecursiveASTVisitor::TraverseFunctionDecl(D);
+    Events.push_back(VisitEvent::EndTraverseFunction);
+
+    return Ret;
+  }
+
+  bool TraverseAttr(const Attr *A) {
+    Events.push_back(VisitEvent::StartTraverseAttr);
+    bool Ret = ConstRecursiveASTVisitor::TraverseAttr(A);
+    Events.push_back(VisitEvent::EndTraverseAttr);
+
+    return Ret;
+  }
+
+  bool TraverseEnumDecl(const EnumDecl *D) {
+    Events.push_back(VisitEvent::StartTraverseEnum);
+    bool Ret = ConstRecursiveASTVisitor::TraverseEnumDecl(D);
+    Events.push_back(VisitEvent::EndTraverseEnum);
+
+    return Ret;
+  }
+
+  bool TraverseTypedefTypeLoc(TypedefTypeLoc TL, bool TraverseQualifier) {
+    Events.push_back(VisitEvent::StartTraverseTypedefType);
+    bool Ret =
+        ConstRecursiveASTVisitor::TraverseTypedefTypeLoc(TL, TraverseQualifier);
+    Events.push_back(VisitEvent::EndTraverseTypedefType);
+
+    return Ret;
+  }
+
+  bool TraverseObjCInterfaceDecl(const ObjCInterfaceDecl *ID) {
+    Events.push_back(VisitEvent::StartTraverseObjCInterface);
+    bool Ret = ConstRecursiveASTVisitor::TraverseObjCInterfaceDecl(ID);
+    Events.push_back(VisitEvent::EndTraverseObjCInterface);
+
+    return Ret;
+  }
+
+  bool TraverseObjCProtocolDecl(const ObjCProtocolDecl *PD) {
+    Events.push_back(VisitEvent::StartTraverseObjCProtocol);
+    bool Ret = ConstRecursiveASTVisitor::TraverseObjCProtocolDecl(PD);
+    Events.push_back(VisitEvent::EndTraverseObjCProtocol);
+
+    return Ret;
+  }
+
+  bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc) {
+    Events.push_back(VisitEvent::StartTraverseObjCProtocolLoc);
+    bool Ret = ConstRecursiveASTVisitor::TraverseObjCProtocolLoc(ProtocolLoc);
+    Events.push_back(VisitEvent::EndTraverseObjCProtocolLoc);
+
+    return Ret;
+  }
+
+  std::vector<VisitEvent> takeEvents() && { return std::move(Events); }
+
+private:
+  std::vector<VisitEvent> Events;
+};
+
+std::vector<VisitEvent> collectConstEvents(llvm::StringRef Code,
+                                           const Twine &FileName = "input.cc") {
+  ConstCollectInterestingEvents Visitor;
+  clang::tooling::runToolOnCode(
+      std::make_unique<ProcessASTAction>(
+          [&](const clang::ASTContext &Ctx) { Visitor.TraverseAST(Ctx); }),
+      Code, FileName);
+  return std::move(Visitor).takeEvents();
+}
+
 } // namespace
 
 TEST(RecursiveASTVisitorTest, AttributesInsideDecls) {
@@ -151,6 +227,7 @@ TEST(RecursiveASTVisitorTest, AttributesInsideDecls) {
 __attribute__((annotate("something"))) int foo() { return 10; }
   )cpp";
 
+  EXPECT_EQ(collectEvents(Code), collectConstEvents(Code));
   EXPECT_THAT(collectEvents(Code),
               ElementsAre(VisitEvent::StartTraverseFunction,
                           VisitEvent::StartTraverseAttr,
@@ -165,6 +242,7 @@ TEST(RecursiveASTVisitorTest, EnumDeclWithBase) {
   enum Bar : Foo;
   )cpp";
 
+  EXPECT_EQ(collectEvents(Code), collectConstEvents(Code));
   EXPECT_THAT(collectEvents(Code),
               ElementsAre(VisitEvent::StartTraverseEnum,
                           VisitEvent::StartTraverseTypedefType,
@@ -184,6 +262,7 @@ TEST(RecursiveASTVisitorTest, InterfaceDeclWithProtocols) {
   @end
   )cpp";
 
+  EXPECT_EQ(collectEvents(Code), collectConstEvents(Code));
   EXPECT_THAT(collectEvents(Code, "input.m"),
               ElementsAre(VisitEvent::StartTraverseObjCProtocol,
                           VisitEvent::EndTraverseObjCProtocol,
@@ -195,4 +274,54 @@ TEST(RecursiveASTVisitorTest, InterfaceDeclWithProtocols) {
                           VisitEvent::StartTraverseObjCProtocolLoc,
                           VisitEvent::EndTraverseObjCProtocolLoc,
                           VisitEvent::EndTraverseObjCInterface));
+}
+
+TEST(ConstRecursiveASTVisitorTest, ConstCorrectness) {
+  // This test verifies that ConstRecursiveASTVisitor properly enforces
+  // const-correctness.
+  // The derived class defines const versions of the Visit* methods,
+  // and they should correctly override the default implementations,
+  // which is demonstrated by non-0 counters.
+
+  class ConstCorrectnessValidator
+      : public ConstRecursiveASTVisitor<ConstCorrectnessValidator> {
+  public:
+    bool VisitFunctionDecl(const FunctionDecl *D) {
+      FunctionDeclCount++;
+      return true;
+    }
+
+    bool VisitStmt(const Stmt *S) {
+      StmtCount++;
+      return true;
+    }
+
+    int getFunctionDeclCount() const { return FunctionDeclCount; }
+    int getStmtCount() const { return StmtCount; }
+
+  private:
+    int FunctionDeclCount = 0;
+    int StmtCount = 0;
+  };
+
+  llvm::StringRef Code = R"cpp(
+    int foo() {
+      return 42;
+    }
+    void bar() {
+      int x = 0;
+      x += 2;
+    }
+  )cpp";
+
+  ConstCorrectnessValidator Visitor;
+  clang::tooling::runToolOnCode(
+      std::make_unique<ProcessASTAction>(
+          [&](clang::ASTContext &Ctx) { Visitor.TraverseAST(Ctx); }),
+      Code);
+
+  // Verify that the visitor found the expected number of nodes
+  EXPECT_EQ(Visitor.getFunctionDeclCount(), 2); // foo and bar
+  // There are at least 3 statements: return 42; int x = 0; x += 2;
+  EXPECT_GE(Visitor.getStmtCount(), 3);
 }
