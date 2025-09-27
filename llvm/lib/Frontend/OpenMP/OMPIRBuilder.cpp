@@ -4979,7 +4979,7 @@ static void createTargetLoopWorkshareCall(OpenMPIRBuilder *OMPBuilder,
                                           WorksharingLoopType LoopType,
                                           BasicBlock *InsertBlock, Value *Ident,
                                           Value *LoopBodyArg, Value *TripCount,
-                                          Function &LoopBodyFn) {
+                                          Function &LoopBodyFn, bool NoLoop) {
   Type *TripCountTy = TripCount->getType();
   Module &M = OMPBuilder->M;
   IRBuilder<> &Builder = OMPBuilder->Builder;
@@ -5007,8 +5007,10 @@ static void createTargetLoopWorkshareCall(OpenMPIRBuilder *OMPBuilder,
   RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
   if (LoopType == WorksharingLoopType::DistributeForStaticLoop) {
     RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
+    RealArgs.push_back(ConstantInt::get(Builder.getInt8Ty(), NoLoop));
+  } else {
+    RealArgs.push_back(ConstantInt::get(Builder.getInt8Ty(), 0));
   }
-  RealArgs.push_back(ConstantInt::get(Builder.getInt8Ty(), 0));
 
   Builder.CreateCall(RTLFn, RealArgs);
 }
@@ -5016,7 +5018,7 @@ static void createTargetLoopWorkshareCall(OpenMPIRBuilder *OMPBuilder,
 static void workshareLoopTargetCallback(
     OpenMPIRBuilder *OMPIRBuilder, CanonicalLoopInfo *CLI, Value *Ident,
     Function &OutlinedFn, const SmallVector<Instruction *, 4> &ToBeDeleted,
-    WorksharingLoopType LoopType) {
+    WorksharingLoopType LoopType, bool NoLoop) {
   IRBuilder<> &Builder = OMPIRBuilder->Builder;
   BasicBlock *Preheader = CLI->getPreheader();
   Value *TripCount = CLI->getTripCount();
@@ -5063,17 +5065,16 @@ static void workshareLoopTargetCallback(
   OutlinedFnCallInstruction->eraseFromParent();
 
   createTargetLoopWorkshareCall(OMPIRBuilder, LoopType, Preheader, Ident,
-                                LoopBodyArg, TripCount, OutlinedFn);
+                                LoopBodyArg, TripCount, OutlinedFn, NoLoop);
 
   for (auto &ToBeDeletedItem : ToBeDeleted)
     ToBeDeletedItem->eraseFromParent();
   CLI->invalidate();
 }
 
-OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                          InsertPointTy AllocaIP,
-                                          WorksharingLoopType LoopType) {
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
+    DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+    WorksharingLoopType LoopType, bool NoLoop) {
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
@@ -5156,7 +5157,7 @@ OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
   OI.PostOutlineCB = [=, ToBeDeletedVec =
                              std::move(ToBeDeleted)](Function &OutlinedFn) {
     workshareLoopTargetCallback(this, CLI, Ident, OutlinedFn, ToBeDeletedVec,
-                                LoopType);
+                                LoopType, NoLoop);
   };
   addOutlineInfo(std::move(OI));
   return CLI->getAfterIP();
@@ -5167,9 +5168,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
     bool NeedsBarrier, omp::ScheduleKind SchedKind, Value *ChunkSize,
     bool HasSimdModifier, bool HasMonotonicModifier,
     bool HasNonmonotonicModifier, bool HasOrderedClause,
-    WorksharingLoopType LoopType) {
+    WorksharingLoopType LoopType, bool NoLoop) {
   if (Config.isTargetDevice())
-    return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType);
+    return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType, NoLoop);
   OMPScheduleType EffectiveScheduleType = computeOpenMPScheduleType(
       SchedKind, ChunkSize, HasSimdModifier, HasMonotonicModifier,
       HasNonmonotonicModifier, HasOrderedClause);
@@ -10312,17 +10313,19 @@ void OffloadEntriesInfoManager::getTargetRegionEntryFnName(
 
 TargetRegionEntryInfo
 OpenMPIRBuilder::getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
+                                          vfs::FileSystem &VFS,
                                           StringRef ParentName) {
   sys::fs::UniqueID ID(0xdeadf17e, 0);
   auto FileIDInfo = CallBack();
   uint64_t FileID = 0;
-  std::error_code EC = sys::fs::getUniqueID(std::get<0>(FileIDInfo), ID);
-  // If the inode ID could not be determined, create a hash value
-  // the current file name and use that as an ID.
-  if (EC)
+  if (ErrorOr<vfs::Status> Status = VFS.status(std::get<0>(FileIDInfo))) {
+    ID = Status->getUniqueID();
+    FileID = Status->getUniqueID().getFile();
+  } else {
+    // If the inode ID could not be determined, create a hash value
+    // the current file name and use that as an ID.
     FileID = hash_value(std::get<0>(FileIDInfo));
-  else
-    FileID = ID.getFile();
+  }
 
   return TargetRegionEntryInfo(ParentName, ID.getDevice(), FileID,
                                std::get<1>(FileIDInfo));

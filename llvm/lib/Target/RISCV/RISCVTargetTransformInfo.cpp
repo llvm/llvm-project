@@ -2774,6 +2774,44 @@ bool RISCVTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
                                           Alignment, Mask, EVL, Stride);
     return true;
   }
+  case Intrinsic::riscv_vloxei_mask:
+  case Intrinsic::riscv_vluxei_mask:
+  case Intrinsic::riscv_vsoxei_mask:
+  case Intrinsic::riscv_vsuxei_mask:
+    HasMask = true;
+    [[fallthrough]];
+  case Intrinsic::riscv_vloxei:
+  case Intrinsic::riscv_vluxei:
+  case Intrinsic::riscv_vsoxei:
+  case Intrinsic::riscv_vsuxei: {
+    // Intrinsic interface (only listed ordered version):
+    // riscv_vloxei(merge, ptr, index, vl)
+    // riscv_vloxei_mask(merge, ptr, index, mask, vl, policy)
+    // riscv_vsoxei(val, ptr, index, vl)
+    // riscv_vsoxei_mask(val, ptr, index, mask, vl, policy)
+    bool IsWrite = Inst->getType()->isVoidTy();
+    Type *Ty = IsWrite ? Inst->getArgOperand(0)->getType() : Inst->getType();
+    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IID);
+    unsigned VLIndex = RVVIInfo->VLOperand;
+    unsigned PtrOperandNo = VLIndex - 2 - HasMask;
+    Value *Mask;
+    if (HasMask) {
+      Mask = Inst->getArgOperand(VLIndex - 1);
+    } else {
+      // Mask cannot be nullptr here: vector GEP produces <vscale x N x ptr>,
+      // and casting that to scalar i64 triggers a vector/scalar mismatch
+      // assertion in CreatePointerCast. Use an all-true mask so ASan lowers it
+      // via extractelement instead.
+      Type *MaskType = Ty->getWithNewType(Type::getInt1Ty(C));
+      Mask = ConstantInt::getTrue(MaskType);
+    }
+    Value *EVL = Inst->getArgOperand(VLIndex);
+    Value *OffsetOp = Inst->getArgOperand(PtrOperandNo + 1);
+    Info.InterestingOperands.emplace_back(Inst, PtrOperandNo, IsWrite, Ty,
+                                          Align(1), Mask, EVL,
+                                          /* Stride */ nullptr, OffsetOp);
+    return true;
+  }
   }
   return false;
 }
