@@ -41,13 +41,8 @@ jobs:
           echo "Formatting files:"
           echo "$CHANGED_FILES"
 
-      - name: Setup Python env
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
-        with:
-          python-version: '3.11'
-
       - name: Install python dependencies
-        run: pip install -r llvm/utils/git/requirements_formatting.txt
+        run: pip install -r llvm/utils/git/requirements_formatting.txt --break-system-packages
 
       - name: Run code formatter
         env:
