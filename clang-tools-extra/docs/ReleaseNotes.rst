@@ -310,7 +310,7 @@ Changes in existing checks
   - ``for`` loops are supported.
 
 - Improved :doc:`misc-const-correctness
-  <clang-tidy/checks/misc/misc-const-correctness>` check to avoid false
+  <clang-tidy/checks/misc/const-correctness>` check to avoid false
   positives when pointers is tranferred to non-const references.
 
 - Improved :doc:`misc-header-include-cycle
