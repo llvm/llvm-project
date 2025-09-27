@@ -287,8 +287,8 @@ updateCalls(ModuleOp module, AllocDynamicSizesMap &map,
 LogicalResult mlir::bufferization::promoteBufferResultsToOutParams(
     ModuleOp module,
     const bufferization::BufferResultsToOutParamsOpts &options) {
-  /// It maps the shape source of the dynamic shape memref returned by each
-  /// function.
+  // It maps the shape source of the dynamic shape memref returned by each
+  // function.
   AllocDynamicSizesMap map;
   for (auto func : module.getOps<func::FuncOp>()) {
     if (!options.filterFn(&func))
