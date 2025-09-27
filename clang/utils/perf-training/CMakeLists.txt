@@ -6,6 +6,10 @@ set(CLANG_PGO_TRAINING_DATA "${CMAKE_CURRENT_SOURCE_DIR}" CACHE PATH
 set(CLANG_PGO_TRAINING_DATA_SOURCE_DIR OFF CACHE STRING "Path to source directory containing cmake project with source files to use for generating pgo data")
 set(CLANG_PGO_TRAINING_DEPS "" CACHE STRING "Extra dependencies needed to build the PGO training data.")
 
+add_custom_target(clear-perf-data
+  COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} perf.data
+  COMMENT "Clearing old perf data")
+
 option(CLANG_PGO_TRAINING_USE_LLVM_BUILD "Use LLVM build for generating PGO data" ON)
 
 llvm_canonicalize_cmake_booleans(
@@ -129,9 +133,5 @@ if(CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
   add_custom_target(clear-bolt-fdata
     COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} fdata
     COMMENT "Clearing old BOLT fdata")
-
-  add_custom_target(clear-perf-data
-    COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} perf.data
-    COMMENT "Clearing old perf data")
 
 endif()
