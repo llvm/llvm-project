@@ -248,7 +248,7 @@ enum mic_type __kmp_mic_type = non_mic;
 
 KMPAffinity *__kmp_affinity_dispatch = NULL;
 
-#if KMP_USE_HWLOC
+#if KMP_INCLUDES_HWLOC
 int __kmp_hwloc_error = FALSE;
 hwloc_topology_t __kmp_hwloc_topology = NULL;
 #endif

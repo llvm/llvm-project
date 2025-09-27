@@ -1069,7 +1069,7 @@ static void __kmp_stg_print_warnings(kmp_str_buf_t *buffer, char const *name,
 static void __kmp_stg_parse_nesting_mode(char const *name, char const *value,
                                          void *data) {
   __kmp_stg_parse_int(name, value, 0, INT_MAX, &__kmp_nesting_mode);
-#if KMP_AFFINITY_SUPPORTED && KMP_USE_HWLOC
+#if KMP_INCLUDES_HWLOC
   if (__kmp_nesting_mode > 0)
     __kmp_affinity_top_method = affinity_top_method_hwloc;
 #endif
@@ -3301,7 +3301,7 @@ static void __kmp_stg_parse_topology_method(char const *name, char const *value,
   if (__kmp_str_match("all", 1, value)) {
     __kmp_affinity_top_method = affinity_top_method_all;
   }
-#if KMP_USE_HWLOC
+#if KMP_INCLUDES_HWLOC
   else if (__kmp_str_match("hwloc", 1, value)) {
     __kmp_affinity_top_method = affinity_top_method_hwloc;
   }
@@ -3409,7 +3409,7 @@ static void __kmp_stg_print_topology_method(kmp_str_buf_t *buffer,
     break;
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
-#if KMP_USE_HWLOC
+#if KMP_INCLUDES_HWLOC
   case affinity_top_method_hwloc:
     value = "hwloc";
     break;
@@ -6277,7 +6277,7 @@ void __kmp_env_initialize(char const *string) {
 #if KMP_AFFINITY_SUPPORTED
 
   if (!TCR_4(__kmp_init_middle)) {
-#if KMP_USE_HWLOC
+#if KMP_INCLUDES_HWLOC
     // Force using hwloc when either tiles or numa nodes requested within
     // KMP_HW_SUBSET or granularity setting and no other topology method
     // is requested
@@ -6297,7 +6297,7 @@ void __kmp_env_initialize(char const *string) {
     // affinity.
     const char *var = "KMP_AFFINITY";
     KMPAffinity::pick_api();
-#if KMP_USE_HWLOC
+#if KMP_INCLUDES_HWLOC
     // If Hwloc topology discovery was requested but affinity was also disabled,
     // then tell user that Hwloc request is being ignored and use default
     // topology discovery method.
