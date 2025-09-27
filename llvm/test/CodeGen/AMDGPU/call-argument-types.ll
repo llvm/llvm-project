@@ -2523,7 +2523,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16() #0 {
 ; CI-NEXT:    s_add_u32 s36, s36, s3
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
-; CI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[0:3], 0
+; CI-NEXT:    buffer_load_dwordx2 v[3:4], off, s[0:3], 0
 ; CI-NEXT:    s_addc_u32 s37, s37, 0
 ; CI-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; CI-NEXT:    s_mov_b64 s[0:1], s[36:37]
@@ -2533,9 +2533,9 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16() #0 {
 ; CI-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; CI-NEXT:    s_mov_b32 s32, 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_alignbit_b32 v1, v3, v2, 16
-; CI-NEXT:    v_mov_b32_e32 v0, v2
-; CI-NEXT:    v_mov_b32_e32 v2, v3
+; CI-NEXT:    v_lshr_b64 v[1:2], v[3:4], 16
+; CI-NEXT:    v_mov_b32_e32 v0, v3
+; CI-NEXT:    v_mov_b32_e32 v2, v4
 ; CI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CI-NEXT:    s_endpgm
 ;

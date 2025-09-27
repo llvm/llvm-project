@@ -92,6 +92,7 @@ def parseScript(test, preamble):
     #       errors, which doesn't make sense for clang-verify tests because we may want to check
     #       for specific warning diagnostics.
     _checkBaseSubstitutions(substitutions)
+    substitutions.append(("%T", tmpDir))
     substitutions.append(
         ("%{build}", "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe")
     )
