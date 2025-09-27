@@ -1615,7 +1615,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
                 common::Intent::Out},
             {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
-        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+        {}, Rank::elemental, IntrinsicClass::pureSubroutine},
     {"get_command_argument",
         {{"number", AnyInt, Rank::scalar},
             {"value", DefaultChar, Rank::scalar, Optionality::optional,
@@ -1626,7 +1626,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
                 common::Intent::Out},
             {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
-        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+        {}, Rank::elemental, IntrinsicClass::pureSubroutine},
     {"get_environment_variable",
         {{"name", DefaultChar, Rank::scalar},
             {"value", DefaultChar, Rank::scalar, Optionality::optional,
@@ -1638,7 +1638,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"trim_name", AnyLogical, Rank::scalar, Optionality::optional},
             {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
-        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+        {}, Rank::elemental, IntrinsicClass::pureSubroutine},
     {"getcwd",
         {{"c", DefaultChar, Rank::scalar, Optionality::required,
              common::Intent::Out},
@@ -1650,7 +1650,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
              common::Intent::Out},
             {"status", TypePattern{IntType, KindCode::greaterOrEqualToKind, 4},
                 Rank::scalar, Optionality::optional, common::Intent::Out}},
-        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+        {}, Rank::elemental, IntrinsicClass::pureSubroutine},
     {"move_alloc",
         {{"from", SameType, Rank::known, Optionality::required,
              common::Intent::InOut},
@@ -1674,7 +1674,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"to", SameIntOrUnsigned, Rank::elemental, Optionality::required,
                 common::Intent::Out},
             {"topos", AnyInt}},
-        {}, Rank::elemental, IntrinsicClass::elementalSubroutine}, // elemental
+        {}, Rank::elemental, IntrinsicClass::elementalSubroutine},
     {"random_init",
         {{"repeatable", AnyLogical, Rank::scalar},
             {"image_distinct", AnyLogical, Rank::scalar}},
@@ -2903,7 +2903,7 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
   static const std::string dualIntrinsic[]{{"chdir"}, {"etime"}, {"fseek"},
-      {"ftell"}, {"getcwd"}, {"hostnm"}, {"putenv"s}, {"rename"}, {"second"},
+      {"ftell"}, {"getcwd"}, {"hostnm"}, {"putenv"}, {"rename"}, {"second"},
       {"system"}, {"unlink"}};
   return llvm::is_contained(dualIntrinsic, name);
 }
@@ -3765,6 +3765,9 @@ bool IntrinsicProcTable::IsIntrinsicFunction(const std::string &name) const {
 }
 bool IntrinsicProcTable::IsIntrinsicSubroutine(const std::string &name) const {
   return DEREF(impl_.get()).IsIntrinsicSubroutine(name);
+}
+bool IntrinsicProcTable::IsDualIntrinsic(const std::string &name) const {
+  return DEREF(impl_.get()).IsDualIntrinsic(name);
 }
 
 IntrinsicClass IntrinsicProcTable::GetIntrinsicClass(
