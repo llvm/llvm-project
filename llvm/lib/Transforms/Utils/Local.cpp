@@ -1159,6 +1159,12 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   bool BBPhisMergeable = BBKillable || CanRedirectPredsOfEmptyBBToSucc(
                                            BB, Succ, BBPreds, CommonPred);
 
+  // If the function has the "no-jump-tables" attribute, merging phis
+  // can make size worse at -Oz.
+  auto *MF = BB->getParent();
+  if (MF->hasMinSize() && MF->hasFnAttribute("no-jump-tables"))
+    BBPhisMergeable = false;
+
   if ((!BBKillable && !BBPhisMergeable) || introduceTooManyPhiEntries(BB, Succ))
     return false;
 

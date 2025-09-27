@@ -145,7 +145,41 @@ Succ:
   ret i8 %phi2
 }
 
+define i8 @common_pred_no_jt(i8 noundef %arg, i1 %c1, i1 %c2) #0 {
+; CHECK-LABEL: @common_pred_no_jt(
+; CHECK-NEXT:  Pred:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[COMMONPRED:%.*]], label [[SUCC:%.*]]
+; CHECK:       CommonPred:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[SUCC1:%.*]], label [[SUCC]]
+; CHECK:       BB:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 0, [[PRED:%.*]] ], [ 1, [[COMMONPRED]] ]
+; CHECK-NEXT:    br label [[SUCC1]]
+; CHECK:       Succ:
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[PHI1]], [[SUCC]] ], [ 4, [[COMMONPRED]] ]
+; CHECK-NEXT:    ret i8 [[PHI2]]
+;
+Pred:
+call void @dummy()
+  br i1 %c1, label %CommonPred, label %BB
+
+CommonPred:
+call void @dummy()
+  br i1 %c2, label %Succ, label %BB
+
+BB:
+  %phi1 = phi i8 [ 0, %Pred ], [1, %CommonPred]
+  br label %Succ
+
+Succ:
+  %phi2 = phi i8 [ %phi1, %BB ], [ 4, %CommonPred ]
+  ret i8 %phi2
+}
 declare void @dummy()
+
+attributes #0 = { minsize "no-jump-tables"="true" }
+
 
 !0 = !{!"branch_weights", i32 3, i32 7}
 !1 = !{!"branch_weights", i32 11, i32 4}
