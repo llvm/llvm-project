@@ -1213,7 +1213,8 @@ bool AMDGPUSwLowerLDS::run() {
       removeFnAttrFromReachable(
           CG, Func,
           {"amdgpu-no-workitem-id-x", "amdgpu-no-workitem-id-y",
-           "amdgpu-no-workitem-id-z", "amdgpu-no-heap-ptr"});
+           "amdgpu-no-workitem-id-z", "amdgpu-no-heap-ptr",
+           "amdgpu-no-flat-scratch-init"});
       if (!LDSParams.IndirectAccess.StaticLDSGlobals.empty() ||
           !LDSParams.IndirectAccess.DynamicLDSGlobals.empty())
         removeFnAttrFromReachable(CG, Func, {"amdgpu-no-lds-kernel-id"});
