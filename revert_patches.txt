@@ -22,3 +22,6 @@ needs more offload patches
 need to resole API changes downstream
 [Offload] Use Error for allocating/deallocating in plugins
 ---
+breaks smoke flags, wgs64
+[clang] Use the VFS to get the OpenMP entry info (#160935)
+---
