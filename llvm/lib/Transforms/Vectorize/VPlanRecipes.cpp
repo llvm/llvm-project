@@ -2754,9 +2754,8 @@ VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
     : VPSingleDefRecipe(VPDef::VPExpressionSC, {}, {}),
-      ExpressionRecipes(SetVector<VPSingleDefRecipe *>(
-                            ExpressionRecipes.begin(), ExpressionRecipes.end())
-                            .takeVector()),
+      ExpressionRecipes(SmallVector<VPSingleDefRecipe *>(
+          ExpressionRecipes.begin(), ExpressionRecipes.end())),
       ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(
@@ -2794,21 +2793,31 @@ VPExpressionRecipe::VPExpressionRecipe(
   // create new temporary VPValues for all operands defined by a recipe outside
   // the expression. The original operands are added as operands of the
   // VPExpressionRecipe itself.
+
+  SmallMapVector<VPValue *, VPValue *, 4> OperandPlaceholders;
   for (auto *R : ExpressionRecipes) {
     for (const auto &[Idx, Op] : enumerate(R->operands())) {
       auto *Def = Op->getDefiningRecipe();
       if (Def && ExpressionRecipesAsSetOfUsers.contains(Def))
         continue;
       addOperand(Op);
-      LiveInPlaceholders.push_back(new VPValue());
-      R->setOperand(Idx, LiveInPlaceholders.back());
+      VPValue *Tmp = new VPValue();
+      OperandPlaceholders[Op] = Tmp;
+      LiveInPlaceholders.push_back(Tmp);
     }
   }
+
+  for (auto *R : ExpressionRecipes)
+    for (auto &Entry : OperandPlaceholders)
+      R->replaceUsesOfWith(Entry.first, Entry.second);
 }
 
 void VPExpressionRecipe::decompose() {
   for (auto *R : ExpressionRecipes)
-    R->insertBefore(this);
+    // Since the list could contain duplicates, make sure the recipe hasn't
+    // already been inserted.
+    if (!R->getParent())
+      R->insertBefore(this);
 
   for (const auto &[Idx, Op] : enumerate(operands()))
     LiveInPlaceholders[Idx]->replaceAllUsesWith(Op);
