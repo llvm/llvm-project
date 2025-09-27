@@ -81,6 +81,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  faccessat
+  SRCS
+    faccessat.cpp
+  HDRS
+    ../faccessat.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   fchdir
   SRCS
     fchdir.cpp
