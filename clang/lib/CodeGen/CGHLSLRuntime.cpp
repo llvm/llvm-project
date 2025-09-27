@@ -266,9 +266,9 @@ CGHLSLRuntime::convertHLSLSpecificType(const Type *T,
   assert(T->isHLSLSpecificType() && "Not an HLSL specific type!");
 
   // Check if the target has a specific translation for this type first.
-  if (llvm::Type *TargetTy =
+  if (llvm::Type *LayoutTy =
           CGM.getTargetCodeGenInfo().getHLSLType(CGM, T, Packoffsets))
-    return TargetTy;
+    return LayoutTy;
 
   llvm_unreachable("Generic handling of HLSL types is not supported.");
 }
@@ -285,10 +285,8 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
 
   // get the layout struct from constant buffer target type
   llvm::Type *BufType = BufGV->getValueType();
-  llvm::Type *BufLayoutType =
-      cast<llvm::TargetExtType>(BufType)->getTypeParameter(0);
   llvm::StructType *LayoutStruct = cast<llvm::StructType>(
-      cast<llvm::TargetExtType>(BufLayoutType)->getTypeParameter(0));
+      cast<llvm::TargetExtType>(BufType)->getTypeParameter(0));
 
   // Start metadata list associating the buffer global variable with its
   // constatns
@@ -326,6 +324,9 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
       }
       continue;
     }
+
+    if (CGM.getTargetCodeGenInfo().isHLSLPadding(*ElemIt))
+      ++ElemIt;
 
     assert(ElemIt != LayoutStruct->element_end() &&
            "number of elements in layout struct does not match");
@@ -424,12 +425,11 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   if (BufDecl->hasValidPackoffset())
     fillPackoffsetLayout(BufDecl, Layout);
 
-  llvm::TargetExtType *TargetTy =
-      cast<llvm::TargetExtType>(convertHLSLSpecificType(
-          ResHandleTy, BufDecl->hasValidPackoffset() ? &Layout : nullptr));
+  llvm::Type *LayoutTy = convertHLSLSpecificType(
+      ResHandleTy, BufDecl->hasValidPackoffset() ? &Layout : nullptr);
   llvm::GlobalVariable *BufGV = new GlobalVariable(
-      TargetTy, /*isConstant*/ false,
-      GlobalValue::LinkageTypes::ExternalLinkage, PoisonValue::get(TargetTy),
+      LayoutTy, /*isConstant*/ false,
+      GlobalValue::LinkageTypes::ExternalLinkage, PoisonValue::get(LayoutTy),
       llvm::formatv("{0}{1}", BufDecl->getName(),
                     BufDecl->isCBuffer() ? ".cb" : ".tb"),
       GlobalValue::NotThreadLocal);
@@ -462,7 +462,7 @@ void CGHLSLRuntime::addRootSignature(
                      SignatureDecl->getRootElements(), nullptr, M);
 }
 
-llvm::TargetExtType *
+llvm::StructType *
 CGHLSLRuntime::getHLSLBufferLayoutType(const RecordType *StructType) {
   const auto Entry = LayoutTypes.find(StructType);
   if (Entry != LayoutTypes.end())
@@ -471,7 +471,7 @@ CGHLSLRuntime::getHLSLBufferLayoutType(const RecordType *StructType) {
 }
 
 void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
-                                            llvm::TargetExtType *LayoutTy) {
+                                            llvm::StructType *LayoutTy) {
   assert(getHLSLBufferLayoutType(StructType) == nullptr &&
          "layout type for this struct already exist");
   LayoutTypes[StructType] = LayoutTy;

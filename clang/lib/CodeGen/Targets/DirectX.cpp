@@ -32,6 +32,19 @@ public:
   llvm::Type *
   getHLSLType(CodeGenModule &CGM, const Type *T,
               const SmallVector<int32_t> *Packoffsets = nullptr) const override;
+
+  llvm::Type *getHLSLPadding(CodeGenModule &CGM,
+                             CharUnits NumBytes) const override {
+    unsigned Size = NumBytes.getQuantity();
+    return llvm::TargetExtType::get(CGM.getLLVMContext(), "dx.Padding", {},
+                                    {Size});
+  }
+
+  bool isHLSLPadding(llvm::Type *Ty) const override {
+    if (auto *TET = dyn_cast<llvm::TargetExtType>(Ty))
+      return TET->getName() == "dx.Padding";
+    return false;
+  }
 };
 
 llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
@@ -75,10 +88,9 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
     if (ContainedTy.isNull() || !ContainedTy->isStructureType())
       return nullptr;
 
-    llvm::Type *BufferLayoutTy =
-        HLSLBufferLayoutBuilder(CGM, "dx.Layout")
-            .createLayoutType(ContainedTy->castAsCanonical<RecordType>(),
-                              Packoffsets);
+    llvm::StructType *BufferLayoutTy =
+        HLSLBufferLayoutBuilder(CGM).layOutStruct(
+            ContainedTy->getAsCanonical<RecordType>(), Packoffsets);
     if (!BufferLayoutTy)
       return nullptr;
 
