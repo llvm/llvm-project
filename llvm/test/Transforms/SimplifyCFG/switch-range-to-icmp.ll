@@ -249,6 +249,28 @@ else:
   ret i32 %i1
 }
 
+define i8 @wrapping_range_phi(i8 %arg) {
+; CHECK-LABEL: @wrapping_range_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARG_OFF:%.*]] = add i8 [[ARG:%.*]], -1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[ARG_OFF]], -2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], i8 0, i8 1
+; CHECK-NEXT:    ret i8 [[SPEC_SELECT]]
+;
+entry:
+  switch i8 %arg, label %else [
+  i8 0, label %if
+  i8 -1, label %if
+  ]
+
+if:
+  %i = phi i8 [ 0, %else ], [ 1, %entry ], [ 1, %entry ]
+  ret i8 %i
+
+else:
+  br label %if
+}
+
 define i32 @no_continuous_wrapping_range(i8 %arg) {
 ; CHECK-LABEL: @no_continuous_wrapping_range(
 ; CHECK-NEXT:    switch i8 [[ARG:%.*]], label [[ELSE:%.*]] [
