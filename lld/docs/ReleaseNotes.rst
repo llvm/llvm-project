@@ -32,6 +32,9 @@ ELF Improvements
 * ``--print-gc-sections=<file>`` prints garbage collection section listing to a file.
   (`#159706 <https://github.com/llvm/llvm-project/pull/159706>`_)
 
+* Added ``--unresolved-symbols=@<file>`` flag to specify path to a file with the
+  list of unresolved symbols that will not trigger an error during lininking.
+
 Breaking changes
 ----------------
 
