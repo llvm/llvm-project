@@ -11,6 +11,8 @@ class Obj;
 
 Obj* provide_obj_ptr();
 void receive_obj_ptr(Obj* p = nullptr);
+void receive_obj_ref(Obj&);
+void receive_obj_rref(Obj&&);
 sqlite3* open_db();
 void close_db(sqlite3*);
 
@@ -36,6 +38,12 @@ Obj& ref() {
   auto &obj = provide_obj_ref();
   // expected-warning@-1{{Local variable 'obj' uses a forward declared type 'Obj &'}}
   return obj;
+}
+
+void opaque_call_arg(Obj* obj, Obj&& otherObj) {
+  receive_obj_ref(*obj);
+  receive_obj_ptr(&*obj);
+  receive_obj_rref(std::move(otherObj));
 }
 
 Obj&& provide_obj_rval();
