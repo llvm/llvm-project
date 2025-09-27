@@ -1222,6 +1222,31 @@ static void AddDotProductRequirements(const MachineInstr &MI,
   }
 }
 
+void addPrintfRequirements(const MachineInstr &MI,
+                           SPIRV::RequirementHandler &Reqs,
+                           const SPIRVSubtarget &ST) {
+  SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+  const SPIRVType *PtrType = GR->getSPIRVTypeForVReg(MI.getOperand(4).getReg());
+  if (PtrType) {
+    MachineOperand ASOp = PtrType->getOperand(1);
+    if (ASOp.isImm()) {
+      unsigned AddrSpace = ASOp.getImm();
+      if (AddrSpace != SPIRV::StorageClass::UniformConstant) {
+        if (!ST.canUseExtension(
+                SPIRV::Extension::
+                    SPV_EXT_relaxed_printf_string_address_space)) {
+          report_fatal_error("SPV_EXT_relaxed_printf_string_address_space is "
+                             "required because printf uses a format string not "
+                             "in constant address space.",
+                             false);
+        }
+        Reqs.addExtension(
+            SPIRV::Extension::SPV_EXT_relaxed_printf_string_address_space);
+      }
+    }
+  }
+}
+
 static bool isBFloat16Type(const SPIRVType *TypeDef) {
   return TypeDef && TypeDef->getNumOperands() == 3 &&
          TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
@@ -1321,6 +1346,12 @@ void addInstrRequirements(const MachineInstr &MI,
         static_cast<int64_t>(
             SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100)) {
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
+      break;
+    }
+    if (MI.getOperand(3).getImm() ==
+        static_cast<int64_t>(SPIRV::OpenCLExtInst::printf)) {
+      addPrintfRequirements(MI, Reqs, ST);
+      break;
     }
     break;
   }
