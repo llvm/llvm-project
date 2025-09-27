@@ -21,5 +21,5 @@ Options
 .. option::  IgnoredRegex
 
    A regular expression for the file name to be ignored by the check. Default
-   is empty.
+   is no regular expression.
 
