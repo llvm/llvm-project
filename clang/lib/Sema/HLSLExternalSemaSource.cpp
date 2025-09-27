@@ -85,8 +85,7 @@ void HLSLExternalSemaSource::defineHLSLVectorAlias() {
       &AST.Idents.get("element_count", tok::TokenKind::identifier), AST.IntTy,
       false, AST.getTrivialTypeSourceInfo(AST.IntTy));
   llvm::APInt Val(AST.getIntWidth(AST.IntTy), 4);
-  TemplateArgument Default(AST, llvm::APSInt(std::move(Val)), AST.IntTy,
-                           /*IsDefaulted=*/true);
+  TemplateArgument Default(AST, llvm::APSInt(std::move(Val)), AST.IntTy);
   SizeParam->setDefaultArgument(
       AST, SemaPtr->getTrivialTemplateArgumentLoc(Default, AST.IntTy,
                                                   SourceLocation(), SizeParam));

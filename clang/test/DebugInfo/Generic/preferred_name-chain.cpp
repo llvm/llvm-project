@@ -48,7 +48,7 @@ int main() {
 // COMMON-SAME: templateParams: ![[PARAM:[0-9]+]]
 // COMMON:      ![[PARAM]] = !{![[TEMPL_TYPE_PARAM:[0-9]+]]}
 // GDB:         ![[TEMPL_TYPE_PARAM]] = !DITemplateTypeParameter(name: "T", type: ![[BAR_INT_TY]])
-// LLDB:        ![[TEMPL_TYPE_PARAM]] = !DITemplateTypeParameter(name: "T", type: ![[BAR_INT_TY]])
+// LLDB:        ![[TEMPL_TYPE_PARAM]] = !DITemplateTypeParameter(name: "T", type: ![[FOO_INT]])
 
     Foo<Foo<char>> varFooChar;
 
@@ -57,7 +57,7 @@ int main() {
 // COMMON-SAME: templateParams: ![[CHAR_PARAM:[0-9]+]]
 // COMMON:      ![[CHAR_PARAM]] = !{![[CHAR_TEMPL_TYPE_PARAM:[0-9]+]]}
 // GDB:         ![[CHAR_TEMPL_TYPE_PARAM]] = !DITemplateTypeParameter(name: "T", type: ![[BAR_CHAR_TY]])
-// LLDB:        ![[CHAR_TEMPL_TYPE_PARAM]] = !DITemplateTypeParameter(name: "T", type: ![[BAR_CHAR_TY]])
+// LLDB:        ![[CHAR_TEMPL_TYPE_PARAM]] = !DITemplateTypeParameter(name: "T", type: ![[FOO_CHAR]])
 
     return 0;
 }
