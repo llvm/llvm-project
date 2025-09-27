@@ -127,8 +127,10 @@ public:
                             llvm::raw_string_ostream &Out) const;
 
   void visitParagraphComment(const comments::ParagraphComment *P) {
-    FreeParagraphs[CommentPartIndex] = P;
-    CommentPartIndex++;
+    if (!P->isWhitespace()) {
+      FreeParagraphs[CommentPartIndex] = P;
+      CommentPartIndex++;
+    }
   }
 
   void visitParamCommandComment(const comments::ParamCommandComment *P) {

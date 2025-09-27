@@ -292,6 +292,14 @@ Another paragraph)",
 this is not treated as brief
 
 Another paragraph)"},
+      {R"(
+@brief Some brief
+)",
+       "", "", ""},
+      {R"(
+Some brief
+)",
+       "", "", ""},
   };
   for (const auto &C : Cases) {
     markup::Document Doc;
