@@ -7532,6 +7532,43 @@ A managed variable can be accessed in both device and host code.
   }];
 }
 
+def CUDAClusterDimsAttrDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+In CUDA/HIP programming, the ``__cluster_dims__`` attribute can be applied to a kernel function
+to set the dimensions of a thread block cluster. ``__cluster_dims__`` defines the cluster size
+as ``(X, Y, Z)``, where each value is the number of thread blocks in that dimension.
+The ``__cluster_dims__`` and `__no_cluster__`` attributes are mutually exclusive.
+
+.. code::
+
+  __global__ __cluster_dims__(2, 1, 1) void kernel(...) {
+    ...
+  }
+
+  }];
+}
+
+def CUDANoClusterAttrDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+In CUDA/HIP programming, a kernel function can still be launched with the cluster feature
+enabled at runtime, even without the ``__cluster_dims__`` attribute. The LLVM/Clang-exclusive
+``__no_cluster__`` attribute can be applied to a kernel function to explicitly indicate that
+the cluster feature will not be enabled either at compile time or at kernel launch time. This
+allows the compiler to apply certain optimizations without assuming that clustering could be
+enabled at runtime. It is undefined behavior to launch a kernel with the ``__no_cluster__``
+attribute if the cluster feature is enabled at runtime. The ``__cluster_dims__`` and
+``__no_cluster__`` attributes are mutually exclusive.
+
+.. code::
+
+  __global__ __no_cluster__ void kernel(...) {
+    ...
+  }
+  }];
+}
+
 def LifetimeOwnerDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{

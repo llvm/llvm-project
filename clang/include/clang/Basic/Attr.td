@@ -1470,7 +1470,7 @@ def Constructor : InheritableAttr {
   let TemplateDependent = 1;
   let Documentation = [CtorDtorDocs];
   let AdditionalMembers = [{
-    static constexpr unsigned DefaultPriority = 65535; 
+    static constexpr unsigned DefaultPriority = 65535;
   }];
 }
 
@@ -1571,6 +1571,23 @@ def HIPManaged : InheritableAttr {
   let LangOpts = [HIP];
   let Documentation = [HIPManagedAttrDocs];
 }
+
+def CUDAClusterDims : InheritableAttr {
+  let Spellings = [GNU<"cluster_dims">, Declspec<"__cluster_dims__">];
+  let Args = [ExprArgument<"X">, ExprArgument<"Y", 1>, ExprArgument<"Z", 1>];
+  let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
+  let LangOpts = [CUDA];
+  let Documentation = [CUDAClusterDimsAttrDoc];
+}
+
+def CUDANoCluster : InheritableAttr {
+  let Spellings = [GNU<"no_cluster">, Declspec<"__no_cluster__">];
+  let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
+  let LangOpts = [CUDA];
+  let Documentation = [CUDANoClusterAttrDoc];
+}
+
+def : MutualExclusions<[CUDAClusterDims, CUDANoCluster]>;
 
 def CUDAInvalidTarget : InheritableAttr {
   let Spellings = [];
@@ -1815,7 +1832,7 @@ def Destructor : InheritableAttr {
   let TemplateDependent = 1;
   let Documentation = [CtorDtorDocs];
   let AdditionalMembers = [{
-    static constexpr unsigned int DefaultPriority = 65535; 
+    static constexpr unsigned int DefaultPriority = 65535;
   }];
 }
 

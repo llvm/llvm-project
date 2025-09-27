@@ -5009,6 +5009,14 @@ public:
   void AddLaunchBoundsAttr(Decl *D, const AttributeCommonInfo &CI,
                            Expr *MaxThreads, Expr *MinBlocks, Expr *MaxBlocks);
 
+  /// Add a cluster_dims attribute to a particular declaration.
+  CUDAClusterDimsAttr *createClusterDimsAttr(const AttributeCommonInfo &CI,
+                                             Expr *X, Expr *Y, Expr *Z);
+  void addClusterDimsAttr(Decl *D, const AttributeCommonInfo &CI, Expr *X,
+                          Expr *Y, Expr *Z);
+  /// Add a no_cluster attribute to a particular declaration.
+  void addNoClusterAttr(Decl *D, const AttributeCommonInfo &CI);
+
   enum class RetainOwnershipKind { NS, CF, OS };
 
   UuidAttr *mergeUuidAttr(Decl *D, const AttributeCommonInfo &CI,
