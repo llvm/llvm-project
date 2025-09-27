@@ -977,23 +977,25 @@ void VPlan::execute(VPTransformState *State) {
     // logic generic during VPlan execution.
     State->CFG.DTU.applyUpdates(
         {{DominatorTree::Delete, ScalarPh, ScalarPh->getSingleSuccessor()}});
-  } else {
-    Loop *OrigLoop =
-        State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
-    // If the original loop is unreachable, we need to delete it.
-    auto Blocks = OrigLoop->getBlocksVector();
-    Blocks.push_back(cast<VPIRBasicBlock>(ScalarPhVPBB)->getIRBasicBlock());
-    for (auto *BB : Blocks)
-      State->LI->removeBlock(BB);
-    State->LI->erase(OrigLoop);
   }
-
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Entry);
   // Generate code for the VPlan, in parts of the vector skeleton, loop body and
   // successor blocks including the middle, exit and scalar preheader blocks.
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
+
+  // If the original loop is unreachable, delete it and all its blocks.
+  if (!ScalarPhVPBB->hasPredecessors()) {
+    Loop *OrigLoop =
+        State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
+    auto Blocks = OrigLoop->getBlocksVector();
+    Blocks.push_back(cast<VPIRBasicBlock>(ScalarPhVPBB)->getIRBasicBlock());
+    for (auto *BB : Blocks)
+      State->LI->removeBlock(BB);
+    DeleteDeadBlocks(Blocks, &State->CFG.DTU);
+    State->LI->erase(OrigLoop);
+  }
 
   State->CFG.DTU.flush();
 
