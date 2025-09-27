@@ -182,6 +182,20 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
     ArchName = "aarch64";
     FeaturesStr = "+all";
     break;
+  case llvm::Triple::ppc64:
+    if (Features)
+      return createFatalBOLTError(
+          "PowerPC target does not use SubtargetFeatures");
+    ArchName = "ppc64";
+    FeaturesStr = "";
+    break;
+  case llvm::Triple::ppc64le:
+    if (Features)
+      return createFatalBOLTError(
+          "PowerPC target does not use SubtargetFeatures");
+    ArchName = "ppc64le";
+    FeaturesStr = "";
+    break;
   case llvm::Triple::riscv64: {
     ArchName = "riscv64";
     if (!Features)
