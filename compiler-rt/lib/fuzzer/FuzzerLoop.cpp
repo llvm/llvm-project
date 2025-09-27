@@ -666,7 +666,7 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U, const char *Text) {
 }
 
 void Fuzzer::ReportNewCoverage(InputInfo *II, const Unit &U) {
-  II->NumSuccessfullMutations++;
+  II->NumSuccessfulMutations++;
   MD.RecordSuccessfulMutationSequence();
   PrintStatusForNewUnit(U, II->Reduced ? "REDUCE" : "NEW   ");
   WriteToOutputCorpus(U);
