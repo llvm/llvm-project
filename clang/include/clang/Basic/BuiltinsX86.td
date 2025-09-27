@@ -58,7 +58,7 @@ let Attributes = [NoThrow, Const, RequiredVectorWidth<64>], Features = "sse" in 
 }
 
 // SSE intrinsics
-let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
+let Attributes = [Const, Constexpr, NoThrow, RequiredVectorWidth<128>] in {
   foreach Cmp = ["eq", "lt", "le", "gt", "ge", "neq"] in {
     let Features = "sse" in {
       def comi#Cmp : X86Builtin<"int(_Vector<4, float>, _Vector<4, float>)">;
@@ -3423,7 +3423,7 @@ let Features = "avx512vp2intersect,avx512vl", Attributes = [NoThrow, RequiredVec
   def vp2intersect_d_128 : X86Builtin<"void(_Vector<4, int>, _Vector<4, int>, unsigned char *, unsigned char *)">;
 }
 
-let Features = "avx512fp16", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512fp16", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def vcomish : X86Builtin<"int(_Vector<8, _Float16>, _Vector<8, _Float16>, _Constant int, _Constant int)">;
 }
 
