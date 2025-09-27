@@ -523,7 +523,7 @@ public:
     // Gather information from the clauses.
     Flags flags;
     std::optional<common::OmpMemoryOrderType> memOrder;
-    for (const auto &clause : std::get<parser::OmpClauseList>(x.t).v) {
+    for (const parser::OmpClause &clause : x.v.Clauses().v) {
       flags |= common::visit(
           common::visitors{
               [&memOrder](
