@@ -523,9 +523,9 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   if (Style.AlwaysBreakBeforeMultilineStrings &&
       (NewLineColumn == State.FirstIndent + Style.ContinuationIndentWidth ||
        Previous.is(tok::comma) || Current.NestingLevel < 2) &&
-      !Previous.isOneOf(tok::kw_return, tok::lessless, tok::at,
-                        Keywords.kw_dollar) &&
-      !Previous.isOneOf(TT_InlineASMColon, TT_ConditionalExpr) &&
+      Previous.isNotOneOf(tok::kw_return, tok::lessless, tok::at,
+                          Keywords.kw_dollar) &&
+      Previous.isNotOneOf(TT_InlineASMColon, TT_ConditionalExpr) &&
       nextIsMultilineString(State)) {
     return true;
   }
@@ -752,7 +752,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       return false;
 
     const auto *Next = Comma->getNextNonComment();
-    return Next && !Next->isOneOf(TT_LambdaLSquare, tok::l_brace, tok::caret);
+    return Next && Next->isNotOneOf(TT_LambdaLSquare, tok::l_brace, tok::caret);
   };
 
   if (DisallowLineBreaks())
@@ -835,7 +835,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       return Tok.is(tok::l_brace) && Tok.isNot(BK_Block) &&
              Style.Cpp11BracedListStyle;
     };
-    if (!Tok.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) &&
+    if (Tok.isNotOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) &&
         !IsStartOfBracedList()) {
       return false;
     }
@@ -843,8 +843,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       return true;
     if (Tok.Previous->isIf())
       return Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak;
-    return !Tok.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
-                                  tok::kw_switch) &&
+    return Tok.Previous->isNotOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
+                                    tok::kw_switch) &&
            !(Style.isJavaScript() && Tok.Previous->is(Keywords.kw_await));
   };
   auto IsFunctionCallParen = [](const FormatToken &Tok) {
@@ -920,9 +920,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // align the commas with the opening paren.
   if (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign &&
       !CurrentState.IsCSharpGenericTypeConstraint && Previous.opensScope() &&
-      Previous.isNot(TT_ObjCMethodExpr) && Previous.isNot(TT_RequiresClause) &&
-      Previous.isNot(TT_TableGenDAGArgOpener) &&
-      Previous.isNot(TT_TableGenDAGArgOpenerToBreak) &&
+      Previous.isNotOneOf(TT_ObjCMethodExpr, TT_RequiresClause,
+                          TT_TableGenDAGArgOpener,
+                          TT_TableGenDAGArgOpenerToBreak) &&
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
        Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen)) &&
@@ -1239,11 +1239,11 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   }
 
   if (PreviousNonComment &&
-      !PreviousNonComment->isOneOf(tok::comma, tok::colon, tok::semi) &&
+      PreviousNonComment->isNotOneOf(tok::comma, tok::colon, tok::semi) &&
       ((PreviousNonComment->isNot(TT_TemplateCloser) &&
         !PreviousNonComment->ClosesRequiresClause) ||
        Current.NestingLevel != 0) &&
-      !PreviousNonComment->isOneOf(
+      PreviousNonComment->isNotOneOf(
           TT_BinaryOperator, TT_FunctionAnnotationRParen, TT_JavaAnnotation,
           TT_LeadingJavaAnnotation) &&
       Current.isNot(TT_BinaryOperator) && !PreviousNonComment->opensScope() &&
@@ -1281,8 +1281,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     bool AllowAllConstructorInitializersOnNextLine =
         Style.PackConstructorInitializers == FormatStyle::PCIS_NextLine ||
         Style.PackConstructorInitializers == FormatStyle::PCIS_NextLineOnly;
-    if (!(Previous.isOneOf(tok::l_paren, tok::l_brace, TT_BinaryOperator) ||
-          PreviousIsBreakingCtorInitializerColon) ||
+    if ((Previous.isNotOneOf(tok::l_paren, tok::l_brace, TT_BinaryOperator) &&
+         !PreviousIsBreakingCtorInitializerColon) ||
         (!Style.AllowAllParametersOfDeclarationOnNextLine &&
          State.Line->MustBeDeclaration) ||
         (!Style.AllowAllArgumentsOnNextLine &&
@@ -1734,8 +1734,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   }
   if (Previous && (Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr) ||
                    (Previous->isOneOf(tok::l_paren, tok::comma, tok::colon) &&
-                    !Previous->isOneOf(TT_DictLiteral, TT_ObjCMethodExpr,
-                                       TT_CtorInitializerColon)))) {
+                    Previous->isNotOneOf(TT_DictLiteral, TT_ObjCMethodExpr,
+                                         TT_CtorInitializerColon)))) {
     CurrentState.NestedBlockInlined =
         !Newline && hasNestedBlockInlined(Previous, Current, Style);
   }

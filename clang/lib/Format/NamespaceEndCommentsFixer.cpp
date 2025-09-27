@@ -85,7 +85,7 @@ std::string computeName(const FormatToken *NamespaceTok) {
   // one token before that up until the '{'. A '(' might be a macro with
   // arguments.
   const FormatToken *FirstNSTok = nullptr;
-  while (Tok && !Tok->isOneOf(tok::l_brace, tok::coloncolon, tok::l_paren)) {
+  while (Tok && Tok->isNotOneOf(tok::l_brace, tok::coloncolon, tok::l_paren)) {
     if (FirstNSTok)
       FirstNSName += FirstNSTok->TokenText;
     FirstNSTok = Tok;
