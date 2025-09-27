@@ -17,6 +17,20 @@ template<typename T> typename remove_reference<T>::type&& move(T&& t);
 
 #endif
 
+namespace std {
+
+template <bool, typename U = void> struct enable_if {
+};
+
+template <typename T> struct enable_if<true, T> {
+  using type = T;
+};
+
+template <bool value, class T = void>
+using enable_if_t = typename enable_if<value, T>::type;
+
+}
+
 @class NSString;
 @class NSArray;
 @class NSMutableArray;
@@ -100,6 +114,7 @@ id CFBridgingRelease(CFTypeRef X) {
 __attribute__((objc_root_class))
 @interface NSObject
 + (instancetype) alloc;
++ (instancetype) allocWithZone:(NSZone *)zone;
 + (Class) class;
 + (Class) superclass;
 - (instancetype) init;
@@ -232,6 +247,14 @@ template <typename T> struct RemovePointer<T*> {
   typedef T Type;
 };
 
+template <typename T> struct IsPointer {
+  static constexpr bool value = false;
+};
+
+template <typename T> struct IsPointer<T*> {
+  static constexpr bool value = true;
+};
+
 template <typename T> struct RetainPtr {
   using ValueType = typename RemovePointer<T>::Type;
   using PtrType = ValueType*;
@@ -285,12 +308,23 @@ template <typename T> struct RetainPtr {
   PtrType operator->() const { return t; }
   T &operator*() const { return *t; }
   RetainPtr &operator=(PtrType t);
-  PtrType leakRef()
+
+  template <typename U = PtrType>
+  std::enable_if_t<IsPointer<U>::value, U> leakRef() CF_RETURNS_RETAINED
   {
     PtrType s = t;
     t = nullptr;
     return s;
   }
+
+  template <typename U = PtrType>
+  std::enable_if_t<!IsPointer<U>::value, U> leakRef() NS_RETURNS_RETAINED
+  {
+    PtrType s = t;
+    t = nullptr;
+    return s;
+  }
+
   operator PtrType() const { return t; }
   operator bool() const { return t; }
 
