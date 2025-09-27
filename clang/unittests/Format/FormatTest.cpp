@@ -8143,6 +8143,39 @@ TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
                Input, Style);
 }
 
+TEST_F(FormatTest, BreakFunctionDeclarationParameters) {
+  StringRef Input = "void functionDecl(paramA, paramB, paramC);\n"
+                    "void emptyFunctionDefinition() {}\n"
+                    "void functionDefinition(int A, int B, int C) {}\n"
+                    "Class::Class(int A, int B) : m_A(A), m_B(B) {}";
+  verifyFormat(Input);
+
+  FormatStyle Style = getLLVMStyle();
+  EXPECT_FALSE(Style.BreakFunctionDeclarationParameters);
+  Style.BreakFunctionDeclarationParameters = true;
+  verifyFormat("void functionDecl(\n"
+               "   paramA, paramB, paramC);\n"
+               "void emptyFunctionDefinition() {}\n"
+               "void functionDefinition(int A, int B, int C) {}\n"
+               "class Class {\n"
+               "  Class(\n"
+               "      int A, int B);\n"
+               "};\n",
+               Input, Style);
+
+  // Test the style where all parameters are on their own lines.
+  Style.AllowAllParametersOfDeclarationOnNextLine = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  verifyFormat("void functionDecl(\n"
+               "    paramA,\n"
+               "    paramB,\n"
+               "    paramC);\n"
+               "void emptyFunctionDefinition() {}\n"
+               "void functionDefinition(int A, int B, int C) {}\n"
+               "Class::Class(int A, int B) : m_A(A), m_B(B) {}",
+               Input, Style);
+}
+
 TEST_F(FormatTest, BreakBeforeInlineASMColon) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeInlineASMColon = FormatStyle::BBIAS_Never;
