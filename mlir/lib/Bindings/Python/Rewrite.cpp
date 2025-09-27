@@ -143,7 +143,21 @@ private:
 
 /// Create the `mlir.rewrite` here.
 void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
-  nb::class_<MlirPatternRewriter>(m, "PatternRewriter");
+  nb::class_<MlirPatternRewriter>(m, "PatternRewriter")
+      .def("ip", [](MlirPatternRewriter rewriter) {
+        MlirRewriterBase base = mlirPatternRewriterAsBase(rewriter);
+        MlirBlock block = mlirRewriterBaseGetInsertionBlock(base);
+        MlirOperation op = mlirRewriterBaseGetOperationAfterInsertion(base);
+        MlirOperation owner = mlirBlockGetParentOperation(block);
+        auto ctx = PyMlirContext::forContext(mlirRewriterBaseGetContext(base))
+                       ->getRef();
+        if (mlirOperationIsNull(op)) {
+          auto parent = PyOperation::forOperation(ctx, owner);
+          return PyInsertionPoint(PyBlock(parent, block));
+        }
+
+        return PyInsertionPoint(*PyOperation::forOperation(ctx, op).get());
+      });
   //----------------------------------------------------------------------------
   // Mapping of the PDLResultList and PDLModule
   //----------------------------------------------------------------------------
