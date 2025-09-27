@@ -272,6 +272,9 @@ Attribute Changes in Clang
   attribute, allowing the attribute to only be attached to the declaration. Prior, this would be
   treated as an error where the definition and declaration would have differing types.
 
+- New format attributes ``gnu_printf``, ``gnu_scanf``, ``gnu_strftime`` and ``gnu_strfmon`` are added
+  as aliases for ``printf``, ``scanf``, ``strftime`` and ``strfmon``. (#GH16219)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added a separate diagnostic group ``-Wfunction-effect-redeclarations``, for the more pedantic
@@ -563,6 +566,7 @@ Crash and bug fixes
 - Fixed a crash in the static analyzer that when the expression in an
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 - Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
+- Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
 
 Improvements
 ^^^^^^^^^^^^
@@ -577,7 +581,9 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
-- Exposed `clang_getCursorLanguage` via `Cursor.language`.
+- Exposed ``clang_getCursorLanguage`` via ``Cursor.language``.
+- Add all missing ``CursorKind``s, ``TypeKind``s and
+  ``ExceptionSpecificationKind``s from ``Index.h``
 
 OpenMP Support
 --------------

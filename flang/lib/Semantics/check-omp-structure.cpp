@@ -624,21 +624,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_assumes);
     return false;
   }
-  bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
-    checker_(
-        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_declare_simd);
-    return false;
-  }
-  bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
-    checker_(
-        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_declare_target);
-    return false;
-  }
-  bool Pre(const parser::OmpDeclareVariantDirective &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source,
-        Directive::OMPD_declare_variant);
-    return false;
-  }
   bool Pre(const parser::OpenMPGroupprivate &x) {
     checker_(x.v.DirName().source, Directive::OMPD_groupprivate);
     return false;
@@ -1361,8 +1346,32 @@ void OmpStructureChecker::Leave(const parser::OpenMPThreadprivate &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPDeclareSimdConstruct &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_declare_simd);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
+
+  const parser::OmpArgumentList &args{x.v.Arguments()};
+  if (args.v.empty()) {
+    return;
+  } else if (args.v.size() > 1) {
+    context_.Say(args.source,
+        "DECLARE_SIMD directive should have at most one argument"_err_en_US);
+    return;
+  }
+
+  const parser::OmpArgument &arg{args.v.front()};
+  if (auto *sym{GetArgumentSymbol(arg)}) {
+    if (!IsProcedure(*sym) && !IsFunction(*sym)) {
+      auto &msg{context_.Say(arg.source,
+          "The name '%s' should refer to a procedure"_err_en_US, sym->name())};
+      if (sym->test(Symbol::Flag::Implicit)) {
+        msg.Attach(arg.source,
+            "The name '%s' has been implicitly declared"_en_US, sym->name());
+      }
+    }
+  } else {
+    context_.Say(arg.source,
+        "The argument to the DECLARE_SIMD directive should be a procedure name"_err_en_US);
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPDeclareSimdConstruct &) {
@@ -1370,9 +1379,50 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareSimdConstruct &) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpDeclareVariantDirective &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(
-      dir.source, llvm::omp::Directive::OMPD_declare_variant);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
+
+  const parser::OmpArgumentList &args{x.v.Arguments()};
+  if (args.v.size() != 1) {
+    context_.Say(args.source,
+        "DECLARE_VARIANT directive should have a single argument"_err_en_US);
+    return;
+  }
+
+  auto InvalidArgument{[&](parser::CharBlock source) {
+    context_.Say(source,
+        "The argument to the DECLARE_VARIANT directive should be [base-name:]variant-name"_err_en_US);
+  }};
+
+  auto CheckSymbol{[&](const Symbol *sym, parser::CharBlock source) {
+    if (sym) {
+      if (!IsProcedure(*sym) && !IsFunction(*sym)) {
+        auto &msg{context_.Say(source,
+            "The name '%s' should refer to a procedure"_err_en_US,
+            sym->name())};
+        if (sym->test(Symbol::Flag::Implicit)) {
+          msg.Attach(source, "The name '%s' has been implicitly declared"_en_US,
+              sym->name());
+        }
+      }
+    } else {
+      InvalidArgument(source);
+    }
+  }};
+
+  const parser::OmpArgument &arg{args.v.front()};
+  common::visit( //
+      common::visitors{
+          [&](const parser::OmpBaseVariantNames &y) {
+            CheckSymbol(GetObjectSymbol(std::get<0>(y.t)), arg.source);
+            CheckSymbol(GetObjectSymbol(std::get<1>(y.t)), arg.source);
+          },
+          [&](const parser::OmpLocator &y) {
+            CheckSymbol(GetArgumentSymbol(arg), arg.source);
+          },
+          [&](auto &&y) { InvalidArgument(arg.source); },
+      },
+      arg.u);
 }
 
 void OmpStructureChecker::Leave(const parser::OmpDeclareVariantDirective &) {
@@ -1560,38 +1610,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Allocate &x) {
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OmpDeclareTargetWithClause &x) {
-  SetClauseSets(llvm::omp::Directive::OMPD_declare_target);
-}
-
-void OmpStructureChecker::Leave(const parser::OmpDeclareTargetWithClause &x) {
-  if (x.v.v.size() > 0) {
-    const parser::OmpClause *enterClause =
-        FindClause(llvm::omp::Clause::OMPC_enter);
-    const parser::OmpClause *toClause = FindClause(llvm::omp::Clause::OMPC_to);
-    const parser::OmpClause *linkClause =
-        FindClause(llvm::omp::Clause::OMPC_link);
-    const parser::OmpClause *indirectClause =
-        FindClause(llvm::omp::Clause::OMPC_indirect);
-    if (!enterClause && !toClause && !linkClause) {
-      context_.Say(x.source,
-          "If the DECLARE TARGET directive has a clause, it must contain at least one ENTER clause or LINK clause"_err_en_US);
-    }
-    if (indirectClause && !enterClause) {
-      context_.Say(x.source,
-          "The INDIRECT clause cannot be used without the ENTER clause with the DECLARE TARGET directive."_err_en_US);
-    }
-    unsigned version{context_.langOptions().OpenMPVersion};
-    if (toClause && version >= 52) {
-      context_.Warn(common::UsageWarning::OpenMPUsage, toClause->source,
-          "The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead."_warn_en_US);
-    }
-    if (indirectClause) {
-      CheckAllowedClause(llvm::omp::Clause::OMPC_indirect);
-    }
-  }
-}
-
 void OmpStructureChecker::Enter(const parser::OpenMPDeclareMapperConstruct &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
   PushContextAndClauseSets(dirName.source, dirName.v);
@@ -1643,42 +1661,6 @@ void OmpStructureChecker::Leave(
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPDeclareTargetConstruct &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContext(dir.source, llvm::omp::Directive::OMPD_declare_target);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpDeclareTargetWithList &x) {
-  SymbolSourceMap symbols;
-  GetSymbolsInObjectList(x.v, symbols);
-  for (auto &[symbol, source] : symbols) {
-    const GenericDetails *genericDetails = symbol->detailsIf<GenericDetails>();
-    if (genericDetails) {
-      context_.Say(source,
-          "The procedure '%s' in DECLARE TARGET construct cannot be a generic name."_err_en_US,
-          symbol->name());
-      genericDetails->specific();
-    }
-    if (IsProcedurePointer(*symbol)) {
-      context_.Say(source,
-          "The procedure '%s' in DECLARE TARGET construct cannot be a procedure pointer."_err_en_US,
-          symbol->name());
-    }
-    const SubprogramDetails *entryDetails =
-        symbol->detailsIf<SubprogramDetails>();
-    if (entryDetails && entryDetails->entryScope()) {
-      context_.Say(source,
-          "The procedure '%s' in DECLARE TARGET construct cannot be an entry name."_err_en_US,
-          symbol->name());
-    }
-    if (IsStmtFunction(*symbol)) {
-      context_.Say(source,
-          "The procedure '%s' in DECLARE TARGET construct cannot be a statement function."_err_en_US,
-          symbol->name());
-    }
-  }
-}
-
 void OmpStructureChecker::CheckSymbolName(
     const parser::CharBlock &source, const parser::OmpObject &object) {
   common::visit(
@@ -1711,62 +1693,138 @@ void OmpStructureChecker::CheckSymbolNames(
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPDeclareTargetConstruct &x) {
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContext(dirName.source, dirName.v);
+
+  // Check if arguments are extended-list-items.
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    const Symbol *symbol{GetArgumentSymbol(arg)};
+    if (!symbol) {
+      context_.Say(arg.source,
+          "An argument to the DECLARE TARGET directive should be an extended-list-item"_err_en_US);
+      continue;
+    }
+    const GenericDetails *genericDetails = symbol->detailsIf<GenericDetails>();
+    if (genericDetails) {
+      context_.Say(arg.source,
+          "The procedure '%s' in DECLARE TARGET construct cannot be a generic name."_err_en_US,
+          symbol->name());
+      genericDetails->specific();
+    }
+    if (IsProcedurePointer(*symbol)) {
+      context_.Say(arg.source,
+          "The procedure '%s' in DECLARE TARGET construct cannot be a procedure pointer."_err_en_US,
+          symbol->name());
+    }
+    const SubprogramDetails *entryDetails =
+        symbol->detailsIf<SubprogramDetails>();
+    if (entryDetails && entryDetails->entryScope()) {
+      context_.Say(arg.source,
+          "The procedure '%s' in DECLARE TARGET construct cannot be an entry name."_err_en_US,
+          symbol->name());
+    }
+    if (IsStmtFunction(*symbol)) {
+      context_.Say(arg.source,
+          "The procedure '%s' in DECLARE TARGET construct cannot be a statement function."_err_en_US,
+          symbol->name());
+    }
+  }
+
+  // Check if there are arguments or clauses, but not both.
+  if (!x.v.Clauses().v.empty()) {
+    if (!x.v.Arguments().v.empty()) {
+      context_.Say(x.source,
+          "DECLARE TARGET directive can have argument or clauses, but not both"_err_en_US);
+    }
+    SetClauseSets(llvm::omp::Directive::OMPD_declare_target);
+  }
+}
+
 void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  const auto &spec{std::get<parser::OmpDeclareTargetSpecifier>(x.t)};
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+
   // Handle both forms of DECLARE TARGET.
   // - Extended list: It behaves as if there was an ENTER/TO clause with the
   //   list of objects as argument. It accepts no explicit clauses.
   // - With clauses.
-  if (const auto *objectList{parser::Unwrap<parser::OmpObjectList>(spec.u)}) {
-    deviceConstructFound_ = true;
-    CheckSymbolNames(dir.source, *objectList);
-    CheckVarIsNotPartOfAnotherVar(dir.source, *objectList);
-    CheckThreadprivateOrDeclareTargetVar(*objectList);
-  } else if (const auto *clauseList{
-                 parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
-    bool toClauseFound{false}, deviceTypeClauseFound{false},
-        enterClauseFound{false};
-    for (const auto &clause : clauseList->v) {
-      common::visit(
-          common::visitors{
-              [&](const parser::OmpClause::To &toClause) {
-                toClauseFound = true;
-                auto &objList{std::get<parser::OmpObjectList>(toClause.v.t)};
-                CheckSymbolNames(dir.source, objList);
-                CheckVarIsNotPartOfAnotherVar(dir.source, objList);
-                CheckThreadprivateOrDeclareTargetVar(objList);
-              },
-              [&](const parser::OmpClause::Link &linkClause) {
-                CheckSymbolNames(dir.source, linkClause.v);
-                CheckVarIsNotPartOfAnotherVar(dir.source, linkClause.v);
-                CheckThreadprivateOrDeclareTargetVar(linkClause.v);
-              },
-              [&](const parser::OmpClause::Enter &enterClause) {
-                enterClauseFound = true;
-                auto &objList{std::get<parser::OmpObjectList>(enterClause.v.t)};
-                CheckSymbolNames(dir.source, objList);
-                CheckVarIsNotPartOfAnotherVar(dir.source, objList);
-                CheckThreadprivateOrDeclareTargetVar(objList);
-              },
-              [&](const parser::OmpClause::DeviceType &deviceTypeClause) {
-                deviceTypeClauseFound = true;
-                if (deviceTypeClause.v.v !=
-                    parser::OmpDeviceTypeClause::DeviceTypeDescription::Host) {
-                  // Function / subroutine explicitly marked as runnable by the
-                  // target device.
-                  deviceConstructFound_ = true;
-                }
-              },
-              [&](const auto &) {},
-          },
-          clause.u);
-
-      if ((toClauseFound || enterClauseFound) && !deviceTypeClauseFound) {
-        deviceConstructFound_ = true;
-      }
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (auto *object{GetArgumentObject(arg)}) {
+      deviceConstructFound_ = true;
+      CheckSymbolName(dirName.source, *object);
+      CheckVarIsNotPartOfAnotherVar(dirName.source, *object);
+      CheckThreadprivateOrDeclareTargetVar(*object);
     }
   }
+
+  if (!x.v.Clauses().v.empty()) {
+    const parser::OmpClause *enterClause =
+        FindClause(llvm::omp::Clause::OMPC_enter);
+    const parser::OmpClause *toClause = FindClause(llvm::omp::Clause::OMPC_to);
+    const parser::OmpClause *linkClause =
+        FindClause(llvm::omp::Clause::OMPC_link);
+    const parser::OmpClause *indirectClause =
+        FindClause(llvm::omp::Clause::OMPC_indirect);
+    if (!enterClause && !toClause && !linkClause) {
+      context_.Say(x.source,
+          "If the DECLARE TARGET directive has a clause, it must contain at least one ENTER clause or LINK clause"_err_en_US);
+    }
+    if (indirectClause && !enterClause) {
+      context_.Say(x.source,
+          "The INDIRECT clause cannot be used without the ENTER clause with the DECLARE TARGET directive."_err_en_US);
+    }
+    unsigned version{context_.langOptions().OpenMPVersion};
+    if (toClause && version >= 52) {
+      context_.Warn(common::UsageWarning::OpenMPUsage, toClause->source,
+          "The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead."_warn_en_US);
+    }
+    if (indirectClause) {
+      CheckAllowedClause(llvm::omp::Clause::OMPC_indirect);
+    }
+  }
+
+  bool toClauseFound{false}, deviceTypeClauseFound{false},
+      enterClauseFound{false};
+  for (const parser::OmpClause &clause : x.v.Clauses().v) {
+    common::visit(
+        common::visitors{
+            [&](const parser::OmpClause::To &toClause) {
+              toClauseFound = true;
+              auto &objList{std::get<parser::OmpObjectList>(toClause.v.t)};
+              CheckSymbolNames(dirName.source, objList);
+              CheckVarIsNotPartOfAnotherVar(dirName.source, objList);
+              CheckThreadprivateOrDeclareTargetVar(objList);
+            },
+            [&](const parser::OmpClause::Link &linkClause) {
+              CheckSymbolNames(dirName.source, linkClause.v);
+              CheckVarIsNotPartOfAnotherVar(dirName.source, linkClause.v);
+              CheckThreadprivateOrDeclareTargetVar(linkClause.v);
+            },
+            [&](const parser::OmpClause::Enter &enterClause) {
+              enterClauseFound = true;
+              auto &objList{std::get<parser::OmpObjectList>(enterClause.v.t)};
+              CheckSymbolNames(dirName.source, objList);
+              CheckVarIsNotPartOfAnotherVar(dirName.source, objList);
+              CheckThreadprivateOrDeclareTargetVar(objList);
+            },
+            [&](const parser::OmpClause::DeviceType &deviceTypeClause) {
+              deviceTypeClauseFound = true;
+              if (deviceTypeClause.v.v !=
+                  parser::OmpDeviceTypeClause::DeviceTypeDescription::Host) {
+                // Function / subroutine explicitly marked as runnable by the
+                // target device.
+                deviceConstructFound_ = true;
+              }
+            },
+            [&](const auto &) {},
+        },
+        clause.u);
+
+    if ((toClauseFound || enterClauseFound) && !deviceTypeClauseFound) {
+      deviceConstructFound_ = true;
+    }
+  }
+
   dirContext_.pop_back();
 }
 

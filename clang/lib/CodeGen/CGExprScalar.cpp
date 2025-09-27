@@ -3672,17 +3672,19 @@ Value *ScalarExprEmitter::VisitReal(const UnaryOperator *E,
     // If it's an l-value, load through the appropriate subobject l-value.
     // Note that we have to ask E because Op might be an l-value that
     // this won't work for, e.g. an Obj-C property.
-    if (E->isGLValue())  {
+    if (E->isGLValue()) {
       if (!PromotionType.isNull()) {
         CodeGenFunction::ComplexPairTy result = CGF.EmitComplexExpr(
             Op, /*IgnoreReal*/ IgnoreResultAssign, /*IgnoreImag*/ true);
-        if (result.first)
-          result.first = CGF.EmitPromotedValue(result, PromotionType).first;
-        return result.first;
-      } else {
-        return CGF.EmitLoadOfLValue(CGF.EmitLValue(E), E->getExprLoc())
-            .getScalarVal();
+        PromotionType = PromotionType->isAnyComplexType()
+                            ? PromotionType
+                            : CGF.getContext().getComplexType(PromotionType);
+        return result.first ? CGF.EmitPromotedValue(result, PromotionType).first
+                            : result.first;
       }
+
+      return CGF.EmitLoadOfLValue(CGF.EmitLValue(E), E->getExprLoc())
+          .getScalarVal();
     }
     // Otherwise, calculate and project.
     return CGF.EmitComplexExpr(Op, false, true).first;
@@ -3715,13 +3717,16 @@ Value *ScalarExprEmitter::VisitImag(const UnaryOperator *E,
       if (!PromotionType.isNull()) {
         CodeGenFunction::ComplexPairTy result = CGF.EmitComplexExpr(
             Op, /*IgnoreReal*/ true, /*IgnoreImag*/ IgnoreResultAssign);
-        if (result.second)
-          result.second = CGF.EmitPromotedValue(result, PromotionType).second;
-        return result.second;
-      } else {
-        return CGF.EmitLoadOfLValue(CGF.EmitLValue(E), E->getExprLoc())
-            .getScalarVal();
+        PromotionType = PromotionType->isAnyComplexType()
+                            ? PromotionType
+                            : CGF.getContext().getComplexType(PromotionType);
+        return result.second
+                   ? CGF.EmitPromotedValue(result, PromotionType).second
+                   : result.second;
       }
+
+      return CGF.EmitLoadOfLValue(CGF.EmitLValue(E), E->getExprLoc())
+          .getScalarVal();
     }
     // Otherwise, calculate and project.
     return CGF.EmitComplexExpr(Op, true, false).second;

@@ -117,12 +117,12 @@ def create_plot(data, metric, subtitle=None):
     Create a plot object showing the evolution of each benchmark throughout the given commits for
     the given metric.
     """
-    data = data.sort_values(by=['date', 'benchmark'])
+    data = data.sort_values(by=['revlist_order', 'benchmark'])
     revlist = pandas.unique(data['commit']) # list of all commits in chronological order
     hover_info = {c: truncate_lines(c.show(), 30, marker='...').replace('\n', '<br>') for c in revlist}
     figure = plotly.express.scatter(data, title=f"{revlist[0].shortrev} to {revlist[-1].shortrev}",
                                           subtitle=subtitle,
-                                          x='date', y=metric,
+                                          x='revlist_order', y=metric,
                                           symbol='benchmark',
                                           color='benchmark',
                                           hover_name=[hover_info[c] for c in data['commit']],
@@ -158,7 +158,7 @@ def parse_lnt(lines, aggregate=statistics.median):
     If a metric has multiple values associated to it, they are aggregated into a single
     value using the provided aggregation function.
     """
-    results = []
+    results = {}
     for line in lines:
         line = line.strip()
         if not line:
@@ -166,20 +166,20 @@ def parse_lnt(lines, aggregate=statistics.median):
 
         (identifier, value) = line.split(' ')
         (benchmark, metric) = identifier.split('.')
-        if not any(x['benchmark'] == benchmark for x in results):
-            results.append({'benchmark': benchmark})
+        if benchmark not in results:
+            results[benchmark] = {'benchmark': benchmark}
 
-        entry = next(x for x in results if x['benchmark'] == benchmark)
+        entry = results[benchmark]
         if metric not in entry:
             entry[metric] = []
         entry[metric].append(float(value))
 
-    for entry in results:
+    for (bm, entry) in results.items():
         for metric in entry:
             if isinstance(entry[metric], list):
                 entry[metric] = aggregate(entry[metric])
 
-    return results
+    return list(results.values())
 
 def sorted_revlist(git_repo, commits):
     """
