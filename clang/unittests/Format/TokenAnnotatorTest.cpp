@@ -4173,7 +4173,7 @@ TEST_F(TokenAnnotatorTest, ArrowAfterSubscript) {
   EXPECT_TOKEN(Tokens[13], tok::arrow, TT_Unknown);
 }
 
-TEST_F(TokenAnnotatorTest, KeywordedFunctionLikeMacro) {
+TEST_F(TokenAnnotatorTest, QtProperty) {
   auto Style = getLLVMStyle();
   Style.AllowBreakBeforeQtProperty = true;
 
