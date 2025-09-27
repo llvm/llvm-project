@@ -96,8 +96,8 @@ public:
   SmallPtrSetImplBase &operator=(const SmallPtrSetImplBase &) = delete;
 
   [[nodiscard]] bool empty() const { return size() == 0; }
-  size_type size() const { return NumEntries; }
-  size_type capacity() const { return CurArraySize; }
+  [[nodiscard]] size_type size() const { return NumEntries; }
+  [[nodiscard]] size_type capacity() const { return CurArraySize; }
 
   void clear() {
     incrementEpoch();
@@ -344,7 +344,7 @@ public:
 
   // Most methods are provided by the base class.
 
-  const PtrTy operator*() const {
+  [[nodiscard]] const PtrTy operator*() const {
     return PtrTraits::getFromVoidPointer(dereference());
   }
 
@@ -452,13 +452,13 @@ public:
   }
 
   /// count - Return 1 if the specified pointer is in the set, 0 otherwise.
-  size_type count(ConstPtrType Ptr) const {
+  [[nodiscard]] size_type count(ConstPtrType Ptr) const {
     return contains_imp(ConstPtrTraits::getAsVoidPointer(Ptr));
   }
-  iterator find(ConstPtrType Ptr) const {
+  [[nodiscard]] iterator find(ConstPtrType Ptr) const {
     return makeIterator(find_imp(ConstPtrTraits::getAsVoidPointer(Ptr)));
   }
-  bool contains(ConstPtrType Ptr) const {
+  [[nodiscard]] bool contains(ConstPtrType Ptr) const {
     return contains_imp(ConstPtrTraits::getAsVoidPointer(Ptr));
   }
 
@@ -475,12 +475,12 @@ public:
     insert(adl_begin(R), adl_end(R));
   }
 
-  iterator begin() const {
+  [[nodiscard]] iterator begin() const {
     if (shouldReverseIterate())
       return makeIterator(EndPointer() - 1);
     return makeIterator(CurArray);
   }
-  iterator end() const { return makeIterator(EndPointer()); }
+  [[nodiscard]] iterator end() const { return makeIterator(EndPointer()); }
 
 private:
   /// Create an iterator that dereferences to same place as the given pointer.
@@ -496,8 +496,8 @@ private:
 /// Iterates over elements of LHS confirming that each value from LHS is also in
 /// RHS, and that no additional values are in RHS.
 template <typename PtrType>
-bool operator==(const SmallPtrSetImpl<PtrType> &LHS,
-                const SmallPtrSetImpl<PtrType> &RHS) {
+[[nodiscard]] bool operator==(const SmallPtrSetImpl<PtrType> &LHS,
+                              const SmallPtrSetImpl<PtrType> &RHS) {
   if (LHS.size() != RHS.size())
     return false;
 
@@ -512,8 +512,8 @@ bool operator==(const SmallPtrSetImpl<PtrType> &LHS,
 ///
 /// Equivalent to !(LHS == RHS).
 template <typename PtrType>
-bool operator!=(const SmallPtrSetImpl<PtrType> &LHS,
-                const SmallPtrSetImpl<PtrType> &RHS) {
+[[nodiscard]] bool operator!=(const SmallPtrSetImpl<PtrType> &LHS,
+                              const SmallPtrSetImpl<PtrType> &RHS) {
   return !(LHS == RHS);
 }
 
