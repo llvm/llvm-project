@@ -16,6 +16,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include <optional>
 
 using namespace llvm;
 using namespace bolt;
@@ -75,7 +76,22 @@ bool PPCMCPlusBuilder::hasPCRelOperand(const MCInst &I) const {
 }
 
 int PPCMCPlusBuilder::getPCRelOperandNum(const MCInst &I) const {
-  return hasPCRelOperand(I) ? 0 : -1;
+  switch (I.getOpcode()) {
+  // Unconditional direct branches
+  case PPC::B:
+  case PPC::BL:
+  case PPC::BA:
+  case PPC::BLA:
+    return 0;
+
+  // Conditional branches
+  case PPC::BC:
+  case PPC::BCL:
+    return 2;
+
+  default:
+    return -1;
+  }
 }
 
 int PPCMCPlusBuilder::getMemoryOperandNo(const MCInst & /*Inst*/) const {
@@ -84,10 +100,10 @@ int PPCMCPlusBuilder::getMemoryOperandNo(const MCInst & /*Inst*/) const {
 
 void PPCMCPlusBuilder::replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                                            MCContext *Ctx) const {
-  // TODO: Implement PPC branch target replacement
-  (void)Inst;
-  (void)TBB;
-  (void)Ctx;
+  int OpNum = getPCRelOperandNum(Inst);
+  assert(OpNum >= 0 && "branch/call must have a PC-rel operand");
+  Inst.getOperand(OpNum) =
+      MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
 }
 
 const MCSymbol *PPCMCPlusBuilder::getTargetSymbol(const MCInst &Inst,
@@ -235,6 +251,43 @@ void PPCMCPlusBuilder::createLongTailCall(std::vector<MCInst> &Seq,
   (void)Seq;
   (void)Target;
   (void)Ctx;
+}
+
+using namespace llvm::ELF;
+
+std::optional<Relocation>
+PPCMCPlusBuilder::createRelocation(const MCFixup &Fixup,
+                                   const MCAsmBackend &MAB) const {
+  Relocation R;
+  R.Offset = Fixup.getOffset();
+
+  // Pull (Symbol, Addend) out of the fixup expression.
+  auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
+  if (!RelSymbol)
+    return std::nullopt;
+
+  R.Symbol =
+      const_cast<MCSymbol *>(RelSymbol); // or just R.Symbol = RelSymbol; if
+                                         // your Relocation uses const MCSymbol*
+  R.Addend = RelAddend;
+
+  const MCFixupKindInfo FKI = MAB.getFixupKindInfo(Fixup.getKind());
+
+  // Branches on PPC are PC-relative and use 24-bit or 14-bit displacements.
+  if (Fixup.isPCRel()) {
+    switch (FKI.TargetSize) {
+    case 24:
+      R.Type = R_PPC64_REL24; // bl/b
+      return R;
+    case 14:
+      R.Type = R_PPC64_REL14; // bc/bdz/...
+      return R;
+    default:
+      return std::nullopt;
+    }
+  }
+
+  return std::nullopt;
 }
 
 namespace llvm {
