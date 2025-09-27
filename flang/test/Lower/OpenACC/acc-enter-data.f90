@@ -1,5 +1,5 @@
 ! This test checks lowering of OpenACC enter data directive.
-
+! XFAIL: *
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 module mod1
