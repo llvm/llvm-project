@@ -5873,8 +5873,14 @@ ASTContext::getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack) {
 
   QualType Canon;
   TemplateArgument CanonArgPack = getCanonicalTemplateArgument(ArgPack);
-  if (!CanonArgPack.structurallyEquals(ArgPack))
+  if (!CanonArgPack.structurallyEquals(ArgPack)) {
     Canon = getSubstBuiltinTemplatePack(CanonArgPack);
+    // Refresh InsertPos, in case the recursive call above caused rehashing,
+    // which would invalidate the bucket pointer.
+    if (auto *T =
+            SubstBuiltinTemplatePackTypes.FindNodeOrInsertPos(ID, InsertPos))
+      return QualType(T, 0);
+  }
 
   auto *PackType = new (*this, alignof(SubstBuiltinTemplatePackType))
       SubstBuiltinTemplatePackType(Canon, ArgPack);
