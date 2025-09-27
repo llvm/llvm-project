@@ -248,9 +248,11 @@ define void @PR52039(ptr %pa, ptr %pb) {
 ;
 ; AVX1-LABEL: PR52039:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm0 = [10,10,10,10]
-; AVX1-NEXT:    vpsubd 16(%rdi), %xmm0, %xmm1
-; AVX1-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [10,10,10,10]
+; AVX1-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm2
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm2
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm1, %xmm3
@@ -259,6 +261,7 @@ define void @PR52039(ptr %pa, ptr %pb) {
 ; AVX1-NEXT:    vmovdqu %xmm0, (%rsi)
 ; AVX1-NEXT:    vmovdqu %xmm3, 16(%rdi)
 ; AVX1-NEXT:    vmovdqu %xmm2, (%rdi)
+; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR52039:
