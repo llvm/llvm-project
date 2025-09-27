@@ -3012,7 +3012,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
     // Simplify the input constraint.
     std::string InputConstraint(S.getInputConstraint(i));
-    InputConstraint = getTarget().simplifyConstraint(InputConstraint.c_str(),
+    InputConstraint = getTarget().simplifyConstraint(InputConstraint,
                                                      &OutputConstraintInfos);
 
     InputConstraint = AddVariableConstraints(
