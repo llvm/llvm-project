@@ -439,10 +439,6 @@ public:
   bool isSafePtrType(const QualType type) const final {
     return isRetainPtrOrOSPtrType(type);
   }
-  bool isSafeExpr(const Expr *E) const final {
-    return ento::cocoa::isCocoaObjectRef(E->getType()) &&
-           isa<ObjCMessageExpr>(E);
-  }
   const char *ptrKind() const final { return "unretained"; }
 };
 
