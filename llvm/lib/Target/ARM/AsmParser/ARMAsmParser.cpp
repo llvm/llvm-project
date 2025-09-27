@@ -135,17 +135,17 @@ public:
   MCRegister getFPReg() const { return FPReg; }
 
   void emitFnStartLocNotes() const {
-    for (const SMLoc &Loc : FnStartLocs)
+    for (SMLoc Loc : FnStartLocs)
       Parser.Note(Loc, ".fnstart was specified here");
   }
 
   void emitCantUnwindLocNotes() const {
-    for (const SMLoc &Loc : CantUnwindLocs)
+    for (SMLoc Loc : CantUnwindLocs)
       Parser.Note(Loc, ".cantunwind was specified here");
   }
 
   void emitHandlerDataLocNotes() const {
-    for (const SMLoc &Loc : HandlerDataLocs)
+    for (SMLoc Loc : HandlerDataLocs)
       Parser.Note(Loc, ".handlerdata was specified here");
   }
 

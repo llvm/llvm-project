@@ -235,6 +235,7 @@ public:
   mlir::Value visitCirAttr(cir::ConstRecordAttr attr);
   mlir::Value visitCirAttr(cir::ConstVectorAttr attr);
   mlir::Value visitCirAttr(cir::GlobalViewAttr attr);
+  mlir::Value visitCirAttr(cir::TypeInfoAttr attr);
   mlir::Value visitCirAttr(cir::VTableAttr attr);
   mlir::Value visitCirAttr(cir::ZeroAttr attr);
 
@@ -521,6 +522,21 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
   llvm_unreachable("Expecting pointer or integer type for GlobalViewAttr");
 }
 
+// TypeInfoAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::TypeInfoAttr typeInfoAttr) {
+  mlir::Type llvmTy = converter->convertType(typeInfoAttr.getType());
+  mlir::Location loc = parentOp->getLoc();
+  mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
+
+  for (auto [idx, elt] : llvm::enumerate(typeInfoAttr.getData())) {
+    mlir::Value init = visit(elt);
+    result =
+        mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init, idx);
+  }
+
+  return result;
+}
+
 // VTableAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::VTableAttr vtableArr) {
   mlir::Type llvmTy = converter->convertType(vtableArr.getType());
@@ -698,6 +714,17 @@ mlir::LogicalResult CIRToLLVMAtomicCmpXchgLowering::matchAndRewrite(
                                                 cmpxchg.getResult(), 1);
 
   rewriter.replaceOp(op, {old, cmp});
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMAtomicXchgLowering::matchAndRewrite(
+    cir::AtomicXchg op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::atomicSyncScopeID());
+  mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(adaptor.getMemOrder());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::AtomicRMWOp>(
+      op, mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(), adaptor.getVal(),
+      llvmOrder);
   return mlir::success();
 }
 
@@ -1914,8 +1941,14 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
   // Pointer unary operations: + only.  (++ and -- of pointers are implemented
   // with cir.ptr_stride, not cir.unary.)
   if (mlir::isa<cir::PointerType>(elementType)) {
-    return op.emitError()
-           << "Unary operation on pointer types is not yet implemented";
+    switch (op.getKind()) {
+    case cir::UnaryOpKind::Plus:
+      rewriter.replaceOp(op, adaptor.getInput());
+      return mlir::success();
+    default:
+      op.emitError() << "Unknown pointer unary operation during CIR lowering";
+      return mlir::failure();
+    }
   }
 
   return op.emitError() << "Unary operation has unsupported type: "
@@ -2354,9 +2387,6 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       }
       break;
     }
-    converter.addConversion([&](cir::VoidType type) -> mlir::Type {
-      return mlir::LLVM::LLVMVoidType::get(type.getContext());
-    });
 
     // Record has a name: lower as an identified record.
     mlir::LLVM::LLVMStructType llvmStruct;

@@ -761,19 +761,17 @@ static void promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(
 static void getDeclareTargetInfo(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval,
-    const parser::OpenMPDeclareTargetConstruct &declareTargetConstruct,
+    const parser::OpenMPDeclareTargetConstruct &construct,
     mlir::omp::DeclareTargetOperands &clauseOps,
     llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &symbolAndClause) {
-  const auto &spec =
-      std::get<parser::OmpDeclareTargetSpecifier>(declareTargetConstruct.t);
-  if (const auto *objectList{parser::Unwrap<parser::OmpObjectList>(spec.u)}) {
-    ObjectList objects{makeObjects(*objectList, semaCtx)};
+
+  if (!construct.v.Arguments().v.empty()) {
+    ObjectList objects{makeObjects(construct.v.Arguments(), semaCtx)};
     // Case: declare target(func, var1, var2)
     gatherFuncAndVarSyms(objects, mlir::omp::DeclareTargetCaptureClause::to,
                          symbolAndClause, /*automap=*/false);
-  } else if (const auto *clauseList{
-                 parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
-    List<Clause> clauses = makeClauses(*clauseList, semaCtx);
+  } else {
+    List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
     if (clauses.empty()) {
       Fortran::lower::pft::FunctionLikeUnit *owningProc =
           eval.getOwningProcedure();
@@ -3441,18 +3439,20 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     TODO(converter.getCurrentLocation(), "OpenMPDeclareSimdConstruct");
 }
 
-static void
-genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
-       semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-       const parser::OpenMPDeclareMapperConstruct &declareMapperConstruct) {
-  mlir::Location loc = converter.genLocation(declareMapperConstruct.source);
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPDeclareMapperConstruct &construct) {
+  mlir::Location loc = converter.genLocation(construct.source);
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  const parser::OmpArgumentList &args = construct.v.Arguments();
+  assert(args.v.size() == 1 && "Expecting single argument");
   lower::StatementContext stmtCtx;
-  const auto &spec =
-      std::get<parser::OmpMapperSpecifier>(declareMapperConstruct.t);
-  const auto &mapperName{std::get<std::string>(spec.t)};
-  const auto &varType{std::get<parser::TypeSpec>(spec.t)};
-  const auto &varName{std::get<parser::Name>(spec.t)};
+  const auto *spec = std::get_if<parser::OmpMapperSpecifier>(&args.v.front().u);
+  assert(spec && "Expecting mapper specifier");
+  const auto &mapperName{std::get<std::string>(spec->t)};
+  const auto &varType{std::get<parser::TypeSpec>(spec->t)};
+  const auto &varName{std::get<parser::Name>(spec->t)};
   assert(varType.declTypeSpec->category() ==
              semantics::DeclTypeSpec::Category::TypeDerived &&
          "Expected derived type");
@@ -3476,9 +3476,7 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   // Populate the declareMapper region with the map information.
   mlir::omp::DeclareMapperInfoOperands clauseOps;
-  const auto *clauseList{
-      parser::Unwrap<parser::OmpClauseList>(declareMapperConstruct.t)};
-  List<Clause> clauses = makeClauses(*clauseList, semaCtx);
+  List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processMap(loc, stmtCtx, clauseOps);
   mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps.mapVars);
@@ -3858,30 +3856,22 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPSectionsConstruct &sectionsConstruct) {
-  const auto &beginSectionsDirective =
-      std::get<parser::OmpBeginSectionsDirective>(sectionsConstruct.t);
-  List<Clause> clauses = makeClauses(
-      std::get<parser::OmpClauseList>(beginSectionsDirective.t), semaCtx);
-  const auto &endSectionsDirective =
-      std::get<std::optional<parser::OmpEndSectionsDirective>>(
-          sectionsConstruct.t);
-  assert(endSectionsDirective &&
+                   const parser::OpenMPSectionsConstruct &construct) {
+  const parser::OmpDirectiveSpecification &beginSpec{construct.BeginDir()};
+  List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
+  const auto &endSpec{construct.EndDir()};
+  assert(endSpec &&
          "Missing end section directive should have been handled in semantics");
-  clauses.append(makeClauses(
-      std::get<parser::OmpClauseList>(endSectionsDirective->t), semaCtx));
+  clauses.append(makeClauses(endSpec->Clauses(), semaCtx));
   mlir::Location currentLocation = converter.getCurrentLocation();
 
-  llvm::omp::Directive directive =
-      std::get<parser::OmpSectionsDirective>(beginSectionsDirective.t).v;
-  const parser::CharBlock &source =
-      std::get<parser::OmpSectionsDirective>(beginSectionsDirective.t).source;
+  const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
-                          eval, source, directive, clauses)};
+                          eval, beginName.source, beginName.v, clauses)};
 
   mlir::SaveStateStack<SectionsConstructStackFrame> saveStateStack{
-      converter.getStateStack(), sectionsConstruct};
+      converter.getStateStack(), construct};
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }

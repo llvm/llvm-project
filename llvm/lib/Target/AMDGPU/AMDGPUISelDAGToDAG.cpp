@@ -1089,10 +1089,17 @@ void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
   for (SDNode::user_iterator UI = N->user_begin(), E = N->user_end(); UI != E;
        ++UI)
     if (UI.getUse().getResNo() == 1) {
-      if ((IsAdd && (UI->getOpcode() != ISD::UADDO_CARRY)) ||
-          (!IsAdd && (UI->getOpcode() != ISD::USUBO_CARRY))) {
-        IsVALU = true;
-        break;
+      if (UI->isMachineOpcode()) {
+        if (UI->getMachineOpcode() !=
+            (IsAdd ? AMDGPU::S_ADD_CO_PSEUDO : AMDGPU::S_SUB_CO_PSEUDO)) {
+          IsVALU = true;
+          break;
+        }
+      } else {
+        if (UI->getOpcode() != (IsAdd ? ISD::UADDO_CARRY : ISD::USUBO_CARRY)) {
+          IsVALU = true;
+          break;
+        }
       }
     }
 
@@ -1531,7 +1538,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr, SDValue &VAddr,
       C1 = nullptr;
   }
 
-  if (N0.getOpcode() == ISD::ADD) {
+  if (N0->isAnyAdd()) {
     // (add N2, N3) -> addr64, or
     // (add (add N2, N3), C1) -> addr64
     SDValue N2 = N0.getOperand(0);
@@ -1993,7 +2000,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
   }
 
   // Match the variable offset.
-  if (Addr.getOpcode() == ISD::ADD) {
+  if (Addr->isAnyAdd()) {
     LHS = Addr.getOperand(0);
 
     if (!LHS->isDivergent()) {
@@ -2495,7 +2502,7 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDNode *N, SDValue Addr,
 
   SDValue N0, N1;
   // Extract the base and offset if possible.
-  if (CurDAG->isBaseWithConstantOffset(Addr) || Addr.getOpcode() == ISD::ADD) {
+  if (Addr->isAnyAdd() || CurDAG->isADDLike(Addr)) {
     N0 = Addr.getOperand(0);
     N1 = Addr.getOperand(1);
   } else if (getBaseWithOffsetUsingSplitOR(*CurDAG, Addr, N0, N1)) {
@@ -4078,18 +4085,26 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
   // register.
 
   Mods |= SISrcMods::OP_SEL_1;
-  if (IsExtractHigh ||
-      (Src.getValueSizeInBits() == 16 && isExtractHiElt(Src, Src))) {
+  if (Src.getValueSizeInBits() == 16) {
+    if (isExtractHiElt(Src, Src)) {
+      Mods |= SISrcMods::OP_SEL_0;
+
+      // TODO: Should we try to look for neg/abs here?
+      return true;
+    }
+
+    if (Src.getOpcode() == ISD::TRUNCATE &&
+        Src.getOperand(0).getValueType() == MVT::i32) {
+      Src = Src.getOperand(0);
+      return true;
+    }
+
+    if (Subtarget->useRealTrue16Insts())
+      // In true16 mode, pack src to a 32bit
+      Src = createVOP3PSrc32FromLo16(Src, In, CurDAG, Subtarget);
+  } else if (IsExtractHigh)
     Mods |= SISrcMods::OP_SEL_0;
 
-    // TODO: Should we try to look for neg/abs here?
-  }
-
-  // Prevent unnecessary subreg COPY to VGPR_16
-  if (Src.getOpcode() == ISD::TRUNCATE &&
-      Src.getOperand(0).getValueType() == MVT::i32) {
-    Src = Src.getOperand(0);
-  }
   return true;
 }
 
