@@ -129,14 +129,28 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
       pint_t sp = (pint_t)co->getReg(UNW_REG_SP);
 
 #if __has_feature(ptrauth_calls)
-      // It is only valid to set the IP within the current function.
-      // This is important for ptrauth, otherwise the IP cannot be correctly
-      // signed.
-      [[maybe_unused]]unw_word_t stripped_value =
-          (unw_word_t)ptrauth_strip((void *)value, ptrauth_key_return_address);
-      assert(stripped_value >= info.start_ip && stripped_value <= info.end_ip);
-
       {
+        // It is only valid to set the IP within the current function.
+        // This is important for ptrauth, otherwise the IP cannot be correctly
+        // signed.
+        // We re-sign to a more usable form and then use it directly.
+        union {
+          unw_word_t opaque_value;
+          unw_word_t
+            __unwind_ptrauth_restricted_intptr(ptrauth_key_return_address, 1, 0)
+            authenticated_value;
+        } u;
+        u.opaque_value = (uint64_t)ptrauth_auth_and_resign(
+          (void *)value,
+          ptrauth_key_return_address,
+          getSP(),
+          ptrauth_key_return_address,
+          &u.opaque_value);
+
+        if (u.authenticated_value < info.start_ip ||
+            u.authenticated_value > info.end_ip)
+          _LIBUNWIND_ABORT("PC vs frame info mismatch");
+
         // PC should have been signed with the sp, so we verify that
         // roundtripping does not fail.
         pint_t pc = (pint_t)co->getReg(UNW_REG_IP);
