@@ -189,14 +189,14 @@ public:
   bool run(Module &M);
 };
 
-class GlobalMerge : public FunctionPass {
+class GlobalMerge : public ModulePass {
   const TargetMachine *TM = nullptr;
   GlobalMergeOptions Opt;
 
 public:
   static char ID; // Pass identification, replacement for typeid.
 
-  explicit GlobalMerge() : FunctionPass(ID) {
+  explicit GlobalMerge() : ModulePass(ID) {
     Opt.MaxOffset = GlobalMergeMaxOffset;
     Opt.MergeConstantGlobals = EnableGlobalMergeOnConst;
     Opt.MergeConstAggressive = GlobalMergeAllConst;
@@ -206,7 +206,7 @@ public:
   explicit GlobalMerge(const TargetMachine *TM, unsigned MaximalOffset,
                        bool OnlyOptimizeForSize, bool MergeExternalGlobals,
                        bool MergeConstantGlobals, bool MergeConstAggressive)
-      : FunctionPass(ID), TM(TM) {
+      : ModulePass(ID), TM(TM) {
     Opt.MaxOffset = MaximalOffset;
     Opt.SizeOnly = OnlyOptimizeForSize;
     Opt.MergeExternal = MergeExternalGlobals;
@@ -215,7 +215,7 @@ public:
     initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
-  bool doInitialization(Module &M) override {
+  bool runOnModule(Module &M) override {
     auto GetSmallDataLimit = [](Module &M) -> std::optional<uint64_t> {
       Metadata *SDL = M.getModuleFlag("SmallDataLimit");
       if (!SDL)
@@ -232,13 +232,11 @@ public:
     GlobalMergeImpl P(TM, Opt);
     return P.run(M);
   }
-  bool runOnFunction(Function &F) override { return false; }
 
   StringRef getPassName() const override { return "Merge internal globals"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    FunctionPass::getAnalysisUsage(AU);
   }
 };
 
