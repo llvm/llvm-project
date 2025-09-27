@@ -2967,6 +2967,122 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_x86_vcomish(InterpState &S, CodePtr OpPC,
+                                        const InterpFrame *Frame,
+                                        const CallExpr *Call) {
+  using CmpResult = llvm::APFloatBase::cmpResult;
+
+  llvm::APSInt R =
+      popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(3)));
+  llvm::APSInt P =
+      popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+  const Pointer &VB = S.Stk.pop<Pointer>();
+  const Pointer &VA = S.Stk.pop<Pointer>();
+
+  llvm::APFloat A0 = VA.elem<Floating>(0).getAPFloat();
+  llvm::APFloat B0 = VB.elem<Floating>(0).getAPFloat();
+  CmpResult cmp = A0.compare(B0);
+
+  bool isEq = cmp == (CmpResult::cmpEqual);
+  bool isGt = cmp == (CmpResult::cmpGreaterThan);
+  bool isLt = cmp == (CmpResult::cmpLessThan);
+  bool result = false;
+
+  switch (P.getZExtValue()) {
+  case 0x00: /* _CMP_EQ_OQ */
+  case 0x10: /* _CMP_EQ_OS */
+    result = isEq && !A0.isNaN() && !B0.isNaN();
+    break;
+  case 0x14: /* _CMP_NEQ_US */
+  case 0x04: /* _CMP_NEQ_UQ */
+    result = !isEq || A0.isNaN() || B0.isNaN();
+    break;
+  case 0x0d: /* _CMP_GE_OS */
+  case 0x1d: /* _CMP_GE_OQ */
+    result = !isLt && !A0.isNaN() && !B0.isNaN();
+    break;
+  case 0x01: /* _CMP_LT_OS */
+  case 0x11: /* _CMP_LT_OQ */
+    result = isLt && !A0.isNaN() && !B0.isNaN();
+    break;
+  case 0x0e: /* _CMP_GT_OS */
+  case 0x1e: /* _CMP_GT_OQ */
+    result = isGt && !A0.isNaN() && !B0.isNaN();
+    break;
+  case 0x02: /* _CMP_LE_OS */
+  case 0x12: /* _CMP_LE_OQ */
+    result = !isGt && !A0.isNaN() && !B0.isNaN();
+    break;
+  default:
+    return false;
+  }
+
+  pushInteger(S, result ? 1 : 0, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_x86_compare_scalar(InterpState &S, CodePtr OpPC,
+                                               const InterpFrame *Frame,
+                                               const CallExpr *Call,
+                                               unsigned ID) {
+  using CmpResult = llvm::APFloatBase::cmpResult;
+
+  const Pointer &VB = S.Stk.pop<Pointer>();
+  const Pointer &VA = S.Stk.pop<Pointer>();
+
+  llvm::APFloat A0 = VA.elem<Floating>(0).getAPFloat();
+  llvm::APFloat B0 = VB.elem<Floating>(0).getAPFloat();
+  CmpResult cmp = A0.compare(B0);
+
+  bool isEq = cmp == (CmpResult::cmpEqual);
+  bool isGt = cmp == (CmpResult::cmpGreaterThan);
+  bool isLt = cmp == (CmpResult::cmpLessThan);
+  bool result = false;
+
+  switch (ID) {
+  case X86::BI__builtin_ia32_comieq:
+  case X86::BI__builtin_ia32_ucomieq:
+  case X86::BI__builtin_ia32_comisdeq:
+  case X86::BI__builtin_ia32_ucomisdeq:
+    result = isEq && !A0.isNaN() && !B0.isNaN();
+    break;
+  case X86::BI__builtin_ia32_comineq:
+  case X86::BI__builtin_ia32_ucomineq:
+  case X86::BI__builtin_ia32_comisdneq:
+  case X86::BI__builtin_ia32_ucomisdneq:
+    result = !isEq || A0.isNaN() || B0.isNaN();
+    break;
+  case X86::BI__builtin_ia32_comige:
+  case X86::BI__builtin_ia32_ucomige:
+  case X86::BI__builtin_ia32_comisdge:
+  case X86::BI__builtin_ia32_ucomisdge:
+    result = !isLt && !A0.isNaN() && !B0.isNaN();
+    break;
+  case X86::BI__builtin_ia32_comilt:
+  case X86::BI__builtin_ia32_ucomilt:
+  case X86::BI__builtin_ia32_comisdlt:
+  case X86::BI__builtin_ia32_ucomisdlt:
+    result = isLt && !A0.isNaN() && !B0.isNaN();
+    break;
+  case X86::BI__builtin_ia32_comigt:
+  case X86::BI__builtin_ia32_ucomigt:
+  case X86::BI__builtin_ia32_comisdgt:
+  case X86::BI__builtin_ia32_ucomisdgt:
+    result = isGt && !A0.isNaN() && !B0.isNaN();
+    break;
+  case X86::BI__builtin_ia32_comile:
+  case X86::BI__builtin_ia32_ucomile:
+  case X86::BI__builtin_ia32_comisdle:
+  case X86::BI__builtin_ia32_ucomisdle:
+    result = !isGt && !A0.isNaN() && !B0.isNaN();
+    break;
+  default:
+    return false;
+  }
+  pushInteger(S, result ? 1 : 0, S.getASTContext().IntTy);
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -3727,6 +3843,34 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_insert128i256:
     return interp__builtin_x86_insert_subvector(S, OpPC, Call, BuiltinID);
 
+  case X86::BI__builtin_ia32_vcomish:
+    return interp__builtin_x86_vcomish(S, OpPC, Frame, Call);
+  case X86::BI__builtin_ia32_comieq:
+  case X86::BI__builtin_ia32_ucomieq:
+  case X86::BI__builtin_ia32_comisdeq:
+  case X86::BI__builtin_ia32_ucomisdeq:
+  case X86::BI__builtin_ia32_comineq:
+  case X86::BI__builtin_ia32_ucomineq:
+  case X86::BI__builtin_ia32_comisdneq:
+  case X86::BI__builtin_ia32_ucomisdneq:
+  case X86::BI__builtin_ia32_comige:
+  case X86::BI__builtin_ia32_ucomige:
+  case X86::BI__builtin_ia32_comisdge:
+  case X86::BI__builtin_ia32_ucomisdge:
+  case X86::BI__builtin_ia32_comilt:
+  case X86::BI__builtin_ia32_ucomilt:
+  case X86::BI__builtin_ia32_comisdlt:
+  case X86::BI__builtin_ia32_ucomisdlt:
+  case X86::BI__builtin_ia32_comile:
+  case X86::BI__builtin_ia32_ucomile:
+  case X86::BI__builtin_ia32_comisdle:
+  case X86::BI__builtin_ia32_ucomisdle:
+  case X86::BI__builtin_ia32_comigt:
+  case X86::BI__builtin_ia32_ucomigt:
+  case X86::BI__builtin_ia32_comisdgt:
+  case X86::BI__builtin_ia32_ucomisdgt:
+    return interp__builtin_x86_compare_scalar(S, OpPC, Frame, Call, BuiltinID);
+
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)
@@ -3763,8 +3907,8 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       break;
     }
     case OffsetOfNode::Array: {
-      // When generating bytecode, we put all the index expressions as Sint64 on
-      // the stack.
+      // When generating bytecode, we put all the index expressions as Sint64
+      // on the stack.
       int64_t Index = ArrayIndices[ArrayIndex];
       const ArrayType *AT = S.getASTContext().getAsArrayType(CurrentType);
       if (!AT)

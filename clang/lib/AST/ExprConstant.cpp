@@ -14822,6 +14822,148 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return HandleMaskBinOp(
         [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
   }
+  case X86::BI__builtin_ia32_vcomish: {
+    APSInt R, P;
+    if (!EvaluateInteger(E->getArg(3), R, Info))
+      return false;
+    if (!EvaluateInteger(E->getArg(2), P, Info))
+      return false;
+    APValue AV, BV;
+    if (!EvaluateVector(E->getArg(0), AV, Info) ||
+        !EvaluateVector(E->getArg(1), BV, Info))
+      return false;
+    if (!AV.isVector() || !BV.isVector() || AV.getVectorLength() == 0 ||
+        BV.getVectorLength() == 0)
+      return false;
+    const APValue &A0V = AV.getVectorElt(0);
+    const APValue &B0V = BV.getVectorElt(0);
+    if (!A0V.isFloat() || !B0V.isFloat())
+      return false;
+    const llvm::APFloat &A0 = A0V.getFloat();
+    const llvm::APFloat &B0 = B0V.getFloat();
+    auto Cmp = A0.compare(B0);
+
+    const bool IsEq = (Cmp == llvm::APFloatBase::cmpEqual);
+    const bool IsLt = (Cmp == llvm::APFloatBase::cmpLessThan);
+    const bool IsGt = (Cmp == llvm::APFloatBase::cmpGreaterThan);
+    bool Result = false;
+
+    switch (P.getExtValue()) {
+    case 0x00: /* _CMP_EQ_OQ */
+    case 0x10: /* _CMP_EQ_OS */
+      Result = IsEq && !A0.isNaN() && !B0.isNaN();
+      break;
+    case 0x14: /* _CMP_NEQ_US */
+    case 0x04: /* _CMP_NEQ_UQ */
+      Result = !IsEq || A0.isNaN() || B0.isNaN();
+      break;
+    case 0x0d: /* _CMP_GE_OS */
+    case 0x1d: /* _CMP_GE_OQ */
+      Result = !IsLt && !A0.isNaN() && !B0.isNaN();
+      break;
+    case 0x01: /* _CMP_LT_OS */
+    case 0x11: /* _CMP_LT_OQ */
+      Result = IsLt && !A0.isNaN() && !B0.isNaN();
+      break;
+    case 0x0e: /* _CMP_GT_OS */
+    case 0x1e: /* _CMP_GT_OQ */
+      Result = IsGt && !A0.isNaN() && !B0.isNaN();
+      break;
+    case 0x02: /* _CMP_LE_OS */
+    case 0x12: /* _CMP_LE_OQ */
+      Result = !IsGt && !A0.isNaN() && !B0.isNaN();
+      break;
+    default:
+      return false;
+    }
+    return Success(Result ? 1 : 0, E);
+  }
+  case X86::BI__builtin_ia32_comieq:
+  case X86::BI__builtin_ia32_ucomieq:
+  case X86::BI__builtin_ia32_comisdeq:
+  case X86::BI__builtin_ia32_ucomisdeq:
+  case X86::BI__builtin_ia32_comineq:
+  case X86::BI__builtin_ia32_ucomineq:
+  case X86::BI__builtin_ia32_comisdneq:
+  case X86::BI__builtin_ia32_ucomisdneq:
+  case X86::BI__builtin_ia32_comige:
+  case X86::BI__builtin_ia32_ucomige:
+  case X86::BI__builtin_ia32_comisdge:
+  case X86::BI__builtin_ia32_ucomisdge:
+  case X86::BI__builtin_ia32_comilt:
+  case X86::BI__builtin_ia32_ucomilt:
+  case X86::BI__builtin_ia32_comisdlt:
+  case X86::BI__builtin_ia32_ucomisdlt:
+  case X86::BI__builtin_ia32_comigt:
+  case X86::BI__builtin_ia32_ucomigt:
+  case X86::BI__builtin_ia32_comisdgt:
+  case X86::BI__builtin_ia32_ucomisdgt:
+  case X86::BI__builtin_ia32_comile:
+  case X86::BI__builtin_ia32_ucomile:
+  case X86::BI__builtin_ia32_comisdle:
+  case X86::BI__builtin_ia32_ucomisdle: {
+    APValue AV, BV;
+    if (!EvaluateVector(E->getArg(0), AV, Info) ||
+        !EvaluateVector(E->getArg(1), BV, Info))
+      return false;
+    if (!AV.isVector() || !BV.isVector() || AV.getVectorLength() == 0 ||
+        BV.getVectorLength() == 0)
+      return false;
+    const APValue &A0V = AV.getVectorElt(0);
+    const APValue &B0V = BV.getVectorElt(0);
+    if (!A0V.isFloat() || !B0V.isFloat())
+      return false;
+    const llvm::APFloat &A0 = A0V.getFloat();
+    const llvm::APFloat &B0 = B0V.getFloat();
+    auto Cmp = A0.compare(B0);
+
+    const bool IsEq = (Cmp == llvm::APFloatBase::cmpEqual);
+    const bool IsLt = (Cmp == llvm::APFloatBase::cmpLessThan);
+    const bool IsGt = (Cmp == llvm::APFloatBase::cmpGreaterThan);
+    bool Result = false;
+
+    switch (BuiltinOp) {
+    case X86::BI__builtin_ia32_comieq:
+    case X86::BI__builtin_ia32_ucomieq:
+    case X86::BI__builtin_ia32_comisdeq:
+    case X86::BI__builtin_ia32_ucomisdeq:
+      Result = IsEq && !A0.isNaN() && !B0.isNaN();
+      break;
+    case X86::BI__builtin_ia32_comineq:
+    case X86::BI__builtin_ia32_ucomineq:
+    case X86::BI__builtin_ia32_comisdneq:
+    case X86::BI__builtin_ia32_ucomisdneq:
+      Result = !IsEq || A0.isNaN() || B0.isNaN();
+      break;
+    case X86::BI__builtin_ia32_comige:
+    case X86::BI__builtin_ia32_ucomige:
+    case X86::BI__builtin_ia32_comisdge:
+    case X86::BI__builtin_ia32_ucomisdge:
+      Result = !IsLt && !A0.isNaN() && !B0.isNaN();
+      break;
+    case X86::BI__builtin_ia32_comilt:
+    case X86::BI__builtin_ia32_ucomilt:
+    case X86::BI__builtin_ia32_comisdlt:
+    case X86::BI__builtin_ia32_ucomisdlt:
+      Result = IsLt && !A0.isNaN() && !B0.isNaN();
+      break;
+    case X86::BI__builtin_ia32_comigt:
+    case X86::BI__builtin_ia32_ucomigt:
+    case X86::BI__builtin_ia32_comisdgt:
+    case X86::BI__builtin_ia32_ucomisdgt:
+      Result = IsGt && !A0.isNaN() && !B0.isNaN();
+      break;
+    case X86::BI__builtin_ia32_comile:
+    case X86::BI__builtin_ia32_ucomile:
+    case X86::BI__builtin_ia32_comisdle:
+    case X86::BI__builtin_ia32_ucomisdle:
+      Result = !IsGt && !A0.isNaN() && !B0.isNaN();
+      break;
+    default:
+      return false;
+    }
+    return Success(Result ? 1 : 0, E);
+  }
   }
 }
 
