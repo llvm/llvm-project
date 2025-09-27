@@ -207,6 +207,9 @@ private:
   bool selectOpIsInf(Register ResVReg, const SPIRVType *ResType,
                      MachineInstr &I) const;
 
+  bool selectOpIsNan(Register ResVReg, const SPIRVType *ResType,
+                     MachineInstr &I) const;
+
   template <bool Signed>
   bool selectDot4AddPacked(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I) const;
@@ -2112,6 +2115,17 @@ bool SPIRVInstructionSelector::selectOpIsInf(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
+bool SPIRVInstructionSelector::selectOpIsNan(Register ResVReg,
+                                             const SPIRVType *ResType,
+                                             MachineInstr &I) const {
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIsNan))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
 template <bool Signed>
 bool SPIRVInstructionSelector::selectDot4AddPacked(Register ResVReg,
                                                    const SPIRVType *ResType,
@@ -3255,6 +3269,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::fract, GL::Fract);
   case Intrinsic::spv_isinf:
     return selectOpIsInf(ResVReg, ResType, I);
+  case Intrinsic::spv_isnan:
+    return selectOpIsNan(ResVReg, ResType, I);
   case Intrinsic::spv_normalize:
     return selectExtInst(ResVReg, ResType, I, CL::normalize, GL::Normalize);
   case Intrinsic::spv_refract:
