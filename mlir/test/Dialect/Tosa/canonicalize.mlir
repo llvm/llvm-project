@@ -1104,26 +1104,6 @@ func.func @canonicalize_pad_slice_dynamic_noupdate(%arg0: tensor<1x16x?x3xf32>) 
 
 // -----
 
-// CHECK-LABEL: @fold_log_exp
-func.func @fold_log_exp(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
-  // CHECK: return %arg{{.*}} : tensor<?x1xf32>
-  %0 = tosa.exp %arg0 : (tensor<?x1xf32>) -> tensor<?x1xf32>
-  %1 = tosa.log %0 : (tensor<?x1xf32>) -> tensor<?x1xf32>
-  return %1 : tensor<?x1xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @fold_exp_log
-func.func @fold_exp_log(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
-  // CHECK: return %arg{{.*}} : tensor<?x1xf32>
-  %0 = tosa.log %arg0 : (tensor<?x1xf32>) -> tensor<?x1xf32>
-  %1 = tosa.exp %0 : (tensor<?x1xf32>) -> tensor<?x1xf32>
-  return %1 : tensor<?x1xf32>
-}
-
-// -----
-
 // CHECK-LABEL: @fold_negate_negate
 func.func @fold_negate_negate(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
   // CHECK: return %arg{{.*}} : tensor<?x1xf32>

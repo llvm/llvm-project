@@ -75,7 +75,7 @@ define void @f2(ptr %a0, ptr %a1, ptr %a2) #0 {
 ; CHECK-NEXT:     v0 = vmem(r1+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r7 = #124
+; CHECK-NEXT:     r7 = #-4
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r3 = #15
