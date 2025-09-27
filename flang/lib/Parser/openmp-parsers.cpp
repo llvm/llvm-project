@@ -1853,7 +1853,9 @@ TYPE_PARSER(
 
 // Assumes Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclarativeAssumes>(
-    verbatim("ASSUMES"_tok), Parser<OmpClauseList>{})))
+    predicated(OmpDirectiveNameParser{},
+        IsDirective(llvm::omp::Directive::OMPD_assumes)) >=
+    Parser<OmpDirectiveSpecification>{})))
 
 // Declarative constructs
 TYPE_PARSER(

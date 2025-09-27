@@ -4877,8 +4877,8 @@ struct OpenMPUtilityConstruct {
 //   ASSUMES absent-clause | contains-clause | holds-clause | no-openmp-clause |
 //          no-openmp-routines-clause | no-parallelism-clause
 struct OpenMPDeclarativeAssumes {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDeclarativeAssumes);
-  std::tuple<Verbatim, OmpClauseList> t;
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPDeclarativeAssumes, OmpDirectiveSpecification);
   CharBlock source;
 };
 
