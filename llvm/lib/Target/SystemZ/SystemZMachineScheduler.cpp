@@ -168,29 +168,29 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
 
   // Before pulling down a load (to close the live range), the liveness of
   // the use operands is checked.
-  bool UsesLiveVR = false, UsesLiveAll = false;
+  bool UsesLivePrio = false, UsesLiveAll = false;
   if (isRegDef(MO0)) {
     // Extract the PressureChanges that all fp/vector or GR64/GR32/GRH32 regs
     // affect respectively. misched-prera-pdiffs.mir tests against any future
     // change in the PressureSets modelling, so simply hard-code them here.
-    int VRPressureChange = 0;
+    int PrioPressureChange = 0;
     int GPRPressureChange = 0;
     const PressureDiff &PDiff = DAG->getPressureDiff(SU);
     for (const PressureChange &PC : PDiff) {
       if (!PC.isValid())
         break;
       if (PC.getPSet() == SystemZ::VR16Bit)
-        VRPressureChange = PC.getUnitInc();
+        PrioPressureChange = PC.getUnitInc();
       else if (PC.getPSet() == SystemZ::GRX32Bit)
         GPRPressureChange = PC.getUnitInc();
     }
     const TargetRegisterClass *RC = DAG->MRI.getRegClass(MO0.getReg());
     int RegWeight = TRI->getRegClassWeight(RC).RegWeight;
-    bool VRDefNoKill = VRPressureChange == -RegWeight;
+    bool PrioDefNoKill = PrioPressureChange == -RegWeight;
     bool GPRDefNoKill = GPRPressureChange == -RegWeight;
-    UsesLiveVR = (VRDefNoKill || (!VRPressureChange && GPRDefNoKill));
-    UsesLiveAll = (VRDefNoKill && !GPRPressureChange) ||
-      (!VRPressureChange && GPRDefNoKill);
+    UsesLivePrio = (PrioDefNoKill || (!PrioPressureChange && GPRDefNoKill));
+    UsesLiveAll = (PrioDefNoKill && !GPRPressureChange) ||
+      (!PrioPressureChange && GPRDefNoKill);
   }
 
   bool IsKillingStore = isStoreOfVReg(MI) &&
@@ -202,7 +202,7 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
   // live it should not be a problem to increase the scheduled latency given
   // the OOO execution.
   // TODO: Try scheduling small (DFSResult) subtrees as a unit.
-  bool SchedLow = (PreservesSchedLat && UsesLiveVR) ||
+  bool SchedLow = (PreservesSchedLat && UsesLivePrio) ||
                   (HasDistToTop && UsesLiveAll);
 
   // This handles regions with many chained stores of the same depth at the
