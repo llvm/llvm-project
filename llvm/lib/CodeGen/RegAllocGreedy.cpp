@@ -1406,8 +1406,28 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
       continue;
 
     // Check if VirtReg interferes with OtherReg after this COPY instruction.
-    if (!IsDef && VirtReg.liveAt(LIS->getInstructionIndex(Instr).getRegSlot()))
-      continue;
+    if (Opnd.readsReg()) {
+      SlotIndex Index = LIS->getInstructionIndex(Instr).getRegSlot();
+
+      if (SubReg) {
+        LaneBitmask Mask = TRI->getSubRegIndexLaneMask(SubReg);
+        if (IsDef)
+          Mask = ~Mask;
+
+        if (any_of(VirtReg.subranges(), [=](const LiveInterval::SubRange &S) {
+              if ((S.LaneMask & Mask).any()) {
+                if (S.liveAt(Index))
+                  return true;
+              }
+              return false;
+            })) {
+          continue;
+        }
+      } else {
+        if (VirtReg.liveAt(Index))
+          continue;
+      }
+    }
 
     MCRegister OtherPhysReg =
         OtherReg.isPhysical() ? OtherReg.asMCReg() : VRM->getPhys(OtherReg);
