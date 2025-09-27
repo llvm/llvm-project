@@ -11723,6 +11723,18 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_pavgb512:
   case clang::X86::BI__builtin_ia32_pavgw512:
     return EvaluateBinOpExpr(llvm::APIntOps::avgCeilU);
+  
+
+  case clang::X86::BI__builtin_ia32_pmulhrsw128:
+  case clang::X86::BI__builtin_ia32_pmulhrsw256:
+  case clang::X86::BI__builtin_ia32_pmulhrsw512:
+    return EvaluateBinOpExpr([](const APSInt &LHS, const APSInt& RHS) {
+      unsigned Width = LHS.getBitWidth();
+      APInt Mul = llvm::APIntOps::mulhs(LHS, RHS);
+      Mul = Mul.relativeLShr(14);
+      Mul = Mul + APInt(Width, 1, true);
+      return Mul.relativeLShr(1);
+    });
 
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
@@ -11758,7 +11770,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       }
       return LHS.shl(RHS.getZExtValue());
     });
-
   case clang::X86::BI__builtin_ia32_psrav4si:
   case clang::X86::BI__builtin_ia32_psrav8di:
   case clang::X86::BI__builtin_ia32_psrav8hi:
