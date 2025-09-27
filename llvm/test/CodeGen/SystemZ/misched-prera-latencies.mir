@@ -1,0 +1,184 @@
+# RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z16 -verify-machineinstrs \
+# RUN:   -run-pass=machine-scheduler -debug-only=machine-scheduler 2>&1\
+# RUN:   | FileCheck %s
+
+# The TMLMux will be scheduled first even though the LA is available and of lesser
+# height, because the TMLMux Depth equals the remaining latency (on CP).
+# Then, the AGHIK will follow even though it also have a Height of 1, because
+# it does not increase the scheduled latency after the TMLMux.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun0:%bb.0
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun0:%bb.1
+# CHECK:      Region is not tiny.
+# CHECK:      Latency scheduling enabled for data sequences.
+# CHECK:      SU(2):   %3:addr64bit = LA %3:addr64bit, 1, $noreg
+# CHECK:        Depth              : 0
+# CHECK:        Height             : 0
+# CHECK:      SU(9):   dead %13:gr64bit = AGHIK %12:gr64bit, -1,
+# CHECK:        Depth              : 6
+# CHECK:        Height             : 1
+# CHECK:      SU(10):   TMLMux %0:gr32bit, 1, implicit-def $cc
+# CHECK:        Depth              : 6
+# CHECK:        Height             : 1
+# CHECK:      Queue BotQ.A: 2 10
+# CHECK:      Scheduling SU(10)
+# CHECK:      Queue BotQ.A: 2 9 1
+# CHECK:      Scheduling SU(9)
+# CHECK:      *** Final schedule for %bb.1 ***
+# CHECK:      SU(2):   %3:addr64bit = LA %3:addr64bit, 1, $noreg
+# CHECK-NEXT: SU(9):   dead %13:gr64bit = AGHIK %12:gr64bit, -1,
+# CHECK-NEXT: SU(10):  TMLMux %0:gr32bit, 1, implicit-def $cc
+---
+name:            fun0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $r2l, $r3l
+  
+    %0:gr32bit = COPY $r3l
+    %1:gr32bit = COPY $r2l
+    %2:gr32bit = COPY %0
+    %3:addr64bit = LGHI 0
+    %4:gr64bit = COPY %3
+    %5:gr32bit = COPY %2
+    J %bb.1
+  
+  bb.1:
+    successors: %bb.1(0x80000000)
+  
+    %6:gr32bit = MSRKC %1, %5, implicit-def dead $cc
+    %2:gr32bit = ORK %6, %2, implicit-def dead $cc
+    %3:addr64bit = LA %3, 1, $noreg
+    %7:gr64bit = COPY %4   ; Make region non-tiny with data sequence.
+    %8:gr64bit = COPY %7   ;
+    %9:gr64bit = COPY %8   ;
+    %10:gr64bit = COPY %9  ;
+    %11:gr64bit = COPY %10 ;
+    %12:gr64bit = COPY %11 ;
+    %13:gr64bit = AGHIK %12, -1, implicit-def dead $cc
+    TMLMux %0, 1, implicit-def $cc
+    BRC 15, 7, %bb.1, implicit killed $cc
+    Return
+...
+
+# This region has many nodes compared to the maximum height: Don't
+# care about heights/latencies. The AGRKs will remain interleaved with
+# the COPYs instead of all ending up at the bottom.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun1:%bb.0
+# CHECK:      Region is not tiny.
+# CHECK-NEXT: Latency scheduling not enabled for data sequences.
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK-NEXT: SU(0):   %0:gr64bit = COPY undef %1:gr64bit
+# CHECK-NEXT: SU(1):   dead %2:gr64bit = AGRK %0:gr64bit, %0:gr64bit,
+# CHECK-NEXT: SU(2):   %3:gr64bit = COPY undef %1:gr64bit
+# CHECK-NEXT: SU(3):   dead %4:gr64bit = AGRK %3:gr64bit, %3:gr64bit,
+# CHECK-NEXT: SU(4):   %5:gr64bit = COPY undef %1:gr64bit
+# CHECK-NEXT: SU(5):   dead %6:gr64bit = AGRK %5:gr64bit, %5:gr64bit,
+# CHECK-NEXT: SU(6):   %7:gr64bit = COPY undef %1:gr64bit
+# CHECK-NEXT: SU(7):   dead %8:gr64bit = AGRK %7:gr64bit, %7:gr64bit,
+# CHECK-NEXT: SU(8):   %9:gr64bit = COPY undef %1:gr64bit
+# CHECK-NEXT: SU(9):   dead %10:gr64bit = AGRK %9:gr64bit, %9:gr64bit,
+# CHECK-NEXT: SU(10):  %11:gr64bit = COPY undef %1:gr64bit
+# CHECK-NEXT: SU(11):  dead %12:gr64bit = AGRK %11:gr64bit, %11:gr64bit,
+---
+name:            fun1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %1:gr64bit = COPY undef %0:gr64bit
+    %2:gr64bit = AGRK %1, %1, implicit-def dead $cc
+    %3:gr64bit = COPY undef %0:gr64bit
+    %4:gr64bit = AGRK %3, %3, implicit-def dead $cc
+    %5:gr64bit = COPY undef %0:gr64bit
+    %6:gr64bit = AGRK %5, %5, implicit-def dead $cc
+    %7:gr64bit = COPY undef %0:gr64bit
+    %8:gr64bit = AGRK %7, %7, implicit-def dead $cc
+    %9:gr64bit = COPY undef %0:gr64bit
+    %10:gr64bit = AGRK %9, %9, implicit-def dead $cc
+    %11:gr64bit = COPY undef %0:gr64bit
+    %12:gr64bit = AGRK %11, %11, implicit-def dead $cc
+    Return
+...
+
+# Schedule the WFDDB high as it extends the scheduled latency.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun2:%bb.0
+# CHECK:      Region is not tiny.
+# CHECK-NEXT: Latency scheduling enabled for data sequences.
+# CHECK: Queue BotQ.A: 7 1
+# CHECK: Pick Bot BOT-HEIGHT
+# CHECK: Scheduling SU(1)
+# CHECK: Queue BotQ.A: 7 2
+# CHECK: Pick Bot BOT-HEIGHT
+# CHECK: Scheduling SU(2)
+# CHECK: Queue BotQ.A: 7 0
+# CHECK: Pick Bot PHYS-REG
+# CHECK: Scheduling SU(7) {{.*}} WFDDB
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK-NEXT: SU(0):   %0:gr32bit = COPY $r2l
+# CHECK-NEXT: SU(5):   %5:vr64bit = COPY undef %6:vr64bit
+# CHECK-NEXT: SU(6):   %7:vr64bit = COPY %5:vr64bit
+# CHECK-NEXT: SU(7):   undef %8.subreg_h64:vr128bit = WFDDB %7:vr64bit, %5:vr64bit,
+# CHECK-NEXT: SU(2):   dead %2:fp64bit = nofpexcept CDFBR %0:gr32bit, implicit $fpc
+# CHECK-NEXT: SU(1):   %1:vr64bit = VL64 $noreg, 0, $noreg :: (load 
+# CHECK-NEXT: SU(8):   %9:vr64bit = COPY %8.subreg_h64:vr128bit
+# CHECK-NEXT: SU(3):   %3:vr64bit = COPY %1:vr64bit
+# CHECK-NEXT: SU(9):   %10:vr64bit = COPY %9:vr64bit
+# CHECK-NEXT: SU(4):   dead %4:vr64bit = COPY %3:vr64bit
+# CHECK-NEXT: SU(10):  dead %11:vr64bit = COPY %10:vr64bit
+---
+name:            fun2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r2l
+
+    %0:gr32bit = COPY $r2l
+    %1:vr64bit = VL64 $noreg, 0, $noreg :: (load (s64) from `ptr null`)
+    %2:fp64bit = nofpexcept CDFBR %0, implicit $fpc
+    %3:vr64bit = COPY %1:vr64bit
+    %4:vr64bit = COPY %3:vr64bit
+    %6:vr64bit = COPY undef %5:vr64bit
+    %7:vr64bit = COPY %6:vr64bit
+    undef %10.subreg_h64:vr128bit = WFDDB %7, %6, implicit $fpc
+    %11:vr64bit = COPY %10.subreg_h64:vr128bit   ; Make region non-tiny.
+    %12:vr64bit = COPY %11:vr64bit
+    %13:vr64bit = COPY %12:vr64bit
+    Return
+...
+
+# Use the GenericScheduler latency heuristic for this single block loop.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun3:%bb.1
+# CHECK: Region is not tiny.
+# CHECK: Latency scheduling not enabled for data sequences.
+# CHECK: ACYCLIC LATENCY LIMIT
+# CHECK: Pick Bot BOT-HEIGHT [pre-RA]
+---
+name:            fun3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %19:vr128bit = VREPIF 1
+
+  bb.1:
+    %3:gr64bit = VLGVF %19, $noreg, 0
+    %6:gr64bit = LLGFR %3.subreg_l32
+    %6:gr64bit = MSGFI %6, 274877907
+    %7:gr64bit = SRLG %6, $noreg, 39
+    %9:gr64bit = VLGVF %19, $noreg, 1
+    %12:gr64bit = LLGFR %9.subreg_l32
+    %12:gr64bit = MSGFI %12, 274877907
+    %13:gr64bit = SRLG %12, $noreg, 39
+    %15:vr128bit = VLVGP %13, %13
+    %15:vr128bit = VLVGF %15, %7.subreg_l32, $noreg, 0
+    %16:vr128bit = VUPLHF %15
+    %17:vr128bit = nofpexcept VCDLGB %16, 0, 0, implicit $fpc
+    %19:vr128bit = VGBM 0
+    %18:vr128bit = nofpexcept VFMDB %17, %19, implicit $fpc
+    VST %18, $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
+    J %bb.1
+...
