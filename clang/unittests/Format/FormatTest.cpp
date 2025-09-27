@@ -20312,6 +20312,11 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "  return 2;\n"
                "} };",
                BracedAlign);
+  verifyFormat("const volatile auto result{ []() {\n"
+               "  const auto something = 1;\n"
+               "  return 2;\n"
+               "} };",
+               BracedAlign);
   verifyFormat("int foo{ []() {\n"
                "  int bar{ 0 };\n"
                "  return 0;\n"
