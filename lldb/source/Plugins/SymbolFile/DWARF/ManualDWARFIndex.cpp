@@ -86,10 +86,12 @@ void ManualDWARFIndex::Index() {
                     total_progress, /*debugger=*/nullptr,
                     Progress::kDefaultHighFrequencyReportTime);
 
+  // Use separate symbol thread pool to avoid deadlock with module loading
   // Share one thread pool across operations to avoid the overhead of
   // recreating the threads.
-  llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
-  const size_t num_threads = Debugger::GetThreadPool().getMaxConcurrency();
+  llvm::ThreadPoolTaskGroup task_group(Debugger::GetSymbolThreadPool());
+  const size_t num_threads =
+      Debugger::GetSymbolThreadPool().getMaxConcurrency();
 
   // Run a function for each compile unit in parallel using as many threads as
   // are available. This is significantly faster than submiting a new task for
