@@ -25,6 +25,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -273,6 +274,17 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   /// Create the actual file system.
   Clang->createVirtualFileSystem(llvm::vfs::getRealFileSystem(), DiagsBuffer);
+  if (Clang->getHeaderSearchOpts().NoScanIPC) {
+    FrontendOptions &Options = Clang->getFrontendOpts();
+    std::string OutputPath = Options.OutputFile.empty()
+                                 ? Options.ModuleOutputPath
+                                 : Options.OutputFile;
+    if (const auto &r = N2978::makeIPCManagerCompiler(OutputPath); r) {
+      N2978::managerCompiler = new N2978::IPCManagerCompiler(r.value());
+    } else {
+      // making manager failed
+    }
+  }
 
   // Create the actual diagnostics engine.
   Clang->createDiagnostics();
