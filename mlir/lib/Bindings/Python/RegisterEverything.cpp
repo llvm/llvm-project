@@ -6,15 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir-c/RegisterEverything.h"
+#include "mlir-c/RegisterAllExtensions.h"
+#include "mlir-c/RegisterAllLLVMTranslations.h"
+#include "mlir-c/RegisterAllPasses.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 NB_MODULE(_mlirRegisterEverything, m) {
-  m.doc() = "MLIR All Upstream Dialects, Translations and Passes Registration";
+  m.doc() =
+      "MLIR All Upstream Extensions, Translations and Passes Registration";
 
-  m.def("register_dialects", [](MlirDialectRegistry registry) {
-    mlirRegisterAllDialects(registry);
+  m.def("register_extensions", [](MlirDialectRegistry registry) {
+    mlirRegisterAllExtensions(registry);
   });
   m.def("register_llvm_translations",
         [](MlirContext context) { mlirRegisterAllLLVMTranslations(context); });
