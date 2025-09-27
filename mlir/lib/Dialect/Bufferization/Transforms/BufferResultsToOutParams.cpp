@@ -23,6 +23,8 @@ namespace bufferization {
 using namespace mlir;
 using AllocationFn = bufferization::BufferResultsToOutParamsOpts::AllocationFn;
 using MemCpyFn = bufferization::BufferResultsToOutParamsOpts::MemCpyFn;
+using AllocDynamicSizesMap =
+    llvm::DenseMap<func::FuncOp, SmallVector<SmallVector<Value>>>;
 
 /// Return `true` if the given MemRef type has a fully dynamic layout.
 static bool hasFullyDynamicLayoutMap(MemRefType type) {
@@ -43,30 +45,24 @@ static bool hasStaticIdentityLayout(MemRefType type) {
   return type.getLayout().isIdentity();
 }
 
-/// Return the dynamic shapes of the `memref` based on the define op. If the
+/// Return the dynamic shapes of the `memref` based on the defining op. If the
 /// complete dynamic shape fails to be captured, return an empty value.
-/// Currently, only function parameters are supported for capturing.
+/// Currently, only function block arguments are supported for capturing.
 static SmallVector<Value> getDynamicSize(Value memref, func::FuncOp funcOp) {
-  auto *defOp = memref.getDefiningOp();
+  Operation *defOp = memref.getDefiningOp();
   if (!defOp)
     return {};
   auto operands = defOp->getOperands();
   SmallVector<Value> dynamicSizes;
   for (Value size : operands) {
-    BlockArgument sizeSrc = mlir::dyn_cast<BlockArgument>(size);
+    BlockArgument sizeSrc = dyn_cast<BlockArgument>(size);
     if (!sizeSrc)
       return {};
 
-    bool finded = false;
-    for (BlockArgument argument : funcOp.getArguments()) {
-      if (argument == sizeSrc) {
-        dynamicSizes.push_back(argument);
-        finded = true;
-        break;
-      }
-    }
-    if (!finded)
+    auto iter = llvm::find(funcOp.getArguments(), sizeSrc);
+    if (!iter)
       return {};
+    dynamicSizes.push_back(*iter);
   }
   return dynamicSizes;
 }
@@ -76,7 +72,7 @@ static SmallVector<Value> getDynamicSize(Value memref, func::FuncOp funcOp) {
 static SmallVector<Value> mapDynamicSizeAtCaller(func::CallOp call,
                                                  func::FuncOp callee,
                                                  ValueRange dynamicSizes) {
-  SmallVector<Value> mapedDynamicSizes;
+  SmallVector<Value> mappedDynamicSizes;
   for (Value size : dynamicSizes) {
     auto callOperands = call.getOperands();
     for (size_t i = 0, e = callOperands.size(); i < e; ++i) {
@@ -84,10 +80,12 @@ static SmallVector<Value> mapDynamicSizeAtCaller(func::CallOp call,
       BlockArgument dst = callee.getArgument(i);
       if (size != dst)
         continue;
-      mapedDynamicSizes.push_back(src);
+      mappedDynamicSizes.push_back(src);
     }
   }
-  return mapedDynamicSizes;
+  assert(mappedDynamicSizes.size() == dynamicSizes.size() &&
+         "could not find all dynamic sizes");
+  return mappedDynamicSizes;
 }
 
 // Updates the func op and entry block.
@@ -156,7 +154,8 @@ updateFuncOp(func::FuncOp func,
 // the given out-params.
 static LogicalResult
 updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
-                bufferization::BufferResultsToOutParamsOpts &options) {
+                AllocDynamicSizesMap &map,
+                const bufferization::BufferResultsToOutParamsOpts &options) {
   auto res = func.walk([&](func::ReturnOp op) {
     SmallVector<Value, 6> copyIntoOutParams;
     SmallVector<Value, 6> keepAsReturnOperands;
@@ -171,10 +170,10 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
     for (auto [orig, arg] : llvm::zip(copyIntoOutParams, appendedEntryArgs)) {
       bool hoistStaticAllocs =
           options.hoistStaticAllocs &&
-          mlir::cast<MemRefType>(orig.getType()).hasStaticShape();
+          cast<MemRefType>(orig.getType()).hasStaticShape();
       bool hoistDynamicAllocs =
           options.hoistDynamicAllocs &&
-          !mlir::cast<MemRefType>(orig.getType()).hasStaticShape();
+          !cast<MemRefType>(orig.getType()).hasStaticShape();
       if ((hoistStaticAllocs || hoistDynamicAllocs) &&
           isa_and_nonnull<bufferization::AllocationOpInterface>(
               orig.getDefiningOp())) {
@@ -194,7 +193,7 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
     auto dynamicSizePair =
         std::pair<func::FuncOp, SmallVector<SmallVector<Value>>>(func,
                                                                  dynamicSizes);
-    options.dynamicSizesMap.insert(dynamicSizePair);
+    map.insert(dynamicSizePair);
     return WalkResult::advance();
   });
   return failure(res.wasInterrupted());
@@ -203,7 +202,7 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
 // Updates all CallOps in the scope of the given ModuleOp by allocating
 // temporary buffers for newly introduced out params.
 static LogicalResult
-updateCalls(ModuleOp module,
+updateCalls(ModuleOp module, AllocDynamicSizesMap &map,
             const bufferization::BufferResultsToOutParamsOpts &options) {
   bool didFail = false;
   SymbolTable symtab(module);
@@ -227,8 +226,7 @@ updateCalls(ModuleOp module,
     }
     SmallVector<Value, 6> outParams;
     OpBuilder builder(op);
-    SmallVector<SmallVector<Value>> dynamicSizes =
-        options.dynamicSizesMap.lookup(callee);
+    SmallVector<SmallVector<Value>> dynamicSizes = map.lookup(callee);
     size_t dynamicSizesIndex = 0;
     for (Value memref : replaceWithOutParams) {
       SmallVector<Value> dynamicSize = dynamicSizes.size() > dynamicSizesIndex
@@ -287,7 +285,11 @@ updateCalls(ModuleOp module,
 }
 
 LogicalResult mlir::bufferization::promoteBufferResultsToOutParams(
-    ModuleOp module, bufferization::BufferResultsToOutParamsOpts &options) {
+    ModuleOp module,
+    const bufferization::BufferResultsToOutParamsOpts &options) {
+  /// It maps the shape source of the dynamic shape memref returned by each
+  /// function.
+  AllocDynamicSizesMap map;
   for (auto func : module.getOps<func::FuncOp>()) {
     if (!options.filterFn(&func))
       continue;
@@ -297,11 +299,11 @@ LogicalResult mlir::bufferization::promoteBufferResultsToOutParams(
       return failure();
     if (func.isExternal())
       continue;
-    if (failed(updateReturnOps(func, appendedEntryArgs, options))) {
+    if (failed(updateReturnOps(func, appendedEntryArgs, map, options))) {
       return failure();
     }
   }
-  if (failed(updateCalls(module, options)))
+  if (failed(updateCalls(module, map, options)))
     return failure();
   return success();
 }
