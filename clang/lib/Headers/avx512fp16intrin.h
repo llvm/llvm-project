@@ -298,8 +298,8 @@ _mm512_zextph256_ph512(__m256h __a) {
 #define _mm_comi_sh(A, B, pred)                                                \
   _mm_comi_round_sh((A), (B), (pred), _MM_FROUND_CUR_DIRECTION)
 
-static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR
-_mm_comieq_sh(__m128h __A, __m128h __B) {
+static __inline__ int
+    __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_comieq_sh(__m128h __A, __m128h __B) {
   return __builtin_ia32_vcomish((__v8hf)__A, (__v8hf)__B, _CMP_EQ_OS,
                                 _MM_FROUND_CUR_DIRECTION);
 }
