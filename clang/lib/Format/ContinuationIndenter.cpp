@@ -920,12 +920,15 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // align the commas with the opening paren.
   if (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign &&
       !CurrentState.IsCSharpGenericTypeConstraint && Previous.opensScope() &&
-      Previous.isNot(TT_ObjCMethodExpr) && Previous.isNot(TT_RequiresClause) &&
-      Previous.isNot(TT_TableGenDAGArgOpener) &&
-      Previous.isNot(TT_TableGenDAGArgOpenerToBreak) &&
+      Previous.isNotOneOf(TT_ObjCMethodExpr, TT_RequiresClause,
+                          TT_TableGenDAGArgOpener,
+                          TT_TableGenDAGArgOpenerToBreak) &&
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
-       Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen)) &&
+       (Previous.is(BK_BracedInit) &&
+        (!Style.Cpp11BracedListStyle || !Previous.Previous ||
+         Previous.Previous->isNot(TT_StartOfName))) ||
+       Previous.is(TT_VerilogMultiLineListLParen)) &&
       !IsInTemplateString(Current)) {
     CurrentState.Indent = State.Column + Spaces;
     CurrentState.IsAligned = true;

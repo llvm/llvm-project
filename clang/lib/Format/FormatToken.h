@@ -645,6 +645,9 @@ public:
     return is(K1) || isOneOf(K2, Ks...);
   }
   template <typename T> bool isNot(T Kind) const { return !is(Kind); }
+  template <typename... Ts> bool isNotOneOf(Ts... Ks) const {
+    return !isOneOf(Ks...);
+  }
 
   bool isIf(bool AllowConstexprMacro = true) const {
     return is(tok::kw_if) || endsSequence(tok::kw_constexpr, tok::kw_if) ||
