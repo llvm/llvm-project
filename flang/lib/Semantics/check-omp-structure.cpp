@@ -620,10 +620,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(GetDirName(x.t).source, Directive::OMPD_allocators);
     return false;
   }
-  bool Pre(const parser::OpenMPDeclarativeAssumes &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_assumes);
-    return false;
-  }
   bool Pre(const parser::OpenMPGroupprivate &x) {
     checker_(x.v.DirName().source, Directive::OMPD_groupprivate);
     return false;
