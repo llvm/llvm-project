@@ -19897,7 +19897,7 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
   // See if we have 128-bit vector cast instructions for this type of cast.
   // We need cvttps2dq/cvttpd2dq and cvtdq2ps/cvtdq2pd.
   if (!Subtarget.hasSSE2() || (VT != MVT::f32 && VT != MVT::f64) ||
-      (IntVT != MVT::i32 && IntVT != MVT::i64))
+      !(IntVT == MVT::i32 || (IntVT == MVT::i64 && Subtarget.hasDQI())))
     return SDValue();
 
   unsigned SrcSize = SrcVT.getSizeInBits();
@@ -19908,23 +19908,24 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
   bool IsUnsigned = CastToInt.getOpcode() == ISD::FP_TO_UINT;
 
   if (Subtarget.hasAVX512()) {
-    if (Subtarget.hasVLX())  {
-      // AVX512VL could handle for FP_TO_UINT/UINT_TO_FP (f64/32 <-> i32) AVX512F as well but Width = 512
+    if (Subtarget.hasVLX()) {
+      // AVX512VL could handle for FP_TO_UINT/UINT_TO_FP (f64/32 <-> i32)
+      // AVX512F as well but Width = 512
       if (IntVT == MVT::i32) {
-        ToIntOpcode = IsUnsigned ? X86ISD::CVTTP2UI : X86ISD::CVTTP2SI;  
-        ToFPOpcode = IsUnsigned ? X86ISD::CVTUI2P : X86ISD::CVTSI2P;  
+        ToIntOpcode = IsUnsigned ? X86ISD::CVTTP2UI : X86ISD::CVTTP2SI;
+        ToFPOpcode = IsUnsigned ? X86ISD::CVTUI2P : X86ISD::CVTSI2P;
       } else {
         ToIntOpcode = CastToInt.getOpcode();
         ToFPOpcode = IsUnsigned ? ISD::UINT_TO_FP : ISD::SINT_TO_FP;
-      } 
-    } else if (Subtarget.hasDQI() && IntVT == MVT::i64) {
+      }
+    } else if (IntVT == MVT::i64) {
       // AVX512DQ + AVX512VL could handle f64/32 <-> i64 SINT & UINT
-      ToIntOpcode = CastToInt.getOpcode(); 
+      ToIntOpcode = CastToInt.getOpcode();
       ToFPOpcode = IsUnsigned ? ISD::UINT_TO_FP : ISD::SINT_TO_FP;
     } else {
       // AVX512F
       Width = 512;
-      ToIntOpcode = CastToInt.getOpcode(); 
+      ToIntOpcode = CastToInt.getOpcode();
       ToFPOpcode = IsUnsigned ? ISD::UINT_TO_FP : ISD::SINT_TO_FP;
     }
   } else {
@@ -19940,7 +19941,6 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
   MVT VecSrcVT = MVT::getVectorVT(SrcVT, Width / SrcSize);
   MVT VecIntVT = MVT::getVectorVT(IntVT, Width / IntSize);
   MVT VecVT = MVT::getVectorVT(VT, Width / VTSize);
-
 
   // sint_to_fp (fp_to_sint X) --> extelt (sint_to_fp (fp_to_sint (s2v X))), 0
   //
