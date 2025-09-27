@@ -5631,6 +5631,9 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
            });
   }
 
+  case ISD::LOAD:
+    return cast<LoadSDNode>(Op)->isDereferenceable();
+
     // TODO: Search for noundef attributes from library functions.
 
     // TODO: Pointers dereferenced by ISD::LOAD/STORE ops are noundef.
