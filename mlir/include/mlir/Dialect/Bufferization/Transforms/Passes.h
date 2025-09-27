@@ -5,7 +5,6 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
-#include "llvm/ADT/MapVector.h"
 
 namespace mlir {
 class FunctionOpInterface;
