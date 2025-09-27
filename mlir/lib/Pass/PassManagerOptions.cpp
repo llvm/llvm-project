@@ -63,6 +63,11 @@ struct PassManagerOptions {
       llvm::cl::desc("When printing the IR before/after a pass, print file "
                      "tree rooted at this directory. Use in conjunction with "
                      "mlir-print-ir-* flags")};
+  llvm::cl::opt<std::string> generateReproducerFile{
+      "mlir-generate-reproducer",
+      llvm::cl::desc("Generate an mlir reproducer at the provided filename"
+                     " (no crash required)"),
+      llvm::cl::init(""), llvm::cl::value_desc("filename")};
 
   /// Add an IR printing instrumentation if enabled by any 'print-ir' flags.
   void addPrinterInstrumentation(PassManager &pm);
@@ -172,6 +177,9 @@ LogicalResult mlir::applyPassManagerCLOptions(PassManager &pm) {
 
   // Add the IR printing instrumentation.
   options->addPrinterInstrumentation(pm);
+
+  if (options->generateReproducerFile.getNumOccurrences())
+    pm.enableGeneratePassManagerReproducer(options->generateReproducerFile);
   return success();
 }
 
