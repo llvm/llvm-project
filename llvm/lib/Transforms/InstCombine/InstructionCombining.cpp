@@ -1735,7 +1735,7 @@ Instruction *InstCombinerImpl::foldBinopOfSextBoolToSelect(BinaryOperator &BO) {
   Constant *Zero = ConstantInt::getNullValue(BO.getType());
   Value *TVal = Builder.CreateBinOp(BO.getOpcode(), Ones, C);
   Value *FVal = Builder.CreateBinOp(BO.getOpcode(), Zero, C);
-  return SelectInst::Create(X, TVal, FVal);
+  return createSelectInst(X, TVal, FVal);
 }
 
 static Value *simplifyOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
@@ -5934,8 +5934,8 @@ static bool combineInstructionsOverFunction(
     LLVM_DEBUG(dbgs() << "\n\nINSTCOMBINE ITERATION #" << Iteration << " on "
                       << F.getName() << "\n");
 
-    InstCombinerImpl IC(Worklist, Builder, F.hasMinSize(), AA, AC, TLI, TTI, DT,
-                        ORE, BFI, BPI, PSI, DL, RPOT);
+    InstCombinerImpl IC(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI,
+                        BPI, PSI, DL, RPOT);
     IC.MaxArraySizeForCombine = MaxArraySize;
     bool MadeChangeInThisIteration = IC.prepareWorklist(F);
     MadeChangeInThisIteration |= IC.run();
