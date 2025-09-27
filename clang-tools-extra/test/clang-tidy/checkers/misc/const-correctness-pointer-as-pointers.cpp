@@ -48,3 +48,18 @@ void ignore_const_alias() {
   p_local0 = &a[1];
 }
 
+void takeNonConstRef(int *&r);
+
+void ignoreNonConstRefOps() {
+  // init with non-const ref
+  int* p0 {nullptr};
+  int*& r1 = p0;
+  
+  // non-const ref param
+  int* p1 {nullptr};
+  takeNonConstRef(p1);
+
+  // cast
+  int* p2 {nullptr};
+  int*& r2 = (int*&)p2;
+}
