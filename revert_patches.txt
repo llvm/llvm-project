@@ -19,6 +19,9 @@ needs more offload patches
 [Offload] Port llvm-offload-device-info to new offload API (#155626)
 [Offload]  Implement 'olIsValidBinary' in offload
 ---
-needs akashB to land
-b4f1e0e5b173 [Flang][OpenMP] Implicitly map nested allocatable components 
+need to resole API changes downstream
+[Offload] Use Error for allocating/deallocating in plugins
+---
+breaks smoke flags, wgs64
+[clang] Use the VFS to get the OpenMP entry info (#160935)
 ---
