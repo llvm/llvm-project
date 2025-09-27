@@ -2283,14 +2283,14 @@ void LVIRReader::checkScopes(LVScope *Scope) {
   };
 
   std::function<void(LVScope * Parent)> Traverse = [&](LVScope *Current) {
-    auto Check = [&](const auto *Set) {
-      if (Set)
-        for (const auto &Entry : *Set)
-          if (!Entry->getIsFinalized())
-            PrintElement(Entry);
+    auto Check = [&](auto *Entry) {
+      if (Entry)
+        if (!Entry->getIsFinalized())
+          PrintElement(Entry);
     };
 
-    Check(Current->getChildren());
+    for (LVElement *Element : Current->getChildren())
+      Check(Element);
 
     if (Current->getScopes())
       for (LVScope *Scope : *Current->getScopes())

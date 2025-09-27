@@ -32,7 +32,8 @@ void printCollectedElements(LVScope *Root) {
           Entry->print(dbgs());
     };
 
-    Print(Parent->getChildren());
+    for (LVElement *Element : Parent->getChildren())
+      Element->print(dbgs());
     Print(Parent->getLines());
     Print(Parent->getRanges());
     if (const LVScopes *Scopes = Parent->getScopes())
