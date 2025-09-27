@@ -47,6 +47,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
@@ -82,6 +83,7 @@
 
 using namespace llvm;
 using namespace llvm::XCOFF;
+using namespace PatternMatch;
 
 #define DEBUG_TYPE "asmprinter"
 
@@ -99,6 +101,13 @@ STATISTIC(NumTOCEHBlock, "Number of EH Block TOC Entries.");
 static cl::opt<bool> EnableSSPCanaryBitInTB(
     "aix-ssp-tb-bit", cl::init(false),
     cl::desc("Enable Passing SSP Canary info in Trackback on AIX"), cl::Hidden);
+
+static cl::list<std::string> IFuncLocal(
+    "ifunc-local",
+    llvm::cl::desc("a comma separated list of ifunc function names that are "
+                   "guaranteed to resolve to a module-local function. "
+                   "-ifunc-local=1 will apply to all ifuncs in the CU."),
+    cl::CommaSeparated, cl::Hidden);
 
 // Specialize DenseMapInfo to allow
 // std::pair<const MCSymbol *, PPCMCExpr::Specifier> in DenseMap.
@@ -305,6 +314,8 @@ public:
   void emitTTypeReference(const GlobalValue *GV, unsigned Encoding) override;
 
   void emitModuleCommandLines(Module &M) override;
+
+  void emitGlobalIFunc(Module &M, const GlobalIFunc &GI) override;
 };
 
 } // end anonymous namespace
@@ -769,6 +780,16 @@ static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO,
 }
 
 static PPCAsmPrinter::TOCEntryType
+getTOCEntryTypeForLinkage(GlobalValue::LinkageTypes Linkage) {
+  if (Linkage == GlobalValue::ExternalLinkage ||
+      Linkage == GlobalValue::AvailableExternallyLinkage ||
+      Linkage == GlobalValue::ExternalWeakLinkage)
+    return PPCAsmPrinter::TOCType_GlobalExternal;
+
+  return PPCAsmPrinter::TOCType_GlobalInternal;
+}
+
+static PPCAsmPrinter::TOCEntryType
 getTOCEntryTypeForMO(const MachineOperand &MO) {
   // Use the target flags to determine if this MO is Thread Local.
   // If we don't do this it comes out as Global.
@@ -778,13 +799,7 @@ getTOCEntryTypeForMO(const MachineOperand &MO) {
   switch (MO.getType()) {
   case MachineOperand::MO_GlobalAddress: {
     const GlobalValue *GlobalV = MO.getGlobal();
-    GlobalValue::LinkageTypes Linkage = GlobalV->getLinkage();
-    if (Linkage == GlobalValue::ExternalLinkage ||
-        Linkage == GlobalValue::AvailableExternallyLinkage ||
-        Linkage == GlobalValue::ExternalWeakLinkage)
-      return PPCAsmPrinter::TOCType_GlobalExternal;
-
-    return PPCAsmPrinter::TOCType_GlobalInternal;
+    return getTOCEntryTypeForLinkage(GlobalV->getLinkage());
   }
   case MachineOperand::MO_ConstantPoolIndex:
     return PPCAsmPrinter::TOCType_ConstantPool;
@@ -2865,8 +2880,10 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
       static_cast<MCSymbolXCOFF *>(CurrentFnDescSym)->getRepresentedCsect());
 
   // Emit aliasing label for function descriptor csect.
-  for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
-    OutStreamer->emitLabel(getSymbol(Alias));
+  if (MF) // TODO MF is unset when processing an ifunc, handle it better than
+          // this.
+    for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
+      OutStreamer->emitLabel(getSymbol(Alias));
 
   // Emit function entry point address.
   OutStreamer->emitValue(MCSymbolRefExpr::create(CurrentFnSym, OutContext),
@@ -2884,6 +2901,12 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
 }
 
 void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
+  if (!MF) { // TODO: MF is unset when processing an ifunc, handle it better.
+    if (!TM.getFunctionSections())
+      PPCAsmPrinter::emitFunctionEntryLabel();
+    return;
+  }
+
   // For functions without user defined section, it's not necessary to emit the
   // label when we have individual function in its own csect.
   if (!TM.getFunctionSections() || MF->getFunction().hasSection())
@@ -3361,6 +3384,217 @@ void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
     RSOS.write('\0');
   }
   OutStreamer->emitXCOFFCInfoSym(".GCC.command.line", RSOS.str());
+}
+
+static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
+  // Query if the given function is local to the load module.
+  auto IsLocalFunc = [](const Function *F) {
+    bool Result = F->isStrongDefinitionForLinker() && F->isDSOLocal();
+    LLVM_DEBUG(dbgs() << F->getName() << " is " << (Result ? "local\n" : "not local\n"));
+    return Result;
+  };
+  // Recursive walker that checks if all possible runtime values of the given
+  // llvm::Value are addresses of local functions.
+  std::function<bool(const Value*)> ValueIsALocalFunc = [&IsLocalFunc, &ValueIsALocalFunc](const Value *V) -> bool {
+    if (auto *F = dyn_cast<Function>(V))
+      return IsLocalFunc(F);
+    if (!isa<Instruction>(V))
+      return false;
+
+    auto *I = cast<Instruction>(V);
+    // return isP9 ? foo_p9 : foo_default;
+    if (auto *SI = dyn_cast<SelectInst>(I))
+      return ValueIsALocalFunc(SI->getTrueValue()) && ValueIsALocalFunc(SI->getFalseValue());
+    else if (auto *PN = dyn_cast<PHINode>(I)) {
+      for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
+        if (!ValueIsALocalFunc(PN->getIncomingValue(i)))
+          return false;
+      return true;
+    }
+    // @switch.table.resolve_foo = private unnamed_addr constant [3 x ptr] [ptr @foo_static, ptr @foo_hidden, ptr @foo_protected]
+    // %switch.gep = getelementptr inbounds nuw ptr, ptr @switch.table, i64 %2
+    // V = load ptr, ptr %switch.gep,
+    else if (auto *Op = getPointerOperand(I)) {
+      while (isa<GEPOperator>(Op))
+        Op = cast<GEPOperator>(Op)->getPointerOperand();
+
+      if (!isa<GlobalVariable>(Op))
+        return false;
+      auto *GV = dyn_cast<GlobalVariable>(Op);
+      if (!GV->hasInitializer() || !isa<ConstantArray>(GV->getInitializer()))
+        return false;
+      auto *Initializer = cast<ConstantArray>(GV->getInitializer());
+      for (unsigned Idx = 0, End = Initializer->getNumOperands(); Idx != End; ++Idx)
+        if (!ValueIsALocalFunc(Initializer->getOperand(Idx)))
+          return false;
+      return true;
+    }
+    return false;
+  };
+
+  if (!IFuncLocal.empty()) {
+    ArrayRef<std::string> List = IFuncLocal;
+    // special case of -ifunc-local=1
+    if (List.size() == 1 && List[0].compare("1") == 0)
+      return false;
+    StringRef IFuncName = GI.getName();
+    if (any_of(List, [&](const std::string &Element) {
+          return Element.size() == IFuncName.size() &&
+                 Element.compare(IFuncName.data()) == 0;
+        }))
+      return false;
+  }
+
+  auto *Resolver = GI.getResolverFunction();
+  // If the resolver is preemptible then we cannot rely on its implementation.
+  if (!IsLocalFunc(Resolver))
+    return true;
+  // If one of the return values of the resolver function is not a
+  // local function, then we have to conservatively do a TOC save/restore.
+  for (auto &BB : *Resolver) {
+    if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator())) {
+      Value *RV = Ret->getReturnValue();
+      assert(RV);
+      if (!ValueIsALocalFunc(RV)) {
+        LLVM_DEBUG(dbgs() << "return value " << RV->getName() << " is not a local function\n");
+        return true;
+      }
+    }
+  }
+  // all return values where local functions, so no TOC save/restore needed.
+  return false;
+}
+/*
+ *   .csect .foo[PR],5
+ *   .globl  foo[DS]
+ *   .globl  .foo[PR]
+ *   .lglobl ifunc_sec.foo[RW]
+ *   .align  4
+ *   .csect foo[DS],2
+ *   .vbyte  4, .foo[PR]
+ *   .vbyte  4, TOC[TC0]
+ *   .vbyte  4, 0
+ *   .csect .foo[PR],5
+ *   .ref ifunc_sec.foo[RW]
+ *   lwz 12, L..foo_desc(2)                  # load foo's descriptor address
+ *   lwz 11, 8(12)                           # load the env pointer if target might be a non-C/C++ function
+ *   lwz 12, 0(12)                           # load foo.addr
+ *   mtctr 12
+ *   bctr                                    # branch to CR without setting LR so that callee returns to the caller of .foo
+ *                                           # -- End function
+ */
+void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
+  // Set the Subtarget to that of the resolver.
+  const TargetSubtargetInfo *STI =
+      TM.getSubtargetImpl(*GI.getResolverFunction());
+  bool IsPPC64 = static_cast<const PPCSubtarget *>(STI)->isPPC64();
+
+  // Create syms and sections that are part of the ifunc implementation:
+  //  - Function descriptor symbol foo[RW]
+  //  - Function entry symbol .foo[PR]
+  //  - ifunc_sec variable (that registers the ifunc's descriptor and resolver)
+  MCSectionXCOFF *FnDescSec = static_cast<MCSectionXCOFF *>(
+      getObjFileLowering().getSectionForFunctionDescriptor(&GI, TM));
+  FnDescSec->setAlignment(Align(IsPPC64 ? 8 : 4));
+
+  CurrentFnDescSym = FnDescSec->getQualNameSymbol();
+
+  CurrentFnSym = getObjFileLowering().getFunctionEntryPointSymbol(&GI, TM);
+
+  MCSymbol *IFuncUpdateSym = nullptr;
+  if (MDNode *MD = GI.getMetadata(LLVMContext::MD_associated)) {
+    const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
+    const GlobalVariable *IFuncUpdateGV = cast<GlobalVariable>(VAM->getValue());
+    IFuncUpdateSym = getSymbol(IFuncUpdateGV);
+  }
+
+  // Start codegen:
+  if (TM.getFunctionSections())
+    OutStreamer->switchSection(
+        static_cast<MCSymbolXCOFF *>(CurrentFnSym)->getRepresentedCsect());
+  else
+    OutStreamer->switchSection(getObjFileLowering().getTextSection());
+
+  // generate linkage for foo and .foo
+  emitLinkage(&GI, CurrentFnDescSym);
+  emitLinkage(&GI, CurrentFnSym);
+
+  // declare the "ifunc_sec.foo[RW]" as an internal symbol
+  if (IFuncUpdateSym)
+    OutStreamer->emitXCOFFSymbolLinkageWithVisibility(
+        IFuncUpdateSym, MCSA_LGlobal, MCSA_Invalid);
+
+  // .align 4
+  Align Alignment(STI->getTargetLowering()->getMinFunctionAlignment());
+  emitAlignment(Alignment, nullptr);
+
+  // generate foo's function descriptor
+  emitFunctionDescriptor();
+
+  emitFunctionEntryLabel();
+
+  // back to .foo[PR]
+  // .ref ifunc_sec.foo[RW]
+  if (IFuncUpdateSym)
+    OutStreamer->emitXCOFFRefDirective(IFuncUpdateSym);
+
+  // vvvvvv TEMPORARY: TO BE REMOVED AFTER upstream PR 151569 lands vvvvv
+  // .ref .__init_ifuncs[PR]
+  if (MDNode *MD = GI.getMetadata(LLVMContext::MD_associated)) {
+    const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
+    const GlobalVariable *IFuncUpdateGV = cast<GlobalVariable>(VAM->getValue());
+    MD = IFuncUpdateGV->getMetadata(LLVMContext::MD_associated);
+    if (MD) {
+      const ValueAsMetadata *VAM =
+          cast<ValueAsMetadata>(MD->getOperand(0).get());
+      const Function *InitIFuncDecl = cast<Function>(VAM->getValue());
+      OutStreamer->emitXCOFFRefDirective(
+          getObjFileLowering().getFunctionEntryPointSymbol(InitIFuncDecl, TM));
+    }
+  }
+  // ^^^^^^ TEMPORARY ^^^^^
+
+  // generate the code for .foo now:
+  if (TOCRestoreNeededForCallToImplementation(GI)) {
+    reportFatalUsageError(
+        "unimplemented: TOC register save/restore needed for function " +
+        Twine(GI.getName()) +
+        ", because couldn't prove all candidates are static or hidden/protected"
+        " visibility definitions");
+    return;
+  }
+
+  //  lwz 12, L..foo_desc(2)
+  auto FnDescTOCEntryType = getTOCEntryTypeForLinkage(GI.getLinkage());
+  auto *FnDescTOCEntrySym =
+      lookUpOrCreateTOCEntry(CurrentFnDescSym, FnDescTOCEntryType);
+  auto *Exp = MCSymbolRefExpr::create(FnDescTOCEntrySym, OutContext);
+  // Exp = getTOCEntryLoadingExprForXCOFF(MOSymbol, Exp, VK);// TODO: need this?
+  // need this uncommented
+  OutStreamer->emitInstruction(MCInstBuilder(IsPPC64 ? PPC::LD : PPC::LWZ)
+                                   .addReg(PPC::X12)
+                                   .addExpr(Exp)
+                                   .addReg(PPC::X2),
+                               *Subtarget);
+  //  lwz 11, 8(12)
+  OutStreamer->emitInstruction(MCInstBuilder(IsPPC64 ? PPC::LD : PPC::LWZ)
+                                   .addReg(PPC::X11)
+                                   .addImm(IsPPC64 ? 16 : 8)
+                                   .addReg(PPC::X12),
+                               *Subtarget);
+  //  lwz 12, 0(12)
+  OutStreamer->emitInstruction(MCInstBuilder(IsPPC64 ? PPC::LD : PPC::LWZ)
+                                   .addReg(PPC::X12)
+                                   .addImm(0)
+                                   .addReg(PPC::X12),
+                               *Subtarget);
+  //  mtctr 12
+  OutStreamer->emitInstruction(
+      MCInstBuilder(IsPPC64 ? PPC::MTCTR8 : PPC::MTCTR).addReg(PPC::X12),
+      *Subtarget);
+  //  bctr
+  OutStreamer->emitInstruction(MCInstBuilder(IsPPC64 ? PPC::BCTR8 : PPC::BCTR),
+                               *Subtarget);
 }
 
 char PPCAIXAsmPrinter::ID = 0;
