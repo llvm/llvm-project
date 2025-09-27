@@ -5836,6 +5836,8 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   BasicBlock *ContiguousDest = nullptr;
   BasicBlock *OtherDest = nullptr;
   bool IsWrapping = false;
+  SmallVectorImpl<ConstantInt *> *ContiguousCases = &CasesA;
+  SmallVectorImpl<ConstantInt *> *OtherCases = &CasesB;
   if (!CasesA.empty() &&
       casesAreContiguous(SI->getCondition(), CasesA, ContiguousCasesMin,
                          ContiguousCasesMax, IsWrapping)) {
@@ -5845,20 +5847,21 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
                                 ContiguousCasesMax, IsWrapping)) {
     ContiguousDest = DestB;
     OtherDest = DestA;
+    std::swap(ContiguousCases, OtherCases);
   } else
     return false;
 
-  if (IsWrapping)
+  if (IsWrapping) {
     std::swap(ContiguousDest, OtherDest);
+    std::swap(ContiguousCases, OtherCases);
+  }
 
   // Start building the compare and branch.
 
-  auto ContiguousCasesSize =
-      (ContiguousCasesMax->getValue() - ContiguousCasesMin->getValue())
-          .getZExtValue() +
-      1;
   Constant *Offset = ConstantExpr::getNeg(ContiguousCasesMin);
-  Constant *NumCases = ConstantInt::get(Offset->getType(), ContiguousCasesSize);
+  Constant *NumCases = ConstantInt::get(Offset->getType(),
+                                        ContiguousCasesMax->getValue() -
+                                            ContiguousCasesMin->getValue() + 1);
 
   Value *Sub = SI->getCondition();
   if (!Offset->isNullValue())
@@ -5866,7 +5869,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
 
   Value *Cmp;
   // If NumCases overflowed, then all possible values jump to the successor.
-  if (NumCases->isNullValue() && ContiguousCasesSize != 0)
+  if (NumCases->isNullValue() && !ContiguousCases->empty())
     Cmp = ConstantInt::getTrue(SI->getContext());
   else
     Cmp = Builder.CreateICmpULT(Sub, NumCases, "switch");
@@ -5896,14 +5899,14 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
 
   // Prune obsolete incoming values off the successors' PHI nodes.
   for (auto BBI = ContiguousDest->begin(); isa<PHINode>(BBI); ++BBI) {
-    unsigned PreviousEdges = ContiguousCasesSize;
+    unsigned PreviousEdges = ContiguousCases->size();
     if (ContiguousDest == SI->getDefaultDest())
       ++PreviousEdges;
     for (unsigned I = 0, E = PreviousEdges - 1; I != E; ++I)
       cast<PHINode>(BBI)->removeIncomingValue(SI->getParent());
   }
   for (auto BBI = OtherDest->begin(); isa<PHINode>(BBI); ++BBI) {
-    unsigned PreviousEdges = SI->getNumCases() - ContiguousCasesSize;
+    unsigned PreviousEdges = OtherCases->size();
     if (OtherDest == SI->getDefaultDest())
       ++PreviousEdges;
     for (unsigned I = 0, E = PreviousEdges - 1; I != E; ++I)
