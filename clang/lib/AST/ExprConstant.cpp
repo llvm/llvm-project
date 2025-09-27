@@ -12060,12 +12060,16 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), RetLen), E);
   }
 
-  case X86::BI__builtin_ia32_extracti32x4_256_mask:  // _mm256_extracti32x4_epi32
-  case X86::BI__builtin_ia32_extracti32x4_mask:      // _mm512_extracti32x4_epi32
-  case X86::BI__builtin_ia32_extracti32x8_mask:      // _mm512_extracti32x8_epi32
-  case X86::BI__builtin_ia32_extracti64x2_256_mask:  // _mm256_extracti64x2_epi64
-  case X86::BI__builtin_ia32_extracti64x2_512_mask:  // _mm512_extracti64x2_epi64
-  case X86::BI__builtin_ia32_extracti64x4_mask: {    // _mm512_extracti64x4_epi64
+  case X86::BI__builtin_ia32_extracti32x4_256_mask: 
+  case X86::BI__builtin_ia32_extractf32x4_256_mask:
+  case X86::BI__builtin_ia32_extracti32x4_mask:     
+  case X86::BI__builtin_ia32_extractf32x4_mask:   
+  case X86::BI__builtin_ia32_extracti32x8_mask:      
+  case X86::BI__builtin_ia32_extractf32x8_mask:     
+  case X86::BI__builtin_ia32_extracti64x2_256_mask: 
+  case X86::BI__builtin_ia32_extractf64x2_256_mask: 
+  case X86::BI__builtin_ia32_extracti64x2_512_mask: 
+  case X86::BI__builtin_ia32_extractf64x2_512_mask: { 
     APValue SourceVec, SourceImm, SourceMerge, SourceKmask;
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||
         !EvaluateAsRValue(Info, E->getArg(1), SourceImm) ||
@@ -12085,11 +12089,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     
     unsigned NumLanes = SrcLen / RetLen;
     unsigned idx = SourceImm.getInt().getZExtValue() & (NumLanes - 1);
-    
-    // Step 2) Apply kmask (covers plain/mask/maskz):
-    //   - plain  : headers pass kmask=all-ones; merge is undef → always take Extracted.
-    //   - mask   : merge=dst; take? Extracted[i] : dst[i]
-    //   - maskz  : merge=zero; take? Extracted[i] : 0
+   
     uint64_t KmaskBits = SourceKmask.getInt().getZExtValue();
 
     auto makeZeroInt = [&]() -> APValue {
@@ -12105,9 +12105,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       if (Take) {
         ResultElements.push_back(SourceVec.getVectorElt(idx * RetLen + i));
       } else {
-        // For plain (all-ones) this path is never taken.
-        // For mask  : merge is the original dst element.
-        // For maskz : headers pass zero vector as merge.
+
         const APValue &MergeElt = 
             SourceMerge.isVector() ? SourceMerge.getVectorElt(i) : makeZeroInt();
         ResultElements.push_back(MergeElt);
@@ -12116,55 +12114,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), RetLen), E);
   }
   
-  case X86::BI__builtin_ia32_extractf32x4_256_mask: // _mm256_extractf32x4_ps _mm256_mask_extractf32x4_ps _mm256_maskz_extractf32x4_ps
-  case X86::BI__builtin_ia32_extractf32x4_mask: // _mm512_extractf32x4_ps _mm512_mask_extractf32x4_ps _mm512_maskz_extractf32x4_ps
-  case X86::BI__builtin_ia32_extractf32x8_mask: // _mm512_extractf32x8_ps _mm512_mask_extractf32x8_ps _mm512_maskz_extractf32x8_ps
-
-  case X86::BI__builtin_ia32_extractf64x2_256_mask: // _mm256_extractf64x2_pd _mm256_mask_extractf64x2_pd _mm256_maskz_extractf64x2_pd
-  case X86::BI__builtin_ia32_extractf64x2_512_mask: // _mm512_extractf64x2_pd _mm512_mask_extractf64x2_pd _mm512_maskz_extractf64x2_pd
-  case X86::BI__builtin_ia32_extractf64x4_mask: { // _mm512_extractf64x4_pd _mm512_mask_extractf64x4_pd _mm512_maskz_extractf64x4_pd
-    APValue SourceVec, SourceImm, SourceMerge, SourceKmask;
-    if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||
-        !EvaluateAsRValue(Info, E->getArg(1), SourceImm) ||
-        !EvaluateAsRValue(Info, E->getArg(2), SourceMerge) ||
-        !EvaluateAsRValue(Info, E->getArg(3), SourceKmask))
-        return false; 
-
-    const auto *RetVT = E->getType()->castAs<VectorType>();
-    QualType EltTy = RetVT->getElementType();
-    unsigned RetLen = RetVT->getNumElements();
-
-    if (!SourceVec.isVector())
-      return false;
-    unsigned SrcLen = SourceVec.getVectorLength();
-    if (SrcLen % RetLen != 0)
-      return false;
-    
-    unsigned NumLanes = SrcLen / RetLen;
-    unsigned idx = SourceImm.getInt().getZExtValue() & (NumLanes - 1);
-    
-    uint64_t KmaskBits = SourceKmask.getInt().getZExtValue();
-
-    auto makeZeroFP = [&]() -> APValue {
-      const llvm::fltSemantics &Sem =
-        Info.Ctx.getFloatTypeSemantics(EltTy);
-      return APValue(llvm::APFloat::getZero(Sem));
-    };
-
-    SmallVector<APValue, 32> ResultElements;
-    ResultElements.reserve(RetLen);
-    for (unsigned i = 0; i < RetLen; i++) {
-      bool Take = (KmaskBits >> i) & 1;
-      if (Take) {
-        ResultElements.push_back(SourceVec.getVectorElt(idx * RetLen + i));
-      } else {
-        const APValue &MergeElt = 
-            SourceMerge.isVector() ? SourceMerge.getVectorElt(i) : makeZeroFP();
-        ResultElements.push_back(MergeElt);
-      }
-    }
-    return Success(APValue(ResultElements.data(), RetLen), E);
-  }
 
   case X86::BI__builtin_ia32_vpshldd128:
   case X86::BI__builtin_ia32_vpshldd256:

@@ -2896,71 +2896,94 @@ static bool interp__builtin_x86_extract_vector(InterpState &S, CodePtr OpPC,
 
 // __builtin_extract_masked
 static bool interp__builtin_x86_extract_vector_masked(InterpState &S, CodePtr OpPC,
-                                                 const CallExpr *Call,
-                                                 unsigned ID) {
-  assert(Call->getNumArgs() == 4);
+                                                      const CallExpr *Call,
+                                                      unsigned ID) {
+  unsigned NumArgs = Call->getNumArgs();
 
-  // kmask
-  APSInt KmaskAPS = popToAPSInt(S, Call->getArg(3));
-  uint64_t Kmask = KmaskAPS.getZExtValue();
-
-  // merge
-  const Pointer &Merge = S.Stk.pop<Pointer>();
-  bool HasMergeVec = Merge.isLive() && Merge.getFieldDesc() &&
-                     Merge.getFieldDesc()->isPrimitiveArray(); 
-  
-  // srcimm
-  APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
-  uint64_t Index = ImmAPS.getZExtValue();
-
-  // srcvec
-  const Pointer &Src = S.Stk.pop<Pointer>();
-  if (!Src.getFieldDesc()->isPrimitiveArray())
-    return false;
-
-  // dst (return)
   const Pointer &Dst = S.Stk.peek<Pointer>();
   if (!Dst.getFieldDesc()->isPrimitiveArray())
     return false;
 
-  unsigned SrcElems = Src.getNumElems();
+  const Pointer *Merge = nullptr;
+  uint64_t Kmask = 0;
+  uint64_t Imm = 0;
+  const Pointer *Src = nullptr;
+
+  if (NumArgs == 4) {
+    // __m256 _mm512_mask_extractf32x8_ps(W, U, A, imm)
+    APSInt ImmAPS = popToAPSInt(S, Call->getArg(3));
+    Imm = ImmAPS.getZExtValue();
+
+    const Pointer &SrcP = S.Stk.pop<Pointer>();
+    Src = &SrcP;
+
+    APSInt KmaskAPS = popToAPSInt(S, Call->getArg(1));
+    Kmask = KmaskAPS.getZExtValue();
+
+    const Pointer &MergeP = S.Stk.pop<Pointer>();
+    Merge = &MergeP;
+
+  } else if (NumArgs == 3) {
+    // __m256 _mm512_maskz_extractf32x8_ps(U, A, imm)
+    APSInt ImmAPS = popToAPSInt(S, Call->getArg(2));
+    Imm = ImmAPS.getZExtValue();
+
+    const Pointer &SrcP = S.Stk.pop<Pointer>();
+    Src = &SrcP;
+
+    APSInt KmaskAPS = popToAPSInt(S, Call->getArg(0));
+    Kmask = KmaskAPS.getZExtValue();
+
+    Merge = nullptr; // maskz → zero fill
+  } else {
+    return false;
+  }
+
+  if (!Src->getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  unsigned SrcElems = Src->getNumElems();
   unsigned DstElems = Dst.getNumElems();
   if (SrcElems == 0 || DstElems == 0 || (SrcElems % DstElems) != 0)
     return false;
 
   unsigned NumLanes = SrcElems / DstElems;
-  unsigned Lane = static_cast<unsigned>(Index % NumLanes);
+  unsigned Lane = static_cast<unsigned>(Imm % NumLanes);
   unsigned ExtractPos = Lane * DstElems;
 
-  PrimType ElemPT = Src.getFieldDesc()->getPrimType();
+  PrimType ElemPT = Src->getFieldDesc()->getPrimType();
   if (ElemPT != Dst.getFieldDesc()->getPrimType())
     return false;
 
-  // Merge vector type/len check(if)
-  if (HasMergeVec) {
-    if (Merge.getFieldDesc()->getPrimType() != ElemPT ||
-        Merge.getNumElems() != DstElems)
-      return false;
-  }
+  // --- 여기서 fast-path 추가 ---
+  unsigned UsedBits = std::min<unsigned>(DstElems, 64); // mask 폭 제한
+  uint64_t AllOnes = (UsedBits == 64 ? ~0ull : ((1ull << UsedBits) - 1));
+  bool MaskAll = (Kmask & AllOnes) == AllOnes;
 
-  // generate 0 value
-  auto storeZeroAt = [&](unsigned I) {
+  if (MaskAll) {
+    // merge는 무시, src에서 그대로 복사
     TYPE_SWITCH(ElemPT, {
-      Dst.elem<T>(I) = T{}; 
+      for (unsigned I = 0; I != DstElems; ++I)
+        Dst.elem<T>(I) = Src->elem<T>(ExtractPos + I);
     });
+    Dst.initializeAllElements();
+    return true;
+  }
+  // --- fast-path 끝 ---
+
+  auto storeZeroAt = [&](unsigned I) {
+    TYPE_SWITCH(ElemPT, { Dst.elem<T>(I) = T{}; });
   };
 
   TYPE_SWITCH(ElemPT, {
     for (unsigned I = 0; I != DstElems; ++I) {
       bool Take = ((Kmask >> I) & 1) != 0;
       if (Take) {
-        Dst.elem<T>(I) = Src.elem<T>(ExtractPos + I);
+        Dst.elem<T>(I) = Src->elem<T>(ExtractPos + I);
+      } else if (Merge) {
+        Dst.elem<T>(I) = Merge->elem<T>(I);
       } else {
-        if (HasMergeVec) {
-          Dst.elem<T>(I) = Merge.elem<T>(I);
-        } else {
-          storeZeroAt(I);
-        }
+        storeZeroAt(I);
       }
     }
   });
