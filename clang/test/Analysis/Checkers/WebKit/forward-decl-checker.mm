@@ -40,10 +40,14 @@ Obj& ref() {
   return obj;
 }
 
-void opaque_call_arg(Obj* obj, Obj&& otherObj) {
+void opaque_call_arg(Obj* obj, Obj&& otherObj, const RefPtr<Obj>& safeObj, WeakPtr<Obj> weakObj, std::unique_ptr<Obj> uniqObj) {
   receive_obj_ref(*obj);
   receive_obj_ptr(&*obj);
   receive_obj_rref(std::move(otherObj));
+  receive_obj_ref(*safeObj.get());
+  receive_obj_ptr(weakObj.get());
+  // expected-warning@-1{{Call argument for parameter 'p' uses a forward declared type 'Obj *'}}
+  receive_obj_ref(*uniqObj);
 }
 
 Obj&& provide_obj_rval();

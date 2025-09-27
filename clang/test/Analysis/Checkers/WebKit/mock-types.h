@@ -25,23 +25,23 @@ namespace std {
 template <typename T>
 class unique_ptr {
 private:
-  T *t;
+  void *t;
 
 public:
   unique_ptr() : t(nullptr) { }
   unique_ptr(T *t) : t(t) { }
   ~unique_ptr() {
     if (t)
-      delete t;
+      delete static_cast<T*>(t);
   }
   template <typename U> unique_ptr(unique_ptr<U>&& u)
     : t(u.t)
   {
     u.t = nullptr;
   }
-  T *get() const { return t; }
-  T *operator->() const { return t; }
-  T &operator*() const { return *t; }
+  T *get() const { return static_cast<T*>(t); }
+  T *operator->() const { return get(); }
+  T &operator*() const { return *get(); }
   unique_ptr &operator=(T *) { return *this; }
   explicit operator bool() const { return !!t; }
 };
@@ -311,6 +311,80 @@ public:
   operator T&() const { return *t; }
   T *operator->() const { return t; }
   UniqueRef &operator=(T &) { return *this; }
+};
+
+template <typename T>
+class WeakPtrImpl {
+private:
+  void* ptr;
+
+  template <typename U> friend class CanMakeWeakPtr;
+  template <typename U> friend class WeakPtr;
+
+  Ref<WeakPtrImpl<T>> create(T& t)
+  {
+    return adoptNS(new WeakPtrImpl<T>(t));
+  }
+
+  T* get() { return static_cast<T*>(ptr); }
+  operator bool() const { return !!ptr; }
+  void clear() { ptr = nullptr; }
+
+  WeakPtrImpl(T& t)
+    : ptr(static_cast<void*>(t))
+  { }
+};
+
+template <typename T>
+class CanMakeWeakPtr {
+private:
+  RefPtr<WeakPtrImpl<T>> impl;
+
+  template <typename U> friend class CanMakeWeakPtr;
+  template <typename U> friend class WeakPtr;
+
+  Ref<WeakPtrImpl<T>> createWeakPtrImpl() {
+    if (!impl)
+      impl = WeakPtrImpl<T>::create(static_cast<T>(*this));
+    return *impl;
+  }
+
+public:
+  ~CanMakeWeakPtr() {
+    if (!impl)
+      return;
+    impl->ptr = nullptr;
+    impl = nullptr;
+  }
+};
+
+template <typename T>
+class WeakPtr {
+private:
+  RefPtr<WeakPtrImpl<T>> impl;
+
+public:
+  WeakPtr(T& t) {
+    *this = t;
+  }
+  WeakPtr(T* t) {
+    *this = t;
+  }
+
+  template <typename U>
+  WeakPtr<T> operator=(U& obj) {
+    impl = obj.createWeakPtrImpl();
+  }
+
+  template <typename U>
+  WeakPtr<T> operator=(U* obj) {
+    impl = obj ? obj->createWeakPtrImpl() : nullptr;
+  }
+
+  T* get() {
+    return impl ? impl->get() : nullptr;
+  }
+
 };
 
 #endif

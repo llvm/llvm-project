@@ -283,6 +283,19 @@ public:
       break;
     }
 
+    if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(ArgExpr)) {
+      if (isOwnerPtrType(MemberCallExpr->getObjectType()))
+        return;
+    }
+
+    if (auto *OpCE = dyn_cast<CXXOperatorCallExpr>(ArgExpr)) {
+      auto *Method = dyn_cast_or_null<CXXMethodDecl>(OpCE->getDirectCallee());
+      if (Method && isOwnerPtr(safeGetName(Method->getParent()))) {
+        if (OpCE->getOperator() == OO_Star && OpCE->getNumArgs() == 1)
+          return;
+      }
+    }
+
     if (isNullPtr(ArgExpr) || isa<IntegerLiteral>(ArgExpr) ||
         isa<CXXDefaultArgExpr>(ArgExpr))
       return;
