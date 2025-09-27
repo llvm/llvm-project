@@ -391,6 +391,13 @@ bool isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind);
 bool isOpenMPCanonicalLoopNestTransformationDirective(
     OpenMPDirectiveKind DKind);
 
+/// Checks if the specified directive is a loop transformation directive that
+/// applies to a canonical loop sequence.
+/// \param DKind Specified directive.
+/// \return True iff the directive is a loop transformation.
+bool isOpenMPCanonicalLoopSequenceTransformationDirective(
+    OpenMPDirectiveKind DKind);
+
 /// Checks if the specified directive is a loop transformation directive.
 /// \param DKind Specified directive.
 /// \return True iff the directive is a loop transformation.
