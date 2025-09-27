@@ -16,6 +16,7 @@ def construct_and_print_in_module(f):
             print(module)
     return f
 
+
 def get_pdl_patterns():
     # Create a rewrite from add to mul. This will match
     # - operation name is arith.addi
@@ -254,25 +255,39 @@ def get_pdl_pattern_expand():
             t = pdl.TypeOp(i32)
             cst = pdl.AttributeOp()
             pdl.apply_native_constraint([], "is_one", [cst])
-            op0 = pdl.OperationOp(name="myint.constant", attributes={"value": cst}, types=[t])
+            op0 = pdl.OperationOp(
+                name="myint.constant", attributes={"value": cst}, types=[t]
+            )
 
             @pdl.rewrite()
             def rew():
-                expanded = pdl.apply_native_rewrite([pdl.OperationType.get()], "expand", [cst])
+                expanded = pdl.apply_native_rewrite(
+                    [pdl.OperationType.get()], "expand", [cst]
+                )
                 pdl.ReplaceOp(op0, with_op=expanded)
 
     def is_one(rewriter, results, values):
         cst = values[0].value
         return cst <= 1
-    
+
     def expand(rewriter, results, values):
         cst = values[0].value
         c1 = cst // 2
         c2 = cst - c1
         with rewriter.ip():
-            op1 = Operation.create("myint.constant", results=[i32], attributes={"value": IntegerAttr.get(i32, c1)})
-            op2 = Operation.create("myint.constant", results=[i32], attributes={"value": IntegerAttr.get(i32, c2)})
-            res = Operation.create("myint.add", results=[i32], operands=[op1.result, op2.result])
+            op1 = Operation.create(
+                "myint.constant",
+                results=[i32],
+                attributes={"value": IntegerAttr.get(i32, c1)},
+            )
+            op2 = Operation.create(
+                "myint.constant",
+                results=[i32],
+                attributes={"value": IntegerAttr.get(i32, c2)},
+            )
+            res = Operation.create(
+                "myint.add", results=[i32], operands=[op1.result, op2.result]
+            )
         results.append(res)
 
     pdl_module = PDLModule(m)
