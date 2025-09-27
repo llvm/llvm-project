@@ -1221,6 +1221,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpaceBeforeCtorInitializerColon);
     IO.mapOptional("SpaceBeforeInheritanceColon",
                    Style.SpaceBeforeInheritanceColon);
+    IO.mapOptional("SpaceBetweenUnderscoreParens",
+                   Style.SpaceBetweenUnderscoreParens);
     IO.mapOptional("SpaceBeforeJsonColon", Style.SpaceBeforeJsonColon);
     IO.mapOptional("SpaceBeforeParens", Style.SpaceBeforeParens);
     IO.mapOptional("SpaceBeforeParensOptions", Style.SpaceBeforeParensOptions);
@@ -1716,6 +1718,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeCpp11BracedList = false;
   LLVMStyle.SpaceBeforeCtorInitializerColon = true;
   LLVMStyle.SpaceBeforeInheritanceColon = true;
+  LLVMStyle.SpaceBetweenUnderscoreParens = true;
   LLVMStyle.SpaceBeforeJsonColon = false;
   LLVMStyle.SpaceBeforeParens = FormatStyle::SBPO_ControlStatements;
   LLVMStyle.SpaceBeforeParensOptions = {};
@@ -2047,6 +2050,7 @@ FormatStyle getGNUStyle() {
   Style.FixNamespaceComments = false;
   Style.KeepFormFeed = true;
   Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
+  Style.SpaceBetweenUnderscoreParens = false;
   return Style;
 }
 

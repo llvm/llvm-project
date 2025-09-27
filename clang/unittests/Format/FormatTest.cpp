@@ -17852,6 +17852,37 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
                Spaces);
 }
 
+TEST_F(FormatTest, SpaceBetweenUnderscoreParens) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
+
+  EXPECT_TRUE(Style.SpaceBetweenUnderscoreParens);
+  verifyFormat("func (arg);", Style);
+  verifyFormat("my_func (arg);", Style);
+  verifyFormat("_ (message);", Style);
+  verifyFormat("underscore_ (param);", Style);
+
+  Style.SpaceBetweenUnderscoreParens = false;
+  verifyFormat("func (arg);", Style);
+  verifyFormat("my_func (arg);", Style);
+  verifyFormat("_(message);", Style);
+  verifyFormat("underscore_ (param);", Style);
+  verifyFormat("_private_func (data);", Style);
+
+  FormatStyle GNUStyle = getGNUStyle();
+  EXPECT_FALSE(GNUStyle.SpaceBetweenUnderscoreParens);
+  EXPECT_EQ(GNUStyle.SpaceBeforeParens, FormatStyle::SBPO_Always);
+  verifyFormat("func (arg);", GNUStyle);
+  verifyFormat("my_func (arg);", GNUStyle);
+  verifyFormat("_(message);", GNUStyle);
+  verifyFormat("_private_func (data);", GNUStyle);
+
+  verifyFormat("printf (_(\"Hello\"));\n"
+               "func (arg);\n"
+               "_(\"World\");",
+               GNUStyle);
+}
+
 TEST_F(FormatTest, ConfigurableSpacesInSquareBrackets) {
   verifyFormat("int a[5];");
   verifyFormat("a[3] += 42;");
