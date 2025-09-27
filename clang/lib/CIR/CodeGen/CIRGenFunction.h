@@ -1197,6 +1197,8 @@ public:
                               bool delegating, Address thisAddr,
                               CallArgList &args, clang::SourceLocation loc);
 
+  void emitCXXDeleteExpr(const CXXDeleteExpr *e);
+
   void emitCXXDestructorCall(const CXXDestructorDecl *dd, CXXDtorType type,
                              bool forVirtualBase, bool delegating,
                              Address thisAddr, QualType thisTy);
@@ -1243,6 +1245,9 @@ public:
   // constructors where they are substantially the same.
   void emitDelegatingCXXConstructorCall(const CXXConstructorDecl *ctor,
                                         const FunctionArgList &args);
+
+  void emitDeleteCall(const FunctionDecl *deleteFD, mlir::Value ptr,
+                      QualType deleteTy);
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
