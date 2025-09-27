@@ -5,6 +5,7 @@ from mlir.ir import *
 from mlir.passmanager import *
 from mlir.dialects.func import FuncOp
 from mlir.dialects.builtin import ModuleOp
+import mlir.dialects.arith
 
 
 # Log everything to stderr and flush so that we have a unified stream to match

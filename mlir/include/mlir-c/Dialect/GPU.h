@@ -63,6 +63,9 @@ mlirGPUObjectAttrHasKernels(MlirAttribute mlirObjectAttr);
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirGPUObjectAttrGetKernels(MlirAttribute mlirObjectAttr);
 
+MLIR_CAPI_EXPORTED void
+mlirGPURegisterTransformDialectExtension(MlirDialectRegistry registry);
+
 #ifdef __cplusplus
 }
 #endif

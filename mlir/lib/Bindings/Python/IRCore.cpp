@@ -2897,6 +2897,14 @@ maybeGetTracebackLocation(const std::optional<PyLocation> &location) {
 // Populates the core exports of the 'ir' submodule.
 //------------------------------------------------------------------------------
 
+MlirDialectHandle createMlirDialectHandleFromCapsule(nb::object capsule) {
+  MlirDialectHandle rawRegistry =
+      mlirPythonCapsuleToDialectHandle(capsule.ptr());
+  if (mlirDialectHandleIsNull(rawRegistry))
+    throw nb::python_error();
+  return rawRegistry;
+}
+
 void mlir::python::populateIRCore(nb::module_ &m) {
   // disable leak warnings which tend to be false positives.
   nb::set_leak_warnings(false);
@@ -3127,13 +3135,45 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::sig("def __repr__(self) -> str"));
 
   //----------------------------------------------------------------------------
+  // Mapping of MlirDialectHandle
+  //----------------------------------------------------------------------------
+
+  nb::class_<MlirDialectHandle>(m, "DialectHandle")
+      .def_prop_ro_static(
+          "_capsule_name",
+          [](nb::handle &) { return MLIR_PYTHON_CAPSULE_DIALECT_HANDLE; },
+          nb::sig("def _capsule_name(/) -> str"))
+      .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR,
+                  &createMlirDialectHandleFromCapsule);
+
+  //----------------------------------------------------------------------------
   // Mapping of PyDialectRegistry
   //----------------------------------------------------------------------------
   nb::class_<PyDialectRegistry>(m, "DialectRegistry")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyDialectRegistry::getCapsule)
+      .def_prop_ro_static(
+          "_capsule_name",
+          [](nb::handle &) { return MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY; },
+          nb::sig("def _capsule_name(/) -> str"))
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR,
                   &PyDialectRegistry::createFromCapsule)
-      .def(nb::init<>());
+      .def(nb::init<>())
+      .def("insert_dialect",
+           [](PyDialectRegistry &self, MlirDialectHandle handle) {
+             mlirDialectHandleInsertDialect(handle, self.get());
+           })
+      .def("insert_dialect",
+           [](PyDialectRegistry &self, intptr_t ptr) {
+             mlirDialectHandleInsertDialect(
+                 {reinterpret_cast<const void *>(ptr)}, self.get());
+           })
+      .def_prop_ro("dialect_names", [](PyDialectRegistry &self) {
+        int64_t numDialectNames =
+            mlirDialectRegistryGetNumDialectNames(self.get());
+        std::vector<MlirStringRef> dialectNames(numDialectNames);
+        mlirDialectRegistryGetDialectNames(self.get(), dialectNames.data());
+        return dialectNames;
+      });
 
   //----------------------------------------------------------------------------
   // Mapping of Location

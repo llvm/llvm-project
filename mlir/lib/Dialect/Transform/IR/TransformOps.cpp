@@ -2928,7 +2928,8 @@ LogicalResult transform::SequenceOp::verify() {
       InFlightDiagnostic diag =
           emitOpError()
           << "expected children ops to implement TransformOpInterface";
-      diag.attachNote(child.getLoc()) << "op without interface";
+      diag.attachNote(child.getLoc())
+          << "op without interface: " << child.getName();
       return diag;
     }
 

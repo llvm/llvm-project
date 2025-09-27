@@ -13,13 +13,17 @@ else:
 
 
 with Context():
+    print("hello1", file=sys.stderr)
     standalone_d.register_dialects()
+    print("hello2", file=sys.stderr)
     module = Module.parse(
         """
     %0 = arith.constant 2 : i32
     %1 = standalone.foo %0 : i32
     """
     )
+    print("hello3", file=sys.stderr)
     # CHECK: %[[C:.*]] = arith.constant 2 : i32
     # CHECK: standalone.foo %[[C]] : i32
     print(str(module))
+    print("hello4", file=sys.stderr)

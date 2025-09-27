@@ -2,7 +2,7 @@
 
 from typing import Callable
 from mlir import ir
-from mlir.dialects import scf, pdl
+from mlir.dialects import scf, pdl, arith
 from mlir.dialects.transform import (
     structured,
     get_parent_op,
@@ -30,6 +30,7 @@ def construct_and_print_in_module(f):
         with ir.InsertionPoint(module.body):
             f()
         print(module)
+        module.operation.verify()
     return f
 
 

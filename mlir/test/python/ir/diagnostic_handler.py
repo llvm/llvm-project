@@ -5,6 +5,7 @@ from mlir.ir import *
 from mlir._mlir_libs._mlirPythonTestNanobind import (
     test_diagnostics_with_errors_and_notes,
 )
+import mlir.dialects.arith
 
 
 def run(f):

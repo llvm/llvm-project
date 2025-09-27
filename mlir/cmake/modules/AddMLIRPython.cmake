@@ -23,11 +23,14 @@
 #     grouping. Source groupings form a DAG.
 #   SOURCES: List of specific source files relative to ROOT_DIR to include.
 #   SOURCES_GLOB: List of glob patterns relative to ROOT_DIR to include.
+#   EMBED_CAPI_LINK_LIBS: Dependent CAPI libraries that this extension depends
+#     on. These will be collected for all extensions and put into an
+#     aggregate dylib that is linked against.
 function(declare_mlir_python_sources name)
   cmake_parse_arguments(ARG
     ""
     "ROOT_DIR;ADD_TO_PARENT"
-    "SOURCES;SOURCES_GLOB"
+    "SOURCES;SOURCES_GLOB;EMBED_CAPI_LINK_LIBS"
     ${ARGN})
 
   if(NOT ARG_ROOT_DIR)
@@ -53,9 +56,10 @@ function(declare_mlir_python_sources name)
   set_target_properties(${name} PROPERTIES
     # Yes: Leading-lowercase property names are load bearing and the recommended
     # way to do this: https://gitlab.kitware.com/cmake/cmake/-/issues/19261
-    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_DEPENDS"
+    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_DEPENDS;mlir_python_EMBED_CAPI_LINK_LIBS"
     mlir_python_SOURCES_TYPE pure
     mlir_python_DEPENDS ""
+    mlir_python_EMBED_CAPI_LINK_LIBS "${ARG_EMBED_CAPI_LINK_LIBS}"
   )
 
   # Use the interface include directories and sources on the target to carry the
@@ -374,6 +378,9 @@ endfunction()
 #     This file is where the *EnumAttrs are defined, not where the *Enums are defined.
 #     **WARNING**: This arg will shortly be removed when the just-below TODO is satisfied. Use at your
 #     risk.
+#   EMBED_CAPI_LINK_LIBS: Dependent CAPI libraries that this extension depends
+#     on. These will be collected for all extensions and put into an
+#     aggregate dylib that is linked against.
 #
 # TODO: Right now `TD_FILE` can't be the actual dialect tablegen file, since we
 #       use its path to determine where to place the generated python file. If
@@ -383,7 +390,7 @@ function(declare_mlir_dialect_python_bindings)
   cmake_parse_arguments(ARG
     "GEN_ENUM_BINDINGS"
     "ROOT_DIR;ADD_TO_PARENT;TD_FILE;DIALECT_NAME"
-    "SOURCES;SOURCES_GLOB;DEPENDS;GEN_ENUM_BINDINGS_TD_FILE"
+    "SOURCES;SOURCES_GLOB;DEPENDS;GEN_ENUM_BINDINGS_TD_FILE;EMBED_CAPI_LINK_LIBS"
     ${ARGN})
   # Sources.
   set(_dialect_target "${ARG_ADD_TO_PARENT}.${ARG_DIALECT_NAME}")
@@ -424,6 +431,7 @@ function(declare_mlir_dialect_python_bindings)
       ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
       ADD_TO_PARENT "${_dialect_target}"
       SOURCES ${_sources}
+      EMBED_CAPI_LINK_LIBS "${ARG_EMBED_CAPI_LINK_LIBS}"
     )
   endif()
 endfunction()
