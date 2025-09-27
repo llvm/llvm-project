@@ -1632,6 +1632,14 @@ const char *SBTarget::GetLabel() const {
   return nullptr;
 }
 
+uint32_t SBTarget::GetUniqueID() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (TargetSP target_sp = GetSP())
+    return target_sp->GetUniqueID();
+  return 0;
+}
+
 SBError SBTarget::SetLabel(const char *label) {
   LLDB_INSTRUMENT_VA(this, label);
 
