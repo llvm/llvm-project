@@ -3070,7 +3070,7 @@ bool VPReplicateRecipe::shouldPack() const {
 
 /// Returns true if \p Ptr is a pointer computation for which the legacy cost
 /// model computes a SCEV expression when computing the address cost.
-static bool shouldUseAddressAccessSCEV(VPValue *Ptr) {
+static bool shouldUseAddressAccessSCEV(const VPValue *Ptr) {
   auto *PtrR = Ptr->getDefiningRecipe();
   if (!PtrR || !((isa<VPReplicateRecipe>(PtrR) &&
                   cast<VPReplicateRecipe>(PtrR)->getOpcode() ==
@@ -3078,11 +3078,9 @@ static bool shouldUseAddressAccessSCEV(VPValue *Ptr) {
                  isa<VPWidenGEPRecipe>(PtrR)))
     return false;
 
-  // We are looking for a GEP with all loop invariant indices except for one
-  // which should be an induction variable.
-  unsigned NumOperands = PtrR->getNumOperands();
-  for (unsigned Idx = 1; Idx < NumOperands; ++Idx) {
-    VPValue *Opd = PtrR->getOperand(Idx);
+  // We are looking for a GEP where all indices are either loop invariant or
+  // inductions.
+  for (VPValue *Opd : drop_begin(PtrR->operands())) {
     if (!Opd->isDefinedOutsideLoopRegions() &&
         !isa<VPScalarIVStepsRecipe, VPWidenIntOrFpInductionRecipe>(Opd))
       return false;
@@ -3242,13 +3240,14 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
       break;
 
     bool IsLoad = UI->getOpcode() == Instruction::Load;
+    const VPValue *PtrOp = getOperand(!IsLoad);
     // TODO: Handle cases where we need to pass a SCEV to
     // getAddressComputationCost.
-    if (shouldUseAddressAccessSCEV(getOperand(!IsLoad)))
+    if (shouldUseAddressAccessSCEV(PtrOp))
       break;
 
     Type *ValTy = Ctx.Types.inferScalarType(IsLoad ? this : getOperand(0));
-    Type *ScalarPtrTy = Ctx.Types.inferScalarType(getOperand(IsLoad ? 0 : 1));
+    Type *ScalarPtrTy = Ctx.Types.inferScalarType(PtrOp);
     const Align Alignment = getLoadStoreAlignment(UI);
     unsigned AS = getLoadStoreAddressSpace(UI);
     TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(UI->getOperand(0));
