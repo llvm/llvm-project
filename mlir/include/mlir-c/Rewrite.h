@@ -101,6 +101,9 @@ mlirRewriterBaseGetInsertionBlock(MlirRewriterBase rewriter);
 MLIR_CAPI_EXPORTED MlirBlock
 mlirRewriterBaseGetBlock(MlirRewriterBase rewriter);
 
+/// Returns the operation right after the current insertion point
+/// of the rewriter. A null MlirOperation will be returned
+// if the current insertion block is empty.
 MLIR_CAPI_EXPORTED MlirOperation
 mlirRewriterBaseGetOperationAfterInsertion(MlirRewriterBase rewriter);
 
