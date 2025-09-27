@@ -81,6 +81,9 @@ public:
     /// Canonicalize a pair of virtual and real paths.
     LLVM_ABI PathStorage canonicalize(StringRef SrcPath);
 
+    /// Return the underlying file system.
+    vfs::FileSystem &getFileSystem() const { return *VFS; };
+
     explicit PathCanonicalizer(IntrusiveRefCntPtr<vfs::FileSystem> VFS)
         : VFS(std::move(VFS)) {}
 
