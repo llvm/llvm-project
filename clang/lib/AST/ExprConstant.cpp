@@ -68,6 +68,7 @@
 #include <functional>
 #include <limits>
 #include <optional>
+#include <cmath>
 
 #define DEBUG_TYPE "exprconstant"
 
@@ -12234,6 +12235,41 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_sqrtpd: {
+    llvm::errs() << "We are inside sqrtpd\n";
+    APValue Source;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    unsigned SourceLen = Source.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    llvm::errs() << "SourceLen " << SourceLen << '\n';
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      llvm::errs() << "We are inside for loop\n";
+      APValue CurrentEle = Source.getVectorElt(EltNum);
+      if (DestEltTy->isFloatingType()) {
+        llvm::APFloat Value = CurrentEle.getFloat();
+        if (Value.isNegative() && !Value.isZero()) {
+          Value = llvm::APFloat::getQNaN(Value.getSemantics());
+        } else {
+          double DoubleValue = Value.convertToDouble();
+          double SqrtValue = ::sqrt(DoubleValue);
+          llvm::APFloat Value2{SqrtValue};
+          Value = Value2;
+          llvm::errs() << "Pushing " << SqrtValue << ' ' << Value2 << " to resultelements\n";
+        }
+        ResultElements.push_back(APValue(Value));
+      } else {
+        return false;
+      }
+      llvm::errs() << "Outside the loop, about to exit " << "res size " << ResultElements.size() << "\n";
+      return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+    }
   }
   }
 }

@@ -222,7 +222,6 @@ let Features = "sse2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] i
   def pshuflw : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Constant int)">;
   def pshufhw : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Constant int)">;
   def psadbw128 : X86Builtin<"_Vector<2, long long int>(_Vector<16, char>, _Vector<16, char>)">;
-  def sqrtpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>)">;
   def sqrtsd : X86Builtin<"_Vector<2, double>(_Vector<2, double>)">;
   def shufpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Constant int)">;
   def cvtpd2dq : X86Builtin<"_Vector<2, long long int>(_Vector<2, double>)">;
@@ -295,6 +294,8 @@ let Features = "sse2",
 
   def psrawi128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, int)">;
   def psradi128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, int)">;
+
+  def sqrtpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>)">;
 }
 
 let Features = "sse3", Attributes = [NoThrow] in {

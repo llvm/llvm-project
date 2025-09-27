@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SipHash.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace interp {
@@ -2996,6 +2997,7 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
+  llvm::errs() << "Calling InterpretBuiltin\n";
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
     return Invalid(S, OpPC);
 
