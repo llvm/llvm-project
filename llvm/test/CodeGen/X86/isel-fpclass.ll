@@ -3,10 +3,10 @@
 ; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s -check-prefixes=X64,X64-SDAGISEL
 ; RUN: llc < %s -mtriple=i686-linux -fast-isel -fast-isel-abort=1  | FileCheck %s -check-prefixes=X86-FASTISEL
 ; RUN: llc < %s -mtriple=x86_64-linux -fast-isel -fast-isel-abort=1  | FileCheck %s -check-prefixes=X64,X64-FASTISEL
+; RUN: llc < %s -mtriple=i686-linux -global-isel -global-isel-abort=2  | FileCheck %s -check-prefixes=X86
+; RUN: llc < %s -mtriple=x86_64-linux -global-isel -global-isel-abort=2  | FileCheck %s -check-prefixes=X64,X64-GISEL
 
-; FIXME: We can reuse/delete llvm/test/CodeGen/X86/is_fpclass.ll when all patches are included.
-
-define i1 @isnone_f(float %x) {
+define i1 @isnone_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: isnone_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    xorl %eax, %eax
@@ -23,12 +23,17 @@ define i1 @isnone_f(float %x) {
 ; X86-FASTISEL-NEXT:    fstp %st(0)
 ; X86-FASTISEL-NEXT:    xorl %eax, %eax
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: isnone_f:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    retl
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 0)
   ret i1 %0
 }
 
-define i1 @isany_f(float %x) {
+define i1 @isany_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: isany_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movb $1, %al
@@ -45,12 +50,17 @@ define i1 @isany_f(float %x) {
 ; X86-FASTISEL-NEXT:    fstp %st(0)
 ; X86-FASTISEL-NEXT:    movb $1, %al
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: isany_f:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb $1, %al
+; X86-NEXT:    retl
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1023)
   ret i1 %0
 }
 
-define i1 @issignaling_f(float %x) {
+define i1 @issignaling_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: issignaling_f:
 ; X86-SDAGISEL:       # %bb.0:
 ; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -76,7 +86,6 @@ define i1 @issignaling_f(float %x) {
 ; X86-FASTISEL-LABEL: issignaling_f:
 ; X86-FASTISEL:       # %bb.0:
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -87,13 +96,23 @@ define i1 @issignaling_f(float %x) {
 ; X86-FASTISEL-NEXT:    setge %al
 ; X86-FASTISEL-NEXT:    andb %cl, %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: issignaling_f:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X86-NEXT:    setl %cl
+; X86-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X86-NEXT:    setge %al
+; X86-NEXT:    andb %cl, %al
+; X86-NEXT:    retl
    %a0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1)  ; "snan"
    ret i1 %a0
 }
 
- define i1 @isquiet_f(float %x) {
+ define i1 @isquiet_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: isquiet_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -113,7 +132,6 @@ define i1 @issignaling_f(float %x) {
 ; X86-FASTISEL-LABEL: isquiet_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -121,14 +139,21 @@ define i1 @issignaling_f(float %x) {
 ; X86-FASTISEL-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
 ; X86-FASTISEL-NEXT:    setge %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: isquiet_f:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X86-NEXT:    setge %al
+; X86-NEXT:    retl
  entry:
    %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 2)  ; "qnan"
    ret i1 %0
 }
 
-define i1 @not_isquiet_f(float %x) {
+define i1 @not_isquiet_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: not_isquiet_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -148,7 +173,6 @@ define i1 @not_isquiet_f(float %x) {
 ; X86-FASTISEL-LABEL: not_isquiet_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -156,14 +180,21 @@ define i1 @not_isquiet_f(float %x) {
 ; X86-FASTISEL-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
 ; X86-FASTISEL-NEXT:    setl %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: not_isquiet_f:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X86-NEXT:    setl %al
+; X86-NEXT:    retl
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1021)  ; ~"qnan"
   ret i1 %0
 }
 
-define i1 @isinf_f(float %x) {
+define i1 @isinf_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: isinf_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -183,7 +214,6 @@ define i1 @isinf_f(float %x) {
 ; X86-FASTISEL-LABEL: isinf_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -191,14 +221,21 @@ define i1 @isinf_f(float %x) {
 ; X86-FASTISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X86-FASTISEL-NEXT:    sete %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: isinf_f:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 516)  ; 0x204 = "inf"
   ret i1 %0
 }
 
-define i1 @not_isinf_f(float %x) {
+define i1 @not_isinf_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: not_isinf_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -218,7 +255,6 @@ define i1 @not_isinf_f(float %x) {
 ; X86-FASTISEL-LABEL: not_isinf_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -226,14 +262,21 @@ define i1 @not_isinf_f(float %x) {
 ; X86-FASTISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X86-FASTISEL-NEXT:    setne %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: not_isinf_f:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-NEXT:    setne %al
+; X86-NEXT:    retl
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 507)  ; ~0x204 = "~inf"
   ret i1 %0
 }
 
-define i1 @is_plus_inf_f(float %x) {
+define i1 @is_plus_inf_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: is_plus_inf_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    cmpl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
@@ -250,20 +293,24 @@ define i1 @is_plus_inf_f(float %x) {
 ; X86-FASTISEL-LABEL: is_plus_inf_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    cmpl $2139095040, (%esp) # imm = 0x7F800000
 ; X86-FASTISEL-NEXT:    sete %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: is_plus_inf_f:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    cmpl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 512)  ; 0x200 = "+inf"
   ret i1 %0
 }
 
-define i1 @is_minus_inf_f(float %x) {
+define i1 @is_minus_inf_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: is_minus_inf_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    cmpl $-8388608, {{[0-9]+}}(%esp) # imm = 0xFF800000
@@ -280,20 +327,24 @@ define i1 @is_minus_inf_f(float %x) {
 ; X86-FASTISEL-LABEL: is_minus_inf_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    cmpl $-8388608, (%esp) # imm = 0xFF800000
 ; X86-FASTISEL-NEXT:    sete %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: is_minus_inf_f:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    cmpl $-8388608, {{[0-9]+}}(%esp) # imm = 0xFF800000
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 4)  ; "-inf"
   ret i1 %0
 }
 
-define i1 @not_is_minus_inf_f(float %x) {
+define i1 @not_is_minus_inf_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: not_is_minus_inf_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    cmpl $-8388608, {{[0-9]+}}(%esp) # imm = 0xFF800000
@@ -310,20 +361,24 @@ define i1 @not_is_minus_inf_f(float %x) {
 ; X86-FASTISEL-LABEL: not_is_minus_inf_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    cmpl $-8388608, (%esp) # imm = 0xFF800000
 ; X86-FASTISEL-NEXT:    setne %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: not_is_minus_inf_f:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    cmpl $-8388608, {{[0-9]+}}(%esp) # imm = 0xFF800000
+; X86-NEXT:    setne %al
+; X86-NEXT:    retl
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1019)  ; ~"-inf"
   ret i1 %0
 }
 
-define i1 @isfinite_f(float %x) {
+define i1 @isfinite_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: isfinite_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -343,7 +398,6 @@ define i1 @isfinite_f(float %x) {
 ; X86-FASTISEL-LABEL: isfinite_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -351,14 +405,21 @@ define i1 @isfinite_f(float %x) {
 ; X86-FASTISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X86-FASTISEL-NEXT:    setl %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: isfinite_f:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-NEXT:    setl %al
+; X86-NEXT:    retl
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 504)  ; 0x1f8 = "finite"
   ret i1 %0
 }
 
-define i1 @not_isfinite_f(float %x) {
+define i1 @not_isfinite_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: not_isfinite_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -378,7 +439,6 @@ define i1 @not_isfinite_f(float %x) {
 ; X86-FASTISEL-LABEL: not_isfinite_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -386,14 +446,21 @@ define i1 @not_isfinite_f(float %x) {
 ; X86-FASTISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X86-FASTISEL-NEXT:    setge %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: not_isfinite_f:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-NEXT:    setge %al
+; X86-NEXT:    retl
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 519)  ; ~0x1f8 = "~finite"
   ret i1 %0
 }
 
-define i1 @is_plus_finite_f(float %x) {
+define i1 @is_plus_finite_f(float %x) nounwind {
 ; X86-SDAGISEL-LABEL: is_plus_finite_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    cmpl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
@@ -410,14 +477,18 @@ define i1 @is_plus_finite_f(float %x) {
 ; X86-FASTISEL-LABEL: is_plus_finite_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    pushl %eax
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 8
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
 ; X86-FASTISEL-NEXT:    cmpl $2139095040, (%esp) # imm = 0x7F800000
 ; X86-FASTISEL-NEXT:    setb %al
 ; X86-FASTISEL-NEXT:    popl %ecx
-; X86-FASTISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: is_plus_finite_f:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    cmpl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; X86-NEXT:    setb %al
+; X86-NEXT:    retl
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 448)  ; 0x1c0 = "+finite"
   ret i1 %0
@@ -440,6 +511,11 @@ define i1 @isnone_d(double %x) nounwind {
 ; X86-FASTISEL-NEXT:    fstp %st(0)
 ; X86-FASTISEL-NEXT:    xorl %eax, %eax
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: isnone_d:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    retl
 entry:
     %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 0)
     ret i1 %0
@@ -462,6 +538,11 @@ define i1 @isany_d(double %x) nounwind {
 ; X86-FASTISEL-NEXT:    fstp %st(0)
 ; X86-FASTISEL-NEXT:    movb $1, %al
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-LABEL: isany_d:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb $1, %al
+; X86-NEXT:    retl
 entry:
     %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 1023)
     ret i1 %0
@@ -491,6 +572,16 @@ define i1 @isnone_f80(x86_fp80 %x) nounwind {
 ; X64-FASTISEL-NEXT:    fstp %st(0)
 ; X64-FASTISEL-NEXT:    xorl %eax, %eax
 ; X64-FASTISEL-NEXT:    retq
+;
+; X86-LABEL: isnone_f80:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-GISEL-LABEL: isnone_f80:
+; X64-GISEL:       # %bb.0: # %entry
+; X64-GISEL-NEXT:    xorl %eax, %eax
+; X64-GISEL-NEXT:    retq
 entry:
 %0 = tail call i1 @llvm.is.fpclass.f80(x86_fp80 %x, i32 0)
 ret i1 %0
@@ -520,6 +611,16 @@ define i1 @isany_f80(x86_fp80 %x) nounwind {
 ; X64-FASTISEL-NEXT:    fstp %st(0)
 ; X64-FASTISEL-NEXT:    movb $1, %al
 ; X64-FASTISEL-NEXT:    retq
+;
+; X86-LABEL: isany_f80:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb $1, %al
+; X86-NEXT:    retl
+;
+; X64-GISEL-LABEL: isany_f80:
+; X64-GISEL:       # %bb.0: # %entry
+; X64-GISEL-NEXT:    movb $1, %al
+; X64-GISEL-NEXT:    retq
 entry:
     %0 = tail call i1 @llvm.is.fpclass.f80(x86_fp80 %x, i32 1023)
     ret i1 %0
