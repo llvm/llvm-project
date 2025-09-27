@@ -40,6 +40,8 @@ FEATURE(speculative_load_hardening, LangOpts.SpeculativeLoadHardening)
 FEATURE(address_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Address |
                                    SanitizerKind::KernelAddress))
+FEATURE(sanitize_address_disable_container_overflow, 
+        LangOpts.SanitizeAddressDisableContainerOverflow)
 FEATURE(leak_sanitizer,
         LangOpts.Sanitize.has(SanitizerKind::Leak))
 FEATURE(hwaddress_sanitizer,
