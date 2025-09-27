@@ -439,9 +439,8 @@ mlir::createSparseReinterpretMapPass(ReinterpretMapScope scope) {
   return std::make_unique<SparseReinterpretMap>(options);
 }
 
-std::unique_ptr<Pass>
-mlir::createSparseReinterpretMapPass(ReinterpretMapScope scope, 
-                                     sparse_tensor::LoopOrderingStrategy strategy) {
+std::unique_ptr<Pass> mlir::createSparseReinterpretMapPass(
+    ReinterpretMapScope scope, sparse_tensor::LoopOrderingStrategy strategy) {
   SparseReinterpretMapOptions options;
   options.scope = scope;
   options.loopOrderingStrategy = strategy;
