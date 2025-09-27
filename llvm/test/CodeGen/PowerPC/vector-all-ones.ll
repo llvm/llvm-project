@@ -8,14 +8,12 @@
 ; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr9 -mtriple=powerpc-ibm-aix \
 ; RUN:     -ppc-asm-full-reg-names --ppc-vsr-nums-as-vr < %s | FileCheck %s
 
-; Currently the generated code uses `vspltisw` to generate vector of 1s followed by add operation.
-; This pattern is expected to be optimized in a future patch by using `xxleqv` to generate vector of -1s
-; followed by subtraction operation.
+; Optimized version of vector addition with {1,1,1,1} by replacing `vspltisw + vadduwm` with 'xxleqv + vsubuwm'
 define dso_local noundef <4 x i32> @test1(<4 x i32> %a) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vspltisw v3, 1
-; CHECK-NEXT:    vadduwm v2, v2, v3
+; CHECK-NEXT:    xxleqv v3, v3, v3
+; CHECK-NEXT:    vsubuwm v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
   %add = add <4 x i32> %a, splat (i32 1)
