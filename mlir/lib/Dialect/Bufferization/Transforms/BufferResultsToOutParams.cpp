@@ -46,7 +46,7 @@ static bool hasStaticIdentityLayout(MemRefType type) {
 /// Return the dynamic shapes of the `memref` based on the define op. If the
 /// complete dynamic shape fails to be captured, return an empty value.
 /// Currently, only function parameters are supported for capturing.
-static ValueRange getDynamicSize(Value memref, func::FuncOp funcOp) {
+static SmallVector<Value> getDynamicSize(Value memref, func::FuncOp funcOp) {
   auto *defOp = memref.getDefiningOp();
   if (!defOp)
     return {};
@@ -73,8 +73,9 @@ static ValueRange getDynamicSize(Value memref, func::FuncOp funcOp) {
 
 /// Returns the dynamic sizes at the callee, through the call relationship
 /// between the caller and callee.
-static ValueRange mapDynamicSizeAtCaller(func::CallOp call, func::FuncOp callee,
-                                         ValueRange dynamicSizes) {
+static SmallVector<Value> mapDynamicSizeAtCaller(func::CallOp call,
+                                                 func::FuncOp callee,
+                                                 ValueRange dynamicSizes) {
   SmallVector<Value> mapedDynamicSizes;
   for (Value size : dynamicSizes) {
     auto callOperands = call.getOperands();
@@ -230,9 +231,9 @@ updateCalls(ModuleOp module,
         options.dynamicSizesMap.lookup(callee);
     size_t dynamicSizesIndex = 0;
     for (Value memref : replaceWithOutParams) {
-      ValueRange dynamicSize = dynamicSizes.size() > dynamicSizesIndex
-                                   ? dynamicSizes[dynamicSizesIndex]
-                                   : SmallVector<Value>();
+      SmallVector<Value> dynamicSize = dynamicSizes.size() > dynamicSizesIndex
+                                           ? dynamicSizes[dynamicSizesIndex]
+                                           : SmallVector<Value>();
       bool memrefStaticShape =
           cast<MemRefType>(memref.getType()).hasStaticShape();
       if (!memrefStaticShape && dynamicSize.empty()) {
