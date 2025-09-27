@@ -1134,7 +1134,7 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, unsigned SelectOpc) {
   }
 }
 
-RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
+RISCVCC::CondCode RISCVCC::getInverseBranchCondition(RISCVCC::CondCode CC) {
   switch (CC) {
   default:
     llvm_unreachable("Unrecognized conditional branch");
@@ -1554,7 +1554,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     return Register();
   };
 
-  unsigned NewOpc = RISCVCC::getBrCond(getOppositeBranchCondition(CC));
+  unsigned NewOpc = RISCVCC::getBrCond(getInverseBranchCondition(CC));
 
   // Might be case 1.
   // Don't change 0 to 1 since we can use x0.
@@ -1801,7 +1801,7 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
   // Add condition code, inverting if necessary.
   auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
   if (Invert)
-    CC = RISCVCC::getOppositeBranchCondition(CC);
+    CC = RISCVCC::getInverseBranchCondition(CC);
   NewMI.addImm(CC);
 
   // Copy the false register.
@@ -3978,7 +3978,7 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   case RISCV::PseudoCCMOVGPR: {
     // CCMOV can be commuted by inverting the condition.
     auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
-    CC = RISCVCC::getOppositeBranchCondition(CC);
+    CC = RISCVCC::getInverseBranchCondition(CC);
     auto &WorkingMI = cloneIfNew(MI);
     WorkingMI.getOperand(3).setImm(CC);
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI*/ false,

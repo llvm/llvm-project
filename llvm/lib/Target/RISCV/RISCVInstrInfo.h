@@ -44,7 +44,7 @@ enum CondCode {
   COND_INVALID
 };
 
-CondCode getOppositeBranchCondition(CondCode);
+CondCode getInverseBranchCondition(CondCode);
 unsigned getBrCond(CondCode CC, unsigned SelectOpc = 0);
 
 } // end of namespace RISCVCC
