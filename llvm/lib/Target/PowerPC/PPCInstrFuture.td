@@ -294,6 +294,9 @@ let Predicates = [HasVSX, IsISAFuture] in {
                               "xvmulhuw $XT, $XA, $XB", []>;
   def XVMULHUH: XX3Form_XTAB6<60, 122, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                               "xvmulhuh $XT, $XA, $XB", []>;
+
+  def XVRLW: XX3Form_XTAB6<60, 184, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvrlw $XT, $XA, $XB", []>;
 }
 
 //---------------------------- Anonymous Patterns ----------------------------//

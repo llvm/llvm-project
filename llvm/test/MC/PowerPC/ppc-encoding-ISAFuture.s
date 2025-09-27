@@ -386,3 +386,7 @@
            xvmulhuh 4, 5, 7
 #CHECK-BE: xvmulhuh 4, 5, 7              # encoding: [0xf0,0x85,0x3b,0xd0]
 #CHECK-LE: xvmulhuh 4, 5, 7              # encoding: [0xd0,0x3b,0x85,0xf0]
+
+           xvrlw 34, 15, 16
+#CHECK-BE: xvrlw 34, 15, 16              # encoding: [0xf0,0x4f,0x85,0xc1]
+#CHECK-LE: xvrlw 34, 15, 16              # encoding: [0xc1,0x85,0x4f,0xf0]
