@@ -270,8 +270,7 @@ private:
                  const llvm::StringMap<Replacements> &Fix) {
     for (const auto &FileAndReplacements : Fix) {
       for (const auto &Repl : FileAndReplacements.second) {
-        if (!Repl.isApplicable())
-          continue;
+        if (!Repl.isApplicable()) continue;
         FileByteRange FBR;
         FBR.FilePath = Repl.getFilePath().str();
         FBR.FileOffset = Repl.getOffset();
