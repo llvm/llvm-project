@@ -477,6 +477,85 @@ std::string PlatformAndroid::GetRunAs() {
   }
   return run_as.str();
 }
+uint32_t
+PlatformAndroid::FindProcesses(const ProcessInstanceInfoMatch &match_info,
+                               ProcessInstanceInfoList &proc_infos) {
+  // Use the parent implementation for host platform
+  if (IsHost())
+    return PlatformLinux::FindProcesses(match_info, proc_infos);
+
+  // For remote Android platform, implement process name lookup using adb
+  proc_infos.clear();
+
+  // Check if we're looking for a process by name
+  const ProcessInstanceInfo &match_process_info = match_info.GetProcessInfo();
+  if (!match_process_info.GetExecutableFile() ||
+      match_info.GetNameMatchType() == NameMatch::Ignore) {
+    // Fall back to the parent implementation if not searching by name
+    return PlatformLinux::FindProcesses(match_info, proc_infos);
+  }
+
+  std::string process_name = match_process_info.GetExecutableFile().GetPath();
+  if (process_name.empty())
+    return 0;
+
+  // Use adb to find the process by name
+  Status error;
+  AdbClientUP adb(GetAdbClient(error));
+  if (error.Fail()) {
+    Log *log = GetLog(LLDBLog::Platform);
+    LLDB_LOGF(log, "PlatformAndroid::%s failed to get ADB client: %s",
+              __FUNCTION__, error.AsCString());
+    return 0;
+  }
+
+  // Use 'pidof' command to get the PID for the process name
+  std::string pidof_output;
+  std::string command = "pidof " + process_name;
+  error = adb->Shell(command.c_str(), seconds(5), &pidof_output);
+
+  if (error.Fail()) {
+    Log *log = GetLog(LLDBLog::Platform);
+    LLDB_LOGF(log, "PlatformAndroid::%s 'pidof %s' failed: %s", __FUNCTION__,
+              process_name.c_str(), error.AsCString());
+    return 0;
+  }
+
+  // Parse the PID from pidof output
+  pidof_output = llvm::StringRef(pidof_output).trim().str();
+  if (pidof_output.empty()) {
+    // No process found with that name
+    return 0;
+  }
+
+  // Parse the output as a single PID
+  lldb::pid_t pid;
+  if (!llvm::to_integer(pidof_output, pid)) {
+    Log *log = GetLog(LLDBLog::Platform);
+    LLDB_LOGF(log, "PlatformAndroid::%s failed to parse PID from output: '%s'",
+              __FUNCTION__, pidof_output.c_str());
+    return 0;
+  }
+
+  // Create ProcessInstanceInfo for the found process
+  ProcessInstanceInfo process_info;
+  process_info.SetProcessID(pid);
+  process_info.GetExecutableFile().SetFile(process_name,
+                                           FileSpec::Style::posix);
+
+  // Check if this process matches the criteria
+  if (match_info.Matches(process_info)) {
+    proc_infos.push_back(process_info);
+
+    Log *log = GetLog(LLDBLog::Platform);
+    LLDB_LOGF(log, "PlatformAndroid::%s found process '%s' with PID %llu",
+              __FUNCTION__, process_name.c_str(), (unsigned long long)pid);
+    return 1;
+  }
+
+  return 0;
+}
+
 std::unique_ptr<AdbSyncService> PlatformAndroid::GetSyncService(Status &error) {
   auto sync_service = std::make_unique<AdbSyncService>(m_device_id);
   error = sync_service->SetupSyncConnection();
