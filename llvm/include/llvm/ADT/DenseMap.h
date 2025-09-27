@@ -448,6 +448,11 @@ protected:
   static const KeyT getTombstoneKey() { return KeyInfoT::getTombstoneKey(); }
 
 private:
+  DerivedT &derived() { return *static_cast<DerivedT *>(this); }
+  const DerivedT &derived() const {
+    return *static_cast<const DerivedT *>(this);
+  }
+
   template <typename KeyArgT, typename... Ts>
   std::pair<BucketT *, bool> lookupOrInsertIntoBucket(KeyArgT &&Key,
                                                       Ts &&...Args) {
@@ -477,39 +482,27 @@ private:
     return const_iterator::makeIterator(TheBucket, buckets(), *this);
   }
 
-  unsigned getNumEntries() const {
-    return static_cast<const DerivedT *>(this)->getNumEntries();
-  }
+  unsigned getNumEntries() const { return derived().getNumEntries(); }
 
-  void setNumEntries(unsigned Num) {
-    static_cast<DerivedT *>(this)->setNumEntries(Num);
-  }
+  void setNumEntries(unsigned Num) { derived().setNumEntries(Num); }
 
   void incrementNumEntries() { setNumEntries(getNumEntries() + 1); }
 
   void decrementNumEntries() { setNumEntries(getNumEntries() - 1); }
 
-  unsigned getNumTombstones() const {
-    return static_cast<const DerivedT *>(this)->getNumTombstones();
-  }
+  unsigned getNumTombstones() const { return derived().getNumTombstones(); }
 
-  void setNumTombstones(unsigned Num) {
-    static_cast<DerivedT *>(this)->setNumTombstones(Num);
-  }
+  void setNumTombstones(unsigned Num) { derived().setNumTombstones(Num); }
 
   void incrementNumTombstones() { setNumTombstones(getNumTombstones() + 1); }
 
   void decrementNumTombstones() { setNumTombstones(getNumTombstones() - 1); }
 
-  const BucketT *getBuckets() const {
-    return static_cast<const DerivedT *>(this)->getBuckets();
-  }
+  const BucketT *getBuckets() const { return derived().getBuckets(); }
 
-  BucketT *getBuckets() { return static_cast<DerivedT *>(this)->getBuckets(); }
+  BucketT *getBuckets() { return derived().getBuckets(); }
 
-  unsigned getNumBuckets() const {
-    return static_cast<const DerivedT *>(this)->getNumBuckets();
-  }
+  unsigned getNumBuckets() const { return derived().getNumBuckets(); }
 
   BucketT *getBucketsEnd() { return getBuckets() + getNumBuckets(); }
 
@@ -525,9 +518,9 @@ private:
     return llvm::make_range(getBuckets(), getBucketsEnd());
   }
 
-  void grow(unsigned AtLeast) { static_cast<DerivedT *>(this)->grow(AtLeast); }
+  void grow(unsigned AtLeast) { derived().grow(AtLeast); }
 
-  void shrink_and_clear() { static_cast<DerivedT *>(this)->shrink_and_clear(); }
+  void shrink_and_clear() { derived().shrink_and_clear(); }
 
   template <typename LookupKeyT>
   BucketT *findBucketForInsertion(const LookupKeyT &Lookup,
