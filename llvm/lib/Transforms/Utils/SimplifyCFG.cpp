@@ -5762,15 +5762,49 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
   return Changed;
 }
 
-static bool casesAreContiguous(SmallVectorImpl<ConstantInt *> &Cases) {
+static bool casesAreContiguous(Value *Condition,
+                               SmallVectorImpl<ConstantInt *> &Cases,
+                               ConstantInt *&ContiguousCasesMin,
+                               ConstantInt *&ContiguousCasesMax,
+                               bool &IsWrapping) {
   assert(Cases.size() >= 1);
 
   array_pod_sort(Cases.begin(), Cases.end(), constantIntSortPredicate);
-  for (size_t I = 1, E = Cases.size(); I != E; ++I) {
-    if (Cases[I - 1]->getValue() != Cases[I]->getValue() + 1)
-      return false;
+  auto Min = Cases.back()->getValue();
+  auto Max = Cases.front()->getValue();
+  auto Offset = Max - Min;
+  auto ContiguousOffset = Cases.size() - 1;
+  if (Offset == ContiguousOffset) {
+    ContiguousCasesMin = Cases.back();
+    ContiguousCasesMax = Cases.front();
+    return true;
   }
-  return true;
+  ConstantRange CR = computeConstantRange(Condition, /*ForSigned=*/false);
+  // If this is a wrapping contiguous range, that is, [Min, OtherMin] +
+  // [OtherMax, Max] (also [OtherMax, OtherMin]), [OtherMin+1, OtherMax-1] is a
+  // contiguous range for the other destination. N.B. If CR is not a full range,
+  // Max+1 is not equal to Min. It's not continuous in arithmetic.
+  if (Max == CR.getUnsignedMax() && Min == CR.getUnsignedMin()) {
+    assert(Cases.size() >= 2);
+    auto *It =
+        std::adjacent_find(Cases.begin(), Cases.end(), [](auto L, auto R) {
+          return L->getValue() != R->getValue() + 1;
+        });
+    if (It == Cases.end())
+      return false;
+    auto *OtherMax = *It;
+    auto *OtherMin = *(It + 1);
+    if ((Max - OtherMax->getValue()) + (OtherMin->getValue() - Min) ==
+        Cases.size() - 2) {
+      ContiguousCasesMin = cast<ConstantInt>(
+          ConstantInt::get(OtherMin->getType(), OtherMin->getValue() + 1));
+      ContiguousCasesMax = cast<ConstantInt>(
+          ConstantInt::get(OtherMax->getType(), OtherMax->getValue() - 1));
+      IsWrapping = true;
+      return true;
+    }
+  }
+  return false;
 }
 
 static void createUnreachableSwitchDefault(SwitchInst *Switch,
@@ -5841,25 +5875,37 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   assert(!CasesA.empty() || HasDefault);
 
   // Figure out if one of the sets of cases form a contiguous range.
-  SmallVectorImpl<ConstantInt *> *ContiguousCases = nullptr;
+  ConstantInt *ContiguousCasesMin = nullptr;
+  ConstantInt *ContiguousCasesMax = nullptr;
   BasicBlock *ContiguousDest = nullptr;
   BasicBlock *OtherDest = nullptr;
-  if (!CasesA.empty() && casesAreContiguous(CasesA)) {
-    ContiguousCases = &CasesA;
+  bool IsWrapping = false;
+  SmallVectorImpl<ConstantInt *> *ContiguousCases = &CasesA;
+  SmallVectorImpl<ConstantInt *> *OtherCases = &CasesB;
+  if (!CasesA.empty() &&
+      casesAreContiguous(SI->getCondition(), CasesA, ContiguousCasesMin,
+                         ContiguousCasesMax, IsWrapping)) {
     ContiguousDest = DestA;
     OtherDest = DestB;
-  } else if (casesAreContiguous(CasesB)) {
-    ContiguousCases = &CasesB;
+  } else if (casesAreContiguous(SI->getCondition(), CasesB, ContiguousCasesMin,
+                                ContiguousCasesMax, IsWrapping)) {
     ContiguousDest = DestB;
     OtherDest = DestA;
+    std::swap(ContiguousCases, OtherCases);
   } else
     return false;
 
+  if (IsWrapping) {
+    std::swap(ContiguousDest, OtherDest);
+    std::swap(ContiguousCases, OtherCases);
+  }
+
   // Start building the compare and branch.
 
-  Constant *Offset = ConstantExpr::getNeg(ContiguousCases->back());
-  Constant *NumCases =
-      ConstantInt::get(Offset->getType(), ContiguousCases->size());
+  Constant *Offset = ConstantExpr::getNeg(ContiguousCasesMin);
+  Constant *NumCases = ConstantInt::get(Offset->getType(),
+                                        ContiguousCasesMax->getValue() -
+                                            ContiguousCasesMin->getValue() + 1);
 
   Value *Sub = SI->getCondition();
   if (!Offset->isNullValue())
@@ -5903,7 +5949,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
       cast<PHINode>(BBI)->removeIncomingValue(SI->getParent());
   }
   for (auto BBI = OtherDest->begin(); isa<PHINode>(BBI); ++BBI) {
-    unsigned PreviousEdges = SI->getNumCases() - ContiguousCases->size();
+    unsigned PreviousEdges = OtherCases->size();
     if (OtherDest == SI->getDefaultDest())
       ++PreviousEdges;
     for (unsigned I = 0, E = PreviousEdges - 1; I != E; ++I)
