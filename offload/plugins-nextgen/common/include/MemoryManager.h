@@ -35,7 +35,6 @@ public:
   virtual void *allocate(size_t Size, void *HstPtr,
                          TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
 
-  /// Delete the pointer \p TgtPtr on the device
   virtual int free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
 };
 

@@ -5784,6 +5784,11 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
     break;
   }
 
+  if (Kind == TARGET_ALLOC_SHARED && IsEquippedWithGFX90A &&
+      EnableGFX90ACoarseGrainSharedAlloc) {
+    MemoryPool = CoarseGrainedMemoryPools[0];
+  }
+
   if (!MemoryPool) {
     REPORT("No memory pool for the specified allocation kind\n");
     return nullptr;
@@ -5794,6 +5799,15 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
   if (Error Err = MemoryPool->allocate(Size, &Alloc)) {
     REPORT("%s\n", toString(std::move(Err)).data());
     return nullptr;
+  }
+  if (MemoryPool == CoarseGrainedMemoryPools[0] && IsEquippedWithGFX90A &&
+      EnableGFX90ACoarseGrainUsmMaps) {
+    // Need to register in the coarse grain usm map table
+    // if not already registered.
+    if (auto Err = setCoarseGrainMemoryImpl(Alloc, Size, /*set_attr=*/false)) {
+      REPORT("%s\n", toString(std::move(Err)).data());
+      return nullptr;
+    }
   }
 
   if (Alloc && (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED ||
