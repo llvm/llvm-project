@@ -1214,6 +1214,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case Instruction::Select:
   case Instruction::PHI:
   case VPInstruction::AnyOf:
+  case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
   case VPInstruction::CalculateTripCountMinusVF:
