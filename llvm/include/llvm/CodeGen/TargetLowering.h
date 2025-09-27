@@ -3459,11 +3459,6 @@ public:
     if (isOperationLegal(Opcode, VT))
       return true;
 
-    // TODO: The default logic is inherited from code in CodeGenPrepare.
-    // The opcode should not make a difference by default?
-    if (Opcode != ISD::UADDO)
-      return false;
-
     // Allow the transform as long as we have an integer type that is not
     // obviously illegal and unsupported and if the math result is used
     // besides the overflow check. On some targets (e.g. SPARC), it is
@@ -3471,7 +3466,7 @@ public:
     // concrete users.
     if (VT.isVector())
       return false;
-    return MathUsed && (VT.isSimple() || !isOperationExpand(Opcode, VT));
+    return MathUsed && (isTypeLegal(VT) || !isOperationExpand(Opcode, VT));
   }
 
   // Return true if it is profitable to use a scalar input to a BUILD_VECTOR
