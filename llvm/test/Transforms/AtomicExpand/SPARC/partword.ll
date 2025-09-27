@@ -12,6 +12,7 @@ target triple = "sparcv9-unknown-unknown"
 define i8 @test_cmpxchg_i8(ptr %arg, i8 %old, i8 %new) {
 ; CHECK-LABEL: @test_cmpxchg_i8(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
@@ -44,6 +45,7 @@ define i8 @test_cmpxchg_i8(ptr %arg, i8 %old, i8 %new) {
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i8
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i8, i1 } poison, i8 [[EXTRACTED]], 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertvalue { i8, i1 } [[TMP17]], i1 [[TMP14]], 1
+; CHECK-NEXT:    fence acquire
 ; CHECK-NEXT:    [[RET:%.*]] = extractvalue { i8, i1 } [[TMP18]], 0
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
@@ -56,6 +58,7 @@ entry:
 define i16 @test_cmpxchg_i16(ptr %arg, i16 %old, i16 %new) {
 ; CHECK-LABEL: @test_cmpxchg_i16(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
@@ -88,6 +91,7 @@ define i16 @test_cmpxchg_i16(ptr %arg, i16 %old, i16 %new) {
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i16, i1 } poison, i16 [[EXTRACTED]], 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertvalue { i16, i1 } [[TMP17]], i1 [[TMP14]], 1
+; CHECK-NEXT:    fence acquire
 ; CHECK-NEXT:    [[RET:%.*]] = extractvalue { i16, i1 } [[TMP18]], 0
 ; CHECK-NEXT:    ret i16 [[RET]]
 ;
