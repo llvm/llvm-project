@@ -10179,11 +10179,33 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
       return outliner::InstrType::Illegal;
   }
 
-  // Special cases for instructions that can always be outlined, but will fail
-  // the later tests. e.g, ADRPs, which are PC-relative use LR, but can always
-  // be outlined because they don't require a *specific* value to be in LR.
-  if (MI.getOpcode() == AArch64::ADRP)
+  // An ADRP instruction referencing a GOT should not be outlined.
+  // This is to avoid splitting ADRP/(LDR/ADD/etc.) pair into different
+  // functions which can lead to linker ICF merging sections incorrectly.
+  if (MI.getOpcode() == AArch64::ADRP) {
+    bool IsPage = (MI.getOperand(1).getTargetFlags() & AArch64II::MO_PAGE) != 0;
+    bool IsGot = (MI.getOperand(1).getTargetFlags() & AArch64II::MO_GOT) != 0;
+    if (IsPage && IsGot)
+      return outliner::InstrType::Illegal;
+
+    // Special cases for instructions that can always be outlined, but will fail
+    // the later tests. e.g, ADRPs, which are PC-relative use LR, but can always
+    // be outlined because they don't require a *specific* value to be in LR.
     return outliner::InstrType::Legal;
+  }
+
+  // Similarly, any user of ADRP instruction referencing a GOT should not be
+  // outlined. It's hard/costly to check exact users of ADRP. So we use check
+  // all operands and reject any that's a page offset and references a GOT.
+  const auto &F = MI.getMF()->getFunction();
+  for (const auto &MO : MI.operands()) {
+    bool IsPageOff = (MO.getTargetFlags() & AArch64II::MO_PAGEOFF) != 0;
+    bool IsGot = (MO.getTargetFlags() & AArch64II::MO_GOT) != 0;
+    if (IsPageOff && IsGot &&
+        (MI.getMF()->getTarget().getFunctionSections() || F.hasComdat() ||
+         F.hasSection() || F.getSectionPrefix()))
+      return outliner::InstrType::Illegal;
+  }
 
   // If MI is a call we might be able to outline it. We don't want to outline
   // any calls that rely on the position of items on the stack. When we outline
