@@ -9,7 +9,7 @@
 #include "ConvertMemberFunctionsToStatic.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
@@ -55,18 +55,20 @@ AST_MATCHER_P(CXXMethodDecl, hasCanonicalDecl,
 }
 
 AST_MATCHER(CXXMethodDecl, usesThis) {
-  class FindUsageOfThis : public RecursiveASTVisitor<FindUsageOfThis> {
+  class FindUsageOfThis : public ConstDynamicRecursiveASTVisitor {
   public:
     bool Used = false;
 
-    bool VisitCXXThisExpr(const CXXThisExpr *E) {
+    bool VisitCXXThisExpr(const CXXThisExpr *E) override {
       Used = true;
       return false; // Stop traversal.
     }
 
     // If we enter a class declaration, don't traverse into it as any usages of
     // `this` will correspond to the nested class.
-    bool TraverseCXXRecordDecl(CXXRecordDecl *RD) { return true; }
+    bool TraverseCXXRecordDecl(const CXXRecordDecl *RD) override {
+      return true;
+    }
 
   } UsageOfThis;
 

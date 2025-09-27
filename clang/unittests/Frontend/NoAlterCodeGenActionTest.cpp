@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTConsumer.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/CodeGenAction.h"
@@ -30,16 +30,16 @@ using namespace clang::tooling;
 
 namespace {
 
-class ASTChecker : public RecursiveASTVisitor<ASTChecker> {
+class ASTChecker : public DynamicRecursiveASTVisitor {
 public:
   ASTContext &Ctx;
   ASTChecker(ASTContext &Ctx) : Ctx(Ctx) {}
-  bool VisitReturnStmt(ReturnStmt *RS) {
+  bool VisitReturnStmt(ReturnStmt *RS) override {
     EXPECT_TRUE(RS->getRetValue());
     return true;
   }
 
-  bool VisitCoroutineBodyStmt(CoroutineBodyStmt *CS) {
+  bool VisitCoroutineBodyStmt(CoroutineBodyStmt *CS) override {
     return VisitReturnStmt(cast<ReturnStmt>(CS->getReturnStmt()));
   }
 };

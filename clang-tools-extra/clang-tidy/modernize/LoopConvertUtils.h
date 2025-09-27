@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_LOOP_CONVERT_UTILS_H
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
@@ -53,8 +53,7 @@ using ComponentVector = llvm::SmallVector<const clang::Expr *, 16>;
 
 /// Class used build the reverse AST properties needed to detect
 /// name conflicts and free variables.
-class StmtAncestorASTVisitor
-    : public clang::RecursiveASTVisitor<StmtAncestorASTVisitor> {
+class StmtAncestorASTVisitor : public ConstDynamicRecursiveASTVisitor {
 public:
   StmtAncestorASTVisitor() { StmtStack.push_back(nullptr); }
 
@@ -72,45 +71,37 @@ public:
   /// Accessor for DeclParents.
   const DeclParentMap &getDeclToParentStmtMap() { return DeclParents; }
 
-  friend class clang::RecursiveASTVisitor<StmtAncestorASTVisitor>;
-
 private:
   StmtParentMap StmtAncestors;
   DeclParentMap DeclParents;
   llvm::SmallVector<const clang::Stmt *, 16> StmtStack;
 
-  bool TraverseStmt(clang::Stmt *Statement);
-  bool VisitDeclStmt(clang::DeclStmt *Statement);
+  bool TraverseStmt(const Stmt *Statement) override;
+  bool VisitDeclStmt(const DeclStmt *Statement) override;
 };
 
 /// Class used to find the variables and member expressions on which an
 /// arbitrary expression depends.
-class ComponentFinderASTVisitor
-    : public clang::RecursiveASTVisitor<ComponentFinderASTVisitor> {
+class ComponentFinderASTVisitor : public ConstDynamicRecursiveASTVisitor {
 public:
   ComponentFinderASTVisitor() = default;
 
   /// Find the components of an expression and place them in a ComponentVector.
-  void findExprComponents(const clang::Expr *SourceExpr) {
-    TraverseStmt(const_cast<clang::Expr *>(SourceExpr));
-  }
+  void findExprComponents(const Expr *SourceExpr) { TraverseStmt(SourceExpr); }
 
   /// Accessor for Components.
   const ComponentVector &getComponents() { return Components; }
 
-  friend class clang::RecursiveASTVisitor<ComponentFinderASTVisitor>;
-
 private:
   ComponentVector Components;
 
-  bool VisitDeclRefExpr(clang::DeclRefExpr *E);
-  bool VisitMemberExpr(clang::MemberExpr *Member);
+  bool VisitDeclRefExpr(const DeclRefExpr *E) override;
+  bool VisitMemberExpr(const MemberExpr *Member) override;
 };
 
 /// Class used to determine if an expression is dependent on a variable declared
 /// inside of the loop where it would be used.
-class DependencyFinderASTVisitor
-    : public clang::RecursiveASTVisitor<DependencyFinderASTVisitor> {
+class DependencyFinderASTVisitor : public ConstDynamicRecursiveASTVisitor {
 public:
   DependencyFinderASTVisitor(const StmtParentMap *StmtParents,
                              const DeclParentMap *DeclParents,
@@ -149,13 +140,11 @@ public:
   /// In order to avoid this, this class looks at the container expression
   /// `arr[k]` and decides whether or not it contains a sub-expression declared
   /// within the loop body.
-  bool dependsOnInsideVariable(const clang::Stmt *Body) {
+  bool dependsOnInsideVariable(const Stmt *Body) {
     DependsOnInsideVariable = false;
-    TraverseStmt(const_cast<clang::Stmt *>(Body));
+    TraverseStmt(Body);
     return DependsOnInsideVariable;
   }
-
-  friend class clang::RecursiveASTVisitor<DependencyFinderASTVisitor>;
 
 private:
   const StmtParentMap *StmtParents;
@@ -164,16 +153,15 @@ private:
   const ReplacedVarsMap *ReplacedVars;
   bool DependsOnInsideVariable;
 
-  bool VisitVarDecl(clang::VarDecl *V);
-  bool VisitDeclRefExpr(clang::DeclRefExpr *D);
+  bool VisitVarDecl(const VarDecl *V) override;
+  bool VisitDeclRefExpr(const DeclRefExpr *D) override;
 };
 
 /// Class used to determine if any declarations used in a Stmt would conflict
 /// with a particular identifier. This search includes the names that don't
 /// actually appear in the AST (i.e. created by a refactoring tool) by including
 /// a map from Stmts to generated names associated with those stmts.
-class DeclFinderASTVisitor
-    : public clang::RecursiveASTVisitor<DeclFinderASTVisitor> {
+class DeclFinderASTVisitor : public ConstDynamicRecursiveASTVisitor {
 public:
   DeclFinderASTVisitor(const StringRef &Name,
                        const StmtGeneratedVarNameMap *GeneratedDecls)
@@ -182,13 +170,11 @@ public:
   /// Attempts to find any usages of variables name Name in Body, returning
   /// true when it is used in Body. This includes the generated loop variables
   /// of ForStmts which have already been transformed.
-  bool findUsages(const clang::Stmt *Body) {
+  bool findUsages(const Stmt *Body) {
     Found = false;
-    TraverseStmt(const_cast<clang::Stmt *>(Body));
+    TraverseStmt(Body);
     return Found;
   }
-
-  friend class clang::RecursiveASTVisitor<DeclFinderASTVisitor>;
 
 private:
   std::string Name;
@@ -197,10 +183,10 @@ private:
   const StmtGeneratedVarNameMap *GeneratedDecls;
   bool Found = false;
 
-  bool VisitForStmt(clang::ForStmt *);
-  bool VisitNamedDecl(clang::NamedDecl *);
-  bool VisitDeclRefExpr(clang::DeclRefExpr *);
-  bool VisitTypeLoc(clang::TypeLoc);
+  bool VisitForStmt(const ForStmt *) override;
+  bool VisitNamedDecl(const NamedDecl *) override;
+  bool VisitDeclRefExpr(const DeclRefExpr *) override;
+  bool VisitTypeLoc(TypeLoc) override;
 };
 
 /// The information needed to describe a valid convertible usage
@@ -283,8 +269,7 @@ bool areSameVariable(const ValueDecl *First, const ValueDecl *Second);
 ///
 /// Given an index variable, recursively crawls a for loop to discover if the
 /// index variable is used in a way consistent with range-based for loop access.
-class ForLoopIndexUseVisitor
-    : public RecursiveASTVisitor<ForLoopIndexUseVisitor> {
+class ForLoopIndexUseVisitor : public ConstDynamicRecursiveASTVisitor {
 public:
   ForLoopIndexUseVisitor(ASTContext *Context, const VarDecl *IndexVar,
                          const VarDecl *EndVar, const Expr *ContainerExpr,
@@ -338,23 +323,22 @@ public:
   bool aliasFromForInit() const { return AliasFromForInit; }
 
 private:
-  /// Typedef used in CRTP functions.
-  using VisitorBase = RecursiveASTVisitor<ForLoopIndexUseVisitor>;
-  friend class RecursiveASTVisitor<ForLoopIndexUseVisitor>;
+  /// Typedef used in derived functions.
+  using VisitorBase = ConstDynamicRecursiveASTVisitor;
 
-  /// Overriden methods for RecursiveASTVisitor's traversal.
-  bool TraverseArraySubscriptExpr(ArraySubscriptExpr *E);
-  bool TraverseCXXMemberCallExpr(CXXMemberCallExpr *MemberCall);
-  bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *OpCall);
-  bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
-                             Expr *Init);
-  bool TraverseMemberExpr(MemberExpr *Member);
-  bool TraverseUnaryOperator(UnaryOperator *Uop);
-  bool VisitDeclRefExpr(DeclRefExpr *E);
-  bool VisitDeclStmt(DeclStmt *S);
-  bool TraverseStmt(Stmt *S);
+  /// Overridden methods for RecursiveASTVisitor's traversal.
+  bool TraverseArraySubscriptExpr(const ArraySubscriptExpr *E) override;
+  bool TraverseCXXMemberCallExpr(const CXXMemberCallExpr *MemberCall) override;
+  bool TraverseCXXOperatorCallExpr(const CXXOperatorCallExpr *OpCall) override;
+  bool TraverseLambdaCapture(const LambdaExpr *LE, const LambdaCapture *C,
+                             const Expr *Init) override;
+  bool TraverseMemberExpr(const MemberExpr *Member) override;
+  bool TraverseUnaryOperator(const UnaryOperator *Uop) override;
+  bool VisitDeclRefExpr(const DeclRefExpr *E) override;
+  bool VisitDeclStmt(const DeclStmt *S) override;
+  bool TraverseStmt(const Stmt *S) override;
 
-  bool TraverseStmtImpl(Stmt *S);
+  bool traverseStmtImpl(const Stmt *S);
 
   /// Add an expression to the list of expressions on which the container
   /// expression depends.

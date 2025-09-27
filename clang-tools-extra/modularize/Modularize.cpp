@@ -229,7 +229,7 @@
 #include "PreprocessorTracker.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -525,8 +525,7 @@ private:
   DenseMap<FileEntryRef, HeaderContents> AllHeaderContents;
 };
 
-class CollectEntitiesVisitor
-    : public RecursiveASTVisitor<CollectEntitiesVisitor> {
+class CollectEntitiesVisitor : public ConstDynamicRecursiveASTVisitor {
 public:
   CollectEntitiesVisitor(SourceManager &SM, EntityMap &Entities,
                          Preprocessor &PP, PreprocessorTracker &PPTracker,
@@ -534,30 +533,42 @@ public:
       : SM(SM), Entities(Entities), PP(PP), PPTracker(PPTracker),
         HadErrors(HadErrors) {}
 
-  bool TraverseStmt(Stmt *S) { return true; }
-  bool TraverseType(QualType T) { return true; }
-  bool TraverseTypeLoc(TypeLoc TL) { return true; }
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) { return true; }
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
+  bool TraverseStmt(const Stmt *S) override { return true; }
+  bool TraverseType(QualType T, bool TraverseQualifier) override {
     return true;
   }
-  bool TraverseDeclarationNameInfo(DeclarationNameInfo NameInfo) {
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier) override {
     return true;
   }
-  bool TraverseTemplateName(TemplateName Template) { return true; }
-  bool TraverseTemplateArgument(const TemplateArgument &Arg) { return true; }
-  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) {
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS) override {
     return true;
   }
-  bool TraverseTemplateArguments(ArrayRef<TemplateArgument>) { return true; }
-  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) { return true; }
-  bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
-                             Expr *Init) {
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) override {
+    return true;
+  }
+  bool TraverseDeclarationNameInfo(DeclarationNameInfo NameInfo) override {
+    return true;
+  }
+  bool TraverseTemplateName(TemplateName Template) override { return true; }
+  bool TraverseTemplateArgument(const TemplateArgument &Arg) override {
+    return true;
+  }
+  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) override {
+    return true;
+  }
+  bool TraverseTemplateArguments(ArrayRef<TemplateArgument>) override {
+    return true;
+  }
+  bool TraverseConstructorInitializer(const CXXCtorInitializer *Init) override {
+    return true;
+  }
+  bool TraverseLambdaCapture(const LambdaExpr *LE, const LambdaCapture *C,
+                             const Expr *Init) override {
     return true;
   }
 
   // Check 'extern "*" {}' block for #include directives.
-  bool VisitLinkageSpecDecl(LinkageSpecDecl *D) {
+  bool VisitLinkageSpecDecl(const LinkageSpecDecl *D) override {
     // Bail if not a block.
     if (!D->hasBraces())
       return true;
@@ -578,7 +589,7 @@ public:
   }
 
   // Check 'namespace (name) {}' block for #include directives.
-  bool VisitNamespaceDecl(const NamespaceDecl *D) {
+  bool VisitNamespaceDecl(const NamespaceDecl *D) override {
     SourceRange BlockRange = D->getSourceRange();
     std::string Label("namespace ");
     Label += D->getName();
@@ -590,7 +601,7 @@ public:
   }
 
   // Collect definition entities.
-  bool VisitNamedDecl(NamedDecl *ND) {
+  bool VisitNamedDecl(const NamedDecl *ND) override {
     // We only care about file-context variables.
     if (!ND->getDeclContext()->isFileContext())
       return true;
@@ -714,47 +725,52 @@ private:
   int &HadErrors;
 };
 
-class CompileCheckVisitor
-  : public RecursiveASTVisitor<CompileCheckVisitor> {
+class CompileCheckVisitor : public ConstDynamicRecursiveASTVisitor {
 public:
   CompileCheckVisitor() {}
 
-  bool TraverseStmt(Stmt *S) { return true; }
-  bool TraverseType(QualType T) { return true; }
-  bool TraverseTypeLoc(TypeLoc TL) { return true; }
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) { return true; }
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
+  bool TraverseStmt(const Stmt *S) override { return true; }
+  bool TraverseType(QualType T, bool TraverseQualifier) override {
     return true;
   }
-  bool TraverseDeclarationNameInfo(DeclarationNameInfo NameInfo) {
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier) override {
     return true;
   }
-  bool TraverseTemplateName(TemplateName Template) { return true; }
-  bool TraverseTemplateArgument(const TemplateArgument &Arg) { return true; }
-  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) {
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS) override {
     return true;
   }
-  bool TraverseTemplateArguments(ArrayRef<TemplateArgument>) { return true; }
-  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) { return true; }
-  bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
-                             Expr *Init) {
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) override {
+    return true;
+  }
+  bool TraverseDeclarationNameInfo(DeclarationNameInfo NameInfo) override {
+    return true;
+  }
+  bool TraverseTemplateName(TemplateName Template) override { return true; }
+  bool TraverseTemplateArgument(const TemplateArgument &Arg) override {
+    return true;
+  }
+  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) override {
+    return true;
+  }
+  bool TraverseTemplateArguments(ArrayRef<TemplateArgument>) override {
+    return true;
+  }
+  bool TraverseConstructorInitializer(const CXXCtorInitializer *Init) override {
+    return true;
+  }
+  bool TraverseLambdaCapture(const LambdaExpr *LE, const LambdaCapture *C,
+                             const Expr *Init) override {
     return true;
   }
 
   // Check 'extern "*" {}' block for #include directives.
-  bool VisitLinkageSpecDecl(LinkageSpecDecl *D) {
-    return true;
-  }
+  bool VisitLinkageSpecDecl(const LinkageSpecDecl *D) override { return true; }
 
   // Check 'namespace (name) {}' block for #include directives.
-  bool VisitNamespaceDecl(const NamespaceDecl *D) {
-    return true;
-  }
+  bool VisitNamespaceDecl(const NamespaceDecl *D) override { return true; }
 
   // Collect definition entities.
-  bool VisitNamedDecl(NamedDecl *ND) {
-    return true;
-  }
+  bool VisitNamedDecl(const NamedDecl *ND) override { return true; }
 };
 
 class CompileCheckConsumer : public ASTConsumer {

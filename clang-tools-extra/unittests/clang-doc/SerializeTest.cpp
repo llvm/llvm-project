@@ -10,14 +10,13 @@
 #include "ClangDocTest.h"
 #include "Representation.h"
 #include "clang/AST/Comment.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "gtest/gtest.h"
 
 namespace clang {
 namespace doc {
 
-class ClangDocSerializeTestVisitor
-    : public RecursiveASTVisitor<ClangDocSerializeTestVisitor> {
+class ClangDocSerializeTestVisitor : public ConstDynamicRecursiveASTVisitor {
 
   EmittedInfoList &EmittedInfos;
   bool Public;
@@ -45,24 +44,30 @@ public:
     return true;
   }
 
-  bool VisitNamespaceDecl(const NamespaceDecl *D) { return mapDecl(D); }
+  bool VisitNamespaceDecl(const NamespaceDecl *D) override {
+    return mapDecl(D);
+  }
 
-  bool VisitFunctionDecl(const FunctionDecl *D) {
+  bool VisitFunctionDecl(const FunctionDecl *D) override {
     // Don't visit CXXMethodDecls twice
     if (dyn_cast<CXXMethodDecl>(D))
       return true;
     return mapDecl(D);
   }
 
-  bool VisitCXXMethodDecl(const CXXMethodDecl *D) { return mapDecl(D); }
+  bool VisitCXXMethodDecl(const CXXMethodDecl *D) override {
+    return mapDecl(D);
+  }
 
-  bool VisitRecordDecl(const RecordDecl *D) { return mapDecl(D); }
+  bool VisitRecordDecl(const RecordDecl *D) override { return mapDecl(D); }
 
-  bool VisitEnumDecl(const EnumDecl *D) { return mapDecl(D); }
+  bool VisitEnumDecl(const EnumDecl *D) override { return mapDecl(D); }
 
-  bool VisitTypedefDecl(const TypedefDecl *D) { return mapDecl(D); }
+  bool VisitTypedefDecl(const TypedefDecl *D) override { return mapDecl(D); }
 
-  bool VisitTypeAliasDecl(const TypeAliasDecl *D) { return mapDecl(D); }
+  bool VisitTypeAliasDecl(const TypeAliasDecl *D) override {
+    return mapDecl(D);
+  }
 };
 
 void ExtractInfosFromCode(StringRef Code, size_t NumExpectedInfos, bool Public,

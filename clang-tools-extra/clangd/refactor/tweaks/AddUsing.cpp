@@ -12,9 +12,9 @@
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
@@ -79,13 +79,13 @@ std::string AddUsing::title() const {
 }
 
 // Locates all "using" statements relevant to SelectionDeclContext.
-class UsingFinder : public RecursiveASTVisitor<UsingFinder> {
+class UsingFinder : public ConstDynamicRecursiveASTVisitor {
 public:
   UsingFinder(std::vector<const UsingDecl *> &Results,
               const DeclContext *SelectionDeclContext, const SourceManager &SM)
       : Results(Results), SelectionDeclContext(SelectionDeclContext), SM(SM) {}
 
-  bool VisitUsingDecl(UsingDecl *D) {
+  bool VisitUsingDecl(const UsingDecl *D) override {
     auto Loc = D->getUsingLoc();
     if (SM.getFileID(Loc) != SM.getMainFileID()) {
       return true;
@@ -96,7 +96,7 @@ public:
     return true;
   }
 
-  bool TraverseDecl(Decl *Node) {
+  bool TraverseDecl(const Decl *Node) override {
     if (!Node)
       return true;
     // There is no need to go deeper into nodes that do not enclose selection,
@@ -104,7 +104,7 @@ public:
     // insertion point.
     if (!Node->getDeclContext() ||
         Node->getDeclContext()->Encloses(SelectionDeclContext)) {
-      return RecursiveASTVisitor<UsingFinder>::TraverseDecl(Node);
+      return ConstDynamicRecursiveASTVisitor::TraverseDecl(Node);
     }
     return true;
   }

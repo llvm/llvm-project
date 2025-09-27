@@ -10,8 +10,8 @@
 #include "../ClangTidyDiagnosticConsumer.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -207,9 +207,8 @@ void CognitiveComplexity::account(SourceLocation Loc, unsigned short Nesting,
 
 namespace {
 
-class FunctionASTVisitor final
-    : public RecursiveASTVisitor<FunctionASTVisitor> {
-  using Base = RecursiveASTVisitor<FunctionASTVisitor>;
+class FunctionASTVisitor final : public ConstDynamicRecursiveASTVisitor {
+  using Base = ConstDynamicRecursiveASTVisitor;
 
   // If set to true, macros are ignored during analysis.
   const bool IgnoreMacros;
@@ -227,21 +226,25 @@ public:
   explicit FunctionASTVisitor(const bool IgnoreMacros)
       : IgnoreMacros(IgnoreMacros) {}
 
-  bool traverseStmtWithIncreasedNestingLevel(Stmt *Node) {
+  bool traverseStmtWithIncreasedNestingLevel(const Stmt *Node) {
     ++CurrentNestingLevel;
     bool ShouldContinue = Base::TraverseStmt(Node);
     --CurrentNestingLevel;
     return ShouldContinue;
   }
 
-  bool traverseDeclWithIncreasedNestingLevel(Decl *Node) {
+  bool traverseDeclWithIncreasedNestingLevel(const Decl *Node) {
     ++CurrentNestingLevel;
     bool ShouldContinue = Base::TraverseDecl(Node);
     --CurrentNestingLevel;
     return ShouldContinue;
   }
 
-  bool TraverseIfStmt(IfStmt *Node, bool InElseIf = false) {
+  bool TraverseIfStmt(const IfStmt *Node) override {
+    return traverseIfStmt(Node);
+  }
+
+  bool traverseIfStmt(const IfStmt *Node, bool InElseIf = false) {
     if (!Node)
       return Base::TraverseIfStmt(Node);
 
@@ -290,7 +293,7 @@ public:
       return true;
 
     if (auto *E = dyn_cast<IfStmt>(Node->getElse()))
-      return TraverseIfStmt(E, true);
+      return traverseIfStmt(E, true);
 
     {
       CognitiveComplexity::Criteria Reasons =
@@ -315,7 +318,7 @@ public:
 
   // In a sequence of binary logical operators, if the new operator is different
   // from the previous one, then the cognitive complexity is increased.
-  bool TraverseBinaryOperator(BinaryOperator *Op) {
+  bool TraverseBinaryOperator(const BinaryOperator *Op) override {
     if (!Op || !Op->isLogicalOp())
       return Base::TraverseBinaryOperator(Op);
 
@@ -346,7 +349,7 @@ public:
 
   // It would make sense for the function call to start the new binary
   // operator sequence, thus let's make sure that it creates a new stack frame.
-  bool TraverseCallExpr(CallExpr *Node) {
+  bool TraverseCallExpr(const CallExpr *Node) override {
     // If we are not currently processing any binary operator sequence, then
     // no Node-handling is needed.
     if (!Node || BinaryOperatorsStack.empty() || !CurrentBinaryOperator)
@@ -363,7 +366,7 @@ public:
 
 #undef CurrentBinaryOperator
 
-  bool TraverseStmt(Stmt *Node) {
+  bool TraverseStmt(const Stmt *Node) override {
     if (!Node)
       return Base::TraverseStmt(Node);
 
@@ -464,7 +467,9 @@ public:
   // function is the entry point, then the Nesting level should not be
   // increased. Thus that parameter is there and is used to fall-through
   // directly to traversing if this is the main function that is being analyzed.
-  bool TraverseDecl(Decl *Node, bool MainAnalyzedFunction = false) {
+  bool TraverseDecl(const Decl *Node) override { return traverseDecl(Node); }
+
+  bool traverseDecl(const Decl *Node, bool MainAnalyzedFunction = false) {
     if (!Node || MainAnalyzedFunction)
       return Base::TraverseDecl(Node);
 
@@ -530,10 +535,10 @@ void FunctionCognitiveComplexityCheck::check(
            "The matchers should only match the functions that "
            "have user-provided body.");
     Loc = TheDecl->getLocation();
-    Visitor.TraverseDecl(const_cast<FunctionDecl *>(TheDecl), true);
+    Visitor.traverseDecl(TheDecl, true);
   } else {
     Loc = TheLambdaExpr->getBeginLoc();
-    Visitor.TraverseLambdaExpr(const_cast<LambdaExpr *>(TheLambdaExpr));
+    Visitor.TraverseLambdaExpr(TheLambdaExpr);
   }
 
   if (Visitor.CC.Total <= Threshold)

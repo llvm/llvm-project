@@ -11,8 +11,8 @@
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
@@ -182,9 +182,9 @@ TEST_F(FindHeadersTest, NonSelfContainedTraverseExporter) {
 }
 
 TEST_F(FindHeadersTest, TargetIsExpandedFromMacroInHeader) {
-  struct CustomVisitor : RecursiveASTVisitor<CustomVisitor> {
+  struct CustomVisitor : ConstDynamicRecursiveASTVisitor {
     const Decl *Out = nullptr;
-    bool VisitNamedDecl(const NamedDecl *ND) {
+    bool VisitNamedDecl(const NamedDecl *ND) override {
       if (ND->getName() == "FLAG_foo" || ND->getName() == "Foo") {
         EXPECT_TRUE(Out == nullptr);
         Out = ND;
@@ -285,11 +285,11 @@ TEST_F(FindHeadersTest, PreferredHeaderHint) {
 class HeadersForSymbolTest : public FindHeadersTest {
 protected:
   llvm::SmallVector<Header> headersFor(llvm::StringRef Name) {
-    struct Visitor : public RecursiveASTVisitor<Visitor> {
+    struct Visitor : ConstDynamicRecursiveASTVisitor {
       const NamedDecl *Out = nullptr;
       llvm::StringRef Name;
       Visitor(llvm::StringRef Name) : Name(Name) {}
-      bool VisitNamedDecl(const NamedDecl *ND) {
+      bool VisitNamedDecl(const NamedDecl *ND) override {
         if (auto *TD = ND->getDescribedTemplate())
           ND = TD;
 
@@ -600,9 +600,9 @@ TEST_F(HeadersForSymbolTest, AmbiguousStdSymbolsUsingShadow) {
   buildAST();
 
   // Find the DeclRefExpr in the std::remove("abc") function call.
-  struct Visitor : public RecursiveASTVisitor<Visitor> {
+  struct Visitor : ConstDynamicRecursiveASTVisitor {
     const DeclRefExpr *Out = nullptr;
-    bool VisitDeclRefExpr(const DeclRefExpr *DRE) {
+    bool VisitDeclRefExpr(const DeclRefExpr *DRE) override {
       EXPECT_TRUE(Out == nullptr) << "Found multiple DeclRefExpr!";
       Out = DRE;
       return true;

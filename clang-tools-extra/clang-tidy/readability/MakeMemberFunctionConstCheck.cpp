@@ -8,8 +8,8 @@
 
 #include "MakeMemberFunctionConstCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMapContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
@@ -51,7 +51,7 @@ AST_MATCHER_P(CXXMethodDecl, hasCanonicalDecl,
 
 enum UsageKind { Unused, Const, NonConst };
 
-class FindUsageOfThis : public RecursiveASTVisitor<FindUsageOfThis> {
+class FindUsageOfThis : public ConstDynamicRecursiveASTVisitor {
   ASTContext &Ctxt;
 
 public:
@@ -73,14 +73,14 @@ public:
     return Parent;
   }
 
-  bool VisitUnresolvedMemberExpr(const UnresolvedMemberExpr *) {
+  bool VisitUnresolvedMemberExpr(const UnresolvedMemberExpr *) override {
     // An UnresolvedMemberExpr might resolve to a non-const non-static
     // member function.
     Usage = NonConst;
     return false; // Stop traversal.
   }
 
-  bool VisitCXXConstCastExpr(const CXXConstCastExpr *) {
+  bool VisitCXXConstCastExpr(const CXXConstCastExpr *) override {
     // Workaround to support the pattern
     // class C {
     //   const S *get() const;
@@ -171,7 +171,7 @@ public:
     return false; // Stop traversal.
   }
 
-  bool VisitCXXThisExpr(const CXXThisExpr *E) {
+  bool VisitCXXThisExpr(const CXXThisExpr *E) override {
     Usage = Const;
 
     const auto *Parent = getParentExprIgnoreParens(E);

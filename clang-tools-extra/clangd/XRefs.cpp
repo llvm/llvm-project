@@ -35,8 +35,8 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
@@ -1043,7 +1043,7 @@ const Stmt *getLoopBody(DynTypedNode N) {
 // AST traversal to highlight control flow statements under some root.
 // Once we hit further control flow we prune the tree (or at least restrict
 // what we highlight) so we capture e.g. breaks from the outer loop only.
-class FindControlFlow : public RecursiveASTVisitor<FindControlFlow> {
+class FindControlFlow : public ConstDynamicRecursiveASTVisitor {
   // Types of control-flow statements we might highlight.
   enum Target {
     Break = 1,
@@ -1091,39 +1091,39 @@ public:
 
   // When traversing function or loops, limit targets to those that still
   // refer to the original root.
-  bool TraverseDecl(Decl *D) {
+  bool TraverseDecl(const Decl *D) override {
     return !D || filterAndTraverse(DynTypedNode::create(*D), [&] {
-      return RecursiveASTVisitor::TraverseDecl(D);
+      return ConstDynamicRecursiveASTVisitor::TraverseDecl(D);
     });
   }
-  bool TraverseStmt(Stmt *S) {
+  bool TraverseStmt(const Stmt *S) override {
     return !S || filterAndTraverse(DynTypedNode::create(*S), [&] {
-      return RecursiveASTVisitor::TraverseStmt(S);
+      return ConstDynamicRecursiveASTVisitor::TraverseStmt(S);
     });
   }
 
   // Add leaves that we found and want.
-  bool VisitReturnStmt(ReturnStmt *R) {
+  bool VisitReturnStmt(const ReturnStmt *R) override {
     found(Return, R->getReturnLoc());
     return true;
   }
-  bool VisitBreakStmt(BreakStmt *B) {
+  bool VisitBreakStmt(const BreakStmt *B) override {
     found(Break, B->getKwLoc());
     return true;
   }
-  bool VisitContinueStmt(ContinueStmt *C) {
+  bool VisitContinueStmt(const ContinueStmt *C) override {
     found(Continue, C->getKwLoc());
     return true;
   }
-  bool VisitSwitchCase(SwitchCase *C) {
+  bool VisitSwitchCase(const SwitchCase *C) override {
     found(Case, C->getKeywordLoc());
     return true;
   }
-  bool VisitCXXThrowExpr(CXXThrowExpr *T) {
+  bool VisitCXXThrowExpr(const CXXThrowExpr *T) override {
     found(Throw, T->getThrowLoc());
     return true;
   }
-  bool VisitGotoStmt(GotoStmt *G) {
+  bool VisitGotoStmt(const GotoStmt *G) override {
     // Goto is interesting if its target is outside the root.
     if (const auto *LD = G->getLabel()) {
       if (SM.isBeforeInTranslationUnit(LD->getLocation(), Bounds.getBegin()) ||
@@ -1243,7 +1243,7 @@ std::vector<SourceLocation> relatedControlFlow(const SelectionTree::Node &N) {
   if (Root) {
     if (!Bounds.isValid())
       Bounds = Root->getSourceRange();
-    FindControlFlow(Bounds, Result, SM).TraverseStmt(const_cast<Stmt *>(Root));
+    FindControlFlow(Bounds, Result, SM).TraverseStmt(Root);
   }
   return Result;
 }

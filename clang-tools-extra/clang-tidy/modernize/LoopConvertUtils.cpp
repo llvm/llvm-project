@@ -34,10 +34,10 @@ namespace clang::tidy::modernize {
 /// RecursiveASTVisitor::TraverseStmt() and pop_back() afterwards. The Stmt atop
 /// the stack is the parent of the current statement (NULL for the topmost
 /// statement).
-bool StmtAncestorASTVisitor::TraverseStmt(Stmt *Statement) {
+bool StmtAncestorASTVisitor::TraverseStmt(const Stmt *Statement) {
   StmtAncestors.insert(std::make_pair(Statement, StmtStack.back()));
   StmtStack.push_back(Statement);
-  RecursiveASTVisitor<StmtAncestorASTVisitor>::TraverseStmt(Statement);
+  ConstDynamicRecursiveASTVisitor::TraverseStmt(Statement);
   StmtStack.pop_back();
   return true;
 }
@@ -47,7 +47,7 @@ bool StmtAncestorASTVisitor::TraverseStmt(Stmt *Statement) {
 /// Combined with StmtAncestors, this provides roughly the same information as
 /// Scope, as we can map a VarDecl to its DeclStmt, then walk up the parent tree
 /// using StmtAncestors.
-bool StmtAncestorASTVisitor::VisitDeclStmt(DeclStmt *Statement) {
+bool StmtAncestorASTVisitor::VisitDeclStmt(const DeclStmt *Statement) {
   for (const auto *Decl : Statement->decls()) {
     if (const auto *V = dyn_cast<VarDecl>(Decl))
       DeclParents.insert(std::make_pair(V, Statement));
@@ -56,27 +56,27 @@ bool StmtAncestorASTVisitor::VisitDeclStmt(DeclStmt *Statement) {
 }
 
 /// record the DeclRefExpr as part of the parent expression.
-bool ComponentFinderASTVisitor::VisitDeclRefExpr(DeclRefExpr *E) {
+bool ComponentFinderASTVisitor::VisitDeclRefExpr(const DeclRefExpr *E) {
   Components.push_back(E);
   return true;
 }
 
 /// record the MemberExpr as part of the parent expression.
-bool ComponentFinderASTVisitor::VisitMemberExpr(MemberExpr *Member) {
+bool ComponentFinderASTVisitor::VisitMemberExpr(const MemberExpr *Member) {
   Components.push_back(Member);
   return true;
 }
 
 /// Forward any DeclRefExprs to a check on the referenced variable
 /// declaration.
-bool DependencyFinderASTVisitor::VisitDeclRefExpr(DeclRefExpr *DeclRef) {
+bool DependencyFinderASTVisitor::VisitDeclRefExpr(const DeclRefExpr *DeclRef) {
   if (auto *V = dyn_cast_or_null<VarDecl>(DeclRef->getDecl()))
     return VisitVarDecl(V);
   return true;
 }
 
 /// Determine if any this variable is declared inside the ContainingStmt.
-bool DependencyFinderASTVisitor::VisitVarDecl(VarDecl *V) {
+bool DependencyFinderASTVisitor::VisitVarDecl(const VarDecl *V) {
   const Stmt *Curr = DeclParents->lookup(V);
   // First, see if the variable was declared within an inner scope of the loop.
   while (Curr != nullptr) {
@@ -100,7 +100,7 @@ bool DependencyFinderASTVisitor::VisitVarDecl(VarDecl *V) {
 
 /// If we already created a variable for TheLoop, check to make sure
 /// that the name was not already taken.
-bool DeclFinderASTVisitor::VisitForStmt(ForStmt *TheLoop) {
+bool DeclFinderASTVisitor::VisitForStmt(const ForStmt *TheLoop) {
   StmtGeneratedVarNameMap::const_iterator I = GeneratedDecls->find(TheLoop);
   if (I != GeneratedDecls->end() && I->second == Name) {
     Found = true;
@@ -111,7 +111,7 @@ bool DeclFinderASTVisitor::VisitForStmt(ForStmt *TheLoop) {
 
 /// If any named declaration within the AST subtree has the same name,
 /// then consider Name already taken.
-bool DeclFinderASTVisitor::VisitNamedDecl(NamedDecl *D) {
+bool DeclFinderASTVisitor::VisitNamedDecl(const NamedDecl *D) {
   const IdentifierInfo *Ident = D->getIdentifier();
   if (Ident && Ident->getName() == Name) {
     Found = true;
@@ -122,7 +122,7 @@ bool DeclFinderASTVisitor::VisitNamedDecl(NamedDecl *D) {
 
 /// Forward any declaration references to the actual check on the
 /// referenced declaration.
-bool DeclFinderASTVisitor::VisitDeclRefExpr(DeclRefExpr *DeclRef) {
+bool DeclFinderASTVisitor::VisitDeclRefExpr(const DeclRefExpr *DeclRef) {
   if (auto *D = dyn_cast<NamedDecl>(DeclRef->getDecl()))
     return VisitNamedDecl(D);
   return true;
@@ -497,7 +497,7 @@ void ForLoopIndexUseVisitor::addUsage(const Usage &U) {
 ///     int k = *i + 2;
 ///   }
 /// \endcode
-bool ForLoopIndexUseVisitor::TraverseUnaryOperator(UnaryOperator *Uop) {
+bool ForLoopIndexUseVisitor::TraverseUnaryOperator(const UnaryOperator *Uop) {
   // If we dereference an iterator that's actually a pointer, count the
   // occurrence.
   if (isDereferenceOfUop(Uop, IndexVar)) {
@@ -533,7 +533,7 @@ bool ForLoopIndexUseVisitor::TraverseUnaryOperator(UnaryOperator *Uop) {
 ///   }
 /// \endcode
 /// will not.
-bool ForLoopIndexUseVisitor::TraverseMemberExpr(MemberExpr *Member) {
+bool ForLoopIndexUseVisitor::TraverseMemberExpr(const MemberExpr *Member) {
   const Expr *Base = Member->getBase();
   const DeclRefExpr *Obj = getDeclRef(Base);
   const Expr *ResultExpr = Member;
@@ -593,8 +593,8 @@ bool ForLoopIndexUseVisitor::TraverseMemberExpr(MemberExpr *Member) {
 /// Calls on the iterator object are not permitted, unless done through
 /// operator->(). The one exception is allowing vector::at() for pseudoarrays.
 bool ForLoopIndexUseVisitor::TraverseCXXMemberCallExpr(
-    CXXMemberCallExpr *MemberCall) {
-  auto *Member =
+    const CXXMemberCallExpr *MemberCall) {
+  const auto *Member =
       dyn_cast<MemberExpr>(MemberCall->getCallee()->IgnoreParenImpCasts());
   if (!Member)
     return VisitorBase::TraverseCXXMemberCallExpr(MemberCall);
@@ -638,7 +638,7 @@ bool ForLoopIndexUseVisitor::TraverseCXXMemberCallExpr(
 ///   }
 /// \endcode
 bool ForLoopIndexUseVisitor::TraverseCXXOperatorCallExpr(
-    CXXOperatorCallExpr *OpCall) {
+    const CXXOperatorCallExpr *OpCall) {
   switch (OpCall->getOperator()) {
   case OO_Star:
     if (isDereferenceOfOpCall(OpCall, IndexVar)) {
@@ -683,8 +683,9 @@ bool ForLoopIndexUseVisitor::TraverseCXXOperatorCallExpr(
 /// \endcode
 /// and further checking needs to be done later to ensure that exactly one array
 /// is referenced.
-bool ForLoopIndexUseVisitor::TraverseArraySubscriptExpr(ArraySubscriptExpr *E) {
-  Expr *Arr = E->getBase();
+bool ForLoopIndexUseVisitor::TraverseArraySubscriptExpr(
+    const ArraySubscriptExpr *E) {
+  const Expr *Arr = E->getBase();
   if (!isIndexInSubscriptExpr(E->getIdx(), IndexVar))
     return VisitorBase::TraverseArraySubscriptExpr(E);
 
@@ -737,7 +738,7 @@ bool ForLoopIndexUseVisitor::TraverseArraySubscriptExpr(ArraySubscriptExpr *E) {
 ///    for (int i = 0; i < obj.getVector().size(); ++i)
 ///      obj.foo(10); // using `obj` is considered risky
 /// \endcode
-bool ForLoopIndexUseVisitor::VisitDeclRefExpr(DeclRefExpr *E) {
+bool ForLoopIndexUseVisitor::VisitDeclRefExpr(const DeclRefExpr *E) {
   const ValueDecl *TheDecl = E->getDecl();
   if (areSameVariable(IndexVar, TheDecl) ||
       exprReferencesVariable(IndexVar, E) || areSameVariable(EndVar, TheDecl) ||
@@ -770,9 +771,9 @@ bool ForLoopIndexUseVisitor::VisitDeclRefExpr(DeclRefExpr *E) {
 ///     f(elem);
 ///   }
 /// \endcode
-bool ForLoopIndexUseVisitor::TraverseLambdaCapture(LambdaExpr *LE,
+bool ForLoopIndexUseVisitor::TraverseLambdaCapture(const LambdaExpr *LE,
                                                    const LambdaCapture *C,
-                                                   Expr *Init) {
+                                                   const Expr *Init) {
   if (C->capturesVariable()) {
     ValueDecl *VDecl = C->getCapturedVar();
     if (areSameVariable(IndexVar, VDecl)) {
@@ -785,7 +786,7 @@ bool ForLoopIndexUseVisitor::TraverseLambdaCapture(LambdaExpr *LE,
                      C->getLocation()));
     }
     if (VDecl->isInitCapture())
-      TraverseStmtImpl(cast<VarDecl>(VDecl)->getInit());
+      traverseStmtImpl(cast<VarDecl>(VDecl)->getInit());
   }
   return VisitorBase::TraverseLambdaCapture(LE, C, Init);
 }
@@ -794,7 +795,7 @@ bool ForLoopIndexUseVisitor::TraverseLambdaCapture(LambdaExpr *LE,
 /// element, note it for reuse as the loop variable.
 ///
 /// See the comments for isAliasDecl.
-bool ForLoopIndexUseVisitor::VisitDeclStmt(DeclStmt *S) {
+bool ForLoopIndexUseVisitor::VisitDeclStmt(const DeclStmt *S) {
   if (!AliasDecl && S->isSingleDecl() &&
       isAliasDecl(Context, S->getSingleDecl(), IndexVar)) {
     AliasDecl = S;
@@ -815,7 +816,7 @@ bool ForLoopIndexUseVisitor::VisitDeclStmt(DeclStmt *S) {
   return true;
 }
 
-bool ForLoopIndexUseVisitor::TraverseStmtImpl(Stmt *S) {
+bool ForLoopIndexUseVisitor::traverseStmtImpl(const Stmt *S) {
   // All this pointer swapping is a mechanism for tracking immediate parentage
   // of Stmts.
   const Stmt *OldNextParent = NextStmtParent;
@@ -826,7 +827,7 @@ bool ForLoopIndexUseVisitor::TraverseStmtImpl(Stmt *S) {
   return Result;
 }
 
-bool ForLoopIndexUseVisitor::TraverseStmt(Stmt *S) {
+bool ForLoopIndexUseVisitor::TraverseStmt(const Stmt *S) {
   // If this is an initialization expression for a lambda capture, prune the
   // traversal so that we don't end up diagnosing the contained DeclRefExpr as
   // inconsistent usage. No need to record the usage here -- this is done in
@@ -838,7 +839,7 @@ bool ForLoopIndexUseVisitor::TraverseStmt(Stmt *S) {
       return true;
     }
   }
-  return TraverseStmtImpl(S);
+  return traverseStmtImpl(S);
 }
 
 std::string VariableNamer::createIndexName() {

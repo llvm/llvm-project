@@ -166,8 +166,7 @@ public:
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
   // FIXME: take a TemplateArgumentLoc* (or TemplateArgumentListInfo) instead.
-  // Not virtual for now because no-one overrides it.
-  bool TraverseTemplateArguments(ArrayRef<TemplateArgument> Args);
+  virtual bool TraverseTemplateArguments(ArrayRef<TemplateArgument> Args);
 
   /// Recursively visit a template name and dispatch to the
   /// appropriate method.

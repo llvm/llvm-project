@@ -11,8 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/ASTDiff/ASTDiff.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/ParentMapContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/PriorityQueue.h"
@@ -186,7 +187,7 @@ static bool isNodeExcluded(const SourceManager &SrcMgr, T *N) {
 
 namespace {
 // Sets Height, Parent and Children for each node.
-struct PreorderVisitor : public RecursiveASTVisitor<PreorderVisitor> {
+struct PreorderVisitor : DynamicRecursiveASTVisitor {
   int Id = 0, Depth = 0;
   NodeId Parent;
   SyntaxTree::Impl &Tree;
@@ -228,30 +229,32 @@ struct PreorderVisitor : public RecursiveASTVisitor<PreorderVisitor> {
     for (NodeId Child : N.Children)
       N.Height = std::max(N.Height, 1 + Tree.getNode(Child).Height);
   }
-  bool TraverseDecl(Decl *D) {
+  bool TraverseDecl(Decl *D) override {
     if (isNodeExcluded(Tree.AST.getSourceManager(), D))
       return true;
     auto SavedState = PreTraverse(D);
-    RecursiveASTVisitor<PreorderVisitor>::TraverseDecl(D);
+    DynamicRecursiveASTVisitor::TraverseDecl(D);
     PostTraverse(SavedState);
     return true;
   }
-  bool TraverseStmt(Stmt *S) {
+  bool TraverseStmt(Stmt *S) override {
     if (auto *E = dyn_cast_or_null<Expr>(S))
       S = E->IgnoreImplicit();
     if (isNodeExcluded(Tree.AST.getSourceManager(), S))
       return true;
     auto SavedState = PreTraverse(S);
-    RecursiveASTVisitor<PreorderVisitor>::TraverseStmt(S);
+    DynamicRecursiveASTVisitor::TraverseStmt(S);
     PostTraverse(SavedState);
     return true;
   }
-  bool TraverseType(QualType T, bool TraverseQualifier = true) { return true; }
-  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+  bool TraverseType(QualType T, bool TraverseQualifier = true) override {
+    return true;
+  }
+  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) override {
     if (isNodeExcluded(Tree.AST.getSourceManager(), Init))
       return true;
     auto SavedState = PreTraverse(Init);
-    RecursiveASTVisitor<PreorderVisitor>::TraverseConstructorInitializer(Init);
+    DynamicRecursiveASTVisitor::TraverseConstructorInitializer(Init);
     PostTraverse(SavedState);
     return true;
   }

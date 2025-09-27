@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DeprecatedHeadersCheck.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
@@ -44,19 +44,19 @@ private:
   bool CheckHeaderFile;
 };
 
-class ExternCRefutationVisitor
-    : public RecursiveASTVisitor<ExternCRefutationVisitor> {
+class ExternCRefutationVisitor : public ConstDynamicRecursiveASTVisitor {
   std::vector<IncludeMarker> &IncludesToBeProcessed;
   const SourceManager &SM;
 
 public:
   ExternCRefutationVisitor(std::vector<IncludeMarker> &IncludesToBeProcessed,
                            SourceManager &SM)
-      : IncludesToBeProcessed(IncludesToBeProcessed), SM(SM) {}
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
-  bool shouldVisitLambdaBody() const { return false; }
+      : IncludesToBeProcessed(IncludesToBeProcessed), SM(SM) {
+    ShouldWalkTypesOfTypeLocs = false;
+    ShouldVisitLambdaBody = false;
+  }
 
-  bool VisitLinkageSpecDecl(LinkageSpecDecl *LinkSpecDecl) const {
+  bool VisitLinkageSpecDecl(const LinkageSpecDecl *LinkSpecDecl) override {
     if (LinkSpecDecl->getLanguage() != LinkageSpecLanguageIDs::C ||
         !LinkSpecDecl->hasBraces())
       return true;

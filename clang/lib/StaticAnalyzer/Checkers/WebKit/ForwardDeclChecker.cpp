@@ -11,7 +11,7 @@
 #include "PtrTypesSemantics.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -44,54 +44,53 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
-      using Base = RecursiveASTVisitor<LocalVisitor>;
+    struct LocalVisitor : ConstDynamicRecursiveASTVisitor {
+      using Base = ConstDynamicRecursiveASTVisitor;
 
       const ForwardDeclChecker *Checker;
-      Decl *DeclWithIssue{nullptr};
+      const Decl *DeclWithIssue{nullptr};
 
       explicit LocalVisitor(const ForwardDeclChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
+        ShouldVisitTemplateInstantiations = true;
+        ShouldVisitImplicitCode = false;
       }
 
-      bool shouldVisitTemplateInstantiations() const { return true; }
-      bool shouldVisitImplicitCode() const { return false; }
-
-      bool VisitTypedefDecl(TypedefDecl *TD) {
+      bool VisitTypedefDecl(const TypedefDecl *TD) override {
         Checker->visitTypedef(TD);
         return true;
       }
 
-      bool VisitRecordDecl(const RecordDecl *RD) {
+      bool VisitRecordDecl(const RecordDecl *RD) override {
         Checker->visitRecordDecl(RD, DeclWithIssue);
         return true;
       }
 
-      bool TraverseDecl(Decl *D) {
+      bool TraverseDecl(const Decl *D) override {
         llvm::SaveAndRestore SavedDecl(DeclWithIssue);
         if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
           DeclWithIssue = D;
         return Base::TraverseDecl(D);
       }
 
-      bool VisitVarDecl(VarDecl *V) {
+      bool VisitVarDecl(const VarDecl *V) override {
         if (V->isLocalVarDecl())
           Checker->visitVarDecl(V, DeclWithIssue);
         return true;
       }
 
-      bool VisitCallExpr(const CallExpr *CE) {
+      bool VisitCallExpr(const CallExpr *CE) override {
         Checker->visitCallExpr(CE, DeclWithIssue);
         return true;
       }
 
-      bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
+      bool VisitCXXConstructExpr(const CXXConstructExpr *CE) override {
         Checker->visitConstructExpr(CE, DeclWithIssue);
         return true;
       }
 
-      bool VisitObjCMessageExpr(const ObjCMessageExpr *ObjCMsgExpr) {
+      bool VisitObjCMessageExpr(const ObjCMessageExpr *ObjCMsgExpr) override {
         Checker->visitObjCMessageExpr(ObjCMsgExpr, DeclWithIssue);
         return true;
       }
@@ -99,7 +98,7 @@ public:
 
     LocalVisitor visitor(this);
     RTC.visitTranslationUnitDecl(TUD);
-    visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
+    visitor.TraverseDecl(TUD);
   }
 
   void visitTypedef(const TypedefDecl *TD) const {

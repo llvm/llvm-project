@@ -13,7 +13,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include <optional>
@@ -48,14 +48,14 @@ private:
 };
 REGISTER_TWEAK(RemoveUsingNamespace)
 
-class FindSameUsings : public RecursiveASTVisitor<FindSameUsings> {
+class FindSameUsings : public ConstDynamicRecursiveASTVisitor {
 public:
   FindSameUsings(const UsingDirectiveDecl &Target,
                  std::vector<const UsingDirectiveDecl *> &Results)
       : TargetNS(Target.getNominatedNamespace()),
         TargetCtx(Target.getDeclContext()), Results(Results) {}
 
-  bool VisitUsingDirectiveDecl(UsingDirectiveDecl *D) {
+  bool VisitUsingDirectiveDecl(const UsingDirectiveDecl *D) override {
     if (D->getNominatedNamespace() != TargetNS ||
         D->getDeclContext() != TargetCtx)
       return true;

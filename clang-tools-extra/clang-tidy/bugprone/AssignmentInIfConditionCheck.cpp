@@ -8,7 +8,7 @@
 
 #include "AssignmentInIfConditionCheck.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -21,13 +21,13 @@ void AssignmentInIfConditionCheck::registerMatchers(MatchFinder *Finder) {
 
 void AssignmentInIfConditionCheck::check(
     const ast_matchers::MatchFinder::MatchResult &Result) {
-  class Visitor : public RecursiveASTVisitor<Visitor> {
+  class Visitor : public ConstDynamicRecursiveASTVisitor {
     AssignmentInIfConditionCheck &Check;
 
   public:
     explicit Visitor(AssignmentInIfConditionCheck &Check) : Check(Check) {}
-    bool VisitIfStmt(IfStmt *If) {
-      class ConditionVisitor : public RecursiveASTVisitor<ConditionVisitor> {
+    bool VisitIfStmt(const IfStmt *If) override {
+      class ConditionVisitor : public ConstDynamicRecursiveASTVisitor {
         AssignmentInIfConditionCheck &Check;
 
       public:
@@ -35,23 +35,20 @@ void AssignmentInIfConditionCheck::check(
             : Check(Check) {}
 
         // Dont traverse into any lambda expressions.
-        bool TraverseLambdaExpr(LambdaExpr *, DataRecursionQueue * = nullptr) {
-          return true;
-        }
+        bool TraverseLambdaExpr(const LambdaExpr *) override { return true; }
 
         // Dont traverse into any requires expressions.
-        bool TraverseRequiresExpr(RequiresExpr *,
-                                  DataRecursionQueue * = nullptr) {
+        bool TraverseRequiresExpr(const RequiresExpr *) override {
           return true;
         }
 
-        bool VisitBinaryOperator(BinaryOperator *BO) {
+        bool VisitBinaryOperator(const BinaryOperator *BO) override {
           if (BO->isAssignmentOp())
             Check.report(BO);
           return true;
         }
 
-        bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *OCE) {
+        bool VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) override {
           if (OCE->isAssignmentOp())
             Check.report(OCE);
           return true;
