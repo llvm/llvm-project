@@ -218,6 +218,10 @@ public:
   // old ValueLatticeElement::isOverdefined() and is intended to be used in the
   // transition to ValueLatticeElement.
   LLVM_ABI static bool isOverdefined(const ValueLatticeElement &LV);
+
+  // Helper to check whether \p V may be carrying a PredicateInfo derived copy
+  // of a pointer.
+  LLVM_ABI bool mayForwardPointerPredicatedCopy(Value *V);
 };
 } // namespace llvm
 
