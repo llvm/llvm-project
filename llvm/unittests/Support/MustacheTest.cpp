@@ -998,7 +998,7 @@ TEST(MustachePartials, StandaloneIndentation) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("\\\n  |\n  <\n  ->\n  |\n/\n", Out);
+  EXPECT_EQ("\\\n  |\n  <\n  ->\n  |\n/\n", Out);
 }
 
 TEST(MustacheLambdas, BasicInterpolation) {
