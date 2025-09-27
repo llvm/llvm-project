@@ -64,6 +64,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
@@ -3780,6 +3781,41 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
               Res = Builder.CreateNeg(Res);
             return replaceInstUsesWith(CI, Res);
           }
+      }
+
+      // Handle the case where a value is multiplied by a power of two.
+      // For example:
+      // %2 = insertelement <4 x i32> poison, i32 %0, i64 0
+      // %3 = shufflevector <4 x i32> %2, poison, <4 x i32> zeroinitializer
+      // %4 = tail call i32 @llvm.vector.reduce.add.v4i32(%3)
+      // =>
+      // %2 = shl i32 %0, 2
+      assert(Arg->getType()->isVectorTy() &&
+             "The vector.reduce.add intrinsic's argument must be a vector!");
+
+      if (Value *Splat = getSplatValue(Arg)) {
+        // It is only a multiplication if we add the same element over and over.
+        ElementCount ReducedVectorElementCount =
+            static_cast<VectorType *>(Arg->getType())->getElementCount();
+        if (ReducedVectorElementCount.isFixed()) {
+          unsigned VectorSize = ReducedVectorElementCount.getFixedValue();
+          Type *SplatType = Splat->getType();
+          unsigned SplatTypeWidth = SplatType->getIntegerBitWidth();
+          Value *Res;
+          // Power of two is a special case. We can just use a left shif here.
+          if (isPowerOf2_32(VectorSize)) {
+            unsigned Pow2 = Log2_32(VectorSize);
+            Res = Builder.CreateShl(
+                Splat, Constant::getIntegerValue(SplatType,
+                                                 APInt(SplatTypeWidth, Pow2)));
+            return replaceInstUsesWith(CI, Res);
+          }
+          // Otherwise just multiply.
+          Res = Builder.CreateMul(
+              Splat, Constant::getIntegerValue(
+                         SplatType, APInt(SplatTypeWidth, VectorSize)));
+          return replaceInstUsesWith(CI, Res);
+        }
       }
     }
     [[fallthrough]];
