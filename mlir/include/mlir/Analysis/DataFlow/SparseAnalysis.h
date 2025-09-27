@@ -464,6 +464,21 @@ protected:
   visitCallableOperation(Operation *op, CallableOpInterface callable,
                          ArrayRef<AbstractSparseLattice *> operandLattices);
 
+  /// Visits a call operation. Given the result lattices, set the operand lattices.
+  //  Performs interprocedural data flow as follows: if the call
+  /// operation targets an external function, or if the solver is not
+  /// interprocedural, attempts to infer the results from the call arguments
+  /// using the user-provided `visitExternalCallImpl`. Otherwise, computes the
+  /// result lattices from the return sites if all return sites are known;
+  /// otherwise, conservatively marks the result lattices as having reached
+  /// their pessimistic fixpoints.
+  /// This method can be overridden to, for example, be less conservative and
+  /// propagate the information even if some return sites are unknown.
+  virtual LogicalResult
+  visitCallOperation(CallOpInterface call,
+                     ArrayRef<AbstractSparseLattice *> operandLattices,
+                     ArrayRef<const AbstractSparseLattice *> resultLattices);
+
 private:
   /// Recursively initialize the analysis on nested operations and blocks.
   LogicalResult initializeRecursively(Operation *op);
