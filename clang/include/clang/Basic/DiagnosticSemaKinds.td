@@ -35,9 +35,8 @@ defm decomp_decl : CXX17Compat<"decomposition declarations are">;
 defm inline_variable : CXX17Compat<"inline variables are">;
 
 // C++20 compatibility with C++17 and earlier.
-defm decomp_decl_spec : CXX20Compat<
-  "decomposition declaration declared "
-  "%plural{1:'%1'|:with '%1' specifiers}0 is">;
+defm decomp_decl_spec
+    : CXX20Compat<"decomposition declaration declared '%0' is">;
 defm constexpr_local_var_no_init : CXX20Compat<
   "uninitialized variable in a constexpr %select{function|constructor}0 is">;
 defm constexpr_function_try_block : CXX20Compat<
@@ -593,9 +592,8 @@ def warn_modifying_shadowing_decl :
 // C++ decomposition declarations
 def err_decomp_decl_context : Error<
   "decomposition declaration not permitted in this context">;
-def err_decomp_decl_spec : Error<
-  "decomposition declaration cannot be declared "
-  "%plural{1:'%1'|:with '%1' specifiers}0">;
+def err_decomp_decl_spec
+    : Error<"decomposition declaration cannot be declared '%0'">;
 def err_decomp_decl_type : Error<
   "decomposition declaration cannot be declared with type %0; "
   "declared type must be 'auto' or reference to 'auto'">;
@@ -1777,7 +1775,8 @@ def note_unsatisfied_trait
            "%Empty{empty}|"
            "%StandardLayout{standard-layout}|"
            "%Aggregate{aggregate}|"
-           "%Final{final}"
+           "%Final{final}|"
+           "%Abstract{abstract}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1827,7 +1826,12 @@ def note_unsatisfied_trait_reason
            "%PrivateProtectedDirectDataMember{has a %select{private|protected}1 direct data member}|"
            "%PrivateProtectedDirectBase{has a %select{private|protected}1 direct base}|"
            "%NotClassOrUnion{is not a class or union type}|"
-           "%NotMarkedFinal{is not marked 'final'}"
+           "%NotMarkedFinal{is not marked 'final'}|"
+           "%PointerType{is a pointer type}|"
+           "%ArrayType{is an array type}|"
+           "%UnionType{is a union type}|"
+           "%NotStructOrClass{is not a struct or class type}|"
+           "%OverridesAllPureVirtual{overrides all pure virtual functions from base class %1}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<

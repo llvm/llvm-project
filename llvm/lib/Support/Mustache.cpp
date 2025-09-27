@@ -305,6 +305,8 @@ SmallVector<Token> tokenize(StringRef Template) {
   SmallVector<Token> Tokens;
   StringLiteral Open("{{");
   StringLiteral Close("}}");
+  StringLiteral TripleOpen("{{{");
+  StringLiteral TripleClose("}}}");
   size_t Start = 0;
   size_t DelimiterStart = Template.find(Open);
   if (DelimiterStart == StringRef::npos) {
@@ -314,18 +316,33 @@ SmallVector<Token> tokenize(StringRef Template) {
   while (DelimiterStart != StringRef::npos) {
     if (DelimiterStart != Start)
       Tokens.emplace_back(Template.substr(Start, DelimiterStart - Start).str());
-    size_t DelimiterEnd = Template.find(Close, DelimiterStart);
-    if (DelimiterEnd == StringRef::npos)
-      break;
 
-    // Extract the Interpolated variable without delimiters.
-    size_t InterpolatedStart = DelimiterStart + Open.size();
-    size_t InterpolatedEnd = DelimiterEnd - DelimiterStart - Close.size();
-    std::string Interpolated =
-        Template.substr(InterpolatedStart, InterpolatedEnd).str();
-    std::string RawBody = Open.str() + Interpolated + Close.str();
-    Tokens.emplace_back(RawBody, Interpolated, Interpolated[0]);
-    Start = DelimiterEnd + Close.size();
+    if (Template.substr(DelimiterStart).starts_with(TripleOpen)) {
+      size_t DelimiterEnd = Template.find(TripleClose, DelimiterStart);
+      if (DelimiterEnd == StringRef::npos)
+        break;
+      size_t BodyStart = DelimiterStart + TripleOpen.size();
+      std::string Body =
+          Template.substr(BodyStart, DelimiterEnd - BodyStart).str();
+      std::string RawBody =
+          Template.substr(DelimiterStart, DelimiterEnd - DelimiterStart + 3)
+              .str();
+      Tokens.emplace_back(RawBody, "&" + Body, '&');
+      Start = DelimiterEnd + TripleClose.size();
+    } else {
+      size_t DelimiterEnd = Template.find(Close, DelimiterStart);
+      if (DelimiterEnd == StringRef::npos)
+        break;
+
+      // Extract the Interpolated variable without delimiters.
+      size_t InterpolatedStart = DelimiterStart + Open.size();
+      size_t InterpolatedEnd = DelimiterEnd - DelimiterStart - Close.size();
+      std::string Interpolated =
+          Template.substr(InterpolatedStart, InterpolatedEnd).str();
+      std::string RawBody = Open.str() + Interpolated + Close.str();
+      Tokens.emplace_back(RawBody, Interpolated, Interpolated[0]);
+      Start = DelimiterEnd + Close.size();
+    }
     DelimiterStart = Template.find(Open, Start);
   }
 
@@ -380,19 +397,32 @@ class EscapeStringStream : public raw_ostream {
 public:
   explicit EscapeStringStream(llvm::raw_ostream &WrappedStream,
                               EscapeMap &Escape)
-      : Escape(Escape), WrappedStream(WrappedStream) {
+      : Escape(Escape), EscapeChars(Escape.keys().begin(), Escape.keys().end()),
+        WrappedStream(WrappedStream) {
     SetUnbuffered();
   }
 
 protected:
   void write_impl(const char *Ptr, size_t Size) override {
-    llvm::StringRef Data(Ptr, Size);
-    for (char C : Data) {
-      auto It = Escape.find(C);
-      if (It != Escape.end())
-        WrappedStream << It->getSecond();
-      else
-        WrappedStream << C;
+    StringRef Data(Ptr, Size);
+    size_t Start = 0;
+    while (Start < Size) {
+      // Find the next character that needs to be escaped.
+      size_t Next = Data.find_first_of(EscapeChars.str(), Start);
+
+      // If no escapable characters are found, write the rest of the string.
+      if (Next == StringRef::npos) {
+        WrappedStream << Data.substr(Start);
+        return;
+      }
+
+      // Write the chunk of text before the escapable character.
+      if (Next > Start)
+        WrappedStream << Data.substr(Start, Next - Start);
+
+      // Look up and write the escaped version of the character.
+      WrappedStream << Escape[Data[Next]];
+      Start = Next + 1;
     }
   }
 
@@ -400,6 +430,7 @@ protected:
 
 private:
   EscapeMap &Escape;
+  SmallString<8> EscapeChars;
   llvm::raw_ostream &WrappedStream;
 };
 

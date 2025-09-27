@@ -1482,7 +1482,7 @@ bool ARMTargetLowering::useSoftFloat() const {
   return Subtarget->useSoftFloat();
 }
 
-bool ARMTargetLowering::shouldExpandCmpUsingSelects(EVT VT) const {
+bool ARMTargetLowering::preferSelectsOverBooleanArithmetic(EVT VT) const {
   return !Subtarget->isThumb1Only() && VT.getSizeInBits() <= 32;
 }
 
@@ -5573,7 +5573,7 @@ static void expandf64Toi32(SDValue Op, SelectionDAG &DAG,
   llvm_unreachable("Unknown VFP cmp argument!");
 }
 
-/// OptimizeVFPBrcond - With nnan, it's legal to optimize some
+/// OptimizeVFPBrcond - With nnan and without daz, it's legal to optimize some
 /// f32 and even f64 comparisons to integer ones.
 SDValue
 ARMTargetLowering::OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const {
@@ -5729,9 +5729,9 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   SDNodeFlags Flags = Op->getFlags();
-  if ((getTargetMachine().Options.UnsafeFPMath || Flags.hasNoNaNs()) &&
-      (DAG.getDenormalMode(MVT::f32) == DenormalMode::getIEEE() &&
-       DAG.getDenormalMode(MVT::f64) == DenormalMode::getIEEE()) &&
+  if (Flags.hasNoNaNs() &&
+      DAG.getDenormalMode(MVT::f32) == DenormalMode::getIEEE() &&
+      DAG.getDenormalMode(MVT::f64) == DenormalMode::getIEEE() &&
       (CC == ISD::SETEQ || CC == ISD::SETOEQ || CC == ISD::SETNE ||
        CC == ISD::SETUNE)) {
     if (SDValue Result = OptimizeVFPBrcond(Op, DAG))
@@ -20428,9 +20428,9 @@ void ARMTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
           if (CVal >= -255 && CVal <= -1)
             break;
         } else {
-          // This must be a constant between -4095 and 4095. It is not clear
-          // what this constraint is intended for. Implemented for
-          // compatibility with GCC.
+          // This must be a constant between -4095 and 4095. This is suitable
+          // for use as the immediate offset field in LDR and STR instructions
+          // such as LDR r0,[r1,#offset].
           if (CVal >= -4095 && CVal <= 4095)
             break;
         }

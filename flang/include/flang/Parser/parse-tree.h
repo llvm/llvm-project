@@ -3555,6 +3555,18 @@ struct OmpLocator {
 
 WRAPPER_CLASS(OmpLocatorList, std::list<OmpLocator>);
 
+// Ref: [4.5:58-60], [5.0:58-60], [5.1:63-68], [5.2:197-198], [6.0:334-336]
+//
+// Argument to DECLARE VARIANT with the base-name present. (When only
+// variant-name is present, it is a simple OmpObject).
+//
+// base-name-variant-name ->                        // since 4.5
+//    base-name : variant-name
+struct OmpBaseVariantNames {
+  TUPLE_CLASS_BOILERPLATE(OmpBaseVariantNames);
+  std::tuple<OmpObject, OmpObject> t;
+};
+
 // Ref: [5.0:326:10-16], [5.1:359:5-11], [5.2:163:2-7], [6.0:293:16-21]
 //
 // mapper-specifier ->
@@ -3584,6 +3596,7 @@ struct OmpArgument {
   CharBlock source;
   UNION_CLASS_BOILERPLATE(OmpArgument);
   std::variant<OmpLocator, // {variable, extended, locator}-list-item
+      OmpBaseVariantNames, // base-name:variant-name
       OmpMapperSpecifier, OmpReductionSpecifier>
       u;
 };
@@ -4920,34 +4933,26 @@ struct OpenMPSectionsConstruct {
       t;
 };
 
+// Ref: [4.5:58-60], [5.0:58-60], [5.1:63-68], [5.2:197-198], [6.0:334-336]
+//
+// declare-variant-directive ->
+//    DECLARE_VARIANT([base-name:]variant-name)     // since 4.5
 struct OmpDeclareVariantDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpDeclareVariantDirective);
-  CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>, Name, OmpClauseList> t;
-};
-
-// 2.10.6 declare-target -> DECLARE TARGET (extended-list) |
-//                          DECLARE TARGET [declare-target-clause[ [,]
-//                                          declare-target-clause]...]
-struct OmpDeclareTargetWithList {
-  WRAPPER_CLASS_BOILERPLATE(OmpDeclareTargetWithList, OmpObjectList);
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpDeclareVariantDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
-struct OmpDeclareTargetWithClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpDeclareTargetWithClause, OmpClauseList);
-  CharBlock source;
-};
-
-struct OmpDeclareTargetSpecifier {
-  UNION_CLASS_BOILERPLATE(OmpDeclareTargetSpecifier);
-  std::variant<OmpDeclareTargetWithList, OmpDeclareTargetWithClause> u;
-};
-
+// Ref: [4.5:110-113], [5.0:180-185], [5.1:210-216], [5.2:206-207],
+//      [6.0:346-348]
+//
+// declare-target-directive ->                      // since 4.5
+//    DECLARE_TARGET[(extended-list)] |
+//    DECLARE_TARGET clause-list
 struct OpenMPDeclareTargetConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDeclareTargetConstruct);
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPDeclareTargetConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, OmpDeclareTargetSpecifier> t;
 };
 
 // OMP v5.2: 5.8.8
@@ -4970,9 +4975,9 @@ struct OpenMPDeclareReductionConstruct {
 // 2.8.2 declare-simd -> DECLARE SIMD [(proc-name)] [declare-simd-clause[ [,]
 //                                                   declare-simd-clause]...]
 struct OpenMPDeclareSimdConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDeclareSimdConstruct);
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPDeclareSimdConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>, OmpClauseList> t;
 };
 
 // ref: [6.0:301-303]

@@ -1169,8 +1169,7 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
                                                const InterpFrame *Frame,
                                                const CallExpr *Call,
                                                unsigned BuiltinOp) {
-  PrimType AlignmentT = *S.Ctx.classify(Call->getArg(1));
-  const APSInt &Alignment = popToAPSInt(S.Stk, AlignmentT);
+  const APSInt &Alignment = popToAPSInt(S, Call->getArg(1));
 
   if (Alignment < 0 || !Alignment.isPowerOf2()) {
     S.FFDiag(Call, diag::note_constexpr_invalid_alignment) << Alignment;
@@ -1184,8 +1183,7 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // The first parameter is either an integer or a pointer (but not a function
-  // pointer).
+  // The first parameter is either an integer or a pointer.
   PrimType FirstArgT = *S.Ctx.classify(Call->getArg(0));
 
   if (isIntegralType(FirstArgT)) {
@@ -1204,12 +1202,12 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
     }
     return true;
   }
-
   assert(FirstArgT == PT_Ptr);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (!Ptr.isBlockPointer())
+    return false;
 
-  unsigned PtrOffset = Ptr.getByteOffset();
-  PtrOffset = Ptr.getIndex();
+  unsigned PtrOffset = Ptr.getIndex();
   CharUnits BaseAlignment =
       S.getASTContext().getDeclAlign(Ptr.getDeclDesc()->asValueDecl());
   CharUnits PtrAlign =
@@ -2596,6 +2594,52 @@ static bool interp__builtin_elementwise_int_binop(
   return true;
 }
 
+static bool
+interp__builtin_x86_pack(InterpState &S, CodePtr, const CallExpr *E,
+                         llvm::function_ref<APInt(const APSInt &)> PackFn) {
+  const auto *VT0 = E->getArg(0)->getType()->castAs<VectorType>();
+  [[maybe_unused]] const auto *VT1 =
+      E->getArg(1)->getType()->castAs<VectorType>();
+  assert(VT0 && VT1 && "pack builtin VT0 and VT1 must be VectorType");
+  assert(VT0->getElementType() == VT1->getElementType() &&
+         VT0->getNumElements() == VT1->getNumElements() &&
+         "pack builtin VT0 and VT1 ElementType must be same");
+
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const ASTContext &ASTCtx = S.getASTContext();
+  const unsigned SrcBits = ASTCtx.getIntWidth(VT0->getElementType());
+  const unsigned LHSVecLen = VT0->getNumElements();
+  const unsigned SrcPerLane = 128 / SrcBits;
+  const unsigned Lanes = LHSVecLen * SrcBits / 128;
+
+  PrimType SrcT = *S.getContext().classify(VT0->getElementType());
+  PrimType DstT = *S.getContext().classify(getElemType(Dst));
+  const bool IsUnsigend = getElemType(Dst)->isUnsignedIntegerType();
+
+  for (unsigned Lane = 0; Lane != Lanes; ++Lane) {
+    const unsigned BaseSrc = Lane * SrcPerLane;
+    const unsigned BaseDst = Lane * (2 * SrcPerLane);
+
+    for (unsigned I = 0; I != SrcPerLane; ++I) {
+      INT_TYPE_SWITCH_NO_BOOL(SrcT, {
+        APSInt A = LHS.elem<T>(BaseSrc + I).toAPSInt();
+        APSInt B = RHS.elem<T>(BaseSrc + I).toAPSInt();
+
+        assignInteger(S, Dst.atIndex(BaseDst + I), DstT,
+                      APSInt(PackFn(A), IsUnsigend));
+        assignInteger(S, Dst.atIndex(BaseDst + SrcPerLane + I), DstT,
+                      APSInt(PackFn(B), IsUnsigend));
+      });
+    }
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
                                                const CallExpr *Call,
                                                unsigned BuiltinID) {
@@ -3475,6 +3519,29 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           }
           return LHS.lshr(RHS.getZExtValue());
         });
+  case clang::X86::BI__builtin_ia32_packsswb128:
+  case clang::X86::BI__builtin_ia32_packsswb256:
+  case clang::X86::BI__builtin_ia32_packsswb512:
+  case clang::X86::BI__builtin_ia32_packssdw128:
+  case clang::X86::BI__builtin_ia32_packssdw256:
+  case clang::X86::BI__builtin_ia32_packssdw512:
+    return interp__builtin_x86_pack(S, OpPC, Call, [](const APSInt &Src) {
+      return APInt(Src).truncSSat(Src.getBitWidth() / 2);
+    });
+  case clang::X86::BI__builtin_ia32_packusdw128:
+  case clang::X86::BI__builtin_ia32_packusdw256:
+  case clang::X86::BI__builtin_ia32_packusdw512:
+  case clang::X86::BI__builtin_ia32_packuswb128:
+  case clang::X86::BI__builtin_ia32_packuswb256:
+  case clang::X86::BI__builtin_ia32_packuswb512:
+    return interp__builtin_x86_pack(S, OpPC, Call, [](const APSInt &Src) {
+      unsigned DstBits = Src.getBitWidth() / 2;
+      if (Src.isNegative())
+        return APInt::getZero(DstBits);
+      if (Src.isIntN(DstBits))
+        return APInt(Src).trunc(DstBits);
+      return APInt::getAllOnes(DstBits);
+    });
 
   case clang::X86::BI__builtin_ia32_vprotbi:
   case clang::X86::BI__builtin_ia32_vprotdi:
