@@ -236,7 +236,7 @@ entry:
   %b.val = load half, ptr addrspace(1) %b
   %c.val = load half, ptr addrspace(1) %c
 
-  %a.neg = fsub half 0.0, %a.val
+  %a.neg = fsub nsz half 0.0, %a.val
   %t.val = fmul half %a.neg, %b.val
   %r.val = fadd half %t.val, %c.val
 
@@ -263,7 +263,7 @@ entry:
   %b.val = load half, ptr addrspace(1) %b
   %c.val = load half, ptr addrspace(1) %c
 
-  %b.neg = fsub half 0.0, %b.val
+  %b.neg = fsub nsz half 0.0, %b.val
   %t.val = fmul half %a.val, %b.neg
   %r.val = fadd half %t.val, %c.val
 
@@ -290,7 +290,7 @@ entry:
   %b.val = load half, ptr addrspace(1) %b
   %c.val = load half, ptr addrspace(1) %c
 
-  %c.neg = fsub half 0.0, %c.val
+  %c.neg = fsub nsz half 0.0, %c.val
   %t.val = fmul half %a.val, %b.val
   %r.val = fadd half %t.val, %c.neg
 
@@ -601,7 +601,7 @@ entry:
   %b.val = load <2 x half>, ptr addrspace(1) %b
   %c.val = load <2 x half>, ptr addrspace(1) %c
 
-  %a.neg = fsub <2 x half> <half 0.0, half 0.0>, %a.val
+  %a.neg = fsub nsz <2 x half> <half 0.0, half 0.0>, %a.val
   %t.val = fmul <2 x half> %a.neg, %b.val
   %r.val = fadd <2 x half> %t.val, %c.val
 
@@ -634,7 +634,7 @@ entry:
   %b.val = load <2 x half>, ptr addrspace(1) %b
   %c.val = load <2 x half>, ptr addrspace(1) %c
 
-  %b.neg = fsub <2 x half> <half 0.0, half 0.0>, %b.val
+  %b.neg = fsub nsz <2 x half> <half 0.0, half 0.0>, %b.val
   %t.val = fmul <2 x half> %a.val, %b.neg
   %r.val = fadd <2 x half> %t.val, %c.val
 
@@ -667,7 +667,7 @@ entry:
   %b.val = load <2 x half>, ptr addrspace(1) %b
   %c.val = load <2 x half>, ptr addrspace(1) %c
 
-  %c.neg = fsub <2 x half> <half 0.0, half 0.0>, %c.val
+  %c.neg = fsub nsz <2 x half> <half 0.0, half 0.0>, %c.val
   %t.val = fmul <2 x half> %a.val, %b.val
   %r.val = fadd <2 x half> %t.val, %c.neg
 
@@ -678,5 +678,5 @@ entry:
 declare void @llvm.amdgcn.s.barrier() #2
 
 attributes #0 = { nounwind "no-signed-zeros-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind "no-signed-zeros-fp-math"="true" "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #1 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
 attributes #2 = { nounwind convergent }
