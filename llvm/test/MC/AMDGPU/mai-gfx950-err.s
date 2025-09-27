@@ -195,6 +195,9 @@ v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], -4.0, v24
 v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], 0.15915494, v24
 // CHECK: :[[@LINE-1]]:72: error: invalid operand for instruction
 
+v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], INV2PI, v24
+// CHECK: :[[@LINE-1]]:72: error: invalid operand for instruction
+
 v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[16:23], v[24:31], v[32:47], 16, v49
 // CHECK: :[[@LINE-1]]:73: error: invalid operand for instruction
 
@@ -205,4 +208,7 @@ v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[16:23], v[24:31], v[32:47], 4.0, v24
 // CHECK: :[[@LINE-1]]:73: error: invalid operand for instruction
 
 v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[16:23], v[24:31], v[32:47], 0.15915494, v24
+// CHECK: :[[@LINE-1]]:73: error: invalid operand for instruction
+
+v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[16:23], v[24:31], v[32:47], INV2PI, v24
 // CHECK: :[[@LINE-1]]:73: error: invalid operand for instruction

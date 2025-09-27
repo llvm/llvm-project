@@ -36,6 +36,9 @@ v_dot2_f32_bf16 v2, v1, -4.0, v2
 v_dot2_f32_bf16 v2, v1, 0.15915494, v2
 // GFX950: v_dot2_f32_bf16 v2, v1, 0.15915494, v2  ; encoding: [0x02,0x40,0x9a,0xd3,0x01,0xf1,0x09,0x1c]
 
+v_dot2_f32_bf16 v2, v1, INV2PI, v2
+// GFX950: v_dot2_f32_bf16 v2, v1, 0.15915494, v2  ; encoding: [0x02,0x40,0x9a,0xd3,0x01,0xf1,0x09,0x1c]
+
 v_dot2_f32_bf16 v2, 0.5, v1, v2
 // GFX950: v_dot2_f32_bf16 v2, 0.5, v1, v2         ; encoding: [0x02,0x40,0x9a,0xd3,0xf0,0x02,0x0a,0x1c]
 
