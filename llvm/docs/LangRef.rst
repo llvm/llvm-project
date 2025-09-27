@@ -5340,6 +5340,14 @@ flag that indicates whether or not the inline asm expression has side effects,
 and a flag indicating whether the function containing the asm needs to align its
 stack conservatively.
 
+The compiler's understanding of the semantics of the expression comes only from
+the list of operand constraints and the flags -- not the contents of the
+template string. In particular, no optimizations or analyses will be performed
+based on the contents of that string. This ensures correct behavior if the
+assembly code emitted by this expression is altered later, e.g. via
+self-modifying code, as long as the code keeps upholding the requirements of the
+operand constraints and the flags.
+
 The template string supports argument substitution of the operands using "``$``"
 followed by a number, to indicate substitution of the given register/memory
 location, as specified by the constraint string. "``${NUM:MODIFIER}``" may also
