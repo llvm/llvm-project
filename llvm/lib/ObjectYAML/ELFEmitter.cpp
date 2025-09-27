@@ -1526,6 +1526,9 @@ void ELFState<ELFT>::writeSectionContent(
         }
         SHeader.sh_size += CBA.writeULEB128(BBE.Size);
         SHeader.sh_size += CBA.writeULEB128(BBE.Metadata);
+        if (FeatureOrErr->BBHash && BBE.Hash) {
+          SHeader.sh_size += CBA.writeULEB128(*BBE.Hash);
+        }
       }
     }
     if (!PGOAnalyses)
