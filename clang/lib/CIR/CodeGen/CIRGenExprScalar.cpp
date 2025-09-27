@@ -1278,9 +1278,7 @@ mlir::Value ScalarExprEmitter::emitPromoted(const Expr *e,
                        "ScalarExprEmitter::emitPromoted unary imag");
       return {};
     case UO_Real:
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "ScalarExprEmitter::emitPromoted unary real");
-      return {};
+      return VisitRealImag(uo, promotionType);
     case UO_Minus:
       return emitUnaryPlusOrMinus(uo, cir::UnaryOpKind::Minus, promotionType);
     case UO_Plus:
@@ -2132,6 +2130,9 @@ mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
     // this won't work for, e.g. an Obj-C property
     mlir::Value complex = cgf.emitComplexExpr(op);
     if (e->isGLValue() && !promotionTy.isNull()) {
+      promotionTy = promotionTy->isAnyComplexType()
+                        ? promotionTy
+                        : cgf.getContext().getComplexType(promotionTy);
       complex = cgf.emitPromotedValue(complex, promotionTy);
     }
 
