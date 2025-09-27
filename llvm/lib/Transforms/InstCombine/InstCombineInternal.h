@@ -63,14 +63,14 @@ class LLVM_LIBRARY_VISIBILITY InstCombinerImpl final
       public InstVisitor<InstCombinerImpl, Instruction *> {
 public:
   InstCombinerImpl(InstructionWorklist &Worklist, BuilderTy &Builder,
-                   bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
+                   Function &F, AAResults *AA, AssumptionCache &AC,
                    TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                    DominatorTree &DT, OptimizationRemarkEmitter &ORE,
                    BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
                    ProfileSummaryInfo *PSI, const DataLayout &DL,
                    ReversePostOrderTraversal<BasicBlock *> &RPOT)
-      : InstCombiner(Worklist, Builder, MinimizeSize, AA, AC, TLI, TTI, DT, ORE,
-                     BFI, BPI, PSI, DL, RPOT) {}
+      : InstCombiner(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI,
+                     PSI, DL, RPOT) {}
 
   virtual ~InstCombinerImpl() = default;
 
@@ -470,14 +470,14 @@ private:
   Value *simplifyNonNullOperand(Value *V, bool HasDereferenceable,
                                 unsigned Depth = 0);
 
-  static SelectInst *createSelectInstMaybeWithUnknownBranchWeights(
-      Value *C, Value *S1, Value *S2, Function *F, const Twine &NameStr = "",
-      InsertPosition InsertBefore = nullptr, Instruction *MDFrom = nullptr) {
+  SelectInst *createSelectInst(Value *C, Value *S1, Value *S2,
+                               const Twine &NameStr = "",
+                               InsertPosition InsertBefore = nullptr,
+                               Instruction *MDFrom = nullptr) {
     SelectInst *SI =
         SelectInst::Create(C, S1, S2, NameStr, InsertBefore, MDFrom);
     if (SI && !MDFrom) {
-      assert(F && "provided parent function is nullptr!");
-      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, *F, DEBUG_TYPE);
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, F, DEBUG_TYPE);
     }
     return SI;
   }
