@@ -1390,3 +1390,23 @@ void logical_not_float() {
 // OGCG: %[[RESULT:.*]] = fcmp oeq <4 x float> %[[TMP_A]], zeroinitializer
 // OGCG: %[[RESULT_VI4:.*]] = sext <4 x i1> %[[RESULT]] to <4 x i32>
 // OGCG: store <4 x i32> %[[RESULT_VI4]], ptr %[[B_ADDR]], align 16
+
+void unary_extension() {
+  vi4 a;
+  vi4 b = __extension__ a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["b", init]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: cir.store{{.*}} %[[TMP_A]], %[[B_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[B_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// LLVM: store <4 x i32> %[[TMP_A]], ptr %[[B_ADDR]], align 16
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[B_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// OGCG: store <4 x i32> %[[TMP_A]], ptr %[[B_ADDR]], align 16
