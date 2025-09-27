@@ -141,13 +141,13 @@ static void fillDict(irdl::detail::dictionary &dict, const OpStrings &strings) {
   dict["OP_RESULT_INITIALIZER_LIST"] =
       resultCount ? joinNameList(strings.opResultNames) : "{\"\"}";
   dict["OP_REGION_COUNT"] = std::to_string(regionCount);
-  dict["OP_ADD_REGIONS"] =
-      regionCount ? std::string(llvm::formatv(
-                        R"(for (unsigned i = 0; i != {0}; ++i)
+  dict["OP_ADD_REGIONS"] = regionCount
+                               ? std::string(llvm::formatv(
+                                     R"(for (unsigned i = 0; i != {0}; ++i)
   (void)odsState.addRegion();
 )",
-                        regionCount))
-                  : "";
+                                     regionCount))
+                               : "";
 }
 
 /// Fills a dictionary with values from DialectStrings
@@ -273,10 +273,10 @@ static void generateOpBuilderDeclarations(irdl::detail::dictionary &dict,
 }
 
 // add traits to the dictionary, return true if any were added
-static std::vector<std::string> generateTraits(irdl::detail::dictionary &dict,
+static SmallVector<std::string> generateTraits(irdl::detail::dictionary &dict,
                                                irdl::OperationOp op,
                                                const OpStrings &strings) {
-  std::vector<std::string> cppTraitNames;
+  SmallVector<std::string> cppTraitNames;
   if (!strings.opRegionNames.empty()) {
     cppTraitNames.push_back(
         llvm::formatv("::mlir::OpTrait::NRegions<{0}>::Impl",
@@ -296,7 +296,7 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
   const auto opStrings = getStrings(op);
   fillDict(dict, opStrings);
 
-  std::vector<std::string> traitNames = generateTraits(dict, op, opStrings);
+  SmallVector<std::string> traitNames = generateTraits(dict, op, opStrings);
   if (traitNames.empty())
     dict["OP_TEMPLATE_ARGS"] = opStrings.opCppName;
   else
@@ -359,9 +359,10 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
 
 static void generateVerifiers(irdl::detail::dictionary &dict,
                               irdl::OperationOp op, const OpStrings &strings) {
-  std::vector<std::string> verifierHelpers;
-  std::vector<std::string> verifierCalls;
-  if (strings.opRegionNames.empty()) {
+  SmallVector<std::string> verifierHelpers;
+  SmallVector<std::string> verifierCalls;
+  auto regionsOp = op.getOp<irdl::RegionsOp>();
+  if (strings.opRegionNames.empty() || !regionsOp) {
     dict["OP_VERIFIER_HELPERS"] = "";
     dict["OP_VERIFIER"] = "";
     // Currently IRDL regions are the only reason to generate a verifier,
@@ -376,13 +377,55 @@ static void generateVerifiers(irdl::detail::dictionary &dict,
         llvm::formatv("__mlir_irdl_local_region_constraint_{0}_{1}",
                       strings.opCppName, regionName)
             .str();
-    std::string condition = "true"; // FIXME: get from irdl region op
-    std::string textualConditionName =
-        "any region"; // FIXME: can use textual irdl for this region?
+
+    // Extract the actual region constraint from the IRDL RegionOp
+    std::string condition = "true";
+    std::string textualConditionName = "any region";
+
+    if (auto regionDefOp =
+            dyn_cast<irdl::RegionOp>(regionsOp->getArgs()[i].getDefiningOp())) {
+      // Generate constraint condition based on RegionOp attributes
+      SmallVector<std::string> conditionParts;
+      SmallVector<std::string> descriptionParts;
+
+      // Check number of blocks constraint
+      if (auto blockCount = regionDefOp.getNumberOfBlocks()) {
+        conditionParts.push_back(
+            llvm::formatv("region.getBlocks().size() == {0}",
+                          blockCount.value())
+                .str());
+        descriptionParts.push_back(
+            llvm::formatv("exactly {0} block(s)", blockCount.value()).str());
+      }
+
+      // Check entry block arguments constraint
+      if (regionDefOp.getConstrainedArguments()) {
+        size_t expectedArgCount = regionDefOp.getEntryBlockArgs().size();
+        conditionParts.push_back(
+            llvm::formatv("region.getNumArguments() == {0}", expectedArgCount)
+                .str());
+        descriptionParts.push_back(
+            llvm::formatv("{0} entry block argument(s)", expectedArgCount)
+                .str());
+      }
+
+      // Combine conditions
+      if (!conditionParts.empty()) {
+        condition = llvm::join(conditionParts, " && ");
+      }
+
+      // Generate descriptive error message
+      if (!descriptionParts.empty()) {
+        textualConditionName =
+            llvm::formatv("region with {0}",
+                          llvm::join(descriptionParts, " and "))
+                .str();
+      }
+    }
 
     verifierHelpers.push_back(llvm::formatv(
         R"(static ::llvm::LogicalResult {0}(::mlir::Operation *op, ::mlir::Region &region, ::llvm::StringRef regionName, unsigned regionIndex) {{
-    if (!{1}) {{
+    if (!({1})) {{
       return op->emitOpError("region #") << regionIndex
           << (regionName.empty() ? " " : " ('" + regionName + "')
           << "failed to verify constraint: {2}";
