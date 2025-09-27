@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <numeric>
+
 #include "CIRGenOpenACCRecipe.h"
 
 namespace clang::CIRGen {
@@ -33,6 +35,110 @@ mlir::Block *OpenACCRecipeBuilderBase::createRecipeBlock(mlir::Region &region,
 
   llvm::SmallVector<mlir::Location> locs{types.size(), loc};
   return builder.createBlock(&region, region.end(), types, locs);
+}
+
+mlir::Value OpenACCRecipeBuilderBase::makeBoundsAlloca(
+    mlir::Block *block, SourceRange exprRange, mlir::Location loc,
+    std::string_view allocaName, size_t numBounds,
+    llvm::ArrayRef<QualType> boundTypes) {
+  mlir::OpBuilder::InsertionGuard guardCase(builder);
+
+  // Get the range of bounds arguments, which are all but the 1st arg.
+  llvm::ArrayRef<mlir::BlockArgument> boundsRange =
+      block->getArguments().drop_front(1);
+
+  // boundTypes contains the before and after of each bounds, so it ends up
+  // having 1 extra. Assert this is the case to ensure we don't call this in the
+  // wrong 'block'.
+  assert(boundsRange.size() + 1 == boundTypes.size());
+
+  mlir::Type itrTy = cgf.cgm.convertType(cgf.getContext().UnsignedLongLongTy);
+  auto idxType = mlir::IndexType::get(&cgf.getMLIRContext());
+
+  auto getUpperBound = [&](mlir::Value bound) {
+    auto upperBoundVal =
+        mlir::acc::GetUpperboundOp::create(builder, loc, idxType, bound);
+    return mlir::UnrealizedConversionCastOp::create(builder, loc, itrTy,
+                                                    upperBoundVal.getResult())
+        .getResult(0);
+  };
+
+  auto isArrayTy = [&](QualType ty) {
+    if (ty->isArrayType() && !ty->isConstantArrayType())
+      cgf.cgm.errorNYI(exprRange, "OpenACC recipe init for VLAs");
+    return ty->isConstantArrayType();
+  };
+
+  mlir::Type topLevelTy = cgf.convertType(boundTypes.back());
+  cir::PointerType topLevelTyPtr = builder.getPointerTo(topLevelTy);
+  // Do an alloca for the 'top' level type without bounds.
+  mlir::Value initialAlloca = builder.createAlloca(
+      loc, topLevelTyPtr, topLevelTy, allocaName,
+      cgf.getContext().getTypeAlignInChars(boundTypes.back()));
+
+  bool lastBoundWasArray = isArrayTy(boundTypes.back());
+
+  // Since we're iterating the types in reverse, this sets up for each index
+  // corresponding to the boundsRange to be the 'after application of the
+  // bounds.
+  llvm::ArrayRef<QualType> boundResults = boundTypes.drop_back(1);
+
+  // Collect the 'do we have any allocas needed after this type' list.
+  llvm::SmallVector<bool> allocasLeftArr;
+  llvm::ArrayRef<QualType> resultTypes = boundTypes.drop_front();
+  std::transform_inclusive_scan(
+      resultTypes.begin(), resultTypes.end(),
+      std::back_inserter(allocasLeftArr), std::plus<bool>{},
+      [](QualType ty) { return !ty->isConstantArrayType(); });
+
+  // Keep track of the number of 'elements' that we're allocating. Individual
+  // allocas should multiply this by the size of its current allocation.
+  mlir::Value cumulativeElts;
+  for (auto [bound, resultType, allocasLeft] : llvm::reverse(
+           llvm::zip_equal(boundsRange, boundResults, allocasLeftArr))) {
+
+    // if there is no further 'alloca' operation we need to do, we can skip
+    // creating the UB/multiplications/etc.
+    if (!allocasLeft)
+      break;
+
+    // First: figure out the number of elements in the current 'bound' list.
+    mlir::Value eltsPerSubArray = getUpperBound(bound);
+    mlir::Value eltsToAlloca;
+
+    // IF we are in a sub-bounds, the total number of elements to alloca is
+    // the product of that one and the current 'bounds' size.  That is,
+    // arr[5][5], we would need 25 elements, not just 5. Else it is just the
+    // current number of elements.
+    if (cumulativeElts)
+      eltsToAlloca = builder.createMul(loc, eltsPerSubArray, cumulativeElts);
+    else
+      eltsToAlloca = eltsPerSubArray;
+
+    if (!lastBoundWasArray) {
+      // If we have to do an allocation, figure out the size of the
+      // allocation.  alloca takes the number of bytes, not elements.
+      TypeInfoChars eltInfo = cgf.getContext().getTypeInfoInChars(resultType);
+      cir::ConstantOp eltSize = builder.getConstInt(
+          loc, itrTy, eltInfo.Width.alignTo(eltInfo.Align).getQuantity());
+      mlir::Value curSize = builder.createMul(loc, eltsToAlloca, eltSize);
+
+      mlir::Type eltTy = cgf.convertType(resultType);
+      cir::PointerType ptrTy = builder.getPointerTo(eltTy);
+      builder.createAlloca(loc, ptrTy, eltTy, "openacc.init.bounds",
+                           cgf.getContext().getTypeAlignInChars(resultType),
+                           curSize);
+
+      // TODO: OpenACC : At this point we should be copying the addresses of
+      // each element of this to the last allocation.  At the moment, that is
+      // not yet implemented.
+      cgf.cgm.errorNYI(exprRange, "OpenACC recipe alloca copying");
+    }
+
+    cumulativeElts = eltsToAlloca;
+    lastBoundWasArray = isArrayTy(resultType);
+  }
+  return initialAlloca;
 }
 
 mlir::Value
@@ -258,7 +364,11 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
         cgf.emitAutoVarAlloca(*allocaDecl, builder.saveInsertionPoint());
     cgf.emitAutoVarInit(tempDeclEmission);
   } else {
-    cgf.cgm.errorNYI(exprRange, "private-init with bounds");
+    makeBoundsAlloca(block, exprRange, loc, "openacc.private.init", numBounds,
+                     boundTypes);
+
+    if (initExpr)
+      cgf.cgm.errorNYI(exprRange, "private-init with bounds initialization");
   }
 
   mlir::acc::YieldOp::create(builder, locEnd);
