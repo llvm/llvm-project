@@ -577,7 +577,7 @@ private:
       if (IsIf && CurrentToken->is(tok::semi)) {
         for (auto *Tok = OpeningParen.Next;
              Tok != CurrentToken &&
-             !Tok->isOneOf(tok::equal, tok::l_paren, tok::l_brace);
+             Tok->isNotOneOf(tok::equal, tok::l_paren, tok::l_brace);
              Tok = Tok->Next) {
           if (Tok->isPointerOrReference())
             Tok->setFinalizedType(TT_PointerOrReference);
@@ -1430,8 +1430,8 @@ private:
                   Scopes.back() == ST_Class)) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
-                 !Line.getFirstNonComment()->isOneOf(tok::kw_enum, tok::kw_case,
-                                                     tok::kw_default) &&
+                 Line.getFirstNonComment()->isNotOneOf(
+                     tok::kw_enum, tok::kw_case, tok::kw_default) &&
                  !Line.startsWith(tok::kw_typedef, tok::kw_enum)) {
         if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept) ||
             Prev->ClosesRequiresClause) {
@@ -1570,8 +1570,8 @@ private:
           !Tok->isOneOf(TT_TypeDeclarationParen, TT_RequiresExpressionLParen)) {
         if (!Prev ||
             (!Prev->isAttribute() &&
-             !Prev->isOneOf(TT_RequiresClause, TT_LeadingJavaAnnotation,
-                            TT_BinaryOperator))) {
+             Prev->isNotOneOf(TT_RequiresClause, TT_LeadingJavaAnnotation,
+                              TT_BinaryOperator))) {
           Line.MightBeFunctionDecl = true;
           Tok->MightBeFunctionDeclParen = true;
         }
@@ -1669,7 +1669,7 @@ private:
         }
       }
       while (CurrentToken &&
-             !CurrentToken->isOneOf(tok::l_paren, tok::semi, tok::r_paren)) {
+             CurrentToken->isNotOneOf(tok::l_paren, tok::semi, tok::r_paren)) {
         if (CurrentToken->isOneOf(tok::star, tok::amp))
           CurrentToken->setType(TT_PointerOrReference);
         auto Next = CurrentToken->getNextNonComment();
@@ -2099,7 +2099,7 @@ private:
     // Reset token type in case we have already looked at it and then
     // recovered from an error (e.g. failure to find the matching >).
     if (!CurrentToken->isTypeFinalized() &&
-        !CurrentToken->isOneOf(
+        CurrentToken->isNotOneOf(
             TT_LambdaLSquare, TT_LambdaLBrace, TT_AttributeMacro, TT_IfMacro,
             TT_ForEachMacro, TT_TypenameMacro, TT_FunctionLBrace,
             TT_ImplicitStringLiteral, TT_InlineASMBrace, TT_FatArrow,
@@ -2516,7 +2516,7 @@ private:
         Current.setType(TT_CastRParen);
       if (Current.MatchingParen && Current.Next &&
           !Current.Next->isBinaryOperator() &&
-          !Current.Next->isOneOf(
+          Current.Next->isNotOneOf(
               tok::semi, tok::colon, tok::l_brace, tok::l_paren, tok::comma,
               tok::period, tok::arrow, tok::coloncolon, tok::kw_noexcept)) {
         if (FormatToken *AfterParen = Current.MatchingParen->Next;
@@ -2574,9 +2574,9 @@ private:
     } else if (Current.isOneOf(tok::identifier, tok::kw_const, tok::kw_noexcept,
                                tok::kw_requires) &&
                Current.Previous &&
-               !Current.Previous->isOneOf(tok::equal, tok::at,
-                                          TT_CtorInitializerComma,
-                                          TT_CtorInitializerColon) &&
+               Current.Previous->isNotOneOf(tok::equal, tok::at,
+                                            TT_CtorInitializerComma,
+                                            TT_CtorInitializerColon) &&
                Line.MightBeFunctionDecl && Contexts.size() == 1) {
       // Line.MightBeFunctionDecl can only be true after the parentheses of a
       // function declaration have been found.
@@ -2785,8 +2785,8 @@ private:
       // If there is an identifier (or with a few exceptions a keyword) right
       // before the parentheses, this is unlikely to be a cast.
       if (LeftOfParens->Tok.getIdentifierInfo() &&
-          !LeftOfParens->isOneOf(Keywords.kw_in, tok::kw_return, tok::kw_case,
-                                 tok::kw_delete, tok::kw_throw)) {
+          LeftOfParens->isNotOneOf(Keywords.kw_in, tok::kw_return, tok::kw_case,
+                                   tok::kw_delete, tok::kw_throw)) {
         return false;
       }
 
@@ -2953,7 +2953,7 @@ private:
 
     // Search for unexpected tokens.
     for (Prev = BeforeRParen; Prev != LParen; Prev = Prev->Previous)
-      if (!Prev->isOneOf(tok::kw_const, tok::identifier, tok::coloncolon))
+      if (Prev->isNotOneOf(tok::kw_const, tok::identifier, tok::coloncolon))
         return false;
 
     return true;
@@ -3745,8 +3745,8 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
     const bool InRequiresExpression = Line.Type == LT_RequiresExpression;
     for (auto &Child : Line.Children) {
       if (InRequiresExpression &&
-          !Child->First->isOneOf(tok::kw_typename, tok::kw_requires,
-                                 TT_CompoundRequirementLBrace)) {
+          Child->First->isNotOneOf(tok::kw_typename, tok::kw_requires,
+                                   TT_CompoundRequirementLBrace)) {
         Child->Type = LT_SimpleRequirement;
       }
       annotate(*Child);
@@ -4329,9 +4329,9 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     // Slightly prefer formatting local lambda definitions like functions.
     if (Right.is(TT_LambdaLSquare) && Left.is(tok::equal))
       return 35;
-    if (!Right.isOneOf(TT_ObjCMethodExpr, TT_LambdaLSquare,
-                       TT_ArrayInitializerLSquare,
-                       TT_DesignatedInitializerLSquare, TT_AttributeSquare)) {
+    if (Right.isNotOneOf(TT_ObjCMethodExpr, TT_LambdaLSquare,
+                         TT_ArrayInitializerLSquare,
+                         TT_DesignatedInitializerLSquare, TT_AttributeSquare)) {
       return 500;
     }
   }
@@ -4520,7 +4520,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                           const FormatToken &Left,
                                           const FormatToken &Right) const {
   if (Left.is(tok::kw_return) &&
-      !Right.isOneOf(tok::semi, tok::r_paren, tok::hashhash)) {
+      Right.isNotOneOf(tok::semi, tok::r_paren, tok::hashhash)) {
     return true;
   }
   if (Left.is(tok::kw_throw) && Right.is(tok::l_paren) && Right.MatchingParen &&
@@ -4809,10 +4809,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                           TT_LambdaLSquare)));
   }
   if (Right.is(tok::l_square) &&
-      !Right.isOneOf(TT_ObjCMethodExpr, TT_LambdaLSquare,
-                     TT_DesignatedInitializerLSquare,
-                     TT_StructuredBindingLSquare, TT_AttributeSquare) &&
-      !Left.isOneOf(tok::numeric_constant, TT_DictLiteral) &&
+      Right.isNotOneOf(TT_ObjCMethodExpr, TT_LambdaLSquare,
+                       TT_DesignatedInitializerLSquare,
+                       TT_StructuredBindingLSquare, TT_AttributeSquare) &&
+      Left.isNotOneOf(tok::numeric_constant, TT_DictLiteral) &&
       !(Left.isNot(tok::r_square) && Style.SpaceBeforeSquareBrackets &&
         Right.is(TT_ArraySubscriptLSquare))) {
     return false;
@@ -4918,7 +4918,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (Left.is(tok::at) && Right.isNot(tok::objc_not_keyword))
     return false;
   if (Right.is(TT_UnaryOperator)) {
-    return !Left.isOneOf(tok::l_paren, tok::l_square, tok::at) &&
+    return Left.isNotOneOf(tok::l_paren, tok::l_square, tok::at) &&
            (Left.isNot(tok::colon) || Left.isNot(TT_ObjCMethodExpr));
   }
   // No space between the variable name and the initializer list.
@@ -5261,8 +5261,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.is(tok::ellipsis))
       return false;
     if (Left.is(TT_TemplateCloser) &&
-        !Right.isOneOf(tok::equal, tok::l_brace, tok::comma, tok::l_square,
-                       Keywords.kw_implements, Keywords.kw_extends)) {
+        Right.isNotOneOf(tok::equal, tok::l_brace, tok::comma, tok::l_square,
+                         Keywords.kw_implements, Keywords.kw_extends)) {
       // Type assertions ('<type>expr') are not followed by whitespace. Other
       // locations that should have whitespace following are identified by the
       // above set of follower tokens.
@@ -5550,14 +5550,14 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return Right.hasWhitespaceBefore();
   }
   if (Right.is(tok::coloncolon) &&
-      !Left.isOneOf(tok::l_brace, tok::comment, tok::l_paren)) {
+      Left.isNotOneOf(tok::l_brace, tok::comment, tok::l_paren)) {
     // Put a space between < and :: in vector< ::std::string >
     return (Left.is(TT_TemplateOpener) &&
             ((Style.Standard < FormatStyle::LS_Cpp11) ||
              ShouldAddSpacesInAngles())) ||
-           !(Left.isOneOf(tok::l_paren, tok::r_paren, tok::l_square,
-                          tok::kw___super, TT_TemplateOpener,
-                          TT_TemplateCloser)) ||
+           Left.isNotOneOf(tok::l_paren, tok::r_paren, tok::l_square,
+                           tok::kw___super, TT_TemplateOpener,
+                           TT_TemplateCloser) ||
            (Left.is(tok::l_paren) && Style.SpacesInParensOptions.Other);
   }
   if ((Left.is(TT_TemplateOpener)) != (Right.is(TT_TemplateCloser)))
@@ -5600,7 +5600,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
 // Returns 'true' if 'Tok' is a brace we'd want to break before in Allman style.
 static bool isAllmanBrace(const FormatToken &Tok) {
   return Tok.is(tok::l_brace) && Tok.is(BK_Block) &&
-         !Tok.isOneOf(TT_ObjCBlockLBrace, TT_LambdaLBrace, TT_DictLiteral);
+         Tok.isNotOneOf(TT_ObjCBlockLBrace, TT_LambdaLBrace, TT_DictLiteral);
 }
 
 // Returns 'true' if 'Tok' is a function argument.
@@ -6207,8 +6207,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     // Avoid to break after '(' in the cases that is in bang operators.
     if (Right.is(tok::l_paren)) {
-      return !Left.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator,
-                           TT_TemplateCloser);
+      return Left.isNotOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator,
+                             TT_TemplateCloser);
     }
     // Avoid to break between the value and its suffix part.
     if (Left.is(TT_TableGenValueSuffix))
@@ -6295,8 +6295,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   }
 
   if (Right.is(tok::colon) &&
-      !Right.isOneOf(TT_CtorInitializerColon, TT_InlineASMColon,
-                     TT_BitFieldColon)) {
+      Right.isNotOneOf(TT_CtorInitializerColon, TT_InlineASMColon,
+                       TT_BitFieldColon)) {
     return false;
   }
   if (Left.is(tok::colon) && Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {
@@ -6406,8 +6406,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   // Allow breaking after a trailing annotation, e.g. after a method
   // declaration.
   if (Left.is(TT_TrailingAnnotation)) {
-    return !Right.isOneOf(tok::l_brace, tok::semi, tok::equal, tok::l_paren,
-                          tok::less, tok::coloncolon);
+    return Right.isNotOneOf(tok::l_brace, tok::semi, tok::equal, tok::l_paren,
+                            tok::less, tok::coloncolon);
   }
 
   if (Right.isAttribute())

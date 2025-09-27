@@ -584,7 +584,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
           ProbablyBracedList =
               ProbablyBracedList ||
               (NextTok->is(tok::identifier) &&
-               !PrevTok->isOneOf(tok::semi, tok::r_brace, tok::l_brace));
+               PrevTok->isNotOneOf(tok::semi, tok::r_brace, tok::l_brace));
 
           ProbablyBracedList = ProbablyBracedList ||
                                (NextTok->is(tok::semi) &&
@@ -607,7 +607,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
               // A statement can end with only `;` (simple statement), a block
               // closing brace (compound statement), or `:` (label statement).
               // If PrevTok is a block opening brace, Tok ends an empty block.
-              !PrevTok->isOneOf(tok::semi, BK_Block, tok::colon)) {
+              PrevTok->isNotOneOf(tok::semi, BK_Block, tok::colon)) {
             ProbablyBracedList = true;
           }
         }
@@ -1233,22 +1233,22 @@ void UnwrappedLineParser::parsePPUnknown() {
 static bool tokenCanStartNewLine(const FormatToken &Tok) {
   // Semicolon can be a null-statement, l_square can be a start of a macro or
   // a C++11 attribute, but this doesn't seem to be common.
-  return !Tok.isOneOf(tok::semi, tok::l_brace,
-                      // Tokens that can only be used as binary operators and a
-                      // part of overloaded operator names.
-                      tok::period, tok::periodstar, tok::arrow, tok::arrowstar,
-                      tok::less, tok::greater, tok::slash, tok::percent,
-                      tok::lessless, tok::greatergreater, tok::equal,
-                      tok::plusequal, tok::minusequal, tok::starequal,
-                      tok::slashequal, tok::percentequal, tok::ampequal,
-                      tok::pipeequal, tok::caretequal, tok::greatergreaterequal,
-                      tok::lesslessequal,
-                      // Colon is used in labels, base class lists, initializer
-                      // lists, range-based for loops, ternary operator, but
-                      // should never be the first token in an unwrapped line.
-                      tok::colon,
-                      // 'noexcept' is a trailing annotation.
-                      tok::kw_noexcept);
+  return Tok.isNotOneOf(
+      tok::semi, tok::l_brace,
+      // Tokens that can only be used as binary operators and a
+      // part of overloaded operator names.
+      tok::period, tok::periodstar, tok::arrow, tok::arrowstar, tok::less,
+      tok::greater, tok::slash, tok::percent, tok::lessless,
+      tok::greatergreater, tok::equal, tok::plusequal, tok::minusequal,
+      tok::starequal, tok::slashequal, tok::percentequal, tok::ampequal,
+      tok::pipeequal, tok::caretequal, tok::greatergreaterequal,
+      tok::lesslessequal,
+      // Colon is used in labels, base class lists, initializer lists,
+      // range-based for loops, ternary operator, but should never be the first
+      // token in an unwrapped line.
+      tok::colon,
+      // 'noexcept' is a trailing annotation.
+      tok::kw_noexcept);
 }
 
 static bool mustBeJSIdent(const AdditionalKeywords &Keywords,
@@ -4885,8 +4885,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       const auto *Next = Tokens->peekNextToken();
       if ((Style.isVerilog() && !Keywords.isVerilogPPDirective(*Next)) ||
           (Style.isTableGen() &&
-           !Next->isOneOf(tok::kw_else, tok::pp_define, tok::pp_ifdef,
-                          tok::pp_ifndef, tok::pp_endif))) {
+           Next->isNotOneOf(tok::kw_else, tok::pp_define, tok::pp_ifdef,
+                            tok::pp_ifndef, tok::pp_endif))) {
         break;
       }
       distributeComments(Comments, FormatTok);

@@ -645,6 +645,9 @@ public:
     return is(K1) || isOneOf(K2, Ks...);
   }
   template <typename T> bool isNot(T Kind) const { return !is(Kind); }
+  template <typename... Ts> bool isNotOneOf(Ts... Ks) const {
+    return !isOneOf(Ks...);
+  }
 
   bool isIf(bool AllowConstexprMacro = true) const {
     return is(tok::kw_if) || endsSequence(tok::kw_constexpr, tok::kw_if) ||
@@ -748,8 +751,8 @@ public:
   /// Returns \c true if this is a "." or "->" accessing a member.
   bool isMemberAccess() const {
     return isOneOf(tok::arrow, tok::period, tok::arrowstar) &&
-           !isOneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
-                    TT_LambdaArrow, TT_LeadingJavaAnnotation);
+           isNotOneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
+                      TT_LambdaArrow, TT_LeadingJavaAnnotation);
   }
 
   bool isPointerOrReference() const {
@@ -1877,8 +1880,9 @@ struct AdditionalKeywords {
     // In Verilog the colon in a default label is optional.
     return Tok.is(TT_CaseLabelColon) ||
            (Tok.is(tok::kw_default) &&
-            !(Next && Next->isOneOf(tok::colon, tok::semi, kw_clocking, kw_iff,
-                                    kw_input, kw_output, kw_sequence)));
+            (!Next ||
+             Next->isNotOneOf(tok::colon, tok::semi, kw_clocking, kw_iff,
+                              kw_input, kw_output, kw_sequence)));
   }
 
   /// Returns whether \p Tok is a Verilog keyword that starts a
