@@ -14,39 +14,22 @@
 #ifndef LLVM_CLANG_BASIC_UNSIGNED_OR_NONE_H
 #define LLVM_CLANG_BASIC_UNSIGNED_OR_NONE_H
 
-#include <cassert>
-#include <optional>
+#include "llvm/ADT/ValueOrSentinel.h"
 
 namespace clang {
 
-struct UnsignedOrNone {
-  constexpr UnsignedOrNone(std::nullopt_t) : Rep(0) {}
-  UnsignedOrNone(unsigned Val) : Rep(Val + 1) { assert(operator bool()); }
-  UnsignedOrNone(int) = delete;
-
-  constexpr static UnsignedOrNone fromInternalRepresentation(unsigned Rep) {
-    return {std::nullopt, Rep};
+namespace detail {
+struct AdjustAddOne {
+  constexpr static unsigned toRepresentation(unsigned Value) {
+    return Value + 1;
   }
-  constexpr unsigned toInternalRepresentation() const { return Rep; }
-
-  explicit constexpr operator bool() const { return Rep != 0; }
-  unsigned operator*() const {
-    assert(operator bool());
-    return Rep - 1;
+  constexpr static unsigned fromRepresentation(unsigned Value) {
+    return Value - 1;
   }
-
-  friend constexpr bool operator==(UnsignedOrNone LHS, UnsignedOrNone RHS) {
-    return LHS.Rep == RHS.Rep;
-  }
-  friend constexpr bool operator!=(UnsignedOrNone LHS, UnsignedOrNone RHS) {
-    return LHS.Rep != RHS.Rep;
-  }
-
-private:
-  constexpr UnsignedOrNone(std::nullopt_t, unsigned Rep) : Rep(Rep) {};
-
-  unsigned Rep;
 };
+} // namespace detail
+
+using UnsignedOrNone = llvm::ValueOrSentinel<unsigned, 0, detail::AdjustAddOne>;
 
 } // namespace clang
 
