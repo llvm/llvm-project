@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -naive-convert-vector-to-llvm -split-input-file | FileCheck %s
 
 //===========================================================================//
 // Complex tests for Vector-to-LLVM conversion

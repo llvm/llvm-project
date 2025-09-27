@@ -1,14 +1,14 @@
 // Check that the wide integer `arith.sitofp` emulation produces the same result as wide
 // `arith.sitofp`. Emulate i32 ops with i16 ops.
 
-// RUN: mlir-opt %s --convert-scf-to-cf --convert-cf-to-llvm --convert-vector-to-llvm \
+// RUN: mlir-opt %s --convert-scf-to-cf --convert-cf-to-llvm --naive-convert-vector-to-llvm \
 // RUN:             --convert-func-to-llvm --convert-arith-to-llvm | \
 // RUN:   mlir-runner -e entry -entry-point-result=void \
 // RUN:                   --shared-libs=%mlir_c_runner_utils | \
 // RUN:   FileCheck %s --match-full-lines
 
 // RUN: mlir-opt %s --test-arith-emulate-wide-int="widest-int-supported=16" \
-// RUN:             --convert-scf-to-cf --convert-cf-to-llvm --convert-vector-to-llvm \
+// RUN:             --convert-scf-to-cf --convert-cf-to-llvm --naive-convert-vector-to-llvm \
 // RUN:             --convert-func-to-llvm --convert-arith-to-llvm | \
 // RUN:   mlir-runner -e entry -entry-point-result=void \
 // RUN:                   --shared-libs=%mlir_c_runner_utils | \

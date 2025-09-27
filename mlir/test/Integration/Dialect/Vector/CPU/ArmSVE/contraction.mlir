@@ -1,6 +1,6 @@
 // DEFINE: %{compile} = mlir-opt %s  -transform-interpreter -test-transform-dialect-erase-schedule\
 // DEFINE:    -cse -canonicalize -convert-vector-to-scf -arm-sve-legalize-vector-storage\
-// DEFINE:    -convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm -o %t
+// DEFINE:    -naive-convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm -o %t
 // DEFINE: %{entry} =
 // DEFINE: %{run} = %mcr_aarch64_cmd %t -e=%{entry} -entry-point-result=void --march=aarch64 --mattr="+sve" -shared-libs=%native_mlir_c_runner_utils
 

@@ -1427,7 +1427,7 @@ def ConvertArmSMEToLLVM : InterfacePass<"convert-arm-sme-to-llvm", "FunctionOpIn
 // VectorToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
+def NaiveConvertVectorToLLVMPass : Pass<"naive-convert-vector-to-llvm"> {
   let summary = "Lower the operations from the vector dialect into the LLVM "
                 "dialect";
   let description = [{

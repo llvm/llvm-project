@@ -1,12 +1,14 @@
-//===- VectorToLLVM.cpp - Conversion from Vector to the LLVM dialect ------===//
+//===- VectorToLLVM.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// (Naive) Conversion from Vector to the LLVM dialect
+//===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Conversion/VectorToLLVM/NaiveConvertVectorToLLVM.h"
 
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"

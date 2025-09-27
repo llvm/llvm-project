@@ -1,12 +1,15 @@
-//===- VectorToLLVM.cpp - Conversion from Vector to the LLVM dialect ------===//
+//===- NaiveConverVectorToLLVM.cpp
+//-----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// (Naive) Conversion from Vector to the LLVM dialect
+//===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
+#include "mlir/Conversion/VectorToLLVM/NaiveConvertVectorToLLVMPass.h"
 
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -28,7 +31,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTVECTORTOLLVMPASS
+#define GEN_PASS_DEF_NAIVECONVERTVECTORTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -36,8 +39,9 @@ using namespace mlir;
 using namespace mlir::vector;
 
 namespace {
-struct ConvertVectorToLLVMPass
-    : public impl::ConvertVectorToLLVMPassBase<ConvertVectorToLLVMPass> {
+struct NaiveConvertVectorToLLVMPass
+    : public impl::NaiveConvertVectorToLLVMPassBase<
+          NaiveConvertVectorToLLVMPass> {
 
   using Base::Base;
 
@@ -60,7 +64,7 @@ struct ConvertVectorToLLVMPass
 };
 } // namespace
 
-void ConvertVectorToLLVMPass::runOnOperation() {
+void NaiveConvertVectorToLLVMPass::runOnOperation() {
   // Perform progressive lowering of operations on slices and all contraction
   // operations. Also materializes masks, lowers vector.step, rank-reduces FMA,
   // applies folding and DCE.

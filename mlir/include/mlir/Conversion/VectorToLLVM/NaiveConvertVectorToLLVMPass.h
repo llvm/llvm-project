@@ -5,16 +5,16 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef MLIR_CONVERSION_VECTORTOLLVM_CONVERTVECTORTOLLVMPASS_H_
-#define MLIR_CONVERSION_VECTORTOLLVM_CONVERTVECTORTOLLVMPASS_H_
+#ifndef MLIR_CONVERSION_VECTORTOLLVM_NAIVECONVERTVECTORTOLLVMPASS_H_
+#define MLIR_CONVERSION_VECTORTOLLVM_NAIVECONVERTVECTORTOLLVMPASS_H_
 
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Conversion/VectorToLLVM/NaiveConvertVectorToLLVM.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 
 namespace mlir {
 class Pass;
 
-#define GEN_PASS_DECL_CONVERTVECTORTOLLVMPASS
+#define GEN_PASS_DECL_NAIVECONVERTVECTORTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
-#endif // MLIR_CONVERSION_VECTORTOLLVM_CONVERTVECTORTOLLVMPASS_H_
+#endif // MLIR_CONVERSION_VECTORTOLLVM_NAIVECONVERTVECTORTOLLVMPASS_H_
