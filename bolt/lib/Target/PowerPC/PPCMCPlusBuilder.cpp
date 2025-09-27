@@ -98,8 +98,23 @@ const MCSymbol *PPCMCPlusBuilder::getTargetSymbol(const MCInst &Inst,
 }
 
 bool PPCMCPlusBuilder::convertJmpToTailCall(MCInst &Inst) {
-  (void)Inst;
-  return false;
+  switch (Inst.getOpcode()) {
+  // Uncoditional direct branch -> add link bit
+  case PPC::B: // relative
+    Inst.setOpcode(PPC::BL);
+    return true;
+  case PPC::BA: // absolute
+    Inst.setOpcode(PPC::BLA);
+    return true;
+
+  // Indirect branch via CTR -> add link bit
+  case PPC::BCTR:
+    Inst.setOpcode(PPC::BCTRL);
+    return true;
+  // Contitional branches
+  default:
+    return false;
+  }
 }
 
 bool PPCMCPlusBuilder::isTailCall(const MCInst &I) const {
