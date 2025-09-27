@@ -61,6 +61,7 @@
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -1400,6 +1401,32 @@ void CodeGenModule::Release() {
                                   PAuthABIVersion);
       }
     }
+  }
+  if ((T.isARM() || T.isThumb()) && getTriple().isTargetAEABI() &&
+      getTriple().isOSBinFormatELF()) {
+    uint32_t TagVal = 0;
+    if (getCodeGenOpts().FPDenormalMode ==
+        llvm::DenormalMode::getPositiveZero())
+      TagVal = llvm::ARMBuildAttrs::PositiveZero;
+    else if (getCodeGenOpts().FPDenormalMode == llvm::DenormalMode::getIEEE())
+      TagVal = llvm::ARMBuildAttrs::IEEEDenormals;
+    else if (getCodeGenOpts().FPDenormalMode ==
+             llvm::DenormalMode::getPreserveSign())
+      TagVal = llvm::ARMBuildAttrs::PreserveFPSign;
+    getModule().addModuleFlag(llvm::Module::Warning, "arm-eabi-fp-denormal",
+                              TagVal);
+
+    if (getLangOpts().getFPExceptionMode() !=
+        LangOptions::FPExceptionModeKind::FPE_Ignore)
+      getModule().addModuleFlag(llvm::Module::Warning, "arm-eabi-fp-exceptions",
+                                llvm::ARMBuildAttrs::Allowed);
+
+    if (getLangOpts().NoHonorNaNs && getLangOpts().NoHonorInfs)
+      TagVal = llvm::ARMBuildAttrs::AllowIEEENormal;
+    else
+      TagVal = llvm::ARMBuildAttrs::AllowIEEE754;
+    getModule().addModuleFlag(llvm::Module::Warning, "arm-eabi-fp-number-model",
+                              TagVal);
   }
 
   if (CodeGenOpts.StackClashProtector)
