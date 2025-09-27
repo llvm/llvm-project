@@ -29,7 +29,6 @@
 #include <__flat_map/key_value_iterator.h>
 #include <__flat_map/sorted_unique.h>
 #include <__flat_map/utils.h>
-#include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
 #include <__fwd/memory.h>
@@ -48,7 +47,6 @@
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/drop_view.h>
 #include <__ranges/from_range.h>
-#include <__ranges/ref_view.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
 #include <__ranges/zip_view.h>
