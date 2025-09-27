@@ -63,6 +63,10 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
   if (name.starts_with("_Z"))
     return Mangled::eManglingSchemeItanium;
 
+  // __Z is used on i686 mingw32
+  if (name.starts_with("__Z"))
+    return Mangled::eManglingSchemeItanium;
+
   // ___Z is a clang extension of block invocations
   if (name.starts_with("___Z"))
     return Mangled::eManglingSchemeItanium;
