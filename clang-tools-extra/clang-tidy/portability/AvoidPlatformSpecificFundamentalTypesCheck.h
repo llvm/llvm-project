@@ -18,7 +18,7 @@ namespace clang::tidy::portability {
 /// and warns against their use due to platform-dependent behavior.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/portability/avoid-platform-specific-fundamental-types.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/portability/avoid-platform-specific-fundamental-types.html
 class AvoidPlatformSpecificFundamentalTypesCheck : public ClangTidyCheck {
 public:
   AvoidPlatformSpecificFundamentalTypesCheck(StringRef Name,
