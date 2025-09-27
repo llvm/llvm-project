@@ -8548,6 +8548,35 @@ Example:
 The ``nofree`` metadata indicates the memory pointed by the pointer will not be
 freed after the attached instruction.
 
+'``ref``' Metadata
+^^^^^^^^^^^^^^^^^^
+
+The ``ref`` metadata may be attached to a global variable definition with a
+single argument that references a global object. The metadata is lowered to a
+.ref directive which will emit a relocation introducing an explicit dependence
+to the referenced symbol. This is typically used when there is some implicit
+dependence between the symbols that is otherwise opaque to the linker. One such
+example is metadata which is accessed by a runtime with associated
+``__start_<section_name>`` and ``__stop_<section_name>`` symbols.
+
+This metadata lowers to the .ref assembly directive which will add a relocation
+representing an implicit reference from the section the global belongs to, to
+the associated symbol. This link will keep the associated symbol alive if the
+section is not garbage collected. More than one associated node can be attached
+to the same global variable.
+
+It does not have any effect on non-XCOFF targets.
+
+Example:
+
+.. code-block:: text
+
+    @a = global i32 1
+    @b = global i32 2
+    @c = global i32 3, section "abc", !ref !0, !ref !1
+    !0 = !{ptr @a}
+    !1 = !{ptr @b}
+
 
 Module Flags Metadata
 =====================
