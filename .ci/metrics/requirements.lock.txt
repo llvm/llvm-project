@@ -186,34 +186,9 @@ charset-normalizer==3.4.0 \
     --hash=sha256:fe9f97feb71aa9896b81973a7bbada8c49501dc73e58a10fcef6663af95e5079 \
     --hash=sha256:ffc519621dce0c767e96b9c53f09c5d215578e10b02c285809f76509a3931482
     # via requests
-cryptography==43.0.3 \
-    --hash=sha256:0c580952eef9bf68c4747774cde7ec1d85a6e61de97281f2dba83c7d2c806362 \
-    --hash=sha256:0f996e7268af62598f2fc1204afa98a3b5712313a55c4c9d434aef49cadc91d4 \
-    --hash=sha256:1ec0bcf7e17c0c5669d881b1cd38c4972fade441b27bda1051665faaa89bdcaa \
-    --hash=sha256:281c945d0e28c92ca5e5930664c1cefd85efe80e5c0d2bc58dd63383fda29f83 \
-    --hash=sha256:2ce6fae5bdad59577b44e4dfed356944fbf1d925269114c28be377692643b4ff \
-    --hash=sha256:315b9001266a492a6ff443b61238f956b214dbec9910a081ba5b6646a055a805 \
-    --hash=sha256:443c4a81bb10daed9a8f334365fe52542771f25aedaf889fd323a853ce7377d6 \
-    --hash=sha256:4a02ded6cd4f0a5562a8887df8b3bd14e822a90f97ac5e544c162899bc467664 \
-    --hash=sha256:53a583b6637ab4c4e3591a15bc9db855b8d9dee9a669b550f311480acab6eb08 \
-    --hash=sha256:63efa177ff54aec6e1c0aefaa1a241232dcd37413835a9b674b6e3f0ae2bfd3e \
-    --hash=sha256:74f57f24754fe349223792466a709f8e0c093205ff0dca557af51072ff47ab18 \
-    --hash=sha256:7e1ce50266f4f70bf41a2c6dc4358afadae90e2a1e5342d3c08883df1675374f \
-    --hash=sha256:81ef806b1fef6b06dcebad789f988d3b37ccaee225695cf3e07648eee0fc6b73 \
-    --hash=sha256:846da004a5804145a5f441b8530b4bf35afbf7da70f82409f151695b127213d5 \
-    --hash=sha256:8ac43ae87929a5982f5948ceda07001ee5e83227fd69cf55b109144938d96984 \
-    --hash=sha256:9762ea51a8fc2a88b70cf2995e5675b38d93bf36bd67d91721c309df184f49bd \
-    --hash=sha256:a2a431ee15799d6db9fe80c82b055bae5a752bef645bba795e8e52687c69efe3 \
-    --hash=sha256:bf7a1932ac4176486eab36a19ed4c0492da5d97123f1406cf15e41b05e787d2e \
-    --hash=sha256:c2e6fc39c4ab499049df3bdf567f768a723a5e8464816e8f009f121a5a9f4405 \
-    --hash=sha256:cbeb489927bd7af4aa98d4b261af9a5bc025bd87f0e3547e11584be9e9427be2 \
-    --hash=sha256:d03b5621a135bffecad2c73e9f4deb1a0f977b9a8ffe6f8e002bf6c9d07b918c \
-    --hash=sha256:d56e96520b1020449bbace2b78b603442e7e378a9b3bd68de65c782db1507995 \
-    --hash=sha256:df6b6c6d742395dd77a23ea3728ab62f98379eff8fb61be2744d4679ab678f73 \
-    --hash=sha256:e1be4655c7ef6e1bbe6b5d0403526601323420bcf414598955968c9ef3eb7d16 \
-    --hash=sha256:f18c716be16bc1fea8e95def49edf46b82fccaa88587a45f8dc0ff6ab5d8e0a7 \
-    --hash=sha256:f46304d6f0c6ab8e52770addfa2fc41e6629495548862279641972b6215451cd \
-    --hash=sha256:f7b178f11ed3664fd0e995a47ed2b5ff0a12d893e41dd0494f406d1cf555cab7
+cryptography==46.0.1 \
+    # Hashes need to be regenerated for cryptography==46.0.1
+    # via pyjwt
     # via pyjwt
 deprecated==1.2.15 \
     --hash=sha256:353bc4a8ac4bfc96800ddab349d89c25dec1079f65fd53acdcc1e0b975b21320 \
@@ -251,9 +226,9 @@ python-dateutil==2.9.0.post0 \
     --hash=sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3 \
     --hash=sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427
     # via -r ./requirements.txt
-requests==2.32.3 \
-    --hash=sha256:55365417734eb18255590a9ff9eb97e9e1da868d4ccd6402399eaf68af20a760 \
-    --hash=sha256:70761cfe03c773ceb22aa2f671b4757976145175cdfca038c02654d061d6dcc6
+requests==2.32.5 \
+    # Hashes need to be regenerated for requests==2.32.5
+    # via pygithub
     # via pygithub
 six==1.17.0 \
     --hash=sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274 \
@@ -263,9 +238,11 @@ typing-extensions==4.12.2 \
     --hash=sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d \
     --hash=sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8
     # via pygithub
-urllib3==2.2.3 \
-    --hash=sha256:ca899ca043dcb1bafa3e262d73aa25c465bfb49e0bd9dd5d59f1d0acba2f8fac \
-    --hash=sha256:e7d814a81dad81e6caf2ec9fdedb284ecc9c73076b62654547cc64ccdcae26e9
+urllib3==2.5.0 \
+    # Hashes need to be regenerated for urllib3==2.5.0
+    # via
+    #   pygithub
+    #   requests
     # via
     #   pygithub
     #   requests
