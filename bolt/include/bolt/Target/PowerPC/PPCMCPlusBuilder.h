@@ -57,6 +57,10 @@ public:
 
   void createLongTailCall(std::vector<MCInst> &Seq, const MCSymbol *Target,
                           MCContext *Ctx) override;
+
+  std::optional<Relocation>
+  createRelocation(const MCFixup &Fixup,
+                   const MCAsmBackend &MAB) const override;
 };
 
 } // namespace bolt
