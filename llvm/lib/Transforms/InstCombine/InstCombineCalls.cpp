@@ -2405,6 +2405,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
               matchBSwapOrBitReverse(*II, /*MatchBSwaps*/ true,
                                      /*MatchBitReversals*/ true))
         return BitOp;
+
+      // R = fshl(X, X, C2)
+      // fshl(R, R, C1) --> fshl(X, X, (C1 + C2) % bitsize)
+      Value *InnerOp;
+      const APInt *ShAmtInnerC, *ShAmtOuterC;
+      if (match(Op0, m_FShl(m_Value(InnerOp), m_Deferred(InnerOp),
+                            m_APInt(ShAmtInnerC))) &&
+          match(ShAmtC, m_APInt(ShAmtOuterC)) && Op0 == Op1) {
+        APInt Sum = *ShAmtOuterC + *ShAmtInnerC;
+        APInt Modulo = Sum.urem(APInt(Sum.getBitWidth(), BitWidth));
+        if (Modulo.isZero())
+          return replaceInstUsesWith(*II, InnerOp);
+        Constant *ModuloC = ConstantInt::get(Ty, Modulo);
+        return CallInst::Create(cast<IntrinsicInst>(Op0)->getCalledFunction(),
+                                {InnerOp, InnerOp, ModuloC});
+      }
     }
 
     // fshl(X, X, Neg(Y)) --> fshr(X, X, Y)
