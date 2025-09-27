@@ -69,7 +69,9 @@ let Attributes = [Const, Constexpr, NoThrow, RequiredVectorWidth<128>] in {
       def ucomisd#Cmp : X86Builtin<"int(_Vector<2, double>, _Vector<2, double>)">;
     }
   }
+}
 
+let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
   foreach Cmp = ["cmpeq", "cmplt", "cmple", "cmpunord", "cmpneq", "cmpnlt",
                  "cmpnle", "cmpord", "min", "max"] in {
     let Features = "sse" in {
