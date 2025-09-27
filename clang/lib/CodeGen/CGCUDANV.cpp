@@ -327,9 +327,10 @@ void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
 /// (void*, short, void*) is passed as {void **, short *, void **} to the launch
 /// function. For the LLVM/offload launch we flatten the arguments into the
 /// struct directly. In addition, we include the size of the arguments, thus
-/// pass {sizeof({void *, short, void *}), ptr to {void *, short, void *},
-/// nullptr}. The last nullptr needs to be initialized to an array of pointers
-/// pointing to the arguments if we want to offload to the host.
+/// pass {size of ({void *, short, void *}) without tail padding, ptr to {void
+/// *, short, void *}, nullptr}. The last nullptr needs to be initialized to an
+/// array of pointers pointing to the arguments if we want to offload to the
+/// host.
 Address CGNVCUDARuntime::prepareKernelArgsLLVMOffload(CodeGenFunction &CGF,
                                                       FunctionArgList &Args) {
   SmallVector<llvm::Type *> ArgTypes, KernelLaunchParamsTypes;
@@ -350,7 +351,15 @@ Address CGNVCUDARuntime::prepareKernelArgsLLVMOffload(CodeGenFunction &CGF,
       KernelLaunchParamsTy, CharUnits::fromQuantity(16),
       "kernel_launch_params");
 
-  auto KernelArgsSize = CGM.getDataLayout().getTypeAllocSize(KernelArgsTy);
+  // Avoid accounting the tail padding for the kernel arguments.
+  auto KernelArgsSize = llvm::TypeSize::getZero();
+  if (auto N = KernelArgsTy->getNumElements()) {
+    auto *SL = CGM.getDataLayout().getStructLayout(KernelArgsTy);
+    KernelArgsSize += SL->getElementOffset(N - 1);
+    KernelArgsSize += CGM.getDataLayout().getTypeAllocSize(
+        KernelArgsTy->getElementType(N - 1));
+  }
+
   CGF.Builder.CreateStore(llvm::ConstantInt::get(Int64Ty, KernelArgsSize),
                           CGF.Builder.CreateStructGEP(KernelLaunchParams, 0));
   CGF.Builder.CreateStore(KernelArgs.emitRawPointer(CGF),

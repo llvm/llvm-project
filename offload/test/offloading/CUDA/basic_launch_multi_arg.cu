@@ -23,6 +23,10 @@ __global__ void square(int *Dst, short Q, int *Src, short P) {
   Src[1] = P;
 }
 
+__global__ void accumulate(short Q, int *Dst, char P) {
+  *Dst += Q + P;
+}
+
 int main(int argc, char **argv) {
   int DevNo = 0;
   int *Ptr = reinterpret_cast<int *>(llvm_omp_target_alloc_shared(4, DevNo));
@@ -39,5 +43,9 @@ int main(int argc, char **argv) {
   // CHECK: Ptr [[Ptr]], *Ptr: 42
   printf("Src: %i : %i\n", Src[0], Src[1]);
   // CHECK: Src: 3 : 4
+  accumulate<<<1, 1>>>(3, Ptr, 7);
+  printf("Ptr %p, *Ptr: %i\n", Ptr, *Ptr);
+  // CHECK: Ptr [[Ptr]], *Ptr: 52
   llvm_omp_target_free_shared(Ptr, DevNo);
+  llvm_omp_target_free_shared(Src, DevNo);
 }
