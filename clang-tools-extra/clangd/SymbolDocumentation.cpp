@@ -339,14 +339,12 @@ private:
   /// Emphasize the given command in a paragraph.
   /// Uses the command name with the first letter capitalized as the heading.
   void commandToHeadedParagraph(const comments::BlockCommandComment *B) {
-    Out.addRuler();
     auto &P = Out.addParagraph();
     std::string Heading = B->getCommandName(Traits).slice(0, 1).upper() +
                           B->getCommandName(Traits).drop_front().str();
     P.appendBoldText(Heading + ":");
     P.appendText("  \n");
     ParagraphToMarkupDocument(P, Traits).visit(B->getParagraph());
-    Out.addRuler();
   }
 };
 

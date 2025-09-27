@@ -3457,10 +3457,12 @@ template <typename T, typename C = bool> class Foo {}
 ```
 
 ---
+### Brief
+
 documentation
 
 ---
-**Template Parameters:**
+### Template Parameters
 
 - `typename T`
 - `typename C = bool`
@@ -3506,7 +3508,7 @@ ret_type foo(params) {}
 ```
 
 ---
-**Parameters:**
+### Parameters
 
 - 
 - `type (aka can_type)`
@@ -3514,7 +3516,7 @@ ret_type foo(params) {}
 - `type foo = default (aka can_type)`
 
 ---
-**Returns:**
+### Returns
 
 `ret_type (aka can_ret_type)`)",
       },
@@ -3649,7 +3651,7 @@ protected: size_t method()
 ```
 
 ---
-**Returns:**
+### Returns
 
 `size_t (aka unsigned long)`)",
       },
@@ -3688,7 +3690,7 @@ public: cls(int a, int b = 5)
 ```
 
 ---
-**Parameters:**
+### Parameters
 
 - `int a`
 - `int b = 5`)",
@@ -4001,10 +4003,12 @@ void foo()
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
-**Details:**
+### Details
 
 longer doc)"},
       {[](HoverInfo &HI) {
@@ -4036,15 +4040,17 @@ int foo()
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
-**Returns:**
+### Returns
 
 `int`
 
 ---
-**Details:**
+### Details
 
 longer doc)"},
       {[](HoverInfo &HI) {
@@ -4105,15 +4111,17 @@ int foo(int a)
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
-**Parameters:**
+### Parameters
 
 - `int a` - this is a param
 
 ---
-**Returns:**
+### Returns
 
 `int` - it returns something
 
@@ -4121,22 +4129,18 @@ brief doc
 - `1` - if failed
 
 ---
-**Details:**
+### Details
 
 longer doc
 
----
 **Note:**  
 this is a note
 
----
 As you see, notes are "inlined".
 
----
 **Warning:**  
 this is a warning
 
----
 As well as warnings)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
@@ -4179,20 +4183,22 @@ int foo(int a)
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
-**Parameters:**
+### Parameters
 
 - `int a` - this is a param
 
 ---
-**Returns:**
+### Returns
 
 `int` - it returns something
 
 ---
-**Details:**
+### Details
 
 longer doc)"},
   };

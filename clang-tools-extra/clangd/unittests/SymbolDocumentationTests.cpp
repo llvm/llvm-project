@@ -218,19 +218,15 @@ Paragraph 1
 Paragraph 2)",
        R"(Paragraph 1
 
----
 \*\*Note:\*\*  
 This is a note
 
----
 Paragraph 2)",
        R"(Paragraph 1
 
----
 **Note:**  
 This is a note
 
----
 Paragraph 2)",
        R"(Paragraph 1
 
@@ -253,19 +249,15 @@ Paragraph 1
 Paragraph 2)",
        R"(Paragraph 1
 
----
 \*\*Warning:\*\*  
 This is a warning
 
----
 Paragraph 2)",
        R"(Paragraph 1
 
----
 **Warning:**  
 This is a warning
 
----
 Paragraph 2)",
        R"(Paragraph 1
 
@@ -281,12 +273,10 @@ Another paragraph)",
        R"(\*\*Note:\*\*  
 this is not treated as brief
 
----
 Another paragraph)",
        R"(**Note:**  
 this is not treated as brief
 
----
 Another paragraph)",
        R"(**Note:**
 this is not treated as brief
@@ -625,7 +615,6 @@ int function() { return 0; }
        R"(\*\*Note:\*\*  
 Show that code blocks are correctly separated
 
----
 ```
 /// Without the markdown preprocessing, this line and the line above would be part of the @note paragraph.
 
@@ -636,7 +625,6 @@ int function() { return 0; }
        R"(**Note:**  
 Show that code blocks are correctly separated
 
----
 ```
 /// Without the markdown preprocessing, this line and the line above would be part of the @note paragraph.
 
@@ -663,7 +651,6 @@ int function() { return 0; }
        R"(\*\*Note:\*\*  
 Show that code blocks are correctly separated
 
----
 ```
 /// Without the markdown preprocessing, this line and the line above would be part of the @note paragraph.
 
@@ -674,7 +661,6 @@ int function() { return 0; }
        R"(**Note:**  
 Show that code blocks are correctly separated
 
----
 ```
 /// Without the markdown preprocessing, this line and the line above would be part of the @note paragraph.
 
