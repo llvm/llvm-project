@@ -82,6 +82,11 @@ public:
   LogicalResult visitOperation(Operation *op, ArrayRef<Liveness *> operands,
                                ArrayRef<const Liveness *> results) override;
 
+  LogicalResult
+  visitCallOperation(CallOpInterface call,
+                     ArrayRef<Liveness *> operandLattices,
+                     ArrayRef<const Liveness *> resultLattices) override;
+
   void visitBranchOperand(OpOperand &operand) override;
 
   void visitCallOperand(OpOperand &operand) override;
