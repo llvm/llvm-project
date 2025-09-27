@@ -40,12 +40,37 @@ int main(int, char**) {
   double DummyDouble;
   long double DummyLongDouble;
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1L) == 1L);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1LL) == 1LL);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1.0) == 1.0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1.0L) == 1.0L);
+  // TODO(LLVM 22): Remove `__has_constexpr_builtin` conditional once support for Clang 19 is dropped.
+  #if __has_constexpr_builtin(__builtin_abs)
+    ASSERT_CONSTEXPR_CXX23(std::abs(-1) == 1);
+  #else
+    ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1) == 1);
+  #endif
+  #if __has_constexpr_builtin(__builtin_labs)
+    ASSERT_CONSTEXPR_CXX23(std::abs(-1L) == 1L);
+  #else
+    ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1L) == 1L);
+  #endif
+  #if __has_constexpr_builtin(__builtin_llabs)
+    ASSERT_CONSTEXPR_CXX23(std::abs(-1LL) == 1LL);
+  #else
+    ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1LL) == 1LL);
+  #endif
+  #if __has_constexpr_builtin(__builtin_fabsf)
+    ASSERT_CONSTEXPR_CXX23(std::abs(-1.0f) == 1.0f);
+  #else
+    ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1.0f) == 1.0f);
+  #endif
+  #if __has_constexpr_builtin(__builtin_fabs)
+    ASSERT_CONSTEXPR_CXX23(std::abs(-1.0) == 1.0);
+  #else
+    ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1.0) == 1.0);
+  #endif
+  #if __has_constexpr_builtin(__builtin_fabsl)
+    ASSERT_CONSTEXPR_CXX23(std::abs(-1.0L) == 1.0L);
+  #else
+    ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1.0L) == 1.0L);
+  #endif
 
   ASSERT_NOT_CONSTEXPR_CXX23(std::labs(-1L) == 1L);
   ASSERT_NOT_CONSTEXPR_CXX23(std::llabs(-1LL) == 1LL);
