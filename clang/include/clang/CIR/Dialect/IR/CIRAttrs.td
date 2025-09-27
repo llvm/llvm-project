@@ -602,6 +602,47 @@ def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// AddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_AddressSpaceAttr : CIR_EnumAttr<CIR_AddressSpace, "address_space"> {
+  let builders = [AttrBuilder<(ins "clang::LangAS":$langAS), [{
+      return $_get($_ctxt, cir::toCIRAddressSpace(langAS));
+    }]>];
+
+  let assemblyFormat = [{
+    `` custom<AddressSpaceValue>($value)
+  }];
+
+  let defaultValue = "cir::AddressSpace::Default";
+
+  let extraClassDeclaration = [{
+    bool isLang() const;
+    bool isTarget() const;
+    unsigned getTargetValue() const;
+    unsigned getAsUnsignedValue() const;
+  }];
+
+  let extraClassDefinition = [{
+    unsigned $cppClass::getAsUnsignedValue() const {
+      return static_cast<unsigned>(getValue());
+    }
+
+    bool $cppClass::isLang() const {
+      return cir::isLangAddressSpace(getValue());
+    }
+
+    bool $cppClass::isTarget() const {
+      return cir::isTargetAddressSpace(getValue());
+    }
+
+    unsigned $cppClass::getTargetValue() const {
+      return cir::getTargetAddressSpaceValue(getValue());
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 

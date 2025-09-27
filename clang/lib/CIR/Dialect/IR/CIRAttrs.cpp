@@ -43,6 +43,15 @@ parseFloatLiteral(mlir::AsmParser &parser,
                   mlir::FailureOr<llvm::APFloat> &value,
                   cir::FPTypeInterface fpType);
 
+//===----------------------------------------------------------------------===//
+// AddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+mlir::ParseResult parseAddressSpaceValue(mlir::AsmParser &p,
+                                         cir::AddressSpace &addrSpace);
+
+void printAddressSpaceValue(mlir::AsmPrinter &p, cir::AddressSpace addrSpace);
+
 static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
                                        mlir::IntegerAttr &value);
 

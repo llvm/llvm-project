@@ -73,12 +73,18 @@ struct CIRGenTypeCache {
   /// The alignment of size_t.
   unsigned char SizeAlignInBytes;
 
+  cir::AddressSpace cirAllocaAddressSpace;
+
   clang::CharUnits getSizeAlign() const {
     return clang::CharUnits::fromQuantity(SizeAlignInBytes);
   }
 
   clang::CharUnits getPointerAlign() const {
     return clang::CharUnits::fromQuantity(PointerAlignInBytes);
+  }
+
+  cir::AddressSpace getCIRAllocaAddressSpace() const {
+    return cirAllocaAddressSpace;
   }
 };
 

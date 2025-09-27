@@ -2305,14 +2305,23 @@ mlir::LogicalResult CIRToLLVMSelectOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+static unsigned
+getTargetAddrSpaceFromCIRAddrSpace(cir::AddressSpace addrSpace) {
+  if (addrSpace == cir::AddressSpace::Default)
+    return 0; // Default address space is always 0 in LLVM.
+
+  if (cir::isTargetAddressSpace(addrSpace))
+    return cir::getTargetAddressSpaceValue(addrSpace);
+
+  llvm_unreachable("CIR AS map is not available");
+}
+
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
                                  mlir::DataLayout &dataLayout) {
   converter.addConversion([&](cir::PointerType type) -> mlir::Type {
-    // Drop pointee type since LLVM dialect only allows opaque pointers.
-    assert(!cir::MissingFeatures::addressSpace());
-    unsigned targetAS = 0;
-
-    return mlir::LLVM::LLVMPointerType::get(type.getContext(), targetAS);
+    unsigned addrSpace =
+        getTargetAddrSpaceFromCIRAddrSpace(type.getAddrSpace());
+    return mlir::LLVM::LLVMPointerType::get(type.getContext(), addrSpace);
   });
   converter.addConversion([&](cir::VPtrType type) -> mlir::Type {
     assert(!cir::MissingFeatures::addressSpace());
