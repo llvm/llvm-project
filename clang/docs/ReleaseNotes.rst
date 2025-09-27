@@ -543,11 +543,8 @@ clang-format
 - Add ``NumericLiteralCase`` option for enforcing character case in numeric
   literals.
 - Add ``Leave`` suboption to ``IndentPPDirectives``.
-<<<<<<< HEAD
 - Add ``AllowBreakBeforeQtProperty`` option.
-=======
 - Add ``AllowShortRecordOnASingleLine`` option and set it to ``EmptyIfAttached`` for LLVM style.
->>>>>>> 47fe17fb9e64 (Update release notes, fixup UnwrappedLineFormatter)
 
 libclang
 --------
