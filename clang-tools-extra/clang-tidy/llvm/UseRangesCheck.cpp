@@ -31,7 +31,7 @@ public:
   }
 
   std::optional<std::string>
-  getHeaderInclusion(const NamedDecl &) const override {
+  getHeaderInclusion(const NamedDecl & /*OriginalName*/) const override {
     return "llvm/ADT/STLExtras.h";
   }
 

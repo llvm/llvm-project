@@ -48,7 +48,7 @@ public:
       : Check(Check), PP(PP) {}
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
-                    SourceRange Range, const MacroArgs *) override {
+                    SourceRange Range, const MacroArgs * /*Args*/) override {
     macroUsed(MacroNameTok, MD, Range.getBegin(), CheckAction::Rename);
   }
 
@@ -119,9 +119,9 @@ private:
 
 } // namespace
 
-void UpgradeGoogletestCaseCheck::registerPPCallbacks(const SourceManager &,
-                                                     Preprocessor *PP,
-                                                     Preprocessor *) {
+void UpgradeGoogletestCaseCheck::registerPPCallbacks(
+    const SourceManager & /*SM*/, Preprocessor *PP,
+    Preprocessor * /*ModuleExpanderPP*/) {
   PP->addPPCallbacks(
       std::make_unique<UpgradeGoogletestCasePPCallback>(this, PP));
 }

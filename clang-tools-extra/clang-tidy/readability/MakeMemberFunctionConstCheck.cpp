@@ -73,14 +73,14 @@ public:
     return Parent;
   }
 
-  bool VisitUnresolvedMemberExpr(const UnresolvedMemberExpr *) {
+  bool VisitUnresolvedMemberExpr(const UnresolvedMemberExpr * /*unused*/) {
     // An UnresolvedMemberExpr might resolve to a non-const non-static
     // member function.
     Usage = NonConst;
     return false; // Stop traversal.
   }
 
-  bool VisitCXXConstCastExpr(const CXXConstCastExpr *) {
+  bool VisitCXXConstCastExpr(const CXXConstCastExpr * /*unused*/) {
     // Workaround to support the pattern
     // class C {
     //   const S *get() const;
