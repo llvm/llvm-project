@@ -44,6 +44,7 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <utility>
 #include <vector>
@@ -1836,6 +1837,38 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
   // and we have to move them to the new inner latch.
   for (PHINode *P : LcssaInnerLatch)
     P->moveBefore(InnerExit->getFirstNonPHIIt());
+
+  // This deals with a corner case of LCSSA phi nodes in the outer loop latch
+  // block: the loop was in LCSSA form, some transformations can come along
+  // (e.g. unswitch) and create an empty block:
+  //
+  //   BB4:
+  //     br label %BB5
+  //   BB5:
+  //     %old.cond.lcssa = phi i16 [ %cond, %BB4 ]
+  //     br outer.header
+  //
+  // Interchange then brings it in LCSSA form again and we get:
+  //
+  //   BB4:
+  //     %new.cond.lcssa = phi i16 [ %cond, %BB3 ]
+  //     br label %BB5
+  //   BB5:
+  //     %old.cond.lcssa = phi i16 [ %new.cond.lcssa, %BB4 ]
+  //
+  // Which means that we have a chain of LCSSA phi nodes from %new.cond.lcssa
+  // to %old.cond.lcssa. The problem is that interchange can reoder blocks BB4
+  // and BB5 placing the use before the def if we don't check this. The
+  // observation is that %old.cond.lcssa is unused, so instead of moving and
+  // renaming these phi nodes, just delete it if it's trivially dead. If it
+  // isn't trivially dead, it is handled above. The loop should still be in
+  // LCSSA form, and if it isn't, formLCSSARecursively is called after the
+  // interchange rewrite.
+  SmallVector<PHINode *, 8> LcssaOuterLatch(
+      llvm::make_pointer_range(OuterLatch->phis()));
+  for (PHINode *P : LcssaOuterLatch)
+     if (isInstructionTriviallyDead(P))
+       P->eraseFromParent();
 
   // Deal with LCSSA PHI nodes in the loop nest exit block. For PHIs that have
   // incoming values defined in the outer loop, we have to add a new PHI
