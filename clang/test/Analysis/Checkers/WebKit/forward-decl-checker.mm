@@ -40,7 +40,7 @@ Obj& ref() {
   return obj;
 }
 
-void opaque_call_arg(Obj* obj, Obj&& otherObj, const RefPtr<Obj>& safeObj, WeakPtr<Obj> weakObj, std::unique_ptr<Obj> uniqObj) {
+void opaque_call_arg(Obj* obj, Obj&& otherObj, const RefPtr<Obj>& safeObj, WeakPtr<Obj> weakObj, std::unique_ptr<Obj>& uniqObj) {
   receive_obj_ref(*obj);
   receive_obj_ptr(&*obj);
   receive_obj_rref(std::move(otherObj));
