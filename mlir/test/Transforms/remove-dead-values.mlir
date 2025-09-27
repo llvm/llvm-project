@@ -569,6 +569,18 @@ module @return_void_with_unused_argument {
     call @fn_return_void_with_unused_argument(%arg0, %unused) : (i32, memref<4xi32>) -> ()
     return %unused : memref<4xi32>
   }
+  // the function signature is immutable because it is public.
+  func.func public @public_fn_with_unused_argument(%unused: i32) -> () {
+    return
+  }
+  // CHECK-LABEL: func.func @main2
+  // CHECK: %[[UNUSED:.*]] = arith.constant 0 : i32
+  // CHECK: call @public_fn_with_unused_argument(%[[UNUSED]]) : (i32) -> ()
+  func.func @main2() -> () {
+    %zero = arith.constant 0 : i32
+    call @public_fn_with_unused_argument(%zero) : (i32) -> ()
+    return
+  }
 }
 
 // -----
