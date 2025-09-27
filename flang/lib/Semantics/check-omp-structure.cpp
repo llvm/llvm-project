@@ -624,10 +624,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(x.v.DirName().source, Directive::OMPD_groupprivate);
     return false;
   }
-  bool Pre(const parser::OpenMPRequiresConstruct &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_requires);
-    return false;
-  }
   bool Pre(const parser::OmpBeginDirective &x) {
     checker_(x.DirName().source, x.DirId());
     return false;
@@ -1498,14 +1494,13 @@ void OmpStructureChecker::Leave(const parser::OpenMPDepobjConstruct &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPRequiresConstruct &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_requires);
+  const auto &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
 
   if (visitedAtomicSource_.empty()) {
     return;
   }
-  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
-  for (const parser::OmpClause &clause : clauseList.v) {
+  for (const parser::OmpClause &clause : x.v.Clauses().v) {
     llvm::omp::Clause id{clause.Id()};
     if (id == llvm::omp::Clause::OMPC_atomic_default_mem_order) {
       parser::MessageFormattedText txt(

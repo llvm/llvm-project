@@ -1836,7 +1836,9 @@ TYPE_PARSER(sourced( //
 
 // 2.4 Requires construct
 TYPE_PARSER(sourced(construct<OpenMPRequiresConstruct>(
-    verbatim("REQUIRES"_tok), Parser<OmpClauseList>{})))
+    predicated(OmpDirectiveNameParser{},
+        IsDirective(llvm::omp::Directive::OMPD_requires)) >=
+    Parser<OmpDirectiveSpecification>{})))
 
 // 2.15.2 Threadprivate directive
 TYPE_PARSER(sourced( //
