@@ -258,9 +258,6 @@ add_mlir_upstream_c_api_library(MLIRCAPITransformDialect
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRTransformDialect
-  MLIRTransformDebugExtension
-  MLIRTransformLoopExtension
-  MLIRTransformTuneExtension
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPITransformDialectTransforms
@@ -270,94 +267,6 @@ add_mlir_upstream_c_api_library(MLIRCAPITransformDialectTransforms
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRTransformDialectTransforms
-)
-
-add_mlir_upstream_c_api_library(MLIRCAPIAffineTransformDialectExtension
-  TransformAffine.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  LINK_LIBS PUBLIC
-  MLIRAffineTransformOps
-)
-
-add_mlir_upstream_c_api_library(MLIRCAPIBufferizationTransformDialectExtension
-  TransformBufferization.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  LINK_LIBS PUBLIC
-  MLIRBufferizationTransformOps
-)
-
-add_mlir_upstream_c_api_library(MLIRCAPIGPUTransformDialectExtension
-  TransformGPU.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  LINK_LIBS PUBLIC
-  MLIRGPUTransformOps
-)
-
-add_mlir_upstream_c_api_library(MLIRCAPILinalgTransformDialectExtension
-  TransformLinalg.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  LINK_LIBS PUBLIC
-  MLIRLinalgTransformOps
-)
-
-add_mlir_upstream_c_api_library(MLIRCAPIMemRefTransformDialectExtension
-  TransformMemRef.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  LINK_LIBS PUBLIC
-  MLIRMemRefTransformOps
-)
-
-add_mlir_upstream_c_api_library(MLIRCAPINVGPUTransformDialectExtension
-  TransformNVGPU.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  LINK_LIBS PUBLIC
-  MLIRNVGPUTransformOps
-)
-
-add_mlir_upstream_c_api_library(MLIRCAPIPDLTransformDialectExtension
-  TransformPDL.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  LINK_LIBS PUBLIC
-  MLIRTransformPDLExtension
-)
-
-add_mlir_upstream_c_api_library(MLIRCAPISMTTransformDialectExtension
-  TransformSMT.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  LINK_LIBS PUBLIC
-  MLIRTransformSMTExtension
-)
-
-add_mlir_upstream_c_api_library(MLIRCAPISparseTensorTransformDialectExtension
-  TransformSparseTensor.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  LINK_LIBS PUBLIC
-  MLIRSparseTensorTransformOps
-)
-
-add_mlir_upstream_c_api_library(MLIRCAPITensorTransformDialectExtension
-  TransformTensor.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  LINK_LIBS PUBLIC
-  MLIRTensorTransformOps
-)
-
-add_mlir_upstream_c_api_library(MLIRCAPIVectorTransformDialectExtension
-  TransformVector.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  LINK_LIBS PUBLIC
-  MLIRVectorTransformOps
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIQuant

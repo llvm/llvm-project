@@ -3,14 +3,33 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 import ctypes
+import platform
 from pathlib import Path
 
-_capi = ctypes.CDLL(
-    str(
-        Path(__file__).parent
-        / "@CMAKE_SHARED_LIBRARY_PREFIX@@MLIR_PYTHON_CAPI_DYLIB_NAME@@CMAKE_SHARED_LIBRARY_SUFFIX@"
-    )
-)
+from . import _mlir, get_dialect_registry as _get_dialect_registry
+
+_get_dialect_registry()
+
+MLIR_PYTHON_CAPSULE_DIALECT_HANDLE = _mlir.ir.DialectHandle._capsule_name.encode()
+
+MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY = _mlir.ir.DialectRegistry._capsule_name.encode()
+
+if platform.system() == "Windows":
+    _ext_suffix = "dll"
+elif platform.system() == "Darwin":
+    _ext_suffix = "dylib"
+else:
+    _ext_suffix = "so"
+
+for fp in Path(__file__).parent.glob(f"*.{_ext_suffix}"):
+    if "CAPI" in fp.name:
+        _capi_dylib = fp
+        break
+else:
+    raise ValueError("Couldn't find CAPI dylib")
+
+
+_capi = ctypes.CDLL(str(Path(__file__).parent / _capi_dylib))
 
 PyCapsule_New = ctypes.pythonapi.PyCapsule_New
 PyCapsule_New.restype = ctypes.py_object
@@ -19,14 +38,6 @@ PyCapsule_New.argtypes = ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p
 PyCapsule_GetPointer = ctypes.pythonapi.PyCapsule_GetPointer
 PyCapsule_GetPointer.argtypes = [ctypes.py_object, ctypes.c_char_p]
 PyCapsule_GetPointer.restype = ctypes.c_void_p
-
-MLIR_PYTHON_CAPSULE_DIALECT_HANDLE = (
-    "@MLIR_PYTHON_PACKAGE_PREFIX@.ir.DialectHandle._CAPIPtr"
-).encode()
-
-MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY = (
-    "@MLIR_PYTHON_PACKAGE_PREFIX@.ir.DialectRegistry._CAPIPtr"
-).encode()
 
 
 def register_dialect(dialect_handle_capi_name, dialect_registry):
@@ -37,14 +48,3 @@ def register_dialect(dialect_handle_capi_name, dialect_registry):
     dialect_handle_capi.restype = ctypes.c_void_p
     handle = dialect_handle_capi()
     dialect_registry.insert_dialect(handle)
-
-
-def register_transform_dialect_extension(registration_capi_name, dialect_registry):
-    if not hasattr(_capi, registration_capi_name):
-        raise RuntimeError(f"missing {registration_capi_name} API")
-    registration_capi = getattr(_capi, registration_capi_name)
-    registration_capi.argtypes = [ctypes.c_void_p]
-    dialect_registry_ptr = PyCapsule_GetPointer(
-        dialect_registry._CAPIPtr, MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY
-    )
-    registration_capi(dialect_registry_ptr)

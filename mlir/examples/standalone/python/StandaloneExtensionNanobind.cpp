@@ -11,6 +11,7 @@
 
 #include "Standalone-c/Dialects.h"
 #include "mlir-c/Dialect/Arith.h"
+#include "mlir-c/Dialect/Builtin.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
@@ -26,12 +27,15 @@ NB_MODULE(_standaloneDialectsNanobind, m) {
       "register_dialects",
       [](MlirContext context, bool load) {
         MlirDialectHandle arithHandle = mlirGetDialectHandle__arith__();
+        MlirDialectHandle builtinHandle = mlirGetDialectHandle__builtin__();
         MlirDialectHandle standaloneHandle =
             mlirGetDialectHandle__standalone__();
         mlirDialectHandleRegisterDialect(arithHandle, context);
+        mlirDialectHandleRegisterDialect(builtinHandle, context);
         mlirDialectHandleRegisterDialect(standaloneHandle, context);
         if (load) {
           mlirDialectHandleLoadDialect(arithHandle, context);
+          mlirDialectHandleLoadDialect(builtinHandle, context);
           mlirDialectHandleRegisterDialect(standaloneHandle, context);
         }
       },

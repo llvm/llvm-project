@@ -3139,6 +3139,10 @@ void mlir::python::populateIRCore(nb::module_ &m) {
   //----------------------------------------------------------------------------
 
   nb::class_<MlirDialectHandle>(m, "DialectHandle")
+      .def_prop_ro_static(
+          "_capsule_name",
+          [](nb::handle &) { return MLIR_PYTHON_CAPSULE_DIALECT_HANDLE; },
+          nb::sig("def _capsule_name(/) -> str"))
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR,
                   &createMlirDialectHandleFromCapsule);
 
@@ -3147,6 +3151,10 @@ void mlir::python::populateIRCore(nb::module_ &m) {
   //----------------------------------------------------------------------------
   nb::class_<PyDialectRegistry>(m, "DialectRegistry")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyDialectRegistry::getCapsule)
+      .def_prop_ro_static(
+          "_capsule_name",
+          [](nb::handle &) { return MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY; },
+          nb::sig("def _capsule_name(/) -> str"))
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR,
                   &PyDialectRegistry::createFromCapsule)
       .def(nb::init<>())
