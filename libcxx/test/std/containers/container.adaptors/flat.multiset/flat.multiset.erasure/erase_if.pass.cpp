@@ -40,8 +40,8 @@ constexpr M make(std::initializer_list<int> vals) {
 }
 
 template <class M, class Pred>
-constexpr void test0(
-    std::initializer_list<int> vals, Pred p, std::initializer_list<int> expected, std::size_t expected_erased_count) {
+constexpr void
+test0(std::initializer_list<int> vals, Pred p, std::initializer_list<int> expected, std::size_t expected_erased_count) {
   M s = make<M>(vals);
   ASSERT_SAME_TYPE(typename M::size_type, decltype(std::erase_if(s, p)));
   assert(expected_erased_count == std::erase_if(s, p));
