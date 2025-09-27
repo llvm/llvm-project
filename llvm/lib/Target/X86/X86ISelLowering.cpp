@@ -5346,6 +5346,19 @@ bool isConstantSplat(SDValue Op, APInt &SplatVal, bool AllowPartialUndefs) {
 
   return false;
 }
+
+int getRoundingModeX86(unsigned RM) {
+  switch (static_cast<::llvm::RoundingMode>(RM)) {
+    // clang-format off
+  case ::llvm::RoundingMode::NearestTiesToEven: return X86::rmToNearest; break;
+  case ::llvm::RoundingMode::TowardNegative:    return X86::rmDownward; break;
+  case ::llvm::RoundingMode::TowardPositive:    return X86::rmUpward; break;
+  case ::llvm::RoundingMode::TowardZero:        return X86::rmTowardZero; break;
+  default:
+    return X86::rmInvalid; // Invalid rounding mode
+  }
+}
+
 } // namespace X86
 } // namespace llvm
 
@@ -11721,10 +11734,19 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
   // we'll have to do 2x as many shuffles in order to achieve this, a 2-input
   // pre-shuffle first is a better strategy.
   if (!isNoopShuffleMask(V1Mask) && !isNoopShuffleMask(V2Mask)) {
+    // If we don't have blends, see if we can create a cheap unpack.
+    if (!Subtarget.hasSSE41() && VT.is128BitVector() &&
+        (is128BitUnpackShuffleMask(V1Mask, DAG) ||
+         is128BitUnpackShuffleMask(V2Mask, DAG)))
+      if (SDValue PermUnpack = lowerShuffleAsPermuteAndUnpack(
+              DL, VT, V1, V2, Mask, Subtarget, DAG))
+        return PermUnpack;
+
     // Only prefer immediate blends to unpack/rotate.
-    if (SDValue BlendPerm = lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask,
-                                                          DAG, true))
+    if (SDValue BlendPerm =
+            lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask, DAG, true))
       return BlendPerm;
+
     // If either input vector provides only a single element which is repeated
     // multiple times, unpacking from both input vectors would generate worse
     // code. e.g. for
@@ -11736,13 +11758,16 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
       if (SDValue UnpackPerm =
               lowerShuffleAsUNPCKAndPermute(DL, VT, V1, V2, Mask, DAG))
         return UnpackPerm;
+
     if (SDValue RotatePerm = lowerShuffleAsByteRotateAndPermute(
             DL, VT, V1, V2, Mask, Subtarget, DAG))
       return RotatePerm;
+
     // Unpack/rotate failed - try again with variable blends.
     if (SDValue BlendPerm = lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask,
                                                           DAG))
       return BlendPerm;
+
     if (VT.getScalarSizeInBits() >= 32)
       if (SDValue PermUnpack = lowerShuffleAsPermuteAndUnpack(
               DL, VT, V1, V2, Mask, Subtarget, DAG))
@@ -28686,16 +28711,14 @@ SDValue X86TargetLowering::LowerSET_ROUNDING(SDValue Op,
   SDValue RMBits;
   if (auto *CVal = dyn_cast<ConstantSDNode>(NewRM)) {
     uint64_t RM = CVal->getZExtValue();
-    int FieldVal;
-    switch (static_cast<RoundingMode>(RM)) {
-    // clang-format off
-    case RoundingMode::NearestTiesToEven: FieldVal = X86::rmToNearest; break;
-    case RoundingMode::TowardNegative:    FieldVal = X86::rmDownward; break;
-    case RoundingMode::TowardPositive:    FieldVal = X86::rmUpward; break;
-    case RoundingMode::TowardZero:        FieldVal = X86::rmTowardZero; break;
-    default:
-      llvm_unreachable("rounding mode is not supported by X86 hardware");
-    // clang-format on
+    int FieldVal = X86::getRoundingModeX86(RM);
+
+    if (FieldVal == X86::rmInvalid) {
+      FieldVal = X86::rmToNearest;
+      LLVMContext &C = MF.getFunction().getContext();
+      C.diagnose(DiagnosticInfoUnsupported(
+          MF.getFunction(), "rounding mode is not supported by X86 hardware",
+          DiagnosticLocation(DL.getDebugLoc()), DS_Error));
     }
     RMBits = DAG.getConstant(FieldVal, DL, MVT::i16);
   } else {
@@ -45162,10 +45185,13 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::WrapperRIP:
     return true;
   case X86ISD::BLENDI:
+  case X86ISD::PSHUFB:
   case X86ISD::PSHUFD:
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
+  case X86ISD::VPERMILPV:
   case X86ISD::VPERMILPI:
+  case X86ISD::VPERMV:
   case X86ISD::VPERMV3: {
     SmallVector<int, 8> Mask;
     SmallVector<SDValue, 2> Ops;
@@ -45228,10 +45254,13 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::BLENDV:
     return false;
   // SSE target shuffles.
+  case X86ISD::PSHUFB:
   case X86ISD::PSHUFD:
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
+  case X86ISD::VPERMILPV:
   case X86ISD::VPERMILPI:
+  case X86ISD::VPERMV:
   case X86ISD::VPERMV3:
     return false;
   // SSE comparisons handle all icmp/fcmp cases.
