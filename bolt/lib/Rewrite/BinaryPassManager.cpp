@@ -18,6 +18,7 @@
 #include "bolt/Passes/Hugify.h"
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Passes/IndirectCallPromotion.h"
+#include "bolt/Passes/InferNonStale.h"
 #include "bolt/Passes/Inliner.h"
 #include "bolt/Passes/Instrumentation.h"
 #include "bolt/Passes/JTFootprintReduction.h"
@@ -58,6 +59,7 @@ extern cl::opt<bolt::PLTCall::OptType> PLT;
 extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
                llvm::bolt::DeprecatedICFNumericOptionParser>
     ICF;
+extern cl::opt<bool> InferNonStaleProfile;
 
 static cl::opt<bool>
 DynoStatsAll("dyno-stats-all",
@@ -97,6 +99,11 @@ static cl::opt<bool> PrintEstimateEdgeCounts(
     "print-estimate-edge-counts",
     cl::desc("print function after edge counts are set for no-LBR profile"),
     cl::Hidden, cl::cat(BoltOptCategory));
+
+static cl::opt<bool> PrintInferNonStale(
+    "print-infer-non-stale",
+    cl::desc("print function after non-stale profile inference"), cl::Hidden,
+    cl::cat(BoltOptCategory));
 
 cl::opt<bool>
 PrintFinalized("print-finalized",
@@ -383,6 +390,15 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
     Manager.registerPass(std::make_unique<PrintProfileStats>(NeverPrint));
 
   Manager.registerPass(std::make_unique<PrintProfileQualityStats>(NeverPrint));
+
+  // Optionally run profile inference on non-stale profiles
+  if (opts::InferNonStaleProfile) {
+    Manager.registerPass(std::make_unique<InferNonStale>(PrintInferNonStale));
+
+    // Print profile quality stats after inference to show improvement
+    Manager.registerPass(
+        std::make_unique<PrintProfileQualityStats>(NeverPrint));
+  }
 
   Manager.registerPass(std::make_unique<ValidateInternalCalls>(NeverPrint));
 
