@@ -1095,6 +1095,39 @@ LLVMDIBuilderCreateFile(LLVMDIBuilderRef Builder, const char *Filename,
                                           StringRef(Directory, DirectoryLen)));
 }
 
+static llvm::DIFile::ChecksumKind
+map_from_llvmChecksumKind(LLVMChecksumKind CSKind) {
+  switch (CSKind) {
+  case LLVMChecksumKind::CSK_MD5:
+    return llvm::DIFile::CSK_MD5;
+  case LLVMChecksumKind::CSK_SHA1:
+    return llvm::DIFile::CSK_SHA1;
+  case LLVMChecksumKind::CSK_SHA256:
+    return llvm::DIFile::CSK_SHA256;
+  default:
+    llvm_unreachable("Unhandled Checksum Kind");
+  }
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateFileWithCheckSum(
+    LLVMDIBuilderRef Builder, const char *Filename, size_t FilenameLen,
+    const char *Directory, size_t DirectoryLen, LLVMChecksumKind ChecksumKind,
+    const char *Checksum, size_t ChecksumLen, const char *Source,
+    size_t SourceLen) {
+  StringRef ChkSum = StringRef(Checksum, ChecksumLen);
+  std::optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo;
+  auto CSK = map_from_llvmChecksumKind(ChecksumKind);
+  CSInfo.emplace(CSK, ChkSum);
+  std::optional<StringRef> Src;
+  if (SourceLen > 0)
+    Src = StringRef(Source, SourceLen);
+  else
+    Src = std::nullopt;
+  return wrap(unwrap(Builder)->createFile(StringRef(Filename, FilenameLen),
+                                          StringRef(Directory, DirectoryLen),
+                                          CSInfo, Src));
+}
+
 LLVMMetadataRef
 LLVMDIBuilderCreateModule(LLVMDIBuilderRef Builder, LLVMMetadataRef ParentScope,
                           const char *Name, size_t NameLen,
