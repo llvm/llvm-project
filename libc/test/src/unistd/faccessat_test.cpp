@@ -34,7 +34,7 @@ using LlvmLibcFaccessatTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 TEST_F(LlvmLibcFaccessatTest, WithAtFdcwd) {
   // Test access checks on a file with AT_FDCWD and no flags, equivalent to
   // access().
-  constexpr const char *FILENAME = "faccessat_basic3.test";
+  constexpr const char *FILENAME = "faccessat_basic.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
 
   // Check permissions on a file with full permissions
@@ -73,8 +73,8 @@ TEST_F(LlvmLibcFaccessatTest, WithAtFdcwd) {
 
 TEST_F(LlvmLibcFaccessatTest, RelativePathWithDirFD) {
   // Check permissions on a file releative to dir_fd
-  const cpp::string DIRNAME = "faccessat_dir3";
-  const cpp::string FILENAME = "relative_file3.txt";
+  const cpp::string DIRNAME = "faccessat_dir";
+  const cpp::string FILENAME = "relative_file.txt";
 
   auto TEST_DIR = libc_make_test_file_path(DIRNAME.data());
   ASSERT_THAT(LIBC_NAMESPACE::mkdir(TEST_DIR, S_IRWXU), Succeeds(0));
@@ -102,8 +102,8 @@ TEST_F(LlvmLibcFaccessatTest, RelativePathWithDirFD) {
 
 TEST_F(LlvmLibcFaccessatTest, SymlinkNoFollow) {
   // Check permissions on a symlink itself, not what it links to
-  constexpr const char *TARGET = "faccessat_target2";
-  constexpr const char *SYMLINK = "faccessat_link2";
+  constexpr const char *TARGET = "faccessat_target";
+  constexpr const char *SYMLINK = "faccessat_link";
   auto TEST_TARGET = libc_make_test_file_path(TARGET);
   auto TEST_SYMLINK = libc_make_test_file_path(SYMLINK);
 
