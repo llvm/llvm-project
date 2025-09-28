@@ -3765,10 +3765,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       // vector.reduce.add.vNiM(splat(%x)) -> mul(%x, N)
       if (Value *Splat = getSplatValue(Arg)) {
-        ElementCount ReducedVectorElementCount =
+        ElementCount VecToReduceCount =
             cast<VectorType>(Arg->getType())->getElementCount();
-        if (ReducedVectorElementCount.isFixed()) {
-          unsigned VectorSize = ReducedVectorElementCount.getFixedValue();
+        if (VecToReduceCount.isFixed()) {
+          unsigned VectorSize = VecToReduceCount.getFixedValue();
           return BinaryOperator::CreateMul(
               Splat, ConstantInt::get(Splat->getType(), VectorSize));
         }
