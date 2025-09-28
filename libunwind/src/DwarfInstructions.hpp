@@ -33,7 +33,7 @@ public:
   typedef typename A::pint_t pint_t;
   typedef typename A::sint_t sint_t;
 
-  static int stepWithDwarf(A &addressSpace, typename R::link_reg_t &pc,
+  static int stepWithDwarf(A &addressSpace, const typename R::link_reg_t &pc,
                            pint_t fdeStart, R &registers, bool &isSignalFrame,
                            bool stage2);
 

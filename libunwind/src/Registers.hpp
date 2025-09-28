@@ -17,8 +17,8 @@
 
 #include "config.h"
 #include "libunwind.h"
-#include "shadow_stack_unwind.h"
 #include "libunwind_ext.h"
+#include "shadow_stack_unwind.h"
 
 namespace libunwind {
 
@@ -1839,8 +1839,8 @@ class _LIBUNWIND_HIDDEN Registers_arm64 {
 public:
   Registers_arm64();
   Registers_arm64(const void *registers);
-  Registers_arm64(const Registers_arm64&);
-  Registers_arm64& operator=(const Registers_arm64&);
+  Registers_arm64(const Registers_arm64 &);
+  Registers_arm64 &operator=(const Registers_arm64 &);
 
   typedef uint64_t reg_t;
   typedef uint64_t __ptrauth_unwind_registers_arm64_link_reg link_reg_t;
@@ -1863,7 +1863,7 @@ public:
 
   uint64_t  getSP() const         { return _registers.__sp; }
   void      setSP(uint64_t value) { _registers.__sp = value; }
-  uint64_t  getIP() const         {
+  uint64_t  getIP() const {
     uint64_t value = _registers.__pc;
 #if __has_feature(ptrauth_calls)
     // Note the value of the PC was signed to its address in the register state
@@ -1956,11 +1956,12 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
 #endif
 }
 
-inline Registers_arm64::Registers_arm64(const Registers_arm64& other) {
+inline Registers_arm64::Registers_arm64(const Registers_arm64 &other) {
   *this = other;
 }
 
-inline Registers_arm64& Registers_arm64::operator=(const Registers_arm64& other) {
+inline Registers_arm64 &
+Registers_arm64::operator=(const Registers_arm64 &other) {
   memcpy(&_registers, &other._registers, sizeof(_registers));
   memcpy(_vectorHalfRegisters, &other._vectorHalfRegisters,
          sizeof(_vectorHalfRegisters));

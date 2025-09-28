@@ -15,7 +15,6 @@
 #include "libunwind_ext.h"
 
 #include <stdlib.h>
-#include <sys/types.h>
 
 // Define the __has_feature extension for compilers that do not support it so
 // that we can later check for the presence of ASan in a compiler-neutral way.
@@ -137,15 +136,12 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
         union {
           unw_word_t opaque_value;
           unw_word_t
-            __unwind_ptrauth_restricted_intptr(ptrauth_key_return_address, 1, 0)
-            authenticated_value;
+              __unwind_ptrauth_restricted_intptr(ptrauth_key_return_address, 1,
+                                                 0) authenticated_value;
         } u;
         u.opaque_value = (uint64_t)ptrauth_auth_and_resign(
-          (void *)value,
-          ptrauth_key_return_address,
-          getSP(),
-          ptrauth_key_return_address,
-          &u.opaque_value);
+            (void *)value, ptrauth_key_return_address, sp,
+            ptrauth_key_return_address, &u.opaque_value);
 
         if (u.authenticated_value < info.start_ip ||
             u.authenticated_value > info.end_ip)
@@ -157,7 +153,7 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
         if (ptrauth_auth_and_resign((void *)pc, ptrauth_key_return_address, sp,
                                     ptrauth_key_return_address,
                                     sp) != (void *)pc) {
-          _LIBUNWIND_LOG("Bad unwind through arm64e (0x%llX, 0x%llX)->0x%llX\n",
+          _LIBUNWIND_LOG("Bad unwind through arm64e (0x%zX, 0x%zX)->0x%zX\n",
                          pc, sp,
                          (pint_t)ptrauth_auth_data(
                              (void *)pc, ptrauth_key_return_address, sp));

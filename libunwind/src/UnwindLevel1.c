@@ -96,8 +96,7 @@
 static _Unwind_Personality_Fn get_handler_function(unw_proc_info_t *frameInfo) {
   union {
     void *opaque_handler;
-    _Unwind_Personality_Fn __ptrauth_unwind_upi_handler *
-        handler;
+    _Unwind_Personality_Fn __ptrauth_unwind_upi_handler *handler;
   } u;
   u.opaque_handler = (void *)&frameInfo->handler;
   return *u.handler;
@@ -608,7 +607,7 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
   unw_word_t result;
   __unw_get_reg(cursor, UNW_REG_IP, &result);
 
-#if __has_feature(ptrauth_calls)
+#if defined(__ARM64E__)
   // If we are in an arm64e frame, then the PC should have been signed with the
   // sp
   {

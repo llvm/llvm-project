@@ -1367,13 +1367,13 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
                 "UnwindCursor<> does not fit in unw_cursor_t");
   static_assert((alignof(UnwindCursor<A, R>) <= alignof(unw_cursor_t)),
                 "UnwindCursor<> requires more alignment than unw_cursor_t");
-  memset(&_info, 0, sizeof(_info));
+  memset(static_cast<void *>(&_info), 0, sizeof(_info));
 }
 
 template <typename A, typename R>
 UnwindCursor<A, R>::UnwindCursor(A &as, void *)
     : _addressSpace(as), _unwindInfoMissing(false), _isSignalFrame(false) {
-  memset(&_info, 0, sizeof(_info));
+  memset(static_cast<void *>(&_info), 0, sizeof(_info));
   // FIXME
   // fill in _registers from thread arg
 }
@@ -1998,13 +1998,11 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
 #if __has_feature(ptrauth_calls)
     // The GOT for the personality function was signed address authenticated.
     // Resign it as a regular function pointer.
-    const auto discriminator =
-      ptrauth_blend_discriminator(&_info.handler,
-                                  __ptrauth_unwind_upi_handler_disc);
-    void *signedPtr =
-      ptrauth_auth_and_resign((void *)personality, ptrauth_key_function_pointer,
-                              personalityPointer, ptrauth_key_function_pointer,
-                              discriminator);
+    const auto discriminator = ptrauth_blend_discriminator(
+        &_info.handler, __ptrauth_unwind_upi_handler_disc);
+    void *signedPtr = ptrauth_auth_and_resign(
+        (void *)personality, ptrauth_key_function_pointer, personalityPointer,
+        ptrauth_key_function_pointer, discriminator);
     personality = (__typeof(personality))signedPtr;
 #endif
     if (log)
@@ -3229,7 +3227,7 @@ template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
 template <typename A, typename R>
 void UnwindCursor<A, R>::getInfo(unw_proc_info_t *info) {
   if (_unwindInfoMissing)
-    memset(info, 0, sizeof(*info));
+    memset(static_cast<void *>(info), 0, sizeof(*info));
   else
     *info = _info;
 }

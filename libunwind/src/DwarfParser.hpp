@@ -409,13 +409,14 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
           const auto oldDiscriminator = resultAddr;
 #else
           const auto oldDiscriminator = ptrauth_blend_discriminator(
-              (void*)resultAddr, __ptrauth_unwind_pacret_personality_disc);
+              (void *)resultAddr, __ptrauth_unwind_pacret_personality_disc);
 #endif
           const auto discriminator = ptrauth_blend_discriminator(
-              &cieInfo->personality, __ptrauth_unwind_cie_info_personality_disc);
+              &cieInfo->personality,
+              __ptrauth_unwind_cie_info_personality_disc);
           void *signedPtr = ptrauth_auth_and_resign(
-              (void *)personality, ptrauth_key_function_pointer, resultAddr,
-              ptrauth_key_function_pointer, discriminator);
+              (void *)personality, ptrauth_key_function_pointer,
+              oldDiscriminator, ptrauth_key_function_pointer, discriminator);
           personality = (pint_t)signedPtr;
         }
 #endif
