@@ -285,8 +285,7 @@ define i1 @simplify_fcmp_implied_by_dom_cond_range_true(float %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[X]], 1.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -308,8 +307,7 @@ define i1 @simplify_fcmp_in_else_implied_by_dom_cond_range_true(float %x) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uge float [[X]], 5.000000e-01
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = fcmp olt float %x, 1.0
   br i1 %cmp, label %if.then, label %if.else
@@ -327,8 +325,7 @@ define i1 @simplify_fcmp_implied_by_dom_cond_range_false(float %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], 1.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -348,8 +345,7 @@ define i1 @simplify_fcmp_implied_by_dom_cond_pred_true(float %x, float %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ole float [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -369,8 +365,7 @@ define i1 @simplify_fcmp_implied_by_dom_cond_pred_false(float %x, float %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -390,8 +385,7 @@ define i1 @simplify_fcmp_implied_by_dom_cond_pred_commuted(float %x, float %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp oge float [[Y]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;
