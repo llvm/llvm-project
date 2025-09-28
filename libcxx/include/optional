@@ -424,28 +424,12 @@ struct __optional_storage_base<_Tp, true> {
   using __raw_type _LIBCPP_NODEBUG = remove_reference_t<_Tp>;
   __raw_type* __value_;
 
-  template <class _Up>
-  static _LIBCPP_HIDE_FROM_ABI constexpr bool __can_bind_reference() {
-    using _RawUp = __libcpp_remove_reference_t<_Up>;
-    using _UpPtr = _RawUp*;
-    using _RawTp = __libcpp_remove_reference_t<_Tp>;
-    using _TpPtr = _RawTp*;
-    using _CheckLValueArg =
-        integral_constant<bool,
-                          (is_lvalue_reference<_Up>::value && is_convertible<_UpPtr, _TpPtr>::value) ||
-                              is_same<_RawUp, reference_wrapper<_RawTp>>::value ||
-                              is_same<_RawUp, reference_wrapper<__remove_const_t<_RawTp>>>::value >;
-    return (is_lvalue_reference<_Tp>::value && _CheckLValueArg::value) ||
-           (is_rvalue_reference<_Tp>::value && !is_lvalue_reference<_Up>::value &&
-            is_convertible<_UpPtr, _TpPtr>::value);
-  }
-
   _LIBCPP_HIDE_FROM_ABI constexpr __optional_storage_base() noexcept : __value_(nullptr) {}
 
   template <class _UArg>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __optional_storage_base(in_place_t, _UArg&& __uarg)
       : __value_(std::addressof(__uarg)) {
-    static_assert(__can_bind_reference<_UArg>(),
+    static_assert(!__reference_constructs_from_temporary_v<_Tp, _UArg>,
                   "Attempted to construct a reference element in tuple from a "
                   "possible temporary");
   }
@@ -461,7 +445,7 @@ struct __optional_storage_base<_Tp, true> {
   template <class _UArg>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct(_UArg&& __val) {
     _LIBCPP_ASSERT_INTERNAL(!has_value(), "__construct called for engaged __optional_storage");
-    static_assert(__can_bind_reference<_UArg>(),
+    static_assert(!__reference_constructs_from_temporary_v<_Tp, _UArg>,
                   "Attempted to construct a reference element in tuple from a "
                   "possible temporary");
     __value_ = std::addressof(__val);
