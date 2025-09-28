@@ -58,8 +58,11 @@ Potentially Breaking Changes
   :doc:`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` from
   ``NamePrefixSuffixSilenceDissimilarityTreshold`` to
-  ``NamePrefixSuffixSilenceDissimilarityThreshold``,
-  correcting a spelling mistake.
+  ``NamePrefixSuffixSilenceDissimilarityThreshold`` and of check
+  :doc:`bugprone-signed-char-misuse
+  <clang-tidy/checks/bugprone/signed-char-misuse>` from
+  ``CharTypdefsToIgnore`` to ``CharTypedefsToIgnore``,
+  correcting spelling mistakes.
 
 Improvements to clangd
 ----------------------
