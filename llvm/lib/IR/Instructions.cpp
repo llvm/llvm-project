@@ -2973,7 +2973,8 @@ unsigned CastInst::isEliminableCastPair(
       // zext, sext -> zext, because sext can't sign extend after zext
       return Instruction::ZExt;
     case 11: {
-      // inttoptr, ptrtoint/ptrtoaddr -> bitcast if SrcSize<=PtrSize and SrcSize==DstSize
+      // inttoptr, ptrtoint/ptrtoaddr -> bitcast if SrcSize<=PtrSize and
+      // SrcSize==DstSize
       if (!MidIntPtrTy)
         return 0;
       unsigned PtrSize = MidIntPtrTy->getScalarSizeInBits();
