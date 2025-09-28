@@ -151,6 +151,14 @@ LLVM_C_ABI void
 LLVMTargetMachineOptionsSetCodeModel(LLVMTargetMachineOptionsRef Options,
                                      LLVMCodeModel CodeModel);
 
+LLVM_C_ABI void
+LLVMTargetMachineOptionsSetEmulatedTLS(LLVMTargetMachineOptionsRef Options,
+                                       LLVMBool EmulatedTLS);
+
+LLVM_C_ABI void
+LLVMTargetMachineOptionsSetEnableTLSDESC(LLVMTargetMachineOptionsRef Options,
+                                         LLVMBool EnableTLSDESC);
+
 /**
  * Create a new llvm::TargetMachine.
  *
