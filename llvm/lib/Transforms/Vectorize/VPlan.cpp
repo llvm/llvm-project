@@ -1700,26 +1700,6 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       LoopVectorizeHints Hints(VectorLoop, true, *ORE);
       Hints.setAlreadyVectorized();
     }
-
-    // Check if it's EVL-vectorized and mark the corresponding metadata.
-    bool IsEVLVectorized =
-        llvm::any_of(*HeaderVPBB, [](const VPRecipeBase &Recipe) {
-          // Looking for the ExplictVectorLength VPInstruction.
-          if (const auto *VI = dyn_cast<VPInstruction>(&Recipe))
-            return VI->getOpcode() == VPInstruction::ExplicitVectorLength;
-          return false;
-        });
-    if (IsEVLVectorized) {
-      LLVMContext &Context = VectorLoop->getHeader()->getContext();
-      MDNode *LoopID = VectorLoop->getLoopID();
-      auto *IsEVLVectorizedMD = MDNode::get(
-          Context,
-          {MDString::get(Context, "llvm.loop.isvectorized.tailfoldingstyle"),
-           MDString::get(Context, "evl")});
-      MDNode *NewLoopID = makePostTransformationMetadata(Context, LoopID, {},
-                                                         {IsEVLVectorizedMD});
-      VectorLoop->setLoopID(NewLoopID);
-    }
   }
   TargetTransformInfo::UnrollingPreferences UP;
   TTI.getUnrollingPreferences(VectorLoop, *PSE.getSE(), UP, ORE);

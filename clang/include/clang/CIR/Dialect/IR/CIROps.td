@@ -2326,6 +2326,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     The function linkage information is specified by `linkage`, as defined by
     `GlobalLinkageKind` attribute.
 
+    The `lambda` translates to a C++ `operator()` that implements a lambda, this
+    allow callsites to make certain assumptions about the real function nature
+    when writing analysis.
+
     The `no_proto` keyword is used to identify functions that were declared
     without a prototype and, consequently, may contain calls with invalid
     arguments and undefined behavior.
@@ -2348,6 +2352,7 @@ def CIR_FuncOp : CIR_Op<"func", [
   let arguments = (ins SymbolNameAttr:$sym_name,
                        CIR_VisibilityAttr:$global_visibility,
                        TypeAttrOf<CIR_FuncType>:$function_type,
+                       UnitAttr:$lambda,
                        UnitAttr:$no_proto,
                        UnitAttr:$dso_local,
                        DefaultValuedAttr<CIR_GlobalLinkageKind,
@@ -4130,6 +4135,45 @@ def CIR_ThrowOp : CIR_Op<"throw"> {
 //===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//
+
+def CIR_AtomicXchg : CIR_Op<"atomic.xchg", [
+  AllTypesMatch<["result", "val"]>,
+  TypesMatchWith<"type of 'val' must match the pointee type of 'ptr'",
+    "ptr", "val", "mlir::cast<cir::PointerType>($_self).getPointee()">
+]> {
+  let summary = "Atomic exchange";
+  let description = [{
+    C/C++ atomic exchange operation. This operation implements the C/C++
+    builtin function `__atomic_exchange`, `__atomic_exchange_n`, and
+    `__c11_atomic_exchange`.
+
+    This operation takes two arguments: a pointer `ptr` and a value `val`. The
+    operation atomically replaces the value of the object pointed-to by `ptr`
+    with `val`, and returns the original value of the object.
+
+    Example:
+
+    ```mlir
+    %res = cir.atomic.xchg(%ptr : !cir.ptr<!u64i>,
+                           %val : !u64i,
+                           seq_cst) : !u64i
+    ```
+  }];
+
+  let results = (outs CIR_AnyType:$result);
+  let arguments = (ins
+    Arg<CIR_PointerType, "", [MemRead, MemWrite]>:$ptr,
+    CIR_AnyType:$val,
+    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    UnitAttr:$is_volatile
+  );
+
+  let assemblyFormat = [{
+    $mem_order (`volatile` $is_volatile^)?
+    $ptr `,` $val
+    `:` qualified(type($ptr)) `->` type($result) attr-dict
+  }];
+}
 
 def CIR_AtomicCmpXchg : CIR_Op<"atomic.cmpxchg", [
   AllTypesMatch<["old", "expected", "desired"]>

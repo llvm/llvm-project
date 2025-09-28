@@ -3142,7 +3142,11 @@ void DWARFASTParserClang::ParseSingleMember(
       uint64_t parent_byte_size =
           parent_die.GetAttributeValueAsUnsigned(DW_AT_byte_size, UINT64_MAX);
 
-      if (attrs.member_byte_offset >= parent_byte_size) {
+      // If the attrs.member_byte_offset is still set to UINT32_MAX this means
+      // that the DW_TAG_member didn't have a DW_AT_data_member_location, so
+      // don't emit an error if this is the case.
+      if (attrs.member_byte_offset != UINT32_MAX &&
+          attrs.member_byte_offset >= parent_byte_size) {
         if (member_array_size != 1 &&
             (member_array_size != 0 ||
              attrs.member_byte_offset > parent_byte_size)) {

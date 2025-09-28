@@ -1439,7 +1439,7 @@ def NoVendorXMIPSCBOP : Predicate<"!Subtarget->hasVendorXMIPSCBOP()">;
 
 def FeatureVendorXMIPSEXECTL : RISCVExtension<1, 0, "MIPS execution control">;
 def HasVendorXMIPSEXECTL
-    : Predicate<"Subtarget->hasVendorXMIPSEXT()">,
+    : Predicate<"Subtarget->hasVendorXMIPSEXECTL()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSEXECTL),
                          "'Xmipsexectl' (MIPS execution control)">;
 
@@ -1647,6 +1647,14 @@ def HasVendorXAndesVBFHCvt
     : Predicate<"Subtarget->hasVendorXAndesVBFHCvt()">,
       AssemblerPredicate<(all_of FeatureVendorXAndesVBFHCvt),
                          "'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)">;
+
+def FeatureVendorXAndesVSIntH
+    : RISCVExtension<5, 0, "Andes Vector Small INT Handling Extension",
+                     [FeatureStdExtZve32x]>;
+def HasVendorXAndesVSIntH
+    : Predicate<"Subtarget->hasVendorXAndesVSIntH()">,
+      AssemblerPredicate<(all_of FeatureVendorXAndesVSIntH),
+                         "'XAndesVSIntH' (Andes Vector Small INT Handling Extension)">;
 
 def FeatureVendorXAndesVSIntLoad
     : RISCVExtension<5, 0, "Andes Vector INT4 Load Extension",

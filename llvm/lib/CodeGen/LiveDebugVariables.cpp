@@ -1263,7 +1263,7 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
 
 void LiveDebugVariables::LDVImpl::computeIntervals() {
   LexicalScopes LS;
-  LS.scanFunction(*MF);
+  LS.initialize(*MF);
 
   for (const auto &UV : userValues) {
     UV->computeIntervals(MF->getRegInfo(), *TRI, *LIS, LS);

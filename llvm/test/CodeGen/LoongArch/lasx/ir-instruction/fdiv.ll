@@ -53,8 +53,7 @@ define void @one_fdiv_v4f64(ptr %res, ptr %a0) nounwind {
 ; LA32-LABEL: one_fdiv_v4f64:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI3_0)
-; LA32-NEXT:    xvld $xr1, $a1, %pc_lo12(.LCPI3_0)
+; LA32-NEXT:    xvldi $xr1, -912
 ; LA32-NEXT:    xvfdiv.d $xr0, $xr1, $xr0
 ; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret
