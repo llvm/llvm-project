@@ -567,9 +567,15 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
   for (const ParmVarDecl *PD : FuncDecl->parameters()) {
+    bool IsConst = PD->getType().isConstQualified();
+    bool IsVolatile = PD->getType().isVolatileQualified();
+
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT);
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
+                                           IsConst, /*IsTemporary=*/false,
+                                           /*IsMutable=*/false, IsVolatile);
+
     ParamDescriptors.insert({ParamOffset, {PT, Desc}});
     ParamOffsets.push_back(ParamOffset);
     ParamOffset += align(primSize(PT));
@@ -595,9 +601,14 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
   for (const ParmVarDecl *PD : BD->parameters()) {
+    bool IsConst = PD->getType().isConstQualified();
+    bool IsVolatile = PD->getType().isVolatileQualified();
+
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT);
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
+                                           IsConst, /*IsTemporary=*/false,
+                                           /*IsMutable=*/false, IsVolatile);
     ParamDescriptors.insert({ParamOffset, {PT, Desc}});
     ParamOffsets.push_back(ParamOffset);
     ParamOffset += align(primSize(PT));
