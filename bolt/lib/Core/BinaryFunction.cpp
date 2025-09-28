@@ -1367,6 +1367,39 @@ Error BinaryFunction::disassemble() {
       setIgnored();
 
     if (MIB->isBranch(Instruction) || MIB->isCall(Instruction)) {
+
+      // ---- PPC64 ELFv2: mark calls that need a NOP in the slot after 'bl'
+      if (BC.isPPC64() && MIB->isCall(Instruction)) {
+        const uint64_t NextOff = Offset + Size;
+
+        // If there's a next instruction inside the function
+        if (NextOff < getSize()) {
+          // Look it up in the decoded map (if present) or peek raw bytes
+          auto NextIt = Instructions.find(NextOff);
+          bool NextIsNop = false;
+
+          if (NextIt != Instructions.end()) {
+            NextIsNop = BC.MIB->isNoop(NextIt->second);
+          } else {
+            // Fall back: peek original bytes and try to decode a single inst
+            // there
+            if (auto NextInstOpt = disassembleInstructionAtOffset(NextOff)) {
+              NextIsNop = BC.MIB->isNoop(*NextInstOpt);
+            }
+          }
+
+          if (!NextIsNop) {
+            // Mark current call: in order to insert a NOP on emission
+            // afterwards.
+            BC.MIB->addAnnotation(Instruction, "PPCNeedsCallSlotNOP", true);
+          }
+        } else {
+          // Call is last instruction: also needs a NOP on emission.
+          BC.MIB->addAnnotation(Instruction, "PPCNeedsCallSlotNOP", true);
+        }
+      }
+      // --------------------------------------------------------------------------
+
       uint64_t TargetAddress = 0;
       if (MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
                               TargetAddress)) {

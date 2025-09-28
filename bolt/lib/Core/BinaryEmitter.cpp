@@ -520,6 +520,25 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
       }
 
       Streamer.emitInstruction(Instr, *BC.STI);
+
+      // --- PPC64 ELFv2: guarantee a post-call NOP (call slot)
+      if (BC.isPPC64() && BC.MIB->isCall(Instr)) {
+        bool NeedSlot = true;
+
+        // If the next IR instruction exists and is already a NOP, don't
+        // inject.
+        auto NextI = std::next(I);
+        if (NextI != E && BC.MIB->isNoop(*NextI))
+          NeedSlot = false;
+
+        if (NeedSlot) {
+          MCInst N;
+          BC.MIB->createNoop(N);
+          Streamer.emitInstruction(N, *BC.STI);
+          LLVM_DEBUG(dbgs() << "PPC: inserted NOP after call at "
+                            << BF.getPrintName() << "\n");
+        }
+      }
     }
   }
 
