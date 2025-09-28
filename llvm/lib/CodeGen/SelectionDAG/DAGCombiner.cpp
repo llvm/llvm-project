@@ -18869,20 +18869,45 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   // FIXME: We should be able to use node-level FMF here.
   // TODO: If strict math, should we use FABS (+ range check for signed cast)?
   EVT VT = N->getValueType(0);
-  if (!TLI.isOperationLegal(ISD::FTRUNC, VT) ||
-      !DAG.getTarget().Options.NoSignedZerosFPMath)
+  if (!TLI.isOperationLegal(ISD::FTRUNC, VT))
     return SDValue();
 
   // fptosi/fptoui round towards zero, so converting from FP to integer and
   // back is the same as an 'ftrunc': [us]itofp (fpto[us]i X) --> ftrunc X
   SDValue N0 = N->getOperand(0);
   if (N->getOpcode() == ISD::SINT_TO_FP && N0.getOpcode() == ISD::FP_TO_SINT &&
-      N0.getOperand(0).getValueType() == VT)
-    return DAG.getNode(ISD::FTRUNC, DL, VT, N0.getOperand(0));
+      N0.getOperand(0).getValueType() == VT) {
+    if (DAG.getTarget().Options.NoSignedZerosFPMath)
+      return DAG.getNode(ISD::FTRUNC, DL, VT, N0.getOperand(0));
+
+    unsigned IntWidth = N0.getValueSizeInBits();
+    APInt APMax = APInt::getSignedMaxValue(IntWidth);
+    APInt APMin = APInt::getSignedMinValue(IntWidth);
+
+    APFloat MaxAPF(VT.getFltSemantics());
+    MaxAPF.convertFromAPInt(APMax, true, APFloat::rmTowardZero);
+    APFloat MinAPF(VT.getFltSemantics());
+    MinAPF.convertFromAPInt(APMin, true, APFloat::rmTowardZero);
+
+    SDValue MaxFP = DAG.getConstantFP(MaxAPF, DL, VT);
+    SDValue MinFP = DAG.getConstantFP(MinAPF, DL, VT);
+
+    SDValue Clamped = DAG.getNode(ISD::FMINNUM, DL, VT,
+                                  DAG.getNode(ISD::FMAXNUM, DL, VT, N0->getOperand(0), MinFP),
+                                  MaxFP);
+    return DAG.getNode(ISD::FTRUNC, DL, VT, Clamped);
+  }
 
   if (N->getOpcode() == ISD::UINT_TO_FP && N0.getOpcode() == ISD::FP_TO_UINT &&
-      N0.getOperand(0).getValueType() == VT)
-    return DAG.getNode(ISD::FTRUNC, DL, VT, N0.getOperand(0));
+      N0.getOperand(0).getValueType() == VT) {
+    if (DAG.getTarget().Options.NoSignedZerosFPMath)
+      return DAG.getNode(ISD::FTRUNC, DL, VT, N0.getOperand(0));
+
+    if (TLI.isFAbsFree(VT)) {
+      SDValue Abs = DAG.getNode(ISD::FABS, DL, VT, N0.getOperand(0));
+      return DAG.getNode(ISD::FTRUNC, DL, VT, Abs);
+    }
+  }
 
   return SDValue();
 }
