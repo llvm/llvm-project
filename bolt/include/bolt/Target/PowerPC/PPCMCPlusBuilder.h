@@ -21,6 +21,7 @@ public:
 
   void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override;
+  bool isIndirectBranch(const MCInst &I) const override;
 
   const MCSymbol *getTargetSymbol(const MCInst &Inst,
                                   unsigned OpNum = 0) const override;
