@@ -8,6 +8,6 @@ declare void @llvm.fake.use(...)
 
 define spir_kernel void @foo(ptr addrspace(1) %a) {
 entry:
-  call void (...) @llvm.fake.use(i8 undef)
+  call void (...) @llvm.fake.use(ptr addrspace(1) %a)
   ret void
 }
