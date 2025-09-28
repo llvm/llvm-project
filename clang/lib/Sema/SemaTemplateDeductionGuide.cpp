@@ -1171,17 +1171,38 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
     const auto &D = DeduceResults[Index];
+    auto *TP = F->getTemplateParameters()->getParam(Index);
     if (IsNonDeducedArgument(D)) {
       // 2): Non-deduced template parameters would be substituted later.
       continue;
     }
     TemplateArgumentLoc Input =
         SemaRef.getTrivialTemplateArgumentLoc(D, QualType(), SourceLocation{});
-    TemplateArgumentLoc Output;
-    if (!SemaRef.SubstTemplateArgument(Input, Args, Output)) {
+    TemplateArgumentListInfo Output;
+    if (!SemaRef.SubstTemplateArguments(Input, Args, Output)) {
       assert(TemplateArgsForBuildingFPrime[Index].isNull() &&
              "InstantiatedArgs must be null before setting");
-      TemplateArgsForBuildingFPrime[Index] = Output.getArgument();
+      Sema::CheckTemplateArgumentInfo CTAI;
+      if (Input.getArgument().getKind() == TemplateArgument::Pack) {
+        for (auto TA : Output.arguments()) {
+          if (SemaRef.CheckTemplateArgument(
+                  TP, TA, F, F->getLocation(), F->getLocation(),
+                  /*ArgumentPackIndex=*/-1, CTAI,
+                  Sema::CheckTemplateArgumentKind::CTAK_Specified))
+            return nullptr;
+        }
+        TemplateArgsForBuildingFPrime[Index] =
+            TemplateArgument::CreatePackCopy(Context, CTAI.SugaredConverted);
+      } else {
+        assert(Output.arguments().size() == 1);
+        TemplateArgumentLoc Transformed = Output.arguments()[0];
+        if (SemaRef.CheckTemplateArgument(
+                TP, Transformed, F, F->getLocation(), F->getLocation(),
+                /*ArgumentPackIndex=*/-1, CTAI,
+                Sema::CheckTemplateArgumentKind::CTAK_Specified))
+          return nullptr;
+        TemplateArgsForBuildingFPrime[Index] = CTAI.SugaredConverted[0];
+      }
     }
   }
 
@@ -1202,8 +1223,21 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
 
     assert(TemplateArgsForBuildingFPrime[FTemplateParamIdx].isNull() &&
            "The argument must be null before setting");
+    TemplateArgument Transformed = Context.getInjectedTemplateArg(NewParam);
+    if (NewParam->isTemplateParameterPack())
+      Transformed = *Transformed.pack_begin();
+    TemplateArgumentLoc TALoc = SemaRef.getTrivialTemplateArgumentLoc(
+        Transformed, QualType(), NewParam->getBeginLoc());
+    Sema::CheckTemplateArgumentInfo CTAI;
+    if (SemaRef.CheckTemplateArgument(
+            TP, TALoc, F, F->getLocation(), F->getLocation(),
+            /*ArgumentPackIndex=*/-1, CTAI,
+            Sema::CheckTemplateArgumentKind::CTAK_Specified))
+      return nullptr;
     TemplateArgsForBuildingFPrime[FTemplateParamIdx] =
-        Context.getInjectedTemplateArg(NewParam);
+        NewParam->isTemplateParameterPack()
+            ? TemplateArgument::CreatePackCopy(Context, CTAI.SugaredConverted)
+            : CTAI.SugaredConverted[0];
   }
 
   auto *TemplateArgListForBuildingFPrime =
