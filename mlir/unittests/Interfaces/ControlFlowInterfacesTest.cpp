@@ -13,17 +13,24 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Parser/Parser.h"
+#include "llvm/Support/DebugLog.h"
 
 #include <gtest/gtest.h>
 
 using namespace mlir;
 
 /// A dummy op that is also a terminator.
-struct DummyOp : public Op<DummyOp, OpTrait::IsTerminator> {
+struct DummyOp : public Op<DummyOp, OpTrait::IsTerminator, OpTrait::ZeroResults,
+                           OpTrait::ZeroSuccessors,
+                           RegionBranchTerminatorOpInterface::Trait> {
   using Op::Op;
   static ArrayRef<StringRef> getAttributeNames() { return {}; }
 
   static StringRef getOperationName() { return "cftest.dummy_op"; }
+
+  MutableOperandRange getMutableSuccessorOperands(RegionSuccessor point) {
+    return MutableOperandRange(getOperation(), 0, 0);
+  }
 };
 
 /// All regions of this op are mutually exclusive.
@@ -53,10 +60,13 @@ struct LoopRegionsOp
 
   void getSuccessorRegions(RegionBranchPoint point,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    if (Region *region = point.getRegionOrNull()) {
-      if (point == (*this)->getRegion(1))
+    if (point.getPredecessorOrNull()) {
+      Region *region = point.getPredecessorOrNull()->getParentRegion();
+      if (region == &(*this)->getRegion(1))
         // This region also branches back to the parent.
-        regions.push_back(RegionSuccessor());
+        regions.push_back(
+            RegionSuccessor(getOperation()->getParentOp(),
+                            getOperation()->getParentOp()->getResults()));
       regions.push_back(RegionSuccessor(region));
     }
   }
@@ -75,8 +85,11 @@ struct DoubleLoopRegionsOp
 
   void getSuccessorRegions(RegionBranchPoint point,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    if (Region *region = point.getRegionOrNull()) {
-      regions.push_back(RegionSuccessor());
+    if (point.getPredecessorOrNull()) {
+      Region *region = point.getPredecessorOrNull()->getParentRegion();
+      regions.push_back(
+          RegionSuccessor(getOperation()->getParentOp(),
+                          getOperation()->getParentOp()->getResults()));
       regions.push_back(RegionSuccessor(region));
     }
   }
@@ -93,7 +106,9 @@ struct SequentialRegionsOp
   // Region 0 has Region 1 as a successor.
   void getSuccessorRegions(RegionBranchPoint point,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    if (point == (*this)->getRegion(0)) {
+    if (point.getPredecessorOrNull() &&
+        point.getPredecessorOrNull()->getParentRegion() ==
+            &(*this)->getRegion(0)) {
       Operation *thisOp = this->getOperation();
       regions.push_back(RegionSuccessor(&thisOp->getRegion(1)));
     }
@@ -132,6 +147,7 @@ TEST(RegionBranchOpInterface, MutuallyExclusiveOps) {
 }
 
 TEST(RegionBranchOpInterface, MutuallyExclusiveOps2) {
+  llvm::DebugFlag = true;
   const char *ir = R"MLIR(
 "cftest.double_loop_regions_op"() (
       {"cftest.dummy_op"() : () -> ()},  // op1

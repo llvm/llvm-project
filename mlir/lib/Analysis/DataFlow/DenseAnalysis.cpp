@@ -418,7 +418,9 @@ void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {
     // If this block is exiting from an operation with region-based control
     // flow, propagate the lattice back along the control flow edge.
     if (auto branch = dyn_cast<RegionBranchOpInterface>(block->getParentOp())) {
-      visitRegionBranchOperation(point, branch, block->getParent(), before);
+      auto terminator =
+          cast<RegionBranchTerminatorOpInterface>(block->getTerminator());
+      visitRegionBranchOperation(point, branch, terminator, before);
       return;
     }
 

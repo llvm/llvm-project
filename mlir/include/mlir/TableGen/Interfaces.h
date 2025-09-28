@@ -32,13 +32,16 @@ public:
     StringRef name;
   };
 
-  explicit InterfaceMethod(const llvm::Record *def);
+  explicit InterfaceMethod(const llvm::Record *def, std::string dedupName);
 
   // Return the return type of this method.
   StringRef getReturnType() const;
 
   // Return the name of this method.
   StringRef getName() const;
+
+  // Return the dedup name of this method.
+  StringRef getDedupName() const;
 
   // Return if this method is static.
   bool isStatic() const;
@@ -62,6 +65,8 @@ private:
 
   // The arguments of this method.
   SmallVector<Argument, 2> arguments;
+
+  std::string dedupName;
 };
 
 //===----------------------------------------------------------------------===//
