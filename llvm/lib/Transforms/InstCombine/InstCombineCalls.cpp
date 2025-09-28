@@ -3763,18 +3763,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           }
       }
 
-      // Handle the case where a value is multiplied by a power of two.
-      // For example:
-      // %2 = insertelement <4 x i32> poison, i32 %0, i64 0
-      // %3 = shufflevector <4 x i32> %2, poison, <4 x i32> zeroinitializer
-      // %4 = tail call i32 @llvm.vector.reduce.add.v4i32(%3)
+      // Handle the case where a splat is summarized. In that case we have a
+      // multpilication. For example: %2 = insertelement <4 x i32> poison, i32
+      // %0, i64 0 %3 = shufflevector <4 x i32> %2, poison, <4 x i32>
+      // zeroinitializer %4 = tail call i32 @llvm.vector.reduce.add.v4i32(%3)
       // =>
       // %2 = shl i32 %0, 2
-      assert(Arg->getType()->isVectorTy() &&
-             "The vector.reduce.add intrinsic's argument must be a vector!");
-
       if (Value *Splat = getSplatValue(Arg)) {
         // It is only a multiplication if we add the same element over and over.
+        assert(Arg->getType()->isVectorTy() &&
+               "The vector.reduce.add intrinsic's argument must be a vector!");
         ElementCount ReducedVectorElementCount =
             static_cast<VectorType *>(Arg->getType())->getElementCount();
         if (ReducedVectorElementCount.isFixed()) {
