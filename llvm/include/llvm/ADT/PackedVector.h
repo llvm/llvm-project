@@ -58,6 +58,8 @@ protected:
     if (val < 0) {
       val = ~val;
       Bits.set((Idx * BitNum) + BitNum - 1);
+    } else {
+      Bits.reset((Idx * BitNum) + BitNum - 1);
     }
     assert((val >> (BitNum-1)) == 0 && "value is too big");
     for (unsigned i = 0; i != BitNum-1; ++i)
