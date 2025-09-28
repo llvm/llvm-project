@@ -146,11 +146,12 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
       // Therefore, if the result value is live, we conservatively consider the
       // non-forwarded operand of the region branch operation with result may
       // live and record all result.
-      for (Value result : op->getResults()) {
+      for (auto [resultIndex, result] : llvm::enumerate(op->getResults())) {
         if (getLatticeElement(result)->isLive) {
           mayLive = true;
-          LDBG() << "[visitBranchOperand] Non-forwarded branch "
-                    "operand may be live due to live result: "
+          LDBG() << "[visitBranchOperand] Non-forwarded branch operand may be "
+                    "live due to live result #"
+                 << resultIndex << ": "
                  << OpWithFlags(op, OpPrintingFlags().skipRegions());
           break;
         }
