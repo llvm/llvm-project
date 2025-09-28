@@ -40,10 +40,8 @@ COPY --from=clang-format-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 # Need git for git-clang-format.
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    # binutils \
     git \
     nodejs \
-    # python3-psutil \
     sudo \
     # These are needed by the premerge pipeline. Pip and venv are used to
     # install dependent python packages.
@@ -71,6 +69,7 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER gha
 WORKDIR /home/gha
 
+# Install dependencies for 'pr-code-format.yml' job
 COPY llvm/utils/git/requirements_formatting.txt /home/gha/requirements_formatting.txt
 RUN python -m venv venv && \
     venv/bin/pip install -r /home/gha/requirements_formatting.txt && \
