@@ -26,7 +26,7 @@ def SDT_LoongArchV1RUimm: SDTypeProfile<1, 2, [SDTCisVec<0>,
 def SDT_LoongArchV2RUimm
     : SDTypeProfile<1, 3,
                     [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
-                     SDTCisVT<3, i64>]>;
+                     SDTCisVT<3, GRLenVT>]>;
 def SDT_LoongArchVreplgr2vr : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<0>, SDTCisInt<1>]>;
 def SDT_LoongArchVFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
 def SDT_LoongArchVFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
@@ -158,6 +158,7 @@ def vsplatf32_fpimm_eq_1
   N = N->getOperand(0).getNode();
 
   return selectVSplat(N, Imm, EltTy.getSizeInBits()) &&
+         Imm.getBitWidth() == 32 &&
          Imm.getBitWidth() == EltTy.getSizeInBits() &&
          Imm == APFloat(+1.0f).bitcastToAPInt();
 }]>;
@@ -1482,7 +1483,7 @@ multiclass VldreplPat<ValueType vt, LAInst Inst, Operand ImmOpnd> {
 }
 
 multiclass VstelmPat<PatFrag StoreOp, ValueType vt, LAInst Inst,
-                     Operand ImmOpnd, Operand IdxOpnd, ValueType elt = i64> {
+                     Operand ImmOpnd, Operand IdxOpnd, ValueType elt = GRLenVT> {
   def : Pat<(StoreOp(elt(vector_extract vt:$vd, IdxOpnd:$idx)), BaseAddr:$rj),
             (Inst vt:$vd, BaseAddr:$rj, 0, IdxOpnd:$idx)>;
 
@@ -2110,8 +2111,8 @@ def : Pat<(GRLenVT (vector_extract v4i32:$vj, GRLenVT:$rk)),
           (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (VREPLVE_W v4i32:$vj, GRLenVT:$rk),
                                                  sub_32)),
                             GPR)>;
-def : Pat<(i64 (vector_extract v2i64:$vj, i64:$rk)),
-          (COPY_TO_REGCLASS (f64 (EXTRACT_SUBREG (VREPLVE_D v2i64:$vj, i64:$rk),
+def : Pat<(GRLenVT (vector_extract v2i64:$vj, GRLenVT:$rk)),
+          (COPY_TO_REGCLASS (f64 (EXTRACT_SUBREG (VREPLVE_D v2i64:$vj, GRLenVT:$rk),
                                                  sub_64)),
                             GPR)>;
 def : Pat<(f32 (vector_extract v4f32:$vj, GRLenVT:$rk)),

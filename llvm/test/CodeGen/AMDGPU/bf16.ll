@@ -10908,13 +10908,12 @@ define <2 x bfloat> @v_fadd_v2bf16(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_perm_b32 v0, v0, v1, 0x7060302
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GFX1250-LABEL: v_fadd_v2bf16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, v1
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-NEXT:   s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:   s_wait_kmcnt 0x0
+; GFX1250-NEXT:   v_pk_add_bf16 v0, v0, v1
+; GFX1250-NEXT:   s_set_pc_i64 s[30:31]
   %op = fadd <2 x bfloat> %a, %b
   ret <2 x bfloat> %op
 }
@@ -11447,14 +11446,13 @@ define <4 x bfloat> @v_fadd_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_perm_b32 v1, v1, v4, 0x7060302
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GFX1250-LABEL: v_fadd_v4bf16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, v2
-; GFX1250-NEXT:    v_pk_add_bf16 v1, v1, v3
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-NEXT:   s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:   s_wait_kmcnt 0x0
+; GFX1250-NEXT:   v_pk_add_bf16 v0, v0, v2
+; GFX1250-NEXT:   v_pk_add_bf16 v1, v1, v3
+; GFX1250-NEXT:   s_set_pc_i64 s[30:31]
   %op = fadd <4 x bfloat> %a, %b
   ret <4 x bfloat> %op
 }
@@ -49040,6 +49038,9 @@ declare bfloat @llvm.fma.bf16(bfloat, bfloat, bfloat)
 declare <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat>, <2 x bfloat>, <2 x bfloat>)
 declare <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat>, <3 x bfloat>, <3 x bfloat>)
 declare <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat>, <4 x bfloat>, <4 x bfloat>)
+declare <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat>, <8 x bfloat>, <8 x bfloat>)
+declare <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat>, <16 x bfloat>, <16 x bfloat>)
+declare <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat>, <32 x bfloat>, <32 x bfloat>)
 
 define bfloat @v_fma_bf16(bfloat %a, bfloat %b, bfloat %c) {
 ; GCN-LABEL: v_fma_bf16:
@@ -49988,6 +49989,98 @@ define <4 x bfloat> @v_fma_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat>
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat> %c)
   ret <4 x bfloat> %op
+}
+
+; GFX1250-LABEL: v_fma_v8bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_fma_bf16 v0, v0, v4, v8
+; GFX1250-NEXT:    v_pk_fma_bf16 v1, v1, v5, v9
+; GFX1250-NEXT:    v_pk_fma_bf16 v2, v2, v6, v10
+; GFX1250-NEXT:    v_pk_fma_bf16 v3, v3, v7, v11
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+define <8 x bfloat> @v_fma_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b, <8 x bfloat> %c) {
+  %op = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %a, <8 x bfloat> %b, <8 x bfloat> %c)
+  ret <8 x bfloat> %op
+}
+
+; GFX1250-LABEL: v_fma_v16bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_fma_bf16 v0, v0, v8, v16
+; GFX1250-NEXT:    v_pk_fma_bf16 v1, v1, v9, v17
+; GFX1250-NEXT:    v_pk_fma_bf16 v2, v2, v10, v18
+; GFX1250-NEXT:    v_pk_fma_bf16 v3, v3, v11, v19
+; GFX1250-NEXT:    v_pk_fma_bf16 v4, v4, v12, v20
+; GFX1250-NEXT:    v_pk_fma_bf16 v5, v5, v13, v21
+; GFX1250-NEXT:    v_pk_fma_bf16 v6, v6, v14, v22
+; GFX1250-NEXT:    v_pk_fma_bf16 v7, v7, v15, v23
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+define <16 x bfloat> @v_fma_v16bf16(<16 x bfloat> %a, <16 x bfloat> %b, <16 x bfloat> %c) {
+  %op = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %a, <16 x bfloat> %b, <16 x bfloat> %c)
+  ret <16 x bfloat> %op
+}
+
+; GFX1250-LABEL: v_fma_v32bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:     s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:     s_wait_kmcnt 0x0
+; GFX1250-NEXT:     s_clause 0x10
+; GFX1250-NEXT:     scratch_load_b32 v31, off, s32 offset:64
+; GFX1250-NEXT:     scratch_load_b32 v32, off, s32 offset:4
+; GFX1250-NEXT:     scratch_load_b32 v33, off, s32 offset:8
+; GFX1250-NEXT:     scratch_load_b32 v34, off, s32 offset:12
+; GFX1250-NEXT:     scratch_load_b32 v35, off, s32 offset:16
+; GFX1250-NEXT:     scratch_load_b32 v36, off, s32 offset:20
+; GFX1250-NEXT:     scratch_load_b32 v37, off, s32 offset:24
+; GFX1250-NEXT:     scratch_load_b32 v38, off, s32 offset:28
+; GFX1250-NEXT:     scratch_load_b32 v39, off, s32 offset:32
+; GFX1250-NEXT:     scratch_load_b32 v48, off, s32 offset:36
+; GFX1250-NEXT:     scratch_load_b32 v49, off, s32 offset:40
+; GFX1250-NEXT:     scratch_load_b32 v50, off, s32 offset:44
+; GFX1250-NEXT:     scratch_load_b32 v51, off, s32 offset:48
+; GFX1250-NEXT:     scratch_load_b32 v52, off, s32 offset:52
+; GFX1250-NEXT:     scratch_load_b32 v53, off, s32 offset:56
+; GFX1250-NEXT:     scratch_load_b32 v54, off, s32 offset:60
+; GFX1250-NEXT:     scratch_load_b32 v55, off, s32
+; GFX1250-NEXT:     s_wait_loadcnt 0xf
+; GFX1250-NEXT:     v_pk_fma_bf16 v0, v0, v16, v32
+; GFX1250-NEXT:     s_wait_loadcnt 0xe
+; GFX1250-NEXT:     v_pk_fma_bf16 v1, v1, v17, v33
+; GFX1250-NEXT:     s_wait_loadcnt 0xd
+; GFX1250-NEXT:     v_pk_fma_bf16 v2, v2, v18, v34
+; GFX1250-NEXT:     s_wait_loadcnt 0xc
+; GFX1250-NEXT:     v_pk_fma_bf16 v3, v3, v19, v35
+; GFX1250-NEXT:     s_wait_loadcnt 0xb
+; GFX1250-NEXT:     v_pk_fma_bf16 v4, v4, v20, v36
+; GFX1250-NEXT:     s_wait_loadcnt 0xa
+; GFX1250-NEXT:     v_pk_fma_bf16 v5, v5, v21, v37
+; GFX1250-NEXT:     s_wait_loadcnt 0x9
+; GFX1250-NEXT:     v_pk_fma_bf16 v6, v6, v22, v38
+; GFX1250-NEXT:     s_wait_loadcnt 0x8
+; GFX1250-NEXT:     v_pk_fma_bf16 v7, v7, v23, v39
+; GFX1250-NEXT:     s_wait_loadcnt 0x7
+; GFX1250-NEXT:     v_pk_fma_bf16 v8, v8, v24, v48
+; GFX1250-NEXT:     s_wait_loadcnt 0x6
+; GFX1250-NEXT:     v_pk_fma_bf16 v9, v9, v25, v49
+; GFX1250-NEXT:     s_wait_loadcnt 0x5
+; GFX1250-NEXT:     v_pk_fma_bf16 v10, v10, v26, v50
+; GFX1250-NEXT:     s_wait_loadcnt 0x4
+; GFX1250-NEXT:     v_pk_fma_bf16 v11, v11, v27, v51
+; GFX1250-NEXT:     s_wait_loadcnt 0x3
+; GFX1250-NEXT:     v_pk_fma_bf16 v12, v12, v28, v52
+; GFX1250-NEXT:     s_wait_loadcnt 0x2
+; GFX1250-NEXT:     v_pk_fma_bf16 v13, v13, v29, v53
+; GFX1250-NEXT:     s_wait_loadcnt 0x1
+; GFX1250-NEXT:     v_pk_fma_bf16 v14, v14, v30, v54
+; GFX1250-NEXT:     s_wait_loadcnt 0x0
+; GFX1250-NEXT:     v_pk_fma_bf16 v15, v15, v55, v31
+; GFX1250-NEXT:     s_set_pc_i64 s[30:31]
+define <32 x bfloat> @v_fma_v32bf16(<32 x bfloat> %a, <32 x bfloat> %b, <32 x bfloat> %c) {
+  %op = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %a, <32 x bfloat> %b, <32 x bfloat> %c)
+  ret <32 x bfloat> %op
 }
 
 declare bfloat @llvm.fmuladd.bf16(bfloat, bfloat, bfloat)

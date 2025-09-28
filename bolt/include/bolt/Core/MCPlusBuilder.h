@@ -51,6 +51,7 @@ class raw_ostream;
 
 namespace bolt {
 class BinaryBasicBlock;
+class BinaryContext;
 class BinaryFunction;
 
 /// Different types of indirect branches encountered during disassembly.
@@ -530,10 +531,15 @@ public:
     return 0;
   }
 
+  /// Create a helper function to increment counter for Instrumentation
+  virtual void createInstrCounterIncrFunc(BinaryContext &BC) {
+    llvm_unreachable("not implemented");
+  }
+
   /// Create increment contents of target by 1 for Instrumentation
-  virtual InstructionListType
-  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
-                       unsigned CodePointerSize) const {
+  virtual InstructionListType createInstrIncMemory(const MCSymbol *Target,
+                                                   MCContext *Ctx, bool IsLeaf,
+                                                   unsigned CodePointerSize) {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }
