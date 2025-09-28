@@ -13,7 +13,7 @@
 #include <__config>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_integral.h>
+#include <__type_traits/is_standard_layout.h>
 #include <cstddef>
 #include <cstdint>
 
@@ -30,14 +30,14 @@ struct __is_atomic_wait_native_type : false_type {};
 using __cxx_contention_t _LIBCPP_NODEBUG = int32_t;
 
 template <class _Tp>
-struct __is_atomic_wait_native_type<_Tp, __enable_if_t<is_integral<_Tp>::value && sizeof(_Tp) == 4> > : true_type {};
+struct __is_atomic_wait_native_type<_Tp, __enable_if_t<is_standard_layout<_Tp>::value && sizeof(_Tp) == 4> > : true_type {};
 
 #else
 using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;
 
 template <class _Tp>
 struct __is_atomic_wait_native_type<_Tp,
-                                    __enable_if_t<is_integral<_Tp>::value && (sizeof(_Tp) == 4 || sizeof(_Tp) == 8)> >
+                                    __enable_if_t<is_standard_layout<_Tp>::value && (sizeof(_Tp) == 4 || sizeof(_Tp) == 8)> >
     : true_type {};
 
 #endif // __linux__ || (_AIX && !__64BIT__)
