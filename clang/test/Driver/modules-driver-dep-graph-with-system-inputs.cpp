@@ -27,13 +27,14 @@
 // RUN:   -stdlib=libc++ \
 // RUN:   -resource-dir=%t/Inputs/usr/lib/x86_64-linux-gnu \
 // RUN:   --target=x86_64-linux-gnu \
+// RUN:   -fmodules-cache-path=%t/modules-cache \
 // RUN:   %t/main.cpp %t/foo.cpp \
 // RUN:   -### 2>&1 \
 // RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %s -DPREFIX=%/t
 
 // CHECK:      remark: using standard modules manifest file '[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/libc++.modules.json' [-Rmodules-driver]
-// CHECK-NEXT: remark: printing module dependency graph [-Rmodules-driver]
+// CHECK:      remark: printing module dependency graph [-Rmodules-driver]
 // CHECK-NEXT: digraph "Module Dependency Graph" {
 // CHECK-NEXT:         label="Module Dependency Graph";
 
