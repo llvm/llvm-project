@@ -29,7 +29,10 @@ jobs:
       - name: Checkout LLVM
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          sparse-checkout: .github/workflows/containers/github-action-ci-code-format/
+          sparse-checkout: |
+            .github/workflows/containers/github-action-ci-code-format/
+            llvm/utils/git/requirements_formatting.txt
+
       - name: Write Variables
         id: vars
         run: |
