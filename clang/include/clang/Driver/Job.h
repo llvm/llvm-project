@@ -221,6 +221,8 @@ public:
 
   const char *getExecutable() const { return Executable; }
 
+  llvm::opt::ArgStringList &getArguments() { return Arguments; }
+
   const llvm::opt::ArgStringList &getArguments() const { return Arguments; }
 
   const std::vector<InputInfo> &getInputInfos() const { return InputInfoList; }
@@ -278,6 +280,9 @@ public:
   void clear();
 
   const list_type &getJobs() const { return Jobs; }
+
+  // Returns and transfers ownership of all jobs, leaving this list empty.
+  list_type takeJobs();
 
   bool empty() const { return Jobs.empty(); }
   size_type size() const { return Jobs.size(); }
