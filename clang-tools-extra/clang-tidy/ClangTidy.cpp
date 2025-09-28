@@ -20,6 +20,7 @@
 #include "ClangTidyModuleRegistry.h"
 #include "ClangTidyProfiling.h"
 #include "ExpandModularHeadersPPCallbacks.h"
+#include "GlobList.h"
 #include "clang-tidy-config.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -581,7 +582,32 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
         return AdjustedArgs;
       };
 
+  // Add extra arguments required by clang-additional-diagnostic-* checks.
+  ArgumentsAdjuster ClangAdditionalDiagnosticArgumentsInserter =
+      [&Context](const CommandLineArguments &Args, StringRef Filename) {
+        ClangTidyOptions Opts = Context.getOptionsForFile(Filename);
+        if (!Opts.Checks)
+          return Args;
+
+        CommandLineArguments AdjustedArgs = Args;
+        CachedGlobList Filter(*Opts.Checks);
+
+        for (StringRef Flag : clang::DiagnosticIDs::getDiagnosticFlags()) {
+          if (Flag.starts_with("-Wno"))
+            continue;
+
+          std::string CheckName = "clang-additional-diagnostic-";
+          CheckName += Flag.drop_front(2);
+
+          if (Filter.contains(CheckName))
+            AdjustedArgs.insert(AdjustedArgs.end(), Flag.str());
+        }
+
+        return AdjustedArgs;
+      };
+
   Tool.appendArgumentsAdjuster(PerFileExtraArgumentsInserter);
+  Tool.appendArgumentsAdjuster(ClangAdditionalDiagnosticArgumentsInserter);
   Tool.appendArgumentsAdjuster(getStripPluginsAdjuster());
   Context.setEnableProfiling(EnableCheckProfile);
   Context.setProfileStoragePrefix(StoreCheckProfile);
