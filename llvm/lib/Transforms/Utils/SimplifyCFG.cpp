@@ -84,6 +84,7 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
+#include <numeric>
 #include <optional>
 #include <set>
 #include <tuple>
@@ -525,28 +526,33 @@ static bool dominatesMergePoint(
 static ConstantInt *getConstantInt(Value *V, const DataLayout &DL) {
   // Normal constant int.
   ConstantInt *CI = dyn_cast<ConstantInt>(V);
-  if (CI || !isa<Constant>(V) || !V->getType()->isPointerTy() ||
-      DL.isNonIntegralPointerType(V->getType()))
+  if (CI || !isa<Constant>(V) || !V->getType()->isPointerTy())
     return CI;
+
+  // It is not safe to look through inttoptr or ptrtoint when using unstable
+  // pointer types.
+  if (DL.hasUnstableRepresentation(V->getType()))
+    return nullptr;
 
   // This is some kind of pointer constant. Turn it into a pointer-sized
   // ConstantInt if possible.
-  IntegerType *PtrTy = cast<IntegerType>(DL.getIntPtrType(V->getType()));
+  IntegerType *IntPtrTy = cast<IntegerType>(DL.getIntPtrType(V->getType()));
 
   // Null pointer means 0, see SelectionDAGBuilder::getValue(const Value*).
   if (isa<ConstantPointerNull>(V))
-    return ConstantInt::get(PtrTy, 0);
+    return ConstantInt::get(IntPtrTy, 0);
 
-  // IntToPtr const int.
+  // IntToPtr const int, we can look through this if the semantics of
+  // inttoptr for this address space are a simple (truncating) bitcast.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V))
     if (CE->getOpcode() == Instruction::IntToPtr)
       if (ConstantInt *CI = dyn_cast<ConstantInt>(CE->getOperand(0))) {
         // The constant is very likely to have the right type already.
-        if (CI->getType() == PtrTy)
+        if (CI->getType() == IntPtrTy)
           return CI;
         else
           return cast<ConstantInt>(
-              ConstantFoldIntegerCast(CI, PtrTy, /*isSigned=*/false, DL));
+              ConstantFoldIntegerCast(CI, IntPtrTy, /*isSigned=*/false, DL));
       }
   return nullptr;
 }
@@ -866,10 +872,12 @@ Value *SimplifyCFGOpt::isValueEqualityComparison(Instruction *TI) {
       }
     }
 
-  // Unwrap any lossless ptrtoint cast.
+  // Unwrap any lossless ptrtoint cast (except for unstable pointers).
   if (CV) {
     if (PtrToIntInst *PTII = dyn_cast<PtrToIntInst>(CV)) {
       Value *Ptr = PTII->getPointerOperand();
+      if (DL.hasUnstableRepresentation(Ptr->getType()))
+        return CV;
       if (PTII->getType() == DL.getIntPtrType(Ptr->getType()))
         CV = Ptr;
     }
@@ -1427,6 +1435,8 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
   Builder.SetInsertPoint(PTI);
   // Convert pointer to int before we switch.
   if (CV->getType()->isPointerTy()) {
+    assert(!DL.hasUnstableRepresentation(CV->getType()) &&
+           "Should not end up here with unstable pointers");
     CV =
         Builder.CreatePtrToInt(CV, DL.getIntPtrType(CV->getType()), "magicptr");
   }
@@ -5246,6 +5256,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
   Builder.SetInsertPoint(BI);
   // Convert pointer to int before we switch.
   if (CompVal->getType()->isPointerTy()) {
+    assert(!DL.hasUnstableRepresentation(CompVal->getType()) &&
+           "Should not end up here with unstable pointers");
     CompVal = Builder.CreatePtrToInt(
         CompVal, DL.getIntPtrType(CompVal->getType()), "magicptr");
   }
@@ -6318,9 +6330,12 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
 // Helper function that checks if it is possible to transform a switch with only
 // two cases (or two cases + default) that produces a result into a select.
 // TODO: Handle switches with more than 2 cases that map to the same result.
+// The branch weights correspond to the provided Condition (i.e. if Condition is
+// modified from the original SwitchInst, the caller must adjust the weights)
 static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
                                  Constant *DefaultResult, Value *Condition,
-                                 IRBuilder<> &Builder, const DataLayout &DL) {
+                                 IRBuilder<> &Builder, const DataLayout &DL,
+                                 ArrayRef<uint32_t> BranchWeights) {
   // If we are selecting between only two cases transform into a simple
   // select or a two-way select if default is possible.
   // Example:
@@ -6329,6 +6344,10 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
   //   case 20: return 2;   ---->  %2 = icmp eq i32 %a, 20
   //   default: return 4;          %3 = select i1 %2, i32 2, i32 %1
   // }
+
+  const bool HasBranchWeights =
+      !BranchWeights.empty() && !ProfcheckDisableMetadataFixes;
+
   if (ResultVector.size() == 2 && ResultVector[0].second.size() == 1 &&
       ResultVector[1].second.size() == 1) {
     ConstantInt *FirstCase = ResultVector[0].second[0];
@@ -6337,13 +6356,37 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
     if (DefaultResult) {
       Value *ValueCompare =
           Builder.CreateICmpEQ(Condition, SecondCase, "switch.selectcmp");
-      SelectValue = Builder.CreateSelect(ValueCompare, ResultVector[1].first,
-                                         DefaultResult, "switch.select");
+      SelectInst *SelectValueInst = cast<SelectInst>(Builder.CreateSelect(
+          ValueCompare, ResultVector[1].first, DefaultResult, "switch.select"));
+      SelectValue = SelectValueInst;
+      if (HasBranchWeights) {
+        // We start with 3 probabilities, where the numerator is the
+        // corresponding BranchWeights[i], and the denominator is the sum over
+        // BranchWeights. We want the probability and negative probability of
+        // Condition == SecondCase.
+        assert(BranchWeights.size() == 3);
+        setBranchWeights(SelectValueInst, BranchWeights[2],
+                         BranchWeights[0] + BranchWeights[1],
+                         /*IsExpected=*/false);
+      }
     }
     Value *ValueCompare =
         Builder.CreateICmpEQ(Condition, FirstCase, "switch.selectcmp");
-    return Builder.CreateSelect(ValueCompare, ResultVector[0].first,
-                                SelectValue, "switch.select");
+    SelectInst *Ret = cast<SelectInst>(Builder.CreateSelect(
+        ValueCompare, ResultVector[0].first, SelectValue, "switch.select"));
+    if (HasBranchWeights) {
+      // We may have had a DefaultResult. Base the position of the first and
+      // second's branch weights accordingly. Also the proability that Condition
+      // != FirstCase needs to take that into account.
+      assert(BranchWeights.size() >= 2);
+      size_t FirstCasePos = (Condition != nullptr);
+      size_t SecondCasePos = FirstCasePos + 1;
+      uint32_t DefaultCase = (Condition != nullptr) ? BranchWeights[0] : 0;
+      setBranchWeights(Ret, BranchWeights[FirstCasePos],
+                       DefaultCase + BranchWeights[SecondCasePos],
+                       /*IsExpected=*/false);
+    }
+    return Ret;
   }
 
   // Handle the degenerate case where two cases have the same result value.
@@ -6379,8 +6422,16 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
           Value *And = Builder.CreateAnd(Condition, AndMask);
           Value *Cmp = Builder.CreateICmpEQ(
               And, Constant::getIntegerValue(And->getType(), AndMask));
-          return Builder.CreateSelect(Cmp, ResultVector[0].first,
-                                      DefaultResult);
+          SelectInst *Ret = cast<SelectInst>(
+              Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult));
+          if (HasBranchWeights) {
+            // We know there's a Default case. We base the resulting branch
+            // weights off its probability.
+            assert(BranchWeights.size() >= 2);
+            setBranchWeights(Ret, accumulate(drop_begin(BranchWeights), 0),
+                             BranchWeights[0], /*IsExpected=*/false);
+          }
+          return Ret;
         }
       }
 
@@ -6397,7 +6448,14 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
         Value *And = Builder.CreateAnd(Condition, ~BitMask, "switch.and");
         Value *Cmp = Builder.CreateICmpEQ(
             And, Constant::getNullValue(And->getType()), "switch.selectcmp");
-        return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+        SelectInst *Ret = cast<SelectInst>(
+            Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult));
+        if (HasBranchWeights) {
+          assert(BranchWeights.size() >= 2);
+          setBranchWeights(Ret, accumulate(drop_begin(BranchWeights), 0),
+                           BranchWeights[0], /*IsExpected=*/false);
+        }
+        return Ret;
       }
     }
 
@@ -6408,7 +6466,14 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
       Value *Cmp2 = Builder.CreateICmpEQ(Condition, CaseValues[1],
                                          "switch.selectcmp.case2");
       Value *Cmp = Builder.CreateOr(Cmp1, Cmp2, "switch.selectcmp");
-      return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+      SelectInst *Ret = cast<SelectInst>(
+          Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult));
+      if (HasBranchWeights) {
+        assert(BranchWeights.size() >= 2);
+        setBranchWeights(Ret, accumulate(drop_begin(BranchWeights), 0),
+                         BranchWeights[0], /*IsExpected=*/false);
+      }
+      return Ret;
     }
   }
 
@@ -6469,8 +6534,18 @@ static bool trySwitchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
 
   assert(PHI != nullptr && "PHI for value select not found");
   Builder.SetInsertPoint(SI);
-  Value *SelectValue =
-      foldSwitchToSelect(UniqueResults, DefaultResult, Cond, Builder, DL);
+  SmallVector<uint32_t, 4> BranchWeights;
+  if (!ProfcheckDisableMetadataFixes) {
+    [[maybe_unused]] auto HasWeights =
+        extractBranchWeights(getBranchWeightMDNode(*SI), BranchWeights);
+    assert(!HasWeights == (BranchWeights.empty()));
+  }
+  assert(BranchWeights.empty() ||
+         (BranchWeights.size() >=
+          UniqueResults.size() + (DefaultResult != nullptr)));
+
+  Value *SelectValue = foldSwitchToSelect(UniqueResults, DefaultResult, Cond,
+                                          Builder, DL, BranchWeights);
   if (!SelectValue)
     return false;
 

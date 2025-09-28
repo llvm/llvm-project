@@ -639,12 +639,22 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   // are probably legitimate places where we could assume that this
   // doesn't happen, but it's not clear that it's worth it.
 
+  auto arrayTy = mlir::cast<cir::ArrayType>(arrayBase.getElementType());
+  mlir::Type elementType = arrayTy.getElementType();
+
+  // This might be a multi-dimensional array. Find the innermost element type.
+  while (auto maybeArrayTy = mlir::dyn_cast<cir::ArrayType>(elementType))
+    elementType = maybeArrayTy.getElementType();
+  cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
+
   // Optimize for a constant count.
   if (auto constantCount = numElements.getDefiningOp<cir::ConstantOp>()) {
     if (auto constIntAttr = constantCount.getValueAttr<cir::IntAttr>()) {
       // Just skip out if the constant count is zero.
       if (constIntAttr.getUInt() == 0)
         return;
+
+      arrayTy = cir::ArrayType::get(elementType, constIntAttr.getUInt());
       // Otherwise, emit the check.
     }
 
@@ -654,10 +664,6 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     // Otherwise, emit the check.
     cgm.errorNYI(e->getSourceRange(), "dynamic-length array expression");
   }
-
-  auto arrayTy = mlir::cast<cir::ArrayType>(arrayBase.getElementType());
-  mlir::Type elementType = arrayTy.getElementType();
-  cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
 
   // Tradional LLVM codegen emits a loop here. CIR lowers to a loop as part of
   // LoweringPrepare.
@@ -772,6 +778,86 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
                        s->getStmtClassName());
 }
 
+void CIRGenFunction::emitForwardingCallToLambda(
+    const CXXMethodDecl *callOperator, CallArgList &callArgs) {
+  // Get the address of the call operator.
+  const CIRGenFunctionInfo &calleeFnInfo =
+      cgm.getTypes().arrangeCXXMethodDeclaration(callOperator);
+  cir::FuncOp calleePtr = cgm.getAddrOfFunction(
+      GlobalDecl(callOperator), cgm.getTypes().getFunctionType(calleeFnInfo));
+
+  // Prepare the return slot.
+  const FunctionProtoType *fpt =
+      callOperator->getType()->castAs<FunctionProtoType>();
+  QualType resultType = fpt->getReturnType();
+  ReturnValueSlot returnSlot;
+
+  // We don't need to separately arrange the call arguments because
+  // the call can't be variadic anyway --- it's impossible to forward
+  // variadic arguments.
+
+  // Now emit our call.
+  CIRGenCallee callee =
+      CIRGenCallee::forDirect(calleePtr, GlobalDecl(callOperator));
+  RValue rv = emitCall(calleeFnInfo, callee, returnSlot, callArgs);
+
+  // If necessary, copy the returned value into the slot.
+  if (!resultType->isVoidType() && returnSlot.isNull()) {
+    if (getLangOpts().ObjCAutoRefCount && resultType->isObjCRetainableType())
+      cgm.errorNYI(callOperator->getSourceRange(),
+                   "emitForwardingCallToLambda: ObjCAutoRefCount");
+    emitReturnOfRValue(*currSrcLoc, rv, resultType);
+  } else {
+    cgm.errorNYI(callOperator->getSourceRange(),
+                 "emitForwardingCallToLambda: return slot is not null");
+  }
+}
+
+void CIRGenFunction::emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md) {
+  const CXXRecordDecl *lambda = md->getParent();
+
+  // Start building arguments for forwarding call
+  CallArgList callArgs;
+
+  QualType lambdaType = getContext().getCanonicalTagType(lambda);
+  QualType thisType = getContext().getPointerType(lambdaType);
+  Address thisPtr =
+      createMemTemp(lambdaType, getLoc(md->getSourceRange()), "unused.capture");
+  callArgs.add(RValue::get(thisPtr.getPointer()), thisType);
+
+  // Add the rest of the parameters.
+  for (auto *param : md->parameters())
+    emitDelegateCallArg(callArgs, param, param->getBeginLoc());
+
+  const CXXMethodDecl *callOp = lambda->getLambdaCallOperator();
+  // For a generic lambda, find the corresponding call operator specialization
+  // to which the call to the static-invoker shall be forwarded.
+  if (lambda->isGenericLambda()) {
+    assert(md->isFunctionTemplateSpecialization());
+    const TemplateArgumentList *tal = md->getTemplateSpecializationArgs();
+    FunctionTemplateDecl *callOpTemplate =
+        callOp->getDescribedFunctionTemplate();
+    void *InsertPos = nullptr;
+    FunctionDecl *correspondingCallOpSpecialization =
+        callOpTemplate->findSpecialization(tal->asArray(), InsertPos);
+    assert(correspondingCallOpSpecialization);
+    callOp = cast<CXXMethodDecl>(correspondingCallOpSpecialization);
+  }
+  emitForwardingCallToLambda(callOp, callArgs);
+}
+
+void CIRGenFunction::emitLambdaStaticInvokeBody(const CXXMethodDecl *md) {
+  if (md->isVariadic()) {
+    // Codgen for LLVM doesn't emit code for this as well, it says:
+    // FIXME: Making this work correctly is nasty because it requires either
+    // cloning the body of the call operator or making the call operator
+    // forward.
+    cgm.errorNYI(md->getSourceRange(), "emitLambdaStaticInvokeBody: variadic");
+  }
+
+  emitLambdaDelegatingInvokeBody(md);
+}
+
 void CIRGenFunction::destroyCXXObject(CIRGenFunction &cgf, Address addr,
                                       QualType type) {
   const auto *record = type->castAsCXXRecordDecl();
@@ -820,7 +906,7 @@ mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
   if (!cgm.getCXXABI().needsVTTParameter(gd))
     return nullptr;
 
-  const CXXRecordDecl *rd = cast<CXXMethodDecl>(curFuncDecl)->getParent();
+  const CXXRecordDecl *rd = cast<CXXMethodDecl>(curCodeDecl)->getParent();
   const CXXRecordDecl *base = cast<CXXMethodDecl>(gd.getDecl())->getParent();
 
   uint64_t subVTTIndex;

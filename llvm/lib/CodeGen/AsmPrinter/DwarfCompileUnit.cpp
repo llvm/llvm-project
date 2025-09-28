@@ -537,9 +537,8 @@ void DwarfCompileUnit::addWasmRelocBaseGlobal(DIELoc *Loc, StringRef GlobalName,
 // and DW_AT_high_pc attributes. If there are global variables in this
 // scope then create and insert DIEs for these variables.
 DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP,
-                                                const Function &F,
                                                 MCSymbol *LineTableSym) {
-  DIE *SPDie = getOrCreateSubprogramDIE(SP, &F, includeMinimalInlineScopes());
+  DIE *SPDie = getOrCreateSubprogramDIE(SP, includeMinimalInlineScopes());
   SmallVector<RangeSpan, 2> BB_List;
   // If basic block sections are on, ranges for each basic block section has
   // to be emitted separately.
@@ -1123,10 +1122,9 @@ sortLocalVars(SmallVectorImpl<DbgVariable *> &Input) {
 }
 
 DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
-                                                   const Function &F,
                                                    LexicalScope *Scope,
                                                    MCSymbol *LineTableSym) {
-  DIE &ScopeDIE = updateSubprogramScopeDIE(Sub, F, LineTableSym);
+  DIE &ScopeDIE = updateSubprogramScopeDIE(Sub, LineTableSym);
 
   if (Scope) {
     assert(!Scope->getInlinedAt());
@@ -1200,17 +1198,32 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
   return ObjectPointer;
 }
 
-DIE &DwarfCompileUnit::getOrCreateAbstractSubprogramDIE(
-    const DISubprogram *SP) {
-  if (auto *AbsDef = getAbstractScopeDIEs().lookup(SP))
-    return *AbsDef;
+void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
+    LexicalScope *Scope) {
+  auto *SP = cast<DISubprogram>(Scope->getScopeNode());
+  if (getAbstractScopeDIEs().count(SP))
+    return;
 
-  auto [ContextDIE, ContextCU] = getOrCreateAbstractSubprogramContextDIE(SP);
-  return createAbstractSubprogramDIE(SP, ContextDIE, ContextCU);
-}
+  DIE *ContextDIE;
+  DwarfCompileUnit *ContextCU = this;
 
-DIE &DwarfCompileUnit::createAbstractSubprogramDIE(
-    const DISubprogram *SP, DIE *ContextDIE, DwarfCompileUnit *ContextCU) {
+  if (includeMinimalInlineScopes())
+    ContextDIE = &getUnitDie();
+  // Some of this is duplicated from DwarfUnit::getOrCreateSubprogramDIE, with
+  // the important distinction that the debug node is not associated with the
+  // DIE (since the debug node will be associated with the concrete DIE, if
+  // any). It could be refactored to some common utility function.
+  else if (auto *SPDecl = SP->getDeclaration()) {
+    ContextDIE = &getUnitDie();
+    getOrCreateSubprogramDIE(SPDecl);
+  } else {
+    ContextDIE = getOrCreateContextDIE(SP->getScope());
+    // The scope may be shared with a subprogram that has already been
+    // constructed in another CU, in which case we need to construct this
+    // subprogram in the same CU.
+    ContextCU = DD->lookupCU(ContextDIE->getUnitDie());
+  }
+
   // Passing null as the associated node because the abstract definition
   // shouldn't be found by lookup.
   DIE &AbsDef = ContextCU->createAndAddDIE(dwarf::DW_TAG_subprogram,
@@ -1224,45 +1237,8 @@ DIE &DwarfCompileUnit::createAbstractSubprogramDIE(
                      DD->getDwarfVersion() <= 4 ? std::optional<dwarf::Form>()
                                                 : dwarf::DW_FORM_implicit_const,
                      dwarf::DW_INL_inlined);
-
-  return AbsDef;
-}
-
-std::pair<DIE *, DwarfCompileUnit *>
-DwarfCompileUnit::getOrCreateAbstractSubprogramContextDIE(
-    const DISubprogram *SP) {
-  bool Minimal = includeMinimalInlineScopes();
-  bool IgnoreScope = shouldPlaceInUnitDIE(SP, Minimal);
-  DIE *ContextDIE = getOrCreateSubprogramContextDIE(SP, IgnoreScope);
-
-  if (auto *SPDecl = SP->getDeclaration())
-    if (!Minimal)
-      getOrCreateSubprogramDIE(SPDecl, nullptr);
-
-  // The scope may be shared with a subprogram that has already been
-  // constructed in another CU, in which case we need to construct this
-  // subprogram in the same CU.
-  auto *ContextCU = IgnoreScope ? this : DD->lookupCU(ContextDIE->getUnitDie());
-
-  return std::make_pair(ContextDIE, ContextCU);
-}
-
-void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
-    LexicalScope *Scope) {
-  auto *SP = cast<DISubprogram>(Scope->getScopeNode());
-
-  // Populate subprogram DIE only once.
-  if (!getFinalizedAbstractSubprograms().insert(SP).second)
-    return;
-
-  auto [ContextDIE, ContextCU] = getOrCreateAbstractSubprogramContextDIE(SP);
-  DIE *AbsDef = getAbstractScopeDIEs().lookup(SP);
-  if (!AbsDef)
-    AbsDef = &createAbstractSubprogramDIE(SP, ContextDIE, ContextCU);
-
-  if (DIE *ObjectPointer = ContextCU->createAndAddScopeChildren(Scope, *AbsDef))
-    ContextCU->addDIEEntry(*AbsDef, dwarf::DW_AT_object_pointer,
-                           *ObjectPointer);
+  if (DIE *ObjectPointer = ContextCU->createAndAddScopeChildren(Scope, AbsDef))
+    ContextCU->addDIEEntry(AbsDef, dwarf::DW_AT_object_pointer, *ObjectPointer);
 }
 
 bool DwarfCompileUnit::useGNUAnalogForDwarf5Feature() const {
@@ -1317,9 +1293,9 @@ DwarfCompileUnit::getDwarf5OrGNULocationAtom(dwarf::LocationAtom Loc) const {
 }
 
 DIE &DwarfCompileUnit::constructCallSiteEntryDIE(
-    DIE &ScopeDIE, const DISubprogram *CalleeSP, const Function *CalleeF,
-    bool IsTail, const MCSymbol *PCAddr, const MCSymbol *CallAddr,
-    unsigned CallReg, DIType *AllocSiteTy) {
+    DIE &ScopeDIE, const DISubprogram *CalleeSP, bool IsTail,
+    const MCSymbol *PCAddr, const MCSymbol *CallAddr, unsigned CallReg,
+    DIType *AllocSiteTy) {
   // Insert a call site entry DIE within ScopeDIE.
   DIE &CallSiteDIE = createAndAddDIE(getDwarf5OrGNUTag(dwarf::DW_TAG_call_site),
                                      ScopeDIE, nullptr);
@@ -1329,7 +1305,7 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(
     addAddress(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_target),
                MachineLocation(CallReg));
   } else if (CalleeSP) {
-    DIE *CalleeDIE = getOrCreateSubprogramDIE(CalleeSP, CalleeF);
+    DIE *CalleeDIE = getOrCreateSubprogramDIE(CalleeSP);
     assert(CalleeDIE && "Could not create DIE for call site entry origin");
     if (AddLinkageNamesToDeclCallOriginsForTuning(DD) &&
         !CalleeSP->isDefinition() &&
@@ -1420,7 +1396,7 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
     if (auto *AbsSPDie = getAbstractScopeDIEs().lookup(SP))
       EntityDie = AbsSPDie;
     else
-      EntityDie = getOrCreateSubprogramDIE(SP, nullptr);
+      EntityDie = getOrCreateSubprogramDIE(SP);
   } else if (auto *T = dyn_cast<DIType>(Entity))
     EntityDie = getOrCreateTypeDIE(T);
   else if (auto *GV = dyn_cast<DIGlobalVariable>(Entity))
@@ -1828,17 +1804,4 @@ DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
       return It->second;
   }
   return DwarfUnit::getOrCreateContextDIE(Context);
-}
-
-DIE *DwarfCompileUnit::getOrCreateSubprogramDIE(const DISubprogram *SP,
-                                                const Function *F,
-                                                bool Minimal) {
-  if (!F && SP->isDefinition()) {
-    F = DD->getLexicalScopes().getFunction(SP);
-
-    if (!F)
-      return &getCU().getOrCreateAbstractSubprogramDIE(SP);
-  }
-
-  return DwarfUnit::getOrCreateSubprogramDIE(SP, F, Minimal);
 }
