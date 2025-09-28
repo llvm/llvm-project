@@ -3769,7 +3769,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             cast<VectorType>(Arg->getType())->getElementCount();
         if (ReducedVectorElementCount.isFixed()) {
           unsigned VectorSize = ReducedVectorElementCount.getFixedValue();
-          return BinaryOperator::CreateMul(Splat, ConstantInt::get(Splat->getType(), VectorSize));
+          return BinaryOperator::CreateMul(
+              Splat, ConstantInt::get(Splat->getType(), VectorSize));
         }
       }
     }
