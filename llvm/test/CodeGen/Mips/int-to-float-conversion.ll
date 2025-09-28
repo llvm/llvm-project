@@ -1,13 +1,24 @@
-; RUN: llc -mtriple=mipsel < %s | FileCheck %s -check-prefix=32
-; RUN: llc -mtriple=mips64el -mcpu=mips4 < %s | FileCheck %s -check-prefix=64
-; RUN: llc -mtriple=mips64el -mcpu=mips64 < %s | FileCheck %s -check-prefix=64
+; RUN: llc -mtriple=mipsel < %s | FileCheck %s -check-prefixes=ALL,32,32DF
+; RUN: llc -mtriple=mipsel -mattr=+single-float < %s | FileCheck %s -check-prefixes=ALL,32,32SF
+
+; RUN: llc -mtriple=mips64el -mcpu=mips4 < %s | FileCheck %s -check-prefixes=ALL,64,64DF
+; RUN: llc -mtriple=mips64el -mcpu=mips4 -mattr=+single-float < %s \
+; RUN:   | FileCheck %s -check-prefixes=ALL,64,64SF
+
+; RUN: llc -mtriple=mips64el -mcpu=mips64 < %s | FileCheck %s -check-prefixes=ALL,64,64DF
+; RUN: llc -mtriple=mips64el -mcpu=mips64 -mattr=+single-float < %s \
+; RUN:   | FileCheck %s -check-prefixes=ALL,64,64SF
+
+; Test various combinations of 32/64bit GP registers and single/double floating point support.
 
 @i1 = global [3 x i32] [i32 1, i32 2, i32 3], align 4
 @i3 = common global ptr null, align 4
 
-; 32-LABEL: test_float_int_:
-; 32: mtc1 ${{[0-9]+}}, $f[[R0:[0-9]+]]
-; 32: cvt.s.w $f{{[0-9]+}}, $f[[R0]]
+; ALL-LABEL: test_float_int_:
+; 32:   mtc1 ${{[0-9]+}}, $f[[R0:[0-9]+]]
+; 32:   cvt.s.w $f{{[0-9]+}}, $f[[R0]]
+; 64:   mtc1 ${{[0-9]+}}, $f[[R0:[0-9]+]]
+; 64:   cvt.s.w $f{{[0-9]+}}, $f[[R0]]
 
 define float @test_float_int_(i32 %a) {
 entry:
@@ -15,12 +26,13 @@ entry:
   ret float %conv
 }
 
-; 32-LABEL: test_double_int_:
-; 32: mtc1 ${{[0-9]+}}, $f[[R0:[0-9]+]]
-; 32: cvt.d.w $f{{[0-9]+}}, $f[[R0]]
-; 64-LABEL: test_double_int_:
-; 64: mtc1 ${{[0-9]+}}, $f[[R0:[0-9]+]]
-; 64: cvt.d.w $f{{[0-9]+}}, $f[[R0]]
+; ALL-LABEL: test_double_int_:
+; 32DF: mtc1 ${{[0-9]+}}, $f[[R0:[0-9]+]]
+; 32DF: cvt.d.w $f{{[0-9]+}}, $f[[R0]]
+; 32SF: jal	__floatsidf
+; 64DF: mtc1 ${{[0-9]+}}, $f[[R0:[0-9]+]]
+; 64DF: cvt.d.w $f{{[0-9]+}}, $f[[R0]]
+; 64SF: jal	__floatsidf
 
 define double @test_double_int_(i32 %a) {
 entry:
@@ -28,9 +40,11 @@ entry:
   ret double %conv
 }
 
-; 64-LABEL: test_float_LL_:
-; 64: dmtc1 ${{[0-9]+}}, $f[[R0:[0-9]+]]
-; 64: cvt.s.l $f{{[0-9]+}}, $f[[R0]]
+; ALL-LABEL: test_float_LL_:
+; 32:   jal __floatdisf
+; 64DF: dmtc1 ${{[0-9]+}}, $f[[R0:[0-9]+]]
+; 64DF: cvt.s.l $f{{[0-9]+}}, $f[[R0]]
+; 64SF: jal __floatdisf
 
 define float @test_float_LL_(i64 %a) {
 entry:
@@ -38,9 +52,11 @@ entry:
   ret float %conv
 }
 
-; 64-LABEL: test_double_LL_:
-; 64: dmtc1 ${{[0-9]+}}, $f[[R0:[0-9]+]]
-; 64: cvt.d.l $f{{[0-9]+}}, $f[[R0]]
+; ALL-LABEL: test_double_LL_:
+; 32:   jal __floatdidf
+; 64DF: dmtc1 ${{[0-9]+}}, $f[[R0:[0-9]+]]
+; 64DF: cvt.d.l $f{{[0-9]+}}, $f[[R0]]
+; 64SF: jal __floatdidf
 
 define double @test_double_LL_(i64 %a) {
 entry:
