@@ -573,6 +573,7 @@ private:
   bool SoftenFloatRes_UnaryWithTwoFPResults(
       SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo = {});
   SDValue SoftenFloatRes_Binary(SDNode *N, RTLIB::Libcall LC);
+  SDValue SoftenFloatRes_FPOperation(SDNode *N, RTLIB::Libcall LC);
   SDValue SoftenFloatRes_MERGE_VALUES(SDNode *N, unsigned ResNo);
   SDValue SoftenFloatRes_ARITH_FENCE(SDNode *N);
   SDValue SoftenFloatRes_BITCAST(SDNode *N);
@@ -681,6 +682,8 @@ private:
                              SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_UnaryWithTwoFPResults(
       SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo = {});
+  void ExpandFloatRes_FPOperation(SDNode *N, RTLIB::Libcall LC, SDValue &Lo,
+                                  SDValue &Hi);
 
   // clang-format off
   void ExpandFloatRes_AssertNoFPClass(SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -788,6 +791,7 @@ private:
   SDValue PromoteFloatRes_XINT_TO_FP(SDNode *N);
   SDValue PromoteFloatRes_VECREDUCE(SDNode *N);
   SDValue PromoteFloatRes_VECREDUCE_SEQ(SDNode *N);
+  SDValue PromoteFloatRes_FPOperation(SDNode *N);
 
   bool PromoteFloatOperand(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_BITCAST(SDNode *N, unsigned OpNo);
@@ -839,6 +843,7 @@ private:
   SDValue SoftPromoteHalfRes_UNDEF(SDNode *N);
   SDValue SoftPromoteHalfRes_VECREDUCE(SDNode *N);
   SDValue SoftPromoteHalfRes_VECREDUCE_SEQ(SDNode *N);
+  SDValue SoftPromoteHalfRes_FPOperation(SDNode *N);
 
   bool SoftPromoteHalfOperand(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_BITCAST(SDNode *N);
@@ -881,6 +886,7 @@ private:
   SDValue ScalarizeVecRes_OverflowOp(SDNode *N, unsigned ResNo);
   SDValue ScalarizeVecRes_InregOp(SDNode *N);
   SDValue ScalarizeVecRes_VecInregOp(SDNode *N);
+  SDValue ScalarizeVecRes_FPOperation(SDNode *N);
 
   SDValue ScalarizeVecRes_ADDRSPACECAST(SDNode *N);
   SDValue ScalarizeVecRes_BITCAST(SDNode *N);
@@ -965,6 +971,7 @@ private:
   void SplitVecRes_StrictFPOp(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_OverflowOp(SDNode *N, unsigned ResNo,
                               SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_FPOperation(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void SplitVecRes_FIX(SDNode *N, SDValue &Lo, SDValue &Hi);
 

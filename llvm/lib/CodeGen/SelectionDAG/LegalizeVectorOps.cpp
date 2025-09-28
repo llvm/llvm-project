@@ -319,9 +319,14 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     if (Action == TargetLowering::Legal)
       Action = TargetLowering::Expand;
     break;
+#define FP_OPERATION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN) case ISD::DAGN:
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
+    if (!Node->hasChain()) {
+      Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
+      break;
+    }
     ValVT = Node->getValueType(0);
     if (Op.getOpcode() == ISD::STRICT_SINT_TO_FP ||
         Op.getOpcode() == ISD::STRICT_UINT_TO_FP)
@@ -435,7 +440,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FCEIL:
   case ISD::FTRUNC:
   case ISD::FRINT:
-  case ISD::FNEARBYINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::FFLOOR:
@@ -1218,11 +1222,20 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::SDIVFIXSAT:
   case ISD::UDIVFIXSAT:
     break;
+#define FP_OPERATION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                  \
+  case ISD::DAGN:
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
-    ExpandStrictFPOp(Node, Results);
-    return;
+    if (Node->hasChain()) {
+      ExpandStrictFPOp(Node, Results);
+      return;
+    }
+    if (SDValue Expanded = TLI.expandVectorNaryOpBySplitting(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_MUL:
   case ISD::VECREDUCE_AND:
@@ -1305,7 +1318,6 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::FDIV:
   case ISD::FCEIL:
   case ISD::FFLOOR:
-  case ISD::FNEARBYINT:
   case ISD::FRINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
@@ -1317,6 +1329,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     }
     break;
   }
+
+  if (Node->hasChain())
+    return UnrollStrictFPOp(Node, Results);
 
   SDValue Unrolled = DAG.UnrollVectorOp(Node);
   if (Node->getNumValues() == 1) {

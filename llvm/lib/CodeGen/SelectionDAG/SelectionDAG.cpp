@@ -11663,6 +11663,7 @@ SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
   switch (OrigOpc) {
   default:
     llvm_unreachable("mutateStrictFPToFP called with unexpected opcode!");
+#define FP_OPERATION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN: NewOpc = ISD::DAGN; break;
 #define CMP_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \

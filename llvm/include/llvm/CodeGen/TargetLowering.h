@@ -1341,6 +1341,8 @@ public:
     unsigned EqOpc;
     switch (Op) {
       default: llvm_unreachable("Unexpected FP pseudo-opcode");
+#define FP_OPERATION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                  \
+      case ISD::DAGN: EqOpc = ISD::DAGN; break;
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
       case ISD::STRICT_##DAGN: EqOpc = ISD::DAGN; break;
 #define CMP_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \

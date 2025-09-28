@@ -12312,8 +12312,16 @@ SDValue TargetLowering::expandVectorNaryOpBySplitting(SDNode *Node,
   if (!isOperationLegalOrCustomOrPromote(Opcode, LoVT))
     return SDValue();
 
+  bool HasChain = Node->hasChain();
+  SDValue Chain = HasChain ? Node->getOperand(0) : SDValue();
+
   SmallVector<SDValue, 4> LoOps, HiOps;
-  for (const SDValue &V : Node->op_values()) {
+  if (HasChain) {
+    LoOps.push_back(Chain);
+    HiOps.push_back(Chain);
+  }
+  for (unsigned i = HasChain, e = Node->getNumOperands(); i != e; ++i) {
+    SDValue V = Node->getOperand(i);
     auto [Lo, Hi] = DAG.SplitVector(V, DL, LoVT, HiVT);
     LoOps.push_back(Lo);
     HiOps.push_back(Hi);
@@ -12321,7 +12329,13 @@ SDValue TargetLowering::expandVectorNaryOpBySplitting(SDNode *Node,
 
   SDValue SplitOpLo = DAG.getNode(Opcode, DL, LoVT, LoOps);
   SDValue SplitOpHi = DAG.getNode(Opcode, DL, HiVT, HiOps);
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SplitOpLo, SplitOpHi);
+  SDValue R = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SplitOpLo, SplitOpHi);
+  if (HasChain) {
+    SDValue Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
+                                SplitOpLo.getValue(1), SplitOpHi.getValue(1));
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Node, 1), Chain);
+  }
+  return R;
 }
 
 SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,

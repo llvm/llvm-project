@@ -85,6 +85,10 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::ZERO_EXTEND_VECTOR_INREG:
     R = ScalarizeVecRes_VecInregOp(N);
     break;
+#define FP_OPERATION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN) case ISD::DAGN:
+#include "llvm/IR/ConstrainedOps.def"
+    R = ScalarizeVecRes_FPOperation(N);
+    break;
   case ISD::ABS:
   case ISD::ANY_EXTEND:
   case ISD::BITREVERSE:
@@ -108,7 +112,6 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FLOG:
   case ISD::FLOG10:
   case ISD::FLOG2:
-  case ISD::FNEARBYINT:
   case ISD::FNEG:
   case ISD::FREEZE:
   case ISD::ARITH_FENCE:
@@ -211,6 +214,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     R = ScalarizeVecRes_TernaryOp(N);
     break;
 
+#define FP_OPERATION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
@@ -511,6 +515,41 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_UnaryOp(SDNode *N) {
     Op = DAG.getExtractVectorElt(DL, VT, Op, 0);
   }
   return DAG.getNode(N->getOpcode(), SDLoc(N), DestVT, Op, N->getFlags());
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecRes_FPOperation(SDNode *N) {
+  SDLoc DL(N);
+  bool HasChain = N->hasChain();
+  assert(N->getNumValues() == 1 + HasChain &&
+         "multiple result is not supported yet");
+  SDValue Chain = HasChain ? N->getOperand(0) : SDValue();
+
+  SmallVector<SDValue, 4> Ops;
+  if (HasChain)
+    Ops.push_back(Chain);
+  for (unsigned i = HasChain, e = N->getNumOperands(); i != e; ++i) {
+    SDValue Op = N->getOperand(i);
+    EVT OpVT = Op.getValueType();
+    if (getTypeAction(OpVT) == TargetLowering::TypeScalarizeVector) {
+      Op = GetScalarizedVector(Op);
+    } else {
+      EVT VT = OpVT.getVectorElementType();
+      Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Op,
+                       DAG.getVectorIdxConstant(0, DL));
+    }
+    Ops.push_back(Op);
+  }
+
+  EVT DestVT = N->getValueType(0).getVectorElementType();
+  SDValue Result;
+  if (HasChain) {
+    Result = DAG.getNode(N->getOpcode(), DL, {DestVT, MVT::Other}, Ops,
+                          N->getFlags());
+    ReplaceValueWith(SDValue(N, 1), Result.getValue(1));
+  } else {
+    Result = DAG.getNode(N->getOpcode(), DL, DestVT, Ops, N->getFlags());
+  }
+  return Result;
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_InregOp(SDNode *N) {
@@ -1262,6 +1301,11 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     SplitVecRes_ExtVecInRegOp(N, Lo, Hi);
     break;
 
+#define FP_OPERATION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN) case ISD::DAGN:
+#include "llvm/IR/ConstrainedOps.def"
+    SplitVecRes_FPOperation(N, Lo, Hi);
+    break;
+
   case ISD::ABS:
   case ISD::VP_ABS:
   case ISD::BITREVERSE:
@@ -1294,7 +1338,6 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FLOG:
   case ISD::FLOG10:
   case ISD::FLOG2:
-  case ISD::FNEARBYINT:
   case ISD::VP_FNEARBYINT:
   case ISD::FNEG: case ISD::VP_FNEG:
   case ISD::FREEZE:
@@ -1421,6 +1464,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     SplitVecRes_CMP(N, Lo, Hi);
     break;
 
+#define FP_OPERATION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
@@ -2062,6 +2106,45 @@ void DAGTypeLegalizer::SplitVecRes_OverflowOp(SDNode *N, unsigned ResNo,
         ISD::CONCAT_VECTORS, dl, OtherVT,
         SDValue(LoNode, OtherNo), SDValue(HiNode, OtherNo));
     ReplaceValueWith(SDValue(N, OtherNo), OtherVal);
+  }
+}
+
+void DAGTypeLegalizer::SplitVecRes_FPOperation(SDNode *N, SDValue &Lo,
+                                               SDValue &Hi) {
+  SDLoc dl(N);
+  bool HasChain = N->hasChain();
+  assert(N->getNumValues() == 1 + HasChain &&
+         "multiple result is not supported yet");
+  SDValue Chain = HasChain ? N->getOperand(0) : SDValue();
+
+  SmallVector<SDValue, 4> OperandsLo;
+  SmallVector<SDValue, 4> OperandsHi;
+
+  EVT LoVT, HiVT;
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
+
+  if (HasChain) {
+    OperandsLo.push_back(Chain);
+    OperandsHi.push_back(Chain);
+  }
+  for (unsigned i = HasChain, e = N->getNumOperands(); i != e; ++i) {
+    SDValue Op = N->getOperand(i);
+    SDValue LHSLo, LHSHi;
+    GetSplitVector(Op, LHSLo, LHSHi);
+    OperandsLo.push_back(LHSLo);
+    OperandsHi.push_back(LHSHi);
+  }
+  SDNodeFlags Flags = N->getFlags();
+  unsigned Opcode = N->getOpcode();
+  if (HasChain) {
+    Lo = DAG.getNode(Opcode, dl, {LoVT, MVT::Other}, OperandsLo, Flags);
+    Hi = DAG.getNode(Opcode, dl, {HiVT, MVT::Other}, OperandsHi, Flags);
+    SDValue Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                                Lo.getValue(1), Hi.getValue(1));
+    ReplaceValueWith(SDValue(N, 1), Chain);
+  } else {
+    Lo = DAG.getNode(Opcode, dl, LoVT, OperandsLo, Flags);
+    Hi = DAG.getNode(Opcode, dl, HiVT, OperandsHi, Flags);
   }
 }
 
@@ -4988,6 +5071,21 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     Res = WidenVecRes_BinaryWithExtraScalarOp(N);
     break;
 
+   
+#define FP_OPERATION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN) case ISD::DAGN:
+#include "llvm/IR/ConstrainedOps.def"
+    if (N->hasChain())
+      Res = WidenVecRes_StrictFP(N);
+    else if (N->getNumOperands() == 1) {
+      if (unrollExpandedOp())
+        break;
+      Res = WidenVecRes_Unary(N);
+    } else {
+      llvm_unreachable("not supported yet");
+    }
+    break;
+
+#define FP_OPERATION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
@@ -5073,7 +5171,6 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FLOG:
   case ISD::FLOG10:
   case ISD::FLOG2:
-  case ISD::FNEARBYINT:
   case ISD::FRINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:

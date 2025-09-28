@@ -3882,7 +3882,7 @@ def : Pat<(v4f32 (int_ppc_vsx_xvcvhpsp v8i16:$A)),
           (v4f32 (XVCVHPSP (COPY_TO_REGCLASS $A, VSRC)))>;
 
 // Use current rounding mode
-def : Pat<(f128 (any_fnearbyint f128:$vB)), (f128 (XSRQPI 0, $vB, 3))>;
+def : Pat<(f128 (fnearbyint f128:$vB)), (f128 (XSRQPI 0, $vB, 3))>;
 // Round to nearest, ties away from zero
 def : Pat<(f128 (any_fround f128:$vB)), (f128 (XSRQPI 0, $vB, 0))>;
 // Round towards Zero

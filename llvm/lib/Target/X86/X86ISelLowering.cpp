@@ -705,7 +705,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FEXP2, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FCEIL, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FFLOOR, MVT::f16, Promote);
-    setOperationAction(ISD::STRICT_FNEARBYINT, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FRINT, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FSETCC, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f16, Promote);
@@ -1359,7 +1358,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FRINT,             RoundedTy,  Legal);
       setOperationAction(ISD::STRICT_FRINT,      RoundedTy,  Legal);
       setOperationAction(ISD::FNEARBYINT,        RoundedTy,  Legal);
-      setOperationAction(ISD::STRICT_FNEARBYINT, RoundedTy,  Legal);
       setOperationAction(ISD::FROUNDEVEN,        RoundedTy,  Legal);
       setOperationAction(ISD::STRICT_FROUNDEVEN, RoundedTy,  Legal);
 
@@ -1460,7 +1458,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FRINT,             VT, Legal);
       setOperationAction(ISD::STRICT_FRINT,      VT, Legal);
       setOperationAction(ISD::FNEARBYINT,        VT, Legal);
-      setOperationAction(ISD::STRICT_FNEARBYINT, VT, Legal);
       setOperationAction(ISD::FROUNDEVEN,        VT, Legal);
       setOperationAction(ISD::STRICT_FROUNDEVEN, VT, Legal);
 
@@ -1917,7 +1914,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FRINT,             VT, Legal);
       setOperationAction(ISD::STRICT_FRINT,      VT, Legal);
       setOperationAction(ISD::FNEARBYINT,        VT, Legal);
-      setOperationAction(ISD::STRICT_FNEARBYINT, VT, Legal);
       setOperationAction(ISD::FROUNDEVEN,        VT, Legal);
       setOperationAction(ISD::STRICT_FROUNDEVEN, VT, Legal);
 
@@ -2255,7 +2251,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FRINT,              VT, Legal);
       setOperationAction(ISD::STRICT_FRINT,       VT, Legal);
       setOperationAction(ISD::FNEARBYINT,         VT, Legal);
-      setOperationAction(ISD::STRICT_FNEARBYINT,  VT, Legal);
       setOperationAction(ISD::FROUNDEVEN, VT, Legal);
       setOperationAction(ISD::STRICT_FROUNDEVEN, VT, Legal);
 

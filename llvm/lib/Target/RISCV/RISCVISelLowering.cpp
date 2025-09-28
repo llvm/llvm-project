@@ -539,7 +539,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // FIXME: Need to promote f16 STRICT_* to f32 libcalls, but we don't have
     // complete support for all operations in LegalizeDAG.
     setOperationAction({ISD::STRICT_FCEIL, ISD::STRICT_FFLOOR,
-                        ISD::STRICT_FNEARBYINT, ISD::STRICT_FRINT,
+                        ISD::STRICT_FRINT,
                         ISD::STRICT_FROUND, ISD::STRICT_FROUNDEVEN,
                         ISD::STRICT_FTRUNC, ISD::STRICT_FLDEXP},
                        MVT::f16, Promote);
@@ -1129,7 +1129,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS,
                           ISD::STRICT_FTRUNC, ISD::STRICT_FCEIL,
                           ISD::STRICT_FFLOOR, ISD::STRICT_FROUND,
-                          ISD::STRICT_FROUNDEVEN, ISD::STRICT_FNEARBYINT},
+                          ISD::STRICT_FROUNDEVEN},
                          VT, Custom);
 
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
@@ -1539,7 +1539,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
              ISD::STRICT_FDIV, ISD::STRICT_FSQRT, ISD::STRICT_FMA,
              ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS, ISD::STRICT_FTRUNC,
              ISD::STRICT_FCEIL, ISD::STRICT_FFLOOR, ISD::STRICT_FROUND,
-             ISD::STRICT_FROUNDEVEN, ISD::STRICT_FNEARBYINT},
+             ISD::STRICT_FROUNDEVEN},
             VT, Custom);
       }
 
@@ -3482,7 +3482,7 @@ lowerVectorStrictFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
         DAG.getNode(RISCVISD::STRICT_VFCVT_RTZ_X_F_VL, DL,
                     DAG.getVTList(IntVT, MVT::Other), Chain, Src, Mask, VL);
     break;
-  case ISD::STRICT_FNEARBYINT:
+  case ISD::FNEARBYINT:
     Truncated = DAG.getNode(RISCVISD::STRICT_VFROUND_NOEXCEPT_VL, DL,
                             DAG.getVTList(ContainerVT, MVT::Other), Chain, Src,
                             Mask, VL);
@@ -3491,7 +3491,7 @@ lowerVectorStrictFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   Chain = Truncated.getValue(1);
 
   // VFROUND_NOEXCEPT_VL includes SINT_TO_FP_VL.
-  if (Op.getOpcode() != ISD::STRICT_FNEARBYINT) {
+  if (Op.getOpcode() != ISD::FNEARBYINT) {
     Truncated = DAG.getNode(RISCVISD::STRICT_SINT_TO_FP_VL, DL,
                             DAG.getVTList(ContainerVT, MVT::Other), Chain,
                             Truncated, Mask, VL);
@@ -7902,6 +7902,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FRINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
+    if (Op->hasChain())
+      return lowerVectorStrictFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
     if (isPromotedOpNeedingSplit(Op, Subtarget))
       return SplitVectorOp(Op, DAG);
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
@@ -8402,7 +8404,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::STRICT_FRINT:
   case ISD::STRICT_FFLOOR:
   case ISD::STRICT_FTRUNC:
-  case ISD::STRICT_FNEARBYINT:
   case ISD::STRICT_FROUND:
   case ISD::STRICT_FROUNDEVEN:
     return lowerVectorStrictFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);

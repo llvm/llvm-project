@@ -1258,7 +1258,6 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     case ISD::FROUNDEVEN:
     case ISD::STRICT_FROUNDEVEN:
     case ISD::FNEARBYINT:
-    case ISD::STRICT_FNEARBYINT:
     case ISD::FRINT:
     case ISD::STRICT_FRINT: {
       // Replace fp rounding with their X86 specific equivalent so we don't
@@ -1274,7 +1273,6 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       case ISD::FTRUNC:     Imm = 0xB; break;
       case ISD::STRICT_FROUNDEVEN:
       case ISD::FROUNDEVEN: Imm = 0x8; break;
-      case ISD::STRICT_FNEARBYINT:
       case ISD::FNEARBYINT: Imm = 0xC; break;
       case ISD::STRICT_FRINT:
       case ISD::FRINT:      Imm = 0x4; break;
@@ -1282,7 +1280,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       SDLoc dl(N);
       bool IsStrict = N->isStrictFPOpcode();
       SDValue Res;
-      if (IsStrict)
+      if (IsStrict || (N->hasChain() && N->isFPOperation()))
         Res = CurDAG->getNode(X86ISD::STRICT_VRNDSCALE, dl,
                               {N->getValueType(0), MVT::Other},
                               {N->getOperand(0), N->getOperand(1),

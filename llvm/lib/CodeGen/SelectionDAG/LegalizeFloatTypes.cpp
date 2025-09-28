@@ -115,7 +115,6 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FMA:         R = SoftenFloatRes_FMA(N); break;
     case ISD::STRICT_FMUL:
     case ISD::FMUL:        R = SoftenFloatRes_FMUL(N); break;
-    case ISD::STRICT_FNEARBYINT:
     case ISD::FNEARBYINT:  R = SoftenFloatRes_FNEARBYINT(N); break;
     case ISD::FNEG:        R = SoftenFloatRes_FNEG(N); break;
     case ISD::STRICT_FP_EXTEND:
@@ -223,6 +222,32 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_Binary(SDNode *N, RTLIB::Libcall LC) {
                                                     CallOptions, SDLoc(N),
                                                     Chain);
   if (IsStrict)
+    ReplaceValueWith(SDValue(N, 1), Tmp.second);
+  return Tmp.first;
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FPOperation(SDNode *N,
+                                                     RTLIB::Libcall LC) {
+  bool HasChain = N->hasChain();
+  assert(N->getNumValues() == 1 + HasChain &&
+         "multiple result is not supported yet");
+  SDValue Chain = HasChain ? N->getOperand(0) : SDValue();
+  SmallVector<SDValue, 4> Ops;
+  SmallVector<EVT, 4> OpsVT;
+
+  for (unsigned i = HasChain, e = N->getNumOperands(); i != e; ++i) {
+    SDValue Op = N->getOperand(i);
+    OpsVT.push_back(Op.getValueType());
+    Op = GetSoftenedFloat(Op);
+    Ops.push_back(Op);
+  }
+
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  TargetLowering::MakeLibCallOptions CallOptions;
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0));
+  std::pair<SDValue, SDValue> Tmp =
+      TLI.makeLibCall(DAG, LC, NVT, Ops, CallOptions, SDLoc(N), Chain);
+  if (HasChain)
     ReplaceValueWith(SDValue(N, 1), Tmp.second);
   return Tmp.first;
 }
@@ -582,7 +607,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FMUL(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FNEARBYINT(SDNode *N) {
-  return SoftenFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
+  return SoftenFloatRes_FPOperation(N, GetFPLibCall(N->getValueType(0),
                                               RTLIB::NEARBYINT_F32,
                                               RTLIB::NEARBYINT_F64,
                                               RTLIB::NEARBYINT_F80,
@@ -1596,7 +1621,6 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::FMA:        ExpandFloatRes_FMA(N, Lo, Hi); break;
   case ISD::STRICT_FMUL:
   case ISD::FMUL:       ExpandFloatRes_FMUL(N, Lo, Hi); break;
-  case ISD::STRICT_FNEARBYINT:
   case ISD::FNEARBYINT: ExpandFloatRes_FNEARBYINT(N, Lo, Hi); break;
   case ISD::FNEG:       ExpandFloatRes_FNEG(N, Lo, Hi); break;
   case ISD::STRICT_FP_EXTEND:
@@ -1684,6 +1708,21 @@ void DAGTypeLegalizer::ExpandFloatRes_Binary(SDNode *N, RTLIB::Libcall LC,
                                                     Ops, CallOptions, SDLoc(N),
                                                     Chain);
   if (IsStrict)
+    ReplaceValueWith(SDValue(N, 1), Tmp.second);
+  GetPairElements(Tmp.first, Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FPOperation(SDNode *N, RTLIB::Libcall LC,
+                                                  SDValue &Lo, SDValue &Hi) {
+  bool HasChain = N->hasChain();
+  SDValue Chain = HasChain ? N->getOperand(0) : SDValue();
+  assert(N->getNumValues() == 1 + HasChain &&
+         "multiple result is not supported yet");
+  SmallVector<SDValue, 4> Ops(HasChain ? llvm::drop_begin(N->ops()) : N->ops());
+  TargetLowering::MakeLibCallOptions CallOptions;
+  std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(
+      DAG, LC, N->getValueType(0), Ops, CallOptions, SDLoc(N), Chain);
+  if (HasChain)
     ReplaceValueWith(SDValue(N, 1), Tmp.second);
   GetPairElements(Tmp.first, Lo, Hi);
 }
@@ -1951,7 +1990,7 @@ void DAGTypeLegalizer::ExpandFloatRes_FMUL(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::ExpandFloatRes_FNEARBYINT(SDNode *N,
                                                  SDValue &Lo, SDValue &Hi) {
-  ExpandFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
+  ExpandFloatRes_FPOperation(N, GetFPLibCall(N->getValueType(0),
                                        RTLIB::NEARBYINT_F32,
                                        RTLIB::NEARBYINT_F64,
                                        RTLIB::NEARBYINT_F80,
@@ -2827,6 +2866,11 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
                           R = PromoteFloatRes_EXTRACT_VECTOR_ELT(N); break;
     case ISD::FCOPYSIGN:  R = PromoteFloatRes_FCOPYSIGN(N); break;
 
+    // Floating-point operations with optional chain.
+    case ISD::FNEARBYINT:
+      R = PromoteFloatRes_FPOperation(N);
+      break;
+
     // Unary FP Operations
     case ISD::FABS:
     case ISD::FACOS:
@@ -2843,7 +2887,6 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FLOG:
     case ISD::FLOG2:
     case ISD::FLOG10:
-    case ISD::FNEARBYINT:
     case ISD::FNEG:
     case ISD::FRINT:
     case ISD::FROUND:
@@ -3069,6 +3112,29 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_BinOp(SDNode *N) {
   SDValue Op0 = GetPromotedFloat(N->getOperand(0));
   SDValue Op1 = GetPromotedFloat(N->getOperand(1));
   return DAG.getNode(N->getOpcode(), SDLoc(N), NVT, Op0, Op1, N->getFlags());
+}
+
+SDValue DAGTypeLegalizer::PromoteFloatRes_FPOperation(SDNode *N) {
+  bool HasChain = N->hasChain();
+  SDValue Chain = HasChain ? N->getOperand(0) : SDValue();
+  assert(N->getNumValues() == 1 + HasChain &&
+         "multiple result is not supported yet");
+  SmallVector<SDValue, 4> Ops;
+
+  if (HasChain)
+    Ops.push_back(Chain);
+  for (unsigned i = HasChain, e = N->getNumOperands(); i != e; ++i) {
+    SDValue Op = N->getOperand(i);
+    // FIXME Use strict conversions for strict operations.
+    Op = GetPromotedFloat(Op);
+    Ops.push_back(Op);
+  }
+
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDValue Res = DAG.getNode(N->getOpcode(), SDLoc(N), NVT, Ops);
+  if (HasChain)
+    ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatRes_FMAD(SDNode *N) {
@@ -3312,6 +3378,11 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FP_ROUND:
   case ISD::FP_ROUND:   R = SoftPromoteHalfRes_FP_ROUND(N); break;
 
+  // Floating-point operations with optional chain.
+  case ISD::FNEARBYINT:
+    R = SoftPromoteHalfRes_FPOperation(N);
+    break;
+
   // Unary FP Operations
   case ISD::FACOS:
   case ISD::FASIN:
@@ -3327,7 +3398,6 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FLOG:
   case ISD::FLOG2:
   case ISD::FLOG10:
-  case ISD::FNEARBYINT:
   case ISD::FREEZE:
   case ISD::FRINT:
   case ISD::FROUND:
@@ -3712,6 +3782,38 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_BinOp(SDNode *N) {
 
   // Convert back to FP16 as an integer.
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FPOperation(SDNode *N) {
+  SDLoc dl(N);
+  bool HasChain = N->hasChain();
+  assert(N->getNumValues() == 1 + HasChain &&
+         "multiple result is not supported yet");
+  SDValue Chain = HasChain ? N->getOperand(0) : SDValue();
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
+  auto PromotionOpcode = GetPromotionOpcode(OVT, NVT);
+
+  SmallVector<SDValue, 4> Ops;
+  if (HasChain)
+    Ops.push_back(Chain);
+  for (unsigned i = HasChain, e = N->getNumOperands(); i != e; ++i) {
+    SDValue Op = GetSoftPromotedHalf(N->getOperand(i));
+    // FIXME Use strict conversions for strict operations.
+    Op = DAG.getNode(PromotionOpcode, dl, NVT, Op);
+    Ops.push_back(Op);
+  }
+
+  SDValue Res = DAG.getNode(N->getOpcode(), SDLoc(N), NVT, Ops);
+  if (HasChain)
+    Chain = Res.getValue(1);
+
+  // Convert back to FP16 as an integer.
+  Res = DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
+
+  if (HasChain)
+    ReplaceValueWith(SDValue(N, 1), Chain);
+  return Res;
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE(SDNode *N) {

@@ -4506,10 +4506,10 @@ define <4 x double> @constrained_vector_nearbyint_v4f64(ptr %a) #0 {
 ;
 ; SZ13-LABEL: constrained_vector_nearbyint_v4f64:
 ; SZ13:       # %bb.0: # %entry
-; SZ13-NEXT:    vl %v0, 16(%r2), 4
-; SZ13-NEXT:    vl %v1, 0(%r2), 4
-; SZ13-NEXT:    vfidb %v24, %v1, 4, 0
-; SZ13-NEXT:    vfidb %v26, %v0, 4, 0
+; SZ13-NEXT:    vl %v0, 0(%r2), 4
+; SZ13-NEXT:    vl %v1, 16(%r2), 4
+; SZ13-NEXT:    vfidb %v26, %v1, 4, 0
+; SZ13-NEXT:    vfidb %v24, %v0, 4, 0
 ; SZ13-NEXT:    br %r14
 entry:
   %b = load <4 x double>, ptr %a
