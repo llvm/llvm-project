@@ -3768,7 +3768,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // %0, i64 0 %3 = shufflevector <4 x i32> %2, poison, <4 x i32>
       // zeroinitializer %4 = tail call i32 @llvm.vector.reduce.add.v4i32(%3)
       // =>
-      // %2 = shl i32 %0, 2
+      // %2 = mul i32 %0, 4
       if (Value *Splat = getSplatValue(Arg)) {
         // It is only a multiplication if we add the same element over and over.
         assert(Arg->getType()->isVectorTy() &&
@@ -3778,10 +3778,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (ReducedVectorElementCount.isFixed()) {
           unsigned VectorSize = ReducedVectorElementCount.getFixedValue();
           Type *SplatType = Splat->getType();
-          unsigned SplatTypeWidth = SplatType->getIntegerBitWidth();
-          Value *Res = Builder.CreateMul(
-              Splat, Constant::getIntegerValue(
-                         SplatType, APInt(SplatTypeWidth, VectorSize)));
+          Value *Res =
+              Builder.CreateMul(Splat, ConstantInt::get(SplatType, VectorSize));
           return replaceInstUsesWith(CI, Res);
         }
       }
