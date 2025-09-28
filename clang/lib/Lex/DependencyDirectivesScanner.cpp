@@ -83,7 +83,7 @@ struct Scanner {
   /// \returns True on error.
   bool scan(SmallVectorImpl<Directive> &Directives);
 
-  friend bool clang::scanInputForCXX20ModulesUsage(StringRef Source);
+  friend bool clang::scanInputForCXXNamedModulesUsage(StringRef Source);
 
 private:
   /// Lexes next token and advances \p First and the \p Lexer.
@@ -1095,7 +1095,7 @@ static void skipUntilMaybeCXX20ModuleDirective(const char *&First,
   }
 }
 
-bool clang::scanInputForCXX20ModulesUsage(StringRef Source) {
+bool clang::scanInputForCXXNamedModulesUsage(StringRef Source) {
   const char *First = Source.begin();
   const char *const End = Source.end();
   skipUntilMaybeCXX20ModuleDirective(First, End);
