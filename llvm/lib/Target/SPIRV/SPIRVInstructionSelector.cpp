@@ -197,6 +197,8 @@ private:
 
   bool selectOverflowArith(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, unsigned Opcode) const;
+  bool selectDebugTrap(Register ResVReg, const SPIRVType *ResType,
+                       MachineInstr &I) const;
 
   bool selectIntegerDot(Register ResVReg, const SPIRVType *ResType,
                         MachineInstr &I, bool Signed) const;
@@ -999,14 +1001,24 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   // represent code after lowering or intrinsics which are not implemented but
   // should not crash when found in a customer's LLVM IR input.
   case TargetOpcode::G_TRAP:
-  case TargetOpcode::G_DEBUGTRAP:
   case TargetOpcode::G_UBSANTRAP:
   case TargetOpcode::DBG_LABEL:
     return true;
+  case TargetOpcode::G_DEBUGTRAP:
+    return selectDebugTrap(ResVReg, ResType, I);
 
   default:
     return false;
   }
+}
+
+bool SPIRVInstructionSelector::selectDebugTrap(Register ResVReg,
+                                               const SPIRVType *ResType,
+                                               MachineInstr &I) const {
+  unsigned Opcode = SPIRV::OpNop;
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+      .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
