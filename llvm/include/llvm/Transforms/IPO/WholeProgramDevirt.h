@@ -226,11 +226,17 @@ struct WholeProgramDevirtPass : public PassInfoMixin<WholeProgramDevirtPass> {
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
   bool UseCommandLine = false;
+  // Default value for LTO mode is true, as this is the default behavior for
+  // whole program devirtualization unless explicitly disabled.
+  const bool InLTOMode;
   WholeProgramDevirtPass()
-      : ExportSummary(nullptr), ImportSummary(nullptr), UseCommandLine(true) {}
+      : ExportSummary(nullptr), ImportSummary(nullptr), UseCommandLine(true),
+        InLTOMode(true) {}
   WholeProgramDevirtPass(ModuleSummaryIndex *ExportSummary,
-                         const ModuleSummaryIndex *ImportSummary)
-      : ExportSummary(ExportSummary), ImportSummary(ImportSummary) {
+                         const ModuleSummaryIndex *ImportSummary,
+                         bool InLTOMode = true)
+      : ExportSummary(ExportSummary), ImportSummary(ImportSummary),
+        InLTOMode(InLTOMode) {
     assert(!(ExportSummary && ImportSummary));
   }
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);

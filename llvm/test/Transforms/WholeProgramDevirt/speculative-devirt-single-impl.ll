@@ -32,7 +32,7 @@ define void @vf_empty(ptr %this) !dbg !11 {
 ; CHECK: define void @call
 define void @call(ptr %obj) #1 !dbg !5 {
   %vtable = load ptr, ptr %obj
-  %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid")
+  %p = call i1 @llvm.public.type.test(ptr %vtable, metadata !"typeid")
   call void @llvm.assume(i1 %p)
   %fptr = load ptr, ptr %vtable
   ; CHECK: if.true.direct_targ:
@@ -96,6 +96,7 @@ define void @call3(ptr %obj) #1 !dbg !16 {
 
 
 declare i1 @llvm.type.test(ptr, metadata)
+declare i1 @llvm.public.type.test(ptr, metadata)
 declare void @llvm.assume(i1)
 
 !llvm.dbg.cu = !{!0}

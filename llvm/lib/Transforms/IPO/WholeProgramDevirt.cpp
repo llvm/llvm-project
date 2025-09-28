@@ -604,6 +604,8 @@ struct DevirtModule {
   ModuleSummaryIndex *const ExportSummary;
   const ModuleSummaryIndex *const ImportSummary;
 
+  const bool InLTOMode;
+
   IntegerType *const Int8Ty;
   PointerType *const Int8PtrTy;
   IntegerType *const Int32Ty;
@@ -640,11 +642,11 @@ struct DevirtModule {
 
   DevirtModule(Module &M, ModuleAnalysisManager &MAM,
                ModuleSummaryIndex *ExportSummary,
-               const ModuleSummaryIndex *ImportSummary)
+               const ModuleSummaryIndex *ImportSummary, bool InLTOMode = true)
       : M(M), MAM(MAM),
         FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
         ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-        Int8Ty(Type::getInt8Ty(M.getContext())),
+        InLTOMode(InLTOMode), Int8Ty(Type::getInt8Ty(M.getContext())),
         Int8PtrTy(PointerType::getUnqual(M.getContext())),
         Int32Ty(Type::getInt32Ty(M.getContext())),
         Int64Ty(Type::getInt64Ty(M.getContext())),
@@ -814,7 +816,7 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
   }
-  if (!DevirtModule(M, MAM, ExportSummary, ImportSummary).run())
+  if (!DevirtModule(M, MAM, ExportSummary, ImportSummary, InLTOMode).run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
@@ -912,6 +914,8 @@ void llvm::updatePublicTypeTestCalls(Module &M,
       CI->eraseFromParent();
     }
   } else {
+    // TODO: Don't replace public type tests when speculative devirtualization
+    // gets enabled in LTO mode.
     auto *True = ConstantInt::getTrue(M.getContext());
     for (Use &U : make_early_inc_range(PublicTypeTestFunc->uses())) {
       auto *CI = cast<CallInst>(U.getUser());
@@ -1353,10 +1357,10 @@ bool DevirtModule::trySingleImplDevirt(
   if (!IsExported)
     return false;
 
-  // Out of speculative devirtualization mode, if the only implementation has
-  // local linkage, we must promote to external to make it visible to thin LTO
-  // objects.
-  if (!ClDevirtualizeSpeculatively && TheFn->hasLocalLinkage()) {
+  // If the only implementation has local linkage, we must promote
+  // to external to make it visible to thin LTO objects.
+  // This change should be safe only in LTO mode.
+  if (InLTOMode && TheFn->hasLocalLinkage()) {
     std::string NewName = (TheFn->getName() + ".llvm.merged").str();
 
     // Since we are renaming the function, any comdats with the same name must
@@ -2085,15 +2089,15 @@ void DevirtModule::scanTypeTestUsers(
     Function *TypeTestFunc,
     DenseMap<Metadata *, std::set<TypeMemberInfo>> &TypeIdMap) {
   // Find all virtual calls via a virtual table pointer %p under an assumption
-  // of the form llvm.assume(llvm.type.test(%p, %md)). This indicates that %p
-  // points to a member of the type identifier %md. Group calls by (type ID,
-  // offset) pair (effectively the identity of the virtual function) and store
-  // to CallSlots.
+  // of the form llvm.assume(llvm.type.test(%p, %md)) or
+  // llvm.assume(llvm.public.type.test(%p, %md)).
+  // This indicates that %p points to a member of the type identifier %md.
+  // Group calls by (type ID, offset) pair (effectively the identity of the
+  // virtual function) and store to CallSlots.
   for (Use &U : llvm::make_early_inc_range(TypeTestFunc->uses())) {
     auto *CI = dyn_cast<CallInst>(U.getUser());
     if (!CI)
       continue;
-
     // Search for virtual calls based on %p and add them to DevirtCalls.
     SmallVector<DevirtCallSite, 1> DevirtCalls;
     SmallVector<CallInst *, 1> Assumes;
@@ -2376,13 +2380,14 @@ bool DevirtModule::run() {
       (ImportSummary && ImportSummary->partiallySplitLTOUnits()))
     return false;
 
-  Function *TypeTestFunc =
-      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
+  Function *PublicTypeTestFunc = nullptr;
   // If we are in speculative devirtualization mode, we can work on the public
   // type test intrinsics.
-  if (!TypeTestFunc && ClDevirtualizeSpeculatively)
-    TypeTestFunc =
+  if (ClDevirtualizeSpeculatively)
+    PublicTypeTestFunc =
         Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
+  Function *TypeTestFunc =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   Function *TypeCheckedLoadFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load);
   Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
@@ -2394,8 +2399,9 @@ bool DevirtModule::run() {
   // module, this pass has nothing to do. But if we are exporting, we also need
   // to handle any users that appear only in the function summaries.
   if (!ExportSummary &&
-      (!TypeTestFunc || TypeTestFunc->use_empty() || !AssumeFunc ||
-       AssumeFunc->use_empty()) &&
+      (((!PublicTypeTestFunc || PublicTypeTestFunc->use_empty()) &&
+        (!TypeTestFunc || TypeTestFunc->use_empty())) ||
+       !AssumeFunc || AssumeFunc->use_empty()) &&
       (!TypeCheckedLoadFunc || TypeCheckedLoadFunc->use_empty()) &&
       (!TypeCheckedLoadRelativeFunc ||
        TypeCheckedLoadRelativeFunc->use_empty()))
@@ -2405,6 +2411,9 @@ bool DevirtModule::run() {
   std::vector<VTableBits> Bits;
   DenseMap<Metadata *, std::set<TypeMemberInfo>> TypeIdMap;
   buildTypeIdentifierMap(Bits, TypeIdMap);
+
+  if (PublicTypeTestFunc && AssumeFunc)
+    scanTypeTestUsers(PublicTypeTestFunc, TypeIdMap);
 
   if (TypeTestFunc && AssumeFunc)
     scanTypeTestUsers(TypeTestFunc, TypeIdMap);
