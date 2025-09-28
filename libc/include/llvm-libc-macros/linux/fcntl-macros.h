@@ -62,7 +62,7 @@
 #define AT_EMPTY_PATH 0x1000
 
 // Perform access checks using the effective user and group IDs.
-#define AT_EACCESS
+#define AT_EACCESS 0x200
 
 // Values of SYS_fcntl commands.
 #define F_DUPFD 0
