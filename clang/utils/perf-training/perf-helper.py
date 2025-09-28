@@ -690,7 +690,10 @@ def bolt_optimize(args):
     process.check_returncode()
 
     if opts.method in ["PERF", "LBR"]:
-        perf2bolt([opts.bolt, opts.perf_training_binary_dir, opts.input])
+        args = [opts.bolt, opts.perf_training_binary_dir, opts.input]
+        if opts.method == "LBR":
+            args.extend("--lbr")
+        perf2bolt(args)
 
     merge_fdata([opts.merge_fdata, opts.fdata, opts.perf_training_binary_dir])
 
