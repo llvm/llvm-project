@@ -161,6 +161,12 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
     case ELF::R_LARCH_B26:
       FixupKind = LoongArch::fixup_loongarch_b26;
       break;
+    case ELF::R_LARCH_MARK_LA:
+      // The R_LARCH_MARCH_LA is used for LoongArch edk2 builds.
+      Fixups.push_back(
+          MCFixup::create(0, MCConstantExpr::create(0, Ctx),
+                          FirstLiteralRelocationKind + ELF::R_LARCH_MARK_LA));
+      [[fallthrough]];
     case ELF::R_LARCH_ABS_HI20:
       FixupKind = LoongArch::fixup_loongarch_abs_hi20;
       break;
