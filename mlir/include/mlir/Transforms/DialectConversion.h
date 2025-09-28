@@ -1414,7 +1414,7 @@ struct ConversionConfig {
   /// less internal state. This is more efficient, but not supported by all
   /// lowering patterns. For details, see
   /// https://discourse.llvm.org/t/rfc-a-new-one-shot-dialect-conversion-driver/79083.
-  bool allowPatternRollback = true;
+  bool allowPatternRollback = false;
 
   /// The folding mode to use during conversion.
   DialectConversionFoldingMode foldingMode =
