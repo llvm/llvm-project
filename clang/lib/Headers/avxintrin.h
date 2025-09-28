@@ -716,8 +716,8 @@ _mm256_hadd_pd(__m256d __a, __m256d __b) {
 ///    index 2, 3, 6, 7 of a vector of [8 x float].
 /// \returns A 256-bit vector of [8 x float] containing the horizontal sums of
 ///    both operands.
-static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_hadd_ps(__m256 __a,
-                                                                   __m256 __b) {
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+ _mm256_hadd_ps(__m256 __a, __m256 __b) {
   return (__m256)__builtin_ia32_haddps256((__v8sf)__a, (__v8sf)__b);
 }
 
