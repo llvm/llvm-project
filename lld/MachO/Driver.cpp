@@ -290,16 +290,13 @@ static void saveThinArchiveToRepro(ArchiveFile const *file) {
 }
 
 struct DeferredFile {
-#if LLVM_ENABLE_THREADS
   StringRef path;
   bool isLazy;
   MemoryBufferRef buffer;
-#endif
 };
 using DeferredFiles = std::vector<DeferredFile>;
 
-#if LLVM_ENABLE_THREADS
-class SerialBackgroundQueue {
+class SerialBackgroundWorkQueue {
   std::deque<std::function<void()>> queue;
   std::thread *running;
   std::mutex mutex;
@@ -339,7 +336,7 @@ public:
   }
 };
 
-static SerialBackgroundQueue pageInQueue;
+static SerialBackgroundWorkQueue pageInQueue;
 
 // Most input files have been mapped but not yet paged in.
 // This code forces the page-ins on multiple threads so
@@ -376,7 +373,7 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
 #endif
   };
 
-  { // Create scope for waiting for the taskGroup
+  if (llvm_is_multithreaded()) { // Create scope for waiting for the taskGroup
     std::atomic_size_t index = 0;
     llvm::parallel::TaskGroup taskGroup;
     for (int w = 0; w < config->readWorkers; w++)
@@ -403,7 +400,6 @@ static void multiThreadedPageIn(const DeferredFiles &deferred) {
     multiThreadedPageInBackground(files);
   });
 }
-#endif
 
 static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
                               DeferredFiles *archiveContents, StringRef path,
@@ -503,10 +499,8 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
             continue;
           }
 
-#if LLVM_ENABLE_THREADS
-          if (archiveContents)
+          if (config->readWorkers && archiveContents)
             archiveContents->push_back({path, isLazy, *mb});
-#endif
           if (!hasObjCSection(*mb))
             continue;
           if (Error e = file->fetch(c, "-ObjC"))
@@ -582,11 +576,9 @@ static void deferFile(StringRef path, bool isLazy, DeferredFiles &deferred) {
   std::optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return;
-#if LLVM_ENABLE_THREADS
   if (config->readWorkers)
     deferred.push_back({path, isLazy, *buffer});
   else
-#endif
     processFile(buffer, nullptr, path, LoadType::CommandLine, isLazy);
 }
 
@@ -1448,7 +1440,6 @@ static void createFiles(const InputArgList &args) {
     }
   }
 
-#if LLVM_ENABLE_THREADS
   if (config->readWorkers) {
     multiThreadedPageIn(deferredFiles);
 
@@ -1468,7 +1459,6 @@ static void createFiles(const InputArgList &args) {
 
     pageInQueue.stopAllWork = true;
   }
-#endif
 }
 
 static void gatherInputSections() {
@@ -1856,17 +1846,16 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   }
 
   if (auto *arg = args.getLastArg(OPT_read_workers)) {
-#if LLVM_ENABLE_THREADS
-    StringRef v(arg->getValue());
-    unsigned workers = 0;
-    if (!llvm::to_integer(v, workers, 0))
-      error(arg->getSpelling() +
-            ": expected a non-negative integer, but got '" + arg->getValue() +
-            "'");
-    config->readWorkers = workers;
-#else
-    error(arg->getSpelling() + ": option unavailable");
-#endif
+    if (llvm_is_multithreaded()) {
+      StringRef v(arg->getValue());
+      unsigned workers = 0;
+      if (!llvm::to_integer(v, workers, 0))
+        error(arg->getSpelling() +
+              ": expected a non-negative integer, but got '" + arg->getValue() +
+              "'");
+      config->readWorkers = workers;
+    } else
+      error(arg->getSpelling() + ": option unavailable");
   }
   if (auto *arg = args.getLastArg(OPT_threads_eq)) {
     StringRef v(arg->getValue());
