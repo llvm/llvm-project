@@ -775,6 +775,40 @@ Sema::BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
       TemplateArgs);
 }
 
+ExprResult Sema::BuildSubstNonTypeTemplateParmExpr(
+    Decl *AssociatedDecl, const NonTypeTemplateParmDecl *NTTP,
+    SourceLocation Loc, TemplateArgument Arg, UnsignedOrNone PackIndex,
+    bool Final) {
+  // The template argument itself might be an expression, in which case we just
+  // return that expression. This happens when substituting into an alias
+  // template.
+  Expr *Replacement;
+  bool refParam = true;
+  if (Arg.getKind() == TemplateArgument::Expression) {
+    Replacement = Arg.getAsExpr();
+    refParam = Replacement->isLValue();
+    if (refParam && Replacement->getType()->isRecordType()) {
+      QualType ParamType =
+          NTTP->isExpandedParameterPack()
+              ? NTTP->getExpansionType(*SemaRef.ArgPackSubstIndex)
+              : NTTP->getType();
+      if (const auto *PET = dyn_cast<PackExpansionType>(ParamType))
+        ParamType = PET->getPattern();
+      refParam = ParamType->isReferenceType();
+    }
+  } else {
+    ExprResult result =
+        SemaRef.BuildExpressionFromNonTypeTemplateArgument(Arg, Loc);
+    if (result.isInvalid())
+      return ExprError();
+    Replacement = result.get();
+    refParam = Arg.getNonTypeTemplateArgumentType()->isReferenceType();
+  }
+  return new (SemaRef.Context) SubstNonTypeTemplateParmExpr(
+      Replacement->getType(), Replacement->getValueKind(), Loc, Replacement,
+      AssociatedDecl, NTTP->getIndex(), PackIndex, refParam, Final);
+}
+
 bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
                                           NamedDecl *Instantiation,
                                           bool InstantiatedFromMember,
