@@ -2862,6 +2862,218 @@ static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_pshuflw_common(InterpState &S, CodePtr OpPC,
+                                                const CallExpr *Call) {
+  const unsigned NumArgs = Call->getNumArgs();
+  assert(NumArgs == 2 || NumArgs == 3 || NumArgs == 4);
+  APSInt K;
+  Pointer SrcPT;
+  const bool HasMask = (NumArgs == 3) || (NumArgs == 4);
+  const bool IsMaskZ = (NumArgs == 3);
+  if (NumArgs == 4) {
+    K = popToAPSInt(S, Call->getArg(3));
+    SrcPT = S.Stk.pop<Pointer>();
+  } else if (NumArgs == 3) {
+    K = popToAPSInt(S, Call->getArg(2));
+  }
+
+  APSInt Imm = popToAPSInt(S, Call->getArg(1));
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  const unsigned NumElems = Dst.getNumElems();
+  const PrimType ElemT = Dst.getFieldDesc()->getPrimType();
+  const unsigned ElemBits = 16;
+  const unsigned LaneElems = 128u / ElemBits;
+  const unsigned Half = 4;
+  assert(NumElems % LaneElems == 0 && "pshuflw expects 128-bit lanes");
+  const uint8_t Ctl = static_cast<uint8_t>(Imm.getZExtValue());
+
+  for (unsigned i = 0; i != NumElems; ++i) {
+    const unsigned laneBase = (i / LaneElems) * LaneElems;
+    const unsigned inLane = i % LaneElems;
+
+    unsigned srcIdx;
+    if (inLane < Half) {
+      const unsigned pos = inLane;
+      const unsigned sel = (Ctl >> (2 * pos)) & 0x3;
+      srcIdx = laneBase + sel;
+    } else {
+      srcIdx = i;
+    }
+
+    APSInt Chosen;
+    INT_TYPE_SWITCH(ElemT, { Chosen = Src.elem<T>(srcIdx).toAPSInt(); });
+
+    if (!HasMask) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                              { Dst.elem<T>(i) = static_cast<T>(Chosen); });
+      continue;
+    }
+
+    const bool Keep =
+        (i < static_cast<unsigned>(K.getBitWidth())) ? K[i] : false;
+
+    if (Keep) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                              { Dst.elem<T>(i) = static_cast<T>(Chosen); });
+    } else if (IsMaskZ) {
+      APSInt Zero(APInt(Chosen.getBitWidth(), 0));
+      Zero.setIsSigned(Chosen.isSigned());
+      INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                              { Dst.elem<T>(i) = static_cast<T>(Zero); });
+    } else {
+      APSInt PT;
+      INT_TYPE_SWITCH(ElemT, { PT = SrcPT.elem<T>(i).toAPSInt(); });
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(i) = static_cast<T>(PT); });
+    }
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp__builtin_ia32_pshufhw_common(InterpState &S, CodePtr OpPC,
+                                                const CallExpr *Call) {
+  (void)OpPC;
+  const unsigned NumArgs = Call->getNumArgs();
+  assert(NumArgs == 2 || NumArgs == 3 || NumArgs == 4);
+
+  APSInt K;
+  Pointer SrcPT;
+  const bool HasMask = (NumArgs == 3) || (NumArgs == 4);
+  const bool IsMaskZ = (NumArgs == 3);
+
+  if (NumArgs == 4) {
+    K = popToAPSInt(S, Call->getArg(3));
+    SrcPT = S.Stk.pop<Pointer>();
+  } else if (NumArgs == 3) {
+    K = popToAPSInt(S, Call->getArg(2));
+  }
+
+  APSInt Imm = popToAPSInt(S, Call->getArg(1));
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const unsigned NumElems = Dst.getNumElems();
+  const PrimType ElemT = Dst.getFieldDesc()->getPrimType();
+
+  const unsigned ElemBits = 16;
+  const unsigned LaneElems = 128u / ElemBits;
+  const unsigned HalfBase = 4;
+  assert(NumElems % LaneElems == 0);
+
+  const uint8_t Ctl = static_cast<uint8_t>(Imm.getZExtValue());
+
+  for (unsigned i = 0; i != NumElems; ++i) {
+    const unsigned laneBase = (i / LaneElems) * LaneElems;
+    const unsigned inLane = i % LaneElems;
+
+    unsigned srcIdx;
+    if (inLane >= HalfBase) {
+      const unsigned pos = inLane - HalfBase;
+      const unsigned sel = (Ctl >> (2 * pos)) & 0x3;
+      srcIdx = laneBase + HalfBase + sel;
+    } else {
+      srcIdx = i;
+    }
+
+    APSInt Chosen;
+    INT_TYPE_SWITCH(ElemT, { Chosen = Src.elem<T>(srcIdx).toAPSInt(); });
+
+    if (!HasMask) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                              { Dst.elem<T>(i) = static_cast<T>(Chosen); });
+      continue;
+    }
+
+    const bool Keep =
+        (i < static_cast<unsigned>(K.getBitWidth())) ? K[i] : false;
+    if (Keep) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                              { Dst.elem<T>(i) = static_cast<T>(Chosen); });
+    } else if (IsMaskZ) {
+      APSInt Zero(APInt(Chosen.getBitWidth(), 0));
+      Zero.setIsSigned(Chosen.isSigned());
+      INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                              { Dst.elem<T>(i) = static_cast<T>(Zero); });
+    } else {
+      APSInt PT;
+      INT_TYPE_SWITCH(ElemT, { PT = SrcPT.elem<T>(i).toAPSInt(); });
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(i) = static_cast<T>(PT); });
+    }
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp__builtin_ia32_pshufd_common(InterpState &S, CodePtr OpPC,
+                                               const CallExpr *Call) {
+  (void)OpPC;
+  const unsigned NumArgs = Call->getNumArgs();
+  assert(NumArgs == 2 || NumArgs == 3 || NumArgs == 4);
+
+  APSInt K;
+  Pointer SrcPT;
+  const bool HasMask = (NumArgs == 3) || (NumArgs == 4);
+  const bool IsMaskZ = (NumArgs == 3);
+
+  if (NumArgs == 4) {
+    K = popToAPSInt(S, Call->getArg(3));
+    SrcPT = S.Stk.pop<Pointer>();
+  } else if (NumArgs == 3) {
+    K = popToAPSInt(S, Call->getArg(2));
+  }
+
+  APSInt Imm = popToAPSInt(S, Call->getArg(1));
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const unsigned NumElems = Dst.getNumElems();
+  const PrimType ElemT = Dst.getFieldDesc()->getPrimType();
+
+  const unsigned ElemBits = 32;
+  const unsigned LaneElems = 128u / ElemBits;
+  assert(NumElems % LaneElems == 0);
+
+  const uint8_t Ctl = static_cast<uint8_t>(Imm.getZExtValue());
+
+  for (unsigned i = 0; i != NumElems; ++i) {
+    const unsigned laneBase = (i / LaneElems) * LaneElems;
+    const unsigned inLane = i % LaneElems;
+    const unsigned sel = (Ctl >> (2 * inLane)) & 0x3;
+    const unsigned srcIdx = laneBase + sel;
+
+    APSInt Chosen;
+    INT_TYPE_SWITCH(ElemT, { Chosen = Src.elem<T>(srcIdx).toAPSInt(); });
+
+    if (!HasMask) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                              { Dst.elem<T>(i) = static_cast<T>(Chosen); });
+      continue;
+    }
+
+    const bool Keep =
+        (i < static_cast<unsigned>(K.getBitWidth())) ? K[i] : false;
+    if (Keep) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                              { Dst.elem<T>(i) = static_cast<T>(Chosen); });
+    } else if (IsMaskZ) {
+      APSInt Zero(APInt(Chosen.getBitWidth(), 0));
+      Zero.setIsSigned(Chosen.isSigned());
+      INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                              { Dst.elem<T>(i) = static_cast<T>(Zero); });
+    } else {
+      APSInt PT;
+      INT_TYPE_SWITCH(ElemT, { PT = SrcPT.elem<T>(i).toAPSInt(); });
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(i) = static_cast<T>(PT); });
+    }
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_elementwise_triop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &, const APSInt &)>
@@ -3416,6 +3628,39 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pmulhw512:
     return interp__builtin_elementwise_int_binop(S, OpPC, Call,
                                                  llvm::APIntOps::mulhs);
+
+  case clang::X86::BI__builtin_ia32_pshuflw:
+  case clang::X86::BI__builtin_ia32_pshuflw256:
+  case clang::X86::BI__builtin_ia32_pshuflw512:
+  case clang::X86::BI__builtin_ia32_pshuflw128_mask:
+  case clang::X86::BI__builtin_ia32_pshuflw256_mask:
+  case clang::X86::BI__builtin_ia32_pshuflw512_mask:
+  case clang::X86::BI__builtin_ia32_pshuflw128_maskz:
+  case clang::X86::BI__builtin_ia32_pshuflw256_maskz:
+  case clang::X86::BI__builtin_ia32_pshuflw512_maskz:
+    return interp__builtin_ia32_pshuflw_common(S, OpPC, Call);
+
+  case clang::X86::BI__builtin_ia32_pshufhw:
+  case clang::X86::BI__builtin_ia32_pshufhw256:
+  case clang::X86::BI__builtin_ia32_pshufhw512:
+  case clang::X86::BI__builtin_ia32_pshufhw128_mask:
+  case clang::X86::BI__builtin_ia32_pshufhw256_mask:
+  case clang::X86::BI__builtin_ia32_pshufhw512_mask:
+  case clang::X86::BI__builtin_ia32_pshufhw128_maskz:
+  case clang::X86::BI__builtin_ia32_pshufhw256_maskz:
+  case clang::X86::BI__builtin_ia32_pshufhw512_maskz:
+    return interp__builtin_ia32_pshufhw_common(S, OpPC, Call);
+
+  case clang::X86::BI__builtin_ia32_pshufd:
+  case clang::X86::BI__builtin_ia32_pshufd256:
+  case clang::X86::BI__builtin_ia32_pshufd512:
+  case clang::X86::BI__builtin_ia32_pshufd128_mask:
+  case clang::X86::BI__builtin_ia32_pshufd256_mask:
+  case clang::X86::BI__builtin_ia32_pshufd512_mask:
+  case clang::X86::BI__builtin_ia32_pshufd128_maskz:
+  case clang::X86::BI__builtin_ia32_pshufd256_maskz:
+  case clang::X86::BI__builtin_ia32_pshufd512_maskz:
+    return interp__builtin_ia32_pshufd_common(S, OpPC, Call);
 
   case clang::X86::BI__builtin_ia32_psllv2di:
   case clang::X86::BI__builtin_ia32_psllv4di:

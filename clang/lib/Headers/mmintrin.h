@@ -43,10 +43,15 @@ typedef char __v16qi __attribute__((__vector_size__(16)));
   __attribute__((__always_inline__, __nodebug__, __target__("sse2"),           \
                  __min_vector_width__(128)))
 
+#define __DEFAULT_FN_ATTRS_MMX \
+  __attribute__((__always_inline__, __nodebug__, __target__("mmx")))
+
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR __DEFAULT_FN_ATTRS_SSE2 constexpr
+#define __DEFAULT_FN_ATTRS_MMX_CONSTEXPR __DEFAULT_FN_ATTRS_MMX constexpr
 #else
 #define __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR __DEFAULT_FN_ATTRS_SSE2
+#define __DEFAULT_FN_ATTRS_MMX_CONSTEXPR __DEFAULT_FN_ATTRS_MMX 
 #endif
 
 #define __trunc64(x)                                                           \
