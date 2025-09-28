@@ -6436,7 +6436,7 @@ static bool isHostDeviceOp(Operation *op) {
 
   if (mlir::isa<omp::TargetAllocMemOp>(op) ||
       mlir::isa<omp::TargetFreeMemOp>(op))
-    return true;
+    return false;
 
   if (auto parentFn = op->getParentOfType<LLVM::LLVMFuncOp>()) {
     if (auto declareTargetIface =
