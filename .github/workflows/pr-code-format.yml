@@ -56,7 +56,7 @@ jobs:
         run: |
           . venv/bin/activate &&
           echo "[]" > comments &&
-          venv/bin/python ./llvm/utils/git/code-format-helper.py \
+          python ./llvm/utils/git/code-format-helper.py \
             --write-comment-to-file \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
