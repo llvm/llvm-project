@@ -264,3 +264,63 @@ define void @post_not_and_not_combine_v2i64(ptr %res, ptr %a, i64 %b) nounwind {
   store <2 x i64> %and, ptr %res
   ret void
 }
+
+define void @and_not_combine_splatimm_v16i8(ptr %res, ptr %a0) nounwind {
+; CHECK-LABEL: and_not_combine_splatimm_v16i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vrepli.b $vr1, -4
+; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <16 x i8>, ptr %a0
+  %and = and <16 x i8> %v0, splat (i8 -4)
+  %xor = xor <16 x i8> %and, splat (i8 -4)
+  store <16 x i8> %xor, ptr %res
+  ret void
+}
+
+define void @and_not_combine_splatimm_v8i16(ptr %res, ptr %a0) nounwind {
+; CHECK-LABEL: and_not_combine_splatimm_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vrepli.h $vr1, -4
+; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <8 x i16>, ptr %a0
+  %and = and <8 x i16> %v0, splat (i16 -4)
+  %xor = xor <8 x i16> %and, splat (i16 -4)
+  store <8 x i16> %xor, ptr %res
+  ret void
+}
+
+define void @and_not_combine_splatimm_v4i32(ptr %res, ptr %a0) nounwind {
+; CHECK-LABEL: and_not_combine_splatimm_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vrepli.w $vr1, -4
+; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <4 x i32>, ptr %a0
+  %and = and <4 x i32> %v0, splat (i32 -4)
+  %xor = xor <4 x i32> %and, splat (i32 -4)
+  store <4 x i32> %xor, ptr %res
+  ret void
+}
+
+define void @and_not_combine_splatimm_v2i64(ptr %res, ptr %a0) nounwind {
+; CHECK-LABEL: and_not_combine_splatimm_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vrepli.d $vr1, -4
+; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <2 x i64>, ptr %a0
+  %and = and <2 x i64> %v0, splat (i64 -4)
+  %xor = xor <2 x i64> %and, splat (i64 -4)
+  store <2 x i64> %xor, ptr %res
+  ret void
+}
