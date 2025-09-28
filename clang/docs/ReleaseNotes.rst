@@ -299,7 +299,8 @@ Improvements to Clang's diagnostics
   "format specifies type 'unsigned int' but the argument has type 'int', which differs in signedness [-Wformat-signedness]"
   "signedness of format specifier 'u' is incompatible with 'c' [-Wformat-signedness]"
   and the API-visible diagnostic id will be appropriate.
-
+- Clang now produces better diagnostics for template template parameter matching
+  involving 'auto' template parameters.
 - Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
