@@ -507,7 +507,8 @@ TEST(LlvmLibcMkTime, EndOf32BitEpochYear) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT((int)LIBC_NAMESPACE::mktime(&tm_data), Succeeds(0x7FFFFFFF - 8));
+    EXPECT_THAT((int)LIBC_NAMESPACE::mktime(&tm_data),
+                Succeeds(0x7FFFFFFF - 8));
     EXPECT_TM_EQ((tm{.tm_sec = 59,
                      .tm_min = 13,
                      .tm_hour = 3,
@@ -643,7 +644,8 @@ TEST(LlvmLibcMkTime, Max64BitYear) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT((int)LIBC_NAMESPACE::mktime(&tm_data), Succeeds(67767976202043050));
+    EXPECT_THAT((int)LIBC_NAMESPACE::mktime(&tm_data),
+                Succeeds(67767976202043050));
     EXPECT_TM_EQ((tm{.tm_sec = 50,
                      .tm_min = 50,
                      .tm_hour = 12,
