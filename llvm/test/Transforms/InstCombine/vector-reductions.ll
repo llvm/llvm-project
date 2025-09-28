@@ -398,3 +398,18 @@ define i64 @constant_multiplied_non_power_of_2_i64(i64 %0) {
   %4 = tail call i64 @llvm.vector.reduce.add.v6i64(<6 x i64> %3)
   ret i64 %4
 }
+
+define i1 @constant_multiplied_non_power_of_2_i1(i1 %0) {
+; CHECK-LABEL: @constant_multiplied_non_power_of_2_i1(
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i1> poison, i1 [[TMP0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP6]], <8 x i1> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i1> [[TMP3]] to i8
+; CHECK-NEXT:    [[TMP5:%.*]] = call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[TMP4]])
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i8 [[TMP5]] to i1
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %2 = insertelement <8 x i1> poison, i1 %0, i32 0
+  %3 = shufflevector <8 x i1> %2, <8 x i1> poison, <8 x i32> zeroinitializer
+  %4 = tail call i1 @llvm.vector.reduce.add.v6i1(<8 x i1> %3)
+  ret i1 %4
+}
