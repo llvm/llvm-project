@@ -25,7 +25,8 @@ using llvm::StringInit;
 // InterfaceMethod
 //===----------------------------------------------------------------------===//
 
-InterfaceMethod::InterfaceMethod(const Record *def) : def(def) {
+InterfaceMethod::InterfaceMethod(const Record *def, std::string dedupName)
+    : def(def), dedupName(dedupName) {
   const DagInit *args = def->getValueAsDag("arguments");
   for (unsigned i = 0, e = args->getNumArgs(); i != e; ++i) {
     arguments.push_back({cast<StringInit>(args->getArg(i))->getValue(),
@@ -41,6 +42,9 @@ StringRef InterfaceMethod::getReturnType() const {
 StringRef InterfaceMethod::getName() const {
   return def->getValueAsString("name");
 }
+
+// Return the name of this method.
+StringRef InterfaceMethod::getDedupName() const { return dedupName; }
 
 // Return if this method is static.
 bool InterfaceMethod::isStatic() const {
@@ -83,8 +87,15 @@ Interface::Interface(const Record *def) : def(def) {
 
   // Initialize the interface methods.
   auto *listInit = dyn_cast<ListInit>(def->getValueInit("methods"));
-  for (const Init *init : listInit->getElements())
-    methods.emplace_back(cast<DefInit>(init)->getDef());
+  StringSet<> dedupNames;
+  for (const Init *init : listInit->getElements()) {
+    std::string name =
+        cast<DefInit>(init)->getDef()->getValueAsString("name").str();
+    while (!dedupNames.insert(name).second) {
+      name = name + "_" + std::to_string(dedupNames.size());
+    }
+    methods.emplace_back(cast<DefInit>(init)->getDef(), name);
+  }
 
   // Initialize the interface base classes.
   auto *basesInit = dyn_cast<ListInit>(def->getValueInit("baseInterfaces"));
