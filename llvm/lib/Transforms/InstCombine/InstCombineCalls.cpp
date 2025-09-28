@@ -3774,7 +3774,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         assert(Arg->getType()->isVectorTy() &&
                "The vector.reduce.add intrinsic's argument must be a vector!");
         ElementCount ReducedVectorElementCount =
-            static_cast<VectorType *>(Arg->getType())->getElementCount();
+            cast<VectorType>(Arg->getType())->getElementCount();
         if (ReducedVectorElementCount.isFixed()) {
           unsigned VectorSize = ReducedVectorElementCount.getFixedValue();
           Type *SplatType = Splat->getType();
