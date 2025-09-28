@@ -280,6 +280,8 @@ public:
     basic_string substr(size_type pos = 0, size_type n = npos) const;                           // constexpr in C++20, removed in C++23
     basic_string substr(size_type pos = 0, size_type n = npos) const&;                          // since C++23
     constexpr basic_string substr(size_type pos = 0, size_type n = npos) &&;                    // since C++23
+    constexpr basic_string_view<charT, traits> subview(size_type pos = 0,
+                                                       size_type n = npos) const;               // since C++26
     void swap(basic_string& str)
         noexcept(allocator_traits<allocator_type>::propagate_on_container_swap::value ||
                  allocator_traits<allocator_type>::is_always_equal::value);                     // C++17, constexpr since C++20
@@ -1756,6 +1758,11 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr basic_string substr(size_type __pos = 0, size_type __n = npos) && {
     return basic_string(std::move(*this), __pos, __n);
+  }
+#  endif
+#  if _LIBCPP_STD_VER >= 26
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __self_view subview(size_type __pos = 0, size_type __n = npos) const {
+    return __self_view(*this).subview(__pos, __n);
   }
 #  endif
 

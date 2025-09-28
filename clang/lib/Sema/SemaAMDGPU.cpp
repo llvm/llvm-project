@@ -58,9 +58,11 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       [[fallthrough]];
     }
     default:
-      Diag(ArgExpr->getExprLoc(), diag::err_amdgcn_load_lds_size_invalid_value)
+      SemaRef.targetDiag(ArgExpr->getExprLoc(),
+                         diag::err_amdgcn_load_lds_size_invalid_value)
           << ArgExpr->getSourceRange();
-      Diag(ArgExpr->getExprLoc(), diag::note_amdgcn_load_lds_size_valid_value)
+      SemaRef.targetDiag(ArgExpr->getExprLoc(),
+                         diag::note_amdgcn_load_lds_size_valid_value)
           << HasGFX950Insts << ArgExpr->getSourceRange();
       return true;
     }
