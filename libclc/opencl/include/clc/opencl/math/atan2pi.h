@@ -9,11 +9,11 @@
 #ifndef __CLC_OPENCL_MATH_ATAN2PI_H__
 #define __CLC_OPENCL_MATH_ATAN2PI_H__
 
-#define FUNCTION atan2pi
+#define __CLC_FUNCTION atan2pi
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_MATH_ATAN2PI_H__

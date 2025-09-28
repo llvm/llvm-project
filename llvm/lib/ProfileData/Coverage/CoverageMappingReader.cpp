@@ -519,7 +519,7 @@ Error InstrProfSymtab::create(SectionRef &Section) {
   return Error::success();
 }
 
-StringRef InstrProfSymtab::getFuncName(uint64_t Pointer, size_t Size) {
+StringRef InstrProfSymtab::getFuncName(uint64_t Pointer, size_t Size) const {
   if (Pointer < Address)
     return StringRef();
   auto Offset = Pointer - Address;

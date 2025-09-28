@@ -146,7 +146,7 @@ static_assert(!std::ranges::enable_view<const PrivateInherit>);
 static_assert(!std::ranges::enable_view<volatile PrivateInherit>);
 static_assert(!std::ranges::enable_view<const volatile PrivateInherit>);
 
-// https://github.com/llvm/llvm-project/issues/132577
+// https://llvm.org/PR132577
 // enable_view<view_interface<T>> should be false.
 static_assert(!std::ranges::enable_view<std::ranges::view_interface<V1>>);
 static_assert(!std::ranges::enable_view<const std::ranges::view_interface<V1>>);

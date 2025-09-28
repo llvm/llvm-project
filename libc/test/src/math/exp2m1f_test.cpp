@@ -15,7 +15,7 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 using LlvmLibcExp2m1fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -38,7 +38,6 @@ TEST_F(LlvmLibcExp2m1fTest, TrickyInputs) {
   };
 
   for (float x : INPUTS) {
-    libc_errno = 0;
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2m1, x,
                                    LIBC_NAMESPACE::exp2m1f(x), 0.5);
   }

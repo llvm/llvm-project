@@ -1,13 +1,5 @@
 // RUN: mlir-opt -convert-memref-to-emitc %s -split-input-file -verify-diagnostics
 
-func.func @memref_op(%arg0 : memref<2x4xf32>) {
-  // expected-error@+1 {{failed to legalize operation 'memref.copy'}}
-  memref.copy %arg0, %arg0 : memref<2x4xf32> to memref<2x4xf32>
-  return
-}
-
-// -----
-
 func.func @alloca_with_dynamic_shape() {
   %0 = index.constant 1
   // expected-error@+1 {{failed to legalize operation 'memref.alloca'}}

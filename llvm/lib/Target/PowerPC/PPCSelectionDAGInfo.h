@@ -20,6 +20,14 @@ public:
   bool isTargetMemoryOpcode(unsigned Opcode) const override;
 
   bool isTargetStrictFPOpcode(unsigned Opcode) const override;
+
+  std::pair<SDValue, SDValue>
+  EmitTargetCodeForMemcmp(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                          SDValue Op1, SDValue Op2, SDValue Op3,
+                          const CallInst *CI) const override;
+  std::pair<SDValue, SDValue>
+  EmitTargetCodeForStrlen(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
+                          SDValue Src, const CallInst *CI) const override;
 };
 
 } // namespace llvm

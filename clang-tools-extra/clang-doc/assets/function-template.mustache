@@ -6,7 +6,7 @@
     This file defines the template for functions/methods
 }}
 <div class="delimiter-container">
-    <div id="{{ID}}">
+    <div id="{{USR}}">
         {{! Function Prototype }}
         <pre>
             <code class="language-cpp code-clang-doc">
@@ -14,10 +14,10 @@
             </code>
         </pre>
         {{! Function Comments }}
-        {{#FunctionComments}}
+        {{#Description}}
         <div>
             {{>Comments}}
         </div>
-        {{/FunctionComments}}
+        {{/Description}}
     </div>
 </div>

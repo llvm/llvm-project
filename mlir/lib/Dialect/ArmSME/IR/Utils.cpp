@@ -14,6 +14,21 @@
 
 namespace mlir::arm_sme {
 
+unsigned getSizeInBytes(TypeSize type) {
+  switch (type) {
+  case arm_sme::TypeSize::Byte:
+    return 1;
+  case arm_sme::TypeSize::Half:
+    return 2;
+  case arm_sme::TypeSize::Word:
+    return 4;
+  case arm_sme::TypeSize::Double:
+    return 8;
+  }
+  llvm_unreachable("unknown type size");
+  return 0;
+}
+
 unsigned getSMETileSliceMinNumElts(Type type) {
   assert(isValidSMETileElementType(type) && "invalid tile type!");
   return MinStreamingVectorLengthInBits / type.getIntOrFloatBitWidth();
@@ -75,21 +90,21 @@ scf::ForOp createLoopOverTileSlices(
     PatternRewriter &rewriter, Location loc, Value initTile,
     std::function<Value(OpBuilder &, Location, Value, Value)> makeLoopBody) {
   OpBuilder::InsertionGuard g(rewriter);
-  auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-  auto minTileSlices = rewriter.create<arith::ConstantIndexOp>(
-      loc, llvm::cast<VectorType>(initTile.getType()).getDimSize(0));
+  auto step = arith::ConstantIndexOp::create(rewriter, loc, 1);
+  auto minTileSlices = arith::ConstantIndexOp::create(
+      rewriter, loc, llvm::cast<VectorType>(initTile.getType()).getDimSize(0));
   auto vscale =
-      rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
-  auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+      vector::VectorScaleOp::create(rewriter, loc, rewriter.getIndexType());
+  auto lowerBound = arith::ConstantIndexOp::create(rewriter, loc, 0);
   auto numTileSlices =
-      rewriter.create<arith::MulIOp>(loc, minTileSlices, vscale);
-  auto forOp = rewriter.create<scf::ForOp>(loc, lowerBound, numTileSlices, step,
-                                           ValueRange{initTile});
+      arith::MulIOp::create(rewriter, loc, minTileSlices, vscale);
+  auto forOp = scf::ForOp::create(rewriter, loc, lowerBound, numTileSlices,
+                                  step, ValueRange{initTile});
   rewriter.setInsertionPointToStart(forOp.getBody());
   Value nextTile =
       makeLoopBody(rewriter, loc, /*tileSliceIndex=*/forOp.getInductionVar(),
                    /*currentTile=*/forOp.getRegionIterArg(0));
-  rewriter.create<scf::YieldOp>(loc, nextTile);
+  scf::YieldOp::create(rewriter, loc, nextTile);
   return forOp;
 }
 

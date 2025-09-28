@@ -1,4 +1,4 @@
-//===--- FloatLoopCounter.h - clang-tidy-------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::cert {
 /// https://www.securecoding.cert.org/confluence/display/c/FLP30-C.+Do+not+use+floating-point+variables+as+loop+counters
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert/flp30-c.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cert/flp30-c.html
 class FloatLoopCounter : public ClangTidyCheck {
 public:
   FloatLoopCounter(StringRef Name, ClangTidyContext *Context)

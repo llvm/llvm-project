@@ -66,7 +66,7 @@ void ObjCPropertyAttributeOrderFixer::sortPropertyAttributes(
       return;
     }
 
-    const StringRef Attribute{Tok->TokenText};
+    const StringRef Attribute(Tok->TokenText);
     StringRef Value;
 
     // Also handle `getter=getFoo` attributes.

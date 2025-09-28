@@ -30,6 +30,7 @@ bool DirectXTTIImpl::isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
   switch (ID) {
   case Intrinsic::dx_asdouble:
   case Intrinsic::dx_isinf:
+  case Intrinsic::dx_isnan:
   case Intrinsic::dx_firstbitlow:
   case Intrinsic::dx_firstbituhigh:
   case Intrinsic::dx_firstbitshigh:
@@ -48,6 +49,7 @@ bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
   case Intrinsic::dx_firstbituhigh:
   case Intrinsic::dx_frac:
   case Intrinsic::dx_isinf:
+  case Intrinsic::dx_isnan:
   case Intrinsic::dx_rsqrt:
   case Intrinsic::dx_saturate:
   case Intrinsic::dx_splitdouble:
@@ -56,6 +58,8 @@ bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
   case Intrinsic::dx_wave_reduce_sum:
   case Intrinsic::dx_wave_reduce_umax:
   case Intrinsic::dx_wave_reduce_usum:
+  case Intrinsic::dx_imad:
+  case Intrinsic::dx_umad:
     return true;
   default:
     return false;

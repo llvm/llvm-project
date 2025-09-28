@@ -18,7 +18,6 @@ define amdgpu_kernel void @__omp_offloading_16_dd2df_main_l9()  {
 ; CHECK-NEXT:    global_load_ushort v2, v0, s[4:5] offset:4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:4 ; 4-byte Folded Spill
-; CHECK-NEXT:    ; implicit-def: $sgpr4
 ; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[6:7], v1, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0

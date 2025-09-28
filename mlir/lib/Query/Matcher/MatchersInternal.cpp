@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Query/Matcher/MatchersInternal.h"
-#include "llvm/ADT/SetVector.h"
 
 namespace mlir::query::matcher {
 

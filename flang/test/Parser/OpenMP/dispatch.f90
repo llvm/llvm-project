@@ -18,7 +18,7 @@ subroutine sub(x)
 !UNPARSE: !$OMP END DISPATCH
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPDispatchConstruct
-!PARSE-TREE: | OmpDirectiveSpecification
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = dispatch
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: | | | Scalar -> Integer -> Expr = '3_4'
@@ -37,7 +37,7 @@ subroutine sub(x)
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt
 ![...]
-!PARSE-TREE: | OmpDirectiveSpecification
+!PARSE-TREE: | OmpEndDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = dispatch
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | | Flags = None
@@ -51,7 +51,7 @@ subroutine sub(x)
 !UNPARSE:   r=func(a+1_4,b+2_4,c+3_4)
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPDispatchConstruct
-!PARSE-TREE: | OmpDirectiveSpecification
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = dispatch
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: | | | Scalar -> Integer -> Expr = '3_4'
@@ -60,7 +60,7 @@ subroutine sub(x)
 !PARSE-TREE: | | Flags = None
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt
-!PARSE-TREE-NOT: OmpDirectiveSpecification
+!PARSE-TREE-NOT: OmpEndDirective
 
   !$omp dispatch device(3) is_device_ptr(x)
   r = func(a+1, b+2, c+3)

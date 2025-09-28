@@ -285,7 +285,7 @@ static mlir::Value getIndex(fir::FirOpBuilder &builder, mlir::Operation *op,
   // index_0 = index - lb;
   if (lb.getType() != index.getType())
     lb = builder.createConvert(coop.getLoc(), index.getType(), lb);
-  return builder.create<mlir::arith::SubIOp>(coop.getLoc(), index, lb);
+  return mlir::arith::SubIOp::create(builder, coop.getLoc(), index, lb);
 }
 
 void LoopVersioningPass::runOnOperation() {
@@ -483,26 +483,26 @@ void LoopVersioningPass::runOnOperation() {
       unsigned ndims = arg.rank;
       for (unsigned i = 0; i < ndims; i++) {
         mlir::Value dimIdx = builder.createIntegerConstant(loc, idxTy, i);
-        arg.dims[i] = builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
-                                                     arg.arg, dimIdx);
+        arg.dims[i] = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy,
+                                             arg.arg, dimIdx);
       }
       // We only care about lowest order dimension, here.
       mlir::Value elemSize =
           builder.createIntegerConstant(loc, idxTy, arg.size);
-      mlir::Value cmp = builder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::eq, arg.dims[0].getResult(2),
-          elemSize);
+      mlir::Value cmp = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq,
+          arg.dims[0].getResult(2), elemSize);
       if (!allCompares) {
         allCompares = cmp;
       } else {
         allCompares =
-            builder.create<mlir::arith::AndIOp>(loc, cmp, allCompares);
+            mlir::arith::AndIOp::create(builder, loc, cmp, allCompares);
       }
     }
 
     auto ifOp =
-        builder.create<fir::IfOp>(loc, op.op->getResultTypes(), allCompares,
-                                  /*withElse=*/true);
+        fir::IfOp::create(builder, loc, op.op->getResultTypes(), allCompares,
+                          /*withElse=*/true);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
     LLVM_DEBUG(llvm::dbgs() << "Creating cloned loop\n");
@@ -515,8 +515,8 @@ void LoopVersioningPass::runOnOperation() {
       mlir::Type arrTy = fir::SequenceType::get(newShape, elementType);
       mlir::Type boxArrTy = fir::BoxType::get(arrTy);
       mlir::Type refArrTy = builder.getRefType(arrTy);
-      auto carg = builder.create<fir::ConvertOp>(loc, boxArrTy, arg.arg);
-      auto caddr = builder.create<fir::BoxAddrOp>(loc, refArrTy, carg);
+      auto carg = fir::ConvertOp::create(builder, loc, boxArrTy, arg.arg);
+      auto caddr = fir::BoxAddrOp::create(builder, loc, refArrTy, carg);
       auto insPt = builder.saveInsertionPoint();
       // Use caddr instead of arg.
       clonedLoop->walk([&](mlir::Operation *coop) {
@@ -540,9 +540,9 @@ void LoopVersioningPass::runOnOperation() {
             mlir::Value scale =
                 builder.createConvert(loc, idxTy, arg.dims[i].getResult(2));
             curIndex =
-                builder.create<mlir::arith::MulIOp>(loc, scale, curIndex);
-            totalIndex = (totalIndex) ? builder.create<mlir::arith::AddIOp>(
-                                            loc, curIndex, totalIndex)
+                mlir::arith::MulIOp::create(builder, loc, scale, curIndex);
+            totalIndex = (totalIndex) ? mlir::arith::AddIOp::create(
+                                            builder, loc, curIndex, totalIndex)
                                       : curIndex;
           }
           // This is the lowest dimension - which doesn't need scaling
@@ -554,16 +554,16 @@ void LoopVersioningPass::runOnOperation() {
             unsigned bits = llvm::Log2_32(arg.size);
             mlir::Value elemShift =
                 builder.createIntegerConstant(loc, idxTy, bits);
-            totalIndex = builder.create<mlir::arith::AddIOp>(
-                loc,
-                builder.create<mlir::arith::ShRSIOp>(loc, totalIndex,
-                                                     elemShift),
+            totalIndex = mlir::arith::AddIOp::create(
+                builder, loc,
+                mlir::arith::ShRSIOp::create(builder, loc, totalIndex,
+                                             elemShift),
                 finalIndex);
           } else {
             totalIndex = finalIndex;
           }
-          auto newOp = builder.create<fir::CoordinateOp>(
-              loc, builder.getRefType(elementType), caddr,
+          auto newOp = fir::CoordinateOp::create(
+              builder, loc, builder.getRefType(elementType), caddr,
               mlir::ValueRange{totalIndex});
           LLVM_DEBUG(newOp->dump());
           coop->getResult(0).replaceAllUsesWith(newOp->getResult(0));
@@ -582,7 +582,7 @@ void LoopVersioningPass::runOnOperation() {
     mlir::ResultRange results = clonedLoop->getResults();
     bool hasResults = (results.size() > 0);
     if (hasResults)
-      builder.create<fir::ResultOp>(loc, results);
+      fir::ResultOp::create(builder, loc, results);
 
     // Add the original loop in the else-side of the if operation.
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
@@ -591,7 +591,7 @@ void LoopVersioningPass::runOnOperation() {
     builder.insert(op.op);
     // Rely on "cloned loop has results, so original loop also has results".
     if (hasResults) {
-      builder.create<fir::ResultOp>(loc, op.op->getResults());
+      fir::ResultOp::create(builder, loc, op.op->getResults());
     } else {
       // Use an assert to check this.
       assert(op.op->getResults().size() == 0 &&

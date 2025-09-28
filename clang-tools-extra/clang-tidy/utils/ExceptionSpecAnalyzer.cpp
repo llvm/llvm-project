@@ -1,4 +1,4 @@
-//===--- ExceptionSpecAnalyzer.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,7 @@
 #include "ExceptionSpecAnalyzer.h"
 
 #include "clang/AST/Expr.h"
+#include "clang/AST/Type.h"
 
 namespace clang::tidy::utils {
 
@@ -66,9 +67,7 @@ ExceptionSpecAnalyzer::analyzeBase(const CXXBaseSpecifier &Base,
   if (!RecType)
     return State::Unknown;
 
-  const auto *BaseClass = cast<CXXRecordDecl>(RecType->getDecl());
-
-  return analyzeRecord(BaseClass, Kind);
+  return analyzeRecord(RecType->getAsCXXRecordDecl(), Kind);
 }
 
 ExceptionSpecAnalyzer::State

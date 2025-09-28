@@ -553,7 +553,6 @@ static void cacheDIVar(FrameDataInfo &FrameData,
       if (I != Container.end())
         DIVarCache.insert({V, (*I)->getVariable()});
     };
-    CacheIt(findDbgDeclares(V));
     CacheIt(findDVRDeclares(V));
   }
 }
@@ -700,9 +699,6 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
          "We could only build debug infomation for C++ coroutine now.\n");
 
   DIBuilder DBuilder(*F.getParent(), /*AllowUnresolved*/ false);
-
-  assert(Shape.getPromiseAlloca() &&
-         "Coroutine with switch ABI should own Promise alloca");
 
   DIFile *DFile = DIS->getFile();
   unsigned LineNum = DIS->getLine();
@@ -911,13 +907,17 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   // Create an entry for every spilled value.
   for (auto &S : FrameData.Spills) {
     Type *FieldType = S.first->getType();
+    MaybeAlign MA;
     // For byval arguments, we need to store the pointed value in the frame,
     // instead of the pointer itself.
-    if (const Argument *A = dyn_cast<Argument>(S.first))
-      if (A->hasByValAttr())
+    if (const Argument *A = dyn_cast<Argument>(S.first)) {
+      if (A->hasByValAttr()) {
         FieldType = A->getParamByValType();
-    FieldIDType Id = B.addField(FieldType, std::nullopt, false /*header*/,
-                                true /*IsSpillOfValue*/);
+        MA = A->getParamAlign();
+      }
+    }
+    FieldIDType Id =
+        B.addField(FieldType, MA, false /*header*/, true /*IsSpillOfValue*/);
     FrameData.setFieldIndex(S.first, Id);
   }
 
@@ -1219,10 +1219,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     auto *G = GetFramePointer(Alloca);
     G->setName(Alloca->getName() + Twine(".reload.addr"));
 
-    SmallVector<DbgVariableIntrinsic *, 4> DIs;
     SmallVector<DbgVariableRecord *> DbgVariableRecords;
-    findDbgUsers(DIs, Alloca, &DbgVariableRecords);
-    assert(DIs.empty() && "Should never see debug-intrinsics");
+    findDbgUsers(Alloca, DbgVariableRecords);
     for (auto *DVR : DbgVariableRecords)
       DVR->replaceVariableLocationOp(Alloca, G);
 
@@ -1824,7 +1822,7 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
       // only used outside the region.
       if (Valid && Lifetimes.size() != 0) {
         auto *NewLifetime = Lifetimes[0]->clone();
-        NewLifetime->replaceUsesOfWith(NewLifetime->getOperand(1), AI);
+        NewLifetime->replaceUsesOfWith(NewLifetime->getOperand(0), AI);
         NewLifetime->insertBefore(DomBB->getTerminator()->getIterator());
 
         // All the outsided lifetime.start markers are no longer necessary.

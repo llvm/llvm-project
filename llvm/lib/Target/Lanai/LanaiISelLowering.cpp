@@ -353,16 +353,15 @@ void LanaiTargetLowering::LowerAsmOperandForConstraint(
 
 #include "LanaiGenCallingConv.inc"
 
-static unsigned NumFixedArgs;
 static bool CC_Lanai32_VarArg(unsigned ValNo, MVT ValVT, MVT LocVT,
                               CCValAssign::LocInfo LocInfo,
-                              ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                              ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                              CCState &State) {
   // Handle fixed arguments with default CC.
   // Note: Both the default and fast CC handle VarArg the same and hence the
   // calling convention of the function is not considered here.
-  if (ValNo < NumFixedArgs) {
-    return CC_Lanai32(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State);
-  }
+  if (!ArgFlags.isVarArg())
+    return CC_Lanai32(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy, State);
 
   // Promote i8/i16 args to i32
   if (LocVT == MVT::i8 || LocVT == MVT::i16) {
@@ -603,15 +602,9 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
   GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
-  NumFixedArgs = 0;
-  if (IsVarArg && G) {
-    const Function *CalleeFn = dyn_cast<Function>(G->getGlobal());
-    if (CalleeFn)
-      NumFixedArgs = CalleeFn->getFunctionType()->getNumParams();
-  }
-  if (NumFixedArgs)
+  if (IsVarArg) {
     CCInfo.AnalyzeCallOperands(Outs, CC_Lanai32_VarArg);
-  else {
+  } else {
     if (CallConv == CallingConv::Fast)
       CCInfo.AnalyzeCallOperands(Outs, CC_Lanai32_Fast);
     else

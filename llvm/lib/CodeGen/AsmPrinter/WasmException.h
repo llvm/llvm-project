@@ -26,7 +26,7 @@ class LLVM_LIBRARY_VISIBILITY WasmException : public EHStreamer {
 public:
   WasmException(AsmPrinter *A) : EHStreamer(A) {}
 
-  void endModule() override;
+  void endModule() override {}
   void beginFunction(const MachineFunction *MF) override {}
   void endFunction(const MachineFunction *MF) override;
 

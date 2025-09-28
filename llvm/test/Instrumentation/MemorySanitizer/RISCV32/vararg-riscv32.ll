@@ -18,7 +18,7 @@ define i32 @foo(i32 %guard, ...) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], -2147483649
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP7]], i8 0, i64 8, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[VL]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VL]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[VL]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], -2147483649
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
@@ -32,15 +32,15 @@ define i32 @foo(i32 %guard, ...) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = inttoptr i64 [[TMP15]] to ptr
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP16]], ptr align 8 [[TMP3]], i64 [[TMP2]], i1 false)
 ; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VL]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[VL]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VL]])
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 0
 ;
   %vl = alloca ptr, align 8
-  call void @llvm.lifetime.start.p0(i64 32, ptr %vl)
+  call void @llvm.lifetime.start.p0(ptr %vl)
   call void @llvm.va_start(ptr %vl)
   call void @llvm.va_end(ptr %vl)
-  call void @llvm.lifetime.end.p0(i64 32, ptr %vl)
+  call void @llvm.lifetime.end.p0(ptr %vl)
   ret i32 0
 }
 
@@ -49,10 +49,10 @@ define i32 @foo(i32 %guard, ...) {
 
 
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 declare void @llvm.va_start(ptr) #2
 declare void @llvm.va_end(ptr) #2
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 define i32 @bar() {
 ; CHECK-LABEL: define i32 @bar() {

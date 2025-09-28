@@ -12,7 +12,7 @@
 
 let TargetPrefix = "riscv" in {
 
-  class TH_VdotTernaryWideMasked
+  class RISCV_TH_VdotTernaryWideMasked
         : DefaultAttrsIntrinsic< [llvm_anyvector_ty],
                      [LLVMMatchType<0>, llvm_any_ty, llvm_anyvector_ty,
                       LLVMScalarOrSameVectorWidth<2, llvm_i1_ty>,
@@ -22,13 +22,13 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 4;
   }
 
-  multiclass TH_VdotTernaryWide {
+  multiclass RISCV_TH_VdotTernaryWide {
     def "int_riscv_" # NAME : RISCVTernaryWideUnMasked;
-    def "int_riscv_" # NAME # "_mask" : TH_VdotTernaryWideMasked;
+    def "int_riscv_" # NAME # "_mask" : RISCV_TH_VdotTernaryWideMasked;
   }
 
-  defm th_vmaqa    : TH_VdotTernaryWide;
-  defm th_vmaqau   : TH_VdotTernaryWide;
-  defm th_vmaqasu  : TH_VdotTernaryWide;
-  defm th_vmaqaus  : TH_VdotTernaryWide;
+  defm th_vmaqa    : RISCV_TH_VdotTernaryWide;
+  defm th_vmaqau   : RISCV_TH_VdotTernaryWide;
+  defm th_vmaqasu  : RISCV_TH_VdotTernaryWide;
+  defm th_vmaqaus  : RISCV_TH_VdotTernaryWide;
 }

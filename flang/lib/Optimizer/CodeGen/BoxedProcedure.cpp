@@ -180,8 +180,8 @@ public:
                                           mlir::ValueRange inputs,
                                           mlir::Location loc) {
     assert(inputs.size() == 1);
-    return builder.create<ConvertOp>(loc, unwrapRefType(type.getEleTy()),
-                                     inputs[0]);
+    return ConvertOp::create(builder, loc, unwrapRefType(type.getEleTy()),
+                             inputs[0]);
   }
 
   void setLocation(mlir::Location location) { loc = location; }
@@ -282,17 +282,17 @@ public:
             // 32 bytes.
             fir::SequenceType::Extent thunkSize = triple.getTrampolineSize();
             mlir::Type buffTy = SequenceType::get({thunkSize}, i8Ty);
-            auto buffer = builder.create<AllocaOp>(loc, buffTy);
+            auto buffer = AllocaOp::create(builder, loc, buffTy);
             mlir::Value closure =
                 builder.createConvert(loc, i8Ptr, embox.getHost());
             mlir::Value tramp = builder.createConvert(loc, i8Ptr, buffer);
             mlir::Value func =
                 builder.createConvert(loc, i8Ptr, embox.getFunc());
-            builder.create<fir::CallOp>(
-                loc, factory::getLlvmInitTrampoline(builder),
+            fir::CallOp::create(
+                builder, loc, factory::getLlvmInitTrampoline(builder),
                 llvm::ArrayRef<mlir::Value>{tramp, func, closure});
-            auto adjustCall = builder.create<fir::CallOp>(
-                loc, factory::getLlvmAdjustTrampoline(builder),
+            auto adjustCall = fir::CallOp::create(
+                builder, loc, factory::getLlvmAdjustTrampoline(builder),
                 llvm::ArrayRef<mlir::Value>{tramp});
             rewriter.replaceOpWithNewOp<ConvertOp>(embox, toTy,
                                                    adjustCall.getResult(0));

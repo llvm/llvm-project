@@ -111,6 +111,65 @@ static void constifyIndexValues(SmallVectorImpl<OpFoldResult> &values,
   }
 }
 
+/// Helper function to retrieve a lossless memory-space cast, and the
+/// corresponding new result memref type.
+static std::tuple<MemorySpaceCastOpInterface, PtrLikeTypeInterface, Type>
+getMemorySpaceCastInfo(BaseMemRefType resultTy, Value src) {
+  MemorySpaceCastOpInterface castOp =
+      MemorySpaceCastOpInterface::getIfPromotableCast(src);
+
+  // Bail if the cast is not lossless.
+  if (!castOp)
+    return {};
+
+  // Transform the source and target type of `castOp` to have the same metadata
+  // as `resultTy`. Bail if not possible.
+  FailureOr<PtrLikeTypeInterface> srcTy = resultTy.clonePtrWith(
+      castOp.getSourcePtr().getType().getMemorySpace(), std::nullopt);
+  if (failed(srcTy))
+    return {};
+
+  FailureOr<PtrLikeTypeInterface> tgtTy = resultTy.clonePtrWith(
+      castOp.getTargetPtr().getType().getMemorySpace(), std::nullopt);
+  if (failed(tgtTy))
+    return {};
+
+  // Check if this is a valid memory-space cast.
+  if (!castOp.isValidMemorySpaceCast(*tgtTy, *srcTy))
+    return {};
+
+  return std::make_tuple(castOp, *tgtTy, *srcTy);
+}
+
+/// Implementation of `bubbleDownCasts` method for memref operations that
+/// return a single memref result.
+template <typename ConcreteOpTy>
+static FailureOr<std::optional<SmallVector<Value>>>
+bubbleDownCastsPassthroughOpImpl(ConcreteOpTy op, OpBuilder &builder,
+                                 OpOperand &src) {
+  auto [castOp, tgtTy, resTy] = getMemorySpaceCastInfo(op.getType(), src.get());
+  // Bail if we cannot cast.
+  if (!castOp)
+    return failure();
+
+  // Create the new operands.
+  SmallVector<Value> operands;
+  llvm::append_range(operands, op->getOperands());
+  operands[src.getOperandNumber()] = castOp.getSourcePtr();
+
+  // Create the new op and results.
+  auto newOp = ConcreteOpTy::create(
+      builder, op.getLoc(), TypeRange(resTy), operands, op.getProperties(),
+      llvm::to_vector_of<NamedAttribute>(op->getDiscardableAttrs()));
+
+  // Insert a memory-space cast to the original memory space of the op.
+  MemorySpaceCastOpInterface result = castOp.cloneMemorySpaceCastOp(
+      builder, tgtTy,
+      cast<TypedValue<PtrLikeTypeInterface>>(newOp.getResult()));
+  return std::optional<SmallVector<Value>>(
+      SmallVector<Value>({result.getTargetPtr()}));
+}
+
 //===----------------------------------------------------------------------===//
 // AllocOp / AllocaOp
 //===----------------------------------------------------------------------===//
@@ -213,9 +272,9 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
     assert(dynamicSizes.size() == newMemRefType.getNumDynamicDims());
 
     // Create and insert the alloc op for the new memref.
-    auto newAlloc = rewriter.create<AllocLikeOp>(
-        alloc.getLoc(), newMemRefType, dynamicSizes, alloc.getSymbolOperands(),
-        alloc.getAlignmentAttr());
+    auto newAlloc = AllocLikeOp::create(rewriter, alloc.getLoc(), newMemRefType,
+                                        dynamicSizes, alloc.getSymbolOperands(),
+                                        alloc.getAlignmentAttr());
     // Insert a cast so we have the same type as the old alloc.
     rewriter.replaceOpWithNewOp<CastOp>(alloc, alloc.getType(), newAlloc);
     return success();
@@ -542,6 +601,11 @@ OpFoldResult AssumeAlignmentOp::fold(FoldAdaptor adaptor) {
   return getMemref();
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+AssumeAlignmentOp::bubbleDownCasts(OpBuilder &builder) {
+  return bubbleDownCastsPassthroughOpImpl(*this, builder, getMemrefMutable());
+}
+
 //===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
@@ -710,6 +774,11 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
   return succeeded(foldMemRefCast(*this)) ? getResult() : Value();
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+CastOp::bubbleDownCasts(OpBuilder &builder) {
+  return bubbleDownCastsPassthroughOpImpl(*this, builder, getSourceMutable());
+}
+
 //===----------------------------------------------------------------------===//
 // CopyOp
 //===----------------------------------------------------------------------===//
@@ -797,7 +866,7 @@ void DimOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
 void DimOp::build(OpBuilder &builder, OperationState &result, Value source,
                   int64_t index) {
   auto loc = result.location;
-  Value indexValue = builder.create<arith::ConstantIndexOp>(loc, index);
+  Value indexValue = arith::ConstantIndexOp::create(builder, loc, index);
   build(builder, result, source, indexValue);
 }
 
@@ -1044,9 +1113,9 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
     rewriter.setInsertionPointAfter(reshape);
     Location loc = dim.getLoc();
     Value load =
-        rewriter.create<LoadOp>(loc, reshape.getShape(), dim.getIndex());
+        LoadOp::create(rewriter, loc, reshape.getShape(), dim.getIndex());
     if (load.getType() != dim.getType())
-      load = rewriter.create<arith::IndexCastOp>(loc, dim.getType(), load);
+      load = arith::IndexCastOp::create(rewriter, loc, dim.getType(), load);
     rewriter.replaceOp(dim, load);
     return success();
   }
@@ -1319,8 +1388,9 @@ static bool replaceConstantUsesOf(OpBuilder &rewriter, Location loc,
     assert(isa<Attribute>(maybeConstant) &&
            "The constified value should be either unchanged (i.e., == result) "
            "or a constant");
-    Value constantVal = rewriter.create<arith::ConstantIndexOp>(
-        loc, llvm::cast<IntegerAttr>(cast<Attribute>(maybeConstant)).getInt());
+    Value constantVal = arith::ConstantIndexOp::create(
+        rewriter, loc,
+        llvm::cast<IntegerAttr>(cast<Attribute>(maybeConstant)).getInt());
     for (Operation *op : llvm::make_early_inc_range(result.getUsers())) {
       // modifyOpInPlace: lambda cannot capture structured bindings in C++17
       // yet.
@@ -1548,14 +1618,6 @@ LogicalResult GlobalOp::verify() {
     }
   }
 
-  if (std::optional<uint64_t> alignAttr = getAlignment()) {
-    uint64_t alignment = *alignAttr;
-
-    if (!llvm::isPowerOf2_64(alignment))
-      return emitError() << "alignment attribute value " << alignment
-                         << " is not a power of 2";
-  }
-
   // TODO: verify visibility for declarations.
   return success();
 }
@@ -1608,6 +1670,12 @@ OpFoldResult LoadOp::fold(FoldAdaptor adaptor) {
   return OpFoldResult();
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+LoadOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getMemrefMutable(),
+                                                            getResult());
+}
+
 //===----------------------------------------------------------------------===//
 // MemorySpaceCastOp
 //===----------------------------------------------------------------------===//
@@ -1650,6 +1718,32 @@ OpFoldResult MemorySpaceCastOp::fold(FoldAdaptor adaptor) {
     return getResult();
   }
   return Value{};
+}
+
+TypedValue<PtrLikeTypeInterface> MemorySpaceCastOp::getSourcePtr() {
+  return cast<TypedValue<PtrLikeTypeInterface>>(getSource());
+}
+
+TypedValue<PtrLikeTypeInterface> MemorySpaceCastOp::getTargetPtr() {
+  return cast<TypedValue<PtrLikeTypeInterface>>(getDest());
+}
+
+bool MemorySpaceCastOp::isValidMemorySpaceCast(PtrLikeTypeInterface tgt,
+                                               PtrLikeTypeInterface src) {
+  return isa<BaseMemRefType>(tgt) &&
+         tgt.clonePtrWith(src.getMemorySpace(), std::nullopt) == src;
+}
+
+MemorySpaceCastOpInterface MemorySpaceCastOp::cloneMemorySpaceCastOp(
+    OpBuilder &b, PtrLikeTypeInterface tgt,
+    TypedValue<PtrLikeTypeInterface> src) {
+  assert(isValidMemorySpaceCast(tgt, src.getType()) && "invalid arguments");
+  return MemorySpaceCastOp::create(b, getLoc(), tgt, src);
+}
+
+/// The only cast we recognize as promotable is to the generic space.
+bool MemorySpaceCastOp::isSourcePromotable() {
+  return getDest().getType().getMemorySpace() == nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2048,6 +2142,11 @@ void ReinterpretCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ReinterpretCastOpExtractStridedMetadataFolder>(context);
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+ReinterpretCastOp::bubbleDownCasts(OpBuilder &builder) {
+  return bubbleDownCastsPassthroughOpImpl(*this, builder, getSourceMutable());
+}
+
 //===----------------------------------------------------------------------===//
 // Reassociative reshape ops
 //===----------------------------------------------------------------------===//
@@ -2355,6 +2454,11 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
       ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>>(context);
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+ExpandShapeOp::bubbleDownCasts(OpBuilder &builder) {
+  return bubbleDownCastsPassthroughOpImpl(*this, builder, getSrcMutable());
+}
+
 /// Compute the layout map after collapsing a given source MemRef type with the
 /// specified reassociation indices.
 ///
@@ -2548,8 +2652,9 @@ public:
       rewriter.modifyOpInPlace(
           op, [&]() { op.getSrcMutable().assign(cast.getSource()); });
     } else {
-      Value newOp = rewriter.create<CollapseShapeOp>(
-          op->getLoc(), cast.getSource(), op.getReassociationIndices());
+      Value newOp =
+          CollapseShapeOp::create(rewriter, op->getLoc(), cast.getSource(),
+                                  op.getReassociationIndices());
       rewriter.replaceOpWithNewOp<CastOp>(op, op.getType(), newOp);
     }
     return success();
@@ -2573,6 +2678,11 @@ OpFoldResult ExpandShapeOp::fold(FoldAdaptor adaptor) {
 OpFoldResult CollapseShapeOp::fold(FoldAdaptor adaptor) {
   return foldReshapeOp<CollapseShapeOp, ExpandShapeOp>(*this,
                                                        adaptor.getOperands());
+}
+
+FailureOr<std::optional<SmallVector<Value>>>
+CollapseShapeOp::bubbleDownCasts(OpBuilder &builder) {
+  return bubbleDownCastsPassthroughOpImpl(*this, builder, getSrcMutable());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2615,6 +2725,11 @@ LogicalResult ReshapeOp::verify() {
   return success();
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+ReshapeOp::bubbleDownCasts(OpBuilder &builder) {
+  return bubbleDownCastsPassthroughOpImpl(*this, builder, getSourceMutable());
+}
+
 //===----------------------------------------------------------------------===//
 // StoreOp
 //===----------------------------------------------------------------------===//
@@ -2630,6 +2745,12 @@ LogicalResult StoreOp::fold(FoldAdaptor adaptor,
                             SmallVectorImpl<OpFoldResult> &results) {
   /// store(memrefcast) -> store
   return foldMemRefCast(*this, getValueToStore());
+}
+
+FailureOr<std::optional<SmallVector<Value>>>
+StoreOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getMemrefMutable(),
+                                                            ValueRange());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3006,15 +3127,15 @@ SmallVector<Range, 8> mlir::getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
     Value offset =
         op.isDynamicOffset(idx)
             ? op.getDynamicOffset(idx)
-            : b.create<arith::ConstantIndexOp>(loc, op.getStaticOffset(idx));
+            : arith::ConstantIndexOp::create(b, loc, op.getStaticOffset(idx));
     Value size =
         op.isDynamicSize(idx)
             ? op.getDynamicSize(idx)
-            : b.create<arith::ConstantIndexOp>(loc, op.getStaticSize(idx));
+            : arith::ConstantIndexOp::create(b, loc, op.getStaticSize(idx));
     Value stride =
         op.isDynamicStride(idx)
             ? op.getDynamicStride(idx)
-            : b.create<arith::ConstantIndexOp>(loc, op.getStaticStride(idx));
+            : arith::ConstantIndexOp::create(b, loc, op.getStaticStride(idx));
     res.emplace_back(Range{offset, size, stride});
   }
   return res;
@@ -3173,8 +3294,8 @@ public:
     if (!resultType)
       return failure();
 
-    Value newSubView = rewriter.create<SubViewOp>(
-        subViewOp.getLoc(), resultType, castOp.getSource(),
+    Value newSubView = SubViewOp::create(
+        rewriter, subViewOp.getLoc(), resultType, castOp.getSource(),
         subViewOp.getOffsets(), subViewOp.getSizes(), subViewOp.getStrides(),
         subViewOp.getStaticOffsets(), subViewOp.getStaticSizes(),
         subViewOp.getStaticStrides());
@@ -3288,6 +3409,11 @@ OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+SubViewOp::bubbleDownCasts(OpBuilder &builder) {
+  return bubbleDownCastsPassthroughOpImpl(*this, builder, getSourceMutable());
+}
+
 //===----------------------------------------------------------------------===//
 // TransposeOp
 //===----------------------------------------------------------------------===//
@@ -3386,6 +3512,11 @@ OpFoldResult TransposeOp::fold(FoldAdaptor) {
     return getResult();
   }
   return {};
+}
+
+FailureOr<std::optional<SmallVector<Value>>>
+TransposeOp::bubbleDownCasts(OpBuilder &builder) {
+  return bubbleDownCastsPassthroughOpImpl(*this, builder, getInMutable());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3495,9 +3626,9 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
       return failure();
 
     // Create new ViewOp.
-    auto newViewOp = rewriter.create<ViewOp>(
-        viewOp.getLoc(), newMemRefType, viewOp.getOperand(0),
-        viewOp.getByteShift(), newOperands);
+    auto newViewOp = ViewOp::create(rewriter, viewOp.getLoc(), newMemRefType,
+                                    viewOp.getOperand(0), viewOp.getByteShift(),
+                                    newOperands);
     // Insert a cast so we have the same type as the old memref type.
     rewriter.replaceOpWithNewOp<CastOp>(viewOp, viewOp.getType(), newViewOp);
     return success();
@@ -3531,6 +3662,11 @@ void ViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ViewOpShapeFolder, ViewOpMemrefCastFolder>(context);
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+ViewOp::bubbleDownCasts(OpBuilder &builder) {
+  return bubbleDownCastsPassthroughOpImpl(*this, builder, getSourceMutable());
+}
+
 //===----------------------------------------------------------------------===//
 // AtomicRMWOp
 //===----------------------------------------------------------------------===//
@@ -3556,6 +3692,7 @@ LogicalResult AtomicRMWOp::verify() {
   case arith::AtomicRMWKind::minu:
   case arith::AtomicRMWKind::muli:
   case arith::AtomicRMWKind::ori:
+  case arith::AtomicRMWKind::xori:
   case arith::AtomicRMWKind::andi:
     if (!llvm::isa<IntegerType>(getValue().getType()))
       return emitOpError() << "with kind '"
@@ -3573,6 +3710,12 @@ OpFoldResult AtomicRMWOp::fold(FoldAdaptor adaptor) {
   if (succeeded(foldMemRefCast(*this, getValue())))
     return getResult();
   return OpFoldResult();
+}
+
+FailureOr<std::optional<SmallVector<Value>>>
+AtomicRMWOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getMemrefMutable(),
+                                                            getResult());
 }
 
 //===----------------------------------------------------------------------===//

@@ -14,9 +14,9 @@ define void @uniform_br_no_metadata(i32 noundef inreg %value, ptr addrspace(8) n
 ; GFX9-NEXT:    s_mov_b32 s6, s19
 ; GFX9-NEXT:    s_mov_b32 s5, s18
 ; GFX9-NEXT:    s_mov_b32 s4, s17
-; GFX9-NEXT:    v_mov_b32_e32 v0, s16
-; GFX9-NEXT:    v_mov_b32_e32 v1, s21
-; GFX9-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen
+; GFX9-NEXT:    v_mov_b32_e32 v1, s16
+; GFX9-NEXT:    v_mov_b32_e32 v0, s21
+; GFX9-NEXT:    buffer_store_dword v1, v0, s[4:7], 0 offen
 ; GFX9-NEXT:  .LBB0_2: ; %if.end
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -61,9 +61,9 @@ define void @uniform_br_same_weight(i32 noundef inreg %value, ptr addrspace(8) n
 ; GFX9-NEXT:    s_mov_b32 s6, s19
 ; GFX9-NEXT:    s_mov_b32 s5, s18
 ; GFX9-NEXT:    s_mov_b32 s4, s17
-; GFX9-NEXT:    v_mov_b32_e32 v0, s16
-; GFX9-NEXT:    v_mov_b32_e32 v1, s21
-; GFX9-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen
+; GFX9-NEXT:    v_mov_b32_e32 v1, s16
+; GFX9-NEXT:    v_mov_b32_e32 v0, s21
+; GFX9-NEXT:    buffer_store_dword v1, v0, s[4:7], 0 offen
 ; GFX9-NEXT:  .LBB1_2: ; %if.end
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -108,9 +108,9 @@ define void @uniform_br_then_likely(i32 noundef inreg %value, ptr addrspace(8) n
 ; GFX9-NEXT:    s_mov_b32 s6, s19
 ; GFX9-NEXT:    s_mov_b32 s5, s18
 ; GFX9-NEXT:    s_mov_b32 s4, s17
-; GFX9-NEXT:    v_mov_b32_e32 v0, s16
-; GFX9-NEXT:    v_mov_b32_e32 v1, s21
-; GFX9-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen
+; GFX9-NEXT:    v_mov_b32_e32 v1, s16
+; GFX9-NEXT:    v_mov_b32_e32 v0, s21
+; GFX9-NEXT:    buffer_store_dword v1, v0, s[4:7], 0 offen
 ; GFX9-NEXT:  .LBB2_2: ; %if.end
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -156,9 +156,9 @@ define void @divergent_br_no_metadata(i32 noundef inreg %value, ptr addrspace(8)
 ; GFX9-NEXT:    s_mov_b32 s6, s19
 ; GFX9-NEXT:    s_mov_b32 s5, s18
 ; GFX9-NEXT:    s_mov_b32 s4, s17
-; GFX9-NEXT:    v_mov_b32_e32 v0, s16
-; GFX9-NEXT:    v_mov_b32_e32 v1, s21
-; GFX9-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen
+; GFX9-NEXT:    v_mov_b32_e32 v1, s16
+; GFX9-NEXT:    v_mov_b32_e32 v0, s21
+; GFX9-NEXT:    buffer_store_dword v1, v0, s[4:7], 0 offen
 ; GFX9-NEXT:  .LBB3_2: ; %if.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -227,9 +227,9 @@ define void @divergent_br_same_weight(i32 noundef inreg %value, ptr addrspace(8)
 ; GFX9-NEXT:    s_mov_b32 s6, s19
 ; GFX9-NEXT:    s_mov_b32 s5, s18
 ; GFX9-NEXT:    s_mov_b32 s4, s17
-; GFX9-NEXT:    v_mov_b32_e32 v0, s16
-; GFX9-NEXT:    v_mov_b32_e32 v1, s21
-; GFX9-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen
+; GFX9-NEXT:    v_mov_b32_e32 v1, s16
+; GFX9-NEXT:    v_mov_b32_e32 v0, s21
+; GFX9-NEXT:    buffer_store_dword v1, v0, s[4:7], 0 offen
 ; GFX9-NEXT:  .LBB4_2: ; %if.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -297,9 +297,9 @@ define void @divergent_br_then_likely(i32 noundef inreg %value, ptr addrspace(8)
 ; GFX9-NEXT:    s_mov_b32 s6, s19
 ; GFX9-NEXT:    s_mov_b32 s5, s18
 ; GFX9-NEXT:    s_mov_b32 s4, s17
-; GFX9-NEXT:    v_mov_b32_e32 v0, s16
-; GFX9-NEXT:    v_mov_b32_e32 v1, s21
-; GFX9-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen
+; GFX9-NEXT:    v_mov_b32_e32 v1, s16
+; GFX9-NEXT:    v_mov_b32_e32 v0, s21
+; GFX9-NEXT:    buffer_store_dword v1, v0, s[4:7], 0 offen
 ; GFX9-NEXT:  ; %bb.2: ; %if.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

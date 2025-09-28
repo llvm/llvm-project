@@ -39,7 +39,7 @@ __for_each(_InputIterator __first, _Sent __last, _Func& __f, _Proj& __proj) {
 template <class _SegmentedIterator,
           class _Func,
           class _Proj,
-          __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
+          __enable_if_t<__is_segmented_iterator_v<_SegmentedIterator>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _SegmentedIterator
 __for_each(_SegmentedIterator __first, _SegmentedIterator __last, _Func& __func, _Proj& __proj) {
   using __local_iterator_t = typename __segmented_iterator_traits<_SegmentedIterator>::__local_iterator;

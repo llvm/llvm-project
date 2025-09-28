@@ -27,6 +27,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 
+#include "flang/Optimizer/CodeGen/TypeConverter.h"
+
 namespace fir {
 /// Return the integer value of a arith::ConstantOp.
 inline std::int64_t toInt(mlir::arith::ConstantOp cop) {
@@ -198,6 +200,37 @@ std::optional<llvm::ArrayRef<int64_t>> getComponentLowerBoundsIfNonDefault(
     fir::RecordType recordType, llvm::StringRef component,
     mlir::ModuleOp module, const mlir::SymbolTable *symbolTable = nullptr);
 
+/// Generate a LLVM constant value of type `ity`, using the provided offset.
+mlir::LLVM::ConstantOp
+genConstantIndex(mlir::Location loc, mlir::Type ity,
+                 mlir::ConversionPatternRewriter &rewriter,
+                 std::int64_t offset);
+
+/// Helper function for generating the LLVM IR that computes the distance
+/// in bytes between adjacent elements pointed to by a pointer
+/// of type \p ptrTy. The result is returned as a value of \p idxTy integer
+/// type.
+mlir::Value computeElementDistance(mlir::Location loc,
+                                   mlir::Type llvmObjectType, mlir::Type idxTy,
+                                   mlir::ConversionPatternRewriter &rewriter,
+                                   const mlir::DataLayout &dataLayout);
+
+// Compute the alloc scale size (constant factors encoded in the array type).
+// We do this for arrays without a constant interior or arrays of character with
+// dynamic length arrays, since those are the only ones that get decayed to a
+// pointer to the element type.
+mlir::Value genAllocationScaleSize(mlir::Location loc, mlir::Type dataTy,
+                                   mlir::Type ity,
+                                   mlir::ConversionPatternRewriter &rewriter);
+
+/// Perform an extension or truncation as needed on an integer value. Lowering
+/// to the specific target may involve some sign-extending or truncation of
+/// values, particularly to fit them from abstract box types to the
+/// appropriate reified structures.
+mlir::Value integerCast(const fir::LLVMTypeConverter &converter,
+                        mlir::Location loc,
+                        mlir::ConversionPatternRewriter &rewriter,
+                        mlir::Type ty, mlir::Value val, bool fold = false);
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_UTILS_H

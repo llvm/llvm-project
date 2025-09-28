@@ -70,7 +70,7 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     populateVectorBitCastLoweringPatterns(patterns);
     populateVectorBroadcastLoweringPatterns(patterns);
     populateVectorContractLoweringPatterns(patterns, vectorContractLowering);
-    if (vectorContractLowering == vector::VectorContractLowering::Matmul) {
+    if (vectorContractLowering == vector::VectorContractLowering::LLVMIntr) {
       // This pattern creates a dependency on the LLVM dialect, hence we don't
       // include it in `populateVectorContractLoweringPatterns` that is part of
       // the Vector dialect (and should not depend on LLVM).
@@ -80,7 +80,7 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     populateVectorShapeCastLoweringPatterns(patterns);
     populateVectorInterleaveLoweringPatterns(patterns);
     populateVectorTransposeLoweringPatterns(patterns, vectorTransposeLowering);
-    if (vectorTransposeLowering == vector::VectorTransposeLowering::Flat) {
+    if (vectorTransposeLowering == vector::VectorTransposeLowering::LLVMIntr) {
       // This pattern creates a dependency on the LLVM dialect, hence we don't
       // include it in `populateVectorTransposeLoweringPatterns` that is part of
       // the Vector dialect (and should not depend on LLVM).
@@ -94,11 +94,19 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     populateVectorStepLoweringPatterns(patterns);
     populateVectorRankReducingFMAPattern(patterns);
     populateVectorGatherLoweringPatterns(patterns);
+    populateVectorFromElementsUnrollPatterns(patterns);
+    populateVectorToElementsUnrollPatterns(patterns);
     if (armI8MM) {
       if (armNeon)
-        arm_neon::populateLowerContractionToNeonI8MMPatternPatterns(patterns);
+        arm_neon::populateLowerContractionToNeonI8MMPatterns(patterns);
       if (armSVE)
-        populateLowerContractionToSVEI8MMPatternPatterns(patterns);
+        populateLowerContractionToSVEI8MMPatterns(patterns);
+    }
+    if (armBF16) {
+      if (armNeon)
+        arm_neon::populateLowerContractionToNeonBFMMLAPatterns(patterns);
+      if (armSVE)
+        populateLowerContractionToSVEBFMMLAPatterns(patterns);
     }
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }

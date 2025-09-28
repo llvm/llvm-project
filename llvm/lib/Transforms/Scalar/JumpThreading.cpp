@@ -1437,9 +1437,18 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
     // AvailablePreds vector as we go so that all of the PHI entries for this
     // predecessor use the same bitcast.
     Value *&PredV = I->second;
-    if (PredV->getType() != LoadI->getType())
+    if (PredV->getType() != LoadI->getType()) {
       PredV = CastInst::CreateBitOrPointerCast(
           PredV, LoadI->getType(), "", P->getTerminator()->getIterator());
+      // The new cast is producing the value used to replace the load
+      // instruction, so uses the load's debug location. If P does not always
+      // branch to the load BB however then the debug location must be dropped,
+      // as it is hoisted past a conditional branch.
+      DebugLoc DL = P->getTerminator()->getNumSuccessors() == 1
+                        ? LoadI->getDebugLoc()
+                        : DebugLoc::getDropped();
+      cast<CastInst>(PredV)->setDebugLoc(DL);
+    }
 
     PN->addIncoming(PredV, I->first);
   }
@@ -1960,7 +1969,6 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
   // PHI insertion, of which we are prepared to do, clean these up now.
   SSAUpdater SSAUpdate;
   SmallVector<Use *, 16> UsesToRename;
-  SmallVector<DbgValueInst *, 4> DbgValues;
   SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
 
   for (Instruction &I : *BB) {
@@ -1978,8 +1986,7 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
     }
 
     // Find debug values outside of the block
-    findDbgValues(DbgValues, &I, &DbgVariableRecords);
-    assert(DbgValues.empty());
+    findDbgValues(&I, DbgVariableRecords);
     llvm::erase_if(DbgVariableRecords, [&](const DbgVariableRecord *DbgVarRec) {
       return DbgVarRec->getParent() == BB;
     });
@@ -2000,7 +2007,6 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
       SSAUpdate.RewriteUse(*UsesToRename.pop_back_val());
     if (!DbgVariableRecords.empty()) {
       SSAUpdate.UpdateDebugValues(&I, DbgVariableRecords);
-      DbgValues.clear();
       DbgVariableRecords.clear();
     }
 

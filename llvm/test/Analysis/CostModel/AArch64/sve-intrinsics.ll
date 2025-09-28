@@ -449,33 +449,33 @@ define void @vector_reverse() #0 {
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'vector_reverse'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv16i8 = call <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv32i8 = call <vscale x 32 x i8> @llvm.vector.reverse.nxv32i8(<vscale x 32 x i8> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv2i16 = call <vscale x 2 x i16> @llvm.vector.reverse.nxv2i16(<vscale x 2 x i16> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv4i16 = call <vscale x 4 x i16> @llvm.vector.reverse.nxv4i16(<vscale x 4 x i16> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv8i16 = call <vscale x 8 x i16> @llvm.vector.reverse.nxv8i16(<vscale x 8 x i16> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv16i16 = call <vscale x 16 x i16> @llvm.vector.reverse.nxv16i16(<vscale x 16 x i16> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv4i32 = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv8i32 = call <vscale x 8 x i32> @llvm.vector.reverse.nxv8i32(<vscale x 8 x i32> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv2i64 = call <vscale x 2 x i64> @llvm.vector.reverse.nxv2i64(<vscale x 2 x i64> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv4i64 = call <vscale x 4 x i64> @llvm.vector.reverse.nxv4i64(<vscale x 4 x i64> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv2f16 = call <vscale x 2 x half> @llvm.vector.reverse.nxv2f16(<vscale x 2 x half> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv4f16 = call <vscale x 4 x half> @llvm.vector.reverse.nxv4f16(<vscale x 4 x half> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv8f16 = call <vscale x 8 x half> @llvm.vector.reverse.nxv8f16(<vscale x 8 x half> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv16f16 = call <vscale x 16 x half> @llvm.vector.reverse.nxv16f16(<vscale x 16 x half> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv2f32 = call <vscale x 2 x float> @llvm.vector.reverse.nxv2f32(<vscale x 2 x float> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv4f32 = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv8f32 = call <vscale x 8 x float> @llvm.vector.reverse.nxv8f32(<vscale x 8 x float> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv2f64 = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv4f64 = call <vscale x 4 x double> @llvm.vector.reverse.nxv4f64(<vscale x 4 x double> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv2bf16 = call <vscale x 2 x bfloat> @llvm.vector.reverse.nxv2bf16(<vscale x 2 x bfloat> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv4bf16 = call <vscale x 4 x bfloat> @llvm.vector.reverse.nxv4bf16(<vscale x 4 x bfloat> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv8bf16 = call <vscale x 8 x bfloat> @llvm.vector.reverse.nxv8bf16(<vscale x 8 x bfloat> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv16bf16 = call <vscale x 16 x bfloat> @llvm.vector.reverse.nxv16bf16(<vscale x 16 x bfloat> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv16i1 = call <vscale x 16 x i1> @llvm.vector.reverse.nxv16i1(<vscale x 16 x i1> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv8i1 = call <vscale x 8 x i1> @llvm.vector.reverse.nxv8i1(<vscale x 8 x i1> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv4i1 = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %reverse_nxv2i1 = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv16i8 = call <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %reverse_nxv32i8 = call <vscale x 32 x i8> @llvm.vector.reverse.nxv32i8(<vscale x 32 x i8> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv2i16 = call <vscale x 2 x i16> @llvm.vector.reverse.nxv2i16(<vscale x 2 x i16> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv4i16 = call <vscale x 4 x i16> @llvm.vector.reverse.nxv4i16(<vscale x 4 x i16> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv8i16 = call <vscale x 8 x i16> @llvm.vector.reverse.nxv8i16(<vscale x 8 x i16> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %reverse_nxv16i16 = call <vscale x 16 x i16> @llvm.vector.reverse.nxv16i16(<vscale x 16 x i16> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv4i32 = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %reverse_nxv8i32 = call <vscale x 8 x i32> @llvm.vector.reverse.nxv8i32(<vscale x 8 x i32> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv2i64 = call <vscale x 2 x i64> @llvm.vector.reverse.nxv2i64(<vscale x 2 x i64> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %reverse_nxv4i64 = call <vscale x 4 x i64> @llvm.vector.reverse.nxv4i64(<vscale x 4 x i64> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv2f16 = call <vscale x 2 x half> @llvm.vector.reverse.nxv2f16(<vscale x 2 x half> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv4f16 = call <vscale x 4 x half> @llvm.vector.reverse.nxv4f16(<vscale x 4 x half> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv8f16 = call <vscale x 8 x half> @llvm.vector.reverse.nxv8f16(<vscale x 8 x half> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %reverse_nxv16f16 = call <vscale x 16 x half> @llvm.vector.reverse.nxv16f16(<vscale x 16 x half> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv2f32 = call <vscale x 2 x float> @llvm.vector.reverse.nxv2f32(<vscale x 2 x float> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv4f32 = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %reverse_nxv8f32 = call <vscale x 8 x float> @llvm.vector.reverse.nxv8f32(<vscale x 8 x float> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv2f64 = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %reverse_nxv4f64 = call <vscale x 4 x double> @llvm.vector.reverse.nxv4f64(<vscale x 4 x double> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv2bf16 = call <vscale x 2 x bfloat> @llvm.vector.reverse.nxv2bf16(<vscale x 2 x bfloat> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv4bf16 = call <vscale x 4 x bfloat> @llvm.vector.reverse.nxv4bf16(<vscale x 4 x bfloat> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv8bf16 = call <vscale x 8 x bfloat> @llvm.vector.reverse.nxv8bf16(<vscale x 8 x bfloat> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %reverse_nxv16bf16 = call <vscale x 16 x bfloat> @llvm.vector.reverse.nxv16bf16(<vscale x 16 x bfloat> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv16i1 = call <vscale x 16 x i1> @llvm.vector.reverse.nxv16i1(<vscale x 16 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv8i1 = call <vscale x 8 x i1> @llvm.vector.reverse.nxv8i1(<vscale x 8 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv4i1 = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %reverse_nxv2i1 = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 
@@ -1277,15 +1277,15 @@ define void @histogram_nxv16i8(<vscale x 16 x ptr> %buckets, <vscale x 16 x i1> 
 
 define void @histogram_v2i64(<2 x ptr> %buckets, <2 x i1> %mask) {
 ; CHECK-VSCALE-1-LABEL: 'histogram_v2i64'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:10 SizeLat:10 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'histogram_v2i64'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:10 SizeLat:10 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'histogram_v2i64'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:10 SizeLat:10 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
@@ -1294,15 +1294,15 @@ define void @histogram_v2i64(<2 x ptr> %buckets, <2 x i1> %mask) {
 
 define void @histogram_v4i32(<4 x ptr> %buckets, <4 x i1> %mask) {
 ; CHECK-VSCALE-1-LABEL: 'histogram_v4i32'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:16 Lat:20 SizeLat:20 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'histogram_v4i32'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:16 Lat:20 SizeLat:20 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'histogram_v4i32'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:16 Lat:20 SizeLat:20 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
@@ -1311,15 +1311,15 @@ define void @histogram_v4i32(<4 x ptr> %buckets, <4 x i1> %mask) {
 
 define void @histogram_v8i16(<8 x ptr> %buckets, <8 x i1> %mask) {
 ; CHECK-VSCALE-1-LABEL: 'histogram_v8i16'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:32 Lat:40 SizeLat:40 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'histogram_v8i16'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:32 Lat:40 SizeLat:40 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'histogram_v8i16'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:32 Lat:40 SizeLat:40 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
@@ -1328,15 +1328,15 @@ define void @histogram_v8i16(<8 x ptr> %buckets, <8 x i1> %mask) {
 
 define void @histogram_v16i8(<16 x ptr> %buckets, <16 x i1> %mask) {
 ; CHECK-VSCALE-1-LABEL: 'histogram_v16i8'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:64 Lat:80 SizeLat:80 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'histogram_v16i8'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:64 Lat:80 SizeLat:80 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'histogram_v16i8'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:64 Lat:80 SizeLat:80 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.v16p0.i64(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)

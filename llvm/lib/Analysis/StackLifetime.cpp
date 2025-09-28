@@ -59,35 +59,10 @@ bool StackLifetime::isAliveAfter(const AllocaInst *AI,
   return getLiveRange(AI).test(InstNum);
 }
 
-// Returns unique alloca annotated by lifetime marker only if
-// markers has the same size and points to the alloca start.
-static const AllocaInst *findMatchingAlloca(const IntrinsicInst &II,
-                                            const DataLayout &DL) {
-  const AllocaInst *AI = findAllocaForValue(II.getArgOperand(1), true);
-  if (!AI)
-    return nullptr;
-
-  auto AllocaSize = AI->getAllocationSize(DL);
-  if (!AllocaSize)
-    return nullptr;
-
-  auto *Size = dyn_cast<ConstantInt>(II.getArgOperand(0));
-  if (!Size)
-    return nullptr;
-  int64_t LifetimeSize = Size->getSExtValue();
-
-  if (LifetimeSize != -1 && uint64_t(LifetimeSize) != *AllocaSize)
-    return nullptr;
-
-  return AI;
-}
-
 void StackLifetime::collectMarkers() {
   InterestingAllocas.resize(NumAllocas);
   DenseMap<const BasicBlock *, SmallDenseMap<const IntrinsicInst *, Marker>>
       BBMarkerSet;
-
-  const DataLayout &DL = F.getDataLayout();
 
   // Compute the set of start/end markers per basic block.
   for (const BasicBlock *BB : depth_first(&F)) {
@@ -95,11 +70,9 @@ void StackLifetime::collectMarkers() {
       const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
       if (!II || !II->isLifetimeStartOrEnd())
         continue;
-      const AllocaInst *AI = findMatchingAlloca(*II, DL);
-      if (!AI) {
-        HasUnknownLifetimeStartOrEnd = true;
+      const AllocaInst *AI = dyn_cast<AllocaInst>(II->getArgOperand(0));
+      if (!AI)
         continue;
-      }
       auto It = AllocaNumbering.find(AI);
       if (It == AllocaNumbering.end())
         continue;
@@ -328,20 +301,6 @@ StackLifetime::StackLifetime(const Function &F,
 }
 
 void StackLifetime::run() {
-  if (HasUnknownLifetimeStartOrEnd) {
-    // There is marker which we can't assign to a specific alloca, so we
-    // fallback to the most conservative results for the type.
-    switch (Type) {
-    case LivenessType::May:
-      LiveRanges.resize(NumAllocas, getFullLiveRange());
-      break;
-    case LivenessType::Must:
-      LiveRanges.resize(NumAllocas, LiveRange(Instructions.size()));
-      break;
-    }
-    return;
-  }
-
   LiveRanges.resize(NumAllocas, LiveRange(Instructions.size()));
   for (unsigned I = 0; I < NumAllocas; ++I)
     if (!InterestingAllocas.test(I))

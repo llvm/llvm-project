@@ -12,7 +12,6 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -108,8 +107,8 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
         // a load (but one that potentially returns the value itself), so we can
         // ignore it if we know that the value isn't captured.
         bool NoCapture = Call->doesNotCapture(DataOpNo);
-        if ((Call->onlyReadsMemory() && (Call->use_empty() || NoCapture)) ||
-            (Call->onlyReadsMemory(DataOpNo) && NoCapture))
+        if (NoCapture &&
+            (Call->onlyReadsMemory() || Call->onlyReadsMemory(DataOpNo)))
           continue;
       }
 
@@ -339,8 +338,18 @@ bool PointerReplacer::collectUsers() {
       if (!TryPushInstOperand(TrueInst) || !TryPushInstOperand(FalseInst))
         return false;
     } else if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
-      UsersToReplace.insert(GEP);
-      PushUsersToWorklist(GEP);
+      auto *PtrOp = dyn_cast<Instruction>(GEP->getPointerOperand());
+      if (!PtrOp)
+        return false;
+      if (isAvailable(PtrOp)) {
+        UsersToReplace.insert(GEP);
+        PushUsersToWorklist(GEP);
+        continue;
+      }
+
+      Worklist.emplace_back(GEP);
+      if (!TryPushInstOperand(PtrOp))
+        return false;
     } else if (auto *MI = dyn_cast<MemTransferInst>(Inst)) {
       if (MI->isVolatile())
         return false;
@@ -738,6 +747,8 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
       LoadInst *NewLoad = IC.combineLoadToNewType(LI, ST->getTypeAtIndex(0U),
                                                   ".unpack");
       NewLoad->setAAMetadata(LI.getAAMetadata());
+      // Copy invariant metadata from parent load.
+      NewLoad->copyMetadata(LI, LLVMContext::MD_invariant_load);
       return IC.replaceInstUsesWith(LI, IC.Builder.CreateInsertValue(
         PoisonValue::get(T), NewLoad, 0, Name));
     }
@@ -765,6 +776,8 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
           Name + ".unpack");
       // Propagate AA metadata. It'll still be valid on the narrowed load.
       L->setAAMetadata(LI.getAAMetadata());
+      // Copy invariant metadata from parent load.
+      L->copyMetadata(LI, LLVMContext::MD_invariant_load);
       V = IC.Builder.CreateInsertValue(V, L, i);
     }
 
@@ -1503,8 +1516,7 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   // This is a non-terminator unreachable marker. Don't remove it.
   if (isa<UndefValue>(Ptr)) {
     // Remove guaranteed-to-transfer instructions before the marker.
-    if (removeInstructionsBeforeUnreachable(SI))
-      return &SI;
+    removeInstructionsBeforeUnreachable(SI);
 
     // Remove all instructions after the marker and handle dead blocks this
     // implies.

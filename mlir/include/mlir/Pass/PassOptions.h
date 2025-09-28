@@ -377,7 +377,7 @@ private:
 ///   ListOption<int> someListFlag{*this, "flag-name", llvm::cl::desc("...")};
 /// };
 template <typename T>
-class PassPipelineOptions : public detail::PassOptions {
+class PassPipelineOptions : public virtual detail::PassOptions {
 public:
   /// Factory that parses the provided options and returns a unique_ptr to the
   /// struct.

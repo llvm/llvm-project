@@ -12,7 +12,9 @@
 
 #include <type_traits>
 
+#include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
+#include "CIRGenOpenACCRecipe.h"
 
 #include "clang/AST/ExprCXX.h"
 
@@ -51,6 +53,7 @@ class OpenACCClauseCIREmitter final
   template <typename FriendOpTy> friend class OpenACCClauseCIREmitter;
 
   OpTy &operation;
+  mlir::OpBuilder::InsertPoint &recipeInsertLocation;
   CIRGen::CIRGenFunction &cgf;
   CIRGen::CIRGenBuilderTy &builder;
 
@@ -146,7 +149,7 @@ class OpenACCClauseCIREmitter final
     mlir::OpBuilder::InsertionGuard guardCase(builder);
     builder.setInsertionPoint(operation.loopOp);
     OpenACCClauseCIREmitter<mlir::acc::LoopOp> loopEmitter{
-        operation.loopOp, cgf, builder, dirKind, dirLoc};
+        operation.loopOp, recipeInsertLocation, cgf, builder, dirKind, dirLoc};
     loopEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
     loopEmitter.Visit(&c);
   }
@@ -157,7 +160,12 @@ class OpenACCClauseCIREmitter final
     mlir::OpBuilder::InsertionGuard guardCase(builder);
     builder.setInsertionPoint(operation.computeOp);
     OpenACCClauseCIREmitter<typename OpTy::ComputeOpTy> computeEmitter{
-        operation.computeOp, cgf, builder, dirKind, dirLoc};
+        operation.computeOp,
+        recipeInsertLocation,
+        cgf,
+        builder,
+        dirKind,
+        dirLoc};
 
     computeEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
 
@@ -356,11 +364,13 @@ class OpenACCClauseCIREmitter final
   }
 
 public:
-  OpenACCClauseCIREmitter(OpTy &operation, CIRGen::CIRGenFunction &cgf,
+  OpenACCClauseCIREmitter(OpTy &operation,
+                          mlir::OpBuilder::InsertPoint &recipeInsertLocation,
+                          CIRGen::CIRGenFunction &cgf,
                           CIRGen::CIRGenBuilderTy &builder,
                           OpenACCDirectiveKind dirKind, SourceLocation dirLoc)
-      : operation(operation), cgf(cgf), builder(builder), dirKind(dirKind),
-        dirLoc(dirLoc) {}
+      : operation(operation), recipeInsertLocation(recipeInsertLocation),
+        cgf(cgf), builder(builder), dirKind(dirKind), dirLoc(dirLoc) {}
 
   void VisitClause(const OpenACCClause &clause) {
     clauseNotImplemented(clause);
@@ -971,13 +981,149 @@ public:
       llvm_unreachable("Unknown construct kind in VisitAttachClause");
     }
   }
+
+  void VisitPrivateClause(const OpenACCPrivateClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::LoopOp>) {
+      for (const auto [varExpr, varRecipe] :
+           llvm::zip_equal(clause.getVarList(), clause.getInitRecipes())) {
+        CIRGenFunction::OpenACCDataOperandInfo opInfo =
+            cgf.getOpenACCDataOperandInfo(varExpr);
+        auto privateOp = mlir::acc::PrivateOp::create(
+            builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
+            /*implicit=*/false, opInfo.name, opInfo.bounds);
+        privateOp.setDataClause(mlir::acc::DataClause::acc_private);
+
+        {
+          mlir::OpBuilder::InsertionGuard guardCase(builder);
+
+          auto recipe =
+              OpenACCRecipeBuilder<mlir::acc::PrivateRecipeOp>(cgf, builder)
+                  .getOrCreateRecipe(
+                      cgf.getContext(), recipeInsertLocation, varExpr,
+                      varRecipe.AllocaDecl, varRecipe.InitExpr,
+                      /*temporary=*/nullptr, OpenACCReductionOperator::Invalid,
+                      Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
+                      opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
+                      privateOp.getResult());
+          // TODO: OpenACC: The dialect is going to change in the near future to
+          // have these be on a different operation, so when that changes, we
+          // probably need to change these here.
+          operation.addPrivatization(builder.getContext(), privateOp, recipe);
+        }
+      }
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Despite this being valid on ParallelOp or SerialOp, combined type
+      // applies to the 'loop'.
+      applyToLoopOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitPrivateClause");
+    }
+  }
+
+  void VisitFirstPrivateClause(const OpenACCFirstPrivateClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp,
+                               mlir::acc::SerialOp>) {
+      for (const auto [varExpr, varRecipe] :
+           llvm::zip_equal(clause.getVarList(), clause.getInitRecipes())) {
+        CIRGenFunction::OpenACCDataOperandInfo opInfo =
+            cgf.getOpenACCDataOperandInfo(varExpr);
+        auto firstPrivateOp = mlir::acc::FirstprivateOp::create(
+            builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
+            /*implicit=*/false, opInfo.name, opInfo.bounds);
+
+        firstPrivateOp.setDataClause(mlir::acc::DataClause::acc_firstprivate);
+
+        {
+          mlir::OpBuilder::InsertionGuard guardCase(builder);
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
+
+          auto recipe =
+              OpenACCRecipeBuilder<mlir::acc::FirstprivateRecipeOp>(cgf,
+                                                                    builder)
+                  .getOrCreateRecipe(
+                      cgf.getContext(), recipeInsertLocation, varExpr,
+                      varRecipe.AllocaDecl, varRecipe.InitExpr,
+                      varRecipe.InitFromTemporary,
+                      OpenACCReductionOperator::Invalid,
+                      Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
+                      opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
+                      firstPrivateOp.getResult());
+
+          // TODO: OpenACC: The dialect is going to change in the near future to
+          // have these be on a different operation, so when that changes, we
+          // probably need to change these here.
+          operation.addFirstPrivatization(builder.getContext(), firstPrivateOp,
+                                          recipe);
+        }
+      }
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Unlike 'private', 'firstprivate' applies to the compute op, not the
+      // loop op.
+      applyToComputeOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitFirstPrivateClause");
+    }
+  }
+
+  void VisitReductionClause(const OpenACCReductionClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::LoopOp>) {
+      for (const auto [varExpr, varRecipe] :
+           llvm::zip_equal(clause.getVarList(), clause.getRecipes())) {
+        CIRGenFunction::OpenACCDataOperandInfo opInfo =
+            cgf.getOpenACCDataOperandInfo(varExpr);
+
+        auto reductionOp = mlir::acc::ReductionOp::create(
+            builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
+            /*implicit=*/false, opInfo.name, opInfo.bounds);
+        reductionOp.setDataClause(mlir::acc::DataClause::acc_reduction);
+
+        {
+          mlir::OpBuilder::InsertionGuard guardCase(builder);
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
+
+          auto recipe =
+              OpenACCRecipeBuilder<mlir::acc::ReductionRecipeOp>(cgf, builder)
+                  .getOrCreateRecipe(
+                      cgf.getContext(), recipeInsertLocation, varExpr,
+                      varRecipe.AllocaDecl, varRecipe.InitExpr,
+                      /*temporary=*/nullptr, clause.getReductionOp(),
+                      Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
+                      opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
+                      reductionOp.getResult());
+
+          operation.addReduction(builder.getContext(), reductionOp, recipe);
+        }
+      }
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Despite this being valid on ParallelOp or SerialOp, combined type
+      // applies to the 'loop'.
+      applyToLoopOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitReductionClause");
+    }
+  }
 };
 
 template <typename OpTy>
-auto makeClauseEmitter(OpTy &op, CIRGen::CIRGenFunction &cgf,
+auto makeClauseEmitter(OpTy &op,
+                       mlir::OpBuilder::InsertPoint &recipeInsertLocation,
+                       CIRGen::CIRGenFunction &cgf,
                        CIRGen::CIRGenBuilderTy &builder,
                        OpenACCDirectiveKind dirKind, SourceLocation dirLoc) {
-  return OpenACCClauseCIREmitter<OpTy>(op, cgf, builder, dirKind, dirLoc);
+  return OpenACCClauseCIREmitter<OpTy>(op, recipeInsertLocation, cgf, builder,
+                                       dirKind, dirLoc);
 }
 } // namespace
 
@@ -990,7 +1136,8 @@ void CIRGenFunction::emitOpenACCClauses(
   // Sets insertion point before the 'op', since every new expression needs to
   // be before the operation.
   builder.setInsertionPoint(op);
-  makeClauseEmitter(op, *this, builder, dirKind, dirLoc).emitClauses(clauses);
+  makeClauseEmitter(op, lastRecipeLocation, *this, builder, dirKind, dirLoc)
+      .emitClauses(clauses);
 }
 
 #define EXPL_SPEC(N)                                                           \
@@ -1022,7 +1169,8 @@ void CIRGenFunction::emitOpenACCClauses(
   // We cannot set the insertion point here and do so in the emitter, but make
   // sure we reset it with the 'guard' anyway.
   mlir::OpBuilder::InsertionGuard guardCase(builder);
-  makeClauseEmitter(inf, *this, builder, dirKind, dirLoc).emitClauses(clauses);
+  makeClauseEmitter(inf, lastRecipeLocation, *this, builder, dirKind, dirLoc)
+      .emitClauses(clauses);
 }
 
 #define EXPL_SPEC(N)                                                           \
