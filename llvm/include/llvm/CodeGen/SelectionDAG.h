@@ -2013,7 +2013,7 @@ public:
   /// function mirrors \c llvm::salvageDebugInfo.
   LLVM_ABI void salvageDebugInfo(SDNode &N);
 
-  /// Dump the textual format of this DAG. Print nodes in sorted orders is \p
+  /// Dump the textual format of this DAG. Print nodes in sorted orders if \p
   /// Sorted is true.
   LLVM_ABI void dump(bool Sorted = false) const;
 

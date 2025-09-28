@@ -146,7 +146,7 @@ UseMBPI("use-mbpi",
 #ifndef NDEBUG
 static cl::opt<bool>
     DumpSortedDAG("dump-sorted-dags", cl::Hidden,
-                  cl::desc("Print the DAG with sorted nodes in debug dump"),
+                  cl::desc("Print DAGs with sorted nodes in debug dump"),
                   cl::init(false));
 
 static cl::opt<std::string>
