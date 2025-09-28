@@ -54,6 +54,7 @@ jobs:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         # Create an empty comments file so the pr-write job doesn't fail.
         run: |
+          . venv/bin/activate &&
           echo "[]" > comments &&
           venv/bin/python ./llvm/utils/git/code-format-helper.py \
             --write-comment-to-file \
