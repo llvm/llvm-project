@@ -372,7 +372,8 @@ static void generateVerifiers(irdl::detail::dictionary &dict,
     std::string verifierDef = llvm::formatv(R"(
 ::llvm::LogicalResult {0}::verifyInvariantsImpl() {{
   return ::mlir::success();
-})", strings.opCppName);
+})",
+                                            strings.opCppName);
     dict["OP_VERIFIER_HELPERS"] = "";
     dict["OP_VERIFIER"] = verifierDef;
     return;
