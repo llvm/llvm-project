@@ -90,9 +90,8 @@ define void @pre_not_and_not_combine_v32i8(ptr %res, ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: pre_not_and_not_combine_v32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    nor $a1, $a2, $zero
-; CHECK-NEXT:    xvreplgr2vr.b $xr1, $a1
-; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvreplgr2vr.b $xr1, $a2
+; CHECK-NEXT:    xvnor.v $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <32 x i8>, ptr %a
@@ -110,8 +109,7 @@ define void @post_not_and_not_combine_v32i8(ptr %res, ptr %a, i8 %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvreplgr2vr.b $xr1, $a2
-; CHECK-NEXT:    xvxori.b $xr1, $xr1, 255
-; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvnor.v $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <32 x i8>, ptr %a
@@ -128,9 +126,8 @@ define void @pre_not_and_not_combine_v16i16(ptr %res, ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: pre_not_and_not_combine_v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    nor $a1, $a2, $zero
-; CHECK-NEXT:    xvreplgr2vr.h $xr1, $a1
-; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvreplgr2vr.h $xr1, $a2
+; CHECK-NEXT:    xvnor.v $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i16>, ptr %a
@@ -148,9 +145,7 @@ define void @post_not_and_not_combine_v16i16(ptr %res, ptr %a, i16 %b) nounwind 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvreplgr2vr.h $xr1, $a2
-; CHECK-NEXT:    xvrepli.b $xr2, -1
-; CHECK-NEXT:    xvxor.v $xr1, $xr1, $xr2
-; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvnor.v $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i16>, ptr %a
@@ -167,9 +162,8 @@ define void @pre_not_and_not_combine_v8i32(ptr %res, ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: pre_not_and_not_combine_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    nor $a1, $a2, $zero
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a1
-; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a2
+; CHECK-NEXT:    xvnor.v $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i32>, ptr %a
@@ -187,9 +181,7 @@ define void @post_not_and_not_combine_v8i32(ptr %res, ptr %a, i32 %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a2
-; CHECK-NEXT:    xvrepli.b $xr2, -1
-; CHECK-NEXT:    xvxor.v $xr1, $xr1, $xr2
-; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvnor.v $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i32>, ptr %a
@@ -218,9 +210,8 @@ define void @pre_not_and_not_combine_v4i64(ptr %res, ptr %a, i64 %b) nounwind {
 ; LA64-LABEL: pre_not_and_not_combine_v4i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    nor $a1, $a2, $zero
-; LA64-NEXT:    xvreplgr2vr.d $xr1, $a1
-; LA64-NEXT:    xvandn.v $xr0, $xr0, $xr1
+; LA64-NEXT:    xvreplgr2vr.d $xr1, $a2
+; LA64-NEXT:    xvnor.v $xr0, $xr0, $xr1
 ; LA64-NEXT:    xvst $xr0, $a0, 0
 ; LA64-NEXT:    ret
   %v0 = load <4 x i64>, ptr %a
@@ -240,9 +231,7 @@ define void @post_not_and_not_combine_v4i64(ptr %res, ptr %a, i64 %b) nounwind {
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 1
 ; LA32-NEXT:    xvreplve0.d $xr1, $xr1
-; LA32-NEXT:    xvrepli.b $xr2, -1
-; LA32-NEXT:    xvxor.v $xr1, $xr1, $xr2
-; LA32-NEXT:    xvandn.v $xr0, $xr0, $xr1
+; LA32-NEXT:    xvnor.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
@@ -250,9 +239,7 @@ define void @post_not_and_not_combine_v4i64(ptr %res, ptr %a, i64 %b) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvld $xr0, $a1, 0
 ; LA64-NEXT:    xvreplgr2vr.d $xr1, $a2
-; LA64-NEXT:    xvrepli.b $xr2, -1
-; LA64-NEXT:    xvxor.v $xr1, $xr1, $xr2
-; LA64-NEXT:    xvandn.v $xr0, $xr0, $xr1
+; LA64-NEXT:    xvnor.v $xr0, $xr0, $xr1
 ; LA64-NEXT:    xvst $xr0, $a0, 0
 ; LA64-NEXT:    ret
   %v0 = load <4 x i64>, ptr %a
@@ -269,8 +256,7 @@ define void @and_not_combine_splatimm_v32i8(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: and_not_combine_splatimm_v32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvrepli.b $xr1, -4
-; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvnori.b $xr0, $xr0, 3
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <32 x i8>, ptr %a0
