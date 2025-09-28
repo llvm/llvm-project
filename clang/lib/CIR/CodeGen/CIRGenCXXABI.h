@@ -28,6 +28,8 @@ protected:
   CIRGenModule &cgm;
   std::unique_ptr<clang::MangleContext> mangleContext;
 
+  virtual bool requiresArrayCookie(const CXXNewExpr *E);
+
 public:
   // TODO(cir): make this protected when target-specific CIRGenCXXABIs are
   // implemented.
@@ -241,6 +243,19 @@ public:
   void setStructorImplicitParamValue(CIRGenFunction &cgf, mlir::Value val) {
     cgf.cxxStructorImplicitParamValue = val;
   }
+
+  /**************************** Array cookies ******************************/
+
+  /// Returns the extra size required in order to store the array
+  /// cookie for the given new-expression.  May return 0 to indicate that no
+  /// array cookie is required.
+  ///
+  /// Several cases are filtered out before this method is called:
+  ///   - non-array allocations never need a cookie
+  ///   - calls to \::operator new(size_t, void*) never need a cookie
+  ///
+  /// \param E - the new-expression being allocated.
+  virtual CharUnits getArrayCookieSize(const CXXNewExpr *E);
 };
 
 /// Creates and Itanium-family ABI
