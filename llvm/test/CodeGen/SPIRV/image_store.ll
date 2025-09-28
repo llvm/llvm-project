@@ -7,7 +7,7 @@
 ; but it is still one type which should be translated to one SPIR-V type.
 ;
 ; The test checks that the code below is successfully translated and only one
-; SPIR-V type for images is generated.
+; SPIR-V type for images is generated (no duplicate OpTypeImage instructions).
 
 ; CHECK:     %[[#]] = OpTypeImage %[[#]] 2D
 ; CHECK-NOT: %[[#]] = OpTypeImage %[[#]] 2D
