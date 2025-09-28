@@ -12302,22 +12302,22 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     SmallVector<APValue, 4> ResultElements(4);
     llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
     for (unsigned i = 0; i < 2; ++i) {
-        APFloat A = SourceLHS.getVectorElt(2*i).getFloat();
-        APFloat B = SourceLHS.getVectorElt(2*i+1).getFloat();
-        if (E->getBuiltinCallee() == clang::X86::BI__builtin_ia32_haddpd256)
-            A.add(B, RM);
-        else 
-            A.subtract(B, RM);
-        ResultElements[2*i] = APValue(A);
+      APFloat A = SourceLHS.getVectorElt(2 * i).getFloat();
+      APFloat B = SourceLHS.getVectorElt(2 * i + 1).getFloat();
+      if (E->getBuiltinCallee() == clang::X86::BI__builtin_ia32_haddpd256)
+        A.add(B, RM);
+      else
+        A.subtract(B, RM);
+      ResultElements[2 * i] = APValue(A);
     }
     for (unsigned i = 0; i < 2; ++i) {
-        APFloat A = SourceRHS.getVectorElt(2*i).getFloat();
-        APFloat B = SourceRHS.getVectorElt(2*i+1).getFloat();
-        if (E->getBuiltinCallee() == clang::X86::BI__builtin_ia32_haddpd256)
-            A.add(B, RM);
-        else 
-            A.subtract(B, RM);
-        ResultElements[2*i+1] = APValue(A);
+      APFloat A = SourceRHS.getVectorElt(2 * i).getFloat();
+      APFloat B = SourceRHS.getVectorElt(2 * i + 1).getFloat();
+      if (E->getBuiltinCallee() == clang::X86::BI__builtin_ia32_haddpd256)
+        A.add(B, RM);
+      else
+        A.subtract(B, RM);
+      ResultElements[2 * i + 1] = APValue(A);
     }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
@@ -12327,27 +12327,27 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
         !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
       return false;
-    SmallVector<APValue, 4> ResultElements(8); 
+    SmallVector<APValue, 4> ResultElements(8);
     llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
     for (unsigned i = 0; i < 4; ++i) {
-      unsigned SrcIdx = 2 * i;       
-      unsigned DestIdx = (i < 2) ? i : (i + 2); 
+      unsigned SrcIdx = 2 * i;
+      unsigned DestIdx = (i < 2) ? i : (i + 2);
       APFloat A = SourceLHS.getVectorElt(SrcIdx).getFloat();
       APFloat B = SourceLHS.getVectorElt(SrcIdx + 1).getFloat();
       if (E->getBuiltinCallee() == clang::X86::BI__builtin_ia32_haddps256)
         A.add(B, RM);
-      else 
+      else
         A.subtract(B, RM);
       ResultElements[DestIdx] = APValue(A);
     }
     for (unsigned i = 0; i < 4; ++i) {
-      unsigned SrcIdx = 2 * i;      
+      unsigned SrcIdx = 2 * i;
       unsigned DestIdx = (i < 2) ? (i + 2) : (i + 4);
       APFloat A = SourceRHS.getVectorElt(SrcIdx).getFloat();
       APFloat B = SourceRHS.getVectorElt(SrcIdx + 1).getFloat();
       if (E->getBuiltinCallee() == clang::X86::BI__builtin_ia32_haddps256)
         A.add(B, RM);
-      else 
+      else
         A.subtract(B, RM);
       ResultElements[DestIdx] = APValue(A);
     }

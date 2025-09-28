@@ -2858,12 +2858,13 @@ static bool interp_builtin_horizontal_fps256_binop(
   llvm::RoundingMode RM = getRoundingMode(FPO);
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   unsigned SourceLen = VT->getNumElements();
-  assert(SourceLen % 2 == 0 && 
-         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements() == SourceLen);
+  assert(SourceLen % 2 == 0 &&
+         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements() ==
+             SourceLen);
   unsigned DstElem = 0;
   for (unsigned I = 0; I < 4; ++I) {
     using T = PrimConv<PT_Float>::T;
-    unsigned SrcIdx = 2 * I;       
+    unsigned SrcIdx = 2 * I;
     unsigned DestIdx = (I < 2) ? I : (I + 2);
     APFloat Elem1 = LHS.elem<T>(SrcIdx).getAPFloat();
     APFloat Elem2 = LHS.elem<T>(SrcIdx + 1).getAPFloat();
@@ -2871,7 +2872,7 @@ static bool interp_builtin_horizontal_fps256_binop(
   }
   for (unsigned I = 0; I < 4; ++I) {
     using T = PrimConv<PT_Float>::T;
-     unsigned SrcIdx = 2 * I;       
+    unsigned SrcIdx = 2 * I;
     unsigned DestIdx = (I < 2) ? (I + 2) : (I + 4);
     APFloat Elem1 = RHS.elem<T>(SrcIdx).getAPFloat();
     APFloat Elem2 = RHS.elem<T>(SrcIdx + 1).getAPFloat();
@@ -2897,19 +2898,20 @@ static bool interp_builtin_horizontal_fpd256_binop(
   llvm::RoundingMode RM = getRoundingMode(FPO);
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   unsigned SourceLen = VT->getNumElements();
-  assert(SourceLen % 2 == 0 && 
-         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements() == SourceLen);
+  assert(SourceLen % 2 == 0 &&
+         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements() ==
+             SourceLen);
   for (unsigned I = 0; I < 2; ++I) {
     using T = PrimConv<PT_Float>::T;
-    APFloat Elem1 = LHS.elem<T>(2*I).getAPFloat();
-    APFloat Elem2 = LHS.elem<T>(2*I + 1).getAPFloat();
-    Dst.elem<T>(2*I) = static_cast<T>(Fn(Elem1, Elem2, RM));
+    APFloat Elem1 = LHS.elem<T>(2 * I).getAPFloat();
+    APFloat Elem2 = LHS.elem<T>(2 * I + 1).getAPFloat();
+    Dst.elem<T>(2 * I) = static_cast<T>(Fn(Elem1, Elem2, RM));
   }
   for (unsigned I = 0; I < 2; ++I) {
     using T = PrimConv<PT_Float>::T;
-    APFloat Elem1 = RHS.elem<T>(2*I).getAPFloat();
-    APFloat Elem2 = RHS.elem<T>(2*I + 1).getAPFloat();
-    Dst.elem<T>(2*I+1) = static_cast<T>(Fn(Elem1, Elem2, RM));
+    APFloat Elem1 = RHS.elem<T>(2 * I).getAPFloat();
+    APFloat Elem2 = RHS.elem<T>(2 * I + 1).getAPFloat();
+    Dst.elem<T>(2 * I + 1) = static_cast<T>(Fn(Elem1, Elem2, RM));
   }
   Dst.initializeAllElements();
   return true;
@@ -3760,7 +3762,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           F.add(RHS, RM);
           return F;
         });
-  case clang::X86::BI__builtin_ia32_haddpd256:{
+  case clang::X86::BI__builtin_ia32_haddpd256: {
     return interp_builtin_horizontal_fpd256_binop(
         S, OpPC, Call,
         [](const APFloat &LHS, const APFloat &RHS, llvm::RoundingMode RM) {
@@ -3769,7 +3771,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return F;
         });
   }
-  case clang::X86::BI__builtin_ia32_haddps256:{
+  case clang::X86::BI__builtin_ia32_haddps256: {
     return interp_builtin_horizontal_fps256_binop(
         S, OpPC, Call,
         [](const APFloat &LHS, const APFloat &RHS, llvm::RoundingMode RM) {
@@ -3787,7 +3789,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           F.subtract(RHS, RM);
           return F;
         });
-  case clang::X86::BI__builtin_ia32_hsubpd256:{
+  case clang::X86::BI__builtin_ia32_hsubpd256: {
     return interp_builtin_horizontal_fpd256_binop(
         S, OpPC, Call,
         [](const APFloat &LHS, const APFloat &RHS, llvm::RoundingMode RM) {
@@ -3796,7 +3798,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return F;
         });
   }
-  case clang::X86::BI__builtin_ia32_hsubps256:{
+  case clang::X86::BI__builtin_ia32_hsubps256: {
     return interp_builtin_horizontal_fps256_binop(
         S, OpPC, Call,
         [](const APFloat &LHS, const APFloat &RHS, llvm::RoundingMode RM) {
