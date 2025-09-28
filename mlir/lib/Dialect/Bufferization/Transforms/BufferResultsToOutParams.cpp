@@ -59,8 +59,9 @@ static SmallVector<Value> getDynamicSize(Value memref, func::FuncOp funcOp) {
     if (!sizeSrc)
       return {};
 
-    auto iter = llvm::find(funcOp.getArguments(), sizeSrc);
-    if (!iter)
+    auto arguments = funcOp.getArguments();
+    auto iter = llvm::find(arguments, sizeSrc);
+    if (iter == arguments.end())
       return {};
     dynamicSizes.push_back(*iter);
   }
@@ -74,10 +75,8 @@ static SmallVector<Value> mapDynamicSizeAtCaller(func::CallOp call,
                                                  ValueRange dynamicSizes) {
   SmallVector<Value> mappedDynamicSizes;
   for (Value size : dynamicSizes) {
-    auto callOperands = call.getOperands();
-    for (size_t i = 0, e = callOperands.size(); i < e; ++i) {
-      Value src = callOperands[i];
-      BlockArgument dst = callee.getArgument(i);
+    for (auto [src, dst] :
+         llvm::zip_first(call.getOperands(), callee.getArguments())) {
       if (size != dst)
         continue;
       mappedDynamicSizes.push_back(src);
@@ -202,7 +201,7 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
 // Updates all CallOps in the scope of the given ModuleOp by allocating
 // temporary buffers for newly introduced out params.
 static LogicalResult
-updateCalls(ModuleOp module, AllocDynamicSizesMap &map,
+updateCalls(ModuleOp module, const AllocDynamicSizesMap &map,
             const bufferization::BufferResultsToOutParamsOpts &options) {
   bool didFail = false;
   SymbolTable symtab(module);

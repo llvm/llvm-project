@@ -165,11 +165,11 @@ struct BufferResultsToOutParamsOpts {
   bool addResultAttribute = false;
 
   /// If true, the pass eliminates the memref.alloc and memcpy if the returned
-  /// memref is static allocated in the current function.
+  /// memref is allocated in the current function.
   bool hoistStaticAllocs = false;
 
   /// If true, the pass eliminates the memref.alloc and memcpy if the returned
-  /// memref is dynamic allocated in the current function.
+  /// memref is allocated in the current function and has dynamic shape.
   bool hoistDynamicAllocs = false;
 };
 
