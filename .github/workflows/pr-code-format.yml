@@ -44,10 +44,9 @@ jobs:
       - name: Create python venv
         run: |
           python -m venv venv
-          . venv/bin/activate
 
       - name: Install python dependencies
-        run: pip install -r llvm/utils/git/requirements_formatting.txt
+        run: venv/bin/pip install -r llvm/utils/git/requirements_formatting.txt
 
       - name: Run code formatter
         env:
@@ -56,7 +55,7 @@ jobs:
         # Create an empty comments file so the pr-write job doesn't fail.
         run: |
           echo "[]" > comments &&
-          python ./llvm/utils/git/code-format-helper.py \
+          venv/bin/python ./llvm/utils/git/code-format-helper.py \
             --write-comment-to-file \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
