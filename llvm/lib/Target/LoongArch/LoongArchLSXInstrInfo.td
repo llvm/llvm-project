@@ -2154,6 +2154,56 @@ def : Pat<(f32 f32imm_vldi:$in),
 def : Pat<(f64 f64imm_vldi:$in),
           (f64 (EXTRACT_SUBREG (VLDI (to_f64imm_vldi f64imm_vldi:$in)), sub_64))>;
 
+// VAVG_{B/H/W/D/BU/HU/WU/DU}, VAVGR_{B/H/W/D/BU/HU/WU/DU}
+def : Pat<(sra (v16i8 (add v16i8:$vj, v16i8:$vk)), (v16i8 (vsplat_imm_eq_1))),
+          (VAVG_B v16i8:$vj, v16i8:$vk)>;
+def : Pat<(sra (v8i16 (add v8i16:$vj, v8i16:$vk)), (v8i16 (vsplat_imm_eq_1))),
+          (VAVG_H v8i16:$vj, v8i16:$vk)>;
+def : Pat<(sra (v4i32 (add v4i32:$vj, v4i32:$vk)), (v4i32 (vsplat_imm_eq_1))),
+          (VAVG_W v4i32:$vj, v4i32:$vk)>;
+def : Pat<(sra (v2i64 (add v2i64:$vj, v2i64:$vk)), (v2i64 (vsplat_imm_eq_1))),
+          (VAVG_D v2i64:$vj, v2i64:$vk)>;
+def : Pat<(srl (v16i8 (add v16i8:$vj, v16i8:$vk)), (v16i8 (vsplat_imm_eq_1))),
+          (VAVG_BU v16i8:$vj, v16i8:$vk)>;
+def : Pat<(srl (v8i16 (add v8i16:$vj, v8i16:$vk)), (v8i16 (vsplat_imm_eq_1))),
+          (VAVG_HU v8i16:$vj, v8i16:$vk)>;
+def : Pat<(srl (v4i32 (add v4i32:$vj, v4i32:$vk)), (v4i32 (vsplat_imm_eq_1))),
+          (VAVG_WU v4i32:$vj, v4i32:$vk)>;
+def : Pat<(srl (v2i64 (add v2i64:$vj, v2i64:$vk)), (v2i64 (vsplat_imm_eq_1))),
+          (VAVG_DU v2i64:$vj, v2i64:$vk)>;
+def : Pat<(sra (v16i8 (add (v16i8 (add v16i8:$vj, v16i8:$vk)),
+                           (v16i8 (vsplat_imm_eq_1)))),
+               (v16i8 (vsplat_imm_eq_1))),
+          (VAVGR_B v16i8:$vj, v16i8:$vk)>;
+def : Pat<(sra (v8i16 (add (v8i16 (add v8i16:$vj, v8i16:$vk)),
+                           (v8i16 (vsplat_imm_eq_1)))),
+               (v8i16 (vsplat_imm_eq_1))),
+          (VAVGR_H v8i16:$vj, v8i16:$vk)>;
+def : Pat<(sra (v4i32 (add (v4i32 (add v4i32:$vj, v4i32:$vk)),
+                           (v4i32 (vsplat_imm_eq_1)))),
+               (v4i32 (vsplat_imm_eq_1))),
+          (VAVGR_W v4i32:$vj, v4i32:$vk)>;
+def : Pat<(sra (v2i64 (add (v2i64 (add v2i64:$vj, v2i64:$vk)),
+                           (v2i64 (vsplat_imm_eq_1)))),
+               (v2i64 (vsplat_imm_eq_1))),
+          (VAVGR_D v2i64:$vj, v2i64:$vk)>;
+def : Pat<(srl (v16i8 (add (v16i8 (add v16i8:$vj, v16i8:$vk)),
+                           (v16i8 (vsplat_imm_eq_1)))),
+               (v16i8 (vsplat_imm_eq_1))),
+          (VAVGR_BU v16i8:$vj, v16i8:$vk)>;
+def : Pat<(srl (v8i16 (add (v8i16 (add v8i16:$vj, v8i16:$vk)),
+                           (v8i16 (vsplat_imm_eq_1)))),
+               (v8i16 (vsplat_imm_eq_1))),
+          (VAVGR_HU v8i16:$vj, v8i16:$vk)>;
+def : Pat<(srl (v4i32 (add (v4i32 (add v4i32:$vj, v4i32:$vk)),
+                           (v4i32 (vsplat_imm_eq_1)))),
+               (v4i32 (vsplat_imm_eq_1))),
+          (VAVGR_WU v4i32:$vj, v4i32:$vk)>;
+def : Pat<(srl (v2i64 (add (v2i64 (add v2i64:$vj, v2i64:$vk)),
+                           (v2i64 (vsplat_imm_eq_1)))),
+               (v2i64 (vsplat_imm_eq_1))),
+          (VAVGR_DU v2i64:$vj, v2i64:$vk)>;
+
 // abs
 def : Pat<(abs v16i8:$vj), (VSIGNCOV_B v16i8:$vj, v16i8:$vj)>;
 def : Pat<(abs v8i16:$vj), (VSIGNCOV_H v8i16:$vj, v8i16:$vj)>;
