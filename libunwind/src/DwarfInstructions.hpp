@@ -63,7 +63,7 @@ private:
                                   pint_t cfa, const RegisterLocation &savedReg);
 
   static pint_t getCFA(A &addressSpace, const PrologInfo &prolog,
-                       R &registers) {
+                       const R &registers) {
     if (prolog.cfaRegister != 0) {
       uintptr_t cfaRegister = registers.getRegister((int)prolog.cfaRegister);
       return (pint_t)(cfaRegister + prolog.cfaRegisterOffset);
@@ -209,7 +209,7 @@ bool DwarfInstructions<A, R>::isReturnAddressSignedWithPC(A &addressSpace,
 
 template <typename A, typename R>
 int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace,
-                                           typename R::link_reg_t &pc,
+                                           const typename R::link_reg_t &pc,
                                            pint_t fdeStart, R &registers,
                                            bool &isSignalFrame, bool stage2) {
   FDE_Info fdeInfo;
@@ -302,12 +302,12 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace,
 
       isSignalFrame = cieInfo.isSignalFrame;
 
-#if defined(_LIBUNWIND_TARGET_AARCH64)
-      // If the target is aarch64 then the return address may have been signed
-      // using the v8.3 pointer authentication extensions. The original
-      // return address needs to be authenticated before the return address is
-      // restored. autia1716 is used instead of autia as autia1716 assembles
-      // to a NOP on pre-v8.3a architectures.
+#if defined(__ARM64E__)
+      // If the target is using the arm64e ABI then the return address has
+      // been signed using the stack pointer as a diversifier. The original
+      // return address needs to be authenticated before the it is restored.
+      // autia1716 is used instead of autia as autia1716 assembles to a NOP on
+      // pre-v8.3a architectures.
       if ((R::getArch() == REGISTERS_ARM64) &&
           isReturnAddressSigned(addressSpace, registers, cfa, prolog) &&
           returnAddress != 0) {

@@ -564,10 +564,10 @@ get_thrown_object_ptr(_Unwind_Exception* unwind_exception)
 namespace
 {
 
-typedef const uint8_t* __ptrauth_scan_results_lsd lsd_ptr_t;
-typedef const uint8_t* __ptrauth_scan_results_action_record action_ptr_t;
+typedef const uint8_t *__ptrauth_scan_results_lsd lsd_ptr_t;
+typedef const uint8_t *__ptrauth_scan_results_action_record action_ptr_t;
 typedef uintptr_t __ptrauth_scan_results_landingpad_intptr landing_pad_t;
-typedef void* __ptrauth_scan_results_landingpad landing_pad_ptr_t;
+typedef void *__ptrauth_scan_results_landingpad landing_pad_ptr_t;
 
 struct scan_results
 {
@@ -585,12 +585,16 @@ struct scan_results
 }  // unnamed namespace
 } // extern "C"
 
+#if !defined(_LIBCXXABI_ARM_EHABI)
 namespace {
 // The logical model for casting authenticated function pointers makes
 // it impossible to directly cast them without breaking the authentication,
 // as a result we need this pair of helpers.
+//
+// __ptrauth_nop_cast cannot be used here as the authentication schemas include
+// address diversification.
 template <typename PtrType>
-[[maybe_unused]] void set_landing_pad_as_ptr(scan_results& results, const PtrType& out) {
+void set_landing_pad_as_ptr(scan_results& results, const PtrType& out) {
   union {
     landing_pad_t* as_landing_pad;
     landing_pad_ptr_t* as_pointer;
@@ -599,7 +603,7 @@ template <typename PtrType>
   *u.as_pointer = out;
 }
 
-[[maybe_unused]] static const landing_pad_ptr_t& get_landing_pad_as_ptr(const scan_results& results) {
+static const landing_pad_ptr_t& get_landing_pad_as_ptr(const scan_results& results) {
   union {
     const landing_pad_t* as_landing_pad;
     const landing_pad_ptr_t* as_pointer;
@@ -608,6 +612,7 @@ template <typename PtrType>
   return *u.as_pointer;
 }
 } // unnamed namespace
+#endif
 
 extern "C" {
 static

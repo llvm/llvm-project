@@ -119,6 +119,9 @@
     __unwind_ptrauth_restricted_intptr(ptrauth_key_function_pointer, 1, \
                                        __ptrauth_unwind_cie_info_personality_disc)
 
+// ptrauth_string_discriminator("personality") == 0x7EAD)
+  #define __ptrauth_unwind_pacret_personality_disc 0x7EAD
+
 #else
 
   #define __ptrauth_unwind_upi_handler
@@ -136,7 +139,6 @@
   #define __ptrauth_unwind_uis_compact_unwind_section
   #define __ptrauth_unwind_uis_compact_unwind_section_length
   #define __ptrauth_unwind_cie_info_personality
-
 #endif
 
 #if defined(_WIN32) && defined(__SEH__)

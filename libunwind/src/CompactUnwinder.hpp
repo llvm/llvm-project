@@ -683,17 +683,13 @@ int CompactUnwinder_arm64<A>::stepWithCompactEncodingFrame(
   }
 
   Registers_arm64::reg_t fp = registers.getFP();
-  // fp points to old fp
-  registers.setFP(addressSpace.get64(fp));
 
-  // old sp is fp less saved fp and lr. Set this before FP & LR because in
-  // arm64e it's the discriminator used for those registers.
+  // old sp is fp less saved fp and lr. Set this before LR because in arm64e
+  // it's the authentication discriminator.
   registers.setSP(fp + 16);
 
-  Registers_arm64::reg_t oldfp = addressSpace.get64(fp);
-
   // fp points to old fp
-  registers.setFP(oldfp);
+  registers.setFP(addressSpace.get64(fp));
 
   // pop return address into pc
   registers.setIP(addressSpace.get64(fp + 8));
