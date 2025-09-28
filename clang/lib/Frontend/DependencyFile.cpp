@@ -324,11 +324,10 @@ void DependencyFileGenerator::finishedMainFile(DiagnosticsEngine &Diags) {
 void DependencyFileGenerator::outputDependencyFilename(
     raw_ostream &OS, StringRef Filename) const {
   llvm::SmallString<256> NativePath;
-  if (MSCompatible) {
+  if (MSCompatible)
     llvm::sys::path::native(Filename.str(), NativePath);
-  } else {
+  else
     NativePath = Filename;
-  }
 
   if (OutputFormat == DependencyOutputFormat::NMake) {
     // Add quotes if needed. These are the characters listed as "special" to
