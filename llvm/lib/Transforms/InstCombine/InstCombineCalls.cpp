@@ -3771,8 +3771,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // %2 = mul i32 %0, 4
       if (Value *Splat = getSplatValue(Arg)) {
         // It is only a multiplication if we add the same element over and over.
-        assert(Arg->getType()->isVectorTy() &&
-               "The vector.reduce.add intrinsic's argument must be a vector!");
         ElementCount ReducedVectorElementCount =
             cast<VectorType>(Arg->getType())->getElementCount();
         if (ReducedVectorElementCount.isFixed()) {
