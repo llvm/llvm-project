@@ -2237,6 +2237,24 @@ func.func @test_minimumf(%arg0 : f32) -> (f32, f32, f32) {
   return %0, %1, %2 : f32, f32, f32
 }
 
+// CHECK-LABEL:   foldMinimumfMinimumf1
+// CHECK:           %[[MINF:.*]] = arith.minimumf %arg1, %arg0 : f32
+// CHECK:           return %[[MINF]] : f32
+func.func public @foldMinimumfMinimumf1(%arg0: f32, %arg1: f32) -> f32 {
+  %min1 = arith.minimumf %arg1, %arg0 : f32
+  %min2 = arith.minimumf %min1, %arg1 : f32
+  func.return %min2 : f32
+}
+
+// CHECK-LABEL:   foldMinimumfMinimumf2
+// CHECK:           %[[MINF:.*]] = arith.minimumf %arg1, %arg0 : f32
+// CHECK:           return %[[MINF]] : f32
+func.func public @foldMinimumfMinimumf2(%arg0: f32, %arg1: f32) -> f32 {
+  %min1 = arith.minimumf %arg1, %arg0 : f32
+  %min2 = arith.minimumf %arg1, %min1 : f32
+  func.return %min2 : f32
+}
+
 // -----
 
 // CHECK-LABEL: @test_maximumf(
@@ -2250,6 +2268,24 @@ func.func @test_maximumf(%arg0 : f32) -> (f32, f32, f32) {
   %1 = arith.maximumf %arg0, %arg0 : f32
   %2 = arith.maximumf %-inf, %arg0 : f32
   return %0, %1, %2 : f32, f32, f32
+}
+
+// CHECK-LABEL:   foldMaximumfMaximumf1
+// CHECK:           %[[MAXF:.*]] = arith.maximumf %arg1, %arg0 : f32
+// CHECK:           return %[[MAXF]] : f32
+func.func public @foldMaximumfMaximumf1(%arg0: f32, %arg1: f32) -> f32 {
+  %max1 = arith.maximumf %arg1, %arg0 : f32
+  %max2 = arith.maximumf %max1, %arg1 : f32
+  func.return %max2 : f32
+}
+
+// CHECK-LABEL:   foldMaximumfMaximumf2
+// CHECK:           %[[MAXF:.*]] = arith.maximumf %arg1, %arg0 : f32
+// CHECK:           return %[[MAXF]] : f32
+func.func public @foldMaximumfMaximumf2(%arg0: f32, %arg1: f32) -> f32 {
+  %max1 = arith.maximumf %arg1, %arg0 : f32
+  %max2 = arith.maximumf %arg1, %max1 : f32
+  func.return %max2 : f32
 }
 
 // -----
@@ -2271,6 +2307,25 @@ func.func @test_minnumf(%arg0 : f32) -> (f32, f32, f32, f32) {
   return %0, %1, %2, %3 : f32, f32, f32, f32
 }
 
+// CHECK-LABEL:   foldMinnumfMinnumf1
+// CHECK:           %[[MINF:.*]] = arith.minnumf %arg1, %arg0 : f32
+// CHECK:           return %[[MINF]] : f32
+func.func public @foldMinnumfMinnumf1(%arg0: f32, %arg1: f32) -> f32 {
+  %min1 = arith.minnumf %arg1, %arg0 : f32
+  %min2 = arith.minnumf %min1, %arg1 : f32
+  func.return %min2 : f32
+}
+
+// CHECK-LABEL:   foldMinnumfMinnumf2
+// CHECK:           %[[MINF:.*]] = arith.minnumf %arg1, %arg0 : f32
+// CHECK:           return %[[MINF]] : f32
+func.func public @foldMinnumfMinnumf2(%arg0: f32, %arg1: f32) -> f32 {
+  %min1 = arith.minnumf %arg1, %arg0 : f32
+  %min2 = arith.minnumf %arg1, %min1 : f32
+  func.return %min2 : f32
+}
+
+
 // -----
 
 // CHECK-LABEL: @test_maxnumf(
@@ -2288,6 +2343,24 @@ func.func @test_maxnumf(%arg0 : f32) -> (f32, f32, f32, f32) {
   %2 = arith.maxnumf %-inf, %arg0 : f32
   %3 = arith.maxnumf %nan, %arg0 : f32
   return %0, %1, %2, %3 : f32, f32, f32, f32
+}
+
+// CHECK-LABEL:   foldMaxnumfMaxnumf1
+// CHECK:           %[[MAXF:.*]] = arith.maxnumf %arg1, %arg0 : f32
+// CHECK:           return %[[MAXF]] : f32
+func.func public @foldMaxnumfMaxnumf1(%arg0: f32, %arg1: f32) -> f32 {
+  %max1 = arith.maxnumf %arg1, %arg0 : f32
+  %max2 = arith.maxnumf %max1, %arg1 : f32
+  func.return %max2 : f32
+}
+
+// CHECK-LABEL:   foldMaxnumfMaxnumf2
+// CHECK:           %[[MAXF:.*]] = arith.maxnumf %arg1, %arg0 : f32
+// CHECK:           return %[[MAXF]] : f32
+func.func public @foldMaxnumfMaxnumf2(%arg0: f32, %arg1: f32) -> f32 {
+  %max1 = arith.maxnumf %arg1, %arg0 : f32
+  %max2 = arith.maxnumf %arg1, %max1 : f32
+  func.return %max2 : f32
 }
 
 // -----
