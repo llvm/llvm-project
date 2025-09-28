@@ -2092,6 +2092,19 @@ static bool isUniqueInternalLinkageDecl(GlobalDecl GD,
          (CGM.getFunctionLinkage(GD) == llvm::GlobalValue::InternalLinkage);
 }
 
+// On certain platforms, a declared (but not defined) FMV shall be treated
+// like a regular non-FMV function.
+static bool IgnoreFMVOnADeclaration(const llvm::Triple &Triple, const FunctionDecl *FD) {
+  if (!FD->isMultiVersion())
+    return false;
+
+  if (Triple.isOSAIX()) {
+    assert(FD->isTargetClonesMultiVersion());
+    return !FD->isDefined();
+  }
+  return false;
+}
+
 static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
                                       const NamedDecl *ND,
                                       bool OmitMultiVersionMangling = false) {
@@ -2141,8 +2154,9 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
     Out << CGM.getModuleNameHash();
   }
 
-  if (const auto *FD = dyn_cast<FunctionDecl>(ND))
-    if (FD->isMultiVersion() && !OmitMultiVersionMangling) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
+    if (FD->isMultiVersion() && !OmitMultiVersionMangling &&
+         !IgnoreFMVOnADeclaration(CGM.getTriple(), FD)) {
       switch (FD->getMultiVersionKind()) {
       case MultiVersionKind::CPUDispatch:
       case MultiVersionKind::CPUSpecific:
@@ -2179,6 +2193,7 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
         llvm_unreachable("None multiversion type isn't valid here");
       }
     }
+  }
 
   // Make unique name for device side static file-scope variable for HIP.
   if (CGM.getContext().shouldExternalize(ND) &&
@@ -4710,7 +4725,8 @@ getFMVPriority(const TargetInfo &TI,
 static llvm::GlobalValue::LinkageTypes
 getMultiversionLinkage(CodeGenModule &CGM, GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
-  if (FD->getFormalLinkage() == Linkage::Internal)
+  if (FD->getFormalLinkage() == Linkage::Internal ||
+      CGM.getTriple().isOSAIX())
     return llvm::GlobalValue::InternalLinkage;
   return llvm::GlobalValue::WeakODRLinkage;
 }
@@ -4744,7 +4760,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     // For AArch64, a resolver is only emitted if a function marked with
     // target_version("default")) or target_clones("default") is defined
     // in this TU. For other architectures it is always emitted.
-    bool ShouldEmitResolver = !getTarget().getTriple().isAArch64();
+    bool ShouldEmitResolver = !getTriple().isAArch64();
     SmallVector<CodeGenFunction::FMVResolverOption, 10> Options;
     llvm::DenseMap<llvm::Function *, const FunctionDecl *> DeclMap;
 
@@ -5063,8 +5079,11 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
     llvm::Constant *Resolver = GetOrCreateLLVMFunction(
         MangledName + ".resolver", ResolverType, GlobalDecl{},
         /*ForVTable=*/false);
+
+    auto Linkage = getTriple().isOSAIX() ? getFunctionLinkage(GD) : getMultiversionLinkage(*this, GD);
+
     llvm::GlobalIFunc *GIF =
-        llvm::GlobalIFunc::create(DeclTy, AS, getMultiversionLinkage(*this, GD),
+        llvm::GlobalIFunc::create(DeclTy, AS, Linkage,
                                   "", Resolver, &getModule());
     GIF->setName(ResolverName);
     SetCommonAttributes(FD, GIF);
@@ -5084,7 +5103,9 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
 void CodeGenModule::setMultiVersionResolverAttributes(llvm::Function *Resolver,
                                                       GlobalDecl GD) {
   const NamedDecl *D = dyn_cast_or_null<NamedDecl>(GD.getDecl());
-  Resolver->setLinkage(getMultiversionLinkage(*this, GD));
+
+  auto ResolverLinkage = getTriple().isOSAIX() ? llvm::GlobalValue::InternalLinkage : getMultiversionLinkage(*this, GD);
+  Resolver->setLinkage(ResolverLinkage);
 
   // Function body has to be emitted before calling setGlobalVisibility
   // for Resolver to be considered as definition.
@@ -5161,6 +5182,10 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
         // without FMV mangling (it may or may not be replaced later).
         if (getTarget().getTriple().isAArch64()) {
           AddDeferredMultiVersionResolverToEmit(GD);
+          NameWithoutMultiVersionMangling = getMangledNameImpl(
+              *this, GD, FD, /*OmitMultiVersionMangling=*/true);
+        } else if (IgnoreFMVOnADeclaration(getTriple(), FD)) {
+          // TODO this might not be necessary after fix in getMangledNameImpl
           NameWithoutMultiVersionMangling = getMangledNameImpl(
               *this, GD, FD, /*OmitMultiVersionMangling=*/true);
         } else
@@ -6622,6 +6647,9 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   // declarations).
   auto *Fn = cast<llvm::Function>(GV);
   setFunctionLinkage(GD, Fn);
+
+  if (getTriple().isOSAIX() && D->isTargetClonesMultiVersion())
+      Fn->setLinkage(llvm::GlobalValue::InternalLinkage);
 
   // FIXME: this is redundant with part of setFunctionDefinitionAttributes
   setGVProperties(Fn, GD);
