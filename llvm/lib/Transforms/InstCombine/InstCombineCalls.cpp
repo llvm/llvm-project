@@ -3763,21 +3763,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           }
       }
 
-      // Handle the case where a splat is summarized. In that case we have a
-      // multpilication. For example: %2 = insertelement <4 x i32> poison, i32
-      // %0, i64 0 %3 = shufflevector <4 x i32> %2, poison, <4 x i32>
-      // zeroinitializer %4 = tail call i32 @llvm.vector.reduce.add.v4i32(%3)
-      // =>
-      // %2 = mul i32 %0, 4
+      // vector.reduce.add.vNiM(splat(%x)) -> mul(%x, N)
       if (Value *Splat = getSplatValue(Arg)) {
-        // It is only a multiplication if we add the same element over and over.
         ElementCount ReducedVectorElementCount =
             cast<VectorType>(Arg->getType())->getElementCount();
         if (ReducedVectorElementCount.isFixed()) {
           unsigned VectorSize = ReducedVectorElementCount.getFixedValue();
-          Type *SplatType = Splat->getType();
-          return BinaryOperator::CreateMul(
-              Splat, ConstantInt::get(SplatType, VectorSize));
+          return BinaryOperator::CreateMul(Splat, ConstantInt::get(Splat->getType(), VectorSize));
         }
       }
     }
