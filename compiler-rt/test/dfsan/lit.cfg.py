@@ -27,5 +27,8 @@ config.substitutions.append(("%clangxx_dfsan ", build_invocation(clang_dfsan_cxx
 config.suffixes = [".c", ".cpp"]
 
 # DataFlowSanitizer tests are currently supported on Linux only.
-if not (config.target_os in ["Linux"] and config.target_arch in ["aarch64", "x86_64", "loongarch64", "s390x"]):
+if not (
+    config.target_os in ["Linux"]
+    and config.target_arch in ["aarch64", "x86_64", "loongarch64", "s390x"]
+):
     config.unsupported = True
