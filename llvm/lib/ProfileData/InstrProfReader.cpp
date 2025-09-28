@@ -1171,8 +1171,8 @@ bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
 
   if (DataBuffer.getBufferSize() < 8)
     return false;
-  uint64_t Magic = endian::read<uint64_t, llvm::endianness::little, aligned>(
-      DataBuffer.getBufferStart());
+  uint64_t Magic = endian::read<uint64_t, aligned>(DataBuffer.getBufferStart(),
+                                                   llvm::endianness::little);
   // Verify that it's magical.
   return Magic == IndexedInstrProf::Magic;
 }
@@ -1598,8 +1598,8 @@ Error IndexedInstrProfReader::getFunctionBitmap(StringRef FuncName,
         std::memset(W, 0, sizeof(W));
         std::memcpy(W, &BitmapBytes[I], N);
         I += N;
-        return support::endian::read<XTy, llvm::endianness::little,
-                                     support::aligned>(W);
+        return support::endian::read<XTy, support::aligned>(
+            W, llvm::endianness::little);
       },
       Bitmap, Bitmap);
   assert(I == E);

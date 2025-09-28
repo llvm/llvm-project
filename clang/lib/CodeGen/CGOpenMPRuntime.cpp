@@ -1542,15 +1542,14 @@ static llvm::TargetRegionEntryInfo getEntryInfoFromPresumedLoc(
     SourceManager &SM = CGM.getContext().getSourceManager();
     PresumedLoc PLoc = SM.getPresumedLoc(BeginLoc);
 
-    llvm::sys::fs::UniqueID ID;
-    if (llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID)) {
+    if (CGM.getFileSystem()->exists(PLoc.getFilename()))
       PLoc = SM.getPresumedLoc(BeginLoc, /*UseLineDirectives=*/false);
-    }
 
     return std::pair<std::string, uint64_t>(PLoc.getFilename(), PLoc.getLine());
   };
 
-  return OMPBuilder.getTargetEntryUniqueInfo(FileInfoCallBack, ParentName);
+  return OMPBuilder.getTargetEntryUniqueInfo(FileInfoCallBack,
+                                             *CGM.getFileSystem(), ParentName);
 }
 
 ConstantAddress CGOpenMPRuntime::getAddrOfDeclareTargetVar(const VarDecl *VD) {
@@ -2703,7 +2702,8 @@ llvm::Value *CGOpenMPRuntime::emitForNext(CodeGenFunction &CGF,
 }
 
 llvm::Value *CGOpenMPRuntime::emitMessageClause(CodeGenFunction &CGF,
-                                                const Expr *Message) {
+                                                const Expr *Message,
+                                                SourceLocation Loc) {
   if (!Message)
     return llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
   return CGF.EmitScalarExpr(Message);
@@ -2713,11 +2713,13 @@ llvm::Value *
 CGOpenMPRuntime::emitMessageClause(CodeGenFunction &CGF,
                                    const OMPMessageClause *MessageClause) {
   return emitMessageClause(
-      CGF, MessageClause ? MessageClause->getMessageString() : nullptr);
+      CGF, MessageClause ? MessageClause->getMessageString() : nullptr,
+      MessageClause->getBeginLoc());
 }
 
 llvm::Value *
-CGOpenMPRuntime::emitSeverityClause(OpenMPSeverityClauseKind Severity) {
+CGOpenMPRuntime::emitSeverityClause(OpenMPSeverityClauseKind Severity,
+                                    SourceLocation Loc) {
   // OpenMP 6.0, 10.4: "If no severity clause is specified then the effect is
   // as if sev-level is fatal."
   return llvm::ConstantInt::get(CGM.Int32Ty,
@@ -2727,13 +2729,15 @@ CGOpenMPRuntime::emitSeverityClause(OpenMPSeverityClauseKind Severity) {
 llvm::Value *
 CGOpenMPRuntime::emitSeverityClause(const OMPSeverityClause *SeverityClause) {
   return emitSeverityClause(SeverityClause ? SeverityClause->getSeverityKind()
-                                           : OMPC_SEVERITY_unknown);
+                                           : OMPC_SEVERITY_unknown,
+                            SeverityClause->getBeginLoc());
 }
 
 void CGOpenMPRuntime::emitNumThreadsClause(
     CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
     OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
-    const Expr *Message) {
+    SourceLocation SeverityLoc, const Expr *Message,
+    SourceLocation MessageLoc) {
   if (!CGF.HaveInsertPoint())
     return;
   llvm::SmallVector<llvm::Value *, 4> Args(
@@ -2745,8 +2749,8 @@ void CGOpenMPRuntime::emitNumThreadsClause(
   RuntimeFunction FnID = OMPRTL___kmpc_push_num_threads;
   if (Modifier == OMPC_NUMTHREADS_strict) {
     FnID = OMPRTL___kmpc_push_num_threads_strict;
-    Args.push_back(emitSeverityClause(Severity));
-    Args.push_back(emitMessageClause(CGF, Message));
+    Args.push_back(emitSeverityClause(Severity, SeverityLoc));
+    Args.push_back(emitMessageClause(CGF, Message, MessageLoc));
   }
   CGF.EmitRuntimeCall(
       OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), FnID), Args);
@@ -12654,7 +12658,8 @@ llvm::Value *CGOpenMPSIMDRuntime::emitForNext(CodeGenFunction &CGF,
 void CGOpenMPSIMDRuntime::emitNumThreadsClause(
     CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
     OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
-    const Expr *Message) {
+    SourceLocation SeverityLoc, const Expr *Message,
+    SourceLocation MessageLoc) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 
