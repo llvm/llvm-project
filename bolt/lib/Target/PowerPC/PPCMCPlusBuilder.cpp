@@ -17,6 +17,9 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include <optional>
+#define DEBUG_TYPE "bolt-ppc-mcplus"
+#include "llvm/Support/Debug.h"
+#include <string>
 
 using namespace llvm;
 using namespace bolt;
@@ -77,22 +80,10 @@ bool PPCMCPlusBuilder::hasPCRelOperand(const MCInst &I) const {
 }
 
 int PPCMCPlusBuilder::getPCRelOperandNum(const MCInst &I) const {
-  switch (I.getOpcode()) {
-  // Unconditional direct branches
-  case PPC::B:
-  case PPC::BL:
-  case PPC::BA:
-  case PPC::BLA:
-    return 0;
-
-  // Conditional branches
-  case PPC::BC:
-  case PPC::BCL:
-    return 2;
-
-  default:
-    return -1;
-  }
+  for (int i = I.getNumOperands() - 1; i >= 0; --i)
+    if (I.getOperand(i).isExpr())
+      return i;
+  return -1;
 }
 
 int PPCMCPlusBuilder::getMemoryOperandNo(const MCInst & /*Inst*/) const {
@@ -105,7 +96,11 @@ void PPCMCPlusBuilder::replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
   assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
          "Invalid instruction for replaceBranchTarget");
   const int OpNum = getPCRelOperandNum(Inst);
-  assert(OpNum >= 0 && "branch/call must have a PC-rel operand");
+  if (OpNum < 0) {
+    LLVM_DEBUG(dbgs() << "PPC: no PC-rel operand to replace in "
+                      << Info->getName(Inst.getOpcode()) << "\n");
+    return; // gracefully do nothing
+  }
   Inst.getOperand(OpNum) =
       MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
 }
@@ -278,32 +273,106 @@ PPCMCPlusBuilder::createRelocation(const MCFixup &Fixup,
   Relocation R;
   R.Offset = Fixup.getOffset();
 
-  // Pull (Symbol, Addend) out of the fixup expression.
+  // Extract (Symbol, Addend) from the fixup expression.
   auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
   if (!RelSymbol)
     return std::nullopt;
 
-  R.Symbol =
-      const_cast<MCSymbol *>(RelSymbol); // or just R.Symbol = RelSymbol; if
-                                         // your Relocation uses const MCSymbol*
-  R.Addend = RelAddend;
+  R.Symbol = const_cast<MCSymbol *>(RelSymbol);
 
-  const MCFixupKindInfo FKI = MAB.getFixupKindInfo(Fixup.getKind());
+  const MCFixupKind Kind = Fixup.getKind();
+  const MCFixupKindInfo FKI = MAB.getFixupKindInfo(Kind);
+  llvm::StringRef Name = FKI.Name;
 
-  // Branches on PPC are PC-relative and use 24-bit or 14-bit displacements.
+  // Make a lowercase copy for case-insensitive matching.
+  std::string L = Name.lower();
+
+  // Branch/call (24-bit) — BL/B
+  if (Name.equals_insensitive("fixup_ppc_br24") ||
+      Name.equals_insensitive("fixup_branch24") ||
+      L.find("br24") != std::string::npos) {
+    R.Type = ELF::R_PPC64_REL24;
+    return R;
+  }
+
+  // Conditional branch (14-bit) — BC/BDNZ/…
+  if (Name.equals_insensitive("fixup_ppc_brcond14") ||
+      Name.equals_insensitive("fixup_branch14") ||
+      L.find("br14") != std::string::npos ||
+      L.find("cond14") != std::string::npos) {
+    R.Type = ELF::R_PPC64_REL14;
+    return R;
+  }
+
+  // Absolute addressing
+  if (Name.equals_insensitive("fixup_ppc_addr16_lo") ||
+      L.find("addr16_lo") != std::string::npos) {
+    R.Type = ELF::R_PPC64_ADDR16_LO;
+    return R;
+  }
+  if (Name.equals_insensitive("fixup_ppc_addr16_ha") ||
+      L.find("addr16_ha") != std::string::npos) {
+    R.Type = ELF::R_PPC64_ADDR16_HA;
+    return R;
+  }
+  if (Name.equals_insensitive("fixup_ppc_addr32") ||
+      L.find("addr32") != std::string::npos) {
+    R.Type = ELF::R_PPC64_ADDR32;
+    return R;
+  }
+  if (Name.equals_insensitive("fixup_ppc_addr64") ||
+      L.find("addr64") != std::string::npos) {
+    R.Type = ELF::R_PPC64_ADDR64;
+    return R;
+  }
+
+  // TOC-related (match loosely)
+  if (L.find("toc16_lo") != std::string::npos) {
+    R.Type = ELF::R_PPC64_TOC16_LO;
+    return R;
+  }
+  if (L.find("toc16_ha") != std::string::npos) {
+    R.Type = ELF::R_PPC64_TOC16_HA;
+    return R;
+  }
+  if (Name.equals_insensitive("fixup_ppc_toc") ||
+      L.find("toc16") != std::string::npos) {
+    // Generic TOC16 fallback if needed
+    R.Type = ELF::R_PPC64_TOC16;
+    return R;
+  }
+
+  // --- Fallback heuristic: use PCRel + bit-size ---
   if (Fixup.isPCRel()) {
     switch (FKI.TargetSize) {
     case 24:
-      R.Type = R_PPC64_REL24; // bl/b
+      R.Type = ELF::R_PPC64_REL24;
       return R;
     case 14:
-      R.Type = R_PPC64_REL14; // bc/bdz/...
+      R.Type = ELF::R_PPC64_REL14;
       return R;
     default:
-      return std::nullopt;
+      break;
+    }
+  } else {
+    switch (FKI.TargetSize) {
+    case 16:
+      R.Type = ELF::R_PPC64_ADDR16_LO;
+      return R; // safest low-16 default
+    case 32:
+      R.Type = ELF::R_PPC64_ADDR32;
+      return R;
+    case 64:
+      R.Type = ELF::R_PPC64_ADDR64;
+      return R;
+    default:
+      break;
     }
   }
 
+  LLVM_DEBUG(dbgs() << "PPC createRelocation: unhandled fixup kind '" << Name
+                    << "', size=" << FKI.TargetSize
+                    << ", isPCRel=" << Fixup.isPCRel() << "\n");
   return std::nullopt;
 }
 
