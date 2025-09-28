@@ -13,6 +13,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 using namespace llvm;
+using namespace llvm::VPlanPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
@@ -63,7 +64,6 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
   };
 
   VPValue *A, *B;
-  using namespace VPlanPatternMatch;
 
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&
@@ -90,7 +90,6 @@ const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
-  using namespace VPlanPatternMatch;
   // Live-ins are uniform.
   if (V->isLiveIn())
     return true;
@@ -159,7 +158,6 @@ std::optional<VPValue *>
 vputils::getRecipesForUncountableExit(VPlan &Plan,
                                       SmallVectorImpl<VPRecipeBase *> &Recipes,
                                       SmallVectorImpl<VPRecipeBase *> &GEPs) {
-  using namespace llvm::VPlanPatternMatch;
   // Given a VPlan like the following (just including the recipes contributing
   // to loop control exiting here, not the actual work), we're looking to match
   // the recipes contributing to the uncountable exit condition comparison

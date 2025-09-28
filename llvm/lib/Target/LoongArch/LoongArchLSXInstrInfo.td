@@ -2154,9 +2154,25 @@ def : Pat<(f32 f32imm_vldi:$in),
 def : Pat<(f64 f64imm_vldi:$in),
           (f64 (EXTRACT_SUBREG (VLDI (to_f64imm_vldi f64imm_vldi:$in)), sub_64))>;
 
+// abs
+def : Pat<(abs v16i8:$vj), (VMAX_B v16i8:$vj, (VNEG_B v16i8:$vj))>;
+def : Pat<(abs v8i16:$vj), (VMAX_H v8i16:$vj, (VNEG_H v8i16:$vj))>;
+def : Pat<(abs v4i32:$vj), (VMAX_W v4i32:$vj, (VNEG_W v4i32:$vj))>;
+def : Pat<(abs v2i64:$vj), (VMAX_D v2i64:$vj, (VNEG_D v2i64:$vj))>;
+
 // VABSD_{B/H/W/D}[U]
 defm : PatVrVr<abds, "VABSD">;
 defm : PatVrVrU<abdu, "VABSD">;
+
+// VADDA_{B/H/W/D}
+def : Pat<(add (v16i8 (abs v16i8:$vj)), (v16i8 (abs v16i8:$vk))),
+          (VADDA_B v16i8:$vj, v16i8:$vk)>;
+def : Pat<(add (v8i16 (abs v8i16:$vj)), (v8i16 (abs v8i16:$vk))),
+          (VADDA_H v8i16:$vj, v8i16:$vk)>;
+def : Pat<(add (v4i32 (abs v4i32:$vj)), (v4i32 (abs v4i32:$vk))),
+          (VADDA_W v4i32:$vj, v4i32:$vk)>;
+def : Pat<(add (v2i64 (abs v2i64:$vj)), (v2i64 (abs v2i64:$vk))),
+          (VADDA_D v2i64:$vj, v2i64:$vk)>;
 
 // VSADD_{B/H/W/D}[U], VSSUB_{B/H/W/D}[U]
 defm : PatVrVr<saddsat, "VSADD">;
