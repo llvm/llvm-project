@@ -2396,9 +2396,9 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
       // and `int (*)()`.
       if (!BeforeRParen || !BeforeRParen->isOneOf(tok::greater, tok::r_paren))
         return false;
+    } else if (Previous->is(tok::star)) {
+      Previous = Previous->getPreviousNonComment();
     }
-    if (Previous->is(tok::star))
-      Previous = Previous->Previous;
     if (Previous && Previous->Tok.getIdentifierInfo() &&
         !Previous->isOneOf(tok::kw_return, tok::kw_co_await, tok::kw_co_yield,
                            tok::kw_co_return)) {
