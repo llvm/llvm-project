@@ -34,6 +34,12 @@ std::string Hurd::getMultiarchTriple(const Driver &D,
   default:
     break;
 
+  case llvm::Triple::aarch64:
+    return "aarch64-gnu";
+
+  case llvm::Triple::riscv64:
+    return "riscv64-gnu";
+
   case llvm::Triple::x86:
     // We use the existence of '/lib/<triple>' as a directory to detect some
     // common hurd triples that don't quite match the Clang triple for both
@@ -71,6 +77,13 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
 
 Hurd::Hurd(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
+  GCCInstallation.TripleToDebianMultiarch = [](const llvm::Triple &T) {
+    StringRef TripleStr = T.str();
+    StringRef DebianMultiarch =
+        T.getArch() == llvm::Triple::x86 ? "i386-gnu" : TripleStr;
+    return DebianMultiarch;
+  };
+
   GCCInstallation.init(Triple, Args);
   Multilibs = GCCInstallation.getMultilibs();
   SelectedMultilibs.assign({GCCInstallation.getMultilib()});
@@ -135,6 +148,10 @@ Tool *Hurd::buildAssembler() const {
 
 std::string Hurd::getDynamicLinker(const ArgList &Args) const {
   switch (getArch()) {
+  case llvm::Triple::aarch64:
+    return "/lib/ld-aarch64.so.1";
+  case llvm::Triple::riscv64:
+    return "/lib/ld-riscv64-lp64.so.1";
   case llvm::Triple::x86:
     return "/lib/ld.so";
   case llvm::Triple::x86_64:
@@ -207,12 +224,7 @@ void Hurd::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   if (!GCCInstallation.isValid())
     return;
 
-  StringRef TripleStr = GCCInstallation.getTriple().str();
-  StringRef DebianMultiarch =
-      GCCInstallation.getTriple().getArch() == llvm::Triple::x86 ? "i386-gnu"
-                                                                 : TripleStr;
-
-  addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args, DebianMultiarch);
+  addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args);
 }
 
 void Hurd::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {

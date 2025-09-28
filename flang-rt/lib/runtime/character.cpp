@@ -616,8 +616,8 @@ void RTDEF(CharacterConcatenate)(Descriptor &accumulator,
   from.GetLowerBounds(fromAt);
   for (; elements-- > 0;
        to += newBytes, p += oldBytes, from.IncrementSubscripts(fromAt)) {
-    std::memcpy(to, p, oldBytes);
-    std::memcpy(to + oldBytes, from.Element<char>(fromAt), fromBytes);
+    runtime::memcpy(to, p, oldBytes);
+    runtime::memcpy(to + oldBytes, from.Element<char>(fromAt), fromBytes);
   }
   FreeMemory(old);
 }
@@ -698,7 +698,7 @@ void RTDEF(CharacterCompare)(
 std::size_t RTDEF(CharacterAppend1)(char *lhs, std::size_t lhsBytes,
     std::size_t offset, const char *rhs, std::size_t rhsBytes) {
   if (auto n{std::min(lhsBytes - offset, rhsBytes)}) {
-    std::memcpy(lhs + offset, rhs, n);
+    runtime::memcpy(lhs + offset, rhs, n);
     offset += n;
   }
   return offset;
@@ -706,7 +706,7 @@ std::size_t RTDEF(CharacterAppend1)(char *lhs, std::size_t lhsBytes,
 
 void RTDEF(CharacterPad1)(char *lhs, std::size_t bytes, std::size_t offset) {
   if (bytes > offset) {
-    std::memset(lhs + offset, ' ', bytes - offset);
+    runtime::memset(lhs + offset, ' ', bytes - offset);
   }
 }
 
@@ -838,7 +838,7 @@ void RTDEF(Repeat)(Descriptor &result, const Descriptor &string,
   }
   const char *from{string.OffsetElement()};
   for (char *to{result.OffsetElement()}; ncopies-- > 0; to += origBytes) {
-    std::memcpy(to, from, origBytes);
+    runtime::memcpy(to, from, origBytes);
   }
 }
 

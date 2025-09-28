@@ -1846,15 +1846,16 @@ void DWARFRewriter::writeDWOFiles(
   }
 
   std::string CompDir = CU.getCompilationDir();
+  SmallString<16> AbsolutePath(DWOName);
 
   if (!opts::DwarfOutputPath.empty())
     CompDir = opts::DwarfOutputPath.c_str();
   else if (!opts::CompDirOverride.empty())
     CompDir = opts::CompDirOverride;
-
-  SmallString<16> AbsolutePath;
-  sys::path::append(AbsolutePath, CompDir);
-  sys::path::append(AbsolutePath, DWOName);
+  else if (!sys::fs::exists(CompDir))
+    CompDir = ".";
+  // Prevent failures when DWOName is already an absolute path.
+  sys::fs::make_absolute(CompDir, AbsolutePath);
 
   std::error_code EC;
   std::unique_ptr<ToolOutputFile> TempOut =

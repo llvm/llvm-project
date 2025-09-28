@@ -22,6 +22,7 @@ typedef float V2f __attribute__((vector_size(8)));
 // 128-bit
 typedef char V16c __attribute__((vector_size(16)));
 typedef signed short V8s __attribute__((vector_size(16)));
+typedef unsigned short V8u __attribute__((vector_size(16)));
 typedef signed int V4i __attribute__((vector_size(16)));
 #ifndef OPENCL
 typedef signed long long V2LLi __attribute__((vector_size(16)));
@@ -99,6 +100,7 @@ void f0(void) {
   // 128-bit
   V16c   tmp_V16c;
   V8s    tmp_V8s;
+  V8u    tmp_V8u;
   V4i    tmp_V4i;
   V2LLi  tmp_V2LLi;
   V4f    tmp_V4f;
@@ -192,7 +194,7 @@ void f0(void) {
   tmp_V16c = __builtin_ia32_packsswb128(tmp_V8s, tmp_V8s);
   tmp_V8s = __builtin_ia32_packssdw128(tmp_V4i, tmp_V4i);
   tmp_V16c = __builtin_ia32_packuswb128(tmp_V8s, tmp_V8s);
-  tmp_V8s = __builtin_ia32_pmulhuw128(tmp_V8s, tmp_V8s);
+  tmp_V8u = __builtin_ia32_pmulhuw128(tmp_V8u, tmp_V8u);
   tmp_V4f = __builtin_ia32_addsubps(tmp_V4f, tmp_V4f);
   tmp_V2d = __builtin_ia32_addsubpd(tmp_V2d, tmp_V2d);
   tmp_V4f = __builtin_ia32_haddps(tmp_V4f, tmp_V4f);

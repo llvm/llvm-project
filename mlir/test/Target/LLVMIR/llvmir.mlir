@@ -3028,3 +3028,15 @@ llvm.mlir.global internal constant @test_array_attr_struct_with_struct() : !llvm
   %0 = llvm.mlir.constant([#llvm.zero, [2 : i32, 1.0 : f32], #llvm.undef]) : !llvm.array<3 x struct<(i32, f32)>>
   llvm.return %0 : !llvm.array<3 x struct<(i32, f32)>>
 }
+
+// -----
+
+// CHECK: @target_specific_attrs_only = external global double #[[ATTRS:[0-9]+]]
+// CHECK: attributes #[[ATTRS]] = { memory(none) "int-attr"="4" "no-enum-attr" "string-attr"="string" }
+llvm.mlir.global external @target_specific_attrs_only() {target_specific_attrs = [["memory", "0"], ["int-attr", "4"], "no-enum-attr", ["string-attr", "string"]]} : f64
+
+// -----
+
+// CHECK: @target_specific_attrs_combined = global i32 2, section "mysection", align 4 #[[ATTRS:[0-9]+]]
+// CHECK: attributes #[[ATTRS]] = { norecurse "bss-section"="my_bss.1" }
+llvm.mlir.global external @target_specific_attrs_combined(2 : i32) {alignment = 4 : i64, section = "mysection", target_specific_attrs = ["norecurse", ["bss-section", "my_bss.1"]]} : i32

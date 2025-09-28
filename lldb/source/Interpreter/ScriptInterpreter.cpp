@@ -116,6 +116,13 @@ lldb::StreamSP ScriptInterpreter::GetOpaqueTypeFromSBStream(
   return nullptr;
 }
 
+SymbolContext ScriptInterpreter::GetOpaqueTypeFromSBSymbolContext(
+    const lldb::SBSymbolContext &sb_sym_ctx) const {
+  if (sb_sym_ctx.m_opaque_up)
+    return *sb_sym_ctx.m_opaque_up;
+  return {};
+}
+
 std::optional<MemoryRegionInfo>
 ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
     const lldb::SBMemoryRegionInfo &mem_region) const {

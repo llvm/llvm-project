@@ -52,6 +52,7 @@ struct Request {
 };
 llvm::json::Value toJSON(const Request &);
 bool fromJSON(const llvm::json::Value &, Request &, llvm::json::Path);
+bool operator==(const Request &, const Request &);
 
 /// A debug adapter initiated event.
 struct Event {
@@ -63,6 +64,7 @@ struct Event {
 };
 llvm::json::Value toJSON(const Event &);
 bool fromJSON(const llvm::json::Value &, Event &, llvm::json::Path);
+bool operator==(const Event &, const Event &);
 
 enum ResponseMessage : unsigned {
   /// The request was cancelled
@@ -101,6 +103,7 @@ struct Response {
 };
 bool fromJSON(const llvm::json::Value &, Response &, llvm::json::Path);
 llvm::json::Value toJSON(const Response &);
+bool operator==(const Response &, const Response &);
 
 /// A structured message object. Used to return errors from requests.
 struct ErrorMessage {
@@ -140,6 +143,7 @@ llvm::json::Value toJSON(const ErrorMessage &);
 using Message = std::variant<Request, Response, Event>;
 bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
 llvm::json::Value toJSON(const Message &);
+bool operator==(const Message &, const Message &);
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Message &V) {
   OS << toJSON(V);

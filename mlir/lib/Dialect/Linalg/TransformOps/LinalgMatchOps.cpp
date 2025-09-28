@@ -15,14 +15,13 @@
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 
 #define DEBUG_TYPE "linalg-transforms"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 //===----------------------------------------------------------------------===//
 // StructuredMatchOp
@@ -39,7 +38,7 @@ DiagnosedSilenceableFailure transform::MatchStructuredOp::matchOperation(
       return emitSilenceableError() << "expected a Linalg op";
     }
     // If errors are suppressed, succeed and set all results to empty lists.
-    LLVM_DEBUG(DBGS() << "optional nested matcher expected a Linalg op");
+    LDBG() << "optional nested matcher expected a Linalg op";
     results.setRemainingToEmpty(cast<TransformOpInterface>(getOperation()));
     return DiagnosedSilenceableFailure::success();
   }
@@ -75,8 +74,7 @@ DiagnosedSilenceableFailure transform::MatchStructuredOp::matchOperation(
     // When they are defined in this block, we additionally check if we have
     // already applied the operation that defines them. If not, the
     // corresponding results will be set to empty lists.
-    LLVM_DEBUG(DBGS() << "optional nested matcher failed: " << diag.getMessage()
-                      << "\n");
+    LDBG() << "optional nested matcher failed: " << diag.getMessage();
     (void)diag.silence();
     SmallVector<OpOperand *> undefinedOperands;
     for (OpOperand &terminatorOperand :

@@ -45,7 +45,7 @@ class GDBRemoteTestBase(TestBase):
         self.yaml2obj(yaml_path, obj_path)
         return self.dbg.CreateTarget(obj_path)
 
-    def connect(self, target):
+    def connect(self, target, plugin="gdb-remote"):
         """
         Create a process by connecting to the mock GDB server.
 
@@ -54,7 +54,7 @@ class GDBRemoteTestBase(TestBase):
         listener = self.dbg.GetListener()
         error = lldb.SBError()
         process = target.ConnectRemote(
-            listener, self.server.get_connect_url(), "gdb-remote", error
+            listener, self.server.get_connect_url(), plugin, error
         )
         self.assertTrue(error.Success(), error.description)
         self.assertTrue(process, PROCESS_IS_VALID)

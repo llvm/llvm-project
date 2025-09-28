@@ -52,8 +52,8 @@ public:
     SmallVector<unsigned> offsets;
     offsets.push_back(0);
     // Do the type conversion and record the offsets.
-    for (Type type : op.getResultTypes()) {
-      if (failed(typeConverter->convertTypes(type, dstTypes)))
+    for (Value v : op.getResults()) {
+      if (failed(typeConverter->convertType(v, dstTypes)))
         return rewriter.notifyMatchFailure(op, "could not convert result type");
       offsets.push_back(dstTypes.size());
     }
@@ -112,11 +112,12 @@ public:
 
     // We can not do clone as the number of result types after conversion
     // might be different.
-    ForOp newOp = rewriter.create<ForOp>(
-        op.getLoc(), llvm::getSingleElement(adaptor.getLowerBound()),
-        llvm::getSingleElement(adaptor.getUpperBound()),
-        llvm::getSingleElement(adaptor.getStep()),
-        flattenValues(adaptor.getInitArgs()));
+    ForOp newOp = ForOp::create(rewriter, op.getLoc(),
+                                llvm::getSingleElement(adaptor.getLowerBound()),
+                                llvm::getSingleElement(adaptor.getUpperBound()),
+                                llvm::getSingleElement(adaptor.getStep()),
+                                flattenValues(adaptor.getInitArgs()),
+                                /*bodyBuilder=*/nullptr, op.getUnsignedCmp());
 
     // Reserve whatever attributes in the original op.
     newOp->setAttrs(op->getAttrs());
@@ -126,7 +127,6 @@ public:
     // Inline the type converted region from the original operation.
     rewriter.inlineRegionBefore(op.getRegion(), newOp.getRegion(),
                                 newOp.getRegion().end());
-
     return newOp;
   }
 };
@@ -142,9 +142,9 @@ public:
                                       ConversionPatternRewriter &rewriter,
                                       TypeRange dstTypes) const {
 
-    IfOp newOp = rewriter.create<IfOp>(
-        op.getLoc(), dstTypes, llvm::getSingleElement(adaptor.getCondition()),
-        true);
+    IfOp newOp =
+        IfOp::create(rewriter, op.getLoc(), dstTypes,
+                     llvm::getSingleElement(adaptor.getCondition()), true);
     newOp->setAttrs(op->getAttrs());
 
     // We do not need the empty blocks created by rewriter.
@@ -171,12 +171,36 @@ public:
   std::optional<WhileOp> convertSourceOp(WhileOp op, OneToNOpAdaptor adaptor,
                                          ConversionPatternRewriter &rewriter,
                                          TypeRange dstTypes) const {
-    auto newOp = rewriter.create<WhileOp>(op.getLoc(), dstTypes,
-                                          flattenValues(adaptor.getOperands()));
+    auto newOp = WhileOp::create(rewriter, op.getLoc(), dstTypes,
+                                 flattenValues(adaptor.getOperands()));
 
     for (auto i : {0u, 1u}) {
       if (failed(rewriter.convertRegionTypes(&op.getRegion(i), *typeConverter)))
         return std::nullopt;
+      auto &dstRegion = newOp.getRegion(i);
+      rewriter.inlineRegionBefore(op.getRegion(i), dstRegion, dstRegion.end());
+    }
+    return newOp;
+  }
+};
+} // namespace
+
+namespace {
+class ConvertIndexSwitchOpTypes
+    : public Structural1ToNConversionPattern<IndexSwitchOp,
+                                             ConvertIndexSwitchOpTypes> {
+public:
+  using Structural1ToNConversionPattern::Structural1ToNConversionPattern;
+
+  std::optional<IndexSwitchOp>
+  convertSourceOp(IndexSwitchOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter,
+                  TypeRange dstTypes) const {
+    auto newOp =
+        IndexSwitchOp::create(rewriter, op.getLoc(), dstTypes, op.getArg(),
+                              op.getCases(), op.getNumCases());
+
+    for (unsigned i = 0u; i < op.getNumRegions(); i++) {
       auto &dstRegion = newOp.getRegion(i);
       rewriter.inlineRegionBefore(op.getRegion(i), dstRegion, dstRegion.end());
     }
@@ -217,23 +241,24 @@ public:
 } // namespace
 
 void mlir::scf::populateSCFStructuralTypeConversions(
-    const TypeConverter &typeConverter, RewritePatternSet &patterns) {
+    const TypeConverter &typeConverter, RewritePatternSet &patterns,
+    PatternBenefit benefit) {
   patterns.add<ConvertForOpTypes, ConvertIfOpTypes, ConvertYieldOpTypes,
-               ConvertWhileOpTypes, ConvertConditionOpTypes>(
-      typeConverter, patterns.getContext());
+               ConvertWhileOpTypes, ConvertConditionOpTypes,
+               ConvertIndexSwitchOpTypes>(typeConverter, patterns.getContext(),
+                                          benefit);
 }
 
 void mlir::scf::populateSCFStructuralTypeConversionTarget(
     const TypeConverter &typeConverter, ConversionTarget &target) {
-  target.addDynamicallyLegalOp<ForOp, IfOp>([&](Operation *op) {
-    return typeConverter.isLegal(op->getResultTypes());
-  });
+  target.addDynamicallyLegalOp<ForOp, IfOp, IndexSwitchOp>(
+      [&](Operation *op) { return typeConverter.isLegal(op->getResults()); });
   target.addDynamicallyLegalOp<scf::YieldOp>([&](scf::YieldOp op) {
     // We only have conversions for a subset of ops that use scf.yield
     // terminators.
-    if (!isa<ForOp, IfOp, WhileOp>(op->getParentOp()))
+    if (!isa<ForOp, IfOp, WhileOp, IndexSwitchOp>(op->getParentOp()))
       return true;
-    return typeConverter.isLegal(op.getOperandTypes());
+    return typeConverter.isLegal(op.getOperands());
   });
   target.addDynamicallyLegalOp<WhileOp, ConditionOp>(
       [&](Operation *op) { return typeConverter.isLegal(op); });
@@ -241,7 +266,7 @@ void mlir::scf::populateSCFStructuralTypeConversionTarget(
 
 void mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
     const TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target) {
-  populateSCFStructuralTypeConversions(typeConverter, patterns);
+    ConversionTarget &target, PatternBenefit benefit) {
+  populateSCFStructuralTypeConversions(typeConverter, patterns, benefit);
   populateSCFStructuralTypeConversionTarget(typeConverter, target);
 }

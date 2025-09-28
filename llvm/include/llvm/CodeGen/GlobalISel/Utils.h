@@ -459,11 +459,25 @@ LLVM_ABI bool isBuildVectorConstantSplat(const Register Reg,
                                          const MachineRegisterInfo &MRI,
                                          int64_t SplatValue, bool AllowUndef);
 
+/// Return true if the specified register is defined by G_BUILD_VECTOR or
+/// G_BUILD_VECTOR_TRUNC where all of the elements are \p SplatValue or undef.
+LLVM_ABI bool isBuildVectorConstantSplat(const Register Reg,
+                                         const MachineRegisterInfo &MRI,
+                                         const APInt &SplatValue,
+                                         bool AllowUndef);
+
 /// Return true if the specified instruction is a G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are \p SplatValue or undef.
 LLVM_ABI bool isBuildVectorConstantSplat(const MachineInstr &MI,
                                          const MachineRegisterInfo &MRI,
                                          int64_t SplatValue, bool AllowUndef);
+
+/// Return true if the specified instruction is a G_BUILD_VECTOR or
+/// G_BUILD_VECTOR_TRUNC where all of the elements are \p SplatValue or undef.
+LLVM_ABI bool isBuildVectorConstantSplat(const MachineInstr &MI,
+                                         const MachineRegisterInfo &MRI,
+                                         const APInt &SplatValue,
+                                         bool AllowUndef);
 
 /// Return true if the specified instruction is a G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are 0 or undef.

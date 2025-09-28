@@ -44,7 +44,7 @@ def test1 : Pat<(AOp (BOp:$x $y), $_), (AOp $x, $y)>;
 // CHECK: test::AOp::Properties tblgen_props;
 // CHECK: tblgen_values.push_back((*x.getODSResults(0).begin()));
 // CHECK: tblgen_props.y = ::llvm::dyn_cast_if_present<decltype(tblgen_props.y)>(y);
-// CHECK: tblgen_AOp_0 = rewriter.create<test::AOp>(odsLoc, tblgen_types, tblgen_values, tblgen_props);
+// CHECK: tblgen_AOp_0 = test::AOp::create(rewriter, odsLoc, tblgen_types, tblgen_values, tblgen_props);
 
 // Note: These use strings to pick up a non-trivial storage/interface type
 // difference.

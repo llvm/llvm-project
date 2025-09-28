@@ -9,11 +9,11 @@
 #include "hdr/math_macros.h"
 #include "in_float_range_test_helper.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/math/acoshf_utils.h"
+#include "src/__support/math/exp10f_utils.h"
 #include "src/math/fabs.h"
 #include "src/math/fabsf.h"
-#include "src/math/generic/explogxf.h"
 #include "test/UnitTest/FPMatcher.h"
-#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 using LlvmLibcExplogfTest = LIBC_NAMESPACE::testing::FPTest<float>;

@@ -1,4 +1,4 @@
-; RUN: llc -o /dev/null %s
+; RUN: llc -filetype=null %s
 ; Check that renameDisconnectedComponents() does not create vregs without a
 ; definition on every path (there should at least be IMPLICIT_DEF instructions).
 target triple = "amdgcn--"

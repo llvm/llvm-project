@@ -56,6 +56,11 @@ makeDenseBoolArrayAttr(MLIRContext *ctx, const ArrayRef<bool> boolArray) {
   return boolArray.empty() ? nullptr : DenseBoolArrayAttr::get(ctx, boolArray);
 }
 
+static DenseI64ArrayAttr
+makeDenseI64ArrayAttr(MLIRContext *ctx, const ArrayRef<int64_t> intArray) {
+  return intArray.empty() ? nullptr : DenseI64ArrayAttr::get(ctx, intArray);
+}
+
 namespace {
 struct MemRefPointerLikeModel
     : public PointerLikeType::ExternalModel<MemRefPointerLikeModel,
@@ -1730,8 +1735,7 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
     if (!mapOp.getDefiningOp())
       return emitError(op->getLoc(), "missing map operation");
 
-    if (auto mapInfoOp =
-            mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp())) {
+    if (auto mapInfoOp = mapOp.getDefiningOp<mlir::omp::MapInfoOp>()) {
       uint64_t mapTypeBits = mapInfoOp.getMapType();
 
       bool to = mapTypeToBitFlag(
@@ -2107,6 +2111,31 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
       });
 }
 
+/// Check if we can promote SPMD kernel to No-Loop kernel.
+static bool canPromoteToNoLoop(Operation *capturedOp, TeamsOp teamsOp,
+                               WsloopOp *wsLoopOp) {
+  // num_teams clause can break no-loop teams/threads assumption.
+  if (teamsOp.getNumTeamsUpper())
+    return false;
+
+  // Reduction kernels are slower in no-loop mode.
+  if (teamsOp.getNumReductionVars())
+    return false;
+  if (wsLoopOp->getNumReductionVars())
+    return false;
+
+  // Check if the user allows the promotion of kernels to no-loop mode.
+  OffloadModuleInterface offloadMod =
+      capturedOp->getParentOfType<omp::OffloadModuleInterface>();
+  if (!offloadMod)
+    return false;
+  auto ompFlags = offloadMod.getFlags();
+  if (!ompFlags)
+    return false;
+  return ompFlags.getAssumeTeamsOversubscription() &&
+         ompFlags.getAssumeThreadsOversubscription();
+}
+
 TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
   // A non-null captured op is only valid if it resides inside of a TargetOp
   // and is the result of calling getInnermostCapturedOmpOp() on it.
@@ -2135,7 +2164,8 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
 
   // Detect target-teams-distribute-parallel-wsloop[-simd].
   if (numWrappers == 2) {
-    if (!isa<WsloopOp>(innermostWrapper))
+    WsloopOp *wsloopOp = dyn_cast<WsloopOp>(innermostWrapper);
+    if (!wsloopOp)
       return TargetRegionFlags::generic;
 
     innermostWrapper = std::next(innermostWrapper);
@@ -2146,12 +2176,17 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
     if (!isa_and_present<ParallelOp>(parallelOp))
       return TargetRegionFlags::generic;
 
-    Operation *teamsOp = parallelOp->getParentOp();
-    if (!isa_and_present<TeamsOp>(teamsOp))
+    TeamsOp teamsOp = dyn_cast<TeamsOp>(parallelOp->getParentOp());
+    if (!teamsOp)
       return TargetRegionFlags::generic;
 
-    if (teamsOp->getParentOp() == targetOp.getOperation())
-      return TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+    if (teamsOp->getParentOp() == targetOp.getOperation()) {
+      TargetRegionFlags result =
+          TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+      if (canPromoteToNoLoop(capturedOp, teamsOp, wsloopOp))
+        result = result | TargetRegionFlags::no_loop;
+      return result;
+    }
   }
   // Detect target-teams-distribute[-simd] and target-teams-loop.
   else if (isa<DistributeOp, LoopOp>(innermostWrapper)) {
@@ -2957,16 +2992,45 @@ ParseResult LoopNestOp::parse(OpAsmParser &parser, OperationState &result) {
   for (auto &iv : ivs)
     iv.type = loopVarType;
 
+  auto *ctx = parser.getBuilder().getContext();
   // Parse "inclusive" flag.
   if (succeeded(parser.parseOptionalKeyword("inclusive")))
-    result.addAttribute("loop_inclusive",
-                        UnitAttr::get(parser.getBuilder().getContext()));
+    result.addAttribute("loop_inclusive", UnitAttr::get(ctx));
 
   // Parse step values.
   SmallVector<OpAsmParser::UnresolvedOperand> steps;
   if (parser.parseKeyword("step") ||
       parser.parseOperandList(steps, ivs.size(), OpAsmParser::Delimiter::Paren))
     return failure();
+
+  // Parse collapse
+  int64_t value = 0;
+  if (!parser.parseOptionalKeyword("collapse") &&
+      (parser.parseLParen() || parser.parseInteger(value) ||
+       parser.parseRParen()))
+    return failure();
+  if (value > 1)
+    result.addAttribute(
+        "collapse_num_loops",
+        IntegerAttr::get(parser.getBuilder().getI64Type(), value));
+
+  // Parse tiles
+  SmallVector<int64_t> tiles;
+  auto parseTiles = [&]() -> ParseResult {
+    int64_t tile;
+    if (parser.parseInteger(tile))
+      return failure();
+    tiles.push_back(tile);
+    return success();
+  };
+
+  if (!parser.parseOptionalKeyword("tiles") &&
+      (parser.parseLParen() || parser.parseCommaSeparatedList(parseTiles) ||
+       parser.parseRParen()))
+    return failure();
+
+  if (tiles.size() > 0)
+    result.addAttribute("tile_sizes", DenseI64ArrayAttr::get(ctx, tiles));
 
   // Parse the body.
   Region *region = result.addRegion();
@@ -2991,14 +3055,23 @@ void LoopNestOp::print(OpAsmPrinter &p) {
   if (getLoopInclusive())
     p << "inclusive ";
   p << "step (" << getLoopSteps() << ") ";
+  if (int64_t numCollapse = getCollapseNumLoops())
+    if (numCollapse > 1)
+      p << "collapse(" << numCollapse << ") ";
+
+  if (const auto tiles = getTileSizes())
+    p << "tiles(" << tiles.value() << ") ";
+
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
 void LoopNestOp::build(OpBuilder &builder, OperationState &state,
                        const LoopNestOperands &clauses) {
-  LoopNestOp::build(builder, state, clauses.loopLowerBounds,
-                    clauses.loopUpperBounds, clauses.loopSteps,
-                    clauses.loopInclusive);
+  MLIRContext *ctx = builder.getContext();
+  LoopNestOp::build(builder, state, clauses.collapseNumLoops,
+                    clauses.loopLowerBounds, clauses.loopUpperBounds,
+                    clauses.loopSteps, clauses.loopInclusive,
+                    makeDenseI64ArrayAttr(ctx, clauses.tileSizes));
 }
 
 LogicalResult LoopNestOp::verify() {
@@ -3013,6 +3086,17 @@ LogicalResult LoopNestOp::verify() {
       return emitOpError()
              << "range argument type does not match corresponding IV type";
   }
+
+  uint64_t numIVs = getIVs().size();
+
+  if (const auto &numCollapse = getCollapseNumLoops())
+    if (numCollapse > numIVs)
+      return emitOpError()
+             << "collapse value is larger than the number of loops";
+
+  if (const auto &tiles = getTileSizes())
+    if (tiles.value().size() > numIVs)
+      return emitOpError() << "too few canonical loops for tile dimensions";
 
   if (!llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp()))
     return emitOpError() << "expects parent op to be a loop wrapper";
@@ -3143,7 +3227,7 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
               }
 
               SmallString<64> Name("canonloop");
-              for (std::string s : reverse(components)) {
+              for (const std::string &s : reverse(components)) {
                 Name += '_';
                 Name += s;
               }
@@ -3872,6 +3956,159 @@ LogicalResult AllocateDirOp::verify() {
                          << " must be power of 2";
   }
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TargetAllocMemOp
+//===----------------------------------------------------------------------===//
+
+mlir::Type omp::TargetAllocMemOp::getAllocatedType() {
+  return getInTypeAttr().getValue();
+}
+
+/// operation ::= %res = (`omp.target_alloc_mem`) $device : devicetype,
+///                      $in_type ( `(` $typeparams `)` )? ( `,` $shape )?
+///                      attr-dict-without-keyword
+static mlir::ParseResult parseTargetAllocMemOp(mlir::OpAsmParser &parser,
+                                               mlir::OperationState &result) {
+  auto &builder = parser.getBuilder();
+  bool hasOperands = false;
+  std::int32_t typeparamsSize = 0;
+
+  // Parse device number as a new operand
+  mlir::OpAsmParser::UnresolvedOperand deviceOperand;
+  mlir::Type deviceType;
+  if (parser.parseOperand(deviceOperand) || parser.parseColonType(deviceType))
+    return mlir::failure();
+  if (parser.resolveOperand(deviceOperand, deviceType, result.operands))
+    return mlir::failure();
+  if (parser.parseComma())
+    return mlir::failure();
+
+  mlir::Type intype;
+  if (parser.parseType(intype))
+    return mlir::failure();
+  result.addAttribute("in_type", mlir::TypeAttr::get(intype));
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
+  llvm::SmallVector<mlir::Type> typeVec;
+  if (!parser.parseOptionalLParen()) {
+    // parse the LEN params of the derived type. (<params> : <types>)
+    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(typeVec) || parser.parseRParen())
+      return mlir::failure();
+    typeparamsSize = operands.size();
+    hasOperands = true;
+  }
+  std::int32_t shapeSize = 0;
+  if (!parser.parseOptionalComma()) {
+    // parse size to scale by, vector of n dimensions of type index
+    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None))
+      return mlir::failure();
+    shapeSize = operands.size() - typeparamsSize;
+    auto idxTy = builder.getIndexType();
+    for (std::int32_t i = typeparamsSize, end = operands.size(); i != end; ++i)
+      typeVec.push_back(idxTy);
+    hasOperands = true;
+  }
+  if (hasOperands &&
+      parser.resolveOperands(operands, typeVec, parser.getNameLoc(),
+                             result.operands))
+    return mlir::failure();
+
+  mlir::Type restype = builder.getIntegerType(64);
+  if (!restype) {
+    parser.emitError(parser.getNameLoc(), "invalid allocate type: ") << intype;
+    return mlir::failure();
+  }
+  llvm::SmallVector<std::int32_t> segmentSizes{1, typeparamsSize, shapeSize};
+  result.addAttribute("operandSegmentSizes",
+                      builder.getDenseI32ArrayAttr(segmentSizes));
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.addTypeToList(restype, result.types))
+    return mlir::failure();
+  return mlir::success();
+}
+
+mlir::ParseResult omp::TargetAllocMemOp::parse(mlir::OpAsmParser &parser,
+                                               mlir::OperationState &result) {
+  return parseTargetAllocMemOp(parser, result);
+}
+
+void omp::TargetAllocMemOp::print(mlir::OpAsmPrinter &p) {
+  p << " ";
+  p.printOperand(getDevice());
+  p << " : ";
+  p << getDevice().getType();
+  p << ", ";
+  p << getInType();
+  if (!getTypeparams().empty()) {
+    p << '(' << getTypeparams() << " : " << getTypeparams().getTypes() << ')';
+  }
+  for (auto sh : getShape()) {
+    p << ", ";
+    p.printOperand(sh);
+  }
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          {"in_type", "operandSegmentSizes"});
+}
+
+llvm::LogicalResult omp::TargetAllocMemOp::verify() {
+  mlir::Type outType = getType();
+  if (!mlir::dyn_cast<IntegerType>(outType))
+    return emitOpError("must be a integer type");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// WorkdistributeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult WorkdistributeOp::verify() {
+  // Check that region exists and is not empty
+  Region &region = getRegion();
+  if (region.empty())
+    return emitOpError("region cannot be empty");
+  // Verify single entry point.
+  Block &entryBlock = region.front();
+  if (entryBlock.empty())
+    return emitOpError("region must contain a structured block");
+  // Verify single exit point.
+  bool hasTerminator = false;
+  for (Block &block : region) {
+    if (isa<TerminatorOp>(block.back())) {
+      if (hasTerminator) {
+        return emitOpError("region must have exactly one terminator");
+      }
+      hasTerminator = true;
+    }
+  }
+  if (!hasTerminator) {
+    return emitOpError("region must be terminated with omp.terminator");
+  }
+  auto walkResult = region.walk([&](Operation *op) -> WalkResult {
+    // No implicit barrier at end
+    if (isa<BarrierOp>(op)) {
+      return emitOpError(
+          "explicit barriers are not allowed in workdistribute region");
+    }
+    // Check for invalid nested constructs
+    if (isa<ParallelOp>(op)) {
+      return emitOpError(
+          "nested parallel constructs not allowed in workdistribute");
+    }
+    if (isa<TeamsOp>(op)) {
+      return emitOpError(
+          "nested teams constructs not allowed in workdistribute");
+    }
+    return WalkResult::advance();
+  });
+  if (walkResult.wasInterrupted())
+    return failure();
+
+  Operation *parentOp = (*this)->getParentOp();
+  if (!llvm::dyn_cast<TeamsOp>(parentOp))
+    return emitOpError("workdistribute must be nested under teams");
   return success();
 }
 

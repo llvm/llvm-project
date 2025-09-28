@@ -7,6 +7,7 @@ add_header_library(
     libc.hdr.fenv_macros
     libc.hdr.math_macros
     libc.hdr.stdint_proxy
+    libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
     libc.src.errno.errno
 )
@@ -230,6 +231,7 @@ add_header_library(
     Hypot.h
   DEPENDS
     .basic_operations
+    .cast
     .fenv_impl
     .fp_bits
     .rounding_mode
@@ -284,6 +286,9 @@ add_header_library(
     libc.hdr.stdint_proxy
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.FPUtil.generic.mul
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
 )

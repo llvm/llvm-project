@@ -1078,6 +1078,15 @@ protected:
       dbgs() << ")\n";
     });
 
+    // If this instruction terminates the program immediately, no
+    // authentication oracles are possible past this point.
+    if (BC.MIB->isTrap(Point)) {
+      LLVM_DEBUG({ traceInst(BC, "Trap instruction found", Point); });
+      DstState Next(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
+      Next.CannotEscapeUnchecked.set();
+      return Next;
+    }
+
     // If this instruction is reachable by the analysis, a non-empty state will
     // be propagated to it sooner or later. Until then, skip computeNext().
     if (Cur.empty()) {
@@ -1185,8 +1194,8 @@ protected:
     //
     // A basic block without any successors, on the other hand, can be
     // pessimistically initialized to everything-is-unsafe: this will naturally
-    // handle both return and tail call instructions and is harmless for
-    // internal indirect branch instructions (such as computed gotos).
+    // handle return, trap and tail call instructions. At the same time, it is
+    // harmless for internal indirect branch instructions, like computed gotos.
     if (BB.succ_empty())
       return createUnsafeState();
 

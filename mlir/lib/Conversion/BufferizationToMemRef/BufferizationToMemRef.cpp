@@ -68,9 +68,8 @@ struct CloneOpConversion : public OpConversionPattern<bufferization::CloneOp> {
 
         scf::YieldOp::create(rewriter, loc, acc);
       };
-      auto size = rewriter
-                      .create<scf::ForOp>(loc, zero, rank, one, ValueRange(one),
-                                          loopBody)
+      auto size = scf::ForOp::create(rewriter, loc, zero, rank, one,
+                                     ValueRange(one), loopBody)
                       .getResult(0);
 
       MemRefType memrefType = MemRefType::get({ShapedType::kDynamic},

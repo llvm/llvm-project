@@ -645,7 +645,7 @@ func.func @wrong_terminator_op(%in: tensor<100xf32>, %out: tensor<100xf32>) {
 
   %result = scf.forall (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>) {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
-      // expected-error @+1 {{expected only tensor.parallel_insert_slice ops}}
+      // expected-error @+1 {{expected only ParallelCombiningOpInterface ops}}
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>

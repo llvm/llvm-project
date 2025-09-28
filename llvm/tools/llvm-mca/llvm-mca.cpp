@@ -83,9 +83,9 @@ static cl::opt<std::string>
              cl::cat(ToolOptions));
 
 static cl::opt<std::string>
-    TripleName("mtriple",
-               cl::desc("Target triple. See -version for available targets"),
-               cl::cat(ToolOptions));
+    TripleNameOpt("mtriple",
+                  cl::desc("Target triple. See -version for available targets"),
+                  cl::cat(ToolOptions));
 
 static cl::opt<std::string>
     MCPU("mcpu",
@@ -292,11 +292,7 @@ static cl::opt<bool> DisableInstrumentManager(
 
 namespace {
 
-const Target *getTarget(const char *ProgName) {
-  if (TripleName.empty())
-    TripleName = Triple::normalize(sys::getDefaultTargetTriple());
-  Triple TheTriple(TripleName);
-
+const Target *getTarget(Triple &TheTriple, const char *ProgName) {
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget =
@@ -305,9 +301,6 @@ const Target *getTarget(const char *ProgName) {
     errs() << ProgName << ": " << Error;
     return nullptr;
   }
-
-  // Update TripleName with the updated triple from the target lookup.
-  TripleName = TheTriple.str();
 
   // Return the found target.
   return TheTarget;
@@ -387,17 +380,17 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv,
                               "llvm machine code performance analyzer.\n");
 
+  Triple TheTriple(TripleNameOpt.empty()
+                       ? Triple::normalize(sys::getDefaultTargetTriple())
+                       : TripleNameOpt);
+
   // Get the target from the triple. If a triple is not specified, then select
   // the default triple for the host. If the triple doesn't correspond to any
   // registered target, then exit with an error message.
   const char *ProgName = argv[0];
-  const Target *TheTarget = getTarget(ProgName);
+  const Target *TheTarget = getTarget(TheTriple, ProgName);
   if (!TheTarget)
     return 1;
-
-  // GetTarget() may replaced TripleName with a default triple.
-  // For safety, reconstruct the Triple object.
-  Triple TheTriple(TripleName);
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferPtr =
       MemoryBuffer::getFileOrSTDIN(InputFilename);
@@ -419,8 +412,12 @@ int main(int argc, char **argv) {
   }
 
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
-  assert(STI && "Unable to create subtarget info!");
+      TheTarget->createMCSubtargetInfo(TheTriple, MCPU, FeaturesStr));
+  if (!STI) {
+    WithColor::error() << "unable to create subtarget info\n";
+    return 1;
+  }
+
   if (!STI->isCPUStringValid(MCPU))
     return 1;
 
@@ -441,12 +438,12 @@ int main(int argc, char **argv) {
   bool IsOutOfOrder = STI->getSchedModel().isOutOfOrder();
   processViewOptions(IsOutOfOrder);
 
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   assert(MRI && "Unable to create target register info!");
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   assert(MAI && "Unable to create target asm info!");
 
   SourceMgr SrcMgr;
@@ -469,7 +466,7 @@ int main(int argc, char **argv) {
   unsigned IPtempOutputAsmVariant =
       OutputAsmVariant == -1 ? 0 : OutputAsmVariant;
   std::unique_ptr<MCInstPrinter> IPtemp(TheTarget->createMCInstPrinter(
-      Triple(TripleName), IPtempOutputAsmVariant, *MAI, *MCII, *MRI));
+      TheTriple, IPtempOutputAsmVariant, *MAI, *MCII, *MRI));
   if (!IPtemp) {
     WithColor::error()
         << "unable to create instruction printer for target triple '"
@@ -513,11 +510,16 @@ int main(int argc, char **argv) {
   if (!DisableInstrumentManager) {
     IM = std::unique_ptr<mca::InstrumentManager>(
         TheTarget->createInstrumentManager(*STI, *MCII));
-  }
-  if (!IM) {
-    // If the target doesn't have its own IM implemented (or the -disable-cb
-    // flag is set) then we use the base class (which does nothing).
-    IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
+    if (!IM) {
+      // If the target doesn't have its own IM implemented we use base class
+      // with instruments enabled.
+      IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
+    }
+  } else {
+    // If the -disable-im flag is set then we use the default base class
+    // implementation and disable the instruments.
+    IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII,
+                                                  /*EnableInstruments=*/false);
   }
 
   // Parse the input and create InstrumentRegion that llvm-mca
@@ -558,7 +560,7 @@ int main(int argc, char **argv) {
   if (OutputAsmVariant >= 0)
     AssemblerDialect = static_cast<unsigned>(OutputAsmVariant);
   std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
-      Triple(TripleName), AssemblerDialect, *MAI, *MCII, *MRI));
+      TheTriple, AssemblerDialect, *MAI, *MCII, *MRI));
   if (!IP) {
     WithColor::error()
         << "unable to create instruction printer for target triple '"
@@ -666,7 +668,7 @@ int main(int argc, char **argv) {
         return 1;
       }
 
-      IPP->postProcessInstruction(Inst.get(), MCI);
+      IPP->postProcessInstruction(*Inst.get(), MCI);
       InstToInstruments.insert({&MCI, Instruments});
       LoweredSequence.emplace_back(std::move(Inst.get()));
     }

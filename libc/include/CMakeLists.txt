@@ -70,6 +70,7 @@ add_header_macro(
   dlfcn.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.dl_info
 )
 
 add_header_macro(
@@ -215,6 +216,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.jmp_buf
+    .llvm-libc-types.sigjmp_buf
 )
 
 add_header_macro(
@@ -391,6 +393,8 @@ add_header_macro(
     .llvm-libc-types.pthread_attr_t
     .llvm-libc-types.pthread_condattr_t
     .llvm-libc-types.pthread_key_t
+    .llvm-libc-types.pthread_barrier_t
+    .llvm-libc-types.pthread_barrierattr_t
     .llvm-libc-types.pthread_mutex_t
     .llvm-libc-types.pthread_mutexattr_t
     .llvm-libc-types.pthread_once_t

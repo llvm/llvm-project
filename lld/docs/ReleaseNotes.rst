@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ===========================
 lld |release| Release Notes
 ===========================
@@ -25,6 +28,9 @@ Non-comprehensive list of changes in this release
 
 ELF Improvements
 ----------------
+
+* ``--print-gc-sections=<file>`` prints garbage collection section listing to a file.
+  (`#159706 <https://github.com/llvm/llvm-project/pull/159706>`_)
 
 Breaking changes
 ----------------

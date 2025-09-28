@@ -146,6 +146,7 @@ public:
   virtual void printCOFFExports() { }
   virtual void printCOFFDirectives() { }
   virtual void printCOFFBaseReloc() { }
+  virtual void printCOFFPseudoReloc() {}
   virtual void printCOFFDebugDirectory() { }
   virtual void printCOFFTLSDirectory() {}
   virtual void printCOFFResources() {}
