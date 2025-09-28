@@ -801,8 +801,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     if (args.at(0)) {
       auto warnContiguous = [&]() {
         if (auto source{args[0]->sourceLocation()}) {
-          context.Warn(common::UsageWarning::ConstantIsContiguous,
-              *source,
+          context.Warn(common::UsageWarning::ConstantIsContiguous, *source,
               "constant values constructed at compile time are likely to be contiguous"_warn_en_US);
         }
       };
