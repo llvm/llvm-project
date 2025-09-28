@@ -55,10 +55,12 @@ static SmallVector<Value> getDynamicSize(Value memref, func::FuncOp funcOp) {
   auto operands = defOp->getOperands();
   SmallVector<Value> dynamicSizes;
   for (Value size : operands) {
+    if (!isa<IndexType>(size.getType()))
+      continue;
+
     BlockArgument sizeSrc = dyn_cast<BlockArgument>(size);
     if (!sizeSrc)
       return {};
-
     auto arguments = funcOp.getArguments();
     auto iter = llvm::find(arguments, sizeSrc);
     if (iter == arguments.end())
