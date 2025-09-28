@@ -100,7 +100,7 @@ TEST_F(LlvmLibcFILETest, SimpleFileOperations) {
   ASSERT_EQ(LIBC_NAMESPACE::ferror(file), 0);
 
   // This is not a readable file.
-  ASSERT_THAT(LIBC_NAMESPACE::fread(data, 1, 1, file),
+  ASSERT_THAT((int)LIBC_NAMESPACE::fread(data, 1, 1, file),
               returns(EQ(0)).with_errno(NE(0)));
 
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
