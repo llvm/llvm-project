@@ -69,6 +69,7 @@ bool PPCMCPlusBuilder::hasPCRelOperand(const MCInst &I) const {
   case PPC::B:
   case PPC::BA:
   case PPC::BC:
+  case PPC::BCL:
     return true;
   default:
     return false;
@@ -100,10 +101,25 @@ int PPCMCPlusBuilder::getMemoryOperandNo(const MCInst & /*Inst*/) const {
 
 void PPCMCPlusBuilder::replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                                            MCContext *Ctx) const {
-  int OpNum = getPCRelOperandNum(Inst);
+
+  assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
+         "Invalid instruction for replaceBranchTarget");
+  const int OpNum = getPCRelOperandNum(Inst);
   assert(OpNum >= 0 && "branch/call must have a PC-rel operand");
   Inst.getOperand(OpNum) =
       MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
+}
+
+bool PPCMCPlusBuilder::isIndirectBranch(const MCInst &I) const {
+  switch (I.getOpcode()) {
+  case PPC::BCTR:
+  case PPC::BCTRL:
+  case PPC::BCLR:
+  case PPC::BCLRL:
+    return true;
+  default:
+    return false;
+  }
 }
 
 const MCSymbol *PPCMCPlusBuilder::getTargetSymbol(const MCInst &Inst,
@@ -142,7 +158,8 @@ bool PPCMCPlusBuilder::isReturn(const MCInst & /*Inst*/) const { return false; }
 
 bool PPCMCPlusBuilder::isConditionalBranch(const MCInst &I) const {
   switch (opc(I)) {
-  case PPC::BC: // branch conditional
+  case PPC::BC:  // branch conditional
+  case PPC::BCL: // branch conditional to link
     return true;
   default:
     return false;
