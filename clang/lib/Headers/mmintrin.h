@@ -192,6 +192,7 @@ _mm_packs_pi32(__m64 __m1, __m64 __m2) {
       (__v4si)__builtin_shufflevector(__m1, __m2, 0, 1), (__v4si){}));
 }
 
+
 /// Converts, with saturation, 16-bit signed integers from both 64-bit integer
 ///    vector parameters of [4 x i16] into 8-bit unsigned integer values, and
 ///    constructs a 64-bit integer vector of [8 x i8] as the result.

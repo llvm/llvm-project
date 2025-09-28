@@ -3179,6 +3179,7 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))

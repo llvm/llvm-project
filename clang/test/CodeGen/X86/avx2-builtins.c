@@ -1126,6 +1126,7 @@ TEST_CONSTEXPR(match_v8si(_mm256_shuffle_epi32((((__m256i)(__v8si){0,1,2,3,4,5,6
 TEST_CONSTEXPR(match_v16hi(_mm256_shufflehi_epi16((((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15})), 107), 0,1,2,3, 7,6,6,5, 8,9,10,11, 15,14,14,13));
 TEST_CONSTEXPR(match_v16hi(_mm256_shufflelo_epi16(((__m256i)(__v16hi){ 0,1,2,3, 4,5,6,7, 8,9,10,11, 12,13,14,15}), 83), 3,0,1,1, 4,5,6,7, 11,8,9,9, 12,13,14,15) );
 
+
 __m256i test_mm256_sign_epi8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_sign_epi8
   // CHECK: call <32 x i8> @llvm.x86.avx2.psign.b(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})

@@ -10046,6 +10046,7 @@ __m256i test_mm256_maskz_shuffle_epi32(__mmask8 __U, __m256i __A) {
   return _mm256_maskz_shuffle_epi32(__U, __A, 2);
 }
 
+
 // 128-bit (_mm_mask_shuffle_epi32 / _mm_maskz_shuffle_epi32)
 TEST_CONSTEXPR(match_v4si(_mm_mask_shuffle_epi32(((__m128i)(__v4si){100,101,102,103}), 0x0Fu, ((__m128i)(__v4si){0,1,2,3}), 1), 1,0,0,0));
 TEST_CONSTEXPR(match_v4si(_mm_mask_shuffle_epi32(((__m128i)(__v4si){100,101,102,103}), 0x0Au, ((__m128i)(__v4si){0,1,2,3}), 1), 100,0,102,0));

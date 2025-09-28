@@ -1317,6 +1317,7 @@ __m128i test_mm_shuffle_epi32(__m128i A) {
   return _mm_shuffle_epi32(A, 0);
 }
 
+
 TEST_CONSTEXPR(match_v4si(_mm_shuffle_epi32(((__m128i)(__v4si){0,1,2,3}), 0), 0,0,0,0));
 TEST_CONSTEXPR(match_v8hi(_mm_shufflehi_epi16(((__m128i)(__v8hi){0,1,2,3,4,5,6,7}), 0), 0,1,2,3, 4,4,4,4));
 TEST_CONSTEXPR(match_v8hi(_mm_shufflelo_epi16(((__m128i)(__v8hi){0,1,2,3,4,5,6,7}), 0), 0,0,0,0, 4,5,6,7));

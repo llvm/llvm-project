@@ -9101,6 +9101,7 @@ TEST_CONSTEXPR(match_v16si(_mm512_maskz_shuffle_epi32(0xFFFFu, ((__m512i)(__v16s
 TEST_CONSTEXPR(match_v16si(_mm512_maskz_shuffle_epi32(0x5555u, ((__m512i)(__v16si){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}), 1), 1,0,0,0, 5,0,4,0, 9,0,8,0, 13,0,12,0));
 TEST_CONSTEXPR(match_v16si(_mm512_maskz_shuffle_epi32(0x8001u, ((__m512i)(__v16si){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}), 1), 1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,12));
 
+
 __m512d test_mm512_mask_expand_pd(__m512d __W, __mmask8 __U, __m512d __A) {
   // CHECK-LABEL: test_mm512_mask_expand_pd
   // CHECK: @llvm.x86.avx512.mask.expand

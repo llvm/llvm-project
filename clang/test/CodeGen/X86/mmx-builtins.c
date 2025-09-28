@@ -579,6 +579,7 @@ __m64 test_mm_shuffle_pi8(__m64 a, __m64 b) {
   return _mm_shuffle_pi8(a, b);
 }
 
+
 __m64 test_mm_shuffle_pi16(__m64 a) {
   // CHECK-LABEL: test_mm_shuffle_pi16
   // CHECK: shufflevector <4 x i16> {{%.*}}, <4 x i16> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 0, i32 0>

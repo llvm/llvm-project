@@ -5150,6 +5150,7 @@ let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr, RequiredVect
   def pshufhw512_maskz : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Constant int, unsigned int)">;
 }
 
+
 let Features = "avx512vl,avx512bw", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def pshuflw256_mask  : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Constant int, _Vector<16, short>, unsigned short)">;
   def pshuflw256_maskz : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Constant int, unsigned short)">;

@@ -3441,6 +3441,7 @@ __m256i test_mm256_maskz_shufflelo_epi16(__mmask16 __U, __m256i __A) {
   return _mm256_maskz_shufflelo_epi16(__U, __A, 5); 
 }
 
+
 // 128-bit shufflelo (mask)
 TEST_CONSTEXPR(match_v8hi(_mm_mask_shufflelo_epi16(((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),0xFF,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),1,1,0,0,4,5,6,7));
 TEST_CONSTEXPR(match_v8hi(_mm_mask_shufflelo_epi16(((__m128i)(__v8hi){100,101,102,103,104,105,106,107}),0x00u,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),100,101,102,103,104,105,106,107));
