@@ -9,6 +9,7 @@
 #include <__thread/timed_backoff_policy.h>
 #include <atomic>
 #include <climits>
+#include <cstddef>
 #include <functional>
 #include <thread>
 
@@ -58,6 +59,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifdef __linux__
 
+
+// TODO : update
 static void
 __libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
   static constexpr timespec __timeout = {2, 0};
@@ -75,22 +78,32 @@ extern "C" int __ulock_wait(
 extern "C" int __ulock_wake(uint32_t operation, void* addr, uint64_t wake_value);
 
 // https://github.com/apple/darwin-xnu/blob/2ff845c2e033bd0ff64b5b6aa6063a1f8f65aa32/bsd/sys/ulock.h#L82
+#  define UL_COMPARE_AND_WAIT 1
 #  define UL_COMPARE_AND_WAIT64 5
 #  define ULF_WAKE_ALL 0x00000100
 
-static void
-__libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
-  static_assert(sizeof(__cxx_atomic_contention_t) == 8, "Waiting on 8 bytes value");
-  __ulock_wait(UL_COMPARE_AND_WAIT64, const_cast<__cxx_atomic_contention_t*>(__ptr), __val, 0);
+template <std::size_t _Size>
+static void __libcpp_platform_wait_on_address(void const volatile* __ptr, void const volatile* __val) {
+  static_assert(_Size == 8 || _Size == 4, "Can only wait on 8 bytes or 4 bytes value");
+  if constexpr (_Size == 4)
+    __ulock_wait(UL_COMPARE_AND_WAIT, const_cast<void*>(__ptr), *reinterpret_cast<uint32_t const volatile*>(__val), 0);
+  else
+    __ulock_wait(
+        UL_COMPARE_AND_WAIT64, const_cast<void*>(__ptr), *reinterpret_cast<uint64_t const volatile*>(__val), 0);
 }
 
-static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
-  static_assert(sizeof(__cxx_atomic_contention_t) == 8, "Waking up on 8 bytes value");
-  __ulock_wake(
-      UL_COMPARE_AND_WAIT64 | (__notify_one ? 0 : ULF_WAKE_ALL), const_cast<__cxx_atomic_contention_t*>(__ptr), 0);
+template <std::size_t _Size>
+static void __libcpp_platform_wake_by_address(void const volatile* __ptr, bool __notify_one) {
+  static_assert(_Size == 8 || _Size == 4, "Can only wake up on 8 bytes or 4 bytes value");
+
+  if constexpr (_Size == 4)
+    __ulock_wake(UL_COMPARE_AND_WAIT | (__notify_one ? 0 : ULF_WAKE_ALL), const_cast<void*>(__ptr), 0);
+  else
+    __ulock_wake(UL_COMPARE_AND_WAIT64 | (__notify_one ? 0 : ULF_WAKE_ALL), const_cast<void*>(__ptr), 0);
 }
 
 #elif defined(__FreeBSD__) && __SIZEOF_LONG__ == 8
+// TODO : update
 /*
  * Since __cxx_contention_t is int64_t even on 32bit FreeBSD
  * platforms, we have to use umtx ops that work on the long type, and
@@ -173,6 +186,7 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
 #else // <- Add other operating systems here
 
 // Baseline is just a timed backoff
+// TODO : update
 
 static void
 __libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
@@ -197,83 +211,115 @@ static __libcpp_contention_table_entry __libcpp_contention_table[__libcpp_conten
 
 static hash<void const volatile*> __libcpp_contention_hasher;
 
-static __libcpp_contention_table_entry* __libcpp_contention_state(void const volatile* p) {
+static __libcpp_contention_table_entry* __get_global_contention_state(void const volatile* p) {
   return &__libcpp_contention_table[__libcpp_contention_hasher(p) & (__libcpp_contention_table_size - 1)];
 }
 
 /* Given an atomic to track contention and an atomic to actually wait on, which may be
    the same atomic, we try to detect contention to avoid spuriously calling the platform. */
 
-static void __libcpp_contention_notify(__cxx_atomic_contention_t volatile* __contention_state,
-                                       __cxx_atomic_contention_t const volatile* __platform_state,
+template <std::size_t _Size>
+static void __libcpp_contention_notify(__cxx_atomic_contention_t volatile* __global_contention_state,
+                                       void const volatile* __address_to_notify,
                                        bool __notify_one) {
-  if (0 != __cxx_atomic_load(__contention_state, memory_order_seq_cst))
+  if (0 != __cxx_atomic_load(__global_contention_state, memory_order_seq_cst))
     // We only call 'wake' if we consumed a contention bit here.
-    __libcpp_platform_wake_by_address(__platform_state, __notify_one);
+    __libcpp_platform_wake_by_address<_Size>(__address_to_notify, __notify_one);
 }
-static __cxx_contention_t
-__libcpp_contention_monitor_for_wait(__cxx_atomic_contention_t volatile* /*__contention_state*/,
-                                     __cxx_atomic_contention_t const volatile* __platform_state) {
-  // We will monitor this value.
-  return __cxx_atomic_load(__platform_state, memory_order_acquire);
-}
+
+template <std::size_t _Size>
 static void __libcpp_contention_wait(__cxx_atomic_contention_t volatile* __contention_state,
-                                     __cxx_atomic_contention_t const volatile* __platform_state,
-                                     __cxx_contention_t __old_value) {
+                                     void const volatile* __address_to_wait,
+                                     void const volatile* __old_value) {
   __cxx_atomic_fetch_add(__contention_state, __cxx_contention_t(1), memory_order_relaxed);
   // https://llvm.org/PR109290
   // There are no platform guarantees of a memory barrier in the platform wait implementation
   __cxx_atomic_thread_fence(memory_order_seq_cst);
   // We sleep as long as the monitored value hasn't changed.
-  __libcpp_platform_wait_on_address(__platform_state, __old_value);
+  __libcpp_platform_wait_on_address<_Size>(__address_to_wait, __old_value);
   __cxx_atomic_fetch_sub(__contention_state, __cxx_contention_t(1), memory_order_release);
 }
 
 /* When the incoming atomic is the wrong size for the platform wait size, need to
    launder the value sequence through an atomic from our table. */
 
-static void __libcpp_atomic_notify(void const volatile* __location) {
-  auto const __entry = __libcpp_contention_state(__location);
+static void __atomic_notify_global_table(void const volatile* __location) {
+  auto const __entry = __get_global_contention_state(__location);
   // The value sequence laundering happens on the next line below.
   __cxx_atomic_fetch_add(&__entry->__platform_state, __cxx_contention_t(1), memory_order_seq_cst);
-  __libcpp_contention_notify(
+  __libcpp_contention_notify<sizeof(__cxx_atomic_contention_t)>(
       &__entry->__contention_state,
       &__entry->__platform_state,
       false /* when laundering, we can't handle notify_one */);
 }
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile* __location) noexcept {
-  __libcpp_atomic_notify(__location);
+
+_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor_global(void const volatile* __location) noexcept {
+  auto const __entry = __get_global_contention_state(__location);
+  return __cxx_atomic_load(&__entry->__platform_state, memory_order_acquire);
 }
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile* __location) noexcept {
-  __libcpp_atomic_notify(__location);
-}
-_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor(void const volatile* __location) noexcept {
-  auto const __entry = __libcpp_contention_state(__location);
-  return __libcpp_contention_monitor_for_wait(&__entry->__contention_state, &__entry->__platform_state);
-}
+
 _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait(void const volatile* __location, __cxx_contention_t __old_value) noexcept {
-  auto const __entry = __libcpp_contention_state(__location);
-  __libcpp_contention_wait(&__entry->__contention_state, &__entry->__platform_state, __old_value);
+__libcpp_atomic_wait_global_table(void const volatile* __location, __cxx_contention_t __old_value) noexcept {
+  auto const __entry = __get_global_contention_state(__location);
+  __libcpp_contention_wait<sizeof(__cxx_atomic_contention_t)>(
+      &__entry->__contention_state, &__entry->__platform_state, &__old_value);
+}
+
+template <std::size_t _Size>
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void
+__libcpp_atomic_wait_native(void const volatile* __address, void const volatile* __old_value) noexcept {
+  __libcpp_contention_wait<_Size>(
+      &__get_global_contention_state(__address)->__contention_state, __address, __old_value);
+}
+
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one_global_table(void const volatile* __location) noexcept {
+  __atomic_notify_global_table(__location);
+}
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all_global_table(void const volatile* __location) noexcept {
+  __atomic_notify_global_table(__location);
 }
 
 /* When the incoming atomic happens to be the platform wait size, we still need to use the
    table for the contention detection, but we can use the atomic directly for the wait. */
 
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_contention_t const volatile* __location) noexcept {
-  __libcpp_contention_notify(&__libcpp_contention_state(__location)->__contention_state, __location, true);
+template <std::size_t _Size>
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one_native(void const volatile* __location) noexcept {
+  __libcpp_contention_notify<_Size>(&__get_global_contention_state(__location)->__contention_state, __location, true);
 }
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_contention_t const volatile* __location) noexcept {
-  __libcpp_contention_notify(&__libcpp_contention_state(__location)->__contention_state, __location, false);
+
+template <std::size_t _Size>
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all_native(void const volatile* __location) noexcept {
+  __libcpp_contention_notify<_Size>(&__get_global_contention_state(__location)->__contention_state, __location, false);
 }
-// This function is never used, but still exported for ABI compatibility.
-_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t
-__libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile* __location) noexcept {
-  return __libcpp_contention_monitor_for_wait(&__libcpp_contention_state(__location)->__contention_state, __location);
-}
-_LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait(__cxx_atomic_contention_t const volatile* __location, __cxx_contention_t __old_value) noexcept {
-  __libcpp_contention_wait(&__libcpp_contention_state(__location)->__contention_state, __location, __old_value);
-}
+
+#ifdef __linux__
+
+// TODO
+
+#elif defined(__APPLE__) && defined(_LIBCPP_USE_ULOCK)
+
+template _LIBCPP_EXPORTED_FROM_ABI void
+__libcpp_atomic_wait_native<4>(void const volatile* __address, void const volatile* __old_value) noexcept;
+
+template _LIBCPP_EXPORTED_FROM_ABI void
+__libcpp_atomic_wait_native<8>(void const volatile* __address, void const volatile* __old_value) noexcept;
+
+template _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one_native<4>(void const volatile* __location) noexcept;
+
+template _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one_native<8>(void const volatile* __location) noexcept;
+
+template _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all_native<4>(void const volatile* __location) noexcept;
+
+template _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all_native<8>(void const volatile* __location) noexcept;
+
+#elif defined(__FreeBSD__) && __SIZEOF_LONG__ == 8
+
+// TODO
+
+#else // <- Add other operating systems here
+
+// TODO
+
+#endif // __linux__
 
 _LIBCPP_END_NAMESPACE_STD
