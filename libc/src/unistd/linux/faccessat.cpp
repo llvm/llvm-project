@@ -1,4 +1,5 @@
-//===-- Linux implementation of faccessat ------------------------------------===//
+//===-- Linux implementation of faccessat
+//------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,9 +19,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, faccessat, (int fd, const char *path, int amode, int flag)) {
+LLVM_LIBC_FUNCTION(int, faccessat,
+                   (int fd, const char *path, int amode, int flag)) {
 #ifdef SYS_faccessat2
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_faccessat2, fd, path, amode, flag);
+  int ret =
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_faccessat2, fd, path, amode, flag);
 #else
 #error "faccessat2 syscall is not available."
 #endif

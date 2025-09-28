@@ -1,4 +1,5 @@
-//===-- Implementation header for faccessat ------------------------*- C++ -*-===//
+//===-- Implementation header for faccessat ------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +9,6 @@
 
 #ifndef LLVM_LIBC_SRC_UNISTD_FACCESSAT_H
 #define LLVM_LIBC_SRC_UNISTD_FACCESSAT_H
-
 
 #include "src/__support/macros/config.h"
 
