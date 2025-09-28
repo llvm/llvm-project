@@ -22,7 +22,6 @@
 #include <__algorithm/upper_bound.h>
 #include <__assert>
 #include <__compare/synth_three_way.h>
-#include <__concepts/convertible_to.h>
 #include <__concepts/swappable.h>
 #include <__config>
 #include <__cstddef/byte.h>
@@ -30,7 +29,6 @@
 #include <__flat_map/key_value_iterator.h>
 #include <__flat_map/sorted_equivalent.h>
 #include <__flat_map/utils.h>
-#include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
 #include <__fwd/vector.h>
@@ -47,7 +45,6 @@
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/drop_view.h>
 #include <__ranges/from_range.h>
-#include <__ranges/ref_view.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
 #include <__ranges/zip_view.h>
@@ -57,14 +54,12 @@
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/maybe_const.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/scope_guard.h>
 #include <__vector/vector.h>
 #include <initializer_list>
-#include <stdexcept>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
