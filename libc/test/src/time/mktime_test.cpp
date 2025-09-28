@@ -36,7 +36,7 @@ TEST(LlvmLibcMkTime, FailureSetsErrno) {
                     .tm_wday = 0,
                     .tm_yday = 0,
                     .tm_isdst = 0};
-  EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails(EOVERFLOW));
+  EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails(time_t(EOVERFLOW)));
 }
 
 TEST(LlvmLibcMkTime, InvalidSeconds) {
