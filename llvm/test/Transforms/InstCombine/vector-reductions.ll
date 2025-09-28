@@ -410,6 +410,46 @@ define i1 @constant_multiplied_non_power_of_2_i1(i1 %0) {
 ;
   %2 = insertelement <8 x i1> poison, i1 %0, i32 0
   %3 = shufflevector <8 x i1> %2, <8 x i1> poison, <8 x i32> zeroinitializer
-  %4 = tail call i1 @llvm.vector.reduce.add.v6i1(<8 x i1> %3)
+  %4 = tail call i1 @llvm.vector.reduce.add.v8i1(<8 x i1> %3)
   ret i1 %4
+}
+
+define i1 @constant_multiplied_non_power_of_2_i1x4(i1 %0) {
+; CHECK-LABEL: @constant_multiplied_non_power_of_2_i1x4(
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i1> poison, i1 [[TMP0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i1> [[TMP3]] to i4
+; CHECK-NEXT:    [[TMP5:%.*]] = call range(i4 0, 5) i4 @llvm.ctpop.i4(i4 [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i4 [[TMP5]] to i1
+; CHECK-NEXT:    ret i1 [[TMP6]]
+;
+  %2 = insertelement <4 x i1> poison, i1 %0, i32 0
+  %3 = shufflevector <4 x i1> %2, <4 x i1> poison, <4 x i32> zeroinitializer
+  %4 = tail call i1 @llvm.vector.reduce.add.v4i1(<4 x i1> %3)
+  ret i1 %4
+}
+
+define i1 @constant_multiplied_non_power_of_2_i1x2(i1 %0) {
+; CHECK-LABEL: @constant_multiplied_non_power_of_2_i1x2(
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i1> poison, i1 [[TMP0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i1> [[TMP3]] to i2
+; CHECK-NEXT:    [[TMP5:%.*]] = call range(i2 0, -1) i2 @llvm.ctpop.i2(i2 [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i2 [[TMP5]] to i1
+; CHECK-NEXT:    ret i1 [[TMP6]]
+;
+  %2 = insertelement <2 x i1> poison, i1 %0, i32 0
+  %3 = shufflevector <2 x i1> %2, <2 x i1> poison, <2 x i32> zeroinitializer
+  %4 = tail call i1 @llvm.vector.reduce.add.v2i1(<2 x i1> %3)
+  ret i1 %4
+}
+
+define i2 @constant_multiplied_non_power_of_2_i2x4(i2 %0) {
+; CHECK-LABEL: @constant_multiplied_non_power_of_2_i2x4(
+; CHECK-NEXT:    ret i2 0
+;
+  %2 = insertelement <4 x i2> poison, i2 %0, i32 0
+  %3 = shufflevector <4 x i2> %2, <4 x i2> poison, <4 x i32> zeroinitializer
+  %4 = tail call i2 @llvm.vector.reduce.add.v4i2(<4 x i2> %3)
+  ret i2 %4
 }
