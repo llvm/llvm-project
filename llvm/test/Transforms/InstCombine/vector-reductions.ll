@@ -309,8 +309,8 @@ define i32 @diff_of_sums_type_mismatch2(<8 x i32> %v0, <4 x i32> %v1) {
   ret i32 %r
 }
 
-define i32 @constant_multiplied_at_0(i32 %0) {
-; CHECK-LABEL: @constant_multiplied_at_0(
+define i32 @constant_multiplied_4xi32(i32 %0) {
+; CHECK-LABEL: @constant_multiplied_4xi32(
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0:%.*]], 2
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -320,8 +320,8 @@ define i32 @constant_multiplied_at_0(i32 %0) {
   ret i32 %4
 }
 
-define i64 @constant_multiplied_at_0_64bits(i64 %0) {
-; CHECK-LABEL: @constant_multiplied_at_0_64bits(
+define i64 @constant_multiplied_4xi64(i64 %0) {
+; CHECK-LABEL: @constant_multiplied_4xi64(
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP0:%.*]], 2
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
@@ -331,8 +331,8 @@ define i64 @constant_multiplied_at_0_64bits(i64 %0) {
   ret i64 %4
 }
 
-define i32 @constant_multiplied_at_0_two_pow8(i32 %0) {
-; CHECK-LABEL: @constant_multiplied_at_0_two_pow8(
+define i32 @constant_multiplied_8xi32(i32 %0) {
+; CHECK-LABEL: @constant_multiplied_8xi32(
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0:%.*]], 3
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -343,8 +343,8 @@ define i32 @constant_multiplied_at_0_two_pow8(i32 %0) {
 }
 
 
-define i32 @constant_multiplied_at_0_two_pow16(i32 %0) {
-; CHECK-LABEL: @constant_multiplied_at_0_two_pow16(
+define i32 @constant_multiplied_16xi32(i32 %0) {
+; CHECK-LABEL: @constant_multiplied_16xi32(
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0:%.*]], 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -355,8 +355,8 @@ define i32 @constant_multiplied_at_0_two_pow16(i32 %0) {
 }
 
 
-define i32 @constant_multiplied_at_1(i32 %0) {
-; CHECK-LABEL: @constant_multiplied_at_1(
+define i32 @constant_multiplied_4xi32_at_idx1(i32 %0) {
+; CHECK-LABEL: @constant_multiplied_4xi32_at_idx1(
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0:%.*]], 2
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -367,8 +367,8 @@ define i32 @constant_multiplied_at_1(i32 %0) {
   ret i32 %4
 }
 
-define i32 @negative_constant_multiplied_at_1(i32 %0) {
-; CHECK-LABEL: @negative_constant_multiplied_at_1(
+define i32 @negative_constant_multiplied_4xi32(i32 %0) {
+; CHECK-LABEL: @negative_constant_multiplied_4xi32(
 ; CHECK-NEXT:    ret i32 poison
 ;
   %2 = insertelement <4 x i32> poison, i32 %0, i64 1
@@ -377,8 +377,8 @@ define i32 @negative_constant_multiplied_at_1(i32 %0) {
   ret i32 %4
 }
 
-define i32 @constant_multiplied_non_power_of_2(i32 %0) {
-; CHECK-LABEL: @constant_multiplied_non_power_of_2(
+define i32 @constant_multiplied_6xi32(i32 %0) {
+; CHECK-LABEL: @constant_multiplied_6xi32(
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP0:%.*]], 6
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -388,8 +388,8 @@ define i32 @constant_multiplied_non_power_of_2(i32 %0) {
   ret i32 %4
 }
 
-define i64 @constant_multiplied_non_power_of_2_i64(i64 %0) {
-; CHECK-LABEL: @constant_multiplied_non_power_of_2_i64(
+define i64 @constant_multiplied_6xi64(i64 %0) {
+; CHECK-LABEL: @constant_multiplied_6xi64(
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0:%.*]], 6
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
@@ -399,14 +399,14 @@ define i64 @constant_multiplied_non_power_of_2_i64(i64 %0) {
   ret i64 %4
 }
 
-define i1 @constant_multiplied_non_power_of_2_i1(i1 %0) {
-; CHECK-LABEL: @constant_multiplied_non_power_of_2_i1(
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i1> poison, i1 [[TMP0:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP6]], <8 x i1> poison, <8 x i32> zeroinitializer
+define i1 @constant_multiplied_8xi1(i1 %0) {
+; CHECK-LABEL: @constant_multiplied_8xi1(
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i1> poison, i1 [[TMP0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i1> [[TMP3]] to i8
 ; CHECK-NEXT:    [[TMP5:%.*]] = call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[TMP4]])
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i8 [[TMP5]] to i1
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i8 [[TMP5]] to i1
+; CHECK-NEXT:    ret i1 [[TMP6]]
 ;
   %2 = insertelement <8 x i1> poison, i1 %0, i32 0
   %3 = shufflevector <8 x i1> %2, <8 x i1> poison, <8 x i32> zeroinitializer
@@ -414,8 +414,8 @@ define i1 @constant_multiplied_non_power_of_2_i1(i1 %0) {
   ret i1 %4
 }
 
-define i2 @constant_multiplied_non_power_of_2_i2x4(i2 %0) {
-; CHECK-LABEL: @constant_multiplied_non_power_of_2_i2x4(
+define i2 @constant_multiplied_4xi2(i2 %0) {
+; CHECK-LABEL: @constant_multiplied_4xi2(
 ; CHECK-NEXT:    ret i2 0
 ;
   %2 = insertelement <4 x i2> poison, i2 %0, i32 0
