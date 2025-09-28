@@ -36,4 +36,13 @@ def Test_TestAttrOp : Op<Test_Dialect, "test", []> {
   let assemblyFormat = "$testAttr attr-dict";
 }
 
-// CHECK: attr-duplicated-builder-error.td:15:5: error: Unexpected overlap when generating `get` for TestAttr (from line 537)
+// CHECK: attr-duplicated-builder-error.td:20:7: error: builder `get` conflicts with an existing builder. 
+// CHECK-NEXT:   let builders = [AttrBuilder<(ins "std::int64_t":$arg), [{
+// CHECK-NEXT:       ^
+// CHECK-NEXT: note: A new builder with signature:
+// CHECK-NEXT: static TestAttr get(::mlir::MLIRContext *context, std::int64_t arg);
+// CHECK-EMPTY:
+// CHECK-NEXT: is shadowed by an existing builder with signature:
+// CHECK-NEXT: static TestAttr get(::mlir::MLIRContext *context, std::int64_t arg);
+// CHECK-EMPTY:
+// CHECK-NEXT: Please remove one of the conflicting definitions.

@@ -513,16 +513,39 @@ getCustomBuilderParams(std::initializer_list<MethodParameter> prefix,
   return builderParams;
 }
 
-static void errorIfPruned(size_t line, Method *m, const Twine &methodName,
-                          const AttrOrTypeDef &def) {
-  if (m)
-    return;
-  PrintFatalError(def.getLoc(), "Unexpected overlap when generating `" +
-                                    methodName + "` for " + def.getName() +
-                                    " (from line " + Twine(line) + ")");
+static std::string getSignature(const Method &m) {
+  std::string signature;
+  llvm::raw_string_ostream os(signature);
+  raw_indented_ostream indentedOs(os);
+  m.writeDeclTo(indentedOs);
+  return signature;
 }
 
-#define ERROR_IF_PRUNED(M, N, O) errorIfPruned(__LINE__, M, N, O)
+static void emitDuplicatedBuilderError(const Method &currentMethod,
+                                       StringRef methodName,
+                                       const Class &defCls,
+                                       const AttrOrTypeDef &def) {
+
+  // Try to search for method that makes `get` redundant.
+  auto loc = def.getDef()->getFieldLoc("builders");
+  for (auto &method : defCls.getMethods()) {
+    if (method->getName() == methodName &&
+        method->makesRedundant(currentMethod)) {
+      PrintError(loc, llvm::Twine("builder `") + methodName +
+                          "` conflicts with an existing builder. ");
+      PrintFatalNote(llvm::Twine("A new builder with signature:\n") +
+                     getSignature(currentMethod) +
+                     "\nis shadowed by an existing builder with signature:\n" +
+                     getSignature(*method) +
+                     "\nPlease remove one of the conflicting "
+                     "definitions.");
+    }
+  }
+
+  // This code shouldn't be reached, but leaving this here for potential future
+  // use.
+  PrintFatalError(loc, "Failed to generate builder " + methodName);
+}
 
 void DefGen::emitCustomBuilder(const AttrOrTypeBuilder &builder) {
   // Don't emit a body if there isn't one.
@@ -530,11 +553,16 @@ void DefGen::emitCustomBuilder(const AttrOrTypeBuilder &builder) {
   StringRef returnType = def.getCppClassName();
   if (std::optional<StringRef> builderReturnType = builder.getReturnType())
     returnType = *builderReturnType;
-  Method *m = defCls.addMethod(returnType, "get", props,
-                               getCustomBuilderParams({}, builder));
+
+  llvm::StringRef methodName = "get";
+  const auto parameters = getCustomBuilderParams({}, builder);
+  Method *m = defCls.addMethod(returnType, methodName, props, parameters);
 
   // If method is pruned, report error and terminate.
-  ERROR_IF_PRUNED(m, "get", def);
+  if (!m) {
+    auto curMethod = Method(returnType, methodName, props, parameters);
+    emitDuplicatedBuilderError(curMethod, methodName, defCls, def);
+  }
 
   if (!builder.getBody())
     return;
@@ -562,14 +590,18 @@ void DefGen::emitCheckedCustomBuilder(const AttrOrTypeBuilder &builder) {
   StringRef returnType = def.getCppClassName();
   if (std::optional<StringRef> builderReturnType = builder.getReturnType())
     returnType = *builderReturnType;
-  Method *m = defCls.addMethod(
-      returnType, "getChecked", props,
-      getCustomBuilderParams(
-          {{"::llvm::function_ref<::mlir::InFlightDiagnostic()>", "emitError"}},
-          builder));
+
+  llvm::StringRef methodName = "getChecked";
+  auto parameters = getCustomBuilderParams(
+      {{"::llvm::function_ref<::mlir::InFlightDiagnostic()>", "emitError"}},
+      builder);
+  Method *m = defCls.addMethod(returnType, methodName, props, parameters);
 
   // If method is pruned, report error and terminate.
-  ERROR_IF_PRUNED(m, "getChecked", def);
+  if (!m) {
+    auto curMethod = Method(returnType, methodName, props, parameters);
+    emitDuplicatedBuilderError(curMethod, methodName, defCls, def);
+  }
 
   if (!builder.getBody())
     return;
