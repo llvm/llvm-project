@@ -16,6 +16,7 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include <sys/_types/_ssize_t.h>
 #include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
@@ -51,12 +52,12 @@ TEST_F(LlvmLibcSendRecvTest, SendFails) {
   const size_t MESSAGE_LEN = sizeof(TEST_MESSAGE);
 
   ASSERT_THAT(LIBC_NAMESPACE::send(-1, TEST_MESSAGE, MESSAGE_LEN, 0),
-              Fails(EBADF));
+              Fails(ssize_t(EBADF)));
 }
 
 TEST_F(LlvmLibcSendRecvTest, RecvFails) {
   char buffer[256];
 
   ASSERT_THAT(LIBC_NAMESPACE::recv(-1, buffer, sizeof(buffer), 0),
-              Fails(EBADF));
+              Fails(ssize_t(EBADF)));
 }
