@@ -799,12 +799,21 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "is_contiguous") {
     if (args.at(0)) {
+      auto warnContiguous = [&]() {
+        if (auto source{args[0]->sourceLocation()}) {
+          context.Warn(common::UsageWarning::ConstantIsContiguous,
+              *source,
+              "constant values constructed at compile time are likely to be contiguous"_warn_en_US);
+        }
+      };
       if (auto *expr{args[0]->UnwrapExpr()}) {
         if (auto contiguous{IsContiguous(*expr, context)}) {
+          warnContiguous();
           return Expr<T>{*contiguous};
         }
       } else if (auto *assumedType{args[0]->GetAssumedTypeDummy()}) {
         if (auto contiguous{IsContiguous(*assumedType, context)}) {
+          warnContiguous();
           return Expr<T>{*contiguous};
         }
       }
