@@ -469,9 +469,10 @@ define i2 @constant_multiplied_7xi2(i2 %0) {
 
 define i32 @negative_scalable_vector(i32 %0) {
 ; CHECK-LABEL: @negative_scalable_vector(
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP0:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <vscale x 4 x i32> [[TMP2]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[DOTTR:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[DOTTR]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP0:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
   %2 = insertelement <vscale x 4 x i32> poison, i32 %0, i64 0

@@ -3785,13 +3785,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       // vector.reduce.add.vNiM(splat(%x)) -> mul(%x, N)
       if (Value *Splat = getSplatValue(Arg)) {
-        ElementCount VecToReduceCount =
-            cast<VectorType>(Arg->getType())->getElementCount();
+        VectorType *VecToReduceTy = cast<VectorType>(Arg->getType());
+        ElementCount VecToReduceCount = VecToReduceTy->getElementCount();
+        Value *RHS;
         if (VecToReduceCount.isFixed()) {
           unsigned VectorSize = VecToReduceCount.getFixedValue();
-          return BinaryOperator::CreateMul(
-              Splat, ConstantInt::get(Splat->getType(), VectorSize));
+          RHS = ConstantInt::get(Splat->getType(), VectorSize);
         }
+
+        RHS = Builder.CreateElementCount(Type::getInt64Ty(II->getContext()),
+                                         VecToReduceCount);
+        if (Splat->getType() != RHS->getType())
+          RHS = Builder.CreateZExtOrTrunc(RHS, Splat->getType());
+        return BinaryOperator::CreateMul(Splat, RHS);
       }
     }
     [[fallthrough]];
