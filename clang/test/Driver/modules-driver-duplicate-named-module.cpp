@@ -3,6 +3,7 @@
 // RUN: split-file %s %t
 
 // RUN: not %clang -std=c++23 -fmodules -fmodules-driver -Rmodules-driver \
+// RUN:   -fmodules-cache-path=%t/modules-cache \
 // RUN:   %t/main.cpp %t/A1.cpp %t/A2.cpp 2>&1 \
 // RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck -DPREFIX=%/t --check-prefixes=CHECK %s

@@ -19,6 +19,7 @@
 // RUN:   -stdlib=libc++ \
 // RUN:   -resource-dir=%t/Inputs/usr/lib/x86_64-linux-gnu \
 // RUN:   --target=x86_64-linux-gnu \
+// RUN:   -fmodules-cache-path=%t/modules-cache \
 // RUN:   main.cpp \
 // RUN:   -### 2>&1 \
 // RUN:   | sed 's:\\\\\?:/:g' \

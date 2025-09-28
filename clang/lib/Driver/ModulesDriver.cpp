@@ -582,7 +582,7 @@ void ScanResultCollector::ClangModuleDepsCollector::mergeGraph(
   SmallVector<ModuleDeps *> NewModuleDeps;
 
   {
-    std::scoped_lock SL(Lock);
+    std::scoped_lock<std::mutex> SL(Lock);
 
     for (auto &MD : ModuleGraph) {
       if (const auto It = ModuleGraphIndexByID.find(MD.ID);
@@ -726,7 +726,7 @@ SmallVector<size_t>
 SystemInputRegistry::getNewSystemInputs(ArrayRef<std::string> NamedDeps) {
   SmallVector<size_t, 8> ToSchedule;
   {
-    std::scoped_lock SL(Lock);
+    std::scoped_lock<std::mutex> SL(Lock);
     for (const auto &ModuleName : NamedDeps) {
       const auto It = NameToManifestIndex.find(ModuleName);
       if (It == NameToManifestIndex.end())
