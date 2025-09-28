@@ -63,6 +63,26 @@ static IntegerAttr mulIntegerAttrs(PatternRewriter &builder, Value res,
   return applyToIntegerAttrs(builder, res, lhs, rhs, std::multiplies<APInt>());
 }
 
+static IntegerAttr sminIntegerAttrs(PatternRewriter &builder, Value res,
+                                    Attribute lhs, Attribute rhs) {
+  return applyToIntegerAttrs(builder, res, lhs, rhs, llvm::APIntOps::smin);
+}
+
+static IntegerAttr uminIntegerAttrs(PatternRewriter &builder, Value res,
+                                    Attribute lhs, Attribute rhs) {
+  return applyToIntegerAttrs(builder, res, lhs, rhs, llvm::APIntOps::umin);
+}
+
+static IntegerAttr smaxIntegerAttrs(PatternRewriter &builder, Value res,
+                                    Attribute lhs, Attribute rhs) {
+  return applyToIntegerAttrs(builder, res, lhs, rhs, llvm::APIntOps::smax);
+}
+
+static IntegerAttr umaxIntegerAttrs(PatternRewriter &builder, Value res,
+                                    Attribute lhs, Attribute rhs) {
+  return applyToIntegerAttrs(builder, res, lhs, rhs, llvm::APIntOps::umax);
+}
+
 // Merge overflow flags from 2 ops, selecting the most conservative combination.
 static IntegerOverflowFlagsAttr
 mergeOverflowFlags(IntegerOverflowFlagsAttr val1,
@@ -1162,6 +1182,11 @@ OpFoldResult MaxSIOp::fold(FoldAdaptor adaptor) {
                                         });
 }
 
+void arith::MaxSIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                 MLIRContext *context) {
+  patterns.add<MaxSIMaxSIConstant>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // MaxUIOp
 //===----------------------------------------------------------------------===//
@@ -1185,6 +1210,11 @@ OpFoldResult MaxUIOp::fold(FoldAdaptor adaptor) {
                                         [](const APInt &a, const APInt &b) {
                                           return llvm::APIntOps::umax(a, b);
                                         });
+}
+
+void arith::MaxUIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                 MLIRContext *context) {
+  patterns.add<MaxUIMaxUIConstant>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1248,6 +1278,11 @@ OpFoldResult MinSIOp::fold(FoldAdaptor adaptor) {
                                         });
 }
 
+void arith::MinSIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                 MLIRContext *context) {
+  patterns.add<MinSIMinSIConstant>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // MinUIOp
 //===----------------------------------------------------------------------===//
@@ -1271,6 +1306,11 @@ OpFoldResult MinUIOp::fold(FoldAdaptor adaptor) {
                                         [](const APInt &a, const APInt &b) {
                                           return llvm::APIntOps::umin(a, b);
                                         });
+}
+
+void arith::MinUIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                 MLIRContext *context) {
+  patterns.add<MinUIMinUIConstant>(context);
 }
 
 //===----------------------------------------------------------------------===//

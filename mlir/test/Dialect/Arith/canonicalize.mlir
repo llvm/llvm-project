@@ -1952,6 +1952,30 @@ func.func @bitcastChain(%arg: i16) -> f16 {
 
 // -----
 
+// CHECK-LABEL: @maxsiMaxsiConst1
+//       CHECK:   %[[C42:.+]] = arith.constant 42 : i32
+//       CHECK:   %[[RES:.+]] = arith.maxsi %arg0, %[[C42]] : i32
+//       CHECK:   return %[[RES]]
+func.func @maxsiMaxsiConst1(%arg0: i32) -> i32 {
+  %c17 = arith.constant 17 : i32
+  %c42 = arith.constant 42 : i32
+  %max1 = arith.maxsi %arg0, %c17 : i32
+  %max2 = arith.maxsi %max1, %c42 : i32
+  return %max2 : i32
+}
+
+// CHECK-LABEL: @maxsiMaxsiConst2
+//       CHECK:   %[[C21:.+]] = arith.constant 21 : i32
+//       CHECK:   %[[RES:.+]] = arith.maxsi %arg0, %[[C21]] : i32
+//       CHECK:   return %[[RES]]
+func.func @maxsiMaxsiConst2(%arg0: i32) -> i32 {
+  %c7 = arith.constant 7 : i32
+  %c21 = arith.constant 21 : i32
+  %max1 = arith.maxsi %arg0, %c7 : i32
+  %max2 = arith.maxsi %c21, %max1 : i32
+  return %max2 : i32
+}
+
 // CHECK-LABEL: test_maxsi
 // CHECK-DAG: %[[C0:.+]] = arith.constant 42
 // CHECK-DAG: %[[MAX_INT_CST:.+]] = arith.constant 127
@@ -1985,6 +2009,30 @@ func.func @test_maxsi2(%arg0 : i8) -> (i8, i8, i8, i8) {
 }
 
 // -----
+
+// CHECK-LABEL: @maxuiMaxuiConst1
+//       CHECK:   %[[C42:.+]] = arith.constant 42 : index
+//       CHECK:   %[[RES:.+]] = arith.maxui %arg0, %[[C42]] : index
+//       CHECK:   return %[[RES]]
+func.func @maxuiMaxuiConst1(%arg0: index) -> index {
+  %c17 = arith.constant 17 : index
+  %c42 = arith.constant 42 : index
+  %max1 = arith.maxui %arg0, %c17 : index
+  %max2 = arith.maxui %max1, %c42 : index
+  return %max2 : index
+}
+
+// CHECK-LABEL: @maxuiMaxuiConst2
+//       CHECK:   %[[C21:.+]] = arith.constant 21 : index
+//       CHECK:   %[[RES:.+]] = arith.maxui %arg0, %[[C21]] : index
+//       CHECK:   return %[[RES]]
+func.func @maxuiMaxuiConst2(%arg0: index) -> index {
+  %c7 = arith.constant 7 : index
+  %c21 = arith.constant 21 : index
+  %max1 = arith.maxui %arg0, %c7 : index
+  %max2 = arith.maxui %c21, %max1 : index
+  return %max2 : index
+}
 
 // CHECK-LABEL: test_maxui
 // CHECK-DAG: %[[C0:.+]] = arith.constant 42
@@ -2020,6 +2068,30 @@ func.func @test_maxui2(%arg0 : i8) -> (i8, i8, i8, i8) {
 
 // -----
 
+// CHECK-LABEL: @minsiMinsiConst1
+//       CHECK:   %[[C17:.+]] = arith.constant 17 : i32
+//       CHECK:   %[[RES:.+]] = arith.minsi %arg0, %[[C17]] : i32
+//       CHECK:   return %[[RES]]
+func.func @minsiMinsiConst1(%arg0: i32) -> i32 {
+  %c17 = arith.constant 17 : i32
+  %c42 = arith.constant 42 : i32
+  %min1 = arith.minsi %arg0, %c17 : i32
+  %min2 = arith.minsi %min1, %c42 : i32
+  return %min2 : i32
+}
+
+// CHECK-LABEL: @minsiMinsiConst2
+//       CHECK:   %[[C7:.+]] = arith.constant 7 : i32
+//       CHECK:   %[[RES:.+]] = arith.minsi %arg0, %[[C7]] : i32
+//       CHECK:   return %[[RES]]
+func.func @minsiMinsiConst2(%arg0: i32) -> i32 {
+  %c7 = arith.constant 7 : i32
+  %c21 = arith.constant 21 : i32
+  %min1 = arith.minsi %arg0, %c7 : i32
+  %min2 = arith.minsi %c21, %min1 : i32
+  return %min2 : i32
+}
+
 // CHECK-LABEL: test_minsi
 // CHECK-DAG: %[[C0:.+]] = arith.constant 42
 // CHECK-DAG: %[[MIN_INT_CST:.+]] = arith.constant -128
@@ -2053,6 +2125,30 @@ func.func @test_minsi2(%arg0 : i8) -> (i8, i8, i8, i8) {
 }
 
 // -----
+
+// CHECK-LABEL: @minuiMinuiConst1
+//       CHECK:   %[[C17:.+]] = arith.constant 17 : index
+//       CHECK:   %[[RES:.+]] = arith.minui %arg0, %[[C17]] : index
+//       CHECK:   return %[[RES]]
+func.func @minuiMinuiConst1(%arg0: index) -> index {
+  %c17 = arith.constant 17 : index
+  %c42 = arith.constant 42 : index
+  %min1 = arith.minui %arg0, %c17 : index
+  %min2 = arith.minui %min1, %c42 : index
+  return %min2 : index
+}
+
+// CHECK-LABEL: @minuiMinuiConst2
+//       CHECK:   %[[C7:.+]] = arith.constant 7 : index
+//       CHECK:   %[[RES:.+]] = arith.minui %arg0, %[[C7]] : index
+//       CHECK:   return %[[RES]]
+func.func @minuiMinuiConst2(%arg0: index) -> index {
+  %c7 = arith.constant 7 : index
+  %c21 = arith.constant 21 : index
+  %min1 = arith.minui %arg0, %c7 : index
+  %min2 = arith.minui %c21, %min1 : index
+  return %min2 : index
+}
 
 // CHECK-LABEL: test_minui
 // CHECK-DAG: %[[C0:.+]] = arith.constant 42
@@ -3377,4 +3473,3 @@ func.func @unreachable() {
   %add = arith.addi %add, %c1_i64 : i64
   cf.br ^unreachable
 }
-
