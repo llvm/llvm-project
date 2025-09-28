@@ -66,7 +66,9 @@ template <typename value_type, std::size_t alignment = unaligned>
 }
 
 template <typename value_type, endianness endian, std::size_t alignment>
-[[nodiscard]] inline value_type read(const void *memory) {
+[[nodiscard]] LLVM_DEPRECATED("Pass endian as a function argument instead",
+                              "read") inline value_type
+    read(const void *memory) {
   return read<value_type, alignment>(memory, endian);
 }
 
@@ -127,7 +129,7 @@ template <typename value_type, endianness endian, std::size_t alignment>
                                                    uint64_t startBit) {
   assert(startBit < 8);
   if (startBit == 0)
-    return read<value_type, endian, alignment>(memory);
+    return read<value_type, alignment>(memory, endian);
   else {
     // Read two values and compose the result from them.
     value_type val[2];
@@ -223,8 +225,8 @@ struct packed_endian_specific_integral {
   explicit packed_endian_specific_integral(value_type val) { *this = val; }
 
   value_type value() const {
-    return endian::read<value_type, endian, alignment>(
-      (const void*)Value.buffer);
+    return endian::read<value_type, alignment>((const void *)Value.buffer,
+                                               endian);
   }
   operator value_type() const { return value(); }
 
@@ -263,7 +265,7 @@ public:
     explicit ref(void *Ptr) : Ptr(Ptr) {}
 
     operator value_type() const {
-      return endian::read<value_type, endian, alignment>(Ptr);
+      return endian::read<value_type, alignment>(Ptr, endian);
     }
 
     void operator=(value_type NewValue) {

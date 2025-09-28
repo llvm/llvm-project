@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=ref,both %s
+// RUN: %clang_cc1 -fcxx-exceptions -std=c++20                                         -verify=ref,both %s
 
 namespace Throw {
 

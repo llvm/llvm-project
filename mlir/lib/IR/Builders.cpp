@@ -14,6 +14,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/Support/DebugLog.h"
 
 using namespace mlir;
 
@@ -486,8 +487,24 @@ OpBuilder::tryFold(Operation *op, SmallVectorImpl<Value> &results,
 
   // Try to fold the operation.
   SmallVector<OpFoldResult, 4> foldResults;
+  LDBG() << "Trying to fold: "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
+  if (op->getName().getStringRef() == "vector.extract") {
+    Operation *parent = op->getParentOp();
+    while (parent && parent->getName().getStringRef() != "spirv.func")
+      parent = parent->getParentOp();
+    if (parent)
+      parent->dump();
+  }
   if (failed(op->fold(foldResults)))
     return cleanupFailure();
+
+  int count = 0;
+  do {
+    LDBG() << "Folded in place #" << count
+           << " times: " << OpWithFlags(op, OpPrintingFlags().skipRegions());
+    count++;
+  } while (foldResults.empty() && succeeded(op->fold(foldResults)));
 
   // An in-place fold does not require generation of any constants.
   if (foldResults.empty())
