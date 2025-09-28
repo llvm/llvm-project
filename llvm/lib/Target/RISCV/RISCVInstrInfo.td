@@ -752,13 +752,15 @@ def LUI : RVInstU<OPC_LUI, (outs GPR:$rd), (ins uimm20_lui:$imm20),
 def AUIPC : RVInstU<OPC_AUIPC, (outs GPR:$rd), (ins uimm20_auipc:$imm20),
                     "auipc", "$rd, $imm20">, Sched<[WriteIALU]>;
 
-def JAL : RVInstJ<OPC_JAL, (outs GPR:$rd), (ins simm21_lsb0_jal:$imm20),
-                  "jal", "$rd, $imm20">, Sched<[WriteJal]>;
+    let isCall = 1 in {
+    def JAL : RVInstJ<OPC_JAL, (outs GPR:$rd), (ins simm21_lsb0_jal:$imm20),
+                    "jal", "$rd, $imm20">, Sched<[WriteJal]>;
 
-def JALR : RVInstI<0b000, OPC_JALR, (outs GPR:$rd),
-                   (ins GPR:$rs1, simm12_lo:$imm12),
-                   "jalr", "$rd, ${imm12}(${rs1})">,
-           Sched<[WriteJalr, ReadJalr]>;
+    def JALR : RVInstI<0b000, OPC_JALR, (outs GPR:$rd),
+                    (ins GPR:$rs1, simm12_lo:$imm12),
+                    "jalr", "$rd, ${imm12}(${rs1})">,
+            Sched<[WriteJalr, ReadJalr]>;
+    }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 def BEQ  : BranchCC_rri<0b000, "beq">;
