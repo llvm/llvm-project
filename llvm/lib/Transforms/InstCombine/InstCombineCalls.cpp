@@ -3778,9 +3778,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (ReducedVectorElementCount.isFixed()) {
           unsigned VectorSize = ReducedVectorElementCount.getFixedValue();
           Type *SplatType = Splat->getType();
-          Value *Res =
-              Builder.CreateMul(Splat, ConstantInt::get(SplatType, VectorSize));
-          return replaceInstUsesWith(CI, Res);
+          return BinaryOperator::CreateMul(
+              Splat, ConstantInt::get(SplatType, VectorSize));
         }
       }
     }
