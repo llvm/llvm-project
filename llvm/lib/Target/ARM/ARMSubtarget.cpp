@@ -222,8 +222,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   // NEON f32 ops are non-IEEE 754 compliant. Darwin is ok with it by default.
   const FeatureBitset &Bits = getFeatureBits();
   if ((Bits[ARM::ProcA5] || Bits[ARM::ProcA8]) && // Where this matters
-      (Options.UnsafeFPMath || isTargetDarwin() ||
-       DM == DenormalMode::getPreserveSign()))
+      (isTargetDarwin() || DM == DenormalMode::getPreserveSign()))
     HasNEONForFP = true;
 
   if (isRWPI())

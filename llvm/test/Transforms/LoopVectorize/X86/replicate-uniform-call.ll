@@ -40,13 +40,10 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE6]]
 ; CHECK:       [[PRED_UREM_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = tail call i64 @llvm.smax.i64(i64 0, i64 0)
-; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], i64 1, i64 [[TMP13]]
 ; CHECK-NEXT:    [[PREDPHI7:%.*]] = select i1 [[C]], i64 1, i64 [[TMP13]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[P]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[PREDPHI7]], 1
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[DST]], i64 [[ADD]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP17]]
-; CHECK-NEXT:    store i64 0, ptr [[GEP]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[TMP19]], align 8
 ; CHECK-NEXT:    store i64 0, ptr [[TMP19]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024

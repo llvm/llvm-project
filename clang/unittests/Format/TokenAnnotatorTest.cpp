@@ -4159,7 +4159,7 @@ TEST_F(TokenAnnotatorTest, LineCommentTrailingBackslash) {
   EXPECT_TOKEN(Tokens[1], tok::comment, TT_LineComment);
 }
 
-TEST_F(TokenAnnotatorTest, KeywordedFunctionLikeMacro) {
+TEST_F(TokenAnnotatorTest, QtProperty) {
   auto Style = getLLVMStyle();
   Style.AllowBreakBeforeQtProperty = true;
 
