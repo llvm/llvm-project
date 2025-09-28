@@ -22,4 +22,3 @@ Options
 
    A regular expression for the file name to be ignored by the check. Default
    is empty string.
-
