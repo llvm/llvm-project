@@ -12,6 +12,8 @@ on:
 jobs:
   code_formatter:
     runs-on: ubuntu-24.04
+    container:
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04:latest'
     timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -38,24 +40,13 @@ jobs:
         run: |
           echo "Formatting files:"
           echo "$CHANGED_FILES"
-
-      # The clang format version should always be upgraded to the first version
-      # of a release cycle (x.1.0) or the last version of a release cycle, or
-      # if there have been relevant clang-format backports.
-      - name: Install clang-format
-        uses: aminya/setup-cpp@17c11551771948abc5752bbf3183482567c7caf0 # v1.1.1
-        with:
-          clangformat: 21.1.0
-
-      - name: Setup Python env
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: 'llvm/utils/git/requirements_formatting.txt'
+      
+      - name: Create python venv
+        run: |
+          python -m venv venv
 
       - name: Install python dependencies
-        run: pip install -r llvm/utils/git/requirements_formatting.txt
+        run: venv/bin/pip install -r llvm/utils/git/requirements_formatting.txt
 
       - name: Run code formatter
         env:
@@ -63,6 +54,7 @@ jobs:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         # Create an empty comments file so the pr-write job doesn't fail.
         run: |
+          . venv/bin/activate &&
           echo "[]" > comments &&
           python ./llvm/utils/git/code-format-helper.py \
             --write-comment-to-file \
