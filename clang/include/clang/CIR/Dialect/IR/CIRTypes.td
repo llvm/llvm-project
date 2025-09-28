@@ -253,30 +253,32 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
     ```
   }];
 
-  let parameters = (ins "mlir::Type":$pointee,
-      CIR_DefaultValuedEnumParameter<CIR_AddressSpace,
-                                     "cir::AddressSpace::Default">:$addrSpace);
+  let parameters = (ins
+    "mlir::Type":$pointee,
+    CIR_DefaultValuedEnumParameter<
+      CIR_AddressSpace,
+      "cir::AddressSpace::Default"
+    >:$addrSpace
+  );
 
   let skipDefaultBuilders = 1;
-  let builders = [TypeBuilderWithInferredContext<
-                      (ins "mlir::Type":$pointee,
-                          CArg<"cir::AddressSpace",
-                               "cir::AddressSpace::Default">:$addrSpace),
-                      [{
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$pointee,
+      CArg<"cir::AddressSpace", "cir::AddressSpace::Default">:$addrSpace), [{
         return $_get(pointee.getContext(), pointee, addrSpace);
     }]>,
-                  TypeBuilder<
-                      (ins "mlir::Type":$pointee,
-                          CArg<"cir::AddressSpace",
-                               "cir::AddressSpace::Default">:$addrSpace),
-                      [{
+    TypeBuilder<(ins
+      "mlir::Type":$pointee,
+      CArg<"cir::AddressSpace", "cir::AddressSpace::Default">:$addrSpace), [{
         return $_get($_ctxt, pointee, addrSpace);
-    }]>];
+    }]>
+  ];
 
   let assemblyFormat = [{
     `<`
       $pointee
-      ( `,` `addrspace` `(` custom<AddressSpaceValue>($addrSpace)^ `)` )?
+      ( `,` `addrspace` `(` `` custom<AddressSpaceValue>($addrSpace)^ `)` )?
     `>`
   }];
 

@@ -605,13 +605,15 @@ def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
 // AddressSpaceAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_AddressSpaceAttr : CIR_EnumAttr<CIR_AddressSpace, "address_space"> {
-  let builders = [AttrBuilder<(ins "clang::LangAS":$langAS), [{
+def CIR_AddressSpaceAttr :  CIR_EnumAttr<CIR_AddressSpace, "address_space"> {
+  let builders = [
+    AttrBuilder<(ins "clang::LangAS":$langAS), [{
       return $_get($_ctxt, cir::toCIRAddressSpace(langAS));
-    }]>];
+    }]>
+  ];
 
   let assemblyFormat = [{
-    `` custom<AddressSpaceValue>($value)
+    `(` custom<AddressSpaceValue>($value) `)`
   }];
 
   let defaultValue = "cir::AddressSpace::Default";
