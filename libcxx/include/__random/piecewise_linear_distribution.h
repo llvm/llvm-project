@@ -194,7 +194,7 @@ piecewise_linear_distribution<_RealType>::param_type::param_type(
     __areas_.assign(1, 0.0);
   } else {
     __densities_.reserve(__b_.size());
-    for (size_t __i = 0; __i < __b_.size(); ++__i, ++__f_w)
+    for (size_t __i = 0; __i < __b_.size(); ++__i, (void)++__f_w)
       __densities_.push_back(*__f_w);
     __init();
   }
