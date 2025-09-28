@@ -32,3 +32,17 @@ define i64 @OpenFilter(i64 %x) {
   %r = zext i8 %t to i64
   ret i64 %r
 }
+
+define i64 @ptr2addr1() {
+; CHECK-LABEL: @ptr2addr1(
+; CHECK-NEXT:    ret i64 ptrtoaddr (ptr inttoptr (i64 1 to ptr) to i64)
+;
+  ret i64 ptrtoaddr (ptr getelementptr (i8, ptr null, i64 1) to i64)
+}
+
+define i64 @ptr2addr2() {
+; CHECK-LABEL: @ptr2addr2(
+; CHECK-NEXT:    ret i64 ptrtoaddr (ptr inttoptr (i64 123 to ptr) to i64)
+;
+  ret i64 ptrtoaddr (ptr inttoptr (i64 123 to ptr) to i64)
+}
