@@ -1147,7 +1147,7 @@ def ext_lambda_missing_parens : ExtWarn<
   "lambda without a parameter clause is a C++23 extension">,
   InGroup<CXX23>;
 def warn_cxx20_compat_decl_attrs_on_lambda : Warning<
-  "%select{an attribute specifier sequence|%1}0 in this position "
+  "%select{an attribute specifier sequence|%0}1 in this position "
   "is incompatible with C++ standards before C++23">,
   InGroup<CXXPre23Compat>, DefaultIgnore;
 
