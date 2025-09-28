@@ -608,14 +608,14 @@ public:
 
 /// This returns a reference to a raw_fd_ostream for standard output. Use it
 /// like: outs() << "foo" << "bar";
-LLVM_ABI raw_fd_ostream &outs();
+LLVM_ABI raw_ostream &outs();
 
 /// This returns a reference to a raw_ostream for standard error.
 /// Use it like: errs() << "foo" << "bar";
 /// By default, the stream is tied to stdout to ensure stdout is flushed before
 /// stderr is written, to ensure the error messages are written in their
 /// expected place.
-LLVM_ABI raw_fd_ostream &errs();
+LLVM_ABI raw_ostream &errs();
 
 /// This returns a reference to a raw_ostream which simply discards output.
 LLVM_ABI raw_ostream &nulls();

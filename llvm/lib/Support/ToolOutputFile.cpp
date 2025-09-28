@@ -41,7 +41,7 @@ ToolOutputFile::ToolOutputFile(StringRef Filename, std::error_code &EC,
                                sys::fs::OpenFlags Flags)
     : Installer(Filename) {
   if (isStdout(Filename)) {
-    OS = &outs();
+    // OS = &outs();
     EC = std::error_code();
     return;
   }
