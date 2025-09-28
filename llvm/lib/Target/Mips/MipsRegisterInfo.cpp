@@ -89,14 +89,25 @@ MipsRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
                                      : CSR_Interrupt_32_SaveList;
   }
 
-  if (Subtarget.isSingleFloat())
-    return CSR_SingleFloatOnly_SaveList;
+  // N64 ABI
+  if (Subtarget.isABI_N64()) {
+    if (Subtarget.isSingleFloat())
+      return CSR_N64_SingleFloat_SaveList;
 
-  if (Subtarget.isABI_N64())
     return CSR_N64_SaveList;
+  }
 
-  if (Subtarget.isABI_N32())
+  // N32 ABI
+  if (Subtarget.isABI_N32()) {
+    if (Subtarget.isSingleFloat())
+      return CSR_N32_SingleFloat_SaveList;
+
     return CSR_N32_SaveList;
+  }
+
+  // O32 ABI
+  if (Subtarget.isSingleFloat())
+    return CSR_O32_SingleFloat_SaveList;
 
   if (Subtarget.isFP64bit())
     return CSR_O32_FP64_SaveList;
@@ -111,14 +122,25 @@ const uint32_t *
 MipsRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const {
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
-  if (Subtarget.isSingleFloat())
-    return CSR_SingleFloatOnly_RegMask;
+  // N64 ABI
+  if (Subtarget.isABI_N64()) {
+    if (Subtarget.isSingleFloat())
+      return CSR_N64_SingleFloat_RegMask;
 
-  if (Subtarget.isABI_N64())
     return CSR_N64_RegMask;
+  }
 
-  if (Subtarget.isABI_N32())
+  // N32 ABI
+  if (Subtarget.isABI_N32()) {
+    if (Subtarget.isSingleFloat())
+      return CSR_N32_SingleFloat_RegMask;
+
     return CSR_N32_RegMask;
+  }
+
+  // O32 ABI
+  if (Subtarget.isSingleFloat())
+    return CSR_O32_SingleFloat_RegMask;
 
   if (Subtarget.isFP64bit())
     return CSR_O32_FP64_RegMask;

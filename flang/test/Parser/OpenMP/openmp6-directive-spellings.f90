@@ -124,12 +124,13 @@ subroutine f04
 end
 
 !UNPARSE: SUBROUTINE f04
-!UNPARSE: !$OMP DECLARE TARGET
+!UNPARSE: !$OMP DECLARE_TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | OmpDeclareTargetSpecifier -> OmpDeclareTargetWithClause -> OmpClauseList ->
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
+!PARSE-TREE: | OmpClauseList ->
+!PARSE-TREE: | Flags = None
 
 subroutine f05
   implicit none
