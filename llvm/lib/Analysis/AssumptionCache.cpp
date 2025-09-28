@@ -53,6 +53,22 @@ AssumptionCache::getOrInsertAffectedValues(Value *V) {
   return AffectedValues[AffectedValueCallbackVH(V, this)];
 }
 
+void AssumptionCache::findValuesAffectedByOperandBundle(
+    OperandBundleUse Bundle, function_ref<void(Value *)> InsertAffected) {
+  auto AddAffectedVal = [&](Value *V) {
+    if (isa<Argument, GlobalValue, Instruction>(V))
+      InsertAffected(V);
+  };
+
+  if (Bundle.getTagName() == "separate_storage") {
+    assert(Bundle.Inputs.size() == 2 && "separate_storage must have two args");
+    AddAffectedVal(getUnderlyingObject(Bundle.Inputs[0]));
+    AddAffectedVal(getUnderlyingObject(Bundle.Inputs[1]));
+  } else if (Bundle.Inputs.size() > ABA_WasOn &&
+             Bundle.getTagName() != IgnoreBundleTag)
+    AddAffectedVal(Bundle.Inputs[ABA_WasOn]);
+}
+
 static void
 findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
                    SmallVectorImpl<AssumptionCache::ResultElem> &Affected) {
@@ -69,17 +85,10 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
     }
   };
 
-  for (unsigned Idx = 0; Idx != CI->getNumOperandBundles(); Idx++) {
-    OperandBundleUse Bundle = CI->getOperandBundleAt(Idx);
-    if (Bundle.getTagName() == "separate_storage") {
-      assert(Bundle.Inputs.size() == 2 &&
-             "separate_storage must have two args");
-      AddAffectedVal(getUnderlyingObject(Bundle.Inputs[0]), Idx);
-      AddAffectedVal(getUnderlyingObject(Bundle.Inputs[1]), Idx);
-    } else if (Bundle.Inputs.size() > ABA_WasOn &&
-               Bundle.getTagName() != IgnoreBundleTag)
-      AddAffectedVal(Bundle.Inputs[ABA_WasOn], Idx);
-  }
+  for (unsigned Idx = 0; Idx != CI->getNumOperandBundles(); Idx++)
+    AssumptionCache::findValuesAffectedByOperandBundle(
+        CI->getOperandBundleAt(Idx),
+        [&](Value *V) { Affected.push_back({V, Idx}); });
 
   Value *Cond = CI->getArgOperand(0);
   findValuesAffectedByCondition(Cond, /*IsAssume=*/true, InsertAffected);
