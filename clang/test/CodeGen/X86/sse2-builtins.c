@@ -515,36 +515,56 @@ int test_mm_comieq_sd(__m128d A, __m128d B) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comieq.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comieq_sd(A, B);
 }
+TEST_CONSTEXPR(_mm_comieq_sd(_mm_set1_pd(1.0), _mm_set1_pd(1.0)) == 1);
+TEST_CONSTEXPR(_mm_comieq_sd(_mm_set1_pd(__builtin_nan("")), _mm_set1_pd(1.0)) == 0);
 
 int test_mm_comige_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comige_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comige.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comige_sd(A, B);
 }
+TEST_CONSTEXPR(_mm_comige_sd(_mm_set1_pd(2.0), _mm_set1_pd(2.0)) == 1);
+TEST_CONSTEXPR(_mm_comige_sd(_mm_set1_pd(3.0), _mm_set1_pd(2.0)) == 1);
+TEST_CONSTEXPR(_mm_comige_sd(_mm_set1_pd(1.0), _mm_set1_pd(2.0)) == 0);
+TEST_CONSTEXPR(_mm_comige_sd(_mm_set1_pd(__builtin_nan("")), _mm_set1_pd(2.0)) == 0);
 
 int test_mm_comigt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comigt_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comigt.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comigt_sd(A, B);
 }
+TEST_CONSTEXPR(_mm_comigt_sd(_mm_set1_pd(3.0), _mm_set1_pd(2.0)) == 1);
+TEST_CONSTEXPR(_mm_comigt_sd(_mm_set1_pd(2.0), _mm_set1_pd(3.0)) == 0);
+TEST_CONSTEXPR(_mm_comigt_sd(_mm_set1_pd(2.0), _mm_set1_pd(2.0)) == 0);
+TEST_CONSTEXPR(_mm_comigt_sd(_mm_set1_pd(__builtin_nan("")), _mm_set1_pd(2.0)) == 0);
 
 int test_mm_comile_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comile_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comile.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comile_sd(A, B);
 }
+TEST_CONSTEXPR(_mm_comile_sd(_mm_set1_pd(1.0), _mm_set1_pd(1.0)) == 1);
+TEST_CONSTEXPR(_mm_comile_sd(_mm_set1_pd(1.0), _mm_set1_pd(2.0)) == 1);
+TEST_CONSTEXPR(_mm_comile_sd(_mm_set1_pd(2.0), _mm_set1_pd(1.0)) == 0);
+TEST_CONSTEXPR(_mm_comile_sd(_mm_set1_pd(__builtin_nan("")), _mm_set1_pd(2.0)) == 0);
 
 int test_mm_comilt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comilt_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comilt.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comilt_sd(A, B);
 }
+TEST_CONSTEXPR(_mm_comilt_sd(_mm_set1_pd(1.0), _mm_set1_pd(2.0)) == 1);
+TEST_CONSTEXPR(_mm_comilt_sd(_mm_set1_pd(2.0), _mm_set1_pd(1.0)) == 0);
+TEST_CONSTEXPR(_mm_comilt_sd(_mm_set1_pd(1.0), _mm_set1_pd(1.0)) == 0);
+TEST_CONSTEXPR(_mm_comilt_sd(_mm_set1_pd(__builtin_nan("")), _mm_set1_pd(2.0)) == 0);
 
 int test_mm_comineq_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comineq_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comineq.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comineq_sd(A, B);
 }
+TEST_CONSTEXPR(_mm_comineq_sd(_mm_set1_pd(2.0), _mm_set1_pd(3.0)) == 1);
+TEST_CONSTEXPR(_mm_comineq_sd(_mm_set1_pd(__builtin_nan("")), _mm_set1_pd(3.0)) == 1);
 
 __m128d test_mm_cvtepi32_pd(__m128i A) {
   // CHECK-LABEL: test_mm_cvtepi32_pd
@@ -1802,36 +1822,57 @@ int test_mm_ucomieq_sd(__m128d A, __m128d B) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomieq.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomieq_sd(A, B);
 }
+TEST_CONSTEXPR(_mm_ucomieq_sd(_mm_set1_pd(1.0), _mm_set1_pd(1.0)) == 1);
+TEST_CONSTEXPR(_mm_ucomieq_sd(_mm_set1_pd(__builtin_nan("")), _mm_set1_pd(1.0)) == 0);
 
 int test_mm_ucomige_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomige_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomige.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomige_sd(A, B);
 }
+TEST_CONSTEXPR(_mm_ucomige_sd(_mm_set1_pd(1.0), _mm_set1_pd(1.0)) == 1);
+TEST_CONSTEXPR(_mm_ucomige_sd(_mm_set1_pd(2.0), _mm_set1_pd(1.0)) == 1);
+TEST_CONSTEXPR(_mm_ucomige_sd(_mm_set1_pd(1.0), _mm_set1_pd(2.0)) == 0);
+TEST_CONSTEXPR(_mm_ucomige_sd(_mm_set1_pd(__builtin_nan("")), _mm_set1_pd(1.0)) == 0);
 
 int test_mm_ucomigt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomigt_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomigt.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomigt_sd(A, B);
 }
+TEST_CONSTEXPR(_mm_ucomigt_sd(_mm_set1_pd(2.0), _mm_set1_pd(1.0)) == 1);
+TEST_CONSTEXPR(_mm_ucomigt_sd(_mm_set1_pd(1.0), _mm_set1_pd(2.0)) == 0);
+TEST_CONSTEXPR(_mm_ucomigt_sd(_mm_set1_pd(1.0), _mm_set1_pd(1.0)) == 0);
+TEST_CONSTEXPR(_mm_ucomigt_sd(_mm_set1_pd(__builtin_nan("")), _mm_set1_pd(1.0)) == 0);
 
 int test_mm_ucomile_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomile_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomile.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomile_sd(A, B);
 }
+TEST_CONSTEXPR(_mm_ucomile_sd(_mm_set1_pd(1.0), _mm_set1_pd(1.0)) == 1);
+TEST_CONSTEXPR(_mm_ucomile_sd(_mm_set1_pd(1.0), _mm_set1_pd(2.0)) == 1);
+TEST_CONSTEXPR(_mm_ucomile_sd(_mm_set1_pd(2.0), _mm_set1_pd(1.0)) == 0);
+TEST_CONSTEXPR(_mm_ucomile_sd(_mm_set1_pd(__builtin_nan("")), _mm_set1_pd(2.0)) == 0);
 
 int test_mm_ucomilt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomilt_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomilt.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomilt_sd(A, B);
 }
+TEST_CONSTEXPR(_mm_ucomilt_sd(_mm_set1_pd(1.0), _mm_set1_pd(2.0)) == 1);
+TEST_CONSTEXPR(_mm_ucomilt_sd(_mm_set1_pd(2.0), _mm_set1_pd(1.0)) == 0);
+TEST_CONSTEXPR(_mm_ucomilt_sd(_mm_set1_pd(1.0), _mm_set1_pd(1.0)) == 0);
+TEST_CONSTEXPR(_mm_ucomilt_sd(_mm_set1_pd(__builtin_nan("")), _mm_set1_pd(2.0)) == 0);
+TEST_CONSTEXPR(_mm_ucomilt_sd(_mm_set1_pd(2.0), _mm_set1_pd(__builtin_nan(""))) == 0);
 
 int test_mm_ucomineq_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomineq_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomineq.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomineq_sd(A, B);
 }
+TEST_CONSTEXPR(_mm_ucomineq_sd(_mm_set1_pd(5.0), _mm_set1_pd(5.0)) == 0);
+TEST_CONSTEXPR(_mm_ucomineq_sd(_mm_set1_pd(__builtin_nanf("")), _mm_set1_pd(5.0)) == 1);
 
 __m128d test_mm_undefined_pd(void) {
   // X64-LABEL: test_mm_undefined_pd
