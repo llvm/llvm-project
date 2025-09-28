@@ -335,6 +335,21 @@ static void lowerFunnelShifts(IntrinsicInst *FSHIntrinsic) {
   FSHIntrinsic->setCalledFunction(FSHFunc);
 }
 
+static void lowerConstrainedFPCmpIntrinsic(
+    ConstrainedFPCmpIntrinsic *ConstrainedCmpIntrinsic,
+    SmallVector<Instruction *> &EraseFromParent) {
+  if (!ConstrainedCmpIntrinsic)
+    return;
+  // Extract the floating-point values being compared
+  Value *LHS = ConstrainedCmpIntrinsic->getArgOperand(0);
+  Value *RHS = ConstrainedCmpIntrinsic->getArgOperand(1);
+  FCmpInst::Predicate Pred = ConstrainedCmpIntrinsic->getPredicate();
+  IRBuilder<> Builder(ConstrainedCmpIntrinsic);
+  Value *FCmp = Builder.CreateFCmp(Pred, LHS, RHS);
+  ConstrainedCmpIntrinsic->replaceAllUsesWith(FCmp);
+  EraseFromParent.push_back(dyn_cast<Instruction>(ConstrainedCmpIntrinsic));
+}
+
 static void lowerExpectAssume(IntrinsicInst *II) {
   // If we cannot use the SPV_KHR_expect_assume extension, then we need to
   // ignore the intrinsic and move on. It should be removed later on by LLVM.
@@ -376,6 +391,7 @@ static bool toSpvLifetimeIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID) {
 bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
   bool Changed = false;
   const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
+  SmallVector<Instruction *> EraseFromParent;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : make_early_inc_range(BB)) {
       auto Call = dyn_cast<CallInst>(&I);
@@ -423,9 +439,17 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         lowerPtrAnnotation(II);
         Changed = true;
         break;
+      case Intrinsic::experimental_constrained_fcmp:
+      case Intrinsic::experimental_constrained_fcmps:
+        lowerConstrainedFPCmpIntrinsic(dyn_cast<ConstrainedFPCmpIntrinsic>(II),
+                                       EraseFromParent);
+        Changed = true;
+        break;
       }
     }
   }
+  for (auto *I : EraseFromParent)
+    I->eraseFromParent();
   return Changed;
 }
 

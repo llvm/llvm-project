@@ -4452,11 +4452,12 @@ static SDValue splitVectorIntBinary(SDValue Op, SelectionDAG &DAG,
 template <typename F>
 SDValue SplitOpsAndApply(SelectionDAG &DAG, const X86Subtarget &Subtarget,
                          const SDLoc &DL, EVT VT, ArrayRef<SDValue> Ops,
-                         F Builder, bool CheckBWI = true) {
+                         F Builder, bool CheckBWI = true,
+                         bool AllowAVX512 = true) {
   assert(Subtarget.hasSSE2() && "Target assumed to support at least SSE2");
   unsigned NumSubs = 1;
   if ((CheckBWI && Subtarget.useBWIRegs()) ||
-      (!CheckBWI && Subtarget.useAVX512Regs())) {
+      (!CheckBWI && AllowAVX512 && Subtarget.useAVX512Regs())) {
     if (VT.getSizeInBits() > 512) {
       NumSubs = VT.getSizeInBits() / 512;
       assert((VT.getSizeInBits() % 512) == 0 && "Illegal vector size");
@@ -45185,10 +45186,13 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::WrapperRIP:
     return true;
   case X86ISD::BLENDI:
+  case X86ISD::PSHUFB:
   case X86ISD::PSHUFD:
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
+  case X86ISD::VPERMILPV:
   case X86ISD::VPERMILPI:
+  case X86ISD::VPERMV:
   case X86ISD::VPERMV3: {
     SmallVector<int, 8> Mask;
     SmallVector<SDValue, 2> Ops;
@@ -45251,10 +45255,13 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::BLENDV:
     return false;
   // SSE target shuffles.
+  case X86ISD::PSHUFB:
   case X86ISD::PSHUFD:
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
+  case X86ISD::VPERMILPV:
   case X86ISD::VPERMILPI:
+  case X86ISD::VPERMV:
   case X86ISD::VPERMV3:
     return false;
   // SSE comparisons handle all icmp/fcmp cases.
@@ -58070,7 +58077,8 @@ static SDValue matchVPMADD52(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
   };
 
   return SplitOpsAndApply(DAG, Subtarget, DL, VT, {Acc, X, Y}, VPMADD52Builder,
-                          /*CheckBWI*/ false);
+                          /*CheckBWI*/ false,
+                          /*AllowAVX512*/ Subtarget.hasIFMA());
 }
 
 static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
