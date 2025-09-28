@@ -258,7 +258,8 @@ public:
         // If the current element is the last element(not leader), set the
         // successor of the current element's predecessor to null, and set
         // the 'Leader' field of the class leader to the predecessor element.
-        Pre->Next = nullptr;
+        Pre->Next = reinterpret_cast<const ECValue *>(
+            static_cast<intptr_t>(Pre->isLeader()));
         Leader->Leader = Pre;
       } else {
         // If the current element is in the middle of class, then simply
