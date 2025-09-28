@@ -767,6 +767,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::OpenBSD:
       return std::make_unique<OpenBSDTargetInfo<LoongArch64TargetInfo>>(Triple,
                                                                         Opts);
+    case llvm::Triple::UEFI:
+      return std::make_unique<UEFITargetInfo<LoongArch64TargetInfo>>(Triple,
+                                                                     Opts);
     default:
       return std::make_unique<LoongArch64TargetInfo>(Triple, Opts);
     }
