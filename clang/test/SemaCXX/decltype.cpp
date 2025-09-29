@@ -170,3 +170,33 @@ class conditional {
 // FIXME: The diagnostics here are produced twice.
 void foo(conditional<decltype((1),int>) {  // expected-note 2 {{to match this '('}} expected-error {{expected ')'}} expected-note 2{{to match this '<'}}
 } // expected-error {{expected function body after function declarator}} expected-error 2 {{expected '>'}} expected-error {{expected ')'}}
+
+
+namespace GH160497 {
+
+template <class> struct S {
+    template <class>
+    inline static auto mem =
+    [] { static_assert(false); // expected-error {{static assertion failed}} \
+        // expected-note {{while substituting into a lambda expression here}}
+        return 42;
+    }();
+};
+
+using T = decltype(S<void>::mem<void>);
+ // expected-note@-1 {{in instantiation of static data member 'GH160497::S<void>::mem<void>' requested here}}
+
+namespace N1 {
+
+template<class>
+struct S {
+  template<class>
+  inline static auto mem = 42;
+};
+
+using T = decltype(S<void>::mem<void>);
+
+T y = 42;
+
+}
+}
