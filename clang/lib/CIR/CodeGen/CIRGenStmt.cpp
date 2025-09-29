@@ -280,6 +280,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::OMPReverseDirectiveClass:
   case Stmt::OMPInterchangeDirectiveClass:
   case Stmt::OMPAssumeDirectiveClass:
+  case Stmt::OMPFuseDirectiveClass:
   case Stmt::OMPMaskedDirectiveClass:
   case Stmt::OMPStripeDirectiveClass:
   case Stmt::ObjCAtCatchStmtClass:
