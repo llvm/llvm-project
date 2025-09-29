@@ -137,7 +137,7 @@ define void @computeNumSignBits_shl_zext_vec_3(<2 x i8> %x, ptr %p) nounwind {
 ; X64-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-NEXT:    por %xmm2, %xmm1
 ; X64-NEXT:    movdqa %xmm0, %xmm2
-; X64-NEXT:    paddw %xmm0, %xmm2
+; X64-NEXT:    paddw %xmm2, %xmm2
 ; X64-NEXT:    movdqa %xmm2, %xmm3
 ; X64-NEXT:    psraw $1, %xmm3
 ; X64-NEXT:    pcmpeqw %xmm0, %xmm3
