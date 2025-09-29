@@ -1412,6 +1412,7 @@ Error BinaryFunction::disassemble() {
 
     if (MIB->isBranch(Instruction) || MIB->isCall(Instruction)) {
 
+      LLVM_DEBUG(dbgs() << "PPC mark: call ");
       // ---- PPC64 ELFv2: mark calls that need a NOP in the slot after 'bl'
       if (BC.isPPC64() && MIB->isCall(Instruction)) {
 
@@ -1438,9 +1439,12 @@ Error BinaryFunction::disassemble() {
             // afterwards.
             BC.MIB->addAnnotation(Instruction, "PPCNeedsCallSlotNOP", true);
           }
-                  LLVM_DEBUG(dbgs() << "PPC mark: call at 0x" << Twine::utohexstr(Address + Offset)
-                  << " size=" << Size << " nextOff=0x" << Twine::utohexstr(Address + NextOff)
-                  << (NextIsNop ? " (already has NOP)\n" : " (will need NOP)\n"));
+          LLVM_DEBUG(dbgs()
+                     << "PPC mark: call at 0x"
+                     << Twine::utohexstr(Address + Offset) << " size=" << Size
+                     << " nextOff=0x" << Twine::utohexstr(Address + NextOff)
+                     << (NextIsNop ? " (already has NOP)\n"
+                                   : " (will need NOP)\n"));
         } else {
           // Call is last instruction: also needs a NOP on emission.
           BC.MIB->addAnnotation(Instruction, "PPCNeedsCallSlotNOP", true);

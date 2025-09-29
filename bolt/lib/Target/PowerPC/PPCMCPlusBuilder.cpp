@@ -16,13 +16,12 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include <optional>
 #include "llvm/Support/Debug.h"
+#include <optional>
 #include <string>
 #define DEBUG_TYPE "bolt-ppc"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-
 
 using namespace llvm;
 using namespace bolt;
@@ -149,10 +148,29 @@ bool PPCMCPlusBuilder::convertJmpToTailCall(MCInst &Inst) {
 
 bool PPCMCPlusBuilder::isCall(const MCInst &I) const {
   switch (I.getOpcode()) {
-    case PPC::BL:      // direct relative call
-    case PPC::BLA:     // direct absolute call
-      return true;
-      default:
+  case PPC::BL:  // direct relative call
+  case PPC::BLA: // direct absolute call
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool PPCMCPlusBuilder::isBranch(const MCInst &I) const {
+  switch (I.getOpcode()) {
+  case PPC::B:     // unconditional branch
+  case PPC::BL:    // branch with link (treated as call, but still a branch)
+  case PPC::BLA:   // absolute branch with link
+  case PPC::BC:    // conditional branch
+  case PPC::BCL:   // conditional branch with link
+  case PPC::BDNZ:  // decrement CTR and branch if not zero
+  case PPC::BDNZL: // decrement CTR and branch with link
+  case PPC::BCTR:  // branch to CTR
+  case PPC::BCTRL: // branch to CTR with link
+  case PPC::BLR:   // branch to LR
+  case PPC::BLRL:  // branch to LR with link
+    return true;
+  default:
     return false;
   }
 }
