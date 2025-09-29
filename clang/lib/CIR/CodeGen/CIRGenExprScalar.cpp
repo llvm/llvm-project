@@ -87,6 +87,7 @@ public:
   //===--------------------------------------------------------------------===//
   //                               Utilities
   //===--------------------------------------------------------------------===//
+  mlir::Type convertType(QualType ty) { return cgf.convertType(ty); }
 
   mlir::Value emitComplexToScalarConversion(mlir::Location loc,
                                             mlir::Value value, CastKind kind,
@@ -1873,6 +1874,27 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
 
     return cgf.getBuilder().createBitcast(cgf.getLoc(subExpr->getSourceRange()),
                                           src, dstTy);
+  }
+  case CK_AddressSpaceConversion: {
+    Expr::EvalResult result;
+    if (subExpr->EvaluateAsRValue(result, cgf.getContext()) &&
+        result.Val.isNullPointer()) {
+      // If E has side effect, it is emitted even if its final result is a
+      // null pointer. In that case, a DCE pass should be able to
+      // eliminate the useless instructions emitted during translating E.
+      if (result.HasSideEffects)
+        Visit(subExpr);
+      return cgf.cgm.emitNullConstant(destTy,
+                                      cgf.getLoc(subExpr->getExprLoc()));
+    }
+    // Since target may map different address spaces in AST to the same address
+    // space, an address space conversion may end up as a bitcast.
+    cir::AddressSpace srcAS = cir::toCIRAddressSpace(
+        subExpr->getType()->getPointeeType().getAddressSpace());
+    cir::AddressSpace destAS =
+        cir::toCIRAddressSpace(destTy->getPointeeType().getAddressSpace());
+    return cgf.cgm.getTargetCIRGenInfo().performAddrSpaceCast(
+        cgf, Visit(subExpr), srcAS, destAS, convertType(destTy));
   }
 
   case CK_AtomicToNonAtomic: {

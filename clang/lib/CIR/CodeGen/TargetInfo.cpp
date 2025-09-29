@@ -1,5 +1,7 @@
 #include "TargetInfo.h"
 #include "ABIInfo.h"
+#include "CIRGenFunction.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -67,4 +69,15 @@ bool TargetCIRGenInfo::isNoProtoCallVariadic(
   //   MIPS
   // For everything else, we just prefer false unless we opt out.
   return false;
+}
+
+mlir::Value TargetCIRGenInfo::performAddrSpaceCast(
+    CIRGenFunction &cgf, mlir::Value src, cir::AddressSpace srcAS,
+    cir::AddressSpace destAS, mlir::Type destTy, bool isNonNull) const {
+  // Since target may map different address spaces in AST to the same address
+  // space, an address space conversion may end up as a bitcast.
+  if (cir::GlobalOp globalOp = src.getDefiningOp<cir::GlobalOp>())
+    llvm_unreachable("Global ops addrspace cast NYI");
+  // Try to preserve the source's name to make IR more readable.
+  return cgf.getBuilder().createAddrSpaceCast(src, destTy);
 }

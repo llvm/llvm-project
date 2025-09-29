@@ -1197,7 +1197,19 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_AtomicToNonAtomic:
   case CK_ToUnion:
   case CK_BaseToDerived:
-  case CK_AddressSpaceConversion:
+  case CK_AddressSpaceConversion: {
+    LValue lv = emitLValue(e->getSubExpr());
+    QualType destTy = getContext().getPointerType(e->getType());
+    cir::AddressSpace srcAS =
+        cir::toCIRAddressSpace(e->getSubExpr()->getType().getAddressSpace());
+    cir::AddressSpace destAS =
+        cir::toCIRAddressSpace(e->getType().getAddressSpace());
+    mlir::Value V = getTargetHooks().performAddrSpaceCast(
+        *this, lv.getPointer(), srcAS, destAS, convertType(destTy));
+    return makeAddrLValue(Address(V, convertTypeForMem(e->getType()),
+                                  lv.getAddress().getAlignment()),
+                          e->getType(), lv.getBaseInfo());
+  }
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat:
   case CK_ConstructorConversion:
@@ -2312,7 +2324,10 @@ Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
   // be different from the type defined by the language. For example,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
-  assert(!cir::MissingFeatures::addressSpace());
+  if (auto astAS = cir::toCIRAddressSpace(cgm.getLangTempAllocaAddressSpace());
+      getCIRAllocaAddressSpace() != astAS) {
+    llvm_unreachable("Requires address space cast which is NYI");
+  }
   return Address(v, ty, align);
 }
 
