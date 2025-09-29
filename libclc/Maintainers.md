@@ -10,6 +10,9 @@ The following people are the active maintainers for the project. Please reach
 out to them for code reviews, questions about their area of expertise, or other
 assistance.
 
+Wenju He \
+wenju.he@intel.com (email), [wenju-he](https://github.com/wenju-he) (GitHub)
+
 Tom Stellard \
 tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
 

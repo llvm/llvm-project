@@ -4456,8 +4456,8 @@ SDValue SplitOpsAndApply(SelectionDAG &DAG, const X86Subtarget &Subtarget,
                          bool AllowAVX512 = true) {
   assert(Subtarget.hasSSE2() && "Target assumed to support at least SSE2");
   unsigned NumSubs = 1;
-  if ((CheckBWI && Subtarget.useBWIRegs()) ||
-      (!CheckBWI && AllowAVX512 && Subtarget.useAVX512Regs())) {
+  if (AllowAVX512 && ((CheckBWI && Subtarget.useBWIRegs()) ||
+                      (!CheckBWI && Subtarget.useAVX512Regs()))) {
     if (VT.getSizeInBits() > 512) {
       NumSubs = VT.getSizeInBits() / 512;
       assert((VT.getSizeInBits() % 512) == 0 && "Illegal vector size");
@@ -46197,7 +46197,7 @@ static SDValue createVPDPBUSD(SelectionDAG &DAG, SDValue LHS, SDValue RHS,
   SDValue Zero = DAG.getConstant(0, DL, DpVT);
 
   return SplitOpsAndApply(DAG, Subtarget, DL, DpVT, {Zero, DpOp0, DpOp1},
-                          DpBuilder, false);
+                          DpBuilder, /*CheckBWI=*/false, Subtarget.hasVNNI());
 }
 
 // Create a PSADBW given two sources representable as zexts of vXi8.

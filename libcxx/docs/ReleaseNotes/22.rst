@@ -64,6 +64,8 @@ Improvements and New Features
 - Multiple internal types have been refactored to use ``[[no_unique_address]]``, resulting in faster compile times and
   reduced debug information.
 
+- The performance of ``std::find`` has been improved by up to 2x for integral types
+
 Deprecations and Removals
 -------------------------
 
