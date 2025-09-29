@@ -93,6 +93,8 @@
 #include "llvm/Transforms/Utils/SizeOpts.h"
 
 namespace llvm {
+struct Spec;
+
 // Map of potential specializations for each function. The FunctionSpecializer
 // keeps the discovered specialisation opportunities for the module in a single
 // vector, where the specialisations of each function form a contiguous range.
@@ -124,6 +126,10 @@ struct SpecSig {
   }
 };
 
+struct SpecCall {
+  CallBase *CallSite;
+};
+
 // Specialization instance.
 struct Spec {
   // Original function.
@@ -142,7 +148,9 @@ struct Spec {
   unsigned CodeSize;
 
   // List of call sites, matching this specialization.
-  SmallVector<CallBase *> CallSites;
+  SmallVector<SpecCall> CallSites;
+
+  void addCall(SpecCall SC) { CallSites.push_back(SC); }
 
   Spec(Function *F, const SpecSig &S, unsigned Score, unsigned CodeSize)
       : F(F), Sig(S), Score(Score), CodeSize(CodeSize) {}

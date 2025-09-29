@@ -790,11 +790,12 @@ bool FunctionSpecializer::run() {
     S.Clone = createSpecialization(S.F, S.Sig);
 
     // Update the known call sites to call the clone.
-    for (CallBase *Call : S.CallSites) {
+    for (auto &CS : S.CallSites) {
       Function *Clone = S.Clone;
+      CallBase *Call = CS.CallSite;
       LLVM_DEBUG(dbgs() << "FnSpecialization: Redirecting " << *Call
                         << " to call " << Clone->getName() << "\n");
-      Call->setCalledFunction(S.Clone);
+      Call->setCalledFunction(Clone);
       auto &BFI = GetBFI(*Call->getFunction());
       std::optional<uint64_t> Count =
           BFI.getBlockProfileCount(Call->getParent());
@@ -961,7 +962,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
       if (CS.getFunction() == F)
         continue;
       const unsigned Index = It->second;
-      AllSpecs[Index].CallSites.push_back(&CS);
+      AllSpecs[Index].addCall({&CS});
     } else {
       // Calculate the specialisation gain.
       Cost CodeSize;
@@ -1025,7 +1026,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
       // Create a new specialisation entry.
       auto &Spec = AllSpecs.emplace_back(F, S, Score, SpecSize);
       if (CS.getFunction() != F)
-        Spec.CallSites.push_back(&CS);
+        Spec.addCall({&CS});
       const unsigned Index = AllSpecs.size() - 1;
       UniqueSpecs[S] = Index;
       if (auto [It, Inserted] = SM.try_emplace(F, Index, Index + 1); !Inserted)
