@@ -398,6 +398,15 @@ void mlirPDLResultListPushBackAttribute(MlirPDLResultList results,
   unwrap(results)->push_back(unwrap(value));
 }
 
+inline std::vector<MlirPDLValue> wrap(ArrayRef<PDLValue> values) {
+  std::vector<MlirPDLValue> mlirValues;
+  mlirValues.reserve(values.size());
+  for (auto &value : values) {
+    mlirValues.push_back(wrap(&value));
+  }
+  return mlirValues;
+}
+
 void mlirPDLPatternModuleRegisterRewriteFunction(
     MlirPDLPatternModule pdlModule, MlirStringRef name,
     MlirPDLRewriteFunction rewriteFn, void *userData) {
@@ -405,14 +414,25 @@ void mlirPDLPatternModuleRegisterRewriteFunction(
       unwrap(name),
       [userData, rewriteFn](PatternRewriter &rewriter, PDLResultList &results,
                             ArrayRef<PDLValue> values) -> LogicalResult {
-        std::vector<MlirPDLValue> mlirValues;
-        mlirValues.reserve(values.size());
-        for (auto &value : values) {
-          mlirValues.push_back(wrap(&value));
-        }
+        std::vector<MlirPDLValue> mlirValues = wrap(values);
         return unwrap(rewriteFn(wrap(&rewriter), wrap(&results),
                                 mlirValues.size(), mlirValues.data(),
                                 userData));
+      });
+}
+
+void mlirPDLPatternModuleRegisterConstraintFunction(
+    MlirPDLPatternModule pdlModule, MlirStringRef name,
+    MlirPDLConstraintFunction constraintFn, void *userData) {
+  unwrap(pdlModule)->registerConstraintFunction(
+      unwrap(name),
+      [userData, constraintFn](PatternRewriter &rewriter,
+                               PDLResultList &results,
+                               ArrayRef<PDLValue> values) -> LogicalResult {
+        std::vector<MlirPDLValue> mlirValues = wrap(values);
+        return unwrap(constraintFn(wrap(&rewriter), wrap(&results),
+                                   mlirValues.size(), mlirValues.data(),
+                                   userData));
       });
 }
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
