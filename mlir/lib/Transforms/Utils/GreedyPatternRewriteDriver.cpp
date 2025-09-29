@@ -555,7 +555,8 @@ bool GreedyPatternRewriteDriver::processWorklist() {
           replacements.push_back(constOp->getResult(0));
         }
 
-        if (materializationSucceeded) {
+        if (materializationSucceeded &&
+            !llvm::equal(replacements, op->getResults())) {
           rewriter.replaceOp(op, replacements);
           changed = true;
           LLVM_DEBUG(logSuccessfulFolding(dumpRootOp));
