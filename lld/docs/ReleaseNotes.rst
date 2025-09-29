@@ -44,6 +44,9 @@ MinGW Improvements
 MachO Improvements
 ------------------
 
+* cstrings sections are now tail merged
+  (`#161262 <https://github.com/llvm/llvm-project/pull/161262>`_)
+
 WebAssembly Improvements
 ------------------------
 
