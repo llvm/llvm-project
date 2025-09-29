@@ -758,6 +758,7 @@ public:
   NODE(PrefixSpec, Non_Recursive)
   NODE(PrefixSpec, Pure)
   NODE(PrefixSpec, Recursive)
+  NODE(PrefixSpec, Simple)
   NODE(PrefixSpec, Attributes)
   NODE(PrefixSpec, Launch_Bounds)
   NODE(PrefixSpec, Cluster_Dims)

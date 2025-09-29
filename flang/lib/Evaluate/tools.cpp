@@ -2082,6 +2082,15 @@ bool IsPureProcedure(const Scope &scope) {
   return symbol && IsPureProcedure(*symbol);
 }
 
+bool IsSimpleProcedure(const Symbol &original) {
+  return original.attrs().test(Attr::SIMPLE);
+}
+
+bool IsSimpleProcedure(const Scope &scope) {
+  const Symbol *symbol{scope.GetSymbol()};
+  return symbol && IsSimpleProcedure(*symbol);
+}
+
 bool IsExplicitlyImpureProcedure(const Symbol &original) {
   // An ENTRY is IMPURE if its containing subprogram is so
   return DEREF(GetMainEntry(&original.GetUltimate()))
