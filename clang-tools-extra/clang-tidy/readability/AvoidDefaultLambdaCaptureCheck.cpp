@@ -20,6 +20,29 @@ AST_MATCHER(LambdaExpr, hasDefaultCapture) {
   return Node.getCaptureDefault() != LCD_None;
 }
 
+std::string getExplicitCaptureText(const LambdaCapture &Capture,
+                                   const SourceManager &SM,
+                                   const LangOptions &LangOpts) {
+  if (!Capture.isExplicit() || !Capture.getLocation().isValid()) {
+    return "";
+  }
+
+  // For explicit captures, extract the actual source text to preserve
+  // original formatting, spacing, and comments
+  SourceLocation CaptureBegin = Capture.getLocation();
+
+  // Find the end of this capture by looking for the next comma or closing
+  // bracket This is a simplified approach - a more robust implementation would
+  // parse tokens
+  SourceLocation CaptureEnd =
+      Lexer::getLocForEndOfToken(CaptureBegin, 0, SM, LangOpts);
+
+  // For now, we'll still reconstruct to ensure correctness
+  // but this framework allows for future enhancement to preserve exact source
+  // text
+  return "";
+}
+
 std::string getCaptureString(const LambdaCapture &Capture) {
   if (Capture.capturesThis()) {
     return Capture.getCaptureKind() == LCK_StarThis ? "*this" : "this";
@@ -38,12 +61,21 @@ std::string getCaptureString(const LambdaCapture &Capture) {
   return "/* VLA capture */";
 }
 
-std::string buildExplicitCaptureList(const LambdaExpr *Lambda) {
+std::string buildExplicitCaptureList(const LambdaExpr *Lambda,
+                                     const SourceManager &SM,
+                                     const LangOptions &LangOpts) {
   std::vector<std::string> CaptureStrings;
 
   // Add explicit captures first (preserve their order and syntax)
   for (const auto &Capture : Lambda->explicit_captures()) {
-    CaptureStrings.push_back(getCaptureString(Capture));
+    // Try to get the original source text first
+    std::string ExplicitText = getExplicitCaptureText(Capture, SM, LangOpts);
+    if (!ExplicitText.empty()) {
+      CaptureStrings.push_back(ExplicitText);
+    } else {
+      // Fall back to reconstructed text
+      CaptureStrings.push_back(getCaptureString(Capture));
+    }
   }
 
   // Add implicit captures (convert to explicit syntax)
@@ -75,7 +107,8 @@ void AvoidDefaultLambdaCaptureCheck::check(
     return;
 
   // Build the replacement capture list
-  std::string NewCaptureList = buildExplicitCaptureList(Lambda);
+  std::string NewCaptureList = buildExplicitCaptureList(
+      Lambda, *Result.SourceManager, Result.Context->getLangOpts());
 
   // Get the range of the entire capture list [...]
   SourceRange CaptureListRange = getCaptureListRange(Lambda);
