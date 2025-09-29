@@ -328,8 +328,8 @@ private:
                            MachineInstr &I) const;
   bool selectFrexp(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
-  bool selectDpdCoarse(Register ResVReg, const SPIRVType *ResType,
-                       MachineInstr &I, const unsigned DPdOpCode) const;
+  bool selectDerivativeInst(Register ResVReg, const SPIRVType *ResType,
+                            MachineInstr &I, const unsigned DPdOpCode) const;
   // Utilities
   std::pair<Register, bool>
   buildI32Constant(uint32_t Val, MachineInstr &I,
@@ -3143,10 +3143,9 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
   return Result;
 }
 
-bool SPIRVInstructionSelector::selectDpdCoarse(Register ResVReg,
-                                               const SPIRVType *ResType,
-                                               MachineInstr &I,
-                                               const unsigned DPdOpCode) const {
+bool SPIRVInstructionSelector::selectDerivativeInst(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
+    const unsigned DPdOpCode) const {
   // TODO: This should check specifically for Fragment Execution Model, but STI
   // doesn't provide that information yet. See #167562
   errorIfInstrOutsideShader(I);
@@ -3584,10 +3583,13 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, GL::UnpackHalf2x16);
   }
   case Intrinsic::spv_ddx_coarse: {
-    return selectDpdCoarse(ResVReg, ResType, I, SPIRV::OpDPdxCoarse);
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdxCoarse);
   }
   case Intrinsic::spv_ddy_coarse: {
-    return selectDpdCoarse(ResVReg, ResType, I, SPIRV::OpDPdyCoarse);
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdyCoarse);
+  }
+  case Intrinsic::spv_fwidth: {
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpFwidth);
   }
   default: {
     std::string DiagMsg;
