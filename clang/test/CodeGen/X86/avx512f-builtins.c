@@ -9073,20 +9073,25 @@ __m512i test_mm512_shuffle_epi32(__m512i __A) {
   // CHECK: shufflevector <16 x i32> %{{.*}}, <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 0, i32 0, i32 5, i32 4, i32 4, i32 4, i32 9, i32 8, i32 8, i32 8, i32 13, i32 12, i32 12, i32 12>
   return _mm512_shuffle_epi32(__A, 1); 
 }
-
+TEST_CONSTEXPR(match_v16si(_mm512_shuffle_epi32((((__m512i)(__v16si){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15})), 1), 1,0,0,0, 5,4,4,4, 9,8,8,8, 13,12,12,12));
 __m512i test_mm512_mask_shuffle_epi32(__m512i __W, __mmask16 __U, __m512i __A) {
   // CHECK-LABEL: test_mm512_mask_shuffle_epi32
   // CHECK: shufflevector <16 x i32> %{{.*}}, <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 0, i32 0, i32 5, i32 4, i32 4, i32 4, i32 9, i32 8, i32 8, i32 8, i32 13, i32 12, i32 12, i32 12>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_mask_shuffle_epi32(__W, __U, __A, 1); 
 }
-
+TEST_CONSTEXPR(match_v16si(_mm512_mask_shuffle_epi32(((__m512i)(__v16si){100,101,102,103,104,105,106,107,200,201,202,203,204,205,206,207}), 0xFFFFu, ((__m512i)(__v16si){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}), 1), 1,0,0,0, 5,4,4,4, 9,8,8,8, 13,12,12,12));
+TEST_CONSTEXPR(match_v16si(_mm512_mask_shuffle_epi32(((__m512i)(__v16si){100,101,102,103,104,105,106,107,200,201,202,203,204,205,206,207}), 0x0000u, ((__m512i)(__v16si){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}), 1), 100,101,102,103,104,105,106,107,200,201,202,203,204,205,206,207));
+TEST_CONSTEXPR(match_v16si(_mm512_mask_shuffle_epi32(((__m512i)(__v16si){100,101,102,103,104,105,106,107,200,201,202,203,204,205,206,207}), 0x00FFu, ((__m512i)(__v16si){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}), 1), 1,0,0,0, 5,4,4,4, 200,201,202,203,204,205,206,207));
 __m512i test_mm512_maskz_shuffle_epi32(__mmask16 __U, __m512i __A) {
   // CHECK-LABEL: test_mm512_maskz_shuffle_epi32
   // CHECK: shufflevector <16 x i32> %{{.*}}, <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 0, i32 0, i32 5, i32 4, i32 4, i32 4, i32 9, i32 8, i32 8, i32 8, i32 13, i32 12, i32 12, i32 12>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_maskz_shuffle_epi32(__U, __A, 1); 
 }
+TEST_CONSTEXPR(match_v16si(_mm512_maskz_shuffle_epi32(0xFFFFu, ((__m512i)(__v16si){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}), 1), 1,0,0,0, 5,4,4,4, 9,8,8,8, 13,12,12,12));
+TEST_CONSTEXPR(match_v16si(_mm512_maskz_shuffle_epi32(0x5555u, ((__m512i)(__v16si){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}), 1), 1,0,0,0, 5,0,4,0, 9,0,8,0, 13,0,12,0));
+TEST_CONSTEXPR(match_v16si(_mm512_maskz_shuffle_epi32(0x8001u, ((__m512i)(__v16si){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}), 1), 1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,12));
 
 __m512d test_mm512_mask_expand_pd(__m512d __W, __mmask8 __U, __m512d __A) {
   // CHECK-LABEL: test_mm512_mask_expand_pd

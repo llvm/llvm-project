@@ -11869,6 +11869,293 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
+  case X86::BI__builtin_ia32_pshufw: {
+    APValue Src;
+    APSInt Imm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Src)) return false;
+    if (!EvaluateInteger(E->getArg(1), Imm, Info))  return false;
+
+    unsigned N = Src.getVectorLength(); 
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(N);
+
+    uint8_t C = static_cast<uint8_t>(Imm.getZExtValue());
+    for (unsigned i = 0; i != N; ++i) {
+      unsigned sel = (C >> (2 * i)) & 0x3;
+      ResultElements.push_back(Src.getVectorElt(sel));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_pshuflw:
+  case clang::X86::BI__builtin_ia32_pshuflw256:
+  case clang::X86::BI__builtin_ia32_pshuflw512:
+  case clang::X86::BI__builtin_ia32_pshuflw128_mask:
+  case clang::X86::BI__builtin_ia32_pshuflw256_mask:
+  case clang::X86::BI__builtin_ia32_pshuflw512_mask:
+  case clang::X86::BI__builtin_ia32_pshuflw128_maskz:
+  case clang::X86::BI__builtin_ia32_pshuflw256_maskz:
+  case clang::X86::BI__builtin_ia32_pshuflw512_maskz: {
+    const unsigned BID = E->getBuiltinCallee();
+
+    const bool IsMask =
+        BID == clang::X86::BI__builtin_ia32_pshuflw128_mask  ||
+        BID == clang::X86::BI__builtin_ia32_pshuflw256_mask  ||
+        BID == clang::X86::BI__builtin_ia32_pshuflw512_mask;
+
+    const bool IsMaskZ =
+        BID == clang::X86::BI__builtin_ia32_pshuflw128_maskz ||
+        BID == clang::X86::BI__builtin_ia32_pshuflw256_maskz ||
+        BID == clang::X86::BI__builtin_ia32_pshuflw512_maskz;
+
+    const unsigned AIdx  = 0, ImmIdx = 1;
+    const unsigned SrcIdx = 2;
+    const unsigned KIdx   = IsMaskZ ? 2 : 3;
+
+    APValue AVal, SrcVal;
+    APSInt Imm, K;
+    if (!EvaluateAsRValue(Info, E->getArg(AIdx), AVal)) return false;
+    if (!EvaluateInteger(E->getArg(ImmIdx), Imm, Info))  return false;
+
+    const APSInt *KPtr = nullptr;
+    const APValue *PassThru = nullptr;
+    bool ZeroInactive = false;
+
+    if (IsMask) {
+      if (!EvaluateAsRValue(Info, E->getArg(SrcIdx), SrcVal)) return false;
+      if (!EvaluateInteger(E->getArg(KIdx), K, Info))         return false;
+      KPtr = &K; PassThru = &SrcVal; ZeroInactive = false;
+    } else if (IsMaskZ) {
+      if (!EvaluateInteger(E->getArg(KIdx), K, Info))         return false;
+      KPtr = &K; PassThru = nullptr; ZeroInactive = true;
+    }
+
+    const auto *VT = E->getType()->getAs<VectorType>();
+    if (!VT) return false;
+    const unsigned NumElts = VT->getNumElements();
+
+    const unsigned ElemBits  = 16;
+    const unsigned LaneElems = std::min(NumElts, 128u / ElemBits);
+    const unsigned Half      = 4;
+    const uint8_t  Ctl       = static_cast<uint8_t>(Imm.getZExtValue());
+    const bool DestUnsigned =
+        VT->getElementType()->isUnsignedIntegerOrEnumerationType();
+
+    auto MakeZero = [&]() -> APValue {
+      return APValue(APSInt(APInt(ElemBits, 0), DestUnsigned));
+    };
+
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(NumElts);
+
+    for (unsigned i = 0; i < NumElts; ++i) {
+      const unsigned laneBase = (i / LaneElems) * LaneElems;
+      const unsigned inLane   = i % LaneElems;
+
+      APValue Chosen;
+      if (inLane < Half) {
+        const unsigned pos = inLane;
+        const unsigned sel = (Ctl >> (2 * pos)) & 0x3;
+        const unsigned srcIdx = laneBase + sel;
+        Chosen = AVal.getVectorElt(srcIdx);
+      } else {
+        Chosen = AVal.getVectorElt(i);
+      }
+
+      if (KPtr) {
+        const bool Keep = (i < KPtr->getBitWidth()) ? (*KPtr)[i] : false;
+        if (Keep) {
+          ResultElements.push_back(Chosen);
+        } else if (ZeroInactive) {
+          ResultElements.push_back(MakeZero());
+        } else {
+          const APValue &PT = PassThru ? PassThru->getVectorElt(i)
+                                      : AVal.getVectorElt(i);
+          ResultElements.push_back(PT);
+        }
+      } else {
+        ResultElements.push_back(Chosen);
+      }
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_pshufhw:
+  case clang::X86::BI__builtin_ia32_pshufhw256:
+  case clang::X86::BI__builtin_ia32_pshufhw512:
+  case clang::X86::BI__builtin_ia32_pshufhw128_mask:
+  case clang::X86::BI__builtin_ia32_pshufhw256_mask:
+  case clang::X86::BI__builtin_ia32_pshufhw512_mask:
+  case clang::X86::BI__builtin_ia32_pshufhw128_maskz:
+  case clang::X86::BI__builtin_ia32_pshufhw256_maskz:
+  case clang::X86::BI__builtin_ia32_pshufhw512_maskz: {
+    const unsigned BID = E->getBuiltinCallee();
+
+    const bool IsMask =
+        BID == clang::X86::BI__builtin_ia32_pshufhw128_mask  ||
+        BID == clang::X86::BI__builtin_ia32_pshufhw256_mask  ||
+        BID == clang::X86::BI__builtin_ia32_pshufhw512_mask;
+
+    const bool IsMaskZ =
+        BID == clang::X86::BI__builtin_ia32_pshufhw128_maskz ||
+        BID == clang::X86::BI__builtin_ia32_pshufhw256_maskz ||
+        BID == clang::X86::BI__builtin_ia32_pshufhw512_maskz;
+
+    const unsigned AIdx = 0, ImmIdx = 1;
+    const unsigned SrcIdx = 2;
+    const unsigned KIdx   = IsMaskZ ? 2 : 3;
+
+    APValue AVal, SrcVal;
+    APSInt Imm, K;
+    if (!EvaluateAsRValue(Info, E->getArg(AIdx), AVal)) return false;
+    if (!EvaluateInteger(E->getArg(ImmIdx), Imm, Info))  return false;
+
+    const APSInt *KPtr = nullptr;
+    const APValue *PassThru = nullptr;
+    bool ZeroInactive = false;
+    if (IsMask) {
+      if (!EvaluateAsRValue(Info, E->getArg(SrcIdx), SrcVal)) return false;
+      if (!EvaluateInteger(E->getArg(KIdx), K, Info))         return false;
+      KPtr = &K; PassThru = &SrcVal; ZeroInactive = false;
+    } else if (IsMaskZ) {
+      if (!EvaluateInteger(E->getArg(KIdx), K, Info))         return false;
+      KPtr = &K; PassThru = nullptr; ZeroInactive = true;
+    }
+
+    const auto *VT = E->getType()->getAs<VectorType>();
+    if (!VT) return false;
+    const unsigned NumElts = VT->getNumElements();
+    const unsigned ElemBits  = 16;
+    const unsigned LaneElems = std::min(NumElts, 128u / ElemBits);
+    const unsigned Half      = 4;
+    const uint8_t  Ctl       = static_cast<uint8_t>(Imm.getZExtValue());
+    const bool DestUnsigned =
+        VT->getElementType()->isUnsignedIntegerOrEnumerationType();
+
+    auto MakeZero = [&]() -> APValue {
+      return APValue(APSInt(APInt(ElemBits, 0), DestUnsigned));
+    };
+
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(NumElts);
+
+    for (unsigned i = 0; i < NumElts; ++i) {
+      const unsigned laneBase = (i / LaneElems) * LaneElems;
+      const unsigned inLane   = i % LaneElems;
+
+      APValue Chosen;
+      if (inLane >= Half) {
+        const unsigned pos = inLane - Half;
+        const unsigned sel = (Ctl >> (2 * pos)) & 0x3;
+        const unsigned srcIdx = laneBase + Half + sel;
+        Chosen = AVal.getVectorElt(srcIdx);
+      } else {
+        Chosen = AVal.getVectorElt(i);
+      }
+
+      if (KPtr) {
+        const bool Keep = (i < KPtr->getBitWidth()) ? (*KPtr)[i] : false;
+        if (Keep) {
+          ResultElements.push_back(Chosen);
+        } else if (ZeroInactive) {
+          ResultElements.push_back(MakeZero());
+        } else {
+          const APValue &PT = PassThru ? PassThru->getVectorElt(i)
+                                      : AVal.getVectorElt(i);
+          ResultElements.push_back(PT);
+        }
+      } else {
+        ResultElements.push_back(Chosen);
+      }
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_pshufd:
+  case clang::X86::BI__builtin_ia32_pshufd256:
+  case clang::X86::BI__builtin_ia32_pshufd512:
+  case clang::X86::BI__builtin_ia32_pshufd128_mask:
+  case clang::X86::BI__builtin_ia32_pshufd256_mask:
+  case clang::X86::BI__builtin_ia32_pshufd512_mask:
+  case clang::X86::BI__builtin_ia32_pshufd128_maskz:
+  case clang::X86::BI__builtin_ia32_pshufd256_maskz:
+  case clang::X86::BI__builtin_ia32_pshufd512_maskz: {
+    const unsigned BID = E->getBuiltinCallee();
+
+    const bool IsMask =
+        BID == clang::X86::BI__builtin_ia32_pshufd512_mask ||
+        BID == clang::X86::BI__builtin_ia32_pshufd128_mask ||
+        BID == clang::X86::BI__builtin_ia32_pshufd256_mask;
+
+    const bool IsMaskZ =
+        BID == clang::X86::BI__builtin_ia32_pshufd512_maskz ||
+        BID == clang::X86::BI__builtin_ia32_pshufd128_maskz ||
+        BID == clang::X86::BI__builtin_ia32_pshufd256_maskz;
+
+    const unsigned AIdx = 0, ImmIdx = 1;
+    const unsigned SrcIdx = 2;
+    const unsigned KIdx   = IsMaskZ ? 2 : 3;
+
+    APValue AVal, SrcVal;
+    APSInt Imm, K;
+    if (!EvaluateAsRValue(Info, E->getArg(AIdx), AVal)) return false;
+    if (!EvaluateInteger(E->getArg(ImmIdx), Imm, Info))  return false;
+
+    const APSInt *KPtr = nullptr;
+    const APValue *PassThru = nullptr;
+    bool ZeroInactive = false;
+    if (IsMask) {
+      if (!EvaluateAsRValue(Info, E->getArg(SrcIdx), SrcVal)) return false;
+      if (!EvaluateInteger(E->getArg(KIdx), K, Info))         return false;
+      KPtr = &K; PassThru = &SrcVal; ZeroInactive = false;
+    } else if (IsMaskZ) {
+      if (!EvaluateInteger(E->getArg(KIdx), K, Info))         return false;
+      KPtr = &K; PassThru = nullptr; ZeroInactive = true;
+    }
+
+    const auto *VT = E->getType()->getAs<VectorType>();
+    if (!VT) return false;
+    const unsigned NumElts = VT->getNumElements();
+    const unsigned ElemBits  = 32;
+    const unsigned LaneElems = std::min(NumElts, 128u / ElemBits);
+    const uint8_t  Ctl       = static_cast<uint8_t>(Imm.getZExtValue());
+    const bool DestUnsigned =
+        VT->getElementType()->isUnsignedIntegerOrEnumerationType();
+
+    auto MakeZero = [&]() -> APValue {
+      return APValue(APSInt(APInt(ElemBits, 0), DestUnsigned));
+    };
+
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(NumElts);
+
+    for (unsigned i = 0; i < NumElts; ++i) {
+      const unsigned laneBase = (i / LaneElems) * LaneElems;
+      const unsigned inLane   = i % LaneElems;
+
+      const unsigned pos = inLane & 3;
+      const unsigned sel = (Ctl >> (2 * pos)) & 0x3;
+      const unsigned srcIdx = laneBase + sel;
+      APValue Chosen = AVal.getVectorElt(srcIdx);
+
+      if (KPtr) {
+        const bool Keep = (i < KPtr->getBitWidth()) ? (*KPtr)[i] : false;
+        if (Keep) {
+          ResultElements.push_back(Chosen);
+        } else if (ZeroInactive) {
+          ResultElements.push_back(MakeZero());
+        } else {
+          const APValue &PT = PassThru ? PassThru->getVectorElt(i)
+                                      : AVal.getVectorElt(i);
+          ResultElements.push_back(PT);
+        }
+      } else {
+        ResultElements.push_back(Chosen);
+      }
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  
   case clang::X86::BI__builtin_ia32_vprotbi:
   case clang::X86::BI__builtin_ia32_vprotdi:
   case clang::X86::BI__builtin_ia32_vprotqi:
