@@ -39,7 +39,7 @@ static_assert(std::is_trivially_copyable_v<IdentifyingPassPtr>,
 template <class Fn> constexpr bool CheckStdCmpRequirements() {
   // std::less and std::equal_to are literal, default constructible, and
   // copyable classes.
-  Fn f1;
+  Fn f1{};
   auto f2 = f1;
   auto f3 = std::move(f2);
   f2 = f3;
