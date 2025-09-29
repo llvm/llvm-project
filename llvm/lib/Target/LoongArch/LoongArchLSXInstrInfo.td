@@ -1633,6 +1633,11 @@ defm : PatVrVr<sra, "VSRA">;
 defm : PatShiftVrVr<sra, "VSRA">;
 defm : PatShiftVrSplatUimm<sra, "VSRAI">;
 
+// VROTR[I]_{B/H/W/D}
+defm : PatVrVr<rotr, "VROTR">;
+defm : PatShiftVrVr<rotr, "VROTR">;
+defm : PatShiftVrSplatUimm<rotr, "VROTRI">;
+
 // VCLZ_{B/H/W/D}
 defm : PatVr<ctlz, "VCLZ">;
 
