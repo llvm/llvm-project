@@ -1349,28 +1349,8 @@ mlir::LogicalResult cir::GlobalOp::verify() {
       return failure();
   }
 
-  // Verify that the constructor region, if present, has only one block which is
-  // not empty.
-  auto &ctorRegion = getCtorRegion();
-  if (!ctorRegion.empty()) {
-    auto &block = ctorRegion.front();
-    if (block.empty()) {
-      return emitError() << "ctor region shall not be empty.";
-    }
-  }
-
-  // Verify that the destructor region, if present, has only one block which is
-  // not empty.
-  auto &dtorRegion = getDtorRegion();
-  if (!dtorRegion.empty()) {
-    auto &block = dtorRegion.front();
-    if (block.empty()) {
-      return emitError() << "dtor region shall not be empty.";
-    }
-  }
-
   // TODO(CIR): Many other checks for properties that haven't been upstreamed
-  // yet (and some that have).
+  // yet.
 
   return success();
 }
@@ -1489,12 +1469,6 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
       auto parseLoc = parser.getCurrentLocation();
       if (parser.parseRegion(ctorRegion, /*arguments=*/{}, /*argTypes=*/{}))
         return failure();
-      if (!ctorRegion.hasOneBlock())
-        return parser.emitError(parser.getCurrentLocation(),
-                                "ctor region must have exactly one block");
-      if (ctorRegion.back().empty())
-        return parser.emitError(parser.getCurrentLocation(),
-                                "ctor region shall not be empty");
       if (ensureRegionTerm(parser, ctorRegion, parseLoc).failed())
         return failure();
     } else {
@@ -1516,12 +1490,6 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
       auto parseLoc = parser.getCurrentLocation();
       if (parser.parseRegion(dtorRegion, /*arguments=*/{}, /*argTypes=*/{}))
         return failure();
-      if (!dtorRegion.hasOneBlock())
-        return parser.emitError(parser.getCurrentLocation(),
-                                "dtor region must have exactly one block");
-      if (dtorRegion.back().empty())
-        return parser.emitError(parser.getCurrentLocation(),
-                                "dtor region shall not be empty");
       if (ensureRegionTerm(parser, dtorRegion, parseLoc).failed())
         return failure();
     }
