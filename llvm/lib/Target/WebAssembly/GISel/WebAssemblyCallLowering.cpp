@@ -14,14 +14,21 @@
 
 #include "WebAssemblyCallLowering.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WasmAddressSpaces.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/DataLayout.h"
@@ -29,7 +36,10 @@
 
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/MC/MCSymbolWasm.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 
 #define DEBUG_TYPE "wasm-call-lowering"
 
@@ -555,7 +565,6 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   SmallVector<ArgInfo, 8> SplitArgs;
 
   if (!FLI.CanLowerReturn) {
-    dbgs() << "grath\n";
     insertSRetIncomingArgument(F, SplitArgs, FLI.DemoteRegister, MRI, DL);
   }
   unsigned i = 0;
@@ -683,5 +692,445 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
 
 bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                         CallLoweringInfo &Info) const {
-  return false;
+  MachineFunction &MF = MIRBuilder.getMF();
+  auto DL = MIRBuilder.getDataLayout();
+  LLVMContext &Ctx = MIRBuilder.getContext();
+  const WebAssemblyTargetLowering &TLI = *getTLI<WebAssemblyTargetLowering>();
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  const WebAssemblySubtarget &Subtarget = MF.getSubtarget<WebAssemblySubtarget>();
+
+  CallingConv::ID CallConv = Info.CallConv;
+  if (!callingConvSupported(CallConv)) {
+    fail(MIRBuilder,
+         "WebAssembly doesn't support language-specific or target-specific "
+         "calling conventions yet");
+    return false;
+  }
+
+  // TODO: investigate "PatchPoint"
+  /*
+  if (Info.IsPatchPoint) {
+    fail(MIRBuilder, "WebAssembly doesn't support patch point yet");
+    return false;
+    }
+    */
+
+  if (Info.IsTailCall) {
+      Info.LoweredTailCall = true;
+    auto NoTail = [&](const char *Msg) {
+      if (Info.CB && Info.CB->isMustTailCall())
+        fail(MIRBuilder, Msg);
+      Info.LoweredTailCall = false;
+    };
+
+    if (!Subtarget.hasTailCall())
+      NoTail("WebAssembly 'tail-call' feature not enabled");
+
+    // Varargs calls cannot be tail calls because the buffer is on the stack
+    if (Info.IsVarArg)
+      NoTail("WebAssembly does not support varargs tail calls");
+
+    // Do not tail call unless caller and callee return types match
+    const Function &F = MF.getFunction();
+    const TargetMachine &TM = TLI.getTargetMachine();
+    Type *RetTy = F.getReturnType();
+    SmallVector<MVT, 4> CallerRetTys;
+    SmallVector<MVT, 4> CalleeRetTys;
+    computeLegalValueVTs(F, TM, RetTy, CallerRetTys);
+    computeLegalValueVTs(F, TM, Info.OrigRet.Ty, CalleeRetTys);
+    bool TypesMatch = CallerRetTys.size() == CalleeRetTys.size() &&
+                      std::equal(CallerRetTys.begin(), CallerRetTys.end(),
+                                 CalleeRetTys.begin());
+    if (!TypesMatch)
+      NoTail("WebAssembly tail call requires caller and callee return types to "
+             "match");
+
+    // If pointers to local stack values are passed, we cannot tail call
+    if (Info.CB) {
+      for (auto &Arg : Info.CB->args()) {
+        Value *Val = Arg.get();
+        // Trace the value back through pointer operations
+        while (true) {
+          Value *Src = Val->stripPointerCastsAndAliases();
+          if (auto *GEP = dyn_cast<GetElementPtrInst>(Src))
+            Src = GEP->getPointerOperand();
+          if (Val == Src)
+            break;
+          Val = Src;
+        }
+        if (isa<AllocaInst>(Val)) {
+          NoTail(
+              "WebAssembly does not support tail calling with stack arguments");
+          break;
+        }
+      }
+    }
+  }
+
+  MachineInstrBuilder CallInst;
+
+  bool IsIndirect = false;
+  Register IndirectIdx;
+
+  if (Info.Callee.isReg()) {
+      LLT CalleeType = MRI.getType(Info.Callee.getReg());
+      assert(CalleeType.isPointer() && "Trying to lower a call with a Callee other than a pointer???");
+
+      IsIndirect = true;
+      CallInst = MIRBuilder.buildInstrNoInsert(Info.LoweredTailCall ? WebAssembly::RET_CALL_INDIRECT : WebAssembly::CALL_INDIRECT);
+
+      // Placeholder for the type index.
+      // This gets replaced with the correct value in WebAssemblyMCInstLower.cpp
+      CallInst.addImm(0);
+
+      MCSymbolWasm *Table;
+      if (CalleeType.getAddressSpace() == WebAssembly::WASM_ADDRESS_SPACE_DEFAULT) {
+          Table = WebAssembly::getOrCreateFunctionTableSymbol(
+                MF.getContext(), &Subtarget);
+          IndirectIdx = Info.Callee.getReg();
+
+          auto PtrSize = CalleeType.getSizeInBits();
+          auto PtrIntLLT = LLT::scalar(PtrSize);
+
+          IndirectIdx = MIRBuilder.buildPtrToInt(PtrIntLLT, IndirectIdx).getReg(0);
+          if (PtrSize > 32) {
+              IndirectIdx = MIRBuilder.buildTrunc(LLT::scalar(32), IndirectIdx).getReg(0);
+          }
+      } else if (CalleeType.getAddressSpace() == WebAssembly::WASM_ADDRESS_SPACE_FUNCREF) {
+          Table = WebAssembly::getOrCreateFuncrefCallTableSymbol(
+                MF.getContext(), &Subtarget);
+
+          auto TableSetInstr = MIRBuilder.buildInstr(WebAssembly::TABLE_SET_FUNCREF);
+          TableSetInstr.addSym(Table);
+          TableSetInstr.addUse(Info.Callee.getReg());
+          IndirectIdx = MIRBuilder.buildConstant(LLT::scalar(32), 0).getReg(0);
+      } else {
+          fail(MIRBuilder, "Invalid address space for indirect call");
+          return false;
+      }
+
+      if (Subtarget.hasCallIndirectOverlong()) {
+        CallInst.addSym(Table);
+      } else {
+        // For the MVP there is at most one table whose number is 0, but we can't
+        // write a table symbol or issue relocations.  Instead we just ensure the
+        // table is live and write a zero.
+        Table->setNoStrip();
+        CallInst.addImm(0);
+      }
+  } else {
+      CallInst = MIRBuilder.buildInstrNoInsert(Info.LoweredTailCall ? WebAssembly::RET_CALL : WebAssembly::CALL);
+
+      if (Info.Callee.isGlobal()) {
+          CallInst.addGlobalAddress(Info.Callee.getGlobal());
+      } else if (Info.Callee.isSymbol()) {
+          // TODO: figure out how to trigger/test this
+          CallInst.addSym(Info.Callee.getMCSymbol());
+      } else {
+          llvm_unreachable("Trying to lower call with a callee other than reg, global, or a symbol.");
+      }
+  }
+
+
+  SmallVector<ArgInfo, 8> SplitArgs;
+
+  bool HasSwiftErrorArg = false;
+  bool HasSwiftSelfArg = false;
+
+  for (const auto &Arg : Info.OrigArgs) {
+    HasSwiftSelfArg |= Arg.Flags[0].isSwiftSelf();
+    HasSwiftErrorArg |= Arg.Flags[0].isSwiftError();
+    if (Arg.Flags[0].isNest()) {
+      fail(MIRBuilder, "WebAssembly hasn't implemented nest arguments");
+      return false;
+    }
+    if (Arg.Flags[0].isInAlloca()) {
+      fail(MIRBuilder, "WebAssembly hasn't implemented inalloca arguments");
+      return false;
+    }
+    if (Arg.Flags[0].isInConsecutiveRegs()) {
+      fail(MIRBuilder, "WebAssembly hasn't implemented cons regs arguments");
+      return false;
+    }
+    if (Arg.Flags[0].isInConsecutiveRegsLast()) {
+      fail(MIRBuilder,
+           "WebAssembly hasn't implemented cons regs last arguments");
+      return false;
+    }
+
+    if (Arg.Flags[0].isByVal() && Arg.Flags[0].getByValSize() != 0) {
+      MachineFrameInfo &MFI = MF.getFrameInfo();
+
+      unsigned MemSize = Arg.Flags[0].getByValSize();
+      Align MemAlign = Arg.Flags[0].getNonZeroByValAlign();
+      int FI = MFI.CreateStackObject(Arg.Flags[0].getByValSize(), MemAlign,
+                                     /*isSS=*/false);
+
+      auto StackAddrSpace = DL.getAllocaAddrSpace();
+      auto PtrLLT = getLLTForType(*PointerType::get(Ctx, StackAddrSpace), DL);
+      Register StackObjPtrVreg =
+          MF.getRegInfo().createGenericVirtualRegister(PtrLLT);
+
+      MIRBuilder.buildFrameIndex(StackObjPtrVreg, FI);
+
+      MachinePointerInfo DstPtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
+
+      MachinePointerInfo SrcPtrInfo(Arg.OrigValue);
+      if (!Arg.OrigValue) {
+        // We still need to accurately track the stack address space if we
+        // don't know the underlying value.
+        SrcPtrInfo = MachinePointerInfo::getUnknownStack(MF);
+      }
+
+      Align DstAlign =
+          std::max(MemAlign, inferAlignFromPtrInfo(MF, DstPtrInfo));
+
+      Align SrcAlign =
+          std::max(MemAlign, inferAlignFromPtrInfo(MF, SrcPtrInfo));
+
+      MachineMemOperand *SrcMMO = MF.getMachineMemOperand(
+          SrcPtrInfo,
+          MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable,
+          MemSize, SrcAlign);
+
+      MachineMemOperand *DstMMO = MF.getMachineMemOperand(
+          DstPtrInfo,
+          MachineMemOperand::MOStore | MachineMemOperand::MODereferenceable,
+          MemSize, DstAlign);
+
+      const LLT SizeTy = LLT::scalar(PtrLLT.getSizeInBits());
+
+      auto SizeConst = MIRBuilder.buildConstant(SizeTy, MemSize);
+      MIRBuilder.buildMemCpy(StackObjPtrVreg, Arg.Regs[0], SizeConst, *DstMMO,
+                             *SrcMMO);
+    }
+
+    splitToValueTypes(Arg, SplitArgs, DL, CallConv);
+  }
+
+  unsigned NumFixedArgs = 0;
+
+  for (auto &Arg : SplitArgs) {
+    EVT OrigVT = TLI.getValueType(DL, Arg.Ty);
+    MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
+    LLT OrigLLT = getLLTForType(*Arg.Ty, DL);
+    LLT NewLLT = getLLTForMVT(NewVT);
+
+    // If we need to split the type over multiple regs, check it's a scenario
+    // we currently support.
+    unsigned NumParts =
+        TLI.getNumRegistersForCallingConv(Ctx, CallConv, OrigVT);
+
+    ISD::ArgFlagsTy OrigFlags = Arg.Flags[0];
+    Arg.Flags.clear();
+
+    for (unsigned Part = 0; Part < NumParts; ++Part) {
+      ISD::ArgFlagsTy Flags = OrigFlags;
+      if (Part == 0) {
+        Flags.setSplit();
+      } else {
+        Flags.setOrigAlign(Align(1));
+        if (Part == NumParts - 1)
+          Flags.setSplitEnd();
+      }
+
+      Arg.Flags.push_back(Flags);
+    }
+
+    Arg.OrigRegs.assign(Arg.Regs.begin(), Arg.Regs.end());
+    if (NumParts != 1 || OrigVT != NewVT) {
+      // If we can't directly assign the register, we need one or more
+      // intermediate values.
+      Arg.Regs.resize(NumParts);
+
+      // For each split register, create and assign a vreg that will store
+      // the incoming component of the larger value. These will later be
+      // merged to form the final vreg.
+      for (unsigned Part = 0; Part < NumParts; ++Part) {
+        Arg.Regs[Part] = MRI.createGenericVirtualRegister(NewLLT);
+      }
+
+      buildCopyToRegs(MIRBuilder, Arg.Regs, Arg.OrigRegs[0], OrigLLT, NewLLT,
+                      extendOpFromFlags(Arg.Flags[0]));
+    }
+
+    if (!Arg.Flags[0].isVarArg()) {
+      for (unsigned Part = 0; Part < NumParts; ++Part) {
+        CallInst.addUse(Arg.Regs[Part]);
+        ++NumFixedArgs;
+      }
+    }
+  }
+
+  if (CallConv == CallingConv::Swift) {
+    Type *PtrTy = PointerType::getUnqual(Ctx);
+    LLT PtrLLT = getLLTForType(*PtrTy, DL);
+
+    if (!HasSwiftSelfArg) {
+      CallInst.addUse(MIRBuilder.buildUndef(PtrLLT).getReg(0));
+    }
+    if (!HasSwiftErrorArg) {
+      CallInst.addUse(MIRBuilder.buildUndef(PtrLLT).getReg(0));
+    }
+  }
+
+  // Analyze operands of the call, assigning locations to each operand.
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CallConv, Info.IsVarArg, MF, ArgLocs, Ctx);
+
+  if (Info.IsVarArg) {
+    // Outgoing non-fixed arguments are placed in a buffer. First
+    // compute their offsets and the total amount of buffer space needed.
+    for (ArgInfo &Arg : drop_begin(SplitArgs, NumFixedArgs)) {
+      EVT OrigVT = TLI.getValueType(DL, Arg.Ty);
+      MVT PartVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
+      Type *Ty = EVT(PartVT).getTypeForEVT(Ctx);
+
+      for (unsigned Part = 0; Part < Arg.Regs.size(); ++Part) {
+        Align Alignment = std::max(Arg.Flags[Part].getNonZeroOrigAlign(),
+                                   DL.getABITypeAlign(Ty));
+        unsigned Offset =
+            CCInfo.AllocateStack(DL.getTypeAllocSize(Ty), Alignment);
+        CCInfo.addLoc(CCValAssign::getMem(ArgLocs.size(), PartVT, Offset,
+                                          PartVT, CCValAssign::Full));
+      }
+    }
+  }
+
+  unsigned NumBytes = CCInfo.getAlignedCallFrameSize();
+
+  auto StackAddrSpace = DL.getAllocaAddrSpace();
+  auto PtrLLT = getLLTForType(*PointerType::get(Ctx, StackAddrSpace), DL);
+  auto SizeLLT = LLT::scalar(PtrLLT.getSizeInBits());
+
+  if (Info.IsVarArg && NumBytes) {
+    Register VarArgStackPtr =
+        MF.getRegInfo().createGenericVirtualRegister(PtrLLT);
+
+    MaybeAlign StackAlign = DL.getStackAlignment();
+    assert(StackAlign && "data layout string is missing stack alignment");
+    int FI = MF.getFrameInfo().CreateStackObject(NumBytes, *StackAlign,
+                                                 /*isSS=*/false);
+
+    MIRBuilder.buildFrameIndex(VarArgStackPtr, FI);
+
+    unsigned ValNo = 0;
+    for (ArgInfo &Arg : drop_begin(SplitArgs, NumFixedArgs)) {
+      EVT OrigVT = TLI.getValueType(DL, Arg.Ty);
+      MVT PartVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
+      Type *Ty = EVT(PartVT).getTypeForEVT(Ctx);
+
+      for (unsigned Part = 0; Part < Arg.Regs.size(); ++Part) {
+        Align Alignment = std::max(Arg.Flags[Part].getNonZeroOrigAlign(),
+                                   DL.getABITypeAlign(Ty));
+
+        unsigned Offset = ArgLocs[ValNo++].getLocMemOffset();
+
+        Register DstPtr =
+            MIRBuilder
+                .buildPtrAdd(PtrLLT, VarArgStackPtr,
+                             MIRBuilder.buildConstant(SizeLLT, Offset).getReg(0))
+                .getReg(0);
+
+        MachineMemOperand *DstMMO = MF.getMachineMemOperand(
+            MachinePointerInfo::getFixedStack(MF, FI, Offset),
+            MachineMemOperand::MOStore | MachineMemOperand::MODereferenceable,
+            PartVT.getStoreSize(), Alignment);
+
+        MIRBuilder.buildStore(Arg.Regs[Part], DstPtr, *DstMMO);
+      }
+    }
+
+    CallInst.addUse(VarArgStackPtr);
+  } else if (Info.IsVarArg) {
+    CallInst.addUse(MIRBuilder.buildConstant(PtrLLT, 0).getReg(0));
+  }
+
+  if (IsIndirect) {
+    CallInst.addUse(IndirectIdx);
+  }
+
+  MIRBuilder.insertInstr(CallInst);
+
+  if (Info.LoweredTailCall) {
+      return true;
+  }
+
+  if (Info.CanLowerReturn && !Info.OrigRet.Ty->isVoidTy()) {
+    SmallVector<EVT, 4> SplitEVTs;
+    ComputeValueVTs(TLI, DL, Info.OrigRet.Ty, SplitEVTs);
+    assert(Info.OrigRet.Regs.size() == SplitEVTs.size() &&
+           "For each split Type there should be exactly one VReg.");
+
+    SmallVector<ArgInfo, 8> SplitReturns;
+
+    unsigned i = 0;
+    for (auto SplitEVT : SplitEVTs) {
+      Register CurVReg = Info.OrigRet.Regs[i];
+      ArgInfo CurArgInfo = ArgInfo{CurVReg, SplitEVT.getTypeForEVT(Ctx), 0};
+      setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, *Info.CB);
+
+      splitToValueTypes(CurArgInfo, SplitReturns, DL, CallConv);
+      ++i;
+    }
+
+    for (auto &Ret : SplitReturns) {
+      EVT OrigVT = TLI.getValueType(DL, Ret.Ty);
+      MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
+      LLT OrigLLT = getLLTForType(*Ret.Ty, DL);
+      LLT NewLLT = getLLTForMVT(NewVT);
+
+      // If we need to split the type over multiple regs, check it's a scenario
+      // we currently support.
+      unsigned NumParts =
+          TLI.getNumRegistersForCallingConv(Ctx, CallConv, OrigVT);
+
+      ISD::ArgFlagsTy OrigFlags = Ret.Flags[0];
+      Ret.Flags.clear();
+
+      for (unsigned Part = 0; Part < NumParts; ++Part) {
+        ISD::ArgFlagsTy Flags = OrigFlags;
+        if (Part == 0) {
+          Flags.setSplit();
+        } else {
+          Flags.setOrigAlign(Align(1));
+          if (Part == NumParts - 1)
+            Flags.setSplitEnd();
+        }
+
+        Ret.Flags.push_back(Flags);
+      }
+
+      Ret.OrigRegs.assign(Ret.Regs.begin(), Ret.Regs.end());
+      if (NumParts != 1 || OrigVT != NewVT) {
+        // If we can't directly assign the register, we need one or more
+        // intermediate values.
+        Ret.Regs.resize(NumParts);
+
+        // For each split register, create and assign a vreg that will store
+        // the incoming component of the larger value. These will later be
+        // merged to form the final vreg.
+        for (unsigned Part = 0; Part < NumParts; ++Part) {
+          Ret.Regs[Part] = MRI.createGenericVirtualRegister(NewLLT);
+        }
+        buildCopyFromRegs(MIRBuilder, Ret.OrigRegs, Ret.Regs, OrigLLT, NewLLT,
+                          Ret.Flags[0]);
+      }
+
+      for (unsigned Part = 0; Part < NumParts; ++Part) {
+        CallInst.addDef(Ret.Regs[Part]);
+      }
+    }
+  }
+
+  if (!Info.CanLowerReturn) {
+    insertSRetLoads(MIRBuilder, Info.OrigRet.Ty, Info.OrigRet.Regs,
+                    Info.DemoteRegister, Info.DemoteStackIndex);
+
+    for (auto Reg : Info.OrigRet.Regs) {
+      CallInst.addDef(Reg);
+    }
+  }
+
+  return true;
 }
