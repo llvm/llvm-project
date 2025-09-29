@@ -3470,6 +3470,11 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     break;
   case llvm::omp::Directive::OMPD_tile:
     genTileOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
+  case llvm::omp::Directive::OMPD_fuse:
+    unsigned version = semaCtx.langOptions().OpenMPVersion;
+    if (!semaCtx.langOptions().OpenMPSimd)
+      TODO(loc, "Unhandled loop directive (" +
+                    llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
     break;
   case llvm::omp::Directive::OMPD_unroll:
     genUnrollOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
@@ -3918,12 +3923,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   mlir::Location currentLocation = converter.genLocation(beginSpec.source);
 
-  auto &optLoopCons =
-      std::get<std::optional<parser::NestedConstruct>>(loopConstruct.t);
-  if (optLoopCons.has_value()) {
+  auto &loopConsList =
+      std::get<std::list<parser::NestedConstruct>>(loopConstruct.t);
+  for (auto &loopCons : loopConsList) {
     if (auto *ompNestedLoopCons{
             std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
-                &*optLoopCons)}) {
+                &loopCons)}) {
       llvm::omp::Directive nestedDirective =
           parser::omp::GetOmpDirectiveName(*ompNestedLoopCons).v;
       switch (nestedDirective) {
