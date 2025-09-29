@@ -78,6 +78,7 @@ set(SANITIZER_TEST_CFLAGS_COMMON
   -O2
   -Werror=sign-compare
   -Wno-gnu-zero-variadic-macro-arguments
+  -std=c++17
   )
 
 set(SANITIZER_TEST_LINK_FLAGS_COMMON
