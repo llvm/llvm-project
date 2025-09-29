@@ -375,7 +375,6 @@ TEST(Remark, TestRemarkFinal) {
 
     // Finalize the remark engine
     context.getRemarkEngine()->shutdown();
-    `
   }
 
   llvm::errs().flush();
