@@ -281,7 +281,7 @@ vector::createUnrollIterator(VectorType vType, int64_t targetRank) {
   auto shapeToUnroll = vType.getShape().drop_back(targetRank);
   auto inputScalableVecDimsToUnroll =
       vType.getScalableDims().drop_back(targetRank);
-  auto it = llvm::find(inputScalableVecDimsToUnroll, true);
+  const auto *it = llvm::find(inputScalableVecDimsToUnroll, true);
   auto firstScalableDim = it - inputScalableVecDimsToUnroll.begin();
   if (firstScalableDim == 0)
     return {};
@@ -319,7 +319,7 @@ bool vector::isLinearizableVector(VectorType type) {
 Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                      Value source,
                                      ArrayRef<int64_t> inputVectorSizes,
-                                     Value padValue,
+                                     std::optional<Value> padValue,
                                      bool useInBoundsInsteadOfMasking,
                                      ArrayRef<bool> inputScalableVecDims) {
   assert(!llvm::is_contained(inputVectorSizes, ShapedType::kDynamic) &&
@@ -328,9 +328,11 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
   auto sourceShape = sourceShapedType.getShape();
   assert(sourceShape.size() == inputVectorSizes.size() &&
          "expected same ranks.");
-  auto vectorType = VectorType::get(inputVectorSizes, padValue.getType(),
-                                    inputScalableVecDims);
-  assert(padValue.getType() == sourceShapedType.getElementType() &&
+  auto vectorType =
+      VectorType::get(inputVectorSizes, sourceShapedType.getElementType(),
+                      inputScalableVecDims);
+  assert((!padValue.has_value() ||
+          padValue.value().getType() == sourceShapedType.getElementType()) &&
          "expected same pad element type to match source element type");
   int64_t readRank = inputVectorSizes.size();
   auto zero = arith::ConstantIndexOp::create(builder, loc, 0);

@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// `array[index]`).
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/misplaced-array-index.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/misplaced-array-index.html
 class MisplacedArrayIndexCheck : public ClangTidyCheck {
 public:
   MisplacedArrayIndexCheck(StringRef Name, ClangTidyContext *Context)

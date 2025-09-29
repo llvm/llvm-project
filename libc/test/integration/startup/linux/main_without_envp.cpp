@@ -8,4 +8,4 @@
 
 #include "test/IntegrationTest/test.h"
 
-TEST_MAIN(int argc, char **argv) { return 0; }
+TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv) { return 0; }
