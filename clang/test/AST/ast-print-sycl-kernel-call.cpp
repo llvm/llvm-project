@@ -3,7 +3,7 @@
 
 struct sycl_kernel_launcher {
   template<typename KernelName, typename... Ts>
-  void sycl_enqueue_kernel_launch(const char *, Ts...) {}
+  void sycl_kernel_launch(const char *, Ts...) {}
 
   template<typename KernelName, typename KernelType>
   void kernel_entry_point(KernelType kernel) {

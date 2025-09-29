@@ -10,6 +10,10 @@
 template<int> struct ST; // #ST-decl
 template<int N> using TTA = ST<N>; // #TTA-decl
 
+// A launcher function definition required for host code synthesis to silence
+// complains.
+template <typename KernelName, typename... Tys>
+void sycl_kernel_launch(const char *, Tys &&...Args) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Valid declarations.

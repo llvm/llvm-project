@@ -24,6 +24,7 @@ def CaseStmt : StmtNode<SwitchCase>;
 def DefaultStmt : StmtNode<SwitchCase>;
 def CapturedStmt : StmtNode<Stmt>;
 def SYCLKernelCallStmt : StmtNode<Stmt>;
+def UnresolvedSYCLKernelCallStmt : StmtNode<Stmt>;
 
 // Break/continue.
 def LoopControlStmt : StmtNode<Stmt, 1>;

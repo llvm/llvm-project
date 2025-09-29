@@ -17,6 +17,11 @@ module M2 { header "m2.h" }
 #--- common.h
 template<int> struct KN;
 
+// A launcher function definition required for host code synthesis to silence
+// complains.
+template <typename KernelName, typename... Tys>
+void sycl_kernel_launch(const char *, Tys &&...Args) {}
+
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void common_test1() {}
 
@@ -24,7 +29,6 @@ template<typename T>
 [[clang::sycl_kernel_entry_point(T)]]
 void common_test2() {}
 template void common_test2<KN<2>>();
-
 
 #--- m1.h
 #include "common.h"

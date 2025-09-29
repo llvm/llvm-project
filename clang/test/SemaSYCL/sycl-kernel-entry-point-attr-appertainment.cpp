@@ -40,6 +40,10 @@ struct coroutine_traits {
 // A unique kernel name type is required for each declared kernel entry point.
 template<int, int = 0> struct KN;
 
+// A launcher function definition required for host code synthesis to silence
+// complains.
+template <typename KernelName, typename... Tys>
+void sycl_kernel_launch(const char *, Tys &&...Args) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Valid declarations.

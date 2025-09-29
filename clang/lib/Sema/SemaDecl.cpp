@@ -15931,7 +15931,6 @@ Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Declarator &D,
   if (!Bases.empty())
     OpenMP().ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl,
                                                                         Bases);
-
   return Dcl;
 }
 
@@ -16352,6 +16351,20 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
 
   maybeAddDeclWithEffects(FD);
 
+  if (FD && !FD->isInvalidDecl() &&
+      FD->hasAttr<SYCLKernelEntryPointAttr>() && FnBodyScope) {
+    // Building KernelLaunchIdExpr requires performing an unqualified lookup
+    // which can only be done correctly while the stack of parsing scopes is
+    // alive, so we do it here when we start parsing function body even if it is
+    // a templated function.
+    const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
+    if (!SKEPAttr->isInvalidAttr()) {
+      ExprResult LaunchIdExpr =
+          SYCL().BuildSYCLKernelLaunchIdExpr(FD, SKEPAttr->getKernelName());
+      getCurFunction()->SYCLKernelLaunchIdExpr = LaunchIdExpr.get();
+    }
+  }
+
   return D;
 }
 
@@ -16553,9 +16566,21 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
       SKEPAttr->setInvalidAttr();
     }
 
-    if (Body && !FD->isTemplated() && !SKEPAttr->isInvalidAttr()) {
-      StmtResult SR =
-          SYCL().BuildSYCLKernelCallStmt(FD, cast<CompoundStmt>(Body));
+    // We don't need to build SYCLKernelCallStmt for template instantiations
+    // since it was already created by template instantiator.
+    if (Body && !SKEPAttr->isInvalidAttr()) {
+      StmtResult SR;
+      if (FD->isTemplated()) {
+        SR = SYCL().BuildUnresolvedSYCLKernelCallStmt(
+            cast<CompoundStmt>(Body), getCurFunction()->SYCLKernelLaunchIdExpr);
+      } else if (FD->isTemplateInstantiation()) {
+        assert(isa<SYCLKernelCallStmt>(Body));
+        SR = Body;
+      } else {
+        SR = SYCL().BuildSYCLKernelCallStmt(
+            FD, cast<CompoundStmt>(Body),
+            getCurFunction()->SYCLKernelLaunchIdExpr);
+      }
       if (SR.isInvalid())
         return nullptr;
       Body = SR.get();

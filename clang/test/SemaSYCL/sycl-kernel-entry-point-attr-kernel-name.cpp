@@ -9,6 +9,12 @@
 // specification.
 
 struct S1;
+
+// A launcher function definition required for host code synthesis to silence
+// complains.
+template <typename KernelName, typename... Tys>
+void sycl_kernel_launch(const char *, Tys &&...Args) {}
+
 // expected-warning@+3 {{redundant 'clang::sycl_kernel_entry_point' attribute}}
 // expected-note@+1  {{previous attribute is here}}
 [[clang::sycl_kernel_entry_point(S1),
