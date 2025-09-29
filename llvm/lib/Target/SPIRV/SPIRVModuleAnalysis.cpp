@@ -1222,6 +1222,31 @@ static void AddDotProductRequirements(const MachineInstr &MI,
   }
 }
 
+void addPrintfRequirements(const MachineInstr &MI,
+                           SPIRV::RequirementHandler &Reqs,
+                           const SPIRVSubtarget &ST) {
+  SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+  const SPIRVType *PtrType = GR->getSPIRVTypeForVReg(MI.getOperand(4).getReg());
+  if (PtrType) {
+    MachineOperand ASOp = PtrType->getOperand(1);
+    if (ASOp.isImm()) {
+      unsigned AddrSpace = ASOp.getImm();
+      if (AddrSpace != SPIRV::StorageClass::UniformConstant) {
+        if (!ST.canUseExtension(
+                SPIRV::Extension::
+                    SPV_EXT_relaxed_printf_string_address_space)) {
+          report_fatal_error("SPV_EXT_relaxed_printf_string_address_space is "
+                             "required because printf uses a format string not "
+                             "in constant address space.",
+                             false);
+        }
+        Reqs.addExtension(
+            SPIRV::Extension::SPV_EXT_relaxed_printf_string_address_space);
+      }
+    }
+  }
+}
+
 static bool isBFloat16Type(const SPIRVType *TypeDef) {
   return TypeDef && TypeDef->getNumOperands() == 3 &&
          TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
@@ -1230,8 +1255,9 @@ static bool isBFloat16Type(const SPIRVType *TypeDef) {
 }
 
 void addInstrRequirements(const MachineInstr &MI,
-                          SPIRV::RequirementHandler &Reqs,
+                          SPIRV::ModuleAnalysisInfo &MAI,
                           const SPIRVSubtarget &ST) {
+  SPIRV::RequirementHandler &Reqs = MAI.Reqs;
   switch (MI.getOpcode()) {
   case SPIRV::OpMemoryModel: {
     int64_t Addr = MI.getOperand(0).getImm();
@@ -1321,6 +1347,12 @@ void addInstrRequirements(const MachineInstr &MI,
         static_cast<int64_t>(
             SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100)) {
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
+      break;
+    }
+    if (MI.getOperand(3).getImm() ==
+        static_cast<int64_t>(SPIRV::OpenCLExtInst::printf)) {
+      addPrintfRequirements(MI, Reqs, ST);
+      break;
     }
     break;
   }
@@ -1781,15 +1813,45 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   case SPIRV::OpConvertHandleToImageINTEL:
   case SPIRV::OpConvertHandleToSamplerINTEL:
-  case SPIRV::OpConvertHandleToSampledImageINTEL:
+  case SPIRV::OpConvertHandleToSampledImageINTEL: {
     if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bindless_images))
       report_fatal_error("OpConvertHandleTo[Image/Sampler/SampledImage]INTEL "
                          "instructions require the following SPIR-V extension: "
                          "SPV_INTEL_bindless_images",
                          false);
+    SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+    SPIRV::AddressingModel::AddressingModel AddrModel = MAI.Addr;
+    SPIRVType *TyDef = GR->getSPIRVTypeForVReg(MI.getOperand(1).getReg());
+    if (MI.getOpcode() == SPIRV::OpConvertHandleToImageINTEL &&
+        TyDef->getOpcode() != SPIRV::OpTypeImage) {
+      report_fatal_error("Incorrect return type for the instruction "
+                         "OpConvertHandleToImageINTEL",
+                         false);
+    } else if (MI.getOpcode() == SPIRV::OpConvertHandleToSamplerINTEL &&
+               TyDef->getOpcode() != SPIRV::OpTypeSampler) {
+      report_fatal_error("Incorrect return type for the instruction "
+                         "OpConvertHandleToSamplerINTEL",
+                         false);
+    } else if (MI.getOpcode() == SPIRV::OpConvertHandleToSampledImageINTEL &&
+               TyDef->getOpcode() != SPIRV::OpTypeSampledImage) {
+      report_fatal_error("Incorrect return type for the instruction "
+                         "OpConvertHandleToSampledImageINTEL",
+                         false);
+    }
+    SPIRVType *SpvTy = GR->getSPIRVTypeForVReg(MI.getOperand(2).getReg());
+    unsigned Bitwidth = GR->getScalarOrVectorBitWidth(SpvTy);
+    if (!(Bitwidth == 32 && AddrModel == SPIRV::AddressingModel::Physical32) &&
+        !(Bitwidth == 64 && AddrModel == SPIRV::AddressingModel::Physical64)) {
+      report_fatal_error(
+          "Parameter value must be a 32-bit scalar in case of "
+          "Physical32 addressing model or a 64-bit scalar in case of "
+          "Physical64 addressing model",
+          false);
+    }
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bindless_images);
     Reqs.addCapability(SPIRV::Capability::BindlessImagesINTEL);
     break;
+  }
   case SPIRV::OpSubgroup2DBlockLoadINTEL:
   case SPIRV::OpSubgroup2DBlockLoadTransposeINTEL:
   case SPIRV::OpSubgroup2DBlockLoadTransformINTEL:
@@ -1927,7 +1989,7 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
       continue;
     for (const MachineBasicBlock &MBB : *MF)
       for (const MachineInstr &MI : MBB)
-        addInstrRequirements(MI, MAI.Reqs, ST);
+        addInstrRequirements(MI, MAI, ST);
   }
   // Collect requirements for OpExecutionMode instructions.
   auto Node = M.getNamedMetadata("spirv.ExecutionMode");

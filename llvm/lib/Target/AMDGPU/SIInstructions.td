@@ -2287,8 +2287,9 @@ def : GCNPat <
 
 def : GCNPat <
   (fcopysign fp16vt:$src0, f32:$src1),
-  (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fff0000)),
-             (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $src0, hi16), $src1), hi16)
+  (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
+             (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
+             (V_LSHRREV_B32_e64 (i32 16), $src1)), lo16)
 >;
 
 def : GCNPat <
