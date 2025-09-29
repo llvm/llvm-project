@@ -3,7 +3,7 @@
 readability-avoid-default-lambda-capture
 ========================================
 
-Warns on default lambda captures (e.g. ``[&](){ ... }``, ``[=](){ ... }``)
+Warns on default lambda captures (e.g. ``[&](){ ... }``, ``[=](){ ... }``).
   
 Captures can lead to subtle bugs including dangling references and unnecessary
 copies. Writing out the name of the variables being captured reminds programmers
@@ -33,8 +33,8 @@ Example
   }
 
 When ``callbacks`` is executed, ``factoryId`` will dangle. Writing the name of
-``factoryId`` in the capture list makes it easy to review the captures and
-detect obvious bugs.
+``factoryId`` in the capture list reminds the reader that it is being captured,
+which will hopefully lead to the bug being fixed during code review.
 
 .. code-block:: c++
 
