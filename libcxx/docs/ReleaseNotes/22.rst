@@ -38,9 +38,10 @@ What's New in Libc++ 22.0.0?
 Implemented Papers
 ------------------
 
-- P2321R2: ``zip`` (`Github <https://github.com/llvm/llvm-project/issues/105169>`__) (The paper is partially
-  implemented. ``zip_transform_view`` is implemented in this release)
-- P3168R2: Give ``std::optional`` Range Support (`Github <https://github.com/llvm/llvm-project/issues/105430>`__)
+- P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``
+  is implemented in this release)
+- P3044R2: sub-``string_view`` from ``string`` (`Github <https://llvm.org/PR148140>`__)
+- P3168R2: Give ``std::optional`` Range Support (`Github <https://llvm.org/PR105430>`__)
 
 Improvements and New Features
 -----------------------------
@@ -57,11 +58,13 @@ Improvements and New Features
   has been improved by up to 3x
 - The performance of ``insert(iterator, iterator)`` of ``map``, ``set``, ``multimap`` and ``multiset`` has been improved
   by up to 2.5x
-- The performance of ``erase(iterator, iterator)`` in the unordered containers has been improved by up to 1.9x
 - The performance of ``map::insert_or_assign`` has been improved by up to 2x
-
 - ``ofstream::write`` has been optimized to pass through large strings to system calls directly instead of copying them
   in chunks into a buffer.
+- Multiple internal types have been refactored to use ``[[no_unique_address]]``, resulting in faster compile times and
+  reduced debug information.
+
+- The performance of ``std::find`` has been improved by up to 2x for integral types
 
 Deprecations and Removals
 -------------------------
@@ -75,11 +78,24 @@ Potentially breaking changes
   first element being returned from ``find`` will be broken, and ``lower_bound`` or ``equal_range`` should be used
   instead.
 
+- The ABI flag ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` has been split off from
+  ``_LIBCPP_ABI_NO_ITERATOR_BASES``. If you are using this flag and care about ABI stability, you should set
+  ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` as well.
+
 Announcements About Future Releases
 -----------------------------------
 
 ABI Affecting Changes
 ---------------------
+
+- The ABI flag ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` has been split off from
+  ``_LIBCPP_ABI_NO_ITERATOR_BASES``. If you are using this flag and care about ABI stability, you should set
+  ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` as well.
+
+- The internal types ``__map_value_compare``, ``__unordered_map_hasher``, ``__unordered_map_equal``,
+  ``__hash_map_hasher`` and ``__hash_map_equal`` have been refactored to use ``_LIBCPP_COMPRESSED_ELEMENT`` instead of
+  potentially inheriting from the types they wrap. At this point in time we are not aware of any ABI changes caused by
+  this.
 
 Build System Changes
 --------------------

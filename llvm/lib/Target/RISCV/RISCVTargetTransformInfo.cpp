@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
 #include <cmath>
 #include <optional>
@@ -289,9 +290,7 @@ bool RISCVTTIImpl::hasActiveVectorLength() const {
 TargetTransformInfo::PopcntSupportKind
 RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) const {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
-  return ST->hasStdExtZbb() || (ST->hasVendorXCVbitmanip() && !ST->is64Bit())
-             ? TTI::PSK_FastHardware
-             : TTI::PSK_Software;
+  return ST->hasCPOPLike() ? TTI::PSK_FastHardware : TTI::PSK_Software;
 }
 
 InstructionCost RISCVTTIImpl::getPartialReductionCost(
@@ -2701,6 +2700,120 @@ void RISCVTTIImpl::getUnrollingPreferences(
 void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::PeelingPreferences &PP) const {
   BaseT::getPeelingPreferences(L, SE, PP);
+}
+
+bool RISCVTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
+                                      MemIntrinsicInfo &Info) const {
+  const DataLayout &DL = getDataLayout();
+  Intrinsic::ID IID = Inst->getIntrinsicID();
+  LLVMContext &C = Inst->getContext();
+  bool HasMask = false;
+  switch (IID) {
+  case Intrinsic::riscv_vle_mask:
+  case Intrinsic::riscv_vse_mask:
+    HasMask = true;
+    [[fallthrough]];
+  case Intrinsic::riscv_vle:
+  case Intrinsic::riscv_vse: {
+    // Intrinsic interface:
+    // riscv_vle(merge, ptr, vl)
+    // riscv_vle_mask(merge, ptr, mask, vl, policy)
+    // riscv_vse(val, ptr, vl)
+    // riscv_vse_mask(val, ptr, mask, vl, policy)
+    bool IsWrite = Inst->getType()->isVoidTy();
+    Type *Ty = IsWrite ? Inst->getArgOperand(0)->getType() : Inst->getType();
+    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IID);
+    unsigned VLIndex = RVVIInfo->VLOperand;
+    unsigned PtrOperandNo = VLIndex - 1 - HasMask;
+    MaybeAlign Alignment =
+        Inst->getArgOperand(PtrOperandNo)->getPointerAlignment(DL);
+    Type *MaskType = Ty->getWithNewType(Type::getInt1Ty(C));
+    Value *Mask = ConstantInt::getTrue(MaskType);
+    if (HasMask)
+      Mask = Inst->getArgOperand(VLIndex - 1);
+    Value *EVL = Inst->getArgOperand(VLIndex);
+    Info.InterestingOperands.emplace_back(Inst, PtrOperandNo, IsWrite, Ty,
+                                          Alignment, Mask, EVL);
+    return true;
+  }
+  case Intrinsic::riscv_vlse_mask:
+  case Intrinsic::riscv_vsse_mask:
+    HasMask = true;
+    [[fallthrough]];
+  case Intrinsic::riscv_vlse:
+  case Intrinsic::riscv_vsse: {
+    // Intrinsic interface:
+    // riscv_vlse(merge, ptr, stride, vl)
+    // riscv_vlse_mask(merge, ptr, stride, mask, vl, policy)
+    // riscv_vsse(val, ptr, stride, vl)
+    // riscv_vsse_mask(val, ptr, stride, mask, vl, policy)
+    bool IsWrite = Inst->getType()->isVoidTy();
+    Type *Ty = IsWrite ? Inst->getArgOperand(0)->getType() : Inst->getType();
+    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IID);
+    unsigned VLIndex = RVVIInfo->VLOperand;
+    unsigned PtrOperandNo = VLIndex - 2 - HasMask;
+    MaybeAlign Alignment =
+        Inst->getArgOperand(PtrOperandNo)->getPointerAlignment(DL);
+
+    Value *Stride = Inst->getArgOperand(PtrOperandNo + 1);
+    // Use the pointer alignment as the element alignment if the stride is a
+    // multiple of the pointer alignment. Otherwise, the element alignment
+    // should be the greatest common divisor of pointer alignment and stride.
+    // For simplicity, just consider unalignment for elements.
+    unsigned PointerAlign = Alignment.valueOrOne().value();
+    if (!isa<ConstantInt>(Stride) ||
+        cast<ConstantInt>(Stride)->getZExtValue() % PointerAlign != 0)
+      Alignment = Align(1);
+
+    Type *MaskType = Ty->getWithNewType(Type::getInt1Ty(C));
+    Value *Mask = ConstantInt::getTrue(MaskType);
+    if (HasMask)
+      Mask = Inst->getArgOperand(VLIndex - 1);
+    Value *EVL = Inst->getArgOperand(VLIndex);
+    Info.InterestingOperands.emplace_back(Inst, PtrOperandNo, IsWrite, Ty,
+                                          Alignment, Mask, EVL, Stride);
+    return true;
+  }
+  case Intrinsic::riscv_vloxei_mask:
+  case Intrinsic::riscv_vluxei_mask:
+  case Intrinsic::riscv_vsoxei_mask:
+  case Intrinsic::riscv_vsuxei_mask:
+    HasMask = true;
+    [[fallthrough]];
+  case Intrinsic::riscv_vloxei:
+  case Intrinsic::riscv_vluxei:
+  case Intrinsic::riscv_vsoxei:
+  case Intrinsic::riscv_vsuxei: {
+    // Intrinsic interface (only listed ordered version):
+    // riscv_vloxei(merge, ptr, index, vl)
+    // riscv_vloxei_mask(merge, ptr, index, mask, vl, policy)
+    // riscv_vsoxei(val, ptr, index, vl)
+    // riscv_vsoxei_mask(val, ptr, index, mask, vl, policy)
+    bool IsWrite = Inst->getType()->isVoidTy();
+    Type *Ty = IsWrite ? Inst->getArgOperand(0)->getType() : Inst->getType();
+    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IID);
+    unsigned VLIndex = RVVIInfo->VLOperand;
+    unsigned PtrOperandNo = VLIndex - 2 - HasMask;
+    Value *Mask;
+    if (HasMask) {
+      Mask = Inst->getArgOperand(VLIndex - 1);
+    } else {
+      // Mask cannot be nullptr here: vector GEP produces <vscale x N x ptr>,
+      // and casting that to scalar i64 triggers a vector/scalar mismatch
+      // assertion in CreatePointerCast. Use an all-true mask so ASan lowers it
+      // via extractelement instead.
+      Type *MaskType = Ty->getWithNewType(Type::getInt1Ty(C));
+      Mask = ConstantInt::getTrue(MaskType);
+    }
+    Value *EVL = Inst->getArgOperand(VLIndex);
+    Value *OffsetOp = Inst->getArgOperand(PtrOperandNo + 1);
+    Info.InterestingOperands.emplace_back(Inst, PtrOperandNo, IsWrite, Ty,
+                                          Align(1), Mask, EVL,
+                                          /* Stride */ nullptr, OffsetOp);
+    return true;
+  }
+  }
+  return false;
 }
 
 unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) const {

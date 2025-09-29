@@ -228,10 +228,12 @@ LogicalResult AbstractSparseForwardDataFlowAnalysis::visitCallOperation(
     ArrayRef<AbstractSparseLattice *> resultLattices) {
   // If the call operation is to an external function, attempt to infer the
   // results from the call arguments.
-  auto callable =
-      dyn_cast_if_present<CallableOpInterface>(call.resolveCallable());
-  if (!getSolverConfig().isInterprocedural() ||
-      (callable && !callable.getCallableRegion())) {
+  auto isExternalCallable = [&]() {
+    auto callable =
+        dyn_cast_if_present<CallableOpInterface>(call.resolveCallable());
+    return callable && !callable.getCallableRegion();
+  };
+  if (!getSolverConfig().isInterprocedural() || isExternalCallable()) {
     visitExternalCallImpl(call, operandLattices, resultLattices);
     return success();
   }

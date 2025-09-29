@@ -426,8 +426,8 @@ FUNCTION_PASS("dot-post-dom", PostDomPrinter())
 FUNCTION_PASS("dot-post-dom-only", PostDomOnlyPrinter())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass(TM))
+FUNCTION_PASS("drop-unnecessary-assumes", DropUnnecessaryAssumesPass())
 FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(TM))
-FUNCTION_PASS("expand-fp", ExpandFpPass(TM))
 FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(TM))
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass())
 FUNCTION_PASS("extra-vector-passes",
@@ -721,6 +721,13 @@ FUNCTION_PASS_WITH_PARAMS(
     },
     parseBoundsCheckingOptions,
     "trap;rt;rt-abort;min-rt;min-rt-abort;merge;guard=N")
+FUNCTION_PASS_WITH_PARAMS(
+    "expand-fp", "ExpandFpPass",
+    [TM = TM](CodeGenOptLevel OL) {
+      return ExpandFpPass(TM, OL);
+    },
+    parseExpandFpOptions, "O0;O1;O2;O3")
+
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS
@@ -749,7 +756,6 @@ LOOP_ANALYSIS("should-run-extra-simple-loop-unswitch",
 #endif
 LOOP_PASS("canon-freeze", CanonicalizeFreezeInLoopsPass())
 LOOP_PASS("dot-ddg", DDGDotPrinterPass())
-LOOP_PASS("evl-iv-simplify", EVLIndVarSimplifyPass())
 LOOP_PASS("guard-widening", GuardWideningPass())
 LOOP_PASS("extra-simple-loop-unswitch-passes",
           ExtraLoopPassManager<ShouldRunExtraSimpleLoopUnswitch>())
@@ -799,3 +805,35 @@ LOOP_PASS_WITH_PARAMS(
     },
     parseLoopUnswitchOptions, "nontrivial;no-nontrivial;trivial;no-trivial")
 #undef LOOP_PASS_WITH_PARAMS
+
+#ifdef MODULE_CALLBACK
+MODULE_CALLBACK("pipeline-start-callbacks", invokePipelineStartEPCallbacks)
+#endif
+#undef MODULE_CALLBACK
+
+// There are some full lto specific ones that are ignored here for now
+#ifdef MODULE_LTO_CALLBACK
+MODULE_LTO_CALLBACK("pipeline-early-simplification-callbacks", invokePipelineEarlySimplificationEPCallbacks)
+MODULE_LTO_CALLBACK("optimizer-early-callbacks", invokeOptimizerEarlyEPCallbacks)
+MODULE_LTO_CALLBACK("optimizer-last-callbacks", invokeOptimizerLastEPCallbacks)
+#endif
+#undef MODULE_LTO_CALLBACK
+
+#ifdef FUNCTION_CALLBACK
+FUNCTION_CALLBACK("peephole-callbacks", invokePeepholeEPCallbacks)
+FUNCTION_CALLBACK("scalar-optimizer-late-callbacks", invokeScalarOptimizerLateEPCallbacks)
+FUNCTION_CALLBACK("vectorizer-start-callbacks", invokeVectorizerStartEPCallbacks)
+FUNCTION_CALLBACK("vectorizer-end-callbacks", invokeVectorizerEndEPCallbacks)
+#endif
+#undef FUNCTION_CALLBACK
+
+#ifdef CGSCC_CALLBACK
+CGSCC_CALLBACK("cgscc-optimizer-late-callbacks", invokeCGSCCOptimizerLateEPCallbacks)
+#endif
+#undef CGSCC_CALLBACK
+
+#ifdef LOOP_CALLBACK
+LOOP_CALLBACK("late-loop-optimizations-callbacks", invokeLateLoopOptimizationsEPCallbacks)
+LOOP_CALLBACK("loop-optimizer-end-callbacks", invokeLoopOptimizerEndEPCallbacks)
+#endif
+#undef LOOP_CALLBACK
