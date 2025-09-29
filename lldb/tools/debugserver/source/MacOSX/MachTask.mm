@@ -213,7 +213,7 @@ nub_size_t MachTask::WriteMemory(nub_addr_t addr, nub_size_t size,
 }
 
 //----------------------------------------------------------------------
-// MachTask::GetMemoryRegionInfo
+// MachTask::MemoryRegionInfo
 //----------------------------------------------------------------------
 int MachTask::GetMemoryRegionInfo(nub_addr_t addr, DNBRegionInfo *region_info) {
   task_t task = TaskPort();
@@ -221,7 +221,7 @@ int MachTask::GetMemoryRegionInfo(nub_addr_t addr, DNBRegionInfo *region_info) {
     return -1;
 
   int ret = m_vm_memory.GetMemoryRegionInfo(task, addr, region_info);
-  DNBLogThreadedIf(LOG_MEMORY, "MachTask::GetMemoryRegionInfo ( addr = 0x%8.8llx "
+  DNBLogThreadedIf(LOG_MEMORY, "MachTask::MemoryRegionInfo ( addr = 0x%8.8llx "
                                ") => %i  (start = 0x%8.8llx, size = 0x%8.8llx, "
                                "permissions = %u)",
                    (uint64_t)addr, ret, (uint64_t)region_info->addr,

@@ -50,11 +50,11 @@ class TestDarwinMTE(TestBase):
             patterns=[r"(.*\(tag: 0x[0-9a-f]\)\n){4}"],
         )
 
-    def _parse_pointer_tag(self):
-        return re.search(r"Logical tag: (0x[0-9a-f])", self.res.GetOutput()).group(1)
+    def _parse_pointer_tag(self, output):
+        return re.search(r"Logical tag: (0x[0-9a-f])", output).group(1)
 
-    def _parse_memory_tags(self, expected_tag_count):
-        tags = re.findall(r"\): (0x[0-9a-f])", self.res.GetOutput())
+    def _parse_memory_tags(self, output, expected_tag_count):
+        tags = re.findall(r"\): (0x[0-9a-f])", output)
         self.assertEqual(len(tags), expected_tag_count)
         return tags
 
@@ -77,18 +77,20 @@ class TestDarwinMTE(TestBase):
             substrs=["Logical tag: 0x", "Allocation tags:", "(mismatch)"],
             patterns=[r"(\[.*\): 0x[0-9a-f].*\n){4}"],
         )
-        self.assertEqual(self.res.GetOutput().count("(mismatch)"), 2)
-        ptr_tag = self._parse_pointer_tag()
-        tags = self._parse_memory_tags(4)
+        output = self.res.GetOutput()
+        self.assertEqual(output.count("(mismatch)"), 2)
+        ptr_tag = self._parse_pointer_tag(output)
+        tags = self._parse_memory_tags(output, 4)
         self.assertEqual(tags[1], ptr_tag)
         self.assertEqual(tags[2], ptr_tag)
-        self.assertNotEqual(tags[0], ptr_tag)
-        self.assertNotEqual(tags[3], ptr_tag)
+        self.assertNotEqual(tags[0], ptr_tag)  # Memory that comes before/after
+        self.assertNotEqual(tags[3], ptr_tag)  # allocation has different tag.
 
         # Continue running until MTE fault
-        self.runCmd("process continue")
+        self.expect("process continue", substrs=["stop reason = EXC_ARM_MTE_TAG_FAULT"])
 
         self.runCmd("memory tag read ptr-1 ptr+33")
-        self.assertEqual(self.res.GetOutput().count("(mismatch)"), 4)
-        tags = self._parse_memory_tags(4)
+        output = self.res.GetOutput()
+        self.assertEqual(output.count("(mismatch)"), 4)
+        tags = self._parse_memory_tags(output, 4)
         self.assertTrue(all(t != ptr_tag for t in tags))
