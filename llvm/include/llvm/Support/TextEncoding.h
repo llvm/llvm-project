@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 
 #include <string>
@@ -92,8 +93,8 @@ public:
   /// \param[in] From the source character encoding
   /// \param[in] To the target character encoding
   /// \return a TextEncodingConverter instance or an error code
-  static ErrorOr<TextEncodingConverter> create(TextEncoding From,
-                                               TextEncoding To);
+  LLVM_ABI static ErrorOr<TextEncodingConverter> create(TextEncoding From,
+                                                        TextEncoding To);
 
   /// Creates a TextEncodingConverter instance.
   /// Returns std::errc::invalid_argument in case the requested conversion is
@@ -101,7 +102,8 @@ public:
   /// \param[in] From name of the source character encoding
   /// \param[in] To name of the target character encoding
   /// \return a TextEncodingConverter instance or an error code
-  static ErrorOr<TextEncodingConverter> create(StringRef From, StringRef To);
+  LLVM_ABI static ErrorOr<TextEncodingConverter> create(StringRef From,
+                                                        StringRef To);
 
   TextEncodingConverter(const TextEncodingConverter &) = delete;
   TextEncodingConverter &operator=(const TextEncodingConverter &) = delete;

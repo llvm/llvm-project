@@ -631,17 +631,17 @@ TEST_F(FormatTestJava, SwitchExpression) {
                "});",
                Style);
 
-  constexpr StringRef Code1{"i = switch (day) {\n"
+  constexpr StringRef Code1("i = switch (day) {\n"
                             "  case THURSDAY, SATURDAY -> 8;\n"
                             "  case WEDNESDAY -> 9;\n"
                             "  default -> 0;\n"
-                            "};"};
+                            "};");
   verifyFormat(Code1, Style);
 
   Style.IndentCaseLabels = true;
   verifyFormat(Code1, Style);
 
-  constexpr StringRef Code2{"i = switch (day) {\n"
+  constexpr StringRef Code2("i = switch (day) {\n"
                             "  case THURSDAY, SATURDAY -> {\n"
                             "    foo();\n"
                             "    yield 8;\n"
@@ -653,17 +653,17 @@ TEST_F(FormatTestJava, SwitchExpression) {
                             "  default -> {\n"
                             "    yield 0;\n"
                             "  }\n"
-                            "};"};
+                            "};");
   verifyFormat(Code2, Style);
 
   Style.IndentCaseLabels = false;
   verifyFormat(Code2, Style);
 
-  constexpr StringRef Code3{"switch (day) {\n"
+  constexpr StringRef Code3("switch (day) {\n"
                             "case THURSDAY, SATURDAY -> i = 8;\n"
                             "case WEDNESDAY -> i = 9;\n"
                             "default -> i = 0;\n"
-                            "};"};
+                            "};");
   verifyFormat(Code3, Style);
 
   Style.IndentCaseLabels = true;

@@ -330,7 +330,7 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
       auto file = HS.lookupModuleMapFile(*dir, is_framework);
       if (!file)
         return error();
-      if (!HS.parseAndLoadModuleMapFile(*file, is_system))
+      if (HS.parseAndLoadModuleMapFile(*file, is_system))
         return error();
     }
   }
@@ -381,6 +381,13 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
       return false;
     }
   }
+
+  // If we didn't make the submodule visible here, Clang wouldn't allow LLDB to
+  // pick any of the decls in the submodules during C++ name lookup.
+  if (submodule)
+    m_compiler_instance->makeModuleVisible(
+        submodule, clang::Module::NameVisibilityKind::AllVisible,
+        /*ImportLoc=*/{});
 
   clang::Module *requested_module = DoGetModule(clang_path, true);
 
@@ -739,8 +746,9 @@ ClangModulesDeclVendor::Create(Target &target) {
   auto instance = std::make_unique<clang::CompilerInstance>(invocation);
 
   // Make sure clang uses the same VFS as LLDB.
-  instance->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
-  instance->setDiagnostics(diagnostics_engine.get());
+  instance->setVirtualFileSystem(FileSystem::Instance().GetVirtualFileSystem());
+  instance->createFileManager();
+  instance->setDiagnostics(diagnostics_engine);
 
   std::unique_ptr<clang::FrontendAction> action(new clang::SyntaxOnlyAction);
 
@@ -750,7 +758,8 @@ ClangModulesDeclVendor::Create(Target &target) {
   if (!instance->hasTarget())
     return nullptr;
 
-  instance->getTarget().adjust(*diagnostics_engine, instance->getLangOpts());
+  instance->getTarget().adjust(*diagnostics_engine, instance->getLangOpts(),
+                               /*AuxTarget=*/nullptr);
 
   if (!action->BeginSourceFile(*instance,
                                instance->getFrontendOpts().Inputs[0]))

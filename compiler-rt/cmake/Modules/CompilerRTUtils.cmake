@@ -418,11 +418,9 @@ macro(construct_compiler_rt_default_triple)
     # Pass the necessary flags to make flag detection work.
     if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
       set(COMPILER_RT_GPU_BUILD ON)
-      set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx")
       set(COMPILER_RT_GPU_BUILD ON)
-      set(CMAKE_REQUIRED_FLAGS
-          "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
+      set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -flto -c")
     endif()
   endif()
 

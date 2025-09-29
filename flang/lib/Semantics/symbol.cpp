@@ -292,8 +292,7 @@ void GenericDetails::CopyFrom(const GenericDetails &from) {
 // This is primarily for debugging.
 std::string DetailsToString(const Details &details) {
   return common::visit(
-      common::visitors{
-          [](const UnknownDetails &) { return "Unknown"; },
+      common::visitors{[](const UnknownDetails &) { return "Unknown"; },
           [](const MainProgramDetails &) { return "MainProgram"; },
           [](const ModuleDetails &) { return "Module"; },
           [](const SubprogramDetails &) { return "Subprogram"; },
@@ -312,7 +311,7 @@ std::string DetailsToString(const Details &details) {
           [](const TypeParamDetails &) { return "TypeParam"; },
           [](const MiscDetails &) { return "Misc"; },
           [](const AssocEntityDetails &) { return "AssocEntity"; },
-      },
+          [](const UserReductionDetails &) { return "UserReductionDetails"; }},
       details);
 }
 
@@ -331,8 +330,14 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
         common::visitors{
             [](const UseErrorDetails &) { return true; },
             [&](const ObjectEntityDetails &) { return has<EntityDetails>(); },
-            [&](const ProcEntityDetails &) { return has<EntityDetails>(); },
+            [&](const ProcEntityDetails &x) { return has<EntityDetails>(); },
             [&](const SubprogramDetails &) {
+              if (const auto *oldProc{this->detailsIf<ProcEntityDetails>()}) {
+                // Can replace bare "EXTERNAL dummy" with explicit INTERFACE
+                return oldProc->isDummy() && !oldProc->procInterface() &&
+                    attrs().test(Attr::EXTERNAL) && !test(Flag::Function) &&
+                    !test(Flag::Subroutine);
+              }
               return has<SubprogramNameDetails>() || has<EntityDetails>();
             },
             [&](const DerivedTypeDetails &) {
@@ -343,8 +348,9 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
               const auto *use{this->detailsIf<UseDetails>()};
               return use && use->symbol() == x.symbol();
             },
-            [&](const HostAssocDetails &) {
-              return this->has<HostAssocDetails>();
+            [&](const HostAssocDetails &) { return has<HostAssocDetails>(); },
+            [&](const UserReductionDetails &) {
+              return has<UserReductionDetails>();
             },
             [](const auto &) { return false; },
         },
@@ -609,7 +615,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
               sep = ',';
             }
           },
-          [](const HostAssocDetails &) {},
+          [&os](const HostAssocDetails &x) { os << " => " << x.symbol(); },
           [&](const ProcBindingDetails &x) {
             os << " => " << x.symbol().name();
             DumpOptional(os, "passName", x.passName());
@@ -643,6 +649,11 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           },
           [&](const MiscDetails &x) {
             os << ' ' << MiscDetails::EnumToString(x.kind());
+          },
+          [&](const UserReductionDetails &x) {
+            for (auto &type : x.GetTypeList()) {
+              DumpType(os, type);
+            }
           },
           [&](const auto &x) { os << x; },
       },
@@ -842,6 +853,9 @@ std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
   case Symbol::Flag::OmpLinear:
     clauseName = "LINEAR";
     break;
+  case Symbol::Flag::OmpUniform:
+    clauseName = "UNIFORM";
+    break;
   case Symbol::Flag::OmpFirstPrivate:
     clauseName = "FIRSTPRIVATE";
     break;
@@ -851,8 +865,7 @@ std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
   case Symbol::Flag::OmpMapTo:
   case Symbol::Flag::OmpMapFrom:
   case Symbol::Flag::OmpMapToFrom:
-  case Symbol::Flag::OmpMapAlloc:
-  case Symbol::Flag::OmpMapRelease:
+  case Symbol::Flag::OmpMapStorage:
   case Symbol::Flag::OmpMapDelete:
     clauseName = "MAP";
     break;

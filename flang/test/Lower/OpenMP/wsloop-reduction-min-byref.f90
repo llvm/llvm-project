@@ -53,11 +53,11 @@
 ! CHECK:                 %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFreduction_min_intEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFreduction_min_intEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 hlfir.assign %[[VAL_13]] to %[[VAL_8]]#0 : i32, !fir.ref<i32>
-! CHECK:                 %[[VAL_15:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
-! CHECK:                 %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (i32) -> i64
-! CHECK:                 %[[VAL_17:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_16]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
-! CHECK:                 %[[VAL_18:.*]] = fir.load %[[VAL_14]]#0 : !fir.ref<i32>
-! CHECK:                 %[[VAL_19:.*]] = fir.load %[[VAL_17]] : !fir.ref<i32>
+! CHECK-DAG:                 %[[VAL_15:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
+! CHECK-DAG:                 %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (i32) -> i64
+! CHECK-DAG:                 %[[VAL_17:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_16]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
+! CHECK-DAG:                 %[[VAL_18:.*]] = fir.load %[[VAL_14]]#0 : !fir.ref<i32>
+! CHECK-DAG:                 %[[VAL_19:.*]] = fir.load %[[VAL_17]] : !fir.ref<i32>
 ! CHECK:                 %[[VAL_20:.*]] = arith.cmpi slt, %[[VAL_18]], %[[VAL_19]] : i32
 ! CHECK:                 %[[VAL_21:.*]] = arith.select %[[VAL_20]], %[[VAL_18]], %[[VAL_19]] : i32
 ! CHECK:                 hlfir.assign %[[VAL_21]] to %[[VAL_14]]#0 : i32, !fir.ref<i32>

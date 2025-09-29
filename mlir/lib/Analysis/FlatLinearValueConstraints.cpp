@@ -8,7 +8,6 @@
 
 #include "mlir/Analysis//FlatLinearValueConstraints.h"
 
-#include "mlir/Analysis/Presburger/LinearTransform.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
@@ -17,7 +16,6 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InterleavedRange.h"
@@ -62,7 +60,7 @@ private:
                           AffineExpr localExpr) override {
     SimpleAffineExprFlattener::addLocalFloorDivId(dividend, divisor, localExpr);
     // Update localVarCst.
-    localVarCst.addLocalFloorDiv(dividend, divisor);
+    (void)localVarCst.addLocalFloorDiv(dividend, divisor);
   }
 
   LogicalResult addLocalIdSemiAffine(ArrayRef<int64_t> lhs,

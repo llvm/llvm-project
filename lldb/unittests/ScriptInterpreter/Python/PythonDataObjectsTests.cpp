@@ -632,8 +632,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
   ASSERT_FALSE(error);
 
   {
-    PyObject *o = PyRun_String("lambda x : x", Py_eval_input, globals.get(),
-                               globals.get());
+    PyObject *o =
+        RunString("lambda x : x", Py_eval_input, globals.get(), globals.get());
     ASSERT_FALSE(o == NULL);
     auto lambda = Take<PythonCallable>(o);
     auto arginfo = lambda.GetArgInfo();
@@ -642,8 +642,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
   }
 
   {
-    PyObject *o = PyRun_String("lambda x,y=0: x", Py_eval_input, globals.get(),
-                               globals.get());
+    PyObject *o = RunString("lambda x,y=0: x", Py_eval_input, globals.get(),
+                            globals.get());
     ASSERT_FALSE(o == NULL);
     auto lambda = Take<PythonCallable>(o);
     auto arginfo = lambda.GetArgInfo();
@@ -652,8 +652,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
   }
 
   {
-    PyObject *o = PyRun_String("lambda x,y=0, **kw: x", Py_eval_input,
-                               globals.get(), globals.get());
+    PyObject *o = RunString("lambda x,y=0, **kw: x", Py_eval_input,
+                            globals.get(), globals.get());
     ASSERT_FALSE(o == NULL);
     auto lambda = Take<PythonCallable>(o);
     auto arginfo = lambda.GetArgInfo();
@@ -662,8 +662,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
   }
 
   {
-    PyObject *o = PyRun_String("lambda x,y,*a: x", Py_eval_input, globals.get(),
-                               globals.get());
+    PyObject *o = RunString("lambda x,y,*a: x", Py_eval_input, globals.get(),
+                            globals.get());
     ASSERT_FALSE(o == NULL);
     auto lambda = Take<PythonCallable>(o);
     auto arginfo = lambda.GetArgInfo();
@@ -673,8 +673,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
   }
 
   {
-    PyObject *o = PyRun_String("lambda x,y,*a,**kw: x", Py_eval_input,
-                               globals.get(), globals.get());
+    PyObject *o = RunString("lambda x,y,*a,**kw: x", Py_eval_input,
+                            globals.get(), globals.get());
     ASSERT_FALSE(o == NULL);
     auto lambda = Take<PythonCallable>(o);
     auto arginfo = lambda.GetArgInfo();
@@ -713,7 +713,7 @@ class NewStyle(object):
 
 )";
     PyObject *o =
-        PyRun_String(script, Py_file_input, globals.get(), globals.get());
+        RunString(script, Py_file_input, globals.get(), globals.get());
     ASSERT_FALSE(o == NULL);
     Take<PythonObject>(o);
 

@@ -679,11 +679,15 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(amdgpu_cs_chain_preserve);
   KEYWORD(amdgpu_kernel);
   KEYWORD(amdgpu_gfx);
+  KEYWORD(amdgpu_gfx_whole_wave);
   KEYWORD(tailcc);
   KEYWORD(m68k_rtdcc);
   KEYWORD(graalcc);
   KEYWORD(riscv_vector_cc);
   KEYWORD(riscv_vls_cc);
+  KEYWORD(cheriot_compartmentcallcc);
+  KEYWORD(cheriot_compartmentcalleecc);
+  KEYWORD(cheriot_librarycallcc);
 
   KEYWORD(cc);
   KEYWORD(c);
@@ -927,6 +931,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(fptoui,      FPToUI);
   INSTKEYWORD(fptosi,      FPToSI);
   INSTKEYWORD(inttoptr,    IntToPtr);
+  INSTKEYWORD(ptrtoaddr,   PtrToAddr);
   INSTKEYWORD(ptrtoint,    PtrToInt);
   INSTKEYWORD(bitcast,     BitCast);
   INSTKEYWORD(addrspacecast, AddrSpaceCast);

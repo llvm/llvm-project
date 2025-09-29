@@ -14,7 +14,6 @@
 #include "path_parser.h"
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 using detail::ErrorHandler;
 using parser::createView;
@@ -293,7 +292,9 @@ path path::lexically_relative(const path& base) const {
   // return a path constructed with 'n' dot-dot elements, followed by the
   // elements of '*this' after the mismatch.
   path Result;
-  // FIXME: Reserve enough room in Result that it won't have to re-allocate.
+  constexpr size_t ElemSize      = 2; // ".."
+  constexpr size_t SeparatorSize = 1; // separator is always a single char
+  Result.__reserve(ElemCount * (ElemSize + SeparatorSize) + SeparatorSize + PP.Path.size());
   while (ElemCount--)
     Result /= PATHSTR("..");
   for (; PP; ++PP)
@@ -443,5 +444,4 @@ size_t __char_to_wide(const string& str, wchar_t* out, size_t outlen) {
 }
 #endif
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM

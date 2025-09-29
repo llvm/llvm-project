@@ -21,6 +21,7 @@ add_lldb_library(lldbDAP
   LLDBUtils.cpp
   OutputRedirector.cpp
   ProgressEvent.cpp
+  ProtocolUtils.cpp
   RunInTerminal.cpp
   SourceBreakpoint.cpp
   Transport.cpp
@@ -44,6 +45,7 @@ add_lldb_library(lldbDAP
   Handler/LaunchRequestHandler.cpp
   Handler/LocationsRequestHandler.cpp
   Handler/ModulesRequestHandler.cpp
+  Handler/ModuleSymbolsRequestHandler.cpp
   Handler/NextRequestHandler.cpp
   Handler/PauseRequestHandler.cpp
   Handler/ReadMemoryRequestHandler.cpp
@@ -64,18 +66,20 @@ add_lldb_library(lldbDAP
   Handler/TestGetTargetBreakpointsRequestHandler.cpp
   Handler/ThreadsRequestHandler.cpp
   Handler/VariablesRequestHandler.cpp
+  Handler/WriteMemoryRequestHandler.cpp
 
+  Protocol/DAPTypes.cpp
   Protocol/ProtocolBase.cpp
+  Protocol/ProtocolEvents.cpp
   Protocol/ProtocolTypes.cpp
   Protocol/ProtocolRequests.cpp
-
-  LINK_LIBS
-    liblldb
-    lldbHost
 
   LINK_COMPONENTS
     Option
     Support
+  LINK_LIBS
+    liblldb
+    lldbHost
   )
 
 target_include_directories(lldbDAP

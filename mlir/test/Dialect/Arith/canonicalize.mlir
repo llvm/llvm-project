@@ -654,7 +654,7 @@ func.func @signExtendConstant() -> i16 {
 //       CHECK:   return %[[cres]]
 func.func @signExtendConstantSplat() -> vector<4xi16> {
   %c-2 = arith.constant -2 : i8
-  %splat = vector.splat %c-2 : vector<4xi8>
+  %splat = vector.broadcast %c-2 : i8 to vector<4xi8>
   %ext = arith.extsi %splat : vector<4xi8> to vector<4xi16>
   return %ext : vector<4xi16>
 }
@@ -682,7 +682,7 @@ func.func @unsignedExtendConstant() -> i16 {
 //       CHECK:   return %[[cres]]
 func.func @unsignedExtendConstantSplat() -> vector<4xi16> {
   %c2 = arith.constant 2 : i8
-  %splat = vector.splat %c2 : vector<4xi8>
+  %splat = vector.broadcast %c2 : i8 to vector<4xi8>
   %ext = arith.extui %splat : vector<4xi8> to vector<4xi16>
   return %ext : vector<4xi16>
 }
@@ -866,7 +866,7 @@ func.func @truncExtsiVector(%arg0: vector<2xi32>) -> vector<2xi16> {
 //       CHECK:   return %[[cres]]
 func.func @truncConstantSplat() -> vector<4xi8> {
   %c-2 = arith.constant -2 : i16
-  %splat = vector.splat %c-2 : vector<4xi16>
+  %splat = vector.broadcast %c-2 : i16 to vector<4xi16>
   %trunc = arith.trunci %splat : vector<4xi16> to vector<4xi8>
   return %trunc : vector<4xi8>
 }
@@ -1000,7 +1000,7 @@ func.func @tripleAddAddOvf2(%arg0: index) -> index {
 
 
 // CHECK-LABEL: @foldSubXX_tensor
-//       CHECK:   %[[c0:.+]] = arith.constant dense<0> : tensor<10xi32> 
+//       CHECK:   %[[c0:.+]] = arith.constant dense<0> : tensor<10xi32>
 //       CHECK:   %[[sub:.+]] = arith.subi
 //       CHECK:   return %[[c0]], %[[sub]]
 func.func @foldSubXX_tensor(%static : tensor<10xi32>, %dyn : tensor<?x?xi32>) -> (tensor<10xi32>, tensor<?x?xi32>) {
@@ -1940,6 +1940,18 @@ func.func @bitcastPoisonFPtoI() -> i32 {
 
 // -----
 
+// CHECK-LABEL: func @bitcastChain(
+//  CHECK-SAME:     %[[arg:.*]]: i16)
+//       CHECK:   %[[cast:.*]] = arith.bitcast %[[arg]] : i16 to f16
+//       CHECK:   return %[[cast]]
+func.func @bitcastChain(%arg: i16) -> f16 {
+  %0 = arith.bitcast %arg : i16 to bf16
+  %1 = arith.bitcast %0 : bf16 to f16
+  return %1 : f16
+}
+
+// -----
+
 // CHECK-LABEL: test_maxsi
 // CHECK-DAG: %[[C0:.+]] = arith.constant 42
 // CHECK-DAG: %[[MAX_INT_CST:.+]] = arith.constant 127
@@ -2322,7 +2334,7 @@ func.func @constant_FPtoUI_splat() -> vector<4xi32> {
   // CHECK: %[[C0:.+]] = arith.constant dense<2> : vector<4xi32>
   // CHECK: return %[[C0]]
   %c0 = arith.constant 2.0 : f32
-  %splat = vector.splat %c0 : vector<4xf32>
+  %splat = vector.broadcast %c0 : f32 to vector<4xf32>
   %res = arith.fptoui %splat : vector<4xf32> to vector<4xi32>
   return %res : vector<4xi32>
 }
@@ -2362,7 +2374,7 @@ func.func @constant_FPtoSI_splat() -> vector<4xi32> {
   // CHECK: %[[C0:.+]] = arith.constant dense<-2> : vector<4xi32>
   // CHECK: return %[[C0]]
   %c0 = arith.constant -2.0 : f32
-  %splat = vector.splat %c0 : vector<4xf32>
+  %splat = vector.broadcast %c0 : f32 to vector<4xf32>
   %res = arith.fptosi %splat : vector<4xf32> to vector<4xi32>
   return %res : vector<4xi32>
 }
@@ -2401,7 +2413,7 @@ func.func @constant_SItoFP_splat() -> vector<4xf32> {
   // CHECK: %[[C0:.+]] = arith.constant dense<2.000000e+00> : vector<4xf32>
   // CHECK: return %[[C0]]
   %c0 = arith.constant 2 : i32
-  %splat = vector.splat %c0 : vector<4xi32>
+  %splat = vector.broadcast %c0 : i32 to vector<4xi32>
   %res = arith.sitofp %splat : vector<4xi32> to vector<4xf32>
   return %res : vector<4xf32>
 }
@@ -2430,7 +2442,7 @@ func.func @constant_UItoFP_splat() -> vector<4xf32> {
   // CHECK: %[[C0:.+]] = arith.constant dense<2.000000e+00> : vector<4xf32>
   // CHECK: return %[[C0]]
   %c0 = arith.constant 2 : i32
-  %splat = vector.splat %c0 : vector<4xi32>
+  %splat = vector.broadcast %c0 : i32 to vector<4xi32>
   %res = arith.uitofp %splat : vector<4xi32> to vector<4xf32>
   return %res : vector<4xf32>
 }
@@ -2952,118 +2964,6 @@ func.func @truncIShrSIToTrunciShrUIBadShiftAmt2(%a: i64) -> i32 {
   return %hi : i32
 }
 
-// CHECK-LABEL: @wideMulToMulSIExtended
-//  CHECK-SAME:   (%[[A:.+]]: i32, %[[B:.+]]: i32)
-//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mulsi_extended %[[A]], %[[B]] : i32
-//  CHECK-NEXT:   return %[[HIGH]] : i32
-func.func @wideMulToMulSIExtended(%a: i32, %b: i32) -> i32 {
-  %x = arith.extsi %a: i32 to i64
-  %y = arith.extsi %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c32 = arith.constant 32: i64
-  %sh = arith.shrui %m, %c32 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulSIExtendedVector
-//  CHECK-SAME:   (%[[A:.+]]: vector<3xi32>, %[[B:.+]]: vector<3xi32>)
-//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mulsi_extended %[[A]], %[[B]] : vector<3xi32>
-//  CHECK-NEXT:   return %[[HIGH]] : vector<3xi32>
-func.func @wideMulToMulSIExtendedVector(%a: vector<3xi32>, %b: vector<3xi32>) -> vector<3xi32> {
-  %x = arith.extsi %a: vector<3xi32> to vector<3xi64>
-  %y = arith.extsi %b: vector<3xi32> to vector<3xi64>
-  %m = arith.muli %x, %y: vector<3xi64>
-  %c32 = arith.constant dense<32>: vector<3xi64>
-  %sh = arith.shrui %m, %c32 : vector<3xi64>
-  %hi = arith.trunci %sh: vector<3xi64> to vector<3xi32>
-  return %hi : vector<3xi32>
-}
-
-// CHECK-LABEL: @wideMulToMulUIExtended
-//  CHECK-SAME:   (%[[A:.+]]: i32, %[[B:.+]]: i32)
-//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mului_extended %[[A]], %[[B]] : i32
-//  CHECK-NEXT:   return %[[HIGH]] : i32
-func.func @wideMulToMulUIExtended(%a: i32, %b: i32) -> i32 {
-  %x = arith.extui %a: i32 to i64
-  %y = arith.extui %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c32 = arith.constant 32: i64
-  %sh = arith.shrui %m, %c32 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulUIExtendedVector
-//  CHECK-SAME:   (%[[A:.+]]: vector<3xi32>, %[[B:.+]]: vector<3xi32>)
-//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mului_extended %[[A]], %[[B]] : vector<3xi32>
-//  CHECK-NEXT:   return %[[HIGH]] : vector<3xi32>
-func.func @wideMulToMulUIExtendedVector(%a: vector<3xi32>, %b: vector<3xi32>) -> vector<3xi32> {
-  %x = arith.extui %a: vector<3xi32> to vector<3xi64>
-  %y = arith.extui %b: vector<3xi32> to vector<3xi64>
-  %m = arith.muli %x, %y: vector<3xi64>
-  %c32 = arith.constant dense<32>: vector<3xi64>
-  %sh = arith.shrui %m, %c32 : vector<3xi64>
-  %hi = arith.trunci %sh: vector<3xi64> to vector<3xi32>
-  return %hi : vector<3xi32>
-}
-
-// CHECK-LABEL: @wideMulToMulIExtendedMixedExt
-//       CHECK:   arith.muli
-//       CHECK:   arith.shrui
-//       CHECK:   arith.trunci
-func.func @wideMulToMulIExtendedMixedExt(%a: i32, %b: i32) -> i32 {
-  %x = arith.extsi %a: i32 to i64
-  %y = arith.extui %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c32 = arith.constant 32: i64
-  %sh = arith.shrui %m, %c32 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulSIExtendedBadExt
-//       CHECK:   arith.muli
-//       CHECK:   arith.shrui
-//       CHECK:   arith.trunci
-func.func @wideMulToMulSIExtendedBadExt(%a: i16, %b: i16) -> i32 {
-  %x = arith.extsi %a: i16 to i64
-  %y = arith.extsi %b: i16 to i64
-  %m = arith.muli %x, %y: i64
-  %c32 = arith.constant 32: i64
-  %sh = arith.shrui %m, %c32 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulSIExtendedBadShift1
-//       CHECK:   arith.muli
-//       CHECK:   arith.shrui
-//       CHECK:   arith.trunci
-func.func @wideMulToMulSIExtendedBadShift1(%a: i32, %b: i32) -> i32 {
-  %x = arith.extsi %a: i32 to i64
-  %y = arith.extsi %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c33 = arith.constant 33: i64
-  %sh = arith.shrui %m, %c33 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulSIExtendedBadShift2
-//       CHECK:   arith.muli
-//       CHECK:   arith.shrui
-//       CHECK:   arith.trunci
-func.func @wideMulToMulSIExtendedBadShift2(%a: i32, %b: i32) -> i32 {
-  %x = arith.extsi %a: i32 to i64
-  %y = arith.extsi %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c31 = arith.constant 31: i64
-  %sh = arith.shrui %m, %c31 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
 // CHECK-LABEL: @foldShli0
 // CHECK-SAME: (%[[ARG:.*]]: i64)
 //       CHECK:   return %[[ARG]] : i64
@@ -3463,3 +3363,18 @@ func.func @bf16_fma(%arg0: vector<32x32x32xbf16>, %arg1: vector<32x32x32xbf16>, 
     }
   }
 #-}
+
+// CHECK-LABEL: func @unreachable()
+// CHECK-NEXT: return
+// CHECK-NOT: arith
+func.func @unreachable() {
+  return
+^unreachable:
+  %c1_i64 = arith.constant 1 : i64
+  // This self referencing operation is legal in an unreachable block.
+  // Many patterns are unsafe with respect to this kind of situation,
+  // check that we don't infinite loop here.
+  %add = arith.addi %add, %c1_i64 : i64
+  cf.br ^unreachable
+}
+

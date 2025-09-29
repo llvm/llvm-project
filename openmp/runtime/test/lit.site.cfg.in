@@ -2,6 +2,7 @@
 
 config.test_c_compiler = "@OPENMP_TEST_C_COMPILER@"
 config.test_cxx_compiler = "@OPENMP_TEST_CXX_COMPILER@"
+config.test_fortran_compiler = "@OPENMP_TEST_Fortran_COMPILER@"
 config.test_compiler_features = @OPENMP_TEST_COMPILER_FEATURES@
 config.test_compiler_has_omp_h = @OPENMP_TEST_COMPILER_HAS_OMP_H@
 config.test_filecheck = "@OPENMP_FILECHECK_EXECUTABLE@"
@@ -12,6 +13,7 @@ config.libomp_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"
 config.library_dir = "@LIBOMP_LIBRARY_DIR@"
 config.omp_header_directory = "@LIBOMP_BINARY_DIR@/src"
 config.operating_system = "@CMAKE_SYSTEM_NAME@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.hwloc_library_dir = "@LIBOMP_HWLOC_LIBRARY_DIR@"
 config.using_hwloc = @LIBOMP_USE_HWLOC@
 config.has_ompt = @LIBOMP_OMPT_SUPPORT@ and @LIBOMP_OMPT_OPTIONAL@
@@ -23,6 +25,10 @@ config.has_omit_frame_pointer_flag = @OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTE
 config.target_arch = "@LIBOMP_ARCH@"
 config.compiler_frontend_variant = "@CMAKE_C_COMPILER_FRONTEND_VARIANT@"
 config.compiler_simulate_id = "@CMAKE_C_SIMULATE_ID@"
+config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@LIBOMP_BASE_DIR@/test/lit.cfg")

@@ -22,7 +22,6 @@
 #endif
 
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #if defined(_LIBCPP_ABI_VCRUNTIME) && (!defined(_HAS_EXCEPTIONS) || _HAS_EXCEPTIONS != 0)
 // The std::exception class was already included above, but we're explicit about this condition here for clarity.
@@ -49,7 +48,7 @@ public:
     __data_._DoFree = true;
   }
 
-  exception(exception const&) _NOEXCEPT {}
+  exception(exception const&) _NOEXCEPT : __data_() {}
 
   exception& operator=(exception const&) _NOEXCEPT { return *this; }
 
@@ -90,7 +89,6 @@ public:
 };
 #endif // !_LIBCPP_ABI_VCRUNTIME
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #endif // _LIBCPP___EXCEPTION_EXCEPTION_H

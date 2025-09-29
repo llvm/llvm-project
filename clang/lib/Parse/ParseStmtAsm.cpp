@@ -15,7 +15,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -30,7 +29,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
 using namespace clang;
 
 namespace {
@@ -382,8 +380,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
     ++NumTokensRead;
   } else {
     // Single-line inline asm; compute which line it is on.
-    std::pair<FileID, unsigned> ExpAsmLoc =
-        SrcMgr.getDecomposedExpansionLoc(EndLoc);
+    FileIDAndOffset ExpAsmLoc = SrcMgr.getDecomposedExpansionLoc(EndLoc);
     FID = ExpAsmLoc.first;
     LineNo = SrcMgr.getLineNumber(FID, ExpAsmLoc.second);
     LBraceLocs.push_back(SourceLocation());
@@ -410,16 +407,14 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
       InAsmComment = true;
       if (!SingleLineMode) {
         // Compute which line the comment is on.
-        std::pair<FileID, unsigned> ExpSemiLoc =
-            SrcMgr.getDecomposedExpansionLoc(TokLoc);
+        FileIDAndOffset ExpSemiLoc = SrcMgr.getDecomposedExpansionLoc(TokLoc);
         FID = ExpSemiLoc.first;
         LineNo = SrcMgr.getLineNumber(FID, ExpSemiLoc.second);
       }
     } else if (SingleLineMode || InAsmComment) {
       // If end-of-line is significant, check whether this token is on a
       // new line.
-      std::pair<FileID, unsigned> ExpLoc =
-          SrcMgr.getDecomposedExpansionLoc(TokLoc);
+      FileIDAndOffset ExpLoc = SrcMgr.getDecomposedExpansionLoc(TokLoc);
       if (ExpLoc.first != FID ||
           SrcMgr.getLineNumber(ExpLoc.first, ExpLoc.second) != LineNo) {
         // If this is a single-line __asm, we're done, except if the next
@@ -514,13 +509,12 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
 
   // We need an actual supported target.
   const llvm::Triple &TheTriple = Actions.Context.getTargetInfo().getTriple();
-  const std::string &TT = TheTriple.getTriple();
   const llvm::Target *TheTarget = nullptr;
   if (!TheTriple.isX86()) {
     Diag(AsmLoc, diag::err_msasm_unsupported_arch) << TheTriple.getArchName();
   } else {
     std::string Error;
-    TheTarget = llvm::TargetRegistry::lookupTarget(TT, Error);
+    TheTarget = llvm::TargetRegistry::lookupTarget(TheTriple, Error);
     if (!TheTarget)
       Diag(AsmLoc, diag::err_msasm_unable_to_create_target) << Error;
   }
@@ -548,7 +542,8 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   std::string FeaturesStr =
       llvm::join(TO.Features.begin(), TO.Features.end(), ",");
 
-  std::unique_ptr<llvm::MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
+  std::unique_ptr<llvm::MCRegisterInfo> MRI(
+      TheTarget->createMCRegInfo(TheTriple));
   if (!MRI) {
     Diag(AsmLoc, diag::err_msasm_unable_to_create_target)
         << "target MC unavailable";
@@ -557,11 +552,11 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   // FIXME: init MCOptions from sanitizer flags here.
   llvm::MCTargetOptions MCOptions;
   std::unique_ptr<llvm::MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   // Get the instruction descriptor.
   std::unique_ptr<llvm::MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   std::unique_ptr<llvm::MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TT, TO.CPU, FeaturesStr));
+      TheTarget->createMCSubtargetInfo(TheTriple, TO.CPU, FeaturesStr));
   // Target MCTargetDesc may not be linked in clang-based tools.
 
   if (!MAI || !MII || !STI) {
@@ -596,7 +591,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   }
 
   std::unique_ptr<llvm::MCInstPrinter> IP(
-      TheTarget->createMCInstPrinter(llvm::Triple(TT), 1, *MAI, *MII, *MRI));
+      TheTarget->createMCInstPrinter(TheTriple, 1, *MAI, *MII, *MRI));
 
   // Change to the Intel dialect.
   Parser->setAssemblerDialect(1);
@@ -866,7 +861,7 @@ bool Parser::ParseAsmOperandsOpt(SmallVectorImpl<IdentifierInfo *> &Names,
     // Read the parenthesized expression.
     BalancedDelimiterTracker T(*this, tok::l_paren);
     T.consumeOpen();
-    ExprResult Res = Actions.CorrectDelayedTyposInExpr(ParseExpression());
+    ExprResult Res = ParseExpression();
     T.consumeClose();
     if (Res.isInvalid()) {
       SkipUntil(tok::r_paren, StopAtSemi);

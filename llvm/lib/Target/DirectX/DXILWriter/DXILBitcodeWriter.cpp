@@ -2113,7 +2113,7 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         }
         break;
       case Instruction::GetElementPtr: {
-        Code = bitc::CST_CODE_CE_GEP;
+        Code = bitc::CST_CODE_CE_GEP_OLD;
         const auto *GO = cast<GEPOperator>(C);
         if (GO->isInBounds())
           Code = bitc::CST_CODE_CE_INBOUNDS_GEP;

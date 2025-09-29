@@ -80,6 +80,32 @@ TEST(IntrinsicNameLookup, Basic) {
   EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i1024"));
 }
 
+TEST(IntrinsicNameLookup, NonNullterminatedStringRef) {
+  using namespace Intrinsic;
+  // This reproduces an issue where lookupIntrinsicID() can access memory beyond
+  // the bounds of the passed in StringRef. For ASAN to catch this as an error,
+  // create a StringRef using heap allocated memory and make it not null
+  // terminated.
+
+  // ASAN will report a "AddressSanitizer: heap-buffer-overflow" error in
+  // `lookupLLVMIntrinsicByName` when LLVM is built with these options:
+  //  -DCMAKE_BUILD_TYPE=Debug
+  //  -DLLVM_USE_SANITIZER=Address
+  //  -DLLVM_OPTIMIZE_SANITIZED_BUILDS=OFF
+
+  // Make an intrinsic name "llvm.memcpy.inline" on the heap.
+  std::string Name = "llvm.memcpy.inline";
+  assert(Name.size() == 18);
+  // Create a StringRef backed by heap allocated memory such that OOB access
+  // in that StringRef can be flagged by asan. Here, the String `S` is of size
+  // 18, and backed by a heap allocated buffer `Data`, so access to S[18] will
+  // be flagged bby asan.
+  auto Data = std::make_unique<char[]>(Name.size());
+  std::strncpy(Data.get(), Name.data(), Name.size());
+  StringRef S(Data.get(), Name.size());
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID(S));
+}
+
 // Tests to verify getIntrinsicForClangBuiltin.
 TEST(IntrinsicNameLookup, ClangBuiltinLookup) {
   using namespace Intrinsic;

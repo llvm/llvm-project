@@ -52,7 +52,7 @@ class ASTContext;
 class FriendDecl final
     : public Decl,
       private llvm::TrailingObjects<FriendDecl, TemplateParameterList *> {
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   using FriendUnion = llvm::PointerUnion<NamedDecl *, TypeSourceInfo *>;

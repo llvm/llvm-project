@@ -21,6 +21,9 @@
 
 namespace clang::CIRGen {
 
+// Forward declaration to avoid a circular dependency
+class CIRGenBuilderTy;
+
 class Address {
 
   // The boolean flag indicates whether the pointer is known to be non-null.
@@ -41,12 +44,12 @@ public:
           clang::CharUnits alignment)
       : pointerAndKnownNonNull(pointer, false), elementType(elementType),
         alignment(alignment) {
-    assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
-           "Expected cir.ptr type");
-
     assert(pointer && "Pointer cannot be null");
     assert(elementType && "Element type cannot be null");
     assert(!alignment.isZero() && "Alignment cannot be zero");
+
+    assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
+           "Expected cir.ptr type");
 
     assert(mlir::cast<cir::PointerType>(pointer.getType()).getPointee() ==
            elementType);
@@ -65,9 +68,26 @@ public:
     return pointerAndKnownNonNull.getPointer() != nullptr;
   }
 
+  /// Return address with different pointer, but same element type and
+  /// alignment.
+  Address withPointer(mlir::Value newPtr) const {
+    return Address(newPtr, getElementType(), getAlignment());
+  }
+
+  /// Return address with different element type, a bitcast pointer, and
+  /// the same alignment.
+  Address withElementType(CIRGenBuilderTy &builder, mlir::Type ElemTy) const;
+
   mlir::Value getPointer() const {
     assert(isValid());
     return pointerAndKnownNonNull.getPointer();
+  }
+
+  mlir::Value getBasePointer() const {
+    // TODO(cir): Remove the version above when we catchup with OG codegen on
+    // ptr auth.
+    assert(isValid() && "pointer isn't valid");
+    return getPointer();
   }
 
   mlir::Type getType() const {
@@ -87,6 +107,17 @@ public:
   }
 
   clang::CharUnits getAlignment() const { return alignment; }
+
+  /// Get the operation which defines this address.
+  mlir::Operation *getDefiningOp() const {
+    if (!isValid())
+      return nullptr;
+    return getPointer().getDefiningOp();
+  }
+
+  template <typename OpTy> OpTy getDefiningOp() const {
+    return mlir::dyn_cast_or_null<OpTy>(getDefiningOp());
+  }
 };
 
 } // namespace clang::CIRGen

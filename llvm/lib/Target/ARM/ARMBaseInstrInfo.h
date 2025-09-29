@@ -125,9 +125,6 @@ public:
   // if there is not such an opcode.
   virtual unsigned getUnindexedOpcode(unsigned Opc) const = 0;
 
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
-                                      LiveIntervals *LIS) const override;
-
   virtual const ARMBaseRegisterInfo &getRegisterInfo() const = 0;
   const ARMSubtarget &getSubtarget() const { return Subtarget; }
 
@@ -482,7 +479,7 @@ private:
   MachineInstr *canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
                                  const TargetInstrInfo *TII) const;
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
 private:
   /// Modeling special VFP / NEON fp MLA / MLS hazards.

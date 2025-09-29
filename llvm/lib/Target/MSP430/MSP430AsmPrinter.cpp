@@ -27,6 +27,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -189,6 +190,7 @@ INITIALIZE_PASS(MSP430AsmPrinter, "msp430-asm-printer",
                 "MSP430 Assembly Printer", false, false)
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430AsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeMSP430AsmPrinter() {
   RegisterAsmPrinter<MSP430AsmPrinter> X(getTheMSP430Target());
 }

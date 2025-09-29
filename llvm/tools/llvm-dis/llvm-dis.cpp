@@ -96,8 +96,6 @@ static cl::opt<bool> PrintThinLTOIndexOnly(
     cl::desc("Only read thinlto index and print the index as LLVM assembly."),
     cl::init(false), cl::Hidden, cl::cat(DisCategory));
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
-
 namespace {
 
 static void printDebugLoc(const DebugLoc &DL, formatted_raw_ostream &OS) {
@@ -132,20 +130,6 @@ public:
         OS << " [debug line = ";
         printDebugLoc(DL,OS);
         OS << "]";
-      }
-      if (const DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(I)) {
-        if (!Padded) {
-          OS.PadToColumn(50);
-          OS << ";";
-        }
-        OS << " [debug variable = " << DDI->getVariable()->getName() << "]";
-      }
-      else if (const DbgValueInst *DVI = dyn_cast<DbgValueInst>(I)) {
-        if (!Padded) {
-          OS.PadToColumn(50);
-          OS << ";";
-        }
-        OS << " [debug variable = " << DVI->getVariable()->getName() << "]";
       }
     }
   }
@@ -270,9 +254,7 @@ int main(int argc, char **argv) {
       // All that llvm-dis does is write the assembly to a file.
       if (!DontPrint) {
         if (M) {
-          M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
-          if (UseNewDbgInfoFormat)
-            M->removeDebugIntrinsicDeclarations();
+          M->removeDebugIntrinsicDeclarations();
           M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
         }
         if (Index)

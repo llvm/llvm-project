@@ -2,11 +2,10 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck -check-prefixes=X64 %s
 ; RUN: llc -mtriple=i386-pc-win32 < %s | FileCheck -check-prefix=WIN32 %s
 
-define { half, i32 } @test_frexp_f16_i32(half %a) {
+define { half, i32 } @test_frexp_f16_i32(half %a) nounwind {
 ; X64-LABEL: test_frexp_f16_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 32
 ; X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -36,7 +35,6 @@ define { half, i32 } @test_frexp_f16_i32(half %a) {
 ; X64-NEXT:    cmovbel %edx, %ecx
 ; X64-NEXT:    pinsrw $0, %ecx, %xmm0
 ; X64-NEXT:    addq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_f16_i32:
@@ -63,11 +61,10 @@ define { half, i32 } @test_frexp_f16_i32(half %a) {
   ret { half, i32 } %result
 }
 
-define half @test_frexp_f16_i32_only_use_fract(half %a) {
+define half @test_frexp_f16_i32_only_use_fract(half %a) nounwind {
 ; X64-LABEL: test_frexp_f16_i32_only_use_fract:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 32
 ; X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -87,7 +84,6 @@ define half @test_frexp_f16_i32_only_use_fract(half %a) {
 ; X64-NEXT:    cmovbel %ecx, %eax
 ; X64-NEXT:    pinsrw $0, %eax, %xmm0
 ; X64-NEXT:    addq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_f16_i32_only_use_fract:
@@ -111,11 +107,10 @@ define half @test_frexp_f16_i32_only_use_fract(half %a) {
   ret half %result.0
 }
 
-define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
+define i32 @test_frexp_f16_i32_only_use_exp(half %a) nounwind {
 ; X64-LABEL: test_frexp_f16_i32_only_use_exp:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 32
 ; X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -138,7 +133,6 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
 ; X64-NEXT:    cmpl $33792, %ecx # imm = 0x8400
 ; X64-NEXT:    cmoval %edx, %eax
 ; X64-NEXT:    addq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_f16_i32_only_use_exp:
@@ -161,33 +155,31 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
 }
 
 ; FIXME
-; define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
+; define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) nounwind {
 ;   %result = call { <2 x half>, <2 x i32> } @llvm.frexp.v2f16.v2i32(<2 x half> %a)
 ;   ret { <2 x half>, <2 x i32> } %result
 ; }
 
-; define <2 x half> @test_frexp_v2f16_v2i32_only_use_fract(<2 x half> %a) {
+; define <2 x half> @test_frexp_v2f16_v2i32_only_use_fract(<2 x half> %a) nounwind {
 ;   %result = call { <2 x half>, <2 x i32> } @llvm.frexp.v2f16.v2i32(<2 x half> %a)
 ;   %result.0 = extractvalue { <2 x half>, <2 x i32> } %result, 0
 ;   ret <2 x half> %result.0
 ; }
 
-; define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) {
+; define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) nounwind {
 ;   %result = call { <2 x half>, <2 x i32> } @llvm.frexp.v2f16.v2i32(<2 x half> %a)
 ;   %result.1 = extractvalue { <2 x half>, <2 x i32> } %result, 1
 ;   ret <2 x i32> %result.1
 ; }
 
-define { float, i32 } @test_frexp_f32_i32(float %a) {
+define { float, i32 } @test_frexp_f32_i32(float %a) nounwind {
 ; X64-LABEL: test_frexp_f32_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    popq %rcx
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_f32_i32:
@@ -207,15 +199,13 @@ define { float, i32 } @test_frexp_f32_i32(float %a) {
   ret { float, i32 } %result
 }
 
-define float @test_frexp_f32_i32_only_use_fract(float %a) {
+define float @test_frexp_f32_i32_only_use_fract(float %a) nounwind {
 ; X64-LABEL: test_frexp_f32_i32_only_use_fract:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    popq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_f32_i32_only_use_fract:
@@ -235,16 +225,14 @@ define float @test_frexp_f32_i32_only_use_fract(float %a) {
   ret float %result.0
 }
 
-define i32 @test_frexp_f32_i32_only_use_exp(float %a) {
+define i32 @test_frexp_f32_i32_only_use_exp(float %a) nounwind {
 ; X64-LABEL: test_frexp_f32_i32_only_use_exp:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    popq %rcx
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_f32_i32_only_use_exp:
@@ -265,28 +253,27 @@ define i32 @test_frexp_f32_i32_only_use_exp(float %a) {
 }
 
 ; FIXME: Widen vector result
-; define { <2 x float>, <2 x i32> } @test_frexp_v2f32_v2i32(<2 x float> %a) {
+; define { <2 x float>, <2 x i32> } @test_frexp_v2f32_v2i32(<2 x float> %a) nounwind {
 ;   %result = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> %a)
 ;   ret { <2 x float>, <2 x i32> } %result
 ; }
 
-; define <2 x float> @test_frexp_v2f32_v2i32_only_use_fract(<2 x float> %a) {
+; define <2 x float> @test_frexp_v2f32_v2i32_only_use_fract(<2 x float> %a) nounwind {
 ;   %result = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> %a)
 ;   %result.0 = extractvalue { <2 x float>, <2 x i32> } %result, 0
 ;   ret <2 x float> %result.0
 ; }
 
-; define <2 x i32> @test_frexp_v2f32_v2i32_only_use_exp(<2 x float> %a) {
+; define <2 x i32> @test_frexp_v2f32_v2i32_only_use_exp(<2 x float> %a) nounwind {
 ;   %result = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> %a)
 ;   %result.1 = extractvalue { <2 x float>, <2 x i32> } %result, 1
 ;   ret <2 x i32> %result.1
 ; }
 
-define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) {
+define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) nounwind {
 ; X64-LABEL: test_frexp_v4f32_v4i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $72, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 80
 ; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; X64-NEXT:    movq %rsp, %rdi
@@ -320,7 +307,6 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) {
 ; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; X64-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; X64-NEXT:    addq $72, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_v4f32_v4i32:
@@ -372,11 +358,10 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) {
   ret { <4 x float>, <4 x i32> } %result
 }
 
-define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) {
+define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) nounwind {
 ; X64-LABEL: test_frexp_v4f32_v4i32_only_use_fract:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $72, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 80
 ; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
@@ -403,7 +388,6 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) {
 ; X64-NEXT:    # xmm1 = xmm1[0],mem[0]
 ; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    addq $72, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_v4f32_v4i32_only_use_fract:
@@ -456,11 +440,10 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) {
   ret <4 x float> %result.0
 }
 
-define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) {
+define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; X64-LABEL: test_frexp_v4f32_v4i32_only_use_exp:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $40, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 48
 ; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; X64-NEXT:    movq %rsp, %rdi
@@ -484,7 +467,6 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) {
 ; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    addq $40, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_v4f32_v4i32_only_use_exp:
@@ -524,16 +506,14 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) {
   ret <4 x i32> %result.1
 }
 
-define { double, i32 } @test_frexp_f64_i32(double %a) {
+define { double, i32 } @test_frexp_f64_i32(double %a) nounwind {
 ; X64-LABEL: test_frexp_f64_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexp@PLT
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    popq %rcx
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_f64_i32:
@@ -551,15 +531,13 @@ define { double, i32 } @test_frexp_f64_i32(double %a) {
   ret { double, i32 } %result
 }
 
-define double @test_frexp_f64_i32_only_use_fract(double %a) {
+define double @test_frexp_f64_i32_only_use_fract(double %a) nounwind {
 ; X64-LABEL: test_frexp_f64_i32_only_use_fract:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexp@PLT
 ; X64-NEXT:    popq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_f64_i32_only_use_fract:
@@ -577,16 +555,14 @@ define double @test_frexp_f64_i32_only_use_fract(double %a) {
   ret double %result.0
 }
 
-define i32 @test_frexp_f64_i32_only_use_exp(double %a) {
+define i32 @test_frexp_f64_i32_only_use_exp(double %a) nounwind {
 ; X64-LABEL: test_frexp_f64_i32_only_use_exp:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexp@PLT
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    popq %rcx
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_f64_i32_only_use_exp:
@@ -606,19 +582,35 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) {
   ret i32 %result.0
 }
 
+define { float, i32 } @pr160981() {
+; X64-LABEL: pr160981:
+; X64:       # %bb.0:
+; X64-NEXT:    movss {{.*#+}} xmm0 = [9.9999988E-1,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    movl $-126, %eax
+; X64-NEXT:    retq
+;
+; WIN32-LABEL: pr160981:
+; WIN32:       # %bb.0:
+; WIN32-NEXT:    flds __real@3f7ffffe
+; WIN32-NEXT:    movl $-126, %eax
+; WIN32-NEXT:    retl
+  %ret = call { float, i32 } @llvm.frexp.f32.i32(float bitcast (i32 8388607 to float))
+  ret { float, i32 } %ret
+}
+
 ; FIXME: Widen vector result
-; define { <2 x double>, <2 x i32> } @test_frexp_v2f64_v2i32(<2 x double> %a) {
+; define { <2 x double>, <2 x i32> } @test_frexp_v2f64_v2i32(<2 x double> %a) nounwind {
 ;   %result = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %a)
 ;   ret { <2 x double>, <2 x i32> } %result
 ; }
 
-; define <2 x double> @test_frexp_v2f64_v2i32_only_use_fract(<2 x double> %a) {
+; define <2 x double> @test_frexp_v2f64_v2i32_only_use_fract(<2 x double> %a) nounwind {
 ;   %result = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %a)
 ;   %result.0 = extractvalue { <2 x double>, <2 x i32> } %result, 0
 ;   ret <2 x double> %result.0
 ; }
 
-; define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) {
+; define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) nounwind {
 ;   %result = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %a)
 ;   %result.1 = extractvalue { <2 x double>, <2 x i32> } %result, 1
 ;   ret <2 x i32> %result.1

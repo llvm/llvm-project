@@ -939,21 +939,17 @@ define <vscale x 16 x i64> @zero_strided_vadd_nxv16i64(<vscale x 16 x i64> %v, p
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    csrr a1, vlenb
 ; CHECK-RV32-NEXT:    srli a2, a1, 3
-; CHECK-RV32-NEXT:    sub a3, a2, a1
-; CHECK-RV32-NEXT:    sltu a4, a2, a3
-; CHECK-RV32-NEXT:    addi a4, a4, -1
-; CHECK-RV32-NEXT:    and a3, a4, a3
-; CHECK-RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
-; CHECK-RV32-NEXT:    vlse64.v v24, (a0), zero
-; CHECK-RV32-NEXT:    bltu a2, a1, .LBB61_2
-; CHECK-RV32-NEXT:  # %bb.1:
-; CHECK-RV32-NEXT:    mv a2, a1
-; CHECK-RV32-NEXT:  .LBB61_2:
+; CHECK-RV32-NEXT:    sub a1, a2, a1
+; CHECK-RV32-NEXT:    sltu a3, a2, a1
+; CHECK-RV32-NEXT:    addi a3, a3, -1
+; CHECK-RV32-NEXT:    and a1, a3, a1
 ; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-RV32-NEXT:    vlse64.v v24, (a0), zero
+; CHECK-RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vlse64.v v0, (a0), zero
 ; CHECK-RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; CHECK-RV32-NEXT:    vadd.vv v16, v16, v24
-; CHECK-RV32-NEXT:    vadd.vv v8, v8, v0
+; CHECK-RV32-NEXT:    vadd.vv v8, v8, v24
+; CHECK-RV32-NEXT:    vadd.vv v16, v16, v0
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: zero_strided_vadd_nxv16i64:

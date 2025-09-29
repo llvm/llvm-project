@@ -45,7 +45,6 @@ class MicroMipsInst16<dag outs, dag ins, string asmstr, list<dag> pattern,
 {
   let Size = 2;
   field bits<16> Inst;
-  field bits<16> SoftFail = 0;
   bits<6> Opcode = 0x0;
 }
 

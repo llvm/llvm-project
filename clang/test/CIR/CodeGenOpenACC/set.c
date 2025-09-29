@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fopenacc -emit-cir -fclangir %s -o - | FileCheck %s
 
 void acc_set(int cond) {
-  // CHECK: cir.func @acc_set(%[[ARG:.*]]: !s32i{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_set(%[[ARG:.*]]: !s32i{{.*}}) {
   // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
   // CHECK-NEXT: cir.store %[[ARG]], %[[COND]] : !s32i, !cir.ptr<!s32i>
 

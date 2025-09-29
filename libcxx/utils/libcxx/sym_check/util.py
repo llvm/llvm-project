@@ -95,7 +95,7 @@ def is_xcoff_or_big_ar(filename):
     with open(filename, "rb") as f:
         magic_bytes = f.read(7)
     return (
-        magic_bytes[:4] in [b"\x01DF", b"\x01F7"]  # XCOFF32  # XCOFF64
+        magic_bytes[:2] in [b"\x01\xDF", b"\x01\xF7"]  # XCOFF32  # XCOFF64
         or magic_bytes == b"<bigaf>"
     )
 

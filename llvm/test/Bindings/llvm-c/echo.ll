@@ -417,6 +417,14 @@ define ptr @test_gep_no_wrap_flags(ptr %0) {
   ret ptr %gep.nusw
 }
 
+define void @test_icmp_same_sign(i32 %a, i32 %b) {
+  %icmp.1 = icmp eq i32 %a, %b
+  %icmp.2 = icmp slt i32 %a, %b
+  %icmp.3 = icmp samesign eq i32 %a, %b
+  %icmp.4 = icmp samesign slt i32 %a, %b
+  ret void
+}
+
 !llvm.dbg.cu = !{!0, !2}
 !llvm.module.flags = !{!3}
 

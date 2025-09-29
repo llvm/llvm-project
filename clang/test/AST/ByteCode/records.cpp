@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++14 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -triple i686 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++14 %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++17 %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++17 -triple i686 %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
+// RUN: %clang_cc1 -std=c++14 -verify=expected,both              %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++17 -verify=expected,both              %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++17 -verify=expected,both -triple i686 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -verify=expected,both              %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++14 -verify=ref,both                   %s
+// RUN: %clang_cc1 -std=c++17 -verify=ref,both                   %s
+// RUN: %clang_cc1 -std=c++17 -verify=ref,both -triple i686      %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,both                   %s
 
 /// Used to crash.
 struct Empty {};
@@ -413,7 +413,7 @@ namespace DeriveFailures {
 
     constexpr Derived(int i) : OtherVal(i) {} // ref-error {{never produces a constant expression}} \
                                               // both-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}} \
-                                              // ref-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}} 
+                                              // ref-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}}
   };
 
   constexpr Derived D(12); // both-error {{must be initialized by a constant expression}} \
@@ -759,10 +759,8 @@ namespace CtorDtor {
   static_assert(B.i == 1 && B.j == 1, "");
 
   constexpr Derived D;
-  static_assert(D.i == 1, ""); // expected-error {{static assertion failed}} \
-                               // expected-note {{2 == 1}}
-  static_assert(D.j == 1, ""); // expected-error {{static assertion failed}} \
-                               // expected-note {{2 == 1}}
+  static_assert(D.i == 1, "");
+  static_assert(D.j == 1, "");
 
   constexpr Derived2 D2; // ref-error {{must be initialized by a constant expression}} \
                          // ref-note {{in call to 'Derived2()'}} \
@@ -1662,9 +1660,9 @@ namespace NullptrCast {
   constexpr A *na = nullptr;
   constexpr B *nb = nullptr;
   constexpr A &ra = *nb; // both-error {{constant expression}} \
-                         // both-note {{cannot access base class of null pointer}}
+                         // both-note {{dereferencing a null pointer}}
   constexpr B &rb = (B&)*na; // both-error {{constant expression}} \
-                             // both-note {{cannot access derived class of null pointer}}
+                             // both-note {{dereferencing a null pointer}}
   constexpr bool test() {
     auto a = (A*)(B*)nullptr;
 
@@ -1742,7 +1740,7 @@ namespace CtorOfInvalidClass {
 #if __cplusplus >= 202002L
   template <typename T, auto Q>
   concept ReferenceOf = Q;
-  /// This calls a valid and constexpr copy constructor of InvalidCtor, 
+  /// This calls a valid and constexpr copy constructor of InvalidCtor,
   /// but should still be rejected.
   template<ReferenceOf<InvalidCtor> auto R, typename Rep> int F; // both-error {{non-type template argument is not a constant expression}}
 #endif

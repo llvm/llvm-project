@@ -8,8 +8,11 @@ add_llvm_component_library(LLVMProfileData
   InstrProfWriter.cpp
   ItaniumManglingCanonicalizer.cpp
   MemProf.cpp
+  MemProfCommon.cpp
   MemProfReader.cpp
   MemProfRadixTree.cpp
+  MemProfSummary.cpp
+  MemProfSummaryBuilder.cpp
   PGOCtxProfReader.cpp
   PGOCtxProfWriter.cpp
   ProfileSummaryBuilder.cpp
@@ -32,6 +35,7 @@ add_llvm_component_library(LLVMProfileData
   Demangle
   Symbolize
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   TargetParser
   )
 

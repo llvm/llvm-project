@@ -30,7 +30,7 @@ class ScalarEvolution;
 class User;
 class Value;
 
-class HexagonTTIImpl : public BasicTTIImplBase<HexagonTTIImpl> {
+class HexagonTTIImpl final : public BasicTTIImplBase<HexagonTTIImpl> {
   using BaseT = BasicTTIImplBase<HexagonTTIImpl>;
   using TTI = TargetTransformInfo;
 
@@ -111,8 +111,9 @@ public:
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
-  InstructionCost getAddressComputationCost(Type *Tp, ScalarEvolution *SE,
-                                            const SCEV *S) const override;
+  InstructionCost
+  getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE, const SCEV *S,
+                            TTI::TargetCostKind CostKind) const override;
   InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind,
@@ -123,9 +124,9 @@ public:
                         unsigned AddressSpace,
                         TTI::TargetCostKind CostKind) const override;
   InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-                 TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-                 ArrayRef<const Value *> Args = {},
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,

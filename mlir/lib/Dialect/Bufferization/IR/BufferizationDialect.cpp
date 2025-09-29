@@ -57,7 +57,37 @@ struct BufferizationInlinerInterface : public DialectInlinerInterface {
 template <typename Tensor>
 struct BuiltinTensorExternalModel
     : TensorLikeType::ExternalModel<BuiltinTensorExternalModel<Tensor>,
-                                    Tensor> {};
+                                    Tensor> {
+  llvm::FailureOr<BufferLikeType> getBufferType(
+      mlir::Type tensor, const BufferizationOptions &options,
+      llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    auto tensorType = cast<TensorType>(tensor);
+    auto memSpace = options.defaultMemorySpaceFn(tensorType);
+    if (!memSpace.has_value())
+      return emitError() << "could not infer memory space";
+
+    return cast<BufferLikeType>(
+        getMemRefType(tensorType, options, /*layout=*/{}, *memSpace));
+  }
+
+  mlir::LogicalResult verifyCompatibleBufferType(
+      mlir::Type tensor, BufferLikeType bufferType,
+      llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    assert(isa<TensorType>(tensor) && "expected tensor type");
+    assert(isa<BaseMemRefType>(bufferType) && "expected memref type");
+
+    auto tensorType = cast<ShapedType>(tensor);
+    auto memrefType = cast<ShapedType>(bufferType);
+
+    if (tensorType.getShape() != memrefType.getShape())
+      return emitError() << "shapes do not match";
+
+    if (tensorType.getElementType() != memrefType.getElementType())
+      return emitError() << "element types do not match";
+
+    return mlir::success();
+  }
+};
 
 template <typename MemRef>
 struct BuiltinMemRefExternalModel

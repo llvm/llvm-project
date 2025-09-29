@@ -258,6 +258,10 @@ void ImportSection::writeBody() {
       import.Memory.Flags |= WASM_LIMITS_FLAG_IS_SHARED;
     if (is64)
       import.Memory.Flags |= WASM_LIMITS_FLAG_IS_64;
+    if (ctx.arg.pageSize != WasmDefaultPageSize) {
+      import.Memory.Flags |= WASM_LIMITS_FLAG_HAS_PAGE_SIZE;
+      import.Memory.PageSize = ctx.arg.pageSize;
+    }
     writeImport(os, import);
   }
 

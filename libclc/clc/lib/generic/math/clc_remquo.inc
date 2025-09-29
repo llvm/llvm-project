@@ -74,7 +74,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_remquo(float x, float y,
 }
 
 // remquo signature is special, we don't have macro for this
-#define __VEC_REMQUO(TYPE, VEC_SIZE, HALF_VEC_SIZE)                            \
+#define __CLC_VEC_REMQUO(TYPE, VEC_SIZE, HALF_VEC_SIZE)                        \
   _CLC_DEF _CLC_OVERLOAD TYPE##VEC_SIZE __clc_remquo(                          \
       TYPE##VEC_SIZE x, TYPE##VEC_SIZE y,                                      \
       __CLC_ADDRESS_SPACE int##VEC_SIZE *quo) {                                \
@@ -87,7 +87,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_remquo(float x, float y,
     return ret;                                                                \
   }
 
-#define __VEC3_REMQUO(TYPE)                                                    \
+#define __CLC_VEC3_REMQUO(TYPE)                                                \
   _CLC_DEF _CLC_OVERLOAD TYPE##3 __clc_remquo(                                 \
       TYPE##3 x, TYPE##3 y, __CLC_ADDRESS_SPACE int##3 * quo) {                \
     int2 lo;                                                                   \
@@ -99,11 +99,11 @@ _CLC_DEF _CLC_OVERLOAD float __clc_remquo(float x, float y,
     (*quo).s2 = hi;                                                            \
     return ret;                                                                \
   }
-__VEC_REMQUO(float, 2, )
-__VEC3_REMQUO(float)
-__VEC_REMQUO(float, 4, 2)
-__VEC_REMQUO(float, 8, 4)
-__VEC_REMQUO(float, 16, 8)
+__CLC_VEC_REMQUO(float, 2, )
+__CLC_VEC3_REMQUO(float)
+__CLC_VEC_REMQUO(float, 4, 2)
+__CLC_VEC_REMQUO(float, 8, 4)
+__CLC_VEC_REMQUO(float, 16, 8)
 
 #ifdef cl_khr_fp64
 
@@ -246,11 +246,11 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remquo(double x, double y,
   *pquo = quo;
   return ret;
 }
-__VEC_REMQUO(double, 2, )
-__VEC3_REMQUO(double)
-__VEC_REMQUO(double, 4, 2)
-__VEC_REMQUO(double, 8, 4)
-__VEC_REMQUO(double, 16, 8)
+__CLC_VEC_REMQUO(double, 2, )
+__CLC_VEC3_REMQUO(double)
+__CLC_VEC_REMQUO(double, 4, 2)
+__CLC_VEC_REMQUO(double, 8, 4)
+__CLC_VEC_REMQUO(double, 16, 8)
 
 #endif
 
@@ -262,10 +262,10 @@ _CLC_OVERLOAD _CLC_DEF half __clc_remquo(half x, half y,
                                          __CLC_ADDRESS_SPACE int *pquo) {
   return (half)__clc_remquo((float)x, (float)y, pquo);
 }
-__VEC_REMQUO(half, 2, )
-__VEC3_REMQUO(half)
-__VEC_REMQUO(half, 4, 2)
-__VEC_REMQUO(half, 8, 4)
-__VEC_REMQUO(half, 16, 8)
+__CLC_VEC_REMQUO(half, 2, )
+__CLC_VEC3_REMQUO(half)
+__CLC_VEC_REMQUO(half, 4, 2)
+__CLC_VEC_REMQUO(half, 8, 4)
+__CLC_VEC_REMQUO(half, 16, 8)
 
 #endif

@@ -79,5 +79,5 @@ Options
    analyzed C++ source file is not included by any other C source files.
    Hence, to omit false-positives and wrong fixit-hints, we ignore emitting
    reports into header files. One can set this option to `true` if they know
-   that the header files in the project are only used by C++ source file.
+   that the header files in the project are only used by C++ source files.
    Default is `false`.

@@ -248,10 +248,9 @@ define i1 @icmp_select_implied_cond_relational_off_by_one(i8 %x, i8 %y) {
 
 define i1 @umin_seq_comparison(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_seq_comparison(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP21:%.*]] = icmp ule i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    [[Y:%.*]] = freeze i8 [[Y1:%.*]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ule i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP21]]
 ;
   %min = call i8 @llvm.umin.i8(i8 %x, i8 %y)
   %cmp1 = icmp eq i8 %x, 0

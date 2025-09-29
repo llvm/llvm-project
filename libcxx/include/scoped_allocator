@@ -434,10 +434,10 @@ public:
         piecewise_construct,
         __transform_tuple(typename __uses_alloc_ctor< _T1, inner_allocator_type&, _Args1... >::type(),
                           std::move(__x),
-                          typename __make_tuple_indices<sizeof...(_Args1)>::type{}),
+                          __make_index_sequence<sizeof...(_Args1)>()),
         __transform_tuple(typename __uses_alloc_ctor< _T2, inner_allocator_type&, _Args2... >::type(),
                           std::move(__y),
-                          typename __make_tuple_indices<sizeof...(_Args2)>::type{}));
+                          __make_index_sequence<sizeof...(_Args2)>()));
   }
 
   template <class _T1, class _T2>
@@ -503,20 +503,20 @@ private:
 
   template <class... _Args, size_t... _Idx>
   _LIBCPP_HIDE_FROM_ABI tuple<_Args&&...>
-  __transform_tuple(integral_constant<int, 0>, tuple<_Args...>&& __t, __tuple_indices<_Idx...>) {
+  __transform_tuple(integral_constant<int, 0>, tuple<_Args...>&& __t, __index_sequence<_Idx...>) {
     return std::forward_as_tuple(std::get<_Idx>(std::move(__t))...);
   }
 
   template <class... _Args, size_t... _Idx>
   _LIBCPP_HIDE_FROM_ABI tuple<allocator_arg_t, inner_allocator_type&, _Args&&...>
-  __transform_tuple(integral_constant<int, 1>, tuple<_Args...>&& __t, __tuple_indices<_Idx...>) {
+  __transform_tuple(integral_constant<int, 1>, tuple<_Args...>&& __t, __index_sequence<_Idx...>) {
     using _Tup = tuple<allocator_arg_t, inner_allocator_type&, _Args&&...>;
     return _Tup(allocator_arg, inner_allocator(), std::get<_Idx>(std::move(__t))...);
   }
 
   template <class... _Args, size_t... _Idx>
   _LIBCPP_HIDE_FROM_ABI tuple<_Args&&..., inner_allocator_type&>
-  __transform_tuple(integral_constant<int, 2>, tuple<_Args...>&& __t, __tuple_indices<_Idx...>) {
+  __transform_tuple(integral_constant<int, 2>, tuple<_Args...>&& __t, __index_sequence<_Idx...>) {
     using _Tup = tuple<_Args&&..., inner_allocator_type&>;
     return _Tup(std::get<_Idx>(std::move(__t))..., inner_allocator());
   }

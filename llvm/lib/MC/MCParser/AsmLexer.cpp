@@ -834,8 +834,10 @@ AsmToken AsmLexer::LexToken() {
       return LexLineComment();
   }
 
-  if (isAtStartOfComment(TokStart))
+  if (isAtStartOfComment(TokStart)) {
+    CurPtr += MAI.getCommentString().size() - 1;
     return LexLineComment();
+  }
 
   if (isAtStatementSeparator(TokStart)) {
     CurPtr += strlen(MAI.getSeparatorString()) - 1;

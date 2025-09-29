@@ -1,4 +1,4 @@
-//===--- UseNullptrCheck.cpp - clang-tidy----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -53,7 +53,7 @@ StatementMatcher makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
       unless(hasImplicitDestinationType(
           qualType(matchers::matchesAnyListedTypeName(NameList)))));
 
-  auto IsOrHasDescendant = [](auto InnerMatcher) {
+  auto IsOrHasDescendant = [](const auto &InnerMatcher) {
     return anyOf(InnerMatcher, hasDescendant(InnerMatcher));
   };
 
@@ -229,7 +229,7 @@ public:
       return true;
     }
 
-    auto* CastSubExpr = C->getSubExpr()->IgnoreParens();
+    auto *CastSubExpr = C->getSubExpr()->IgnoreParens();
     // Ignore cast expressions which cast nullptr literal.
     if (isa<CXXNullPtrLiteralExpr>(CastSubExpr)) {
       return true;

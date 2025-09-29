@@ -11,10 +11,10 @@ int main() {
   A *a;
 
 #if SWIFT_VERSION_3_0
-  float *fp =  // expected-warning{{incompatible pointer types initializing 'float *' with an expression of type 'A * _Nullable'}}
+  float *fp =  // expected-error{{incompatible pointer types initializing 'float *' with an expression of type 'A * _Nullable'}}
     [a transform: 0 integer: 0];
 #else
-  float *fp =  // expected-warning{{incompatible pointer types initializing 'float *' with an expression of type 'A *'}}
+  float *fp =  // expected-error{{incompatible pointer types initializing 'float *' with an expression of type 'A *'}}
     [a transform: 0 integer: 0]; // expected-warning{{null passed to a callee that requires a non-null argument}}
 #endif
 

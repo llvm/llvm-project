@@ -1,4 +1,4 @@
-//===---------- IncludeSorter.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -48,8 +48,7 @@ StringRef makeCanonicalName(StringRef Str, IncludeSorter::IncludeStyle Style) {
     if (StartIndex == StringRef::npos) {
       StartIndex = 0;
     }
-    return Canonical.substr(
-        0, Canonical.find_first_of('+', StartIndex));
+    return Canonical.substr(0, Canonical.find_first_of('+', StartIndex));
   }
   return removeFirstSuffix(
       removeFirstSuffix(Str, {".cc", ".cpp", ".c", ".h", ".hpp"}),

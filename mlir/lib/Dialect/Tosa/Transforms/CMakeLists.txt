@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRTosaTransforms
+  TosaConvertIntegerTypeToSignless.cpp
   TosaDecomposeTransposeConv.cpp
   TosaDecomposeDepthwise.cpp
   TosaFolders.cpp

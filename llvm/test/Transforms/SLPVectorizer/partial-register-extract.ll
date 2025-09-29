@@ -24,9 +24,10 @@ define i32 @test(i32 %v, ptr %p) {
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i64 [[OP_RDX1]], [[I9_I_I]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = freeze <16 x i1> [[TMP4]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[TMP10]], i64 0)
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <16 x i1> [[TMP10]], <16 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[RDX_OP:%.*]] = select <4 x i1> [[TMP14]], <4 x i1> splat (i1 true), <4 x i1> [[TMP12]]
-; CHECK-NEXT:    [[TMP13:%.*]] = call <16 x i1> @llvm.vector.insert.v16i1.v4i1(<16 x i1> [[TMP10]], <4 x i1> [[RDX_OP]], i64 0)
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x i1> [[RDX_OP]], <4 x i1> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <16 x i1> [[TMP10]], <16 x i1> [[TMP15]], <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP13]])
 ; CHECK-NEXT:    [[AND252_US_I_24_I_I:%.*]] = select i1 [[OP_RDX]], i32 0, i32 0
 ; CHECK-NEXT:    br label %[[INC]]

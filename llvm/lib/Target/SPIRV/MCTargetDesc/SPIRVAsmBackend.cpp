@@ -11,7 +11,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSPIRVObjectWriter.h"
-#include "llvm/Support/EndianStream.h"
 
 using namespace llvm;
 
@@ -22,8 +21,7 @@ public:
   SPIRVAsmBackend(llvm::endianness Endian) : MCAsmBackend(Endian) {}
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override {}
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override {}
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {

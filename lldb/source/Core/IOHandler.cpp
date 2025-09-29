@@ -442,7 +442,7 @@ void IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request) {
 }
 
 void IOHandlerEditline::RedrawCallback() {
-  m_debugger.RedrawStatusline(/*update=*/false);
+  m_debugger.RedrawStatusline(std::nullopt);
 }
 
 #endif
@@ -662,4 +662,11 @@ void IOHandlerEditline::PrintAsync(const char *s, size_t len, bool is_stdout) {
       IOHandler::PrintAsync(prompt, strlen(prompt), is_stdout);
 #endif
   }
+}
+
+void IOHandlerEditline::Refresh() {
+#if LLDB_ENABLE_LIBEDIT
+  if (m_editline_up)
+    m_editline_up->Refresh();
+#endif
 }

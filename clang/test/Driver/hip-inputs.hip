@@ -15,5 +15,5 @@
 // RUN:   --hip-link %S/Inputs/hip_multiple_inputs/a.cu 2>&1 \
 // RUN: | FileCheck -check-prefix=MIX %s
 
-// CHECK-NOT: error: mixed CUDA and HIP compilation is not supported
-// MIX: error: mixed CUDA and HIP compilation is not supported
+// CHECK-NOT: error: mixed CUDA and HIP offloading compilation is not supported
+// MIX: error: mixed CUDA and HIP offloading compilation is not supported
