@@ -224,6 +224,14 @@ bool PPCMCPlusBuilder::isNoop(const MCInst &Inst) const {
          Inst.getOperand(2).getImm() == 0;
 }
 
+void PPCMCPlusBuilder::createNoop(MCInst &Nop) const {
+  Nop.clear();
+  Nop.setOpcode(PPC::ORI);
+  Nop.addOperand(MCOperand::createReg(PPC::R0)); // dst
+  Nop.addOperand(MCOperand::createReg(PPC::R0)); // src
+  Nop.addOperand(MCOperand::createImm(0));       // imm
+}
+
 bool PPCMCPlusBuilder::analyzeBranch(InstructionIterator Begin,
                                      InstructionIterator End,
                                      const MCSymbol *&Tgt,
