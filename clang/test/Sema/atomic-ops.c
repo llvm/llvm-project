@@ -827,7 +827,7 @@ void nullPointerWarning(void) {
   (void)__atomic_fetch_min((int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
   (void)__atomic_fetch_max((volatile int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
   (void)__atomic_fetch_max((int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
-  
+
   // These don't warn: the "desired" parameter is passed by value. Even for
   // atomic pointers the "desired" result can be NULL.
   __c11_atomic_init(&vai, 0);
