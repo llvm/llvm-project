@@ -654,17 +654,17 @@ multiclass XeVM_SpecialRegisterXYZ<string mnemonic, list<Trait> traits = []> {
 //===----------------------------------------------------------------------===//
 // Workitem index and range
 defm XeVM_WorkitemId : XeVM_SpecialRegisterXYZ<"local_id">;
-defm XeVM_WgDim : XeVM_SpecialRegisterXYZ<"local_size">;
+defm XeVM_WorkgroupDim : XeVM_SpecialRegisterXYZ<"local_size">;
 
 //===----------------------------------------------------------------------===//
 // Workgroup index and range
-defm XeVM_WgId : XeVM_SpecialRegisterXYZ<"group_id">;
+defm XeVM_WorkgroupId : XeVM_SpecialRegisterXYZ<"group_id">;
 defm XeVM_GridDim : XeVM_SpecialRegisterXYZ<"group_count">;
 
 //===----------------------------------------------------------------------===//
 // Lane, Subgroup index and range
 def XeVM_LaneIdOp : XeVM_SpecialIdRegisterOp<"lane_id">;
-def XeVM_SgIdOp : XeVM_SpecialIdRegisterOp<"subgroup_id">;
-def XeVM_SgSizeOp : XeVM_SpecialIdRegisterOp<"subgroup_size">;
+def XeVM_SubgroupIdOp : XeVM_SpecialIdRegisterOp<"subgroup_id">;
+def XeVM_SubgroupSizeOp : XeVM_SpecialIdRegisterOp<"subgroup_size">;
 
 #endif // XEVMIR_OPS
