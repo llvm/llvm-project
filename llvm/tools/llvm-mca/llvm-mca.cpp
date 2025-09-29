@@ -668,7 +668,7 @@ int main(int argc, char **argv) {
         return 1;
       }
 
-      IPP->postProcessInstruction(Inst.get(), MCI);
+      IPP->postProcessInstruction(*Inst.get(), MCI);
       InstToInstruments.insert({&MCI, Instruments});
       LoweredSequence.emplace_back(std::move(Inst.get()));
     }
