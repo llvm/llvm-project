@@ -798,10 +798,6 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       auto PtrIntLLT = LLT::scalar(PtrSize);
 
       IndirectIdx = MIRBuilder.buildPtrToInt(PtrIntLLT, IndirectIdx).getReg(0);
-      if (PtrSize > 32) {
-        IndirectIdx =
-            MIRBuilder.buildTrunc(LLT::scalar(32), IndirectIdx).getReg(0);
-      }
     } else if (CalleeType.getAddressSpace() ==
                WebAssembly::WASM_ADDRESS_SPACE_FUNCREF) {
       Table = WebAssembly::getOrCreateFuncrefCallTableSymbol(MF.getContext(),
@@ -833,8 +829,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     if (Info.Callee.isGlobal()) {
       CallInst.addGlobalAddress(Info.Callee.getGlobal());
     } else if (Info.Callee.isSymbol()) {
-      // TODO: figure out how to trigger/test this
-      CallInst.addSym(Info.Callee.getMCSymbol());
+      CallInst.addExternalSymbol(Info.Callee.getSymbolName());
     } else {
       llvm_unreachable("Trying to lower call with a callee other than reg, "
                        "global, or a symbol.");
@@ -1078,8 +1073,24 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     for (auto SplitEVT : SplitEVTs) {
       Register CurVReg = Info.OrigRet.Regs[i];
       ArgInfo CurArgInfo = ArgInfo{CurVReg, SplitEVT.getTypeForEVT(Ctx), 0};
-      setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, *Info.CB);
+      if (Info.CB) {
+        setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, *Info.CB);
+      } else {
+        // we don't have a call base, so chances are we're looking at a libcall
+        // (external symbol).
 
+        // TODO: figure out how to get ALL the correct attributes
+        auto &Flags = CurArgInfo.Flags[0];
+        PointerType *PtrTy =
+            dyn_cast<PointerType>(CurArgInfo.Ty->getScalarType());
+        if (PtrTy) {
+          Flags.setPointer();
+          Flags.setPointerAddrSpace(PtrTy->getPointerAddressSpace());
+        }
+        Align MemAlign = DL.getABITypeAlign(CurArgInfo.Ty);
+        Flags.setMemAlign(MemAlign);
+        Flags.setOrigAlign(MemAlign);
+      }
       splitToValueTypes(CurArgInfo, SplitReturns, DL, CallConv);
       ++i;
     }
