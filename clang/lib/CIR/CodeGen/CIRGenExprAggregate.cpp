@@ -184,7 +184,8 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinAssign");
   }
   void VisitBinComma(const BinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinComma");
+    cgf.emitIgnoredExpr(e->getLHS());
+    Visit(e->getRHS());
   }
   void VisitBinCmp(const BinaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinCmp");
