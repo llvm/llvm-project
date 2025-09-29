@@ -33,9 +33,11 @@ static int gettok() {
   static int LastChar = ' ';
 
   // Skip any whitespace.
-  while (isspace(LastChar))
+  while (isspace(LastChar)){
     LastChar = getchar();
+  }
 
+  // Get identifier
   if (isalpha(LastChar)) { // identifier: [a-zA-Z][a-zA-Z0-9]*
     IdentifierStr = LastChar;
     while (isalnum((LastChar = getchar())))
