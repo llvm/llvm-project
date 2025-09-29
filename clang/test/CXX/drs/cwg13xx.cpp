@@ -180,6 +180,7 @@ namespace cwg1315 { // cwg1315: partial
   // dependent type of T::value is not the same as 'int'.
   // A core issue will be opened to decide what is supposed to happen here.
   template <typename T, int I> struct C;
+  // expected-note@-1 {{template parameter is declared here}}
   template <typename T> struct C<T, T::value>;
   // expected-error@-1 {{type of specialized non-type template argument depends on a template parameter of the partial specialization}}
 } // namespace cwg1315

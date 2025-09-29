@@ -14,10 +14,10 @@ struct is_same<T, T> {
 };
 
 namespace ExpandIntoFixed {
-  template<typename T, 
-           typename U, 
-           typename V = pair<T, U>, 
-           typename W = V*> 
+  template<typename T,
+           typename U,
+           typename V = pair<T, U>,
+           typename W = V*>
   class X0 { };
 
   template<typename ...Ts>
@@ -26,24 +26,24 @@ namespace ExpandIntoFixed {
     typedef X0<Ts...> type;
   };
 
-  static_assert(is_same<X1<int, int>::type, 
+  static_assert(is_same<X1<int, int>::type,
                         X0<int, int, pair<int, int>, pair<int, int>*>>::value,
                 "fails with two default arguments");
 
-  static_assert(is_same<X1<int, int, float>::type, 
+  static_assert(is_same<X1<int, int, float>::type,
                         X0<int, int, float, float*>>::value,
                 "fails with one default argument");
 
-  static_assert(is_same<X1<int, int, float, double>::type, 
+  static_assert(is_same<X1<int, int, float, double>::type,
                         X0<int, int, float, double>>::value,
                 "fails with no default arguments");
 }
 
 namespace ExpandIntoFixedShifted {
-  template<typename T, 
-           typename U, 
-           typename V = pair<T, U>, 
-           typename W = V*> 
+  template<typename T,
+           typename U,
+           typename V = pair<T, U>,
+           typename W = V*>
   class X0 { };
 
   template<typename ...Ts>
@@ -52,15 +52,15 @@ namespace ExpandIntoFixedShifted {
     typedef X0<char, Ts...> type;
   };
 
-  static_assert(is_same<X1<int>::type, 
+  static_assert(is_same<X1<int>::type,
                         X0<char, int, pair<char, int>, pair<char, int>*>>::value,
                 "fails with two default arguments");
 
-  static_assert(is_same<X1<int, float>::type, 
+  static_assert(is_same<X1<int, float>::type,
                         X0<char, int, float, float*>>::value,
                 "fails with one default argument");
 
-  static_assert(is_same<X1<int, float, double>::type, 
+  static_assert(is_same<X1<int, float, double>::type,
                         X0<char, int, float, double>>::value,
                 "fails with no default arguments");
 }
@@ -76,11 +76,11 @@ namespace Deduction {
 }
 
 namespace PR9021a {
-  template<typename, typename> 
+  template<typename, typename>
   struct A { };
 
   template<typename ...T>
-  struct B { 
+  struct B {
     A<T...> a1;
   };
 
@@ -93,9 +93,9 @@ namespace PR9021b {
   template<class, class>
   struct t2
   {
-    
+
   };
-  
+
   template<template<class...> class M>
   struct m
   {
@@ -107,14 +107,14 @@ namespace PR9021b {
 }
 
 namespace PartialSpecialization {
-  template<typename T, typename U, typename V = U>
-  struct X0; // expected-note 2{{template is declared here}}
+  template<typename T, typename U, typename V = U> // expected-note {{template parameter is declared here}}
+  struct X0; // expected-note {{template is declared here}}
 
   template<typename ...Ts>
   struct X0<Ts...> { // expected-error {{class template partial specialization is not more specialized than the primary template}}
   };
 
-  X0<int> x0i; // expected-error{{too few template arguments for class template 'X0'}}
+  X0<int> x0i; // expected-error{{missing template argument for template parameter}}
   X0<int, float> x0if;
   X0<int, float, double> x0ifd;
 }

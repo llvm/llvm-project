@@ -5,10 +5,12 @@
 #  error
 #endif
 
-// expected-note@*:* {{template declaration from hidden source: template <template <class ...> class, template <class> class, class, class ...>}}
+// expected-note@*:* {{template parameter from hidden source: template <class ...> class}}
+// expected-note@*:* {{template parameter from hidden source: class ...}}
+// expected-note@*:* 2{{template parameter from hidden source: template <class ...> class}}
 
 void test() {
-  __builtin_common_type<> a; // expected-error {{too few template arguments for template '__builtin_common_type'}}
+  __builtin_common_type<> a; // expected-error {{missing template argument for template parameter}}
   __builtin_common_type<1> b; // expected-error {{template argument for template template parameter must be a class template or type alias template}}
   __builtin_common_type<int, 1> c; // expected-error {{template argument for template template parameter must be a class template or type alias template}}
 }
@@ -219,6 +221,7 @@ static_assert(__is_same(common_type_base<int, PrivateConstructor>, empty_type));
 
 // expected-note@+1 {{in instantiation of template type alias 'common_type_base' requested here}}
 template<typename A, typename B, typename Res = common_type_base<A, B>>
+// expected-note@-1 {{template parameter is declared here}}
 static Res common_type_sfinae();
 // expected-note@-1 {{in instantiation of default argument for 'common_type_sfinae<int, InvalidConversion>' required here}}
 

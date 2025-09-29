@@ -2980,7 +2980,7 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
         // arguments).
         S.Diag(Param->getLocation(),
                diag::err_template_arg_deduced_incomplete_pack)
-          << Arg << Param;
+            << Arg << Param;
         return true;
       }
       if (ConvertArg(InnerArg, SugaredPackedArgsBuilder.size()))
@@ -3039,9 +3039,10 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
     TemplateDeductionInfo &Info, Sema::CheckTemplateArgumentInfo &CTAI,
     LocalInstantiationScope *CurrentInstantiationScope,
     unsigned NumAlreadyConverted, bool *IsIncomplete) {
+  Sema::CheckTemplateParameterRAII CTP(S);
   for (unsigned I = 0, N = TemplateParams->size(); I != N; ++I) {
     NamedDecl *Param = TemplateParams->getParam(I);
-
+    CTP.setParam(Param);
     // C++0x [temp.arg.explicit]p3:
     //    A trailing template parameter pack (14.5.3) not otherwise deduced will
     //    be deduced to an empty sequence of template arguments.

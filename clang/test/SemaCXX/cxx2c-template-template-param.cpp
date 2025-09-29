@@ -3,12 +3,16 @@
 namespace Errors {
 
 template <template<typename T> auto>
+// expected-note@-1 4{{template parameter is declared here}}
 struct S1;
 template <template<auto T> auto>
+// expected-note@-1 4{{template parameter is declared here}}
 struct S2;
 template <template<typename T> concept>
+// expected-note@-1 4{{template parameter is declared here}}
 struct S3;
 template <template<auto T> concept>
+// expected-note@-1 4{{template parameter is declared here}}
 struct S4;
 int a;
 
@@ -36,7 +40,7 @@ S4<Var> t16; // expected-error {{template argument does not refer to a concept, 
 
 }
 
-template <template<typename T> auto V> // expected-note {{previous template template parameter is here}} \
+template <template<typename T> auto V> // expected-note {{template parameter is declared here}} \
                                        // expected-error{{template argument for non-type template parameter must be an expression}}
 struct S1 {
     static_assert(V<int> == 42);
@@ -44,18 +48,18 @@ struct S1 {
     static_assert(V<double> == 0);
 };
 template <template<auto T> auto V>  // expected-error {{template argument for template type parameter must be a type}} \
-                                    // expected-note {{previous template template parameter is here}}
+                                    // expected-note {{template parameter is declared here}}
 struct S2 {
     static_assert(V<0> == 1);
     static_assert(V<1> == 0);
 };
 template <template<typename T> concept C > // expected-error {{template argument for non-type template parameter must be an expression}} \
-                                           // expected-note {{previous template template parameter is here}}
+                                           // expected-note {{template parameter is declared here}}
 struct S3 {
     static_assert(C<int>);
 };
 template <template<auto> concept C> // expected-error {{template argument for template type parameter must be a type}} \
-                                    // expected-note {{previous template template parameter is here}}
+                                    // expected-note {{template parameter is declared here}}
 struct S4 {
     static_assert(C<0>);
 };
@@ -80,14 +84,14 @@ requires (N%2 == 0)
 constexpr auto Var2<N> = 1;
 
 void test () {
-    S1<Var2> sE; // expected-note {{template template argument has different template parameters than its corresponding template template parameter}}
-    S2<Var>  sE; // expected-note {{template template argument has different template parameters than its corresponding template template parameter}}
+    S1<Var2> sE; // expected-note {{template template argument is incompatible with its corresponding template template parameter}}
+    S2<Var>  sE; // expected-note {{template template argument is incompatible with its corresponding template template parameter}}
     S1<Var> s1;
     S2<Var2> s2;
     S3<C> s3;
-    S4<C> sE; // expected-note {{template template argument has different template parameters than its corresponding template template parameter}}
+    S4<C> sE; // expected-note {{template template argument is incompatible with its corresponding template template parameter}}
     S4<CI> s4;
-    S3<CI> sE; // expected-note {{template template argument has different template parameters than its corresponding template template parameter}}
+    S3<CI> sE; // expected-note {{template template argument is incompatible with its corresponding template template parameter}}
 }
 
 
@@ -342,10 +346,11 @@ concept D = Var<int>;
 
 namespace InvalidName {
 template <typename T, template <typename> concept C>
-concept A = C<T>; // expected-note {{here}}
+// expected-note@-1 {{template parameter is declared here}}
+concept A = C<T>;
 
 template <A<concept missing<int>> T> // expected-error {{expected expression}} \
-                                     // expected-error {{too few template arguments for concept 'A'}} \
+                                     // expected-error {{missing template argument for template parameter}} \
                                      // expected-error {{unknown type name 'T'}}  \
                                      // expected-error {{expected unqualified-id}}
 auto f();

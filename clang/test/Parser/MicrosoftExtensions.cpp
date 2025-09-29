@@ -126,7 +126,7 @@ void template_uuid()
 }
 
 
-template <class T, const GUID* g = &__uuidof(T)> // expected-note {{template parameter is declared here}}
+template <class T, const GUID* g = &__uuidof(T)> // expected-note 2{{template parameter is declared here}}
 class COM_CLASS_TEMPLATE  { };
 
 typedef COM_CLASS_TEMPLATE<struct_with_uuid, &*&__uuidof(struct_with_uuid)> COM_TYPE_1; // expected-warning {{non-type template argument containing a dereference operation is a Microsoft extension}}

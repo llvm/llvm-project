@@ -27,7 +27,7 @@ int b = __builtin_addressof(b2)->foo;
 // cwg2009: na
 
 namespace cwg2026 { // cwg2026: 11
-  template<int> struct X {};
+  template<int> struct X {}; // #cwg2026-X
 
   const int a = a + 1; // #cwg2026-a
   // expected-warning@-1 {{variable 'a' is uninitialized when used within its own initialization}}
@@ -35,9 +35,11 @@ namespace cwg2026 { // cwg2026: 11
   // cxx98-error@-1 {{non-type template argument of type 'int' is not an integral constant expression}}
   //   cxx98-note@-2 {{initializer of 'a' is not a constant expression}}
   //   cxx98-note@#cwg2026-a {{declared here}}
+  //   cxx98-note@#cwg2026-X {{template parameter is declared here}}
   // since-cxx11-error@#cwg2026-xa {{non-type template argument is not a constant expression}}
   //   since-cxx11-note@#cwg2026-xa {{initializer of 'a' is not a constant expression}}
   //   since-cxx11-note@#cwg2026-a {{declared here}}
+  //   since-cxx11-note@#cwg2026-X {{template parameter is declared here}}
 
 #if __cplusplus >= 201103L
   constexpr int b = b;
@@ -65,9 +67,11 @@ namespace cwg2026 { // cwg2026: 11
     // cxx98-error@-1 {{non-type template argument of type 'int' is not an integral constant expression}}
     //   cxx98-note@-2 {{initializer of 'e' is not a constant expression}}
     //   cxx98-note@#cwg2026-e {{declared here}}
+    //   cxx98-note@#cwg2026-X {{template parameter is declared here}}
     // since-cxx11-error@#cwg2026-xe {{non-type template argument is not a constant expression}}
     //   since-cxx11-note@#cwg2026-xe {{initializer of 'e' is not a constant expression}}
     //   since-cxx11-note@#cwg2026-e {{declared here}}
+    //   since-cxx11-note@#cwg2026-X {{template parameter is declared here}}
 
 #if __cplusplus >= 201103L
     static constexpr int f = f;
@@ -149,7 +153,7 @@ namespace cwg2076 { // cwg2076: 13
     operator string_view() const;
   };
 
-  void foo(const string &); // #cwg2076-foo 
+  void foo(const string &); // #cwg2076-foo
   void bar(string_view); // #cwg2076-bar
 
   void func(const string &arg) {
@@ -429,7 +433,7 @@ int f()
   return 0;
 }
 } // namespace GH42233
-} // namespace cwg2091 
+} // namespace cwg2091
 
 namespace cwg2094 { // cwg2094: 5
   struct A { int n; };

@@ -43,6 +43,7 @@ namespace cwg1004 { // cwg1004: 5
   template<class T, template<class> class U = T::template A> struct Third { };
   // expected-error@-1 {{is a constructor name}}
   //   expected-note@#cwg1004-t {{in instantiation of default argument}}
+  //   expected-note@-3 {{template parameter is declared here}}
   Third<A<int> > t; // #cwg1004-t
 } // namespace cwg1004
 

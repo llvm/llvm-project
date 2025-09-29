@@ -22,7 +22,7 @@ static_assert(sizeof(Z) == 1, "No valid members");
 
 constexpr int N = undef; // expected-error {{use of undeclared identifier}} \
                             expected-note {{declared here}}
-template<int a>
+template<int a> // expected-note {{template parameter is declared here}}
 class ABC {};
 class T {
   ABC<N> abc; // expected-error {{non-type template argument is not a constant expression}} \

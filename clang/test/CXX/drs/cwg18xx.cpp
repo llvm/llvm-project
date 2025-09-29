@@ -26,6 +26,7 @@ S<i> V; // #cwg1801-S-i
 // cxx98-14-error@-1 {{non-type template argument does not refer to any declaration}}
 //   cxx98-14-note@#cwg1801-S {{template parameter is declared here}}
 // cxx17-error@#cwg1801-S-i {{non-type template argument refers to subobject '.i'}}
+//   cxx17-note@#cwg1801-S {{template parameter is declared here}}
 } // namespace cwg1801
 
 namespace cwg1802 { // cwg1802: 3.1

@@ -5,8 +5,9 @@ template<template<> class C> class D; // expected-error{{template template param
 
 
 struct A {};
-template<class M, 
-         class T = A,  // expected-note{{previous default template argument defined here}}
+template<class M,
+         class T // expected-note {{template parameter is declared here}}
+           = A,  // expected-note{{previous default template argument defined here}}
          class C> // expected-error{{template parameter missing a default argument}}
-class X0 {}; // expected-note{{template is declared here}}
-X0<int> x0; // expected-error{{too few template arguments for class template 'X0'}}
+class X0 {};
+X0<int> x0; // expected-error{{missing template argument for template parameter}}

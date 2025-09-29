@@ -77,7 +77,7 @@ using r2i3 = r2<int, int>; // expected-error{{constraints not satisfied for clas
 namespace ns2 {
   template<typename T, typename U> struct identity {};
 
-  template<typename... Ts> requires requires { typename identity<Ts...>; } // expected-note 2{{because 'typename identity<Ts...>' would be invalid: too few template arguments for class template 'identity'}}
+  template<typename... Ts> requires requires { typename identity<Ts...>; } // expected-note 2{{because 'typename identity<Ts...>' would be invalid: missing template argument for template parameter}}
   struct r4 {};
 
   using r4i1 = r4<int>; // expected-error{{constraints not satisfied for class template 'r4' [with Ts = <int>]}}

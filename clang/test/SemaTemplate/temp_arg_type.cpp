@@ -1,9 +1,12 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98 -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s
 
-template<typename T> class A; // expected-note 2 {{template parameter is declared here}} expected-note{{template is declared here}}
+template<typename T> class A;
+// expected-note@-1 4{{template parameter is declared here}}
+// cxx98-note@-2    2{{template parameter is declared here}}
+// expected-note@-3  {{template is declared here}}
 
 // [temp.arg.type]p1
 A<0> *a1; // expected-error{{template argument for template type parameter must be a type}}

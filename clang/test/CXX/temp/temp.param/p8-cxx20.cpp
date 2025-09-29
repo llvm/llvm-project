@@ -59,7 +59,7 @@ namespace ConstDestruction {
     f<D{1, true}>();
   }
 
-  template<D d> struct Z {};
+  template<D d> struct Z {}; // expected-note {{template parameter is declared here}}
   Z<D{2, true}> z1;
   Z<D{2, false}> z2; // expected-error {{non-type template argument is not a constant expression}} expected-note-re {{in call to '{{.*}}.~D()'}}
 }

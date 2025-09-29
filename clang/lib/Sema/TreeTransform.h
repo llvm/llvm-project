@@ -16351,6 +16351,8 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmPackExpr(
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
     SubstNonTypeTemplateParmExpr *E) {
+  Sema::CheckTemplateParameterRAII CTP(SemaRef, E->getParameter());
+
   Expr *OrigReplacement = E->getReplacement()->IgnoreImplicitAsWritten();
   ExprResult Replacement = getDerived().TransformExpr(OrigReplacement);
   if (Replacement.isInvalid())

@@ -24,7 +24,7 @@ namespace std {
 }
 
 namespace cwg2100 { // cwg2100: 12
-  template<const int *P, bool = true> struct X {};
+  template<const int *P, bool = true> struct X {}; // #cwg2100-X
   template<typename T> struct A {
     static const int n = 1;
     int f() {
@@ -35,6 +35,7 @@ namespace cwg2100 { // cwg2100: 12
       return X<&n>::n; // ok, value-dependent
       // cxx98-14-error@-1 {{non-type template argument refers to object 'n' that does not have linkage}}
       //   cxx98-14-note@#cwg2100-n {{non-type template argument refers to object here}}
+      //   cxx98-14-note@#cwg2100-X {{template parameter is declared here}}
     }
   };
   template<const int *P> struct X<P> {

@@ -30,7 +30,7 @@ namespace Auto {
 
 namespace check_conversion_early {
   struct X {};
-  template<int> struct A {};
+  template<int> struct A {}; // expected-note {{template parameter is declared here}}
   template<X &x> struct A<x> {}; // expected-error {{not implicitly convertible}}
 
   struct Y { constexpr operator int() const { return 0; } };

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s
 
-template<typename T, T val> struct A {}; // expected-note 3{{template parameter is declared here}}
+template<typename T, T val> struct A {}; // expected-note 15{{template parameter is declared here}}
 
 template<typename T, typename U> constexpr bool is_same = false;
 template<typename T> constexpr bool is_same<T, T> = true;
@@ -254,8 +254,8 @@ namespace Auto {
   }
 
   namespace DecltypeAuto {
-    template<auto v> struct A { };
-    template<decltype(auto) v> struct DA { };
+    template<auto v> struct A { }; // expected-note {{template parameter is declared here}}
+    template<decltype(auto) v> struct DA { }; // expected-note {{template parameter is declared here}}
     template<auto&> struct R { };
 
     auto n = 0; // expected-note + {{declared here}}
@@ -448,7 +448,7 @@ namespace PR42108 {
   struct R {};
   struct S { constexpr S() {} constexpr S(R) {} };
   struct T { constexpr operator S() { return {}; } };
-  template <const S &> struct A {}; // expected-note {{template parameter is declared here}}
+  template <const S &> struct A {}; // expected-note 3{{template parameter is declared here}}
   void f() {
     A<R{}>(); // expected-error {{would bind reference to a temporary}}
     A<S{}>(); // expected-error {{reference to temporary object}}

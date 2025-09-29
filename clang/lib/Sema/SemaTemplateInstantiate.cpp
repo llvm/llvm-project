@@ -592,6 +592,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case BuildingDeductionGuides:
   case TypeAliasTemplateInstantiation:
   case PartialOrderingTTP:
+  case CheckTemplateParameter:
     return false;
 
   // This function should never be called when Kind's value is Memoization.
@@ -616,29 +617,30 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     Invalid = true;
     return;
   }
-  Invalid = CheckInstantiationDepth(PointOfInstantiation, InstantiationRange);
+
+  CodeSynthesisContext Inst;
+  Inst.Kind = Kind;
+  Inst.PointOfInstantiation = PointOfInstantiation;
+  Inst.Entity = Entity;
+  Inst.Template = Template;
+  Inst.TemplateArgs = TemplateArgs.data();
+  Inst.NumTemplateArgs = TemplateArgs.size();
+  Inst.DeductionInfo = DeductionInfo;
+  Inst.InstantiationRange = InstantiationRange;
+  Inst.InConstraintSubstitution =
+      Inst.Kind == CodeSynthesisContext::ConstraintSubstitution;
+  if (!SemaRef.CodeSynthesisContexts.empty())
+    Inst.InConstraintSubstitution |=
+        SemaRef.CodeSynthesisContexts.back().InConstraintSubstitution;
+
+  Invalid = SemaRef.pushCodeSynthesisContext(Inst);
   if (!Invalid) {
-    CodeSynthesisContext Inst;
-    Inst.Kind = Kind;
-    Inst.PointOfInstantiation = PointOfInstantiation;
-    Inst.Entity = Entity;
-    Inst.Template = Template;
-    Inst.TemplateArgs = TemplateArgs.data();
-    Inst.NumTemplateArgs = TemplateArgs.size();
-    Inst.DeductionInfo = DeductionInfo;
-    Inst.InstantiationRange = InstantiationRange;
-    Inst.InConstraintSubstitution =
-        Inst.Kind == CodeSynthesisContext::ConstraintSubstitution;
-    if (!SemaRef.CodeSynthesisContexts.empty())
-      Inst.InConstraintSubstitution |=
-          SemaRef.CodeSynthesisContexts.back().InConstraintSubstitution;
-
-    SemaRef.pushCodeSynthesisContext(Inst);
-
-    AlreadyInstantiating = !Inst.Entity ? false :
-        !SemaRef.InstantiatingSpecializations
-             .insert({Inst.Entity->getCanonicalDecl(), Inst.Kind})
-             .second;
+    AlreadyInstantiating =
+        !Inst.Entity
+            ? false
+            : !SemaRef.InstantiatingSpecializations
+                   .insert({Inst.Entity->getCanonicalDecl(), Inst.Kind})
+                   .second;
     atTemplateBegin(SemaRef.TemplateInstCallbacks, SemaRef, Inst);
   }
 }
@@ -832,20 +834,43 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation ArgLoc, PartialOrderingTTP,
     TemplateDecl *PArg, SourceRange InstantiationRange)
     : InstantiatingTemplate(SemaRef, CodeSynthesisContext::PartialOrderingTTP,
-                            ArgLoc, InstantiationRange, PArg) {}
+                            ArgLoc, SourceRange(), PArg) {}
 
-void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
+Sema::InstantiatingTemplate::InstantiatingTemplate(Sema &SemaRef,
+                                                   CheckTemplateParameter)
+    : InstantiatingTemplate(
+          SemaRef, CodeSynthesisContext::CheckTemplateParameter,
+          /*PointOfInstantiation*/ SourceLocation(),
+          /*InstantiationRange=*/SourceRange(), /*Entity=*/nullptr) {}
+
+bool Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
   Ctx.SavedInNonInstantiationSFINAEContext = InNonInstantiationSFINAEContext;
   InNonInstantiationSFINAEContext = false;
 
-  CodeSynthesisContexts.push_back(Ctx);
-
-  if (!Ctx.isInstantiationRecord())
+  if (!Ctx.isInstantiationRecord()) {
     ++NonInstantiationEntries;
+  } else {
+    assert(SemaRef.NonInstantiationEntries <=
+           SemaRef.CodeSynthesisContexts.size());
+    if ((SemaRef.CodeSynthesisContexts.size() -
+         SemaRef.NonInstantiationEntries) >
+        SemaRef.getLangOpts().InstantiationDepth) {
+      SemaRef.Diag(Ctx.PointOfInstantiation,
+                   diag::err_template_recursion_depth_exceeded)
+          << SemaRef.getLangOpts().InstantiationDepth << Ctx.InstantiationRange;
+      SemaRef.Diag(Ctx.PointOfInstantiation,
+                   diag::note_template_recursion_depth)
+          << SemaRef.getLangOpts().InstantiationDepth;
+      return true;
+    }
+  }
+
+  CodeSynthesisContexts.push_back(Ctx);
 
   // Check to see if we're low on stack space. We can't do anything about this
   // from here, but we can at least warn the user.
   StackHandler.warnOnStackNearlyExhausted(Ctx.PointOfInstantiation);
+  return false;
 }
 
 void Sema::popCodeSynthesisContext() {
@@ -905,25 +930,6 @@ static std::string convertCallArgsToString(Sema &S,
                                      S.Context.getPrintingPolicy());
   }
   return Result;
-}
-
-bool Sema::InstantiatingTemplate::CheckInstantiationDepth(
-                                        SourceLocation PointOfInstantiation,
-                                           SourceRange InstantiationRange) {
-  assert(SemaRef.NonInstantiationEntries <=
-         SemaRef.CodeSynthesisContexts.size());
-  if ((SemaRef.CodeSynthesisContexts.size() -
-          SemaRef.NonInstantiationEntries)
-        <= SemaRef.getLangOpts().InstantiationDepth)
-    return false;
-
-  SemaRef.Diag(PointOfInstantiation,
-               diag::err_template_recursion_depth_exceeded)
-    << SemaRef.getLangOpts().InstantiationDepth
-    << InstantiationRange;
-  SemaRef.Diag(PointOfInstantiation, diag::note_template_recursion_depth)
-    << SemaRef.getLangOpts().InstantiationDepth;
-  return true;
 }
 
 void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
@@ -1276,12 +1282,20 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
     case CodeSynthesisContext::PartialOrderingTTP:
       DiagFunc(Active->PointOfInstantiation,
                PDiag(diag::note_template_arg_template_params_mismatch));
-      if (SourceLocation ParamLoc = Active->Entity->getLocation();
-          ParamLoc.isValid())
-        DiagFunc(ParamLoc, PDiag(diag::note_template_prev_declaration)
-                               << /*isTemplateTemplateParam=*/true
-                               << Active->InstantiationRange);
       break;
+    case CodeSynthesisContext::CheckTemplateParameter: {
+      if (!Active->Entity)
+        break;
+      const auto &ND = *cast<NamedDecl>(Active->Entity);
+      if (SourceLocation Loc = ND.getLocation(); Loc.isValid()) {
+        DiagFunc(Loc, PDiag(diag::note_template_param_here)
+                          << ND.getSourceRange());
+        break;
+      }
+      DiagFunc(SourceLocation(), PDiag(diag::note_template_param_external)
+                                     << toTerseString(ND).str());
+      break;
+    }
     }
   }
 }
@@ -1325,6 +1339,7 @@ std::optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
     case CodeSynthesisContext::DefaultTemplateArgumentChecking:
     case CodeSynthesisContext::RewritingOperatorAsSpaceship:
     case CodeSynthesisContext::PartialOrderingTTP:
+    case CodeSynthesisContext::CheckTemplateParameter:
       // A default template argument instantiation and substitution into
       // template parameters with arguments for prior parameters may or may
       // not be a SFINAE context; look further up the stack.
