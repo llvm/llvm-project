@@ -55,27 +55,4 @@ entry:
   ret float %conv
 }
 
-define float @test_constrained(i64 %x) nounwind readnone {
-; Also check that with fpexcept.ignore we do not get that extra
-; code sequence.  Simply verify that there is no "isel" present.
-; CHECK-LABEL: test_constrained:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    std 3, -8(1)
-; CHECK-NEXT:    lfd 0, -8(1)
-; CHECK-NEXT:    xscvsxddp 0, 0
-; CHECK-NEXT:    frsp 1, 0
-; CHECK-NEXT:    blr
-;
-; CHECK-NO-ISEL-LABEL: test_constrained:
-; CHECK-NO-ISEL:       # %bb.0: # %entry
-; CHECK-NO-ISEL-NEXT:    std 3, -8(1)
-; CHECK-NO-ISEL-NEXT:    lfd 0, -8(1)
-; CHECK-NO-ISEL-NEXT:    xscvsxddp 0, 0
-; CHECK-NO-ISEL-NEXT:    frsp 1, 0
-; CHECK-NO-ISEL-NEXT:    blr
-entry:
-  %conv = call float @llvm.experimental.constrained.sitofp.f32.i64(i64 %x, metadata !"round.dynamic", metadata !"fpexcept.ignore")
-  ret float %conv
-}
-
-declare float @llvm.experimental.constrained.sitofp.f32.i64(i64, metadata, metadata)
+; TODO: Add sitofp afn test.
