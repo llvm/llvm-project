@@ -2894,7 +2894,7 @@ static bool interp__builtin_elementwise_triop(
   }
 
   static bool interp__builtin_byteshift(
-      InterpState & S, CodePtr OpPC, const CallExpr *Call, uint32_t BuiltinID) {
+      InterpState & S, CodePtr OpPC, const CallExpr *Call, uint32_t BuiltinID, bool isLeft) {
     APSInt Amt;
     if (!EvaluateInteger(Call->getArg(1), Amt, S.getCtx()))
       return false;
@@ -2909,9 +2909,6 @@ static bool interp__builtin_elementwise_triop(
     assert(NumElts % LaneBytes == 0);
 
     SmallVector<APValue, 64> Result(NumElts, APValue(0));
-    bool IsLeft = (BuiltinID == clang::X86::BI__builtin_ia32_pslldqi128 ||
-                   BuiltinID == clang::X86::BI__builtin_ia32_pslldqi256 ||
-                   BuiltinID == clang::X86::BI__builtin_ia32_pslldqi512);
 
     if (ShiftVal >= LaneBytes)
       return Success(APValue(Result.data(), Result.size()), Call);
@@ -3610,11 +3607,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pslldqi128:
   case clang::X86::BI__builtin_ia32_pslldqi256:
   case clang::X86::BI__builtin_ia32_pslldqi512:
+    return interp__builtin_byteshift(S, OpPC, Call, BuiltinID, /*IsLeft=*/true);
   case clang::X86::BI__builtin_ia32_psrldqi128:
   case clang::X86::BI__builtin_ia32_psrldqi256:
   case clang::X86::BI__builtin_ia32_psrldqi512:
-    return interp__builtin_byteshift(S, OpPC, Call, BuiltinID);
-    
+    return interp__builtin_byteshift(S, OpPC, Call, BuiltinID, /*IsLeft=*/false);
+
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)
