@@ -8113,10 +8113,11 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
     LiveIntervals *LIS) const {
 
-  Register MaskReg;
+  // If LoadMI is a masked load, check MI having the same mask.
   const MCInstrDesc &MCID = get(LoadMI.getOpcode());
   unsigned NumOps = MCID.getNumOperands();
   if (NumOps >= 3) {
+    Register MaskReg;
     const MachineOperand &Op1 = LoadMI.getOperand(1);
     const MachineOperand &Op2 = LoadMI.getOperand(2);
 
