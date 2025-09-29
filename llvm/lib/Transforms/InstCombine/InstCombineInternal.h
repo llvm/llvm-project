@@ -124,6 +124,8 @@ public:
       BinaryOperator &I);
   Instruction *foldVariableSignZeroExtensionOfVariableHighBitExtract(
       BinaryOperator &OldAShr);
+  
+
   Instruction *visitAShr(BinaryOperator &I);
   Instruction *visitLShr(BinaryOperator &I);
   Instruction *commonShiftTransforms(BinaryOperator &I);
