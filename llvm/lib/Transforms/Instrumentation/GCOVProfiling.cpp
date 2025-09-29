@@ -94,9 +94,9 @@ class GCOVFunction;
 class GCOVProfiler {
 public:
   GCOVProfiler()
-      : GCOVProfiler(GCOVOptions::getDefault(), vfs::getRealFileSystem()) {}
-  GCOVProfiler(const GCOVOptions &Opts, IntrusiveRefCntPtr<vfs::FileSystem> VFS)
-      : Options(Opts), VFS(std::move(VFS)) {}
+      : GCOVProfiler(GCOVOptions::getDefault(), *vfs::getRealFileSystem()) {}
+  GCOVProfiler(const GCOVOptions &Opts, vfs::FileSystem &VFS)
+      : Options(Opts), VFS(VFS) {}
   bool
   runOnModule(Module &M, function_ref<BlockFrequencyInfo *(Function &F)> GetBFI,
               function_ref<BranchProbabilityInfo *(Function &F)> GetBPI,
@@ -113,7 +113,7 @@ public:
     os->write_zeros(4 - s.size() % 4);
   }
   void writeBytes(const char *Bytes, int Size) { os->write(Bytes, Size); }
-  vfs::FileSystem &getVirtualFileSystem() const { return *VFS; }
+  vfs::FileSystem &getVirtualFileSystem() const { return VFS; }
 
 private:
   // Create the .gcno files for the Module based on DebugInfo.
@@ -170,7 +170,7 @@ private:
   std::vector<Regex> ExcludeRe;
   DenseSet<const BasicBlock *> ExecBlocks;
   StringMap<bool> InstrumentedFiles;
-  IntrusiveRefCntPtr<vfs::FileSystem> VFS;
+  vfs::FileSystem &VFS;
 };
 
 struct BBInfo {
@@ -460,7 +460,7 @@ bool GCOVProfiler::isFunctionInstrumented(const Function &F) {
   if (FilterRe.empty() && ExcludeRe.empty()) {
     return true;
   }
-  SmallString<128> Filename = getFilename(F.getSubprogram(), *VFS);
+  SmallString<128> Filename = getFilename(F.getSubprogram(), VFS);
   auto It = InstrumentedFiles.find(Filename);
   if (It != InstrumentedFiles.end()) {
     return It->second;
@@ -472,7 +472,7 @@ bool GCOVProfiler::isFunctionInstrumented(const Function &F) {
   // Path can be
   // /usr/lib/gcc/x86_64-linux-gnu/8/../../../../include/c++/8/bits/*.h so for
   // such a case we must get the real_path.
-  if (VFS->getRealPath(Filename, RealPath)) {
+  if (VFS.getRealPath(Filename, RealPath)) {
     // real_path can fail with path like "foo.c".
     RealFilename = Filename;
   } else {
@@ -529,7 +529,7 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
   SmallString<128> Filename = CU->getFilename();
   sys::path::replace_extension(Filename, Notes ? "gcno" : "gcda");
   StringRef FName = sys::path::filename(Filename);
-  ErrorOr<std::string> CWD = VFS->getCurrentWorkingDirectory();
+  ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory();
   if (!CWD)
     return std::string(FName);
   SmallString<128> CurPath{*CWD};
@@ -560,7 +560,7 @@ bool GCOVProfiler::runOnModule(
 PreservedAnalyses GCOVProfilerPass::run(Module &M,
                                         ModuleAnalysisManager &AM) {
 
-  GCOVProfiler Profiler(GCOVOpts, VFS);
+  GCOVProfiler Profiler(GCOVOpts, *VFS);
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
@@ -795,7 +795,7 @@ bool GCOVProfiler::emitProfileNotes(
       // Add the function line number to the lines of the entry block
       // to have a counter for the function definition.
       uint32_t Line = SP->getLine();
-      auto Filename = getFilename(SP, *VFS);
+      auto Filename = getFilename(SP, VFS);
 
       BranchProbabilityInfo *BPI = GetBPI(F);
       BlockFrequencyInfo *BFI = GetBFI(F);
@@ -887,7 +887,7 @@ bool GCOVProfiler::emitProfileNotes(
           if (SP != getDISubprogram(Scope))
             continue;
 
-          GCOVLines &Lines = Block.getFile(getFilename(Loc->getScope(), *VFS));
+          GCOVLines &Lines = Block.getFile(getFilename(Loc->getScope(), VFS));
           Lines.addLine(Loc.getLine());
         }
         Line = 0;
