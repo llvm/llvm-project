@@ -112,11 +112,22 @@ uint32_t SPIRVLegalizeImplicitBinding::getAndReserveFirstUnusedBinding(
 }
 
 void SPIRVLegalizeImplicitBinding::replaceImplicitBindingCalls(Module &M) {
+  std::unordered_map<uint32_t, uint32_t> OrderIdToBinding;
+
   for (CallInst *OldCI : ImplicitBindingCalls) {
     IRBuilder<> Builder(OldCI);
+    const uint32_t OrderId =
+        cast<ConstantInt>(OldCI->getArgOperand(0))->getZExtValue();
     const uint32_t DescSet =
         cast<ConstantInt>(OldCI->getArgOperand(1))->getZExtValue();
-    const uint32_t NewBinding = getAndReserveFirstUnusedBinding(DescSet);
+
+    // Reuse an existing binding for this order ID, if one was already assigned.
+    // Otherwise, assign a new binding.
+    const uint32_t NewBinding =
+        (OrderIdToBinding.find(OrderId) != OrderIdToBinding.end())
+            ? OrderIdToBinding[OrderId]
+            : getAndReserveFirstUnusedBinding(DescSet);
+    OrderIdToBinding[OrderId] = NewBinding;
 
     SmallVector<Value *, 8> Args;
     Args.push_back(Builder.getInt32(DescSet));
