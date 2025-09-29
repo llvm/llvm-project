@@ -600,3 +600,23 @@ void StaticFieldPairTests() {
     int y = P.second;
   }
 }
+
+void IgnoreDirectInit() {
+  {
+    std::pair<int, int> P{1, 1};
+    int x = P.first;
+    int y = P.second; 
+  }
+
+  {
+    std::pair<int, int> P(1, 1);
+    int x = P.first;
+    int y = P.second;
+  }
+
+  {
+    std::pair<int, int> P;
+    int x = P.first;
+    int y = P.second;
+  }
+}
