@@ -4452,11 +4452,12 @@ static SDValue splitVectorIntBinary(SDValue Op, SelectionDAG &DAG,
 template <typename F>
 SDValue SplitOpsAndApply(SelectionDAG &DAG, const X86Subtarget &Subtarget,
                          const SDLoc &DL, EVT VT, ArrayRef<SDValue> Ops,
-                         F Builder, bool CheckBWI = true) {
+                         F Builder, bool CheckBWI = true,
+                         bool AllowAVX512 = true) {
   assert(Subtarget.hasSSE2() && "Target assumed to support at least SSE2");
   unsigned NumSubs = 1;
-  if ((CheckBWI && Subtarget.useBWIRegs()) ||
-      (!CheckBWI && Subtarget.useAVX512Regs())) {
+  if (AllowAVX512 && ((CheckBWI && Subtarget.useBWIRegs()) ||
+                      (!CheckBWI && Subtarget.useAVX512Regs()))) {
     if (VT.getSizeInBits() > 512) {
       NumSubs = VT.getSizeInBits() / 512;
       assert((VT.getSizeInBits() % 512) == 0 && "Illegal vector size");
@@ -5346,6 +5347,19 @@ bool isConstantSplat(SDValue Op, APInt &SplatVal, bool AllowPartialUndefs) {
 
   return false;
 }
+
+int getRoundingModeX86(unsigned RM) {
+  switch (static_cast<::llvm::RoundingMode>(RM)) {
+    // clang-format off
+  case ::llvm::RoundingMode::NearestTiesToEven: return X86::rmToNearest; break;
+  case ::llvm::RoundingMode::TowardNegative:    return X86::rmDownward; break;
+  case ::llvm::RoundingMode::TowardPositive:    return X86::rmUpward; break;
+  case ::llvm::RoundingMode::TowardZero:        return X86::rmTowardZero; break;
+  default:
+    return X86::rmInvalid; // Invalid rounding mode
+  }
+}
+
 } // namespace X86
 } // namespace llvm
 
@@ -28698,16 +28712,14 @@ SDValue X86TargetLowering::LowerSET_ROUNDING(SDValue Op,
   SDValue RMBits;
   if (auto *CVal = dyn_cast<ConstantSDNode>(NewRM)) {
     uint64_t RM = CVal->getZExtValue();
-    int FieldVal;
-    switch (static_cast<RoundingMode>(RM)) {
-    // clang-format off
-    case RoundingMode::NearestTiesToEven: FieldVal = X86::rmToNearest; break;
-    case RoundingMode::TowardNegative:    FieldVal = X86::rmDownward; break;
-    case RoundingMode::TowardPositive:    FieldVal = X86::rmUpward; break;
-    case RoundingMode::TowardZero:        FieldVal = X86::rmTowardZero; break;
-    default:
-      llvm_unreachable("rounding mode is not supported by X86 hardware");
-    // clang-format on
+    int FieldVal = X86::getRoundingModeX86(RM);
+
+    if (FieldVal == X86::rmInvalid) {
+      FieldVal = X86::rmToNearest;
+      LLVMContext &C = MF.getFunction().getContext();
+      C.diagnose(DiagnosticInfoUnsupported(
+          MF.getFunction(), "rounding mode is not supported by X86 hardware",
+          DiagnosticLocation(DL.getDebugLoc()), DS_Error));
     }
     RMBits = DAG.getConstant(FieldVal, DL, MVT::i16);
   } else {
@@ -30301,22 +30313,8 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
 
   uint64_t ShiftAmt = APIntShiftAmt.getZExtValue();
 
-  if (supportedVectorShiftWithImm(VT, Subtarget, Op.getOpcode())) {
-    // Hardware support for vector shifts is sparse which makes us scalarize the
-    // vector operations in many cases. Also, on sandybridge ADD is faster than
-    // shl: (shl V, 1) -> (add (freeze V), (freeze V))
-    if (Op.getOpcode() == ISD::SHL && ShiftAmt == 1) {
-      // R may be undef at run-time, but (shl R, 1) must be an even number (LSB
-      // must be 0). (add undef, undef) however can be any value. To make this
-      // safe, we must freeze R to ensure that register allocation uses the same
-      // register for an undefined value. This ensures that the result will
-      // still be even and preserves the original semantics.
-      R = DAG.getFreeze(R);
-      return DAG.getNode(ISD::ADD, dl, VT, R, R);
-    }
-
+  if (supportedVectorShiftWithImm(VT, Subtarget, Op.getOpcode()))
     return getTargetVShiftByConstNode(X86Opc, dl, VT, R, ShiftAmt, DAG);
-  }
 
   // i64 SRA needs to be performed as partial shifts.
   if (((!Subtarget.hasXOP() && VT == MVT::v2i64) ||
@@ -31217,16 +31215,16 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     unsigned NumElts = VT.getVectorNumElements();
 
     if (Subtarget.hasVBMI2() && EltSizeInBits > 8) {
-      if (IsFSHR)
-        std::swap(Op0, Op1);
 
       if (IsCstSplat) {
+        if (IsFSHR)
+          std::swap(Op0, Op1);
         uint64_t ShiftAmt = APIntShiftAmt.urem(EltSizeInBits);
         SDValue Imm = DAG.getTargetConstant(ShiftAmt, DL, MVT::i8);
         return getAVX512Node(IsFSHR ? X86ISD::VSHRD : X86ISD::VSHLD, DL, VT,
                              {Op0, Op1, Imm}, DAG, Subtarget);
       }
-      return getAVX512Node(IsFSHR ? X86ISD::VSHRDV : X86ISD::VSHLDV, DL, VT,
+      return getAVX512Node(IsFSHR ? ISD::FSHR : ISD::FSHL, DL, VT,
                            {Op0, Op1, Amt}, DAG, Subtarget);
     }
     assert((VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8 ||
@@ -35141,8 +35139,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VALIGN)
   NODE_NAME_CASE(VSHLD)
   NODE_NAME_CASE(VSHRD)
-  NODE_NAME_CASE(VSHLDV)
-  NODE_NAME_CASE(VSHRDV)
   NODE_NAME_CASE(PSHUFD)
   NODE_NAME_CASE(PSHUFHW)
   NODE_NAME_CASE(PSHUFLW)
@@ -45174,10 +45170,13 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::WrapperRIP:
     return true;
   case X86ISD::BLENDI:
+  case X86ISD::PSHUFB:
   case X86ISD::PSHUFD:
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
+  case X86ISD::VPERMILPV:
   case X86ISD::VPERMILPI:
+  case X86ISD::VPERMV:
   case X86ISD::VPERMV3: {
     SmallVector<int, 8> Mask;
     SmallVector<SDValue, 2> Ops;
@@ -45240,10 +45239,13 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::BLENDV:
     return false;
   // SSE target shuffles.
+  case X86ISD::PSHUFB:
   case X86ISD::PSHUFD:
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
+  case X86ISD::VPERMILPV:
   case X86ISD::VPERMILPI:
+  case X86ISD::VPERMV:
   case X86ISD::VPERMV3:
     return false;
   // SSE comparisons handle all icmp/fcmp cases.
@@ -46193,7 +46195,7 @@ static SDValue createVPDPBUSD(SelectionDAG &DAG, SDValue LHS, SDValue RHS,
   SDValue Zero = DAG.getConstant(0, DL, DpVT);
 
   return SplitOpsAndApply(DAG, Subtarget, DL, DpVT, {Zero, DpOp0, DpOp1},
-                          DpBuilder, false);
+                          DpBuilder, /*CheckBWI=*/false, Subtarget.hasVNNI());
 }
 
 // Create a PSADBW given two sources representable as zexts of vXi8.
@@ -58059,7 +58061,8 @@ static SDValue matchVPMADD52(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
   };
 
   return SplitOpsAndApply(DAG, Subtarget, DL, VT, {Acc, X, Y}, VPMADD52Builder,
-                          /*CheckBWI*/ false);
+                          /*CheckBWI*/ false,
+                          /*AllowAVX512*/ Subtarget.hasIFMA());
 }
 
 static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,

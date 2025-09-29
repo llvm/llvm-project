@@ -272,6 +272,9 @@ Attribute Changes in Clang
   attribute, allowing the attribute to only be attached to the declaration. Prior, this would be
   treated as an error where the definition and declaration would have differing types.
 
+- New format attributes ``gnu_printf``, ``gnu_scanf``, ``gnu_strftime`` and ``gnu_strfmon`` are added
+  as aliases for ``printf``, ``scanf``, ``strftime`` and ``strfmon``. (#GH16219)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added a separate diagnostic group ``-Wfunction-effect-redeclarations``, for the more pedantic
@@ -296,7 +299,8 @@ Improvements to Clang's diagnostics
   "format specifies type 'unsigned int' but the argument has type 'int', which differs in signedness [-Wformat-signedness]"
   "signedness of format specifier 'u' is incompatible with 'c' [-Wformat-signedness]"
   and the API-visible diagnostic id will be appropriate.
-
+- Clang now produces better diagnostics for template template parameter matching
+  involving 'auto' template parameters.
 - Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
@@ -357,6 +361,7 @@ Bug Fixes in This Version
   first parameter. (#GH113323).
 - Fixed a crash with incompatible pointer to integer conversions in designated
   initializers involving string literals. (#GH154046)
+- Fix crash on CTAD for alias template. (#GH131342)
 - Clang now emits a frontend error when a function marked with the `flatten` attribute
   calls another function that requires target features not enabled in the caller. This
   prevents a fatal error in the backend.
@@ -563,6 +568,7 @@ Crash and bug fixes
 - Fixed a crash in the static analyzer that when the expression in an
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 - Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
+- Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
 
 Improvements
 ^^^^^^^^^^^^
@@ -577,7 +583,9 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
-- Exposed `clang_getCursorLanguage` via `Cursor.language`.
+- Exposed ``clang_getCursorLanguage`` via ``Cursor.language``.
+- Add all missing ``CursorKind``s, ``TypeKind``s and
+  ``ExceptionSpecificationKind``s from ``Index.h``
 
 OpenMP Support
 --------------
@@ -591,6 +599,7 @@ OpenMP Support
 - Added support for ``defaultmap`` directive implicit-behavior ``storage``.
 - Added support for ``defaultmap`` directive implicit-behavior ``private``.
 - Added parsing and semantic analysis support for ``groupprivate`` directive.
+- Added support for 'omp fuse' directive.
 
 Improvements
 ^^^^^^^^^^^^
