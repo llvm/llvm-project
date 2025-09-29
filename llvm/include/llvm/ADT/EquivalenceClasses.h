@@ -180,8 +180,8 @@ public:
   }
 
   /// Returns true if \p V is contained an equivalence class.
-  bool contains(const ElemTy &V) const {
-    return TheMapping.find(V) != TheMapping.end();
+  [[nodiscard]] bool contains(const ElemTy &V) const {
+    return TheMapping.contains(V);
   }
 
   /// getLeaderValue - Return the leader for the specified value that is in the
