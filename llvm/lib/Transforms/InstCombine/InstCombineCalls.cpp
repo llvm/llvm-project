@@ -86,6 +86,8 @@ using namespace PatternMatch;
 
 STATISTIC(NumSimplified, "Number of library calls simplified");
 
+
+
 static cl::opt<unsigned> GuardWideningWindow(
     "instcombine-guard-widening-window",
     cl::init(3),
@@ -3074,6 +3076,20 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::amdgcn_ballot: {
+    // Optimize ballot intrinsics when the condition is known to be uniform
+    Value *Condition = II->getArgOperand(0);
+    
+    // If the condition is a constant, we can evaluate the ballot directly
+    if (auto *ConstCond = dyn_cast<ConstantInt>(Condition)) {
+      // ballot(true) -> -1 (all lanes active)
+      // ballot(false) -> 0 (no lanes active)
+      uint64_t Result = ConstCond->isOne() ? ~0ULL : 0ULL;
+      return replaceInstUsesWith(*II, ConstantInt::get(II->getType(), Result));
+    }
+    
+    break;
+  }
   case Intrinsic::ldexp: {
     // ldexp(ldexp(x, a), b) -> ldexp(x, a + b)
     //
@@ -3667,38 +3683,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    // Optimize AMDGPU ballot uniformity assumptions:
-    // assume(icmp eq (ballot(cmp), -1)) implies that cmp is uniform and true
-    // This allows us to optimize away the ballot and replace cmp with true
-    Value *BallotInst;
-    if (match(IIOperand, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(BallotInst),
-                                        m_AllOnes()))) {
-      // Check if this is an AMDGPU ballot intrinsic
-      if (auto *BallotCall = dyn_cast<IntrinsicInst>(BallotInst)) {
-        if (BallotCall->getIntrinsicID() == Intrinsic::amdgcn_ballot) {
-          Value *BallotCondition = BallotCall->getArgOperand(0);
 
-          // If ballot(cmp) == -1, then cmp is uniform across all lanes and
-          // evaluates to true We can safely replace BallotCondition with true
-          // since ballot == -1 implies all lanes are true
-          if (BallotCondition->getType()->isIntOrIntVectorTy(1) &&
-              !isa<Constant>(BallotCondition)) {
-
-            // Add the condition to the worklist for further optimization
-            Worklist.pushValue(BallotCondition);
-
-            // Replace BallotCondition with true
-            BallotCondition->replaceAllUsesWith(
-                ConstantInt::getTrue(BallotCondition->getType()));
-
-            // The assumption is now always true, so we can simplify it
-            replaceUse(II->getOperandUse(0),
-                       ConstantInt::getTrue(II->getContext()));
-            return II;
-          }
-        }
-      }
-    }
 
     // If there is a dominating assume with the same condition as this one,
     // then this one is redundant, and should be removed.
@@ -3712,6 +3697,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       CreateNonTerminatorUnreachable(II);
       return eraseInstFromFunction(*II);
     }
+
+
 
     // Update the cache of affected values for this assumption (we might be
     // here because we just simplified the condition).
