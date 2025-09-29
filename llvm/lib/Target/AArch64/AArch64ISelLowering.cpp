@@ -29247,9 +29247,10 @@ bool AArch64TargetLowering::useStackGuardXorFP() const { return true; }
 SDValue AArch64TargetLowering::emitStackGuardXorFP(SelectionDAG &DAG,
                                                    SDValue Val,
                                                    const SDLoc &DL) const {
-  return DAG.getNode(
-      ISD::XOR, DL, Val.getValueType(), Val,
-      DAG.getRegister(getStackPointerRegisterToSaveRestore(), MVT::i64));
+  return DAG.getNode(ISD::XOR, DL, Val.getValueType(), Val,
+                     DAG.getCopyFromReg(DAG.getEntryNode(), DL,
+                                        getStackPointerRegisterToSaveRestore(),
+                                        MVT::i64));
 }
 
 unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {
