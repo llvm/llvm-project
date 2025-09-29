@@ -2452,11 +2452,9 @@ __m256d test_mm512_extractf64x4_pd(__m512d a)
   // CHECK: shufflevector <8 x double> %{{.*}}, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   return _mm512_extractf64x4_pd(a, 1);
 }
-TEST_CONSTEXPR(match_m256d(_mm512_extractf64x4_pd(((__m512d){
-      0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0
-  }), 1),
-  4.0, 5.0, 6.0, 7.0));
-
+TEST_CONSTEXPR(match_m256d(_mm512_extractf64x4_pd(((__m512d)
+{0.0,1.0,2.0,3.0, 4.0,5.0,6.0,7.0}),1),
+ 4.0, 5.0, 6.0, 7.0));
 
 __m256d test_mm512_mask_extractf64x4_pd(__m256d  __W,__mmask8  __U,__m512d __A){
   // CHECK-LABEL: test_mm512_mask_extractf64x4_pd
@@ -2464,12 +2462,13 @@ __m256d test_mm512_mask_extractf64x4_pd(__m256d  __W,__mmask8  __U,__m512d __A){
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm512_mask_extractf64x4_pd( __W, __U, __A, 1);
 }
-TEST_CONSTEXPR(match_m256d(_mm512_mask_extractf64x4_pd(
-      (__m256d){100.0,101.0,102.0,103.0},   // W(merge)
-      (__mmask8)0x5,                         // 0101b
-      (__m512d){0.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0},
-      1),
-    4.0, 101.0, 6.0, 103.0));
+TEST_CONSTEXPR(match_m256d(
+  _mm512_mask_extractf64x4_pd(
+    ((__m256d){100.0,101.0,102.0,103.0}),  // W (merge)
+    (__mmask8)0x5,
+    ((__m512d){0.0,1.0,2.0,3.0, 4.0,5.0,6.0,7.0}),
+    1),
+  4.0, 101.0, 6.0, 103.0));
 
 __m256d test_mm512_maskz_extractf64x4_pd(__mmask8  __U,__m512d __A){
   // CHECK-LABEL: test_mm512_maskz_extractf64x4_pd
@@ -2477,11 +2476,12 @@ __m256d test_mm512_maskz_extractf64x4_pd(__mmask8  __U,__m512d __A){
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm512_maskz_extractf64x4_pd( __U, __A, 1);
 }
-TEST_CONSTEXPR(match_m256d(_mm512_maskz_extractf64x4_pd(
-      (__mmask8)0x3,
-      (__m512d){0.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0},
-      1),
-    4.0, 5.0, 0.0, 0.0));
+TEST_CONSTEXPR(match_m256d(
+  _mm512_maskz_extractf64x4_pd(
+    (__mmask8)0x3,
+    ((__m512d){0.0,1.0,2.0,3.0, 4.0,5.0,6.0,7.0}),
+    1),
+  4.0, 5.0, 0.0, 0.0));
 
 __m128 test_mm512_extractf32x4_ps(__m512 a)
 {
@@ -2489,9 +2489,9 @@ __m128 test_mm512_extractf32x4_ps(__m512 a)
   // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   return _mm512_extractf32x4_ps(a, 1);
 }
-TEST_CONSTEXPR(match_m128(_mm512_extractf32x4_ps(((__m512){
-      0,1,2,3, 4,5,6,7, 8,9,10,11, 12,13,14,15
-  }), 1),
+TEST_CONSTEXPR(match_m128(_mm512_extractf32x4_ps(
+      ((__m512){0,1,2,3, 4,5,6,7, 8,9,10,11, 12,13,14,15}),
+      1),
   4.0f, 5.0f, 6.0f, 7.0f));
 
 __m128 test_mm512_mask_extractf32x4_ps(__m128 __W, __mmask8  __U,__m512 __A){
@@ -2501,9 +2501,9 @@ __m128 test_mm512_mask_extractf32x4_ps(__m128 __W, __mmask8  __U,__m512 __A){
   return _mm512_mask_extractf32x4_ps( __W, __U, __A, 1);
 }
 TEST_CONSTEXPR(match_m128(_mm512_mask_extractf32x4_ps(
-      (__m128){100,101,102,103},      // W(merge)
-      (__mmask8)0x5,                  // 0101b
-      (__m512){0,1,2,3, 4,5,6,7, 8,9,10,11, 12,13,14,15},
+      ((__m128){100,101,102,103}),
+      (__mmask8)0x5,
+      ((__m512){0,1,2,3, 4,5,6,7, 8,9,10,11, 12,13,14,15}),
       1),
     4.0f, 101.0f, 6.0f, 103.0f));
 
@@ -2515,7 +2515,7 @@ __m128 test_mm512_maskz_extractf32x4_ps( __mmask8  __U,__m512 __A){
 }
 TEST_CONSTEXPR(match_m128(_mm512_maskz_extractf32x4_ps(
       (__mmask8)0x3,
-      (__m512){0,1,2,3, 4,5,6,7, 8,9,10,11, 12,13,14,15},
+      ((__m512){0,1,2,3, 4,5,6,7, 8,9,10,11, 12,13,14,15}),
       1),
     4.0f, 5.0f, 0.0f, 0.0f));
 
@@ -7388,10 +7388,11 @@ __m128i test_mm512_extracti32x4_epi32(__m512i __A) {
   // CHECK: shufflevector <16 x i32> %{{.*}}, <16 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
   return _mm512_extracti32x4_epi32(__A, 3); 
 }
-TEST_CONSTEXPR(match_m128i(_mm512_extracti32x4_epi32(((__m512i){
-      0,1,2,3, 4,5,6,7, 8,9,10,11, 12,13,14,15
-  }), 3),
-  12, 13, 14, 15));
+TEST_CONSTEXPR(match_m128i(_mm512_extracti32x4_epi32(((__m512i)(__v16si)
+  {0,1,2,3, 4,5,6,7, 8,9,10,11, 12,13,14,15}), 3),
+  0x0000000D0000000CULL,  // (13<<32)|12
+  0x0000000F0000000EULL  
+  ));
 
 __m128i test_mm512_mask_extracti32x4_epi32(__m128i __W, __mmask8 __U, __m512i __A) {
   // CHECK-LABEL: test_mm512_mask_extracti32x4_epi32
@@ -7400,14 +7401,16 @@ __m128i test_mm512_mask_extracti32x4_epi32(__m128i __W, __mmask8 __U, __m512i __
   return _mm512_mask_extracti32x4_epi32(__W, __U, __A, 3); 
 }
 TEST_CONSTEXPR(match_m128i(_mm512_mask_extracti32x4_epi32(
-      (__m128i){100,101,102,103},      // merge=W
+      ((__m128i)(__v4si){100,101,102,103}),      // merge=W
       (__mmask8)0x5,                   // 0101b
-      (__m512i){
+      ((__m512i)(__v16si){
         0,1,2,3, 4,5,6,7,
         8,9,10,11, 12,13,14,15
-      },
+      }),
       3),
-    12, 101, 14, 103));
+    0x000000650000000CULL,  // (101<<32)|12
+    0x000000670000000EULL   // (103<<32)|14
+    ));
 
 __m128i test_mm512_maskz_extracti32x4_epi32(__mmask8 __U, __m512i __A) {
   // CHECK-LABEL: test_mm512_maskz_extracti32x4_epi32
@@ -7417,21 +7420,19 @@ __m128i test_mm512_maskz_extracti32x4_epi32(__mmask8 __U, __m512i __A) {
 }
 TEST_CONSTEXPR(match_m128i(_mm512_maskz_extracti32x4_epi32(
   (__mmask8)0x3,
-  (__m512i){
-    0,1,2,3, 4,5,6,7,
-    8,9,10,11, 12,13,14,15
-  },
+  ((__m512i)(__v16si){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),
   3),
-12, 13, 0, 0));
+  0x0000000D0000000CULL,  // (13<<32)|12
+  0x0000000000000000ULL 
+  ));
 
 __m256i test_mm512_extracti64x4_epi64(__m512i __A) {
   // CHECK-LABEL: test_mm512_extracti64x4_epi64
   // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   return _mm512_extracti64x4_epi64(__A, 1); 
 }
-TEST_CONSTEXPR(match_m256i(_mm512_extracti64x4_epi64(((__m512i){
-      0ULL,1ULL,2ULL,3ULL, 4ULL,5ULL,6ULL,7ULL
-  }), 1),
+TEST_CONSTEXPR(match_m256i(
+  _mm512_extracti64x4_epi64(((__m512i)(__v8di){0,1,2,3,4,5,6,7}), 1),
   4ULL, 5ULL, 6ULL, 7ULL));
 
 __m256i test_mm512_mask_extracti64x4_epi64(__m256i __W, __mmask8 __U, __m512i __A) {
@@ -7440,10 +7441,10 @@ __m256i test_mm512_mask_extracti64x4_epi64(__m256i __W, __mmask8 __U, __m512i __
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm512_mask_extracti64x4_epi64(__W, __U, __A, 1); 
 }
-TEST_CONSTEXPR(match_m256i_64(_mm512_mask_extracti64x4_epi64(
-      (__m256i){100ULL,101ULL,102ULL,103ULL},
+TEST_CONSTEXPR(match_m256i(_mm512_mask_extracti64x4_epi64(
+      ((__m256i)(__v4di){100ULL,101ULL,102ULL,103ULL}),  // W
       (__mmask8)0x5,
-      (__m512i){0ULL,1ULL,2ULL,3ULL, 4ULL,5ULL,6ULL,7ULL},
+      (((__m512i)(__v8di){0ULL,1ULL,2ULL,3ULL, 4ULL,5ULL,6ULL,7ULL})), 
       1),
     4ULL, 101ULL, 6ULL, 103ULL));
 
@@ -7455,7 +7456,7 @@ __m256i test_mm512_maskz_extracti64x4_epi64(__mmask8 __U, __m512i __A) {
 }
 TEST_CONSTEXPR(match_m256i(_mm512_maskz_extracti64x4_epi64(
       (__mmask8)0x3,
-      (__m512i){0ULL,1ULL,2ULL,3ULL, 4ULL,5ULL,6ULL,7ULL},
+      (((__m512i)(__v8di){0ULL,1ULL,2ULL,3ULL, 4ULL,5ULL,6ULL,7ULL})), 
       1),
     4ULL, 5ULL, 0ULL, 0ULL));
 
