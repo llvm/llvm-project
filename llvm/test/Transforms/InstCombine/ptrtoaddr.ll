@@ -2,23 +2,23 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 target datalayout = "p1:64:64:64:32"
 
-define i32 @ptrtoaddr_inttoptr() {
-; CHECK-LABEL: define i32 @ptrtoaddr_inttoptr() {
-; CHECK-NEXT:    ret i32 -1
+define i64 @ptrtoaddr_inttoptr() {
+; CHECK-LABEL: define i64 @ptrtoaddr_inttoptr() {
+; CHECK-NEXT:    ret i64 ptrtoaddr (ptr addrspace(1) inttoptr (i32 -1 to ptr addrspace(1)) to i64)
 ;
-  ret i32 ptrtoaddr (ptr inttoptr (i32 -1 to ptr) to i32)
+  ret i64 ptrtoaddr (ptr addrspace(1) inttoptr (i32 -1 to ptr addrspace(1)) to i64)
 }
 
 define i32 @ptrtoaddr_inttoptr_diff_size1() {
 ; CHECK-LABEL: define i32 @ptrtoaddr_inttoptr_diff_size1() {
-; CHECK-NEXT:    ret i32 ptrtoaddr (ptr inttoptr (i64 -1 to ptr) to i32)
+; CHECK-NEXT:    ret i32 ptrtoaddr (ptr addrspace(1) inttoptr (i64 -1 to ptr addrspace(1)) to i32)
 ;
-  ret i32 ptrtoaddr (ptr inttoptr (i64 -1 to ptr) to i32)
+  ret i32 ptrtoaddr (ptr addrspace(1) inttoptr (i64 -1 to ptr addrspace(1)) to i32)
 }
 
 define i32 @ptrtoaddr_inttoptr_diff_size2() {
 ; CHECK-LABEL: define i32 @ptrtoaddr_inttoptr_diff_size2() {
-; CHECK-NEXT:    ret i32 ptrtoaddr (ptr inttoptr (i16 -1 to ptr) to i32)
+; CHECK-NEXT:    ret i32 ptrtoaddr (ptr addrspace(1) inttoptr (i16 -1 to ptr addrspace(1)) to i32)
 ;
-  ret i32 ptrtoaddr (ptr inttoptr (i16 -1 to ptr) to i32)
+  ret i32 ptrtoaddr (ptr addrspace(1) inttoptr (i16 -1 to ptr addrspace(1)) to i32)
 }
