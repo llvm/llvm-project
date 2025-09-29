@@ -12070,6 +12070,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_extractf64x2_256_mask: 
   case X86::BI__builtin_ia32_extracti64x2_512_mask: 
   case X86::BI__builtin_ia32_extractf64x2_512_mask:
+  case X86::BI__builtin_ia32_extracti64x4_mask:
   case X86::BI__builtin_ia32_extractf64x4_mask:{ 
     APValue A, W;
     APSInt Imm, U;
