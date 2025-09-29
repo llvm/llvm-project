@@ -6,7 +6,7 @@ define i1 @foo(i1 %v) {            ; assume %v is 1
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i1> poison, i1 [[V]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[TMP0]], <2 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = mul <2 x i1> <i1 false, i1 true>, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i1> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i1 [[TMP3]], [[TMP4]]
