@@ -20,30 +20,47 @@ AST_MATCHER(LambdaExpr, hasDefaultCapture) {
   return Node.getCaptureDefault() != LCD_None;
 }
 
-std::string getExplicitCaptureText(const LambdaCapture &Capture,
+// Find the source range of the default capture token (= or &)
+SourceRange getDefaultCaptureRange(const LambdaExpr *Lambda,
                                    const SourceManager &SM,
                                    const LangOptions &LangOpts) {
-  if (!Capture.isExplicit() || !Capture.getLocation().isValid()) {
-    return "";
-  }
+  SourceLocation DefaultLoc = Lambda->getCaptureDefaultLoc();
+  if (DefaultLoc.isInvalid())
+    return SourceRange();
 
-  // For explicit captures, extract the actual source text to preserve
-  // original formatting, spacing, and comments
-  SourceLocation CaptureBegin = Capture.getLocation();
-
-  // Find the end of this capture by looking for the next comma or closing
-  // bracket This is a simplified approach - a more robust implementation would
-  // parse tokens
-  SourceLocation CaptureEnd =
-      Lexer::getLocForEndOfToken(CaptureBegin, 0, SM, LangOpts);
-
-  // For now, we'll still reconstruct to ensure correctness
-  // but this framework allows for future enhancement to preserve exact source
-  // text
-  return "";
+  // The default capture is a single token
+  SourceLocation EndLoc =
+      Lexer::getLocForEndOfToken(DefaultLoc, 0, SM, LangOpts);
+  return SourceRange(DefaultLoc, EndLoc);
 }
 
-std::string getCaptureString(const LambdaCapture &Capture) {
+// Find where to insert implicit captures
+SourceLocation getImplicitCaptureInsertionLoc(const LambdaExpr *Lambda,
+                                              const SourceManager &SM,
+                                              const LangOptions &LangOpts) {
+  // If there are explicit captures, insert after the last one
+  if (Lambda->explicit_capture_begin() != Lambda->explicit_capture_end()) {
+    // Find the location after the last explicit capture
+    const auto *LastExplicit = Lambda->explicit_capture_end() - 1;
+    SourceLocation LastLoc = LastExplicit->getLocation();
+    if (LastLoc.isValid()) {
+      return Lexer::getLocForEndOfToken(LastLoc, 0, SM, LangOpts);
+    }
+  }
+
+  // If no explicit captures, insert after the default capture
+  SourceLocation DefaultLoc = Lambda->getCaptureDefaultLoc();
+  if (DefaultLoc.isValid()) {
+    return Lexer::getLocForEndOfToken(DefaultLoc, 0, SM, LangOpts);
+  }
+
+  // Fallback: insert at the beginning of the capture list
+  return Lambda->getIntroducerRange().getBegin().getLocWithOffset(1);
+}
+
+// Generate the text for an implicit capture
+std::optional<std::string>
+generateImplicitCaptureText(const LambdaCapture &Capture) {
   if (Capture.capturesThis()) {
     return Capture.getCaptureKind() == LCK_StarThis ? "*this" : "this";
   }
@@ -57,38 +74,15 @@ std::string getCaptureString(const LambdaCapture &Capture) {
     return Result;
   }
 
-  // Handle VLA captures - these are rare but possible
-  return "/* VLA capture */";
+  // TODO: handle VLAs and other weird captures
+  return std::nullopt;
 }
 
-std::string buildExplicitCaptureList(const LambdaExpr *Lambda,
-                                     const SourceManager &SM,
-                                     const LangOptions &LangOpts) {
-  std::vector<std::string> CaptureStrings;
-
-  // Add explicit captures first (preserve their order and syntax)
-  for (const auto &Capture : Lambda->explicit_captures()) {
-    // Try to get the original source text first
-    std::string ExplicitText = getExplicitCaptureText(Capture, SM, LangOpts);
-    if (!ExplicitText.empty()) {
-      CaptureStrings.push_back(ExplicitText);
-    } else {
-      // Fall back to reconstructed text
-      CaptureStrings.push_back(getCaptureString(Capture));
-    }
-  }
-
-  // Add implicit captures (convert to explicit syntax)
-  for (const auto &Capture : Lambda->implicit_captures()) {
-    CaptureStrings.push_back(getCaptureString(Capture));
-  }
-
-  return "[" + llvm::join(CaptureStrings, ", ") + "]";
-}
-
-SourceRange getCaptureListRange(const LambdaExpr *Lambda) {
-  SourceRange IntroducerRange = Lambda->getIntroducerRange();
-  return IntroducerRange;
+// Check if we need a comma before inserting captures
+bool needsCommaBefore(const LambdaExpr *Lambda, SourceLocation InsertLoc,
+                      const SourceManager &SM, const LangOptions &LangOpts) {
+  // If there are explicit captures, we need a comma
+  return Lambda->explicit_capture_begin() != Lambda->explicit_capture_end();
 }
 
 } // namespace
@@ -102,24 +96,72 @@ void AvoidDefaultLambdaCaptureCheck::check(
   const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
   assert(Lambda);
 
+  const SourceManager &SM = *Result.SourceManager;
+  const LangOptions &LangOpts = Result.Context->getLangOpts();
+
   const SourceLocation DefaultCaptureLoc = Lambda->getCaptureDefaultLoc();
   if (DefaultCaptureLoc.isInvalid())
     return;
-
-  // Build the replacement capture list
-  std::string NewCaptureList = buildExplicitCaptureList(
-      Lambda, *Result.SourceManager, Result.Context->getLangOpts());
-
-  // Get the range of the entire capture list [...]
-  SourceRange CaptureListRange = getCaptureListRange(Lambda);
 
   auto Diag = diag(DefaultCaptureLoc,
                    "lambda default captures are discouraged; "
                    "prefer to capture specific variables explicitly");
 
-  // Only provide fixit if we can determine a valid replacement
-  if (CaptureListRange.isValid() && !NewCaptureList.empty()) {
-    Diag << FixItHint::CreateReplacement(CaptureListRange, NewCaptureList);
+  // Get the range of the default capture token to remove
+  SourceRange DefaultRange = getDefaultCaptureRange(Lambda, SM, LangOpts);
+  if (!DefaultRange.isValid())
+    return;
+
+  // Collect all implicit captures that need to be made explicit
+  std::vector<std::string> ImplicitCaptureTexts;
+  for (const auto &Capture : Lambda->implicit_captures()) {
+    if (const auto CaptureText = generateImplicitCaptureText(Capture)) {
+      ImplicitCaptureTexts.push_back(CaptureText.value());
+    }
+  }
+
+  // If there are no implicit captures, just remove the default capture
+  if (ImplicitCaptureTexts.empty()) {
+    // Also remove any trailing comma if it exists
+    SourceLocation AfterDefault = DefaultRange.getEnd();
+    SourceLocation CommaLoc = Lexer::findLocationAfterToken(
+        AfterDefault, tok::comma, SM, LangOpts, false);
+
+    if (CommaLoc.isValid()) {
+      // Remove default capture and the comma
+      SourceRange RemovalRange(DefaultRange.getBegin(), CommaLoc);
+      Diag << FixItHint::CreateRemoval(RemovalRange);
+    } else {
+      // Just remove the default capture
+      Diag << FixItHint::CreateRemoval(DefaultRange);
+    }
+    return;
+  }
+
+  // Find where to insert the implicit captures
+  SourceLocation InsertLoc =
+      getImplicitCaptureInsertionLoc(Lambda, SM, LangOpts);
+  if (!InsertLoc.isValid())
+    return;
+
+  // Apply the transformations:
+  // 1. Remove the default capture
+  Diag << FixItHint::CreateRemoval(DefaultRange);
+
+  // 2. Insert the explicit captures if any
+  if (!ImplicitCaptureTexts.empty()) {
+    // Build the insertion text for implicit captures
+    std::string InsertionText;
+    bool NeedsComma = needsCommaBefore(Lambda, InsertLoc, SM, LangOpts);
+
+    for (size_t I = 0; I < ImplicitCaptureTexts.size(); ++I) {
+      if (NeedsComma || I > 0) {
+        InsertionText += ", ";
+      }
+      InsertionText += ImplicitCaptureTexts[I];
+    }
+
+    Diag << FixItHint::CreateInsertion(InsertLoc, InsertionText);
   }
 }
 
