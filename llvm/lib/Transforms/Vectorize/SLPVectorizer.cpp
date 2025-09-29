@@ -2100,6 +2100,7 @@ public:
     PostponedGathers.clear();
     ValueToGatherNodes.clear();
     TreeEntryToStridedPtrInfoMap.clear();
+    assert(TreeEntryToStridedPtrInfoMap.empty() && "TreeEntryToStridedPtrInfoMap is not cleared");
   }
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
