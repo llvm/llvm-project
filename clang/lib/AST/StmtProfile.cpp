@@ -1353,7 +1353,8 @@ void StmtProfiler::VisitExpr(const Expr *S) {
 }
 
 void StmtProfiler::VisitConstantExpr(const ConstantExpr *S) {
-  VisitExpr(S);
+  // Profile exactly as the sub-expression.
+  Visit(S->getSubExpr());
 }
 
 void StmtProfiler::VisitDeclRefExpr(const DeclRefExpr *S) {
