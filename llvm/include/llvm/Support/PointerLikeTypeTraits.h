@@ -51,7 +51,7 @@ template <typename T> struct PointerLikeTypeTraits<T *> {
   static inline void *getAsVoidPointer(T *P) { return P; }
   static inline T *getFromVoidPointer(void *P) { return static_cast<T *>(P); }
 
-  static constexpr int NumLowBitsAvailable = CTLog2<alignof(T)>();
+  static constexpr int NumLowBitsAvailable = ConstantLog2<alignof(T)>();
 };
 
 template <> struct PointerLikeTypeTraits<void *> {
@@ -116,7 +116,7 @@ template <> struct PointerLikeTypeTraits<uintptr_t> {
 /// potentially use alignment attributes on functions to satisfy that.
 template <int Alignment, typename FunctionPointerT>
 struct FunctionPointerLikeTypeTraits {
-  static constexpr int NumLowBitsAvailable = CTLog2<Alignment>();
+  static constexpr int NumLowBitsAvailable = ConstantLog2<Alignment>();
   static inline void *getAsVoidPointer(FunctionPointerT P) {
     assert((reinterpret_cast<uintptr_t>(P) &
             ~((uintptr_t)-1 << NumLowBitsAvailable)) == 0 &&

@@ -144,6 +144,8 @@ static cl::opt<unsigned>
 MaxArraySize("instcombine-maxarray-size", cl::init(1024),
              cl::desc("Maximum array size considered when doing a combine"));
 
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
 // FIXME: Remove this flag when it is no longer necessary to convert
 // llvm.dbg.declare to avoid inaccurate debug info. Setting this to false
 // increases variable availability at the cost of accuracy. Variables that
@@ -1361,6 +1363,10 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   if (!LHSIsSelect && !RHSIsSelect)
     return nullptr;
 
+  SelectInst *SI = ProfcheckDisableMetadataFixes
+                       ? nullptr
+                       : cast<SelectInst>(LHSIsSelect ? LHS : RHS);
+
   FastMathFlags FMF;
   BuilderTy::FastMathFlagGuard Guard(Builder);
   if (isa<FPMathOperator>(&I)) {
@@ -1381,15 +1387,14 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     // We need an 'add' and exactly 1 arm of the select to have been simplified.
     if (Opcode != Instruction::Add || (!True && !False) || (True && False))
       return nullptr;
-
     Value *N;
     if (True && match(FVal, m_Neg(m_Value(N)))) {
       Value *Sub = Builder.CreateSub(Z, N);
-      return Builder.CreateSelect(Cond, True, Sub, I.getName());
+      return Builder.CreateSelect(Cond, True, Sub, I.getName(), SI);
     }
     if (False && match(TVal, m_Neg(m_Value(N)))) {
       Value *Sub = Builder.CreateSub(Z, N);
-      return Builder.CreateSelect(Cond, Sub, False, I.getName());
+      return Builder.CreateSelect(Cond, Sub, False, I.getName(), SI);
     }
     return nullptr;
   };
@@ -1425,9 +1430,9 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   if (!True || !False)
     return nullptr;
 
-  Value *SI = Builder.CreateSelect(Cond, True, False);
-  SI->takeName(&I);
-  return SI;
+  Value *NewSI = Builder.CreateSelect(Cond, True, False, I.getName(), SI);
+  NewSI->takeName(&I);
+  return NewSI;
 }
 
 /// Freely adapt every user of V as-if V was changed to !V.

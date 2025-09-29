@@ -483,7 +483,7 @@ DeduceNonTypeTemplateArgument(Sema &S, TemplateParameterList *TemplateParams,
     return TemplateDeductionResult::Inconsistent;
   }
   Deduced[NTTP.getIndex()] = Result;
-  if (!S.getLangOpts().CPlusPlus17)
+  if (!S.getLangOpts().CPlusPlus17 && !PartialOrdering)
     return TemplateDeductionResult::Success;
 
   if (NTTP.isExpandedParameterPack())
@@ -696,6 +696,11 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
   if (isa<TemplateSpecializationType>(P.getCanonicalType())) {
     const TemplateSpecializationType *TP = ::getLastTemplateSpecType(P);
     TNP = TP->getTemplateName();
+
+    // No deduction for specializations of dependent template names.
+    if (TNP.getAsDependentTemplateName())
+      return TemplateDeductionResult::Success;
+
     // FIXME: To preserve sugar, the TST needs to carry sugared resolved
     // arguments.
     PResolved =
@@ -2540,7 +2545,6 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::Decltype:
     case Type::UnaryTransform:
     case Type::DeducedTemplateSpecialization:
-    case Type::DependentTemplateSpecialization:
     case Type::PackExpansion:
     case Type::Pipe:
     case Type::ArrayParameter:
@@ -2648,28 +2652,11 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
             getDeducedNTTParameterFromExpr(Info, P.getAsExpr())) {
       switch (A.getKind()) {
       case TemplateArgument::Expression: {
-        const Expr *E = A.getAsExpr();
-        // When checking NTTP, if either the parameter or the argument is
-        // dependent, as there would be otherwise nothing to deduce, we force
-        // the argument to the parameter type using this dependent implicit
-        // cast, in order to maintain invariants. Now we can deduce the
-        // resulting type from the original type, and deduce the original type
-        // against the parameter we are checking.
-        if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E);
-            ICE && ICE->getCastKind() == clang::CK_Dependent) {
-          E = ICE->getSubExpr();
-          if (auto Result = DeduceTemplateArgumentsByTypeMatch(
-                  S, TemplateParams, ICE->getType(), E->getType(), Info,
-                  Deduced, TDF_SkipNonDependent,
-                  PartialOrdering ? PartialOrderingKind::NonCall
-                                  : PartialOrderingKind::None,
-                  /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
-              Result != TemplateDeductionResult::Success)
-            return Result;
-        }
+        // The type of the value is the type of the expression as written.
         return DeduceNonTypeTemplateArgument(
-            S, TemplateParams, NTTP, DeducedTemplateArgument(A), E->getType(),
-            Info, PartialOrdering, Deduced, HasDeducedAnyParam);
+            S, TemplateParams, NTTP, DeducedTemplateArgument(A),
+            A.getAsExpr()->IgnoreImplicitAsWritten()->getType(), Info,
+            PartialOrdering, Deduced, HasDeducedAnyParam);
       }
       case TemplateArgument::Integral:
       case TemplateArgument::StructuralValue:
@@ -5176,7 +5163,7 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
     TemplateArgs.addArgument(TypeLoc.getArgLoc(I));
 
   Sema::CheckTemplateArgumentInfo CTAI;
-  if (S.CheckTemplateArgumentList(Concept, SourceLocation(), TemplateArgs,
+  if (S.CheckTemplateArgumentList(Concept, TypeLoc.getNameLoc(), TemplateArgs,
                                   /*DefaultArgs=*/{},
                                   /*PartialTemplateArgs=*/false, CTAI))
     return true;
@@ -5275,18 +5262,6 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
   SmallVector<DeducedTemplateArgument, 1> Deduced;
   Deduced.resize(1);
 
-  // If deduction failed, don't diagnose if the initializer is dependent; it
-  // might acquire a matching type in the instantiation.
-  auto DeductionFailed = [&](TemplateDeductionResult TDK) {
-    if (Init->isTypeDependent()) {
-      Result =
-          SubstituteDeducedTypeTransform(*this, DependentResult).Apply(Type);
-      assert(!Result.isNull() && "substituting DependentTy can't fail");
-      return TemplateDeductionResult::Success;
-    }
-    return TDK;
-  };
-
   SmallVector<OriginalCallArg, 4> OriginalCallArgs;
 
   QualType DeducedType;
@@ -5336,9 +5311,9 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
             Diag(Info.getLocation(), diag::err_auto_inconsistent_deduction)
                 << Info.FirstArg << Info.SecondArg << DeducedFromInitRange
                 << Init->getSourceRange();
-            return DeductionFailed(TemplateDeductionResult::AlreadyDiagnosed);
+            return TemplateDeductionResult::AlreadyDiagnosed;
           }
-          return DeductionFailed(TDK);
+          return TDK;
         }
 
         if (DeducedFromInitRange.isInvalid() &&
@@ -5360,12 +5335,12 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
               OriginalCallArgs,
               /*Decomposed=*/false, /*ArgIdx=*/0, /*TDF=*/0, FailedTSC);
           TDK != TemplateDeductionResult::Success)
-        return DeductionFailed(TDK);
+        return TDK;
     }
 
     // Could be null if somehow 'auto' appears in a non-deduced context.
     if (Deduced[0].getKind() != TemplateArgument::Type)
-      return DeductionFailed(TemplateDeductionResult::Incomplete);
+      return TemplateDeductionResult::Incomplete;
     DeducedType = Deduced[0].getAsType();
 
     if (InitList) {
@@ -5379,7 +5354,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
     if (!Context.hasSameType(DeducedType, Result)) {
       Info.FirstArg = Result;
       Info.SecondArg = DeducedType;
-      return DeductionFailed(TemplateDeductionResult::Inconsistent);
+      return TemplateDeductionResult::Inconsistent;
     }
     DeducedType = Context.getCommonSugaredType(Result, DeducedType);
   }
@@ -5403,7 +5378,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
             CheckOriginalCallArgDeduction(*this, Info, OriginalArg, DeducedA);
         TDK != TemplateDeductionResult::Success) {
       Result = QualType();
-      return DeductionFailed(TDK);
+      return TDK;
     }
   }
 
@@ -5425,13 +5400,17 @@ TypeSourceInfo *Sema::SubstAutoTypeSourceInfo(TypeSourceInfo *TypeWithAuto,
 }
 
 QualType Sema::SubstAutoTypeDependent(QualType TypeWithAuto) {
-  return SubstituteDeducedTypeTransform(*this, DependentAuto{false})
+  return SubstituteDeducedTypeTransform(
+             *this,
+             DependentAuto{/*IsPack=*/isa<PackExpansionType>(TypeWithAuto)})
       .TransformType(TypeWithAuto);
 }
 
 TypeSourceInfo *
 Sema::SubstAutoTypeSourceInfoDependent(TypeSourceInfo *TypeWithAuto) {
-  return SubstituteDeducedTypeTransform(*this, DependentAuto{false})
+  return SubstituteDeducedTypeTransform(
+             *this, DependentAuto{/*IsPack=*/isa<PackExpansionType>(
+                        TypeWithAuto->getType())})
       .TransformType(TypeWithAuto);
 }
 
@@ -6495,9 +6474,9 @@ Sema::getMoreSpecializedPartialSpecialization(
          " the same template.");
   TemplateName Name(PS1->getSpecializedTemplate()->getCanonicalDecl());
   QualType PT1 = Context.getCanonicalTemplateSpecializationType(
-      Name, PS1->getTemplateArgs().asArray());
+      ElaboratedTypeKeyword::None, Name, PS1->getTemplateArgs().asArray());
   QualType PT2 = Context.getCanonicalTemplateSpecializationType(
-      Name, PS2->getTemplateArgs().asArray());
+      ElaboratedTypeKeyword::None, Name, PS2->getTemplateArgs().asArray());
 
   TemplateDeductionInfo Info(Loc);
   return getMoreSpecialized(*this, PT1, PT2, PS1, PS2, Info);
@@ -6512,10 +6491,10 @@ bool Sema::isMoreSpecializedThanPrimary(
       Primary->getInjectedTemplateArgs(Context));
   Context.canonicalizeTemplateArguments(PrimaryCanonArgs);
 
-  QualType PrimaryT =
-      Context.getCanonicalTemplateSpecializationType(Name, PrimaryCanonArgs);
+  QualType PrimaryT = Context.getCanonicalTemplateSpecializationType(
+      ElaboratedTypeKeyword::None, Name, PrimaryCanonArgs);
   QualType PartialT = Context.getCanonicalTemplateSpecializationType(
-      Name, Spec->getTemplateArgs().asArray());
+      ElaboratedTypeKeyword::None, Name, Spec->getTemplateArgs().asArray());
 
   VarTemplatePartialSpecializationDecl *MaybeSpec =
       getMoreSpecialized(*this, PartialT, PrimaryT, Spec, Primary, Info);
@@ -6993,8 +6972,12 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   case Type::TemplateSpecialization: {
     const TemplateSpecializationType *Spec
       = cast<TemplateSpecializationType>(T);
-    MarkUsedTemplateParameters(Ctx, Spec->getTemplateName(), OnlyDeduced,
-                               Depth, Used);
+
+    TemplateName Name = Spec->getTemplateName();
+    if (OnlyDeduced && Name.getAsDependentTemplateName())
+      break;
+
+    MarkUsedTemplateParameters(Ctx, Name, OnlyDeduced, Depth, Used);
 
     // C++0x [temp.deduct.type]p9:
     //   If the template argument list of P contains a pack expansion that is
@@ -7029,31 +7012,6 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
                                  cast<DependentNameType>(T)->getQualifier(),
                                  OnlyDeduced, Depth, Used);
     break;
-
-  case Type::DependentTemplateSpecialization: {
-    // C++14 [temp.deduct.type]p5:
-    //   The non-deduced contexts are:
-    //     -- The nested-name-specifier of a type that was specified using a
-    //        qualified-id
-    //
-    // C++14 [temp.deduct.type]p6:
-    //   When a type name is specified in a way that includes a non-deduced
-    //   context, all of the types that comprise that type name are also
-    //   non-deduced.
-    if (OnlyDeduced)
-      break;
-
-    const DependentTemplateSpecializationType *Spec
-      = cast<DependentTemplateSpecializationType>(T);
-
-    MarkUsedTemplateParameters(Ctx,
-                               Spec->getDependentTemplateName().getQualifier(),
-                               OnlyDeduced, Depth, Used);
-
-    for (const auto &Arg : Spec->template_arguments())
-      MarkUsedTemplateParameters(Ctx, Arg, OnlyDeduced, Depth, Used);
-    break;
-  }
 
   case Type::TypeOf:
     if (!OnlyDeduced)

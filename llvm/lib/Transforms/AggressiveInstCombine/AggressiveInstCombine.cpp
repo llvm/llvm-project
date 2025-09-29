@@ -29,6 +29,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -1283,11 +1284,19 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
     Value *VR =
         ConstantInt::get(CI->getType(), static_cast<unsigned char>(RHS[i]));
     Value *Sub = Swapped ? B.CreateSub(VR, VL) : B.CreateSub(VL, VR);
-    if (i < N - 1)
-      B.CreateCondBr(B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)),
-                     BBNE, BBSubs[i + 1]);
-    else
+    if (i < N - 1) {
+      BranchInst *CondBrInst = B.CreateCondBr(
+          B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)), BBNE,
+          BBSubs[i + 1]);
+
+      Function *F = CI->getFunction();
+      assert(F && "Instruction does not belong to a function!");
+      std::optional<Function::ProfileCount> EC = F->getEntryCount();
+      if (EC && EC->getCount() > 0)
+        setExplicitlyUnknownBranchWeights(*CondBrInst, DEBUG_TYPE);
+    } else {
       B.CreateBr(BBNE);
+    }
 
     Phi->addIncoming(Sub, BBSubs[i]);
   }
