@@ -304,6 +304,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
       beginName.v == llvm::omp::Directive::OMPD_distribute_simd) {
     CheckDistLinear(x);
   }
+  if (beginName.v == llvm::omp::Directive::OMPD_fuse) {
+    CheckLooprangeBounds(x);
+  }
 }
 
 const parser::Name OmpStructureChecker::GetLoopIndex(
@@ -448,6 +451,32 @@ void OmpStructureChecker::CheckDistLinear(
       context_.Say(source,
           "Variable '%s' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE"_err_en_US,
           root.name());
+    }
+  }
+}
+
+void OmpStructureChecker::CheckLooprangeBounds(
+    const parser::OpenMPLoopConstruct &x) {
+  const parser::OmpClauseList &clauseList = x.BeginDir().Clauses();
+  if (!clauseList.v.empty()) {
+    for (auto &clause : clauseList.v) {
+      if (const auto *lrClause{
+              std::get_if<parser::OmpClause::Looprange>(&clause.u)}) {
+        if (const auto first{GetIntValue(std::get<0>((lrClause->v).t))}) {
+          if (const auto count{GetIntValue(std::get<1>((lrClause->v).t))}) {
+            auto &loopConsList =
+                std::get<std::list<parser::NestedConstruct>>(x.t);
+            if (loopConsList.size() < (unsigned)(*first + *count - 1)) {
+              context_.Say(clause.source,
+                  "The loop range indicated in the %s clause"
+                  " must not be out of the bounds of the Loop Sequence"
+                  " following the construct."_err_en_US,
+                  parser::ToUpperCaseLetters(clause.source.ToString()));
+            }
+          }
+        }
+        return;
+      }
     }
   }
 }
