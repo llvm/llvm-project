@@ -46,81 +46,52 @@ macro(mlir_configure_python_dev_packages)
     message(STATUS "Found python include dirs: ${Python3_INCLUDE_DIRS}")
     message(STATUS "Found python libraries: ${Python3_LIBRARIES}")
     message(STATUS "Found numpy v${Python3_NumPy_VERSION}: ${Python3_NumPy_INCLUDE_DIRS}")
-    mlir_detect_pybind11_install()
-    find_package(pybind11 2.10 CONFIG REQUIRED)
-    message(STATUS "Found pybind11 v${pybind11_VERSION}: ${pybind11_INCLUDE_DIR}")
-    message(STATUS "Python prefix = '${PYTHON_MODULE_PREFIX}', "
-                  "suffix = '${PYTHON_MODULE_SUFFIX}', "
-                  "extension = '${PYTHON_MODULE_EXTENSION}")
-
-    mlir_detect_nanobind_install()
-    find_package(nanobind 2.9 CONFIG REQUIRED)
-    message(STATUS "Found nanobind v${nanobind_VERSION}: ${nanobind_INCLUDE_DIR}")
-    message(STATUS "Python prefix = '${PYTHON_MODULE_PREFIX}', "
-                  "suffix = '${PYTHON_MODULE_SUFFIX}', "
-                  "extension = '${PYTHON_MODULE_EXTENSION}")
+    message(STATUS "Python extension suffix for modules: '${Python3_SOABI}'")
+    if(nanobind_DIR)
+      message(STATUS "Using explicit nanobind cmake directory: ${nanobind_DIR} (-Dnanobind_DIR to change)")
+      find_package(nanobind 2.9 CONFIG REQUIRED)
+    else()
+      include(FetchContent)
+#      # nanobind uses tsl-robin-map and since we're not using GIT for nanobind we need to
+#      # get tsl-robin-map manually too.
+#      FetchContent_Declare(
+#        tsl-robin-map
+#        OVERRIDE_FIND_PACKAGE
+#        # timestamp the files with the extraction time instead of archive time
+#        DOWNLOAD_EXTRACT_TIMESTAMP FALSE
+#        URL https://github.com/Tessil/robin-map/archive/refs/tags/v1.4.0.tar.gz
+#        # put this last otherwise windows parses everything after the hash as part of the hash???
+#        URL_HASH MD5=d56a879c94e021c55d8956e37deb3e4f
+#      )
+#      FetchContent_MakeAvailable(tsl-robin-map)
+#      # Tell nanobind to use find_project(tsl-robin-map) instead of searching its
+#      # submodule folder.
+#      set(NB_USE_SUBMODULE_DEPS OFF CACHE INTERNAL "Switch off Nanobind submodule deps")
+#      FetchContent_Declare(
+#        nanobind
+#        OVERRIDE_FIND_PACKAGE
+#        # timestamp the files with the extraction time instead of archive time
+#        DOWNLOAD_EXTRACT_TIMESTAMP FALSE
+#        URL https://github.com/wjakob/nanobind/archive/refs/tags/v2.9.0.tar.gz
+#        # put this last otherwise windows parses everything after the hash as part of the hash???
+#        URL_HASH MD5=df0e9de9d5fd817df264584be4917fd0
+#      )
+#      FetchContent_MakeAvailable(nanobind)
+      FetchContent_Declare(
+        nanobind
+        GIT_REPOSITORY https://github.com/wjakob/nanobind.git
+        GIT_TAG        v2.9.0
+        GIT_SHALLOW    TRUE
+        OVERRIDE_FIND_PACKAGE
+      )
+      FetchContent_MakeAvailable(nanobind)
+      if(CMAKE_VERSION VERSION_LESS "3.24.0")
+        # OVERRIDE_FIND_PACKAGE not implemented so have to set the dirs manually.
+        set(nanobind_DIR "${nanobind_SOURCE_DIR}/cmake" CACHE INTERNAL "")
+      endif()
+      # no PACKAGE_VERSION in this path but we know it's 2.9 of course.
+      find_package(nanobind CONFIG REQUIRED)
+    endif()
+    message(STATUS "Found nanobind: ${NB_DIR}")
   endif()
 endmacro()
-
-# Detects a pybind11 package installed in the current python environment
-# and sets variables to allow it to be found. This allows pybind11 to be
-# installed via pip, which typically yields a much more recent version than
-# the OS install, which will be available otherwise.
-function(mlir_detect_pybind11_install)
-  if(pybind11_DIR)
-    message(STATUS "Using explicit pybind11 cmake directory: ${pybind11_DIR} (-Dpybind11_DIR to change)")
-  else()
-    message(STATUS "Checking for pybind11 in python path...")
-    execute_process(
-      COMMAND "${Python3_EXECUTABLE}"
-      -c "import pybind11;print(pybind11.get_cmake_dir(), end='')"
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      RESULT_VARIABLE STATUS
-      OUTPUT_VARIABLE PACKAGE_DIR
-      ERROR_QUIET)
-    if(NOT STATUS EQUAL "0")
-      message(STATUS "not found (install via 'pip install pybind11' or set pybind11_DIR)")
-      return()
-    endif()
-    message(STATUS "found (${PACKAGE_DIR})")
-    set(pybind11_DIR "${PACKAGE_DIR}" PARENT_SCOPE)
-  endif()
-endfunction()
-
-
-# Detects a nanobind package installed in the current python environment
-# and sets variables to allow it to be found. This allows nanobind to be
-# installed via pip, which typically yields a much more recent version than
-# the OS install, which will be available otherwise.
-function(mlir_detect_nanobind_install)
-  if(nanobind_DIR)
-    message(STATUS "Using explicit nanobind cmake directory: ${nanobind_DIR} (-Dnanobind_DIR to change)")
-  else()
-    message(STATUS "Checking for nanobind in python path...")
-    execute_process(
-      COMMAND "${Python3_EXECUTABLE}"
-      -c "import nanobind;print(nanobind.cmake_dir(), end='')"
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      RESULT_VARIABLE STATUS
-      OUTPUT_VARIABLE PACKAGE_DIR
-      ERROR_QUIET)
-    if(NOT STATUS EQUAL "0")
-      message(STATUS "not found (install via 'pip install nanobind' or set nanobind_DIR)")
-      return()
-    endif()
-    message(STATUS "found (${PACKAGE_DIR})")
-    set(nanobind_DIR "${PACKAGE_DIR}" PARENT_SCOPE)
-    execute_process(
-      COMMAND "${Python3_EXECUTABLE}"
-      -c "import nanobind;print(nanobind.include_dir(), end='')"
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      RESULT_VARIABLE STATUS
-      OUTPUT_VARIABLE PACKAGE_DIR
-      ERROR_QUIET)
-    if(NOT STATUS EQUAL "0")
-      message(STATUS "not found (install via 'pip install nanobind' or set nanobind_DIR)")
-      return()
-    endif()
-    set(nanobind_INCLUDE_DIR "${PACKAGE_DIR}" PARENT_SCOPE)
-  endif()
-endfunction()
