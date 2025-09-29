@@ -2615,6 +2615,10 @@ public:
   bool isAnyVaListType(ASTContext &) const;
   bool isDynamicRangePointerType() const;
   bool isBoundsAttributedType() const;
+  /// Whether this type is a count-attributed type that is depending on an
+  /// inout count. True for `__counted_by(*count)`, but false for
+  /// `__counted_by(len)`.
+  bool isCountAttributedTypeDependingOnInoutCount() const;
   bool isValueTerminatedType() const;
   bool isImplicitlyNullTerminatedType(const ASTContext &) const;
   /* TO_UPSTREAM(BoundsSafety) OFF */

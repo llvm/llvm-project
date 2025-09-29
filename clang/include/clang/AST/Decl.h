@@ -712,6 +712,38 @@ public:
   bool isInitCapture() const;
 
   /* TO_UPSTREAM(BoundsSafety) ON */
+  /// Whether this decl is a dependent count. This returns true for dependent
+  /// counts with and without dereference:
+  ///   void foo(int *__counted_by(m) p, int m,
+  ///            int *__counted_by(*n) *q, int *n);
+  /// True for both `m` and `n`.
+  bool isDependentCount() const;
+
+  /// Whether this decl is a dependent count without a dereference:
+  ///   void foo(int *__counted_by(m) p, int m,
+  ///            int *__counted_by(*n) *q, int *n);
+  /// True for `m`, but false for `n`.
+  bool isDependentCountWithoutDeref() const;
+
+  /// Whether this decl is a dependent count with a dereference:
+  ///   void foo(int *__counted_by(m) p, int m,
+  ///            int *__counted_by(*n) *q, int *n);
+  /// False for `m`, but true for `n`.
+  bool isDependentCountWithDeref() const;
+
+  /// Whether this decl is a dependent count that is used at least once in a
+  /// count expression of an inout count-attributed pointer.
+  ///   void foo(int *__counted_by(a) p, int a,
+  ///            int *__counted_by(*b) q, int *b,
+  ///            int *__counted_by(c) *r, int c,
+  ///            int *__counted_by(*d) *s, int *d);
+  /// True for `c` and `d`, but false for `a` and `b`.
+  ///   void bar(int *__counted_by(count) in_p,
+  ///            int *__counted_by(count) *out_p,
+  ///            int count);
+  /// True for `count` (because of `out_p`).
+  bool isDependentCountThatIsUsedInInoutPointer() const;
+
   /// Whether this decl is a dependent parameter referred to by the return type
   /// that is a bounds-attributed type.
   bool isDependentParamOfReturnType(

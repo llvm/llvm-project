@@ -831,6 +831,14 @@ bool Type::isBoundsAttributedType() const {
   return getAs<BoundsAttributedType>();
 }
 
+bool Type::isCountAttributedTypeDependingOnInoutCount() const {
+  const auto *CAT = getAs<CountAttributedType>();
+  return CAT &&
+         std::any_of(
+             CAT->dependent_decl_begin(), CAT->dependent_decl_end(),
+             [](const TypeCoupledDeclRefInfo &Info) { return Info.isDeref(); });
+}
+
 bool Type::isValueTerminatedType() const {
   return getAs<ValueTerminatedType>();
 }

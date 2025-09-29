@@ -5513,6 +5513,27 @@ bool ValueDecl::isParameterPack() const {
 }
 
 /* TO_UPSTREAM(BoundsSafety) ON */
+bool ValueDecl::isDependentCount() const {
+  return hasAttr<DependerDeclsAttr>();
+}
+
+bool ValueDecl::isDependentCountWithoutDeref() const {
+  const auto *Att = getAttr<DependerDeclsAttr>();
+  return Att && !Att->getIsDeref();
+}
+
+bool ValueDecl::isDependentCountWithDeref() const {
+  const auto *Att = getAttr<DependerDeclsAttr>();
+  return Att && Att->getIsDeref();
+}
+
+bool ValueDecl::isDependentCountThatIsUsedInInoutPointer() const {
+  const auto *Att = getAttr<DependerDeclsAttr>();
+  return Att &&
+         std::any_of(Att->dependerLevels_begin(), Att->dependerLevels_end(),
+                     [](unsigned Level) { return Level > 0; });
+}
+
 bool ValueDecl::isDependentParamOfReturnType(
     const BoundsAttributedType **RetType,
     const TypeCoupledDeclRefInfo **Info) const {
