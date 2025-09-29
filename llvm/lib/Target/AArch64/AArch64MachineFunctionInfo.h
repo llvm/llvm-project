@@ -441,12 +441,18 @@ public:
   }
 
   unsigned getSVECalleeSavedStackSize() const {
+    assert(!hasSplitSVEObjects() &&
+           "ZPRs and PPRs are split. Use get[ZPR|PPR]CalleeSavedStackSize()");
     return getZPRCalleeSavedStackSize() + getPPRCalleeSavedStackSize();
   }
 
   void incNumLocalDynamicTLSAccesses() { ++NumLocalDynamicTLSAccesses; }
   unsigned getNumLocalDynamicTLSAccesses() const {
     return NumLocalDynamicTLSAccesses;
+  }
+
+  bool isStackHazardIncludedInCalleeSaveArea() const {
+    return hasStackHazardSlotIndex() && !hasSplitSVEObjects();
   }
 
   std::optional<bool> hasRedZone() const { return HasRedZone; }

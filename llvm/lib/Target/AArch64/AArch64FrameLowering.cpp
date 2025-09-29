@@ -354,6 +354,9 @@ AArch64FrameLowering::getZPRStackSize(const MachineFunction &MF) const {
 
 StackOffset
 AArch64FrameLowering::getPPRStackSize(const MachineFunction &MF) const {
+  // With split SVE objects, the hazard padding is added to the PPR region,
+  // which places it between the [GPR, PPR] area and the [ZPR, FPR] area. This
+  // avoids hazards between both GPRs and FPRs and ZPRs and PPRs.
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   return StackOffset::get(AFI->hasSplitSVEObjects() ? getStackHazardSize(MF)
                                                     : 0,
@@ -374,7 +377,7 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   for (int FI = MFI.getObjectIndexBegin(); FI < MFI.getObjectIndexEnd(); FI++) {
-    if (MFI.isScalableStackID(FI))
+    if (MFI.hasScalableStackID(FI))
       return true;
   }
 
@@ -522,10 +525,6 @@ bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
   if (!EnableRedZone)
     return false;
 
-  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  if (AFI->hasSplitSVEObjects())
-    return false;
-
   // Don't use the red zone if the function explicitly asks us not to.
   // This is typically used for kernel code.
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
@@ -535,6 +534,7 @@ bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
     return false;
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   uint64_t NumBytes = AFI->getLocalStackSize();
 
   // If neither NEON or SVE are available, a COPY from one Q-reg to
@@ -1258,7 +1258,7 @@ AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
   const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool FPAfterSVECalleeSaves =
       isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
-  if (MFI.isScalableStackID(FI)) {
+  if (MFI.hasScalableStackID(FI)) {
     if (FPAfterSVECalleeSaves &&
         -ObjectOffset <= (int64_t)AFI->getSVECalleeSavedStackSize()) {
       assert(!AFI->hasSplitSVEObjects() &&
@@ -1266,6 +1266,8 @@ AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
       return StackOffset::getScalable(ObjectOffset);
     }
     StackOffset AccessOffset{};
+    // The scalable vectors are below (lower address) the scalable predicates
+    // with split SVE objects, so we must subtract the size of the predicates.
     if (AFI->hasSplitSVEObjects() &&
         MFI.getStackID(FI) == TargetStackID::ScalableVector)
       AccessOffset = -PPRStackSize;
@@ -1332,14 +1334,15 @@ StackOffset AArch64FrameLowering::resolveFrameIndexReference(
   const auto &MFI = MF.getFrameInfo();
   int64_t ObjectOffset = MFI.getObjectOffset(FI);
   bool isFixed = MFI.isFixedObjectIndex(FI);
-  bool isSVE = MFI.isScalableStackID(FI);
-  return resolveFrameOffsetReference(MF, ObjectOffset, isFixed, isSVE, FrameReg,
-                                     PreferFP, ForSimm, FI);
+  auto StackID = static_cast<TargetStackID::Value>(MFI.getStackID(FI));
+  return resolveFrameOffsetReference(MF, ObjectOffset, isFixed, StackID,
+                                     FrameReg, PreferFP, ForSimm);
 }
 
 StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
-    const MachineFunction &MF, int64_t ObjectOffset, bool isFixed, bool isSVE,
-    Register &FrameReg, bool PreferFP, bool ForSimm, int64_t FI) const {
+    const MachineFunction &MF, int64_t ObjectOffset, bool isFixed,
+    TargetStackID::Value StackID, Register &FrameReg, bool PreferFP,
+    bool ForSimm) const {
   const auto &MFI = MF.getFrameInfo();
   const auto *RegInfo = static_cast<const AArch64RegisterInfo *>(
       MF.getSubtarget().getRegisterInfo());
@@ -1350,6 +1353,7 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
   int64_t Offset = getStackOffset(MF, ObjectOffset).getFixed();
   bool isCSR =
       !isFixed && ObjectOffset >= -((int)AFI->getCalleeSavedStackSize(MFI));
+  bool isSVE = MFI.isScalableStackID(StackID);
 
   StackOffset ZPRStackSize = getZPRStackSize(MF);
   StackOffset PPRStackSize = getPPRStackSize(MF);
@@ -1428,19 +1432,25 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
 
   if (isSVE) {
-    StackOffset AccessOffset{};
-    if (AFI->hasSplitSVEObjects() &&
-        MFI.getStackID(FI) == TargetStackID::ScalableVector)
-      AccessOffset = -PPRStackSize;
-
-    StackOffset FPOffset =
-        AccessOffset +
-        StackOffset::get(-AFI->getCalleeSaveBaseToFrameRecordOffset(),
-                         ObjectOffset);
+    StackOffset FPOffset = StackOffset::get(
+        -AFI->getCalleeSaveBaseToFrameRecordOffset(), ObjectOffset);
     StackOffset SPOffset =
-        SVEStackSize + AccessOffset +
+        SVEStackSize +
         StackOffset::get(MFI.getStackSize() - AFI->getCalleeSavedStackSize(),
                          ObjectOffset);
+
+    // With split SVE objects the ObjectOffset is relative to the split area
+    // (i.e. the PPR area or ZPR area respectively).
+    if (AFI->hasSplitSVEObjects() && StackID == TargetStackID::ScalableVector) {
+      // If we're accessing an SVE vector with split SVE objects...
+      // - From the FP we need to move down past the PPR area:
+      FPOffset -= PPRStackSize;
+      // - From the SP we only need to move up to the ZPR area:
+      SPOffset -= PPRStackSize;
+      // Note: `SPOffset = SVEStackSize + ...`, so `-= PPRStackSize` results in
+      // `SPOffset = ZPRStackSize + ...`.
+    }
+
     if (FPAfterSVECalleeSaves) {
       FPOffset += StackOffset::getScalable(AFI->getSVECalleeSavedStackSize());
       if (-ObjectOffset <= (int64_t)AFI->getSVECalleeSavedStackSize()) {
@@ -2323,7 +2333,7 @@ void AArch64FrameLowering::determineStackHazardSlot(
         std::optional<int> FI = getLdStFrameID(MI, MFI);
         if (!FI || FI < 0 || FI > int(SlotTypes.size()))
           continue;
-        if (MFI.isScalableStackID(*FI)) {
+        if (MFI.hasScalableStackID(*FI)) {
           SlotTypes[*FI] |=
               isPPRAccess(MI) ? SlotType::PPR : SlotType::ZPRorFPR;
         } else {
@@ -2398,7 +2408,7 @@ void AArch64FrameLowering::determineStackHazardSlot(
       if (AArch64::FPR64RegClass.contains(Reg))
         SubRegIdx = AArch64::dsub;
       else if (AArch64::FPR128RegClass.contains(Reg))
-        SubRegIdx = AArch64::zsub; // TODO: Is the the right sub-register?
+        SubRegIdx = AArch64::zsub;
       else
         continue;
       // Clear the bit for the FPR save.
@@ -2578,7 +2588,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   unsigned NumSavedRegs = SavedRegs.count();
 
   // If we have hazard padding in the CS area add that to the size.
-  if (AFI->hasStackHazardSlotIndex() && !AFI->hasSplitSVEObjects())
+  if (AFI->isStackHazardIncludedInCalleeSaveArea())
     CSStackSize += getStackHazardSize(MF);
 
   // Increase the callee-saved stack size if the function has streaming mode
@@ -2748,7 +2758,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
 
     // Create a hazard slot as we switch between GPR and FPR CSRs.
-    if (AFI->hasStackHazardSlotIndex() && !AFI->hasSplitSVEObjects() &&
+    if (AFI->isStackHazardIncludedInCalleeSaveArea() &&
         (!LastReg || !AArch64InstrInfo::isFpOrNEON(LastReg)) &&
         AArch64InstrInfo::isFpOrNEON(Reg)) {
       assert(HazardSlotIndex == std::numeric_limits<int>::max() &&
@@ -2787,7 +2797,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   // Add hazard slot in the case where no FPR CSRs are present.
-  if (AFI->hasStackHazardSlotIndex() && !AFI->hasSplitSVEObjects() &&
+  if (AFI->isStackHazardIncludedInCalleeSaveArea() &&
       HazardSlotIndex == std::numeric_limits<int>::max()) {
     HazardSlotIndex = MFI.CreateStackObject(StackHazardSize, Align(8), true);
     LLVM_DEBUG(dbgs() << "Created CSR Hazard at slot " << HazardSlotIndex
@@ -2858,7 +2868,7 @@ static SVEStackSizes determineSVEStackSizes(MachineFunction &MF,
 #ifndef NDEBUG
   // First process all fixed stack objects.
   for (int I = MFI.getObjectIndexBegin(); I != 0; ++I)
-    assert(!MFI.isScalableStackID(I) &&
+    assert(!MFI.hasScalableStackID(I) &&
            "SVE vectors should never be passed on the stack by value, only by "
            "reference.");
 #endif
@@ -3533,8 +3543,9 @@ void TagStoreEdit::emitCode(MachineBasicBlock::iterator &InsertI,
 
   Register Reg;
   FrameRegOffset = TFI->resolveFrameOffsetReference(
-      *MF, FirstTagStore.Offset, false /*isFixed*/, false /*isSVE*/, Reg,
-      /*PreferFP=*/false, /*ForSimm=*/true, /*FI=*/-1);
+      *MF, FirstTagStore.Offset, false /*isFixed*/,
+      TargetStackID::Default /*StackID*/, Reg,
+      /*PreferFP=*/false, /*ForSimm=*/true);
   FrameReg = Reg;
   FrameRegUpdate = std::nullopt;
 
@@ -4256,7 +4267,7 @@ void AArch64FrameLowering::emitRemarks(
           }
 
           unsigned RegTy = StackAccess::AccessType::GPR;
-          if (MFI.isScalableStackID(FrameIdx)) {
+          if (MFI.hasScalableStackID(FrameIdx)) {
             // SPILL_PPR_TO_ZPR_SLOT_PSEUDO and FILL_PPR_FROM_ZPR_SLOT_PSEUDO
             // spill/fill the predicate as a data vector (so are an FPR access).
             if (MI.getOpcode() != AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO &&

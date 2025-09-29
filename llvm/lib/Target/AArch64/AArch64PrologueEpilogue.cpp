@@ -1224,7 +1224,7 @@ void AArch64PrologueEmitter::emitCalleeSavedGPRLocations(
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
   for (const auto &Info : CSI) {
     unsigned FrameIdx = Info.getFrameIdx();
-    if (MFI.isScalableStackID(FrameIdx))
+    if (MFI.hasScalableStackID(FrameIdx))
       continue;
 
     assert(!Info.isSpilledToReg() && "Spilling to registers not implemented");
@@ -1253,7 +1253,7 @@ void AArch64PrologueEmitter::emitCalleeSavedSVELocations(
   StackOffset PPRStackSize = AFL.getPPRStackSize(MF);
   for (const auto &Info : CSI) {
     int FI = Info.getFrameIdx();
-    if (!MFI.isScalableStackID(FI))
+    if (!MFI.hasScalableStackID(FI))
       continue;
 
     // Not all unwinders may know about SVE registers, so assume the lowest
@@ -1547,8 +1547,10 @@ void AArch64EpilogueEmitter::emitEpilogue() {
         emitCalleeSavedSVERestores(RestoreEnd);
     }
   } else if (AFI->hasSplitSVEObjects() && SVEStackSize) {
+    // TODO: Support stack realigment and variable-sized objects.
     assert(!AFI->isStackRealigned() && !MFI.hasVarSizedObjects() &&
-           "TODO: Support stack realigment / variable-sized objects");
+           "unexpected stack realignment or variable sized objects with split "
+           "SVE stack objects");
     // SplitSVEObjects. Determine the sizes and starts/ends of the ZPR and PPR
     // areas.
     auto ZPRCalleeSavedSize =
@@ -1771,7 +1773,7 @@ void AArch64EpilogueEmitter::emitCalleeSavedRestores(
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameDestroy);
 
   for (const auto &Info : CSI) {
-    if (SVE != MFI.isScalableStackID(Info.getFrameIdx()))
+    if (SVE != MFI.hasScalableStackID(Info.getFrameIdx()))
       continue;
 
     MCRegister Reg = Info.getReg();
