@@ -3,6 +3,9 @@ namespace std {
   struct pair {
     T1 first;
     T2 second;
+
+    pair() = default;
+    pair(T1 first, T2 second) : first(first), second(second) {}
   };
 
   template<typename... Args>

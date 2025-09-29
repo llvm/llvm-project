@@ -184,6 +184,10 @@ AST_MATCHER(CXXRecordDecl, isPairType) {
   });
 }
 
+AST_MATCHER(VarDecl, isDirectInitialization) {
+  return Node.getInitStyle() != VarDecl::InitializationStyle::CInit;
+}
+
 } // namespace
 
 static auto getVarInitWithMemberMatcher(
@@ -267,7 +271,7 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
       declStmt(
           unless(isInMarco()),
           hasSingleDecl(
-              varDecl(UnlessShouldBeIgnored,
+              varDecl(UnlessShouldBeIgnored, unless(isDirectInitialization()),
                       hasType(qualType(anyOf(PairType, lValueReferenceType(
                                                            pointee(PairType))))
                                   .bind(PairVarTypeName)),
