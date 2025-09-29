@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -Wno-bit-int-extension %s
-// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -Wno-bit-int-extension -triple ppc64-unknown-linux %s
-// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -Wno-bit-int-extension -triple ppc64le-unknown-linux %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -verify -std=c++2a -fsyntax-only -Wno-bit-int-extension %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -verify -std=c++2a -fsyntax-only -Wno-bit-int-extension -triple ppc64-unknown-linux %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -verify -std=c++2a -fsyntax-only -Wno-bit-int-extension -triple ppc64le-unknown-linux %s
 
-// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -Wno-bit-int-extension %s -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -Wno-bit-int-extension -triple ppc64-unknown-linux %s -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -Wno-bit-int-extension -triple ppc64le-unknown-linux %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -verify -std=c++2a -fsyntax-only -Wno-bit-int-extension %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -verify -std=c++2a -fsyntax-only -Wno-bit-int-extension -triple ppc64-unknown-linux %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -verify -std=c++2a -fsyntax-only -Wno-bit-int-extension -triple ppc64le-unknown-linux %s -fexperimental-new-constant-interpreter
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #define LITTLE_END 1
