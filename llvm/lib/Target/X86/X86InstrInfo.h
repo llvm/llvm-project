@@ -248,8 +248,7 @@ public:
   /// GR*_NOREX2RegClass (Returned register class)
   const TargetRegisterClass *
   getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-              const TargetRegisterInfo *TRI,
-              const MachineFunction &MF) const override;
+              const TargetRegisterInfo *TRI) const override;
 
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should
@@ -341,7 +340,7 @@ public:
   Register isStoreToStackSlotPostFE(const MachineInstr &MI,
                                     int &FrameIndex) const override;
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      Register DestReg, unsigned SubIdx,
                      const MachineInstr &Orig,

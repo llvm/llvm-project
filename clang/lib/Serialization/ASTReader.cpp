@@ -7532,20 +7532,6 @@ void TypeLocReader::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
 
-void TypeLocReader::VisitDependentTemplateSpecializationTypeLoc(
-       DependentTemplateSpecializationTypeLoc TL) {
-  TL.setElaboratedKeywordLoc(readSourceLocation());
-  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
-  TL.setTemplateKeywordLoc(readSourceLocation());
-  TL.setTemplateNameLoc(readSourceLocation());
-  TL.setLAngleLoc(readSourceLocation());
-  TL.setRAngleLoc(readSourceLocation());
-  for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I)
-    TL.setArgLocInfo(I,
-                     Reader.readTemplateArgumentLocInfo(
-                         TL.getTypePtr()->template_arguments()[I].getKind()));
-}
-
 void TypeLocReader::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
   TL.setEllipsisLoc(readSourceLocation());
 }
@@ -11229,6 +11215,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_partial:
     C = OMPPartialClause::CreateEmpty(Context);
     break;
+  case llvm::omp::OMPC_looprange:
+    C = OMPLoopRangeClause::CreateEmpty(Context);
+    break;
   case llvm::omp::OMPC_allocator:
     C = new (Context) OMPAllocatorClause();
     break;
@@ -11632,6 +11621,14 @@ void OMPClauseReader::VisitOMPPartialClause(OMPPartialClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
 }
 
+void OMPClauseReader::VisitOMPLoopRangeClause(OMPLoopRangeClause *C) {
+  C->setFirst(Record.readSubExpr());
+  C->setCount(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setFirstLoc(Record.readSourceLocation());
+  C->setCountLoc(Record.readSourceLocation());
+}
+
 void OMPClauseReader::VisitOMPAllocatorClause(OMPAllocatorClause *C) {
   C->setAllocator(Record.readExpr());
   C->setLParenLoc(Record.readSourceLocation());
@@ -11646,6 +11643,9 @@ void OMPClauseReader::VisitOMPDefaultClause(OMPDefaultClause *C) {
   C->setDefaultKind(static_cast<llvm::omp::DefaultKind>(Record.readInt()));
   C->setLParenLoc(Record.readSourceLocation());
   C->setDefaultKindKwLoc(Record.readSourceLocation());
+  C->setDefaultVariableCategory(
+      Record.readEnum<OpenMPDefaultClauseVariableCategory>());
+  C->setDefaultVariableCategoryLocation(Record.readSourceLocation());
 }
 
 void OMPClauseReader::VisitOMPProcBindClause(OMPProcBindClause *C) {

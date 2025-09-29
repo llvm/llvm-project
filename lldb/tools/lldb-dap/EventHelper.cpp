@@ -12,9 +12,11 @@
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolEvents.h"
+#include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBFileSpec.h"
 #include "llvm/Support/Error.h"
+#include <utility>
 
 #if defined(_WIN32)
 #define NOMINMAX
@@ -271,6 +273,26 @@ void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process) {
   body.try_emplace("exitCode", (int64_t)process.GetExitStatus());
   event.try_emplace("body", std::move(body));
   dap.SendJSON(llvm::json::Value(std::move(event)));
+}
+
+void SendInvalidatedEvent(
+    DAP &dap, llvm::ArrayRef<protocol::InvalidatedEventBody::Area> areas) {
+  if (!dap.clientFeatures.contains(protocol::eClientFeatureInvalidatedEvent))
+    return;
+  protocol::InvalidatedEventBody body;
+  body.areas = areas;
+  dap.Send(protocol::Event{"invalidated", std::move(body)});
+}
+
+void SendMemoryEvent(DAP &dap, lldb::SBValue variable) {
+  if (!dap.clientFeatures.contains(protocol::eClientFeatureMemoryEvent))
+    return;
+  protocol::MemoryEventBody body;
+  body.memoryReference = variable.GetLoadAddress();
+  body.count = variable.GetByteSize();
+  if (body.memoryReference == LLDB_INVALID_ADDRESS)
+    return;
+  dap.Send(protocol::Event{"memory", std::move(body)});
 }
 
 } // namespace lldb_dap

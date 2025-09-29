@@ -243,6 +243,7 @@ using Initializer = tomp::clause::InitializerT<TypeTy, IdTy, ExprTy>;
 using InReduction = tomp::clause::InReductionT<TypeTy, IdTy, ExprTy>;
 using IsDevicePtr = tomp::clause::IsDevicePtrT<TypeTy, IdTy, ExprTy>;
 using Lastprivate = tomp::clause::LastprivateT<TypeTy, IdTy, ExprTy>;
+using LoopRange = tomp::clause::LoopRangeT<TypeTy, IdTy, ExprTy>;
 using Linear = tomp::clause::LinearT<TypeTy, IdTy, ExprTy>;
 using Link = tomp::clause::LinkT<TypeTy, IdTy, ExprTy>;
 using Map = tomp::clause::MapT<TypeTy, IdTy, ExprTy>;
@@ -277,6 +278,7 @@ using Read = tomp::clause::ReadT<TypeTy, IdTy, ExprTy>;
 using Reduction = tomp::clause::ReductionT<TypeTy, IdTy, ExprTy>;
 using Relaxed = tomp::clause::RelaxedT<TypeTy, IdTy, ExprTy>;
 using Release = tomp::clause::ReleaseT<TypeTy, IdTy, ExprTy>;
+using Replayable = tomp::clause::ReplayableT<TypeTy, IdTy, ExprTy>;
 using ReverseOffload = tomp::clause::ReverseOffloadT<TypeTy, IdTy, ExprTy>;
 using Safelen = tomp::clause::SafelenT<TypeTy, IdTy, ExprTy>;
 using Schedule = tomp::clause::ScheduleT<TypeTy, IdTy, ExprTy>;
@@ -290,6 +292,7 @@ using Permutation = tomp::clause::PermutationT<TypeTy, IdTy, ExprTy>;
 using TaskReduction = tomp::clause::TaskReductionT<TypeTy, IdTy, ExprTy>;
 using ThreadLimit = tomp::clause::ThreadLimitT<TypeTy, IdTy, ExprTy>;
 using Threads = tomp::clause::ThreadsT<TypeTy, IdTy, ExprTy>;
+using Transparent = tomp::clause::TransparentT<TypeTy, IdTy, ExprTy>;
 using To = tomp::clause::ToT<TypeTy, IdTy, ExprTy>;
 using UnifiedAddress = tomp::clause::UnifiedAddressT<TypeTy, IdTy, ExprTy>;
 using UnifiedSharedMemory =
@@ -326,11 +329,14 @@ struct MemoryOrder {
 struct Threadprivate {
   using EmptyTrait = std::true_type;
 };
+struct Groupprivate {
+  using EmptyTrait = std::true_type;
+};
 
 using ClauseBase = tomp::ClauseT<TypeTy, IdTy, ExprTy,
                                  // Extras...
                                  CancellationConstructType, Depobj, Flush,
-                                 MemoryOrder, Threadprivate>;
+                                 MemoryOrder, Threadprivate, Groupprivate>;
 
 struct Clause : public ClauseBase {
   Clause(ClauseBase &&base, const parser::CharBlock source = {})

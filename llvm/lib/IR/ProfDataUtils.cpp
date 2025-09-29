@@ -95,6 +95,7 @@ const char *MDProfLabels::FunctionEntryCount = "function_entry_count";
 const char *MDProfLabels::SyntheticFunctionEntryCount =
     "synthetic_function_entry_count";
 const char *MDProfLabels::UnknownBranchWeightsMarker = "unknown";
+const char *LLVMLoopEstimatedTripCount = "llvm.loop.estimated_trip_count";
 
 bool hasProfMD(const Instruction &I) {
   return I.hasMetadata(LLVMContext::MD_prof);
@@ -249,6 +250,13 @@ void setExplicitlyUnknownBranchWeights(Instruction &I, StringRef PassName) {
       MDNode::get(I.getContext(),
                   {MDB.createString(MDProfLabels::UnknownBranchWeightsMarker),
                    MDB.createString(PassName)}));
+}
+
+void setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I, Function &F,
+                                                 StringRef PassName) {
+  if (std::optional<Function::ProfileCount> EC = F.getEntryCount();
+      EC && EC->getCount() > 0)
+    setExplicitlyUnknownBranchWeights(I, PassName);
 }
 
 void setExplicitlyUnknownFunctionEntryCount(Function &F, StringRef PassName) {
