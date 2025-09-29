@@ -421,7 +421,7 @@ void CIRGenFunction::emitNewArrayInitializer(
   if (!e->hasInitializer())
     return;
 
-  llvm_unreachable("NYI");
+  cgm.errorNYI(e->getSourceRange(), "emitNewArrayInitializer");
 }
 
 static void emitNewInitializer(CIRGenFunction &cgf, const CXXNewExpr *e,
@@ -700,10 +700,9 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
   // If there's an operator delete, enter a cleanup to call it if an
   // exception is thrown.
-  // TODO: Handle operator delete cleanup for exception safety
-  // if (e->getOperatorDelete() &&
-  //     !e->getOperatorDelete()->isReservedGlobalPlacementOperator())
-  //   cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: operator delete");
+  if (e->getOperatorDelete() &&
+      !e->getOperatorDelete()->isReservedGlobalPlacementOperator())
+    cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: operator delete");
 
   if (allocSize != allocSizeWithoutCookie)
     cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: array with cookies");
