@@ -11163,9 +11163,10 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   // Note: BCD instructions expect the immediate operand in vector form (v4i32),
   // but the builtin provides it as a scalar. To satisfy the instruction encoding,
   // we splat the scalar across all lanes using SPLAT_VECTOR.                                         
-  auto MapNodeWithSplatVector = [&](unsigned Opcode,
-                                  std::initializer_list<SDValue>
-                                  ExtraOps = {}) -> SDValue {
+  auto MapNodeWithSplatVector =
+    [&](unsigned Opcode,
+        std::initializer_list<SDValue> ExtraOps = {}) -> SDValue {
+
     SDValue SplatVal =
       DAG.getNode(ISD::SPLAT_VECTOR, dl, MVT::v4i32, Op.getOperand(2));
 
@@ -11227,16 +11228,16 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                    0);
   }
 
-case Intrinsic::ppc_bcdshift:
-  return MapNodeWithSplatVector(PPCISD::BCDSHIFT, {Op.getOperand(3)});
-case Intrinsic::ppc_bcdshiftround:
-  return MapNodeWithSplatVector(PPCISD::BCDSHIFTROUND, {Op.getOperand(3)});
-case Intrinsic::ppc_bcdtruncate:
-  return MapNodeWithSplatVector(PPCISD::BCDTRUNC, {Op.getOperand(3)});
-case Intrinsic::ppc_bcdunsignedtruncate:
-  return MapNodeWithSplatVector(PPCISD::BCDUTRUNC);
-case Intrinsic::ppc_bcdunsignedshift:
-  return MapNodeWithSplatVector(PPCISD::BCDUSHIFT);
+  case Intrinsic::ppc_bcdshift:
+    return MapNodeWithSplatVector(PPCISD::BCDSHIFT, {Op.getOperand(3)});
+  case Intrinsic::ppc_bcdshiftround:
+    return MapNodeWithSplatVector(PPCISD::BCDSHIFTROUND, {Op.getOperand(3)});
+  case Intrinsic::ppc_bcdtruncate:
+    return MapNodeWithSplatVector(PPCISD::BCDTRUNC, {Op.getOperand(3)});
+  case Intrinsic::ppc_bcdunsignedtruncate:
+    return MapNodeWithSplatVector(PPCISD::BCDUTRUNC);
+  case Intrinsic::ppc_bcdunsignedshift:
+    return MapNodeWithSplatVector(PPCISD::BCDUSHIFT);
 
   case Intrinsic::ppc_rlwnm: {
     if (Op.getConstantOperandVal(3) == 0)
