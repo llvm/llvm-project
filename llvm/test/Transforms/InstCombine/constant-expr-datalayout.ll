@@ -46,3 +46,17 @@ define i64 @ptr2addr2() {
 ;
   ret i64 ptrtoaddr (ptr inttoptr (i64 123 to ptr) to i64)
 }
+
+define i64 @ptrtoaddr_diff_size1() {
+; CHECK-LABEL: @ptrtoaddr_diff_size1(
+; CHECK-NEXT:    ret i64 ptrtoaddr (ptr inttoptr (i32 -1 to ptr) to i64)
+;
+  ret i64 ptrtoaddr (ptr inttoptr (i32 -1 to ptr) to i64)
+}
+
+define i64 @ptrtoaddr_diff_size2() {
+; CHECK-LABEL: @ptrtoaddr_diff_size2(
+; CHECK-NEXT:    ret i64 ptrtoaddr (ptr inttoptr (i128 -1 to ptr) to i64)
+;
+  ret i64 ptrtoaddr (ptr inttoptr (i128 -1 to ptr) to i64)
+}
