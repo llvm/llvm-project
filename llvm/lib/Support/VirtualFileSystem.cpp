@@ -2204,7 +2204,7 @@ RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
     //  FS->OverlayFileDir => /<absolute_path_to>/dummy.cache/vfs
     //
     SmallString<256> OverlayAbsDir = sys::path::parent_path(YAMLFilePath);
-    std::error_code EC = llvm::sys::fs::make_absolute(OverlayAbsDir);
+    std::error_code EC = ExternalFS->makeAbsolute(OverlayAbsDir);
     assert(!EC && "Overlay dir final path must be absolute");
     (void)EC;
     FS->setOverlayFileDir(OverlayAbsDir);
