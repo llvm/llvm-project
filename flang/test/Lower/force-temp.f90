@@ -27,6 +27,14 @@ module test
       integer, intent(out) :: buf(5)
     end subroutine
   end interface
+
+  ! Used by s6() and call_s6()
+  type base
+    integer :: i = -1
+  end type
+  type, extends (base) :: child
+    real :: r = -2.0
+  end type
 contains
   subroutine s1(buf)
 !CHECK-LABEL: func.func @_QMtestPs1
@@ -79,4 +87,20 @@ contains
     p => x(::2) ! pointer to non-contiguous array section
     call pass_intent_out(p)
   end subroutine
+  subroutine call_s6()
+!CHECK-LABEL: func.func @_QMtestPcall_s6
+!CHECK-NOT: hlfir.copy_in
+!CHECK: fir.call @_QMtestPs6
+!CHECK-NOT: hlfir.copy_out
+    class(base), pointer :: pb(:)
+    type(child), target :: c(2)
+
+    c = (/(child (i, real(i*2)), i=1,size(c))/)
+    pb => c
+    call s6(pb)
+  end subroutine call_s6
+  subroutine s6(b)
+    type(base), intent(inout) :: b(:)
+    b%i = 42
+  end subroutine s6
 end module

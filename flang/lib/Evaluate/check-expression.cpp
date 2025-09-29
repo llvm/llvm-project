@@ -1493,36 +1493,6 @@ public:
     return !actualTreatAsContiguous && dummyNeedsContiguity;
   }
 
-  // Returns true, if actual and dummy have polymorphic differences
-  bool HavePolymorphicDifferences() const {
-    bool dummyIsAssumedRank{dummyObj_.type.attrs().test(
-        characteristics::TypeAndShape::Attr::AssumedRank)};
-    bool actualIsAssumedRank{semantics::IsAssumedRank(actual_)};
-    bool dummyIsAssumedShape{dummyObj_.type.attrs().test(
-        characteristics::TypeAndShape::Attr::AssumedShape)};
-    bool actualIsAssumedShape{semantics::IsAssumedShape(actual_)};
-    if ((actualIsAssumedRank && dummyIsAssumedRank) ||
-        (actualIsAssumedShape && dummyIsAssumedShape)) {
-      // Assumed-rank and assumed-shape arrays are represented by descriptors,
-      // so don't need to do polymorphic check.
-    } else if (!dummyObj_.ignoreTKR.test(common::IgnoreTKR::Type)) {
-      // flang supports limited cases of passing polymorphic to non-polimorphic.
-      // These cases require temporary of non-polymorphic type. (For example,
-      // the actual argument could be polymorphic array of child type,
-      // while the dummy argument could be non-polymorphic array of parent
-      // type.)
-      bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
-      auto actualType{
-          characteristics::TypeAndShape::Characterize(actual_, fc_)};
-      bool actualIsPolymorphic{
-          actualType && actualType->type().IsPolymorphic()};
-      if (actualIsPolymorphic && !dummyIsPolymorphic) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   bool HaveArrayOrAssumedRankArgs() const {
     bool dummyTreatAsArray{dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank)};
     return IsArrayOrAssumedRank(actual_) &&
@@ -1609,9 +1579,6 @@ bool MayNeedCopy(const ActualArgument *actual,
       return false;
     }
     if (check.HaveContiguityDifferences()) {
-      return true;
-    }
-    if (check.HavePolymorphicDifferences()) {
       return true;
     }
   } else { // Implicit interface
