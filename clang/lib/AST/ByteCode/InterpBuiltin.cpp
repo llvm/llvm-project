@@ -3709,9 +3709,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_selectpd_512:
     return interp__builtin_select(S, OpPC, Call);
 
-  case X86::BI__builtin_ia32_pshufw:
-    return interp__builtin_ia32_pshuf(S, OpPC, Call, Half::None);
-
   case X86::BI__builtin_ia32_pshuflw:
   case X86::BI__builtin_ia32_pshuflw256:
   case X86::BI__builtin_ia32_pshuflw512:

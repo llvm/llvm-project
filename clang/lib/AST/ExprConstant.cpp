@@ -12159,12 +12159,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
-  case X86::BI__builtin_ia32_pshufw: {
-    APValue R;
-    if (!evalPshufBuiltin(Info, E, /*ElemBits=*/16, /*HalfBaseElems=*/noHalf, R)) return false;
-    return Success(R, E);
-  }
-
   case X86::BI__builtin_ia32_pshuflw:
   case X86::BI__builtin_ia32_pshuflw256:
   case X86::BI__builtin_ia32_pshuflw512: {

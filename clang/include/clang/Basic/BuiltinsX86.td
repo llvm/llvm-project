@@ -145,10 +145,6 @@ let Features = "mmx", Header = "mmintrin.h", Attributes = [NoThrow, Const] in {
   def _m_prefetch : X86LibBuiltin<"void(void *)">;
 }
 
-let Features = "mmx", Attributes = [NoThrow, Const, Constexpr] in {
-  def pshufw : X86Builtin<"_Vector<4, short>(_Vector<4, short>, _Constant int)">;
-}
-
 // PRFCHW
 let Features = "prfchw", Header = "intrin.h", Attributes = [NoThrow, Const] in {
   def _m_prefetchw : X86LibBuiltin<"void(void volatile const *)">;
