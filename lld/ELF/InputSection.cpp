@@ -1365,14 +1365,14 @@ template <class ELFT> void EhInputSection::split() {
     preprocessRelocs<ELFT>(elfRels.rels);
   else
     preprocessRelocs<ELFT>(elfRels.relas);
+
+  // The loop below expects the relocations to be sorted by offset.
   auto cmp = [](const Relocation &a, const Relocation &b) {
     return a.offset < b.offset;
   };
   if (!llvm::is_sorted(rels, cmp))
     llvm::stable_sort(rels, cmp);
 
-  // getReloc expects the relocations to be sorted by r_offset. See the comment
-  // in scanRelocs.
   ArrayRef<uint8_t> d = content();
   const char *msg = nullptr;
   unsigned relI = 0;
