@@ -81,14 +81,14 @@ void test6_f(a)
 {}
 void test6_g() {
   int arr[10];
-  test6_f(&arr); // expected-warning {{incompatible pointer types passing 'int (*)[10]' to parameter of type 'int (*)[11]}}
+  test6_f(&arr); // expected-error {{incompatible pointer types passing 'int (*)[10]' to parameter of type 'int (*)[11]}}
 }
 
 void test7_f(int (*)[10]);
 void test7_f(int (*)[]); // expected-note {{passing argument to parameter here}}
 void test7_g() {
   int x[5];
-  test7_f(&x); // expected-warning {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[10]}}
+  test7_f(&x); // expected-error {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[10]}}
 }
 
 char d;

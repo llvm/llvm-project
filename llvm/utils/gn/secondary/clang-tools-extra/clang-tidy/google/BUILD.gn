@@ -19,6 +19,7 @@ static_library("google") {
     "DefaultArgumentsCheck.cpp",
     "ExplicitConstructorCheck.cpp",
     "ExplicitMakePairCheck.cpp",
+    "FloatTypesCheck.cpp",
     "FunctionNamingCheck.cpp",
     "GlobalNamesInHeadersCheck.cpp",
     "GlobalVariableDeclarationCheck.cpp",

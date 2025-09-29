@@ -1,4 +1,4 @@
-//===--- tools/extra/clang-tidy/ClangTidyMain.cpp - Clang tidy tool -------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,7 @@
 ///  \file This file implements a clang-tidy tool.
 ///
 ///  This tool uses the Clang Tooling infrastructure, see
-///    http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
+///    https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
 ///  for details on setting it up with LLVM source tree.
 ///
 //===----------------------------------------------------------------------===//
@@ -60,6 +60,8 @@ Configuration files:
   Checks                       - Same as '--checks'. Additionally, the list of
                                  globs can be specified as a list instead of a
                                  string.
+  CustomChecks                 - Array of user defined checks based on
+                                 Clang-Query syntax.
   ExcludeHeaderFilterRegex     - Same as '--exclude-header-filter'.
   ExtraArgs                    - Same as '--extra-arg'.
   ExtraArgsBefore              - Same as '--extra-arg-before'.
@@ -343,6 +345,15 @@ the "no checks enabled" error when disabling
 all of the checks.
 )"),
                                    cl::init(false), cl::cat(ClangTidyCategory));
+
+static cl::opt<bool> ExperimentalCustomChecks("experimental-custom-checks",
+                                              desc(R"(
+Enable experimental clang-query based
+custom checks.
+see https://clang.llvm.org/extra/clang-tidy/QueryBasedCustomChecks.html.
+)"),
+                                              cl::init(false),
+                                              cl::cat(ClangTidyCategory));
 
 namespace clang::tidy {
 
@@ -631,7 +642,8 @@ int clangTidyMain(int argc, const char **argv) {
   ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
 
   std::vector<std::string> EnabledChecks =
-      getCheckNames(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
+      getCheckNames(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers,
+                    ExperimentalCustomChecks);
 
   if (ExplainConfig) {
     // FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
@@ -663,7 +675,8 @@ int clangTidyMain(int argc, const char **argv) {
 
   if (DumpConfig) {
     EffectiveOptions.CheckOptions =
-        getCheckOptions(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
+        getCheckOptions(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers,
+                        ExperimentalCustomChecks);
     ClangTidyOptions OptionsToDump =
         ClangTidyOptions::getDefaults().merge(EffectiveOptions, 0);
     filterCheckOptions(OptionsToDump, EnabledChecks);
@@ -674,8 +687,8 @@ int clangTidyMain(int argc, const char **argv) {
   if (VerifyConfig) {
     std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
         OptionsProvider->getRawOptions(FileName);
-    ChecksAndOptions Valid =
-        getAllChecksAndOptions(AllowEnablingAnalyzerAlphaCheckers);
+    ChecksAndOptions Valid = getAllChecksAndOptions(
+        AllowEnablingAnalyzerAlphaCheckers, ExperimentalCustomChecks);
     bool AnyInvalid = false;
     for (const auto &[Opts, Source] : RawOptions) {
       if (Opts.Checks)
@@ -712,9 +725,9 @@ int clangTidyMain(int argc, const char **argv) {
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmParsers();
 
-  ClangTidyContext Context(std::move(OwningOptionsProvider),
-                           AllowEnablingAnalyzerAlphaCheckers,
-                           EnableModuleHeadersParsing);
+  ClangTidyContext Context(
+      std::move(OwningOptionsProvider), AllowEnablingAnalyzerAlphaCheckers,
+      EnableModuleHeadersParsing, ExperimentalCustomChecks);
   std::vector<ClangTidyError> Errors =
       runClangTidy(Context, OptionsParser->getCompilations(), PathList, BaseFS,
                    FixNotes, EnableCheckProfile, ProfilePrefix, Quiet);

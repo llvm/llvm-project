@@ -53,9 +53,8 @@ static void populateDialectSparseTensorSubmodule(const nb::module_ &m) {
           },
           nb::arg("cls"), nb::arg("lvl_types"), nb::arg("dim_to_lvl").none(),
           nb::arg("lvl_to_dim").none(), nb::arg("pos_width"),
-          nb::arg("crd_width"), nb::arg("explicit_val").none() = nb::none(),
-          nb::arg("implicit_val").none() = nb::none(),
-          nb::arg("context").none() = nb::none(),
+          nb::arg("crd_width"), nb::arg("explicit_val") = nb::none(),
+          nb::arg("implicit_val") = nb::none(), nb::arg("context") = nb::none(),
           "Gets a sparse_tensor.encoding from parameters.")
       .def_classmethod(
           "build_level_type",
