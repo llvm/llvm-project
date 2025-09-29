@@ -221,6 +221,8 @@ public:
 
   const char *getExecutable() const { return Executable; }
 
+  llvm::opt::ArgStringList &getArguments() { return Arguments; }
+
   const llvm::opt::ArgStringList &getArguments() const { return Arguments; }
 
   const std::vector<InputInfo> &getInputInfos() const { return InputInfoList; }
@@ -277,6 +279,7 @@ public:
   /// Clear the job list.
   void clear();
 
+  list_type &getJobs() { return Jobs; }
   const list_type &getJobs() const { return Jobs; }
 
   bool empty() const { return Jobs.empty(); }
