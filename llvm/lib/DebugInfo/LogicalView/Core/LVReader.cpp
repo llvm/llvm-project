@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SetVector.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -531,9 +531,9 @@ namespace {
 
 struct DebuggerViewPrinter {
   std::vector<const LVLine *> Lines;
-  std::unordered_map<LVAddress, std::vector<const LVLocation *>> LivetimeBegins;
+  std::unordered_map<LVAddress, std::vector<const LVLocation *>> LifetimeBegins;
   std::unordered_map<LVAddress, std::vector<const LVLocation *>>
-      LivetimeEndsExclusive;
+      LifetimeEndsExclusive;
   raw_ostream &OS;
 
   const bool IncludeRanges = false;
@@ -566,8 +566,9 @@ struct DebuggerViewPrinter {
 
           LVAddress Begin = Loc->getLowerAddress();
           LVAddress End = Loc->getUpperAddress();
-          LivetimeBegins[Begin].push_back(Loc);
-          LivetimeEndsExclusive[End].push_back(Loc);
+          LifetimeBegins[Begin].push_back(Loc);
+          LifetimeEndsExclusive[End].push_back(Loc);
+
           if (IncludeRanges) {
             OS << "[" << hexValue(Begin) << ":" << hexValue(End) << "] ";
           }
@@ -629,10 +630,10 @@ struct DebuggerViewPrinter {
     for (const LVLine *Line : Lines) {
       const LVScope *Scope = Line->getParentScope();
       // Update live list: Add lives
-      for (auto Loc : LivetimeBegins[Line->getAddress()])
+      for (auto Loc : LifetimeBegins[Line->getAddress()])
         LiveSymbols.insert(Loc);
       // Update live list: remove dead
-      for (auto Loc : LivetimeEndsExclusive[Line->getAddress()])
+      for (auto Loc : LifetimeEndsExclusive[Line->getAddress()])
         LiveSymbols.remove(Loc);
 
       if (Line->getIsNewStatement() && Line->getIsLineDebug() &&
@@ -653,8 +654,8 @@ struct DebuggerViewPrinter {
             if (SymScope != LineScope && !IsChildScopeOf(LineScope, SymScope))
               continue;
             PrintIndent(OS, 2);
-            OS << "{Variable}: " << Sym->getName() << ": " << Sym->getType()->getName()
-               << " : ";
+            OS << "{Variable}: " << Sym->getName() << ": "
+               << Sym->getType()->getName() << " : ";
             SymLoc->printLocations(OS);
             OS << " (line " << Sym->getLineNumber() << ")";
             OS << "\n";
@@ -674,7 +675,8 @@ struct DebuggerViewPrinter {
 Error LVReader::printDebugger() {
   auto *CU = getCompileUnit();
   if (!CU) {
-    return createStringError(std::make_error_code(std::errc::invalid_argument), "Error: No compute unit found.");
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "Error: No compute unit found.");
   }
 
   for (LVElement *Child : *CU->getChildren()) {

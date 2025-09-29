@@ -1,8 +1,8 @@
 ; RUN: llc %s -o %t.o -mcpu=gfx1030 -filetype=obj -O0
 ; RUN: llvm-debuginfo-analyzer --report=debugger --print=symbols %t.o | FileCheck %s
 
-; This test compiles this module with AMDGPU backend under -O0,
-; and makes sure llvm-debuginfo-analyzer --report=debugger works for it.
+; The test compiles this module using the AMDGPU backend under `-O0`,
+; and makes sure `llvm-debuginfo-analyzer --report=debugger` works for it.
 
 ; CHECK: {Function}: main
 ; CHECK: {Line}: {{.+}}basic_var.hlsl:7
