@@ -433,6 +433,7 @@ Bug Fixes to C++ Support
   object type. (#GH151531)
 - Suppress ``-Wdouble-promotion`` when explicitly asked for with C++ list initialization (#GH33409).
 - Fix the result of `__builtin_is_implicit_lifetime` for types with a user-provided constructor. (#GH160610)
+- Correctly deduce return types in ``decltype`` expressions. (#GH160497) (#GH56652) (#GH116319) (#GH161196)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
