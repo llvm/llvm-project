@@ -35,8 +35,6 @@
 #include <mutex>
 #include <string>
 
-#include "OpenMP/InteropAPI.h"
-
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 
 /// Struct for the data required to handle plugins
@@ -89,9 +87,6 @@ struct PluginManager {
   /// Map from ptrs on the host to an entry in the Translation Table
   HostPtrToTableMapTy HostPtrToTableMap;
   std::mutex TblMapMtx; ///< For HostPtrToTableMap
-
-  /// Table of cached implicit interop objects
-  InteropTblTy InteropTbl;
 
   // Work around for plugins that call dlopen on shared libraries that call
   // tgt_register_lib during their initialisation. Stash the pointers in a
@@ -190,6 +185,5 @@ void initRuntime();
 void deinitRuntime();
 
 extern PluginManager *PM;
-extern std::atomic<bool> RTLAlive; // Indicates if the RTL has been initialized
-extern std::atomic<int> RTLOngoingSyncs; // Counts ongoing external syncs
+
 #endif // OMPTARGET_PLUGIN_MANAGER_H
