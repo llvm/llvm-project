@@ -2100,7 +2100,6 @@ public:
     PostponedGathers.clear();
     ValueToGatherNodes.clear();
     TreeEntryToStridedPtrInfoMap.clear();
-    assert(TreeEntryToStridedPtrInfoMap.empty() && "TreeEntryToStridedPtrInfoMap is not cleared");
   }
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
@@ -8944,6 +8943,8 @@ BoUpSLP::findExternalStoreUsersReorderIndices(TreeEntry *TE) const {
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
                         const SmallDenseSet<Value *> &UserIgnoreLst) {
   deleteTree();
+  assert(TreeEntryToStridedPtrInfoMap.empty() &&
+         "TreeEntryToStridedPtrInfoMap is not cleared");
   UserIgnoreList = &UserIgnoreLst;
   if (!allSameType(Roots))
     return;
@@ -8952,6 +8953,8 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
 
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
   deleteTree();
+  assert(TreeEntryToStridedPtrInfoMap.empty() &&
+         "TreeEntryToStridedPtrInfoMap is not cleared");
   if (!allSameType(Roots))
     return;
   buildTreeRec(Roots, 0, EdgeInfo());
