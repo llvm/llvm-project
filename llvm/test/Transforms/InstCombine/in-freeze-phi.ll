@@ -151,23 +151,23 @@ define i32 @multi_use_one_folds_one_not_zero(i1 %c0, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: define i32 @multi_use_one_folds_one_not_zero(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 [[C0]], label %[[BB_OTHER2:.*]], label %[[CC:.*]]
-; CHECK:       [[BB_OTHER2]]:
+; CHECK-NEXT:    br i1 [[C0]], label %[[BB_OTHER3:.*]], label %[[CC1:.*]]
+; CHECK:       [[BB_OTHER3]]:
 ; CHECK-NEXT:    br label %[[MID:.*]]
-; CHECK:       [[CC]]:
+; CHECK:       [[CC1]]:
 ; CHECK-NEXT:    br i1 [[C1]], label %[[CA:.*]], label %[[CB:.*]]
 ; CHECK:       [[CA]]:
 ; CHECK-NEXT:    br label %[[MID]]
 ; CHECK:       [[CB]]:
 ; CHECK-NEXT:    br label %[[MID]]
 ; CHECK:       [[MID]]:
-; CHECK-NEXT:    [[PHI_FOLD:%.*]] = phi i32 [ 0, %[[BB_OTHER2]] ], [ 1, %[[CA]] ], [ 1, %[[CB]] ]
+; CHECK-NEXT:    [[PHI_FOLD:%.*]] = phi i32 [ 0, %[[BB_OTHER3]] ], [ 1, %[[CA]] ], [ 1, %[[CB]] ]
 ; CHECK-NEXT:    br i1 [[C2]], label %[[BB_FREEZE2:.*]], label %[[CD:.*]]
 ; CHECK:       [[BB_FREEZE2]]:
 ; CHECK-NEXT:    br label %[[FINAL:.*]]
-; CHECK:       [[BB_OTHER3:.*:]]
+; CHECK:       [[BB_OTHER2:.*:]]
 ; CHECK-NEXT:    br i1 true, label %[[CA]], label %[[CB]]
-; CHECK:       [[CC1:.*:]]
+; CHECK:       [[CC:.*:]]
 ; CHECK-NEXT:    br label %[[FINAL]]
 ; CHECK:       [[CD]]:
 ; CHECK-NEXT:    br label %[[FINAL]]
@@ -237,8 +237,8 @@ final:
   ret i32 %phi
 }
 
-define i32 @phi_freeze_undef(i1 %c0, i1 %c1) {
-; CHECK-LABEL: define i32 @phi_freeze_undef(
+define <2 x i32> @phi_freeze_poison_vec(i1 %c0, i1 %c1) {
+; CHECK-LABEL: define <2 x i32> @phi_freeze_poison_vec(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 [[C0]], label %[[BB_FREEZE:.*]], label %[[BB_OTHER:.*]]
@@ -251,13 +251,14 @@ define i32 @phi_freeze_undef(i1 %c0, i1 %c1) {
 ; CHECK:       [[CB]]:
 ; CHECK-NEXT:    br label %[[FINAL]]
 ; CHECK:       [[FINAL]]:
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[PHI:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB_FREEZE]] ], [ <i32 poison, i32 1>, %[[CA]] ], [ <i32 poison, i32 1>, %[[CB]] ]
+; CHECK-NEXT:    ret <2 x i32> [[PHI]]
 ;
 entry:
   br i1 %c0, label %bb_freeze, label %bb_other
 
 bb_freeze:
-  %f = freeze i32 undef
+  %f = freeze <2 x i32> undef
   br label %final
 
 bb_other:
@@ -268,6 +269,6 @@ cB:
   br label %final
 
 final:
-  %phi = phi i32 [ %f, %bb_freeze ], [ undef, %cA ], [ undef, %cB ]
-  ret i32 %phi
+  %phi = phi <2 x i32> [ %f, %bb_freeze ], [ <i32 poison, i32 1>, %cA ], [ <i32 poison, i32 1>, %cB ]
+  ret <2 x i32> %phi
 }
