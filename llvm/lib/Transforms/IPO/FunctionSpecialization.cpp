@@ -154,13 +154,14 @@ Constant *InstCostVisitor::findConstantFor(Value *V) const {
   return KnownConstants.lookup(V);
 }
 
-Cost InstCostVisitor::getCodeSizeSavingsFromPendingPHIs() {
+Cost InstCostVisitor::getCodeSizeSavingsFromPendingPHIs(CallUserT *CallUsers) {
   Cost CodeSize;
   while (!PendingPHIs.empty()) {
     Instruction *Phi = PendingPHIs.pop_back_val();
     // The pending PHIs could have been proven dead by now.
     if (isBlockExecutable(Phi->getParent()))
-      CodeSize += getCodeSizeSavingsForUser(Phi);
+      CodeSize +=
+          getCodeSizeSavingsForUser(Phi, nullptr, nullptr, CallUsers, nullptr);
   }
   return CodeSize;
 }
@@ -1116,7 +1117,7 @@ bool FunctionSpecializer::findSpecializations(
         Score += getInliningBonus(A.Formal, A.Actual);
       }
 
-      CodeSize += Visitor.getCodeSizeSavingsFromPendingPHIs();
+      CodeSize += Visitor.getCodeSizeSavingsFromPendingPHIs(&CallUsers);
       CurrentChain.insert(F);
 
       for (auto &CU : CallUsers) {

@@ -228,7 +228,8 @@ public:
   LLVM_ABI Cost getCodeSizeSavingsForArg(Argument *A, Constant *C,
                                          CallUserT *CallUsers = nullptr);
 
-  LLVM_ABI Cost getCodeSizeSavingsFromPendingPHIs();
+  LLVM_ABI Cost
+  getCodeSizeSavingsFromPendingPHIs(CallUserT *CallUsers = nullptr);
 
   LLVM_ABI Cost getLatencySavingsForKnownConstants();
 
