@@ -2188,8 +2188,6 @@ static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
   }
 }
 
-struct SPIRV::ModuleAnalysisInfo SPIRVModuleAnalysis::MAI;
-
 void SPIRVModuleAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<MachineModuleInfoWrapperPass>();

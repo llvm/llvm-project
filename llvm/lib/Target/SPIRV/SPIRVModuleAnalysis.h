@@ -222,7 +222,7 @@ public:
 
   bool runOnModule(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-  static struct SPIRV::ModuleAnalysisInfo MAI;
+  struct SPIRV::ModuleAnalysisInfo MAI;
 
 private:
   void setBaseInfo(const Module &M);
