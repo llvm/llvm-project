@@ -36,11 +36,11 @@ config.substitutions.append(('%{lib}', '@LIBUNWIND_TESTING_INSTALL_PREFIX@/@LIBU
 config.substitutions.append(('%{benchmark_flags}', ''))
 
 # Check for objcopy tools
-objcopy_path = which('objcopy')
+objcopy_path = which('llvm-objcopy', '@LLVM_BUILD_BINARY_DIR@/bin')
 if not objcopy_path:
     objcopy_path = which('llvm-objcopy')
 if not objcopy_path:
-    objcopy_path = which('llvm-objcopy', '@LLVM_BUILD_BINARY_DIR@/bin')
+    objcopy_path = which('objcopy')
 if objcopy_path:
     config.substitutions.append(('%{objcopy}', objcopy_path))
     config.available_features.add('objcopy-available')
