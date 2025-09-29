@@ -941,6 +941,10 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushPhiNodes(
         CommonValue = Values[I];
       else if (Values[I] != *CommonValue)
         Uniform = false;
+
+      // Phi is reached via divergent exit (i.e. respect temporal divergence).
+      if (DivDesc.CycleDivBlocks.contains(Blocks[I]))
+        Uniform = false;
     }
     if (Uniform)
       continue;
