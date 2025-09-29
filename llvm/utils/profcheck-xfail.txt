@@ -838,8 +838,6 @@ Transforms/InstCombine/2011-02-14-InfLoop.ll
 Transforms/InstCombine/AArch64/sve-intrinsic-sel.ll
 Transforms/InstCombine/AArch64/sve-intrinsic-simplify-binop.ll
 Transforms/InstCombine/AArch64/sve-intrinsic-simplify-shift.ll
-Transforms/InstCombine/add2.ll
-Transforms/InstCombine/add.ll
 Transforms/InstCombine/add-mask.ll
 Transforms/InstCombine/add-shl-mul-umax.ll
 Transforms/InstCombine/add-shl-sdiv-to-srem.ll
