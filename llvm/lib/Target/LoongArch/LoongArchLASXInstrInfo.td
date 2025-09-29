@@ -2025,54 +2025,22 @@ def : Pat<(v4i32(fp_to_uint v4f64:$vj)),
               sub_128)>;
 
 // XVAVG_{B/H/W/D/BU/HU/WU/DU}, XVAVGR_{B/H/W/D/BU/HU/WU/DU}
-def : Pat<(sra (v32i8 (add v32i8:$xj, v32i8:$xk)), (v32i8 (vsplat_imm_eq_1))),
-          (XVAVG_B v32i8:$xj, v32i8:$xk)>;
-def : Pat<(sra (v16i16 (add v16i16:$xj, v16i16:$xk)), (v16i16 (vsplat_imm_eq_1))),
-          (XVAVG_H v16i16:$xj, v16i16:$xk)>;
-def : Pat<(sra (v8i32 (add v8i32:$xj, v8i32:$xk)), (v8i32 (vsplat_imm_eq_1))),
-          (XVAVG_W v8i32:$xj, v8i32:$xk)>;
-def : Pat<(sra (v4i64 (add v4i64:$xj, v4i64:$xk)), (v4i64 (vsplat_imm_eq_1))),
-          (XVAVG_D v4i64:$xj, v4i64:$xk)>;
-def : Pat<(srl (v32i8 (add v32i8:$xj, v32i8:$xk)), (v32i8 (vsplat_imm_eq_1))),
-          (XVAVG_BU v32i8:$xj, v32i8:$xk)>;
-def : Pat<(srl (v16i16 (add v16i16:$xj, v16i16:$xk)), (v16i16 (vsplat_imm_eq_1))),
-          (XVAVG_HU v16i16:$xj, v16i16:$xk)>;
-def : Pat<(srl (v8i32 (add v8i32:$xj, v8i32:$xk)), (v8i32 (vsplat_imm_eq_1))),
-          (XVAVG_WU v8i32:$xj, v8i32:$xk)>;
-def : Pat<(srl (v4i64 (add v4i64:$xj, v4i64:$xk)), (v4i64 (vsplat_imm_eq_1))),
-          (XVAVG_DU v4i64:$xj, v4i64:$xk)>;
-def : Pat<(sra (v32i8 (add (v32i8 (add v32i8:$vj, v32i8:$vk)),
-                           (v32i8 (vsplat_imm_eq_1)))),
-               (v32i8 (vsplat_imm_eq_1))),
-          (XVAVGR_B v32i8:$vj, v32i8:$vk)>;
-def : Pat<(sra (v16i16 (add (v16i16 (add v16i16:$vj, v16i16:$vk)),
-                            (v16i16 (vsplat_imm_eq_1)))),
-               (v16i16 (vsplat_imm_eq_1))),
-          (XVAVGR_H v16i16:$vj, v16i16:$vk)>;
-def : Pat<(sra (v8i32 (add (v8i32 (add v8i32:$vj, v8i32:$vk)),
-                           (v8i32 (vsplat_imm_eq_1)))),
-               (v8i32 (vsplat_imm_eq_1))),
-          (XVAVGR_W v8i32:$vj, v8i32:$vk)>;
-def : Pat<(sra (v4i64 (add (v4i64 (add v4i64:$vj, v4i64:$vk)),
-                           (v4i64 (vsplat_imm_eq_1)))),
-               (v4i64 (vsplat_imm_eq_1))),
-          (XVAVGR_D v4i64:$vj, v4i64:$vk)>;
-def : Pat<(srl (v32i8 (add (v32i8 (add v32i8:$vj, v32i8:$vk)),
-                           (v32i8 (vsplat_imm_eq_1)))),
-               (v32i8 (vsplat_imm_eq_1))),
-          (XVAVGR_BU v32i8:$vj, v32i8:$vk)>;
-def : Pat<(srl (v16i16 (add (v16i16 (add v16i16:$vj, v16i16:$vk)),
-                            (v16i16 (vsplat_imm_eq_1)))),
-               (v16i16 (vsplat_imm_eq_1))),
-          (XVAVGR_HU v16i16:$vj, v16i16:$vk)>;
-def : Pat<(srl (v8i32 (add (v8i32 (add v8i32:$vj, v8i32:$vk)),
-                           (v8i32 (vsplat_imm_eq_1)))),
-               (v8i32 (vsplat_imm_eq_1))),
-          (XVAVGR_WU v8i32:$vj, v8i32:$vk)>;
-def : Pat<(srl (v4i64 (add (v4i64 (add v4i64:$vj, v4i64:$vk)),
-                           (v4i64 (vsplat_imm_eq_1)))),
-               (v4i64 (vsplat_imm_eq_1))),
-          (XVAVGR_DU v4i64:$vj, v4i64:$vk)>;
+defm : VAvgPat<sra, "XVAVG_B", v32i8>;
+defm : VAvgPat<sra, "XVAVG_H", v16i16>;
+defm : VAvgPat<sra, "XVAVG_W", v8i32>;
+defm : VAvgPat<sra, "XVAVG_D", v4i64>;
+defm : VAvgPat<srl, "XVAVG_BU", v32i8>;
+defm : VAvgPat<srl, "XVAVG_HU", v16i16>;
+defm : VAvgPat<srl, "XVAVG_WU", v8i32>;
+defm : VAvgPat<srl, "XVAVG_DU", v4i64>;
+defm : VAvgrPat<sra, "XVAVGR_B", v32i8>;
+defm : VAvgrPat<sra, "XVAVGR_H", v16i16>;
+defm : VAvgrPat<sra, "XVAVGR_W", v8i32>;
+defm : VAvgrPat<sra, "XVAVGR_D", v4i64>;
+defm : VAvgrPat<srl, "XVAVGR_BU", v32i8>;
+defm : VAvgrPat<srl, "XVAVGR_HU", v16i16>;
+defm : VAvgrPat<srl, "XVAVGR_WU", v8i32>;
+defm : VAvgrPat<srl, "XVAVGR_DU", v4i64>;
 
 // abs
 def : Pat<(abs v32i8:$xj), (XVSIGNCOV_B v32i8:$xj, v32i8:$xj)>;
