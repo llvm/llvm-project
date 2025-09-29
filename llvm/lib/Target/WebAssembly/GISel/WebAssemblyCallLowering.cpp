@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/DataLayout.h"
@@ -481,6 +482,7 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
       LLT OrigLLT = getLLTForType(*Arg.Ty, DL);
       LLT NewLLT = getLLTForMVT(NewVT);
+      const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
 
       // If we need to split the type over multiple regs, check it's a scenario
       // we currently support.
@@ -522,10 +524,12 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       }
 
       for (unsigned Part = 0; Part < NumParts; ++Part) {
-        auto NewOutReg = constrainRegToClass(MRI, TII, RBI, Arg.Regs[Part],
-                                             *TLI.getRegClassFor(NewVT));
-        if (NewOutReg != Arg.Regs[Part])
+        auto NewOutReg = Arg.Regs[Part];
+        if (!RBI.constrainGenericRegister(NewOutReg, NewRegClass, MRI)) {
+          NewOutReg = MRI.createGenericVirtualRegister(NewLLT);
+          assert(RBI.constrainGenericRegister(NewOutReg, NewRegClass, MRI) && "Couldn't constrain brand-new register?");
           MIRBuilder.buildCopy(NewOutReg, Arg.Regs[Part]);
+        }
         MIB.addUse(NewOutReg);
       }
     }
@@ -864,6 +868,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
         LLT OrigLLT = getLLTForType(*Ret.Ty, DL);
         LLT NewLLT = getLLTForMVT(NewVT);
+        const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
 
         // If we need to split the type over multiple regs, check it's a
         // scenario we currently support.
@@ -903,12 +908,12 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         }
 
         for (unsigned Part = 0; Part < NumParts; ++Part) {
-          // MRI.setRegClass(Ret.Regs[Part], TLI.getRegClassFor(NewVT));
-          auto NewRetReg = constrainRegToClass(MRI, TII, RBI, Ret.Regs[Part],
-                                               *TLI.getRegClassFor(NewVT));
-          if (Ret.Regs[Part] != NewRetReg)
+          auto NewRetReg = Ret.Regs[Part];
+          if (!RBI.constrainGenericRegister(NewRetReg, NewRegClass, MRI)) {
+            NewRetReg = MRI.createGenericVirtualRegister(NewLLT);
+            assert(RBI.constrainGenericRegister(NewRetReg, NewRegClass, MRI) && "Couldn't constrain brand-new register?");
             MIRBuilder.buildCopy(NewRetReg, Ret.Regs[Part]);
-
+          }
           CallInst.addDef(Ret.Regs[Part]);
         }
       }
