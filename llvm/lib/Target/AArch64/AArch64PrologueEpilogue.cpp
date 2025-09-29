@@ -754,7 +754,36 @@ void AArch64PrologueEmitter::emitPrologue() {
     emitCalleeSavedSVELocations(AfterSVESavesI);
 
   if (AFI->hasSplitSVEObjects()) {
-    reportFatalInternalError("not implemented yet");
+    assert(!FPAfterSVECalleeSaves &&
+           "Cannot use FPAfterSVECalleeSaves with aarch64-split-sve-objects");
+    assert(!AFL.canUseRedZone(MF) &&
+           "Cannot use redzone with aarch64-split-sve-objects");
+    // TODO: Handle HasWinCFI/NeedsWinCFI?
+    assert(!NeedsWinCFI &&
+           "WinCFI with aarch64-split-sve-objects is not supported");
+
+    // Split ZPR and PPR allocation.
+    // Allocate PPR callee saves
+    allocateStackSpace(*PPRCalleeSavesBegin, 0, PPRCalleeSavesSize,
+                       EmitAsyncCFI && !HasFP, CFAOffset,
+                       MFI.hasVarSizedObjects() || ZPRCalleeSavesSize ||
+                           ZPRLocalsSize || PPRLocalsSize);
+    CFAOffset += PPRCalleeSavesSize;
+
+    // Allocate PPR locals + ZPR callee saves
+    assert(PPRCalleeSavesEnd == ZPRCalleeSavesBegin &&
+           "Expected ZPR callee saves after PPR locals");
+    allocateStackSpace(*PPRCalleeSavesEnd, RealignmentPadding,
+                       PPRLocalsSize + ZPRCalleeSavesSize,
+                       EmitAsyncCFI && !HasFP, CFAOffset,
+                       MFI.hasVarSizedObjects() || ZPRLocalsSize);
+    CFAOffset += PPRLocalsSize + ZPRCalleeSavesSize;
+
+    // Allocate ZPR locals
+    allocateStackSpace(*ZPRCalleeSavesEnd, RealignmentPadding,
+                       ZPRLocalsSize + StackOffset::getFixed(NumBytes),
+                       EmitAsyncCFI && !HasFP, CFAOffset,
+                       MFI.hasVarSizedObjects());
   } else {
     // Allocate space for the callee saves (if any).
     StackOffset LocalsSize =
@@ -1221,8 +1250,10 @@ void AArch64PrologueEmitter::emitCalleeSavedSVELocations(
                                  AFL.getOffsetOfLocalArea();
   }
 
+  StackOffset PPRStackSize = AFL.getPPRStackSize(MF);
   for (const auto &Info : CSI) {
-    if (!MFI.isScalableStackID(Info.getFrameIdx()))
+    int FI = Info.getFrameIdx();
+    if (!MFI.isScalableStackID(FI))
       continue;
 
     // Not all unwinders may know about SVE registers, so assume the lowest
@@ -1233,8 +1264,12 @@ void AArch64PrologueEmitter::emitCalleeSavedSVELocations(
       continue;
 
     StackOffset Offset =
-        StackOffset::getScalable(MFI.getObjectOffset(Info.getFrameIdx())) -
+        StackOffset::getScalable(MFI.getObjectOffset(FI)) -
         StackOffset::getFixed(AFI->getCalleeSavedStackSize(MFI));
+
+    if (AFI->hasSplitSVEObjects() &&
+        MFI.getStackID(FI) == TargetStackID::ScalableVector)
+      Offset -= PPRStackSize;
 
     CFIBuilder.insertCFIInst(
         createCFAOffset(RegInfo, Reg, Offset, IncomingVGOffsetFromDefCFA));
@@ -1512,7 +1547,73 @@ void AArch64EpilogueEmitter::emitEpilogue() {
         emitCalleeSavedSVERestores(RestoreEnd);
     }
   } else if (AFI->hasSplitSVEObjects() && SVEStackSize) {
-    reportFatalInternalError("not implemented yet");
+    assert(!AFI->isStackRealigned() && !MFI.hasVarSizedObjects() &&
+           "TODO: Support stack realigment / variable-sized objects");
+    // SplitSVEObjects. Determine the sizes and starts/ends of the ZPR and PPR
+    // areas.
+    auto ZPRCalleeSavedSize =
+        StackOffset::getScalable(AFI->getZPRCalleeSavedStackSize());
+    auto PPRCalleeSavedSize =
+        StackOffset::getScalable(AFI->getPPRCalleeSavedStackSize());
+    StackOffset PPRLocalsSize = PPRStackSize - PPRCalleeSavedSize;
+    StackOffset ZPRLocalsSize = ZPRStackSize - ZPRCalleeSavedSize;
+
+    MachineBasicBlock::iterator PPRRestoreBegin = FirstGPRRestoreI,
+                                PPRRestoreEnd = FirstGPRRestoreI;
+    if (PPRCalleeSavedSize) {
+      PPRRestoreBegin = std::prev(PPRRestoreEnd);
+      while (PPRRestoreBegin != MBB.begin() &&
+             isPartOfPPRCalleeSaves(std::prev(PPRRestoreBegin)))
+        --PPRRestoreBegin;
+    }
+
+    MachineBasicBlock::iterator ZPRRestoreBegin = PPRRestoreBegin,
+                                ZPRRestoreEnd = PPRRestoreBegin;
+    if (ZPRCalleeSavedSize) {
+      ZPRRestoreBegin = std::prev(ZPRRestoreEnd);
+      while (ZPRRestoreBegin != MBB.begin() &&
+             isPartOfZPRCalleeSaves(std::prev(ZPRRestoreBegin)))
+        --ZPRRestoreBegin;
+    }
+
+    auto CFAOffset =
+        SVEStackSize + StackOffset::getFixed(NumBytes + PrologueSaveSize);
+    if (PPRCalleeSavedSize || ZPRCalleeSavedSize) {
+      // Deallocate the non-SVE locals first before we can deallocate (and
+      // restore callee saves) from the SVE area.
+      auto NonSVELocals = StackOffset::getFixed(NumBytes);
+      emitFrameOffset(MBB, ZPRRestoreBegin, DL, AArch64::SP, AArch64::SP,
+                      NonSVELocals, TII, MachineInstr::FrameDestroy, false,
+                      false, nullptr, EmitCFI && !HasFP, CFAOffset);
+      NumBytes = 0;
+      CFAOffset -= NonSVELocals;
+    }
+
+    if (ZPRLocalsSize) {
+      emitFrameOffset(MBB, ZPRRestoreBegin, DL, AArch64::SP, AArch64::SP,
+                      ZPRLocalsSize, TII, MachineInstr::FrameDestroy, false,
+                      false, nullptr, EmitCFI && !HasFP, CFAOffset);
+      CFAOffset -= ZPRLocalsSize;
+    }
+
+    if (PPRLocalsSize || ZPRCalleeSavedSize) {
+      assert(PPRRestoreBegin == ZPRRestoreEnd &&
+             "Expected PPR restores after ZPR");
+      emitFrameOffset(MBB, PPRRestoreBegin, DL, AArch64::SP, AArch64::SP,
+                      PPRLocalsSize + ZPRCalleeSavedSize, TII,
+                      MachineInstr::FrameDestroy, false, false, nullptr,
+                      EmitCFI && !HasFP, CFAOffset);
+      CFAOffset -= PPRLocalsSize + ZPRCalleeSavedSize;
+    }
+    if (PPRCalleeSavedSize) {
+      emitFrameOffset(MBB, PPRRestoreEnd, DL, AArch64::SP, AArch64::SP,
+                      PPRCalleeSavedSize, TII, MachineInstr::FrameDestroy,
+                      false, false, nullptr, EmitCFI && !HasFP, CFAOffset);
+    }
+
+    // We only emit CFI information for ZPRs so emit CFI after the ZPR restores.
+    if (EmitCFI)
+      emitCalleeSavedSVERestores(ZPRRestoreEnd);
   }
 
   if (!HasFP) {
