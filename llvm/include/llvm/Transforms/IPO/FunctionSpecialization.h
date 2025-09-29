@@ -95,11 +95,8 @@
 namespace llvm {
 struct Spec;
 
-// Map of potential specializations for each function. The FunctionSpecializer
-// keeps the discovered specialisation opportunities for the module in a single
-// vector, where the specialisations of each function form a contiguous range.
-// This map's value is the beginning and the end of that range.
-using SpecMap = DenseMap<Function *, std::pair<unsigned, unsigned>>;
+// Map of potential specializations for each function.
+using SpecMap = DenseMap<Function *, SmallVector<unsigned>>;
 
 // Just a shorter abbreviation to improve indentation.
 using Cost = InstructionCost;
@@ -340,9 +337,9 @@ private:
 
   /// @brief Find and update calls to \p F, which match a specialization
   /// @param F Orginal function
-  /// @param Begin Start of a range of possibly matching specialisations
-  /// @param End End of a range (exclusive) of possibly matching specialisations
-  void updateCallSites(Function *F, const Spec *Begin, const Spec *End);
+  /// @param Specs Vector of possibly matching specialisations
+  void updateCallSites(Function *F, const SmallVector<unsigned> &Specs,
+                       SmallVector<Spec, 32> AllSpecs);
 };
 } // namespace llvm
 

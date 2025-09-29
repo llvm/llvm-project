@@ -843,10 +843,8 @@ bool FunctionSpecializer::run() {
   // Update the rest of the call sites - these are the recursive calls, calls
   // to discarded specialisations and calls that may match a specialisation
   // after the solver runs.
-  for (Function *F : OriginalFuncs) {
-    auto [Begin, End] = SM[F];
-    updateCallSites(F, AllSpecs.begin() + Begin, AllSpecs.begin() + End);
-  }
+  for (Function *F : OriginalFuncs)
+    updateCallSites(F, SM[F], AllSpecs);
 
   for (Function *F : Clones) {
     if (F->getReturnType()->isVoidTy())
@@ -1044,8 +1042,7 @@ bool FunctionSpecializer::findSpecializations(
 
       FoundSpecialization = true;
 
-      if (auto [It, Inserted] = SM.try_emplace(F, Index, Index + 1); !Inserted)
-        It->second.second = Index + 1;
+      SM[F].push_back(Index);
     }
   }
 
@@ -1223,8 +1220,9 @@ Constant *FunctionSpecializer::getCandidateConstant(Value *V) {
   return C;
 }
 
-void FunctionSpecializer::updateCallSites(Function *F, const Spec *Begin,
-                                          const Spec *End) {
+void FunctionSpecializer::updateCallSites(Function *F,
+                                          const SmallVector<unsigned> &Specs,
+                                          SmallVector<Spec, 32> AllSpecs) {
   // Collect the call sites that need updating.
   SmallVector<CallBase *> ToUpdate;
   for (User *U : F->users())
@@ -1239,7 +1237,8 @@ void FunctionSpecializer::updateCallSites(Function *F, const Spec *Begin,
 
     // Find the best matching specialisation.
     const Spec *BestSpec = nullptr;
-    for (const Spec &S : make_range(Begin, End)) {
+    for (const unsigned SI : Specs) {
+      const auto &S = AllSpecs[SI];
       if (!S.Clone || (BestSpec && S.Score <= BestSpec->Score))
         continue;
 
