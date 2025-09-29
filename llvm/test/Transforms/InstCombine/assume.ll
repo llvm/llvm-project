@@ -104,7 +104,7 @@ define i32 @simple(i32 %a) #1 {
 ; CHECK-LABEL: @simple(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 4
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 [[A]]
+; CHECK-NEXT:    ret i32 4
 ;
   %cmp = icmp eq i32 %a, 4
   tail call void @llvm.assume(i1 %cmp)
@@ -1056,6 +1056,34 @@ define i1 @neg_assume_trunc_eq_one(i8 %x) {
   ret i1 %q
 }
 
+; Test AMDGPU ballot uniformity pattern optimization  
+; This demonstrates that assume(ballot(cmp) == -1) enables the optimization
+; of cmp to true, which then optimizes the branch condition
+define void @assume_ballot_uniform(i32 %x) {
+; CHECK-LABEL: @assume_ballot_uniform(
+; CHECK-NEXT:    [[BALLOT:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
+; CHECK-NEXT:    [[ALL:%.*]] = icmp eq i64 [[BALLOT]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ALL]])
+; CHECK-NEXT:    br i1 true, label [[FOO:%.*]], label [[BAR:%.*]]
+; CHECK:       foo:
+; CHECK-NEXT:    ret void
+; CHECK:       bar:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp eq i32 %x, 0
+  %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cmp)
+  %all = icmp eq i64 %ballot, -1
+  call void @llvm.assume(i1 %all)
+  br i1 %cmp, label %foo, label %bar
+
+foo:
+  ret void
+
+bar:
+  ret void
+}
+
+declare i64 @llvm.amdgcn.ballot.i64(i1)
 declare void @use(i1)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
