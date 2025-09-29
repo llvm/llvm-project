@@ -63,24 +63,21 @@ void AvoidDefaultLambdaCaptureCheck::check(
                    "lambda default captures are discouraged; "
                    "prefer to capture specific variables explicitly");
 
-  // Build the complete replacement capture list
   std::vector<std::string> AllCaptures;
 
-  // Add explicit captures first (preserve their order)
   for (const auto &Capture : Lambda->explicit_captures()) {
     if (const auto CaptureText = generateImplicitCaptureText(Capture)) {
       AllCaptures.push_back(CaptureText.value());
     }
   }
 
-  // Add implicit captures (convert to explicit)
   for (const auto &Capture : Lambda->implicit_captures()) {
     if (const auto CaptureText = generateImplicitCaptureText(Capture)) {
       AllCaptures.push_back(CaptureText.value());
     }
   }
 
-  // Build the final capture list
+  // Replace with new capture list
   std::string ReplacementText;
   if (AllCaptures.empty()) {
     ReplacementText = "[]";
@@ -88,7 +85,6 @@ void AvoidDefaultLambdaCaptureCheck::check(
     ReplacementText = "[" + llvm::join(AllCaptures, ", ") + "]";
   }
 
-  // Replace the entire capture list with the explicit version
   SourceRange IntroducerRange = Lambda->getIntroducerRange();
   if (IntroducerRange.isValid()) {
     Diag << FixItHint::CreateReplacement(IntroducerRange, ReplacementText);
