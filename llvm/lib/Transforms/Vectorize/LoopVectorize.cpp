@@ -4372,22 +4372,29 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
       vputils::getSCEVExprForVPValue(getPlanFor(MainLoopVF).getTripCount(), SE);
   assert(!isa<SCEVCouldNotCompute>(TC) && "Trip count SCEV must be computable");
 
-  // TODO: Maybe this could be removed when SCEV can evaluate expressions with
-  // 'vscale'.
-  // If TC is multiple of vscale, try to get estimated value:
-  if (match(TC, m_scev_Mul(m_SCEV(), m_SCEVVScale()))) {
-    if (std::optional<ElementCount> BestKnownTC =
-            getSmallBestKnownTC(PSE, OrigLoop)) {
-      unsigned EstimatedRuntimeTC =
-          estimateElementCount(*BestKnownTC, CM.getVScaleForTuning());
-      TC = SE.getConstant(TCType, EstimatedRuntimeTC);
+  // Calculate runtime estimated value for TC/MainLoopVF only when they are in
+  // different numerical space.
+  // TODO: This is a workaround until SCEV can evaluate vscale-based
+  // expressions.
+  if (match(TC, m_scev_Mul(m_SCEV(), m_SCEVVScale())) &&
+      MainLoopVF.isScalable()) {
+    RemainingIterations =
+        SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
+  } else {
+    if (match(TC, m_scev_Mul(m_SCEV(), m_SCEVVScale()))) {
+      if (std::optional<ElementCount> BestKnownTC =
+              getSmallBestKnownTC(PSE, OrigLoop)) {
+        unsigned EstimatedRuntimeTC =
+            estimateElementCount(*BestKnownTC, CM.getVScaleForTuning());
+        TC = SE.getConstant(TCType, EstimatedRuntimeTC);
+      }
     }
+    RemainingIterations =
+        SE.getURemExpr(TC, SE.getElementCount(TCType, EstimatedRuntimeVF * IC));
   }
-  RemainingIterations =
-      SE.getURemExpr(TC, SE.getElementCount(TCType, EstimatedRuntimeVF * IC));
 
   // No iterations left to process in the epilogue.
-  if (RemainingIterations->isZero())
+  if (!RemainingIterations || RemainingIterations->isZero())
     return Result;
 
   if (MainLoopVF.isFixed()) {
