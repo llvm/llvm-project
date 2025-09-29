@@ -30,8 +30,7 @@ class raw_ostream;
 }
 namespace Fortran::parser {
 struct Expr;
-struct OpenMPDeclareReductionConstruct;
-struct OmpMetadirectiveDirective;
+struct OpenMPDeclarativeConstruct;
 }
 
 namespace Fortran::semantics {
@@ -736,9 +735,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GenericDetails &);
 class UserReductionDetails {
 public:
   using TypeVector = std::vector<const DeclTypeSpec *>;
-  using DeclInfo = std::variant<const parser::OpenMPDeclareReductionConstruct *,
-      const parser::OmpMetadirectiveDirective *>;
-  using DeclVector = std::vector<DeclInfo>;
+  using DeclVector = std::vector<const parser::OpenMPDeclarativeConstruct *>;
 
   UserReductionDetails() = default;
 
@@ -756,7 +753,9 @@ public:
     return false;
   }
 
-  void AddDecl(const DeclInfo &decl) { declList_.emplace_back(decl); }
+  void AddDecl(const parser::OpenMPDeclarativeConstruct *decl) {
+    declList_.emplace_back(decl);
+  }
   const DeclVector &GetDeclList() const { return declList_; }
 
 private:

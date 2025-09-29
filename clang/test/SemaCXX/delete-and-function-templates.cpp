@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -verify  -emit-llvm-only %s
-// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only  -fdelayed-template-parsing %s 
-// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only  -fms-extensions %s 
-// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only  -fdelayed-template-parsing -fms-extensions %s 
+// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only  -fdelayed-template-parsing %s
+// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only  -fms-extensions %s
+// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only  -fdelayed-template-parsing -fms-extensions %s
 
 template<class T, class U> struct is_same { enum { value = false }; };
 template<class T> struct is_same<T, T> { enum { value = true }; };
@@ -53,7 +53,7 @@ namespace test_explicit_specialization_of_member {
 namespace ns1 {
 template<class T> struct X {
   int* f(T) = delete;
-}; 
+};
 template<> int* X<int>::f(int) { }
 
 template<class T> decltype(X<T>{}.f(T{})) g(T); // expected-note{{candidate}}
@@ -69,7 +69,7 @@ void foo() {
 namespace ns2 {
 struct X {
 template<class T> double* f(T) = delete;
-}; 
+};
 template<> double* X::f(int);
 
 template<class T> decltype(X{}.f(T{})) g(T); // expected-note{{candidate}}
@@ -105,8 +105,8 @@ void foo() {
    int *ip4 = g2(3, 3); //expected-error{{ambiguous}}
   }
   {
-   int *ip3 = g2(3.14, 3.14); 
-   int *ip4 = g2(3, 3.14); 
+   int *ip3 = g2(3.14, 3.14);
+   int *ip4 = g2(3, 3.14);
   }
 }
 
