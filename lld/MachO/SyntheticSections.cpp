@@ -1826,6 +1826,7 @@ void DeduplicatedCStringSection::finalizeContents() {
       if (it == tailMergeMap.end())
         continue;
       const auto &[superString, tailOffset] = it->second;
+      assert(superString.val().ends_with(s.val()));
       assert(!tailMergeMap.count(superString));
       auto &outSecOff = stringOffsetMap[s];
       outSecOff = stringOffsetMap.at(superString) + tailOffset;
