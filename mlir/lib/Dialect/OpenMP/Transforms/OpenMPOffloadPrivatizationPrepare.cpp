@@ -119,7 +119,7 @@ class PrepareForOMPOffloadPrivatizationPass
         // simply record the newly allocated malloc location as the
         // new private variable. If, however, the type is not a pointer
         // then, we need to load the value from the newly allocated
-        // location. We'll inser that load later after we have updated
+        // location. We'll insert that load later after we have updated
         // the malloc'd location with the contents of the original
         // variable.
         if (!isPrivatizedByValue)
@@ -360,6 +360,10 @@ private:
     return mallocCallOp.getResult();
   }
 
+  // Create a function for srcRegion and attribute it to be always_inline.
+  // The big assumption here is that srcRegion is one of init or copy regions
+  // of a omp::PrivateClauseop. Accordingly, the return type is assumed
+  // to be the same as the types of the two arguments of the region itself.
   LLVM::LLVMFuncOp createFuncOpForRegion(Location loc, ModuleOp mod,
                                          Region &srcRegion,
                                          llvm::StringRef funcName,
@@ -377,7 +381,6 @@ private:
     LLVM::LLVMFunctionType funcType =
         LLVM::LLVMFunctionType::get(resultType, paramTypes);
 
-    LDBG() << "funcType is " << funcType << "\n";
     LLVM::LLVMFuncOp func =
         LLVM::LLVMFuncOp::create(rewriter, loc, funcName, funcType);
     func.setAlwaysInline(true);
@@ -392,8 +395,6 @@ private:
                                                       yieldOp.getOperands());
       }
     }
-    LDBG() << funcName << " is \n" << func << "\n";
-    LLVM_DEBUG(llvm::dbgs() << "Module is \n" << mod << "\n");
     return func;
   }
 };
