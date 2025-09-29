@@ -14,6 +14,9 @@ public:
 
   bool shouldRecordCodeRelocation(unsigned Type) const override;
 
+  bool evaluateMemOperandTarget(const MCInst &Inst, uint64_t &Target,
+                                uint64_t Address = 0,
+                                uint64_t Size = 0) const override;
   bool hasPCRelOperand(const MCInst &I) const override;
   int getPCRelOperandNum(const MCInst &Inst) const;
 

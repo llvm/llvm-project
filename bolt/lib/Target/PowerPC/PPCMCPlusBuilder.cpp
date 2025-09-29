@@ -67,15 +67,24 @@ bool PPCMCPlusBuilder::shouldRecordCodeRelocation(unsigned Type) const {
   }
 }
 
+bool PPCMCPlusBuilder::evaluateMemOperandTarget(const MCInst &, uint64_t &,
+                                                uint64_t, uint64_t) const {
+  LLVM_DEBUG(dbgs() << "PPC: no PC-rel mem operand on this target\n");
+  return false;
+}
+
 bool PPCMCPlusBuilder::hasPCRelOperand(const MCInst &I) const {
-  switch (opc(I)) {
-  case PPC::BL:
-  case PPC::BLA:
-  case PPC::B:
-  case PPC::BA:
-  case PPC::BC:
-  case PPC::BCL:
+  switch (I.getOpcode()) {
+  case PPC::BL: // relative call (AA=0)
+  case PPC::B:  // relative branch (AA=0)
+  case PPC::BC: // conditional relative (AA=0)
     return true;
+
+  // Absolute branches/calls (AA=1): no PC-relative operand.
+  case PPC::BA:
+  case PPC::BLA:
+    return false;
+
   default:
     return false;
   }
