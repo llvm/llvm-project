@@ -237,33 +237,17 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp);
 }
 
-static bool matchingIteratorTypes(ArrayRef<utils::IteratorType> iteratorTypes,
-ArrayRef<mlir::utils::IteratorType> expectedIteratorTypes) {
-  if (iteratorTypes.size() != expectedIteratorTypes.size()) return false;
-  for (auto [orig, expected] : llvm::zip_equal(iteratorTypes, expectedIteratorTypes)) {
-    if (orig != expected) return false;
-  }
-  return true;
-}
-
 static mlir::AffineExpr getAffineMapDim(ArrayAttr indexingMaps,
                                         uint32_t mapIndex, uint32_t dimIndex) {
   auto affineMap = cast<AffineMapAttr>(indexingMaps[mapIndex]).getValue();
-  // uint32_t nResults = affineMap.getNumResults();
-  // llvm::outs()<<affineMap<<"\n";
-  // llvm::outs()<<"Total result = "<<affineMap.getNumResults()<<"\n";
-  // llvm::outs()<<"N = "<<nResults<<", dimIndex = "<<dimIndex<<"\n";
-  // llvm::outs().flush();
   return affineMap.getResult(dimIndex);
 }
 
 static std::string inferBasedOnRank2ConvIteratorTypes(GenericOp genericOp) {
-  SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
-  SmallVector<utils::IteratorType> expectedIteratorTypes = {
-    utils::IteratorType::parallel, utils::IteratorType::reduction
-  };
-
-  if (matchingIteratorTypes(iteratorTypes, expectedIteratorTypes))
+  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
+  if (indexingMaps.size() != 3) return "";
+  unsigned iIndex = 0, fIndex = 1, oIndex = 2;
+  if (getAffineMapDim(indexingMaps, iIndex, 0) == (getAffineMapDim(indexingMaps, fIndex, 0) + getAffineMapDim(indexingMaps, oIndex, 0)))
     return "linalg.conv_1d";
   return "";
 }
@@ -271,74 +255,187 @@ static std::string inferBasedOnRank2ConvIteratorTypes(GenericOp genericOp) {
 static std::string inferBasedOnRank4ConvIteratorTypes(GenericOp genericOp) {
   ArrayAttr indexingMaps = genericOp.getIndexingMaps();
   if (indexingMaps.size() != 3) return "";
-  SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
-  // Conv 1D
-  // depthwise_conv_1d_ncw_cw
-  // depthwise_conv_1d_nwc_wc
-  // ["parallel", "parallel", "parallel", "reduction"]
-  SmallVector<utils::IteratorType> expectedIteratorTypes = {
-    utils::IteratorType::parallel, utils::IteratorType::parallel,
-    utils::IteratorType::parallel, utils::IteratorType::reduction
-  };
-  // inputMapIndex = 0, filterMapIndex = 1, outputMapIndex = 2;
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  if (matchingIteratorTypes(iteratorTypes, expectedIteratorTypes)) {
-    if (getAffineMapDim(indexingMaps, fIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 1))
-      return "linalg.depthwise_conv_1d_ncw_cw";
-    else if (getAffineMapDim(indexingMaps, fIndex, 1) == getAffineMapDim(indexingMaps, oIndex, 2))
-      return "linalg.depthwise_conv_1d_nwc_wc";
-  }
-
-  //
-  expectedIteratorTypes[2] = utils::IteratorType::reduction;
-  if (matchingIteratorTypes(iteratorTypes, expectedIteratorTypes)) {
+  // depthwise_conv_1d_ncw_cw
+  // #map = affine_map<(d0, d1, d2, d3) -> (d0, d2, d1 + d3)>
+  // #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d2, d1)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == getAffineMapDim(indexingMaps, fIndex, 0) && getAffineMapDim(indexingMaps, iIndex, 1) == getAffineMapDim(indexingMaps, oIndex, 1)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == (getAffineMapDim(indexingMaps, fIndex, 1) + getAffineMapDim(indexingMaps, oIndex, 2))))
+    return "linalg.depthwise_conv_1d_ncw_cw";
+  // depthwise_conv_1d_nwc_wc
+  // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
+  // #map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == getAffineMapDim(indexingMaps, fIndex, 1) && getAffineMapDim(indexingMaps, iIndex, 2) == getAffineMapDim(indexingMaps, oIndex, 2)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == (getAffineMapDim(indexingMaps, fIndex, 0) + getAffineMapDim(indexingMaps, oIndex, 1))))
+    return "linalg.depthwise_conv_1d_nwc_wc";
+  // conv_2d
+  // #map = affine_map<(d0, d1, d2, d3) -> (d0 + d2, d1 + d3)>
+  // #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == (getAffineMapDim(indexingMaps, fIndex, 0) + getAffineMapDim(indexingMaps, oIndex, 0))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == (getAffineMapDim(indexingMaps, fIndex, 1) + getAffineMapDim(indexingMaps, oIndex, 1))))
     return "linalg.conv_2d";
-  }
   return "";
 }
 
 static std::string inferBasedOnRank5ConvIteratorTypes(GenericOp genericOp) {
   ArrayAttr indexingMaps = genericOp.getIndexingMaps();
   if (indexingMaps.size() != 3) return "";
-  SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
-  // "parallel", "parallel", "parallel", "reduction", "reduction"]
-  SmallVector<utils::IteratorType> expectedIteratorTypes = {
-    utils::IteratorType::parallel, utils::IteratorType::parallel,
-    utils::IteratorType::parallel, utils::IteratorType::parallel,
-    utils::IteratorType::reduction
-  };
-  if (matchingIteratorTypes(iteratorTypes, expectedIteratorTypes))
-    return "linalg.depthwise_conv_1d_nwc_wcm";
-
-  expectedIteratorTypes[3] = utils::IteratorType::reduction;
-  // inputMapIndex = 0, filterMapIndex = 1, outputMapIndex = 2;
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  if (matchingIteratorTypes(iteratorTypes, expectedIteratorTypes)) {
-    if (getAffineMapDim(indexingMaps, fIndex, 2) == getAffineMapDim(indexingMaps, oIndex, 2))
-      return "linalg.conv_1d_nwc_wcf";
-    else if (getAffineMapDim(indexingMaps, fIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 1))
-      return "linalg.conv_1d_ncw_fcw";
-  }
+  // depthwise_conv_1d_nwc_wcm
+  // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1 + d4, d2)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d4, d2, d3)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == (getAffineMapDim(indexingMaps, fIndex, 0) + getAffineMapDim(indexingMaps, oIndex, 1))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == getAffineMapDim(indexingMaps, fIndex, 1) && getAffineMapDim(indexingMaps, iIndex, 2) == getAffineMapDim(indexingMaps, oIndex, 2)) &&
+      (getAffineMapDim(indexingMaps, fIndex, 2) == getAffineMapDim(indexingMaps, oIndex, 3)))
+    return "linalg.depthwise_conv_1d_nwc_wcm";
+  // conv_1d_nwc_wcf
+  // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1 + d3, d4)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d3, d4, d2)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == (getAffineMapDim(indexingMaps, fIndex, 0) + getAffineMapDim(indexingMaps, oIndex, 1))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == getAffineMapDim(indexingMaps, fIndex, 1)) &&
+      (getAffineMapDim(indexingMaps, fIndex, 2) == getAffineMapDim(indexingMaps, oIndex, 2)))
+    return "linalg.conv_1d_nwc_wcf";
+  // conv_1d_ncw_fcw
+  // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d3, d2 + d4)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d1, d3, d4)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == getAffineMapDim(indexingMaps, fIndex, 1)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == (getAffineMapDim(indexingMaps, fIndex, 2) + getAffineMapDim(indexingMaps, oIndex, 2))) &&
+      (getAffineMapDim(indexingMaps, fIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 1)))
+    return "linalg.conv_1d_ncw_fcw";
   return "";
 }
 
 static std::string inferBasedOnRank7ConvIteratorTypes(GenericOp genericOp) {
-  SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
-  SmallVector<utils::IteratorType> expectedIteratorTypes = {
-    utils::IteratorType::parallel, utils::IteratorType::reduction
-  };
-  if (matchingIteratorTypes(iteratorTypes, expectedIteratorTypes))
-    return "linalg.conv_1d";
+  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
+  if (indexingMaps.size() < 3) return "";
+  unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
+  // conv_2d_nhwc_fhwc
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3, d4, d5, d6)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
+  if (indexingMaps.size() == 3 &&
+      (getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == (getAffineMapDim(indexingMaps, fIndex, 1) + getAffineMapDim(indexingMaps, oIndex, 1))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == (getAffineMapDim(indexingMaps, fIndex, 2) + getAffineMapDim(indexingMaps, oIndex, 2))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 3) == getAffineMapDim(indexingMaps, fIndex, 3)) &&
+      (getAffineMapDim(indexingMaps, fIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 3)))
+    return "linalg.conv_2d_nhwc_fhwc";
+  // conv_2d_nhwc_hwcf
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == (getAffineMapDim(indexingMaps, fIndex, 0) + getAffineMapDim(indexingMaps, oIndex, 1))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == (getAffineMapDim(indexingMaps, fIndex, 1) + getAffineMapDim(indexingMaps, oIndex, 2))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 3) == getAffineMapDim(indexingMaps, fIndex, 2)) &&
+      (getAffineMapDim(indexingMaps, fIndex, 3) == getAffineMapDim(indexingMaps, oIndex, 3)))
+    return "linalg.conv_2d_nhwc_hwcf";
+  // conv_2d_nchw_fchw
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d4, d2 + d5, d3 + d6)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d1, d4, d5, d6)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
+  if (indexingMaps.size() == 3 &&
+      (getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == getAffineMapDim(indexingMaps, fIndex, 1)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == (getAffineMapDim(indexingMaps, fIndex, 2) + getAffineMapDim(indexingMaps, oIndex, 2))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 3) == (getAffineMapDim(indexingMaps, fIndex, 3) + getAffineMapDim(indexingMaps, oIndex, 3))) &&
+      (getAffineMapDim(indexingMaps, fIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 1)))
+    return "linalg.conv_2d_nchw_fchw";
+  // conv_2d_nhwc_fhwc_q (same as conv_2d_nhwc_fhwc + check total 4 indexing maps)
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3, d4, d5, d6)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> ()>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
+  if (indexingMaps.size() == 5 &&
+      (indexingMaps[2] == indexingMaps[3] && cast<AffineMapAttr>(indexingMaps[2]).getValue().getNumResults() == 0) &&
+      (getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == (getAffineMapDim(indexingMaps, fIndex, 1) + getAffineMapDim(indexingMaps, oIndex, 1))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == (getAffineMapDim(indexingMaps, fIndex, 2) + getAffineMapDim(indexingMaps, oIndex, 2))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 3) == getAffineMapDim(indexingMaps, fIndex, 3)) &&
+      (getAffineMapDim(indexingMaps, fIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 3)))
+    return "linalg.conv_2d_nhwc_fhwc_q";
+  // conv_2d_nchw_fchw_q (same as conv_2d_nchw_fchw + check total 4 indexing maps)
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d4, d2 + d5, d3 + d6)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d1, d4, d5, d6)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> ()>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
+  llvm::outs()<<"Indexing map size = "<<indexingMaps.size()<<"\n";
+  llvm::outs()<<"(indexingMaps[2] == indexingMaps[3]) == "<<(indexingMaps[2] == indexingMaps[3])<<"\n";
+  llvm::outs()<<"cast<AffineMapAttr>(indexingMaps[2]).getValue().getNumResults() = "<<cast<AffineMapAttr>(indexingMaps[2]).getValue().getNumResults()<<"\n";
+  if (indexingMaps.size() == 5 &&
+      (indexingMaps[2] == indexingMaps[3] && cast<AffineMapAttr>(indexingMaps[2]).getValue().getNumResults() == 0) &&
+      (getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == getAffineMapDim(indexingMaps, fIndex, 1)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == (getAffineMapDim(indexingMaps, fIndex, 2) + getAffineMapDim(indexingMaps, oIndex, 2))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 3) == (getAffineMapDim(indexingMaps, fIndex, 3) + getAffineMapDim(indexingMaps, oIndex, 3))) &&
+      (getAffineMapDim(indexingMaps, fIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 1)))
+    return "linalg.conv_2d_nchw_fchw_q";
   return "";
 }
 
 static std::string inferBasedOnRank8ConvIteratorTypes(GenericOp genericOp) {
-  SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
-  SmallVector<utils::IteratorType> expectedIteratorTypes = {
-    utils::IteratorType::parallel, utils::IteratorType::reduction
-  };
-  if (matchingIteratorTypes(iteratorTypes, expectedIteratorTypes))
-    return "linalg.conv_1d";
+  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
+  if (indexingMaps.size() < 3) return "";
+  unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
+  // conv_2d_ngchw_fgchw
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d5, d3 + d6, d4 + d7)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d2, d1, d5, d6, d7)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == getAffineMapDim(indexingMaps, fIndex, 1) && getAffineMapDim(indexingMaps, iIndex, 1) == getAffineMapDim(indexingMaps, oIndex, 1)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == getAffineMapDim(indexingMaps, fIndex, 2)) && 
+      (getAffineMapDim(indexingMaps, iIndex, 3) == (getAffineMapDim(indexingMaps, fIndex, 3) + getAffineMapDim(indexingMaps, oIndex, 3))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 4) == (getAffineMapDim(indexingMaps, fIndex, 4) + getAffineMapDim(indexingMaps, oIndex, 4))) &&
+      (getAffineMapDim(indexingMaps, fIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 1)))
+    return "linalg.conv_2d_ngchw_fgchw";
+  // conv_2d_ngchw_gfchw
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d5, d3 + d6, d4 + d7)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d1, d2, d5, d6, d7)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
+  if (indexingMaps.size() == 3 &&
+      (getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == getAffineMapDim(indexingMaps, fIndex, 0) && getAffineMapDim(indexingMaps, iIndex, 1) == getAffineMapDim(indexingMaps, oIndex, 1)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == getAffineMapDim(indexingMaps, fIndex, 2)) && 
+      (getAffineMapDim(indexingMaps, iIndex, 3) == (getAffineMapDim(indexingMaps, fIndex, 3) + getAffineMapDim(indexingMaps, oIndex, 3))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 4) == (getAffineMapDim(indexingMaps, fIndex, 4) + getAffineMapDim(indexingMaps, oIndex, 4))) &&
+      (getAffineMapDim(indexingMaps, fIndex, 1) == getAffineMapDim(indexingMaps, oIndex, 2)))
+    return "linalg.conv_2d_ngchw_gfchw";
+  // conv_2d_ngchw_gfchw_q
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d5, d3 + d6, d4 + d7)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d1, d2, d5, d6, d7)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> ()>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
+  if (indexingMaps.size() == 5 &&
+      (indexingMaps[2] == indexingMaps[3] && cast<AffineMapAttr>(indexingMaps[2]).getValue().getNumResults() == 0) &&
+      (getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == getAffineMapDim(indexingMaps, fIndex, 0) && getAffineMapDim(indexingMaps, iIndex, 1) == getAffineMapDim(indexingMaps, oIndex, 1)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == getAffineMapDim(indexingMaps, fIndex, 2)) && 
+      (getAffineMapDim(indexingMaps, iIndex, 3) == (getAffineMapDim(indexingMaps, fIndex, 3) + getAffineMapDim(indexingMaps, oIndex, 3))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 4) == (getAffineMapDim(indexingMaps, fIndex, 4) + getAffineMapDim(indexingMaps, oIndex, 4))) &&
+      (getAffineMapDim(indexingMaps, fIndex, 1) == getAffineMapDim(indexingMaps, oIndex, 2)))
+    return "linalg.conv_2d_ngchw_gfchw_q";
+  // conv_2d_nhwgc_gfhwc
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3, d7)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d3, d4, d5, d6, d7)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == (getAffineMapDim(indexingMaps, fIndex, 2) + getAffineMapDim(indexingMaps, oIndex, 1))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == (getAffineMapDim(indexingMaps, fIndex, 3) + getAffineMapDim(indexingMaps, oIndex, 2))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 3) == getAffineMapDim(indexingMaps, fIndex, 0) && getAffineMapDim(indexingMaps, iIndex, 3) == getAffineMapDim(indexingMaps, oIndex, 3)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 4) == getAffineMapDim(indexingMaps, fIndex, 4)) && 
+      (getAffineMapDim(indexingMaps, fIndex, 1) == getAffineMapDim(indexingMaps, oIndex, 4)))
+    return "linalg.conv_2d_nhwgc_gfhwc";
   return "";
 }
 
@@ -382,8 +479,28 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
     namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv1DNcwCwOp>(genericOp, resultTypes, inputs, outputs);
   } else if (convKind == "linalg.depthwise_conv_1d_nwc_wc") {
     namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv1DNwcWcOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.depthwise_conv_1d_nwc_wcm") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv1DNwcWcmOp>(genericOp, resultTypes, inputs, outputs);
   } else if (convKind == "linalg.conv_2d") {
     namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_2d_nhwc_fhwc") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNhwcFhwcOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_2d_nhwc_hwcf") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNhwcHwcfOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_2d_nchw_fchw") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNchwFchwOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_2d_nhwc_fhwc_q") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNhwcFhwcQOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_2d_nchw_fchw_q") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNchwFchwQOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_2d_ngchw_fgchw") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNgchwFgchwOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_2d_ngchw_gfchw") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNgchwGfchwOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_2d_ngchw_gfchw_q") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNgchwGfchwQOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_2d_nhwgc_gfhwc") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNhwgcGfhwcOp>(genericOp, resultTypes, inputs, outputs);
   }
   return namedOp;
 
