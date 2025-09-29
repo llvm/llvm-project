@@ -1835,9 +1835,10 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   if (C->getArgs().hasFlag(options::OPT_fmodules_driver,
                            options::OPT_fno_modules_driver, false)) {
     Diags.Report(diag::remark_performing_driver_managed_module_build);
-    // TODO: Once -fmodules-driver is no longer experimental, move
-    // TODO: The detection logic to implicitly enable -fmodules-driver is kept
-    // here only for diagnostics until the feature is no longer experimental.
+    // TODO: When -fmodules-driver is no longer experimental, allow implicit
+    // activation of the modules driver. For now, keep the detection of whether
+    // the modules driver should be enabled here for  diagnostics only, and do
+    // not implicitly enable the feature.
     auto EnableOrErr = modules::shouldUseModulesDriver(Inputs, getVFS(), Diags);
     if (!EnableOrErr) {
       llvm::handleAllErrors(
