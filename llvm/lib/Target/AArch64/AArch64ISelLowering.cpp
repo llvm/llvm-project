@@ -25524,7 +25524,7 @@ SDValue performCONDCombine(SDNode *N,
     APInt M = AndNode->getConstantOperandAPInt(1);
     APInt C = SubsNode->getConstantOperandAPInt(1);
 
-    if (M.isMask() && !(C & ~M) && (C & 0xfff) != C && (C & 0xfff000) != C) {
+    if (M.isMask() && C.isSubsetOf(M) && !isLegalArithImmed(C.getZExtValue())) {
       SDLoc DL(SubsNode);
       EVT VT = SubsNode->getValueType(0);
       unsigned ShiftAmt = M.countl_zero();
