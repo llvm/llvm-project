@@ -2,9 +2,9 @@
 # Then manually tempered with some of the value of the attribute
 # I hope there are easier ways to construct tests like this.
 
-# RUN: yaml2obj %s -o verify_stmt_seq.o
-# RUN: not llvm-dwarfdump -verify -debug-info verify_stmt_seq.o | FileCheck %s --check-prefix=CHECK_INVALID --implicit-check-not=error:
-# RUN: llvm-dwarfdump -debug-line -verbose -debug-info verify_stmt_seq.o | FileCheck %s --check-prefix=CHECK_DEBUG_LINE
+# RUN: yaml2obj %s -o %t.o
+# RUN: not llvm-dwarfdump -verify -debug-info %t.o | FileCheck %s --check-prefix=CHECK_INVALID --implicit-check-not=error:
+# RUN: llvm-dwarfdump -debug-line -verbose -debug-info %t.o | FileCheck %s --check-prefix=CHECK_DEBUG_LINE
 
 # CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset 0x00000000 is not within the line table bounds [0x00000034, 0x000000fd)
 # CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]     (0x00000000)
