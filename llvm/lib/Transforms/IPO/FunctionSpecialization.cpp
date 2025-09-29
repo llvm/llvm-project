@@ -668,6 +668,61 @@ static unsigned getCostValue(const Cost &C) {
   return static_cast<unsigned>(Value);
 }
 
+bool FunctionSpecializer::runOneSpec(Function &F, SpecMap &SM,
+                                     SmallVectorImpl<Spec> &AllSpecs) {
+  if (!isCandidateFunction(&F))
+    return false;
+
+  auto [It, Inserted] = FunctionMetrics.try_emplace(&F);
+  CodeMetrics &Metrics = It->second;
+  // Analyze the function.
+  if (Inserted) {
+    SmallPtrSet<const Value *, 32> EphValues;
+    CodeMetrics::collectEphemeralValues(&F, &GetAC(F), EphValues);
+    for (BasicBlock &BB : F)
+      Metrics.analyzeBasicBlock(&BB, GetTTI(F), EphValues);
+  }
+
+  // When specializing literal constants is enabled, always require functions
+  // to be larger than MinFunctionSize, to prevent excessive specialization.
+  const bool RequireMinSize =
+      !ForceSpecialization &&
+      (SpecializeLiteralConstant || !F.hasFnAttribute(Attribute::NoInline));
+
+  // If the code metrics reveal that we shouldn't duplicate the function,
+  // or if the code size implies that this function is easy to get inlined,
+  // then we shouldn't specialize it.
+  if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid() ||
+      (RequireMinSize && Metrics.NumInsts < MinFunctionSize))
+    return false;
+
+  // When specialization on literal constants is disabled, only consider
+  // recursive functions when running multiple times to save wasted analysis,
+  // as we will not be able to specialize on any newly found literal constant
+  // return values.
+  if (!SpecializeLiteralConstant && !Inserted && !Metrics.isRecursive)
+    return false;
+
+  int64_t Sz = Metrics.NumInsts.getValue();
+  assert(Sz > 0 && "CodeSize should be positive");
+  // It is safe to down cast from int64_t, NumInsts is always positive.
+  unsigned FuncSize = static_cast<unsigned>(Sz);
+
+  LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization cost for "
+                    << F.getName() << " is " << FuncSize << "\n");
+
+  if (Inserted && Metrics.isRecursive)
+    promoteConstantStackValues(&F);
+
+  if (!findSpecializations(&F, FuncSize, AllSpecs, SM)) {
+    LLVM_DEBUG(
+        dbgs() << "FnSpecialization: No possible specializations found for "
+               << F.getName() << "\n");
+    return false;
+  }
+  return true;
+}
+
 /// Attempt to specialize functions in the module to enable constant
 /// propagation across function boundaries.
 ///
@@ -678,58 +733,8 @@ bool FunctionSpecializer::run() {
   SmallVector<Spec, 32> AllSpecs;
   unsigned NumCandidates = 0;
   for (Function &F : M) {
-    if (!isCandidateFunction(&F))
-      continue;
-
-    auto [It, Inserted] = FunctionMetrics.try_emplace(&F);
-    CodeMetrics &Metrics = It->second;
-    //Analyze the function.
-    if (Inserted) {
-      SmallPtrSet<const Value *, 32> EphValues;
-      CodeMetrics::collectEphemeralValues(&F, &GetAC(F), EphValues);
-      for (BasicBlock &BB : F)
-        Metrics.analyzeBasicBlock(&BB, GetTTI(F), EphValues);
-    }
-
-    // When specializing literal constants is enabled, always require functions
-    // to be larger than MinFunctionSize, to prevent excessive specialization.
-    const bool RequireMinSize =
-        !ForceSpecialization &&
-        (SpecializeLiteralConstant || !F.hasFnAttribute(Attribute::NoInline));
-
-    // If the code metrics reveal that we shouldn't duplicate the function,
-    // or if the code size implies that this function is easy to get inlined,
-    // then we shouldn't specialize it.
-    if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid() ||
-        (RequireMinSize && Metrics.NumInsts < MinFunctionSize))
-      continue;
-
-    // When specialization on literal constants is disabled, only consider
-    // recursive functions when running multiple times to save wasted analysis,
-    // as we will not be able to specialize on any newly found literal constant
-    // return values.
-    if (!SpecializeLiteralConstant && !Inserted && !Metrics.isRecursive)
-      continue;
-
-    int64_t Sz = Metrics.NumInsts.getValue();
-    assert(Sz > 0 && "CodeSize should be positive");
-    // It is safe to down cast from int64_t, NumInsts is always positive.
-    unsigned FuncSize = static_cast<unsigned>(Sz);
-
-    LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization cost for "
-                      << F.getName() << " is " << FuncSize << "\n");
-
-    if (Inserted && Metrics.isRecursive)
-      promoteConstantStackValues(&F);
-
-    if (!findSpecializations(&F, FuncSize, AllSpecs, SM)) {
-      LLVM_DEBUG(
-          dbgs() << "FnSpecialization: No possible specializations found for "
-                 << F.getName() << "\n");
-      continue;
-    }
-
-    ++NumCandidates;
+    if (runOneSpec(F, SM, AllSpecs))
+      ++NumCandidates;
   }
 
   if (!NumCandidates) {

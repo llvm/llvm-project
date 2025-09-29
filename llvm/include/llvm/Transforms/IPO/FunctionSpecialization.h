@@ -307,6 +307,13 @@ private:
   bool findSpecializations(Function *F, unsigned FuncSize,
                            SmallVectorImpl<Spec> &AllSpecs, SpecMap &SM);
 
+  /// @brief Find specialization opportunities for a given function.
+  /// @param F Function to specialize
+  /// @param SM  A map for a function's specialisation range
+  /// @param AllSpecs A vector to add potential specializations to.
+  /// @return True, if any potential specializations were found
+  bool runOneSpec(Function &F, SpecMap &SM, SmallVectorImpl<Spec> &AllSpecs);
+
   /// Compute the inlining bonus for replacing argument \p A with constant \p C.
   unsigned getInliningBonus(Argument *A, Constant *C);
 
