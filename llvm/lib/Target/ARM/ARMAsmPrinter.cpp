@@ -701,9 +701,21 @@ void ARMAsmPrinter::emitAttributes() {
                       ARMBuildAttrs::AddressDirect);
   }
 
+  Metadata *MDEx = nullptr;
+  Metadata *MDDM = nullptr;
+  Metadata *MDNM = nullptr;
+  if (const Module *M = MMI->getModule()) {
+    MDEx = M->getModuleFlag("arm-eabi-fp-exceptions");
+    MDDM = M->getModuleFlag("arm-eabi-fp-denormal");
+    MDNM = M->getModuleFlag("arm-eabi-fp-number-model");
+  }
+
   // Set FP Denormals.
-  if (checkDenormalAttributeConsistency(*MMI->getModule(), "denormal-fp-math",
-                                        DenormalMode::getPreserveSign()))
+  if (auto *DM = mdconst::extract_or_null<ConstantInt>(MDDM))
+    ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal, DM->getZExtValue());
+  else if (checkDenormalAttributeConsistency(*MMI->getModule(),
+                                             "denormal-fp-math",
+                                             DenormalMode::getPreserveSign()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::PreserveFPSign);
   else if (checkDenormalAttributeConsistency(*MMI->getModule(),
@@ -743,9 +755,11 @@ void ARMAsmPrinter::emitAttributes() {
   }
 
   // Set FP exceptions and rounding
-  if (checkFunctionsAttributeConsistency(*MMI->getModule(),
-                                         "no-trapping-math", "true") ||
-      TM.Options.NoTrappingFPMath)
+  if (auto *Ex = mdconst::extract_or_null<ConstantInt>(MDEx))
+    ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions, Ex->getZExtValue());
+  else if (checkFunctionsAttributeConsistency(*MMI->getModule(),
+                                              "no-trapping-math", "true") ||
+           TM.Options.NoTrappingFPMath)
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions,
                       ARMBuildAttrs::Not_Allowed);
   else {
@@ -759,7 +773,9 @@ void ARMAsmPrinter::emitAttributes() {
 
   // TM.Options.NoInfsFPMath && TM.Options.NoNaNsFPMath is the
   // equivalent of GCC's -ffinite-math-only flag.
-  if (TM.Options.NoInfsFPMath && TM.Options.NoNaNsFPMath)
+  if (auto *NM = mdconst::extract_or_null<ConstantInt>(MDNM))
+    ATS.emitAttribute(ARMBuildAttrs::ABI_FP_number_model, NM->getZExtValue());
+  else if (TM.Options.NoInfsFPMath && TM.Options.NoNaNsFPMath)
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_number_model,
                       ARMBuildAttrs::Allowed);
   else
