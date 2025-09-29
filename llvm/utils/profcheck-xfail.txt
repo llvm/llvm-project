@@ -107,6 +107,7 @@ Instrumentation/AddressSanitizer/AMDGPU/global_metadata_addrspacecasts.ll
 Instrumentation/AddressSanitizer/AMDGPU/instrument-stack.ll
 Instrumentation/AddressSanitizer/AMDGPU/no_redzones_in_lds_globals.ll
 Instrumentation/AddressSanitizer/AMDGPU/no_redzones_in_scratch_globals.ll
+Instrumentation/AddressSanitizer/RISCV/asan-rvv-intrinsics.ll
 Instrumentation/AddressSanitizer/asan_address_space_attr.ll
 Instrumentation/AddressSanitizer/asan-detect-invalid-pointer-pair.ll
 Instrumentation/AddressSanitizer/asan-disable-sanitizer-instrumentation.ll
