@@ -350,13 +350,14 @@ struct VPCostContext {
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
   TargetTransformInfo::TargetCostKind CostKind;
   ScalarEvolution &SE;
+  const Loop *L;
 
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
                 const VPlan &Plan, LoopVectorizationCostModel &CM,
                 TargetTransformInfo::TargetCostKind CostKind,
-                ScalarEvolution &SE)
+                ScalarEvolution &SE, const Loop *L)
       : TTI(TTI), TLI(TLI), Types(Plan), LLVMCtx(Plan.getContext()), CM(CM),
-        CostKind(CostKind), SE(SE) {}
+        CostKind(CostKind), SE(SE), L(L) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.

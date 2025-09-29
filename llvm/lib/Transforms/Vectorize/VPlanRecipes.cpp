@@ -3071,23 +3071,24 @@ bool VPReplicateRecipe::shouldPack() const {
 
 /// Returns true if \p Ptr is a pointer computation for which the legacy cost
 /// model computes a SCEV expression when computing the address cost.
-static bool shouldUseAddressAccessSCEV(const VPValue *Ptr) {
+static const SCEV *getAddressAccessSCEV(const VPValue *Ptr, ScalarEvolution &SE,
+                                        const Loop *L) {
   auto *PtrR = Ptr->getDefiningRecipe();
   if (!PtrR || !((isa<VPReplicateRecipe>(PtrR) &&
                   cast<VPReplicateRecipe>(PtrR)->getOpcode() ==
                       Instruction::GetElementPtr) ||
                  isa<VPWidenGEPRecipe>(PtrR)))
-    return false;
+    return nullptr;
 
   // We are looking for a GEP where all indices are either loop invariant or
   // inductions.
   for (VPValue *Opd : drop_begin(PtrR->operands())) {
     if (!Opd->isDefinedOutsideLoopRegions() &&
         !isa<VPScalarIVStepsRecipe, VPWidenIntOrFpInductionRecipe>(Opd))
-      return false;
+      return nullptr;
   }
 
-  return true;
+  return vputils::getSCEVExprForVPValue(Ptr, SE, L);
 }
 
 /// Returns true if \p V is used as part of the address of another load or
@@ -3242,11 +3243,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     bool IsLoad = UI->getOpcode() == Instruction::Load;
     const VPValue *PtrOp = getOperand(!IsLoad);
-    // TODO: Handle cases where we need to pass a SCEV to
-    // getAddressComputationCost.
-    if (shouldUseAddressAccessSCEV(PtrOp))
-      break;
-
     Type *ValTy = Ctx.Types.inferScalarType(IsLoad ? this : getOperand(0));
     Type *ScalarPtrTy = Ctx.Types.inferScalarType(PtrOp);
     const Align Alignment = getLoadStoreAlignment(UI);
@@ -3257,9 +3253,12 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
 
+    const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.SE, Ctx.L);
+    if (PtrSCEV && isa<SCEVCouldNotCompute>(PtrSCEV))
+      break;
     InstructionCost ScalarCost =
         ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(
-                              PtrTy, &Ctx.SE, nullptr, Ctx.CostKind);
+                              PtrTy, &Ctx.SE, PtrSCEV, Ctx.CostKind);
     if (isSingleScalar())
       return ScalarCost;
 
