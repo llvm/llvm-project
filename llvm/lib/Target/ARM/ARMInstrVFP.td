@@ -338,7 +338,7 @@ def : MnemonicAlias<"vstm", "vstmia">;
 
 def VLLDM : AXSI4FR<"vlldm${p}\t$Rn, $regs", 0, 1>,
             Requires<[HasV8MMainline, Has8MSecExt]> {
-    let Defs = [VPR, FPSCR, FPSCR_NZCV, FPSCR_RM, D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15];
+    let Defs = [VPR, FPSCR, FPSCR_NZCV, D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15];
     let DecoderMethod = "DecodeLazyLoadStoreMul";
 }
 // T1: assembly does not contains the register list.
@@ -348,7 +348,7 @@ def : InstAlias<"vlldm${p}\t$Rn", (VLLDM GPRnopc:$Rn, pred:$p, 0)>,
 // The register list has no effect on the encoding, it is for assembly/disassembly purposes only.
 def VLLDM_T2 : AXSI4FR<"vlldm${p}\t$Rn, $regs", 1, 1>,
             Requires<[HasV8_1MMainline, Has8MSecExt]> {
-    let Defs = [VPR, FPSCR, FPSCR_NZCV, FPSCR_RM, D0,  D1,  D2,  D3,  D4,  D5,  D6,  D7,  D8,  D9,  D10, D11, D12, D13, D14, D15,
+    let Defs = [VPR, FPSCR, FPSCR_NZCV, D0,  D1,  D2,  D3,  D4,  D5,  D6,  D7,  D8,  D9,  D10, D11, D12, D13, D14, D15,
                                         D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27, D28, D29, D30, D31];
     let DecoderMethod = "DecodeLazyLoadStoreMul";
 }
@@ -356,8 +356,8 @@ def VLLDM_T2 : AXSI4FR<"vlldm${p}\t$Rn, $regs", 1, 1>,
 // The register list has no effect on the encoding, it is for assembly/disassembly purposes only.
 def VLSTM : AXSI4FR<"vlstm${p}\t$Rn, $regs", 0, 0>,
             Requires<[HasV8MMainline, Has8MSecExt]> {
-    let Defs = [VPR, FPSCR, FPSCR_NZCV, FPSCR_RM];
-    let Uses = [VPR, FPSCR, FPSCR_NZCV, FPSCR_RM, D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15];
+    let Defs = [VPR, FPSCR, FPSCR_NZCV];
+    let Uses = [VPR, FPSCR, FPSCR_NZCV, D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15];
     let DecoderMethod = "DecodeLazyLoadStoreMul";
 }
 // T1: assembly does not contain the register list.
@@ -367,8 +367,8 @@ def : InstAlias<"vlstm${p}\t$Rn", (VLSTM GPRnopc:$Rn, pred:$p, 0)>,
 // The register list has no effect on the encoding, it is for assembly/disassembly purposes only.
 def VLSTM_T2 : AXSI4FR<"vlstm${p}\t$Rn, $regs", 1, 0>,
             Requires<[HasV8_1MMainline, Has8MSecExt]> {
-    let Defs = [VPR, FPSCR, FPSCR_NZCV, FPSCR_RM];
-    let Uses = [VPR, FPSCR, FPSCR_NZCV, FPSCR_RM, D0,  D1,  D2,  D3,  D4,  D5,  D6,  D7,  D8,  D9,  D10, D11, D12, D13, D14, D15,
+    let Defs = [VPR, FPSCR, FPSCR_NZCV];
+    let Uses = [VPR, FPSCR, FPSCR_NZCV, D0,  D1,  D2,  D3,  D4,  D5,  D6,  D7,  D8,  D9,  D10, D11, D12, D13, D14, D15,
                                         D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27, D28, D29, D30, D31];
     let DecoderMethod = "DecodeLazyLoadStoreMul";
 }
