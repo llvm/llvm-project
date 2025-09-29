@@ -245,6 +245,8 @@ public:
   Value *emitSqrtIEEE2ULP(IRBuilder<> &Builder, Value *Src,
                           FastMathFlags FMF) const;
 
+  bool tryNarrowMathIfNoOverflow(Instruction *I);
+
 public:
   bool visitFDiv(BinaryOperator &I);
 
@@ -284,6 +286,9 @@ bool AMDGPUCodeGenPrepareImpl::run() {
   BreakPhiNodesCache.clear();
   bool MadeChange = false;
 
+  // Need to use make_early_inc_range because integer division expansion is
+  // handled by Transform/Utils, and it can delete instructions such as the
+  // terminator of the BB.
   for (BasicBlock &BB : reverse(F)) {
     for (Instruction &I : make_early_inc_range(reverse(BB))) {
       if (!isInstructionTriviallyDead(&I, TLI))
@@ -1295,11 +1300,7 @@ it will create `s_and_b32 s0, s0, 0xff`.
 We accept this change since the non-byte load assumes the upper bits
 within the byte are all 0.
 */
-static bool tryNarrowMathIfNoOverflow(Instruction *I,
-                                      const SITargetLowering *TLI,
-                                      const TargetTransformInfo &TTI,
-                                      const DataLayout &DL,
-                                      SmallVector<WeakVH> &DeadVals) {
+bool AMDGPUCodeGenPrepareImpl::tryNarrowMathIfNoOverflow(Instruction *I) {
   unsigned Opc = I->getOpcode();
   Type *OldType = I->getType();
 
@@ -1324,6 +1325,7 @@ static bool tryNarrowMathIfNoOverflow(Instruction *I,
   NewType = I->getType()->getWithNewBitWidth(NewBit);
 
   // Old cost
+  const TargetTransformInfo &TTI = TM.getTargetTransformInfo(F);
   InstructionCost OldCost =
       TTI.getArithmeticInstrCost(Opc, OldType, TTI::TCK_RecipThroughput);
   // New cost of new op
@@ -1364,8 +1366,7 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
 
   if (UseMul24Intrin && replaceMulWithMul24(I))
     return true;
-  if (tryNarrowMathIfNoOverflow(&I, ST.getTargetLowering(),
-                                TM.getTargetTransformInfo(F), DL, DeadVals))
+  if (tryNarrowMathIfNoOverflow(&I))
     return true;
 
   bool Changed = false;
