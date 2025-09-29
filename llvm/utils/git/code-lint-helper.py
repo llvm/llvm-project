@@ -206,10 +206,8 @@ def run_clang_tidy(changed_files: List[str], args: LintArgs) -> Optional[str]:
     proc = subprocess.run(
         tidy_diff_cmd,
         input=diff_content,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        check=False,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, check=False,
     )
 
     return clean_clang_tidy_output(proc.stdout.strip())
