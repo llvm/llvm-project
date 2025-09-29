@@ -536,7 +536,6 @@ int main() {
 
 
 #endif
-
 //.
 // CHECK1: @.gomp_critical_user_.reduction.var = common global [8 x i32] zeroinitializer, align 8
 // CHECK1: @.gomp_critical_user_.atomic_reduction.var = common global [8 x i32] zeroinitializer, align 8
