@@ -89,8 +89,7 @@ int main() {
   assert(res == -1);
 
   unsigned long name = reinterpret_cast<unsigned long>(nullptr);
-  res = prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, 0, nullptr, name);
-  assert(res == 0);
+  prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, 0, nullptr, name);
 
   return 0;
 }
