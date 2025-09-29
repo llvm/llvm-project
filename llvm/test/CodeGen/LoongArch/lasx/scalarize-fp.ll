@@ -5,9 +5,8 @@
 define <8 x float> @fadd_elt0_v8f32(float %a) nounwind {
 ; CHECK-LABEL: fadd_elt0_v8f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
-; CHECK-NEXT:    xvldi $xr1, -1424
-; CHECK-NEXT:    xvfadd.s $xr0, $xr0, $xr1
+; CHECK-NEXT:    vldi $vr1, -1168
+; CHECK-NEXT:    fadd.s $fa0, $fa0, $fa1
 ; CHECK-NEXT:    ret
 entry:
   %b = insertelement <8 x float> poison, float %a, i32 0
@@ -18,9 +17,8 @@ entry:
 define <4 x double> @fadd_elt0_v4f64(double %a) nounwind {
 ; CHECK-LABEL: fadd_elt0_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
-; CHECK-NEXT:    xvldi $xr1, -912
-; CHECK-NEXT:    xvfadd.d $xr0, $xr0, $xr1
+; CHECK-NEXT:    vldi $vr1, -912
+; CHECK-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; CHECK-NEXT:    ret
 entry:
   %b = insertelement <4 x double> poison, double %a, i32 0
@@ -31,11 +29,8 @@ entry:
 define <8 x float> @fsub_splat_v8f32(float %a, float %b) nounwind {
 ; CHECK-LABEL: fsub_splat_v8f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vr1
-; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0
-; CHECK-NEXT:    vfsub.s $vr0, $vr0, $vr1
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
-; CHECK-NEXT:    xvrepl128vei.w $xr0, $xr0, 0
+; CHECK-NEXT:    fsub.s $fa0, $fa0, $fa1
+; CHECK-NEXT:    xvreplve0.w $xr0, $xr0
 ; CHECK-NEXT:    ret
 entry:
   %insa = insertelement <8 x float> poison, float %a, i32 0
@@ -49,10 +44,9 @@ entry:
 define <4 x double> @fsub_splat_v4f64(double %a) nounwind {
 ; CHECK-LABEL: fsub_splat_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
-; CHECK-NEXT:    xvldi $xr1, -784
-; CHECK-NEXT:    xvfadd.d $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 0
+; CHECK-NEXT:    vldi $vr1, -784
+; CHECK-NEXT:    fadd.d $fa0, $fa0, $fa1
+; CHECK-NEXT:    xvreplve0.d $xr0, $xr0
 ; CHECK-NEXT:    ret
 entry:
   %insa = insertelement <4 x double> poison, double %a, i32 0
