@@ -88,8 +88,7 @@ template <>
 void MachineSSAContext::getPhiInputs(
     const MachineInstr &Phi, SmallVectorImpl<Register> &Values,
     SmallVectorImpl<const MachineBasicBlock *> &Blocks) const {
-  if (!Phi.isPHI())
-    return;
+  assert(Phi.isPHI());
 
   const MachineRegisterInfo &MRI = Phi.getMF()->getRegInfo();
   // const Register DstReg = Phi.getOperand(0).getReg();
