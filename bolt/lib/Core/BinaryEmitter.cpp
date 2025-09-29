@@ -26,10 +26,8 @@
 #include "llvm/Support/SMLoc.h"
 
 #define DEBUG_TYPE "bolt"
-#define DEBUG_TYPE "bolt-ppc"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-
 
 using namespace llvm;
 using namespace bolt;
@@ -528,8 +526,7 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
       // --- PPC64 ELFv2: guarantee a post-call NOP (call slot)
       if (BC.isPPC64() && BC.MIB->isCall(Instr)) {
         bool NeedSlot = true;
-          LLVM_DEBUG(dbgs() << "PPC emit: call, considering slot after\n");
-
+        LLVM_DEBUG(dbgs() << "PPC emit: call, considering slot after\n");
 
         // If the next IR instruction exists and is already a NOP, don't
         // inject.
@@ -544,10 +541,9 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
           Streamer.emitInstruction(N, *BC.STI);
           LLVM_DEBUG(dbgs() << "PPC: inserted NOP after call at "
                             << BF.getPrintName() << "\n");
-        }else{
+        } else {
           LLVM_DEBUG(dbgs() << "PPC emit: post-call NOP not needed\n");
         }
-
       }
     }
   }
