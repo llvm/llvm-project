@@ -17,6 +17,8 @@ function(libomp_get_architecture return_arch)
   set(detect_arch_src_txt "
     #if defined(__KNC__)
       #error ARCHITECTURE=mic
+    #elif defined(__aarch64__) || defined(_M_ARM64) || defined(__arm64ec__) || defined(_M_ARM64EC)
+      #error ARCHITECTURE=aarch64
     #elif defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_X64) || defined(_M_AMD64)
       #error ARCHITECTURE=x86_64
     #elif defined(__i386) || defined(__i386__) || defined(__IA32__) || defined(_M_I86) || defined(_M_IX86) || defined(__X86__) || defined(_X86_)
@@ -37,8 +39,6 @@ function(libomp_get_architecture return_arch)
       #error ARCHITECTURE=arm
     #elif defined(__ARM64_ARCH_8_32__)
       #error ARCHITECTURE=aarch64_32
-    #elif defined(__aarch64__) || defined(_M_ARM64)
-      #error ARCHITECTURE=aarch64
     #elif defined(__powerpc64__) && defined(__LITTLE_ENDIAN__)
       #error ARCHITECTURE=ppc64le
     #elif defined(__powerpc64__)
