@@ -150,6 +150,7 @@ void registerTestSliceAnalysisPass();
 void registerTestSPIRVCPURunnerPipeline();
 void registerTestSPIRVFuncSignatureConversion();
 void registerTestSPIRVVectorUnrolling();
+void registerTestStridedMetadataRangeAnalysisPass();
 void registerTestTensorCopyInsertionPass();
 void registerTestTensorLikeAndBufferLikePass();
 void registerTestTensorTransforms();
@@ -297,6 +298,7 @@ void registerTestPasses() {
   mlir::test::registerTestSPIRVCPURunnerPipeline();
   mlir::test::registerTestSPIRVFuncSignatureConversion();
   mlir::test::registerTestSPIRVVectorUnrolling();
+  mlir::test::registerTestStridedMetadataRangeAnalysisPass();
   mlir::test::registerTestTensorCopyInsertionPass();
   mlir::test::registerTestTensorLikeAndBufferLikePass();
   mlir::test::registerTestTensorTransforms();
