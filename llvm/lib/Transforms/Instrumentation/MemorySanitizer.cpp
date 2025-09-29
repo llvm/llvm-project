@@ -6278,6 +6278,62 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                         /*MaskIndex=*/2);
       break;
 
+    //  <32 x half> @llvm.x86.avx512fp16.mask.rndscale.ph.512
+    //                  (<32 x half>, i32, <32 x half>, i32, i32)
+    //  <16 x half> @llvm.x86.avx512fp16.mask.rndscale.ph.256
+    //                  (<16 x half>, i32, <16 x half>, i32, i16)
+    //  <8 x half> @llvm.x86.avx512fp16.mask.rndscale.ph.128
+    //                 (<8 x half>, i32, <8 x half>, i32, i8)
+    //
+    //  <16 x float> @llvm.x86.avx512.mask.rndscale.ps.512
+    //                  (<16 x float>, i32, <16 x float>, i16, i32)
+    //  <8 x float> @llvm.x86.avx512.mask.rndscale.ps.256
+    //                  (<8 x float>, i32, <8 x float>, i8)
+    //  <4 x float> @llvm.x86.avx512.mask.rndscale.ps.128
+    //                  (<4 x float>, i32, <4 x float>, i8)
+    //
+    //  <8 x double> @llvm.x86.avx512.mask.rndscale.pd.512
+    //                  (<8 x double>, i32, <8 x double>, i8,  i32)
+    //                   A             Imm  WriteThru     Mask Rounding
+    //  <4 x double> @llvm.x86.avx512.mask.rndscale.pd.256
+    //                  (<4 x double>, i32, <4 x double>, i8)
+    //  <2 x double> @llvm.x86.avx512.mask.rndscale.pd.128
+    //                  (<2 x double>, i32, <2 x double>, i8)
+    //                   A             Imm  WriteThru     Mask
+    //
+    //  <32 x bfloat> @llvm.x86.avx10.mask.rndscale.bf16.512
+    //                    (<32 x bfloat>, i32, <32 x bfloat>, i32)
+    //  <16 x bfloat> @llvm.x86.avx10.mask.rndscale.bf16.256
+    //                    (<16 x bfloat>, i32, <16 x bfloat>, i16)
+    //  <8 x bfloat> @llvm.x86.avx10.mask.rndscale.bf16.128
+    //                    (<8 x bfloat>, i32, <8 x bfloat>, i8)
+    //
+    //  Not supported: three vectors
+    //  - <8 x half> @llvm.x86.avx512fp16.mask.rndscale.sh
+    //                   (<8 x half>, <8 x half>,<8 x half>, i8, i32, i32)
+    //  - <4 x float> @llvm.x86.avx512.mask.rndscale.ss
+    //                   (<4 x float>, <4 x float>, <4 x float>, i8, i32, i32)
+    //  - <2 x double> @llvm.x86.avx512.mask.rndscale.sd
+    //                     (<2 x double>, <2 x double>, <2 x double>, i8,   i32,
+    //                      i32)
+    //                      A             B             WriteThru     Mask  Imm
+    //                      Rounding
+    case Intrinsic::x86_avx512fp16_mask_rndscale_ph_512:
+    case Intrinsic::x86_avx512fp16_mask_rndscale_ph_256:
+    case Intrinsic::x86_avx512fp16_mask_rndscale_ph_128:
+    case Intrinsic::x86_avx512_mask_rndscale_ps_512:
+    case Intrinsic::x86_avx512_mask_rndscale_ps_256:
+    case Intrinsic::x86_avx512_mask_rndscale_ps_128:
+    case Intrinsic::x86_avx512_mask_rndscale_pd_512:
+    case Intrinsic::x86_avx512_mask_rndscale_pd_256:
+    case Intrinsic::x86_avx512_mask_rndscale_pd_128:
+    case Intrinsic::x86_avx10_mask_rndscale_bf16_512:
+    case Intrinsic::x86_avx10_mask_rndscale_bf16_256:
+    case Intrinsic::x86_avx10_mask_rndscale_bf16_128:
+      handleAVX512VectorGenericMaskedFP(I, /*AIndex=*/0, /*WriteThruIndex=*/2,
+                                        /*MaskIndex=*/3);
+      break;
+
     // AVX512 FP16 Arithmetic
     case Intrinsic::x86_avx512fp16_mask_add_sh_round:
     case Intrinsic::x86_avx512fp16_mask_sub_sh_round:
