@@ -7102,7 +7102,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
 
   // If the parameter type somehow involves auto, deduce the type now.
   DeducedType *DeducedT = ParamType->getContainedDeducedType();
-  bool IsDeduced = DeducedT && !DeducedT->isDeduced();
+  bool IsDeduced = DeducedT && DeducedT->getDeducedType().isNull();
   if (IsDeduced) {
     // When checking a deduced template argument, deduce from its type even if
     // the type is dependent, in order to check the types of non-type template
