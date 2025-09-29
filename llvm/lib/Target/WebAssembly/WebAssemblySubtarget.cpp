@@ -73,9 +73,9 @@ WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT,
       TLInfo(TM, *this) {
   CallLoweringInfo.reset(new WebAssemblyCallLowering(*getTargetLowering()));
   Legalizer.reset(new WebAssemblyLegalizerInfo(*this));
-  /*auto *RBI = new WebAssemblyRegisterBankInfo(*getRegisterInfo());
+  auto *RBI = new WebAssemblyRegisterBankInfo(*getRegisterInfo());
   RegBankInfo.reset(RBI);
-
+/*
   InstSelector.reset(createWebAssemblyInstructionSelector(
   *static_cast<const WebAssemblyTargetMachine *>(&TM), *this, *RBI));*/
 }
