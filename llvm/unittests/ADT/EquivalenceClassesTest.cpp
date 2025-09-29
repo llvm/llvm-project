@@ -114,7 +114,7 @@ TEST(EquivalenceClassesTest, EraseKeepsLeaderBit) {
   // Create a set {1, 2} where 1 is the leader.
   EC.unionSets(1, 2);
 
-  // Verify initial state
+  // Verify initial state.
   EXPECT_EQ(EC.getLeaderValue(2), 1);
 
   // Erase 2, the non-leader member.
