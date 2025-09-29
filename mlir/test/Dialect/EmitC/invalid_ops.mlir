@@ -857,27 +857,6 @@ func.func @test_do(%arg0 : !emitc.ptr<i32>) {
 
 // -----
 
-func.func @test_do() {
-  %1 = emitc.literal "1" : i32
-  %2 = emitc.literal "2" : i32
-
-  // expected-error @+1 {{'emitc.do' op body region cannot be empty}}
-  emitc.do {
-    ^bb0:
-  } while {
-    %r = emitc.expression %1, %2 : (i32, i32) -> i1 {
-      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
-      emitc.yield %cmp : i1
-    }
-
-    emitc.yield %r: i1
-  }
-
-  return
-}
-
-// -----
-
 func.func @test_do(%arg0 : !emitc.ptr<i32>) {
   %1 = emitc.literal "1" : i32
   %2 = emitc.literal "2" : i32

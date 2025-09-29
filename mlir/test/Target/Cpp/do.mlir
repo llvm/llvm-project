@@ -134,3 +134,31 @@ emitc.func @emitc_double_do() {
 
   return
 }
+
+
+// CPP-DEFAULT-LABEL: bool payload_do_with_empty_body(int32_t v1, int32_t v2) {
+// CPP-DEFAULT:         bool v3 = v1 < v2;
+// CPP-DEFAULT:         return v3;
+// CPP-DEFAULT:       }
+// CPP-DEFAULT:       void emitc_do_with_empty_body(int32_t v1, int32_t v2) {
+// CPP-DEFAULT:         do {
+// CPP-DEFAULT:         } while (payload_do_with_empty_body(v1, v2));
+// CPP-DEFAULT:         return;
+// CPP-DEFAULT:       }
+
+emitc.func @payload_do_with_empty_body(%1 : i32, %2 : i32) -> i1 {
+  %cmp = emitc.cmp lt, %1, %2 : (i32, i32) -> i1
+  return %cmp : i1
+}
+func.func @emitc_do_with_empty_body(%arg1 : i32, %arg2 : i32) {
+  emitc.do {
+  } while {
+    %r = emitc.expression %arg1, %arg2 : (i32, i32) -> i1 {
+      %call = emitc.call @payload_do_with_empty_body(%arg1, %arg2) : (i32, i32) -> i1
+      emitc.yield %call : i1
+    }
+    emitc.yield %r: i1
+  }
+
+  return
+}

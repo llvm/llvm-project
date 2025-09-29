@@ -232,3 +232,62 @@ func.func @empty_after_region() {
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
+
+emitc.func @payload_different_number_of_vars(%arg0: i32) -> i32 {
+  %0 = add %arg0, %arg0 : (i32, i32) -> i32
+  return %0 : i32
+}
+func.func @different_number_of_vars() -> (i32, i32) {
+  %init = emitc.literal "1.0" : i32
+  %var  = emitc.literal "7.0" : i32
+  %exit = emitc.literal "10.0" : i32
+  %res, %res2 = scf.while (%arg1 = %init) : (i32) -> (i32, i32) {
+    %sum = emitc.add %arg1, %var : (i32, i32) -> i32
+    %condition = emitc.cmp lt, %sum, %exit : (i32, i32) -> i1
+    %next = emitc.add %arg1, %arg1 : (i32, i32) -> i32
+    scf.condition(%condition) %next, %sum : i32, i32
+  } do {
+  ^bb0(%arg2: i32, %arg3 : i32):
+    %next_arg1 = emitc.call @payload_different_number_of_vars(%arg2) : (i32) -> i32
+    scf.yield %next_arg1 : i32
+  }
+  return %res, %res2 : i32, i32
+}
+// CHECK-LABEL:   emitc.func @payload_different_number_of_vars(
+// CHECK-SAME:      %[[ARG0:.*]]: i32) -> i32 {
+// CHECK:           %[[VAL_0:.*]] = add %[[ARG0]], %[[ARG0]] : (i32, i32) -> i32
+// CHECK:           return %[[VAL_0]] : i32
+// CHECK:         }
+
+// CHECK-LABEL:   func.func @different_number_of_vars() -> (i32, i32) {
+// CHECK:           %[[VAL_0:.*]] = emitc.literal "1.0" : i32
+// CHECK:           %[[VAL_1:.*]] = emitc.literal "7.0" : i32
+// CHECK:           %[[VAL_2:.*]] = emitc.literal "10.0" : i32
+// CHECK:           %[[VAL_3:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+// CHECK:           %[[VAL_4:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+// CHECK:           %[[VAL_5:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+// CHECK:           emitc.assign %[[VAL_0]] : i32 to %[[VAL_5]] : <i32>
+// CHECK:           %[[VAL_6:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i1>
+// CHECK:           emitc.do {
+// CHECK:             %[[VAL_7:.*]] = load %[[VAL_5]] : <i32>
+// CHECK:             %[[VAL_8:.*]] = add %[[VAL_7]], %[[VAL_1]] : (i32, i32) -> i32
+// CHECK:             %[[VAL_9:.*]] = cmp lt, %[[VAL_8]], %[[VAL_2]] : (i32, i32) -> i1
+// CHECK:             %[[VAL_10:.*]] = add %[[VAL_7]], %[[VAL_7]] : (i32, i32) -> i32
+// CHECK:             assign %[[VAL_10]] : i32 to %[[VAL_3]] : <i32>
+// CHECK:             assign %[[VAL_8]] : i32 to %[[VAL_4]] : <i32>
+// CHECK:             assign %[[VAL_9]] : i1 to %[[VAL_6]] : <i1>
+// CHECK:             if %[[VAL_9]] {
+// CHECK:               %[[VAL_11:.*]] = call @payload_different_number_of_vars(%[[VAL_10]]) : (i32) -> i32
+// CHECK:               assign %[[VAL_11]] : i32 to %[[VAL_5]] : <i32>
+// CHECK:             }
+// CHECK:           } while {
+// CHECK:             %[[VAL_12:.*]] = expression %[[VAL_6]] : (!emitc.lvalue<i1>) -> i1 {
+// CHECK:               %[[VAL_13:.*]] = load %[[VAL_6]] : <i1>
+// CHECK:               yield %[[VAL_13]] : i1
+// CHECK:             }
+// CHECK:             yield %[[VAL_12]] : i1
+// CHECK:           }
+// CHECK:           %[[VAL_14:.*]] = emitc.load %[[VAL_3]] : <i32>
+// CHECK:           %[[VAL_15:.*]] = emitc.load %[[VAL_4]] : <i32>
+// CHECK:           return %[[VAL_14]], %[[VAL_15]] : i32, i32
+// CHECK:         }

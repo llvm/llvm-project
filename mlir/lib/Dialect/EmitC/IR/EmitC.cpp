@@ -1617,9 +1617,6 @@ LogicalResult emitc::DoOp::verify() {
                      "'emitc.expression' from this condition region");
 
   Block &bodyBlock = getBodyRegion().front();
-  if (bodyBlock.empty())
-    return emitOpError("body region cannot be empty");
-
   if (bodyBlock.mightHaveTerminator())
     return emitOpError("body region must not contain terminator");
 
@@ -1633,6 +1630,9 @@ ParseResult DoOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.parseRegion(*bodyRegion) || parser.parseKeyword("while") ||
       parser.parseRegion(*condRegion))
     return failure();
+
+  if (bodyRegion->empty())
+    bodyRegion->emplaceBlock();
 
   return parser.parseOptionalAttrDictWithKeyword(result.attributes);
 }

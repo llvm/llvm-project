@@ -384,6 +384,9 @@ private:
       WhileOp whileOp, ConversionPatternRewriter &rewriter,
       SmallVectorImpl<Value> &loopVars, Location loc,
       MLIRContext *context) const {
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(whileOp);
+
     emitc::OpaqueAttr noInit = emitc::OpaqueAttr::get(context, "");
 
     for (Value init : whileOp.getInits()) {
@@ -394,7 +397,7 @@ private:
       emitc::VariableOp var = rewriter.create<emitc::VariableOp>(
           loc, emitc::LValueType::get(convertedType), noInit);
       rewriter.create<emitc::AssignOp>(loc, var.getResult(), init);
-      loopVars.push_back(var.getResult());
+      loopVars.push_back(var);
     }
 
     return success();
