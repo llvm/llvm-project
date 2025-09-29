@@ -234,8 +234,7 @@ static std::optional<llvm::Value *> initializeLocalResourceArray(
 
     CallArgList Args;
     CXXMethodDecl *CreateMethod = lookupResourceInitMethodAndSetupArgs(
-        CGF.CGM, ResourceDecl, Range, Index, ResourceName, Binding,
-        Args);
+        CGF.CGM, ResourceDecl, Range, Index, ResourceName, Binding, Args);
 
     if (!CreateMethod)
       // This can happen if someone creates an array of structs that looks like
