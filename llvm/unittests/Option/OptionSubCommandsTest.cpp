@@ -111,11 +111,10 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     EXPECT_EQ(SC, "foo");
     EXPECT_TRUE(AL.hasArg(OPT_uppercase));
     EXPECT_FALSE(AL.hasArg(OPT_lowercase));
-    EXPECT_FALSE(AL.hasArg(OPT_version));
-    // Do not expect any error messages as this is a valid use case.
-    EXPECT_EQ(std::string::npos, ErrMsg.find("Multiple subcommands passed"));
+    EXPECT_FALSE(AL.hasArg(OPT_version));    
+    EXPECT_EQ(std::string::npos, ErrMsg.find("Multiple subcommands passed")) << "Did not expect error message as this is a valid use case.";
     EXPECT_EQ(std::string::npos,
-              ErrMsg.find("Unregistered positionals passed"));
+              ErrMsg.find("Unregistered positionals passed"))  << "Did not expect error message as this is a valid use case.";
   }
 
   {
@@ -128,11 +127,10 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     EXPECT_EQ(SC, "foo");
     EXPECT_TRUE(AL.hasArg(OPT_uppercase));
     EXPECT_FALSE(AL.hasArg(OPT_lowercase));
-    EXPECT_FALSE(AL.hasArg(OPT_version));
-    // Do not expect any error messages as this is a valid use case.
-    EXPECT_EQ(std::string::npos, ErrMsg.find("Multiple subcommands passed"));
+    EXPECT_FALSE(AL.hasArg(OPT_version));    
+    EXPECT_EQ(std::string::npos, ErrMsg.find("Multiple subcommands passed"))  << "Did not expect error message as this is a valid use case.";
     EXPECT_EQ(std::string::npos,
-              ErrMsg.find("Unregistered positionals passed"));
+              ErrMsg.find("Unregistered positionals passed")) << "Did not expect error message as this is a valid use case.";
   }
 
   {
@@ -147,9 +145,8 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     EXPECT_NE(std::string::npos, ErrMsg.find("Multiple subcommands passed"));
     EXPECT_NE(std::string::npos, ErrMsg.find("foo"));
     EXPECT_NE(std::string::npos, ErrMsg.find("bar"));
-    // Do not expect the rnregistered subcommands error message.
     EXPECT_EQ(std::string::npos,
-              ErrMsg.find("Unregistered positionals passed"));
+              ErrMsg.find("Unregistered positionals passed"))  << "Did not expect error message as this is a valid use case.";
   }
 
   {
@@ -160,7 +157,7 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
         T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
     // No valid subcommand should be returned as this is an invalid invocation.
     EXPECT_TRUE(SC.empty());
-    // Expect the rnregistered subcommands error message.
+    // Expect the unregistered subcommands error message.
     EXPECT_NE(std::string::npos,
               ErrMsg.find("Unregistered positionals passed"));
     EXPECT_NE(std::string::npos, ErrMsg.find("foobar"));
