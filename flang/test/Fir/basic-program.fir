@@ -131,6 +131,7 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   SetRuntimeCallAttributes
+// PASSES-NEXT: MIFOpConversion 
 // PASSES-NEXT: BoxedProcedurePass
 // PASSES-NEXT: AddAliasTags
 

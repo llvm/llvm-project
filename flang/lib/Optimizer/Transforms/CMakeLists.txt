@@ -36,6 +36,7 @@ add_flang_library(FIRTransforms
   SimplifyFIROperations.cpp
   OptimizeArrayRepacking.cpp
   ConvertComplexPow.cpp
+  MIFOpConversion.cpp
 
   DEPENDS
   CUFAttrs
