@@ -342,6 +342,9 @@ StandaloneDiagnostic::StandaloneDiagnostic(const StoredDiagnostic &StoredDiag)
 
 /// Translates \c StandaloneDiag into a StoredDiagnostic, associating it with
 /// the provided FileManager and SourceManager.
+///
+/// Use this to translate a \c StandaloneDiagnostic into a form that can be
+/// emitted by the diagnostics engine.
 static StoredDiagnostic
 translateStandaloneDiag(FileManager &FileMgr, SourceManager &SrcMgr,
                         StandaloneDiagnostic &&StandaloneDiag) {
