@@ -45,9 +45,6 @@ static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
 static lldb::ValueObjectSP
 ArrayToPointerConversion(lldb::ValueObjectSP valobj,
                          std::shared_ptr<ExecutionContextScope> ctx) {
-  assert(valobj->IsArrayType() &&
-         "an argument to array-to-pointer conversion must be an array");
-
   uint64_t addr = valobj->GetLoadAddress();
   ExecutionContext exe_ctx;
   ctx->CalculateExecutionContext(exe_ctx);
