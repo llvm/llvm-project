@@ -414,4 +414,44 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
   }];
 }
 
+def DistinctObjectsInterface : OpInterface<"DistinctObjectsInterface"> {
+  let description = [{
+    This intefaces indicates that pointer-like objects (such as memrefs) returned
+    from this operation will never alias with each other. This provides a
+    guarantee to optimization passes that accesses through different results
+    of this operation can be safely reordered, as they will never reference
+    overlapping memory locations.
+
+    Operations with this interface take multiple pointer-like operands
+    and return the same operands with additional non-aliasing guarantees.
+    If the access to the results of this operation aliases at runtime, the
+    behavior of such access is undefined.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{ Return input pointer-like objects. }],
+      /*retTy=*/"::mlir::ValueRange",
+      /*methodName=*/"getDistinctOperands",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op->getOperands();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{ Return result pointer-like objects. }],
+      /*retTy=*/"::mlir::ValueRange",
+      /*methodName=*/"getDistinctResults",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op->getResults();
+      }]
+    >
+  ];
+}
+
+
 #endif // MLIR_INTERFACES_VIEWLIKEINTERFACE

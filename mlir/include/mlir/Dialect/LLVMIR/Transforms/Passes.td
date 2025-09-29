@@ -73,4 +73,20 @@ def DIScopeForLLVMFuncOpPass : Pass<"ensure-debug-info-scope-on-llvm-func", "::m
   ];
 }
 
+def LLVMInferAliasScopeAttributes
+    : InterfacePass<"llvm-infer-alias-scopes-attrs", "::mlir::FunctionOpInterface"> {
+  let summary = "Infer alias scopes for load/store ops";
+  let description = [{
+    This pass infers LLVM alias scope attributes for other dialect load and store
+    operations based on alias analysis information. It analyzes memory operations
+    within functions to determine which operations may or may not alias with each
+    other, and annotates them with appropriate LLVM alias scope metadata.
+
+    Alias scopes on other dialect ops are not robust enough against code
+    transformations (e.g. inlining) so this pass is intended to be run just
+    before *-to-llvm conversion.
+  }];
+  let dependentDialects = ["LLVM::LLVMDialect"];
+}
+
 #endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES
