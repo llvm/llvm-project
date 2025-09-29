@@ -1788,11 +1788,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 
   // Ignore -plugin=LLVMgold.so because we don't need to load it.
   StringRef v = args.getLastArgValue(OPT_plugin);
-  if (!v.empty() && !v.ends_with("LLVMgold.so"))
+  if (!v.empty() && !v.ends_with("LLVMgold.so")) {
     if (!llvm::sys::fs::exists(v))
       ErrAlways(ctx) << "Cannot find plugin " << v;
     else
       ctx.arg.plugin = v;
+  }
 
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))

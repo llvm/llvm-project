@@ -654,7 +654,7 @@ bool GccIRCompiler::addCompiledFile(StringRef path) {
   std::optional<MemoryBufferRef> mbref = readFile(ctx, path);
   if (!mbref)
     return false;
-  files.push_back(std::move(MemoryBuffer::getMemBuffer(*mbref)));
+  files.push_back(MemoryBuffer::getMemBuffer(*mbref));
   return true;
 }
 #endif
