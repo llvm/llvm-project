@@ -211,7 +211,7 @@ void ThreadStart(ThreadState *thr, Tid tid, ThreadID os_id,
   // because its initialization is synchronized with all
   // subsequent threads anyway.
   // Because thr is created by MmapOrDie, the thr object
-  // is not in tls, the pointer of thr object is in
+  // is not in tls, the pointer to the thr object is in
   // TLS_SLOT_SANITIZER slot. So skip this check on
   // Android platform.
   if (tid != kMainTid) {

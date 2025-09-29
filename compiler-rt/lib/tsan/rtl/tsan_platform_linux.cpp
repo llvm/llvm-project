@@ -677,15 +677,16 @@ ThreadState *cur_thread() {
   }
 
   // https://android.googlesource.com/platform/external/skia/+/refs/tags/android-15.0.0_r36/src/ports/SkMemory_malloc.cpp#105
-  // https://android.googlesource.com/platform/external/scudo/+/refs/tags/android-15.0.0_r36/standalone/tsd_shared.h#198
-  // Workaround to get the correct ThreadState pointer. Scudo allocator uses the
-  // last bit of TLS_SLOT_SANITIZER as a flag of disable memory initialization.
-  // getPlatformAllocatorTlsSlot should not use TLS_SLOT_SANITIZER slot.
-  uptr addr = reinterpret_cast<uptr>(thr);
-  if (addr % 2 != 0) {
-    return reinterpret_cast<ThreadState*>(addr & ~1ULL);
-  }
-  return thr;
+  // https://github.com/llvm/llvm-project/blob/release/21.x/compiler-rt/lib/scudo/standalone/wrappers_c.inc#L247
+  // https://github.com/llvm/llvm-project/blob/release/21.x/compiler-rt/lib/scudo/standalone/tsd_shared.h#L106
+  // https://github.com/llvm/llvm-project/blob/release/21.x/compiler-rt/lib/scudo/standalone/tsd_shared.h#L198
+  // https://github.com/llvm/llvm-project/blob/release/21.x/compiler-rt/lib/scudo/standalone/tsd_shared.h#L154
+  // https://android.googlesource.com/platform/bionic/+/refs/tags/android-15.0.0_r36/libc/platform/scudo_platform_tls_slot.h#34
+  // Skia changes the malloc flags to M_THREAD_DISABLE_MEM_INIT, which sets the
+  // least significant bit of TLS_SLOT_SANITIZER to 1. Scudo allocator uses this
+  // bit as a flag to disable memory initialization. This is a workaround to get
+  // the correct ThreadState pointer.
+  reinterpret_cast<ThreadState *>(addr & ~1ULL);
 }
 
 void set_cur_thread(ThreadState *thr) {
