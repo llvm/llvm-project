@@ -3985,6 +3985,8 @@ entry:
   ret i32 %spec.store.select7
 }
 
+; i32 non saturate
+
 define i32 @ustest_f16i32_nsat(half %x) {
 ; SOFT-LABEL: ustest_f16i32_nsat:
 ; SOFT:       @ %bb.0:

@@ -3829,6 +3829,8 @@ entry:
   ret i64 %conv6
 }
 
+; i32 non saturate
+
 define i32 @ustest_f16i32_nsat(half %x) {
 ; RV32-LABEL: ustest_f16i32_nsat:
 ; RV32:       # %bb.0:
