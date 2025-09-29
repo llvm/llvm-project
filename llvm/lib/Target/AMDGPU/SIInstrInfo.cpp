@@ -7565,6 +7565,52 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI,
     legalizeOperandsVALUt16(MI, OpIdx, MRI);
 }
 
+// Legalize size mismatches between 16bit and 32bit registers in v2s copy
+// lowering (lower the copy itself). Including cases:
+// 1. sreg32 = copy vgpr16 => vgpr32 = REG_SEQUENCE(vgpr16, lo16)
+// 2. sreg32 = copy .lo16:vgpr32 / sreg32 = copy .hi16:vgpr32
+//    =>  vgpr16 = copy .hi/lo16:vgpr32
+//        vgpr32 = REG_SEQUENCE(vgpr16, lo16)
+// 3. sgpr16 = copy vgpr32/... (skipped, isel do not generate sgpr16)
+// This can be removed after we have sgpr16 in place.
+bool SIInstrInfo::legalizeV2SCopyt16(MachineInstr &Copy,
+                                     MachineRegisterInfo &MRI,
+                                     SIInstrWorklist &Worklist) const {
+  Register DstReg = Copy.getOperand(0).getReg();
+  Register SrcReg = Copy.getOperand(1).getReg();
+  Register SrcSubReg = Copy.getOperand(1).getSubReg();
+  const TargetRegisterClass *NewDstRC = getDestEquivalentVGPRClass(Copy);
+  const TargetRegisterClass *SrcRegRC = getOpRegClass(Copy, 1);
+  bool KeepCopy;
+
+  if (RI.getMatchingSuperRegClass(NewDstRC, SrcRegRC, AMDGPU::lo16)) {
+    KeepCopy = 0;
+  } else if (NewDstRC == &AMDGPU::VGPR_32RegClass &&
+             (SrcSubReg == AMDGPU::hi16 || SrcSubReg == AMDGPU::lo16)) {
+    KeepCopy = 1;
+    Register NewDstReg = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+    Copy.getOperand(0).setReg(NewDstReg);
+    SrcReg = NewDstReg;
+  } else
+    return false;
+
+  Register NewDstReg = MRI.createVirtualRegister(NewDstRC);
+  Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+  BuildMI(*Copy.getParent(), &Copy, Copy.getDebugLoc(),
+          get(AMDGPU::IMPLICIT_DEF), Undef);
+  BuildMI(*Copy.getParent(), std::next(Copy.getIterator()), Copy.getDebugLoc(),
+          get(AMDGPU::REG_SEQUENCE), NewDstReg)
+      .addReg(SrcReg)
+      .addImm(AMDGPU::lo16)
+      .addReg(Undef)
+      .addImm(AMDGPU::hi16);
+  if (!KeepCopy)
+    Copy.eraseFromParent();
+  MRI.replaceRegWith(DstReg, NewDstReg);
+  addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
+  return true;
+}
+
 void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
                              MachineDominatorTree *MDT) const {
 
@@ -8083,6 +8129,15 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       return;
     }
 
+    // If this is a v2s copy between 16bit and 32bit reg,
+    // replace vgpr copy to reg_sequence
+    if (ST.useRealTrue16Insts() && Inst.isCopy() &&
+        Inst.getOperand(1).getReg().isVirtual() &&
+        RI.isVGPR(MRI, Inst.getOperand(1).getReg())) {
+      if (legalizeV2SCopyt16(Inst, MRI, Worklist))
+        return;
+    }
+
     if (Inst.isCopy() && Inst.getOperand(1).getReg().isVirtual() &&
         NewDstRC == RI.getRegClassForReg(MRI, Inst.getOperand(1).getReg())) {
       // Instead of creating a copy where src and dst are the same register
@@ -8103,38 +8158,6 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
         legalizeOperandsVALUt16(*MO.getParent(), MRI);
       }
       return;
-    }
-
-    // If this is a v2s copy between 16bit and 32bit reg,
-    // replace vgpr copy to reg_sequence/extract_subreg
-    // This can be remove after we have sgpr16 in place
-    if (ST.useRealTrue16Insts() && Inst.isCopy() &&
-        Inst.getOperand(1).getReg().isVirtual() &&
-        RI.isVGPR(MRI, Inst.getOperand(1).getReg())) {
-      const TargetRegisterClass *SrcRegRC = getOpRegClass(Inst, 1);
-      if (RI.getMatchingSuperRegClass(NewDstRC, SrcRegRC, AMDGPU::lo16)) {
-        Register NewDstReg = MRI.createVirtualRegister(NewDstRC);
-        Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
-        BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-                get(AMDGPU::IMPLICIT_DEF), Undef);
-        BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-                get(AMDGPU::REG_SEQUENCE), NewDstReg)
-            .addReg(Inst.getOperand(1).getReg())
-            .addImm(AMDGPU::lo16)
-            .addReg(Undef)
-            .addImm(AMDGPU::hi16);
-        Inst.eraseFromParent();
-        MRI.replaceRegWith(DstReg, NewDstReg);
-        addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
-        return;
-      } else if (RI.getMatchingSuperRegClass(SrcRegRC, NewDstRC,
-                                             AMDGPU::lo16)) {
-        Inst.getOperand(1).setSubReg(AMDGPU::lo16);
-        Register NewDstReg = MRI.createVirtualRegister(NewDstRC);
-        MRI.replaceRegWith(DstReg, NewDstReg);
-        addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
-        return;
-      }
     }
 
     Register NewDstReg = MRI.createVirtualRegister(NewDstRC);

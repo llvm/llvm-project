@@ -1375,6 +1375,8 @@ public:
                                MachineRegisterInfo &MRI) const;
   void legalizeOperandsVALUt16(MachineInstr &Inst, unsigned OpIdx,
                                MachineRegisterInfo &MRI) const;
+  bool legalizeV2SCopyt16(MachineInstr &Inst, MachineRegisterInfo &MRI,
+                          SIInstrWorklist &Worklist) const;
 
   /// Replace the instructions opcode with the equivalent VALU
   /// opcode.  This function will also move the users of MachineInstruntions
