@@ -12,9 +12,6 @@
 # CHECK:         flat_store_dwordx3 v[2:3], v[4:6]
 # CHECK:         s_endpgm
 
---- |
-  define void @misaligned_regsequence() { ret void }
-...
 ---
 name: misaligned_regsequence
 tracksRegLiveness: true
