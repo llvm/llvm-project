@@ -157,12 +157,22 @@ struct A {
   }
 };
 
+
+
+// This shouldn't crash.
+static_assert(A<int>().f<int>() == 0, "");
+// The result should not be dependent.
+static_assert(A<int>().f<int>() != 0, ""); // expected-error {{static assertion failed due to requirement 'GH99873::A<int>().f<int>() != 0'}}
+                                           // expected-note@-1 {{expression evaluates to '0 != 0'}}
+}
+
+
 #if __cplusplus >= 201703L
 namespace GH160497 {
 
 template <class> struct S {
     template <class>
-    static inline auto mem =
+    inline static auto mem =
     [] { static_assert(false); // expected-error {{static assertion failed}} \
         // expected-note {{while substituting into a lambda expression here}}
         return 42;
@@ -170,7 +180,21 @@ template <class> struct S {
 };
 
 using T = decltype(S<void>::mem<void>);
- // expected-note@-1 {{in instantiation of static data member 'GH99873::GH160497::S<void>::mem<void>' requested here}}
+ // expected-note@-1 {{in instantiation of static data member 'GH160497::S<void>::mem<void>' requested here}}
+
+
+template <class> struct S2 {
+    template <class>
+    inline static auto* mem =
+    [] { static_assert(false); // expected-error {{static assertion failed}} \
+        // expected-note {{while substituting into a lambda expression here}}
+        return static_cast<int*>(nullptr);
+    }();
+};
+
+
+using T2 = decltype(S2<void>::mem<void>);
+//expected-note@-1 {{in instantiation of static data member 'GH160497::S2<void>::mem<void>' requested here}}
 
 namespace N1 {
 
@@ -187,13 +211,6 @@ T y = 42;
 }
 }
 #endif
-
-// This shouldn't crash.
-static_assert(A<int>().f<int>() == 0, "");
-// The result should not be dependent.
-static_assert(A<int>().f<int>() != 0, ""); // expected-error {{static assertion failed due to requirement 'GH99873::A<int>().f<int>() != 0'}}
-                                           // expected-note@-1 {{expression evaluates to '0 != 0'}}
-}
 
 template<typename>
 class conditional {
