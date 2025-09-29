@@ -2319,25 +2319,6 @@ static SDValue lowerVECTOR_SHUFFLE_XVPICKOD(const SDLoc &DL, ArrayRef<int> Mask,
   return DAG.getNode(LoongArchISD::VPICKOD, DL, VT, V2, V1);
 }
 
-// Check if exactly one element of the Mask is replaced by 'Replaced', while
-// all other elements are either 'Base + i' or undef (-1). On success, return
-// the index of the replaced element. Otherwise, just return -1.
-static int checkReplaceOne(ArrayRef<int> Mask, int Base, int Replaced) {
-  int MaskSize = Mask.size();
-  int Idx = -1;
-  for (int i = 0; i < MaskSize; ++i) {
-    if (Mask[i] == Base + i || Mask[i] == -1)
-      continue;
-    if (Mask[i] != Replaced)
-      return -1;
-    if (Idx == -1)
-      Idx = i;
-    else
-      return -1;
-  }
-  return Idx;
-}
-
 /// Lower VECTOR_SHUFFLE into XVINSVE0 (if possible).
 static SDValue
 lowerVECTOR_SHUFFLE_XVINSVE0(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
@@ -2352,14 +2333,32 @@ lowerVECTOR_SHUFFLE_XVINSVE0(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   int MaskSize = Mask.size();
   assert(MaskSize == (int)VT.getVectorNumElements() && "Unexpected mask size");
 
+  // Check if exactly one element of the Mask is replaced by 'Replaced', while
+  // all other elements are either 'Base + i' or undef (-1). On success, return
+  // the index of the replaced element. Otherwise, just return -1.
+  auto checkReplaceOne = [&](int Base, int Replaced) -> int {
+    int Idx = -1;
+    for (int i = 0; i < MaskSize; ++i) {
+      if (Mask[i] == Base + i || Mask[i] == -1)
+        continue;
+      if (Mask[i] != Replaced)
+        return -1;
+      if (Idx == -1)
+        Idx = i;
+      else
+        return -1;
+    }
+    return Idx;
+  };
+
   // Case 1: the lowest element of V2 replaces one element in V1.
-  int Idx = checkReplaceOne(Mask, 0, MaskSize);
+  int Idx = checkReplaceOne(0, MaskSize);
   if (Idx != -1)
     return DAG.getNode(LoongArchISD::XVINSVE0, DL, VT, V1, V2,
                        DAG.getConstant(Idx, DL, GRLenVT));
 
   // Case 2: the lowest element of V1 replaces one element in V2.
-  Idx = checkReplaceOne(Mask, MaskSize, 0);
+  Idx = checkReplaceOne(MaskSize, 0);
   if (Idx != -1)
     return DAG.getNode(LoongArchISD::XVINSVE0, DL, VT, V2, V1,
                        DAG.getConstant(Idx, DL, GRLenVT));
