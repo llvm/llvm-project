@@ -1855,7 +1855,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     // pruned later.
     const auto StdModuleManifestPath =
         GetStdModuleManifestPath(*C, C->getDefaultToolChain());
-    if (StdModuleManifestPath == "<NOT PRESENT>") {
+    if (llvm::sys::fs::exists(StdModuleManifestPath)) {
       Diags.Report(diag::remark_modules_manifest_not_found);
     } else {
       Diags.Report(diag::remark_using_modules_manifest)
