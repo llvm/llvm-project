@@ -476,7 +476,7 @@ private:
                                Instruction *MDFrom = nullptr) {
     SelectInst *SI =
         SelectInst::Create(C, S1, S2, NameStr, InsertBefore, MDFrom);
-    if (SI && !MDFrom) {
+    if (!MDFrom) {
       setExplicitlyUnknownBranchWeightsIfProfiled(*SI, F, DEBUG_TYPE);
     }
     return SI;
