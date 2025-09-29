@@ -7,7 +7,7 @@
 ; CHECK: %[[#Composite:]] = OpConstantComposite %[[#VecTy]] %[[#False]] %[[#False]] %[[#False]] %[[#False]]
 ; CHECK: OpReturnValue %[[#Composite]]
 
-define spir_func <4 x i1> @f(<4 x float> %0) {
- %2 = fcmp false <4 x float> %0, %0
- ret <4 x i1> %2
+define spir_func <4 x i1> @test(<4 x float> %a) {
+ %compare = fcmp false <4 x float> %a, %a
+ ret <4 x i1> %compare
 }

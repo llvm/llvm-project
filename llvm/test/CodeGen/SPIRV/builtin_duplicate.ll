@@ -13,8 +13,8 @@
 
 declare spir_func i64 @_Z12get_local_idj(i32) local_unnamed_addr
 
-define spir_kernel void @test_fn(i32 %a) {
+define spir_kernel void @test(i32 %a) {
 entry:
-  %3 = tail call i64 @_Z12get_local_idj(i32 0)
+  %builtin_call = tail call i64 @_Z12get_local_idj(i32 0)
   ret void
 }
