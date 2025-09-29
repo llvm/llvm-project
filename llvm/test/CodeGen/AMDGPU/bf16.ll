@@ -53397,6 +53397,22 @@ define <32 x bfloat> @v_fma_v32bf16(<32 x bfloat> %a, <32 x bfloat> %b, <32 x bf
 ; GFX950-LABEL: v_fma_v32bf16:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a2, v42 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a3, v43 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a4, v44 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a5, v45 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a6, v46 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a7, v47 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a8, v56 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a9, v57 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a10, v58 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a11, v59 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a12, v60 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a13, v61 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a14, v62 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a15, v63 ; Reload Reuse
 ; GFX950-NEXT:    scratch_load_dword v35, off, s32 offset:64
 ; GFX950-NEXT:    scratch_load_dword v36, off, s32
 ; GFX950-NEXT:    scratch_load_dword v38, off, s32 offset:60
@@ -53414,14 +53430,6 @@ define <32 x bfloat> @v_fma_v32bf16(<32 x bfloat> %a, <32 x bfloat> %b, <32 x bf
 ; GFX950-NEXT:    scratch_load_dword v34, off, s32 offset:16
 ; GFX950-NEXT:    scratch_load_dword v37, off, s32 offset:20
 ; GFX950-NEXT:    scratch_load_dword v55, off, s32 offset:24
-; GFX950-NEXT:    v_accvgpr_write_b32 a3, v43 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a5, v45 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a6, v46 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a8, v56 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a11, v59 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a13, v61 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a14, v62 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a15, v63 ; Reload Reuse
 ; GFX950-NEXT:    v_and_b32_e32 v43, 0xffff0000, v14
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v45, 16, v14
 ; GFX950-NEXT:    v_and_b32_e32 v46, 0xffff0000, v29
@@ -53430,20 +53438,12 @@ define <32 x bfloat> @v_fma_v32bf16(<32 x bfloat> %a, <32 x bfloat> %b, <32 x bf
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v61, 16, v12
 ; GFX950-NEXT:    v_and_b32_e32 v62, 0xffff0000, v27
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
-; GFX950-NEXT:    v_accvgpr_write_b32 a2, v42 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a4, v44 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a7, v47 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a9, v57 ; Reload Reuse
 ; GFX950-NEXT:    v_and_b32_e32 v42, 0xffff0000, v30
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v44, 16, v30
 ; GFX950-NEXT:    v_and_b32_e32 v47, 0xffff0000, v13
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v57, 16, v13
-; GFX950-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
 ; GFX950-NEXT:    v_and_b32_e32 v40, 0xffff0000, v15
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v41, 16, v15
-; GFX950-NEXT:    v_accvgpr_write_b32 a10, v58 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a12, v60 ; Reload Reuse
 ; GFX950-NEXT:    v_and_b32_e32 v58, 0xffff0000, v28
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v60, 16, v28
 ; GFX950-NEXT:    s_waitcnt vmcnt(16)
