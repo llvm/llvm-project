@@ -8995,10 +8995,10 @@ private:
       }
 
       // Next, sort by increasing order of their complexity.
-      llvm::sort(AttachPtrMapInfoPairs,
-                 [this](const auto &LHS, const auto &RHS) {
-                   return AttachPtrComparator(LHS.first, RHS.first);
-                 });
+      llvm::stable_sort(AttachPtrMapInfoPairs,
+                        [this](const auto &LHS, const auto &RHS) {
+                          return AttachPtrComparator(LHS.first, RHS.first);
+                        });
 
       std::optional<size_t> MemberOfValueForFirstCombinedEntry = std::nullopt;
       bool IsFirstGroup = true;
@@ -9849,9 +9849,10 @@ public:
     }
 
     // Next, sort by increasing order of their complexity.
-    llvm::sort(AttachPtrMapDataPairs, [this](const auto &LHS, const auto &RHS) {
-      return AttachPtrComparator(LHS.first, RHS.first);
-    });
+    llvm::stable_sort(AttachPtrMapDataPairs,
+                      [this](const auto &LHS, const auto &RHS) {
+                        return AttachPtrComparator(LHS.first, RHS.first);
+                      });
 
     // Process groups by complexity and process each group
     bool NoDefaultMappingDoneForVD = CurCaptureVarInfo.BasePointers.empty();
