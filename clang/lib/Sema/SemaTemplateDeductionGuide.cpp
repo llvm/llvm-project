@@ -1223,21 +1223,8 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
 
     assert(TemplateArgsForBuildingFPrime[FTemplateParamIdx].isNull() &&
            "The argument must be null before setting");
-    TemplateArgument Transformed = Context.getInjectedTemplateArg(NewParam);
-    if (NewParam->isTemplateParameterPack())
-      Transformed = *Transformed.pack_begin();
-    TemplateArgumentLoc TALoc = SemaRef.getTrivialTemplateArgumentLoc(
-        Transformed, QualType(), NewParam->getBeginLoc());
-    Sema::CheckTemplateArgumentInfo CTAI;
-    if (SemaRef.CheckTemplateArgument(
-            TP, TALoc, F, F->getLocation(), F->getLocation(),
-            /*ArgumentPackIndex=*/-1, CTAI,
-            Sema::CheckTemplateArgumentKind::CTAK_Specified))
-      return nullptr;
     TemplateArgsForBuildingFPrime[FTemplateParamIdx] =
-        NewParam->isTemplateParameterPack()
-            ? TemplateArgument::CreatePackCopy(Context, CTAI.SugaredConverted)
-            : CTAI.SugaredConverted[0];
+        Context.getInjectedTemplateArg(NewParam);
   }
 
   auto *TemplateArgListForBuildingFPrime =
