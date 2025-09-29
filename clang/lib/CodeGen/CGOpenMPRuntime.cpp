@@ -6800,7 +6800,6 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 class MappableExprsHandler {
 public:
   /// Custom comparator for attach-pointer expressions that compares them by
-  /// complexity (i.e. their component-depth) first, then by the order in which
   /// they were computed by collectAttachPtrExprInfo(), if they are semantically
   /// different.
   struct AttachPtrExprComparator {
@@ -9010,16 +9009,13 @@ private:
         const Expr *AttachPtrExpr = It->first;
 
         SmallVector<MapInfo, 8> GroupLists;
-
         while (It != AttachPtrMapInfoPairs.end() &&
                (It->first == AttachPtrExpr ||
                 AttachPtrComparator.areEqual(It->first, AttachPtrExpr))) {
           GroupLists.push_back(It->second);
           ++It;
         }
-
-        if (GroupLists.empty())
-          continue;
+        assert(!GroupLists.empty() && "GroupLists should not be empty");
 
         StructRangeInfoTy PartialStruct;
         AttachInfoTy AttachInfo;
@@ -9854,9 +9850,8 @@ public:
                         return AttachPtrComparator(LHS.first, RHS.first);
                       });
 
-    // Process groups by complexity and process each group
     bool NoDefaultMappingDoneForVD = CurCaptureVarInfo.BasePointers.empty();
-    bool FirstGroupProcessed = false;
+    bool IsFirstGroup = true;
 
     // And finally, process them all in order, grouping those with
     // equivalent attach-ptr exprs together.
@@ -9864,27 +9859,23 @@ public:
     while (It != AttachPtrMapDataPairs.end()) {
       const Expr *AttachPtrExpr = It->first;
 
-      // Collect all MapData entries for this AttachPtrExpr group
       MapDataArrayTy GroupLists;
-
       while (It != AttachPtrMapDataPairs.end() &&
              (It->first == AttachPtrExpr ||
               AttachPtrComparator.areEqual(It->first, AttachPtrExpr))) {
         GroupLists.push_back(It->second);
         ++It;
       }
-
-      if (GroupLists.empty())
-        continue;
+      assert(!GroupLists.empty() && "GroupLists should not be empty");
 
       // Determine if this group of component-lists is eligible for TARGET_PARAM
       // flag. Only the first group processed should be eligible, and only if no
       // default mapping was done.
       bool IsEligibleForTargetParamFlag =
-          !FirstGroupProcessed && NoDefaultMappingDoneForVD;
+          IsFirstGroup && NoDefaultMappingDoneForVD;
 
       GenerateInfoForComponentLists(GroupLists, IsEligibleForTargetParamFlag);
-      FirstGroupProcessed = true;
+      IsFirstGroup = false;
     }
   }
 
