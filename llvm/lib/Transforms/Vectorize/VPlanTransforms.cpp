@@ -150,18 +150,17 @@ static bool cannotHoistOrSinkRecipe(const VPRecipeBase &R) {
 }
 
 static bool sinkScalarOperands(VPlan &Plan) {
+  auto Iter = vp_depth_first_deep(Plan.getEntry());
   bool ScalarVFOnly = Plan.hasScalarVFOnly();
   bool Changed = false;
   // First, collect the operands of all recipes in replicate blocks as seeds for
   // sinking.
   SetVector<std::pair<VPBasicBlock *, VPSingleDefRecipe *>> WorkList;
-  for (VPRegionBlock *VPR : VPBlockUtils::blocksOnly<VPRegionBlock>(
-           vp_depth_first_deep(Plan.getEntry()))) {
+  for (VPRegionBlock *VPR : VPBlockUtils::blocksOnly<VPRegionBlock>(Iter)) {
     VPBasicBlock *EntryVPBB = VPR->getEntryBasicBlock();
     if (!VPR->isReplicator() || EntryVPBB->getSuccessors().size() != 2)
       continue;
-    VPBasicBlock *VPBB =
-        dyn_cast<VPBasicBlock>(EntryVPBB->getSuccessors().front());
+    VPBasicBlock *VPBB = cast<VPBasicBlock>(EntryVPBB->getSuccessors().front());
     if (!VPBB || VPBB->getSingleSuccessor() != VPR->getExitingBasicBlock())
       continue;
     for (auto &Recipe : *VPBB) {
