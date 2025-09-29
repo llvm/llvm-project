@@ -654,6 +654,9 @@ PrototypeDescriptor::parsePrototypeDescriptor(
     case 'F':
       TM |= TypeModifier::Float;
       break;
+    case 'Y':
+      TM |= TypeModifier::BFloat;
+      break;
     case 'S':
       TM |= TypeModifier::LMUL1;
       break;
@@ -704,6 +707,8 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
     ElementBitwidth *= 2;
     LMUL.MulLog2LMUL(1);
     Scale = LMUL.getScale(ElementBitwidth);
+    if (ScalarType == ScalarTypeKind::BFloat)
+      ScalarType = ScalarTypeKind::Float;
     break;
   case VectorTypeModifier::Widening4XVector:
     ElementBitwidth *= 4;
