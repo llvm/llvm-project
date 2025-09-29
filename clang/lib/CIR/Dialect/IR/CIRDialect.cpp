@@ -428,7 +428,10 @@ LogicalResult cir::CastOp::verify() {
     auto resPtrTy = mlir::dyn_cast<cir::PointerType>(resType);
 
     if (srcPtrTy && resPtrTy) {
-      return success();
+      if (srcPtrTy.getAddrSpace() != resPtrTy.getAddrSpace()) {
+        return emitOpError() << "result type address space does not match the "
+                                "address space of the operand";
+      }
     }
 
     return success();
