@@ -1517,6 +1517,7 @@ constexpr bool mayTailCallThisCC(CallingConv::ID CC) {
   switch (CC) {
   case CallingConv::C:
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_Gfx_WholeWave:
     return true;
   default:
     return canGuaranteeTCO(CC);
@@ -1567,6 +1568,11 @@ bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
+
+inline bool supportsWave32(const MCSubtargetInfo &STI) {
+  return AMDGPU::isGFX10Plus(STI) && !AMDGPU::isGFX1250(STI);
+}
+
 int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
@@ -1717,6 +1723,9 @@ bool isInlinableLiteralV2F16(uint32_t Literal);
 LLVM_READNONE
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64);
 
+LLVM_READNONE
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type);
+
 bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
@@ -1785,6 +1794,25 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
 
+/// \returns a register class for the physical register \p Reg if it is a VGPR
+/// or nullptr otherwise.
+const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
+                                           const MCRegisterInfo &MRI);
+
+/// \returns the MODE bits which have to be set by the S_SET_VGPR_MSB for the
+/// physical register \p Reg.
+unsigned getVGPREncodingMSBs(MCPhysReg Reg, const MCRegisterInfo &MRI);
+
+/// If \p Reg is a low VGPR return a corresponding high VGPR with \p MSBs set.
+MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
+                          const MCRegisterInfo &MRI);
+
+// Returns a table for the opcode with a given \p Desc to map the VGPR MSB
+// set by the S_SET_VGPR_MSB to one of 4 sources. In case of VOPD returns 2
+// maps, one for X and one for Y component.
+std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>
+getVGPRLoweringOperandTables(const MCInstrDesc &Desc);
+
 /// \returns true if a memory instruction supports scale_offset modifier.
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
 
@@ -1792,6 +1820,50 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
 /// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
 /// must be defined in terms of bytes.
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
+
+class ClusterDimsAttr {
+public:
+  enum class Kind { Unknown, NoCluster, VariableDims, FixedDims };
+
+  ClusterDimsAttr() = default;
+
+  Kind getKind() const { return AttrKind; }
+
+  bool isUnknown() const { return getKind() == Kind::Unknown; }
+
+  bool isNoCluster() const { return getKind() == Kind::NoCluster; }
+
+  bool isFixedDims() const { return getKind() == Kind::FixedDims; }
+
+  bool isVariableDims() const { return getKind() == Kind::VariableDims; }
+
+  void setUnknown() { *this = ClusterDimsAttr(Kind::Unknown); }
+
+  void setNoCluster() { *this = ClusterDimsAttr(Kind::NoCluster); }
+
+  void setVariableDims() { *this = ClusterDimsAttr(Kind::VariableDims); }
+
+  /// \returns the dims stored. Note that this function can only be called if
+  /// the kind is \p Fixed.
+  const std::array<unsigned, 3> &getDims() const;
+
+  bool operator==(const ClusterDimsAttr &RHS) const {
+    return AttrKind == RHS.AttrKind && Dims == RHS.Dims;
+  }
+
+  std::string to_string() const;
+
+  static ClusterDimsAttr get(const Function &F);
+
+private:
+  enum Encoding { EncoNoCluster = 0, EncoVariableDims = 1024 };
+
+  ClusterDimsAttr(Kind AttrKind) : AttrKind(AttrKind) {}
+
+  std::array<unsigned, 3> Dims = {0, 0, 0};
+
+  Kind AttrKind = Kind::Unknown;
+};
 
 } // end namespace AMDGPU
 

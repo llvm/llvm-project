@@ -1273,6 +1273,12 @@ def G_GET_ROUNDING : GenericInstruction {
   let hasSideEffects = true;
 }
 
+def G_SET_ROUNDING : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = true;
+}
+
 //------------------------------------------------------------------------------
 // Memory ops
 //------------------------------------------------------------------------------

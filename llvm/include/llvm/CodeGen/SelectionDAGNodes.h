@@ -1885,6 +1885,12 @@ LLVM_ABI SDValue peekThroughOneUseBitcasts(SDValue V);
 /// If \p V is not an extracted subvector, it is returned as-is.
 LLVM_ABI SDValue peekThroughExtractSubvectors(SDValue V);
 
+/// Recursively peek through INSERT_VECTOR_ELT nodes, returning the source
+/// vector operand of \p V, as long as \p V is an INSERT_VECTOR_ELT operation
+/// that do not insert into any of the demanded vector elts.
+LLVM_ABI SDValue peekThroughInsertVectorElt(SDValue V,
+                                            const APInt &DemandedElts);
+
 /// Return the non-truncated source operand of \p V if it exists.
 /// If \p V is not a truncation, it is returned as-is.
 LLVM_ABI SDValue peekThroughTruncates(SDValue V);
@@ -3344,6 +3350,14 @@ namespace ISD {
     auto *Ld = dyn_cast<MaskedLoadSDNode>(N);
     return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD &&
            Ld->getAddressingMode() == ISD::UNINDEXED;
+  }
+
+  /// Returns true if the specified node is a non-extending and unindexed
+  /// masked store.
+  inline bool isNormalMaskedStore(const SDNode *N) {
+    auto *St = dyn_cast<MaskedStoreSDNode>(N);
+    return St && !St->isTruncatingStore() &&
+           St->getAddressingMode() == ISD::UNINDEXED;
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or

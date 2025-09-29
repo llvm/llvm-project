@@ -20,7 +20,9 @@ namespace rootsig {
 
 bool verifyRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
 
-bool verifyVersion(uint32_t Version) { return (Version == 1 || Version == 2); }
+bool verifyVersion(uint32_t Version) {
+  return (Version == 1 || Version == 2 || Version == 3);
+}
 
 bool verifyRegisterValue(uint32_t RegisterValue) {
   return RegisterValue != ~0U;
@@ -51,25 +53,11 @@ bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
   return (Flags | DataFlags) == DataFlags;
 }
 
-bool verifyRangeType(uint32_t Type) {
-  switch (Type) {
-  case llvm::to_underlying(dxbc::DescriptorRangeType::CBV):
-  case llvm::to_underlying(dxbc::DescriptorRangeType::SRV):
-  case llvm::to_underlying(dxbc::DescriptorRangeType::UAV):
-  case llvm::to_underlying(dxbc::DescriptorRangeType::Sampler):
-    return true;
-  };
-
-  return false;
-}
-
-bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
-                               uint32_t FlagsVal) {
+bool verifyDescriptorRangeFlag(uint32_t Version, dxil::ResourceClass Type,
+                               dxbc::DescriptorRangeFlags Flags) {
   using FlagT = dxbc::DescriptorRangeFlags;
-  FlagT Flags = FlagT(FlagsVal);
 
-  const bool IsSampler =
-      (Type == llvm::to_underlying(dxbc::DescriptorRangeType::Sampler));
+  const bool IsSampler = (Type == dxil::ResourceClass::Sampler);
 
   if (Version == 1) {
     // Since the metadata is unversioned, we expect to explicitly see the values
@@ -125,29 +113,27 @@ bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
   return (Flags & ~Mask) == FlagT::None;
 }
 
+bool verifyStaticSamplerFlags(uint32_t Version, uint32_t FlagsNumber) {
+  uint32_t LargestValue = llvm::to_underlying(
+      dxbc::StaticSamplerFlags::LLVM_BITMASK_LARGEST_ENUMERATOR);
+  if (FlagsNumber >= NextPowerOf2(LargestValue))
+    return false;
+
+  dxbc::StaticSamplerFlags Flags = dxbc::StaticSamplerFlags(FlagsNumber);
+  if (Version <= 2)
+    return Flags == dxbc::StaticSamplerFlags::None;
+
+  assert(Version == 3 && "Provided invalid root signature version");
+
+  dxbc::StaticSamplerFlags Mask =
+      dxbc::StaticSamplerFlags::NonNormalizedCoordinates |
+      dxbc::StaticSamplerFlags::UintBorderColor |
+      dxbc::StaticSamplerFlags::None;
+  return (Flags | Mask) == Mask;
+}
+
 bool verifyNumDescriptors(uint32_t NumDescriptors) {
   return NumDescriptors > 0;
-}
-
-bool verifySamplerFilter(uint32_t Value) {
-  switch (Value) {
-#define FILTER(Num, Val) case llvm::to_underlying(dxbc::SamplerFilter::Val):
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-    return true;
-  }
-  return false;
-}
-
-// Values allowed here:
-// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode#syntax
-bool verifyAddress(uint32_t Address) {
-  switch (Address) {
-#define TEXTURE_ADDRESS_MODE(Num, Val)                                         \
-  case llvm::to_underlying(dxbc::TextureAddressMode::Val):
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-    return true;
-  }
-  return false;
 }
 
 bool verifyMipLODBias(float MipLODBias) {
@@ -158,28 +144,19 @@ bool verifyMaxAnisotropy(uint32_t MaxAnisotropy) {
   return MaxAnisotropy <= 16u;
 }
 
-bool verifyComparisonFunc(uint32_t ComparisonFunc) {
-  switch (ComparisonFunc) {
-#define COMPARISON_FUNC(Num, Val)                                              \
-  case llvm::to_underlying(dxbc::ComparisonFunc::Val):
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-    return true;
-  }
-  return false;
-}
-
-bool verifyBorderColor(uint32_t BorderColor) {
-  switch (BorderColor) {
-#define STATIC_BORDER_COLOR(Num, Val)                                          \
-  case llvm::to_underlying(dxbc::StaticBorderColor::Val):
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-    return true;
-  }
-  return false;
-}
-
 bool verifyLOD(float LOD) { return !std::isnan(LOD); }
 
+bool verifyNoOverflowedOffset(uint64_t Offset) {
+  return Offset <= std::numeric_limits<uint32_t>::max();
+}
+
+uint64_t computeRangeBound(uint64_t Offset, uint32_t Size) {
+  assert(0 < Size && "Must be a non-empty range");
+  if (Size == NumDescriptorsUnbounded)
+    return NumDescriptorsUnbounded;
+
+  return Offset + uint64_t(Size) - 1;
+}
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm

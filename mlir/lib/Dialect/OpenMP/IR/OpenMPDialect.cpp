@@ -56,6 +56,11 @@ makeDenseBoolArrayAttr(MLIRContext *ctx, const ArrayRef<bool> boolArray) {
   return boolArray.empty() ? nullptr : DenseBoolArrayAttr::get(ctx, boolArray);
 }
 
+static DenseI64ArrayAttr
+makeDenseI64ArrayAttr(MLIRContext *ctx, const ArrayRef<int64_t> intArray) {
+  return intArray.empty() ? nullptr : DenseI64ArrayAttr::get(ctx, intArray);
+}
+
 namespace {
 struct MemRefPointerLikeModel
     : public PointerLikeType::ExternalModel<MemRefPointerLikeModel,
@@ -2106,6 +2111,31 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
       });
 }
 
+/// Check if we can promote SPMD kernel to No-Loop kernel.
+static bool canPromoteToNoLoop(Operation *capturedOp, TeamsOp teamsOp,
+                               WsloopOp *wsLoopOp) {
+  // num_teams clause can break no-loop teams/threads assumption.
+  if (teamsOp.getNumTeamsUpper())
+    return false;
+
+  // Reduction kernels are slower in no-loop mode.
+  if (teamsOp.getNumReductionVars())
+    return false;
+  if (wsLoopOp->getNumReductionVars())
+    return false;
+
+  // Check if the user allows the promotion of kernels to no-loop mode.
+  OffloadModuleInterface offloadMod =
+      capturedOp->getParentOfType<omp::OffloadModuleInterface>();
+  if (!offloadMod)
+    return false;
+  auto ompFlags = offloadMod.getFlags();
+  if (!ompFlags)
+    return false;
+  return ompFlags.getAssumeTeamsOversubscription() &&
+         ompFlags.getAssumeThreadsOversubscription();
+}
+
 TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
   // A non-null captured op is only valid if it resides inside of a TargetOp
   // and is the result of calling getInnermostCapturedOmpOp() on it.
@@ -2134,7 +2164,8 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
 
   // Detect target-teams-distribute-parallel-wsloop[-simd].
   if (numWrappers == 2) {
-    if (!isa<WsloopOp>(innermostWrapper))
+    WsloopOp *wsloopOp = dyn_cast<WsloopOp>(innermostWrapper);
+    if (!wsloopOp)
       return TargetRegionFlags::generic;
 
     innermostWrapper = std::next(innermostWrapper);
@@ -2145,12 +2176,17 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
     if (!isa_and_present<ParallelOp>(parallelOp))
       return TargetRegionFlags::generic;
 
-    Operation *teamsOp = parallelOp->getParentOp();
-    if (!isa_and_present<TeamsOp>(teamsOp))
+    TeamsOp teamsOp = dyn_cast<TeamsOp>(parallelOp->getParentOp());
+    if (!teamsOp)
       return TargetRegionFlags::generic;
 
-    if (teamsOp->getParentOp() == targetOp.getOperation())
-      return TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+    if (teamsOp->getParentOp() == targetOp.getOperation()) {
+      TargetRegionFlags result =
+          TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+      if (canPromoteToNoLoop(capturedOp, teamsOp, wsloopOp))
+        result = result | TargetRegionFlags::no_loop;
+      return result;
+    }
   }
   // Detect target-teams-distribute[-simd] and target-teams-loop.
   else if (isa<DistributeOp, LoopOp>(innermostWrapper)) {
@@ -2956,16 +2992,45 @@ ParseResult LoopNestOp::parse(OpAsmParser &parser, OperationState &result) {
   for (auto &iv : ivs)
     iv.type = loopVarType;
 
+  auto *ctx = parser.getBuilder().getContext();
   // Parse "inclusive" flag.
   if (succeeded(parser.parseOptionalKeyword("inclusive")))
-    result.addAttribute("loop_inclusive",
-                        UnitAttr::get(parser.getBuilder().getContext()));
+    result.addAttribute("loop_inclusive", UnitAttr::get(ctx));
 
   // Parse step values.
   SmallVector<OpAsmParser::UnresolvedOperand> steps;
   if (parser.parseKeyword("step") ||
       parser.parseOperandList(steps, ivs.size(), OpAsmParser::Delimiter::Paren))
     return failure();
+
+  // Parse collapse
+  int64_t value = 0;
+  if (!parser.parseOptionalKeyword("collapse") &&
+      (parser.parseLParen() || parser.parseInteger(value) ||
+       parser.parseRParen()))
+    return failure();
+  if (value > 1)
+    result.addAttribute(
+        "collapse_num_loops",
+        IntegerAttr::get(parser.getBuilder().getI64Type(), value));
+
+  // Parse tiles
+  SmallVector<int64_t> tiles;
+  auto parseTiles = [&]() -> ParseResult {
+    int64_t tile;
+    if (parser.parseInteger(tile))
+      return failure();
+    tiles.push_back(tile);
+    return success();
+  };
+
+  if (!parser.parseOptionalKeyword("tiles") &&
+      (parser.parseLParen() || parser.parseCommaSeparatedList(parseTiles) ||
+       parser.parseRParen()))
+    return failure();
+
+  if (tiles.size() > 0)
+    result.addAttribute("tile_sizes", DenseI64ArrayAttr::get(ctx, tiles));
 
   // Parse the body.
   Region *region = result.addRegion();
@@ -2990,14 +3055,23 @@ void LoopNestOp::print(OpAsmPrinter &p) {
   if (getLoopInclusive())
     p << "inclusive ";
   p << "step (" << getLoopSteps() << ") ";
+  if (int64_t numCollapse = getCollapseNumLoops())
+    if (numCollapse > 1)
+      p << "collapse(" << numCollapse << ") ";
+
+  if (const auto tiles = getTileSizes())
+    p << "tiles(" << tiles.value() << ") ";
+
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
 void LoopNestOp::build(OpBuilder &builder, OperationState &state,
                        const LoopNestOperands &clauses) {
-  LoopNestOp::build(builder, state, clauses.loopLowerBounds,
-                    clauses.loopUpperBounds, clauses.loopSteps,
-                    clauses.loopInclusive);
+  MLIRContext *ctx = builder.getContext();
+  LoopNestOp::build(builder, state, clauses.collapseNumLoops,
+                    clauses.loopLowerBounds, clauses.loopUpperBounds,
+                    clauses.loopSteps, clauses.loopInclusive,
+                    makeDenseI64ArrayAttr(ctx, clauses.tileSizes));
 }
 
 LogicalResult LoopNestOp::verify() {
@@ -3012,6 +3086,17 @@ LogicalResult LoopNestOp::verify() {
       return emitOpError()
              << "range argument type does not match corresponding IV type";
   }
+
+  uint64_t numIVs = getIVs().size();
+
+  if (const auto &numCollapse = getCollapseNumLoops())
+    if (numCollapse > numIVs)
+      return emitOpError()
+             << "collapse value is larger than the number of loops";
+
+  if (const auto &tiles = getTileSizes())
+    if (tiles.value().size() > numIVs)
+      return emitOpError() << "too few canonical loops for tile dimensions";
 
   if (!llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp()))
     return emitOpError() << "expects parent op to be a loop wrapper";
@@ -3142,7 +3227,7 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
               }
 
               SmallString<64> Name("canonloop");
-              for (std::string s : reverse(components)) {
+              for (const std::string &s : reverse(components)) {
                 Name += '_';
                 Name += s;
               }

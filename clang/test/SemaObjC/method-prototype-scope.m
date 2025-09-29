@@ -18,7 +18,7 @@ int object;
 - (NSString *)doSomethingWith:(NSString *)object and:(NSArray *)object // expected-warning {{redefinition of method parameter 'object'}} \
 					  // expected-note {{previous declaration is here}}
 {
-    return object; // expected-warning {{incompatible pointer types returning 'NSArray *' from a function with result type 'NSString *'}}
+    return object; // expected-error {{incompatible pointer types returning 'NSArray *' from a function with result type 'NSString *'}}
 }
 
 - Func:(int)XXXX, id object { return object; } // expected-warning {{use of C-style parameters in Objective-C method declarations is deprecated}}

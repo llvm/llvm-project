@@ -1938,9 +1938,9 @@ define void @mscatter_nxv16f64(<vscale x 8 x double> %val0, <vscale x 8 x double
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
-  %p0 = call <vscale x 16 x ptr> @llvm.vector.insert.nxv8p0.nxv16p0(<vscale x 16 x ptr> undef, <vscale x 8 x ptr> %ptrs0, i64 0)
+  %p0 = call <vscale x 16 x ptr> @llvm.vector.insert.nxv8p0.nxv16p0(<vscale x 16 x ptr> poison, <vscale x 8 x ptr> %ptrs0, i64 0)
   %p1 = call <vscale x 16 x ptr> @llvm.vector.insert.nxv8p0.nxv16p0(<vscale x 16 x ptr> %p0, <vscale x 8 x ptr> %ptrs1, i64 8)
-  %v0 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> undef, <vscale x 8 x double> %val0, i64 0)
+  %v0 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> poison, <vscale x 8 x double> %val0, i64 0)
   %v1 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> %v0, <vscale x 8 x double> %val1, i64 8)
   call void @llvm.masked.scatter.nxv16f64.nxv16p0(<vscale x 16 x double> %v1, <vscale x 16 x ptr> %p1, i32 8, <vscale x 16 x i1> %m)
   ret void
@@ -1980,7 +1980,7 @@ define void @mscatter_baseidx_nxv16i8_nxv16f64(<vscale x 8 x double> %val0, <vsc
 ; RV64-NEXT:    vsoxei64.v v16, (a0), v8, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds double, ptr %base, <vscale x 16 x i8> %idxs
-  %v0 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> undef, <vscale x 8 x double> %val0, i64 0)
+  %v0 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> poison, <vscale x 8 x double> %val0, i64 0)
   %v1 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> %v0, <vscale x 8 x double> %val1, i64 8)
   call void @llvm.masked.scatter.nxv16f64.nxv16p0(<vscale x 16 x double> %v1, <vscale x 16 x ptr> %ptrs, i32 8, <vscale x 16 x i1> %m)
   ret void
@@ -2020,7 +2020,7 @@ define void @mscatter_baseidx_nxv16i16_nxv16f64(<vscale x 8 x double> %val0, <vs
 ; RV64-NEXT:    vsoxei64.v v16, (a0), v8, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds double, ptr %base, <vscale x 16 x i16> %idxs
-  %v0 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> undef, <vscale x 8 x double> %val0, i64 0)
+  %v0 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> poison, <vscale x 8 x double> %val0, i64 0)
   %v1 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> %v0, <vscale x 8 x double> %val1, i64 8)
   call void @llvm.masked.scatter.nxv16f64.nxv16p0(<vscale x 16 x double> %v1, <vscale x 16 x ptr> %ptrs, i32 8, <vscale x 16 x i1> %m)
   ret void
