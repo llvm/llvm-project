@@ -22005,7 +22005,7 @@ bool ARMTargetLowering::isComplexDeinterleavingOperationSupported(
 }
 
 ArrayRef<MCPhysReg> ARMTargetLowering::getRoundingControlRegisters() const {
-  static const MCPhysReg RCRegs[] = {ARM::FPSCR};
+  static const MCPhysReg RCRegs[] = {ARM::FPSCR_RM};
   return RCRegs;
 }
 
