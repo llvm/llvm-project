@@ -5169,6 +5169,7 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   // - or: pick -1
   // - select's condition: if the true value is constant, choose it by making
   //                       the condition true.
+  // - phi: pick the common constant across operands
   // - default: pick 0
   //
   // Note that this transform is intentionally done here rather than
@@ -5193,6 +5194,9 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
 
         C = cast<Constant>(V);
 
+        if (isa<UndefValue>(C) || isa<PoisonValue>(C))
+          return nullptr;
+
         if (BestValue && BestValue != C)
           return nullptr;
 
@@ -5203,28 +5207,8 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
 
     Value *NullValue = Constant::getNullValue(Ty);
 
-    bool OnlyPHIUsers =
-        all_of(I.users(), [](const User *U) { return isa<PHINode>(U); });
-    if (OnlyPHIUsers) {
-      Value *BestValue = nullptr;
-      for (auto *U : I.users()) {
-        Value *V = pickCommonConstantFromPHI(*cast<PHINode>(U));
-        if (!V)
-          continue;
-
-        if (!BestValue) {
-          BestValue = V;
-        } else if (BestValue && BestValue == NullValue) {
-          BestValue = NullValue;
-        }
-      }
-
-      if (BestValue)
-        return BestValue;
-    }
-
     Value *BestValue = nullptr;
-    for (const auto *U : I.users()) {
+    for (auto *U : I.users()) {
       Value *V = NullValue;
       if (match(U, m_Or(m_Value(), m_Value())))
         V = ConstantInt::getAllOnesValue(Ty);
@@ -5233,6 +5217,10 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
       else if (match(U, m_c_Select(m_Specific(&I), m_Value(V)))) {
         if (!isGuaranteedNotToBeUndefOrPoison(V, &AC, &I, &DT))
           V = NullValue;
+      } else if (auto *PHI = dyn_cast<PHINode>(U)) {
+        Value *MaybeV = pickCommonConstantFromPHI(*PHI);
+        if (MaybeV)
+          V = MaybeV;
       }
 
       if (!BestValue)
