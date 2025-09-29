@@ -219,7 +219,7 @@ using T = decltype(S<void>::mem<void>);
 T y = 42;
 
 }
-}
+
 namespace GH161196 {
 
 template <typename> struct A {
@@ -237,6 +237,8 @@ struct C {
 };
 
 void test() { (void)C::XBitMask<0>; }
+
+}
 #endif
 
 template<typename>
