@@ -51,6 +51,7 @@ public:
                         MCInst *&FixedEntryLoadInstr) const override;
 
   bool isNoop(const MCInst &Inst) const override;
+  void createNoop(MCInst &Nop) const override;
 
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
                      const llvm::MCSymbol *&Tgt,
