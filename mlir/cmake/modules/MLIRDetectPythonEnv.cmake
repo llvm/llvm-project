@@ -54,7 +54,7 @@ macro(mlir_configure_python_dev_packages)
                   "extension = '${PYTHON_MODULE_EXTENSION}")
 
     mlir_detect_nanobind_install()
-    find_package(nanobind 2.4 CONFIG REQUIRED)
+    find_package(nanobind 2.9 CONFIG REQUIRED)
     message(STATUS "Found nanobind v${nanobind_VERSION}: ${nanobind_INCLUDE_DIR}")
     message(STATUS "Python prefix = '${PYTHON_MODULE_PREFIX}', "
                   "suffix = '${PYTHON_MODULE_SUFFIX}', "

@@ -175,7 +175,7 @@ uint16_t ELF::convertArchNameToEMachine(StringRef Arch) {
       .Case("ba2", EM_BA2)
       .Case("xcore", EM_XCORE)
       .Case("mchp_pic", EM_MCHP_PIC)
-      .Case("intel205", EM_INTEL205)
+      .Case("intelgt", EM_INTELGT)
       .Case("intel206", EM_INTEL206)
       .Case("intel207", EM_INTEL207)
       .Case("intel208", EM_INTEL208)
@@ -584,8 +584,8 @@ StringRef ELF::convertEMachineToArchName(uint16_t EMachine) {
     return "xcore";
   case EM_MCHP_PIC:
     return "mchp_pic";
-  case EM_INTEL205:
-    return "intel205";
+  case EM_INTELGT:
+    return "intelgt";
   case EM_INTEL206:
     return "intel206";
   case EM_INTEL207:

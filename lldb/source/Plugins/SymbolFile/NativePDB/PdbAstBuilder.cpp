@@ -1454,8 +1454,9 @@ PdbAstBuilder::FromCompilerDeclContext(CompilerDeclContext context) {
   return static_cast<clang::DeclContext *>(context.GetOpaqueDeclContext());
 }
 
-void PdbAstBuilder::Dump(Stream &stream, llvm::StringRef filter) {
-  m_clang.Dump(stream.AsRawOstream(), filter);
+void PdbAstBuilder::Dump(Stream &stream, llvm::StringRef filter,
+                         bool show_color) {
+  m_clang.Dump(stream.AsRawOstream(), filter, show_color);
 }
 
 clang::NamespaceDecl *

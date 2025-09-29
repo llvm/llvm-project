@@ -659,7 +659,7 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes) {
 #ifdef _WIN32
     if (is_windows_console) {
       llvm::raw_fd_ostream(_fileno(m_stream), false)
-          .write((char *)buf, num_bytes);
+          .write((const char *)buf, num_bytes);
       return error;
     }
 #endif

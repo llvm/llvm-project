@@ -30,6 +30,13 @@ define float @fadd_f32(float %x, float %y) {
 ; RV32I-NEXT:    fadd.d fa5, fa5, fa4
 ; RV32I-NEXT:    fmv.x.d a0, fa5
 ; RV32I-NEXT:    ret
+; RV64I-LABEL: fadd_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.w.x fa5, a0
+; RV64I-NEXT:    fmv.w.x fa4, a1
+; RV64I-NEXT:    fadd.s fa5, fa5, fa4
+; RV64I-NEXT:    fmv.x.w a0, fa5
+; RV64I-NEXT:    ret
   %a = fadd float %x, %y
   ret float %a
 }

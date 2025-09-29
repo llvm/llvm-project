@@ -31,24 +31,24 @@ Parts:
       NumRootParameters: 3
       NumStaticSamplers: 0
       Parameters:
-      - ParameterType: 1 # RootConstants
-        ShaderVisibility: 0
+      - ParameterType: Constants32Bit
+        ShaderVisibility: All
         Constants:
           Num32BitValues: 16
           ShaderRegister: 15
           RegisterSpace: 14
-      - ParameterType: 2 # SRV
-        ShaderVisibility: 0
+      - ParameterType: SRV
+        ShaderVisibility: All
         Descriptor:
           ShaderRegister: 31
           RegisterSpace: 32
           DATA_STATIC_WHILE_SET_AT_EXECUTE: true
-      - ParameterType: 0 # Descriptor Table
-        ShaderVisibility: 0
+      - ParameterType: DescriptorTable
+        ShaderVisibility: All
         Table:
           NumRanges: 1
           Ranges:
-            - RangeType: 0 # CBV
+            - RangeType: CBuffer
               NumDescriptors: -1
               BaseShaderRegister: 42
               RegisterSpace: 43

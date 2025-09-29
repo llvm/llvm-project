@@ -15,6 +15,7 @@
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/compiler.h"
 
 #if defined(LIBC_TARGET_ARCH_IS_X86)
 
@@ -57,7 +58,12 @@ LIBC_INLINE_VAR constexpr bool K_AVX512_BW = LLVM_LIBC_IS_DEFINED(__AVX512BW__);
 // Memcpy repmovsb implementation
 struct Memcpy {
   LIBC_INLINE static void repmovsb(void *dst, const void *src, size_t count) {
+#ifdef LIBC_COMPILER_IS_MSVC
+    __movsb(static_cast<unsigned char *>(dst),
+            static_cast<const unsigned char *>(src), count);
+#else
     asm volatile("rep movsb" : "+D"(dst), "+S"(src), "+c"(count) : : "memory");
+#endif // LIBC_COMPILER_IS_MSVC
   }
 };
 
@@ -138,8 +144,10 @@ LIBC_INLINE MemcmpReturnType cmp_neq<uint64_t>(CPtr p1, CPtr p2,
 // When we use these SIMD types in template specialization GCC complains:
 // "ignoring attributes on template argument ‘__m128i’ [-Wignored-attributes]"
 // Therefore, we disable this warning in this file.
+#ifndef LIBC_COMPILER_IS_MSVC
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif // !LIBC_COMPILER_IS_MSVC
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for __m128i
@@ -366,7 +374,9 @@ LIBC_INLINE MemcmpReturnType cmp_neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
 }
 #endif // __AVX512BW__
 
+#ifndef LIBC_COMPILER_IS_MSVC
 #pragma GCC diagnostic pop
+#endif // !LIBC_COMPILER_IS_MSVC
 
 } // namespace generic
 } // namespace LIBC_NAMESPACE_DECL

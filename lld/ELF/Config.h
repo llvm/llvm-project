@@ -363,7 +363,7 @@ struct Config {
   bool optRemarksWithHotness;
   bool picThunk;
   bool pie;
-  bool printGcSections;
+  llvm::StringRef printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
   std::optional<uint64_t> randomizeSectionPadding;

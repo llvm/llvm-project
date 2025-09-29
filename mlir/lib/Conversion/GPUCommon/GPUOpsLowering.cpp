@@ -663,7 +663,7 @@ static IntegerAttr wrapNumericMemorySpace(MLIRContext *ctx, unsigned space) {
 
 /// Generates a symbol with 0-sized array type for dynamic shared memory usage,
 /// or uses existing symbol.
-LLVM::GlobalOp getDynamicSharedMemorySymbol(
+static LLVM::GlobalOp getDynamicSharedMemorySymbol(
     ConversionPatternRewriter &rewriter, gpu::GPUModuleOp moduleOp,
     gpu::DynamicSharedMemoryOp op, const LLVMTypeConverter *typeConverter,
     MemRefType memrefType, unsigned alignmentBit) {

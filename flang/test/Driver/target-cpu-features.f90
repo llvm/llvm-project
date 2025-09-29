@@ -23,12 +23,6 @@
 ! RUN: %flang --target=x86_64-linux-gnu -mno-apx-features=ccmp -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-NO-APX
 
-! RUN: %flang --target=x86_64-linux-gnu -mevex512 -c %s -### 2>&1 \
-! RUN: | FileCheck %s -check-prefix=CHECK-EVEX512
-
-! RUN: %flang --target=x86_64-linux-gnu -mno-evex512 -c %s -### 2>&1 \
-! RUN: | FileCheck %s -check-prefix=CHECK-NO-EVEX512
-
 ! RUN: %flang --target=x86_64h-linux-gnu -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-X86_64H
 
@@ -76,17 +70,11 @@
 ! CHECK-NO-APX: "-fc1" "-triple" "x86_64-unknown-linux-gnu"
 ! CHECK-NO-APX-SAME: "-target-feature" "-ccmp"
 
-! CHECK-EVEX512: "-fc1" "-triple" "x86_64-unknown-linux-gnu"
-! CHECK-EVEX512-SAME: "-target-feature" "+evex512"
-
-! CHECK-NO-EVEX512: "-fc1" "-triple" "x86_64-unknown-linux-gnu"
-! CHECK-NO-EVEX512-SAME: "-target-feature" "-evex512"
-
 ! CHECK-X86_64H: "-fc1" "-triple" "x86_64h-unknown-linux-gnu"
 ! CHECK-X86_64H-SAME: "-target-cpu" "x86-64" "-target-feature" "-rdrnd" "-target-feature" "-aes" "-target-feature" "-pclmul" "-target-feature" "-rtm" "-target-feature" "-fsgsbase"
 
 ! CHECK-RV64: "-fc1" "-triple" "riscv64-unknown-linux-gnu"
-! CHECK-RV64-SAME: "-target-cpu" "generic-rv64" "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+c"
+! CHECK-RV64-SAME: "-target-cpu" "generic-rv64" "-target-feature" "+i" "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+c"
 
 ! CHECK-AMDGPU: "-fc1" "-triple" "amdgcn-amd-amdhsa"
 ! CHECK-AMDGPU-SAME: "-target-cpu" "gfx908"
