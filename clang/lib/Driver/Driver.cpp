@@ -1837,7 +1837,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     Diags.Report(diag::remark_performing_driver_managed_module_build);
     // TODO: When -fmodules-driver is no longer experimental, allow implicit
     // activation of the modules driver. For now, keep the detection of whether
-    // the modules driver should be enabled here for  diagnostics only, and do
+    // the modules driver should be enabled here for diagnostics only, and do
     // not implicitly enable the feature.
     auto EnableOrErr = modules::shouldUseModulesDriver(Inputs, getVFS(), Diags);
     if (!EnableOrErr) {
