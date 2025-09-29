@@ -194,9 +194,9 @@ ml-dtypes==0.5.1 ; python_version < "3.13" \
     --hash=sha256:d13755f8e8445b3870114e5b6240facaa7cb0c3361e54beba3e07fa912a6e12b \
     --hash=sha256:fd918d4e6a4e0c110e2e05be7a7814d10dc1b95872accbf6512b80a109b71ae1
     # via -r mlir/python/requirements.txt
-nanobind==2.7.0 \
-    --hash=sha256:73b12d0e751d140d6c1bf4b215e18818a8debfdb374f08dc3776ad208d808e74 \
-    --hash=sha256:f9f1b160580c50dcf37b6495a0fd5ec61dc0d95dae5f8004f87dd9ad7eb46b34
+nanobind==2.9.2 \
+    --hash=sha256:c37957ffd5eac7eda349cff3622ecd32e5ee1244ecc912c99b5bc8188bafd16e \
+    --hash=sha256:e7608472de99d375759814cab3e2c94aba3f9ec80e62cfef8ced495ca5c27d6e
     # via -r mlir/python/requirements.txt
 numpy==2.0.2 \
     --hash=sha256:0123ffdaa88fa4ab64835dcbde75dcdf89c453c922f18dced6e27c90d1d0ec5a \
@@ -383,6 +383,10 @@ swig==4.3.1 \
     --hash=sha256:efec16327029f682f649a26da726bb0305be8800bd0f1fa3e81bf0769cf5b476 \
     --hash=sha256:fc496c0d600cf1bb2d91e28d3d6eae9c4301e5ea7a0dec5a4281b5efed4245a8
     # via -r lldb/test/requirements.txt
+typing-extensions==4.15.0 \
+    --hash=sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466 \
+    --hash=sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548
+    # via -r mlir/python/requirements.txt
 urllib3==2.5.0 \
     --hash=sha256:3fc47733c7e419d4bc3f6b3dc2b4f890bb743906a30d56ba4a5bfa4bbff92760 \
     --hash=sha256:e6b01673c0fa6a13e374b50871808eb3bf7046c4b125b216f6bf1cc604cff0dc

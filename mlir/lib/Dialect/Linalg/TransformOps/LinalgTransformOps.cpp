@@ -283,7 +283,7 @@ void transform::BufferizeToAllocationOp::build(OpBuilder &b,
   return build(b, result,
                /*resultTypes=*/resultTypes,
                /*target=*/target,
-               /*memorySpace=*/memorySpace);
+               /*memory_space=*/memorySpace);
 }
 
 void transform::BufferizeToAllocationOp::build(OpBuilder &b,
@@ -296,7 +296,7 @@ void transform::BufferizeToAllocationOp::build(OpBuilder &b,
   return build(b, result,
                /*resultTypes=*/resultTypes,
                /*target=*/target,
-               /*memorySpace=*/b.getI64IntegerAttr(memorySpace));
+               /*memory_space=*/b.getI64IntegerAttr(memorySpace));
 }
 
 namespace {
@@ -1903,21 +1903,21 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                              StringRef copyBackOp,
                              bool usePrescribedTensorShapes) {
   auto resultType = transform::AnyOpType::get(b.getContext());
-  return build(/*builder=*/b,
+  return build(/*odsBuilder=*/b,
                /*result=*/result,
                /*types=*/TypeRange{resultType, resultType},
                /*target=*/target,
-               /*paddingValues=*/ArrayAttr(), // let inference handle this
-               /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
-               /*padToMultipleOf=*/ValueRange{},
+               /*padding_values=*/ArrayAttr(), // let inference handle this
+               /*padding_dimensions=*/b.getI64ArrayAttr(paddingDimensions),
+               /*pad_to_multiple_of=*/ValueRange{},
                /*padToMultipleOf=*/
                (padToMultipleOf.empty()
                     ? DenseI64ArrayAttr()
                     : b.getDenseI64ArrayAttr(padToMultipleOf)),
-               /*nofoldFlags=*/b.getI64ArrayAttr(nofoldFlags),
-               /*transposePaddings=*/b.getArrayAttr(transposePaddings),
-               /*copyBackOp=*/b.getStringAttr(copyBackOp),
-               /*usePrescribedTensorShapes=*/
+               /*nofold_flags=*/b.getI64ArrayAttr(nofoldFlags),
+               /*transpose_paddings=*/b.getArrayAttr(transposePaddings),
+               /*copy_back_op=*/b.getStringAttr(copyBackOp),
+               /*use_prescribed_tensor_shapes=*/
                usePrescribedTensorShapes ? b.getUnitAttr() : nullptr);
 }
 
@@ -1933,18 +1933,18 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
   SmallVector<Value> dynamicPadToMultipleOf;
   dispatchIndexOpFoldResults(mixedPadToMultipleOf, dynamicPadToMultipleOf,
                              staticPadToMultipleOf);
-  return build(/*builder=*/b,
+  return build(/*odsBuilder=*/b,
                /*result=*/result,
                /*types=*/TypeRange{resultType, resultType},
                /*target=*/target,
-               /*paddingValues=*/ArrayAttr(), // let inference handle this
-               /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
-               /*padToMultipleOf=*/dynamicPadToMultipleOf,
+               /*padding_values=*/ArrayAttr(), // let inference handle this
+               /*padding_dimensions=*/b.getI64ArrayAttr(paddingDimensions),
+               /*pad_to_multiple_of=*/dynamicPadToMultipleOf,
                /*padToMultipleOf=*/staticPadToMultipleOf,
-               /*nofoldFlags=*/b.getI64ArrayAttr(nofoldFlags),
-               /*transposePaddings=*/b.getArrayAttr(transposePaddings),
-               /*copyBackOp=*/copyBackOp,
-               /*usePrescribedTensorShapes=*/usePrescribedTensorShapes);
+               /*nofold_flags=*/b.getI64ArrayAttr(nofoldFlags),
+               /*transpose_paddings=*/b.getArrayAttr(transposePaddings),
+               /*copy_back_op=*/copyBackOp,
+               /*use_prescribed_tensor_shapes=*/usePrescribedTensorShapes);
 }
 
 void PadOp::getEffects(
@@ -2163,16 +2163,16 @@ void transform::PadTilingInterfaceOp::build(OpBuilder &b,
                                             ArrayRef<int64_t> paddingSizes,
                                             bool padToMultipleOf) {
   auto resultType = transform::AnyOpType::get(b.getContext());
-  return build(/*builder=*/b,
+  return build(/*odsBuilder=*/b,
                /*result=*/result,
                /*types=*/TypeRange{resultType, resultType},
                /*target=*/target,
-               /*paddingValues=*/ArrayAttr(), // let inference handle this
-               /*paddingSizes=*/ValueRange{},
+               /*padding_values=*/ArrayAttr(), // let inference handle this
+               /*padding_sizes=*/ValueRange{},
                /*paddingSizes=*/
                (paddingSizes.empty() ? DenseI64ArrayAttr()
                                      : b.getDenseI64ArrayAttr(paddingSizes)),
-               /*padToMultipleOf=*/
+               /*pad_to_multiple_of=*/
                padToMultipleOf ? b.getUnitAttr() : nullptr);
 }
 
@@ -2184,12 +2184,12 @@ void transform::PadTilingInterfaceOp::build(
   SmallVector<Value> dynamicPaddingSizes;
   dispatchIndexOpFoldResults(mixedPaddingSizes, dynamicPaddingSizes,
                              staticPaddingSizes);
-  return build(/*builder=*/b,
+  return build(/*odsBuilder=*/b,
                /*result=*/result,
                /*types=*/TypeRange{resultType, resultType},
                /*target=*/target,
-               /*paddingValues=*/ArrayAttr(), // let inference handle this
-               /*paddingSizes=*/dynamicPaddingSizes,
+               /*padding_values=*/ArrayAttr(), // let inference handle this
+               /*padding_sizes=*/dynamicPaddingSizes,
                /*paddingSizes=*/staticPaddingSizes,
                /*usePrescribedTensorShapes=*/padToMultipleOf);
 }
