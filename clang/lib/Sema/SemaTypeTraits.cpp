@@ -1163,13 +1163,16 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     //   - it has at least one trivial eligible constructor and a trivial,
     //     non-deleted destructor.
     const CXXDestructorDecl *Dtor = RD->getDestructor();
-    if (UnqualT->isAggregateType())
-      if (Dtor && !Dtor->isUserProvided())
-        return true;
-    if (RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted()))
-      if (RD->hasTrivialDefaultConstructor() ||
-          RD->hasTrivialCopyConstructor() || RD->hasTrivialMoveConstructor())
-        return true;
+    if (UnqualT->isAggregateType() && (!Dtor || !Dtor->isUserProvided()))
+      return true;
+    if (RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted())) {
+      for (CXXConstructorDecl *Ctr : RD->ctors()) {
+        if (Ctr->isIneligibleOrNotSelected() || Ctr->isDeleted())
+          continue;
+        if (Ctr->isTrivial())
+          return true;
+      }
+    }
     return false;
   }
   case UTT_IsIntangibleType:
