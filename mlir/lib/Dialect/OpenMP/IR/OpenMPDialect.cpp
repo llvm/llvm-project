@@ -78,11 +78,19 @@ struct LLVMPointerPointerLikeModel
 } // namespace
 
 /// Generate a name of a canonical loop nest of the format
-/// `<prefix>(_s<num>_r<num>)*` that describes its nesting inside parent
-/// operations (`_r<num>`) and that operation's region (`_s<num>`). The region
-/// number is omitted if the parent operation has just one region. If a loop
-/// nest just consists of canonical loops nested inside each other, also uses
-/// `d<num>` where <num> is the nesting depth of the loop.
+/// `<prefix>(_r<idx>_s<idx>)*`. Hereby, `_r<idx>` identifies the region
+/// argument index of an operation that has multiple regions, if the operation
+/// has multiple regions.
+/// `_s<idx>` identifies the position of an operation within a region, where
+/// only operations that may potentially contain loops (i.e. have region
+/// arguments) are counted. Again, it is omitted if there is only one such
+/// operation in a region. If there are canonical loops nested inside each
+/// other, also may also use the format `_d<num>` where <num> is the nesting
+/// depth of the loop.
+///
+/// The generated name is a best-effort to make canonical loop unique within an
+/// SSA namespace. This also means that regions with IsolatedFromAbove property
+/// do not consider any parents or siblings.
 static std::string generateLoopNestingName(StringRef prefix,
                                            CanonicalLoopOp op) {
   struct Component {
