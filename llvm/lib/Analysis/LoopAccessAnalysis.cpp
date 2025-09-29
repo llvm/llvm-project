@@ -2111,15 +2111,21 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   if (StrideAScaled == StrideBScaled)
     CommonStride = StrideAScaled;
 
-  // TODO: Historically, we didn't retry with runtime checks when (unscaled)
-  // strides were different but there is no inherent reason to.
-  if (!isa<SCEVConstant>(Dist))
-    ShouldRetryWithRuntimeChecks |= StrideAPtrInt == StrideBPtrInt;
-
   // If distance is a SCEVCouldNotCompute, return Unknown immediately.
   if (isa<SCEVCouldNotCompute>(Dist)) {
     LLVM_DEBUG(dbgs() << "LAA: Uncomputable distance.\n");
     return Dependence::Unknown;
+  }
+
+  if (!isa<SCEVConstant>(Dist)) {
+    if (!LoopGuards)
+      LoopGuards.emplace(
+          ScalarEvolution::LoopGuards::collect(InnermostLoop, SE));
+    Dist = SE.applyLoopGuards(Dist, *LoopGuards);
+
+    // TODO: Historically, we didn't retry with runtime checks when (unscaled)
+    // strides were different but there is no inherent reason to.
+    ShouldRetryWithRuntimeChecks |= StrideAPtrInt == StrideBPtrInt;
   }
 
   // When the distance is possibly zero, we're reading/writing the same memory
@@ -2193,21 +2199,14 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   uint64_t ConstDist =
       match(Dist, m_scev_APInt(APDist)) ? APDist->abs().getZExtValue() : 0;
 
-  // Attempt to prove strided accesses independent.
-  if (APDist) {
-    // If the distance between accesses and their strides are known constants,
-    // check whether the accesses interlace each other.
-    if (ConstDist > 0 && CommonStride && CommonStride > 1 && HasSameSize &&
-        areStridedAccessesIndependent(ConstDist, *CommonStride,
-                                      TypeByteSize.first)) {
-      LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
-      return Dependence::NoDep;
-    }
-  } else {
-    if (!LoopGuards)
-      LoopGuards.emplace(
-          ScalarEvolution::LoopGuards::collect(InnermostLoop, SE));
-    Dist = SE.applyLoopGuards(Dist, *LoopGuards);
+  // Attempt to prove strided accesses independent. If the distance between
+  // accesses and their strides are known constants, check whether the accesses
+  // interlace each other.
+  if (ConstDist && CommonStride && CommonStride > 1 && HasSameSize &&
+      areStridedAccessesIndependent(ConstDist, *CommonStride,
+                                    TypeByteSize.first)) {
+    LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
+    return Dependence::NoDep;
   }
 
   // Negative distances are not plausible dependencies.
