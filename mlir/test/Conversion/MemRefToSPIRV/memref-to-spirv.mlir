@@ -519,6 +519,8 @@ module attributes {
 #col_major = affine_map<(d0, d1) -> (d1, d0)>
 // CHECK: #[[$CUSTOMLAYOUTMAP:.*]] = affine_map<(d0, d1, d2) -> (d2, d1, d0)>
 #custom = affine_map<(d0, d1, d2) -> (d2, d1, d0)>
+// CHECK: #[[$NONPERMMAP:.*]] = affine_map<(d0, d1) -> (d0, d1 mod 2)>
+#non_permutation = affine_map<(d0, d1) -> (d0, d1 mod 2)>
 module attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [
     Shader,
@@ -784,6 +786,17 @@ module attributes {
     // CHECK-NOT: spirv.ImageFetch
     %0 = memref.load %arg0[%cst] : memref<1xvector<1xf32>, #spirv.storage_class<Image>>
     memref.store %0, %arg1[%cst] : memref<1xvector<1xf32>, #spirv.storage_class<StorageBuffer>>
+    return
+  }
+
+  // CHECK-LABEL: @load_non_perm_layout(
+  func.func @load_non_perm_layout(%arg0: memref<2x4xf32, #non_permutation, #spirv.storage_class<Image>>, %arg1: memref<2x4xf32, #spirv.storage_class<StorageBuffer>>) {
+    %x = arith.constant 3 : index
+    %y = arith.constant 1 : index
+    // CHECK-NOT: spirv.Image
+    // CHECK-NOT: spirv.ImageFetch
+    %0 = memref.load %arg0[%y, %x] : memref<2x4xf32, #non_permutation, #spirv.storage_class<Image>>
+    memref.store %0, %arg1[%y, %x] : memref<2x4xf32, #spirv.storage_class<StorageBuffer>>
     return
   }
 }
