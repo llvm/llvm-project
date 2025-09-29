@@ -412,7 +412,7 @@ namespace call_with_cf_constant {
     boo(@(details->value));
   }
 }
-#if 0
+
 namespace call_with_cf_string {
   void bar(CFStringRef);
   void foo() {
@@ -607,4 +607,3 @@ struct Derived : Base {
   return stringForImage(image.get());
 }
 @end
-#endif
