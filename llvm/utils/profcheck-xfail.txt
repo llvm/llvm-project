@@ -107,6 +107,7 @@ Instrumentation/AddressSanitizer/AMDGPU/global_metadata_addrspacecasts.ll
 Instrumentation/AddressSanitizer/AMDGPU/instrument-stack.ll
 Instrumentation/AddressSanitizer/AMDGPU/no_redzones_in_lds_globals.ll
 Instrumentation/AddressSanitizer/AMDGPU/no_redzones_in_scratch_globals.ll
+Instrumentation/AddressSanitizer/RISCV/asan-rvv-intrinsics.ll
 Instrumentation/AddressSanitizer/asan_address_space_attr.ll
 Instrumentation/AddressSanitizer/asan-detect-invalid-pointer-pair.ll
 Instrumentation/AddressSanitizer/asan-disable-sanitizer-instrumentation.ll
@@ -1097,6 +1098,7 @@ Transforms/IROutliner/outlining-remapped-outputs.ll
 Transforms/IROutliner/outlining-same-constants.ll
 Transforms/IROutliner/outlining-same-globals.ll
 Transforms/IROutliner/outlining-same-output-blocks.ll
+Transforms/IROutliner/outlining-special-state.ll
 Transforms/IROutliner/outlining-strip-loop-info.ll
 Transforms/IROutliner/outlining-swift-error.ll
 Transforms/IROutliner/phi-node-exit-path-order.ll
@@ -1173,6 +1175,7 @@ Transforms/LoopVectorize/AArch64/early_exit_costs.ll
 Transforms/LoopVectorize/AArch64/epilog-iv-select-cmp.ll
 Transforms/LoopVectorize/AArch64/epilog-vectorization-factors.ll
 Transforms/LoopVectorize/AArch64/epilog-vectorization-widen-inductions.ll
+Transforms/LoopVectorize/AArch64/epilogue-vectorization-fix-scalar-resume-values.ll
 Transforms/LoopVectorize/AArch64/extend-vectorization-factor-for-unprofitable-memops.ll
 Transforms/LoopVectorize/AArch64/f128-fmuladd-reduction.ll
 Transforms/LoopVectorize/AArch64/first-order-recurrence-fold-tail.ll
@@ -1288,6 +1291,7 @@ Transforms/LoopVectorize/bzip_reverse_loops.ll
 Transforms/LoopVectorize/calloc.ll
 Transforms/LoopVectorize/cast-induction.ll
 Transforms/LoopVectorize/consecutive-ptr-uniforms.ll
+Transforms/LoopVectorize/cse-casts.ll
 Transforms/LoopVectorize/dbg-outer-loop-vect.ll
 Transforms/LoopVectorize/debugloc.ll
 Transforms/LoopVectorize/dereferenceable-info-from-assumption-constant-size.ll
@@ -1406,6 +1410,7 @@ Transforms/LoopVectorize/RISCV/blocks-with-dead-instructions.ll
 Transforms/LoopVectorize/RISCV/dead-ops-cost.ll
 Transforms/LoopVectorize/RISCV/divrem.ll
 Transforms/LoopVectorize/RISCV/gather-scatter-cost.ll
+Transforms/LoopVectorize/RISCV/induction-costs.ll
 Transforms/LoopVectorize/RISCV/inloop-reduction.ll
 Transforms/LoopVectorize/RISCV/interleaved-masked-access.ll
 Transforms/LoopVectorize/RISCV/mask-index-type.ll
@@ -1453,6 +1458,7 @@ Transforms/LoopVectorize/skip-iterations.ll
 Transforms/LoopVectorize/store-reduction-results-in-tail-folded-loop.ll
 Transforms/LoopVectorize/strict-fadd-interleave-only.ll
 Transforms/LoopVectorize/struct-return.ll
+Transforms/LoopVectorize/struct-return-replicate.ll
 Transforms/LoopVectorize/SystemZ/branch-for-predicated-block.ll
 Transforms/LoopVectorize/SystemZ/force-target-instruction-cost.ll
 Transforms/LoopVectorize/SystemZ/load-scalarization-cost-0.ll
@@ -1739,6 +1745,7 @@ Transforms/PGOProfile/chr-dead-pred.ll
 Transforms/PGOProfile/chr-dup-threshold.ll
 Transforms/PGOProfile/chr.ll
 Transforms/PGOProfile/chr-poison.ll
+Transforms/PGOProfile/chr-lifetimes.ll
 Transforms/PGOProfile/comdat.ll
 Transforms/PGOProfile/cspgo_profile_summary.ll
 Transforms/PGOProfile/memop_profile_funclet_wasm.ll
