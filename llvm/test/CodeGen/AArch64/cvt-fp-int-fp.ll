@@ -4,13 +4,8 @@
 define double @t1(double %x) {
 ; CHECK-LABEL: t1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-4332462841530417152 // =0xc3e0000000000000
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    mov x8, #4890909195324358655 // =0x43dfffffffffffff
-; CHECK-NEXT:    fmaxnm d0, d0, d1
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    fminnm d0, d0, d1
-; CHECK-NEXT:    frintz d0, d0
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    scvtf d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi double %x to i64
@@ -21,12 +16,8 @@ entry:
 define float @t2(float %x) {
 ; CHECK-LABEL: t2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2s, #207, lsl #24
-; CHECK-NEXT:    mov w8, #1325400063 // =0x4effffff
-; CHECK-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    fminnm s0, s0, s1
-; CHECK-NEXT:    frintz s0, s0
+; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    scvtf s0, s0
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi float %x to i32
@@ -37,13 +28,8 @@ entry:
 define half @t3(half %x)  {
 ; CHECK-LABEL: t3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #64511 // =0xfbff
-; CHECK-NEXT:    fmov h1, w8
-; CHECK-NEXT:    mov w8, #31743 // =0x7bff
-; CHECK-NEXT:    fmaxnm h0, h0, h1
-; CHECK-NEXT:    fmov h1, w8
-; CHECK-NEXT:    fminnm h0, h0, h1
-; CHECK-NEXT:    frintz h0, h0
+; CHECK-NEXT:    fcvtzs h0, h0
+; CHECK-NEXT:    scvtf h0, h0
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi half %x to i32
@@ -184,14 +170,8 @@ entry:
 define i64 @tests_f64_multiuse(double %x) {
 ; CHECK-LABEL: tests_f64_multiuse:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-4332462841530417152 // =0xc3e0000000000000
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    mov x8, #4890909195324358655 // =0x43dfffffffffffff
-; CHECK-NEXT:    fmov d2, x8
 ; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    fmaxnm d1, d0, d1
-; CHECK-NEXT:    fminnm d1, d1, d2
-; CHECK-NEXT:    frintz d1, d1
+; CHECK-NEXT:    scvtf d1, x8
 ; CHECK-NEXT:    fcmp d0, d1
 ; CHECK-NEXT:    csel x0, x8, xzr, eq
 ; CHECK-NEXT:    ret
@@ -206,13 +186,8 @@ entry:
 define i32 @tests_f32_multiuse(float %x) {
 ; CHECK-LABEL: tests_f32_multiuse:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2s, #207, lsl #24
-; CHECK-NEXT:    mov w8, #1325400063 // =0x4effffff
-; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    fcvtzs w8, s0
-; CHECK-NEXT:    fmaxnm s1, s0, s1
-; CHECK-NEXT:    fminnm s1, s1, s2
-; CHECK-NEXT:    frintz s1, s1
+; CHECK-NEXT:    scvtf s1, w8
 ; CHECK-NEXT:    fcmp s0, s1
 ; CHECK-NEXT:    csel w0, w8, wzr, eq
 ; CHECK-NEXT:    ret
@@ -227,14 +202,8 @@ entry:
 define i32 @tests_f16_multiuse(half %x) {
 ; CHECK-LABEL: tests_f16_multiuse:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #64511 // =0xfbff
-; CHECK-NEXT:    fmov h1, w8
-; CHECK-NEXT:    mov w8, #31743 // =0x7bff
-; CHECK-NEXT:    fmov h2, w8
 ; CHECK-NEXT:    fcvtzs w8, h0
-; CHECK-NEXT:    fmaxnm h1, h0, h1
-; CHECK-NEXT:    fminnm h1, h1, h2
-; CHECK-NEXT:    frintz h1, h1
+; CHECK-NEXT:    scvtf h1, w8
 ; CHECK-NEXT:    fcmp h0, h1
 ; CHECK-NEXT:    csel w0, w8, wzr, eq
 ; CHECK-NEXT:    ret

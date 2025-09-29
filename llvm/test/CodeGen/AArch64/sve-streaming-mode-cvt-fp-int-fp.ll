@@ -9,35 +9,23 @@ target triple = "aarch64-unknown-linux-gnu"
 define double @t1(double %x) {
 ; CHECK-LABEL: t1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-4332462841530417152 // =0xc3e0000000000000
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    mov x8, #4890909195324358655 // =0x43dfffffffffffff
-; CHECK-NEXT:    fmaxnm d0, d0, d1
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    fminnm d0, d0, d1
-; CHECK-NEXT:    frintz d0, d0
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; USE-NEON-NO-GPRS-LABEL: t1:
 ; USE-NEON-NO-GPRS:       // %bb.0: // %entry
-; USE-NEON-NO-GPRS-NEXT:    mov x8, #-4332462841530417152 // =0xc3e0000000000000
-; USE-NEON-NO-GPRS-NEXT:    fmov d1, x8
-; USE-NEON-NO-GPRS-NEXT:    mov x8, #4890909195324358655 // =0x43dfffffffffffff
-; USE-NEON-NO-GPRS-NEXT:    fmaxnm d0, d0, d1
-; USE-NEON-NO-GPRS-NEXT:    fmov d1, x8
-; USE-NEON-NO-GPRS-NEXT:    fminnm d0, d0, d1
-; USE-NEON-NO-GPRS-NEXT:    frintz d0, d0
+; USE-NEON-NO-GPRS-NEXT:    fcvtzs d0, d0
+; USE-NEON-NO-GPRS-NEXT:    scvtf d0, d0
 ; USE-NEON-NO-GPRS-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: t1:
 ; NONEON-NOSVE:       // %bb.0: // %entry
-; NONEON-NOSVE-NEXT:    mov x8, #-4332462841530417152 // =0xc3e0000000000000
-; NONEON-NOSVE-NEXT:    fmov d1, x8
-; NONEON-NOSVE-NEXT:    mov x8, #4890909195324358655 // =0x43dfffffffffffff
-; NONEON-NOSVE-NEXT:    fmaxnm d0, d0, d1
-; NONEON-NOSVE-NEXT:    fmov d1, x8
-; NONEON-NOSVE-NEXT:    fminnm d0, d0, d1
-; NONEON-NOSVE-NEXT:    frintz d0, d0
+; NONEON-NOSVE-NEXT:    fcvtzs x8, d0
+; NONEON-NOSVE-NEXT:    scvtf d0, x8
 ; NONEON-NOSVE-NEXT:    ret
 entry:
   %conv = fptosi double %x to i64
@@ -48,35 +36,23 @@ entry:
 define float @t2(float %x) {
 ; CHECK-LABEL: t2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-822083584 // =0xcf000000
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov w8, #1325400063 // =0x4effffff
-; CHECK-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    fminnm s0, s0, s1
-; CHECK-NEXT:    frintz s0, s0
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; USE-NEON-NO-GPRS-LABEL: t2:
 ; USE-NEON-NO-GPRS:       // %bb.0: // %entry
-; USE-NEON-NO-GPRS-NEXT:    mov w8, #-822083584 // =0xcf000000
-; USE-NEON-NO-GPRS-NEXT:    fmov s1, w8
-; USE-NEON-NO-GPRS-NEXT:    mov w8, #1325400063 // =0x4effffff
-; USE-NEON-NO-GPRS-NEXT:    fmaxnm s0, s0, s1
-; USE-NEON-NO-GPRS-NEXT:    fmov s1, w8
-; USE-NEON-NO-GPRS-NEXT:    fminnm s0, s0, s1
-; USE-NEON-NO-GPRS-NEXT:    frintz s0, s0
+; USE-NEON-NO-GPRS-NEXT:    fcvtzs s0, s0
+; USE-NEON-NO-GPRS-NEXT:    scvtf s0, s0
 ; USE-NEON-NO-GPRS-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: t2:
 ; NONEON-NOSVE:       // %bb.0: // %entry
-; NONEON-NOSVE-NEXT:    mov w8, #-822083584 // =0xcf000000
-; NONEON-NOSVE-NEXT:    fmov s1, w8
-; NONEON-NOSVE-NEXT:    mov w8, #1325400063 // =0x4effffff
-; NONEON-NOSVE-NEXT:    fmaxnm s0, s0, s1
-; NONEON-NOSVE-NEXT:    fmov s1, w8
-; NONEON-NOSVE-NEXT:    fminnm s0, s0, s1
-; NONEON-NOSVE-NEXT:    frintz s0, s0
+; NONEON-NOSVE-NEXT:    fcvtzs w8, s0
+; NONEON-NOSVE-NEXT:    scvtf s0, w8
 ; NONEON-NOSVE-NEXT:    ret
 entry:
   %conv = fptosi float %x to i32
@@ -87,36 +63,24 @@ entry:
 define half @t3(half %x)  {
 ; CHECK-LABEL: t3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    ldr h1, [x8, :lo12:.LCPI2_0]
-; CHECK-NEXT:    adrp x8, .LCPI2_1
-; CHECK-NEXT:    fmaxnm h0, h0, h1
-; CHECK-NEXT:    ldr h1, [x8, :lo12:.LCPI2_1]
-; CHECK-NEXT:    fminnm h0, h0, h1
-; CHECK-NEXT:    frintz h0, h0
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.h
+; CHECK-NEXT:    scvtf z0.h, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; USE-NEON-NO-GPRS-LABEL: t3:
 ; USE-NEON-NO-GPRS:       // %bb.0: // %entry
-; USE-NEON-NO-GPRS-NEXT:    adrp x8, .LCPI2_0
-; USE-NEON-NO-GPRS-NEXT:    ldr h1, [x8, :lo12:.LCPI2_0]
-; USE-NEON-NO-GPRS-NEXT:    adrp x8, .LCPI2_1
-; USE-NEON-NO-GPRS-NEXT:    fmaxnm h0, h0, h1
-; USE-NEON-NO-GPRS-NEXT:    ldr h1, [x8, :lo12:.LCPI2_1]
-; USE-NEON-NO-GPRS-NEXT:    fminnm h0, h0, h1
-; USE-NEON-NO-GPRS-NEXT:    frintz h0, h0
+; USE-NEON-NO-GPRS-NEXT:    fcvtzs h0, h0
+; USE-NEON-NO-GPRS-NEXT:    scvtf h0, h0
 ; USE-NEON-NO-GPRS-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: t3:
 ; NONEON-NOSVE:       // %bb.0: // %entry
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    mov w8, #-822083584 // =0xcf000000
-; NONEON-NOSVE-NEXT:    fmov s1, w8
-; NONEON-NOSVE-NEXT:    mov w8, #1325400063 // =0x4effffff
-; NONEON-NOSVE-NEXT:    fmaxnm s0, s0, s1
-; NONEON-NOSVE-NEXT:    fmov s1, w8
-; NONEON-NOSVE-NEXT:    fminnm s0, s0, s1
-; NONEON-NOSVE-NEXT:    frintz s0, s0
+; NONEON-NOSVE-NEXT:    fcvtzs w8, s0
+; NONEON-NOSVE-NEXT:    scvtf s0, w8
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    ret
 entry:

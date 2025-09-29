@@ -18865,10 +18865,9 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   // We can fold the fpto[us]i -> [us]itofp pattern into a single ftrunc.
   // If NoSignedZerosFPMath is enabled, this is a direct replacement.
   // Otherwise, for strict math, we must handle edge cases:
-  // 1. For signed conversions, clamp out-of-range values to the valid
-  //    integer range before the trunc.
-  // 2. For unsigned conversions, use FABS. A negative float becomes integer 0,
-  //    which must convert back to +0.0. FTRUNC on its own could produce -0.0.
+  // 1. For unsigned conversions, use FABS to handle negative cases. Take -0.0
+  // as example, it first becomes integer 0, and is converted back to +0.0.
+  // FTRUNC on its own could produce -0.0.
 
   // FIXME: We should be able to use node-level FMF here.
   EVT VT = N->getValueType(0);
@@ -18882,24 +18881,6 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
       N0.getOperand(0).getValueType() == VT) {
     if (DAG.getTarget().Options.NoSignedZerosFPMath)
       return DAG.getNode(ISD::FTRUNC, DL, VT, N0.getOperand(0));
-
-    // Strict math: clamp to the signed integer range before truncating.
-    unsigned IntWidth = N0.getValueSizeInBits();
-    APInt APMax = APInt::getSignedMaxValue(IntWidth);
-    APInt APMin = APInt::getSignedMinValue(IntWidth);
-
-    APFloat MaxAPF(VT.getFltSemantics());
-    MaxAPF.convertFromAPInt(APMax, true, APFloat::rmTowardZero);
-    APFloat MinAPF(VT.getFltSemantics());
-    MinAPF.convertFromAPInt(APMin, true, APFloat::rmTowardZero);
-
-    SDValue MaxFP = DAG.getConstantFP(MaxAPF, DL, VT);
-    SDValue MinFP = DAG.getConstantFP(MinAPF, DL, VT);
-
-    SDValue Clamped = DAG.getNode(
-        ISD::FMINNUM, DL, VT,
-        DAG.getNode(ISD::FMAXNUM, DL, VT, N0->getOperand(0), MinFP), MaxFP);
-    return DAG.getNode(ISD::FTRUNC, DL, VT, Clamped);
   }
 
   if (N->getOpcode() == ISD::UINT_TO_FP && N0.getOpcode() == ISD::FP_TO_UINT &&
