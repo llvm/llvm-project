@@ -44,8 +44,16 @@ bool vputils::chainUsesScalarValues(const VPValue *Root) {
         Worklist.emplace_back(Def, V);
       continue;
     }
-    if (isa<VPWidenMemoryRecipe>(U) && vputils::isSingleScalar(Op))
+
+    // It is always profitable to widen stores, even if the address or stored
+    // value are single-scalars: checking that the operand is single-scalar in
+    // WidenStores is an important leaf condition of chainUsesScalarValues, as
+    // WidenStores have no users, and checking that the address or stored-val is
+    // single-scalar allows the chains of uses to be determined to use scalar
+    // values (and can be narowed in an optimization routine, for example).
+    if (isa<VPWidenStoreRecipe>(U) && vputils::isSingleScalar(Op))
       continue;
+
     if (auto *VPI = dyn_cast<VPInstruction>(U))
       if (VPI->isVectorToScalar() || VPI->isSingleScalar())
         continue;
