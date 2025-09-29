@@ -84,7 +84,6 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
-#include <numeric>
 #include <optional>
 #include <set>
 #include <tuple>
@@ -6356,25 +6355,25 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
     if (DefaultResult) {
       Value *ValueCompare =
           Builder.CreateICmpEQ(Condition, SecondCase, "switch.selectcmp");
-      SelectInst *SelectValueInst = cast<SelectInst>(Builder.CreateSelect(
-          ValueCompare, ResultVector[1].first, DefaultResult, "switch.select"));
-      SelectValue = SelectValueInst;
-      if (HasBranchWeights) {
+      SelectValue = Builder.CreateSelect(ValueCompare, ResultVector[1].first,
+                                         DefaultResult, "switch.select");
+      if (auto *SI = dyn_cast<SelectInst>(SelectValue);
+          SI && HasBranchWeights) {
         // We start with 3 probabilities, where the numerator is the
         // corresponding BranchWeights[i], and the denominator is the sum over
         // BranchWeights. We want the probability and negative probability of
         // Condition == SecondCase.
         assert(BranchWeights.size() == 3);
-        setBranchWeights(SelectValueInst, BranchWeights[2],
+        setBranchWeights(SI, BranchWeights[2],
                          BranchWeights[0] + BranchWeights[1],
                          /*IsExpected=*/false);
       }
     }
     Value *ValueCompare =
         Builder.CreateICmpEQ(Condition, FirstCase, "switch.selectcmp");
-    SelectInst *Ret = cast<SelectInst>(Builder.CreateSelect(
-        ValueCompare, ResultVector[0].first, SelectValue, "switch.select"));
-    if (HasBranchWeights) {
+    Value *Ret = Builder.CreateSelect(ValueCompare, ResultVector[0].first,
+                                      SelectValue, "switch.select");
+    if (auto *SI = dyn_cast<SelectInst>(Ret); SI && HasBranchWeights) {
       // We may have had a DefaultResult. Base the position of the first and
       // second's branch weights accordingly. Also the proability that Condition
       // != FirstCase needs to take that into account.
@@ -6382,7 +6381,7 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
       size_t FirstCasePos = (Condition != nullptr);
       size_t SecondCasePos = FirstCasePos + 1;
       uint32_t DefaultCase = (Condition != nullptr) ? BranchWeights[0] : 0;
-      setBranchWeights(Ret, BranchWeights[FirstCasePos],
+      setBranchWeights(SI, BranchWeights[FirstCasePos],
                        DefaultCase + BranchWeights[SecondCasePos],
                        /*IsExpected=*/false);
     }
@@ -6422,13 +6421,13 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
           Value *And = Builder.CreateAnd(Condition, AndMask);
           Value *Cmp = Builder.CreateICmpEQ(
               And, Constant::getIntegerValue(And->getType(), AndMask));
-          SelectInst *Ret = cast<SelectInst>(
-              Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult));
-          if (HasBranchWeights) {
+          Value *Ret =
+              Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+          if (auto *SI = dyn_cast<SelectInst>(Ret); SI && HasBranchWeights) {
             // We know there's a Default case. We base the resulting branch
             // weights off its probability.
             assert(BranchWeights.size() >= 2);
-            setBranchWeights(Ret, accumulate(drop_begin(BranchWeights), 0),
+            setBranchWeights(SI, accumulate(drop_begin(BranchWeights), 0),
                              BranchWeights[0], /*IsExpected=*/false);
           }
           return Ret;
@@ -6448,11 +6447,11 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
         Value *And = Builder.CreateAnd(Condition, ~BitMask, "switch.and");
         Value *Cmp = Builder.CreateICmpEQ(
             And, Constant::getNullValue(And->getType()), "switch.selectcmp");
-        SelectInst *Ret = cast<SelectInst>(
-            Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult));
-        if (HasBranchWeights) {
+        Value *Ret =
+            Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+        if (auto *SI = dyn_cast<SelectInst>(Ret); SI && HasBranchWeights) {
           assert(BranchWeights.size() >= 2);
-          setBranchWeights(Ret, accumulate(drop_begin(BranchWeights), 0),
+          setBranchWeights(SI, accumulate(drop_begin(BranchWeights), 0),
                            BranchWeights[0], /*IsExpected=*/false);
         }
         return Ret;
@@ -6466,11 +6465,11 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
       Value *Cmp2 = Builder.CreateICmpEQ(Condition, CaseValues[1],
                                          "switch.selectcmp.case2");
       Value *Cmp = Builder.CreateOr(Cmp1, Cmp2, "switch.selectcmp");
-      SelectInst *Ret = cast<SelectInst>(
-          Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult));
-      if (HasBranchWeights) {
+      Value *Ret =
+          Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+      if (auto *SI = dyn_cast<SelectInst>(Ret); SI && HasBranchWeights) {
         assert(BranchWeights.size() >= 2);
-        setBranchWeights(Ret, accumulate(drop_begin(BranchWeights), 0),
+        setBranchWeights(SI, accumulate(drop_begin(BranchWeights), 0),
                          BranchWeights[0], /*IsExpected=*/false);
       }
       return Ret;
