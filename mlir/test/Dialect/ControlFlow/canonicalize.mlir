@@ -490,3 +490,147 @@ func.func @branchCondProp(%arg0: i1) {
 ^exit:
   return
 }
+
+// -----
+
+/// Test that control-flow cycles are not simplified infinitely.
+
+// CHECK-LABEL:   @cycle_2_blocks
+// CHECK:           cf.br ^bb1
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb1
+func.func @cycle_2_blocks() {
+  cf.br ^bb1
+^bb1:
+  cf.br ^bb2
+^bb2:
+  cf.br ^bb1
+}
+
+// CHECK-LABEL:   @no_cycle_2_blocks
+// CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i32
+// CHECK:           return %[[VAL_0]] : i32
+func.func @no_cycle_2_blocks() -> i32 {
+  cf.br ^bb1
+^bb1:
+  cf.br ^bb2
+^bb2:
+  cf.br ^bb3
+^bb3:
+  %ret = arith.constant 1 : i32
+  return %ret : i32
+}
+
+// CHECK-LABEL:   @cycle_4_blocks
+// CHECK:           cf.br ^bb1
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb1
+func.func @cycle_4_blocks() {
+  cf.br ^bb1
+^bb1:
+  cf.br ^bb2
+^bb2:
+  cf.br ^bb3
+^bb3:
+  cf.br ^bb4
+^bb4:
+  cf.br ^bb1
+}
+
+// CHECK-LABEL:   @no_cycle_4_blocks
+// CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i32
+// CHECK:           return %[[VAL_0]] : i32
+func.func @no_cycle_4_blocks() -> i32 {
+  cf.br ^bb1
+^bb1:
+  cf.br ^bb2
+^bb2:
+  cf.br ^bb3
+^bb3:
+  cf.br ^bb4
+^bb4:
+  cf.br ^bb5
+^bb5:
+  %ret = arith.constant 1 : i32
+  return %ret : i32
+}
+
+// CHECK-LABEL:   @delayed_3_cycle
+// CHECK:           cf.br ^bb1
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb1
+func.func @delayed_3_cycle() {
+  cf.br ^bb1
+^bb1:
+  cf.br ^bb2
+^bb2:
+  cf.br ^bb3
+^bb3:
+  cf.br ^bb4
+^bb4:
+  cf.br ^bb5
+^bb5:
+  cf.br ^bb3
+}
+
+// CHECK-LABEL:   @cycle_1_block
+// CHECK:           cf.br ^bb1
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb1
+func.func @cycle_1_block() {
+  cf.br ^bb1
+^bb1:
+  cf.br ^bb2
+^bb2:
+  cf.br ^bb2
+}
+
+// CHECK-LABEL:   @unsimplified_cycle_1
+// CHECK-SAME:      %[[ARG0:.*]]: i1) {
+// CHECK:           cf.cond_br %[[ARG0]], ^bb1, ^bb2
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb2
+// CHECK:         ^bb2:
+// CHECK:           cf.br ^bb3
+// CHECK:         ^bb3:
+// CHECK:           cf.br ^bb3
+func.func @unsimplified_cycle_1(%c : i1) {
+  cf.cond_br %c, ^bb1, ^bb2
+^bb1:
+  cf.br ^bb2
+^bb2:
+  cf.br ^bb3
+^bb3:
+  cf.br ^bb4
+^bb4:
+  cf.br ^bb3
+}
+
+// Make sure we terminate when other cf passes can't help us.
+
+// CHECK-LABEL:   @unsimplified_cycle_2
+// CHECK-SAME:      %[[ARG0:.*]]: i1) {
+// CHECK:           cf.cond_br %[[ARG0]], ^bb1, ^bb3
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb2 {A}
+// CHECK:         ^bb2:
+// CHECK:           cf.br ^bb2 {E}
+// CHECK:         ^bb3:
+// CHECK:           cf.br ^bb1
+func.func @unsimplified_cycle_2(%c : i1) {
+  cf.cond_br %c, ^bb6, ^bb7
+^bb6:
+  cf.br ^bb5 {F}
+^bb5:
+  cf.br ^bb1 {A}
+^bb1:
+  cf.br ^bb2 {B}
+^bb2:
+  cf.br ^bb3 {C}
+^bb3:
+  cf.br ^bb4 {D}
+^bb4:
+  cf.br ^bb1 {E}
+^bb7:
+  cf.br ^bb6
+}

@@ -1298,6 +1298,20 @@ llvm.func @rocdl_last_use(%ptr: !llvm.ptr<1>) -> i32 {
   llvm.return %ret : i32
 }
 
+llvm.func @test_fmed3_f16(%arg0: f16, %arg1: f16, %arg2: f16) -> f16 {
+  // CHECK-LABEL: define half @test_fmed3_f16(half %0, half %1, half %2)
+  %0 = rocdl.fmed3 %arg0, %arg1, %arg2 : f16
+  llvm.return %0 : f16
+  // CHECK: call half @llvm.amdgcn.fmed3.f16(half %0, half %1, half %2)
+}
+
+llvm.func @test_fmed3_f32(%arg0: f32, %arg1: f32, %arg2: f32) -> f32 {
+  // CHECK-LABEL: define float @test_fmed3_f32(float %0, float %1, float %2)
+  %0 = rocdl.fmed3 %arg0, %arg1, %arg2 : f32
+  llvm.return %0 : f32
+  // CHECK: call float @llvm.amdgcn.fmed3.f32(float %0, float %1, float %2)
+}
+
 // CHECK-LABEL: rocdl.cvt.scale.pk8
 // CHECK-SAME:(i32 %[[I32:.+]], <2 x i32> %[[V2I32:.+]], i32 %[[SCALE:.+]])
 llvm.func @rocdl.cvt.scale.pk8(%i32: i32, %v2xi32: vector<2xi32>, %scale: i32) {
