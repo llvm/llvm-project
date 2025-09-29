@@ -8976,26 +8976,44 @@ private:
       //
       // This is similar to how generateInfoForCaptureFromClauseInfo handles
       // grouping for target constructs.
-      std::map<const Expr *, SmallVector<MapInfo, 8>, AttachPtrExprComparator>
-          AttachPtrGroups{AttachPtrExprComparator(this)};
+      SmallVector<std::pair<const Expr *, MapInfo>, 16> AttachPtrMapInfoPairs;
 
-      // Collect all MapInfo entries and group them by AttachPtrExpr
+      // First, collect all MapData entries with their attach-ptr exprs.
       for (const auto &M : Data.second) {
         for (const MapInfo &L : M) {
           assert(!L.Components.empty() &&
                  "Not expecting declaration with no component lists.");
 
           const Expr *AttachPtrExpr = getAttachPtrExpr(L.Components);
-          AttachPtrGroups[AttachPtrExpr].push_back(L);
+          AttachPtrMapInfoPairs.emplace_back(AttachPtrExpr, L);
         }
       }
 
-      // Process each group in order of their attach-pointers increasing
-      // complexity.
+      // Next, sort by increasing order of their complexity.
+      AttachPtrExprComparator Comparator(this);
+      llvm::sort(AttachPtrMapInfoPairs, [&Comparator](const auto &LHS,
+                                                       const auto &RHS) {
+        return Comparator(LHS.first, RHS.first);
+      });
+
       std::optional<size_t> MemberOfValueForFirstCombinedEntry = std::nullopt;
       bool IsFirstGroup = true;
-      for (const auto &Entry : AttachPtrGroups) {
-        const SmallVector<MapInfo, 8> &GroupLists = Entry.second;
+
+      // And finally, process them all in order, grouping those with
+      // equivalent attach-ptr exprs together.
+      auto *It = AttachPtrMapInfoPairs.begin();
+      while (It != AttachPtrMapInfoPairs.end()) {
+        const Expr *AttachPtrExpr = It->first;
+
+        SmallVector<MapInfo, 8> GroupLists;
+
+        while (It != AttachPtrMapInfoPairs.end() &&
+               (It->first == AttachPtrExpr ||
+                Comparator.areEqual(It->first, AttachPtrExpr))) {
+          GroupLists.push_back(It->second);
+          ++It;
+        }
+
         if (GroupLists.empty())
           continue;
 
@@ -9816,26 +9834,43 @@ public:
     //   map(ps->d, ps->e, ps->pt) | ps
     //   map(ps->pt->d, ps->pt->e) | ps->pt
 
-    // Group component lists by their AttachPtrExpr
-    std::map<const Expr *, MapDataArrayTy, AttachPtrExprComparator>
-        AttachPtrGroups{AttachPtrExprComparator(this)};
+    // First, collect all MapData entries with their attach-ptr exprs.
+    SmallVector<std::pair<const Expr *, MapData>, 16> AttachPtrMapDataPairs;
 
     for (const MapData &L : DeclComponentListsFromClauses) {
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
           std::get<0>(L);
       const Expr *AttachPtrExpr = getAttachPtrExpr(Components);
-      AttachPtrGroups[AttachPtrExpr].push_back(L);
+      AttachPtrMapDataPairs.emplace_back(AttachPtrExpr, L);
     }
 
-    // Sort AttachPtrExprs by complexity and process each group
+    // Next, sort by increasing order of their complexity.
+    AttachPtrExprComparator Comparator(this);
+    llvm::sort(AttachPtrMapDataPairs, [&Comparator](const auto &LHS,
+                                                     const auto &RHS) {
+      return Comparator(LHS.first, RHS.first);
+    });
+
+    // Process groups by complexity and process each group
     bool NoDefaultMappingDoneForVD = CurCaptureVarInfo.BasePointers.empty();
     bool FirstGroupProcessed = false;
 
-    // Process each group in order of their attach-pointers increasing
-    // complexity.
-    for (const auto &Entry : AttachPtrGroups) {
-      const Expr *AttachPtr = Entry.first;
-      const MapDataArrayTy &GroupLists = AttachPtrGroups[AttachPtr];
+    // And finally, process them all in order, grouping those with
+    // equivalent attach-ptr exprs together.
+    auto *It = AttachPtrMapDataPairs.begin();
+    while (It != AttachPtrMapDataPairs.end()) {
+      const Expr *AttachPtrExpr = It->first;
+
+      // Collect all MapData entries for this AttachPtrExpr group
+      MapDataArrayTy GroupLists;
+
+      while (It != AttachPtrMapDataPairs.end() &&
+             (It->first == AttachPtrExpr ||
+              Comparator.areEqual(It->first, AttachPtrExpr))) {
+        GroupLists.push_back(It->second);
+        ++It;
+      }
+
       if (GroupLists.empty())
         continue;
 
