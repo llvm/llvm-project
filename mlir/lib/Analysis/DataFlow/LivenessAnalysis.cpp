@@ -17,6 +17,7 @@
 #include <mlir/IR/Operation.h>
 #include <mlir/IR/Value.h>
 #include <mlir/Interfaces/CallInterfaces.h>
+#include <mlir/Interfaces/LoopLikeInterface.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
 
@@ -309,15 +310,29 @@ RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
              << " has no liveness info (unreachable), mark dead";
       solver.getOrCreateState<Liveness>(result.value());
     }
+    SmallVector<Value> mustLiveValues;
+    if (auto loopOp = dyn_cast<LoopLikeOpInterface>(op)) {
+      std::optional<SmallVector<Value>> ivs = loopOp.getLoopInductionVars();
+      if (ivs.has_value())
+        mustLiveValues.append(*ivs);
+    }
     for (auto &region : op->getRegions()) {
       for (auto &block : region) {
         for (auto blockArg : llvm::enumerate(block.getArguments())) {
           if (getLiveness(blockArg.value()))
             continue;
-          LDBG() << "Block argument: " << blockArg.index() << " of "
-                 << OpWithFlags(op, OpPrintingFlags().skipRegions())
-                 << " has no liveness info, mark dead";
-          solver.getOrCreateState<Liveness>(blockArg.value());
+          if (llvm::find(mustLiveValues, blockArg.value())) {
+            LDBG() << "Block argument: " << blockArg.index() << " of "
+                   << OpWithFlags(op, OpPrintingFlags().skipRegions())
+                   << " is must value, mark live";
+            (void)solver.getOrCreateState<Liveness>(blockArg.value())
+                ->markLive();
+          } else {
+            LDBG() << "Block argument: " << blockArg.index() << " of "
+                   << OpWithFlags(op, OpPrintingFlags().skipRegions())
+                   << " has no liveness info, mark dead";
+            solver.getOrCreateState<Liveness>(blockArg.value());
+          }
         }
       }
     }

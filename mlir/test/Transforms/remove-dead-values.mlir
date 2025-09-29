@@ -649,3 +649,16 @@ func.func @callee(%arg0: index, %arg1: index, %arg2: index) -> index {
   %res = call @mutl_parameter(%arg0, %arg1, %arg2) : (index, index, index) -> (index)
   return %res : index
 }
+
+// -----
+
+// This test verifies that the induction variables in loops are not deleted.
+
+// CHECK-LABEL: func @dead_value_loop_ivs
+func.func @dead_value_loop_ivs(%lb: index, %ub: index, %step: index, %b : i1) -> i1 {
+  %loop_ret = scf.for %iv = %lb to %ub step %step iter_args(%iter = %b) -> (i1) {
+    cf.assert %b, "loop not dead"
+    scf.yield %b : i1
+  }
+  return %loop_ret : i1
+}
