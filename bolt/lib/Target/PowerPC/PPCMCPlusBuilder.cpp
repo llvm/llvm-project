@@ -73,22 +73,7 @@ bool PPCMCPlusBuilder::evaluateMemOperandTarget(const MCInst &, uint64_t &,
   return false;
 }
 
-bool PPCMCPlusBuilder::hasPCRelOperand(const MCInst &I) const {
-  switch (I.getOpcode()) {
-  case PPC::BL: // relative call (AA=0)
-  case PPC::B:  // relative branch (AA=0)
-  case PPC::BC: // conditional relative (AA=0)
-    return true;
-
-  // Absolute branches/calls (AA=1): no PC-relative operand.
-  case PPC::BA:
-  case PPC::BLA:
-    return false;
-
-  default:
-    return false;
-  }
-}
+bool PPCMCPlusBuilder::hasPCRelOperand(const MCInst &I) const { return false; }
 
 int PPCMCPlusBuilder::getPCRelOperandNum(const MCInst &I) const {
   for (int i = I.getNumOperands() - 1; i >= 0; --i)
@@ -103,9 +88,6 @@ int PPCMCPlusBuilder::getMemoryOperandNo(const MCInst & /*Inst*/) const {
 
 void PPCMCPlusBuilder::replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                                            MCContext *Ctx) const {
-
-  assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
-         "Invalid instruction for replaceBranchTarget");
   const int OpNum = getPCRelOperandNum(Inst);
   if (OpNum < 0) {
     LLVM_DEBUG(dbgs() << "PPC: no PC-rel operand to replace in "
