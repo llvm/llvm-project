@@ -110,12 +110,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   endif()
 endif()
 
-# libstdc++15 makes use of an unroll pragma inside std::find_if(). This
-# produces a warning if clang fails to unroll the loop. As this pragma is
-# outside of our control, suppress the warning.
-check_cxx_compiler_flag("-Wno-pass-failed" CXX_SUPPORTS_WNO_PASS_FAILED)
-append_if(CXX_SUPPORTS_WNO_PASS_FAILED "-Wno-pass-failed" CMAKE_CXX_FLAGS)
-
 # Installing the headers and docs needs to depend on generating any public
 # tablegen'd targets.
 # mlir-generic-headers are dialect-independent.
