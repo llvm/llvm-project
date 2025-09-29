@@ -677,6 +677,14 @@ public:
   virtual void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                 Align ByteAlignment) = 0;
 
+  /// Emit a large common (.largecomm) symbol.
+  ///
+  /// \param Symbol - The common symbol to emit.
+  /// \param Size - The size of the common symbol.
+  /// \param ByteAlignment - The alignment of the common symbol in bytes.
+  virtual void emitLargeCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+                                     Align ByteAlignment);
+
   /// Emit a local common (.lcomm) symbol.
   ///
   /// \param Symbol - The common symbol to emit.

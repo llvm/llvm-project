@@ -1052,6 +1052,8 @@ ELFDumper<ELFT>::getSymbolSectionIndex(const Elf_Sym &Symbol, unsigned SymIndex,
     return CreateErr("SHN_ABS");
   if (Ndx == ELF::SHN_COMMON)
     return CreateErr("SHN_COMMON");
+  if (Ndx == ELF::SHN_AMD64_LCOMMON)
+    return CreateErr("SHN_AMD64_LCOMMON");
   return CreateErr("SHN_LORESERVE", Ndx - SHN_LORESERVE);
 }
 
@@ -4308,6 +4310,9 @@ std::string GNUELFDumper<ELFT>::getSymbolSectionNdx(
   default:
     // Find if:
     // Processor specific
+    if (this->Obj.getHeader().e_machine == EM_X86_64 &&
+        SectionIndex == ELF::SHN_AMD64_LCOMMON)
+      return "LARGE_COMMON";
     if (SectionIndex >= ELF::SHN_LOPROC && SectionIndex <= ELF::SHN_HIPROC)
       return std::string("PRC[0x") +
              to_string(format_hex_no_prefix(SectionIndex, 4)) + "]";

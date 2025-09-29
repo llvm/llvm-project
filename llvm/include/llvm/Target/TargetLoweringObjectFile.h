@@ -305,6 +305,12 @@ public:
     return nullptr;
   }
 
+  virtual MCSection *LargeSectionForCommon(const GlobalObject *GO,
+                                           SectionKind Kind,
+                                           const TargetMachine &TM) const {
+    return nullptr;
+  }
+
 protected:
   virtual MCSection *SelectSectionForGlobal(const GlobalObject *GO,
                                             SectionKind Kind,

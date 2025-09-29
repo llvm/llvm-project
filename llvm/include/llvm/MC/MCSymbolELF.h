@@ -17,6 +17,7 @@ class MCSymbolELF : public MCSymbol {
   /// An expression describing how to calculate the size of a symbol. If a
   /// symbol has no size this field will be NULL.
   const MCExpr *SymbolSize = nullptr;
+  bool IsLargeCommon = false;
 
 public:
   MCSymbolELF(const MCSymbolTableEntry *Name, bool isTemporary)
@@ -47,6 +48,9 @@ public:
 
   void setMemtag(bool Tagged);
   bool isMemtag() const;
+
+  bool isLargeCommon() const { return IsLargeCommon; }
+  void setIsLargeCommon(bool V) { IsLargeCommon = V; }
 
 private:
   void setIsBindingSet() const;
