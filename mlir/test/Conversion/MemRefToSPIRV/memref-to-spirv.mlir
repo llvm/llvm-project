@@ -515,9 +515,9 @@ module attributes {
 
 // Check Image Support.
 
-// CHECK: #[[COLMAJMAP:[a-z_]+]] = affine_map<(d0, d1) -> (d1, d0)>
+// CHECK: #[[$COLMAJMAP:.*]] = affine_map<(d0, d1) -> (d1, d0)>
 #col_major = affine_map<(d0, d1) -> (d1, d0)>
-// CHECK: #[[CUSTOMLAYOUTMAP:[a-z0-9_]+]] = affine_map<(d0, d1, d2) -> (d2, d1, d0)>
+// CHECK: #[[$CUSTOMLAYOUTMAP:.*]] = affine_map<(d0, d1, d2) -> (d2, d1, d0)>
 #custom = affine_map<(d0, d1, d2) -> (d2, d1, d0)>
 module attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [
@@ -538,8 +538,8 @@ module attributes {
   // CHECK-LABEL: @load_from_image_1D(
   // CHECK-SAME: %[[ARG0:.*]]: memref<1xf32, #spirv.storage_class<Image>>, %[[ARG1:.*]]: memref<1xf32, #spirv.storage_class<StorageBuffer>>
   func.func @load_from_image_1D(%arg0: memref<1xf32, #spirv.storage_class<Image>>, %arg1: memref<1xf32, #spirv.storage_class<StorageBuffer>>) {
-// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %arg1 : memref<1xf32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x f32, stride=4> [0])>, StorageBuffer>
-// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %arg0 : memref<1xf32, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<f32, Dim1D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32f>>, UniformConstant>
+// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : memref<1xf32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x f32, stride=4> [0])>, StorageBuffer>
+// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<1xf32, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<f32, Dim1D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32f>>, UniformConstant>
     %cst = arith.constant 0 : index
     // CHECK: %[[COORDS:.*]] = builtin.unrealized_conversion_cast %{{.*}} : index to i32
     // CHECK: %[[SIMAGE:.*]] = spirv.Load "UniformConstant" %[[IMAGE_PTR]] : !spirv.sampled_image<!spirv.image<f32, Dim1D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32f>>
@@ -556,8 +556,8 @@ module attributes {
   // CHECK-LABEL: @load_from_image_2D(
   // CHECK-SAME: %[[ARG0:.*]]: memref<2x4xf32, #spirv.storage_class<Image>>, %[[ARG1:.*]]: memref<2x4xf32, #spirv.storage_class<StorageBuffer>>
   func.func @load_from_image_2D(%arg0: memref<2x4xf32, #spirv.storage_class<Image>>, %arg1: memref<2x4xf32, #spirv.storage_class<StorageBuffer>>) {
-// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %arg1 : memref<2x4xf32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<8 x f32, stride=4> [0])>, StorageBuffer>
-// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %arg0 : memref<2x4xf32, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<f32, Dim2D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32f>>, UniformConstant>
+// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : memref<2x4xf32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<8 x f32, stride=4> [0])>, StorageBuffer>
+// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<2x4xf32, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<f32, Dim2D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32f>>, UniformConstant>
     // CHECK: %[[X:.*]] = arith.constant 3 : index
     // CHECK: %[[X32:.*]] = builtin.unrealized_conversion_cast %[[X]] : index to i32
     %x = arith.constant 3 : index
@@ -576,10 +576,10 @@ module attributes {
   }
 
   // CHECK-LABEL: @load_from_col_major_image_2D(
-  // CHECK-SAME: %[[ARG0:.*]]: memref<2x4xf32, #[[COLMAJMAP]], #spirv.storage_class<Image>>, %[[ARG1:.*]]: memref<2x4xf32, #spirv.storage_class<StorageBuffer>>
+  // CHECK-SAME: %[[ARG0:.*]]: memref<2x4xf32, #[[$COLMAJMAP]], #spirv.storage_class<Image>>, %[[ARG1:.*]]: memref<2x4xf32, #spirv.storage_class<StorageBuffer>>
   func.func @load_from_col_major_image_2D(%arg0: memref<2x4xf32, #col_major, #spirv.storage_class<Image>>, %arg1: memref<2x4xf32, #spirv.storage_class<StorageBuffer>>) {
-// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %arg1 : memref<2x4xf32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<8 x f32, stride=4> [0])>, StorageBuffer>
-// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %arg0 : memref<2x4xf32, #[[COLMAJMAP]], #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<f32, Dim2D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32f>>, UniformConstant>
+// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : memref<2x4xf32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<8 x f32, stride=4> [0])>, StorageBuffer>
+// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<2x4xf32, #[[$COLMAJMAP]], #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<f32, Dim2D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32f>>, UniformConstant>
     // CHECK: %[[X:.*]] = arith.constant 3 : index
     // CHECK: %[[X32:.*]] = builtin.unrealized_conversion_cast %[[X]] : index to i32
     %x = arith.constant 3 : index
@@ -600,8 +600,8 @@ module attributes {
   // CHECK-LABEL: @load_from_image_3D(
   // CHECK-SAME: %[[ARG0:.*]]: memref<2x3x4xf32, #spirv.storage_class<Image>>, %[[ARG1:.*]]: memref<2x3x4xf32, #spirv.storage_class<StorageBuffer>>
   func.func @load_from_image_3D(%arg0: memref<2x3x4xf32, #spirv.storage_class<Image>>, %arg1: memref<2x3x4xf32, #spirv.storage_class<StorageBuffer>>) {
-// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %arg1 : memref<2x3x4xf32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<24 x f32, stride=4> [0])>, StorageBuffer>
-// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %arg0 : memref<2x3x4xf32, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<f32, Dim3D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32f>>, UniformConstant>
+// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : memref<2x3x4xf32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<24 x f32, stride=4> [0])>, StorageBuffer>
+// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<2x3x4xf32, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<f32, Dim3D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32f>>, UniformConstant>
     // CHECK: %[[X:.*]] = arith.constant 3 : index
     // CHECK: %[[X32:.*]] = builtin.unrealized_conversion_cast %[[X]] : index to i32
     %x = arith.constant 3 : index
@@ -623,10 +623,10 @@ module attributes {
   }
 
   // CHECK-LABEL: @load_from_custom_layout_image_3D(
-  // CHECK-SAME: %[[ARG0:.*]]: memref<2x3x4xf32, #[[CUSTOMLAYOUTMAP]], #spirv.storage_class<Image>>, %[[ARG1:.*]]: memref<2x3x4xf32, #spirv.storage_class<StorageBuffer>>
+  // CHECK-SAME: %[[ARG0:.*]]: memref<2x3x4xf32, #[[$CUSTOMLAYOUTMAP]], #spirv.storage_class<Image>>, %[[ARG1:.*]]: memref<2x3x4xf32, #spirv.storage_class<StorageBuffer>>
   func.func @load_from_custom_layout_image_3D(%arg0: memref<2x3x4xf32, #custom,  #spirv.storage_class<Image>>, %arg1: memref<2x3x4xf32, #spirv.storage_class<StorageBuffer>>) {
-// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %arg1 : memref<2x3x4xf32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<24 x f32, stride=4> [0])>, StorageBuffer>
-// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %arg0 : memref<2x3x4xf32, #[[CUSTOMLAYOUTMAP]], #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<f32, Dim3D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32f>>, UniformConstant>
+// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : memref<2x3x4xf32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<24 x f32, stride=4> [0])>, StorageBuffer>
+// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<2x3x4xf32, #[[$CUSTOMLAYOUTMAP]], #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<f32, Dim3D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32f>>, UniformConstant>
     // CHECK: %[[X:.*]] = arith.constant 3 : index
     // CHECK: %[[X32:.*]] = builtin.unrealized_conversion_cast %[[X]] : index to i32
     %x = arith.constant 3 : index
@@ -650,8 +650,8 @@ module attributes {
   // CHECK-LABEL: @load_from_image_2D_f16(
   // CHECK-SAME: %[[ARG0:.*]]: memref<2x3xf16, #spirv.storage_class<Image>>, %[[ARG1:.*]]: memref<2x3xf16, #spirv.storage_class<StorageBuffer>>
   func.func @load_from_image_2D_f16(%arg0: memref<2x3xf16, #spirv.storage_class<Image>>, %arg1: memref<2x3xf16, #spirv.storage_class<StorageBuffer>>) {
-// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %arg1 : memref<2x3xf16, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<6 x f16, stride=2> [0])>, StorageBuffer>
-// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %arg0 : memref<2x3xf16, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<f16, Dim2D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R16f>>, UniformConstant>
+// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : memref<2x3xf16, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<6 x f16, stride=2> [0])>, StorageBuffer>
+// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<2x3xf16, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<f16, Dim2D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R16f>>, UniformConstant>
     // CHECK: %[[X:.*]] = arith.constant 2 : index
     // CHECK: %[[X32:.*]] = builtin.unrealized_conversion_cast %[[X]] : index to i32
     %x = arith.constant 2 : index
@@ -672,8 +672,8 @@ module attributes {
   // CHECK-LABEL: @load_from_image_2D_i32(
   // CHECK-SAME: %[[ARG0:.*]]: memref<2x3xi32, #spirv.storage_class<Image>>, %[[ARG1:.*]]: memref<2x3xi32, #spirv.storage_class<StorageBuffer>>
   func.func @load_from_image_2D_i32(%arg0: memref<2x3xi32, #spirv.storage_class<Image>>, %arg1: memref<2x3xi32, #spirv.storage_class<StorageBuffer>>) {
-// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %arg1 : memref<2x3xi32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<6 x i32, stride=4> [0])>, StorageBuffer>
-// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %arg0 : memref<2x3xi32, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<i32, Dim2D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32i>>, UniformConstant>
+// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : memref<2x3xi32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<6 x i32, stride=4> [0])>, StorageBuffer>
+// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<2x3xi32, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<i32, Dim2D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32i>>, UniformConstant>
     // CHECK: %[[X:.*]] = arith.constant 2 : index
     // CHECK: %[[X32:.*]] = builtin.unrealized_conversion_cast %[[X]] : index to i32
     %x = arith.constant 2 : index
@@ -694,8 +694,8 @@ module attributes {
   // CHECK-LABEL: @load_from_image_2D_ui32(
   // CHECK-SAME: %[[ARG0:.*]]: memref<2x3xui32, #spirv.storage_class<Image>>, %[[ARG1:.*]]: memref<2x3xui32, #spirv.storage_class<StorageBuffer>>
   func.func @load_from_image_2D_ui32(%arg0: memref<2x3xui32, #spirv.storage_class<Image>>, %arg1: memref<2x3xui32, #spirv.storage_class<StorageBuffer>>) {
-// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %arg1 : memref<2x3xui32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<6 x ui32, stride=4> [0])>, StorageBuffer>
-// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %arg0 : memref<2x3xui32, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<ui32, Dim2D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32ui>>, UniformConstant>
+// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : memref<2x3xui32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<6 x ui32, stride=4> [0])>, StorageBuffer>
+// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<2x3xui32, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<ui32, Dim2D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R32ui>>, UniformConstant>
     // CHECK: %[[X:.*]] = arith.constant 2 : index
     // CHECK: %[[X32:.*]] = builtin.unrealized_conversion_cast %[[X]] : index to i32
     %x = arith.constant 2 : index
@@ -716,8 +716,8 @@ module attributes {
   // CHECK-LABEL: @load_from_image_2D_i16(
   // CHECK-SAME: %[[ARG0:.*]]: memref<2x3xi16, #spirv.storage_class<Image>>, %[[ARG1:.*]]: memref<2x3xi16, #spirv.storage_class<StorageBuffer>>
   func.func @load_from_image_2D_i16(%arg0: memref<2x3xi16, #spirv.storage_class<Image>>, %arg1: memref<2x3xi16, #spirv.storage_class<StorageBuffer>>) {
-// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %arg1 : memref<2x3xi16, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<6 x i16, stride=2> [0])>, StorageBuffer>
-// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %arg0 : memref<2x3xi16, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<i16, Dim2D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R16i>>, UniformConstant>
+// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : memref<2x3xi16, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<6 x i16, stride=2> [0])>, StorageBuffer>
+// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<2x3xi16, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<i16, Dim2D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R16i>>, UniformConstant>
     // CHECK: %[[X:.*]] = arith.constant 2 : index
     // CHECK: %[[X32:.*]] = builtin.unrealized_conversion_cast %[[X]] : index to i32
     %x = arith.constant 2 : index
@@ -738,8 +738,8 @@ module attributes {
   // CHECK-LABEL: @load_from_image_2D_ui16(
   // CHECK-SAME: %[[ARG0:.*]]: memref<2x3xui16, #spirv.storage_class<Image>>, %[[ARG1:.*]]: memref<2x3xui16, #spirv.storage_class<StorageBuffer>>
   func.func @load_from_image_2D_ui16(%arg0: memref<2x3xui16, #spirv.storage_class<Image>>, %arg1: memref<2x3xui16, #spirv.storage_class<StorageBuffer>>) {
-// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %arg1 : memref<2x3xui16, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<6 x ui16, stride=2> [0])>, StorageBuffer>
-// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %arg0 : memref<2x3xui16, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<ui16, Dim2D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R16ui>>, UniformConstant>
+// CHECK-DAG: %[[SB:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : memref<2x3xui16, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<6 x ui16, stride=2> [0])>, StorageBuffer>
+// CHECK-DAG: %[[IMAGE_PTR:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<2x3xui16, #spirv.storage_class<Image>> to !spirv.ptr<!spirv.sampled_image<!spirv.image<ui16, Dim2D, DepthUnknown, NonArrayed, SingleSampled, NeedSampler, R16ui>>, UniformConstant>
     // CHECK: %[[X:.*]] = arith.constant 2 : index
     // CHECK: %[[X32:.*]] = builtin.unrealized_conversion_cast %[[X]] : index to i32
     %x = arith.constant 2 : index
