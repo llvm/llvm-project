@@ -121,6 +121,11 @@ namespace mlir {
 class MLIRContextImpl {
 public:
   //===--------------------------------------------------------------------===//
+  // Remark
+  //===--------------------------------------------------------------------===//
+  std::unique_ptr<remark::detail::RemarkEngine> remarkEngine;
+
+  //===--------------------------------------------------------------------===//
   // Debugging
   //===--------------------------------------------------------------------===//
 
@@ -133,11 +138,6 @@ public:
   // Diagnostics
   //===--------------------------------------------------------------------===//
   DiagnosticEngine diagEngine;
-
-  //===--------------------------------------------------------------------===//
-  // Remark
-  //===--------------------------------------------------------------------===//
-  std::unique_ptr<remark::detail::RemarkEngine> remarkEngine;
 
   //===--------------------------------------------------------------------===//
   // Options
@@ -357,7 +357,10 @@ MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
   impl->affineUniquer.registerParametricStorageType<IntegerSetStorage>();
 }
 
-MLIRContext::~MLIRContext() = default;
+MLIRContext::~MLIRContext() {
+  // finalize remark engine before destroying anything else.
+  impl->remarkEngine.reset();
+}
 
 /// Copy the specified array of elements into memory managed by the provided
 /// bump pointer allocator.  This assumes the elements are all PODs.

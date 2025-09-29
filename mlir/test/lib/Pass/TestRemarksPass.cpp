@@ -43,7 +43,12 @@ public:
           << remark::add("This is a test missed remark")
           << remark::reason("because we are testing the remark pipeline")
           << remark::suggest("try using the remark pipeline feature");
-
+      mlir::remark::passed(
+          loc,
+          remark::RemarkOpts::name("test-remark").category("category-1-passed"))
+          << remark::add("This is a test passed remark (should be dropped)")
+          << remark::reason("because we are testing the remark pipeline")
+          << remark::suggest("try using the remark pipeline feature");
       mlir::remark::passed(
           loc,
           remark::RemarkOpts::name("test-remark").category("category-1-passed"))
