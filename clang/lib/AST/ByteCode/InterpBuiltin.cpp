@@ -2893,8 +2893,9 @@ static bool interp__builtin_elementwise_triop(
     return true;
   }
 
-  static bool interp__builtin_byteshift(
-      InterpState & S, CodePtr OpPC, const CallExpr *Call, uint32_t BuiltinID, bool isLeft) {
+  static bool interp__builtin_byteshift(InterpState & S, CodePtr OpPC,
+                                        const CallExpr *Call,
+                                        uint32_t BuiltinID, bool isLeft) {
     APSInt Amt;
     if (!EvaluateInteger(Call->getArg(1), Amt, S.getCtx()))
       return false;
@@ -3611,7 +3612,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psrldqi128:
   case clang::X86::BI__builtin_ia32_psrldqi256:
   case clang::X86::BI__builtin_ia32_psrldqi512:
-    return interp__builtin_byteshift(S, OpPC, Call, BuiltinID, /*IsLeft=*/false);
+    return interp__builtin_byteshift(S, OpPC, Call, BuiltinID,
+                                     /*IsLeft=*/false);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
