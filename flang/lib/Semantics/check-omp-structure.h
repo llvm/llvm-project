@@ -113,9 +113,6 @@ public:
   void Leave(const parser::OpenMPDeclareTargetConstruct &);
   void Enter(const parser::OpenMPDepobjConstruct &);
   void Leave(const parser::OpenMPDepobjConstruct &);
-  void Enter(const parser::OmpDeclareTargetWithList &);
-  void Enter(const parser::OmpDeclareTargetWithClause &);
-  void Leave(const parser::OmpDeclareTargetWithClause &);
   void Enter(const parser::OpenMPDispatchConstruct &);
   void Leave(const parser::OpenMPDispatchConstruct &);
   void Enter(const parser::OmpErrorDirective &);
