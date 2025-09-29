@@ -124,8 +124,6 @@ public:
       BinaryOperator &I);
   Instruction *foldVariableSignZeroExtensionOfVariableHighBitExtract(
       BinaryOperator &OldAShr);
-  
-
   Instruction *visitAShr(BinaryOperator &I);
   Instruction *visitLShr(BinaryOperator &I);
   Instruction *commonShiftTransforms(BinaryOperator &I);
@@ -232,6 +230,9 @@ public:
 private:
   bool annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI);
   bool isDesirableIntType(unsigned BitWidth) const;
+  
+  /// Optimize uses of variables that are established as uniform by assume intrinsics.
+  void optimizeAssumedUniformValues(AssumeInst *Assume);
   bool shouldChangeType(unsigned FromBitWidth, unsigned ToBitWidth) const;
   bool shouldChangeType(Type *From, Type *To) const;
   Value *dyn_castNegVal(Value *V) const;
