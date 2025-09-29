@@ -165,6 +165,7 @@
 // CHECK-NEXT:     xandesvbfhcvt        5.0       'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)
 // CHECK-NEXT:     xandesvdot           5.0       'XAndesVDot' (Andes Vector Dot Product Extension)
 // CHECK-NEXT:     xandesvpackfph       5.0       'XAndesVPackFPH' (Andes Vector Packed FP16 Extension)
+// CHECK-NEXT:     xandesvsinth         5.0       'XAndesVSIntH' (Andes Vector Small INT Handling Extension)
 // CHECK-NEXT:     xandesvsintload      5.0       'XAndesVSIntLoad' (Andes Vector INT4 Load Extension)
 // CHECK-NEXT:     xcvalu               1.0       'XCValu' (CORE-V ALU Operations)
 // CHECK-NEXT:     xcvbi                1.0       'XCVbi' (CORE-V Immediate Branching)
@@ -212,11 +213,13 @@
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
 // CHECK-NEXT:     p                    0.15      'P' ('Base P' (Packed SIMD))
+// CHECK-NEXT:     zibi                 0.1       'Zibi' (Branch with Immediate)
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
 // CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
 // CHECK-NEXT:     zalasr               0.1       'Zalasr' (Load-Acquire and Store-Release Instructions)
 // CHECK-NEXT:     zvbc32e              0.7       'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)
 // CHECK-NEXT:     zvfbfa               0.1       'Zvfbfa' (Additional BF16 vector compute support)
+// CHECK-NEXT:     zvfofp8min           0.2       'Zvfofp8min' (Vector OFP8 Converts)
 // CHECK-NEXT:     zvkgs                0.7       'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)
 // CHECK-NEXT:     zvqdotq              0.0       'Zvqdotq' (Vector quad widening 4D Dot Product)
 // CHECK-NEXT:     svukte               0.3       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)

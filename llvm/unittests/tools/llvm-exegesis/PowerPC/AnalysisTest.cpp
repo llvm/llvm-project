@@ -29,8 +29,7 @@ protected:
     const StringRef TripleName = "powerpc64le-unknown-linux";
     const Triple TT(TripleName);
     std::string error;
-    const Target *const TheTarget =
-        TargetRegistry::lookupTarget(TripleName, error);
+    const Target *const TheTarget = TargetRegistry::lookupTarget(TT, error);
     if (!TheTarget) {
       errs() << error << "\n";
       return;

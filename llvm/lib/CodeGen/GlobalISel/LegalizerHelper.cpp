@@ -487,6 +487,10 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(FMIN_F);
   case TargetOpcode::G_FMAXNUM:
     RTLIBCASE(FMAX_F);
+  case TargetOpcode::G_FMINIMUMNUM:
+    RTLIBCASE(FMINIMUM_NUM_F);
+  case TargetOpcode::G_FMAXIMUMNUM:
+    RTLIBCASE(FMAXIMUM_NUM_F);
   case TargetOpcode::G_FSQRT:
     RTLIBCASE(SQRT_F);
   case TargetOpcode::G_FRINT:
@@ -1307,6 +1311,8 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FFLOOR:
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINIMUMNUM:
+  case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FNEARBYINT:
@@ -2916,6 +2922,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_SMIN:
   case TargetOpcode::G_SMAX:
+  case TargetOpcode::G_ABDS:
     Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
@@ -2928,6 +2935,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
     widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_SEXT);
     widenScalarDst(MI, WideTy);
+    MIRBuilder.setInsertPt(MIRBuilder.getMBB(), --MIRBuilder.getInsertPt());
     widenScalarDst(MI, WideTy, 1);
     Observer.changedInstr(MI);
     return Legalized;
@@ -2953,6 +2961,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_UREM:
+  case TargetOpcode::G_ABDU:
     Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ZEXT);
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
@@ -2964,6 +2973,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
     widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_ZEXT);
     widenScalarDst(MI, WideTy);
+    MIRBuilder.setInsertPt(MIRBuilder.getMBB(), --MIRBuilder.getInsertPt());
     widenScalarDst(MI, WideTy, 1);
     Observer.changedInstr(MI);
     return Legalized;
@@ -4447,6 +4457,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case TargetOpcode::G_SADDO:
   case TargetOpcode::G_SSUBO:
     return lowerSADDO_SSUBO(MI);
+  case TargetOpcode::G_SADDE:
+    return lowerSADDE(MI);
+  case TargetOpcode::G_SSUBE:
+    return lowerSSUBE(MI);
   case TargetOpcode::G_UMULH:
   case TargetOpcode::G_SMULH:
     return lowerSMULH_UMULH(MI);
@@ -8586,7 +8600,8 @@ LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
 
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
   auto BC = TLI.getBooleanContents(DstTy.isVector(), /*isFP=*/false);
-  if (TLI.shouldExpandCmpUsingSelects(getApproximateEVTForLLT(SrcTy, Ctx)) ||
+  if (TLI.preferSelectsOverBooleanArithmetic(
+          getApproximateEVTForLLT(SrcTy, Ctx)) ||
       BC == TargetLowering::UndefinedBooleanContent) {
     auto One = MIRBuilder.buildConstant(DstTy, 1);
     auto SelectZeroOrOne = MIRBuilder.buildSelect(DstTy, IsGT, One, Zero);
@@ -9295,6 +9310,49 @@ LegalizerHelper::lowerSADDO_SSUBO(MachineInstr &MI) {
   MIRBuilder.buildCopy(Dst0, NewDst0);
   MI.eraseFromParent();
 
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerSADDE(MachineInstr &MI) {
+  auto [Res, OvOut, LHS, RHS, CarryIn] = MI.getFirst5Regs();
+  const LLT Ty = MRI.getType(Res);
+
+  // sum = LHS + RHS + zext(CarryIn)
+  auto Tmp = MIRBuilder.buildAdd(Ty, LHS, RHS);
+  auto CarryZ = MIRBuilder.buildZExt(Ty, CarryIn);
+  auto Sum = MIRBuilder.buildAdd(Ty, Tmp, CarryZ);
+  MIRBuilder.buildCopy(Res, Sum);
+
+  // OvOut = icmp slt ((sum ^ lhs) & (sum ^ rhs)), 0
+  auto AX = MIRBuilder.buildXor(Ty, Sum, LHS);
+  auto BX = MIRBuilder.buildXor(Ty, Sum, RHS);
+  auto T = MIRBuilder.buildAnd(Ty, AX, BX);
+
+  auto Zero = MIRBuilder.buildConstant(Ty, 0);
+  MIRBuilder.buildICmp(CmpInst::ICMP_SLT, OvOut, T, Zero);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerSSUBE(MachineInstr &MI) {
+  auto [Res, OvOut, LHS, RHS, CarryIn] = MI.getFirst5Regs();
+  const LLT Ty = MRI.getType(Res);
+
+  // Diff = LHS - (RHS + zext(CarryIn))
+  auto CarryZ = MIRBuilder.buildZExt(Ty, CarryIn);
+  auto RHSPlusCI = MIRBuilder.buildAdd(Ty, RHS, CarryZ);
+  auto Diff = MIRBuilder.buildSub(Ty, LHS, RHSPlusCI);
+  MIRBuilder.buildCopy(Res, Diff);
+
+  // ov = msb((LHS ^ RHS) & (LHS ^ Diff))
+  auto X1 = MIRBuilder.buildXor(Ty, LHS, RHS);
+  auto X2 = MIRBuilder.buildXor(Ty, LHS, Diff);
+  auto T = MIRBuilder.buildAnd(Ty, X1, X2);
+  auto Zero = MIRBuilder.buildConstant(Ty, 0);
+  MIRBuilder.buildICmp(CmpInst::ICMP_SLT, OvOut, T, Zero);
+
+  MI.eraseFromParent();
   return Legalized;
 }
 

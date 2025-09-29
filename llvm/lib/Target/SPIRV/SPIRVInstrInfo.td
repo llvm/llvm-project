@@ -167,7 +167,7 @@ def OpTypeVoid: Op<19, (outs TYPE:$type), (ins), "$type = OpTypeVoid">;
 def OpTypeBool: Op<20, (outs TYPE:$type), (ins), "$type = OpTypeBool">;
 def OpTypeInt: Op<21, (outs TYPE:$type), (ins i32imm:$width, i32imm:$signedness),
                   "$type = OpTypeInt $width $signedness">;
-def OpTypeFloat: Op<22, (outs TYPE:$type), (ins i32imm:$width),
+def OpTypeFloat: Op<22, (outs TYPE:$type), (ins i32imm:$width, variable_ops),
                   "$type = OpTypeFloat $width">;
 def OpTypeVector: Op<23, (outs TYPE:$type), (ins TYPE:$compType, i32imm:$compCount),
                   "$type = OpTypeVector $compType $compCount">;
@@ -763,7 +763,38 @@ def OpGetDefaultQueue: Op<303, (outs ID:$res), (ins TYPE:$type),
 def OpBuildNDRange: Op<304, (outs ID:$res), (ins TYPE:$type, ID:$GWS, ID:$LWS, ID:$GWO),
                   "$res = OpBuildNDRange $type $GWS $LWS $GWO">;
 
-// TODO: 3.42.23. Pipe Instructions
+// 3.42.23. Pipe Instructions
+
+def OpReadPipe: Op<274, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpReadPipe $type $Pipe $Pointer $PcktSize $PcktAlign">;
+def OpWritePipe: Op<275, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpWritePipe $type $Pipe $Pointer $PcktSize $PcktAlign">;
+def OpReservedReadPipe : Op<276, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$ReserveId, ID:$Index, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpReservedReadPipe $type $Pipe $ReserveId $Index $Pointer $PcktSize $PcktAlign">;
+def OpReservedWritePipe : Op<277, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$ReserveId, ID:$Index, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign), 
+                  "$res = OpReservedWritePipe $type $Pipe $ReserveId $Index $Pointer $PcktSize $PcktAlign">;
+def OpReserveReadPipePackets : Op<278, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$NumPckts, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpReserveReadPipePackets $type $Pipe $NumPckts $PcktSize $PcktAlign">;
+def OpReserveWritePipePackets : Op<279, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$NumPckts, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpReserveWritePipePackets $type $Pipe $NumPckts $PcktSize $PcktAlign">;
+def OpCommitReadPipe : Op<280, (outs), (ins ID:$Pipe, ID:$ReserveId, ID:$PcktSize, ID:$PcktAlign),
+                  "OpCommitReadPipe $Pipe $ReserveId $PcktSize $PcktAlign">;
+def OpCommitWritePipe : Op<281, (outs), (ins ID:$Pipe, ID:$ReserveId, ID:$PcktSize, ID:$PcktAlign),
+                  "OpCommitWritePipe $Pipe $ReserveId $PcktSize $PcktAlign">;
+def OpIsValidReserveId : Op<282, (outs ID:$res), (ins TYPE:$type, ID:$ReserveId),
+                  "$res = OpIsValidReserveId $type $ReserveId">;
+def OpGetNumPipePackets : Op<283, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$PacketSize, ID:$PacketAlign),
+                  "$res = OpGetNumPipePackets $type $Pipe $PacketSize $PacketAlign">;
+def OpGetMaxPipePackets : Op<284, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$PacketSize, ID:$PacketAlign),
+                  "$res = OpGetMaxPipePackets $type $Pipe $PacketSize $PacketAlign">;
+def OpGroupReserveReadPipePackets : Op<285, (outs ID:$res), (ins TYPE:$type, ID:$Scope, ID:$Pipe, ID:$NumPckts, ID:$PacketSize, ID:$PacketAlign),
+                  "$res = OpGroupReserveReadPipePackets $type $Scope $Pipe $NumPckts $PacketSize $PacketAlign">;
+def OpGroupReserveWritePipePackets : Op<286, (outs ID:$res), (ins TYPE:$type, ID:$Scope, ID:$Pipe, ID:$NumPckts, ID:$PacketSize, ID:$PacketAlign),
+                  "$res = OpGroupReserveWritePipePackets $type $Scope $Pipe $NumPckts $PacketSize $PacketAlign">;
+def OpGroupCommitReadPipe : Op<287, (outs), (ins ID:$Scope, ID:$Pipe, ID:$ReserveId, ID:$PacketSize, ID:$PacketAlign),
+                  "OpGroupCommitReadPipe $Scope $Pipe $ReserveId $PacketSize $PacketAlign">;
+def OpGroupCommitWritePipe : Op<288, (outs), (ins ID:$Scope, ID:$Pipe, ID:$ReserveId, ID:$PacketSize, ID:$PacketAlign),
+                  "OpGroupCommitWritePipe $Scope $Pipe $ReserveId $PacketSize $PacketAlign">;
 
 // 3.42.24. Non-Uniform Instructions
 

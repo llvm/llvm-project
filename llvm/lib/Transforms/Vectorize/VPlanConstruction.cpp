@@ -193,6 +193,9 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
     }
 
     if (auto *SI = dyn_cast<SwitchInst>(Inst)) {
+      // Don't emit recipes for unconditional switch instructions.
+      if (SI->getNumCases() == 0)
+        continue;
       SmallVector<VPValue *> Ops = {getOrCreateVPOperand(SI->getCondition())};
       for (auto Case : SI->cases())
         Ops.push_back(getOrCreateVPOperand(Case.getCaseValue()));
@@ -751,6 +754,43 @@ void VPlanTransforms::addMinimumIterationCheck(
         ArrayRef(MinItersBypassWeights, 2), /*IsExpected=*/false);
     Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
   }
+}
+
+void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
+    VPlan &Plan, Value *TripCount, Value *VectorTripCount,
+    bool RequiresScalarEpilogue, ElementCount EpilogueVF, unsigned EpilogueUF,
+    unsigned MainLoopStep, unsigned EpilogueLoopStep, ScalarEvolution &SE) {
+  // Add the minimum iteration check for the epilogue vector loop.
+  VPValue *TC = Plan.getOrAddLiveIn(TripCount);
+  VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
+  VPValue *Count = Builder.createNaryOp(
+      Instruction::Sub, {TC, Plan.getOrAddLiveIn(VectorTripCount)},
+      DebugLoc::getUnknown(), "n.vec.remaining");
+
+  // Generate code to check if the loop's trip count is less than VF * UF of
+  // the vector epilogue loop.
+  auto P = RequiresScalarEpilogue ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
+  VPValue *VFxUF = Builder.createExpandSCEV(SE.getElementCount(
+      TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));
+
+  auto *CheckMinIters = Builder.createICmp(
+      P, Count, VFxUF, DebugLoc::getUnknown(), "min.epilog.iters.check");
+  VPInstruction *Branch =
+      Builder.createNaryOp(VPInstruction::BranchOnCond, CheckMinIters);
+
+  // We assume the remaining `Count` is equally distributed in
+  // [0, MainLoopStep)
+  // So the probability for `Count < EpilogueLoopStep` should be
+  // min(MainLoopStep, EpilogueLoopStep) / MainLoopStep
+  // TODO: Improve the estimate by taking the estimated trip count into
+  // consideration.
+  unsigned EstimatedSkipCount = std::min(MainLoopStep, EpilogueLoopStep);
+  const uint32_t Weights[] = {EstimatedSkipCount,
+                              MainLoopStep - EstimatedSkipCount};
+  MDBuilder MDB(Plan.getContext());
+  MDNode *BranchWeights =
+      MDB.createBranchWeights(Weights, /*IsExpected=*/false);
+  Branch->addMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {

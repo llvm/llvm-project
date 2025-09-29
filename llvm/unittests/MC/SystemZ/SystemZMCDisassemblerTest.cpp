@@ -38,7 +38,7 @@ struct Context {
 
     // If we didn't build SystemZ, do not run the test.
     std::string Error;
-    const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+    const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     if (!TheTarget)
       return;
 

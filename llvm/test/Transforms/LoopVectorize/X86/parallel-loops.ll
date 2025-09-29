@@ -66,7 +66,7 @@ for.end:                                          ; preds = %for.body
 define void @parallel_loop(ptr nocapture %a, ptr nocapture %b) nounwind uwtable {
 ; CHECK-LABEL: @parallel_loop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

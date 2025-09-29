@@ -96,6 +96,16 @@ and each instruction printed by LLVM is suffixed with the file and line
 number of the instruction according to the debug information. Note that
 this requires debug information to be enabled (e.g. pass ``-g`` to Clang).
 
+LLDB Data Formatters
+====================
+
+A handful of `LLDB data formatters
+<https://lldb.llvm.org/resources/dataformatters.html>`__ are
+provided for some of the core LLVM libraries. To use them, execute the
+following (or add it to your ``~/.lldbinit``)::
+
+  command script import /path/to/llvm/utils/lldbDataFormatters.py
+
 GDB pretty printers
 ===================
 
@@ -104,7 +114,7 @@ A handful of `GDB pretty printers
 provided for some of the core LLVM libraries. To use them, execute the
 following (or add it to your ``~/.gdbinit``)::
 
-  source /path/to/llvm/src/utils/gdb-scripts/prettyprinters.py
+  source /path/to/llvm/utils/gdb-scripts/prettyprinters.py
 
 It also might be handy to enable the `print pretty
 <https://sourceware.org/gdb/current/onlinedocs/gdb.html/Print-Settings.html>`__
