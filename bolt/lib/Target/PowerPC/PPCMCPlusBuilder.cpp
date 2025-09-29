@@ -17,9 +17,12 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include <optional>
-#define DEBUG_TYPE "bolt-ppc-mcplus"
 #include "llvm/Support/Debug.h"
 #include <string>
+#define DEBUG_TYPE "bolt-ppc"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+
 
 using namespace llvm;
 using namespace bolt;
