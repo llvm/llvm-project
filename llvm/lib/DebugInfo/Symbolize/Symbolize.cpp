@@ -793,7 +793,7 @@ LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
         if (auto Err = loadDataForEXE(ReaderType, Objects.first->getFileName(),
                                       Session)) {
           Modules.emplace(ModuleName, std::unique_ptr<SymbolizableModule>());
-          // Return along the PDB filename to provide more context.
+          // Return along the PDB filename to provide more context
           return createFileError(PDBFileName, std::move(Err));
         }
         Context.reset(new PDBContext(*CoffObject, std::move(Session)));
