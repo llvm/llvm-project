@@ -5667,9 +5667,18 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   VectorType *AccumVectorType =
       VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));
 
-  // We don't yet support widening for <vscale x 1 x ..> accumulators.
-  if (AccumVectorType->getElementCount() == ElementCount::getScalable(1))
+  // We don't yet support all kinds of legalization (e.g. widening
+  // of <[vscale x] 1 x ..> accumulators)
+  auto TA = TLI->getTypeAction(AccumVectorType->getContext(),
+                               EVT::getEVT(AccumVectorType));
+  switch (TA) {
+  default:
     return Invalid;
+  case TargetLowering::TypeLegal:
+  case TargetLowering::TypePromoteInteger:
+  case TargetLowering::TypeSplitVector:
+    break;
+  }
 
   // Check what kind of type-legalisation happens.
   std::pair<InstructionCost, MVT> AccumLT =

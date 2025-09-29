@@ -7,7 +7,7 @@ target triple = "aarch64-none-unknown-elf"
 ; Tests for printing VPlans that are enabled under AArch64
 
 define i32 @print_partial_reduction(ptr %a, ptr %b) {
-; CHECK:      VPlan 'Initial VPlan for VF={4,8,16},UF>=1' {
+; CHECK:      VPlan 'Initial VPlan for VF={8,16},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -71,7 +71,7 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT:   IR   %exitcond.not = icmp eq i64 %iv.next, 1024
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
-; CHECK: VPlan 'Final VPlan for VF={4,8,16},UF={1}' {
+; CHECK: VPlan 'Final VPlan for VF={8,16},UF={1}' {
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
