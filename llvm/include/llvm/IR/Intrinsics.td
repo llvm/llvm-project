@@ -960,8 +960,12 @@ def int_instrprof_mcdc_tvbitmap_update : Intrinsic<[],
                                         [llvm_ptr_ty, llvm_i64_ty,
                                          llvm_i32_ty, llvm_ptr_ty]>;
 
-def int_call_preallocated_setup : DefaultAttrsIntrinsic<[llvm_token_ty], [llvm_i32_ty]>;
-def int_call_preallocated_arg : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_i32_ty]>;
+def int_call_preallocated_setup
+    : DefaultAttrsIntrinsic<[llvm_token_ty], [llvm_i32_ty],
+                            [ImmArg<ArgIndex<0>>]>;
+def int_call_preallocated_arg
+    : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_i32_ty],
+                            [ImmArg<ArgIndex<1>>]>;
 def int_call_preallocated_teardown : DefaultAttrsIntrinsic<[], [llvm_token_ty]>;
 
 // This intrinsic is intentionally undocumented and users shouldn't call it;
