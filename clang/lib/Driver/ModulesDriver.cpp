@@ -28,6 +28,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DirectedGraph.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -504,14 +505,15 @@ struct DependencyScanResult {
   llvm::SmallVector<std::optional<InputDependencies>> InputDeps;
 
   /// The full Clang module dependenies for this compilation.
-  SmallVector<std::unique_ptr<ModuleDeps>> ClangModuleDeps;
+  SmallVector<ModuleDeps, 0> ClangModuleDeps;
 };
 
 /// Merges and deterministically orders scan results from multiple threads
 /// into a single DependencyScanResult.
 class ScanResultCollector {
 public:
-  explicit ScanResultCollector(size_t NumInputs) : InputDeps(NumInputs) {}
+  explicit ScanResultCollector(size_t NumInputs)
+      : InputDeps(NumInputs), ClangModuleGraphs(NumInputs) {}
 
   /// Adds the dependency scan result for the input at \c InputIndex.
   ///
@@ -525,36 +527,8 @@ public:
   DependencyScanResult takeScanResults();
 
 private:
-  /// Merges and deterministically orders Clang module dependencies.
-  class ClangModuleDepsCollector {
-  public:
-    void mergeGraph(ModuleDepsGraph &&Graph, size_t InputIndex);
-
-    SmallVector<std::unique_ptr<ModuleDeps>> takeOrderedModuleDeps();
-
-  private:
-    /// We need the output of dependency scan to be deterministic. However,
-    /// the dependency graph may contain two modules with the same name. How
-    /// do we decide which one to order first? If we made that decision based
-    /// on the context hash, the ordering would be deterministic, but
-    /// different across machines. This can happen for example when the inputs
-    /// or the SDKs (which both contribute to the "context" hash) live in
-    /// different absolute locations. We solve that by tracking the index of
-    /// the first input TU that (transitively) imports the dependency, which
-    /// is always the same for the same input, resulting in deterministic
-    /// sorting that's also reproducible across machines.
-    struct IndexedModuleDeps {
-      size_t FirstImportingInputIndex;
-      std::unique_ptr<ModuleDeps> ModuleDeps;
-    };
-
-    SmallVector<IndexedModuleDeps> IndexedModuleGraph;
-    llvm::DenseMap<ModuleID, size_t> ModuleGraphIndexByID;
-    std::mutex Lock;
-  };
-
   SmallVector<std::optional<InputDependencies>, 0> InputDeps;
-  ClangModuleDepsCollector ClangModuleDeps;
+  llvm::SmallVector<std::vector<ModuleDeps>, 0> ClangModuleGraphs;
 };
 } // anonymous namespace
 
@@ -562,7 +536,6 @@ void ScanResultCollector::handleTUResult(TranslationUnitDeps &&TUDeps,
                                          bool IsSystem, size_t InputIndex) {
   assert(!InputDeps[InputIndex].has_value() &&
          "Each slot should be written to at most once.");
-
   InputDeps[InputIndex].emplace();
   auto &NewInputDep = InputDeps[InputIndex].value();
   NewInputDep.ID = std::move(TUDeps.ID);
@@ -573,61 +546,27 @@ void ScanResultCollector::handleTUResult(TranslationUnitDeps &&TUDeps,
   assert(TUDeps.Commands.size() == 1 && "Expected exactly one command");
   NewInputDep.BuildArgs = TUDeps.Commands.front().Arguments;
 
-  ClangModuleDeps.mergeGraph(std::move(TUDeps.ModuleGraph), InputIndex);
+  assert(ClangModuleGraphs[InputIndex].empty() &&
+         "Each slot should be written to at most once.");
+  ClangModuleGraphs[InputIndex] = std::move(TUDeps.ModuleGraph);
 }
 
 DependencyScanResult ScanResultCollector::takeScanResults() {
-  return {std::move(InputDeps), ClangModuleDeps.takeOrderedModuleDeps()};
-}
+  DependencyScanResult Out;
 
-void ScanResultCollector::ClangModuleDepsCollector::mergeGraph(
-    ModuleDepsGraph &&ModuleGraph, size_t InputIndex) {
-  SmallVector<ModuleDeps *> NewModuleDeps;
-
-  {
-    std::scoped_lock<std::mutex> SL(Lock);
-
+  // Record each module only once, from its first importing input.
+  // This keeps the output deterministic.
+  llvm::DenseSet<ModuleID> AlreadySeen;
+  for (auto &ModuleGraph : ClangModuleGraphs) {
     for (auto &MD : ModuleGraph) {
-      if (const auto It = ModuleGraphIndexByID.find(MD.ID);
-          It != ModuleGraphIndexByID.end()) {
-        auto &FirstImportingInput =
-            IndexedModuleGraph[It->second].FirstImportingInputIndex;
-        FirstImportingInput = std::min(FirstImportingInput, InputIndex);
+      auto [It, Inserted] = AlreadySeen.insert(MD.ID);
+      if (!Inserted)
         continue;
-      }
-
-      const auto GraphIndex = IndexedModuleGraph.size();
-      ModuleGraphIndexByID.try_emplace(MD.ID, GraphIndex);
-
-      auto NewModule = std::make_unique<ModuleDeps>(std::move(MD));
-      NewModuleDeps.push_back(NewModule.get());
-
-      IndexedModuleGraph.push_back(
-          IndexedModuleDeps{InputIndex, std::move(NewModule)});
+      Out.ClangModuleDeps.push_back(std::move(MD));
     }
   }
 
-  // First call to \c getBuildArguments is somewhat expensive. Let's call it
-  // on the current thread (instead of the main one), and outside the
-  // critical section.
-  for (const auto *MD : NewModuleDeps)
-    (void)MD->getBuildArguments();
-}
-
-SmallVector<std::unique_ptr<ModuleDeps>>
-ScanResultCollector::ClangModuleDepsCollector::takeOrderedModuleDeps() {
-  // The context hash of a ModuleID can be different across machines.
-  // We therefore use the first importing input index and module name to sort
-  // ModuleDeps deterministically.
-  llvm::sort(IndexedModuleGraph, [](const auto &A, const auto &B) {
-    return std::tie(A.FirstImportingInputIndex, A.ModuleDeps->ID.ModuleName) <
-           std::tie(B.FirstImportingInputIndex, B.ModuleDeps->ID.ModuleName);
-  });
-
-  SmallVector<std::unique_ptr<ModuleDeps>> Out;
-  Out.reserve(IndexedModuleGraph.size());
-  for (auto &IndexedMD : IndexedModuleGraph)
-    Out.push_back(std::move(IndexedMD.ModuleDeps));
+  Out.InputDeps = std::move(InputDeps);
   return Out;
 }
 
@@ -639,11 +578,11 @@ public:
   ScanningWorkerPool(size_t NumWorkers, DependencyScanningService &S,
                      llvm::vfs::FileSystem &FS);
 
-  /// Acquires a unique pointer to a dependency scanning worker and its context.
+  /// Acquires a unique pointer to a dependency scanning worker and its
+  /// context.
   ///
-  /// The worker bundle automatically released back to the pool when the pointer
-  /// is destroyed.
-  /// The pool has to outlive the leased worker bundle.
+  /// The worker bundle automatically released back to the pool when the
+  /// pointer is destroyed. The pool has to outlive the leased worker bundle.
   [[nodiscard]] auto scopedAcquire();
 
 private:
@@ -1063,14 +1002,13 @@ static MDGComponent *makeWithAlloc(llvm::BumpPtrAllocator &Alloc,
 /// Builds all Clang module nodes from \c ClangModuleDeps for \c Graph and
 /// registers them in \c ClangModuleMap.
 static void buildClangModuleNodes(
-    ModuleDependencyGraph &Graph,
-    ArrayRef<std::unique_ptr<ModuleDeps>> ClangModuleDeps,
+    ModuleDependencyGraph &Graph, ArrayRef<ModuleDeps> ClangModuleDeps,
     llvm::DenseMap<ModuleID, ClangModuleMDGNode *> &ClangModuleMap) {
   auto &Alloc = Graph.getAllocator();
   for (auto &M : ClangModuleDeps) {
-    auto *Node = makeWithAlloc<ClangModuleMDGNode>(Alloc, *M);
+    auto *Node = makeWithAlloc<ClangModuleMDGNode>(Alloc, M);
     Graph.addNode(*Node);
-    const auto [It, Inserted] = ClangModuleMap.try_emplace(M->ID, Node);
+    const auto [It, Inserted] = ClangModuleMap.try_emplace(M.ID, Node);
     assert(Inserted && "Duplicate Clang module in scan result.");
   }
 }
