@@ -13,7 +13,6 @@
 
 using namespace clang::tidy::readability;
 
-namespace {
 static std::optional<std::string>
 generateImplicitCaptureText(const clang::LambdaCapture &Capture) {
   if (Capture.capturesThis()) {
@@ -37,8 +36,6 @@ generateImplicitCaptureText(const clang::LambdaCapture &Capture) {
 
   return std::nullopt;
 }
-
-} // namespace
 
 void AvoidDefaultLambdaCaptureCheck::registerMatchers(
     clang::ast_matchers::MatchFinder *Finder) {
