@@ -703,12 +703,11 @@ template <typename OpAdaptor>
 static FailureOr<SmallVector<Value>>
 extractLoadCoordsForComposite(memref::LoadOp loadOp, OpAdaptor adaptor,
                               ConversionPatternRewriter &rewriter) {
-  // Texel coordinates are ordered from inner most to outer most dimension
-  // i.e. u, v, w, a where:
-  // u: Coordinate in the first dimension of an image.
-  // v: Coordinate in the second dimension of an image.
-  // w: Coordinate in the third dimension of an image.
-  // a: Coordinate for array layer.
+  // At present we only support linear "tiling" as specified in Vulkan, this
+  // means that texels are assumed to be laid out in memory in a row-major
+  // order. This allows us to support any memref layout that is a permutation of
+  // the dimensions. Future work will pass an optional image layout to the
+  // rewrite pattern so that we can support optimized target specific tilings.
   //
   // The memrefs layout determines the dimension ordering so we need to invert
   // the map to get the ordering.
