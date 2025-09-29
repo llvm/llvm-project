@@ -727,8 +727,8 @@ define void @load_splat_v4f64(ptr %a, ptr %b) vscale_range(2,2) #0 {
 define void @load_splat_v32i8(ptr %a, ptr %b) vscale_range(2,2) #0 {
 ; CHECK-LABEL: load_splat_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    mov z0.b, b0
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld1rb { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %v = load <32 x i8>, ptr %a
@@ -740,8 +740,8 @@ define void @load_splat_v32i8(ptr %a, ptr %b) vscale_range(2,2) #0 {
 define void @load_splat_v16i16(ptr %a, ptr %b) vscale_range(2,2) #0 {
 ; CHECK-LABEL: load_splat_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    mov z0.h, h0
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld1rh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %v = load <16 x i16>, ptr %a
@@ -753,8 +753,8 @@ define void @load_splat_v16i16(ptr %a, ptr %b) vscale_range(2,2) #0 {
 define void @load_splat_v8i32(ptr %a, ptr %b) vscale_range(2,2) #0 {
 ; CHECK-LABEL: load_splat_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    mov z0.s, s0
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1rw { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %v = load <8 x i32>, ptr %a
@@ -766,8 +766,8 @@ define void @load_splat_v8i32(ptr %a, ptr %b) vscale_range(2,2) #0 {
 define void @load_splat_v4i64(ptr %a, ptr %b) vscale_range(2,2) #0 {
 ; CHECK-LABEL: load_splat_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %v = load <4 x i64>, ptr %a
