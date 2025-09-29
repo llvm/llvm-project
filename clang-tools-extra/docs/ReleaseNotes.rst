@@ -54,15 +54,17 @@ Potentially Breaking Changes
   :program:`clang-tidy-20`. Users should use the check-specific options of the
   same name instead.
 
-- Renamed :program:`clang-tidy`'s option name of check
-  :doc:`bugprone-easily-swappable-parameters
-  <clang-tidy/checks/bugprone/easily-swappable-parameters>` from
-  ``NamePrefixSuffixSilenceDissimilarityTreshold`` to
-  ``NamePrefixSuffixSilenceDissimilarityThreshold`` and of check
-  :doc:`bugprone-signed-char-misuse
-  <clang-tidy/checks/bugprone/signed-char-misuse>` from
-  ``CharTypdefsToIgnore`` to ``CharTypedefsToIgnore``,
-  correcting spelling mistakes.
+- Renamed a few :program:`clang-tidy` check options, as they
+  were misspelled:
+
+  - `NamePrefixSuffixSilenceDissimilarityTreshold` →
+    `NamePrefixSuffixSilenceDissimilarityThreshold` in
+    :doc:`bugprone-easily-swappable-parameters
+    <clang-tidy/checks/bugprone/easily-swappable-parameters>`
+
+  - `CharTypdefsToIgnore` → `CharTypedefsToIgnore` in
+    :doc:`bugprone-signed-char-misuse
+    <clang-tidy/checks/bugprone/signed-char-misuse>`
 
 Improvements to clangd
 ----------------------
