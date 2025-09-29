@@ -169,7 +169,7 @@ template <typename T> struct Memset {
 
   LIBC_INLINE static void block(Ptr dst, uint8_t value) {
     if constexpr (is_scalar_v<T> || is_vector_v<T>) {
-      // Avoid ambiguous call due to ADT
+      // Avoid ambiguous call due to ADL
       generic::store<T>(dst, splat<T>(value));
     } else if constexpr (is_array_v<T>) {
       using value_type = typename T::value_type;
