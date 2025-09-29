@@ -432,8 +432,7 @@ Bug Fixes to C++ Support
 - Fix an assertion failure when taking the address on a non-type template parameter argument of
   object type. (#GH151531)
 - Suppress ``-Wdouble-promotion`` when explicitly asked for with C++ list initialization (#GH33409).
-- Fixed a crash in the pre-C++23 warning for attributes before a lambda
-  declarator by unifying format args to ``%0`` as attribute name, ``%1`` as selector (#GH161070).
+- Fixed a crash in the pre-C++23 warning for attributes before a lambda declarator (#GH161070).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
