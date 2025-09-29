@@ -9,7 +9,6 @@
 #include "bolt/Core/MCInstUtils.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
-#include "llvm/ADT/iterator.h"
 
 #include <type_traits>
 
@@ -22,19 +21,6 @@ using BasicBlockStorageIsVector =
     std::is_same<BinaryBasicBlock::const_iterator,
                  std::vector<MCInst>::const_iterator>;
 static_assert(BasicBlockStorageIsVector::value);
-
-namespace {
-// Cannot reuse MCPlusBuilder::InstructionIterator because it has to be
-// constructed from a non-const std::map iterator.
-class mapped_mcinst_iterator
-    : public iterator_adaptor_base<mapped_mcinst_iterator,
-                                   MCInstReference::nocfg_const_iterator> {
-public:
-  mapped_mcinst_iterator(MCInstReference::nocfg_const_iterator It)
-      : iterator_adaptor_base(It) {}
-  const MCInst &operator*() const { return this->I->second; }
-};
-} // anonymous namespace
 
 MCInstReference MCInstReference::get(const MCInst &Inst,
                                      const BinaryFunction &BF) {
@@ -71,10 +57,7 @@ uint64_t MCInstReference::computeAddress(const MCCodeEmitter *Emitter) const {
   }
 
   auto &Ref = getRefInBF();
-  mapped_mcinst_iterator FirstInstInBF(Ref.BF->instrs().begin());
-  mapped_mcinst_iterator ThisInst(Ref.It);
-
-  uint64_t OffsetInBF = BC.computeCodeSize(FirstInstInBF, ThisInst, Emitter);
+  uint64_t OffsetInBF = Ref.It->first;
 
   return getFunction()->getAddress() + OffsetInBF;
 }

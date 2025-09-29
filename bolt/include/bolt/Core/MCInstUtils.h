@@ -93,8 +93,7 @@ public:
   ///
   /// This function is intended for the use cases like debug printing, as it
   /// is only as precise as BinaryContext::computeCodeSize() is and requires
-  /// iterating over the prefix of the basic block (when CFG is available) or
-  /// of the function (when CFG is unavailable).
+  /// iterating over the prefix of the basic block (when CFG is available).
   ///
   /// MCCodeEmitter is not thread safe and the default instance from
   /// BinaryContext is used by default, thus pass an instance explicitly if
