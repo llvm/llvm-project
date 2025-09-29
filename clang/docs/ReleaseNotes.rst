@@ -379,7 +379,7 @@ Bug Fixes in This Version
 - Fixed an assertion when an improper use of the ``malloc`` attribute targeting
   a function without arguments caused us to try to access a non-existent argument.
   (#GH159080)
-- Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898) (#GH56652)
+- Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -433,7 +433,7 @@ Bug Fixes to C++ Support
   object type. (#GH151531)
 - Suppress ``-Wdouble-promotion`` when explicitly asked for with C++ list initialization (#GH33409).
 - Fix the result of `__builtin_is_implicit_lifetime` for types with a user-provided constructor. (#GH160610)
-- Correctly deduced return types in ``decltype`` expressions. (#GH160497)
+- Correctly deduced return types in ``decltype`` expressions. (#GH160497) (#GH56652) (#GH116319)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

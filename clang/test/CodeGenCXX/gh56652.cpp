@@ -24,5 +24,18 @@ auto a = decltype(fn(bar<int>{})){};
 
 }
 
+namespace GH116319 {
+
+template <int = 0> struct a {
+template <class> static constexpr auto b = 2;
+template <class> static void c() noexcept(noexcept(b<int>)) {}
+};
+
+void test() { a<>::c<int>(); }
+
+
+}
+
 // CHECK: %"struct.GH56652::bar" = type { i8 }
+// CHECK: $_ZN8GH1163191aILi0EE1cIiEEvv = comdat any
 // CHECK: @_ZN7GH566521aE = global %"struct.GH56652::bar" undef
