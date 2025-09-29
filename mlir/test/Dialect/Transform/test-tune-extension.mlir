@@ -158,3 +158,30 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// CHECK-LABEL: eeny_meeny_miny_moe
+func.func private @eeny_meeny_miny_moe()
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+
+    %tiled_matmul = transform.tune.alternatives<"4way"> selected_region = 3 -> !transform.any_param
+    { // First alternative/region, with index = 0
+      %out = transform.param.constant "eeny" -> !transform.any_param
+      transform.yield %out : !transform.any_param
+    }, { // Second alternative/region, with index = 1
+      %out = transform.param.constant "meeny" -> !transform.any_param
+      transform.yield %out : !transform.any_param
+    }, { // Third alternative/region, with index = 2
+      %out = transform.param.constant "miny" -> !transform.any_param
+      transform.yield %out : !transform.any_param
+    }, { // Fourth alternative/region, with index = 3
+      %out = transform.param.constant "moe" -> !transform.any_param
+      transform.yield %out : !transform.any_param
+    }
+    transform.yield
+  }
+}
