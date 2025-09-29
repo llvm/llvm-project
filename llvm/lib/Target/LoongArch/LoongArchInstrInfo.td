@@ -943,7 +943,7 @@ let Predicates = [IsLA64] in {
 def ADD_D : ALU_3R<0x00108000>;
 def SUB_D : ALU_3R<0x00118000>;
 // ADDI_D isn't always rematerializable, but isReMaterializable will be used as
-// a hint which is verified in isReallyTriviallyReMaterializable.
+// a hint which is verified in isReMaterializableImpl.
 // See LoongArchInstrInfo::isAsCheapAsAMove for more details.
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def ADDI_D : ALU_2RI12<0x02c00000, simm12_addlike>;

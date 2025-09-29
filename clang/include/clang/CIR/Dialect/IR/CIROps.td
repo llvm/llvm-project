@@ -2326,6 +2326,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     The function linkage information is specified by `linkage`, as defined by
     `GlobalLinkageKind` attribute.
 
+    The `lambda` translates to a C++ `operator()` that implements a lambda, this
+    allow callsites to make certain assumptions about the real function nature
+    when writing analysis.
+
     The `no_proto` keyword is used to identify functions that were declared
     without a prototype and, consequently, may contain calls with invalid
     arguments and undefined behavior.
@@ -2348,6 +2352,7 @@ def CIR_FuncOp : CIR_Op<"func", [
   let arguments = (ins SymbolNameAttr:$sym_name,
                        CIR_VisibilityAttr:$global_visibility,
                        TypeAttrOf<CIR_FuncType>:$function_type,
+                       UnitAttr:$lambda,
                        UnitAttr:$no_proto,
                        UnitAttr:$dso_local,
                        DefaultValuedAttr<CIR_GlobalLinkageKind,
