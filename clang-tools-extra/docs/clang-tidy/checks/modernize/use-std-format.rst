@@ -67,7 +67,7 @@ Options
    the first parameter contains the printf-style format string and the
    arguments to be formatted follow immediately afterwards. Qualified member
    function names are supported, but the replacement function name must be
-   unqualified. The default value for this option is `absl::StrFormat`.
+   unqualified. The default value is `absl::StrFormat`.
 
 .. option:: ReplacementFormatFunction
 
