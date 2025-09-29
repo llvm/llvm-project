@@ -50,6 +50,13 @@ TEST(SipHashTest, SipHash_2_4_128) {
   }
 }
 
+// Tests for the 64-bit stable SipHash wrapper.
+TEST(SipHashTest, StableSipHash) {
+  EXPECT_EQ(0xB2BB69BB0A2AC0F1UL, getStableSipHash(""));
+  EXPECT_EQ(0x9304ABFF427B72E8UL, getStableSipHash("strlen"));
+  EXPECT_EQ(0x55F45179A08AE51BUL, getStableSipHash("_ZN1 ind; f"));
+}
+
 // Tests for the ptrauth-specific SipHash wrapper.
 TEST(SipHashTest, PointerAuthSipHash) {
   // Test some basic cases.
