@@ -29239,7 +29239,17 @@ void AArch64TargetLowering::ReplaceNodeResults(
 bool AArch64TargetLowering::useLoadStackGuardNode(const Module &M) const {
   if (Subtarget->isTargetAndroid() || Subtarget->isTargetFuchsia())
     return TargetLowering::useLoadStackGuardNode(M);
-  return true;
+  return false;
+}
+
+bool AArch64TargetLowering::useStackGuardXorFP() const { return true; }
+
+SDValue AArch64TargetLowering::emitStackGuardXorFP(SelectionDAG &DAG,
+                                                   SDValue Val,
+                                                   const SDLoc &DL) const {
+  return DAG.getNode(
+      ISD::XOR, DL, Val.getValueType(), Val,
+      DAG.getRegister(getStackPointerRegisterToSaveRestore(), MVT::i64));
 }
 
 unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {
