@@ -318,16 +318,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     }
 
     // Partial MLA reductions.
-    // We only have native support with i32x4.dot_i16x8_s, the rest are custom
-    // lowered.
-    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v4i32, MVT::v8i16,
-                              Legal);
-    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v4i32, MVT::v8i16,
-                              Custom);
-    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v4i32, MVT::v16i8,
-                              Custom);
-    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v4i32, MVT::v16i8,
-                              Custom);
+    for (auto Op : {ISD::PARTIAL_REDUCE_SMLA, ISD::PARTIAL_REDUCE_UMLA}) {
+      setPartialReduceMLAAction(Op, MVT::v4i32, MVT::v16i8, Legal);
+      setPartialReduceMLAAction(Op, MVT::v4i32, MVT::v8i16, Legal);
+    }
   }
 
   // As a special case, these operators use the type to mean the type to
@@ -1682,9 +1676,6 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerMUL_LOHI(Op, DAG);
   case ISD::UADDO:
     return LowerUADDO(Op, DAG);
-  case ISD::PARTIAL_REDUCE_SMLA:
-  case ISD::PARTIAL_REDUCE_UMLA:
-    return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }
 
@@ -2090,88 +2081,6 @@ SDValue WebAssemblyTargetLowering::LowerVASTART(SDValue Op,
                                     MFI->getVarargBufferVreg(), PtrVT);
   return DAG.getStore(Op.getOperand(0), DL, ArgN, Op.getOperand(1),
                       MachinePointerInfo(SV));
-}
-
-// We only have native support with i32x4.dot_i16x8_s, so for the unsigned
-// case we can expand to extmul and add. For v16i8 inputs, we can use two dots,
-// for signed, for an expanded tree of extmul adds for unsigned.
-SDValue
-WebAssemblyTargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
-                                                   SelectionDAG &DAG) const {
-  assert(Op->getValueType(0) == MVT::v4i32 && "can only support v4i32");
-  SDLoc DL(Op);
-
-  SDValue Acc = Op.getOperand(0);
-  SDValue ExtendInLHS = Op.getOperand(1);
-  SDValue ExtendInRHS = Op.getOperand(2);
-  bool IsSigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_SMLA;
-
-  APInt Imm;
-  if (ISD::isConstantSplatVector(ExtendInRHS.getNode(), Imm) && Imm == 1) {
-    // Accumulate the input using extadd_pairwise.
-    unsigned PairwiseOpc = IsSigned ? WebAssemblyISD::EXT_ADD_PAIRWISE_S
-                                    : WebAssemblyISD::EXT_ADD_PAIRWISE_U;
-    if (ExtendInLHS->getValueType(0) == MVT::v8i16) {
-      SDValue Add = DAG.getNode(PairwiseOpc, DL, MVT::v4i32, ExtendInLHS);
-      return DAG.getNode(ISD::ADD, DL, MVT::v4i32, Acc, Add);
-    }
-    assert(ExtendInLHS->getValueType(0) == MVT::v16i8 &&
-           "expected v16i8 input types");
-    SDValue Add =
-        DAG.getNode(PairwiseOpc, DL, MVT::v4i32,
-                    DAG.getNode(PairwiseOpc, DL, MVT::v8i16, ExtendInLHS));
-    return DAG.getNode(ISD::ADD, DL, MVT::v4i32, Acc, Add);
-  } else {
-    unsigned LowOpc =
-        IsSigned ? WebAssemblyISD::EXTEND_LOW_S : WebAssemblyISD::EXTEND_LOW_U;
-    unsigned HighOpc = IsSigned ? WebAssemblyISD::EXTEND_HIGH_S
-                                : WebAssemblyISD::EXTEND_HIGH_U;
-    SDValue LowLHS;
-    SDValue LowRHS;
-    SDValue HighLHS;
-    SDValue HighRHS;
-
-    auto AssignInputs = [&](MVT VT) {
-      LowLHS = DAG.getNode(LowOpc, DL, VT, ExtendInLHS);
-      LowRHS = DAG.getNode(LowOpc, DL, VT, ExtendInRHS);
-      HighLHS = DAG.getNode(HighOpc, DL, VT, ExtendInLHS);
-      HighRHS = DAG.getNode(HighOpc, DL, VT, ExtendInRHS);
-    };
-    if (ExtendInLHS->getValueType(0) == MVT::v8i16) {
-      assert(!IsSigned && "expected unsigned");
-      // (add (add (extmul_low_sx lhs, rhs), (extmul_high_sx lhs, rhs)))
-      MVT VT = MVT::v4i32;
-      AssignInputs(VT);
-      SDValue MulLow = DAG.getNode(ISD::MUL, DL, VT, LowLHS, LowRHS);
-      SDValue MulHigh = DAG.getNode(ISD::MUL, DL, VT, HighLHS, HighRHS);
-      SDValue Add = DAG.getNode(ISD::ADD, DL, VT, MulLow, MulHigh);
-      return DAG.getNode(ISD::ADD, DL, VT, Acc, Add);
-    } else {
-      assert(ExtendInLHS->getValueType(0) == MVT::v16i8 &&
-             "expected v16i8 input types");
-      AssignInputs(MVT::v8i16);
-      // Lower to a wider tree, using twice the operations compared to above.
-      if (IsSigned) {
-        // Use two dots
-        SDValue DotLHS =
-            DAG.getNode(WebAssemblyISD::DOT, DL, MVT::v4i32, LowLHS, LowRHS);
-        SDValue DotRHS =
-            DAG.getNode(WebAssemblyISD::DOT, DL, MVT::v4i32, HighLHS, HighRHS);
-        SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::v4i32, DotLHS, DotRHS);
-        return DAG.getNode(ISD::ADD, DL, MVT::v4i32, Acc, Add);
-      }
-
-      SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
-      SDValue MulHigh = DAG.getNode(ISD::MUL, DL, MVT::v8i16, HighLHS, HighRHS);
-
-      SDValue AddLow = DAG.getNode(WebAssemblyISD::EXT_ADD_PAIRWISE_U, DL,
-                                   MVT::v4i32, MulLow);
-      SDValue AddHigh = DAG.getNode(WebAssemblyISD::EXT_ADD_PAIRWISE_U, DL,
-                                    MVT::v4i32, MulHigh);
-      SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::v4i32, AddLow, AddHigh);
-      return DAG.getNode(ISD::ADD, DL, MVT::v4i32, Acc, Add);
-    }
-  }
 }
 
 SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
