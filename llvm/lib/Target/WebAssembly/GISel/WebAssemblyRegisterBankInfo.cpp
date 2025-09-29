@@ -1,7 +1,9 @@
 #include "WebAssemblyRegisterBankInfo.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define GET_TARGET_REGBANK_IMPL
 
@@ -59,46 +61,6 @@ using namespace llvm;
 WebAssemblyRegisterBankInfo::WebAssemblyRegisterBankInfo(
     const TargetRegisterInfo &TRI) {}
 
-// Instructions where use operands are floating point registers.
-// Def operands are general purpose.
-static bool isFloatingPointOpcodeUse(unsigned Opc) {
-  switch (Opc) {
-  case TargetOpcode::G_FPTOSI:
-  case TargetOpcode::G_FPTOUI:
-  case TargetOpcode::G_FCMP:
-    return true;
-  default:
-    return isPreISelGenericFloatingPointOpcode(Opc);
-  }
-}
-
-// Instructions where def operands are floating point registers.
-// Use operands are general purpose.
-static bool isFloatingPointOpcodeDef(unsigned Opc) {
-  switch (Opc) {
-  case TargetOpcode::G_SITOFP:
-  case TargetOpcode::G_UITOFP:
-    return true;
-  default:
-    return isPreISelGenericFloatingPointOpcode(Opc);
-  }
-}
-
-static bool isAmbiguous(unsigned Opc) {
-  switch (Opc) {
-  case TargetOpcode::G_LOAD:
-  case TargetOpcode::G_STORE:
-  case TargetOpcode::G_PHI:
-  case TargetOpcode::G_SELECT:
-  case TargetOpcode::G_IMPLICIT_DEF:
-  case TargetOpcode::G_UNMERGE_VALUES:
-  case TargetOpcode::G_MERGE_VALUES:
-    return true;
-  default:
-    return false;
-  }
-}
-
 const RegisterBankInfo::InstructionMapping &
 WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
@@ -135,13 +97,35 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         return getInvalidInstructionMapping();
     }
   }
-
   switch (Opc) {
   case G_BR:
     return getInstructionMapping(MappingID, /*Cost=*/1,
                                  getOperandsMapping({nullptr}), NumOperands);
   case G_TRAP:
-    return getInstructionMapping(MappingID, /*Cost=*/1, nullptr, 0);
+  case G_DEBUGTRAP:
+    return getInstructionMapping(MappingID, /*Cost=*/1, getOperandsMapping({}),
+                                 0);
+  case COPY:
+    Register DstReg = MI.getOperand(0).getReg();
+    if (DstReg.isPhysical()) {
+      if (DstReg.id() == WebAssembly::SP32) {
+        return getInstructionMapping(
+            MappingID, /*Cost=*/1,
+            getOperandsMapping(
+                {&WebAssembly::ValueMappings[WebAssembly::I32Idx]}),
+            1);
+      } else if (DstReg.id() == WebAssembly::SP64) {
+        return getInstructionMapping(
+            MappingID, /*Cost=*/1,
+            getOperandsMapping(
+                {&WebAssembly::ValueMappings[WebAssembly::I64Idx]}),
+            1);
+      } else {
+        llvm_unreachable("Trying to copy into WASM physical register other "
+                         "than sp32 or sp64?");
+      }
+    }
+    break;
   }
 
   const LLT Op0Ty = MRI.getType(MI.getOperand(0).getReg());
@@ -176,7 +160,38 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_SREM:
   case G_UDIV:
   case G_UREM:
+  case G_CTLZ:
+  case G_CTLZ_ZERO_UNDEF:
+  case G_CTTZ:
+  case G_CTTZ_ZERO_UNDEF:
+  case G_CTPOP:
+  case G_FSHL:
+  case G_FSHR:
     OperandsMapping = &Op0IntValueMapping;
+    break;
+  case G_FADD:
+  case G_FSUB:
+  case G_FDIV:
+  case G_FMUL:
+  case G_FNEG:
+  case G_FABS:
+  case G_FCEIL:
+  case G_FFLOOR:
+  case G_FSQRT:
+  case G_INTRINSIC_TRUNC:
+  case G_FNEARBYINT:
+  case G_FRINT:
+  case G_INTRINSIC_ROUNDEVEN:
+  case G_FMINIMUM:
+  case G_FMAXIMUM:
+  case G_FMINNUM:
+  case G_FMAXNUM:
+  case G_FMINNUM_IEEE:
+  case G_FMAXNUM_IEEE:
+  case G_FMA:
+  case G_FREM:
+  case G_FCOPYSIGN:
+    OperandsMapping = &Op0FloatValueMapping;
     break;
   case G_SEXT_INREG:
     OperandsMapping =
@@ -184,6 +199,9 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   case G_FRAME_INDEX:
     OperandsMapping = getOperandsMapping({&Op0IntValueMapping, nullptr});
+    break;
+  case G_VASTART:
+    OperandsMapping = &Op0IntValueMapping;
     break;
   case G_ZEXT:
   case G_ANYEXT:
@@ -233,7 +251,7 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                                                  : WebAssembly::I32Idx];
 
     const LLT Op2Ty = MRI.getType(MI.getOperand(2).getReg());
-    unsigned Op2Size = Op1Ty.getSizeInBits();
+    unsigned Op2Size = Op2Ty.getSizeInBits();
     auto &Op2IntValueMapping =
         WebAssembly::ValueMappings[Op2Size == 64 ? WebAssembly::I64Idx
                                                  : WebAssembly::I32Idx];
@@ -246,6 +264,9 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_GLOBAL_VALUE:
   case G_CONSTANT:
     OperandsMapping = getOperandsMapping({&Op0IntValueMapping, nullptr});
+    break;
+  case G_FCONSTANT:
+    OperandsMapping = getOperandsMapping({&Op0FloatValueMapping, nullptr});
     break;
   case G_IMPLICIT_DEF:
     OperandsMapping = &Op0IntValueMapping;
@@ -263,37 +284,140 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                             &Op2IntValueMapping});
     break;
   }
+  case G_FCMP: {
+    const LLT Op2Ty = MRI.getType(MI.getOperand(2).getReg());
+    unsigned Op2Size = Op2Ty.getSizeInBits();
+
+    auto &Op2FloatValueMapping =
+        WebAssembly::ValueMappings[Op2Size == 64 ? WebAssembly::F64Idx
+                                                 : WebAssembly::F32Idx];
+
+    OperandsMapping =
+        getOperandsMapping({&Op0IntValueMapping, nullptr, &Op2FloatValueMapping,
+                            &Op2FloatValueMapping});
+    break;
+  }
   case G_BRCOND:
     OperandsMapping = getOperandsMapping({&Op0IntValueMapping, nullptr});
+    break;
+  case G_JUMP_TABLE:
+    OperandsMapping = getOperandsMapping({&Op0IntValueMapping, nullptr});
+    break;
+  case G_BRJT:
+    OperandsMapping =
+        getOperandsMapping({&Op0IntValueMapping, nullptr,
+                            &WebAssembly::ValueMappings[WebAssembly::I32Idx]});
     break;
   case COPY: {
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
-    // Check if one of the register is not a generic register.
-    if ((DstReg.isPhysical() || !MRI.getType(DstReg).isValid()) ||
-        (SrcReg.isPhysical() || !MRI.getType(SrcReg).isValid())) {
-      const RegisterBank *DstRB = getRegBank(DstReg, MRI, TRI);
-      const RegisterBank *SrcRB = getRegBank(SrcReg, MRI, TRI);
-      if (!DstRB)
-        DstRB = SrcRB;
-      else if (!SrcRB)
-        SrcRB = DstRB;
-      // If both RB are null that means both registers are generic.
-      // We shouldn't be here.
-      assert(DstRB && SrcRB && "Both RegBank were nullptr");
-      TypeSize DstSize = getSizeInBits(DstReg, MRI, TRI);
-      TypeSize SrcSize = getSizeInBits(SrcReg, MRI, TRI);
-      assert(DstSize == SrcSize &&
-             "Trying to copy between different sized regbanks? Why?");
 
-      return getInstructionMapping(
-          DefaultMappingID, copyCost(*DstRB, *SrcRB, DstSize),
-          getCopyMapping(DstRB->getID(), SrcRB->getID(), Size),
-          // We only care about the mapping of the destination.
-          /*NumOperands*/ 1);
+    const RegisterBank *DstRB = getRegBank(DstReg, MRI, TRI);
+    const RegisterBank *SrcRB = getRegBank(SrcReg, MRI, TRI);
+
+    if (!DstRB)
+      DstRB = SrcRB;
+    else if (!SrcRB)
+      SrcRB = DstRB;
+
+    assert(DstRB && SrcRB && "Both RegBank were nullptr");
+    TypeSize DstSize = getSizeInBits(DstReg, MRI, TRI);
+    TypeSize SrcSize = getSizeInBits(SrcReg, MRI, TRI);
+    assert(DstSize == SrcSize &&
+           "Trying to copy between different sized regbanks? Why?");
+
+    WebAssembly::ValueMappingIdx DstValMappingIdx = WebAssembly::InvalidIdx;
+    switch (DstRB->getID()) {
+    case WebAssembly::I32RegBankID:
+      DstValMappingIdx = WebAssembly::I32Idx;
+      break;
+    case WebAssembly::I64RegBankID:
+      DstValMappingIdx = WebAssembly::I64Idx;
+      break;
+    case WebAssembly::F32RegBankID:
+      DstValMappingIdx = WebAssembly::F32Idx;
+      break;
+    case WebAssembly::F64RegBankID:
+      DstValMappingIdx = WebAssembly::F64Idx;
+      break;
+    default:
+      break;
     }
+
+    WebAssembly::ValueMappingIdx SrcValMappingIdx = WebAssembly::InvalidIdx;
+    switch (SrcRB->getID()) {
+    case WebAssembly::I32RegBankID:
+      SrcValMappingIdx = WebAssembly::I32Idx;
+      break;
+    case WebAssembly::I64RegBankID:
+      SrcValMappingIdx = WebAssembly::I64Idx;
+      break;
+    case WebAssembly::F32RegBankID:
+      SrcValMappingIdx = WebAssembly::F32Idx;
+      break;
+    case WebAssembly::F64RegBankID:
+      SrcValMappingIdx = WebAssembly::F64Idx;
+      break;
+    default:
+      break;
+    }
+
+    OperandsMapping =
+        getOperandsMapping({&WebAssembly::ValueMappings[DstValMappingIdx],
+                            &WebAssembly::ValueMappings[SrcValMappingIdx]});
+    return getInstructionMapping(
+        MappingID, /*Cost=*/copyCost(*DstRB, *SrcRB, DstSize), OperandsMapping,
+        // We only care about the mapping of the destination for COPY.
+        1);
+  }
+  case G_SELECT:
+    OperandsMapping = getOperandsMapping(
+        {&Op0IntValueMapping, &WebAssembly::ValueMappings[WebAssembly::I32Idx],
+         &Op0IntValueMapping, &Op0IntValueMapping});
+    break;
+  case G_FPTOSI:
+  case G_FPTOSI_SAT:
+  case G_FPTOUI:
+  case G_FPTOUI_SAT: {
+    const LLT Op1Ty = MRI.getType(MI.getOperand(1).getReg());
+    unsigned Op1Size = Op1Ty.getSizeInBits();
+
+    auto &Op1FloatValueMapping =
+        WebAssembly::ValueMappings[Op1Size == 64 ? WebAssembly::F64Idx
+                                                 : WebAssembly::F32Idx];
+
+    OperandsMapping =
+        getOperandsMapping({&Op0IntValueMapping, &Op1FloatValueMapping});
+    break;
+  }
+  case G_SITOFP:
+  case G_UITOFP: {
+    const LLT Op1Ty = MRI.getType(MI.getOperand(1).getReg());
+    unsigned Op1Size = Op1Ty.getSizeInBits();
+
+    auto &Op1IntValueMapping =
+        WebAssembly::ValueMappings[Op1Size == 64 ? WebAssembly::I64Idx
+                                                 : WebAssembly::I32Idx];
+
+    OperandsMapping =
+        getOperandsMapping({&Op0FloatValueMapping, &Op1IntValueMapping});
+    break;
+  }
+  case G_FPEXT:
+  case G_FPTRUNC: {
+    const LLT Op1Ty = MRI.getType(MI.getOperand(1).getReg());
+    unsigned Op1Size = Op1Ty.getSizeInBits();
+
+    auto &Op1FloatValueMapping =
+        WebAssembly::ValueMappings[Op1Size == 64 ? WebAssembly::F64Idx
+                                                 : WebAssembly::F32Idx];
+
+    OperandsMapping =
+        getOperandsMapping({&Op0FloatValueMapping, &Op1FloatValueMapping});
+    break;
   }
   }
+
   if (!OperandsMapping)
     return getInvalidInstructionMapping();
 
