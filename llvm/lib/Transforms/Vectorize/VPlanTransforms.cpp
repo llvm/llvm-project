@@ -3938,7 +3938,7 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
 
 /// Returns VF from \p VFs if \p IR is a full interleave group with factor and
 /// number of members both equal to VF. The interleave group must also access
-/// the full vector width \p VectorRegWidth.
+/// the full vector width.
 static std::optional<ElementCount> isConsecutiveInterleaveGroup(
     VPInterleaveRecipe *InterleaveR, ArrayRef<ElementCount> VFs,
     VPTypeAnalysis &TypeInfo, const TargetTransformInfo &TTI) {
@@ -4039,10 +4039,9 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
         return nullptr;
     } else {
       if (auto VF = isConsecutiveInterleaveGroup(
-              InterleaveR, to_vector(Plan.vectorFactors()), TypeInfo, TTI)) {
+              InterleaveR, to_vector(Plan.vectorFactors()), TypeInfo, TTI))
         VFToOptimize = *VF;
-      }
-      if (!VFToOptimize)
+      else
         return nullptr;
     }
     // Skip read interleave groups.
