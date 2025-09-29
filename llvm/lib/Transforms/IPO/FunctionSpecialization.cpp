@@ -788,45 +788,47 @@ bool FunctionSpecializer::run() {
   for (unsigned I = 0; I < NSpecs; ++I) {
     Spec &S = AllSpecs[BestSpecs[I]];
 
-    // Accumulate the codesize growth for the function, now we are creating the
-    // specialization.
-    FunctionGrowth[S.F] += S.CodeSize;
+    auto actuallySpecialize = [&](Spec &S) -> void {
+      // Accumulate the codesize growth for the function, now we are creating
+      // the specialization.
+      FunctionGrowth[S.F] += S.CodeSize;
 
-    S.Clone = createSpecialization(S.F, S.Sig);
+      S.Clone = createSpecialization(S.F, S.Sig);
 
-    // Update the known call sites to call the clone.
-    for (auto &CS : S.CallSites) {
-      Function *Clone = S.Clone;
-      CallBase *Call = CS.CallSite;
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Redirecting " << *Call
-                        << " to call " << Clone->getName() << "\n");
-      Call->setCalledFunction(Clone);
-      auto &BFI = GetBFI(*Call->getFunction());
-      std::optional<uint64_t> Count =
-          BFI.getBlockProfileCount(Call->getParent());
-      if (Count && !ProfcheckDisableMetadataFixes) {
-        std::optional<llvm::Function::ProfileCount> MaybeCloneCount =
-            Clone->getEntryCount();
-        if (MaybeCloneCount) {
-          uint64_t CallCount = *Count + MaybeCloneCount->getCount();
-          Clone->setEntryCount(CallCount);
-          if (std::optional<llvm::Function::ProfileCount> MaybeOriginalCount =
-                  S.F->getEntryCount()) {
-            uint64_t OriginalCount = MaybeOriginalCount->getCount();
-            if (OriginalCount >= *Count) {
-              S.F->setEntryCount(OriginalCount - *Count);
-            } else {
-              // This should generally not happen as that would mean there are
-              // more computed calls to the function than what was recorded.
-              LLVM_DEBUG(S.F->setEntryCount(0));
+      // Update the known call sites to call the clone.
+      for (auto &CS : S.CallSites) {
+        Function *Clone = S.Clone;
+        CallBase *Call = CS.CallSite;
+        LLVM_DEBUG(dbgs() << "FnSpecialization: Redirecting " << *Call
+                          << " to call " << Clone->getName() << "\n");
+        Call->setCalledFunction(Clone);
+        auto &BFI = GetBFI(*Call->getFunction());
+        std::optional<uint64_t> Count =
+            BFI.getBlockProfileCount(Call->getParent());
+        if (Count && !ProfcheckDisableMetadataFixes) {
+          std::optional<llvm::Function::ProfileCount> MaybeCloneCount =
+              Clone->getEntryCount();
+          if (MaybeCloneCount) {
+            uint64_t CallCount = *Count + MaybeCloneCount->getCount();
+            Clone->setEntryCount(CallCount);
+            if (std::optional<llvm::Function::ProfileCount> MaybeOriginalCount =
+                    S.F->getEntryCount()) {
+              uint64_t OriginalCount = MaybeOriginalCount->getCount();
+              if (OriginalCount >= *Count) {
+                S.F->setEntryCount(OriginalCount - *Count);
+              } else {
+                // This should generally not happen as that would mean there are
+                // more computed calls to the function than what was recorded.
+                LLVM_DEBUG(S.F->setEntryCount(0));
+              }
             }
           }
         }
       }
-    }
-
-    Clones.push_back(S.Clone);
-    OriginalFuncs.insert(S.F);
+      Clones.push_back(S.Clone);
+      OriginalFuncs.insert(S.F);
+    };
+    actuallySpecialize(S);
   }
 
   Solver.solveWhileResolvedUndefsIn(Clones);
