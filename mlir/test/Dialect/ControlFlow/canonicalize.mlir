@@ -587,9 +587,13 @@ func.func @cycle_1_block() {
 
 // CHECK-LABEL:   @unsimplified_cycle_1
 // CHECK-SAME:      %[[ARG0:.*]]: i1) {
-// CHECK:           cf.br ^bb1
+// CHECK:           cf.cond_br %[[ARG0]], ^bb1, ^bb2
 // CHECK:         ^bb1:
-// CHECK:           cf.br ^bb1
+// CHECK:           cf.br ^bb2
+// CHECK:         ^bb2:
+// CHECK:           cf.br ^bb3
+// CHECK:         ^bb3:
+// CHECK:           cf.br ^bb3
 func.func @unsimplified_cycle_1(%c : i1) {
   cf.cond_br %c, ^bb1, ^bb2
 ^bb1:
@@ -606,9 +610,13 @@ func.func @unsimplified_cycle_1(%c : i1) {
 
 // CHECK-LABEL:   @unsimplified_cycle_2
 // CHECK-SAME:      %[[ARG0:.*]]: i1) {
-// CHECK:           cf.br ^bb1
+// CHECK:           cf.cond_br %[[ARG0]], ^bb1, ^bb3
 // CHECK:         ^bb1:
-// CHECK:           cf.br ^bb1 {E}
+// CHECK:           cf.br ^bb2 {A}
+// CHECK:         ^bb2:
+// CHECK:           cf.br ^bb2 {E}
+// CHECK:         ^bb3:
+// CHECK:           cf.br ^bb1
 func.func @unsimplified_cycle_2(%c : i1) {
   cf.cond_br %c, ^bb6, ^bb7
 ^bb6:
