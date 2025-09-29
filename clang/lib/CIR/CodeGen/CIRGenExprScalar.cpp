@@ -1278,9 +1278,6 @@ mlir::Value ScalarExprEmitter::emitPromoted(const Expr *e,
   } else if (const auto *uo = dyn_cast<UnaryOperator>(e)) {
     switch (uo->getOpcode()) {
     case UO_Imag:
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "ScalarExprEmitter::emitPromoted unary imag");
-      return {};
     case UO_Real:
       return VisitRealImag(uo, promotionType);
     case UO_Minus:
