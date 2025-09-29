@@ -701,28 +701,40 @@ class MapInfoFinalizationPass
 
         auto recordType = mlir::cast<fir::RecordType>(underlyingType);
         llvm::SmallVector<mlir::Value> newMapOpsForFields;
-        llvm::SmallVector<llvm::SmallVector<int64_t>> newMemberIndexPaths;
+        llvm::SmallVector<int64_t> fieldIndicies;
 
-        auto appendMemberMap = [&](mlir::Location loc, mlir::Value coordRef,
-                                   mlir::Type memTy,
-                                   llvm::ArrayRef<int64_t> indexPath,
-                                   llvm::StringRef memberName) {
-          // Check if already mapped (index path equality).
+        for (auto fieldMemTyPair : recordType.getTypeList()) {
+          auto &field = fieldMemTyPair.first;
+          auto memTy = fieldMemTyPair.second;
+
+          bool shouldMapField =
+              llvm::find_if(mapVarForwardSlice, [&](mlir::Operation *sliceOp) {
+                if (!fir::isAllocatableType(memTy))
+                  return false;
+
+                auto designateOp = mlir::dyn_cast<hlfir::DesignateOp>(sliceOp);
+                if (!designateOp)
+                  return false;
+
+                return designateOp.getComponent() &&
+                       designateOp.getComponent()->strref() == field;
+              }) != mapVarForwardSlice.end();
+
+          // TODO Handle recursive record types. Adapting
+          // `createParentSymAndGenIntermediateMaps` to work direclty on MLIR
+          // entities might be helpful here.
+
+          if (!shouldMapField)
+            continue;
+
+          int32_t fieldIdx = recordType.getFieldIndex(field);
           bool alreadyMapped = [&]() {
             if (op.getMembersIndexAttr())
               for (auto indexList : op.getMembersIndexAttr()) {
                 auto indexListAttr = mlir::cast<mlir::ArrayAttr>(indexList);
-                if (indexListAttr.size() != indexPath.size())
-                  continue;
-                bool allEq = true;
-                for (auto [i, attr] : llvm::enumerate(indexListAttr)) {
-                  if (mlir::cast<mlir::IntegerAttr>(attr).getInt() !=
-                      indexPath[i]) {
-                    allEq = false;
-                    break;
-                  }
-                }
-                if (allEq)
+                if (indexListAttr.size() == 1 &&
+                    mlir::cast<mlir::IntegerAttr>(indexListAttr[0]).getInt() ==
+                        fieldIdx)
                   return true;
               }
 
@@ -730,128 +742,42 @@ class MapInfoFinalizationPass
           }();
 
           if (alreadyMapped)
-            return;
-
-          builder.setInsertionPoint(op);
-          fir::factory::AddrAndBoundsInfo info =
-              fir::factory::getDataOperandBaseAddr(builder, coordRef,
-                                                   /*isOptional=*/false, loc);
-          llvm::SmallVector<mlir::Value> bounds =
-              fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                                 mlir::omp::MapBoundsType>(
-                  builder, info,
-                  hlfir::translateToExtendedValue(loc, builder,
-                                                  hlfir::Entity{coordRef})
-                      .first,
-                  /*dataExvIsAssumedSize=*/false, loc);
-
-          mlir::omp::MapInfoOp fieldMapOp = mlir::omp::MapInfoOp::create(
-              builder, loc, coordRef.getType(), coordRef,
-              mlir::TypeAttr::get(fir::unwrapRefType(coordRef.getType())),
-              op.getMapTypeAttr(),
-              builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
-                  mlir::omp::VariableCaptureKind::ByRef),
-              /*varPtrPtr=*/mlir::Value{}, /*members=*/mlir::ValueRange{},
-              /*members_index=*/mlir::ArrayAttr{}, bounds,
-              /*mapperId=*/mlir::FlatSymbolRefAttr(),
-              builder.getStringAttr(op.getNameAttr().strref() + "." +
-                                    memberName + ".implicit_map"),
-              /*partial_map=*/builder.getBoolAttr(false));
-          newMapOpsForFields.emplace_back(fieldMapOp);
-          newMemberIndexPaths.emplace_back(indexPath.begin(), indexPath.end());
-        };
-
-        // 1) Handle direct top-level allocatable fields (existing behavior).
-        for (auto fieldMemTyPair : recordType.getTypeList()) {
-          auto &field = fieldMemTyPair.first;
-          auto memTy = fieldMemTyPair.second;
-
-          if (!fir::isAllocatableType(memTy))
             continue;
 
-          bool referenced = llvm::any_of(mapVarForwardSlice, [&](auto *opv) {
-            auto designateOp = mlir::dyn_cast<hlfir::DesignateOp>(opv);
-            return designateOp && designateOp.getComponent() &&
-                   designateOp.getComponent()->strref() == field;
-          });
-          if (!referenced)
-            continue;
-
-          int32_t fieldIdx = recordType.getFieldIndex(field);
           builder.setInsertionPoint(op);
           fir::IntOrValue idxConst =
               mlir::IntegerAttr::get(builder.getI32Type(), fieldIdx);
           auto fieldCoord = fir::CoordinateOp::create(
               builder, op.getLoc(), builder.getRefType(memTy), op.getVarPtr(),
               llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
-          appendMemberMap(op.getLoc(), fieldCoord, memTy, {fieldIdx}, field);
-        }
+          fir::factory::AddrAndBoundsInfo info =
+              fir::factory::getDataOperandBaseAddr(
+                  builder, fieldCoord, /*isOptional=*/false, op.getLoc());
+          llvm::SmallVector<mlir::Value> bounds =
+              fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                                 mlir::omp::MapBoundsType>(
+                  builder, info,
+                  hlfir::translateToExtendedValue(op.getLoc(), builder,
+                                                  hlfir::Entity{fieldCoord})
+                      .first,
+                  /*dataExvIsAssumedSize=*/false, op.getLoc());
 
-        // Handle nested allocatable fields along any component chain
-        // referenced in the region via HLFIR designates.
-        for (mlir::Operation *sliceOp : mapVarForwardSlice) {
-          auto designateOp = mlir::dyn_cast<hlfir::DesignateOp>(sliceOp);
-          if (!designateOp || !designateOp.getComponent())
-            continue;
-          llvm::SmallVector<llvm::StringRef> compPathReversed;
-          compPathReversed.push_back(designateOp.getComponent()->strref());
-          mlir::Value curBase = designateOp.getMemref();
-          bool rootedAtMapArg = false;
-          while (true) {
-            if (auto parentDes = curBase.getDefiningOp<hlfir::DesignateOp>()) {
-              if (!parentDes.getComponent())
-                break;
-              compPathReversed.push_back(parentDes.getComponent()->strref());
-              curBase = parentDes.getMemref();
-              continue;
-            }
-            if (auto decl = curBase.getDefiningOp<hlfir::DeclareOp>()) {
-              if (auto barg =
-                      mlir::dyn_cast<mlir::BlockArgument>(decl.getMemref()))
-                rootedAtMapArg = (barg == opBlockArg);
-            } else if (auto blockArg =
-                           mlir::dyn_cast_or_null<mlir::BlockArgument>(
-                               curBase)) {
-              rootedAtMapArg = (blockArg == opBlockArg);
-            }
-            break;
-          }
-          if (!rootedAtMapArg || compPathReversed.size() < 2)
-            continue;
-          builder.setInsertionPoint(op);
-          llvm::SmallVector<int64_t> indexPath;
-          mlir::Type curTy = underlyingType;
-          mlir::Value coordRef = op.getVarPtr();
-          bool validPath = true;
-          for (llvm::StringRef compName : llvm::reverse(compPathReversed)) {
-            auto recTy = mlir::dyn_cast<fir::RecordType>(curTy);
-            if (!recTy) {
-              validPath = false;
-              break;
-            }
-            int32_t idx = recTy.getFieldIndex(compName);
-            if (idx < 0) {
-              validPath = false;
-              break;
-            }
-            indexPath.push_back(idx);
-            mlir::Type memTy = recTy.getType(idx);
-            fir::IntOrValue idxConst =
-                mlir::IntegerAttr::get(builder.getI32Type(), idx);
-            coordRef = fir::CoordinateOp::create(
-                builder, op.getLoc(), builder.getRefType(memTy), coordRef,
-                llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
-            curTy = memTy;
-          }
-          if (!validPath)
-            continue;
-          if (auto finalRefTy =
-                  mlir::dyn_cast<fir::ReferenceType>(coordRef.getType())) {
-            mlir::Type eleTy = finalRefTy.getElementType();
-            if (fir::isAllocatableType(eleTy))
-              appendMemberMap(op.getLoc(), coordRef, eleTy, indexPath,
-                              compPathReversed.front());
-          }
+          mlir::omp::MapInfoOp fieldMapOp = mlir::omp::MapInfoOp::create(
+              builder, op.getLoc(), fieldCoord.getResult().getType(),
+              fieldCoord.getResult(),
+              mlir::TypeAttr::get(
+                  fir::unwrapRefType(fieldCoord.getResult().getType())),
+              op.getMapTypeAttr(),
+              builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
+                  mlir::omp::VariableCaptureKind::ByRef),
+              /*varPtrPtr=*/mlir::Value{}, /*members=*/mlir::ValueRange{},
+              /*members_index=*/mlir::ArrayAttr{}, bounds,
+              /*mapperId=*/mlir::FlatSymbolRefAttr(),
+              builder.getStringAttr(op.getNameAttr().strref() + "." + field +
+                                    ".implicit_map"),
+              /*partial_map=*/builder.getBoolAttr(false));
+          newMapOpsForFields.emplace_back(fieldMapOp);
+          fieldIndicies.emplace_back(fieldIdx);
         }
 
         if (newMapOpsForFields.empty())
@@ -859,8 +785,10 @@ class MapInfoFinalizationPass
 
         op.getMembersMutable().append(newMapOpsForFields);
         llvm::SmallVector<llvm::SmallVector<int64_t>> newMemberIndices;
-        if (mlir::ArrayAttr oldAttr = op.getMembersIndexAttr())
-          for (mlir::Attribute indexList : oldAttr) {
+        mlir::ArrayAttr oldMembersIdxAttr = op.getMembersIndexAttr();
+
+        if (oldMembersIdxAttr)
+          for (mlir::Attribute indexList : oldMembersIdxAttr) {
             llvm::SmallVector<int64_t> listVec;
 
             for (mlir::Attribute index : mlir::cast<mlir::ArrayAttr>(indexList))
@@ -868,8 +796,10 @@ class MapInfoFinalizationPass
 
             newMemberIndices.emplace_back(std::move(listVec));
           }
-        for (auto &path : newMemberIndexPaths)
-          newMemberIndices.emplace_back(path);
+
+        for (int64_t newFieldIdx : fieldIndicies)
+          newMemberIndices.emplace_back(
+              llvm::SmallVector<int64_t>(1, newFieldIdx));
 
         op.setMembersIndexAttr(builder.create2DI64ArrayAttr(newMemberIndices));
         op.setPartialMap(true);
