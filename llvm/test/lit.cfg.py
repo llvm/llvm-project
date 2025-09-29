@@ -48,15 +48,17 @@ config.suffixes = [".ll", ".c", ".test", ".txt", ".s", ".mir", ".yaml", ".spv"]
 # directories.
 config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
 
-# Exclude llvm-reduce tests for profcheck because we substitute the FileCheck
-# binary with a no-op command for profcheck, but llvm-reduce tests have RUN
-# commands of the form llvm-reduce --test FileCheck, which explode if we
-# substitute FileCheck because llvm-reduce expects FileCheck in these tests.
-# It's not really possible to exclude these tests from the command substitution,
-# so we just exclude llvm-reduce tests from this config altogether. This should
-# be fine though as profcheck config tests are mostly concerned with opt.
 if config.enable_profcheck:
-    config.excludes = config.excludes + ["llvm-reduce"]
+    # Exclude llvm-reduce tests for profcheck because we substitute the FileCheck
+    # binary with a no-op command for profcheck, but llvm-reduce tests have RUN
+    # commands of the form llvm-reduce --test FileCheck, which explode if we
+    # substitute FileCheck because llvm-reduce expects FileCheck in these tests.
+    # It's not really possible to exclude these tests from the command substitution,
+    # so we just exclude llvm-reduce tests from this config altogether. This should
+    # be fine though as profcheck config tests are mostly concerned with opt.
+    config.excludes.append("llvm-reduce")
+    # (Issue #161235) Temporarily exclude LoopVectorize.
+    config.excludes.append("LoopVectorize")
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
