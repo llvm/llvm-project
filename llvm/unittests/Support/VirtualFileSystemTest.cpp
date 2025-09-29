@@ -2518,6 +2518,7 @@ TEST_F(VFSFromYAMLTest, RelativePaths) {
   SmallString<128> CWD;
   EC = llvm::sys::fs::current_path(CWD);
   ASSERT_FALSE(EC);
+  Lower->setCurrentWorkingDirectory(CWD);
 
   // Filename at root level without a parent directory.
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
