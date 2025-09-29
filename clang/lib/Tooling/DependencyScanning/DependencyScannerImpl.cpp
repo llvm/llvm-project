@@ -9,8 +9,10 @@
 #include "DependencyScannerImpl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSerialization.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace clang;
 using namespace tooling;
@@ -334,6 +336,17 @@ public:
 };
 } // namespace
 
+std::unique_ptr<DiagnosticOptions>
+clang::tooling::dependencies::createDiagOptions(
+    const std::vector<std::string> &CommandLine) {
+  std::vector<const char *> CLI;
+  for (const std::string &Arg : CommandLine)
+    CLI.push_back(Arg.c_str());
+  auto DiagOpts = CreateAndPopulateDiagOpts(CLI);
+  sanitizeDiagOpts(*DiagOpts);
+  return DiagOpts;
+}
+
 /// Sanitize diagnostic options for dependency scan.
 void clang::tooling::dependencies::sanitizeDiagOpts(
     DiagnosticOptions &DiagOpts) {
@@ -356,43 +369,131 @@ void clang::tooling::dependencies::sanitizeDiagOpts(
   });
 }
 
-bool DependencyScanningAction::runInvocation(
-    std::shared_ptr<CompilerInvocation> Invocation,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-    std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-    DiagnosticConsumer *DiagConsumer) {
-  // Making sure that we canonicalize the defines before we create the deep
-  // copy to avoid unnecessary variants in the scanner and in the resulting
-  // explicit command lines.
-  if (any(Service.getOptimizeArgs() & ScanningOptimizations::Macros))
-    canonicalizeDefines(Invocation->getPreprocessorOpts());
+std::pair<std::unique_ptr<driver::Driver>, std::unique_ptr<driver::Compilation>>
+clang::tooling::dependencies::buildCompilation(
+    ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
+  SmallVector<const char *, 256> Argv;
+  Argv.reserve(ArgStrs.size());
+  for (const std::string &Arg : ArgStrs)
+    Argv.push_back(Arg.c_str());
 
-  // Make a deep copy of the original Clang invocation.
-  CompilerInvocation OriginalInvocation(*Invocation);
+  std::unique_ptr<driver::Driver> Driver = std::make_unique<driver::Driver>(
+      Argv[0], llvm::sys::getDefaultTargetTriple(), Diags,
+      "clang LLVM compiler", FS);
+  Driver->setTitle("clang_based_tool");
 
-  if (Scanned) {
-    // Scanning runs once for the first -cc1 invocation in a chain of driver
-    // jobs. For any dependent jobs, reuse the scanning result and just
-    // update the LastCC1Arguments to correspond to the new invocation.
-    // FIXME: to support multi-arch builds, each arch requires a separate scan
-    setLastCC1Arguments(std::move(OriginalInvocation));
-    return true;
+  llvm::BumpPtrAllocator Alloc;
+  bool CLMode = driver::IsClangCL(
+      driver::getDriverMode(Argv[0], ArrayRef(Argv).slice(1)));
+
+  if (llvm::Error E =
+          driver::expandResponseFiles(Argv, CLMode, Alloc, FS.get())) {
+    Diags.Report(diag::err_drv_expand_response_file)
+        << llvm::toString(std::move(E));
+    return std::make_pair(nullptr, nullptr);
   }
 
-  Scanned = true;
+  std::unique_ptr<driver::Compilation> Compilation(
+      Driver->BuildCompilation(llvm::ArrayRef(Argv)));
+  if (!Compilation)
+    return std::make_pair(nullptr, nullptr);
 
-  // Create a compiler instance to handle the actual work.
-  auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
-  ScanInstanceStorage.emplace(std::move(Invocation), std::move(PCHContainerOps),
-                              ModCache.get());
-  CompilerInstance &ScanInstance = *ScanInstanceStorage;
+  if (Compilation->containsError())
+    return std::make_pair(nullptr, nullptr);
+
+  return std::make_pair(std::move(Driver), std::move(Compilation));
+}
+
+llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+clang::tooling::dependencies::initVFSForTUBufferScanning(
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+    std::optional<std::vector<std::string>> &ModifiedCommandLine,
+    const std::vector<std::string> &CommandLine, StringRef WorkingDirectory,
+    std::optional<llvm::MemoryBufferRef> TUBuffer) {
+  // Reset what might have been modified in the previous worker invocation.
+  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
+
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> ModifiedFS;
+  if (TUBuffer) {
+    auto OverlayFS =
+        llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
+    auto InMemoryFS =
+        llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+    InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
+    auto InputPath = TUBuffer->getBufferIdentifier();
+    InMemoryFS->addFile(
+        InputPath, 0,
+        llvm::MemoryBuffer::getMemBufferCopy(TUBuffer->getBuffer()));
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay =
+        InMemoryFS;
+
+    OverlayFS->pushOverlay(InMemoryOverlay);
+    ModifiedFS = OverlayFS;
+    ModifiedCommandLine = CommandLine;
+    ModifiedCommandLine->emplace_back(InputPath);
+
+    return ModifiedFS;
+  }
+
+  return BaseFS;
+}
+
+llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+clang::tooling::dependencies::initVFSForByNameScanning(
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+    std::vector<std::string> &CommandLine, StringRef WorkingDirectory,
+    StringRef FakeFileNamePrefix) {
+  // Reset what might have been modified in the previous worker invocation.
+  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
+
+  // If we're scanning based on a module name alone, we don't expect the client
+  // to provide us with an input file. However, the driver really wants to have
+  // one. Let's just make it up to make the driver happy.
+  auto OverlayFS =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
+  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
+  SmallString<128> FakeInputPath;
+  // TODO: We should retry the creation if the path already exists.
+  llvm::sys::fs::createUniquePath(FakeFileNamePrefix + "-%%%%%%%%.input",
+                                  FakeInputPath,
+                                  /*MakeAbsolute=*/false);
+  InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
+  OverlayFS->pushOverlay(InMemoryOverlay);
+
+  CommandLine.emplace_back(FakeInputPath);
+
+  return OverlayFS;
+}
+
+std::unique_ptr<CompilerInvocation>
+clang::tooling::dependencies::createCompilerInvocation(
+    const std::vector<std::string> &CommandLine, DiagnosticsEngine &Diags) {
+  llvm::opt::ArgStringList Argv;
+  for (const std::string &Str : ArrayRef(CommandLine).drop_front())
+    Argv.push_back(Str.c_str());
+
+  auto Invocation = std::make_unique<CompilerInvocation>();
+  if (!CompilerInvocation::CreateFromArgs(*Invocation, Argv, Diags)) {
+    // FIXME: Should we just go on like cc1_main does?
+    return nullptr;
+  }
+  return Invocation;
+}
+
+bool clang::tooling::dependencies::initializeScanCompilerInstance(
+    CompilerInstance &ScanInstance,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+    DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
+    llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS) {
   ScanInstance.setBuildingModule(false);
 
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
 
   // Create the compiler's actual diagnostics engine.
   sanitizeDiagOpts(ScanInstance.getDiagnosticOpts());
-  assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
   ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
   if (!ScanInstance.hasDiagnostics())
     return false;
@@ -434,6 +535,26 @@ bool DependencyScanningAction::runInvocation(
 
   ScanInstance.createSourceManager(*FileMgr);
 
+  // Consider different header search and diagnostic options to create
+  // different modules. This avoids the unsound aliasing of module PCMs.
+  //
+  // TODO: Implement diagnostic bucketing to reduce the impact of strict
+  // context hashing.
+  ScanInstance.getHeaderSearchOpts().ModulesStrictContextHash = true;
+  ScanInstance.getHeaderSearchOpts().ModulesSerializeOnlyPreprocessor = true;
+  ScanInstance.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
+  ScanInstance.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
+  ScanInstance.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings = true;
+  ScanInstance.getHeaderSearchOpts().ModulesForceValidateUserHeaders = false;
+
+  // Avoid some checks and module map parsing when loading PCM files.
+  ScanInstance.getPreprocessorOpts().ModulesCheckRelocated = false;
+
+  return true;
+}
+
+llvm::SmallVector<StringRef> clang::tooling::dependencies::computeStableDirs(
+    CompilerInstance &ScanInstance) {
   // Create a collection of stable directories derived from the ScanInstance
   // for determining whether module dependencies would fully resolve from
   // those directories.
@@ -441,7 +562,12 @@ bool DependencyScanningAction::runInvocation(
   const StringRef Sysroot = ScanInstance.getHeaderSearchOpts().Sysroot;
   if (!Sysroot.empty() && (llvm::sys::path::root_directory(Sysroot) != Sysroot))
     StableDirs = {Sysroot, ScanInstance.getHeaderSearchOpts().ResourceDir};
+  return StableDirs;
+}
 
+std::optional<PrebuiltModulesAttrsMap>
+clang::tooling::dependencies::computePrebuiltModulesASTMap(
+    CompilerInstance &ScanInstance, llvm::SmallVector<StringRef> &StableDirs) {
   // Store a mapping of prebuilt module files and their properties like header
   // search options. This will prevent the implicit build to create duplicate
   // modules and will force reuse of the existing prebuilt module files
@@ -453,8 +579,18 @@ bool DependencyScanningAction::runInvocation(
             ScanInstance.getPreprocessorOpts().ImplicitPCHInclude, ScanInstance,
             ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles,
             PrebuiltModulesASTMap, ScanInstance.getDiagnostics(), StableDirs))
-      return false;
+      return {};
 
+  return PrebuiltModulesASTMap;
+}
+
+void clang::tooling::dependencies::initializeModuleDepCollector(
+    CompilerInstance &ScanInstance, std::shared_ptr<ModuleDepCollector> &MDC,
+    StringRef WorkingDirectory, DependencyConsumer &Consumer,
+    DependencyScanningService &Service, CompilerInvocation &Inv,
+    DependencyActionController &Controller,
+    PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
+    llvm::SmallVector<StringRef> &StableDirs) {
   // Create the dependency collector that will collect the produced
   // dependencies.
   //
@@ -463,6 +599,11 @@ bool DependencyScanningAction::runInvocation(
   // which ensures that the compiler won't create new dependency collectors,
   // and thus won't write out the extra '.d' files to disk.
   auto Opts = std::make_unique<DependencyOutputOptions>();
+
+  // We rely on the behaviour that that ScanInstance's Invocation instance's
+  // dependency output opts are cleared here.
+  // TODO: we will need to preserve and recover the original dependency output
+  // opts if we want to reuse ScanInstance.
   std::swap(*Opts, ScanInstance.getInvocation().getDependencyOutputOpts());
   // We need at least one -MT equivalent for the generator of make dependency
   // files to work.
@@ -480,26 +621,58 @@ bool DependencyScanningAction::runInvocation(
   case ScanningOutputFormat::P1689:
   case ScanningOutputFormat::Full:
     MDC = std::make_shared<ModuleDepCollector>(
-        Service, std::move(Opts), ScanInstance, Consumer, Controller,
-        OriginalInvocation, std::move(PrebuiltModulesASTMap), StableDirs);
+        Service, std::move(Opts), ScanInstance, Consumer, Controller, Inv,
+        std::move(PrebuiltModulesASTMap), StableDirs);
     ScanInstance.addDependencyCollector(MDC);
     break;
   }
+}
 
-  // Consider different header search and diagnostic options to create
-  // different modules. This avoids the unsound aliasing of module PCMs.
-  //
-  // TODO: Implement diagnostic bucketing to reduce the impact of strict
-  // context hashing.
-  ScanInstance.getHeaderSearchOpts().ModulesStrictContextHash = true;
-  ScanInstance.getHeaderSearchOpts().ModulesSerializeOnlyPreprocessor = true;
-  ScanInstance.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
-  ScanInstance.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
-  ScanInstance.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings = true;
-  ScanInstance.getHeaderSearchOpts().ModulesForceValidateUserHeaders = false;
+bool DependencyScanningAction::runInvocation(
+    std::unique_ptr<CompilerInvocation> Invocation,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+    std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+    DiagnosticConsumer *DiagConsumer) {
+  // Making sure that we canonicalize the defines before we create the deep
+  // copy to avoid unnecessary variants in the scanner and in the resulting
+  // explicit command lines.
+  if (any(Service.getOptimizeArgs() & ScanningOptimizations::Macros))
+    canonicalizeDefines(Invocation->getPreprocessorOpts());
 
-  // Avoid some checks and module map parsing when loading PCM files.
-  ScanInstance.getPreprocessorOpts().ModulesCheckRelocated = false;
+  // Make a deep copy of the original Clang invocation.
+  CompilerInvocation OriginalInvocation(*Invocation);
+
+  if (Scanned) {
+    // Scanning runs once for the first -cc1 invocation in a chain of driver
+    // jobs. For any dependent jobs, reuse the scanning result and just
+    // update the LastCC1Arguments to correspond to the new invocation.
+    // FIXME: to support multi-arch builds, each arch requires a separate scan
+    setLastCC1Arguments(std::move(OriginalInvocation));
+    return true;
+  }
+
+  Scanned = true;
+
+  // Create a compiler instance to handle the actual work.
+  auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
+  ScanInstanceStorage.emplace(std::move(Invocation), std::move(PCHContainerOps),
+                              ModCache.get());
+  CompilerInstance &ScanInstance = *ScanInstanceStorage;
+
+  assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
+  if (!initializeScanCompilerInstance(ScanInstance, FS, DiagConsumer, Service,
+                                      DepFS))
+    return false;
+
+  llvm::SmallVector<StringRef> StableDirs = computeStableDirs(ScanInstance);
+  auto MaybePrebuiltModulesASTMap =
+      computePrebuiltModulesASTMap(ScanInstance, StableDirs);
+  if (!MaybePrebuiltModulesASTMap)
+    return false;
+
+  initializeModuleDepCollector(ScanInstance, MDC, WorkingDirectory, Consumer,
+                               Service, OriginalInvocation, Controller,
+                               *MaybePrebuiltModulesASTMap, StableDirs);
 
   std::unique_ptr<FrontendAction> Action;
 

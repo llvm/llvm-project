@@ -63,32 +63,19 @@ DependencyScanningWorker::DependencyScanningWorker(
   }
 }
 
-static std::unique_ptr<DiagnosticOptions>
-createDiagOptions(const std::vector<std::string> &CommandLine) {
-  std::vector<const char *> CLI;
-  for (const std::string &Arg : CommandLine)
-    CLI.push_back(Arg.c_str());
-  auto DiagOpts = CreateAndPopulateDiagOpts(CLI);
-  sanitizeDiagOpts(*DiagOpts);
-  return DiagOpts;
-}
-
 llvm::Error DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
     std::optional<llvm::MemoryBufferRef> TUBuffer) {
   // Capture the emitted diagnostics and report them to the client
   // in the case of a failure.
-  std::string DiagnosticOutput;
-  llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
-  auto DiagOpts = createDiagOptions(CommandLine);
-  TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, *DiagOpts);
+  TextDiagnosticsPrinterWithOutput DiagPrinterWithOS(CommandLine);
 
   if (computeDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
-                          DiagPrinter, TUBuffer))
+                          DiagPrinterWithOS.DiagPrinter, TUBuffer))
     return llvm::Error::success();
-  return llvm::make_error<llvm::StringError>(DiagnosticsOS.str(),
-                                             llvm::inconvertibleErrorCode());
+  return llvm::make_error<llvm::StringError>(
+      DiagPrinterWithOS.DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
 }
 
 llvm::Error DependencyScanningWorker::computeDependencies(
@@ -97,51 +84,24 @@ llvm::Error DependencyScanningWorker::computeDependencies(
     StringRef ModuleName) {
   // Capture the emitted diagnostics and report them to the client
   // in the case of a failure.
-  std::string DiagnosticOutput;
-  llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
-  auto DiagOpts = createDiagOptions(CommandLine);
-  TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, *DiagOpts);
+  TextDiagnosticsPrinterWithOutput DiagPrinterWithOS(CommandLine);
 
   if (computeDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
-                          DiagPrinter, ModuleName))
+                          DiagPrinterWithOS.DiagPrinter, ModuleName))
     return llvm::Error::success();
-  return llvm::make_error<llvm::StringError>(DiagnosticsOS.str(),
-                                             llvm::inconvertibleErrorCode());
+  return llvm::make_error<llvm::StringError>(
+      DiagPrinterWithOS.DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
 }
 
 static bool forEachDriverJob(
     ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     llvm::function_ref<bool(const driver::Command &Cmd)> Callback) {
-  SmallVector<const char *, 256> Argv;
-  Argv.reserve(ArgStrs.size());
-  for (const std::string &Arg : ArgStrs)
-    Argv.push_back(Arg.c_str());
-
-  std::unique_ptr<driver::Driver> Driver = std::make_unique<driver::Driver>(
-      Argv[0], llvm::sys::getDefaultTargetTriple(), Diags,
-      "clang LLVM compiler", FS);
-  Driver->setTitle("clang_based_tool");
-
-  llvm::BumpPtrAllocator Alloc;
-  bool CLMode = driver::IsClangCL(
-      driver::getDriverMode(Argv[0], ArrayRef(Argv).slice(1)));
-
-  if (llvm::Error E =
-          driver::expandResponseFiles(Argv, CLMode, Alloc, FS.get())) {
-    Diags.Report(diag::err_drv_expand_response_file)
-        << llvm::toString(std::move(E));
-    return false;
-  }
-
-  const std::unique_ptr<driver::Compilation> Compilation(
-      Driver->BuildCompilation(llvm::ArrayRef(Argv)));
+  // Compilation owns a reference to the Driver, hence we need to
+  // keep the Driver alive when we use Compilation.
+  auto [Driver, Compilation] = buildCompilation(ArgStrs, Diags, FS);
   if (!Compilation)
     return false;
-
-  if (Compilation->containsError())
-    return false;
-
   for (const driver::Command &Job : Compilation->getJobs()) {
     if (!Callback(Job))
       return false;
@@ -150,30 +110,21 @@ static bool forEachDriverJob(
 }
 
 static bool createAndRunToolInvocation(
-    std::vector<std::string> CommandLine, DependencyScanningAction &Action,
+    const std::vector<std::string> &CommandLine,
+    DependencyScanningAction &Action,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     std::shared_ptr<clang::PCHContainerOperations> &PCHContainerOps,
     DiagnosticsEngine &Diags, DependencyConsumer &Consumer) {
-
-  // Save executable path before providing CommandLine to ToolInvocation
-  std::string Executable = CommandLine[0];
-
-  llvm::opt::ArgStringList Argv;
-  for (const std::string &Str : ArrayRef(CommandLine).drop_front())
-    Argv.push_back(Str.c_str());
-
-  auto Invocation = std::make_shared<CompilerInvocation>();
-  if (!CompilerInvocation::CreateFromArgs(*Invocation, Argv, Diags)) {
-    // FIXME: Should we just go on like cc1_main does?
+  auto Invocation = createCompilerInvocation(CommandLine, Diags);
+  if (!Invocation)
     return false;
-  }
 
   if (!Action.runInvocation(std::move(Invocation), std::move(FS),
                             PCHContainerOps, Diags.getClient()))
     return false;
 
   std::vector<std::string> Args = Action.takeLastCC1Arguments();
-  Consumer.handleBuildCommand({std::move(Executable), std::move(Args)});
+  Consumer.handleBuildCommand({CommandLine[0], std::move(Args)});
   return true;
 }
 
@@ -238,37 +189,11 @@ bool DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
     DiagnosticConsumer &DC, std::optional<llvm::MemoryBufferRef> TUBuffer) {
-  // Reset what might have been modified in the previous worker invocation.
-  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
-
   std::optional<std::vector<std::string>> ModifiedCommandLine;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> ModifiedFS;
-
-  // If we're scanning based on a module name alone, we don't expect the client
-  // to provide us with an input file. However, the driver really wants to have
-  // one. Let's just make it up to make the driver happy.
-  if (TUBuffer) {
-    auto OverlayFS =
-        llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
-    auto InMemoryFS =
-        llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-    InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-    auto InputPath = TUBuffer->getBufferIdentifier();
-    InMemoryFS->addFile(
-        InputPath, 0,
-        llvm::MemoryBuffer::getMemBufferCopy(TUBuffer->getBuffer()));
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay =
-        InMemoryFS;
-
-    OverlayFS->pushOverlay(InMemoryOverlay);
-    ModifiedFS = OverlayFS;
-    ModifiedCommandLine = CommandLine;
-    ModifiedCommandLine->emplace_back(InputPath);
-  }
-
+  auto FinalFS = initVFSForTUBufferScanning(
+      BaseFS, ModifiedCommandLine, CommandLine, WorkingDirectory, TUBuffer);
   const std::vector<std::string> &FinalCommandLine =
       ModifiedCommandLine ? *ModifiedCommandLine : CommandLine;
-  auto &FinalFS = ModifiedFS ? ModifiedFS : BaseFS;
 
   return scanDependencies(WorkingDirectory, FinalCommandLine, Consumer,
                           Controller, DC, FinalFS, /*ModuleName=*/std::nullopt);
@@ -278,26 +203,9 @@ bool DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
     DiagnosticConsumer &DC, StringRef ModuleName) {
-  // Reset what might have been modified in the previous worker invocation.
-  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
-
-  // If we're scanning based on a module name alone, we don't expect the client
-  // to provide us with an input file. However, the driver really wants to have
-  // one. Let's just make it up to make the driver happy.
-  auto OverlayFS =
-      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
-  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-  SmallString<128> FakeInputPath;
-  // TODO: We should retry the creation if the path already exists.
-  llvm::sys::fs::createUniquePath(ModuleName + "-%%%%%%%%.input", FakeInputPath,
-                                  /*MakeAbsolute=*/false);
-  InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
-
-  OverlayFS->pushOverlay(InMemoryOverlay);
   auto ModifiedCommandLine = CommandLine;
-  ModifiedCommandLine.emplace_back(FakeInputPath);
+  auto OverlayFS = initVFSForByNameScanning(BaseFS, ModifiedCommandLine,
+                                            WorkingDirectory, ModuleName);
 
   return scanDependencies(WorkingDirectory, ModifiedCommandLine, Consumer,
                           Controller, DC, OverlayFS, ModuleName);

@@ -9,8 +9,10 @@
 #ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNER_H
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNER_H
 
+#include "clang/Driver/Compilation.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
@@ -35,7 +37,7 @@ public:
       : Service(Service), WorkingDirectory(WorkingDirectory),
         Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)),
         ModuleName(ModuleName) {}
-  bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
+  bool runInvocation(std::unique_ptr<CompilerInvocation> Invocation,
                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer);
@@ -73,8 +75,63 @@ private:
 };
 
 // Helper functions
+std::unique_ptr<DiagnosticOptions>
+createDiagOptions(const std::vector<std::string> &CommandLine);
 void sanitizeDiagOpts(DiagnosticOptions &DiagOpts);
 
+struct TextDiagnosticsPrinterWithOutput {
+  std::string DiagnosticOutput;
+  llvm::raw_string_ostream DiagnosticsOS;
+  std::unique_ptr<clang::DiagnosticOptions> DiagOpts;
+  TextDiagnosticPrinter DiagPrinter;
+
+  TextDiagnosticsPrinterWithOutput(const std::vector<std::string> &CommandLine)
+      : DiagnosticsOS(DiagnosticOutput),
+        DiagOpts(createDiagOptions(CommandLine)),
+        DiagPrinter(DiagnosticsOS, *DiagOpts) {}
+};
+
+std::pair<std::unique_ptr<driver::Driver>, std::unique_ptr<driver::Compilation>>
+buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
+                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
+
+std::unique_ptr<CompilerInvocation>
+createCompilerInvocation(const std::vector<std::string> &CommandLine,
+                         DiagnosticsEngine &Diags);
+
+llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> initVFSForTUBufferScanning(
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+    std::optional<std::vector<std::string>> &ModifiedCommandLine,
+    const std::vector<std::string> &CommandLine, StringRef WorkingDirectory,
+    std::optional<llvm::MemoryBufferRef> TUBuffer);
+
+llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+initVFSForByNameScanning(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                         std::vector<std::string> &CommandLine,
+                         StringRef WorkingDirectory,
+                         StringRef FakeFileNamePrefix);
+
+bool initializeScanCompilerInstance(
+    CompilerInstance &ScanInstance,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+    DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
+    llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS);
+
+llvm::SmallVector<StringRef> computeStableDirs(CompilerInstance &ScanInstance);
+
+std::optional<PrebuiltModulesAttrsMap>
+computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
+                             llvm::SmallVector<StringRef> &StableDirs);
+
+void initializeModuleDepCollector(CompilerInstance &ScanInstance,
+                                  std::shared_ptr<ModuleDepCollector> &MDC,
+                                  StringRef WorkingDirectory,
+                                  DependencyConsumer &Consumer,
+                                  DependencyScanningService &Service,
+                                  CompilerInvocation &Inv,
+                                  DependencyActionController &Controller,
+                                  PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
+                                  llvm::SmallVector<StringRef> &StableDirs);
 } // namespace dependencies
 } // namespace tooling
 } // namespace clang
