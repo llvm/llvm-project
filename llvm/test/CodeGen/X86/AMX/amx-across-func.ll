@@ -139,12 +139,12 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; O0-NEXT:    callq foo
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %cx # 2-byte Reload
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
+; O0-NEXT:    movl $32, %esi
+; O0-NEXT:    movl $buf+2048, %edx
 ; O0-NEXT:    # implicit-def: $al
 ; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; O0-NEXT:    movl $32, %esi
-; O0-NEXT:    movl $buf+2048, %edx
 ; O0-NEXT:    tileloadd (%rdx,%rsi), %tmm0
 ; O0-NEXT:    movl $64, %esi
 ; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx

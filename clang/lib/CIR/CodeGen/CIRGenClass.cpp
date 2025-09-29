@@ -316,6 +316,7 @@ static Address applyNonVirtualAndVirtualOffset(
   assert(!nonVirtualOffset.isZero() || virtualOffset != nullptr);
 
   // Compute the offset from the static and dynamic components.
+  mlir::Value baseOffset;
   if (!nonVirtualOffset.isZero()) {
     if (virtualOffset) {
       cgf.cgm.errorNYI(
@@ -329,10 +330,33 @@ static Address applyNonVirtualAndVirtualOffset(
           loc, addr, baseValueTy, nonVirtualOffset.getQuantity(),
           assumeNotNull);
     }
+  } else {
+    baseOffset = virtualOffset;
   }
 
-  cgf.cgm.errorNYI(loc, "applyNonVirtualAndVirtualOffset: virtual offset");
-  return Address::invalid();
+  // Apply the base offset.  cir.ptr_stride adjusts by a number of elements,
+  // not bytes.  So the pointer must be cast to a byte pointer and back.
+
+  mlir::Value ptr = addr.getPointer();
+  mlir::Type charPtrType = cgf.cgm.UInt8PtrTy;
+  mlir::Value charPtr = cgf.getBuilder().createBitcast(ptr, charPtrType);
+  mlir::Value adjusted = cir::PtrStrideOp::create(
+      cgf.getBuilder(), loc, charPtrType, charPtr, baseOffset);
+  ptr = cgf.getBuilder().createBitcast(adjusted, ptr.getType());
+
+  // If we have a virtual component, the alignment of the result will
+  // be relative only to the known alignment of that vbase.
+  CharUnits alignment;
+  if (virtualOffset) {
+    assert(nearestVBase && "virtual offset without vbase?");
+    alignment = cgf.cgm.getVBaseAlignment(addr.getAlignment(), derivedClass,
+                                          nearestVBase);
+  } else {
+    alignment = addr.getAlignment();
+  }
+  alignment = alignment.alignmentAtOffset(nonVirtualOffset);
+
+  return Address(ptr, alignment);
 }
 
 void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
@@ -351,7 +375,11 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
 
   mlir::Type baseValueTy;
   if (cgm.getCXXABI().isVirtualOffsetNeededForVTableField(*this, vptr)) {
-    cgm.errorNYI(loc, "initializeVTablePointer: virtual offset for vtable");
+    // We need to use the virtual base offset offset because the virtual base
+    // might have a different offset in the most derived class.
+    virtualOffset = cgm.getCXXABI().getVirtualBaseClassOffset(
+        loc, *this, loadCXXThisAddress(), vptr.vtableClass, vptr.nearestVBase);
+    nonVirtualOffset = vptr.offsetFromNearestVBase;
   } else {
     // We can just use the base offset in the complete class.
     nonVirtualOffset = vptr.base.getBaseOffset();
@@ -447,14 +475,14 @@ void CIRGenFunction::getVTablePointers(BaseSubobject base,
       const ASTRecordLayout &layout =
           getContext().getASTRecordLayout(vtableClass);
 
-      nextBaseDecl = nearestVBase;
+      nextBaseDecl = baseDecl;
       baseOffset = layout.getVBaseClassOffset(baseDecl);
       baseOffsetFromNearestVBase = CharUnits::Zero();
       baseDeclIsNonVirtualPrimaryBase = false;
     } else {
       const ASTRecordLayout &layout = getContext().getASTRecordLayout(rd);
 
-      nextBaseDecl = baseDecl;
+      nextBaseDecl = nearestVBase;
       baseOffset = base.getBaseOffset() + layout.getBaseClassOffset(baseDecl);
       baseOffsetFromNearestVBase =
           offsetFromNearestVBase + layout.getBaseClassOffset(baseDecl);
@@ -489,17 +517,23 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   QualType fieldType = field->getType();
   switch (getEvaluationKind(fieldType)) {
   case cir::TEK_Scalar:
-    if (lhs.isSimple())
+    if (lhs.isSimple()) {
       emitExprAsInit(init, field, lhs, false);
-    else
-      cgm.errorNYI(field->getSourceRange(),
-                   "emitInitializerForField: non-simple scalar");
+    } else {
+      RValue rhs = RValue::get(emitScalarExpr(init));
+      emitStoreThroughLValue(rhs, lhs);
+    }
     break;
   case cir::TEK_Complex:
-    cgm.errorNYI(field->getSourceRange(), "emitInitializerForField: complex");
+    emitComplexExprIntoLValue(init, lhs, /*isInit=*/true);
     break;
   case cir::TEK_Aggregate: {
-    cgm.errorNYI(field->getSourceRange(), "emitInitializerForField: aggregate");
+    assert(!cir::MissingFeatures::aggValueSlotGC());
+    assert(!cir::MissingFeatures::sanitizers());
+    AggValueSlot slot = AggValueSlot::forLValue(
+        lhs, AggValueSlot::IsDestructed, AggValueSlot::IsNotAliased,
+        getOverlapForFieldInit(field), AggValueSlot::IsNotZeroed);
+    emitAggExpr(init, slot);
     break;
   }
   }
@@ -509,6 +543,64 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   QualType::DestructionKind dtorKind = fieldType.isDestructedType();
   (void)dtorKind;
   assert(!cir::MissingFeatures::requiresCleanups());
+}
+
+CharUnits
+CIRGenModule::getDynamicOffsetAlignment(CharUnits actualBaseAlign,
+                                        const CXXRecordDecl *baseDecl,
+                                        CharUnits expectedTargetAlign) {
+  // If the base is an incomplete type (which is, alas, possible with
+  // member pointers), be pessimistic.
+  if (!baseDecl->isCompleteDefinition())
+    return std::min(actualBaseAlign, expectedTargetAlign);
+
+  const ASTRecordLayout &baseLayout =
+      getASTContext().getASTRecordLayout(baseDecl);
+  CharUnits expectedBaseAlign = baseLayout.getNonVirtualAlignment();
+
+  // If the class is properly aligned, assume the target offset is, too.
+  //
+  // This actually isn't necessarily the right thing to do --- if the
+  // class is a complete object, but it's only properly aligned for a
+  // base subobject, then the alignments of things relative to it are
+  // probably off as well.  (Note that this requires the alignment of
+  // the target to be greater than the NV alignment of the derived
+  // class.)
+  //
+  // However, our approach to this kind of under-alignment can only
+  // ever be best effort; after all, we're never going to propagate
+  // alignments through variables or parameters.  Note, in particular,
+  // that constructing a polymorphic type in an address that's less
+  // than pointer-aligned will generally trap in the constructor,
+  // unless we someday add some sort of attribute to change the
+  // assumed alignment of 'this'.  So our goal here is pretty much
+  // just to allow the user to explicitly say that a pointer is
+  // under-aligned and then safely access its fields and vtables.
+  if (actualBaseAlign >= expectedBaseAlign)
+    return expectedTargetAlign;
+
+  // Otherwise, we might be offset by an arbitrary multiple of the
+  // actual alignment.  The correct adjustment is to take the min of
+  // the two alignments.
+  return std::min(actualBaseAlign, expectedTargetAlign);
+}
+
+/// Return the best known alignment for a pointer to a virtual base,
+/// given the alignment of a pointer to the derived class.
+clang::CharUnits
+CIRGenModule::getVBaseAlignment(CharUnits actualDerivedAlign,
+                                const CXXRecordDecl *derivedClass,
+                                const CXXRecordDecl *vbaseClass) {
+  // The basic idea here is that an underaligned derived pointer might
+  // indicate an underaligned base pointer.
+
+  assert(vbaseClass->isCompleteDefinition());
+  const ASTRecordLayout &baseLayout =
+      getASTContext().getASTRecordLayout(vbaseClass);
+  CharUnits expectedVBaseAlign = baseLayout.getNonVirtualAlignment();
+
+  return getDynamicOffsetAlignment(actualDerivedAlign, derivedClass,
+                                   expectedVBaseAlign);
 }
 
 /// Emit a loop to call a particular constructor for each of several members
@@ -547,12 +639,22 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   // are probably legitimate places where we could assume that this
   // doesn't happen, but it's not clear that it's worth it.
 
+  auto arrayTy = mlir::cast<cir::ArrayType>(arrayBase.getElementType());
+  mlir::Type elementType = arrayTy.getElementType();
+
+  // This might be a multi-dimensional array. Find the innermost element type.
+  while (auto maybeArrayTy = mlir::dyn_cast<cir::ArrayType>(elementType))
+    elementType = maybeArrayTy.getElementType();
+  cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
+
   // Optimize for a constant count.
   if (auto constantCount = numElements.getDefiningOp<cir::ConstantOp>()) {
     if (auto constIntAttr = constantCount.getValueAttr<cir::IntAttr>()) {
       // Just skip out if the constant count is zero.
       if (constIntAttr.getUInt() == 0)
         return;
+
+      arrayTy = cir::ArrayType::get(elementType, constIntAttr.getUInt());
       // Otherwise, emit the check.
     }
 
@@ -562,10 +664,6 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     // Otherwise, emit the check.
     cgm.errorNYI(e->getSourceRange(), "dynamic-length array expression");
   }
-
-  auto arrayTy = mlir::cast<cir::ArrayType>(arrayBase.getElementType());
-  mlir::Type elementType = arrayTy.getElementType();
-  cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
 
   // Tradional LLVM codegen emits a loop here. CIR lowers to a loop as part of
   // LoweringPrepare.
@@ -680,6 +778,86 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
                        s->getStmtClassName());
 }
 
+void CIRGenFunction::emitForwardingCallToLambda(
+    const CXXMethodDecl *callOperator, CallArgList &callArgs) {
+  // Get the address of the call operator.
+  const CIRGenFunctionInfo &calleeFnInfo =
+      cgm.getTypes().arrangeCXXMethodDeclaration(callOperator);
+  cir::FuncOp calleePtr = cgm.getAddrOfFunction(
+      GlobalDecl(callOperator), cgm.getTypes().getFunctionType(calleeFnInfo));
+
+  // Prepare the return slot.
+  const FunctionProtoType *fpt =
+      callOperator->getType()->castAs<FunctionProtoType>();
+  QualType resultType = fpt->getReturnType();
+  ReturnValueSlot returnSlot;
+
+  // We don't need to separately arrange the call arguments because
+  // the call can't be variadic anyway --- it's impossible to forward
+  // variadic arguments.
+
+  // Now emit our call.
+  CIRGenCallee callee =
+      CIRGenCallee::forDirect(calleePtr, GlobalDecl(callOperator));
+  RValue rv = emitCall(calleeFnInfo, callee, returnSlot, callArgs);
+
+  // If necessary, copy the returned value into the slot.
+  if (!resultType->isVoidType() && returnSlot.isNull()) {
+    if (getLangOpts().ObjCAutoRefCount && resultType->isObjCRetainableType())
+      cgm.errorNYI(callOperator->getSourceRange(),
+                   "emitForwardingCallToLambda: ObjCAutoRefCount");
+    emitReturnOfRValue(*currSrcLoc, rv, resultType);
+  } else {
+    cgm.errorNYI(callOperator->getSourceRange(),
+                 "emitForwardingCallToLambda: return slot is not null");
+  }
+}
+
+void CIRGenFunction::emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md) {
+  const CXXRecordDecl *lambda = md->getParent();
+
+  // Start building arguments for forwarding call
+  CallArgList callArgs;
+
+  QualType lambdaType = getContext().getCanonicalTagType(lambda);
+  QualType thisType = getContext().getPointerType(lambdaType);
+  Address thisPtr =
+      createMemTemp(lambdaType, getLoc(md->getSourceRange()), "unused.capture");
+  callArgs.add(RValue::get(thisPtr.getPointer()), thisType);
+
+  // Add the rest of the parameters.
+  for (auto *param : md->parameters())
+    emitDelegateCallArg(callArgs, param, param->getBeginLoc());
+
+  const CXXMethodDecl *callOp = lambda->getLambdaCallOperator();
+  // For a generic lambda, find the corresponding call operator specialization
+  // to which the call to the static-invoker shall be forwarded.
+  if (lambda->isGenericLambda()) {
+    assert(md->isFunctionTemplateSpecialization());
+    const TemplateArgumentList *tal = md->getTemplateSpecializationArgs();
+    FunctionTemplateDecl *callOpTemplate =
+        callOp->getDescribedFunctionTemplate();
+    void *InsertPos = nullptr;
+    FunctionDecl *correspondingCallOpSpecialization =
+        callOpTemplate->findSpecialization(tal->asArray(), InsertPos);
+    assert(correspondingCallOpSpecialization);
+    callOp = cast<CXXMethodDecl>(correspondingCallOpSpecialization);
+  }
+  emitForwardingCallToLambda(callOp, callArgs);
+}
+
+void CIRGenFunction::emitLambdaStaticInvokeBody(const CXXMethodDecl *md) {
+  if (md->isVariadic()) {
+    // Codgen for LLVM doesn't emit code for this as well, it says:
+    // FIXME: Making this work correctly is nasty because it requires either
+    // cloning the body of the call operator or making the call operator
+    // forward.
+    cgm.errorNYI(md->getSourceRange(), "emitLambdaStaticInvokeBody: variadic");
+  }
+
+  emitLambdaDelegatingInvokeBody(md);
+}
+
 void CIRGenFunction::destroyCXXObject(CIRGenFunction &cgf, Address addr,
                                       QualType type) {
   const auto *record = type->castAsCXXRecordDecl();
@@ -721,6 +899,50 @@ void CIRGenFunction::emitCXXDestructorCall(const CXXDestructorDecl *dd,
                                            Address thisAddr, QualType thisTy) {
   cgm.getCXXABI().emitDestructorCall(*this, dd, type, forVirtualBase,
                                      delegating, thisAddr, thisTy);
+}
+
+mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
+                                            bool delegating) {
+  if (!cgm.getCXXABI().needsVTTParameter(gd))
+    return nullptr;
+
+  const CXXRecordDecl *rd = cast<CXXMethodDecl>(curCodeDecl)->getParent();
+  const CXXRecordDecl *base = cast<CXXMethodDecl>(gd.getDecl())->getParent();
+
+  uint64_t subVTTIndex;
+
+  if (delegating) {
+    // If this is a delegating constructor call, just load the VTT.
+    return loadCXXVTT();
+  } else if (rd == base) {
+    // If the record matches the base, this is the complete ctor/dtor
+    // variant calling the base variant in a class with virtual bases.
+    assert(!cgm.getCXXABI().needsVTTParameter(curGD) &&
+           "doing no-op VTT offset in base dtor/ctor?");
+    assert(!forVirtualBase && "Can't have same class as virtual base!");
+    subVTTIndex = 0;
+  } else {
+    const ASTRecordLayout &layout = getContext().getASTRecordLayout(rd);
+    CharUnits baseOffset = forVirtualBase ? layout.getVBaseClassOffset(base)
+                                          : layout.getBaseClassOffset(base);
+
+    subVTTIndex =
+        cgm.getVTables().getSubVTTIndex(rd, BaseSubobject(base, baseOffset));
+    assert(subVTTIndex != 0 && "Sub-VTT index must be greater than zero!");
+  }
+
+  mlir::Location loc = cgm.getLoc(rd->getBeginLoc());
+  if (cgm.getCXXABI().needsVTTParameter(curGD)) {
+    // A VTT parameter was passed to the constructor, use it.
+    mlir::Value vtt = loadCXXVTT();
+    return builder.createVTTAddrPoint(loc, vtt.getType(), vtt, subVTTIndex);
+  } else {
+    // We're the complete constructor, so get the VTT by name.
+    cir::GlobalOp vtt = cgm.getVTables().getAddrOfVTT(rd);
+    return builder.createVTTAddrPoint(
+        loc, builder.getPointerTo(cgm.VoidPtrTy),
+        mlir::FlatSymbolRefAttr::get(vtt.getSymNameAttr()), subVTTIndex);
+  }
 }
 
 Address CIRGenFunction::getAddressOfBaseClass(
@@ -856,12 +1078,14 @@ void CIRGenFunction::emitCXXConstructorCall(
   }
 
   // Insert any ABI-specific implicit constructor arguments.
-  assert(!cir::MissingFeatures::implicitConstructorArgs());
+  CIRGenCXXABI::AddedStructorArgCounts extraArgs =
+      cgm.getCXXABI().addImplicitConstructorArgs(*this, d, type, forVirtualBase,
+                                                 delegating, args);
 
   // Emit the call.
   auto calleePtr = cgm.getAddrOfCXXStructor(GlobalDecl(d, type));
   const CIRGenFunctionInfo &info = cgm.getTypes().arrangeCXXConstructorCall(
-      args, d, type, passPrototypeArgs);
+      args, d, type, extraArgs.prefix, extraArgs.suffix, passPrototypeArgs);
   CIRGenCallee callee = CIRGenCallee::forDirect(calleePtr, GlobalDecl(d, type));
   cir::CIRCallOpInterface c;
   emitCall(info, callee, ReturnValueSlot(), args, &c, getLoc(loc));

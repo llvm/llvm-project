@@ -297,46 +297,39 @@ def IIT_MMX : IIT_VT<x86mmx, 17>;
 def IIT_TOKEN : IIT_VT<token, 18>;
 def IIT_METADATA : IIT_VT<MetadataVT, 19>;
 def IIT_EMPTYSTRUCT : IIT_VT<OtherVT, 20>;
-def IIT_STRUCT2 : IIT_Base<21>;
-def IIT_STRUCT3 : IIT_Base<22>;
-def IIT_STRUCT4 : IIT_Base<23>;
-def IIT_STRUCT5 : IIT_Base<24>;
-def IIT_EXTEND_ARG : IIT_Base<25>;
-def IIT_TRUNC_ARG : IIT_Base<26>;
-def IIT_ANYPTR : IIT_Base<27>;
-def IIT_V1 : IIT_Vec<1, 28>;
-def IIT_VARARG : IIT_VT<isVoid, 29>;
-def IIT_ONE_NTH_ELTS_VEC_ARG : IIT_Base<30>;
-def IIT_SAME_VEC_WIDTH_ARG : IIT_Base<31>;
-def IIT_VEC_OF_ANYPTRS_TO_ELT : IIT_Base<34>;
-def IIT_I128 : IIT_Int<128, 35>;
-def IIT_V512 : IIT_Vec<512, 36>;
-def IIT_V1024 : IIT_Vec<1024, 37>;
-def IIT_STRUCT6 : IIT_Base<38>;
-def IIT_STRUCT7 : IIT_Base<39>;
-def IIT_STRUCT8 : IIT_Base<40>;
-def IIT_F128 : IIT_VT<f128, 41>;
-def IIT_VEC_ELEMENT : IIT_Base<42>;
-def IIT_SCALABLE_VEC : IIT_Base<43>;
-def IIT_SUBDIVIDE2_ARG : IIT_Base<44>;
-def IIT_SUBDIVIDE4_ARG : IIT_Base<45>;
-def IIT_VEC_OF_BITCASTS_TO_INT : IIT_Base<46>;
-def IIT_V128 : IIT_Vec<128, 47>;
-def IIT_BF16 : IIT_VT<bf16, 48>;
-def IIT_STRUCT9 : IIT_Base<49>;
-def IIT_V256 : IIT_Vec<256, 50>;
-def IIT_AMX : IIT_VT<x86amx, 51>;
-def IIT_PPCF128 : IIT_VT<ppcf128, 52>;
-def IIT_V3 : IIT_Vec<3, 53>;
-def IIT_EXTERNREF : IIT_VT<externref, 54>;
-def IIT_FUNCREF : IIT_VT<funcref, 55>;
-def IIT_I2 : IIT_Int<2, 57>;
-def IIT_I4 : IIT_Int<4, 58>;
-def IIT_AARCH64_SVCOUNT : IIT_VT<aarch64svcount, 59>;
-def IIT_V6 : IIT_Vec<6, 60>;
-def IIT_V10 : IIT_Vec<10, 61>;
-def IIT_V2048 : IIT_Vec<2048, 62>;
-def IIT_V4096 : IIT_Vec<4096, 63>;
+def IIT_STRUCT : IIT_Base<21>;
+def IIT_EXTEND_ARG : IIT_Base<22>;
+def IIT_TRUNC_ARG : IIT_Base<23>;
+def IIT_ANYPTR : IIT_Base<24>;
+def IIT_V1 : IIT_Vec<1, 25>;
+def IIT_VARARG : IIT_VT<isVoid, 26>;
+def IIT_ONE_NTH_ELTS_VEC_ARG : IIT_Base<27>;
+def IIT_SAME_VEC_WIDTH_ARG : IIT_Base<28>;
+def IIT_VEC_OF_ANYPTRS_TO_ELT : IIT_Base<29>;
+def IIT_I128 : IIT_Int<128, 30>;
+def IIT_V512 : IIT_Vec<512, 31>;
+def IIT_V1024 : IIT_Vec<1024, 32>;
+def IIT_F128 : IIT_VT<f128, 33>;
+def IIT_VEC_ELEMENT : IIT_Base<34>;
+def IIT_SCALABLE_VEC : IIT_Base<35>;
+def IIT_SUBDIVIDE2_ARG : IIT_Base<36>;
+def IIT_SUBDIVIDE4_ARG : IIT_Base<37>;
+def IIT_VEC_OF_BITCASTS_TO_INT : IIT_Base<38>;
+def IIT_V128 : IIT_Vec<128, 39>;
+def IIT_BF16 : IIT_VT<bf16, 40>;
+def IIT_V256 : IIT_Vec<256, 41>;
+def IIT_AMX : IIT_VT<x86amx, 42>;
+def IIT_PPCF128 : IIT_VT<ppcf128, 43>;
+def IIT_V3 : IIT_Vec<3, 44>;
+def IIT_EXTERNREF : IIT_VT<externref, 45>;
+def IIT_FUNCREF : IIT_VT<funcref, 46>;
+def IIT_I2 : IIT_Int<2, 47>;
+def IIT_I4 : IIT_Int<4, 48>;
+def IIT_AARCH64_SVCOUNT : IIT_VT<aarch64svcount, 49>;
+def IIT_V6 : IIT_Vec<6, 50>;
+def IIT_V10 : IIT_Vec<10, 51>;
+def IIT_V2048 : IIT_Vec<2048, 52>;
+def IIT_V4096 : IIT_Vec<4096, 53>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -344,19 +337,6 @@ defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
 
 defvar IIT_all_VectorTypes = !filter(iit, IIT_all,
   !isa<IIT_Vec>(iit));
-
-defvar IIT_RetNumbers = [
-  [IIT_Done.Number],
-  []<int>,
-  [IIT_STRUCT2.Number],
-  [IIT_STRUCT3.Number],
-  [IIT_STRUCT4.Number],
-  [IIT_STRUCT5.Number],
-  [IIT_STRUCT6.Number],
-  [IIT_STRUCT7.Number],
-  [IIT_STRUCT8.Number],
-  [IIT_STRUCT9.Number],
-];
 
 //===----------------------------------------------------------------------===//
 // Types used by intrinsics.
@@ -663,7 +643,10 @@ class TypeInfoGen<
     !if(!isa<LLVMMatchType>(ty), ACTys[MappingRIdxs[ty.Number]], ty));
 
   list<int> TypeSig = !listflatten(!listconcat(
-    [IIT_RetNumbers[!size(RetTypes)]],
+    [!cond(
+      !eq(!size(RetTypes), 0): [IIT_Done.Number],
+      !eq(!size(RetTypes), 1): []<int>,
+      true: [IIT_STRUCT.Number, !sub(!size(RetTypes), 2)])],
     !foreach(i, !range(AllTypes),
       !foreach(a, AllTypes[i].Sig,
         ResolveArgCode<
@@ -977,8 +960,12 @@ def int_instrprof_mcdc_tvbitmap_update : Intrinsic<[],
                                         [llvm_ptr_ty, llvm_i64_ty,
                                          llvm_i32_ty, llvm_ptr_ty]>;
 
-def int_call_preallocated_setup : DefaultAttrsIntrinsic<[llvm_token_ty], [llvm_i32_ty]>;
-def int_call_preallocated_arg : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_i32_ty]>;
+def int_call_preallocated_setup
+    : DefaultAttrsIntrinsic<[llvm_token_ty], [llvm_i32_ty],
+                            [ImmArg<ArgIndex<0>>]>;
+def int_call_preallocated_arg
+    : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_i32_ty],
+                            [ImmArg<ArgIndex<1>>]>;
 def int_call_preallocated_teardown : DefaultAttrsIntrinsic<[], [llvm_token_ty]>;
 
 // This intrinsic is intentionally undocumented and users shouldn't call it;
@@ -1775,12 +1762,13 @@ def int_coro_free : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
                               [IntrReadMem, IntrArgMemOnly,
                                ReadOnly<ArgIndex<1>>,
                                NoCapture<ArgIndex<1>>]>;
-def int_coro_end : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_i1_ty, llvm_token_ty], []>;
+def int_coro_end : Intrinsic<[], [llvm_ptr_ty, llvm_i1_ty, llvm_token_ty], []>;
 def int_coro_end_results : Intrinsic<[llvm_token_ty], [llvm_vararg_ty]>;
 def int_coro_end_async
-    : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_i1_ty, llvm_vararg_ty], []>;
+    : Intrinsic<[], [llvm_ptr_ty, llvm_i1_ty, llvm_vararg_ty], []>;
 
 def int_coro_frame : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
+def int_coro_is_in_ramp : Intrinsic<[llvm_i1_ty], [], [IntrNoMem], "llvm.coro.is_in_ramp">;
 def int_coro_noop : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
 def int_coro_size : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
 def int_coro_align : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
@@ -1834,7 +1822,8 @@ def int_trap : Intrinsic<[], [], [IntrNoReturn, IntrCold, IntrInaccessibleMemOnl
 def int_debugtrap : Intrinsic<[]>,
                     ClangBuiltin<"__builtin_debugtrap">;
 def int_ubsantrap : Intrinsic<[], [llvm_i8_ty],
-                              [IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>]>;
+                              [IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>,
+                               IntrInaccessibleMemOnly, IntrWriteMem]>;
 
 // Return true if ubsan check is allowed.
 def int_allow_ubsan_check : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i8_ty],
@@ -2796,9 +2785,9 @@ foreach n = 2...8 in {
 
 //===-------------- Intrinsics to perform partial reduction ---------------===//
 
-def int_experimental_vector_partial_reduce_add : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
-                                                                       [llvm_anyvector_ty, llvm_anyvector_ty],
-                                                                       [IntrNoMem]>;
+def int_vector_partial_reduce_add : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                                                          [llvm_anyvector_ty, llvm_anyvector_ty],
+                                                          [IntrNoMem]>;
 
 //===----------------- Pointer Authentication Intrinsics ------------------===//
 //

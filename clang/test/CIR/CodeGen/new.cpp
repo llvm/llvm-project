@@ -23,7 +23,6 @@ void test_basic_new() {
 // CHECK:   %[[EIGHT:.*]] = cir.const #cir.int<8>
 // CHECK:   %[[NEW_S:.*]] = cir.call @_Znwm(%[[EIGHT]])
 // CHECK:   %[[NEW_S_PTR:.*]] = cir.cast(bitcast, %[[NEW_S]]
-// CHECK:   cir.call @_ZN1SC1Ev(%[[NEW_S_PTR]])
 // CHECK:   cir.store{{.*}} %[[NEW_S_PTR]], %[[PS_ADDR]]
 // CHECK:   %[[FOUR:.*]] = cir.const #cir.int<4>
 // CHECK:   %[[NEW_INT:.*]] = cir.call @_Znwm(%[[FOUR]])
@@ -40,15 +39,12 @@ void test_basic_new() {
 // LLVM:   %[[PN_ADDR:.*]] = alloca ptr, i64 1, align 8
 // LLVM:   %[[PD_ADDR:.*]] = alloca ptr, i64 1, align 8
 // LLVM:   %[[NEW_S:.*]] = call{{.*}} ptr @_Znwm(i64 8)
-// LLVM:   call{{.*}} void @_ZN1SC1Ev(ptr %[[NEW_S]])
 // LLVM:   store ptr %[[NEW_S]], ptr %[[PS_ADDR]], align 8
 // LLVM:   %[[NEW_INT:.*]] = call{{.*}} ptr @_Znwm(i64 4)
 // LLVM:   store ptr %[[NEW_INT]], ptr %[[PN_ADDR]], align 8
 // LLVM:   %[[NEW_DOUBLE:.*]] = call{{.*}} ptr @_Znwm(i64 8)
 // LLVM:   store ptr %[[NEW_DOUBLE]], ptr %[[PD_ADDR]], align 8
 // LLVM:   ret void
-
-// NOTE: OGCG elides the constructor call here, but CIR does not.
 
 // OGCG: define{{.*}} void @_Z14test_basic_newv
 // OGCG:   %[[PS_ADDR:.*]] = alloca ptr, align 8
@@ -156,3 +152,31 @@ void test_new_with_ctor() {
 // OGCG:   call{{.*}} void @_ZN2S2C1Eii(ptr {{.*}} %[[NEW_S2_2]], i32 noundef 1, i32 noundef 2)
 // OGCG:   store ptr %[[NEW_S2_2]], ptr %[[PS2_2_ADDR]], align 8
 // OGCG:   ret void
+
+void test_new_with_complex_type() {
+  _Complex float *a = new _Complex float{1.0f, 2.0f};
+}
+
+// CHECK: cir.func{{.*}} @_Z26test_new_with_complex_typev
+// CHECK:   %0 = cir.alloca !cir.ptr<!cir.complex<!cir.float>>, !cir.ptr<!cir.ptr<!cir.complex<!cir.float>>>, ["a", init]
+// CHECK:   %1 = cir.const #cir.int<8> : !u64i
+// CHECK:   %2 = cir.call @_Znwm(%1) : (!u64i) -> !cir.ptr<!void>
+// CHECK:   %3 = cir.cast(bitcast, %2 : !cir.ptr<!void>), !cir.ptr<!cir.complex<!cir.float>>
+// CHECK:   %4 = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
+// CHECK:   cir.store align(8) %4, %3 : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CHECK:   cir.store align(8) %3, %0 : !cir.ptr<!cir.complex<!cir.float>>, !cir.ptr<!cir.ptr<!cir.complex<!cir.float>>>
+
+// LLVM: define{{.*}} void @_Z26test_new_with_complex_typev
+// LLVM:   %[[A_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[NEW_COMPLEX:.*]] = call ptr @_Znwm(i64 8)
+// LLVM:   store { float, float } { float 1.000000e+00, float 2.000000e+00 }, ptr %[[NEW_COMPLEX]], align 8
+// LLVM:   store ptr %[[NEW_COMPLEX]], ptr %[[A_ADDR]], align 8
+
+// OGCG: define{{.*}} void @_Z26test_new_with_complex_typev
+// OGCG:   %[[A_ADDR:.*]] = alloca ptr, align 8
+// OGCG:   %[[NEW_COMPLEX:.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 8)
+// OGCG:   %[[COMPLEX_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[NEW_COMPLEX]], i32 0, i32 0
+// OGCG:   %[[COMPLEX_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[NEW_COMPLEX]], i32 0, i32 1
+// OGCG:   store float 1.000000e+00, ptr %[[COMPLEX_REAL_PTR]], align 8
+// OGCG:   store float 2.000000e+00, ptr %[[COMPLEX_IMAG_PTR]], align 4
+// OGCG:   store ptr %[[NEW_COMPLEX]], ptr %[[A_ADDR]], align 8

@@ -1367,7 +1367,7 @@ static ParseResult parseCallTypeAndResolveOperands(
   if (parser.resolveOperands(operands, types, parser.getNameLoc(),
                              result.operands))
     return failure();
-  if (resTypes.size() != 0)
+  if (!resTypes.empty())
     result.addTypes(resTypes);
 
   return success();
@@ -4083,6 +4083,25 @@ printIndirectBrOpSucessors(OpAsmPrinter &p, IndirectBrOp op, Type flagType,
   if (!succOperands.empty())
     p.printNewline();
   p << "]";
+}
+
+//===----------------------------------------------------------------------===//
+// SincosOp (intrinsic)
+//===----------------------------------------------------------------------===//
+
+LogicalResult LLVM::SincosOp::verify() {
+  auto operandType = getOperand().getType();
+  auto resultType = getResult().getType();
+  auto resultStructType =
+      mlir::dyn_cast<mlir::LLVM::LLVMStructType>(resultType);
+  if (!resultStructType || resultStructType.getBody().size() != 2 ||
+      resultStructType.getBody()[0] != operandType ||
+      resultStructType.getBody()[1] != operandType) {
+    return emitOpError("expected result type to be an homogeneous struct with "
+                       "two elements matching the operand type, but got ")
+           << resultType;
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

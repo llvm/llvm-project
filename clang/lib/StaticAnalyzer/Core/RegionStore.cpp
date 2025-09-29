@@ -43,10 +43,13 @@ using namespace ento;
 namespace {
 class BindingKey {
 public:
-  enum Kind { Default = 0x0, Direct = 0x1 };
-private:
-  enum { Symbolic = 0x2 };
+  enum Kind {
+    Default = 0x0,
+    Direct = 0x1,
+    Symbolic = 0x2,
+  };
 
+private:
   llvm::PointerIntPair<const MemRegion *, 2> P;
   uint64_t Data;
 

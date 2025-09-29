@@ -178,8 +178,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
         context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
         /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
         mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0,
-        elements, dataLocation, rank, /*allocated=*/nullptr,
-        /*associated=*/nullptr);
+        dataLocation, rank, /*allocated=*/nullptr,
+        /*associated=*/nullptr, elements);
   }
 
   addOp(llvm::dwarf::DW_OP_push_object_address, {});
@@ -255,8 +255,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
   return mlir::LLVM::DICompositeTypeAttr::get(
       context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
       /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
-      mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0, elements,
-      dataLocation, /*rank=*/nullptr, allocated, associated);
+      mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0,
+      dataLocation, /*rank=*/nullptr, allocated, associated, elements);
 }
 
 std::pair<std::uint64_t, unsigned short>
@@ -389,8 +389,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
       context, recId, /*isRecSelf=*/true, llvm::dwarf::DW_TAG_structure_type,
       mlir::StringAttr::get(context, ""), fileAttr, /*line=*/0, scope,
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0,
-      /*alignInBits=*/0, elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
-      /*allocated=*/nullptr, /*associated=*/nullptr);
+      /*alignInBits=*/0, /*dataLocation=*/nullptr, /*rank=*/nullptr,
+      /*allocated=*/nullptr, /*associated=*/nullptr, elements);
   DerivedTypeCache::ActiveLevels nestedRecursions =
       derivedTypeCache.startTranslating(Ty, placeHolder);
 
@@ -429,8 +429,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
           /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr,
           convertType(seqTy.getEleTy(), fileAttr, scope, declOp),
           mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0,
-          arrayElements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
-          /*allocated=*/nullptr, /*associated=*/nullptr);
+          /*dataLocation=*/nullptr, /*rank=*/nullptr,
+          /*allocated=*/nullptr, /*associated=*/nullptr, arrayElements);
     } else
       elemTy = convertType(fieldTy, fileAttr, scope, /*declOp=*/nullptr);
     offset = llvm::alignTo(offset, byteAlign);
@@ -448,8 +448,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
       context, recId, /*isRecSelf=*/false, llvm::dwarf::DW_TAG_structure_type,
       mlir::StringAttr::get(context, sourceName.name), fileAttr, line, scope,
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
-      /*alignInBits=*/0, elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
-      /*allocated=*/nullptr, /*associated=*/nullptr);
+      /*alignInBits=*/0, /*dataLocation=*/nullptr, /*rank=*/nullptr,
+      /*allocated=*/nullptr, /*associated=*/nullptr, elements);
 
   derivedTypeCache.finalize(Ty, finalAttr, std::move(nestedRecursions));
 
@@ -490,8 +490,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertTupleType(
       context, llvm::dwarf::DW_TAG_structure_type,
       mlir::StringAttr::get(context, ""), fileAttr, /*line=*/0, scope,
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
-      /*alignInBits=*/0, elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
-      /*allocated=*/nullptr, /*associated=*/nullptr);
+      /*alignInBits=*/0, /*dataLocation=*/nullptr, /*rank=*/nullptr,
+      /*allocated=*/nullptr, /*associated=*/nullptr, elements);
   derivedTypeCache.finalize(Ty, typeAttr, std::move(nestedRecursions));
   return typeAttr;
 }
@@ -554,9 +554,9 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
   return mlir::LLVM::DICompositeTypeAttr::get(
       context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
       /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
-      mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0, elements,
+      mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0,
       /*dataLocation=*/nullptr, /*rank=*/nullptr, /*allocated=*/nullptr,
-      /*associated=*/nullptr);
+      /*associated=*/nullptr, elements);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertVectorType(
@@ -587,9 +587,9 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertVectorType(
       context, llvm::dwarf::DW_TAG_array_type,
       mlir::StringAttr::get(context, name),
       /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
-      mlir::LLVM::DIFlags::Vector, sizeInBits, /*alignInBits=*/0, elements,
+      mlir::LLVM::DIFlags::Vector, sizeInBits, /*alignInBits=*/0,
       /*dataLocation=*/nullptr, /*rank=*/nullptr, /*allocated=*/nullptr,
-      /*associated=*/nullptr);
+      /*associated=*/nullptr, elements);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
