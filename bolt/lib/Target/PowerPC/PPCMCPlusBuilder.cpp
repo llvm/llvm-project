@@ -144,6 +144,16 @@ bool PPCMCPlusBuilder::convertJmpToTailCall(MCInst &Inst) {
   }
 }
 
+bool PPCMCPlusBuilder::isCall(const MCInst &I) const {
+  switch (I.getOpcode()) {
+    case PPC::BL:      // direct relative call
+    case PPC::BLA:     // direct absolute call
+      return true;
+      default:
+    return false;
+  }
+}
+
 bool PPCMCPlusBuilder::isTailCall(const MCInst &I) const {
   (void)I;
   return false;
