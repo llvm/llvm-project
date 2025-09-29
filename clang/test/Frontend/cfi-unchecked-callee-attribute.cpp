@@ -233,3 +233,7 @@ void lambdas() {
     checked_func = checked_lambda;
   };
 }
+
+CFI_UNCHECKED_CALLEE
+void func(void);
+void func(void) {}  // No warning expected.

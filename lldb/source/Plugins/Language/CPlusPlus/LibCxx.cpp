@@ -40,8 +40,10 @@ using namespace lldb_private::formatters;
 static void consumeInlineNamespace(llvm::StringRef &name) {
   // Delete past an inline namespace, if any: __[a-zA-Z0-9_]+::
   auto scratch = name;
-  if (scratch.consume_front("__") && std::isalnum(scratch[0])) {
-    scratch = scratch.drop_while([](char c) { return std::isalnum(c); });
+  if (scratch.consume_front("__") &&
+      std::isalnum(static_cast<unsigned char>(scratch[0]))) {
+    scratch = scratch.drop_while(
+        [](char c) { return std::isalnum(static_cast<unsigned char>(c)); });
     if (scratch.consume_front("::")) {
       // Successfully consumed a namespace.
       name = scratch;

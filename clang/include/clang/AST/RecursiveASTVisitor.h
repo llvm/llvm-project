@@ -1192,13 +1192,6 @@ DEF_TRAVERSE_TYPE(DependentNameType, {
     TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
 })
 
-DEF_TRAVERSE_TYPE(DependentTemplateSpecializationType, {
-  const DependentTemplateStorage &S = T->getDependentTemplateName();
-  if (TraverseQualifier)
-    TRY_TO(TraverseNestedNameSpecifier(S.getQualifier()));
-  TRY_TO(TraverseTemplateArguments(T->template_arguments()));
-})
-
 DEF_TRAVERSE_TYPE(TemplateSpecializationType, {
   if (TraverseQualifier) {
     TRY_TO(TraverseTemplateName(T->getTemplateName()));
@@ -1544,15 +1537,6 @@ DEF_TRAVERSE_TYPELOC(InjectedClassNameType,
 DEF_TRAVERSE_TYPELOC(DependentNameType, {
   if (TraverseQualifier)
     TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
-})
-
-DEF_TRAVERSE_TYPELOC(DependentTemplateSpecializationType, {
-  if (TraverseQualifier)
-    TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
-
-  for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I) {
-    TRY_TO(TraverseTemplateArgumentLoc(TL.getArgLoc(I)));
-  }
 })
 
 DEF_TRAVERSE_TYPELOC(TemplateSpecializationType, {
@@ -1903,6 +1887,12 @@ DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
   }
 })
 
+DEF_TRAVERSE_DECL(OMPGroupPrivateDecl, {
+  for (auto *I : D->varlist()) {
+    TRY_TO(TraverseStmt(I));
+  }
+})
+
 DEF_TRAVERSE_DECL(OMPRequiresDecl, {
   for (auto *C : D->clauselists()) {
     TRY_TO(TraverseOMPClause(C));
@@ -2204,6 +2194,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
        is the only callback that's made for this instantiation.                \
        We use getTemplateArgsAsWritten() to distinguish. */                    \
     if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {             \
+      assert(D->getTemplateSpecializationKind() != TSK_ImplicitInstantiation); \
       /* The args that remains unspecialized. */                               \
       TRY_TO(TraverseTemplateArgumentLocsHelper(                               \
           ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));      \
@@ -3186,6 +3177,9 @@ DEF_TRAVERSE_STMT(OMPUnrollDirective,
 DEF_TRAVERSE_STMT(OMPReverseDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPFuseDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPInterchangeDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
@@ -3500,6 +3494,14 @@ bool RecursiveASTVisitor<Derived>::VisitOMPPermutationClause(
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPFullClause(OMPFullClause *C) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPLoopRangeClause(
+    OMPLoopRangeClause *C) {
+  TRY_TO(TraverseStmt(C->getFirst()));
+  TRY_TO(TraverseStmt(C->getCount()));
   return true;
 }
 

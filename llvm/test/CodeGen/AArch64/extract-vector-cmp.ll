@@ -75,10 +75,9 @@ define void @vector_loop_with_icmp(ptr nocapture noundef writeonly %dest) {
 ; CHECK-LABEL: vector_loop_with_icmp:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    index z0.d, #0, #1
-; CHECK-NEXT:    mov w8, #2 // =0x2
-; CHECK-NEXT:    mov w9, #16 // =0x10
-; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    mov z1.d, #2 // =0x2
 ; CHECK-NEXT:    add x8, x0, #4
+; CHECK-NEXT:    mov w9, #16 // =0x10
 ; CHECK-NEXT:    mov w10, #1 // =0x1
 ; CHECK-NEXT:    b .LBB5_2
 ; CHECK-NEXT:  .LBB5_1: // %pred.store.continue6
@@ -142,14 +141,12 @@ for.cond.cleanup:
 }
 
 
-; TODO: Combine the sbfx(cset) into a csetm
 define i32 @issue_121372(<4 x i32> %v) {
 ; CHECK-LABEL: issue_121372:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx w8, w8, #0, #1
+; CHECK-NEXT:    csetm w8, eq
 ; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    csetm w0, lt
 ; CHECK-NEXT:    ret

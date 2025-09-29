@@ -80,9 +80,9 @@ class FeaturePTX<int version>:
 //  + Compare within the family by comparing FullSMVersion, given both belongs to
 //    the same family.
 //  + Detect 'a' variants by checking FullSMVersion & 1.
-foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53,
-              60, 61, 62, 70, 72, 75, 80, 86, 87,
-              89, 90, 100, 101, 103, 120, 121] in {
+foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53, 60,
+              61, 62, 70, 72, 75, 80, 86, 87, 88, 89,
+              90, 100, 101, 103, 110, 120, 121] in {
   // Base SM version (e.g. FullSMVersion for sm_100 is 1000)
   def SM#sm : FeatureSM<""#sm, !mul(sm, 10)>;
 
@@ -127,6 +127,7 @@ def : Proc<"sm_75",   [SM75, PTX63]>;
 def : Proc<"sm_80",   [SM80, PTX70]>;
 def : Proc<"sm_86",   [SM86, PTX71]>;
 def : Proc<"sm_87",   [SM87, PTX74]>;
+def : Proc<"sm_88",   [SM88, PTX90]>;
 def : Proc<"sm_89",   [SM89, PTX78]>;
 def : Proc<"sm_90",   [SM90, PTX78]>;
 def : Proc<"sm_90a",  [SM90a, PTX80]>;
@@ -139,6 +140,9 @@ def : Proc<"sm_101f", [SM101f, PTX88]>;
 def : Proc<"sm_103",  [SM103, PTX88]>;
 def : Proc<"sm_103a", [SM103a, PTX88]>;
 def : Proc<"sm_103f", [SM103f, PTX88]>;
+def : Proc<"sm_110",  [SM110, PTX90]>;
+def : Proc<"sm_110a", [SM110a, PTX90]>;
+def : Proc<"sm_110f", [SM110f, PTX90]>;
 def : Proc<"sm_120",  [SM120, PTX87]>;
 def : Proc<"sm_120a", [SM120a, PTX87]>;
 def : Proc<"sm_120f", [SM120f, PTX88]>;

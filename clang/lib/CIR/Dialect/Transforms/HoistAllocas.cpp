@@ -42,7 +42,8 @@ static void process(mlir::ModuleOp mod, cir::FuncOp func) {
     if (alloca->getBlock() == &entryBlock)
       return;
     // Don't hoist allocas with dynamic alloca size.
-    assert(!cir::MissingFeatures::opAllocaDynAllocSize());
+    if (alloca.getDynAllocSize())
+      return;
 
     // Hoist allocas into the entry block.
 
