@@ -308,7 +308,8 @@ SearchPathResolver::resolve(StringRef Stem, const DylibSubstitutor &Subst,
     std::string Base = Subst.substitute(searchPath);
 
     SmallString<512> FullPath(Base);
-    if (!placeholderPrefix.empty() && Stem.starts_with(placeholderPrefix))
+    if (!placeholderPrefix.empty() &&
+        Stem.starts_with_insensitive(placeholderPrefix))
       FullPath.append(Stem.drop_front(placeholderPrefix.size()));
     else
       sys::path::append(FullPath, Stem);
@@ -387,7 +388,7 @@ DylibResolverImpl::resolve(StringRef LibStem, bool variateLibStem) const {
     return Validator.validate(LibStem);
   }
 
-  if (!LibStem.starts_with("@rpath")) {
+  if (!LibStem.starts_with_insensitive("@rpath")) {
     if (auto norm = Validator.validate(Substitutor.substitute(LibStem))) {
       LLVM_DEBUG(dbgs() << "  -> Resolved after substitution: " << *norm
                         << "\n";);

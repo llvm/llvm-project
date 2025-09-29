@@ -174,7 +174,7 @@ public:
 
   std::string substitute(StringRef input) const {
     for (const auto &[ph, value] : Placeholders) {
-      if (input.starts_with(ph))
+      if (input.starts_with_insensitive(ph))
         return (Twine(value) + input.drop_front(ph.size())).str();
     }
     return input.str();

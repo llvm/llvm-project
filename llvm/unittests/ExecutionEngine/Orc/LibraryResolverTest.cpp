@@ -29,7 +29,7 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__linux__)
 namespace {
 
 #if defined(__APPLE__)
@@ -42,19 +42,40 @@ constexpr const char *ext = ".so";
 
 static bool EnvReady = true;
 
-static bool CheckHostSupport() {
+Triple getTargetTriple() {
   auto JTMB = JITTargetMachineBuilder::detectHost();
-  // Bail out if we can not detect the host.
   if (!JTMB) {
     consumeError(JTMB.takeError());
-    return false;
+    return Triple();
   }
+  return JTMB->getTargetTriple();
+}
 
-  auto Triple = JTMB->getTargetTriple();
-  if (!Triple.isOSBinFormatMachO())
+static bool CheckHostSupport() {
+  auto Triple = getTargetTriple();
+  if (!Triple.isOSBinFormatMachO() &&
+      (!Triple.isOSBinFormatELF() || (!Triple.isX86() && !Triple.isAArch64())))
     return false;
 
   return true;
+}
+
+std::string getYamlFilePlatformExt() {
+  auto Triple = getTargetTriple();
+  if (Triple.isOSBinFormatMachO())
+    return "_macho";
+  else if (Triple.isOSBinFormatELF())
+    return "_linux";
+
+  return "";
+}
+
+unsigned getYamlDocNum() {
+  auto Triple = getTargetTriple();
+  if (Triple.isOSBinFormatELF())
+    return Triple.isAArch64() ? 1 : 2;
+
+  return 1;
 }
 
 class LibraryTestEnvironment : public ::testing::Environment {
@@ -76,9 +97,9 @@ public:
     sys::path::append(dirPath, filedirpath, indir);
 
     // given yamlPath + dylibPath, validate + convert
-    auto processYamlToDylib =
-        [&](const SmallVector<char, 128> &yamlPath,
-            const SmallVector<char, 128> &dylibPath) -> bool {
+    auto processYamlToDylib = [&](const SmallVector<char, 128> &yamlPath,
+                                  const SmallVector<char, 128> &dylibPath,
+                                  unsigned DocNum) -> bool {
       if (!sys::fs::exists(yamlPath)) {
         errs() << "YAML file missing: "
                << StringRef(yamlPath.data(), yamlPath.size()) << "\n";
@@ -108,10 +129,13 @@ public:
         return false;
       }
 
-      if (!yaml::convertYAML(yin, outFile, [](const Twine &M) {
-            // Handle or ignore errors here
-            errs() << "Yaml Error :" << M << "\n";
-          })) {
+      if (!yaml::convertYAML(
+              yin, outFile,
+              [](const Twine &M) {
+                // Handle or ignore errors here
+                errs() << "Yaml Error :" << M << "\n";
+              },
+              DocNum)) {
         errs() << "Failed to convert "
                << StringRef(yamlPath.data(), yamlPath.size()) << " to "
                << StringRef(dylibPath.data(), dylibPath.size()) << "\n";
@@ -127,37 +151,35 @@ public:
 
     std::vector<const char *> libDirs = {"Z", "A", "B", "C", "D"};
 
+    unsigned DocNum = getYamlDocNum();
+    std::string YamlPltExt = getYamlFilePlatformExt();
     for (const auto &libdirName : libDirs) {
       // YAML path
       SmallVector<char, 128> yamlPath(dirPath.begin(), dirPath.end());
-      sys::path::append(yamlPath, libdirName, libdirName);
+      SmallVector<char, 128> yamlFileName;
+      yamlFileName.append(libdirName, libdirName + strlen(libdirName));
+      yamlFileName.append(YamlPltExt.begin(), YamlPltExt.end());
+      sys::path::append(yamlPath, libdirName, yamlFileName);
       sys::path::replace_extension(yamlPath, ".yaml");
 
       // dylib path
       SmallVector<char, 128> dylibPath(dirPath.begin(), dirPath.end());
-      sys::path::append(dylibPath, libdirName, libdirName);
-      sys::path::replace_extension(dylibPath, ext);
-      if (!processYamlToDylib(yamlPath, dylibPath))
-        return;
-    }
+      SmallVector<char, 128> dylibFileName;
+      StringRef prefix("lib");
+      dylibFileName.append(prefix.begin(), prefix.end());
+      dylibFileName.append(libdirName, libdirName + strlen(libdirName));
 
-    std::error_code ec;
-    for (sys::fs::directory_iterator It(dirPath, ec), end; It != end && !ec;
-         It.increment(ec)) {
-      if (sys::path::extension(It->path()) == ".yaml") {
-        SmallVector<char, 128> yamlPath(It->path().begin(), It->path().end());
-        SmallVector<char, 128> dylibPath(It->path().begin(), It->path().end());
-        sys::path::replace_extension(dylibPath, ext);
-        if (!processYamlToDylib(yamlPath, dylibPath))
-          return;
-      }
+      sys::path::append(dylibPath, libdirName, dylibFileName);
+      sys::path::replace_extension(dylibPath, ext);
+      if (!processYamlToDylib(yamlPath, dylibPath, DocNum))
+        return;
     }
   }
 
   void TearDown() override {
-    for (const auto &dylibFile : createdDylibs) {
+    for (const auto &dylibFile : createdDylibs)
       sys::fs::remove(dylibFile);
-    }
+
     createdDylibs.clear();
   }
 
@@ -221,11 +243,11 @@ protected:
 
     ASSERT_NE(GlobalEnv, nullptr);
     baseDir = GlobalEnv->getBaseDir();
-    libs["A"] = {libPath(baseDir, "A/A"), {platformSymbolName("sayA")}};
-    libs["B"] = {libPath(baseDir, "B/B"), {platformSymbolName("sayB")}};
-    libs["C"] = {libPath(baseDir, "C/C"), {platformSymbolName("sayC")}};
-    libs["D"] = {libPath(baseDir, "D/D"), {platformSymbolName("sayD")}};
-    libs["Z"] = {libPath(baseDir, "Z/Z"), {platformSymbolName("sayZ")}};
+    libs["A"] = {libPath(baseDir, "A/libA"), {platformSymbolName("sayA")}};
+    libs["B"] = {libPath(baseDir, "B/libB"), {platformSymbolName("sayB")}};
+    libs["C"] = {libPath(baseDir, "C/libC"), {platformSymbolName("sayC")}};
+    libs["D"] = {libPath(baseDir, "D/libD"), {platformSymbolName("sayD")}};
+    libs["Z"] = {libPath(baseDir, "Z/libZ"), {platformSymbolName("sayZ")}};
   }
 
   const std::vector<std::string> &sym(const std::string &key) {
@@ -412,7 +434,7 @@ TEST_F(LibraryResolverIT, DriverResolvesSymbolsToCorrectLibraries) {
     {
       auto lib = query.getResolvedLib(platformSymbolName("sayA"));
       ASSERT_TRUE(lib.has_value()) << "sayA should be resolved";
-      EXPECT_TRUE(endsWith(lib->str(), withext("/A")))
+      EXPECT_TRUE(endsWith(lib->str(), withext("/libA")))
           << "sayA resolved to: " << lib->str();
     }
 
@@ -420,7 +442,7 @@ TEST_F(LibraryResolverIT, DriverResolvesSymbolsToCorrectLibraries) {
     {
       auto lib = query.getResolvedLib(platformSymbolName("sayB"));
       ASSERT_TRUE(lib.has_value()) << "sayB should be resolved";
-      EXPECT_TRUE(endsWith(lib->str(), withext("/B")))
+      EXPECT_TRUE(endsWith(lib->str(), withext("/libB")))
           << "sayB resolved to: " << lib->str();
     }
 
@@ -428,7 +450,7 @@ TEST_F(LibraryResolverIT, DriverResolvesSymbolsToCorrectLibraries) {
     {
       auto lib = query.getResolvedLib(platformSymbolName("sayZ"));
       ASSERT_TRUE(lib.has_value()) << "sayZ should be resolved";
-      EXPECT_TRUE(endsWith(lib->str(), withext("/Z")))
+      EXPECT_TRUE(endsWith(lib->str(), withext("/libZ")))
           << "sayZ resolved to: " << lib->str();
     }
 
@@ -652,7 +674,7 @@ TEST_F(LibraryResolverIT, PathResolverNormalizesDotAndDotDot) {
   std::error_code ec;
 
   // e.g. baseDir + "/./C/../C/C.dylib" → baseDir + "/C.dylib"
-  std::string messy = baseDir + "/C/./../C/./C" + ext;
+  std::string messy = baseDir + "/C/./../C/./libC" + ext;
   auto resolved = presolver->resolve(messy, ec);
   ASSERT_TRUE(resolved.has_value());
   EXPECT_FALSE(ec);
@@ -709,9 +731,14 @@ TEST_F(LibraryResolverIT, LoaderPathSubstitutionAndResolve) {
 
   DylibSubstitutor substitutor;
   substitutor.configure(libdir("C"));
-
+#if defined(__APPLE__)
   // Substitute @loader_path with baseDir
-  std::string substituted = substitutor.substitute(withext("@loader_path/C"));
+  std::string substituted =
+      substitutor.substitute(withext("@loader_path/libC"));
+#elif defined(__linux__)
+  // Substitute $origin with baseDir
+  std::string substituted = substitutor.substitute(withext("$ORIGIN/libC"));
+#endif
   ASSERT_FALSE(substituted.empty());
   EXPECT_EQ(substituted, lib("C"));
 
@@ -738,42 +765,43 @@ TEST_F(LibraryResolverIT, ResolveFromUsrOrSystemPaths) {
   Resolver.configure("", {{P, SearchPathType::UsrOrSys}});
 
   // Check "C"
-  auto valOptC = Resolver.resolve("C", true);
+  auto valOptC = Resolver.resolve("libC", true);
   EXPECT_TRUE(valOptC.has_value());
   EXPECT_EQ(*valOptC, lib("C"));
 
-  auto valOptCdylib = Resolver.resolve(withext("C"));
+  auto valOptCdylib = Resolver.resolve(withext("libC"));
   EXPECT_TRUE(valOptCdylib.has_value());
   EXPECT_EQ(*valOptCdylib, lib("C"));
 
   // Check "A"
-  auto valOptA = Resolver.resolve("A", true);
+  auto valOptA = Resolver.resolve("libA", true);
   EXPECT_TRUE(valOptA.has_value());
   EXPECT_EQ(*valOptA, lib("A"));
 
-  auto valOptAdylib = Resolver.resolve(withext("A"));
+  auto valOptAdylib = Resolver.resolve(withext("libA"));
   EXPECT_TRUE(valOptAdylib.has_value());
   EXPECT_EQ(*valOptAdylib, lib("A"));
 
   // Check "B"
-  auto valOptB = Resolver.resolve("B", true);
+  auto valOptB = Resolver.resolve("libB", true);
   EXPECT_TRUE(valOptB.has_value());
   EXPECT_EQ(*valOptB, lib("B"));
 
-  auto valOptBdylib = Resolver.resolve(withext("B"));
+  auto valOptBdylib = Resolver.resolve(withext("libB"));
   EXPECT_TRUE(valOptBdylib.has_value());
   EXPECT_EQ(*valOptBdylib, lib("B"));
 
   // Check "Z"
-  auto valOptZ = Resolver.resolve("Z", true);
+  auto valOptZ = Resolver.resolve("libZ", true);
   EXPECT_TRUE(valOptZ.has_value());
   EXPECT_EQ(*valOptZ, lib("Z"));
 
-  auto valOptZdylib = Resolver.resolve(withext("Z"));
+  auto valOptZdylib = Resolver.resolve(withext("libZ"));
   EXPECT_TRUE(valOptZdylib.has_value());
   EXPECT_EQ(*valOptZdylib, lib("Z"));
 }
 
+#if defined(__APPLE__)
 TEST_F(LibraryResolverIT, ResolveViaLoaderPathAndRPathSubstitution) {
   auto cache = std::make_shared<LibraryPathCache>();
   auto presolver = std::make_shared<PathResolver>(cache);
@@ -791,31 +819,79 @@ TEST_F(LibraryResolverIT, ResolveViaLoaderPathAndRPathSubstitution) {
   Resolver.configure(lib("C"), {{P, SearchPathType::RPath}});
 
   // --- Check A ---
-  auto valOptA = Resolver.resolve("@rpath/A", true);
+  auto valOptA = Resolver.resolve("@rpath/libA", true);
   EXPECT_TRUE(valOptA.has_value());
   EXPECT_EQ(*valOptA, lib("A"));
 
-  auto valOptAdylib = Resolver.resolve(withext("@rpath/A"));
+  auto valOptAdylib = Resolver.resolve(withext("@rpath/libA"));
   EXPECT_TRUE(valOptAdylib.has_value());
   EXPECT_EQ(*valOptAdylib, lib("A"));
 
   // --- Check B ---
-  auto valOptB = Resolver.resolve("@rpath/B", true);
+  auto valOptB = Resolver.resolve("@rpath/libB", true);
   EXPECT_TRUE(valOptB.has_value());
   EXPECT_EQ(*valOptB, lib("B"));
 
-  auto valOptBdylib = Resolver.resolve(withext("@rpath/B"));
+  auto valOptBdylib = Resolver.resolve(withext("@rpath/libB"));
   EXPECT_TRUE(valOptBdylib.has_value());
   EXPECT_EQ(*valOptBdylib, lib("B"));
 
   // --- Check Z ---
-  auto valOptZ = Resolver.resolve("@rpath/Z", true);
+  auto valOptZ = Resolver.resolve("@rpath/libZ", true);
   EXPECT_TRUE(valOptZ.has_value());
   EXPECT_EQ(*valOptZ, lib("Z"));
 
-  auto valOptZdylib = Resolver.resolve(withext("@rpath/Z"));
+  auto valOptZdylib = Resolver.resolve(withext("@rpath/libZ"));
   EXPECT_TRUE(valOptZdylib.has_value());
   EXPECT_EQ(*valOptZdylib, lib("Z"));
 }
+#endif
+
+#if defined(__linux__)
+TEST_F(LibraryResolverIT, ResolveViaOriginAndRPathSubstitution) {
+  auto cache = std::make_shared<LibraryPathCache>();
+  auto presolver = std::make_shared<PathResolver>(cache);
+
+  DylibPathValidator validator(*presolver);
+
+  // On Linux, $ORIGIN works like @loader_path
+  std::vector<std::string> Paths = {"$ORIGIN/../A", "$ORIGIN/../B",
+                                    "$ORIGIN/../D", "$ORIGIN/../Z"};
+
+  SmallVector<StringRef> P(Paths.begin(), Paths.end());
+
+  DylibResolver Resolver(validator);
+
+  // Use only RPath config
+  Resolver.configure(lib("C"), {{P, SearchPathType::RPath}});
+
+  // --- Check A ---
+  auto valOptA = Resolver.resolve("libA", true);
+  EXPECT_TRUE(valOptA.has_value());
+  EXPECT_EQ(*valOptA, lib("A"));
+
+  auto valOptASO = Resolver.resolve(withext("libA"));
+  EXPECT_TRUE(valOptASO.has_value());
+  EXPECT_EQ(*valOptASO, lib("A"));
+
+  // --- Check B ---
+  auto valOptB = Resolver.resolve("libB", true);
+  EXPECT_TRUE(valOptB.has_value());
+  EXPECT_EQ(*valOptB, lib("B"));
+
+  auto valOptBSO = Resolver.resolve(withext("libB"));
+  EXPECT_TRUE(valOptBSO.has_value());
+  EXPECT_EQ(*valOptBSO, lib("B"));
+
+  // --- Check Z ---
+  auto valOptZ = Resolver.resolve("libZ", true);
+  EXPECT_TRUE(valOptZ.has_value());
+  EXPECT_EQ(*valOptZ, lib("Z"));
+
+  auto valOptZSO = Resolver.resolve(withext("libZ"));
+  EXPECT_TRUE(valOptZSO.has_value());
+  EXPECT_EQ(*valOptZSO, lib("Z"));
+}
+#endif
 } // namespace
 #endif // defined(__APPLE__)
