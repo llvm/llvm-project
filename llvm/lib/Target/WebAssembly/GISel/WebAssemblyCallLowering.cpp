@@ -976,8 +976,8 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     if (!Arg.Flags[0].isVarArg()) {
       for (unsigned Part = 0; Part < NumParts; ++Part) {
         CallInst.addUse(Arg.Regs[Part]);
-        ++NumFixedArgs;
       }
+      ++NumFixedArgs;
     }
   }
 
