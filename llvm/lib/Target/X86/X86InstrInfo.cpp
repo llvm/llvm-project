@@ -914,6 +914,117 @@ bool X86InstrInfo::expandCtSelectWithCMOV(MachineInstr &MI) const {
   return true;
 }
 
+/// Expand i386-specific CTSELECT pseudo instructions (post-RA, constant-time)
+/// These internal pseudos receive a pre-materialized condition byte from the
+/// custom inserter, avoiding EFLAGS corruption issues during i64 type legalization.
+bool X86InstrInfo::expandCtSelectIntWithoutCMOV(MachineInstr &MI) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  // CTSELECT_I386_INT_GRxxrr has operands: (outs dst, tmp_byte, tmp_mask),
+  // (ins src1, src2, cond_byte)
+  // Note: cond_byte is pre-materialized by custom inserter, not EFLAGS-dependent
+  Register DstReg = MI.getOperand(0).getReg();
+  Register TmpByteReg = MI.getOperand(1).getReg();
+  Register TmpMaskReg = MI.getOperand(2).getReg();
+  Register Src1Reg = MI.getOperand(3).getReg();
+  Register Src2Reg = MI.getOperand(4).getReg();
+  Register CondByteReg = MI.getOperand(5).getReg();  // Pre-materialized condition byte
+
+  // Determine instruction opcodes based on register width
+  unsigned MovZXOp, NegOp, MovOp, AndOp, NotOp, OrOp;
+  if (MI.getOpcode() == X86::CTSELECT_I386_INT_GR8rr) {
+    MovZXOp = 0;  // No zero-extend needed for GR8
+    NegOp = X86::NEG8r;
+    MovOp = X86::MOV8rr;
+    AndOp = X86::AND8rr;
+    NotOp = X86::NOT8r;
+    OrOp = X86::OR8rr;
+  } else if (MI.getOpcode() == X86::CTSELECT_I386_INT_GR16rr) {
+    MovZXOp = X86::MOVZX16rr8;
+    NegOp = X86::NEG16r;
+    MovOp = X86::MOV16rr;
+    AndOp = X86::AND16rr;
+    NotOp = X86::NOT16r;
+    OrOp = X86::OR16rr;
+  } else { // X86::CTSELECT_I386_INT_GR32rr
+    MovZXOp = X86::MOVZX32rr8;
+    NegOp = X86::NEG32r;
+    MovOp = X86::MOV32rr;
+    AndOp = X86::AND32rr;
+    NotOp = X86::NOT32r;
+    OrOp = X86::OR32rr;
+  }
+
+  // 7-instruction constant-time selection bundle (no SETCC inside):
+  // result = (true_val & mask) | (false_val & ~mask)
+  // The condition byte is already materialized, avoiding EFLAGS dependency
+
+  // Step 1: Copy pre-materialized condition byte to TmpByteReg
+  // This allows the bundle to work with allocated temporaries
+  auto I1 = BuildMI(*MBB, MI, DL, get(X86::MOV8rr), TmpByteReg)
+      .addReg(CondByteReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+  auto BundleStart = I1->getIterator();
+
+  // Step 2: Zero-extend condition byte to register width (0 or 1)
+  if (MI.getOpcode() != X86::CTSELECT_I386_INT_GR8rr) {
+    BuildMI(*MBB, MI, DL, get(MovZXOp), TmpMaskReg)
+        .addReg(TmpByteReg)
+        .setMIFlag(MachineInstr::MIFlag::NoMerge);
+  }
+
+  // Step 3: Convert condition to bitmask (NEG: 1 -> 0xFFFF..., 0 -> 0x0000...)
+  Register MaskReg = (MI.getOpcode() == X86::CTSELECT_I386_INT_GR8rr) ? TmpByteReg : TmpMaskReg;
+  BuildMI(*MBB, MI, DL, get(NegOp), MaskReg)
+      .addReg(MaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 4,5: Apply mask to true value - copy src1 to dest, then AND with mask
+  BuildMI(*MBB, MI, DL, get(MovOp), DstReg)
+      .addReg(Src1Reg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  BuildMI(*MBB, MI, DL, get(AndOp), DstReg)
+      .addReg(DstReg)
+      .addReg(MaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 6: Create inverted mask inline (~mask)
+  BuildMI(*MBB, MI, DL, get(NotOp), MaskReg)
+      .addReg(MaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 7: Apply inverted mask to false value - reuse mask register directly
+  BuildMI(*MBB, MI, DL, get(AndOp), MaskReg)
+      .addReg(MaskReg)
+      .addReg(Src2Reg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 8: Final result: (src1 & mask) | (src2 & ~mask)
+  auto LI = BuildMI(*MBB, MI, DL, get(OrOp), DstReg)
+      .addReg(DstReg)
+      .addReg(MaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Bundle all generated instructions for atomic execution before removing MI
+  auto BundleEnd = std::next(LI->getIterator());
+  if (BundleStart != BundleEnd) {
+    // Only bundle if we have multiple instructions
+    finalizeBundle(*MBB, BundleStart, BundleEnd);
+  }
+
+  // TODO: Optimization opportunity - The register allocator may choose callee-saved
+  // registers (e.g., %ebx, %esi) for TmpByteReg/TmpMaskReg, causing unnecessary
+  // save/restore overhead. Consider constraining these to caller-saved register
+  // classes (e.g., GR8_AL, GR32_CallSaved) in the TableGen definitions to improve
+  // constant-time performance by eliminating prologue/epilogue instructions.
+
+  // Remove the original pseudo instruction
+  MI.eraseFromParent();
+  return true;
+}
+
 static bool isFrameLoadOpcode(int Opcode, TypeSize &MemBytes) {
   switch (Opcode) {
   default:
@@ -6857,6 +6968,13 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::CTSELECT32rm:
   case X86::CTSELECT16rm:
     return expandCtSelectWithCMOV(MI);
+
+  // non-cmov CTSELECT expansion (post-RA, constant-time)
+  // These are the internal pseudos with pre-materialized condition byte
+  case X86::CTSELECT_I386_INT_GR8rr:
+  case X86::CTSELECT_I386_INT_GR16rr:
+  case X86::CTSELECT_I386_INT_GR32rr:
+    return expandCtSelectIntWithoutCMOV(MI);
 
   case X86::CTSELECT_V2F64:
   case X86::CTSELECT_V4F32:

@@ -49,6 +49,11 @@ def HasZU        : Predicate<"Subtarget->hasZU()">;
 def HasCF        : Predicate<"Subtarget->hasCF()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
+// Predicate for constant-time selection without native CMOV instruction
+// Unlike NoCMOV, this checks hasCMOV() directly, not canUseCMOV()
+// This ensures i386 with SSE (canUseCMOV=true but hasCMOV=false) uses
+// the constant-time i386-specific implementation instead of CMOV emulation
+def NoNativeCMOV : Predicate<"!Subtarget->hasCMOV()">;
 def HasNOPL      : Predicate<"Subtarget->hasNOPL()">;
 def HasMMX       : Predicate<"Subtarget->hasMMX()">;
 def HasSSE1      : Predicate<"Subtarget->hasSSE1()">;

@@ -726,6 +726,7 @@ private:
 
   /// Expand the CTSELECT pseudo-instructions.
   bool expandCtSelectWithCMOV(MachineInstr &MI) const;
+  bool expandCtSelectIntWithoutCMOV(MachineInstr &MI) const;
 
   bool expandCtSelectVector(MachineInstr &MI) const;
 

@@ -114,7 +114,7 @@ let Uses = [EFLAGS], isNotDuplicable = 1, isPseudo = 1 in {
 
   multiclass CTSELECT<X86TypeInfo t> {
     // register-only
-    let isCommutable = 0, SchedRW = [WriteCMOV],
+    let isCommutable = 0, SchedRW = [WriteCMOV], Predicates = [HasCMOV],
         AsmString = "ctselect\\t$dst, $src1, $src2, $cond" in {
       def rr : PseudoI<(outs t.RegClass:$dst),
                        (ins t.RegClass:$src1, t.RegClass:$src2, i8imm:$cond),
@@ -122,7 +122,7 @@ let Uses = [EFLAGS], isNotDuplicable = 1, isPseudo = 1 in {
     }
 
     // register-memory
-    let SchedRW = [WriteCMOV.Folded, WriteCMOV.ReadAfterFold],
+    let SchedRW = [WriteCMOV.Folded, WriteCMOV.ReadAfterFold], Predicates = [HasCMOV],
         AsmString = "ctselect\\t$dst, $src1, $src2, $cond" in {
       def rm : PseudoI<(outs t.RegClass:$dst),
                        (ins t.RegClass:$src1, t.MemOperand:$src2, i8imm:$cond),
@@ -132,7 +132,7 @@ let Uses = [EFLAGS], isNotDuplicable = 1, isPseudo = 1 in {
 }
 
 let isCodeGenOnly = 1, hasSideEffects = 1, ForceDisassemble = 1 in {
-  let Predicates = [HasCMOV], Constraints = "$dst = $src1" in {
+  let Constraints = "$dst = $src1" in {
     defm CTSELECT16 : CTSELECT<Xi16>;
     defm CTSELECT32 : CTSELECT<Xi32>;
     defm CTSELECT64 : CTSELECT<Xi64>;

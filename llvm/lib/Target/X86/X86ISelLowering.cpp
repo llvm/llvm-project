@@ -25504,7 +25504,8 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // Promote small integer types to avoid partial register stalls
-  if ((Op.getValueType() == MVT::i8) ||
+  // Exception: For i8 without CMOV, prefer native 8-bit constant-time operations
+  if ((Op.getValueType() == MVT::i8 && Subtarget.canUseCMOV()) ||
       (Op.getValueType() == MVT::i16 && !X86::mayFoldLoad(TrueOp, Subtarget) &&
        !X86::mayFoldLoad(FalseOp, Subtarget))) {
     TrueOp = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, TrueOp);
@@ -37983,122 +37984,69 @@ X86TargetLowering::emitPatchableEventCall(MachineInstr &MI,
   return BB;
 }
 
-MachineBasicBlock *
-X86TargetLowering::EmitLoweredCtSelect(MachineInstr &MI,
-                                       MachineBasicBlock *ThisMBB) const {
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+/// Helper function to emit i386 CTSELECT with condition materialization.
+/// This converts EFLAGS-based CTSELECT into a condition byte that can be
+/// shared across multiple operations (critical for i64 type legalization).
+///
+/// Phase 1: Materialize condition byte from EFLAGS using SETCC
+/// Phase 2: Create internal pseudo with condition byte for post-RA expansion
+///
+/// This approach ensures that when i64 is type-legalized into two i32
+/// operations, both operations share the same condition byte rather than
+/// each independently reading (and destroying) EFLAGS.
+static MachineBasicBlock *
+emitCTSelectI386WithConditionMaterialization(MachineInstr &MI,
+                                              MachineBasicBlock *BB,
+                                              unsigned InternalPseudoOpcode) {
+  const TargetInstrInfo *TII = BB->getParent()->getSubtarget().getInstrInfo();
   const MIMetadata MIMD(MI);
-  MachineRegisterInfo &MRI = ThisMBB->getParent()->getRegInfo();
-  DebugLoc DL = MI.getDebugLoc();
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
 
-  // Get operands
-  Register DstReg = MI.getOperand(0).getReg();
-  Register TrueReg = MI.getOperand(1).getReg();
-  Register FalseReg = MI.getOperand(2).getReg();
+  // Original pseudo operands: (outs dst), (ins src1, src2, cond)
+  Register Src1Reg = MI.getOperand(1).getReg();
+  Register Src2Reg = MI.getOperand(2).getReg();
+  X86::CondCode CC = static_cast<X86::CondCode>(MI.getOperand(3).getImm());
 
-  X86::CondCode CC = X86::CondCode(MI.getOperand(3).getImm());
+  // Get opposite condition (SETCC sets to 1 when condition is TRUE,
+  // but we want to select src1 when condition is FALSE for X86 semantics)
   X86::CondCode OppCC = X86::GetOppositeBranchCondition(CC);
 
-  const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
-  unsigned SETCCOp, MOVZXOp, NEGOp, ANDOp, XOROp, OROp;
-  const TargetRegisterClass *condRC;
-
-  if (RC == &X86::GR8RegClass) {
-    SETCCOp = X86::SETCCr;
-    MOVZXOp = 0; // No extension needed for 8-bit
-    NEGOp = X86::NEG8r;
-    ANDOp = X86::AND8rr;
-    XOROp = X86::XOR8ri;
-    OROp = X86::OR8rr;
-    condRC = &X86::GR8RegClass;
-  } else if (RC == &X86::GR16RegClass) {
-    SETCCOp = X86::SETCCr;
-    MOVZXOp = X86::MOVZX16rr8;
-    NEGOp = X86::NEG16r;
-    ANDOp = X86::AND16rr;
-    XOROp = X86::XOR16ri;
-    OROp = X86::OR16rr;
-    condRC = &X86::GR16RegClass;
-  } else if (RC == &X86::GR32RegClass) {
-    SETCCOp = X86::SETCCr;
-    MOVZXOp = X86::MOVZX32rr8;
-    NEGOp = X86::NEG32r;
-    ANDOp = X86::AND32rr;
-    XOROp = X86::XOR32ri;
-    OROp = X86::OR32rr;
-    condRC = &X86::GR32RegClass;
-  } else {
-    llvm_unreachable("Unsupported register class for conditional select");
-  }
-
-  auto BundleStart = MI.getIterator();
-
-  // Step 1: Create condition value using SETCC instruction
+  // Step 1: Materialize condition byte from EFLAGS
+  // This is done OUTSIDE the constant-time bundle, before any EFLAGS corruption
   Register CondByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
-  BuildMI(*ThisMBB, MI, MIMD, TII->get(SETCCOp), CondByteReg)
-      .addImm(OppCC)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+  BuildMI(*BB, MI, MIMD, TII->get(X86::SETCCr), CondByteReg).addImm(OppCC);
 
-  Register CondReg;
-  if (RC == &X86::GR8RegClass) {
-    // For 8-bit, use the byte register directly
-    CondReg = CondByteReg;
+  // Step 2: Create internal pseudo that takes condition byte as input
+  // This pseudo will be expanded post-RA into the actual constant-time bundle
+  // The condition byte can now be safely shared between multiple pseudos
+
+  // Internal pseudo has operands: (outs dst, tmp_byte, tmp_mask), (ins src1, src2, cond_byte)
+  Register DstReg = MI.getOperand(0).getReg();
+
+  // Create virtual registers for the temporary outputs
+  Register TmpByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
+  Register TmpMaskReg;
+
+  // Determine the register class for tmp_mask based on the data type
+  if (InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR8rr ||
+      InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR16rr ||
+      InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR32rr) {
+    TmpMaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
   } else {
-    // For 16/32-bit, zero-extend the byte to the target size
-    CondReg = MRI.createVirtualRegister(condRC);
-    BuildMI(*ThisMBB, MI, MIMD, TII->get(MOVZXOp), CondReg)
-        .addReg(CondByteReg)
-        .setMIFlag(MachineInstr::MIFlag::NoMerge);
+    llvm_unreachable("Unknown internal pseudo opcode");
   }
 
-  // Step 2: Convert condition to mask (1 -> 0xFFFF..., 0 -> 0x0000...)
-  // Use NEG to create all-ones mask when condition is true
-  Register MaskReg = MRI.createVirtualRegister(condRC);
-  BuildMI(*ThisMBB, MI, MIMD, TII->get(NEGOp), MaskReg)
-      .addReg(CondReg)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+  BuildMI(*BB, MI, MIMD, TII->get(InternalPseudoOpcode))
+      .addDef(DstReg)         // dst (output)
+      .addDef(TmpByteReg)     // tmp_byte (output)
+      .addDef(TmpMaskReg)     // tmp_mask (output)
+      .addReg(Src1Reg)        // src1 (input)
+      .addReg(Src2Reg)        // src2 (input)
+      .addReg(CondByteReg);   // pre-materialized condition byte (input)
 
-  // Step 3: Implement conditional select using bitwise operations
-  // Result = (TrueReg & Mask) | (FalseReg & ~Mask)
-
-  // Create inverted mask (~Mask)
-  Register InvMaskReg = MRI.createVirtualRegister(condRC);
-  BuildMI(*ThisMBB, MI, MIMD, TII->get(XOROp), InvMaskReg)
-      .addReg(MaskReg)
-      .addImm(-1)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge); // XOR with all 1s to invert
-
-  // Compute TrueReg & Mask
-  Register TrueMaskedReg = MRI.createVirtualRegister(condRC);
-  BuildMI(*ThisMBB, MI, MIMD, TII->get(ANDOp), TrueMaskedReg)
-      .addReg(TrueReg)
-      .addReg(MaskReg)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-  // Compute FalseReg & ~Mask
-  Register FalseMaskedReg = MRI.createVirtualRegister(condRC);
-  BuildMI(*ThisMBB, MI, MIMD, TII->get(ANDOp), FalseMaskedReg)
-      .addReg(FalseReg)
-      .addReg(InvMaskReg)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-  // Final result: (TrueReg & Mask) | (FalseReg & ~Mask)
-  BuildMI(*ThisMBB, MI, MIMD, TII->get(OROp), DstReg)
-      .addReg(TrueMaskedReg)
-      .addReg(FalseMaskedReg)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-  // Remove the original instruction
   MI.eraseFromParent();
-
-  auto BundleEnd = MI.getIterator();
-  if (BundleStart != BundleEnd) {
-    // Only bundle if we have multiple instructions
-    MachineInstr *BundleHeader =
-        BuildMI(*ThisMBB, BundleStart, DL, TII->get(TargetOpcode::BUNDLE));
-    finalizeBundle(*ThisMBB, BundleHeader->getIterator(), std::next(BundleEnd));
-  }
-  return ThisMBB;
+  return BB;
 }
 
 MachineBasicBlock *
@@ -38162,9 +38110,17 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::CMOV_VK64:
     return EmitLoweredSelect(MI, BB);
 
-  case X86::CTSELECT_GR16rr:
-  case X86::CTSELECT_GR32rr:
-    return EmitLoweredCtSelect(MI, BB);
+  case X86::CTSELECT_I386_GR8rr:
+    return emitCTSelectI386WithConditionMaterialization(
+        MI, BB, X86::CTSELECT_I386_INT_GR8rr);
+
+  case X86::CTSELECT_I386_GR16rr:
+    return emitCTSelectI386WithConditionMaterialization(
+        MI, BB, X86::CTSELECT_I386_INT_GR16rr);
+
+  case X86::CTSELECT_I386_GR32rr:
+    return emitCTSelectI386WithConditionMaterialization(
+        MI, BB, X86::CTSELECT_I386_INT_GR32rr);
 
   case X86::CTSELECT_FP32rr:
   case X86::CTSELECT_FP64rr:
