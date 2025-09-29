@@ -434,3 +434,15 @@ void ctad_test() {
   CTAD t = s; // expected-warning {{class template argument deduction is incompatible with C++ standards before C++17}}
 }
 #endif
+
+namespace GH161702 {
+struct S {
+  enum E { A };
+  using E::A; // expected-warning {{enumeration type in nested name specifier is incompatible with C++98}}
+#ifndef CXX20COMPAT 
+	      // expected-error@-2 {{using declaration refers to its own class}}
+#else
+              // expected-warning@-4 {{member using declaration naming non-class ''E'' enumerator is incompatible with C++ standards before C++20}}
+#endif
+};
+}
