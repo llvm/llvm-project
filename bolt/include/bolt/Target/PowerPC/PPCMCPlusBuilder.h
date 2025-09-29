@@ -28,6 +28,8 @@ public:
 
   bool convertJmpToTailCall(MCInst &Inst) override;
 
+  bool isCall(const MCInst &Inst) const override;
+
   bool isTailCall(const MCInst &Inst) const;
   bool isReturn(const MCInst &Inst) const override;
   bool isConditionalBranch(const MCInst &Inst) const override;
