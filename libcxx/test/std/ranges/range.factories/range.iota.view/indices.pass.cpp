@@ -28,18 +28,11 @@
 template <typename SizeType>
 concept HasIndices = requires(SizeType s) { std::ranges::views::indices(s); };
 
-struct IntegerTypesTest {
-  template <class T>
-  constexpr void operator()() {
-    static_assert(HasIndices<T>);
-  }
-};
-
 struct NotIntegerLike {};
 
-void test_SFIANE() {
+void test_SFINAE() {
   static_assert(HasIndices<std::size_t>);
-  types::for_each(types::integer_types(), IntegerTypesTest{});
+  types::for_each(types::integer_types(), []<typename T> { static_assert(HasIndices<T>); });
 
   // Non-integer-like types should not satisfy HasIndices
   static_assert(!HasIndices<bool>);
@@ -97,7 +90,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  test_SFIANE();
+  test_SFINAE();
 
   test();
   static_assert(test());
