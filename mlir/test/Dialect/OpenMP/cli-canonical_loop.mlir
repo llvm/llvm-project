@@ -234,3 +234,47 @@ func.func @omp_newcli_unused() -> () {
   // CHECK-NEXT: return
   return
 }
+
+
+// CHECK-LABEL: @omp_canonloop_multiregion_isolatedfromabove(
+func.func @omp_canonloop_multiregion_isolatedfromabove() -> () {
+  omp.private {type = firstprivate} @x.privatizer : !llvm.ptr init {
+    ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+      %c42_i32 = arith.constant 42: i32
+      // CHECK: omp.canonical_loop %iv : i32 in range(%c42_i32) {
+      omp.canonical_loop %iv1 : i32 in range(%c42_i32) {
+        omp.terminator
+      }
+      // CHECK: omp.yield
+      omp.yield(%arg0 : !llvm.ptr)
+  } copy {
+    ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+      %c42_i32 = arith.constant 42: i32
+      // CHECK: omp.canonical_loop %iv : i32 in range(%c42_i32) {
+      omp.canonical_loop %iv : i32 in range(%c42_i32) {
+        // CHECK: omp.canonical_loop %iv_d1 : i32 in range(%c42_i32) {
+        omp.canonical_loop %iv_d1 : i32 in range(%c42_i32) {
+          omp.terminator
+        }
+        omp.terminator
+      }
+      // CHECK: omp.yield
+      omp.yield(%arg0 : !llvm.ptr)
+  } dealloc {
+    ^bb0(%arg0: !llvm.ptr):
+      %c42_i32 = arith.constant 42: i32
+      // CHECK: omp.canonical_loop %iv_s0 : i32 in range(%c42_i32) {
+      omp.canonical_loop %iv_s0 : i32 in range(%c42_i32) {
+        omp.terminator
+      }
+      // CHECK: omp.canonical_loop %iv_s1 : i32 in range(%c42_i32) {
+      omp.canonical_loop %iv_s1 : i32 in range(%c42_i32) {
+        omp.terminator
+      }
+      // CHECK: omp.yield
+      omp.yield
+  }
+
+  // CHECK: return
+  return
+}

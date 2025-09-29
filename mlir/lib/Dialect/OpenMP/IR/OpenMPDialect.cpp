@@ -106,9 +106,6 @@ static std::string generateLoopNestingName(StringRef prefix,
   // their parent
   Operation *o = op.getOperation();
   while (o) {
-    if (o->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>())
-      break;
-
     // Operation within a region
     Region *r = o->getParentRegion();
     if (!r)
@@ -147,7 +144,14 @@ static std::string generateLoopNestingName(StringRef prefix,
     comp.parentOp = parent;
     comp.regionInOpIdx = 0;
     comp.isOnlyRegionInOp = true;
-    if (parent && parent->getRegions().size() > 1) {
+
+    // Need to disambiguate between different region arguments? The
+    // IsolatedFromAbove trait of the parent operation implies that each
+    // individual region argument has its own separate namespace.
+    if (!parent || parent->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>())
+      break;
+
+    if (parent->getRegions().size() > 1) {
       auto getRegionIndex = [](Operation *o, Region *r) {
         for (auto [idx, region] : llvm::enumerate(o->getRegions())) {
           if (&region == r)
@@ -158,9 +162,6 @@ static std::string generateLoopNestingName(StringRef prefix,
       comp.regionInOpIdx = getRegionIndex(parent, r);
       comp.isOnlyRegionInOp = false;
     }
-
-    if (!parent)
-      break;
 
     // next parent
     o = parent;
