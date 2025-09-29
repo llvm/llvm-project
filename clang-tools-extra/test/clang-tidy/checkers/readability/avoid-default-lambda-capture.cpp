@@ -6,15 +6,19 @@ void test_default_captures() {
 
   auto lambda1 = [=](int x) { return value + x; };
   // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES: auto lambda1 = [value](int x) { return value + x; };
 
   auto lambda2 = [&](int x) { return value + x; };
   // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES: auto lambda2 = [&value](int x) { return value + x; };
 
   auto lambda3 = [=, &another](int x) { return value + another + x; };
   // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES: auto lambda3 = [&another, value](int x) { return value + another + x; };
 
   auto lambda4 = [&, value](int x) { return value + another + x; };
   // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES: auto lambda4 = [value, &another](int x) { return value + another + x; };
 }
 
 void test_acceptable_captures() {
@@ -43,9 +47,11 @@ void test_nested_lambdas() {
 
   auto outer = [=]() {
     // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+    // CHECK-FIXES: auto outer = [outer_var, middle_var, inner_var]() {
 
     auto inner = [&](int x) { return outer_var + middle_var + inner_var + x; };
     // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+    // CHECK-FIXES: auto inner = [&outer_var, &middle_var, &inner_var](int x) { return outer_var + middle_var + inner_var + x; };
     
     return inner(10);
   };
@@ -56,14 +62,17 @@ void test_lambda_returns() {
 
   auto create_adder = [=](int x) {
     // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+    // CHECK-FIXES: auto create_adder = [](int x) {
     return [x](int y) { return x + y; }; // Inner lambda is fine - explicit capture
   };
   
   auto func1 = [&]() { return a; };
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES: auto func1 = [&a]() { return a; };
 
   auto func2 = [=]() { return b; };
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES: auto func2 = [b]() { return b; };
 }
 
 class TestClass {
@@ -75,9 +84,11 @@ public:
     
     auto lambda1 = [=]() { return member + local; };
     // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+    // CHECK-FIXES: auto lambda1 = [this, local]() { return member + local; };
 
     auto lambda2 = [&]() { return member + local; };
     // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+    // CHECK-FIXES: auto lambda2 = [this, &local]() { return member + local; };
     
     auto lambda3 = [this, local]() { return member + local; };
     auto lambda4 = [this, &local]() { return member + local; };
@@ -90,6 +101,7 @@ void test_template_lambdas() {
   
   auto lambda = [=](T x) { return value + x; };
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES: auto lambda = [](T x) { return value + x; };
 }
 
 void instantiate_templates() {
