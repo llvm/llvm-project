@@ -57,6 +57,11 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(false));
 
+static cl::opt<bool>
+    EnableMergeBaseOffset("loongarch-enable-merge-offset",
+                          cl::desc("Enable the merge base offset pass"),
+                          cl::init(true), cl::Hidden);
+
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
@@ -214,7 +219,7 @@ void LoongArchPassConfig::addMachineSSAOptimization() {
 
 void LoongArchPassConfig::addPreRegAlloc() {
   addPass(createLoongArchPreRAExpandPseudoPass());
-  if (TM->getOptLevel() != CodeGenOptLevel::None)
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMergeBaseOffset)
     addPass(createLoongArchMergeBaseOffsetOptPass());
 }
 
