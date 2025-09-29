@@ -432,6 +432,7 @@ Bug Fixes to C++ Support
 - Fix an assertion failure when taking the address on a non-type template parameter argument of
   object type. (#GH151531)
 - Suppress ``-Wdouble-promotion`` when explicitly asked for with C++ list initialization (#GH33409).
+- Fix the result of `__builtin_is_implicit_lifetime` for types with a user-provided constructor. (#GH160610)
 - Fixed a crash in the pre-C++23 warning for attributes before a lambda declarator (#GH161070).
 
 Bug Fixes to AST Handling
