@@ -27,7 +27,6 @@
 #include "llvm/Support/Path.h"
 #include <cstddef>
 #include <cstring>
-#include <dlfcn.h>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -428,6 +427,8 @@ void BitcodeCompiler::addObject(IRFile &f,
 }
 
 #if LLD_ENABLE_GNU_LTO
+#include <dlfcn.h>
+
 GccIRCompiler *GccIRCompiler::singleton = nullptr;
 
 GccIRCompiler *GccIRCompiler::getInstance() {
