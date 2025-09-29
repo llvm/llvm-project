@@ -37,17 +37,13 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
     function_ref<bool(const RetainedKnowledge &RK)> CheckSize,
     const DataLayout &DL, const Instruction *CtxI, AssumptionCache *AC,
     const DominatorTree *DT) {
-  // Dereferenceable information from assumptions is only valid if the value
-  // cannot be freed between the assumption and use. For now just use the
-  // information for values that cannot be freed in the function.
-  // TODO: More precisely check if the pointer can be freed between assumption
-  // and use.
-  if (!CtxI || Ptr->canBeFreed())
+  if (!CtxI)
     return false;
   /// Look through assumes to see if both dereferencability and alignment can
   /// be proven by an assume if needed.
   RetainedKnowledge AlignRK;
   RetainedKnowledge DerefRK;
+  bool PtrCanBeFreed = Ptr->canBeFreed();
   bool IsAligned = Ptr->getPointerAlignment(DL) >= Alignment;
   return getKnowledgeForValue(
       Ptr, {Attribute::Dereferenceable, Attribute::Alignment}, *AC,
@@ -56,7 +52,11 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
           return false;
         if (RK.AttrKind == Attribute::Alignment)
           AlignRK = std::max(AlignRK, RK);
-        if (RK.AttrKind == Attribute::Dereferenceable)
+
+        // Dereferenceable information from assumptions is only valid if the
+        // value cannot be freed between the assumption and use.
+        if ((!PtrCanBeFreed || willNotFreeBetween(Assume, CtxI)) &&
+            RK.AttrKind == Attribute::Dereferenceable)
           DerefRK = std::max(DerefRK, RK);
         IsAligned |= AlignRK && AlignRK.ArgValue >= Alignment.value();
         if (IsAligned && DerefRK && CheckSize(DerefRK))
@@ -391,6 +391,10 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     return false;
 
   Instruction *HeaderFirstNonPHI = &*L->getHeader()->getFirstNonPHIIt();
+  if (BasicBlock *LoopPred = L->getLoopPredecessor()) {
+    if (isa<BranchInst>(LoopPred->getTerminator()))
+      HeaderFirstNonPHI = LoopPred->getTerminator();
+  }
   return isDereferenceableAndAlignedPointerViaAssumption(
              Base, Alignment,
              [&SE, AccessSizeSCEV, &LoopGuards](const RetainedKnowledge &RK) {
