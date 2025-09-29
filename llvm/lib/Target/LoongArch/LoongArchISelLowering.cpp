@@ -2319,6 +2319,25 @@ static SDValue lowerVECTOR_SHUFFLE_XVPICKOD(const SDLoc &DL, ArrayRef<int> Mask,
   return DAG.getNode(LoongArchISD::VPICKOD, DL, VT, V2, V1);
 }
 
+// Check if exactly one element of the Mask is replaced by 'Replaced', while
+// all other elements are either 'Base + i' or undef (-1). On success, return
+// the index of the replaced element. Otherwise, just return -1.
+static int checkReplaceOne(ArrayRef<int> Mask, int Base, int Replaced) {
+  int MaskSize = Mask.size();
+  int Idx = -1;
+  for (int i = 0; i < MaskSize; ++i) {
+    if (Mask[i] == Base + i || Mask[i] == -1)
+      continue;
+    if (Mask[i] != Replaced)
+      return -1;
+    if (Idx == -1)
+      Idx = i;
+    else
+      return -1;
+  }
+  return Idx;
+}
+
 /// Lower VECTOR_SHUFFLE into XVINSVE0 (if possible).
 static SDValue
 lowerVECTOR_SHUFFLE_XVINSVE0(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
@@ -2329,49 +2348,21 @@ lowerVECTOR_SHUFFLE_XVINSVE0(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
       VT != MVT::v4f64)
     return SDValue();
 
+  MVT GRLenVT = Subtarget.getGRLenVT();
   int MaskSize = Mask.size();
   assert(MaskSize == (int)VT.getVectorNumElements() && "Unexpected mask size");
 
-  // Check if exactly one element of the Mask is replaced by the lowest element
-  // of the other vector, while all other elements are either its index or
-  // undef (-1). On success, return the index of the replaced element and the
-  // two result vectors. Otherwise, just return -1 and empty.
-  auto DetectReplaced = [&](ArrayRef<int> Mask, SDValue V1,
-                            SDValue V2) -> std::tuple<SDValue, SDValue, int> {
-    int Idx1 = -1, Idx2 = -1;
-    bool Found1 = true, Found2 = true;
-
-    for (int i = 0; i < MaskSize; ++i) {
-      int Cur = Mask[i];
-      // Case 1: the lowest element of V2 replaces one element in V1.
-      bool Match1 = (Cur == i || Cur == -1 || (Cur == MaskSize && Idx1 == -1));
-      // Case 2: the lowest element of V1 replaces one element in V2.
-      bool Match2 =
-          (Cur == MaskSize + i || Cur == -1 || (Cur == 0 && Idx2 == -1));
-
-      // Record the index of the replaced element.
-      if (Match1 && Cur == MaskSize && Idx1 == -1)
-        Idx1 = i;
-      if (Match2 && Cur == 0 && Idx2 == -1)
-        Idx2 = i;
-
-      Found1 &= Match1;
-      Found2 &= Match2;
-      if (!Found1 && !Found2)
-        return {SDValue(), SDValue(), -1};
-    }
-
-    if (Found1 && Idx1 != -1)
-      return {V1, V2, Idx1};
-    if (Found2 && Idx2 != -1)
-      return {V2, V1, Idx2};
-    return {SDValue(), SDValue(), -1};
-  };
-
-  auto [Src, Ins, Idx] = DetectReplaced(Mask, V1, V2);
+  // Case 1: the lowest element of V2 replaces one element in V1.
+  int Idx = checkReplaceOne(Mask, 0, MaskSize);
   if (Idx != -1)
-    return DAG.getNode(LoongArchISD::XVINSVE0, DL, VT, Src, Ins,
-                       DAG.getConstant(Idx, DL, Subtarget.getGRLenVT()));
+    return DAG.getNode(LoongArchISD::XVINSVE0, DL, VT, V1, V2,
+                       DAG.getConstant(Idx, DL, GRLenVT));
+
+  // Case 2: the lowest element of V1 replaces one element in V2.
+  Idx = checkReplaceOne(Mask, MaskSize, 0);
+  if (Idx != -1)
+    return DAG.getNode(LoongArchISD::XVINSVE0, DL, VT, V2, V1,
+                       DAG.getConstant(Idx, DL, GRLenVT));
 
   return SDValue();
 }
