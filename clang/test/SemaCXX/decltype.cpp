@@ -192,9 +192,19 @@ template <class> struct S2 {
     }();
 };
 
-
 using T2 = decltype(S2<void>::mem<void>);
 //expected-note@-1 {{in instantiation of static data member 'GH160497::S2<void>::mem<void>' requested here}}
+
+template <class> struct S3 {
+    template <class>
+    inline static int mem =    // Check we don't instantiate when the type is not deduced.
+    [] { static_assert(false);
+        return 42;
+    }();
+};
+
+using T = decltype(S3<void>::mem<void>);
+}
 
 namespace N1 {
 
@@ -210,6 +220,23 @@ T y = 42;
 
 }
 }
+namespace GH161196 {
+
+template <typename> struct A {
+  static constexpr int digits = 0;
+};
+
+template <typename> struct B {
+  template <int, typename MaskInt = int, int = A<MaskInt>::digits>
+  static constexpr auto XBitMask = 0;
+};
+
+struct C {
+  using ReferenceHost = B<int>;
+  template <int> static decltype(ReferenceHost::XBitMask<0>) XBitMask;
+};
+
+void test() { (void)C::XBitMask<0>; }
 #endif
 
 template<typename>
