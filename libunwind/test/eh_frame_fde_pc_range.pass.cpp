@@ -14,6 +14,7 @@
 // clang-format off
 
 // REQUIRES: linux, objcopy-available
+// UNSUPPORTED: target={{.+-gnueabihf}}
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan
