@@ -150,6 +150,10 @@ C++ Language Changes
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Started the implementation of `P2686R5 <https://wg21.link/P2686R5>`_ Constexpr structured bindings.
+  At this timem, references to constexpr and decomposition of *tuple-like* types are not supported
+  (only arrays and aggregates are).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -213,6 +217,10 @@ Non-comprehensive list of changes in this release
   conditional memory loads from vectors. Binds to the LLVM intrinsics of the
   same name.
 
+- Added ``__builtin_masked_gather`` and ``__builtin_masked_scatter`` for
+  conditional gathering and scattering operations on vectors. Binds to the LLVM
+  intrinsics of the same name.
+
 - The ``__builtin_popcountg``, ``__builtin_ctzg``, and ``__builtin_clzg``
   functions now accept fixed-size boolean vectors.
 
@@ -264,6 +272,9 @@ Attribute Changes in Clang
   attribute, allowing the attribute to only be attached to the declaration. Prior, this would be
   treated as an error where the definition and declaration would have differing types.
 
+- New format attributes ``gnu_printf``, ``gnu_scanf``, ``gnu_strftime`` and ``gnu_strfmon`` are added
+  as aliases for ``printf``, ``scanf``, ``strftime`` and ``strfmon``. (#GH16219)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added a separate diagnostic group ``-Wfunction-effect-redeclarations``, for the more pedantic
@@ -288,7 +299,8 @@ Improvements to Clang's diagnostics
   "format specifies type 'unsigned int' but the argument has type 'int', which differs in signedness [-Wformat-signedness]"
   "signedness of format specifier 'u' is incompatible with 'c' [-Wformat-signedness]"
   and the API-visible diagnostic id will be appropriate.
-
+- Clang now produces better diagnostics for template template parameter matching
+  involving 'auto' template parameters.
 - Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
@@ -349,6 +361,7 @@ Bug Fixes in This Version
   first parameter. (#GH113323).
 - Fixed a crash with incompatible pointer to integer conversions in designated
   initializers involving string literals. (#GH154046)
+- Fix crash on CTAD for alias template. (#GH131342)
 - Clang now emits a frontend error when a function marked with the `flatten` attribute
   calls another function that requires target features not enabled in the caller. This
   prevents a fatal error in the backend.
@@ -366,6 +379,7 @@ Bug Fixes in This Version
 - Fixed an assertion when an improper use of the ``malloc`` attribute targeting
   a function without arguments caused us to try to access a non-existent argument.
   (#GH159080)
+- Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -417,6 +431,10 @@ Bug Fixes to C++ Support
   ``__builtin_addressof``, and related issues with builtin arguments. (#GH154034)
 - Fix an assertion failure when taking the address on a non-type template parameter argument of
   object type. (#GH151531)
+- Suppress ``-Wdouble-promotion`` when explicitly asked for with C++ list initialization (#GH33409).
+- Fix the result of `__builtin_is_implicit_lifetime` for types with a user-provided constructor. (#GH160610)
+- Correctly deduce return types in ``decltype`` expressions. (#GH160497) (#GH56652) (#GH116319) (#GH161196)
+- Fixed a crash in the pre-C++23 warning for attributes before a lambda declarator (#GH161070).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -530,6 +548,7 @@ clang-format
 - Add ``NumericLiteralCase`` option for enforcing character case in numeric
   literals.
 - Add ``Leave`` suboption to ``IndentPPDirectives``.
+- Add ``AllowBreakBeforeQtProperty`` option.
 
 libclang
 --------
@@ -552,6 +571,7 @@ Crash and bug fixes
 - Fixed a crash in the static analyzer that when the expression in an
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 - Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
+- Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
 
 Improvements
 ^^^^^^^^^^^^
@@ -566,7 +586,9 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
-- Exposed `clang_getCursorLanguage` via `Cursor.language`.
+- Exposed ``clang_getCursorLanguage`` via ``Cursor.language``.
+- Add all missing ``CursorKind``s, ``TypeKind``s and
+  ``ExceptionSpecificationKind``s from ``Index.h``
 
 OpenMP Support
 --------------
@@ -580,6 +602,7 @@ OpenMP Support
 - Added support for ``defaultmap`` directive implicit-behavior ``storage``.
 - Added support for ``defaultmap`` directive implicit-behavior ``private``.
 - Added parsing and semantic analysis support for ``groupprivate`` directive.
+- Added support for 'omp fuse' directive.
 
 Improvements
 ^^^^^^^^^^^^

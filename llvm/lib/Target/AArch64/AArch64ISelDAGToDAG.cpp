@@ -4346,34 +4346,14 @@ bool AArch64DAGToDAGISel::SelectSVECpyDupImm(SDValue N, MVT VT, SDValue &Imm,
                     ->getAPIntValue()
                     .trunc(VT.getFixedSizeInBits())
                     .getSExtValue();
+  int32_t ImmVal, ShiftVal;
+  if (!AArch64_AM::isSVECpyDupImm(VT.getScalarSizeInBits(), Val, ImmVal,
+                                  ShiftVal))
+    return false;
 
-  switch (VT.SimpleTy) {
-  case MVT::i8:
-    // All immediates are supported.
-    Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
-    Imm = CurDAG->getTargetConstant(Val & 0xFF, DL, MVT::i32);
-    return true;
-  case MVT::i16:
-  case MVT::i32:
-  case MVT::i64:
-    // Support 8bit signed immediates.
-    if (Val >= -128 && Val <= 127) {
-      Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
-      Imm = CurDAG->getTargetConstant(Val & 0xFF, DL, MVT::i32);
-      return true;
-    }
-    // Support 16bit signed immediates that are a multiple of 256.
-    if (Val >= -32768 && Val <= 32512 && Val % 256 == 0) {
-      Shift = CurDAG->getTargetConstant(8, DL, MVT::i32);
-      Imm = CurDAG->getTargetConstant((Val >> 8) & 0xFF, DL, MVT::i32);
-      return true;
-    }
-    break;
-  default:
-    break;
-  }
-
-  return false;
+  Shift = CurDAG->getTargetConstant(ShiftVal, DL, MVT::i32);
+  Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
+  return true;
 }
 
 bool AArch64DAGToDAGISel::SelectSVESignedArithImm(SDValue N, SDValue &Imm) {

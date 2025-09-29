@@ -307,7 +307,7 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       if (End == StringRef::npos || End < 1 ||
           Parent->getStringTable()[End - 1] != '/') {
         return malformedError("string table at long name offset " +
-                              Twine(StringOffset) + "not terminated");
+                              Twine(StringOffset) + " not terminated");
       }
       return Parent->getStringTable().slice(StringOffset, End - 1);
     }

@@ -130,17 +130,16 @@ public:
     if (BR->getSourceManager().isInSystemHeader(CD->getLocation()))
       return;
 
-    ObjCContainerDecl::PropertyMap map;
-    CD->collectPropertiesToImplement(map);
-    for (auto it : map)
-      visitObjCPropertyDecl(CD, it.second);
-
-    if (auto *ID = dyn_cast<ObjCInterfaceDecl>(CD)) {
-      for (auto *Ivar : ID->ivars())
-        visitIvarDecl(CD, Ivar);
-      return;
-    }
     if (auto *ID = dyn_cast<ObjCImplementationDecl>(CD)) {
+      ObjCContainerDecl::PropertyMap map;
+      CD->collectPropertiesToImplement(map);
+      for (auto it : map)
+        visitObjCPropertyDecl(CD, it.second);
+
+      if (auto *Interface = ID->getClassInterface()) {
+        for (auto *Ivar : Interface->ivars())
+          visitIvarDecl(CD, Ivar);
+      }
       for (auto *PropImpl : ID->property_impls())
         visitPropImpl(CD, PropImpl);
       for (auto *Ivar : ID->ivars())

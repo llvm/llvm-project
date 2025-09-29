@@ -1100,7 +1100,9 @@ class BinOpSameOpcodeHelper {
       // constant + x cannot be -constant - x
       // instead, it should be x - -constant
       if (Pos == 1 ||
-          (FromOpcode == Instruction::Add && ToOpcode == Instruction::Sub))
+          ((FromOpcode == Instruction::Add || FromOpcode == Instruction::Or ||
+            FromOpcode == Instruction::Xor) &&
+           ToOpcode == Instruction::Sub))
         return SmallVector<Value *>({LHS, RHS});
       return SmallVector<Value *>({RHS, LHS});
     }
@@ -1187,6 +1189,10 @@ public:
       case Instruction::And:
         if (CIValue.isAllOnes())
           InterchangeableMask = CanBeAll;
+        break;
+      case Instruction::Xor:
+        if (CIValue.isZero())
+          InterchangeableMask = XorBIT | OrBIT | AndBIT | SubBIT | AddBIT;
         break;
       default:
         if (CIValue.isZero())
@@ -2237,8 +2243,7 @@ public:
   bool isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                      ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
                      const DataLayout &DL, ScalarEvolution &SE,
-                     const bool IsAnyPointerUsedOutGraph, const int64_t Diff,
-                     StridedPtrInfo &SPtrInfo) const;
+                     const int64_t Diff, StridedPtrInfo &SPtrInfo) const;
 
   /// Checks if the given array of loads can be represented as a vectorized,
   /// scatter or just simple gather.
@@ -6822,10 +6827,19 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                             ArrayRef<unsigned> Order,
                             const TargetTransformInfo &TTI,
                             const DataLayout &DL, ScalarEvolution &SE,
-                            const bool IsAnyPointerUsedOutGraph,
                             const int64_t Diff,
                             StridedPtrInfo &SPtrInfo) const {
   const size_t Sz = VL.size();
+  if (Diff % (Sz - 1) != 0)
+    return false;
+
+  // Try to generate strided load node.
+  auto IsAnyPointerUsedOutGraph = any_of(PointerOps, [&](Value *V) {
+    return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
+             return !isVectorized(U) && !MustGather.contains(U);
+           });
+  });
+
   const uint64_t AbsoluteDiff = std::abs(Diff);
   Type *ScalarTy = VL.front()->getType();
   auto *VecTy = getWidenedType(ScalarTy, Sz);
@@ -6956,18 +6970,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
                                    cast<Instruction>(V), UserIgnoreList);
                              }))
       return LoadsState::CompressVectorize;
-    // Simple check if not a strided access - clear order.
-    bool IsPossibleStrided = *Diff % (Sz - 1) == 0;
-    // Try to generate strided load node.
-    auto IsAnyPointerUsedOutGraph =
-        IsPossibleStrided && any_of(PointerOps, [&](Value *V) {
-          return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
-                   return !isVectorized(U) && !MustGather.contains(U);
-                 });
-        });
-    if (IsPossibleStrided &&
-        isStridedLoad(VL, PointerOps, Order, *TTI, *DL, *SE,
-                      IsAnyPointerUsedOutGraph, *Diff, SPtrInfo))
+    if (isStridedLoad(VL, PointerOps, Order, *TTI, *DL, *SE, *Diff, SPtrInfo))
       return LoadsState::StridedVectorize;
   }
   if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
@@ -17522,7 +17525,9 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                   return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
                 })) ||
         all_of(E->Scalars, [&](Value *V) {
-          return isa<PoisonValue>(V) || E->isCopyableElement(V) ||
+          return isa<PoisonValue>(V) ||
+                 (E->Idx == 0 && isa<InsertElementInst>(V)) ||
+                 E->isCopyableElement(V) ||
                  (!isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V));
         }))
       Res = FindLastInst();
@@ -19122,7 +19127,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     case Instruction::InsertElement: {
       assert(E->ReuseShuffleIndices.empty() && "All inserts should be unique");
-      Builder.SetInsertPoint(cast<Instruction>(E->Scalars.back()));
+      if (const TreeEntry *OpE = getOperandEntry(E, 1);
+          OpE && !OpE->isGather() && OpE->hasState() &&
+          !OpE->hasCopyableElements())
+        Builder.SetInsertPoint(cast<Instruction>(E->Scalars.back()));
+      else
+        setInsertPointAfterBundle(E);
       Value *V = vectorizeOperand(E, 1);
       ArrayRef<Value *> Op = E->getOperand(1);
       Type *ScalarTy = Op.front()->getType();

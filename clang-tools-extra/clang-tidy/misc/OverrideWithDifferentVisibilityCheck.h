@@ -17,7 +17,7 @@ namespace clang::tidy::misc {
 /// in the base class.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/override-with-different-visibility.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/override-with-different-visibility.html
 class OverrideWithDifferentVisibilityCheck : public ClangTidyCheck {
 public:
   enum class ChangeKind { Any, Widening, Narrowing };

@@ -399,6 +399,7 @@ __m128i test_mm_packus_epi32(__m128i x, __m128i y) {
   // CHECK: call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_packus_epi32(x, y);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_packus_epi32((__m128i)(__v4si){40000, -50000, 32767, -32768}, (__m128i)(__v4si){0, 1, -1, 70000}), -25536, 0, 32767, 0, 0, 1, 0, -1));
 
 __m128d test_mm_round_pd(__m128d x) {
   // CHECK-LABEL: test_mm_round_pd
