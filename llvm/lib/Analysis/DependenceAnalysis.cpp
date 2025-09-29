@@ -117,6 +117,10 @@ static cl::opt<unsigned> MIVMaxLevelThreshold(
     cl::desc("Maximum depth allowed for the recursive algorithm used to "
              "explore MIV direction vectors."));
 
+static cl::opt<bool> EnableBanerjeeMIVTest(
+    "da-enable-banerjee-miv-test", cl::init(false), cl::Hidden,
+    cl::desc("Enable Banerjee MIV test in dependence analysis."));
+
 //===----------------------------------------------------------------------===//
 // basics
 
@@ -2590,6 +2594,9 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
 bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
                                      const SmallBitVector &Loops,
                                      FullDependence &Result) const {
+  if (!EnableBanerjeeMIVTest)
+    return false;
+
   LLVM_DEBUG(dbgs() << "starting Banerjee\n");
   ++BanerjeeApplications;
   LLVM_DEBUG(dbgs() << "    Src = " << *Src << '\n');
