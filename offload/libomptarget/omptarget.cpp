@@ -1490,7 +1490,7 @@ class PrivateArgumentManagerTy {
                         : HstPteeBase;
   }
 
-  /// initialized the source buffer for corresponding-pointer-initialization.
+  /// Initialize the source buffer for corresponding-pointer-initialization.
   ///
   /// It computes and stores the target pointee base address (or the host
   /// pointee's base address, if lookup of target pointee fails) to the first
@@ -1933,8 +1933,8 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
           (I < ArgNum - 1 && (ArgTypes[I + 1] & OMP_TGT_MAPTYPE_MEMBER_OF));
       Ret = PrivateArgumentManager.addArg(
           HstPtrBegin, ArgSizes[I], TgtBaseOffset, IsFirstPrivate, TgtPtrBegin,
-          TgtArgs.size(), HstPtrName, AllocImmediately, HstPteeBase,
-          HstPteeBegin, IsAttach);
+          /*TgtArgsIndex=*/TgtArgs.size(), HstPtrName, AllocImmediately,
+          HstPteeBase, HstPteeBegin, /*IsCorrespondingPointerInit=*/IsAttach);
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT("Failed to process %s%sprivate argument " DPxMOD "\n",
                IsAttach ? "corresponding-pointer-initialization " : "",
