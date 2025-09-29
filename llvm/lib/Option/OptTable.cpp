@@ -807,7 +807,6 @@ void OptTable::internalPrintHelp(
       continue;
 
     const Info &CandidateInfo = getInfo(Id);
-
     if (!ShowHidden && (CandidateInfo.Flags & opt::HelpHidden))
       continue;
 

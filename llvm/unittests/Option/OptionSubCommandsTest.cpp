@@ -79,17 +79,15 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
   auto HandleMultipleSubcommands = [&](ArrayRef<StringRef> SubCommands) {
     ErrMsg.clear();
     RSO1 << "Multiple subcommands passed\n";
-    for (auto SC : SubCommands) {
+    for (auto SC : SubCommands)
       RSO1 << "\n" << SC;
-    }
   };
 
   auto HandleOtherPositionals = [&](ArrayRef<StringRef> Positionals) {
     ErrMsg.clear();
     RSO1 << "Unregistered positionals passed\n";
-    for (auto SC : Positionals) {
+    for (auto SC : Positionals)
       RSO1 << "\n" << SC;
-    }
   };
 
   {
