@@ -6,6 +6,7 @@
 ; RUN: llc <%s -mtriple=arm-none-eabi --frame-pointer=all 2>&1 \
 ; RUN:   | FileCheck %s -check-prefix=NO_FP_ELIM
 
+; RUN: llc <%s -mtriple=armv6-apple-ios2 2>&1 | FileCheck %s -check-prefix=IOS2
 ; RUN: llc <%s -mtriple=armv6k-apple-ios2 2>&1 | FileCheck %s -check-prefix=IOS2
 ; RUN: llc <%s -mtriple=armv6k-apple-ios3 2>&1 | FileCheck %s -check-prefix=IOS3
 ; RUN: llc <%s -mtriple=armv7-apple-ios2 2>&1 | FileCheck %s -check-prefix=IOSV7
