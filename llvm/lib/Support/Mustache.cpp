@@ -282,18 +282,15 @@ void stripTokenAhead(SmallVectorImpl<Token> &Tokens, size_t Idx) {
 // For example:
 //  The template string
 //  " \t{{#section}}A{{/section}}"
-// would be considered as having no text ahead and would be render as
+// would be considered as having no text ahead and would be render as:
 //  "A"
-// The exception for this is partial tag which requires us to
-// keep track of the indentation once it's rendered.
 void stripTokenBefore(SmallVectorImpl<Token> &Tokens, size_t Idx,
                       Token &CurrentToken, Token::Type CurrentType) {
   Token &PrevToken = Tokens[Idx - 1];
   StringRef PrevTokenBody = PrevToken.TokenBody;
   StringRef Unindented = PrevTokenBody.rtrim(" \r\t\v");
   size_t Indentation = PrevTokenBody.size() - Unindented.size();
-  if (CurrentType != Token::Type::Partial)
-    PrevToken.TokenBody = Unindented.str();
+  PrevToken.TokenBody = Unindented.str();
   CurrentToken.setIndentation(Indentation);
 }
 
@@ -439,7 +436,8 @@ class AddIndentationStringStream : public raw_ostream {
 public:
   explicit AddIndentationStringStream(llvm::raw_ostream &WrappedStream,
                                       size_t Indentation)
-      : Indentation(Indentation), WrappedStream(WrappedStream) {
+      : Indentation(Indentation), WrappedStream(WrappedStream),
+        NeedsIndent(true) {
     SetUnbuffered();
   }
 
@@ -448,10 +446,15 @@ protected:
     llvm::StringRef Data(Ptr, Size);
     SmallString<0> Indent;
     Indent.resize(Indentation, ' ');
+
     for (char C : Data) {
+      if (NeedsIndent && C != '\n') {
+        WrappedStream << Indent;
+        NeedsIndent = false;
+      }
       WrappedStream << C;
       if (C == '\n')
-        WrappedStream << Indent;
+        NeedsIndent = true;
     }
   }
 
@@ -460,6 +463,7 @@ protected:
 private:
   size_t Indentation;
   llvm::raw_ostream &WrappedStream;
+  bool NeedsIndent;
 };
 
 class Parser {
