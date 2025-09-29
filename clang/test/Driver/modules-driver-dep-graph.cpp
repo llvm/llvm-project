@@ -12,19 +12,22 @@
 // RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck -DPREFIX=%/t --check-prefixes=CHECK %s
 
-// CHECK:      digraph "Module Dependency Graph" {
+// CHECK:      clang: remark: printing module dependency graph [-Rmodules-driver]
+// CHECK-NEXT: digraph "Module Dependency Graph" {
 // CHECK-NEXT:         label="Module Dependency Graph";
+// CHECK-NEXT:         node [colorscheme={{.*}},style=filled,shape=Mrecord];
+// CHECK-NEXT:         edge [dir="back"];
 
-// CHECK:              "direct1:[[HASH_DIRECT1:.*]]" [ fillcolor=[[COLOR1:[0-9]+]],label="{ Kind: Clang module | Module name: direct1 | Modulemap file: [[PREFIX]]/module.modulemap | Input origin: User | Hash: [[HASH_DIRECT1]] }"];
-// CHECK-NEXT:         "direct2:[[HASH_DIRECT2:.*]]" [ fillcolor=[[COLOR1]],label="{ Kind: Clang module | Module name: direct2 | Modulemap file: [[PREFIX]]/module.modulemap | Input origin: User | Hash: [[HASH_DIRECT2]] }"];
-// CHECK-NEXT:         "root:[[HASH_ROOT:.*]]" [ fillcolor=[[COLOR1]],label="{ Kind: Clang module | Module name: root | Modulemap file: [[PREFIX]]/module.modulemap | Input origin: User | Hash: [[HASH_ROOT]] }"];
-// CHECK-NEXT:         "transitive1:[[HASH_TRANSITIVE1:.*]]" [ fillcolor=[[COLOR1]],label="{ Kind: Clang module | Module name: transitive1 | Modulemap file: [[PREFIX]]/module.modulemap | Input origin: User | Hash: [[HASH_TRANSITIVE1]] }"];
-// CHECK-NEXT:         "transitive2:[[HASH_TRANSITIVE2:.*]]" [ fillcolor=[[COLOR1]],label="{ Kind: Clang module | Module name: transitive2 | Modulemap file: [[PREFIX]]/module.modulemap | Input origin: User | Hash: [[HASH_TRANSITIVE2]] }"];
-// CHECK-NEXT:         "[[PREFIX]]/main.cpp" [ fillcolor=[[COLOR2:[0-9]+]],label="{ Kind: Non-module | Filename: [[PREFIX]]/main.cpp }"];
-// CHECK-NEXT:         "A" [ fillcolor=[[COLOR3:[0-9]+]],label="{ Kind: C++ named module | Module name: A | Filename: [[PREFIX]]/A.cpp | Input origin: User | Hash: {{.*}} }"];
-// CHECK-NEXT:         "A:B" [ fillcolor=[[COLOR3]],label="{ Kind: C++ named module | Module name: A:B | Filename: [[PREFIX]]/A-B.cpp | Input origin: User | Hash: {{.*}} }"];
-// CHECK-NEXT:         "A:C" [ fillcolor=[[COLOR3]],label="{ Kind: C++ named module | Module name: A:C | Filename: [[PREFIX]]/A-C.cpp | Input origin: User | Hash: {{.*}} }"];
-// CHECK-NEXT:         "B" [ fillcolor=[[COLOR3]],label="{ Kind: C++ named module | Module name: B | Filename: [[PREFIX]]/B.cpp | Input origin: User | Hash: {{.*}} }"];
+// CHECK:              "transitive1:[[HASH_TRANSITIVE1:.*]]" [ fillcolor=1,label="{ Kind: Clang module | Module name: transitive1 | Modulemap file: [[PREFIX]]/module.modulemap | Input origin: User | Hash: [[HASH_TRANSITIVE1]] }"];
+// CHECK-NEXT:         "transitive2:[[HASH_TRANSITIVE2:.*]]" [ fillcolor=1,label="{ Kind: Clang module | Module name: transitive2 | Modulemap file: [[PREFIX]]/module.modulemap | Input origin: User | Hash: [[HASH_TRANSITIVE2]] }"];
+// CHECK-NEXT:         "direct1:[[HASH_DIRECT1:.*]]" [ fillcolor=1,label="{ Kind: Clang module | Module name: direct1 | Modulemap file: [[PREFIX]]/module.modulemap | Input origin: User | Hash: [[HASH_DIRECT1]] }"];
+// CHECK-NEXT:         "direct2:[[HASH_DIRECT2:.*]]" [ fillcolor=1,label="{ Kind: Clang module | Module name: direct2 | Modulemap file: [[PREFIX]]/module.modulemap | Input origin: User | Hash: [[HASH_DIRECT2]] }"];
+// CHECK-NEXT:         "root:[[HASH_ROOT:.*]]" [ fillcolor=1,label="{ Kind: Clang module | Module name: root | Modulemap file: [[PREFIX]]/module.modulemap | Input origin: User | Hash: [[HASH_ROOT]] }"];
+// CHECK-NEXT:         "[[PREFIX]]/main.cpp" [ fillcolor=3,label="{ Kind: Non-module | Filename: [[PREFIX]]/main.cpp }"];
+// CHECK-NEXT:         "A" [ fillcolor=2,label="{ Kind: C++ named module | Module name: A | Filename: [[PREFIX]]/A.cpp | Input origin: User | Hash: {{.*}} }"];
+// CHECK-NEXT:         "A:B" [ fillcolor=2,label="{ Kind: C++ named module | Module name: A:B | Filename: [[PREFIX]]/A-B.cpp | Input origin: User | Hash: {{.*}} }"];
+// CHECK-NEXT:         "A:C" [ fillcolor=2,label="{ Kind: C++ named module | Module name: A:C | Filename: [[PREFIX]]/A-C.cpp | Input origin: User | Hash: {{.*}} }"];
+// CHECK-NEXT:         "B" [ fillcolor=2,label="{ Kind: C++ named module | Module name: B | Filename: [[PREFIX]]/B.cpp | Input origin: User | Hash: {{.*}} }"];
 
 // CHECK:              "direct1:[[HASH_DIRECT1]]" -> "transitive1:[[HASH_TRANSITIVE1]]";
 // CHECK-NEXT:         "direct1:[[HASH_DIRECT1]]" -> "transitive2:[[HASH_TRANSITIVE2]]";
