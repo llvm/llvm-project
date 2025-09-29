@@ -1,0 +1,4 @@
+# Check that we fail if earlier operations in a pipe fail.
+#
+# RUN: false | echo test
+#

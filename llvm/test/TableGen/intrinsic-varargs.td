@@ -3,5 +3,5 @@
 
 include "llvm/IR/Intrinsics.td"
 
-// CHECK: /* 0 */ 0, 29, 0,
+// CHECK: /* 0 */ 0, 26, 0,
 def int_foo : Intrinsic<[], [llvm_vararg_ty]>;

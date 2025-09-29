@@ -159,6 +159,7 @@
 ; CHECK-O-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: RecomputeGlobalsAAPass
+; CHECK-O-NEXT: Running pass: DropUnnecessaryAssumesPass
 ; CHECK-O-NEXT: Running pass: Float2IntPass
 ; CHECK-O-NEXT: Running pass: LowerConstantIntrinsicsPass
 ; CHECK-O3-NEXT: Running pass: ControlHeightReductionPass

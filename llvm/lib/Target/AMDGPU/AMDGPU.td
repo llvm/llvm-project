@@ -68,13 +68,15 @@ def FeatureFlatInstOffsets : SubtargetFeature<"flat-inst-offsets",
 def FeatureFlatGlobalInsts : SubtargetFeature<"flat-global-insts",
   "FlatGlobalInsts",
   "true",
-  "Have global_* flat memory instructions"
+  "Have global_* flat memory instructions",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureFlatScratchInsts : SubtargetFeature<"flat-scratch-insts",
   "FlatScratchInsts",
   "true",
-  "Have scratch_* flat memory instructions"
+  "Have scratch_* flat memory instructions",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureScalarFlatScratchInsts : SubtargetFeature<"scalar-flat-scratch-insts",
@@ -92,7 +94,8 @@ def FeatureEnableFlatScratch : SubtargetFeature<"enable-flat-scratch",
 def FeatureFlatGVSMode : SubtargetFeature<"flat-gvs-mode",
   "FlatGVSMode",
   "true",
-  "Have GVS addressing mode with flat_* instructions"
+  "Have GVS addressing mode with flat_* instructions",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureAddNoCarryInsts : SubtargetFeature<"add-no-carry-insts",
@@ -284,12 +287,6 @@ def FeatureSafeCUPrefetch : SubtargetFeature<"safe-cu-prefetch",
   "HasSafeCUPrefetch",
   "true",
   "VMEM CU scope prefetches do not fail on illegal address"
->;
-
-def FeatureCUStores : SubtargetFeature<"cu-stores",
-  "HasCUStores",
-  "true",
-  "Whether SCOPE_CU stores can be used on GFX12.5"
 >;
 
 def FeatureVcmpxExecWARHazard : SubtargetFeature<"vcmpx-exec-war-hazard",
@@ -581,6 +578,12 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
   "EnableRealTrue16Insts",
   "true",
   "Use true 16-bit registers"
+>;
+
+def FeatureD16Writes32BitVgpr : SubtargetFeature<"d16-write-vgpr32",
+  "EnableD16Writes32BitVgpr",
+  "true",
+  "D16 instructions potentially have 32-bit data dependencies"
 >;
 
 def FeatureBF16TransInsts : SubtargetFeature<"bf16-trans-insts",
@@ -934,13 +937,15 @@ def FeatureAtomicFMinFMaxF64GlobalInsts : SubtargetFeature<"atomic-fmin-fmax-glo
 def FeatureAtomicFMinFMaxF32FlatInsts : SubtargetFeature<"atomic-fmin-fmax-flat-f32",
   "HasAtomicFMinFMaxF32FlatInsts",
   "true",
-  "Has flat memory instructions for atomicrmw fmin/fmax for float"
+  "Has flat memory instructions for atomicrmw fmin/fmax for float",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureAtomicFMinFMaxF64FlatInsts : SubtargetFeature<"atomic-fmin-fmax-flat-f64",
   "HasAtomicFMinFMaxF64FlatInsts",
   "true",
-  "Has flat memory instructions for atomicrmw fmin/fmax for double"
+  "Has flat memory instructions for atomicrmw fmin/fmax for double",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureAtomicFaddNoRtnInsts : SubtargetFeature<"atomic-fadd-no-rtn-insts",
@@ -992,7 +997,8 @@ def FeatureFlatAtomicFaddF32Inst
   : SubtargetFeature<"flat-atomic-fadd-f32-inst",
   "HasFlatAtomicFaddF32Inst",
   "true",
-  "Has flat_atomic_add_f32 instruction"
+  "Has flat_atomic_add_f32 instruction",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureFlatBufferGlobalAtomicFaddF64Inst
@@ -1232,6 +1238,19 @@ def FeatureSetPrioIncWgInst : SubtargetFeature<"setprio-inc-wg-inst",
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
 
+// Ugly hack to accomodate assembling modules with mixed
+// wavesizes. Ideally we would have a mapping symbol in assembly which
+// would keep track of which sections of code should be treated as
+// wave32 and wave64. Instead what users do is assemble with both
+// wavesizes enabled. We translate this into this special mode so this
+// only influences assembler behavior and nothing else.
+def FeatureAssemblerPermissiveWavesize : SubtargetFeature<
+  "assembler-permissive-wavesize",
+  "AssemblerPermissiveWavesize",
+  "true",
+  "allow parsing wave32 and wave64 variants of instructions"
+>;
+
 class FeatureMaxPrivateElementSize<int size> : SubtargetFeature<
   "max-private-element-size-"#size,
   "MaxPrivateElementSize",
@@ -1435,6 +1454,12 @@ def FeatureLdsBarrierArriveAtomic : SubtargetFeature< "lds-barrier-arrive-atomic
   "HasLdsBarrierArriveAtomic",
   "true",
   "Has LDS barrier-arrive atomic instructions"
+>;
+
+def Feature45BitNumRecordsBufferResource : SubtargetFeature< "45-bit-num-records-buffer-resource",
+  "Has45BitNumRecordsBufferResource",
+  "true",
+  "The buffer resource (V#) supports 45-bit num_records"
 >;
 
 // Dummy feature used to disable assembler instructions.
@@ -1928,7 +1953,9 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureMemoryAtomicFAddF32DenormalSupport,
-   FeatureRealTrue16Insts]>;
+   FeatureRealTrue16Insts,
+   FeatureD16Writes32BitVgpr,
+]>;
 
 // There are few workarounds that need to be
 // added to all targets. This pessimizes codegen
@@ -2036,7 +2063,6 @@ def FeatureISAVersion12_50 : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
    FeatureRequiresAlignedVGPRs,
-   FeatureCUStores,
    FeatureAddressableLocalMemorySize327680,
    FeatureCuMode,
    Feature1024AddressableVGPRs,
@@ -2099,7 +2125,12 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureMadU32Inst,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
+   Feature45BitNumRecordsBufferResource,
 ]>;
+
+def FeatureISAVersion12_51 : FeatureSet<
+  !listconcat(FeatureISAVersion12_50.Features,
+  [FeatureDPALU_DPP])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
@@ -2563,6 +2594,11 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
   // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
   // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
+
+def HasD16Writes32BitVgpr: Predicate<"Subtarget->hasD16Writes32BitVgpr()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, FeatureD16Writes32BitVgpr)>;
+def NotHasD16Writes32BitVgpr: Predicate<"!Subtarget->hasD16Writes32BitVgpr()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, (not FeatureD16Writes32BitVgpr))>;
 
 def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
   AssemblerPredicate<(all_of FeatureBF16TransInsts)>;

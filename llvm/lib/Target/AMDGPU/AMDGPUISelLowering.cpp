@@ -423,7 +423,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::LRINT, ISD::LLRINT}, {MVT::f16, MVT::f32, MVT::f64},
                      Expand);
 
-  setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Custom);
+  setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Expand);
 
   if (Subtarget->has16BitInsts()) {
     setOperationAction(ISD::IS_FPCLASS, {MVT::f16, MVT::f32, MVT::f64}, Legal);
@@ -1439,8 +1439,8 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::CONCAT_VECTORS: return LowerCONCAT_VECTORS(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR: return LowerEXTRACT_SUBVECTOR(Op, DAG);
   case ISD::UDIVREM: return LowerUDIVREM(Op, DAG);
-  case ISD::SDIVREM: return LowerSDIVREM(Op, DAG);
-  case ISD::FREM: return LowerFREM(Op, DAG);
+  case ISD::SDIVREM:
+    return LowerSDIVREM(Op, DAG);
   case ISD::FCEIL: return LowerFCEIL(Op, DAG);
   case ISD::FTRUNC: return LowerFTRUNC(Op, DAG);
   case ISD::FRINT: return LowerFRINT(Op, DAG);
@@ -2433,21 +2433,6 @@ SDValue AMDGPUTargetLowering::LowerSDIVREM(SDValue Op,
     Rem
   };
   return DAG.getMergeValues(Res, DL);
-}
-
-// (frem x, y) -> (fma (fneg (ftrunc (fdiv x, y))), y, x)
-SDValue AMDGPUTargetLowering::LowerFREM(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc SL(Op);
-  EVT VT = Op.getValueType();
-  auto Flags = Op->getFlags();
-  SDValue X = Op.getOperand(0);
-  SDValue Y = Op.getOperand(1);
-
-  SDValue Div = DAG.getNode(ISD::FDIV, SL, VT, X, Y, Flags);
-  SDValue Trunc = DAG.getNode(ISD::FTRUNC, SL, VT, Div, Flags);
-  SDValue Neg = DAG.getNode(ISD::FNEG, SL, VT, Trunc, Flags);
-  // TODO: For f32 use FMAD instead if !hasFastFMA32?
-  return DAG.getNode(ISD::FMA, SL, VT, Neg, Y, X, Flags);
 }
 
 SDValue AMDGPUTargetLowering::LowerFCEIL(SDValue Op, SelectionDAG &DAG) const {
@@ -4134,8 +4119,6 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
 
-  // i64 (shl x, C) -> (build_pair 0, (shl x, C - 32))
-
   // On some subtargets, 64-bit shift is a quarter rate instruction. In the
   // common case, splitting this into a move and a 32-bit shift is faster and
   // the same code size.
@@ -4225,12 +4208,12 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
              (ElementType.getSizeInBits() - 1)) {
     ShiftAmt = ShiftFullAmt;
   } else {
-    SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
+    SDValue TruncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
     const SDValue ShiftMask =
         DAG.getConstant(TargetScalarType.getSizeInBits() - 1, SL, TargetType);
     // This AND instruction will clamp out of bounds shift values.
     // It will also be removed during later instruction selection.
-    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, truncShiftAmt, ShiftMask);
+    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, TruncShiftAmt, ShiftMask);
   }
 
   EVT ConcatType;
@@ -5682,6 +5665,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CALL)
   NODE_NAME_CASE(TC_RETURN)
   NODE_NAME_CASE(TC_RETURN_GFX)
+  NODE_NAME_CASE(TC_RETURN_GFX_WholeWave)
   NODE_NAME_CASE(TC_RETURN_CHAIN)
   NODE_NAME_CASE(TC_RETURN_CHAIN_DVGPR)
   NODE_NAME_CASE(TRAP)

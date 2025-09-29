@@ -2290,8 +2290,7 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
   bool IsExact = !IsDynamicCastToVoid &&
                  CGM.getCodeGenOpts().OptimizationLevel > 0 &&
                  DestRecordTy->getAsCXXRecordDecl()->isEffectivelyFinal() &&
-                 CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy) &&
-                 !getLangOpts().PointerAuthCalls;
+                 CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy);
 
   std::optional<CGCXXABI::ExactDynamicCastInfo> ExactCastInfo;
   if (IsExact) {

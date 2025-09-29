@@ -144,6 +144,8 @@ static cl::opt<unsigned>
 MaxArraySize("instcombine-maxarray-size", cl::init(1024),
              cl::desc("Maximum array size considered when doing a combine"));
 
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
 // FIXME: Remove this flag when it is no longer necessary to convert
 // llvm.dbg.declare to avoid inaccurate debug info. Setting this to false
 // increases variable availability at the cost of accuracy. Variables that
@@ -1361,6 +1363,10 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   if (!LHSIsSelect && !RHSIsSelect)
     return nullptr;
 
+  SelectInst *SI = ProfcheckDisableMetadataFixes
+                       ? nullptr
+                       : cast<SelectInst>(LHSIsSelect ? LHS : RHS);
+
   FastMathFlags FMF;
   BuilderTy::FastMathFlagGuard Guard(Builder);
   if (isa<FPMathOperator>(&I)) {
@@ -1381,15 +1387,14 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     // We need an 'add' and exactly 1 arm of the select to have been simplified.
     if (Opcode != Instruction::Add || (!True && !False) || (True && False))
       return nullptr;
-
     Value *N;
     if (True && match(FVal, m_Neg(m_Value(N)))) {
       Value *Sub = Builder.CreateSub(Z, N);
-      return Builder.CreateSelect(Cond, True, Sub, I.getName());
+      return Builder.CreateSelect(Cond, True, Sub, I.getName(), SI);
     }
     if (False && match(TVal, m_Neg(m_Value(N)))) {
       Value *Sub = Builder.CreateSub(Z, N);
-      return Builder.CreateSelect(Cond, Sub, False, I.getName());
+      return Builder.CreateSelect(Cond, Sub, False, I.getName(), SI);
     }
     return nullptr;
   };
@@ -1425,9 +1430,9 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   if (!True || !False)
     return nullptr;
 
-  Value *SI = Builder.CreateSelect(Cond, True, False);
-  SI->takeName(&I);
-  return SI;
+  Value *NewSI = Builder.CreateSelect(Cond, True, False, I.getName(), SI);
+  NewSI->takeName(&I);
+  return NewSI;
 }
 
 /// Freely adapt every user of V as-if V was changed to !V.
@@ -2568,7 +2573,7 @@ Instruction *InstCombinerImpl::narrowMathIfNoOverflow(BinaryOperator &BO) {
     Constant *WideC;
     if (!Op0->hasOneUse() || !match(Op1, m_Constant(WideC)))
       return nullptr;
-    Constant *NarrowC = getLosslessTrunc(WideC, X->getType(), CastOpc);
+    Constant *NarrowC = getLosslessInvCast(WideC, X->getType(), CastOpc, DL);
     if (!NarrowC)
       return nullptr;
     Y = NarrowC;
@@ -2744,125 +2749,53 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   if (auto *I = combineConstantOffsets(GEP, *this))
     return I;
 
-  // For constant GEPs, use a more general offset-based folding approach.
-  Type *PtrTy = Src->getType()->getScalarType();
-  if (GEP.hasAllConstantIndices() &&
-      (Src->hasOneUse() || Src->hasAllConstantIndices())) {
-    // Split Src into a variable part and a constant suffix.
-    gep_type_iterator GTI = gep_type_begin(*Src);
-    Type *BaseType = GTI.getIndexedType();
-    bool IsFirstType = true;
-    unsigned NumVarIndices = 0;
-    for (auto Pair : enumerate(Src->indices())) {
-      if (!isa<ConstantInt>(Pair.value())) {
-        BaseType = GTI.getIndexedType();
-        IsFirstType = false;
-        NumVarIndices = Pair.index() + 1;
-      }
-      ++GTI;
-    }
-
-    // Determine the offset for the constant suffix of Src.
-    APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), 0);
-    if (NumVarIndices != Src->getNumIndices()) {
-      // FIXME: getIndexedOffsetInType() does not handled scalable vectors.
-      if (BaseType->isScalableTy())
-        return nullptr;
-
-      SmallVector<Value *> ConstantIndices;
-      if (!IsFirstType)
-        ConstantIndices.push_back(
-            Constant::getNullValue(Type::getInt32Ty(GEP.getContext())));
-      append_range(ConstantIndices, drop_begin(Src->indices(), NumVarIndices));
-      Offset += DL.getIndexedOffsetInType(BaseType, ConstantIndices);
-    }
-
-    // Add the offset for GEP (which is fully constant).
-    if (!GEP.accumulateConstantOffset(DL, Offset))
-      return nullptr;
-
-    // Convert the total offset back into indices.
-    SmallVector<APInt> ConstIndices =
-        DL.getGEPIndicesForOffset(BaseType, Offset);
-    if (!Offset.isZero() || (!IsFirstType && !ConstIndices[0].isZero()))
-      return nullptr;
-
-    GEPNoWrapFlags NW = getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
-    SmallVector<Value *> Indices(
-        drop_end(Src->indices(), Src->getNumIndices() - NumVarIndices));
-    for (const APInt &Idx : drop_begin(ConstIndices, !IsFirstType)) {
-      Indices.push_back(ConstantInt::get(GEP.getContext(), Idx));
-      // Even if the total offset is inbounds, we may end up representing it
-      // by first performing a larger negative offset, and then a smaller
-      // positive one. The large negative offset might go out of bounds. Only
-      // preserve inbounds if all signs are the same.
-      if (Idx.isNonNegative() != ConstIndices[0].isNonNegative())
-        NW = NW.withoutNoUnsignedSignedWrap();
-      if (!Idx.isNonNegative())
-        NW = NW.withoutNoUnsignedWrap();
-    }
-
-    return replaceInstUsesWith(
-        GEP, Builder.CreateGEP(Src->getSourceElementType(), Src->getOperand(0),
-                               Indices, "", NW));
-  }
-
   if (Src->getResultElementType() != GEP.getSourceElementType())
     return nullptr;
-
-  SmallVector<Value*, 8> Indices;
 
   // Find out whether the last index in the source GEP is a sequential idx.
   bool EndsWithSequential = false;
   for (gep_type_iterator I = gep_type_begin(*Src), E = gep_type_end(*Src);
        I != E; ++I)
     EndsWithSequential = I.isSequential();
-
-  // Can we combine the two pointer arithmetics offsets?
-  if (EndsWithSequential) {
-    // Replace: gep (gep %P, long B), long A, ...
-    // With:    T = long A+B; gep %P, T, ...
-    Value *SO1 = Src->getOperand(Src->getNumOperands()-1);
-    Value *GO1 = GEP.getOperand(1);
-
-    // If they aren't the same type, then the input hasn't been processed
-    // by the loop above yet (which canonicalizes sequential index types to
-    // intptr_t).  Just avoid transforming this until the input has been
-    // normalized.
-    if (SO1->getType() != GO1->getType())
-      return nullptr;
-
-    Value *Sum =
-        simplifyAddInst(GO1, SO1, false, false, SQ.getWithInstruction(&GEP));
-    // Only do the combine when we are sure the cost after the
-    // merge is never more than that before the merge.
-    if (Sum == nullptr)
-      return nullptr;
-
-    Indices.append(Src->op_begin()+1, Src->op_end()-1);
-    Indices.push_back(Sum);
-    Indices.append(GEP.op_begin()+2, GEP.op_end());
-  } else if (isa<Constant>(*GEP.idx_begin()) &&
-             cast<Constant>(*GEP.idx_begin())->isNullValue() &&
-             Src->getNumOperands() != 1) {
-    // Otherwise we can do the fold if the first index of the GEP is a zero
-    Indices.append(Src->op_begin()+1, Src->op_end());
-    Indices.append(GEP.idx_begin()+1, GEP.idx_end());
-  }
-
-  // Don't create GEPs with more than one variable index.
-  unsigned NumVarIndices =
-      count_if(Indices, [](Value *Idx) { return !isa<Constant>(Idx); });
-  if (NumVarIndices > 1)
+  if (!EndsWithSequential)
     return nullptr;
 
-  if (!Indices.empty())
-    return replaceInstUsesWith(
-        GEP, Builder.CreateGEP(
-                 Src->getSourceElementType(), Src->getOperand(0), Indices, "",
-                 getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP))));
+  // Replace: gep (gep %P, long B), long A, ...
+  // With:    T = long A+B; gep %P, T, ...
+  Value *SO1 = Src->getOperand(Src->getNumOperands() - 1);
+  Value *GO1 = GEP.getOperand(1);
 
-  return nullptr;
+  // If they aren't the same type, then the input hasn't been processed
+  // by the loop above yet (which canonicalizes sequential index types to
+  // intptr_t).  Just avoid transforming this until the input has been
+  // normalized.
+  if (SO1->getType() != GO1->getType())
+    return nullptr;
+
+  Value *Sum =
+      simplifyAddInst(GO1, SO1, false, false, SQ.getWithInstruction(&GEP));
+  // Only do the combine when we are sure the cost after the
+  // merge is never more than that before the merge.
+  if (Sum == nullptr)
+    return nullptr;
+
+  SmallVector<Value *, 8> Indices;
+  Indices.append(Src->op_begin() + 1, Src->op_end() - 1);
+  Indices.push_back(Sum);
+  Indices.append(GEP.op_begin() + 2, GEP.op_end());
+
+  // Don't create GEPs with more than one non-zero index.
+  unsigned NumNonZeroIndices = count_if(Indices, [](Value *Idx) {
+    auto *C = dyn_cast<Constant>(Idx);
+    return !C || !C->isNullValue();
+  });
+  if (NumNonZeroIndices > 1)
+    return nullptr;
+
+  return replaceInstUsesWith(
+      GEP, Builder.CreateGEP(
+               Src->getSourceElementType(), Src->getOperand(0), Indices, "",
+               getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP))));
 }
 
 Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
@@ -3334,17 +3267,18 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return replaceInstUsesWith(GEP, Res);
   }
 
-  bool SeenVarIndex = false;
+  bool SeenNonZeroIndex = false;
   for (auto [IdxNum, Idx] : enumerate(Indices)) {
-    if (isa<Constant>(Idx))
+    auto *C = dyn_cast<Constant>(Idx);
+    if (C && C->isNullValue())
       continue;
 
-    if (!SeenVarIndex) {
-      SeenVarIndex = true;
+    if (!SeenNonZeroIndex) {
+      SeenNonZeroIndex = true;
       continue;
     }
 
-    // GEP has multiple variable indices: Split it.
+    // GEP has multiple non-zero indices: Split it.
     ArrayRef<Value *> FrontIndices = ArrayRef(Indices).take_front(IdxNum);
     Value *FrontGEP =
         Builder.CreateGEP(GEPEltType, PtrOp, FrontIndices,

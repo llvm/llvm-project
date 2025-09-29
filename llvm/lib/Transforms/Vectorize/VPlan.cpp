@@ -45,6 +45,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <cassert>
 #include <string>
 
@@ -54,6 +55,15 @@ using namespace llvm::VPlanPatternMatch;
 namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
 }
+
+/// @{
+/// Metadata attribute names
+const char LLVMLoopVectorizeFollowupAll[] = "llvm.loop.vectorize.followup_all";
+const char LLVMLoopVectorizeFollowupVectorized[] =
+    "llvm.loop.vectorize.followup_vectorized";
+const char LLVMLoopVectorizeFollowupEpilogue[] =
+    "llvm.loop.vectorize.followup_epilogue";
+/// @}
 
 extern cl::opt<unsigned> ForceTargetInstructionCost;
 
@@ -333,37 +343,21 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     LastLane = 0;
   }
 
-  auto *LastInst = cast<Instruction>(get(Def, LastLane));
+  // We need to construct the vector value for a single-scalar value by
+  // broadcasting the scalar to all lanes.
+  // TODO: Replace by introducing Broadcast VPInstructions.
+  assert(IsSingleScalar && "must be a single-scalar at this point");
   // Set the insert point after the last scalarized instruction or after the
   // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
   // will directly follow the scalar definitions.
   auto OldIP = Builder.saveIP();
+  auto *LastInst = cast<Instruction>(get(Def, LastLane));
   auto NewIP = isa<PHINode>(LastInst)
                    ? LastInst->getParent()->getFirstNonPHIIt()
                    : std::next(BasicBlock::iterator(LastInst));
   Builder.SetInsertPoint(&*NewIP);
-
-  // However, if we are vectorizing, we need to construct the vector values.
-  // If the value is known to be uniform after vectorization, we can just
-  // broadcast the scalar value corresponding to lane zero. Otherwise, we
-  // construct the vector values using insertelement instructions. Since the
-  // resulting vectors are stored in State, we will only generate the
-  // insertelements once.
-  Value *VectorValue = nullptr;
-  if (IsSingleScalar) {
-    VectorValue = GetBroadcastInstrs(ScalarValue);
-    set(Def, VectorValue);
-  } else {
-    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
-    assert(isa<VPInstruction>(Def) &&
-           "Explicit BuildVector recipes must have"
-           "handled packing for non-VPInstructions.");
-    // Initialize packing with insertelements to start from poison.
-    VectorValue = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
-    for (unsigned Lane = 0; Lane < VF.getFixedValue(); ++Lane)
-      VectorValue = packScalarIntoVectorizedValue(Def, VectorValue, Lane);
-    set(Def, VectorValue);
-  }
+  Value *VectorValue = GetBroadcastInstrs(ScalarValue);
+  set(Def, VectorValue);
   Builder.restoreIP(OldIP);
   return VectorValue;
 }
@@ -851,19 +845,10 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   if (VF.isScalable())
     return InstructionCost::getInvalid();
 
-  // First compute the cost of the conditionally executed recipes, followed by
-  // account for the branching cost, except if the mask is a header mask or
-  // uniform condition.
-  using namespace llvm::VPlanPatternMatch;
+  // Compute and return the cost of the conditionally executed recipes.
+  assert(VF.isVector() && "Can only compute vector cost at the moment.");
   VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
-  InstructionCost ThenCost = Then->cost(VF, Ctx);
-
-  // For the scalar case, we may not always execute the original predicated
-  // block, Thus, scale the block's cost by the probability of executing it.
-  if (VF.isScalar())
-    return ThenCost / getPredBlockCostDivisor(Ctx.CostKind);
-
-  return ThenCost;
+  return Then->cost(VF, Ctx);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -975,12 +960,24 @@ void VPlan::execute(VPTransformState *State) {
   setName("Final VPlan");
   LLVM_DEBUG(dump());
 
-  // Disconnect scalar preheader and scalar header, as the dominator tree edge
-  // will be updated as part of VPlan execution. This allows keeping the DTU
-  // logic generic during VPlan execution.
   BasicBlock *ScalarPh = State->CFG.ExitBB;
-  State->CFG.DTU.applyUpdates(
-      {{DominatorTree::Delete, ScalarPh, ScalarPh->getSingleSuccessor()}});
+  VPBasicBlock *ScalarPhVPBB = getScalarPreheader();
+  if (ScalarPhVPBB->hasPredecessors()) {
+    // Disconnect scalar preheader and scalar header, as the dominator tree edge
+    // will be updated as part of VPlan execution. This allows keeping the DTU
+    // logic generic during VPlan execution.
+    State->CFG.DTU.applyUpdates(
+        {{DominatorTree::Delete, ScalarPh, ScalarPh->getSingleSuccessor()}});
+  } else {
+    Loop *OrigLoop =
+        State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
+    // If the original loop is unreachable, we need to delete it.
+    auto Blocks = OrigLoop->getBlocksVector();
+    Blocks.push_back(cast<VPIRBasicBlock>(ScalarPhVPBB)->getIRBasicBlock());
+    for (auto *BB : Blocks)
+      State->LI->removeBlock(BB);
+    State->LI->erase(OrigLoop);
+  }
 
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Entry);
@@ -1615,6 +1612,121 @@ VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {
   llvm_unreachable("No plan found!");
 }
 
+static void addRuntimeUnrollDisableMetaData(Loop *L) {
+  SmallVector<Metadata *, 4> MDs;
+  // Reserve first location for self reference to the LoopID metadata node.
+  MDs.push_back(nullptr);
+  bool IsUnrollMetadata = false;
+  MDNode *LoopID = L->getLoopID();
+  if (LoopID) {
+    // First find existing loop unrolling disable metadata.
+    for (unsigned I = 1, IE = LoopID->getNumOperands(); I < IE; ++I) {
+      auto *MD = dyn_cast<MDNode>(LoopID->getOperand(I));
+      if (MD) {
+        const auto *S = dyn_cast<MDString>(MD->getOperand(0));
+        if (!S)
+          continue;
+        if (S->getString().starts_with("llvm.loop.unroll.runtime.disable"))
+          continue;
+        IsUnrollMetadata =
+            S->getString().starts_with("llvm.loop.unroll.disable");
+      }
+      MDs.push_back(LoopID->getOperand(I));
+    }
+  }
+
+  if (!IsUnrollMetadata) {
+    // Add runtime unroll disable metadata.
+    LLVMContext &Context = L->getHeader()->getContext();
+    SmallVector<Metadata *, 1> DisableOperands;
+    DisableOperands.push_back(
+        MDString::get(Context, "llvm.loop.unroll.runtime.disable"));
+    MDNode *DisableNode = MDNode::get(Context, DisableOperands);
+    MDs.push_back(DisableNode);
+    MDNode *NewLoopID = MDNode::get(Context, MDs);
+    // Set operand 0 to refer to the loop id itself.
+    NewLoopID->replaceOperandWith(0, NewLoopID);
+    L->setLoopID(NewLoopID);
+  }
+}
+
+void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
+    Loop *VectorLoop, VPBasicBlock *HeaderVPBB, const VPlan &Plan,
+    bool VectorizingEpilogue, MDNode *OrigLoopID,
+    std::optional<unsigned> OrigAverageTripCount,
+    unsigned OrigLoopInvocationWeight, unsigned EstimatedVFxUF,
+    bool DisableRuntimeUnroll) {
+  // Update the metadata of the scalar loop. Skip the update when vectorizing
+  // the epilogue loop to ensure it is updated only once. Also skip the update
+  // when the scalar loop became unreachable.
+  if (Plan.getScalarPreheader()->hasPredecessors() && !VectorizingEpilogue) {
+    std::optional<MDNode *> RemainderLoopID =
+        makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
+                                        LLVMLoopVectorizeFollowupEpilogue});
+    if (RemainderLoopID) {
+      OrigLoop->setLoopID(*RemainderLoopID);
+    } else {
+      if (DisableRuntimeUnroll)
+        addRuntimeUnrollDisableMetaData(OrigLoop);
+
+      LoopVectorizeHints Hints(OrigLoop, true, *ORE);
+      Hints.setAlreadyVectorized();
+    }
+  }
+
+  if (!VectorLoop)
+    return;
+
+  if (std::optional<MDNode *> VectorizedLoopID = makeFollowupLoopID(
+          OrigLoopID, {LLVMLoopVectorizeFollowupAll,
+                       LLVMLoopVectorizeFollowupVectorized})) {
+    VectorLoop->setLoopID(*VectorizedLoopID);
+  } else {
+    // Keep all loop hints from the original loop on the vector loop (we'll
+    // replace the vectorizer-specific hints below).
+    if (OrigLoopID)
+      VectorLoop->setLoopID(OrigLoopID);
+
+    if (!VectorizingEpilogue) {
+      LoopVectorizeHints Hints(VectorLoop, true, *ORE);
+      Hints.setAlreadyVectorized();
+    }
+  }
+  TargetTransformInfo::UnrollingPreferences UP;
+  TTI.getUnrollingPreferences(VectorLoop, *PSE.getSE(), UP, ORE);
+  if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
+    addRuntimeUnrollDisableMetaData(VectorLoop);
+
+  // Set/update profile weights for the vector and remainder loops as original
+  // loop iterations are now distributed among them. Note that original loop
+  // becomes the scalar remainder loop after vectorization.
+  //
+  // For cases like foldTailByMasking() and requiresScalarEpiloque() we may
+  // end up getting slightly roughened result but that should be OK since
+  // profile is not inherently precise anyway. Note also possible bypass of
+  // vector code caused by legality checks is ignored, assigning all the weight
+  // to the vector loop, optimistically.
+  //
+  // For scalable vectorization we can't know at compile time how many
+  // iterations of the loop are handled in one vector iteration, so instead
+  // use the value of vscale used for tuning.
+  if (!OrigAverageTripCount)
+    return;
+  // Calculate number of iterations in unrolled loop.
+  unsigned AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
+  // Calculate number of iterations for remainder loop.
+  unsigned RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
+
+  if (HeaderVPBB) {
+    setLoopEstimatedTripCount(VectorLoop, AverageVectorTripCount,
+                              OrigLoopInvocationWeight);
+  }
+  if (Plan.getScalarPreheader()->hasPredecessors()) {
+    setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
+                              OrigLoopInvocationWeight);
+  }
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
   if (VPlans.empty()) {
@@ -1635,4 +1747,37 @@ VPCostContext::getOperandInfo(VPValue *V) const {
     return {};
 
   return TTI::getOperandInfo(V->getLiveInIRValue());
+}
+
+InstructionCost VPCostContext::getScalarizationOverhead(
+    Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
+    bool AlwaysIncludeReplicatingR) {
+  if (VF.isScalar())
+    return 0;
+
+  InstructionCost ScalarizationCost = 0;
+  // Compute the cost of scalarizing the result if needed.
+  if (!ResultTy->isVoidTy()) {
+    for (Type *VectorTy :
+         to_vector(getContainedTypes(toVectorizedTy(ResultTy, VF)))) {
+      ScalarizationCost += TTI.getScalarizationOverhead(
+          cast<VectorType>(VectorTy), APInt::getAllOnes(VF.getFixedValue()),
+          /*Insert=*/true,
+          /*Extract=*/false, CostKind);
+    }
+  }
+  // Compute the cost of scalarizing the operands, skipping ones that do not
+  // require extraction/scalarization and do not incur any overhead.
+  SmallPtrSet<const VPValue *, 4> UniqueOperands;
+  SmallVector<Type *> Tys;
+  for (auto *Op : Operands) {
+    if (Op->isLiveIn() ||
+        (!AlwaysIncludeReplicatingR &&
+         isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op)) ||
+        !UniqueOperands.insert(Op).second)
+      continue;
+    Tys.push_back(toVectorizedTy(Types.inferScalarType(Op), VF));
+  }
+  return ScalarizationCost +
+         TTI.getOperandsScalarizationOverhead(Tys, CostKind);
 }

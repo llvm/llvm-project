@@ -569,7 +569,7 @@ def ROCDL_MakeBufferRsrcOp :
   ROCDL_IntrOp<"make.buffer.rsrc", [0], [0], [Pure], 1>,
   Arguments<(ins LLVM_AnyPointer:$base,
                  I16:$stride,
-                 I32:$numRecords,
+                 I64:$numRecords,
                  I32:$flags)> {
   let results = (outs LLVM_AnyPointer:$res);
   let assemblyFormat = "operands attr-dict `:` type($base) `to` type($res)";
@@ -835,10 +835,17 @@ class ROCDL_ConcreteVector<Type elem, int length> :
 
 def ROCDL_V2I16Type : ROCDL_ConcreteVector<I16, 2>;
 def ROCDL_V2F16Type : ROCDL_ConcreteVector<F16, 2>;
+def ROCDL_V2I32Type : ROCDL_ConcreteVector<I32, 2>;
 def ROCDL_V2BF16Type : ROCDL_ConcreteVector<BF16, 2>;
 def ROCDL_V2F32Type : ROCDL_ConcreteVector<F32, 2>;
+def ROCDL_V3I32Type : ROCDL_ConcreteVector<I32, 3>;
 def ROCDL_V6I32Type : ROCDL_ConcreteVector<I32, 6>;
 def ROCDL_V8I32Type : ROCDL_ConcreteVector<I32, 8>;
+def ROCDL_V8BF16Type : ROCDL_ConcreteVector<BF16, 8>;
+def ROCDL_V8F16Type : ROCDL_ConcreteVector<F16, 8>;
+def ROCDL_V8F32Type : ROCDL_ConcreteVector<F32, 8>;
+def ROCDL_V16BF16Type : ROCDL_ConcreteVector<BF16, 16>;
+def ROCDL_V16F16Type : ROCDL_ConcreteVector<F16, 16>;
 def ROCDL_V16F32Type : ROCDL_ConcreteVector<F32, 16>;
 def ROCDL_V32F16Type : ROCDL_ConcreteVector<F16, 32>;
 def ROCDL_V32BF16Type : ROCDL_ConcreteVector<BF16, 32>;
@@ -974,6 +981,68 @@ class ScaleArgInfo<TypeConstraint argTyVal, string typeName> {
   string name = !tolower(typeName);
   string nameForOp = typeName;
 }
+
+//===---------------------------------------------------------------------===//
+// Scaled {fp4,bf8,fp8} to {bf16,f16,f32} conversion intrinsics
+//===---------------------------------------------------------------------===//
+
+foreach smallT = [
+  ScaleArgInfo<I32, "Fp4">,
+  ScaleArgInfo<ROCDL_V2I32Type, "Fp8">,
+  ScaleArgInfo<ROCDL_V2I32Type, "Bf8">
+] in {
+  foreach largeT = [
+    ScaleArgInfo<ROCDL_V8F16Type, "F16">,
+    ScaleArgInfo<ROCDL_V8BF16Type, "Bf16">,
+    ScaleArgInfo<ROCDL_V8F32Type, "F32">,
+  ] in {
+    def ROCDL_CvtPkScalePk8 # largeT.nameForOp # smallT.nameForOp # Op :
+          ROCDL_ConcreteNonMemIntrOp<"cvt.scale.pk8." # largeT.name # "." # smallT.name,
+          [Pure], 1, [2], ["scaleSel"]>,
+        Arguments<(ins smallT.type:$src, I32:$scale, I32Attr:$scaleSel)> {
+
+      let summary = "Scales 8 " # smallT.name # " and converts them to 8 " # largeT.name # ".";
+      let description = [{
+        Available on gfx1250+.
+      }];
+      let results = (outs largeT.type:$res);
+      let assemblyFormat = [{
+        attr-dict $src `,` $scale `[` $scaleSel `]` `:` type($res)
+      }];
+    }
+  } // foreach largeT
+} // foreach smallTOp
+
+//===---------------------------------------------------------------------===//
+// Scaled {bf6,fp6} to {bf16,f16,f32} conversion intrinsics
+//===---------------------------------------------------------------------===//
+
+foreach smallT = [
+  ScaleArgInfo<ROCDL_V3I32Type, "Fp6">,
+  ScaleArgInfo<ROCDL_V3I32Type, "Bf6">
+] in {
+  foreach largeT = [
+    ScaleArgInfo<ROCDL_V16F16Type, "F16">,
+    ScaleArgInfo<ROCDL_V16BF16Type, "Bf16">,
+    ScaleArgInfo<ROCDL_V16F32Type, "F32">,
+  ] in {
+    def ROCDL_CvtPkScalePk16 # largeT.nameForOp # smallT.nameForOp # Op :
+          ROCDL_ConcreteNonMemIntrOp<"cvt.scale.pk16." # largeT.name # "." # smallT.name,
+          [Pure], 1, [2], ["scaleSel"]>,
+        Arguments<(ins smallT.type:$src, I32:$scale, I32Attr:$scaleSel)> {
+
+      let summary = "Scales 16 " # smallT.name # " and converts them to 16 " # largeT.name # ".";
+      let description = [{
+        Available on gfx1250+.
+      }];
+      let results = (outs largeT.type:$res);
+      let assemblyFormat = [{
+        attr-dict $src `,` $scale `[` $scaleSel `]` `:` type($res)
+      }];
+
+    }
+  } // foreach largeT
+} // foreach smallTOp
 
 //===---------------------------------------------------------------------===//
 // Scaled 32x6-bit float float conversion intrinsics
@@ -1288,6 +1357,37 @@ def ROCDL_CvtScaleF32PkFp4F32Op :
   }];
  let assemblyFormat = [{
     attr-dict $src0 `,` $src1 `,` $scale `->` $oldVdst `[` $dstSelIndex `]` `:` type($res)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// FMED3 operations
+//===----------------------------------------------------------------------===//
+
+def ROCDL_FMed3Op : ROCDL_IntrOp<"fmed3", [0], [], [Pure, AllTypesMatch<["res", "src0", "src1", "src2"]>], 1>,
+  Arguments<(ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src0,
+                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src1,
+                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src2)> {
+  let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$res);
+  let summary = "Median of three float/half values";
+  let description = [{
+    Computes the median of three floating-point values using the AMDGPU fmed3 intrinsic.
+    This operation is equivalent to `max(min(a, b), min(max(a, b), c))` but uses the
+    hardware-accelerated V_MED3_F16/V_MED3_F32 instruction for better performance.
+    
+    The operation supports both scalar and vector floating-point types (f16, f32).
+    
+    Example:
+    ```mlir
+    // Scalar f32 median
+    %result = rocdl.fmed3 %a, %b, %c : f32
+    
+    // Vector f16 median
+    %result = rocdl.fmed3 %va, %vb, %vc : vector<4xf16>
+    ```
+  }];
+  let assemblyFormat = [{
+    $src0 `,` $src1 `,` $src2 attr-dict `:` type($res)
   }];
 }
 

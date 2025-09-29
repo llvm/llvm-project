@@ -48,6 +48,10 @@ static const MachineMemOperand::Flags MONoClobber =
 static const MachineMemOperand::Flags MOLastUse =
     MachineMemOperand::MOTargetFlag2;
 
+/// Mark the MMO of cooperative load/store atomics.
+static const MachineMemOperand::Flags MOCooperative =
+    MachineMemOperand::MOTargetFlag3;
+
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
   SIInstrWorklist() = default;
@@ -240,7 +244,7 @@ public:
     return ST;
   }
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
   bool isIgnorableUse(const MachineOperand &MO) const override;
 
@@ -793,9 +797,11 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::Spill;
   }
 
-  static bool isSpill(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::Spill;
+  static bool isSpill(const MCInstrDesc &Desc) {
+    return Desc.TSFlags & SIInstrFlags::Spill;
   }
+
+  static bool isSpill(const MachineInstr &MI) { return isSpill(MI.getDesc()); }
 
   static bool isWWMRegSpillOpcode(uint16_t Opcode) {
     return Opcode == AMDGPU::SI_SPILL_WWM_V32_SAVE ||
@@ -922,7 +928,8 @@ public:
     return Opcode == AMDGPU::S_CMPK_EQ_U32 || Opcode == AMDGPU::S_CMPK_LG_U32 ||
            Opcode == AMDGPU::S_CMPK_GT_U32 || Opcode == AMDGPU::S_CMPK_GE_U32 ||
            Opcode == AMDGPU::S_CMPK_LT_U32 || Opcode == AMDGPU::S_CMPK_LE_U32 ||
-           Opcode == AMDGPU::S_GETREG_B32;
+           Opcode == AMDGPU::S_GETREG_B32 ||
+           Opcode == AMDGPU::S_GETREG_B32_const;
   }
 
   /// \returns true if this is an s_store_dword* instruction. This is more
@@ -1051,6 +1058,8 @@ public:
       return AMDGPU::S_WAIT_DSCNT;
     case AMDGPU::S_WAIT_KMCNT_soft:
       return AMDGPU::S_WAIT_KMCNT;
+    case AMDGPU::S_WAIT_XCNT_soft:
+      return AMDGPU::S_WAIT_XCNT;
     default:
       return Opcode;
     }
@@ -1193,6 +1202,8 @@ public:
                          const MachineOperand &MO) const {
     return isImmOperandLegal(MI.getDesc(), OpNo, MO);
   }
+
+  bool isNeverCoissue(MachineInstr &MI) const;
 
   /// Check if this immediate value can be used for AV_MOV_B64_IMM_PSEUDO.
   bool isLegalAV64PseudoImm(uint64_t Imm) const;
@@ -1528,10 +1539,9 @@ public:
   /// Return true if this opcode should not be used by codegen.
   bool isAsmOnlyOpcode(int MCOp) const;
 
-  const TargetRegisterClass *getRegClass(const MCInstrDesc &TID, unsigned OpNum,
-                                         const TargetRegisterInfo *TRI,
-                                         const MachineFunction &MF)
-    const override;
+  const TargetRegisterClass *
+  getRegClass(const MCInstrDesc &TID, unsigned OpNum,
+              const TargetRegisterInfo *TRI) const override;
 
   void fixImplicitOperands(MachineInstr &MI) const;
 
