@@ -3390,9 +3390,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_discard: {
     return selectDiscard(ResVReg, ResType, I);
   }
-  case Intrinsic::modf: {
-    return selectModf(ResVReg, ResType, I);
-  }
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
