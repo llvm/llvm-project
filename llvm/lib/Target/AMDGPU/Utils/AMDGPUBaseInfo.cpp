@@ -3410,7 +3410,16 @@ MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
   const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
   if (!RC)
     return AMDGPU::NoRegister;
-  return RC->getRegister(Idx | (MSBs << 8));
+
+  Idx |= MSBs << 8;
+  if (RC->getID() == AMDGPU::VGPR_16RegClassID) {
+    // This class has 2048 registers with interleaved lo16 and hi16.
+    Idx *= 2;
+    if (Enc & AMDGPU::HWEncoding::IS_HI16)
+      ++Idx;
+  }
+
+  return RC->getRegister(Idx);
 }
 
 std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>

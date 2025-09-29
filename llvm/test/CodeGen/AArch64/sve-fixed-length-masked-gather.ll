@@ -438,8 +438,7 @@ define void @masked_gather_v32i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define void @masked_gather_v1i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    // implicit-def: $d0
 ; CHECK-NEXT:    cbnz x8, .LBB15_2
 ; CHECK-NEXT:  // %bb.1: // %cond.load

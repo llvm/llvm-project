@@ -211,6 +211,7 @@ def CooperativeMatrixOperandsOperand : OperandCategory;
 def SpecConstantOpOperandsOperand : OperandCategory;
 def MatrixMultiplyAccumulateOperandsOperand : OperandCategory;
 def FPEncodingOperand : OperandCategory;
+def PackedVectorFormatsOperand : OperandCategory;
 
 //===----------------------------------------------------------------------===//
 // Definition of the Environments
@@ -2026,3 +2027,22 @@ multiclass FPEncodingOperand<bits<32> value, list<Extension> reqExtensions>{
 }
 
 defm BFloat16KHR : FPEncodingOperand<0, [SPV_KHR_bfloat16]>;
+
+def PackedVectorFormats : GenericEnum, Operand<i32> {
+  let FilterClass = "PackedVectorFormats";
+  let NameField = "Name";
+  let ValueField = "Value";
+  let PrintMethod = !strconcat("printSymbolicOperand<OperandCategory::", FilterClass, "Operand>");
+}
+
+class PackedVectorFormats<string name, bits<32> value> {
+  string Name = name;
+  bits<32> Value = value;
+}
+
+multiclass PackedVectorFormatsOperand<bits<32> value, list<Extension> reqExtensions> {
+  def NAME : BuiltIn<NAME, value>;
+  defm : SymbolicOperandWithRequirements<PackedVectorFormatsOperand, value, NAME, 0, 0, reqExtensions, [], []>;
+}
+
+defm PackedVectorFormat4x8Bit : PackedVectorFormatsOperand<0, [SPV_KHR_integer_dot_product]>;
