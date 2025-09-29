@@ -2566,7 +2566,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   Register LastReg = 0;
-  int HazardSlotIndex = std::numeric_limits<int>::max();
+  ValueOrSentinelIntMax<int> HazardSlotIndex;
   for (auto &CS : CSI) {
     MCRegister Reg = CS.getReg();
     const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
@@ -2575,16 +2575,16 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     if (AFI->hasStackHazardSlotIndex() &&
         (!LastReg || !AArch64InstrInfo::isFpOrNEON(LastReg)) &&
         AArch64InstrInfo::isFpOrNEON(Reg)) {
-      assert(HazardSlotIndex == std::numeric_limits<int>::max() &&
+      assert(!HazardSlotIndex.has_value() &&
              "Unexpected register order for hazard slot");
       HazardSlotIndex = MFI.CreateStackObject(StackHazardSize, Align(8), true);
-      LLVM_DEBUG(dbgs() << "Created CSR Hazard at slot " << HazardSlotIndex
+      LLVM_DEBUG(dbgs() << "Created CSR Hazard at slot " << *HazardSlotIndex
                         << "\n");
-      AFI->setStackHazardCSRSlotIndex(HazardSlotIndex);
-      if ((unsigned)HazardSlotIndex < MinCSFrameIndex)
-        MinCSFrameIndex = HazardSlotIndex;
-      if ((unsigned)HazardSlotIndex > MaxCSFrameIndex)
-        MaxCSFrameIndex = HazardSlotIndex;
+      AFI->setStackHazardCSRSlotIndex(*HazardSlotIndex);
+      if (static_cast<unsigned>(*HazardSlotIndex) < MinCSFrameIndex)
+        MinCSFrameIndex = *HazardSlotIndex;
+      if (static_cast<unsigned>(*HazardSlotIndex) > MaxCSFrameIndex)
+        MaxCSFrameIndex = *HazardSlotIndex;
     }
 
     unsigned Size = RegInfo->getSpillSize(*RC);
@@ -2611,16 +2611,15 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   // Add hazard slot in the case where no FPR CSRs are present.
-  if (AFI->hasStackHazardSlotIndex() &&
-      HazardSlotIndex == std::numeric_limits<int>::max()) {
+  if (AFI->hasStackHazardSlotIndex() && !HazardSlotIndex.has_value()) {
     HazardSlotIndex = MFI.CreateStackObject(StackHazardSize, Align(8), true);
-    LLVM_DEBUG(dbgs() << "Created CSR Hazard at slot " << HazardSlotIndex
+    LLVM_DEBUG(dbgs() << "Created CSR Hazard at slot " << *HazardSlotIndex
                       << "\n");
-    AFI->setStackHazardCSRSlotIndex(HazardSlotIndex);
-    if ((unsigned)HazardSlotIndex < MinCSFrameIndex)
-      MinCSFrameIndex = HazardSlotIndex;
-    if ((unsigned)HazardSlotIndex > MaxCSFrameIndex)
-      MaxCSFrameIndex = HazardSlotIndex;
+    AFI->setStackHazardCSRSlotIndex(*HazardSlotIndex);
+    if (static_cast<unsigned>(*HazardSlotIndex) < MinCSFrameIndex)
+      MinCSFrameIndex = *HazardSlotIndex;
+    if (static_cast<unsigned>(*HazardSlotIndex) > MaxCSFrameIndex)
+      MaxCSFrameIndex = *HazardSlotIndex;
   }
 
   return true;
