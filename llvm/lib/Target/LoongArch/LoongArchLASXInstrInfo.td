@@ -2015,6 +2015,24 @@ def : Pat<(v4i32(fp_to_uint v4f64:$vj)),
                (XVFTINTRZ_LU_D v4f64:$vj)),
               sub_128)>;
 
+// XVAVG_{B/H/W/D/BU/HU/WU/DU}, XVAVGR_{B/H/W/D/BU/HU/WU/DU}
+defm : VAvgPat<sra, "XVAVG_B", v32i8>;
+defm : VAvgPat<sra, "XVAVG_H", v16i16>;
+defm : VAvgPat<sra, "XVAVG_W", v8i32>;
+defm : VAvgPat<sra, "XVAVG_D", v4i64>;
+defm : VAvgPat<srl, "XVAVG_BU", v32i8>;
+defm : VAvgPat<srl, "XVAVG_HU", v16i16>;
+defm : VAvgPat<srl, "XVAVG_WU", v8i32>;
+defm : VAvgPat<srl, "XVAVG_DU", v4i64>;
+defm : VAvgrPat<sra, "XVAVGR_B", v32i8>;
+defm : VAvgrPat<sra, "XVAVGR_H", v16i16>;
+defm : VAvgrPat<sra, "XVAVGR_W", v8i32>;
+defm : VAvgrPat<sra, "XVAVGR_D", v4i64>;
+defm : VAvgrPat<srl, "XVAVGR_BU", v32i8>;
+defm : VAvgrPat<srl, "XVAVGR_HU", v16i16>;
+defm : VAvgrPat<srl, "XVAVGR_WU", v8i32>;
+defm : VAvgrPat<srl, "XVAVGR_DU", v4i64>;
+
 // XVABSD_{B/H/W/D}[U]
 defm : PatXrXr<abds, "XVABSD">;
 defm : PatXrXrU<abdu, "XVABSD">;
