@@ -697,7 +697,8 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   LLVMContext &Ctx = MIRBuilder.getContext();
   const WebAssemblyTargetLowering &TLI = *getTLI<WebAssemblyTargetLowering>();
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
-  const WebAssemblySubtarget &Subtarget = MF.getSubtarget<WebAssemblySubtarget>();
+  const WebAssemblySubtarget &Subtarget =
+      MF.getSubtarget<WebAssemblySubtarget>();
 
   CallingConv::ID CallConv = Info.CallConv;
   if (!callingConvSupported(CallConv)) {
@@ -716,7 +717,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     */
 
   if (Info.IsTailCall) {
-      Info.LoweredTailCall = true;
+    Info.LoweredTailCall = true;
     auto NoTail = [&](const char *Msg) {
       if (Info.CB && Info.CB->isMustTailCall())
         fail(MIRBuilder, Msg);
@@ -773,64 +774,72 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   Register IndirectIdx;
 
   if (Info.Callee.isReg()) {
-      LLT CalleeType = MRI.getType(Info.Callee.getReg());
-      assert(CalleeType.isPointer() && "Trying to lower a call with a Callee other than a pointer???");
+    LLT CalleeType = MRI.getType(Info.Callee.getReg());
+    assert(CalleeType.isPointer() &&
+           "Trying to lower a call with a Callee other than a pointer???");
 
-      IsIndirect = true;
-      CallInst = MIRBuilder.buildInstrNoInsert(Info.LoweredTailCall ? WebAssembly::RET_CALL_INDIRECT : WebAssembly::CALL_INDIRECT);
+    IsIndirect = true;
+    CallInst = MIRBuilder.buildInstrNoInsert(
+        Info.LoweredTailCall ? WebAssembly::RET_CALL_INDIRECT
+                             : WebAssembly::CALL_INDIRECT);
 
-      // Placeholder for the type index.
-      // This gets replaced with the correct value in WebAssemblyMCInstLower.cpp
+    // Placeholder for the type index.
+    // This gets replaced with the correct value in WebAssemblyMCInstLower.cpp
+    CallInst.addImm(0);
+
+    MCSymbolWasm *Table;
+    if (CalleeType.getAddressSpace() ==
+        WebAssembly::WASM_ADDRESS_SPACE_DEFAULT) {
+      Table = WebAssembly::getOrCreateFunctionTableSymbol(MF.getContext(),
+                                                          &Subtarget);
+      IndirectIdx = Info.Callee.getReg();
+
+      auto PtrSize = CalleeType.getSizeInBits();
+      auto PtrIntLLT = LLT::scalar(PtrSize);
+
+      IndirectIdx = MIRBuilder.buildPtrToInt(PtrIntLLT, IndirectIdx).getReg(0);
+      if (PtrSize > 32) {
+        IndirectIdx =
+            MIRBuilder.buildTrunc(LLT::scalar(32), IndirectIdx).getReg(0);
+      }
+    } else if (CalleeType.getAddressSpace() ==
+               WebAssembly::WASM_ADDRESS_SPACE_FUNCREF) {
+      Table = WebAssembly::getOrCreateFuncrefCallTableSymbol(MF.getContext(),
+                                                             &Subtarget);
+
+      auto TableSetInstr =
+          MIRBuilder.buildInstr(WebAssembly::TABLE_SET_FUNCREF);
+      TableSetInstr.addSym(Table);
+      TableSetInstr.addUse(Info.Callee.getReg());
+      IndirectIdx = MIRBuilder.buildConstant(LLT::scalar(32), 0).getReg(0);
+    } else {
+      fail(MIRBuilder, "Invalid address space for indirect call");
+      return false;
+    }
+
+    if (Subtarget.hasCallIndirectOverlong()) {
+      CallInst.addSym(Table);
+    } else {
+      // For the MVP there is at most one table whose number is 0, but we can't
+      // write a table symbol or issue relocations.  Instead we just ensure the
+      // table is live and write a zero.
+      Table->setNoStrip();
       CallInst.addImm(0);
-
-      MCSymbolWasm *Table;
-      if (CalleeType.getAddressSpace() == WebAssembly::WASM_ADDRESS_SPACE_DEFAULT) {
-          Table = WebAssembly::getOrCreateFunctionTableSymbol(
-                MF.getContext(), &Subtarget);
-          IndirectIdx = Info.Callee.getReg();
-
-          auto PtrSize = CalleeType.getSizeInBits();
-          auto PtrIntLLT = LLT::scalar(PtrSize);
-
-          IndirectIdx = MIRBuilder.buildPtrToInt(PtrIntLLT, IndirectIdx).getReg(0);
-          if (PtrSize > 32) {
-              IndirectIdx = MIRBuilder.buildTrunc(LLT::scalar(32), IndirectIdx).getReg(0);
-          }
-      } else if (CalleeType.getAddressSpace() == WebAssembly::WASM_ADDRESS_SPACE_FUNCREF) {
-          Table = WebAssembly::getOrCreateFuncrefCallTableSymbol(
-                MF.getContext(), &Subtarget);
-
-          auto TableSetInstr = MIRBuilder.buildInstr(WebAssembly::TABLE_SET_FUNCREF);
-          TableSetInstr.addSym(Table);
-          TableSetInstr.addUse(Info.Callee.getReg());
-          IndirectIdx = MIRBuilder.buildConstant(LLT::scalar(32), 0).getReg(0);
-      } else {
-          fail(MIRBuilder, "Invalid address space for indirect call");
-          return false;
-      }
-
-      if (Subtarget.hasCallIndirectOverlong()) {
-        CallInst.addSym(Table);
-      } else {
-        // For the MVP there is at most one table whose number is 0, but we can't
-        // write a table symbol or issue relocations.  Instead we just ensure the
-        // table is live and write a zero.
-        Table->setNoStrip();
-        CallInst.addImm(0);
-      }
+    }
   } else {
-      CallInst = MIRBuilder.buildInstrNoInsert(Info.LoweredTailCall ? WebAssembly::RET_CALL : WebAssembly::CALL);
+    CallInst = MIRBuilder.buildInstrNoInsert(
+        Info.LoweredTailCall ? WebAssembly::RET_CALL : WebAssembly::CALL);
 
-      if (Info.Callee.isGlobal()) {
-          CallInst.addGlobalAddress(Info.Callee.getGlobal());
-      } else if (Info.Callee.isSymbol()) {
-          // TODO: figure out how to trigger/test this
-          CallInst.addSym(Info.Callee.getMCSymbol());
-      } else {
-          llvm_unreachable("Trying to lower call with a callee other than reg, global, or a symbol.");
-      }
+    if (Info.Callee.isGlobal()) {
+      CallInst.addGlobalAddress(Info.Callee.getGlobal());
+    } else if (Info.Callee.isSymbol()) {
+      // TODO: figure out how to trigger/test this
+      CallInst.addSym(Info.Callee.getMCSymbol());
+    } else {
+      llvm_unreachable("Trying to lower call with a callee other than reg, "
+                       "global, or a symbol.");
+    }
   }
-
 
   SmallVector<ArgInfo, 8> SplitArgs;
 
@@ -1028,8 +1037,9 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
         Register DstPtr =
             MIRBuilder
-                .buildPtrAdd(PtrLLT, VarArgStackPtr,
-                             MIRBuilder.buildConstant(SizeLLT, Offset).getReg(0))
+                .buildPtrAdd(
+                    PtrLLT, VarArgStackPtr,
+                    MIRBuilder.buildConstant(SizeLLT, Offset).getReg(0))
                 .getReg(0);
 
         MachineMemOperand *DstMMO = MF.getMachineMemOperand(
@@ -1053,7 +1063,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MIRBuilder.insertInstr(CallInst);
 
   if (Info.LoweredTailCall) {
-      return true;
+    return true;
   }
 
   if (Info.CanLowerReturn && !Info.OrigRet.Ty->isVoidTy()) {
