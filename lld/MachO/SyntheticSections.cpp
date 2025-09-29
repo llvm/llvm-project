@@ -1723,7 +1723,7 @@ void CStringSection::writeTo(uint8_t *buf) const {
 // `A`, but ld64 will treat them as being 16-byte aligned with an offset of
 // `16 % A`.
 static uint8_t getStringPieceAlignment(const CStringInputSection *isec,
-                                     const StringPiece &piece) {
+                                       const StringPiece &piece) {
   return llvm::countr_zero(isec->align | piece.inSecOff);
 }
 
