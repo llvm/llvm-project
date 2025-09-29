@@ -1025,6 +1025,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def pmuldq512 : X86Builtin<"_Vector<8, long long int>(_Vector<16, int>, _Vector<16, int>)">;
   def pmuludq512 : X86Builtin<"_Vector<8, long long int>(_Vector<16, int>, _Vector<16, int>)">;
+  def pshufd512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Constant int)">;
 }
 
 let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
@@ -2024,35 +2025,20 @@ let Features = "avx512f",
 
 let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def psrlv32hi : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Vector<32, short>)">;
-  def pshuflw512_mask  : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Constant int, _Vector<32, short>, unsigned int)">;
-  def pshuflw512_maskz : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Constant int, unsigned int)">;
-  def pshufhw512_mask  : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Constant int, _Vector<32, short>, unsigned int)">;
-  def pshufhw512_maskz : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Constant int, unsigned int)">;
 }
 
 let Features = "avx512bw,avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def psrlv16hi : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
-  def pshuflw256_mask  : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Constant int, _Vector<16, short>, unsigned short)">;
-  def pshuflw256_maskz : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Constant int, unsigned short)">;
-  def pshufhw256_mask  : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Constant int, _Vector<16, short>, unsigned short)">;
-  def pshufhw256_maskz : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Constant int, unsigned short)">;
 }
 
 let Features = "avx512bw,avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def psrlv8hi : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Vector<8, short>)">;
-  def pshuflw128_mask  : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Constant int, _Vector<8, short>, unsigned char)">;
-  def pshuflw128_maskz : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Constant int, unsigned char)">;
-  def pshufhw128_mask  : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Constant int, _Vector<8, short>, unsigned char)">;
-  def pshufhw128_maskz : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Constant int, unsigned char)">;
 }
 
 let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def psrlwi512 : X86Builtin<"_Vector<32, short>(_Vector<32, short>, int)">;
   def psrldi512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, int)">;
   def psrlqi512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, int)">;
-  def pshufd512_mask : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Constant int, _Vector<16, int>, unsigned short)">;
-  def pshufd512_maskz : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Constant int, unsigned short)">;
-  def pshufd512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Constant int)">;
 }
 
 let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
@@ -2069,14 +2055,10 @@ let Features = "avx512bw,avx512vl", Attributes = [NoThrow, Const, Constexpr, Req
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def psravq128 : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>)">;
-  def pshufd128_mask : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Constant int, _Vector<4, int>, unsigned char)">;
-  def pshufd128_maskz : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Constant int, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def psravq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>)">;
-  def pshufd256_mask : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Constant int, _Vector<8, int>, unsigned char)">;
-  def pshufd256_maskz : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Constant int, unsigned char)">;
 }
 
 let Features = "avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
