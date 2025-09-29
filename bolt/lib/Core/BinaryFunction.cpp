@@ -1397,6 +1397,7 @@ Error BinaryFunction::disassemble() {
 
       // ---- PPC64 ELFv2: mark calls that need a NOP in the slot after 'bl'
       if (BC.isPPC64() && MIB->isCall(Instruction)) {
+
         const uint64_t NextOff = Offset + Size;
 
         // If there's a next instruction inside the function
@@ -1420,6 +1421,9 @@ Error BinaryFunction::disassemble() {
             // afterwards.
             BC.MIB->addAnnotation(Instruction, "PPCNeedsCallSlotNOP", true);
           }
+                  LLVM_DEBUG(dbgs() << "PPC mark: call at 0x" << Twine::utohexstr(Address + Offset)
+                  << " size=" << Size << " nextOff=0x" << Twine::utohexstr(Address + NextOff)
+                  << (NextIsNop ? " (already has NOP)\n" : " (will need NOP)\n"));
         } else {
           // Call is last instruction: also needs a NOP on emission.
           BC.MIB->addAnnotation(Instruction, "PPCNeedsCallSlotNOP", true);
