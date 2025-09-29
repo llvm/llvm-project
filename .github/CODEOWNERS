@@ -85,11 +85,11 @@
 /mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
 /mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
-/mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
-/mlir/include/mlir/Dialect/Vector/IR @kuhar
-/mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
-/mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @hanhanW @nicolasvasilache
-/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache
+/mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @Groverkss @nicolasvasilache
+/mlir/include/mlir/Dialect/Vector/IR @banach-space @dcaballe @Groverkss @kuhar @nicolasvasilache
+/mlir/lib/Dialect/Vector @banach-space @dcaballe @Groverkss @nicolasvasilache
+/mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @Groverkss @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @Groverkss @hanhanW @MaheshRavishankar @nicolasvasilache
 /mlir/**/*EmulateNarrowType* @dcaballe @hanhanW
 
 # Presburger library in MLIR
