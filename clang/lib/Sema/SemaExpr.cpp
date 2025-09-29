@@ -20108,8 +20108,9 @@ static void DoMarkVarDeclReferenced(
   bool NeededForConstantEvaluation =
       isPotentiallyConstantEvaluatedContext(SemaRef) && UsableInConstantExpr;
 
-  bool NeedDefinition =
-      OdrUse == OdrUseContext::Used || NeededForConstantEvaluation;
+  bool NeedDefinition = OdrUse == OdrUseContext::Used ||
+                        NeededForConstantEvaluation ||
+                        Var->getType()->isUndeducedType();
 
   assert(!isa<VarTemplatePartialSpecializationDecl>(Var) &&
          "Can't instantiate a partial template specialization.");
