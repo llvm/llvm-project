@@ -311,7 +311,7 @@ func.func @test_expression_illegal_op(%arg0 : i1) -> i32 {
 // -----
 
 func.func @test_expression_no_use(%arg0: i32, %arg1: i32) -> i32 {
-  // expected-error @+1 {{'emitc.expression' op requires exactly one use for each operation}}
+  // expected-error @+1 {{'emitc.expression' op contains an unused operation}}
   %r = emitc.expression %arg0, %arg1 : (i32, i32) -> i32 {
     %a = emitc.add %arg0, %arg1 : (i32, i32) -> i32
     %b = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
@@ -323,12 +323,12 @@ func.func @test_expression_no_use(%arg0: i32, %arg1: i32) -> i32 {
 // -----
 
 func.func @test_expression_multiple_uses(%arg0: i32, %arg1: i32) -> i32 {
-  // expected-error @+1 {{'emitc.expression' op requires exactly one use for each operation}}
+  // expected-error @+1 {{'emitc.expression' op requires exactly one use for operations with side effects}}
   %r = emitc.expression %arg0, %arg1 : (i32, i32) -> i32 {
-    %a = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
+    %a = emitc.call_opaque "foo"(%arg0, %arg1) : (i32, i32) -> i32
     %b = emitc.add %a, %arg0 : (i32, i32) -> i32
-    %c = emitc.mul %arg1, %a : (i32, i32) -> i32
-    emitc.yield %a : i32
+    %c = emitc.mul %b, %a : (i32, i32) -> i32
+    emitc.yield %c : i32
   }
   return %r : i32
 }
@@ -527,6 +527,16 @@ emitc.global @myglobal_scalar : f32
 func.func @use_global() {
   // expected-error @+1 {{'emitc.get_global' op on non-array type expects result inner type 'i32' to match type 'f32' of the global @myglobal_scalar}}
   %0 = emitc.get_global @myglobal_scalar : !emitc.lvalue<i32>
+  return
+}
+
+// -----
+
+emitc.global @myglobal_value : f32
+
+func.func @use_global() {
+  // expected-error @+1 {{'emitc.get_global' op on non-array type expects result type to be an lvalue type for the global @myglobal_value}}
+  %0 = emitc.get_global @myglobal_value : !emitc.array<2xf32>
   return
 }
 

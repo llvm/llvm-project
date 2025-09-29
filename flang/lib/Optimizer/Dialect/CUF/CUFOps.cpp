@@ -345,17 +345,6 @@ llvm::LogicalResult cuf::StreamCastOp::verify() {
   return checkStreamType(*this);
 }
 
-//===----------------------------------------------------------------------===//
-// SetAllocatorOp
-//===----------------------------------------------------------------------===//
-
-llvm::LogicalResult cuf::SetAllocatorIndexOp::verify() {
-  if (!mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(getBox().getType())))
-    return emitOpError(
-        "expect box to be a reference to class or box type value");
-  return mlir::success();
-}
-
 // Tablegen operators
 
 #define GET_OP_CLASSES

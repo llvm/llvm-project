@@ -390,41 +390,15 @@
 // AVXVNNIINT16: "-target-feature" "+avxvnniint16"
 // NO-AVXVNNIINT16: "-target-feature" "-avxvnniint16"
 
-// RUN: %clang --target=i386 -mevex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=EVEX512,WARN-EVEX512 %s
-// RUN: %clang --target=i386 -mno-evex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=NO-EVEX512,WARN-EVEX512 %s
-// RUN: %clang --target=i386 -march=i386 -mavx10.1 %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=AVX10_1_512 %s
-// RUN: %clang --target=i386 -march=i386 -mno-avx10.1 %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=NO-AVX10_1 %s
-// RUN: %clang --target=i386 -mavx10.1-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_1_256,WARN-AVX10-256 %s
-// RUN: %clang --target=i386 -mavx10.1-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_1_512,WARN-AVX10-512 %s
-// RUN: %clang --target=i386 -mavx10.1-256 -mavx10.1-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_1_512 %s
-// RUN: %clang --target=i386 -mavx10.1-512 -mavx10.1-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_1_256 %s
-// RUN: not %clang --target=i386 -march=i386 -mavx10.1-128 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-AVX10 %s
-// RUN: not %clang --target=i386 -march=i386 -mavx10.a-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-AVX10 %s
-// RUN: not %clang --target=i386 -march=i386 -mavx10.1024-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-AVX10 %s
-// RUN: %clang --target=i386 -march=i386 -mavx10.1-256 -mavx512f %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-AVX512 %s
-// RUN: %clang --target=i386 -march=i386 -mavx10.1-256 -mno-avx512f %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-AVX512 %s
-// RUN: %clang --target=i386 -march=i386 -mavx10.1-256 -mevex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10-EVEX512,WARN-EVEX512 %s
-// RUN: %clang --target=i386 -march=i386 -mavx10.1-256 -mno-evex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10-EVEX512,WARN-EVEX512 %s
-// RUN: %clang --target=i386 -mavx10.2 %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=AVX10_2_512 %s
+// RUN: %clang --target=i386 -mavx10.1 %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=AVX10_1 %s
+// RUN: %clang --target=i386 -mno-avx10.1 %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=NO-AVX10_1 %s
+// AVX10_1: "-target-feature" "+avx10.1"
+// NO-AVX10_1: "-target-feature" "-avx10.1"
+
+// RUN: %clang --target=i386 -mavx10.2 %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=AVX10_2 %s
 // RUN: %clang --target=i386 -mno-avx10.2 %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=NO-AVX10_2 %s
-// RUN: %clang --target=i386 -mavx10.2-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_256,WARN-AVX10-256 %s
-// RUN: %clang --target=i386 -mavx10.2-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_512,WARN-AVX10-512 %s
-// RUN: %clang --target=i386 -mavx10.2-256 -mavx10.1-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_256,AVX10_1_512 %s
-// RUN: %clang --target=i386 -mavx10.2-512 -mavx10.1-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_512,AVX10_1_256 %s
-// WARN-EVEX512: warning: argument '{{.*}}evex512' is deprecated, no alternative argument provided because AVX10/256 is not supported and will be removed [-Wdeprecated]
-// WARN-AVX10-256: warning: argument 'avx10.{{.*}}-256' is deprecated, no alternative argument provided because AVX10/256 is not supported and will be removed [-Wdeprecated]
-// WARN-AVX10-512: warning: argument 'avx10.{{.*}}-512' is deprecated, use 'avx10.{{.*}}' instead [-Wdeprecated]
-// EVEX512: "-target-feature" "+evex512"
-// NO-EVEX512: "-target-feature" "-evex512"
-// NO-AVX10_1: "-target-feature" "-avx10.1-256"
-// NO-AVX10_2: "-target-feature" "-avx10.2-256"
-// AVX10_2_256: "-target-feature" "+avx10.2-256"
-// AVX10_2_512: "-target-feature" "+avx10.2-512"
-// AVX10_1_256: "-target-feature" "+avx10.1-256"
-// AVX10_1_512: "-target-feature" "+avx10.1-512"
-// BAD-AVX10: error: unknown argument{{:?}} '-mavx10.{{.*}}'
-// AVX10-AVX512: "-target-feature" "+avx10.1-256" "-target-feature" "{{.}}avx512f"
-// AVX10-EVEX512: "-target-feature" "+avx10.1-256" "-target-feature" "{{.}}evex512"
+// AVX10_2: "-target-feature" "+avx10.2"
+// NO-AVX10_2: "-target-feature" "-avx10.2"
 
 // RUN: %clang --target=i386 -musermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=USERMSR %s
 // RUN: %clang --target=i386 -mno-usermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-USERMSR %s

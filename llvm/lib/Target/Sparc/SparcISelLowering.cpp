@@ -115,7 +115,8 @@ static bool Analyze_CC_Sparc64_Full(bool IsReturn, unsigned &ValNo, MVT &ValVT,
 
   // Stack space is allocated for all arguments starting from [%fp+BIAS+128].
   unsigned size      = (LocVT == MVT::f128) ? 16 : 8;
-  Align alignment = (LocVT == MVT::f128) ? Align(16) : Align(8);
+  Align alignment =
+      (LocVT == MVT::f128 || ArgFlags.isSplit()) ? Align(16) : Align(8);
   unsigned Offset = State.AllocateStack(size, alignment);
   unsigned Reg = 0;
 
@@ -3510,7 +3511,7 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
 
 // Override to enable LOAD_STACK_GUARD lowering on Linux.
 bool SparcTargetLowering::useLoadStackGuardNode(const Module &M) const {
-  if (!Subtarget->isTargetLinux())
+  if (!Subtarget->getTargetTriple().isOSLinux())
     return TargetLowering::useLoadStackGuardNode(M);
   return true;
 }
