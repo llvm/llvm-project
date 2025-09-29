@@ -125,7 +125,9 @@ lazy-loading, and more. Each section contains a Section ID, whose high bit
 indicates if the section has alignment requirements, a length (which allows for
 skipping over the section), and an optional alignment. When an alignment is
 present, a variable number of padding bytes (0xCB) may appear before the section
-data. The alignment of a section must be a power of 2. The input bytecode buffer must satisfy the same alignment requirements as those of every section.
+data. The alignment of a section must be a power of 2. 
+The input bytecode buffer must satisfy the same alignment requirements as 
+those of every section.
 
 ## MLIR Encoding
 

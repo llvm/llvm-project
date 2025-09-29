@@ -148,6 +148,18 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
   return Result;
 }
 
+AliasResult AAResults::aliasErrno(const MemoryLocation &Loc, const Module *M) {
+  AliasResult Result = AliasResult::MayAlias;
+
+  for (const auto &AA : AAs) {
+    Result = AA->aliasErrno(Loc, M);
+    if (Result != AliasResult::MayAlias)
+      break;
+  }
+
+  return Result;
+}
+
 ModRefInfo AAResults::getModRefInfoMask(const MemoryLocation &Loc,
                                         bool IgnoreLocals) {
   SimpleAAQueryInfo AAQIP(*this);

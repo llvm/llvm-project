@@ -384,6 +384,10 @@ private:
                OpeningParen.Previous->is(tok::kw__Generic)) {
       Contexts.back().ContextType = Context::C11GenericSelection;
       Contexts.back().IsExpression = true;
+    } else if (OpeningParen.Previous &&
+               OpeningParen.Previous->TokenText == "Q_PROPERTY") {
+      Contexts.back().ContextType = Context::QtProperty;
+      Contexts.back().IsExpression = false;
     } else if (Line.InPPDirective &&
                (!OpeningParen.Previous ||
                 OpeningParen.Previous->isNot(tok::identifier))) {
@@ -828,11 +832,6 @@ private:
           // binary operator.
           if (Parent && Parent->is(TT_PointerOrReference))
             Parent->overwriteFixedType(TT_BinaryOperator);
-        }
-        // An arrow after an ObjC method expression is not a lambda arrow.
-        if (CurrentToken->is(TT_ObjCMethodExpr) && CurrentToken->Next &&
-            CurrentToken->Next->is(TT_LambdaArrow)) {
-          CurrentToken->Next->overwriteFixedType(TT_Unknown);
         }
         Left->MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = Left;
@@ -1803,6 +1802,11 @@ private:
             return false;
         }
       }
+      if (Style.AllowBreakBeforeQtProperty &&
+          Contexts.back().ContextType == Context::QtProperty &&
+          Tok->isQtProperty()) {
+        Tok->setFinalizedType(TT_QtProperty);
+      }
       break;
     case tok::arrow:
       if (Tok->isNot(TT_LambdaArrow) && Prev && Prev->is(tok::kw_noexcept))
@@ -2169,6 +2173,7 @@ private:
       TemplateArgument,
       // C11 _Generic selection.
       C11GenericSelection,
+      QtProperty,
       // Like in the outer parentheses in `ffnand ff1(.q());`.
       VerilogInstancePortList,
     } ContextType = Unknown;
@@ -3627,7 +3632,7 @@ void TokenAnnotator::setCommentLineLevels(
       // Align comments for preprocessor lines with the # in column 0 if
       // preprocessor lines are not indented. Otherwise, align with the next
       // line.
-      Line->Level = Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+      Line->Level = Style.IndentPPDirectives < FormatStyle::PPDIS_BeforeHash &&
                             PPDirectiveOrImportStmt
                         ? 0
                         : NextNonCommentLine->Level;
@@ -6254,7 +6259,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
               Right.Next->isOneOf(TT_FunctionDeclarationName, tok::kw_const)));
   }
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
-                    TT_ClassHeadName, tok::kw_operator)) {
+                    TT_ClassHeadName, TT_QtProperty, tok::kw_operator)) {
     return true;
   }
   if (Left.is(TT_PointerOrReference))
@@ -6486,13 +6491,14 @@ void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) const {
                << "):\n";
   const FormatToken *Tok = Line.First;
   while (Tok) {
-    llvm::errs() << " M=" << Tok->MustBreakBefore
+    llvm::errs() << " I=" << Tok->IndentLevel << " M=" << Tok->MustBreakBefore
                  << " C=" << Tok->CanBreakBefore
                  << " T=" << getTokenTypeName(Tok->getType())
                  << " S=" << Tok->SpacesRequiredBefore
                  << " F=" << Tok->Finalized << " B=" << Tok->BlockParameterCount
                  << " BK=" << Tok->getBlockKind() << " P=" << Tok->SplitPenalty
-                 << " Name=" << Tok->Tok.getName() << " L=" << Tok->TotalLength
+                 << " Name=" << Tok->Tok.getName() << " N=" << Tok->NestingLevel
+                 << " L=" << Tok->TotalLength
                  << " PPK=" << Tok->getPackingKind() << " FakeLParens=";
     for (prec::Level LParen : Tok->FakeLParens)
       llvm::errs() << LParen << "/";
