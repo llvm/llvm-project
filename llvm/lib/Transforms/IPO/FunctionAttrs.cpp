@@ -2472,12 +2472,12 @@ PreservedAnalyses NoRecurseLTOInferencePass::run(Module &M,
 
   for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
     // Skip any RefSCC that is part of a call cycle. A RefSCC containing more
-    // than one SCC indicates a recursive relationship, which could involve
-    // direct or indirect calls.
+    // than one SCC indicates a recursive relationship involving indirect calls.
     if (RC.size() > 1)
       continue;
 
-    // A single-SCC RefSCC could still be a self-loop.
+    // RefSCC contains a single-SCC. SCC size > 1 indicates mutually recursive
+    // functions. Ex: foo1 -> foo2 -> foo3 -> foo1.
     LazyCallGraph::SCC &S = *RC.begin();
     if (S.size() > 1)
       continue;
