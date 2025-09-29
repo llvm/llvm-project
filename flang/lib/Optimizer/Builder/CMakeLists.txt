@@ -42,6 +42,7 @@ add_flang_library(FIRBuilder
   CUFDialect
   FIRDialect
   HLFIRDialect
+  MIFDialect
 
   LINK_LIBS
   CUFAttrs
@@ -52,6 +53,7 @@ add_flang_library(FIRBuilder
   FortranEvaluate
   FortranSupport
   HLFIRDialect
+  MIFDialect
 
   MLIR_DEPS
   ${dialect_libs}
