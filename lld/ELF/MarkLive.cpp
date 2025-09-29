@@ -155,7 +155,7 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
     // associated text section is live, the LSDA will be retained due to section
     // group/SHF_LINK_ORDER rules (b) if the associated text section should be
     // discarded, marking the LSDA will unnecessarily retain the text section.
-    if (!(std::is_same_v<RelTy, Relocation> && fromFDE &&
+    if (!(fromFDE && std::is_same_v<RelTy, Relocation> &&
           ((relSec->flags & (SHF_EXECINSTR | SHF_LINK_ORDER)) ||
            relSec->nextInSectionGroup))) {
       Symbol *canonicalSym = d;
