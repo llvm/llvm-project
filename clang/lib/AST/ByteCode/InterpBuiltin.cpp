@@ -2894,97 +2894,46 @@ static bool interp__builtin_x86_extract_vector(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-// __builtin_extract_masked
 static bool interp__builtin_x86_extract_vector_masked(InterpState &S, CodePtr OpPC,
                                                       const CallExpr *Call,
                                                       unsigned ID) {
-  unsigned NumArgs = Call->getNumArgs();
+  assert(Call->getNumArgs() == 4);
+
+  APSInt UAPS = popToAPSInt(S, Call->getArg(3));
+  const Pointer &W = S.Stk.pop<Pointer>();
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
+  const Pointer &A = S.Stk.pop<Pointer>();
+
+  if (!A.getFieldDesc()->isPrimitiveArray() || !W.getFieldDesc()->isPrimitiveArray())
+    return false;
 
   const Pointer &Dst = S.Stk.peek<Pointer>();
   if (!Dst.getFieldDesc()->isPrimitiveArray())
     return false;
 
-  const Pointer *Merge = nullptr;
-  uint64_t Kmask = 0;
-  uint64_t Imm = 0;
-  const Pointer *Src = nullptr;
-
-  if (NumArgs == 4) {
-    // __m256 _mm512_mask_extractf32x8_ps(W, U, A, imm)
-    APSInt ImmAPS = popToAPSInt(S, Call->getArg(3));
-    Imm = ImmAPS.getZExtValue();
-
-    const Pointer &SrcP = S.Stk.pop<Pointer>();
-    Src = &SrcP;
-
-    APSInt KmaskAPS = popToAPSInt(S, Call->getArg(1));
-    Kmask = KmaskAPS.getZExtValue();
-
-    const Pointer &MergeP = S.Stk.pop<Pointer>();
-    Merge = &MergeP;
-
-  } else if (NumArgs == 3) {
-    // __m256 _mm512_maskz_extractf32x8_ps(U, A, imm)
-    APSInt ImmAPS = popToAPSInt(S, Call->getArg(2));
-    Imm = ImmAPS.getZExtValue();
-
-    const Pointer &SrcP = S.Stk.pop<Pointer>();
-    Src = &SrcP;
-
-    APSInt KmaskAPS = popToAPSInt(S, Call->getArg(0));
-    Kmask = KmaskAPS.getZExtValue();
-
-    Merge = nullptr; // maskz → zero fill
-  } else {
-    return false;
-  }
-
-  if (!Src->getFieldDesc()->isPrimitiveArray())
-    return false;
-
-  unsigned SrcElems = Src->getNumElems();
+  unsigned SrcElems = A.getNumElems();
   unsigned DstElems = Dst.getNumElems();
-  if (SrcElems == 0 || DstElems == 0 || (SrcElems % DstElems) != 0)
+  if (!SrcElems || !DstElems || (SrcElems % DstElems) != 0)
     return false;
 
-  unsigned NumLanes = SrcElems / DstElems;
-  unsigned Lane = static_cast<unsigned>(Imm % NumLanes);
-  unsigned ExtractPos = Lane * DstElems;
-
-  PrimType ElemPT = Src->getFieldDesc()->getPrimType();
-  if (ElemPT != Dst.getFieldDesc()->getPrimType())
+  // 타입 일치 체크
+  PrimType PT = A.getFieldDesc()->getPrimType();
+  if (PT != Dst.getFieldDesc()->getPrimType() ||
+      PT != W.getFieldDesc()->getPrimType())
     return false;
 
-  // --- 여기서 fast-path 추가 ---
-  unsigned UsedBits = std::min<unsigned>(DstElems, 64); // mask 폭 제한
-  uint64_t AllOnes = (UsedBits == 64 ? ~0ull : ((1ull << UsedBits) - 1));
-  bool MaskAll = (Kmask & AllOnes) == AllOnes;
+  unsigned numLanes = SrcElems / DstElems;
+  unsigned lane     = static_cast<unsigned>(ImmAPS.getZExtValue() % numLanes);
+  unsigned base     = lane * DstElems;
 
-  if (MaskAll) {
-    // merge는 무시, src에서 그대로 복사
-    TYPE_SWITCH(ElemPT, {
-      for (unsigned I = 0; I != DstElems; ++I)
-        Dst.elem<T>(I) = Src->elem<T>(ExtractPos + I);
-    });
-    Dst.initializeAllElements();
-    return true;
-  }
-  // --- fast-path 끝 ---
+  uint64_t U = UAPS.getZExtValue();
 
-  auto storeZeroAt = [&](unsigned I) {
-    TYPE_SWITCH(ElemPT, { Dst.elem<T>(I) = T{}; });
-  };
-
-  TYPE_SWITCH(ElemPT, {
-    for (unsigned I = 0; I != DstElems; ++I) {
-      bool Take = ((Kmask >> I) & 1) != 0;
-      if (Take) {
-        Dst.elem<T>(I) = Src->elem<T>(ExtractPos + I);
-      } else if (Merge) {
-        Dst.elem<T>(I) = Merge->elem<T>(I);
-      } else {
-        storeZeroAt(I);
-      }
+  TYPE_SWITCH(PT, {
+    for (unsigned i = 0; i < DstElems; ++i) {
+      if ((U >> i) & 1)
+        Dst.elem<T>(i) = A.elem<T>(base + i);
+      else
+        Dst.elem<T>(i) = W.elem<T>(i);   
     }
   });
 
