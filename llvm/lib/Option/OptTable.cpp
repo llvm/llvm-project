@@ -561,9 +561,9 @@ InputArgList OptTable::internalParseArgs(
     }
 
     unsigned Prev = Index;
-    std::unique_ptr<Arg> A = GroupedShortOptions 
-                  ? parseOneArgGrouped(Args, Index)
-                  : internalParseOneArg(Args, Index, ExcludeOption);
+    std::unique_ptr<Arg> A = GroupedShortOptions
+                 ? parseOneArgGrouped(Args, Index)
+                 : internalParseOneArg(Args, Index, ExcludeOption);
     assert((Index > Prev || GroupedShortOptions) &&
            "Parser failed to consume argument.");
 
