@@ -756,7 +756,7 @@ void OptTable::internalPrintHelp(
   // pairs.
   std::map<std::string, std::vector<OptionInfo>> GroupedOptionHelp;
 
-  auto ActiveSubCommand =
+  const auto ActiveSubCommand =
       std::find_if(SubCommands.begin(), SubCommands.end(),
                    [&](const auto &C) { return SubCommand == C.Name; });
   if (!SubCommand.empty()) {
@@ -775,24 +775,30 @@ void OptTable::internalPrintHelp(
   }
 
   auto DoesOptionBelongToSubcommand = [&](const Info &CandidateInfo) {
-    // Retrieve the SubCommandIDs registered to the given current CandidateInfo Option.
+    // Retrieve the SubCommandIDs registered to the given current CandidateInfo
+    // Option.
     ArrayRef<unsigned> SubCommandIDs =
         CandidateInfo.getCommandIDs(SubCommandIDsTable);
 
     // If no registered subcommands, then only global options are to be printed.
-    // If no valid SubCommand (empty) in commandline then print the current global CandidateInfo Option.
+    // If no valid SubCommand (empty) in commandline then print the current
+    // global CandidateInfo Option.
     if (SubCommandIDs.empty())
       return SubCommand.empty();
-    
+
     // Handle CandidateInfo Option which has at least one registered SubCommand.
-    // If no valid SubCommand (empty) in commandline, this CandidateInfo option should not be printed.
+    // If no valid SubCommand (empty) in commandline, this CandidateInfo option
+    // should not be printed.
     if (SubCommand.empty())
       return false;
 
-    // Find the ID of the valid subcommand passed in commandline (its index in the SubCommands table which contains all subcommands).
+    // Find the ID of the valid subcommand passed in commandline (its index in
+    // the SubCommands table which contains all subcommands).
     unsigned ActiveSubCommandID = ActiveSubCommand - &SubCommands[0];
-    // Print if the ActiveSubCommandID is registered with the CandidateInfo Option.
-    return std::find(SubCommandIDs.begin(), SubCommandIDs.end(), ActiveSubCommandID) != SubCommandIDs.end();
+    // Print if the ActiveSubCommandID is registered with the CandidateInfo
+    // Option.
+    return std::find(SubCommandIDs.begin(), SubCommandIDs.end(),
+                     ActiveSubCommandID) != SubCommandIDs.end();
   };
 
   for (unsigned Id = 1, e = getNumOptions() + 1; Id != e; ++Id) {
