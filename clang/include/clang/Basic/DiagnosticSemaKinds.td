@@ -5770,8 +5770,10 @@ def err_template_recursion_depth_exceeded : Error<
 def err_constraint_depends_on_self
     : Error<"satisfaction of constraint %0 depends on itself">,
       NoSFINAE;
-def note_template_recursion_depth : Note<
-  "use -ftemplate-depth=N to increase recursive template instantiation depth">;
+def note_template_recursion_depth
+    : Note<"use -ftemplate-depth=N to increase recursive template "
+           "instantiation depth">,
+      NoSFINAE;
 
 def err_template_instantiate_within_definition : Error<
   "%select{implicit|explicit}0 instantiation of template %1 within its"
