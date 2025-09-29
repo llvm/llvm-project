@@ -1049,11 +1049,13 @@ public:
                                    Address UB, Address ST);
 
   virtual llvm::Value *emitMessageClause(CodeGenFunction &CGF,
-                                         const Expr *Message);
+                                         const Expr *Message,
+                                         SourceLocation Loc);
   virtual llvm::Value *emitMessageClause(CodeGenFunction &CGF,
                                          const OMPMessageClause *MessageClause);
 
-  virtual llvm::Value *emitSeverityClause(OpenMPSeverityClauseKind Severity);
+  virtual llvm::Value *emitSeverityClause(OpenMPSeverityClauseKind Severity,
+                                          SourceLocation Loc);
   virtual llvm::Value *
   emitSeverityClause(const OMPSeverityClause *SeverityClause);
 
@@ -1069,7 +1071,9 @@ public:
       CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
       OpenMPNumThreadsClauseModifier Modifier = OMPC_NUMTHREADS_unknown,
       OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
-      const Expr *Message = nullptr);
+      SourceLocation SeverityLoc = SourceLocation(),
+      const Expr *Message = nullptr,
+      SourceLocation MessageLoc = SourceLocation());
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
@@ -1956,7 +1960,9 @@ public:
       CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
       OpenMPNumThreadsClauseModifier Modifier = OMPC_NUMTHREADS_unknown,
       OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
-      const Expr *Message = nullptr) override;
+      SourceLocation SeverityLoc = SourceLocation(),
+      const Expr *Message = nullptr,
+      SourceLocation MessageLoc = SourceLocation()) override;
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.

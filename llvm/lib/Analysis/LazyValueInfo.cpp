@@ -1493,6 +1493,24 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
             //   br %Condition, label %then, label %else
             APInt ConditionVal(1, isTrueDest ? 1 : 0);
             Result = constantFoldUser(Usr, Condition, ConditionVal, DL);
+          } else if (isa<TruncInst, ZExtInst, SExtInst>(Usr)) {
+            ValueLatticeElement OpLatticeVal =
+                *getValueFromCondition(Usr->getOperand(0), Condition,
+                                       isTrueDest, /*UseBlockValue*/ false);
+
+            if (!OpLatticeVal.isConstantRange())
+              return OpLatticeVal;
+
+            const unsigned ResultBitWidth =
+                Usr->getType()->getScalarSizeInBits();
+            if (auto *Trunc = dyn_cast<TruncInst>(Usr))
+              return ValueLatticeElement::getRange(
+                  OpLatticeVal.getConstantRange().truncate(
+                      ResultBitWidth, Trunc->getNoWrapKind()));
+
+            return ValueLatticeElement::getRange(
+                OpLatticeVal.getConstantRange().castOp(
+                    cast<CastInst>(Usr)->getOpcode(), ResultBitWidth));
           } else {
             // If one of Val's operand has an inferred value, we may be able to
             // infer the value of Val.

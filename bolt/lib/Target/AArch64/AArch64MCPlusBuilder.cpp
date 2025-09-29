@@ -26,6 +26,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -34,6 +35,15 @@
 
 using namespace llvm;
 using namespace bolt;
+
+namespace opts {
+extern cl::OptionCategory BoltInstrCategory;
+static cl::opt<bool> NoLSEAtomics(
+    "no-lse-atomics",
+    cl::desc("generate instrumentation code sequence without using LSE atomic "
+             "instruction"),
+    cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
+} // namespace opts
 
 namespace {
 
@@ -106,7 +116,7 @@ static void storeReg(MCInst &Inst, MCPhysReg From, MCPhysReg To) {
 }
 
 static void atomicAdd(MCInst &Inst, MCPhysReg RegTo, MCPhysReg RegCnt) {
-  // NOTE: Supports only ARM with LSE extension
+  assert(!opts::NoLSEAtomics && "Supports only ARM with LSE extension");
   Inst.setOpcode(AArch64::LDADDX);
   Inst.clear();
   Inst.addOperand(MCOperand::createReg(AArch64::XZR));
@@ -134,6 +144,8 @@ static InstructionListType createIncMemory(MCPhysReg RegTo, MCPhysReg RegTmp) {
 class AArch64MCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
+
+  BinaryFunction *InstrCounterIncrFunc{nullptr};
 
   std::unique_ptr<MCSymbolizer>
   createTargetSymbolizer(BinaryFunction &Function,
@@ -2513,30 +2525,129 @@ public:
     return Insts;
   }
 
-  InstructionListType
-  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
-                       unsigned CodePointerSize) const override {
-    unsigned int I = 0;
-    InstructionListType Instrs(IsLeaf ? 12 : 10);
+  // Instrumentation code sequence using LSE atomic instruction has a total of
+  // 6 instructions:
+  //
+  //     stp    x0, x1, [sp, #-0x10]!
+  //     adrp   x0, page_address(counter)
+  //     add    x0, x0, page_offset(counter)
+  //     mov    x1, #0x1
+  //     stadd  x1, [x0]
+  //     ldp    x0, x1, [sp], #0x10
+  //
+  // Instrumentation code sequence without using LSE atomic instruction has
+  // 8 instructions at instrumentation place, with 6 instructions in the helper:
+  //
+  //     stp    x0, x30, [sp, #-0x10]!
+  //     stp    x1, x2, [sp, #-0x10]!
+  //     adrp   x0, page_address(counter)
+  //     add    x0, x0, page_offset(counter)
+  //     adrp   x1, page_address(helper)
+  //     add    x1, x1, page_offset(helper)
+  //     blr    x1
+  //     ldp    x0, x30, [sp], #0x10
+  //
+  //   <helper>:
+  //     ldaxr  x1, [x0]
+  //     add    x1, x1, #0x1
+  //     stlxr  w2, x1, [x0]
+  //     cbnz   w2, <helper>
+  //     ldp    x1, x2, [sp], #0x10
+  //     ret
 
-    if (IsLeaf)
-      createStackPointerIncrement(Instrs[I++], 128);
-    createPushRegisters(Instrs[I++], AArch64::X0, AArch64::X1);
-    getSystemFlag(Instrs[I++], AArch64::X1);
+  void createInstrCounterIncrFunc(BinaryContext &BC) override {
+    assert(InstrCounterIncrFunc == nullptr &&
+           "helper function of counter increment for instrumentation "
+           "has already been created");
+
+    if (!opts::NoLSEAtomics)
+      return;
+
+    MCContext *Ctx = BC.Ctx.get();
+    InstrCounterIncrFunc = BC.createInjectedBinaryFunction(
+        "__bolt_instr_counter_incr", /*IsSimple*/ false);
+    std::vector<std::unique_ptr<BinaryBasicBlock>> BBs;
+
+    BBs.emplace_back(InstrCounterIncrFunc->createBasicBlock());
+    InstructionListType Instrs(4);
+    Instrs[0].setOpcode(AArch64::LDAXRX);
+    Instrs[0].clear();
+    Instrs[0].addOperand(MCOperand::createReg(AArch64::X1));
+    Instrs[0].addOperand(MCOperand::createReg(AArch64::X0));
+    Instrs[1].setOpcode(AArch64::ADDXri);
+    Instrs[1].clear();
+    Instrs[1].addOperand(MCOperand::createReg(AArch64::X1));
+    Instrs[1].addOperand(MCOperand::createReg(AArch64::X1));
+    Instrs[1].addOperand(MCOperand::createImm(1));
+    Instrs[1].addOperand(MCOperand::createImm(0));
+    Instrs[2].setOpcode(AArch64::STLXRX);
+    Instrs[2].clear();
+    Instrs[2].addOperand(MCOperand::createReg(AArch64::W2));
+    Instrs[2].addOperand(MCOperand::createReg(AArch64::X1));
+    Instrs[2].addOperand(MCOperand::createReg(AArch64::X0));
+    Instrs[3].setOpcode(AArch64::CBNZW);
+    Instrs[3].clear();
+    Instrs[3].addOperand(MCOperand::createReg(AArch64::W2));
+    Instrs[3].addOperand(MCOperand::createExpr(
+        MCSymbolRefExpr::create(BBs.back()->getLabel(), *Ctx)));
+    BBs.back()->addInstructions(Instrs.begin(), Instrs.end());
+    BBs.back()->setCFIState(0);
+
+    BBs.emplace_back(InstrCounterIncrFunc->createBasicBlock());
+    InstructionListType InstrsEpilog(2);
+    createPopRegisters(InstrsEpilog[0], AArch64::X1, AArch64::X2);
+    createReturn(InstrsEpilog[1]);
+    BBs.back()->addInstructions(InstrsEpilog.begin(), InstrsEpilog.end());
+    BBs.back()->setCFIState(0);
+
+    BBs[0]->addSuccessor(BBs[0].get());
+    BBs[0]->addSuccessor(BBs[1].get());
+
+    InstrCounterIncrFunc->insertBasicBlocks(nullptr, std::move(BBs),
+                                            /*UpdateLayout*/ true,
+                                            /*UpdateCFIState*/ false);
+    InstrCounterIncrFunc->updateState(BinaryFunction::State::CFG_Finalized);
+
+    LLVM_DEBUG({
+      dbgs() << "BOLT-DEBUG: instrumentation counter increment helper:\n";
+      InstrCounterIncrFunc->dump();
+    });
+  }
+
+  InstructionListType createInstrIncMemory(const MCSymbol *Target,
+                                           MCContext *Ctx, bool IsLeaf,
+                                           unsigned CodePointerSize) override {
+    unsigned int I = 0;
+    InstructionListType Instrs(opts::NoLSEAtomics ? 8 : 6);
+
+    if (opts::NoLSEAtomics) {
+      createPushRegisters(Instrs[I++], AArch64::X0, AArch64::LR);
+      createPushRegisters(Instrs[I++], AArch64::X1, AArch64::X2);
+    } else {
+      createPushRegisters(Instrs[I++], AArch64::X0, AArch64::X1);
+    }
+
     InstructionListType Addr = materializeAddress(Target, Ctx, AArch64::X0);
     assert(Addr.size() == 2 && "Invalid Addr size");
     std::copy(Addr.begin(), Addr.end(), Instrs.begin() + I);
     I += Addr.size();
-    storeReg(Instrs[I++], AArch64::X2, AArch64::SP);
-    InstructionListType Insts = createIncMemory(AArch64::X0, AArch64::X2);
-    assert(Insts.size() == 2 && "Invalid Insts size");
-    std::copy(Insts.begin(), Insts.end(), Instrs.begin() + I);
-    I += Insts.size();
-    loadReg(Instrs[I++], AArch64::X2, AArch64::SP);
-    setSystemFlag(Instrs[I++], AArch64::X1);
-    createPopRegisters(Instrs[I++], AArch64::X0, AArch64::X1);
-    if (IsLeaf)
-      createStackPointerDecrement(Instrs[I++], 128);
+
+    if (opts::NoLSEAtomics) {
+      const MCSymbol *Helper = InstrCounterIncrFunc->getSymbol();
+      InstructionListType HelperAddr =
+          materializeAddress(Helper, Ctx, AArch64::X1);
+      assert(HelperAddr.size() == 2 && "Invalid HelperAddr size");
+      std::copy(HelperAddr.begin(), HelperAddr.end(), Instrs.begin() + I);
+      I += HelperAddr.size();
+      createIndirectCallInst(Instrs[I++], /*IsTailCall*/ false, AArch64::X1);
+    } else {
+      InstructionListType Insts = createIncMemory(AArch64::X0, AArch64::X1);
+      assert(Insts.size() == 2 && "Invalid Insts size");
+      std::copy(Insts.begin(), Insts.end(), Instrs.begin() + I);
+      I += Insts.size();
+    }
+    createPopRegisters(Instrs[I++], AArch64::X0,
+                       opts::NoLSEAtomics ? AArch64::LR : AArch64::X1);
     return Instrs;
   }
 
@@ -2623,6 +2734,122 @@ public:
   std::optional<uint32_t>
   getInstructionSize(const MCInst &Inst) const override {
     return 4;
+  }
+
+  std::optional<uint64_t>
+  extractMoveImmediate(const MCInst &Inst, MCPhysReg TargetReg) const override {
+    // Match MOVZ instructions (both X and W register variants) with no shift.
+    if ((Inst.getOpcode() == AArch64::MOVZXi ||
+         Inst.getOpcode() == AArch64::MOVZWi) &&
+        Inst.getOperand(2).getImm() == 0 &&
+        getAliases(TargetReg)[Inst.getOperand(0).getReg()])
+      return Inst.getOperand(1).getImm();
+    return std::nullopt;
+  }
+
+  std::optional<uint64_t>
+  findMemcpySizeInBytes(const BinaryBasicBlock &BB,
+                        BinaryBasicBlock::iterator CallInst) const override {
+    MCPhysReg SizeReg = getIntArgRegister(2);
+    if (SizeReg == getNoRegister())
+      return std::nullopt;
+
+    BitVector WrittenRegs(RegInfo->getNumRegs());
+    const BitVector &SizeRegAliases = getAliases(SizeReg);
+
+    for (auto InstIt = BB.begin(); InstIt != CallInst; ++InstIt) {
+      const MCInst &Inst = *InstIt;
+      WrittenRegs.reset();
+      getWrittenRegs(Inst, WrittenRegs);
+
+      if (WrittenRegs.anyCommon(SizeRegAliases))
+        return extractMoveImmediate(Inst, SizeReg);
+    }
+    return std::nullopt;
+  }
+
+  InstructionListType
+  createInlineMemcpy(bool ReturnEnd,
+                     std::optional<uint64_t> KnownSize) const override {
+    assert(KnownSize.has_value() &&
+           "AArch64 memcpy inlining requires known size");
+    InstructionListType Code;
+    uint64_t Size = *KnownSize;
+
+    generateSizeSpecificMemcpy(Code, Size);
+
+    // If _memcpy8, adjust X0 to return dest+size instead of dest.
+    if (ReturnEnd)
+      Code.emplace_back(MCInstBuilder(AArch64::ADDXri)
+                            .addReg(AArch64::X0)
+                            .addReg(AArch64::X0)
+                            .addImm(Size)
+                            .addImm(0));
+    return Code;
+  }
+
+  InstructionListType generateSizeSpecificMemcpy(InstructionListType &Code,
+                                                 uint64_t Size) const {
+    auto AddLoadStorePair = [&](unsigned LoadOpc, unsigned StoreOpc,
+                                unsigned Reg, unsigned Offset = 0) {
+      Code.emplace_back(MCInstBuilder(LoadOpc)
+                            .addReg(Reg)
+                            .addReg(AArch64::X1)
+                            .addImm(Offset));
+      Code.emplace_back(MCInstBuilder(StoreOpc)
+                            .addReg(Reg)
+                            .addReg(AArch64::X0)
+                            .addImm(Offset));
+    };
+
+    // Generate optimal instruction sequences based on exact size.
+    switch (Size) {
+    case 1:
+      AddLoadStorePair(AArch64::LDRBBui, AArch64::STRBBui, AArch64::W9);
+      break;
+    case 2:
+      AddLoadStorePair(AArch64::LDRHHui, AArch64::STRHHui, AArch64::W9);
+      break;
+    case 4:
+      AddLoadStorePair(AArch64::LDRWui, AArch64::STRWui, AArch64::W9);
+      break;
+    case 8:
+      AddLoadStorePair(AArch64::LDRXui, AArch64::STRXui, AArch64::X9);
+      break;
+    case 16:
+      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q16);
+      break;
+    case 32:
+      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q16, 0);
+      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q17, 1);
+      break;
+
+    default:
+      // For sizes up to 64 bytes, greedily use the largest possible loads.
+      // Caller should have already filtered out sizes > 64 bytes.
+      assert(Size <= 64 &&
+             "Size should be <= 64 bytes for AArch64 memcpy inlining");
+
+      uint64_t Remaining = Size;
+      uint64_t Offset = 0;
+
+      const std::array<std::tuple<uint64_t, unsigned, unsigned, unsigned>, 5>
+          LoadStoreOps = {
+              {{16, AArch64::LDRQui, AArch64::STRQui, AArch64::Q16},
+               {8, AArch64::LDRXui, AArch64::STRXui, AArch64::X9},
+               {4, AArch64::LDRWui, AArch64::STRWui, AArch64::W9},
+               {2, AArch64::LDRHHui, AArch64::STRHHui, AArch64::W9},
+               {1, AArch64::LDRBBui, AArch64::STRBBui, AArch64::W9}}};
+
+      for (const auto &[OpSize, LoadOp, StoreOp, TempReg] : LoadStoreOps)
+        while (Remaining >= OpSize) {
+          AddLoadStorePair(LoadOp, StoreOp, TempReg, Offset / OpSize);
+          Remaining -= OpSize;
+          Offset += OpSize;
+        }
+      break;
+    }
+    return Code;
   }
 };
 

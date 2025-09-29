@@ -62,11 +62,18 @@ public:
   /// Perform the final copy to DestPtr, if desired.
   void emitFinalDestCopy(QualType type, const LValue &src);
 
+  void emitCopy(QualType type, const AggValueSlot &dest,
+                const AggValueSlot &src);
+
   void emitInitializationToLValue(Expr *e, LValue lv);
 
   void emitNullInitializationToLValue(mlir::Location loc, LValue lv);
 
   void Visit(Expr *e) { StmtVisitor<AggExprEmitter>::Visit(e); }
+
+  void VisitArraySubscriptExpr(ArraySubscriptExpr *e) {
+    emitAggLoadOfLValue(e);
+  }
 
   void VisitCallExpr(const CallExpr *e);
   void VisitStmtExpr(const StmtExpr *e) {
@@ -84,20 +91,17 @@ public:
   void visitCXXParenListOrInitListExpr(Expr *e, ArrayRef<Expr *> args,
                                        FieldDecl *initializedFieldInUnion,
                                        Expr *arrayFiller);
-
+  void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
+    CIRGenFunction::CXXDefaultInitExprScope Scope(cgf, die);
+    Visit(die->getExpr());
+  }
   void VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *e) {
     assert(!cir::MissingFeatures::aggValueSlotDestructedFlag());
     Visit(e->getSubExpr());
   }
+  void VisitLambdaExpr(LambdaExpr *e);
 
   // Stubs -- These should be moved up when they are implemented.
-  void VisitCXXFunctionalCastExpr(CXXFunctionalCastExpr *e) {
-    // We shouldn't really get here, but we do because of missing handling for
-    // emitting constant aggregate initializers. If we just ignore this, a
-    // fallback handler will do the right thing.
-    assert(!cir::MissingFeatures::constEmitterAggILE());
-    return;
-  }
   void VisitCastExpr(CastExpr *e) {
     switch (e->getCastKind()) {
     case CK_LValueToRValue:
@@ -167,10 +171,6 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCompoundLiteralExpr");
   }
-  void VisitArraySubscriptExpr(ArraySubscriptExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitArraySubscriptExpr");
-  }
   void VisitPredefinedExpr(const PredefinedExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitPredefinedExpr");
@@ -236,16 +236,9 @@ public:
     cgf.cgm.errorNYI(dae->getSourceRange(),
                      "AggExprEmitter: VisitCXXDefaultArgExpr");
   }
-  void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
-    cgf.cgm.errorNYI(die->getSourceRange(),
-                     "AggExprEmitter: VisitCXXDefaultInitExpr");
-  }
   void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXInheritedCtorInitExpr");
-  }
-  void VisitLambdaExpr(LambdaExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitLambdaExpr");
   }
   void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -460,7 +453,31 @@ void AggExprEmitter::emitFinalDestCopy(QualType type, const LValue &src) {
   if (dest.isIgnored())
     return;
 
-  cgf.cgm.errorNYI("emitFinalDestCopy: non-ignored dest is NYI");
+  assert(!cir::MissingFeatures::aggValueSlotVolatile());
+  assert(!cir::MissingFeatures::aggEmitFinalDestCopyRValue());
+  assert(!cir::MissingFeatures::aggValueSlotGC());
+
+  AggValueSlot srcAgg = AggValueSlot::forLValue(src, AggValueSlot::IsDestructed,
+                                                AggValueSlot::IsAliased,
+                                                AggValueSlot::MayOverlap);
+  emitCopy(type, dest, srcAgg);
+}
+
+/// Perform a copy from the source into the destination.
+///
+/// \param type - the type of the aggregate being copied; qualifiers are
+///   ignored
+void AggExprEmitter::emitCopy(QualType type, const AggValueSlot &dest,
+                              const AggValueSlot &src) {
+  assert(!cir::MissingFeatures::aggValueSlotGC());
+
+  // If the result of the assignment is used, copy the LHS there also.
+  // It's volatile if either side is.  Use the minimum alignment of
+  // the two sides.
+  LValue destLV = cgf.makeAddrLValue(dest.getAddress(), type);
+  LValue srcLV = cgf.makeAddrLValue(src.getAddress(), type);
+  assert(!cir::MissingFeatures::aggValueSlotVolatile());
+  cgf.emitAggregateCopy(destLV, srcLV, type, dest.mayOverlap());
 }
 
 void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
@@ -476,12 +493,14 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
   if (isa<NoInitExpr>(e))
     return;
 
-  if (type->isReferenceType())
-    cgf.cgm.errorNYI("emitInitializationToLValue ReferenceType");
+  if (type->isReferenceType()) {
+    RValue rv = cgf.emitReferenceBindingToExpr(e);
+    return cgf.emitStoreThroughLValue(rv, lv);
+  }
 
   switch (cgf.getEvaluationKind(type)) {
   case cir::TEK_Complex:
-    cgf.cgm.errorNYI("emitInitializationToLValue TEK_Complex");
+    cgf.emitComplexExprIntoLValue(e, lv, /*isInit*/ true);
     break;
   case cir::TEK_Aggregate:
     cgf.emitAggExpr(e, AggValueSlot::forLValue(lv, AggValueSlot::IsDestructed,
@@ -529,6 +548,47 @@ void AggExprEmitter::emitNullInitializationToLValue(mlir::Location loc,
   // memsets; that would be easy for arrays, but relatively
   // difficult for structures with the current code.
   cgf.emitNullInitialization(loc, lv.getAddress(), lv.getType());
+}
+
+void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
+  CIRGenFunction::SourceLocRAIIObject loc{cgf, cgf.getLoc(e->getSourceRange())};
+  AggValueSlot slot = ensureSlot(cgf.getLoc(e->getSourceRange()), e->getType());
+  [[maybe_unused]] LValue slotLV =
+      cgf.makeAddrLValue(slot.getAddress(), e->getType());
+
+  // We'll need to enter cleanup scopes in case any of the element
+  // initializers throws an exception or contains branch out of the expressions.
+  assert(!cir::MissingFeatures::opScopeCleanupRegion());
+
+  for (auto [curField, capture, captureInit] : llvm::zip(
+           e->getLambdaClass()->fields(), e->captures(), e->capture_inits())) {
+    // Pick a name for the field.
+    llvm::StringRef fieldName = curField->getName();
+    if (capture.capturesVariable()) {
+      assert(!curField->isBitField() && "lambdas don't have bitfield members!");
+      ValueDecl *v = capture.getCapturedVar();
+      fieldName = v->getName();
+      cgf.cgm.lambdaFieldToName[curField] = fieldName;
+    } else if (capture.capturesThis()) {
+      cgf.cgm.lambdaFieldToName[curField] = "this";
+    } else {
+      cgf.cgm.errorNYI(e->getSourceRange(), "Unhandled capture kind");
+      cgf.cgm.lambdaFieldToName[curField] = "unhandled-capture-kind";
+    }
+
+    // Emit initialization
+    LValue lv =
+        cgf.emitLValueForFieldInitialization(slotLV, curField, fieldName);
+    if (curField->hasCapturedVLAType())
+      cgf.cgm.errorNYI(e->getSourceRange(), "lambda captured VLA type");
+
+    emitInitializationToLValue(captureInit, lv);
+
+    // Push a destructor if necessary.
+    if ([[maybe_unused]] QualType::DestructionKind DtorKind =
+            curField->getType().isDestructedType())
+      cgf.cgm.errorNYI(e->getSourceRange(), "lambda with destructed field");
+  }
 }
 
 void AggExprEmitter::VisitCallExpr(const CallExpr *e) {
@@ -710,6 +770,88 @@ AggValueSlot::Overlap_t CIRGenFunction::getOverlapForBaseInit(
 
 void CIRGenFunction::emitAggExpr(const Expr *e, AggValueSlot slot) {
   AggExprEmitter(*this, slot).Visit(const_cast<Expr *>(e));
+}
+
+void CIRGenFunction::emitAggregateCopy(LValue dest, LValue src, QualType ty,
+                                       AggValueSlot::Overlap_t mayOverlap) {
+  // TODO(cir): this function needs improvements, commented code for now since
+  // this will be touched again soon.
+  assert(!ty->isAnyComplexType() && "Unexpected copy of complex");
+
+  Address destPtr = dest.getAddress();
+  Address srcPtr = src.getAddress();
+
+  if (getLangOpts().CPlusPlus) {
+    if (auto *record = ty->getAsCXXRecordDecl()) {
+      assert((record->hasTrivialCopyConstructor() ||
+              record->hasTrivialCopyAssignment() ||
+              record->hasTrivialMoveConstructor() ||
+              record->hasTrivialMoveAssignment() ||
+              record->hasAttr<TrivialABIAttr>() || record->isUnion()) &&
+             "Trying to aggregate-copy a type without a trivial copy/move "
+             "constructor or assignment operator");
+      // Ignore empty classes in C++.
+      if (record->isEmpty())
+        return;
+    }
+  }
+
+  assert(!cir::MissingFeatures::cudaSupport());
+
+  // Aggregate assignment turns into llvm.memcpy.  This is almost valid per
+  // C99 6.5.16.1p3, which states "If the value being stored in an object is
+  // read from another object that overlaps in anyway the storage of the first
+  // object, then the overlap shall be exact and the two objects shall have
+  // qualified or unqualified versions of a compatible type."
+  //
+  // memcpy is not defined if the source and destination pointers are exactly
+  // equal, but other compilers do this optimization, and almost every memcpy
+  // implementation handles this case safely.  If there is a libc that does not
+  // safely handle this, we can add a target hook.
+
+  // Get data size info for this aggregate. Don't copy the tail padding if this
+  // might be a potentially-overlapping subobject, since the tail padding might
+  // be occupied by a different object. Otherwise, copying it is fine.
+  TypeInfoChars typeInfo;
+  if (mayOverlap)
+    typeInfo = getContext().getTypeInfoDataSizeInChars(ty);
+  else
+    typeInfo = getContext().getTypeInfoInChars(ty);
+
+  assert(!cir::MissingFeatures::aggValueSlotVolatile());
+
+  // NOTE(cir): original codegen would normally convert destPtr and srcPtr to
+  // i8* since memcpy operates on bytes. We don't need that in CIR because
+  // cir.copy will operate on any CIR pointer that points to a sized type.
+
+  // Don't do any of the memmove_collectable tests if GC isn't set.
+  if (cgm.getLangOpts().getGC() != LangOptions::NonGC)
+    cgm.errorNYI("emitAggregateCopy: GC");
+
+  [[maybe_unused]] cir::CopyOp copyOp =
+      builder.createCopy(destPtr.getPointer(), srcPtr.getPointer());
+
+  assert(!cir::MissingFeatures::opTBAA());
+}
+
+// TODO(cir): This could be shared with classic codegen.
+AggValueSlot::Overlap_t
+CIRGenFunction::getOverlapForFieldInit(const FieldDecl *fd) {
+  if (!fd->hasAttr<NoUniqueAddressAttr>() || !fd->getType()->isRecordType())
+    return AggValueSlot::DoesNotOverlap;
+
+  // If the field lies entirely within the enclosing class's nvsize, its tail
+  // padding cannot overlap any already-initialized object. (The only subobjects
+  // with greater addresses that might already be initialized are vbases.)
+  const RecordDecl *classRD = fd->getParent();
+  const ASTRecordLayout &layout = getContext().getASTRecordLayout(classRD);
+  if (layout.getFieldOffset(fd->getFieldIndex()) +
+          getContext().getTypeSize(fd->getType()) <=
+      (uint64_t)getContext().toBits(layout.getNonVirtualSize()))
+    return AggValueSlot::DoesNotOverlap;
+
+  // The tail padding may contain values we need to preserve.
+  return AggValueSlot::MayOverlap;
 }
 
 LValue CIRGenFunction::emitAggExprToLValue(const Expr *e) {

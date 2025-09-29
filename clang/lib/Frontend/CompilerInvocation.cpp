@@ -1680,6 +1680,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   else
     GenerateArg(Consumer, OPT_fno_loop_interchange);
 
+  if (Opts.FuseLoops)
+    GenerateArg(Consumer, OPT_fexperimental_loop_fusion);
+
   if (!Opts.BinutilsVersion.empty())
     GenerateArg(Consumer, OPT_fbinutils_version_EQ, Opts.BinutilsVersion);
 
@@ -1979,9 +1982,10 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   }
 
   const llvm::Triple::ArchType DebugEntryValueArchs[] = {
-      llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::aarch64,
-      llvm::Triple::arm, llvm::Triple::armeb, llvm::Triple::mips,
-      llvm::Triple::mipsel, llvm::Triple::mips64, llvm::Triple::mips64el};
+      llvm::Triple::x86,     llvm::Triple::x86_64, llvm::Triple::aarch64,
+      llvm::Triple::arm,     llvm::Triple::armeb,  llvm::Triple::mips,
+      llvm::Triple::mipsel,  llvm::Triple::mips64, llvm::Triple::mips64el,
+      llvm::Triple::riscv32, llvm::Triple::riscv64};
 
   if (Opts.OptimizationLevel > 0 && Opts.hasReducedDebugInfo() &&
       llvm::is_contained(DebugEntryValueArchs, T.getArch()))
@@ -2004,6 +2008,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                    (Opts.OptimizationLevel > 1));
   Opts.InterchangeLoops =
       Args.hasFlag(OPT_floop_interchange, OPT_fno_loop_interchange, false);
+  Opts.FuseLoops = Args.hasFlag(OPT_fexperimental_loop_fusion,
+                                OPT_fno_experimental_loop_fusion, false);
   Opts.BinutilsVersion =
       std::string(Args.getLastArgValue(OPT_fbinutils_version_EQ));
 
@@ -3328,9 +3334,6 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
   if (Opts.UseLibcxx)
     GenerateArg(Consumer, OPT_stdlib_EQ, "libc++");
 
-  if (!Opts.ModuleCachePath.empty())
-    GenerateArg(Consumer, OPT_fmodules_cache_path, Opts.ModuleCachePath);
-
   for (const auto &File : Opts.PrebuiltModuleFiles)
     GenerateArg(Consumer, OPT_fmodule_file, File.first + "=" + File.second);
 
@@ -3433,8 +3436,7 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
 }
 
 static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
-                                  DiagnosticsEngine &Diags,
-                                  const std::string &WorkingDir) {
+                                  DiagnosticsEngine &Diags) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
   HeaderSearchOptions *HeaderSearchOpts = &Opts;
@@ -3446,17 +3448,6 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
 
   if (const Arg *A = Args.getLastArg(OPT_stdlib_EQ))
     Opts.UseLibcxx = (strcmp(A->getValue(), "libc++") == 0);
-
-  // Canonicalize -fmodules-cache-path before storing it.
-  SmallString<128> P(Args.getLastArgValue(OPT_fmodules_cache_path));
-  if (!(P.empty() || llvm::sys::path::is_absolute(P))) {
-    if (WorkingDir.empty())
-      llvm::sys::fs::make_absolute(P);
-    else
-      llvm::sys::fs::make_absolute(WorkingDir, P);
-  }
-  llvm::sys::path::remove_dots(P);
-  Opts.ModuleCachePath = std::string(P);
 
   // Only the -fmodule-file=<name>=<file> form.
   for (const auto *A : Args.filtered(OPT_fmodule_file)) {
@@ -5034,8 +5025,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   InputKind DashX = Res.getFrontendOpts().DashX;
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
   llvm::Triple T(Res.getTargetOpts().Triple);
-  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
-                        Res.getFileSystemOpts().WorkingDir);
+  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags);
   if (Res.getFrontendOpts().GenReducedBMI ||
       Res.getFrontendOpts().ProgramAction ==
           frontend::GenerateReducedModuleInterface ||

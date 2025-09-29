@@ -660,19 +660,60 @@ Non-Integral Pointer Type
 Note: non-integral pointer types are a work in progress, and they should be
 considered experimental at this time.
 
-LLVM IR optionally allows the frontend to denote pointers in certain address
-spaces as "non-integral" via the :ref:`datalayout string<langref_datalayout>`.
-Non-integral pointer types represent pointers that have an *unspecified* bitwise
-representation; that is, the integral representation may be target dependent or
-unstable (not backed by a fixed integer).
+For most targets, the pointer representation is a direct mapping from the
+bitwise representation to the address of the underlying memory location.
+Such pointers are considered "integral", and any pointers where the
+representation is not just an integer address are called "non-integral".
+
+Non-integral pointers have at least one of the following three properties:
+
+* the pointer representation contains non-address bits
+* the pointer representation is unstable (may changed at any time in a
+  target-specific way)
+* the pointer representation has external state
+
+These properties (or combinations thereof) can be applied to pointers via the
+:ref:`datalayout string<langref_datalayout>`.
+
+The exact implications of these properties are target-specific. The following
+subsections describe the IR semantics and restrictions to optimization passes
+for each of these properties.
+
+Pointers with non-address bits
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Pointers in this address space have a bitwise representation that not only
+has address bits, but also some other target-specific metadata.
+In most cases pointers with non-address bits behave exactly the same as
+integral pointers, the only difference is that it is not possible to create a
+pointer just from an address unless all the non-address bits are also recreated
+correctly in a target-specific way.
+
+An example of pointers with non-address bits are the AMDGPU buffer descriptors
+which are 160 bits: a 128-bit fat pointer and a 32-bit offset.
+Similarly, CHERI capabilities contain a 32 or 64 bit address as well as the
+same number of metadata bits, but unlike the AMDGPU buffer descriptors they have
+external state in addition to non-address bits.
+
+
+Unstable pointer representation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Pointers in this address space have an *unspecified* bitwise representation
+(i.e. not backed by a fixed integer). The bitwise pattern of such pointers is
+allowed to change in a target-specific way. For example, this could be a pointer
+type used with copying garbage collection where the garbage collector could
+update the pointer at any time in the collection sweep.
 
 ``inttoptr`` and ``ptrtoint`` instructions have the same semantics as for
 integral (i.e., normal) pointers in that they convert integers to and from
-corresponding pointer types, but there are additional implications to be
-aware of.  Because the bit-representation of a non-integral pointer may
-not be stable, two identical casts of the same operand may or may not
+corresponding pointer types, but there are additional implications to be aware
+of.
+
+For "unstable" pointer representations, the bit-representation of the pointer
+may not be stable, so two identical casts of the same operand may or may not
 return the same value.  Said differently, the conversion to or from the
-non-integral type depends on environmental state in an implementation
+"unstable" pointer type depends on environmental state in an implementation
 defined manner.
 
 If the frontend wishes to observe a *particular* value following a cast, the
@@ -681,20 +722,71 @@ defined manner. (In practice, this tends to require ``noinline`` routines for
 such operations.)
 
 From the perspective of the optimizer, ``inttoptr`` and ``ptrtoint`` for
-non-integral types are analogous to ones on integral types with one
+"unstable" pointer types are analogous to ones on integral types with one
 key exception: the optimizer may not, in general, insert new dynamic
 occurrences of such casts.  If a new cast is inserted, the optimizer would
 need to either ensure that a) all possible values are valid, or b)
 appropriate fencing is inserted.  Since the appropriate fencing is
 implementation defined, the optimizer can't do the latter.  The former is
 challenging as many commonly expected properties, such as
-``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for non-integral types.
+``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for "unstable" pointer types.
 Similar restrictions apply to intrinsics that might examine the pointer bits,
 such as :ref:`llvm.ptrmask<int_ptrmask>`.
 
-The alignment information provided by the frontend for a non-integral pointer
+The alignment information provided by the frontend for an "unstable" pointer
 (typically using attributes or metadata) must be valid for every possible
 representation of the pointer.
+
+Pointers with external state
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A further special case of non-integral pointers is ones that include external
+state (such as bounds information or a type tag) with a target-defined size.
+An example of such a type is a CHERI capability, where there is an additional
+validity bit that is part of all pointer-typed registers, but is located in
+memory at an implementation-defined address separate from the pointer itself.
+Another example would be a fat-pointer scheme where pointers remain plain
+integers, but the associated bounds are stored in an out-of-band table.
+
+Unless also marked as "unstable", the bit-wise representation of pointers with
+external state is stable and ``ptrtoint(x)`` always yields a deterministic
+value. This means transformation passes are still permitted to insert new
+``ptrtoint`` instructions.
+
+The following restrictions apply to IR level optimization passes:
+
+The ``inttoptr`` instruction does not recreate the external state and therefore
+it is target dependent whether it can be used to create a dereferenceable
+pointer. In general passes should assume that the result of such an inttoptr
+is not dereferenceable. For example, on CHERI targets an ``inttoptr`` will
+yield a capability with the external state (the validity tag bit) set to zero,
+which will cause any dereference to trap.
+The ``ptrtoint`` instruction also only returns the "in-band" state and omits
+all external  state.
+
+When a ``store ptr addrspace(N) %p, ptr @dst`` of such a non-integral pointer
+is performed, the external metadata is also stored to an implementation-defined
+location. Similarly, a ``%val = load ptr addrspace(N), ptr @dst`` will fetch the
+external metadata and make it available for all uses of ``%val``.
+Similarly, the ``llvm.memcpy`` and ``llvm.memmove`` intrinsics also transfer the
+external state. This is essential to allow frontends to efficiently emit copies
+of structures containing such pointers, since expanding all these copies as
+individual loads and stores would affect compilation speed and inhibit
+optimizations.
+
+Notionally, these external bits are part of the pointer, but since
+``inttoptr`` / ``ptrtoint``` only operate on the "in-band" bits of the pointer
+and the external bits are not explicitly exposed, they are not included in the
+size specified in the :ref:`datalayout string<langref_datalayout>`.
+
+When a pointer type has external state, all roundtrips via memory must
+be performed as loads and stores of the correct type since stores of other
+types may not propagate the external data.
+Therefore it is not legal to convert an existing load/store (or a
+``llvm.memcpy`` / ``llvm.memmove`` intrinsic) of pointer types with external
+state to a load/store of an integer type with same bitwidth, as that may drop
+the external state.
+
 
 .. _globalvars:
 
@@ -1022,13 +1114,14 @@ On ELF platforms, IFuncs are resolved by the dynamic linker at load time. On
 Mach-O platforms, they are lowered in terms of ``.symbol_resolver`` functions,
 which lazily resolve the callee the first time they are called.
 
-IFunc may have an optional :ref:`linkage type <linkage>` and an optional
-:ref:`visibility style <visibility>`.
+IFunc may have an optional :ref:`linkage type <linkage>`, an optional
+:ref:`visibility style <visibility>`, an option partition, and an optional
+list of attached :ref:`metadata <metadata>`.
 
 Syntax::
 
     @<Name> = [Linkage] [PreemptionSpecifier] [Visibility] ifunc <IFuncTy>, <ResolverTy>* @<Resolver>
-              [, partition "name"]
+              [, partition "name"] (, !name !N)*
 
 
 .. _langref_comdats:
@@ -2256,9 +2349,16 @@ For example:
     behavior at runtime if the function ever does dynamically return. Annotated
     functions may still raise an exception, i.a., ``nounwind`` is not implied.
 ``norecurse``
-    This function attribute indicates that the function does not call itself
-    either directly or indirectly down any possible call path. This produces
-    undefined behavior at runtime if the function ever does recurse.
+    This function attribute indicates that the function is not recursive and
+    does not participate in recursion. This means that the function never
+    occurs inside a cycle in the dynamic call graph.
+    For example:
+
+.. code-block:: llvm
+
+    fn -> other_fn -> fn       ; fn is not norecurse
+    other_fn -> fn -> other_fn ; fn is not norecurse
+    fn -> other_fn -> other_fn ; fn is norecurse
 
 .. _langref_willreturn:
 
@@ -2916,6 +3016,8 @@ assumptions, such as that a :ref:`parameter attribute <paramattrs>` or a
 location. Operand bundles enable assumptions that are either hard or impossible
 to represent as a boolean argument of an :ref:`llvm.assume <int_assume>`.
 
+Assumes with operand bundles must have ``i1 true`` as the condition operand.
+
 An assume operand bundle has the form:
 
 ::
@@ -2948,7 +3050,7 @@ allows the optimizer to assume that at location of call to
 
 .. code-block:: llvm
 
-      call void @llvm.assume(i1 %cond) ["cold"(), "nonnull"(ptr %val)]
+      call void @llvm.assume(i1 true) ["cold"(), "nonnull"(ptr %val)]
 
 allows the optimizer to assume that the :ref:`llvm.assume <int_assume>`
 call location is cold and that ``%val`` may not be null.
@@ -3174,8 +3276,8 @@ as follows:
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[n]:<size>:<abi>[:<pref>[:<idx>]]``
-    This specifies the properties of a pointer in address space ``n``.
+``p[<flags>][<as>]:<size>:<abi>[:<pref>[:<idx>]]``
+    This specifies the properties of a pointer in address space ``as``.
     The ``<size>`` parameter specifies the size of the bitwise representation.
     For :ref:`non-integral pointers <nointptrtype>` the representation size may
     be larger than the address width of the underlying address space (e.g. to
@@ -3188,9 +3290,13 @@ as follows:
     default index size is equal to the pointer size.
     The index size also specifies the width of addresses in this address space.
     All sizes are in bits.
-    The address space, ``n``, is optional, and if not specified,
-    denotes the default address space 0. The value of ``n`` must be
-    in the range [1,2^24).
+    The address space, ``<as>``, is optional, and if not specified, denotes the
+    default address space 0. The value of ``<as>`` must be in the range [1,2^24).
+    The optional ``<flags>`` are used to specify properties of pointers in this
+    address space: the character ``u`` marks pointers as having an unstable
+    representation, and ``e`` marks pointers having external state. See
+    :ref:`Non-Integral Pointer Types <nointptrtype>`.
+
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
@@ -3243,9 +3349,11 @@ as follows:
     this set are considered to support most general arithmetic operations
     efficiently.
 ``ni:<address space0>:<address space1>:<address space2>...``
-    This specifies pointer types with the specified address spaces
-    as :ref:`Non-Integral Pointer Type <nointptrtype>` s.  The ``0``
-    address space cannot be specified as non-integral.
+    This marks pointer types with the specified address spaces
+    as :ref:`unstable <nointptrtype>`.
+    The ``0`` address space cannot be specified as non-integral.
+    It is only supported for backwards compatibility, the flags of the ``p``
+    specifier should be used instead for new code.
 
 ``<abi>`` is a lower bound on what is required for a type to be considered
 aligned. This is used in various places, such as:
@@ -3276,7 +3384,6 @@ specifications are given in this list:
 -  ``p[n]:64:64:64`` - Other address spaces are assumed to be the
    same as the default address space.
 -  ``S0`` - natural stack alignment is unspecified
--  ``i1:8:8`` - i1 is 8-bit (byte) aligned
 -  ``i8:8:8`` - i8 is 8-bit (byte) aligned as mandated
 -  ``i16:16:16`` - i16 is 16-bit aligned
 -  ``i32:32:32`` - i32 is 32-bit aligned
@@ -3391,6 +3498,10 @@ This explains code motion of these instructions across operations that impact
 the object's lifetime. A stack object's lifetime can be explicitly specified
 using :ref:`llvm.lifetime.start <int_lifestart>` and
 :ref:`llvm.lifetime.end <int_lifeend>` intrinsic function calls.
+
+As an exception to the above, loading from a stack object outside its lifetime
+is not undefined behavior and returns a poison value instead. Storing to it is
+still undefined behavior.
 
 .. _pointeraliasing:
 
@@ -7840,6 +7951,54 @@ If a loop was successfully processed by the loop distribution pass,
 this metadata is added (i.e., has been distributed).  See
 :ref:`Transformation Metadata <transformation-metadata>` for details.
 
+'``llvm.loop.estimated_trip_count``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata records an estimated trip count for the loop.  The first operand
+is the string ``llvm.loop.estimated_trip_count``.  The second operand is an
+integer constant of type ``i32`` or smaller specifying the estimate.  For
+example:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.estimated_trip_count", i32 8}
+
+Purpose
+"""""""
+
+A loop's estimated trip count is an estimate of the average number of loop
+iterations (specifically, the number of times the loop's header executes) each
+time execution reaches the loop.  It is usually only an estimate based on, for
+example, profile data.  The actual number of iterations might vary widely.
+
+The estimated trip count serves as a parameter for various loop transformations
+and typically helps estimate transformation cost.  For example, it can help
+determine how many iterations to peel or how aggressively to unroll.
+
+Initialization and Maintenance
+""""""""""""""""""""""""""""""
+
+Passes should interact with estimated trip counts always via
+``llvm::getLoopEstimatedTripCount`` and ``llvm::setLoopEstimatedTripCount``.
+
+When the ``llvm.loop.estimated_trip_count`` metadata is not present on a loop,
+``llvm::getLoopEstimatedTripCount`` estimates the loop's trip count from the
+loop's ``branch_weights`` metadata under the assumption that the latter still
+accurately encodes the program's original profile data.  However, as passes
+transform existing loops and create new loops, they must be free to update and
+create ``branch_weights`` metadata in a way that maintains accurate block
+frequencies.  Trip counts estimated from this new ``branch_weights`` metadata
+are not necessarily useful to the passes that consume estimated trip counts.
+
+For this reason, when a pass transforms or creates loops, the pass should
+separately estimate new trip counts based on the estimated trip counts that
+``llvm::getLoopEstimatedTripCount`` returns at the start of the pass, and the
+pass should record the new estimates by calling
+``llvm::setLoopEstimatedTripCount``, which creates or updates
+``llvm.loop.estimated_trip_count`` metadata.  Once this metadata is present on a
+loop, ``llvm::getLoopEstimatedTripCount`` returns its value instead of
+estimating the trip count from the loop's ``branch_weights`` metadata.
+
 '``llvm.licm.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -8723,6 +8882,28 @@ For example, the following metadata section contains two library specifiers::
 
 Each library specifier will be handled independently by the consuming linker.
 The effect of the library specifiers are defined by the consuming linker.
+
+'``llvm.errno.tbaa``' Named Metadata
+====================================
+
+The module-level ``!llvm.errno.tbaa`` metadata specifies the TBAA nodes used
+for accessing ``errno``. These nodes are guaranteed to represent int-compatible
+accesses according to C/C++ strict aliasing rules. This should let LLVM alias
+analyses to reason about aliasing with ``errno`` when calling library functions
+that may set ``errno``, allowing optimizations such as store-to-load forwarding
+across such routines.
+
+For example, the following is a valid metadata specifying the TBAA information
+for an integer access:
+
+    !llvm.errno.tbaa = !{!0}
+    !0 = !{!1, !1, i64 0}
+    !1 = !{!"int", !2, i64 0}
+    !2 = !{!"omnipotent char", !3, i64 0}
+    !3 = !{!"Simple C/C++ TBAA"}
+
+Multiple TBAA operands are allowed to support merging of modules that may use
+different TBAA hierarchies (e.g., when mixing C and C++).
 
 .. _summary:
 
@@ -11259,11 +11440,9 @@ responsibility of the code emitter to ensure that the alignment information is
 correct. Overestimating the alignment results in undefined behavior.
 Underestimating the alignment may produce less efficient code. An alignment of
 1 is always safe. The maximum possible alignment is ``1 << 32``. An alignment
-value higher than the size of the loaded type implies memory up to the
-alignment value bytes can be safely loaded without trapping in the default
-address space. Access of the high bytes can interfere with debugging tools, so
-should not be accessed if the function has the ``sanitize_thread`` or
-``sanitize_address`` attributes.
+value higher than the size of the loaded type does *not* imply (without target
+specific knowledge) that memory up to the alignment value bytes can be safely
+loaded without trapping.
 
 The alignment is only optional when parsing textual IR; for in-memory IR, it is
 always present. An omitted ``align`` argument means that the operation has the
@@ -11399,12 +11578,10 @@ operation (that is, the alignment of the memory address). It is the
 responsibility of the code emitter to ensure that the alignment information is
 correct. Overestimating the alignment results in undefined behavior.
 Underestimating the alignment may produce less efficient code. An alignment of
-1 is always safe. The maximum possible alignment is ``1 << 32``. An alignment
-value higher than the size of the loaded type implies memory up to the
-alignment value bytes can be safely loaded without trapping in the default
-address space. Access of the high bytes can interfere with debugging tools, so
-should not be accessed if the function has the ``sanitize_thread`` or
-``sanitize_address`` attributes.
+1 is always safe. The maximum possible alignment is ``1 << 32``.  An alignment
+value higher than the size of the stored type does *not* imply (without target
+specific knowledge) that memory up to the alignment value bytes can be safely
+loaded without trapping.
 
 The alignment is only optional when parsing textual IR; for in-memory IR, it is
 always present. An omitted ``align`` argument means that the operation has the
@@ -14650,6 +14827,8 @@ Semantics:
 
       The return value type of :ref:`llvm.get.dynamic.area.offset <int_get_dynamic_area_offset>`
       must match the target's :ref:`alloca address space <alloca_addrspace>` type.
+
+.. _int_prefetch:
 
 '``llvm.prefetch``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -20528,7 +20707,7 @@ Note that it has the following implications:
 -  If ``%cnt`` is non-zero, the return value is non-zero as well.
 -  If ``%cnt`` is less than or equal to ``%max_lanes``, the return value is equal to ``%cnt``.
 
-'``llvm.experimental.vector.partial.reduce.add.*``' Intrinsic
+'``llvm.vector.partial.reduce.add.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20537,15 +20716,15 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v8i32(<4 x i32> %a, <8 x i32> %b)
-      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v16i32(<4 x i32> %a, <16 x i32> %b)
-      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32> %a, <vscale x 8 x i32> %b)
-      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32> %a, <vscale x 16 x i32> %b)
+      declare <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32.v8i32(<4 x i32> %a, <8 x i32> %b)
+      declare <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32.v16i32(<4 x i32> %a, <16 x i32> %b)
+      declare <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32> %a, <vscale x 8 x i32> %b)
+      declare <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32> %a, <vscale x 16 x i32> %b)
 
 Overview:
 """""""""
 
-The '``llvm.vector.experimental.partial.reduce.add.*``' intrinsics reduce the
+The '``llvm.vector.partial.reduce.add.*``' intrinsics reduce the
 concatenation of the two vector arguments down to the number of elements of the
 result vector type.
 
@@ -21141,6 +21320,53 @@ Example:
       %b = call i8 @llvm.fptosi.sat.i8.f32(float -130.75)            ; yields i8: -128
       %c = call i8 @llvm.fptosi.sat.i8.f32(float 999.0)              ; yields i8:  127
       %d = call i8 @llvm.fptosi.sat.i8.f32(float 0xFFF8000000000000) ; yields i8:    0
+
+Floating-Point Conversion Intrinsics
+------------------------------------
+
+This class of intrinsics is designed for floating-point conversions that do
+not fall into other categories. For example conversions with specified rounding
+mode or mini-float conversions.
+
+'``llvm.fptrunc.round``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <ty2>
+      @llvm.fptrunc.round(<type> <value>, metadata <rounding mode>)
+
+Overview:
+"""""""""
+
+The '``llvm.fptrunc.round``' intrinsic truncates
+:ref:`floating-point <t_floating>` ``value`` to type ``ty2``
+with a specified rounding mode.
+
+Arguments:
+""""""""""
+
+The '``llvm.fptrunc.round``' intrinsic takes a :ref:`floating-point
+<t_floating>` value to cast and a :ref:`floating-point <t_floating>` type
+to cast it to. This argument must be larger in size than the result.
+
+The second argument specifies the rounding mode as described in the constrained
+intrinsics section.
+For this intrinsic, the "round.dynamic" mode is not supported.
+
+Semantics:
+""""""""""
+
+The '``llvm.fptrunc.round``' intrinsic casts a ``value`` from a larger
+:ref:`floating-point <t_floating>` type to a smaller :ref:`floating-point
+<t_floating>` type.
+This intrinsic is assumed to execute in the default :ref:`floating-point
+environment <floatenv>` *except* for the rounding mode.
+This intrinsic is not supported on all targets. Some targets may not support
+all rounding modes.
 
 Convergence Intrinsics
 ----------------------
@@ -24006,8 +24232,7 @@ indexed by ``i``,  and ``%base``, ``%n`` are the two arguments to
 ``llvm.get.active.lane.mask.*``, ``%icmp`` is an integer compare and ``ult``
 the unsigned less-than comparison operator.  Overflow cannot occur in
 ``(%base + i)`` and its comparison against ``%n`` as it is performed in integer
-numbers and not in machine numbers.  If ``%n`` is ``0``, then the result is a
-poison value. The above is equivalent to:
+numbers and not in machine numbers.  The above is equivalent to:
 
 ::
 
@@ -24380,7 +24605,7 @@ Overview:
 
 The '``llvm.vp.load.ff.*``' intrinsic is similar to
 '``llvm.vp.load.*``', but will not trap if there are not ``evl`` readable
-lanes at the pointer. '``ff``' stands for fault-first or fault-only-first.
+lanes at the pointer. '``ff``' stands for first-fault or fault-only-first.
 
 Arguments:
 """"""""""
@@ -31314,43 +31539,3 @@ Semantics:
 
 The '``llvm.preserve.struct.access.index``' intrinsic produces the same result
 as a getelementptr with base ``base`` and access operands ``{0, gep_index}``.
-
-'``llvm.fptrunc.round``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <ty2>
-      @llvm.fptrunc.round(<type> <value>, metadata <rounding mode>)
-
-Overview:
-"""""""""
-
-The '``llvm.fptrunc.round``' intrinsic truncates
-:ref:`floating-point <t_floating>` ``value`` to type ``ty2``
-with a specified rounding mode.
-
-Arguments:
-""""""""""
-
-The '``llvm.fptrunc.round``' intrinsic takes a :ref:`floating-point
-<t_floating>` value to cast and a :ref:`floating-point <t_floating>` type
-to cast it to. This argument must be larger in size than the result.
-
-The second argument specifies the rounding mode as described in the constrained
-intrinsics section.
-For this intrinsic, the "round.dynamic" mode is not supported.
-
-Semantics:
-""""""""""
-
-The '``llvm.fptrunc.round``' intrinsic casts a ``value`` from a larger
-:ref:`floating-point <t_floating>` type to a smaller :ref:`floating-point
-<t_floating>` type.
-This intrinsic is assumed to execute in the default :ref:`floating-point
-environment <floatenv>` *except* for the rounding mode.
-This intrinsic is not supported on all targets. Some targets may not support
-all rounding modes.

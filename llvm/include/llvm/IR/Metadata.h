@@ -919,8 +919,8 @@ public:
 
   // Check if MDOperand is of type MDString and equals `Str`.
   bool equalsStr(StringRef Str) const {
-    return isa<MDString>(this->get()) &&
-           cast<MDString>(this->get())->getString() == Str;
+    return isa_and_nonnull<MDString>(get()) &&
+           cast<MDString>(get())->getString() == Str;
   }
 
   ~MDOperand() { untrack(); }
@@ -1410,18 +1410,14 @@ private:
   void eraseFromStore();
 
   template <class NodeTy> struct HasCachedHash;
-  template <class NodeTy>
-  static void dispatchRecalculateHash(NodeTy *N, std::true_type) {
-    N->recalculateHash();
+  template <class NodeTy> static void dispatchRecalculateHash(NodeTy *N) {
+    if constexpr (HasCachedHash<NodeTy>::value)
+      N->recalculateHash();
   }
-  template <class NodeTy>
-  static void dispatchRecalculateHash(NodeTy *, std::false_type) {}
-  template <class NodeTy>
-  static void dispatchResetHash(NodeTy *N, std::true_type) {
-    N->setHash(0);
+  template <class NodeTy> static void dispatchResetHash(NodeTy *N) {
+    if constexpr (HasCachedHash<NodeTy>::value)
+      N->setHash(0);
   }
-  template <class NodeTy>
-  static void dispatchResetHash(NodeTy *, std::false_type) {}
 
   /// Merge branch weights from two direct callsites.
   static MDNode *mergeDirectCallProfMetadata(MDNode *A, MDNode *B,

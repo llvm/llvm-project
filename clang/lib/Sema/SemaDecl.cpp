@@ -1653,6 +1653,17 @@ void Sema::FilterLookupForScope(LookupResult &R, DeclContext *Ctx, Scope *S,
   F.done();
 }
 
+static bool isImplicitInstantiation(NamedDecl *D) {
+  if (auto *VD = dyn_cast<VarDecl>(D))
+    return VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation;
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
+    return FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation;
+  if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+    return RD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation;
+
+  return false;
+}
+
 bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
   // [module.interface]p7:
   // A declaration is attached to a module as follows:
@@ -1667,6 +1678,14 @@ bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
     makeMergedDefinitionVisible(New);
     return false;
   }
+
+  // Although we have questions for the module ownership of implicit
+  // instantiations, it should be sure that we shouldn't diagnose the
+  // redeclaration of incorrect module ownership for different implicit
+  // instantiations in different modules. We will diagnose the redeclaration of
+  // incorrect module ownership for the template itself.
+  if (isImplicitInstantiation(New) || isImplicitInstantiation(Old))
+    return false;
 
   Module *NewM = New->getOwningModule();
   Module *OldM = Old->getOwningModule();
@@ -3856,6 +3875,23 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   if (OldTypeInfo.getNoReturn() && !NewTypeInfo.getNoReturn()) {
     NewTypeInfo = NewTypeInfo.withNoReturn(true);
     RequiresAdjustment = true;
+  }
+
+  // If the declaration is marked with cfi_unchecked_callee but the definition
+  // isn't, the definition is also cfi_unchecked_callee.
+  if (auto *FPT1 = OldType->getAs<FunctionProtoType>()) {
+    if (auto *FPT2 = NewType->getAs<FunctionProtoType>()) {
+      FunctionProtoType::ExtProtoInfo EPI1 = FPT1->getExtProtoInfo();
+      FunctionProtoType::ExtProtoInfo EPI2 = FPT2->getExtProtoInfo();
+
+      if (EPI1.CFIUncheckedCallee && !EPI2.CFIUncheckedCallee) {
+        EPI2.CFIUncheckedCallee = true;
+        NewQType = Context.getFunctionType(FPT2->getReturnType(),
+                                           FPT2->getParamTypes(), EPI2);
+        NewType = cast<FunctionType>(NewQType);
+        New->setType(NewQType);
+      }
+    }
   }
 
   // Merge regparm attribute.
@@ -6373,12 +6409,6 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
       NextTL =
           TL.castAs<DependentNameTypeLoc>().getQualifierLoc().getAsTypeLoc();
       break;
-    case TypeLoc::DependentTemplateSpecialization: {
-      auto TST = TL.castAs<DependentTemplateSpecializationTypeLoc>();
-      TemplateKeywordLoc = TST.getTemplateKeywordLoc();
-      NextTL = TST.getQualifierLoc().getAsTypeLoc();
-      break;
-    }
     default:
       break;
     }
@@ -6764,7 +6794,9 @@ bool Sema::tryToFixVariablyModifiedVarType(TypeSourceInfo *&TInfo,
   if (SizeIsNegative)
     Diag(Loc, diag::err_typecheck_negative_array_size);
   else if (Oversized.getBoolValue())
-    Diag(Loc, diag::err_array_too_large) << toString(Oversized, 10);
+    Diag(Loc, diag::err_array_too_large) << toString(
+        Oversized, 10, Oversized.isSigned(), /*formatAsCLiteral=*/false,
+        /*UpperCase=*/false, /*InsertSeparators=*/true);
   else if (FailedFoldDiagID)
     Diag(Loc, FailedFoldDiagID);
   return false;
@@ -8382,7 +8414,7 @@ static ShadowedDeclKind computeShadowedDeclKind(const NamedDecl *ShadowedDecl,
 /// Return the location of the capture if the given lambda captures the given
 /// variable \p VD, or an invalid source location otherwise.
 static SourceLocation getCaptureLocation(const LambdaScopeInfo *LSI,
-                                         const VarDecl *VD) {
+                                         const ValueDecl *VD) {
   for (const Capture &Capture : LSI->Captures) {
     if (Capture.isVariableCapture() && Capture.getVariable() == VD)
       return Capture.getLocation();
@@ -8479,7 +8511,9 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   if (isa<VarDecl>(D) && NewDC && isa<CXXMethodDecl>(NewDC)) {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(NewDC->getParent())) {
       if (RD->isLambda() && OldDC->Encloses(NewDC->getLexicalParent())) {
-        if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
+        // Handle both VarDecl and BindingDecl in lambda contexts
+        if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
+          const auto *VD = cast<ValueDecl>(ShadowedDecl);
           const auto *LSI = cast<LambdaScopeInfo>(getCurFunction());
           if (RD->getLambdaCaptureDefault() == LCD_None) {
             // Try to avoid warnings for lambdas with an explicit capture
@@ -8508,18 +8542,27 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
           return;
         }
       }
-      if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl);
-          VD && VD->hasLocalStorage()) {
-        // A variable can't shadow a local variable in an enclosing scope, if
-        // they are separated by a non-capturing declaration context.
-        for (DeclContext *ParentDC = NewDC;
-             ParentDC && !ParentDC->Equals(OldDC);
-             ParentDC = getLambdaAwareParentOfDeclContext(ParentDC)) {
-          // Only block literals, captured statements, and lambda expressions
-          // can capture; other scopes don't.
-          if (!isa<BlockDecl>(ParentDC) && !isa<CapturedDecl>(ParentDC) &&
-              !isLambdaCallOperator(ParentDC)) {
-            return;
+      // Apply scoping logic to both VarDecl and BindingDecl with local storage
+      if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
+        bool HasLocalStorage = false;
+        if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl))
+          HasLocalStorage = VD->hasLocalStorage();
+        else if (const auto *BD = dyn_cast<BindingDecl>(ShadowedDecl))
+          HasLocalStorage =
+              cast<VarDecl>(BD->getDecomposedDecl())->hasLocalStorage();
+
+        if (HasLocalStorage) {
+          // A variable can't shadow a local variable or binding in an enclosing
+          // scope, if they are separated by a non-capturing declaration
+          // context.
+          for (DeclContext *ParentDC = NewDC;
+               ParentDC && !ParentDC->Equals(OldDC);
+               ParentDC = getLambdaAwareParentOfDeclContext(ParentDC)) {
+            // Only block literals, captured statements, and lambda expressions
+            // can capture; other scopes don't.
+            if (!isa<BlockDecl>(ParentDC) && !isa<CapturedDecl>(ParentDC) &&
+                !isLambdaCallOperator(ParentDC))
+              return;
           }
         }
       }
@@ -8566,7 +8609,8 @@ void Sema::DiagnoseShadowingLambdaDecls(const LambdaScopeInfo *LSI) {
     const NamedDecl *ShadowedDecl = Shadow.ShadowedDecl;
     // Try to avoid the warning when the shadowed decl isn't captured.
     const DeclContext *OldDC = ShadowedDecl->getDeclContext();
-    if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
+    if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
+      const auto *VD = cast<ValueDecl>(ShadowedDecl);
       SourceLocation CaptureLoc = getCaptureLocation(LSI, VD);
       Diag(Shadow.VD->getLocation(),
            CaptureLoc.isInvalid() ? diag::warn_decl_shadow_uncaptured_local
@@ -14393,9 +14437,12 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       return;
     }
 
-    // Provide a specific diagnostic for uninitialized variable
-    // definitions with incomplete array type.
-    if (Type->isIncompleteArrayType()) {
+    // Provide a specific diagnostic for uninitialized variable definitions
+    // with incomplete array type, unless it is a global unbounded HLSL resource
+    // array.
+    if (Type->isIncompleteArrayType() &&
+        !(getLangOpts().HLSL && Var->hasGlobalStorage() &&
+          Type->isHLSLResourceRecordArray())) {
       if (Var->isConstexpr())
         Diag(Var->getLocation(), diag::err_constexpr_var_requires_const_init)
             << Var;
@@ -15474,6 +15521,14 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
         D.setInvalidType(true);
       }
     }
+  }
+
+  // Incomplete resource arrays are not allowed as function parameters in HLSL
+  if (getLangOpts().HLSL && parmDeclType->isIncompleteArrayType() &&
+      parmDeclType->isHLSLResourceRecordArray()) {
+    Diag(D.getIdentifierLoc(),
+         diag::err_hlsl_incomplete_resource_array_in_function_param);
+    D.setInvalidType(true);
   }
 
   // Temporarily put parameter variables in the translation unit, not

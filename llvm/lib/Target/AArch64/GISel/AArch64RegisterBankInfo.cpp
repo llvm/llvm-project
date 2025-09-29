@@ -482,6 +482,11 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_sqrdmulh:
   case Intrinsic::aarch64_neon_sqadd:
   case Intrinsic::aarch64_neon_sqsub:
+  case Intrinsic::aarch64_crypto_sha1h:
+  case Intrinsic::aarch64_crypto_sha1c:
+  case Intrinsic::aarch64_crypto_sha1p:
+  case Intrinsic::aarch64_crypto_sha1m:
+  case Intrinsic::aarch64_sisd_fcvtxn:
     return true;
   case Intrinsic::aarch64_neon_saddlv: {
     const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
@@ -568,9 +573,7 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
     case Intrinsic::aarch64_neon_fcvtnu:
     case Intrinsic::aarch64_neon_fcvtps:
     case Intrinsic::aarch64_neon_fcvtpu:
-      // Force FPR register bank for half types, as those types otherwise
-      // don't get legalized correctly resulting in fp16 <-> gpr32 COPY's.
-      return MRI.getType(MI.getOperand(2).getReg()) == LLT::float16();
+      return true;
     default:
       break;
     }
@@ -1143,6 +1146,34 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS: {
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+    case Intrinsic::aarch64_neon_fcvtas:
+    case Intrinsic::aarch64_neon_fcvtau:
+    case Intrinsic::aarch64_neon_fcvtzs:
+    case Intrinsic::aarch64_neon_fcvtzu:
+    case Intrinsic::aarch64_neon_fcvtms:
+    case Intrinsic::aarch64_neon_fcvtmu:
+    case Intrinsic::aarch64_neon_fcvtns:
+    case Intrinsic::aarch64_neon_fcvtnu:
+    case Intrinsic::aarch64_neon_fcvtps:
+    case Intrinsic::aarch64_neon_fcvtpu: {
+      OpRegBankIdx[2] = PMI_FirstFPR;
+      if (MRI.getType(MI.getOperand(0).getReg()).isVector()) {
+        OpRegBankIdx[0] = PMI_FirstFPR;
+        break;
+      }
+      TypeSize DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+      TypeSize SrcSize = getSizeInBits(MI.getOperand(2).getReg(), MRI, TRI);
+      if (((DstSize == SrcSize) || STI.hasFeature(AArch64::FeatureFPRCVT)) &&
+          all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+                 [&](const MachineInstr &UseMI) {
+                   return onlyUsesFP(UseMI, MRI, TRI) ||
+                          prefersFPUse(UseMI, MRI, TRI);
+                 }))
+        OpRegBankIdx[0] = PMI_FirstFPR;
+      else
+        OpRegBankIdx[0] = PMI_FirstGPR;
+      break;
+    }
     case Intrinsic::aarch64_neon_vcvtfxs2fp:
     case Intrinsic::aarch64_neon_vcvtfxu2fp:
     case Intrinsic::aarch64_neon_vcvtfp2fxs:

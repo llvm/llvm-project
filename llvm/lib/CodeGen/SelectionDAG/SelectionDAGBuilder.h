@@ -408,6 +408,10 @@ public:
                    bool IsMustTailCall, const BasicBlock *EHPadBB = nullptr,
                    const TargetLowering::PtrAuthInfo *PAI = nullptr);
 
+  // Check some of the target-independent constraints for tail calls. This does
+  // not iterate over the call arguments.
+  bool canTailCall(const CallBase &CB) const;
+
   // Lower range metadata from 0 to N to assert zext to an integer of nearest
   // floor power of two.
   SDValue lowerRangeToAssertZExt(SelectionDAG &DAG, const Instruction &I,

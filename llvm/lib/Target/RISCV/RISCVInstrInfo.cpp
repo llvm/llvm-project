@@ -80,8 +80,8 @@ namespace llvm::RISCV {
 
 } // end namespace llvm::RISCV
 
-RISCVInstrInfo::RISCVInstrInfo(RISCVSubtarget &STI)
-    : RISCVGenInstrInfo(RISCV::ADJCALLSTACKDOWN, RISCV::ADJCALLSTACKUP),
+RISCVInstrInfo::RISCVInstrInfo(const RISCVSubtarget &STI)
+    : RISCVGenInstrInfo(STI, RISCV::ADJCALLSTACKDOWN, RISCV::ADJCALLSTACKUP),
       STI(STI) {}
 
 #define GET_INSTRINFO_HELPERS
@@ -232,7 +232,7 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
+bool RISCVInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   case RISCV::VMV_V_X:
@@ -243,7 +243,7 @@ bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
   case RISCV::VID_V:
     return MI.getOperand(1).isUndef();
   default:
-    return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+    return TargetInstrInfo::isReMaterializableImpl(MI);
   }
 }
 
@@ -955,6 +955,7 @@ RISCVCC::CondCode RISCVInstrInfo::getCondFromBranchOpc(unsigned Opc) {
   default:
     return RISCVCC::COND_INVALID;
   case RISCV::BEQ:
+  case RISCV::BEQI:
   case RISCV::CV_BEQIMM:
   case RISCV::QC_BEQI:
   case RISCV::QC_E_BEQI:
@@ -962,6 +963,7 @@ RISCVCC::CondCode RISCVInstrInfo::getCondFromBranchOpc(unsigned Opc) {
   case RISCV::NDS_BEQC:
     return RISCVCC::COND_EQ;
   case RISCV::BNE:
+  case RISCV::BNEI:
   case RISCV::QC_BNEI:
   case RISCV::QC_E_BNEI:
   case RISCV::CV_BNEIMM:
@@ -1039,6 +1041,16 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, unsigned SelectOpc) {
       return RISCV::BLTU;
     case RISCVCC::COND_GEU:
       return RISCV::BGEU;
+    }
+    break;
+  case RISCV::Select_GPR_Using_CC_Imm5_Zibi:
+    switch (CC) {
+    default:
+      llvm_unreachable("Unexpected condition code!");
+    case RISCVCC::COND_EQ:
+      return RISCV::BEQI;
+    case RISCVCC::COND_NE:
+      return RISCV::BNEI;
     }
     break;
   case RISCV::Select_GPR_Using_CC_SImm5_CV:
@@ -1359,8 +1371,14 @@ bool RISCVInstrInfo::reverseBranchCondition(
   case RISCV::BEQ:
     Cond[0].setImm(RISCV::BNE);
     break;
+  case RISCV::BEQI:
+    Cond[0].setImm(RISCV::BNEI);
+    break;
   case RISCV::BNE:
     Cond[0].setImm(RISCV::BEQ);
+    break;
+  case RISCV::BNEI:
+    Cond[0].setImm(RISCV::BEQI);
     break;
   case RISCV::BLT:
     Cond[0].setImm(RISCV::BGE);
@@ -1611,6 +1629,8 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   case RISCV::BGE:
   case RISCV::BLTU:
   case RISCV::BGEU:
+  case RISCV::BEQI:
+  case RISCV::BNEI:
   case RISCV::CV_BEQIMM:
   case RISCV::CV_BNEIMM:
   case RISCV::QC_BEQI:
@@ -2859,6 +2879,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_FOUR:
           Ok = Imm == 4;
           break;
+        case RISCVOp::OPERAND_IMM5_ZIBI:
+          Ok = (isUInt<5>(Imm) && Imm != 0) || Imm == -1;
+          break;
           // clang-format off
         CASE_OPERAND_SIMM(5)
         CASE_OPERAND_SIMM(6)
@@ -3510,6 +3533,9 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
          F.hasSection() || F.getSectionPrefix()))
       return outliner::InstrType::Illegal;
   }
+
+  if (isLPAD(MI))
+    return outliner::InstrType::Illegal;
 
   return outliner::InstrType::Legal;
 }
@@ -4489,7 +4515,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addReg(DestReg, RegState::Kill)
         .addImm(ShiftAmount)
         .setMIFlag(Flag);
-  } else if (STI.hasStdExtZba() &&
+  } else if (STI.hasShlAdd(3) &&
              ((Amount % 3 == 0 && isPowerOf2_64(Amount / 3)) ||
               (Amount % 5 == 0 && isPowerOf2_64(Amount / 5)) ||
               (Amount % 9 == 0 && isPowerOf2_64(Amount / 9)))) {
@@ -4796,8 +4822,22 @@ unsigned RISCV::getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW) {
   return Scaled;
 }
 
-/// Given two VL operands, do we know that LHS <= RHS?
+static std::optional<int64_t> getEffectiveImm(const MachineOperand &MO) {
+  assert(MO.isImm() || MO.getReg().isVirtual());
+  if (MO.isImm())
+    return MO.getImm();
+  const MachineInstr *Def =
+      MO.getParent()->getMF()->getRegInfo().getVRegDef(MO.getReg());
+  int64_t Imm;
+  if (isLoadImm(Def, Imm))
+    return Imm;
+  return std::nullopt;
+}
+
+/// Given two VL operands, do we know that LHS <= RHS? Must be used in SSA form.
 bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
+  assert((LHS.isImm() || LHS.getParent()->getMF()->getRegInfo().isSSA()) &&
+         (RHS.isImm() || RHS.getParent()->getMF()->getRegInfo().isSSA()));
   if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
       LHS.getReg() == RHS.getReg())
     return true;
@@ -4807,9 +4847,11 @@ bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
     return true;
   if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
     return false;
-  if (!LHS.isImm() || !RHS.isImm())
+  std::optional<int64_t> LHSImm = getEffectiveImm(LHS),
+                         RHSImm = getEffectiveImm(RHS);
+  if (!LHSImm || !RHSImm)
     return false;
-  return LHS.getImm() <= RHS.getImm();
+  return LHSImm <= RHSImm;
 }
 
 namespace {

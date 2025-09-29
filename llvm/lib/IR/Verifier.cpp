@@ -119,6 +119,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -399,6 +400,7 @@ public:
   bool hasBrokenDebugInfo() const { return BrokenDebugInfo; }
 
   bool verify(const Function &F) {
+    llvm::TimeTraceScope timeScope("Verifier");
     assert(F.getParent() == &M &&
            "An instance of this class only works with a specific module!");
 
@@ -478,6 +480,7 @@ public:
     visitModuleFlags();
     visitModuleIdents();
     visitModuleCommandLines();
+    visitModuleErrnoTBAA();
 
     verifyCompileUnits();
 
@@ -514,6 +517,7 @@ private:
   void visitComdat(const Comdat &C);
   void visitModuleIdents();
   void visitModuleCommandLines();
+  void visitModuleErrnoTBAA();
   void visitModuleFlags();
   void visitModuleFlag(const MDNode *Op,
                        DenseMap<const MDString *, const MDNode *> &SeenIDs,
@@ -630,7 +634,7 @@ private:
   void verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                            const Value *V, bool IsIntrinsic, bool IsInlineAsm);
   void verifyFunctionMetadata(ArrayRef<std::pair<unsigned, MDNode *>> MDs);
-
+  void verifyUnknownProfileMetadata(MDNode *MD);
   void visitConstantExprsRecursively(const Constant *EntryC);
   void visitConstantExpr(const ConstantExpr *CE);
   void visitConstantPtrAuth(const ConstantPtrAuth *CPA);
@@ -998,6 +1002,18 @@ void Verifier::visitGlobalAlias(const GlobalAlias &GA) {
 }
 
 void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
+  visitGlobalValue(GI);
+
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  GI.getAllMetadata(MDs);
+  for (const auto &I : MDs) {
+    CheckDI(I.first != LLVMContext::MD_dbg,
+            "an ifunc may not have a !dbg attachment", &GI);
+    Check(I.first != LLVMContext::MD_prof,
+          "an ifunc may not have a !prof attachment", &GI);
+    visitMDNode(*I.second, AreDebugLocsAllowed::No);
+  }
+
   Check(GlobalIFunc::isValidLinkage(GI.getLinkage()),
         "IFunc should have private, internal, linkonce, weak, linkonce_odr, "
         "weak_odr, or external linkage!",
@@ -1073,6 +1089,18 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
       visitValueAsMetadata(*V, nullptr);
       continue;
     }
+  }
+
+  // Check llvm.loop.estimated_trip_count.
+  if (MD.getNumOperands() > 0 &&
+      MD.getOperand(0).equalsStr(LLVMLoopEstimatedTripCount)) {
+    Check(MD.getNumOperands() == 2, "Expected two operands", &MD);
+    auto *Count = dyn_cast_or_null<ConstantAsMetadata>(MD.getOperand(1));
+    Check(Count && Count->getType()->isIntegerTy() &&
+              cast<IntegerType>(Count->getType())->getBitWidth() <= 32,
+          "Expected second operand to be an integer constant of type i32 or "
+          "smaller",
+          &MD);
   }
 
   // Check these last, so we diagnose problems in operands first.
@@ -1790,6 +1818,18 @@ void Verifier::visitModuleCommandLines() {
   }
 }
 
+void Verifier::visitModuleErrnoTBAA() {
+  const NamedMDNode *ErrnoTBAA = M.getNamedMetadata("llvm.errno.tbaa");
+  if (!ErrnoTBAA)
+    return;
+
+  Check(ErrnoTBAA->getNumOperands() >= 1,
+        "llvm.errno.tbaa must have at least one operand", ErrnoTBAA);
+
+  for (const MDNode *N : ErrnoTBAA->operands())
+    TBAAVerifyHelper.visitTBAAMetadata(nullptr, N);
+}
+
 void Verifier::visitModuleFlags() {
   const NamedMDNode *Flags = M.getModuleFlagsMetadata();
   if (!Flags) return;
@@ -2447,16 +2487,6 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
 
-  // Check EVEX512 feature.
-  if (TT.isX86() && MaxParameterWidth >= 512) {
-    Attribute TargetFeaturesAttr = Attrs.getFnAttr("target-features");
-    if (TargetFeaturesAttr.isValid()) {
-      StringRef TF = TargetFeaturesAttr.getValueAsString();
-      Check(!TF.contains("+avx512f") || !TF.contains("-evex512"),
-            "512-bit vector arguments require 'evex512' for AVX512", V);
-    }
-  }
-
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-entry", V);
   if (Attrs.hasFnAttr("patchable-function-entry-section"))
@@ -2524,20 +2554,31 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                   V);
   }
 }
+void Verifier::verifyUnknownProfileMetadata(MDNode *MD) {
+  Check(MD->getNumOperands() == 2,
+        "'unknown' !prof should have a single additional operand", MD);
+  auto *PassName = dyn_cast<MDString>(MD->getOperand(1));
+  Check(PassName != nullptr,
+        "'unknown' !prof should have an additional operand of type "
+        "string");
+  Check(!PassName->getString().empty(),
+        "the 'unknown' !prof operand should not be an empty string");
+}
 
 void Verifier::verifyFunctionMetadata(
     ArrayRef<std::pair<unsigned, MDNode *>> MDs) {
   for (const auto &Pair : MDs) {
     if (Pair.first == LLVMContext::MD_prof) {
       MDNode *MD = Pair.second;
-      if (isExplicitlyUnknownBranchWeightsMetadata(*MD)) {
-        CheckFailed("'unknown' !prof metadata should appear only on "
-                    "instructions supporting the 'branch_weights' metadata",
-                    MD);
-        continue;
-      }
       Check(MD->getNumOperands() >= 2,
             "!prof annotations should have no less than 2 operands", MD);
+      // We may have functions that are synthesized by the compiler, e.g. in
+      // WPD, that we can't currently determine the entry count.
+      if (MD->getOperand(0).equalsStr(
+              MDProfLabels::UnknownBranchWeightsMarker)) {
+        verifyUnknownProfileMetadata(MD);
+        continue;
+      }
 
       // Check first operand.
       Check(MD->getOperand(0) != nullptr, "first operand should not be null",
@@ -2834,6 +2875,7 @@ static Instruction *getSuccPad(Instruction *Terminator) {
 }
 
 void Verifier::verifySiblingFuncletUnwinds() {
+  llvm::TimeTraceScope timeScope("Verifier verify sibling funclet unwinds");
   SmallPtrSet<Instruction *, 8> Visited;
   SmallPtrSet<Instruction *, 8> Active;
   for (const auto &Pair : SiblingFuncletInfo) {
@@ -3194,7 +3236,7 @@ void Verifier::visitFunction(const Function &F) {
 
     // Scope and SP could be the same MDNode and we don't want to skip
     // validation in that case
-    if (SP && ((Scope != SP) && !Seen.insert(SP).second))
+    if ((Scope != SP) && !Seen.insert(SP).second)
       return;
 
     CheckDI(SP->describes(&F),
@@ -4384,7 +4426,7 @@ void Verifier::visitNoaliasAddrspaceMetadata(Instruction &I, MDNode *Range,
 }
 
 void Verifier::checkAtomicMemAccessSize(Type *Ty, const Instruction *I) {
-  unsigned Size = DL.getTypeSizeInBits(Ty);
+  unsigned Size = DL.getTypeSizeInBits(Ty).getFixedValue();
   Check(Size >= 8, "atomic memory access' size must be byte-sized", Ty, I);
   Check(!(Size & (Size - 1)),
         "atomic memory access' operand must have a power-of-two size", Ty, I);
@@ -5063,8 +5105,7 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
           "'unknown' !prof should only appear on instructions on which "
           "'branch_weights' would",
           MD);
-    Check(MD->getNumOperands() == 1,
-          "'unknown' !prof should have no additional operands", MD);
+    verifyUnknownProfileMetadata(MD);
     return;
   }
 
@@ -5519,7 +5560,7 @@ void Verifier::visitInstruction(Instruction &I) {
     visitNofreeMetadata(I, MD);
 
   if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa))
-    TBAAVerifyHelper.visitTBAAMetadata(I, TBAA);
+    TBAAVerifyHelper.visitTBAAMetadata(&I, TBAA);
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_noalias))
     visitAliasScopeListMetadata(MD);
@@ -5660,6 +5701,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   default:
     break;
   case Intrinsic::assume: {
+    if (Call.hasOperandBundles()) {
+      auto *Cond = dyn_cast<ConstantInt>(Call.getArgOperand(0));
+      Check(Cond && Cond->isOne(),
+            "assume with operand bundles must have i1 true condition", Call);
+    }
     for (auto &Elem : Call.bundle_op_infos()) {
       unsigned ArgCount = Elem.End - Elem.Begin;
       // Separate storage assumptions are special insofar as they're the only
@@ -5835,9 +5881,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::call_preallocated_setup: {
-    auto *NumArgs = dyn_cast<ConstantInt>(Call.getArgOperand(0));
-    Check(NumArgs != nullptr,
-          "llvm.call.preallocated.setup argument must be a constant");
+    auto *NumArgs = cast<ConstantInt>(Call.getArgOperand(0));
     bool FoundCall = false;
     for (User *U : Call.users()) {
       auto *UseCall = dyn_cast<CallBase>(U);
@@ -6527,7 +6571,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     }
     break;
   }
-  case Intrinsic::experimental_vector_partial_reduce_add: {
+  case Intrinsic::vector_partial_reduce_add: {
     VectorType *AccTy = cast<VectorType>(Call.getArgOperand(0)->getType());
     VectorType *VecTy = cast<VectorType>(Call.getArgOperand(1)->getType());
 
@@ -6797,6 +6841,28 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "invalid vector type for format", &Call, Src0, Call.getArgOperand(0));
     Check(Src1Ty->getNumElements() >= getFormatNumRegs(FmtB),
           "invalid vector type for format", &Call, Src1, Call.getArgOperand(2));
+    break;
+  }
+  case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B: {
+    // Check we only use this intrinsic on the FLAT or GLOBAL address spaces.
+    Value *PtrArg = Call.getArgOperand(0);
+    const unsigned AS = PtrArg->getType()->getPointerAddressSpace();
+    Check(AS == AMDGPUAS::FLAT_ADDRESS || AS == AMDGPUAS::GLOBAL_ADDRESS,
+          "cooperative atomic intrinsics require a generic or global pointer",
+          &Call, PtrArg);
+
+    // Last argument must be a MD string
+    auto *Op = cast<MetadataAsValue>(Call.getArgOperand(Call.arg_size() - 1));
+    MDNode *MD = cast<MDNode>(Op->getMetadata());
+    Check((MD->getNumOperands() == 1) && isa<MDString>(MD->getOperand(0)),
+          "cooperative atomic intrinsics require that the last argument is a "
+          "metadata string",
+          &Call, Op);
     break;
   }
   case Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32:
@@ -7618,10 +7684,10 @@ template <typename... Tys> void TBAAVerifier::CheckFailed(Tys &&... Args) {
 /// TBAA scheme.  This means \p BaseNode is either a scalar node, or a
 /// struct-type node describing an aggregate data structure (like a struct).
 TBAAVerifier::TBAABaseNodeSummary
-TBAAVerifier::verifyTBAABaseNode(Instruction &I, const MDNode *BaseNode,
+TBAAVerifier::verifyTBAABaseNode(const Instruction *I, const MDNode *BaseNode,
                                  bool IsNewFormat) {
   if (BaseNode->getNumOperands() < 2) {
-    CheckFailed("Base nodes must have at least two operands", &I, BaseNode);
+    CheckFailed("Base nodes must have at least two operands", I, BaseNode);
     return {true, ~0u};
   }
 
@@ -7637,8 +7703,8 @@ TBAAVerifier::verifyTBAABaseNode(Instruction &I, const MDNode *BaseNode,
 }
 
 TBAAVerifier::TBAABaseNodeSummary
-TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, const MDNode *BaseNode,
-                                     bool IsNewFormat) {
+TBAAVerifier::verifyTBAABaseNodeImpl(const Instruction *I,
+                                     const MDNode *BaseNode, bool IsNewFormat) {
   const TBAAVerifier::TBAABaseNodeSummary InvalidNode = {true, ~0u};
 
   if (BaseNode->getNumOperands() == 2) {
@@ -7667,7 +7733,7 @@ TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, const MDNode *BaseNode,
     auto *TypeSizeNode = mdconst::dyn_extract_or_null<ConstantInt>(
         BaseNode->getOperand(1));
     if (!TypeSizeNode) {
-      CheckFailed("Type size nodes must be constants!", &I, BaseNode);
+      CheckFailed("Type size nodes must be constants!", I, BaseNode);
       return InvalidNode;
     }
   }
@@ -7693,7 +7759,7 @@ TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, const MDNode *BaseNode,
     const MDOperand &FieldTy = BaseNode->getOperand(Idx);
     const MDOperand &FieldOffset = BaseNode->getOperand(Idx + 1);
     if (!isa<MDNode>(FieldTy)) {
-      CheckFailed("Incorrect field entry in struct type node!", &I, BaseNode);
+      CheckFailed("Incorrect field entry in struct type node!", I, BaseNode);
       Failed = true;
       continue;
     }
@@ -7701,7 +7767,7 @@ TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, const MDNode *BaseNode,
     auto *OffsetEntryCI =
         mdconst::dyn_extract_or_null<ConstantInt>(FieldOffset);
     if (!OffsetEntryCI) {
-      CheckFailed("Offset entries must be constants!", &I, BaseNode);
+      CheckFailed("Offset entries must be constants!", I, BaseNode);
       Failed = true;
       continue;
     }
@@ -7711,7 +7777,7 @@ TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, const MDNode *BaseNode,
 
     if (OffsetEntryCI->getBitWidth() != BitWidth) {
       CheckFailed(
-          "Bitwidth between the offsets and struct type entries must match", &I,
+          "Bitwidth between the offsets and struct type entries must match", I,
           BaseNode);
       Failed = true;
       continue;
@@ -7726,7 +7792,7 @@ TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, const MDNode *BaseNode,
         !PrevOffset || PrevOffset->ule(OffsetEntryCI->getValue());
 
     if (!IsAscending) {
-      CheckFailed("Offsets must be increasing!", &I, BaseNode);
+      CheckFailed("Offsets must be increasing!", I, BaseNode);
       Failed = true;
     }
 
@@ -7736,7 +7802,7 @@ TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, const MDNode *BaseNode,
       auto *MemberSizeNode = mdconst::dyn_extract_or_null<ConstantInt>(
           BaseNode->getOperand(Idx + 2));
       if (!MemberSizeNode) {
-        CheckFailed("Member size entries must be constants!", &I, BaseNode);
+        CheckFailed("Member size entries must be constants!", I, BaseNode);
         Failed = true;
         continue;
       }
@@ -7788,7 +7854,7 @@ bool TBAAVerifier::isValidScalarTBAANode(const MDNode *MD) {
 /// Offset in place to be the offset within the field node returned.
 ///
 /// We assume we've okayed \p BaseNode via \c verifyTBAABaseNode.
-MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(Instruction &I,
+MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(const Instruction *I,
                                                    const MDNode *BaseNode,
                                                    APInt &Offset,
                                                    bool IsNewFormat) {
@@ -7808,7 +7874,7 @@ MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(Instruction &I,
         mdconst::extract<ConstantInt>(BaseNode->getOperand(Idx + 1));
     if (OffsetEntryCI->getValue().ugt(Offset)) {
       if (Idx == FirstFieldOpNo) {
-        CheckFailed("Could not find TBAA parent in struct type node", &I,
+        CheckFailed("Could not find TBAA parent in struct type node", I,
                     BaseNode, &Offset);
         return nullptr;
       }
@@ -7837,21 +7903,22 @@ static bool isNewFormatTBAATypeNode(llvm::MDNode *Type) {
   return isa_and_nonnull<MDNode>(Type->getOperand(0));
 }
 
-bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
-  CheckTBAA(MD->getNumOperands() > 0, "TBAA metadata cannot have 0 operands",
-            &I, MD);
+bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
+  CheckTBAA(MD->getNumOperands() > 0, "TBAA metadata cannot have 0 operands", I,
+            MD);
 
-  CheckTBAA(isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallInst>(I) ||
-                isa<VAArgInst>(I) || isa<AtomicRMWInst>(I) ||
-                isa<AtomicCmpXchgInst>(I),
-            "This instruction shall not have a TBAA access tag!", &I);
+  if (I)
+    CheckTBAA(isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallInst>(I) ||
+                  isa<VAArgInst>(I) || isa<AtomicRMWInst>(I) ||
+                  isa<AtomicCmpXchgInst>(I),
+              "This instruction shall not have a TBAA access tag!", I);
 
   bool IsStructPathTBAA =
       isa<MDNode>(MD->getOperand(0)) && MD->getNumOperands() >= 3;
 
   CheckTBAA(IsStructPathTBAA,
             "Old-style TBAA is no longer allowed, use struct-path TBAA instead",
-            &I);
+            I);
 
   MDNode *BaseNode = dyn_cast_or_null<MDNode>(MD->getOperand(0));
   MDNode *AccessType = dyn_cast_or_null<MDNode>(MD->getOperand(1));
@@ -7860,17 +7927,17 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
 
   if (IsNewFormat) {
     CheckTBAA(MD->getNumOperands() == 4 || MD->getNumOperands() == 5,
-              "Access tag metadata must have either 4 or 5 operands", &I, MD);
+              "Access tag metadata must have either 4 or 5 operands", I, MD);
   } else {
     CheckTBAA(MD->getNumOperands() < 5,
-              "Struct tag metadata must have either 3 or 4 operands", &I, MD);
+              "Struct tag metadata must have either 3 or 4 operands", I, MD);
   }
 
   // Check the access size field.
   if (IsNewFormat) {
     auto *AccessSizeNode = mdconst::dyn_extract_or_null<ConstantInt>(
         MD->getOperand(3));
-    CheckTBAA(AccessSizeNode, "Access size field must be a constant", &I, MD);
+    CheckTBAA(AccessSizeNode, "Access size field must be a constant", I, MD);
   }
 
   // Check the immutability flag.
@@ -7879,27 +7946,27 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
     auto *IsImmutableCI = mdconst::dyn_extract_or_null<ConstantInt>(
         MD->getOperand(ImmutabilityFlagOpNo));
     CheckTBAA(IsImmutableCI,
-              "Immutability tag on struct tag metadata must be a constant", &I,
+              "Immutability tag on struct tag metadata must be a constant", I,
               MD);
     CheckTBAA(
         IsImmutableCI->isZero() || IsImmutableCI->isOne(),
-        "Immutability part of the struct tag metadata must be either 0 or 1",
-        &I, MD);
+        "Immutability part of the struct tag metadata must be either 0 or 1", I,
+        MD);
   }
 
   CheckTBAA(BaseNode && AccessType,
             "Malformed struct tag metadata: base and access-type "
             "should be non-null and point to Metadata nodes",
-            &I, MD, BaseNode, AccessType);
+            I, MD, BaseNode, AccessType);
 
   if (!IsNewFormat) {
     CheckTBAA(isValidScalarTBAANode(AccessType),
-              "Access type node must be a valid scalar type", &I, MD,
+              "Access type node must be a valid scalar type", I, MD,
               AccessType);
   }
 
   auto *OffsetCI = mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(2));
-  CheckTBAA(OffsetCI, "Offset must be constant integer", &I, MD);
+  CheckTBAA(OffsetCI, "Offset must be constant integer", I, MD);
 
   APInt Offset = OffsetCI->getValue();
   bool SeenAccessTypeInPath = false;
@@ -7907,17 +7974,17 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
   SmallPtrSet<MDNode *, 4> StructPath;
 
   for (/* empty */; BaseNode && !IsRootTBAANode(BaseNode);
-       BaseNode = getFieldNodeFromTBAABaseNode(I, BaseNode, Offset,
-                                               IsNewFormat)) {
+       BaseNode =
+           getFieldNodeFromTBAABaseNode(I, BaseNode, Offset, IsNewFormat)) {
     if (!StructPath.insert(BaseNode).second) {
-      CheckFailed("Cycle detected in struct path", &I, MD);
+      CheckFailed("Cycle detected in struct path", I, MD);
       return false;
     }
 
     bool Invalid;
     unsigned BaseNodeBitWidth;
-    std::tie(Invalid, BaseNodeBitWidth) = verifyTBAABaseNode(I, BaseNode,
-                                                             IsNewFormat);
+    std::tie(Invalid, BaseNodeBitWidth) =
+        verifyTBAABaseNode(I, BaseNode, IsNewFormat);
 
     // If the base node is invalid in itself, then we've already printed all the
     // errors we wanted to print.
@@ -7927,20 +7994,20 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
     SeenAccessTypeInPath |= BaseNode == AccessType;
 
     if (isValidScalarTBAANode(BaseNode) || BaseNode == AccessType)
-      CheckTBAA(Offset == 0, "Offset not zero at the point of scalar access",
-                &I, MD, &Offset);
+      CheckTBAA(Offset == 0, "Offset not zero at the point of scalar access", I,
+                MD, &Offset);
 
     CheckTBAA(BaseNodeBitWidth == Offset.getBitWidth() ||
                   (BaseNodeBitWidth == 0 && Offset == 0) ||
                   (IsNewFormat && BaseNodeBitWidth == ~0u),
-              "Access bit-width not the same as description bit-width", &I, MD,
+              "Access bit-width not the same as description bit-width", I, MD,
               BaseNodeBitWidth, Offset.getBitWidth());
 
     if (IsNewFormat && SeenAccessTypeInPath)
       break;
   }
 
-  CheckTBAA(SeenAccessTypeInPath, "Did not see access type in access path!", &I,
+  CheckTBAA(SeenAccessTypeInPath, "Did not see access type in access path!", I,
             MD);
   return true;
 }

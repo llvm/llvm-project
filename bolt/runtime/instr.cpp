@@ -714,9 +714,11 @@ static char *getBinaryPath() {
       uint32_t Ret = __readlink(FindBuf, TargetPath, sizeof(TargetPath));
       assert(Ret != -1 && Ret != BufSize, "readlink error");
       TargetPath[Ret] = '\0';
+      __close(FDdir);
       return TargetPath;
     }
   }
+  __close(FDdir);
   return nullptr;
 }
 
