@@ -4456,8 +4456,8 @@ SDValue SplitOpsAndApply(SelectionDAG &DAG, const X86Subtarget &Subtarget,
                          bool AllowAVX512 = true) {
   assert(Subtarget.hasSSE2() && "Target assumed to support at least SSE2");
   unsigned NumSubs = 1;
-  if ((CheckBWI && Subtarget.useBWIRegs()) ||
-      (!CheckBWI && AllowAVX512 && Subtarget.useAVX512Regs())) {
+  if (AllowAVX512 && ((CheckBWI && Subtarget.useBWIRegs()) ||
+                      (!CheckBWI && Subtarget.useAVX512Regs()))) {
     if (VT.getSizeInBits() > 512) {
       NumSubs = VT.getSizeInBits() / 512;
       assert((VT.getSizeInBits() % 512) == 0 && "Illegal vector size");
@@ -30313,22 +30313,8 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
 
   uint64_t ShiftAmt = APIntShiftAmt.getZExtValue();
 
-  if (supportedVectorShiftWithImm(VT, Subtarget, Op.getOpcode())) {
-    // Hardware support for vector shifts is sparse which makes us scalarize the
-    // vector operations in many cases. Also, on sandybridge ADD is faster than
-    // shl: (shl V, 1) -> (add (freeze V), (freeze V))
-    if (Op.getOpcode() == ISD::SHL && ShiftAmt == 1) {
-      // R may be undef at run-time, but (shl R, 1) must be an even number (LSB
-      // must be 0). (add undef, undef) however can be any value. To make this
-      // safe, we must freeze R to ensure that register allocation uses the same
-      // register for an undefined value. This ensures that the result will
-      // still be even and preserves the original semantics.
-      R = DAG.getFreeze(R);
-      return DAG.getNode(ISD::ADD, dl, VT, R, R);
-    }
-
+  if (supportedVectorShiftWithImm(VT, Subtarget, Op.getOpcode()))
     return getTargetVShiftByConstNode(X86Opc, dl, VT, R, ShiftAmt, DAG);
-  }
 
   // i64 SRA needs to be performed as partial shifts.
   if (((!Subtarget.hasXOP() && VT == MVT::v2i64) ||
@@ -46211,7 +46197,7 @@ static SDValue createVPDPBUSD(SelectionDAG &DAG, SDValue LHS, SDValue RHS,
   SDValue Zero = DAG.getConstant(0, DL, DpVT);
 
   return SplitOpsAndApply(DAG, Subtarget, DL, DpVT, {Zero, DpOp0, DpOp1},
-                          DpBuilder, false);
+                          DpBuilder, /*CheckBWI=*/false, Subtarget.hasVNNI());
 }
 
 // Create a PSADBW given two sources representable as zexts of vXi8.
