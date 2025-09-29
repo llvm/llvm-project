@@ -421,6 +421,14 @@
 #CHECK-BE: xsaddaddsuqm  4, 5, 7        # encoding: [0xec,0x85,0x3b,0x40]
 #CHECK-LE: xsaddaddsuqm  4, 5, 7        # encoding: [0x40,0x3b,0x85,0xec]
 
+           xsaddsubuqm  4, 5, 7
+#CHECK-BE: xsaddsubuqm  4, 5, 7         # encoding: [0xec,0x85,0x3b,0x80]
+#CHECK-LE: xsaddsubuqm  4, 5, 7         # encoding: [0x80,0x3b,0x85,0xec]
+
+           xsaddsubsuqm  4, 5, 7
+#CHECK-BE: xsaddsubsuqm  4, 5, 7        # encoding: [0xec,0x85,0x3f,0x00]
+#CHECK-LE: xsaddsubsuqm  4, 5, 7        # encoding: [0x00,0x3f,0x85,0xec]
+
            xsrebase2t1uqm 4, 5, 7
 #CHECK-BE: xsrebase2t1uqm 4, 5, 7       # encoding: [0xec,0x85,0x3c,0x88]
 #CHECK-LE: xsrebase2t1uqm 4, 5, 7       # encoding: [0x88,0x3c,0x85,0xec]

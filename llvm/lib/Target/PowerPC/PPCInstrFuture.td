@@ -423,6 +423,12 @@ let Predicates = [HasVSX, IsISAFuture] in {
   def XSADDADDSUQM
       : XX3Form_XTAB6<59, 104, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                       "xsaddaddsuqm $XT, $XA, $XB", []>;
+  def XSADDSUBUQM
+      : XX3Form_XTAB6<59, 112, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                      "xsaddsubuqm $XT, $XA, $XB", []>;
+  def XSADDSUBSUQM
+      : XX3Form_XTAB6<59, 224, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                      "xsaddsubsuqm $XT, $XA, $XB", []>;
   def XSMERGE2T1UQM
       : XX3Form_XTAB6<59, 232, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                       "xsmerge2t1uqm $XT, $XA, $XB", []>;
