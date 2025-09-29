@@ -224,6 +224,10 @@ if config.clang_staticanalyzer:
         )
     )
 
+# ClangIR support
+if config.clang_enable_cir:
+    config.available_features.add("cir-support")
+
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 config.substitutions.append(

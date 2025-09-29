@@ -90,7 +90,7 @@ public:
   ///
   /// Cleanup implementations should generally be declared in an
   /// anonymous namespace.
-  class Cleanup {
+  class LLVM_MOVABLE_POLYMORPHIC_TYPE Cleanup {
     // Anchor the construction vtable.
     virtual void anchor();
 

@@ -252,7 +252,7 @@ static unsigned GetCXXMethodCVQuals(const DWARFDIE &subprogram,
 }
 
 static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
-  char const *name = die.GetMangledName(/*substitute_name_allowed*/ false);
+  const char *name = die.GetMangledName(/*substitute_name_allowed*/ false);
   if (!name)
     return {};
 
@@ -286,7 +286,9 @@ static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
   if (die_id == LLDB_INVALID_UID)
     return {};
 
-  return FunctionCallLabel{/*module_id=*/module_id,
+  // Note, discriminator is added by Clang during mangling.
+  return FunctionCallLabel{/*discriminator=*/{},
+                           /*module_id=*/module_id,
                            /*symbol_id=*/die_id,
                            /*.lookup_name=*/name}
       .toString();
@@ -2230,6 +2232,18 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
       for (DelayedAddObjCClassProperty &property : delayed_properties)
         property.Finalize();
     }
+  } else if (Language::LanguageIsObjC(
+                 static_cast<LanguageType>(die.GetAttributeValueAsUnsigned(
+                     DW_AT_APPLE_runtime_class, eLanguageTypeUnknown)))) {
+    /// The forward declaration was C++ but the definition is Objective-C.
+    /// We currently don't handle such situations. In such cases, keep the
+    /// forward declaration without a definition to avoid violating Clang AST
+    /// invariants.
+    LLDB_LOG(GetLog(LLDBLog::Expressions),
+             "WARNING: Type completion aborted because forward declaration for "
+             "'{0}' is C++ while definition is Objective-C.",
+             llvm::StringRef(die.GetName()));
+    return {};
   }
 
   if (!bases.empty()) {
@@ -3128,7 +3142,11 @@ void DWARFASTParserClang::ParseSingleMember(
       uint64_t parent_byte_size =
           parent_die.GetAttributeValueAsUnsigned(DW_AT_byte_size, UINT64_MAX);
 
-      if (attrs.member_byte_offset >= parent_byte_size) {
+      // If the attrs.member_byte_offset is still set to UINT32_MAX this means
+      // that the DW_TAG_member didn't have a DW_AT_data_member_location, so
+      // don't emit an error if this is the case.
+      if (attrs.member_byte_offset != UINT32_MAX &&
+          attrs.member_byte_offset >= parent_byte_size) {
         if (member_array_size != 1 &&
             (member_array_size != 0 ||
              attrs.member_byte_offset > parent_byte_size)) {

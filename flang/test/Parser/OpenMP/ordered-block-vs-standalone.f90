@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fdebug-dump-parse-tree -fopenmp -fopenmp-version=45 %s | FileCheck %s
+! RUN: %flang_fc1 -fdebug-dump-parse-tree-no-sema -fopenmp -fopenmp-version=45 %s | FileCheck %s
 
 ! Check that standalone ORDERED is successfully distinguished form block associated ORDERED
 
@@ -12,7 +12,7 @@ subroutine standalone
       ! CHECK-NEXT: | OmpDirectiveName -> llvm::omp::Directive = ordered
       ! CHECK-NEXT: | OmpClauseList ->
       ! CHECK-NEXT: | Flags = None
-      !$omp ordered
+      !$omp ordered depend(source)
       x(i, j) = i + j
     end do
   end do

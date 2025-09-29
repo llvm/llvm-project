@@ -934,6 +934,10 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     if (!OpXRegs[CompOprIdx] || !OpYRegs[CompOprIdx])
       continue;
 
+    if (getVGPREncodingMSBs(OpXRegs[CompOprIdx], MRI) !=
+        getVGPREncodingMSBs(OpYRegs[CompOprIdx], MRI))
+      return CompOprIdx;
+
     if (SkipSrc && CompOprIdx >= Component::DST_NUM)
       continue;
 
@@ -1395,11 +1399,17 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   return IsWave32 ? 1024 : 512;
 }
 
-unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
+unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) {
+  const auto &Features = STI->getFeatureBits();
+  if (Features.test(Feature1024AddressableVGPRs))
+    return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
+  return 256;
+}
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
                                 unsigned DynamicVGPRBlockSize) {
-  if (STI->getFeatureBits().test(FeatureGFX90AInsts))
+  const auto &Features = STI->getFeatureBits();
+  if (Features.test(FeatureGFX90AInsts))
     return 512;
 
   // Temporarily check the subtarget feature, until we fully switch to using
@@ -2772,6 +2782,7 @@ unsigned getRegBitWidth(unsigned RCID) {
     return 16;
   case AMDGPU::SGPR_32RegClassID:
   case AMDGPU::VGPR_32RegClassID:
+  case AMDGPU::VGPR_32_Lo256RegClassID:
   case AMDGPU::VRegOrLds_32RegClassID:
   case AMDGPU::AGPR_32RegClassID:
   case AMDGPU::VS_32RegClassID:
@@ -2790,6 +2801,8 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_64_Align2RegClassID:
   case AMDGPU::AV_64RegClassID:
   case AMDGPU::AV_64_Align2RegClassID:
+  case AMDGPU::VReg_64_Lo256_Align2RegClassID:
+  case AMDGPU::VS_64_Lo256RegClassID:
     return 64;
   case AMDGPU::SGPR_96RegClassID:
   case AMDGPU::SReg_96RegClassID:
@@ -2799,6 +2812,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_96_Align2RegClassID:
   case AMDGPU::AV_96RegClassID:
   case AMDGPU::AV_96_Align2RegClassID:
+  case AMDGPU::VReg_96_Lo256_Align2RegClassID:
     return 96;
   case AMDGPU::SGPR_128RegClassID:
   case AMDGPU::SReg_128RegClassID:
@@ -2809,6 +2823,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_128RegClassID:
   case AMDGPU::AV_128_Align2RegClassID:
   case AMDGPU::SReg_128_XNULLRegClassID:
+  case AMDGPU::VReg_128_Lo256_Align2RegClassID:
     return 128;
   case AMDGPU::SGPR_160RegClassID:
   case AMDGPU::SReg_160RegClassID:
@@ -2818,6 +2833,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_160_Align2RegClassID:
   case AMDGPU::AV_160RegClassID:
   case AMDGPU::AV_160_Align2RegClassID:
+  case AMDGPU::VReg_160_Lo256_Align2RegClassID:
     return 160;
   case AMDGPU::SGPR_192RegClassID:
   case AMDGPU::SReg_192RegClassID:
@@ -2827,6 +2843,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_192_Align2RegClassID:
   case AMDGPU::AV_192RegClassID:
   case AMDGPU::AV_192_Align2RegClassID:
+  case AMDGPU::VReg_192_Lo256_Align2RegClassID:
     return 192;
   case AMDGPU::SGPR_224RegClassID:
   case AMDGPU::SReg_224RegClassID:
@@ -2836,6 +2853,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_224_Align2RegClassID:
   case AMDGPU::AV_224RegClassID:
   case AMDGPU::AV_224_Align2RegClassID:
+  case AMDGPU::VReg_224_Lo256_Align2RegClassID:
     return 224;
   case AMDGPU::SGPR_256RegClassID:
   case AMDGPU::SReg_256RegClassID:
@@ -2846,6 +2864,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_256RegClassID:
   case AMDGPU::AV_256_Align2RegClassID:
   case AMDGPU::SReg_256_XNULLRegClassID:
+  case AMDGPU::VReg_256_Lo256_Align2RegClassID:
     return 256;
   case AMDGPU::SGPR_288RegClassID:
   case AMDGPU::SReg_288RegClassID:
@@ -2855,6 +2874,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_288_Align2RegClassID:
   case AMDGPU::AV_288RegClassID:
   case AMDGPU::AV_288_Align2RegClassID:
+  case AMDGPU::VReg_288_Lo256_Align2RegClassID:
     return 288;
   case AMDGPU::SGPR_320RegClassID:
   case AMDGPU::SReg_320RegClassID:
@@ -2864,6 +2884,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_320_Align2RegClassID:
   case AMDGPU::AV_320RegClassID:
   case AMDGPU::AV_320_Align2RegClassID:
+  case AMDGPU::VReg_320_Lo256_Align2RegClassID:
     return 320;
   case AMDGPU::SGPR_352RegClassID:
   case AMDGPU::SReg_352RegClassID:
@@ -2873,6 +2894,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_352_Align2RegClassID:
   case AMDGPU::AV_352RegClassID:
   case AMDGPU::AV_352_Align2RegClassID:
+  case AMDGPU::VReg_352_Lo256_Align2RegClassID:
     return 352;
   case AMDGPU::SGPR_384RegClassID:
   case AMDGPU::SReg_384RegClassID:
@@ -2882,6 +2904,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_384_Align2RegClassID:
   case AMDGPU::AV_384RegClassID:
   case AMDGPU::AV_384_Align2RegClassID:
+  case AMDGPU::VReg_384_Lo256_Align2RegClassID:
     return 384;
   case AMDGPU::SGPR_512RegClassID:
   case AMDGPU::SReg_512RegClassID:
@@ -2891,6 +2914,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_512_Align2RegClassID:
   case AMDGPU::AV_512RegClassID:
   case AMDGPU::AV_512_Align2RegClassID:
+  case AMDGPU::VReg_512_Lo256_Align2RegClassID:
     return 512;
   case AMDGPU::SGPR_1024RegClassID:
   case AMDGPU::SReg_1024RegClassID:
@@ -2900,6 +2924,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_1024_Align2RegClassID:
   case AMDGPU::AV_1024RegClassID:
   case AMDGPU::AV_1024_Align2RegClassID:
+  case AMDGPU::VReg_1024_Lo256_Align2RegClassID:
     return 1024;
   default:
     llvm_unreachable("Unexpected register class");
@@ -3132,6 +3157,34 @@ bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {
   return isUInt<32>(Val) || isInt<32>(Val);
 }
 
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type) {
+  switch (Type) {
+  default:
+    break;
+  case OPERAND_REG_IMM_BF16:
+  case OPERAND_REG_IMM_FP16:
+  case OPERAND_REG_INLINE_C_BF16:
+  case OPERAND_REG_INLINE_C_FP16:
+    return Imm & 0xffff;
+  case OPERAND_INLINE_SPLIT_BARRIER_INT32:
+  case OPERAND_REG_IMM_FP32:
+  case OPERAND_REG_IMM_INT32:
+  case OPERAND_REG_IMM_V2BF16:
+  case OPERAND_REG_IMM_V2FP16:
+  case OPERAND_REG_IMM_V2FP32:
+  case OPERAND_REG_IMM_V2INT16:
+  case OPERAND_REG_IMM_V2INT32:
+  case OPERAND_REG_INLINE_AC_FP32:
+  case OPERAND_REG_INLINE_AC_INT32:
+  case OPERAND_REG_INLINE_C_FP32:
+  case OPERAND_REG_INLINE_C_INT32:
+    return Lo_32(Imm);
+  case OPERAND_REG_IMM_FP64:
+    return Hi_32(Imm);
+  }
+  return Imm;
+}
+
 bool isArgPassedInSGPR(const Argument *A) {
   const Function *F = A->getParent();
 
@@ -3202,8 +3255,11 @@ bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
 
 bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
                                     int64_t EncodedOffset, bool IsBuffer) {
-  if (isGFX12Plus(ST))
+  if (isGFX12Plus(ST)) {
+    if (IsBuffer && EncodedOffset < 0)
+      return false;
     return isInt<24>(EncodedOffset);
+  }
 
   return !IsBuffer && hasSMRDSignedImmOffset(ST) && isInt<21>(EncodedOffset);
 }
@@ -3317,6 +3373,121 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                           : getGfx9BufferFormatInfo(Format);
 }
 
+const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
+                                           const MCRegisterInfo &MRI) {
+  const unsigned VGPRClasses[] = {
+      AMDGPU::VGPR_16RegClassID,  AMDGPU::VGPR_32RegClassID,
+      AMDGPU::VReg_64RegClassID,  AMDGPU::VReg_96RegClassID,
+      AMDGPU::VReg_128RegClassID, AMDGPU::VReg_160RegClassID,
+      AMDGPU::VReg_192RegClassID, AMDGPU::VReg_224RegClassID,
+      AMDGPU::VReg_256RegClassID, AMDGPU::VReg_288RegClassID,
+      AMDGPU::VReg_320RegClassID, AMDGPU::VReg_352RegClassID,
+      AMDGPU::VReg_384RegClassID, AMDGPU::VReg_512RegClassID,
+      AMDGPU::VReg_1024RegClassID};
+
+  for (unsigned RCID : VGPRClasses) {
+    const MCRegisterClass &RC = MRI.getRegClass(RCID);
+    if (RC.contains(Reg))
+      return &RC;
+  }
+
+  return nullptr;
+}
+
+unsigned getVGPREncodingMSBs(MCPhysReg Reg, const MCRegisterInfo &MRI) {
+  unsigned Enc = MRI.getEncodingValue(Reg);
+  unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+  return Idx >> 8;
+}
+
+MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
+                          const MCRegisterInfo &MRI) {
+  unsigned Enc = MRI.getEncodingValue(Reg);
+  unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+  if (Idx >= 0x100)
+    return AMDGPU::NoRegister;
+
+  const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
+  if (!RC)
+    return AMDGPU::NoRegister;
+
+  Idx |= MSBs << 8;
+  if (RC->getID() == AMDGPU::VGPR_16RegClassID) {
+    // This class has 2048 registers with interleaved lo16 and hi16.
+    Idx *= 2;
+    if (Enc & AMDGPU::HWEncoding::IS_HI16)
+      ++Idx;
+  }
+
+  return RC->getRegister(Idx);
+}
+
+std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>
+getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
+  static const AMDGPU::OpName VOPOps[4] = {
+      AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2,
+      AMDGPU::OpName::vdst};
+  static const AMDGPU::OpName VDSOps[4] = {
+      AMDGPU::OpName::addr, AMDGPU::OpName::data0, AMDGPU::OpName::data1,
+      AMDGPU::OpName::vdst};
+  static const AMDGPU::OpName FLATOps[4] = {
+      AMDGPU::OpName::vaddr, AMDGPU::OpName::vdata,
+      AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::vdst};
+  static const AMDGPU::OpName BUFOps[4] = {
+      AMDGPU::OpName::vaddr, AMDGPU::OpName::NUM_OPERAND_NAMES,
+      AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::vdata};
+  static const AMDGPU::OpName VIMGOps[4] = {
+      AMDGPU::OpName::vaddr0, AMDGPU::OpName::vaddr1, AMDGPU::OpName::vaddr2,
+      AMDGPU::OpName::vdata};
+
+  // For VOPD instructions MSB of a corresponding Y component operand VGPR
+  // address is supposed to match X operand, otherwise VOPD shall not be
+  // combined.
+  static const AMDGPU::OpName VOPDOpsX[4] = {
+      AMDGPU::OpName::src0X, AMDGPU::OpName::vsrc1X, AMDGPU::OpName::vsrc2X,
+      AMDGPU::OpName::vdstX};
+  static const AMDGPU::OpName VOPDOpsY[4] = {
+      AMDGPU::OpName::src0Y, AMDGPU::OpName::vsrc1Y, AMDGPU::OpName::vsrc2Y,
+      AMDGPU::OpName::vdstY};
+
+  unsigned TSFlags = Desc.TSFlags;
+
+  if (TSFlags &
+      (SIInstrFlags::VOP1 | SIInstrFlags::VOP2 | SIInstrFlags::VOP3 |
+       SIInstrFlags::VOP3P | SIInstrFlags::VOPC | SIInstrFlags::DPP)) {
+    // LD_SCALE operands ignore MSB.
+    if (Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32 ||
+        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32_gfx1250 ||
+        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64 ||
+        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64_gfx1250)
+      return {};
+    return {VOPOps, nullptr};
+  }
+
+  if (TSFlags & SIInstrFlags::DS)
+    return {VDSOps, nullptr};
+
+  if (TSFlags & SIInstrFlags::FLAT)
+    return {FLATOps, nullptr};
+
+  if (TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))
+    return {BUFOps, nullptr};
+
+  if (TSFlags & SIInstrFlags::VIMAGE)
+    return {VIMGOps, nullptr};
+
+  if (AMDGPU::isVOPD(Desc.getOpcode()))
+    return {VOPDOpsX, VOPDOpsY};
+
+  assert(!(TSFlags & SIInstrFlags::MIMG));
+
+  if (TSFlags & (SIInstrFlags::VSAMPLE | SIInstrFlags::EXP))
+    llvm_unreachable("Sample and export VGPR lowering is not implemented and"
+                     " these instructions are not expected on gfx1250");
+
+  return {};
+}
+
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
   uint64_t TSFlags = MII.get(Opcode).TSFlags;
 
@@ -3397,6 +3568,54 @@ bool isPackedFP32Inst(unsigned Opc) {
   default:
     return false;
   }
+}
+
+const std::array<unsigned, 3> &ClusterDimsAttr::getDims() const {
+  assert(isFixedDims() && "expect kind to be FixedDims");
+  return Dims;
+}
+
+std::string ClusterDimsAttr::to_string() const {
+  SmallString<10> Buffer;
+  raw_svector_ostream OS(Buffer);
+
+  switch (getKind()) {
+  case Kind::Unknown:
+    return "";
+  case Kind::NoCluster: {
+    OS << EncoNoCluster << ',' << EncoNoCluster << ',' << EncoNoCluster;
+    return Buffer.c_str();
+  }
+  case Kind::VariableDims: {
+    OS << EncoVariableDims << ',' << EncoVariableDims << ','
+       << EncoVariableDims;
+    return Buffer.c_str();
+  }
+  case Kind::FixedDims: {
+    OS << Dims[0] << ',' << Dims[1] << ',' << Dims[2];
+    return Buffer.c_str();
+  }
+  }
+  llvm_unreachable("Unknown ClusterDimsAttr kind");
+}
+
+ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {
+  std::optional<SmallVector<unsigned>> Attr =
+      getIntegerVecAttribute(F, "amdgpu-cluster-dims", /*Size=*/3);
+  ClusterDimsAttr::Kind AttrKind = Kind::FixedDims;
+
+  if (!Attr.has_value())
+    AttrKind = Kind::Unknown;
+  else if (all_of(*Attr, [](unsigned V) { return V == EncoNoCluster; }))
+    AttrKind = Kind::NoCluster;
+  else if (all_of(*Attr, [](unsigned V) { return V == EncoVariableDims; }))
+    AttrKind = Kind::VariableDims;
+
+  ClusterDimsAttr A(AttrKind);
+  if (AttrKind == Kind::FixedDims)
+    A.Dims = {(*Attr)[0], (*Attr)[1], (*Attr)[2]};
+
+  return A;
 }
 
 } // namespace AMDGPU

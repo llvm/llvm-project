@@ -501,8 +501,6 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
 TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
   using llvm::dxbc::RootFlags;
   const llvm::StringLiteral Source = R"cc(
-    RootFlags(),
-    RootFlags(0),
     RootFlags(
       deny_domain_shader_root_access |
       deny_pixel_shader_root_access |
@@ -533,17 +531,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
   ASSERT_FALSE(Parser.parse());
 
   auto Elements = Parser.getElements();
-  ASSERT_EQ(Elements.size(), 3u);
+  ASSERT_EQ(Elements.size(), 1u);
 
   RootElement Elem = Elements[0].getElement();
-  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
-  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
-
-  Elem = Elements[1].getElement();
-  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
-  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
-
-  Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
   auto ValidRootFlags = RootFlags::AllowInputAssemblerInputLayout |
                         RootFlags::DenyVertexShaderRootAccess |
@@ -558,6 +548,64 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
                         RootFlags::CBVSRVUAVHeapDirectlyIndexed |
                         RootFlags::SamplerHeapDirectlyIndexed;
   ASSERT_EQ(std::get<RootFlags>(Elem), ValidRootFlags);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, ValidParseEmptyRootFlagsTest) {
+  using llvm::dxbc::RootFlags;
+  const llvm::StringLiteral Source = R"cc(
+    RootFlags(),
+  )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  auto Elements = Parser.getElements();
+  ASSERT_EQ(Elements.size(), 1u);
+
+  RootElement Elem = Elements[0].getElement();
+  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
+  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, ValidParseZeroRootFlagsTest) {
+  using llvm::dxbc::RootFlags;
+  const llvm::StringLiteral Source = R"cc(
+    RootFlags(0),
+  )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  auto Elements = Parser.getElements();
+  ASSERT_EQ(Elements.size(), 1u);
+
+  RootElement Elem = Elements[0].getElement();
+  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
+  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -1653,6 +1701,29 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidDescriptorRangeFlagsValueTest) {
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidMultipleRootFlagsTest) {
+  // This test will check that an error is produced when there are multiple
+  // root flags provided
+  const llvm::StringLiteral Source = R"cc(
+    RootFlags(DENY_VERTEX_SHADER_ROOT_ACCESS),
+    RootFlags(DENY_PIXEL_SHADER_ROOT_ACCESS)
+  )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_rootsig_repeat_param);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());

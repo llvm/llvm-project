@@ -22,7 +22,7 @@ runs:
   using: "composite"
   steps:
     - name: Install Ninja
-      uses: llvm/actions/install-ninja@22e9f909d35b50bd1181709564bfe816eaeaae81 # main
+      uses: llvm/actions/install-ninja@a1ea791b03c8e61f53a0e66f2f73db283aa0f01e # main
    
     - name: Setup Windows
       if: startsWith(runner.os, 'Windows')
@@ -44,7 +44,7 @@ runs:
     - name: Download Previous Stage Artifact
       if: ${{ inputs.previous-artifact }}
       id: download
-      uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
       with:
         pattern: ${{ runner.os }}-${{ runner.arch }}-${{ inputs.previous-artifact }}-*
         merge-multiple: true

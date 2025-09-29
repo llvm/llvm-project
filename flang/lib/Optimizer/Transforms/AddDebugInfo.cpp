@@ -649,6 +649,19 @@ void AddDebugInfoPass::runOnOperation() {
     signalPassFailure();
     return;
   }
+  mlir::OpBuilder builder(context);
+  if (dwarfVersion > 0) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToEnd(module.getBody());
+    llvm::SmallVector<mlir::Attribute> moduleFlags;
+    mlir::IntegerType int32Ty = mlir::IntegerType::get(context, 32);
+    moduleFlags.push_back(builder.getAttr<mlir::LLVM::ModuleFlagAttr>(
+        mlir::LLVM::ModFlagBehavior::Max,
+        mlir::StringAttr::get(context, "Dwarf Version"),
+        mlir::IntegerAttr::get(int32Ty, dwarfVersion)));
+    mlir::LLVM::ModuleFlagsOp::create(builder, module.getLoc(),
+                                      builder.getArrayAttr(moduleFlags));
+  }
   fir::DebugTypeGenerator typeGen(module, &symbolTable, *dl);
   // We need 2 type of file paths here.
   // 1. Name of the file as was presented to compiler. This can be absolute
@@ -681,12 +694,13 @@ void AddDebugInfoPass::runOnOperation() {
   mlir::LLVM::DICompileUnitAttr cuAttr = mlir::LLVM::DICompileUnitAttr::get(
       mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
-      isOptimized, debugLevel);
+      isOptimized, debugLevel,
+      /*nameTableKind=*/mlir::LLVM::DINameTableKind::Default,
+      /*splitDebugFilename=*/mlir::StringAttr());
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     handleFuncOp(funcOp, fileAttr, cuAttr, typeGen, &symbolTable);
   });
-  mlir::OpBuilder builder(context);
   // We have processed all function. Attach common block variables to the
   // global that represent the storage.
   for (auto [global, exprs] : globalToGlobalExprsMap) {

@@ -1,4 +1,4 @@
-//===--- TypeTraitsCheck.cpp - clang-tidy ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -220,7 +220,7 @@ static bool checkTemplatedDecl(NestedNameSpecifier NNS,
 
 TypeTraitsCheck::TypeTraitsCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", false)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
   auto EmitValueWarning = [this, &Result](const NestedNameSpecifierLoc &QualLoc,

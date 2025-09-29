@@ -148,6 +148,7 @@ cc_test(
         "//clang:testing",
         "//clang:tooling",
         "//llvm:Support",
+        "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",

@@ -18,6 +18,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -126,7 +127,7 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
 }
 
 bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
-                                    APValue &Result) {
+                                    const Expr *Init, APValue &Result) {
   ++EvalID;
   bool Recursing = !Stk.empty();
   size_t StackSizeBefore = Stk.size();
@@ -135,7 +136,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   bool CheckGlobalInitialized =
       shouldBeGloballyIndexed(VD) &&
       (VD->getType()->isRecordType() || VD->getType()->isArrayType());
-  auto Res = C.interpretDecl(VD, CheckGlobalInitialized);
+  auto Res = C.interpretDecl(VD, Init, CheckGlobalInitialized);
   if (Res.isInvalid()) {
     C.cleanup();
     Stk.clearTo(StackSizeBefore);
@@ -236,6 +237,52 @@ bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
   return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
 }
 
+bool Context::evaluateString(State &Parent, const Expr *E,
+                             std::string &Result) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    const Descriptor *FieldDesc = Ptr.getFieldDesc();
+    if (!FieldDesc->isPrimitiveArray())
+      return false;
+
+    if (!Ptr.isConst())
+      return false;
+
+    unsigned N = Ptr.getNumElems();
+
+    if (Ptr.elemSize() == 1 /* bytes */) {
+      const char *Chars = reinterpret_cast<const char *>(Ptr.getRawAddress());
+      unsigned Length = strnlen(Chars, N);
+      // Wasn't null terminated.
+      if (N == Length)
+        return false;
+      Result.assign(Chars, Length);
+      return true;
+    }
+
+    PrimType ElemT = FieldDesc->getPrimType();
+    for (unsigned I = Ptr.getIndex(); I != N; ++I) {
+      INT_TYPE_SWITCH(ElemT, {
+        auto Elem = Ptr.elem<T>(I);
+        if (Elem.isZero())
+          return true;
+        Result.push_back(static_cast<char>(Elem));
+      });
+    }
+    // We didn't find a 0 byte.
+    return false;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+  return true;
+}
+
 bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
   assert(Stk.empty());
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
@@ -243,6 +290,9 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
   auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
     const Descriptor *FieldDesc = Ptr.getFieldDesc();
     if (!FieldDesc->isPrimitiveArray())
+      return false;
+
+    if (Ptr.isDummy() || Ptr.isUnknownSizeArray())
       return false;
 
     unsigned N = Ptr.getNumElems();
@@ -446,8 +496,6 @@ Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
 
 const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   assert(FuncDecl);
-  FuncDecl = FuncDecl->getMostRecentDecl();
-
   if (const Function *Func = P->getFunction(FuncDecl))
     return Func;
 
@@ -465,23 +513,6 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
     // be a non-static member function, this (usually) requiring an
     // instance pointer. We suppress that later in this function.
     IsLambdaStaticInvoker = true;
-
-    const CXXRecordDecl *ClosureClass = MD->getParent();
-    assert(ClosureClass->captures().empty());
-    if (ClosureClass->isGenericLambda()) {
-      const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
-      assert(MD->isFunctionTemplateSpecialization() &&
-             "A generic lambda's static-invoker function must be a "
-             "template specialization");
-      const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
-      FunctionTemplateDecl *CallOpTemplate =
-          LambdaCallOp->getDescribedFunctionTemplate();
-      void *InsertPos = nullptr;
-      const FunctionDecl *CorrespondingCallOpSpecialization =
-          CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
-      assert(CorrespondingCallOpSpecialization);
-      FuncDecl = CorrespondingCallOpSpecialization;
-    }
   }
   // Set up argument indices.
   unsigned ParamOffset = 0;
@@ -536,9 +567,15 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
   for (const ParmVarDecl *PD : FuncDecl->parameters()) {
+    bool IsConst = PD->getType().isConstQualified();
+    bool IsVolatile = PD->getType().isVolatileQualified();
+
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT);
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
+                                           IsConst, /*IsTemporary=*/false,
+                                           /*IsMutable=*/false, IsVolatile);
+
     ParamDescriptors.insert({ParamOffset, {PT, Desc}});
     ParamOffsets.push_back(ParamOffset);
     ParamOffset += align(primSize(PT));
@@ -564,9 +601,14 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
   for (const ParmVarDecl *PD : BD->parameters()) {
+    bool IsConst = PD->getType().isConstQualified();
+    bool IsVolatile = PD->getType().isVolatileQualified();
+
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT);
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
+                                           IsConst, /*IsTemporary=*/false,
+                                           /*IsMutable=*/false, IsVolatile);
     ParamDescriptors.insert({ParamOffset, {PT, Desc}});
     ParamOffsets.push_back(ParamOffset);
     ParamOffset += align(primSize(PT));

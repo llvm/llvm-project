@@ -203,6 +203,8 @@ static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
     cl::desc("Limit number of blocks a define in a threaded block is allowed "
              "to be live in"));
 
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
           "Number of switch instructions turned into linear mapping");
@@ -329,6 +331,17 @@ public:
     return true;
   }
 };
+
+// we synthesize a || b as select a, true, b
+// we synthesize a && b as select a, b, false
+// this function determines if SI is playing one of those roles.
+[[maybe_unused]] bool
+isSelectInRoleOfConjunctionOrDisjunction(const SelectInst *SI) {
+  return ((isa<ConstantInt>(SI->getTrueValue()) &&
+           (dyn_cast<ConstantInt>(SI->getTrueValue())->isOne())) ||
+          (isa<ConstantInt>(SI->getFalseValue()) &&
+           (dyn_cast<ConstantInt>(SI->getFalseValue())->isNullValue())));
+}
 
 } // end anonymous namespace
 
@@ -512,28 +525,33 @@ static bool dominatesMergePoint(
 static ConstantInt *getConstantInt(Value *V, const DataLayout &DL) {
   // Normal constant int.
   ConstantInt *CI = dyn_cast<ConstantInt>(V);
-  if (CI || !isa<Constant>(V) || !V->getType()->isPointerTy() ||
-      DL.isNonIntegralPointerType(V->getType()))
+  if (CI || !isa<Constant>(V) || !V->getType()->isPointerTy())
     return CI;
+
+  // It is not safe to look through inttoptr or ptrtoint when using unstable
+  // pointer types.
+  if (DL.hasUnstableRepresentation(V->getType()))
+    return nullptr;
 
   // This is some kind of pointer constant. Turn it into a pointer-sized
   // ConstantInt if possible.
-  IntegerType *PtrTy = cast<IntegerType>(DL.getIntPtrType(V->getType()));
+  IntegerType *IntPtrTy = cast<IntegerType>(DL.getIntPtrType(V->getType()));
 
   // Null pointer means 0, see SelectionDAGBuilder::getValue(const Value*).
   if (isa<ConstantPointerNull>(V))
-    return ConstantInt::get(PtrTy, 0);
+    return ConstantInt::get(IntPtrTy, 0);
 
-  // IntToPtr const int.
+  // IntToPtr const int, we can look through this if the semantics of
+  // inttoptr for this address space are a simple (truncating) bitcast.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V))
     if (CE->getOpcode() == Instruction::IntToPtr)
       if (ConstantInt *CI = dyn_cast<ConstantInt>(CE->getOperand(0))) {
         // The constant is very likely to have the right type already.
-        if (CI->getType() == PtrTy)
+        if (CI->getType() == IntPtrTy)
           return CI;
         else
           return cast<ConstantInt>(
-              ConstantFoldIntegerCast(CI, PtrTy, /*isSigned=*/false, DL));
+              ConstantFoldIntegerCast(CI, IntPtrTy, /*isSigned=*/false, DL));
       }
   return nullptr;
 }
@@ -612,6 +630,9 @@ private:
   /// If CompValue is already set, the function is expected to fail if a match
   /// is found but the value compared to is different.
   bool matchInstruction(Instruction *I, bool isEQ) {
+    if (match(I, m_Not(m_Instruction(I))))
+      isEQ = !isEQ;
+
     Value *Val;
     if (match(I, m_NUWTrunc(m_Value(Val)))) {
       // If we already have a value for the switch, it has to match!
@@ -850,10 +871,12 @@ Value *SimplifyCFGOpt::isValueEqualityComparison(Instruction *TI) {
       }
     }
 
-  // Unwrap any lossless ptrtoint cast.
+  // Unwrap any lossless ptrtoint cast (except for unstable pointers).
   if (CV) {
     if (PtrToIntInst *PTII = dyn_cast<PtrToIntInst>(CV)) {
       Value *Ptr = PTII->getPointerOperand();
+      if (DL.hasUnstableRepresentation(Ptr->getType()))
+        return CV;
       if (PTII->getType() == DL.getIntPtrType(Ptr->getType()))
         CV = Ptr;
     }
@@ -1411,6 +1434,8 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
   Builder.SetInsertPoint(PTI);
   // Convert pointer to int before we switch.
   if (CV->getType()->isPointerTy()) {
+    assert(!DL.hasUnstableRepresentation(CV->getType()) &&
+           "Should not end up here with unstable pointers");
     CV =
         Builder.CreatePtrToInt(CV, DL.getIntPtrType(CV->getType()), "magicptr");
   }
@@ -3376,7 +3401,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // hoisting above.
   for (auto &I : make_early_inc_range(*ThenBB)) {
     if (!SpeculatedStoreValue || &I != SpeculatedStore) {
-      I.setDebugLoc(DebugLoc::getDropped());
+      I.dropLocation();
     }
     I.dropUBImplyingAttrsAndMetadata();
 
@@ -4028,6 +4053,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   // Try to update branch weights.
   uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
+  SmallVector<uint32_t, 2> MDWeights;
   if (extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
                              SuccTrueWeight, SuccFalseWeight)) {
     SmallVector<uint64_t, 8> NewWeights;
@@ -4058,7 +4084,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
     // Halve the weights if any of them cannot fit in an uint32_t
     fitWeights(NewWeights);
 
-    SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(), NewWeights.end());
+    append_range(MDWeights, NewWeights);
     setBranchWeights(PBI, MDWeights[0], MDWeights[1], /*IsExpected=*/false);
 
     // TODO: If BB is reachable from all paths through PredBlock, then we
@@ -4095,6 +4121,13 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   Value *BICond = VMap[BI->getCondition()];
   PBI->setCondition(
       createLogicalOp(Builder, Opc, PBI->getCondition(), BICond, "or.cond"));
+  if (!ProfcheckDisableMetadataFixes)
+    if (auto *SI = dyn_cast<SelectInst>(PBI->getCondition()))
+      if (!MDWeights.empty()) {
+        assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
+        setBranchWeights(SI, MDWeights[0], MDWeights[1],
+                         /*IsExpected=*/false);
+      }
 
   ++NumFoldBranchToCommonDest;
   return true;
@@ -4435,6 +4468,20 @@ static bool mergeConditionalStoreToAddress(
   auto *T = SplitBlockAndInsertIfThen(CombinedPred, InsertPt,
                                       /*Unreachable=*/false,
                                       /*BranchWeights=*/nullptr, DTU);
+  if (hasBranchWeightMD(*PBranch) && hasBranchWeightMD(*QBranch) &&
+      !ProfcheckDisableMetadataFixes) {
+    SmallVector<uint32_t, 2> PWeights, QWeights;
+    extractBranchWeights(*PBranch, PWeights);
+    extractBranchWeights(*QBranch, QWeights);
+    if (InvertPCond)
+      std::swap(PWeights[0], PWeights[1]);
+    if (InvertQCond)
+      std::swap(QWeights[0], QWeights[1]);
+    auto CombinedWeights = getDisjunctionWeights(PWeights, QWeights);
+    setBranchWeights(PostBB->getTerminator(), CombinedWeights[0],
+                     CombinedWeights[1],
+                     /*IsExpected=*/false);
+  }
 
   QB.SetInsertPoint(T);
   StoreInst *SI = cast<StoreInst>(QB.CreateStore(QPHI, Address));
@@ -4793,6 +4840,18 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     fitWeights(NewWeights);
 
     setBranchWeights(PBI, NewWeights[0], NewWeights[1], /*IsExpected=*/false);
+    // Cond may be a select instruction with the first operand set to "true", or
+    // the second to "false" (see how createLogicalOp works for `and` and `or`)
+    if (!ProfcheckDisableMetadataFixes)
+      if (auto *SI = dyn_cast<SelectInst>(Cond)) {
+        assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
+        // The select is predicated on PBICond
+        assert(dyn_cast<SelectInst>(SI)->getCondition() == PBICond);
+        // The corresponding probabilities are what was referred to above as
+        // PredCommon and PredOther.
+        setBranchWeights(SI, PredCommon, PredOther,
+                         /*IsExpected=*/false);
+      }
   }
 
   // OtherDest may have phi nodes.  If so, add an entry from PBI's
@@ -4812,23 +4871,12 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
       SelectInst *NV = cast<SelectInst>(
           Builder.CreateSelect(PBICond, PBIV, BIV, PBIV->getName() + ".mux"));
       PN.setIncomingValue(PBBIdx, NV);
-      // Although the select has the same condition as PBI, the original branch
-      // weights for PBI do not apply to the new select because the select's
-      // 'logical' edges are incoming edges of the phi that is eliminated, not
-      // the outgoing edges of PBI.
+      // The select has the same condition as PBI, in the same BB. The
+      // probabilities don't change.
       if (HasWeights) {
-        uint64_t PredCommon = PBIOp ? PredFalseWeight : PredTrueWeight;
-        uint64_t PredOther = PBIOp ? PredTrueWeight : PredFalseWeight;
-        uint64_t SuccCommon = BIOp ? SuccFalseWeight : SuccTrueWeight;
-        uint64_t SuccOther = BIOp ? SuccTrueWeight : SuccFalseWeight;
-        // The weight to PredCommonDest should be PredCommon * SuccTotal.
-        // The weight to PredOtherDest should be PredOther * SuccCommon.
-        uint64_t NewWeights[2] = {PredCommon * (SuccCommon + SuccOther),
-                                  PredOther * SuccCommon};
-
-        fitWeights(NewWeights);
-
-        setBranchWeights(NV, NewWeights[0], NewWeights[1],
+        uint64_t TrueWeight = PBIOp ? PredFalseWeight : PredTrueWeight;
+        uint64_t FalseWeight = PBIOp ? PredTrueWeight : PredFalseWeight;
+        setBranchWeights(NV, TrueWeight, FalseWeight,
                          /*IsExpected=*/false);
       }
     }
@@ -5207,6 +5255,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
   Builder.SetInsertPoint(BI);
   // Convert pointer to int before we switch.
   if (CompVal->getType()->isPointerTy()) {
+    assert(!DL.hasUnstableRepresentation(CompVal->getType()) &&
+           "Should not end up here with unstable pointers");
     CompVal = Builder.CreatePtrToInt(
         CompVal, DL.getIntPtrType(CompVal->getType()), "magicptr");
   }
@@ -6279,9 +6329,12 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
 // Helper function that checks if it is possible to transform a switch with only
 // two cases (or two cases + default) that produces a result into a select.
 // TODO: Handle switches with more than 2 cases that map to the same result.
+// The branch weights correspond to the provided Condition (i.e. if Condition is
+// modified from the original SwitchInst, the caller must adjust the weights)
 static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
                                  Constant *DefaultResult, Value *Condition,
-                                 IRBuilder<> &Builder, const DataLayout &DL) {
+                                 IRBuilder<> &Builder, const DataLayout &DL,
+                                 ArrayRef<uint32_t> BranchWeights) {
   // If we are selecting between only two cases transform into a simple
   // select or a two-way select if default is possible.
   // Example:
@@ -6290,6 +6343,10 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
   //   case 20: return 2;   ---->  %2 = icmp eq i32 %a, 20
   //   default: return 4;          %3 = select i1 %2, i32 2, i32 %1
   // }
+
+  const bool HasBranchWeights =
+      !BranchWeights.empty() && !ProfcheckDisableMetadataFixes;
+
   if (ResultVector.size() == 2 && ResultVector[0].second.size() == 1 &&
       ResultVector[1].second.size() == 1) {
     ConstantInt *FirstCase = ResultVector[0].second[0];
@@ -6300,11 +6357,35 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
           Builder.CreateICmpEQ(Condition, SecondCase, "switch.selectcmp");
       SelectValue = Builder.CreateSelect(ValueCompare, ResultVector[1].first,
                                          DefaultResult, "switch.select");
+      if (auto *SI = dyn_cast<SelectInst>(SelectValue);
+          SI && HasBranchWeights) {
+        // We start with 3 probabilities, where the numerator is the
+        // corresponding BranchWeights[i], and the denominator is the sum over
+        // BranchWeights. We want the probability and negative probability of
+        // Condition == SecondCase.
+        assert(BranchWeights.size() == 3);
+        setBranchWeights(SI, BranchWeights[2],
+                         BranchWeights[0] + BranchWeights[1],
+                         /*IsExpected=*/false);
+      }
     }
     Value *ValueCompare =
         Builder.CreateICmpEQ(Condition, FirstCase, "switch.selectcmp");
-    return Builder.CreateSelect(ValueCompare, ResultVector[0].first,
-                                SelectValue, "switch.select");
+    Value *Ret = Builder.CreateSelect(ValueCompare, ResultVector[0].first,
+                                      SelectValue, "switch.select");
+    if (auto *SI = dyn_cast<SelectInst>(Ret); SI && HasBranchWeights) {
+      // We may have had a DefaultResult. Base the position of the first and
+      // second's branch weights accordingly. Also the proability that Condition
+      // != FirstCase needs to take that into account.
+      assert(BranchWeights.size() >= 2);
+      size_t FirstCasePos = (Condition != nullptr);
+      size_t SecondCasePos = FirstCasePos + 1;
+      uint32_t DefaultCase = (Condition != nullptr) ? BranchWeights[0] : 0;
+      setBranchWeights(SI, BranchWeights[FirstCasePos],
+                       DefaultCase + BranchWeights[SecondCasePos],
+                       /*IsExpected=*/false);
+    }
+    return Ret;
   }
 
   // Handle the degenerate case where two cases have the same result value.
@@ -6340,8 +6421,16 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
           Value *And = Builder.CreateAnd(Condition, AndMask);
           Value *Cmp = Builder.CreateICmpEQ(
               And, Constant::getIntegerValue(And->getType(), AndMask));
-          return Builder.CreateSelect(Cmp, ResultVector[0].first,
-                                      DefaultResult);
+          Value *Ret =
+              Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+          if (auto *SI = dyn_cast<SelectInst>(Ret); SI && HasBranchWeights) {
+            // We know there's a Default case. We base the resulting branch
+            // weights off its probability.
+            assert(BranchWeights.size() >= 2);
+            setBranchWeights(SI, accumulate(drop_begin(BranchWeights), 0),
+                             BranchWeights[0], /*IsExpected=*/false);
+          }
+          return Ret;
         }
       }
 
@@ -6358,7 +6447,14 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
         Value *And = Builder.CreateAnd(Condition, ~BitMask, "switch.and");
         Value *Cmp = Builder.CreateICmpEQ(
             And, Constant::getNullValue(And->getType()), "switch.selectcmp");
-        return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+        Value *Ret =
+            Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+        if (auto *SI = dyn_cast<SelectInst>(Ret); SI && HasBranchWeights) {
+          assert(BranchWeights.size() >= 2);
+          setBranchWeights(SI, accumulate(drop_begin(BranchWeights), 0),
+                           BranchWeights[0], /*IsExpected=*/false);
+        }
+        return Ret;
       }
     }
 
@@ -6369,7 +6465,14 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
       Value *Cmp2 = Builder.CreateICmpEQ(Condition, CaseValues[1],
                                          "switch.selectcmp.case2");
       Value *Cmp = Builder.CreateOr(Cmp1, Cmp2, "switch.selectcmp");
-      return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+      Value *Ret =
+          Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+      if (auto *SI = dyn_cast<SelectInst>(Ret); SI && HasBranchWeights) {
+        assert(BranchWeights.size() >= 2);
+        setBranchWeights(SI, accumulate(drop_begin(BranchWeights), 0),
+                         BranchWeights[0], /*IsExpected=*/false);
+      }
+      return Ret;
     }
   }
 
@@ -6430,8 +6533,18 @@ static bool trySwitchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
 
   assert(PHI != nullptr && "PHI for value select not found");
   Builder.SetInsertPoint(SI);
-  Value *SelectValue =
-      foldSwitchToSelect(UniqueResults, DefaultResult, Cond, Builder, DL);
+  SmallVector<uint32_t, 4> BranchWeights;
+  if (!ProfcheckDisableMetadataFixes) {
+    [[maybe_unused]] auto HasWeights =
+        extractBranchWeights(getBranchWeightMDNode(*SI), BranchWeights);
+    assert(!HasWeights == (BranchWeights.empty()));
+  }
+  assert(BranchWeights.empty() ||
+         (BranchWeights.size() >=
+          UniqueResults.size() + (DefaultResult != nullptr)));
+
+  Value *SelectValue = foldSwitchToSelect(UniqueResults, DefaultResult, Cond,
+                                          Builder, DL, BranchWeights);
   if (!SelectValue)
     return false;
 
@@ -6465,6 +6578,9 @@ public:
 
   /// Return the default value of the switch.
   Constant *getDefaultValue();
+
+  /// Return true if the replacement is a lookup table.
+  bool isLookupTable();
 
 private:
   // Depending on the switch, there are different alternatives.
@@ -6613,7 +6729,6 @@ SwitchReplacement::SwitchReplacement(
         (void)M.smul_ov(APInt(M.getBitWidth(), TableSize - 1), MayWrap);
       LinearMapValWrapped = NonMonotonic || MayWrap;
       Kind = LinearMapKind;
-      ++NumLinearMaps;
       return;
     }
   }
@@ -6633,7 +6748,6 @@ SwitchReplacement::SwitchReplacement(
     BitMap = ConstantInt::get(M.getContext(), TableInt);
     BitMapElementTy = IT;
     Kind = BitMapKind;
-    ++NumBitMaps;
     return;
   }
 
@@ -6650,6 +6764,7 @@ Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
   case SingleValueKind:
     return SingleValue;
   case LinearMapKind: {
+    ++NumLinearMaps;
     // Derive the result value from the input value.
     Value *Result = Builder.CreateIntCast(Index, LinearMultiplier->getType(),
                                           false, "switch.idx.cast");
@@ -6665,6 +6780,7 @@ Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
     return Result;
   }
   case BitMapKind: {
+    ++NumBitMaps;
     // Type of the bitmap (e.g. i59).
     IntegerType *MapTy = BitMap->getIntegerType();
 
@@ -6687,6 +6803,7 @@ Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
     return Builder.CreateTrunc(DownShifted, BitMapElementTy, "switch.masked");
   }
   case LookupTableKind: {
+    ++NumLookupTables;
     auto *Table =
         new GlobalVariable(*Func->getParent(), Initializer->getType(),
                            /*isConstant=*/true, GlobalVariable::PrivateLinkage,
@@ -6752,6 +6869,8 @@ static bool isTypeLegalForLookupTable(Type *Ty, const TargetTransformInfo &TTI,
 }
 
 Constant *SwitchReplacement::getDefaultValue() { return DefaultValue; }
+
+bool SwitchReplacement::isLookupTable() { return Kind == LookupTableKind; }
 
 static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange) {
   // 40% is the default density for building a jump table in optsize/minsize
@@ -6923,11 +7042,6 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
 
   BasicBlock *BB = SI->getParent();
   Function *Fn = BB->getParent();
-  // Only build lookup table when we have a target that supports it or the
-  // attribute is not set.
-  if (!TTI.shouldBuildLookupTables() ||
-      (Fn->getFnAttribute("no-jump-tables").getValueAsBool()))
-    return false;
 
   // FIXME: If the switch is too sparse for a lookup table, perhaps we could
   // split off a dense part and build a lookup table for that.
@@ -7086,6 +7200,20 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
     PhiToReplacementMap.insert({PHI, Replacement});
   }
 
+  bool AnyLookupTables = any_of(
+      PhiToReplacementMap, [](auto &KV) { return KV.second.isLookupTable(); });
+
+  // A few conditions prevent the generation of lookup tables:
+  //     1. The target does not support lookup tables.
+  //     2. The "no-jump-tables" function attribute is set.
+  // However, these objections do not apply to other switch replacements, like
+  // the bitmap, so we only stop here if any of these conditions are met and we
+  // want to create a LUT. Otherwise, continue with the switch replacement.
+  if (AnyLookupTables &&
+      (!TTI.shouldBuildLookupTables() ||
+       Fn->getFnAttribute("no-jump-tables").getValueAsBool()))
+    return false;
+
   Builder.SetInsertPoint(SI);
   // TableIndex is the switch condition - TableIndexOffset if we don't
   // use the condition directly
@@ -7227,7 +7355,6 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
   if (DTU)
     DTU->applyUpdates(Updates);
 
-  ++NumLookupTables;
   if (NeedMask)
     ++NumLookupTablesHoles;
   return true;
