@@ -271,8 +271,8 @@ public:
   MappedFileRegion &getRegion() const { return *Region; }
 
   size_t getFlags() const { return H->Flags; }
-  uint64_t getNumSubtrieBits() const { return H->NumSubtrieBits; }
-  uint64_t getNumHashBits() const { return H->NumHashBits; }
+  size_t getNumSubtrieBits() const { return H->NumSubtrieBits; }
+  size_t getNumHashBits() const { return H->NumHashBits; }
   size_t getNumHashBytes() const { return getNumHashBytes(H->NumHashBits); }
   size_t getRecordDataSize() const { return H->RecordDataSize; }
   size_t getRecordSize() const {
