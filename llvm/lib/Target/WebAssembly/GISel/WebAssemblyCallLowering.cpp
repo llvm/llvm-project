@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/DataLayout.h"
@@ -108,9 +109,12 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
 /// typed values to the original IR value. \p OrigRegs contains the destination
 /// value registers of type \p LLTy, and \p Regs contains the legalized pieces
 /// with type \p PartLLT. This is used for incoming values (physregs to vregs).
+
+// Modified to account for floating-point extends/truncations
 static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
                               ArrayRef<Register> Regs, LLT LLTy, LLT PartLLT,
-                              const ISD::ArgFlagsTy Flags) {
+                              const ISD::ArgFlagsTy Flags,
+                              bool IsFloatingPoint) {
   MachineRegisterInfo &MRI = *B.getMRI();
 
   if (PartLLT == LLTy) {
@@ -153,7 +157,10 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
       return;
     }
 
-    B.buildTrunc(OrigRegs[0], SrcReg);
+    if (IsFloatingPoint)
+      B.buildFPTrunc(OrigRegs[0], SrcReg);
+    else
+      B.buildTrunc(OrigRegs[0], SrcReg);
     return;
   }
 
@@ -166,7 +173,11 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
       B.buildMergeValues(OrigRegs[0], Regs);
     else {
       auto Widened = B.buildMergeLikeInstr(LLT::scalar(SrcSize), Regs);
-      B.buildTrunc(OrigRegs[0], Widened);
+
+      if (IsFloatingPoint)
+        B.buildFPTrunc(OrigRegs[0], Widened);
+      else
+        B.buildTrunc(OrigRegs[0], Widened);
     }
 
     return;
@@ -496,7 +507,9 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
           Arg.Regs[Part] = MRI.createGenericVirtualRegister(NewLLT);
         }
         buildCopyToRegs(MIRBuilder, Arg.Regs, Arg.OrigRegs[0], OrigLLT, NewLLT,
-                        extendOpFromFlags(Arg.Flags[0]));
+                        Arg.Ty->isFloatingPointTy()
+                            ? TargetOpcode::G_FPEXT
+                            : extendOpFromFlags(Arg.Flags[0]));
       }
 
       for (unsigned Part = 0; Part < NumParts; ++Part) {
@@ -630,7 +643,7 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
         Arg.Regs[Part] = MRI.createGenericVirtualRegister(NewLLT);
       }
       buildCopyFromRegs(MIRBuilder, Arg.OrigRegs, Arg.Regs, OrigLLT, NewLLT,
-                        Arg.Flags[0]);
+                        Arg.Flags[0], Arg.Ty->isFloatingPointTy());
     }
 
     for (unsigned Part = 0; Part < NumParts; ++Part) {
@@ -955,7 +968,9 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       }
 
       buildCopyToRegs(MIRBuilder, Arg.Regs, Arg.OrigRegs[0], OrigLLT, NewLLT,
-                      extendOpFromFlags(Arg.Flags[0]));
+                      Arg.Ty->isFloatingPointTy()
+                          ? TargetOpcode::G_FPEXT
+                          : extendOpFromFlags(Arg.Flags[0]));
     }
 
     if (!Arg.Flags[0].isVarArg()) {
@@ -1135,7 +1150,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           Ret.Regs[Part] = MRI.createGenericVirtualRegister(NewLLT);
         }
         buildCopyFromRegs(MIRBuilder, Ret.OrigRegs, Ret.Regs, OrigLLT, NewLLT,
-                          Ret.Flags[0]);
+                          Ret.Flags[0], Ret.Ty->isFloatingPointTy());
       }
 
       for (unsigned Part = 0; Part < NumParts; ++Part) {
