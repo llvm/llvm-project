@@ -40,7 +40,7 @@ static_assert((UINTPTR_MAX == 4294967295U) ||
                   (UINTPTR_MAX == 18446744073709551615UL),
               "We currently only support 32- or 64-bit platforms");
 
-#ifdef LIBC_COMPILER_IS_MSVC 
+#ifdef LIBC_COMPILER_IS_MSVC
 #ifdef LIBC_TARGET_ARCH_IS_X86
 namespace LIBC_NAMESPACE_DECL {
 using generic_v128 = __m128i;
@@ -55,7 +55,7 @@ namespace LIBC_NAMESPACE_DECL {
 struct alignas(16) generic_v128 : public cpp::array<uint8_t, 16> {};
 struct alignas(32) generic_v256 : public cpp::array<uint8_t, 32> {};
 struct alignas(64) generic_v512 : public cpp::array<uint8_t, 64> {};
-}
+} // namespace LIBC_NAMESPACE_DECL
 #endif
 
 #else
