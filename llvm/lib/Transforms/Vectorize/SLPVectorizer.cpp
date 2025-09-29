@@ -2099,6 +2099,7 @@ public:
     UserIgnoreList = nullptr;
     PostponedGathers.clear();
     ValueToGatherNodes.clear();
+    assert(TreeEntryToStridedPtrInfoMap.empty() && "TreeEntryToStridedPtrInfoMap is not cleared");
   }
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
