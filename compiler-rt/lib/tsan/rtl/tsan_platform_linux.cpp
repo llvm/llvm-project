@@ -554,7 +554,17 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 # else
 #  define LONG_JMP_SP_ENV_SLOT 2
 # endif
-#    elif SANITIZER_LINUX && !SANITIZER_ANDROID
+#    elif SANITIZER_ANDROID
+#      ifdef __aarch64__
+#        define LONG_JMP_SP_ENV_SLOT 3
+#      elif SANITIZER_RISCV64
+#        define LONG_JMP_SP_ENV_SLOT 3
+#      elif defined(__x86_64__)
+#        define LONG_JMP_SP_ENV_SLOT 6
+#      else
+#        error unsupported
+#      endif
+#    elif SANITIZER_LINUX
 #      ifdef __aarch64__
 #        define LONG_JMP_SP_ENV_SLOT 13
 #      elif defined(__loongarch__)
@@ -567,16 +577,6 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #        define LONG_JMP_SP_ENV_SLOT 9
 #      else
 #        define LONG_JMP_SP_ENV_SLOT 6
-#      endif
-#    elif SANITIZER_ANDROID
-#      ifdef __aarch64__
-#        define LONG_JMP_SP_ENV_SLOT 3
-#      elif SANITIZER_RISCV64
-#        define LONG_JMP_SP_ENV_SLOT 3
-#      elif defined(__x86_64__)
-#        define LONG_JMP_SP_ENV_SLOT 6
-#      else
-#        error unsupported
 #      endif
 #    endif
 
