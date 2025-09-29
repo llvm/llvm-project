@@ -77,11 +77,11 @@ using tooling::dependencies::ScanningMode;
 using tooling::dependencies::ScanningOutputFormat;
 using tooling::dependencies::TranslationUnitDeps;
 
-/// Returns true if any source input is of type c++-module.
+/// Returns true if any source input signals C++ module usage.
 static bool hasCXXNamedModuleInput(const InputList &Inputs) {
   const auto IsTypeCXXModule = [](const auto &Input) -> bool {
     const auto TypeID = Input.first;
-    return (TypeID == types::TY_CXXModule);
+    return (TypeID == types::TY_CXXModule || TypeID == types::TY_PP_CXXModule);
   };
   return any_of(Inputs, IsTypeCXXModule);
 }
