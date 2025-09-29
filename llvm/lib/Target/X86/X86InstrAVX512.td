@@ -3238,6 +3238,7 @@ multiclass avx512_load<bits<8> opc, string OpcodeStr, string Name,
                                           (_.VT _.RC:$src1),
                                           (_.VT _.RC:$src0))))], _.ExeDomain>,
                        EVEX, EVEX_K, Sched<[Sched.RR]>;
+    let mayLoad = 1, canFoldAsLoad = 1 in
     def rmk : AVX512PI<opc, MRMSrcMem, (outs _.RC:$dst),
                      (ins _.RC:$src0, _.KRCWM:$mask, _.MemOp:$src1),
                      !strconcat(OpcodeStr, "\t{$src1, ${dst} {${mask}}|",
@@ -3248,6 +3249,7 @@ multiclass avx512_load<bits<8> opc, string OpcodeStr, string Name,
                            (_.VT _.RC:$src0))))], _.ExeDomain>,
                      EVEX, EVEX_K, Sched<[Sched.RM]>;
   }
+  let mayLoad = 1, canFoldAsLoad = 1 in
   def rmkz : AVX512PI<opc, MRMSrcMem, (outs _.RC:$dst),
                   (ins _.KRCWM:$mask, _.MemOp:$src),
                   OpcodeStr #"\t{$src, ${dst} {${mask}} {z}|"#

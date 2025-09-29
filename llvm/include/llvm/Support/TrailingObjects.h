@@ -57,25 +57,9 @@
 namespace llvm {
 
 namespace trailing_objects_internal {
-/// Helper template to calculate the max alignment requirement for a set of
-/// objects.
-template <typename First, typename... Rest> class AlignmentCalcHelper {
-private:
-  enum {
-    FirstAlignment = alignof(First),
-    RestAlignment = AlignmentCalcHelper<Rest...>::Alignment,
-  };
 
-public:
-  enum {
-    Alignment = FirstAlignment > RestAlignment ? FirstAlignment : RestAlignment
-  };
-};
-
-template <typename First> class AlignmentCalcHelper<First> {
-public:
-  enum { Alignment = alignof(First) };
-};
+template <typename... T>
+inline constexpr size_t MaxAlignment = std::max({alignof(T)...});
 
 /// The base class for TrailingObjects* classes.
 class TrailingObjectsBase {
@@ -209,11 +193,10 @@ protected:
 /// See the file comment for details on the usage of the
 /// TrailingObjects type.
 template <typename BaseTy, typename... TrailingTys>
-class TrailingObjects : private trailing_objects_internal::TrailingObjectsImpl<
-                            trailing_objects_internal::AlignmentCalcHelper<
-                                TrailingTys...>::Alignment,
-                            BaseTy, TrailingObjects<BaseTy, TrailingTys...>,
-                            BaseTy, TrailingTys...> {
+class TrailingObjects
+    : private trailing_objects_internal::TrailingObjectsImpl<
+          trailing_objects_internal::MaxAlignment<TrailingTys...>, BaseTy,
+          TrailingObjects<BaseTy, TrailingTys...>, BaseTy, TrailingTys...> {
 
   template <int A, typename B, typename T, typename P, typename... M>
   friend class trailing_objects_internal::TrailingObjectsImpl;
@@ -221,8 +204,8 @@ class TrailingObjects : private trailing_objects_internal::TrailingObjectsImpl<
   template <typename... Tys> class Foo {};
 
   typedef trailing_objects_internal::TrailingObjectsImpl<
-      trailing_objects_internal::AlignmentCalcHelper<TrailingTys...>::Alignment,
-      BaseTy, TrailingObjects<BaseTy, TrailingTys...>, BaseTy, TrailingTys...>
+      trailing_objects_internal::MaxAlignment<TrailingTys...>, BaseTy,
+      TrailingObjects<BaseTy, TrailingTys...>, BaseTy, TrailingTys...>
       ParentType;
   using TrailingObjectsBase = trailing_objects_internal::TrailingObjectsBase;
 

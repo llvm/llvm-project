@@ -45,6 +45,7 @@
 #include "math/exp10.h"
 #include "math/exp10f.h"
 #include "math/exp10f16.h"
+#include "math/exp10m1f.h"
 #include "math/expf.h"
 #include "math/expf16.h"
 #include "math/frexpf.h"
