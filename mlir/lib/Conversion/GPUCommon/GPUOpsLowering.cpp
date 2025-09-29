@@ -397,14 +397,8 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
   auto ptrType = LLVM::LLVMPointerType::get(rewriter.getContext());
   mlir::Type llvmI32 = typeConverter->convertType(rewriter.getI32Type());
   mlir::Type llvmI64 = typeConverter->convertType(rewriter.getI64Type());
-  // Note: this is the GPUModule op, not the ModuleOp that surrounds it
-  // This ensures that global constants and declarations are placed within
-  // the device code, not the host code.
-  Operation *moduleOp = gpuPrintfOp->getParentOfType<gpu::GPUModuleOp>();
-  // However, if the `gpu.module` is already lowered or for compilers that don't
-  // use `gpu.module`, fall back to `builtin.module`.
-  if (!moduleOp)
-    moduleOp = gpuPrintfOp->getParentOfType<ModuleOp>();
+
+  Operation *moduleOp = gpuPrintfOp->getParentWithTrait<OpTrait::SymbolTable>();
   if (!moduleOp)
     return rewriter.notifyMatchFailure(gpuPrintfOp,
                                        "Couldn't find a parent module");
@@ -504,14 +498,7 @@ LogicalResult GPUPrintfOpToLLVMCallLowering::matchAndRewrite(
   mlir::Type ptrType =
       LLVM::LLVMPointerType::get(rewriter.getContext(), addressSpace);
 
-  // Note: this is the GPUModule op, not the ModuleOp that surrounds it
-  // This ensures that global constants and declarations are placed within
-  // the device code, not the host code
-  Operation *moduleOp = gpuPrintfOp->getParentOfType<gpu::GPUModuleOp>();
-  // However, if the `gpu.module` is already lowered or for compilers that don't
-  // use `gpu.module`, fall back to `builtin.module`.
-  if (!moduleOp)
-    moduleOp = gpuPrintfOp->getParentOfType<ModuleOp>();
+  Operation *moduleOp = gpuPrintfOp->getParentWithTrait<OpTrait::SymbolTable>();
   if (!moduleOp)
     return rewriter.notifyMatchFailure(gpuPrintfOp,
                                        "Couldn't find a parent module");
@@ -556,14 +543,7 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
   mlir::Type llvmI8 = typeConverter->convertType(rewriter.getIntegerType(8));
   mlir::Type ptrType = LLVM::LLVMPointerType::get(rewriter.getContext());
 
-  // Note: this is the GPUModule op, not the ModuleOp that surrounds it
-  // This ensures that global constants and declarations are placed within
-  // the device code, not the host code
-  Operation *moduleOp = gpuPrintfOp->getParentOfType<gpu::GPUModuleOp>();
-  // However, if the `gpu.module` is already lowered or for compilers that don't
-  // use `gpu.module`, fall back to `builtin.module`.
-  if (!moduleOp)
-    moduleOp = gpuPrintfOp->getParentOfType<ModuleOp>();
+  Operation *moduleOp = gpuPrintfOp->getParentWithTrait<OpTrait::SymbolTable>();
   if (!moduleOp)
     return rewriter.notifyMatchFailure(gpuPrintfOp,
                                        "Couldn't find a parent module");

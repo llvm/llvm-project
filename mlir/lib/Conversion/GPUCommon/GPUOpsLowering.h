@@ -18,6 +18,9 @@ namespace mlir {
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
+/// Note that these functions don't take a `SymbolTable` because GPU module
+/// lowerings can have name collisions as an intermediate state.
+
 /// Find or create an external function declaration in the given module.
 LLVM::LLVMFuncOp getOrDefineFunction(Operation *moduleOp, Location loc,
                                      OpBuilder &b, StringRef name,
