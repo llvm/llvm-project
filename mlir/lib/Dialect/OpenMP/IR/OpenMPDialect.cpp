@@ -82,11 +82,11 @@ struct LLVMPointerPointerLikeModel
 /// argument index of an operation that has multiple regions, if the operation
 /// has multiple regions.
 /// `_s<idx>` identifies the position of an operation within a region, where
-/// only operations that may potentially contain loops ("container operations" i.e. have region
-/// arguments) are counted. Again, it is omitted if there is only one such
-/// operation in a region. If there are canonical loops nested inside each
-/// other, also may also use the format `_d<num>` where <num> is the nesting
-/// depth of the loop.
+/// only operations that may potentially contain loops ("container operations"
+/// i.e. have region arguments) are counted. Again, it is omitted if there is
+/// only one such operation in a region. If there are canonical loops nested
+/// inside each other, also may also use the format `_d<num>` where <num> is the
+/// nesting depth of the loop.
 ///
 /// The generated name is a best-effort to make canonical loop unique within an
 /// SSA namespace. This also means that regions with IsolatedFromAbove property
@@ -94,20 +94,31 @@ struct LLVMPointerPointerLikeModel
 static std::string generateLoopNestingName(StringRef prefix,
                                            CanonicalLoopOp op) {
   struct Component {
-    // An region argument of an operation
-    Operation *parentOp;
-    size_t regionInOpIdx;
-    bool isOnlyRegionInOp;
-    bool skipRegion;
+    bool isRegionArgOfOp;
+    bool skip = false;
+    bool isUnique = false;
+    size_t idx;
 
-    // An container operation somewhere in a parent region
-    Operation *containerOp;
-    Region *parentRegion;
-    size_t containerOpInRegionIdx;
-    bool isOnlyContainerOpInRegion;
-    bool skipContainerOp;
-    int depth = -1;
+    union {
+      /// isRegionArgOfOp == true: region argument of an operation
+      struct {
+        Operation *ownerOp;
+      };
+      /// isRegionArgOfOp == false: container op in a region
+      struct {
+        Operation *containerOp;
+        Region *parentRegion;
+        size_t loopDepth;
+      };
+    };
+
+    void skipIf(bool v = true) { skip = skip || v; }
   };
+
+  // List of ancestors, from inner to outer.
+  // Alternates between
+  //  * region argument of an operation
+  //  * operation within a region
   SmallVector<Component> components;
 
   // Gather a list of parent regions and operations, and the position within
@@ -123,7 +134,7 @@ static std::string generateLoopNestingName(StringRef prefix,
     size_t idx = 0;
     bool found = false;
     size_t sequentialIdx = -1;
-    bool isOnlyLoop = true;
+    bool isOnlyContainerOp = true;
     for (Block *b : traversal) {
       for (Operation &op : *b) {
         if (&op == o && !found) {
@@ -133,32 +144,37 @@ static std::string generateLoopNestingName(StringRef prefix,
         if (op.getNumRegions()) {
           idx += 1;
           if (idx > 1)
-            isOnlyLoop = false;
+            isOnlyContainerOp = false;
         }
-        if (found && !isOnlyLoop)
+        if (found && !isOnlyContainerOp)
           break;
       }
     }
 
-    Component &comp = components.emplace_back();
-    comp.containerOp = o;
-    comp.parentRegion = r;
-    comp.containerOpInRegionIdx = sequentialIdx;
-    comp.isOnlyContainerOpInRegion = isOnlyLoop;
+    Component &containerOpInRegion = components.emplace_back();
+    containerOpInRegion.isRegionArgOfOp = false;
+    containerOpInRegion.containerOp = o;
+    containerOpInRegion.parentRegion = r;
+    containerOpInRegion.idx = sequentialIdx;
+    containerOpInRegion.isUnique = isOnlyContainerOp;
 
-    // Region argument of an operation
     Operation *parent = r->getParentOp();
 
-    comp.parentOp = parent;
-    comp.regionInOpIdx = 0;
-    comp.isOnlyRegionInOp = true;
+    // Region argument of an operation
+    Component &regionArgOfOperation = components.emplace_back();
+    regionArgOfOperation.isRegionArgOfOp = true;
+    regionArgOfOperation.ownerOp = parent;
+    regionArgOfOperation.idx = 0;
+    regionArgOfOperation.isUnique = true;
 
-    // Need to disambiguate between different region arguments? The
-    // IsolatedFromAbove trait of the parent operation implies that each
-    // individual region argument has its own separate namespace.
+    // The IsolatedFromAbove trait of the parent operation implies that each
+    // individual region argument has its own separate namespace, so no
+    // ambiguity.
     if (!parent || parent->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>())
       break;
 
+    // Component only needed if operation has multiple region operands. Region
+    // arguments may be optional, but we currently do not consider this.
     if (parent->getRegions().size() > 1) {
       auto getRegionIndex = [](Operation *o, Region *r) {
         for (auto [idx, region] : llvm::enumerate(o->getRegions())) {
@@ -167,94 +183,102 @@ static std::string generateLoopNestingName(StringRef prefix,
         }
         llvm_unreachable("Region not child of its parent operation");
       };
-      comp.regionInOpIdx = getRegionIndex(parent, r);
-      comp.isOnlyRegionInOp = false;
+      regionArgOfOperation.idx = getRegionIndex(parent, r);
+      regionArgOfOperation.isUnique = false;
     }
 
     // next parent
     o = parent;
   }
 
-  // Reorder components from outermost to innermost
-  std::reverse(components.begin(), components.end());
+  // Determine whether a region-argument component is not needed
+  for (Component &c : components)
+    c.skipIf(c.isRegionArgOfOp && c.isUnique);
 
-  // Determine whether a component is not needed
+  // Find runs of nested loops and determine each loop's depth in the loop nest
+  size_t numSurroundingLoops = 0;
+  for (Component &c : llvm::reverse(components)) {
+    if (c.skip)
+      continue;
+
+    // non-skipped multi-argument operands interrupt the loop nest
+    if (c.isRegionArgOfOp) {
+      numSurroundingLoops = 0;
+      continue;
+    }
+
+    // Multiple loops in a region means each of them is the outermost loop of a
+    // new loop nest
+    if (!c.isUnique)
+      numSurroundingLoops = 0;
+
+    c.loopDepth = numSurroundingLoops;
+
+    // Next loop is surrounded by one more loop
+    if (isa<CanonicalLoopOp>(c.containerOp))
+      numSurroundingLoops += 1;
+  }
+
+  // In loop nests, skip all but the innermost loop that contains the depth
+  // number
+  bool isLoopNest = false;
   for (Component &c : components) {
-    c.skipRegion = c.isOnlyRegionInOp;
-    c.skipContainerOp = c.isOnlyContainerOpInRegion && !isa<CanonicalLoopOp>(c.containerOp);
+    if (c.skip || c.isRegionArgOfOp)
+      continue;
+
+    if (!isLoopNest && c.loopDepth >= 1) {
+      // Innermost loop of a loop nest of at least two loops
+      isLoopNest = true;
+    } else if (isLoopNest) {
+      // Non-innermost loop of a loop nest
+      c.skipIf(c.isUnique);
+
+      // If there is no surrounding loop left, this must have been the outermost
+      // loop; leave loop-nest mode for the next iteration
+      if (c.loopDepth == 0)
+        isLoopNest = false;
+    }
   }
 
-  // Find runs of perfect nests and merge them into a single component
-  size_t curNestRoot = 0;
-  size_t curNestDepth = 1;
-  auto mergeLoopNest = [&](size_t innermost) {
-    size_t outermost = curNestRoot;
+  // Skip non-loop unambiguous regions (but they should interrupt loop nests, so
+  // we mark them as skipped only after computing loop nests)
+  for (Component &c : components)
+    c.skipIf(!c.isRegionArgOfOp && c.isUnique &&
+             !isa<CanonicalLoopOp>(c.containerOp));
 
-    // Don't do enything if it does not consist of at least 2 loops
-    if (outermost < innermost) {
-      for (auto i : llvm::seq<int>(outermost + 1, innermost))
-        components[i].skipContainerOp = true;
-      components[innermost].depth = curNestDepth;
-    }
+  // Components can be skipped if they are already disambiguated by their parent
+  // (or does not have a parent)
+  bool newRegion = true;
+  for (Component &c : llvm::reverse(components)) {
+    c.skipIf(newRegion && c.isUnique);
 
-    // Start new root
-    curNestRoot = innermost + 1;
-    curNestDepth = 1;
-  };
-  for (auto &&[i, c] : llvm::enumerate(components)) {
-    if (i <= curNestRoot)
-      continue;
+    // non-skipped components disambiguate unique children
+    if (!c.skip)
+      newRegion = true;
 
-    // Check whether this region can be included
-    if (!c.skipRegion) {
-      mergeLoopNest(i);
-      continue;
-    }
-
-    if (c.skipContainerOp)
-      continue;
-
-    if (!c.isOnlyContainerOpInRegion) {
-      mergeLoopNest(i);
-      continue;
-    }
-
-    curNestDepth += 1;
+    // ...except canonical loops that need a suffix for each nest
+    if (!c.isRegionArgOfOp && isa<CanonicalLoopOp>(c.containerOp))
+      newRegion = false;
   }
 
-  // Finalize innermost loop nest
-  mergeLoopNest(components.size() - 1);
-
-  // Outermost loop does not need a suffix if it has no sibling
-  for (auto &c : components) {
-    if (c.skipContainerOp)
-      continue;
-    if (c.isOnlyContainerOpInRegion)
-      c.skipContainerOp = true;
-    break;
-  }
-
-  // Compile name
+  // Compile the nesting name string
   SmallString<64> Name{prefix};
-  for (auto &c : components) {
-    auto addComponent = [&Name](char letter, int64_t idx) {
-      Name += '_';
-      Name += letter;
-      Name += idx;
-    };
+  llvm::raw_svector_ostream NameOS(Name);
+  for (auto &c : llvm::reverse(components)) {
+    if (c.skip)
+      continue;
 
-    if (!c.skipRegion)
-      addComponent('r', c.regionInOpIdx);
-
-    if (!c.skipContainerOp) {
-      if (c.depth >= 0)
-        addComponent('d', c.depth - 1);
+    if (c.isRegionArgOfOp) {
+      NameOS << "_r" << c.idx;
+    } else {
+      if (c.loopDepth >= 1)
+        NameOS << "_d" << c.loopDepth;
       else
-        addComponent('s', c.containerOpInRegionIdx);
+        NameOS << "_s" << c.idx;
     }
   }
 
-  return Name.str().str();
+  return NameOS.str().str();
 }
 
 void OpenMPDialect::initialize() {
