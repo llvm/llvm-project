@@ -52,45 +52,13 @@ macro(mlir_configure_python_dev_packages)
       find_package(nanobind 2.9 CONFIG REQUIRED)
     else()
       include(FetchContent)
-#      # nanobind uses tsl-robin-map and since we're not using GIT for nanobind we need to
-#      # get tsl-robin-map manually too.
-#      FetchContent_Declare(
-#        tsl-robin-map
-#        OVERRIDE_FIND_PACKAGE
-#        # timestamp the files with the extraction time instead of archive time
-#        DOWNLOAD_EXTRACT_TIMESTAMP FALSE
-#        URL https://github.com/Tessil/robin-map/archive/refs/tags/v1.4.0.tar.gz
-#        # put this last otherwise windows parses everything after the hash as part of the hash???
-#        URL_HASH MD5=d56a879c94e021c55d8956e37deb3e4f
-#      )
-#      FetchContent_MakeAvailable(tsl-robin-map)
-#      # Tell nanobind to use find_project(tsl-robin-map) instead of searching its
-#      # submodule folder.
-#      set(NB_USE_SUBMODULE_DEPS OFF CACHE INTERNAL "Switch off Nanobind submodule deps")
-#      FetchContent_Declare(
-#        nanobind
-#        OVERRIDE_FIND_PACKAGE
-#        # timestamp the files with the extraction time instead of archive time
-#        DOWNLOAD_EXTRACT_TIMESTAMP FALSE
-#        URL https://github.com/wjakob/nanobind/archive/refs/tags/v2.9.0.tar.gz
-#        # put this last otherwise windows parses everything after the hash as part of the hash???
-#        URL_HASH MD5=df0e9de9d5fd817df264584be4917fd0
-#      )
-#      FetchContent_MakeAvailable(nanobind)
       FetchContent_Declare(
         nanobind
         GIT_REPOSITORY https://github.com/wjakob/nanobind.git
         GIT_TAG        v2.9.0
         GIT_SHALLOW    TRUE
-        OVERRIDE_FIND_PACKAGE
       )
       FetchContent_MakeAvailable(nanobind)
-      if(CMAKE_VERSION VERSION_LESS "3.24.0")
-        # OVERRIDE_FIND_PACKAGE not implemented so have to set the dirs manually.
-        set(nanobind_DIR "${nanobind_SOURCE_DIR}/cmake" CACHE INTERNAL "")
-      endif()
-      # no PACKAGE_VERSION in this path but we know it's 2.9 of course.
-      find_package(nanobind CONFIG REQUIRED)
     endif()
     message(STATUS "Found nanobind: ${NB_DIR}")
   endif()
