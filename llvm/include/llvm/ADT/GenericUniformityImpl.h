@@ -920,8 +920,10 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushPhiNodes(
     // implemented; in which case no uniformity is possible.
     bool Uniform = !Values.empty();
 
-    std::optional<ConstValueRefT> CommonValue;
-    for (unsigned I = 0; I < Blocks.size() && Uniform; ++I) {
+    std::optional<ConstValueRefT> PhiCommon, PathCommon;
+    bool HasSingleValue = true;
+    for (unsigned I = 0; I < Blocks.size() && (HasSingleValue || Uniform);
+         ++I) {
       // FIXME: We assume undefs are uniform and/or do not dominate the PHI
       // in the presence of other constant or uniform values.
       // This particular interpretation of the undef value was added to
@@ -931,22 +933,29 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushPhiNodes(
       if (!Values[I])
         continue;
 
+      // Track common value for all inputs.
+      if (!PhiCommon)
+        PhiCommon = Values[I];
+      else if (Values[I] != *PhiCommon)
+        HasSingleValue = false;
+
       // Only consider predecessors on divergent path.
       if (Blocks[I] != &DivTermBlock &&
           !DivDesc.BlockLabels.lookup_or(Blocks[I], nullptr))
         continue;
 
       // Phi uniformity is maintained if all values on divergent path match.
-      if (!CommonValue)
-        CommonValue = Values[I];
-      else if (Values[I] != *CommonValue)
+      if (!PathCommon)
+        PathCommon = Values[I];
+      else if (Values[I] != *PathCommon)
         Uniform = false;
 
       // Phi is reached via divergent exit (i.e. respect temporal divergence).
       if (DivDesc.CycleDivBlocks.contains(Blocks[I]))
         Uniform = false;
     }
-    if (Uniform)
+
+    if (Uniform || HasSingleValue)
       continue;
 
     LLVM_DEBUG(dbgs() << "tainted: " << Phi << "\n");

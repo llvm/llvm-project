@@ -73,16 +73,16 @@ template <>
 void SSAContext::getPhiInputs(
     const Instruction &Instr, SmallVectorImpl<const Value *> &Values,
     SmallVectorImpl<const BasicBlock *> &Blocks) const {
-  if (auto *Phi = dyn_cast<PHINode>(&Instr)) {
-    for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
-      const Value *Incoming = Phi->getIncomingValue(I);
-      const BasicBlock *Block = Phi->getIncomingBlock(I);
-      // FIXME: should this also consider Incoming == &Instr undef?
-      if (isa<UndefValue>(Incoming))
-        Incoming = ValueRefNull;
-      Values.push_back(Incoming);
-      Blocks.push_back(Block);
-    }
+  assert(isa<PHINode>(Instr));
+  const PHINode *Phi = static_cast<const PHINode *>(&Instr);
+  for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
+    const Value *Incoming = Phi->getIncomingValue(I);
+    const BasicBlock *Block = Phi->getIncomingBlock(I);
+    // FIXME: should this also consider Incoming == &Instr undef?
+    if (isa<UndefValue>(Incoming))
+      Incoming = ValueRefNull;
+    Values.push_back(Incoming);
+    Blocks.push_back(Block);
   }
 }
 
