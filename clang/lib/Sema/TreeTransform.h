@@ -12966,6 +12966,25 @@ ExprResult TreeTransform<Derived>::TransformSYCLUniqueStableNameExpr(
       E->getLocation(), E->getLParenLocation(), E->getRParenLocation(), NewT);
 }
 
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
+    UnresolvedSYCLKernelCallStmt *S) {
+  ExprResult IdExpr = getDerived().TransformExpr(S->getKernelLaunchIdExpr());
+
+  if (IdExpr.isInvalid())
+     return StmtError();
+
+  StmtResult Body = getDerived().TransformStmt(S->getOriginalStmt());
+  if (Body.isInvalid())
+     return StmtError();
+
+  StmtResult SR = SemaRef.SYCL().BuildSYCLKernelCallStmt(
+      cast<FunctionDecl>(SemaRef.CurContext), cast<CompoundStmt>(Body.get()),
+      IdExpr.get());
+
+  return SR;
+}
+
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformPredefinedExpr(PredefinedExpr *E) {

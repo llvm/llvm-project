@@ -16,6 +16,7 @@
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "llvm/ADT/ArrayRef.h"
 

@@ -566,7 +566,7 @@ follows.
   namespace sycl {
   class handler {
     template<typename KernelNameType, typename... Ts>
-    void sycl_enqueue_kernel_launch(const char *KernelName, Ts...) {
+    void sycl_kernel_launch(const char *KernelName, Ts...) {
       // Call functions appropriate for the desired offload backend
       // (OpenCL, CUDA, HIP, Level Zero, etc...) to enqueue kernel invocation.
     }
@@ -634,7 +634,7 @@ The offload kernel entry point for a SYCL kernel performs the following tasks:
 The ``sycl_kernel_entry_point`` attribute facilitates or automates these tasks
 by generating the offload kernel entry point, generating a unique symbol name
 for it, synthesizing code for kernel argument decomposition and reconstruction,
-and synthesizing a call to a ``sycl_enqueue_kernel_launch`` function template
+and synthesizing a call to a ``sycl_kernel_launch`` function template
 with the kernel name type, kernel symbol name, and (decomposed) kernel arguments
 passed as template or function arguments.
 
@@ -702,7 +702,7 @@ replaced with synthesized code that looks approximately as follows.
 
   sycl::stream sout = Kernel.sout;
   S s = Kernel.s;
-  sycl_enqueue_kernel_launch<KN>("kernel-symbol-name", sout, s);
+  sycl_kernel_launch<KN>("kernel-symbol-name", sout, s);
 
 There are a few items worthy of note:
 
@@ -713,16 +713,16 @@ There are a few items worthy of note:
 #. ``kernel-symbol-name`` is substituted for the actual symbol name that would
    be generated; these names are implementation details subject to change.
 
-#. Lookup for the ``sycl_enqueue_kernel_launch()`` function template is
+#. Lookup for the ``sycl_kernel_launch()`` function template is
    performed from the (possibly instantiated) location of the definition of
    ``kernel_entry_point()``. If overload resolution fails, the program is
    ill-formed. If the selected overload is a non-static member function, then
    ``this`` is passed for the implicit object parameter.
 
-#. Function arguments passed to ``sycl_enqueue_kernel_launch()`` are passed
+#. Function arguments passed to ``sycl_kernel_launch()`` are passed
    as if by ``std::forward<X>(x)``.
 
-#. The ``sycl_enqueue_kernel_launch()`` function is expected to be provided by
+#. The ``sycl_kernel_launch()`` function is expected to be provided by
    the SYCL library implementation. It is responsible for scheduling execution
    of the generated offload kernel entry point identified by
    ``kernel-symbol-name`` and copying the (decomposed) kernel arguments to
@@ -733,7 +733,7 @@ attribute to be called for the offload kernel entry point to be emitted. For
 inline functions and function templates, any ODR-use will suffice. For other
 functions, an ODR-use is not required; the offload kernel entry point will be
 emitted if the function is defined. In any case, a call to the function is
-required for the synthesized call to ``sycl_enqueue_kernel_launch()`` to occur.
+required for the synthesized call to ``sycl_kernel_launch()`` to occur.
 
 Functions declared with the ``sycl_kernel_entry_point`` attribute are not
 limited to the simple example shown above. They may have additional template
