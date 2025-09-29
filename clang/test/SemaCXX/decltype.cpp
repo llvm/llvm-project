@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -Wno-c99-designator %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify -Wno-c99-designator %s
 
 // PR5290
 int const f0();
@@ -156,27 +157,12 @@ struct A {
   }
 };
 
-// This shouldn't crash.
-static_assert(A<int>().f<int>() == 0, "");
-// The result should not be dependent.
-static_assert(A<int>().f<int>() != 0, ""); // expected-error {{static assertion failed due to requirement 'GH99873::A<int>().f<int>() != 0'}}
-                                           // expected-note@-1 {{expression evaluates to '0 != 0'}}
-}
-
-template<typename>
-class conditional {
-};
-
-// FIXME: The diagnostics here are produced twice.
-void foo(conditional<decltype((1),int>) {  // expected-note 2 {{to match this '('}} expected-error {{expected ')'}} expected-note 2{{to match this '<'}}
-} // expected-error {{expected function body after function declarator}} expected-error 2 {{expected '>'}} expected-error {{expected ')'}}
-
-
+#if __cplusplus >= 201703L
 namespace GH160497 {
 
 template <class> struct S {
     template <class>
-    inline static auto mem =
+    static inline auto mem =
     [] { static_assert(false); // expected-error {{static assertion failed}} \
         // expected-note {{while substituting into a lambda expression here}}
         return 42;
@@ -184,7 +170,7 @@ template <class> struct S {
 };
 
 using T = decltype(S<void>::mem<void>);
- // expected-note@-1 {{in instantiation of static data member 'GH160497::S<void>::mem<void>' requested here}}
+ // expected-note@-1 {{in instantiation of static data member 'GH99873::GH160497::S<void>::mem<void>' requested here}}
 
 namespace N1 {
 
@@ -200,3 +186,19 @@ T y = 42;
 
 }
 }
+#endif
+
+// This shouldn't crash.
+static_assert(A<int>().f<int>() == 0, "");
+// The result should not be dependent.
+static_assert(A<int>().f<int>() != 0, ""); // expected-error {{static assertion failed due to requirement 'GH99873::A<int>().f<int>() != 0'}}
+                                           // expected-note@-1 {{expression evaluates to '0 != 0'}}
+}
+
+template<typename>
+class conditional {
+};
+
+// FIXME: The diagnostics here are produced twice.
+void foo(conditional<decltype((1),int>) {  // expected-note 2 {{to match this '('}} expected-error {{expected ')'}} expected-note 2{{to match this '<'}}
+} // expected-error {{expected function body after function declarator}} expected-error 2 {{expected '>'}} expected-error {{expected ')'}}
