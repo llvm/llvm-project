@@ -26,7 +26,7 @@ namespace llvm {
 namespace mca {
 
 class AMDGPUInstrPostProcess : public InstrPostProcess {
-  void processWaitCnt(std::unique_ptr<Instruction> &Inst, const MCInst &MCI);
+  void processWaitCnt(Instruction &Inst, const MCInst &MCI);
 
 public:
   AMDGPUInstrPostProcess(const MCSubtargetInfo &STI, const MCInstrInfo &MCII)
@@ -34,8 +34,7 @@ public:
 
   ~AMDGPUInstrPostProcess() = default;
 
-  void postProcessInstruction(std::unique_ptr<Instruction> &Inst,
-                              const MCInst &MCI) override;
+  void postProcessInstruction(Instruction &Inst, const MCInst &MCI) override;
 };
 
 struct WaitCntInfo {

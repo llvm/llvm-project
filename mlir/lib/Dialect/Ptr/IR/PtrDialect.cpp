@@ -15,6 +15,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -38,6 +39,29 @@ void PtrDialect::initialize() {
 #include "mlir/Dialect/Ptr/IR/PtrOpsTypes.cpp.inc"
       >();
 }
+
+//===----------------------------------------------------------------------===//
+// Common helper functions.
+//===----------------------------------------------------------------------===//
+
+/// Verifies that the alignment attribute is a power of 2 if present.
+static LogicalResult
+verifyAlignment(std::optional<int64_t> alignment,
+                function_ref<InFlightDiagnostic()> emitError) {
+  if (!alignment)
+    return success();
+  if (alignment.value() <= 0)
+    return emitError() << "alignment must be positive";
+  if (!llvm::isPowerOf2_64(alignment.value()))
+    return emitError() << "alignment must be a power of 2";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConstantOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 
 //===----------------------------------------------------------------------===//
 // FromPtrOp
@@ -85,6 +109,39 @@ LogicalResult FromPtrOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// GatherOp
+//===----------------------------------------------------------------------===//
+
+void GatherOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // Gather performs reads from multiple memory locations specified by ptrs
+  effects.emplace_back(MemoryEffects::Read::get(), &getPtrsMutable());
+}
+
+LogicalResult GatherOp::verify() {
+  auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
+
+  // Verify that the pointer type's memory space allows loads.
+  MemorySpaceAttrInterface ms =
+      cast<PtrType>(getPtrs().getType().getElementType()).getMemorySpace();
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!ms.isValidLoad(getResult().getType(), AtomicOrdering::not_atomic,
+                      getAlignment(), &dataLayout, emitDiag))
+    return failure();
+
+  // Verify the alignment.
+  return verifyAlignment(getAlignment(), emitDiag);
+}
+
+void GatherOp::build(OpBuilder &builder, OperationState &state, Type resultType,
+                     Value ptrs, Value mask, Value passthrough,
+                     unsigned alignment) {
+  build(builder, state, resultType, ptrs, mask, passthrough,
+        alignment ? std::optional<int64_t>(alignment) : std::nullopt);
+}
+
+//===----------------------------------------------------------------------===//
 // LoadOp
 //===----------------------------------------------------------------------===//
 
@@ -104,19 +161,6 @@ verifyAtomicMemOp(OpTy memOp, ArrayRef<AtomicOrdering> unsupportedOrderings) {
     return memOp.emitOpError(
         "expected syncscope to be null for non-atomic access");
   }
-  return success();
-}
-
-/// Verifies that the alignment attribute is a power of 2 if present.
-static LogicalResult
-verifyAlignment(std::optional<int64_t> alignment,
-                function_ref<InFlightDiagnostic()> emitError) {
-  if (!alignment)
-    return success();
-  if (alignment.value() <= 0)
-    return emitError() << "alignment must be positive";
-  if (!llvm::isPowerOf2_64(alignment.value()))
-    return emitError() << "alignment must be a power of 2";
   return success();
 }
 
@@ -157,6 +201,99 @@ void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
         alignment ? std::optional<int64_t>(alignment) : std::nullopt,
         isVolatile, isNonTemporal, isInvariant, isInvariantGroup, ordering,
         syncscope.empty() ? nullptr : builder.getStringAttr(syncscope));
+}
+//===----------------------------------------------------------------------===//
+// MaskedLoadOp
+//===----------------------------------------------------------------------===//
+
+void MaskedLoadOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // MaskedLoad performs reads from the memory location specified by ptr.
+  effects.emplace_back(MemoryEffects::Read::get(), &getPtrMutable());
+}
+
+LogicalResult MaskedLoadOp::verify() {
+  auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
+  // Verify that the pointer type's memory space allows loads.
+  MemorySpaceAttrInterface ms = getPtr().getType().getMemorySpace();
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!ms.isValidLoad(getResult().getType(), AtomicOrdering::not_atomic,
+                      getAlignment(), &dataLayout, emitDiag))
+    return failure();
+
+  // Verify the alignment.
+  return verifyAlignment(getAlignment(), emitDiag);
+}
+
+void MaskedLoadOp::build(OpBuilder &builder, OperationState &state,
+                         Type resultType, Value ptr, Value mask,
+                         Value passthrough, unsigned alignment) {
+  build(builder, state, resultType, ptr, mask, passthrough,
+        alignment ? std::optional<int64_t>(alignment) : std::nullopt);
+}
+
+//===----------------------------------------------------------------------===//
+// MaskedStoreOp
+//===----------------------------------------------------------------------===//
+
+void MaskedStoreOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // MaskedStore performs writes to the memory location specified by ptr
+  effects.emplace_back(MemoryEffects::Write::get(), &getPtrMutable());
+}
+
+LogicalResult MaskedStoreOp::verify() {
+  auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
+  // Verify that the pointer type's memory space allows stores.
+  MemorySpaceAttrInterface ms = getPtr().getType().getMemorySpace();
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!ms.isValidStore(getValue().getType(), AtomicOrdering::not_atomic,
+                       getAlignment(), &dataLayout, emitDiag))
+    return failure();
+
+  // Verify the alignment.
+  return verifyAlignment(getAlignment(), emitDiag);
+}
+
+void MaskedStoreOp::build(OpBuilder &builder, OperationState &state,
+                          Value value, Value ptr, Value mask,
+                          unsigned alignment) {
+  build(builder, state, value, ptr, mask,
+        alignment ? std::optional<int64_t>(alignment) : std::nullopt);
+}
+
+//===----------------------------------------------------------------------===//
+// ScatterOp
+//===----------------------------------------------------------------------===//
+
+void ScatterOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // Scatter performs writes to multiple memory locations specified by ptrs
+  effects.emplace_back(MemoryEffects::Write::get(), &getPtrsMutable());
+}
+
+LogicalResult ScatterOp::verify() {
+  auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
+
+  // Verify that the pointer type's memory space allows stores.
+  MemorySpaceAttrInterface ms =
+      cast<PtrType>(getPtrs().getType().getElementType()).getMemorySpace();
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!ms.isValidStore(getValue().getType(), AtomicOrdering::not_atomic,
+                       getAlignment(), &dataLayout, emitDiag))
+    return failure();
+
+  // Verify the alignment.
+  return verifyAlignment(getAlignment(), emitDiag);
+}
+
+void ScatterOp::build(OpBuilder &builder, OperationState &state, Value value,
+                      Value ptrs, Value mask, unsigned alignment) {
+  build(builder, state, value, ptrs, mask,
+        alignment ? std::optional<int64_t>(alignment) : std::nullopt);
 }
 
 //===----------------------------------------------------------------------===//
@@ -214,6 +351,78 @@ OpFoldResult PtrAddOp::fold(FoldAdaptor adaptor) {
   if (llvm::APInt value; m_ConstantInt(&value).match(attr) && value.isZero())
     return getBase();
   return nullptr;
+}
+
+LogicalResult PtrAddOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  // Get the base pointer and offset types.
+  Type baseType = operands[0].getType();
+  Type offsetType = operands[1].getType();
+
+  auto offTy = dyn_cast<ShapedType>(offsetType);
+  if (!offTy) {
+    // If the offset isn't shaped, the result is always the base type.
+    inferredReturnTypes.push_back(baseType);
+    return success();
+  }
+  auto baseTy = dyn_cast<ShapedType>(baseType);
+  if (!baseTy) {
+    // Base isn't shaped, but offset is, use the ShapedType from offset with the
+    // base pointer as element type.
+    inferredReturnTypes.push_back(offTy.clone(baseType));
+    return success();
+  }
+
+  // Both are shaped, their shape must match.
+  if (offTy.getShape() != baseTy.getShape()) {
+    if (location)
+      mlir::emitError(*location) << "shapes of base and offset must match";
+    return failure();
+  }
+
+  // Make sure they are the same kind of shaped type.
+  if (baseType.getTypeID() != offsetType.getTypeID()) {
+    if (location)
+      mlir::emitError(*location) << "the shaped containers type must match";
+    return failure();
+  }
+  inferredReturnTypes.push_back(baseType);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// PtrDiffOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult PtrDiffOp::verify() {
+  // If the operands are not shaped early exit.
+  if (!isa<ShapedType>(getLhs().getType()))
+    return success();
+
+  // Just check the container type matches, `SameOperandsAndResultShape` handles
+  // the actual shape.
+  if (getResult().getType().getTypeID() != getLhs().getType().getTypeID()) {
+    return emitError() << "expected the result to have the same container "
+                          "type as the operands when operands are shaped";
+  }
+
+  return success();
+}
+
+ptr::PtrType PtrDiffOp::getPtrType() {
+  Type lhsType = getLhs().getType();
+  if (auto shapedType = dyn_cast<ShapedType>(lhsType))
+    return cast<ptr::PtrType>(shapedType.getElementType());
+  return cast<ptr::PtrType>(lhsType);
+}
+
+Type PtrDiffOp::getIntType() {
+  Type resultType = getResult().getType();
+  if (auto shapedType = dyn_cast<ShapedType>(resultType))
+    return shapedType.getElementType();
+  return resultType;
 }
 
 //===----------------------------------------------------------------------===//

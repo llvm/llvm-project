@@ -503,7 +503,6 @@ enum class FormatStringType {
   FreeBSDKPrintf,
   OSTrace,
   OSLog,
-  Syslog,
   Unknown
 };
 
@@ -845,9 +844,16 @@ enum AttrName { Target, TargetClones, TargetVersion };
 
 void inferNoReturnAttr(Sema &S, const Decl *D);
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
   // Table of Contents
   // -----------------
   // 1. Semantic Analysis (Sema.cpp)
@@ -2812,26 +2818,27 @@ public:
 
   /// BuiltinConstantArg - Handle a check if argument ArgNum of CallExpr
   /// TheCall is a constant expression.
-  bool BuiltinConstantArg(CallExpr *TheCall, int ArgNum, llvm::APSInt &Result);
+  bool BuiltinConstantArg(CallExpr *TheCall, unsigned ArgNum,
+                          llvm::APSInt &Result);
 
   /// BuiltinConstantArgRange - Handle a check if argument ArgNum of CallExpr
   /// TheCall is a constant expression in the range [Low, High].
-  bool BuiltinConstantArgRange(CallExpr *TheCall, int ArgNum, int Low, int High,
-                               bool RangeIsError = true);
+  bool BuiltinConstantArgRange(CallExpr *TheCall, unsigned ArgNum, int Low,
+                               int High, bool RangeIsError = true);
 
   /// BuiltinConstantArgMultiple - Handle a check if argument ArgNum of CallExpr
   /// TheCall is a constant expression is a multiple of Num..
-  bool BuiltinConstantArgMultiple(CallExpr *TheCall, int ArgNum,
+  bool BuiltinConstantArgMultiple(CallExpr *TheCall, unsigned ArgNum,
                                   unsigned Multiple);
 
   /// BuiltinConstantArgPower2 - Check if argument ArgNum of TheCall is a
   /// constant expression representing a power of 2.
-  bool BuiltinConstantArgPower2(CallExpr *TheCall, int ArgNum);
+  bool BuiltinConstantArgPower2(CallExpr *TheCall, unsigned ArgNum);
 
   /// BuiltinConstantArgShiftedByte - Check if argument ArgNum of TheCall is
   /// a constant expression representing an arbitrary byte value shifted left by
   /// a multiple of 8 bits.
-  bool BuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum,
+  bool BuiltinConstantArgShiftedByte(CallExpr *TheCall, unsigned ArgNum,
                                      unsigned ArgBits);
 
   /// BuiltinConstantArgShiftedByteOr0xFF - Check if argument ArgNum of
@@ -2839,7 +2846,7 @@ public:
   /// or a value of the form 0x??FF (i.e. a member of the arithmetic progression
   /// 0x00FF, 0x01FF, ..., 0xFFFF). This strange range check is needed for some
   /// Arm MVE intrinsics.
-  bool BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall, int ArgNum,
+  bool BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall, unsigned ArgNum,
                                            unsigned ArgBits);
 
   /// Checks that a call expression's argument count is at least the desired
@@ -5363,7 +5370,7 @@ public:
                                   SourceLocation UsingLoc,
                                   SourceLocation EnumLoc, SourceRange TyLoc,
                                   const IdentifierInfo &II, ParsedType Ty,
-                                  CXXScopeSpec *SS = nullptr);
+                                  const CXXScopeSpec &SS);
   Decl *ActOnAliasDeclaration(Scope *CurScope, AccessSpecifier AS,
                               MultiTemplateParamsArg TemplateParams,
                               SourceLocation UsingLoc, UnqualifiedId &Name,
@@ -8546,10 +8553,12 @@ public:
                                 bool Diagnose = true);
   FunctionDecl *FindUsualDeallocationFunction(SourceLocation StartLoc,
                                               ImplicitDeallocationParameters,
-                                              DeclarationName Name);
+                                              DeclarationName Name,
+                                              bool Diagnose = true);
   FunctionDecl *FindDeallocationFunctionForDestructor(SourceLocation StartLoc,
                                                       CXXRecordDecl *RD,
-                                                      bool Diagnose = true);
+                                                      bool Diagnose,
+                                                      bool LookForGlobal);
 
   /// ActOnCXXDelete - Parsed a C++ 'delete' expression (C++ 5.3.5), as in:
   /// @code ::delete ptr; @endcode
@@ -11392,10 +11401,6 @@ public:
                                        SourceLocation NameLoc,
                                        IdentifierInfo *&II);
 
-  bool resolveAssumedTemplateNameAsType(Scope *S, TemplateName &Name,
-                                        SourceLocation NameLoc,
-                                        bool Diagnose = true);
-
   /// Determine whether a particular identifier might be the name in a C++1z
   /// deduction-guide declaration.
   bool isDeductionGuideName(Scope *S, const IdentifierInfo &Name,
@@ -11636,7 +11641,8 @@ public:
   QualType CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
                                TemplateName Template,
                                SourceLocation TemplateLoc,
-                               TemplateArgumentListInfo &TemplateArgs);
+                               TemplateArgumentListInfo &TemplateArgs,
+                               Scope *Scope, bool ForNestedNameSpecifier);
 
   TypeResult
   ActOnTemplateIdType(Scope *S, ElaboratedTypeKeyword ElaboratedKeyword,
@@ -11668,7 +11674,8 @@ public:
   DeclResult CheckVarTemplateId(VarTemplateDecl *Template,
                                 SourceLocation TemplateLoc,
                                 SourceLocation TemplateNameLoc,
-                                const TemplateArgumentListInfo &TemplateArgs);
+                                const TemplateArgumentListInfo &TemplateArgs,
+                                bool SetWrittenArgs);
 
   /// Form a reference to the specialization of the given variable template
   /// corresponding to the specified argument list, or a null-but-valid result
@@ -11706,6 +11713,23 @@ public:
                                const DeclarationNameInfo &NameInfo,
                                const TemplateArgumentListInfo *TemplateArgs,
                                bool IsAddressOfOperand);
+
+  UnsignedOrNone getPackIndex(TemplateArgument Pack) const {
+    return Pack.pack_size() - 1 - *ArgPackSubstIndex;
+  }
+
+  TemplateArgument
+  getPackSubstitutedTemplateArgument(TemplateArgument Arg) const {
+    Arg = Arg.pack_elements()[*ArgPackSubstIndex];
+    if (Arg.isPackExpansion())
+      Arg = Arg.getPackExpansionPattern();
+    return Arg;
+  }
+
+  ExprResult BuildSubstNonTypeTemplateParmExpr(
+      Decl *AssociatedDecl, const NonTypeTemplateParmDecl *NTTP,
+      SourceLocation loc, TemplateArgument Replacement,
+      UnsignedOrNone PackIndex, bool Final);
 
   /// Form a template name from a name that is syntactically required to name a
   /// template, either due to use of the 'template' keyword or because a name in
@@ -13311,8 +13335,6 @@ public:
     Sema &SemaRef;
     bool Invalid;
     bool AlreadyInstantiating;
-    bool CheckInstantiationDepth(SourceLocation PointOfInstantiation,
-                                 SourceRange InstantiationRange);
 
     InstantiatingTemplate(Sema &SemaRef,
                           CodeSynthesisContext::SynthesisKind Kind,
@@ -13505,7 +13527,7 @@ public:
     ~ArgPackSubstIndexRAII() { Self.ArgPackSubstIndex = OldSubstIndex; }
   };
 
-  void pushCodeSynthesisContext(CodeSynthesisContext Ctx);
+  bool pushCodeSynthesisContext(CodeSynthesisContext Ctx);
   void popCodeSynthesisContext();
 
   void PrintContextStack(InstantiationContextDiagFuncRef DiagFunc) {
@@ -14028,7 +14050,6 @@ public:
   VarTemplateSpecializationDecl *BuildVarTemplateInstantiation(
       VarTemplateDecl *VarTemplate, VarDecl *FromVar,
       const TemplateArgumentList *PartialSpecArgs,
-      const TemplateArgumentListInfo &TemplateArgsInfo,
       SmallVectorImpl<TemplateArgument> &Converted,
       SourceLocation PointOfInstantiation,
       LateInstantiatedAttrVec *LateAttrs = nullptr,

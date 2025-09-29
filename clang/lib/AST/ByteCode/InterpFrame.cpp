@@ -24,13 +24,13 @@ using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S)
     : Caller(nullptr), S(S), Depth(0), Func(nullptr), RetPC(CodePtr()),
-      ArgSize(0), Args(nullptr), FrameOffset(0), IsBottom(true) {}
+      ArgSize(0), Args(nullptr), FrameOffset(0) {}
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
     : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
       RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())),
-      FrameOffset(S.Stk.size()), IsBottom(!Caller) {
+      FrameOffset(S.Stk.size()) {
   if (!Func)
     return;
 
@@ -58,15 +58,12 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC,
   // If the fuction has a This pointer, that one is next.
   // Then follow the actual arguments (but those are handled
   // in getParamPointer()).
-  if (Func->hasRVO())
-    RVOPtr = stackRef<Pointer>(0);
-
-  if (Func->hasThisPointer()) {
-    if (Func->hasRVO())
-      This = stackRef<Pointer>(sizeof(Pointer));
-    else
-      This = stackRef<Pointer>(0);
+  if (Func->hasRVO()) {
+    // RVO pointer offset is always 0.
   }
+
+  if (Func->hasThisPointer())
+    ThisPointerOffset = Func->hasRVO() ? sizeof(Pointer) : 0;
 }
 
 InterpFrame::~InterpFrame() {
@@ -167,7 +164,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
                                   /*Indentation=*/0);
       OS << ".";
     } else if (const auto *M = dyn_cast<CXXMethodDecl>(F)) {
-      print(OS, This, S.getASTContext(),
+      print(OS, getThis(), S.getASTContext(),
             S.getASTContext().getLValueReferenceType(
                 S.getASTContext().getCanonicalTagType(M->getParent())));
       OS << ".";
@@ -233,6 +230,8 @@ Pointer InterpFrame::getParamPointer(unsigned Off) {
   // Return the block if it was created previously.
   if (auto Pt = Params.find(Off); Pt != Params.end())
     return Pointer(reinterpret_cast<Block *>(Pt->second.get()));
+
+  assert(!isBottomFrame());
 
   // Allocate memory to store the parameter and the block metadata.
   const auto &Desc = Func->getParamDescriptor(Off);
