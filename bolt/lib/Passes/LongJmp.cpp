@@ -894,8 +894,11 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
 }
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
-  if (opts::SplitStrategy == opts::SplitFunctionsStrategy::CDSplit) {
-    BC.errs() << "BOLT-ERROR: CDSplit is not supported on AArch64\n";
+
+  if (!opts::CompactCodeModel &&
+      opts::SplitStrategy == opts::SplitFunctionsStrategy::CDSplit) {
+    BC.errs() << "BOLT-ERROR: CDSplit is not supported with LongJmp. Try with "
+                 "'--compact-code-model'\n";
     exit(1);
   }
 
