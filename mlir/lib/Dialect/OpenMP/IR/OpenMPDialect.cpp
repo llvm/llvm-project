@@ -82,7 +82,7 @@ struct LLVMPointerPointerLikeModel
 /// argument index of an operation that has multiple regions, if the operation
 /// has multiple regions.
 /// `_s<idx>` identifies the position of an operation within a region, where
-/// only operations that may potentially contain loops (i.e. have region
+/// only operations that may potentially contain loops ("container operations" i.e. have region
 /// arguments) are counted. Again, it is omitted if there is only one such
 /// operation in a region. If there are canonical loops nested inside each
 /// other, also may also use the format `_d<num>` where <num> is the nesting
@@ -100,12 +100,12 @@ static std::string generateLoopNestingName(StringRef prefix,
     bool isOnlyRegionInOp;
     bool skipRegion;
 
-    // An operation somewhere in a parent region
-    Operation *thisOp;
+    // An container operation somewhere in a parent region
+    Operation *containerOp;
     Region *parentRegion;
-    size_t opInRegionIdx;
-    bool isOnlyOpInRegion;
-    bool skipOp;
+    size_t containerOpInRegionIdx;
+    bool isOnlyContainerOpInRegion;
+    bool skipContainerOp;
     int depth = -1;
   };
   SmallVector<Component> components;
@@ -141,10 +141,10 @@ static std::string generateLoopNestingName(StringRef prefix,
     }
 
     Component &comp = components.emplace_back();
-    comp.thisOp = o;
+    comp.containerOp = o;
     comp.parentRegion = r;
-    comp.opInRegionIdx = sequentialIdx;
-    comp.isOnlyOpInRegion = isOnlyLoop;
+    comp.containerOpInRegionIdx = sequentialIdx;
+    comp.isOnlyContainerOpInRegion = isOnlyLoop;
 
     // Region argument of an operation
     Operation *parent = r->getParentOp();
@@ -181,7 +181,7 @@ static std::string generateLoopNestingName(StringRef prefix,
   // Determine whether a component is not needed
   for (Component &c : components) {
     c.skipRegion = c.isOnlyRegionInOp;
-    c.skipOp = c.isOnlyOpInRegion && !isa<CanonicalLoopOp>(c.thisOp);
+    c.skipContainerOp = c.isOnlyContainerOpInRegion && !isa<CanonicalLoopOp>(c.containerOp);
   }
 
   // Find runs of perfect nests and merge them into a single component
@@ -193,7 +193,7 @@ static std::string generateLoopNestingName(StringRef prefix,
     // Don't do enything if it does not consist of at least 2 loops
     if (outermost < innermost) {
       for (auto i : llvm::seq<int>(outermost + 1, innermost))
-        components[i].skipOp = true;
+        components[i].skipContainerOp = true;
       components[innermost].depth = curNestDepth;
     }
 
@@ -211,10 +211,10 @@ static std::string generateLoopNestingName(StringRef prefix,
       continue;
     }
 
-    if (c.skipOp)
+    if (c.skipContainerOp)
       continue;
 
-    if (!c.isOnlyOpInRegion) {
+    if (!c.isOnlyContainerOpInRegion) {
       mergeLoopNest(i);
       continue;
     }
@@ -227,10 +227,10 @@ static std::string generateLoopNestingName(StringRef prefix,
 
   // Outermost loop does not need a suffix if it has no sibling
   for (auto &c : components) {
-    if (c.skipOp)
+    if (c.skipContainerOp)
       continue;
-    if (c.isOnlyOpInRegion)
-      c.skipOp = true;
+    if (c.isOnlyContainerOpInRegion)
+      c.skipContainerOp = true;
     break;
   }
 
@@ -246,11 +246,11 @@ static std::string generateLoopNestingName(StringRef prefix,
     if (!c.skipRegion)
       addComponent('r', c.regionInOpIdx);
 
-    if (!c.skipOp) {
+    if (!c.skipContainerOp) {
       if (c.depth >= 0)
         addComponent('d', c.depth - 1);
       else
-        addComponent('s', c.opInRegionIdx);
+        addComponent('s', c.containerOpInRegionIdx);
     }
   }
 
