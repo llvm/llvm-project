@@ -2389,8 +2389,8 @@ OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
 
 LogicalResult cir::ComplexRealOp::verify() {
   mlir::Type operandTy = getOperand().getType();
-  if (mlir::isa<cir::ComplexType>(operandTy)) {
-    operandTy = mlir::cast<cir::ComplexType>(operandTy).getElementType();
+  if (auto complexOperandTy = mlir::dyn_cast<cir::ComplexType>(operandTy)) {
+    operandTy = complexOperandTy.getElementType();
   }
 
   if (getType() != operandTy) {

@@ -3260,8 +3260,8 @@ def CIR_ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
 def CIR_ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
   let summary = "Extract the real part of a complex value";
   let description = [{
-    `cir.complex.real` operation takes an operand of `!cir.complex` or scalar
-    type and yields the real part of it.
+    `cir.complex.real` operation takes an operand of `!cir.complex`, `!cir.int`
+    or `!cir.float` type and yields the real part of it.
 
     Example:
 
