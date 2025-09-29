@@ -627,14 +627,14 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
   Inst.DeductionInfo = DeductionInfo;
   Inst.InstantiationRange = InstantiationRange;
   Inst.InConstraintSubstitution =
-        Inst.Kind == CodeSynthesisContext::ConstraintSubstitution;
+      Inst.Kind == CodeSynthesisContext::ConstraintSubstitution;
   Inst.InParameterMappingSubstitution =
       Inst.Kind == CodeSynthesisContext::ParameterMappingSubstitution;
   if (!SemaRef.CodeSynthesisContexts.empty()) {
     Inst.InConstraintSubstitution |=
         SemaRef.CodeSynthesisContexts.back().InConstraintSubstitution;
     Inst.InParameterMappingSubstitution |=
-        SemaRef.CodeSynthesisContexts.back().InParameterMappingSubstitution;\
+        SemaRef.CodeSynthesisContexts.back().InParameterMappingSubstitution;
   }
 
   Invalid = SemaRef.pushCodeSynthesisContext(Inst);
