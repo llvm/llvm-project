@@ -243,7 +243,7 @@ define <4 x double> @trunc_unsigned_v4f64(<4 x double> %x) #0 {
   ret <4 x double> %r
 }
 
-define float @trunc_signed_f32_no_fast_math(float %x) {
+define float @trunc_signed_f32_no_fast_math(float %x) nounwind {
 ; SSE-LABEL: trunc_signed_f32_no_fast_math:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
@@ -259,14 +259,12 @@ define float @trunc_signed_f32_no_fast_math(float %x) {
 ; X86-AVX1-LABEL: trunc_signed_f32_no_fast_math:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    pushl %eax
-; X86-AVX1-NEXT:    .cfi_def_cfa_offset 8
 ; X86-AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-AVX1-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vmovss %xmm0, (%esp)
 ; X86-AVX1-NEXT:    flds (%esp)
 ; X86-AVX1-NEXT:    popl %eax
-; X86-AVX1-NEXT:    .cfi_def_cfa_offset 4
 ; X86-AVX1-NEXT:    retl
   %i = fptosi float %x to i32
   %r = sitofp i32 %i to float
@@ -306,7 +304,7 @@ define float @trunc_signed_f32_nsz(float %x) #0 {
   ret float %r
 }
 
-define double @trunc_signed32_f64_no_fast_math(double %x) {
+define double @trunc_signed32_f64_no_fast_math(double %x) nounwind {
 ; SSE-LABEL: trunc_signed32_f64_no_fast_math:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
@@ -322,10 +320,7 @@ define double @trunc_signed32_f64_no_fast_math(double %x) {
 ; X86-AVX1-LABEL: trunc_signed32_f64_no_fast_math:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    pushl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX1-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX1-NEXT:    movl %esp, %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX1-NEXT:    andl $-8, %esp
 ; X86-AVX1-NEXT:    subl $8, %esp
 ; X86-AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -335,7 +330,6 @@ define double @trunc_signed32_f64_no_fast_math(double %x) {
 ; X86-AVX1-NEXT:    fldl (%esp)
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX1-NEXT:    retl
   %i = fptosi double %x to i32
   %r = sitofp i32 %i to double
@@ -377,7 +371,7 @@ define double @trunc_signed32_f64_nsz(double %x) #0 {
   ret double %r
 }
 
-define double @trunc_f32_signed32_f64_no_fast_math(float %x) {
+define double @trunc_f32_signed32_f64_no_fast_math(float %x) nounwind {
 ; SSE-LABEL: trunc_f32_signed32_f64_no_fast_math:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
@@ -393,10 +387,7 @@ define double @trunc_f32_signed32_f64_no_fast_math(float %x) {
 ; X86-AVX1-LABEL: trunc_f32_signed32_f64_no_fast_math:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    pushl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX1-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX1-NEXT:    movl %esp, %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX1-NEXT:    andl $-8, %esp
 ; X86-AVX1-NEXT:    subl $8, %esp
 ; X86-AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -406,7 +397,6 @@ define double @trunc_f32_signed32_f64_no_fast_math(float %x) {
 ; X86-AVX1-NEXT:    fldl (%esp)
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX1-NEXT:    retl
   %i = fptosi float %x to i32
   %r = sitofp i32 %i to double
@@ -445,7 +435,7 @@ define double @trunc_f32_signed32_f64_nsz(float %x) #0 {
   ret double %r
 }
 
-define float @trunc_f64_signed32_f32_no_fast_math(double %x) {
+define float @trunc_f64_signed32_f32_no_fast_math(double %x) nounwind {
 ; SSE-LABEL: trunc_f64_signed32_f32_no_fast_math:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
@@ -461,14 +451,12 @@ define float @trunc_f64_signed32_f32_no_fast_math(double %x) {
 ; X86-AVX1-LABEL: trunc_f64_signed32_f32_no_fast_math:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    pushl %eax
-; X86-AVX1-NEXT:    .cfi_def_cfa_offset 8
 ; X86-AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX1-NEXT:    vcvttpd2dq %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vmovss %xmm0, (%esp)
 ; X86-AVX1-NEXT:    flds (%esp)
 ; X86-AVX1-NEXT:    popl %eax
-; X86-AVX1-NEXT:    .cfi_def_cfa_offset 4
 ; X86-AVX1-NEXT:    retl
   %i = fptosi double %x to i32
   %r = sitofp i32 %i to float
@@ -503,7 +491,7 @@ define float @trunc_f64_signed32_f32_nsz(double %x) #0 {
   ret float %r
 }
 
-define double @trunc_signed_f64_no_fast_math(double %x) {
+define double @trunc_signed_f64_no_fast_math(double %x) nounwind {
 ; SSE-LABEL: trunc_signed_f64_no_fast_math:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
@@ -520,10 +508,7 @@ define double @trunc_signed_f64_no_fast_math(double %x) {
 ; X86-AVX1-LABEL: trunc_signed_f64_no_fast_math:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    pushl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX1-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX1-NEXT:    movl %esp, %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX1-NEXT:    andl $-8, %esp
 ; X86-AVX1-NEXT:    subl $24, %esp
 ; X86-AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -537,7 +522,6 @@ define double @trunc_signed_f64_no_fast_math(double %x) {
 ; X86-AVX1-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX1-NEXT:    retl
   %i = fptosi double %x to i64
   %r = sitofp i64 %i to double

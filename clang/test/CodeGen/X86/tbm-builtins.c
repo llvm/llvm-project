@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X64
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=i386-unknown-unknown -target-feature +tbm -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK
 
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=i386-unknown-unknown -target-feature +tbm -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=i386-unknown-unknown -target-feature +tbm -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK
+
 #include <x86intrin.h>
 
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/tbm-intrinsics-fast-isel.ll

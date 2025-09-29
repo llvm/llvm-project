@@ -1241,28 +1241,28 @@ def LoadOp : MemRef_Op<"load",
     OpBuilder<(ins "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, memref, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
+                               nullptr);
     }]>,
     OpBuilder<(ins "Type":$resultType,
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultType, memref, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
+                               nullptr);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultTypes, memref, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
+                               nullptr);
     }]>
   ];
 
@@ -2007,10 +2007,10 @@ def MemRef_StoreOp : MemRef_Op<"store",
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, valueToStore, memref, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
+                               nullptr);
     }]>,
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref), [{
       $_state.addOperands(valueToStore);

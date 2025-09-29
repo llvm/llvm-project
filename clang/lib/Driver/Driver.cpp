@@ -6613,6 +6613,9 @@ std::string Driver::GetStdModuleManifestPath(const Compilation &C,
                                              const ToolChain &TC) const {
   std::string error = "<NOT PRESENT>";
 
+  if (C.getArgs().hasArg(options::OPT_nostdlib))
+    return error;
+
   switch (TC.GetCXXStdlibType(C.getArgs())) {
   case ToolChain::CST_Libcxx: {
     auto evaluate = [&](const char *library) -> std::optional<std::string> {
