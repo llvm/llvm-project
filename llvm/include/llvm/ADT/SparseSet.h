@@ -171,23 +171,23 @@ public:
   using iterator = typename DenseT::iterator;
   using const_iterator = typename DenseT::const_iterator;
 
-  const_iterator begin() const { return Dense.begin(); }
-  const_iterator end() const { return Dense.end(); }
-  iterator begin() { return Dense.begin(); }
-  iterator end() { return Dense.end(); }
+  [[nodiscard]] const_iterator begin() const { return Dense.begin(); }
+  [[nodiscard]] const_iterator end() const { return Dense.end(); }
+  [[nodiscard]] iterator begin() { return Dense.begin(); }
+  [[nodiscard]] iterator end() { return Dense.end(); }
 
   /// empty - Returns true if the set is empty.
   ///
   /// This is not the same as BitVector::empty().
   ///
-  bool empty() const { return Dense.empty(); }
+  [[nodiscard]] bool empty() const { return Dense.empty(); }
 
   /// size - Returns the number of elements in the set.
   ///
   /// This is not the same as BitVector::size() which returns the size of the
   /// universe.
   ///
-  size_type size() const { return Dense.size(); }
+  [[nodiscard]] size_type size() const { return Dense.size(); }
 
   /// clear - Clears the set.  This is a very fast constant time operation.
   ///
@@ -222,21 +222,27 @@ public:
   /// @param   Key A valid key to find.
   /// @returns An iterator to the element identified by key, or end().
   ///
-  iterator find(const KeyT &Key) { return findIndex(KeyIndexOf(Key)); }
+  [[nodiscard]] iterator find(const KeyT &Key) {
+    return findIndex(KeyIndexOf(Key));
+  }
 
-  const_iterator find(const KeyT &Key) const {
+  [[nodiscard]] const_iterator find(const KeyT &Key) const {
     return const_cast<SparseSet *>(this)->findIndex(KeyIndexOf(Key));
   }
 
   /// Check if the set contains the given \c Key.
   ///
   /// @param Key A valid key to find.
-  bool contains(const KeyT &Key) const { return find(Key) != end(); }
+  [[nodiscard]] bool contains(const KeyT &Key) const {
+    return find(Key) != end();
+  }
 
   /// count - Returns 1 if this set contains an element identified by Key,
   /// 0 otherwise.
   ///
-  size_type count(const KeyT &Key) const { return contains(Key) ? 1 : 0; }
+  [[nodiscard]] size_type count(const KeyT &Key) const {
+    return contains(Key) ? 1 : 0;
+  }
 
   /// insert - Attempts to insert a new element.
   ///

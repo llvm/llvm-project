@@ -199,17 +199,18 @@ protected:
   }
 
   /// Check whether any part of the range will be invalidated by clearing.
-  void assertSafeToReferenceAfterClear(const T *From, const T *To) {
-    if (From == To)
-      return;
-    this->assertSafeToReferenceAfterResize(From, 0);
-    this->assertSafeToReferenceAfterResize(To - 1, 0);
+  template <class ItTy>
+  void assertSafeToReferenceAfterClear(ItTy From, ItTy To) {
+    if constexpr (std::is_pointer_v<ItTy> &&
+                  std::is_same_v<
+                      std::remove_const_t<std::remove_pointer_t<ItTy>>,
+                      std::remove_const_t<T>>) {
+      if (From == To)
+        return;
+      this->assertSafeToReferenceAfterResize(From, 0);
+      this->assertSafeToReferenceAfterResize(To - 1, 0);
+    }
   }
-  template <
-      class ItTy,
-      std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T *>::value,
-                       bool> = false>
-  void assertSafeToReferenceAfterClear(ItTy, ItTy) {}
 
   /// Check whether any part of the range will be invalidated by growing.
   template <class ItTy> void assertSafeToAddRange(ItTy From, ItTy To) {

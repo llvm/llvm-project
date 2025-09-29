@@ -1519,10 +1519,10 @@ private:
 
 static StringRef detectStubKind(const Session::MemoryRegionInfo &Stub) {
   using namespace support::endian;
-  auto Armv7MovWTle = byte_swap<uint32_t, endianness::little>(0xe300c000);
-  auto Armv7BxR12le = byte_swap<uint32_t, endianness::little>(0xe12fff1c);
-  auto Thumbv7MovWTle = byte_swap<uint32_t, endianness::little>(0x0c00f240);
-  auto Thumbv7BxR12le = byte_swap<uint16_t, endianness::little>(0x4760);
+  auto Armv7MovWTle = byte_swap<uint32_t>(0xe300c000, endianness::little);
+  auto Armv7BxR12le = byte_swap<uint32_t>(0xe12fff1c, endianness::little);
+  auto Thumbv7MovWTle = byte_swap<uint32_t>(0x0c00f240, endianness::little);
+  auto Thumbv7BxR12le = byte_swap<uint16_t>(0x4760, endianness::little);
 
   MemoryMatcher M(Stub.getContent());
   if (M.matchMask(Thumbv7MovWTle)) {

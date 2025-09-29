@@ -30,14 +30,14 @@ runs:
         tar -C ${{ inputs.build-prefix }} -c build/ | zstd -T0 -c > build.tar.zst
 
     - name: Upload Stage 1 Source
-      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-source
         path: llvm-project.tar.zst
         retention-days: 2
 
     - name: Upload Stage 1 Build Dir
-      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: ${{ runner.os}}-${{ runner.arch }}-${{ github.job }}-build
         path: build.tar.zst

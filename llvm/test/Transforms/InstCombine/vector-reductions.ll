@@ -308,3 +308,174 @@ define i32 @diff_of_sums_type_mismatch2(<8 x i32> %v0, <4 x i32> %v1) {
   %r = sub i32 %r0, %r1
   ret i32 %r
 }
+
+define i32 @constant_multiplied_4xi32(i32 %0) {
+; CHECK-LABEL: @constant_multiplied_4xi32(
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0:%.*]], 2
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %2 = insertelement <4 x i32> poison, i32 %0, i64 0
+  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <4 x i32> zeroinitializer
+  %4 = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %3)
+  ret i32 %4
+}
+
+define i32 @constant_multiplied_3xi32(i32 %0) {
+; CHECK-LABEL: @constant_multiplied_3xi32(
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP0:%.*]], 3
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %2 = insertelement <3 x i32> poison, i32 %0, i64 0
+  %3 = shufflevector <3 x i32> %2, <3 x i32> poison, <3 x i32> zeroinitializer
+  %4 = tail call i32 @llvm.vector.reduce.add.v3i32(<3 x i32> %3)
+  ret i32 %4
+}
+
+define i64 @constant_multiplied_4xi64(i64 %0) {
+; CHECK-LABEL: @constant_multiplied_4xi64(
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP0:%.*]], 2
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %2 = insertelement <4 x i64> poison, i64 %0, i64 0
+  %3 = shufflevector <4 x i64> %2, <4 x i64> poison, <4 x i32> zeroinitializer
+  %4 = tail call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %3)
+  ret i64 %4
+}
+
+define i32 @constant_multiplied_8xi32(i32 %0) {
+; CHECK-LABEL: @constant_multiplied_8xi32(
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0:%.*]], 3
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %2 = insertelement <4 x i32> poison, i32 %0, i64 0
+  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <8 x i32> zeroinitializer
+  %4 = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %3)
+  ret i32 %4
+}
+
+
+define i32 @constant_multiplied_16xi32(i32 %0) {
+; CHECK-LABEL: @constant_multiplied_16xi32(
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0:%.*]], 4
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %2 = insertelement <4 x i32> poison, i32 %0, i64 0
+  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <16 x i32> zeroinitializer
+  %4 = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %3)
+  ret i32 %4
+}
+
+
+define i32 @constant_multiplied_4xi32_at_idx1(i32 %0) {
+; CHECK-LABEL: @constant_multiplied_4xi32_at_idx1(
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0:%.*]], 2
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %2 = insertelement <4 x i32> poison, i32 %0, i64 1
+  %3 = shufflevector <4 x i32> %2, <4 x i32> poison,
+  <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %4 = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %3)
+  ret i32 %4
+}
+
+define i32 @negative_constant_multiplied_4xi32(i32 %0) {
+; CHECK-LABEL: @negative_constant_multiplied_4xi32(
+; CHECK-NEXT:    ret i32 poison
+;
+  %2 = insertelement <4 x i32> poison, i32 %0, i64 1
+  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <4 x i32> zeroinitializer
+  %4 = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %3)
+  ret i32 %4
+}
+
+define i32 @constant_multiplied_6xi32(i32 %0) {
+; CHECK-LABEL: @constant_multiplied_6xi32(
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP0:%.*]], 6
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %2 = insertelement <4 x i32> poison, i32 %0, i64 0
+  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <6 x i32> zeroinitializer
+  %4 = tail call i32 @llvm.vector.reduce.add.v6i32(<6 x i32> %3)
+  ret i32 %4
+}
+
+define i64 @constant_multiplied_6xi64(i64 %0) {
+; CHECK-LABEL: @constant_multiplied_6xi64(
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0:%.*]], 6
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %2 = insertelement <4 x i64> poison, i64 %0, i64 0
+  %3 = shufflevector <4 x i64> %2, <4 x i64> poison, <6 x i32> zeroinitializer
+  %4 = tail call i64 @llvm.vector.reduce.add.v6i64(<6 x i64> %3)
+  ret i64 %4
+}
+
+define i1 @constant_multiplied_8xi1(i1 %0) {
+; CHECK-LABEL: @constant_multiplied_8xi1(
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i1> poison, i1 [[TMP0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i1> [[TMP3]] to i8
+; CHECK-NEXT:    [[TMP5:%.*]] = call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i8 [[TMP5]] to i1
+; CHECK-NEXT:    ret i1 [[TMP6]]
+;
+  %2 = insertelement <8 x i1> poison, i1 %0, i32 0
+  %3 = shufflevector <8 x i1> %2, <8 x i1> poison, <8 x i32> zeroinitializer
+  %4 = tail call i1 @llvm.vector.reduce.add.v8i1(<8 x i1> %3)
+  ret i1 %4
+}
+
+define i2 @constant_multiplied_4xi2(i2 %0) {
+; CHECK-LABEL: @constant_multiplied_4xi2(
+; CHECK-NEXT:    ret i2 0
+;
+  %2 = insertelement <4 x i2> poison, i2 %0, i32 0
+  %3 = shufflevector <4 x i2> %2, <4 x i2> poison, <4 x i32> zeroinitializer
+  %4 = tail call i2 @llvm.vector.reduce.add.v4i2(<4 x i2> %3)
+  ret i2 %4
+}
+
+define i2 @constant_multiplied_5xi2(i2 %0) {
+; CHECK-LABEL: @constant_multiplied_5xi2(
+; CHECK-NEXT:    ret i2 [[TMP0:%.*]]
+;
+  %2 = insertelement <5 x i2> poison, i2 %0, i64 0
+  %3 = shufflevector <5 x i2> %2, <5 x i2> poison, <5 x i32> zeroinitializer
+  %4 = tail call i2 @llvm.vector.reduce.add.v5i2(<5 x i2> %3)
+  ret i2 %4
+}
+
+define i2 @constant_multiplied_6xi2(i2 %0) {
+; CHECK-LABEL: @constant_multiplied_6xi2(
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i2 [[TMP0:%.*]], 1
+; CHECK-NEXT:    ret i2 [[TMP2]]
+;
+  %2 = insertelement <6 x i2> poison, i2 %0, i64 0
+  %3 = shufflevector <6 x i2> %2, <6 x i2> poison, <6 x i32> zeroinitializer
+  %4 = tail call i2 @llvm.vector.reduce.add.v6i2(<6 x i2> %3)
+  ret i2 %4
+}
+
+define i2 @constant_multiplied_7xi2(i2 %0) {
+; CHECK-LABEL: @constant_multiplied_7xi2(
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i2 0, [[TMP0:%.*]]
+; CHECK-NEXT:    ret i2 [[TMP2]]
+;
+  %2 = insertelement <7 x i2> poison, i2 %0, i64 0
+  %3 = shufflevector <7 x i2> %2, <7 x i2> poison, <7 x i32> zeroinitializer
+  %4 = tail call i2 @llvm.vector.reduce.add.v7i2(<7 x i2> %3)
+  ret i2 %4
+}
+
+define i32 @negative_scalable_vector(i32 %0) {
+; CHECK-LABEL: @negative_scalable_vector(
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <vscale x 4 x i32> [[TMP2]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP3]])
+; CHECK-NEXT:    ret i32 [[TMP4]]
+;
+  %2 = insertelement <vscale x 4 x i32> poison, i32 %0, i64 0
+  %3 = shufflevector <vscale x 4 x i32> %2, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %4 = tail call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %3)
+  ret i32 %4
+}

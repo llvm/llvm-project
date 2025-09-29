@@ -191,7 +191,7 @@ computeSuffixProductIRBlock(Location loc, OpBuilder &builder,
 }
 
 MemrefValue skipFullyAliasingOperations(MemrefValue source) {
-  while (auto op = source.getDefiningOp()) {
+  while (auto *op = source.getDefiningOp()) {
     if (auto subViewOp = dyn_cast<memref::SubViewOp>(op);
         subViewOp && subViewOp.hasZeroOffset() && subViewOp.hasUnitStride()) {
       // A `memref.subview` with an all zero offset, and all unit strides, still
@@ -208,7 +208,7 @@ MemrefValue skipFullyAliasingOperations(MemrefValue source) {
 }
 
 MemrefValue skipViewLikeOps(MemrefValue source) {
-  while (auto op = source.getDefiningOp()) {
+  while (auto *op = source.getDefiningOp()) {
     if (auto viewLike = dyn_cast<ViewLikeOpInterface>(op)) {
       if (source == viewLike.getViewDest()) {
         source = cast<MemrefValue>(viewLike.getViewSource());
