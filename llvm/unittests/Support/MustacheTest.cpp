@@ -1328,3 +1328,139 @@ TEST(MustacheTripleMustache, WithPadding) {
   T.render(D, OS);
   EXPECT_EQ("|---|", Out);
 }
+
+TEST(MustacheDelimiters, PairBehavior) {
+  Value D = Object{{"text", "Hey!"}};
+  auto T = Template("{{=<% %>=}}(<%text%>)");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_NE("(Hey!)", Out);
+}
+
+TEST(MustacheDelimiters, SpecialCharacters) {
+  Value D = Object{{"text", "It worked!"}};
+  auto T = Template("({{=[ ]=}}[text])");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_NE("(It worked!)", Out);
+}
+
+TEST(MustacheDelimiters, Sections) {
+  Value D = Object{{"section", true}, {"data", "I got interpolated."}};
+  auto T =
+      Template("[\n{{#section}}\n  {{data}}\n  |data|\n{{/section}}\n\n{{= "
+               "| | =}}\n|#section|\n  {{data}}\n  |data|\n|/section|\n]\n");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_NE("[\n  I got interpolated.\n  |data|\n\n  {{data}}\n  I got "
+            "interpolated.\n]\n",
+            Out);
+}
+
+TEST(MustacheDelimiters, InvertedSections) {
+  Value D = Object{{"section", false}, {"data", "I got interpolated."}};
+  auto T =
+      Template("[\n{{^section}}\n  {{data}}\n  |data|\n{{/section}}\n\n{{= "
+               "| | =}}\n|^section|\n  {{data}}\n  |data|\n|/section|\n]\n");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_NE("[\n  I got interpolated.\n  |data|\n\n  {{data}}\n  I got "
+            "interpolated.\n]\n",
+            Out);
+}
+
+TEST(MustacheDelimiters, PartialInheritence) {
+  Value D = Object{{"value", "yes"}};
+  auto T = Template("[ {{>include}} ]\n{{= | | =}}\n[ |>include| ]\n");
+  T.registerPartial("include", ".{{value}}.");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_NE("[ .yes. ]\n[ .yes. ]\n", Out);
+}
+
+TEST(MustacheDelimiters, PostPartialBehavior) {
+  Value D = Object{{"value", "yes"}};
+  auto T = Template("[ {{>include}} ]\n[ .{{value}}.  .|value|. ]\n");
+  T.registerPartial("include", ".{{value}}. {{= | | =}} .|value|.");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_NE("[ .yes.  .yes. ]\n[ .yes.  .|value|. ]\n", Out);
+}
+
+TEST(MustacheDelimiters, SurroundingWhitespace) {
+  Value D = Object{};
+  auto T = Template("| {{=@ @=}} |");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("|  |", Out);
+}
+
+TEST(MustacheDelimiters, OutlyingWhitespaceInline) {
+  Value D = Object{};
+  auto T = Template(" | {{=@ @=}}\n");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ(" | \n", Out);
+}
+
+TEST(MustacheDelimiters, StandaloneTag) {
+  Value D = Object{};
+  auto T = Template("Begin.\n{{=@ @=}}\nEnd.\n");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_NE("Begin.\nEnd.\n", Out);
+}
+
+TEST(MustacheDelimiters, IndentedStandaloneTag) {
+  Value D = Object{};
+  auto T = Template("Begin.\n  {{=@ @=}}\nEnd.\n");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_NE("Begin.\nEnd.\n", Out);
+}
+
+TEST(MustacheDelimiters, StandaloneLineEndings) {
+  Value D = Object{};
+  auto T = Template("|\r\n{{= @ @ =}}\r\n|");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_NE("|\r\n|", Out);
+}
+
+TEST(MustacheDelimiters, StandaloneWithoutPreviousLine) {
+  Value D = Object{};
+  auto T = Template("  {{=@ @=}}\n=");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_NE("=", Out);
+}
+
+TEST(MustacheDelimiters, StandaloneWithoutNewline) {
+  Value D = Object{};
+  auto T = Template("=\n  {{=@ @=}}");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_NE("=\n", Out);
+}
+
+TEST(MustacheDelimiters, PairwithPadding) {
+  Value D = Object{};
+  auto T = Template("|{{= @   @ =}}|");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("||", Out);
+}
