@@ -381,6 +381,8 @@ def CopyArray : Opcode {
   let HasGroup = 1;
 }
 
+def SetArrayFillerPtr : Opcode { let Args = [ArgUint32]; }
+
 //===----------------------------------------------------------------------===//
 // Direct field accessors
 //===----------------------------------------------------------------------===//

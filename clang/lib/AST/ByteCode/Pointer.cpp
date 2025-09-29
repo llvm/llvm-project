@@ -812,9 +812,12 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
     }
 
     if (const auto *AT = Ty->getAsArrayTypeUnsafe()) {
-      const size_t NumElems = Ptr.getNumElems();
+      const Descriptor *Desc = Ptr.getFieldDesc();
+
+      size_t Capacity = Desc->Capacity;
+      const size_t NumElems = Ptr.getNumAllocatedElems();
       QualType ElemTy = AT->getElementType();
-      R = APValue(APValue::UninitArray{}, NumElems, NumElems);
+      R = APValue(APValue::UninitArray{}, NumElems, Desc->Capacity);
 
       bool Ok = true;
       OptPrimType ElemT = Ctx.classify(ElemTy);
@@ -826,6 +829,16 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
           Ok &= Composite(ElemTy, Ptr.atIndex(I).narrow(), Slot);
         }
       }
+
+      if (NumElems != Capacity) {
+        APValue &Slot = R.getArrayFiller();
+        if (ElemT) {
+          TYPE_SWITCH(*ElemT, Slot = Ptr.elem<T>(NumElems).toAPValue(ASTCtx));
+        } else {
+          Ok &= Composite(ElemTy, Ptr.atIndex(NumElems).narrow(), Slot);
+        }
+      }
+
       return Ok;
     }
 

@@ -11,6 +11,7 @@
 #include "Context.h"
 #include "Floating.h"
 #include "Integral.h"
+#include "InterpHelpers.h"
 #include "InterpState.h"
 #include "MemberPointer.h"
 #include "Pointer.h"
@@ -265,6 +266,8 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
   Endian TargetEndianness =
       ASTCtx.getTargetInfo().isLittleEndian() ? Endian::Little : Endian::Big;
 
+  ensureArraySize(Ctx.getProgram(), FromPtr);
+
   return enumeratePointerFields(
       FromPtr, Ctx, Buffer.size(),
       [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
@@ -383,6 +386,8 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
   BitcastBuffer Buffer(Bytes(Size).toBits());
   readPointerToBuffer(S.getContext(), FromPtr, Buffer,
                       /*ReturnOnUninit=*/false);
+
+  ensureArraySize(S.P, ToPtr);
 
   // Now read the values out of the buffer again and into ToPtr.
   Endian TargetEndianness =

@@ -161,6 +161,12 @@ public:
       return std::nullopt;
     return CurrentDeclaration;
   }
+  /// Creates a new descriptor.
+  template <typename... Ts> Descriptor *allocateDescriptor(Ts &&...Args) {
+    return new (Allocator) Descriptor(std::forward<Ts>(Args)...);
+  }
+
+  void reallocGlobal(Block *Prev, const Descriptor *NewDesc);
 
 private:
   friend class DeclScope;
@@ -204,6 +210,10 @@ private:
     Block *block() { return &B; }
     const Block *block() const { return &B; }
 
+    GlobalInlineDescriptor getInlineDesc() const {
+      return *reinterpret_cast<const GlobalInlineDescriptor *>(B.rawData());
+    }
+
   private:
     /// Required metadata - does not actually track pointers.
     Block B;
@@ -222,11 +232,6 @@ private:
 
   /// Dummy parameter to generate pointers from.
   llvm::DenseMap<const void *, unsigned> DummyVariables;
-
-  /// Creates a new descriptor.
-  template <typename... Ts> Descriptor *allocateDescriptor(Ts &&...Args) {
-    return new (Allocator) Descriptor(std::forward<Ts>(Args)...);
-  }
 
   /// No declaration ID.
   static constexpr unsigned NoDeclaration = ~0u;

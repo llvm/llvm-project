@@ -22,6 +22,7 @@
 #include "Function.h"
 #include "InterpBuiltinBitCast.h"
 #include "InterpFrame.h"
+#include "InterpHelpers.h"
 #include "InterpStack.h"
 #include "InterpState.h"
 #include "MemberPointer.h"
@@ -1960,6 +1961,7 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Store(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
+
   if (!CheckStore(S, OpPC, Ptr))
     return false;
   if (Ptr.canBeInitialized())
@@ -1972,6 +1974,7 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool StorePop(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
   if (!CheckStore(S, OpPC, Ptr))
     return false;
   if (Ptr.canBeInitialized())
@@ -2139,7 +2142,10 @@ bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
 
   if (!CheckLive(S, OpPC, Ptr, AK_Assign))
     return false;
-  if (Idx >= Desc->getNumElems()) {
+
+  ensureArraySize(S.P, Ptr, Idx);
+
+  if (Idx >= (Desc->getNumElems())) {
     // CheckRange.
     if (S.getLangOpts().CPlusPlus) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
@@ -2171,9 +2177,11 @@ bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
     return true;
   }
 
+  ensureArraySize(S.P, Ptr, Idx);
+
   if (!CheckLive(S, OpPC, Ptr, AK_Assign))
     return false;
-  if (Idx >= Desc->getNumElems()) {
+  if (Idx >= Desc->getNumElemsWithoutFiller()) {
     // CheckRange.
     if (S.getLangOpts().CPlusPlus) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
@@ -2264,7 +2272,7 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
 
   assert(Ptr.isBlockPointer());
 
-  uint64_t MaxIndex = static_cast<uint64_t>(Ptr.getNumElems());
+  uint64_t MaxIndex = static_cast<uint64_t>(Ptr.getCapacity());
   uint64_t Index;
   if (Ptr.isOnePastEnd())
     Index = MaxIndex;
@@ -2308,8 +2316,9 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
     }
   }
 
-  if (Invalid && S.getLangOpts().CPlusPlus)
+  if (Invalid && S.getLangOpts().CPlusPlus) {
     return std::nullopt;
+  }
 
   // Offset is valid - compute it on unsigned.
   int64_t WideIndex = static_cast<int64_t>(Index);
@@ -2319,6 +2328,8 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
     Result = WideIndex + WideOffset;
   else
     Result = WideIndex - WideOffset;
+
+  ensureArraySize(S.P, Ptr, Result);
 
   // When the pointer is one-past-end, going back to index 0 is the only
   // useful thing we can do. Any other index has been diagnosed before and
@@ -3098,6 +3109,7 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   }
 
   if (Offset.isZero()) {
+    ensureArraySize(S.P, Ptr, 0);
     if (const Descriptor *Desc = Ptr.getFieldDesc();
         Desc && Desc->isArray() && Ptr.getIndex() == 0) {
       S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
@@ -3129,6 +3141,7 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   }
 
   if (Offset.isZero()) {
+    ensureArraySize(S.P, Ptr, 0);
     if (const Descriptor *Desc = Ptr.getFieldDesc();
         Desc && Desc->isArray() && Ptr.getIndex() == 0) {
       S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
@@ -3164,6 +3177,13 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
+  // if (Index == Ptr.getFieldDesc()->getNumElemsWithoutFiller() &&
+  // Index < Ptr.getFieldDesc()->Capacity &&
+  // Ptr.getFieldDesc()->hasArrayFiller()) {
+  // S.Stk.push<T>(Ptr.elem<T>(Ptr.getNumElems()));
+  // return true;
+  // }
+
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
 
@@ -3191,6 +3211,27 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
     DestPtr.initializeElement(DestIndex + I);
   }
   return true;
+}
+
+inline bool SetArrayFillerPtr(InterpState &S, CodePtr OpPC,
+                              uint32_t LocalIndex) {
+  const auto &FillerValue = S.Stk.pop<Pointer>();
+  const auto &Arr = S.Stk.peek<Pointer>();
+
+  assert(Arr.getFieldDesc()->hasArrayFiller());
+  assert(Arr.isArrayRoot());
+  assert(FillerValue.isRoot());
+  assert(Arr.getNumAllocatedElems() < Arr.getNumAllocatedElemsWithFiller());
+
+  Pointer ArrayFillerDest = Arr.atIndex(Arr.getNumAllocatedElems()).narrow();
+  if (Arr.getFieldDesc()->isPrimitiveArray()) {
+    TYPE_SWITCH(ArrayFillerDest.getFieldDesc()->getPrimType(), {
+      new (&ArrayFillerDest.deref<T>()) T(FillerValue.deref<T>());
+    });
+    return true;
+  }
+
+  return DoMemcpy(S, OpPC, FillerValue, ArrayFillerDest);
 }
 
 /// Just takes a pointer and checks if it's an incomplete

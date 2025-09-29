@@ -596,6 +596,33 @@ public:
   unsigned getNumElems() const {
     if (!isBlockPointer())
       return ~0u;
+    // return getFieldDesc()->getNumElemsWithoutFiller();
+    // return getSize() / elemSize();
+    return getCapacity();
+  }
+
+  unsigned getNumAllocatedElems() const {
+    if (!isBlockPointer())
+      return ~0u;
+
+    assert(getFieldDesc()->isArray());
+    // return getSize() / elemSize();
+    return getFieldDesc()->getNumElemsWithoutFiller();
+  }
+
+  unsigned getNumAllocatedElemsWithFiller() const {
+    if (!isBlockPointer())
+      return ~0u;
+
+    assert(getFieldDesc()->isArray());
+    return getFieldDesc()->getNumElems(); // XXX WITH FILLER
+  }
+
+  unsigned getCapacity() const {
+    if (!isBlockPointer())
+      return ~0u;
+    if (getFieldDesc()->IsArray)
+      return getFieldDesc()->Capacity;
     return getSize() / elemSize();
   }
 
@@ -636,6 +663,15 @@ public:
     if (isUnknownSizeArray())
       return false;
 
+    if (isPastEnd())
+      return true;
+
+    return getIndex() == getNumElems();
+
+    // if (getFieldDesc()->IsArray && getIndex() >=
+    // getFieldDesc()->getNumElems() && getIndex() < getFieldDesc()->Capacity)
+    // return false;
+
     return isPastEnd() || (getSize() == getOffset());
   }
 
@@ -643,6 +679,10 @@ public:
   bool isPastEnd() const {
     if (isIntegralPointer())
       return false;
+
+    // if (getFieldDesc()->IsArray && getIndex() >=
+    // getFieldDesc()->getNumElems() && getIndex() < getFieldDesc()->Capacity)
+    // return false;
 
     return !isZero() && Offset > BS.Pointee->getSize();
   }
@@ -682,7 +722,7 @@ public:
     assert(BS.Pointee);
     assert(isDereferencable());
     assert(getFieldDesc()->isPrimitiveArray());
-    assert(I < getFieldDesc()->getNumElems());
+    // assert(I < getFieldDesc()->getNumElems());
 
     unsigned ElemByteOffset = I * getFieldDesc()->getElemSize();
     unsigned ReadOffset = BS.Base + sizeof(InitMapPtr) + ElemByteOffset;

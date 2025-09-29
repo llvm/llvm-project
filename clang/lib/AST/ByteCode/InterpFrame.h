@@ -142,6 +142,7 @@ public:
 
   void dump() const { dump(llvm::errs(), 0); }
   void dump(llvm::raw_ostream &OS, unsigned Indent = 0) const;
+  void reallocLocal(Block *Prev, const Descriptor *NewDesc);
 
 private:
   /// Returns an original argument from the stack.
@@ -156,7 +157,16 @@ private:
   }
 
   /// Returns a pointer to a local's block.
-  Block *localBlock(unsigned Offset) const {
+  Block *localBlock(unsigned Offset, bool CheckReallocs = true) const {
+    if (CheckReallocs) {
+      // llvm::errs() << __PRETTY_FUNCTION__ << ": " << Offset << ". Reallocated
+      // locals: " << ReallocatedLocals.size() <<  '\n';
+      if (auto It = ReallocatedLocals.find(Offset);
+          It != ReallocatedLocals.end()) {
+        // llvm::errs() << "AAAAAAAha! localblock() on a reallocated local!\n";
+        return It->second;
+      }
+    }
     return reinterpret_cast<Block *>(Locals.get() + Offset - sizeof(Block));
   }
 
@@ -186,6 +196,8 @@ private:
   const size_t FrameOffset;
   /// Mapping from arg offsets to their argument blocks.
   llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Params;
+
+  llvm::DenseMap<unsigned, Block *> ReallocatedLocals;
 };
 
 } // namespace interp
