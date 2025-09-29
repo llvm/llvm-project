@@ -1,25 +1,25 @@
 ; RUN: llc %s -o %t.o -mcpu=gfx1030 -filetype=obj -O0
-; RUN: llvm-debuginfo-analyzer --debugger-view --debugger-view-vars %t.o | FileCheck %s
+; RUN: llvm-debuginfo-analyzer --report=debugger --print=symbols %t.o | FileCheck %s
 
 ; This test compiles this module with AMDGPU backend under -O0,
-; and makes sure llvm-debuginfo-analyzer --debugger-view works for it.
+; and makes sure llvm-debuginfo-analyzer --report=debugger works for it.
 
-; CHECK: FUNCTION: main
-; CHECK: LINE: {{.+}}basic_var.hlsl:7
-; CHECK: LINE: {{.+}}basic_var.hlsl:11
-; CHECK: VAR: dtid: uint3 : reg{{.+}}, piece 4
-; CHECK: LINE: {{.+}}basic_var.hlsl:17
-; CHECK: VAR: dtid: uint3 : reg{{.+}}, piece 4
-; CHECK: LINE: {{.+}}basic_var.hlsl:11
-; CHECK: VAR: dtid: uint3 : reg{{.+}}, piece 4
-; CHECK: LINE: {{.+}}basic_var.hlsl:14
-; CHECK-DAG: VAR: dtid: uint3 : reg{{.+}}, piece 4
-; CHECK: LINE: {{.+}}basic_var.hlsl:17
-; CHECK-DAG: VAR: dtid: uint3 : reg{{.+}}, piece 4
-; CHECK-DAG: VAR: my_var2: float : reg{{.+}}
-; CHECK: LINE: {{.+}}basic_var.hlsl:19
-; CHECK-DAG: VAR: dtid: uint3 : reg{{.+}}, piece 4
-; CHECK-DAG: VAR: my_var2: float : reg{{.+}}
+; CHECK: {Function}: main
+; CHECK: {Line}: {{.+}}basic_var.hlsl:7
+; CHECK: {Line}: {{.+}}basic_var.hlsl:11
+; CHECK: {Variable}: dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: {Line}: {{.+}}basic_var.hlsl:17
+; CHECK: {Variable}: dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: {Line}: {{.+}}basic_var.hlsl:11
+; CHECK: {Variable}: dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: {Line}: {{.+}}basic_var.hlsl:14
+; CHECK-DAG: {Variable}: dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: {Line}: {{.+}}basic_var.hlsl:17
+; CHECK-DAG: {Variable}: dtid: uint3 : reg{{.+}}, piece 4
+; CHECK-DAG: {Variable}: my_var2: float : reg{{.+}}
+; CHECK: {Line}: {{.+}}basic_var.hlsl:19
+; CHECK-DAG: {Variable}: dtid: uint3 : reg{{.+}}, piece 4
+; CHECK-DAG: {Variable}: my_var2: float : reg{{.+}}
 
 source_filename = "module"
 target triple = "amdgcn-amd-amdpal"

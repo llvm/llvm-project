@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
 #include "llvm/Support/FileSystem.h"
@@ -516,11 +517,180 @@ Error LVReader::doPrint() {
     if (options().getReportParents() || options().getReportView())
       if (Error Err = printScopes())
         return Err;
-
+    // Requested debugger report
+    if (options().getReportDebugger())
+      if (Error Err = printDebugger())
+        return Err;
     return Error::success();
   }
 
   return printScopes();
+}
+
+namespace {
+
+struct DebuggerViewPrinter {
+  std::vector<const LVLine *> Lines;
+  std::unordered_map<LVAddress, std::vector<const LVLocation *>> LivetimeBegins;
+  std::unordered_map<LVAddress, std::vector<const LVLocation *>>
+      LivetimeEndsExclusive;
+  raw_ostream &OS;
+
+  const bool IncludeRanges = false;
+
+  void Walk(raw_ostream &OS, const LVScope *Scope) {
+    if (Scope->scopeCount()) {
+      for (const LVScope *ChildScope : *Scope->getScopes())
+        Walk(OS, ChildScope);
+    }
+    if (Scope->lineCount()) {
+      for (const LVLine *Line : *Scope->getLines()) {
+        Lines.push_back(Line);
+      }
+    }
+    if (Scope->symbolCount()) {
+      for (const LVSymbol *Symbol : *Scope->getSymbols()) {
+        LVLocations SymbolLocations;
+        Symbol->getLocations(SymbolLocations);
+        if (SymbolLocations.empty())
+          continue;
+
+        if (IncludeRanges) {
+          OS << "{Range}: " << Symbol->getName() << " (line "
+             << Symbol->getLineNumber() << ")" << ": ";
+        }
+
+        for (const LVLocation *Loc : SymbolLocations) {
+          if (Loc->getIsGapEntry())
+            continue;
+
+          LVAddress Begin = Loc->getLowerAddress();
+          LVAddress End = Loc->getUpperAddress();
+          LivetimeBegins[Begin].push_back(Loc);
+          LivetimeEndsExclusive[End].push_back(Loc);
+          if (IncludeRanges) {
+            OS << "[" << hexValue(Begin) << ":" << hexValue(End) << "] ";
+          }
+        }
+
+        if (IncludeRanges)
+          OS << "\n";
+      }
+    }
+  }
+
+  DebuggerViewPrinter(raw_ostream &OS, const LVScopeFunction *Fn) : OS(OS) {
+    Walk(OS, Fn);
+    std::sort(Lines.begin(), Lines.end(),
+              [](const LVLine *a, const LVLine *b) -> bool {
+                if (a->getAddress() != b->getAddress())
+                  return a->getAddress() < b->getAddress();
+                if (a->getIsLineDebug() != b->getIsLineDebug())
+                  return a->getIsLineDebug();
+                return a->getID() < b->getID();
+              });
+  }
+
+  static void PrintIndent(raw_ostream &OS, int Indent) {
+    for (int i = 0; i < Indent; i++)
+      OS << "  ";
+  }
+
+  static void PrintCallstack(raw_ostream &OS, const LVScope *Scope) {
+    const LVScope *PrevScope = nullptr;
+    while (Scope) {
+      if (Scope->getIsFunction() || Scope->getIsInlinedFunction()) {
+        OS << "[" << Scope->getName();
+        if (PrevScope && PrevScope->getIsInlinedFunction()) {
+          OS << ":"
+             << cast<LVScopeFunctionInlined>(PrevScope)->getCallLineNumber();
+        }
+        OS << "]";
+        PrevScope = Scope;
+      }
+      Scope = Scope->getParentScope();
+    }
+  }
+
+  static bool IsChildScopeOf(const LVScope *A, const LVScope *B) {
+    while (A) {
+      A = A->getParentScope();
+      if (A == B)
+        return true;
+    }
+    return false;
+  }
+
+  void Print() {
+    const bool IncludeVars = options().getPrintSymbols();
+    const bool IncludeCode = options().getPrintInstructions();
+    SetVector<const LVLocation *>
+        LiveSymbols; // This needs to be ordered since we're iterating over it.
+    for (const LVLine *Line : Lines) {
+      const LVScope *Scope = Line->getParentScope();
+      // Update live list: Add lives
+      for (auto Loc : LivetimeBegins[Line->getAddress()])
+        LiveSymbols.insert(Loc);
+      // Update live list: remove dead
+      for (auto Loc : LivetimeEndsExclusive[Line->getAddress()])
+        LiveSymbols.remove(Loc);
+
+      if (Line->getIsNewStatement() && Line->getIsLineDebug() &&
+          Line->getLineNumber() != 0) {
+        auto LineDebug = cast<LVLineDebug>(Line);
+
+        PrintIndent(OS, 1);
+        OS << "{Line}: " << " [" << hexValue(LineDebug->getAddress()) << "] "
+           << LineDebug->getPathname() << ":" << LineDebug->getLineNumber()
+           << " ";
+        PrintCallstack(OS, Scope);
+        OS << "\n";
+        if (IncludeVars) {
+          for (auto SymLoc : LiveSymbols) {
+            const LVSymbol *Sym = SymLoc->getParentSymbol();
+            auto SymScope = Sym->getParentScope();
+            auto LineScope = LineDebug->getParentScope();
+            if (SymScope != LineScope && !IsChildScopeOf(LineScope, SymScope))
+              continue;
+            PrintIndent(OS, 2);
+            OS << "{Variable}: " << Sym->getName() << ": " << Sym->getType()->getName()
+               << " : ";
+            SymLoc->printLocations(OS);
+            OS << " (line " << Sym->getLineNumber() << ")";
+            OS << "\n";
+          }
+        }
+
+      } else if (IncludeCode && Line->getIsLineAssembler()) {
+        OS << "  {Code}: " << " [" << hexValue(Line->getAddress()) << "]  "
+           << Line->getName() << "\n";
+      }
+    }
+  }
+};
+
+} // namespace
+
+Error LVReader::printDebugger() {
+  auto *CU = getCompileUnit();
+  if (!CU) {
+    return createStringError(std::make_error_code(std::errc::invalid_argument), "Error: No compute unit found.");
+  }
+
+  for (LVElement *Child : *CU->getChildren()) {
+    auto *Fn = dyn_cast<LVScopeFunction>(Child);
+    if (Fn) {
+      const LVLines *Lines = Fn->getLines();
+      // If there's no lines, this function has no body.
+      if (!Lines)
+        continue;
+      outs() << "{Function}: " << Child->getName() << "\n";
+
+      DebuggerViewPrinter P(OS, Fn);
+      P.Print();
+    }
+  }
+  return Error::success();
 }
 
 Error LVReader::printScopes() {

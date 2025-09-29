@@ -15,5 +15,4 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_tool(llvm-debuginfo-analyzer
   llvm-debuginfo-analyzer.cpp
   Options.cpp
-  DebuggerView.cpp
   )
