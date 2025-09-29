@@ -1727,6 +1727,7 @@ static Align getStringPieceAlignment(const CStringInputSection *isec,
 }
 
 void CStringSection::finalizeContents() {
+  size = 0;
   // TODO: Call buildCStringPriorities() to support cstring ordering when
   // deduplication is off, although this may negatively impact build
   // performance.
