@@ -49,6 +49,19 @@ define <4 x float> @forward_masked_load(ptr %0, ptr %1) {
   ret <4 x float> %load2
 }
 
+define <4 x float> @forward_masked_load_arbitrary_mask(ptr %loc_a, ptr %loc_b, <4 x i1> %mask) {
+; CHECK-LABEL: @forward_masked_load_arbitrary_mask(
+; CHECK-NEXT:    [[LOAD1:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[LOC_A:%.*]], i32 1, <4 x i1> [[MASK:%.*]], <4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[LOAD1]], ptr [[LOC_B:%.*]], i32 1, <4 x i1> [[MASK]])
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[MASK]], <4 x float> [[LOAD1]], <4 x float> zeroinitializer
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %load1 = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %loc_a, i32 1, <4 x i1> %mask, <4 x float> zeroinitializer)
+  call void @llvm.masked.store.v4f32.p0(<4 x float> %load1, ptr %loc_b, i32 1, <4 x i1> %mask)
+  %load2 = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %loc_b, i32 1, <4 x i1> %mask, <4 x float> zeroinitializer)
+  ret <4 x float> %load2
+}
+
 define <4 x float> @forward_binop_splat_i1_mask(ptr %0, ptr %1) {
 ; CHECK-LABEL: @forward_binop_splat_i1_mask(
 ; CHECK-NEXT:    [[LOAD_0_0:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP0:%.*]], i32 1, <4 x i1> splat (i1 true), <4 x float> zeroinitializer)

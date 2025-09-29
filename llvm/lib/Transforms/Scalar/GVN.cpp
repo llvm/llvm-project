@@ -2311,8 +2311,6 @@ bool GVNPass::processMaskedLoad(IntrinsicInst *I) {
   ICF->removeUsersOf(I);
   I->replaceAllUsesWith(OpToForward);
   salvageAndRemoveInstruction(I);
-  if (OpToForward->getType()->isPtrOrPtrVectorTy())
-    MD->invalidateCachedPointerInfo(OpToForward);
   ++NumGVNLoad;
   return true;
 }
