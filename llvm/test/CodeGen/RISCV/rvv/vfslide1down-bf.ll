@@ -18,7 +18,7 @@ define <vscale x 1 x bfloat> @intrinsic_vfslide1down_vf_nxv1bf16_nxv1bf16_bf16(<
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x bfloat> @llvm.riscv.vfslide1down.nxv1bf16.bf16(
-    <vscale x 1 x bfloat> undef,
+    <vscale x 1 x bfloat> poison,
     <vscale x 1 x bfloat> %0,
     bfloat %1,
     iXLen %2)
@@ -65,7 +65,7 @@ define <vscale x 2 x bfloat> @intrinsic_vfslide1down_vf_nxv2bf16_nxv2bf16_bf16(<
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x bfloat> @llvm.riscv.vfslide1down.nxv2bf16.bf16(
-    <vscale x 2 x bfloat> undef,
+    <vscale x 2 x bfloat> poison,
     <vscale x 2 x bfloat> %0,
     bfloat %1,
     iXLen %2)
@@ -112,7 +112,7 @@ define <vscale x 4 x bfloat> @intrinsic_vfslide1down_vf_nxv4bf16_nxv4bf16_bf16(<
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x bfloat> @llvm.riscv.vfslide1down.nxv4bf16.bf16(
-    <vscale x 4 x bfloat> undef,
+    <vscale x 4 x bfloat> poison,
     <vscale x 4 x bfloat> %0,
     bfloat %1,
     iXLen %2)
@@ -159,7 +159,7 @@ define <vscale x 8 x bfloat> @intrinsic_vfslide1down_vf_nxv8bf16_nxv8bf16_bf16(<
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x bfloat> @llvm.riscv.vfslide1down.nxv8bf16.bf16(
-    <vscale x 8 x bfloat> undef,
+    <vscale x 8 x bfloat> poison,
     <vscale x 8 x bfloat> %0,
     bfloat %1,
     iXLen %2)
@@ -206,7 +206,7 @@ define <vscale x 16 x bfloat> @intrinsic_vfslide1down_vf_nxv16bf16_nxv16bf16_bf1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x bfloat> @llvm.riscv.vfslide1down.nxv16bf16.bf16(
-    <vscale x 16 x bfloat> undef,
+    <vscale x 16 x bfloat> poison,
     <vscale x 16 x bfloat> %0,
     bfloat %1,
     iXLen %2)
@@ -253,7 +253,7 @@ define <vscale x 32 x bfloat> @intrinsic_vfslide1down_vf_nxv32bf16_nxv32bf16_bf1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x bfloat> @llvm.riscv.vfslide1down.nxv32bf16.bf16(
-    <vscale x 32 x bfloat> undef,
+    <vscale x 32 x bfloat> poison,
     <vscale x 32 x bfloat> %0,
     bfloat %1,
     iXLen %2)

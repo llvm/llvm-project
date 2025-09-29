@@ -35,13 +35,13 @@ define <vscale x 1 x bfloat> @test_half_bf16(<vscale x 1 x bfloat> %0, <vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x half> @llvm.riscv.vfadd.nxv1f16.nxv1f16(
-    <vscale x 1 x half> undef,
+    <vscale x 1 x half> poison,
     <vscale x 1 x half> %3,
     <vscale x 1 x half> %4,
     iXLen 0, iXLen %2)
 
   %b = call <vscale x 1 x bfloat> @llvm.riscv.vfadd.nxv1bf16.nxv1bf16(
-    <vscale x 1 x bfloat> undef,
+    <vscale x 1 x bfloat> poison,
     <vscale x 1 x bfloat> %0,
     <vscale x 1 x bfloat> %1,
     iXLen 0, iXLen %2)
@@ -64,13 +64,13 @@ define <vscale x 1 x bfloat> @test_i32_bf16(<vscale x 1 x bfloat> %0, <vscale x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vadd.nxv1i32.nxv1i32(
-    <vscale x 1 x i32> undef,
+    <vscale x 1 x i32> poison,
     <vscale x 1 x i32> %3,
     <vscale x 1 x i32> %4,
     iXLen %2)
 
   %b = call <vscale x 1 x bfloat> @llvm.riscv.vfadd.nxv1bf16.nxv1bf16(
-    <vscale x 1 x bfloat> undef,
+    <vscale x 1 x bfloat> poison,
     <vscale x 1 x bfloat> %0,
     <vscale x 1 x bfloat> %1,
     iXLen 0, iXLen %2)
@@ -96,19 +96,19 @@ define <vscale x 1 x bfloat> @test_half_bf16_half(<vscale x 1 x bfloat> %0, <vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x half> @llvm.riscv.vfadd.nxv1f16.nxv1f16(
-    <vscale x 1 x half> undef,
+    <vscale x 1 x half> poison,
     <vscale x 1 x half> %3,
     <vscale x 1 x half> %4,
     iXLen 0, iXLen %2)
 
   %b = call <vscale x 1 x bfloat> @llvm.riscv.vfadd.nxv1bf16.nxv1bf16(
-    <vscale x 1 x bfloat> undef,
+    <vscale x 1 x bfloat> poison,
     <vscale x 1 x bfloat> %0,
     <vscale x 1 x bfloat> %1,
     iXLen 0, iXLen %2)
 
   %c = call <vscale x 1 x half> @llvm.riscv.vfadd.nxv1f16.nxv1f16(
-    <vscale x 1 x half> undef,
+    <vscale x 1 x half> poison,
     <vscale x 1 x half> %a,
     <vscale x 1 x half> %4,
     iXLen 0, iXLen %2)
@@ -134,19 +134,19 @@ define <vscale x 1 x bfloat> @test_bf16_half_bf16(<vscale x 1 x bfloat> %0, <vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x bfloat> @llvm.riscv.vfadd.nxv1bf16.nxv1bf16(
-    <vscale x 1 x bfloat> undef,
+    <vscale x 1 x bfloat> poison,
     <vscale x 1 x bfloat> %0,
     <vscale x 1 x bfloat> %1,
     iXLen 0, iXLen %2)
 
   %b = call <vscale x 1 x half> @llvm.riscv.vfadd.nxv1f16.nxv1f16(
-    <vscale x 1 x half> undef,
+    <vscale x 1 x half> poison,
     <vscale x 1 x half> %3,
     <vscale x 1 x half> %4,
     iXLen 0, iXLen %2)
 
   %c = call <vscale x 1 x bfloat> @llvm.riscv.vfadd.nxv1bf16.nxv1bf16(
-    <vscale x 1 x bfloat> undef,
+    <vscale x 1 x bfloat> poison,
     <vscale x 1 x bfloat> %a,
     <vscale x 1 x bfloat> %1,
     iXLen 0, iXLen %2)
@@ -169,13 +169,13 @@ define <vscale x 1 x bfloat> @test_bf16_i16(<vscale x 1 x bfloat> %0, <vscale x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x bfloat> @llvm.riscv.vfadd.nxv1bf16.nxv1bf16(
-    <vscale x 1 x bfloat> undef,
+    <vscale x 1 x bfloat> poison,
     <vscale x 1 x bfloat> %0,
     <vscale x 1 x bfloat> %1,
     iXLen 0, iXLen %2)
 
   %b = call <vscale x 1 x i16> @llvm.riscv.vadd.nxv1i16.nxv1i16(
-    <vscale x 1 x i16> undef,
+    <vscale x 1 x i16> poison,
     <vscale x 1 x i16> %3,
     <vscale x 1 x i16> %4,
     iXLen %2)

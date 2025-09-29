@@ -19,7 +19,7 @@ define <vscale x 1 x bfloat> @intrinsic_vfmerge_vfm_nxv1bf16_nxv1bf16_bf16(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x bfloat> @llvm.riscv.vfmerge.nxv1bf16.bf16(
-    <vscale x 1 x bfloat> undef,
+    <vscale x 1 x bfloat> poison,
     <vscale x 1 x bfloat> %0,
     bfloat %1,
     <vscale x 1 x i1> %2,
@@ -43,7 +43,7 @@ define <vscale x 2 x bfloat> @intrinsic_vfmerge_vfm_nxv2bf16_nxv2bf16_bf16(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x bfloat> @llvm.riscv.vfmerge.nxv2bf16.bf16(
-    <vscale x 2 x bfloat> undef,
+    <vscale x 2 x bfloat> poison,
     <vscale x 2 x bfloat> %0,
     bfloat %1,
     <vscale x 2 x i1> %2,
@@ -67,7 +67,7 @@ define <vscale x 4 x bfloat> @intrinsic_vfmerge_vfm_nxv4bf16_nxv4bf16_bf16(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x bfloat> @llvm.riscv.vfmerge.nxv4bf16.bf16(
-    <vscale x 4 x bfloat> undef,
+    <vscale x 4 x bfloat> poison,
     <vscale x 4 x bfloat> %0,
     bfloat %1,
     <vscale x 4 x i1> %2,
@@ -91,7 +91,7 @@ define <vscale x 8 x bfloat> @intrinsic_vfmerge_vfm_nxv8bf16_nxv8bf16_bf16(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x bfloat> @llvm.riscv.vfmerge.nxv8bf16.bf16(
-    <vscale x 8 x bfloat> undef,
+    <vscale x 8 x bfloat> poison,
     <vscale x 8 x bfloat> %0,
     bfloat %1,
     <vscale x 8 x i1> %2,
@@ -115,7 +115,7 @@ define <vscale x 16 x bfloat> @intrinsic_vfmerge_vfm_nxv16bf16_nxv16bf16_bf16(<v
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x bfloat> @llvm.riscv.vfmerge.nxv16bf16.bf16(
-    <vscale x 16 x bfloat> undef,
+    <vscale x 16 x bfloat> poison,
     <vscale x 16 x bfloat> %0,
     bfloat %1,
     <vscale x 16 x i1> %2,
@@ -139,7 +139,7 @@ define <vscale x 32 x bfloat> @intrinsic_vfmerge_vfm_nxv32bf16_nxv32bf16_bf16(<v
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x bfloat> @llvm.riscv.vfmerge.nxv32bf16.bf16(
-    <vscale x 32 x bfloat> undef,
+    <vscale x 32 x bfloat> poison,
     <vscale x 32 x bfloat> %0,
     bfloat %1,
     <vscale x 32 x i1> %2,
@@ -157,7 +157,7 @@ define <vscale x 1 x bfloat> @intrinsic_vfmerge_vzm_nxv1bf16_nxv1bf16_bf16(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x bfloat> @llvm.riscv.vfmerge.nxv1bf16.bf16(
-    <vscale x 1 x bfloat> undef,
+    <vscale x 1 x bfloat> poison,
     <vscale x 1 x bfloat> %0,
     bfloat zeroinitializer,
     <vscale x 1 x i1> %1,
@@ -175,7 +175,7 @@ define <vscale x 2 x bfloat> @intrinsic_vfmerge_vzm_nxv2bf16_nxv2bf16_bf16(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x bfloat> @llvm.riscv.vfmerge.nxv2bf16.bf16(
-    <vscale x 2 x bfloat> undef,
+    <vscale x 2 x bfloat> poison,
     <vscale x 2 x bfloat> %0,
     bfloat zeroinitializer,
     <vscale x 2 x i1> %1,
@@ -193,7 +193,7 @@ define <vscale x 4 x bfloat> @intrinsic_vfmerge_vzm_nxv4bf16_nxv4bf16_bf16(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x bfloat> @llvm.riscv.vfmerge.nxv4bf16.bf16(
-    <vscale x 4 x bfloat> undef,
+    <vscale x 4 x bfloat> poison,
     <vscale x 4 x bfloat> %0,
     bfloat zeroinitializer,
     <vscale x 4 x i1> %1,
@@ -211,7 +211,7 @@ define <vscale x 8 x bfloat> @intrinsic_vfmerge_vzm_nxv8bf16_nxv8bf16_bf16(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x bfloat> @llvm.riscv.vfmerge.nxv8bf16.bf16(
-    <vscale x 8 x bfloat> undef,
+    <vscale x 8 x bfloat> poison,
     <vscale x 8 x bfloat> %0,
     bfloat zeroinitializer,
     <vscale x 8 x i1> %1,
@@ -229,7 +229,7 @@ define <vscale x 16 x bfloat> @intrinsic_vfmerge_vzm_nxv16bf16_nxv16bf16_bf16(<v
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x bfloat> @llvm.riscv.vfmerge.nxv16bf16.bf16(
-    <vscale x 16 x bfloat> undef,
+    <vscale x 16 x bfloat> poison,
     <vscale x 16 x bfloat> %0,
     bfloat zeroinitializer,
     <vscale x 16 x i1> %1,
@@ -247,7 +247,7 @@ define <vscale x 32 x bfloat> @intrinsic_vfmerge_vzm_nxv32bf16_nxv32bf16_bf16(<v
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x bfloat> @llvm.riscv.vfmerge.nxv32bf16.bf16(
-    <vscale x 32 x bfloat> undef,
+    <vscale x 32 x bfloat> poison,
     <vscale x 32 x bfloat> %0,
     bfloat zeroinitializer,
     <vscale x 32 x i1> %1,

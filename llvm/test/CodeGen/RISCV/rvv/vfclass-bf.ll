@@ -19,7 +19,7 @@ define <vscale x 1 x i16> @intrinsic_vfclass_v_nxv1i16_nxv1bf16(
   iXLen %1) nounwind {
 entry:
   %a = call <vscale x 1 x i16> @llvm.riscv.vfclass.nxv1i16.nxv1bf16(
-    <vscale x 1 x i16> undef,
+    <vscale x 1 x i16> poison,
     <vscale x 1 x bfloat> %0,
     iXLen %1)
 
@@ -67,7 +67,7 @@ define <vscale x 2 x i16> @intrinsic_vfclass_v_nxv2i16_nxv2bf16(
   iXLen %1) nounwind {
 entry:
   %a = call <vscale x 2 x i16> @llvm.riscv.vfclass.nxv2i16.nxv2bf16(
-    <vscale x 2 x i16> undef,
+    <vscale x 2 x i16> poison,
     <vscale x 2 x bfloat> %0,
     iXLen %1)
 
@@ -115,7 +115,7 @@ define <vscale x 4 x i16> @intrinsic_vfclass_v_nxv4i16_nxv4bf16(
   iXLen %1) nounwind {
 entry:
   %a = call <vscale x 4 x i16> @llvm.riscv.vfclass.nxv4i16.nxv4bf16(
-    <vscale x 4 x i16> undef,
+    <vscale x 4 x i16> poison,
     <vscale x 4 x bfloat> %0,
     iXLen %1)
 
@@ -163,7 +163,7 @@ define <vscale x 8 x i16> @intrinsic_vfclass_v_nxv8i16_nxv8bf16(
   iXLen %1) nounwind {
 entry:
   %a = call <vscale x 8 x i16> @llvm.riscv.vfclass.nxv8i16.nxv8bf16(
-    <vscale x 8 x i16> undef,
+    <vscale x 8 x i16> poison,
     <vscale x 8 x bfloat> %0,
     iXLen %1)
 
@@ -211,7 +211,7 @@ define <vscale x 16 x i16> @intrinsic_vfclass_v_nxv16i16_nxv16bf16(
   iXLen %1) nounwind {
 entry:
   %a = call <vscale x 16 x i16> @llvm.riscv.vfclass.nxv16i16.nxv16bf16(
-    <vscale x 16 x i16> undef,
+    <vscale x 16 x i16> poison,
     <vscale x 16 x bfloat> %0,
     iXLen %1)
 
@@ -259,7 +259,7 @@ define <vscale x 32 x i16> @intrinsic_vfclass_v_nxv32i16_nxv32bf16(
   iXLen %1) nounwind {
 entry:
   %a = call <vscale x 32 x i16> @llvm.riscv.vfclass.nxv32i16.nxv32bf16(
-    <vscale x 32 x i16> undef,
+    <vscale x 32 x i16> poison,
     <vscale x 32 x bfloat> %0,
     iXLen %1)
 
