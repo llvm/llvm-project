@@ -537,7 +537,6 @@ InputArgList OptTable::internalParseArgs(
 
   MissingArgIndex = MissingArgCount = 0;
   unsigned Index = 0, End = ArgArr.size();
-
   while (Index < End) {
     // Ingore nullptrs, they are response file's EOL markers
     if (Args.getArgString(Index) == nullptr) {
@@ -562,9 +561,9 @@ InputArgList OptTable::internalParseArgs(
     }
 
     unsigned Prev = Index;
-    std::unique_ptr<Arg> A =
-        GroupedShortOptions ? parseOneArgGrouped(Args, Index)
-                            : internalParseOneArg(Args, Index, ExcludeOption);
+    std::unique_ptr<Arg> A = GroupedShortOptions 
+                  ? parseOneArgGrouped(Args, Index)
+                  : internalParseOneArg(Args, Index, ExcludeOption);
     assert((Index > Prev || GroupedShortOptions) &&
            "Parser failed to consume argument.");
 
@@ -720,9 +719,9 @@ static const char *getOptionHelpGroup(const OptTable &Opts, OptSpecifier Id) {
 void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
                          bool ShowHidden, bool ShowAllAliases,
                          Visibility VisibilityMask,
-                         StringRef Subcommand) const {
+                         StringRef SubCommand) const {
   return internalPrintHelp(
-      OS, Usage, Title, Subcommand, ShowHidden, ShowAllAliases,
+      OS, Usage, Title, SubCommand, ShowHidden, ShowAllAliases,
       [VisibilityMask](const Info &CandidateInfo) -> bool {
         return (CandidateInfo.Visibility & VisibilityMask) == 0;
       },
@@ -735,7 +734,7 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
   bool ShowHidden = !(FlagsToExclude & HelpHidden);
   FlagsToExclude &= ~HelpHidden;
   return internalPrintHelp(
-      OS, Usage, Title, /*Subcommand=*/{}, ShowHidden, ShowAllAliases,
+      OS, Usage, Title, /*SubCommand=*/{}, ShowHidden, ShowAllAliases,
       [FlagsToInclude, FlagsToExclude](const Info &CandidateInfo) {
         if (FlagsToInclude && !(CandidateInfo.Flags & FlagsToInclude))
           return true;
@@ -747,7 +746,7 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
 }
 
 void OptTable::internalPrintHelp(
-    raw_ostream &OS, const char *Usage, const char *Title, StringRef Subcommand,
+    raw_ostream &OS, const char *Usage, const char *Title, StringRef SubCommand,
     bool ShowHidden, bool ShowAllAliases,
     std::function<bool(const Info &)> ExcludeOption,
     Visibility VisibilityMask) const {
@@ -757,10 +756,10 @@ void OptTable::internalPrintHelp(
   // pairs.
   std::map<std::string, std::vector<OptionInfo>> GroupedOptionHelp;
 
-  const SubCommand *ActiveSubCommand =
+  auto ActiveSubCommand =
       std::find_if(SubCommands.begin(), SubCommands.end(),
-                   [&](const auto &C) { return Subcommand == C.Name; });
-  if (!Subcommand.empty()) {
+                   [&](const auto &C) { return SubCommand == C.Name; });
+  if (!SubCommand.empty()) {
     assert(ActiveSubCommand != nullptr && "Not a valid registered subcommand.");
     OS << ActiveSubCommand->HelpText << "\n\n";
     if (!StringRef(ActiveSubCommand->Usage).empty())
@@ -776,29 +775,24 @@ void OptTable::internalPrintHelp(
   }
 
   auto DoesOptionBelongToSubcommand = [&](const Info &CandidateInfo) {
+    // Retrieve the SubCommandIDs registered to the given current CandidateInfo Option.
     ArrayRef<unsigned> SubCommandIDs =
         CandidateInfo.getCommandIDs(SubCommandIDsTable);
 
-    // Options with no subcommands are global.
-    if (SubCommandIDs.empty()) {
-      // if Subcommand is not empty then don't print global options.
-      return Subcommand.empty();
-    }
-
-    // If we are not in a subcommand, don't show subcommand-specific options.
-    if (Subcommand.empty())
+    // If no registered subcommands, then only global options are to be printed.
+    // If no valid SubCommand (empty) in commandline then print the current global CandidateInfo Option.
+    if (SubCommandIDs.empty())
+      return SubCommand.empty();
+    
+    // Handle CandidateInfo Option which has at least one registered SubCommand.
+    // If no valid SubCommand (empty) in commandline, this CandidateInfo option should not be printed.
+    if (SubCommand.empty())
       return false;
 
-    // The subcommand ID is its index in the SubCommands table.
+    // Find the ID of the valid subcommand passed in commandline (its index in the SubCommands table which contains all subcommands).
     unsigned ActiveSubCommandID = ActiveSubCommand - &SubCommands[0];
-
-    // Check if the option belongs to the active subcommand.
-    for (unsigned ID : SubCommandIDs) {
-      if (ID == ActiveSubCommandID) {
-        return true;
-      }
-    }
-    return false;
+    // Print if the ActiveSubCommandID is registered with the CandidateInfo Option.
+    return std::find(SubCommandIDs.begin(), SubCommandIDs.end(), ActiveSubCommandID) != SubCommandIDs.end();
   };
 
   for (unsigned Id = 1, e = getNumOptions() + 1; Id != e; ++Id) {
