@@ -11,24 +11,18 @@
 #include "clang/Basic/Lambda.h"
 #include "clang/Lex/Lexer.h"
 
-using namespace clang::ast_matchers;
-
-namespace clang::tidy::readability {
+using namespace clang::tidy::readability;
 
 namespace {
-AST_MATCHER(LambdaExpr, hasDefaultCapture) {
-  return Node.getCaptureDefault() != LCD_None;
-}
-
-std::optional<std::string>
-generateImplicitCaptureText(const LambdaCapture &Capture) {
+static std::optional<std::string>
+generateImplicitCaptureText(const clang::LambdaCapture &Capture) {
   if (Capture.capturesThis()) {
-    return Capture.getCaptureKind() == LCK_StarThis ? "*this" : "this";
+    return Capture.getCaptureKind() == clang::LCK_StarThis ? "*this" : "this";
   }
 
   if (Capture.capturesVariable()) {
     std::string Result;
-    if (Capture.getCaptureKind() == LCK_ByRef) {
+    if (Capture.getCaptureKind() == clang::LCK_ByRef) {
       Result += "&";
     }
     Result += Capture.getCapturedVar()->getName().str();
@@ -46,16 +40,21 @@ generateImplicitCaptureText(const LambdaCapture &Capture) {
 
 } // namespace
 
-void AvoidDefaultLambdaCaptureCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(lambdaExpr(hasDefaultCapture()).bind("lambda"), this);
+void AvoidDefaultLambdaCaptureCheck::registerMatchers(
+    clang::ast_matchers::MatchFinder *Finder) {
+  Finder->addMatcher(
+      clang::ast_matchers::lambdaExpr(clang::ast_matchers::hasDefaultCapture())
+          .bind("lambda"),
+      this);
 }
 
 void AvoidDefaultLambdaCaptureCheck::check(
-    const MatchFinder::MatchResult &Result) {
-  const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
+    const clang::ast_matchers::MatchFinder::MatchResult &Result) {
+  const auto *Lambda = Result.Nodes.getNodeAs<clang::LambdaExpr>("lambda");
   assert(Lambda);
 
-  const SourceLocation DefaultCaptureLoc = Lambda->getCaptureDefaultLoc();
+  const clang::SourceLocation DefaultCaptureLoc =
+      Lambda->getCaptureDefaultLoc();
   if (DefaultCaptureLoc.isInvalid())
     return;
 
@@ -85,10 +84,9 @@ void AvoidDefaultLambdaCaptureCheck::check(
     ReplacementText = "[" + llvm::join(AllCaptures, ", ") + "]";
   }
 
-  SourceRange IntroducerRange = Lambda->getIntroducerRange();
+  clang::SourceRange IntroducerRange = Lambda->getIntroducerRange();
   if (IntroducerRange.isValid()) {
-    Diag << FixItHint::CreateReplacement(IntroducerRange, ReplacementText);
+    Diag << clang::FixItHint::CreateReplacement(IntroducerRange,
+                                                ReplacementText);
   }
 }
-
-} // namespace clang::tidy::readability
