@@ -1843,12 +1843,6 @@ LogicalResult MatMulOp::verify() {
       return emitOpError("expect quantized operands to have same widths, got ")
              << aQuantWidth << " and " << bQuantWidth;
     }
-  } else {
-    // non-quantized element types
-    if (aElementType != bElementType) {
-      return emitOpError("expect same element type for inputs a and b, got ")
-             << aElementType << " and " << bElementType;
-    }
   }
 
   // check a_zp and b_zp
@@ -4073,16 +4067,26 @@ LogicalResult WhileOp::verify() {
           .failed())
     return failure();
 
-  auto bodyYield = cast<tosa::YieldOp>(getBodyGraph().front().getTerminator());
-  if (errorIfTypeOrShapeMismatch(*this, bodyYield.getInputs(),
-                                 "'body_graph' results", getInputList(),
-                                 "'input_list'")
-          .failed())
-    return failure();
+  if (getBodyGraph().front().mightHaveTerminator()) {
+    auto bodyYield =
+        dyn_cast<tosa::YieldOp>(getBodyGraph().front().getTerminator());
+    if (bodyYield && errorIfTypeOrShapeMismatch(*this, bodyYield.getInputs(),
+                                                "'body_graph' results",
+                                                getInputList(), "'input_list'")
+                         .failed())
+      return failure();
+  }
 
   // Condition block output must be a single element tensor with a single bool
   // value.
-  auto condYield = cast<tosa::YieldOp>(getCondGraph().front().getTerminator());
+  if (!getCondGraph().front().mightHaveTerminator())
+    return success();
+
+  auto condYield =
+      dyn_cast<tosa::YieldOp>(getCondGraph().front().getTerminator());
+  if (!condYield)
+    return success();
+
   if (condYield.getInputs().size() != 1)
     return emitOpError() << "require 'cond_graph' only have one result";
 

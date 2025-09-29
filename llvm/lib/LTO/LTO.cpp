@@ -1290,11 +1290,11 @@ void lto::updateMemProfAttributes(Module &Mod,
 
 Error LTO::runRegularLTO(AddStreamFn AddStream) {
   llvm::TimeTraceScope timeScope("Run regular LTO");
+  LLVMContext &CombinedCtx = RegularLTO.CombinedModule->getContext();
   // Setup optimization remarks.
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
-      RegularLTO.CombinedModule->getContext(), Conf.RemarksFilename,
-      Conf.RemarksPasses, Conf.RemarksFormat, Conf.RemarksWithHotness,
-      Conf.RemarksHotnessThreshold);
+      CombinedCtx, Conf.RemarksFilename, Conf.RemarksPasses, Conf.RemarksFormat,
+      Conf.RemarksWithHotness, Conf.RemarksHotnessThreshold);
   LLVM_DEBUG(dbgs() << "Running regular LTO\n");
   if (!DiagFileOrErr)
     return DiagFileOrErr.takeError();
@@ -2177,7 +2177,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   return RunBackends(SecondRoundLTO.get());
 }
 
-Expected<std::unique_ptr<ToolOutputFile>> lto::setupLLVMOptimizationRemarks(
+Expected<LLVMRemarkFileHandle> lto::setupLLVMOptimizationRemarks(
     LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
     std::optional<uint64_t> RemarksHotnessThreshold, int Count) {
