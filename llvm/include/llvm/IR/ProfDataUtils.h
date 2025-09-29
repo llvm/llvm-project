@@ -187,7 +187,7 @@ LLVM_ABI void setExplicitlyUnknownBranchWeights(Instruction &I,
 
 /// Like setExplicitlyUnknownBranchWeights(...), but only sets unknown branch
 /// weights in the new instruction if the parent function of the original
-/// instruction has function counts. This is to not confuse users by injecting
+/// instruction has an entry count. This is to not confuse users by injecting
 /// profile data into non-profiled functions.
 LLVM_ABI void setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I,
                                                           Function &F,
