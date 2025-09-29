@@ -2853,6 +2853,7 @@ void VPlanTransforms::replaceSymbolicStrides(
     return R->getParent()->getParent() ||
            R->getParent() == Plan.getVectorLoopRegion()->getSinglePredecessor();
   };
+  ValueToSCEVMapTy RewriteMap;
   for (const SCEV *Stride : StridesMap.values()) {
     using namespace SCEVPatternMatch;
     auto *StrideV = cast<SCEVUnknown>(Stride)->getValue();
@@ -2879,6 +2880,22 @@ void VPlanTransforms::replaceSymbolicStrides(
           isa<SExtInst>(U) ? StrideConst->sext(BW) : StrideConst->zext(BW);
       VPValue *CI = Plan.getOrAddLiveIn(ConstantInt::get(U->getType(), C));
       StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
+    }
+    RewriteMap[StrideV] = PSE.getSCEV(StrideV);
+  }
+
+  for (VPRecipeBase &R : *Plan.getEntry()) {
+    auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
+    if (!ExpSCEV)
+      continue;
+    const SCEV *ScevExpr = ExpSCEV->getSCEV();
+    auto *NewSCEV =
+        SCEVParameterRewriter::rewrite(ScevExpr, *PSE.getSE(), RewriteMap);
+    if (NewSCEV != ScevExpr) {
+      VPValue *NewExp = vputils::getOrCreateVPValueForSCEVExpr(Plan, NewSCEV);
+      ExpSCEV->replaceAllUsesWith(NewExp);
+      if (Plan.getTripCount() == ExpSCEV)
+        Plan.resetTripCount(NewExp);
     }
   }
 }
