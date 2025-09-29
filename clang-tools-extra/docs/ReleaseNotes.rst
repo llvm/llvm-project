@@ -57,12 +57,12 @@ Potentially Breaking Changes
 - Renamed a few :program:`clang-tidy` check options, as they
   were misspelled:
 
-  - `NamePrefixSuffixSilenceDissimilarityTreshold` →
+  - `NamePrefixSuffixSilenceDissimilarityTreshold` to
     `NamePrefixSuffixSilenceDissimilarityThreshold` in
     :doc:`bugprone-easily-swappable-parameters
     <clang-tidy/checks/bugprone/easily-swappable-parameters>`
 
-  - `CharTypdefsToIgnore` → `CharTypedefsToIgnore` in
+  - `CharTypdefsToIgnore` to `CharTypedefsToIgnore` in
     :doc:`bugprone-signed-char-misuse
     <clang-tidy/checks/bugprone/signed-char-misuse>`
 
