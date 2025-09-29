@@ -86,8 +86,6 @@ using namespace PatternMatch;
 
 STATISTIC(NumSimplified, "Number of library calls simplified");
 
-
-
 static cl::opt<unsigned> GuardWideningWindow(
     "instcombine-guard-widening-window",
     cl::init(3),
@@ -3076,20 +3074,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
-  case Intrinsic::amdgcn_ballot: {
-    // Optimize ballot intrinsics when the condition is known to be uniform
-    Value *Condition = II->getArgOperand(0);
-    
-    // If the condition is a constant, we can evaluate the ballot directly
-    if (auto *ConstCond = dyn_cast<ConstantInt>(Condition)) {
-      // ballot(true) -> -1 (all lanes active)
-      // ballot(false) -> 0 (no lanes active)
-      uint64_t Result = ConstCond->isOne() ? ~0ULL : 0ULL;
-      return replaceInstUsesWith(*II, ConstantInt::get(II->getType(), Result));
-    }
-    
-    break;
-  }
   case Intrinsic::ldexp: {
     // ldexp(ldexp(x, a), b) -> ldexp(x, a + b)
     //
@@ -3683,8 +3667,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-
-
     // If there is a dominating assume with the same condition as this one,
     // then this one is redundant, and should be removed.
     KnownBits Known(1);
@@ -3698,7 +3680,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return eraseInstFromFunction(*II);
     }
 
-
+    // Try to extract uniformity information from the assume and optimize
+    // dominated uses of any variables that are established as uniform.
+    optimizeAssumedUniformValues(cast<AssumeInst>(II));
 
     // Update the cache of affected values for this assumption (we might be
     // here because we just simplified the condition).
@@ -5254,4 +5238,118 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
   // code sort out any function type mismatches.
   Call.setCalledFunction(FTy, NestF);
   return &Call;
+}
+
+/// Extract uniformity information from assume and optimize dominated uses.
+/// This works with any assume pattern that establishes value uniformity.
+void InstCombinerImpl::optimizeAssumedUniformValues(AssumeInst *Assume) {
+  Value *AssumedCondition = Assume->getArgOperand(0);
+  
+  // Map of uniform values to their uniform constants
+  SmallDenseMap<Value *, Constant *> UniformValues;
+  
+  // Pattern 1: assume(icmp eq (X, C)) -> X is uniform and equals C
+  if (auto *ICmp = dyn_cast<ICmpInst>(AssumedCondition)) {
+    if (ICmp->getPredicate() == ICmpInst::ICMP_EQ) {
+      Value *LHS = ICmp->getOperand(0);
+      Value *RHS = ICmp->getOperand(1);
+      
+      // X == constant -> X is uniform and equals constant
+      if (auto *C = dyn_cast<Constant>(RHS)) {
+        UniformValues[LHS] = C;
+      } else if (auto *C = dyn_cast<Constant>(LHS)) {
+        UniformValues[RHS] = C;
+      }
+      
+      // Handle intrinsic patterns in equality comparisons
+      // Pattern: assume(ballot(cmp) == -1) -> cmp is uniform and true
+      if (auto *IntrinsicCall = dyn_cast<IntrinsicInst>(LHS)) {
+        if (IntrinsicCall->getIntrinsicID() == Intrinsic::amdgcn_ballot) {
+          if (match(RHS, m_AllOnes())) {
+            Value *BallotArg = IntrinsicCall->getArgOperand(0);
+            if (BallotArg->getType()->isIntegerTy(1)) {
+              UniformValues[BallotArg] = ConstantInt::getTrue(BallotArg->getType());
+              
+              // Special case: if BallotArg is an equality comparison, 
+              // we know the operands are equal
+              if (auto *CmpInst = dyn_cast<ICmpInst>(BallotArg)) {
+                if (CmpInst->getPredicate() == ICmpInst::ICMP_EQ) {
+                  Value *CmpLHS = CmpInst->getOperand(0);
+                  Value *CmpRHS = CmpInst->getOperand(1);
+                  
+                  // If one operand is constant, the other is uniform and equals that constant
+                  if (auto *C = dyn_cast<Constant>(CmpRHS)) {
+                    UniformValues[CmpLHS] = C;
+                  } else if (auto *C = dyn_cast<Constant>(CmpLHS)) {
+                    UniformValues[CmpRHS] = C;
+                  }
+                  // TODO: Handle case where both operands are variables
+                }
+              }
+            }
+          }
+        } else if (IntrinsicCall->getIntrinsicID() == Intrinsic::amdgcn_readfirstlane) {
+          // assume(readfirstlane(x) == c) -> x is uniform and equals c
+          if (auto *C = dyn_cast<Constant>(RHS)) {
+            Value *ReadFirstLaneArg = IntrinsicCall->getArgOperand(0);
+            UniformValues[ReadFirstLaneArg] = C;
+          }
+        }
+      }
+      
+      // Handle the reverse case too
+      if (auto *IntrinsicCall = dyn_cast<IntrinsicInst>(RHS)) {
+        if (IntrinsicCall->getIntrinsicID() == Intrinsic::amdgcn_ballot) {
+          if (match(LHS, m_AllOnes())) {
+            Value *BallotArg = IntrinsicCall->getArgOperand(0);
+            if (BallotArg->getType()->isIntegerTy(1)) {
+              UniformValues[BallotArg] = ConstantInt::getTrue(BallotArg->getType());
+            }
+          }
+        } else if (IntrinsicCall->getIntrinsicID() == Intrinsic::amdgcn_readfirstlane) {
+          if (auto *C = dyn_cast<Constant>(LHS)) {
+            Value *ReadFirstLaneArg = IntrinsicCall->getArgOperand(0);
+            UniformValues[ReadFirstLaneArg] = C;
+          }
+        }
+      }
+    }
+  }
+  
+  // Pattern 2: assume(X) where X is i1 -> X is uniform and equals true  
+  if (AssumedCondition->getType()->isIntegerTy(1) && !isa<ICmpInst>(AssumedCondition)) {
+    UniformValues[AssumedCondition] = ConstantInt::getTrue(AssumedCondition->getType());
+  }
+  
+  // Now optimize dominated uses of all discovered uniform values
+  for (auto &[UniformValue, UniformConstant] : UniformValues) {
+    SmallVector<Use *, 8> DominatedUses;
+    
+    // Find all uses dominated by the assume
+    // Skip if the value doesn't have a use list (e.g., constants)
+    if (!UniformValue->hasUseList())
+      continue;
+      
+    for (Use &U : UniformValue->uses()) {
+      Instruction *UseInst = dyn_cast<Instruction>(U.getUser());
+      if (!UseInst || UseInst == Assume)
+        continue;
+        
+      // Critical: Check dominance using InstCombine's infrastructure  
+      if (isValidAssumeForContext(Assume, UseInst, &DT)) {
+        DominatedUses.push_back(&U);
+      }
+    }
+    
+    // Replace only dominated uses with the uniform constant
+    for (Use *U : DominatedUses) {
+      U->set(UniformConstant);
+      Worklist.pushValue(U->getUser());
+    }
+    
+    // Mark for further optimization if we made changes
+    if (!DominatedUses.empty()) {
+      Worklist.pushValue(UniformValue);
+    }
+  }
 }
