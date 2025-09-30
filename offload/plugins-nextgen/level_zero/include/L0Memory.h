@@ -307,7 +307,7 @@ class MemAllocatorTy {
   bool IsHostMem = false;
   // Internal deallocation function to be called when already
   // hondling the Mtx lock
-  int32_t dealloc_locked(void *Ptr);
+  Error dealloc_locked(void *Ptr);
 
 public:
   MemAllocatorTy() = default;
@@ -337,12 +337,12 @@ public:
   void *allocL0(size_t Size, size_t Align, int32_t Kind, size_t ActiveSize = 0);
 
   /// Allocate memory with the specified information from a memory pool
-  void *alloc(size_t Size, size_t Align, int32_t Kind, intptr_t Offset,
-              bool UserAlloc, bool DevMalloc, uint32_t MemAdvice,
-              AllocOptionTy AllocOpt);
+  Expected<void *> alloc(size_t Size, size_t Align, int32_t Kind,
+                         intptr_t Offset, bool UserAlloc, bool DevMalloc,
+                         uint32_t MemAdvice, AllocOptionTy AllocOpt);
 
   /// Deallocate memory
-  int32_t dealloc(void *Ptr) {
+  Error dealloc(void *Ptr) {
     std::lock_guard<std::mutex> Lock(Mtx);
     return dealloc_locked(Ptr);
   }

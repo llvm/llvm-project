@@ -816,7 +816,7 @@ Expected<void *> L0DeviceTy::dataAlloc(size_t Size, size_t Align, int32_t Kind,
 
 Error L0DeviceTy::dataDelete(void *Ptr) {
   auto &Allocator = getMemAllocator(Ptr);
-  return Plugin::check(Allocator.dealloc(Ptr), "Error deleting ptr");
+  return Allocator.dealloc(Ptr);
 }
 
 int32_t L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
