@@ -115,7 +115,7 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV32IXQCI-NEXT:  # %bb.1:
 ; RV32IXQCI-NEXT:    mv a0, a2
 ; RV32IXQCI-NEXT:  .LBB0_2:
-; RV32IXQCI-NEXT:    qc.mvnei a0, a2, 0, a3
+; RV32IXQCI-NEXT:    qc.mvlti a0, a2, 0, a3
 ; RV32IXQCI-NEXT:    li a3, 1024
 ; RV32IXQCI-NEXT:    qc.mvge a0, a3, a4, a4
 ; RV32IXQCI-NEXT:    li a3, 2046

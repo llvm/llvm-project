@@ -316,7 +316,7 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
     break;
   case RISCVCC::COND_LT:
     CMovOpcode = RISCV::QC_MVLT;
-    CMovIOpcode = RISCV::QC_MVNEI;
+    CMovIOpcode = RISCV::QC_MVLTI;
     break;
   case RISCVCC::COND_GE:
     CMovOpcode = RISCV::QC_MVGE;
