@@ -401,7 +401,7 @@ ExegesisAArch64Target::generateMmap(uintptr_t Address, size_t Length,
   MmapCode.push_back(loadImmediate(AArch64::X3, 64, APInt(64, flags))); // flags
   // FIXME: Loading [FileDescriptorAddress] as fd leds syscall to return error
   MmapCode.push_back(loadImmediate(AArch64::X4, 64, APInt(64, fd))); // fd
-  MmapCode.push_back(loadImmediate(AArch64::X5, 64, APInt(64, 0))); // offset
+  MmapCode.push_back(loadImmediate(AArch64::X5, 64, APInt(64, 0)));  // offset
   generateSysCall(SYS_mmap, MmapCode); // SYS_mmap is 222
   return MmapCode;
 }
