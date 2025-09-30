@@ -25,3 +25,6 @@ need to resole API changes downstream
 breaks smoke flags, wgs64
 [clang] Use the VFS to get the OpenMP entry info (#160935)
 ---
+breaks 463.swim build
+[Flang] Add perfect-nest and rectangular-loop semantic tests (#160283)
+---
