@@ -34,6 +34,6 @@ int (*fp3e)(int* __attribute__((noescape))) __attribute__((noreturn,cfi_unchecke
 
 // Case 4: assignment to function with no prototype
 
-int   f4  (int);
+int   f4   (int);
 int (*fp4a)(int) = &f4;
 int (*fp4b)()    = &f4; // proto-error {{incompatible function pointer types}}

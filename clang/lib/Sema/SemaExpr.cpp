@@ -9014,24 +9014,6 @@ bool Sema::IsInvalidSMECallConversion(QualType FromType, QualType ToType) {
   return FromAttributes != ToAttributes;
 }
 
-// Check if we have a conversion between incompatible cmse function pointer
-// types, that is, a conversion between a function pointer with the
-// cmse_nonsecure_call attribute and one without.
-static bool IsInvalidCmseNSCallConversion(Sema &S, QualType FromType,
-                                          QualType ToType) {
-  if (const auto *ToFn =
-          dyn_cast<FunctionType>(S.Context.getCanonicalType(ToType))) {
-    if (const auto *FromFn =
-            dyn_cast<FunctionType>(S.Context.getCanonicalType(FromType))) {
-      FunctionType::ExtInfo ToEInfo = ToFn->getExtInfo();
-      FunctionType::ExtInfo FromEInfo = FromFn->getExtInfo();
-
-      return ToEInfo.getCmseNSCall() != FromEInfo.getCmseNSCall();
-    }
-  }
-  return false;
-}
-
 // checkPointerTypesForAssignment - This is a very tricky routine (despite
 // being closely modeled after the C99 spec:-). The odd characteristic of this
 // routine is it effectively iqnores the qualifiers on the top level pointee.
@@ -9187,15 +9169,17 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
       return AssignConvertType::IncompatibleFunctionPointer;
     return AssignConvertType::IncompatiblePointer;
   }
+  // Note: in C++, typesAreCompatible(ltrans, rtrans) will have guaranteed
+  // hasSameType, so we can skip further checks.
   const auto *LFT = ltrans->getAs<FunctionType>();
   const auto *RFT = rtrans->getAs<FunctionType>();
   if (!S.getLangOpts().CPlusPlus && LFT && RFT) {
     // The invocation of IsFunctionConversion below will try to transform rtrans
     // to obtain an exact match for ltrans. This should not fail because of
     // mismatches in result type and parameter types, they were already checked
-    // by typesAreCompatible above. So we will recreate rtrans using the result
-    // type and parameter types from ltrans, but keeping its
-    // ExtInfo/ExtProtoInfo.
+    // by typesAreCompatible above. So we will recreate rtrans (or where
+    // appropriate ltrans) using the result type and parameter types from ltrans
+    // (respectively rtrans), but keeping its ExtInfo/ExtProtoInfo.
     const auto *LFPT = dyn_cast<FunctionProtoType>(LFT);
     const auto *RFPT = dyn_cast<FunctionProtoType>(RFT);
     if (LFPT && RFPT) {
@@ -9209,15 +9193,11 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
                                          LFPT->getParamTypes(), EPI);
     } else if (RFPT) {
       // In this case, we want to retain rtrans as a FunctionProtoType, to keep
-      // all of its ExtProtoInfo. To enable an exact match, we recreate ltrans
-      // as a FunctionProtoType, using its own info but filling in the parameter
-      // types from rtrans.
+      // all of its ExtProtoInfo. Transform ltrans instead.
       FunctionProtoType::ExtProtoInfo EPI;
       EPI.ExtInfo = LFT->getExtInfo();
-      ltrans = S.Context.getFunctionType(LFT->getReturnType(),
+      ltrans = S.Context.getFunctionType(RFPT->getReturnType(),
                                          RFPT->getParamTypes(), EPI);
-      rtrans = S.Context.getFunctionType(
-          LFT->getReturnType(), RFPT->getParamTypes(), RFPT->getExtProtoInfo());
     } else {
       rtrans = S.Context.getFunctionNoProtoType(LFT->getReturnType(),
                                                 RFT->getExtInfo());
@@ -9226,10 +9206,6 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
         !S.IsFunctionConversion(rtrans, ltrans))
       return AssignConvertType::IncompatibleFunctionPointer;
   }
-  if (IsInvalidCmseNSCallConversion(S, ltrans, rtrans))
-    return AssignConvertType::IncompatibleFunctionPointer;
-  if (S.IsInvalidSMECallConversion(rtrans, ltrans))
-    return AssignConvertType::IncompatibleFunctionPointer;
   return ConvTy;
 }
 
