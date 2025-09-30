@@ -174,6 +174,9 @@ enum NodeType : unsigned {
   VBSLL,
   VBSRL,
 
+  // Vector bit operation
+  VANDN,
+
   // Scalar load broadcast to vector
   VLDREPL,
 
