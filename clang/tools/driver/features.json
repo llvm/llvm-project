@@ -40,6 +40,9 @@
     },
     {
       "name": "extract-api-supports-cpp"
+    },
+    {
+      "name": "print-headers-direct-per-file"
     }
   ]
 }
