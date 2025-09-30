@@ -44,7 +44,7 @@
 #  define __ptrauth_scan_results_landingpad                                                                            \
     __ptrauth(__ptrauth_scan_results_landingpad_key, 1, __ptrauth_scan_results_landingpad_disc)
 
-#  if __has_extension(__ptrauth_restricted_intptr)
+#  if __has_extension(ptrauth_restricted_intptr_qualifier)
 #    define __ptrauth_scan_results_landingpad_intptr                                                                   \
       __ptrauth_restricted_intptr(__ptrauth_scan_results_landingpad_key, 1, __ptrauth_scan_results_landingpad_disc)
 #  else
