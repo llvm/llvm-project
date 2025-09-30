@@ -370,10 +370,8 @@ define i32 @sub_sub_ugt(i32 %a, i32 %b) {
 ; CHECK-LABEL: sub_sub_ugt:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    subl %esi, %eax
-; CHECK-NEXT:    seta %cl
-; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    cmpl %edi, %esi
+; CHECK-NEXT:    sbbl %esi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ugt i32 %a, %b
   %conv = zext i1 %cmp to i32
@@ -386,10 +384,8 @@ define i32 @sub_sub_ult(i32 %a, i32 %b) {
 ; CHECK-LABEL: sub_sub_ult:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    subl %esi, %eax
-; CHECK-NEXT:    seta %cl
-; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    cmpl %edi, %esi
+; CHECK-NEXT:    sbbl %esi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ult i32 %b, %a
   %conv = zext i1 %cmp to i32
