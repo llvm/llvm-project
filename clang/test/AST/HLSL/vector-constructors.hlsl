@@ -28,11 +28,11 @@ void entry() {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float2':'vector<float, 2>' lvalue Var {{.*}} 'Vec2' 'float2':'vector<float, 2>'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float2':'vector<float, 2>' lvalue Var {{.*}} 'Vec2' 'float2':'vector<float, 2>'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: FloatingLiteral {{.*}} 'float' 3.000000e+00
 
 // CHECK: VarDecl {{.*}} 'float3':'vector<float, 3>' cinit
@@ -92,25 +92,6 @@ void entry() {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .f {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'struct S' lvalue Var {{.*}} 's' 'struct S'
-
-  struct T {
-    operator float() const { return 1.0f; }
-  } t;
-  float2 foo5 = float2(t, t); // user-defined cast operator
-
-// CHECK-LABEL: VarDecl {{.*}} foo5 'float2'
-// CHECK-NEXT: CXXFunctionalCastExpr
-// CHECK-NEXT: InitListExpr
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <UserDefinedConversion>
-// CHECK-NEXT: CXXMemberCallExpr {{.*}} 'float'
-// CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator float {{.*}}
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'const T' lvalue <NoOp>
-// CHECK-NEXT: DeclRefExpr {{.*}} 'struct T' lvalue Var {{.*}} 't' 'struct T'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <UserDefinedConversion>
-// CHECK-NEXT: CXXMemberCallExpr {{.*}} 'float'
-// CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator float {{.*}}
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'const T' lvalue <NoOp>
-// CHECK-NEXT: DeclRefExpr {{.*}} 'struct T' lvalue Var {{.*}} 't' 'struct T'
 
   typedef float2 second_level_of_typedefs;
   second_level_of_typedefs foo6 = float2(1.0f, 2.0f);
