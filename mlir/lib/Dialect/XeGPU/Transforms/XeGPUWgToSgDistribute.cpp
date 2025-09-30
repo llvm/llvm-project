@@ -831,7 +831,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
         // Multiply offset with stride, broadcast it and add to baseConstVec
         Value mulOffset = rewriter.create<arith::MulIOp>(
             loc, rewriter.getIndexType(), offsets[nonUnitDim], strideConst);
-        auto bcastOffset = rewriter.create<vector::SplatOp>(
+        auto bcastOffset = rewriter.create<vector::BroadcastOp>(
             loc, VectorType::get({sgData}, rewriter.getIndexType()), mulOffset);
         auto finalConst =
             arith::AddIOp::create(rewriter, loc, baseConstVec, bcastOffset);
