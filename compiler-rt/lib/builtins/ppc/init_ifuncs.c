@@ -16,7 +16,13 @@ void __init_ifuncs() {
   // __stop_ifunc_sec occupy different addresses.
   IFUNC_PAIR *volatile volatile_end = &__stop_ifunc_sec;
   for (IFUNC_PAIR *pair = &__start_ifunc_sec, *end = volatile_end; pair != end;
-       pair++)
-    pair->desc->addr = ((Descr*)(pair->resolver()))->addr;
+       pair++) {
+    // Call the resolver and copy the entire descriptor because:
+    //  - the resolved function might be in another DSO, so copy the TOC address
+    //  - we might be linking with objects from a language that uses the
+    //    enviroment pointer, so copy it too.
+    Descr *result = (Descr*)pair->resolver();
+    *(pair->desc) = *result;
+  }
 }
 
