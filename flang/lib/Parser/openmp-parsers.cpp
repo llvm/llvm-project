@@ -1023,6 +1023,9 @@ TYPE_PARSER(
         maybe(":"_tok >> nonemptyList(Parser<OmpLinearClause::Modifier>{})),
         /*PostModified=*/pure(true)))
 
+TYPE_PARSER(construct<OmpLoopRangeClause>(
+    scalarIntConstantExpr, "," >> scalarIntConstantExpr))
+
 // OpenMPv5.2 12.5.2 detach-clause -> DETACH (event-handle)
 TYPE_PARSER(construct<OmpDetachClause>(Parser<OmpObject>{}))
 
@@ -1207,6 +1210,8 @@ TYPE_PARSER( //
                     parenthesized(Parser<OmpLinearClause>{}))) ||
     "LINK" >> construct<OmpClause>(construct<OmpClause::Link>(
                   parenthesized(Parser<OmpObjectList>{}))) ||
+    "LOOPRANGE" >> construct<OmpClause>(construct<OmpClause::Looprange>(
+                       parenthesized(Parser<OmpLoopRangeClause>{}))) ||
     "MAP" >> construct<OmpClause>(construct<OmpClause::Map>(
                  parenthesized(Parser<OmpMapClause>{}))) ||
     "MATCH" >> construct<OmpClause>(construct<OmpClause::Match>(
@@ -1836,7 +1841,9 @@ TYPE_PARSER(sourced( //
 
 // 2.4 Requires construct
 TYPE_PARSER(sourced(construct<OpenMPRequiresConstruct>(
-    verbatim("REQUIRES"_tok), Parser<OmpClauseList>{})))
+    predicated(OmpDirectiveNameParser{},
+        IsDirective(llvm::omp::Directive::OMPD_requires)) >=
+    Parser<OmpDirectiveSpecification>{})))
 
 // 2.15.2 Threadprivate directive
 TYPE_PARSER(sourced( //
@@ -1853,7 +1860,9 @@ TYPE_PARSER(
 
 // Assumes Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclarativeAssumes>(
-    verbatim("ASSUMES"_tok), Parser<OmpClauseList>{})))
+    predicated(OmpDirectiveNameParser{},
+        IsDirective(llvm::omp::Directive::OMPD_assumes)) >=
+    Parser<OmpDirectiveSpecification>{})))
 
 // Declarative constructs
 TYPE_PARSER(

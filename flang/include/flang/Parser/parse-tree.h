@@ -4546,6 +4546,15 @@ struct OmpLinearClause {
   std::tuple<OmpObjectList, MODIFIERS(), /*PostModified=*/bool> t;
 };
 
+// Ref: [6.0:207-208]
+//
+// loop-range-clause ->
+//    LOOPRANGE(first, count)                       // since 6.0
+struct OmpLoopRangeClause {
+  TUPLE_CLASS_BOILERPLATE(OmpLoopRangeClause);
+  std::tuple<ScalarIntConstantExpr, ScalarIntConstantExpr> t;
+};
+
 // Ref: [4.5:216-219], [5.0:315-324], [5.1:347-355], [5.2:150-158]
 //
 // map-clause ->
@@ -4877,8 +4886,8 @@ struct OpenMPUtilityConstruct {
 //   ASSUMES absent-clause | contains-clause | holds-clause | no-openmp-clause |
 //          no-openmp-routines-clause | no-parallelism-clause
 struct OpenMPDeclarativeAssumes {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDeclarativeAssumes);
-  std::tuple<Verbatim, OmpClauseList> t;
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPDeclarativeAssumes, OmpDirectiveSpecification);
   CharBlock source;
 };
 
@@ -4991,9 +5000,8 @@ struct OpenMPGroupprivate {
 
 // 2.4 requires -> REQUIRES requires-clause[ [ [,] requires-clause]...]
 struct OpenMPRequiresConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPRequiresConstruct);
+  WRAPPER_CLASS_BOILERPLATE(OpenMPRequiresConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, OmpClauseList> t;
 };
 
 // 2.15.2 threadprivate -> THREADPRIVATE (variable-name-list)
