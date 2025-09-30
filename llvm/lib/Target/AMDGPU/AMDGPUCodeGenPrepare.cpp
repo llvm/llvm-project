@@ -2137,10 +2137,27 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
 
 bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) {
   // exec_hi is all 0, so this is just a copy on wave32.
+  // However, only optimize if we have the same conditions as mbcnt.lo.
   if (ST.isWave32()) {
-    I.replaceAllUsesWith(I.getArgOperand(1));
-    I.eraseFromParent();
-    return true;
+    Function *F = I.getFunction();
+    if (!F)
+      return false;
+
+    unsigned Wave = 0;
+    if (ST.isWaveSizeKnown())
+      Wave = ST.getWavefrontSize();
+
+    if (auto MaybeX = ST.getReqdWorkGroupSize(*F, 0)) {
+      unsigned XLen = *MaybeX;
+      if (Wave == 0 && XLen == 32)
+        Wave = XLen;
+
+      if (Wave != 0 && XLen == Wave) {
+        I.replaceAllUsesWith(I.getArgOperand(1));
+        I.eraseFromParent();
+        return true;
+      }
+    }
   }
 
   // Pattern: mbcnt.hi(~0, mbcnt.lo(~0, 0))
