@@ -6388,16 +6388,14 @@ static void handleNoSanitizeAddressAttr(Sema &S, Decl *D,
                  NoSanitizeAttr(S.Context, Info, &SanitizerName, 1));
 }
 
-static void handleNoSanitizeThreadAttr(Sema &S, Decl *D,
-                                        const ParsedAttr &AL) {
+static void handleNoSanitizeThreadAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef SanitizerName = "thread";
   AttributeCommonInfo Info = getNoSanitizeAttrInfo(AL);
   D->addAttr(::new (S.Context)
                  NoSanitizeAttr(S.Context, Info, &SanitizerName, 1));
 }
 
-static void handleNoSanitizeMemoryAttr(Sema &S, Decl *D,
-                                        const ParsedAttr &AL) {
+static void handleNoSanitizeMemoryAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef SanitizerName = "memory";
   AttributeCommonInfo Info = getNoSanitizeAttrInfo(AL);
   D->addAttr(::new (S.Context)
