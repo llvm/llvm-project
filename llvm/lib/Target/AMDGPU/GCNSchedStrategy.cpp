@@ -1407,7 +1407,7 @@ bool PreRARematStage::initGCNSchedStage() {
                          << "] REMAT (always) | " << *Remat.DefMI);
       rematerialize(Remat, RecomputeRP);
     } else {
-      ScoredRemats.emplace_back(&Remat, DAG.ST, *DAG.TII);
+      ScoredRemats.emplace_back(&Remat, DAG);
     }
   }
   unsetSatisifedRPTargets(RescheduleRegions);
@@ -1468,9 +1468,12 @@ bool PreRARematStage::initGCNSchedStage() {
       REMAT_DEBUG(dbgs() << "[" << MIRegion[Remat.DefMI] << "] REMAT *" << Score
                          << "* | " << *Remat.DefMI);
       MachineInstr *RematMI = rematerialize(Remat, RecomputeRP);
-      // Every rematerialization done with the objective of increasing occupancy
-      // increases latency. If we don't manage to increase occupancy, we want to
-      // roll them back.
+      // Every rematerialization we do here is likely to move the instruction
+      // into a higher frequency region, increasing the total sum latency of the
+      // instruction itself. This is acceptable if we are eliminating a spill in
+      // the process, but when the goal is increasing occupancy we get nothing
+      // out of rematerialization if occupancy is not increased in the end; in
+      // such cases we want to roll back the rematerialization.
       if (TargetOcc)
         Rollbackable.push_back({RematMI, &Remat});
       unsetSatisifedRPTargets(Remat.Live);
@@ -1497,7 +1500,7 @@ bool PreRARematStage::initGCNSchedStage() {
     DAG.Pressure[I] = RP;
     unsigned NewRegionOcc = RP.getOccupancy(ST, DynamicVGPRBlockSize);
     AchievedOcc = std::min(AchievedOcc, NewRegionOcc);
-    REMAT_DEBUG(dbgs() << "[" << I << "] Achieved occupancy " << NewRegionOcc
+    REMAT_DEBUG(dbgs() << '[' << I << "] Achieved occupancy " << NewRegionOcc
                        << " (" << RPTargets[I] << ")\n");
   }
 
@@ -2081,9 +2084,9 @@ bool PreRARematStage::collectRematRegs(ArrayRef<uint64_t> RegionFreq) {
   // regions containing rematerializable instructions.
   DAG.RegionLiveOuts.buildLiveRegMap();
 
-  // Set of registers already marked for potential remterialization; used for
-  // remat chains checks.
-  DenseSet<Register> RematRegSet;
+  // Set of registers already marked for potential remterialization; used to
+  // avoid rematerialization chains.
+  SmallSet<Register, 4> RematRegSet;
   auto IsMORematable = [&RematRegSet](const MachineOperand &MO) -> bool {
     return MO.isReg() && RematRegSet.contains(MO.getReg());
   };
@@ -2182,15 +2185,45 @@ PreRARematStage::RematReg::insertMI(unsigned RegionIdx,
   return NewMI;
 }
 
+unsigned PreRARematStage::ScoredRemat::getNumRegs(
+    const GCNScheduleDAGMILive &DAG) const {
+  // FIXME: this doesn't account for the fact that the rematerialization may be
+  // for a subregister. In that case we will overestimate the number of
+  // registers involved. This is acceptable since this is purely used for the
+  // scoring heuristic, but we should find a way to compute the number of
+  // registers actually covered by the register/subregister pair.
+  Register Reg = Remat->DefMI->getOperand(0).getReg();
+  const TargetRegisterClass &RC = *DAG.MRI.getRegClass(Reg);
+  return divideCeil(DAG.TRI->getRegSizeInBits(RC), 32);
+}
+
+unsigned PreRARematStage::ScoredRemat::getLatencyGain(
+    const GCNScheduleDAGMILive &DAG) const {
+  if (hasUnknownLatencyGain())
+    return 0;
+
+  const TargetSchedModel &SchedModel = DAG.ST.getInstrInfo()->getSchedModel();
+
+  // Rematerializing the register to its using region changes the number of
+  // times we will execute it in total.
+  unsigned FreqDiff = Remat->UseFrequency - Remat->DefFrequency;
+  int RematLatDiff = FreqDiff * SchedModel.computeInstrLatency(Remat->DefMI);
+
+  // We assume that spilling the register means we have to insert a save in its
+  // defining region and a restore in its using region. Spill instruction
+  // opcodes do not have corresponding scheduling models so we cannot accurately
+  // estimate their latency. Since this is just meant as a heuristic, use the
+  // default high latency from the MC scheduling model.
+  int SpillLatDiff = SchedModel.getMCSchedModel()->DefaultHighLatency *
+                     (Remat->DefFrequency + Remat->UseFrequency);
+
+  return SpillLatDiff - RematLatDiff;
+}
+
 PreRARematStage::ScoredRemat::ScoredRemat(const RematReg *Remat,
-                                          const GCNSubtarget &ST,
-                                          const TargetInstrInfo &TII)
-    : Remat(Remat) {
-  const InstrItineraryData *Itin = ST.getInstrItineraryData();
-  if (Remat->DefFrequency && Remat->UseFrequency) {
-    InstrLatencyGain = Remat->DefFrequency - Remat->UseFrequency;
-    *InstrLatencyGain *= TII.getInstrLatency(Itin, *Remat->DefMI);
-  }
+                                          const GCNScheduleDAGMILive &DAG)
+    : Remat(Remat), NumRegs(getNumRegs(DAG)),
+      RematLatencyGainOverSpill(getLatencyGain(DAG)) {
   resetScore();
 }
 
@@ -2214,20 +2247,13 @@ void PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
   // we get by increasing occupancy and compare it to the latency hit each wave
   // will be subjected to.
   if (ReduceSpill) {
-    // It may be better to let the register spill if it is defined by a very
-    // high latency instruction. Try to estimate the latency gain induced by
-    // rematerializing the register.
-    //
-    // If we don't know the rematerializations's latency gain we don't know
-    // what to compare the spill latency against. We still consider the
-    // rematerialization potentially beneficial in such cases because we don't
-    // want to miss rematerialization opportunities and rematerializing is in
-    // most cases cheaper than spilling. We still give a bonus to remats for
-    // which we are able to do the calculation.
-    if (InstrLatencyGain && *InstrLatencyGain < 0) {
-      int SpillLatencyGain = SaveCost * Remat->DefFrequency;
-      SpillLatencyGain += RestoreCost * Remat->UseFrequency;
-      if (*InstrLatencyGain + SpillLatencyGain < 0)
+    // If we don't know the latency gain, we still consider the
+    // rematerialization potentially beneficial because we don't want to miss
+    // rematerialization opportunities and rematerializing is in most cases
+    // cheaper than spilling. We still give a bonus to remats for which we are
+    // able to do the calculation.
+    if (!hasUnknownLatencyGain()) {
+      if (RematLatencyGainOverSpill < 0)
         return setUselessRemat();
       setKnownLatencyGain();
     }
@@ -2236,7 +2262,7 @@ void PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
   // The estimated RP reduction is proportional to the total frequency in target
   // regions where the register is live.
   Register Reg = Remat->DefMI->getOperand(0).getReg();
-  unsigned RPScore = 0;
+  ScoreTy RPScore = 0;
   for (unsigned I : TargetRegions.set_bits()) {
     unsigned Freq = std::max(RegionFreq[I], static_cast<uint64_t>(1));
     if (Remat->isBeneficialRegion(I))
@@ -2247,7 +2273,7 @@ void PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
 
   // The estimated RP reduction is directly proportional to the size of the
   // rematerializable register.
-  setRPScore(RPScore * SIRegisterInfo::getNumCoveredRegs(Remat->Mask));
+  setRPScore(RPScore * NumRegs);
 }
 
 MachineInstr *PreRARematStage::rematerialize(const RematReg &Remat,

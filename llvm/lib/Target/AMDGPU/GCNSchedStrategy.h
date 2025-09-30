@@ -460,6 +460,19 @@ public:
 /// reducing spilling or increasing occupancy is possible, it tries to
 /// rematerialize as few registers as possible to reduce potential negative
 /// effects on function latency.
+///
+/// The stage only supports rematerializing registers that meet all of the
+/// following constraints.
+/// 1. The register is virtual and has a single defining instruction.
+/// 2. The single defining instruction is either deemed rematerializable by the
+///    target-independent logic, or if not, has no non-constant and
+///    non-ignorable physical register use.
+/// 3  The register has no virtual register use whose live range would be
+///    extended by the rematerialization.
+/// 4. The register has a single non-debug user in a different region from its
+///    defining region.
+/// 5. The register is not used by or using another register that is going to be
+///    rematerialized.
 class PreRARematStage : public GCNSchedStage {
 private:
   /// Groups information about a rematerializable register.
@@ -539,8 +552,7 @@ private:
 
     /// This only initializes state-independent characteristics of \p Remat, not
     /// the actual score.
-    ScoredRemat(const RematReg *Remat, const GCNSubtarget &ST,
-                const TargetInstrInfo &TII);
+    ScoredRemat(const RematReg *Remat, const GCNScheduleDAGMILive &DAG);
 
     /// Updates the rematerialization's score w.r.t. the current \p RPTargets.
     /// \p RegionFreq indicates the frequency of each region
@@ -559,19 +571,22 @@ private:
     }
 
   private:
-    /// Estimated save/restore latency costs for spilling a register to stack.
-    /// FIXME: These numbers are very arbitrary. Need a good rationale for them,
-    /// which I don't know where to get from.
-    static constexpr int SaveCost = 100, RestoreCost = 100;
     /// Per-region contribution weights to RP score depending on whether RP is
     /// guaranteed or only likely to be reduced in the region. Only their
     /// relative value w.r.t. one another matter.
     static constexpr int WeightRP = 10, WeightRPMaybe = 5;
 
-    /// Latency gain induced by rematerializing the instruction. Does not
-    /// include estimated spilling cost of *not* rematerializing (save/restore
-    /// to/from stack).
-    std::optional<int> InstrLatencyGain = std::nullopt;
+    /// Number of 32-bit registers this rematerialization covers.
+    const unsigned NumRegs;
+    /// Latency gain induced by rematerializing the register over spilling its
+    /// defining instruction.
+    const int RematLatencyGainOverSpill;
+
+    /// Whether we can estimate the latency gain of rematerialazing over
+    /// spilling; this requires knowing defining/using region frequencies.
+    bool hasUnknownLatencyGain() const {
+      return !Remat->DefFrequency || !Remat->UseFrequency;
+    }
 
     using ScoreTy = int32_t;
     /// Overall rematerialization score. Scoring components are mapped to bit
@@ -587,9 +602,11 @@ private:
 
     void setKnownLatencyGain() { Score |= 1; }
 
-    void setRPScore(unsigned RPScore) {
-      Score |= static_cast<ScoreTy>(RPScore) << 1;
-    }
+    void setRPScore(ScoreTy RPScore) { Score |= RPScore << 1; }
+
+    unsigned getNumRegs(const GCNScheduleDAGMILive &DAG) const;
+
+    unsigned getLatencyGain(const GCNScheduleDAGMILive &DAG) const;
   };
 
   /// Maps all MIs (except lone terminators, which are not part of any region)
