@@ -705,8 +705,8 @@ defm : Zn4WriteResIntPair<WriteIDiv16, [Zn4Divider], 10, [10], 2>;
 defm : Zn4WriteResIntPair<WriteIDiv32, [Zn4Divider], 12, [12], 2>;
 defm : Zn4WriteResIntPair<WriteIDiv64, [Zn4Divider], 18, [18], 2>;
 
-defm : Zn4WriteResIntPair<WriteBSF, [Zn4ALU1], 1, [1], 6, /*LoadUOps=*/1>; // Bit scan forward.
-defm : Zn4WriteResIntPair<WriteBSR, [Zn4ALU1], 1, [1], 6, /*LoadUOps=*/1>; // Bit scan reverse.
+defm : Zn4WriteResIntPair<WriteBSF, [Zn4ALU1], 1, [1], 1, /*LoadUOps=*/1>; // Bit scan forward.
+defm : Zn4WriteResIntPair<WriteBSR, [Zn4ALU1], 1, [1], 1, /*LoadUOps=*/1>; // Bit scan reverse.
 
 defm : Zn4WriteResIntPair<WritePOPCNT, [Zn4ALU0123], 1, [1], 1>; // Bit population count.
 
