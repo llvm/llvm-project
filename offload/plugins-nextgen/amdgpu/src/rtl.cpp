@@ -1286,6 +1286,29 @@ private:
       PreferredNumBlocks = std::min(TripCountNumBlocks, AdjustedNumBlocks);
     }
 
+    // For most generic-SPMD kernels, the tripcount of the outer distribute-loop
+    // determines the number of teams launched. The tripcounts of the inner
+    // parallel loops should determine the number of threads launched. However,
+    // the inner loop tripcounts are unknown, so the runtime just launches 256
+    // threads by default. But if the inner loop tripcount is lower than 256,
+    // many of the threads in every workgroup are idle and just waste resources.
+    // In order to reduce this wastage, we reduce the blocksize upto the
+    // wavefront size if the tripcount is large enough to proportionally
+    // increase the number of teams. The increase in the number of teams is
+    // required to preserve the occupancy in case the inner loop tripcounts are
+    // larger than the blocksize. This change is done only when the user has not
+    // specified the number of teams or threads.
+    if (isGenericSPMDMode() && !IsNumThreadsFromUser &&
+        NumTeamsClause[0] == 0 && NumTeamsEnvVar == 0 &&
+        GenericDevice.getOMPXGenericSpmdUseSmallBlockSize()) {
+      uint64_t TmpPreferredNumBlocks = PreferredNumBlocks << 1;
+      while (TmpPreferredNumBlocks <= LoopTripCount &&
+             NumThreads > GenericDevice.getWarpSize()) {
+        NumThreads >>= 1;
+        PreferredNumBlocks = TmpPreferredNumBlocks;
+        TmpPreferredNumBlocks <<= 1;
+      }
+    }
     return std::min(PreferredNumBlocks,
                     (uint64_t)GenericDevice.getBlockLimit());
   }
@@ -3135,6 +3158,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                              0),
         OMPX_AdjustNumTeamsForXteamRedSmallBlockSize(
             "LIBOMPTARGET_AMDGPU_ADJUST_XTEAM_RED_TEAMS", 1),
+        OMPX_GenericSpmdUseSmallBlockSize(
+            "LIBOMPTARGET_AMDGPU_GENERIC_SPMD_USE_SMALL_BLOCKSIZE", 0),
         OMPX_MaxAsyncCopyBytes("LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES",
                                64 * 1024),
         OMPX_InitialNumSignals("LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS",
@@ -3266,6 +3291,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   virtual uint32_t
   getOMPXAdjustNumTeamsForXteamRedSmallBlockSize() const override {
     return OMPX_AdjustNumTeamsForXteamRedSmallBlockSize;
+  }
+  virtual bool getOMPXGenericSpmdUseSmallBlockSize() const override {
+    return OMPX_GenericSpmdUseSmallBlockSize;
   }
 
   /// Initialize the device, its resources and get its properties.
@@ -4861,6 +4889,10 @@ private:
   /// number of teams proportionally. A value greater than 1 indicates that the
   /// value should be used as the scaling factor for the number of teams.
   UInt32Envar OMPX_AdjustNumTeamsForXteamRedSmallBlockSize;
+
+  /// Envar indicating whether, for generic-SPMD kernels, the blocksize should
+  /// be reduced and the corresponding number of teams adjusted.
+  BoolEnvar OMPX_GenericSpmdUseSmallBlockSize;
 
   /// Envar specifying the maximum size in bytes where the memory copies are
   /// asynchronous operations. Up to this transfer size, the memory copies are
