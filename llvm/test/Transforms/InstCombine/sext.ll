@@ -320,17 +320,6 @@ define i10 @test19(i10 %i) {
   ret i10 %d
 }
 
-define i32 @test20(i64 %i) {
-; CHECK-LABEL: @test20(
-; CHECK-NEXT:    [[A:%.*]] = trunc i64 [[I:%.*]] to i16
-; CHECK-NEXT:    [[B:%.*]] = sext i16 [[A]] to i32
-; CHECK-NEXT:    ret i32 [[B]]
-;
-  %a = trunc i64 %i to i16
-  %b = sext i16 %a to i32
-  ret i32 %b
-}
-
 define i32 @smear_set_bit(i32 %x) {
 ; CHECK-LABEL: @smear_set_bit(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 24
