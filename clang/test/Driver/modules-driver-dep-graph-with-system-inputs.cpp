@@ -1,8 +1,6 @@
 // This test checks the on-demand scanning of system inputs, in particular:
 // 1. Inputs for unused system modules are not scanned.
 // 2. Imports between system modules are supported and scanned on demand.
-// 3. Arbitrary modules may be declared in the manifest (modules other than
-// std and std.compat).
 
 // RUN: split-file %s %t
 
@@ -42,11 +40,11 @@
 // CHECK-NEXT:         "[[PREFIX]]/foo.cpp" [ fillcolor=[[COLOR1]],label="{ Kind: Non-module | Filename: [[PREFIX]]/foo.cpp }"];
 // CHECK-NEXT:         "std" [ fillcolor=[[COLOR2:[0-9]+]],label="{ Kind: C++ named module | Module name: std | Filename: [[PREFIX]]/Inputs/usr/lib/share/libc++/v1/std.cppm | Input origin: System | Hash: {{.*}} }"];
 // CHECK-NEXT:         "std.compat" [ fillcolor=[[COLOR2]],label="{ Kind: C++ named module | Module name: std.compat | Filename: [[PREFIX]]/Inputs/usr/lib/share/libc++/v1/std.compat.cppm | Input origin: System | Hash: {{.*}} }"];
-// CHECK-NEXT:         "nonstd" [ fillcolor=[[COLOR2]],label="{ Kind: C++ named module | Module name: nonstd | Filename: [[PREFIX]]/non-std.cxxm | Input origin: System | Hash: {{.*}} }"];
+// CHECK-NEXT:         "core" [ fillcolor=[[COLOR2]],label="{ Kind: C++ named module | Module name: core | Filename: [[PREFIX]]/core.cxxm | Input origin: System | Hash: {{.*}} }"];
 
 // CHECK:              "[[PREFIX]]/main.cpp" -> "std";
 // CHECK-NEXT:         "[[PREFIX]]/main.cpp" -> "std.compat";
-// CHECK-NEXT:         "[[PREFIX]]/foo.cpp" -> "nonstd";
+// CHECK-NEXT:         "[[PREFIX]]/foo.cpp" -> "core";
 // CHECK-NEXT:         "std.compat" -> "std";
 // CHECK-NEXT: }
 
@@ -56,7 +54,7 @@ import std;
 import std.compat;
 
 //--- foo.cpp
-import nonstd;
+import core;
 
 //--- std.cppm
 export module std;
@@ -65,8 +63,11 @@ export module std;
 export module std.compat;
 import std;
 
-//--- non-std.cxxm
-export module nonstd;
+// The module 'core' is isn't really a system module in libc++ or libstdc++.
+// This is only to test that any module marked with '"is-std-library": true' can 
+// be imported on demand.
+//--- core.cxxm
+export module core;
 
 //--- unused.cppm
 export module unused;
@@ -87,14 +88,14 @@ export module unused;
       "is-std-library": true
     },
     {
-      "logical-name": "nonstd",
-      "source-path": "DIR/non-std.cxxm",
-      "is-std-library": false
+      "logical-name": "core",
+      "source-path": "DIR/core.cxxm",
+      "is-std-library": true
     },
     {
       "logical-name": "unused",
       "source-path": "DIR/unused.cppm",
-      "is-std-library": false
+      "is-std-library": true
     }
   ]
 }

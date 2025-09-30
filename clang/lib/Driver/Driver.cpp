@@ -1876,6 +1876,11 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
             });
       }
     }
+    // Only allow on-demand imports of standard library modules.
+    llvm::erase_if(Manifest.ModuleEntries, [](const auto &ModuleEntry) {
+      return !ModuleEntry.IsStdlib;
+    });
+
     modules::buildStdModuleManifestInputs(Manifest, *C, Inputs);
   }
 
