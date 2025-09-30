@@ -92,6 +92,32 @@ void SPIRVLegalizeImplicitBinding::collectBindingInfo(Module &M) {
             cast<ConstantInt>(B->getArgOperand(OrderIdArgIdx))->getZExtValue();
         return OrderA < OrderB;
       });
+
+  // Check that the order Id is unique per resource.
+  for (uint32_t i = 1; i < ImplicitBindingCalls.size(); ++i) {
+    const uint32_t OrderIdArgIdx = 0;
+    const uint32_t DescSetArgIdx = 1;
+    const uint32_t OrderA =
+        cast<ConstantInt>(
+            ImplicitBindingCalls[i - 1]->getArgOperand(OrderIdArgIdx))
+            ->getZExtValue();
+    const uint32_t OrderB =
+        cast<ConstantInt>(ImplicitBindingCalls[i]->getArgOperand(OrderIdArgIdx))
+            ->getZExtValue();
+    if (OrderA == OrderB) {
+      const uint32_t DescSetA =
+          cast<ConstantInt>(
+              ImplicitBindingCalls[i - 1]->getArgOperand(DescSetArgIdx))
+              ->getZExtValue();
+      const uint32_t DescSetB =
+          cast<ConstantInt>(
+              ImplicitBindingCalls[i]->getArgOperand(DescSetArgIdx))
+              ->getZExtValue();
+      assert(DescSetA == DescSetB &&
+             "If two implicit binding calls have the same order ID, they must "
+             "also have the same descriptor set.");
+    }
+  }
 }
 
 uint32_t SPIRVLegalizeImplicitBinding::getAndReserveFirstUnusedBinding(
@@ -112,7 +138,8 @@ uint32_t SPIRVLegalizeImplicitBinding::getAndReserveFirstUnusedBinding(
 }
 
 void SPIRVLegalizeImplicitBinding::replaceImplicitBindingCalls(Module &M) {
-  std::unordered_map<uint32_t, uint32_t> OrderIdToBinding;
+  uint32_t lastOrderId = -1;
+  uint32_t lastBindingNumber = -1;
 
   for (CallInst *OldCI : ImplicitBindingCalls) {
     IRBuilder<> Builder(OldCI);
@@ -123,11 +150,11 @@ void SPIRVLegalizeImplicitBinding::replaceImplicitBindingCalls(Module &M) {
 
     // Reuse an existing binding for this order ID, if one was already assigned.
     // Otherwise, assign a new binding.
-    const uint32_t NewBinding =
-        (OrderIdToBinding.find(OrderId) != OrderIdToBinding.end())
-            ? OrderIdToBinding[OrderId]
-            : getAndReserveFirstUnusedBinding(DescSet);
-    OrderIdToBinding[OrderId] = NewBinding;
+    const uint32_t NewBinding = (lastOrderId == OrderId)
+                                    ? lastBindingNumber
+                                    : getAndReserveFirstUnusedBinding(DescSet);
+    lastOrderId = OrderId;
+    lastBindingNumber = NewBinding;
 
     SmallVector<Value *, 8> Args;
     Args.push_back(Builder.getInt32(DescSet));

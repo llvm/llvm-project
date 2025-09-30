@@ -32,6 +32,7 @@
 ; CHECK-DAG: OpDecorate [[g]] Binding 0
 ; CHECK-DAG: OpDecorate [[h]] DescriptorSet 10
 ; CHECK-DAG: OpDecorate [[h]] Binding 3
+; CHECK-NOT: OpDecorate [[h]] Binding 4
 ; CHECK-DAG: OpDecorate [[i]] DescriptorSet 10
 ; CHECK-DAG: OpDecorate [[i]] Binding 2
 
@@ -45,8 +46,8 @@ entry:
   %4 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 10, i32 1, i32 1, i32 0, ptr nonnull @.str.8)
   %5 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefromimplicitbinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 2, i32 10, i32 1, i32 0, ptr nonnull @.str.10)
   %6 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefromimplicitbinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 3, i32 10, i32 2, i32 0, ptr nonnull @.str.12)
-  %7 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 10, i32 2, i32 1, i32 0, ptr nonnull @.str.14)
-  %8 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefromimplicitbinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 3, i32 10, i32 2, i32 1, ptr nonnull @.str.12)
+  %7 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefromimplicitbinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 3, i32 10, i32 2, i32 1, ptr nonnull @.str.12)
+  %8 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 10, i32 2, i32 1, i32 0, ptr nonnull @.str.14)
   %9 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %1, i32 0)
   %10 = load i32, ptr addrspace(11) %9, align 4
   %11 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %2, i32 0)
