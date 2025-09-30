@@ -779,7 +779,7 @@ void OptTable::internalPrintHelp(
     // Retrieve the SubCommandIDs registered to the given current CandidateInfo
     // Option.
     ArrayRef<unsigned> SubCommandIDs =
-        CandidateInfo.getCommandIDs(SubCommandIDsTable);
+        CandidateInfo.getSubCommandIDs(SubCommandIDsTable);
 
     // If no registered subcommands, then only global options are to be printed.
     // If no valid SubCommand (empty) in commandline then print the current

@@ -105,16 +105,16 @@ public:
 
     bool hasSubCommands() const { return SubCommandIDsOffset != 0; }
 
-    unsigned getNumCommandIDs(ArrayRef<unsigned> SubCommandIDsTable) const {
+    unsigned getNumSubCommandIDs(ArrayRef<unsigned> SubCommandIDsTable) const {
       // We embed the number of subcommand IDs in the value of the first offset.
       return SubCommandIDsTable[SubCommandIDsOffset];
     }
 
     ArrayRef<unsigned>
-    getCommandIDs(ArrayRef<unsigned> SubCommandIDsTable) const {
+    getSubCommandIDs(ArrayRef<unsigned> SubCommandIDsTable) const {
       return hasSubCommands() ? SubCommandIDsTable.slice(
                                     SubCommandIDsOffset + 1,
-                                    getNumCommandIDs(SubCommandIDsTable))
+                                    getNumSubCommandIDs(SubCommandIDsTable))
                               : ArrayRef<unsigned>();
     }
 
@@ -153,7 +153,7 @@ public:
                      [&](const auto &C) { return SubCommand == C.Name; });
     assert(SCIT != SubCommands.end() &&
            "This helper is only for valid registered subcommands.");
-    auto SubCommandIDs = CandidateInfo->getCommandIDs(SubCommandIDsTable);
+    auto SubCommandIDs = CandidateInfo->getSubCommandIDs(SubCommandIDsTable);
     unsigned CurrentSubCommandID = SCIT - &SubCommands[0];
     return std::find(SubCommandIDs.begin(), SubCommandIDs.end(),
                      CurrentSubCommandID) != SubCommandIDs.end();
