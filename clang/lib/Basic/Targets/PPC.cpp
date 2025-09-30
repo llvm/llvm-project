@@ -694,18 +694,20 @@ ParsedTargetAttr PPCTargetInfo::parseTargetAttr(StringRef Features) const {
 
     // While we're here iterating check for a different target cpu.
     if (Feature.starts_with("cpu=")) {
-      assert(Ret.CPU.empty());
-      Ret.CPU = Feature.split("=").second.trim();
-    } else assert(0);
-//    else if (Feature.starts_with("tune=")) {
-//      if (!Ret.Tune.empty())
-//        Ret.Duplicate = "tune=";
-//      else
-//        Ret.Tune = Feature.split("=").second.trim();
-//    } else if (Feature.starts_with("no-"))
-//      Ret.Features.push_back("-" + Feature.split("-").second.str());
-//    else
-//      Ret.Features.push_back("+" + Feature.str());
+      if (!Ret.CPU.empty())
+        Ret.Duplicate = "cpu=";
+      else
+        Ret.CPU = Feature.split("=").second.trim();
+    }
+    else if (Feature.starts_with("tune=")) {
+      if (!Ret.Tune.empty())
+        Ret.Duplicate = "tune=";
+      else
+        Ret.Tune = Feature.split("=").second.trim();
+    } else if (Feature.starts_with("no-"))
+      Ret.Features.push_back("-" + Feature.split("-").second.str());
+    else
+      Ret.Features.push_back("+" + Feature.str());
   }
   return Ret;
 }
