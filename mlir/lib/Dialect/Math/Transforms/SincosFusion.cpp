@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
-// #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
@@ -20,7 +19,7 @@ namespace {
 /// Fuse a math.sin and math.cos in the same block that use the same operand and
 /// have identical fastmath flags into a single math.sincos.
 struct SincosFusionPattern : OpRewritePattern<math::SinOp> {
-  using OpRewritePattern<math::SinOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::SinOp sinOp,
                                 PatternRewriter &rewriter) const override {
