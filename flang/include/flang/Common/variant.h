@@ -24,9 +24,17 @@ using cuda::std::variant_size_v;
 using cuda::std::visit;
 } // namespace std
 #else // !RT_USE_LIBCUDACXX
+
+// initializer_list is included to load bits/c++config, which can't be included
+// directly and which defines a macro we need to redefine.
 #include <initializer_list>
+
+// Redefine problematic abort macro to avoid defining symbols related to
+// std::exception. std::exception is defined in the C++ runtime library, which
+// we do not want the Fortran runtime library to depend on.
 #undef _GLIBCXX_THROW_OR_ABORT
 #define _GLIBCXX_THROW_OR_ABORT(_EXC) (__builtin_abort())
+
 #include <variant>
 #endif // !RT_USE_LIBCUDACXX
 
