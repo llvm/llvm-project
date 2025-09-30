@@ -16,7 +16,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Refactoring/Rename/USRFinder.h"
@@ -53,10 +53,11 @@ namespace {
 // AdditionalUSRFinder. AdditionalUSRFinder adds USRs of ctor and dtor if given
 // Decl refers to class and adds USRs of all overridden methods if Decl refers
 // to virtual method.
-class AdditionalUSRFinder : public RecursiveASTVisitor<AdditionalUSRFinder> {
-public:
+struct AdditionalUSRFinder : ConstDynamicRecursiveASTVisitor {
   AdditionalUSRFinder(const Decl *FoundDecl, ASTContext &Context)
-      : FoundDecl(FoundDecl), Context(Context) {}
+      : FoundDecl(FoundDecl), Context(Context) {
+    ShouldVisitTemplateInstantiations = true;
+  }
 
   std::vector<std::string> Find() {
     // Fill OverriddenMethods and PartialSpecs storages.
@@ -95,9 +96,7 @@ public:
     return std::vector<std::string>(USRSet.begin(), USRSet.end());
   }
 
-  bool shouldVisitTemplateInstantiations() const { return true; }
-
-  bool VisitCXXMethodDecl(const CXXMethodDecl *MethodDecl) {
+  bool VisitCXXMethodDecl(const CXXMethodDecl *MethodDecl) override {
     if (MethodDecl->isVirtual())
       OverriddenMethods.push_back(MethodDecl);
     if (MethodDecl->getInstantiatedFromMemberFunction())

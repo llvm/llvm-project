@@ -11,11 +11,11 @@
 #include "SourceCode.h"
 #include "support/Logger.h"
 #include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TextNodeDumper.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -37,14 +37,14 @@ template <typename Print> std::string toString(const Print &C) {
   return std::move(OS.str());
 }
 
-bool isInjectedClassName(Decl *D) {
+bool isInjectedClassName(const Decl *D) {
   if (const auto *CRD = llvm::dyn_cast<CXXRecordDecl>(D))
     return CRD->isInjectedClassName();
   return false;
 }
 
-class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
-  using Base = RecursiveASTVisitor<DumpVisitor>;
+class DumpVisitor : public ConstDynamicRecursiveASTVisitor {
+  using Base = ConstDynamicRecursiveASTVisitor;
 
   const syntax::TokenBuffer &Tokens;
   const ASTContext &Ctx;
@@ -337,68 +337,75 @@ public:
   // Override traversal to record the nodes we care about.
   // Generally, these are nodes with position information (TypeLoc, not Type).
 
-  bool TraverseDecl(Decl *D) {
+  bool TraverseDecl(const Decl *D) override {
     return !D || isInjectedClassName(D) ||
            traverseNode("declaration", D, [&] { Base::TraverseDecl(D); });
   }
-  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) override {
     return !TL || traverseNode("type", TL, [&] {
       Base::TraverseTypeLoc(TL, TraverseQualifier);
     });
   }
-  bool TraverseTemplateName(const TemplateName &TN) {
+  bool TraverseTemplateName(TemplateName TN) override {
     return traverseNode("template name", TN,
                         [&] { Base::TraverseTemplateName(TN); });
   }
-  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &TAL) {
+  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &TAL) override {
     return traverseNode("template argument", TAL,
                         [&] { Base::TraverseTemplateArgumentLoc(TAL); });
   }
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSL) {
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSL) override {
     return !NNSL || traverseNode("specifier", NNSL, [&] {
       Base::TraverseNestedNameSpecifierLoc(NNSL);
     });
   }
-  bool TraverseConstructorInitializer(CXXCtorInitializer *CCI) {
+  bool TraverseConstructorInitializer(const CXXCtorInitializer *CCI) override {
     return !CCI || traverseNode("constructor initializer", CCI, [&] {
       Base::TraverseConstructorInitializer(CCI);
     });
   }
-  bool TraverseAttr(Attr *A) {
+  bool TraverseAttr(const Attr *A) override {
     return !A || traverseNode("attribute", A, [&] { Base::TraverseAttr(A); });
   }
-  bool TraverseConceptReference(ConceptReference *C) {
+  bool TraverseConceptReference(const ConceptReference *C) override {
     return !C || traverseNode("reference", C,
                               [&] { Base::TraverseConceptReference(C); });
   }
-  bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &CBS) {
+  bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &CBS) override {
     return traverseNode("base", CBS,
                         [&] { Base::TraverseCXXBaseSpecifier(CBS); });
   }
   // Stmt is the same, but this form allows the data recursion optimization.
-  bool dataTraverseStmtPre(Stmt *S) {
+  bool dataTraverseStmtPre(const Stmt *S) override {
     return S && traverseNodePre(isa<Expr>(S) ? "expression" : "statement", S);
   }
-  bool dataTraverseStmtPost(Stmt *X) { return traverseNodePost(); }
+  bool dataTraverseStmtPost(const Stmt *X) override {
+    return traverseNodePost();
+  }
 
   // QualifiedTypeLoc is handled strangely in RecursiveASTVisitor: the derived
   // TraverseTypeLoc is not called for the inner UnqualTypeLoc.
   // This means we'd never see 'int' in 'const int'! Work around that here.
   // (The reason for the behavior is to avoid traversing the nested Type twice,
   // but we ignore TraverseType anyway).
-  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc QTL, bool TraverseQualifier) {
+  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc QTL,
+                                bool TraverseQualifier) override {
     return TraverseTypeLoc(QTL.getUnqualifiedLoc());
   }
   // Uninteresting parts of the AST that don't have locations within them.
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier) { return true; }
-  bool TraverseType(QualType) { return true; }
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier) override {
+    return true;
+  }
+  bool TraverseType(QualType, bool TraverseQualifier = true) override {
+    return true;
+  }
 
   // OpaqueValueExpr blocks traversal, we must explicitly traverse it.
-  bool TraverseOpaqueValueExpr(OpaqueValueExpr *E) {
+  bool TraverseOpaqueValueExpr(const OpaqueValueExpr *E) override {
     return TraverseStmt(E->getSourceExpr());
   }
   // We only want to traverse the *syntactic form* to understand the selection.
-  bool TraversePseudoObjectExpr(PseudoObjectExpr *E) {
+  bool TraversePseudoObjectExpr(const PseudoObjectExpr *E) override {
     return TraverseStmt(E->getSyntacticForm());
   }
 };
@@ -410,26 +417,25 @@ ASTNode dumpAST(const DynTypedNode &N, const syntax::TokenBuffer &Tokens,
   DumpVisitor V(Tokens, Ctx);
   // DynTypedNode only works with const, RecursiveASTVisitor only non-const :-(
   if (const auto *D = N.get<Decl>())
-    V.TraverseDecl(const_cast<Decl *>(D));
+    V.TraverseDecl(D);
   else if (const auto *S = N.get<Stmt>())
-    V.TraverseStmt(const_cast<Stmt *>(S));
+    V.TraverseStmt(S);
   else if (const auto *NNSL = N.get<NestedNameSpecifierLoc>())
-    V.TraverseNestedNameSpecifierLoc(
-        *const_cast<NestedNameSpecifierLoc *>(NNSL));
+    V.TraverseNestedNameSpecifierLoc(*NNSL);
   else if (const auto *NNS = N.get<NestedNameSpecifier>())
     V.TraverseNestedNameSpecifier(*NNS);
   else if (const auto *TL = N.get<TypeLoc>())
-    V.TraverseTypeLoc(*const_cast<TypeLoc *>(TL));
+    V.TraverseTypeLoc(*TL);
   else if (const auto *QT = N.get<QualType>())
-    V.TraverseType(*const_cast<QualType *>(QT));
+    V.TraverseType(*QT);
   else if (const auto *CCI = N.get<CXXCtorInitializer>())
-    V.TraverseConstructorInitializer(const_cast<CXXCtorInitializer *>(CCI));
+    V.TraverseConstructorInitializer(CCI);
   else if (const auto *TAL = N.get<TemplateArgumentLoc>())
-    V.TraverseTemplateArgumentLoc(*const_cast<TemplateArgumentLoc *>(TAL));
+    V.TraverseTemplateArgumentLoc(*TAL);
   else if (const auto *CBS = N.get<CXXBaseSpecifier>())
-    V.TraverseCXXBaseSpecifier(*const_cast<CXXBaseSpecifier *>(CBS));
+    V.TraverseCXXBaseSpecifier(*CBS);
   else if (const auto *CR = N.get<ConceptReference>())
-    V.TraverseConceptReference(const_cast<ConceptReference *>(CR));
+    V.TraverseConceptReference(CR);
   else
     elog("dumpAST: unhandled DynTypedNode kind {0}",
          N.getNodeKind().asStringRef());

@@ -13,7 +13,7 @@
 
 #include "clang/Tooling/Refactoring/Rename/USRFinder.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
@@ -96,14 +96,12 @@ namespace {
 
 /// Recursively visits each NamedDecl node to find the declaration with a
 /// specific name.
-class NamedDeclFindingVisitor
-    : public RecursiveASTVisitor<NamedDeclFindingVisitor> {
-public:
+struct NamedDeclFindingVisitor : ConstDynamicRecursiveASTVisitor {
   explicit NamedDeclFindingVisitor(StringRef Name) : Name(Name) {}
 
   // We don't have to traverse the uses to find some declaration with a
   // specific name, so just visit the named declarations.
-  bool VisitNamedDecl(const NamedDecl *ND) {
+  bool VisitNamedDecl(const NamedDecl *ND) override {
     if (!ND)
       return true;
     // Fully qualified name is used to find the declaration.

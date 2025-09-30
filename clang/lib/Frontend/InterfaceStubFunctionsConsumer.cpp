@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Mangle.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -242,8 +242,8 @@ public:
       : Instance(Instance), InFile(InFile), Format(Format) {}
 
   void HandleTranslationUnit(ASTContext &context) override {
-    struct Visitor : public RecursiveASTVisitor<Visitor> {
-      bool VisitNamedDecl(NamedDecl *ND) {
+    struct Visitor : ConstDynamicRecursiveASTVisitor {
+      bool VisitNamedDecl(const NamedDecl *ND) override {
         if (const auto *FD = dyn_cast<FunctionDecl>(ND))
           if (FD->isLateTemplateParsed()) {
             LateParsedDecls.insert(FD);
@@ -260,7 +260,7 @@ public:
       }
 
       std::set<const NamedDecl *> LateParsedDecls;
-      std::set<NamedDecl *> NamedDecls;
+      std::set<const NamedDecl *> NamedDecls;
       std::set<const ValueDecl *> ValueDecls;
     } v;
 

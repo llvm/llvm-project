@@ -13,7 +13,7 @@
 #include "TestFS.h"
 #include "index/FileIndex.h"
 #include "index/SymbolOrigin.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -240,10 +240,10 @@ const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName) {
 const NamedDecl &findDecl(ParsedAST &AST,
                           std::function<bool(const NamedDecl &)> Filter) {
   TraverseHeadersToo Too(AST);
-  struct Visitor : RecursiveASTVisitor<Visitor> {
+  struct Visitor : ConstDynamicRecursiveASTVisitor {
     decltype(Filter) F;
     llvm::SmallVector<const NamedDecl *, 1> Decls;
-    bool VisitNamedDecl(const NamedDecl *ND) {
+    bool VisitNamedDecl(const NamedDecl *ND) override {
       if (F(*ND))
         Decls.push_back(ND);
       return true;

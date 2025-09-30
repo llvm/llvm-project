@@ -9,7 +9,7 @@
 #include "RenamerClangTidyCheck.h"
 #include "ASTUtils.h"
 #include "clang/AST/CXXInheritance.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -211,19 +211,17 @@ private:
   RenamerClangTidyCheck *Check;
 };
 
-class RenamerClangTidyVisitor
-    : public RecursiveASTVisitor<RenamerClangTidyVisitor> {
+class RenamerClangTidyVisitor : public ConstDynamicRecursiveASTVisitor {
 public:
   RenamerClangTidyVisitor(RenamerClangTidyCheck *Check, const SourceManager &SM,
                           bool AggressiveDependentMemberLookup)
       : Check(Check), SM(SM),
-        AggressiveDependentMemberLookup(AggressiveDependentMemberLookup) {}
+        AggressiveDependentMemberLookup(AggressiveDependentMemberLookup) {
+    ShouldVisitTemplateInstantiations = true;
+    ShouldVisitImplicitCode = false;
+  }
 
-  bool shouldVisitTemplateInstantiations() const { return true; }
-
-  bool shouldVisitImplicitCode() const { return false; }
-
-  bool VisitCXXConstructorDecl(CXXConstructorDecl *Decl) {
+  bool VisitCXXConstructorDecl(const CXXConstructorDecl *Decl) override {
     if (Decl->isImplicit())
       return true;
     Check->addUsage(Decl->getParent(), Decl->getNameInfo().getSourceRange(),
@@ -241,7 +239,7 @@ public:
     return true;
   }
 
-  bool VisitCXXDestructorDecl(CXXDestructorDecl *Decl) {
+  bool VisitCXXDestructorDecl(const CXXDestructorDecl *Decl) override {
     if (Decl->isImplicit())
       return true;
     SourceRange Range = Decl->getNameInfo().getSourceRange();
@@ -255,20 +253,20 @@ public:
     return true;
   }
 
-  bool VisitUsingDecl(UsingDecl *Decl) {
+  bool VisitUsingDecl(const UsingDecl *Decl) override {
     for (const auto *Shadow : Decl->shadows())
       Check->addUsage(Shadow->getTargetDecl(),
                       Decl->getNameInfo().getSourceRange(), SM);
     return true;
   }
 
-  bool VisitUsingDirectiveDecl(UsingDirectiveDecl *Decl) {
+  bool VisitUsingDirectiveDecl(const UsingDirectiveDecl *Decl) override {
     Check->addUsage(Decl->getNominatedNamespaceAsWritten(),
                     Decl->getIdentLocation(), SM);
     return true;
   }
 
-  bool VisitNamedDecl(NamedDecl *Decl) {
+  bool VisitNamedDecl(const NamedDecl *Decl) override {
     SourceRange UsageRange =
         DeclarationNameInfo(Decl->getDeclName(), Decl->getLocation())
             .getSourceRange();
@@ -276,13 +274,13 @@ public:
     return true;
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *DeclRef) {
+  bool VisitDeclRefExpr(const DeclRefExpr *DeclRef) override {
     SourceRange Range = DeclRef->getNameInfo().getSourceRange();
     Check->addUsage(DeclRef->getDecl(), Range, SM);
     return true;
   }
 
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Loc) {
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Loc) override {
     if (NestedNameSpecifier Spec = Loc.getNestedNameSpecifier();
         Spec.getKind() == NestedNameSpecifier::Kind::Namespace) {
       if (const auto *Decl =
@@ -290,18 +288,17 @@ public:
         Check->addUsage(Decl, Loc.getLocalSourceRange(), SM);
     }
 
-    using Base = RecursiveASTVisitor<RenamerClangTidyVisitor>;
-    return Base::TraverseNestedNameSpecifierLoc(Loc);
+    return ConstDynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(Loc);
   }
 
-  bool VisitMemberExpr(MemberExpr *MemberRef) {
+  bool VisitMemberExpr(const MemberExpr *MemberRef) override {
     SourceRange Range = MemberRef->getMemberNameInfo().getSourceRange();
     Check->addUsage(MemberRef->getMemberDecl(), Range, SM);
     return true;
   }
 
-  bool
-  VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *DepMemberRef) {
+  bool VisitCXXDependentScopeMemberExpr(
+      const CXXDependentScopeMemberExpr *DepMemberRef) override {
     QualType BaseType = DepMemberRef->isArrow()
                             ? DepMemberRef->getBaseType()->getPointeeType()
                             : DepMemberRef->getBaseType();
@@ -325,28 +322,28 @@ public:
     return true;
   }
 
-  bool VisitTypedefTypeLoc(const TypedefTypeLoc &Loc) {
+  bool VisitTypedefTypeLoc(TypedefTypeLoc Loc) override {
     Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 
-  bool VisitTagTypeLoc(const TagTypeLoc &Loc) {
+  bool VisitTagTypeLoc(TagTypeLoc Loc) override {
     Check->addUsage(Loc.getOriginalDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 
-  bool VisitUnresolvedUsingTypeLoc(const UnresolvedUsingTypeLoc &Loc) {
+  bool VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc Loc) override {
     Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 
-  bool VisitTemplateTypeParmTypeLoc(const TemplateTypeParmTypeLoc &Loc) {
+  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc Loc) override {
     Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 
-  bool
-  VisitTemplateSpecializationTypeLoc(const TemplateSpecializationTypeLoc &Loc) {
+  bool VisitTemplateSpecializationTypeLoc(
+      TemplateSpecializationTypeLoc Loc) override {
     const TemplateDecl *Decl =
         Loc.getTypePtr()->getTemplateName().getAsTemplateDecl(
             /*IgnoreDeduced=*/true);
@@ -360,7 +357,7 @@ public:
     return true;
   }
 
-  bool VisitDesignatedInitExpr(DesignatedInitExpr *Expr) {
+  bool VisitDesignatedInitExpr(const DesignatedInitExpr *Expr) override {
     for (const DesignatedInitExpr::Designator &D : Expr->designators()) {
       if (!D.isFieldDesignator())
         continue;

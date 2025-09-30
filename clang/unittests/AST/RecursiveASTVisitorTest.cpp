@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Tooling.h"
@@ -68,61 +68,61 @@ enum class VisitEvent {
   EndTraverseObjCProtocolLoc,
 };
 
-class CollectInterestingEvents
-    : public RecursiveASTVisitor<CollectInterestingEvents> {
+class CollectInterestingEvents : public DynamicRecursiveASTVisitor {
 public:
-  bool TraverseFunctionDecl(FunctionDecl *D) {
+  bool TraverseFunctionDecl(FunctionDecl *D) override {
     Events.push_back(VisitEvent::StartTraverseFunction);
-    bool Ret = RecursiveASTVisitor::TraverseFunctionDecl(D);
+    bool Ret = DynamicRecursiveASTVisitor::TraverseFunctionDecl(D);
     Events.push_back(VisitEvent::EndTraverseFunction);
 
     return Ret;
   }
 
-  bool TraverseAttr(Attr *A) {
+  bool TraverseAttr(Attr *A) override {
     Events.push_back(VisitEvent::StartTraverseAttr);
-    bool Ret = RecursiveASTVisitor::TraverseAttr(A);
+    bool Ret = DynamicRecursiveASTVisitor::TraverseAttr(A);
     Events.push_back(VisitEvent::EndTraverseAttr);
 
     return Ret;
   }
 
-  bool TraverseEnumDecl(EnumDecl *D) {
+  bool TraverseEnumDecl(EnumDecl *D) override {
     Events.push_back(VisitEvent::StartTraverseEnum);
-    bool Ret = RecursiveASTVisitor::TraverseEnumDecl(D);
+    bool Ret = DynamicRecursiveASTVisitor::TraverseEnumDecl(D);
     Events.push_back(VisitEvent::EndTraverseEnum);
 
     return Ret;
   }
 
-  bool TraverseTypedefTypeLoc(TypedefTypeLoc TL, bool TraverseQualifier) {
+  bool TraverseTypedefTypeLoc(TypedefTypeLoc TL,
+                              bool TraverseQualifier) override {
     Events.push_back(VisitEvent::StartTraverseTypedefType);
-    bool Ret =
-        RecursiveASTVisitor::TraverseTypedefTypeLoc(TL, TraverseQualifier);
+    bool Ret = DynamicRecursiveASTVisitor::TraverseTypedefTypeLoc(
+        TL, TraverseQualifier);
     Events.push_back(VisitEvent::EndTraverseTypedefType);
 
     return Ret;
   }
 
-  bool TraverseObjCInterfaceDecl(ObjCInterfaceDecl *ID) {
+  bool TraverseObjCInterfaceDecl(ObjCInterfaceDecl *ID) override {
     Events.push_back(VisitEvent::StartTraverseObjCInterface);
-    bool Ret = RecursiveASTVisitor::TraverseObjCInterfaceDecl(ID);
+    bool Ret = DynamicRecursiveASTVisitor::TraverseObjCInterfaceDecl(ID);
     Events.push_back(VisitEvent::EndTraverseObjCInterface);
 
     return Ret;
   }
 
-  bool TraverseObjCProtocolDecl(ObjCProtocolDecl *PD) {
+  bool TraverseObjCProtocolDecl(ObjCProtocolDecl *PD) override {
     Events.push_back(VisitEvent::StartTraverseObjCProtocol);
-    bool Ret = RecursiveASTVisitor::TraverseObjCProtocolDecl(PD);
+    bool Ret = DynamicRecursiveASTVisitor::TraverseObjCProtocolDecl(PD);
     Events.push_back(VisitEvent::EndTraverseObjCProtocol);
 
     return Ret;
   }
 
-  bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc) {
+  bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc) override {
     Events.push_back(VisitEvent::StartTraverseObjCProtocolLoc);
-    bool Ret = RecursiveASTVisitor::TraverseObjCProtocolLoc(ProtocolLoc);
+    bool Ret = DynamicRecursiveASTVisitor::TraverseObjCProtocolLoc(ProtocolLoc);
     Events.push_back(VisitEvent::EndTraverseObjCProtocolLoc);
 
     return Ret;

@@ -17,10 +17,10 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TypeLoc.h"
@@ -479,7 +479,7 @@ namespace {
 /// not have the deduced type set. Instead, we have to go to the appropriate
 /// DeclaratorDecl/FunctionDecl and work our back to the AutoType that does have
 /// a deduced type set. The AST should be improved to simplify this scenario.
-class DeducedTypeVisitor : public RecursiveASTVisitor<DeducedTypeVisitor> {
+class DeducedTypeVisitor : public ConstDynamicRecursiveASTVisitor {
   SourceLocation SearchedLocation;
   const HeuristicResolver *Resolver;
 
@@ -493,7 +493,7 @@ public:
   //- decltype(auto) i = 1;
   //- auto& i = 1;
   //- auto* i = &a;
-  bool VisitDeclaratorDecl(DeclaratorDecl *D) {
+  bool VisitDeclaratorDecl(const DeclaratorDecl *D) override {
     if (!D->getTypeSourceInfo() ||
         !D->getTypeSourceInfo()->getTypeLoc().getContainedAutoTypeLoc() ||
         D->getTypeSourceInfo()
@@ -522,7 +522,7 @@ public:
   //- auto foo() -> int {}
   //- auto foo() -> decltype(1+1) {}
   //- operator auto() const { return 10; }
-  bool VisitFunctionDecl(FunctionDecl *D) {
+  bool VisitFunctionDecl(const FunctionDecl *D) override {
     if (!D->getTypeSourceInfo())
       return true;
     // Loc of auto in return type (c++14).
@@ -553,7 +553,7 @@ public:
   // Handle non-auto decltype, e.g.:
   // - auto foo() -> decltype(expr) {}
   // - decltype(expr);
-  bool VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
+  bool VisitDecltypeTypeLoc(DecltypeTypeLoc TL) override {
     if (TL.getBeginLoc() != SearchedLocation)
       return true;
 
@@ -571,7 +571,7 @@ public:
 
   // Handle functions/lambdas with `auto` typed parameters.
   // We deduce the type if there's exactly one instantiation visible.
-  bool VisitParmVarDecl(ParmVarDecl *PVD) {
+  bool VisitParmVarDecl(const ParmVarDecl *PVD) override {
     if (!PVD->getType()->isDependentType())
       return true;
     // 'auto' here does not name an AutoType, but an implicit template param.
@@ -659,13 +659,13 @@ static NamedDecl *getOnlyInstantiationImpl(TemplateDeclTy *TD) {
   return Only;
 }
 
-NamedDecl *getOnlyInstantiation(NamedDecl *TemplatedDecl) {
-  if (TemplateDecl *TD = TemplatedDecl->getDescribedTemplate()) {
-    if (auto *CTD = llvm::dyn_cast<ClassTemplateDecl>(TD))
+const NamedDecl *getOnlyInstantiation(const NamedDecl *TemplatedDecl) {
+  if (const TemplateDecl *TD = TemplatedDecl->getDescribedTemplate()) {
+    if (const auto *CTD = llvm::dyn_cast<ClassTemplateDecl>(TD))
       return getOnlyInstantiationImpl(CTD);
-    if (auto *FTD = llvm::dyn_cast<FunctionTemplateDecl>(TD))
+    if (const auto *FTD = llvm::dyn_cast<FunctionTemplateDecl>(TD))
       return getOnlyInstantiationImpl(FTD);
-    if (auto *VTD = llvm::dyn_cast<VarTemplateDecl>(TD))
+    if (const auto *VTD = llvm::dyn_cast<VarTemplateDecl>(TD))
       return getOnlyInstantiationImpl(VTD);
   }
   return nullptr;
@@ -810,23 +810,22 @@ const TemplateTypeParmType *getUnderlyingPackType(const ParmVarDecl *Param) {
 // resolved parameters (passed as argument to a parameter that is not an
 // expanded template type parameter pack) and forwarding parameters (passed to a
 // parameter that is an expanded template type parameter pack).
-class ForwardingCallVisitor
-    : public RecursiveASTVisitor<ForwardingCallVisitor> {
+class ForwardingCallVisitor : public ConstDynamicRecursiveASTVisitor {
 public:
   ForwardingCallVisitor(ArrayRef<const ParmVarDecl *> Parameters)
       : Parameters{Parameters},
         PackType{getUnderlyingPackType(Parameters.front())} {}
 
-  bool VisitCallExpr(CallExpr *E) {
-    auto *Callee = getCalleeDeclOrUniqueOverload(E);
+  bool VisitCallExpr(const CallExpr *E) override {
+    const auto *Callee = getCalleeDeclOrUniqueOverload(E);
     if (Callee) {
       handleCall(Callee, E->arguments());
     }
     return !Info.has_value();
   }
 
-  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
-    auto *Callee = E->getConstructor();
+  bool VisitCXXConstructExpr(const CXXConstructExpr *E) override {
+    const auto *Callee = E->getConstructor();
     if (Callee) {
       handleCall(Callee, E->arguments());
     }
@@ -853,7 +852,7 @@ public:
     ArrayRef<const ParmVarDecl *> Tail;
     // If the parameters were resolved to another forwarding FunctionDecl, this
     // is it.
-    std::optional<FunctionDecl *> PackTarget;
+    std::optional<const FunctionDecl *> PackTarget;
   };
 
   // The output of this visitor
@@ -862,7 +861,8 @@ public:
 private:
   // inspects the given callee with the given args to check whether it
   // contains Parameters, and sets Info accordingly.
-  void handleCall(FunctionDecl *Callee, typename CallExpr::arg_range Args) {
+  void handleCall(const FunctionDecl *Callee,
+                  typename CallExpr::const_arg_range Args) {
     // Skip functions with less parameters, they can't be the target.
     if (Callee->parameters().size() < Parameters.size())
       return;
@@ -899,7 +899,7 @@ private:
 
   // Returns the beginning of the expanded pack represented by Parameters
   // in the given arguments, if it is there.
-  std::optional<size_t> findPack(typename CallExpr::arg_range Args) {
+  std::optional<size_t> findPack(typename CallExpr::const_arg_range Args) {
     // find the argument directly referring to the first parameter
     assert(Parameters.size() <= static_cast<size_t>(llvm::size(Args)));
     for (auto Begin = Args.begin(), End = Args.end() - Parameters.size() + 1;
@@ -920,9 +920,9 @@ private:
     return std::nullopt;
   }
 
-  static FunctionDecl *getCalleeDeclOrUniqueOverload(CallExpr *E) {
-    Decl *CalleeDecl = E->getCalleeDecl();
-    auto *Callee = dyn_cast_or_null<FunctionDecl>(CalleeDecl);
+  static const FunctionDecl *getCalleeDeclOrUniqueOverload(const CallExpr *E) {
+    const Decl *CalleeDecl = E->getCalleeDecl();
+    const auto *Callee = dyn_cast_or_null<FunctionDecl>(CalleeDecl);
     if (!Callee) {
       if (auto *Lookup = dyn_cast<UnresolvedLookupExpr>(E->getCallee())) {
         Callee = resolveOverload(Lookup, E);
@@ -934,8 +934,8 @@ private:
     return nullptr;
   }
 
-  static FunctionDecl *resolveOverload(UnresolvedLookupExpr *Lookup,
-                                       CallExpr *E) {
+  static FunctionDecl *resolveOverload(const UnresolvedLookupExpr *Lookup,
+                                       const CallExpr *E) {
     FunctionDecl *MatchingDecl = nullptr;
     if (!Lookup->requiresADL()) {
       // Check whether there is a single overload with this number of

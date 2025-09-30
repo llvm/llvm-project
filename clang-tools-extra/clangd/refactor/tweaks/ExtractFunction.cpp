@@ -56,9 +56,9 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -576,24 +576,23 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
   // We use the ASTVisitor instead of using the selection tree since we need to
   // find references in the PostZone as well.
   // FIXME: Check which statements we don't allow to extract.
-  class ExtractionZoneVisitor
-      : public clang::RecursiveASTVisitor<ExtractionZoneVisitor> {
+  class ExtractionZoneVisitor : public ConstDynamicRecursiveASTVisitor {
   public:
     ExtractionZoneVisitor(const ExtractionZone &ExtZone) : ExtZone(ExtZone) {
-      TraverseDecl(const_cast<FunctionDecl *>(ExtZone.EnclosingFunction));
+      ExtractionZoneVisitor::TraverseDecl(ExtZone.EnclosingFunction);
     }
 
-    bool TraverseStmt(Stmt *S) {
+    bool TraverseStmt(const Stmt *S) override {
       if (!S)
         return true;
-      bool IsRootStmt = ExtZone.isRootStmt(const_cast<const Stmt *>(S));
+      bool IsRootStmt = ExtZone.isRootStmt(S);
       // If we are starting traversal of a RootStmt, we are somewhere inside
       // ExtractionZone
       if (IsRootStmt)
         CurrentLocation = ZoneRelative::Inside;
       addToLoopSwitchCounters(S, 1);
       // Traverse using base class's TraverseStmt
-      RecursiveASTVisitor::TraverseStmt(S);
+      ConstDynamicRecursiveASTVisitor::TraverseStmt(S);
       addToLoopSwitchCounters(S, -1);
       // We set the current location as after since next stmt will either be a
       // RootStmt (handled at the beginning) or after extractionZone
@@ -604,7 +603,7 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
 
     // Add Increment to CurNumberOf{Loops,Switch} if statement is
     // {Loop,Switch} and inside Extraction Zone.
-    void addToLoopSwitchCounters(Stmt *S, int Increment) {
+    void addToLoopSwitchCounters(const Stmt *S, int Increment) {
       if (CurrentLocation != ZoneRelative::Inside)
         return;
       if (isLoop(S))
@@ -613,12 +612,12 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
         CurNumberOfSwitch += Increment;
     }
 
-    bool VisitDecl(Decl *D) {
+    bool VisitDecl(const Decl *D) override {
       Info.createDeclInfo(D, CurrentLocation);
       return true;
     }
 
-    bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    bool VisitDeclRefExpr(const DeclRefExpr *DRE) override {
       // Find the corresponding Decl and mark it's occurrence.
       const Decl *D = DRE->getDecl();
       auto *DeclInfo = Info.getDeclInfoFor(D);
@@ -630,13 +629,13 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
       return true;
     }
 
-    bool VisitReturnStmt(ReturnStmt *Return) {
+    bool VisitReturnStmt(const ReturnStmt *Return) override {
       if (CurrentLocation == ZoneRelative::Inside)
         Info.HasReturnStmt = true;
       return true;
     }
 
-    bool VisitBreakStmt(BreakStmt *Break) {
+    bool VisitBreakStmt(const BreakStmt *Break) override {
       // Control flow is broken if break statement is selected without any
       // parent loop or switch statement.
       if (CurrentLocation == ZoneRelative::Inside &&
@@ -645,7 +644,7 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
       return true;
     }
 
-    bool VisitContinueStmt(ContinueStmt *Continue) {
+    bool VisitContinueStmt(const ContinueStmt *Continue) override {
       // Control flow is broken if Continue statement is selected without any
       // parent loop
       if (CurrentLocation == ZoneRelative::Inside && !CurNumberOfNestedLoops)
@@ -851,10 +850,9 @@ tooling::Replacement createForwardDeclaration(const NewFunction &ExtractedFunc,
 
 // Returns true if ExtZone contains any ReturnStmts.
 bool hasReturnStmt(const ExtractionZone &ExtZone) {
-  class ReturnStmtVisitor
-      : public clang::RecursiveASTVisitor<ReturnStmtVisitor> {
+  class ReturnStmtVisitor : public ConstDynamicRecursiveASTVisitor {
   public:
-    bool VisitReturnStmt(ReturnStmt *Return) {
+    bool VisitReturnStmt(const ReturnStmt *Return) override {
       Found = true;
       return false; // We found the answer, abort the scan.
     }
@@ -863,7 +861,7 @@ bool hasReturnStmt(const ExtractionZone &ExtZone) {
 
   ReturnStmtVisitor V;
   for (const Stmt *RootStmt : ExtZone.RootStmts) {
-    V.TraverseStmt(const_cast<Stmt *>(RootStmt));
+    V.TraverseStmt(RootStmt);
     if (V.Found)
       break;
   }

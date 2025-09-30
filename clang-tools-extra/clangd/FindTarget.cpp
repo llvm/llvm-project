@@ -17,13 +17,13 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -923,8 +923,7 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
   return V.Refs;
 }
 
-class ExplicitReferenceCollector
-    : public RecursiveASTVisitor<ExplicitReferenceCollector> {
+class ExplicitReferenceCollector : public ConstDynamicRecursiveASTVisitor {
 public:
   ExplicitReferenceCollector(llvm::function_ref<void(ReferenceLoc)> Out,
                              const HeuristicResolver *Resolver)
@@ -932,36 +931,37 @@ public:
     assert(Out);
   }
 
-  bool VisitTypeLoc(TypeLoc TTL) {
+  bool VisitTypeLoc(TypeLoc TTL) override {
     if (TypeLocsToSkip.count(TTL.getBeginLoc()))
       return true;
     visitNode(DynTypedNode::create(TTL));
     return true;
   }
 
-  bool VisitStmt(Stmt *S) {
+  bool VisitStmt(const Stmt *S) override {
     visitNode(DynTypedNode::create(*S));
     return true;
   }
 
-  bool TraverseOpaqueValueExpr(OpaqueValueExpr *OVE) {
+  bool TraverseOpaqueValueExpr(const OpaqueValueExpr *OVE) override {
     visitNode(DynTypedNode::create(*OVE));
     // Not clear why the source expression is skipped by default...
     // FIXME: can we just make RecursiveASTVisitor do this?
-    return RecursiveASTVisitor::TraverseStmt(OVE->getSourceExpr());
+    return ConstDynamicRecursiveASTVisitor::TraverseStmt(OVE->getSourceExpr());
   }
 
-  bool TraversePseudoObjectExpr(PseudoObjectExpr *POE) {
+  bool TraversePseudoObjectExpr(const PseudoObjectExpr *POE) override {
     visitNode(DynTypedNode::create(*POE));
     // Traverse only the syntactic form to find the *written* references.
     // (The semantic form also contains lots of duplication)
-    return RecursiveASTVisitor::TraverseStmt(POE->getSyntacticForm());
+    return ConstDynamicRecursiveASTVisitor::TraverseStmt(
+        POE->getSyntacticForm());
   }
 
   // We re-define Traverse*, since there's no corresponding Visit*.
   // TemplateArgumentLoc is the only way to get locations for references to
   // template template parameters.
-  bool TraverseTemplateArgumentLoc(TemplateArgumentLoc A) {
+  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &A) override {
     switch (A.getArgument().getKind()) {
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
@@ -985,36 +985,37 @@ public:
     case TemplateArgument::StructuralValue:
       break; // Handled by VisitType and VisitExpression.
     };
-    return RecursiveASTVisitor::TraverseTemplateArgumentLoc(A);
+    return ConstDynamicRecursiveASTVisitor::TraverseTemplateArgumentLoc(A);
   }
 
-  bool VisitDecl(Decl *D) {
+  bool VisitDecl(const Decl *D) override {
     visitNode(DynTypedNode::create(*D));
     return true;
   }
 
   // We have to use Traverse* because there is no corresponding Visit*.
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc L) {
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc L) override {
     if (!L.getNestedNameSpecifier())
       return true;
     visitNode(DynTypedNode::create(L));
     // Inner type is missing information about its qualifier, skip it.
     if (auto TL = L.getAsTypeLoc())
       TypeLocsToSkip.insert(TL.getBeginLoc());
-    return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(L);
+    return ConstDynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(L);
   }
 
-  bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc) {
+  bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc) override {
     visitNode(DynTypedNode::create(ProtocolLoc));
     return true;
   }
 
-  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+  bool TraverseConstructorInitializer(const CXXCtorInitializer *Init) override {
     visitNode(DynTypedNode::create(*Init));
-    return RecursiveASTVisitor::TraverseConstructorInitializer(Init);
+    return ConstDynamicRecursiveASTVisitor::TraverseConstructorInitializer(
+        Init);
   }
 
-  bool VisitConceptReference(const ConceptReference *CR) {
+  bool VisitConceptReference(const ConceptReference *CR) override {
     visitNode(DynTypedNode::create(*CR));
     return true;
   }
@@ -1115,19 +1116,18 @@ void findExplicitReferences(const Stmt *S,
                             llvm::function_ref<void(ReferenceLoc)> Out,
                             const HeuristicResolver *Resolver) {
   assert(S);
-  ExplicitReferenceCollector(Out, Resolver).TraverseStmt(const_cast<Stmt *>(S));
+  ExplicitReferenceCollector(Out, Resolver).TraverseStmt(S);
 }
 void findExplicitReferences(const Decl *D,
                             llvm::function_ref<void(ReferenceLoc)> Out,
                             const HeuristicResolver *Resolver) {
   assert(D);
-  ExplicitReferenceCollector(Out, Resolver).TraverseDecl(const_cast<Decl *>(D));
+  ExplicitReferenceCollector(Out, Resolver).TraverseDecl(D);
 }
 void findExplicitReferences(const ASTContext &AST,
                             llvm::function_ref<void(ReferenceLoc)> Out,
                             const HeuristicResolver *Resolver) {
-  ExplicitReferenceCollector(Out, Resolver)
-      .TraverseAST(const_cast<ASTContext &>(AST));
+  ExplicitReferenceCollector(Out, Resolver).TraverseAST(AST);
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, DeclRelation R) {

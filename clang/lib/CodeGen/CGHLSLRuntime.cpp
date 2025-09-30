@@ -21,7 +21,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -874,13 +874,13 @@ llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {
   return nullptr;
 }
 
-class OpaqueValueVisitor : public RecursiveASTVisitor<OpaqueValueVisitor> {
+class OpaqueValueVisitor : public DynamicRecursiveASTVisitor {
 public:
   llvm::SmallVector<OpaqueValueExpr *, 8> OVEs;
   llvm::SmallPtrSet<OpaqueValueExpr *, 8> Visited;
   OpaqueValueVisitor() {}
 
-  bool VisitHLSLOutArgExpr(HLSLOutArgExpr *) {
+  bool VisitHLSLOutArgExpr(HLSLOutArgExpr *) override {
     // These need to be bound in CodeGenFunction::EmitHLSLOutArgLValues
     // or CodeGenFunction::EmitHLSLOutArgExpr. If they are part of this
     // traversal, the temporary containing the copy out will not have
@@ -888,7 +888,7 @@ public:
     return false;
   }
 
-  bool VisitOpaqueValueExpr(OpaqueValueExpr *E) {
+  bool VisitOpaqueValueExpr(OpaqueValueExpr *E) override {
     // Traverse the source expression first.
     if (E->getSourceExpr())
       TraverseStmt(E->getSourceExpr());

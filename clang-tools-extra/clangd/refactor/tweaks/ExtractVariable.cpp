@@ -14,11 +14,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/LambdaCapture.h"
 #include "clang/AST/OperationKinds.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/LangOptions.h"
@@ -62,7 +62,7 @@ private:
   const SourceManager &SM;
   const ASTContext &Ctx;
   // Decls referenced in the Expr
-  std::vector<clang::Decl *> ReferencedDecls;
+  std::vector<const Decl *> ReferencedDecls;
   // returns true if the Expr doesn't reference any variable declared in scope
   bool exprIsValidOutside(const clang::Stmt *Scope) const;
   // computes the Stmt before which we will extract out Expr
@@ -70,14 +70,12 @@ private:
 };
 
 // Returns all the Decls referenced inside the given Expr
-static std::vector<clang::Decl *>
-computeReferencedDecls(const clang::Expr *Expr) {
+std::vector<const Decl *> computeReferencedDecls(const Expr *Expr) {
   // RAV subclass to find all DeclRefs in a given Stmt
-  class FindDeclRefsVisitor
-      : public clang::RecursiveASTVisitor<FindDeclRefsVisitor> {
+  class FindDeclRefsVisitor : public ConstDynamicRecursiveASTVisitor {
   public:
-    std::vector<Decl *> ReferencedDecls;
-    bool VisitDeclRefExpr(DeclRefExpr *DeclRef) { // NOLINT
+    std::vector<const Decl *> ReferencedDecls;
+    bool VisitDeclRefExpr(const DeclRefExpr *DeclRef) override { // NOLINT
       // Stop the call operator of lambdas from being marked as a referenced
       // DeclRefExpr in immediately invoked lambdas.
       if (const auto *const Method =
@@ -94,7 +92,7 @@ computeReferencedDecls(const clang::Expr *Expr) {
     // the DeclRefExprs inside the initializers of init-capture variables,
     // variables mentioned in trailing return types, constraints and explicit
     // defaulted template parameters.
-    bool TraverseLambdaExpr(LambdaExpr *LExpr) {
+    bool TraverseLambdaExpr(const LambdaExpr *LExpr) override {
       for (const auto &[Capture, Initializer] :
            llvm::zip(LExpr->captures(), LExpr->capture_inits())) {
         TraverseLambdaCapture(LExpr, &Capture, Initializer);
@@ -102,7 +100,7 @@ computeReferencedDecls(const clang::Expr *Expr) {
 
       if (const clang::Expr *RequiresClause =
               LExpr->getTrailingRequiresClause().ConstraintExpr) {
-        TraverseStmt(const_cast<clang::Expr *>(RequiresClause));
+        TraverseStmt(RequiresClause);
       }
 
       for (auto *const TemplateParam : LExpr->getExplicitTemplateParameters())
@@ -125,7 +123,7 @@ computeReferencedDecls(const clang::Expr *Expr) {
   };
 
   FindDeclRefsVisitor Visitor;
-  Visitor.TraverseStmt(const_cast<Stmt *>(cast<Stmt>(Expr)));
+  Visitor.TraverseStmt(cast<Stmt>(Expr));
   return Visitor.ReferencedDecls;
 }
 

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SimplifyBooleanExprCheck.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -258,8 +258,9 @@ static bool containsDiscardedTokens(const ASTContext &Context,
   return false;
 }
 
-class SimplifyBooleanExprCheck::Visitor : public RecursiveASTVisitor<Visitor> {
-  using Base = RecursiveASTVisitor<Visitor>;
+class SimplifyBooleanExprCheck::Visitor
+    : public ConstDynamicRecursiveASTVisitor {
+  using Base = ConstDynamicRecursiveASTVisitor;
 
 public:
   Visitor(SimplifyBooleanExprCheck *Check, ASTContext &Context)
@@ -267,7 +268,7 @@ public:
 
   bool traverse() { return TraverseAST(Context); }
 
-  static bool shouldIgnore(Stmt *S) {
+  static bool shouldIgnore(const Stmt *S) {
     switch (S->getStmtClass()) {
     case Stmt::ImplicitCastExprClass:
     case Stmt::MaterializeTemporaryExprClass:
@@ -278,7 +279,7 @@ public:
     }
   }
 
-  bool dataTraverseStmtPre(Stmt *S) {
+  bool dataTraverseStmtPre(const Stmt *S) override {
     if (!S) {
       return true;
     }
@@ -289,7 +290,7 @@ public:
     return true;
   }
 
-  bool dataTraverseStmtPost(Stmt *S) {
+  bool dataTraverseStmtPost(const Stmt *S) override {
     if (S && !shouldIgnore(S)) {
       assert(StmtStack.back() == S);
       StmtStack.pop_back();
@@ -297,7 +298,7 @@ public:
     return true;
   }
 
-  bool VisitBinaryOperator(const BinaryOperator *Op) const {
+  bool VisitBinaryOperator(const BinaryOperator *Op) override {
     Check->reportBinOp(Context, Op);
     return true;
   }
@@ -346,8 +347,8 @@ public:
   /// only 1 statement in the \c CompoundStmt, applies F on that single
   /// statement.
   template <typename Functor>
-  static auto checkSingleStatement(Stmt *S, Functor F) -> decltype(F(S)) {
-    if (auto *CS = dyn_cast<CompoundStmt>(S)) {
+  static auto checkSingleStatement(const Stmt *S, Functor F) -> decltype(F(S)) {
+    if (const auto *CS = dyn_cast<CompoundStmt>(S)) {
       if (CS->size() == 1)
         return F(CS->body_front());
       return {};
@@ -355,11 +356,11 @@ public:
     return F(S);
   }
 
-  Stmt *parent() const {
+  const Stmt *parent() const {
     return StmtStack.size() < 2 ? nullptr : StmtStack[StmtStack.size() - 2];
   }
 
-  bool VisitIfStmt(IfStmt *If) {
+  bool VisitIfStmt(const IfStmt *If) override {
     // Skip any if's that have a condition var or an init statement, or are
     // "if consteval" statements.
     if (If->hasInitStorage() || If->hasVarStorage() || If->isConsteval())
@@ -369,7 +370,7 @@ public:
      * if (false) ThenStmt(); -> <Empty>;
      * if (false) ThenStmt(); else ElseStmt() -> ElseStmt();
      */
-    Expr *Cond = If->getCond()->IgnoreImplicit();
+    const Expr *Cond = If->getCond()->IgnoreImplicit();
     if (std::optional<bool> Bool = getAsBoolLiteral(Cond, true)) {
       if (*Bool)
         Check->replaceWithThenStatement(Context, If, Cond);
@@ -439,7 +440,7 @@ public:
     return true;
   }
 
-  bool VisitConditionalOperator(ConditionalOperator *Cond) {
+  bool VisitConditionalOperator(const ConditionalOperator *Cond) override {
     /*
      * Condition ? true : false; -> Condition
      * Condition ? false : true; -> !Condition;
@@ -455,7 +456,7 @@ public:
     return true;
   }
 
-  bool VisitCompoundStmt(CompoundStmt *CS) {
+  bool VisitCompoundStmt(const CompoundStmt *CS) override {
     if (CS->size() < 2)
       return true;
     bool CurIf = false, PrevIf = false;
@@ -558,7 +559,7 @@ public:
     }
   }
 
-  bool TraverseUnaryOperator(UnaryOperator *Op) {
+  bool TraverseUnaryOperator(const UnaryOperator *Op) override {
     if (!Check->SimplifyDeMorgan || Op->getOpcode() != UO_LNot)
       return Base::TraverseUnaryOperator(Op);
     const Expr *SubImp = Op->getSubExpr()->IgnoreImplicit();
@@ -587,7 +588,7 @@ public:
 private:
   bool IsProcessing = false;
   SimplifyBooleanExprCheck *Check;
-  SmallVector<Stmt *, 32> StmtStack;
+  SmallVector<const Stmt *, 32> StmtStack;
   ASTContext &Context;
 };
 

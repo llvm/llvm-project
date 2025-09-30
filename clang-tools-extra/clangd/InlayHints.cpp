@@ -16,9 +16,9 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
@@ -373,7 +373,7 @@ struct Callee {
   FunctionProtoTypeLoc Loc;
 };
 
-class InlayHintVisitor : public RecursiveASTVisitor<InlayHintVisitor> {
+class InlayHintVisitor : public ConstDynamicRecursiveASTVisitor {
 public:
   InlayHintVisitor(std::vector<InlayHint> &Results, ParsedAST &AST,
                    const Config &Cfg, std::optional<Range> RestrictRange,
@@ -397,14 +397,14 @@ public:
     // SuppressDefaultTemplateArgs (set by default) to have an effect.
   }
 
-  bool VisitTypeLoc(TypeLoc TL) {
+  bool VisitTypeLoc(TypeLoc TL) override {
     if (const auto *DT = llvm::dyn_cast<DecltypeType>(TL.getType()))
       if (QualType UT = DT->getUnderlyingType(); !UT->isDependentType())
         addTypeHint(TL.getSourceRange(), UT, ": ");
     return true;
   }
 
-  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+  bool VisitCXXConstructExpr(const CXXConstructExpr *E) override {
     // Weed out constructor calls that don't look like a function call with
     // an argument list, by checking the validity of getParenOrBraceRange().
     // Also weed out std::initializer_list constructors as there are no names
@@ -425,8 +425,8 @@ public:
 
   // Carefully recurse into PseudoObjectExprs, which typically incorporate
   // a syntactic expression and several semantic expressions.
-  bool TraversePseudoObjectExpr(PseudoObjectExpr *E) {
-    Expr *SyntacticExpr = E->getSyntacticForm();
+  bool TraversePseudoObjectExpr(const PseudoObjectExpr *E) override {
+    const Expr *SyntacticExpr = E->getSyntacticForm();
     if (isa<CallExpr>(SyntacticExpr))
       // Since the counterpart semantics usually get the identical source
       // locations as the syntactic one, visiting those would end up presenting
@@ -434,7 +434,7 @@ public:
       // Thus, only traverse the syntactic forms if this is written as a
       // CallExpr. This leaves the door open in case the arguments in the
       // syntactic form could possibly get parameter names.
-      return RecursiveASTVisitor<InlayHintVisitor>::TraverseStmt(SyntacticExpr);
+      return ConstDynamicRecursiveASTVisitor::TraverseStmt(SyntacticExpr);
     // We don't want the hints for some of the MS property extensions.
     // e.g.
     // struct S {
@@ -445,10 +445,10 @@ public:
     if (isa<BinaryOperator>(SyntacticExpr))
       return true;
     // FIXME: Handle other forms of a pseudo object expression.
-    return RecursiveASTVisitor<InlayHintVisitor>::TraversePseudoObjectExpr(E);
+    return ConstDynamicRecursiveASTVisitor::TraversePseudoObjectExpr(E);
   }
 
-  bool VisitCallExpr(CallExpr *E) {
+  bool VisitCallExpr(const CallExpr *E) override {
     if (!Cfg.InlayHints.Parameters)
       return true;
 
@@ -497,7 +497,7 @@ public:
     return true;
   }
 
-  bool VisitFunctionDecl(FunctionDecl *D) {
+  bool VisitFunctionDecl(const FunctionDecl *D) override {
     if (auto *FPT =
             llvm::dyn_cast<FunctionProtoType>(D->getType().getTypePtr())) {
       if (!FPT->hasTrailingReturn()) {
@@ -514,7 +514,7 @@ public:
     return true;
   }
 
-  bool VisitForStmt(ForStmt *S) {
+  bool VisitForStmt(const ForStmt *S) override {
     if (Cfg.InlayHints.BlockEnd) {
       std::string Name;
       // Common case: for (int I = 0; I < N; I++). Use "I" as the name.
@@ -528,19 +528,19 @@ public:
     return true;
   }
 
-  bool VisitCXXForRangeStmt(CXXForRangeStmt *S) {
+  bool VisitCXXForRangeStmt(const CXXForRangeStmt *S) override {
     if (Cfg.InlayHints.BlockEnd)
       markBlockEnd(S->getBody(), "for", getSimpleName(*S->getLoopVariable()));
     return true;
   }
 
-  bool VisitWhileStmt(WhileStmt *S) {
+  bool VisitWhileStmt(const WhileStmt *S) override {
     if (Cfg.InlayHints.BlockEnd)
       markBlockEnd(S->getBody(), "while", summarizeExpr(S->getCond()));
     return true;
   }
 
-  bool VisitSwitchStmt(SwitchStmt *S) {
+  bool VisitSwitchStmt(const SwitchStmt *S) override {
     if (Cfg.InlayHints.BlockEnd)
       markBlockEnd(S->getBody(), "switch", summarizeExpr(S->getCond()));
     return true;
@@ -553,7 +553,7 @@ public:
   // For now, the answer is neither, just mark as "if".
   // The ElseIf is a different IfStmt that doesn't know about the outer one.
   llvm::DenseSet<const IfStmt *> ElseIfs; // not eligible for names
-  bool VisitIfStmt(IfStmt *S) {
+  bool VisitIfStmt(const IfStmt *S) override {
     if (Cfg.InlayHints.BlockEnd) {
       if (const auto *ElseIf = llvm::dyn_cast_or_null<IfStmt>(S->getElse()))
         ElseIfs.insert(ElseIf);
@@ -574,7 +574,7 @@ public:
       addBlockEndHint(CS->getSourceRange(), Label, Name, "");
   }
 
-  bool VisitTagDecl(TagDecl *D) {
+  bool VisitTagDecl(const TagDecl *D) override {
     if (Cfg.InlayHints.BlockEnd && D->isThisDeclarationADefinition()) {
       std::string DeclPrefix = D->getKindName().str();
       if (const auto *ED = dyn_cast<EnumDecl>(D)) {
@@ -586,7 +586,7 @@ public:
     return true;
   }
 
-  bool VisitNamespaceDecl(NamespaceDecl *D) {
+  bool VisitNamespaceDecl(const NamespaceDecl *D) override {
     if (Cfg.InlayHints.BlockEnd) {
       // For namespace, the range actually starts at the namespace keyword. But
       // it should be fine since it's usually very short.
@@ -595,7 +595,7 @@ public:
     return true;
   }
 
-  bool VisitLambdaExpr(LambdaExpr *E) {
+  bool VisitLambdaExpr(const LambdaExpr *E) override {
     FunctionDecl *D = E->getCallOperator();
     if (!E->hasExplicitResultType()) {
       SourceLocation TypeHintLoc;
@@ -609,14 +609,14 @@ public:
     return true;
   }
 
-  void addReturnTypeHint(FunctionDecl *D, SourceRange Range) {
+  void addReturnTypeHint(const FunctionDecl *D, SourceRange Range) {
     auto *AT = D->getReturnType()->getContainedAutoType();
     if (!AT || AT->getDeducedType().isNull())
       return;
     addTypeHint(Range, D->getReturnType(), /*Prefix=*/"-> ");
   }
 
-  bool VisitVarDecl(VarDecl *D) {
+  bool VisitVarDecl(const VarDecl *D) override {
     // Do not show hints for the aggregate in a structured binding,
     // but show hints for the individual bindings.
     if (auto *DD = dyn_cast<DecompositionDecl>(D)) {
@@ -661,11 +661,11 @@ public:
     }
 
     // Handle templates like `int foo(auto x)` with exactly one instantiation.
-    if (auto *PVD = llvm::dyn_cast<ParmVarDecl>(D)) {
+    if (const auto *PVD = llvm::dyn_cast<ParmVarDecl>(D)) {
       if (D->getIdentifier() && PVD->getType()->isDependentType() &&
           !getContainedAutoParamType(D->getTypeSourceInfo()->getTypeLoc())
                .isNull()) {
-        if (auto *IPVD = getOnlyParamInstantiation(PVD))
+        if (const auto *IPVD = getOnlyParamInstantiation(PVD))
           addTypeHint(D->getLocation(), IPVD->getType(), /*Prefix=*/": ");
       }
     }
@@ -673,11 +673,11 @@ public:
     return true;
   }
 
-  ParmVarDecl *getOnlyParamInstantiation(ParmVarDecl *D) {
+  const ParmVarDecl *getOnlyParamInstantiation(const ParmVarDecl *D) {
     auto *TemplateFunction = llvm::dyn_cast<FunctionDecl>(D->getDeclContext());
     if (!TemplateFunction)
       return nullptr;
-    auto *InstantiatedFunction = llvm::dyn_cast_or_null<FunctionDecl>(
+    const auto *InstantiatedFunction = llvm::dyn_cast_or_null<FunctionDecl>(
         getOnlyInstantiation(TemplateFunction));
     if (!InstantiatedFunction)
       return nullptr;
@@ -699,7 +699,7 @@ public:
     return InstantiatedFunction->getParamDecl(ParamIdx);
   }
 
-  bool VisitInitListExpr(InitListExpr *Syn) {
+  bool VisitInitListExpr(const InitListExpr *Syn) override {
     // We receive the syntactic form here (shouldVisitImplicitCode() is false).
     // This is the one we will ultimately attach designators to.
     // It may have subobject initializers inlined without braces. The *semantic*
@@ -1150,8 +1150,8 @@ private:
     return Range{HintStart, HintEnd};
   }
 
-  static bool isFunctionObjectCallExpr(CallExpr *E) noexcept {
-    if (auto *CallExpr = dyn_cast<CXXOperatorCallExpr>(E))
+  static bool isFunctionObjectCallExpr(const CallExpr *E) noexcept {
+    if (const auto *CallExpr = dyn_cast<CXXOperatorCallExpr>(E))
       return CallExpr->getOperator() == OverloadedOperatorKind::OO_Call;
     return false;
   }

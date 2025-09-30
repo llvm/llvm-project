@@ -8,7 +8,7 @@
 
 #include "UseTrailingReturnTypeCheck.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/FixIt.h"
@@ -45,13 +45,12 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 namespace {
-struct UnqualNameVisitor : public RecursiveASTVisitor<UnqualNameVisitor> {
-public:
-  UnqualNameVisitor(const FunctionDecl &F) : F(F) {}
+struct UnqualNameVisitor : ConstDynamicRecursiveASTVisitor {
+  UnqualNameVisitor(const FunctionDecl &F) : F(F) {
+    ShouldWalkTypesOfTypeLocs = false;
+  }
 
   bool Collision = false;
-
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
 
   bool visitUnqualName(StringRef UnqualName) {
     // Check for collisions with function arguments.
@@ -64,7 +63,7 @@ public:
     return false;
   }
 
-  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) override {
     if (TL.isNull())
       return true;
 
@@ -115,17 +114,18 @@ public:
       break;
     }
 
-    return RecursiveASTVisitor<UnqualNameVisitor>::TraverseTypeLoc(
-        TL, TraverseQualifier);
+    return ConstDynamicRecursiveASTVisitor::TraverseTypeLoc(TL,
+                                                            TraverseQualifier);
   }
 
   // Replace the base method in order to call our own
   // TraverseTypeLoc().
-  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc TL, bool TraverseQualifier) {
+  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc TL,
+                                bool TraverseQualifier) override {
     return TraverseTypeLoc(TL.getUnqualifiedLoc(), TraverseQualifier);
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *S) {
+  bool VisitDeclRefExpr(const DeclRefExpr *S) override {
     DeclarationName Name = S->getNameInfo().getName();
     return S->getQualifierLoc() || Name.isEmpty() || !Name.isIdentifier() ||
            !visitUnqualName(Name.getAsIdentifierInfo()->getName());

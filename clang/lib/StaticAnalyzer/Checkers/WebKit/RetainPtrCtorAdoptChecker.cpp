@@ -8,7 +8,7 @@
 
 #include "ASTUtils.h"
 #include "PtrTypesSemantics.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Analysis/RetainSummaryManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -45,64 +45,63 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
+    struct LocalVisitor : ConstDynamicRecursiveASTVisitor {
       const RetainPtrCtorAdoptChecker *Checker;
-      Decl *DeclWithIssue{nullptr};
+      const Decl *DeclWithIssue{nullptr};
 
-      using Base = RecursiveASTVisitor<LocalVisitor>;
+      using Base = ConstDynamicRecursiveASTVisitor;
 
       explicit LocalVisitor(const RetainPtrCtorAdoptChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
+        ShouldVisitTemplateInstantiations = true;
+        ShouldVisitImplicitCode = false;
       }
 
-      bool shouldVisitTemplateInstantiations() const { return true; }
-      bool shouldVisitImplicitCode() const { return false; }
-
-      bool TraverseDecl(Decl *D) {
+      bool TraverseDecl(const Decl *D) override {
         llvm::SaveAndRestore SavedDecl(DeclWithIssue);
         if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
           DeclWithIssue = D;
         return Base::TraverseDecl(D);
       }
 
-      bool TraverseClassTemplateDecl(ClassTemplateDecl *CTD) {
+      bool TraverseClassTemplateDecl(const ClassTemplateDecl *CTD) override {
         if (isRetainPtrOrOSPtr(safeGetName(CTD)))
           return true; // Skip the contents of RetainPtr.
         return Base::TraverseClassTemplateDecl(CTD);
       }
 
-      bool VisitTypedefDecl(TypedefDecl *TD) {
+      bool VisitTypedefDecl(const TypedefDecl *TD) override {
         Checker->RTC.visitTypedef(TD);
         return true;
       }
 
-      bool VisitCallExpr(const CallExpr *CE) {
+      bool VisitCallExpr(const CallExpr *CE) override {
         Checker->visitCallExpr(CE, DeclWithIssue);
         return true;
       }
 
-      bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
+      bool VisitCXXConstructExpr(const CXXConstructExpr *CE) override {
         Checker->visitConstructExpr(CE, DeclWithIssue);
         return true;
       }
 
-      bool VisitObjCMessageExpr(const ObjCMessageExpr *ObjCMsgExpr) {
+      bool VisitObjCMessageExpr(const ObjCMessageExpr *ObjCMsgExpr) override {
         Checker->visitObjCMessageExpr(ObjCMsgExpr, DeclWithIssue);
         return true;
       }
 
-      bool VisitReturnStmt(const ReturnStmt *RS) {
+      bool VisitReturnStmt(const ReturnStmt *RS) override {
         Checker->visitReturnStmt(RS, DeclWithIssue);
         return true;
       }
 
-      bool VisitVarDecl(const VarDecl *VD) {
+      bool VisitVarDecl(const VarDecl *VD) override {
         Checker->visitVarDecl(VD);
         return true;
       }
 
-      bool VisitBinaryOperator(const BinaryOperator *BO) {
+      bool VisitBinaryOperator(const BinaryOperator *BO) override {
         Checker->visitBinaryOperator(BO);
         return true;
       }
@@ -113,7 +112,7 @@ public:
         TUD->getASTContext(), true /* trackObjCAndCFObjects */,
         false /* trackOSObjects */);
     RTC.visitTranslationUnitDecl(TUD);
-    visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
+    visitor.TraverseDecl(TUD);
   }
 
   bool isAdoptFn(const Decl *FnDecl) const {
