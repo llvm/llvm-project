@@ -54,7 +54,7 @@ void OpenACCRecipeBuilderBase::makeAllocaCopy(mlir::Location loc,
     auto itr =
         cir::AllocaOp::create(builder, loc, itrPtrTy, itrTy, "itr", itrAlign);
     cir::ConstantOp constZero = builder.getConstInt(loc, itrTy, 0);
-    builder.CIRBaseBuilderTy::createStore(loc, constZero.getResult(), itr);
+    builder.CIRBaseBuilderTy::createStore(loc, constZero, itr);
     builder.createFor(
         loc,
         /*condBuilder=*/
@@ -64,26 +64,25 @@ void OpenACCRecipeBuilderBase::makeAllocaCopy(mlir::Location loc,
           // way we can just use this loop with a constant bounds instead of a
           // separate code path.
           if (!numEltsToCopy)
-            numEltsToCopy = builder.getConstInt(loc, itrTy, 1).getResult();
+            numEltsToCopy = builder.getConstInt(loc, itrTy, 1);
 
           auto loadCur = cir::LoadOp::create(builder, loc, {itr});
-          auto cmp = builder.createCompare(loc, cir::CmpOpKind::lt,
-                                           loadCur.getResult(), numEltsToCopy);
+          auto cmp = builder.createCompare(loc, cir::CmpOpKind::lt, loadCur,
+                                           numEltsToCopy);
           builder.createCondition(cmp);
         },
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           // destAlloca[itr] = srcAlloca[offsetPerSubArray * itr];
           auto loadCur = cir::LoadOp::create(builder, loc, {itr});
-          auto srcOffset =
-              builder.createMul(loc, offsetPerSubarray, loadCur.getResult());
+          auto srcOffset = builder.createMul(loc, offsetPerSubarray, loadCur);
 
           auto ptrToOffsetIntoSrc = cir::PtrStrideOp::create(
               builder, loc, copyType, srcAlloca, srcOffset);
 
           auto offsetIntoDecayDest = cir::PtrStrideOp::create(
               builder, loc, builder.getPointerTo(copyType), destAlloca,
-              loadCur.getResult());
+              loadCur);
 
           builder.CIRBaseBuilderTy::createStore(loc, ptrToOffsetIntoSrc,
                                                 offsetIntoDecayDest);
@@ -93,10 +92,9 @@ void OpenACCRecipeBuilderBase::makeAllocaCopy(mlir::Location loc,
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           // Simple increment of the iterator.
           auto load = cir::LoadOp::create(builder, loc, {itr});
-          auto inc =
-              cir::UnaryOp::create(builder, loc, load.getType(),
-                                   cir::UnaryOpKind::Inc, load.getResult());
-          builder.CIRBaseBuilderTy::createStore(loc, inc.getResult(), itr);
+          auto inc = cir::UnaryOp::create(builder, loc, load.getType(),
+                                          cir::UnaryOpKind::Inc, load);
+          builder.CIRBaseBuilderTy::createStore(loc, inc, itr);
           builder.createYield(loc);
         });
   };
@@ -212,9 +210,9 @@ mlir::Value OpenACCRecipeBuilderBase::makeBoundsAlloca(
       // a zero-offset stride on the last alloca to decay it down an array
       // level.
       cir::ConstantOp constZero = builder.getConstInt(loc, itrTy, 0);
-      lastAlloca = builder.getArrayElement(
-          loc, loc, lastAlloca, cgf.convertType(resultType),
-          constZero.getResult(), /*shouldDecay=*/true);
+      lastAlloca = builder.getArrayElement(loc, loc, lastAlloca,
+                                           cgf.convertType(resultType),
+                                           constZero, /*shouldDecay=*/true);
     }
 
     cumulativeElts = eltsToAlloca;
