@@ -118,3 +118,11 @@ define void @call_things() {
   ptr @j
 ], section "llvm.metadata"
 
+define internal i32 @constexpr_self_user() addrspace(1) {
+; CHECK-LABEL: define internal fastcc i32 @constexpr_self_user() addrspace(1) {
+; CHECK-NEXT:    [[OBJSIZE:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr addrspacecast (ptr addrspace(1) @constexpr_self_user to ptr), i1 false, i1 false, i1 false)
+; CHECK-NEXT:    ret i32 [[OBJSIZE]]
+;
+  %objsize = call i32 @llvm.objectsize.i32.p0(ptr addrspacecast (ptr addrspace(1) @constexpr_self_user to ptr), i1 false, i1 false, i1 false)
+  ret i32 %objsize
+}

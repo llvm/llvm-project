@@ -1680,7 +1680,8 @@ processGlobal(GlobalValue &GV,
 /// FastCC.
 static void ChangeCalleesToFastCall(Function *F) {
   for (User *U : F->users())
-    cast<CallBase>(U)->setCallingConv(CallingConv::Fast);
+    if (auto *Call = dyn_cast<CallBase>(U))
+      Call->setCallingConv(CallingConv::Fast);
 }
 
 static AttributeList StripAttr(LLVMContext &C, AttributeList Attrs,
@@ -1779,7 +1780,8 @@ isValidCandidateForColdCC(Function &F,
 
 static void changeCallSitesToColdCC(Function *F) {
   for (User *U : F->users())
-    cast<CallBase>(U)->setCallingConv(CallingConv::Cold);
+    if (auto *Call = dyn_cast<CallBase>(U))
+      Call->setCallingConv(CallingConv::Cold);
 }
 
 // This function iterates over all the call instructions in the input Function
