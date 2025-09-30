@@ -1097,7 +1097,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         setRegScore(FIRST_LDS_VGPR, T, CurrScore);
     }
 
-    if (SIInstrInfo::asynchronouslyWritesSCC(Inst.getOpcode())) {
+    if (SIInstrInfo::isSBarrierSCCWrite(Inst.getOpcode())) {
       setRegScore(SCC, T, CurrScore);
       PendingSCCWrite = &Inst;
     }
@@ -2069,7 +2069,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // TODO: Remove this work-around, enable the assert for Bug 457939
   //       after fixing the scheduler. Also, the Shader Compiler code is
   //       independent of target.
-  if (SIInstrInfo::readsVCCZ(MI) && ST->hasReadVCCZBug() &&
+  if (SIInstrInfo::isCBranchVCCZRead(MI) && ST->hasReadVCCZBug() &&
       ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
     Wait.DsCnt = 0;
   }
@@ -2311,7 +2311,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_POS_ACCESS, Inst);
     else
       ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_GPR_LOCK, Inst);
-  } else if (SIInstrInfo::asynchronouslyWritesSCC(Inst.getOpcode())) {
+  } else if (SIInstrInfo::isSBarrierSCCWrite(Inst.getOpcode())) {
     ScoreBrackets->updateByEvent(TII, TRI, MRI, SCC_WRITE, Inst);
   } else {
     switch (Inst.getOpcode()) {
@@ -2489,7 +2489,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     OldWaitcntInstr = nullptr;
 
     // Restore vccz if it's not known to be correct already.
-    bool RestoreVCCZ = !VCCZCorrect && SIInstrInfo::readsVCCZ(Inst);
+    bool RestoreVCCZ = !VCCZCorrect && SIInstrInfo::isCBranchVCCZRead(Inst);
 
     // Don't examine operands unless we need to track vccz correctness.
     if (ST->hasReadVCCZBug() || !ST->partialVCCWritesUpdateVCCZ()) {

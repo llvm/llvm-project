@@ -754,13 +754,13 @@ public:
     return isLDSDMA(MI) && MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
   }
 
-  static bool asynchronouslyWritesSCC(unsigned Opcode) {
+  static bool isSBarrierSCCWrite(unsigned Opcode) {
     return Opcode == AMDGPU::S_BARRIER_LEAVE ||
            Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM ||
            Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0;
   }
 
-  static bool readsVCCZ(const MachineInstr &MI) {
+  static bool isCBranchVCCZRead(const MachineInstr &MI) {
     unsigned Opc = MI.getOpcode();
     return (Opc == AMDGPU::S_CBRANCH_VCCNZ || Opc == AMDGPU::S_CBRANCH_VCCZ) &&
            !MI.getOperand(1).isUndef();
