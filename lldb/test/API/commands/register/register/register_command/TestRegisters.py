@@ -41,6 +41,7 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
+    @skipIfOutOfTreeDebugserver
     @expectedFailureAll(oslist=["freebsd", "netbsd"], bugnumber="llvm.org/pr48371")
     def test_register_commands(self):
         """Test commands related to registers, in particular vector registers."""
