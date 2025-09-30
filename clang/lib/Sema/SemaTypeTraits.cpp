@@ -1830,10 +1830,10 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
 
     return Self.HLSL().IsScalarizedLayoutCompatible(LhsT, RhsT);
   }
-  case BTT_LtSynthesisesFromSpaceship:
-  case BTT_LeSynthesisesFromSpaceship:
-  case BTT_GtSynthesisesFromSpaceship:
-  case BTT_GeSynthesisesFromSpaceship: {
+  case BTT_LtSynthesizesFromSpaceship:
+  case BTT_LeSynthesizesFromSpaceship:
+  case BTT_GtSynthesizesFromSpaceship:
+  case BTT_GeSynthesizesFromSpaceship: {
     EnterExpressionEvaluationContext UnevaluatedContext(
         Self, Sema::ExpressionEvaluationContext::Unevaluated);
     Sema::SFINAETrap SFINAE(Self, /*ForValidityCheck=*/true);
@@ -1852,13 +1852,13 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
 
     auto OpKind = [&] {
       switch (BTT) {
-      case BTT_LtSynthesisesFromSpaceship:
+      case BTT_LtSynthesizesFromSpaceship:
         return BinaryOperatorKind::BO_LT;
-      case BTT_LeSynthesisesFromSpaceship:
+      case BTT_LeSynthesizesFromSpaceship:
         return BinaryOperatorKind::BO_LE;
-      case BTT_GtSynthesisesFromSpaceship:
+      case BTT_GtSynthesizesFromSpaceship:
         return BinaryOperatorKind::BO_GT;
-      case BTT_GeSynthesisesFromSpaceship:
+      case BTT_GeSynthesizesFromSpaceship:
         return BinaryOperatorKind::BO_GE;
       default:
         llvm_unreachable("Trying to Synthesize non-comparison operator?");
