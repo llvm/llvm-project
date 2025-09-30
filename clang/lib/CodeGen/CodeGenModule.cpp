@@ -1556,7 +1556,7 @@ void CodeGenModule::Release() {
   EmitBackendOptionsMetadata(getCodeGenOpts());
 
   // If there is device offloading code embed it in the host now.
-  EmbedObject(&getModule(), CodeGenOpts, getDiags());
+  EmbedObject(&getModule(), CodeGenOpts, *getFileSystem(), getDiags());
 
   // Set visibility from DLL storage class
   // We do this at the end of LLVM IR generation; after any operation
@@ -8172,12 +8172,17 @@ void CodeGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
 
     // Get the UniqueID for the file containing the decl.
     llvm::sys::fs::UniqueID ID;
-    if (llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID)) {
+    auto Status = FS->status(PLoc.getFilename());
+    if (!Status) {
       PLoc = SM.getPresumedLoc(D->getLocation(), /*UseLineDirectives=*/false);
       assert(PLoc.isValid() && "Source location is expected to be valid.");
-      if (auto EC = llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID))
-        SM.getDiagnostics().Report(diag::err_cannot_open_file)
-            << PLoc.getFilename() << EC.message();
+      Status = FS->status(PLoc.getFilename());
+    }
+    if (!Status) {
+      SM.getDiagnostics().Report(diag::err_cannot_open_file)
+          << PLoc.getFilename() << Status.getError().message();
+    } else {
+      ID = Status->getUniqueID();
     }
     OS << llvm::format("%x", ID.getFile()) << llvm::format("%x", ID.getDevice())
        << "_" << llvm::utohexstr(Result.low(), /*LowerCase=*/true, /*Width=*/8);
