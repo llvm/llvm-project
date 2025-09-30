@@ -13,8 +13,8 @@
 
 // clang-format off
 
-// REQUIRES: linux, objcopy-available
-// UNSUPPORTED: target={{.+-gnueabi.*}}
+// REQUIRES: target={{x86_64-.+-linux-gnu}}
+// REQUIRES: objcopy-available
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan
