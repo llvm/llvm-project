@@ -117,6 +117,21 @@ define <vscale x 4 x float> @forward_masked_load_scalable(ptr %0, ptr %1, <vscal
   ret <vscale x 4 x float> %load2
 }
 
+define <vscale x 4 x float> @forward_masked_load_scalable_type_mismatch(ptr %0, ptr %1, <vscale x 4 x float> %passthrough) {
+; CHECK-LABEL: @forward_masked_load_scalable_type_mismatch(
+; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 4)
+; CHECK-NEXT:    [[LOAD1:%.*]] = call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr [[TMP0:%.*]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x double> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> [[LOAD1]], ptr [[TMP1:%.*]], i32 1, <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    [[LOAD2:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[TMP1]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> [[PASSTHROUGH:%.*]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[LOAD2]]
+;
+  %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 4)
+  %load1 = call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr %0, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x double> zeroinitializer)
+  call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> %load1, ptr %1, i32 1, <vscale x 4 x i1> %mask)
+  %load2 = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr %1, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x float> %passthrough)
+  ret <vscale x 4 x float> %load2
+}
+
 define <vscale x 4 x float> @generate_sel_with_passthrough(ptr %0, ptr %1, <vscale x 4 x float> %passthrough) {
 ; CHECK-LABEL: @generate_sel_with_passthrough(
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 4)

@@ -2301,7 +2301,8 @@ bool GVNPass::processMaskedLoad(IntrinsicInst *I) {
   Value *Passthrough = I->getOperand(3);
   Value *StoreVal;
   if (!match(DepInst, m_MaskedStore(m_Value(StoreVal), m_Value(), m_Value(),
-                                    m_Specific(Mask))))
+                                    m_Specific(Mask))) ||
+      StoreVal->getType() != I->getType())
     return false;
 
   // Remove the load but generate a select for the passthrough
