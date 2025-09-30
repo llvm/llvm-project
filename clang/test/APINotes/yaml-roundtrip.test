@@ -1,30 +1,23 @@
 RUN: apinotes-test %S/Inputs/Frameworks/Simple.framework/Headers/Simple.apinotes > %t.result
-RUN: not diff -b %S/Inputs/Frameworks/Simple.framework/Headers/Simple.apinotes %t.result | FileCheck %s
-
-Avoid Windows as the diff output differs due to line-endings and different diff
-implementations.
-UNSUPPORTED: system-windows
+RUN: not diff -u %S/Inputs/Frameworks/Simple.framework/Headers/Simple.apinotes %t.result | \
+RUN:   tail -n +5 | \
+RUN:   FileCheck %s --implicit-check-not="{{^\+}}" --implicit-check-not="{{^\-}}"
 
 We expect only the nullability to be different as it is canonicalized during the
 roudtrip.
 
-CHECK:      7c8
-CHECK-NEXT: <         Nullability:     N
-CHECK-NEXT: ---
-CHECK-NEXT: >         Nullability:     Nonnull
-CHECK-NEXT: 13c14
-CHECK-NEXT: <         Nullability:     O
-CHECK-NEXT: ---
-CHECK-NEXT: >         Nullability:     Optional
-CHECK-NEXT: 19c20
-CHECK-NEXT: <         Nullability:     U
-CHECK-NEXT: ---
-CHECK-NEXT: >         Nullability:     Unspecified
-CHECK-NEXT: 25c26
-CHECK-NEXT: <         Nullability:     S
-CHECK-NEXT: ---
-CHECK-NEXT: >         Nullability:     Unspecified
-CHECK-NEXT: 28c29
-CHECK-NEXT: <         Nullability:     Scalar
-CHECK-NEXT: ---
-CHECK-NEXT: >         Nullability:     Unspecified
+CHECK:      -        Nullability:     N
+CHECK-NEXT: +        Nullability:     Nonnull
+CHECK:      -        Nullability:     O
+CHECK-NEXT: +        Nullability:     Optional
+CHECK:      -        Nullability:     U
+CHECK-NEXT: +        Nullability:     Unspecified
+CHECK:      -        Nullability:     S
+CHECK-NEXT: +        Nullability:     Unspecified
+CHECK:      -        Nullability:     Scalar
+CHECK-NEXT: +        Nullability:     Unspecified
+
+# The roundtrip will add document markers. It is hard to remove the last line of the
+# file in a cross-platform manner, so just assert it here to avoid a test failure due
+# to the implicit check not.
+# CHECK: +

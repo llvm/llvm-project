@@ -186,10 +186,8 @@ public:
       if (!CVisited.insert(CII).second)
         continue;
 
-      // Allow same-BB non-lookthrough users when the def is a PHI:
-      // loop headers frequently consume the carried value in the header block
-      // (e.g. byte-wise vector binops). We *do* want to coerce across the
-      // backedge in that common case to enable packed i32 + SDWA lowering.
+      // Same-BB filter must look at the *user*; and allow non-lookthrough
+      // users when the def is a PHI (loop-header pattern).
       if (CII->getParent() == II->getParent() && !IsLookThru(CII) &&
           !isa<PHINode>(II))
         continue;

@@ -95,10 +95,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasFMA = false;
   bool HasF16C = false;
   bool HasAVX10_1 = false;
-  bool HasAVX10_1_512 = false;
   bool HasAVX10_2 = false;
-  bool HasAVX10_2_512 = false;
-  bool HasEVEX512 = false;
   bool HasAVX512CD = false;
   bool HasAVX512VPOPCNTDQ = false;
   bool HasAVX512VNNI = false;
@@ -649,6 +646,7 @@ public:
       : X86_32TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
     this->WIntType = TargetInfo::UnsignedInt;
+    this->UseMicrosoftManglingForC = true;
     DoubleAlign = LongLongAlign = 64;
     resetDataLayout("e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-"
                     "i128:128-f80:32-n8:16:32-a:0:32-S32",
@@ -986,6 +984,7 @@ public:
       : X86_64TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
     this->WIntType = TargetInfo::UnsignedInt;
+    this->UseMicrosoftManglingForC = true;
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -998,6 +997,29 @@ public:
     DefineStd(Builder, "unix", Opts);
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
+  }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+    case CC_X86StdCall:
+    case CC_X86ThisCall:
+    case CC_X86FastCall:
+      return CCCR_Ignore;
+    case CC_C:
+    case CC_X86VectorCall:
+    case CC_IntelOclBicc:
+    case CC_PreserveMost:
+    case CC_PreserveAll:
+    case CC_PreserveNone:
+    case CC_X86_64SysV:
+    case CC_Swift:
+    case CC_SwiftAsync:
+    case CC_X86RegCall:
+    case CC_DeviceKernel:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {

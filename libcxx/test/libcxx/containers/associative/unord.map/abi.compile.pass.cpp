@@ -209,9 +209,9 @@ static_assert(TEST_ALIGNOF(unordered_map_alloc<char, final_small_iter_allocator<
               "");
 
 static_assert(sizeof(std::unordered_map<int, int, FinalHash, UnalignedEqualTo>) == 24, "");
-static_assert(sizeof(std::unordered_map<int, int, FinalHash, FinalEqualTo>) == 24, "");
-static_assert(sizeof(std::unordered_map<int, int, NonEmptyHash, FinalEqualTo>) == 28, "");
-static_assert(sizeof(std::unordered_map<int, int, NonEmptyHash, NonEmptyEqualTo>) == 32, "");
+static_assert(sizeof(std::unordered_map<int, int, FinalHash, FinalEqualTo>) == 28, "");
+static_assert(sizeof(std::unordered_map<int, int, NonEmptyHash, FinalEqualTo>) == 32, "");
+static_assert(sizeof(std::unordered_map<int, int, NonEmptyHash, NonEmptyEqualTo>) == 36, "");
 
 static_assert(TEST_ALIGNOF(std::unordered_map<int, int, FinalHash, UnalignedEqualTo>) == 4, "");
 static_assert(TEST_ALIGNOF(std::unordered_map<int, int, FinalHash, FinalEqualTo>) == 4, "");

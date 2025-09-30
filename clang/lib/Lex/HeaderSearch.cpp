@@ -672,9 +672,8 @@ OptionalFileEntryRef DirectoryLookup::DoFrameworkLookup(
     if (getDirCharacteristic() == SrcMgr::C_User) {
       SmallString<1024> SystemFrameworkMarker(FrameworkName);
       SystemFrameworkMarker += ".system_framework";
-      if (llvm::sys::fs::exists(SystemFrameworkMarker)) {
+      if (FileMgr.getOptionalFileRef(SystemFrameworkMarker))
         CacheEntry.IsUserSpecifiedSystemFramework = true;
-      }
     }
   }
 
@@ -2182,4 +2181,11 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
     Filename = IncludeSpelling;
   }
   return path::convert_to_slash(Filename);
+}
+
+void clang::normalizeModuleCachePath(FileManager &FileMgr, StringRef Path,
+                                     SmallVectorImpl<char> &NormalizedPath) {
+  NormalizedPath.assign(Path.begin(), Path.end());
+  FileMgr.makeAbsolutePath(NormalizedPath);
+  llvm::sys::path::remove_dots(NormalizedPath);
 }
