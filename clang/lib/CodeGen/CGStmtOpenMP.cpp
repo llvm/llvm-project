@@ -201,6 +201,24 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
     } else {
       llvm_unreachable("Unknown loop-based directive kind.");
     }
+    doEmitPreinits(PreInits);
+    PreCondVars.restore(CGF);
+  }
+
+  void
+  emitPreInitStmt(CodeGenFunction &CGF,
+                  const OMPCanonicalLoopSequenceTransformationDirective &S) {
+    const Stmt *PreInits;
+    if (const auto *Fuse = dyn_cast<OMPFuseDirective>(&S)) {
+      PreInits = Fuse->getPreInits();
+    } else {
+      llvm_unreachable(
+          "Unknown canonical loop sequence transform directive kind.");
+    }
+    doEmitPreinits(PreInits);
+  }
+
+  void doEmitPreinits(const Stmt *PreInits) {
     if (PreInits) {
       // CompoundStmts and DeclStmts are used as lists of PreInit statements and
       // declarations. Since declarations must be visible in the the following
@@ -222,11 +240,15 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
         CGF.EmitStmt(S);
       }
     }
-    PreCondVars.restore(CGF);
   }
 
 public:
   OMPLoopScope(CodeGenFunction &CGF, const OMPLoopBasedDirective &S)
+      : CodeGenFunction::RunCleanupsScope(CGF) {
+    emitPreInitStmt(CGF, S);
+  }
+  OMPLoopScope(CodeGenFunction &CGF,
+               const OMPCanonicalLoopSequenceTransformationDirective &S)
       : CodeGenFunction::RunCleanupsScope(CGF) {
     emitPreInitStmt(CGF, S);
   }
@@ -1929,6 +1951,15 @@ public:
       CGSI = new CodeGenFunction::CGCapturedStmtInfo(CR_OpenMP);
       CapInfoRAII = new CodeGenFunction::CGCapturedStmtRAII(CGF, CGSI);
     }
+    if (const auto *Dir =
+            dyn_cast<OMPCanonicalLoopSequenceTransformationDirective>(S)) {
+      // For simplicity we reuse the loop scope similarly to what we do with
+      // OMPCanonicalLoopNestTransformationDirective do by being a subclass
+      // of OMPLoopBasedDirective.
+      Scope = new OMPLoopScope(CGF, *Dir);
+      CGSI = new CodeGenFunction::CGCapturedStmtInfo(CR_OpenMP);
+      CapInfoRAII = new CodeGenFunction::CGCapturedStmtRAII(CGF, CGSI);
+    }
   }
   ~OMPTransformDirectiveScopeRAII() {
     if (!Scope)
@@ -1956,8 +1987,7 @@ static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
     return;
   }
   if (SimplifiedS == NextLoop) {
-    if (auto *Dir =
-            dyn_cast<OMPCanonicalLoopNestTransformationDirective>(SimplifiedS))
+    if (auto *Dir = dyn_cast<OMPLoopTransformationDirective>(SimplifiedS))
       SimplifiedS = Dir->getTransformedStmt();
     if (const auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(SimplifiedS))
       SimplifiedS = CanonLoop->getLoopStmt();
@@ -2949,6 +2979,12 @@ void CodeGenFunction::EmitOMPInterchangeDirective(
     const OMPInterchangeDirective &S) {
   // Emit the de-sugared statement.
   OMPTransformDirectiveScopeRAII InterchangeScope(*this, &S);
+  EmitStmt(S.getTransformedStmt());
+}
+
+void CodeGenFunction::EmitOMPFuseDirective(const OMPFuseDirective &S) {
+  // Emit the de-sugared statement
+  OMPTransformDirectiveScopeRAII FuseScope(*this, &S);
   EmitStmt(S.getTransformedStmt());
 }
 

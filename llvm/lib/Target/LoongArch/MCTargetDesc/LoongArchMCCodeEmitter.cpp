@@ -162,7 +162,8 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
       FixupKind = LoongArch::fixup_loongarch_b26;
       break;
     case ELF::R_LARCH_MARK_LA:
-      // The R_LARCH_MARCH_LA is used for LoongArch edk2 builds.
+      // Match gas behavior: generate `R_LARCH_MARK_LA` relocation when using
+      // `la.abs`.
       Fixups.push_back(
           MCFixup::create(0, MCConstantExpr::create(0, Ctx),
                           FirstLiteralRelocationKind + ELF::R_LARCH_MARK_LA));
