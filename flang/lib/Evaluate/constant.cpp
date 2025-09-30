@@ -9,6 +9,7 @@
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include <string>
 
@@ -392,8 +393,8 @@ std::size_t Constant<SomeDerived>::CopyFrom(const Constant<SomeDerived> &source,
 bool ComponentCompare::operator()(SymbolRef x, SymbolRef y) const {
   if (&x->owner() != &y->owner()) {
     // Not components of the same derived type; put ancestors' components first.
-    if (auto xDepth{DerivedTypeDepth(x->owner())}) {
-      if (auto yDepth{DerivedTypeDepth(y->owner())}) {
+    if (auto xDepth{CountDerivedTypeAncestors(x->owner())}) {
+      if (auto yDepth{CountDerivedTypeAncestors(y->owner())}) {
         if (*xDepth != *yDepth) {
           return *xDepth < *yDepth;
         }
