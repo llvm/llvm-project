@@ -21,7 +21,7 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
-                         Address declPtr) {
+                         cir::GlobalOp globalOp) {
   assert((varDecl->hasGlobalStorage() ||
           (varDecl->hasLocalStorage() &&
            cgf.getContext().getLangOpts().OpenCLCPlusPlus)) &&
@@ -29,30 +29,47 @@ static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
   assert(!varDecl->getType()->isReferenceType() &&
          "Should not call emitDeclInit on a reference!");
 
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  // Set up the ctor region.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  mlir::Block *block = builder.createBlock(&globalOp.getCtorRegion());
+  CIRGenFunction::LexicalScope lexScope{cgf, globalOp.getLoc(),
+                                        builder.getInsertionBlock()};
+  lexScope.setAsGlobalInit();
+  builder.setInsertionPointToStart(block);
+
+  Address declAddr(cgf.cgm.getAddrOfGlobalVar(varDecl),
+                   cgf.cgm.getASTContext().getDeclAlign(varDecl));
+
   QualType type = varDecl->getType();
-  LValue lv = cgf.makeAddrLValue(declPtr, type);
+  LValue lv = cgf.makeAddrLValue(declAddr, type);
 
   const Expr *init = varDecl->getInit();
   switch (CIRGenFunction::getEvaluationKind(type)) {
   case cir::TEK_Scalar:
     assert(!cir::MissingFeatures::objCGC());
     cgf.emitScalarInit(init, cgf.getLoc(varDecl->getLocation()), lv, false);
-    return;
+    break;
   case cir::TEK_Complex:
     cgf.cgm.errorNYI(varDecl->getSourceRange(), "complex global initializer");
-    return;
+    break;
   case cir::TEK_Aggregate:
     assert(!cir::MissingFeatures::aggValueSlotGC());
     cgf.emitAggExpr(init,
                     AggValueSlot::forLValue(lv, AggValueSlot::IsDestructed,
                                             AggValueSlot::IsNotAliased,
                                             AggValueSlot::DoesNotOverlap));
-    return;
+    break;
   }
-  llvm_unreachable("bad evaluation kind");
+
+  // Finish the ctor region.
+  builder.setInsertionPointToEnd(block);
+  cir::YieldOp::create(builder, globalOp.getLoc());
 }
 
-static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd) {
+static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
+                            cir::GlobalOp addr) {
   // Honor __attribute__((no_destroy)) and bail instead of attempting
   // to emit a reference to a possibly nonexistent destructor, which
   // in turn can cause a crash. This will result in a global constructor
@@ -114,7 +131,7 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
   QualType ty = varDecl->getType();
 
   // TODO: handle address space
-  // The address space of a static local variable (DeclPtr) may be different
+  // The address space of a static local variable (addr) may be different
   // from the address space of the "this" argument of the constructor. In that
   // case, we need an addrspacecast before calling the constructor.
   //
@@ -148,43 +165,13 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
     bool needsDtor = varDecl->needsDestruction(getASTContext()) ==
                      QualType::DK_cxx_destructor;
     // PerformInit, constant store invariant / destroy handled below.
-    if (performInit) {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      auto *block = builder.createBlock(&addr.getCtorRegion());
-      CIRGenFunction::LexicalScope lexScope{*curCGF, addr.getLoc(),
-                                            builder.getInsertionBlock()};
-      lexScope.setAsGlobalInit();
+    if (performInit)
+      emitDeclInit(cgf, varDecl, addr);
 
-      builder.setInsertionPointToStart(block);
-      Address declAddr(getAddrOfGlobalVar(varDecl),
-                       getASTContext().getDeclAlign(varDecl));
-      emitDeclInit(cgf, varDecl, declAddr);
-      builder.setInsertionPointToEnd(block);
-      builder.create<cir::YieldOp>(addr->getLoc());
-    }
-
-    if (varDecl->getType().isConstantStorage(getASTContext(), true,
-                                             !needsDtor)) {
+    if (varDecl->getType().isConstantStorage(getASTContext(), true, !needsDtor))
       errorNYI(varDecl->getSourceRange(), "global with constant storage");
-    } else {
-      // If not constant storage we'll emit this regardless of NeedsDtor value.
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      auto *block = builder.createBlock(&addr.getDtorRegion());
-      CIRGenFunction::LexicalScope lexScope{*curCGF, addr.getLoc(),
-                                            builder.getInsertionBlock()};
-      lexScope.setAsGlobalInit();
-
-      builder.setInsertionPointToStart(block);
-      emitDeclDestroy(cgf, varDecl);
-      builder.setInsertionPointToEnd(block);
-      if (block->empty()) {
-        block->erase();
-        // Don't confuse lexical cleanup.
-        builder.clearInsertionPoint();
-      } else {
-        builder.create<cir::YieldOp>(addr->getLoc());
-      }
-    }
+    else
+      emitDeclDestroy(cgf, varDecl, addr);
     return;
   }
 
