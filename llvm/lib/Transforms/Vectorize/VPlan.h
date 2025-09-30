@@ -3041,7 +3041,7 @@ public:
   }
 
   ~VPExpressionRecipe() override {
-    SmallSet<VPSingleDefRecipe *, 4> ExpressionRecipesSeen;
+    SmallPtrSet<VPSingleDefRecipe *, 4> ExpressionRecipesSeen;
     for (auto *R : reverse(ExpressionRecipes)) {
       if (ExpressionRecipesSeen.insert(R).second)
         delete R;

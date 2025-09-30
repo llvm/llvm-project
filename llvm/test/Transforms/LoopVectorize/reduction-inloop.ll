@@ -3351,6 +3351,130 @@ for.end:                                          ; preds = %for.body, %entry
   ret i32 %x.0.lcssa
 }
 
+; Test that bundling recipes that share an operand into an expression works.
+; In this case the two extends are the recipes that share an operand.
+define i64 @reduction_expression_same_operands(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
+; CHECK-LABEL: @reduction_expression_same_operands(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -4
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[INDEX]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[X:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i16> [[WIDE_LOAD]] to <4 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i16> [[WIDE_LOAD]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <4 x i64> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP4]])
+; CHECK-NEXT:    [[TMP6]] = add i64 [[VEC_PHI]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP6]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i64 [ [[RDX_NEXT:%.*]], [[LOOP]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = sext i32 [[IV]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[TMP8]]
+; CHECK-NEXT:    [[LOAD0:%.*]] = load i16, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CONV0:%.*]] = sext i16 [[LOAD0]] to i64
+; CHECK-NEXT:    [[CONV1:%.*]] = sext i16 [[LOAD0]] to i64
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV0]], [[CONV1]]
+; CHECK-NEXT:    [[RDX_NEXT]] = add nsw i64 [[RDX]], [[MUL]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP34:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i64 [ [[RDX_NEXT]], [[LOOP]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[R_0_LCSSA]]
+;
+; CHECK-INTERLEAVED-LABEL: @reduction_expression_same_operands(
+; CHECK-INTERLEAVED-NEXT:  entry:
+; CHECK-INTERLEAVED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], 8
+; CHECK-INTERLEAVED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-INTERLEAVED:       vector.ph:
+; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -8
+; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-INTERLEAVED:       vector.body:
+; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = sext i32 [[INDEX]] to i64
+; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[X:%.*]], i64 [[TMP0]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 8
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP1]], align 4
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP2]], align 4
+; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = sext <4 x i16> [[WIDE_LOAD]] to <4 x i64>
+; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = sext <4 x i16> [[WIDE_LOAD]] to <4 x i64>
+; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = mul nsw <4 x i64> [[TMP3]], [[TMP4]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP5]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP7]] = add i64 [[VEC_PHI]], [[TMP6]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = sext <4 x i16> [[WIDE_LOAD2]] to <4 x i64>
+; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = sext <4 x i16> [[WIDE_LOAD2]] to <4 x i64>
+; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = mul nsw <4 x i64> [[TMP8]], [[TMP9]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP10]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP12]] = add i64 [[VEC_PHI1]], [[TMP11]]
+; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
+; CHECK-INTERLEAVED:       middle.block:
+; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = add i64 [[TMP12]], [[TMP7]]
+; CHECK-INTERLEAVED-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-INTERLEAVED:       scalar.ph:
+; CHECK-INTERLEAVED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-INTERLEAVED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; CHECK-INTERLEAVED-NEXT:    br label [[LOOP:%.*]]
+; CHECK-INTERLEAVED:       loop:
+; CHECK-INTERLEAVED-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-INTERLEAVED-NEXT:    [[RDX:%.*]] = phi i64 [ [[RDX_NEXT:%.*]], [[LOOP]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = sext i32 [[IV]] to i64
+; CHECK-INTERLEAVED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[TMP14]]
+; CHECK-INTERLEAVED-NEXT:    [[LOAD0:%.*]] = load i16, ptr [[ARRAYIDX]], align 4
+; CHECK-INTERLEAVED-NEXT:    [[CONV0:%.*]] = sext i16 [[LOAD0]] to i64
+; CHECK-INTERLEAVED-NEXT:    [[CONV1:%.*]] = sext i16 [[LOAD0]] to i64
+; CHECK-INTERLEAVED-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV0]], [[CONV1]]
+; CHECK-INTERLEAVED-NEXT:    [[RDX_NEXT]] = add nsw i64 [[RDX]], [[MUL]]
+; CHECK-INTERLEAVED-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-INTERLEAVED-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[EXITCOND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP34:![0-9]+]]
+; CHECK-INTERLEAVED:       exit:
+; CHECK-INTERLEAVED-NEXT:    [[R_0_LCSSA:%.*]] = phi i64 [ [[RDX_NEXT]], [[LOOP]] ], [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ]
+; CHECK-INTERLEAVED-NEXT:    ret i64 [[R_0_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %rdx = phi i64 [ %rdx.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i16, ptr %x, i32 %iv
+  %load0 = load i16, ptr %arrayidx, align 4
+  %conv0 = sext i16 %load0 to i32
+  %conv1 = sext i16 %load0 to i32
+  %mul = mul nsw i32 %conv0, %conv1
+  %conv = sext i32 %mul to i64
+  %rdx.next = add nsw i64 %rdx, %conv
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %r.0.lcssa = phi i64 [ %rdx.next, %loop ]
+  ret i64 %r.0.lcssa
+}
+
 declare float @llvm.fmuladd.f32(float, float, float)
 
 !6 = distinct !{!6, !7, !8}

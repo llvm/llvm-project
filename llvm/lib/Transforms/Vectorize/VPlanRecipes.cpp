@@ -2795,22 +2795,19 @@ VPExpressionRecipe::VPExpressionRecipe(
   // the expression. The original operands are added as operands of the
   // VPExpressionRecipe itself.
 
-  SmallMapVector<VPValue *, VPValue *, 4> OperandPlaceholders;
   for (auto *R : ExpressionRecipes) {
     for (const auto &[Idx, Op] : enumerate(R->operands())) {
       auto *Def = Op->getDefiningRecipe();
       if (Def && ExpressionRecipesAsSetOfUsers.contains(Def))
         continue;
       addOperand(Op);
-      VPValue *Tmp = new VPValue();
-      OperandPlaceholders[Op] = Tmp;
-      LiveInPlaceholders.push_back(Tmp);
+      LiveInPlaceholders.push_back(new VPValue());
     }
   }
 
   for (auto *R : ExpressionRecipes)
-    for (auto &Entry : OperandPlaceholders)
-      R->replaceUsesOfWith(Entry.first, Entry.second);
+    for (auto const &[LiveIn, Tmp] : zip(operands(), LiveInPlaceholders))
+      R->replaceUsesOfWith(LiveIn, Tmp);
 }
 
 void VPExpressionRecipe::decompose() {
