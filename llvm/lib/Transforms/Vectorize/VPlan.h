@@ -3033,7 +3033,7 @@ public:
     assert(Red->getRecurrenceKind() == RecurKind::Add &&
            "Expected an add reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
-    auto *SubConst = dyn_cast<ConstantInt>(getOperand(2)->getLiveInIRValue());
+    [[maybe_unused]] auto *SubConst = dyn_cast<ConstantInt>(getOperand(2)->getLiveInIRValue());
     assert(SubConst && SubConst->getValue() == 0 &&
            Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
   }
