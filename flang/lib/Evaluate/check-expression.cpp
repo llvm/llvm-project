@@ -1493,6 +1493,25 @@ public:
     return !actualTreatAsContiguous && dummyNeedsContiguity;
   }
 
+  bool HavePolymorphicDifferences() const {
+    // These cases require temporary of non-polymorphic type. (For example,
+    // the actual argument could be polymorphic array of child type,
+    // while the dummy argument could be non-polymorphic array of parent
+    // type.)
+    if (dummyObj_.ignoreTKR.test(common::IgnoreTKR::Type)) {
+      return false;
+    }
+    auto actualType{characteristics::TypeAndShape::Characterize(actual_, fc_)};
+    bool actualIsPolymorphic{
+        actualType && actualType->type().IsPolymorphic()};
+    if (actualIsPolymorphic && !dummyObj_.IsPassedByDescriptor(/*isBindC*/false)) {
+      // Not passing a descriptor, so will need to make a copy of the data
+      // with a proper type.
+      return true;
+    }
+    return false;
+  }
+
   bool HaveArrayOrAssumedRankArgs() const {
     bool dummyTreatAsArray{dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank)};
     return IsArrayOrAssumedRank(actual_) &&
@@ -1579,6 +1598,9 @@ bool MayNeedCopy(const ActualArgument *actual,
       return false;
     }
     if (check.HaveContiguityDifferences()) {
+      return true;
+    }
+    if (check.HavePolymorphicDifferences()) {
       return true;
     }
   } else { // Implicit interface
