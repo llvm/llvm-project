@@ -43,6 +43,8 @@ createFrontendAction(CompilerInstance &ci) {
     return std::make_unique<ParseSyntaxOnlyAction>();
   case EmitFIR:
     return std::make_unique<EmitFIRAction>();
+  case EmitMLIR:
+    return std::make_unique<EmitMLIRAction>();
   case EmitHLFIR:
     return std::make_unique<EmitHLFIRAction>();
   case EmitLLVM:
