@@ -118,6 +118,53 @@ static T getPerfectlyNested(Operation *op) {
   return nullptr;
 }
 
+// VerifyTargetTeamsWorkdistribute method verifies that
+// omp.target { teams { workdistribute { ... } } } is well formed
+// and fails for function calls that don't have lowering implemented yet.
+static bool
+VerifyTargetTeamsWorkdistribute(omp::WorkdistributeOp workdistribute) {
+  OpBuilder rewriter(workdistribute);
+  auto teams = dyn_cast<omp::TeamsOp>(workdistribute->getParentOp());
+  if (!teams) {
+    workdistribute.emitError() << "workdistribute not nested in teams\n";
+    return false;
+  }
+  if (workdistribute.getRegion().getBlocks().size() != 1) {
+    workdistribute.emitError() << "workdistribute with multiple blocks\n";
+    return false;
+  }
+  if (teams.getRegion().getBlocks().size() != 1) {
+    workdistribute.emitError() << "teams with multiple blocks\n";
+    return false;
+  }
+  omp::TargetOp targetOp = dyn_cast<omp::TargetOp>(teams->getParentOp());
+  // return if not omp.target
+  if (!targetOp)
+    return true;
+
+  for (auto &op : workdistribute.getOps()) {
+    if (auto callOp = dyn_cast<fir::CallOp>(op)) {
+      if (isRuntimeCall(&op)) {
+        auto funcName = (*callOp.getCallee()).getRootReference().getValue();
+        // _FortranAAssign is handled. Other runtime calls are not supported
+        // in omp.workdistribute yet.
+        if (funcName == "_FortranAAssign")
+          continue;
+        else
+          workdistribute.emitError()
+              << "Runtime call " << funcName
+              << " lowering not supported for workdistribute yet.";
+        return false;
+      } else {
+        workdistribute.emitError() << "Non-runtime fir.call lowering not "
+                                      "supported in workdistribute yet.";
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 // FissionWorkdistribute method finds the parallelizable ops
 // within teams {workdistribute} region and moves them to their
 // own teams{workdistribute} region.
@@ -154,18 +201,10 @@ static bool FissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
   OpBuilder rewriter(workdistribute);
   auto loc = workdistribute->getLoc();
   auto teams = dyn_cast<omp::TeamsOp>(workdistribute->getParentOp());
-  if (!teams) {
-    emitError(loc, "workdistribute not nested in teams\n");
-    return false;
-  }
-  if (workdistribute.getRegion().getBlocks().size() != 1) {
-    emitError(loc, "workdistribute with multiple blocks\n");
-    return false;
-  }
-  if (teams.getRegion().getBlocks().size() != 1) {
-    emitError(loc, "teams with multiple blocks\n");
-    return false;
-  }
+
+  omp::TargetOp targetOp;
+  // Get the target op parent of teams
+  targetOp = dyn_cast<omp::TargetOp>(teams->getParentOp());
 
   auto *teamsBlock = &teams.getRegion().front();
   bool changed = false;
@@ -1744,6 +1783,11 @@ public:
     auto moduleOp = getOperation();
     bool changed = false;
     SetVector<omp::TargetOp> targetOpsToProcess;
+    moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
+      bool res = VerifyTargetTeamsWorkdistribute(workdistribute);
+      if (!res)
+        signalPassFailure();
+    });
     moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
       changed |= FissionWorkdistribute(workdistribute);
     });
