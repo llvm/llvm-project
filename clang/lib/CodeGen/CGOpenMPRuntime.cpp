@@ -7427,10 +7427,9 @@ private:
     // size
     llvm::Value *PointerSize = CGF.Builder.CreateIntCast(
         llvm::ConstantInt::get(
-            CGF.CGM.SizeTy,
-            CGF.getContext().getTypeSize(
-                CGF.getContext().getPointerType(CGF.getContext().VoidTy)) /
-                8),
+            CGF.CGM.SizeTy, CGF.getContext()
+                                .getTypeSizeInChars(CGF.getContext().VoidPtrTy)
+                                .getQuantity()),
         CGF.Int64Ty, /*isSigned=*/true);
 
     CombinedInfo.Exprs.emplace_back(AttachInfo.AttachPtrDecl,
