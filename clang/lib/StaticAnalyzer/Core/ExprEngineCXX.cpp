@@ -1118,7 +1118,7 @@ void ExprEngine::VisitCXXDeleteExpr(const CXXDeleteExpr *CDE,
     StmtNodeBuilder Bldr(DstPreCall, DstPostCall, *currBldrCtx);
     for (ExplodedNode *I : DstPreCall) {
       // Intentionally either inline or conservative eval-call the operator
-      // delete, but triggering an eval-call event for checkers.
+      // delete, but avoid triggering an eval-call event for checkers.
       // As detailed at handling CXXNewExprs, in short, because it does not
       // really make sense to eval-call user-provided functions.
       defaultEvalCall(Bldr, I, *Call);
