@@ -268,14 +268,12 @@ static std::string generateLoopNestingName(StringRef prefix,
     if (c.skip)
       continue;
 
-    if (c.isRegionArgOfOp) {
+    if (c.isRegionArgOfOp)
       NameOS << "_r" << c.idx;
-    } else {
-      if (c.loopDepth >= 1)
-        NameOS << "_d" << c.loopDepth;
-      else
-        NameOS << "_s" << c.idx;
-    }
+    else if (c.loopDepth >= 1)
+      NameOS << "_d" << c.loopDepth;
+    else
+      NameOS << "_s" << c.idx;
   }
 
   return NameOS.str().str();
