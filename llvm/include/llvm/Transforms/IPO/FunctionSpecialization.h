@@ -157,7 +157,12 @@ struct Spec {
   // List of call sites, matching this specialization.
   SmallVector<SpecCall> CallSites;
 
-  void addCall(SpecCall SC) { CallSites.push_back(SC); }
+  bool AllChains = true;
+
+  void addCall(SpecCall SC) {
+    CallSites.push_back(SC);
+    AllChains = AllChains && SC.Status != CallSiteStatusT::NO_PARENT;
+  }
 
   // List Sub-Specializations
   SmallVector<unsigned> SubSpecs;

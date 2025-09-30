@@ -792,6 +792,10 @@ bool FunctionSpecializer::run() {
   // specialization budget, which is derived from maximum number of
   // specializations per specialization candidate function.
   auto CompareScore = [&AllSpecs](unsigned I, unsigned J) {
+    if (AllSpecs[J].AllChains)
+      return true;
+    if (AllSpecs[I].AllChains)
+      return false;
     if (AllSpecs[I].Score != AllSpecs[J].Score)
       return AllSpecs[I].Score > AllSpecs[J].Score;
     return I > J;
@@ -1224,6 +1228,7 @@ bool FunctionSpecializer::findSpecializations(
 
       if (CS.getFunction() == F && !Spec.CallSites[0].Parent) {
         Spec.CallSites.clear();
+        Spec.AllChains = true;
       }
       UniqueSpecs[S] = Index;
 
