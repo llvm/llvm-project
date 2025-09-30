@@ -342,10 +342,12 @@ void CIRGenFunction::LexicalScope::cleanup() {
 cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
-  if (!cgf.curFn.getFunctionType().hasVoidReturn()) {
+  auto fn = dyn_cast<cir::FuncOp>(cgf.curFn);
+  assert(fn && "emitReturn from non-function");
+  if (!fn.getFunctionType().hasVoidReturn()) {
     // Load the value from `__retval` and return it via the `cir.return` op.
     auto value = builder.create<cir::LoadOp>(
-        loc, cgf.curFn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
+        loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
     return builder.create<cir::ReturnOp>(loc,
                                          llvm::ArrayRef(value.getResult()));
   }
@@ -459,7 +461,9 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     const auto *md = cast<CXXMethodDecl>(d);
     if (md->getParent()->isLambda() && md->getOverloadedOperator() == OO_Call) {
       // We're in a lambda.
-      curFn.setLambda(true);
+      auto fn = dyn_cast<cir::FuncOp>(curFn);
+      assert(fn && "lambda in non-function region");
+      fn.setLambda(true);
 
       // Figure out the captures.
       md->getParent()->getCaptureFields(lambdaCaptureFields,
@@ -577,7 +581,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       getCIRGenModule().errorNYI(bodyRange, "CUDA kernel");
     } else if (isa<CXXMethodDecl>(funcDecl) &&
                cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker()) {
-      getCIRGenModule().errorNYI(bodyRange, "Lambda static invoker");
+      // The lambda static invoker function is special, because it forwards or
+      // clones the body of the function call operator (but is actually
+      // static).
+      emitLambdaStaticInvokeBody(cast<CXXMethodDecl>(funcDecl));
     } else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
                (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
                 cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator())) {
@@ -838,6 +845,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCastLValue(cast<CastExpr>(e));
   case Expr::MaterializeTemporaryExprClass:
     return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
+  case Expr::ChooseExprClass:
+    return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
   }
 }
 

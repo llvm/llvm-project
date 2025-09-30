@@ -131,9 +131,7 @@ public:
                      std::string("AggExprEmitter::VisitStmt: ") +
                          s->getStmtClassName());
   }
-  void VisitParenExpr(ParenExpr *pe) {
-    cgf.cgm.errorNYI(pe->getSourceRange(), "AggExprEmitter: VisitParenExpr");
-  }
+  void VisitParenExpr(ParenExpr *pe) { Visit(pe->getSubExpr()); }
   void VisitGenericSelectionExpr(GenericSelectionExpr *ge) {
     cgf.cgm.errorNYI(ge->getSourceRange(),
                      "AggExprEmitter: VisitGenericSelectionExpr");
@@ -213,9 +211,7 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitAbstractConditionalOperator");
   }
-  void VisitChooseExpr(const ChooseExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitChooseExpr");
-  }
+  void VisitChooseExpr(const ChooseExpr *e) { Visit(e->getChosenSubExpr()); }
   void VisitCXXParenListInitExpr(CXXParenListInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXParenListInitExpr");
@@ -500,7 +496,7 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
 
   switch (cgf.getEvaluationKind(type)) {
   case cir::TEK_Complex:
-    cgf.cgm.errorNYI("emitInitializationToLValue TEK_Complex");
+    cgf.emitComplexExprIntoLValue(e, lv, /*isInit*/ true);
     break;
   case cir::TEK_Aggregate:
     cgf.emitAggExpr(e, AggValueSlot::forLValue(lv, AggValueSlot::IsDestructed,

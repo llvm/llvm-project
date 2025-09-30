@@ -124,7 +124,7 @@ static bool canRemat(const MachineInstr &MI) {
   return false;
 }
 
-bool SIInstrInfo::isReallyTriviallyReMaterializable(
+bool SIInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
 
   if (canRemat(MI)) {
@@ -145,7 +145,7 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(
       return true;
   }
 
-  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+  return TargetInstrInfo::isReMaterializableImpl(MI);
 }
 
 // Returns true if the scalar result of a VALU instruction depends on exec.
@@ -9503,6 +9503,13 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       // Assume d16_lo/hi inst are always in same size
       unsigned LoInstOpcode = D16Info->LoOp;
       const MCInstrDesc &Desc = getMCOpcodeFromPseudo(LoInstOpcode);
+      DescSize = Desc.getSize();
+    }
+
+    // If FMA Pseudo inst, get correct MC code size
+    if (Opc == AMDGPU::V_FMA_MIX_F16_t16 || Opc == AMDGPU::V_FMA_MIX_BF16_t16) {
+      // All potential lowerings are the same size; arbitrarily pick one.
+      const MCInstrDesc &Desc = getMCOpcodeFromPseudo(AMDGPU::V_FMA_MIXLO_F16);
       DescSize = Desc.getSize();
     }
 

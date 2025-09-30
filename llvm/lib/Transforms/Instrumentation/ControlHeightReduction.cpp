@@ -1736,7 +1736,7 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
 
   // Move static allocas into the pre-entry block so they stay static.
   for (AllocaInst *AI : StaticAllocas)
-    AI->moveBefore(EntryBlock->getTerminator()->getIterator());
+    AI->moveBefore(EntryBlock->begin());
 
   if (ExitBlock) {
     // Insert a trivial phi at the exit block (where the CHR hot path and the

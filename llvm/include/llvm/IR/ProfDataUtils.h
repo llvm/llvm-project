@@ -185,6 +185,14 @@ inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
 LLVM_ABI void setExplicitlyUnknownBranchWeights(Instruction &I,
                                                 StringRef PassName);
 
+/// Like setExplicitlyUnknownBranchWeights(...), but only sets unknown branch
+/// weights in the new instruction if the parent function of the original
+/// instruction has an entry count. This is to not confuse users by injecting
+/// profile data into non-profiled functions.
+LLVM_ABI void setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I,
+                                                          Function &F,
+                                                          StringRef PassName);
+
 /// Analogous to setExplicitlyUnknownBranchWeights, but for functions and their
 /// entry counts.
 LLVM_ABI void setExplicitlyUnknownFunctionEntryCount(Function &F,

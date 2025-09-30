@@ -1450,6 +1450,33 @@ func.func @push_unpack_in_padded_domain_out_used(%arg0: tensor<8x8x4x8xf32>, %ar
 
 // -----
 
+#map = affine_map<(d0, d1) -> (d0, d1)>
+func.func @push_unpack_in_padded_domain_multiple_inputs(%arg0: tensor<1x4x16x16xf32>, %arg1: tensor<8x64xf32>, %arg2: tensor<8x64xf32>) -> tensor<8x64xf32> {
+  %0 = tensor.empty() : tensor<8x64xf32>
+  %unpack = linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [16, 16] into %0 : tensor<1x4x16x16xf32> -> tensor<8x64xf32>
+  %1 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel", "parallel"]} ins(%arg1, %unpack : tensor<8x64xf32>, tensor<8x64xf32>) outs(%arg2 : tensor<8x64xf32>) {
+  ^bb0(%in: f32, %in_0: f32, %out: f32):
+    %2 = arith.addf %in, %in_0 : f32
+    linalg.yield %2 : f32
+  } -> tensor<8x64xf32>
+  return %1 : tensor<8x64xf32>
+}
+// CHECK-LABEL: func.func @push_unpack_in_padded_domain_multiple_inputs
+// CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[ARG2:[a-zA-Z0-9]+]]
+// CHECK-DAG:     %[[POISON:.+]] = ub.poison : f32
+// CHECK:         %[[PACK:.+]] = linalg.pack %[[ARG1]] padding_value(%[[POISON]] : f32)
+// CHECK-SAME:       inner_dims_pos = [0, 1] inner_tiles = [16, 16]
+// CHECK:         %[[ELEM:.+]] = linalg.generic
+// CHECK:           ins(%[[PACK]], %[[ARG0]]
+// CHECK:         %[[UNPACK:.+]] = linalg.unpack %[[ELEM]]
+// CHECK-SAME:      inner_dims_pos = [0, 1] inner_tiles = [16, 16]
+// CHECK-SAME:      into %[[ARG2]]
+// CHECK:         return %[[UNPACK]]
+
+// -----
+
 module {
   func.func @push_extract_through_generic(%arg0: tensor<128x7x128xf32>, %arg1: tensor<?x5x3x128xf32>, %arg2: tensor<?x5x128xbf16>, %arg3: index) -> tensor<?x5x128xbf16> {
     %extracted_slice = tensor.extract_slice %arg0[0, 0, %arg3] [128, 7, %arg3] [1, 1, 1] : tensor<128x7x128xf32> to tensor<128x7x?xf32>
@@ -1473,7 +1500,7 @@ module {
 // CHECK:         } : tensor<?x5x3x128xf32> to tensor<?x5x3x128xf32>
 // CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<128x5x128xbf16>
 // CHECK:         %[[GENERIC:.+]] = linalg.generic
-// CHECK-SAME:    ins(%[[ARG0]], %[[PADDED]]   
+// CHECK-SAME:    ins(%[[ARG0]], %[[PADDED]]
 // CHECK-SAME:    outs(%[[EMPTY]]
 // CHECK:         %[[EXTRACT:.+]] = tensor.extract_slice %3[%[[ARG3]], 0, 0] [%[[ARG3]], 5, 128] [1, 1, 1] : tensor<128x5x128xbf16> to tensor<?x5x128xbf16>
 // CHECK:         return %[[EXTRACT]]
@@ -1492,7 +1519,7 @@ func.func @nopush_extract_through_generic_nodimexpr1(%arg0: tensor<128x7x128xf32
 
 // CHECK-LABEL: func.func @nopush_extract_through_generic_nodimexpr1
 // CHECK:         %[[GENERIC:.+]] = linalg.generic
-// CHECK:         return %[[GENERIC]]          
+// CHECK:         return %[[GENERIC]]
 
 // -----
 
@@ -1508,7 +1535,7 @@ func.func @nopush_extract_through_generic_nodimexpr2(%arg0: tensor<128x?x128xf32
 
 // CHECK-LABEL: func.func @nopush_extract_through_generic_nodimexpr2
 // CHECK:         %[[GENERIC:.+]] = linalg.generic
-// CHECK:         return %[[GENERIC]]   
+// CHECK:         return %[[GENERIC]]
 
 // -----
 
@@ -1575,7 +1602,7 @@ func.func @push_extract_through_generic_rank0_operand(%arg0: tensor<128x128xf32>
 
 // CHECK-LABEL: func.func @push_extract_through_generic_rank0_operand
 // CHECK:         %[[GENERIC:.+]] = linalg.generic
-// CHECK:         %[[EXTRACT:.+]] = tensor.extract_slice %[[GENERIC]]         
+// CHECK:         %[[EXTRACT:.+]] = tensor.extract_slice %[[GENERIC]]
 // CHECK:         return %[[EXTRACT]]
 
 // -----
