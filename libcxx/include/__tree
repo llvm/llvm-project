@@ -582,7 +582,6 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node_base()  = default;
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~__tree_node_base() = default;
   __tree_node_base(__tree_node_base const&)            = delete;
   __tree_node_base& operator=(__tree_node_base const&) = delete;
 };
