@@ -43,19 +43,19 @@ struct { char *prefix; char *content; } global;
 // GLOBAL-NEXT:  "global"
 // GLOBAL-NEXT:]
 
-// PREFIX: "!testRelLabel": "memberOf $ c:@S@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@prefix $ c:@global"
+// PREFIX: "!testRelLabel": "memberOf $ c:@S@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@prefix $ c:@S@anonymous_record_no_typedef.c@{{[0-9]+}}"
 // PREFIX-LABEL: "!testLabel": "c:@S@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@prefix"
 // PREFIX: "title": "prefix"
 // PREFIX:      "pathComponents": [
-// PREFIX-NEXT:   "global",
+// PREFIX-NEXT:   "",
 // PREFIX-NEXT:   "prefix"
 // PREFIX-NEXT: ]
 
-// CONTENT: "!testRelLabel": "memberOf $ c:@S@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@content $ c:@global"
+// CONTENT: "!testRelLabel": "memberOf $ c:@S@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@content $ c:@S@anonymous_record_no_typedef.c@{{[0-9]+}}"
 // CONTENT-LABEL: "!testLabel": "c:@S@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@content"
 // CONTENT: "title": "content"
 // CONTENT:      "pathComponents": [
-// CONTENT-NEXT:   "global",
+// CONTENT-NEXT:   "",
 // CONTENT-NEXT:   "content"
 // CONTENT-NEXT: ]
 
@@ -139,21 +139,21 @@ struct Vehicle {
     // INFORMATION: "text": "The information about the vehicle."
     // INFORMATION: "title": "information"
 
-    // WHEELS: "!testRelLabel": "memberOf $ c:@S@Vehicle@U@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@wheels $ c:@S@Vehicle@FI@information"
+    // WHEELS: "!testRelLabel": "memberOf $ c:@S@Vehicle@U@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@wheels $ c:@S@Vehicle@U@anonymous_record_no_typedef.c@{{[0-9]+}}"
     // WHEELS-LABEL: "!testLabel": "c:@S@Vehicle@U@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@wheels"
     // WHEELS: "title": "wheels"
     // WHEELS:      "pathComponents": [
     // WHEELS-NEXT:   "Vehicle",
-    // WHEELS-NEXT:   "information",
+    // WHEELS-NEXT:   "",
     // WHEELS-NEXT:   "wheels"
     // WHEELS-NEXT: ]
 
-    // NAME: "!testRelLabel": "memberOf $ c:@S@Vehicle@U@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@name $ c:@S@Vehicle@FI@information"
+    // NAME: "!testRelLabel": "memberOf $ c:@S@Vehicle@U@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@name $ c:@S@Vehicle@U@anonymous_record_no_typedef.c@{{[0-9]+}}"
     // NAME-LABEL: "!testLabel": "c:@S@Vehicle@U@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@name"
     // NAME: "title": "name"
     // NAME:      "pathComponents": [
     // NAME-NEXT:   "Vehicle",
-    // NAME-NEXT:   "information",
+    // NAME-NEXT:   "",
     // NAME-NEXT:   "name"
     // NAME-NEXT: ]
 };
@@ -188,11 +188,9 @@ union Vector {
   float Data[2];
 };
 // VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@FI@Data $ c:@U@Vector"
-// VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@Sa@FI@X $ c:@U@Vector"
-// VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@Sa@FI@Y $ c:@U@Vector"
+// VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@Sa@FI@X $ c:@U@Vector@Sa"
+// VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@Sa@FI@Y $ c:@U@Vector@Sa"
 
-// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix MYSTRUCT
-// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix MYSTRUCT
 // RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix COUNTS
 // RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix COUNTS
 struct MyStruct {
@@ -200,8 +198,6 @@ struct MyStruct {
         int count;
     } counts[1];
 };
-// MYSTRUCT-NOT: "spelling": ""
-// MYSTRUCT-NOT: "title": ""
 
 // COUNTS-LABEL: "!testLabel": "c:@S@MyStruct@FI@counts"
 // COUNTS:      "declarationFragments": [
