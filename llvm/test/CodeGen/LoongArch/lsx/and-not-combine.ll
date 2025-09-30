@@ -318,10 +318,9 @@ define void @and_or_not_combine_v16i8(ptr %pa, ptr %pb, ptr %pv, ptr %dst) nounw
 ; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, 0
 ; CHECK-NEXT:    vseq.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vxori.b $vr0, $vr0, 255
 ; CHECK-NEXT:    vseq.b $vr1, $vr1, $vr2
-; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vandi.b $vr0, $vr0, 4
+; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vnori.b $vr0, $vr0, 251
 ; CHECK-NEXT:    vst $vr0, $a3, 0
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %pa
@@ -343,12 +342,10 @@ define void @and_or_not_combine_v8i16(ptr %pa, ptr %pb, ptr %pv, ptr %dst) nounw
 ; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, 0
 ; CHECK-NEXT:    vseq.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vrepli.b $vr3, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr3
 ; CHECK-NEXT:    vseq.h $vr1, $vr1, $vr2
-; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.h $vr1, 4
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vrepli.h $vr1, 4
+; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a3, 0
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %pa
@@ -370,12 +367,10 @@ define void @and_or_not_combine_v4i32(ptr %pa, ptr %pb, ptr %pv, ptr %dst) nounw
 ; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, 0
 ; CHECK-NEXT:    vseq.w $vr0, $vr1, $vr0
-; CHECK-NEXT:    vrepli.b $vr3, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr3
 ; CHECK-NEXT:    vseq.w $vr1, $vr1, $vr2
-; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.w $vr1, 4
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vrepli.w $vr1, 4
+; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a3, 0
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %pa
@@ -397,12 +392,10 @@ define void @and_or_not_combine_v2i64(ptr %pa, ptr %pb, ptr %pv, ptr %dst) nounw
 ; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, 0
 ; CHECK-NEXT:    vseq.d $vr0, $vr1, $vr0
-; CHECK-NEXT:    vrepli.b $vr3, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr3
 ; CHECK-NEXT:    vseq.d $vr1, $vr1, $vr2
-; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.d $vr1, 4
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vrepli.d $vr1, 4
+; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a3, 0
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %pa

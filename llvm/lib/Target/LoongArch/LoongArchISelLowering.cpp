@@ -5152,12 +5152,12 @@ static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
   SDValue NewOperand;
   MVT GRLenVT = Subtarget.getGRLenVT();
 
+  if (SDValue R = combineAndNotIntoVANDN(N, DL, DAG))
+    return R;
+
   // BSTRPICK requires the 32S feature.
   if (!Subtarget.has32S())
     return SDValue();
-
-  if (SDValue R = combineAndNotIntoVANDN(N, DL, DAG))
-    return R;
 
   // Op's second operand must be a shifted mask.
   if (!(CN = dyn_cast<ConstantSDNode>(SecondOperand)) ||
