@@ -74,15 +74,28 @@ private:
   bool DiagConsumerFinished = false;
 };
 
-// Helper functions
+// Helper functions and data types.
 std::unique_ptr<DiagnosticOptions>
 createDiagOptions(const std::vector<std::string> &CommandLine);
-void sanitizeDiagOpts(DiagnosticOptions &DiagOpts);
+
+struct DignosticsEngineWithCCommandLineAndDiagOpts {
+  // We need to bound the lifetime of the CCommandLine and the DiagOpts
+  // used to create the DiganosticsEngine with the DiagnosticsEngine itself.
+  std::vector<const char *> CCommandLine;
+  std::unique_ptr<DiagnosticOptions> DiagOpts;
+  IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine;
+
+  DignosticsEngineWithCCommandLineAndDiagOpts(
+      const std::vector<std::string> CommandLine,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS, DiagnosticConsumer &DC);
+};
 
 struct TextDiagnosticsPrinterWithOutput {
+  // We need to bound the lifetime of the data that supports the DiagPrinter
+  // with it together so they have the same lifetime.
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS;
-  std::unique_ptr<clang::DiagnosticOptions> DiagOpts;
+  std::unique_ptr<DiagnosticOptions> DiagOpts;
   TextDiagnosticPrinter DiagPrinter;
 
   TextDiagnosticsPrinterWithOutput(const std::vector<std::string> &CommandLine)
@@ -99,17 +112,16 @@ std::unique_ptr<CompilerInvocation>
 createCompilerInvocation(const std::vector<std::string> &CommandLine,
                          DiagnosticsEngine &Diags);
 
-llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> initVFSForTUBufferScanning(
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    std::optional<std::vector<std::string>> &ModifiedCommandLine,
-    const std::vector<std::string> &CommandLine, StringRef WorkingDirectory,
-    std::optional<llvm::MemoryBufferRef> TUBuffer);
+std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
+initVFSForTUBuferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                          const std::vector<std::string> &CommandLine,
+                          StringRef WorkingDirectory,
+                          llvm::MemoryBufferRef TUBuffer);
 
-llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
 initVFSForByNameScanning(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                         std::vector<std::string> &CommandLine,
-                         StringRef WorkingDirectory,
-                         StringRef FakeFileNamePrefix);
+                         const std::vector<std::string> &CommandLine,
+                         StringRef WorkingDirectory, StringRef ModuleName);
 
 bool initializeScanCompilerInstance(
     CompilerInstance &ScanInstance,
@@ -117,7 +129,8 @@ bool initializeScanCompilerInstance(
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
     llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS);
 
-llvm::SmallVector<StringRef> computeStableDirs(CompilerInstance &ScanInstance);
+llvm::SmallVector<StringRef>
+computeStableDirs(const CompilerInstance &ScanInstance);
 
 std::optional<PrebuiltModulesAttrsMap>
 computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,

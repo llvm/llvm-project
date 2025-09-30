@@ -334,22 +334,9 @@ public:
     return DepFS->getDirectiveTokens(File.getName());
   }
 };
-} // namespace
-
-std::unique_ptr<DiagnosticOptions>
-clang::tooling::dependencies::createDiagOptions(
-    const std::vector<std::string> &CommandLine) {
-  std::vector<const char *> CLI;
-  for (const std::string &Arg : CommandLine)
-    CLI.push_back(Arg.c_str());
-  auto DiagOpts = CreateAndPopulateDiagOpts(CLI);
-  sanitizeDiagOpts(*DiagOpts);
-  return DiagOpts;
-}
 
 /// Sanitize diagnostic options for dependency scan.
-void clang::tooling::dependencies::sanitizeDiagOpts(
-    DiagnosticOptions &DiagOpts) {
+void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
   // Don't print 'X warnings and Y errors generated'.
   DiagOpts.ShowCarets = false;
   // Don't write out diagnostic file.
@@ -367,6 +354,31 @@ void clang::tooling::dependencies::sanitizeDiagOpts(
         .StartsWith("no-error=", false)
         .Default(true);
   });
+}
+} // namespace
+
+std::unique_ptr<DiagnosticOptions>
+clang::tooling::dependencies::createDiagOptions(
+    const std::vector<std::string> &CommandLine) {
+  std::vector<const char *> CLI;
+  for (const std::string &Arg : CommandLine)
+    CLI.push_back(Arg.c_str());
+  auto DiagOpts = CreateAndPopulateDiagOpts(CLI);
+  sanitizeDiagOpts(*DiagOpts);
+  return DiagOpts;
+}
+
+clang::tooling::dependencies::DignosticsEngineWithCCommandLineAndDiagOpts::
+    DignosticsEngineWithCCommandLineAndDiagOpts(
+        const std::vector<std::string> CommandLine,
+        IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS, DiagnosticConsumer &DC)
+    : CCommandLine(CommandLine.size(), nullptr) {
+  llvm::transform(CommandLine, CCommandLine.begin(),
+                  [](const std::string &Str) { return Str.c_str(); });
+  DiagOpts = CreateAndPopulateDiagOpts(CCommandLine);
+  sanitizeDiagOpts(*DiagOpts);
+  DiagEngine = CompilerInstance::createDiagnostics(*FS, *DiagOpts, &DC,
+                                                   /*ShouldOwnClient=*/false);
 }
 
 std::pair<std::unique_ptr<driver::Driver>, std::unique_ptr<driver::Compilation>>
@@ -395,7 +407,7 @@ clang::tooling::dependencies::buildCompilation(
   }
 
   std::unique_ptr<driver::Compilation> Compilation(
-      Driver->BuildCompilation(llvm::ArrayRef(Argv)));
+      Driver->BuildCompilation(Argv));
   if (!Compilation)
     return std::make_pair(nullptr, nullptr);
 
@@ -405,45 +417,37 @@ clang::tooling::dependencies::buildCompilation(
   return std::make_pair(std::move(Driver), std::move(Compilation));
 }
 
-llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-clang::tooling::dependencies::initVFSForTUBufferScanning(
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    std::optional<std::vector<std::string>> &ModifiedCommandLine,
+std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
+clang::tooling::dependencies::initVFSForTUBuferScanning(
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
     const std::vector<std::string> &CommandLine, StringRef WorkingDirectory,
-    std::optional<llvm::MemoryBufferRef> TUBuffer) {
+    llvm::MemoryBufferRef TUBuffer) {
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> ModifiedFS;
-  if (TUBuffer) {
-    auto OverlayFS =
-        llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
-    auto InMemoryFS =
-        llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-    InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-    auto InputPath = TUBuffer->getBufferIdentifier();
-    InMemoryFS->addFile(
-        InputPath, 0,
-        llvm::MemoryBuffer::getMemBufferCopy(TUBuffer->getBuffer()));
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay =
-        InMemoryFS;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> ModifiedFS;
+  auto OverlayFS =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
+  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
+  auto InputPath = TUBuffer.getBufferIdentifier();
+  InMemoryFS->addFile(
+      InputPath, 0, llvm::MemoryBuffer::getMemBufferCopy(TUBuffer.getBuffer()));
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
 
-    OverlayFS->pushOverlay(InMemoryOverlay);
-    ModifiedFS = OverlayFS;
-    ModifiedCommandLine = CommandLine;
-    ModifiedCommandLine->emplace_back(InputPath);
+  OverlayFS->pushOverlay(InMemoryOverlay);
+  ModifiedFS = OverlayFS;
+  auto ModifiedCommandLine = CommandLine;
+  ModifiedCommandLine.emplace_back(InputPath);
 
-    return ModifiedFS;
-  }
-
-  return BaseFS;
+  return std::make_pair(ModifiedFS, ModifiedCommandLine);
 }
 
-llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
 clang::tooling::dependencies::initVFSForByNameScanning(
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    std::vector<std::string> &CommandLine, StringRef WorkingDirectory,
-    StringRef FakeFileNamePrefix) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+    const std::vector<std::string> &CommandLine, StringRef WorkingDirectory,
+    StringRef ModuleName) {
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
@@ -456,16 +460,16 @@ clang::tooling::dependencies::initVFSForByNameScanning(
   InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
   SmallString<128> FakeInputPath;
   // TODO: We should retry the creation if the path already exists.
-  llvm::sys::fs::createUniquePath(FakeFileNamePrefix + "-%%%%%%%%.input",
-                                  FakeInputPath,
+  llvm::sys::fs::createUniquePath(ModuleName + "-%%%%%%%%.input", FakeInputPath,
                                   /*MakeAbsolute=*/false);
   InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
   OverlayFS->pushOverlay(InMemoryOverlay);
 
-  CommandLine.emplace_back(FakeInputPath);
+  auto ModifiedCommandLine = CommandLine;
+  ModifiedCommandLine.emplace_back(FakeInputPath);
 
-  return OverlayFS;
+  return std::make_pair(OverlayFS, ModifiedCommandLine);
 }
 
 std::unique_ptr<CompilerInvocation>
@@ -487,7 +491,7 @@ bool clang::tooling::dependencies::initializeScanCompilerInstance(
     CompilerInstance &ScanInstance,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
-    llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS) {
+    IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS) {
   ScanInstance.setBuildingModule(false);
 
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
@@ -554,7 +558,7 @@ bool clang::tooling::dependencies::initializeScanCompilerInstance(
 }
 
 llvm::SmallVector<StringRef> clang::tooling::dependencies::computeStableDirs(
-    CompilerInstance &ScanInstance) {
+    const CompilerInstance &ScanInstance) {
   // Create a collection of stable directories derived from the ScanInstance
   // for determining whether module dependencies would fully resolve from
   // those directories.
@@ -600,7 +604,7 @@ void clang::tooling::dependencies::initializeModuleDepCollector(
   // and thus won't write out the extra '.d' files to disk.
   auto Opts = std::make_unique<DependencyOutputOptions>();
 
-  // We rely on the behaviour that that ScanInstance's Invocation instance's
+  // We rely on the behaviour that the ScanInstance's Invocation instance's
   // dependency output opts are cleared here.
   // TODO: we will need to preserve and recover the original dependency output
   // opts if we want to reuse ScanInstance.

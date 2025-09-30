@@ -8,29 +8,9 @@
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "DependencyScannerImpl.h"
-#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/Basic/DiagnosticSerialization.h"
-#include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Job.h"
 #include "clang/Driver/Tool.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Frontend/Utils.h"
-#include "clang/Lex/PreprocessorOptions.h"
-#include "clang/Serialization/ObjectFilePCHContainerReader.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
-#include "clang/Tooling/DependencyScanning/InProcessModuleCache.h"
-#include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/Support/Allocator.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/TargetParser/Host.h"
-#include <optional>
 
 using namespace clang;
 using namespace tooling;
@@ -97,7 +77,7 @@ static bool forEachDriverJob(
     ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     llvm::function_ref<bool(const driver::Command &Cmd)> Callback) {
-  // Compilation owns a reference to the Driver, hence we need to
+  // Compilation holds a non-owning a reference to the Driver, hence we need to
   // keep the Driver alive when we use Compilation.
   auto [Driver, Compilation] = buildCompilation(ArgStrs, Diags, FS);
   if (!Compilation)
@@ -133,24 +113,20 @@ bool DependencyScanningWorker::scanDependencies(
     DependencyConsumer &Consumer, DependencyActionController &Controller,
     DiagnosticConsumer &DC, llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     std::optional<StringRef> ModuleName) {
-  std::vector<const char *> CCommandLine(CommandLine.size(), nullptr);
-  llvm::transform(CommandLine, CCommandLine.begin(),
-                  [](const std::string &Str) { return Str.c_str(); });
-  auto DiagOpts = CreateAndPopulateDiagOpts(CCommandLine);
-  sanitizeDiagOpts(*DiagOpts);
-  auto Diags = CompilerInstance::createDiagnostics(*FS, *DiagOpts, &DC,
-                                                   /*ShouldOwnClient=*/false);
-
+  DignosticsEngineWithCCommandLineAndDiagOpts DiagEngineWithCmdAndOpts(
+      CommandLine, FS, DC);
   DependencyScanningAction Action(Service, WorkingDirectory, Consumer,
                                   Controller, DepFS, ModuleName);
 
   bool Success = false;
   if (CommandLine[1] == "-cc1") {
-    Success = createAndRunToolInvocation(CommandLine, Action, FS,
-                                         PCHContainerOps, *Diags, Consumer);
+    Success = createAndRunToolInvocation(
+        CommandLine, Action, FS, PCHContainerOps,
+        *DiagEngineWithCmdAndOpts.DiagEngine, Consumer);
   } else {
     Success = forEachDriverJob(
-        CommandLine, *Diags, FS, [&](const driver::Command &Cmd) {
+        CommandLine, *DiagEngineWithCmdAndOpts.DiagEngine, FS,
+        [&](const driver::Command &Cmd) {
           if (StringRef(Cmd.getCreator().getName()) != "clang") {
             // Non-clang command. Just pass through to the dependency
             // consumer.
@@ -169,13 +145,15 @@ bool DependencyScanningWorker::scanDependencies(
           // system to ensure that any file system requests that
           // are made by the driver do not go through the
           // dependency scanning filesystem.
-          return createAndRunToolInvocation(std::move(Argv), Action, FS,
-                                            PCHContainerOps, *Diags, Consumer);
+          return createAndRunToolInvocation(
+              std::move(Argv), Action, FS, PCHContainerOps,
+              *DiagEngineWithCmdAndOpts.DiagEngine, Consumer);
         });
   }
 
   if (Success && !Action.hasScanned())
-    Diags->Report(diag::err_fe_expected_compiler_job)
+    DiagEngineWithCmdAndOpts.DiagEngine->Report(
+        diag::err_fe_expected_compiler_job)
         << llvm::join(CommandLine, " ");
 
   // Ensure finish() is called even if we never reached ExecuteAction().
@@ -189,23 +167,25 @@ bool DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
     DiagnosticConsumer &DC, std::optional<llvm::MemoryBufferRef> TUBuffer) {
-  std::optional<std::vector<std::string>> ModifiedCommandLine;
-  auto FinalFS = initVFSForTUBufferScanning(
-      BaseFS, ModifiedCommandLine, CommandLine, WorkingDirectory, TUBuffer);
-  const std::vector<std::string> &FinalCommandLine =
-      ModifiedCommandLine ? *ModifiedCommandLine : CommandLine;
-
-  return scanDependencies(WorkingDirectory, FinalCommandLine, Consumer,
-                          Controller, DC, FinalFS, /*ModuleName=*/std::nullopt);
+  if (TUBuffer) {
+    auto [FinalFS, FinalCommandLine] = initVFSForTUBuferScanning(
+        BaseFS, CommandLine, WorkingDirectory, *TUBuffer);
+    return scanDependencies(WorkingDirectory, FinalCommandLine, Consumer,
+                            Controller, DC, FinalFS,
+                            /*ModuleName=*/std::nullopt);
+  } else {
+    BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
+    return scanDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
+                            DC, BaseFS, /*ModuleName=*/std::nullopt);
+  }
 }
 
 bool DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
     DiagnosticConsumer &DC, StringRef ModuleName) {
-  auto ModifiedCommandLine = CommandLine;
-  auto OverlayFS = initVFSForByNameScanning(BaseFS, ModifiedCommandLine,
-                                            WorkingDirectory, ModuleName);
+  auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(
+      BaseFS, CommandLine, WorkingDirectory, ModuleName);
 
   return scanDependencies(WorkingDirectory, ModifiedCommandLine, Consumer,
                           Controller, DC, OverlayFS, ModuleName);
