@@ -75,15 +75,13 @@ int __attribute__((target("tune=pwr8"))) baz(void) { return 4; }
 //expected-warning@+1 {{unsupported 'fpmath=' in the 'target' attribute string; 'target' attribute ignored}}
 int __attribute__((target("fpmath=387"))) walrus(void) { return 4; }
 //expected-warning@+1 {{unknown CPU 'hiss' in the 'target' attribute string; 'target' attribute ignored}}
-int __attribute__((target("float128,arch=hiss"))) meow(void) {  return 4; }
+int __attribute__((target("float128,cpu=hiss"))) meow(void) {  return 4; }
 // no warning, same as saying 'nothing'.
-int __attribute__((target("arch="))) turtle(void) { return 4; }
+int __attribute__((target("cpu="))) turtle(void) { return 4; }
 //expected-warning@+1 {{unknown CPU 'hiss' in the 'target' attribute string; 'target' attribute ignored}}
-int __attribute__((target("arch=hiss,arch=woof"))) pine_tree(void) { return 4; }
-//expected-warning@+1 {{duplicate 'arch=' in the 'target' attribute string; 'target' attribute ignored}}
-int __attribute__((target("arch=pwr9,arch=pwr10"))) oak_tree(void) { return 4; }
-//expected-warning@+1 {{unsupported 'branch-protection' in the 'target' attribute string; 'target' attribute ignored}}
-int __attribute__((target("branch-protection=none"))) birch_tree(void) { return 5; }
+int __attribute__((target("cpu=hiss,cpu=woof"))) pine_tree(void) { return 4; }
+//expected-warning@+1 {{duplicate 'cpu=' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("cpu=pwr9,cpu=pwr10"))) oak_tree(void) { return 4; }
 //expected-warning@+1 {{unknown tune CPU 'hiss' in the 'target' attribute string; 'target' attribute ignored}}
 int __attribute__((target("tune=hiss,tune=woof"))) apple_tree(void) { return 4; }
 
