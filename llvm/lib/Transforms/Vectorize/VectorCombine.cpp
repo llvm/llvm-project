@@ -1031,6 +1031,16 @@ bool VectorCombine::foldBitOpOfCastConstant(Instruction &I) {
   // Create the cast operation directly to ensure we get a new instruction
   Instruction *NewCast = CastInst::Create(CastOpcode, NewOp, I.getType());
 
+  // Preserve cast instruction flags
+  if (RHSFlags.NNeg)
+    NewCast->setNonNeg();
+  if (RHSFlags.NUW)
+    NewCast->setHasNoUnsignedWrap();
+  if (RHSFlags.NSW)
+    NewCast->setHasNoSignedWrap();
+
+  NewCast->andIRFlags(LHSCast);
+
   // Insert the new instruction
   Value *Result = Builder.Insert(NewCast);
 
