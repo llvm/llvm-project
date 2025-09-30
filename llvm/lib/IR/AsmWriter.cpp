@@ -1697,7 +1697,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     Type *ETy = CA->getType()->getElementType();
     Out << '[';
     ListSeparator LS;
-    for (const Value *Op : CA->operand_values()) {
+    for (const Value *Op : CA->operands()) {
       Out << LS;
       WriterCtx.TypePrinter->print(ETy, Out);
       Out << ' ';
@@ -1737,7 +1737,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     if (CS->getNumOperands() != 0) {
       Out << ' ';
       ListSeparator LS;
-      for (const Value *Op : CS->operand_values()) {
+      for (const Value *Op : CS->operands()) {
         Out << LS;
         WriterCtx.TypePrinter->print(Op->getType(), Out);
         Out << ' ';
@@ -1832,12 +1832,11 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     }
 
     ListSeparator LS;
-    for (User::const_op_iterator OI = CE->op_begin(); OI != CE->op_end();
-         ++OI) {
+    for (const Value *Op : CE->operands()) {
       Out << LS;
-      WriterCtx.TypePrinter->print((*OI)->getType(), Out);
+      WriterCtx.TypePrinter->print(Op->getType(), Out);
       Out << ' ';
-      WriteAsOperandInternal(Out, *OI, WriterCtx);
+      WriteAsOperandInternal(Out, Op, WriterCtx);
     }
 
     if (CE->isCast()) {
@@ -4780,7 +4779,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 
     Out << ' ';
     ListSeparator LS;
-    for (const Value *Op : I.operand_values()) {
+    for (const Value *Op : I.operands()) {
       Out << LS;
       writeOperand(Op, PrintAllTypes);
     }
