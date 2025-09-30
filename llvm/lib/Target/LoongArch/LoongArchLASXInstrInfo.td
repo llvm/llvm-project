@@ -1328,6 +1328,39 @@ multiclass PairInsertExtractPatV4<ValueType vecty, ValueType elemty> {
   }
 }
 
+multiclass XVmulwPat<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v32i8 LASX256:$xj), (v32i8 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_H_B") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(OpNode (v16i16 LASX256:$xj), (v16i16 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_W_H") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(OpNode (v8i32 LASX256:$xj), (v8i32 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_D_W") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(OpNode (v4i64 LASX256:$xj), (v4i64 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_Q_D") LASX256:$xj, LASX256:$xk)>;
+}
+
+multiclass XVmulwuPat<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v32i8 LASX256:$xj), (v32i8 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_H_BU") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(OpNode (v16i16 LASX256:$xj), (v16i16 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_W_HU") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(OpNode (v8i32 LASX256:$xj), (v8i32 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_D_WU") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(OpNode (v4i64 LASX256:$xj), (v4i64 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_Q_DU") LASX256:$xj, LASX256:$xk)>;
+}
+
+multiclass XVmulwusPat<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v32i8 LASX256:$xj), (v32i8 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_H_BU_B") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(OpNode (v16i16 LASX256:$xj), (v16i16 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_W_HU_H") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(OpNode (v8i32 LASX256:$xj), (v8i32 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_D_WU_W") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(OpNode (v4i64 LASX256:$xj), (v4i64 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_Q_DU_D") LASX256:$xj, LASX256:$xk)>;
+}
+
 let Predicates = [HasExtLASX] in {
 
 // XVADD_{B/H/W/D}
@@ -1364,6 +1397,14 @@ defm : PatXrXr<mul, "XVMUL">;
 // XVMUH_{B/H/W/D}[U]
 defm : PatXrXr<mulhs, "XVMUH">;
 defm : PatXrXrU<mulhu, "XVMUH">;
+
+// XVMULW{EV/OD}_{H_B/W_H/D_W/Q_D}[U], XVMULW{EV/OD}_{H_BU_B/W_HU_H/D_WU_W/Q_DU_D}
+defm : XVmulwPat<loongarch_vmulwev, "XVMULWEV">;
+defm : XVmulwPat<loongarch_vmulwod, "XVMULWOD">;
+defm : XVmulwuPat<loongarch_vmulwevu, "XVMULWEV">;
+defm : XVmulwuPat<loongarch_vmulwodu, "XVMULWOD">;
+defm : XVmulwusPat<loongarch_vmulwevus, "XVMULWEV">;
+defm : XVmulwusPat<loongarch_vmulwodus, "XVMULWOD">;
 
 // XVMADD_{B/H/W/D}
 defm : PatXrXrXr<muladd, "XVMADD">;

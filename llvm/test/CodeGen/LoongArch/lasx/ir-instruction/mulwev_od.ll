@@ -5,109 +5,9 @@
 define void @vmulwev_h_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: vmulwev_h_b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr3, $a1, 0
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvpermi.d $xr2, $xr3, 14
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 0
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 2
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 4
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 6
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 8
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 10
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 12
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 14
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 0
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 2
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 4
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 6
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 8
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 10
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 12
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 14
-; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 14
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 0
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 2
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 4
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 6
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 8
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 10
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 12
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 14
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 0
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 2
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 4
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 6
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 8
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 10
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 12
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 14
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 7
-; CHECK-NEXT:    xvpermi.q $xr1, $xr3, 2
-; CHECK-NEXT:    xvpermi.q $xr4, $xr0, 2
-; CHECK-NEXT:    xvmul.h $xr0, $xr1, $xr4
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwev.h.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -127,59 +27,7 @@ define void @vmulwev_w_h(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 14
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr2, 6
-; CHECK-NEXT:    vpickve2gr.h $a2, $vr2, 4
-; CHECK-NEXT:    vpickve2gr.h $a3, $vr2, 2
-; CHECK-NEXT:    vpickve2gr.h $a4, $vr2, 0
-; CHECK-NEXT:    vpickve2gr.h $a5, $vr0, 6
-; CHECK-NEXT:    vpickve2gr.h $a6, $vr0, 4
-; CHECK-NEXT:    vpickve2gr.h $a7, $vr0, 2
-; CHECK-NEXT:    vpickve2gr.h $t0, $vr0, 0
-; CHECK-NEXT:    xvpermi.d $xr0, $xr1, 14
-; CHECK-NEXT:    vpickve2gr.h $t1, $vr0, 6
-; CHECK-NEXT:    vpickve2gr.h $t2, $vr0, 4
-; CHECK-NEXT:    vpickve2gr.h $t3, $vr0, 2
-; CHECK-NEXT:    vpickve2gr.h $t4, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.h $t5, $vr1, 6
-; CHECK-NEXT:    vpickve2gr.h $t6, $vr1, 4
-; CHECK-NEXT:    vpickve2gr.h $t7, $vr1, 2
-; CHECK-NEXT:    vpickve2gr.h $t8, $vr1, 0
-; CHECK-NEXT:    ext.w.h $t0, $t0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; CHECK-NEXT:    ext.w.h $a7, $a7
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a7, 1
-; CHECK-NEXT:    ext.w.h $a6, $a6
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a6, 2
-; CHECK-NEXT:    ext.w.h $a5, $a5
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a5, 3
-; CHECK-NEXT:    ext.w.h $a4, $a4
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; CHECK-NEXT:    ext.w.h $a3, $a3
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; CHECK-NEXT:    ext.w.h $a2, $a2
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; CHECK-NEXT:    ext.w.h $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
-; CHECK-NEXT:    ext.w.h $a1, $t8
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; CHECK-NEXT:    ext.w.h $a1, $t7
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; CHECK-NEXT:    ext.w.h $a1, $t6
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; CHECK-NEXT:    ext.w.h $a1, $t5
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; CHECK-NEXT:    ext.w.h $a1, $t4
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; CHECK-NEXT:    ext.w.h $a1, $t3
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; CHECK-NEXT:    ext.w.h $a1, $t2
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; CHECK-NEXT:    ext.w.h $a1, $t1
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; CHECK-NEXT:    xvpermi.q $xr1, $xr2, 2
-; CHECK-NEXT:    xvmul.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvmulwev.w.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -195,73 +43,13 @@ entry:
 }
 
 define void @vmulwev_d_w(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: vmulwev_d_w:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvld $xr1, $a2, 0
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 2
-; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 0
-; LA32-NEXT:    xvpickve2gr.w $a3, $xr0, 6
-; LA32-NEXT:    xvpickve2gr.w $a4, $xr0, 4
-; LA32-NEXT:    xvpickve2gr.w $a5, $xr1, 2
-; LA32-NEXT:    xvpickve2gr.w $a6, $xr1, 0
-; LA32-NEXT:    xvpickve2gr.w $a7, $xr1, 6
-; LA32-NEXT:    xvpickve2gr.w $t0, $xr1, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 0
-; LA32-NEXT:    srai.w $a4, $a4, 31
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 1
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 2
-; LA32-NEXT:    srai.w $a3, $a3, 31
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 3
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
-; LA32-NEXT:    srai.w $a2, $a2, 31
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 1
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA32-NEXT:    srai.w $a1, $a1, 31
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr1, $xr0, 2
-; LA32-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; LA32-NEXT:    srai.w $a1, $t0, 31
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 1
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a7, 2
-; LA32-NEXT:    srai.w $a1, $a7, 31
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 3
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a6, 0
-; LA32-NEXT:    srai.w $a1, $a6, 31
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a5, 2
-; LA32-NEXT:    srai.w $a1, $a5, 31
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr2, $xr0, 2
-; LA32-NEXT:    xvmul.d $xr0, $xr1, $xr2
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmulwev_d_w:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 2
-; LA64-NEXT:    xvpickve2gr.w $a2, $xr0, 0
-; LA64-NEXT:    xvpickve2gr.w $a3, $xr0, 6
-; LA64-NEXT:    xvpickve2gr.w $a4, $xr0, 4
-; LA64-NEXT:    xvpickve2gr.w $a5, $xr1, 2
-; LA64-NEXT:    xvpickve2gr.w $a6, $xr1, 0
-; LA64-NEXT:    xvpickve2gr.w $a7, $xr1, 6
-; LA64-NEXT:    xvpickve2gr.w $t0, $xr1, 4
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a4, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a3, 1
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a2, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a1, 1
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 2
-; LA64-NEXT:    vinsgr2vr.d $vr0, $t0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a7, 1
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a6, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a5, 1
-; LA64-NEXT:    xvpermi.q $xr2, $xr0, 2
-; LA64-NEXT:    xvmul.d $xr0, $xr1, $xr2
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmulwev_d_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwev.d.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i32>, ptr %a
   %vb = load <8 x i32>, ptr %b
@@ -423,109 +211,9 @@ entry:
 define void @vmulwod_h_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: vmulwod_h_b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr3, $a1, 0
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvpermi.d $xr2, $xr3, 14
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 1
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 3
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 5
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 7
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 9
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 11
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 13
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 15
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 1
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 3
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 5
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 7
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 9
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 11
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 13
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 15
-; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 14
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 1
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 3
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 5
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 7
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 9
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 11
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 13
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 1
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 3
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 5
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 7
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 9
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 11
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 13
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 15
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 7
-; CHECK-NEXT:    xvpermi.q $xr1, $xr3, 2
-; CHECK-NEXT:    xvpermi.q $xr4, $xr0, 2
-; CHECK-NEXT:    xvmul.h $xr0, $xr1, $xr4
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwod.h.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -545,59 +233,7 @@ define void @vmulwod_w_h(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 14
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr2, 7
-; CHECK-NEXT:    vpickve2gr.h $a2, $vr2, 5
-; CHECK-NEXT:    vpickve2gr.h $a3, $vr2, 3
-; CHECK-NEXT:    vpickve2gr.h $a4, $vr2, 1
-; CHECK-NEXT:    vpickve2gr.h $a5, $vr0, 7
-; CHECK-NEXT:    vpickve2gr.h $a6, $vr0, 5
-; CHECK-NEXT:    vpickve2gr.h $a7, $vr0, 3
-; CHECK-NEXT:    vpickve2gr.h $t0, $vr0, 1
-; CHECK-NEXT:    xvpermi.d $xr0, $xr1, 14
-; CHECK-NEXT:    vpickve2gr.h $t1, $vr0, 7
-; CHECK-NEXT:    vpickve2gr.h $t2, $vr0, 5
-; CHECK-NEXT:    vpickve2gr.h $t3, $vr0, 3
-; CHECK-NEXT:    vpickve2gr.h $t4, $vr0, 1
-; CHECK-NEXT:    vpickve2gr.h $t5, $vr1, 7
-; CHECK-NEXT:    vpickve2gr.h $t6, $vr1, 5
-; CHECK-NEXT:    vpickve2gr.h $t7, $vr1, 3
-; CHECK-NEXT:    vpickve2gr.h $t8, $vr1, 1
-; CHECK-NEXT:    ext.w.h $t0, $t0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; CHECK-NEXT:    ext.w.h $a7, $a7
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a7, 1
-; CHECK-NEXT:    ext.w.h $a6, $a6
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a6, 2
-; CHECK-NEXT:    ext.w.h $a5, $a5
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a5, 3
-; CHECK-NEXT:    ext.w.h $a4, $a4
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; CHECK-NEXT:    ext.w.h $a3, $a3
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; CHECK-NEXT:    ext.w.h $a2, $a2
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; CHECK-NEXT:    ext.w.h $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
-; CHECK-NEXT:    ext.w.h $a1, $t8
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; CHECK-NEXT:    ext.w.h $a1, $t7
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; CHECK-NEXT:    ext.w.h $a1, $t6
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; CHECK-NEXT:    ext.w.h $a1, $t5
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; CHECK-NEXT:    ext.w.h $a1, $t4
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; CHECK-NEXT:    ext.w.h $a1, $t3
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; CHECK-NEXT:    ext.w.h $a1, $t2
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; CHECK-NEXT:    ext.w.h $a1, $t1
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; CHECK-NEXT:    xvpermi.q $xr1, $xr2, 2
-; CHECK-NEXT:    xvmul.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvmulwod.w.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -613,73 +249,13 @@ entry:
 }
 
 define void @vmulwod_d_w(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: vmulwod_d_w:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvld $xr1, $a2, 0
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 3
-; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 1
-; LA32-NEXT:    xvpickve2gr.w $a3, $xr0, 7
-; LA32-NEXT:    xvpickve2gr.w $a4, $xr0, 5
-; LA32-NEXT:    xvpickve2gr.w $a5, $xr1, 3
-; LA32-NEXT:    xvpickve2gr.w $a6, $xr1, 1
-; LA32-NEXT:    xvpickve2gr.w $a7, $xr1, 7
-; LA32-NEXT:    xvpickve2gr.w $t0, $xr1, 5
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 0
-; LA32-NEXT:    srai.w $a4, $a4, 31
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 1
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 2
-; LA32-NEXT:    srai.w $a3, $a3, 31
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 3
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
-; LA32-NEXT:    srai.w $a2, $a2, 31
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 1
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA32-NEXT:    srai.w $a1, $a1, 31
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr1, $xr0, 2
-; LA32-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; LA32-NEXT:    srai.w $a1, $t0, 31
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 1
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a7, 2
-; LA32-NEXT:    srai.w $a1, $a7, 31
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 3
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a6, 0
-; LA32-NEXT:    srai.w $a1, $a6, 31
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a5, 2
-; LA32-NEXT:    srai.w $a1, $a5, 31
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr2, $xr0, 2
-; LA32-NEXT:    xvmul.d $xr0, $xr1, $xr2
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmulwod_d_w:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 3
-; LA64-NEXT:    xvpickve2gr.w $a2, $xr0, 1
-; LA64-NEXT:    xvpickve2gr.w $a3, $xr0, 7
-; LA64-NEXT:    xvpickve2gr.w $a4, $xr0, 5
-; LA64-NEXT:    xvpickve2gr.w $a5, $xr1, 3
-; LA64-NEXT:    xvpickve2gr.w $a6, $xr1, 1
-; LA64-NEXT:    xvpickve2gr.w $a7, $xr1, 7
-; LA64-NEXT:    xvpickve2gr.w $t0, $xr1, 5
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a4, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a3, 1
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a2, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a1, 1
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 2
-; LA64-NEXT:    vinsgr2vr.d $vr0, $t0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a7, 1
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a6, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a5, 1
-; LA64-NEXT:    xvpermi.q $xr2, $xr0, 2
-; LA64-NEXT:    xvmul.d $xr0, $xr1, $xr2
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmulwod_d_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwod.d.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i32>, ptr %a
   %vb = load <8 x i32>, ptr %b
@@ -841,109 +417,9 @@ entry:
 define void @vmulwev_h_bu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: vmulwev_h_bu:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr3, $a1, 0
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvpermi.d $xr2, $xr3, 14
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 0
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 2
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 4
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 6
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 8
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 10
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 12
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 14
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 0
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 2
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 4
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 6
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 8
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 10
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 12
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 14
-; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 14
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 0
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 2
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 4
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 6
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 8
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 10
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 12
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 14
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 0
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 2
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 4
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 6
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 8
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 10
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 12
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 14
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 7
-; CHECK-NEXT:    xvpermi.q $xr1, $xr3, 2
-; CHECK-NEXT:    xvpermi.q $xr4, $xr0, 2
-; CHECK-NEXT:    xvmul.h $xr0, $xr1, $xr4
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwev.h.bu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -959,125 +435,13 @@ entry:
 }
 
 define void @vmulwev_w_hu(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: vmulwev_w_hu:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvld $xr1, $a2, 0
-; LA32-NEXT:    xvpermi.d $xr2, $xr0, 14
-; LA32-NEXT:    vpickve2gr.h $a1, $vr2, 6
-; LA32-NEXT:    vpickve2gr.h $a2, $vr2, 4
-; LA32-NEXT:    vpickve2gr.h $a3, $vr2, 2
-; LA32-NEXT:    vpickve2gr.h $a4, $vr2, 0
-; LA32-NEXT:    vpickve2gr.h $a5, $vr0, 6
-; LA32-NEXT:    vpickve2gr.h $a6, $vr0, 4
-; LA32-NEXT:    vpickve2gr.h $a7, $vr0, 2
-; LA32-NEXT:    vpickve2gr.h $t0, $vr0, 0
-; LA32-NEXT:    xvpermi.d $xr0, $xr1, 14
-; LA32-NEXT:    vpickve2gr.h $t1, $vr0, 6
-; LA32-NEXT:    vpickve2gr.h $t2, $vr0, 4
-; LA32-NEXT:    vpickve2gr.h $t3, $vr0, 2
-; LA32-NEXT:    vpickve2gr.h $t4, $vr0, 0
-; LA32-NEXT:    vpickve2gr.h $t5, $vr1, 6
-; LA32-NEXT:    vpickve2gr.h $t6, $vr1, 4
-; LA32-NEXT:    vpickve2gr.h $t7, $vr1, 2
-; LA32-NEXT:    vpickve2gr.h $t8, $vr1, 0
-; LA32-NEXT:    bstrpick.w $t0, $t0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; LA32-NEXT:    bstrpick.w $a7, $a7, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a7, 1
-; LA32-NEXT:    bstrpick.w $a6, $a6, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a6, 2
-; LA32-NEXT:    bstrpick.w $a5, $a5, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a5, 3
-; LA32-NEXT:    bstrpick.w $a4, $a4, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; LA32-NEXT:    bstrpick.w $a3, $a3, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA32-NEXT:    bstrpick.w $a2, $a2, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA32-NEXT:    bstrpick.w $a1, $t8, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA32-NEXT:    bstrpick.w $a1, $t7, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA32-NEXT:    bstrpick.w $a1, $t6, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA32-NEXT:    bstrpick.w $a1, $t5, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    bstrpick.w $a1, $t4, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; LA32-NEXT:    bstrpick.w $a1, $t3, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; LA32-NEXT:    bstrpick.w $a1, $t2, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA32-NEXT:    bstrpick.w $a1, $t1, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr1, $xr2, 2
-; LA32-NEXT:    xvmul.w $xr0, $xr0, $xr1
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmulwev_w_hu:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvpermi.d $xr2, $xr0, 14
-; LA64-NEXT:    vpickve2gr.h $a1, $vr2, 6
-; LA64-NEXT:    vpickve2gr.h $a2, $vr2, 4
-; LA64-NEXT:    vpickve2gr.h $a3, $vr2, 2
-; LA64-NEXT:    vpickve2gr.h $a4, $vr2, 0
-; LA64-NEXT:    vpickve2gr.h $a5, $vr0, 6
-; LA64-NEXT:    vpickve2gr.h $a6, $vr0, 4
-; LA64-NEXT:    vpickve2gr.h $a7, $vr0, 2
-; LA64-NEXT:    vpickve2gr.h $t0, $vr0, 0
-; LA64-NEXT:    xvpermi.d $xr0, $xr1, 14
-; LA64-NEXT:    vpickve2gr.h $t1, $vr0, 6
-; LA64-NEXT:    vpickve2gr.h $t2, $vr0, 4
-; LA64-NEXT:    vpickve2gr.h $t3, $vr0, 2
-; LA64-NEXT:    vpickve2gr.h $t4, $vr0, 0
-; LA64-NEXT:    vpickve2gr.h $t5, $vr1, 6
-; LA64-NEXT:    vpickve2gr.h $t6, $vr1, 4
-; LA64-NEXT:    vpickve2gr.h $t7, $vr1, 2
-; LA64-NEXT:    vpickve2gr.h $t8, $vr1, 0
-; LA64-NEXT:    bstrpick.d $t0, $t0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; LA64-NEXT:    bstrpick.d $a7, $a7, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a7, 1
-; LA64-NEXT:    bstrpick.d $a6, $a6, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a6, 2
-; LA64-NEXT:    bstrpick.d $a5, $a5, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a5, 3
-; LA64-NEXT:    bstrpick.d $a4, $a4, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; LA64-NEXT:    bstrpick.d $a3, $a3, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA64-NEXT:    bstrpick.d $a2, $a2, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA64-NEXT:    bstrpick.d $a1, $t8, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $t7, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA64-NEXT:    bstrpick.d $a1, $t6, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA64-NEXT:    bstrpick.d $a1, $t5, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA64-NEXT:    bstrpick.d $a1, $t4, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $t3, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; LA64-NEXT:    bstrpick.d $a1, $t2, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA64-NEXT:    bstrpick.d $a1, $t1, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA64-NEXT:    xvpermi.q $xr1, $xr2, 2
-; LA64-NEXT:    xvmul.w $xr0, $xr0, $xr1
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmulwev_w_hu:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwev.w.hu $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <16 x i16>, ptr %a
   %vb = load <16 x i16>, ptr %b
@@ -1091,63 +455,13 @@ entry:
 }
 
 define void @vmulwev_d_wu(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: vmulwev_d_wu:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvrepli.b $xr1, 0
-; LA32-NEXT:    xvld $xr2, $a2, 0
-; LA32-NEXT:    xvori.b $xr3, $xr1, 0
-; LA32-NEXT:    xvinsve0.w $xr3, $xr0, 0
-; LA32-NEXT:    xvpickve.w $xr4, $xr0, 2
-; LA32-NEXT:    xvinsve0.w $xr3, $xr4, 2
-; LA32-NEXT:    xvpickve.w $xr4, $xr0, 4
-; LA32-NEXT:    xvinsve0.w $xr3, $xr4, 4
-; LA32-NEXT:    xvpickve.w $xr0, $xr0, 6
-; LA32-NEXT:    xvinsve0.w $xr3, $xr0, 6
-; LA32-NEXT:    xvinsve0.w $xr1, $xr2, 0
-; LA32-NEXT:    xvpickve.w $xr0, $xr2, 2
-; LA32-NEXT:    xvinsve0.w $xr1, $xr0, 2
-; LA32-NEXT:    xvpickve.w $xr0, $xr2, 4
-; LA32-NEXT:    xvinsve0.w $xr1, $xr0, 4
-; LA32-NEXT:    xvpickve.w $xr0, $xr2, 6
-; LA32-NEXT:    xvinsve0.w $xr1, $xr0, 6
-; LA32-NEXT:    xvmul.d $xr0, $xr3, $xr1
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmulwev_d_wu:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 2
-; LA64-NEXT:    xvpickve2gr.w $a2, $xr0, 0
-; LA64-NEXT:    xvpickve2gr.w $a3, $xr0, 6
-; LA64-NEXT:    xvpickve2gr.w $a4, $xr0, 4
-; LA64-NEXT:    xvpickve2gr.w $a5, $xr1, 2
-; LA64-NEXT:    xvpickve2gr.w $a6, $xr1, 0
-; LA64-NEXT:    xvpickve2gr.w $a7, $xr1, 6
-; LA64-NEXT:    xvpickve2gr.w $t0, $xr1, 4
-; LA64-NEXT:    bstrpick.d $a4, $a4, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a4, 0
-; LA64-NEXT:    bstrpick.d $a3, $a3, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a3, 1
-; LA64-NEXT:    bstrpick.d $a2, $a2, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a2, 0
-; LA64-NEXT:    bstrpick.d $a1, $a1, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a1, 1
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 2
-; LA64-NEXT:    bstrpick.d $a1, $t0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $a7, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a1, 1
-; LA64-NEXT:    bstrpick.d $a1, $a6, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $a5, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a1, 1
-; LA64-NEXT:    xvpermi.q $xr2, $xr0, 2
-; LA64-NEXT:    xvmul.d $xr0, $xr1, $xr2
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmulwev_d_wu:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwev.d.wu $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i32>, ptr %a
   %vb = load <8 x i32>, ptr %b
@@ -1255,109 +569,9 @@ entry:
 define void @vmulwod_h_bu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: vmulwod_h_bu:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr3, $a1, 0
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvpermi.d $xr2, $xr3, 14
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 1
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 3
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 5
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 7
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 9
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 11
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 13
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 15
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 1
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 3
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 5
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 7
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 9
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 11
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 13
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 15
-; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 14
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 3
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 5
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 7
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 9
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 11
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 13
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 1
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 3
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 5
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 7
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 9
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 11
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 13
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 15
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 7
-; CHECK-NEXT:    xvpermi.q $xr1, $xr3, 2
-; CHECK-NEXT:    xvpermi.q $xr4, $xr0, 2
-; CHECK-NEXT:    xvmul.h $xr0, $xr1, $xr4
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwod.h.bu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -1373,125 +587,13 @@ entry:
 }
 
 define void @vmulwod_w_hu(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: vmulwod_w_hu:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvld $xr1, $a2, 0
-; LA32-NEXT:    xvpermi.d $xr2, $xr0, 14
-; LA32-NEXT:    vpickve2gr.h $a1, $vr2, 7
-; LA32-NEXT:    vpickve2gr.h $a2, $vr2, 5
-; LA32-NEXT:    vpickve2gr.h $a3, $vr2, 3
-; LA32-NEXT:    vpickve2gr.h $a4, $vr2, 1
-; LA32-NEXT:    vpickve2gr.h $a5, $vr0, 7
-; LA32-NEXT:    vpickve2gr.h $a6, $vr0, 5
-; LA32-NEXT:    vpickve2gr.h $a7, $vr0, 3
-; LA32-NEXT:    vpickve2gr.h $t0, $vr0, 1
-; LA32-NEXT:    xvpermi.d $xr0, $xr1, 14
-; LA32-NEXT:    vpickve2gr.h $t1, $vr0, 7
-; LA32-NEXT:    vpickve2gr.h $t2, $vr0, 5
-; LA32-NEXT:    vpickve2gr.h $t3, $vr0, 3
-; LA32-NEXT:    vpickve2gr.h $t4, $vr0, 1
-; LA32-NEXT:    vpickve2gr.h $t5, $vr1, 7
-; LA32-NEXT:    vpickve2gr.h $t6, $vr1, 5
-; LA32-NEXT:    vpickve2gr.h $t7, $vr1, 3
-; LA32-NEXT:    vpickve2gr.h $t8, $vr1, 1
-; LA32-NEXT:    bstrpick.w $t0, $t0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; LA32-NEXT:    bstrpick.w $a7, $a7, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a7, 1
-; LA32-NEXT:    bstrpick.w $a6, $a6, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a6, 2
-; LA32-NEXT:    bstrpick.w $a5, $a5, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a5, 3
-; LA32-NEXT:    bstrpick.w $a4, $a4, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; LA32-NEXT:    bstrpick.w $a3, $a3, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA32-NEXT:    bstrpick.w $a2, $a2, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA32-NEXT:    bstrpick.w $a1, $t8, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA32-NEXT:    bstrpick.w $a1, $t7, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA32-NEXT:    bstrpick.w $a1, $t6, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA32-NEXT:    bstrpick.w $a1, $t5, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    bstrpick.w $a1, $t4, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; LA32-NEXT:    bstrpick.w $a1, $t3, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; LA32-NEXT:    bstrpick.w $a1, $t2, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA32-NEXT:    bstrpick.w $a1, $t1, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr1, $xr2, 2
-; LA32-NEXT:    xvmul.w $xr0, $xr0, $xr1
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmulwod_w_hu:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvpermi.d $xr2, $xr0, 14
-; LA64-NEXT:    vpickve2gr.h $a1, $vr2, 7
-; LA64-NEXT:    vpickve2gr.h $a2, $vr2, 5
-; LA64-NEXT:    vpickve2gr.h $a3, $vr2, 3
-; LA64-NEXT:    vpickve2gr.h $a4, $vr2, 1
-; LA64-NEXT:    vpickve2gr.h $a5, $vr0, 7
-; LA64-NEXT:    vpickve2gr.h $a6, $vr0, 5
-; LA64-NEXT:    vpickve2gr.h $a7, $vr0, 3
-; LA64-NEXT:    vpickve2gr.h $t0, $vr0, 1
-; LA64-NEXT:    xvpermi.d $xr0, $xr1, 14
-; LA64-NEXT:    vpickve2gr.h $t1, $vr0, 7
-; LA64-NEXT:    vpickve2gr.h $t2, $vr0, 5
-; LA64-NEXT:    vpickve2gr.h $t3, $vr0, 3
-; LA64-NEXT:    vpickve2gr.h $t4, $vr0, 1
-; LA64-NEXT:    vpickve2gr.h $t5, $vr1, 7
-; LA64-NEXT:    vpickve2gr.h $t6, $vr1, 5
-; LA64-NEXT:    vpickve2gr.h $t7, $vr1, 3
-; LA64-NEXT:    vpickve2gr.h $t8, $vr1, 1
-; LA64-NEXT:    bstrpick.d $t0, $t0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; LA64-NEXT:    bstrpick.d $a7, $a7, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a7, 1
-; LA64-NEXT:    bstrpick.d $a6, $a6, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a6, 2
-; LA64-NEXT:    bstrpick.d $a5, $a5, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a5, 3
-; LA64-NEXT:    bstrpick.d $a4, $a4, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; LA64-NEXT:    bstrpick.d $a3, $a3, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA64-NEXT:    bstrpick.d $a2, $a2, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA64-NEXT:    bstrpick.d $a1, $t8, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $t7, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA64-NEXT:    bstrpick.d $a1, $t6, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA64-NEXT:    bstrpick.d $a1, $t5, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA64-NEXT:    bstrpick.d $a1, $t4, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $t3, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; LA64-NEXT:    bstrpick.d $a1, $t2, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA64-NEXT:    bstrpick.d $a1, $t1, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA64-NEXT:    xvpermi.q $xr1, $xr2, 2
-; LA64-NEXT:    xvmul.w $xr0, $xr0, $xr1
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmulwod_w_hu:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwod.w.hu $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <16 x i16>, ptr %a
   %vb = load <16 x i16>, ptr %b
@@ -1505,65 +607,13 @@ entry:
 }
 
 define void @vmulwod_d_wu(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: vmulwod_d_wu:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvld $xr1, $a2, 0
-; LA32-NEXT:    xvrepli.b $xr2, 0
-; LA32-NEXT:    xvpickve.w $xr3, $xr0, 1
-; LA32-NEXT:    xvori.b $xr4, $xr2, 0
-; LA32-NEXT:    xvinsve0.w $xr4, $xr3, 0
-; LA32-NEXT:    xvpickve.w $xr3, $xr0, 3
-; LA32-NEXT:    xvinsve0.w $xr4, $xr3, 2
-; LA32-NEXT:    xvpickve.w $xr3, $xr0, 5
-; LA32-NEXT:    xvinsve0.w $xr4, $xr3, 4
-; LA32-NEXT:    xvpickve.w $xr0, $xr0, 7
-; LA32-NEXT:    xvinsve0.w $xr4, $xr0, 6
-; LA32-NEXT:    xvpickve.w $xr0, $xr1, 1
-; LA32-NEXT:    xvinsve0.w $xr2, $xr0, 0
-; LA32-NEXT:    xvpickve.w $xr0, $xr1, 3
-; LA32-NEXT:    xvinsve0.w $xr2, $xr0, 2
-; LA32-NEXT:    xvpickve.w $xr0, $xr1, 5
-; LA32-NEXT:    xvinsve0.w $xr2, $xr0, 4
-; LA32-NEXT:    xvpickve.w $xr0, $xr1, 7
-; LA32-NEXT:    xvinsve0.w $xr2, $xr0, 6
-; LA32-NEXT:    xvmul.d $xr0, $xr4, $xr2
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmulwod_d_wu:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 3
-; LA64-NEXT:    xvpickve2gr.w $a2, $xr0, 1
-; LA64-NEXT:    xvpickve2gr.w $a3, $xr0, 7
-; LA64-NEXT:    xvpickve2gr.w $a4, $xr0, 5
-; LA64-NEXT:    xvpickve2gr.w $a5, $xr1, 3
-; LA64-NEXT:    xvpickve2gr.w $a6, $xr1, 1
-; LA64-NEXT:    xvpickve2gr.w $a7, $xr1, 7
-; LA64-NEXT:    xvpickve2gr.w $t0, $xr1, 5
-; LA64-NEXT:    bstrpick.d $a4, $a4, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a4, 0
-; LA64-NEXT:    bstrpick.d $a3, $a3, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a3, 1
-; LA64-NEXT:    bstrpick.d $a2, $a2, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a2, 0
-; LA64-NEXT:    bstrpick.d $a1, $a1, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a1, 1
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 2
-; LA64-NEXT:    bstrpick.d $a1, $t0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $a7, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a1, 1
-; LA64-NEXT:    bstrpick.d $a1, $a6, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $a5, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a1, 1
-; LA64-NEXT:    xvpermi.q $xr2, $xr0, 2
-; LA64-NEXT:    xvmul.d $xr0, $xr1, $xr2
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmulwod_d_wu:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwod.d.wu $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i32>, ptr %a
   %vb = load <8 x i32>, ptr %b
@@ -1671,109 +721,9 @@ entry:
 define void @vmulwev_h_bu_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: vmulwev_h_bu_b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr3, $a1, 0
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvpermi.d $xr2, $xr3, 14
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 0
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 2
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 4
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 6
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 8
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 10
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 12
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 14
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 0
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 2
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 4
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 6
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 8
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 10
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 12
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 14
-; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 14
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 0
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 2
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 4
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 6
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 8
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 10
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 12
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 14
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 0
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 2
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 4
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 6
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 8
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 10
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 12
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 14
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 7
-; CHECK-NEXT:    xvpermi.q $xr1, $xr3, 2
-; CHECK-NEXT:    xvpermi.q $xr4, $xr0, 2
-; CHECK-NEXT:    xvmul.h $xr0, $xr1, $xr4
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwev.h.bu.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -1789,125 +739,13 @@ entry:
 }
 
 define void @vmulwev_w_hu_h(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: vmulwev_w_hu_h:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvld $xr1, $a2, 0
-; LA32-NEXT:    xvpermi.d $xr2, $xr0, 14
-; LA32-NEXT:    vpickve2gr.h $a1, $vr2, 6
-; LA32-NEXT:    vpickve2gr.h $a2, $vr2, 4
-; LA32-NEXT:    vpickve2gr.h $a3, $vr2, 2
-; LA32-NEXT:    vpickve2gr.h $a4, $vr2, 0
-; LA32-NEXT:    vpickve2gr.h $a5, $vr0, 6
-; LA32-NEXT:    vpickve2gr.h $a6, $vr0, 4
-; LA32-NEXT:    vpickve2gr.h $a7, $vr0, 2
-; LA32-NEXT:    vpickve2gr.h $t0, $vr0, 0
-; LA32-NEXT:    xvpermi.d $xr0, $xr1, 14
-; LA32-NEXT:    vpickve2gr.h $t1, $vr0, 6
-; LA32-NEXT:    vpickve2gr.h $t2, $vr0, 4
-; LA32-NEXT:    vpickve2gr.h $t3, $vr0, 2
-; LA32-NEXT:    vpickve2gr.h $t4, $vr0, 0
-; LA32-NEXT:    vpickve2gr.h $t5, $vr1, 6
-; LA32-NEXT:    vpickve2gr.h $t6, $vr1, 4
-; LA32-NEXT:    vpickve2gr.h $t7, $vr1, 2
-; LA32-NEXT:    vpickve2gr.h $t8, $vr1, 0
-; LA32-NEXT:    bstrpick.w $t0, $t0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; LA32-NEXT:    bstrpick.w $a7, $a7, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a7, 1
-; LA32-NEXT:    bstrpick.w $a6, $a6, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a6, 2
-; LA32-NEXT:    bstrpick.w $a5, $a5, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a5, 3
-; LA32-NEXT:    bstrpick.w $a4, $a4, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; LA32-NEXT:    bstrpick.w $a3, $a3, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA32-NEXT:    bstrpick.w $a2, $a2, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA32-NEXT:    ext.w.h $a1, $t8
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA32-NEXT:    ext.w.h $a1, $t7
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA32-NEXT:    ext.w.h $a1, $t6
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA32-NEXT:    ext.w.h $a1, $t5
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    ext.w.h $a1, $t4
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; LA32-NEXT:    ext.w.h $a1, $t3
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; LA32-NEXT:    ext.w.h $a1, $t2
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA32-NEXT:    ext.w.h $a1, $t1
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr1, $xr2, 2
-; LA32-NEXT:    xvmul.w $xr0, $xr0, $xr1
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmulwev_w_hu_h:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvpermi.d $xr2, $xr0, 14
-; LA64-NEXT:    vpickve2gr.h $a1, $vr2, 6
-; LA64-NEXT:    vpickve2gr.h $a2, $vr2, 4
-; LA64-NEXT:    vpickve2gr.h $a3, $vr2, 2
-; LA64-NEXT:    vpickve2gr.h $a4, $vr2, 0
-; LA64-NEXT:    vpickve2gr.h $a5, $vr0, 6
-; LA64-NEXT:    vpickve2gr.h $a6, $vr0, 4
-; LA64-NEXT:    vpickve2gr.h $a7, $vr0, 2
-; LA64-NEXT:    vpickve2gr.h $t0, $vr0, 0
-; LA64-NEXT:    xvpermi.d $xr0, $xr1, 14
-; LA64-NEXT:    vpickve2gr.h $t1, $vr0, 6
-; LA64-NEXT:    vpickve2gr.h $t2, $vr0, 4
-; LA64-NEXT:    vpickve2gr.h $t3, $vr0, 2
-; LA64-NEXT:    vpickve2gr.h $t4, $vr0, 0
-; LA64-NEXT:    vpickve2gr.h $t5, $vr1, 6
-; LA64-NEXT:    vpickve2gr.h $t6, $vr1, 4
-; LA64-NEXT:    vpickve2gr.h $t7, $vr1, 2
-; LA64-NEXT:    vpickve2gr.h $t8, $vr1, 0
-; LA64-NEXT:    bstrpick.d $t0, $t0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; LA64-NEXT:    bstrpick.d $a7, $a7, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a7, 1
-; LA64-NEXT:    bstrpick.d $a6, $a6, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a6, 2
-; LA64-NEXT:    bstrpick.d $a5, $a5, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a5, 3
-; LA64-NEXT:    bstrpick.d $a4, $a4, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; LA64-NEXT:    bstrpick.d $a3, $a3, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA64-NEXT:    bstrpick.d $a2, $a2, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA64-NEXT:    ext.w.h $a1, $t8
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA64-NEXT:    ext.w.h $a1, $t7
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA64-NEXT:    ext.w.h $a1, $t6
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA64-NEXT:    ext.w.h $a1, $t5
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA64-NEXT:    ext.w.h $a1, $t4
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; LA64-NEXT:    ext.w.h $a1, $t3
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; LA64-NEXT:    ext.w.h $a1, $t2
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA64-NEXT:    ext.w.h $a1, $t1
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA64-NEXT:    xvpermi.q $xr1, $xr2, 2
-; LA64-NEXT:    xvmul.w $xr0, $xr0, $xr1
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmulwev_w_hu_h:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwev.w.hu.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <16 x i16>, ptr %a
   %vb = load <16 x i16>, ptr %b
@@ -1921,68 +759,13 @@ entry:
 }
 
 define void @vmulwev_d_wu_w(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: vmulwev_d_wu_w:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a2, 0
-; LA32-NEXT:    xvld $xr1, $a1, 0
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 2
-; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 0
-; LA32-NEXT:    xvpickve2gr.w $a3, $xr0, 6
-; LA32-NEXT:    xvpickve2gr.w $a4, $xr0, 4
-; LA32-NEXT:    xvrepli.b $xr0, 0
-; LA32-NEXT:    xvinsve0.w $xr0, $xr1, 0
-; LA32-NEXT:    xvpickve.w $xr2, $xr1, 2
-; LA32-NEXT:    xvinsve0.w $xr0, $xr2, 2
-; LA32-NEXT:    xvpickve.w $xr2, $xr1, 4
-; LA32-NEXT:    xvinsve0.w $xr0, $xr2, 4
-; LA32-NEXT:    xvpickve.w $xr1, $xr1, 6
-; LA32-NEXT:    xvinsve0.w $xr0, $xr1, 6
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; LA32-NEXT:    srai.w $a4, $a4, 31
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a4, 1
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 2
-; LA32-NEXT:    srai.w $a3, $a3, 31
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 3
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a2, 0
-; LA32-NEXT:    srai.w $a2, $a2, 31
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a2, 1
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA32-NEXT:    srai.w $a1, $a1, 31
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr2, $xr1, 2
-; LA32-NEXT:    xvmul.d $xr0, $xr0, $xr2
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmulwev_d_wu_w:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 2
-; LA64-NEXT:    xvpickve2gr.w $a2, $xr0, 0
-; LA64-NEXT:    xvpickve2gr.w $a3, $xr0, 6
-; LA64-NEXT:    xvpickve2gr.w $a4, $xr0, 4
-; LA64-NEXT:    xvpickve2gr.w $a5, $xr1, 2
-; LA64-NEXT:    xvpickve2gr.w $a6, $xr1, 0
-; LA64-NEXT:    xvpickve2gr.w $a7, $xr1, 6
-; LA64-NEXT:    xvpickve2gr.w $t0, $xr1, 4
-; LA64-NEXT:    bstrpick.d $a4, $a4, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a4, 0
-; LA64-NEXT:    bstrpick.d $a3, $a3, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a3, 1
-; LA64-NEXT:    bstrpick.d $a2, $a2, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a2, 0
-; LA64-NEXT:    bstrpick.d $a1, $a1, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a1, 1
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 2
-; LA64-NEXT:    vinsgr2vr.d $vr0, $t0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a7, 1
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a6, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a5, 1
-; LA64-NEXT:    xvpermi.q $xr2, $xr0, 2
-; LA64-NEXT:    xvmul.d $xr0, $xr1, $xr2
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmulwev_d_wu_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwev.d.wu.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i32>, ptr %a
   %vb = load <8 x i32>, ptr %b
@@ -2122,109 +905,9 @@ entry:
 define void @vmulwod_h_bu_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: vmulwod_h_bu_b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr3, $a1, 0
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvpermi.d $xr2, $xr3, 14
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 1
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 3
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 5
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 7
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 9
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 11
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 13
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 15
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 1
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 3
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 5
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 7
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 9
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 11
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 13
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 15
-; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 14
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 1
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 3
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 5
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 7
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 9
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 11
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 13
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 1
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 3
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 5
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 7
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 9
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 11
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 13
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 15
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 7
-; CHECK-NEXT:    xvpermi.q $xr1, $xr3, 2
-; CHECK-NEXT:    xvpermi.q $xr4, $xr0, 2
-; CHECK-NEXT:    xvmul.h $xr0, $xr1, $xr4
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwod.h.bu.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -2240,125 +923,13 @@ entry:
 }
 
 define void @vmulwod_w_hu_h(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: vmulwod_w_hu_h:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvld $xr1, $a2, 0
-; LA32-NEXT:    xvpermi.d $xr2, $xr0, 14
-; LA32-NEXT:    vpickve2gr.h $a1, $vr2, 7
-; LA32-NEXT:    vpickve2gr.h $a2, $vr2, 5
-; LA32-NEXT:    vpickve2gr.h $a3, $vr2, 3
-; LA32-NEXT:    vpickve2gr.h $a4, $vr2, 1
-; LA32-NEXT:    vpickve2gr.h $a5, $vr0, 7
-; LA32-NEXT:    vpickve2gr.h $a6, $vr0, 5
-; LA32-NEXT:    vpickve2gr.h $a7, $vr0, 3
-; LA32-NEXT:    vpickve2gr.h $t0, $vr0, 1
-; LA32-NEXT:    xvpermi.d $xr0, $xr1, 14
-; LA32-NEXT:    vpickve2gr.h $t1, $vr0, 7
-; LA32-NEXT:    vpickve2gr.h $t2, $vr0, 5
-; LA32-NEXT:    vpickve2gr.h $t3, $vr0, 3
-; LA32-NEXT:    vpickve2gr.h $t4, $vr0, 1
-; LA32-NEXT:    vpickve2gr.h $t5, $vr1, 7
-; LA32-NEXT:    vpickve2gr.h $t6, $vr1, 5
-; LA32-NEXT:    vpickve2gr.h $t7, $vr1, 3
-; LA32-NEXT:    vpickve2gr.h $t8, $vr1, 1
-; LA32-NEXT:    bstrpick.w $t0, $t0, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; LA32-NEXT:    bstrpick.w $a7, $a7, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a7, 1
-; LA32-NEXT:    bstrpick.w $a6, $a6, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a6, 2
-; LA32-NEXT:    bstrpick.w $a5, $a5, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a5, 3
-; LA32-NEXT:    bstrpick.w $a4, $a4, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; LA32-NEXT:    bstrpick.w $a3, $a3, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA32-NEXT:    bstrpick.w $a2, $a2, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA32-NEXT:    ext.w.h $a1, $t8
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA32-NEXT:    ext.w.h $a1, $t7
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA32-NEXT:    ext.w.h $a1, $t6
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA32-NEXT:    ext.w.h $a1, $t5
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    ext.w.h $a1, $t4
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; LA32-NEXT:    ext.w.h $a1, $t3
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; LA32-NEXT:    ext.w.h $a1, $t2
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA32-NEXT:    ext.w.h $a1, $t1
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr1, $xr2, 2
-; LA32-NEXT:    xvmul.w $xr0, $xr0, $xr1
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmulwod_w_hu_h:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvpermi.d $xr2, $xr0, 14
-; LA64-NEXT:    vpickve2gr.h $a1, $vr2, 7
-; LA64-NEXT:    vpickve2gr.h $a2, $vr2, 5
-; LA64-NEXT:    vpickve2gr.h $a3, $vr2, 3
-; LA64-NEXT:    vpickve2gr.h $a4, $vr2, 1
-; LA64-NEXT:    vpickve2gr.h $a5, $vr0, 7
-; LA64-NEXT:    vpickve2gr.h $a6, $vr0, 5
-; LA64-NEXT:    vpickve2gr.h $a7, $vr0, 3
-; LA64-NEXT:    vpickve2gr.h $t0, $vr0, 1
-; LA64-NEXT:    xvpermi.d $xr0, $xr1, 14
-; LA64-NEXT:    vpickve2gr.h $t1, $vr0, 7
-; LA64-NEXT:    vpickve2gr.h $t2, $vr0, 5
-; LA64-NEXT:    vpickve2gr.h $t3, $vr0, 3
-; LA64-NEXT:    vpickve2gr.h $t4, $vr0, 1
-; LA64-NEXT:    vpickve2gr.h $t5, $vr1, 7
-; LA64-NEXT:    vpickve2gr.h $t6, $vr1, 5
-; LA64-NEXT:    vpickve2gr.h $t7, $vr1, 3
-; LA64-NEXT:    vpickve2gr.h $t8, $vr1, 1
-; LA64-NEXT:    bstrpick.d $t0, $t0, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; LA64-NEXT:    bstrpick.d $a7, $a7, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a7, 1
-; LA64-NEXT:    bstrpick.d $a6, $a6, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a6, 2
-; LA64-NEXT:    bstrpick.d $a5, $a5, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a5, 3
-; LA64-NEXT:    bstrpick.d $a4, $a4, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; LA64-NEXT:    bstrpick.d $a3, $a3, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA64-NEXT:    bstrpick.d $a2, $a2, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA64-NEXT:    ext.w.h $a1, $t8
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA64-NEXT:    ext.w.h $a1, $t7
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA64-NEXT:    ext.w.h $a1, $t6
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA64-NEXT:    ext.w.h $a1, $t5
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA64-NEXT:    ext.w.h $a1, $t4
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; LA64-NEXT:    ext.w.h $a1, $t3
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; LA64-NEXT:    ext.w.h $a1, $t2
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA64-NEXT:    ext.w.h $a1, $t1
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA64-NEXT:    xvpermi.q $xr1, $xr2, 2
-; LA64-NEXT:    xvmul.w $xr0, $xr0, $xr1
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmulwod_w_hu_h:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwod.w.hu.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <16 x i16>, ptr %a
   %vb = load <16 x i16>, ptr %b
@@ -2372,69 +943,13 @@ entry:
 }
 
 define void @vmulwod_d_wu_w(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: vmulwod_d_wu_w:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a2, 0
-; LA32-NEXT:    xvld $xr1, $a1, 0
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 3
-; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 1
-; LA32-NEXT:    xvpickve2gr.w $a3, $xr0, 7
-; LA32-NEXT:    xvpickve2gr.w $a4, $xr0, 5
-; LA32-NEXT:    xvpickve.w $xr0, $xr1, 1
-; LA32-NEXT:    xvrepli.b $xr2, 0
-; LA32-NEXT:    xvinsve0.w $xr2, $xr0, 0
-; LA32-NEXT:    xvpickve.w $xr0, $xr1, 3
-; LA32-NEXT:    xvinsve0.w $xr2, $xr0, 2
-; LA32-NEXT:    xvpickve.w $xr0, $xr1, 5
-; LA32-NEXT:    xvinsve0.w $xr2, $xr0, 4
-; LA32-NEXT:    xvpickve.w $xr0, $xr1, 7
-; LA32-NEXT:    xvinsve0.w $xr2, $xr0, 6
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 0
-; LA32-NEXT:    srai.w $a4, $a4, 31
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 1
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 2
-; LA32-NEXT:    srai.w $a3, $a3, 31
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 3
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
-; LA32-NEXT:    srai.w $a2, $a2, 31
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 1
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA32-NEXT:    srai.w $a1, $a1, 31
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr1, $xr0, 2
-; LA32-NEXT:    xvmul.d $xr0, $xr2, $xr1
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmulwod_d_wu_w:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 3
-; LA64-NEXT:    xvpickve2gr.w $a2, $xr0, 1
-; LA64-NEXT:    xvpickve2gr.w $a3, $xr0, 7
-; LA64-NEXT:    xvpickve2gr.w $a4, $xr0, 5
-; LA64-NEXT:    xvpickve2gr.w $a5, $xr1, 3
-; LA64-NEXT:    xvpickve2gr.w $a6, $xr1, 1
-; LA64-NEXT:    xvpickve2gr.w $a7, $xr1, 7
-; LA64-NEXT:    xvpickve2gr.w $t0, $xr1, 5
-; LA64-NEXT:    bstrpick.d $a4, $a4, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a4, 0
-; LA64-NEXT:    bstrpick.d $a3, $a3, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a3, 1
-; LA64-NEXT:    bstrpick.d $a2, $a2, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a2, 0
-; LA64-NEXT:    bstrpick.d $a1, $a1, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a1, 1
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 2
-; LA64-NEXT:    vinsgr2vr.d $vr0, $t0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a7, 1
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a6, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a5, 1
-; LA64-NEXT:    xvpermi.q $xr2, $xr0, 2
-; LA64-NEXT:    xvmul.d $xr0, $xr1, $xr2
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmulwod_d_wu_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwod.d.wu.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i32>, ptr %a
   %vb = load <8 x i32>, ptr %b
@@ -2574,109 +1089,9 @@ entry:
 define void @vmulwev_h_bu_b_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: vmulwev_h_bu_b_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr3, $a1, 0
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvpermi.d $xr2, $xr3, 14
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 0
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 2
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 4
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 6
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 8
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 10
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 12
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 14
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 0
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 2
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 4
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 6
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 8
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 10
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 12
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 14
-; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 14
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 0
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 2
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 4
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 6
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 8
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 10
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 12
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 14
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 0
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 2
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 4
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 6
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 8
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 10
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 12
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 14
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 7
-; CHECK-NEXT:    xvpermi.q $xr1, $xr3, 2
-; CHECK-NEXT:    xvpermi.q $xr4, $xr0, 2
-; CHECK-NEXT:    xvmul.h $xr0, $xr1, $xr4
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwev.h.bu.b $xr0, $xr1, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -2692,125 +1107,13 @@ entry:
 }
 
 define void @vmulwev_w_hu_h_1(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: vmulwev_w_hu_h_1:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvld $xr1, $a2, 0
-; LA32-NEXT:    xvpermi.d $xr2, $xr0, 14
-; LA32-NEXT:    vpickve2gr.h $a1, $vr2, 6
-; LA32-NEXT:    vpickve2gr.h $a2, $vr2, 4
-; LA32-NEXT:    vpickve2gr.h $a3, $vr2, 2
-; LA32-NEXT:    vpickve2gr.h $a4, $vr2, 0
-; LA32-NEXT:    vpickve2gr.h $a5, $vr0, 6
-; LA32-NEXT:    vpickve2gr.h $a6, $vr0, 4
-; LA32-NEXT:    vpickve2gr.h $a7, $vr0, 2
-; LA32-NEXT:    vpickve2gr.h $t0, $vr0, 0
-; LA32-NEXT:    xvpermi.d $xr0, $xr1, 14
-; LA32-NEXT:    vpickve2gr.h $t1, $vr0, 6
-; LA32-NEXT:    vpickve2gr.h $t2, $vr0, 4
-; LA32-NEXT:    vpickve2gr.h $t3, $vr0, 2
-; LA32-NEXT:    vpickve2gr.h $t4, $vr0, 0
-; LA32-NEXT:    vpickve2gr.h $t5, $vr1, 6
-; LA32-NEXT:    vpickve2gr.h $t6, $vr1, 4
-; LA32-NEXT:    vpickve2gr.h $t7, $vr1, 2
-; LA32-NEXT:    vpickve2gr.h $t8, $vr1, 0
-; LA32-NEXT:    ext.w.h $t0, $t0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; LA32-NEXT:    ext.w.h $a7, $a7
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a7, 1
-; LA32-NEXT:    ext.w.h $a6, $a6
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a6, 2
-; LA32-NEXT:    ext.w.h $a5, $a5
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a5, 3
-; LA32-NEXT:    ext.w.h $a4, $a4
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; LA32-NEXT:    ext.w.h $a3, $a3
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA32-NEXT:    ext.w.h $a2, $a2
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; LA32-NEXT:    ext.w.h $a1, $a1
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA32-NEXT:    bstrpick.w $a1, $t8, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA32-NEXT:    bstrpick.w $a1, $t7, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA32-NEXT:    bstrpick.w $a1, $t6, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA32-NEXT:    bstrpick.w $a1, $t5, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    bstrpick.w $a1, $t4, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; LA32-NEXT:    bstrpick.w $a1, $t3, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; LA32-NEXT:    bstrpick.w $a1, $t2, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA32-NEXT:    bstrpick.w $a1, $t1, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr1, $xr2, 2
-; LA32-NEXT:    xvmul.w $xr0, $xr0, $xr1
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmulwev_w_hu_h_1:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvpermi.d $xr2, $xr0, 14
-; LA64-NEXT:    vpickve2gr.h $a1, $vr2, 6
-; LA64-NEXT:    vpickve2gr.h $a2, $vr2, 4
-; LA64-NEXT:    vpickve2gr.h $a3, $vr2, 2
-; LA64-NEXT:    vpickve2gr.h $a4, $vr2, 0
-; LA64-NEXT:    vpickve2gr.h $a5, $vr0, 6
-; LA64-NEXT:    vpickve2gr.h $a6, $vr0, 4
-; LA64-NEXT:    vpickve2gr.h $a7, $vr0, 2
-; LA64-NEXT:    vpickve2gr.h $t0, $vr0, 0
-; LA64-NEXT:    xvpermi.d $xr0, $xr1, 14
-; LA64-NEXT:    vpickve2gr.h $t1, $vr0, 6
-; LA64-NEXT:    vpickve2gr.h $t2, $vr0, 4
-; LA64-NEXT:    vpickve2gr.h $t3, $vr0, 2
-; LA64-NEXT:    vpickve2gr.h $t4, $vr0, 0
-; LA64-NEXT:    vpickve2gr.h $t5, $vr1, 6
-; LA64-NEXT:    vpickve2gr.h $t6, $vr1, 4
-; LA64-NEXT:    vpickve2gr.h $t7, $vr1, 2
-; LA64-NEXT:    vpickve2gr.h $t8, $vr1, 0
-; LA64-NEXT:    ext.w.h $t0, $t0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; LA64-NEXT:    ext.w.h $a7, $a7
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a7, 1
-; LA64-NEXT:    ext.w.h $a6, $a6
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a6, 2
-; LA64-NEXT:    ext.w.h $a5, $a5
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a5, 3
-; LA64-NEXT:    ext.w.h $a4, $a4
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; LA64-NEXT:    ext.w.h $a3, $a3
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA64-NEXT:    ext.w.h $a2, $a2
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; LA64-NEXT:    ext.w.h $a1, $a1
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA64-NEXT:    bstrpick.d $a1, $t8, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $t7, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA64-NEXT:    bstrpick.d $a1, $t6, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA64-NEXT:    bstrpick.d $a1, $t5, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA64-NEXT:    bstrpick.d $a1, $t4, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $t3, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; LA64-NEXT:    bstrpick.d $a1, $t2, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA64-NEXT:    bstrpick.d $a1, $t1, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA64-NEXT:    xvpermi.q $xr1, $xr2, 2
-; LA64-NEXT:    xvmul.w $xr0, $xr0, $xr1
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmulwev_w_hu_h_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwev.w.hu.h $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <16 x i16>, ptr %a
   %vb = load <16 x i16>, ptr %b
@@ -2824,68 +1127,13 @@ entry:
 }
 
 define void @vmulwev_d_wu_w_1(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: vmulwev_d_wu_w_1:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvld $xr1, $a2, 0
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 2
-; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 0
-; LA32-NEXT:    xvpickve2gr.w $a3, $xr0, 6
-; LA32-NEXT:    xvpickve2gr.w $a4, $xr0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 0
-; LA32-NEXT:    srai.w $a4, $a4, 31
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 1
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 2
-; LA32-NEXT:    srai.w $a3, $a3, 31
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 3
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a2, 0
-; LA32-NEXT:    srai.w $a2, $a2, 31
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a2, 1
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA32-NEXT:    srai.w $a1, $a1, 31
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr2, $xr0, 2
-; LA32-NEXT:    xvrepli.b $xr0, 0
-; LA32-NEXT:    xvinsve0.w $xr0, $xr1, 0
-; LA32-NEXT:    xvpickve.w $xr3, $xr1, 2
-; LA32-NEXT:    xvinsve0.w $xr0, $xr3, 2
-; LA32-NEXT:    xvpickve.w $xr3, $xr1, 4
-; LA32-NEXT:    xvinsve0.w $xr0, $xr3, 4
-; LA32-NEXT:    xvpickve.w $xr1, $xr1, 6
-; LA32-NEXT:    xvinsve0.w $xr0, $xr1, 6
-; LA32-NEXT:    xvmul.d $xr0, $xr2, $xr0
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmulwev_d_wu_w_1:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 2
-; LA64-NEXT:    xvpickve2gr.w $a2, $xr0, 0
-; LA64-NEXT:    xvpickve2gr.w $a3, $xr0, 6
-; LA64-NEXT:    xvpickve2gr.w $a4, $xr0, 4
-; LA64-NEXT:    xvpickve2gr.w $a5, $xr1, 2
-; LA64-NEXT:    xvpickve2gr.w $a6, $xr1, 0
-; LA64-NEXT:    xvpickve2gr.w $a7, $xr1, 6
-; LA64-NEXT:    xvpickve2gr.w $t0, $xr1, 4
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a4, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a3, 1
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a2, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a1, 1
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 2
-; LA64-NEXT:    bstrpick.d $a1, $t0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $a7, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a1, 1
-; LA64-NEXT:    bstrpick.d $a1, $a6, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $a5, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a1, 1
-; LA64-NEXT:    xvpermi.q $xr2, $xr0, 2
-; LA64-NEXT:    xvmul.d $xr0, $xr1, $xr2
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmulwev_d_wu_w_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwev.d.wu.w $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i32>, ptr %a
   %vb = load <8 x i32>, ptr %b
@@ -3025,109 +1273,9 @@ entry:
 define void @vmulwod_h_bu_b_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: vmulwod_h_bu_b_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr3, $a1, 0
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvpermi.d $xr2, $xr3, 14
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 1
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 3
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 5
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 7
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 9
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 11
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 13
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr3, 15
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 1
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 3
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 5
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 7
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 9
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 11
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 13
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 15
-; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 14
-; CHECK-NEXT:    ext.w.b $a1, $a1
-; CHECK-NEXT:    vinsgr2vr.h $vr3, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 3
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 5
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 7
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 9
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 11
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 13
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr4, $a1, 7
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 1
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 3
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 5
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 7
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 9
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 11
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 13
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 6
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr2, 15
-; CHECK-NEXT:    andi $a1, $a1, 255
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 7
-; CHECK-NEXT:    xvpermi.q $xr1, $xr3, 2
-; CHECK-NEXT:    xvpermi.q $xr4, $xr0, 2
-; CHECK-NEXT:    xvmul.h $xr0, $xr1, $xr4
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwod.h.bu.b $xr0, $xr1, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -3143,125 +1291,13 @@ entry:
 }
 
 define void @vmulwod_w_hu_h_1(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: vmulwod_w_hu_h_1:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvld $xr1, $a2, 0
-; LA32-NEXT:    xvpermi.d $xr2, $xr0, 14
-; LA32-NEXT:    vpickve2gr.h $a1, $vr2, 7
-; LA32-NEXT:    vpickve2gr.h $a2, $vr2, 5
-; LA32-NEXT:    vpickve2gr.h $a3, $vr2, 3
-; LA32-NEXT:    vpickve2gr.h $a4, $vr2, 1
-; LA32-NEXT:    vpickve2gr.h $a5, $vr0, 7
-; LA32-NEXT:    vpickve2gr.h $a6, $vr0, 5
-; LA32-NEXT:    vpickve2gr.h $a7, $vr0, 3
-; LA32-NEXT:    vpickve2gr.h $t0, $vr0, 1
-; LA32-NEXT:    xvpermi.d $xr0, $xr1, 14
-; LA32-NEXT:    vpickve2gr.h $t1, $vr0, 7
-; LA32-NEXT:    vpickve2gr.h $t2, $vr0, 5
-; LA32-NEXT:    vpickve2gr.h $t3, $vr0, 3
-; LA32-NEXT:    vpickve2gr.h $t4, $vr0, 1
-; LA32-NEXT:    vpickve2gr.h $t5, $vr1, 7
-; LA32-NEXT:    vpickve2gr.h $t6, $vr1, 5
-; LA32-NEXT:    vpickve2gr.h $t7, $vr1, 3
-; LA32-NEXT:    vpickve2gr.h $t8, $vr1, 1
-; LA32-NEXT:    ext.w.h $t0, $t0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; LA32-NEXT:    ext.w.h $a7, $a7
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a7, 1
-; LA32-NEXT:    ext.w.h $a6, $a6
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a6, 2
-; LA32-NEXT:    ext.w.h $a5, $a5
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a5, 3
-; LA32-NEXT:    ext.w.h $a4, $a4
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; LA32-NEXT:    ext.w.h $a3, $a3
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA32-NEXT:    ext.w.h $a2, $a2
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; LA32-NEXT:    ext.w.h $a1, $a1
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA32-NEXT:    bstrpick.w $a1, $t8, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA32-NEXT:    bstrpick.w $a1, $t7, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA32-NEXT:    bstrpick.w $a1, $t6, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA32-NEXT:    bstrpick.w $a1, $t5, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    bstrpick.w $a1, $t4, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; LA32-NEXT:    bstrpick.w $a1, $t3, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; LA32-NEXT:    bstrpick.w $a1, $t2, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA32-NEXT:    bstrpick.w $a1, $t1, 15, 0
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr1, $xr2, 2
-; LA32-NEXT:    xvmul.w $xr0, $xr0, $xr1
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmulwod_w_hu_h_1:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvpermi.d $xr2, $xr0, 14
-; LA64-NEXT:    vpickve2gr.h $a1, $vr2, 7
-; LA64-NEXT:    vpickve2gr.h $a2, $vr2, 5
-; LA64-NEXT:    vpickve2gr.h $a3, $vr2, 3
-; LA64-NEXT:    vpickve2gr.h $a4, $vr2, 1
-; LA64-NEXT:    vpickve2gr.h $a5, $vr0, 7
-; LA64-NEXT:    vpickve2gr.h $a6, $vr0, 5
-; LA64-NEXT:    vpickve2gr.h $a7, $vr0, 3
-; LA64-NEXT:    vpickve2gr.h $t0, $vr0, 1
-; LA64-NEXT:    xvpermi.d $xr0, $xr1, 14
-; LA64-NEXT:    vpickve2gr.h $t1, $vr0, 7
-; LA64-NEXT:    vpickve2gr.h $t2, $vr0, 5
-; LA64-NEXT:    vpickve2gr.h $t3, $vr0, 3
-; LA64-NEXT:    vpickve2gr.h $t4, $vr0, 1
-; LA64-NEXT:    vpickve2gr.h $t5, $vr1, 7
-; LA64-NEXT:    vpickve2gr.h $t6, $vr1, 5
-; LA64-NEXT:    vpickve2gr.h $t7, $vr1, 3
-; LA64-NEXT:    vpickve2gr.h $t8, $vr1, 1
-; LA64-NEXT:    ext.w.h $t0, $t0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $t0, 0
-; LA64-NEXT:    ext.w.h $a7, $a7
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a7, 1
-; LA64-NEXT:    ext.w.h $a6, $a6
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a6, 2
-; LA64-NEXT:    ext.w.h $a5, $a5
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a5, 3
-; LA64-NEXT:    ext.w.h $a4, $a4
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; LA64-NEXT:    ext.w.h $a3, $a3
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA64-NEXT:    ext.w.h $a2, $a2
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; LA64-NEXT:    ext.w.h $a1, $a1
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA64-NEXT:    bstrpick.d $a1, $t8, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $t7, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA64-NEXT:    bstrpick.d $a1, $t6, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA64-NEXT:    bstrpick.d $a1, $t5, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA64-NEXT:    bstrpick.d $a1, $t4, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $t3, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; LA64-NEXT:    bstrpick.d $a1, $t2, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA64-NEXT:    bstrpick.d $a1, $t1, 15, 0
-; LA64-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA64-NEXT:    xvpermi.q $xr1, $xr2, 2
-; LA64-NEXT:    xvmul.w $xr0, $xr0, $xr1
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmulwod_w_hu_h_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwod.w.hu.h $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <16 x i16>, ptr %a
   %vb = load <16 x i16>, ptr %b
@@ -3275,69 +1311,13 @@ entry:
 }
 
 define void @vmulwod_d_wu_w_1(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: vmulwod_d_wu_w_1:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvld $xr1, $a2, 0
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 3
-; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 1
-; LA32-NEXT:    xvpickve2gr.w $a3, $xr0, 7
-; LA32-NEXT:    xvpickve2gr.w $a4, $xr0, 5
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 0
-; LA32-NEXT:    srai.w $a4, $a4, 31
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 1
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 2
-; LA32-NEXT:    srai.w $a3, $a3, 31
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 3
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a2, 0
-; LA32-NEXT:    srai.w $a2, $a2, 31
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a2, 1
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; LA32-NEXT:    srai.w $a1, $a1, 31
-; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; LA32-NEXT:    xvpermi.q $xr2, $xr0, 2
-; LA32-NEXT:    xvpickve.w $xr0, $xr1, 1
-; LA32-NEXT:    xvrepli.b $xr3, 0
-; LA32-NEXT:    xvinsve0.w $xr3, $xr0, 0
-; LA32-NEXT:    xvpickve.w $xr0, $xr1, 3
-; LA32-NEXT:    xvinsve0.w $xr3, $xr0, 2
-; LA32-NEXT:    xvpickve.w $xr0, $xr1, 5
-; LA32-NEXT:    xvinsve0.w $xr3, $xr0, 4
-; LA32-NEXT:    xvpickve.w $xr0, $xr1, 7
-; LA32-NEXT:    xvinsve0.w $xr3, $xr0, 6
-; LA32-NEXT:    xvmul.d $xr0, $xr2, $xr3
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmulwod_d_wu_w_1:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 3
-; LA64-NEXT:    xvpickve2gr.w $a2, $xr0, 1
-; LA64-NEXT:    xvpickve2gr.w $a3, $xr0, 7
-; LA64-NEXT:    xvpickve2gr.w $a4, $xr0, 5
-; LA64-NEXT:    xvpickve2gr.w $a5, $xr1, 3
-; LA64-NEXT:    xvpickve2gr.w $a6, $xr1, 1
-; LA64-NEXT:    xvpickve2gr.w $a7, $xr1, 7
-; LA64-NEXT:    xvpickve2gr.w $t0, $xr1, 5
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a4, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a3, 1
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a2, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a1, 1
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 2
-; LA64-NEXT:    bstrpick.d $a1, $t0, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $a7, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a1, 1
-; LA64-NEXT:    bstrpick.d $a1, $a6, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a1, 0
-; LA64-NEXT:    bstrpick.d $a1, $a5, 31, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a1, 1
-; LA64-NEXT:    xvpermi.q $xr2, $xr0, 2
-; LA64-NEXT:    xvmul.d $xr0, $xr1, $xr2
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmulwod_d_wu_w_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvmulwod.d.wu.w $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i32>, ptr %a
   %vb = load <8 x i32>, ptr %b
