@@ -711,6 +711,7 @@ struct UnrealizedConversionCastOpPattern
   }
 };
 
+// This pattern distributes arith.constant op into subgroup-level constants
 struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
   using OpConversionPattern<arith::ConstantOp>::OpConversionPattern;
 
@@ -753,7 +754,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       rewriter.replaceOp(op, cstOp);
       return success();
     } else if (sgShape == wgShape) { // if the entire vector is shared by all
-                                     // subgroups...don't distribute
+                                     // subgroups, don't distribute
       auto newConstOp =
           arith::ConstantOp::create(rewriter, op.getLoc(), vecType, vecAttr);
       setLayoutIfNeeded(newConstOp->getResult(0));
@@ -761,13 +762,28 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       return success();
     } else {
       // Non-splat constant
+      // Only supports 1D & 2D (with one unit dim)
+      // TODO: support other cases that require SLM access
+      if (!eltType.isIndex())
+        return rewriter.notifyMatchFailure(
+            op, "Unsupported element type for non-splat constant op.");
+
+      SmallVector<int64_t> sgLayout = layout.getEffectiveSgLayoutAsInt();
       if (wgShape.size() > 2)
         return rewriter.notifyMatchFailure(
             op, "Only 1D & 2D vector constant supported");
 
-      if (wgShape.size() == 2 && wgShape[0] != 1 && wgShape[1] != 1)
+      // allow 2D vector/distributions with one unit dim
+      auto hasTwoNonUnitDims = [](ArrayRef<int64_t> dims) {
+        return dims.size() == 2 && dims[0] != 1 && dims[1] != 1;
+      };
+      if (hasTwoNonUnitDims(wgShape) || hasTwoNonUnitDims(sgLayout))
         return rewriter.notifyMatchFailure(
-            op, "2D vector constant only supported with 1 unit dim");
+            op, "2D vector/distribution only supported with 1 unit dim");
+
+      int64_t nonUnitDim = 0;
+      if (wgShape.size() == 2)
+        nonUnitDim = wgShape[0] != 1 ? 0 : 1;
 
       SmallVector<Attribute> values(vecAttr.getValues<Attribute>());
       int64_t stride = 0;
@@ -783,26 +799,22 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
         }
       }
 
-      // Create a constant for the base tile
-      SmallVector<Attribute> tileValues;
       int sgData = 1;
       if (sgShape.size() == 1) {
         sgData = static_cast<int>(sgShape[0]);
       } else if (sgShape.size() == 2) {
-        // If shape is [1, n] or [n, 1], pick the non-unit dimension.
-        if (sgShape[0] == 1 && sgShape[1] != 1)
-          sgData = static_cast<int>(sgShape[1]);
-        else
-          sgData = static_cast<int>(sgShape[0]);
+        sgData = static_cast<int>(sgShape[0] != 1 ? sgShape[0] : sgShape[1]);
       } else {
         return rewriter.notifyMatchFailure(
             op, "Only 1D or 2D vector constant supported");
       }
 
+      // Create a constant for the base tile
+      SmallVector<Attribute> baseTileValues;
       for (int i = 0; i < sgData; ++i)
-        tileValues.push_back(values[i]);
+        baseTileValues.push_back(values[i]);
       auto tileAttr = DenseElementsAttr::get(VectorType::get({sgData}, eltType),
-                                             tileValues);
+                                             baseTileValues);
       auto baseConstVec = rewriter.create<arith::ConstantOp>(loc, tileAttr);
 
       // Get subgroup id
@@ -813,13 +825,12 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       if (failed(sgOffsets))
         return failure();
 
+      auto strideConst = rewriter.create<arith::ConstantIndexOp>(loc, stride);
       SmallVector<Value> newConstOps;
       for (auto offsets : *sgOffsets) {
-        // Multiply offset with stride and broadcast it to a vector of
-        // "sgData[nonUnitDim]" size
-        auto strideConst = rewriter.create<arith::ConstantIndexOp>(loc, stride);
+        // Multiply offset with stride, broadcast it and add to baseConstVec
         Value mulOffset = rewriter.create<arith::MulIOp>(
-            loc, rewriter.getIndexType(), offsets[0], strideConst);
+            loc, rewriter.getIndexType(), offsets[nonUnitDim], strideConst);
         auto bcastOffset = rewriter.create<vector::SplatOp>(
             loc, VectorType::get({sgData}, rewriter.getIndexType()), mulOffset);
         auto finalConst =
