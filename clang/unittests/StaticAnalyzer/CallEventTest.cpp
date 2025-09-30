@@ -85,9 +85,10 @@ TEST(CXXDeallocatorCall, SimpleDestructor) {
 }
 
 TEST(PrivateMethodCache, NeverReturnDanglingPointersWithMultipleASTs) {
-  // Each iteration will load and unload an AST multiple times. Since the code is always the same,
-  // we increase the chance of hitting a bug in the private method cache, returning a dangling pointer and
-  // crashing the process. If the cache is properly cleared between runs, the test should pass.
+  // Each iteration will load and unload an AST multiple times. Since the code
+  // is always the same, we increase the chance of hitting a bug in the private
+  // method cache, returning a dangling pointer and crashing the process. If the
+  // cache is properly cleared between runs, the test should pass.
   for (int I = 0; I < 100; ++I) {
     auto const *Code = R"(
     typedef __typeof(sizeof(int)) size_t;
