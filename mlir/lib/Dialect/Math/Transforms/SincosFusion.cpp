@@ -9,7 +9,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
+// #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
@@ -39,10 +39,14 @@ struct SincosFusionPattern : OpRewritePattern<math::SinOp> {
     if (!cosOp)
       return failure();
 
+    Operation *firstOp = sinOp->isBeforeInBlock(cosOp) ? sinOp.getOperation()
+                                                       : cosOp.getOperation();
+    rewriter.setInsertionPoint(firstOp);
+
     Type elemType = sinOp.getType();
-    auto sincos = rewriter.create<math::SincosOp>(
-        sinOp.getLoc(), TypeRange{elemType, elemType}, operand,
-        sinOp.getFastmathAttr());
+    auto sincos = math::SincosOp::create(rewriter, firstOp->getLoc(),
+                                         TypeRange{elemType, elemType}, operand,
+                                         sinOp.getFastmathAttr());
 
     rewriter.replaceOp(sinOp, sincos.getSin());
     rewriter.replaceOp(cosOp, sincos.getCos());
