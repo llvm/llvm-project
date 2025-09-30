@@ -2394,6 +2394,16 @@ void AArch64FrameLowering::determineStackHazardSlot(
       return;
     }
 
+    // If another calling convention is explicitly set FPRs can't be promoted to
+    // ZPR callee-saves.
+    if (!is_contained({CallingConv::C, CallingConv::Fast,
+                       CallingConv::AArch64_SVE_VectorCall},
+                      MF.getFunction().getCallingConv())) {
+      LLVM_DEBUG(
+          dbgs() << "Calling convention is not supported with SplitSVEObjects");
+      return;
+    }
+
     [[maybe_unused]] const AArch64Subtarget &Subtarget =
         MF.getSubtarget<AArch64Subtarget>();
     assert(Subtarget.isSVEorStreamingSVEAvailable() &&
@@ -2423,9 +2433,6 @@ void AArch64FrameLowering::determineStackHazardSlot(
     }
     SavedRegs |= FPRZRegs;
 
-    // FIXME: Avoid setting setting the CC. Since we've replaced FPRs with ZPRs
-    // we need to set this or later in PEI the ZPR CS will be masked out.
-    AFI->setIsSVECC(true);
     AFI->setSplitSVEObjects(true);
   }
 }

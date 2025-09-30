@@ -493,6 +493,12 @@ public:
   bool hasSplitSVEObjects() const { return SplitSVEObjects; }
   void setSplitSVEObjects(bool s) { SplitSVEObjects = s; }
 
+  bool hasSVE_AAPCS(const MachineFunction &MF) const {
+    return hasSplitSVEObjects() || isSVECC() ||
+           MF.getFunction().getCallingConv() ==
+               CallingConv::AArch64_SVE_VectorCall;
+  }
+
   SMEAttrs getSMEFnAttrs() const { return SMEFnAttrs; }
 
   unsigned getSRetReturnReg() const { return SRetReturnReg; }
