@@ -177,7 +177,7 @@ if (LLD_DEFAULT_LD_LLD_IS_MINGW)
   add_definitions("-DLLD_DEFAULT_LD_LLD_IS_MINGW=1")
 endif()
 
-option(LLD_LINK_GPL3 "Allow LLD to link to GPLv3-licensed files")
+option(LLD_LINK_GPL3 "Allow LLD to link to GPLv3-licensed plugins, e.g. liblto_plugin.so")
 option(LLD_ENABLE_GNU_LTO "Enable support for GNU LTO plugin")
 if(!LLD_LINK_GPL3)
   # Support for GNU LTO require linking to liblto_plugin.so from GCC which is
