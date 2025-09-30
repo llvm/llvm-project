@@ -917,6 +917,7 @@ bool FunctionSpecializer::findSpecializations(
     unsigned FuncSize, SmallVectorImpl<Spec> &AllSpecs, SpecMap &SM, Spec &InS,
     DenseMap<SpecSig, unsigned> &UniqueSpecs) {
   Function *F = InS.F;
+  bool FoundSpecialization = false;
 
   // Get a list of interesting arguments.
   SmallVector<Argument *> Args;
@@ -1040,12 +1041,15 @@ bool FunctionSpecializer::findSpecializations(
         Spec.addCall({&CS});
       const unsigned Index = AllSpecs.size() - 1;
       UniqueSpecs[S] = Index;
+
+      FoundSpecialization = true;
+
       if (auto [It, Inserted] = SM.try_emplace(F, Index, Index + 1); !Inserted)
         It->second.second = Index + 1;
     }
   }
 
-  return !UniqueSpecs.empty();
+  return FoundSpecialization;
 }
 
 bool FunctionSpecializer::isCandidateFunction(Function *F) {
