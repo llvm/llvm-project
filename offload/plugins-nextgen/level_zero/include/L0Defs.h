@@ -27,12 +27,6 @@ enum class AllocOptionTy : int32_t {
   ALLOC_OPT_SLM = 4,
 };
 
-/// Host runtime routines being used
-extern "C" {
-LIBOMP_DECL(int, omp_get_max_teams(void));
-LIBOMP_DECL(int, omp_get_teams_thread_limit(void));
-} // extern "C"
-
 #ifndef EXTRACT_BITS
 // MSB=63, LSB=0
 #define EXTRACT_BITS(I64, HIGH, LOW)                                           \
