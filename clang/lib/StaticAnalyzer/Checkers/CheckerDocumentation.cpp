@@ -269,6 +269,7 @@ public:
   /// because the checker can't predict the exact semantics/contract of the
   /// callee, and by having the eval::Call callback, we also prevent it from
   /// getting inlined, potentially regressing analysis quality.
+  /// Consider using check::PreCall or check::PostCall to allow inlining.
   ///
   /// \returns true if the call has been successfully evaluated
   /// and false otherwise. Note, that only one checker can evaluate a call. If

@@ -916,6 +916,7 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
     // 2) If it can't be inlined, then the default conservative modeling
     //    is what we want anyway.
     // So the best is to not allow eval-calling CXXNewExprs from checkers.
+    // Checkers can provide their pre/post-call callbacks if needed.
     defaultEvalCall(CallBldr, I, *Call);
   }
   // If the call is inlined, DstPostCall will be empty and we bail out now.
