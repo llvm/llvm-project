@@ -7487,12 +7487,13 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     VPSingleDefRecipe *VectorPtr;
     if (Reverse) {
       // When folding the tail, we may compute an address that we don't in the
-      // original scalar loop and it may not be inbounds. Drop Inbounds in that
-      // case.
+      // original scalar loop: drop the GEP no-wrap flags in this case.
+      // Otherwise preserve existing flags without no-unsigned-wrap, as we will
+      // emit negative indices.
       GEPNoWrapFlags Flags =
-          (CM.foldTailByMasking() || !GEP || !GEP->isInBounds())
+          CM.foldTailByMasking() || !GEP
               ? GEPNoWrapFlags::none()
-              : GEPNoWrapFlags::inBounds();
+              : GEP->getNoWrapFlags().withoutNoUnsignedWrap();
       VectorPtr =
           new VPVectorEndPointerRecipe(Ptr, &Plan.getVF(), getLoadStoreType(I),
                                        /*Stride*/ -1, Flags, I->getDebugLoc());
