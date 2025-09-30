@@ -154,6 +154,15 @@ struct Spec {
   // Number of instructions in the specialization.
   unsigned CodeSize;
 
+  // Cumulative function size of the chain
+  unsigned FuncSize;
+
+  // Latency savings
+  unsigned Latency;
+
+  // Benefit from inlining
+  unsigned InlineScore;
+
   // List of call sites, matching this specialization.
   SmallVector<SpecCall> CallSites;
 
@@ -170,16 +179,20 @@ struct Spec {
   // Index within AllSpecs
   unsigned Loc = 0;
 
-  Spec(Function *F, CallBase *CallSite, const SpecSig &S, CallSiteStatusT Status)
-      : F(F), Clone(nullptr), Sig(S), Score(), CodeSize(), CallSites() {
+  Spec(Function *F, CallBase *CallSite, const SpecSig &S,
+       CallSiteStatusT Status)
+      : F(F), Clone(nullptr), Sig(S), Score(), CodeSize(), FuncSize(),
+        InlineScore(), CallSites() {
     addCall({CallSite, Status, /*Parent*/ 0});
   }
   Spec(Function *F, CallBase *CallSite, CallSiteStatusT Status)
-      : F(F), Clone(nullptr), Sig(), Score(), CodeSize(), CallSites() {
+      : F(F), Clone(nullptr), Sig(), Score(), CodeSize(), FuncSize(),
+        InlineScore(), CallSites() {
     addCall({CallSite, Status, /*Parent*/ 0});
   }
   Spec(Function *F)
-      : F(F), Clone(nullptr), Sig(), Score(0), CodeSize(), CallSites(0) {}
+      : F(F), Clone(nullptr), Sig(), Score(), CodeSize(), FuncSize(),
+        InlineScore(), CallSites() {}
 };
 
 class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {

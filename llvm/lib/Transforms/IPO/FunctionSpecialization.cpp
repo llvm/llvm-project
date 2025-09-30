@@ -1149,6 +1149,27 @@ bool FunctionSpecializer::findSpecializations(
       unsigned CodeSizeSavings = getCostValue(CodeSize);
       unsigned SpecSize = FuncSize - CodeSizeSavings;
 
+      // Cache savings information in the chain to use for profitibility
+      // analysis of the entire chain
+      Chain.CodeSize = SpecSize;
+      Chain.InlineScore = Score;
+      Chain.FuncSize = FuncSize;
+      unsigned CumulCodeSize = 0;
+      unsigned CumulFuncSize = 0;
+      unsigned CumulInlineScore = 0;
+      unsigned CumulLatency = 0;
+      auto getCumulScores = [&](auto &&getCumulScores, Spec &CurrSpec) -> void {
+        CumulCodeSize += CurrSpec.CodeSize;
+        CumulFuncSize += CurrSpec.FuncSize;
+        CumulInlineScore += CurrSpec.InlineScore;
+        CumulLatency += CurrSpec.Latency;
+        for (auto SSI : CurrSpec.SubSpecs) {
+          getCumulScores(getCumulScores, AllSpecs[SSI]);
+        }
+      };
+      getCumulScores(getCumulScores, Chain);
+      unsigned CumulCodeSizeSavings = CumulFuncSize - CumulCodeSize;
+
       auto IsProfitable = [&]() -> bool {
         // No check required.
         if (ForceSpecialization)
@@ -1157,37 +1178,50 @@ bool FunctionSpecializer::findSpecializations(
         LLVM_DEBUG(
             dbgs() << "FnSpecialization: Specialization bonus {Inlining = "
                    << Score << " (" << (Score * 100 / FuncSize) << "%)}\n");
+        LLVM_DEBUG(
+            dbgs()
+            << "FnSpecialization: Chain specialization bonus {Inlining = "
+            << CumulInlineScore << " ("
+            << (CumulInlineScore * 100 / CumulFuncSize) << "%)}\n");
 
         // Minimum inlining bonus.
-        if (Score > MinInliningBonus * FuncSize / 100)
+        if ((Score > MinInliningBonus * FuncSize / 100) &&
+            (CumulInlineScore > MinInliningBonus * CumulFuncSize / 100))
           return true;
 
         LLVM_DEBUG(
             dbgs() << "FnSpecialization: Specialization bonus {CodeSize = "
                    << CodeSizeSavings << " ("
                    << (CodeSizeSavings * 100 / FuncSize) << "%)}\n");
+        LLVM_DEBUG(dbgs() << "FnSpecialization: Cumulative specialization "
+                             "bonus {CodeSize = "
+                          << CumulCodeSizeSavings << " ("
+                          << (CumulCodeSizeSavings * 100 / CumulFuncSize)
+                          << "%)}\n");
 
         // Minimum codesize savings.
-        if (CodeSizeSavings <= MinCodeSizeSavings * FuncSize / 100)
+        if ((CodeSizeSavings <= MinCodeSizeSavings * FuncSize / 100) &&
+            (CumulCodeSizeSavings <= MinCodeSizeSavings * CumulFuncSize / 100))
           return false;
 
         // Lazily compute the Latency, to avoid unnecessarily computing BFI.
-        unsigned LatencySavings =
+        Chain.Latency =
             getCostValue(Visitor.getLatencySavingsForKnownConstants());
+        CumulLatency += Chain.Latency;
 
         LLVM_DEBUG(
             dbgs() << "FnSpecialization: Specialization bonus {Latency = "
-                   << LatencySavings << " ("
-                   << (LatencySavings * 100 / FuncSize) << "%)}\n");
+                   << CumulLatency << " ("
+                   << (CumulLatency * 100 / CumulFuncSize) << "%)}\n");
 
         // Minimum latency savings.
-        if (LatencySavings < MinLatencySavings * FuncSize / 100)
+        if (CumulLatency < MinLatencySavings * CumulFuncSize / 100)
           return false;
         // Maximum codesize growth.
         if ((FunctionGrowth[F] + SpecSize) / FuncSize > MaxCodeSizeGrowth)
           return false;
 
-        Chain.Score += std::max(CodeSizeSavings, LatencySavings);
+        Score = CumulInlineScore + std::max(CumulCodeSizeSavings, CumulLatency);
         return true;
       };
 
@@ -1228,7 +1262,7 @@ bool FunctionSpecializer::findSpecializations(
       AddParentToSubSpecs(Spec);
       // Update the chain's Sig for any new constants at this level
       Spec.Sig = S;
-      Spec.CodeSize = SpecSize;
+      Spec.Score = Score;
 
       if (CS.getFunction() == F && !Spec.CallSites[0].Parent) {
         Spec.CallSites.clear();
