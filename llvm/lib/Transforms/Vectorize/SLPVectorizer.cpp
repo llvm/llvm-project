@@ -1100,7 +1100,9 @@ class BinOpSameOpcodeHelper {
       // constant + x cannot be -constant - x
       // instead, it should be x - -constant
       if (Pos == 1 ||
-          (FromOpcode == Instruction::Add && ToOpcode == Instruction::Sub))
+          ((FromOpcode == Instruction::Add || FromOpcode == Instruction::Or ||
+            FromOpcode == Instruction::Xor) &&
+           ToOpcode == Instruction::Sub))
         return SmallVector<Value *>({LHS, RHS});
       return SmallVector<Value *>({RHS, LHS});
     }
@@ -1187,6 +1189,10 @@ public:
       case Instruction::And:
         if (CIValue.isAllOnes())
           InterchangeableMask = CanBeAll;
+        break;
+      case Instruction::Xor:
+        if (CIValue.isZero())
+          InterchangeableMask = XorBIT | OrBIT | AndBIT | SubBIT | AddBIT;
         break;
       default:
         if (CIValue.isZero())
@@ -2099,6 +2105,7 @@ public:
     UserIgnoreList = nullptr;
     PostponedGathers.clear();
     ValueToGatherNodes.clear();
+    TreeEntryToStridedPtrInfoMap.clear();
   }
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
@@ -8942,6 +8949,8 @@ BoUpSLP::findExternalStoreUsersReorderIndices(TreeEntry *TE) const {
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
                         const SmallDenseSet<Value *> &UserIgnoreLst) {
   deleteTree();
+  assert(TreeEntryToStridedPtrInfoMap.empty() &&
+         "TreeEntryToStridedPtrInfoMap is not cleared");
   UserIgnoreList = &UserIgnoreLst;
   if (!allSameType(Roots))
     return;
@@ -8950,6 +8959,8 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
 
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
   deleteTree();
+  assert(TreeEntryToStridedPtrInfoMap.empty() &&
+         "TreeEntryToStridedPtrInfoMap is not cleared");
   if (!allSameType(Roots))
     return;
   buildTreeRec(Roots, 0, EdgeInfo());
@@ -17519,7 +17530,9 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                   return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
                 })) ||
         all_of(E->Scalars, [&](Value *V) {
-          return isa<PoisonValue>(V) || E->isCopyableElement(V) ||
+          return isa<PoisonValue>(V) ||
+                 (E->Idx == 0 && isa<InsertElementInst>(V)) ||
+                 E->isCopyableElement(V) ||
                  (!isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V));
         }))
       Res = FindLastInst();
@@ -19119,7 +19132,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     case Instruction::InsertElement: {
       assert(E->ReuseShuffleIndices.empty() && "All inserts should be unique");
-      Builder.SetInsertPoint(cast<Instruction>(E->Scalars.back()));
+      if (const TreeEntry *OpE = getOperandEntry(E, 1);
+          OpE && !OpE->isGather() && OpE->hasState() &&
+          !OpE->hasCopyableElements())
+        Builder.SetInsertPoint(cast<Instruction>(E->Scalars.back()));
+      else
+        setInsertPointAfterBundle(E);
       Value *V = vectorizeOperand(E, 1);
       ArrayRef<Value *> Op = E->getOperand(1);
       Type *ScalarTy = Op.front()->getType();

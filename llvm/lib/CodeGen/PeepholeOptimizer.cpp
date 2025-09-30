@@ -1004,9 +1004,8 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
   // Thus, instead of maintaining untested code, we will revisit that if
   // that changes at some point.
   Register Reg = RegSubReg.Reg;
-  SmallVector<RegSubRegPair, 4> SrcToLook;
   RegSubRegPair CurSrcPair = RegSubReg;
-  SrcToLook.push_back(CurSrcPair);
+  SmallVector<RegSubRegPair, 4> SrcToLook = {CurSrcPair};
 
   unsigned PHICount = 0;
   do {

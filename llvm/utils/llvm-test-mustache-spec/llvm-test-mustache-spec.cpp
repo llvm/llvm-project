@@ -54,20 +54,6 @@ static int NumXFail = 0;
 static int NumSuccess = 0;
 
 static const StringMap<StringSet<>> XFailTestNames = {{
-    {"delimiters.json",
-     {
-         "Pair Behavior",
-         "Special Characters",
-         "Sections",
-         "Inverted Sections",
-         "Partial Inheritence",
-         "Post-Partial Behavior",
-         "Standalone Tag",
-         "Indented Standalone Tag",
-         "Standalone Line Endings",
-         "Standalone Without Previous Line",
-         "Standalone Without Newline",
-     }},
     {"~dynamic-names.json",
      {
          "Basic Behavior - Partial",
@@ -113,7 +99,6 @@ static const StringMap<StringSet<>> XFailTestNames = {{
          "Block reindentation",
          "Intrinsic indentation",
          "Nested block reindentation",
-
      }},
     {"~lambdas.json",
      {
@@ -126,7 +111,6 @@ static const StringMap<StringSet<>> XFailTestNames = {{
          "Section - Expansion",
          "Section - Alternate Delimiters",
          "Section - Multiple Calls",
-
      }},
     {"partials.json", {"Standalone Indentation"}},
 }};
