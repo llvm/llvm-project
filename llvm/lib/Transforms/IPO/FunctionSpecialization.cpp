@@ -166,15 +166,18 @@ Cost InstCostVisitor::getCodeSizeSavingsFromPendingPHIs() {
 }
 
 /// Compute the codesize savings for replacing argument \p A with constant \p C.
-Cost InstCostVisitor::getCodeSizeSavingsForArg(Argument *A, Constant *C) {
+Cost InstCostVisitor::getCodeSizeSavingsForArg(Argument *A, Constant *C,
+                                               CallUserT *CallUsers) {
   LLVM_DEBUG(dbgs() << "FnSpecialization: Analysing bonus for constant: "
                     << C->getNameOrAsOperand() << "\n");
   Cost CodeSize;
-  for (auto *U : A->users())
-    if (auto *UI = dyn_cast<Instruction>(U))
+  for (Use &UseEdge : A->uses()) {
+    User *U = UseEdge.getUser();
+    if (auto *UI = dyn_cast<Instruction>(U)) {
       if (isBlockExecutable(UI->getParent()))
-        CodeSize += getCodeSizeSavingsForUser(UI, A, C);
-
+        CodeSize += getCodeSizeSavingsForUser(UI, A, C, CallUsers, &UseEdge);
+    }
+  }
   LLVM_DEBUG(dbgs() << "FnSpecialization:   Accumulated bonus {CodeSize = "
                     << CodeSize << "} for argument " << *A << "\n");
   return CodeSize;
@@ -217,7 +220,9 @@ Cost InstCostVisitor::getLatencySavingsForKnownConstants() {
 }
 
 Cost InstCostVisitor::getCodeSizeSavingsForUser(Instruction *User, Value *Use,
-                                                Constant *C) {
+                                                Constant *C,
+                                                CallUserT *CallUsers,
+                                                llvm::Use *UseEdge) {
   // We have already propagated a constant for this user.
   if (KnownConstants.contains(User))
     return 0;
@@ -227,10 +232,35 @@ Cost InstCostVisitor::getCodeSizeSavingsForUser(Instruction *User, Value *Use,
                     : KnownConstants.end();
 
   Cost CodeSize = 0;
+  auto isChainableCall = [&](Instruction *I) -> bool {
+    if (CallInst *CI = dyn_cast<CallInst>(I);
+        CI && CI->getIntrinsicID() == llvm::Intrinsic::not_intrinsic) {
+      LLVM_DEBUG(
+          dbgs() << "FnSpecialization:   Found constant forwarded via a call "
+                 << *C << "\n");
+      Function *F = CI->getCalledFunction();
+      if (F && CallUsers && UseEdge) { // Avoid function pointers
+        unsigned Idx = CI->getArgOperandNo(UseEdge);
+        LLVM_DEBUG(dbgs() << "FnSpecialization:   Function called: "
+                          << F->getName() << " argument number: " << Idx
+                          << "\n");
+        (*CallUsers)[CI].first.Args.push_back({F->getArg(Idx), C});
+        (*CallUsers)[CI].second = F;
+        return true;
+      } else {
+        LLVM_DEBUG(
+            dbgs() << "FnSpecialization:   Could not find call function.\n");
+      }
+    }
+    return false;
+  };
   if (auto *I = dyn_cast<SwitchInst>(User)) {
     CodeSize = estimateSwitchInst(*I);
   } else if (auto *I = dyn_cast<BranchInst>(User)) {
     CodeSize = estimateBranchInst(*I);
+  } else if (isChainableCall(User)) {
+    // Will get benefit from recusive call to findSpecializations()
+    return 0;
   } else {
     C = visit(*User);
     if (!C)
@@ -668,12 +698,16 @@ static unsigned getCostValue(const Cost &C) {
   return static_cast<unsigned>(Value);
 }
 
-bool FunctionSpecializer::runOneSpec(Spec &S, SpecMap &SM,
+bool FunctionSpecializer::runOneSpec(Spec &S, bool Chained, SpecMap &SM,
                                      SmallVectorImpl<Spec> &AllSpecs,
-                                     DenseMap<SpecSig, unsigned> &UniqueSpecs) {
+                                     DenseMap<SpecSig, unsigned> &UniqueSpecs,
+                                     SmallPtrSet<Function *, 4> CurrentChain) {
   Function &F = *(S.F);
   if (!isCandidateFunction(&F))
     return false;
+
+  LLVM_DEBUG(dbgs() << "FnSpecialization: Trying function " << F.getName()
+                    << ", Chain=" << Chained << "\n");
 
   auto [It, Inserted] = FunctionMetrics.try_emplace(&F);
   CodeMetrics &Metrics = It->second;
@@ -716,7 +750,8 @@ bool FunctionSpecializer::runOneSpec(Spec &S, SpecMap &SM,
   if (Inserted && Metrics.isRecursive)
     promoteConstantStackValues(&F);
 
-  if (!findSpecializations(FuncSize, AllSpecs, SM, S, UniqueSpecs)) {
+  if (!findSpecializations(FuncSize, AllSpecs, SM, S, UniqueSpecs,
+                           CurrentChain)) {
     LLVM_DEBUG(
         dbgs() << "FnSpecialization: No possible specializations found for "
                << F.getName() << "\n");
@@ -740,7 +775,9 @@ bool FunctionSpecializer::run() {
   unsigned NumCandidates = 0;
   for (Function &F : M) {
     Spec S(&F);
-    if (runOneSpec(S, SM, AllSpecs, UniqueSpecs))
+    SmallPtrSet<Function *, 4> CurrentChain;
+    if (runOneSpec(S, /*Chained*/ false, SM, AllSpecs, UniqueSpecs,
+                   CurrentChain))
       ++NumCandidates;
   }
 
@@ -792,50 +829,90 @@ bool FunctionSpecializer::run() {
   // Create the chosen specializations.
   SmallPtrSet<Function *, 8> OriginalFuncs;
   SmallVector<Function *> Clones;
+  // Does this also need to include the base function in the hash, or is the
+  // SpecSig sufficient
+  DenseMap<SpecSig, Function *> UniqueClones;
   for (unsigned I = 0; I < NSpecs; ++I) {
     Spec &S = AllSpecs[BestSpecs[I]];
 
-    auto actuallySpecialize = [&](Spec &S) -> void {
-      // Accumulate the codesize growth for the function, now we are creating
-      // the specialization.
-      FunctionGrowth[S.F] += S.CodeSize;
+    // Update the known call sites to call the clone.
+    ValueToValueMapTy Mappings;
 
-      S.Clone = createSpecialization(S.F, S.Sig);
+    auto actuallySpecialize = [&](auto &&actuallySpecialize, Spec &S,
+                                  CallSiteStatusT Status, unsigned Parent,
+                                  ValueToValueMapTy &Mappings) -> void {
+      if (Status == CallSiteStatusT::HAS_PARENT) {
+        for (auto &CS : S.CallSites) {
+          if (CS.Status == Status && CS.Parent == Parent) {
+            CallBase *&Call = CS.CallSite;
+            Value *V = Mappings[Call];
+            Call = dyn_cast<CallBase>(V);
+          }
+        }
+      }
 
-      // Update the known call sites to call the clone.
+      bool NewClone;
+      ValueToValueMapTy CurrMappings;
+      if (auto It = UniqueClones.find(S.Sig); It != UniqueClones.end()) {
+        NewClone = false;
+        S.Clone = It->second;
+      } else {
+        NewClone = true;
+        S.Clone = createSpecialization(S.F, S.Sig, CurrMappings);
+
+        // Accumulate the codesize growth for the function, now we are creating
+        // the specialization.
+        FunctionGrowth[S.F] += S.CodeSize;
+
+        UniqueClones[S.Sig] = S.Clone;
+        Clones.push_back(S.Clone);
+        OriginalFuncs.insert(S.F);
+      }
       for (auto &CS : S.CallSites) {
-        Function *Clone = S.Clone;
-        CallBase *Call = CS.CallSite;
-        LLVM_DEBUG(dbgs() << "FnSpecialization: Redirecting " << *Call
-                          << " to call " << Clone->getName() << "\n");
-        Call->setCalledFunction(Clone);
-        auto &BFI = GetBFI(*Call->getFunction());
-        std::optional<uint64_t> Count =
-            BFI.getBlockProfileCount(Call->getParent());
-        if (Count && !ProfcheckDisableMetadataFixes) {
-          std::optional<llvm::Function::ProfileCount> MaybeCloneCount =
-              Clone->getEntryCount();
-          if (MaybeCloneCount) {
-            uint64_t CallCount = *Count + MaybeCloneCount->getCount();
-            Clone->setEntryCount(CallCount);
-            if (std::optional<llvm::Function::ProfileCount> MaybeOriginalCount =
-                    S.F->getEntryCount()) {
-              uint64_t OriginalCount = MaybeOriginalCount->getCount();
-              if (OriginalCount >= *Count) {
-                S.F->setEntryCount(OriginalCount - *Count);
-              } else {
-                // This should generally not happen as that would mean there are
-                // more computed calls to the function than what was recorded.
-                LLVM_DEBUG(S.F->setEntryCount(0));
+        if (CS.Status == Status && CS.Parent == Parent) {
+          Function *Clone = S.Clone;
+          CallBase *&Call = CS.CallSite;
+          LLVM_DEBUG(dbgs() << "FnSpecialization: Redirecting " << *Call
+                            << " to call " << Clone->getName() << "\n");
+          Call->setCalledFunction(Clone);
+          auto &BFI = GetBFI(*Call->getFunction());
+          std::optional<uint64_t> Count =
+              BFI.getBlockProfileCount(Call->getParent());
+          if (Count && !ProfcheckDisableMetadataFixes) {
+            std::optional<llvm::Function::ProfileCount> MaybeCloneCount =
+                Clone->getEntryCount();
+            if (MaybeCloneCount) {
+              uint64_t CallCount = *Count + MaybeCloneCount->getCount();
+              Clone->setEntryCount(CallCount);
+              if (std::optional<llvm::Function::ProfileCount>
+                      MaybeOriginalCount = S.F->getEntryCount()) {
+                uint64_t OriginalCount = MaybeOriginalCount->getCount();
+                if (OriginalCount >= *Count) {
+                  S.F->setEntryCount(OriginalCount - *Count);
+                } else {
+                  // This should generally not happen as that would mean there
+                  // are more computed calls to the function than what was
+                  // recorded.
+                  LLVM_DEBUG(S.F->setEntryCount(0));
+                }
               }
             }
           }
         }
       }
-      Clones.push_back(S.Clone);
-      OriginalFuncs.insert(S.F);
+      if (!NewClone)
+        return;
+      for (auto &SSI : S.SubSpecs) {
+        Spec &SS = AllSpecs[SSI];
+        actuallySpecialize(actuallySpecialize, SS,
+                           /*Status*/ CallSiteStatusT::HAS_PARENT,
+                           /*Parent*/ S.Loc, CurrMappings);
+      }
     };
-    actuallySpecialize(S);
+
+    actuallySpecialize(actuallySpecialize, S,
+                       /*hasParent*/ CallSiteStatusT::NO_PARENT, /*Parent*/ 0,
+                       Mappings);
   }
 
   Solver.solveWhileResolvedUndefsIn(Clones);
@@ -903,8 +980,8 @@ void FunctionSpecializer::removeDeadFunctions() {
 
 /// Clone the function \p F and remove the ssa_copy intrinsics added by
 /// the SCCPSolver in the cloned version.
-static Function *cloneCandidateFunction(Function *F, unsigned NSpecs) {
-  ValueToValueMapTy Mappings;
+static Function *cloneCandidateFunction(Function *F, unsigned NSpecs,
+                                        ValueToValueMapTy &Mappings) {
   Function *Clone = CloneFunction(F, Mappings);
   Clone->setName(F->getName() + ".specialized." + Twine(NSpecs));
   removeSSACopy(*Clone);
@@ -913,7 +990,8 @@ static Function *cloneCandidateFunction(Function *F, unsigned NSpecs) {
 
 bool FunctionSpecializer::findSpecializations(
     unsigned FuncSize, SmallVectorImpl<Spec> &AllSpecs, SpecMap &SM, Spec &InS,
-    DenseMap<SpecSig, unsigned> &UniqueSpecs) {
+    DenseMap<SpecSig, unsigned> &UniqueSpecs,
+    SmallPtrSet<Function *, 4> &CurrentChain) {
   Function *F = InS.F;
   bool FoundSpecialization = false;
 
@@ -926,15 +1004,32 @@ bool FunctionSpecializer::findSpecializations(
   if (Args.empty())
     return false;
 
-  for (User *U : F->users()) {
-    if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
-      continue;
-    auto &CS = *cast<CallBase>(U);
+  SmallVector<CallBase *, 8> CallSites;
+  CallSiteStatusT Status;
+  if (InS.CallSites.size()) {
+    assert(InS.CallSites.size() == 1 &&
+           "Should only be passing single call spec as part of a chain");
+    CallSites.push_back(InS.CallSites[0].CallSite);
+    Status = CallSiteStatusT::AWAITING_PARENT;
+  } else {
+    Status = CallSiteStatusT::NO_PARENT;
+    for (User *U : F->users()) {
+      // If multiple funcs, check that user is proceeding func
+      if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
+        continue;
+      auto *CS = cast<CallBase>(U);
 
-    // The user instruction does not call our function.
-    if (CS.getCalledFunction() != F)
-      continue;
+      // The user instruction does not call our function.
+      if (CS->getCalledFunction() != F)
+        continue;
 
+      CallSites.push_back(CS);
+    }
+  }
+
+  for (auto *CSP : CallSites) {
+    auto &CS = *CSP;
+    Spec Chain(F, /*CallSite*/ CSP, Status);
     // If the call site has attribute minsize set, that callsite won't be
     // specialized.
     if (CS.hasFnAttr(Attribute::MinSize))
@@ -949,17 +1044,40 @@ bool FunctionSpecializer::findSpecializations(
     // constant operands of this call site.
     SpecSig S;
     for (Argument *A : Args) {
-      Constant *C = getCandidateConstant(CS.getArgOperand(A->getArgNo()));
-      if (!C)
-        continue;
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Found interesting argument "
-                        << A->getName() << " : " << C->getNameOrAsOperand()
-                        << "\n");
-      S.Args.push_back({A, C});
+      // Check if this argument is constant from the call chain propogation
+      unsigned Idx;
+      auto &As = InS.Sig.Args;
+      for (Idx = 0; Idx < As.size(); ++Idx) {
+        if (As[Idx].Formal == A)
+          break;
+      }
+      if (As.size() == Idx) {
+        Value *PossC = CS.getArgOperand(A->getArgNo());
+        Constant *C = getCandidateConstant(PossC);
+        if (!C)
+          continue;
+        LLVM_DEBUG(dbgs() << "FnSpecialization: Found interesting argument "
+                          << A->getName() << " : " << C->getNameOrAsOperand()
+                          << "\n");
+        S.Args.push_back({A, C});
+        if (InS.CallSites.size()) {
+          assert(InS.CallSites.size() == 1 &&
+                 "Should only be passing single call spec as part of a chain");
+          InS.Sig.Args.push_back({A, C});
+        }
+      } else {
+        Constant *C = InS.Sig.Args[Idx].Actual;
+        S.Args.push_back({A, C});
+        LLVM_DEBUG(dbgs() << "FnSpecialization: Found passed argument "
+                          << A->getName() << " : " << C->getNameOrAsOperand()
+                          << "\n");
+      }
     }
 
     if (S.Args.empty())
       continue;
+
+    CallUserT CallUsers;
 
     // Check if we have encountered the same specialisation already.
     if (auto It = UniqueSpecs.find(S); It != UniqueSpecs.end()) {
@@ -972,17 +1090,53 @@ bool FunctionSpecializer::findSpecializations(
       if (CS.getFunction() == F)
         continue;
       const unsigned Index = It->second;
-      AllSpecs[Index].addCall({&CS});
+      AllSpecs[Index].addCall({&CS, Status, /*Parent*/ 0});
     } else {
       // Calculate the specialisation gain.
       Cost CodeSize;
       unsigned Score = 0;
       InstCostVisitor Visitor = getInstCostVisitorFor(F);
       for (ArgInfo &A : S.Args) {
-        CodeSize += Visitor.getCodeSizeSavingsForArg(A.Formal, A.Actual);
+        CodeSize +=
+            Visitor.getCodeSizeSavingsForArg(A.Formal, A.Actual, &CallUsers);
         Score += getInliningBonus(A.Formal, A.Actual);
       }
+
       CodeSize += Visitor.getCodeSizeSavingsFromPendingPHIs();
+      CurrentChain.insert(F);
+
+      for (auto &CU : CallUsers) {
+        Function *NewF = CU.second.second;
+
+        // Recurse only if constants found for the function
+        if (!NewF)
+          continue;
+
+        // Don't allow any recursion in chains
+        bool isRecursion = CurrentChain.contains(NewF);
+        if (isRecursion)
+          continue;
+
+        LLVM_DEBUG(
+            dbgs() << "FnSpecialization:   Recursively calling runOneSpec() on "
+                   << NewF->getName() << "\n");
+
+        // Since the function might not yet be known when processing the
+        // constants due to a function pointer, wait to extract the argument
+        // pointer at a given index.
+        SpecSig NewS = CU.second.first;
+
+        Spec CallSpec(NewF, /*CallSite*/ CU.first, NewS,
+                      /*Status*/ CallSiteStatusT::AWAITING_PARENT);
+        runOneSpec(CallSpec, /*Chained*/ true, SM, AllSpecs, UniqueSpecs,
+                   CurrentChain);
+
+        // Use CallSpec.Sig since may have been added to within findSpec()
+        if (auto It = UniqueSpecs.find(CallSpec.Sig); It != UniqueSpecs.end()) {
+          const unsigned Index = It->second;
+          Chain.SubSpecs.push_back(Index);
+        }
+      }
 
       unsigned CodeSizeSavings = getCostValue(CodeSize);
       unsigned SpecSize = FuncSize - CodeSizeSavings;
@@ -1025,19 +1179,52 @@ bool FunctionSpecializer::findSpecializations(
         if ((FunctionGrowth[F] + SpecSize) / FuncSize > MaxCodeSizeGrowth)
           return false;
 
-        Score += std::max(CodeSizeSavings, LatencySavings);
+        Chain.Score += std::max(CodeSizeSavings, LatencySavings);
         return true;
       };
 
-      // Discard unprofitable specialisations.
-      if (!IsProfitable())
+      auto RemoveFromSubSpecs = [&](Spec &S) -> void {
+        for (unsigned &SSI : S.SubSpecs) {
+          Spec &SS = AllSpecs[SSI];
+          auto NewEnd = std::remove_if(
+              SS.CallSites.begin(), SS.CallSites.end(),
+              [&](SpecCall &SC) -> bool {
+                return SC.Status == CallSiteStatusT::AWAITING_PARENT;
+              });
+          SS.CallSites.erase(NewEnd, SS.CallSites.end());
+        }
+      };
+
+      // Discard unprofitable specialisations
+      if (!IsProfitable()) {
+        RemoveFromSubSpecs(Chain); // Remove Parent from SubSpecs
         continue;
+      }
+
+      auto AddParentToSubSpecs = [&](Spec &S) -> void {
+        for (unsigned &SSI : S.SubSpecs) {
+          Spec &SS = AllSpecs[SSI];
+          for (SpecCall &SC : SS.CallSites) {
+            if (SC.Status == CallSiteStatusT::AWAITING_PARENT) {
+              SC.Status = CallSiteStatusT::HAS_PARENT;
+              SC.Parent = S.Loc;
+            }
+          }
+        }
+      };
 
       // Create a new specialisation entry.
-      auto &Spec = AllSpecs.emplace_back(F, S, Score, SpecSize);
-      if (CS.getFunction() != F)
-        Spec.addCall({&CS});
+      auto &Spec = AllSpecs.emplace_back(Chain);
       const unsigned Index = AllSpecs.size() - 1;
+      Spec.Loc = Index;
+      AddParentToSubSpecs(Spec);
+      // Update the chain's Sig for any new constants at this level
+      Spec.Sig = S;
+      Spec.CodeSize = SpecSize;
+
+      if (CS.getFunction() == F && !Spec.CallSites[0].Parent) {
+        Spec.CallSites.clear();
+      }
       UniqueSpecs[S] = Index;
 
       FoundSpecialization = true;
@@ -1078,9 +1265,11 @@ bool FunctionSpecializer::isCandidateFunction(Function *F) {
   return true;
 }
 
-Function *FunctionSpecializer::createSpecialization(Function *F,
-                                                    const SpecSig &S) {
-  Function *Clone = cloneCandidateFunction(F, Specializations.size() + 1);
+Function *
+FunctionSpecializer::createSpecialization(Function *F, const SpecSig &S,
+                                          ValueToValueMapTy &Mappings) {
+  Function *Clone =
+      cloneCandidateFunction(F, Specializations.size() + 1, Mappings);
 
   // The original function does not neccessarily have internal linkage, but the
   // clone must.
