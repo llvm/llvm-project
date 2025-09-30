@@ -390,22 +390,17 @@ namespace {
 class OffsetGetter {
 public:
   OffsetGetter() = default;
-  explicit OffsetGetter(InputSectionBase &sec) {
-    if (auto *eh = dyn_cast<EhInputSection>(&sec)) {
-      cies = eh->cies;
-      fdes = eh->fdes;
-      i = cies.begin();
-      j = fdes.begin();
-    }
+  explicit OffsetGetter(EhInputSection &sec) {
+    cies = sec.cies;
+    fdes = sec.fdes;
+    i = cies.begin();
+    j = fdes.begin();
   }
 
   // Translates offsets in input sections to offsets in output sections.
   // Given offset must increase monotonically. We assume that Piece is
   // sorted by inputOff.
   uint64_t get(Ctx &ctx, uint64_t off) {
-    if (cies.empty())
-      return off;
-
     while (j != fdes.end() && j->inputOff <= off)
       ++j;
     auto it = j;
@@ -435,13 +430,12 @@ private:
 class RelocationScanner {
 public:
   RelocationScanner(Ctx &ctx) : ctx(ctx) {}
-  template <class ELFT>
-  void scanSection(InputSectionBase &s, bool isEH = false);
+  template <class ELFT> void scanSection(InputSectionBase &s);
+  template <class ELFT> void scanEhSection(EhInputSection &s);
 
 private:
   Ctx &ctx;
   InputSectionBase *sec;
-  OffsetGetter getter;
 
   // End of relocations, used by Mips/PPC64.
   const void *end = nullptr;
@@ -1496,9 +1490,7 @@ void RelocationScanner::scan(typename Relocs<RelTy>::const_iterator &i) {
     }
   }
   // Get an offset in an output section this relocation is applied to.
-  uint64_t offset = getter.get(ctx, rel.r_offset);
-  if (offset == uint64_t(-1))
-    return;
+  uint64_t offset = rel.r_offset;
 
   RelExpr expr =
       ctx.target->getRelExpr(type, sym, sec->content().data() + offset);
@@ -1634,13 +1626,10 @@ void RelocationScanner::scanSectionImpl(Relocs<RelTy> rels) {
   if (ctx.arg.emachine == EM_PPC64)
     checkPPC64TLSRelax<RelTy>(*sec, rels);
 
-  // For EhInputSection, OffsetGetter expects the relocations to be sorted by
-  // r_offset. In rare cases (.eh_frame pieces are reordered by a linker
-  // script), the relocations may be unordered.
   // On SystemZ, all sections need to be sorted by r_offset, to allow TLS
   // relaxation to be handled correctly - see SystemZ::getTlsGdRelaxSkip.
   SmallVector<RelTy, 0> storage;
-  if (isa<EhInputSection>(sec) || ctx.arg.emachine == EM_S390)
+  if (ctx.arg.emachine == EM_S390)
     rels = sortRels(rels, storage);
 
   if constexpr (RelTy::IsCrel) {
@@ -1665,17 +1654,36 @@ void RelocationScanner::scanSectionImpl(Relocs<RelTy> rels) {
                       });
 }
 
-template <class ELFT>
-void RelocationScanner::scanSection(InputSectionBase &s, bool isEH) {
+template <class ELFT> void RelocationScanner::scanSection(InputSectionBase &s) {
   sec = &s;
-  getter = OffsetGetter(s);
-  const RelsOrRelas<ELFT> rels = s.template relsOrRelas<ELFT>(!isEH);
+  const RelsOrRelas<ELFT> rels = s.template relsOrRelas<ELFT>();
   if (rels.areRelocsCrel())
     scanSectionImpl<ELFT>(rels.crels);
   else if (rels.areRelocsRel())
     scanSectionImpl<ELFT>(rels.rels);
   else
     scanSectionImpl<ELFT>(rels.relas);
+}
+
+template <class ELFT> void RelocationScanner::scanEhSection(EhInputSection &s) {
+  sec = &s;
+  OffsetGetter getter(s);
+  auto rels = s.rels;
+  s.relocations.reserve(rels.size());
+  for (auto &r : rels) {
+    // Ignore R_*_NONE and other marker relocations.
+    if (r.expr == R_NONE)
+      continue;
+    uint64_t offset = getter.get(ctx, r.offset);
+    // Skip if the relocation offset is within a dead piece.
+    if (offset == uint64_t(-1))
+      continue;
+    Symbol *sym = r.sym;
+    if (sym->isUndefined() &&
+        maybeReportUndefined(ctx, cast<Undefined>(*sym), *sec, offset))
+      continue;
+    process(r.expr, r.type, offset, *sym, r.addend);
+  }
 }
 
 template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
@@ -1710,7 +1718,7 @@ template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
       RelocationScanner scanner(ctx);
       for (Partition &part : ctx.partitions) {
         for (EhInputSection *sec : part.ehFrame->sections)
-          scanner.template scanSection<ELFT>(*sec, /*isEH=*/true);
+          scanner.template scanEhSection<ELFT>(*sec);
         if (part.armExidx && part.armExidx->isLive())
           for (InputSection *sec : part.armExidx->exidxSections)
             if (sec->isLive())
