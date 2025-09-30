@@ -114,19 +114,51 @@ entry:
 ; CHECK-NEXT:    ret i32 0
 ;
 ;
-; CHECK-LABEL: define range(i32 -2147483642, -2147483648) i32 @main() {
+; CHECK-LABEL: define i32 @main() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ADD:%.*]] = call i32 @incr.specialized.1(i32 10)
 ; CHECK-NEXT:    [[INT:%.*]] = call i32 @intrinsic(i32 3)
 ; CHECK-NEXT:    [[FWD_UNFOLD:%.*]] = call i32 @forward_unfold(i32 3)
-; CHECK-NEXT:    [[FWD_INNER:%.*]] = call i32 @forward_inner(i32 3)
-; CHECK-NEXT:    [[FWD_OUTER:%.*]] = call i32 @forward_outer(i32 3)
-; CHECK-NEXT:    [[FWD_OUTER1:%.*]] = call i32 @forward_outer(i32 3)
-; CHECK-NEXT:    [[MULTI_CALL:%.*]] = call i32 @multi_call(i32 5)
-; CHECK-NEXT:    ret i32 [[MULTI_CALL]]
+; CHECK-NEXT:    [[FWD_INNER:%.*]] = call i32 @forward_inner.specialized.4(i32 3)
+; CHECK-NEXT:    [[FWD_OUTER:%.*]] = call i32 @forward_outer.specialized.6(i32 3)
+; CHECK-NEXT:    [[FWD_OUTER1:%.*]] = call i32 @forward_outer.specialized.6(i32 3)
+; CHECK-NEXT:    [[MULTI_CALL:%.*]] = call i32 @multi_call.specialized.2(i32 5)
+; CHECK-NEXT:    ret i32 11
 ;
 ;
 ; CHECK-LABEL: define internal i32 @incr.specialized.1(
 ; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    ret i32 poison
+;
+;
+; CHECK-LABEL: define internal i32 @multi_call.specialized.2(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @incr.specialized.3(i32 5)
+; CHECK-NEXT:    [[MUL_CALL:%.*]] = call i32 @incr.specialized.1(i32 10)
+; CHECK-NEXT:    ret i32 poison
+;
+;
+; CHECK-LABEL: define internal i32 @incr.specialized.3(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    ret i32 poison
+;
+;
+; CHECK-LABEL: define internal i32 @forward_inner.specialized.4(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @incr.specialized.5(i32 3)
+; CHECK-NEXT:    ret i32 poison
+;
+;
+; CHECK-LABEL: define internal i32 @incr.specialized.5(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    ret i32 poison
+;
+;
+; CHECK-LABEL: define internal i32 @forward_outer.specialized.6(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @forward_inner.specialized.4(i32 3)
 ; CHECK-NEXT:    ret i32 poison
 ;
