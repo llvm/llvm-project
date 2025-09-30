@@ -5780,10 +5780,14 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
   return nullptr;
 }
 
-// Transform patterns like:
-//   icmp eq/ne X, min(max(X, Lo), Hi)
-// Into:
-//   (X - Lo) u< (Hi - Lo + 1)
+/// Match and fold patterns like:
+///   icmp eq/ne X, min(max(X, Lo), Hi)
+/// which represents a range check and can be repsented as a ConstantRange.
+///
+/// For icmp eq, build ConstantRange [Lo, Hi + 1) and convert to:
+///   (X - Lo) u< (Hi + 1 - Lo)
+/// For icmp ne, build ConstantRange [Hi + 1, Lo) and convert to:
+///   (X - (Hi + 1)) u< (Lo - (Hi + 1))
 Instruction *InstCombinerImpl::foldICmpWithClamp(ICmpInst &I, Value *X,
                                                  MinMaxIntrinsic *Min) {
   if (!I.isEquality() || !Min->hasOneUse())
