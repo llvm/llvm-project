@@ -1687,6 +1687,9 @@ void CStringSection::writeTo(uint8_t *buf) const {
 
 void CStringSection::finalizeContents() {
   uint64_t offset = 0;
+  // TODO: Call buildCStringPriorities() to support cstring ordering when
+  // deduplication is off, although this may negatively impact build
+  // performance.
   for (CStringInputSection *isec : inputs) {
     for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
       if (!piece.live)

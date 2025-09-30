@@ -82,4 +82,20 @@ gpu.module @test_distribution {
       : vector<256x128xf16>, vector<128x256xf16> -> vector<256x256xf32>
     gpu.return
   }
+
+  // CHECK-LABEL: vector_reduce_dim_1
+  gpu.func @vector_reduce_dim_1(%src: memref<256x64xf32>) {
+    // CHECK: %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<16xf32>
+    %cst = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [8, 1], sg_data = [16, 64]>, dims = [1]>} dense<1.0> : vector<256xf32>
+    %tdesc = xegpu.create_nd_tdesc %src : memref<256x64xf32>
+      -> !xegpu.tensor_desc<256x64xf32, #xegpu.layout<sg_layout = [8, 1], sg_data = [16, 64]>>
+    %load =  xegpu.load_nd %tdesc[0, 0]
+      : !xegpu.tensor_desc<256x64xf32, #xegpu.layout<sg_layout = [8, 1], sg_data = [16, 64]>>
+      -> vector<256x64xf32>
+    // CHECK-COUNT-2: vector.multi_reduction <add>, {{.*}}, %[[CST]] [1] : vector<16x64xf32> to vector<16xf32>
+    // CHECK-NOT: vector.multi_reduction
+    %reduce = vector.multi_reduction <add>, %load, %cst {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [8, 1], sg_data = [16, 64]>, dims = [1]>} [1]
+      : vector<256x64xf32> to vector<256xf32>
+    gpu.return
+  }
 }

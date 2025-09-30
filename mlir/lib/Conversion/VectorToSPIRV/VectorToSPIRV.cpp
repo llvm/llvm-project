@@ -753,7 +753,7 @@ struct VectorLoadOpConverter final
     spirv::MemoryAccessAttr memoryAccessAttr;
     IntegerAttr alignmentAttr;
     if (alignment.has_value()) {
-      memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
+      memoryAccess |= spirv::MemoryAccess::Aligned;
       memoryAccessAttr =
           spirv::MemoryAccessAttr::get(rewriter.getContext(), memoryAccess);
       alignmentAttr = rewriter.getI32IntegerAttr(alignment.value());
@@ -822,7 +822,7 @@ struct VectorStoreOpConverter final
     spirv::MemoryAccessAttr memoryAccessAttr;
     IntegerAttr alignmentAttr;
     if (alignment.has_value()) {
-      memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
+      memoryAccess |= spirv::MemoryAccess::Aligned;
       memoryAccessAttr =
           spirv::MemoryAccessAttr::get(rewriter.getContext(), memoryAccess);
       alignmentAttr = rewriter.getI32IntegerAttr(alignment.value());

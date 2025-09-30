@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
@@ -110,7 +111,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor(HasSSE2 || UseX87, {s64})
       .legalFor(UseX87, {s80});
 
-  getActionDefinitionsBuilder(G_GET_ROUNDING).customFor({s32});
+  getActionDefinitionsBuilder({G_GET_ROUNDING, G_SET_ROUNDING})
+      .customFor({s32});
 
   // merge/unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -617,6 +619,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeFPTOSI(MI, MRI, Helper);
   case TargetOpcode::G_GET_ROUNDING:
     return legalizeGETROUNDING(MI, MRI, Helper);
+  case TargetOpcode::G_SET_ROUNDING:
+    return legalizeSETROUNDING(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -854,6 +858,134 @@ bool X86LegalizerInfo::legalizeGETROUNDING(MachineInstr &MI,
   auto RetValTrunc = MIRBuilder.buildZExtOrTrunc(DstTy, RetVal);
 
   MIRBuilder.buildCopy(Dst, RetValTrunc);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
+                                           MachineRegisterInfo &MRI,
+                                           LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineFunction &MF = MIRBuilder.getMF();
+  Register Src = MI.getOperand(0).getReg();
+  const LLT s8 = LLT::scalar(8);
+  const LLT s16 = LLT::scalar(16);
+  const LLT s32 = LLT::scalar(32);
+
+  // Allocate stack slot for control word and MXCSR (4 bytes).
+  int MemSize = 4;
+  Align Alignment = Align(4);
+  MachinePointerInfo PtrInfo;
+  auto StackTemp = Helper.createStackTemporary(TypeSize::getFixed(MemSize),
+                                               Alignment, PtrInfo);
+  Register StackPtr = StackTemp.getReg(0);
+
+  auto StoreMMO =
+      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore, 2, Align(2));
+  MIRBuilder.buildInstr(X86::G_FNSTCW16)
+      .addUse(StackPtr)
+      .addMemOperand(StoreMMO);
+
+  auto LoadMMO =
+      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad, 2, Align(2));
+  auto CWD16 = MIRBuilder.buildLoad(s16, StackPtr, *LoadMMO);
+
+  // Clear RM field (bits 11:10)
+  auto ClearedCWD =
+      MIRBuilder.buildAnd(s16, CWD16, MIRBuilder.buildConstant(s16, 0xf3ff));
+
+  // Check if Src is a constant
+  auto *SrcDef = MRI.getVRegDef(Src);
+  Register RMBits;
+  Register MXCSRRMBits;
+
+  if (SrcDef && SrcDef->getOpcode() == TargetOpcode::G_CONSTANT) {
+    uint64_t RM = getIConstantFromReg(Src, MRI).getZExtValue();
+    int FieldVal = X86::getRoundingModeX86(RM);
+
+    if (FieldVal == X86::rmInvalid) {
+      FieldVal = X86::rmToNearest;
+      LLVMContext &C = MF.getFunction().getContext();
+      C.diagnose(DiagnosticInfoUnsupported(
+          MF.getFunction(), "rounding mode is not supported by X86 hardware",
+          DiagnosticLocation(MI.getDebugLoc()), DS_Error));
+      return false;
+    }
+
+    FieldVal = FieldVal << 3;
+    RMBits = MIRBuilder.buildConstant(s16, FieldVal).getReg(0);
+    MXCSRRMBits = MIRBuilder.buildConstant(s32, FieldVal).getReg(0);
+  } else {
+    // Convert Src (rounding mode) to bits for control word
+    // (0xc9 << (2 * Src + 4)) & 0xc00
+    auto Src32 = MIRBuilder.buildZExtOrTrunc(s32, Src);
+    auto ShiftAmt = MIRBuilder.buildAdd(
+        s32, MIRBuilder.buildShl(s32, Src32, MIRBuilder.buildConstant(s32, 1)),
+        MIRBuilder.buildConstant(s32, 4));
+    auto ShiftAmt8 = MIRBuilder.buildTrunc(s8, ShiftAmt);
+    auto Shifted = MIRBuilder.buildShl(s16, MIRBuilder.buildConstant(s16, 0xc9),
+                                       ShiftAmt8);
+    RMBits =
+        MIRBuilder.buildAnd(s16, Shifted, MIRBuilder.buildConstant(s16, 0xc00))
+            .getReg(0);
+
+    // For non-constant case, we still need to compute MXCSR bits dynamically
+    auto RMBits32 = MIRBuilder.buildZExt(s32, RMBits);
+    MXCSRRMBits =
+        MIRBuilder.buildShl(s32, RMBits32, MIRBuilder.buildConstant(s32, 3))
+            .getReg(0);
+  }
+  // Update rounding mode bits
+  auto NewCWD =
+      MIRBuilder.buildOr(s16, ClearedCWD, RMBits, MachineInstr::Disjoint);
+
+  // Store new FP Control Word to stack
+  auto StoreNewMMO =
+      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore, 2, Align(2));
+  MIRBuilder.buildStore(NewCWD, StackPtr, *StoreNewMMO);
+
+  // Load FP control word from the slot using G_FLDCW16
+  auto LoadNewMMO =
+      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad, 2, Align(2));
+  MIRBuilder.buildInstr(X86::G_FLDCW16)
+      .addUse(StackPtr)
+      .addMemOperand(LoadNewMMO);
+
+  if (Subtarget.hasSSE1()) {
+    // Store MXCSR to stack (use STMXCSR)
+    auto StoreMXCSRMMO = MF.getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOStore, 4, Align(4));
+    MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS)
+        .addIntrinsicID(Intrinsic::x86_sse_stmxcsr)
+        .addUse(StackPtr)
+        .addMemOperand(StoreMXCSRMMO);
+
+    // Load MXCSR from stack
+    auto LoadMXCSRMMO = MF.getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOLoad, 4, Align(4));
+    auto MXCSR = MIRBuilder.buildLoad(s32, StackPtr, *LoadMXCSRMMO);
+
+    // Clear RM field (bits 14:13)
+    auto ClearedMXCSR = MIRBuilder.buildAnd(
+        s32, MXCSR, MIRBuilder.buildConstant(s32, 0xffff9fff));
+
+    // Update rounding mode bits
+    auto NewMXCSR = MIRBuilder.buildOr(s32, ClearedMXCSR, MXCSRRMBits);
+
+    // Store new MXCSR to stack
+    auto StoreNewMXCSRMMO = MF.getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOStore, 4, Align(4));
+    MIRBuilder.buildStore(NewMXCSR, StackPtr, *StoreNewMXCSRMMO);
+
+    // Load MXCSR from stack (use LDMXCSR)
+    auto LoadNewMXCSRMMO = MF.getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOLoad, 4, Align(4));
+    MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS)
+        .addIntrinsicID(Intrinsic::x86_sse_ldmxcsr)
+        .addUse(StackPtr)
+        .addMemOperand(LoadNewMXCSRMMO);
+  }
 
   MI.eraseFromParent();
   return true;

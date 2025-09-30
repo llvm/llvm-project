@@ -2014,3 +2014,24 @@ llvm.mlir.alias external @alias_resolver : !llvm.ptr {
 }
 // expected-error@+1 {{'llvm.mlir.ifunc' op must have a function resolver}}
 llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @alias_resolver {dso_local}
+
+// -----
+
+llvm.func @invalid_sincos_nonhomogeneous_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f64)>
+}
+
+// -----
+
+llvm.func @invalid_sincos_non_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  llvm.intr.sincos(%f) : (f32) -> f32
+}
+
+// -----
+
+llvm.func @invalid_sincos_gt_2_element_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
+}

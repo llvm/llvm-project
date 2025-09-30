@@ -1026,18 +1026,21 @@ __m128i test_mm_packs_epi16(__m128i A, __m128i B) {
   // CHECK: call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_packs_epi16(A, B);
 }
+TEST_CONSTEXPR(match_v16qi(_mm_packs_epi16((__m128i)(__v8hi){130, -200, 127, -128, 300, -1000, 42, -42}, (__m128i)(__v8hi){0, 1, -1, 255, -129, 128, 20000, -32768}), 127, -128, 127, -128, 127, -128, 42, -42, 0, 1, -1, 127, -128, 127, 127, -128));
 
 __m128i test_mm_packs_epi32(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_packs_epi32
   // CHECK: call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_packs_epi32(A, B);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_packs_epi32((__m128i)(__v4si){40000, -50000, 32767, -32768}, (__m128i)(__v4si){0, 1, -1, 70000}), 32767, -32768, 32767, -32768, 0, 1, -1, 32767));
 
 __m128i test_mm_packus_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_packus_epi16
   // CHECK: call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_packus_epi16(A, B);
 }
+TEST_CONSTEXPR(match_v16qi(_mm_packus_epi16((__m128i)(__v8hi){-1, 0, 1, 127, 300, -1000, 255, -42}, (__m128i)(__v8hi){0, 1, -1, 255, -129, 128, 20000, -32768}), 0, 0, 1, 127, -1, 0, -1, 0, 0, 1, 0, -1, 0, -128, -1, 0));
 
 void test_mm_pause(void) {
   // CHECK-LABEL: test_mm_pause

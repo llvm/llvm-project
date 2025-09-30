@@ -113,7 +113,7 @@ using Bar = Foo<X, sizeof(X)>; // expected-note {{candidate template ignored: co
                                // expected-note {{implicit deduction guide declared as 'template <typename X> requires __is_deducible(test9::Bar, test9::Foo<X, sizeof(X)>) Bar(test9::Foo<X, sizeof(X)>) -> test9::Foo<X, sizeof(X)>'}} \
                                // expected-note {{implicit deduction guide declared as 'template <typename X> requires __is_deducible(test9::Bar, test9::Foo<X, sizeof(X)>) Bar(const X (&)[sizeof(X)]) -> test9::Foo<X, sizeof(X)>'}} \
                                // expected-note {{candidate template ignored: constraints not satisfied [with X = int]}} \
-                               // expected-note {{cannot deduce template arguments for 'test9::Bar' from 'test9::Foo<int, 4UL>'}}
+                               // expected-note {{cannot deduce template arguments for 'test9::Bar' from 'test9::Foo<int, sizeof(int)>'}}
 
 
 Bar s = {{1}}; // expected-error {{no viable constructor or deduction guide }}

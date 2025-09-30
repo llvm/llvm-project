@@ -327,6 +327,7 @@ protected:
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
+                                  bool IsVolatile = false,
                                   const ValueDecl *ExtendingDecl = nullptr,
                                   ScopeKind SC = ScopeKind::Block,
                                   bool IsConstexprUnknown = false);

@@ -503,7 +503,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   // then we're the top level compiler instance and need to create one.
   if (!ModuleDepCollector && !DepOpts.ModuleDependencyOutputDir.empty()) {
     ModuleDepCollector = std::make_shared<ModuleDependencyCollector>(
-        DepOpts.ModuleDependencyOutputDir);
+        DepOpts.ModuleDependencyOutputDir, getVirtualFileSystemPtr());
   }
 
   // If there is a module dep collector, register with other dep collectors

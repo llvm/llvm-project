@@ -189,6 +189,70 @@ inline bool FPToIntegerIntrinsicResultIsSigned(Intrinsic::ID IntrinsicID) {
       "Checking invalid f2i/d2i intrinsic for signed int conversion");
 }
 
+inline bool FPToIntegerIntrinsicNaNZero(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  // f2i
+  case Intrinsic::nvvm_f2i_rm:
+  case Intrinsic::nvvm_f2i_rn:
+  case Intrinsic::nvvm_f2i_rp:
+  case Intrinsic::nvvm_f2i_rz:
+  case Intrinsic::nvvm_f2i_rm_ftz:
+  case Intrinsic::nvvm_f2i_rn_ftz:
+  case Intrinsic::nvvm_f2i_rp_ftz:
+  case Intrinsic::nvvm_f2i_rz_ftz:
+  // f2ui
+  case Intrinsic::nvvm_f2ui_rm:
+  case Intrinsic::nvvm_f2ui_rn:
+  case Intrinsic::nvvm_f2ui_rp:
+  case Intrinsic::nvvm_f2ui_rz:
+  case Intrinsic::nvvm_f2ui_rm_ftz:
+  case Intrinsic::nvvm_f2ui_rn_ftz:
+  case Intrinsic::nvvm_f2ui_rp_ftz:
+  case Intrinsic::nvvm_f2ui_rz_ftz:
+    return true;
+  // d2i
+  case Intrinsic::nvvm_d2i_rm:
+  case Intrinsic::nvvm_d2i_rn:
+  case Intrinsic::nvvm_d2i_rp:
+  case Intrinsic::nvvm_d2i_rz:
+  // d2ui
+  case Intrinsic::nvvm_d2ui_rm:
+  case Intrinsic::nvvm_d2ui_rn:
+  case Intrinsic::nvvm_d2ui_rp:
+  case Intrinsic::nvvm_d2ui_rz:
+  // f2ll
+  case Intrinsic::nvvm_f2ll_rm:
+  case Intrinsic::nvvm_f2ll_rn:
+  case Intrinsic::nvvm_f2ll_rp:
+  case Intrinsic::nvvm_f2ll_rz:
+  case Intrinsic::nvvm_f2ll_rm_ftz:
+  case Intrinsic::nvvm_f2ll_rn_ftz:
+  case Intrinsic::nvvm_f2ll_rp_ftz:
+  case Intrinsic::nvvm_f2ll_rz_ftz:
+  // f2ull
+  case Intrinsic::nvvm_f2ull_rm:
+  case Intrinsic::nvvm_f2ull_rn:
+  case Intrinsic::nvvm_f2ull_rp:
+  case Intrinsic::nvvm_f2ull_rz:
+  case Intrinsic::nvvm_f2ull_rm_ftz:
+  case Intrinsic::nvvm_f2ull_rn_ftz:
+  case Intrinsic::nvvm_f2ull_rp_ftz:
+  case Intrinsic::nvvm_f2ull_rz_ftz:
+  // d2ll
+  case Intrinsic::nvvm_d2ll_rm:
+  case Intrinsic::nvvm_d2ll_rn:
+  case Intrinsic::nvvm_d2ll_rp:
+  case Intrinsic::nvvm_d2ll_rz:
+  // d2ull
+  case Intrinsic::nvvm_d2ull_rm:
+  case Intrinsic::nvvm_d2ull_rn:
+  case Intrinsic::nvvm_d2ull_rp:
+  case Intrinsic::nvvm_d2ull_rz:
+    return false;
+  }
+  llvm_unreachable("Checking NaN result for invalid f2i/d2i intrinsic");
+}
+
 inline APFloat::roundingMode
 GetFPToIntegerRoundingMode(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {

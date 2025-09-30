@@ -6211,12 +6211,10 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -4
 ; UNROLL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[STEP]], i64 0
+; UNROLL-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; UNROLL-NEXT:    [[IND_END:%.*]] = mul i32 [[STEP]], [[DOTCAST]]
-; UNROLL-NEXT:    [[TMP15:%.*]] = shl <2 x i32> [[BROADCAST_SPLATINSERT]], <i32 1, i32 0>
-; UNROLL-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i32> [[TMP15]], <2 x i32> poison, <2 x i32> zeroinitializer
-; UNROLL-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[STEP]], i64 0
-; UNROLL-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; UNROLL-NEXT:    [[TMP16:%.*]] = shl <2 x i32> [[DOTSPLAT]], splat (i32 1)
 ; UNROLL-NEXT:    [[TMP17:%.*]] = mul nuw <2 x i32> [[DOTSPLAT]], <i32 0, i32 1>
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
@@ -6293,9 +6291,7 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; UNROLL-NO-IC-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; UNROLL-NO-IC-NEXT:    [[IND_END:%.*]] = mul i32 [[DOTCAST]], [[STEP]]
 ; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = mul <2 x i32> splat (i32 2), [[BROADCAST_SPLAT]]
-; UNROLL-NO-IC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[STEP]], i64 0
-; UNROLL-NO-IC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = mul <2 x i32> <i32 0, i32 1>, [[DOTSPLAT]]
+; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = mul <2 x i32> <i32 0, i32 1>, [[BROADCAST_SPLAT]]
 ; UNROLL-NO-IC-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> zeroinitializer, [[TMP18]]
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-IC:       vector.body:
@@ -6365,12 +6361,10 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -8
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[STEP]], i64 0
+; INTERLEAVE-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; INTERLEAVE-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; INTERLEAVE-NEXT:    [[IND_END:%.*]] = mul i32 [[STEP]], [[DOTCAST]]
-; INTERLEAVE-NEXT:    [[TMP15:%.*]] = shl <4 x i32> [[BROADCAST_SPLATINSERT]], <i32 2, i32 0, i32 0, i32 0>
-; INTERLEAVE-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i32> [[TMP15]], <4 x i32> poison, <4 x i32> zeroinitializer
-; INTERLEAVE-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[STEP]], i64 0
-; INTERLEAVE-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; INTERLEAVE-NEXT:    [[TMP16:%.*]] = shl <4 x i32> [[DOTSPLAT]], splat (i32 2)
 ; INTERLEAVE-NEXT:    [[TMP17:%.*]] = mul <4 x i32> [[DOTSPLAT]], <i32 0, i32 1, i32 2, i32 3>
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:

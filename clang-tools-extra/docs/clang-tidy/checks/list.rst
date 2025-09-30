@@ -87,6 +87,7 @@ Clang-Tidy Checks
    :doc:`bugprone-capturing-this-in-member-variable <bugprone/capturing-this-in-member-variable>`,
    :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,
    :doc:`bugprone-chained-comparison <bugprone/chained-comparison>`,
+   :doc:`bugprone-command-processor <bugprone/command-processor>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
    :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
@@ -173,7 +174,6 @@ Clang-Tidy Checks
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
    :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,
-   :doc:`cert-env33-c <cert/env33-c>`,
    :doc:`cert-err33-c <cert/err33-c>`,
    :doc:`cert-err60-cpp <cert/err60-cpp>`,
    :doc:`cert-flp30-c <cert/flp30-c>`,
@@ -404,6 +404,7 @@ Clang-Tidy Checks
    :doc:`readability-redundant-function-ptr-dereference <readability/redundant-function-ptr-dereference>`, "Yes"
    :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes"
    :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
+   :doc:`readability-redundant-parentheses <readability/redundant-parentheses>`, "Yes"
    :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,
    :doc:`readability-redundant-smartptr-get <readability/redundant-smartptr-get>`, "Yes"
    :doc:`readability-redundant-string-cstr <readability/redundant-string-cstr>`, "Yes"
@@ -440,6 +441,7 @@ Check aliases
    :doc:`cert-dcl54-cpp <cert/dcl54-cpp>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
    :doc:`cert-dcl59-cpp <cert/dcl59-cpp>`, :doc:`google-build-namespaces <google/build-namespaces>`,
    :doc:`cert-err09-cpp <cert/err09-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
+   :doc:`cert-env33-c <cert/env33-c>`, :doc:`bugprone-command-processor <bugprone/command-processor>`,
    :doc:`cert-err34-c <cert/err34-c>`, :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
    :doc:`cert-err52-cpp <cert/err52-cpp>`, :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
    :doc:`cert-err58-cpp <cert/err58-cpp>`, :doc:`bugprone-throwing-static-initialization <bugprone/throwing-static-initialization>`,

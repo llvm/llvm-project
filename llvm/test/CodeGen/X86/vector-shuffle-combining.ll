@@ -3550,14 +3550,14 @@ define <8 x i16> @PR141475(i32 %in) {
 ; SSE-LABEL: PR141475:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd %edi, %xmm0
-; SSE-NEXT:    pslld $1, %xmm0
+; SSE-NEXT:    paddd %xmm0, %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR141475:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovd %edi, %xmm0
-; AVX-NEXT:    vpslld $1, %xmm0, %xmm0
+; AVX-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; AVX-NEXT:    retq
   %mul = shl i32 %in, 1

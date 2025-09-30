@@ -1,7 +1,7 @@
 ## Check that DWARF CU with a valid DWOId but missing a dwo_name is correctly detected.
 # RUN: rm -rf %t && mkdir -p %t && cd %t
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %s -split-dwarf-file=main.dwo -o main.o
-# RUN: %clang -O3 -g -gdwarf-5 -gsplit-dwarf -Wl,-q %t/main.o -o main.exe
+# RUN: %clang %cflags -O3 -g -gdwarf-5 -gsplit-dwarf -Wl,-q %t/main.o -o main.exe
 # RUN: llvm-bolt %t/main.exe -o %t/main.exe.bolt -update-debug-sections  2>&1 | FileCheck %s --check-prefix=PRECHECK
 # PRECHECK: BOLT-ERROR: broken DWARF found in CU at offset 0x3e (DWOId=0x0, missing DW_AT_dwo_name / DW_AT_GNU_dwo_name)
 

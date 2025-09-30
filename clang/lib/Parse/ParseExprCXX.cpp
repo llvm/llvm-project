@@ -1299,7 +1299,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     Diag(Tok, getLangOpts().CPlusPlus23
                   ? diag::warn_cxx20_compat_decl_attrs_on_lambda
                   : diag::ext_decl_attrs_on_lambda)
-        << Tok.getIdentifierInfo() << Tok.isRegularKeywordAttribute();
+        << Tok.isRegularKeywordAttribute() << Tok.getIdentifierInfo();
     MaybeParseCXX11Attributes(D);
   }
 

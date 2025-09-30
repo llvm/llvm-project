@@ -569,7 +569,7 @@ def ROCDL_MakeBufferRsrcOp :
   ROCDL_IntrOp<"make.buffer.rsrc", [0], [0], [Pure], 1>,
   Arguments<(ins LLVM_AnyPointer:$base,
                  I16:$stride,
-                 I32:$numRecords,
+                 I64:$numRecords,
                  I32:$flags)> {
   let results = (outs LLVM_AnyPointer:$res);
   let assemblyFormat = "operands attr-dict `:` type($base) `to` type($res)";
@@ -1357,6 +1357,37 @@ def ROCDL_CvtScaleF32PkFp4F32Op :
   }];
  let assemblyFormat = [{
     attr-dict $src0 `,` $src1 `,` $scale `->` $oldVdst `[` $dstSelIndex `]` `:` type($res)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// FMED3 operations
+//===----------------------------------------------------------------------===//
+
+def ROCDL_FMed3Op : ROCDL_IntrOp<"fmed3", [0], [], [Pure, AllTypesMatch<["res", "src0", "src1", "src2"]>], 1>,
+  Arguments<(ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src0,
+                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src1,
+                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src2)> {
+  let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$res);
+  let summary = "Median of three float/half values";
+  let description = [{
+    Computes the median of three floating-point values using the AMDGPU fmed3 intrinsic.
+    This operation is equivalent to `max(min(a, b), min(max(a, b), c))` but uses the
+    hardware-accelerated V_MED3_F16/V_MED3_F32 instruction for better performance.
+    
+    The operation supports both scalar and vector floating-point types (f16, f32).
+    
+    Example:
+    ```mlir
+    // Scalar f32 median
+    %result = rocdl.fmed3 %a, %b, %c : f32
+    
+    // Vector f16 median
+    %result = rocdl.fmed3 %va, %vb, %vc : vector<4xf16>
+    ```
+  }];
+  let assemblyFormat = [{
+    $src0 `,` $src1 `,` $src2 attr-dict `:` type($res)
   }];
 }
 

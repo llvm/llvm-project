@@ -216,6 +216,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::OMPSimdDirectiveClass:
   case Stmt::OMPTileDirectiveClass:
   case Stmt::OMPUnrollDirectiveClass:
+  case Stmt::OMPFuseDirectiveClass:
   case Stmt::OMPForDirectiveClass:
   case Stmt::OMPForSimdDirectiveClass:
   case Stmt::OMPSectionsDirectiveClass:
