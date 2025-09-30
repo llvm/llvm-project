@@ -16,7 +16,7 @@ namespace clang::tidy::bugprone {
 /// Find suspicious calls to string compare functions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-string-compare.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-string-compare.html
 class SuspiciousStringCompareCheck : public ClangTidyCheck {
 public:
   SuspiciousStringCompareCheck(StringRef Name, ClangTidyContext *Context);

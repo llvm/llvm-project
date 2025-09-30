@@ -3877,6 +3877,23 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     RequiresAdjustment = true;
   }
 
+  // If the declaration is marked with cfi_unchecked_callee but the definition
+  // isn't, the definition is also cfi_unchecked_callee.
+  if (auto *FPT1 = OldType->getAs<FunctionProtoType>()) {
+    if (auto *FPT2 = NewType->getAs<FunctionProtoType>()) {
+      FunctionProtoType::ExtProtoInfo EPI1 = FPT1->getExtProtoInfo();
+      FunctionProtoType::ExtProtoInfo EPI2 = FPT2->getExtProtoInfo();
+
+      if (EPI1.CFIUncheckedCallee && !EPI2.CFIUncheckedCallee) {
+        EPI2.CFIUncheckedCallee = true;
+        NewQType = Context.getFunctionType(FPT2->getReturnType(),
+                                           FPT2->getParamTypes(), EPI2);
+        NewType = cast<FunctionType>(NewQType);
+        New->setType(NewQType);
+      }
+    }
+  }
+
   // Merge regparm attribute.
   if (OldTypeInfo.getHasRegParm() != NewTypeInfo.getHasRegParm() ||
       OldTypeInfo.getRegParm() != NewTypeInfo.getRegParm()) {
@@ -6777,7 +6794,9 @@ bool Sema::tryToFixVariablyModifiedVarType(TypeSourceInfo *&TInfo,
   if (SizeIsNegative)
     Diag(Loc, diag::err_typecheck_negative_array_size);
   else if (Oversized.getBoolValue())
-    Diag(Loc, diag::err_array_too_large) << toString(Oversized, 10);
+    Diag(Loc, diag::err_array_too_large) << toString(
+        Oversized, 10, Oversized.isSigned(), /*formatAsCLiteral=*/false,
+        /*UpperCase=*/false, /*InsertSeparators=*/true);
   else if (FailedFoldDiagID)
     Diag(Loc, FailedFoldDiagID);
   return false;
@@ -18890,8 +18909,7 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
     // 'bool'.
     if (BitfieldIsOverwide && !FieldTy->isBooleanType() && FieldName) {
       Diag(FieldLoc, diag::warn_bitfield_width_exceeds_type_width)
-          << FieldName << toString(Value, 10)
-          << (unsigned)TypeWidth;
+          << FieldName << Value << (unsigned)TypeWidth;
     }
   }
 

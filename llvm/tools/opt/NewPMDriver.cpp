@@ -60,6 +60,9 @@ cl::opt<bool> VerifyEachDebugInfoPreserve(
     cl::desc("Start each pass with collecting and end it with checking of "
              "debug info preservation."));
 
+static cl::opt<bool> EnableLoopFusion("enable-loopfusion", cl::init(false),
+                                      cl::Hidden,
+                                      cl::desc("Enable the LoopFuse Pass"));
 cl::opt<std::string>
     VerifyDIPreserveExport("verify-di-preserve-export",
                    cl::desc("Export debug info preservation failures into "
@@ -358,27 +361,25 @@ bool llvm::runPassPipeline(
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
     bool EmitModuleHash, bool EnableDebugify, bool VerifyDIPreserve,
     bool EnableProfcheck, bool UnifiedLTO) {
-  auto FS = vfs::getRealFileSystem();
   std::optional<PGOOptions> P;
   switch (PGOKindFlag) {
   case InstrGen:
-    P = PGOOptions(ProfileFile, "", "", MemoryProfileFile, FS,
-                   PGOOptions::IRInstr, PGOOptions::NoCSAction,
-                   PGOColdFuncAttr);
+    P = PGOOptions(ProfileFile, "", "", MemoryProfileFile, PGOOptions::IRInstr,
+                   PGOOptions::NoCSAction, PGOColdFuncAttr);
     break;
   case InstrUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
+    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile,
                    PGOOptions::IRUse, PGOOptions::NoCSAction, PGOColdFuncAttr);
     break;
   case SampleUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
+    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile,
                    PGOOptions::SampleUse, PGOOptions::NoCSAction,
                    PGOColdFuncAttr);
     break;
   case NoPGO:
     if (DebugInfoForProfiling || PseudoProbeForProfiling ||
         !MemoryProfileFile.empty())
-      P = PGOOptions("", "", "", MemoryProfileFile, FS, PGOOptions::NoAction,
+      P = PGOOptions("", "", "", MemoryProfileFile, PGOOptions::NoAction,
                      PGOOptions::NoCSAction, PGOColdFuncAttr,
                      DebugInfoForProfiling, PseudoProbeForProfiling);
     else
@@ -400,7 +401,7 @@ bool llvm::runPassPipeline(
         P->CSProfileGenFile = CSProfileGenFile;
       } else
         P = PGOOptions("", CSProfileGenFile, ProfileRemappingFile,
-                       /*MemoryProfile=*/"", FS, PGOOptions::NoAction,
+                       /*MemoryProfile=*/"", PGOOptions::NoAction,
                        PGOOptions::CSIRInstr);
     } else /* CSPGOKindFlag == CSInstrUse */ {
       if (!P) {
@@ -446,6 +447,7 @@ bool llvm::runPassPipeline(
   // option has been enabled.
   PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.UnifiedLTO = UnifiedLTO;
+  PTO.LoopFusion = EnableLoopFusion;
   PassBuilder PB(TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 

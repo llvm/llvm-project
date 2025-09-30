@@ -3,6 +3,7 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from ._smt_ops_gen import *
+from ._smt_enum_gen import *
 
 from .._mlir_libs._mlirDialectsSMT import *
 from ..extras.meta import region_op
