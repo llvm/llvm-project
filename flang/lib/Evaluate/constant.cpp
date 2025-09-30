@@ -390,6 +390,17 @@ std::size_t Constant<SomeDerived>::CopyFrom(const Constant<SomeDerived> &source,
 }
 
 bool ComponentCompare::operator()(SymbolRef x, SymbolRef y) const {
+  if (&x->owner() != &y->owner()) {
+    // Not components of the same derived type; put ancestors' components first.
+    if (auto xDepth{DerivedTypeDepth(x->owner())}) {
+      if (auto yDepth{DerivedTypeDepth(y->owner())}) {
+        if (*xDepth != *yDepth) {
+          return *xDepth < *yDepth;
+        }
+      }
+    }
+  }
+  // Same derived type, distinct instantiations, or error recovery.
   return semantics::SymbolSourcePositionCompare{}(x, y);
 }
 
