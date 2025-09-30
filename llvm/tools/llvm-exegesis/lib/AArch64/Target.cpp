@@ -384,6 +384,11 @@ ExegesisAArch64Target::generateMmap(uintptr_t Address, size_t Length,
                                     uintptr_t FileDescriptorAddress) const {
   // mmap(address, length, prot, flags, fd, offset=0)
   int flags = MAP_SHARED;
+  int fd = -1;
+  if (fd == -1) {
+    dbgs() << "Warning: generateMmap using anonymous mapping\n";
+    flags |= MAP_ANONYMOUS;
+  }
   if (Address != 0)
     flags |= MAP_FIXED_NOREPLACE;
   std::vector<MCInst> MmapCode;
@@ -394,14 +399,8 @@ ExegesisAArch64Target::generateMmap(uintptr_t Address, size_t Length,
   MmapCode.push_back(loadImmediate(AArch64::X2, 64,
                                    APInt(64, PROT_READ | PROT_WRITE))); // prot
   MmapCode.push_back(loadImmediate(AArch64::X3, 64, APInt(64, flags))); // flags
-  // Copy file descriptor location from aux memory into X4
-  MmapCode.push_back(loadImmediate(ArgumentRegisters::TempRegister, 64,
-                                   APInt(64, FileDescriptorAddress)));
-  // Dereference file descriptor into X4 (32-bit load from [X16])
-  MmapCode.push_back(MCInstBuilder(AArch64::LDRWui)
-                         .addReg(AArch64::W4)
-                         .addReg(ArgumentRegisters::TempRegister)
-                         .addImm(0));
+  // FIXME: Loading [FileDescriptorAddress] as fd leds syscall to return error
+  MmapCode.push_back(loadImmediate(AArch64::X4, 64, APInt(64, fd))); // fd
   MmapCode.push_back(loadImmediate(AArch64::X5, 64, APInt(64, 0))); // offset
   generateSysCall(SYS_mmap, MmapCode); // SYS_mmap is 222
   return MmapCode;
