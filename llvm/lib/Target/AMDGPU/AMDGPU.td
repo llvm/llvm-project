@@ -1238,6 +1238,19 @@ def FeatureSetPrioIncWgInst : SubtargetFeature<"setprio-inc-wg-inst",
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
 
+// Ugly hack to accomodate assembling modules with mixed
+// wavesizes. Ideally we would have a mapping symbol in assembly which
+// would keep track of which sections of code should be treated as
+// wave32 and wave64. Instead what users do is assemble with both
+// wavesizes enabled. We translate this into this special mode so this
+// only influences assembler behavior and nothing else.
+def FeatureAssemblerPermissiveWavesize : SubtargetFeature<
+  "assembler-permissive-wavesize",
+  "AssemblerPermissiveWavesize",
+  "true",
+  "allow parsing wave32 and wave64 variants of instructions"
+>;
+
 class FeatureMaxPrivateElementSize<int size> : SubtargetFeature<
   "max-private-element-size-"#size,
   "MaxPrivateElementSize",
@@ -2576,6 +2589,8 @@ def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()
 // only allow 32-bit registers in operands and use low halves thereof.
 def UseRealTrue16Insts : True16PredicateClass<"Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
+def NotUseRealTrue16Insts : True16PredicateClass<"!Subtarget->useRealTrue16Insts()">,
+  AssemblerPredicate<(not (all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts))>;
 def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
                                               "!Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
