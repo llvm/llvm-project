@@ -594,6 +594,42 @@ static bool upgradeX86IntrinsicFunction(Function *F, StringRef Name,
     return false; // No other 'x86.avx512.*'.
   }
 
+  if (Name.consume_front("avx2.vpdpb")) {
+    // Added in 21.1
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("ssd.128", Intrinsic::x86_avx2_vpdpbssd_128)
+             .Case("ssd.256", Intrinsic::x86_avx2_vpdpbssd_256)
+             .Case("ssds.128", Intrinsic::x86_avx2_vpdpbssds_128)
+             .Case("ssds.256", Intrinsic::x86_avx2_vpdpbssds_256)
+             .Case("sud.128", Intrinsic::x86_avx2_vpdpbsud_128)
+             .Case("sud.256", Intrinsic::x86_avx2_vpdpbsud_256)
+             .Case("suds.128", Intrinsic::x86_avx2_vpdpbsuds_128)
+             .Case("suds.256", Intrinsic::x86_avx2_vpdpbsuds_256)
+             .Case("uud.128", Intrinsic::x86_avx2_vpdpbuud_128)
+             .Case("uud.256", Intrinsic::x86_avx2_vpdpbuud_256)
+             .Case("uuds.128", Intrinsic::x86_avx2_vpdpbuuds_128)
+             .Case("uuds.256", Intrinsic::x86_avx2_vpdpbuuds_256)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return upgradeX86MultiplyAddBytes(F, ID, NewFn);
+    return false; // No other 'x86.avx2.*'
+  }
+
+  if (Name.consume_front("avx10.vpdpb")) {
+    // Added in 21.1
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("ssd.512", Intrinsic::x86_avx10_vpdpbssd_512)
+             .Case("ssds.512", Intrinsic::x86_avx10_vpdpbssds_512)
+             .Case("sud.512", Intrinsic::x86_avx10_vpdpbsud_512)
+             .Case("suds.512", Intrinsic::x86_avx10_vpdpbsuds_512)
+             .Case("uud.512", Intrinsic::x86_avx10_vpdpbuud_512)
+             .Case("uuds.512", Intrinsic::x86_avx10_vpdpbuuds_512)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return upgradeX86MultiplyAddBytes(F, ID, NewFn);
+    return false; // No other 'x86.avx10.*'
+  }
+
   if (Name.consume_front("avx512bf16.")) {
     // Added in 9.0
     ID = StringSwitch<Intrinsic::ID>(Name)
@@ -5224,7 +5260,25 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   case Intrinsic::x86_avx512_vpdpbusd_512:
   case Intrinsic::x86_avx512_vpdpbusds_128:
   case Intrinsic::x86_avx512_vpdpbusds_256:
-  case Intrinsic::x86_avx512_vpdpbusds_512: {
+  case Intrinsic::x86_avx512_vpdpbusds_512:
+  case Intrinsic::x86_avx2_vpdpbssd_128:
+  case Intrinsic::x86_avx2_vpdpbssd_256:
+  case Intrinsic::x86_avx10_vpdpbssd_512:
+  case Intrinsic::x86_avx2_vpdpbssds_128:
+  case Intrinsic::x86_avx2_vpdpbssds_256:
+  case Intrinsic::x86_avx10_vpdpbssds_512:
+  case Intrinsic::x86_avx2_vpdpbsud_128:
+  case Intrinsic::x86_avx2_vpdpbsud_256:
+  case Intrinsic::x86_avx10_vpdpbsud_512:
+  case Intrinsic::x86_avx2_vpdpbsuds_128:
+  case Intrinsic::x86_avx2_vpdpbsuds_256:
+  case Intrinsic::x86_avx10_vpdpbsuds_512:
+  case Intrinsic::x86_avx2_vpdpbuud_128:
+  case Intrinsic::x86_avx2_vpdpbuud_256:
+  case Intrinsic::x86_avx10_vpdpbuud_512:
+  case Intrinsic::x86_avx2_vpdpbuuds_128:
+  case Intrinsic::x86_avx2_vpdpbuuds_256:
+  case Intrinsic::x86_avx10_vpdpbuuds_512: {
     unsigned NumElts = CI->getType()->getPrimitiveSizeInBits() / 8;
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};

@@ -5810,10 +5810,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_vpdpbusds_512:
     case Intrinsic::x86_avx2_vpdpbssd_128:
     case Intrinsic::x86_avx2_vpdpbssd_256:
+    case Intrinsic::x86_avx10_vpdpbssd_512:
     case Intrinsic::x86_avx2_vpdpbssds_128:
     case Intrinsic::x86_avx2_vpdpbssds_256:
-    case Intrinsic::x86_avx10_vpdpbssd_512:
     case Intrinsic::x86_avx10_vpdpbssds_512:
+    case Intrinsic::x86_avx2_vpdpbsud_128:
+    case Intrinsic::x86_avx2_vpdpbsud_256:
+    case Intrinsic::x86_avx10_vpdpbsud_512:
+    case Intrinsic::x86_avx2_vpdpbsuds_128:
+    case Intrinsic::x86_avx2_vpdpbsuds_256:
+    case Intrinsic::x86_avx10_vpdpbsuds_512:
+    case Intrinsic::x86_avx2_vpdpbuud_128:
+    case Intrinsic::x86_avx2_vpdpbuud_256:
+    case Intrinsic::x86_avx10_vpdpbuud_512:
+    case Intrinsic::x86_avx2_vpdpbuuds_128:
+    case Intrinsic::x86_avx2_vpdpbuuds_256:
+    case Intrinsic::x86_avx10_vpdpbuuds_512:
       handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/4, /*EltSize=*/8);
       break;
 
