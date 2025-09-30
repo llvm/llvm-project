@@ -527,15 +527,16 @@ define void @rt_stride_1_with_reordering(ptr %pl, i64 %stride, ptr %ps) {
   ret void
 }
 
-define void @constant_stride_widen_no_reordering(ptr %pl, i64 %stride, ptr %ps) {
-; CHECK-LABEL: define void @constant_stride_widen_no_reordering(
+define void @constant_stride_masked_no_reordering(ptr %pl, i64 %stride, ptr %ps) {
+; CHECK-LABEL: define void @constant_stride_masked_no_reordering(
 ; CHECK-SAME: ptr [[PL:%.*]], i64 [[STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[GEP_L0:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 0
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <28 x i8> @llvm.masked.load.v28i8.p0(ptr [[GEP_L0]], i32 1, <28 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <28 x i8> poison)
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <28 x i8> [[TMP1]], <28 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19, i32 24, i32 25, i32 26, i32 27>
-; CHECK-NEXT:    store <16 x i8> [[TMP8]], ptr [[GEP_S0]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <28 x i8> [[TMP1]], <28 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19, i32 24, i32 25, i32 26, i32 27>
+; CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[GEP_S0]], align 1
 ; CHECK-NEXT:    ret void
+;
   %gep_l0 = getelementptr inbounds i8, ptr %pl, i64 0
   %gep_l1 = getelementptr inbounds i8, ptr %pl, i64 1
   %gep_l2 = getelementptr inbounds i8, ptr %pl, i64 2
