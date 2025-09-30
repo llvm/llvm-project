@@ -775,7 +775,9 @@ public:
   }
 
   mlir::Attribute VisitCXXConstructExpr(CXXConstructExpr *e, QualType ty) {
-    cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitCXXConstructExpr");
+    if (!e->getConstructor()->isTrivial())
+      return nullptr;
+    cgm.errorNYI(e->getBeginLoc(), "trivial constructor const handling");
     return {};
   }
 
