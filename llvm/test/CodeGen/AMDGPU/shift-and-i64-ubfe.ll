@@ -281,9 +281,9 @@ define amdgpu_kernel void @v_uextract_bit_31_32_i64(ptr addrspace(1) %out, ptr a
 ; GCN-NEXT:    buffer_load_dwordx2 v[2:3], v[0:1], s[8:11], 0 addr64
 ; GCN-NEXT:    s_mov_b64 s[6:7], s[10:11]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_alignbit_b32 v2, v3, v2, 31
-; GCN-NEXT:    v_and_b32_e32 v2, 3, v2
+; GCN-NEXT:    v_lshr_b64 v[2:3], v[2:3], 31
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
+; GCN-NEXT:    v_and_b32_e32 v2, 3, v2
 ; GCN-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[4:7], 0 addr64
 ; GCN-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workgroup.id.x()

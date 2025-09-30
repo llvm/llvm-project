@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: ld.lld %t --gc-sections --print-gc-sections -o %t2 2>&1 | FileCheck -check-prefix=PRINT %s
 # RUN: ld.lld %t --gc-sections --print-gc-sections=- -o %t2 2>&1 | FileCheck -check-prefix=PRINT %s
-# RUN: ld.lld %t --gc-sections --print-gc-sections=%t.txt
+# RUN: ld.lld %t --gc-sections --print-gc-sections=%t.txt -o %t2
 # RUN: FileCheck --check-prefix=PRINT %s --input-file=%t.txt
 
 # PRINT:      removing unused section {{.*}}:(.text.x)

@@ -20,7 +20,7 @@ namespace clang::tidy::bugprone {
 /// when the string is read.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/not-null-terminated-result.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/not-null-terminated-result.html
 class NotNullTerminatedResultCheck : public ClangTidyCheck {
 public:
   NotNullTerminatedResultCheck(StringRef Name, ClangTidyContext *Context);

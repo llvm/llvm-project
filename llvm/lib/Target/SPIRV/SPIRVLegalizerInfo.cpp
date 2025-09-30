@@ -276,6 +276,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       {G_UADDO, G_SADDO, G_USUBO, G_SSUBO, G_UMULO, G_SMULO})
       .alwaysLegal();
 
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .legalForCartesianProduct(allFloatScalarsAndVectors,
+                                allIntScalarsAndVectors);
+
   // FP conversions.
   getActionDefinitionsBuilder({G_FPTRUNC, G_FPEXT})
       .legalForCartesianProduct(allFloatScalarsAndVectors);
@@ -285,6 +289,9 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   // Control-flow. In some cases (e.g. constants) s1 may be promoted to s32.
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1, s32});
+
+  getActionDefinitionsBuilder(G_FFREXP).legalForCartesianProduct(
+      allFloatScalarsAndVectors, {s32, v2s32, v3s32, v4s32, v8s32, v16s32});
 
   // TODO: Review the target OpenCL and GLSL Extended Instruction Set specs to
   // tighten these requirements. Many of these math functions are only legal on

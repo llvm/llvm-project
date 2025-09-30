@@ -169,8 +169,6 @@ define i64 @streaming_agnostic_caller_nonstreaming_private_za_callee(i64 %v) nou
 ; CHECK-NEWLOWERING-NEXT:    smstop sm
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x8
 ; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
-; CHECK-NEWLOWERING-NEXT:    smstart sm
-; CHECK-NEWLOWERING-NEXT:    smstop sm
 ; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
 ; CHECK-NEWLOWERING-NEXT:    smstart sm
 ; CHECK-NEWLOWERING-NEXT:    mov x8, x0
@@ -268,19 +266,11 @@ define i64 @streaming_compatible_agnostic_caller_nonstreaming_private_za_callee(
 ; CHECK-NEWLOWERING-NEXT:  .LBB5_2:
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x8
 ; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
+; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
 ; CHECK-NEWLOWERING-NEXT:    tbz w20, #0, .LBB5_4
 ; CHECK-NEWLOWERING-NEXT:  // %bb.3:
 ; CHECK-NEWLOWERING-NEXT:    smstart sm
 ; CHECK-NEWLOWERING-NEXT:  .LBB5_4:
-; CHECK-NEWLOWERING-NEXT:    tbz w20, #0, .LBB5_6
-; CHECK-NEWLOWERING-NEXT:  // %bb.5:
-; CHECK-NEWLOWERING-NEXT:    smstop sm
-; CHECK-NEWLOWERING-NEXT:  .LBB5_6:
-; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
-; CHECK-NEWLOWERING-NEXT:    tbz w20, #0, .LBB5_8
-; CHECK-NEWLOWERING-NEXT:  // %bb.7:
-; CHECK-NEWLOWERING-NEXT:    smstart sm
-; CHECK-NEWLOWERING-NEXT:  .LBB5_8:
 ; CHECK-NEWLOWERING-NEXT:    mov x8, x0
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x19
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_restore
