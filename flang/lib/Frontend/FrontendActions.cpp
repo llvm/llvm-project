@@ -58,6 +58,7 @@
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -836,6 +837,15 @@ void CodeGenAction::generateLLVMIR() {
                                 "amdhsa_code_object_version",
                                 opts.CodeObjectVersion);
     }
+  }
+
+  if ((triple.isARM() || triple.isThumb()) && triple.isTargetAEABI() &&
+      triple.isOSBinFormatELF()) {
+    llvmModule->addModuleFlag(llvm::Module::Warning, "arm-eabi-fp-number-model",
+                              mathOpts.getNoHonorInfs() &&
+                                      mathOpts.getNoHonorNaNs()
+                                  ? llvm::ARMBuildAttrs::AllowIEEENormal
+                                  : llvm::ARMBuildAttrs::AllowIEEE754);
   }
 }
 
