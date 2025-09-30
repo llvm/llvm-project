@@ -237,12 +237,6 @@ void RemarkEngine::reportImpl(const Remark &remark) {
     emitRemark(remark.getLocation(), remark.getMsg());
 }
 
-void RemarkEngine::shutdown() {
-  if (remarkEmittingPolicy) {
-    remarkEmittingPolicy->finalize();
-  }
-}
-
 void RemarkEngine::report(const Remark &&remark) {
   if (remarkEmittingPolicy)
     remarkEmittingPolicy->reportRemark(remark);

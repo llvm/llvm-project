@@ -374,7 +374,7 @@ TEST(Remark, TestRemarkFinal) {
         << pass4Msg;
 
     // Finalize the remark engine
-    context.getRemarkEngine()->shutdown();
+    policy->finalize();
   }
 
   llvm::errs().flush();

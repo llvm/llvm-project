@@ -429,15 +429,16 @@ public:
   /// main remark streamer.
   ~RemarkEngine();
 
-  /// Shutdown the remark engine. This will finalize the remark engine and
-  /// close the output file.
-  void shutdown();
-
   /// Setup the remark engine with the given output path and format.
   LogicalResult
   initialize(std::unique_ptr<MLIRRemarkStreamerBase> streamer,
              std::unique_ptr<RemarkEmittingPolicyBase> remarkEmittingPolicy,
              std::string *errMsg);
+
+  /// Get the remark emitting policy.
+  RemarkEmittingPolicyBase *getRemarkEmittingPolicy() const {
+    return remarkEmittingPolicy.get();
+  }
 
   /// Report a remark.
   void report(const Remark &&remark);

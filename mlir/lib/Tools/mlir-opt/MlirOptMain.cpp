@@ -618,7 +618,8 @@ performActions(raw_ostream &os,
   os << OpWithState(op.get(), asmState) << '\n';
 
   if (remark::detail::RemarkEngine *engine = ctx.getRemarkEngine())
-    engine->shutdown();
+    engine->getRemarkEmittingPolicy()->finalize();
+
   return success();
 }
 
