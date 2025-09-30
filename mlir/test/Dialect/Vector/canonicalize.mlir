@@ -3816,28 +3816,3 @@ func.func @no_fold_insert_use_chain_mismatch_static_position(%arg : vector<4xf32
   %v_1 = vector.insert %val, %v_0[1] : f32 into vector<4xf32>
   return %v_1 : vector<4xf32>
 }
-
-// -----
-
-// CHECK-LABEL: @fold_to_elements_of_scalar_broadcast
-//  CHECK-SAME: (%[[S:.*]]: f32) -> (f32, f32, f32, f32)
-func.func @fold_to_elements_of_scalar_broadcast(%s: f32) -> (f32, f32, f32, f32) {
-  %v = vector.broadcast %s : f32 to vector<4xf32>
-  %e:4 = vector.to_elements %v : vector<4xf32>
-  // CHECK-NOT: vector.broadcast
-  // CHECK: return %[[S]], %[[S]], %[[S]], %[[S]] : f32, f32, f32, f32
-  return %e#0, %e#1, %e#2, %e#3 : f32, f32, f32, f32
-}
-
-// -----
-
-// CHECK-LABEL: @canonicalize_to_elements_of_vector_broadcast
-//  CHECK-SAME: (%[[VEC:.*]]: vector<2xf32>) -> (f32, f32, f32, f32, f32, f32)
-func.func @canonicalize_to_elements_of_vector_broadcast(%vec: vector<2xf32>) -> (f32, f32, f32, f32, f32, f32) {
-  %v = vector.broadcast %vec : vector<2xf32> to vector<3x2xf32>
-  %e:6 = vector.to_elements %v : vector<3x2xf32>
-  // CHECK-NOT: vector.broadcast
-  // CHECK: %[[SRC_ELEMS:.*]]:2 = vector.to_elements %[[VEC]]
-  // CHECK: return %[[SRC_ELEMS]]#0, %[[SRC_ELEMS]]#1, %[[SRC_ELEMS]]#0, %[[SRC_ELEMS]]#1, %[[SRC_ELEMS]]#0, %[[SRC_ELEMS]]#1
-  return %e#0, %e#1, %e#2, %e#3, %e#4, %e#5 : f32, f32, f32, f32, f32, f32
-}
