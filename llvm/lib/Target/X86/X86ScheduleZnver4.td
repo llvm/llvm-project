@@ -1395,7 +1395,7 @@ def : InstRW<[Zn4WriteVPERMPSYrr], (instrs VPERMPSYrr)>;
 
 def Zn4WriteVPERMPSYrm : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPVShuf]> {
   let Latency = !add(Znver4Model.VecLoadLatency, Zn4WriteVPERMPSYrr.Latency);
-  let ReleaseAtCycles = [1];
+  let ReleaseAtCycles = [1, 1, 1];
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WriteVPERMPSYrm], (instrs VPERMPSYrm)>;
