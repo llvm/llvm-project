@@ -25512,6 +25512,32 @@ SDValue performCONDCombine(SDNode *N,
                                              CmpIndex, CC))
     return Val;
 
+  // X & M ?= C --> (C << clz(M)) ?= (X << clz(M)) where M is a non-empty
+  // sequence of ones starting at the least significant bit with the remainder
+  // zero and C is a constant s.t. (C & ~M) == 0 that cannot be materialised
+  // into a SUBS (immediate). The transformed form can be matched into a SUBS
+  // (shifted register).
+  if ((CC == AArch64CC::EQ || CC == AArch64CC::NE) && AndNode->hasOneUse() &&
+      isa<ConstantSDNode>(AndNode->getOperand(1)) &&
+      isa<ConstantSDNode>(SubsNode->getOperand(1))) {
+    SDValue X = AndNode->getOperand(0);
+    APInt M = AndNode->getConstantOperandAPInt(1);
+    APInt C = SubsNode->getConstantOperandAPInt(1);
+
+    if (M.isMask() && C.isSubsetOf(M) && !isLegalArithImmed(C.getZExtValue())) {
+      SDLoc DL(SubsNode);
+      EVT VT = SubsNode->getValueType(0);
+      unsigned ShiftAmt = M.countl_zero();
+      SDValue ShiftedX = DAG.getNode(
+          ISD::SHL, DL, VT, X, DAG.getShiftAmountConstant(ShiftAmt, VT, DL));
+      SDValue ShiftedC = DAG.getConstant(C << ShiftAmt, DL, VT);
+      SDValue NewSubs = DAG.getNode(AArch64ISD::SUBS, DL, SubsNode->getVTList(),
+                                    ShiftedC, ShiftedX);
+      DCI.CombineTo(SubsNode, NewSubs, NewSubs.getValue(1));
+      return SDValue(N, 0);
+    }
+  }
+
   if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(AndNode->getOperand(1))) {
     uint32_t CNV = CN->getZExtValue();
     if (CNV == 255)
