@@ -1100,7 +1100,9 @@ class BinOpSameOpcodeHelper {
       // constant + x cannot be -constant - x
       // instead, it should be x - -constant
       if (Pos == 1 ||
-          (FromOpcode == Instruction::Add && ToOpcode == Instruction::Sub))
+          ((FromOpcode == Instruction::Add || FromOpcode == Instruction::Or ||
+            FromOpcode == Instruction::Xor) &&
+           ToOpcode == Instruction::Sub))
         return SmallVector<Value *>({LHS, RHS});
       return SmallVector<Value *>({RHS, LHS});
     }
@@ -1187,6 +1189,10 @@ public:
       case Instruction::And:
         if (CIValue.isAllOnes())
           InterchangeableMask = CanBeAll;
+        break;
+      case Instruction::Xor:
+        if (CIValue.isZero())
+          InterchangeableMask = XorBIT | OrBIT | AndBIT | SubBIT | AddBIT;
         break;
       default:
         if (CIValue.isZero())
