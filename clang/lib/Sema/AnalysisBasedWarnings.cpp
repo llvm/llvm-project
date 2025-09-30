@@ -2598,6 +2598,17 @@ public:
                                          ASTContext &Ctx) override {
     S.Diag(Arg->getBeginLoc(), diag::warn_unsafe_single_pointer_argument);
   }
+
+  void handleTooComplexCountAttributedAssign(const Expr *E, const ValueDecl *VD,
+                                             bool IsRelatedToDecl,
+                                             ASTContext &Ctx) override {
+    SourceLocation Loc = E->getBeginLoc();
+    if (const auto *BO = dyn_cast<BinaryOperator>(E))
+      Loc = BO->getOperatorLoc();
+
+    S.Diag(Loc, diag::warn_assign_to_count_attributed_must_be_simple_stmt)
+        << VD->isDependentCount() << VD->getName();
+  }
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   void handleUnsafeVariableGroup(const VarDecl *Variable,
@@ -3416,6 +3427,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   bool UnsafeBufferUsageShouldSuggestSuggestions =
       UnsafeBufferUsageCanEmitSuggestions &&
       !DiagOpts.ShowSafeBufferUsageSuggestions;
+  bool BoundsSafetyAttributedEnabled = S.getLangOpts().BoundsSafetyAttributes;
   UnsafeBufferUsageReporter R(S, UnsafeBufferUsageShouldSuggestSuggestions);
 
   // The Callback function that performs analyses:
@@ -3433,7 +3445,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
         !Diags.isIgnored(diag::warn_unsafe_buffer_libc_call,
                          Node->getBeginLoc())) {
       clang::checkUnsafeBufferUsage(Node, R,
-                                    UnsafeBufferUsageShouldEmitSuggestions);
+                                    UnsafeBufferUsageShouldEmitSuggestions,
+                                    BoundsSafetyAttributedEnabled);
     }
 
     // More analysis ...

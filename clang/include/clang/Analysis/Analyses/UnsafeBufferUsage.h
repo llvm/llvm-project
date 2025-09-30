@@ -142,6 +142,13 @@ public:
                                                  ASTContext &Ctx) {
     handleUnsafeOperation(Arg, IsRelatedToDecl, Ctx);
   }
+
+  virtual void handleTooComplexCountAttributedAssign(const Expr *E,
+                                                     const ValueDecl *VD,
+                                                     bool IsRelatedToDecl,
+                                                     ASTContext &Ctx) {
+    handleUnsafeOperation(E, IsRelatedToDecl, Ctx);
+  }
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// Invoked when a fix is suggested against a variable. This function groups
@@ -196,7 +203,8 @@ public:
 // This function invokes the analysis and allows the caller to react to it
 // through the handler class.
 void checkUnsafeBufferUsage(const Decl *D, UnsafeBufferUsageHandler &Handler,
-                            bool EmitSuggestions);
+                            bool EmitSuggestions,
+                            bool BoundsSafetyAttributesEnabled = false);
 
 namespace internal {
 // Tests if any two `FixItHint`s in `FixIts` conflict.  Two `FixItHint`s

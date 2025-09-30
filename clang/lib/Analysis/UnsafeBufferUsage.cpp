@@ -5375,9 +5375,322 @@ static void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
   }
 }
 
+// Checks if Self and Other are the same member bases. This supports only very
+// simple forms of member bases.
+static bool isSameMemberBase(const Expr *Self, const Expr *Other) {
+  for (;;) {
+    if (Self == Other)
+      return true;
+
+    const auto *SelfICE = dyn_cast<ImplicitCastExpr>(Self);
+    const auto *OtherICE = dyn_cast<ImplicitCastExpr>(Other);
+    if (SelfICE && OtherICE && SelfICE->getCastKind() == CK_LValueToRValue &&
+        OtherICE->getCastKind() == CK_LValueToRValue) {
+      Self = SelfICE->getSubExpr();
+      Other = OtherICE->getSubExpr();
+    }
+
+    const auto *SelfDRE = dyn_cast<DeclRefExpr>(Self);
+    const auto *OtherDRE = dyn_cast<DeclRefExpr>(Other);
+    if (SelfDRE && OtherDRE)
+      return SelfDRE->getDecl() == OtherDRE->getDecl();
+
+    const auto *SelfME = dyn_cast<MemberExpr>(Self);
+    const auto *OtherME = dyn_cast<MemberExpr>(Other);
+    if (!SelfME || !OtherME ||
+        SelfME->getMemberDecl() != OtherME->getMemberDecl()) {
+      return false;
+    }
+
+    Self = SelfME->getBase();
+    Other = OtherME->getBase();
+  }
+}
+
+using DependentDeclSetTy = llvm::SmallPtrSet<const ValueDecl *, 4>;
+
+// Gets the set/closure of bounds-attributed pointers and counts that belong to
+// the same group. Consider the following example:
+//   int a, b, c;
+//   int *__counted_by(a + b) p;
+//   int *__counted_by(b - c) q;
+// Passing any of the variables above as `InitVD`, the function should return
+// the closure `{a, b, c, p, q}`.
+static DependentDeclSetTy getBoundsAttributedClosure(const ValueDecl *InitVD) {
+  DependentDeclSetTy Set;
+
+  llvm::SmallVector<const ValueDecl *, 4> WorkList;
+  WorkList.push_back(InitVD);
+
+  while (!WorkList.empty()) {
+    const ValueDecl *CurVD = WorkList.pop_back_val();
+    bool Inserted = Set.insert(CurVD).second;
+    if (!Inserted)
+      continue;
+
+    // If CurVD is a dependent decl, add the pointers that depend on CurVD.
+    for (const auto *Attr : CurVD->specific_attrs<DependerDeclsAttr>()) {
+      for (const Decl *D : Attr->dependerDecls()) {
+        if (const auto *VD = dyn_cast<ValueDecl>(D))
+          WorkList.push_back(VD);
+      }
+    }
+
+    // If CurVD is a bounds-attributed pointer (or pointer to it), add its
+    // dependent decls.
+    QualType Ty = CurVD->getType();
+    const auto *BAT = Ty->getAs<BoundsAttributedType>();
+    if (!BAT && Ty->isPointerType())
+      BAT = Ty->getPointeeType()->getAs<BoundsAttributedType>();
+    if (BAT) {
+      for (const auto &DI : BAT->dependent_decls())
+        WorkList.push_back(DI.getDecl());
+    }
+  }
+
+  return Set;
+}
+
+// Bounds-attributed pointer or dependent count.
+struct BoundsAttributedObject {
+  const ValueDecl *Decl = nullptr;
+  const Expr *MemberBase = nullptr;
+  int DerefLevel = 0;
+};
+
+static std::optional<BoundsAttributedObject>
+getBoundsAttributedObject(const Expr *E) {
+  E = E->IgnoreParenCasts();
+
+  int DerefLevel = 0;
+  while (const auto *UO = dyn_cast<UnaryOperator>(E)) {
+    if (UO->getOpcode() == UO_Deref)
+      DerefLevel++;
+    else if (UO->getOpcode() == UO_AddrOf)
+      DerefLevel--;
+    else
+      break;
+    E = UO->getSubExpr()->IgnoreParenCasts();
+  }
+  assert(DerefLevel >= 0);
+
+  const ValueDecl *Decl;
+  const Expr *MemberBase = nullptr;
+
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    Decl = DRE->getDecl();
+  else if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    Decl = ME->getMemberDecl();
+    MemberBase = ME->getBase();
+  } else
+    return std::nullopt;
+
+  QualType Ty = Decl->getType();
+  bool IsBoundsAttributedPointer =
+      Ty->isBoundsAttributedType() ||
+      (Ty->isPointerType() && Ty->getPointeeType()->isBoundsAttributedType());
+  if (IsBoundsAttributedPointer || Decl->isDependentCount())
+    return {{Decl, MemberBase, DerefLevel}};
+
+  return std::nullopt;
+}
+
+struct BoundsAttributedAssignmentGroup {
+  DependentDeclSetTy DeclClosure;
+  llvm::SmallVector<const BinaryOperator *, 4> Assignments;
+  llvm::SmallVector<BoundsAttributedObject, 4> AssignedObjects;
+  using DeclUseTy = std::pair<const ValueDecl *, const Expr *>;
+  const Expr *MemberBase = nullptr;
+
+  void init(const BoundsAttributedObject &Object) {
+    DeclClosure = getBoundsAttributedClosure(Object.Decl);
+    MemberBase = Object.MemberBase;
+  }
+
+  void clear() {
+    DeclClosure.clear();
+    Assignments.clear();
+    AssignedObjects.clear();
+    MemberBase = nullptr;
+  }
+
+  bool empty() const {
+    return DeclClosure.empty();
+  }
+
+  bool isPartOfGroup(const BoundsAttributedObject &Object) const {
+    if (!DeclClosure.contains(Object.Decl))
+      return false;
+    if (MemberBase)
+      return Object.MemberBase &&
+             isSameMemberBase(MemberBase, Object.MemberBase);
+    return true;
+  }
+
+  void addAssignment(const BoundsAttributedObject &Object,
+                     const BinaryOperator *BO) {
+    Assignments.push_back(BO);
+    AssignedObjects.push_back(Object);
+  }
+};
+
+// Visitor that is responsible for finding bounds-attributed assignment groups
+// and other assignments that can modify bounds-attributed objects.
+//
+// A bounds-attributed group must be a group of assignments that are children
+// of a CompoundStmt:
+//   void foo(int *__counted_by(count) p, int count) {
+//     p = ...;
+//     count = ...;
+//   }
+// Here, the group consists of both assignments to p and count.  Note that the
+// function body is a CompoundStmt.
+//
+// We consider assignments to bounds-attributed objects that are not simple
+// statements or not children of a CompoundStmt as too complex, and we give up
+// trying to put them in a bounds-attributed group:
+//   void foo(int *__counted_by(count) p, int count) {
+//     q = p = ...;
+//           ^ too complex assignment to __counted_by() pointer
+//     n = count += ...;
+//               ^ too complex assignment to dependent count
+//   }
+// Note that while those assignments are descendants of a CompoundStmt, they
+// are not its direct children.
+struct BoundsAttributedGroupFinder
+    : public ConstStmtVisitor<BoundsAttributedGroupFinder> {
+  using GroupHandlerTy = void(const BoundsAttributedAssignmentGroup &Group);
+  using AssignHandlerTy = void(const Expr *, const ValueDecl *);
+  std::function<GroupHandlerTy> GroupHandler;
+  std::function<AssignHandlerTy> TooComplexAssignHandler;
+  BoundsAttributedAssignmentGroup CurGroup;
+
+  explicit BoundsAttributedGroupFinder(
+      std::function<GroupHandlerTy> GroupHandler,
+      std::function<AssignHandlerTy> TooComplexAssignHandler)
+      : GroupHandler(std::move(GroupHandler)),
+        TooComplexAssignHandler(std::move(TooComplexAssignHandler)) {}
+
+  void VisitChildren(const Stmt *S) {
+    for (const Stmt *Child : S->children()) {
+      if (Child)
+        Visit(Child);
+    }
+  }
+
+  void VisitStmt(const Stmt *S) { VisitChildren(S); }
+
+  void VisitCompoundStmt(const CompoundStmt *CS) {
+    for (const Stmt *Child : CS->children()) {
+      const Stmt *E = Child;
+
+      // See through `ExprWithCleanups`. Clang will attach those nodes when C++
+      // temporary object needs to be materialized. In our case, this can
+      // happen when we create a temporary span with `sp.first()`. Then, the
+      // structure is going to be:
+      //   CompoundStmt
+      //   `-ExprWithCleanups
+      //     `-BinaryOperator ...
+      if (const auto *EWC = dyn_cast<ExprWithCleanups>(E))
+        E = EWC->getSubExpr();
+
+      const auto *BO = dyn_cast<BinaryOperator>(E);
+      if (BO && BO->getOpcode() == BO_Assign)
+        handleAssignInCompound(BO);
+      else {
+        finishGroup();
+        Visit(Child);
+      }
+    }
+
+    finishGroup();
+  }
+
+  void handleAssignInCompound(const BinaryOperator *AssignOp) {
+    const auto ObjectOpt = getBoundsAttributedObject(AssignOp->getLHS());
+    if (!ObjectOpt.has_value()) {
+      finishGroup();
+      VisitChildren(AssignOp);
+      return;
+    }
+
+    if (!CurGroup.isPartOfGroup(*ObjectOpt)) {
+      finishGroup();
+      CurGroup.init(*ObjectOpt);
+    }
+
+    CurGroup.addAssignment(*ObjectOpt, AssignOp);
+    VisitChildren(AssignOp->getRHS());
+  }
+
+  void finishGroup() {
+    if (CurGroup.empty())
+      return;
+    GroupHandler(CurGroup);
+    CurGroup.clear();
+  }
+
+  // Handle statements that might modify bounds-attributed pointer/count, but
+  // are not children of a CompoundStmt.
+
+  void VisitBinaryOperator(const BinaryOperator *BO) {
+    VisitChildren(BO);
+
+    if (BO->isAssignmentOp())
+      checkTooComplexAssign(BO, BO->getLHS());
+  }
+
+  void VisitUnaryOperator(const UnaryOperator *UO) {
+    VisitChildren(UO);
+
+    if (UO->isIncrementDecrementOp())
+      checkTooComplexAssign(UO, UO->getSubExpr());
+  }
+
+  void checkTooComplexAssign(const Expr *E, const Expr *Sub) {
+    const auto DA = getBoundsAttributedObject(Sub);
+    if (DA.has_value())
+      TooComplexAssignHandler(E, DA->Decl);
+  }
+};
+
+static void
+diagnoseTooComplexAssignToBoundsAttributed(const Expr *E, const ValueDecl *VD,
+                                           UnsafeBufferUsageHandler &Handler,
+                                           ASTContext &Ctx) {
+  // Don't diagnose pointer arithmetic, since -Wunsafe-buffer-usage already does
+  // it.
+  bool IsPtrArith = false;
+  if (E->getType()->isPointerType()) {
+    if (const auto *BO = dyn_cast<BinaryOperator>(E))
+      IsPtrArith = BO->isCompoundAssignmentOp();
+    else if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
+      assert(UO->isIncrementDecrementOp());
+      IsPtrArith = true;
+    }
+  }
+  if (!IsPtrArith)
+    Handler.handleTooComplexCountAttributedAssign(
+        E, VD, /*IsRelatedToDecl=*/false, Ctx);
+}
+
+static void checkBoundsSafetyAssignments(const Stmt *S,
+                                         UnsafeBufferUsageHandler &Handler,
+                                         ASTContext &Ctx) {
+  BoundsAttributedGroupFinder Finder(
+      [&](const BoundsAttributedAssignmentGroup &Group) {
+        // TODO: Check group constraints.
+      },
+      [&](const Expr *E, const ValueDecl *VD) {
+        diagnoseTooComplexAssignToBoundsAttributed(E, VD, Handler, Ctx);
+      });
+  Finder.Visit(S);
+}
+
 void clang::checkUnsafeBufferUsage(const Decl *D,
                                    UnsafeBufferUsageHandler &Handler,
-                                   bool EmitSuggestions) {
+                                   bool EmitSuggestions,
+                                   bool BoundsSafetyAttributesEnabled) {
 #ifndef NDEBUG
   Handler.clearDebugNotes();
 #endif
@@ -5423,6 +5736,11 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   for (Stmt *S : Stmts) {
     findGadgets(S, D->getASTContext(), Handler, EmitSuggestions, FixableGadgets,
                 WarningGadgets, Tracker);
+
+    // Run the bounds-safety assignment analysis if the attributes are enabled,
+    // otherwise don't waste cycles.
+    if (BoundsSafetyAttributesEnabled)
+      checkBoundsSafetyAssignments(S, Handler, D->getASTContext());
   }
   applyGadgets(D, std::move(FixableGadgets), std::move(WarningGadgets),
                std::move(Tracker), Handler, EmitSuggestions);
