@@ -720,19 +720,19 @@ static void instantiateDependentCUDAClusterDimsAttr(
   if (Attr.getX()) {
     ExprResult ResultX = S.SubstExpr(Attr.getX(), TemplateArgs);
     if (ResultX.isUsable())
-      XExpr = ResultX.getAs<Expr>();
+      XExpr = ResultX.get();
   }
 
   if (Attr.getY()) {
     ExprResult ResultY = S.SubstExpr(Attr.getY(), TemplateArgs);
     if (ResultY.isUsable())
-      YExpr = ResultY.getAs<Expr>();
+      YExpr = ResultY.get();
   }
 
   if (Attr.getZ()) {
     ExprResult ResultZ = S.SubstExpr(Attr.getZ(), TemplateArgs);
     if (ResultZ.isUsable())
-      ZExpr = ResultZ.getAs<Expr>();
+      ZExpr = ResultZ.get();
   }
 
   if (XExpr)

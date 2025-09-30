@@ -407,20 +407,15 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   }
 
   if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {
-    uint32_t X =
-        Attr->getX()->EvaluateKnownConstInt(M.getContext()).getExtValue();
-    uint32_t Y =
-        Attr->getY()
-            ? Attr->getY()->EvaluateKnownConstInt(M.getContext()).getExtValue()
-            : 1;
-    uint32_t Z =
-        Attr->getZ()
-            ? Attr->getZ()->EvaluateKnownConstInt(M.getContext()).getExtValue()
-            : 1;
-
+    auto GetExprVal = [&](const auto &E) {
+      return E ? E->EvaluateKnownConstInt(M.getContext()).getExtValue() : 1;
+    };
+    unsigned X = GetExprVal(Attr->getX());
+    unsigned Y = GetExprVal(Attr->getY());
+    unsigned Z = GetExprVal(Attr->getZ());
     llvm::SmallString<32> AttrVal;
     llvm::raw_svector_ostream OS(AttrVal);
-    OS << X << ',' << Y << ',' << Z;
+    OS << X << ", " << Y << ", " << Z;
     F->addFnAttr("amdgpu-cluster-dims", AttrVal.str());
   }
 
