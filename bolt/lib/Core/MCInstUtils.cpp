@@ -45,19 +45,21 @@ uint64_t MCInstReference::computeAddress(const MCCodeEmitter *Emitter) const {
 
   const BinaryContext &BC = getFunction()->getBinaryContext();
   if (auto *Ref = tryGetRefInBB()) {
-    uint64_t AddressOfBB = getFunction()->getAddress() + Ref->BB->getOffset();
+    const uint64_t AddressOfBB =
+        getFunction()->getAddress() + Ref->BB->getOffset();
     const MCInst *FirstInstInBB = &*Ref->BB->begin();
     const MCInst *ThisInst = &getMCInst();
 
     // Usage of plain 'const MCInst *' as iterators assumes the instructions
     // are stored in a vector, see BasicBlockStorageIsVector.
-    uint64_t OffsetInBB = BC.computeCodeSize(FirstInstInBB, ThisInst, Emitter);
+    const uint64_t OffsetInBB =
+        BC.computeCodeSize(FirstInstInBB, ThisInst, Emitter);
 
     return AddressOfBB + OffsetInBB;
   }
 
   auto &Ref = getRefInBF();
-  uint64_t OffsetInBF = Ref.It->first;
+  const uint64_t OffsetInBF = Ref.It->first;
 
   return getFunction()->getAddress() + OffsetInBF;
 }
