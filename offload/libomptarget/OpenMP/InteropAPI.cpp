@@ -275,7 +275,7 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
   return Interop;
 }
 
-int __tgt_interop_use(ident_t *LocRef, omp_interop_val_t *Interop,
+int __tgt_interop_use60(ident_t *LocRef, omp_interop_val_t *Interop,
                       interop_ctx_t *Ctx, dep_pack_t *Deps) {
   bool Nowait = Ctx->flags.nowait;
   DP("Call to %s with interop " DPxMOD ", nowait %" PRId32 "\n", __func__,
@@ -357,6 +357,36 @@ EXTERN int ompx_interop_add_completion_callback(omp_interop_val_t *Interop,
   Interop->addCompletionCb(CB, Data);
 
   return omp_irc_success;
+}
+
+// Backwards compatibility wrappers
+void __tgt_interop_init(ident_t *LocRef, int32_t Gtid,
+                        omp_interop_val_t *&InteropPtr,
+                        kmp_interop_type_t InteropType, int32_t DeviceId,
+                        int32_t Ndeps, kmp_depend_info_t *DepList,
+                        int32_t HaveNowait) {
+  interop_ctx_t Ctx = {0, {false, (bool)HaveNowait, 0}, Gtid};
+  dep_pack_t Deps = {Ndeps, 0, DepList, nullptr};
+  InteropPtr = __tgt_interop_get(LocRef, InteropType, DeviceId, 0, nullptr,
+                                 &Ctx, Ndeps ? &Deps : nullptr);
+}
+
+void __tgt_interop_use(ident_t *LocRef, int32_t Gtid,
+                       omp_interop_val_t *&InteropPtr, int32_t DeviceId,
+                       int32_t Ndeps, kmp_depend_info_t *DepList,
+                       int32_t HaveNowait) {
+  interop_ctx_t Ctx = {0, {false, (bool)HaveNowait, 0}, Gtid};
+  dep_pack_t Deps = {Ndeps, 0, DepList, nullptr};
+  __tgt_interop_use60(LocRef, InteropPtr, &Ctx, Ndeps ? &Deps : nullptr);
+}
+
+void __tgt_interop_destroy(ident_t *LocRef, int32_t Gtid,
+                           omp_interop_val_t *&InteropPtr, int32_t DeviceId,
+                           int32_t Ndeps, kmp_depend_info_t *DepList,
+                           int32_t HaveNowait) {
+  interop_ctx_t Ctx = {0, {false, (bool)HaveNowait, 0}, Gtid};
+  dep_pack_t Deps = {Ndeps, 0, DepList, nullptr};
+  __tgt_interop_release(LocRef, InteropPtr, &Ctx, Ndeps ? &Deps : nullptr);
 }
 
 } // extern "C"
