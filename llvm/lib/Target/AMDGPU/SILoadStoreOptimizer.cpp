@@ -1352,12 +1352,21 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
                                               DataRC1, SubReg);
     }
 
-    if (!MRI->constrainRegClass(Data0->getReg(), DataRC0) ||
-        !MRI->constrainRegClass(Data1->getReg(), DataRC1))
+    bool constrainData0 = MRI->constrainRegClass(Data0->getReg(), DataRC0);
+    bool constrainData1 = MRI->constrainRegClass(Data1->getReg(), DataRC1);
+    if (!constrainData0 && !constrainData1) {
       return nullptr;
-
-    // TODO: If one register can be constrained, and not the other, insert a
-    // copy.
+    } else if (!constrainData0 || !constrainData1) {
+      MachineBasicBlock::iterator InsertBefore = CI.I;
+      MachineBasicBlock *MBB = CI.I->getParent();
+      DebugLoc DL = CI.I->getDebugLoc();
+      const MachineOperand *activeData = !constrainData0 ? Data0 : Data1;
+      Register BaseReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
+      BuildMI(*MBB, InsertBefore, DL, CopyDesc, BaseReg)
+          .addReg(activeData->getReg(), 0);
+      const_cast<MachineOperand *>(activeData)->setReg(BaseReg);
+    }
   }
 
   return Where;
