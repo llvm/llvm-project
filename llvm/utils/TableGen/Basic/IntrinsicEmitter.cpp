@@ -794,12 +794,15 @@ AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {{
   if (id == 0)
     return AttributeSet();
   auto [FnAttrID, _] = unpackID(IntrinsicsToAttributesMap[id - 1]);
+  if (FnAttrID == {})
+    return AttributeSet();
   return getIntrinsicFnAttributeSet(C, FnAttrID);
 }
 #endif // GET_INTRINSIC_ATTRIBUTES
 
 )",
-                UniqAttributesBitSize, MaxNumAttrs, NoFunctionAttrsID);
+                UniqAttributesBitSize, MaxNumAttrs, NoFunctionAttrsID,
+                NoFunctionAttrsID);
 }
 
 void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
