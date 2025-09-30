@@ -1,9 +1,5 @@
 // RUN: %clang_cc1 -Wno-unused-value -Wunsafe-buffer-usage -fsafe-buffer-usage-suggestions -std=c++20 -verify=expected %s
 
-// This debugging facility is only available in debug builds.
-//
-// REQUIRES: asserts
-
 namespace std {
 inline namespace __1 {
 template <class T> class unique_ptr {
@@ -45,18 +41,3 @@ void basic_unique_ptr() {
 
 }
 
-// CHECK: Root # 1
-// CHECK: |- DeclRefExpr # 4
-// CHECK: |-- UnaryOperator(++) # 1
-// CHECK: |--- CompoundStmt # 1
-// CHECK: |-- ImplicitCastExpr(LValueToRValue) # 1
-// CHECK: |--- BinaryOperator(+) # 1
-// CHECK: |---- ParenExpr # 1
-// CHECK: |----- BinaryOperator(+) # 1
-// CHECK: |------ ParenExpr # 1
-// CHECK: |------- UnaryOperator(*) # 1
-// CHECK: |-------- CompoundStmt # 1
-// CHECK: |-- BinaryOperator(-=) # 1
-// CHECK: |--- CompoundStmt # 1
-// CHECK: |-- UnaryOperator(--) # 1
-// CHECK: |--- CompoundStmt # 1
