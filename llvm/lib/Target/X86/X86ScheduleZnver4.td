@@ -1327,9 +1327,9 @@ def : InstRW<[Zn4WriteSHA256RNDS2rr], (instrs SHA256RNDS2rr)>;
 
 // Strings instructions.
 // Packed Compare Implicit Length Strings, Return Mask
-defm : Zn4WriteResXMMPair<WritePCmpIStrM, [Zn4FPVAdd0123], 6, [8], 3, /*LoadUOps=*/1>;
+defm : Zn4WriteResXMMPair<WritePCmpIStrM, [Zn4FPVAdd0123], 7, [8], 3, /*LoadUOps=*/1>;
 // Packed Compare Explicit Length Strings, Return Mask
-defm : Zn4WriteResXMMPair<WritePCmpEStrM, [Zn4FPVAdd0123], 6, [12], 7, /*LoadUOps=*/5>;
+defm : Zn4WriteResXMMPair<WritePCmpEStrM, [Zn4FPVAdd0123], 7, [12], 7, /*LoadUOps=*/5>;
 // Packed Compare Implicit Length Strings, Return Index
 defm : Zn4WriteResXMMPair<WritePCmpIStrI, [Zn4FPVAdd0123], 2, [8], 4>;
 // Packed Compare Explicit Length Strings, Return Index
