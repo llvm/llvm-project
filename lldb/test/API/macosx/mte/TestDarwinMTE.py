@@ -33,6 +33,23 @@ class TestDarwinMTE(TestBase):
         )
 
     @skipUnlessFeature(cpu_feature.AArch64.MTE)
+    def test_memory_region(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "// before free", lldb.SBFileSpec("main.c"), exe_name=exe_name
+        )
+
+        # (lldb) memory region ptr
+        # [0x00000001005ec000-0x00000001009ec000) rw-
+        # memory tagging: enabled
+        # Modified memory (dirty) page list provided, 2 entries.
+        # Dirty pages: 0x1005ec000, 0x1005fc000.
+        self.expect(
+            "memory region ptr",
+            substrs=[") rw-", "memory tagging: enabled"]
+        )
+
+    @skipUnlessFeature(cpu_feature.AArch64.MTE)
     def test_memory_read_with_tags(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
