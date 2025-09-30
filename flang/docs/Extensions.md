@@ -557,6 +557,17 @@ end
   generic intrinsic function's inferred result type does not
   match an explicit declaration.  This message is a warning.
 
+* There is no restriction in the standard against assigning
+  to a whole polymorphic allocatable under control of a `WHERE`
+  construct or statement, but there is no good portable
+  behavior to implement and the standard isn't entirely clear
+  what it should mean.
+  (Other compilers allow it, but the results are never meaningful;
+  some never change the type, some change the type according to
+  the value of the last mask element, some treat these
+  assignment statements as no-ops, and the rest crash during compilation.)
+  The compiler flags this case as an error.
+
 ## Standard features that might as well not be
 
 * f18 supports designators with constant expressions, properly
