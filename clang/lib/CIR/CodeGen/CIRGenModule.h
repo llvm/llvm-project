@@ -426,6 +426,13 @@ public:
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 
+  /// Emit the function that initializes the specified global
+  void emitCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                bool performInit);
+
+  void emitCXXGlobalVarDeclInitFunc(const VarDecl *vd, cir::GlobalOp addr,
+                                    bool performInit);
+
   void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
 
   // C++ related functions.
