@@ -349,7 +349,7 @@ func.func @_QPopenmp_target_data_region() {
     %3 = fir.convert %c1024_i32 : (i32) -> index
     %c1 = arith.constant 1 : index
     %4 = fir.convert %2 : (index) -> i32
-    %5:2 = fir.do_loop %arg0 = %2 to %3 step %c1 iter_args(%arg1 = %4) -> (index, i32) {
+    %5 = fir.do_loop %arg0 = %2 to %3 step %c1 iter_args(%arg1 = %4) -> (i32) {
       fir.store %arg1 to %1 : !fir.ref<i32>
       %6 = fir.load %1 : !fir.ref<i32>
       %7 = fir.load %1 : !fir.ref<i32>
@@ -358,13 +358,12 @@ func.func @_QPopenmp_target_data_region() {
       %9 = arith.subi %8, %c1_i64 : i64
       %10 = fir.coordinate_of %0, %9 : (!fir.ref<!fir.array<1024xi32>>, i64) -> !fir.ref<i32>
       fir.store %6 to %10 : !fir.ref<i32>
-      %11 = arith.addi %arg0, %c1 overflow<nsw> : index
       %12 = fir.convert %c1 : (index) -> i32
       %13 = fir.load %1 : !fir.ref<i32>
       %14 = arith.addi %13, %12 overflow<nsw> : i32
-      fir.result %11, %14 : index, i32
+      fir.result %14 : i32
     }
-    fir.store %5#1 to %1 : !fir.ref<i32>
+    fir.store %5 to %1 : !fir.ref<i32>
     omp.terminator
   }
   return
@@ -404,7 +403,6 @@ func.func @_QPopenmp_target_data_region() {
 // CHECK:             %[[VAL_21:.*]] = llvm.sub %[[VAL_19]], %[[VAL_20]]  : i64
 // CHECK:             %[[VAL_22:.*]] = llvm.getelementptr %[[VAL_1]][0, %[[VAL_21]]] : (!llvm.ptr, i64) -> !llvm.ptr
 // CHECK:             llvm.store %[[VAL_17]], %[[VAL_22]] : i32, !llvm.ptr
-// CHECK:             %[[VAL_23:.*]] = llvm.add %[[VAL_12]], %[[VAL_8]] overflow<nsw> : i64
 // CHECK:             %[[VAL_24:.*]] = llvm.trunc %[[VAL_8]] : i64 to i32
 // CHECK:             %[[VAL_25:.*]] = llvm.load %[[VAL_3]] : !llvm.ptr -> i32
 // CHECK:             %[[VAL_26:.*]] = llvm.add %[[VAL_25]], %[[VAL_24]] overflow<nsw> : i32
@@ -653,18 +651,17 @@ func.func @_QPsb() {
   omp.sections   {
     omp.section {
       %2 = fir.convert %c1 : (index) -> i32
-      %3:2 = fir.do_loop %arg0 = %c1 to %c10 step %c1 iter_args(%arg1 = %2) -> (index, i32) {
+      %3 = fir.do_loop %arg0 = %c1 to %c10 step %c1 iter_args(%arg1 = %2) -> (i32) {
         fir.store %arg1 to %0 : !fir.ref<i32>
         %4 = fir.load %1 : !fir.ref<i32>
         %5 = arith.addi %4, %c1_i32 : i32
         fir.store %5 to %1 : !fir.ref<i32>
-        %6 = arith.addi %arg0, %c1 : index
         %7 = fir.convert %c1 : (index) -> i32
         %8 = fir.load %0 : !fir.ref<i32>
         %9 = arith.addi %8, %7 : i32
-        fir.result %6, %9 : index, i32
+        fir.result %9 : i32
       }
-      fir.store %3#1 to %0 : !fir.ref<i32>
+      fir.store %3 to %0 : !fir.ref<i32>
       omp.terminator
     }
     omp.terminator

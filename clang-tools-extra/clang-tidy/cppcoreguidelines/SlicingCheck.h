@@ -17,7 +17,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// or vtable.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/slicing.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/slicing.html
 class SlicingCheck : public ClangTidyCheck {
 public:
   SlicingCheck(StringRef Name, ClangTidyContext *Context)
