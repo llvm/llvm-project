@@ -20,7 +20,7 @@ define void @pr56282() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP1]], 7
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 7
-; CHECK-NEXT:    br i1 [[TMP3]], label [[OUTER_MIDDLE_UNR_LCSSA:%.*]], label [[OUTER_HEADER_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[INNER_1_HEADER_EPIL_PREHEADER:%.*]], label [[OUTER_HEADER_NEW:%.*]]
 ; CHECK:       outer.header.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP1]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[INNER_1_HEADER:%.*]]
@@ -62,17 +62,16 @@ define void @pr56282() {
 ; CHECK:       inner.1.latch.7:
 ; CHECK-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
 ; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp ne i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[INNER_1_HEADER]], label [[OUTER_MIDDLE_UNR_LCSSA_LOOPEXIT:%.*]]
-; CHECK:       outer.middle.unr-lcssa.loopexit:
+; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[INNER_1_HEADER]], label [[OUTER_MIDDLE_UNR_LCSSA:%.*]]
+; CHECK:       outer.middle.unr-lcssa:
 ; CHECK-NEXT:    [[V_LCSSA1_PH_PH:%.*]] = phi i32 [ [[V_7]], [[INNER_1_LATCH_7]] ]
 ; CHECK-NEXT:    [[INNER_1_IV_UNR_PH:%.*]] = phi i64 [ [[INNER_1_IV_NEXT_7]], [[INNER_1_LATCH_7]] ]
-; CHECK-NEXT:    br label [[OUTER_MIDDLE_UNR_LCSSA]]
-; CHECK:       outer.middle.unr-lcssa:
-; CHECK-NEXT:    [[V_LCSSA1_PH:%.*]] = phi i32 [ poison, [[OUTER_HEADER]] ], [ [[V_LCSSA1_PH_PH]], [[OUTER_MIDDLE_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[INNER_1_IV_UNR:%.*]] = phi i64 [ 0, [[OUTER_HEADER]] ], [ [[INNER_1_IV_UNR_PH]], [[OUTER_MIDDLE_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[INNER_1_HEADER_EPIL_PREHEADER:%.*]], label [[OUTER_MIDDLE:%.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[INNER_1_HEADER_EPIL_PREHEADER]], label [[OUTER_MIDDLE:%.*]]
 ; CHECK:       inner.1.header.epil.preheader:
+; CHECK-NEXT:    [[INNER_1_IV_UNR:%.*]] = phi i64 [ 0, [[OUTER_HEADER]] ], [ [[INNER_1_IV_UNR_PH]], [[OUTER_MIDDLE_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD3:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD3]])
 ; CHECK-NEXT:    br label [[INNER_1_HEADER_EPIL:%.*]]
 ; CHECK:       inner.1.header.epil:
 ; CHECK-NEXT:    [[INNER_1_IV_EPIL:%.*]] = phi i64 [ [[INNER_1_IV_UNR]], [[INNER_1_HEADER_EPIL_PREHEADER]] ], [ [[INNER_1_IV_NEXT_EPIL:%.*]], [[INNER_1_LATCH_EPIL:%.*]] ]
@@ -90,7 +89,7 @@ define void @pr56282() {
 ; CHECK-NEXT:    [[V_LCSSA1_PH2:%.*]] = phi i32 [ [[V_EPIL]], [[INNER_1_LATCH_EPIL]] ]
 ; CHECK-NEXT:    br label [[OUTER_MIDDLE]]
 ; CHECK:       outer.middle:
-; CHECK-NEXT:    [[V_LCSSA1:%.*]] = phi i32 [ [[V_LCSSA1_PH]], [[OUTER_MIDDLE_UNR_LCSSA]] ], [ [[V_LCSSA1_PH2]], [[OUTER_MIDDLE_EPILOG_LCSSA]] ]
+; CHECK-NEXT:    [[V_LCSSA1:%.*]] = phi i32 [ [[V_LCSSA1_PH_PH]], [[OUTER_MIDDLE_UNR_LCSSA]] ], [ [[V_LCSSA1_PH2]], [[OUTER_MIDDLE_EPILOG_LCSSA]] ]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i32 [[V_LCSSA1]], 0
 ; CHECK-NEXT:    br i1 [[C_3]], label [[INNER_2_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       inner.2.preheader:
@@ -102,7 +101,7 @@ define void @pr56282() {
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit.deopt.loopexit:
 ; CHECK-NEXT:    br label [[EXIT_DEOPT:%.*]]
-; CHECK:       exit.deopt.loopexit3:
+; CHECK:       exit.deopt.loopexit4:
 ; CHECK-NEXT:    br label [[EXIT_DEOPT]]
 ; CHECK:       exit.deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid(i32 0) [ "deopt"() ]
@@ -233,7 +232,7 @@ define void @pr56286(i64 %x, ptr %src, ptr %dst, ptr %ptr.src) !prof !0 {
 ; CHECK-NEXT:    store i32 [[L_1_7]], ptr [[DST]], align 8
 ; CHECK-NEXT:    [[INNER_1_IV_NEXT_7]] = add i64 [[INNER_1_IV]], 8
 ; CHECK-NEXT:    [[CMP_2_7:%.*]] = icmp sgt i64 [[INNER_1_IV_NEXT_6]], 0
-; CHECK-NEXT:    br i1 [[CMP_2_7]], label [[OUTER_MIDDLE_UNR_LCSSA:%.*]], label [[INNER_1_HEADER]], !prof [[PROF6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_2_7]], label [[OUTER_MIDDLE_UNR_LCSSA:%.*]], label [[INNER_1_HEADER]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       outer.middle.unr-lcssa:
 ; CHECK-NEXT:    [[L_1_LCSSA_PH:%.*]] = phi i32 [ [[L_1_7]], [[INNER_1_LATCH_7]] ]
 ; CHECK-NEXT:    br label [[OUTER_MIDDLE]]
