@@ -180,12 +180,12 @@ entry:
 define <16 x i1> @whilewr_16_split(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_16_split:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add x8, x0, #16
 ; CHECK-NEXT:    whilewr p0.h, x0, x1
-; CHECK-NEXT:    whilewr p1.h, x8, x1
-; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    incb x0
+; CHECK-NEXT:    whilewr p1.h, x0, x1
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 2)
@@ -195,21 +195,19 @@ entry:
 define <32 x i1> @whilewr_16_split2(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_16_split2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add x9, x0, #48
-; CHECK-NEXT:    add x10, x0, #16
-; CHECK-NEXT:    whilewr p0.h, x0, x1
-; CHECK-NEXT:    whilewr p1.h, x9, x1
 ; CHECK-NEXT:    add x9, x0, #32
-; CHECK-NEXT:    whilewr p2.h, x9, x1
-; CHECK-NEXT:    mov z2.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    whilewr p0.h, x0, x1
+; CHECK-NEXT:    incb x0
+; CHECK-NEXT:    whilewr p1.h, x9, x1
+; CHECK-NEXT:    incb x9
+; CHECK-NEXT:    whilewr p2.h, x0, x1
+; CHECK-NEXT:    whilewr p3.h, x9, x1
 ; CHECK-NEXT:    adrp x9, .LCPI11_0
-; CHECK-NEXT:    whilewr p3.h, x10, x1
-; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z1.h, p2/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z3.h, p3/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    uzp1 v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p2.b
 ; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI11_0]
+; CHECK-NEXT:    uzp1 p1.b, p1.b, p3.b
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-NEXT:    shl v1.16b, v1.16b, #7
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
@@ -222,8 +220,8 @@ define <32 x i1> @whilewr_16_split2(ptr %a, ptr %b) {
 ; CHECK-NEXT:    zip1 v1.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    addv h0, v0.8h
 ; CHECK-NEXT:    addv h1, v1.8h
-; CHECK-NEXT:    str h0, [x8, #2]
-; CHECK-NEXT:    str h1, [x8]
+; CHECK-NEXT:    str h0, [x8]
+; CHECK-NEXT:    str h1, [x8, #2]
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <32 x i1> @llvm.loop.dependence.war.mask.v32i1(ptr %a, ptr %b, i64 2)
@@ -234,26 +232,11 @@ define <8 x i1> @whilewr_32_split(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_32_split:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    whilewr p0.s, x0, x1
-; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov w9, v0.s[2]
-; CHECK-NEXT:    mov v1.h[1], w8
-; CHECK-NEXT:    mov w8, v0.s[3]
-; CHECK-NEXT:    mov v1.h[2], w9
-; CHECK-NEXT:    add x9, x0, #16
-; CHECK-NEXT:    whilewr p0.s, x9, x1
-; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov v1.h[3], w8
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov w9, v0.s[1]
-; CHECK-NEXT:    mov v1.h[4], w8
-; CHECK-NEXT:    mov w8, v0.s[2]
-; CHECK-NEXT:    mov v1.h[5], w9
-; CHECK-NEXT:    mov w9, v0.s[3]
-; CHECK-NEXT:    mov v1.h[6], w8
-; CHECK-NEXT:    mov v1.h[7], w9
-; CHECK-NEXT:    xtn v0.8b, v1.8h
+; CHECK-NEXT:    incb x0
+; CHECK-NEXT:    whilewr p1.s, x0, x1
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i1> @llvm.loop.dependence.war.mask.v8i1(ptr %a, ptr %b, i64 4)
@@ -263,18 +246,19 @@ entry:
 define <16 x i1> @whilewr_32_split2(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_32_split2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add x8, x0, #32
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    addvl x9, x0, #3
 ; CHECK-NEXT:    whilewr p0.s, x0, x1
+; CHECK-NEXT:    incb x8, all, mul #2
 ; CHECK-NEXT:    incb x0
-; CHECK-NEXT:    whilewr p1.s, x8, x1
-; CHECK-NEXT:    incb x8
-; CHECK-NEXT:    whilewr p2.s, x0, x1
-; CHECK-NEXT:    whilewr p3.s, x8, x1
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p2.h
-; CHECK-NEXT:    uzp1 p1.h, p1.h, p3.h
-; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    whilewr p1.s, x9, x1
+; CHECK-NEXT:    whilewr p2.s, x8, x1
+; CHECK-NEXT:    whilewr p3.s, x0, x1
+; CHECK-NEXT:    uzp1 p1.h, p2.h, p1.h
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p3.h
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 4)
@@ -284,34 +268,33 @@ entry:
 define <32 x i1> @whilewr_32_split3(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_32_split3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x9, x0
-; CHECK-NEXT:    add x10, x0, #96
-; CHECK-NEXT:    whilewr p1.s, x0, x1
-; CHECK-NEXT:    incb x9
-; CHECK-NEXT:    whilewr p0.s, x10, x1
+; CHECK-NEXT:    add x10, x0, #64
+; CHECK-NEXT:    addvl x11, x0, #3
+; CHECK-NEXT:    add x9, x0, #64
+; CHECK-NEXT:    whilewr p0.s, x11, x1
+; CHECK-NEXT:    addvl x11, x10, #3
+; CHECK-NEXT:    incb x9, all, mul #2
+; CHECK-NEXT:    whilewr p1.s, x11, x1
+; CHECK-NEXT:    mov x11, x0
+; CHECK-NEXT:    incb x11, all, mul #2
+; CHECK-NEXT:    whilewr p3.s, x0, x1
+; CHECK-NEXT:    incb x0
+; CHECK-NEXT:    whilewr p4.s, x10, x1
 ; CHECK-NEXT:    incb x10
 ; CHECK-NEXT:    whilewr p2.s, x9, x1
-; CHECK-NEXT:    add x9, x0, #32
-; CHECK-NEXT:    whilewr p3.s, x10, x1
-; CHECK-NEXT:    add x10, x0, #64
-; CHECK-NEXT:    whilewr p4.s, x9, x1
-; CHECK-NEXT:    incb x9
-; CHECK-NEXT:    whilewr p5.s, x10, x1
-; CHECK-NEXT:    incb x10
-; CHECK-NEXT:    uzp1 p1.h, p1.h, p2.h
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p3.h
-; CHECK-NEXT:    whilewr p2.s, x10, x1
-; CHECK-NEXT:    mov z2.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    whilewr p3.s, x9, x1
-; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    adrp x9, .LCPI14_0
-; CHECK-NEXT:    uzp1 p2.h, p5.h, p2.h
-; CHECK-NEXT:    uzp1 p3.h, p4.h, p3.h
-; CHECK-NEXT:    mov z1.h, p2/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z3.h, p3/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    uzp1 v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    whilewr p5.s, x11, x1
 ; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI14_0]
+; CHECK-NEXT:    uzp1 p1.h, p2.h, p1.h
+; CHECK-NEXT:    uzp1 p0.h, p5.h, p0.h
+; CHECK-NEXT:    whilewr p2.s, x0, x1
+; CHECK-NEXT:    whilewr p5.s, x10, x1
+; CHECK-NEXT:    uzp1 p2.h, p3.h, p2.h
+; CHECK-NEXT:    uzp1 p3.h, p4.h, p5.h
+; CHECK-NEXT:    uzp1 p0.b, p2.b, p0.b
+; CHECK-NEXT:    uzp1 p1.b, p3.b, p1.b
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-NEXT:    shl v1.16b, v1.16b, #7
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
@@ -324,8 +307,8 @@ define <32 x i1> @whilewr_32_split3(ptr %a, ptr %b) {
 ; CHECK-NEXT:    zip1 v1.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    addv h0, v0.8h
 ; CHECK-NEXT:    addv h1, v1.8h
-; CHECK-NEXT:    str h0, [x8, #2]
-; CHECK-NEXT:    str h1, [x8]
+; CHECK-NEXT:    str h0, [x8]
+; CHECK-NEXT:    str h1, [x8, #2]
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <32 x i1> @llvm.loop.dependence.war.mask.v32i1(ptr %a, ptr %b, i64 4)
@@ -336,13 +319,10 @@ define <4 x i1> @whilewr_64_split(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_64_split:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    whilewr p0.d, x0, x1
-; CHECK-NEXT:    add x8, x0, #16
-; CHECK-NEXT:    mov z0.d, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    whilewr p0.d, x8, x1
-; CHECK-NEXT:    mov z1.d, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov v0.s[1], v0.s[2]
-; CHECK-NEXT:    mov v0.s[2], v1.s[0]
-; CHECK-NEXT:    mov v0.s[3], v1.s[2]
+; CHECK-NEXT:    incb x0
+; CHECK-NEXT:    whilewr p1.d, x0, x1
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p1.s
+; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -354,33 +334,18 @@ define <8 x i1> @whilewr_64_split2(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_64_split2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    addvl x9, x0, #3
 ; CHECK-NEXT:    whilewr p0.d, x0, x1
-; CHECK-NEXT:    add x10, x0, #32
-; CHECK-NEXT:    incb x8
-; CHECK-NEXT:    whilewr p1.d, x8, x1
-; CHECK-NEXT:    uzp1 p0.s, p0.s, p1.s
-; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    whilewr p0.d, x10, x1
-; CHECK-NEXT:    incb x10
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov w9, v0.s[2]
-; CHECK-NEXT:    whilewr p1.d, x10, x1
-; CHECK-NEXT:    uzp1 p0.s, p0.s, p1.s
-; CHECK-NEXT:    mov v1.h[1], w8
-; CHECK-NEXT:    mov w8, v0.s[3]
-; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov v1.h[2], w9
-; CHECK-NEXT:    mov w9, v0.s[1]
-; CHECK-NEXT:    mov v1.h[3], w8
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov v1.h[4], w8
-; CHECK-NEXT:    mov w8, v0.s[2]
-; CHECK-NEXT:    mov v1.h[5], w9
-; CHECK-NEXT:    mov w9, v0.s[3]
-; CHECK-NEXT:    mov v1.h[6], w8
-; CHECK-NEXT:    mov v1.h[7], w9
-; CHECK-NEXT:    xtn v0.8b, v1.8h
+; CHECK-NEXT:    incb x8, all, mul #2
+; CHECK-NEXT:    incb x0
+; CHECK-NEXT:    whilewr p1.d, x9, x1
+; CHECK-NEXT:    whilewr p2.d, x8, x1
+; CHECK-NEXT:    whilewr p3.d, x0, x1
+; CHECK-NEXT:    uzp1 p1.s, p2.s, p1.s
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p3.s
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i1> @llvm.loop.dependence.war.mask.v8i1(ptr %a, ptr %b, i64 8)
@@ -390,32 +355,32 @@ entry:
 define <16 x i1> @whilewr_64_split3(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_64_split3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    addvl x8, x0, #3
-; CHECK-NEXT:    mov x9, x0
-; CHECK-NEXT:    add x10, x0, #64
-; CHECK-NEXT:    whilewr p0.d, x0, x1
+; CHECK-NEXT:    addvl x8, x0, #7
+; CHECK-NEXT:    addvl x9, x0, #6
+; CHECK-NEXT:    whilewr p5.d, x0, x1
+; CHECK-NEXT:    whilewr p0.d, x8, x1
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    incb x8, all, mul #4
+; CHECK-NEXT:    whilewr p1.d, x9, x1
+; CHECK-NEXT:    addvl x9, x0, #5
+; CHECK-NEXT:    whilewr p2.d, x9, x1
+; CHECK-NEXT:    addvl x9, x0, #3
+; CHECK-NEXT:    whilewr p3.d, x9, x1
+; CHECK-NEXT:    whilewr p4.d, x8, x1
+; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    incb x0
-; CHECK-NEXT:    incb x9, all, mul #2
-; CHECK-NEXT:    whilewr p1.d, x8, x1
-; CHECK-NEXT:    addvl x8, x10, #3
-; CHECK-NEXT:    whilewr p2.d, x8, x1
-; CHECK-NEXT:    mov x8, x10
-; CHECK-NEXT:    whilewr p5.d, x10, x1
 ; CHECK-NEXT:    incb x8, all, mul #2
-; CHECK-NEXT:    incb x10
-; CHECK-NEXT:    whilewr p3.d, x0, x1
-; CHECK-NEXT:    whilewr p4.d, x9, x1
-; CHECK-NEXT:    uzp1 p0.s, p0.s, p3.s
-; CHECK-NEXT:    uzp1 p1.s, p4.s, p1.s
-; CHECK-NEXT:    whilewr p3.d, x8, x1
-; CHECK-NEXT:    whilewr p4.d, x10, x1
-; CHECK-NEXT:    uzp1 p2.s, p3.s, p2.s
+; CHECK-NEXT:    uzp1 p0.s, p1.s, p0.s
+; CHECK-NEXT:    uzp1 p1.s, p4.s, p2.s
+; CHECK-NEXT:    whilewr p4.d, x0, x1
+; CHECK-NEXT:    whilewr p2.d, x8, x1
+; CHECK-NEXT:    uzp1 p0.h, p1.h, p0.h
+; CHECK-NEXT:    uzp1 p2.s, p2.s, p3.s
 ; CHECK-NEXT:    uzp1 p3.s, p5.s, p4.s
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    uzp1 p1.h, p3.h, p2.h
-; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 8)
@@ -425,76 +390,73 @@ entry:
 define <32 x i1> @whilewr_64_split4(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_64_split4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    addvl x9, x0, #3
-; CHECK-NEXT:    add x12, x0, #64
-; CHECK-NEXT:    mov x11, x0
-; CHECK-NEXT:    whilewr p1.d, x9, x1
-; CHECK-NEXT:    addvl x9, x12, #3
-; CHECK-NEXT:    mov x10, x0
-; CHECK-NEXT:    whilewr p2.d, x9, x1
-; CHECK-NEXT:    mov x9, x12
-; CHECK-NEXT:    incb x11
-; CHECK-NEXT:    incb x9, all, mul #2
-; CHECK-NEXT:    incb x10, all, mul #2
-; CHECK-NEXT:    whilewr p0.d, x0, x1
-; CHECK-NEXT:    whilewr p5.d, x12, x1
-; CHECK-NEXT:    incb x12
-; CHECK-NEXT:    whilewr p4.d, x11, x1
-; CHECK-NEXT:    whilewr p6.d, x9, x1
-; CHECK-NEXT:    add x9, x0, #192
-; CHECK-NEXT:    whilewr p3.d, x10, x1
-; CHECK-NEXT:    addvl x10, x9, #3
-; CHECK-NEXT:    uzp1 p0.s, p0.s, p4.s
-; CHECK-NEXT:    whilewr p4.d, x10, x1
-; CHECK-NEXT:    mov x10, x9
-; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
-; CHECK-NEXT:    incb x10, all, mul #2
-; CHECK-NEXT:    whilewr p3.d, x12, x1
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
-; CHECK-NEXT:    uzp1 p1.s, p6.s, p2.s
-; CHECK-NEXT:    whilewr p2.d, x9, x1
-; CHECK-NEXT:    incb x9
-; CHECK-NEXT:    mov z2.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    whilewr p6.d, x10, x1
-; CHECK-NEXT:    add x10, x0, #128
-; CHECK-NEXT:    mov x11, x10
-; CHECK-NEXT:    uzp1 p3.s, p5.s, p3.s
-; CHECK-NEXT:    uzp1 p4.s, p6.s, p4.s
-; CHECK-NEXT:    incb x11, all, mul #2
+; CHECK-NEXT:    add x9, x0, #128
+; CHECK-NEXT:    add x11, x0, #128
+; CHECK-NEXT:    whilewr p6.d, x0, x1
+; CHECK-NEXT:    addvl x10, x9, #7
+; CHECK-NEXT:    incb x11, all, mul #4
 ; CHECK-NEXT:    whilewr p5.d, x9, x1
-; CHECK-NEXT:    addvl x9, x10, #3
-; CHECK-NEXT:    whilewr p6.d, x10, x1
-; CHECK-NEXT:    incb x10
-; CHECK-NEXT:    uzp1 p2.s, p2.s, p5.s
+; CHECK-NEXT:    whilewr p0.d, x10, x1
+; CHECK-NEXT:    addvl x10, x9, #6
+; CHECK-NEXT:    whilewr p1.d, x10, x1
+; CHECK-NEXT:    addvl x10, x9, #5
+; CHECK-NEXT:    whilewr p2.d, x10, x1
+; CHECK-NEXT:    addvl x10, x9, #3
+; CHECK-NEXT:    incb x9
+; CHECK-NEXT:    whilewr p3.d, x10, x1
+; CHECK-NEXT:    add x10, x0, #128
+; CHECK-NEXT:    incb x10, all, mul #2
+; CHECK-NEXT:    whilewr p4.d, x11, x1
+; CHECK-NEXT:    uzp1 p0.s, p1.s, p0.s
+; CHECK-NEXT:    uzp1 p1.s, p4.s, p2.s
+; CHECK-NEXT:    whilewr p2.d, x10, x1
+; CHECK-NEXT:    addvl x10, x0, #5
+; CHECK-NEXT:    uzp1 p0.h, p1.h, p0.h
+; CHECK-NEXT:    uzp1 p1.s, p2.s, p3.s
+; CHECK-NEXT:    whilewr p2.d, x9, x1
+; CHECK-NEXT:    addvl x9, x0, #7
+; CHECK-NEXT:    whilewr p3.d, x9, x1
+; CHECK-NEXT:    addvl x9, x0, #6
+; CHECK-NEXT:    whilewr p4.d, x9, x1
+; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:    incb x9, all, mul #4
+; CHECK-NEXT:    uzp1 p2.s, p5.s, p2.s
+; CHECK-NEXT:    uzp1 p3.s, p4.s, p3.s
+; CHECK-NEXT:    whilewr p4.d, x10, x1
+; CHECK-NEXT:    mov x10, x0
+; CHECK-NEXT:    whilewr p5.d, x9, x1
+; CHECK-NEXT:    incb x10, all, mul #2
+; CHECK-NEXT:    addvl x9, x0, #3
+; CHECK-NEXT:    incb x0
+; CHECK-NEXT:    uzp1 p1.h, p2.h, p1.h
+; CHECK-NEXT:    uzp1 p4.s, p5.s, p4.s
 ; CHECK-NEXT:    whilewr p5.d, x9, x1
 ; CHECK-NEXT:    adrp x9, .LCPI18_0
-; CHECK-NEXT:    whilewr p7.d, x11, x1
-; CHECK-NEXT:    whilewr p8.d, x10, x1
+; CHECK-NEXT:    whilewr p7.d, x10, x1
+; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI18_0]
+; CHECK-NEXT:    whilewr p8.d, x0, x1
 ; CHECK-NEXT:    uzp1 p5.s, p7.s, p5.s
 ; CHECK-NEXT:    uzp1 p6.s, p6.s, p8.s
-; CHECK-NEXT:    uzp1 p2.h, p2.h, p4.h
+; CHECK-NEXT:    uzp1 p3.h, p4.h, p3.h
 ; CHECK-NEXT:    uzp1 p4.h, p6.h, p5.h
-; CHECK-NEXT:    uzp1 p1.h, p3.h, p1.h
-; CHECK-NEXT:    mov z0.h, p2/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z1.h, p4/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z3.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    uzp1 v1.16b, v2.16b, v3.16b
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI18_0]
-; CHECK-NEXT:    shl v0.16b, v0.16b, #7
+; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
+; CHECK-NEXT:    uzp1 p2.b, p4.b, p3.b
+; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z0.b, p2/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    shl v1.16b, v1.16b, #7
-; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
+; CHECK-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-NEXT:    cmlt v1.16b, v1.16b, #0
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    zip1 v1.16b, v1.16b, v3.16b
-; CHECK-NEXT:    addv h0, v0.8h
+; CHECK-NEXT:    zip1 v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    addv h1, v1.8h
-; CHECK-NEXT:    str h0, [x8, #2]
-; CHECK-NEXT:    str h1, [x8]
+; CHECK-NEXT:    addv h0, v0.8h
+; CHECK-NEXT:    str h1, [x8, #2]
+; CHECK-NEXT:    str h0, [x8]
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <32 x i1> @llvm.loop.dependence.war.mask.v32i1(ptr %a, ptr %b, i64 8)

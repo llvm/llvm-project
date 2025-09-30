@@ -1927,10 +1927,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   if (Subtarget->hasSVE2() ||
       (Subtarget->hasSME() && Subtarget->isStreaming())) {
     // FIXME: Support wider fixed-length types when msve-vector-bits is used.
-    for (auto VT : {MVT::v2i32, MVT::v2i16, MVT::v2i8, MVT::v4i16, MVT::v4i8,
-                    MVT::v8i8, MVT::v16i8}) {
-      setOperationAction(ISD::LOOP_DEPENDENCE_RAW_MASK, VT, Custom);
-      setOperationAction(ISD::LOOP_DEPENDENCE_WAR_MASK, VT, Custom);
+    for (auto Elts : {2, 4, 8, 16}) {
+      for (auto EltVT : {MVT::i8, MVT::i16, MVT::i32}) {
+        MVT VT = MVT::getVectorVT(EltVT, Elts);
+        setOperationAction(ISD::LOOP_DEPENDENCE_RAW_MASK, VT, Custom);
+        setOperationAction(ISD::LOOP_DEPENDENCE_WAR_MASK, VT, Custom);
+      }
     }
     for (auto VT : {MVT::nxv2i1, MVT::nxv4i1, MVT::nxv8i1, MVT::nxv16i1}) {
       setOperationAction(ISD::LOOP_DEPENDENCE_RAW_MASK, VT, Custom);
@@ -5387,86 +5389,67 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
          "Lowering loop_dependence_raw_mask or loop_dependence_war_mask "
          "requires SVE or SME");
 
-  uint64_t EltSizeInBytes = Op.getConstantOperandVal(2);
-  // Other element sizes are incompatible with whilewr/rw, so expand instead
-  if (!is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes))
-    return SDValue();
-
   LLVMContext &Ctx = *DAG.getContext();
-  EVT FullVT = Op.getValueType();
-  EVT ExtractVT = FullVT;
-  EVT EltVT = MVT::getIntegerVT(EltSizeInBytes * 8);
-
+  EVT VT = Op.getValueType();
   unsigned MaskOpcode = Op.getOpcode();
-  unsigned NumElements = FullVT.getVectorMinNumElements();
-  unsigned PredElements = getPackedSVEVectorVT(EltVT).getVectorMinNumElements();
-  bool Split = NumElements > PredElements;
-
-  if (EltSizeInBytes * NumElements < 16) {
-    // The element size and vector length combination must at least form a
-    // 128-bit vector. Shorter vector lengths can be widened then extracted
-    FullVT = FullVT.getDoubleNumVectorElementsVT(Ctx);
-    // Re-create the node, but widened.
-    Op = DAG.getNode(MaskOpcode, DL, FullVT, Op->ops());
-  }
+  unsigned NumElements = VT.getVectorMinNumElements();
+  uint64_t EltSizeInBytes = Op.getConstantOperandVal(2);
 
   SDValue PtrA = Op.getOperand(0);
   SDValue PtrB = Op.getOperand(1);
   SDValue EltSizeInBytesValue = Op.getOperand(2);
 
-  auto ContaineriseFixedWidth = [&](SDValue MaskOp) {
-    assert((MaskOp.getOpcode() == ISD::LOOP_DEPENDENCE_WAR_MASK ||
-            MaskOp.getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK) &&
-           "Expected to containerise a loop dependence mask.");
+  // Other element sizes are incompatible with whilewr/rw, so expand instead
+  if (!is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes))
+    return SDValue();
+
+  if (EltSizeInBytes * NumElements < 16) {
+    // The element size and vector length combination must at least form a
+    // 128-bit vector. Shorter vector lengths can be widened then extracted
+    EVT WideVT = VT.getDoubleNumVectorElementsVT(Ctx);
+    // Re-create the node, but widened.
+    SDValue Widened = DAG.getNode(MaskOpcode, DL, WideVT, Op->ops());
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Widened,
+                       DAG.getVectorIdxConstant(0, DL));
+  }
+
+  if (!VT.isScalableVT()) {
     // We can use the SVE whilewr/whilerw instruction to lower this
     // intrinsic by creating the appropriate sequence of scalable vector
     // operations and then extracting a fixed-width subvector from the
     // scalable vector. Scalable vector variants are already legal.
-    EVT VT = MaskOp.getValueType();
     EVT ContainerVT = MVT::getScalableVectorVT(
-        VT.getVectorElementType().getSimpleVT(), VT.getVectorNumElements());
+        VT.getVectorElementType().getSimpleVT(), NumElements);
     EVT WhileVT = ContainerVT.changeElementType(MVT::i1);
 
     SDValue Mask =
-        DAG.getNode(MaskOp.getOpcode(), DL, WhileVT, MaskOp.getOperand(0),
-                    MaskOp.getOperand(1), MaskOp.getOperand(2));
+        DAG.getNode(MaskOpcode, DL, WhileVT, PtrA, PtrB, EltSizeInBytesValue);
     SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Mask);
     return convertFromScalableVector(DAG, VT, MaskAsInt);
-  };
-
-  SDValue Result = Op;
-  if (Split) {
-    EVT PartVT = FullVT.getHalfNumVectorElementsVT(*DAG.getContext());
-    TypeSize PartOffset =
-        TypeSize(PartVT.getVectorMinNumElements(), PartVT.isScalableVT()) *
-        EltSizeInBytes;
-
-    SDValue Low =
-        DAG.getNode(MaskOpcode, DL, PartVT, PtrA, PtrB, EltSizeInBytesValue);
-    SDValue High = DAG.getNode(MaskOpcode, DL, PartVT,
-                               DAG.getMemBasePlusOffset(PtrA, PartOffset, DL),
-                               PtrB, EltSizeInBytesValue);
-    if (!PartVT.isScalableVT()) {
-      Low = ContaineriseFixedWidth(Low);
-      High = ContaineriseFixedWidth(High);
-    }
-
-    SDValue Inserted =
-        DAG.getNode(ISD::INSERT_SUBVECTOR, DL, FullVT, DAG.getPOISON(FullVT),
-                    Low, DAG.getVectorIdxConstant(0, DL));
-    Result = DAG.getNode(
-        ISD::INSERT_SUBVECTOR, DL, FullVT, Inserted, High,
-        DAG.getVectorIdxConstant(PartVT.getVectorMinNumElements(), DL));
-  } else if (!FullVT.isScalableVT()) {
-    Result = ContaineriseFixedWidth(Result);
   }
 
-  if (ExtractVT != FullVT) {
-    // Extract the widened vector.
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ExtractVT, Result,
-                       DAG.getVectorIdxConstant(0, DL));
-  }
-  return Result;
+  EVT EltVT = MVT::getIntegerVT(EltSizeInBytes * 8);
+  unsigned PredElements = getPackedSVEVectorVT(EltVT).getVectorMinNumElements();
+  bool NeedsSplit = NumElements > PredElements;
+  if (!NeedsSplit)
+    return Op;
+
+  EVT PartVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+  TypeSize PartOffset =
+      TypeSize::get(PartVT.getVectorMinNumElements(), PartVT.isScalableVT()) *
+      EltSizeInBytes;
+
+  SDValue Low =
+      DAG.getNode(MaskOpcode, DL, PartVT, PtrA, PtrB, EltSizeInBytesValue);
+  SDValue High = DAG.getNode(MaskOpcode, DL, PartVT,
+                             DAG.getMemBasePlusOffset(PtrA, PartOffset, DL),
+                             PtrB, EltSizeInBytesValue);
+  SDValue Inserted =
+      DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getPOISON(VT), Low,
+                  DAG.getVectorIdxConstant(0, DL));
+  return DAG.getNode(
+      ISD::INSERT_SUBVECTOR, DL, VT, Inserted, High,
+      DAG.getVectorIdxConstant(PartVT.getVectorMinNumElements(), DL));
 }
 
 SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
