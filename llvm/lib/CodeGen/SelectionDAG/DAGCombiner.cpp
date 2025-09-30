@@ -5442,6 +5442,24 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   if (SDValue DivRem = useDivRem(N))
     return DivRem.getValue(1);
 
+  // fold urem(urem(A, BCst), Op1Cst) -> urem(A, Op1Cst)
+  // iff urem(BCst, Op1Cst) == 0
+  SDValue A;
+  APInt Op1Cst, BCst;
+  if (sd_match(N, m_URem(m_URem(m_Value(A), m_ConstInt(BCst)),
+                         m_ConstInt(Op1Cst))) &&
+      BCst.urem(Op1Cst).isZero()) {
+    return DAG.getNode(ISD::UREM, DL, VT, A, DAG.getConstant(Op1Cst, DL, VT));
+  }
+
+  // fold srem(srem(A, BCst), Op1Cst) -> srem(A, Op1Cst)
+  // iff srem(BCst, Op1Cst) == 0 && Op1Cst != 1
+  if (sd_match(N, m_SRem(m_SRem(m_Value(A), m_ConstInt(BCst)),
+                         m_ConstInt(Op1Cst))) &&
+      BCst.srem(Op1Cst).isZero() && !Op1Cst.isAllOnes()) {
+    return DAG.getNode(ISD::SREM, DL, VT, A, DAG.getConstant(Op1Cst, DL, VT));
+  }
+
   return SDValue();
 }
 
@@ -11831,9 +11849,7 @@ static bool isLegalToCombineMinNumMaxNum(SelectionDAG &DAG, SDValue LHS,
   if (!VT.isFloatingPoint())
     return false;
 
-  const TargetOptions &Options = DAG.getTarget().Options;
-
-  return (Flags.hasNoSignedZeros() || Options.NoSignedZerosFPMath) &&
+  return Flags.hasNoSignedZeros() &&
          TLI.isProfitableToCombineMinNumMaxNum(VT) &&
          (Flags.hasNoNaNs() ||
           (DAG.isKnownNeverNaN(RHS) && DAG.isKnownNeverNaN(LHS)));
@@ -17333,7 +17349,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   // Always prefer FMAD to FMA for precision.
   unsigned PreferredFusedOpcode = HasFMAD ? ISD::FMAD : ISD::FMA;
   bool Aggressive = TLI.enableAggressiveFMAFusion(VT);
-  bool NoSignedZero = Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros();
+  bool NoSignedZero = Flags.hasNoSignedZeros();
 
   // Is the node an FMUL and contractable either due to global flags or
   // SDNodeFlags.
@@ -17752,7 +17768,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   // N0 + -0.0 --> N0 (also allowed with +0.0 and fast-math)
   ConstantFPSDNode *N1C = isConstOrConstSplatFP(N1, true);
   if (N1C && N1C->isZero())
-    if (N1C->isNegative() || Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros())
+    if (N1C->isNegative() || Flags.hasNoSignedZeros())
       return N0;
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
@@ -17805,11 +17821,10 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
       return DAG.getConstantFP(0.0, DL, VT);
   }
 
-  // If 'unsafe math' or reassoc and nsz, fold lots of things.
+  // If reassoc and nsz, fold lots of things.
   // TODO: break out portions of the transformations below for which Unsafe is
   //       considered and which do not require both nsz and reassoc
-  if ((Options.NoSignedZerosFPMath ||
-       (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())) &&
+  if (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros() &&
       AllowNewConst) {
     // fadd (fadd x, c1), c2 -> fadd x, c1 + c2
     if (N1CFP && N0.getOpcode() == ISD::FADD &&
@@ -17893,10 +17908,9 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
                            DAG.getConstantFP(4.0, DL, VT));
       }
     }
-  } // enable-unsafe-fp-math && AllowNewConst
+  } // reassoc && nsz && AllowNewConst
 
-  if ((Options.NoSignedZerosFPMath ||
-       (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros()))) {
+  if (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros()) {
     // Fold fadd(vecreduce(x), vecreduce(y)) -> vecreduce(fadd(x, y))
     if (SDValue SD = reassociateReduction(ISD::VECREDUCE_FADD, ISD::FADD, DL,
                                           VT, N0, N1, Flags))
@@ -17967,8 +17981,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 
   // (fsub A, 0) -> A
   if (N1CFP && N1CFP->isZero()) {
-    if (!N1CFP->isNegative() || Options.NoSignedZerosFPMath ||
-        Flags.hasNoSignedZeros()) {
+    if (!N1CFP->isNegative() || Flags.hasNoSignedZeros()) {
       return N0;
     }
   }
@@ -17981,8 +17994,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 
   // (fsub -0.0, N1) -> -N1
   if (N0CFP && N0CFP->isZero()) {
-    if (N0CFP->isNegative() ||
-        (Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros())) {
+    if (N0CFP->isNegative() || Flags.hasNoSignedZeros()) {
       // We cannot replace an FSUB(+-0.0,X) with FNEG(X) when denormals are
       // flushed to zero, unless all users treat denorms as zero (DAZ).
       // FIXME: This transform will change the sign of a NaN and the behavior
@@ -17998,8 +18010,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
     }
   }
 
-  if ((Options.NoSignedZerosFPMath ||
-       (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())) &&
+  if (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros() &&
       N1.getOpcode() == ISD::FADD) {
     // X - (X + Y) -> -Y
     if (N0 == N1->getOperand(0))
@@ -18314,11 +18325,9 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
       return matcher.getNode(ISD::FMA, DL, VT, NegN0, NegN1, N2);
   }
 
-  // FIXME: use fast math flags instead of Options.UnsafeFPMath
-  // TODO: Finally migrate away from global TargetOptions.
   if ((Options.NoNaNsFPMath && Options.NoInfsFPMath) ||
       (N->getFlags().hasNoNaNs() && N->getFlags().hasNoInfs())) {
-    if (Options.NoSignedZerosFPMath || N->getFlags().hasNoSignedZeros() ||
+    if (N->getFlags().hasNoSignedZeros() ||
         (N2CFP && !N2CFP->isExactlyValue(-0.0))) {
       if (N0CFP && N0CFP->isZero())
         return N2;
@@ -18623,8 +18632,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   }
 
   // Fold X/Sqrt(X) -> Sqrt(X)
-  if ((Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros()) &&
-      Flags.hasAllowReassociation())
+  if (Flags.hasNoSignedZeros() && Flags.hasAllowReassociation())
     if (N1.getOpcode() == ISD::FSQRT && N0 == N1.getOperand(0))
       return N1;
 

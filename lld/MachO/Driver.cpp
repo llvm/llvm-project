@@ -1522,8 +1522,8 @@ static void foldIdenticalLiterals() {
   // We always create a cStringSection, regardless of whether dedupLiterals is
   // true. If it isn't, we simply create a non-deduplicating CStringSection.
   // Either way, we must unconditionally finalize it here.
-  in.cStringSection->finalizeContents();
-  in.objcMethnameSection->finalizeContents();
+  for (auto *sec : in.cStringSections)
+    sec->finalizeContents();
   in.wordLiteralSection->finalizeContents();
 }
 
@@ -1711,7 +1711,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     firstTLVDataSection = nullptr;
     tar = nullptr;
-    memset(&in, 0, sizeof(in));
+    in = InStruct();
 
     resetLoadedDylibs();
     resetOutputSegments();
@@ -1983,6 +1983,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
                    OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
   config->disableVerify = args.hasArg(OPT_disable_verify);
+  config->separateCstringLiteralSections =
+      args.hasFlag(OPT_separate_cstring_literal_sections,
+                   OPT_no_separate_cstring_literal_sections, false);
 
   auto IncompatWithCGSort = [&](StringRef firstArgStr) {
     // Throw an error only if --call-graph-profile-sort is explicitly specified

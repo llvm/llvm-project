@@ -657,7 +657,12 @@ public:
       if (LocSrc == nullptr || LocDst == nullptr)
         return;
 
-      copyRecord(*LocSrc, *LocDst, Env);
+      // If the destination object here is of a derived class, `Arg0` may be a
+      // cast of that object to a base class, and the source object may be of a
+      // sibling derived class. To handle these cases, ensure we are copying
+      // only the fields for `Arg0`'s type, not the type of the underlying
+      // `RecordStorageLocation`.
+      copyRecord(*LocSrc, *LocDst, Env, Arg0->getType());
 
       // The assignment operator can have an arbitrary return type. We model the
       // return value only if the return type is the same as or a base class of
