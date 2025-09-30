@@ -61,7 +61,7 @@ static std::tuple<int32_t, int32_t> readTeamsThreadLimit() {
   int32_t ThreadLimit;
   ThreadLimit = omp_get_teams_thread_limit();
   DP("omp_get_teams_thread_limit() returned %" PRId32 "\n", ThreadLimit);
-  // omp_get_thread_limit() would return INT_MAX by default.
+  // omp_get_teams_thread_limit() would return INT_MAX by default.
   // NOTE: Windows.h defines max() macro, so we have to guard
   //       the call with parentheses.
   ThreadLimit =
@@ -406,21 +406,12 @@ int32_t L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
   const auto DeviceId = Device.getDeviceId();
   const auto &KernelPR = getProperties();
 
-  // Detect if we need to reduce available HW threads. We need this adjustment
-  // on XeHPG when L0 debug is enabled (ZET_ENABLE_PROGRAM_DEBUGGING=1).
-  static std::once_flag OnceFlag;
-  static bool ZeDebugEnabled = false;
-  std::call_once(OnceFlag, []() {
-    const char *EnvVal = std::getenv("ZET_ENABLE_PROGRAM_DEBUGGING");
-    if (EnvVal && std::atoi(EnvVal) == 1)
-      ZeDebugEnabled = true;
-  });
-
   // Read the most recent global thread limit and max teams.
   auto [NumTeamsICV, ThreadLimitICV] = readTeamsThreadLimit();
 
   bool IsXeHPG = Device.isDeviceArch(DeviceArchTy::DeviceArch_XeHPG);
-  bool HalfNumThreads = ZeDebugEnabled && IsXeHPG;
+  bool HalfNumThreads =
+      LevelZeroPluginTy::getOptions().ZeDebugEnabled && IsXeHPG;
   uint32_t KernelWidth = KernelPR.Width;
   uint32_t SIMDWidth = KernelPR.SIMDWidth;
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,

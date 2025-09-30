@@ -172,6 +172,9 @@ void L0OptionsTy::processEnvironmentVars() {
       INVALID_OPTION(LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE,
                      CommandModeVar.get().c_str());
   }
+
+  // Detect if we need to enable compatibility with Level Zero debug mode.
+  ZeDebugEnabled = BoolEnvar("ZET_ENABLE_PROGRAM_DEBUGGING", false);
 }
 
 } // namespace llvm::omp::target::plugin

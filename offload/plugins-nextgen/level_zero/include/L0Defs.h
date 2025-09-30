@@ -30,9 +30,7 @@ enum class AllocOptionTy : int32_t {
 /// Host runtime routines being used
 extern "C" {
 LIBOMP_DECL(int, omp_get_max_teams(void));
-LIBOMP_DECL(int, omp_get_thread_limit(void));
 LIBOMP_DECL(int, omp_get_teams_thread_limit(void));
-LIBOMP_DECL(double, omp_get_wtime(void));
 } // extern "C"
 
 #ifndef EXTRACT_BITS
@@ -69,7 +67,7 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
 }
 
 #define L0_UNIMPLEMENTED_ERR                                                   \
-  return Plugin::error(ErrorCode::UNIMPLEMENTED, "%s not implemented yet\n",   \
+  return Plugin::error(ErrorCode::UNIMPLEMENTED, "%s not implemented yet",     \
                        __func__);
 
 } // namespace llvm::omp::target::plugin

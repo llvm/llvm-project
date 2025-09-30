@@ -128,6 +128,10 @@ struct L0OptionsTy {
   /// devices and whether immediate command list is fully enabled.
   CommandModeTy CommandMode = CommandModeTy::Async;
 
+  // Controlso if we need to reduce available HW threads. We need this adjustment
+  // on XeHPG when Level Zero debug is enabled (ZET_ENABLE_PROGRAM_DEBUGGING=1).
+  bool ZeDebugEnabled = false;
+
   bool Init = false; // have the options already been processed
 
   // Allocator for long-lived allocations (e.g. spec constants)
