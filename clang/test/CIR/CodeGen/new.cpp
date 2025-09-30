@@ -189,12 +189,12 @@ void t_new_constant_size() {
 //   are no constructor calls needed.
 
 // CHECK:   cir.func{{.*}} @_Z19t_new_constant_sizev()
-// CHECK:    %0 = cir.alloca !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>, ["p", init] {alignment = 8 : i64}
+// CHECK:    %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>, ["p", init] {alignment = 8 : i64}
 // CHECK:    %[[#NUM_ELEMENTS:]] = cir.const #cir.int<16> : !u64i
 // CHECK:    %[[#ALLOCATION_SIZE:]] = cir.const #cir.int<128> : !u64i
-// CHECK:    %3 = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
-// CHECK:    %4 = cir.cast(bitcast, %3 : !cir.ptr<!void>), !cir.ptr<!cir.double>
-// CHECK:    cir.store align(8) %4, %0 : !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>
+// CHECK:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
+// CHECK:    %[[TYPED_PTR:.*]] = cir.cast(bitcast, %[[RAW_PTR]] : !cir.ptr<!void>), !cir.ptr<!cir.double>
+// CHECK:    cir.store align(8) %[[TYPED_PTR]], %[[P_ADDR]] : !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>
 // CHECK:    cir.return
 // CHECK:  }
 
@@ -216,12 +216,12 @@ void t_new_multidim_constant_size() {
 // As above, NUM_ELEMENTS isn't used.
 
 // CHECK:   cir.func{{.*}} @_Z28t_new_multidim_constant_sizev()
-// CHECK:    %0 = cir.alloca !cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>, !cir.ptr<!cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>>, ["p", init] {alignment = 8 : i64}
+// CHECK:    %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>, !cir.ptr<!cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>>, ["p", init] {alignment = 8 : i64}
 // CHECK:    %[[#NUM_ELEMENTS:]] = cir.const #cir.int<24> : !u64i
 // CHECK:    %[[#ALLOCATION_SIZE:]] = cir.const #cir.int<192> : !u64i
-// CHECK:    %3 = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
-// CHECK:    %4 = cir.cast(bitcast, %3 : !cir.ptr<!void>), !cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>
-// CHECK:    cir.store align(8) %4, %0 : !cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>, !cir.ptr<!cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>>
+// CHECK:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
+// CHECK:    %[[TYPED_PTR:.*]] = cir.cast(bitcast, %[[RAW_PTR]] : !cir.ptr<!void>), !cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>
+// CHECK:    cir.store align(8) %[[TYPED_PTR]], %[[P_ADDR]] : !cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>, !cir.ptr<!cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>>
 // CHECK:  }
 
 // LLVM: define{{.*}} void @_Z28t_new_multidim_constant_sizev
