@@ -49,12 +49,10 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
     case IRMemLocation::Other:
       OS << "Other: ";
       break;
-    case static_cast<IRMemLocation>(
-        static_cast<int>(InaccessibleTargetMemLocation::TargetMem0)):
+    case IRMemLocation::TargetMem0:
       OS << "TargetMem0: ";
       break;
-    case static_cast<IRMemLocation>(
-        static_cast<int>(InaccessibleTargetMemLocation::TargetMem1)):
+    case IRMemLocation::TargetMem1:
       OS << "TargetMem1: ";
       break;
     }

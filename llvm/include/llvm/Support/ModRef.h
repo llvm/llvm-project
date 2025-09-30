@@ -56,11 +56,6 @@ enum class ModRefInfo : uint8_t {
 /// Debug print ModRefInfo.
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
 
-enum class InaccessibleTargetMemLocation {
-  TargetMem0 = 3,
-  TargetMem1 = 4,
-};
-
 /// The locations at which a function might access memory.
 enum class IRMemLocation {
   /// Access to memory via argument pointers.
@@ -70,11 +65,16 @@ enum class IRMemLocation {
   /// Errno memory.
   ErrnoMem = 2,
   /// Any other memory.
-  Other = 5,
+  Other = 3,
+  /// Target Memory Location
+  /// Used by a target to represent target specif memory regions
+  TargetMem0 = 4,
+  TargetMem1 = 5,
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
-  Last = Other,
+  Last = TargetMem1,
+  FirstTarget = TargetMem0,
 };
 
 template <typename LocationEnum> class MemoryEffectsBase {
@@ -175,8 +175,8 @@ public:
   /// cleared.
   bool onlyAccessTargetMemoryLocation() {
     MemoryEffectsBase ME = *this;
-    for (unsigned I = static_cast<int>(LocationEnum::ErrnoMem);
-         I < static_cast<int>(LocationEnum::Last); I++)
+    for (unsigned I = static_cast<int>(LocationEnum::FirstTarget);
+         I <=  static_cast<int>(LocationEnum::Last); I++)
       ME = ME.getWithoutLoc(static_cast<IRMemLocation>(I));
     return ME.doesNotAccessMemory();
   }
@@ -185,7 +185,7 @@ public:
   static MemoryEffectsBase
   setTargetMemLocationModRef(ModRefInfo MR = ModRefInfo::NoModRef) {
     MemoryEffectsBase FRMB = none();
-    for (unsigned I = static_cast<int>(LocationEnum::ErrnoMem);
+    for (unsigned I = static_cast<int>(LocationEnum::FirstTarget);
          I < static_cast<int>(LocationEnum::Last); I++)
       FRMB.setModRef(static_cast<Location>(I), MR);
     return FRMB;
@@ -218,8 +218,8 @@ public:
   }
 
   bool isTargetMemLoc(IRMemLocation Loc) {
-    return static_cast<unsigned>(Loc) >
-           static_cast<unsigned>(Location::ErrnoMem);
+    return static_cast<unsigned>(Loc) >=
+           static_cast<unsigned>(Location::FirstTarget);
   }
 
   /// Convert MemoryEffectsBase into an encoded integer value (used by memory
@@ -276,10 +276,8 @@ public:
 
   /// Whether this function only (at most) accesses inaccessible memory.
   bool onlyAccessesInaccessibleMem() const {
-    return getWithoutLoc(static_cast<IRMemLocation>(
-                             llvm::InaccessibleTargetMemLocation::TargetMem0))
-        .getWithoutLoc(static_cast<IRMemLocation>(
-            llvm::InaccessibleTargetMemLocation::TargetMem1))
+    return getWithoutLoc(IRMemLocation::TargetMem0)
+        .getWithoutLoc(IRMemLocation::TargetMem1)
         .getWithoutLoc(Location::InaccessibleMem)
         .doesNotAccessMemory();
   }

@@ -470,11 +470,9 @@ CodeGenIntrinsic::getLocationTypeAsInt(const Record *R,
   const Record *LocRec = R->getValueAsDef(FieldName);
   StringRef Name = LocRec->getName();
   if (Name == "TargetMem0")
-    return static_cast<IRMemLocation>(
-        llvm::InaccessibleTargetMemLocation::TargetMem0);
+    return IRMemLocation::TargetMem0;
   else if (Name == "TargetMem1")
-    return static_cast<IRMemLocation>(
-        llvm::InaccessibleTargetMemLocation::TargetMem1);
+    return IRMemLocation::TargetMem1;
   else if (Name == "InaccessibleMem")
     return llvm::IRMemLocation::InaccessibleMem;
   else

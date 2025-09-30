@@ -25,7 +25,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ModRef.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/TrailingObjects.h"

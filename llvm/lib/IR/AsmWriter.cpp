@@ -4969,8 +4969,8 @@ void AssemblyWriter::writeAllAttributeGroups() {
     asVec[I.second] = I;
 
   for (const auto &I : asVec)
-    Out << "attributes #" << I.second << " = { " << I.first.getAsString(true)
-        << " }\n";
+    Out << "attributes #" << I.second << " = { "
+    << I.first.getAsString(true) << " }\n";
 }
 
 void AssemblyWriter::printUseListOrder(const Value *V,
