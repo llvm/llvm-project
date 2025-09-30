@@ -616,7 +616,7 @@ def : InstRW<[Zn4WriteLEA], (instrs LEA32r, LEA64r, LEA64_32r)>;
 
 // values from uops.info
 def Zn4SlowLEA16r : SchedWriteRes<[Zn4ALU0123]> {
-  let Latency = 2;
+  let Latency = 2; // FIXME: not from llvm-exegesis
   let ReleaseAtCycles = [1, 1];
   let NumMicroOps = 2;
 }
