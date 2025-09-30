@@ -1140,7 +1140,7 @@ void real_on_scalar_glvalue() {
 // CIR: %[[A_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a"]
 // CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.float>, !cir.float
-// CIR: %[[A_REAL:.*]] = cir.complex.real %2 : !cir.float -> !cir.float
+// CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.float -> !cir.float
 // CIR: cir.store{{.*}} %[[A_REAL]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 
 // LLVM: %[[A_ADDR:.*]] = alloca float, i64 1, align 4
