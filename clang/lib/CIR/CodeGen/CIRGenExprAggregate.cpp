@@ -131,9 +131,7 @@ public:
                      std::string("AggExprEmitter::VisitStmt: ") +
                          s->getStmtClassName());
   }
-  void VisitParenExpr(ParenExpr *pe) {
-    cgf.cgm.errorNYI(pe->getSourceRange(), "AggExprEmitter: VisitParenExpr");
-  }
+  void VisitParenExpr(ParenExpr *pe) { Visit(pe->getSubExpr()); }
   void VisitGenericSelectionExpr(GenericSelectionExpr *ge) {
     cgf.cgm.errorNYI(ge->getSourceRange(),
                      "AggExprEmitter: VisitGenericSelectionExpr");
