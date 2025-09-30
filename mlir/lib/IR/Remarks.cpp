@@ -243,7 +243,6 @@ void RemarkEngine::report(const Remark &&remark) {
 }
 
 RemarkEngine::~RemarkEngine() {
-
   if (remarkStreamer)
     remarkStreamer->finalize();
 }
