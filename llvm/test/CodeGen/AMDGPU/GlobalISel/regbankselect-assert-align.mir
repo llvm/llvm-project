@@ -2,6 +2,86 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx90a -run-pass=amdgpu-regbankselect,amdgpu-regbanklegalize %s -verify-machineinstrs -o - | FileCheck %s
 
 ---
+name:            assert_align_p5_sgpr
+alignment:       4
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0
+
+    ; CHECK-LABEL: name: assert_align_p5_sgpr
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:sgpr(p5) = COPY $sgpr0
+    ; CHECK-NEXT: %assert_align:sgpr(p5) = G_ASSERT_ALIGN %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_align(p5)
+    %copy:_(p5) = COPY $sgpr0
+    %assert_align:_(p5) = G_ASSERT_ALIGN %copy, 4
+    S_ENDPGM 0, implicit %assert_align
+...
+
+---
+name:            assert_align_p5_vgpr
+alignment:       4
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: assert_align_p5_vgpr
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:vgpr(p5) = COPY $vgpr0
+    ; CHECK-NEXT: %assert_align:vgpr(p5) = G_ASSERT_ALIGN %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_align(p5)
+    %copy:_(p5) = COPY $vgpr0
+    %assert_align:_(p5) = G_ASSERT_ALIGN %copy, 4
+    S_ENDPGM 0, implicit %assert_align
+...
+
+---
+name:            assert_align_p3_sgpr
+alignment:       4
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0
+
+    ; CHECK-LABEL: name: assert_align_p3_sgpr
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:sgpr(p3) = COPY $sgpr0
+    ; CHECK-NEXT: %assert_align:sgpr(p3) = G_ASSERT_ALIGN %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_align(p3)
+    %copy:_(p3) = COPY $sgpr0
+    %assert_align:_(p3) = G_ASSERT_ALIGN %copy, 4
+    S_ENDPGM 0, implicit %assert_align
+...
+
+---
+name:            assert_align_p3_vgpr
+alignment:       4
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr1
+
+    ; CHECK-LABEL: name: assert_align_p3_vgpr
+    ; CHECK: liveins: $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:vgpr(p3) = COPY $vgpr1
+    ; CHECK-NEXT: %assert_align:vgpr(p3) = G_ASSERT_ALIGN %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_align(p3)
+    %copy:_(p3) = COPY $vgpr1
+    %assert_align:_(p3) = G_ASSERT_ALIGN %copy, 4
+    S_ENDPGM 0, implicit %assert_align
+...
+
+---
 name:            assert_align_vgpr
 alignment:       4
 legalized:       true
@@ -38,6 +118,46 @@ body:             |
     ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_align(p1)
     %copy:_(p1) = COPY $sgpr8_sgpr9
     %assert_align:_(p1) = G_ASSERT_ALIGN %copy, 4
+    S_ENDPGM 0, implicit %assert_align
+...
+
+---
+name:            assert_align_p8_sgpr
+alignment:       4
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+
+    ; CHECK-LABEL: name: assert_align_p8_sgpr
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:sgpr(p8) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; CHECK-NEXT: %assert_align:sgpr(p8) = G_ASSERT_ALIGN %copy, 8
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_align(p8)
+    %copy:_(p8) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %assert_align:_(p8) = G_ASSERT_ALIGN %copy, 8
+    S_ENDPGM 0, implicit %assert_align
+...
+
+---
+name:            assert_align_p8_vgpr
+alignment:       4
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: assert_align_p8_vgpr
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:vgpr(p8) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: %assert_align:vgpr(p8) = G_ASSERT_ALIGN %copy, 16
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_align(p8)
+    %copy:_(p8) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %assert_align:_(p8) = G_ASSERT_ALIGN %copy, 16
     S_ENDPGM 0, implicit %assert_align
 ...
 

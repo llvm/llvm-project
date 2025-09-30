@@ -622,8 +622,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {Vgpr32, Imm}});
 
   addRulesForGOpcs({G_ASSERT_ALIGN})
-      .Any({{UniP1}, {{SgprP1}, {SgprP1}}})
-      .Any({{DivP1}, {{VgprP1}, {VgprP1}}});
+      .Any({{UniPtr32}, {{SgprPtr32}, {SgprPtr32}}})
+      .Any({{DivPtr32}, {{VgprPtr32}, {VgprPtr32}}})
+      .Any({{UniPtr64}, {{SgprPtr64}, {SgprPtr64}}})
+      .Any({{DivPtr64}, {{VgprPtr64}, {VgprPtr64}}})
+      .Any({{UniPtr128}, {{SgprPtr128}, {SgprPtr128}}})
+      .Any({{DivPtr128}, {{VgprPtr128}, {VgprPtr128}}});
 
   bool hasSMRDx3 = ST->hasScalarDwordx3Loads();
   bool hasSMRDSmall = ST->hasScalarSubwordLoads();
