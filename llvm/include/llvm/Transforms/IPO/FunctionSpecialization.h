@@ -179,6 +179,8 @@ struct Spec {
   // Index within AllSpecs
   unsigned Loc = 0;
 
+  bool SpecializeOnOwn = true;
+
   Spec(Function *F, CallBase *CallSite, const SpecSig &S,
        CallSiteStatusT Status)
       : F(F), Clone(nullptr), Sig(S), Score(), CodeSize(), FuncSize(),

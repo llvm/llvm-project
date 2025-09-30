@@ -740,9 +740,18 @@ bool FunctionSpecializer::runOneSpec(Spec &S, bool Chained, SpecMap &SM,
   // If the code metrics reveal that we shouldn't duplicate the function,
   // or if the code size implies that this function is easy to get inlined,
   // then we shouldn't specialize it.
-  if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid() ||
-      (RequireMinSize && Metrics.NumInsts < MinFunctionSize))
+  if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid())
     return false;
+
+  if (RequireMinSize && Metrics.NumInsts < MinFunctionSize) {
+    if (Chained) {
+      // Want to specialize as part of chain still so we can more accurately
+      // assess the chain specialization
+      S.SpecializeOnOwn = false;
+    } else {
+      return false;
+    }
+  }
 
   // When specialization on literal constants is disabled, only consider
   // recursive functions when running multiple times to save wasted analysis,
@@ -800,7 +809,7 @@ bool FunctionSpecializer::run() {
 
   unsigned IndepSpecs = 0;
   for (auto &S : AllSpecs)
-    if (!S.AllChains)
+    if (S.SpecializeOnOwn && !S.AllChains)
       ++IndepSpecs;
   if (!NumCandidates || !IndepSpecs) {
     LLVM_DEBUG(
@@ -813,9 +822,9 @@ bool FunctionSpecializer::run() {
   // specialization budget, which is derived from maximum number of
   // specializations per specialization candidate function.
   auto CompareScore = [&AllSpecs](unsigned I, unsigned J) {
-    if (AllSpecs[J].AllChains)
+    if (!AllSpecs[J].SpecializeOnOwn || AllSpecs[J].AllChains)
       return true;
-    if (AllSpecs[I].AllChains)
+    if (!AllSpecs[I].SpecializeOnOwn || AllSpecs[I].AllChains)
       return false;
     if (AllSpecs[I].Score != AllSpecs[J].Score)
       return AllSpecs[I].Score > AllSpecs[J].Score;
