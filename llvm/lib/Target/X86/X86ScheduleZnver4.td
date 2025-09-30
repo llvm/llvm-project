@@ -589,7 +589,7 @@ defm : Zn4WriteResInt<WriteLEA, [Zn4AGU012], 1, [1], 1>;     // LEA instructions
 // values from uops.info
 def Zn4Write3OpsLEA : SchedWriteRes<[Zn4ALU0123]> {
   let Latency = 3;
-  let ReleaseAtCycles = [1, 1, 1, 2];
+  let ReleaseAtCycles = [1];
   let NumMicroOps = 4;
 }
 
