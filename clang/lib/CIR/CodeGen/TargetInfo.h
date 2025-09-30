@@ -32,8 +32,6 @@ bool isEmptyFieldForLayout(const ASTContext &context, const FieldDecl *fd);
 /// if the [[no_unique_address]] attribute would have made them empty.
 bool isEmptyRecordForLayout(const ASTContext &context, QualType t);
 
-class CIRGenFunction;
-
 class TargetCIRGenInfo {
   std::unique_ptr<ABIInfo> info;
 
@@ -44,6 +42,11 @@ public:
 
   /// Returns ABI info helper for the target.
   const ABIInfo &getABIInfo() const { return *info; }
+
+  /// Get the CIR address space for alloca.
+  virtual cir::AddressSpace getCIRAllocaAddressSpace() const {
+    return cir::AddressSpace::Default;
+  }
 
   /// Determine whether a call to an unprototyped functions under
   /// the given calling convention should use the variadic

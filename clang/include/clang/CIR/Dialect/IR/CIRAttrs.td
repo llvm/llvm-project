@@ -606,6 +606,38 @@ def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
 //===----------------------------------------------------------------------===//
 
 def CIR_AddressSpaceAttr :  CIR_EnumAttr<CIR_AddressSpace, "address_space"> {
+  let summary = "Attribute representing memory address spaces";
+  let description = [{
+    Represents different memory address spaces for pointer types.
+    Address spaces distinguish between different types of memory regions,
+    such as global, local, or constant memory.
+
+    The `value` parameter is an extensible enum, which encodes target address
+    space as an offset to the last language address space. For that reason, the
+    attribute is implemented as custom AddressSpaceAttr, which provides custom
+    printer and parser for the `value` parameter.
+
+    CIR supports two categories:
+    - Language address spaces: Predefined spaces like `offload_global`,
+      `offload_constant`, `offload_private` for offload programming models
+    - Target address spaces: Numeric spaces `target<N>` for target-specific
+      memory regions, where N is the address space number
+
+    Examples:
+    ```mlir
+    // Default address space (implicit)
+    !cir.ptr<!s32i>
+    
+    // Language-defined offload address spaces  
+    !cir.ptr<!s32i, addrspace(offload_global)>
+    !cir.ptr<!s32i, addrspace(offload_constant)>
+    !cir.ptr<!s32i, addrspace(offload_private)>
+    
+    // Target-specific numeric address spaces
+    !cir.ptr<!s32i, addrspace(target<1>)>
+    !cir.ptr<!s32i, addrspace(target<10>)>
+    ```
+  }];
   let builders = [
     AttrBuilder<(ins "clang::LangAS":$langAS), [{
       return $_get($_ctxt, cir::toCIRAddressSpace(langAS));

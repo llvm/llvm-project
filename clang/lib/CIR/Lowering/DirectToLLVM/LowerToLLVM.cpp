@@ -2313,7 +2313,7 @@ getTargetAddrSpaceFromCIRAddrSpace(cir::AddressSpace addrSpace) {
   if (cir::isTargetAddressSpace(addrSpace))
     return cir::getTargetAddressSpaceValue(addrSpace);
 
-  llvm_unreachable("CIR AS map is not available");
+  llvm_unreachable("CIR target lowering is NYI");
 }
 
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,

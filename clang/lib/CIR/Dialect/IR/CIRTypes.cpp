@@ -852,13 +852,13 @@ mlir::ParseResult parseAddressSpaceValue(mlir::AsmParser &p,
   if (mlir::failed(result))
     return p.emitError(loc, "expected address space keyword");
 
-  // Address space is either a target address space or a regular one.
+  // Address space is either a target address space or a language-specific one.
   // - If it is a target address space, we expect a value to follow in the form
   // of `<value>`, where value is an integer that represents the target address
   // space value. This value is kept in the address space enum as an offset
   // from the maximum address space value, which is defined in
   // `cir::getMaxEnumValForAddressSpace()`. This allows us to use
-  // the same enum for both regular and target address spaces.
+  // the same enum for both language-specific and target address spaces.
   // - Otherwise, we just use the parsed value.
   if (cir::isTargetAddressSpace(result.value())) {
     if (p.parseLess())
