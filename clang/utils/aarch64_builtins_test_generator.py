@@ -150,6 +150,9 @@ def make_arg_for_type(ty: str) -> Tuple[str, str]:
     if ty in LITERAL_TYPES_MAP:
         return "", LITERAL_TYPES_MAP[ty]
 
+    if ty.startswith("ImmCheck") or ty.startswith("enum "):
+        print(f"Failed to parse potential literal type: {ty}", file=sys.stderr)
+
     name = ty.replace(" ", "_").replace("*", "ptr") + "_val"
     return f"{ty} {name};", name
 
@@ -252,7 +255,7 @@ def emit_streaming_guard_run_lines(ctx: BuiltinContext) -> str:
 
     if "streaming-only" in ctx.flags:
         assert not guard_features
-        # Generate RUN lines for features only availble to streaming functions
+        # Generate RUN lines for features only available to streaming functions
         for feats in streaming_guard_features:
             out.append(
                 f"{run_prefix} {cc1_args_for_features(feats)} -verify=streaming-guard"
@@ -270,7 +273,7 @@ def emit_streaming_guard_run_lines(ctx: BuiltinContext) -> str:
             ctx.guard + "," + ctx.streaming_guard, ctx.flags
         )
 
-        # Generate RUN lines for features only availble to normal functions
+        # Generate RUN lines for features only available to normal functions
         for feats in guard_features:
             if feats not in combined_features:
                 out.append(f"{run_prefix} {cc1_args_for_features(feats)} -verify=guard")
