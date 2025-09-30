@@ -8,7 +8,7 @@
 // RUN:               -convert-scf-to-cf                                       \
 // RUN:               -arith-expand                                            \
 // RUN:               -memref-expand                                           \
-// RUN:               -convert-vector-to-llvm                                  \
+// RUN:               -naive-convert-vector-to-llvm                                  \
 // RUN:               -finalize-memref-to-llvm                                 \
 // RUN:               -convert-func-to-llvm                                    \
 // RUN:               -convert-arith-to-llvm                                   \
@@ -24,7 +24,7 @@
 // RUN:   mlir-opt %s                                                          \
 // RUN:               -convert-linalg-to-loops                                 \
 // RUN:               -convert-scf-to-cf                                       \
-// RUN:               -convert-vector-to-llvm                                  \
+// RUN:               -naive-convert-vector-to-llvm                                  \
 // RUN:               -finalize-memref-to-llvm                                 \
 // RUN:               -convert-func-to-llvm                                    \
 // RUN:               -convert-arith-to-llvm                                   \

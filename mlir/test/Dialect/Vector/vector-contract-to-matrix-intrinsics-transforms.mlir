@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s  --convert-vector-to-llvm='vector-contract-lowering=llvmintr' | FileCheck %s
+// RUN: mlir-opt %s  --naive-convert-vector-to-llvm='vector-contract-lowering=llvmintr' | FileCheck %s
 
 #matmat_accesses = [
   affine_map<(i, j, k) -> (i, k)>,

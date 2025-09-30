@@ -1,6 +1,6 @@
 add_mlir_conversion_library(MLIRVectorToLLVM
   PARTIAL_SOURCES_INTENDED
-  ConvertVectorToLLVM.cpp
+  NaiveConvertVectorToLLVM.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/VectorToLLVM
@@ -27,7 +27,7 @@ add_mlir_conversion_library(MLIRVectorToLLVM
 add_mlir_conversion_library(MLIRVectorToLLVMPass
   PARTIAL_SOURCES_INTENDED
 
-  ConvertVectorToLLVMPass.cpp
+  NaiveConvertVectorToLLVMPass.cpp
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/VectorToLLVM
 

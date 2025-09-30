@@ -70,14 +70,14 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
   pm.addPass(memref::createExpandStridedMetadataPass());
   pm.addPass(createLowerAffinePass());
   pm.addPass(
-      createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
+      createNaiveConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
   pm.addNestedPass<func::FuncOp>(createConvertComplexToStandardPass());
   pm.addNestedPass<func::FuncOp>(arith::createArithExpandOpsPass());
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
   pm.addPass(createConvertMathToLibmPass());
   pm.addPass(createConvertComplexToLibm());
   pm.addPass(
-      createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
+      createNaiveConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
 
   // Finalize GPU code generation.
   if (gpuCodegen) {

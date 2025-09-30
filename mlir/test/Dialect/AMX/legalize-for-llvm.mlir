@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm="enable-amx" | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s -naive-convert-vector-to-llvm="enable-amx" | mlir-opt | FileCheck %s
 
 // CHECK-LABEL: muli(
 // CHECK: llvm.call_intrinsic "llvm.x86.tilezero.internal"

@@ -3,7 +3,7 @@
 
 // RUN: mlir-opt %s --test-arith-emulate-wide-int="widest-int-supported=8" \
 // RUN:             --convert-vector-to-scf --convert-scf-to-cf --convert-cf-to-llvm \
-// RUN:             --convert-vector-to-llvm --convert-func-to-llvm --convert-arith-to-llvm \
+// RUN:             --naive-convert-vector-to-llvm --convert-func-to-llvm --convert-arith-to-llvm \
 // RUN:             --reconcile-unrealized-casts | \
 // RUN:   mlir-runner -e entry -entry-point-result=void \
 // RUN:      --shared-libs="%mlir_c_runner_utils,%mlir_runner_utils" | \

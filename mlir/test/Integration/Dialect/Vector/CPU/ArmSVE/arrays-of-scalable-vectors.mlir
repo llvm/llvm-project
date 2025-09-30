@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -arm-sve-legalize-vector-storage -convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm | \
+// RUN: mlir-opt %s -convert-vector-to-scf -arm-sve-legalize-vector-storage -naive-convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd -e=entry -entry-point-result=void --march=aarch64 --mattr="+sve" -shared-libs=%native_mlir_c_runner_utils | \
 // RUN: FileCheck %s
 

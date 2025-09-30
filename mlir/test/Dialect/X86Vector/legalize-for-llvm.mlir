@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm="enable-x86vector" | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s -naive-convert-vector-to-llvm="enable-x86vector" | mlir-opt | FileCheck %s
 
 // CHECK-LABEL: func @avx512_mask_rndscale
 func.func @avx512_mask_rndscale(
