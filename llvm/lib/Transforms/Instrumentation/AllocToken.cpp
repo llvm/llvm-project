@@ -157,11 +157,13 @@ bool containsPointer(const MDNode *MD) {
 
 class ModeBase {
 public:
-  explicit ModeBase(uint64_t MaxTokens) : MaxTokens(MaxTokens) {}
+  explicit ModeBase(const IntegerType &TokenTy, uint64_t MaxTokens)
+      : MaxTokens(MaxTokens ? MaxTokens : TokenTy.getBitMask()) {}
 
 protected:
   uint64_t boundedToken(uint64_t Val) const {
-    return MaxTokens ? Val % MaxTokens : Val;
+    assert(MaxTokens != 0);
+    return Val % MaxTokens;
   }
 
   const uint64_t MaxTokens;
@@ -183,8 +185,9 @@ private:
 /// Implementation for TokenMode::Random.
 class RandomMode : public ModeBase {
 public:
-  RandomMode(uint64_t MaxTokens, std::unique_ptr<RandomNumberGenerator> RNG)
-      : ModeBase(MaxTokens), RNG(std::move(RNG)) {}
+  RandomMode(const IntegerType &TokenTy, uint64_t MaxTokens,
+             std::unique_ptr<RandomNumberGenerator> RNG)
+      : ModeBase(TokenTy, MaxTokens), RNG(std::move(RNG)) {}
   uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &) {
     return boundedToken((*RNG)());
   }
@@ -239,11 +242,14 @@ public:
   uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
     if (MaxTokens == 1)
       return 0;
-    const uint64_t HalfTokens =
-        (MaxTokens ? MaxTokens : std::numeric_limits<uint64_t>::max()) / 2;
+    const uint64_t HalfTokens = MaxTokens / 2;
     const auto [N, H] = getHash(CB, ORE);
-    if (!N)
-      return H;                     // fallback token
+    if (!N) {
+      // Pick the fallback token (ClFallbackToken), which by default is 0,
+      // meaning it'll fall into the pointer-less bucket. Override by setting
+      // -alloc-token-fallback if that is the wrong choice.
+      return H;
+    }
     uint64_t Hash = H % HalfTokens; // base hash
     if (containsPointer(N))
       Hash += HalfTokens;
@@ -266,18 +272,19 @@ public:
                       ModuleAnalysisManager &MAM)
       : Options(transformOptionsFromCl(std::move(Opts))), Mod(M),
         FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
-        Mode(IncrementMode(*Options.MaxTokens)) {
+        Mode(IncrementMode(*IntPtrTy, *Options.MaxTokens)) {
     switch (ClMode.getValue()) {
     case TokenMode::Increment:
       break;
     case TokenMode::Random:
-      Mode.emplace<RandomMode>(*Options.MaxTokens, M.createRNG(DEBUG_TYPE));
+      Mode.emplace<RandomMode>(*IntPtrTy, *Options.MaxTokens,
+                               M.createRNG(DEBUG_TYPE));
       break;
     case TokenMode::TypeHash:
-      Mode.emplace<TypeHashMode>(*Options.MaxTokens);
+      Mode.emplace<TypeHashMode>(*IntPtrTy, *Options.MaxTokens);
       break;
     case TokenMode::TypeHashPointerSplit:
-      Mode.emplace<TypeHashPointerSplitMode>(*Options.MaxTokens);
+      Mode.emplace<TypeHashPointerSplitMode>(*IntPtrTy, *Options.MaxTokens);
       break;
     }
   }

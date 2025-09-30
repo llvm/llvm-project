@@ -45169,6 +45169,7 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::Wrapper:
   case X86ISD::WrapperRIP:
     return true;
+  case X86ISD::INSERTPS:
   case X86ISD::BLENDI:
   case X86ISD::PSHUFB:
   case X86ISD::PSHUFD:
@@ -45239,6 +45240,7 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::BLENDV:
     return false;
   // SSE target shuffles.
+  case X86ISD::INSERTPS:
   case X86ISD::PSHUFB:
   case X86ISD::PSHUFD:
   case X86ISD::UNPCKL:
