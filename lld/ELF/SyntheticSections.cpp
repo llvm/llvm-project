@@ -4543,7 +4543,7 @@ void PartitionIndexSection::writeTo(uint8_t *buf) {
 }
 
 static bool needsInterpSection(Ctx &ctx) {
-  return !ctx.arg.relocatable && !ctx.arg.shared &&
+  return !ctx.arg.relocatable &&
          !ctx.arg.dynamicLinker.empty() && ctx.script->needsInterpSection();
 }
 
