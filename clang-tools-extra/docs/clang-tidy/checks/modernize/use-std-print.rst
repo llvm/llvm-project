@@ -128,7 +128,7 @@ Options
    arguments to be formatted follow immediately afterwards. Qualified member
    function names are supported, but the replacement function name must be
    unqualified. If neither this option nor `FprintfLikeFunctions` are set then
-   the default value is `printf; absl::PrintF`, otherwise it is empty string.
+   the default value is `printf; absl::PrintF`, otherwise it is the empty string.
 
 
 .. option:: FprintfLikeFunctions
@@ -140,7 +140,7 @@ Options
    immediately afterwards. Qualified member function names are supported,
    but the replacement function name must be unqualified. If neither this
    option nor `PrintfLikeFunctions` are set then the default value is 
-   `fprintf;absl::FPrintF`, otherwise it is empty string.
+   `fprintf;absl::FPrintF`, otherwise it is the empty string.
 
 
 .. option:: ReplacementPrintFunction
