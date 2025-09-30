@@ -1724,7 +1724,7 @@ static void printRelatedInstrs(raw_ostream &OS, const MCInstReference Location,
   for (unsigned I = 0; I < RI.size(); ++I) {
     auto [Address, InstRef] = RI[I];
     OS << "  " << (I + 1) << ". ";
-    BC.printInstruction(OS, InstRef, InstRef.computeAddress(), &BF);
+    BC.printInstruction(OS, InstRef, Address, &BF);
   };
 
   if (RelatedInstrs.size() == 1) {
