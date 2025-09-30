@@ -848,8 +848,7 @@ void ObjCSelRefsHelper::initialize() {
 void ObjCSelRefsHelper::cleanup() { methnameToSelref.clear(); }
 
 ConcatInputSection *ObjCSelRefsHelper::makeSelRef(StringRef methname) {
-  auto methnameOffset =
-      in.objcMethnameSection->getStringOffset(methname).outSecOff;
+  auto methnameOffset = in.objcMethnameSection->getStringOffset(methname);
 
   size_t wordSize = target->wordSize;
   uint8_t *selrefData = bAlloc().Allocate<uint8_t>(wordSize);
@@ -1722,13 +1721,13 @@ void CStringSection::writeTo(uint8_t *buf) const {
 // and don't need this alignment. They will be emitted at some arbitrary address
 // `A`, but ld64 will treat them as being 16-byte aligned with an offset of
 // `16 % A`.
-static uint8_t getStringPieceAlignment(const CStringInputSection *isec,
-                                       const StringPiece &piece) {
-  return llvm::countr_zero(isec->align | piece.inSecOff);
+static Align getStringPieceAlignment(const CStringInputSection *isec,
+                                     const StringPiece &piece) {
+  return llvm::Align(1ULL << llvm::countr_zero(isec->align | piece.inSecOff));
 }
 
 void CStringSection::finalizeContents() {
-  uint64_t offset = 0;
+  size = 0;
   // TODO: Call buildCStringPriorities() to support cstring ordering when
   // deduplication is off, although this may negatively impact build
   // performance.
@@ -1736,30 +1735,27 @@ void CStringSection::finalizeContents() {
     for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
       if (!piece.live)
         continue;
-      uint32_t pieceAlign = 1 << getStringPieceAlignment(isec, piece);
-      offset = alignToPowerOf2(offset, pieceAlign);
-      piece.outSecOff = offset;
-      isec->isFinal = true;
+      piece.outSecOff = alignTo(size, getStringPieceAlignment(isec, piece));
       StringRef string = isec->getStringRef(i);
-      offset += string.size() + 1; // account for null terminator
+      size = piece.outSecOff + string.size() + 1; // account for null terminator
     }
+    isec->isFinal = true;
   }
-  size = offset;
 }
 
 void DeduplicatedCStringSection::finalizeContents() {
   // Find the largest alignment required for each string.
+  DenseMap<CachedHashStringRef, Align> strToAlignment;
   for (const CStringInputSection *isec : inputs) {
     for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
       if (!piece.live)
         continue;
       auto s = isec->getCachedHashStringRef(i);
       assert(isec->align != 0);
-      uint8_t trailingZeros = getStringPieceAlignment(isec, piece);
-      auto it = stringOffsetMap.insert(
-          std::make_pair(s, StringOffset(trailingZeros)));
-      if (!it.second && it.first->second.trailingZeros < trailingZeros)
-        it.first->second.trailingZeros = trailingZeros;
+      auto align = getStringPieceAlignment(isec, piece);
+      auto [it, wasInserted] = strToAlignment.try_emplace(s, align);
+      if (!wasInserted && it->second < align)
+        it->second = align;
     }
   }
 
@@ -1769,38 +1765,31 @@ void DeduplicatedCStringSection::finalizeContents() {
   for (auto &[isec, i] : priorityBuilder.buildCStringPriorities(inputs)) {
     auto &piece = isec->pieces[i];
     auto s = isec->getCachedHashStringRef(i);
-    auto it = stringOffsetMap.find(s);
-    assert(it != stringOffsetMap.end());
-    lld::macho::DeduplicatedCStringSection::StringOffset &offsetInfo =
-        it->second;
-    if (offsetInfo.outSecOff == UINT64_MAX) {
-      offsetInfo.outSecOff =
-          alignToPowerOf2(size, 1ULL << offsetInfo.trailingZeros);
-      size = offsetInfo.outSecOff + s.size() + 1; // account for null terminator
+    auto [it, wasInserted] = stringOffsetMap.try_emplace(s, /*placeholder*/ 0);
+    if (wasInserted) {
+      // Avoid computing the offset until we are sure we will need to
+      uint64_t offset = alignTo(size, strToAlignment.at(s));
+      it->second = offset;
+      size = offset + s.size() + 1; // account for null terminator
     }
-    piece.outSecOff = offsetInfo.outSecOff;
+    // If the string was already in stringOffsetMap, it is a duplicate and we
+    // only need to assign the offset.
+    piece.outSecOff = it->second;
   }
   for (CStringInputSection *isec : inputs)
     isec->isFinal = true;
 }
 
 void DeduplicatedCStringSection::writeTo(uint8_t *buf) const {
-  for (const auto &p : stringOffsetMap) {
-    StringRef data = p.first.val();
-    uint64_t off = p.second.outSecOff;
-    if (!data.empty())
-      memcpy(buf + off, data.data(), data.size());
-  }
+  for (const auto &[s, outSecOff] : stringOffsetMap)
+    if (s.size())
+      memcpy(buf + outSecOff, s.data(), s.size());
 }
 
-DeduplicatedCStringSection::StringOffset
-DeduplicatedCStringSection::getStringOffset(StringRef str) const {
+uint64_t DeduplicatedCStringSection::getStringOffset(StringRef str) const {
   // StringPiece uses 31 bits to store the hashes, so we replicate that
   uint32_t hash = xxh3_64bits(str) & 0x7fffffff;
-  auto offset = stringOffsetMap.find(CachedHashStringRef(str, hash));
-  assert(offset != stringOffsetMap.end() &&
-         "Looked-up strings should always exist in section");
-  return offset->second;
+  return stringOffsetMap.at(CachedHashStringRef(str, hash));
 }
 
 // This section is actually emitted as __TEXT,__const by ld64, but clang may
