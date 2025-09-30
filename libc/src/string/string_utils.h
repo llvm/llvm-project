@@ -120,7 +120,7 @@ template <typename T> LIBC_INLINE size_t string_length(const T *src) {
 }
 
 template <typename Word>
-LIBC_NOSANITIZE_OOB_ACCESS LIBC_INLINE void *
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE void *
 find_first_character_wide_read(const unsigned char *src, unsigned char ch,
                                size_t n) {
   const unsigned char *char_ptr = src;
