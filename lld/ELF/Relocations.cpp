@@ -20,7 +20,8 @@
 // Instead, it populates Relocation objects in InputSectionBase::relocations
 // and creates necessary synthetic sections (GOT, PLT, etc.).
 //
-// In addition, this file implements the core Thunk creation logic.
+// In addition, this file implements the core Thunk creation logic, called
+// during finalizeAddressDependentContent().
 //
 //===----------------------------------------------------------------------===//
 
