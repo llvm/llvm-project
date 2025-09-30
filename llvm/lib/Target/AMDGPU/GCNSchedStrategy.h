@@ -503,6 +503,9 @@ private:
     }
 
     /// Returns whether is is always beneficial to rematerialize this register.
+    /// These are rematerializations that never move instructions into higher
+    /// frequency regions and at least shorten live intervals, so they are
+    /// always useful irrespective of RP targets.
     bool isAlwaysBeneficial() const {
       // When the using region is executed a single time, we know
       // rematerializing will be beneficial whatever the defining region's
@@ -574,7 +577,7 @@ private:
     /// Per-region contribution weights to RP score depending on whether RP is
     /// guaranteed or only likely to be reduced in the region. Only their
     /// relative value w.r.t. one another matter.
-    static constexpr int WeightRP = 10, WeightRPMaybe = 5;
+    static constexpr int WeightRP = 2, WeightRPMaybe = 1;
 
     /// Number of 32-bit registers this rematerialization covers.
     const unsigned NumRegs;
