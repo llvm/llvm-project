@@ -17,8 +17,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 namespace neon {
-__attribute__((no_sanitize("address", "hwaddress", "thread")))
-[[maybe_unused]] LIBC_INLINE static size_t
+[[maybe_unused]] __attribute__((no_sanitize("address", "hwaddress", "thread")))
+LIBC_INLINE static size_t
 string_length(const char *src) {
   using Vector __attribute__((may_alias)) = uint8x8_t;
 
