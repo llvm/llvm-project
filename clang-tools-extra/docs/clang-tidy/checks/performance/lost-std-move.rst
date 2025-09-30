@@ -30,8 +30,8 @@ Also it does notice variable references "behind the scenes":
      y.f();  // because is still used
    }
 
-If you want to ignore assigns to reference variables, set ``StrictMode``
-to ``false``.
+If you want to ignore assigns to reference variables, set ::option::
+`StrictMode` to `false`.
 
 
 Options
