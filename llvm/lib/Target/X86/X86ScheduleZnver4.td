@@ -586,10 +586,11 @@ def : InstRW<[Zn4WriteADC8mr_SBB8mr], (instrs ADC8mr, SBB8mr)>;
 defm : Zn4WriteResInt<WriteLEA, [Zn4AGU012], 1, [1], 1>;     // LEA instructions can't fold loads.
 
 // This write is used for slow LEA instructions.
+// values from uops.info
 def Zn4Write3OpsLEA : SchedWriteRes<[Zn4ALU0123]> {
-  let Latency = 2;
-  let ReleaseAtCycles = [1];
-  let NumMicroOps = 2;
+  let Latency = 3;
+  let ReleaseAtCycles = [1, 1, 1, 2];
+  let NumMicroOps = 4;
 }
 
 // On Znver4, a slow LEA is either a 3Ops LEA (base, index, offset),
@@ -613,9 +614,10 @@ def Zn4WriteLEA : SchedWriteVariant<[
 
 def : InstRW<[Zn4WriteLEA], (instrs LEA32r, LEA64r, LEA64_32r)>;
 
+// values from uops.info
 def Zn4SlowLEA16r : SchedWriteRes<[Zn4ALU0123]> {
-  let Latency = 2; // FIXME: not from llvm-exegesis
-  let ReleaseAtCycles = [4];
+  let Latency = 2;
+  let ReleaseAtCycles = [1, 1];
   let NumMicroOps = 2;
 }
 
