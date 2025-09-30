@@ -120,8 +120,8 @@ on support follow.
      ``H``             Assembly Support
      ``M``             Supported
      ``Q``             Assembly Support
-     ``Sdext``         Assembly Support (`See note <#riscv-extensions-specifications-note>`__)
-     ``Sdtrig``        Assembly Support (`See note <#riscv-extensions-specifications-note>`__)
+     ``Sdext``         Assembly Support (`See note <#riscv-debug-specification-note>`__)
+     ``Sdtrig``        Assembly Support (`See note <#riscv-debug-specification-note>`__)
      ``Sha``           Supported
      ``Shcounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shgatpa``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
@@ -134,7 +134,7 @@ on support follow.
      ``Smcdeleg``      Supported
      ``Smcntrpmf``     Supported
      ``Smcsrind``      Supported
-     ``Smctr``         Assembly Support (`See note <#riscv-extensions-specifications-note>`__)
+     ``Smctr``         Assembly Support
      ``Smdbltrp``      Supported
      ``Smepmp``        Supported
      ``Smmpm``         Supported
@@ -147,7 +147,7 @@ on support follow.
      ``Sscofpmf``      Assembly Support
      ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sscsrind``      Supported
-     ``Ssctr``         Assembly Support (`See note <#riscv-extensions-specifications-note>`__)
+     ``Ssctr``         Assembly Support
      ``Ssdbltrp``      Supported
      ``Ssnpm``         Supported
      ``Sspm``          Supported
@@ -310,10 +310,9 @@ Supported
 ``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccamoc``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
-.. _riscv-extensions-specifications-note:
+.. _riscv-debug-specification-note:
 
 ``Sdext``, ``Sdtrig`` `The RISC-V Debug Specification <https://github.com/riscv/riscv-debug-spec/releases/download/1.0/riscv-debug-specification.pdf>`__.
-``Smctr``, ``Ssctr`` `RISC-V Control Transfer Records <https://github.com/riscv/riscv-control-transfer-records/releases/download/v1.0_rc3/riscv-ctr-v1.0_rc3.pdf>`__.
 
 .. _riscv-zacas-note:
 
