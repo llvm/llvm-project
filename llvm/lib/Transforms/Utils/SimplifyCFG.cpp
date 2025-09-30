@@ -5152,14 +5152,18 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
   if (ExtraCase && Values.size() < 2)
     return false;
 
-  // TODO: Preserve branch weight metadata, similarly to how
-  // foldValueComparisonIntoPredecessors preserves it.
+  SmallVector<uint32_t> BranchWeights;
+  const bool HasProfile = !ProfcheckDisableMetadataFixes &&
+                          extractBranchWeights(*BI, BranchWeights);
 
   // Figure out which block is which destination.
   BasicBlock *DefaultBB = BI->getSuccessor(1);
   BasicBlock *EdgeBB = BI->getSuccessor(0);
-  if (!TrueWhenEqual)
+  if (!TrueWhenEqual) {
     std::swap(DefaultBB, EdgeBB);
+    if (HasProfile)
+      std::swap(BranchWeights[0], BranchWeights[1]);
+  }
 
   BasicBlock *BB = BI->getParent();
 
@@ -5190,10 +5194,11 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
     if (!isGuaranteedNotToBeUndefOrPoison(ExtraCase, AC, BI, nullptr))
       ExtraCase = Builder.CreateFreeze(ExtraCase);
 
-    if (TrueWhenEqual)
-      Builder.CreateCondBr(ExtraCase, EdgeBB, NewBB);
-    else
-      Builder.CreateCondBr(ExtraCase, NewBB, EdgeBB);
+    // We don't have any info about this condition.
+    auto *Br = TrueWhenEqual ? Builder.CreateCondBr(ExtraCase, EdgeBB, NewBB)
+                             : Builder.CreateCondBr(ExtraCase, NewBB, EdgeBB);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Br, *NewBB->getParent(),
+                                                DEBUG_TYPE);
 
     OldTI->eraseFromParent();
 
@@ -5220,6 +5225,17 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
 
   // Create the new switch instruction now.
   SwitchInst *New = Builder.CreateSwitch(CompVal, DefaultBB, Values.size());
+  if (HasProfile) {
+    // We know the weight of the default case. We don't know the weight of the
+    // other cases, but rather than completely lose profiling info, we split
+    // the remaining probability equally over them.
+    SmallVector<uint32_t> NewWeights(Values.size() + 1);
+    NewWeights[0] = BranchWeights[1]; // this is the default, and we swapped if
+                                      // TrueWhenEqual.
+    for (auto &V : drop_begin(NewWeights))
+      V = BranchWeights[0] / Values.size();
+    setBranchWeights(*New, NewWeights, /*IsExpected=*/false);
+  }
 
   // Add all of the 'cases' to the switch instruction.
   for (ConstantInt *Val : Values)
