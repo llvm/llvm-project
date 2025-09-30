@@ -23,14 +23,14 @@ using namespace mlir;
 LLVM::LLVMFuncOp mlir::getOrDefineFunction(Operation *moduleOp, Location loc,
                                            OpBuilder &b, StringRef name,
                                            LLVM::LLVMFunctionType type) {
-  LLVM::LLVMFuncOp ret;
-  if (!(ret = dyn_cast_or_null<LLVM::LLVMFuncOp>(
-            SymbolTable::lookupSymbolIn(moduleOp, name)))) {
-    OpBuilder::InsertionGuard guard(b);
-    b.setInsertionPointToStart(&moduleOp->getRegion(0).front());
-    ret = LLVM::LLVMFuncOp::create(b, loc, name, type, LLVM::Linkage::External);
-  }
-  return ret;
+  auto existing = dyn_cast_or_null<LLVM::LLVMFuncOp>(
+      SymbolTable::lookupSymbolIn(moduleOp, name));
+  if (existing)
+    return existing;
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(&moduleOp->getRegion(0).front());
+  return LLVM::LLVMFuncOp::create(b, loc, name, type, LLVM::Linkage::External);
 }
 
 static SmallString<16> getUniqueSymbolName(Operation *moduleOp,
