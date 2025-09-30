@@ -163,7 +163,7 @@ public:
 class LLVM_LIBRARY_VISIBILITY OffloadPackager final : public Tool {
 public:
   OffloadPackager(const ToolChain &TC)
-      : Tool("Offload::Packager", "clang-offload-packager", TC) {}
+      : Tool("Offload::Packager", "llvm-offload-binary", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   void ConstructJob(Compilation &C, const JobAction &JA,
