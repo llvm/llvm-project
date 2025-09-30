@@ -340,6 +340,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
       setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
+      setOperationAction(ISD::ABS, VT, Legal);
       setOperationAction(ISD::ABDS, VT, Legal);
       setOperationAction(ISD::ABDU, VT, Legal);
       setOperationAction(ISD::SADDSAT, VT, Legal);
@@ -419,6 +420,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
       setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
+      setOperationAction(ISD::ABS, VT, Legal);
       setOperationAction(ISD::ABDS, VT, Legal);
       setOperationAction(ISD::ABDU, VT, Legal);
       setOperationAction(ISD::SADDSAT, VT, Legal);
@@ -2317,6 +2319,53 @@ static SDValue lowerVECTOR_SHUFFLE_XVPICKOD(const SDLoc &DL, ArrayRef<int> Mask,
   return DAG.getNode(LoongArchISD::VPICKOD, DL, VT, V2, V1);
 }
 
+/// Lower VECTOR_SHUFFLE into XVINSVE0 (if possible).
+static SDValue
+lowerVECTOR_SHUFFLE_XVINSVE0(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
+                             SDValue V1, SDValue V2, SelectionDAG &DAG,
+                             const LoongArchSubtarget &Subtarget) {
+  // LoongArch LASX only supports xvinsve0.{w/d}.
+  if (VT != MVT::v8i32 && VT != MVT::v8f32 && VT != MVT::v4i64 &&
+      VT != MVT::v4f64)
+    return SDValue();
+
+  MVT GRLenVT = Subtarget.getGRLenVT();
+  int MaskSize = Mask.size();
+  assert(MaskSize == (int)VT.getVectorNumElements() && "Unexpected mask size");
+
+  // Check if exactly one element of the Mask is replaced by 'Replaced', while
+  // all other elements are either 'Base + i' or undef (-1). On success, return
+  // the index of the replaced element. Otherwise, just return -1.
+  auto checkReplaceOne = [&](int Base, int Replaced) -> int {
+    int Idx = -1;
+    for (int i = 0; i < MaskSize; ++i) {
+      if (Mask[i] == Base + i || Mask[i] == -1)
+        continue;
+      if (Mask[i] != Replaced)
+        return -1;
+      if (Idx == -1)
+        Idx = i;
+      else
+        return -1;
+    }
+    return Idx;
+  };
+
+  // Case 1: the lowest element of V2 replaces one element in V1.
+  int Idx = checkReplaceOne(0, MaskSize);
+  if (Idx != -1)
+    return DAG.getNode(LoongArchISD::XVINSVE0, DL, VT, V1, V2,
+                       DAG.getConstant(Idx, DL, GRLenVT));
+
+  // Case 2: the lowest element of V1 replaces one element in V2.
+  Idx = checkReplaceOne(MaskSize, 0);
+  if (Idx != -1)
+    return DAG.getNode(LoongArchISD::XVINSVE0, DL, VT, V2, V1,
+                       DAG.getConstant(Idx, DL, GRLenVT));
+
+  return SDValue();
+}
+
 /// Lower VECTOR_SHUFFLE into XVSHUF (if possible).
 static SDValue lowerVECTOR_SHUFFLE_XVSHUF(const SDLoc &DL, ArrayRef<int> Mask,
                                           MVT VT, SDValue V1, SDValue V2,
@@ -2593,6 +2642,9 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   if ((Result = lowerVECTOR_SHUFFLEAsShift(DL, Mask, VT, V1, V2, DAG, Subtarget,
                                            Zeroable)))
     return Result;
+  if ((Result =
+           lowerVECTOR_SHUFFLE_XVINSVE0(DL, Mask, VT, V1, V2, DAG, Subtarget)))
+    return Result;
   if ((Result = lowerVECTOR_SHUFFLEAsByteRotate(DL, Mask, VT, V1, V2, DAG,
                                                 Subtarget)))
     return Result;
@@ -2851,9 +2903,10 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
     if (SplatBitSize == 64 && !Subtarget.is64Bit()) {
       // We can only handle 64-bit elements that are within
-      // the signed 10-bit range on 32-bit targets.
+      // the signed 10-bit range or match vldi patterns on 32-bit targets.
       // See the BUILD_VECTOR case in LoongArchDAGToDAGISel::Select().
-      if (!SplatValue.isSignedIntN(10))
+      if (!SplatValue.isSignedIntN(10) &&
+          !isImmVLDILegalForMode1(SplatValue, SplatBitSize).first)
         return SDValue();
       if ((Is128Vec && ResTy == MVT::v4i32) ||
           (Is256Vec && ResTy == MVT::v8i32))
@@ -7450,6 +7503,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(XVPERM)
     NODE_NAME_CASE(XVREPLVE0)
     NODE_NAME_CASE(XVREPLVE0Q)
+    NODE_NAME_CASE(XVINSVE0)
     NODE_NAME_CASE(VPICK_SEXT_ELT)
     NODE_NAME_CASE(VPICK_ZEXT_ELT)
     NODE_NAME_CASE(VREPLVE)
@@ -8543,6 +8597,87 @@ SDValue LoongArchTargetLowering::LowerReturn(
   return DAG.getNode(LoongArchISD::RET, DL, MVT::Other, RetOps);
 }
 
+// Check if a constant splat can be generated using [x]vldi, where imm[12] == 1.
+// Note: The following prefixes are excluded:
+//   imm[11:8] == 4'b0000, 4'b0100, 4'b1000
+// as they can be represented using [x]vrepli.[whb]
+std::pair<bool, uint64_t> LoongArchTargetLowering::isImmVLDILegalForMode1(
+    const APInt &SplatValue, const unsigned SplatBitSize) const {
+  uint64_t RequiredImm = 0;
+  uint64_t V = SplatValue.getZExtValue();
+  if (SplatBitSize == 16 && !(V & 0x00FF)) {
+    // 4'b0101
+    RequiredImm = (0b10101 << 8) | (V >> 8);
+    return {true, RequiredImm};
+  } else if (SplatBitSize == 32) {
+    // 4'b0001
+    if (!(V & 0xFFFF00FF)) {
+      RequiredImm = (0b10001 << 8) | (V >> 8);
+      return {true, RequiredImm};
+    }
+    // 4'b0010
+    if (!(V & 0xFF00FFFF)) {
+      RequiredImm = (0b10010 << 8) | (V >> 16);
+      return {true, RequiredImm};
+    }
+    // 4'b0011
+    if (!(V & 0x00FFFFFF)) {
+      RequiredImm = (0b10011 << 8) | (V >> 24);
+      return {true, RequiredImm};
+    }
+    // 4'b0110
+    if ((V & 0xFFFF00FF) == 0xFF) {
+      RequiredImm = (0b10110 << 8) | (V >> 8);
+      return {true, RequiredImm};
+    }
+    // 4'b0111
+    if ((V & 0xFF00FFFF) == 0xFFFF) {
+      RequiredImm = (0b10111 << 8) | (V >> 16);
+      return {true, RequiredImm};
+    }
+    // 4'b1010
+    if ((V & 0x7E07FFFF) == 0x3E000000 || (V & 0x7E07FFFF) == 0x40000000) {
+      RequiredImm =
+          (0b11010 << 8) | (((V >> 24) & 0xC0) ^ 0x40) | ((V >> 19) & 0x3F);
+      return {true, RequiredImm};
+    }
+  } else if (SplatBitSize == 64) {
+    // 4'b1011
+    if ((V & 0xFFFFFFFF7E07FFFFULL) == 0x3E000000ULL ||
+        (V & 0xFFFFFFFF7E07FFFFULL) == 0x40000000ULL) {
+      RequiredImm =
+          (0b11011 << 8) | (((V >> 24) & 0xC0) ^ 0x40) | ((V >> 19) & 0x3F);
+      return {true, RequiredImm};
+    }
+    // 4'b1100
+    if ((V & 0x7FC0FFFFFFFFFFFFULL) == 0x4000000000000000ULL ||
+        (V & 0x7FC0FFFFFFFFFFFFULL) == 0x3FC0000000000000ULL) {
+      RequiredImm =
+          (0b11100 << 8) | (((V >> 56) & 0xC0) ^ 0x40) | ((V >> 48) & 0x3F);
+      return {true, RequiredImm};
+    }
+    // 4'b1001
+    auto sameBitsPreByte = [](uint64_t x) -> std::pair<bool, uint8_t> {
+      uint8_t res = 0;
+      for (int i = 0; i < 8; ++i) {
+        uint8_t byte = x & 0xFF;
+        if (byte == 0 || byte == 0xFF)
+          res |= ((byte & 1) << i);
+        else
+          return {false, 0};
+        x >>= 8;
+      }
+      return {true, res};
+    };
+    auto [IsSame, Suffix] = sameBitsPreByte(V);
+    if (IsSame) {
+      RequiredImm = (0b11001 << 8) | Suffix;
+      return {true, RequiredImm};
+    }
+  }
+  return {false, RequiredImm};
+}
+
 bool LoongArchTargetLowering::isFPImmVLDILegal(const APFloat &Imm,
                                                EVT VT) const {
   if (!Subtarget.hasExtLSX())
@@ -9474,4 +9609,21 @@ bool LoongArchTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
   // not be worthwhile.
   EVT ScalarVT = VecVT.getScalarType();
   return isOperationLegalOrCustomOrPromote(Opc, ScalarVT);
+}
+
+bool LoongArchTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+                                                      unsigned Index) const {
+  if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
+    return false;
+
+  // Extract a 128-bit subvector from index 0 of a 256-bit vector is free.
+  return Index == 0;
+}
+
+bool LoongArchTargetLowering::isExtractVecEltCheap(EVT VT,
+                                                   unsigned Index) const {
+  EVT EltVT = VT.getScalarType();
+
+  // Extract a scalar FP value from index 0 of a vector is free.
+  return (EltVT == MVT::f32 || EltVT == MVT::f64) && Index == 0;
 }

@@ -576,6 +576,18 @@ public:
         nb::arg("type"), nb::arg("value"), nb::arg("loc") = nb::none(),
         "Gets an uniqued float point attribute associated to a type");
     c.def_static(
+        "get_unchecked",
+        [](PyType &type, double value, DefaultingPyMlirContext context) {
+          PyMlirContext::ErrorCapture errors(context->getRef());
+          MlirAttribute attr =
+              mlirFloatAttrDoubleGet(context.get()->get(), type, value);
+          if (mlirAttributeIsNull(attr))
+            throw MLIRError("Invalid attribute", errors.take());
+          return PyFloatAttribute(type.getContext(), attr);
+        },
+        nb::arg("type"), nb::arg("value"), nb::arg("context") = nb::none(),
+        "Gets an uniqued float point attribute associated to a type");
+    c.def_static(
         "get_f32",
         [](double value, DefaultingPyMlirContext context) {
           MlirAttribute attr = mlirFloatAttrDoubleGet(

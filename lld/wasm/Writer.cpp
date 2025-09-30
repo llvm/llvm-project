@@ -784,6 +784,9 @@ void Writer::calculateExports() {
   unsigned globalIndex =
       out.importSec->getNumImportedGlobals() + out.globalSec->numGlobals();
 
+  bool hasMutableGlobals =
+      out.targetFeaturesSec->features.count("mutable-globals") > 0;
+
   for (Symbol *sym : symtab->symbols()) {
     if (!sym->isExported())
       continue;
@@ -801,7 +804,8 @@ void Writer::calculateExports() {
       }
       export_ = {name, WASM_EXTERNAL_FUNCTION, f->getExportedFunctionIndex()};
     } else if (auto *g = dyn_cast<DefinedGlobal>(sym)) {
-      if (g->getGlobalType()->Mutable && !g->getFile() && !g->forceExport) {
+      if (!hasMutableGlobals && g->getGlobalType()->Mutable && !g->getFile() &&
+          !g->isExportedExplicit()) {
         // Avoid exporting mutable globals are linker synthesized (e.g.
         // __stack_pointer or __tls_base) unless they are explicitly exported
         // from the command line.
