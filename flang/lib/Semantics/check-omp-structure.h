@@ -316,7 +316,6 @@ private:
   void CheckNameInAllocateStmt(const parser::CharBlock &source,
       const parser::Name &ompObject, const parser::AllocateStmt &allocate);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
-
   void CheckReductionObjects(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool CheckReductionOperator(const parser::OmpReductionIdentifier &ident,
