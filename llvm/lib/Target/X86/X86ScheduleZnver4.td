@@ -726,12 +726,12 @@ def Zn4WriteLZCNT16rr : SchedWriteRes<[Zn4ALU0123]> {
 }
 def : InstRW<[Zn4WriteLZCNT16rr], (instrs LZCNT16rr)>;
 
-defm : Zn4WriteResIntPair<WriteTZCNT, [Zn4ALU12], 2, [1], 2>; // Trailing zero count.
+defm : Zn4WriteResIntPair<WriteTZCNT, [Zn4ALU12], 1, [1], 1>; // Trailing zero count.
 
 def Zn4WriteTZCNT16rr : SchedWriteRes<[Zn4ALU0123]> {
-  let Latency = 2;
-  let ReleaseAtCycles = [4];
-  let NumMicroOps = 2;
+  let Latency = 1;
+  let ReleaseAtCycles = [1];
+  let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WriteTZCNT16rr], (instrs TZCNT16rr)>;
 
