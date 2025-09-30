@@ -367,8 +367,8 @@ void __tgt_interop_init(ident_t *LocRef, int32_t Gtid,
                         int32_t HaveNowait) {
   interop_ctx_t Ctx = {0, {false, (bool)HaveNowait, 0}, Gtid};
   dep_pack_t Deps = {Ndeps, 0, DepList, nullptr};
-  InteropPtr = __tgt_interop_get(LocRef, InteropType, DeviceId, 0, nullptr,
-                                 &Ctx, Ndeps ? &Deps : nullptr);
+  InteropPtr = __tgt_interop_get(LocRef, InteropType == 2 ? 1 : 0, DeviceId, 0,
+                                 nullptr, &Ctx, Ndeps ? &Deps : nullptr);
 }
 
 void __tgt_interop_use(ident_t *LocRef, int32_t Gtid,
