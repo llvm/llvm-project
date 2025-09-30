@@ -4268,7 +4268,10 @@ Register AMDGPUInstructionSelector::copyToVGPRIfSrcFolded(
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectIgnore(MachineOperand &Root) const {
-  return {{}};
+  // Don't render anything.
+  ComplexRendererFns Renderers;
+  Renderers.emplace();
+  return Renderers;
 }
 
 ///
