@@ -15,7 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 def Znver4Model : SchedMachineModel {
-  // AMD SOG Zen4, 2.9.6 Dispatch
+  // AMD SOG Zen4, 2.9.8 Dispatch
   // The processor may dispatch up to 6 macro ops per cycle
   // into the execution engine.
   let IssueWidth = 6;
