@@ -615,6 +615,59 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
   return SDValue();
 }
 
+// Helper to attempt to return a cheaper, bit-inverted version of \p V.
+static SDValue isNOT(SDValue V, SelectionDAG &DAG) {
+  // TODO: don't always ignore oneuse constraints.
+  V = peekThroughBitcasts(V);
+  EVT VT = V.getValueType();
+
+  // Match not(xor X, -1) -> X.
+  if (V.getOpcode() == ISD::XOR &&
+      (ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()) ||
+       isAllOnesConstant(V.getOperand(1))))
+    return V.getOperand(0);
+
+  // Match not(extract_subvector(not(X)) -> extract_subvector(X).
+  if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      (isNullConstant(V.getOperand(1)) || V.getOperand(0).hasOneUse())) {
+    if (SDValue Not = isNOT(V.getOperand(0), DAG)) {
+      Not = DAG.getBitcast(V.getOperand(0).getValueType(), Not);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Not), VT, Not,
+                         V.getOperand(1));
+    }
+  }
+
+  // Match not(SplatVector(not(X)) -> SplatVector(X).
+  if (V.getOpcode() == ISD::BUILD_VECTOR) {
+    if (SDValue SplatValue =
+            cast<BuildVectorSDNode>(V.getNode())->getSplatValue()) {
+      if (!V->isOnlyUserOf(SplatValue.getNode()))
+        return SDValue();
+
+      if (SDValue Not = isNOT(SplatValue, DAG)) {
+        Not = DAG.getBitcast(V.getOperand(0).getValueType(), Not);
+        return DAG.getSplat(VT, SDLoc(Not), Not);
+      }
+    }
+  }
+
+  // Match not(or(not(X),not(Y))) -> and(X, Y).
+  if (V.getOpcode() == ISD::OR && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
+      V.getOperand(0).hasOneUse() && V.getOperand(1).hasOneUse()) {
+    // TODO: Handle cases with single NOT operand -> VANDN
+    if (SDValue Op1 = isNOT(V.getOperand(1), DAG))
+      if (SDValue Op0 = isNOT(V.getOperand(0), DAG))
+        return DAG.getNode(ISD::AND, SDLoc(V), VT, DAG.getBitcast(VT, Op0),
+                           DAG.getBitcast(VT, Op1));
+  }
+
+  // TODO: Add more matching patterns. Such as,
+  // not(concat_vectors(not(X), not(Y))) -> concat_vectors(X, Y).
+  // not(slt(C, X)) -> slt(X - 1, C)
+
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -5053,59 +5106,6 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     break;
   }
   }
-}
-
-// Helper to attempt to return a cheaper, bit-inverted version of \p V.
-static SDValue isNOT(SDValue V, SelectionDAG &DAG) {
-  // TODO: don't always ignore oneuse constraints.
-  V = peekThroughBitcasts(V);
-  EVT VT = V.getValueType();
-
-  // Match not(xor X, -1) -> X.
-  if (V.getOpcode() == ISD::XOR &&
-      (ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()) ||
-       isAllOnesConstant(V.getOperand(1))))
-    return V.getOperand(0);
-
-  // Match not(extract_subvector(not(X)) -> extract_subvector(X).
-  if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-      (isNullConstant(V.getOperand(1)) || V.getOperand(0).hasOneUse())) {
-    if (SDValue Not = isNOT(V.getOperand(0), DAG)) {
-      Not = DAG.getBitcast(V.getOperand(0).getValueType(), Not);
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Not), VT, Not,
-                         V.getOperand(1));
-    }
-  }
-
-  // Match not(SplatVector(not(X)) -> SplatVector(X).
-  if (V.getOpcode() == ISD::BUILD_VECTOR) {
-    if (SDValue SplatValue =
-            cast<BuildVectorSDNode>(V.getNode())->getSplatValue()) {
-      if (!V->isOnlyUserOf(SplatValue.getNode()))
-        return SDValue();
-
-      if (SDValue Not = isNOT(SplatValue, DAG)) {
-        Not = DAG.getBitcast(V.getOperand(0).getValueType(), Not);
-        return DAG.getSplat(VT, SDLoc(Not), Not);
-      }
-    }
-  }
-
-  // Match not(or(not(X),not(Y))) -> and(X, Y).
-  if (V.getOpcode() == ISD::OR && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
-      V.getOperand(0).hasOneUse() && V.getOperand(1).hasOneUse()) {
-    // TODO: Handle cases with single NOT operand -> VANDN
-    if (SDValue Op1 = isNOT(V.getOperand(1), DAG))
-      if (SDValue Op0 = isNOT(V.getOperand(0), DAG))
-        return DAG.getNode(ISD::AND, SDLoc(V), VT, DAG.getBitcast(VT, Op0),
-                           DAG.getBitcast(VT, Op1));
-  }
-
-  // TODO: Add more matching patterns. Such as,
-  // not(concat_vectors(not(X), not(Y))) -> concat_vectors(X, Y).
-  // not(slt(C, X)) -> slt(X - 1, C)
-
-  return SDValue();
 }
 
 /// Try to fold: (and (xor X, -1), Y) -> (vandn X, Y).
