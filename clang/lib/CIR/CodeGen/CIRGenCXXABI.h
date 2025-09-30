@@ -114,6 +114,9 @@ public:
 
   virtual void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) = 0;
 
+  virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
+                                                  QualType ty) = 0;
+
   /// Get the type of the implicit "this" parameter used by a method. May return
   /// zero if no specific type is applicable, e.g. if the ABI expects the "this"
   /// parameter to point to some artificial offset in a complete object due to

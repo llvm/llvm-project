@@ -256,6 +256,24 @@ public:
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc, QualType ty,
                                           bool forEH = false);
 
+  static mlir::SymbolTable::Visibility getMLIRVisibility(Visibility v) {
+    switch (v) {
+    case DefaultVisibility:
+      return mlir::SymbolTable::Visibility::Public;
+    case HiddenVisibility:
+      return mlir::SymbolTable::Visibility::Private;
+    case ProtectedVisibility:
+      // The distinction between ProtectedVisibility and DefaultVisibility is
+      // that symbols with ProtectedVisibility, while visible to the dynamic
+      // linker like DefaultVisibility, are guaranteed to always dynamically
+      // resolve to a symbol in the current shared object. There is currently no
+      // equivalent MLIR visibility, so we fall back on the fact that the symbol
+      // is visible.
+      return mlir::SymbolTable::Visibility::Public;
+    }
+    llvm_unreachable("unknown visibility!");
+  }
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 
