@@ -216,6 +216,32 @@ MlirPass mlirCreateExternalPass(MlirTypeID passID, MlirStringRef name,
       userData)));
 }
 
+void mlirRegisterExternalPass(MlirTypeID passID, MlirStringRef name,
+                              MlirStringRef argument, MlirStringRef description,
+                              MlirStringRef opName, intptr_t nDependentDialects,
+                              MlirDialectHandle *dependentDialects,
+                              MlirExternalPassCallbacks callbacks,
+                              void *userData) {
+  // here we clone these arguments as owned and pass them to
+  // the lambda as copies to avoid dangling refs,
+  // since the lambda below lives longer than the current function
+  std::string nameStr = unwrap(name).str();
+  std::string argumentStr = unwrap(argument).str();
+  std::string descriptionStr = unwrap(description).str();
+  std::string opNameStr = unwrap(opName).str();
+  std::vector<MlirDialectHandle> dependentDialectVec(
+      dependentDialects, dependentDialects + nDependentDialects);
+
+  mlir::registerPass([passID, nameStr, argumentStr, descriptionStr, opNameStr,
+                      dependentDialectVec, callbacks, userData] {
+    return std::unique_ptr<mlir::Pass>(new mlir::ExternalPass(
+        unwrap(passID), nameStr, argumentStr, descriptionStr,
+        opNameStr.length() > 0 ? std::optional<StringRef>(opNameStr)
+                               : std::nullopt,
+        dependentDialectVec, callbacks, userData));
+  });
+}
+
 void mlirExternalPassSignalFailure(MlirExternalPass pass) {
   unwrap(pass)->signalPassFailure();
 }
