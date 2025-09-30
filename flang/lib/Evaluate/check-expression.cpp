@@ -1502,9 +1502,9 @@ public:
       return false;
     }
     auto actualType{characteristics::TypeAndShape::Characterize(actual_, fc_)};
-    bool actualIsPolymorphic{
-        actualType && actualType->type().IsPolymorphic()};
-    if (actualIsPolymorphic && !dummyObj_.IsPassedByDescriptor(/*isBindC*/false)) {
+    if (actualType && actualType->type().IsPolymorphic() &&
+        !actualType->type().IsAssumedType() &&
+        !dummyObj_.IsPassedByDescriptor(/*isBindC*/false)) {
       // Not passing a descriptor, so will need to make a copy of the data
       // with a proper type.
       return true;
