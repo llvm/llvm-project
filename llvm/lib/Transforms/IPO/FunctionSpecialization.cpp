@@ -668,8 +668,9 @@ static unsigned getCostValue(const Cost &C) {
   return static_cast<unsigned>(Value);
 }
 
-bool FunctionSpecializer::runOneSpec(Function &F, SpecMap &SM,
+bool FunctionSpecializer::runOneSpec(Spec &S, SpecMap &SM,
                                      SmallVectorImpl<Spec> &AllSpecs) {
+  Function &F = *(S.F);
   if (!isCandidateFunction(&F))
     return false;
 
@@ -714,7 +715,7 @@ bool FunctionSpecializer::runOneSpec(Function &F, SpecMap &SM,
   if (Inserted && Metrics.isRecursive)
     promoteConstantStackValues(&F);
 
-  if (!findSpecializations(&F, FuncSize, AllSpecs, SM)) {
+  if (!findSpecializations(FuncSize, AllSpecs, SM, S)) {
     LLVM_DEBUG(
         dbgs() << "FnSpecialization: No possible specializations found for "
                << F.getName() << "\n");
@@ -733,7 +734,8 @@ bool FunctionSpecializer::run() {
   SmallVector<Spec, 32> AllSpecs;
   unsigned NumCandidates = 0;
   for (Function &F : M) {
-    if (runOneSpec(F, SM, AllSpecs))
+    Spec S(&F);
+    if (runOneSpec(S, SM, AllSpecs))
       ++NumCandidates;
   }
 
@@ -906,9 +908,10 @@ static Function *cloneCandidateFunction(Function *F, unsigned NSpecs) {
   return Clone;
 }
 
-bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
+bool FunctionSpecializer::findSpecializations(unsigned FuncSize,
                                               SmallVectorImpl<Spec> &AllSpecs,
-                                              SpecMap &SM) {
+                                              SpecMap &SM, Spec &InS) {
+  Function *F = InS.F;
   // A mapping from a specialisation signature to the index of the respective
   // entry in the all specialisation array. Used to ensure uniqueness of
   // specialisations.

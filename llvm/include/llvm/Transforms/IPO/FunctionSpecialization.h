@@ -156,6 +156,8 @@ struct Spec {
       : F(F), Sig(S), Score(Score), CodeSize(CodeSize) {}
   Spec(Function *F, const SpecSig &&S, unsigned Score, unsigned CodeSize)
       : F(F), Sig(S), Score(Score), CodeSize(CodeSize) {}
+  Spec(Function *F)
+      : F(F), Clone(nullptr), Sig(), Score(0), CodeSize(), CallSites(0) {}
 };
 
 class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
@@ -304,15 +306,15 @@ private:
   /// @param AllSpecs A vector to add potential specializations to.
   /// @param SM  A map for a function's specialisation range
   /// @return True, if any potential specializations were found
-  bool findSpecializations(Function *F, unsigned FuncSize,
-                           SmallVectorImpl<Spec> &AllSpecs, SpecMap &SM);
+  bool findSpecializations(unsigned FuncSize, SmallVectorImpl<Spec> &AllSpecs,
+                           SpecMap &SM, Spec &InS);
 
   /// @brief Find specialization opportunities for a given function.
-  /// @param F Function to specialize
+  /// @param S Specialization to complete, possibly with a Callsite attached.
   /// @param SM  A map for a function's specialisation range
   /// @param AllSpecs A vector to add potential specializations to.
   /// @return True, if any potential specializations were found
-  bool runOneSpec(Function &F, SpecMap &SM, SmallVectorImpl<Spec> &AllSpecs);
+  bool runOneSpec(Spec &S, SpecMap &SM, SmallVectorImpl<Spec> &AllSpecs);
 
   /// Compute the inlining bonus for replacing argument \p A with constant \p C.
   unsigned getInliningBonus(Argument *A, Constant *C);
