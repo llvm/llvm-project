@@ -663,14 +663,14 @@ def : InstRW<[Zn4WriteCMPXCHG8rm_LCMPXCHG8], (instrs CMPXCHG8rm, LCMPXCHG8)>;
 def Zn4WriteCMPXCHG8B : SchedWriteRes<[Zn4ALU0123]> {
   let Latency = 3; // FIXME: not from llvm-exegesis
   let ReleaseAtCycles = [24];
-  let NumMicroOps = 19;
+  let NumMicroOps = 15;
 }
 def : InstRW<[Zn4WriteCMPXCHG8B], (instrs CMPXCHG8B)>;
 
 def Zn4WriteCMPXCHG16B_LCMPXCHG16B : SchedWriteRes<[Zn4ALU0123]> {
   let Latency = 4; // FIXME: not from llvm-exegesis
   let ReleaseAtCycles = [59];
-  let NumMicroOps = 28;
+  let NumMicroOps = 26;
 }
 def : InstRW<[Zn4WriteCMPXCHG16B_LCMPXCHG16B], (instrs CMPXCHG16B, LCMPXCHG16B)>;
 
@@ -684,7 +684,7 @@ def : InstRW<[Zn4WriteWriteXCHGUnrenameable], (instrs XCHG8rr, XCHG16rr, XCHG16a
 def Zn4WriteXCHG8rm_XCHG16rm : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4ALU0123]> {
   let Latency = !add(Znver4Model.LoadLatency, 3); // FIXME: not from llvm-exegesis
   let ReleaseAtCycles = [1, 1, 2];
-  let NumMicroOps = 5;
+  let NumMicroOps = 2;
 }
 def : InstRW<[Zn4WriteXCHG8rm_XCHG16rm], (instrs XCHG8rm, XCHG16rm)>;
 
