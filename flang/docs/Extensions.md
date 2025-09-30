@@ -928,6 +928,17 @@ print *, [(j,j=1,10)]
   and the portable interpretation across the most common Fortran
   compilers.
 
+* `NAMELIST` child input statements are allowed to advance to further
+  input records.
+  Further, advancement is allowed when the parent input statement is
+  a non-child (top level) list-directed input statement, or, recursively,
+  an intermediate child list-directed input statement that can advance.
+  This means that non-`NAMELIST` list-directed child input statements are
+  not allowed to advance when they have an ancestor formatted input statement
+  that is not list-directed and there is no intervening `NAMELIST`.
+  This design allows format-driven input with `DT` editing to retain
+  control over advancement in child input, while otherwise allowing it.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
