@@ -402,6 +402,10 @@ BUILTIN(__builtin_amdgcn_wave_reduce_max_u64, "WUiWUiZi", "nc")
 BUILTIN(__builtin_amdgcn_wave_reduce_and_b64, "WiWiZi", "nc")
 BUILTIN(__builtin_amdgcn_wave_reduce_or_b64, "WiWiZi", "nc")
 BUILTIN(__builtin_amdgcn_wave_reduce_xor_b64, "WiWiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_add_f32, "ffZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_sub_f32, "ffZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_min_f32, "ffZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_max_f32, "ffZi", "nc")
 
 //===----------------------------------------------------------------------===//
 // R600-NI only builtins.
