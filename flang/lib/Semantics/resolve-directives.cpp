@@ -1011,11 +1011,6 @@ private:
     sourceLabels_.clear();
     targetLabels_.clear();
   };
-  void CheckAllNamesInAllocateStmt(const parser::CharBlock &source,
-      const parser::OmpObjectList &ompObjectList,
-      const parser::AllocateStmt &allocate);
-  void CheckNameInAllocateStmt(const parser::CharBlock &source,
-      const parser::Name &ompObject, const parser::AllocateStmt &allocate);
 
   std::int64_t ordCollapseLevel{0};
 
@@ -2550,8 +2545,6 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDispatchConstruct &x) {
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPExecutableAllocate &x) {
-  IssueNonConformanceWarning(llvm::omp::Directive::OMPD_allocate, x.source, 52);
-
   PushContext(x.source, llvm::omp::Directive::OMPD_allocate);
   const auto &list{std::get<std::optional<parser::OmpObjectList>>(x.t)};
   if (list) {
@@ -2632,83 +2625,10 @@ bool OmpAttributeVisitor::IsNestedInDirective(llvm::omp::Directive directive) {
 }
 
 void OmpAttributeVisitor::Post(const parser::OpenMPExecutableAllocate &x) {
-  bool hasAllocator = false;
-  // TODO: Investigate whether searching the clause list can be done with
-  // parser::Unwrap instead of the following loop
-  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
-  for (const auto &clause : clauseList.v) {
-    if (std::get_if<parser::OmpClause::Allocator>(&clause.u)) {
-      hasAllocator = true;
-    }
-  }
-
-  if (IsNestedInDirective(llvm::omp::Directive::OMPD_target) && !hasAllocator) {
-    // TODO: expand this check to exclude the case when a requires
-    //       directive with the dynamic_allocators clause is present
-    //       in the same compilation unit (OMP5.0 2.11.3).
-    context_.Say(x.source,
-        "ALLOCATE directives that appear in a TARGET region "
-        "must specify an allocator clause"_err_en_US);
-  }
-
-  const auto &allocateStmt =
-      std::get<parser::Statement<parser::AllocateStmt>>(x.t).statement;
-  if (const auto &list{std::get<std::optional<parser::OmpObjectList>>(x.t)}) {
-    CheckAllNamesInAllocateStmt(
-        std::get<parser::Verbatim>(x.t).source, *list, allocateStmt);
-  }
-  if (const auto &subDirs{
-          std::get<std::optional<std::list<parser::OpenMPDeclarativeAllocate>>>(
-              x.t)}) {
-    for (const auto &dalloc : *subDirs) {
-      CheckAllNamesInAllocateStmt(std::get<parser::Verbatim>(dalloc.t).source,
-          std::get<parser::OmpObjectList>(dalloc.t), allocateStmt);
-    }
-  }
   PopContext();
 }
 
 void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
-  const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
-  auto &block{std::get<parser::Block>(x.t)};
-
-  omp::SourcedActionStmt action{omp::GetActionStmt(block)};
-  const parser::AllocateStmt *allocate{[&]() {
-    if (action) {
-      if (auto *alloc{std::get_if<common::Indirection<parser::AllocateStmt>>(
-              &action.stmt->u)}) {
-        return &alloc->value();
-      }
-    }
-    return static_cast<const parser::AllocateStmt *>(nullptr);
-  }()};
-
-  if (allocate) {
-    for (const auto &clause : dirSpec.Clauses().v) {
-      if (auto *alloc{std::get_if<parser::OmpClause::Allocate>(&clause.u)}) {
-        CheckAllNamesInAllocateStmt(
-            x.source, std::get<parser::OmpObjectList>(alloc->v.t), *allocate);
-
-        using OmpAllocatorSimpleModifier = parser::OmpAllocatorSimpleModifier;
-        using OmpAllocatorComplexModifier = parser::OmpAllocatorComplexModifier;
-
-        auto &modifiers{OmpGetModifiers(alloc->v)};
-        bool hasAllocator{
-            OmpGetUniqueModifier<OmpAllocatorSimpleModifier>(modifiers) ||
-            OmpGetUniqueModifier<OmpAllocatorComplexModifier>(modifiers)};
-
-        // TODO: As with allocate directive, exclude the case when a requires
-        //       directive with the dynamic_allocators clause is present in
-        //       the same compilation unit (OMP5.0 2.11.3).
-        if (IsNestedInDirective(llvm::omp::Directive::OMPD_target) &&
-            !hasAllocator) {
-          context_.Say(x.source,
-              "ALLOCATORS directives that appear in a TARGET region "
-              "must specify an allocator"_err_en_US);
-        }
-      }
-    }
-  }
   PopContext();
 }
 
@@ -3626,44 +3546,6 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
                 sourceContext->directive, version)
                     .str()));
   }
-}
-
-// Goes through the names in an OmpObjectList and checks if each name appears
-// in the given allocate statement
-void OmpAttributeVisitor::CheckAllNamesInAllocateStmt(
-    const parser::CharBlock &source, const parser::OmpObjectList &ompObjectList,
-    const parser::AllocateStmt &allocate) {
-  for (const auto &obj : ompObjectList.v) {
-    if (const auto *d{std::get_if<parser::Designator>(&obj.u)}) {
-      if (const auto *ref{std::get_if<parser::DataRef>(&d->u)}) {
-        if (const auto *n{std::get_if<parser::Name>(&ref->u)}) {
-          CheckNameInAllocateStmt(source, *n, allocate);
-        }
-      }
-    }
-  }
-}
-
-void OmpAttributeVisitor::CheckNameInAllocateStmt(
-    const parser::CharBlock &source, const parser::Name &name,
-    const parser::AllocateStmt &allocate) {
-  for (const auto &allocation :
-      std::get<std::list<parser::Allocation>>(allocate.t)) {
-    const auto &allocObj = std::get<parser::AllocateObject>(allocation.t);
-    if (const auto *n{std::get_if<parser::Name>(&allocObj.u)}) {
-      if (n->source == name.source) {
-        return;
-      }
-    }
-  }
-  unsigned version{context_.langOptions().OpenMPVersion};
-  context_.Say(source,
-      "Object '%s' in %s directive not "
-      "found in corresponding ALLOCATE statement"_err_en_US,
-      name.ToString(),
-      parser::ToUpperCaseLetters(
-          llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
-              .str()));
 }
 
 void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,

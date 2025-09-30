@@ -177,6 +177,7 @@ private:
   bool HasInvalidWorksharingNesting(
       const parser::CharBlock &, const OmpDirectiveSet &);
   bool IsCloselyNestedRegion(const OmpDirectiveSet &set);
+  bool IsNestedInDirective(llvm::omp::Directive directive);
   void HasInvalidTeamsNesting(
       const llvm::omp::Directive &dir, const parser::CharBlock &source);
   void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
@@ -309,6 +310,11 @@ private:
       const std::optional<parser::OmpClauseList> &maybeClauses);
   void CheckCancellationNest(
       const parser::CharBlock &source, llvm::omp::Directive type);
+  void CheckAllNamesInAllocateStmt(const parser::CharBlock &source,
+      const parser::OmpObjectList &ompObjectList,
+      const parser::AllocateStmt &allocate);
+  void CheckNameInAllocateStmt(const parser::CharBlock &source,
+      const parser::Name &ompObject, const parser::AllocateStmt &allocate);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckReductionObjects(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);

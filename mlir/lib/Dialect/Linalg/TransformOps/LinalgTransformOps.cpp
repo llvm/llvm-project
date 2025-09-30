@@ -2799,7 +2799,7 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
     }
 
     opList.append(first);
-    if (second.size())
+    if (!second.empty())
       opList.append(second);
   }
   results.set(cast<OpResult>(getSplitList()), opList);
