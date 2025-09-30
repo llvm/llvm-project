@@ -522,6 +522,7 @@ public:
   NODE(parser, OmpAtomicDefaultMemOrderClause)
   NODE(parser, OmpAutomapModifier)
   NODE_ENUM(OmpAutomapModifier, Value)
+  NODE(parser, OmpBaseVariantNames)
   NODE(parser, OmpBeginDirective)
   NODE(parser, OmpBeginLoopDirective)
   NODE(parser, OmpBeginSectionsDirective)
