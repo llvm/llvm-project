@@ -1437,7 +1437,7 @@ LangAS CIRGenModule::getLangTempAllocaAddressSpace() const {
 
   if (getLangOpts().SYCLIsDevice ||
       (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice))
-    llvm_unreachable("NYI");
+    errorNYI("SYCL or OpenMP temp address space");
   return LangAS::Default;
 }
 

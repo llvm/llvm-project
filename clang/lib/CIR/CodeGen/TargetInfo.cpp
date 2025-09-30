@@ -77,7 +77,7 @@ mlir::Value TargetCIRGenInfo::performAddrSpaceCast(
   // Since target may map different address spaces in AST to the same address
   // space, an address space conversion may end up as a bitcast.
   if (cir::GlobalOp globalOp = src.getDefiningOp<cir::GlobalOp>())
-    llvm_unreachable("Global ops addrspace cast NYI");
+    cgf.cgm.errorNYI("Global op addrspace cast");
   // Try to preserve the source's name to make IR more readable.
   return cgf.getBuilder().createAddrSpaceCast(src, destTy);
 }

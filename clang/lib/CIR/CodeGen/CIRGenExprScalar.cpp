@@ -1879,7 +1879,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     Expr::EvalResult result;
     if (subExpr->EvaluateAsRValue(result, cgf.getContext()) &&
         result.Val.isNullPointer()) {
-      // If E has side effect, it is emitted even if its final result is a
+      // If e has side effect, it is emitted even if its final result is a
       // null pointer. In that case, a DCE pass should be able to
       // eliminate the useless instructions emitted during translating E.
       if (result.HasSideEffects)

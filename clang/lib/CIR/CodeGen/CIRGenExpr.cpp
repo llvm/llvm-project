@@ -2310,6 +2310,8 @@ Address CIRGenFunction::createTempAllocaWithoutCast(
 
 /// This creates a alloca and inserts it into the entry block. The alloca is
 /// casted to default address space if necessary.
+// TODO(cir): Implement address space casting to match classic codegen's
+// CreateTempAlloca behavior with DestLangAS parameter
 Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
                                          mlir::Location loc, const Twine &name,
                                          mlir::Value arraySize,

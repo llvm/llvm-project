@@ -60,18 +60,18 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
 
 // Initialize the alloca with the given size and alignment according to the lang
 // opts. Supporting only the trivial non-initialization for now.
-static void initializeAlloca(CIRGenFunction &CGF,
-                             [[maybe_unused]] mlir::Value AllocaAddr,
-                             [[maybe_unused]] mlir::Value Size,
-                             [[maybe_unused]] CharUnits AlignmentInBytes) {
+static void initializeAlloca(CIRGenFunction &cgf,
+                             [[maybe_unused]] mlir::Value allocaAddr,
+                             [[maybe_unused]] mlir::Value size,
+                             [[maybe_unused]] CharUnits alignmentInBytes) {
 
-  switch (CGF.getLangOpts().getTrivialAutoVarInit()) {
+  switch (cgf.getLangOpts().getTrivialAutoVarInit()) {
   case LangOptions::TrivialAutoVarInitKind::Uninitialized:
     // Nothing to initialize.
     return;
   case LangOptions::TrivialAutoVarInitKind::Zero:
   case LangOptions::TrivialAutoVarInitKind::Pattern:
-    assert(false && "unexpected trivial auto var init kind NYI");
+    cgf.cgm.errorNYI("trivial auto var init");
     return;
   }
 }
@@ -198,17 +198,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     // default (e.g. in C / C++ auto vars are in the generic address space). At
     // the AST level this is handled within CreateTempAlloca et al., but for the
     // builtin / dynamic alloca we have to handle it here.
-    assert(!cir::MissingFeatures::addressSpace());
     cir::AddressSpace aas = getCIRAllocaAddressSpace();
     cir::AddressSpace eas = cir::toCIRAddressSpace(
         e->getType()->getPointeeType().getAddressSpace());
     if (eas != aas) {
-      assert(false && "Non-default address space for alloca NYI");
+      cgm.errorNYI(e->getSourceRange(), "Non-default address space for alloca");
     }
 
     // Bitcast the alloca to the expected type.
     return RValue::get(
-        builder.createBitcast(allocaAddr, builder.getVoidPtrTy()));
+        builder.createBitcast(allocaAddr, builder.getVoidPtrTy(aas)));
   }
 
   case Builtin::BIcos:
