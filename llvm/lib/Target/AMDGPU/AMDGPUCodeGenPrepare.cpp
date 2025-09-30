@@ -2113,6 +2113,23 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
       I.eraseFromParent();
       return true;
     }
+    // Handle bitmask case: when X dimension evenly splits into waves
+    // mbcnt.lo(~0, 0) = workitem.id.x() & (wave_size - 1)
+    if (ST.hasWavefrontsEvenlySplittingXDim(*F, /*RequiresUniformYZ=*/true)) {
+      if (Wave != 0 && isPowerOf2_32(Wave)) {
+        IRBuilder<> B(&I);
+        CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
+        ST.makeLIDRangeMetadata(Tid);
+        IntegerType *ITy = cast<IntegerType>(Tid->getType());
+        Constant *Mask = ConstantInt::get(ITy, Wave - 1);
+        Instruction *AndInst = cast<Instruction>(B.CreateAnd(Tid, Mask));
+        AndInst->takeName(&I);
+        // Note: Range metadata cannot be applied to 'and' instructions
+        I.replaceAllUsesWith(AndInst);
+        I.eraseFromParent();
+        return true;
+      }
+    }
   }
 
   return false;
