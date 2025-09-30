@@ -2893,40 +2893,6 @@ static bool interp__builtin_elementwise_triop(
     return true;
   }
 
-  static bool interp__builtin_byteshift(InterpState & S, CodePtr OpPC,
-                                        const CallExpr *Call,
-                                        uint32_t BuiltinID, bool isLeft) {
-    APSInt Amt;
-    if (!EvaluateInteger(Call->getArg(1), Amt, S.getCtx()))
-      return false;
-    unsigned ShiftVal = (unsigned)Amt.getZExtValue() & 0xff;
-
-    APValue Vec;
-    if (!Evaluate(Vec, S.getCtx(), Call->getArg(0)) || !Vec.isVector())
-      return false;
-
-    unsigned NumElts = Vec.getVectorLength();
-    const unsigned LaneBytes = 16;
-    assert(NumElts % LaneBytes == 0);
-
-    SmallVector<APValue, 64> Result(NumElts, APValue(0));
-
-    if (ShiftVal >= LaneBytes)
-      return Success(APValue(Result.data(), Result.size()), Call);
-
-    for (unsigned LaneBase = 0; LaneBase < NumElts; LaneBase += LaneBytes) {
-      for (unsigned I = 0; I < LaneBytes; ++I) {
-        int src = IsLeft ? (I + ShiftVal) : (int)I - (int)ShiftVal;
-        if (src >= 0 && (unsigned)src < LaneBytes)
-          Result[LaneBase + I] = Vec.getVectorElt(LaneBase + (unsigned)src);
-        else
-          Result[LaneBase + I] = APValue(0);
-      }
-    }
-
-    return Success(APValue(Result.data(), Result.size()), Call);
-  }
-
   // Vector type.
   const Pointer &Op2 = S.Stk.pop<Pointer>();
   const Pointer &Op1 = S.Stk.pop<Pointer>();
@@ -2945,6 +2911,35 @@ static bool interp__builtin_elementwise_triop(
   }
   Dst.initializeAllElements();
 
+  return true;
+}
+
+static bool interp__builtin_byteshift(InterpState &S, CodePtr OpPC,
+                                      const CallExpr *Call, uint32_t BuiltinID,
+                                      bool isLeft) {
+  APSInt Amt = popToAPSInt(S, Call->getArg(1));
+  unsigned ShiftVal = (unsigned)Amt.getZExtValue() & 0xff;
+
+  const Pointer &VecPtr = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned NumElts = VecPtr.getNumElems();
+  const unsigned LaneBytes = 16;
+  assert(NumElts % LaneBytes == 0);
+
+  for (unsigned LaneBase = 0; LaneBase < NumElts; LaneBase += LaneBytes) {
+    for (unsigned I = 0; I < LaneBytes; ++I) {
+      int Src = isLeft ? (I + ShiftVal) : (int)I - (int)ShiftVal;
+      if (Src >= 0 && (unsigned)Src < LaneBytes) {
+        Dst.elem<uint8_t>(LaneBase + I) =
+            VecPtr.elem<uint8_t>(LaneBase + (unsigned)Src);
+      } else {
+        Dst.elem<uint8_t>(LaneBase + I) = 0;
+      }
+    }
+  }
+
+  Dst.initializeAllElements();
   return true;
 }
 
@@ -3605,13 +3600,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_elementwise_fshr:
     return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshr);
-  case clang::X86::BI__builtin_ia32_pslldqi128:
-  case clang::X86::BI__builtin_ia32_pslldqi256:
-  case clang::X86::BI__builtin_ia32_pslldqi512:
+  case clang::X86::BI__builtin_ia32_pslldqi128_byteshift:
+  case clang::X86::BI__builtin_ia32_pslldqi256_byteshift:
+  case clang::X86::BI__builtin_ia32_pslldqi512_byteshift:
     return interp__builtin_byteshift(S, OpPC, Call, BuiltinID, /*IsLeft=*/true);
-  case clang::X86::BI__builtin_ia32_psrldqi128:
-  case clang::X86::BI__builtin_ia32_psrldqi256:
-  case clang::X86::BI__builtin_ia32_psrldqi512:
+  case clang::X86::BI__builtin_ia32_psrldqi128_byteshift:
+  case clang::X86::BI__builtin_ia32_psrldqi256_byteshift:
+  case clang::X86::BI__builtin_ia32_psrldqi512_byteshift:
     return interp__builtin_byteshift(S, OpPC, Call, BuiltinID,
                                      /*IsLeft=*/false);
 
