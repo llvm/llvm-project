@@ -2226,6 +2226,17 @@ func.func @test_mulf2(%arg0 : f32, %arg1 : f32) -> (f32, f32) {
   return %0, %1  : f32, f32
 }
 
+// CHECK-LABEL: @test_mulf3(
+func.func @test_mulf3(%arg0 : f32, %arg1 : f32) -> (f32, f32) {
+  // CHECK-NEXT:  %[[NAN:.+]] = arith.constant 0x7FC00000 : f32
+  // CHECK-NEXT:  return %[[NAN]], %[[NAN]]
+  %c0 = arith.constant 0.0 : f32
+  %nan = arith.constant 0x7FC00000 : f32
+  %0 = arith.mulf %nan, %c0 : f32
+  %1 = arith.mulf %c0, %nan : f32
+  return %0, %1  : f32, f32
+}
+
 // -----
 
 // CHECK-LABEL: @test_divf(
