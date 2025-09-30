@@ -380,7 +380,7 @@ Bug Fixes in This Version
   a function without arguments caused us to try to access a non-existent argument.
   (#GH159080)
 - Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
-- Accept empty enum in MSVC-compatible C. (#GH114402)
+- Accept empty enumerations in MSVC-compatible C mode. (#GH114402)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
