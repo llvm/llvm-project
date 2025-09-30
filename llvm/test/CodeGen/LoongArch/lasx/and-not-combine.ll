@@ -430,3 +430,80 @@ define void @and_or_not_combine_v4i64(ptr %pa, ptr %pb, ptr %pv, ptr %dst) nounw
   store <4 x i64> %and, ptr %dst
   ret void
 }
+
+define void @and_extract_subvector_not_combine_v32i8(ptr %pa, ptr %dst) nounwind {
+; CHECK-LABEL: and_extract_subvector_not_combine_v32i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a0, 0
+; CHECK-NEXT:    xvxori.b $xr0, $xr0, 255
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    vandi.b $vr0, $vr0, 4
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    ret
+  %a = load volatile <32 x i8>, ptr %pa
+  %a.not = xor <32 x i8> %a, splat (i8 -1)
+  %subv = shufflevector <32 x i8> %a.not, <32 x i8> poison,
+                        <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
+                                    i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %and = and <16 x i8> %subv, splat (i8 4)
+  store <16 x i8> %and, ptr %dst
+  ret void
+}
+
+define void @and_extract_subvector_not_combine_v16i16(ptr %pa, ptr %dst) nounwind {
+; CHECK-LABEL: and_extract_subvector_not_combine_v16i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a0, 0
+; CHECK-NEXT:    xvrepli.b $xr1, -1
+; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    vrepli.h $vr1, 4
+; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    ret
+  %a = load volatile <16 x i16>, ptr %pa
+  %a.not = xor <16 x i16> %a, splat (i16 -1)
+  %subv = shufflevector <16 x i16> %a.not, <16 x i16> poison,
+                        <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %and = and <8 x i16> %subv, splat (i16 4)
+  store <8 x i16> %and, ptr %dst
+  ret void
+}
+
+define void @and_extract_subvector_not_combine_v8i32(ptr %pa, ptr %dst) nounwind {
+; CHECK-LABEL: and_extract_subvector_not_combine_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a0, 0
+; CHECK-NEXT:    xvrepli.b $xr1, -1
+; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    vrepli.w $vr1, 4
+; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    ret
+  %a = load volatile <8 x i32>, ptr %pa
+  %a.not = xor <8 x i32> %a, splat (i32 -1)
+  %subv = shufflevector <8 x i32> %a.not, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %and = and <4 x i32> %subv, splat (i32 4)
+  store <4 x i32> %and, ptr %dst
+  ret void
+}
+
+define void @and_extract_subvector_not_combine_v4i64(ptr %pa, ptr %dst) nounwind {
+; CHECK-LABEL: and_extract_subvector_not_combine_v4i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a0, 0
+; CHECK-NEXT:    xvrepli.b $xr1, -1
+; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    vrepli.d $vr1, 4
+; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    ret
+  %a = load volatile <4 x i64>, ptr %pa
+  %a.not = xor <4 x i64> %a, splat (i64 -1)
+  %subv = shufflevector <4 x i64> %a.not, <4 x i64> poison, <2 x i32> <i32 2, i32 3>
+  %and = and <2 x i64> %subv, splat (i64 4)
+  store <2 x i64> %and, ptr %dst
+  ret void
+}
