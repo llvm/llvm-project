@@ -307,14 +307,17 @@ private:
   /// @param SM  A map for a function's specialisation range
   /// @return True, if any potential specializations were found
   bool findSpecializations(unsigned FuncSize, SmallVectorImpl<Spec> &AllSpecs,
-                           SpecMap &SM, Spec &InS);
+                           SpecMap &SM, Spec &InS,
+                           DenseMap<SpecSig, unsigned> &UniqueSpecs);
 
   /// @brief Find specialization opportunities for a given function.
   /// @param S Specialization to complete, possibly with a Callsite attached.
   /// @param SM  A map for a function's specialisation range
   /// @param AllSpecs A vector to add potential specializations to.
+  /// @param UniqueSpecs Map of existing specializations.
   /// @return True, if any potential specializations were found
-  bool runOneSpec(Spec &S, SpecMap &SM, SmallVectorImpl<Spec> &AllSpecs);
+  bool runOneSpec(Spec &S, SpecMap &SM, SmallVectorImpl<Spec> &AllSpecs,
+                  DenseMap<SpecSig, unsigned> &UniqueSpecs);
 
   /// Compute the inlining bonus for replacing argument \p A with constant \p C.
   unsigned getInliningBonus(Argument *A, Constant *C);

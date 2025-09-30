@@ -669,7 +669,8 @@ static unsigned getCostValue(const Cost &C) {
 }
 
 bool FunctionSpecializer::runOneSpec(Spec &S, SpecMap &SM,
-                                     SmallVectorImpl<Spec> &AllSpecs) {
+                                     SmallVectorImpl<Spec> &AllSpecs,
+                                     DenseMap<SpecSig, unsigned> &UniqueSpecs) {
   Function &F = *(S.F);
   if (!isCandidateFunction(&F))
     return false;
@@ -715,7 +716,7 @@ bool FunctionSpecializer::runOneSpec(Spec &S, SpecMap &SM,
   if (Inserted && Metrics.isRecursive)
     promoteConstantStackValues(&F);
 
-  if (!findSpecializations(FuncSize, AllSpecs, SM, S)) {
+  if (!findSpecializations(FuncSize, AllSpecs, SM, S, UniqueSpecs)) {
     LLVM_DEBUG(
         dbgs() << "FnSpecialization: No possible specializations found for "
                << F.getName() << "\n");
@@ -732,10 +733,14 @@ bool FunctionSpecializer::run() {
   // Find possible specializations for each function.
   SpecMap SM;
   SmallVector<Spec, 32> AllSpecs;
+  // A mapping from a specialisation signature to the index of the respective
+  // entry in the all specialisation array. Used to ensure uniqueness of
+  // specialisations.
+  DenseMap<SpecSig, unsigned> UniqueSpecs;
   unsigned NumCandidates = 0;
   for (Function &F : M) {
     Spec S(&F);
-    if (runOneSpec(S, SM, AllSpecs))
+    if (runOneSpec(S, SM, AllSpecs, UniqueSpecs))
       ++NumCandidates;
   }
 
@@ -908,14 +913,10 @@ static Function *cloneCandidateFunction(Function *F, unsigned NSpecs) {
   return Clone;
 }
 
-bool FunctionSpecializer::findSpecializations(unsigned FuncSize,
-                                              SmallVectorImpl<Spec> &AllSpecs,
-                                              SpecMap &SM, Spec &InS) {
+bool FunctionSpecializer::findSpecializations(
+    unsigned FuncSize, SmallVectorImpl<Spec> &AllSpecs, SpecMap &SM, Spec &InS,
+    DenseMap<SpecSig, unsigned> &UniqueSpecs) {
   Function *F = InS.F;
-  // A mapping from a specialisation signature to the index of the respective
-  // entry in the all specialisation array. Used to ensure uniqueness of
-  // specialisations.
-  DenseMap<SpecSig, unsigned> UniqueSpecs;
 
   // Get a list of interesting arguments.
   SmallVector<Argument *> Args;
