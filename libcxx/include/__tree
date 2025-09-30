@@ -647,7 +647,7 @@ public:
   bool __value_constructed;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node_destructor(const __tree_node_destructor&) = default;
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node_destructor& operator=(const __tree_node_destructor&)            = delete;
+  __tree_node_destructor& operator=(const __tree_node_destructor&)            = delete;
 
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit __tree_node_destructor(allocator_type& __na, bool __val = false) _NOEXCEPT
