@@ -27,11 +27,11 @@ Also it does notice variable references "behind the scenes":
    void g(X x) {
      auto &y = x;
      f(x);  // does not emit a warning
-     y.f();  // because is still used
+     y.f();  // because x is still used via y
    }
 
 If you want to ignore assigns to reference variables, set ::option::
-`StrictMode` to `false`.
+`StrictMode` to `true`.
 
 
 Options
@@ -45,4 +45,4 @@ Options
    references ``X``, then it will not emit a warning for ``X`` not to provoke
    false positive. If you're sure that such references don't extend ``X``
    lifetime and ready to handle possible false positives, then set `StrictMode`
-   to `false`. Defaults to `true`.
+   to `true`. Defaults to `false`.

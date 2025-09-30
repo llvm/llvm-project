@@ -85,7 +85,7 @@ void LostStdMoveCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 LostStdMoveCheck::LostStdMoveCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.get("StrictMode", true)) {}
+      StrictMode(Options.get("StrictMode", false)) {}
 
 void LostStdMoveCheck::registerMatchers(MatchFinder *Finder) {
   auto ReturnParent =
@@ -132,7 +132,7 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  if (StrictMode) {
+  if (!StrictMode) {
     llvm::SmallPtrSet<const VarDecl *, 16> AllVarDecls =
         allVarDeclsExprs(*MatchedDecl, *MatchedFunc, *Result.Context);
     if (!AllVarDecls.empty()) {

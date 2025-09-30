@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-lost-std-move %t -- -config='{CheckOptions: {performance-lost-std-move.StrictMode: false}}'
+// RUN: %check_clang_tidy %s performance-lost-std-move %t -- -config='{CheckOptions: {performance-lost-std-move.StrictMode: true}}'
 
 namespace std {
 
