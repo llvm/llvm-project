@@ -10,7 +10,6 @@
 #define LLDB_TARGET_STACKID_H
 
 #include "lldb/Core/AddressRange.h"
-#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -18,19 +17,20 @@ class Process;
 
 class StackID {
 public:
-  // Constructors and Destructors
   StackID() = default;
 
   explicit StackID(lldb::addr_t pc, lldb::addr_t cfa,
                    SymbolContextScope *symbol_scope, Process *process);
 
-  StackID(const StackID &rhs) = default;
-
   ~StackID() = default;
 
   lldb::addr_t GetPC() const { return m_pc; }
 
-  lldb::addr_t GetCallFrameAddress() const { return m_cfa; }
+  lldb::addr_t GetCallFrameAddressWithMetadata() const {
+    return m_cfa_with_metadata;
+  }
+
+  lldb::addr_t GetCallFrameAddressWithoutMetadata() const { return m_cfa; }
 
   SymbolContextScope *GetSymbolContextScope() const { return m_symbol_scope; }
 
@@ -51,17 +51,6 @@ public:
 
   void Dump(Stream *s);
 
-  // Operators
-  const StackID &operator=(const StackID &rhs) {
-    if (this != &rhs) {
-      m_pc = rhs.m_pc;
-      m_cfa = rhs.m_cfa;
-      m_cfa_on_stack = rhs.m_cfa_on_stack;
-      m_symbol_scope = rhs.m_symbol_scope;
-    }
-    return *this;
-  }
-
   /// Check if the CFA is on the stack, or elsewhere in the process, such as on
   /// the heap.
   bool IsCFAOnStack(Process &process) const;
@@ -76,28 +65,31 @@ protected:
   void SetPC(lldb::addr_t pc, Process *process);
   void SetCFA(lldb::addr_t cfa, Process *process);
 
-  lldb::addr_t m_pc =
-      LLDB_INVALID_ADDRESS; // The pc value for the function/symbol for this
-                            // frame. This will
-  // only get used if the symbol scope is nullptr (the code where we are
-  // stopped is not represented by any function or symbol in any shared
-  // library).
-  lldb::addr_t m_cfa =
-      LLDB_INVALID_ADDRESS; // The call frame address (stack pointer) value
-                            // at the beginning of the function that uniquely
-                            // identifies this frame (along with m_symbol_scope
-                            // below)
-  // True if the CFA is an address on the stack, false if it's an address
-  // elsewhere (ie heap).
+  /// The pc value for the function/symbol for this frame. This will only get
+  /// used if the symbol scope is nullptr (the code where we are stopped is not
+  /// represented by any function or symbol in any shared library).
+  lldb::addr_t m_pc = LLDB_INVALID_ADDRESS;
+
+  /// The call frame address (stack pointer) value at the beginning of the
+  /// function that uniquely identifies this frame (along with m_symbol_scope
+  /// below)
+  lldb::addr_t m_cfa = LLDB_INVALID_ADDRESS;
+
+  /// The cfa with metadata (i.e. prior to Process::FixAddress).
+  lldb::addr_t m_cfa_with_metadata = LLDB_INVALID_ADDRESS;
+
+  /// If nullptr, there is no block or symbol for this frame. If not nullptr,
+  /// this will either be the scope for the lexical block for the frame, or the
+  /// scope for the symbol. Symbol context scopes are always be unique pointers
+  /// since the are part of the Block and Symbol objects and can easily be used
+  /// to tell if a stack ID is the same as another.
+  SymbolContextScope *m_symbol_scope = nullptr;
+
+  // BEGIN SWIFT
+  /// True if the CFA is an address on the stack, false if it's an address
+  /// elsewhere (ie heap).
   mutable LazyBool m_cfa_on_stack = eLazyBoolCalculate;
-  SymbolContextScope *m_symbol_scope =
-      nullptr; // If nullptr, there is no block or symbol for this frame.
-               // If not nullptr, this will either be the scope for the
-               // lexical block for the frame, or the scope for the
-               // symbol. Symbol context scopes are always be unique
-               // pointers since the are part of the Block and Symbol
-               // objects and can easily be used to tell if a stack ID
-               // is the same as another.
+  // END SWIFT
 };
 
 bool operator==(const StackID &lhs, const StackID &rhs);
