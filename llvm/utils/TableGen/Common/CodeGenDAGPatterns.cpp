@@ -1820,7 +1820,8 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
                                              TreePattern &TP) {
   // The 'unknown' operand indicates that types should be inferred from the
   // context.
-  if (Operand->isSubClassOf("unknown_class"))
+  if (Operand->isSubClassOf("unknown_class") ||
+      Operand->isSubClassOf("PointerLikeRegClass"))
     return false;
 
   // The Operand class specifies a type directly.
@@ -3020,7 +3021,13 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     return nullptr;
   }
 
-  auto ParseCastOperand = [this](const DagInit *Dag, StringRef OpName) {
+  auto ParseCastOperand = [this](const DagInit *Dag,
+                                 StringRef OpName) -> TreePatternNodePtr {
+    if (Dag->getNumArgs() == 0) {
+      error("type cast should not have zero arguments!");
+      return nullptr;
+    }
+
     if (Dag->getNumArgs() != 1)
       error("Type cast only takes one operand!");
 
@@ -3034,6 +3041,8 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     // If the operator is a list (of value types), then this must be "type cast"
     // of a leaf node with multiple results.
     TreePatternNodePtr New = ParseCastOperand(Dag, OpName);
+    if (!New)
+      return nullptr;
 
     size_t NumTypes = New->getNumTypes();
     if (LI->empty() || LI->size() != NumTypes)
@@ -3059,6 +3068,8 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     // If the operator is a ValueType, then this must be "type cast" of a leaf
     // node.
     TreePatternNodePtr New = ParseCastOperand(Dag, OpName);
+    if (!New)
+      return nullptr;
 
     if (New->getNumTypes() != 1)
       error("ValueType cast can only have one type!");
@@ -3608,10 +3619,15 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
     // If this is not a set, verify that the children nodes are not void typed,
     // and recurse.
     for (unsigned i = 0, e = Pat->getNumChildren(); i != e; ++i) {
-      if (Pat->getChild(i).getNumTypes() == 0)
+      TreePatternNodePtr Child = Pat->getChildShared(i);
+      if (!Child) {
+        I.error("child node at index " + Twine(i) + " is null!");
+        continue;
+      }
+      if (Child->getNumTypes() == 0)
         I.error("Cannot have void nodes inside of patterns!");
-      FindPatternInputsAndOutputs(I, Pat->getChildShared(i), InstInputs,
-                                  InstResults, InstImpResults);
+      FindPatternInputsAndOutputs(I, Child, InstInputs, InstResults,
+                                  InstImpResults);
     }
 
     // If this is a non-leaf node with no children, treat it basically as if
