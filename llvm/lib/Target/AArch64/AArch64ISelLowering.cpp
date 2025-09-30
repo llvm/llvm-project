@@ -5392,9 +5392,12 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
   if (!is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes))
     return SDValue();
 
+  LLVMContext &Ctx = *DAG.getContext();
   EVT FullVT = Op.getValueType();
   EVT ExtractVT = FullVT;
   EVT EltVT = MVT::getIntegerVT(EltSizeInBytes * 8);
+
+  unsigned MaskOpcode = Op.getOpcode();
   unsigned NumElements = FullVT.getVectorMinNumElements();
   unsigned PredElements = getPackedSVEVectorVT(EltVT).getVectorMinNumElements();
   bool Split = NumElements > PredElements;
@@ -5402,28 +5405,14 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
   if (EltSizeInBytes * NumElements < 16) {
     // The element size and vector length combination must at least form a
     // 128-bit vector. Shorter vector lengths can be widened then extracted
-    FullVT = FullVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+    FullVT = FullVT.getDoubleNumVectorElementsVT(Ctx);
     // Re-create the node, but widened.
-    Op = DAG.getNode(Op.getOpcode(), DL, FullVT, Op->ops());
+    Op = DAG.getNode(MaskOpcode, DL, FullVT, Op->ops());
   }
 
-  auto MaskWithAddressOffset = [&](EVT VT, unsigned Offset) {
-    SDValue PtrA = Op.getOperand(0);
-    SDValue PtrB = Op.getOperand(1);
-
-    if (Offset != 0) {
-      SDValue Addend;
-
-      if (VT.isScalableVT())
-        Addend = DAG.getVScale(DL, MVT::i64, APInt(64, Offset));
-      else
-        Addend = DAG.getConstant(Offset, DL, MVT::i64);
-
-      PtrA = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrA, Addend);
-    }
-
-    return DAG.getNode(Op.getOpcode(), DL, VT, PtrA, PtrB, Op.getOperand(2));
-  };
+  SDValue PtrA = Op.getOperand(0);
+  SDValue PtrB = Op.getOperand(1);
+  SDValue EltSizeInBytesValue = Op.getOperand(2);
 
   auto ContaineriseFixedWidth = [&](SDValue MaskOp) {
     assert((MaskOp.getOpcode() == ISD::LOOP_DEPENDENCE_WAR_MASK ||
@@ -5434,37 +5423,40 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
     // operations and then extracting a fixed-width subvector from the
     // scalable vector. Scalable vector variants are already legal.
     EVT VT = MaskOp.getValueType();
-    EVT ContainerVT =
-        EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
-                         VT.getVectorNumElements(), true);
+    EVT ContainerVT = MVT::getScalableVectorVT(
+        VT.getVectorElementType().getSimpleVT(), VT.getVectorNumElements());
     EVT WhileVT = ContainerVT.changeElementType(MVT::i1);
 
     SDValue Mask =
         DAG.getNode(MaskOp.getOpcode(), DL, WhileVT, MaskOp.getOperand(0),
                     MaskOp.getOperand(1), MaskOp.getOperand(2));
     SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Mask);
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, MaskAsInt,
-                       DAG.getVectorIdxConstant(0, DL));
+    return convertFromScalableVector(DAG, VT, MaskAsInt);
   };
 
   SDValue Result = Op;
   if (Split) {
-    unsigned NumElementsPerSplit = NumElements / 2;
-    EVT PartVT =
-        EVT::getVectorVT(*DAG.getContext(), FullVT.getVectorElementType(),
-                         NumElementsPerSplit, FullVT.isScalableVT());
-    SDValue Low = MaskWithAddressOffset(PartVT, 0);
-    SDValue High = MaskWithAddressOffset(
-        PartVT, PartVT.getVectorMinNumElements() * EltSizeInBytes);
+    EVT PartVT = FullVT.getHalfNumVectorElementsVT(*DAG.getContext());
+    TypeSize PartOffset =
+        TypeSize(PartVT.getVectorMinNumElements(), PartVT.isScalableVT()) *
+        EltSizeInBytes;
+
+    SDValue Low =
+        DAG.getNode(MaskOpcode, DL, PartVT, PtrA, PtrB, EltSizeInBytesValue);
+    SDValue High = DAG.getNode(MaskOpcode, DL, PartVT,
+                               DAG.getMemBasePlusOffset(PtrA, PartOffset, DL),
+                               PtrB, EltSizeInBytesValue);
     if (!PartVT.isScalableVT()) {
       Low = ContaineriseFixedWidth(Low);
       High = ContaineriseFixedWidth(High);
     }
+
     SDValue Inserted =
         DAG.getNode(ISD::INSERT_SUBVECTOR, DL, FullVT, DAG.getPOISON(FullVT),
                     Low, DAG.getVectorIdxConstant(0, DL));
-    Result = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, FullVT, Inserted, High,
-                         DAG.getVectorIdxConstant(NumElementsPerSplit, DL));
+    Result = DAG.getNode(
+        ISD::INSERT_SUBVECTOR, DL, FullVT, Inserted, High,
+        DAG.getVectorIdxConstant(PartVT.getVectorMinNumElements(), DL));
   } else if (!FullVT.isScalableVT()) {
     Result = ContaineriseFixedWidth(Result);
   }
