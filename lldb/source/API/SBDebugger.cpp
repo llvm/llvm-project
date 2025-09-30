@@ -983,7 +983,7 @@ uint32_t SBDebugger::GetIndexOfTarget(lldb::SBTarget target) {
   return m_opaque_sp->GetTargetList().GetIndexOfTarget(target.GetSP());
 }
 
-SBTarget SBDebugger::FindTargetWithUniqueID(uint32_t id) {
+SBTarget SBDebugger::FindTargetWithUniqueID(lldb::user_id_t id) {
   LLDB_INSTRUMENT_VA(this, id);
   SBTarget sb_target;
   if (m_opaque_sp) {

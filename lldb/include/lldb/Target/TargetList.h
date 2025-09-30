@@ -159,7 +159,7 @@ public:
 
   lldb::TargetSP FindTargetWithProcess(lldb_private::Process *process) const;
 
-  lldb::TargetSP FindTargetWithUniqueID(uint32_t id) const;
+  lldb::TargetSP FindTargetWithUniqueID(lldb::user_id_t id) const;
 
   lldb::TargetSP GetTargetSP(Target *target) const;
 
