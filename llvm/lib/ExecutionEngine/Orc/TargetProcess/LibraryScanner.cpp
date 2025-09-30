@@ -327,25 +327,30 @@ SearchPathResolver::resolve(StringRef Stem, const DylibSubstitutor &Subst,
 std::optional<std::string>
 DylibResolverImpl::tryWithExtensions(StringRef LibStem) const {
   LLVM_DEBUG(dbgs() << "tryWithExtensions: baseName = " << LibStem << "\n";);
-  SmallVector<StringRef, 4> Candidates;
+  SmallVector<SmallString<256>, 8> Candidates;
 
   // Add extensions by platform
 #if defined(__APPLE__)
-  Candidates.push_back(LibStem.str() + ".dylib");
+  Candidates.emplace_back(LibStem);
+  Candidates.back() += ".dylib";
 #elif defined(_WIN32)
-  Candidates.push_back(LibStem.str() + ".dll");
+  Candidates.emplace_back(LibStem);
+  Candidates.back() += ".dll";
 #else
-  Candidates.push_back(LibStem.str() + ".so");
+  Candidates.emplace_back(LibStem);
+  Candidates.back() += ".so";
 #endif
 
   // Optionally try "lib" prefix if not already there
   StringRef filename = sys::path::filename(LibStem);
   StringRef Base = sys::path::parent_path(LibStem);
-  SmallString<256> withPrefix(Base);
   if (!filename.starts_with("lib")) {
+    SmallString<256> withPrefix(Base);
+    if (!withPrefix.empty())
+      sys::path::append(withPrefix, ""); // ensure separator if needed
     withPrefix += "lib";
     withPrefix += filename;
-    // Apply extension too
+
 #if defined(__APPLE__)
     withPrefix += ".dylib";
 #elif defined(_WIN32)
@@ -353,7 +358,8 @@ DylibResolverImpl::tryWithExtensions(StringRef LibStem) const {
 #else
     withPrefix += ".so";
 #endif
-    Candidates.push_back(withPrefix.str());
+
+    Candidates.push_back(std::move(withPrefix));
   }
 
   LLVM_DEBUG({
