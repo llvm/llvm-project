@@ -89,7 +89,7 @@ mlir::Value OpenACCRecipeBuilderBase::makeBoundsAlloca(
   std::transform_inclusive_scan(
       resultTypes.begin(), resultTypes.end(),
       std::back_inserter(allocasLeftArr), std::plus<bool>{},
-      [](QualType ty) { return !ty->isConstantArrayType(); });
+      [](QualType ty) { return !ty->isConstantArrayType(); }, false);
 
   // Keep track of the number of 'elements' that we're allocating. Individual
   // allocas should multiply this by the size of its current allocation.

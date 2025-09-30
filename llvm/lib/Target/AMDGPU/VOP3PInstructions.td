@@ -402,8 +402,7 @@ defm V_FMA_MIX_F16_t16 : VOP3_VOP3PInst_t16<"v_fma_mix_f16_t16", VOP3P_Mix_Profi
 
 defm : MadFmaMixFP32Pats<fma, V_FMA_MIX_F32>;
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in
+let True16Predicate = NotUseRealTrue16Insts in
 defm : MadFmaMixFP16Pats<fma, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16>;
 let True16Predicate = UseRealTrue16Insts in
 defm : MadFmaMixFP16Pats_t16<fma, V_FMA_MIX_F16_t16>;
@@ -428,8 +427,7 @@ defm V_FMA_MIX_BF16_t16 : VOP3_VOP3PInst_t16<"v_fma_mix_bf16_t16", VOP3P_Mix_Pro
 } // End isCommutable = 1
 
 defm : MadFmaMixFP32Pats<fma, V_FMA_MIX_F32_BF16, bf16>;
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in
+let True16Predicate = NotUseRealTrue16Insts in
 defm : MadFmaMixFP16Pats<fma, V_FMA_MIXLO_BF16, V_FMA_MIXHI_BF16, bf16, v2bf16>;
 let True16Predicate = UseRealTrue16Insts in
 defm : MadFmaMixFP16Pats_t16<fma, V_FMA_MIX_BF16_t16>;
