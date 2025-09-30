@@ -1286,19 +1286,13 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   fields.push_back(typeNameField);
 
   switch (ty->getTypeClass()) {
-  case Type::ArrayParameter:
-  case Type::HLSLAttributedResource:
-  case Type::HLSLInlineSpirv:
-    llvm_unreachable("NYI");
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
 #define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class, Base) case Type::Class:
 #define NON_CANONICAL_TYPE(Class, Base) case Type::Class:
 #define DEPENDENT_TYPE(Class, Base) case Type::Class:
 #include "clang/AST/TypeNodes.inc"
-    cgm.errorNYI(
-        "buildTypeInfo: Non-canonical and dependent types shouldn't get here");
-    break;
+    llvm_unreachable("Non-canonical and dependent types shouldn't get here");
 
   // GCC treats vector types as fundamental types.
   case Type::Builtin:
@@ -1328,6 +1322,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
+  case Type::ArrayParameter:
     // Itanium C++ ABI 2.9.5p5:
     // abi::__array_type_info adds no data members to std::type_info.
     break;
@@ -1364,7 +1359,6 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   case Type::ObjCObject:
   case Type::ObjCInterface:
     cgm.errorNYI("buildTypeInfo: ObjCObject & ObjCInterface");
-
     break;
 
   case Type::ObjCObjectPointer:
@@ -1373,7 +1367,6 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
 
   case Type::Pointer:
     cgm.errorNYI("buildTypeInfo: Pointer");
-
     break;
 
   case Type::MemberPointer:
@@ -1383,6 +1376,10 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   case Type::Atomic:
     // No fields, at least for the moment.
     break;
+
+  case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
+    llvm_unreachable("HLSL doesn't support RTTI");
   }
 
   assert(!cir::MissingFeatures::opGlobalDLLImportExport());
