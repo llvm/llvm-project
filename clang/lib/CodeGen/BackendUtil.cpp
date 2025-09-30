@@ -1110,8 +1110,9 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (std::optional<GCOVOptions> Options =
             getGCOVOptions(CodeGenOpts, LangOpts))
       PB.registerPipelineStartEPCallback(
-          [Options](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(GCOVProfilerPass(*Options));
+          [this, Options](ModulePassManager &MPM, OptimizationLevel Level) {
+            MPM.addPass(
+                GCOVProfilerPass(*Options, CI.getVirtualFileSystemPtr()));
           });
     if (std::optional<InstrProfOptions> Options =
             getInstrProfOptions(CodeGenOpts, LangOpts))
