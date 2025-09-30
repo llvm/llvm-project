@@ -204,7 +204,7 @@ void ArgList::print(raw_ostream &O) const {
 LLVM_DUMP_METHOD void ArgList::dump() const { print(dbgs()); }
 #endif
 
-StringRef ArgList::getSubcommand(
+StringRef ArgList::getSubCommand(
     ArrayRef<OptTable::SubCommand> AllSubCommands,
     std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
     std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals) const {

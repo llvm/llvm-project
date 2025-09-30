@@ -281,7 +281,7 @@ public:
   /// list.
   virtual unsigned getNumInputArgStrings() const = 0;
 
-  /// getSubcommand - Find subcommand from the arguments if the usage is valid.
+  /// getSubCommand - Find subcommand from the arguments if the usage is valid.
   ///
   /// \param AllSubCommands - A list of all valid subcommands.
   /// \param HandleMultipleSubcommands - A callback for the case where multiple
@@ -292,7 +292,7 @@ public:
   /// \return The name of the subcommand found. If no subcommand is found,
   /// this returns an empty StringRef. If multiple subcommands are found, the
   /// first one is returned.
-  StringRef getSubcommand(
+  StringRef getSubCommand(
       ArrayRef<OptTable::SubCommand> AllSubCommands,
       std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
       std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals) const;

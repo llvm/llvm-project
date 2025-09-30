@@ -78,17 +78,30 @@ int main(int argc, char **argv) {
   InputArgList Args = T.ParseArgs(ArrayRef(argv + 1, argc - 1), MissingArgIndex,
                                   MissingArgCount);
 
-  StringRef Subcommand = Args.getSubcommand(
+  StringRef SubCommand = Args.getSubCommand(
       T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
   // Handle help. When help options is found, ignore all other options and exit
   // after printing help.
 
   if (Args.hasArg(OPT_help)) {
     T.printHelp(llvm::outs(), "llvm-hello-sub [subcommand] [options]",
-                "LLVM Hello Subcommand Example", false, false, Visibility(),
-                Subcommand);
+                "LLVM Hello SubCommand Example", false, false, Visibility(),
+                SubCommand);
     return 0;
   }
+
+  auto HandleSubCommandArg = [&](ID OptionType) {
+    if (!Args.hasArg(OptionType))
+      return false;
+    auto O = T.getOption(OptionType);
+    if (!O.isRegisteredSC(SubCommand)) {
+      llvm::errs() << "Option [" << O.getName()
+                   << "] is not valid for SubCommand [" << SubCommand << "]\n";
+      return false;
+    }
+    return true;
+  };
+
   bool HasUnknownOptions = false;
   for (const Arg *A : Args.filtered(OPT_UNKNOWN)) {
     HasUnknownOptions = true;
@@ -98,26 +111,26 @@ int main(int argc, char **argv) {
     llvm::errs() << "See `OptSubcommand --help`.\n";
     return 1;
   }
-  if (Subcommand.empty()) {
+  if (SubCommand.empty()) {
     if (Args.hasArg(OPT_version))
-      llvm::outs() << "LLVM Hello Subcommand Example 1.0\n";
-  } else if (Subcommand == "foo") {
-    if (Args.hasArg(OPT_uppercase))
+      llvm::outs() << "LLVM Hello SubCommand Example 1.0\n";
+  } else if (SubCommand == "foo") {
+    if (HandleSubCommandArg(OPT_uppercase))
       llvm::outs() << "FOO\n";
-    else if (Args.hasArg(OPT_lowercase))
+    else if (HandleSubCommandArg(OPT_lowercase))
       llvm::outs() << "foo\n";
 
-    if (Args.hasArg(OPT_version))
-      llvm::outs() << "LLVM Hello Subcommand foo Example 1.0\n";
+    if (HandleSubCommandArg(OPT_version))
+      llvm::outs() << "LLVM Hello SubCommand foo Example 1.0\n";
 
-  } else if (Subcommand == "bar") {
-    if (Args.hasArg(OPT_lowercase))
+  } else if (SubCommand == "bar") {
+    if (HandleSubCommandArg(OPT_lowercase))
       llvm::outs() << "bar\n";
-    else if (Args.hasArg(OPT_uppercase))
+    else if (HandleSubCommandArg(OPT_uppercase))
       llvm::outs() << "BAR\n";
 
-    if (Args.hasArg(OPT_version))
-      llvm::outs() << "LLVM Hello Subcommand bar Example 1.0\n";
+    if (HandleSubCommandArg(OPT_version))
+      llvm::outs() << "LLVM Hello SubCommand bar Example 1.0\n";
   }
 
   return 0;

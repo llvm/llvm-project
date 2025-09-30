@@ -86,6 +86,7 @@ public:
     unsigned short AliasID;
     const char *AliasArgs;
     const char *Values;
+    // Offset into OptTable's SubCommandIDsTable.
     unsigned SubCommandIDsOffset;
 
     bool hasNoPrefix() const { return PrefixesOffset == 0; }
@@ -102,7 +103,7 @@ public:
                                                  getNumPrefixes(PrefixesTable));
     }
 
-    bool hasCommands() const { return SubCommandIDsOffset != 0; }
+    bool hasSubCommands() const { return SubCommandIDsOffset != 0; }
 
     unsigned getNumCommandIDs(ArrayRef<unsigned> SubCommandIDsTable) const {
       // We embed the number of subcommand IDs in the value of the first offset.
@@ -111,10 +112,10 @@ public:
 
     ArrayRef<unsigned>
     getCommandIDs(ArrayRef<unsigned> SubCommandIDsTable) const {
-      return hasCommands() ? SubCommandIDsTable.slice(
-                                 SubCommandIDsOffset + 1,
-                                 getNumCommandIDs(SubCommandIDsTable))
-                           : ArrayRef<unsigned>();
+      return hasSubCommands() ? SubCommandIDsTable.slice(
+                                    SubCommandIDsOffset + 1,
+                                    getNumCommandIDs(SubCommandIDsTable))
+                              : ArrayRef<unsigned>();
     }
 
     void appendPrefixes(const StringTable &StrTable,
@@ -141,6 +142,22 @@ public:
       return getPrefixedName(StrTable).drop_front(PrefixLength);
     }
   };
+
+public:
+  bool isValidForSubCommand(const Info *CandidateInfo,
+                            StringRef SubCommand) const {
+    assert(!SubCommand.empty() &&
+           "This helper is only for valid registered subcommands.");
+    typename ArrayRef<OptTable::SubCommand>::iterator SCIT =
+        std::find_if(SubCommands.begin(), SubCommands.end(),
+                     [&](const auto &C) { return SubCommand == C.Name; });
+    assert(SCIT != SubCommands.end() &&
+           "This helper is only for valid registered subcommands.");
+    auto SubCommandIDs = CandidateInfo->getCommandIDs(SubCommandIDsTable);
+    unsigned CurrentSubCommandID = SCIT - &SubCommands[0];
+    return std::find(SubCommandIDs.begin(), SubCommandIDs.end(),
+                     CurrentSubCommandID) != SubCommandIDs.end();
+  }
 
 private:
   // A unified string table for these options. Individual strings are stored as
