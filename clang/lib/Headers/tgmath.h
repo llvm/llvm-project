@@ -17,7 +17,7 @@
  * platforms. This is done after #include <math.h> to avoid depcycle conflicts
  * between libcxx and darwin in C++ modules builds.
  */
-#if defined(__APPLE__) && __STDC_HOSTED__ && __has_include_next(<tgmath.h>)
+#if (defined(__APPLE__) && __STDC_HOSTED__ && __has_include_next(<tgmath.h>)) || defined(__GLIBC__)
 #  include_next <tgmath.h>
 #else
 
