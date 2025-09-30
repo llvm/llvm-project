@@ -2867,58 +2867,58 @@ enum class Half { None, Low, High };
 static bool interp__builtin_ia32_pshuf(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                                        Half whichHalf) {
   assert(Call->getNumArgs() == 2 && "masked forms handled via select*");
-  APSInt controlImm = popToAPSInt(S, Call->getArg(1));
-  const Pointer &src = S.Stk.pop<Pointer>();
+  APSInt ControlImm = popToAPSInt(S, Call->getArg(1));
+  const Pointer &Src = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  const unsigned numElts = Dst.getNumElems();
-  const PrimType elemTy  = Dst.getFieldDesc()->getPrimType();
+  unsigned NumElems = Dst.getNumElems();
+  PrimType ElemT  = Dst.getFieldDesc()->getPrimType();
 
   // Only i16/i32 supported
-  const unsigned elemBits = static_cast<unsigned>(primSize(elemTy) * 8);
-  if (elemBits != 16 && elemBits != 32) return false;
+  unsigned ElemBits = static_cast<unsigned>(primSize(ElemT) * 8);
+  if (ElemBits != 16 && ElemBits != 32) return false;
 
   // Lane: 64b for MMX, 128b otherwise
-  const unsigned totalBits = numElts * elemBits;
-  const unsigned laneBits  = (totalBits == 64) ? 64u : 128u;
-  const unsigned laneElts  = laneBits / elemBits;
-  assert(laneElts && (numElts % laneElts == 0));
+  unsigned TotalBits = NumElems * ElemBits;
+  unsigned LaneBits  = (TotalBits == 64) ? 64u : 128u;
+  unsigned LaneElts  = LaneBits / ElemBits;
+  assert(LaneElts && (NumElems % LaneElts == 0));
 
-  const uint8_t ctl = static_cast<uint8_t>(controlImm.getZExtValue());
+  uint8_t ctl = static_cast<uint8_t>(ControlImm.getZExtValue());
 
-  for (unsigned idx = 0; idx != numElts; idx++) {
-    const unsigned laneBase = (idx / laneElts) * laneElts;
-    const unsigned laneIdx  = idx % laneElts;
+  for (unsigned idx = 0; idx != NumElems; idx++) {
+    unsigned LaneBase = (idx / LaneElts) * LaneElts;
+    unsigned LaneIdx  = idx % LaneElts;
 
-    unsigned srcIdx = idx; 
+    unsigned SrcIdx = idx; 
 
-    if (elemBits == 32) {
+    if (ElemBits == 32) {
       // PSHUFD: 4×i32 per lane
-      const unsigned sel = (ctl >> (2 * laneIdx)) & 0x3;
-      srcIdx = laneBase + sel;
+      unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
+      SrcIdx = LaneBase + sel;
     } else { // 16-bit shuffles
-      if (laneElts == 4) {
+      if (LaneElts == 4) {
         // MMX: permute all 4×i16
-        const unsigned sel = (ctl >> (2 * laneIdx)) & 0x3;
-        srcIdx = laneBase + sel;
+        unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
+        SrcIdx = LaneBase + sel;
       } else {
         // 128b lanes: shuffle 4×i16 half
-        constexpr unsigned halfSize = 4;
-        if (whichHalf == Half::Low && laneIdx < halfSize) {
-          const unsigned sel = (ctl >> (2 * laneIdx)) & 0x3;
-          srcIdx = laneBase + sel;
-        } else if (whichHalf == Half::High && laneIdx >= halfSize) {
-          const unsigned rel = laneIdx - halfSize;
-          const unsigned sel = (ctl >> (2 * rel)) & 0x3;
-          srcIdx = laneBase + halfSize + sel;
+        constexpr unsigned HalfSize = 4;
+        if (whichHalf == Half::Low && LaneIdx < HalfSize) {
+          unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
+          SrcIdx = LaneBase + sel;
+        } else if (whichHalf == Half::High && LaneIdx >= HalfSize) {
+          unsigned rel = LaneIdx - HalfSize;
+          unsigned sel = (ctl >> (2 * rel)) & 0x3;
+          SrcIdx = LaneBase + HalfSize + sel;
         } else if (whichHalf == Half::None) {
-          const unsigned sel = (ctl >> (2 * laneIdx)) & 0x3;
-          srcIdx = laneBase + sel;
+          unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
+          SrcIdx = LaneBase + sel;
         }
       }
     }
 
-    INT_TYPE_SWITCH_NO_BOOL(elemTy, { Dst.elem<T>(idx) = src.elem<T>(srcIdx); });
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(idx) = Src.elem<T>(SrcIdx); });
   }
   Dst.initializeAllElements();
   return true;
