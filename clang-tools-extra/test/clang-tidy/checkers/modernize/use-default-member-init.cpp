@@ -596,3 +596,26 @@ class DefaultMemberInitWithArithmetic {
 };
 
 } //namespace PR122480
+
+namespace GH156295 {
+
+class NotFix {
+  NotFix(int v) : x(0 + 0 + (0 * 0 * (((((((v)))) - 20))) + 10)) {}
+  int x;
+};
+
+class ShouldFix {
+  ShouldFix(int v) : x(0 + 0 + (0 * 0 * (((((((1)))) - 20))) + 10)) {}
+  int x;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'x' [modernize-use-default-member-init]
+  // CHECK-FIXES: int x{0 + 0 + (0 * 0 * (((((((1)))) - 20))) + 10)};
+};
+
+} // namespace GH156295
+
+namespace GH160394 {
+struct A {
+    A(int i) : f((i & 0x1f) == 1) {}
+    bool f;
+};
+} // namespace GH160394

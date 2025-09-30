@@ -315,6 +315,7 @@ public:
 
 private:
   std::int64_t GetAssociatedLoopLevelFromClauses(const parser::AccClauseList &);
+  bool HasForceCollapseModifier(const parser::AccClauseList &);
 
   Symbol::Flags dataSharingAttributeFlags{Symbol::Flag::AccShared,
       Symbol::Flag::AccPrivate, Symbol::Flag::AccFirstPrivate,
@@ -333,7 +334,7 @@ private:
       Symbol::Flag::AccDevicePtr, Symbol::Flag::AccDeviceResident,
       Symbol::Flag::AccLink, Symbol::Flag::AccPresent};
 
-  void CheckAssociatedLoop(const parser::DoConstruct &);
+  void CheckAssociatedLoop(const parser::DoConstruct &, bool forceCollapsed);
   void ResolveAccObjectList(const parser::AccObjectList &, Symbol::Flag);
   void ResolveAccObject(const parser::AccObject &, Symbol::Flag);
   Symbol *ResolveAcc(const parser::Name &, Symbol::Flag, Scope &);
@@ -360,6 +361,24 @@ class OmpAttributeVisitor : DirectiveAttributeVisitor<llvm::omp::Directive> {
 public:
   explicit OmpAttributeVisitor(SemanticsContext &context)
       : DirectiveAttributeVisitor(context) {}
+
+  static const Scope &scopingUnit(const Scope &scope) {
+    const Scope *iter{&scope};
+    for (; !iter->IsTopLevel(); iter = &iter->parent()) {
+      switch (iter->kind()) {
+      case Scope::Kind::BlockConstruct:
+      case Scope::Kind::BlockData:
+      case Scope::Kind::DerivedType:
+      case Scope::Kind::MainProgram:
+      case Scope::Kind::Module:
+      case Scope::Kind::Subprogram:
+        return *iter;
+      default:
+        break;
+      }
+    }
+    return *iter;
+  }
 
   template <typename A> void Walk(const A &x) { parser::Walk(x, *this); }
   template <typename A> bool Pre(const A &) { return true; }
@@ -413,7 +432,7 @@ public:
   }
 
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
-    PushContext(x.source, llvm::omp::Directive::OMPD_metadirective);
+    PushContext(x.v.source, llvm::omp::Directive::OMPD_metadirective);
     return true;
   }
   void Post(const parser::OmpMetadirectiveDirective &) { PopContext(); }
@@ -472,9 +491,10 @@ public:
 
   bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_declare_simd);
-    const auto &name{std::get<std::optional<parser::Name>>(x.t)};
-    if (name) {
-      ResolveOmpName(*name, Symbol::Flag::OmpDeclareSimd);
+    for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+      if (auto *object{omp::GetArgumentObject(arg)}) {
+        ResolveOmpObject(*object, Symbol::Flag::OmpDeclareSimd);
+      }
     }
     return true;
   }
@@ -521,7 +541,7 @@ public:
     // Gather information from the clauses.
     Flags flags;
     std::optional<common::OmpMemoryOrderType> memOrder;
-    for (const auto &clause : std::get<parser::OmpClauseList>(x.t).v) {
+    for (const parser::OmpClause &clause : x.v.Clauses().v) {
       flags |= common::visit(
           common::visitors{
               [&memOrder](
@@ -950,7 +970,6 @@ private:
   void ResolveOmpNameList(const std::list<parser::Name> &, Symbol::Flag);
   void ResolveOmpName(const parser::Name &, Symbol::Flag);
   Symbol *ResolveName(const parser::Name *);
-  Symbol *ResolveOmpObjectScope(const parser::Name *);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
   void CheckMultipleAppearances(
@@ -1168,7 +1187,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCLoopConstruct &x) {
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
-  CheckAssociatedLoop(*outer);
+  CheckAssociatedLoop(*outer, HasForceCollapseModifier(clauseList));
   return true;
 }
 
@@ -1366,7 +1385,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
   const auto &clauseList{std::get<parser::AccClauseList>(beginBlockDir.t)};
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
-  CheckAssociatedLoop(*outer);
+  CheckAssociatedLoop(*outer, HasForceCollapseModifier(clauseList));
   ClearDataSharingAttributeObjects();
   return true;
 }
@@ -1478,6 +1497,18 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCacheConstruct &x) {
   return true;
 }
 
+bool AccAttributeVisitor::HasForceCollapseModifier(
+    const parser::AccClauseList &x) {
+  for (const auto &clause : x.v) {
+    if (const auto *collapseClause{
+            std::get_if<parser::AccClause::Collapse>(&clause.u)}) {
+      const parser::AccCollapseArg &arg = collapseClause->v;
+      return std::get<bool>(arg.t);
+    }
+  }
+  return false;
+}
+
 std::int64_t AccAttributeVisitor::GetAssociatedLoopLevelFromClauses(
     const parser::AccClauseList &x) {
   std::int64_t collapseLevel{0};
@@ -1499,14 +1530,14 @@ std::int64_t AccAttributeVisitor::GetAssociatedLoopLevelFromClauses(
 }
 
 void AccAttributeVisitor::CheckAssociatedLoop(
-    const parser::DoConstruct &outerDoConstruct) {
+    const parser::DoConstruct &outerDoConstruct, bool forceCollapsed) {
   std::int64_t level{GetContext().associatedLoopLevel};
   if (level <= 0) { // collapse value was negative or 0
     return;
   }
 
   const auto getNextDoConstruct =
-      [this](const parser::Block &block,
+      [this, forceCollapsed](const parser::Block &block,
           std::int64_t &level) -> const parser::DoConstruct * {
     for (const auto &entry : block) {
       if (const auto *doConstruct = GetDoConstructIf(entry)) {
@@ -1524,7 +1555,9 @@ void AccAttributeVisitor::CheckAssociatedLoop(
             "LOOP directive not expected in COLLAPSE loop nest"_err_en_US);
         level = 0;
       } else {
-        break;
+        if (!forceCollapsed) {
+          break;
+        }
       }
     }
     return nullptr;
@@ -2278,14 +2311,12 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPGroupprivate &x) {
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionsConstruct &x) {
-  const auto &beginSectionsDir{
-      std::get<parser::OmpBeginSectionsDirective>(x.t)};
-  const auto &beginDir{
-      std::get<parser::OmpSectionsDirective>(beginSectionsDir.t)};
-  switch (beginDir.v) {
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
+  switch (beginName.v) {
   case llvm::omp::Directive::OMPD_parallel_sections:
   case llvm::omp::Directive::OMPD_sections:
-    PushContext(beginDir.source, beginDir.v);
+    PushContext(beginName.source, beginName.v);
     GetContext().withinConstruct = true;
     break;
   default:
@@ -2310,22 +2341,17 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_declare_target);
-  const auto &spec{std::get<parser::OmpDeclareTargetSpecifier>(x.t)};
-  if (const auto *objectList{parser::Unwrap<parser::OmpObjectList>(spec.u)}) {
-    ResolveOmpObjectList(*objectList, Symbol::Flag::OmpDeclareTarget);
-  } else if (const auto *clauseList{
-                 parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
-    for (const auto &clause : clauseList->v) {
-      if (const auto *toClause{std::get_if<parser::OmpClause::To>(&clause.u)}) {
-        auto &objList{std::get<parser::OmpObjectList>(toClause->v.t)};
-        ResolveOmpObjectList(objList, Symbol::Flag::OmpDeclareTarget);
-      } else if (const auto *linkClause{
-                     std::get_if<parser::OmpClause::Link>(&clause.u)}) {
-        ResolveOmpObjectList(linkClause->v, Symbol::Flag::OmpDeclareTarget);
-      } else if (const auto *enterClause{
-                     std::get_if<parser::OmpClause::Enter>(&clause.u)}) {
-        ResolveOmpObjectList(std::get<parser::OmpObjectList>(enterClause->v.t),
-            Symbol::Flag::OmpDeclareTarget);
+
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (auto *object{omp::GetArgumentObject(arg)}) {
+      ResolveOmpObject(*object, Symbol::Flag::OmpDeclareTarget);
+    }
+  }
+
+  for (const parser::OmpClause &clause : x.v.Clauses().v) {
+    if (auto *objects{parser::omp::GetOmpObjectList(clause)}) {
+      for (const parser::OmpObject &object : objects->v) {
+        ResolveOmpObject(object, Symbol::Flag::OmpDeclareTarget);
       }
     }
   }
@@ -2333,7 +2359,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
-  PushContext(x.source, llvm::omp::Directive::OMPD_declare_mapper);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContext(dirName.source, dirName.v);
   return true;
 }
 
@@ -2344,9 +2371,14 @@ bool OmpAttributeVisitor::Pre(
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
-  PushContext(x.source, llvm::omp::Directive::OMPD_threadprivate);
-  const auto &list{std::get<parser::OmpObjectList>(x.t)};
-  ResolveOmpObjectList(list, Symbol::Flag::OmpThreadprivate);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContext(dirName.source, dirName.v);
+
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (auto *object{omp::GetArgumentObject(arg)}) {
+      ResolveOmpObject(*object, Symbol::Flag::OmpThreadprivate);
+    }
+  }
   return true;
 }
 
@@ -2905,31 +2937,6 @@ Symbol *OmpAttributeVisitor::ResolveOmpCommonBlockName(
   return nullptr;
 }
 
-// Use this function over ResolveOmpName when an omp object's scope needs
-// resolving, it's symbol flag isn't important and a simple check for resolution
-// failure is desired. Using ResolveOmpName means needing to work with the
-// context to check for failure, whereas here a pointer comparison is all that's
-// needed.
-Symbol *OmpAttributeVisitor::ResolveOmpObjectScope(const parser::Name *name) {
-
-  // TODO: Investigate whether the following block can be replaced by, or
-  // included in, the ResolveOmpName function
-  if (auto *prev{name ? GetContext().scope.parent().FindSymbol(name->source)
-                      : nullptr}) {
-    name->symbol = prev;
-    return nullptr;
-  }
-
-  // TODO: Investigate whether the following block can be replaced by, or
-  // included in, the ResolveOmpName function
-  if (auto *ompSymbol{
-          name ? GetContext().scope.FindSymbol(name->source) : nullptr}) {
-    name->symbol = ompSymbol;
-    return ompSymbol;
-  }
-  return nullptr;
-}
-
 void OmpAttributeVisitor::ResolveOmpObjectList(
     const parser::OmpObjectList &ompObjectList, Symbol::Flag ompFlag) {
   for (const auto &ompObject : ompObjectList.v) {
@@ -3008,13 +3015,19 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
       context_.Say(designator.source,
           "List items specified in the ALLOCATE directive must not have the ALLOCATABLE attribute unless the directive is associated with an ALLOCATE statement"_err_en_US);
     }
-    if ((ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective ||
-            ompFlag == Symbol::Flag::OmpExecutableAllocateDirective) &&
-        ResolveOmpObjectScope(name) == nullptr) {
-      context_.Say(designator.source, // 2.15.3
-          "List items must be declared in the same scoping unit in which the %s directive appears"_err_en_US,
-          parser::ToUpperCaseLetters(
-              llvm::omp::getOpenMPDirectiveName(directive, version)));
+    bool checkScope{ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective};
+    // In 5.1 the scope check only applies to declarative allocate.
+    if (version == 50 && !checkScope) {
+      checkScope = ompFlag == Symbol::Flag::OmpExecutableAllocateDirective;
+    }
+    if (checkScope) {
+      if (scopingUnit(GetContext().scope) !=
+          scopingUnit(symbol->GetUltimate().owner())) {
+        context_.Say(designator.source, // 2.15.3
+            "List items must be declared in the same scoping unit in which the %s directive appears"_err_en_US,
+            parser::ToUpperCaseLetters(
+                llvm::omp::getOpenMPDirectiveName(directive, version)));
+      }
     }
     if (ompFlag == Symbol::Flag::OmpReduction) {
       // Using variables inside of a namelist in OpenMP reductions
@@ -3123,14 +3136,24 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
 
 void OmpAttributeVisitor::ResolveOmpObject(
     const parser::OmpObject &ompObject, Symbol::Flag ompFlag) {
-  common::visit(common::visitors{
-                    [&](const parser::Designator &designator) {
-                      ResolveOmpDesignator(designator, ompFlag);
-                    },
-                    [&](const parser::Name &name) { // common block
-                      ResolveOmpCommonBlock(name, ompFlag);
-                    },
-                },
+  common::visit( //
+      common::visitors{
+          [&](const parser::Designator &designator) {
+            ResolveOmpDesignator(designator, ompFlag);
+          },
+          [&](const parser::Name &name) { // common block
+            ResolveOmpCommonBlock(name, ompFlag);
+          },
+          [&](const parser::OmpObject::Invalid &invalid) {
+            switch (invalid.v) {
+              SWITCH_COVERS_ALL_CASES
+            case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
+              context_.Say(invalid.source,
+                  "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
+              break;
+            }
+          },
+      },
       ompObject.u);
 }
 

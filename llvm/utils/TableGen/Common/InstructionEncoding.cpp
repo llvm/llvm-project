@@ -14,7 +14,8 @@
 
 using namespace llvm;
 
-static std::string findOperandDecoderMethod(const Record *Record) {
+std::pair<std::string, bool>
+InstructionEncoding::findOperandDecoderMethod(const Record *Record) {
   std::string Decoder;
 
   const RecordVal *DecoderString = Record->getValue("DecoderMethod");
@@ -23,7 +24,7 @@ static std::string findOperandDecoderMethod(const Record *Record) {
   if (String) {
     Decoder = String->getValue().str();
     if (!Decoder.empty())
-      return Decoder;
+      return {Decoder, false};
   }
 
   if (Record->isSubClassOf("RegisterOperand"))
@@ -32,15 +33,17 @@ static std::string findOperandDecoderMethod(const Record *Record) {
 
   if (Record->isSubClassOf("RegisterClass")) {
     Decoder = "Decode" + Record->getName().str() + "RegisterClass";
+  } else if (Record->isSubClassOf("RegClassByHwMode")) {
+    Decoder = "Decode" + Record->getName().str() + "RegClassByHwMode";
   } else if (Record->isSubClassOf("PointerLikeRegClass")) {
     Decoder = "DecodePointerLikeRegClass" +
               utostr(Record->getValueAsInt("RegClassKind"));
   }
 
-  return Decoder;
+  return {Decoder, true};
 }
 
-static OperandInfo getOpInfo(const Record *TypeRecord) {
+OperandInfo InstructionEncoding::getOpInfo(const Record *TypeRecord) {
   const RecordVal *HasCompleteDecoderVal =
       TypeRecord->getValue("hasCompleteDecoder");
   const BitInit *HasCompleteDecoderBit =
@@ -50,7 +53,8 @@ static OperandInfo getOpInfo(const Record *TypeRecord) {
   bool HasCompleteDecoder =
       HasCompleteDecoderBit ? HasCompleteDecoderBit->getValue() : true;
 
-  return OperandInfo(findOperandDecoderMethod(TypeRecord), HasCompleteDecoder);
+  return OperandInfo(findOperandDecoderMethod(TypeRecord).first,
+                     HasCompleteDecoder);
 }
 
 void InstructionEncoding::parseVarLenEncoding(const VarLenInst &VLI) {
@@ -311,6 +315,14 @@ static void addOneOperandFields(const Record *EncodingDef,
       ++J;
     else
       OpInfo.addField(I, J - I, Offset);
+  }
+
+  if (!OpInfo.InitValue && OpInfo.fields().empty()) {
+    // We found a field in InstructionEncoding record that corresponds to the
+    // named operand, but that field has no constant bits and doesn't contribute
+    // to the Inst field. For now, treat that field as if it didn't exist.
+    // TODO: Remove along with IgnoreNonDecodableOperands.
+    OpInfo.HasNoEncoding = true;
   }
 }
 

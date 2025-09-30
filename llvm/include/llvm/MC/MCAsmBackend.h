@@ -168,6 +168,7 @@ public:
   virtual bool relaxAlign(MCFragment &F, unsigned &Size) { return false; }
   virtual bool relaxDwarfLineAddr(MCFragment &) const { return false; }
   virtual bool relaxDwarfCFA(MCFragment &) const { return false; }
+  virtual bool relaxSFrameCFA(MCFragment &) const { return false; }
 
   // Defined by linker relaxation targets to possibly emit LEB128 relocations
   // and set Value at the relocated location.

@@ -2009,6 +2009,19 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     }
     break;
   }
+  case OMPD_groupprivate: {
+    ConsumeToken();
+    DeclDirectiveListParserHelper Helper(this, DKind);
+    if (!ParseOpenMPSimpleVarList(DKind, Helper,
+                                  /*AllowScopeSpecifier=*/true)) {
+      skipUntilPragmaOpenMPEnd(DKind);
+      // Skip the last annot_pragma_openmp_end.
+      ConsumeAnnotationToken();
+      return Actions.OpenMP().ActOnOpenMPGroupPrivateDirective(
+          Loc, Helper.getIdentifiers());
+    }
+    break;
+  }
   case OMPD_allocate: {
     ConsumeToken();
     DeclDirectiveListParserHelper Helper(this, DKind);
@@ -2731,6 +2744,24 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     SkipUntil(tok::annot_pragma_openmp_end);
     break;
   }
+  case OMPD_groupprivate: {
+    if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
+        ParsedStmtContext()) {
+      Diag(Tok, diag::err_omp_immediate_directive)
+          << getOpenMPDirectiveName(DKind, OMPVersion) << 0;
+    }
+    ConsumeToken();
+    DeclDirectiveListParserHelper Helper(this, DKind);
+    if (!ParseOpenMPSimpleVarList(DKind, Helper,
+                                  /*AllowScopeSpecifier=*/false)) {
+      skipUntilPragmaOpenMPEnd(DKind);
+      DeclGroupPtrTy Res = Actions.OpenMP().ActOnOpenMPGroupPrivateDirective(
+          Loc, Helper.getIdentifiers());
+      Directive = Actions.ActOnDeclStmt(Res, Loc, Tok.getLocation());
+    }
+    SkipUntil(tok::annot_pragma_openmp_end);
+    break;
+  }
   case OMPD_allocate: {
     // FIXME: Should this be permitted in C++?
     if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
@@ -2935,6 +2966,39 @@ OMPClause *Parser::ParseOpenMPSizesClause() {
 
   return Actions.OpenMP().ActOnOpenMPSizesClause(ValExprs, ClauseNameLoc,
                                                  OpenLoc, CloseLoc);
+}
+
+OMPClause *Parser::ParseOpenMPLoopRangeClause() {
+  SourceLocation ClauseNameLoc = ConsumeToken();
+  SourceLocation FirstLoc, CountLoc;
+
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.consumeOpen()) {
+    Diag(Tok, diag::err_expected) << tok::l_paren;
+    return nullptr;
+  }
+
+  FirstLoc = Tok.getLocation();
+  ExprResult FirstVal = ParseConstantExpression();
+  if (!FirstVal.isUsable()) {
+    T.skipToEnd();
+    return nullptr;
+  }
+
+  ExpectAndConsume(tok::comma);
+
+  CountLoc = Tok.getLocation();
+  ExprResult CountVal = ParseConstantExpression();
+  if (!CountVal.isUsable()) {
+    T.skipToEnd();
+    return nullptr;
+  }
+
+  T.consumeClose();
+
+  return Actions.OpenMP().ActOnOpenMPLoopRangeClause(
+      FirstVal.get(), CountVal.get(), ClauseNameLoc, T.getOpenLocation(),
+      FirstLoc, CountLoc, T.getCloseLocation());
 }
 
 OMPClause *Parser::ParseOpenMPPermutationClause() {
@@ -3360,6 +3424,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     skipUntilPragmaOpenMPEnd(DKind);
     break;
   case OMPC_threadprivate:
+  case OMPC_groupprivate:
   case OMPC_uniform:
   case OMPC_match:
     if (!WrongDirective)
@@ -3440,6 +3505,9 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       ErrorFound = true;
     }
     Clause = ParseOpenMPClause(CKind, WrongDirective);
+    break;
+  case OMPC_looprange:
+    Clause = ParseOpenMPLoopRangeClause();
     break;
   default:
     break;
