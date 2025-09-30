@@ -483,14 +483,14 @@ char SSAMachineScheduler::ID = 0;
 
 char &llvm::SSAMachineSchedulerID = SSAMachineScheduler::ID;
 
-INITIALIZE_PASS_BEGIN(SSAMachineScheduler, "ssamisched",
+INITIALIZE_PASS_BEGIN(SSAMachineScheduler, "ssa-machine-scheduler",
                       "SSA Machine Instruction Scheduler", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_END(SSAMachineScheduler, "ssamisched",
+INITIALIZE_PASS_END(SSAMachineScheduler, "ssa-machine-scheduler",
                     "SSA Machine Instruction Scheduler", false, false)
 
 SSAMachineScheduler::SSAMachineScheduler() : MachineFunctionPass(ID) {
@@ -800,8 +800,6 @@ bool SSAMachineScheduler::runOnMachineFunction(MachineFunction &MF) {
     return false;
   }
 
-  LLVM_DEBUG(dbgs() << "Before ssa-MI-sched:\n"; MF.print(dbgs()));
-
   auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
@@ -867,7 +865,7 @@ SSAMachineSchedulerPass::run(MachineFunction &MF,
     LLVM_DEBUG(dbgs() << "Subtarget disables ssa-MI-sched.\n");
     return PreservedAnalyses::all();
   }
-  LLVM_DEBUG(dbgs() << "Before ssa-MI-sched:\n"; MF.print(dbgs()));
+
   auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
   auto &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
