@@ -233,6 +233,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds support for 4-bit integer type, and allow this type to be used in cooperative matrices.
    * - ``SPV_KHR_float_controls2``
      - Adds ability to specify the floating-point environment in shaders. It can be used on whole modules and individual instructions.
+   * - ``SPV_INTEL_blocking_pipes``
+     - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
 
 SPIR-V representation in LLVM IR
 ================================
