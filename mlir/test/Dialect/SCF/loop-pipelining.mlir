@@ -930,7 +930,7 @@ func.func @dynamic_loop_result(%A: memref<?xf32>, %result: memref<?xf32>, %lb: i
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
 //   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
-//   CHECK-DAG:   %[[CST0:.*]] = arith.constant 0.000000e+00 : f32
+//   CHECK-DAG:   %[[CST10:.*]] = arith.constant 1.000000e+01 : f32
 //   CHECK-DAG:   %[[CST2:.*]] = arith.constant 2.000000e+00 : f32
 // Prologue:
 //       CHECK:   %[[L0:.*]] = memref.load %[[A]][%[[C0]]] : memref<?xf32>
@@ -938,15 +938,15 @@ func.func @dynamic_loop_result(%A: memref<?xf32>, %result: memref<?xf32>, %lb: i
 //  CHECK-NEXT:   %[[L1:.*]]:2 = scf.for %[[IV:.*]] = %[[C0]] to %[[C3]]
 //  CHECK-SAME:     step %[[C1]] iter_args(%[[ARG0:.*]] = %[[CST2]], %[[ARG1:.*]] = %[[L0]]) -> (f32, f32) {
 //  CHECK-NEXT:     %[[ADD0:.*]] = arith.addf %[[ARG1]], %[[ARG0]] : f32
-//  CHECK-NEXT:     %[[MUL0:.*]] = arith.mulf %[[ADD0]], %[[CST0]] : f32
+//  CHECK-NEXT:     %[[MUL0:.*]] = arith.mulf %[[ADD0]], %[[CST10]] : f32
 //  CHECK-NEXT:     memref.store %[[MUL0]], %[[A]][%[[IV]]] : memref<?xf32>
 //  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C1]] : index
 //  CHECK-NEXT:     %[[L2:.*]] = memref.load %[[A]][%[[IV1]]] : memref<?xf32>
-//  CHECK-NEXT:     scf.yield %[[CST0]], %[[L2]] : f32
+//  CHECK-NEXT:     scf.yield %[[CST10]], %[[L2]] : f32
 //  CHECK-NEXT:   }
 // Epilogue:
-//  CHECK-NEXT:   %[[ADD1:.*]] = arith.addf %[[L1]]#1, %[[CST0]] : f32
-//  CHECK-NEXT:   %[[MUL1:.*]] = arith.mulf %[[ADD1]], %[[CST0]] : f32
+//  CHECK-NEXT:   %[[ADD1:.*]] = arith.addf %[[L1]]#1, %[[CST10]] : f32
+//  CHECK-NEXT:   %[[MUL1:.*]] = arith.mulf %[[ADD1]], %[[CST10]] : f32
 //  CHECK-NEXT:   memref.store %[[MUL1]], %[[A]][%[[C3]]] : memref<?xf32>
 //  CHECK-NEXT:   return %[[L1]]#0 : f32
 
@@ -954,7 +954,7 @@ func.func @yield_constant_loop(%A: memref<?xf32>) -> f32 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
-  %cf0 = arith.constant 0.0 : f32
+  %cf0 = arith.constant 10.0 : f32
   %cf2 = arith.constant 2.0 : f32
   %r = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%arg0 = %cf2) -> f32 {
     %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 3 } : memref<?xf32>

@@ -1281,6 +1281,9 @@ OpFoldResult arith::MulFOp::fold(FoldAdaptor adaptor) {
   // mulf(x, 1) -> x
   if (matchPattern(adaptor.getRhs(), m_OneFloat()))
     return getLhs();
+  // mulf(x, 0) -> 0
+  if (matchPattern(adaptor.getRhs(), m_AnyZeroFloat()))
+    return getRhs();
 
   return constFoldBinaryOp<FloatAttr>(
       adaptor.getOperands(),
