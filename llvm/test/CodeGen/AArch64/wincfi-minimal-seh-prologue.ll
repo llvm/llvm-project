@@ -5,8 +5,9 @@ entry:
   ret void
 }
 
-; Check that there is no .seh_endprologue but there is seh_startepilogue/seh_endepilogue.
-; CHECK-NOT: .seh_endprologue
+; Check that there is a minimal SEH prologue with seh_startepilogue/seh_endepilogue.
+; CHECK:     .seh_proc test
+; CHECK:     .seh_endprologue
 ; CHECK:     .seh_startepilogue
 ; CHECK:     add sp, sp, #48
 ; CHECK:     .seh_stackalloc 48

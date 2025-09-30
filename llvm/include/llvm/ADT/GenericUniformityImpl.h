@@ -408,15 +408,6 @@ public:
                                 const CycleT *);
 
 protected:
-  /// \brief Value/block pair representing a single phi input.
-  struct PhiInput {
-    ConstValueRefT value;
-    BlockT *predBlock;
-
-    PhiInput(ConstValueRefT value, BlockT *predBlock)
-        : value(value), predBlock(predBlock) {}
-  };
-
   const ContextT &Context;
   const FunctionT &F;
   const CycleInfoT &CI;
