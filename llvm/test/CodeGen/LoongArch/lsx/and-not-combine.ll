@@ -324,3 +324,109 @@ define void @and_not_combine_splatimm_v2i64(ptr %res, ptr %a0) nounwind {
   store <2 x i64> %xor, ptr %res
   ret void
 }
+
+define void @and_or_not_combine_v16i8(ptr %pa, ptr %pb, ptr %pv, ptr %dst) nounwind {
+; CHECK-LABEL: and_or_not_combine_v16i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vld $vr2, $a1, 0
+; CHECK-NEXT:    vseq.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vxori.b $vr0, $vr0, 255
+; CHECK-NEXT:    vseq.b $vr1, $vr1, $vr2
+; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vandi.b $vr0, $vr0, 4
+; CHECK-NEXT:    vst $vr0, $a3, 0
+; CHECK-NEXT:    ret
+  %a = load <16 x i8>, ptr %pa
+  %b = load <16 x i8>, ptr %pb
+  %v = load <16 x i8>, ptr %pv
+  %ca = icmp ne <16 x i8> %v, %a
+  %cb = icmp ne <16 x i8> %v, %b
+  %or = or <16 x i1> %ca, %cb
+  %ext = sext <16 x i1> %or to <16 x i8>
+  %and = and <16 x i8> %ext, splat (i8 4)
+  store <16 x i8> %and, ptr %dst
+  ret void
+}
+
+define void @and_or_not_combine_v8i16(ptr %pa, ptr %pb, ptr %pv, ptr %dst) nounwind {
+; CHECK-LABEL: and_or_not_combine_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vld $vr2, $a1, 0
+; CHECK-NEXT:    vseq.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vrepli.b $vr3, -1
+; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr3
+; CHECK-NEXT:    vseq.h $vr1, $vr1, $vr2
+; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vrepli.h $vr1, 4
+; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a3, 0
+; CHECK-NEXT:    ret
+  %a = load <8 x i16>, ptr %pa
+  %b = load <8 x i16>, ptr %pb
+  %v = load <8 x i16>, ptr %pv
+  %ca = icmp ne <8 x i16> %v, %a
+  %cb = icmp ne <8 x i16> %v, %b
+  %or = or <8 x i1> %ca, %cb
+  %ext = sext <8 x i1> %or to <8 x i16>
+  %and = and <8 x i16> %ext, splat (i16 4)
+  store <8 x i16> %and, ptr %dst
+  ret void
+}
+
+define void @and_or_not_combine_v4i32(ptr %pa, ptr %pb, ptr %pv, ptr %dst) nounwind {
+; CHECK-LABEL: and_or_not_combine_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vld $vr2, $a1, 0
+; CHECK-NEXT:    vseq.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vrepli.b $vr3, -1
+; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr3
+; CHECK-NEXT:    vseq.w $vr1, $vr1, $vr2
+; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vrepli.w $vr1, 4
+; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a3, 0
+; CHECK-NEXT:    ret
+  %a = load <4 x i32>, ptr %pa
+  %b = load <4 x i32>, ptr %pb
+  %v = load <4 x i32>, ptr %pv
+  %ca = icmp ne <4 x i32> %v, %a
+  %cb = icmp ne <4 x i32> %v, %b
+  %or = or <4 x i1> %ca, %cb
+  %ext = sext <4 x i1> %or to <4 x i32>
+  %and = and <4 x i32> %ext, splat (i32 4)
+  store <4 x i32> %and, ptr %dst
+  ret void
+}
+
+define void @and_or_not_combine_v2i64(ptr %pa, ptr %pb, ptr %pv, ptr %dst) nounwind {
+; CHECK-LABEL: and_or_not_combine_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vld $vr2, $a1, 0
+; CHECK-NEXT:    vseq.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vrepli.b $vr3, -1
+; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr3
+; CHECK-NEXT:    vseq.d $vr1, $vr1, $vr2
+; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vrepli.d $vr1, 4
+; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a3, 0
+; CHECK-NEXT:    ret
+  %a = load <2 x i64>, ptr %pa
+  %b = load <2 x i64>, ptr %pb
+  %v = load <2 x i64>, ptr %pv
+  %ca = icmp ne <2 x i64> %v, %a
+  %cb = icmp ne <2 x i64> %v, %b
+  %or = or <2 x i1> %ca, %cb
+  %ext = sext <2 x i1> %or to <2 x i64>
+  %and = and <2 x i64> %ext, splat (i64 4)
+  store <2 x i64> %and, ptr %dst
+  ret void
+}
