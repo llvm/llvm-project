@@ -2395,13 +2395,12 @@ foldToElementsFromElements(ToElementsOp toElementsOp,
   return success();
 }
 
-/// Folds vector.to_elements(vector.broadcast(%x)) by creating a new
-/// vector.to_elements on the source and remapping results according to
-/// broadcast semantics.
+/// Folds vector.to_elements(vector.broadcast(%x)) for the scalar case only.
 ///
 /// Cases handled:
 ///  - %x is a scalar: replicate the scalar across all results.
-///  - %x is a vector: create to_elements on source and remap/duplicate results.
+///
+/// The vector source case is handled by a canonicalization pattern.
 static LogicalResult
 foldToElementsOfBroadcast(ToElementsOp toElementsOp,
                           SmallVectorImpl<OpFoldResult> &results) {
@@ -2421,67 +2420,8 @@ foldToElementsOfBroadcast(ToElementsOp toElementsOp,
     return success();
   }
 
-  // Case 2: vector broadcast → create to_elements on source and remap.
-  auto srcVecType = cast<VectorType>(bcastOp.getSource().getType());
-  if (srcVecType.getNumScalableDims() != 0)
-    return failure();
-
-  // Create a temporary to_elements to get the source elements for mapping.
-  // Change the operand to the broadcast source.
-  OpBuilder builder(toElementsOp);
-  auto srcElems = builder.create<ToElementsOp>(toElementsOp.getLoc(),
-                                               bcastOp.getSource());
-
-  ArrayRef<int64_t> dstShape = resultVecType.getShape();
-  ArrayRef<int64_t> srcShape = srcVecType.getShape();
-
-  // Quick broadcastability check with right-aligned shapes.
-  unsigned dstRank = dstShape.size();
-  unsigned srcRank = srcShape.size();
-  if (srcRank > dstRank)
-    return failure();
-
-  for (unsigned i = 0; i < dstRank; ++i) {
-    int64_t dstDim = dstShape[i];
-    int64_t srcDim = 1;
-    if (i + srcRank >= dstRank)
-      srcDim = srcShape[i + srcRank - dstRank];
-    if (!(srcDim == 1 || srcDim == dstDim))
-      return failure();
-  }
-
-  int64_t dstCount = 1;
-  for (int64_t v : dstShape)
-    dstCount *= v;
-  results.clear();
-  results.reserve(dstCount);
-
-  // Pre-compute the mapping from destination linear index to source linear index
-  SmallVector<int64_t> dstToSrcMap(dstCount);
-  SmallVector<int64_t> dstIdx(dstShape.size());
-  
-  for (int64_t lin = 0; lin < dstCount; ++lin) {
-    // Convert linear index to multi-dimensional indices (row-major order)
-    int64_t temp = lin;
-    for (int64_t i = dstShape.size() - 1; i >= 0; --i) {
-      int64_t dim = dstShape[i];
-      dstIdx[i] = temp % dim;
-      temp /= dim;
-    }
-    // Right-align mapping from dst indices to src indices.
-    int64_t srcLin = 0;
-    for (unsigned k = 0; k < srcRank; ++k)
-      srcLin = srcLin * srcShape[k] + 
-        ((srcShape[k] == 1) ? 0 : dstIdx[dstRank - srcRank + k]);
-
-    dstToSrcMap[lin] = srcLin;
-  }
-
-  // Apply the pre-computed mapping
-  for (int64_t lin = 0; lin < dstCount; ++lin) {
-    results.push_back(srcElems.getResult(dstToSrcMap[lin]));
-  }
-  return success();
+  // Vector source case is not folded here.
+  return failure();
 }
 
 LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
@@ -2491,7 +2431,6 @@ LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
   return foldToElementsOfBroadcast(*this, results);
 }
 
-
 LogicalResult
 ToElementsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
                                ToElementsOp::Adaptor adaptor,
@@ -2500,6 +2439,88 @@ ToElementsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
   Type elType = vecType.getElementType();
   inferredReturnTypes.append(vecType.getNumElements(), elType);
   return success();
+}
+
+namespace {
+
+struct ToElementsOfVectorBroadcast final
+    : public OpRewritePattern<ToElementsOp> {
+  using OpRewritePattern<ToElementsOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ToElementsOp toElementsOp,
+                                PatternRewriter &rewriter) const override {
+    auto bcastOp = toElementsOp.getSource().getDefiningOp<BroadcastOp>();
+    if (!bcastOp)
+      return failure();
+
+    // Only handle broadcasts from a vector source here.
+    auto srcType = dyn_cast<VectorType>(bcastOp.getSource().getType());
+    if (!srcType)
+      return failure();
+
+    auto dstType = cast<VectorType>(toElementsOp.getSource().getType());
+
+    // Bail on scalable vectors.
+    if (srcType.getNumScalableDims() != 0 || dstType.getNumScalableDims() != 0)
+      return failure();
+
+    ArrayRef<int64_t> dstShape = dstType.getShape();
+    ArrayRef<int64_t> srcShape = srcType.getShape();
+
+    unsigned dstRank = dstShape.size();
+    unsigned srcRank = srcShape.size();
+    if (srcRank > dstRank)
+      return failure();
+
+    // Verify broadcastability (right-aligned)
+    for (unsigned i = 0; i < dstRank; ++i) {
+      int64_t dstDim = dstShape[i];
+      int64_t srcDim = 1;
+      if (i + srcRank >= dstRank)
+        srcDim = srcShape[i + srcRank - dstRank];
+      if (!(srcDim == 1 || srcDim == dstDim))
+        return failure();
+    }
+
+    // Create elements for the broadcast source vector.
+    auto loc = toElementsOp.getLoc();
+    auto srcElems = rewriter.create<ToElementsOp>(loc, bcastOp.getSource());
+
+    int64_t dstCount = 1;
+    for (int64_t v : dstShape)
+      dstCount *= v;
+
+    SmallVector<Value> replacements;
+    replacements.reserve(dstCount);
+
+    // Pre-compute and apply mapping from destination linear index to
+    // source linear index (row-major, right-aligned broadcasting).
+    SmallVector<int64_t> dstIdx(dstShape.size());
+    for (int64_t lin = 0; lin < dstCount; ++lin) {
+      int64_t temp = lin;
+      for (int64_t i = dstShape.size() - 1; i >= 0; --i) {
+        int64_t dim = dstShape[i];
+        dstIdx[i] = temp % dim;
+        temp /= dim;
+      }
+      int64_t srcLin = 0;
+      for (unsigned k = 0; k < srcRank; ++k)
+        srcLin = srcLin * srcShape[k] +
+                 ((srcShape[k] == 1) ? 0 : dstIdx[dstRank - srcRank + k]);
+
+      replacements.push_back(srcElems.getResult(srcLin));
+    }
+
+    rewriter.replaceOp(toElementsOp, replacements);
+    return success();
+  }
+};
+
+} // end anonymous namespace
+
+void ToElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<ToElementsOfVectorBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
