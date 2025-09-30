@@ -2272,7 +2272,7 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
   llvm::Type *ResTy = ConvertType(Ty);
   bool HasBoolRep = Ty->hasBooleanRepresentation();
   if (HasBoolRep && CGM.getCodeGenOpts().getLoadBoolFromMem() ==
-          CodeGenOptions::BoolFromMem::NonZero) {
+                        CodeGenOptions::BoolFromMem::NonZero) {
     return Builder.CreateICmpNE(
         Value, llvm::Constant::getNullValue(Value->getType()), "loadedv");
   }
