@@ -2443,6 +2443,20 @@ ToElementsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
   return success();
 }
 
+/// Canonicalize `vector.to_elements(vector.broadcast(%v))` where `%v` is a
+/// vector:
+/// - Build `vector.to_elements %v` and remap each destination element to the
+///   corresponding source element using broadcast rules (match or 1 →
+///   replicate).
+///
+/// Example:
+///   %v = vector.broadcast %src : vector<2xf32> to vector<3x2xf32>
+///   %e:6 = vector.to_elements %v : vector<3x2xf32>
+/// becomes:
+///   %src_elems:2 = vector.to_elements %src : vector<2xf32>
+///   // uses: %src_elems#0, %src_elems#1, %src_elems#0,
+///   //       %src_elems#1, %src_elems#0, %src_elems#1
+
 class ToElementsOfBroadcast final : public OpRewritePattern<ToElementsOp> {
   using OpRewritePattern::OpRewritePattern;
 
