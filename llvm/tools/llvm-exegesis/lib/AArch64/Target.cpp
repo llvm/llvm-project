@@ -475,6 +475,9 @@ ExegesisAArch64Target::configurePerfCounter(long Request,
 
   // Load actual file descriptor from auxiliary memory location [address + 0]
   // CounterFileDescriptor was stored at AuxiliaryMemoryMapping[0]
+  dbgs() << "Warning: configurePerfCounter ioctl syscall failing\n";
+  // FIXME: Ensure file descriptor is correctly populated at auxiliary memory
+  // address before ioctl syscall to avoid unreliable benchmark results
   ConfigurePerfCounterCode.push_back(
       loadImmediate(ArgumentRegisters::TempRegister, 64,
                     APInt(64, getAuxiliaryMemoryStartAddress())));
