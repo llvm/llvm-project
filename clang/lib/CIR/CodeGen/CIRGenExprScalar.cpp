@@ -676,6 +676,10 @@ public:
   mlir::Value VisitRealImag(const UnaryOperator *e,
                             QualType promotionType = QualType());
 
+  mlir::Value VisitUnaryExtension(const UnaryOperator *e) {
+    return Visit(e->getSubExpr());
+  }
+
   mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
     CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
     return Visit(die->getExpr());
@@ -686,6 +690,10 @@ public:
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *e);
   mlir::Value VisitCXXNewExpr(const CXXNewExpr *e) {
     return cgf.emitCXXNewExpr(e);
+  }
+  mlir::Value VisitCXXDeleteExpr(const CXXDeleteExpr *e) {
+    cgf.emitCXXDeleteExpr(e);
+    return {};
   }
 
   mlir::Value VisitCXXThrowExpr(const CXXThrowExpr *e) {
@@ -1274,9 +1282,6 @@ mlir::Value ScalarExprEmitter::emitPromoted(const Expr *e,
   } else if (const auto *uo = dyn_cast<UnaryOperator>(e)) {
     switch (uo->getOpcode()) {
     case UO_Imag:
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "ScalarExprEmitter::emitPromoted unary imag");
-      return {};
     case UO_Real:
       return VisitRealImag(uo, promotionType);
     case UO_Minus:
