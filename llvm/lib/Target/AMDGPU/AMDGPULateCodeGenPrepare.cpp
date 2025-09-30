@@ -127,13 +127,8 @@ public:
   }
 
   bool isOpLegal(const Instruction *I) {
-    if (dyn_cast<IntrinsicInst>(I))
-      return true; 
-/*    if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
-      Intrinsic::ID ID = II->getIntrinsicID();
-      if (Intrinsic::isTargetIntrinsic(ID))
-        return true; // FIXME: optionally narrow to specific amdgcn intrinsics
-    }*/
+    if (isa<IntrinsicInst>(I))
+      return true;
 
     // Any store is a profitable sink (prevents flip-flopping)
     if (isa<StoreInst>(I))
@@ -147,14 +142,14 @@ public:
           // Check for SDWA-compatible operation
           if ((EB == 8 || EB == 16) && ST.hasSDWA() && EC * EB <= 32) {
             switch (BO->getOpcode()) {
-              case Instruction::Add:
-              case Instruction::Sub:
-              case Instruction::And:
-              case Instruction::Or:
-              case Instruction::Xor:
-                return true;
-              default:
-                break;
+            case Instruction::Add:
+            case Instruction::Sub:
+            case Instruction::And:
+            case Instruction::Or:
+            case Instruction::Xor:
+              return true;
+            default:
+              break;
             }
           }
         }
