@@ -111,8 +111,38 @@ define <vscale x 8 x i16> @mul_neg_fold_u_two_dups(<vscale x 8 x i1> %pg, <vscal
 }
 
 ; Undefined mul is commutative
-define <vscale x 2 x i64> @mul_neg_fold_u_different_argument_order(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
-; CHECK-LABEL: mul_neg_fold_u_different_argument_order:
+define <vscale x 16 x i8> @mul_neg_fold_u_different_argument_order_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) {
+; CHECK-LABEL: mul_neg_fold_u_different_argument_order_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg z0.b, p0/m, z0.b
+; CHECK-NEXT:    ret
+  %1 = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.x.nxv16i8(i8 -1)
+  %2 = call <vscale x 16 x i8> @llvm.aarch64.sve.mul.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %1, <vscale x 16 x i8> %a)
+  ret <vscale x 16 x i8> %2
+}
+
+define <vscale x 8 x i16> @mul_neg_fold_u_different_argument_order_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
+; CHECK-LABEL: mul_neg_fold_u_different_argument_order_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %1 = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 -1)
+  %2 = call <vscale x 8 x i16> @llvm.aarch64.sve.mul.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %1, <vscale x 8 x i16> %a)
+  ret <vscale x 8 x i16> %2
+}
+
+define <vscale x 4 x i32> @mul_neg_fold_u_different_argument_order_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
+; CHECK-LABEL: mul_neg_fold_u_different_argument_order_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 -1)
+  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 2 x i64> @mul_neg_fold_u_different_argument_order_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
+; CHECK-LABEL: mul_neg_fold_u_different_argument_order_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    neg z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
@@ -120,6 +150,7 @@ define <vscale x 2 x i64> @mul_neg_fold_u_different_argument_order(<vscale x 2 x
   %2 = call <vscale x 2 x i64> @llvm.aarch64.sve.mul.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %1, <vscale x 2 x i64> %a)
   ret <vscale x 2 x i64> %2
 }
+
 ; Non foldable muls -- we don't expect these to be optimised out.
 define <vscale x 8 x i16> @no_mul_neg_fold_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
 ; CHECK-LABEL: no_mul_neg_fold_i16:
