@@ -541,6 +541,13 @@ void AArch64PrologueEmitter::emitPrologue() {
   // to determine the end of the prologue.
   DebugLoc DL;
 
+  // In some cases, particularly with CallingConv::SwiftTail, it is possible to
+  // have a tail-call where the caller only needs to adjust the stack pointer in
+  // the epilogue. In this case, we still need to emit a SEH prologue sequence.
+  // See `seh-minimal-prologue-epilogue.ll` test cases.
+  if (AFI->getArgumentStackToRestore())
+    HasWinCFI = true;
+
   if (AFI->shouldSignReturnAddress(MF)) {
     // If pac-ret+leaf is in effect, PAUTH_PROLOGUE pseudo instructions
     // are inserted by emitPacRetPlusLeafHardening().

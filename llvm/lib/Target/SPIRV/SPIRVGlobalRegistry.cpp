@@ -806,7 +806,7 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   // arguments.
   MDNode *GVarMD = nullptr;
   if (GVar && (GVarMD = GVar->getMetadata("spirv.Decorations")) != nullptr)
-    buildOpSpirvDecorations(Reg, MIRBuilder, GVarMD);
+    buildOpSpirvDecorations(Reg, MIRBuilder, GVarMD, ST);
 
   return Reg;
 }
