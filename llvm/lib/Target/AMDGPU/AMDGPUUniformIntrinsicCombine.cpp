@@ -17,11 +17,11 @@
 /// uniformity must be convergent (and isel will introduce v_readfirstlane for
 /// them if their operands can't be proven statically uniform).
 ///
-/// Although the transformations are applied at the function level, this pass is
-/// structured as a ModulePass because we must also inspect intrinsic
-/// declarations at the module scope. A function pass would require re-scanning
-/// all instructions in every function, while the module view lets us directly
-/// pair intrinsic uses with their declarations in a single traversal.
+/// This pass is implemented as a ModulePass because intrinsic declarations
+/// exist at the module scope, allowing us to skip processing entirely if no
+/// declarations are present and to traverse their user lists directly when
+/// they are. A FunctionPass would instead require scanning every instruction
+/// in every function to find relevant intrinsics, which is far less efficient.
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
@@ -47,7 +47,8 @@ using namespace llvm;
 using namespace llvm::AMDGPU;
 using namespace llvm::PatternMatch;
 
-/// Wrapper for querying uniformity info that first checks new instructions.
+/// Wrapper for querying uniformity info that first checks locally tracked
+/// instructions.
 static bool
 isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
                       const ValueMap<const Value *, bool> &Tracker) {
@@ -57,7 +58,7 @@ isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
   return UI.isDivergentUse(U);
 }
 
-/// Optimizes uniform intrinsics.
+/// Optimizes uniform intrinsics calls if their operand can be proven uniform.
 static bool optimizeUniformIntrinsic(IntrinsicInst &II,
                                      const UniformityInfo &UI,
                                      ValueMap<const Value *, bool> &Tracker) {
@@ -119,7 +120,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
   return false;
 }
 
-/// Iterate over intrinsics in the module to optimise.
+/// Iterates over intrinsic declarations in the module to optimize their uses.
 static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
   bool IsChanged = false;
   ValueMap<const Value *, bool> Tracker;
