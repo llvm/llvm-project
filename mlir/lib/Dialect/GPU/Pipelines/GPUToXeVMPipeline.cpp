@@ -70,7 +70,8 @@ void buildGpuPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   }
-  if (options.xegpuOpLevel == "subgroup") {
+  if (options.xegpuOpLevel == "subgroup" ||
+      options.xegpuOpLevel == "workgroup") {
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUPropagateLayout());
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUSubgroupDistribute());
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
