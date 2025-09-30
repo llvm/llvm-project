@@ -2398,8 +2398,13 @@ foldToElementsFromElements(ToElementsOp toElementsOp,
 
 /// Folds vector.to_elements(vector.broadcast(%x)) for the scalar case only.
 ///
-/// Cases handled:
-///  - %x is a scalar: replicate the scalar across all results.
+/// takes a scalar %x: replicate the scalar across all results.
+/// Example:
+///  %b = vector.broadcast %x : i32 to vector<3xf32>
+///  %e:3 = vector.to_elements %b : vector<3xf32>
+///  user_op %e#0, %e#1, %e#2
+/// becomes:
+///  user_op %x, %x, %x
 ///
 /// The vector source case is handled by a canonicalization pattern.
 static LogicalResult
@@ -2408,22 +2413,15 @@ foldToElementsOfBroadcast(ToElementsOp toElementsOp,
   auto bcastOp = toElementsOp.getSource().getDefiningOp<BroadcastOp>();
   if (!bcastOp)
     return failure();
-
-  auto resultVecType = cast<VectorType>(toElementsOp.getSource().getType());
-  // Bail on scalable vectors, since the element count and per-dimension extents
-  // must be known at compile time.
-  if (resultVecType.getNumScalableDims() != 0)
+  // Vectors are handled in the ToElementsOfBroadcast RewritePattern.
+  if (isa<VectorType>(bcastOp.getSource().getType()))
     return failure();
 
-  // Case 1: scalar broadcast → replicate scalar across all results.
-  if (!isa<VectorType>(bcastOp.getSource().getType())) {
-    Value scalar = bcastOp.getSource();
-    results.assign(resultVecType.getNumElements(), scalar);
-    return success();
-  }
+  auto resultVecType = cast<VectorType>(toElementsOp.getSource().getType());
 
-  // Vector source case is not folded here.
-  return failure();
+  Value scalar = bcastOp.getSource();
+  results.assign(resultVecType.getNumElements(), scalar);
+  return success();
 }
 
 LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
@@ -2473,21 +2471,15 @@ class ToElementsOfBroadcast final : public OpRewritePattern<ToElementsOp> {
 
     auto dstType = cast<VectorType>(toElementsOp.getSource().getType());
 
-    // Bail on scalable vectors.
-    if (srcType.getNumScalableDims() != 0 || dstType.getNumScalableDims() != 0)
-      return failure();
-
     ArrayRef<int64_t> dstShape = dstType.getShape();
     ArrayRef<int64_t> srcShape = srcType.getShape();
 
     int64_t dstRank = dstShape.size();
     int64_t srcRank = srcShape.size();
-    if (srcRank > dstRank)
-      return failure();
 
     // Create elements for the broadcast source vector.
-    auto srcElems = rewriter.create<ToElementsOp>(toElementsOp.getLoc(),
-                                                  bcastOp.getSource());
+    auto srcElems = vector::ToElementsOp::create(
+        rewriter, toElementsOp.getLoc(), bcastOp.getSource());
 
     int64_t dstCount = std::accumulate(dstShape.begin(), dstShape.end(), 1,
                                        std::multiplies<int64_t>());
