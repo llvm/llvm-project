@@ -47,6 +47,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <numeric>
 
 #include "mlir/Dialect/Vector/IR/VectorDialect.cpp.inc"
 // Pull in all enum type and utility function definitions.
@@ -2409,7 +2410,8 @@ foldToElementsOfBroadcast(ToElementsOp toElementsOp,
     return failure();
 
   auto resultVecType = cast<VectorType>(toElementsOp.getSource().getType());
-  // Bail on scalable vectors.
+  // Bail on scalable vectors, since the element count and per-dimension extents
+  // must be known at compile time.
   if (resultVecType.getNumScalableDims() != 0)
     return failure();
 
@@ -2441,11 +2443,8 @@ ToElementsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
   return success();
 }
 
-namespace {
-
-struct ToElementsOfVectorBroadcast final
-    : public OpRewritePattern<ToElementsOp> {
-  using OpRewritePattern<ToElementsOp>::OpRewritePattern;
+class ToElementsOfBroadcast final : public OpRewritePattern<ToElementsOp> {
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(ToElementsOp toElementsOp,
                                 PatternRewriter &rewriter) const override {
@@ -2467,34 +2466,28 @@ struct ToElementsOfVectorBroadcast final
     ArrayRef<int64_t> dstShape = dstType.getShape();
     ArrayRef<int64_t> srcShape = srcType.getShape();
 
-    unsigned dstRank = dstShape.size();
-    unsigned srcRank = srcShape.size();
+    int64_t dstRank = dstShape.size();
+    int64_t srcRank = srcShape.size();
     if (srcRank > dstRank)
       return failure();
 
-    // Verify broadcastability (right-aligned)
-    for (unsigned i = 0; i < dstRank; ++i) {
-      int64_t dstDim = dstShape[i];
-      int64_t srcDim = 1;
-      if (i + srcRank >= dstRank)
-        srcDim = srcShape[i + srcRank - dstRank];
-      if (!(srcDim == 1 || srcDim == dstDim))
-        return failure();
-    }
-
     // Create elements for the broadcast source vector.
-    auto loc = toElementsOp.getLoc();
-    auto srcElems = rewriter.create<ToElementsOp>(loc, bcastOp.getSource());
+    auto srcElems = rewriter.create<ToElementsOp>(toElementsOp.getLoc(),
+                                                  bcastOp.getSource());
 
-    int64_t dstCount = 1;
-    for (int64_t v : dstShape)
-      dstCount *= v;
+    int64_t dstCount = std::accumulate(dstShape.begin(), dstShape.end(), 1,
+                                       std::multiplies<int64_t>());
 
     SmallVector<Value> replacements;
     replacements.reserve(dstCount);
 
-    // Pre-compute and apply mapping from destination linear index to
-    // source linear index (row-major, right-aligned broadcasting).
+    // For each element of the destination, determine which element of the
+    // source should be used. We walk all destination positions using a single
+    // counter, decode it into per-dimension indices, then build the matching
+    // source position: use the same index where sizes match, and use 0 where
+    // the source size is 1 (replication). This mapping is needed so we can
+    // replace each result of to_elements with the corresponding element from
+    // the broadcast source.
     SmallVector<int64_t> dstIdx(dstShape.size());
     for (int64_t lin = 0; lin < dstCount; ++lin) {
       int64_t temp = lin;
@@ -2504,7 +2497,7 @@ struct ToElementsOfVectorBroadcast final
         temp /= dim;
       }
       int64_t srcLin = 0;
-      for (unsigned k = 0; k < srcRank; ++k)
+      for (int64_t k = 0; k < srcRank; ++k)
         srcLin = srcLin * srcShape[k] +
                  ((srcShape[k] == 1) ? 0 : dstIdx[dstRank - srcRank + k]);
 
@@ -2516,11 +2509,9 @@ struct ToElementsOfVectorBroadcast final
   }
 };
 
-} // end anonymous namespace
-
 void ToElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
-  results.add<ToElementsOfVectorBroadcast>(context);
+  results.add<ToElementsOfBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
