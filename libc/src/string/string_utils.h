@@ -19,6 +19,7 @@
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/CPP/type_traits.h" // cpp::is_same_v
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -119,8 +120,7 @@ template <typename T> LIBC_INLINE size_t string_length(const T *src) {
 }
 
 template <typename Word>
-__attribute__((no_sanitize("address", "hwaddress", "thread")))
-LIBC_INLINE void *
+LIBC_NOSANITIZE_OOB_ACCESS LIBC_INLINE void *
 find_first_character_wide_read(const unsigned char *src, unsigned char ch,
                                size_t n) {
   const unsigned char *char_ptr = src;

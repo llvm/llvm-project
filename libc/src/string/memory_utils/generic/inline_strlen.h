@@ -24,9 +24,7 @@ LIBC_INLINE constexpr cpp::simd_mask<char> shift_mask(cpp::simd_mask<char> m,
   return cpp::bit_cast<cpp::simd_mask<char>>(r);
 }
 
-__attribute__((no_sanitize("address", "hwaddress", "thread")))
-LIBC_INLINE size_t
-string_length(const char *src) {
+LIBC_NOSANITIZE_OOB_ACCESS LIBC_INLINE size_t string_length(const char *src) {
   constexpr cpp::simd<char> null_byte = cpp::splat('\0');
 
   size_t alignment = alignof(cpp::simd<char>);
