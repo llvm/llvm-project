@@ -627,9 +627,13 @@ uint32_t L0DeviceTy::getMemAllocType(const void *Ptr) const {
 interop_spec_t L0DeviceTy::selectInteropPreference(int32_t InteropType,
                                                    int32_t NumPrefers,
                                                    interop_spec_t *Prefers) {
-  // no supported preference found, set default to level_zero, non-ordered
+  // no supported preference found, set default to level_zero,
+  // non-ordered unless is targetsync
   return interop_spec_t{
-      tgt_fr_level_zero, {forceInorderInterop() /*inorder*/, 0}, 0};
+      tgt_fr_level_zero,
+      {InteropType == kmp_interop_type_targetsync ? true : false /*inorder*/,
+       0},
+      0};
 }
 
 Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,

@@ -445,7 +445,6 @@ public:
   bool useImmForCompute() const { return true; }
   bool useImmForCopy() const { return true; }
   bool useImmForInterop() const { return true; }
-  bool forceInorderInterop() const { return true; }
 
   void reportDeviceInfo() const;
 
