@@ -1891,7 +1891,7 @@ void *GenericDeviceTy::getFree_ArgBuf(size_t sz) {
     }
   }
   if (!found_ptr) {
-    auto AllocOrErr = this->allocate(sz, nullptr, TARGET_ALLOC_SHARED);
+    auto AllocOrErr = this->allocate(sz, &found_ptr, TARGET_ALLOC_SHARED);
     if (!AllocOrErr) {
       REPORT("Could not get SHARED mem for Arg Buffer: %s\n",
              toString(AllocOrErr.takeError()).data());
