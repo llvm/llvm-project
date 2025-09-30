@@ -679,26 +679,37 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
       /*optional<address space>=*/std::nullopt, /*extra data=*/nullptr);
 }
 
+static mlir::StringAttr getBasicTypeName(mlir::MLIRContext *context,
+                                         llvm::StringRef baseName,
+                                         unsigned bitSize) {
+  std::string name(baseName.str());
+  if (bitSize != 32)
+    name += "*" + std::to_string(bitSize / 8);
+  return mlir::StringAttr::get(context, name);
+}
+
 mlir::LLVM::DITypeAttr
 DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                                 mlir::LLVM::DIScopeAttr scope,
                                 fir::cg::XDeclareOp declOp) {
   mlir::MLIRContext *context = module.getContext();
   if (Ty.isInteger()) {
-    return genBasicType(context, mlir::StringAttr::get(context, "integer"),
-                        Ty.getIntOrFloatBitWidth(), llvm::dwarf::DW_ATE_signed);
+    unsigned bitWidth = Ty.getIntOrFloatBitWidth();
+    return genBasicType(context, getBasicTypeName(context, "integer", bitWidth),
+                        bitWidth, llvm::dwarf::DW_ATE_signed);
   } else if (mlir::isa<mlir::FloatType>(Ty)) {
-    return genBasicType(context, mlir::StringAttr::get(context, "real"),
-                        Ty.getIntOrFloatBitWidth(), llvm::dwarf::DW_ATE_float);
+    unsigned bitWidth = Ty.getIntOrFloatBitWidth();
+    return genBasicType(context, getBasicTypeName(context, "real", bitWidth),
+                        bitWidth, llvm::dwarf::DW_ATE_float);
   } else if (auto logTy = mlir::dyn_cast_if_present<fir::LogicalType>(Ty)) {
-    return genBasicType(context,
-                        mlir::StringAttr::get(context, logTy.getMnemonic()),
-                        kindMapping.getLogicalBitsize(logTy.getFKind()),
-                        llvm::dwarf::DW_ATE_boolean);
+    unsigned bitWidth = kindMapping.getLogicalBitsize(logTy.getFKind());
+    return genBasicType(
+        context, getBasicTypeName(context, logTy.getMnemonic(), bitWidth),
+        bitWidth, llvm::dwarf::DW_ATE_boolean);
   } else if (auto cplxTy = mlir::dyn_cast_if_present<mlir::ComplexType>(Ty)) {
     auto floatTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
     unsigned bitWidth = floatTy.getWidth();
-    return genBasicType(context, mlir::StringAttr::get(context, "complex"),
+    return genBasicType(context, getBasicTypeName(context, "complex", bitWidth),
                         bitWidth * 2, llvm::dwarf::DW_ATE_complex_float);
   } else if (auto seqTy = mlir::dyn_cast_if_present<fir::SequenceType>(Ty)) {
     return convertSequenceType(seqTy, fileAttr, scope, declOp);
