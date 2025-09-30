@@ -61,8 +61,14 @@ using IoDirectionState = std::conditional_t<D == Direction::Input,
     InputStatementState, OutputStatementState>;
 
 // Common state for all kinds of formatted I/O
-template <Direction D> class FormattedIoStatementState {};
-template <> class FormattedIoStatementState<Direction::Input> {
+struct DefinedIoArgs {
+  char ioType[DataEdit::maxIoTypeChars]; // IOTYPE string
+  int vList[DataEdit::maxVListEntries]; // V_LIST(:) values
+};
+template <Direction D>
+class FormattedIoStatementState : public DefinedIoArgs {};
+template <>
+class FormattedIoStatementState<Direction::Input> : public DefinedIoArgs {
 public:
   RT_API_ATTRS std::size_t GetEditDescriptorChars() const;
   RT_API_ATTRS void GotChar(int);
@@ -703,6 +709,13 @@ public:
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
   RT_API_ATTRS bool AdvanceRecord(int = 1);
   RT_API_ATTRS int EndIoStatement();
+  RT_API_ATTRS bool CanAdvance() {
+    return DIR == Direction::Input &&
+        (canAdvance_ || this->mutableModes().inNamelist);
+  }
+
+private:
+  bool canAdvance_{false};
 };
 
 template <Direction DIR>

@@ -86,12 +86,11 @@ struct DataEdit {
   // defined I/O data edit descriptor
   RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr std::size_t maxIoTypeChars{32};
-  static constexpr std::size_t maxVListEntries{4};
+  static constexpr std::size_t maxVListEntries{16};
   RT_OFFLOAD_VAR_GROUP_END
   std::uint8_t ioTypeChars{0};
   std::uint8_t vListEntries{0};
   char ioType[maxIoTypeChars];
-  int vList[maxVListEntries];
 };
 
 // Generates a sequence of DataEdits from a FORMAT statement or

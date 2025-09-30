@@ -1908,7 +1908,12 @@ private:
           FullPath = FS->getOverlayFileDir();
           assert(!FullPath.empty() &&
                  "External contents prefix directory must exist");
-          llvm::sys::path::append(FullPath, Value);
+          SmallString<256> AbsFullPath = Value;
+          if (FS->makeAbsolute(FullPath, AbsFullPath)) {
+            error(N, "failed to make 'external-contents' absolute");
+            return nullptr;
+          }
+          FullPath = AbsFullPath;
         } else {
           FullPath = Value;
         }
@@ -2204,7 +2209,7 @@ RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
     //  FS->OverlayFileDir => /<absolute_path_to>/dummy.cache/vfs
     //
     SmallString<256> OverlayAbsDir = sys::path::parent_path(YAMLFilePath);
-    std::error_code EC = llvm::sys::fs::make_absolute(OverlayAbsDir);
+    std::error_code EC = FS->makeAbsolute(OverlayAbsDir);
     assert(!EC && "Overlay dir final path must be absolute");
     (void)EC;
     FS->setOverlayFileDir(OverlayAbsDir);
