@@ -9,7 +9,7 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-LABEL: define void @test_pr63368
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -23,14 +23,14 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER:%.*]]
 ; CHECK:       loop.1.header:
-; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], [[LOOP_1_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_1_NEXT:%.*]], [[LOOP_1_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP_1_LATCH]], label [[LOOP_1_LATCH]]
 ; CHECK:       loop.1.latch:
 ; CHECK-NEXT:    [[L_LCSSA:%.*]] = phi i32 [ [[L]], [[LOOP_1_HEADER]] ], [ [[L]], [[LOOP_1_HEADER]] ]
 ; CHECK-NEXT:    [[IV_1_NEXT]] = add nuw nsw i32 [[IV_1]], 1
 ; CHECK-NEXT:    [[EC_1:%.*]] = icmp eq i32 [[IV_1_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EC_1]], label [[EXIT_1]], label [[LOOP_1_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC_1]], label [[EXIT_1]], label [[LOOP_1_HEADER]]
 ; CHECK:       exit.1:
 ; CHECK-NEXT:    [[L_LCSSA_LCSSA:%.*]] = phi i32 [ [[L_LCSSA]], [[LOOP_1_LATCH]] ], [ [[TMP0]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[L_LCSSA_LCSSA]], i32 -1)
@@ -59,7 +59,7 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP11]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT6]] = add nuw i32 [[INDEX5]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT6]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK7:%.*]], label [[VECTOR_BODY4]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK7:%.*]], label [[VECTOR_BODY4]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block7:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_2:%.*]], label [[SCALAR_PH2]]
@@ -73,7 +73,7 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_A]], align 1
 ; CHECK-NEXT:    [[IV_2_SEXT:%.*]] = sext i8 [[IV_2]] to i32
 ; CHECK-NEXT:    [[EC_2:%.*]] = icmp sge i32 [[L_LCSSA_LCSSA]], [[IV_2_SEXT]]
-; CHECK-NEXT:    br i1 [[EC_2]], label [[LOOP_2]], label [[EXIT_2]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC_2]], label [[LOOP_2]], label [[EXIT_2]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       exit.2:
 ; CHECK-NEXT:    ret void
 ;

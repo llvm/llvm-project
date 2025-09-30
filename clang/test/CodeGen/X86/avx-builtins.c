@@ -1144,6 +1144,7 @@ __m256d test_mm256_insertf128_pd(__m256d A, __m128d B) {
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
   return _mm256_insertf128_pd(A, B, 0);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_insertf128_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m128d){5.0, 6.0}), 0), 5.0, 6.0, 3.0, 4.0));
 
 __m256 test_mm256_insertf128_ps(__m256 A, __m128 B) {
   // CHECK-LABEL: test_mm256_insertf128_ps
@@ -1151,6 +1152,7 @@ __m256 test_mm256_insertf128_ps(__m256 A, __m128 B) {
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   return _mm256_insertf128_ps(A, B, 1);
 }
+TEST_CONSTEXPR(match_m256(_mm256_insertf128_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m128){10.0f, 20.0f, 30.0f, 40.0f}), 1), 1.0f, 2.0f, 3.0f, 4.0f, 10.0f, 20.0f, 30.0f, 40.0f));
 
 __m256i test_mm256_insertf128_si256(__m256i A, __m128i B) {
   // CHECK-LABEL: test_mm256_insertf128_si256
@@ -1158,6 +1160,7 @@ __m256i test_mm256_insertf128_si256(__m256i A, __m128i B) {
   // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
   return _mm256_insertf128_si256(A, B, 0);
 }
+TEST_CONSTEXPR(match_m256i(_mm256_insertf128_si256(((__m256i){1ULL, 2ULL, 3ULL, 4ULL}), ((__m128i){10ULL, 20ULL}), 0), 10ULL, 20ULL, 3ULL, 4ULL));
 
 __m256i test_mm256_lddqu_si256(__m256i* A) {
   // CHECK-LABEL: test_mm256_lddqu_si256

@@ -57,8 +57,6 @@ uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
     ScopeSwitch(ORDER)
 
   switch (Ordering) {
-  default:
-    __builtin_unreachable();
     Case(atomic::relaxed);
     Case(atomic::acquire);
     Case(atomic::release);

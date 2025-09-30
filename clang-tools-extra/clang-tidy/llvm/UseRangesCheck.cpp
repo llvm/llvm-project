@@ -8,6 +8,8 @@
 
 #include "UseRangesCheck.h"
 
+// FixItHint - Let the docs script know that this class does provide fixits
+
 namespace clang::tidy::llvm_check {
 
 namespace {
