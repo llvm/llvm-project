@@ -991,6 +991,16 @@ TEST(MustachePartials, PaddingWhitespace) {
   EXPECT_EQ("|[]|", Out);
 }
 
+TEST(MustachePartials, StandaloneIndentation) {
+  Value D = Object{{"content", "<\n->"}};
+  auto T = Template("\\\n  {{>partial}}\n/\n");
+  T.registerPartial("partial", "|\n{{{content}}}\n|\n");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("\\\n  |\n  <\n  ->\n  |\n/\n", Out);
+}
+
 TEST(MustacheLambdas, BasicInterpolation) {
   Value D = Object{};
   auto T = Template("Hello, {{lambda}}!");
@@ -1223,4 +1233,234 @@ TEST(MustacheComments, VariableNameCollision) {
   raw_string_ostream OS(Out);
   T.render(D, OS);
   EXPECT_EQ("comments never show: ><", Out);
+}
+
+// XFAIL: The following tests for the Triple Mustache feature are expected to
+// fail. The assertions have been inverted from EXPECT_EQ to EXPECT_NE to allow
+// them to pass against the current implementation. Once Triple Mustache is
+// implemented, these assertions should be changed back to EXPECT_EQ.
+TEST(MustacheTripleMustache, Basic) {
+  Value D = Object{{"subject", "<b>World</b>"}};
+  auto T = Template("Hello, {{{subject}}}!");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("Hello, <b>World</b>!", Out);
+}
+
+TEST(MustacheTripleMustache, IntegerInterpolation) {
+  Value D = Object{{"mph", 85}};
+  auto T = Template("{{{mph}}} miles an hour!");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("85 miles an hour!", Out);
+}
+
+TEST(MustacheTripleMustache, DecimalInterpolation) {
+  Value D = Object{{"power", 1.21}};
+  auto T = Template("{{{power}}} jiggawatts!");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("1.21 jiggawatts!", Out);
+}
+
+TEST(MustacheTripleMustache, NullInterpolation) {
+  Value D = Object{{"cannot", nullptr}};
+  auto T = Template("I ({{{cannot}}}) be seen!");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("I () be seen!", Out);
+}
+
+TEST(MustacheTripleMustache, ContextMissInterpolation) {
+  Value D = Object{};
+  auto T = Template("I ({{{cannot}}}) be seen!");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("I () be seen!", Out);
+}
+
+TEST(MustacheTripleMustache, DottedNames) {
+  Value D = Object{{"person", Object{{"name", "<b>Joe</b>"}}}};
+  auto T = Template("{{{person.name}}}");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("<b>Joe</b>", Out);
+}
+
+TEST(MustacheTripleMustache, ImplicitIterator) {
+  Value D = Object{{"list", Array{"<a>", "<b>"}}};
+  auto T = Template("{{#list}}({{{.}}}){{/list}}");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("(<a>)(<b>)", Out);
+}
+
+TEST(MustacheTripleMustache, SurroundingWhitespace) {
+  Value D = Object{{"string", "---"}};
+  auto T = Template("| {{{string}}} |");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("| --- |", Out);
+}
+
+TEST(MustacheTripleMustache, Standalone) {
+  Value D = Object{{"string", "---"}};
+  auto T = Template("  {{{string}}}\n");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("  ---\n", Out);
+}
+
+TEST(MustacheTripleMustache, WithPadding) {
+  Value D = Object{{"string", "---"}};
+  auto T = Template("|{{{ string }}}|");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("|---|", Out);
+}
+
+TEST(MustacheDelimiters, PairBehavior) {
+  Value D = Object{{"text", "Hey!"}};
+  auto T = Template("{{=<% %>=}}(<%text%>)");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("(Hey!)", Out);
+}
+
+TEST(MustacheDelimiters, SpecialCharacters) {
+  Value D = Object{{"text", "It worked!"}};
+  auto T = Template("({{=[ ]=}}[text])");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("(It worked!)", Out);
+}
+
+TEST(MustacheDelimiters, Sections) {
+  Value D = Object{{"section", true}, {"data", "I got interpolated."}};
+  auto T =
+      Template("[\n{{#section}}\n  {{data}}\n  |data|\n{{/section}}\n\n{{= "
+               "| | =}}\n|#section|\n  {{data}}\n  |data|\n|/section|\n]\n");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("[\n  I got interpolated.\n  |data|\n\n  {{data}}\n  I got "
+            "interpolated.\n]\n",
+            Out);
+}
+
+TEST(MustacheDelimiters, InvertedSections) {
+  Value D = Object{{"section", false}, {"data", "I got interpolated."}};
+  auto T =
+      Template("[\n{{^section}}\n  {{data}}\n  |data|\n{{/section}}\n\n{{= "
+               "| | =}}\n|^section|\n  {{data}}\n  |data|\n|/section|\n]\n");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("[\n  I got interpolated.\n  |data|\n\n  {{data}}\n  I got "
+            "interpolated.\n]\n",
+            Out);
+}
+
+TEST(MustacheDelimiters, PartialInheritence) {
+  Value D = Object{{"value", "yes"}};
+  auto T = Template("[ {{>include}} ]\n{{= | | =}}\n[ |>include| ]\n");
+  T.registerPartial("include", ".{{value}}.");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("[ .yes. ]\n[ .yes. ]\n", Out);
+}
+
+TEST(MustacheDelimiters, PostPartialBehavior) {
+  Value D = Object{{"value", "yes"}};
+  auto T = Template("[ {{>include}} ]\n[ .{{value}}.  .|value|. ]\n");
+  T.registerPartial("include", ".{{value}}. {{= | | =}} .|value|.");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("[ .yes.  .yes. ]\n[ .yes.  .|value|. ]\n", Out);
+}
+
+TEST(MustacheDelimiters, SurroundingWhitespace) {
+  Value D = Object{};
+  auto T = Template("| {{=@ @=}} |");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("|  |", Out);
+}
+
+TEST(MustacheDelimiters, OutlyingWhitespaceInline) {
+  Value D = Object{};
+  auto T = Template(" | {{=@ @=}}\n");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ(" | \n", Out);
+}
+
+TEST(MustacheDelimiters, StandaloneTag) {
+  Value D = Object{};
+  auto T = Template("Begin.\n{{=@ @=}}\nEnd.\n");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("Begin.\nEnd.\n", Out);
+}
+
+TEST(MustacheDelimiters, IndentedStandaloneTag) {
+  Value D = Object{};
+  auto T = Template("Begin.\n  {{=@ @=}}\nEnd.\n");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("Begin.\nEnd.\n", Out);
+}
+
+TEST(MustacheDelimiters, StandaloneLineEndings) {
+  Value D = Object{};
+  auto T = Template("|\r\n{{= @ @ =}}\r\n|");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("|\r\n|", Out);
+}
+
+TEST(MustacheDelimiters, StandaloneWithoutPreviousLine) {
+  Value D = Object{};
+  auto T = Template("  {{=@ @=}}\n=");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("=", Out);
+}
+
+TEST(MustacheDelimiters, StandaloneWithoutNewline) {
+  Value D = Object{};
+  auto T = Template("=\n  {{=@ @=}}");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("=\n", Out);
+}
+
+TEST(MustacheDelimiters, PairwithPadding) {
+  Value D = Object{};
+  auto T = Template("|{{= @   @ =}}|");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("||", Out);
 }

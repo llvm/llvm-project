@@ -528,7 +528,9 @@ public:
 
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
 
-  bool shouldExpandCmpUsingSelects(EVT VT) const override { return true; }
+  bool preferSelectsOverBooleanArithmetic(EVT VT) const override {
+    return true;
+  }
 
   const char *getTargetNodeName(unsigned Opcode) const override;
   std::pair<unsigned, const TargetRegisterClass *>

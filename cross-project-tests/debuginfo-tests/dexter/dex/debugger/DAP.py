@@ -59,10 +59,17 @@ class DAPMessageLogger:
         if self.log_file == "-":
             self.out_handle = sys.stdout
             return
+        if self.log_file == "-e":
+            self.out_handle = sys.stderr
+            return
         self.out_handle = open(self.log_file, "w+", encoding="utf-8")
 
     def _custom_exit(self):
-        if self.out_handle is not None and self.log_file != "-":
+        if (
+            self.out_handle is not None
+            and self.log_file != "-"
+            and self.log_file != "-e"
+        ):
             self.out_handle.close()
         self.open = False
 
