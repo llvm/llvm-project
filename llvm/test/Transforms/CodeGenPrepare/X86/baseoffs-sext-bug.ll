@@ -14,7 +14,7 @@ define i128 @test(i128 %arg) {
 ; GEP-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[EXIT:.*]]
 ; GEP:       [[THEN]]:
 ; GEP-NEXT:    [[SUNKADDR:%.*]] = inttoptr i128 [[ARG]] to ptr
-; GEP-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[SUNKADDR]], i128 18446744073709551584
+; GEP-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[SUNKADDR]], i128 -32
 ; GEP-NEXT:    [[LOAD:%.*]] = load i128, ptr [[SUNKADDR1]], align 16
 ; GEP-NEXT:    br label %[[EXIT]]
 ; GEP:       [[EXIT]]:
@@ -27,7 +27,7 @@ define i128 @test(i128 %arg) {
 ; NO-GEP-NEXT:    [[CMP:%.*]] = icmp ugt i128 [[ARG]], 10
 ; NO-GEP-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[EXIT:.*]]
 ; NO-GEP:       [[THEN]]:
-; NO-GEP-NEXT:    [[SUNKADDR:%.*]] = add i128 [[ARG]], 18446744073709551584
+; NO-GEP-NEXT:    [[SUNKADDR:%.*]] = add i128 [[ARG]], -32
 ; NO-GEP-NEXT:    [[SUNKADDR1:%.*]] = inttoptr i128 [[SUNKADDR]] to ptr
 ; NO-GEP-NEXT:    [[LOAD:%.*]] = load i128, ptr [[SUNKADDR1]], align 16
 ; NO-GEP-NEXT:    br label %[[EXIT]]
