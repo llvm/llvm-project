@@ -1076,7 +1076,7 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     type = results.GetFirstType();
 
   // Find the type by declcontext (-gdwarf-types).
-  if (!type) {
+  if (!type && flavor == swift::Mangle::ManglingFlavor::Embedded) {
     auto resolved = DWARFASTParserSwift::ResolveTypeAlias(
         GetTypeFromMangledTypename(mangled));
     if (resolved.second) {
