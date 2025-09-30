@@ -50,6 +50,7 @@ enum ImageKind : uint16_t {
   IMG_Cubin,
   IMG_Fatbinary,
   IMG_PTX,
+  IMG_SPIRV,
   IMG_LAST,
 };
 
@@ -72,9 +73,9 @@ public:
 
   /// The offloading metadata that will be serialized to a memory buffer.
   struct OffloadingImage {
-    ImageKind TheImageKind;
-    OffloadKind TheOffloadKind;
-    uint32_t Flags;
+    ImageKind TheImageKind = ImageKind::IMG_None;
+    OffloadKind TheOffloadKind = OffloadKind::OFK_None;
+    uint32_t Flags = 0;
     MapVector<StringRef, StringRef> StringData;
     std::unique_ptr<MemoryBuffer> Image;
   };

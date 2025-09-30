@@ -45,8 +45,8 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
@@ -61,6 +61,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
@@ -789,8 +790,14 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
 }
 
 amd_comgr_status_t AMDGPUCompiler::createTmpDirs() {
+  static std::atomic<unsigned> Id = 0;
+  static Process::Pid Pid = Process::getProcessId();
+
+  std::string TmpDirPrefix("comgr-" + std::to_string(Pid) + "-" +
+                           std::to_string(Id++));
+
   ProfilePoint Point("CreateDir");
-  if (fs::createUniqueDirectory("comgr", TmpDir)) {
+  if (fs::createUniqueDirectory(TmpDirPrefix, TmpDir)) {
     return AMD_COMGR_STATUS_ERROR;
   }
 

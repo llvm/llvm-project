@@ -189,11 +189,6 @@ public:
     explicit Remat(const VNInfo *ParentVNI) : ParentVNI(ParentVNI) {}
   };
 
-  /// allUsesAvailableAt - Return true if all registers used by OrigMI at
-  /// OrigIdx are also available with the same value at UseIdx.
-  bool allUsesAvailableAt(const MachineInstr *OrigMI, SlotIndex OrigIdx,
-                          SlotIndex UseIdx) const;
-
   /// canRematerializeAt - Determine if ParentVNI can be rematerialized at
   /// UseIdx. It is assumed that parent_.getVNINfoAt(UseIdx) == ParentVNI.
   bool canRematerializeAt(Remat &RM, VNInfo *OrigVNI, SlotIndex UseIdx);

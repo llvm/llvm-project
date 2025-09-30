@@ -188,6 +188,7 @@ struct MissingFeatures {
   static bool builtinCallF128() { return false; }
   static bool builtinCallMathErrno() { return false; }
   static bool builtinCheckKind() { return false; }
+  static bool cgCapturedStmtInfo() { return false; }
   static bool cgFPOptionsRAII() { return false; }
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
@@ -207,16 +208,19 @@ struct MissingFeatures {
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutTypeStoreSize() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
+  static bool deleteArray() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
   static bool ehCleanupFlags() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
   static bool ehCleanupBranchFixups() { return false; }
   static bool ehstackBranches() { return false; }
+  static bool emitBranchThroughCleanup() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool emitLifetimeMarkers() { return false; }
   static bool emitLValueAlignmentAssumption() { return false; }
+  static bool emitNullCheckForDeleteCalls() { return false; }
   static bool emitNullabilityCheck() { return false; }
   static bool emitTypeCheck() { return false; }
   static bool emitTypeMetadataCodeForVCall() { return false; }
@@ -234,7 +238,6 @@ struct MissingFeatures {
   static bool isMemcpyEquivalentSpecialMember() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
   static bool lambdaCaptures() { return false; }
-  static bool lambdaFieldToName() { return false; }
   static bool loopInfoStack() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
   static bool lowerModeOptLevel() { return false; }

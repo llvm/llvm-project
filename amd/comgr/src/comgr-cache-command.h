@@ -41,7 +41,13 @@ public:
   static void addFileContents(HashAlgorithm &H, llvm::StringRef Buf);
   static void addUInt(HashAlgorithm &H, uint64_t I);
   static void addString(HashAlgorithm &H, llvm::StringRef S);
-  static std::optional<size_t> searchComgrTmpModel(llvm::StringRef S);
+
+  struct ComgrTmpSearchResult {
+    size_t StartPosition;
+    size_t MatchSize;
+  };
+  static std::optional<ComgrTmpSearchResult>
+  searchComgrTmpModel(llvm::StringRef S);
 
   // helper since several command types just write to a single output file
   static llvm::Error writeSingleOutputFile(llvm::StringRef OutputFilename,

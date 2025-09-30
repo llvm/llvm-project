@@ -396,14 +396,31 @@ std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
   return {};
 }
 
-/// Converts an IntegerAttr to have the specified type if needed.
-/// This handles cases where integer constant attributes have a different type
-/// than the target element type.
-static IntegerAttr convertIntegerAttr(IntegerAttr intAttr, Type expectedType) {
-  if (intAttr.getType() == expectedType)
-    return intAttr; // Already correct type
+/// Converts numeric attributes to the expected type. Supports
+/// integer-to-integer and float-to-integer conversions. Returns the original
+/// attribute if no conversion is needed or supported.
+static Attribute convertNumericAttr(Attribute attr, Type expectedType) {
+  // Integer-to-integer conversion
+  if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+    if (auto intType = dyn_cast<IntegerType>(expectedType)) {
+      if (intAttr.getType() != expectedType)
+        return IntegerAttr::get(expectedType, intAttr.getInt());
+    }
+    return attr;
+  }
 
-  return IntegerAttr::get(expectedType, intAttr.getInt());
+  // Float-to-integer bitcast (preserves bit representation)
+  if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
+    auto intType = dyn_cast<IntegerType>(expectedType);
+    if (!intType)
+      return attr;
+
+    APFloat floatVal = floatAttr.getValue();
+    APInt intVal = floatVal.bitcastToAPInt();
+    return IntegerAttr::get(expectedType, intVal);
+  }
+
+  return attr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2473,16 +2490,11 @@ static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
   if (!destEltType.isIntOrIndexOrFloat() && !isa<ComplexType>(destEltType))
     return {};
 
-  // Convert integer attributes to the target type if needed, leave others
-  // unchanged.
-  auto convertedElements =
-      llvm::map_to_vector(elements, [&](Attribute attr) -> Attribute {
-        if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
-          return convertIntegerAttr(intAttr, destEltType);
-        }
-        return attr; // Non-integer attributes (FloatAttr, etc.) returned
-                     // unchanged
-      });
+  // Constant attributes might have a different type than the return type.
+  // Convert them before creating the dense elements attribute.
+  auto convertedElements = llvm::map_to_vector(elements, [&](Attribute attr) {
+    return convertNumericAttr(attr, destEltType);
+  });
 
   return DenseElementsAttr::get(destVecType, convertedElements);
 }
@@ -3504,19 +3516,13 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
   SmallVector<Attribute> insertedValues;
   Type destEltType = destTy.getElementType();
 
-  /// Converts integer attributes to the expected type if there's a mismatch.
-  /// Non-integer attributes are left unchanged.
+  /// Converts attribute to the expected type if there's
+  /// a mismatch.
   if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(srcAttr)) {
     for (auto value : denseSource.getValues<Attribute>())
-      if (auto intAttr = dyn_cast<IntegerAttr>(value))
-        insertedValues.push_back(convertIntegerAttr(intAttr, destEltType));
-      else
-        insertedValues.push_back(value); // Non-integer attributes unchanged
+      insertedValues.push_back(convertNumericAttr(value, destEltType));
   } else {
-    if (auto intAttr = dyn_cast<IntegerAttr>(srcAttr))
-      insertedValues.push_back(convertIntegerAttr(intAttr, destEltType));
-    else
-      insertedValues.push_back(srcAttr); // Non-integer attributes unchanged
+    insertedValues.push_back(convertNumericAttr(srcAttr, destEltType));
   }
 
   auto allValues = llvm::to_vector(denseDst.getValues<Attribute>());
@@ -5100,6 +5106,14 @@ void TransferReadOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<TransferReadAfterWriteToBroadcast>(context);
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+TransferReadOp::bubbleDownCasts(OpBuilder &builder) {
+  if (!hasPureBufferSemantics())
+    return failure();
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
+}
+
 //===----------------------------------------------------------------------===//
 // TransferWriteOp
 //===----------------------------------------------------------------------===//
@@ -5587,6 +5601,14 @@ void TransferWriteOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<FoldWaw, SwapExtractSliceOfTransferWrite>(context);
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+TransferWriteOp::bubbleDownCasts(OpBuilder &builder) {
+  if (!hasPureBufferSemantics())
+    return failure();
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
+}
+
 //===----------------------------------------------------------------------===//
 // LoadOp
 //===----------------------------------------------------------------------===//
@@ -5641,6 +5663,12 @@ std::optional<SmallVector<int64_t, 4>> LoadOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+LoadOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
+}
+
 //===----------------------------------------------------------------------===//
 // StoreOp
 //===----------------------------------------------------------------------===//
@@ -5678,6 +5706,12 @@ LogicalResult StoreOp::fold(FoldAdaptor adaptor,
 
 std::optional<SmallVector<int64_t, 4>> StoreOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
+}
+
+FailureOr<std::optional<SmallVector<Value>>>
+StoreOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5734,6 +5768,12 @@ OpFoldResult MaskedLoadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+MaskedLoadOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
+}
+
 //===----------------------------------------------------------------------===//
 // MaskedStoreOp
 //===----------------------------------------------------------------------===//
@@ -5782,6 +5822,12 @@ void MaskedStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
 LogicalResult MaskedStoreOp::fold(FoldAdaptor adaptor,
                                   SmallVectorImpl<OpFoldResult> &results) {
   return memref::foldMemRefCast(*this);
+}
+
+FailureOr<std::optional<SmallVector<Value>>>
+MaskedStoreOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5887,6 +5933,12 @@ void GatherOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<GatherFolder, FoldContiguousGather>(context);
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+GatherOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
+}
+
 //===----------------------------------------------------------------------===//
 // ScatterOp
 //===----------------------------------------------------------------------===//
@@ -5949,6 +6001,12 @@ void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ScatterFolder, FoldContiguousScatter>(context);
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+ScatterOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
+}
+
 //===----------------------------------------------------------------------===//
 // ExpandLoadOp
 //===----------------------------------------------------------------------===//
@@ -5997,6 +6055,12 @@ void ExpandLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ExpandLoadFolder>(context);
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+ExpandLoadOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
+}
+
 //===----------------------------------------------------------------------===//
 // CompressStoreOp
 //===----------------------------------------------------------------------===//
@@ -6041,6 +6105,12 @@ public:
 void CompressStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<CompressStoreFolder>(context);
+}
+
+FailureOr<std::optional<SmallVector<Value>>>
+CompressStoreOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
 }
 
 //===----------------------------------------------------------------------===//

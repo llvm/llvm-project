@@ -1992,12 +1992,12 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // All VPInstructions that lower to GEPs must have the i8 source element
     // type (as they are PtrAdds), so we omit it.
     return TypeSwitch<const VPSingleDefRecipe *, Type *>(R)
-        .Case<VPReplicateRecipe, VPWidenGEPRecipe>([](auto *I) -> Type * {
+        .Case<VPReplicateRecipe>([](auto *I) -> Type * {
           if (auto *GEP = dyn_cast<GetElementPtrInst>(I->getUnderlyingValue()))
             return GEP->getSourceElementType();
           return nullptr;
         })
-        .Case<VPVectorPointerRecipe>(
+        .Case<VPVectorPointerRecipe, VPWidenGEPRecipe>(
             [](auto *I) { return I->getSourceElementType(); })
         .Default([](auto *) { return nullptr; });
   }
@@ -2195,7 +2195,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         auto [ProcessedIter, IterIsEmpty] = ProcessedTruncs.try_emplace(Op);
         VPWidenCastRecipe *NewOp =
             IterIsEmpty
-                ? new VPWidenCastRecipe(Instruction::Trunc, Op, NewResTy)
+                ? new VPWidenCastRecipe(Instruction::Trunc, Op, NewResTy,
+                                        VPIRFlags::TruncFlagsTy(false, false))
                 : ProcessedIter->second;
         R.setOperand(Idx, NewOp);
         if (!IterIsEmpty)
@@ -2852,6 +2853,7 @@ void VPlanTransforms::replaceSymbolicStrides(
     return R->getParent()->getParent() ||
            R->getParent() == Plan.getVectorLoopRegion()->getSinglePredecessor();
   };
+  ValueToSCEVMapTy RewriteMap;
   for (const SCEV *Stride : StridesMap.values()) {
     using namespace SCEVPatternMatch;
     auto *StrideV = cast<SCEVUnknown>(Stride)->getValue();
@@ -2878,6 +2880,22 @@ void VPlanTransforms::replaceSymbolicStrides(
           isa<SExtInst>(U) ? StrideConst->sext(BW) : StrideConst->zext(BW);
       VPValue *CI = Plan.getOrAddLiveIn(ConstantInt::get(U->getType(), C));
       StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
+    }
+    RewriteMap[StrideV] = PSE.getSCEV(StrideV);
+  }
+
+  for (VPRecipeBase &R : *Plan.getEntry()) {
+    auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
+    if (!ExpSCEV)
+      continue;
+    const SCEV *ScevExpr = ExpSCEV->getSCEV();
+    auto *NewSCEV =
+        SCEVParameterRewriter::rewrite(ScevExpr, *PSE.getSE(), RewriteMap);
+    if (NewSCEV != ScevExpr) {
+      VPValue *NewExp = vputils::getOrCreateVPValueForSCEVExpr(Plan, NewSCEV);
+      ExpSCEV->replaceAllUsesWith(NewExp);
+      if (Plan.getTripCount() == ExpSCEV)
+        Plan.resetTripCount(NewExp);
     }
   }
 }
@@ -3566,13 +3584,13 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                    Mul, Ext0, Ext1, Ext)) {
       auto *NewExt0 = new VPWidenCastRecipe(
           Ext0->getOpcode(), Ext0->getOperand(0), Ext->getResultType(), *Ext0,
-          Ext0->getDebugLoc());
+          *Ext0, Ext0->getDebugLoc());
       NewExt0->insertBefore(Ext0);
 
       VPWidenCastRecipe *NewExt1 = NewExt0;
       if (Ext0 != Ext1) {
         NewExt1 = new VPWidenCastRecipe(Ext1->getOpcode(), Ext1->getOperand(0),
-                                        Ext->getResultType(), *Ext1,
+                                        Ext->getResultType(), *Ext1, *Ext1,
                                         Ext1->getDebugLoc());
         NewExt1->insertBefore(Ext1);
       }
