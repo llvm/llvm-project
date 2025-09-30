@@ -2880,8 +2880,7 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
       static_cast<MCSymbolXCOFF *>(CurrentFnDescSym)->getRepresentedCsect());
 
   // Emit aliasing label for function descriptor csect.
-  if (MF) // TODO MF is unset when processing an ifunc, handle it better than
-          // this.
+  if (MF)
     for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
       OutStreamer->emitLabel(getSymbol(Alias));
 
@@ -2901,17 +2900,13 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
 }
 
 void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
-  if (!MF) { // TODO: MF is unset when processing an ifunc, handle it better.
-    if (!TM.getFunctionSections())
-      PPCAsmPrinter::emitFunctionEntryLabel();
-    return;
-  }
-
   // For functions without user defined section, it's not necessary to emit the
   // label when we have individual function in its own csect.
-  if (!TM.getFunctionSections() || MF->getFunction().hasSection())
+  if (!TM.getFunctionSections() || (MF && MF->getFunction().hasSection()))
     PPCAsmPrinter::emitFunctionEntryLabel();
 
+  if (!MF)
+    return;
   // Emit aliasing label for function entry point label.
   for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
     OutStreamer->emitLabel(
