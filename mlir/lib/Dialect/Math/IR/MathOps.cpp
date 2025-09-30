@@ -289,7 +289,7 @@ OpFoldResult math::SinhOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>> math::SincosOp::getShapeForUnroll() {
-  if (auto vt = mlir::dyn_cast_or_null<VectorType>(getOperand().getType()))
+  if (auto vt = mlir::dyn_cast<VectorType>(getOperand().getType()))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
 }

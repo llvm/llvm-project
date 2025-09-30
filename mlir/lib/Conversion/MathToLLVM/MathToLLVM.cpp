@@ -128,12 +128,12 @@ struct SincosOpLowering : public ConvertOpToLLVMPattern<math::SincosOp> {
   LogicalResult
   matchAndRewrite(math::SincosOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    const auto &typeConverter = *this->getTypeConverter();
-    auto loc = op.getLoc();
-    auto operandType = adaptor.getOperand().getType();
-    auto llvmOperandType = typeConverter.convertType(operandType);
-    auto sinType = typeConverter.convertType(op.getSin().getType());
-    auto cosType = typeConverter.convertType(op.getCos().getType());
+    const LLVMTypeConverter &typeConverter = *this->getTypeConverter();
+    mlir::Location loc = op.getLoc();
+    mlir::Type operandType = adaptor.getOperand().getType();
+    mlir::Type llvmOperandType = typeConverter.convertType(operandType);
+    mlir::Type sinType = typeConverter.convertType(op.getSin().getType());
+    mlir::Type cosType = typeConverter.convertType(op.getCos().getType());
     if (!llvmOperandType || !sinType || !cosType)
       return failure();
 
