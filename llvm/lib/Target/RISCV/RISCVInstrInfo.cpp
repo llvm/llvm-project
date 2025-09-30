@@ -3983,8 +3983,7 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   case RISCV::QC_SELECTINE:
   case RISCV::QC_SELECTIIEQ:
   case RISCV::QC_SELECTIINE: {
-    auto &WorkingMI = cloneIfNew(MI);
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
+    return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1,
                                                    OpIdx2);
   }
   case RISCV::PseudoCCMOVGPRNoX0:
