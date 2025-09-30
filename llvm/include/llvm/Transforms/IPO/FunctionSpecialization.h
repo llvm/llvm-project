@@ -295,6 +295,7 @@ class FunctionSpecializer {
 
   SmallPtrSet<Function *, 32> Specializations;
   SmallPtrSet<Function *, 32> DeadFunctions;
+  SmallPtrSet<Function *, 32> VisitedFunctions;
   DenseMap<Function *, CodeMetrics> FunctionMetrics;
   DenseMap<Function *, unsigned> FunctionGrowth;
   unsigned NGlobals = 0;

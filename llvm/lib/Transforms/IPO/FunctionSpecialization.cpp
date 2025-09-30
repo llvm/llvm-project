@@ -736,8 +736,13 @@ bool FunctionSpecializer::runOneSpec(Spec &S, bool Chained, SpecMap &SM,
   // recursive functions when running multiple times to save wasted analysis,
   // as we will not be able to specialize on any newly found literal constant
   // return values.
-  if (!SpecializeLiteralConstant && !Inserted && !Metrics.isRecursive)
+  if (!Chained && !SpecializeLiteralConstant && VisitedFunctions.contains(&F) &&
+      !Metrics.isRecursive)
     return false;
+
+  // Don't want to mistake this chain for checking all of the CallSites for F
+  if (!Chained)
+    VisitedFunctions.insert(&F);
 
   int64_t Sz = Metrics.NumInsts.getValue();
   assert(Sz > 0 && "CodeSize should be positive");
