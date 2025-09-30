@@ -9330,9 +9330,8 @@ bool SelectionDAGBuilder::visitStrLenCall(const CallInst &I) {
   const Value *Arg0 = I.getArgOperand(0);
 
   const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
-  std::pair<SDValue, SDValue> Res =
-    TSI.EmitTargetCodeForStrlen(DAG, getCurSDLoc(), DAG.getRoot(),
-                                getValue(Arg0), MachinePointerInfo(Arg0));
+  std::pair<SDValue, SDValue> Res = TSI.EmitTargetCodeForStrlen(
+      DAG, getCurSDLoc(), DAG.getRoot(), getValue(Arg0), &I);
   if (Res.first.getNode()) {
     processIntegerCallValue(I, Res.first, false);
     PendingLoads.push_back(Res.second);

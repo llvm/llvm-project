@@ -8,7 +8,7 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: define i32 @dotp(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -87,8 +87,7 @@ define void @dotp_small_epilogue_vf(i64 %idx.neg, i8 %a) #1 {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[IND_END6:%.*]] = add i64 [[IDX_NEG]], [[IV_NEXT]]
-; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP0]], [[IV_NEXT]]
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 4
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT]], [[WHILE_BODY]] ], [ 0, [[ENTRY]] ]
@@ -169,7 +168,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK-LABEL: define i32 @dotp_predicated(
 ; CHECK-SAME: i64 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 15
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16

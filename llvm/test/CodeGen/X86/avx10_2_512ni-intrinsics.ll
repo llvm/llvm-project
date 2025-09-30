@@ -53,7 +53,7 @@ declare <16 x float> @llvm.x86.avx10.vdpphps.512(<16 x float>, <32 x half>, <32 
 
 ; VNNI INT8
 
-define <16 x i32> @test_mm512_dpbssd_epi32(<16 x i32> %__W, <16 x i32> %__A, ptr %pB) {
+define <16 x i32> @test_mm512_dpbssd_epi32(<16 x i32> %__W, <64 x i8> %__A, ptr %pB) {
 ; X86-LABEL: test_mm512_dpbssd_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -64,12 +64,12 @@ define <16 x i32> @test_mm512_dpbssd_epi32(<16 x i32> %__W, <16 x i32> %__A, ptr
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpdpbssd (%rdi), %zmm1, %zmm0 # encoding: [0x62,0xf2,0x77,0x48,0x50,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %__B = load <16 x i32>, ptr %pB
-  %res = tail call <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32> %__W, <16 x i32> %__A, <16 x i32> %__B)
+  %__B = load <64 x i8>, ptr %pB
+  %res = tail call <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32> %__W, <64 x i8> %__A, <64 x i8> %__B)
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_mm512_mask_dpbssds_epi32(<16 x i32> %__W, i16 zeroext %__U, <16 x i32> %__A, <16 x i32> %__B) {
+define <16 x i32> @test_mm512_mask_dpbssds_epi32(<16 x i32> %__W, i16 zeroext %__U, <64 x i8> %__A, <64 x i8> %__B) {
 ; X86-LABEL: test_mm512_mask_dpbssds_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
@@ -81,13 +81,13 @@ define <16 x i32> @test_mm512_mask_dpbssds_epi32(<16 x i32> %__W, i16 zeroext %_
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vpdpbssds %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf2,0x77,0x49,0x51,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %dpi = tail call <16 x i32> @llvm.x86.avx10.vpdpbssds.512(<16 x i32> %__W, <16 x i32> %__A, <16 x i32> %__B)
+  %dpi = tail call <16 x i32> @llvm.x86.avx10.vpdpbssds.512(<16 x i32> %__W, <64 x i8> %__A, <64 x i8> %__B)
   %bst = bitcast i16 %__U to <16 x i1>
   %res = select <16 x i1> %bst, <16 x i32> %dpi, <16 x i32> %__W
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_mm512_maskz_dpbssd_epi32(i16 zeroext %__U, <16 x i32> %__W, <16 x i32> %__A, <16 x i32> %__B) {
+define <16 x i32> @test_mm512_maskz_dpbssd_epi32(i16 zeroext %__U, <16 x i32> %__W, <64 x i8> %__A, <64 x i8> %__B) {
 ; X86-LABEL: test_mm512_maskz_dpbssd_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
@@ -99,16 +99,16 @@ define <16 x i32> @test_mm512_maskz_dpbssd_epi32(i16 zeroext %__U, <16 x i32> %_
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vpdpbssd %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x77,0xc9,0x50,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %dpi = tail call <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32> %__W, <16 x i32> %__A, <16 x i32> %__B)
+  %dpi = tail call <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32> %__W, <64 x i8> %__A, <64 x i8> %__B)
   %bst = bitcast i16 %__U to <16 x i1>
   %res = select <16 x i1> %bst, <16 x i32> %dpi, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
-declare <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32>, <16 x i32>, <16 x i32>)
-declare <16 x i32> @llvm.x86.avx10.vpdpbssds.512(<16 x i32>, <16 x i32>, <16 x i32>)
+declare <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32>, <64 x i8>, <64 x i8>)
+declare <16 x i32> @llvm.x86.avx10.vpdpbssds.512(<16 x i32>, <64 x i8>, <64 x i8>)
 
-define <16 x i32> @test_mm512_dpbsud_epi32(<16 x i32> %__W, <16 x i32> %__A, ptr %pB) {
+define <16 x i32> @test_mm512_dpbsud_epi32(<16 x i32> %__W, <64 x i8> %__A, ptr %pB) {
 ; X86-LABEL: test_mm512_dpbsud_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -119,12 +119,12 @@ define <16 x i32> @test_mm512_dpbsud_epi32(<16 x i32> %__W, <16 x i32> %__A, ptr
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpdpbsud (%rdi), %zmm1, %zmm0 # encoding: [0x62,0xf2,0x76,0x48,0x50,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %__B = load <16 x i32>, ptr %pB
-  %res = tail call <16 x i32> @llvm.x86.avx10.vpdpbsud.512(<16 x i32> %__W, <16 x i32> %__A, <16 x i32> %__B)
+  %__B = load <64 x i8>, ptr %pB
+  %res = tail call <16 x i32> @llvm.x86.avx10.vpdpbsud.512(<16 x i32> %__W, <64 x i8> %__A, <64 x i8> %__B)
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_mm512_mask_dpbsuds_epi32(<16 x i32> %__W, i16 zeroext %__U, <16 x i32> %__A, <16 x i32> %__B) {
+define <16 x i32> @test_mm512_mask_dpbsuds_epi32(<16 x i32> %__W, i16 zeroext %__U, <64 x i8> %__A, <64 x i8> %__B) {
 ; X86-LABEL: test_mm512_mask_dpbsuds_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
@@ -136,13 +136,13 @@ define <16 x i32> @test_mm512_mask_dpbsuds_epi32(<16 x i32> %__W, i16 zeroext %_
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vpdpbsuds %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf2,0x76,0x49,0x51,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %dpi = tail call <16 x i32> @llvm.x86.avx10.vpdpbsuds.512(<16 x i32> %__W, <16 x i32> %__A, <16 x i32> %__B)
+  %dpi = tail call <16 x i32> @llvm.x86.avx10.vpdpbsuds.512(<16 x i32> %__W, <64 x i8> %__A, <64 x i8> %__B)
   %bst = bitcast i16 %__U to <16 x i1>
   %res = select <16 x i1> %bst, <16 x i32> %dpi, <16 x i32> %__W
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_mm512_maskz_dpbsud_epi32(i16 zeroext %__U, <16 x i32> %__W, <16 x i32> %__A, <16 x i32> %__B) {
+define <16 x i32> @test_mm512_maskz_dpbsud_epi32(i16 zeroext %__U, <16 x i32> %__W, <64 x i8> %__A, <64 x i8> %__B) {
 ; X86-LABEL: test_mm512_maskz_dpbsud_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
@@ -154,16 +154,16 @@ define <16 x i32> @test_mm512_maskz_dpbsud_epi32(i16 zeroext %__U, <16 x i32> %_
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vpdpbsud %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0xc9,0x50,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %dpi = tail call <16 x i32> @llvm.x86.avx10.vpdpbsud.512(<16 x i32> %__W, <16 x i32> %__A, <16 x i32> %__B)
+  %dpi = tail call <16 x i32> @llvm.x86.avx10.vpdpbsud.512(<16 x i32> %__W, <64 x i8> %__A, <64 x i8> %__B)
   %bst = bitcast i16 %__U to <16 x i1>
   %res = select <16 x i1> %bst, <16 x i32> %dpi, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
-declare <16 x i32> @llvm.x86.avx10.vpdpbsud.512(<16 x i32>, <16 x i32>, <16 x i32>)
-declare <16 x i32> @llvm.x86.avx10.vpdpbsuds.512(<16 x i32>, <16 x i32>, <16 x i32>)
+declare <16 x i32> @llvm.x86.avx10.vpdpbsud.512(<16 x i32>, <64 x i8>, <64 x i8>)
+declare <16 x i32> @llvm.x86.avx10.vpdpbsuds.512(<16 x i32>, <64 x i8>, <64 x i8>)
 
-define <16 x i32> @test_mm512_dpbuud_epi32(<16 x i32> %__W, <16 x i32> %__A, ptr %pB) {
+define <16 x i32> @test_mm512_dpbuud_epi32(<16 x i32> %__W, <64 x i8> %__A, ptr %pB) {
 ; X86-LABEL: test_mm512_dpbuud_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -174,12 +174,12 @@ define <16 x i32> @test_mm512_dpbuud_epi32(<16 x i32> %__W, <16 x i32> %__A, ptr
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpdpbuud (%rdi), %zmm1, %zmm0 # encoding: [0x62,0xf2,0x74,0x48,0x50,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %__B = load <16 x i32>, ptr %pB
-  %res = tail call <16 x i32> @llvm.x86.avx10.vpdpbuud.512(<16 x i32> %__W, <16 x i32> %__A, <16 x i32> %__B)
+  %__B = load <64 x i8>, ptr %pB
+  %res = tail call <16 x i32> @llvm.x86.avx10.vpdpbuud.512(<16 x i32> %__W, <64 x i8> %__A, <64 x i8> %__B)
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_mm512_mask_dpbuuds_epi32(<16 x i32> %__W, i16 zeroext %__U, <16 x i32> %__A, <16 x i32> %__B) {
+define <16 x i32> @test_mm512_mask_dpbuuds_epi32(<16 x i32> %__W, i16 zeroext %__U, <64 x i8> %__A, <64 x i8> %__B) {
 ; X86-LABEL: test_mm512_mask_dpbuuds_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
@@ -191,13 +191,13 @@ define <16 x i32> @test_mm512_mask_dpbuuds_epi32(<16 x i32> %__W, i16 zeroext %_
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vpdpbuuds %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf2,0x74,0x49,0x51,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %dpi = tail call <16 x i32> @llvm.x86.avx10.vpdpbuuds.512(<16 x i32> %__W, <16 x i32> %__A, <16 x i32> %__B)
+  %dpi = tail call <16 x i32> @llvm.x86.avx10.vpdpbuuds.512(<16 x i32> %__W, <64 x i8> %__A, <64 x i8> %__B)
   %bst = bitcast i16 %__U to <16 x i1>
   %res = select <16 x i1> %bst, <16 x i32> %dpi, <16 x i32> %__W
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_mm512_maskz_dpbuud_epi32(i16 zeroext %__U, <16 x i32> %__W, <16 x i32> %__A, <16 x i32> %__B) {
+define <16 x i32> @test_mm512_maskz_dpbuud_epi32(i16 zeroext %__U, <16 x i32> %__W, <64 x i8> %__A, <64 x i8> %__B) {
 ; X86-LABEL: test_mm512_maskz_dpbuud_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
@@ -209,14 +209,14 @@ define <16 x i32> @test_mm512_maskz_dpbuud_epi32(i16 zeroext %__U, <16 x i32> %_
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vpdpbuud %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x74,0xc9,0x50,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %dpi = tail call <16 x i32> @llvm.x86.avx10.vpdpbuud.512(<16 x i32> %__W, <16 x i32> %__A, <16 x i32> %__B)
+  %dpi = tail call <16 x i32> @llvm.x86.avx10.vpdpbuud.512(<16 x i32> %__W, <64 x i8> %__A, <64 x i8> %__B)
   %bst = bitcast i16 %__U to <16 x i1>
   %res = select <16 x i1> %bst, <16 x i32> %dpi, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
-declare <16 x i32> @llvm.x86.avx10.vpdpbuud.512(<16 x i32>, <16 x i32>, <16 x i32>)
-declare <16 x i32> @llvm.x86.avx10.vpdpbuuds.512(<16 x i32>, <16 x i32>, <16 x i32>)
+declare <16 x i32> @llvm.x86.avx10.vpdpbuud.512(<16 x i32>, <64 x i8>, <64 x i8>)
+declare <16 x i32> @llvm.x86.avx10.vpdpbuuds.512(<16 x i32>, <64 x i8>, <64 x i8>)
 
 ; VNNI INT16
 
