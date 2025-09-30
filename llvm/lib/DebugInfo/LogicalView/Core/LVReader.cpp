@@ -555,10 +555,9 @@ struct DebuggerViewPrinter {
         if (SymbolLocations.empty())
           continue;
 
-        if (IncludeRanges) {
+        if (IncludeRanges)
           OS << "{Range}: " << Symbol->getName() << " (line "
              << Symbol->getLineNumber() << ")" << ": ";
-        }
 
         for (const LVLocation *Loc : SymbolLocations) {
           if (Loc->getIsGapEntry())
@@ -569,9 +568,8 @@ struct DebuggerViewPrinter {
           LifetimeBegins[Begin].push_back(Loc);
           LifetimeEndsExclusive[End].push_back(Loc);
 
-          if (IncludeRanges) {
+          if (IncludeRanges)
             OS << "[" << hexValue(Begin) << ":" << hexValue(End) << "] ";
-          }
         }
 
         if (IncludeRanges)
@@ -674,12 +672,11 @@ struct DebuggerViewPrinter {
 
 Error LVReader::printDebugger() {
   auto *CU = getCompileUnit();
-  if (!CU) {
+  if (!CU)
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Error: No compute unit found.");
-  }
 
-  for (LVElement *Child : *CU->getChildren()) {
+  for (const LVElement *Child : *CU->getChildren()) {
     auto *Fn = dyn_cast<LVScopeFunction>(Child);
     if (Fn) {
       const LVLines *Lines = Fn->getLines();
