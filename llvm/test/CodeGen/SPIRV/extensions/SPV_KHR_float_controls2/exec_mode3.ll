@@ -49,7 +49,7 @@ entry:
   ret void
 }
 
-define dso_local dllexport spir_kernel void @k_float_controls_all(half %h, bfloat %b, float %f, double %d) {
+define dso_local dllexport spir_kernel void @k_float_controls_all(half %h, float %f, double %d) {
 entry:
 ; CHECK-DAG: %[[#addResH]] = OpFAdd %[[#HALF_TYPE]]
 ; CHECK-DAG: %[[#addResF]] = OpFAdd %[[#FLOAT_TYPE]]
@@ -67,7 +67,7 @@ entry:
   ret void
 }
 
-define dso_local dllexport spir_kernel void @k_float_controls_all_v(<2 x half> %h, <2 x bfloat> %b, <2 x float> %f, <2 x double> %d) {
+define dso_local dllexport spir_kernel void @k_float_controls_all_v(<2 x half> %h, <2 x float> %f, <2 x double> %d) {
 entry:
 ; CHECK-DAG: %[[#addResH_V]] = OpFAdd %[[#HALF_V_TYPE]]
 ; CHECK-DAG: %[[#addResF_V]] = OpFAdd %[[#FLOAT_V_TYPE]]

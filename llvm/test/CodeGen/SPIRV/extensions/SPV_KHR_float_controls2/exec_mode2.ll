@@ -14,7 +14,7 @@ entry:
   ret void
 }
 
-define dso_local dllexport spir_kernel void @k_float_controls_all(half %h, bfloat %b, float %f, double %d) {
+define dso_local dllexport spir_kernel void @k_float_controls_all(half %h, float %f, double %d) {
 entry:
   ret void
 }
@@ -24,7 +24,7 @@ entry:
   ret void
 }
 
-define dso_local dllexport spir_kernel void @k_float_controls_all_v(<2 x half> %h, <2 x bfloat> %b, <2 x float> %f, <2 x double> %d) {
+define dso_local dllexport spir_kernel void @k_float_controls_all_v(<2 x half> %h, <2 x float> %f, <2 x double> %d) {
 entry:
   ret void
 }
