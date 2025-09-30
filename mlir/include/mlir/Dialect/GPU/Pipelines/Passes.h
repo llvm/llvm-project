@@ -63,11 +63,17 @@ struct GPUToNVVMPipelineOptions
 // Options for the gpu to xevm pipeline.
 struct GPUToXeVMPipelineOptions
     : public PassPipelineOptions<GPUToXeVMPipelineOptions> {
+  // XeGPU op granularity selection: workgroup | subgroup | workitem
+  PassOptions::Option<std::string> xegpuOpLevel{
+      *this, "xegpu-op-level",
+      llvm::cl::desc("Granularity of XeGPU operations to target: workgroup | "
+                     "subgroup | workitem"),
+      llvm::cl::init("workgroup")};
   // General lowering controls.
-  PassOptions::Option<int64_t> indexBitWidth{
-      *this, "index-bitwidth",
+  PassOptions::Option<bool> use64bitIndex{
+      *this, "use-64bit-index",
       llvm::cl::desc("Bitwidth of the index type (host & device)"),
-      llvm::cl::init(64)};
+      llvm::cl::init(true)};
   PassOptions::Option<bool> kernelBarePtrCallConv{
       *this, "kernel-bare-ptr-calling-convention",
       llvm::cl::desc("Use bare pointer calling convention for device kernels"),

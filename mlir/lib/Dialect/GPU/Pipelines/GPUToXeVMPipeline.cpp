@@ -62,24 +62,30 @@ void buildCommonPassPipeline(
 //===----------------------------------------------------------------------===//
 void buildGpuPassPipeline(OpPassManager &pm,
                           const mlir::gpu::GPUToXeVMPipelineOptions &options) {
-  pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUWgToSgDistribute());
-  pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
-  pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUBlocking());
-  pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUPropagateLayout());
-  pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUSubgroupDistribute());
-  pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createLoopInvariantCodeMotionPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUVectorLinearize());
+  if (options.xegpuOpLevel == "workgroup") {
+    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUWgToSgDistribute());
+    pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
+    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUBlocking());
+    pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
+  }
+  if (options.xegpuOpLevel == "subgroup") {
+    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUPropagateLayout());
+    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUSubgroupDistribute());
+    pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(createLoopInvariantCodeMotionPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUVectorLinearize());
+  }
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertXeGPUToXeVMPass());
-  ConvertGpuOpsToLLVMSPVOpsOptions gpuToLLVMSPVOptions;
-  gpuToLLVMSPVOptions.use64bitIndex = options.indexBitWidth;
-  pm.addNestedPass<gpu::GPUModuleOp>(
-      createConvertGpuOpsToLLVMSPVOps(gpuToLLVMSPVOptions));
+  {
+    ConvertGpuOpsToLLVMSPVOpsOptions gpuToLLVMSPVOptions;
+    gpuToLLVMSPVOptions.use64bitIndex = options.use64bitIndex;
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        createConvertGpuOpsToLLVMSPVOps(gpuToLLVMSPVOptions));
+  }
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertXeVMToLLVMPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
 }
@@ -104,6 +110,7 @@ void buildHostPostPipeline(OpPassManager &pm,
   }
   pm.addPass(createConvertToLLVMPass());
   pm.addPass(createLowerAffinePass());
+  pm.addPass(createReconcileUnrealizedCastsPass());
   // gpu-module-to-binary
   {
     GpuModuleToBinaryPassOptions gpuToModuleBinOptions;
@@ -111,7 +118,6 @@ void buildHostPostPipeline(OpPassManager &pm,
     gpuToModuleBinOptions.cmdOptions = options.cmdOptions;
     pm.addPass(createGpuModuleToBinaryPass(gpuToModuleBinOptions));
   }
-  pm.addPass(createReconcileUnrealizedCastsPass());
 }
 } // namespace
 
