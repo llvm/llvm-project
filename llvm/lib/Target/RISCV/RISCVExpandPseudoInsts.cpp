@@ -193,7 +193,7 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
   // we need to invert the branch condition to jump over TrueBB when the
   // condition is false.
   auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
-  CC = RISCVCC::getOppositeBranchCondition(CC);
+  CC = RISCVCC::getInverseBranchCondition(CC);
 
   // Insert branch instruction.
   BuildMI(MBB, MBBI, DL, TII->get(RISCVCC::getBrCond(CC)))

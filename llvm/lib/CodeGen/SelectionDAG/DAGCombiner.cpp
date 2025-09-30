@@ -11849,9 +11849,7 @@ static bool isLegalToCombineMinNumMaxNum(SelectionDAG &DAG, SDValue LHS,
   if (!VT.isFloatingPoint())
     return false;
 
-  const TargetOptions &Options = DAG.getTarget().Options;
-
-  return (Flags.hasNoSignedZeros() || Options.NoSignedZerosFPMath) &&
+  return Flags.hasNoSignedZeros() &&
          TLI.isProfitableToCombineMinNumMaxNum(VT) &&
          (Flags.hasNoNaNs() ||
           (DAG.isKnownNeverNaN(RHS) && DAG.isKnownNeverNaN(LHS)));
@@ -17351,7 +17349,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   // Always prefer FMAD to FMA for precision.
   unsigned PreferredFusedOpcode = HasFMAD ? ISD::FMAD : ISD::FMA;
   bool Aggressive = TLI.enableAggressiveFMAFusion(VT);
-  bool NoSignedZero = Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros();
+  bool NoSignedZero = Flags.hasNoSignedZeros();
 
   // Is the node an FMUL and contractable either due to global flags or
   // SDNodeFlags.
@@ -18327,11 +18325,9 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
       return matcher.getNode(ISD::FMA, DL, VT, NegN0, NegN1, N2);
   }
 
-  // FIXME: use fast math flags instead of Options.UnsafeFPMath
-  // TODO: Finally migrate away from global TargetOptions.
   if ((Options.NoNaNsFPMath && Options.NoInfsFPMath) ||
       (N->getFlags().hasNoNaNs() && N->getFlags().hasNoInfs())) {
-    if (Options.NoSignedZerosFPMath || N->getFlags().hasNoSignedZeros() ||
+    if (N->getFlags().hasNoSignedZeros() ||
         (N2CFP && !N2CFP->isExactlyValue(-0.0))) {
       if (N0CFP && N0CFP->isZero())
         return N2;
@@ -18636,8 +18632,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   }
 
   // Fold X/Sqrt(X) -> Sqrt(X)
-  if ((Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros()) &&
-      Flags.hasAllowReassociation())
+  if (Flags.hasNoSignedZeros() && Flags.hasAllowReassociation())
     if (N1.getOpcode() == ISD::FSQRT && N0 == N1.getOperand(0))
       return N1;
 

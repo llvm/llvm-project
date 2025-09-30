@@ -683,8 +683,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "IfOp", "ScopeOp",
-  "SwitchOp", "TernaryOp", "WhileOp"
+  "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "GlobalOp", "IfOp",
+  "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -1776,7 +1776,9 @@ def CIR_GlobalLinkageKind : CIR_I32EnumAttr<
 // is upstreamed.
 
 def CIR_GlobalOp : CIR_Op<"global", [
-  DeclareOpInterfaceMethods<CIRGlobalValueInterface>
+  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
+  NoRegionArguments
 ]> {
   let summary = "Declare or define a global variable";
   let description = [{
@@ -1807,6 +1809,9 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        UnitAttr:$dso_local,
                        OptionalAttr<I64Attr>:$alignment);
 
+  let regions = (region MaxSizedRegion<1>:$ctorRegion,
+                        MaxSizedRegion<1>:$dtorRegion);
+
   let assemblyFormat = [{
     ($sym_visibility^)?
     (`` $global_visibility^)?
@@ -1815,24 +1820,34 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`comdat` $comdat^)?
     (`dso_local` $dso_local^)?
     $sym_name
-    custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
+    custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
+                                        $ctorRegion, $dtorRegion)
     attr-dict
   }];
 
   let extraClassDeclaration = [{
-    bool isDeclaration() { return !getInitialValue(); }
+    bool isDeclaration() {
+      return !getInitialValue() && getCtorRegion().empty() && getDtorRegion().empty();
+    }
     bool hasInitializer() { return !isDeclaration(); }
   }];
 
   let skipDefaultBuilders = 1;
 
-  let builders = [OpBuilder<(ins
-    "llvm::StringRef":$sym_name,
-    "mlir::Type":$sym_type,
-    CArg<"bool", "false">:$isConstant,
-    // CIR defaults to external linkage.
-    CArg<"cir::GlobalLinkageKind",
-    "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)>];
+  let builders = [
+    OpBuilder<(ins
+      "llvm::StringRef":$sym_name,
+      "mlir::Type":$sym_type,
+      CArg<"bool", "false">:$isConstant,
+      // CIR defaults to external linkage.
+      CArg<"cir::GlobalLinkageKind",
+           "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
+      CArg<"llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>",
+           "nullptr">:$ctorBuilder,
+      CArg<"llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>",
+           "nullptr">:$dtorBuilder)
+    >
+  ];
 
   let hasVerifier = 1;
 

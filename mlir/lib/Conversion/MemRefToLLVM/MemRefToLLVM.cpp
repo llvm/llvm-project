@@ -48,8 +48,8 @@ static bool isStaticStrideOrOffset(int64_t strideOrOffset) {
 }
 
 static FailureOr<LLVM::LLVMFuncOp>
-getFreeFn(OpBuilder &b, const LLVMTypeConverter *typeConverter, ModuleOp module,
-          SymbolTableCollection *symbolTables) {
+getFreeFn(OpBuilder &b, const LLVMTypeConverter *typeConverter,
+          Operation *module, SymbolTableCollection *symbolTables) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
   if (useGenericFn)
@@ -483,8 +483,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // Insert the `free` declaration if it is not already present.
     FailureOr<LLVM::LLVMFuncOp> freeFunc =
-        getFreeFn(rewriter, getTypeConverter(), op->getParentOfType<ModuleOp>(),
-                  symbolTables);
+        getFreeFn(rewriter, getTypeConverter(),
+                  op->getParentWithTrait<OpTrait::SymbolTable>(), symbolTables);
     if (failed(freeFunc))
       return failure();
     Value allocatedPtr;

@@ -914,9 +914,10 @@ static InputGlobal *createGlobal(StringRef name, bool isMutable) {
   return make<InputGlobal>(wasmGlobal, nullptr);
 }
 
-static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable) {
+static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable,
+                                          uint32_t flags = 0) {
   InputGlobal *g = createGlobal(name, isMutable);
-  return symtab->addSyntheticGlobal(name, WASM_SYMBOL_VISIBILITY_HIDDEN, g);
+  return symtab->addSyntheticGlobal(name, flags, g);
 }
 
 static GlobalSymbol *createOptionalGlobal(StringRef name, bool isMutable) {
@@ -966,9 +967,13 @@ static void createSyntheticSymbols() {
   }
 
   if (ctx.arg.sharedMemory) {
-    ctx.sym.tlsBase = createGlobalVariable("__tls_base", true);
-    ctx.sym.tlsSize = createGlobalVariable("__tls_size", false);
-    ctx.sym.tlsAlign = createGlobalVariable("__tls_align", false);
+    // TLS symbols are all hidden/dso-local
+    ctx.sym.tlsBase =
+        createGlobalVariable("__tls_base", true, WASM_SYMBOL_VISIBILITY_HIDDEN);
+    ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
+                                           WASM_SYMBOL_VISIBILITY_HIDDEN);
+    ctx.sym.tlsAlign = createGlobalVariable("__tls_align", false,
+                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.initTLS = symtab->addSyntheticFunction(
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,

@@ -143,6 +143,10 @@ OPTIONS
 
  Display all notes.
 
+.. option:: --offloading
+
+ Display list of HIP offload bundles.
+
 .. option:: --pretty-print
 
  When used with :option:`--elf-output-style`, JSON output will be formatted in

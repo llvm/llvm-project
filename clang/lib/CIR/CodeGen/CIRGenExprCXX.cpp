@@ -210,6 +210,60 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
   return emitCall(fnInfo, callee, returnValue, args, nullptr, loc);
 }
 
+namespace {
+/// The parameters to pass to a usual operator delete.
+struct UsualDeleteParams {
+  TypeAwareAllocationMode typeAwareDelete = TypeAwareAllocationMode::No;
+  bool destroyingDelete = false;
+  bool size = false;
+  AlignedAllocationMode alignment = AlignedAllocationMode::No;
+};
+} // namespace
+
+// FIXME(cir): this should be shared with LLVM codegen
+static UsualDeleteParams getUsualDeleteParams(const FunctionDecl *fd) {
+  UsualDeleteParams params;
+
+  const FunctionProtoType *fpt = fd->getType()->castAs<FunctionProtoType>();
+  auto ai = fpt->param_type_begin(), ae = fpt->param_type_end();
+
+  if (fd->isTypeAwareOperatorNewOrDelete()) {
+    params.typeAwareDelete = TypeAwareAllocationMode::Yes;
+    assert(ai != ae);
+    ++ai;
+  }
+
+  // The first argument after the type-identity parameter (if any) is
+  // always a void* (or C* for a destroying operator delete for class
+  // type C).
+  ++ai;
+
+  // The next parameter may be a std::destroying_delete_t.
+  if (fd->isDestroyingOperatorDelete()) {
+    params.destroyingDelete = true;
+    assert(ai != ae);
+    ++ai;
+  }
+
+  // Figure out what other parameters we should be implicitly passing.
+  if (ai != ae && (*ai)->isIntegerType()) {
+    params.size = true;
+    ++ai;
+  } else {
+    assert(!isTypeAwareAllocation(params.typeAwareDelete));
+  }
+
+  if (ai != ae && (*ai)->isAlignValT()) {
+    params.alignment = AlignedAllocationMode::Yes;
+    ++ai;
+  } else {
+    assert(!isTypeAwareAllocation(params.typeAwareDelete));
+  }
+
+  assert(ai == ae && "unexpected usual deallocation function parameter");
+  return params;
+}
+
 static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
                                        unsigned minElements,
                                        mlir::Value &numElements,
@@ -332,6 +386,117 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
   return rv;
 }
 
+namespace {
+/// Calls the given 'operator delete' on a single object.
+struct CallObjectDelete final : EHScopeStack::Cleanup {
+  mlir::Value ptr;
+  const FunctionDecl *operatorDelete;
+  QualType elementType;
+
+  CallObjectDelete(mlir::Value ptr, const FunctionDecl *operatorDelete,
+                   QualType elementType)
+      : ptr(ptr), operatorDelete(operatorDelete), elementType(elementType) {}
+
+  void emit(CIRGenFunction &cgf) override {
+    cgf.emitDeleteCall(operatorDelete, ptr, elementType);
+  }
+
+  // This is a placeholder until EHCleanupScope is implemented.
+  size_t getSize() const override {
+    assert(!cir::MissingFeatures::ehCleanupScope());
+    return sizeof(CallObjectDelete);
+  }
+};
+} // namespace
+
+/// Emit the code for deleting a single object.
+static void emitObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
+                             Address ptr, QualType elementType) {
+  // C++11 [expr.delete]p3:
+  //   If the static type of the object to be deleted is different from its
+  //   dynamic type, the static type shall be a base class of the dynamic type
+  //   of the object to be deleted and the static type shall have a virtual
+  //   destructor or the behavior is undefined.
+  assert(!cir::MissingFeatures::emitTypeCheck());
+
+  const FunctionDecl *operatorDelete = de->getOperatorDelete();
+  assert(!operatorDelete->isDestroyingOperatorDelete());
+
+  // Find the destructor for the type, if applicable.  If the
+  // destructor is virtual, we'll just emit the vcall and return.
+  const CXXDestructorDecl *dtor = nullptr;
+  if (const auto *rd = elementType->getAsCXXRecordDecl()) {
+    if (rd->hasDefinition() && !rd->hasTrivialDestructor()) {
+      dtor = rd->getDestructor();
+
+      if (dtor->isVirtual()) {
+        cgf.cgm.errorNYI(de->getSourceRange(),
+                         "emitObjectDelete: virtual destructor");
+      }
+    }
+  }
+
+  // Make sure that we call delete even if the dtor throws.
+  // This doesn't have to a conditional cleanup because we're going
+  // to pop it off in a second.
+  cgf.ehStack.pushCleanup<CallObjectDelete>(
+      NormalAndEHCleanup, ptr.getPointer(), operatorDelete, elementType);
+
+  if (dtor) {
+    cgf.emitCXXDestructorCall(dtor, Dtor_Complete,
+                              /*ForVirtualBase=*/false,
+                              /*Delegating=*/false, ptr, elementType);
+  } else if (elementType.getObjCLifetime()) {
+    assert(!cir::MissingFeatures::objCLifetime());
+    cgf.cgm.errorNYI(de->getSourceRange(), "emitObjectDelete: ObjCLifetime");
+  }
+
+  // In traditional LLVM codegen null checks are emitted to save a delete call.
+  // In CIR we optimize for size by default, the null check should be added into
+  // this function callers.
+  assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
+
+  cgf.popCleanupBlock();
+}
+
+void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
+  const Expr *arg = e->getArgument();
+  Address ptr = emitPointerWithAlignment(arg);
+
+  // Null check the pointer.
+  //
+  // We could avoid this null check if we can determine that the object
+  // destruction is trivial and doesn't require an array cookie; we can
+  // unconditionally perform the operator delete call in that case. For now, we
+  // assume that deleted pointers are null rarely enough that it's better to
+  // keep the branch. This might be worth revisiting for a -O0 code size win.
+  //
+  // CIR note: emit the code size friendly by default for now, such as mentioned
+  // in `emitObjectDelete`.
+  assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
+  QualType deleteTy = e->getDestroyedType();
+
+  // A destroying operator delete overrides the entire operation of the
+  // delete expression.
+  if (e->getOperatorDelete()->isDestroyingOperatorDelete()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXDeleteExpr: destroying operator delete");
+    return;
+  }
+
+  // We might be deleting a pointer to array.
+  deleteTy = getContext().getBaseElementType(deleteTy);
+  ptr = ptr.withElementType(builder, convertTypeForMem(deleteTy));
+
+  if (e->isArrayForm()) {
+    assert(!cir::MissingFeatures::deleteArray());
+    cgm.errorNYI(e->getSourceRange(), "emitCXXDeleteExpr: array delete");
+    return;
+  } else {
+    emitObjectDelete(*this, e, ptr, deleteTy);
+  }
+}
+
 mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   // The element type being allocated.
   QualType allocType = getContext().getBaseElementType(e->getAllocatedType());
@@ -442,4 +607,54 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   emitNewInitializer(*this, e, allocType, elementTy, result, numElements,
                      allocSizeWithoutCookie);
   return result.getPointer();
+}
+
+void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
+                                    mlir::Value ptr, QualType deleteTy) {
+  assert(!cir::MissingFeatures::deleteArray());
+
+  const auto *deleteFTy = deleteFD->getType()->castAs<FunctionProtoType>();
+  CallArgList deleteArgs;
+
+  UsualDeleteParams params = getUsualDeleteParams(deleteFD);
+  auto paramTypeIt = deleteFTy->param_type_begin();
+
+  // Pass std::type_identity tag if present
+  if (isTypeAwareAllocation(params.typeAwareDelete))
+    cgm.errorNYI(deleteFD->getSourceRange(),
+                 "emitDeleteCall: type aware delete");
+
+  // Pass the pointer itself.
+  QualType argTy = *paramTypeIt++;
+  mlir::Value deletePtr =
+      builder.createBitcast(ptr.getLoc(), ptr, convertType(argTy));
+  deleteArgs.add(RValue::get(deletePtr), argTy);
+
+  // Pass the std::destroying_delete tag if present.
+  if (params.destroyingDelete)
+    cgm.errorNYI(deleteFD->getSourceRange(),
+                 "emitDeleteCall: destroying delete");
+
+  // Pass the size if the delete function has a size_t parameter.
+  if (params.size) {
+    QualType sizeType = *paramTypeIt++;
+    CharUnits deleteTypeSize = getContext().getTypeSizeInChars(deleteTy);
+    assert(mlir::isa<cir::IntType>(convertType(sizeType)) &&
+           "expected cir::IntType");
+    cir::ConstantOp size = builder.getConstInt(
+        *currSrcLoc, convertType(sizeType), deleteTypeSize.getQuantity());
+
+    deleteArgs.add(RValue::get(size), sizeType);
+  }
+
+  // Pass the alignment if the delete function has an align_val_t parameter.
+  if (isAlignedAllocation(params.alignment))
+    cgm.errorNYI(deleteFD->getSourceRange(),
+                 "emitDeleteCall: aligned allocation");
+
+  assert(paramTypeIt == deleteFTy->param_type_end() &&
+         "unknown parameter to usual delete function");
+
+  // Emit the call to delete.
+  emitNewDeleteCall(*this, deleteFD, deleteFTy, deleteArgs);
 }

@@ -64,7 +64,7 @@ set_target_properties(libompdevice PROPERTIES
   RUNTIME_OUTPUT_NAME libomptarget-${target_name}.bc)
 
 # If the user built with the GPU C library enabled we will use that instead.
-if(LIBOMPTARGET_GPU_LIBC_SUPPORT)
+if(TARGET libc)
   target_compile_definitions(libompdevice PRIVATE OMPTARGET_HAS_LIBC)
 endif()
 target_compile_definitions(libompdevice PRIVATE SHARED_SCRATCHPAD_SIZE=512)

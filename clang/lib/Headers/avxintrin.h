@@ -2311,10 +2311,9 @@ _mm256_cvttps_epi32(__m256 __a)
 /// \param __a
 ///    A 256-bit vector of [4 x double].
 /// \returns A 64 bit double containing the first element of the input vector.
-static __inline double __DEFAULT_FN_ATTRS
-_mm256_cvtsd_f64(__m256d __a)
-{
- return __a[0];
+static __inline double __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtsd_f64(__m256d __a) {
+  return __a[0];
 }
 
 /// Returns the first element of the input vector of [8 x i32].
@@ -2327,11 +2326,10 @@ _mm256_cvtsd_f64(__m256d __a)
 /// \param __a
 ///    A 256-bit vector of [8 x i32].
 /// \returns A 32 bit integer containing the first element of the input vector.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_cvtsi256_si32(__m256i __a)
-{
- __v8si __b = (__v8si)__a;
- return __b[0];
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtsi256_si32(__m256i __a) {
+  __v8si __b = (__v8si)__a;
+  return __b[0];
 }
 
 /// Returns the first element of the input vector of [8 x float].
@@ -2344,10 +2342,9 @@ _mm256_cvtsi256_si32(__m256i __a)
 /// \param __a
 ///    A 256-bit vector of [8 x float].
 /// \returns A 32 bit float containing the first element of the input vector.
-static __inline float __DEFAULT_FN_ATTRS
-_mm256_cvtss_f32(__m256 __a)
-{
- return __a[0];
+static __inline float __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtss_f32(__m256 __a) {
+  return __a[0];
 }
 
 /* Vector replicate */

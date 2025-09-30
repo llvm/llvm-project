@@ -155,7 +155,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
             mlirPDLResultListPushBackValue(results, value);
           },
           // clang-format off
-          nb::sig("def append(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Value") ")")
+          nb::sig("def append(self, value: " MAKE_MLIR_PYTHON_QUALNAME("ir.Value") ")")
           // clang-format on
           )
       .def(
@@ -164,7 +164,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
             mlirPDLResultListPushBackOperation(results, op);
           },
           // clang-format off
-          nb::sig("def append(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ")")
+          nb::sig("def append(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ")")
           // clang-format on
           )
       .def(
@@ -173,7 +173,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
             mlirPDLResultListPushBackType(results, type);
           },
           // clang-format off
-          nb::sig("def append(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") ")")
+          nb::sig("def append(self, type: " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") ")")
           // clang-format on
           )
       .def(
@@ -182,7 +182,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
             mlirPDLResultListPushBackAttribute(results, attr);
           },
           // clang-format off
-          nb::sig("def append(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute") ")")
+          nb::sig("def append(self, attr: " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute") ")")
           // clang-format on
       );
   nb::class_<PyPDLPatternModule>(m, "PDLModule")

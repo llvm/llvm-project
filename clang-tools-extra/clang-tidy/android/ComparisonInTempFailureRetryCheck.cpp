@@ -19,7 +19,7 @@ ComparisonInTempFailureRetryCheck::ComparisonInTempFailureRetryCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       RawRetryList(Options.get("RetryMacros", "TEMP_FAILURE_RETRY")) {
-  StringRef(RawRetryList).split(RetryMacros, ",", -1, false);
+  RawRetryList.split(RetryMacros, ",", -1, false);
 }
 
 void ComparisonInTempFailureRetryCheck::storeOptions(

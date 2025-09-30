@@ -10,7 +10,7 @@
 #include <stdarg.h>
 #include "Inputs/cuda.h"
 
-__device__ void foo() {
+__global__ void foo() {
   va_list list;
   va_arg(list, int);
 #ifdef EXPECT_VA_ARG_ERR
