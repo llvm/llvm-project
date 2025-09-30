@@ -696,16 +696,14 @@ def Zn4WriteXCHG32rm_XCHG64rm : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4ALU0123]> 
 def : InstRW<[Zn4WriteXCHG32rm_XCHG64rm], (instrs XCHG32rm, XCHG64rm)>;
 
 // Integer division.
-// FIXME: uops for 8-bit division measures as 2. for others it's a guess.
-// FIXME: latency for 8-bit division measures as 10. for others it's a guess.
-defm : Zn4WriteResIntPair<WriteDiv8, [Zn4Divider], 10, [10], 2>;
-defm : Zn4WriteResIntPair<WriteDiv16, [Zn4Divider], 11, [11], 2>;
-defm : Zn4WriteResIntPair<WriteDiv32, [Zn4Divider], 13, [13], 2>;
-defm : Zn4WriteResIntPair<WriteDiv64, [Zn4Divider], 17, [17], 2>;
-defm : Zn4WriteResIntPair<WriteIDiv8, [Zn4Divider], 10, [10], 2>;
-defm : Zn4WriteResIntPair<WriteIDiv16, [Zn4Divider], 11, [11], 2>;
-defm : Zn4WriteResIntPair<WriteIDiv32, [Zn4Divider], 13, [13], 2>;
-defm : Zn4WriteResIntPair<WriteIDiv64, [Zn4Divider], 17, [17], 2>;
+defm : Zn4WriteResIntPair<WriteDiv8, [Zn4Divider], 9, [9], 2>;
+defm : Zn4WriteResIntPair<WriteDiv16, [Zn4Divider], 10, [10], 2>;
+defm : Zn4WriteResIntPair<WriteDiv32, [Zn4Divider], 12, [12], 2>;
+defm : Zn4WriteResIntPair<WriteDiv64, [Zn4Divider], 18, [18], 2>;
+defm : Zn4WriteResIntPair<WriteIDiv8, [Zn4Divider], 9, [9], 2>;
+defm : Zn4WriteResIntPair<WriteIDiv16, [Zn4Divider], 10, [10], 2>;
+defm : Zn4WriteResIntPair<WriteIDiv32, [Zn4Divider], 12, [12], 2>;
+defm : Zn4WriteResIntPair<WriteIDiv64, [Zn4Divider], 18, [18], 2>;
 
 defm : Zn4WriteResIntPair<WriteBSF, [Zn4ALU1], 1, [1], 6, /*LoadUOps=*/1>; // Bit scan forward.
 defm : Zn4WriteResIntPair<WriteBSR, [Zn4ALU1], 1, [1], 6, /*LoadUOps=*/1>; // Bit scan reverse.
