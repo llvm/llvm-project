@@ -3,12 +3,12 @@ add_llvm_component_library(LLVMRISCVDesc
   RISCVBaseInfo.cpp
   RISCVELFObjectWriter.cpp
   RISCVInstPrinter.cpp
-  RISCVMachObjectWriter.cpp
   RISCVMCAsmInfo.cpp
   RISCVMCCodeEmitter.cpp
   RISCVMCExpr.cpp
   RISCVMCObjectFileInfo.cpp
   RISCVMCTargetDesc.cpp
+  RISCVMachObjectWriter.cpp
   RISCVMatInt.cpp
   RISCVTargetStreamer.cpp
   RISCVELFStreamer.cpp
