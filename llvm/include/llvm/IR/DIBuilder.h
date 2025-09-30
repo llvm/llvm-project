@@ -729,7 +729,8 @@ namespace llvm {
     /// \param Subscripts   Subscripts.
     LLVM_ABI DICompositeType *createVectorType(uint64_t Size,
                                                uint32_t AlignInBits, DIType *Ty,
-                                               DINodeArray Subscripts);
+                                               DINodeArray Subscripts,
+                                               Metadata *BitStride = nullptr);
 
     /// Create debugging information entry for an
     /// enumeration.
