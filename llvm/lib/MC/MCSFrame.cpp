@@ -200,7 +200,7 @@ class SFrameEmitterImpl {
     return false;
   }
 
-  bool setCFAOffset(SFrameFRE &FRE, const SMLoc &Loc, size_t Offset) {
+  bool setCFAOffset(SFrameFRE &FRE, SMLoc Loc, size_t Offset) {
     if (!FRE.CFARegSet) {
       Streamer.getContext().reportWarning(
           Loc, "adjusting CFA offset without a base register. "

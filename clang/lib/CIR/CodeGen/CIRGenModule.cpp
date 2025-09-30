@@ -119,6 +119,19 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                        cir::OptInfoAttr::get(&mlirContext,
                                              cgo.OptimizationLevel,
                                              cgo.OptimizeSize));
+  // Set the module name to be the name of the main file. TranslationUnitDecl
+  // often contains invalid source locations and isn't a reliable source for the
+  // module location.
+  FileID mainFileId = astContext.getSourceManager().getMainFileID();
+  const FileEntry &mainFile =
+      *astContext.getSourceManager().getFileEntryForID(mainFileId);
+  StringRef path = mainFile.tryGetRealPathName();
+  if (!path.empty()) {
+    theModule.setSymName(path);
+    theModule->setLoc(mlir::FileLineColLoc::get(&mlirContext, path,
+                                                /*line=*/0,
+                                                /*column=*/0));
+  }
 }
 
 CIRGenModule::~CIRGenModule() = default;
@@ -2171,8 +2184,13 @@ mlir::Attribute CIRGenModule::getAddrOfRTTIDescriptor(mlir::Location loc,
   if (!shouldEmitRTTI(forEh))
     return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
 
-  errorNYI(loc, "getAddrOfRTTIDescriptor");
-  return mlir::Attribute();
+  if (forEh && ty->isObjCObjectPointerType() &&
+      langOpts.ObjCRuntime.isGNUFamily()) {
+    errorNYI(loc, "getAddrOfRTTIDescriptor: Objc PtrType & Objc RT GUN");
+    return {};
+  }
+
+  return getCXXABI().getAddrOfRTTIDescriptor(loc, ty);
 }
 
 // TODO(cir): this can be shared with LLVM codegen.

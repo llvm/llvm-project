@@ -444,7 +444,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       // Regardless of FP16 support, widen 16-bit elements to 32-bits.
       .minScalar(0, s32)
       .libcallFor({s32, s64, s128});
-  getActionDefinitionsBuilder(G_FPOWI)
+  getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})
       .scalarize(0)
       .minScalar(0, s32)
       .libcallFor({{s32, s32}, {s64, s32}, {s128, s32}});
