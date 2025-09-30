@@ -16,7 +16,6 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/Support/Debug.h"
 #include <optional>
 #include <string>
 #define DEBUG_TYPE "bolt-ppc"
@@ -67,19 +66,58 @@ bool PPCMCPlusBuilder::shouldRecordCodeRelocation(unsigned Type) const {
   }
 }
 
+// Sign-extend 24-bit field (BD/LI is 24 bits, multiplied by 4)
+static inline int64_t signExtend24(int64_t v) {
+  v &= 0x00ffffff;
+  if (v & 0x00800000)
+    v |= ~0x00ffffff;
+  return v;
+}
+
+bool PPCMCPlusBuilder::evaluateBranch(const MCInst &I, uint64_t PC,
+                                      uint64_t Size, uint64_t &Target) const {
+  if (!hasPCRelOperand(I))
+    return false;
+  const int Op = getPCRelOperandNum(I);
+  if (Op < 0 || !I.getOperand(Op).isImm())
+    return false;
+
+  int64_t wordDisp = I.getOperand(Op).getImm();   // units of 4 bytes
+  int64_t byteDisp = signExtend24(wordDisp) << 2; // 24-bit signed * 4
+  Target =
+      PC + byteDisp; // PPC branches are relative to the branch insn address
+  return true;
+}
+
 bool PPCMCPlusBuilder::evaluateMemOperandTarget(const MCInst &, uint64_t &,
                                                 uint64_t, uint64_t) const {
   LLVM_DEBUG(dbgs() << "PPC: no PC-rel mem operand on this target\n");
   return false;
 }
 
-bool PPCMCPlusBuilder::hasPCRelOperand(const MCInst &I) const { return false; }
+bool PPCMCPlusBuilder::hasPCRelOperand(const MCInst &I) const {
+  return getPCRelOperandNum(I) >= 0;
+}
 
 int PPCMCPlusBuilder::getPCRelOperandNum(const MCInst &I) const {
-  for (int i = I.getNumOperands() - 1; i >= 0; --i)
-    if (I.getOperand(i).isExpr())
-      return i;
-  return -1;
+  switch (I.getOpcode()) {
+  // Relative direct call/branch – target is operand #0 in MC (Imm/Expr)
+  case PPC::BL: // relative call
+  case PPC::B:  // unconditional relative branch
+    return 0;
+
+  // Conditional relative branch: BO, BI, BD
+  case PPC::BC:
+    return 2;
+
+  // Absolute branches/calls (AA=1) — no PC-relative operand
+  case PPC::BLA:
+  case PPC::BA:
+    return -1;
+
+  default:
+    return -1;
+  }
 }
 
 int PPCMCPlusBuilder::getMemoryOperandNo(const MCInst & /*Inst*/) const {
@@ -171,7 +209,9 @@ bool PPCMCPlusBuilder::isTailCall(const MCInst &I) const {
   return false;
 }
 
-bool PPCMCPlusBuilder::isReturn(const MCInst & /*Inst*/) const { return false; }
+bool PPCMCPlusBuilder::isReturn(const MCInst &Inst) const {
+  return Inst.getOpcode() == PPC::BLR;
+}
 
 bool PPCMCPlusBuilder::isConditionalBranch(const MCInst &I) const {
   switch (opc(I)) {
