@@ -17,8 +17,8 @@ define void @vmulwev_h_b(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <16 x i8>, ptr %a
   %vb = load <16 x i8>, ptr %b
-  %vas = shufflevector <16 x i8> %va, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-  %vbs = shufflevector <16 x i8> %vb, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %vas = shufflevector <16 x i8> %va, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %vbs = shufflevector <16 x i8> %vb, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %vae = sext <8 x i8> %vas to <8 x i16>
   %vbe = sext <8 x i8> %vbs to <8 x i16>
   %mul = mul <8 x i16> %vae, %vbe
@@ -41,8 +41,8 @@ define void @vmulwev_w_h(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <8 x i16>, ptr %a
   %vb = load <8 x i16>, ptr %b
-  %vas = shufflevector <8 x i16> %va, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-  %vbs = shufflevector <8 x i16> %vb, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %vas = shufflevector <8 x i16> %va, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %vbs = shufflevector <8 x i16> %vb, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %vae = sext <4 x i16> %vas to <4 x i32>
   %vbe = sext <4 x i16> %vbs to <4 x i32>
   %mul = mul <4 x i32> %vae, %vbe
@@ -65,8 +65,8 @@ define void @vmulwev_d_w(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <4 x i32>, ptr %a
   %vb = load <4 x i32>, ptr %b
-  %vas = shufflevector <4 x i32> %va, <4 x i32> undef, <2 x i32> <i32 0, i32 2>
-  %vbs = shufflevector <4 x i32> %vb, <4 x i32> undef, <2 x i32> <i32 0, i32 2>
+  %vas = shufflevector <4 x i32> %va, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+  %vbs = shufflevector <4 x i32> %vb, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
   %vae = sext <2 x i32> %vas to <2 x i64>
   %vbe = sext <2 x i32> %vbs to <2 x i64>
   %mul = mul <2 x i64> %vae, %vbe
@@ -167,8 +167,8 @@ define void @vmulwod_h_b(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <16 x i8>, ptr %a
   %vb = load <16 x i8>, ptr %b
-  %vas = shufflevector <16 x i8> %va, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-  %vbs = shufflevector <16 x i8> %vb, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %vas = shufflevector <16 x i8> %va, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %vbs = shufflevector <16 x i8> %vb, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %vae = sext <8 x i8> %vas to <8 x i16>
   %vbe = sext <8 x i8> %vbs to <8 x i16>
   %mul = mul <8 x i16> %vae, %vbe
@@ -193,8 +193,8 @@ define void @vmulwod_w_h(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <8 x i16>, ptr %a
   %vb = load <8 x i16>, ptr %b
-  %vas = shufflevector <8 x i16> %va, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-  %vbs = shufflevector <8 x i16> %vb, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %vas = shufflevector <8 x i16> %va, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %vbs = shufflevector <8 x i16> %vb, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   %vae = sext <4 x i16> %vas to <4 x i32>
   %vbe = sext <4 x i16> %vbs to <4 x i32>
   %mul = mul <4 x i32> %vae, %vbe
@@ -219,8 +219,8 @@ define void @vmulwod_d_w(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <4 x i32>, ptr %a
   %vb = load <4 x i32>, ptr %b
-  %vas = shufflevector <4 x i32> %va, <4 x i32> undef, <2 x i32> <i32 1, i32 3>
-  %vbs = shufflevector <4 x i32> %vb, <4 x i32> undef, <2 x i32> <i32 1, i32 3>
+  %vas = shufflevector <4 x i32> %va, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
+  %vbs = shufflevector <4 x i32> %vb, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
   %vae = sext <2 x i32> %vas to <2 x i64>
   %vbe = sext <2 x i32> %vbs to <2 x i64>
   %mul = mul <2 x i64> %vae, %vbe
@@ -320,8 +320,8 @@ define void @vmulwev_h_bu(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <16 x i8>, ptr %a
   %vb = load <16 x i8>, ptr %b
-  %vas = shufflevector <16 x i8> %va, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-  %vbs = shufflevector <16 x i8> %vb, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %vas = shufflevector <16 x i8> %va, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %vbs = shufflevector <16 x i8> %vb, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %vae = zext <8 x i8> %vas to <8 x i16>
   %vbe = zext <8 x i8> %vbs to <8 x i16>
   %mul = mul <8 x i16> %vae, %vbe
@@ -346,8 +346,8 @@ define void @vmulwev_w_hu(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <8 x i16>, ptr %a
   %vb = load <8 x i16>, ptr %b
-  %vas = shufflevector <8 x i16> %va, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-  %vbs = shufflevector <8 x i16> %vb, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %vas = shufflevector <8 x i16> %va, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %vbs = shufflevector <8 x i16> %vb, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %vae = zext <4 x i16> %vas to <4 x i32>
   %vbe = zext <4 x i16> %vbs to <4 x i32>
   %mul = mul <4 x i32> %vae, %vbe
@@ -372,8 +372,8 @@ define void @vmulwev_d_wu(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <4 x i32>, ptr %a
   %vb = load <4 x i32>, ptr %b
-  %vas = shufflevector <4 x i32> %va, <4 x i32> undef, <2 x i32> <i32 0, i32 2>
-  %vbs = shufflevector <4 x i32> %vb, <4 x i32> undef, <2 x i32> <i32 0, i32 2>
+  %vas = shufflevector <4 x i32> %va, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+  %vbs = shufflevector <4 x i32> %vb, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
   %vae = zext <2 x i32> %vas to <2 x i64>
   %vbe = zext <2 x i32> %vbs to <2 x i64>
   %mul = mul <2 x i64> %vae, %vbe
@@ -451,8 +451,8 @@ define void @vmulwod_h_bu(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <16 x i8>, ptr %a
   %vb = load <16 x i8>, ptr %b
-  %vas = shufflevector <16 x i8> %va, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-  %vbs = shufflevector <16 x i8> %vb, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %vas = shufflevector <16 x i8> %va, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %vbs = shufflevector <16 x i8> %vb, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %vae = zext <8 x i8> %vas to <8 x i16>
   %vbe = zext <8 x i8> %vbs to <8 x i16>
   %mul = mul <8 x i16> %vae, %vbe
@@ -474,8 +474,8 @@ define void @vmulwod_w_hu(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <8 x i16>, ptr %a
   %vb = load <8 x i16>, ptr %b
-  %vas = shufflevector <8 x i16> %va, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-  %vbs = shufflevector <8 x i16> %vb, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %vas = shufflevector <8 x i16> %va, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %vbs = shufflevector <8 x i16> %vb, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   %vae = zext <4 x i16> %vas to <4 x i32>
   %vbe = zext <4 x i16> %vbs to <4 x i32>
   %mul = mul <4 x i32> %vae, %vbe
@@ -497,8 +497,8 @@ define void @vmulwod_d_wu(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <4 x i32>, ptr %a
   %vb = load <4 x i32>, ptr %b
-  %vas = shufflevector <4 x i32> %va, <4 x i32> undef, <2 x i32> <i32 1, i32 3>
-  %vbs = shufflevector <4 x i32> %vb, <4 x i32> undef, <2 x i32> <i32 1, i32 3>
+  %vas = shufflevector <4 x i32> %va, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
+  %vbs = shufflevector <4 x i32> %vb, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
   %vae = zext <2 x i32> %vas to <2 x i64>
   %vbe = zext <2 x i32> %vbs to <2 x i64>
   %mul = mul <2 x i64> %vae, %vbe
@@ -579,8 +579,8 @@ define void @vmulwev_h_bu_b(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <16 x i8>, ptr %a
   %vb = load <16 x i8>, ptr %b
-  %vas = shufflevector <16 x i8> %va, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-  %vbs = shufflevector <16 x i8> %vb, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %vas = shufflevector <16 x i8> %va, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %vbs = shufflevector <16 x i8> %vb, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %vae = zext <8 x i8> %vas to <8 x i16>
   %vbe = sext <8 x i8> %vbs to <8 x i16>
   %mul = mul <8 x i16> %vae, %vbe
@@ -605,8 +605,8 @@ define void @vmulwev_w_hu_h(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <8 x i16>, ptr %a
   %vb = load <8 x i16>, ptr %b
-  %vas = shufflevector <8 x i16> %va, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-  %vbs = shufflevector <8 x i16> %vb, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %vas = shufflevector <8 x i16> %va, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %vbs = shufflevector <8 x i16> %vb, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %vae = zext <4 x i16> %vas to <4 x i32>
   %vbe = sext <4 x i16> %vbs to <4 x i32>
   %mul = mul <4 x i32> %vae, %vbe
@@ -631,8 +631,8 @@ define void @vmulwev_d_wu_w(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <4 x i32>, ptr %a
   %vb = load <4 x i32>, ptr %b
-  %vas = shufflevector <4 x i32> %va, <4 x i32> undef, <2 x i32> <i32 0, i32 2>
-  %vbs = shufflevector <4 x i32> %vb, <4 x i32> undef, <2 x i32> <i32 0, i32 2>
+  %vas = shufflevector <4 x i32> %va, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+  %vbs = shufflevector <4 x i32> %vb, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
   %vae = zext <2 x i32> %vas to <2 x i64>
   %vbe = sext <2 x i32> %vbs to <2 x i64>
   %mul = mul <2 x i64> %vae, %vbe
@@ -725,8 +725,8 @@ define void @vmulwod_h_bu_b(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <16 x i8>, ptr %a
   %vb = load <16 x i8>, ptr %b
-  %vas = shufflevector <16 x i8> %va, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-  %vbs = shufflevector <16 x i8> %vb, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %vas = shufflevector <16 x i8> %va, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %vbs = shufflevector <16 x i8> %vb, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %vae = zext <8 x i8> %vas to <8 x i16>
   %vbe = sext <8 x i8> %vbs to <8 x i16>
   %mul = mul <8 x i16> %vae, %vbe
@@ -750,8 +750,8 @@ define void @vmulwod_w_hu_h(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <8 x i16>, ptr %a
   %vb = load <8 x i16>, ptr %b
-  %vas = shufflevector <8 x i16> %va, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-  %vbs = shufflevector <8 x i16> %vb, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %vas = shufflevector <8 x i16> %va, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %vbs = shufflevector <8 x i16> %vb, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   %vae = zext <4 x i16> %vas to <4 x i32>
   %vbe = sext <4 x i16> %vbs to <4 x i32>
   %mul = mul <4 x i32> %vae, %vbe
@@ -775,8 +775,8 @@ define void @vmulwod_d_wu_w(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <4 x i32>, ptr %a
   %vb = load <4 x i32>, ptr %b
-  %vas = shufflevector <4 x i32> %va, <4 x i32> undef, <2 x i32> <i32 1, i32 3>
-  %vbs = shufflevector <4 x i32> %vb, <4 x i32> undef, <2 x i32> <i32 1, i32 3>
+  %vas = shufflevector <4 x i32> %va, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
+  %vbs = shufflevector <4 x i32> %vb, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
   %vae = zext <2 x i32> %vas to <2 x i64>
   %vbe = sext <2 x i32> %vbs to <2 x i64>
   %mul = mul <2 x i64> %vae, %vbe
@@ -870,8 +870,8 @@ define void @vmulwev_h_bu_b_1(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <16 x i8>, ptr %a
   %vb = load <16 x i8>, ptr %b
-  %vas = shufflevector <16 x i8> %va, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-  %vbs = shufflevector <16 x i8> %vb, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %vas = shufflevector <16 x i8> %va, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %vbs = shufflevector <16 x i8> %vb, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %vae = sext <8 x i8> %vas to <8 x i16>
   %vbe = zext <8 x i8> %vbs to <8 x i16>
   %mul = mul <8 x i16> %vae, %vbe
@@ -896,8 +896,8 @@ define void @vmulwev_w_hu_h_1(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <8 x i16>, ptr %a
   %vb = load <8 x i16>, ptr %b
-  %vas = shufflevector <8 x i16> %va, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-  %vbs = shufflevector <8 x i16> %vb, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %vas = shufflevector <8 x i16> %va, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %vbs = shufflevector <8 x i16> %vb, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %vae = sext <4 x i16> %vas to <4 x i32>
   %vbe = zext <4 x i16> %vbs to <4 x i32>
   %mul = mul <4 x i32> %vae, %vbe
@@ -922,8 +922,8 @@ define void @vmulwev_d_wu_w_1(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <4 x i32>, ptr %a
   %vb = load <4 x i32>, ptr %b
-  %vas = shufflevector <4 x i32> %va, <4 x i32> undef, <2 x i32> <i32 0, i32 2>
-  %vbs = shufflevector <4 x i32> %vb, <4 x i32> undef, <2 x i32> <i32 0, i32 2>
+  %vas = shufflevector <4 x i32> %va, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+  %vbs = shufflevector <4 x i32> %vb, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
   %vae = sext <2 x i32> %vas to <2 x i64>
   %vbe = zext <2 x i32> %vbs to <2 x i64>
   %mul = mul <2 x i64> %vae, %vbe
@@ -1016,8 +1016,8 @@ define void @vmulwod_h_bu_b_1(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <16 x i8>, ptr %a
   %vb = load <16 x i8>, ptr %b
-  %vas = shufflevector <16 x i8> %va, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-  %vbs = shufflevector <16 x i8> %vb, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %vas = shufflevector <16 x i8> %va, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %vbs = shufflevector <16 x i8> %vb, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %vae = sext <8 x i8> %vas to <8 x i16>
   %vbe = zext <8 x i8> %vbs to <8 x i16>
   %mul = mul <8 x i16> %vae, %vbe
@@ -1041,8 +1041,8 @@ define void @vmulwod_w_hu_h_1(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <8 x i16>, ptr %a
   %vb = load <8 x i16>, ptr %b
-  %vas = shufflevector <8 x i16> %va, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-  %vbs = shufflevector <8 x i16> %vb, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %vas = shufflevector <8 x i16> %va, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %vbs = shufflevector <8 x i16> %vb, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   %vae = sext <4 x i16> %vas to <4 x i32>
   %vbe = zext <4 x i16> %vbs to <4 x i32>
   %mul = mul <4 x i32> %vae, %vbe
@@ -1066,8 +1066,8 @@ define void @vmulwod_d_wu_w_1(ptr %res, ptr %a, ptr %b) nounwind {
 entry:
   %va = load <4 x i32>, ptr %a
   %vb = load <4 x i32>, ptr %b
-  %vas = shufflevector <4 x i32> %va, <4 x i32> undef, <2 x i32> <i32 1, i32 3>
-  %vbs = shufflevector <4 x i32> %vb, <4 x i32> undef, <2 x i32> <i32 1, i32 3>
+  %vas = shufflevector <4 x i32> %va, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
+  %vbs = shufflevector <4 x i32> %vb, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
   %vae = sext <2 x i32> %vas to <2 x i64>
   %vbe = zext <2 x i32> %vbs to <2 x i64>
   %mul = mul <2 x i64> %vae, %vbe
