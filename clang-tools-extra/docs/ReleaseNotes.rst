@@ -244,6 +244,10 @@ Changes in existing checks
   correcting a spelling mistake on its option
   ``NamePrefixSuffixSilenceDissimilarityTreshold``.
 
+- Improved :doc:`bugprone-empty-catch
+  <clang-tidy/checks/bugprone/empty-catch>` check by allowing empty 
+  ``catch`` blocks in destructors.
+
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
   exceptions from captures are now diagnosed, exceptions in the bodies of

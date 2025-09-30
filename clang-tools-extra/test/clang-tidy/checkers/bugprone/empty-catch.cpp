@@ -65,3 +65,12 @@ void functionWithComment2() {
     // @IGNORE: relax its safe
   }
 }
+
+struct StructWithEmptyCatchInDestructor {
+  ~StructWithEmptyCatchInDestructor() {
+    try {
+    } 
+    catch (...) {
+    }
+  }
+};
