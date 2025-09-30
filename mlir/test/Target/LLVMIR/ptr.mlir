@@ -281,3 +281,99 @@ llvm.func @ptr_add_cst() -> !ptr.ptr<#llvm.address_space<0>> {
   %res = ptr.ptr_add %ptr, %off : !ptr.ptr<#llvm.address_space<0>>, i32
   llvm.return %res : !ptr.ptr<#llvm.address_space<0>>
 }
+
+// CHECK-LABEL: define i64 @ptr_diff_scalar
+// CHECK-SAME: (ptr %[[PTR1:.*]], ptr %[[PTR2:.*]]) {
+// CHECK-NEXT:   %[[P1INT:.*]] = ptrtoint ptr %[[PTR1]] to i64
+// CHECK-NEXT:   %[[P2INT:.*]] = ptrtoint ptr %[[PTR2]] to i64
+// CHECK-NEXT:   %[[DIFF:.*]] = sub i64 %[[P1INT]], %[[P2INT]]
+// CHECK-NEXT:   ret i64 %[[DIFF]]
+// CHECK-NEXT: }
+llvm.func @ptr_diff_scalar(%ptr1: !ptr.ptr<#llvm.address_space<0>>, %ptr2: !ptr.ptr<#llvm.address_space<0>>) -> i64 {
+  %diff = ptr.ptr_diff %ptr1, %ptr2 : !ptr.ptr<#llvm.address_space<0>> -> i64
+  llvm.return %diff : i64
+}
+
+// CHECK-LABEL: define i32 @ptr_diff_scalar_i32
+// CHECK-SAME: (ptr %[[PTR1:.*]], ptr %[[PTR2:.*]]) {
+// CHECK-NEXT:   %[[P1INT:.*]] = ptrtoint ptr %[[PTR1]] to i64
+// CHECK-NEXT:   %[[P2INT:.*]] = ptrtoint ptr %[[PTR2]] to i64
+// CHECK-NEXT:   %[[DIFF:.*]] = sub i64 %[[P1INT]], %[[P2INT]]
+// CHECK-NEXT:   %[[TRUNC:.*]] = trunc i64 %[[DIFF]] to i32
+// CHECK-NEXT:   ret i32 %[[TRUNC]]
+// CHECK-NEXT: }
+llvm.func @ptr_diff_scalar_i32(%ptr1: !ptr.ptr<#llvm.address_space<0>>, %ptr2: !ptr.ptr<#llvm.address_space<0>>) -> i32 {
+  %diff = ptr.ptr_diff %ptr1, %ptr2 : !ptr.ptr<#llvm.address_space<0>> -> i32
+  llvm.return %diff : i32
+}
+
+// CHECK-LABEL: define <4 x i64> @ptr_diff_vector
+// CHECK-SAME: (<4 x ptr> %[[PTRS1:.*]], <4 x ptr> %[[PTRS2:.*]]) {
+// CHECK-NEXT:   %[[P1INT:.*]] = ptrtoint <4 x ptr> %[[PTRS1]] to <4 x i64>
+// CHECK-NEXT:   %[[P2INT:.*]] = ptrtoint <4 x ptr> %[[PTRS2]] to <4 x i64>
+// CHECK-NEXT:   %[[DIFF:.*]] = sub <4 x i64> %[[P1INT]], %[[P2INT]]
+// CHECK-NEXT:   ret <4 x i64> %[[DIFF]]
+// CHECK-NEXT: }
+llvm.func @ptr_diff_vector(%ptrs1: vector<4x!ptr.ptr<#llvm.address_space<0>>>, %ptrs2: vector<4x!ptr.ptr<#llvm.address_space<0>>>) -> vector<4xi64> {
+  %diffs = ptr.ptr_diff %ptrs1, %ptrs2 : vector<4x!ptr.ptr<#llvm.address_space<0>>> -> vector<4xi64>
+  llvm.return %diffs : vector<4xi64>
+}
+
+// CHECK-LABEL: define <8 x i32> @ptr_diff_vector_i32
+// CHECK-SAME: (<8 x ptr> %[[PTRS1:.*]], <8 x ptr> %[[PTRS2:.*]]) {
+// CHECK-NEXT:   %[[P1INT:.*]] = ptrtoint <8 x ptr> %[[PTRS1]] to <8 x i64>
+// CHECK-NEXT:   %[[P2INT:.*]] = ptrtoint <8 x ptr> %[[PTRS2]] to <8 x i64>
+// CHECK-NEXT:   %[[DIFF:.*]] = sub <8 x i64> %[[P1INT]], %[[P2INT]]
+// CHECK-NEXT:   %[[TRUNC:.*]] = trunc <8 x i64> %[[DIFF]] to <8 x i32>
+// CHECK-NEXT:   ret <8 x i32> %[[TRUNC]]
+// CHECK-NEXT: }
+llvm.func @ptr_diff_vector_i32(%ptrs1: vector<8x!ptr.ptr<#llvm.address_space<0>>>, %ptrs2: vector<8x!ptr.ptr<#llvm.address_space<0>>>) -> vector<8xi32> {
+  %diffs = ptr.ptr_diff %ptrs1, %ptrs2 : vector<8x!ptr.ptr<#llvm.address_space<0>>> -> vector<8xi32>
+  llvm.return %diffs : vector<8xi32>
+}
+
+// CHECK-LABEL: define i64 @ptr_diff_with_constants() {
+// CHECK-NEXT:   ret i64 4096
+// CHECK-NEXT: }
+llvm.func @ptr_diff_with_constants() -> i64 {
+  %ptr1 = ptr.constant #ptr.address<0x2000> : !ptr.ptr<#llvm.address_space<0>>
+  %ptr2 = ptr.constant #ptr.address<0x1000> : !ptr.ptr<#llvm.address_space<0>>
+  %diff = ptr.ptr_diff %ptr1, %ptr2 : !ptr.ptr<#llvm.address_space<0>> -> i64
+  llvm.return %diff : i64
+}
+
+// CHECK-LABEL: define i64 @ptr_diff_with_flags_nsw
+// CHECK-SAME: (ptr %[[PTR1:.*]], ptr %[[PTR2:.*]]) {
+// CHECK-NEXT:   %[[P1INT:.*]] = ptrtoint ptr %[[PTR1]] to i64
+// CHECK-NEXT:   %[[P2INT:.*]] = ptrtoint ptr %[[PTR2]] to i64
+// CHECK-NEXT:   %[[DIFF:.*]] = sub nsw i64 %[[P1INT]], %[[P2INT]]
+// CHECK-NEXT:   ret i64 %[[DIFF]]
+// CHECK-NEXT: }
+llvm.func @ptr_diff_with_flags_nsw(%ptr1: !ptr.ptr<#llvm.address_space<0>>, %ptr2: !ptr.ptr<#llvm.address_space<0>>) -> i64 {
+  %diff = ptr.ptr_diff nsw %ptr1, %ptr2 : !ptr.ptr<#llvm.address_space<0>> -> i64
+  llvm.return %diff : i64
+}
+
+// CHECK-LABEL: define i64 @ptr_diff_with_flags_nuw
+// CHECK-SAME: (ptr %[[PTR1:.*]], ptr %[[PTR2:.*]]) {
+// CHECK-NEXT:   %[[P1INT:.*]] = ptrtoint ptr %[[PTR1]] to i64
+// CHECK-NEXT:   %[[P2INT:.*]] = ptrtoint ptr %[[PTR2]] to i64
+// CHECK-NEXT:   %[[DIFF:.*]] = sub nuw i64 %[[P1INT]], %[[P2INT]]
+// CHECK-NEXT:   ret i64 %[[DIFF]]
+// CHECK-NEXT: }
+llvm.func @ptr_diff_with_flags_nuw(%ptr1: !ptr.ptr<#llvm.address_space<0>>, %ptr2: !ptr.ptr<#llvm.address_space<0>>) -> i64 {
+  %diff = ptr.ptr_diff nuw %ptr1, %ptr2 : !ptr.ptr<#llvm.address_space<0>> -> i64
+  llvm.return %diff : i64
+}
+
+// CHECK-LABEL: define i64 @ptr_diff_with_flags_nsw_nuw
+// CHECK-SAME: (ptr %[[PTR1:.*]], ptr %[[PTR2:.*]]) {
+// CHECK-NEXT:   %[[P1INT:.*]] = ptrtoint ptr %[[PTR1]] to i64
+// CHECK-NEXT:   %[[P2INT:.*]] = ptrtoint ptr %[[PTR2]] to i64
+// CHECK-NEXT:   %[[DIFF:.*]] = sub nuw nsw i64 %[[P1INT]], %[[P2INT]]
+// CHECK-NEXT:   ret i64 %[[DIFF]]
+// CHECK-NEXT: }
+llvm.func @ptr_diff_with_flags_nsw_nuw(%ptr1: !ptr.ptr<#llvm.address_space<0>>, %ptr2: !ptr.ptr<#llvm.address_space<0>>) -> i64 {
+  %diff = ptr.ptr_diff nsw | nuw %ptr1, %ptr2 : !ptr.ptr<#llvm.address_space<0>> -> i64
+  llvm.return %diff : i64
+}

@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
+#include "../bugprone/CommandProcessorCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
@@ -33,7 +34,6 @@
 #include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "CommandProcessorCheck.h"
 #include "DefaultOperatorNewAlignmentCheck.h"
 #include "DontModifyStdNamespaceCheck.h"
 #include "FloatLoopCounter.h"
@@ -296,7 +296,8 @@ public:
     CheckFactories.registerCheck<bugprone::ReservedIdentifierCheck>(
         "cert-dcl37-c");
     // ENV
-    CheckFactories.registerCheck<CommandProcessorCheck>("cert-env33-c");
+    CheckFactories.registerCheck<bugprone::CommandProcessorCheck>(
+        "cert-env33-c");
     // ERR
     CheckFactories.registerCheck<bugprone::UnusedReturnValueCheck>(
         "cert-err33-c");

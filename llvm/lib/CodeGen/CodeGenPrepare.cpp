@@ -1749,6 +1749,12 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
                                  Sub->hasNUsesOrMore(1)))
     return false;
 
+  // We don't want to move around uses of condition values this late, so we
+  // check if it is legal to create the call to the intrinsic in the basic
+  // block containing the icmp.
+  if (Sub->getParent() != Cmp->getParent() && !Sub->hasOneUse())
+    return false;
+
   if (!replaceMathCmpWithIntrinsic(Sub, Sub->getOperand(0), Sub->getOperand(1),
                                    Cmp, Intrinsic::usub_with_overflow))
     return false;

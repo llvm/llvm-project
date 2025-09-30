@@ -57,7 +57,7 @@ public:
     }
     std::pair<uint64_t, uint64_t> words() const {
       using namespace support;
-      return std::make_pair(high(), low());
+      return {high(), low()};
     }
   };
 
