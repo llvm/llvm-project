@@ -1790,13 +1790,12 @@ would help to avoid running into a "dangling else" situation.
       markAsIgnored(D);
   }
 
-Use Unix style line endings for source files
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Use Unix line endings for source files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Use Unix style line endings for C/C++ source files (``.c``, ``.cpp`` and header
-files). This is required to avoid various build issue for downstream clients of
-LLVM. Test files like C/C++/HLSL test inputs can continue to use any line ending
-style.
+Use Unix line endings for all source files. CRLF line endings are allowed as an
+exception for test files that intend to test CRLF handling or when the file
+format requires it (like ``.bat`` or ``.rc`` files).
 
 See Also
 ========
