@@ -1341,7 +1341,7 @@ defm : Zn4WriteResXMMPair<WriteAESIMC, [Zn4FPAES01], 4, [1], 1>; // InvMixColumn
 defm : Zn4WriteResXMMPair<WriteAESKeyGen, [Zn4FPAES01], 4, [1], 1>; // Key Generation.
 
 // Carry-less multiplication instructions.
-defm : Zn4WriteResXMMPair<WriteCLMul, [Zn4FPCLM01], 4, [4], 4>;
+defm : Zn4WriteResXMMPair<WriteCLMul, [Zn4FPCLM01], 4, [3], 4>;
 
 // EMMS/FEMMS
 defm : Zn4WriteResInt<WriteEMMS, [Zn4ALU0123], 2, [1], 1>; // FIXME: latency not from llvm-exegesis
@@ -1387,23 +1387,23 @@ def Zn4WriteVPERM2F128rm : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPVShuf]> {
 def : InstRW<[Zn4WriteVPERM2F128rm], (instrs VPERM2F128rmi)>;
 
 def Zn4WriteVPERMPSYrr : SchedWriteRes<[Zn4FPVShuf]> {
-  let Latency = 7;
+  let Latency = 4;
   let ReleaseAtCycles = [1];
-  let NumMicroOps = 2;
+  let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WriteVPERMPSYrr], (instrs VPERMPSYrr)>;
 
 def Zn4WriteVPERMPSYrm : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPVShuf]> {
   let Latency = !add(Znver4Model.VecLoadLatency, Zn4WriteVPERMPSYrr.Latency);
-  let ReleaseAtCycles = [1, 1, 2];
-  let NumMicroOps = !add(Zn4WriteVPERMPSYrr.NumMicroOps, 1);
+  let ReleaseAtCycles = [1];
+  let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WriteVPERMPSYrm], (instrs VPERMPSYrm)>;
 
 def Zn4WriteVPERMYri : SchedWriteRes<[Zn4FPVShuf]> {
-  let Latency = 6;
+  let Latency = 4;
   let ReleaseAtCycles = [1];
-  let NumMicroOps = 2;
+  let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WriteVPERMYri], (instrs VPERMPDYri, VPERMQYri)>;
 
@@ -1415,9 +1415,9 @@ def Zn4WriteVPERMPDYmi : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPVShuf]> {
 def : InstRW<[Zn4WriteVPERMPDYmi], (instrs VPERMPDYmi)>;
 
 def Zn4WriteVPERMDYrr : SchedWriteRes<[Zn4FPVShuf]> {
-  let Latency = 5;
+  let Latency = 4;
   let ReleaseAtCycles = [1];
-  let NumMicroOps = 2;
+  let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WriteVPERMDYrr], (instrs VPERMDYrr)>;
 
