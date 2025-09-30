@@ -1637,7 +1637,7 @@ uint32_t SBTarget::GetUniqueID() const {
 
   if (TargetSP target_sp = GetSP())
     return target_sp->GetUniqueID();
-  return 0;
+  return LLDB_INVALID_TARGET_ID;
 }
 
 SBError SBTarget::SetLabel(const char *label) {

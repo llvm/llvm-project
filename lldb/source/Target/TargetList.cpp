@@ -256,8 +256,6 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
   Status error;
   const bool is_dummy_target = false;
 
-  static uint32_t g_target_unique_id = 0;
-
   ArchSpec arch(specified_arch);
 
   if (arch.IsValid()) {
@@ -345,8 +343,6 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
 
   if (!target_sp)
     return error;
-
-  target_sp->m_target_unique_id = ++g_target_unique_id;
 
   // Set argv0 with what the user typed, unless the user specified a
   // directory. If the user specified a directory, then it is probably a

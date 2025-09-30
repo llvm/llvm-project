@@ -1657,7 +1657,8 @@ protected:
   bool m_suppress_stop_hooks; /// Used to not run stop hooks for expressions
   bool m_is_dummy_target;
   unsigned m_next_persistent_variable_index = 0;
-  uint32_t m_target_unique_id = 0; /// The unique ID assigned to this target
+  uint32_t m_target_unique_id =
+      LLDB_INVALID_TARGET_ID; /// The unique ID assigned to this target
   /// An optional \a lldb_private::Trace object containing processor trace
   /// information of this target.
   lldb::TraceSP m_trace_sp;
