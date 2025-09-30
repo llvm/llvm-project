@@ -276,7 +276,7 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
 }
 
 int __tgt_interop_use60(ident_t *LocRef, omp_interop_val_t *Interop,
-                      interop_ctx_t *Ctx, dep_pack_t *Deps) {
+                        interop_ctx_t *Ctx, dep_pack_t *Deps) {
   bool Nowait = Ctx->flags.nowait;
   DP("Call to %s with interop " DPxMOD ", nowait %" PRId32 "\n", __func__,
      DPxPTR(Interop), Nowait);
