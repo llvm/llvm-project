@@ -583,6 +583,7 @@ Moved checkers
 
 Sanitizers
 ----------
+- Improved documentation for legacy ``no_sanitize`` attributes.
 
 Python Binding Changes
 ----------------------
