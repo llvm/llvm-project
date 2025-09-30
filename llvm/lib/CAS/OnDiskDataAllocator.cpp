@@ -18,11 +18,6 @@ using namespace llvm;
 using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
 
-OnDiskDataAllocator::OnDiskDataAllocator(OnDiskDataAllocator &&RHS) = default;
-OnDiskDataAllocator &
-OnDiskDataAllocator::operator=(OnDiskDataAllocator &&RHS) = default;
-OnDiskDataAllocator::~OnDiskDataAllocator() = default;
-
 #if LLVM_ENABLE_ONDISK_CAS
 
 //===----------------------------------------------------------------------===//
@@ -230,3 +225,8 @@ size_t OnDiskDataAllocator::size() const { return 0; }
 size_t OnDiskDataAllocator::capacity() const { return 0; }
 
 #endif // LLVM_ENABLE_ONDISK_CAS
+
+OnDiskDataAllocator::OnDiskDataAllocator(OnDiskDataAllocator &&RHS) = default;
+OnDiskDataAllocator &
+OnDiskDataAllocator::operator=(OnDiskDataAllocator &&RHS) = default;
+OnDiskDataAllocator::~OnDiskDataAllocator() = default;
