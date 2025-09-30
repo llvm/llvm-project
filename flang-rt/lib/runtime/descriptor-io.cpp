@@ -47,9 +47,11 @@ static RT_API_ATTRS common::optional<bool> DefinedFormattedIo(
     const typeInfo::DerivedType &derived,
     const typeInfo::SpecialBinding &special,
     const SubscriptValue subscripts[]) {
-  // Look at the next data edit descriptor.  If this is list-directed I/O, the
-  // "maxRepeat=0" argument will prevent the input from advancing over an
+  // Look at the next data edit descriptor.  If this is list-directed input,
+  // the "maxRepeat=0" argument will prevent the input from advancing over an
   // initial '(' that shouldn't be consumed now as the start of a real part.
+  // It also allows reaching EOF without crashing, since the EOF only matters
+  // if a child READ is actually performed.
   common::optional<DataEdit> peek{io.GetNextDataEdit(/*maxRepeat=*/0)};
   if (peek &&
       (peek->descriptor == DataEdit::DefinedDerivedType ||
