@@ -115,6 +115,11 @@ template <class _VecT, class _Iter>
 }
 
 template <class _Tp, size_t _Np>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __any_of(__simd_vector<_Tp, _Np> __vec) noexcept {
+  return __builtin_reduce_or(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
+}
+
+template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __all_of(__simd_vector<_Tp, _Np> __vec) noexcept {
   return __builtin_reduce_and(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
 }

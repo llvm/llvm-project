@@ -2675,8 +2675,7 @@ define i32 @predicated_not_dominates_reduction_twoadd(ptr nocapture noundef read
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> [[TMP13]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[VEC_PHI]], [[TMP7]]
-; CHECK-NEXT:    [[TMP18:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
-; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> [[TMP18]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> [[TMP13]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP9]])
 ; CHECK-NEXT:    [[TMP11]] = add i32 [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -2746,12 +2745,10 @@ define i32 @predicated_not_dominates_reduction_twoadd(ptr nocapture noundef read
 ; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP28]], <4 x i32> [[TMP30]], <4 x i32> zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP12]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = add i32 [[VEC_PHI1]], [[TMP13]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP31:%.*]] = zext <4 x i8> [[TMP7]] to <4 x i32>
-; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = select <4 x i1> [[TMP27]], <4 x i32> [[TMP31]], <4 x i32> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = select <4 x i1> [[TMP27]], <4 x i32> [[TMP29]], <4 x i32> zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP15]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP17]] = add i32 [[TMP11]], [[TMP16]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = zext <4 x i8> [[TMP8]] to <4 x i32>
-; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = select <4 x i1> [[TMP28]], <4 x i32> [[TMP22]], <4 x i32> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = select <4 x i1> [[TMP28]], <4 x i32> [[TMP30]], <4 x i32> zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP18]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP20]] = add i32 [[TMP14]], [[TMP19]]
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8

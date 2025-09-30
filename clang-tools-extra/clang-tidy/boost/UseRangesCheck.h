@@ -17,7 +17,7 @@ namespace clang::tidy::boost {
 /// replaced with a boost ranges version instead
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/boost/use-ranges.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/boost/use-ranges.html
 class UseRangesCheck : public utils::UseRangesCheck {
 public:
   UseRangesCheck(StringRef Name, ClangTidyContext *Context);

@@ -20,7 +20,7 @@ namespace clang::tidy::abseil {
 ///   StrCat(1, StrCat(2, 3))  ==>  StrCat(1, 2, 3)
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/redundant-strcat-calls.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/abseil/redundant-strcat-calls.html
 class RedundantStrcatCallsCheck : public ClangTidyCheck {
 public:
   RedundantStrcatCallsCheck(StringRef Name, ClangTidyContext *Context)
