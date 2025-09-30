@@ -845,19 +845,10 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   if (VF.isScalable())
     return InstructionCost::getInvalid();
 
-  // First compute the cost of the conditionally executed recipes, followed by
-  // account for the branching cost, except if the mask is a header mask or
-  // uniform condition.
-  using namespace llvm::VPlanPatternMatch;
+  // Compute and return the cost of the conditionally executed recipes.
+  assert(VF.isVector() && "Can only compute vector cost at the moment.");
   VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
-  InstructionCost ThenCost = Then->cost(VF, Ctx);
-
-  // For the scalar case, we may not always execute the original predicated
-  // block, Thus, scale the block's cost by the probability of executing it.
-  if (VF.isScalar())
-    return ThenCost / getPredBlockCostDivisor(Ctx.CostKind);
-
-  return ThenCost;
+  return Then->cost(VF, Ctx);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1759,7 +1750,8 @@ VPCostContext::getOperandInfo(VPValue *V) const {
 }
 
 InstructionCost VPCostContext::getScalarizationOverhead(
-    Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF) {
+    Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
+    bool AlwaysIncludeReplicatingR) {
   if (VF.isScalar())
     return 0;
 
@@ -1779,7 +1771,9 @@ InstructionCost VPCostContext::getScalarizationOverhead(
   SmallPtrSet<const VPValue *, 4> UniqueOperands;
   SmallVector<Type *> Tys;
   for (auto *Op : Operands) {
-    if (Op->isLiveIn() || isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op) ||
+    if (Op->isLiveIn() ||
+        (!AlwaysIncludeReplicatingR &&
+         isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op)) ||
         !UniqueOperands.insert(Op).second)
       continue;
     Tys.push_back(toVectorizedTy(Types.inferScalarType(Op), VF));

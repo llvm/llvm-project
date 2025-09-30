@@ -1618,12 +1618,14 @@ public:
   void Post(const parser::OpenMPDeclareTargetConstruct &) {
     SkipImplicitTyping(false);
   }
-  bool Pre(const parser::OpenMPDeclarativeAllocate &) {
+  bool Pre(const parser::OpenMPDeclarativeAllocate &x) {
+    AddOmpSourceRange(x.source);
     SkipImplicitTyping(true);
     return true;
   }
   void Post(const parser::OpenMPDeclarativeAllocate &) {
     SkipImplicitTyping(false);
+    messageHandler().set_currStmtSource(std::nullopt);
   }
   bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
     AddOmpSourceRange(x.source);
