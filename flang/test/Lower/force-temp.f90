@@ -94,15 +94,32 @@ contains
         type(base), intent(inout) :: b(:)
       end subroutine s6
     end interface
+    class(base), pointer :: pb(:)
+    type(child), target :: c(2)
 !CHECK-LABEL: func.func @_QMtestPcall_s6
 !CHECK-NOT: hlfir.copy_in
 !CHECK: fir.call @_QPs6
 !CHECK-NOT: hlfir.copy_out
-    class(base), pointer :: pb(:)
-    type(child), target :: c(2)
-
-    c = (/(child (i, real(i*2)), i=1,size(c))/)
     pb => c
     call s6(pb)
   end subroutine call_s6
+  subroutine call_s7()
+    interface
+      subroutine s7(b1, b2, n)
+        import :: base
+        integer :: n
+        type(base), intent(inout) :: b1(n)
+        type(base), intent(inout) :: b2(*)
+      end subroutine
+    end interface
+    integer, parameter :: n = 7
+    class(base), allocatable :: c1(:), c2(:)
+!CHECK-LABEL: func.func @_QMtestPcall_s7
+!CHECK: hlfir.copy_in
+!CHECK: hlfir.copy_in
+!CHECK: fir.call @_QPs7
+!CHECK: hlfir.copy_out
+!CHECK: hlfir.copy_out
+    call s7(c1, c2, n)
+  end subroutine call_s7
 end module
