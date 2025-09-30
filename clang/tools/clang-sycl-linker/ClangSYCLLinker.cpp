@@ -466,6 +466,7 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
   return createStringError(inconvertibleErrorCode(), "Unsupported arch");
 }
 
+// TODO: Consider using LLVM-IR metadata to identify globals of interest
 bool isKernel(const Function &F) {
   const CallingConv::ID CC = F.getCallingConv();
   return CC == CallingConv::SPIR_KERNEL || CC == CallingConv::AMDGPU_KERNEL ||
@@ -545,6 +546,12 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
         return createFileError(File, EC);
     }
     OffloadingImage TheImage{};
+    // TODO: TheImageKind should be
+    // `IsAOTCompileNeeded ? IMG_Object : IMG_SPIRV;`
+    // For that we need to update SYCL Runtime to align with the ImageKind enum.
+    // Temporarily it is initalized to IMG_None, because in that case, SYCL
+    // Runtime has a heuristic to understand what the Image Kind is, so at least
+    // it works.
     TheImage.TheImageKind = IMG_None;
     TheImage.TheOffloadKind = OFK_SYCL;
     TheImage.StringData["triple"] =
