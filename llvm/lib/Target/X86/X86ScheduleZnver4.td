@@ -46,8 +46,9 @@ def Znver4Model : SchedMachineModel {
   int VecLoadLatency = 7;
   // Latency of a simple store operation.
   int StoreLatency = 1;
-  // FIXME:
-  let HighLatency = 25; // FIXME: any better choice?
+  // Mean and median value for all instructions with latencies >6
+  // Source: Zen4 Instruction Latencies spreadsheet (included with SOG)
+  let HighLatency = 13;
   // AMD SOG Zen4, 2.8 Optimizing Branching
   // The branch misprediction penalty is in the range from 11 to 18 cycles,
   // <...>. The common case penalty is 13 cycles.
