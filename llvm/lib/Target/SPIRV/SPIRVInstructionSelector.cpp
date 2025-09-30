@@ -197,6 +197,8 @@ private:
 
   bool selectOverflowArith(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, unsigned Opcode) const;
+  bool selectDebugTrap(Register ResVReg, const SPIRVType *ResType,
+                       MachineInstr &I) const;
 
   bool selectIntegerDot(Register ResVReg, const SPIRVType *ResType,
                         MachineInstr &I, bool Signed) const;
@@ -312,7 +314,8 @@ private:
                                 MachineInstr &I) const;
   bool selectModf(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
-
+  bool selectFrexp(Register ResVReg, const SPIRVType *ResType,
+                   MachineInstr &I) const;
   // Utilities
   std::pair<Register, bool>
   buildI32Constant(uint32_t Val, MachineInstr &I,
@@ -833,6 +836,9 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_USUBSAT:
     return selectExtInst(ResVReg, ResType, I, CL::u_sub_sat);
 
+  case TargetOpcode::G_FFREXP:
+    return selectFrexp(ResVReg, ResType, I);
+
   case TargetOpcode::G_UADDO:
     return selectOverflowArith(ResVReg, ResType, I,
                                ResType->getOpcode() == SPIRV::OpTypeVector
@@ -999,14 +1005,24 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   // represent code after lowering or intrinsics which are not implemented but
   // should not crash when found in a customer's LLVM IR input.
   case TargetOpcode::G_TRAP:
-  case TargetOpcode::G_DEBUGTRAP:
   case TargetOpcode::G_UBSANTRAP:
   case TargetOpcode::DBG_LABEL:
     return true;
+  case TargetOpcode::G_DEBUGTRAP:
+    return selectDebugTrap(ResVReg, ResType, I);
 
   default:
     return false;
   }
+}
+
+bool SPIRVInstructionSelector::selectDebugTrap(Register ResVReg,
+                                               const SPIRVType *ResType,
+                                               MachineInstr &I) const {
+  unsigned Opcode = SPIRV::OpNop;
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+      .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
@@ -1103,6 +1119,53 @@ bool SPIRVInstructionSelector::selectExtInstForLRound(
       MIB.constrainAllUses(TII, TRI, RBI);
       return true;
     }
+  }
+  return false;
+}
+
+bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
+                                           const SPIRVType *ResType,
+                                           MachineInstr &I) const {
+  ExtInstList ExtInsts = {{SPIRV::InstructionSet::OpenCL_std, CL::frexp},
+                          {SPIRV::InstructionSet::GLSL_std_450, GL::Frexp}};
+  for (const auto &Ex : ExtInsts) {
+    SPIRV::InstructionSet::InstructionSet Set = Ex.first;
+    uint32_t Opcode = Ex.second;
+    if (!STI.canUseExtInstSet(Set))
+      continue;
+
+    MachineIRBuilder MIRBuilder(I);
+    SPIRVType *PointeeTy = GR.getSPIRVTypeForVReg(I.getOperand(1).getReg());
+    const SPIRVType *PointerType = GR.getOrCreateSPIRVPointerType(
+        PointeeTy, MIRBuilder, SPIRV::StorageClass::Function);
+    Register PointerVReg =
+        createVirtualRegister(PointerType, &GR, MRI, MRI->getMF());
+
+    auto It = getOpVariableMBBIt(I);
+    auto MIB = BuildMI(*It->getParent(), It, It->getDebugLoc(),
+                       TII.get(SPIRV::OpVariable))
+                   .addDef(PointerVReg)
+                   .addUse(GR.getSPIRVTypeID(PointerType))
+                   .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))
+                   .constrainAllUses(TII, TRI, RBI);
+
+    MIB = MIB &
+          BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+              .addDef(ResVReg)
+              .addUse(GR.getSPIRVTypeID(ResType))
+              .addImm(static_cast<uint32_t>(Ex.first))
+              .addImm(Opcode)
+              .add(I.getOperand(2))
+              .addUse(PointerVReg)
+              .constrainAllUses(TII, TRI, RBI);
+
+    MIB = MIB &
+          BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
+              .addDef(I.getOperand(1).getReg())
+              .addUse(GR.getSPIRVTypeID(PointeeTy))
+              .addUse(PointerVReg)
+              .constrainAllUses(TII, TRI, RBI);
+    return MIB;
   }
   return false;
 }

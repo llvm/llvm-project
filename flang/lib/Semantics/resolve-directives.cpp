@@ -362,6 +362,24 @@ public:
   explicit OmpAttributeVisitor(SemanticsContext &context)
       : DirectiveAttributeVisitor(context) {}
 
+  static const Scope &scopingUnit(const Scope &scope) {
+    const Scope *iter{&scope};
+    for (; !iter->IsTopLevel(); iter = &iter->parent()) {
+      switch (iter->kind()) {
+      case Scope::Kind::BlockConstruct:
+      case Scope::Kind::BlockData:
+      case Scope::Kind::DerivedType:
+      case Scope::Kind::MainProgram:
+      case Scope::Kind::Module:
+      case Scope::Kind::Subprogram:
+        return *iter;
+      default:
+        break;
+      }
+    }
+    return *iter;
+  }
+
   template <typename A> void Walk(const A &x) { parser::Walk(x, *this); }
   template <typename A> bool Pre(const A &) { return true; }
   template <typename A> void Post(const A &) {}
@@ -523,7 +541,7 @@ public:
     // Gather information from the clauses.
     Flags flags;
     std::optional<common::OmpMemoryOrderType> memOrder;
-    for (const auto &clause : std::get<parser::OmpClauseList>(x.t).v) {
+    for (const parser::OmpClause &clause : x.v.Clauses().v) {
       flags |= common::visit(
           common::visitors{
               [&memOrder](
@@ -952,7 +970,6 @@ private:
   void ResolveOmpNameList(const std::list<parser::Name> &, Symbol::Flag);
   void ResolveOmpName(const parser::Name &, Symbol::Flag);
   Symbol *ResolveName(const parser::Name *);
-  Symbol *ResolveOmpObjectScope(const parser::Name *);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
   void CheckMultipleAppearances(
@@ -2324,22 +2341,17 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_declare_target);
-  const auto &spec{std::get<parser::OmpDeclareTargetSpecifier>(x.t)};
-  if (const auto *objectList{parser::Unwrap<parser::OmpObjectList>(spec.u)}) {
-    ResolveOmpObjectList(*objectList, Symbol::Flag::OmpDeclareTarget);
-  } else if (const auto *clauseList{
-                 parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
-    for (const auto &clause : clauseList->v) {
-      if (const auto *toClause{std::get_if<parser::OmpClause::To>(&clause.u)}) {
-        auto &objList{std::get<parser::OmpObjectList>(toClause->v.t)};
-        ResolveOmpObjectList(objList, Symbol::Flag::OmpDeclareTarget);
-      } else if (const auto *linkClause{
-                     std::get_if<parser::OmpClause::Link>(&clause.u)}) {
-        ResolveOmpObjectList(linkClause->v, Symbol::Flag::OmpDeclareTarget);
-      } else if (const auto *enterClause{
-                     std::get_if<parser::OmpClause::Enter>(&clause.u)}) {
-        ResolveOmpObjectList(std::get<parser::OmpObjectList>(enterClause->v.t),
-            Symbol::Flag::OmpDeclareTarget);
+
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (auto *object{omp::GetArgumentObject(arg)}) {
+      ResolveOmpObject(*object, Symbol::Flag::OmpDeclareTarget);
+    }
+  }
+
+  for (const parser::OmpClause &clause : x.v.Clauses().v) {
+    if (auto *objects{parser::omp::GetOmpObjectList(clause)}) {
+      for (const parser::OmpObject &object : objects->v) {
+        ResolveOmpObject(object, Symbol::Flag::OmpDeclareTarget);
       }
     }
   }
@@ -2925,31 +2937,6 @@ Symbol *OmpAttributeVisitor::ResolveOmpCommonBlockName(
   return nullptr;
 }
 
-// Use this function over ResolveOmpName when an omp object's scope needs
-// resolving, it's symbol flag isn't important and a simple check for resolution
-// failure is desired. Using ResolveOmpName means needing to work with the
-// context to check for failure, whereas here a pointer comparison is all that's
-// needed.
-Symbol *OmpAttributeVisitor::ResolveOmpObjectScope(const parser::Name *name) {
-
-  // TODO: Investigate whether the following block can be replaced by, or
-  // included in, the ResolveOmpName function
-  if (auto *prev{name ? GetContext().scope.parent().FindSymbol(name->source)
-                      : nullptr}) {
-    name->symbol = prev;
-    return nullptr;
-  }
-
-  // TODO: Investigate whether the following block can be replaced by, or
-  // included in, the ResolveOmpName function
-  if (auto *ompSymbol{
-          name ? GetContext().scope.FindSymbol(name->source) : nullptr}) {
-    name->symbol = ompSymbol;
-    return ompSymbol;
-  }
-  return nullptr;
-}
-
 void OmpAttributeVisitor::ResolveOmpObjectList(
     const parser::OmpObjectList &ompObjectList, Symbol::Flag ompFlag) {
   for (const auto &ompObject : ompObjectList.v) {
@@ -3028,13 +3015,19 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
       context_.Say(designator.source,
           "List items specified in the ALLOCATE directive must not have the ALLOCATABLE attribute unless the directive is associated with an ALLOCATE statement"_err_en_US);
     }
-    if ((ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective ||
-            ompFlag == Symbol::Flag::OmpExecutableAllocateDirective) &&
-        ResolveOmpObjectScope(name) == nullptr) {
-      context_.Say(designator.source, // 2.15.3
-          "List items must be declared in the same scoping unit in which the %s directive appears"_err_en_US,
-          parser::ToUpperCaseLetters(
-              llvm::omp::getOpenMPDirectiveName(directive, version)));
+    bool checkScope{ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective};
+    // In 5.1 the scope check only applies to declarative allocate.
+    if (version == 50 && !checkScope) {
+      checkScope = ompFlag == Symbol::Flag::OmpExecutableAllocateDirective;
+    }
+    if (checkScope) {
+      if (scopingUnit(GetContext().scope) !=
+          scopingUnit(symbol->GetUltimate().owner())) {
+        context_.Say(designator.source, // 2.15.3
+            "List items must be declared in the same scoping unit in which the %s directive appears"_err_en_US,
+            parser::ToUpperCaseLetters(
+                llvm::omp::getOpenMPDirectiveName(directive, version)));
+      }
     }
     if (ompFlag == Symbol::Flag::OmpReduction) {
       // Using variables inside of a namelist in OpenMP reductions
