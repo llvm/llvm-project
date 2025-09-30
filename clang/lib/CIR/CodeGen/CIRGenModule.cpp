@@ -2184,8 +2184,13 @@ mlir::Attribute CIRGenModule::getAddrOfRTTIDescriptor(mlir::Location loc,
   if (!shouldEmitRTTI(forEh))
     return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
 
-  errorNYI(loc, "getAddrOfRTTIDescriptor");
-  return mlir::Attribute();
+  if (forEh && ty->isObjCObjectPointerType() &&
+      langOpts.ObjCRuntime.isGNUFamily()) {
+    errorNYI(loc, "getAddrOfRTTIDescriptor: Objc PtrType & Objc RT GUN");
+    return {};
+  }
+
+  return getCXXABI().getAddrOfRTTIDescriptor(loc, ty);
 }
 
 // TODO(cir): this can be shared with LLVM codegen.
