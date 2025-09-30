@@ -2033,9 +2033,9 @@ TEST(ExprMutationAnalyzerTest, PointeeMutatedByReturn) {
       int *const x = nullptr;
       return x;
     })";
-    // in C++20, AST will have NoOp cast.
+    // in C++23, AST will have NoOp cast.
     auto AST =
-        buildASTFromCodeWithArgs(Code, {"-Wno-everything", "-std=c++26"});
+        buildASTFromCodeWithArgs(Code, {"-Wno-everything", "-std=c++23"});
     auto Results =
         match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
     EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
