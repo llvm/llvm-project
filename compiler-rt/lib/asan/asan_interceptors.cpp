@@ -60,15 +60,15 @@ static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
 #if SANITIZER_INTERCEPT_STRNLEN
   if (REAL(strnlen))
     return REAL(strnlen)(s, maxlen);
-#endif
+#  endif
   return internal_strnlen(s, maxlen);
 }
 
-static inline uptr MaybeRealWcsnlen(const wchar_t *s, uptr maxlen) {
-#if SANITIZER_INTERCEPT_WCSNLEN
+static inline uptr MaybeRealWcsnlen(const wchar_t* s, uptr maxlen) {
+#  if SANITIZER_INTERCEPT_WCSNLEN
   if (REAL(wcsnlen))
     return REAL(wcsnlen)(s, maxlen);
-#endif
+#  endif
   return internal_wcsnlen(s, maxlen);
 }
 
@@ -577,8 +577,8 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   return REAL(strcpy)(to, from);
 }
 
-INTERCEPTOR(wchar_t *, wcscpy, wchar_t *to, const wchar_t *from) {
-  void *ctx;
+INTERCEPTOR(wchar_t*, wcscpy, wchar_t* to, const wchar_t* from) {
+  void* ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, wcscpy);
   if (!TryAsanInitFromRtl())
     return REAL(wcscpy)(to, from);
@@ -654,8 +654,8 @@ INTERCEPTOR(char*, strncpy, char *to, const char *from, usize size) {
   return REAL(strncpy)(to, from, size);
 }
 
-INTERCEPTOR(wchar_t *, wcsncpy, wchar_t *to, const wchar_t *from, uptr size) {
-  void *ctx;
+INTERCEPTOR(wchar_t*, wcsncpy, wchar_t* to, const wchar_t* from, uptr size) {
+  void* ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, wcsncpy);
   AsanInitFromRtl();
   if (flags()->replace_str) {
