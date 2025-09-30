@@ -28,7 +28,7 @@ module test
     end subroutine
   end interface
 
-  ! Used by s6() and call_s6()
+  ! Used by call_s6() and others below
   type base
     integer :: i = -1
   end type
