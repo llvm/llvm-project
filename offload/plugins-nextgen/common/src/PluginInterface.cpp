@@ -1891,7 +1891,13 @@ void *GenericDeviceTy::getFree_ArgBuf(size_t sz) {
     }
   }
   if (!found_ptr) {
-    found_ptr = this->allocate(sz, &found_ptr, TARGET_ALLOC_SHARED);
+    auto AllocOrErr = this->allocate(sz, nullptr, TARGET_ALLOC_SHARED);
+    if (!AllocOrErr) {
+      REPORT("Could not get SHARED mem for Arg Buffer: %s\n",
+             toString(AllocOrErr.takeError()).data());
+      return nullptr;
+    }
+    found_ptr = *AllocOrErr;
     assert(found_ptr && "Could not get SHARED mem for Arg Buffer\n");
     ArgBufEntryTy *new_entry_ptr = new ArgBufEntryTy;
     new_entry_ptr->Size = sz;
@@ -1915,7 +1921,7 @@ void GenericDeviceTy::moveBusyToFree_ArgBuf(void *ptr) {
 }
 void GenericDeviceTy::clear_ArgBufs() {
   for (auto entry : ArgBufEntries) {
-    this->free(entry->Addr, TARGET_ALLOC_SHARED);
+    consumeError(this->free(entry->Addr, TARGET_ALLOC_SHARED));
     delete entry;
   }
   ArgBufEntries.clear();
