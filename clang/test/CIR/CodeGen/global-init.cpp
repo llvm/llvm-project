@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 
-// Note: The CIR generated fro this test isn't ready for lowering to LLVM yet.
+// Note: The CIR generated from this test isn't ready for lowering to LLVM yet.
 //       That will require changes to LoweringPrepare.
 
 struct NeedsCtor {
