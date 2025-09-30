@@ -259,7 +259,7 @@ int RTDEF(PointerDeallocatePolymorphic)(Descriptor &pointer,
 }
 
 bool RTDEF(PointerIsAssociated)(const Descriptor &pointer) {
-  return pointer.raw().base_addr != nullptr;
+  return pointer.IsAssociated();
 }
 
 bool RTDEF(PointerIsAssociatedWith)(
