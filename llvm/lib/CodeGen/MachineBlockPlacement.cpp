@@ -164,14 +164,15 @@ enum class TwoWayBranchOptStrategy {
   // friendly to static branch prediction (predict not-taken).
   HotPathFallthrough,
   // For a two-way branch, make the cold path the fallthrough path. This
-  // improves
-  // i-cache efficiency as the unconditional branch is fetched less often.
+  // improves i-cache efficiency as the unconditional branch is fetched less
+  // often.
   ColdPathFallthrough
 };
 
 static cl::opt<TwoWayBranchOptStrategy> TwoWayBranchOpt(
     "two-way-branch-opt", cl::Hidden,
-    cl::desc("Select the optimization strategy for two-way conditional branches:"),
+    cl::desc(
+        "Select the optimization strategy for two-way conditional branches:"),
     cl::values(
         clEnumValN(TwoWayBranchOptStrategy::None, "none",
                    "Avoid optimizing the two-way branches."),
@@ -3014,8 +3015,7 @@ void MachineBlockPlacement::optimizeBranches() {
     auto TBBProb = MBPI->getEdgeProbability(ChainBB, TBB);
     auto FBBProb = MBPI->getEdgeProbability(ChainBB, FBB);
     bool ReverseBranch =
-        (TwoWayBranchOpt ==
-             TwoWayBranchOptStrategy::ColdPathFallthrough &&
+        (TwoWayBranchOpt == TwoWayBranchOptStrategy::ColdPathFallthrough &&
          (FBBProb > TBBProb)) ||
         (TwoWayBranchOpt == TwoWayBranchOptStrategy::HotPathFallthrough &&
          (TBBProb > FBBProb));
