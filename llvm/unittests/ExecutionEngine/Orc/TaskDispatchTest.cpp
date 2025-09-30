@@ -19,6 +19,7 @@ TEST(InPlaceTaskDispatchTest, GenericNamedTask) {
   auto D = std::make_unique<InPlaceTaskDispatcher>();
   bool B = false;
   D->dispatch(makeGenericNamedTask([&]() { B = true; }));
+  D->run_to_complete();
   EXPECT_TRUE(B);
   D->shutdown();
 }
@@ -31,6 +32,7 @@ TEST(DynamicThreadPoolDispatchTest, GenericNamedTask) {
   D->dispatch(makeGenericNamedTask(
       [P = std::move(P)]() mutable { P.set_value(true); }));
   EXPECT_TRUE(F.get());
+  D->run_to_complete();
   D->shutdown();
 }
 #endif
