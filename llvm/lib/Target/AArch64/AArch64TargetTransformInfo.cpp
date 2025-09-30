@@ -5636,9 +5636,6 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   if (CostKind != TTI::TCK_RecipThroughput)
     return Invalid;
 
-  if (VF.isScalable() && !ST->isSVEorStreamingSVEAvailable())
-    return Invalid;
-
   if (VF.isFixed() && !ST->isSVEorStreamingSVEAvailable() &&
       (!ST->isNeonAvailable() || !ST->hasDotProd()))
     return Invalid;
@@ -5660,13 +5657,12 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
   unsigned Ratio =
       AccumType->getScalarSizeInBits() / InputTypeA->getScalarSizeInBits();
-  if (VF.getKnownMinValue() < Ratio)
+  if (VF.getKnownMinValue() <= Ratio)
     return Invalid;
 
   VectorType *InputVectorType = VectorType::get(InputTypeA, VF);
   VectorType *AccumVectorType =
       VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));
-
   // We don't yet support all kinds of legalization (e.g. widening
   // of <[vscale x] 1 x ..> accumulators)
   auto TA = TLI->getTypeAction(AccumVectorType->getContext(),
