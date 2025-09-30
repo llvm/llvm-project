@@ -264,7 +264,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree_left_rotate(_Nod
 // Effects:  Makes __x->__left_ the subtree root with __x as its right child
 //           while preserving in-order order.
 template <class _NodePtr>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __tree_right_rotate(_NodePtr __x) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree_right_rotate(_NodePtr __x) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__x != nullptr, "node shouldn't be null");
   _LIBCPP_ASSERT_INTERNAL(__x->__left_ != nullptr, "node should have a left child");
   _NodePtr __y = __x->__left_;
