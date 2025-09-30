@@ -4313,7 +4313,7 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     break;
   }
 
-  if (!Tok.isOneOf(tok::eod, tok::semi, tok::l_square))
+  if (!Tok.isOneOf(tok::eod, tok::semi, tok::l_square, tok::kw_private))
     Diag(Tok, diag::err_unexpected_char_in_module_directive)
         << getSpelling(Tok);
 
