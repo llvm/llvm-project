@@ -2270,16 +2270,13 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
   }
 
   llvm::Type *ResTy = ConvertType(Ty);
-  bool IsBitInt = Ty->isBitIntType();
   bool HasBoolRep = Ty->hasBooleanRepresentation();
-  if (HasBoolRep && !IsBitInt &&
-      CGM.getCodeGenOpts().getLoadBoolFromMem() ==
+  if (HasBoolRep && CGM.getCodeGenOpts().getLoadBoolFromMem() ==
           CodeGenOptions::BoolFromMem::NonZero) {
-    auto *NonZero = Builder.CreateICmpNE(
-        Value, llvm::Constant::getNullValue(Value->getType()), "loadedv.nz");
-    return Builder.CreateIntCast(NonZero, ResTy, false, "loadedv");
+    return Builder.CreateICmpNE(
+        Value, llvm::Constant::getNullValue(Value->getType()), "loadedv");
   }
-  if (HasBoolRep || IsBitInt || Ty->isExtVectorBoolType())
+  if (HasBoolRep || Ty->isBitIntType() || Ty->isExtVectorBoolType())
     return Builder.CreateTrunc(Value, ResTy, "loadedv");
 
   return Value;
