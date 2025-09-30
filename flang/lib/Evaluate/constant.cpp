@@ -10,6 +10,7 @@
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Semantics/scope.h"
 #include <string>
 
 namespace Fortran::evaluate {
