@@ -8671,7 +8671,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
     Plan->addVF(VF);
 
   if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
-          Plan,
+          *Plan,
           [this](PHINode *P) {
             return Legal->getIntOrFpInductionDescriptor(P);
           },
