@@ -139,11 +139,13 @@ MDNode *getAllocTokenMetadata(const CallBase &CB) {
 
 class ModeBase {
 public:
-  explicit ModeBase(uint64_t MaxTokens) : MaxTokens(MaxTokens) {}
+  explicit ModeBase(const IntegerType &TokenTy, uint64_t MaxTokens)
+      : MaxTokens(MaxTokens ? MaxTokens : TokenTy.getBitMask()) {}
 
 protected:
   uint64_t boundedToken(uint64_t Val) const {
-    return MaxTokens ? Val % MaxTokens : Val;
+    assert(MaxTokens != 0);
+    return Val % MaxTokens;
   }
 
   const uint64_t MaxTokens;
@@ -165,8 +167,9 @@ private:
 /// Implementation for TokenMode::Random.
 class RandomMode : public ModeBase {
 public:
-  RandomMode(uint64_t MaxTokens, std::unique_ptr<RandomNumberGenerator> RNG)
-      : ModeBase(MaxTokens), RNG(std::move(RNG)) {}
+  RandomMode(const IntegerType &TokenTy, uint64_t MaxTokens,
+             std::unique_ptr<RandomNumberGenerator> RNG)
+      : ModeBase(TokenTy, MaxTokens), RNG(std::move(RNG)) {}
   uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &) {
     return boundedToken((*RNG)());
   }
@@ -220,15 +223,16 @@ public:
                       ModuleAnalysisManager &MAM)
       : Options(transformOptionsFromCl(std::move(Opts))), Mod(M),
         FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
-        Mode(IncrementMode(*Options.MaxTokens)) {
+        Mode(IncrementMode(*IntPtrTy, *Options.MaxTokens)) {
     switch (ClMode.getValue()) {
     case TokenMode::Increment:
       break;
     case TokenMode::Random:
-      Mode.emplace<RandomMode>(*Options.MaxTokens, M.createRNG(DEBUG_TYPE));
+      Mode.emplace<RandomMode>(*IntPtrTy, *Options.MaxTokens,
+                               M.createRNG(DEBUG_TYPE));
       break;
     case TokenMode::TypeHash:
-      Mode.emplace<TypeHashMode>(*Options.MaxTokens);
+      Mode.emplace<TypeHashMode>(*IntPtrTy, *Options.MaxTokens);
       break;
     }
   }

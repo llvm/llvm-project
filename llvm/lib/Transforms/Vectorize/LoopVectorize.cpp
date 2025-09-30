@@ -1762,9 +1762,10 @@ public:
   GeneratedRTChecks(PredicatedScalarEvolution &PSE, DominatorTree *DT,
                     LoopInfo *LI, TargetTransformInfo *TTI,
                     const DataLayout &DL, TTI::TargetCostKind CostKind)
-      : DT(DT), LI(LI), TTI(TTI), SCEVExp(*PSE.getSE(), DL, "scev.check"),
-        MemCheckExp(*PSE.getSE(), DL, "scev.check"), PSE(PSE),
-        CostKind(CostKind) {}
+      : DT(DT), LI(LI), TTI(TTI),
+        SCEVExp(*PSE.getSE(), DL, "scev.check", /*PreserveLCSSA=*/false),
+        MemCheckExp(*PSE.getSE(), DL, "scev.check", /*PreserveLCSSA=*/false),
+        PSE(PSE), CostKind(CostKind) {}
 
   /// Generate runtime checks in SCEVCheckBlock and MemCheckBlock, so we can
   /// accurately estimate the cost of the runtime checks. The blocks are
@@ -7486,12 +7487,13 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     VPSingleDefRecipe *VectorPtr;
     if (Reverse) {
       // When folding the tail, we may compute an address that we don't in the
-      // original scalar loop and it may not be inbounds. Drop Inbounds in that
-      // case.
+      // original scalar loop: drop the GEP no-wrap flags in this case.
+      // Otherwise preserve existing flags without no-unsigned-wrap, as we will
+      // emit negative indices.
       GEPNoWrapFlags Flags =
-          (CM.foldTailByMasking() || !GEP || !GEP->isInBounds())
+          CM.foldTailByMasking() || !GEP
               ? GEPNoWrapFlags::none()
-              : GEPNoWrapFlags::inBounds();
+              : GEP->getNoWrapFlags().withoutNoUnsignedWrap();
       VectorPtr =
           new VPVectorEndPointerRecipe(Ptr, &Plan.getVF(), getLoadStoreType(I),
                                        /*Stride*/ -1, Flags, I->getDebugLoc());
