@@ -198,9 +198,9 @@ private:
     /// and targets.
     using CGTypeId = uint64_t;
 
-    /// Map type identifiers to callsite labels. Labels are generated for each
-    /// indirect callsite in the function.
-    SmallVector<std::pair<CGTypeId, MCSymbol *>> IndirectCallsites;
+    /// Unique target type IDs.
+    SmallSet<CGTypeId, 4> IndirectCalleeTypeIDs;
+    /// Unique direct callees.
     SmallSet<MCSymbol *, 4> DirectCallees;
   };
 
@@ -217,7 +217,7 @@ private:
     INDIRECT_TARGET_KNOWN_TID = 2,
   };
 
-  enum CallGraphSectionFormatVersion : uint32_t {
+  enum CallGraphSectionFormatVersion : uint8_t {
     V_0 = 0,
   };
 

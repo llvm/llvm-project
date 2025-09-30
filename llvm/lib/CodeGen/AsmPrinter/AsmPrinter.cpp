@@ -1685,59 +1685,46 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   OutStreamer->pushSection();
   OutStreamer->switchSection(FuncCGSection);
 
-  auto EmitFunctionKindAndTypeId = [&]() {
-    const Function &F = MF.getFunction();
-    // If this function has external linkage or has its address taken and
-    // it is not a callback, then anything could call it.
-    bool IsIndirectTarget = !F.hasLocalLinkage() ||
-                            F.hasAddressTaken(nullptr,
-                                              /*IgnoreCallbackUses=*/true,
-                                              /*IgnoreAssumeLikeCalls=*/true,
-                                              /*IgnoreLLVMUsed=*/false);
-    if (!IsIndirectTarget) {
-      OutStreamer->emitInt8(
-          static_cast<uint8_t>(FunctionKind::NOT_INDIRECT_TARGET));
-      return;
-    }
-    if (const auto *TypeId = extractNumericCGTypeId(F)) {
-      OutStreamer->emitInt8(
-          static_cast<uint8_t>(FunctionKind::INDIRECT_TARGET_KNOWN_TID));
-      OutStreamer->emitInt64(TypeId->getZExtValue());
-      return;
-    }
-    OutStreamer->emitInt8(
-        static_cast<uint8_t>(FunctionKind::INDIRECT_TARGET_UNKNOWN_TID));
-  };
+  const MCSymbol *FunctionSymbol = getFunctionBegin();
+  const Function &F = MF.getFunction();
+  // If this function has external linkage or has its address taken and
+  // it is not a callback, then anything could call it.
+  bool IsIndirectTarget =
+      !F.hasLocalLinkage() || F.hasAddressTaken(nullptr,
+                                                /*IgnoreCallbackUses=*/true,
+                                                /*IgnoreAssumeLikeCalls=*/true,
+                                                /*IgnoreLLVMUsed=*/false);
+
+  uint8_t Flags = 0;
+  if (IsIndirectTarget)
+    Flags |= 1 << 0; // Set the 0th bit to 1.
 
   // Emit function's call graph information.
   // 1) CallGraphSectionFormatVersion
-  // 2) Function entry PC.
-  // 3) FunctionKind: Whether the function is indirect target, and if so,
-  //    whether its type id is known.
-  // 4) FunctionTypeID if the function is indirect target, and its type id is
-  //    known.
-  // 5) Number of indirect callsites.
-  // 6) For each indirect callsite, its
-  //    callsite PC and callee's expected type id.
-  // 7) Number of unique direct callees.
-  // 8) For each unique direct callee, the callee's PC.
+  // 2) Flags - Bit 0 is set to 1 if the function is a valid indirect target.
+  // Other bits are reserved for future use. 3) Function entry PC. 4)
+  // FunctionTypeID if the function is indirect target and its type id is known,
+  // otherwise it is set to 0. 5) Number of unique direct callees. 6) Number of
+  // unique indirect target type IDs. 7) For each unique direct callee, the
+  // callee's PC. 8) Each unique indirect target type id.
 
-  OutStreamer->emitInt32(CallGraphSectionFormatVersion::V_0);
-  const MCSymbol *FunctionSymbol = getFunctionBegin();
+  OutStreamer->emitInt8(CallGraphSectionFormatVersion::V_0);
+  OutStreamer->emitInt8(Flags);
   OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
-  EmitFunctionKindAndTypeId();
-  const auto &IndirectCallsites = FuncCGInfo.IndirectCallsites;
-  OutStreamer->emitInt32(IndirectCallsites.size());
+  const auto *TypeId = extractNumericCGTypeId(F);
+  if (IsIndirectTarget && TypeId)
+    OutStreamer->emitInt64(TypeId->getZExtValue());
+  else
+    OutStreamer->emitInt64(0);
   const auto &DirectCallees = FuncCGInfo.DirectCallees;
-  for (const auto &[TypeId, Label] : IndirectCallsites) {
-    OutStreamer->emitInt64(TypeId);
-    OutStreamer->emitSymbolValue(Label, TM.getProgramPointerSize());
-  }
-  FuncCGInfo.IndirectCallsites.clear();
+  const auto &IndirectCalleeTypeIDs = FuncCGInfo.IndirectCalleeTypeIDs;
   OutStreamer->emitInt32(DirectCallees.size());
-  for (const auto &CalleeSymbol : DirectCallees) {
+  OutStreamer->emitInt32(IndirectCalleeTypeIDs.size());
+  for (const auto &CalleeTypeId : IndirectCalleeTypeIDs)
+    OutStreamer->emitInt64(CalleeTypeId);
+  FuncCGInfo.IndirectCalleeTypeIDs.clear();
+  for (const auto &CalleeSymbol : DirectCallees)
     OutStreamer->emitSymbolValue(CalleeSymbol, TM.getProgramPointerSize());
-  }
   FuncCGInfo.DirectCallees.clear();
 
   OutStreamer->popSection();
@@ -1906,7 +1893,8 @@ void AsmPrinter::handleCallsiteForCallgraph(
     MCSymbol *S = MF->getContext().createTempSymbol();
     OutStreamer->emitLabel(S);
     uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
-    FuncCGInfo.IndirectCallsites.emplace_back(CalleeTypeIdVal, S);
+    // FuncCGInfo.IndirectCallsites.emplace_back(CalleeTypeIdVal, S);
+    FuncCGInfo.IndirectCalleeTypeIDs.insert(CalleeTypeIdVal);
   }
 }
 
