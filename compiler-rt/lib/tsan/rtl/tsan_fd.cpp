@@ -180,7 +180,7 @@ void FdAcquire(ThreadState *thr, uptr pc, int fd) {
     return;
   FdDesc *d = fddesc(thr, pc, fd);
   FdSync *s = d->sync;
-  DPrintf("#%d: FdAcquire(%d) -> %p\n", thr->tid, fd, s);
+  DPrintf("#%d: FdAcquire(%d) -> %p\n", thr->tid, fd, (void*)s);
   MemoryAccess(thr, pc, (uptr)d, 8, kAccessRead);
   if (s)
     Acquire(thr, pc, (uptr)s);
@@ -191,7 +191,7 @@ void FdRelease(ThreadState *thr, uptr pc, int fd) {
     return;
   FdDesc *d = fddesc(thr, pc, fd);
   FdSync *s = d->sync;
-  DPrintf("#%d: FdRelease(%d) -> %p\n", thr->tid, fd, s);
+  DPrintf("#%d: FdRelease(%d) -> %p\n", thr->tid, fd, (void*)s);
   MemoryAccess(thr, pc, (uptr)d, 8, kAccessRead);
   if (s)
     Release(thr, pc, (uptr)s);
