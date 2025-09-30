@@ -753,18 +753,22 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       rewriter.replaceOp(op, cstOp);
       return success();
     } else if (sgShape == wgShape) { // if the entire vector is shared by all
-                                     // threads...don't distribute
+                                     // subgroups...don't distribute
       auto newConstOp =
           arith::ConstantOp::create(rewriter, op.getLoc(), vecType, vecAttr);
       setLayoutIfNeeded(newConstOp->getResult(0));
       rewriter.replaceOp(op, newConstOp);
       return success();
     } else {
-      // Non-splat constant: use baseValue/stride logic for runtime indexing,
-      // with wrap-around
-      if (wgShape.size() >= 2 && wgShape[0] != 1 && wgShape[1] != 1)
+      // Non-splat constant
+      if (wgShape.size() > 2)
         return rewriter.notifyMatchFailure(
-            op, "Only 1D or 2D vector constant supported");
+            op, "Only 1D & 2D vector constant supported");
+
+      if (wgShape.size() == 2 && wgShape[0] != 1 && wgShape[1] != 1)
+        return rewriter.notifyMatchFailure(
+            op, "2D vector constant only supported with 1 unit dim");
+
       SmallVector<Attribute> values(vecAttr.getValues<Attribute>());
       int64_t stride = 0;
       if (values.size() > 1) {
@@ -779,13 +783,13 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
         }
       }
 
-      // Create a constant for the first tile
+      // Create a constant for the base tile
       SmallVector<Attribute> tileValues;
       int sgData = 1;
       if (sgShape.size() == 1) {
         sgData = static_cast<int>(sgShape[0]);
       } else if (sgShape.size() == 2) {
-        // If shape is [1, n] or [n, 1], pick the non-1 dimension (n).
+        // If shape is [1, n] or [n, 1], pick the non-unit dimension.
         if (sgShape[0] == 1 && sgShape[1] != 1)
           sgData = static_cast<int>(sgShape[1]);
         else
@@ -801,43 +805,31 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
                                              tileValues);
       auto baseConstVec = rewriter.create<arith::ConstantOp>(loc, tileAttr);
 
-      // Get subgroup/thread id
+      // Get subgroup id
       Value sgId =
           gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
 
-      // Compute baseValue: baseValue = (sgId % numTiles) * stride * sgData
-      int64_t nonUnitDim = 0;
-      if (wgShape.size() == 2)
-        nonUnitDim = wgShape[0] != 1 ? 0 : 1;
-      // For 1D, just use the first dim
-      int64_t numTiles = wgShape[nonUnitDim] / sgShape[nonUnitDim];
-      auto numTileConst =
-          rewriter.create<arith::ConstantIndexOp>(loc, numTiles);
-      Value remsiOp = rewriter.create<arith::RemSIOp>(
-          loc, rewriter.getIndexType(), sgId, numTileConst);
-      auto baseValueConst =
-          rewriter.create<arith::ConstantIndexOp>(loc, stride * sgData);
-      Value baseValue = rewriter.create<arith::MulIOp>(
-          loc, rewriter.getIndexType(), remsiOp, baseValueConst);
+      auto sgOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
+      if (failed(sgOffsets))
+        return failure();
 
-      // Broadcast baseValue to vector
-      auto splatBaseValue = rewriter.create<vector::SplatOp>(
-          loc, VectorType::get({sgData}, rewriter.getIndexType()), baseValue);
-
-      // Add baseValue to baseConstantVec constant
-      Value finalTile = rewriter.create<arith::AddIOp>(
-          loc, splatBaseValue->getResult(0), baseConstVec);
-
-      // Cast to final type if needed
-      Value result;
-      if (eltType.isIndex()) {
-        result = finalTile;
-      } else {
-        result = rewriter.create<arith::IndexCastOp>(loc, newType, finalTile);
+      SmallVector<Value> newConstOps;
+      for (auto offsets : *sgOffsets) {
+        // Multiply offset with stride and broadcast it to a vector of
+        // "sgData[nonUnitDim]" size
+        auto strideConst = rewriter.create<arith::ConstantIndexOp>(loc, stride);
+        Value mulOffset = rewriter.create<arith::MulIOp>(
+            loc, rewriter.getIndexType(), offsets[0], strideConst);
+        auto bcastOffset = rewriter.create<vector::SplatOp>(
+            loc, VectorType::get({sgData}, rewriter.getIndexType()), mulOffset);
+        auto finalConst =
+            arith::AddIOp::create(rewriter, loc, baseConstVec, bcastOffset);
+        setLayoutIfNeeded(baseConstVec);
+        setLayoutIfNeeded(bcastOffset);
+        setLayoutIfNeeded(finalConst);
+        newConstOps.push_back(finalConst);
       }
-
-      setLayoutIfNeeded(result);
-      rewriter.replaceOp(op, result);
+      rewriter.replaceOpWithMultiple(op, {newConstOps});
       return success();
     }
   }
