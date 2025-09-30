@@ -302,12 +302,21 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace,
 
       isSignalFrame = cieInfo.isSignalFrame;
 
-#if defined(__ARM64E__)
-      // If the target is using the arm64e ABI then the return address has
-      // been signed using the stack pointer as a diversifier. The original
-      // return address needs to be authenticated before the it is restored.
-      // autia1716 is used instead of autia as autia1716 assembles to a NOP on
-      // pre-v8.3a architectures.
+#if defined(_LIBUNWIND_TARGET_AARCH64) && \
+    !defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+      // There are two ways of return address signing: pac-ret (enabled via
+      // -mbranch-protection=pac-ret) and ptrauth-returns (enabled as part of
+      // Apple's arm64e or experimental pauthtest ABI on Linux). The code
+      // below handles signed RA for pac-ret, while ptrauth-returns uses
+      // different logic.
+      // TODO: unify logic for both cases, see
+      // https://github.com/llvm/llvm-project/issues/160110
+      //
+      // If the target is aarch64 then the return address may have been signed
+      // using the v8.3 pointer authentication extensions. The original
+      // return address needs to be authenticated before the return address is
+      // restored. autia1716 is used instead of autia as autia1716 assembles
+      // to a NOP on pre-v8.3a architectures.
       if ((R::getArch() == REGISTERS_ARM64) &&
           isReturnAddressSigned(addressSpace, registers, cfa, prolog) &&
           returnAddress != 0) {
