@@ -18,12 +18,14 @@ namespace LIBC_NAMESPACE_DECL {
 namespace string_length_internal {
 // Return a bit-mask with the nth bit set if the nth-byte in block_ptr is zero.
 template <typename Vector, typename Mask>
-[[gnu::no_sanitize_address]] LIBC_INLINE static Mask
+__attribute__((no_sanitize("address", "hwaddress", "thread")))
+LIBC_INLINE static Mask
 compare_and_mask(const Vector *block_ptr);
 
 template <typename Vector, typename Mask,
           decltype(compare_and_mask<Vector, Mask>)>
-[[gnu::no_sanitize_address]] LIBC_INLINE static size_t
+__attribute__((no_sanitize("address", "hwaddress", "thread")))
+LIBC_INLINE static size_t
 string_length_vector(const char *src) {
   uintptr_t misalign_bytes = reinterpret_cast<uintptr_t>(src) % sizeof(Vector);
 

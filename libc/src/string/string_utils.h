@@ -119,7 +119,8 @@ template <typename T> LIBC_INLINE size_t string_length(const T *src) {
 }
 
 template <typename Word>
-[[gnu::no_sanitize_address]] LIBC_INLINE void *
+__attribute__((no_sanitize("address", "hwaddress", "thread")))
+LIBC_INLINE void *
 find_first_character_wide_read(const unsigned char *src, unsigned char ch,
                                size_t n) {
   const unsigned char *char_ptr = src;
