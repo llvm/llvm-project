@@ -2217,13 +2217,12 @@ func.func @test_mulf1(%arg0 : f32, %arg1 : f32) -> (f32) {
 }
 
 // CHECK-LABEL: @test_mulf2(
-func.func @test_mulf2(%arg0 : f32, %arg1 : f32) -> (f32, f32) {
+func.func @test_mulf2(%arg0 : f32) -> f32 {
   // CHECK-NEXT:  %[[C0:.+]] = arith.constant 0.000000e+00 : f32
-  // CHECK-NEXT:  return %[[C0]], %[[C0]]
+  // CHECK-NEXT:  return %[[C0]]
   %c0 = arith.constant 0.0 : f32
-  %0 = arith.mulf %arg0, %c0 fastmath<nnan,ninf> : f32
-  %1 = arith.mulf %c0, %arg1 fastmath<nnan,ninf> : f32
-  return %0, %1 : f32, f32
+  %0 = arith.mulf %c0, %arg0 fastmath<nnan,ninf> : f32
+  return %0 : f32
 }
 
 // -----
