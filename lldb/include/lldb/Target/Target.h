@@ -603,8 +603,8 @@ public:
   /// Get the unique ID for this target.
   ///
   /// \return
-  ///     The unique ID for this target, or 0 if no ID has been assigned.
-  uint32_t GetUniqueID() const { return m_target_unique_id; }
+  ///     The unique ID for this target.
+  lldb::user_id_t GetUniqueID() const { return m_target_unique_id; }
 
   const std::string &GetLabel() const { return m_label; }
 
@@ -1657,7 +1657,7 @@ protected:
   bool m_suppress_stop_hooks; /// Used to not run stop hooks for expressions
   bool m_is_dummy_target;
   unsigned m_next_persistent_variable_index = 0;
-  uint32_t m_target_unique_id =
+  lldb::user_id_t m_target_unique_id =
       LLDB_INVALID_TARGET_ID; /// The unique ID assigned to this target
   /// An optional \a lldb_private::Trace object containing processor trace
   /// information of this target.

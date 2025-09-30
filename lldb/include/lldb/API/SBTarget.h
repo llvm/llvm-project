@@ -357,7 +357,7 @@ public:
 
   const char *GetLabel() const;
 
-  uint32_t GetUniqueID() const;
+  lldb::user_id_t GetUniqueID() const;
 
   SBError SetLabel(const char *label);
 

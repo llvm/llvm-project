@@ -1632,7 +1632,7 @@ const char *SBTarget::GetLabel() const {
   return nullptr;
 }
 
-uint32_t SBTarget::GetUniqueID() const {
+lldb::user_id_t SBTarget::GetUniqueID() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP())

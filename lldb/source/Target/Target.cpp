@@ -139,7 +139,7 @@ private:
 };
 } // namespace
 
-static uint32_t g_target_unique_id = 1;
+static std::atomic<lldb::user_id_t> g_target_unique_id{1};
 
 template <typename Installer>
 static Status installExecutable(const Installer &installer) {
