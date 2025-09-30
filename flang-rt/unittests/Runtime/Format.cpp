@@ -22,7 +22,7 @@ using namespace std::literals::string_literals;
 using ResultsTy = std::vector<std::string>;
 
 // A test harness context for testing FormatControl
-class TestFormatContext : public IoErrorHandler {
+class TestFormatContext : public IoErrorHandler, public DefinedIoArgs {
 public:
   using CharType = char;
   TestFormatContext() : IoErrorHandler{"format.cpp", 1} {}
