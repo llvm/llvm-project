@@ -1617,7 +1617,7 @@ def S_BARRIER_WAIT : SOPP_Pseudo <"s_barrier_wait", (ins i16imm:$simm16), "$simm
 }
 
   def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave",
-    (ins), "", [(int_amdgcn_s_barrier_leave (Ignore))] > {
+    (ins), "", [(int_amdgcn_s_barrier_leave (i16 srcvalue))] > {
   let SchedRW = [WriteBarrier];
   let simm16 = 0;
   let fixed_imm = 1;
