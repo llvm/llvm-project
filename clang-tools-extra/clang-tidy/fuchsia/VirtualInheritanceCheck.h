@@ -16,7 +16,7 @@ namespace clang::tidy::fuchsia {
 /// Defining classes with virtual inheritance is disallowed.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia/virtual-inheritance.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/fuchsia/virtual-inheritance.html
 class VirtualInheritanceCheck : public ClangTidyCheck {
 public:
   VirtualInheritanceCheck(StringRef Name, ClangTidyContext *Context)

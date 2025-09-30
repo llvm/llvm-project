@@ -16,7 +16,7 @@ namespace clang::tidy::android {
 /// Finds code that uses accept4() without using the SOCK_CLOEXEC flag.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-accept4.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-accept4.html
 class CloexecAccept4Check : public CloexecCheck {
 public:
   CloexecAccept4Check(StringRef Name, ClangTidyContext *Context)

@@ -1777,9 +1777,9 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
     auto Region = DAG.Regions[I];
     for (auto MI = Region.first; MI != Region.second; ++MI) {
-      // The instruction must be trivially rematerializable.
+      // The instruction must be rematerializable.
       MachineInstr &DefMI = *MI;
-      if (!isTriviallyReMaterializable(DefMI))
+      if (!isReMaterializable(DefMI))
         continue;
 
       // We only support rematerializing virtual registers with one definition.
@@ -2002,8 +2002,8 @@ void PreRARematStage::rematerialize() {
 }
 
 // Copied from MachineLICM
-bool PreRARematStage::isTriviallyReMaterializable(const MachineInstr &MI) {
-  if (!DAG.TII->isTriviallyReMaterializable(MI))
+bool PreRARematStage::isReMaterializable(const MachineInstr &MI) {
+  if (!DAG.TII->isReMaterializable(MI))
     return false;
 
   for (const MachineOperand &MO : MI.all_uses()) {
