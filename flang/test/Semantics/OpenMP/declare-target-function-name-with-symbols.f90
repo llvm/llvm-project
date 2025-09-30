@@ -19,7 +19,7 @@ end module test
 !CHECK:  !DEF: /test/ex/b ObjectEntity INTEGER(4)
 !CHECK:  !DEF: /test/ex/c ObjectEntity INTEGER(4)
 !CHECK:  function ex(a, b, c)
-!CHECK: !$omp declare target (ex)
+!CHECK: !$omp declare target(ex)
 !CHECK:   !REF: /test/ex/a
 !CHECK:   !REF: /test/ex/b
 !CHECK:   !REF: /test/ex/c

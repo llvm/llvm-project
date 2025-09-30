@@ -39,32 +39,62 @@ bool isalnum(char c) {
   }
   return false;
 }
-
 } // namespace
 
-std::optional<size_t> CachedCommandAdaptor::searchComgrTmpModel(StringRef S) {
+std::optional<CachedCommandAdaptor::ComgrTmpSearchResult>
+CachedCommandAdaptor::searchComgrTmpModel(StringRef S) {
   // Ideally, we would use std::regex_search with the regex
-  // "comgr-[[:alnum:]]{6}". However, due to a bug in stdlibc++
-  // (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85824) we have to roll our
-  // own search of this regular expression. This bug resulted in a crash in
-  // luxmarkv3, during the std::regex constructor.
-  const StringRef Prefix = "comgr-";
+  // "comgr-[[:num:]]+-[[:num:]]+-[[:alnum:]]{6}". However, due to a bug in
+  // stdlibc++ (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85824) we have to
+  // roll our own search of this regular expression. This bug resulted in a
+  // crash in luxmarkv3, during the std::regex constructor.
+
+  const StringRef Prefix = "comgr";
   const size_t AlnumCount = 6;
 
-  size_t N = S.size();
-  size_t Pos = S.find(Prefix);
-
-  size_t AlnumStart = Pos + Prefix.size();
-  size_t AlnumEnd = AlnumStart + AlnumCount;
-  if (Pos == StringRef::npos || N < AlnumEnd)
-    return std::nullopt;
-
-  for (size_t i = AlnumStart; i < AlnumEnd; ++i) {
-    if (!isalnum(S[i]))
+  StringRef Remaining = S;
+  while (!Remaining.empty()) {
+    size_t PosInRemaining = Remaining.find(Prefix);
+    if (PosInRemaining == StringRef::npos)
       return std::nullopt;
+
+    size_t PosInS = Remaining.data() + PosInRemaining - S.data();
+
+    Remaining = Remaining.substr(PosInRemaining + Prefix.size());
+
+    unsigned Pid;
+    if (!Remaining.consume_front("-") ||
+        Remaining.consumeInteger<unsigned>(10, Pid)) {
+      continue;
+    }
+
+    unsigned Id;
+    if (!Remaining.consume_front("-") ||
+        Remaining.consumeInteger<unsigned>(10, Id)) {
+      continue;
+    }
+
+    if (!Remaining.consume_front("-")) {
+      continue;
+    }
+
+    if (Remaining.size() < AlnumCount) {
+      continue;
+    }
+
+    if (!all_of(Remaining.substr(0, AlnumCount), isalnum)) {
+      continue;
+    }
+
+    // `Remaining` begin is one after the end of the pattern
+    Remaining = Remaining.drop_front(AlnumCount);
+
+    size_t MatchSize = Remaining.data() - S.data() - PosInS;
+
+    return {{PosInS, MatchSize}};
   }
 
-  return Pos;
+  return std::nullopt;
 }
 
 void CachedCommandAdaptor::addUInt(CachedCommandAdaptor::HashAlgorithm &H,
@@ -89,15 +119,15 @@ void CachedCommandAdaptor::addFileContents(
   // different commands in #line directives in preprocessed files, and the
   // ModuleID or source_filename in the bitcode.
   while (!Buf.empty()) {
-    std::optional<size_t> ComgrTmpPos = searchComgrTmpModel(Buf);
+    auto ComgrTmpPos = searchComgrTmpModel(Buf);
     if (!ComgrTmpPos) {
       addString(H, Buf);
       break;
     }
 
-    StringRef ToHash = Buf.substr(0, *ComgrTmpPos);
+    StringRef ToHash = Buf.substr(0, ComgrTmpPos->StartPosition);
     addString(H, ToHash);
-    Buf = Buf.substr(ToHash.size() + StringRef("comgr-xxxxxx").size());
+    Buf = Buf.substr(ToHash.size() + ComgrTmpPos->MatchSize);
   }
 }
 

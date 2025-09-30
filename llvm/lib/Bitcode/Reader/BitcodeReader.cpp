@@ -7025,7 +7025,7 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (!MDLoader->isStrippingTBAA()) {
     for (auto &I : instructions(F)) {
       MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa);
-      if (!TBAA || TBAAVerifyHelper.visitTBAAMetadata(I, TBAA))
+      if (!TBAA || TBAAVerifyHelper.visitTBAAMetadata(&I, TBAA))
         continue;
       MDLoader->setStripTBAA(true);
       stripTBAA(F->getParent());

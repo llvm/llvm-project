@@ -95,8 +95,8 @@ void printAddressCallback(uint64_t Address, void *UserData) {
          InstructionsIdx, BrInstructionIdx);
   }
   if (Address != BrInstructionAddr) {
-    fail("incorrect absolute address %u resolved for instruction index %zu, "
-         "expected %u",
+    fail("incorrect absolute address %llu resolved for instruction index %zu, "
+         "expected %llu",
          Address, ActualIdx, BrInstructionAddr);
   }
 }

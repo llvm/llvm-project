@@ -3614,8 +3614,10 @@ getDeclareTargetRefPtrSuffix(LLVM::GlobalOp globalOp,
           llvm::StringRef(loc.getFilename()), loc.getLine());
     };
 
+    auto vfs = llvm::vfs::getRealFileSystem();
     os << llvm::format(
-        "_%x", ompBuilder.getTargetEntryUniqueInfo(fileInfoCallBack).FileID);
+        "_%x",
+        ompBuilder.getTargetEntryUniqueInfo(fileInfoCallBack, *vfs).FileID);
   }
   os << "_decl_tgt_ref_ptr";
 
@@ -4298,14 +4300,33 @@ mapParentWithMembers(LLVM::ModuleTranslation &moduleTranslation,
                      uint64_t mapDataIndex, TargetDirective targetDirective) {
   assert(!ompBuilder.Config.isTargetDevice() &&
          "function only supported for host device codegen");
-
-  // Map the first segment of our structure
   const size_t parentIndex = combinedInfo.Types.size();
-  combinedInfo.Types.emplace_back(
+
+  // Map the first segment of the parent. If a user-defined mapper is attached,
+  // include the parent's to/from-style bits (and common modifiers) in this
+  // base entry so the mapper receives correct copy semantics via its 'type'
+  // parameter. Also keep TARGET_PARAM when required for kernel arguments.
+  llvm::omp::OpenMPOffloadMappingFlags baseFlag =
       (targetDirective == TargetDirective::Target &&
        !mapData.IsDeclareTarget[mapDataIndex])
           ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM
-          : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE);
+          : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+
+  // Detect if this mapping uses a user-defined mapper.
+  bool hasUserMapper = mapData.Mappers[mapDataIndex] != nullptr;
+  if (hasUserMapper) {
+    using mapFlags = llvm::omp::OpenMPOffloadMappingFlags;
+    // Preserve relevant map-type bits from the parent clause. These include
+    // the copy direction (TO/FROM), as well as commonly used modifiers that
+    // should be visible to the mapper for correct behaviour.
+    mapFlags parentFlags = mapData.Types[mapDataIndex];
+    mapFlags preserve = mapFlags::OMP_MAP_TO | mapFlags::OMP_MAP_FROM |
+                        mapFlags::OMP_MAP_ALWAYS | mapFlags::OMP_MAP_CLOSE |
+                        mapFlags::OMP_MAP_PRESENT | mapFlags::OMP_MAP_OMPX_HOLD;
+    baseFlag |= (parentFlags & preserve);
+  }
+
+  combinedInfo.Types.emplace_back(baseFlag);
   combinedInfo.DevicePointers.emplace_back(
       mapData.DevicePointers[mapDataIndex]);
   combinedInfo.Mappers.emplace_back(mapData.Mappers[mapDataIndex]);
@@ -6249,10 +6270,12 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
                                                      lineNo);
       };
 
+      auto vfs = llvm::vfs::getRealFileSystem();
+
       ompBuilder->registerTargetGlobalVariable(
           captureClause, deviceClause, isDeclaration, isExternallyVisible,
-          ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack), mangledName,
-          generatedRefs, /*OpenMPSimd*/ false, targetTriple,
+          ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, *vfs),
+          mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
           /*GlobalInitializer*/ nullptr, /*VariableLinkage*/ nullptr,
           gVal->getType(), gVal);
 
@@ -6262,9 +6285,9 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
            ompBuilder->Config.hasRequiresUnifiedSharedMemory())) {
         ompBuilder->getAddrOfDeclareTargetVar(
             captureClause, deviceClause, isDeclaration, isExternallyVisible,
-            ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack), mangledName,
-            generatedRefs, /*OpenMPSimd*/ false, targetTriple, gVal->getType(),
-            /*GlobalInitializer*/ nullptr,
+            ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, *vfs),
+            mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
+            gVal->getType(), /*GlobalInitializer*/ nullptr,
             /*VariableLinkage*/ nullptr);
       }
     }
@@ -6413,7 +6436,7 @@ static bool isHostDeviceOp(Operation *op) {
 
   if (mlir::isa<omp::TargetAllocMemOp>(op) ||
       mlir::isa<omp::TargetFreeMemOp>(op))
-    return true;
+    return false;
 
   if (auto parentFn = op->getParentOfType<LLVM::LLVMFuncOp>()) {
     if (auto declareTargetIface =

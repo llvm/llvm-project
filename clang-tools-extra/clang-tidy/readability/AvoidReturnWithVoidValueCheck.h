@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// result types.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/avoid-return-with-void-value.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/avoid-return-with-void-value.html
 class AvoidReturnWithVoidValueCheck : public ClangTidyCheck {
 public:
   AvoidReturnWithVoidValueCheck(StringRef Name, ClangTidyContext *Context);
