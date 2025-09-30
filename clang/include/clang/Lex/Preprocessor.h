@@ -1804,7 +1804,8 @@ public:
   bool LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
                              SmallVectorImpl<Token> &Suffix,
                              SmallVectorImpl<IdentifierLoc> &Path,
-                             bool AllowMacroExpansion = true);
+                             bool AllowMacroExpansion = true,
+                             bool IsPartition = false);
   void EnterModuleSuffixTokenStream(ArrayRef<Token> Toks);
   void HandleCXXImportDirective(Token Import);
   void HandleCXXModuleDirective(Token Module);

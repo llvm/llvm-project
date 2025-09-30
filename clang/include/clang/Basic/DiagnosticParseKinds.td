@@ -1798,6 +1798,8 @@ def err_module_expected_semi : Error<
   "expected ';' after module name">;
 def err_expected_semi_after_module_or_import
   : Error<"'%0' directive must end with a ';' on the same line">;
+def note_module_declared_here : Note<
+  "%select{module|import}0 directive defined here">;
 def err_global_module_introducer_not_at_start : Error<
   "'module;' introducing a global module fragment can appear only "
   "at the start of the translation unit">;

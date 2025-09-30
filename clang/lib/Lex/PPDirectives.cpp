@@ -485,7 +485,7 @@ Preprocessor::CheckEndOfDirective(StringRef DirType, bool EnableMacros,
     DiagID = diag::ext_pp_extra_tokens_at_module_directive_eol;
 
   Diag(Tmp, DiagID) << DirType << Hint;
-  return DiscardUntilEndOfDirective().getEnd();
+  return DiscardUntilEndOfDirective(ExtraToks).getEnd();
 }
 
 void Preprocessor::SuggestTypoedDirective(const Token &Tok,
@@ -4280,9 +4280,12 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     //     pp-module-name pp-module-partition[opt] pp-tokens[opt]
     if (Tok.is(tok::colon)) {
       LexUnexpandedToken(Tok);
-      if (LexModuleNameContinue(Tok, UseLoc, DirToks, Partition)) {
+      if (LexModuleNameContinue(Tok, UseLoc, DirToks, Partition,
+                                /*AllowMacroExpansion=*/false,
+                                /*IsPartition=*/true)) {
         if (Tok.isNot(tok::eod))
-          CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName());
+          CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName(),
+                              /*EnableMacros=*/false, &DirToks);
         EnterModuleSuffixTokenStream(DirToks);
         return;
       }
@@ -4291,7 +4294,7 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     // If the current token is a macro definition, put it back to token stream
     // and expand any macros in it later.
     //
-    // export module M ATTR(some_attr);  // -DATTR(x)='[[x]]'
+    // export module M ATTR(some_attr);  // -D'ATTR(x)=[[x]]'
     //
     // Current token is `ATTR`.
     if (Tok.is(tok::identifier) &&
@@ -4310,6 +4313,10 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     break;
   }
 
+  if (!Tok.isOneOf(tok::eod, tok::semi, tok::l_square))
+    Diag(Tok, diag::err_unexpected_char_in_module_directive)
+        << getSpelling(Tok);
+
   // Consume the pp-import-suffix and expand any macros in it now, if we're not
   // at the semicolon already.
   SourceLocation End = DirToks.back().getLocation();
@@ -4325,5 +4332,11 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
                               /*EnableMacros=*/false, &DirToks);
   else
     End = DirToks.pop_back_val().getLocation();
+
+  // export module m
+  // ;
+  //
+  // FIXME: Do we need to strictly check whether ';' and module directive are in
+  // the same line?
   EnterModuleSuffixTokenStream(DirToks);
 }

@@ -1137,7 +1137,8 @@ std::string ModuleLoader::getFlatNameFromPath(ModuleIdPath Path) {
 bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
                                          SmallVectorImpl<Token> &Suffix,
                                          SmallVectorImpl<IdentifierLoc> &Path,
-                                         bool AllowMacroExpansion) {
+                                         bool AllowMacroExpansion,
+                                         bool IsPartition) {
   auto ConsumeToken = [&]() {
     if (AllowMacroExpansion)
       Lex(Tok);
@@ -1150,6 +1151,18 @@ bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
   while (true) {
     if (Tok.isNot(tok::identifier))
       return true;
+
+    // [cpp.pre]/p2:
+    // No identifier in the pp-module-name or pp-module-partition shall
+    // currently be defined as an object-like macro.
+    if (MacroInfo *MI = getMacroInfo(Tok.getIdentifierInfo());
+        MI && MI->isObjectLike() && getLangOpts().CPlusPlus20 &&
+        !AllowMacroExpansion) {
+      Diag(Tok, diag::err_module_name_is_macro)
+          << IsPartition << Tok.getIdentifierInfo();
+      Diag(MI->getDefinitionLoc(), diag::note_macro_here)
+          << Tok.getIdentifierInfo();
+    }
 
     // Record this part of the module path.
     Path.emplace_back(Tok.getLocation(), Tok.getIdentifierInfo());

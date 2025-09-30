@@ -2389,8 +2389,18 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
                           /*DiagnoseEmptyAttrs=*/false,
                           /*WarnOnUnknownAttrs=*/true);
 
-  ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
-                       tok::getKeywordSpelling(tok::kw_module));
+  if (!ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
+                            tok::getKeywordSpelling(tok::kw_module))) {
+    auto &SourceMgr = PP.getSourceManager();
+
+    // Check whether ';' and 'module' directive in same line.
+    if (SourceMgr.getSpellingLineNumber(StartLoc) !=
+        SourceMgr.getSpellingLineNumber(PrevTokLocation)) {
+      Diag(PrevTokLocation, diag::err_expected_semi_after_module_or_import)
+          << tok::getKeywordSpelling(tok::kw_module);
+      Diag(StartLoc, diag::note_module_declared_here) << /*IsImport=*/false;
+    }
+  }
 
   return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,
                                  ImportState,
@@ -2495,10 +2505,20 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     break;
   }
 
-  if (getLangOpts().CPlusPlusModules)
-    ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
-                         tok::getKeywordSpelling(tok::kw_import));
-  else
+  if (getLangOpts().CPlusPlusModules) {
+    if (!ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
+                              tok::getKeywordSpelling(tok::kw_import))) {
+      auto &SourceMgr = PP.getSourceManager();
+
+      // Check whether ';' and 'import' directive in same line.
+      if (SourceMgr.getSpellingLineNumber(StartLoc) !=
+          SourceMgr.getSpellingLineNumber(PrevTokLocation)) {
+        Diag(PrevTokLocation, diag::err_expected_semi_after_module_or_import)
+            << tok::getKeywordSpelling(tok::kw_import);
+        Diag(StartLoc, diag::note_module_declared_here) << /*IsImport=*/true;
+      }
+    }
+  } else
     ExpectAndConsumeSemi(diag::err_module_expected_semi);
 
   if (SeenError)

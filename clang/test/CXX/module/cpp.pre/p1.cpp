@@ -26,6 +26,13 @@
 // RUN: %clang_cc1 -std=c++20 %t/operator_keyword_and2.cpp -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/macro_in_module_decl_suffix.cpp -D'ATTR(X)=[[X]]' -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/macro_in_module_decl_suffix2.cpp -D'ATTR(X)=[[X]]' -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/extra_tokens_after_module_decl1.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/extra_tokens_after_module_decl2.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/object_like_macro_in_module_name.cpp -Dm=x -Dn=y -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/object_like_macro_in_partition_name.cpp -Dm=x -Dn=y -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/unexpected_character_in_pp_module_suffix.cpp -D'm(x)=x' -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/unexpected_id_in_pp_module_suffix.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/semi_in_same_line.cpp -fsyntax-only -verify
 
 
 //--- hash.cpp
@@ -111,3 +118,52 @@ export module m ATTR(x);    // expected-warning {{unknown attribute 'x' ignored}
 //--- macro_in_module_decl_suffix2.cpp
 export module m [[y]] ATTR(x);          // expected-warning {{unknown attribute 'y' ignored}} \
                                         // expected-warning {{unknown attribute 'x' ignored}}
+
+//--- extra_tokens_after_module_decl1.cpp
+module; int n;  // expected-warning {{extra tokens at end of 'module' directive}}
+import foo; int n1; // expected-warning {{extra tokens at end of 'import' directive}}
+                    // expected-error@-1 {{module 'foo' not found}}
+const int *p1 = &n1;
+
+
+//--- extra_tokens_after_module_decl2.cpp
+export module m; int n2 // expected-warning {{extra tokens at end of 'module' directive}}
+;
+const int *p2 = &n2;
+
+
+//--- object_like_macro_in_module_name.cpp
+export module m.n;
+// expected-error@-1 {{module name component 'm' cannot be a object-like macro}}
+// expected-note@* {{macro 'm' defined here}}
+// expected-error@-3 {{module name component 'n' cannot be a object-like macro}}
+// expected-note@* {{macro 'n' defined here}}
+
+//--- object_like_macro_in_partition_name.cpp
+export module m:n;
+// expected-error@-1 {{module name component 'm' cannot be a object-like macro}}
+// expected-note@* {{macro 'm' defined here}}
+// expected-error@-3 {{partition name component 'n' cannot be a object-like macro}}
+// expected-note@* {{macro 'n' defined here}}
+
+//--- unexpected_character_in_pp_module_suffix.cpp
+export module m();
+// expected-error@-1 {{unexpected '(' in a C++ module directive}}
+// expected-error@-2 {{'module' directive must end with a ';' on the same line}}
+// expected-error@-3 {{expected unqualified-id}}
+
+//--- unexpected_id_in_pp_module_suffix.cpp
+export module m n;
+// expected-error@-1 {{unexpected 'n' in a C++ module directive}}
+// expected-error@-2 {{'module' directive must end with a ';' on the same line}}
+// expected-error@-3 {{a type specifier is required for all declarations}}
+
+//--- semi_in_same_line.cpp
+export module m // expected-note {{module directive defined here}}
+[[]]; // expected-error {{'module' directive must end with a ';' on the same line}}
+
+import foo  // expected-note {{import directive defined here}}
+; // expected-error {{'import' directive must end with a ';' on the same line}}
+// expected-error@-2 {{module 'foo' not found}}
+
+
