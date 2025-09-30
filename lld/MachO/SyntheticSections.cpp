@@ -1685,31 +1685,7 @@ void CStringSection::writeTo(uint8_t *buf) const {
   }
 }
 
-void CStringSection::finalizeContents() {
-  uint64_t offset = 0;
-  // TODO: Call buildCStringPriorities() to support cstring ordering when
-  // deduplication is off, although this may negatively impact build
-  // performance.
-  for (CStringInputSection *isec : inputs) {
-    for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-      if (!piece.live)
-        continue;
-      // See comment above DeduplicatedCStringSection for how alignment is
-      // handled.
-      uint32_t pieceAlign = 1
-                            << llvm::countr_zero(isec->align | piece.inSecOff);
-      offset = alignToPowerOf2(offset, pieceAlign);
-      piece.outSecOff = offset;
-      isec->isFinal = true;
-      StringRef string = isec->getStringRef(i);
-      offset += string.size() + 1; // account for null terminator
-    }
-  }
-  size = offset;
-}
-
-// Mergeable cstring literals are found under the __TEXT,__cstring section. In
-// contrast to ELF, which puts strings that need different alignments into
+// In contrast to ELF, which puts strings that need different alignments into
 // different sections, clang's Mach-O backend puts them all in one section.
 // Strings that need to be aligned have the .p2align directive emitted before
 // them, which simply translates into zero padding in the object file. In other
@@ -1744,8 +1720,33 @@ void CStringSection::finalizeContents() {
 // requires its operand addresses to be 16-byte aligned). However, there will
 // typically also be other cstrings in the same file that aren't used via SIMD
 // and don't need this alignment. They will be emitted at some arbitrary address
-// `A`, but ld64 will treat them as being 16-byte aligned with an offset of `16
-// % A`.
+// `A`, but ld64 will treat them as being 16-byte aligned with an offset of
+// `16 % A`.
+static uint8_t getStringPieceAlignment(const CStringInputSection *isec,
+                                       const StringPiece &piece) {
+  return llvm::countr_zero(isec->align | piece.inSecOff);
+}
+
+void CStringSection::finalizeContents() {
+  uint64_t offset = 0;
+  // TODO: Call buildCStringPriorities() to support cstring ordering when
+  // deduplication is off, although this may negatively impact build
+  // performance.
+  for (CStringInputSection *isec : inputs) {
+    for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
+      if (!piece.live)
+        continue;
+      uint32_t pieceAlign = 1 << getStringPieceAlignment(isec, piece);
+      offset = alignToPowerOf2(offset, pieceAlign);
+      piece.outSecOff = offset;
+      isec->isFinal = true;
+      StringRef string = isec->getStringRef(i);
+      offset += string.size() + 1; // account for null terminator
+    }
+  }
+  size = offset;
+}
+
 void DeduplicatedCStringSection::finalizeContents() {
   // Find the largest alignment required for each string.
   for (const CStringInputSection *isec : inputs) {
@@ -1754,7 +1755,7 @@ void DeduplicatedCStringSection::finalizeContents() {
         continue;
       auto s = isec->getCachedHashStringRef(i);
       assert(isec->align != 0);
-      uint8_t trailingZeros = llvm::countr_zero(isec->align | piece.inSecOff);
+      uint8_t trailingZeros = getStringPieceAlignment(isec, piece);
       auto it = stringOffsetMap.insert(
           std::make_pair(s, StringOffset(trailingZeros)));
       if (!it.second && it.first->second.trailingZeros < trailingZeros)

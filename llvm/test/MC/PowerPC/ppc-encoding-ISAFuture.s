@@ -386,3 +386,89 @@
            xvmulhuh 4, 5, 7
 #CHECK-BE: xvmulhuh 4, 5, 7              # encoding: [0xf0,0x85,0x3b,0xd0]
 #CHECK-LE: xvmulhuh 4, 5, 7              # encoding: [0xd0,0x3b,0x85,0xf0]
+
+           xxmulmul 8, 3, 4, 2
+#CHECK-BE: xxmulmul 8, 3, 4, 2          # encoding: [0xed,0x03,0x22,0x08]
+#CHECK-LE: xxmulmul 8, 3, 4, 2          # encoding: [0x08,0x22,0x03,0xed]
+
+           xxmulmulhiadd 8, 3, 4, 1, 0, 1
+#CHECK-BE: xxmulmulhiadd 8, 3, 4, 1, 0, 1   # encoding: [0xed,0x03,0x25,0x48]
+#CHECK-LE: xxmulmulhiadd 8, 3, 4, 1, 0, 1   # encoding: [0x48,0x25,0x03,0xed]
+
+           xxmulmulloadd 8, 3, 4, 1, 0
+#CHECK-BE: xxmulmulloadd 8, 3, 4, 1, 0      # encoding: [0xed,0x03,0x22,0x88]
+#CHECK-LE: xxmulmulloadd 8, 3, 4, 1, 0      # encoding: [0x88,0x22,0x03,0xed]
+
+           xxssumudm 8, 3, 4, 1
+#CHECK-BE: xxssumudm 8, 3, 4, 1         # encoding: [0xed,0x03,0x24,0xc8]
+#CHECK-LE: xxssumudm 8, 3, 4, 1         # encoding: [0xc8,0x24,0x03,0xed]
+
+           xxssumudmc 8, 3, 4, 1
+#CHECK-BE: xxssumudmc 8, 3, 4, 1        # encoding: [0xed,0x03,0x25,0xc8]
+#CHECK-LE: xxssumudmc 8, 3, 4, 1        # encoding: [0xc8,0x25,0x03,0xed]
+
+           xxssumudmcext 8, 3, 4, 6, 0
+# CHECK-BE: xxssumudmcext 8, 3, 4, 6, 0 # encoding: [0x05,0x00,0x00,0x00,
+# CHECK-BE-SAME:                                     0x89,0x03,0x21,0xa0]
+# CHECK-LE: xxssumudmcext 8, 3, 4, 6, 0 # encoding: [0x00,0x00,0x00,0x05,
+# CHECK-LE-SAME:                                     0xa0,0x21,0x03,0x89]
+
+           xsaddadduqm  4, 5, 7
+#CHECK-BE: xsaddadduqm  4, 5, 7         # encoding: [0xec,0x85,0x3b,0x00]
+#CHECK-LE: xsaddadduqm  4, 5, 7         # encoding: [0x00,0x3b,0x85,0xec]
+
+           xsaddaddsuqm  4, 5, 7
+#CHECK-BE: xsaddaddsuqm  4, 5, 7        # encoding: [0xec,0x85,0x3b,0x40]
+#CHECK-LE: xsaddaddsuqm  4, 5, 7        # encoding: [0x40,0x3b,0x85,0xec]
+
+           xsaddsubuqm  4, 5, 7
+#CHECK-BE: xsaddsubuqm  4, 5, 7         # encoding: [0xec,0x85,0x3b,0x80]
+#CHECK-LE: xsaddsubuqm  4, 5, 7         # encoding: [0x80,0x3b,0x85,0xec]
+
+           xsaddsubsuqm  4, 5, 7
+#CHECK-BE: xsaddsubsuqm  4, 5, 7        # encoding: [0xec,0x85,0x3f,0x00]
+#CHECK-LE: xsaddsubsuqm  4, 5, 7        # encoding: [0x00,0x3f,0x85,0xec]
+
+           xsrebase2t1uqm 4, 5, 7
+#CHECK-BE: xsrebase2t1uqm 4, 5, 7       # encoding: [0xec,0x85,0x3c,0x88]
+#CHECK-LE: xsrebase2t1uqm 4, 5, 7       # encoding: [0x88,0x3c,0x85,0xec]
+
+           xsrebase2t2uqm 4, 5, 7
+#CHECK-BE: xsrebase2t2uqm 4, 5, 7       # encoding: [0xec,0x85,0x3d,0x88]
+#CHECK-LE: xsrebase2t2uqm 4, 5, 7       # encoding: [0x88,0x3d,0x85,0xec]
+
+           xsrebase2t3uqm 4, 5, 7
+#CHECK-BE: xsrebase2t3uqm 4, 5, 7       # encoding: [0xec,0x85,0x3e,0x88]
+#CHECK-LE: xsrebase2t3uqm 4, 5, 7       # encoding: [0x88,0x3e,0x85,0xec]
+
+           xsrebase2t4uqm 4, 5, 7
+#CHECK-BE: xsrebase2t4uqm 4, 5, 7       # encoding: [0xec,0x85,0x3e,0xc8]
+#CHECK-LE: xsrebase2t4uqm 4, 5, 7       # encoding: [0xc8,0x3e,0x85,0xec]
+
+           xsrebase3t1uqm 4, 5, 7
+#CHECK-BE: xsrebase3t1uqm 4, 5, 7       # encoding: [0xec,0x85,0x3f,0x88]
+#CHECK-LE: xsrebase3t1uqm 4, 5, 7       # encoding: [0x88,0x3f,0x85,0xec]
+
+           xsrebase3t2uqm 4, 5, 7
+#CHECK-BE: xsrebase3t2uqm 4, 5, 7       # encoding: [0xec,0x85,0x3f,0xc8]
+#CHECK-LE: xsrebase3t2uqm 4, 5, 7       # encoding: [0xc8,0x3f,0x85,0xec]
+
+           xsrebase3t3uqm 4, 5, 7
+#CHECK-BE: xsrebase3t3uqm 4, 5, 7       # encoding: [0xec,0x85,0x3e,0x18]
+#CHECK-LE: xsrebase3t3uqm 4, 5, 7       # encoding: [0x18,0x3e,0x85,0xec]
+
+           xsmerge2t1uqm 4, 5, 7
+#CHECK-BE: xsmerge2t1uqm 4, 5, 7        # encoding: [0xec,0x85,0x3f,0x40]
+#CHECK-LE: xsmerge2t1uqm 4, 5, 7        # encoding: [0x40,0x3f,0x85,0xec]
+
+           xsmerge2t2uqm 4, 5, 7
+#CHECK-BE: xsmerge2t2uqm 4, 5, 7        # encoding: [0xec,0x85,0x3f,0x80]
+#CHECK-LE: xsmerge2t2uqm 4, 5, 7        # encoding: [0x80,0x3f,0x85,0xec]
+
+           xsmerge2t3uqm 4, 5, 7
+#CHECK-BE: xsmerge2t3uqm 4, 5, 7        # encoding: [0xec,0x85,0x3a,0xc8]
+#CHECK-LE: xsmerge2t3uqm 4, 5, 7        # encoding: [0xc8,0x3a,0x85,0xec]
+
+           xsmerge3t1uqm 4, 5, 7
+#CHECK-BE: xsmerge3t1uqm 4, 5, 7        # encoding: [0xec,0x85,0x3b,0xc8]
+#CHECK-LE: xsmerge3t1uqm 4, 5, 7        # encoding: [0xc8,0x3b,0x85,0xec]

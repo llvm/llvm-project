@@ -665,8 +665,8 @@ generateLoopNestUsingCustomOp(
     return failure();
   }
 
-  if (failed(generateLoopTerminatorFn(rewriter, loc, tiledResults,
-                                      resultOffsets, resultSizes,
+  if (failed(generateLoopTerminatorFn(rewriter, loc, loopHeaderInfo->loops,
+                                      tiledResults, resultOffsets, resultSizes,
                                       loopHeaderInfo->destinationTensors))) {
     return failure();
   }

@@ -183,6 +183,7 @@ struct SCFTilingOptions {
       ArrayRef<OpFoldResult> givenTileSizes, ValueRange destinationTensors)>;
 
   // Type of the callback function that generates the loop terminator.
+  // - `loops` : generated loops from the GenerateLoopHeaderFn callback
   // - `tiledResults` : Tiles of the result computed for the iteration space
   //                    tile.
   // - `resultOffsets` : For each of the `tiledResults`, the offset at which
@@ -193,7 +194,8 @@ struct SCFTilingOptions {
   //                   tensor.
   // Returns the `CustomLoopHeaderInfo` object (described above)
   using GenerateLoopTerminatorFn = std::function<LogicalResult(
-      RewriterBase &rewriter, Location loc, ValueRange tiledResults,
+      RewriterBase &rewriter, Location loc, ArrayRef<LoopLikeOpInterface> loops,
+      ValueRange tiledResults,
       ArrayRef<SmallVector<OpFoldResult>> resultOffsets,
       ArrayRef<SmallVector<OpFoldResult>> resultSizes,
       ValueRange destinationTensors)>;
