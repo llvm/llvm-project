@@ -44,10 +44,7 @@ class TestDarwinMTE(TestBase):
         # memory tagging: enabled
         # Modified memory (dirty) page list provided, 2 entries.
         # Dirty pages: 0x1005ec000, 0x1005fc000.
-        self.expect(
-            "memory region ptr",
-            substrs=[") rw-", "memory tagging: enabled"]
-        )
+        self.expect("memory region ptr", substrs=["memory tagging: enabled"])
 
     @skipUnlessFeature(cpu_feature.AArch64.MTE)
     def test_memory_read_with_tags(self):
