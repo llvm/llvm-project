@@ -1529,11 +1529,11 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
 
   // Try to extend the entire expression tree to the wide destination type.
   bool shouldExtendExpression = true;
-  Value *Trunc = nullptr;
+  Value *TruncSrc = nullptr;
   // It is not desirable to extend expression in the trunc + sext pattern when
   // destination type is narrower than original (pre-trunc) type.
-  if (match(Src, m_Trunc(m_Value(Trunc))))
-    if (Trunc->getType()->getScalarSizeInBits() > DestBitSize)
+  if (match(Src, m_Trunc(m_Value(TruncSrc))))
+    if (TruncSrc->getType()->getScalarSizeInBits() > DestBitSize)
       shouldExtendExpression = false;
   if (shouldExtendExpression && shouldChangeType(SrcTy, DestTy) &&
       canEvaluateSExtd(Src, DestTy)) {
@@ -1556,7 +1556,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
                                       ShAmt);
   }
 
-  Value *X = Trunc;
+  Value *X = TruncSrc;
   if (X) {
     // If the input has more sign bits than bits truncated, then convert
     // directly to final type.
