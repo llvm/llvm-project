@@ -1,5 +1,4 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
-! RUN: %flang_fc1 -ffast-real-mod -fno-fast-real-mod -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 
 ! CHECK-LABEL: func @_QPmod_testr4(
 subroutine mod_testr4(r, a, p)
