@@ -492,13 +492,14 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo) {
   return Plugin::success();
 }
 
-void *L0DeviceTy::allocate(size_t Size, void *HstPtr, TargetAllocTy Kind) {
+Expected<void *> L0DeviceTy::allocate(size_t Size, void *HstPtr,
+                                      TargetAllocTy Kind) {
   return dataAlloc(Size, /*Align=*/0, Kind,
                    /*Offset=*/0, /*UserAlloc=*/HstPtr == nullptr,
                    /*DevMalloc=*/false);
 }
 
-int L0DeviceTy::free(void *TgtPtr, TargetAllocTy Kind) {
+Error L0DeviceTy::free(void *TgtPtr, TargetAllocTy Kind) {
   return dataDelete(TgtPtr);
 }
 
@@ -790,9 +791,10 @@ Error L0DeviceTy::dataFillImpl(void *TgtPtr, const void *PatternPtr,
   return Plugin::error(error::ErrorCode::UNKNOWN, "%s failed\n", __func__);
 }
 
-void *L0DeviceTy::dataAlloc(size_t Size, size_t Align, int32_t Kind,
-                            intptr_t Offset, bool UserAlloc, bool DevMalloc,
-                            uint32_t MemAdvice, AllocOptionTy AllocOpt) {
+Expected<void *> L0DeviceTy::dataAlloc(size_t Size, size_t Align, int32_t Kind,
+                                       intptr_t Offset, bool UserAlloc,
+                                       bool DevMalloc, uint32_t MemAdvice,
+                                       AllocOptionTy AllocOpt) {
 
   const bool UseDedicatedPool =
       (AllocOpt == AllocOptionTy::ALLOC_OPT_REDUCTION_SCRATCH) ||
@@ -812,9 +814,9 @@ void *L0DeviceTy::dataAlloc(size_t Size, size_t Align, int32_t Kind,
                          MemAdvice, AllocOpt);
 }
 
-int32_t L0DeviceTy::dataDelete(void *Ptr) {
+Error L0DeviceTy::dataDelete(void *Ptr) {
   auto &Allocator = getMemAllocator(Ptr);
-  return Allocator.dealloc(Ptr);
+  return Plugin::check(Allocator.dealloc(Ptr), "Error deleting ptr");
 }
 
 int32_t L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {

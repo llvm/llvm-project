@@ -541,13 +541,14 @@ public:
   // Allocation related routines
 
   /// Data alloc
-  void *dataAlloc(size_t Size, size_t Align, int32_t Kind, intptr_t Offset,
-                  bool UserAlloc, bool DevMalloc = false,
-                  uint32_t MemAdvice = UINT32_MAX,
-                  AllocOptionTy AllocOpt = AllocOptionTy::ALLOC_OPT_NONE);
+  Expected<void *>
+  dataAlloc(size_t Size, size_t Align, int32_t Kind, intptr_t Offset,
+            bool UserAlloc, bool DevMalloc = false,
+            uint32_t MemAdvice = UINT32_MAX,
+            AllocOptionTy AllocOpt = AllocOptionTy::ALLOC_OPT_NONE);
 
   /// Data delete
-  int32_t dataDelete(void *Ptr);
+  Error dataDelete(void *Ptr);
 
   /// Return the memory allocation type for the specified memory location.
   uint32_t getMemAllocType(const void *Ptr) const;
@@ -575,8 +576,9 @@ public:
   loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
                  int32_t ImageId) override;
   Error unloadBinaryImpl(DeviceImageTy *Image) override;
-  void *allocate(size_t Size, void *HstPtr, TargetAllocTy Kind) override;
-  int free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override;
+  Expected<void *> allocate(size_t Size, void *HstPtr,
+                            TargetAllocTy Kind) override;
+  Error free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override;
 
   Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) override {
     return Plugin::error(error::ErrorCode::UNKNOWN,
