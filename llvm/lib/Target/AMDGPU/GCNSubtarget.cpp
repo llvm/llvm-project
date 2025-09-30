@@ -85,6 +85,10 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
       FullFS += "-wavefrontsize64,";
   }
 
+  // GFX9 enables fast-fmaf by default
+  if (GPU.contains_insensitive("gfx9") && !FS.contains_insensitive("fast-fmaf"))
+    FullFS += "+fast-fmaf";
+
   FullFS += FS;
 
   ParseSubtargetFeatures(GPU, /*TuneCPU*/ GPU, FullFS);

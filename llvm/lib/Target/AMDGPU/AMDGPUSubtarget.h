@@ -76,6 +76,7 @@ protected:
   bool EnablePromoteAlloca = false;
   bool HasTrigReducedRange = false;
   bool FastFMAF32 = false;
+  bool DisableAggressiveFMAFusion = false;
   unsigned EUsPerCU = 4;
   unsigned MaxWavesPerEU = 10;
   unsigned LocalMemorySize = 0;
@@ -301,6 +302,10 @@ public:
 
   bool hasFastFMAF32() const {
     return FastFMAF32;
+  }
+
+  bool hasDisableAggressiveFMAFusion() const {
+    return DisableAggressiveFMAFusion;
   }
 
   bool isPromoteAllocaEnabled() const {

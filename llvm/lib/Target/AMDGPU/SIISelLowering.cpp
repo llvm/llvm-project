@@ -6502,10 +6502,14 @@ bool SITargetLowering::enableAggressiveFMAFusion(EVT VT) const {
   // When fma is quarter rate, for f64 where add / sub are at best half rate,
   // most of these combines appear to be cycle neutral but save on instruction
   // count / code size.
-  return true;
+  return Subtarget->hasFastFMAF32() &&
+         !Subtarget->hasDisableAggressiveFMAFusion();
 }
 
-bool SITargetLowering::enableAggressiveFMAFusion(LLT Ty) const { return true; }
+bool SITargetLowering::enableAggressiveFMAFusion(LLT Ty) const {
+  return Subtarget->hasFastFMAF32() &&
+         !Subtarget->hasDisableAggressiveFMAFusion();
+}
 
 EVT SITargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &Ctx,
                                          EVT VT) const {
