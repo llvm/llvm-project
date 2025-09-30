@@ -261,7 +261,6 @@ llvm::LogicalResult RemarkEngine::initialize(
 
   remarkStreamer = std::move(streamer);
 
-  // Capture `this`. Ensure RemarkEngine is not moved after this.
   auto reportFunc =
       std::bind(&RemarkEngine::reportImpl, this, std::placeholders::_1);
   remarkEmittingPolicy->initialize(ReportFn(std::move(reportFunc)));
