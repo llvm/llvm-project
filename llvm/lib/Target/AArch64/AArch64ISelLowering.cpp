@@ -18785,9 +18785,7 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       (!ST->hasSVE2p1() && !(ST->hasSME2() && ST->isStreaming())))
     return SDValue();
 
-  // Count the number of users which are extract_vectors
-  // The only other valid users for this combine are ptest_first
-  // and reinterpret_cast.
+  // Count the number of users which are extract_vectors.
   unsigned NumExts = count_if(N->users(), [](SDNode *Use) {
     return Use->getOpcode() == ISD::EXTRACT_SUBVECTOR;
   });
