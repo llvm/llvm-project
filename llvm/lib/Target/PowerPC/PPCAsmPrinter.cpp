@@ -2899,10 +2899,16 @@ void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
   if (!TM.getFunctionSections() || MF->getFunction().hasSection())
     PPCAsmPrinter::emitFunctionEntryLabel();
 
+  const Function *F = &MF->getFunction();
+
   // Emit aliasing label for function entry point label.
-  for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
+  for (const GlobalAlias *Alias : GOAliasMap[F])
     OutStreamer->emitLabel(
         getObjFileLowering().getFunctionEntryPointSymbol(Alias, TM));
+
+  if (F->hasMetadata(LLVMContext::MD_ref)) {
+    emitRefMetadata(F);
+  }
 }
 
 void PPCAIXAsmPrinter::emitPGORefs(Module &M) {

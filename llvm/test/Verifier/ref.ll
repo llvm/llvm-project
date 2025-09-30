@@ -25,4 +25,3 @@
 ; CHECK: ref metadata must have one operand
 ; CHECK: ptr @d
 ; CHECK: !3 = !{ptr @c, ptr @a}
-

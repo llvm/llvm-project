@@ -777,8 +777,6 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
         Check(MD->getNumOperands() == 1, "ref metadata must have one operand",
               &GV, MD);
         const Metadata *Op = MD->getOperand(0).get();
-        Check(Op, "ref metadata must have a global value", GO, MD);
-
         const auto *VM = dyn_cast_or_null<ValueAsMetadata>(Op);
         Check(VM, "ref metadata must be ValueAsMetadata", GO, MD);
         if (VM) {
