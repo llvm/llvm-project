@@ -88,9 +88,15 @@ contains
     call pass_intent_out(p)
   end subroutine
   subroutine call_s6()
+    interface
+      subroutine s6(b)
+        import :: base
+        type(base), intent(inout) :: b(:)
+      end subroutine s6
+    end interface
 !CHECK-LABEL: func.func @_QMtestPcall_s6
 !CHECK-NOT: hlfir.copy_in
-!CHECK: fir.call @_QMtestPs6
+!CHECK: fir.call @_QPs6
 !CHECK-NOT: hlfir.copy_out
     class(base), pointer :: pb(:)
     type(child), target :: c(2)
@@ -99,8 +105,4 @@ contains
     pb => c
     call s6(pb)
   end subroutine call_s6
-  subroutine s6(b)
-    type(base), intent(inout) :: b(:)
-    b%i = 42
-  end subroutine s6
 end module
