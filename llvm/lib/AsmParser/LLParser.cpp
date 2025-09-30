@@ -1666,25 +1666,6 @@ static bool upgradeMemoryAttr(MemoryEffects &ME, lltok::Kind Kind) {
   }
 }
 
-static std::optional<MemoryEffects::Location> keywordToLoc(lltok::Kind Tok) {
-  switch (Tok) {
-  case lltok::kw_argmem:
-    return IRMemLocation::ArgMem;
-  case lltok::kw_inaccessiblemem:
-    return IRMemLocation::InaccessibleMem;
-  case lltok::kw_errnomem:
-    return IRMemLocation::ErrnoMem;
-  case lltok::kw_target_mem0:
-    return static_cast<IRMemLocation>(
-        llvm::InaccessibleTargetMemLocation::TargetMem0);
-  case lltok::kw_target_mem1:
-    return static_cast<IRMemLocation>(
-        llvm::InaccessibleTargetMemLocation::TargetMem1);
-  default:
-    return std::nullopt;
-  }
-}
-
 /// parseFnAttributeValuePairs
 ///   ::= <attr> | <attr> '=' <value>
 bool LLParser::parseFnAttributeValuePairs(AttrBuilder &B,
@@ -2530,6 +2511,23 @@ bool LLParser::parseAllocKind(AllocFnKind &Kind) {
   if (Kind == AllocFnKind::Unknown)
     return error(KindLoc, "expected allockind value");
   return false;
+}
+
+static std::optional<MemoryEffects::Location> keywordToLoc(lltok::Kind Tok) {
+  switch (Tok) {
+  case lltok::kw_argmem:
+    return IRMemLocation::ArgMem;
+  case lltok::kw_inaccessiblemem:
+    return IRMemLocation::InaccessibleMem;
+  case lltok::kw_errnomem:
+    return IRMemLocation::ErrnoMem;
+  case lltok::kw_target_mem0:
+    return IRMemLocation::TargetMem0;
+  case lltok::kw_target_mem1:
+    return IRMemLocation::TargetMem1;
+  default:
+    return std::nullopt;
+  }
 }
 
 static std::optional<ModRefInfo> keywordToModRef(lltok::Kind Tok) {

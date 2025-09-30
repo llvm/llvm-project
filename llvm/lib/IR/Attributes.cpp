@@ -661,20 +661,12 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       case IRMemLocation::Other:
         llvm_unreachable("This is represented as the default access kind");
         break;
-      }
-      // Target Memory locations are not IRMemLocation.
-      // It is breaking buildbots when it treats warning as error
-      if (static_cast<int>(Loc) > static_cast<int>(IRMemLocation::ErrnoMem)) {
-        InaccessibleTargetMemLocation TargetMemLoc =
-            static_cast<InaccessibleTargetMemLocation>(Loc);
-        switch (TargetMemLoc) {
-        case InaccessibleTargetMemLocation::TargetMem0:
-          OS << "target_mem0: ";
-          break;
-        case InaccessibleTargetMemLocation::TargetMem1:
-          OS << "target_mem1: ";
-          break;
-        }
+      case IRMemLocation::TargetMem0:
+        OS << "target_mem0: ";
+        break;
+      case IRMemLocation::TargetMem1:
+        OS << "target_mem1: ";
+        break;
       }
 
       OS << getModRefStr(MR);

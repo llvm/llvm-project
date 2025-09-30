@@ -144,7 +144,8 @@ static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
   ME |= MemoryEffects(IRMemLocation::Other, MR);
   // Should also set the other Target Memory Locations as MR.
   // To compares with MemoryEffects::unknown() in addMemoryAttrs
-  ME |= MemoryEffects::setTargetMemLocationModRef(MR);
+  ME |= MemoryEffects(IRMemLocation::TargetMem0, MR);
+  ME |= MemoryEffects(IRMemLocation::TargetMem1, MR);;
 }
 
 static void addArgLocs(MemoryEffects &ME, const CallBase *Call,
