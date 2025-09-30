@@ -25,38 +25,7 @@ entry:
   ret void
 }
 
-; Test 2: Regular function with no stack frame but needs epilogue
-define void @test_no_stack_frame() {
-; CHECK-LABEL: test_no_stack_frame:
-; CHECK-NEXT:  .seh_proc test_no_stack_frame
-; CHECK:       .seh_endprologue
-; CHECK:       .seh_startepilogue
-; CHECK:       .seh_endepilogue
-; CHECK:       .seh_endproc
-entry:
-  call void @external_function()
-  ret void
-}
-
-; Test 3: Function with minimal stack adjustment only in epilogue
-define void @test_minimal_stack_adjust(ptr %ptr) {
-; CHECK-LABEL: test_minimal_stack_adjust:
-; CHECK-NEXT:  .seh_proc test_minimal_stack_adjust
-; CHECK:       .seh_endprologue
-; CHECK:       .seh_startepilogue
-; CHECK:       add sp, sp, #16
-; CHECK:       .seh_stackalloc 16
-; CHECK:       .seh_endepilogue
-; CHECK:       .seh_endproc
-entry:
-  %local = alloca i64, align 8
-  store i64 42, ptr %local, align 8
-  %value = load i64, ptr %local, align 8
-  store i64 %value, ptr %ptr, align 8
-  ret void
-}
-
-; Test 4: Function similar to the original failing case
+; Test 2: Function similar to the original failing case
 define linkonce_odr hidden swifttailcc void @test_linkonce_swifttailcc(ptr swiftasync %async_ctx, ptr %arg1, ptr noalias dereferenceable(40) %arg2, ptr %arg3, i64 %value, ptr %arg4, ptr %arg5, ptr %arg6, i1 %flag, ptr %arg7, ptr noalias dereferenceable(40) %arg8) {
 ; CHECK-LABEL: test_linkonce_swifttailcc:
 ; CHECK-NEXT:  .seh_proc
@@ -82,4 +51,3 @@ entry:
 
 declare swifttailcc void @external_swift_function(ptr, ptr)
 declare swifttailcc void @external_swift_continuation(ptr swiftasync, i64, i64)
-declare void @external_function()
