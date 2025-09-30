@@ -327,6 +327,9 @@ static Expected<ELFObjectFile<ELFT>> toBinary(SmallVectorImpl<char> &Storage,
 }
 
 TEST(ELFObjectFileTest, ELFNoteIteratorOverflow) {
+  using Elf_Shdr_Range = ELFFile<ELF64LE>::Elf_Shdr_Range;
+  using Elf_Phdr_Range = ELFFile<ELF64LE>::Elf_Phdr_Range;
+
   SmallString<0> Storage;
   Expected<ELFObjectFile<ELF64LE>> ElfOrErr = toBinary<ELF64LE>(Storage, R"(
 --- !ELF
@@ -368,15 +371,15 @@ Sections:
                               .str());
   };
 
-  Expected<ELFFile<ELF64LE>::Elf_Phdr_Range> PhdrsOrErr = Obj.program_headers();
+  Expected<Elf_Phdr_Range> PhdrsOrErr = Obj.program_headers();
   EXPECT_FALSE(!PhdrsOrErr);
-  for (auto P : *PhdrsOrErr)
+  for (Elf_Phdr_Impl<ELF64LE> P : *PhdrsOrErr)
     if (P.p_type == ELF::PT_NOTE)
       CheckOverflow(P, P.p_offset, P.p_filesz);
 
-  Expected<ELFFile<ELF64LE>::Elf_Shdr_Range> ShdrsOrErr = Obj.sections();
+  Expected<Elf_Shdr_Range> ShdrsOrErr = Obj.sections();
   EXPECT_FALSE(!ShdrsOrErr);
-  for (auto S : *ShdrsOrErr)
+  for (Elf_Shdr_Impl<ELF64LE> S : *ShdrsOrErr)
     if (S.sh_type == ELF::SHT_NOTE)
       CheckOverflow(S, S.sh_offset, S.sh_size);
 }
