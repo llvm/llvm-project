@@ -5800,12 +5800,6 @@ Instruction *InstCombinerImpl::foldICmpWithClamp(ICmpInst &I, Value *X,
       return nullptr;
   }
 
-  // If Hi is the maximum value, the min operation becomes redundant and
-  // will be removed by other optimizations.
-  if ((Min->isSigned() && (Lo->isMinSignedValue() || Hi->isMaxSignedValue())) ||
-      (!Min->isSigned() && (Lo->isMinValue() || Hi->isMaxValue())))
-    return nullptr;
-
   ConstantRange CR(*Lo, *Hi + 1);
   ICmpInst::Predicate Pred;
   APInt C, Offset;
@@ -5814,8 +5808,7 @@ Instruction *InstCombinerImpl::foldICmpWithClamp(ICmpInst &I, Value *X,
   else
     CR.inverse().getEquivalentICmp(Pred, C, Offset);
 
-  if (Offset != 0)
-    X = Builder.CreateAdd(X, ConstantInt::get(X->getType(), Offset));
+  X = Builder.CreateAdd(X, ConstantInt::get(X->getType(), Offset));
 
   return replaceInstUsesWith(
       I, Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), C)));
