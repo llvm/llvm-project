@@ -1450,16 +1450,10 @@ Error BinaryFunction::disassemble() {
           BC.MIB->addAnnotation(Instruction, "PPCNeedsCallSlotNOP", true);
         }
       }
-      // ---- end PPC64 ELFv2 special handling
+      // --------------------------------------------------------------------------
 
       uint64_t TargetAddress = 0;
-      bool CanEval = true;
-      if (BC.isPPC64() && MIB->isCall(Instruction)) {
-        LLVM_DEBUG(dbgs() << "PPC: skip evaluateBranch() for call at 0x"
-                          << Twine::utohexstr(AbsoluteInstrAddr) << '\n');
-        CanEval = false;
-      }
-      if (CanEval && !MIB->isIndirectBranch(Instruction) &&
+      if (!MIB->isIndirectBranch(Instruction) &&
           MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
                               TargetAddress)) {
         // Check if the target is within the same function. Otherwise it's
