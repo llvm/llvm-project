@@ -465,8 +465,12 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
 
-    // If the function has sanitizer attributes, we cannot remove
-    // implicitarg_ptr, hostcall_ptr, or flat_scratch_init.
+    // If the function requires the implicit arg pointer due to sanitizers,
+    // assume it's needed even if explicitly marked as not requiring it.
+    // Flat scratch initialization is needed because `asan_malloc_impl`
+    // calls introduced later in pipeline will have flat scratch accesses.
+    // FIXME: FLAT_SCRATCH_INIT will not be required here if device-libs
+    // implementation for `asan_malloc_impl` is updated.
     const bool HasSanitizerAttrs = hasSanitizerAttributes(*F);
     if (HasSanitizerAttrs) {
       removeAssumedBits(IMPLICIT_ARG_PTR);
