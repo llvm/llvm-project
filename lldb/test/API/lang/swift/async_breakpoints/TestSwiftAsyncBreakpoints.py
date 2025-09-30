@@ -36,7 +36,7 @@ class TestSwiftAsyncBreakpoints(lldbtest.TestBase):
         self.assertEquals(thread.GetStopDescription(128), "breakpoint 2.1")
         self.expect("expr timestamp1", substrs=["42"])
 
-        thread.StepOver()
+        process.Continue()
         self.assertIn("breakpoint 3.1", thread.GetStopDescription(128))
         self.expect("expr timestamp1", substrs=["42"])
 
