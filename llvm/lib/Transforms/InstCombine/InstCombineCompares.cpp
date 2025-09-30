@@ -5780,6 +5780,47 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
   return nullptr;
 }
 
+// Transform patterns like:
+//   icmp eq/ne X, min(max(X, Lo), Hi)
+// Into:
+//   (X - Lo) u< (Hi - Lo + 1)
+Instruction *InstCombinerImpl::foldICmpWithClamp(ICmpInst &I, Value *X,
+                                                 MinMaxIntrinsic *Min) {
+  if (!I.isEquality() || !Min->hasOneUse())
+    return nullptr;
+
+  const APInt *Lo = nullptr, *Hi = nullptr;
+  if (Min->isSigned()) {
+    if (!match(Min->getLHS(), m_OneUse(m_SMax(m_Specific(X), m_APInt(Lo)))) ||
+        !match(Min->getRHS(), m_APInt(Hi)) || !Lo->slt(*Hi))
+      return nullptr;
+  } else {
+    if (!match(Min->getLHS(), m_OneUse(m_UMax(m_Specific(X), m_APInt(Lo)))) ||
+        !match(Min->getRHS(), m_APInt(Hi)) || !Lo->ult(*Hi))
+      return nullptr;
+  }
+
+  // If Hi is the maximum value, the min operation becomes redundant and
+  // will be removed by other optimizations.
+  if ((Min->isSigned() && (Lo->isMinSignedValue() || Hi->isMaxSignedValue())) ||
+      (!Min->isSigned() && (Lo->isMinValue() || Hi->isMaxValue())))
+    return nullptr;
+
+  ConstantRange CR(*Lo, *Hi + 1);
+  ICmpInst::Predicate Pred;
+  APInt C, Offset;
+  if (I.getPredicate() == ICmpInst::ICMP_EQ)
+    CR.getEquivalentICmp(Pred, C, Offset);
+  else
+    CR.inverse().getEquivalentICmp(Pred, C, Offset);
+
+  if (Offset != 0)
+    X = Builder.CreateAdd(X, ConstantInt::get(X->getType(), Offset));
+
+  return replaceInstUsesWith(
+      I, Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), C)));
+}
+
 // Canonicalize checking for a power-of-2-or-zero value:
 static Instruction *foldICmpPow2Test(ICmpInst &I,
                                      InstCombiner::BuilderTy &Builder) {
@@ -7467,9 +7508,13 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
     if (Instruction *NI = foldSelectICmp(Pred, SI, Op1, CxtI))
       return NI;
 
-  if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(Op0))
+  if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(Op0)) {
     if (Instruction *Res = foldICmpWithMinMax(CxtI, MinMax, Op1, Pred))
       return Res;
+
+    if (Instruction *Res = foldICmpWithClamp(CxtI, Op1, MinMax))
+      return Res;
+  }
 
   {
     Value *X;

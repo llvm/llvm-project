@@ -6,9 +6,8 @@ declare void @use(i32)
 define i1 @test_i32_eq(i32 %x) {
 ; CHECK-LABEL: define i1 @test_i32_eq(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = tail call i32 @llvm.smax.i32(i32 [[X]], i32 -95)
-; CHECK-NEXT:    [[V2:%.*]] = tail call i32 @llvm.smin.i32(i32 [[V1]], i32 160)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V2]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], 95
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 256
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %v1 = tail call i32 @llvm.smax.i32(i32 %x, i32 -95)
@@ -20,9 +19,8 @@ define i1 @test_i32_eq(i32 %x) {
 define i1 @test_i32_ne(i32 %x) {
 ; CHECK-LABEL: define i1 @test_i32_ne(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = tail call i32 @llvm.smax.i32(i32 [[X]], i32 -95)
-; CHECK-NEXT:    [[V2:%.*]] = tail call i32 @llvm.smin.i32(i32 [[V1]], i32 160)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[V2]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], -161
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -256
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %v1 = tail call i32 @llvm.smax.i32(i32 %x, i32 -95)
@@ -34,9 +32,7 @@ define i1 @test_i32_ne(i32 %x) {
 define i1 @test_i32_eq_no_add(i32 %x) {
 ; CHECK-LABEL: define i1 @test_i32_eq_no_add(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = tail call i32 @llvm.smax.i32(i32 [[X]], i32 0)
-; CHECK-NEXT:    [[V2:%.*]] = tail call i32 @llvm.smin.i32(i32 [[V1]], i32 160)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V2]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X]], 161
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %v1 = tail call i32 @llvm.smax.i32(i32 %x, i32 0)
@@ -48,9 +44,7 @@ define i1 @test_i32_eq_no_add(i32 %x) {
 define i1 @test_i32_ne_no_add(i32 %x) {
 ; CHECK-LABEL: define i1 @test_i32_ne_no_add(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = tail call i32 @llvm.smax.i32(i32 [[X]], i32 0)
-; CHECK-NEXT:    [[V2:%.*]] = tail call i32 @llvm.smin.i32(i32 [[V1]], i32 160)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[V2]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X]], 160
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %v1 = tail call i32 @llvm.smax.i32(i32 %x, i32 0)
@@ -62,9 +56,8 @@ define i1 @test_i32_ne_no_add(i32 %x) {
 define i1 @test_unsigned_eq(i32 %x) {
 ; CHECK-LABEL: define i1 @test_unsigned_eq(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = tail call i32 @llvm.umax.i32(i32 [[X]], i32 10)
-; CHECK-NEXT:    [[V2:%.*]] = tail call i32 @llvm.umin.i32(i32 [[V1]], i32 100)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V2]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], -10
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 91
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %v1 = tail call i32 @llvm.umax.i32(i32 %x, i32 10)
@@ -76,9 +69,8 @@ define i1 @test_unsigned_eq(i32 %x) {
 define i1 @test_unsigned_ne(i32 %x) {
 ; CHECK-LABEL: define i1 @test_unsigned_ne(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = tail call i32 @llvm.umax.i32(i32 [[X]], i32 10)
-; CHECK-NEXT:    [[V2:%.*]] = tail call i32 @llvm.umin.i32(i32 [[V1]], i32 100)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[V2]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], -101
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -91
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %v1 = tail call i32 @llvm.umax.i32(i32 %x, i32 10)
@@ -92,9 +84,8 @@ define i1 @test_unsigned_ne(i32 %x) {
 define i1 @test_i8_eq(i8 %x) {
 ; CHECK-LABEL: define i1 @test_i8_eq(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = tail call i8 @llvm.smax.i8(i8 [[X]], i8 -50)
-; CHECK-NEXT:    [[V2:%.*]] = tail call i8 @llvm.smin.i8(i8 [[V1]], i8 50)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[V2]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], 50
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], 101
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %v1 = tail call i8 @llvm.smax.i8(i8 %x, i8 -50)
@@ -106,9 +97,8 @@ define i1 @test_i8_eq(i8 %x) {
 define i1 @test_i16_eq(i16 %x) {
 ; CHECK-LABEL: define i1 @test_i16_eq(
 ; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = tail call i16 @llvm.smax.i16(i16 [[X]], i16 -1000)
-; CHECK-NEXT:    [[V2:%.*]] = tail call i16 @llvm.smin.i16(i16 [[V1]], i16 1000)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[V2]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[X]], 1000
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[TMP1]], 2001
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %v1 = tail call i16 @llvm.smax.i16(i16 %x, i16 -1000)
@@ -120,9 +110,8 @@ define i1 @test_i16_eq(i16 %x) {
 define i1 @test_i64_eq(i64 %x) {
 ; CHECK-LABEL: define i1 @test_i64_eq(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = tail call i64 @llvm.smax.i64(i64 [[X]], i64 -1)
-; CHECK-NEXT:    [[V2:%.*]] = tail call i64 @llvm.smin.i64(i64 [[V1]], i64 9223372036854775806)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[V2]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[X]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %v1 = tail call i64 @llvm.smax.i64(i64 %x, i64 -1)
@@ -250,9 +239,8 @@ define i1 @test_multi_use_min(i32 %x) {
 define i1 @test_commuted_eq(i32 %x) {
 ; CHECK-LABEL: define i1 @test_commuted_eq(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = tail call i32 @llvm.smax.i32(i32 [[X]], i32 -95)
-; CHECK-NEXT:    [[V2:%.*]] = tail call i32 @llvm.smin.i32(i32 [[V1]], i32 160)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], [[V2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], 95
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 256
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %v1 = tail call i32 @llvm.smax.i32(i32 %x, i32 -95)
@@ -266,9 +254,8 @@ define i1 @test_commuted_eq(i32 %x) {
 define <2 x i1> @test_vec_splat_eq(<2 x i32> %x) {
 ; CHECK-LABEL: define <2 x i1> @test_vec_splat_eq(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = tail call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[X]], <2 x i32> splat (i32 -50))
-; CHECK-NEXT:    [[V2:%.*]] = tail call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[V1]], <2 x i32> splat (i32 50))
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[V2]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X]], splat (i32 50)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[TMP1]], splat (i32 101)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %v1 = tail call <2 x i32> @llvm.smax.v2i32(<2 x i32> %x, <2 x i32> <i32 -50, i32 -50>)
