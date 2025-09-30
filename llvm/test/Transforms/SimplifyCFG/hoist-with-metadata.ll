@@ -469,7 +469,7 @@ out:
 define void @hoist_captures_overlap(i1 %c, ptr %x, ptr %y) {
 ; CHECK-LABEL: @hoist_captures_overlap(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META11:![0-9]+]]
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META10]]
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -487,12 +487,52 @@ out:
   ret void
 }
 
-; We could also omit the attribute in this case, as it provides no additional
-; information.
+define void @hoist_captures_subsume1(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_subsume1(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META9]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"address_is_null"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_subsume2(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_subsume2(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META11:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"provenance"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"read_provenance"}
+  br label %out
+
+out:
+  ret void
+}
+
 define void @hoist_captures_full_set(i1 %c, ptr %x, ptr %y) {
 ; CHECK-LABEL: @hoist_captures_full_set(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META12:![0-9]+]]
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -574,7 +614,6 @@ out:
 ; CHECK: [[META7]] = !{i32 5, i32 6}
 ; CHECK: [[META8]] = !{i32 4, i32 5}
 ; CHECK: [[META9]] = !{!"address"}
-; CHECK: [[META10]] = !{!"read_provenance", !"address"}
-; CHECK: [[META11]] = !{!"address", !"read_provenance"}
-; CHECK: [[META12]] = !{!"provenance", !"address"}
+; CHECK: [[META10]] = !{!"address", !"read_provenance"}
+; CHECK: [[META11]] = !{!"provenance"}
 ;.

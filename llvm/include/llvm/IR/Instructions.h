@@ -393,9 +393,6 @@ public:
     return getPointerOperandType()->getPointerAddressSpace();
   }
 
-  /// Get capturing behavior of the value operand, based on !captures metadata.
-  CaptureComponents getCaptureComponents() const;
-
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Store;

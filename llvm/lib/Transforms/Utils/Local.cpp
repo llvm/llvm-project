@@ -3026,7 +3026,10 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_captures:
-        K->setMetadata(Kind, JMD ? MDNode::concatenate(JMD, KMD) : nullptr);
+        K->setMetadata(
+            Kind, MDNode::fromCaptureComponents(
+                      K->getContext(), MDNode::toCaptureComponents(JMD) |
+                                           MDNode::toCaptureComponents(KMD)));
         break;
       }
   }
