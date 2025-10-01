@@ -52,6 +52,7 @@ namespace opts {
 extern cl::opt<bool> PrintAll;
 extern cl::opt<bool> PrintDynoStats;
 extern cl::opt<bool> DumpDotAll;
+extern bool shouldDumpDot(const bolt::BinaryFunction &Function);
 extern cl::opt<std::string> AsmDump;
 extern cl::opt<bolt::PLTCall::OptType> PLT;
 extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
@@ -247,7 +248,9 @@ static cl::opt<bool> Stoke("stoke", cl::desc("turn on the stoke analysis"),
 
 static cl::opt<bool> StringOps(
     "inline-memcpy",
-    cl::desc("inline memcpy using 'rep movsb' instruction (X86-only)"),
+    cl::desc(
+        "inline memcpy using size-specific optimized instructions "
+        "(X86: 'rep movsb', AArch64: width-optimized register operations)"),
     cl::cat(BoltOptCategory));
 
 static cl::opt<bool> StripRepRet(
@@ -340,7 +343,7 @@ Error BinaryFunctionPassManager::runPasses() {
 
       Function.print(BC.outs(), Message);
 
-      if (opts::DumpDotAll)
+      if (opts::shouldDumpDot(Function))
         Function.dumpGraphForPass(PassIdName);
     }
   }

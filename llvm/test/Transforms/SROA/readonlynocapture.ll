@@ -284,25 +284,25 @@ define void @incompletestruct(i1 %b, i1 %c) {
 ; CHECK-LABEL: @incompletestruct(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LII:%.*]] = alloca [[STRUCT_LOADIMMEDIATEINFO:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[LII]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[LII]])
 ; CHECK-NEXT:    [[BF_CLEAR4:%.*]] = and i32 undef, -262144
 ; CHECK-NEXT:    [[BF_SET5:%.*]] = select i1 [[B:%.*]], i32 196608, i32 131072
 ; CHECK-NEXT:    [[BF_SET12:%.*]] = or disjoint i32 [[BF_SET5]], [[BF_CLEAR4]]
 ; CHECK-NEXT:    store i32 [[BF_SET12]], ptr [[LII]], align 4
 ; CHECK-NEXT:    call void @callee(ptr [[LII]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[LII]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[LII]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %LII = alloca %struct.LoadImmediateInfo, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %LII)
+  call void @llvm.lifetime.start.p0(ptr nonnull %LII)
   %bf.load = load i32, ptr %LII, align 4
   %bf.clear4 = and i32 %bf.load, -262144
   %bf.set5 = select i1 %b, i32 196608, i32 131072
   %bf.set12 = or disjoint i32 %bf.set5, %bf.clear4
   store i32 %bf.set12, ptr %LII, align 4
   call void @callee(ptr %LII)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %LII)
+  call void @llvm.lifetime.end.p0(ptr nonnull %LII)
   ret void
 }
 
@@ -312,13 +312,13 @@ define void @incompletestruct_bb(i1 %b, i1 %c) {
 ; CHECK-NEXT:    [[LII:%.*]] = alloca [[STRUCT_LOADIMMEDIATEINFO:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[LII]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[LII]])
 ; CHECK-NEXT:    [[BF_CLEAR4:%.*]] = and i32 undef, -262144
 ; CHECK-NEXT:    [[BF_SET5:%.*]] = select i1 [[B:%.*]], i32 196608, i32 131072
 ; CHECK-NEXT:    [[BF_SET12:%.*]] = or disjoint i32 [[BF_SET5]], [[BF_CLEAR4]]
 ; CHECK-NEXT:    store i32 [[BF_SET12]], ptr [[LII]], align 4
 ; CHECK-NEXT:    call void @callee(ptr [[LII]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[LII]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[LII]])
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -328,14 +328,14 @@ entry:
   br i1 %c, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %LII)
+  call void @llvm.lifetime.start.p0(ptr nonnull %LII)
   %bf.load = load i32, ptr %LII, align 4
   %bf.clear4 = and i32 %bf.load, -262144
   %bf.set5 = select i1 %b, i32 196608, i32 131072
   %bf.set12 = or disjoint i32 %bf.set5, %bf.clear4
   store i32 %bf.set12, ptr %LII, align 4
   call void @callee(ptr %LII)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %LII)
+  call void @llvm.lifetime.end.p0(ptr nonnull %LII)
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -459,35 +459,35 @@ define i32 @provenance_only_capture() {
 define i32 @simple_with_lifetimes() {
 ; CHECK-LABEL: @simple_with_lifetimes(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @callee(ptr [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret i32 0
 ;
   %a = alloca i32
-  call void @llvm.lifetime.start(i64 4, ptr %a)
+  call void @llvm.lifetime.start(ptr %a)
   store i32 0, ptr %a
   call void @callee(ptr %a)
   %l1 = load i32, ptr %a
-  call void @llvm.lifetime.end(i64 4, ptr %a)
+  call void @llvm.lifetime.end(ptr %a)
   ret i32 %l1
 }
 
 define i32 @twoalloc_with_lifetimes() {
 ; CHECK-LABEL: @twoalloc_with_lifetimes(
 ; CHECK-NEXT:    [[A:%.*]] = alloca { i32, i32 }, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[A]], i32 1
 ; CHECK-NEXT:    store i32 1, ptr [[B]], align 4
 ; CHECK-NEXT:    call void @callee(ptr [[A]])
 ; CHECK-NEXT:    [[R:%.*]] = add i32 0, 1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = alloca {i32, i32}
-  call void @llvm.lifetime.start(i64 8, ptr %a)
+  call void @llvm.lifetime.start(ptr %a)
   store i32 0, ptr %a
   %b = getelementptr i32, ptr %a, i32 1
   store i32 1, ptr %b
@@ -495,7 +495,7 @@ define i32 @twoalloc_with_lifetimes() {
   %l1 = load i32, ptr %a
   %l2 = load i32, ptr %b
   %r = add i32 %l1, %l2
-  call void @llvm.lifetime.end(i64 8, ptr %a)
+  call void @llvm.lifetime.end(ptr %a)
   ret i32 %r
 }
 

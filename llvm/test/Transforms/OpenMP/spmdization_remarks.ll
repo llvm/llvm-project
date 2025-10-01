@@ -75,10 +75,10 @@ common.ret:                                       ; preds = %entry, %user_code.e
 user_code.entry:                                  ; preds = %entry
   %1 = call i32 @__kmpc_global_thread_num(ptr nonnull @3) #3
   call void @unknown() #6, !dbg !20
-  call void @llvm.lifetime.start.p0(i64 0, ptr nonnull %captured_vars_addrs.i.i) #3
+  call void @llvm.lifetime.start.p0(ptr nonnull %captured_vars_addrs.i.i) #3
   %2 = call i32 @__kmpc_global_thread_num(ptr noundef nonnull @13) #3
   call void @__kmpc_parallel_51(ptr noundef nonnull @13, i32 %2, i32 noundef 1, i32 noundef -1, i32 noundef -1, ptr noundef @__omp_outlined__2, ptr noundef @__omp_outlined__2_wrapper, ptr noundef nonnull %captured_vars_addrs.i.i, i64 noundef 0) #3, !dbg !23
-  call void @llvm.lifetime.end.p0(i64 0, ptr nonnull %captured_vars_addrs.i.i) #3, !dbg !26
+  call void @llvm.lifetime.end.p0(ptr nonnull %captured_vars_addrs.i.i) #3, !dbg !26
   call void @unknown() #6, !dbg !27
   call void @__kmpc_target_deinit() #3, !dbg !28
   br label %common.ret
@@ -119,18 +119,18 @@ common.ret:                                       ; preds = %entry, %user_code.e
 
 user_code.entry:                                  ; preds = %entry
   %1 = call i32 @__kmpc_global_thread_num(ptr nonnull @9) #3
-  call void @llvm.lifetime.start.p0(i64 0, ptr nonnull %captured_vars_addrs.i2.i) #3
+  call void @llvm.lifetime.start.p0(ptr nonnull %captured_vars_addrs.i2.i) #3
   %2 = call i32 @__kmpc_global_thread_num(ptr noundef nonnull @13) #3
   call void @__kmpc_parallel_51(ptr noundef nonnull @13, i32 %2, i32 noundef 1, i32 noundef -1, i32 noundef -1, ptr noundef @__omp_outlined__2, ptr noundef @__omp_outlined__2_wrapper, ptr noundef nonnull %captured_vars_addrs.i2.i, i64 noundef 0) #3, !dbg !35
-  call void @llvm.lifetime.end.p0(i64 0, ptr nonnull %captured_vars_addrs.i2.i) #3, !dbg !39
-  call void @llvm.lifetime.start.p0(i64 0, ptr nonnull %captured_vars_addrs.i2.i) #3
+  call void @llvm.lifetime.end.p0(ptr nonnull %captured_vars_addrs.i2.i) #3, !dbg !39
+  call void @llvm.lifetime.start.p0(ptr nonnull %captured_vars_addrs.i2.i) #3
   %3 = call i32 @__kmpc_global_thread_num(ptr noundef nonnull @13) #3
   call void @__kmpc_parallel_51(ptr noundef nonnull @13, i32 %3, i32 noundef 1, i32 noundef -1, i32 noundef -1, ptr noundef @__omp_outlined__2, ptr noundef @__omp_outlined__2_wrapper, ptr noundef nonnull %captured_vars_addrs.i2.i, i64 noundef 0) #3, !dbg !40
-  call void @llvm.lifetime.end.p0(i64 0, ptr nonnull %captured_vars_addrs.i2.i) #3, !dbg !42
-  call void @llvm.lifetime.start.p0(i64 0, ptr nonnull %captured_vars_addrs.i2.i) #3
+  call void @llvm.lifetime.end.p0(ptr nonnull %captured_vars_addrs.i2.i) #3, !dbg !42
+  call void @llvm.lifetime.start.p0(ptr nonnull %captured_vars_addrs.i2.i) #3
   %4 = call i32 @__kmpc_global_thread_num(ptr noundef nonnull @13) #3
   call void @__kmpc_parallel_51(ptr noundef nonnull @13, i32 %4, i32 noundef 1, i32 noundef -1, i32 noundef -1, ptr noundef @__omp_outlined__2, ptr noundef @__omp_outlined__2_wrapper, ptr noundef nonnull %captured_vars_addrs.i2.i, i64 noundef 0) #3, !dbg !43
-  call void @llvm.lifetime.end.p0(i64 0, ptr nonnull %captured_vars_addrs.i2.i) #3, !dbg !45
+  call void @llvm.lifetime.end.p0(ptr nonnull %captured_vars_addrs.i2.i) #3, !dbg !45
   call void @spmd_amenable()
   call void @__kmpc_target_deinit() #3, !dbg !46
   br label %common.ret
@@ -157,10 +157,10 @@ declare void @__kmpc_get_shared_variables(ptr) local_unnamed_addr
 declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64) local_unnamed_addr
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #5
+declare void @llvm.lifetime.start.p0(ptr nocapture) #5
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #5
+declare void @llvm.lifetime.end.p0(ptr nocapture) #5
 
 declare void @spmd_amenable() #7
 

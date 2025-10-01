@@ -623,7 +623,7 @@ MaybeExtentExpr GetRawUpperBound(
       } else if (semantics::IsAssumedSizeArray(symbol) &&
           dimension + 1 == symbol.Rank()) {
         return std::nullopt;
-      } else {
+      } else if (IsSafelyCopyable(base, /*admitPureCall=*/true)) {
         return ComputeUpperBound(
             GetRawLowerBound(base, dimension), GetExtent(base, dimension));
       }
@@ -678,9 +678,11 @@ static MaybeExtentExpr GetUBOUND(FoldingContext *context,
       } else if (semantics::IsAssumedSizeArray(symbol) &&
           dimension + 1 == symbol.Rank()) {
         return std::nullopt; // UBOUND() folding replaces with -1
-      } else if (auto lb{GetLBOUND(base, dimension, invariantOnly)}) {
-        return ComputeUpperBound(
-            std::move(*lb), GetExtent(base, dimension, invariantOnly));
+      } else if (IsSafelyCopyable(base, /*admitPureCall=*/true)) {
+        if (auto lb{GetLBOUND(base, dimension, invariantOnly)}) {
+          return ComputeUpperBound(
+              std::move(*lb), GetExtent(base, dimension, invariantOnly));
+        }
       }
     }
   } else if (const auto *assoc{
@@ -947,7 +949,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         intrinsic->name == "ubound") {
       // For LBOUND/UBOUND, these are the array-valued cases (no DIM=)
       if (!call.arguments().empty() && call.arguments().front()) {
-        if (IsAssumedRank(*call.arguments().front())) {
+        if (semantics::IsAssumedRank(*call.arguments().front())) {
           return Shape{MaybeExtentExpr{}};
         } else {
           return Shape{

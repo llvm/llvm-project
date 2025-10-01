@@ -10,8 +10,8 @@ target triple = "aarch64--linux-android"
 declare void @mayFail(ptr %x) sanitize_hwaddress
 declare void @onExcept(ptr %x) sanitize_hwaddress
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
+declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind
+declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind
 declare i32 @__gxx_personality_v0(...)
 
 define void @test() sanitize_hwaddress personality ptr @__gxx_personality_v0 {
@@ -48,7 +48,7 @@ define void @test() sanitize_hwaddress personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP21]] to ptr
 ; CHECK-NEXT:    [[EXN_SLOT:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[X]])
 ; CHECK-NEXT:    [[TMP22:%.*]] = trunc i64 [[TMP17]] to i8
 ; CHECK-NEXT:    [[TMP23:%.*]] = ptrtoint ptr [[X]] to i64
 ; CHECK-NEXT:    [[TMP24:%.*]] = and i64 [[TMP23]], 72057594037927935
@@ -64,7 +64,7 @@ define void @test() sanitize_hwaddress personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[TMP30:%.*]] = lshr i64 [[TMP29]], 4
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP30]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP31]], i8 [[TMP27]], i64 1, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[TMP32:%.*]] = landingpad { ptr, i32 }
@@ -82,7 +82,7 @@ define void @test() sanitize_hwaddress personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[TMP39:%.*]] = lshr i64 [[TMP38]], 4
 ; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP39]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP40]], i8 [[TMP36]], i64 1, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]])
 ; CHECK-NEXT:    br label [[EH_RESUME:%.*]]
 ; CHECK:       eh.resume:
 ; CHECK-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
@@ -95,12 +95,12 @@ entry:
   %x = alloca i32, align 8
   %exn.slot = alloca ptr, align 8
   %ehselector.slot = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
   invoke void @mayFail(ptr %x) to label %invoke.cont unwind label %lpad
 
 invoke.cont:                                      ; preds = %entry
 
-  call void @llvm.lifetime.end.p0(i64 4, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
   ret void
 
 lpad:                                             ; preds = %entry
@@ -112,7 +112,7 @@ lpad:                                             ; preds = %entry
   %2 = extractvalue { ptr, i32 } %0, 1
   store i32 %2, ptr %ehselector.slot, align 4
   call void @onExcept(ptr %x) #18
-  call void @llvm.lifetime.end.p0(i64 4, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
   br label %eh.resume
 
 eh.resume:                                        ; preds = %lpad

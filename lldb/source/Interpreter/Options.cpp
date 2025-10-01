@@ -19,6 +19,7 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/STLExtras.h"
@@ -261,7 +262,8 @@ Option *Options::GetLongOptions() {
 
 void Options::OutputFormattedUsageText(Stream &strm,
                                        const OptionDefinition &option_def,
-                                       uint32_t output_max_columns) {
+                                       uint32_t output_max_columns,
+                                       bool use_color) {
   std::string actual_text;
   if (option_def.validator) {
     const char *condition = option_def.validator->ShortConditionString();
@@ -271,14 +273,16 @@ void Options::OutputFormattedUsageText(Stream &strm,
       actual_text.append("] ");
     }
   }
-  actual_text.append(option_def.usage_text);
+  actual_text.append(
+      ansi::FormatAnsiTerminalCodes(option_def.usage_text, use_color));
+  const size_t visible_length = ansi::ColumnWidth(actual_text);
 
   // Will it all fit on one line?
 
-  if (static_cast<uint32_t>(actual_text.length() + strm.GetIndentLevel()) <
+  if (static_cast<uint32_t>(visible_length + strm.GetIndentLevel()) <
       output_max_columns) {
     // Output it as a single line.
-    strm.Indent(actual_text);
+    strm.Indent(ansi::FormatAnsiTerminalCodes(actual_text, use_color));
     strm.EOL();
   } else {
     // We need to break it up into multiple lines.
@@ -286,7 +290,7 @@ void Options::OutputFormattedUsageText(Stream &strm,
     int text_width = output_max_columns - strm.GetIndentLevel() - 1;
     int start = 0;
     int end = start;
-    int final_end = actual_text.length();
+    int final_end = visible_length;
     int sub_len;
 
     while (end < final_end) {
@@ -312,7 +316,8 @@ void Options::OutputFormattedUsageText(Stream &strm,
       strm.Indent();
       assert(start < final_end);
       assert(start + sub_len <= final_end);
-      strm.Write(actual_text.c_str() + start, sub_len);
+      strm.PutCString(ansi::FormatAnsiTerminalCodes(
+          llvm::StringRef(actual_text.c_str() + start, sub_len), use_color));
       start = end + 1;
     }
     strm.EOL();
@@ -385,7 +390,7 @@ static bool PrintOption(const OptionDefinition &opt_def,
 }
 
 void Options::GenerateOptionUsage(Stream &strm, CommandObject &cmd,
-                                  uint32_t screen_width) {
+                                  uint32_t screen_width, bool use_color) {
   auto opt_defs = GetDefinitions();
   const uint32_t save_indent_level = strm.GetIndentLevel();
   llvm::StringRef name = cmd.GetCommandName();
@@ -527,7 +532,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject &cmd,
       strm.IndentMore(5);
 
       if (opt_def.usage_text)
-        OutputFormattedUsageText(strm, opt_def, screen_width);
+        OutputFormattedUsageText(strm, opt_def, screen_width, use_color);
       if (!opt_def.enum_values.empty()) {
         strm.Indent();
         strm.Printf("Values: ");
@@ -628,6 +633,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
   auto opt_defs = GetDefinitions();
 
   llvm::StringRef cur_opt_str = request.GetCursorArgumentPrefix();
+  const bool use_color = interpreter.GetDebugger().GetUseColor();
 
   for (size_t i = 0; i < opt_element_vector.size(); i++) {
     size_t opt_pos = static_cast<size_t>(opt_element_vector[i].opt_pos);
@@ -647,7 +653,8 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
           if (!def.short_option)
             continue;
           opt_str[1] = def.short_option;
-          request.AddCompletion(opt_str, def.usage_text);
+          request.AddCompletion(opt_str, ansi::FormatAnsiTerminalCodes(
+                                             def.usage_text, use_color));
         }
 
         return true;
@@ -659,7 +666,8 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
 
           full_name.erase(full_name.begin() + 2, full_name.end());
           full_name.append(def.long_option);
-          request.AddCompletion(full_name, def.usage_text);
+          request.AddCompletion(full_name, ansi::FormatAnsiTerminalCodes(
+                                               def.usage_text, use_color));
         }
         return true;
       } else if (opt_defs_index != OptionArgElement::eUnrecognizedArg) {
@@ -670,7 +678,9 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
         const OptionDefinition &opt = opt_defs[opt_defs_index];
         llvm::StringRef long_option = opt.long_option;
         if (cur_opt_str.starts_with("--") && cur_opt_str != long_option) {
-          request.AddCompletion("--" + long_option.str(), opt.usage_text);
+          request.AddCompletion(
+              "--" + long_option.str(),
+              ansi::FormatAnsiTerminalCodes(opt.usage_text, use_color));
           return true;
         } else
           request.AddCompletion(request.GetCursorArgumentPrefix());
@@ -686,7 +696,9 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
           for (auto &def : opt_defs) {
             llvm::StringRef long_option(def.long_option);
             if (long_option.starts_with(cur_opt_str))
-              request.AddCompletion("--" + long_option.str(), def.usage_text);
+              request.AddCompletion(
+                  "--" + long_option.str(),
+                  ansi::FormatAnsiTerminalCodes(def.usage_text, use_color));
           }
         }
         return true;
@@ -1282,7 +1294,7 @@ llvm::Expected<Args> Options::Parse(const Args &args,
   Status error;
   Option *long_options = GetLongOptions();
   if (long_options == nullptr) {
-    return llvm::createStringError("Invalid long options.");
+    return llvm::createStringError("invalid long options");
   }
 
   std::string short_options = BuildShortOptions(long_options);

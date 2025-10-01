@@ -11,13 +11,13 @@
 
 #include <clc/internal/clc.h>
 
-#define FUNCTION __clc_bitfield_extract_unsigned
-#define __RETTYPE __CLC_U_GENTYPE
+#define __CLC_FUNCTION __clc_bitfield_extract_unsigned
+#define __CLC_RETTYPE __CLC_U_GENTYPE
 
 #define __CLC_BODY <clc/integer/clc_bitfield_extract_decl.inc>
 #include <clc/integer/gentype.inc>
 
-#undef __RETTYPE
-#undef FUNCTION
+#undef __CLC_RETTYPE
+#undef __CLC_FUNCTION
 
 #endif // __CLC_INTEGER_CLC_BITFIELD_EXTRACT_SIGNED_H__

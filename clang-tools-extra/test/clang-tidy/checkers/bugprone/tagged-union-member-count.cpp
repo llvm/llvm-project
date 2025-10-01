@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy -std=c++98-or-later %s bugprone-tagged-union-member-count %t
+// RUN: %check_clang_tidy -std=c++98-or-later %s bugprone-tagged-union-member-count %t -- -- \
+// RUN: -I%S/Inputs/tagged-union-member-count \
+// RUN: -isystem %S/Inputs/tagged-union-member-count/system
 // Test check with C++ features
 
 typedef enum Tags3 {
@@ -308,3 +310,26 @@ void DoNotMatchLambdas() {
 	} u;
     auto L = [e, u] () {};
 }
+
+// Typedefed unions from system header files should be ignored when
+// we are trying to pinpoint the union part in a user-defined tagged union.
+#include <pthread.h>
+
+// This should not be analyzed as a user-defined tagged union,
+// even though pthread_mutex_t may be declared as a typedefed union.
+struct SystemTypedefedUnionDataMemberShouldBeIgnored {
+  pthread_mutex_t Mutex;
+  enum {
+    MyEnum
+  } EnumField;
+};
+
+// Filter when union or enum comes from the std namespace but not a system header
+#include "stdnamespace.h"
+
+struct StdNameSpaceUnionDataMemberShouldBeIgnored {
+  std::pthread_mutex_t Mutex;
+  enum {
+    MyEnum
+  } EnumField;
+};

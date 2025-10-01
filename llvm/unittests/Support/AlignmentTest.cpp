@@ -44,6 +44,16 @@ TEST(AlignmentTest, AlignConstexprConstant) {
   EXPECT_EQ(Align(alignof(uint64_t)), kConstantAlign);
 }
 
+TEST(AlignmentTest, ConstexprAssign) {
+  constexpr auto assignAndGet = []() constexpr {
+    Align A = Align::Constant<8>();
+    Align B = Align::Constant<16>();
+    A = B;
+    return A.value();
+  };
+  static_assert(assignAndGet() == 16);
+}
+
 std::vector<uint64_t> getValidAlignments() {
   std::vector<uint64_t> Out;
   for (size_t Shift = 0; Shift < 64; ++Shift)

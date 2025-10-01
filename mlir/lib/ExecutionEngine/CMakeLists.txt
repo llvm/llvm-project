@@ -14,6 +14,7 @@ set(LLVM_OPTIONAL_SOURCES
   RunnerUtils.cpp
   OptUtils.cpp
   JitRunner.cpp
+  LevelZeroRuntimeWrappers.cpp
   SpirvCpuRuntimeWrappers.cpp
   SyclRuntimeWrappers.cpp
   VulkanRuntimeWrappers.cpp
@@ -374,17 +375,20 @@ if(LLVM_ENABLE_PIC)
     )
   endif()
 
+  if(MLIR_ENABLE_SYCL_RUNNER OR MLIR_ENABLE_LEVELZERO_RUNNER)
+    # Both runtimes require LevelZero, so we can find it once.
+    find_package(LevelZeroRuntime)
+
+    if(NOT LevelZeroRuntime_FOUND)
+      message(FATAL_ERROR "LevelZero not found. Please set LEVEL_ZERO_DIR.")
+    endif()
+  endif()
+
   if(MLIR_ENABLE_SYCL_RUNNER)
     find_package(SyclRuntime)
 
     if(NOT SyclRuntime_FOUND)
       message(FATAL_ERROR "syclRuntime not found. Please set check oneapi installation and run setvars.sh.")
-    endif()
-
-    find_package(LevelZero)
-
-    if(NOT LevelZero_FOUND)
-      message(FATAL_ERROR "LevelZero not found. Please set LEVEL_ZERO_DIR.")
     endif()
 
     add_mlir_library(mlir_sycl_runtime
@@ -404,9 +408,28 @@ if(LLVM_ENABLE_PIC)
       ${MLIR_INCLUDE_DIRS}
     )
 
-    target_link_libraries(mlir_sycl_runtime PRIVATE LevelZero::LevelZero SyclRuntime::SyclRuntime)
+    target_link_libraries(mlir_sycl_runtime PRIVATE LevelZeroRuntime::LevelZeroRuntime SyclRuntime::SyclRuntime)
 
-    set_property(TARGET mlir_sycl_runtime APPEND PROPERTY BUILD_RPATH "${LevelZero_LIBRARIES_DIR}" "${SyclRuntime_LIBRARIES_DIR}")
+    set_property(TARGET mlir_sycl_runtime APPEND PROPERTY BUILD_RPATH "${LevelZeroRuntime_LIBRARIES_DIR}" "${SyclRuntime_LIBRARIES_DIR}")
+  endif()
+
+  if(MLIR_ENABLE_LEVELZERO_RUNNER)
+    add_mlir_library(mlir_levelzero_runtime
+      SHARED
+      LevelZeroRuntimeWrappers.cpp
+
+      EXCLUDE_FROM_LIBMLIR
+    )
+
+    target_compile_options(mlir_levelzero_runtime PUBLIC -fexceptions -frtti)
+
+    target_include_directories(mlir_levelzero_runtime PRIVATE
+      ${MLIR_INCLUDE_DIRS}
+    )
+
+    target_link_libraries(mlir_levelzero_runtime PRIVATE LevelZeroRuntime::LevelZeroRuntime)
+
+    set_property(TARGET mlir_levelzero_runtime APPEND PROPERTY BUILD_RPATH "${LevelZeroRuntime_LIBRARIES_DIR}")
   endif()
 
   if(MLIR_ENABLE_SPIRV_CPU_RUNNER)

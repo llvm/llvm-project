@@ -747,9 +747,12 @@ TEST(Replacement, TemplatedFunctionCall) {
 class NestedNameSpecifierAVisitor : public TestVisitor {
 public:
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLoc) override {
-    if (NNSLoc.getNestedNameSpecifier()) {
-      if (const auto *NS = dyn_cast_if_present<NamespaceDecl>(
-              NNSLoc.getNestedNameSpecifier()->getAsNamespace())) {
+    if (NestedNameSpecifier NNS = NNSLoc.getNestedNameSpecifier();
+        NNS.getKind() == NestedNameSpecifier::Kind::Namespace) {
+      if (const auto *NS =
+              dyn_cast<NamespaceDecl>(NNSLoc.getNestedNameSpecifier()
+                                          .getAsNamespaceAndPrefix()
+                                          .Namespace)) {
         if (NS->getName() == "a") {
           Replace = Replacement(*SM, &NNSLoc, "", Context->getLangOpts());
         }

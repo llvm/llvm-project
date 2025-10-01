@@ -1,4 +1,4 @@
-//===--- FunctionNamingCheck.h - clang-tidy ---------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,7 @@ namespace clang::tidy::google::objc {
 /// method or property declarations.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google/objc-function-naming.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/google/objc-function-naming.html
 class FunctionNamingCheck : public ClangTidyCheck {
 public:
   FunctionNamingCheck(StringRef Name, ClangTidyContext *Context)

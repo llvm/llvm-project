@@ -147,7 +147,7 @@ static void test_cached_values_in_iteration() {
     const std::set<fs::path> dir_contents(static_env.RecDirIterationList.begin(), static_env.RecDirIterationList.end());
     dir_entries = get_directory_entries_for(testDir, dir_contents);
   }
-  // Testing folder should be deleted after destoying static_test_env.
+  // Testing folder should be deleted after destroying static_test_env.
 
   for (const auto& dir_entry : dir_entries) {
     // During iteration Windows provides information only about symlink itself

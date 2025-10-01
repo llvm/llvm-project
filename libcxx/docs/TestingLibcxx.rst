@@ -471,7 +471,7 @@ removed from the Standard. These tests should be written like:
 Benchmarks
 ==========
 
-Libc++'s test suite also contains benchmarks. The benchmarks are written using the `Google Benchmark`_
+Libc++'s test suite also contains benchmarks. Many benchmarks are written using the `Google Benchmark`_
 library, a copy of which is stored in the LLVM monorepo. For more information about using the Google
 Benchmark library, see the `official documentation <https://github.com/google/benchmark>`_.
 
@@ -482,7 +482,7 @@ when running the benchmarks. For example,
 
 .. code-block:: bash
 
-  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/string.bench.cpp --show-all --param optimization=speed
+  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/containers/string.bench.cpp --show-all --param optimization=speed
 
 Note that benchmarks are only dry-run when run via the ``check-cxx`` target since
 we only want to make sure they don't rot. Do not rely on the results of benchmarks
@@ -490,27 +490,56 @@ run through ``check-cxx`` for anything, instead run the benchmarks manually usin
 the instructions for running individual tests.
 
 If you want to compare the results of different benchmark runs, we recommend using the
-``libcxx-compare-benchmarks`` helper tool. First, configure CMake in a build directory
-and run the benchmark:
+``compare-benchmarks`` helper tool. Note that the script has some dependencies, which can
+be installed with:
 
 .. code-block:: bash
 
-  $ cmake -S runtimes -B <build1> [...]
-  $ libcxx/utils/libcxx-lit <build1> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+  $ python -m venv .venv && source .venv/bin/activate # Optional but recommended
+  $ pip install -r libcxx/utils/requirements.txt
 
-Then, do the same for the second configuration you want to test. Use a different build
-directory for that configuration:
-
-.. code-block:: bash
-
-  $ cmake -S runtimes -B <build2> [...]
-  $ libcxx/utils/libcxx-lit <build2> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
-
-Finally, use ``libcxx-compare-benchmarks`` to compare both:
+Once that's done, start by configuring CMake in a build directory and running one or
+more benchmarks, as usual:
 
 .. code-block:: bash
 
-  $ libcxx/utils/libcxx-compare-benchmarks <build1> <build2> libcxx/test/benchmarks/string.bench.cpp
+  $ cmake -S runtimes -B <build> [...]
+  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/containers/string.bench.cpp --param optimization=speed
+
+Then, get the consolidated benchmark output for that run using ``consolidate-benchmarks``:
+
+.. code-block:: bash
+
+  $ libcxx/utils/consolidate-benchmarks <build> > baseline.lnt
+
+The ``baseline.lnt`` file will contain a consolidation of all the benchmark results present in the build
+directory. You can then make the desired modifications to the code, run the benchmark(s) again, and then run:
+
+.. code-block:: bash
+
+  $ libcxx/utils/consolidate-benchmarks <build> > candidate.lnt
+
+Finally, use ``compare-benchmarks`` to compare both:
+
+.. code-block:: bash
+
+  $ libcxx/utils/compare-benchmarks baseline.lnt candidate.lnt
+
+  # Useful one-liner when iterating locally:
+  $ libcxx/utils/compare-benchmarks baseline.lnt <(libcxx/utils/consolidate-benchmarks <build>)
+
+The ``compare-benchmarks`` script provides some useful options like creating a chart to easily visualize
+differences in a browser window. Use ``compare-benchmarks --help`` for details.
+
+Additionally, adding a comment of the following form to a libc++ PR will cause the specified benchmarks to be run
+on our pre-commit CI infrastructure and the results to be reported in the PR by our CI system:
+
+.. code-block::
+
+    /libcxx-bot benchmark <path/to/benchmark1.bench.cpp> <path/to/benchmark2.bench.cpp> ...
+
+Note that this is currently experimental and the results should not be relied upon too strongly, since
+we do not have dedicated hardware to run the benchmarks on.
 
 .. _`Google Benchmark`: https://github.com/google/benchmark
 

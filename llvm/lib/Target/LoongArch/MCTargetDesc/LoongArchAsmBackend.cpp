@@ -143,8 +143,6 @@ static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup, uint8_t *Data,
 void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                      const MCValue &Target, uint8_t *Data,
                                      uint64_t Value, bool IsResolved) {
-  if (IsResolved && shouldForceRelocation(Fixup, Target))
-    IsResolved = false;
   IsResolved = addReloc(F, Fixup, Target, Value, IsResolved);
   if (!Value)
     return; // Doesn't change encoding.
@@ -176,20 +174,6 @@ void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   }
 }
 
-bool LoongArchAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
-                                                const MCValue &Target) {
-  switch (Fixup.getKind()) {
-  default:
-    return STI.hasFeature(LoongArch::FeatureRelax);
-  case FK_Data_1:
-  case FK_Data_2:
-  case FK_Data_4:
-  case FK_Data_8:
-  case FK_Data_leb128:
-    return !Target.isAbsolute();
-  }
-}
-
 static inline std::pair<MCFixupKind, MCFixupKind>
 getRelocPairForSize(unsigned Size) {
   switch (Size) {
@@ -216,10 +200,19 @@ getRelocPairForSize(unsigned Size) {
 // size, the fixup encodes MaxBytesToEmit in the higher bits and references a
 // per-section marker symbol.
 bool LoongArchAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
+  // Alignments before the first linker-relaxable instruction have fixed sizes
+  // and do not require relocations. Alignments after a linker-relaxable
+  // instruction require a relocation, even if the STI specifies norelax.
+  //
+  // firstLinkerRelaxable is the layout order within the subsection, which may
+  // be smaller than the section's order. Therefore, alignments in a
+  // lower-numbered subsection may be unnecessarily treated as linker-relaxable.
+  auto *Sec = F.getParent();
+  if (F.getLayoutOrder() <= Sec->firstLinkerRelaxable())
+    return false;
+
   // Use default handling unless linker relaxation is enabled and the
   // MaxBytesToEmit >= the nop size.
-  if (!F.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
-    return false;
   const unsigned MinNopLen = 4;
   unsigned MaxBytesToEmit = F.getAlignMaxBytesToEmit();
   if (MaxBytesToEmit < MinNopLen)
@@ -254,7 +247,6 @@ bool LoongArchAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
       MCFixup::create(0, Expr, FirstLiteralRelocationKind + ELF::R_LARCH_ALIGN);
   F.setVarFixups({Fixup});
   F.setLinkerRelaxable();
-  F.getParent()->setLinkerRelaxable();
   return true;
 }
 
@@ -267,21 +259,16 @@ std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCFragment &F,
   return std::make_pair(true, true);
 }
 
-bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
-                                             bool &WasRelaxed) const {
+bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F) const {
   MCContext &C = getContext();
-
   int64_t LineDelta = F.getDwarfLineDelta();
   const MCExpr &AddrDelta = F.getDwarfAddrDelta();
-  SmallVector<MCFixup, 1> Fixups;
-  size_t OldSize = F.getVarSize();
-
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
     return false;
-  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, *Asm);
-  assert(IsAbsolute && "CFA with invalid expression");
-  (void)IsAbsolute;
+  [[maybe_unused]] bool IsAbsolute =
+      AddrDelta.evaluateKnownAbsolute(Value, *Asm);
+  assert(IsAbsolute);
 
   SmallVector<char> Data;
   raw_svector_ostream OS(Data);
@@ -292,33 +279,23 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
     encodeSLEB128(LineDelta, OS);
   }
 
-  unsigned Offset;
-  std::pair<MCFixupKind, MCFixupKind> FK;
-
   // According to the DWARF specification, the `DW_LNS_fixed_advance_pc` opcode
   // takes a single unsigned half (unencoded) operand. The maximum encodable
   // value is therefore 65535.  Set a conservative upper bound for relaxation.
+  unsigned PCBytes;
   if (Value > 60000) {
     unsigned PtrSize = C.getAsmInfo()->getCodePointerSize();
-
-    OS << uint8_t(dwarf::DW_LNS_extended_op);
-    encodeULEB128(PtrSize + 1, OS);
-
-    OS << uint8_t(dwarf::DW_LNE_set_address);
-    Offset = OS.tell();
     assert((PtrSize == 4 || PtrSize == 8) && "Unexpected pointer size");
-    FK = getRelocPairForSize(PtrSize == 4 ? 32 : 64);
+    PCBytes = PtrSize;
+    OS << uint8_t(dwarf::DW_LNS_extended_op) << uint8_t(PtrSize + 1)
+       << uint8_t(dwarf::DW_LNE_set_address);
     OS.write_zeros(PtrSize);
   } else {
+    PCBytes = 2;
     OS << uint8_t(dwarf::DW_LNS_fixed_advance_pc);
-    Offset = OS.tell();
-    FK = getRelocPairForSize(16);
     support::endian::write<uint16_t>(OS, 0, llvm::endianness::little);
   }
-
-  const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
-  Fixups.push_back(MCFixup::create(Offset, MBE.getLHS(), std::get<0>(FK)));
-  Fixups.push_back(MCFixup::create(Offset, MBE.getRHS(), std::get<1>(FK)));
+  auto Offset = OS.tell() - PCBytes;
 
   if (LineDelta == INT64_MAX) {
     OS << uint8_t(dwarf::DW_LNS_extended_op);
@@ -329,16 +306,14 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
   }
 
   F.setVarContents(Data);
-  F.setVarFixups(Fixups);
-  WasRelaxed = OldSize != Data.size();
+  F.setVarFixups({MCFixup::create(Offset, &AddrDelta,
+                                  MCFixup::getDataKindForSize(PCBytes))});
   return true;
 }
 
-bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
+bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F) const {
   const MCExpr &AddrDelta = F.getDwarfAddrDelta();
   SmallVector<MCFixup, 2> Fixups;
-  size_t OldSize = F.getVarContents().size();
-
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
     return false;
@@ -351,7 +326,6 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
   if (Value == 0) {
     F.clearVarContents();
     F.clearVarFixups();
-    WasRelaxed = OldSize != 0;
     return true;
   }
 
@@ -385,8 +359,6 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
   }
   F.setVarContents(Data);
   F.setVarFixups(Fixups);
-
-  WasRelaxed = OldSize != Data.size();
   return true;
 }
 
@@ -457,10 +429,10 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
           isPCRelFixupResolved(Target.getSubSym(), F))
         return Fallback();
 
-      // In SecA == SecB case. If the linker relaxation is disabled, the
+      // In SecA == SecB case. If the section is not linker-relaxable, the
       // FixedValue has already been calculated out in evaluateFixup,
       // return true and avoid record relocations.
-      if (&SecA == &SecB && !STI.hasFeature(LoongArch::FeatureRelax))
+      if (&SecA == &SecB && !SecA.isLinkerRelaxable())
         return true;
     }
 
@@ -493,9 +465,16 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
     return false;
   }
 
-  IsResolved = Fallback();
   // If linker relaxation is enabled and supported by the current relocation,
-  // append a RELAX relocation.
+  // generate a relocation and then append a RELAX.
+  if (Fixup.isLinkerRelaxable())
+    IsResolved = false;
+  if (IsResolved && Fixup.isPCRel())
+    IsResolved = isPCRelFixupResolved(Target.getAddSym(), F);
+
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
+
   if (Fixup.isLinkerRelaxable()) {
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_LARCH_RELAX);
     Asm->getWriter().recordRelocation(F, FA, MCValue::get(nullptr),
@@ -507,8 +486,7 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
 
 std::unique_ptr<MCObjectTargetWriter>
 LoongArchAsmBackend::createObjectTargetWriter() const {
-  return createLoongArchELFObjectWriter(
-      OSABI, Is64Bit, STI.hasFeature(LoongArch::FeatureRelax));
+  return createLoongArchELFObjectWriter(OSABI, Is64Bit);
 }
 
 MCAsmBackend *llvm::createLoongArchAsmBackend(const Target &T,

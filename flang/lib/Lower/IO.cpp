@@ -977,9 +977,9 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
     fir::StoreOp::create(builder, loc, lcv, loopVar);
     genItemList(ioImpliedDo);
     builder.setInsertionPointToEnd(doLoopOp.getBody());
-    mlir::Value result = mlir::arith::AddIOp::create(
-        builder, loc, doLoopOp.getInductionVar(), doLoopOp.getStep(), iofAttr);
-    fir::ResultOp::create(builder, loc, result);
+    // fir.do_loop's induction variable's increment is implied,
+    // so we do not need to increment it explicitly.
+    fir::ResultOp::create(builder, loc, doLoopOp.getInductionVar());
     builder.setInsertionPointAfter(doLoopOp);
     // The loop control variable may be used after the loop.
     lcv = builder.createConvert(loc, fir::unwrapRefType(loopVar.getType()),
@@ -2522,12 +2522,10 @@ mlir::Value Fortran::lower::genInquireStatement(
         fir::getBase(converter.genExprAddr(loc, ioLengthVar, stmtCtx));
     llvm::SmallVector<mlir::Value> args = {cookie};
     mlir::Value length =
-        builder
-            .create<fir::CallOp>(
-                loc,
-                fir::runtime::getIORuntimeFunc<mkIOKey(GetIoLength)>(loc,
-                                                                     builder),
-                args)
+        fir::CallOp::create(
+            builder, loc,
+            fir::runtime::getIORuntimeFunc<mkIOKey(GetIoLength)>(loc, builder),
+            args)
             .getResult(0);
     mlir::Value length1 =
         builder.createConvert(loc, converter.genType(*ioLengthVar), length);

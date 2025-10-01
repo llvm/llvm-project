@@ -18,6 +18,7 @@
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class LLVMContext;
@@ -47,9 +48,94 @@ public:
   }
 };
 
-class GenericRSMetadataError : public ErrorInfo<GenericRSMetadataError> {
+class OffsetAppendAfterOverflow : public ErrorInfo<OffsetAppendAfterOverflow> {
 public:
   static char ID;
+  dxil::ResourceClass Type;
+  uint32_t Register;
+  uint32_t Space;
+
+  OffsetAppendAfterOverflow(dxil::ResourceClass Type, uint32_t Register,
+                            uint32_t Space)
+      : Type(Type), Register(Register), Space(Space) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "Range " << getResourceClassName(Type) << "(register=" << Register
+       << ", space=" << Space << ") "
+       << "cannot be appended after an unbounded range ";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+class ShaderRegisterOverflowError
+    : public ErrorInfo<ShaderRegisterOverflowError> {
+public:
+  static char ID;
+  dxil::ResourceClass Type;
+  uint32_t Register;
+  uint32_t Space;
+
+  ShaderRegisterOverflowError(dxil::ResourceClass Type, uint32_t Register,
+                              uint32_t Space)
+      : Type(Type), Register(Register), Space(Space) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "Overflow for shader register range: " << getResourceClassName(Type)
+       << "(register=" << Register << ", space=" << Space << ").";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+class OffsetOverflowError : public ErrorInfo<OffsetOverflowError> {
+public:
+  static char ID;
+  dxil::ResourceClass Type;
+  uint32_t Register;
+  uint32_t Space;
+
+  OffsetOverflowError(dxil::ResourceClass Type, uint32_t Register,
+                      uint32_t Space)
+      : Type(Type), Register(Register), Space(Space) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "Offset overflow for descriptor range: " << getResourceClassName(Type)
+       << "(register=" << Register << ", space=" << Space << ").";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+class TableSamplerMixinError : public ErrorInfo<TableSamplerMixinError> {
+public:
+  static char ID;
+  dxil::ResourceClass Type;
+  uint32_t Location;
+
+  TableSamplerMixinError(dxil::ResourceClass Type, uint32_t Location)
+      : Type(Type), Location(Location) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "Samplers cannot be mixed with other "
+       << "resource types in a descriptor table, " << getResourceClassName(Type)
+       << "(location=" << Location << ")";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+class GenericRSMetadataError : public ErrorInfo<GenericRSMetadataError> {
+public:
+  LLVM_ABI static char ID;
   StringRef Message;
   MDNode *MD;
 
@@ -71,7 +157,7 @@ public:
 
 class InvalidRSMetadataFormat : public ErrorInfo<InvalidRSMetadataFormat> {
 public:
-  static char ID;
+  LLVM_ABI static char ID;
   StringRef ElementName;
 
   InvalidRSMetadataFormat(StringRef ElementName) : ElementName(ElementName) {}
@@ -87,7 +173,7 @@ public:
 
 class InvalidRSMetadataValue : public ErrorInfo<InvalidRSMetadataValue> {
 public:
-  static char ID;
+  LLVM_ABI static char ID;
   StringRef ParamName;
 
   InvalidRSMetadataValue(StringRef ParamName) : ParamName(ParamName) {}

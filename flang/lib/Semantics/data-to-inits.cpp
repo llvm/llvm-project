@@ -285,21 +285,22 @@ template <typename DSV>
 std::optional<std::pair<SomeExpr, bool>>
 DataInitializationCompiler<DSV>::ConvertElement(
     const SomeExpr &expr, const evaluate::DynamicType &type) {
+  evaluate::FoldingContext &foldingContext{exprAnalyzer_.GetFoldingContext()};
+  evaluate::CheckRealWidening(expr, type, foldingContext);
   if (auto converted{evaluate::ConvertToType(type, SomeExpr{expr})}) {
     return {std::make_pair(std::move(*converted), false)};
   }
   // Allow DATA initialization with Hollerith and kind=1 CHARACTER like
   // (most) other Fortran compilers do.
-  if (auto converted{evaluate::HollerithToBOZ(
-          exprAnalyzer_.GetFoldingContext(), expr, type)}) {
+  if (auto converted{evaluate::HollerithToBOZ(foldingContext, expr, type)}) {
     return {std::make_pair(std::move(*converted), true)};
   }
   SemanticsContext &context{exprAnalyzer_.context()};
   if (context.IsEnabled(common::LanguageFeature::LogicalIntegerAssignment)) {
     if (MaybeExpr converted{evaluate::DataConstantConversionExtension(
-            exprAnalyzer_.GetFoldingContext(), type, expr)}) {
+            foldingContext, type, expr)}) {
       context.Warn(common::LanguageFeature::LogicalIntegerAssignment,
-          exprAnalyzer_.GetFoldingContext().messages().at(),
+          foldingContext.messages().at(),
           "nonstandard usage: initialization of %s with %s"_port_en_US,
           type.AsFortran(), expr.GetType().value().AsFortran());
       return {std::make_pair(std::move(*converted), false)};
@@ -942,10 +943,19 @@ void ConstructInitializer(const Symbol &symbol,
 
 void ConvertToInitializers(
     DataInitializations &inits, evaluate::ExpressionAnalyzer &exprAnalyzer) {
+  // Process DATA-style component /initializers/ now, so that they appear as
+  // default values in time for EQUIVALENCE processing in ProcessScopes.
+  for (auto &[symbolPtr, initialization] : inits) {
+    if (symbolPtr->owner().IsDerivedType()) {
+      ConstructInitializer(*symbolPtr, initialization, exprAnalyzer);
+    }
+  }
   if (ProcessScopes(
           exprAnalyzer.context().globalScope(), exprAnalyzer, inits)) {
     for (auto &[symbolPtr, initialization] : inits) {
-      ConstructInitializer(*symbolPtr, initialization, exprAnalyzer);
+      if (!symbolPtr->owner().IsDerivedType()) {
+        ConstructInitializer(*symbolPtr, initialization, exprAnalyzer);
+      }
     }
   }
 }
