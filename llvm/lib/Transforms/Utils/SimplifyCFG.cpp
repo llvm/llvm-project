@@ -95,7 +95,9 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "simplifycfg"
 
-cl::opt<bool> llvm::RequireAndPreserveDomTree(
+namespace llvm {
+
+cl::opt<bool> RequireAndPreserveDomTree(
     "simplifycfg-require-and-preserve-domtree", cl::Hidden,
 
     cl::desc(
@@ -204,6 +206,8 @@ static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
              "to be live in"));
 
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+} // end namespace llvm
 
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
