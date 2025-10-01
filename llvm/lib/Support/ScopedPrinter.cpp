@@ -14,7 +14,6 @@
 #include "llvm/Support/Format.h"
 
 using namespace llvm;
-using namespace llvm::support;
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const HexNumber &Value) {
   OS << "0x" << utohexstr(Value.Value);
