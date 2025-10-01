@@ -82,7 +82,7 @@ Error GNUPropertyRewriter::sectionInitializer() {
   return Error::success();
 }
 
-/// Desc contains an array of property descriptors. Each member has the
+/// \p Desc contains an array of property descriptors. Each member has the
 /// following structure:
 /// typedef struct {
 ///   Elf_Word pr_type;
@@ -125,17 +125,17 @@ Expected<uint32_t> GNUPropertyRewriter::decodeGNUPropertyNote(StringRef Desc) {
       if (!Tmp)
         return createStringError(
             errc::executable_format_error,
-            "out of bounds while reading .gnu.property.note section: %s",
+            "failed to read property from .gnu.property.note section: %s",
             toString(Tmp.takeError()).c_str());
       Features = Features ? (*Features | FeaturesItem) : FeaturesItem;
     }
 
     Cursor.seek(alignTo(PrDataEnd, Align));
     if (!Cursor)
-      return createStringError(
-          errc::executable_format_error,
-          "out of bounds while reading .gnu.property.note section: %s",
-          toString(Cursor.takeError()).c_str());
+      return createStringError(errc::executable_format_error,
+                               "out of bounds while reading property array in "
+                               ".gnu.property.note section: %s",
+                               toString(Cursor.takeError()).c_str());
   }
   return Features.value_or(0u);
 }
