@@ -5,10 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Implementation of ScopedPrinter.
-//
-//===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Format.h"
