@@ -13058,6 +13058,11 @@ ExprResult TreeTransform<Derived>::TransformSYCLUniqueStableNameExpr(
 template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
     UnresolvedSYCLKernelCallStmt *S) {
+  auto *FD = cast<FunctionDecl>(SemaRef.CurContext);
+  const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
+  if (!SKEPAttr || SKEPAttr->isInvalidAttr())
+    return StmtError();
+
   ExprResult IdExpr = getDerived().TransformExpr(S->getKernelLaunchIdExpr());
 
   if (IdExpr.isInvalid())
