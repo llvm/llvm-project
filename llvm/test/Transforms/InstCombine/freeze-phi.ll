@@ -224,7 +224,7 @@ define float @pr161524(float noundef %arg) {
 ; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    br label [[IF_EXIT]]
 ; CHECK:       if.exit:
-; CHECK-NEXT:    [[RET:%.*]] = phi ninf float [ [[FADD]], [[IF_THEN]] ], [ [[ARG]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi float [ [[FADD]], [[IF_THEN]] ], [ [[ARG]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
 entry:
