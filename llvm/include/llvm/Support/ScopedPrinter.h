@@ -454,14 +454,10 @@ public:
   virtual raw_ostream &getOStream() { return OS; }
 
 private:
-  template <typename T> void printVersionInternal(T Value) {
+  template <typename T, typename... TArgs>
+  void printVersionInternal(T Value, TArgs... Args) {
     getOStream() << Value;
-  }
-
-  template <typename S, typename T, typename... TArgs>
-  void printVersionInternal(S Value, T Value2, TArgs... Args) {
-    getOStream() << Value << ".";
-    printVersionInternal(Value2, Args...);
+    ((getOStream() << '.' << Args), ...);
   }
 
   static bool flagName(const FlagEntry &LHS, const FlagEntry &RHS) {
