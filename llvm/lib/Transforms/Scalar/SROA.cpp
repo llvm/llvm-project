@@ -6689,9 +6689,8 @@ void SROAPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<SROAPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  OS << (Options.PCFGOption == SROAOptions::PreserveCFG
-             ? "<preserve-cfg>"
-             : "<modify-cfg>");
+  OS << (Options.PCFGOption == SROAOptions::PreserveCFG ? "<preserve-cfg>"
+                                                        : "<modify-cfg>");
 }
 
 SROAPass::SROAPass(SROAOptions::PreserveCFGOption PreserveCFG)
@@ -6707,10 +6706,9 @@ class SROALegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  SROALegacyPass(
-      const SROAOptions &Options =
-          {SROAOptions::PreserveCFGOption::PreserveCFG,
-           SROAOptions::DecomposeStructsOption::NoDecomposeStructs})
+  SROALegacyPass(const SROAOptions &Options =
+                     {SROAOptions::PreserveCFGOption::PreserveCFG,
+                      SROAOptions::DecomposeStructsOption::NoDecomposeStructs})
       : FunctionPass(ID), Options(Options) {
     initializeSROALegacyPassPass(*PassRegistry::getPassRegistry());
   }
