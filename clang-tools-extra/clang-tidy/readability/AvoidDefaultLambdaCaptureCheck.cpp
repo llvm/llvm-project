@@ -14,7 +14,7 @@
 using namespace clang::tidy::readability;
 
 static std::optional<std::string>
-generateImplicitCaptureText(const clang::LambdaCapture &Capture) {
+generateCaptureText(const clang::LambdaCapture &Capture) {
   if (Capture.capturesThis()) {
     return Capture.getCaptureKind() == clang::LCK_StarThis ? "*this" : "this";
   }
@@ -61,14 +61,8 @@ void AvoidDefaultLambdaCaptureCheck::check(
 
   std::vector<std::string> AllCaptures;
 
-  for (const auto &Capture : Lambda->explicit_captures()) {
-    if (const auto CaptureText = generateImplicitCaptureText(Capture)) {
-      AllCaptures.push_back(CaptureText.value());
-    }
-  }
-
-  for (const auto &Capture : Lambda->implicit_captures()) {
-    if (const auto CaptureText = generateImplicitCaptureText(Capture)) {
+  for (const auto &Capture : Lambda->captures()) {
+    if (const auto CaptureText = generateCaptureText(Capture)) {
       AllCaptures.push_back(CaptureText.value());
     }
   }
