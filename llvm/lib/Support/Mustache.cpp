@@ -329,7 +329,7 @@ struct Tag {
   size_t StartPosition = StringRef::npos;
 };
 
-static const char *tagKindToString(Tag::Kind K) {
+[[maybe_unused]] static const char *tagKindToString(Tag::Kind K) {
   switch (K) {
   case Tag::Kind::None:
     return "None";
@@ -341,7 +341,7 @@ static const char *tagKindToString(Tag::Kind K) {
   llvm_unreachable("Unknown Tag::Kind");
 }
 
-static const char *jsonKindToString(json::Value::Kind K) {
+[[maybe_unused]] static const char *jsonKindToString(json::Value::Kind K) {
   switch (K) {
   case json::Value::Kind::Null:
     return "JSON_KIND_NULL";
