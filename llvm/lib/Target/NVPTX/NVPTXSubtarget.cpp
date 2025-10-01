@@ -72,6 +72,32 @@ const SelectionDAGTargetInfo *NVPTXSubtarget::getSelectionDAGInfo() const {
   return TSInfo.get();
 }
 
+bool NVPTXSubtarget::hasPTXWithFamilySMs(unsigned PTXVersion,
+                                         ArrayRef<unsigned> SMVersions) const {
+  if (!hasFamilySpecificFeatures() || getPTXVersion() < PTXVersion)
+    return false;
+
+  for (unsigned SM : SMVersions) {
+    if (getSmFamilyVersion() == SM / 10 && getSmVersion() >= SM)
+      return true;
+  }
+
+  return false;
+}
+
+bool NVPTXSubtarget::hasPTXWithAccelSMs(unsigned PTXVersion,
+                                        ArrayRef<unsigned> SMVersions) const {
+  if (!hasArchAccelFeatures() || getPTXVersion() < PTXVersion)
+    return false;
+
+  for (unsigned SM : SMVersions) {
+    if (getSmVersion() == SM)
+      return true;
+  }
+
+  return false;
+}
+
 bool NVPTXSubtarget::allowFP16Math() const {
   return hasFP16Math() && NoF16Math == false;
 }

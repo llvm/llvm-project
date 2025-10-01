@@ -73,6 +73,16 @@ public:
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
+  // Checks PTX version and family-specific and architecture-specific SM
+  // versions. For example, sm_100{f/a} and any future variants in the same
+  // family will match.
+  bool hasPTXWithFamilySMs(unsigned PTXVersion,
+                           ArrayRef<unsigned> SMVersions) const;
+  // Checks PTX version and architecture-specific SM versions.
+  // For example, sm_100{a} will match.
+  bool hasPTXWithAccelSMs(unsigned PTXVersion,
+                          ArrayRef<unsigned> SMVersions) const;
+
   bool has256BitVectorLoadStore(unsigned AS) const {
     return SmVersion >= 100 && PTXVersion >= 88 &&
            AS == NVPTXAS::ADDRESS_SPACE_GLOBAL;
@@ -127,6 +137,18 @@ public:
     return HasTcgen05 && PTXVersion >= MinPTXVersion;
   }
 
+  // Checks following instructions support:
+  // - tcgen05.ld/st
+  // - tcgen05.alloc/dealloc/relinquish
+  // - tcgen05.cp
+  // - tcgen05.fence/wait
+  // - tcgen05.commit
+  bool hasTcgen05InstSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110}) ||
+           hasPTXWithFamilySMs(88, {100, 101}) ||
+           hasPTXWithAccelSMs(86, {100, 101});
+  }
+
   bool hasTcgen05MMAScaleInputDImm() const {
     return FullSmVersion == 1003 && PTXVersion >= 86;
   }
@@ -158,6 +180,7 @@ public:
   bool hasCvtaParam() const { return SmVersion >= 70 && PTXVersion >= 77; }
   unsigned int getFullSmVersion() const { return FullSmVersion; }
   unsigned int getSmVersion() const { return getFullSmVersion() / 10; }
+  unsigned int getSmFamilyVersion() const { return getFullSmVersion() / 100; }
   // GPUs with "a" suffix have architecture-accelerated features that are
   // supported on the specified architecture only, hence such targets do not
   // follow the onion layer model. hasArchAccelFeatures() allows distinguishing
