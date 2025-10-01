@@ -900,7 +900,7 @@ public:
   /// RewriterBase APIs, (3) may be removed in the future.
   void replaceAllUsesWith(Value from, ValueRange to);
   void replaceAllUsesWith(Value from, Value to) override {
-    replaceAllUsesWith(from, ValueRange{to});
+    replaceAllUsesWith(from, to ? ValueRange{to} : ValueRange{});
   }
 
   /// Return the converted value of 'key' with a type defined by the type
@@ -922,20 +922,6 @@ public:
   /// Recovery is supported via rollback, allowing for continued processing of
   /// patterns even if a failure is encountered during the rewrite step.
   bool canRecoverFromRewriteFailure() const override { return true; }
-
-  /// Replace the given operation with the new values. The number of op results
-  /// and replacement values must match. The types may differ: the dialect
-  /// conversion driver will reconcile any surviving type mismatches at the end
-  /// of the conversion process with source materializations. The given
-  /// operation is erased.
-  void replaceOp(Operation *op, ValueRange newValues) override;
-
-  /// Replace the given operation with the results of the new op. The number of
-  /// op results must match. The types may differ: the dialect conversion
-  /// driver will reconcile any surviving type mismatches at the end of the
-  /// conversion process with source materializations. The original operation
-  /// is erased.
-  void replaceOp(Operation *op, Operation *newOp) override;
 
   /// Replace the given operation with the new value ranges. The number of op
   /// results and value ranges must match. The given  operation is erased.

@@ -515,12 +515,12 @@ public:
   /// Replace the results of the given (original) operation with the specified
   /// list of values (replacements). The result types of the given op and the
   /// replacements must match. The original op is erased.
-  virtual void replaceOp(Operation *op, ValueRange newValues);
+  void replaceOp(Operation *op, ValueRange newValues);
 
   /// Replace the results of the given (original) operation with the specified
   /// new op (replacement). The result types of the two ops must match. The
   /// original op is erased.
-  virtual void replaceOp(Operation *op, Operation *newOp);
+  void replaceOp(Operation *op, Operation *newOp);
 
   /// Replace the results of the given (original) op with a new op that is
   /// created without verification (replacement). The result values of the two
