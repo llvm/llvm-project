@@ -14,7 +14,7 @@ in assembly, or `OpNegateRAState` in BOLT sources. In this document, I will use
 
 ### Pointer Authentication
 
-Refer to the [pac-ret section of the BOLT-binary-analysis document](BinaryAnalysis.md#pac-ret-analysis).
+For more information, see the [pac-ret section of the BOLT-binary-analysis document](BinaryAnalysis.md#pac-ret-analysis).
 
 ### DW_CFA_AARCH64_negate_ra_state
 
@@ -27,14 +27,14 @@ The DW_CFA_AARCH64_negate_ra_state operation negates bit[0] of the RA_SIGN_STATE
 
 This bit indicates to the unwinder whether the current return address is signed
 or not (hence the name). The unwinder uses this information to authenticate the
-pointer, and remove the Pointer Authentication Code (PAC) bits. Incorrect
-negate-ra-state placement can lead to the unwinder trying to authenticate an
-unsigned pointer (which segfaults), or skipping authenticating a signed pointer,
-and trying to access an incorrect location (also leading to a segfault).
+pointer, and remove the Pointer Authentication Code (PAC) bits.
+Incorrect placment of negate-ra-state CFIs causes the unwinder to either attempt
+to authenticate an unsigned pointer (resulting in a segmentation fault), or skip
+authentication on a signed pointer, which can also cause a fault.
 
-Note: not *all* unwinders do this. Some use the `xpac` instruction to strip the
-PAC bits without authenticating the pointer. This is an incorrect (incomplete)
-implementation, as it allows control-flow modification in the case of unwinding.
+Note: some unwinders use the `xpac` instruction to strip the PAC bits without
+authenticating the pointer. This is an incorrect (incomplete) implementation,
+as it allows control-flow modification in the case of unwinding.
 
 There are no DWARF instructions to directly set or clear the RA State. However,
 two other CFIs can also affect the RA state:
@@ -56,12 +56,12 @@ is not widely used, and is [likely to become deprecated](https://github.com/ARM-
 
 ### Where are these CFIs needed?
 
-In all locations, where two consecutive instructions have different RA state,
-this needs to be indicated to the unwinder. This happens at pointer signing and
-authenticating. The other case where two consecutive instructions have different
-RA state, but neither of them is signing or authenticating means that they are
-not next to each other in control flow. One is part of an execution path with
-signed RA, the other is part of a path with an unsigned RA.
+Whenever two consecutive instructions have different RA states, the unwinder must
+be informed of the change. This typically occurs during pointer signing or
+authentication. If adjacent instructions differ in RA state but neither signs
+nor authenticates the return address, they must belong to different control flow
+paths. One is part of an execution path with signed RA, the other is part of a
+path with an unsigned RA.
 
 In the example below, the first BasicBlock ends in a conditional branch, and
 jumps to two different BasicBlocks, each with their own authentication, and
@@ -103,7 +103,7 @@ negate-ra-state CFIs will become invalid during BasicBlock reordering.
 
 ## Solution design
 
-The patch introduces two new passes:
+The implementation introduces two new passes:
 1. `MarkRAStatesPass`: assigns the RA state to each instruction based on the CFIs
     in the input binary
 2. `InsertNegateRAStatePass`: reads those assigned instruction RA states after
@@ -123,24 +123,21 @@ with the CFI processing that already happens in BOLT (e.g. remember-state and
 restore-state CFIs are removed in `normalizeCFIState` for reasons unrelated to PAC).
 
 As we add the MCAnnotations *to instructions*, we have to account for the case
-where the function starts with a CFI altering the RA state. If a function starts
-with a negate-ra-state CFI for example, we cannot save the annotation on the
-first instruction, because that itself should already be signed. This is why all
-BinaryFunctions have an `initialRAState` bool. If the `Offset` the CFI refers to
-is zero, we don't store an annotation, but set the `initialRAState` in
-`FillCFIInfoFor`. This information is then used in `MarkRAStates`.
+where the function starts with a CFI altering the RA state. As CFIs modify the RA
+state of the instructions before them, we cannot add the annotation to the first
+instruction.
+This special case is handled by adding an `initialRAState` bool to each BinaryFunction.
+If the `Offset` the CFI refers to is zero, we don't store an annotation, but set
+the `initialRAState` in `FillCFIInfoFor`. This information is then used in
+`MarkRAStates`.
 
 ### Binaries without DWARF info
 
 In some cases, the DWARF tables are stripped from the binary. These programs
-usually have some other unwind-mechanism. To account for code that uses Pointer
-Authentication, but does not have DWARF CFIs, the passes only run on functions
-that had at least one negate-ra-state CFI. This information is saved on the
-functions during CFI reading.
-
-This also makes sure that the passes don't run on functions that do not store
-the return address to the stack, and don't need Pointer Authentication, saving
-on runtime overhead.
+usually have some other unwind-mechanism.
+These passes only run on functions that include at least one negate-ra-state CFI.
+This avoids processing functions that do not use Pointer Authentication, or on
+functions that use Pointer Authentication, but do not have DWARF info.
 
 In summary:
 - pointer auth is not used: no change, the new passes do not run.
@@ -149,20 +146,20 @@ In summary:
 - pointer auth is used, and we have DWARF CFIs: passes run, and rewrite the
   negate-ra-state CFI.
 
-### MarkRAStates Pass
+### MarkRAStates pass
 
 This pass runs before optimizations reorder anything.
 
 It processes MCAnnotations generated during the CFI reading stage to check if
 instructions have either of the three CFIs that can modify RA state:
-- negate-ra-state
-- remember-state
-- restore-state
+- negate-ra-state,
+- remember-state,
+- restore-state.
 
 Then it adds new MCAnnotations to each instruction, indicating their RA state.
 Those annotations are:
-- Signed
-- Unsigned
+- Signed,
+- Unsigned.
 
 Below is a simple example, that shows the two different type of annotations:
 what we have before the pass, and after it.
@@ -179,9 +176,9 @@ what we have before the pass, and after it.
 ##### Error handling in MarkRAState Pass:
 
 Whenever the MarkRAStates pass finds inconsistencies in the current
-BinaryFunction, it ignores it by calling `BF.setIgnored()`. This prevents BOLT
-from optimizing that function, but it will still be emitted as part of the
-original section (`.bolt.org.text`) in its original form.
+BinaryFunction, it marks the function as ignored using `BF.setIgnored()`. BOLT
+will not optimize this function but will emit it unchanged in the original section
+(`.bolt.org.text`).
 
 The inconsistencies are as follows:
 - finding a `pac*` instruction when already in signed state
@@ -193,8 +190,7 @@ exact functions ignored, and the found inconsistency.
 
 ### InsertNegateRAStatePass
 
-This pass runs after the optimizations are done. In essence, it does the _inverse_
-of MarkRAState pass:
+This pass runs after optimizations. It performns the _inverse_ of MarkRAState pa s:
 1. it reads the RA state annotations attached to the instructions, and
 2. whenever the state changes, it adds a PseudoInstruction that holds an
    OpNegateRAState CFI.
@@ -205,8 +201,14 @@ Some BOLT passes can add new Instructions. In InsertNegateRAStatePass, we have
 to know what RA state these have.
 
 The current solution has the `inferUnknownStates` function to cover these, using
-a fairly simple strategy: unknown states inherit the last known state. Testing so
-far has shown that this implementation is sufficient.
+a fairly simple strategy: unknown states inherit the last known state.
+
+This will be updated to a more robust solution.
+
+> [!important]
+> As issue #160989 describes, unwind info is incorrect in stubs with multiple callers.
+> For this same reason, we cannot generate correct pac-specific unwind info: the signess
+> of the _incorrect_ return address is meaningless.
 
 ### Optimizations requiring special attention
 
@@ -221,6 +223,6 @@ to indicate this.
 
 ## Option to disallow the feature
 
-To aid debugging, we added the `--disallow-pacret` flag. If the flag is used,
-and a function `containedNegateRAState()` after `FillCFIInfoFor()`, BOLT exits
-with an error. With this flag, the feature is on by default.
+The feature can be guarded with the `--update-branch-prediction` flag, which is
+on by default. If the flag is set to false, and a function
+`containedNegateRAState()` after `FillCFIInfoFor()`, BOLT exits with an error.
