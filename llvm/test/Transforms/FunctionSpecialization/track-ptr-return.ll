@@ -48,9 +48,8 @@ entry:
 ; CHECK-NEXT:    [[OP1:%.*]] = call ptr @select_op.specialized.1(ptr @global_true)
 ; CHECK-NEXT:    [[OP2:%.*]] = call ptr @select_op.specialized.2(ptr @global_false)
 ; CHECK-NEXT:    [[C1:%.*]] = call i64 @compute.specialized.3(ptr @plus)
-; CHECK-NEXT:    [[C2:%.*]] = call i64 @compute.specialized.4(ptr @minus)
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i64 [[ADD]]
+; CHECK-NEXT:    [[C2:%.*]] = call i64 @compute.specialized.5(ptr @minus)
+; CHECK-NEXT:    ret i64 2
 ;
 ;
 ; CHECK-LABEL: define ptr @select_op(
@@ -87,15 +86,27 @@ entry:
 ; CHECK-LABEL: define internal i64 @compute.specialized.3(
 ; CHECK-SAME: ptr [[OP:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @plus(i64 1)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @plus.specialized.4(i64 1)
+; CHECK-NEXT:    ret i64 poison
 ;
 ;
-; CHECK-LABEL: define internal i64 @compute.specialized.4(
+; CHECK-LABEL: define internal i64 @plus.specialized.4(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    ret i64 poison
+;
+;
+; CHECK-LABEL: define internal i64 @compute.specialized.5(
 ; CHECK-SAME: ptr [[OP:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @minus(i64 1)
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @minus.specialized.6(i64 1)
+; CHECK-NEXT:    ret i64 poison
+;
+;
+; CHECK-LABEL: define internal i64 @minus.specialized.6(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    ret i64 poison
 ;
 ;
 ; NOLIT-LABEL: define i64 @main() {

@@ -234,13 +234,15 @@ Cost InstCostVisitor::getCodeSizeSavingsForUser(Instruction *User, Value *Use,
 
   Cost CodeSize = 0;
   auto isChainableCall = [&](Instruction *I) -> bool {
+    if (!CallUsers || !UseEdge)
+      return false;
     if (CallInst *CI = dyn_cast<CallInst>(I);
         CI && CI->getIntrinsicID() == llvm::Intrinsic::not_intrinsic) {
       LLVM_DEBUG(
           dbgs() << "FnSpecialization:   Found constant forwarded via a call "
                  << *C << "\n");
       Function *F = CI->getCalledFunction();
-      if (F && CallUsers && UseEdge) { // Avoid function pointers
+      if (F) { // Avoid function pointers
         unsigned Idx = CI->getArgOperandNo(UseEdge);
         LLVM_DEBUG(dbgs() << "FnSpecialization:   Function called: "
                           << F->getName() << " argument number: " << Idx
@@ -248,9 +250,17 @@ Cost InstCostVisitor::getCodeSizeSavingsForUser(Instruction *User, Value *Use,
         (*CallUsers)[CI].first.push_back({Idx, C});
         (*CallUsers)[CI].second = F;
         return true;
+      } else if (Use == CI->getCalledOperand()) {
+        LLVM_DEBUG(dbgs() << "FnSpecialization:   Found call to constant "
+                             "function pointer.\n");
+        Function *CF = dyn_cast<Function>(C);
+        assert(CF && "Indirect call to a non-Function type");
+        (*CallUsers)[CI].second = CF;
       } else {
         LLVM_DEBUG(
             dbgs() << "FnSpecialization:   Could not find call function.\n");
+        unsigned Idx = CI->getArgOperandNo(UseEdge);
+        (*CallUsers)[CI].first.push_back({Idx, C});
       }
     }
     return false;
