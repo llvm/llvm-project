@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// Finds unnecessary uses of the `typename` keyword.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-typename.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-typename.html
 class RedundantTypenameCheck : public ClangTidyCheck {
 public:
   RedundantTypenameCheck(StringRef Name, ClangTidyContext *Context)
