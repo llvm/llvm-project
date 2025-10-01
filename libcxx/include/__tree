@@ -25,6 +25,7 @@
 #include <__memory/swap_allocator.h>
 #include <__memory/unique_ptr.h>
 #include <__new/launder.h>
+#include <__type_traits/conditional.h>
 #include <__type_traits/copy_cvref.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
@@ -34,6 +35,7 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_specialization.h>
 #include <__type_traits/is_swappable.h>
+#include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/remove_const.h>
 #include <__utility/forward.h>
 #include <__utility/lazy_synth_three_way_comparator.h>
@@ -1314,7 +1316,7 @@ private:
   };
 
   class __tree_deleter {
-    __node_allocator& __alloc_;
+    __conditional_t<__is_cheap_to_copy<__node_allocator>, __node_allocator, __node_allocator&> __alloc_;
 
   public:
     using pointer = __node_pointer;
@@ -1348,15 +1350,14 @@ private:
   _LIBCPP_HIDE_FROM_ABI
 #endif
   __node_pointer
-  __copy_construct_tree(__node_pointer __src) {
-    if (!__src)
-      return nullptr;
-
+  __copy_construct_tree_impl(__node_pointer __src) {
     __node_holder __new_node = __construct_node(__src->__get_value());
 
     unique_ptr<__node, __tree_deleter> __left(
-        __copy_construct_tree(static_cast<__node_pointer>(__src->__left_)), __node_alloc_);
-    __node_pointer __right = __copy_construct_tree(static_cast<__node_pointer>(__src->__right_));
+        __src->__left_ ? __copy_construct_tree_impl(static_cast<__node_pointer>(__src->__left_)) : nullptr,
+        __node_alloc_);
+    __node_pointer __right =
+        __src->__right_ ? __copy_construct_tree_impl(static_cast<__node_pointer>(__src->__right_)) : nullptr;
 
     __node_pointer __new_node_ptr = __new_node.release();
 
@@ -1368,6 +1369,10 @@ private:
     if (__new_node_ptr->__right_)
       __new_node_ptr->__right_->__parent_ = static_cast<__end_node_pointer>(__new_node_ptr);
     return __new_node_ptr;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI __node_pointer __copy_construct_tree(__node_pointer __src) {
+    return __src ? __copy_construct_tree_impl(__src) : nullptr;
   }
 
   // This copy assignment will always produce a correct red-black-tree assuming the incoming tree is correct, since our
