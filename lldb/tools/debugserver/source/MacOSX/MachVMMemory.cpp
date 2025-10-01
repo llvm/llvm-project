@@ -173,11 +173,11 @@ nub_bool_t MachVMMemory::GetMemoryTags(task_t task, nub_addr_t address,
           RTLD_DEFAULT, "mach_vm_update_pointers_with_remote_tags");
   assert(mach_vm_update_pointers_with_remote_tags);
 
-  // Max batch size supported by mach_vm_update_pointers_with_remote_tags()
+  // Max batch size supported by mach_vm_update_pointers_with_remote_tags.
   constexpr uint32_t max_ptr_count = VM_OFFSET_LIST_MAX;
   constexpr uint32_t tag_shift = 56;
   constexpr nub_addr_t tag_mask =
-      ((nub_addr_t)0x0f << tag_shift); // Lower half of top byte
+      ((nub_addr_t)0x0f << tag_shift); // Lower half of top byte.
   constexpr uint32_t tag_granule = 16;
 
   mach_msg_type_number_t ptr_count =
