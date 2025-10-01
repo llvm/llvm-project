@@ -22,7 +22,10 @@
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "test-tiling-interface"
@@ -586,6 +589,16 @@ DiagnosedSilenceableFailure transform::TestTileUsingCustomLoopOp::apply(
           ArrayRef<SmallVector<OpFoldResult>> resultOffsets,
           ArrayRef<SmallVector<OpFoldResult>> resultSizes,
           ValueRange destinationTensors) -> LogicalResult {
+    if (loops.size() != 1) {
+      return emitOpError("loop size must be 1");
+    }
+    LoopLikeOpInterface loop = loops.front();
+    scf::ForOp *forOp = dyn_cast<scf::ForOp>(&loop);
+    if (!forOp) {
+      return emitOpError("unexpected loop type. Expecting scf::ForOp");
+    }
+    rewriter.setInsertionPointToEnd(forOp->getBody());
+
     SmallVector<Value> yieldValues;
     yieldValues.reserve(destinationTensors.size());
     for (auto [tiledResult, offsets, sizes, destination] : llvm::zip_equal(
