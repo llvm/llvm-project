@@ -45172,6 +45172,18 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::Wrapper:
   case X86ISD::WrapperRIP:
     return true;
+  case X86ISD::PACKSS:
+  case X86ISD::PACKUS: {
+    APInt DemandedLHS, DemandedRHS;
+    getPackDemandedElts(Op.getSimpleValueType(), DemandedElts, DemandedLHS,
+                        DemandedRHS);
+    return (!DemandedLHS ||
+            DAG.isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedLHS,
+                                                 PoisonOnly, Depth + 1)) &&
+           (!DemandedRHS ||
+            DAG.isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedRHS,
+                                                 PoisonOnly, Depth + 1));
+  }
   case X86ISD::INSERTPS:
   case X86ISD::BLENDI:
   case X86ISD::PSHUFB:
@@ -45241,6 +45253,10 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   // SSE blends.
   case X86ISD::BLENDI:
   case X86ISD::BLENDV:
+    return false;
+  // SSE packs.
+  case X86ISD::PACKSS:
+  case X86ISD::PACKUS:
     return false;
   // SSE target shuffles.
   case X86ISD::INSERTPS:
