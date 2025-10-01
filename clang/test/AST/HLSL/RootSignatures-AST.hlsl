@@ -78,9 +78,7 @@
 // CHECK-SAME:   s1, filter = Anisotropic, addressU = Wrap, addressV = Wrap, addressW = Wrap,
 // CHECK-SAME:   mipLODBias = 0.000000e+00, maxAnisotropy = 16, comparisonFunc = LessEqual,
 // CHECK-SAME:   borderColor = OpaqueWhite, minLOD = 0.000000e+00, maxLOD = 3.402823e+38, space = 0, visibility = All
-// CHECK-V1_0-SAME:  flags = None
-// CHECK-V1_1-SAME:  flags = None
-// CHECK-V1_2-SAME:  flags = None
+// CHECK-SAME:  flags = None
 // CHECK-SAME: )}
 
 // CHECK: -RootSignatureAttr 0x{{.*}} {{.*}} [[SAMPLE_RS_DECL]]
@@ -148,6 +146,7 @@ void different_rs_string_main() {}
 // CHECK: -HLSLRootSignatureDecl 0x{{.*}} {{.*}} implicit [[DIFF_RS_DECL:__hlsl_rootsig_decl_\d*]]
 // CHECK-V1_0: version: 1.0,
 // CHECK-V1_1: version: 1.1,
+// CHECK-V1_2: version: 1.2,
 // CHECK-SAME: RootElements{
 // CHECK-SAME:  StaticSampler(
 // CHECK-SAME:   s0, filter = Anisotropic, addressU = Wrap, addressV = Wrap, addressW = Wrap,
