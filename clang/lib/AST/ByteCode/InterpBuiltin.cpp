@@ -2775,45 +2775,41 @@ static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
 
 enum class Half { None, Low, High };
 
-static bool interp__builtin_ia32_pshuf(InterpState &S, CodePtr OpPC, const CallExpr *Call,
-                                       Half whichHalf) {
+static bool interp__builtin_ia32_pshuf(InterpState &S, CodePtr OpPC,
+                                       const CallExpr *Call, Half whichHalf) {
   assert(Call->getNumArgs() == 2 && "masked forms handled via select*");
   APSInt ControlImm = popToAPSInt(S, Call->getArg(1));
   const Pointer &Src = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
   unsigned NumElems = Dst.getNumElems();
-  PrimType ElemT  = Dst.getFieldDesc()->getPrimType();
+  PrimType ElemT = Dst.getFieldDesc()->getPrimType();
 
-  // Only i16/i32 supported
   unsigned ElemBits = static_cast<unsigned>(primSize(ElemT) * 8);
-  if (ElemBits != 16 && ElemBits != 32) return false;
+  if (ElemBits != 16 && ElemBits != 32)
+    return false;
 
-  // Lane: 64b for MMX, 128b otherwise
   unsigned TotalBits = NumElems * ElemBits;
-  unsigned LaneBits  = (TotalBits == 64) ? 64u : 128u;
-  unsigned LaneElts  = LaneBits / ElemBits;
+  unsigned LaneBits = (TotalBits == 64) ? 64u : 128u;
+  unsigned LaneElts = LaneBits / ElemBits;
   assert(LaneElts && (NumElems % LaneElts == 0));
 
   uint8_t ctl = static_cast<uint8_t>(ControlImm.getZExtValue());
 
   for (unsigned idx = 0; idx != NumElems; idx++) {
     unsigned LaneBase = (idx / LaneElts) * LaneElts;
-    unsigned LaneIdx  = idx % LaneElts;
+    unsigned LaneIdx = idx % LaneElts;
 
-    unsigned SrcIdx = idx; 
+    unsigned SrcIdx = idx;
 
     if (ElemBits == 32) {
-      // PSHUFD: 4×i32 per lane
       unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
       SrcIdx = LaneBase + sel;
-    } else { // 16-bit shuffles
+    } else {
       if (LaneElts == 4) {
-        // MMX: permute all 4×i16
         unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
         SrcIdx = LaneBase + sel;
       } else {
-        // 128b lanes: shuffle 4×i16 half
         constexpr unsigned HalfSize = 4;
         if (whichHalf == Half::Low && LaneIdx < HalfSize) {
           unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
