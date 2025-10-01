@@ -28,7 +28,7 @@ module root { header "root.h" }
 //--- root.h
 // empty
 
-// RUN: %clang++ -std=c++23 -fmodules %t/main.cpp %t/A.cppm %t/B.cppm -fsyntax-only -fdriver-only -MJ %t/deps.json
+// RUN: %clang -std=c++23 -fmodules %t/main.cpp %t/A.cppm %t/B.cppm -fsyntax-only -fdriver-only -MJ %t/deps.json
 // RUN: sed -e '1s/^/[/' -e '$s/,$/]/' %t/deps.json | sed 's:\\\\\?:/:g' > %t/compile_commands.json
 // RUN: clang-scan-deps -compilation-database=%t/compile_commands.json -format experimental-full > %t/result.json
 // RUN: cat %t/result.json
