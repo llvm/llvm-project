@@ -199,6 +199,11 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`readability-redundant-typename
+  <clang-tidy/checks/readability/redundant-typename>` check.
+
+  Finds unnecessary uses of the ``typename`` keyword.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
