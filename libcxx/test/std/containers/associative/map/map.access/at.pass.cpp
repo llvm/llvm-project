@@ -43,18 +43,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(5) == 5.5);
 #ifndef TEST_HAS_NO_EXCEPTIONS
 
-// throwing is not allowed during constant evaluation
-#  if TEST_STD_VER >= 26
-    if (!std::is_constant_evaluated()) {
-#  endif
+    // throwing is not allowed during constant evaluation
+    if (!std::is_constant_evaluated())
       try {
         TEST_IGNORE_NODISCARD m.at(6);
         assert(false);
       } catch (std::out_of_range&) {
       }
-#  if TEST_STD_VER >= 26
-    }
-#  endif
 
 #endif
     assert(m.at(7) == 7.5);
@@ -80,18 +75,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(4) == 4.5);
     assert(m.at(5) == 5.5);
 #ifndef TEST_HAS_NO_EXCEPTIONS
-#  if TEST_STD_VER >= 26
     // throwing is not allowed during constant evaluation
-    if (!std::is_constant_evaluated()) {
-#  endif
+    if (!std::is_constant_evaluated())
       try {
         TEST_IGNORE_NODISCARD m.at(6);
         assert(false);
       } catch (std::out_of_range&) {
       }
-#  if TEST_STD_VER >= 26
-    }
-#  endif
 #endif
 
     assert(m.at(7) == 7.5);
@@ -121,18 +111,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(5) == 5.5);
 #  ifndef TEST_HAS_NO_EXCEPTIONS
 
-// throwing is not allowed during constant evaluation
-#    if TEST_STD_VER >= 26
-    if (!std::is_constant_evaluated()) {
-#    endif
+    // throwing is not allowed during constant evaluation
+    if (!std::is_constant_evaluated())
       try {
         TEST_IGNORE_NODISCARD m.at(6);
         assert(false);
       } catch (std::out_of_range&) {
       }
-#    if TEST_STD_VER >= 26
-    }
-#    endif
 #  endif
     assert(m.at(7) == 7.5);
     assert(m.at(8) == 8.5);
@@ -157,18 +142,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(4) == 4.5);
     assert(m.at(5) == 5.5);
 #  ifndef TEST_HAS_NO_EXCEPTIONS
-// throwing is not allowed during constant evaluation
-#    if TEST_STD_VER >= 26
-    if (!std::is_constant_evaluated()) {
-#    endif
+    // throwing is not allowed during constant evaluation
+    if (!std::is_constant_evaluated())
       try {
         TEST_IGNORE_NODISCARD m.at(6);
         assert(false);
       } catch (std::out_of_range&) {
       }
-#    if TEST_STD_VER >= 26
-    }
-#    endif
 
 #  endif
     assert(m.at(7) == 7.5);
