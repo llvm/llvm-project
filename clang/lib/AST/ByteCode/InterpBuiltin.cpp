@@ -2599,14 +2599,14 @@ static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_ia32_pmadd(InterpState &S, CodePtr OpPC,
-                                      const CallExpr *Call,
-                                      unsigned BuiltinID) {
+                                       const CallExpr *Call,
+                                       unsigned BuiltinID) {
   assert(Call->getArg(0)->getType()->isVectorType() &&
          Call->getArg(1)->getType()->isVectorType());
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
-                                    
+
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   PrimType ElemT = *S.getContext().classify(VT->getElementType());
   unsigned NumElems = VT->getNumElements();
@@ -2623,11 +2623,11 @@ static bool interp__builtin_ia32_pmadd(InterpState &S, CodePtr OpPC,
     APSInt RHS1;
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
       U_LHS0 = LHS.elem<T>(I).toAPSInt();
-      U_LHS1 = LHS.elem<T>(I+1).toAPSInt();
+      U_LHS1 = LHS.elem<T>(I + 1).toAPSInt();
       LHS0 = LHS.elem<T>(I).toAPSInt();
-      LHS1 = LHS.elem<T>(I+1).toAPSInt();
+      LHS1 = LHS.elem<T>(I + 1).toAPSInt();
       RHS0 = RHS.elem<T>(I).toAPSInt();
-      RHS1 = RHS.elem<T>(I+1).toAPSInt();
+      RHS1 = RHS.elem<T>(I + 1).toAPSInt();
     });
 
     APSInt Mul0;
@@ -3429,7 +3429,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pmaddubsw256:
   case clang::X86::BI__builtin_ia32_pmaddubsw512:
     return interp__builtin_ia32_pmadd(S, OpPC, Call, BuiltinID);
-  
+
   case clang::X86::BI__builtin_ia32_pmaddwd128:
   case clang::X86::BI__builtin_ia32_pmaddwd256:
   case clang::X86::BI__builtin_ia32_pmaddwd512:

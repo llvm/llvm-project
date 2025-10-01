@@ -11752,20 +11752,17 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       case clang::X86::BI__builtin_ia32_pmaddubsw128:
       case clang::X86::BI__builtin_ia32_pmaddubsw256:
       case clang::X86::BI__builtin_ia32_pmaddubsw512:
-        ResultElements.push_back(
-            APValue(APSInt(APInt(
-              U_LHS0.zext(BitWidth)) * RHS0.sext(BitWidth)
-              .sadd_sat(APInt(U_LHS1.zext(BitWidth)) * RHS1.sext(BitWidth)
-            ))));
+        ResultElements.push_back(APValue(
+            APSInt(APInt(U_LHS0.zext(BitWidth)) *
+                   RHS0.sext(BitWidth).sadd_sat(APInt(U_LHS1.zext(BitWidth)) *
+                                                RHS1.sext(BitWidth)))));
         break;
       case clang::X86::BI__builtin_ia32_pmaddwd128:
       case clang::X86::BI__builtin_ia32_pmaddwd256:
       case clang::X86::BI__builtin_ia32_pmaddwd512:
         ResultElements.push_back(
-            APValue(APSInt(
-              LHS0.sext(BitWidth) * RHS0.sext(BitWidth) +
-              LHS1.sext(BitWidth) * RHS1.sext(BitWidth)
-            )));
+            APValue(APSInt(LHS0.sext(BitWidth) * RHS0.sext(BitWidth) +
+                           LHS1.sext(BitWidth) * RHS1.sext(BitWidth))));
         break;
       }
     }
