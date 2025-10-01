@@ -326,6 +326,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_INTRINSIC_TRUNC,
                                G_FMINIMUM,
                                G_FMAXIMUM,
+                               G_FMINIMUMNUM,
+                               G_FMAXIMUMNUM,
                                G_INTRINSIC_ROUNDEVEN})
       .legalFor(allFloatScalarsAndVectors);
 
