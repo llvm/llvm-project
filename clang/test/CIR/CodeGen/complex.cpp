@@ -1160,8 +1160,9 @@ void imag_on_scalar_glvalue() {
 
 // CIR: %[[A_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a"]
 // CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
-// CIR: %[[CONST_ZERO:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
-// CIR: cir.store{{.*}} %[[CONST_ZERO]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
+// CIR: %[[TMP_A:.*]] = cir.load %[[A_ADDR]] : !cir.ptr<!cir.float>, !cir.float
+// CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.float -> !cir.float
+// CIR: cir.store{{.*}} %[[A_IMAG]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 
 // LLVM: %[[A_ADDR:.*]] = alloca float, i64 1, align 4
 // LLVM: %[[B_ADDR:.*]] = alloca float, i64 1, align 4
@@ -1205,9 +1206,10 @@ void imag_on_scalar_with_type_promotion() {
 
 // CIR: %[[A_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["a"]
 // CIR: %[[B_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["b", init]
-// CIR: %[[CONST_ZERO:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
-// CIR: %[[CONST_ZERO_F16:.*]] = cir.cast floating %[[CONST_ZERO]] : !cir.float -> !cir.f16
-// CIR: cir.store{{.*}} %[[CONST_ZERO_F16]], %[[B_ADDR]] : !cir.f16, !cir.ptr<!cir.f16>
+// CIR: %[[TMP_A:.*]] = cir.load %[[A_ADDR]] : !cir.ptr<!cir.f16>, !cir.f16
+// CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.f16 -> !cir.f16
+// CIR: %[[A_IMAG_F16:.*]] = cir.cast floating %[[A_IMAG]] : !cir.f16 -> !cir.f16
+// CIR: cir.store{{.*}} %[[A_IMAG_F16]], %[[B_ADDR]] : !cir.f16, !cir.ptr<!cir.f16>
 
 // LLVM: %[[A_ADDR:.*]] = alloca half, i64 1, align 2
 // LLVM: %[[B_ADDR:.*]] = alloca half, i64 1, align 2
@@ -1225,8 +1227,8 @@ void imag_on_const_scalar() {
 // CIR: %[[A_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a"]
 // CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
 // CIR: %[[CONST_ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
-// CIR: %[[CONST_ZERO:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
-// CIR: cir.store{{.*}} %[[CONST_ZERO]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
+// CIR: %[[CONST_IMAG:.*]] = cir.complex.imag %[[CONST_ONE]] : !cir.float -> !cir.float
+// CIR: cir.store{{.*}} %[[CONST_IMAG]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 
 // LLVM: %[[A_ADDR:.*]] = alloca float, i64 1, align 4
 // LLVM: %[[B_ADDR:.*]] = alloca float, i64 1, align 4
