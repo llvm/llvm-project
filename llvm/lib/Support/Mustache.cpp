@@ -56,6 +56,33 @@ static Accessor splitMustacheString(StringRef Str) {
 
 namespace llvm::mustache {
 
+class MustacheOutputStream : public raw_ostream {
+public:
+  MustacheOutputStream() = default;
+  ~MustacheOutputStream() override = default;
+
+  virtual void suspendIndentation() {}
+  virtual void resumeIndentation() {}
+
+private:
+  void anchor() override;
+};
+
+void MustacheOutputStream::anchor() {}
+
+class RawMustacheOutputStream : public MustacheOutputStream {
+public:
+  RawMustacheOutputStream(raw_ostream &OS) : OS(OS) { SetUnbuffered(); }
+
+private:
+  raw_ostream &OS;
+
+  void write_impl(const char *Ptr, size_t Size) override {
+    OS.write(Ptr, Size);
+  }
+  uint64_t current_pos() const override { return OS.tell(); }
+};
+
 class Token {
 public:
   enum class Type {
@@ -156,29 +183,31 @@ public:
 
   void setIndentation(size_t NewIndentation) { Indentation = NewIndentation; };
 
-  void render(const llvm::json::Value &Data, llvm::raw_ostream &OS);
+  void render(const llvm::json::Value &Data, MustacheOutputStream &OS);
 
 private:
-  void renderLambdas(const llvm::json::Value &Contexts, llvm::raw_ostream &OS,
-                     Lambda &L);
+  void renderLambdas(const llvm::json::Value &Contexts,
+                     MustacheOutputStream &OS, Lambda &L);
 
   void renderSectionLambdas(const llvm::json::Value &Contexts,
-                            llvm::raw_ostream &OS, SectionLambda &L);
+                            MustacheOutputStream &OS, SectionLambda &L);
 
-  void renderPartial(const llvm::json::Value &Contexts, llvm::raw_ostream &OS,
-                     ASTNode *Partial);
+  void renderPartial(const llvm::json::Value &Contexts,
+                     MustacheOutputStream &OS, ASTNode *Partial);
 
-  void renderChild(const llvm::json::Value &Context, llvm::raw_ostream &OS);
+  void renderChild(const llvm::json::Value &Context, MustacheOutputStream &OS);
 
   const llvm::json::Value *findContext();
 
-  void renderRoot(const json::Value &CurrentCtx, raw_ostream &OS);
-  void renderText(raw_ostream &OS);
-  void renderPartial(const json::Value &CurrentCtx, raw_ostream &OS);
-  void renderVariable(const json::Value &CurrentCtx, raw_ostream &OS);
-  void renderUnescapeVariable(const json::Value &CurrentCtx, raw_ostream &OS);
-  void renderSection(const json::Value &CurrentCtx, raw_ostream &OS);
-  void renderInvertSection(const json::Value &CurrentCtx, raw_ostream &OS);
+  void renderRoot(const json::Value &CurrentCtx, MustacheOutputStream &OS);
+  void renderText(MustacheOutputStream &OS);
+  void renderPartial(const json::Value &CurrentCtx, MustacheOutputStream &OS);
+  void renderVariable(const json::Value &CurrentCtx, MustacheOutputStream &OS);
+  void renderUnescapeVariable(const json::Value &CurrentCtx,
+                              MustacheOutputStream &OS);
+  void renderSection(const json::Value &CurrentCtx, MustacheOutputStream &OS);
+  void renderInvertSection(const json::Value &CurrentCtx,
+                           MustacheOutputStream &OS);
 
   MustacheContext &Ctx;
   Type Ty;
@@ -455,7 +484,7 @@ static SmallVector<Token> tokenize(StringRef Template) {
 }
 
 // Custom stream to escape strings.
-class EscapeStringStream : public raw_ostream {
+class EscapeStringStream : public MustacheOutputStream {
 public:
   explicit EscapeStringStream(llvm::raw_ostream &WrappedStream,
                               EscapeMap &Escape)
@@ -497,14 +526,17 @@ private:
 };
 
 // Custom stream to add indentation used to for rendering partials.
-class AddIndentationStringStream : public raw_ostream {
+class AddIndentationStringStream : public MustacheOutputStream {
 public:
-  explicit AddIndentationStringStream(llvm::raw_ostream &WrappedStream,
+  explicit AddIndentationStringStream(raw_ostream &WrappedStream,
                                       size_t Indentation)
       : Indentation(Indentation), WrappedStream(WrappedStream),
-        NeedsIndent(true) {
+        NeedsIndent(true), IsSuspended(false) {
     SetUnbuffered();
   }
+
+  void suspendIndentation() override { IsSuspended = true; }
+  void resumeIndentation() override { IsSuspended = false; }
 
 protected:
   void write_impl(const char *Ptr, size_t Size) override {
@@ -513,12 +545,15 @@ protected:
     Indent.resize(Indentation, ' ');
 
     for (char C : Data) {
+      LLVM_DEBUG(dbgs() << "IndentationStream: NeedsIndent=" << NeedsIndent
+                        << ", C='" << C << "', Indentation=" << Indentation
+                        << "\n");
       if (NeedsIndent && C != '\n') {
         WrappedStream << Indent;
         NeedsIndent = false;
       }
       WrappedStream << C;
-      if (C == '\n')
+      if (C == '\n' && !IsSuspended)
         NeedsIndent = true;
     }
   }
@@ -527,8 +562,9 @@ protected:
 
 private:
   size_t Indentation;
-  llvm::raw_ostream &WrappedStream;
+  raw_ostream &WrappedStream;
   bool NeedsIndent;
+  bool IsSuspended;
 };
 
 class Parser {
@@ -618,6 +654,7 @@ void Parser::parseMustache(ASTNode *Parent) {
   }
 }
 static void toMustacheString(const json::Value &Data, raw_ostream &OS) {
+  LLVM_DEBUG(dbgs() << "toMustacheString: kind=" << (int)Data.kind() << "\n");
   switch (Data.kind()) {
   case json::Value::Null:
     return;
@@ -630,6 +667,7 @@ static void toMustacheString(const json::Value &Data, raw_ostream &OS) {
   }
   case json::Value::String: {
     auto Str = *Data.getAsString();
+    LLVM_DEBUG(dbgs() << "  --> writing string: \"" << Str << "\"\n");
     OS << Str.str();
     return;
   }
@@ -649,19 +687,24 @@ static void toMustacheString(const json::Value &Data, raw_ostream &OS) {
   }
 }
 
-void ASTNode::renderRoot(const json::Value &CurrentCtx, raw_ostream &OS) {
+void ASTNode::renderRoot(const json::Value &CurrentCtx,
+                         MustacheOutputStream &OS) {
   renderChild(CurrentCtx, OS);
 }
 
-void ASTNode::renderText(raw_ostream &OS) { OS << Body; }
+void ASTNode::renderText(MustacheOutputStream &OS) { OS << Body; }
 
-void ASTNode::renderPartial(const json::Value &CurrentCtx, raw_ostream &OS) {
+void ASTNode::renderPartial(const json::Value &CurrentCtx,
+                            MustacheOutputStream &OS) {
+  LLVM_DEBUG(dbgs() << "renderPartial: Accessor=" << AccessorValue[0]
+                    << ", Indentation=" << Indentation << "\n");
   auto Partial = Ctx.Partials.find(AccessorValue[0]);
   if (Partial != Ctx.Partials.end())
     renderPartial(CurrentCtx, OS, Partial->getValue().get());
 }
 
-void ASTNode::renderVariable(const json::Value &CurrentCtx, raw_ostream &OS) {
+void ASTNode::renderVariable(const json::Value &CurrentCtx,
+                             MustacheOutputStream &OS) {
   auto Lambda = Ctx.Lambdas.find(AccessorValue[0]);
   if (Lambda != Ctx.Lambdas.end()) {
     renderLambdas(CurrentCtx, OS, Lambda->getValue());
@@ -672,16 +715,22 @@ void ASTNode::renderVariable(const json::Value &CurrentCtx, raw_ostream &OS) {
 }
 
 void ASTNode::renderUnescapeVariable(const json::Value &CurrentCtx,
-                                     raw_ostream &OS) {
+                                     MustacheOutputStream &OS) {
+  LLVM_DEBUG(dbgs() << "renderUnescapeVariable: Accessor=" << AccessorValue[0]
+                    << "\n");
   auto Lambda = Ctx.Lambdas.find(AccessorValue[0]);
   if (Lambda != Ctx.Lambdas.end()) {
     renderLambdas(CurrentCtx, OS, Lambda->getValue());
   } else if (const json::Value *ContextPtr = findContext()) {
+    LLVM_DEBUG(dbgs() << "  --> Found context value, writing to stream.\n");
+    OS.suspendIndentation();
     toMustacheString(*ContextPtr, OS);
+    OS.resumeIndentation();
   }
 }
 
-void ASTNode::renderSection(const json::Value &CurrentCtx, raw_ostream &OS) {
+void ASTNode::renderSection(const json::Value &CurrentCtx,
+                            MustacheOutputStream &OS) {
   auto SectionLambda = Ctx.SectionLambdas.find(AccessorValue[0]);
   if (SectionLambda != Ctx.SectionLambdas.end()) {
     renderSectionLambdas(CurrentCtx, OS, SectionLambda->getValue());
@@ -701,7 +750,7 @@ void ASTNode::renderSection(const json::Value &CurrentCtx, raw_ostream &OS) {
 }
 
 void ASTNode::renderInvertSection(const json::Value &CurrentCtx,
-                                  raw_ostream &OS) {
+                                  MustacheOutputStream &OS) {
   bool IsLambda = Ctx.SectionLambdas.contains(AccessorValue[0]);
   const json::Value *ContextPtr = findContext();
   if (isContextFalsey(ContextPtr) && !IsLambda) {
@@ -709,40 +758,42 @@ void ASTNode::renderInvertSection(const json::Value &CurrentCtx,
   }
 }
 
-void ASTNode::render(const json::Value &CurrentCtx, raw_ostream &OS) {
+void ASTNode::render(const llvm::json::Value &Data, MustacheOutputStream &OS) {
   if (Ty != Root && Ty != Text && AccessorValue.empty())
     return;
   // Set the parent context to the incoming context so that we
   // can walk up the context tree correctly in findContext().
-  ParentContext = &CurrentCtx;
+  ParentContext = &Data;
 
   switch (Ty) {
   case Root:
-    renderRoot(CurrentCtx, OS);
+    renderRoot(Data, OS);
     return;
   case Text:
     renderText(OS);
     return;
   case Partial:
-    renderPartial(CurrentCtx, OS);
+    renderPartial(Data, OS);
     return;
   case Variable:
-    renderVariable(CurrentCtx, OS);
+    renderVariable(Data, OS);
     return;
   case UnescapeVariable:
-    renderUnescapeVariable(CurrentCtx, OS);
+    renderUnescapeVariable(Data, OS);
     return;
   case Section:
-    renderSection(CurrentCtx, OS);
+    renderSection(Data, OS);
     return;
   case InvertSection:
-    renderInvertSection(CurrentCtx, OS);
+    renderInvertSection(Data, OS);
     return;
   }
   llvm_unreachable("Invalid ASTNode type");
 }
 
 const json::Value *ASTNode::findContext() {
+  LLVM_DEBUG(dbgs() << "findContext: AccessorValue[0]=" << AccessorValue[0]
+                    << "\n");
   // The mustache spec allows for dot notation to access nested values
   // a single dot refers to the current context.
   // We attempt to find the JSON context in the current node, if it is not
@@ -757,12 +808,22 @@ const json::Value *ASTNode::findContext() {
   StringRef CurrentAccessor = AccessorValue[0];
   ASTNode *CurrentParent = Parent;
 
+  LLVM_DEBUG(dbgs() << "findContext: ParentContext: ";
+             if (ParentContext) ParentContext->print(dbgs());
+             else dbgs() << "nullptr"; dbgs() << "\n");
+
   while (!CurrentContext || !CurrentContext->get(CurrentAccessor)) {
+    LLVM_DEBUG(dbgs() << "findContext: climbing parent\n");
     if (CurrentParent->Ty != Root) {
       CurrentContext = CurrentParent->ParentContext->getAsObject();
       CurrentParent = CurrentParent->Parent;
+      LLVM_DEBUG(dbgs() << "findContext: new ParentContext: ";
+                 if (CurrentParent->ParentContext)
+                     CurrentParent->ParentContext->print(dbgs());
+                 else dbgs() << "nullptr"; dbgs() << "\n");
       continue;
     }
+    LLVM_DEBUG(dbgs() << "findContext: reached root, not found\n");
     return nullptr;
   }
   const json::Value *Context = nullptr;
@@ -778,22 +839,28 @@ const json::Value *ASTNode::findContext() {
       Context = CurrentValue;
     }
   }
+  LLVM_DEBUG(dbgs() << "findContext: found value: ";
+             if (Context) Context->print(dbgs()); else dbgs() << "nullptr";
+             dbgs() << "\n");
   return Context;
 }
 
-void ASTNode::renderChild(const json::Value &Contexts, llvm::raw_ostream &OS) {
+void ASTNode::renderChild(const json::Value &Contexts,
+                          MustacheOutputStream &OS) {
   for (AstPtr &Child : Children)
     Child->render(Contexts, OS);
 }
 
-void ASTNode::renderPartial(const json::Value &Contexts, llvm::raw_ostream &OS,
-                            ASTNode *Partial) {
+void ASTNode::renderPartial(const json::Value &Contexts,
+                            MustacheOutputStream &OS, ASTNode *Partial) {
+  LLVM_DEBUG(dbgs() << "renderPartial (helper): Indentation=" << Indentation
+                    << "\n");
   AddIndentationStringStream IS(OS, Indentation);
   Partial->render(Contexts, IS);
 }
 
-void ASTNode::renderLambdas(const json::Value &Contexts, llvm::raw_ostream &OS,
-                            Lambda &L) {
+void ASTNode::renderLambdas(const json::Value &Contexts,
+                            MustacheOutputStream &OS, Lambda &L) {
   json::Value LambdaResult = L();
   std::string LambdaStr;
   raw_string_ostream Output(LambdaStr);
@@ -810,7 +877,7 @@ void ASTNode::renderLambdas(const json::Value &Contexts, llvm::raw_ostream &OS,
 }
 
 void ASTNode::renderSectionLambdas(const json::Value &Contexts,
-                                   llvm::raw_ostream &OS, SectionLambda &L) {
+                                   MustacheOutputStream &OS, SectionLambda &L) {
   json::Value Return = L(RawBody);
   if (isFalsey(Return))
     return;
@@ -823,7 +890,8 @@ void ASTNode::renderSectionLambdas(const json::Value &Contexts,
 }
 
 void Template::render(const json::Value &Data, llvm::raw_ostream &OS) {
-  Tree->render(Data, OS);
+  RawMustacheOutputStream MOS(OS);
+  Tree->render(Data, MOS);
 }
 
 void Template::registerPartial(std::string Name, std::string Partial) {
