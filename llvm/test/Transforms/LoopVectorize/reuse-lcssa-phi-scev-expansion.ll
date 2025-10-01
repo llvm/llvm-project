@@ -13,7 +13,7 @@ define void @reuse_lcssa_phi_for_add_rec1(ptr %head) {
 ; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[FOR:%.*]] = phi ptr [ [[HEAD]], %[[ENTRY]] ], [ [[L_1:%.*]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[L_1]] = load ptr, ptr [[FOR]], align 8
-; CHECK-NEXT:    [[IV_2_NEXT]] = add nuw nsw i32 [[IV_2]], 1
+; CHECK-NEXT:    [[IV_2_NEXT]] = add nuw i32 [[IV_2]], 1
 ; CHECK-NEXT:    [[EC_1:%.*]] = icmp eq ptr [[L_1]], null
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[EC_1]], label %[[PH:.*]], label %[[LOOP_1]]
