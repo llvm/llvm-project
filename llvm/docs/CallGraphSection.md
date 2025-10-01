@@ -14,5 +14,5 @@ Each record in the `.callgraph` section has the following binary layout:
 | Function Type ID                       | `uint64_t`    | 64          | The type ID of the function. This field is non-zero if the function is an indirect call target and its type is known. |
 | Number of Unique Direct Callees        | `uint32_t`    | 32          | The number of unique direct call destinations from this function.                                       |
 | Number of Unique Indirect Target Type IDs| `uint32_t`    | 32          | The number of unique indirect call target type IDs within the function.                                 |
-| Indirect Target Type IDs Array         | `uint64_t[]`  | Variable    | An array of unique indirect call target type IDs.                                                       |
 | Direct Callees Array                   | `uintptr_t[]` | Variable    | An array of unique direct callee entry point addresses.                                                 |
+| Indirect Target Type IDs Array         | `uint64_t[]`  | Variable    | An array of unique indirect call target type IDs.                                                       |
