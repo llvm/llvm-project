@@ -1702,11 +1702,14 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   // Emit function's call graph information.
   // 1) CallGraphSectionFormatVersion
   // 2) Flags - Bit 0 is set to 1 if the function is a valid indirect target.
-  // Other bits are reserved for future use. 3) Function entry PC. 4)
-  // FunctionTypeID if the function is indirect target and its type id is known,
-  // otherwise it is set to 0. 5) Number of unique direct callees. 6) Number of
-  // unique indirect target type IDs. 7) For each unique direct callee, the
-  // callee's PC. 8) Each unique indirect target type id.
+  // Other bits are reserved for future use.
+  // 3) Function entry PC.
+  // 4) FunctionTypeID if the function is indirect target and its type id is
+  // known, otherwise it is set to 0.
+  // 5) Number of unique direct callees.
+  // 6) Number of unique indirect target type IDs.
+  // 7) For each unique direct callee, the callee's PC.
+  // 8) Each unique indirect target type id.
   OutStreamer->emitInt8(CallGraphSectionFormatVersion::V_0);
   OutStreamer->emitInt8(Flags);
   OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
