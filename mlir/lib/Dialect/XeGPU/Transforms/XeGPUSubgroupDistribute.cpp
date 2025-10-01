@@ -1415,11 +1415,6 @@ namespace {
 struct XeGPUSubgroupDistributePass final
     : public xegpu::impl::XeGPUSubgroupDistributeBase<
           XeGPUSubgroupDistributePass> {
-  XeGPUSubgroupDistributePass() = default;
-  XeGPUSubgroupDistributePass(const XeGPUSubgroupDistributePass &other) =
-      default;
-  XeGPUSubgroupDistributePass(xegpu::XeGPUSubgroupDistributeOptions options)
-      : XeGPUSubgroupDistributeBase(options) {}
   void runOnOperation() override;
 };
 } // namespace
@@ -1527,10 +1522,9 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     return laneVal;
   };
 
-  if (enableSGReductions)
-    vector::populateDistributeReduction(
-        patterns, warpReduction,
-        /*pattern benefit=*/regularPatternBenefit);
+  vector::populateDistributeReduction(
+      patterns, warpReduction,
+      /*pattern benefit=*/regularPatternBenefit);
 
   vector::populatePropagateWarpVectorDistributionPatterns(
       patterns, distributionFn, shuffleFn,
