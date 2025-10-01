@@ -734,10 +734,10 @@ void make_absolute(const Twine &current_directory,
   }
 
   if (rootName && !rootDirectory) {
-    StringRef pRootName      = root_name(p);
+    StringRef pRootName = root_name(p);
     StringRef bRootDirectory = root_directory(current_dir);
-    StringRef bRelativePath  = relative_path(current_dir);
-    StringRef pRelativePath  = relative_path(p);
+    StringRef bRelativePath = relative_path(current_dir);
+    StringRef pRelativePath = relative_path(p);
 
     SmallString<128> res;
     append(res, pRootName, bRootDirectory, bRelativePath, pRelativePath);
