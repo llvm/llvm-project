@@ -1428,8 +1428,11 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
     DeclareImplicitDeductionGuidesForTypeAlias(*this, AliasTemplate, Loc);
     return;
   }
-  if (CXXRecordDecl *DefRecord =
-          cast<CXXRecordDecl>(Template->getTemplatedDecl())->getDefinition()) {
+  CXXRecordDecl *DefRecord =
+      llvm::dyn_cast_or_null<CXXRecordDecl>(Template->getTemplatedDecl());
+  if (!DefRecord)
+    return;
+  if (DefRecord->getDefinition()) {
     if (TemplateDecl *DescribedTemplate =
             DefRecord->getDescribedClassTemplate())
       Template = DescribedTemplate;
