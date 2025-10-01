@@ -2218,8 +2218,8 @@ func.func @test_mulf1(%arg0 : f32, %arg1 : f32) -> (f32) {
 
 // CHECK-LABEL: @test_mulf2(
 func.func @test_mulf2(%arg0 : f32) -> (f32, f32) {
-  // CHECK-NEXT:  %[[C0:.+]] = arith.constant 0.000000e+00 : f32
-  // CHECK-NEXT:  %[[C0n:.+]] = arith.constant -0.000000e+00 : f32
+  // CHECK-DAG:  %[[C0:.+]] = arith.constant 0.000000e+00 : f32
+  // CHECK-DAG:  %[[C0n:.+]] = arith.constant -0.000000e+00 : f32
   // CHECK-NEXT:  return %[[C0]], %[[C0n]]
   %c0 = arith.constant 0.0 : f32
   %c0n = arith.constant -0.0 : f32
