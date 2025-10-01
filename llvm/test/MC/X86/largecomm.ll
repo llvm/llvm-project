@@ -1,7 +1,7 @@
 ; RUN: llc -filetype=asm -code-model=medium %s --large-data-threshold=65636 -o - | FileCheck %s --check-prefix=CHECKASM-MEDIUM
 ; RUN: llc -filetype=asm -code-model=large %s -o - | FileCheck %s --check-prefix=CHECKASM-LARGE
-; RUN: llc -filetype=asm -code-model=medium %s --large-data-threshold=65636 -o - | llvm-mc -filetype=obj - | llvm-readelf -s - | FileCheck %s --check-prefix=CHECKOBJ-MEDIUM
-; RUN: llc -filetype=asm -code-model=large %s -o - | llvm-mc -filetype=obj - | llvm-readelf -s - | FileCheck %s --check-prefix=CHECKOBJ-LARGE
+; RUN: llc -filetype=asm -code-model=medium %s --large-data-threshold=65636 -o - | llvm-mc -triple x86_64-linux-gnu -filetype=obj - | llvm-readelf -s - | FileCheck %s --check-prefix=CHECKOBJ-MEDIUM
+; RUN: llc -filetype=asm -code-model=large %s -o - | llvm-mc -triple x86_64-linux-gnu -filetype=obj - | llvm-readelf -s - | FileCheck %s --check-prefix=CHECKOBJ-LARGE
 
 ; CHECKASM-MEDIUM:       .section	.lbss,"awl",@nobits
 ; CHECKASM-MEDIUM-NEXT:	 .type	__BLNK__,@object                # @__BLNK__

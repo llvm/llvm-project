@@ -888,7 +888,7 @@ bool ELFAsmParser::parseDirectiveCGProfile(StringRef S, SMLoc Loc) {
   return MCAsmParserExtension::parseDirectiveCGProfile(S, Loc);
 }
 
-bool ELFAsmParser::parseDirectiveLargecomm(StringRef s, SMLoc Loc) {
+bool ELFAsmParser::parseDirectiveLargecomm(StringRef, SMLoc Loc) {
   if (getParser().checkForValidSection())
     return true;
 

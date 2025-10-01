@@ -786,10 +786,10 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   // Place the large common variables in the .lbss section for the medium and
   // large code models on x86_64. (AMD64 ABI, 9.2.5 COMMON blocks)
-  MCSection *largeCommonSec =
+  MCSection *LargeCommonSec =
       getObjFileLowering().LargeSectionForCommon(GV, GVKind, TM);
-  if (largeCommonSec)
-    OutStreamer->switchSection(largeCommonSec);
+  if (LargeCommonSec)
+    OutStreamer->switchSection(LargeCommonSec);
 
   if (MAI->hasDotTypeDotSizeDirective())
     OutStreamer->emitSymbolAttribute(EmittedSym, MCSA_ELF_TypeObject);
@@ -809,7 +809,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (GVKind.isCommon()) {
     if (Size == 0) Size = 1;   // .comm Foo, 0 is undefined, avoid it.
     // .comm _foo, 42, 4
-    if (largeCommonSec)
+    if (LargeCommonSec)
       OutStreamer->emitLargeCommonSymbol(GVSym, Size, Alignment);
     else
       OutStreamer->emitCommonSymbol(GVSym, Size, Alignment);
