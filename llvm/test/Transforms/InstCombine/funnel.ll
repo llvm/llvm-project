@@ -644,7 +644,7 @@ define i16 @fshl_concat_vector_may_produce_poison(i4 %x, i12 %y) {
 ; CHECK-LABEL: @fshl_concat_vector_may_produce_poison(
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze i4 [[X:%.*]]
 ; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext i4 [[X_FR]] to i16
-; CHECK-NEXT:    [[SLX:%.*]] = shl nuw nsw i16 [[ZEXT_X]], 12
+; CHECK-NEXT:    [[SLX:%.*]] = shl nuw i16 [[ZEXT_X]], 12
 ; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext i12 [[Y:%.*]] to i16
 ; CHECK-NEXT:    [[XY:%.*]] = or disjoint i16 [[SLX]], [[ZEXT_Y]]
 ; CHECK-NEXT:    call void @use(i16 [[XY]])
