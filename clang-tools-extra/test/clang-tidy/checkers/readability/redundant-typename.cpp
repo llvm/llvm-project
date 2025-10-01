@@ -122,8 +122,14 @@ struct PartiallySpecializedType {};
 template <typename T>
 struct PartiallySpecializedType<T, typename T::R> {};
 
+#if __cplusplus >= 201402L
+
 template <typename T>
-auto v = typename T::type();
+typename T::R v = typename T::R();
+// CHECK-MESSAGES-20: :[[@LINE-1]]:1: warning: redundant 'typename' [readability-redundant-typename]
+// CHECK-FIXES-20: T::R v = typename T::R();
+
+#endif // __cplusplus >= 201402L
 
 template <typename T>
 typename T::R f();
