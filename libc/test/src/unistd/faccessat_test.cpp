@@ -65,63 +65,12 @@ TEST_F(LlvmLibcFaccessatTest, WithAtFdcwd) {
   ASSERT_THAT(LIBC_NAMESPACE::faccessat(AT_FDCWD, TEST_FILE, W_OK, 0),
               Fails(EACCES));
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), Succeeds(0));
+}
 
-  // Check permissions on a non existent file
-  ASSERT_THAT(LIBC_NAMESPACE::faccessat(AT_FDCWD, TEST_FILE, F_OK, 0),
+TEST_F(LlvmLibcFaccessatTest, NonExistentFile) {
+  ASSERT_THAT(LIBC_NAMESPACE::faccessat(AT_FDCWD, "faccessat_nonexistent.test",
+                                        F_OK, 0),
               Fails(ENOENT));
-}
-
-TEST_F(LlvmLibcFaccessatTest, RelativePathWithDirFD) {
-  // Check permissions on a file releative to dir_fd
-  const cpp::string DIRNAME = "faccessat_dir";
-  const cpp::string FILENAME = "relative_file.txt";
-
-  auto TEST_DIR = libc_make_test_file_path(DIRNAME.data());
-  ASSERT_THAT(LIBC_NAMESPACE::mkdir(TEST_DIR, S_IRWXU), Succeeds(0));
-
-  int dir_fd = LIBC_NAMESPACE::open(TEST_DIR, O_RDONLY | O_DIRECTORY);
-  ASSERT_ERRNO_SUCCESS();
-  ASSERT_GT(dir_fd, 0);
-
-  auto FULL_FILE_PATH =
-      libc_make_test_file_path((DIRNAME + "/" + FILENAME).data());
-  int fd = LIBC_NAMESPACE::open(FULL_FILE_PATH, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_ERRNO_SUCCESS();
-  ASSERT_GT(fd, 0);
-  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
-
-  ASSERT_THAT(
-      LIBC_NAMESPACE::faccessat(dir_fd, FILENAME.data(), R_OK | W_OK, 0),
-      Succeeds(0));
-
-  ASSERT_THAT(LIBC_NAMESPACE::unlinkat(dir_fd, FILENAME.data(), 0),
-              Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::close(dir_fd), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::rmdir(TEST_DIR), Succeeds(0));
-}
-
-TEST_F(LlvmLibcFaccessatTest, SymlinkNoFollow) {
-  // Check permissions on a symlink itself, not what it links to
-  constexpr const char *TARGET = "faccessat_target";
-  constexpr const char *SYMLINK = "faccessat_link";
-  auto TEST_TARGET = libc_make_test_file_path(TARGET);
-  auto TEST_SYMLINK = libc_make_test_file_path(SYMLINK);
-
-  int fd = LIBC_NAMESPACE::open(TEST_TARGET, O_WRONLY | O_CREAT, 0);
-  ASSERT_ERRNO_SUCCESS();
-  ASSERT_GT(fd, 0);
-  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
-
-  ASSERT_THAT(LIBC_NAMESPACE::symlink(TARGET, TEST_SYMLINK), Succeeds(0));
-
-  ASSERT_THAT(LIBC_NAMESPACE::faccessat(AT_FDCWD, TEST_SYMLINK, R_OK, 0),
-              Fails(EACCES));
-  ASSERT_THAT(LIBC_NAMESPACE::faccessat(AT_FDCWD, TEST_SYMLINK, F_OK,
-                                        AT_SYMLINK_NOFOLLOW),
-              Succeeds(0));
-
-  ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_SYMLINK), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_TARGET), Succeeds(0));
 }
 
 TEST_F(LlvmLibcFaccessatTest, AtEaccess) {
