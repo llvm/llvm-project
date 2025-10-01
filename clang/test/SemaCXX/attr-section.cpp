@@ -69,3 +69,11 @@ __attribute__((section("non_trivial_ctor"))) const t1 v1; // expected-note {{dec
 extern const t1 v2;
 __attribute__((section("non_trivial_ctor"))) const t1 v2{3}; // expected-error {{'v2' causes a section type conflict with 'v1'}}
 } // namespace non_trivial_ctor
+
+namespace incomplete_type {
+template <class T>
+struct A {
+  struct B;
+  static constexpr B b{nullptr};
+};
+}

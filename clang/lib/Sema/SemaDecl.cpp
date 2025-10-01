@@ -14918,52 +14918,57 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   }
 
   // Apply section attributes and pragmas to global variables.
-  if (GlobalStorage && var->isThisDeclarationADefinition() &&
-      !inTemplateInstantiation()) {
-    PragmaStack<StringLiteral *> *Stack = nullptr;
-    int SectionFlags = ASTContext::PSF_Read;
-    bool MSVCEnv =
-        Context.getTargetInfo().getTriple().isWindowsMSVCEnvironment();
-    std::optional<QualType::NonConstantStorageReason> Reason;
-    if (HasConstInit &&
-        !(Reason = var->getType().isNonConstantStorage(Context, true, false))) {
-      Stack = &ConstSegStack;
-    } else {
-      SectionFlags |= ASTContext::PSF_Write;
-      Stack = var->hasInit() && HasConstInit ? &DataSegStack : &BSSSegStack;
-    }
-    if (const SectionAttr *SA = var->getAttr<SectionAttr>()) {
-      if (SA->getSyntax() == AttributeCommonInfo::AS_Declspec)
-        SectionFlags |= ASTContext::PSF_Implicit;
-      UnifySection(SA->getName(), SectionFlags, var);
-    } else if (Stack->CurrentValue) {
-      if (Stack != &ConstSegStack && MSVCEnv &&
-          ConstSegStack.CurrentValue != ConstSegStack.DefaultValue &&
-          var->getType().isConstQualified()) {
-        assert((!Reason || Reason != QualType::NonConstantStorageReason::
-                                         NonConstNonReferenceType) &&
-               "This case should've already been handled elsewhere");
-        Diag(var->getLocation(), diag::warn_section_msvc_compat)
-                << var << ConstSegStack.CurrentValue << (int)(!HasConstInit
-            ? QualType::NonConstantStorageReason::NonTrivialCtor
-            : *Reason);
+  [&]() {
+    if (GlobalStorage && var->isThisDeclarationADefinition() &&
+        !inTemplateInstantiation()) {
+      PragmaStack<StringLiteral *> *Stack = nullptr;
+      int SectionFlags = ASTContext::PSF_Read;
+      bool MSVCEnv =
+          Context.getTargetInfo().getTriple().isWindowsMSVCEnvironment();
+      std::optional<QualType::NonConstantStorageReason> Reason;
+      if (HasConstInit && var->getType()->isIncompleteType())
+        return;
+      if (HasConstInit && !(Reason = var->getType().isNonConstantStorage(
+                                Context, true, false))) {
+        Stack = &ConstSegStack;
+      } else {
+        SectionFlags |= ASTContext::PSF_Write;
+        Stack = var->hasInit() && HasConstInit ? &DataSegStack : &BSSSegStack;
       }
-      SectionFlags |= ASTContext::PSF_Implicit;
-      auto SectionName = Stack->CurrentValue->getString();
-      var->addAttr(SectionAttr::CreateImplicit(Context, SectionName,
-                                               Stack->CurrentPragmaLocation,
-                                               SectionAttr::Declspec_allocate));
-      if (UnifySection(SectionName, SectionFlags, var))
-        var->dropAttr<SectionAttr>();
-    }
+      if (const SectionAttr *SA = var->getAttr<SectionAttr>()) {
+        if (SA->getSyntax() == AttributeCommonInfo::AS_Declspec)
+          SectionFlags |= ASTContext::PSF_Implicit;
+        UnifySection(SA->getName(), SectionFlags, var);
+      } else if (Stack->CurrentValue) {
+        if (Stack != &ConstSegStack && MSVCEnv &&
+            ConstSegStack.CurrentValue != ConstSegStack.DefaultValue &&
+            var->getType().isConstQualified()) {
+          assert((!Reason || Reason != QualType::NonConstantStorageReason::
+                                           NonConstNonReferenceType) &&
+                 "This case should've already been handled elsewhere");
+          Diag(var->getLocation(), diag::warn_section_msvc_compat)
+              << var << ConstSegStack.CurrentValue
+              << (int)(!HasConstInit
+                           ? QualType::NonConstantStorageReason::NonTrivialCtor
+                           : *Reason);
+        }
+        SectionFlags |= ASTContext::PSF_Implicit;
+        auto SectionName = Stack->CurrentValue->getString();
+        var->addAttr(SectionAttr::CreateImplicit(
+            Context, SectionName, Stack->CurrentPragmaLocation,
+            SectionAttr::Declspec_allocate));
+        if (UnifySection(SectionName, SectionFlags, var))
+          var->dropAttr<SectionAttr>();
+      }
 
-    // Apply the init_seg attribute if this has an initializer.  If the
-    // initializer turns out to not be dynamic, we'll end up ignoring this
-    // attribute.
-    if (CurInitSeg && var->getInit())
-      var->addAttr(InitSegAttr::CreateImplicit(Context, CurInitSeg->getString(),
-                                               CurInitSegLoc));
-  }
+      // Apply the init_seg attribute if this has an initializer.  If the
+      // initializer turns out to not be dynamic, we'll end up ignoring this
+      // attribute.
+      if (CurInitSeg && var->getInit())
+        var->addAttr(InitSegAttr::CreateImplicit(
+            Context, CurInitSeg->getString(), CurInitSegLoc));
+    }
+  }();
 
   // All the following checks are C++ only.
   if (!getLangOpts().CPlusPlus) {
