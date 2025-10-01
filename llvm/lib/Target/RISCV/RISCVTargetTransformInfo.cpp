@@ -2753,8 +2753,7 @@ bool RISCVTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     if (auto *TarExtTy =
             dyn_cast<TargetExtType>(II->getArgOperand(0)->getType()))
       return TarExtTy->getIntParameter(0);
-    if (IsWrite)
-      return PtrOperandNo;
+
     return 1;
   };
 
