@@ -124,7 +124,7 @@ bool RTDEF(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
   // F'23 16.9.86 p 5
   // If MOLD is unlimited polymorphic and is either a disassociated pointer or
   // unallocated allocatable variable, the result is true;
-  if ((mold.IsPointer() && !mold.IsAssociated()) || 
+  if ((mold.IsPointer() && !mold.IsAssociated()) ||
       (mold.IsAllocatable() && !mold.IsAllocated())) {
     return true;
   } else if ((a.IsPointer() && !mold.IsAssociated()) ||
@@ -139,22 +139,22 @@ bool RTDEF(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
       // true if and only if the dynamic type of A is an extension type of the
       // dynamic type of MOLD.
       for (const typeInfo::DerivedType *derivedTypeA{GetDerivedType(a)};
-           derivedTypeA; derivedTypeA = derivedTypeA->GetParentType()) {
-          if (derivedTypeA == derivedTypeMold) {
-            return true;
-          }
+          derivedTypeA; derivedTypeA = derivedTypeA->GetParentType()) {
+        if (derivedTypeA == derivedTypeMold) {
+          return true;
+        }
       }
       return false;
     }
     // MOLD is unlimited polymorphic and unallocated/disassociated.
-    // This might be impossible to reach since the case is now handled explicitly
-    // above.
+    // This might be impossible to reach since the case is now handled
+    // explicitly above.
     return true;
   } else {
     // F'23: otherwise, the result is processor dependent.
     // extension, if types are not extensible, true if they match.
-    return aType != CFI_type_other && moldType != CFI_type_other && 
-      aType == moldType;
+    return aType != CFI_type_other && moldType != CFI_type_other &&
+        aType == moldType;
   }
 }
 
