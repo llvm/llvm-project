@@ -2738,9 +2738,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   Error releaseInterop(omp_interop_val_t *Interop) override {
-    if (!Interop)
-      return Plugin::success();
-    delete Interop;
+    if (Interop)
+      delete Interop;
     return Plugin::success();
   }
 

@@ -942,8 +942,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
       if (auto Err = setContext())
         return Err;
       CUstream Stream;
-      if (auto Err = CUDAStreamManager.getResource(
-              *reinterpret_cast<CUstream *>(&Stream)))
+      if (auto Err = CUDAStreamManager.getResource(Stream))
         return Err;
 
       Ret->async_info->Queue = Stream;
