@@ -55,6 +55,11 @@ class TestStatsAPI(TestBase):
             stats_json,
             'Make sure the "frameVariable" key in in target.GetStatistics()["targets"][0]',
         )
+        self.assertNotIn(
+            "loadCoreTime",
+            stats_json,
+            "LoadCoreTime should not be present in a live, non-coredump target",
+        )
         expressionEvaluation = stats_json["expressionEvaluation"]
         self.assertIn(
             "successes",
