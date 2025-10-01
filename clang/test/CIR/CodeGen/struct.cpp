@@ -154,3 +154,32 @@ void choose_expr() {
 // OGCG:   %[[B_ADDR:.*]] = alloca %struct.CompleteS, align 4
 // OGCG:   %[[C_ADDR:.*]] = alloca %struct.CompleteS, align 4
 // OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[C_ADDR]], ptr align 4 %[[A_ADDR]], i64 8, i1 false)
+
+void generic_selection() {
+  CompleteS a;
+  CompleteS b;
+  int c;
+  CompleteS d = _Generic(c, int : a, default: b);
+}
+
+// CIR: cir.func{{.*}} @_Z17generic_selectionv()
+// CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a"]
+// CIR:   %[[B_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["b"]
+// CIR:   %[[C_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["c"]
+// CIR:   %[[D_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["d", init]
+// TODO(cir): Call to default copy constructor should be replaced by `cir.copy` op
+// CIR:   cir.call @_ZN9CompleteSC1ERKS_(%[[D_ADDR]], %[[A_ADDR]]) nothrow : (!cir.ptr<!rec_CompleteS>, !cir.ptr<!rec_CompleteS>) -> ()
+
+// LLVM: define{{.*}} void @_Z17generic_selectionv()
+// LLVM:   %1 = alloca %struct.CompleteS, i64 1, align 4
+// LLVM:   %2 = alloca %struct.CompleteS, i64 1, align 4
+// LLVM:   %3 = alloca i32, i64 1, align 4
+// LLVM:   %4 = alloca %struct.CompleteS, i64 1, align 4
+// LLVM:   call void @_ZN9CompleteSC1ERKS_(ptr %4, ptr %1)
+
+// OGCG: define{{.*}} void @_Z17generic_selectionv()
+// OGCG:   %[[A_ADDR:.*]] = alloca %struct.CompleteS, align 4
+// OGCG:   %[[B_ADDR:.*]] = alloca %struct.CompleteS, align 4
+// OGCG:   %[[C_ADDR:.*]] = alloca i32, align 4
+// OGCG:   %[[D_ADDR:.*]] = alloca %struct.CompleteS, align 4
+// OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[D_ADDR]], ptr align 4 %[[A_ADDR]], i64 8, i1 false)
