@@ -75,8 +75,9 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
 
     auto callOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
         op, funcOp, adaptor.getOperands());
-    // Preserve the fastmath flags in our MLIR op for later use: We need to
-    // convert our MLIR fastmath attrs into something compatible with llvm.
+    // Preserve fastmath flags in our MLIR op when converting to llvm function
+    // calls, in order to allow further fastmath optimizations: We thus need to
+    // convert arith fastmath attrs into attrs recognized by llvm.
     arith::AttrConvertFastMathToLLVM<Op, LLVM::CallOp> fastAttrConverter(op);
     mlir::NamedAttribute fastAttr = fastAttrConverter.getAttrs()[0];
     callOp->setAttr(fastAttr.getName(), fastAttr.getValue());
