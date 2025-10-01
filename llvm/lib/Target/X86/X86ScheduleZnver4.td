@@ -661,7 +661,7 @@ def : InstRW<[Zn4WriteCMPXCHG8rm_LCMPXCHG8], (instrs CMPXCHG8rm, LCMPXCHG8)>;
 
 def Zn4WriteCMPXCHG8B : SchedWriteRes<[Zn4ALU0123]> {
   let Latency = 3; // FIXME: not from llvm-exegesis
-  let ReleaseAtCycles = [24];
+  let ReleaseAtCycles = [20];
   let NumMicroOps = 15;
 }
 def : InstRW<[Zn4WriteCMPXCHG8B], (instrs CMPXCHG8B)>;
