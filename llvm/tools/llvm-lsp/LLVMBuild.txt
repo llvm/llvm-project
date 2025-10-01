@@ -24,3 +24,6 @@ required_libraries =
  Support
  Analysis
  Passes
+ SupportLSP
+ TransformUtils
+ AsmParser
