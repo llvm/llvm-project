@@ -94,7 +94,12 @@
 ; GCN-O0-NEXT:        Dominator Tree Construction
 ; GCN-O0-NEXT:        Cycle Info Analysis
 ; GCN-O0-NEXT:        Uniformity Analysis
+; GCN-O0-NEXT:        Natural Loop Information
+; GCN-O0-NEXT:        Post-Dominator Tree Construction
+; GCN-O0-NEXT:        Branch Probability Analysis
 ; GCN-O0-NEXT:        Assignment Tracking Analysis
+; GCN-O0-NEXT:        Lazy Branch Probability Analysis
+; GCN-O0-NEXT:        Lazy Block Frequency Analysis
 ; GCN-O0-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O0-NEXT:        MachineDominator Tree Construction
 ; GCN-O0-NEXT:        SI Fix SGPR copies

@@ -398,15 +398,14 @@ void SelectionDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addRequired<AssumptionCacheTracker>();
-  if (UseMBPI && OptLevel != CodeGenOptLevel::None)
-      AU.addRequired<BranchProbabilityInfoWrapperPass>();
+  if (UseMBPI)
+    AU.addRequired<BranchProbabilityInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
   // AssignmentTrackingAnalysis only runs if assignment tracking is enabled for
   // the module.
   AU.addRequired<AssignmentTrackingAnalysis>();
   AU.addPreserved<AssignmentTrackingAnalysis>();
-  if (OptLevel != CodeGenOptLevel::None)
-      LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
+  LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -469,7 +468,7 @@ void SelectionDAGISel::initializeAnalysisResults(
   auto *PSI = MAMP.getCachedResult<ProfileSummaryAnalysis>(*Fn.getParent());
   BlockFrequencyInfo *BFI = nullptr;
   FAM.getResult<BlockFrequencyAnalysis>(Fn);
-  if (PSI && PSI->hasProfileSummary() && OptLevel != CodeGenOptLevel::None)
+  if (PSI && PSI->hasProfileSummary())
     BFI = &FAM.getResult<BlockFrequencyAnalysis>(Fn);
 
   FunctionVarLocs const *FnVarLocs = nullptr;
@@ -487,7 +486,7 @@ void SelectionDAGISel::initializeAnalysisResults(
   // into account).  That's unfortunate but OK because it just means we won't
   // ask for passes that have been required anyway.
 
-  if (UseMBPI && OptLevel != CodeGenOptLevel::None)
+  if (UseMBPI && (Fn.hasProfileData() || OptLevel != CodeGenOptLevel::None))
     FuncInfo->BPI = &FAM.getResult<BranchProbabilityAnalysis>(Fn);
   else
     FuncInfo->BPI = nullptr;
@@ -523,7 +522,7 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   AC = &MFP.getAnalysis<AssumptionCacheTracker>().getAssumptionCache(Fn);
   auto *PSI = &MFP.getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   BlockFrequencyInfo *BFI = nullptr;
-  if (PSI && PSI->hasProfileSummary() && OptLevel != CodeGenOptLevel::None)
+  if (PSI && PSI->hasProfileSummary())
     BFI = &MFP.getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
 
   FunctionVarLocs const *FnVarLocs = nullptr;
@@ -544,7 +543,7 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   // into account).  That's unfortunate but OK because it just means we won't
   // ask for passes that have been required anyway.
 
-  if (UseMBPI && OptLevel != CodeGenOptLevel::None)
+  if (UseMBPI && (Fn.hasProfileData() || OptLevel != CodeGenOptLevel::None))
     FuncInfo->BPI =
         &MFP.getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
   else
