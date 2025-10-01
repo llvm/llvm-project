@@ -211,6 +211,16 @@ protected:
   getExtraInvalidatedValues(ValueList &Values,
                             RegionAndSymbolInvalidationTraits *ETraits) const {}
 
+  /// The state in which the call is being evaluated.
+  /// CallEvent instances have a reference to a state object instead of storing
+  /// the argument `SVal`s, the return value (if available), the dynamic type
+  /// information and similar things as separate data members. However, the
+  /// existence of this state object is an implementation detail (and perhaps
+  /// it should be eventually eliminated), so use of this method should be
+  /// avoided if possible. (The checker callbacks can and should access the
+  /// canonical state through the CheckerContext.)
+  const ProgramStateRef &getState() const { return State; }
+
 public:
   CallEvent &operator=(const CallEvent &) = delete;
   virtual ~CallEvent() = default;
@@ -231,8 +241,14 @@ public:
   }
   void setForeign(bool B) const { Foreign = B; }
 
-  /// The state in which the call is being evaluated.
-  const ProgramStateRef &getState() const { return State; }
+  /// Returns the ASTContext which is (indirectly) associated with this call
+  /// event. This method is exposed for the convenience of a few checkers that
+  /// need the AST context in functions that take a CallEvent as argument. For
+  /// the sake of clarity prefer to get the ASTContext from more "natural"
+  /// sources (e.g. the CheckerContext) instead of using this method!
+  ASTContext &getASTContext() const {
+    return getState()->getStateManager().getContext();
+  }
 
   /// The context in which the call is being evaluated.
   const LocationContext *getLocationContext() const { return LCtx; }
