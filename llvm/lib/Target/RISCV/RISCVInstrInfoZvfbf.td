@@ -53,7 +53,7 @@ let Predicates = [HasStdExtZvfbfminOrZvfofp8min] in {
   defm : VPatConversionVF_WF_BF_RM<"int_riscv_vfncvtbf16_f_f_w",
                                    "PseudoVFNCVTBF16_F_F", isSEWAware=1>;
 
-  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = [HasVInstructionsBF16Minimal] in
@@ -91,9 +91,9 @@ let Predicates = [HasStdExtZvfbfminOrZvfofp8min] in {
 
 let Predicates = [HasStdExtZvfbfwma] in {
   defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmaccbf16", "PseudoVFWMACCBF16",
-                               AllWidenableBFloatToFloatVectors, isSEWAware=1>;
+                               AllWidenableBF16ToFloatVectors, isSEWAware=1>;
   defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmadd_vl, "PseudoVFWMACCBF16",
-                                      AllWidenableBFloatToFloatVectors>;
+                                      AllWidenableBF16ToFloatVectors>;
   defm : VPatWidenFPMulAccSDNode_VV_VF_RM<"PseudoVFWMACCBF16",
-                                          AllWidenableBFloatToFloatVectors>;
+                                          AllWidenableBF16ToFloatVectors>;
 }

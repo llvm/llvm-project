@@ -345,7 +345,7 @@ defset list<VTypeInfo> AllVectors = {
     }
   }
 
-  defset list<VTypeInfo> AllFloatAndBFloatVectors = {
+  defset list<VTypeInfo> AllFloatAndBF16Vectors = {
     defset list<VTypeInfo> AllFloatVectors = {
       defset list<VTypeInfo> NoGroupFloatVectors = {
         defset list<VTypeInfo> FractionalGroupFloatVectors = {
@@ -382,16 +382,16 @@ defset list<VTypeInfo> AllVectors = {
       }
     }
 
-    defset list<VTypeInfo> AllBFloatVectors = {
-      defset list<VTypeInfo> NoGroupBFloatVectors = {
-        defset list<VTypeInfo> FractionalGroupBFloatVectors = {
+    defset list<VTypeInfo> AllBF16Vectors = {
+      defset list<VTypeInfo> NoGroupBF16Vectors = {
+        defset list<VTypeInfo> FractionalGroupBF16Vectors = {
           def VBF16MF4: VTypeInfo<vbfloat16mf4_t, vbool64_t, 16, V_MF4, bf16, FPR16>;
           def VBF16MF2: VTypeInfo<vbfloat16mf2_t, vbool32_t, 16, V_MF2, bf16, FPR16>;
         }
         def VBF16M1:  VTypeInfo<vbfloat16m1_t, vbool16_t, 16, V_M1, bf16, FPR16>;
       }
 
-      defset list<GroupVTypeInfo> GroupBFloatVectors = {
+      defset list<GroupVTypeInfo> GroupBF16Vectors = {
         def VBF16M2: GroupVTypeInfo<vbfloat16m2_t, vbfloat16m1_t, vbool8_t, 16,
                                     V_M2, bf16, FPR16>;
         def VBF16M4: GroupVTypeInfo<vbfloat16m4_t, vbfloat16m1_t, vbool4_t, 16,
@@ -542,7 +542,7 @@ defset list<VTypeInfoToWide> AllWidenableIntToFloatVectors = {
   def : VTypeInfoToWide<VI32M4, VF64M8>;
 }
 
-defset list<VTypeInfoToWide> AllWidenableBFloatToFloatVectors = {
+defset list<VTypeInfoToWide> AllWidenableBF16ToFloatVectors = {
   def : VTypeInfoToWide<VBF16MF4, VF32MF2>;
   def : VTypeInfoToWide<VBF16MF2, VF32M1>;
   def : VTypeInfoToWide<VBF16M1, VF32M2>;
@@ -5870,7 +5870,7 @@ multiclass VPatConversionWF_VF<string intrinsic, string instruction,
 
 multiclass VPatConversionWF_VF_BF<string intrinsic, string instruction,
                                   bit isSEWAware = 0> {
-  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in
   {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
@@ -5977,7 +5977,7 @@ multiclass VPatConversionVF_WF_RTZ<string intrinsic, string instruction,
 
 multiclass VPatConversionVF_WF_BF_RM<string intrinsic, string instruction,
                                      bit isSEWAware = 0> {
-  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
@@ -7154,7 +7154,7 @@ defm : VPatConversionVI_VF<"int_riscv_vfclass", "PseudoVFCLASS">;
 // We can use vmerge.vvm to support vector-vector vfmerge.
 // NOTE: Clang previously used int_riscv_vfmerge for vector-vector, but now uses
 // int_riscv_vmerge. Support both for compatibility.
-foreach vti = AllFloatAndBFloatVectors in {
+foreach vti = AllFloatAndBF16Vectors in {
   let Predicates = GetVTypeMinimalPredicates<vti>.Predicates in
     defm : VPatBinaryCarryInTAIL<"int_riscv_vmerge", "PseudoVMERGE", "VVM",
                                  vti.Vector,
