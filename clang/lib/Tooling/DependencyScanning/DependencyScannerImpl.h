@@ -32,7 +32,7 @@ public:
   DependencyScanningAction(
       DependencyScanningService &Service, StringRef WorkingDirectory,
       DependencyConsumer &Consumer, DependencyActionController &Controller,
-      llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
+      IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       std::optional<StringRef> ModuleName = std::nullopt)
       : Service(Service), WorkingDirectory(WorkingDirectory),
         Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)),
@@ -65,7 +65,7 @@ private:
   StringRef WorkingDirectory;
   DependencyConsumer &Consumer;
   DependencyActionController &Controller;
-  llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
+  IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   std::optional<StringRef> ModuleName;
   std::optional<CompilerInstance> ScanInstanceStorage;
   std::shared_ptr<ModuleDepCollector> MDC;
@@ -76,18 +76,17 @@ private:
 
 // Helper functions and data types.
 std::unique_ptr<DiagnosticOptions>
-createDiagOptions(const std::vector<std::string> &CommandLine);
+createDiagOptions(ArrayRef<std::string> CommandLine);
 
-struct DignosticsEngineWithCCommandLineAndDiagOpts {
-  // We need to bound the lifetime of the CCommandLine and the DiagOpts
-  // used to create the DiganosticsEngine with the DiagnosticsEngine itself.
-  std::vector<const char *> CCommandLine;
+struct DignosticsEngineWithDiagOpts {
+  // We need to bound the lifetime of the DiagOpts used to create the
+  // DiganosticsEngine with the DiagnosticsEngine itself.
   std::unique_ptr<DiagnosticOptions> DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine;
 
-  DignosticsEngineWithCCommandLineAndDiagOpts(
-      const std::vector<std::string> CommandLine,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS, DiagnosticConsumer &DC);
+  DignosticsEngineWithDiagOpts(ArrayRef<std::string> CommandLine,
+                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                               DiagnosticConsumer &DC);
 };
 
 struct TextDiagnosticsPrinterWithOutput {
@@ -98,7 +97,7 @@ struct TextDiagnosticsPrinterWithOutput {
   std::unique_ptr<DiagnosticOptions> DiagOpts;
   TextDiagnosticPrinter DiagPrinter;
 
-  TextDiagnosticsPrinterWithOutput(const std::vector<std::string> &CommandLine)
+  TextDiagnosticsPrinterWithOutput(ArrayRef<std::string> CommandLine)
       : DiagnosticsOS(DiagnosticOutput),
         DiagOpts(createDiagOptions(CommandLine)),
         DiagPrinter(DiagnosticsOS, *DiagOpts) {}
@@ -109,42 +108,43 @@ buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
 std::unique_ptr<CompilerInvocation>
-createCompilerInvocation(const std::vector<std::string> &CommandLine,
+createCompilerInvocation(ArrayRef<std::string> CommandLine,
                          DiagnosticsEngine &Diags);
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
 initVFSForTUBuferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                          const std::vector<std::string> &CommandLine,
+                          ArrayRef<std::string> CommandLine,
                           StringRef WorkingDirectory,
                           llvm::MemoryBufferRef TUBuffer);
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
-initVFSForByNameScanning(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                         const std::vector<std::string> &CommandLine,
+initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                         ArrayRef<std::string> CommandLine,
                          StringRef WorkingDirectory, StringRef ModuleName);
 
 bool initializeScanCompilerInstance(
     CompilerInstance &ScanInstance,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
-    llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS);
+    IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS);
 
-llvm::SmallVector<StringRef>
-computeStableDirs(const CompilerInstance &ScanInstance);
+SmallVector<StringRef>
+getInitialStableDirs(const CompilerInstance &ScanInstance);
 
 std::optional<PrebuiltModulesAttrsMap>
 computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
-                             llvm::SmallVector<StringRef> &StableDirs);
+                             SmallVector<StringRef> &StableDirs);
 
-void initializeModuleDepCollector(CompilerInstance &ScanInstance,
-                                  std::shared_ptr<ModuleDepCollector> &MDC,
-                                  StringRef WorkingDirectory,
-                                  DependencyConsumer &Consumer,
-                                  DependencyScanningService &Service,
-                                  CompilerInvocation &Inv,
-                                  DependencyActionController &Controller,
-                                  PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
-                                  llvm::SmallVector<StringRef> &StableDirs);
+std::unique_ptr<DependencyOutputOptions>
+getDependencyOutputOptions(CompilerInstance &ScanInstance);
+
+std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
+    CompilerInstance &ScanInstance,
+    const DependencyOutputOptions &DepOutputOpts, StringRef WorkingDirectory,
+    DependencyConsumer &Consumer, DependencyScanningService &Service,
+    CompilerInvocation &Inv, DependencyActionController &Controller,
+    PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
+    llvm::SmallVector<StringRef> &StableDirs);
 } // namespace dependencies
 } // namespace tooling
 } // namespace clang

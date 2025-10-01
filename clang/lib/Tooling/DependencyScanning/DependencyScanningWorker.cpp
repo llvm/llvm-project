@@ -113,8 +113,7 @@ bool DependencyScanningWorker::scanDependencies(
     DependencyConsumer &Consumer, DependencyActionController &Controller,
     DiagnosticConsumer &DC, llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     std::optional<StringRef> ModuleName) {
-  DignosticsEngineWithCCommandLineAndDiagOpts DiagEngineWithCmdAndOpts(
-      CommandLine, FS, DC);
+  DignosticsEngineWithDiagOpts DiagEngineWithCmdAndOpts(CommandLine, FS, DC);
   DependencyScanningAction Action(Service, WorkingDirectory, Consumer,
                                   Controller, DepFS, ModuleName);
 

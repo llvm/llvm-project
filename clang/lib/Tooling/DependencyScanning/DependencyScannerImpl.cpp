@@ -357,9 +357,9 @@ void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
 }
 } // namespace
 
+namespace clang::tooling::dependencies {
 std::unique_ptr<DiagnosticOptions>
-clang::tooling::dependencies::createDiagOptions(
-    const std::vector<std::string> &CommandLine) {
+createDiagOptions(ArrayRef<std::string> CommandLine) {
   std::vector<const char *> CLI;
   for (const std::string &Arg : CommandLine)
     CLI.push_back(Arg.c_str());
@@ -368,11 +368,10 @@ clang::tooling::dependencies::createDiagOptions(
   return DiagOpts;
 }
 
-clang::tooling::dependencies::DignosticsEngineWithCCommandLineAndDiagOpts::
-    DignosticsEngineWithCCommandLineAndDiagOpts(
-        const std::vector<std::string> CommandLine,
-        IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS, DiagnosticConsumer &DC)
-    : CCommandLine(CommandLine.size(), nullptr) {
+DignosticsEngineWithDiagOpts::DignosticsEngineWithDiagOpts(
+    ArrayRef<std::string> CommandLine,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS, DiagnosticConsumer &DC) {
+  std::vector<const char *> CCommandLine(CommandLine.size(), nullptr);
   llvm::transform(CommandLine, CCommandLine.begin(),
                   [](const std::string &Str) { return Str.c_str(); });
   DiagOpts = CreateAndPopulateDiagOpts(CCommandLine);
@@ -382,9 +381,8 @@ clang::tooling::dependencies::DignosticsEngineWithCCommandLineAndDiagOpts::
 }
 
 std::pair<std::unique_ptr<driver::Driver>, std::unique_ptr<driver::Compilation>>
-clang::tooling::dependencies::buildCompilation(
-    ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
+buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
+                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
   SmallVector<const char *, 256> Argv;
   Argv.reserve(ArgStrs.size());
   for (const std::string &Arg : ArgStrs)
@@ -417,11 +415,26 @@ clang::tooling::dependencies::buildCompilation(
   return std::make_pair(std::move(Driver), std::move(Compilation));
 }
 
+std::unique_ptr<CompilerInvocation>
+createCompilerInvocation(ArrayRef<std::string> CommandLine,
+                         DiagnosticsEngine &Diags) {
+  llvm::opt::ArgStringList Argv;
+  for (const std::string &Str : ArrayRef(CommandLine).drop_front())
+    Argv.push_back(Str.c_str());
+
+  auto Invocation = std::make_unique<CompilerInvocation>();
+  if (!CompilerInvocation::CreateFromArgs(*Invocation, Argv, Diags)) {
+    // FIXME: Should we just go on like cc1_main does?
+    return nullptr;
+  }
+  return Invocation;
+}
+
 std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
-clang::tooling::dependencies::initVFSForTUBuferScanning(
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    const std::vector<std::string> &CommandLine, StringRef WorkingDirectory,
-    llvm::MemoryBufferRef TUBuffer) {
+initVFSForTUBuferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                          ArrayRef<std::string> CommandLine,
+                          StringRef WorkingDirectory,
+                          llvm::MemoryBufferRef TUBuffer) {
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
@@ -437,17 +450,16 @@ clang::tooling::dependencies::initVFSForTUBuferScanning(
 
   OverlayFS->pushOverlay(InMemoryOverlay);
   ModifiedFS = OverlayFS;
-  auto ModifiedCommandLine = CommandLine;
+  std::vector<std::string> ModifiedCommandLine(CommandLine);
   ModifiedCommandLine.emplace_back(InputPath);
 
   return std::make_pair(ModifiedFS, ModifiedCommandLine);
 }
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
-clang::tooling::dependencies::initVFSForByNameScanning(
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    const std::vector<std::string> &CommandLine, StringRef WorkingDirectory,
-    StringRef ModuleName) {
+initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                         ArrayRef<std::string> CommandLine,
+                         StringRef WorkingDirectory, StringRef ModuleName) {
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
@@ -466,28 +478,13 @@ clang::tooling::dependencies::initVFSForByNameScanning(
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
   OverlayFS->pushOverlay(InMemoryOverlay);
 
-  auto ModifiedCommandLine = CommandLine;
+  std::vector<std::string> ModifiedCommandLine(CommandLine);
   ModifiedCommandLine.emplace_back(FakeInputPath);
 
   return std::make_pair(OverlayFS, ModifiedCommandLine);
 }
 
-std::unique_ptr<CompilerInvocation>
-clang::tooling::dependencies::createCompilerInvocation(
-    const std::vector<std::string> &CommandLine, DiagnosticsEngine &Diags) {
-  llvm::opt::ArgStringList Argv;
-  for (const std::string &Str : ArrayRef(CommandLine).drop_front())
-    Argv.push_back(Str.c_str());
-
-  auto Invocation = std::make_unique<CompilerInvocation>();
-  if (!CompilerInvocation::CreateFromArgs(*Invocation, Argv, Diags)) {
-    // FIXME: Should we just go on like cc1_main does?
-    return nullptr;
-  }
-  return Invocation;
-}
-
-bool clang::tooling::dependencies::initializeScanCompilerInstance(
+bool initializeScanCompilerInstance(
     CompilerInstance &ScanInstance,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
@@ -557,8 +554,8 @@ bool clang::tooling::dependencies::initializeScanCompilerInstance(
   return true;
 }
 
-llvm::SmallVector<StringRef> clang::tooling::dependencies::computeStableDirs(
-    const CompilerInstance &ScanInstance) {
+llvm::SmallVector<StringRef>
+getInitialStableDirs(const CompilerInstance &ScanInstance) {
   // Create a collection of stable directories derived from the ScanInstance
   // for determining whether module dependencies would fully resolve from
   // those directories.
@@ -570,8 +567,8 @@ llvm::SmallVector<StringRef> clang::tooling::dependencies::computeStableDirs(
 }
 
 std::optional<PrebuiltModulesAttrsMap>
-clang::tooling::dependencies::computePrebuiltModulesASTMap(
-    CompilerInstance &ScanInstance, llvm::SmallVector<StringRef> &StableDirs) {
+computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
+                             llvm::SmallVector<StringRef> &StableDirs) {
   // Store a mapping of prebuilt module files and their properties like header
   // search options. This will prevent the implicit build to create duplicate
   // modules and will force reuse of the existing prebuilt module files
@@ -588,34 +585,36 @@ clang::tooling::dependencies::computePrebuiltModulesASTMap(
   return PrebuiltModulesASTMap;
 }
 
-void clang::tooling::dependencies::initializeModuleDepCollector(
-    CompilerInstance &ScanInstance, std::shared_ptr<ModuleDepCollector> &MDC,
-    StringRef WorkingDirectory, DependencyConsumer &Consumer,
-    DependencyScanningService &Service, CompilerInvocation &Inv,
-    DependencyActionController &Controller,
-    PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
-    llvm::SmallVector<StringRef> &StableDirs) {
-  // Create the dependency collector that will collect the produced
-  // dependencies.
-  //
-  // This also moves the existing dependency output options from the
+std::unique_ptr<DependencyOutputOptions>
+getDependencyOutputOptions(CompilerInstance &ScanInstance) {
+  // This function moves the existing dependency output options from the
   // invocation to the collector. The options in the invocation are reset,
   // which ensures that the compiler won't create new dependency collectors,
   // and thus won't write out the extra '.d' files to disk.
   auto Opts = std::make_unique<DependencyOutputOptions>();
-
-  // We rely on the behaviour that the ScanInstance's Invocation instance's
-  // dependency output opts are cleared here.
-  // TODO: we will need to preserve and recover the original dependency output
-  // opts if we want to reuse ScanInstance.
   std::swap(*Opts, ScanInstance.getInvocation().getDependencyOutputOpts());
-  // We need at least one -MT equivalent for the generator of make dependency
-  // files to work.
   if (Opts->Targets.empty())
     Opts->Targets = {deduceDepTarget(ScanInstance.getFrontendOpts().OutputFile,
                                      ScanInstance.getFrontendOpts().Inputs)};
   Opts->IncludeSystemHeaders = true;
 
+  return Opts;
+}
+
+std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
+    CompilerInstance &ScanInstance,
+    const DependencyOutputOptions &DepOutputOpts, StringRef WorkingDirectory,
+    DependencyConsumer &Consumer, DependencyScanningService &Service,
+    CompilerInvocation &Inv, DependencyActionController &Controller,
+    PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
+    llvm::SmallVector<StringRef> &StableDirs) {
+  // Create the dependency collector that will collect the produced
+  // dependencies. May return the created ModuleDepCollector depending
+  // on the scanning format.
+
+  auto Opts = std::make_unique<DependencyOutputOptions>(DepOutputOpts);
+
+  std::shared_ptr<ModuleDepCollector> MDC;
   switch (Service.getFormat()) {
   case ScanningOutputFormat::Make:
     ScanInstance.addDependencyCollector(
@@ -630,7 +629,10 @@ void clang::tooling::dependencies::initializeModuleDepCollector(
     ScanInstance.addDependencyCollector(MDC);
     break;
   }
+
+  return MDC;
 }
+} // namespace clang::tooling::dependencies
 
 bool DependencyScanningAction::runInvocation(
     std::unique_ptr<CompilerInvocation> Invocation,
@@ -668,15 +670,17 @@ bool DependencyScanningAction::runInvocation(
                                       DepFS))
     return false;
 
-  llvm::SmallVector<StringRef> StableDirs = computeStableDirs(ScanInstance);
+  llvm::SmallVector<StringRef> StableDirs = getInitialStableDirs(ScanInstance);
   auto MaybePrebuiltModulesASTMap =
       computePrebuiltModulesASTMap(ScanInstance, StableDirs);
   if (!MaybePrebuiltModulesASTMap)
     return false;
 
-  initializeModuleDepCollector(ScanInstance, MDC, WorkingDirectory, Consumer,
-                               Service, OriginalInvocation, Controller,
-                               *MaybePrebuiltModulesASTMap, StableDirs);
+  auto DepOutputOpts = getDependencyOutputOptions(ScanInstance);
+
+  MDC = initializeScanInstanceDependencyCollector(
+      ScanInstance, *DepOutputOpts, WorkingDirectory, Consumer, Service,
+      OriginalInvocation, Controller, *MaybePrebuiltModulesASTMap, StableDirs);
 
   std::unique_ptr<FrontendAction> Action;
 
