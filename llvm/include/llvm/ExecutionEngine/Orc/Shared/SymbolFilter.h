@@ -1,4 +1,4 @@
-//===--- SymbolFilter.h - Utils for Symbol Filter ---*- C++ -*-===//
+//===- SymbolFilter.h - Utilities for Symbol Filtering ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,65 +33,65 @@ public:
   BloomFilter(const BloomFilter &) = delete;
   BloomFilter &operator=(const BloomFilter &) = delete;
 
-  BloomFilter(uint32_t symbolCount, float falsePositiveRate, HashFunc hashFn)
-      : hashFunc(std::move(hashFn)) {
-    initialize(symbolCount, falsePositiveRate);
+  BloomFilter(uint32_t SymbolCount, float FalsePositiveRate, HashFunc hashFn)
+      : HashFn(std::move(hashFn)) {
+    initialize(SymbolCount, FalsePositiveRate);
   }
-  bool IsInitialized() const { return initialized; }
+  bool isInitialized() const { return Initialized; }
 
-  void add(StringRef symbol) {
-    assert(initialized);
-    addHash(hashFunc(symbol));
-  }
-
-  bool mayContain(StringRef symbol) const {
-    return !isEmpty() && testHash(hashFunc(symbol));
+  void add(StringRef Sym) {
+    assert(Initialized);
+    addHash(HashFn(Sym));
   }
 
-  bool isEmpty() const { return symbolCount_ == 0; }
+  bool mayContain(StringRef Sym) const {
+    return !isEmpty() && testHash(HashFn(Sym));
+  }
+
+  bool isEmpty() const { return SymbolCount == 0; }
 
 private:
   friend class shared::SPSSerializationTraits<shared::SPSBloomFilter,
                                               BloomFilter>;
-  static constexpr uint32_t bitsPerEntry = 64;
+  static constexpr uint32_t BitsPerEntry = 64;
 
-  bool initialized = false;
-  uint32_t symbolCount_ = 0;
-  uint32_t bloomSize = 0;
-  uint32_t bloomShift = 0;
-  std::vector<uint64_t> bloomTable;
-  HashFunc hashFunc;
+  bool Initialized = false;
+  uint32_t SymbolCount = 0;
+  uint32_t BloomSize = 0;
+  uint32_t BloomShift = 0;
+  std::vector<uint64_t> BloomTable;
+  HashFunc HashFn;
 
-  void initialize(uint32_t symbolCount, float falsePositiveRate) {
-    assert(symbolCount > 0);
-    symbolCount_ = symbolCount;
-    initialized = true;
+  void initialize(uint32_t SymCount, float FalsePositiveRate) {
+    assert(SymCount > 0);
+    SymbolCount = SymCount;
+    Initialized = true;
 
     float ln2 = std::log(2.0f);
-    float m = -1.0f * symbolCount * std::log(falsePositiveRate) / (ln2 * ln2);
-    bloomSize = static_cast<uint32_t>(std::ceil(m / bitsPerEntry));
-    bloomShift = std::min(6u, log2ceil(symbolCount));
-    bloomTable.resize(bloomSize, 0);
+    float M = -1.0f * SymbolCount * std::log(FalsePositiveRate) / (ln2 * ln2);
+    BloomSize = static_cast<uint32_t>(std::ceil(M / BitsPerEntry));
+    BloomShift = std::min(6u, log2ceil(SymbolCount));
+    BloomTable.resize(BloomSize, 0);
   }
 
-  void addHash(uint32_t hash) {
-    uint32_t hash2 = hash >> bloomShift;
-    uint32_t n = (hash / bitsPerEntry) % bloomSize;
-    uint64_t mask =
-        (1ULL << (hash % bitsPerEntry)) | (1ULL << (hash2 % bitsPerEntry));
-    bloomTable[n] |= mask;
+  void addHash(uint32_t Hash) {
+    uint32_t Hash2 = Hash >> BloomShift;
+    uint32_t N = (Hash / BitsPerEntry) % BloomSize;
+    uint64_t Mask =
+        (1ULL << (Hash % BitsPerEntry)) | (1ULL << (Hash2 % BitsPerEntry));
+    BloomTable[N] |= Mask;
   }
 
-  bool testHash(uint32_t hash) const {
-    uint32_t hash2 = hash >> bloomShift;
-    uint32_t n = (hash / bitsPerEntry) % bloomSize;
-    uint64_t mask =
-        (1ULL << (hash % bitsPerEntry)) | (1ULL << (hash2 % bitsPerEntry));
-    return (bloomTable[n] & mask) == mask;
+  bool testHash(uint32_t Hash) const {
+    uint32_t Hash2 = Hash >> BloomShift;
+    uint32_t N = (Hash / BitsPerEntry) % BloomSize;
+    uint64_t Mask =
+        (1ULL << (Hash % BitsPerEntry)) | (1ULL << (Hash2 % BitsPerEntry));
+    return (BloomTable[N] & Mask) == Mask;
   }
 
-  static constexpr uint32_t log2ceil(uint32_t v) {
-    return v <= 1 ? 0 : 32 - countl_zero(v - 1);
+  static constexpr uint32_t log2ceil(uint32_t V) {
+    return V <= 1 ? 0 : 32 - countl_zero(V - 1);
   }
 };
 
@@ -101,34 +101,34 @@ public:
 
   BloomFilterBuilder() = default;
 
-  BloomFilterBuilder &setFalsePositiveRate(float rate) {
-    assert(rate > 0.0f && rate < 1.0f);
-    falsePositiveRate = rate;
+  BloomFilterBuilder &setFalsePositiveRate(float Rate) {
+    assert(Rate > 0.0f && Rate < 1.0f);
+    FalsePositiveRate = Rate;
     return *this;
   }
 
-  BloomFilterBuilder &setHashFunction(HashFunc func) {
-    hashFunc = std::move(func);
+  BloomFilterBuilder &setHashFunction(HashFunc Fn) {
+    HashFn = std::move(Fn);
     return *this;
   }
 
   BloomFilter build(ArrayRef<StringRef> Symbols) const {
     assert(!Symbols.empty() && "Cannot build filter from empty symbol list.");
-    BloomFilter filter(static_cast<uint32_t>(Symbols.size()), falsePositiveRate,
-                       hashFunc);
-    for (const auto &sym : Symbols)
-      filter.add(sym);
+    BloomFilter F(static_cast<uint32_t>(Symbols.size()), FalsePositiveRate,
+                  HashFn);
+    for (const auto &Sym : Symbols)
+      F.add(Sym);
 
-    return filter;
+    return F;
   }
 
 private:
-  float falsePositiveRate = 0.02f;
-  HashFunc hashFunc = [](StringRef s) -> uint32_t {
-    uint32_t h = 5381;
-    for (char c : s)
-      h = ((h << 5) + h) + static_cast<uint8_t>(c); // h * 33 + c
-    return h;
+  float FalsePositiveRate = 0.02f;
+  HashFunc HashFn = [](StringRef S) -> uint32_t {
+    uint32_t H = 5381;
+    for (char C : S)
+      H = ((H << 5) + H) + static_cast<uint8_t>(C); // H * 33 + C
+    return H;
   };
 };
 
@@ -138,30 +138,30 @@ template <> class SPSSerializationTraits<SPSBloomFilter, BloomFilter> {
 public:
   static size_t size(const BloomFilter &Filter) {
     return SPSBloomFilter::AsArgList::size(
-        Filter.initialized, Filter.symbolCount_, Filter.bloomSize,
-        Filter.bloomShift, Filter.bloomTable);
+        Filter.Initialized, Filter.SymbolCount, Filter.BloomSize,
+        Filter.BloomShift, Filter.BloomTable);
   }
 
   static bool serialize(SPSOutputBuffer &OB, const BloomFilter &Filter) {
     return SPSBloomFilter::AsArgList::serialize(
-        OB, Filter.initialized, Filter.symbolCount_, Filter.bloomSize,
-        Filter.bloomShift, Filter.bloomTable);
+        OB, Filter.Initialized, Filter.SymbolCount, Filter.BloomSize,
+        Filter.BloomShift, Filter.BloomTable);
   }
 
   static bool deserialize(SPSInputBuffer &IB, BloomFilter &Filter) {
     bool IsInitialized;
-    uint32_t symbolCount_ = 0, bloomSize = 0, bloomShift = 0;
-    std::vector<uint64_t> bloomTable;
+    uint32_t SymbolCount = 0, BloomSize = 0, BloomShift = 0;
+    std::vector<uint64_t> BloomTable;
 
     if (!SPSBloomFilter::AsArgList::deserialize(
-            IB, IsInitialized, symbolCount_, bloomSize, bloomShift, bloomTable))
+            IB, IsInitialized, SymbolCount, BloomSize, BloomShift, BloomTable))
       return false;
 
-    Filter.initialized = IsInitialized;
-    Filter.symbolCount_ = symbolCount_;
-    Filter.bloomSize = bloomSize;
-    Filter.bloomShift = bloomShift;
-    Filter.bloomTable = std::move(bloomTable);
+    Filter.Initialized = IsInitialized;
+    Filter.SymbolCount = SymbolCount;
+    Filter.BloomSize = BloomSize;
+    Filter.BloomShift = BloomShift;
+    Filter.BloomTable = std::move(BloomTable);
 
     return true;
   }

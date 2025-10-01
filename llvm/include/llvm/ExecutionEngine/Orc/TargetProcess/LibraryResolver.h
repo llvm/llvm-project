@@ -1,5 +1,4 @@
-//===- LibraryResolver.h - Automatic Dynamic Library Symbol Resolution -*- C++
-//-*-===//
+//===- LibraryResolver.h - Automatic Library Symbol Resolution -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -106,8 +105,8 @@ public:
     using Iterator = typename Map::const_iterator;
     class FilterIterator {
     public:
-      FilterIterator(Iterator _it, Iterator _end, LibState S, PathType K)
-          : it(_it), end(_end), S(S), K(K) {
+      FilterIterator(Iterator it_, Iterator end_, LibState S, PathType K)
+          : it(it_), end(end_), S(S), K(K) {
         advance();
       }
 
@@ -137,21 +136,21 @@ public:
       PathType K;
     };
     FilteredView(Iterator begin, Iterator end, LibState s, PathType k)
-        : begin_(begin), end_(end), state_(s), kind_(k) {}
+        : mapBegin(begin), mapEnd(end), state(s), kind(k) {}
 
     FilterIterator begin() const {
-      return FilterIterator(begin_, end_, state_, kind_);
+      return FilterIterator(mapBegin, mapEnd, state, kind);
     }
 
     FilterIterator end() const {
-      return FilterIterator(end_, end_, state_, kind_);
+      return FilterIterator(mapEnd, mapEnd, state, kind);
     }
 
   private:
-    Iterator begin_;
-    Iterator end_;
-    LibState state_;
-    PathType kind_;
+    Iterator mapBegin;
+    Iterator mapEnd;
+    LibState state;
+    PathType kind;
   };
 
 private:
@@ -346,9 +345,9 @@ public:
 
     void resolve(StringRef Sym, const std::string &LibPath) {
       std::unique_lock<std::shared_mutex> Lock(Mtx);
-      auto it = Results.find(Sym);
-      if (it != Results.end() && it->second.ResolvedLibPath.empty()) {
-        it->second.ResolvedLibPath = LibPath;
+      auto It = Results.find(Sym);
+      if (It != Results.end() && It->second.ResolvedLibPath.empty()) {
+        It->second.ResolvedLibPath = LibPath;
         ResolvedCount.fetch_add(1, std::memory_order_relaxed);
       }
     }

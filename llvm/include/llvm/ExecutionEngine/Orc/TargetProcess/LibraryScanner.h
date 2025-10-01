@@ -1,5 +1,4 @@
-//===- LibraryScanner.h - Scanner for Shared Libraries -*- C++
-//-*-===//
+//===- LibraryScanner.h - Scanner for Shared Libraries ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -93,9 +92,9 @@ private:
 
   std::optional<PathInfo> read_realpath(StringRef Path) const {
     std::shared_lock<std::shared_mutex> lock(Mtx);
-    auto it = RealPathCache.find(Path);
-    if (it != RealPathCache.end())
-      return it->second;
+    auto It = RealPathCache.find(Path);
+    if (It != RealPathCache.end())
+      return It->second;
 
     return std::nullopt;
   }
@@ -114,9 +113,9 @@ private:
 
   std::optional<std::string> read_link(StringRef Path) const {
     std::shared_lock<std::shared_mutex> lock(Mtx);
-    auto it = ReadlinkCache.find(Path);
-    if (it != ReadlinkCache.end())
-      return it->second;
+    auto It = ReadlinkCache.find(Path);
+    if (It != ReadlinkCache.end())
+      return It->second;
 
     return std::nullopt;
   }
@@ -128,9 +127,9 @@ private:
 
   std::optional<mode_t> read_lstat(StringRef Path) const {
     std::shared_lock<std::shared_mutex> lock(Mtx);
-    auto it = LstatCache.find(Path);
-    if (it != LstatCache.end())
-      return it->second;
+    auto It = LstatCache.find(Path);
+    if (It != LstatCache.end())
+      return It->second;
 
     return std::nullopt;
   }
@@ -311,12 +310,12 @@ enum class PathType : uint8_t { User, System, Unknown };
 enum class ScanState : uint8_t { NotScanned, Scanning, Scanned };
 
 struct LibrarySearchPath {
-  std::string basePath; // Canonical base directory path
+  std::string BasePath; // Canonical base directory path
   PathType Kind;        // User or System
   std::atomic<ScanState> State;
 
-  LibrarySearchPath(std::string base, PathType K)
-      : basePath(std::move(base)), Kind(K), State(ScanState::NotScanned) {}
+  LibrarySearchPath(std::string Base, PathType K)
+      : BasePath(std::move(Base)), Kind(K), State(ScanState::NotScanned) {}
 };
 
 /// Scans and tracks libraries for symbol resolution.
@@ -351,10 +350,10 @@ public:
   std::vector<std::shared_ptr<LibrarySearchPath>> getAllUnits() const;
 
   SmallVector<StringRef> getSearchPaths() const {
-    SmallVector<StringRef> searchPaths;
-    for (const auto &unit : LibSearchPaths)
-      searchPaths.push_back(unit.second->basePath);
-    return searchPaths;
+    SmallVector<StringRef> SearchPaths;
+    for (const auto &[_, SP] : LibSearchPaths)
+      SearchPaths.push_back(SP->BasePath);
+    return SearchPaths;
   }
 
   PathResolver &getPathResolver() const { return *LibPathResolver; }
