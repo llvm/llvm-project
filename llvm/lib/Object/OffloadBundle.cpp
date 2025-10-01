@@ -128,7 +128,7 @@ OffloadBundleFatBin::create(MemoryBufferRef Buf, uint64_t SectionOffset,
   if (Err)
     return Err;
 
-  return TheBundle;
+  return std::move(TheBundle);
 }
 
 Error OffloadBundleFatBin::extractBundle(const ObjectFile &Source) {
