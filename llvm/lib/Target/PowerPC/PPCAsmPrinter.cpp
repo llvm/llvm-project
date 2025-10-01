@@ -102,12 +102,14 @@ static cl::opt<bool> EnableSSPCanaryBitInTB(
     "aix-ssp-tb-bit", cl::init(false),
     cl::desc("Enable Passing SSP Canary info in Trackback on AIX"), cl::Hidden);
 
-static cl::list<std::string> IFuncLocal(
-    "ifunc-local",
-    llvm::cl::desc("a comma separated list of ifunc function names that are "
-                   "guaranteed to resolve to a module-local function. "
-                   "-ifunc-local=1 will apply to all ifuncs in the CU."),
-    cl::CommaSeparated, cl::Hidden);
+static cl::opt<bool> IFuncLocalIfProven(
+    "ifunc-local-if-proven", cl::init(false),
+    cl::desc("During ifunc lowering, the compiler assumes the resolver returns "
+             "dso-local functions and bails out if non-local functions are "
+             "detected; this flag flips the assumption: resolver returns "
+             "preemptible functions unless the compiler can prove all paths "
+             "return local functions."),
+    cl::Hidden);
 
 // Specialize DenseMapInfo to allow
 // std::pair<const MCSymbol *, PPCMCExpr::Specifier> in DenseMap.
@@ -3411,29 +3413,48 @@ void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
 }
 
 static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
+  enum class IsLocal { Unknown, True, False };
+  auto Combine = [](IsLocal LHS, IsLocal RHS) -> IsLocal {
+    if (LHS == IsLocal::False || RHS == IsLocal::False)
+      return IsLocal::False;
+    if (LHS == IsLocal::True && RHS == IsLocal::True)
+      return IsLocal::True;
+    return IsLocal::Unknown;
+  };
+
   // Query if the given function is local to the load module.
-  auto IsLocalFunc = [](const Function *F) {
+  auto IsLocalFunc = [](const Function *F) -> IsLocal {
     bool Result = F->isStrongDefinitionForLinker() && F->isDSOLocal();
     LLVM_DEBUG(dbgs() << F->getName() << " is " << (Result ? "local\n" : "not local\n"));
-    return Result;
+    return Result ? IsLocal::True : IsLocal::False;
   };
-  // Recursive walker that checks if all possible runtime values of the given
-  // llvm::Value are addresses of local functions.
-  std::function<bool(const Value*)> ValueIsALocalFunc = [&IsLocalFunc, &ValueIsALocalFunc](const Value *V) -> bool {
+
+  // Recursive walker that visits certain patterns that make up the given Value,
+  // and returns
+  //  - false if at least one non-local function was seen,
+  //  - otherwise, return unknown if some unrecognizable pattern was seen,
+  //  - otherwise, return true (which means only recognizable patterns were seen
+  //    and all possible values are local functions).
+  std::function<IsLocal(const Value *)> ValueIsALocalFunc =
+      [&IsLocalFunc, &Combine, &ValueIsALocalFunc](const Value *V) -> IsLocal {
     if (auto *F = dyn_cast<Function>(V))
       return IsLocalFunc(F);
     if (!isa<Instruction>(V))
-      return false;
+      return IsLocal::Unknown;
 
     auto *I = cast<Instruction>(V);
     // return isP9 ? foo_p9 : foo_default;
     if (auto *SI = dyn_cast<SelectInst>(I))
-      return ValueIsALocalFunc(SI->getTrueValue()) && ValueIsALocalFunc(SI->getFalseValue());
+      return Combine(ValueIsALocalFunc(SI->getTrueValue()),
+                     ValueIsALocalFunc(SI->getFalseValue()));
     else if (auto *PN = dyn_cast<PHINode>(I)) {
-      for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-        if (!ValueIsALocalFunc(PN->getIncomingValue(i)))
-          return false;
-      return true;
+      IsLocal Res = IsLocal::True;
+      for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+        Res = Combine(Res, ValueIsALocalFunc(PN->getIncomingValue(i)));
+        if (Res == IsLocal::False)
+          return Res;
+      }
+      return Res;
     }
     // @switch.table.resolve_foo = private unnamed_addr constant [3 x ptr] [ptr @foo_static, ptr @foo_hidden, ptr @foo_protected]
     // %switch.gep = getelementptr inbounds nuw ptr, ptr @switch.table, i64 %2
@@ -3443,50 +3464,45 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
         Op = cast<GEPOperator>(Op)->getPointerOperand();
 
       if (!isa<GlobalVariable>(Op))
-        return false;
+        return IsLocal::Unknown;
       auto *GV = dyn_cast<GlobalVariable>(Op);
       if (!GV->hasInitializer() || !isa<ConstantArray>(GV->getInitializer()))
-        return false;
-      auto *Initializer = cast<ConstantArray>(GV->getInitializer());
-      for (unsigned Idx = 0, End = Initializer->getNumOperands(); Idx != End; ++Idx)
-        if (!ValueIsALocalFunc(Initializer->getOperand(Idx)))
-          return false;
-      return true;
+        return IsLocal::Unknown;
+      auto *Init = cast<ConstantArray>(GV->getInitializer());
+      IsLocal Res = IsLocal::True;
+      for (unsigned Idx = 0, End = Init->getNumOperands(); Idx != End; ++Idx) {
+        Res = Combine(Res, ValueIsALocalFunc(Init->getOperand(Idx)));
+        if (Res == IsLocal::False)
+          return Res;
+      }
+      return Res;
     }
-    return false;
+    return IsLocal::Unknown;
   };
-
-  if (!IFuncLocal.empty()) {
-    ArrayRef<std::string> List = IFuncLocal;
-    // special case of -ifunc-local=1
-    if (List.size() == 1 && List[0].compare("1") == 0)
-      return false;
-    StringRef IFuncName = GI.getName();
-    if (any_of(List, [&](const std::string &Element) {
-          return Element.size() == IFuncName.size() &&
-                 Element.compare(IFuncName.data()) == 0;
-        }))
-      return false;
-  }
 
   auto *Resolver = GI.getResolverFunction();
   // If the resolver is preemptible then we cannot rely on its implementation.
-  if (!IsLocalFunc(Resolver))
+  if (IsLocalFunc(Resolver) == IsLocal::False && IFuncLocalIfProven)
     return true;
+
   // If one of the return values of the resolver function is not a
   // local function, then we have to conservatively do a TOC save/restore.
+  IsLocal Res = IsLocal::True;
   for (auto &BB : *Resolver) {
-    if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator())) {
-      Value *RV = Ret->getReturnValue();
-      assert(RV);
-      if (!ValueIsALocalFunc(RV)) {
-        LLVM_DEBUG(dbgs() << "return value " << RV->getName() << " is not a local function\n");
-        return true;
-      }
-    }
+    if (!isa<ReturnInst>(BB.getTerminator()))
+      continue;
+    auto *Ret = cast<ReturnInst>(BB.getTerminator());
+    Value *RV = Ret->getReturnValue();
+    assert(RV);
+    Res = Combine(Res, ValueIsALocalFunc(RV));
+    if (Res == IsLocal::False)
+      break;
   }
-  // all return values where local functions, so no TOC save/restore needed.
-  return false;
+  // no TOC save/restore needed if either all functions were local or we're
+  // being optimistic and no preemptible functions were seen.
+  if (Res == IsLocal::True || (Res == IsLocal::Unknown && !IFuncLocalIfProven))
+    return false;
+  return true;
 }
 /*
  *   .csect .foo[PR],5
