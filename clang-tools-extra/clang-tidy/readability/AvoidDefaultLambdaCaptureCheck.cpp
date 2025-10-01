@@ -67,15 +67,14 @@ void AvoidDefaultLambdaCaptureCheck::check(
     }
   }
 
-  // Replace with new capture list
-  std::string ReplacementText;
-  if (AllCaptures.empty()) {
-    ReplacementText = "[]";
-  } else {
-    ReplacementText = "[" + llvm::join(AllCaptures, ", ") + "]";
-  }
+  const auto ReplacementText = [&AllCaptures]() -> std::string {
+    if (AllCaptures.empty()) {
+      return "[]";
+    }
+    return "[" + llvm::join(AllCaptures, ", ") + "]";
+  }();
 
-  clang::SourceRange IntroducerRange = Lambda->getIntroducerRange();
+  const clang::SourceRange IntroducerRange = Lambda->getIntroducerRange();
   if (IntroducerRange.isValid()) {
     Diag << clang::FixItHint::CreateReplacement(IntroducerRange,
                                                 ReplacementText);
