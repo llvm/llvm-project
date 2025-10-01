@@ -2268,7 +2268,8 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
 }
 
 static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
-                                   unsigned Pos, bool Vector = true) {
+                                   unsigned Pos, bool AllowConst,
+                                   bool AllowAS) {
   QualType MaskTy = MaskArg->getType();
   if (!MaskTy->isExtVectorBoolType())
     return S.Diag(MaskArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
@@ -2276,11 +2277,38 @@ static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
            << MaskTy;
 
   QualType PtrTy = PtrArg->getType();
-  if (!PtrTy->isPointerType() ||
-      (Vector && !PtrTy->getPointeeType()->isVectorType()) ||
-      (!Vector && PtrTy->getPointeeType()->isVectorType()))
+  if (!PtrTy->isPointerType() || PtrTy->getPointeeType()->isVectorType())
     return S.Diag(PtrArg->getExprLoc(), diag::err_vec_masked_load_store_ptr)
-           << Pos << (Vector ? "pointer to vector" : "scalar pointer");
+           << Pos << "scalar pointer";
+
+  QualType PointeeTy = PtrTy->getPointeeType();
+  if (PointeeTy.isVolatileQualified() || PointeeTy->isAtomicType() ||
+      (!AllowConst && PointeeTy.isConstQualified()) ||
+      (!AllowAS && PointeeTy.hasAddressSpace())) {
+    QualType Target =
+        S.Context.getPointerType(PointeeTy.getAtomicUnqualifiedType());
+    return S.Diag(PtrArg->getExprLoc(),
+                  diag::err_typecheck_convert_incompatible)
+           << PtrTy << Target << /*different qualifiers=*/5
+           << /*qualifier difference=*/0 << /*parameter mismatch=*/3 << 2
+           << PtrTy << Target;
+  }
+  return false;
+}
+
+static bool ConvertMaskedBuiltinArgs(Sema &S, CallExpr *TheCall) {
+  bool TypeDependent = false;
+  for (unsigned Arg = 0, E = TheCall->getNumArgs(); Arg != E; ++Arg) {
+    ExprResult Converted =
+        S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(Arg));
+    if (Converted.isInvalid())
+      return true;
+    TheCall->setArg(Arg, Converted.get());
+    TypeDependent |= Converted.get()->isTypeDependent();
+  }
+
+  if (TypeDependent)
+    TheCall->setType(S.Context.DependentTy);
   return false;
 }
 
@@ -2288,33 +2316,35 @@ static ExprResult BuiltinMaskedLoad(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCountRange(TheCall, 2, 3))
     return ExprError();
 
+  if (ConvertMaskedBuiltinArgs(S, TheCall))
+    return ExprError();
+
   Expr *MaskArg = TheCall->getArg(0);
   Expr *PtrArg = TheCall->getArg(1);
-  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 2))
+  if (TheCall->isTypeDependent())
+    return TheCall;
+
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 2, /*AllowConst=*/true,
+                             TheCall->getBuiltinCallee() ==
+                                 Builtin::BI__builtin_masked_load))
     return ExprError();
 
   QualType MaskTy = MaskArg->getType();
   QualType PtrTy = PtrArg->getType();
   QualType PointeeTy = PtrTy->getPointeeType();
   const VectorType *MaskVecTy = MaskTy->getAs<VectorType>();
-  const VectorType *DataVecTy = PointeeTy->getAs<VectorType>();
 
+  QualType RetTy = S.Context.getExtVectorType(PointeeTy.getUnqualifiedType(),
+                                              MaskVecTy->getNumElements());
   if (TheCall->getNumArgs() == 3) {
     Expr *PassThruArg = TheCall->getArg(2);
     QualType PassThruTy = PassThruArg->getType();
-    if (!S.Context.hasSameType(PassThruTy, PointeeTy))
+    if (!S.Context.hasSameType(PassThruTy, RetTy))
       return S.Diag(PtrArg->getExprLoc(), diag::err_vec_masked_load_store_ptr)
-             << /* third argument */ 3 << PointeeTy;
+             << /* third argument */ 3 << RetTy;
   }
 
-  if (MaskVecTy->getNumElements() != DataVecTy->getNumElements())
-    return ExprError(
-        S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
-        << S.getASTContext().BuiltinInfo.getQuotedName(
-               TheCall->getBuiltinCallee())
-        << MaskTy << PointeeTy);
-
-  TheCall->setType(PointeeTy);
+  TheCall->setType(RetTy);
   return TheCall;
 }
 
@@ -2322,11 +2352,18 @@ static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 3))
     return ExprError();
 
+  if (ConvertMaskedBuiltinArgs(S, TheCall))
+    return ExprError();
+
   Expr *MaskArg = TheCall->getArg(0);
   Expr *ValArg = TheCall->getArg(1);
   Expr *PtrArg = TheCall->getArg(2);
+  if (TheCall->isTypeDependent())
+    return TheCall;
 
-  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3))
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*AllowConst=*/false,
+                             TheCall->getBuiltinCallee() ==
+                                 Builtin::BI__builtin_masked_store))
     return ExprError();
 
   QualType MaskTy = MaskArg->getType();
@@ -2339,18 +2376,10 @@ static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
 
   QualType PointeeTy = PtrTy->getPointeeType();
   const VectorType *MaskVecTy = MaskTy->getAs<VectorType>();
-  const VectorType *ValVecTy = ValTy->getAs<VectorType>();
-  const VectorType *PtrVecTy = PointeeTy->getAs<VectorType>();
-
-  if (MaskVecTy->getNumElements() != ValVecTy->getNumElements() ||
-      MaskVecTy->getNumElements() != PtrVecTy->getNumElements())
-    return ExprError(
-        S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
-        << S.getASTContext().BuiltinInfo.getQuotedName(
-               TheCall->getBuiltinCallee())
-        << MaskTy << PointeeTy);
-
-  if (!S.Context.hasSameType(ValTy, PointeeTy))
+  QualType MemoryTy = S.Context.getExtVectorType(PointeeTy.getUnqualifiedType(),
+                                                 MaskVecTy->getNumElements());
+  if (!S.Context.hasSameType(ValTy.getUnqualifiedType(),
+                             MemoryTy.getUnqualifiedType()))
     return ExprError(S.Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
                      << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ 2
@@ -2365,10 +2394,17 @@ static ExprResult BuiltinMaskedGather(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCountRange(TheCall, 3, 4))
     return ExprError();
 
+  if (ConvertMaskedBuiltinArgs(S, TheCall))
+    return ExprError();
+
   Expr *MaskArg = TheCall->getArg(0);
   Expr *IdxArg = TheCall->getArg(1);
   Expr *PtrArg = TheCall->getArg(2);
-  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*Vector=*/false))
+  if (TheCall->isTypeDependent())
+    return TheCall;
+
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*AllowConst=*/true,
+                             /*AllowAS=*/true))
     return ExprError();
 
   QualType IdxTy = IdxArg->getType();
@@ -2389,8 +2425,8 @@ static ExprResult BuiltinMaskedGather(Sema &S, CallExpr *TheCall) {
                TheCall->getBuiltinCallee())
         << MaskTy << IdxTy);
 
-  QualType RetTy =
-      S.Context.getExtVectorType(PointeeTy, MaskVecTy->getNumElements());
+  QualType RetTy = S.Context.getExtVectorType(PointeeTy.getUnqualifiedType(),
+                                              MaskVecTy->getNumElements());
   if (TheCall->getNumArgs() == 4) {
     Expr *PassThruArg = TheCall->getArg(3);
     QualType PassThruTy = PassThruArg->getType();
@@ -2408,12 +2444,18 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 4))
     return ExprError();
 
+  if (ConvertMaskedBuiltinArgs(S, TheCall))
+    return ExprError();
+
   Expr *MaskArg = TheCall->getArg(0);
   Expr *IdxArg = TheCall->getArg(1);
   Expr *ValArg = TheCall->getArg(2);
   Expr *PtrArg = TheCall->getArg(3);
+  if (TheCall->isTypeDependent())
+    return TheCall;
 
-  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*Vector=*/false))
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 4, /*AllowConst=*/false,
+                             /*AllowAS=*/true))
     return ExprError();
 
   QualType IdxTy = IdxArg->getType();
@@ -2443,9 +2485,9 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
                TheCall->getBuiltinCallee())
         << MaskTy << ValTy);
 
-  QualType ArgTy =
-      S.Context.getExtVectorType(PointeeTy, MaskVecTy->getNumElements());
-  if (!S.Context.hasSameType(ValTy, ArgTy))
+  QualType ArgTy = S.Context.getExtVectorType(PointeeTy.getUnqualifiedType(),
+                                              MaskVecTy->getNumElements());
+  if (!S.Context.hasSameType(ValTy.getUnqualifiedType(), ArgTy))
     return ExprError(S.Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
                      << TheCall->getDirectCallee() << /*isMoreThanTwoArgs*/ 2
@@ -6882,11 +6924,12 @@ StringRef Sema::GetFormatStringTypeName(FormatStringType FST) {
 
 FormatStringType Sema::GetFormatStringType(StringRef Flavor) {
   return llvm::StringSwitch<FormatStringType>(Flavor)
-      .Case("scanf", FormatStringType::Scanf)
-      .Cases("printf", "printf0", "syslog", FormatStringType::Printf)
+      .Cases("gnu_scanf", "scanf", FormatStringType::Scanf)
+      .Cases("gnu_printf", "printf", "printf0", "syslog",
+             FormatStringType::Printf)
       .Cases("NSString", "CFString", FormatStringType::NSString)
-      .Case("strftime", FormatStringType::Strftime)
-      .Case("strfmon", FormatStringType::Strfmon)
+      .Cases("gnu_strftime", "strftime", FormatStringType::Strftime)
+      .Cases("gnu_strfmon", "strfmon", FormatStringType::Strfmon)
       .Cases("kprintf", "cmn_err", "vcmn_err", "zcmn_err",
              FormatStringType::Kprintf)
       .Case("freebsd_kprintf", FormatStringType::FreeBSDKPrintf)
@@ -7006,7 +7049,6 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
     case FormatStringType::Kprintf:
     case FormatStringType::FreeBSDKPrintf:
     case FormatStringType::Printf:
-    case FormatStringType::Syslog:
       Diag(FormatLoc, diag::note_format_security_fixit)
         << FixItHint::CreateInsertion(FormatLoc, "\"%s\", ");
       break;
@@ -9136,8 +9178,7 @@ static void CheckFormatString(
   if (Type == FormatStringType::Printf || Type == FormatStringType::NSString ||
       Type == FormatStringType::Kprintf ||
       Type == FormatStringType::FreeBSDKPrintf ||
-      Type == FormatStringType::OSLog || Type == FormatStringType::OSTrace ||
-      Type == FormatStringType::Syslog) {
+      Type == FormatStringType::OSLog || Type == FormatStringType::OSTrace) {
     bool IsObjC =
         Type == FormatStringType::NSString || Type == FormatStringType::OSTrace;
     if (ReferenceFormatString == nullptr) {
@@ -9173,8 +9214,7 @@ bool Sema::CheckFormatStringsCompatible(
   if (Type != FormatStringType::Printf && Type != FormatStringType::NSString &&
       Type != FormatStringType::Kprintf &&
       Type != FormatStringType::FreeBSDKPrintf &&
-      Type != FormatStringType::OSLog && Type != FormatStringType::OSTrace &&
-      Type != FormatStringType::Syslog)
+      Type != FormatStringType::OSLog && Type != FormatStringType::OSTrace)
     return true;
 
   bool IsObjC =
@@ -9208,8 +9248,7 @@ bool Sema::ValidateFormatString(FormatStringType Type,
   if (Type != FormatStringType::Printf && Type != FormatStringType::NSString &&
       Type != FormatStringType::Kprintf &&
       Type != FormatStringType::FreeBSDKPrintf &&
-      Type != FormatStringType::OSLog && Type != FormatStringType::OSTrace &&
-      Type != FormatStringType::Syslog)
+      Type != FormatStringType::OSLog && Type != FormatStringType::OSTrace)
     return true;
 
   FormatStringLiteral RefLit = Str;
@@ -13043,7 +13082,19 @@ static void AnalyzeImplicitConversions(
 
   // Skip past explicit casts.
   if (auto *CE = dyn_cast<ExplicitCastExpr>(E)) {
-    E = CE->getSubExpr()->IgnoreParenImpCasts();
+    E = CE->getSubExpr();
+    // In the special case of a C++ function-style cast with braces,
+    // CXXFunctionalCastExpr has an InitListExpr as direct child with a single
+    // initializer. This InitListExpr basically belongs to the cast itself, so
+    // we skip it too. Specifically this is needed to silence -Wdouble-promotion
+    if (isa<CXXFunctionalCastExpr>(CE)) {
+      if (auto *InitListE = dyn_cast<InitListExpr>(E)) {
+        if (InitListE->getNumInits() == 1) {
+          E = InitListE->getInit(0);
+        }
+      }
+    }
+    E = E->IgnoreParenImpCasts();
     if (!CE->getType()->isVoidType() && E->getType()->isAtomicType())
       S.Diag(E->getBeginLoc(), diag::warn_atomic_implicit_seq_cst);
     WorkList.push_back({E, CC, IsListInit});

@@ -98,8 +98,10 @@ public:
   /// This is the inner-most code context, which includes blocks.
   const clang::Decl *curCodeDecl = nullptr;
 
-  /// The function for which code is currently being generated.
-  cir::FuncOp curFn;
+  /// The current function or global initializer that is generated code for.
+  /// This is usually a cir::FuncOp, but it can also be a cir::GlobalOp for
+  /// global initializers.
+  mlir::Operation *curFn = nullptr;
 
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
@@ -116,7 +118,11 @@ public:
   CIRGenModule &getCIRGenModule() { return cgm; }
   const CIRGenModule &getCIRGenModule() const { return cgm; }
 
-  mlir::Block *getCurFunctionEntryBlock() { return &curFn.getRegion().front(); }
+  mlir::Block *getCurFunctionEntryBlock() {
+    // We currently assume this isn't called for a global initializer.
+    auto fn = mlir::cast<cir::FuncOp>(curFn);
+    return &fn.getRegion().front();
+  }
 
   /// Sanitizers enabled for this function.
   clang::SanitizerSet sanOpts;
@@ -1197,6 +1203,8 @@ public:
                               bool delegating, Address thisAddr,
                               CallArgList &args, clang::SourceLocation loc);
 
+  void emitCXXDeleteExpr(const CXXDeleteExpr *e);
+
   void emitCXXDestructorCall(const CXXDestructorDecl *dd, CXXDtorType type,
                              bool forVirtualBase, bool delegating,
                              Address thisAddr, QualType thisTy);
@@ -1243,6 +1251,9 @@ public:
   // constructors where they are substantially the same.
   void emitDelegatingCXXConstructorCall(const CXXConstructorDecl *ctor,
                                         const FunctionArgList &args);
+
+  void emitDeleteCall(const FunctionDecl *deleteFD, mlir::Value ptr,
+                      QualType deleteTy);
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
@@ -1716,6 +1727,10 @@ private:
     ~ActiveOpenACCLoopRAII() { cgf.activeLoopOp = oldLoopOp; }
   };
 
+  // Keep track of the last place we inserted a 'recipe' so that we can insert
+  // the next one in lexical order.
+  mlir::OpBuilder::InsertPoint lastRecipeLocation;
+
 public:
   // Helper type used to store the list of important information for a 'data'
   // clause variable, or a 'cache' variable reference.
@@ -1723,9 +1738,17 @@ public:
     mlir::Location beginLoc;
     mlir::Value varValue;
     std::string name;
+    // The type of the original variable reference: that is, after 'bounds' have
+    // removed pointers/array types/etc. So in the case of int arr[5], and a
+    // private(arr[1]), 'origType' is 'int', but 'baseType' is 'int[5]'.
+    QualType origType;
     QualType baseType;
     llvm::SmallVector<mlir::Value> bounds;
+    // The list of types that we found when going through the bounds, which we
+    // can use to properly set the alloca section.
+    llvm::SmallVector<QualType> boundTypes;
   };
+
   // Gets the collection of info required to lower and OpenACC clause or cache
   // construct variable reference.
   OpenACCDataOperandInfo getOpenACCDataOperandInfo(const Expr *e);
