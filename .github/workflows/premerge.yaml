@@ -90,7 +90,9 @@ jobs:
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
-    runs-on: llvm-premerge-windows-2022-runners
+    runs-on:
+      group: ${{ (endsWith(github.run_id, '0') || endsWith(github.run_id, '2') || endsWith(github.run_id, '4') || endsWith(github.run_id, '6') || endsWith(github.run_id, '8')) && 'llvm-premerge-cluster-us-west' || 'llvm-premerge-cluster-us-central' }}
+      labels: llvm-premerge-windows-2022-runners
     defaults:
       run:
         shell: bash
