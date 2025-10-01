@@ -895,12 +895,9 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
 
-  if (!opts::CompactCodeModel &&
-      opts::SplitStrategy == opts::SplitFunctionsStrategy::CDSplit) {
-    BC.errs() << "BOLT-ERROR: CDSplit is not supported with LongJmp. Try with "
-                 "'--compact-code-model'\n";
-    exit(1);
-  }
+  assert((opts::CompactCodeModel ||
+          opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit) &&
+         "LongJmp cannot work with functions split in more than two fragments");
 
   if (opts::CompactCodeModel) {
     BC.outs()
