@@ -6825,17 +6825,16 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
     Callee.setFunctionPointer(Stub);
   }
 
-  // Check whether the associated CallExpr is in the set OMPTargetCalls.
-  // If YES, insert a call to devicertl function __llvm_omp_indirect_call_lookup
+  // Insert function pointer lookup if this is a target call
   //
-  // This is used for the indriect function Case, virtual function case is
+  // This is used for the indirect function case, virtual function case is
   // handled in ItaniumCXXABI.cpp
   if (getLangOpts().OpenMPIsTargetDevice && CGM.OMPTargetCalls.contains(E)) {
     auto *PtrTy = CGM.VoidPtrTy;
     llvm::Type *RtlFnArgs[] = {PtrTy};
     llvm::FunctionCallee DeviceRtlFn = CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(PtrTy, RtlFnArgs, false),
-        "__llvm_omp_indirect_call_lookup");
+        "__kmpc_omp_indirect_call_lookup");
     llvm::Value *Func = Callee.getFunctionPointer();
     llvm::Type *BackupTy = Func->getType();
     Func = Builder.CreatePointerBitCastOrAddrSpaceCast(Func, PtrTy);

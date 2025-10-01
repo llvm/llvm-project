@@ -89,7 +89,7 @@ double omp_get_wtime(void) {
   return static_cast<double>(__builtin_readsteadycounter()) * omp_get_wtick();
 }
 
-void *__llvm_omp_indirect_call_lookup(void *HstPtr) {
+void *__kmpc_omp_indirect_call_lookup(void *HstPtr) {
   return ompx::impl::indirectCallLookup(HstPtr);
 }
 

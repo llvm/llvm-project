@@ -33,10 +33,10 @@ int main() {
 
 #pragma omp target
       {
-        // CK1-DAG:  call ptr @__llvm_omp_indirect_call_lookup(ptr %vtable{{[0-9]*}})
-        // CK1-DAG:  call ptr @__llvm_omp_indirect_call_lookup(ptr %vtable{{[0-9]*}})
-        // CK1-DAG:  call ptr @__llvm_omp_indirect_call_lookup(ptr %vtable{{[0-9]*}})
-        // CK1-DAG:  call ptr @__llvm_omp_indirect_call_lookup(ptr %vtable{{[0-9]*}})
+        // CK1-DAG:  call ptr @__kmpc_omp_indirect_call_lookup(ptr %vtable{{[0-9]*}})
+        // CK1-DAG:  call ptr @__kmpc_omp_indirect_call_lookup(ptr %vtable{{[0-9]*}})
+        // CK1-DAG:  call ptr @__kmpc_omp_indirect_call_lookup(ptr %vtable{{[0-9]*}})
+        // CK1-DAG:  call ptr @__kmpc_omp_indirect_call_lookup(ptr %vtable{{[0-9]*}})
         int result1 = pointer1->foo();
         int result2 = pointer1->bar();
         int result3 = pointer2->foo();
