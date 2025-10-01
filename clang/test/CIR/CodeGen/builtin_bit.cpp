@@ -34,7 +34,7 @@ int test_builtin_clrsbl(long x) {
 
 // CIR-LABEL: _Z19test_builtin_clrsbll
 // CIR:         [[TMP:%.+]] = cir.clrsb %{{.+}} : !s64i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !s64i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !s64i -> !s32i
 
 // LLVM-LABEL: _Z19test_builtin_clrsbll
 // LLVM:         %[[X:.+]] = load i64, ptr %{{.+}}, align 8
@@ -58,7 +58,7 @@ int test_builtin_clrsbll(long long x) {
 
 // CIR-LABEL: _Z20test_builtin_clrsbllx
 // CIR:         [[TMP:%.+]] = cir.clrsb %{{.+}} : !s64i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !s64i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !s64i -> !s32i
 
 // LLVM-LABEL: _Z20test_builtin_clrsbllx
 // LLVM:         %[[X:.+]] = load i64, ptr %{{.+}}, align 8
@@ -82,7 +82,7 @@ int test_builtin_ctzs(unsigned short x) {
 
 // CIR-LABEL: _Z17test_builtin_ctzst
 // CIR:         [[TMP:%.+]] = cir.ctz %{{.+}} poison_zero : !u16i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u16i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u16i -> !s32i
 
 // LLVM-LABEL: _Z17test_builtin_ctzst
 // LLVM:         %{{.+}} = call i16 @llvm.cttz.i16(i16 %{{.+}}, i1 true)
@@ -96,7 +96,7 @@ int test_builtin_ctz(unsigned x) {
 
 // CIR-LABEL: _Z16test_builtin_ctzj
 // CIR:         [[TMP:%.+]] = cir.ctz %{{.+}} poison_zero : !u32i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u32i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u32i -> !s32i
 
 // LLVM-LABEL: _Z16test_builtin_ctzj
 // LLVM:         %{{.+}} = call i32 @llvm.cttz.i32(i32 %{{.+}}, i1 true)
@@ -110,7 +110,7 @@ int test_builtin_ctzl(unsigned long x) {
 
 // CIR-LABEL: _Z17test_builtin_ctzlm
 // CIR:         [[TMP:%.+]] = cir.ctz %{{.+}} poison_zero : !u64i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u64i -> !s32i
 
 // LLVM-LABEL: _Z17test_builtin_ctzlm
 // LLVM:         %{{.+}} = call i64 @llvm.cttz.i64(i64 %{{.+}}, i1 true)
@@ -124,7 +124,7 @@ int test_builtin_ctzll(unsigned long long x) {
 
 // CIR-LABEL: _Z18test_builtin_ctzlly
 // CIR:         [[TMP:%.+]] = cir.ctz %{{.+}} poison_zero : !u64i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u64i -> !s32i
 
 // LLVM-LABEL: _Z18test_builtin_ctzlly
 // LLVM:         %{{.+}} = call i64 @llvm.cttz.i64(i64 %{{.+}}, i1 true)
@@ -138,7 +138,7 @@ int test_builtin_ctzg(unsigned x) {
 
 // CIR-LABEL: _Z17test_builtin_ctzgj
 // CIR:         [[TMP:%.+]] = cir.ctz %{{.+}} poison_zero : !u32i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u32i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u32i -> !s32i
 
 // LLVM-LABEL: _Z17test_builtin_ctzgj
 // LLVM:         %{{.+}} = call i32 @llvm.cttz.i32(i32 %{{.+}}, i1 true)
@@ -152,7 +152,7 @@ int test_builtin_clzs(unsigned short x) {
 
 // CIR-LABEL: _Z17test_builtin_clzst
 // CIR:         [[TMP:%.+]] = cir.clz %{{.+}} poison_zero : !u16i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u16i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u16i -> !s32i
 
 // LLVM-LABEL: _Z17test_builtin_clzst
 // LLVM:         %{{.+}} = call i16 @llvm.ctlz.i16(i16 %{{.+}}, i1 true)
@@ -166,7 +166,7 @@ int test_builtin_clz(unsigned x) {
 
 // CIR-LABEL: _Z16test_builtin_clzj
 // CIR:         [[TMP:%.+]] = cir.clz %{{.+}} poison_zero : !u32i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u32i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u32i -> !s32i
 
 // LLVM-LABEL: _Z16test_builtin_clzj
 // LLVM:         %{{.+}} = call i32 @llvm.ctlz.i32(i32 %{{.+}}, i1 true)
@@ -180,7 +180,7 @@ int test_builtin_clzl(unsigned long x) {
 
 // CIR-LABEL: _Z17test_builtin_clzlm
 // CIR:         [[TMP:%.+]] = cir.clz %{{.+}} poison_zero : !u64i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u64i -> !s32i
 
 // LLVM-LABEL: _Z17test_builtin_clzlm
 // LLVM:         %{{.+}} = call i64 @llvm.ctlz.i64(i64 %{{.+}}, i1 true)
@@ -194,7 +194,7 @@ int test_builtin_clzll(unsigned long long x) {
 
 // CIR-LABEL: _Z18test_builtin_clzlly
 // CIR:         [[TMP:%.+]] = cir.clz %{{.+}} poison_zero : !u64i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u64i -> !s32i
 
 // LLVM-LABEL: _Z18test_builtin_clzlly
 // LLVM:         %{{.+}} = call i64 @llvm.ctlz.i64(i64 %{{.+}}, i1 true)
@@ -208,7 +208,7 @@ int test_builtin_clzg(unsigned x) {
 
 // CIR-LABEL: _Z17test_builtin_clzgj
 // CIR:         [[TMP:%.+]] = cir.clz %{{.+}} poison_zero : !u32i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u32i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u32i -> !s32i
 
 // LLVM-LABEL: _Z17test_builtin_clzgj
 // LLVM:         %{{.+}} = call i32 @llvm.ctlz.i32(i32 %{{.+}}, i1 true)
@@ -294,7 +294,7 @@ int test_builtin_parity(unsigned x) {
 
 // CIR-LABEL: _Z19test_builtin_parityj
 // CIR:         [[TMP:%.+]] = cir.parity %{{.+}} : !u32i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u32i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u32i -> !s32i
 
 // LLVM-LABEL: _Z19test_builtin_parityj
 // LLVM:         %[[X:.+]] = load i32, ptr %{{.+}}, align 4
@@ -312,7 +312,7 @@ int test_builtin_parityl(unsigned long x) {
 
 // CIR-LABEL: _Z20test_builtin_paritylm
 // CIR:         [[TMP:%.+]] = cir.parity %{{.+}} : !u64i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u64i -> !s32i
 
 // LLVM-LABEL: _Z20test_builtin_paritylm
 // LLVM:         %[[X:.+]] = load i64, ptr %{{.+}}, align 8
@@ -330,7 +330,7 @@ int test_builtin_parityll(unsigned long long x) {
 
 // CIR-LABEL: _Z21test_builtin_paritylly
 // CIR:         [[TMP:%.+]] = cir.parity %{{.+}} : !u64i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u64i -> !s32i
 
 // LLVM-LABEL: _Z21test_builtin_paritylly
 // LLVM:         %[[X:.+]] = load i64, ptr %{{.+}}, align 8
@@ -348,7 +348,7 @@ int test_builtin_popcount(unsigned x) {
 
 // CIR-LABEL: _Z21test_builtin_popcountj
 // CIR:         [[TMP:%.+]] = cir.popcount %{{.+}} : !u32i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u32i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u32i -> !s32i
 
 // LLVM-LABEL: _Z21test_builtin_popcountj
 // LLVM:         %{{.+}} = call i32 @llvm.ctpop.i32(i32 %{{.+}})
@@ -362,7 +362,7 @@ int test_builtin_popcountl(unsigned long x) {
 
 // CIR-LABEL: _Z22test_builtin_popcountlm
 // CIR:         [[TMP:%.+]] = cir.popcount %{{.+}} : !u64i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u64i -> !s32i
 
 // LLVM-LABEL: _Z22test_builtin_popcountlm
 // LLVM:         %{{.+}} = call i64 @llvm.ctpop.i64(i64 %{{.+}})
@@ -376,7 +376,7 @@ int test_builtin_popcountll(unsigned long long x) {
 
 // CIR-LABEL: _Z23test_builtin_popcountlly
 // CIR:         [[TMP:%.+]] = cir.popcount %{{.+}} : !u64i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u64i -> !s32i
 
 // LLVM-LABEL: _Z23test_builtin_popcountlly
 // LLVM:         %{{.+}} = call i64 @llvm.ctpop.i64(i64 %{{.+}})
@@ -390,7 +390,7 @@ int test_builtin_popcountg(unsigned x) {
 
 // CIR-LABEL: _Z22test_builtin_popcountgj
 // CIR:         [[TMP:%.+]] = cir.popcount %{{.+}} : !u32i
-// CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u32i), !s32i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u32i -> !s32i
 
 // LLVM-LABEL: _Z22test_builtin_popcountgj
 // LLVM:         %{{.+}} = call i32 @llvm.ctpop.i32(i32 %{{.+}})
