@@ -2308,7 +2308,7 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
       auto last = block.end();
       --last;
 
-      // A trailing CONTINUE or CYCLE does not belong to the loop body
+      // A trailing CONTINUE is not considered part of the loop body
       if (parser::Unwrap<parser::ContinueStmt>(*last))
         --last;
 
