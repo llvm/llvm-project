@@ -1599,7 +1599,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   {
     auto LoByte = [](IRBuilderBase &Builder, Value *Op, const Twine &Name) {
       return Builder.CreateZExtOrTrunc(
-          Op, IntegerType::getInt8Ty(Op->getContext()));
+          Op, IntegerType::getInt8Ty(Op->getContext()), Name);
     };
     auto HiIdx = [LoByte, CRCBW](IRBuilderBase &Builder, Value *Op,
                                  const Twine &Name) {

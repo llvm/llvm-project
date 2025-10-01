@@ -19,8 +19,8 @@ define void @test_with_dl() {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, %[[PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[CRC2:%.*]] = phi i32 [ 0, %[[PH]] ], [ [[CRC_NEXT3]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[CRC2]] to i8
-; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[TMP0]] to i16
+; CHECK-NEXT:    [[INDEXER_LO:%.*]] = trunc i32 [[CRC2]] to i8
+; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_LO]] to i16
 ; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i32, ptr @.crctable, i16 [[INDEXER_EXT]]
 ; CHECK-NEXT:    [[TBL_LD:%.*]] = load i32, ptr [[TBL_PTRADD]], align 4
 ; CHECK-NEXT:    [[CRC_LE_SHIFT:%.*]] = lshr i32 [[CRC2]], 8
