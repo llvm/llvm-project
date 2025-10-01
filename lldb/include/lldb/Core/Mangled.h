@@ -251,7 +251,7 @@ public:
   /// \return
   ///     eManglingSchemeNone if no known mangling scheme could be identified
   ///     for s, otherwise the enumerator for the mangling scheme detected.
-  static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef const name);
+  static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef name);
 
   static bool IsMangledName(llvm::StringRef name);
 
