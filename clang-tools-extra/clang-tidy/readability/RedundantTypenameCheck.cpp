@@ -21,7 +21,7 @@ namespace clang::tidy::readability {
 void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
   // NOLINTNEXTLINE(readability-identifier-naming)
   const VariadicDynCastAllOfMatcher<TypeLoc, TypedefTypeLoc> typedefTypeLoc;
-  Finder->addMatcher(typedefTypeLoc().bind("typeloc"), this);
+  Finder->addMatcher(typedefTypeLoc().bind("typedefTypeLoc"), this);
 
   if (!getLangOpts().CPlusPlus20)
     return;
@@ -44,7 +44,8 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
 
 void RedundantTypenameCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceLocation TypenameKeywordLoc = [&] {
-    if (const auto *TTL = Result.Nodes.getNodeAs<TypedefTypeLoc>("typeloc"))
+    if (const auto *TTL =
+            Result.Nodes.getNodeAs<TypedefTypeLoc>("typedefTypeLoc"))
       return TTL->getElaboratedKeywordLoc();
 
     TypeLoc InnermostTypeLoc = *Result.Nodes.getNodeAs<TypeLoc>("typeloc");
