@@ -349,14 +349,12 @@ struct VPCostContext {
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
   TargetTransformInfo::TargetCostKind CostKind;
-  ScalarEvolution &SE;
 
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
                 const VPlan &Plan, LoopVectorizationCostModel &CM,
-                TargetTransformInfo::TargetCostKind CostKind,
-                ScalarEvolution &SE)
+                TargetTransformInfo::TargetCostKind CostKind)
       : TTI(TTI), TLI(TLI), Types(Plan), LLVMCtx(Plan.getContext()), CM(CM),
-        CostKind(CostKind), SE(SE) {}
+        CostKind(CostKind) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -376,12 +374,10 @@ struct VPCostContext {
 
   /// Estimate the overhead of scalarizing a recipe with result type \p ResultTy
   /// and \p Operands with \p VF. This is a convenience wrapper for the
-  /// type-based getScalarizationOverhead API. If \p AlwaysIncludeReplicatingR
-  /// is true, always compute the cost of scalarizing replicating operands.
-  InstructionCost
-  getScalarizationOverhead(Type *ResultTy, ArrayRef<const VPValue *> Operands,
-                           ElementCount VF,
-                           bool AlwaysIncludeReplicatingR = false);
+  /// type-based getScalarizationOverhead API.
+  InstructionCost getScalarizationOverhead(Type *ResultTy,
+                                           ArrayRef<const VPValue *> Operands,
+                                           ElementCount VF);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without
