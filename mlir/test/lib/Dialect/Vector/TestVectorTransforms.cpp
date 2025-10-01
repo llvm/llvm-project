@@ -994,6 +994,22 @@ struct TestEliminateVectorMasks
                          VscaleRange{vscaleMin, vscaleMax});
   }
 };
+
+struct TestVectorShuffleLowering
+    : public PassWrapper<TestVectorShuffleLowering,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorShuffleLowering)
+
+  StringRef getArgument() const final { return "test-vector-shuffle-lowering"; }
+  StringRef getDescription() const final {
+    return "Test lowering patterns for vector.shuffle with mixed-size inputs";
+  }
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateVectorShuffleLoweringPatterns(patterns);
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
+};
 } // namespace
 
 namespace mlir {
@@ -1022,6 +1038,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestFlattenVectorTransferPatterns>();
 
   PassRegistration<TestVectorScanLowering>();
+
+  PassRegistration<TestVectorShuffleLowering>();
 
   PassRegistration<TestVectorDistribution>();
 

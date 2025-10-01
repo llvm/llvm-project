@@ -1021,10 +1021,6 @@ void LinkerScript::addOrphanSections() {
     }
   };
 
-  // For further --emit-reloc handling code we need target output section
-  // to be created before we create relocation output section, so we want
-  // to create target sections first. We do not want priority handling
-  // for synthetic sections because them are special.
   size_t n = 0;
   for (InputSectionBase *isec : ctx.inputSections) {
     // Process InputSection and MergeInputSection.
@@ -1037,10 +1033,18 @@ void LinkerScript::addOrphanSections() {
     if (ctx.arg.relocatable && (isec->flags & SHF_LINK_ORDER))
       continue;
 
-    if (auto *sec = dyn_cast<InputSection>(isec))
-      if (InputSectionBase *rel = sec->getRelocatedSection())
-        if (auto *relIS = dyn_cast_or_null<InputSectionBase>(rel->parent))
-          add(relIS);
+    if (auto *sec = dyn_cast<InputSection>(isec)) {
+      if (InputSectionBase *relocated = sec->getRelocatedSection()) {
+        // For --emit-relocs and -r, ensure the output section for .text.foo
+        // is created before the output section for .rela.text.foo.
+        add(relocated);
+        // EhInputSection sections are not added to ctx.inputSections. If we see
+        // .rela.eh_frame, ensure the output section for the synthetic
+        // EhFrameSection is created first.
+        if (auto *p = dyn_cast_or_null<InputSectionBase>(relocated->parent))
+          add(p);
+      }
+    }
     add(isec);
     if (ctx.arg.relocatable)
       for (InputSectionBase *depSec : isec->dependentSections)

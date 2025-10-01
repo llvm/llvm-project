@@ -47,6 +47,7 @@
 #include "RedundantFunctionPtrDereferenceCheck.h"
 #include "RedundantInlineSpecifierCheck.h"
 #include "RedundantMemberInitCheck.h"
+#include "RedundantParenthesesCheck.h"
 #include "RedundantPreprocessorCheck.h"
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
@@ -139,6 +140,8 @@ public:
         "readability-redundant-function-ptr-dereference");
     CheckFactories.registerCheck<RedundantMemberInitCheck>(
         "readability-redundant-member-init");
+    CheckFactories.registerCheck<RedundantParenthesesCheck>(
+        "readability-redundant-parentheses");
     CheckFactories.registerCheck<RedundantPreprocessorCheck>(
         "readability-redundant-preprocessor");
     CheckFactories.registerCheck<RedundantTypenameCheck>(

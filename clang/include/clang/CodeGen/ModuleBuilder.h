@@ -52,6 +52,12 @@ namespace CodeGen {
 class CodeGenerator : public ASTConsumer {
   virtual void anchor();
 
+protected:
+  /// True if we've finished generating IR. This prevents us from generating
+  /// additional LLVM IR after emitting output in HandleTranslationUnit. This
+  /// can happen when Clang plugins trigger additional AST deserialization.
+  bool IRGenFinished = false;
+
 public:
   /// Return an opaque reference to the CodeGenModule object, which can
   /// be used in various secondary APIs.  It is valid as long as the

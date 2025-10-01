@@ -162,7 +162,7 @@ public:
     // Ref-counted smartpointers actually have raw-pointer to uncounted type as
     // a member but we trust them to handle it correctly.
     auto R = llvm::dyn_cast_or_null<CXXRecordDecl>(RD);
-    if (!R || isRefCounted(R) || isCheckedPtr(R) || isRetainPtr(R))
+    if (!R || isRefCounted(R) || isCheckedPtr(R) || isRetainPtrOrOSPtr(R))
       return;
 
     for (auto *Member : RD->fields()) {
