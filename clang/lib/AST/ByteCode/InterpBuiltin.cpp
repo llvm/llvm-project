@@ -2788,10 +2788,8 @@ static bool interp__builtin_ia32_pshuf(InterpState &S, CodePtr OpPC,
   unsigned ElemBits = static_cast<unsigned>(primSize(ElemT) * 8);
   if (ElemBits != 16 && ElemBits != 32)
     return false;
-
-  unsigned TotalBits = NumElems * ElemBits;
-  unsigned LaneBits = (TotalBits == 64) ? 64u : 128u;
-  unsigned LaneElts = LaneBits / ElemBits;
+  
+  unsigned LaneElts = 128u / ElemBits;
   assert(LaneElts && (NumElems % LaneElts == 0));
 
   uint8_t ctl = static_cast<uint8_t>(ControlImm.getZExtValue());
