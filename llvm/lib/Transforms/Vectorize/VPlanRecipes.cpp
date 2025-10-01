@@ -2794,7 +2794,6 @@ VPExpressionRecipe::VPExpressionRecipe(
   // create new temporary VPValues for all operands defined by a recipe outside
   // the expression. The original operands are added as operands of the
   // VPExpressionRecipe itself.
-
   for (auto *R : ExpressionRecipes) {
     for (const auto &[Idx, Op] : enumerate(R->operands())) {
       auto *Def = Op->getDefiningRecipe();
@@ -2805,6 +2804,8 @@ VPExpressionRecipe::VPExpressionRecipe(
     }
   }
 
+  // Replace each external operand with the first one created for it in
+  // LiveInPlaceholders.
   for (auto *R : ExpressionRecipes)
     for (auto const &[LiveIn, Tmp] : zip(operands(), LiveInPlaceholders))
       R->replaceUsesOfWith(LiveIn, Tmp);
