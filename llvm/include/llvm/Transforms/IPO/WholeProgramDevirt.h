@@ -226,17 +226,15 @@ struct WholeProgramDevirtPass : public PassInfoMixin<WholeProgramDevirtPass> {
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
   bool UseCommandLine = false;
-  // Default value for LTO mode is true, as this is the default behavior for
-  // whole program devirtualization unless explicitly disabled.
-  const bool InLTOMode;
+  // True if ExportSummary was built locally from the module rather than
+  // provided externally to the pass (e.g., during LTO). Default value is false
+  // unless explicitly set when the Summary is explicitly built.
+  bool HasLocalSummary = false;
   WholeProgramDevirtPass()
-      : ExportSummary(nullptr), ImportSummary(nullptr), UseCommandLine(true),
-        InLTOMode(true) {}
+      : ExportSummary(nullptr), ImportSummary(nullptr), UseCommandLine(true) {}
   WholeProgramDevirtPass(ModuleSummaryIndex *ExportSummary,
-                         const ModuleSummaryIndex *ImportSummary,
-                         bool InLTOMode = true)
-      : ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-        InLTOMode(InLTOMode) {
+                         const ModuleSummaryIndex *ImportSummary)
+      : ExportSummary(ExportSummary), ImportSummary(ImportSummary) {
     assert(!(ExportSummary && ImportSummary));
   }
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);

@@ -603,8 +603,9 @@ struct DevirtModule {
 
   ModuleSummaryIndex *const ExportSummary;
   const ModuleSummaryIndex *const ImportSummary;
-
-  const bool InLTOMode;
+  // True if ExportSummary was built locally from the module.
+  // Default is false unless explicitly set.
+  const bool HasLocalSummary;
 
   IntegerType *const Int8Ty;
   PointerType *const Int8PtrTy;
@@ -642,11 +643,13 @@ struct DevirtModule {
 
   DevirtModule(Module &M, ModuleAnalysisManager &MAM,
                ModuleSummaryIndex *ExportSummary,
-               const ModuleSummaryIndex *ImportSummary, bool InLTOMode = true)
+               const ModuleSummaryIndex *ImportSummary,
+               bool HasLocalSummary = false)
       : M(M), MAM(MAM),
         FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
         ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-        InLTOMode(InLTOMode), Int8Ty(Type::getInt8Ty(M.getContext())),
+        HasLocalSummary(HasLocalSummary),
+        Int8Ty(Type::getInt8Ty(M.getContext())),
         Int8PtrTy(PointerType::getUnqual(M.getContext())),
         Int32Ty(Type::getInt32Ty(M.getContext())),
         Int64Ty(Type::getInt64Ty(M.getContext())),
@@ -816,7 +819,8 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
   }
-  if (!DevirtModule(M, MAM, ExportSummary, ImportSummary, InLTOMode).run())
+  if (!DevirtModule(M, MAM, ExportSummary, ImportSummary, HasLocalSummary)
+           .run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
@@ -1360,7 +1364,7 @@ bool DevirtModule::trySingleImplDevirt(
   // If the only implementation has local linkage, we must promote
   // to external to make it visible to thin LTO objects.
   // This change should be safe only in LTO mode.
-  if (InLTOMode && TheFn->hasLocalLinkage()) {
+  if (!HasLocalSummary && TheFn->hasLocalLinkage()) {
     std::string NewName = (TheFn->getName() + ".llvm.merged").str();
 
     // Since we are renaming the function, any comdats with the same name must
@@ -2518,6 +2522,7 @@ bool DevirtModule::run() {
           trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res);
       // Out of speculative devirtualization mode, Try to apply virtual constant
       // propagation or branch funneling.
+      // TODO: This should eventually be enabled for non-public type tests.
       if (!SingleImplDevirt && !ClDevirtualizeSpeculatively) {
         DidVirtualConstProp |=
             tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first);
