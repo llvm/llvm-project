@@ -6825,8 +6825,9 @@ void InitializationSequence::InitializeFrom(Sema &S,
   if (S.getLangOpts().HLSL && Args.size() > 1 && DestType->isExtVectorType() &&
       (SourceType.isNull() ||
        !Context.hasSameUnqualifiedType(SourceType, DestType))) {
-    InitListExpr *ILE = new (Context) InitListExpr(
-        S.getASTContext(), SourceLocation(), Args, SourceLocation());
+    InitListExpr *ILE = new (Context)
+        InitListExpr(S.getASTContext(), Args.front()->getBeginLoc(), Args,
+                     Args.back()->getEndLoc());
     ILE->setType(DestType);
     Args[0] = ILE;
     TryListInitialization(S, Entity, Kind, ILE, *this,

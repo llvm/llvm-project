@@ -14,7 +14,7 @@ void entry() {
 // parameters to an initialization list
 // CHECK-LABEL: VarDecl {{.*}} used Vec2 'float2':'vector<float, 2>' cinit
 // CHECK-NEXT: CXXFunctionalCastExpr {{.*}} 'float2':'vector<float, 2>' functional cast to float2 <NoOp>
-// CHECK-NEXT: InitListExpr {{.*}} 'float2':'vector<float, 2>'
+// CHECK-NEXT: InitListExpr {{0x[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>'
 // CHECK-NEXT: FloatingLiteral {{.*}} 'float' 1.000000e+00
 // CHECK-NEXT: FloatingLiteral {{.*}} 'float' 2.000000e+00
 
