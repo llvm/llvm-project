@@ -954,14 +954,10 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (!Interop)
       return Plugin::success();
 
-    if (Interop->async_info) {
-      if (auto Err = CUDAStreamManager.returnResource(
-              *static_cast<CUstream *>(Interop->async_info->Queue)))
-        return Err;
+    if (Interop->async_info)
       delete Interop->async_info;
-    }
-    delete Interop;
 
+    delete Interop;
     return Plugin::success();
   }
 
