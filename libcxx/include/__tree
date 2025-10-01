@@ -581,7 +581,7 @@ public:
     __parent_ = std::__static_fancy_pointer_cast<__end_node_pointer>(__p);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node_base()  = default;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node_base() = default;
   __tree_node_base(__tree_node_base const&)            = delete;
   __tree_node_base& operator=(__tree_node_base const&) = delete;
 };
@@ -609,9 +609,7 @@ private:
   _ALIGNAS_TYPE(__node_value_type) unsigned char __buffer_[sizeof(__node_value_type)];
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() {
-    return *reinterpret_cast<__node_value_type*>(__buffer_);
-  }
+  _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return *reinterpret_cast<__node_value_type*>(__buffer_); }
 #endif
 
   template <class _Alloc, class... _Args>
@@ -1054,17 +1052,17 @@ public:
         std::forward<_Args>(__args)...);
   }
 
-
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool>
   __emplace_hint_unique__sfinae(true_type, const_iterator __p, _Args&&... __args) {
-      return __emplace_hint_unique(__p, __args...);
+    return __emplace_hint_unique(__p, __args...);
   }
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool>
-  __emplace_hint_unique__sfinae(false_type, const_iterator , _Args&&... ) {
-    // This method body should never be run. It only exists to allow for compilation. See note in __insert_unique_from_orphaned_node for more information.
+  __emplace_hint_unique__sfinae(false_type, const_iterator, _Args&&...) {
+    // This method body should never be run. It only exists to allow for compilation. See note in
+    // __insert_unique_from_orphaned_node for more information.
     return pair<iterator, bool>(iterator(__node_pointer()), false);
   }
 
@@ -1073,16 +1071,16 @@ public:
   __insert_unique_from_orphaned_node(const_iterator __p, __get_node_value_type_t<_Tp>&& __value) {
 #if _LIBCPP_STD_VER >= 26
     if (std::is_constant_evaluated() && std::is_copy_constructible_v<decltype(__value.first)>) {
-
-      // We create a sfinae wrapper method here, because if the __emplace_hint_unique method gets template instantiated within __insert_unique_from_orphaned_node, the code will fail to compile where the value is not copy_constructible for runtime execution as well; unless we use `if constexpr`.
-      // Given the copy-constructible code path will be a performance regression, we want to restrict it to only execute during constant evaluation
+      // We create a sfinae wrapper method here, because if the __emplace_hint_unique method gets template instantiated
+      // within __insert_unique_from_orphaned_node, the code will fail to compile where the value is not
+      // copy_constructible for runtime execution as well; unless we use `if constexpr`. Given the copy-constructible
+      // code path will be a performance regression, we want to restrict it to only execute during constant evaluation
       //, we need to delay the template instantiation
       __emplace_hint_unique__sfinae(
-        integral_constant <
-          bool,
-          std::is_copy_constructible_v<decltype(__value.first)>
-        >(),
-      __p, std::move(__value.first), std::move(__value.second));
+          integral_constant< bool, std::is_copy_constructible_v<decltype(__value.first)> >(),
+          __p,
+          std::move(__value.first),
+          std::move(__value.second));
     } else
 #endif
     {
@@ -1360,25 +1358,23 @@ private:
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __move_assign_alloc(__tree&, false_type) _NOEXCEPT {}
 
-
   template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __assign_value__sfinae(true_type, __get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
+    __node_allocator& __na = __node_alloc();
+    __node_traits::destroy(__na, std::addressof(__lhs));
 
-      __node_allocator& __na = __node_alloc();
-      __node_traits::destroy(__na, std::addressof(__lhs));
+    using __node_value_type = __get_node_value_type_t<value_type>;
+    __node_value_type __tmp(__rhs.first, __rhs.second);
 
-      using __node_value_type = __get_node_value_type_t<value_type>;
-      __node_value_type __tmp(__rhs.first, __rhs.second);
-
-      __node_traits::construct(__na, std::addressof(__lhs), std::move(__tmp));
-
+    __node_traits::construct(__na, std::addressof(__lhs), std::move(__tmp));
   }
 
   template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  __assign_value__sfinae(false_type, __get_node_value_type_t<value_type>& , _From&& ) {
-// This method body should never be run. It only exists to allow for compilation. See note in __assign_value for more information
+  __assign_value__sfinae(false_type, __get_node_value_type_t<value_type>&, _From&&) {
+    // This method body should never be run. It only exists to allow for compilation. See note in __assign_value for
+    // more information
   }
 
   template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
@@ -1399,17 +1395,16 @@ private:
       // we get around this by deleting __lhs and creating a new node in-place
       // to avoid const_cast __lhs.first
 
-      // We create a sfinae wrapper method here, because if the body of the true_type overload for __assign_value__sfinae() gets template instantiated within __assign_value,
-      // the code will fail to compile where the value is not copy_constructible for runtime execution as well; unless we use `if constexpr`.
-      // Given the copy-constructible code path will be a performance regression, we want to restrict it to only execute during constant evaluation
+      // We create a sfinae wrapper method here, because if the body of the true_type overload for
+      // __assign_value__sfinae() gets template instantiated within __assign_value, the code will fail to compile where
+      // the value is not copy_constructible for runtime execution as well; unless we use `if constexpr`. Given the
+      // copy-constructible code path will be a performance regression, we want to restrict it to only execute during
+      // constant evaluation
       //, we need to delay the template instantiation
 
-      __assign_value__sfinae(
-        std::integral_constant<bool, std::is_copy_constructible_v<decltype(__rhs.first)>>(),
-        std::forward<decltype(__lhs)>(__lhs),
-        std::forward<decltype(__rhs)>(__rhs)
-      );
-
+      __assign_value__sfinae(std::integral_constant<bool, std::is_copy_constructible_v<decltype(__rhs.first)>>(),
+                             std::forward<decltype(__lhs)>(__lhs),
+                             std::forward<decltype(__rhs)>(__rhs));
 
     } else
 #endif
