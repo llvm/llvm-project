@@ -3171,10 +3171,11 @@ def fthin_link_bitcode_EQ : Joined<["-"], "fthin-link-bitcode=">,
   MarshallingInfoString<CodeGenOpts<"ThinLinkBitcodeFile">>;
 defm fat_lto_objects : BoolFOption<"fat-lto-objects",
   CodeGenOpts<"FatLTO">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Disable">,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option, FlangOption, FC1Option], "Disable">,
   BothFlags<[], [ClangOption, CC1Option], " fat LTO object support">>;
 def flto_partitions_EQ : Joined<["-"], "flto-partitions=">, Group<f_Group>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Number of partitions to use for parallel full LTO codegen, ld.lld only.">;
 def fmacro_backtrace_limit_EQ : Joined<["-"], "fmacro-backtrace-limit=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
@@ -3836,10 +3837,26 @@ let Visibility = [ClangOption, CC1Option, FC1Option, FlangOption] in {
 let Group = f_Group in {
 
 def fopenmp_target_debug_EQ : Joined<["-"], "fopenmp-target-debug=">;
-def fopenmp_assume_teams_oversubscription : Flag<["-"], "fopenmp-assume-teams-oversubscription">;
-def fopenmp_assume_threads_oversubscription : Flag<["-"], "fopenmp-assume-threads-oversubscription">;
-def fno_openmp_assume_teams_oversubscription : Flag<["-"], "fno-openmp-assume-teams-oversubscription">;
-def fno_openmp_assume_threads_oversubscription : Flag<["-"], "fno-openmp-assume-threads-oversubscription">;
+def fopenmp_assume_teams_oversubscription : Flag<["-"], "fopenmp-assume-teams-oversubscription">,
+  HelpText<"Allow the optimizer to discretely increase the number of "
+           "teams. May cause ignore environment variables that set "
+           "the number of teams to be ignored. The combination of "
+           "-fopenmp-assume-teams-oversubscription "
+           "and -fopenmp-assume-threads-oversubscription "
+           "may allow the conversion of loops into sequential code by "
+           "ensuring that each team/thread executes at most one iteration.">;
+def fopenmp_assume_threads_oversubscription : Flag<["-"], "fopenmp-assume-threads-oversubscription">,
+  HelpText<"Allow the optimizer to discretely increase the number of "
+           "threads. May cause ignore environment variables that set "
+           "the number of threads to be ignored. The combination of "
+           "-fopenmp-assume-teams-oversubscription "
+           "and -fopenmp-assume-threads-oversubscription "
+           "may allow the conversion of loops into sequential code by "
+           "ensuring that each team/thread executes at most one iteration.">;
+def fno_openmp_assume_teams_oversubscription : Flag<["-"], "fno-openmp-assume-teams-oversubscription">,
+  HelpText<"Do not assume teams oversubscription.">;
+def fno_openmp_assume_threads_oversubscription : Flag<["-"], "fno-openmp-assume-threads-oversubscription">,
+  HelpText<"Do not assume threads oversubscription.">;
 def fopenmp_assume_no_thread_state : Flag<["-"], "fopenmp-assume-no-thread-state">,
   HelpText<"Assert no thread in a parallel region modifies an ICV">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoThreadState">>;
@@ -4586,7 +4603,7 @@ defm ptrauth_block_descriptor_pointers : OptInCC1FFlag<"ptrauth-block-descriptor
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
     HelpText<"Enable matrix data type and related builtin functions">,
-    MarshallingInfoFlag<LangOpts<"MatrixTypes">>;
+    MarshallingInfoFlag<LangOpts<"MatrixTypes">, hlsl.KeyPath>;
 
 defm raw_string_literals : BoolFOption<"raw-string-literals",
     LangOpts<"RawStringLiterals">, Default<std#".hasRawStringLiterals()">,
@@ -4753,13 +4770,13 @@ defm column_info : BoolOption<"g", "column-info",
   PosFlag<SetTrue>, BothFlags<[], [ClangOption, CLOption, DXCOption]>>,
   Group<g_flags_Group>;
 def gsplit_dwarf : Flag<["-"], "gsplit-dwarf">, Group<g_flags_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def gsplit_dwarf_EQ : Joined<["-"], "gsplit-dwarf=">, Group<g_flags_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Set DWARF fission mode">,
   Values<"split,single">;
 def gno_split_dwarf : Flag<["-"], "gno-split-dwarf">, Group<g_flags_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def gtemplate_alias : Flag<["-"], "gtemplate-alias">, Group<g_flags_Group>, Visibility<[ClangOption, CC1Option]>;
 def gno_template_alias : Flag<["-"], "gno-template-alias">, Group<g_flags_Group>, Visibility<[ClangOption]>;
 def gsimple_template_names : Flag<["-"], "gsimple-template-names">, Group<g_flags_Group>;
@@ -8404,7 +8421,7 @@ def main_file_name : Separate<["-"], "main-file-name">,
   MarshallingInfoString<CodeGenOpts<"MainFileName">>;
 def split_dwarf_output : Separate<["-"], "split-dwarf-output">,
   HelpText<"File name to use for split dwarf debug info output">,
-  Visibility<[CC1Option, CC1AsOption]>,
+  Visibility<[CC1Option, CC1AsOption, FC1Option]>,
   MarshallingInfoString<CodeGenOpts<"SplitDwarfOutput">>;
 
 let Visibility = [CC1Option, FC1Option] in {
@@ -8436,6 +8453,10 @@ def dependent_lib : Joined<["--"], "dependent-lib=">,
   HelpText<"Add dependent library">,
   MarshallingInfoStringVector<CodeGenOpts<"DependentLibraries">>;
 
+def split_dwarf_file : Separate<["-"], "split-dwarf-file">,
+  HelpText<"Name of the split dwarf debug info file to encode in the object file">,
+  MarshallingInfoString<CodeGenOpts<"SplitDwarfFile">>;
+
 } // let Visibility = [CC1Option, FC1Option]
 
 let Visibility = [CC1Option] in {
@@ -8446,9 +8467,6 @@ def fblocks_runtime_optional : Flag<["-"], "fblocks-runtime-optional">,
 def fexternc_nounwind : Flag<["-"], "fexternc-nounwind">,
   HelpText<"Assume all functions with C linkage do not unwind">,
   MarshallingInfoFlag<LangOpts<"ExternCNoUnwind">>;
-def split_dwarf_file : Separate<["-"], "split-dwarf-file">,
-  HelpText<"Name of the split dwarf debug info file to encode in the object file">,
-  MarshallingInfoString<CodeGenOpts<"SplitDwarfFile">>;
 def fno_wchar : Flag<["-"], "fno-wchar">,
   HelpText<"Disable C++ builtin type wchar_t">,
   MarshallingInfoNegativeFlag<LangOpts<"WChar">, cplusplus.KeyPath>,
@@ -9455,7 +9473,7 @@ def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
          "lib_6_3, lib_6_4, lib_6_5, lib_6_6, lib_6_7, lib_6_x,"
          "ms_6_5, ms_6_6, ms_6_7,"
          "as_6_5, as_6_6, as_6_7,"
-         "rootsig_1_0, rootsig_1_1">;
+         "rootsig_1_0, rootsig_1_1, rootsig_1_2">;
 def emit_pristine_llvm : DXCFlag<"emit-pristine-llvm">,
   HelpText<"Emit pristine LLVM IR from the frontend by not running any LLVM passes at all."
            "Same as -S + -emit-llvm + -disable-llvm-passes.">;
@@ -9468,9 +9486,9 @@ def fdx_rootsignature_version :
   Group<dxc_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Root Signature Version">,
-  Values<"rootsig_1_0,rootsig_1_1">,
+  Values<"rootsig_1_0,rootsig_1_1,rootsig_1_2">,
   NormalizedValuesScope<"llvm::dxbc::RootSignatureVersion">,
-  NormalizedValues<["V1_0", "V1_1"]>,
+  NormalizedValues<["V1_0", "V1_1", "V1_2"]>,
   MarshallingInfoEnum<LangOpts<"HLSLRootSigVer">, "V1_1">;
 def dxc_rootsig_ver :
   Separate<["/", "-"], "force-rootsig-ver">,

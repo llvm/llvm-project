@@ -226,6 +226,8 @@ bool RISCVInstructionSelector::hasAllNBitUsers(const MachineInstr &MI,
     case RISCV::ADDW:
     case RISCV::ADDIW:
     case RISCV::SUBW:
+    case RISCV::FCVT_D_W:
+    case RISCV::FCVT_S_W:
       if (Bits >= 32)
         break;
       return false;

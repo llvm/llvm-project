@@ -2100,7 +2100,7 @@ def MaskedOp : OpenMP_Op<"masked", clauses = [
 //===----------------------------------------------------------------------===//
 // [Spec 5.2] 6.5 allocate Directive
 //===----------------------------------------------------------------------===//
-def AllocateDirOp : OpenMP_Op<"allocate_dir", clauses = [
+def AllocateDirOp : OpenMP_Op<"allocate_dir", [AttrSizedOperandSegments], clauses = [
     OpenMP_AlignClause, OpenMP_AllocatorClause
   ]> {
   let summary = "allocate directive";

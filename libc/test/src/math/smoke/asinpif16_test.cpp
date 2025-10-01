@@ -21,44 +21,37 @@ TEST_F(LlvmLibcAsinpif16Test, SpecialNumbers) {
   EXPECT_FP_EQ(-0.5f16, LIBC_NAMESPACE::asinpif16(-1.0));
 
   // NaN inputs
-  EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
-               LIBC_NAMESPACE::asinpif16(FPBits::quiet_nan().get_val()));
+  EXPECT_FP_IS_NAN(LIBC_NAMESPACE::asinpif16(aNaN));
 
-  EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
-               LIBC_NAMESPACE::asinpif16(FPBits::signaling_nan().get_val()));
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::asinpif16(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
   // infinity inputs -> should return NaN
-  EXPECT_FP_EQ(FPBits::quiet_nan().get_val(), LIBC_NAMESPACE::asinpif16(inf));
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::asinpif16(inf), FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
-               LIBC_NAMESPACE::asinpif16(neg_inf));
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::asinpif16(neg_inf),
+                                  FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
 }
 
 TEST_F(LlvmLibcAsinpif16Test, OutOfRange) {
   // Test values > 1
-  EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
-               LIBC_NAMESPACE::asinpif16(1.5f16));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinpif16(1.5f16));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
-               LIBC_NAMESPACE::asinpif16(2.0f16));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinpif16(2.0f16));
   EXPECT_MATH_ERRNO(EDOM);
 
   // Test values < -1
-  EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
-               LIBC_NAMESPACE::asinpif16(-1.5f16));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinpif16(-1.5f16));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
-               LIBC_NAMESPACE::asinpif16(-2.0f16));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinpif16(-2.0f16));
   EXPECT_MATH_ERRNO(EDOM);
 
   // Test maximum normal value (should be > 1 for float16)
-  EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
-               LIBC_NAMESPACE::asinpif16(FPBits::max_normal().get_val()));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinpif16(FPBits::max_normal().get_val()));
   EXPECT_MATH_ERRNO(EDOM);
 }
 

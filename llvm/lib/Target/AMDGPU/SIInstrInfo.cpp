@@ -124,7 +124,7 @@ static bool canRemat(const MachineInstr &MI) {
   return false;
 }
 
-bool SIInstrInfo::isReallyTriviallyReMaterializable(
+bool SIInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
 
   if (canRemat(MI)) {
@@ -145,7 +145,7 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(
       return true;
   }
 
-  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+  return TargetInstrInfo::isReMaterializableImpl(MI);
 }
 
 // Returns true if the scalar result of a VALU instruction depends on exec.
@@ -3773,7 +3773,7 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
           MachineInstr *Def = MRI->getUniqueVRegDef(Src0->getReg());
           if (Def && Def->isMoveImmediate() &&
               isInlineConstant(Def->getOperand(1)) &&
-              MRI->hasOneUse(Src0->getReg())) {
+              MRI->hasOneNonDBGUse(Src0->getReg())) {
             Src0->ChangeToImmediate(Def->getOperand(1).getImm());
             Src0Inlined = true;
           } else if (ST.getConstantBusLimit(Opc) <= 1 &&
@@ -3788,7 +3788,7 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
           MachineInstr *Def = MRI->getUniqueVRegDef(Src1->getReg());
           if (Def && Def->isMoveImmediate() &&
               isInlineConstant(Def->getOperand(1)) &&
-              MRI->hasOneUse(Src1->getReg()) && commuteInstruction(UseMI))
+              MRI->hasOneNonDBGUse(Src1->getReg()) && commuteInstruction(UseMI))
             Src0->ChangeToImmediate(Def->getOperand(1).getImm());
           else if (RI.isSGPRReg(*MRI, Src1->getReg()))
             return false;
@@ -4342,6 +4342,59 @@ bool SIInstrInfo::mayAccessScratchThroughFlat(const MachineInstr &MI) const {
     }
     return AS == AMDGPUAS::PRIVATE_ADDRESS;
   });
+}
+
+bool SIInstrInfo::mayAccessVMEMThroughFlat(const MachineInstr &MI) const {
+  assert(isFLAT(MI));
+
+  // All flat instructions use the VMEM counter except prefetch.
+  if (!usesVM_CNT(MI))
+    return false;
+
+  // If there are no memory operands then conservatively assume the flat
+  // operation may access VMEM.
+  if (MI.memoperands_empty())
+    return true;
+
+  // See if any memory operand specifies an address space that involves VMEM.
+  // Flat operations only supported FLAT, LOCAL (LDS), or address spaces
+  // involving VMEM such as GLOBAL, CONSTANT, PRIVATE (SCRATCH), etc. The REGION
+  // (GDS) address space is not supported by flat operations. Therefore, simply
+  // return true unless only the LDS address space is found.
+  for (const MachineMemOperand *Memop : MI.memoperands()) {
+    unsigned AS = Memop->getAddrSpace();
+    assert(AS != AMDGPUAS::REGION_ADDRESS);
+    if (AS != AMDGPUAS::LOCAL_ADDRESS)
+      return true;
+  }
+
+  return false;
+}
+
+bool SIInstrInfo::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
+  assert(isFLAT(MI));
+
+  // Flat instruction such as SCRATCH and GLOBAL do not use the lgkm counter.
+  if (!usesLGKM_CNT(MI))
+    return false;
+
+  // If in tgsplit mode then there can be no use of LDS.
+  if (ST.isTgSplitEnabled())
+    return false;
+
+  // If there are no memory operands then conservatively assume the flat
+  // operation may access LDS.
+  if (MI.memoperands_empty())
+    return true;
+
+  // See if any memory operand specifies an address space that involves LDS.
+  for (const MachineMemOperand *Memop : MI.memoperands()) {
+    unsigned AS = Memop->getAddrSpace();
+    if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS)
+      return true;
+  }
+
+  return false;
 }
 
 bool SIInstrInfo::modifiesModeRegister(const MachineInstr &MI) {
@@ -6332,6 +6385,66 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
   return isImmOperandLegal(MI, OpIdx, *MO);
 }
 
+bool SIInstrInfo::isNeverCoissue(MachineInstr &MI) const {
+  bool IsGFX950Only = ST.hasGFX950Insts();
+  bool IsGFX940Only = ST.hasGFX940Insts();
+
+  if (!IsGFX950Only && !IsGFX940Only)
+    return false;
+
+  if (!isVALU(MI))
+    return false;
+
+  // V_COS, V_EXP, V_RCP, etc.
+  if (isTRANS(MI))
+    return true;
+
+  // DOT2, DOT2C, DOT4, etc.
+  if (isDOT(MI))
+    return true;
+
+  // MFMA, SMFMA
+  if (isMFMA(MI))
+    return true;
+
+  unsigned Opcode = MI.getOpcode();
+  switch (Opcode) {
+  case AMDGPU::V_CVT_PK_BF8_F32_e64:
+  case AMDGPU::V_CVT_PK_FP8_F32_e64:
+  case AMDGPU::V_MQSAD_PK_U16_U8_e64:
+  case AMDGPU::V_MQSAD_U32_U8_e64:
+  case AMDGPU::V_PK_ADD_F16:
+  case AMDGPU::V_PK_ADD_F32:
+  case AMDGPU::V_PK_ADD_I16:
+  case AMDGPU::V_PK_ADD_U16:
+  case AMDGPU::V_PK_ASHRREV_I16:
+  case AMDGPU::V_PK_FMA_F16:
+  case AMDGPU::V_PK_FMA_F32:
+  case AMDGPU::V_PK_FMAC_F16_e32:
+  case AMDGPU::V_PK_FMAC_F16_e64:
+  case AMDGPU::V_PK_LSHLREV_B16:
+  case AMDGPU::V_PK_LSHRREV_B16:
+  case AMDGPU::V_PK_MAD_I16:
+  case AMDGPU::V_PK_MAD_U16:
+  case AMDGPU::V_PK_MAX_F16:
+  case AMDGPU::V_PK_MAX_I16:
+  case AMDGPU::V_PK_MAX_U16:
+  case AMDGPU::V_PK_MIN_F16:
+  case AMDGPU::V_PK_MIN_I16:
+  case AMDGPU::V_PK_MIN_U16:
+  case AMDGPU::V_PK_MOV_B32:
+  case AMDGPU::V_PK_MUL_F16:
+  case AMDGPU::V_PK_MUL_F32:
+  case AMDGPU::V_PK_MUL_LO_U16:
+  case AMDGPU::V_PK_SUB_I16:
+  case AMDGPU::V_PK_SUB_U16:
+  case AMDGPU::V_QSAD_PK_U16_U8_e64:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void SIInstrInfo::legalizeOperandsVOP2(MachineRegisterInfo &MRI,
                                        MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
@@ -6370,13 +6483,6 @@ void SIInstrInfo::legalizeOperandsVOP2(MachineRegisterInfo &MRI,
     }
     return;
   }
-
-  // No VOP2 instructions support AGPRs.
-  if (Src0.isReg() && RI.isAGPR(MRI, Src0.getReg()))
-    legalizeOpWithMove(MI, Src0Idx);
-
-  if (Src1.isReg() && RI.isAGPR(MRI, Src1.getReg()))
-    legalizeOpWithMove(MI, Src1Idx);
 
   // Special case: V_FMAC_F32 and V_FMAC_F16 have src2.
   if (Opc == AMDGPU::V_FMAC_F32_e32 || Opc == AMDGPU::V_FMAC_F16_e32) {
@@ -6518,12 +6624,6 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
       continue;
     }
 
-    if (RI.hasAGPRs(RI.getRegClassForReg(MRI, MO.getReg())) &&
-        !isOperandLegal(MI, Idx, &MO)) {
-      legalizeOpWithMove(MI, Idx);
-      continue;
-    }
-
     if (!RI.isSGPRClass(RI.getRegClassForReg(MRI, MO.getReg())))
       continue; // VGPRs are legal
 
@@ -6546,21 +6646,6 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
   if ((Opc == AMDGPU::V_FMAC_F32_e64 || Opc == AMDGPU::V_FMAC_F16_e64) &&
       !RI.isVGPR(MRI, MI.getOperand(VOP3Idx[2]).getReg()))
     legalizeOpWithMove(MI, VOP3Idx[2]);
-
-  if (isWMMA(MI)) {
-    // scale_src has a register class restricted to low 256 VGPRs, we may need
-    // to insert a copy to the restricted VGPR class.
-    int ScaleSrc0Idx =
-        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_src0);
-    if (ScaleSrc0Idx != -1) {
-      int ScaleSrc1Idx =
-          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_src1);
-      if (!isOperandLegal(MI, ScaleSrc0Idx))
-        legalizeOpWithMove(MI, ScaleSrc0Idx);
-      if (!isOperandLegal(MI, ScaleSrc1Idx))
-        legalizeOpWithMove(MI, ScaleSrc1Idx);
-    }
-  }
 
   // Fix the register class of packed FP32 instructions on gfx12+. See
   // SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand for more information.
@@ -8993,7 +9078,10 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
       break;
     }
 
-    if (!RI.hasVectorRegisters(getOpRegClass(UseMI, OpNo)))
+    const TargetRegisterClass *OpRC = getOpRegClass(UseMI, OpNo);
+    MRI.constrainRegClass(DstReg, OpRC);
+
+    if (!RI.hasVectorRegisters(OpRC))
       Worklist.insert(&UseMI);
     else
       // Legalization could change user list.
@@ -9468,6 +9556,13 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       // Assume d16_lo/hi inst are always in same size
       unsigned LoInstOpcode = D16Info->LoOp;
       const MCInstrDesc &Desc = getMCOpcodeFromPseudo(LoInstOpcode);
+      DescSize = Desc.getSize();
+    }
+
+    // If FMA Pseudo inst, get correct MC code size
+    if (Opc == AMDGPU::V_FMA_MIX_F16_t16 || Opc == AMDGPU::V_FMA_MIX_BF16_t16) {
+      // All potential lowerings are the same size; arbitrarily pick one.
+      const MCInstrDesc &Desc = getMCOpcodeFromPseudo(AMDGPU::V_FMA_MIXLO_F16);
       DescSize = Desc.getSize();
     }
 

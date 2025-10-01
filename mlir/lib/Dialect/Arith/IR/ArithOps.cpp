@@ -2137,7 +2137,7 @@ OpFoldResult arith::CmpFOp::fold(FoldAdaptor adaptor) {
 
 class CmpFIntToFPConst final : public OpRewritePattern<CmpFOp> {
 public:
-  using OpRewritePattern<CmpFOp>::OpRewritePattern;
+  using Base::Base;
 
   static CmpIPredicate convertToIntegerPredicate(CmpFPredicate pred,
                                                  bool isUnsigned) {
@@ -2431,7 +2431,7 @@ void arith::CmpFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 //  select %arg, %c1, %c0 => extui %arg
 struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
-  using OpRewritePattern<arith::SelectOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::SelectOp op,
                                 PatternRewriter &rewriter) const override {
@@ -2723,7 +2723,7 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   return nullptr;
 }
 
-/// Return the identity numeric value associated to the give op.
+/// Returns the identity numeric value of the given op.
 std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
   std::optional<AtomicRMWKind> maybeKind =
       llvm::TypeSwitch<Operation *, std::optional<AtomicRMWKind>>(op)
