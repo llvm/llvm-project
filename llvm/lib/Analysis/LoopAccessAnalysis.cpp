@@ -934,6 +934,7 @@ private:
   /// The LoopInfo of the loop being checked.
   const LoopInfo *LI;
 
+  /// The dominator tree of the function.
   DominatorTree &DT;
 
   /// Sets of potentially dependent accesses - members of one set share an
@@ -1030,23 +1031,24 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
   // the distance between the previously accessed location and the wrapped
   // location will be larger than half the pointer index type space. In that
   // case, the GEP would be  poison and any memory access dependent on it would
-  // be immediate UB when executed. The reasoning can only be applied if the
-  // pointer is dereferenced at least at the last iteration. For now, check if
-  // it is dereferenced in every iteration.
+  // be immediate UB when executed.
   if (auto *GEP = dyn_cast_if_present<GetElementPtrInst>(Ptr);
-      GEP && GEP->hasNoUnsignedSignedWrap() &&
-      (L->getHeader() == L->getLoopLatch() ||
-       (any_of(GEP->users(), [L, DT](User *U) {
-         if (!isa<LoadInst, StoreInst>(U))
-           return false;
-         BasicBlock *UserBB = cast<Instruction>(U)->getParent();
-         if (DT && !LoopAccessInfo::blockNeedsPredication(UserBB, L, DT))
-           return true;
-         return UserBB == L->getHeader() ||
-                (L->getExitingBlock() == L->getLoopLatch() &&
-                 UserBB == L->getLoopLatch());
-       }))))
-    return true;
+      GEP && GEP->hasNoUnsignedSignedWrap()) {
+    // For the above reasoning to apply, the pointer must be dereferenced in
+    // every iteration.
+    if (L->getHeader() == L->getLoopLatch() ||
+        any_of(GEP->users(), [L, DT](User *U) {
+          if (!isa<LoadInst, StoreInst>(U))
+            return false;
+          BasicBlock *UserBB = cast<Instruction>(U)->getParent();
+          if (DT && !LoopAccessInfo::blockNeedsPredication(UserBB, L, DT))
+            return true;
+          return UserBB == L->getHeader() ||
+                 (L->getExitingBlock() == L->getLoopLatch() &&
+                  UserBB == L->getLoopLatch());
+        }))
+      return true;
+  }
 
   if (!Stride)
     Stride = getStrideFromAddRec(AR, L, AccessTy, Ptr, PSE);
