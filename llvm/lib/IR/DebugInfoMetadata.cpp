@@ -1662,33 +1662,6 @@ DIAssignID *DIAssignID::getImpl(LLVMContext &Context, StorageType Storage,
   return storeImpl(new (0u, Storage) DIAssignID(Context, Storage), Storage);
 }
 
-unsigned DIExpression::ExprOperand::getSize() const {
-  uint64_t Op = getOp();
-
-  if (Op >= dwarf::DW_OP_breg0 && Op <= dwarf::DW_OP_breg31)
-    return 2;
-
-  switch (Op) {
-  case dwarf::DW_OP_LLVM_convert:
-  case dwarf::DW_OP_LLVM_fragment:
-  case dwarf::DW_OP_LLVM_extract_bits_sext:
-  case dwarf::DW_OP_LLVM_extract_bits_zext:
-  case dwarf::DW_OP_bregx:
-    return 3;
-  case dwarf::DW_OP_constu:
-  case dwarf::DW_OP_consts:
-  case dwarf::DW_OP_deref_size:
-  case dwarf::DW_OP_plus_uconst:
-  case dwarf::DW_OP_LLVM_tag_offset:
-  case dwarf::DW_OP_LLVM_entry_value:
-  case dwarf::DW_OP_LLVM_arg:
-  case dwarf::DW_OP_regx:
-    return 2;
-  default:
-    return 1;
-  }
-}
-
 bool DIExpression::isValid() const {
   for (auto I = expr_op_begin(), E = expr_op_end(); I != E; ++I) {
     // Check that there's space for the operand.
@@ -2476,14 +2449,12 @@ uint64_t DIExpression::getNumLocationOperands() const {
   return Result;
 }
 
-std::optional<DIExpression::SignedOrUnsignedConstant>
-DIExpression::isConstant() const {
-
+std::optional<SignedOrUnsignedConstant> DIExpression::isConstant() const {
   // Recognize signed and unsigned constants.
-  // An signed constants can be represented as DW_OP_consts C DW_OP_stack_value
-  // (DW_OP_LLVM_fragment of Len).
-  // An unsigned constant can be represented as
-  // DW_OP_constu C DW_OP_stack_value (DW_OP_LLVM_fragment of Len).
+  // An signed constants can be represented as DW_OP_consts C
+  // DW_OP_stack_value (DW_OP_LLVM_fragment of Len). An unsigned constant can
+  // be represented as DW_OP_constu C DW_OP_stack_value (DW_OP_LLVM_fragment
+  // of Len).
 
   if ((getNumElements() != 2 && getNumElements() != 3 &&
        getNumElements() != 6) ||

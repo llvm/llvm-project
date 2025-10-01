@@ -337,7 +337,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
 
   // Don't emit locations that cannot be expressed without DW_OP_stack_value.
   if (DwarfVersion < 4)
-    if (any_of(ExprCursor, [](DIExpression::ExprOperand Op) -> bool {
+    if (any_of(ExprCursor, [](ExprOperand Op) -> bool {
           return Op.getOp() == dwarf::DW_OP_stack_value;
         })) {
       DwarfRegs.clear();
@@ -511,7 +511,7 @@ bool DwarfExpression::addExpression(
   // and not any other parts of the following DWARF expression.
   assert(!IsEmittingEntryValue && "Can't emit entry value around expression");
 
-  std::optional<DIExpression::ExprOperand> PrevConvertOp;
+  std::optional<ExprOperand> PrevConvertOp;
 
   while (ExprCursor) {
     auto Op = ExprCursor.take();

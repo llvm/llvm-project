@@ -22,6 +22,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DbgVariableFragmentInfo.h"
+#include "llvm/IR/DebugInfoCommon.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/Casting.h"
@@ -3330,7 +3331,6 @@ public:
     return Elements[I];
   }
 
-  enum SignedOrUnsignedConstant { SignedConstant, UnsignedConstant };
   /// Determine whether this represents a constant value, if so
   // return it's sign information.
   LLVM_ABI std::optional<SignedOrUnsignedConstant> isConstant() const;
@@ -3349,86 +3349,6 @@ public:
 
   element_iterator elements_begin() const { return getElements().begin(); }
   element_iterator elements_end() const { return getElements().end(); }
-
-  /// A lightweight wrapper around an expression operand.
-  ///
-  /// TODO: Store arguments directly and change \a DIExpression to store a
-  /// range of these.
-  class ExprOperand {
-    const uint64_t *Op = nullptr;
-
-  public:
-    ExprOperand() = default;
-    explicit ExprOperand(const uint64_t *Op) : Op(Op) {}
-
-    const uint64_t *get() const { return Op; }
-
-    /// Get the operand code.
-    uint64_t getOp() const { return *Op; }
-
-    /// Get an argument to the operand.
-    ///
-    /// Never returns the operand itself.
-    uint64_t getArg(unsigned I) const { return Op[I + 1]; }
-
-    unsigned getNumArgs() const { return getSize() - 1; }
-
-    /// Return the size of the operand.
-    ///
-    /// Return the number of elements in the operand (1 + args).
-    LLVM_ABI unsigned getSize() const;
-
-    /// Append the elements of this operand to \p V.
-    void appendToVector(SmallVectorImpl<uint64_t> &V) const {
-      V.append(get(), get() + getSize());
-    }
-  };
-
-  /// An iterator for expression operands.
-  class expr_op_iterator {
-    ExprOperand Op;
-
-  public:
-    using iterator_category = std::input_iterator_tag;
-    using value_type = ExprOperand;
-    using difference_type = std::ptrdiff_t;
-    using pointer = value_type *;
-    using reference = value_type &;
-
-    expr_op_iterator() = default;
-    explicit expr_op_iterator(element_iterator I) : Op(I) {}
-
-    element_iterator getBase() const { return Op.get(); }
-    const ExprOperand &operator*() const { return Op; }
-    const ExprOperand *operator->() const { return &Op; }
-
-    expr_op_iterator &operator++() {
-      increment();
-      return *this;
-    }
-    expr_op_iterator operator++(int) {
-      expr_op_iterator T(*this);
-      increment();
-      return T;
-    }
-
-    /// Get the next iterator.
-    ///
-    /// \a std::next() doesn't work because this is technically an
-    /// input_iterator, but it's a perfectly valid operation.  This is an
-    /// accessor to provide the same functionality.
-    expr_op_iterator getNext() const { return ++expr_op_iterator(*this); }
-
-    bool operator==(const expr_op_iterator &X) const {
-      return getBase() == X.getBase();
-    }
-    bool operator!=(const expr_op_iterator &X) const {
-      return getBase() != X.getBase();
-    }
-
-  private:
-    void increment() { Op = ExprOperand(getBase() + Op.getSize()); }
-  };
 
   /// Visit the elements via ExprOperand wrappers.
   ///
@@ -3779,7 +3699,7 @@ template <> struct DenseMapInfo<DIExpression::FragmentInfo> {
 /// Holds a DIExpression and keeps track of how many operands have been consumed
 /// so far.
 class DIExpressionCursor {
-  DIExpression::expr_op_iterator Start, End;
+  expr_op_iterator Start, End;
 
 public:
   DIExpressionCursor(const DIExpression *Expr) {
@@ -3797,7 +3717,7 @@ public:
   DIExpressionCursor(const DIExpressionCursor &) = default;
 
   /// Consume one operation.
-  std::optional<DIExpression::ExprOperand> take() {
+  std::optional<ExprOperand> take() {
     if (Start == End)
       return std::nullopt;
     return *(Start++);
@@ -3807,14 +3727,14 @@ public:
   void consume(unsigned N) { std::advance(Start, N); }
 
   /// Return the current operation.
-  std::optional<DIExpression::ExprOperand> peek() const {
+  std::optional<ExprOperand> peek() const {
     if (Start == End)
       return std::nullopt;
     return *(Start);
   }
 
   /// Return the next operation.
-  std::optional<DIExpression::ExprOperand> peekNext() const {
+  std::optional<ExprOperand> peekNext() const {
     if (Start == End)
       return std::nullopt;
 
@@ -3825,10 +3745,10 @@ public:
     return *Next;
   }
 
-  std::optional<DIExpression::ExprOperand> peekNextN(unsigned N) const {
+  std::optional<ExprOperand> peekNextN(unsigned N) const {
     if (Start == End)
       return std::nullopt;
-    DIExpression::expr_op_iterator Nth = Start;
+    expr_op_iterator Nth = Start;
     for (unsigned I = 0; I < N; I++) {
       Nth = Nth.getNext();
       if (Nth == End)
@@ -3838,15 +3758,15 @@ public:
   }
 
   void assignNewExpr(ArrayRef<uint64_t> Expr) {
-    this->Start = DIExpression::expr_op_iterator(Expr.begin());
-    this->End = DIExpression::expr_op_iterator(Expr.end());
+    this->Start = expr_op_iterator(Expr.begin());
+    this->End = expr_op_iterator(Expr.end());
   }
 
   /// Determine whether there are any operations left in this expression.
   operator bool() const { return Start != End; }
 
-  DIExpression::expr_op_iterator begin() const { return Start; }
-  DIExpression::expr_op_iterator end() const { return End; }
+  expr_op_iterator begin() const { return Start; }
+  expr_op_iterator end() const { return End; }
 
   /// Retrieve the fragment information, if any.
   std::optional<DIExpression::FragmentInfo> getFragmentInfo() const {

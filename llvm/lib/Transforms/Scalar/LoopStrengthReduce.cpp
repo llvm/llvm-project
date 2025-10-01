@@ -6340,12 +6340,10 @@ void LoopStrengthReduce::getAnalysisUsage(AnalysisUsage &AU) const {
 namespace {
 
 /// Enables more convenient iteration over a DWARF expression vector.
-static iterator_range<llvm::DIExpression::expr_op_iterator>
+static iterator_range<expr_op_iterator>
 ToDwarfOpIter(SmallVectorImpl<uint64_t> &Expr) {
-  llvm::DIExpression::expr_op_iterator Begin =
-      llvm::DIExpression::expr_op_iterator(Expr.begin());
-  llvm::DIExpression::expr_op_iterator End =
-      llvm::DIExpression::expr_op_iterator(Expr.end());
+  expr_op_iterator Begin = expr_op_iterator(Expr.begin());
+  expr_op_iterator End = expr_op_iterator(Expr.end());
   return {Begin, End};
 }
 
@@ -6401,9 +6399,7 @@ struct SCEVDbgValueBuilder {
 
   // Iterating the expression as DWARF ops is convenient when updating
   // DWARF_OP_LLVM_args.
-  iterator_range<llvm::DIExpression::expr_op_iterator> expr_ops() {
-    return ToDwarfOpIter(Expr);
-  }
+  iterator_range<expr_op_iterator> expr_ops() { return ToDwarfOpIter(Expr); }
 
   /// Several SCEV types are sequences of the same arithmetic operator applied
   /// to constants and values that may be extended or truncated.
