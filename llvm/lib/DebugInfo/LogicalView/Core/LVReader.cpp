@@ -676,14 +676,14 @@ Error LVReader::printDebugger() {
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Error: No compute unit found.");
 
-  for (const LVElement *Child : *CU->getChildren()) {
-    auto *Fn = dyn_cast<LVScopeFunction>(Child);
+  for (const LVScope *ChildScope : *CU->getScopes()) {
+    auto *Fn = dyn_cast<LVScopeFunction>(ChildScope);
     if (Fn) {
       const LVLines *Lines = Fn->getLines();
       // If there's no lines, this function has no body.
       if (!Lines)
         continue;
-      outs() << "{Function}: " << Child->getName() << "\n";
+      outs() << "{Function}: " << ChildScope->getName() << "\n";
 
       DebuggerViewPrinter P(OS, Fn);
       P.Print();
