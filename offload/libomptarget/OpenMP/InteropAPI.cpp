@@ -362,7 +362,7 @@ EXTERN int ompx_interop_add_completion_callback(omp_interop_val_t *Interop,
 // Backwards compatibility wrappers
 void __tgt_interop_init(ident_t *LocRef, int32_t Gtid,
                         omp_interop_val_t *&InteropPtr,
-                        kmp_interop_type_t InteropType, int32_t DeviceId,
+                        int32_t InteropType, int32_t DeviceId,
                         int32_t Ndeps, kmp_depend_info_t *DepList,
                         int32_t HaveNowait) {
   interop_ctx_t Ctx = {0, {false, (bool)HaveNowait, 0}, Gtid};
