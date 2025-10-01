@@ -3,9 +3,9 @@
 ;; Regression test for #82763
 
 ; RUN: split-file %s %t
-; RUN: opt -module-summary %t/foo.s -o %t/foo.o
-; RUN: opt -module-summary %t/bar.s -o %t/bar.o
-; RUN: opt -module-summary %t/main.s -o %t/main.o
+; RUN: opt -module-summary %t/foo.ll -o %t/foo.o
+; RUN: opt -module-summary %t/bar.ll -o %t/bar.o
+; RUN: opt -module-summary %t/main.ll -o %t/main.o
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o %t/bar.o -save-temps \
 ; RUN:   -o %t/t.exe \
 ; RUN:   -r=%t/foo.o,foo,plx \
