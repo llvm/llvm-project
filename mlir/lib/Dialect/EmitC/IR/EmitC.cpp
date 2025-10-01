@@ -1565,12 +1565,6 @@ LogicalResult GetFieldOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // DoOp
 //===----------------------------------------------------------------------===//
 
-Operation *DoOp::getRootOp() {
-  auto yieldOp =
-      cast<emitc::YieldOp>(getConditionRegion().front().getTerminator());
-  return yieldOp.getResult().getDefiningOp();
-}
-
 void DoOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printRegion(getBodyRegion(), /*printEntryBlockArgs=*/false);

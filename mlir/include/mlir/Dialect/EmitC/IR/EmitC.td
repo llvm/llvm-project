@@ -1817,8 +1817,6 @@ def EmitC_DoOp : EmitC_Op<"do",
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    Operation *getRootOp();
-
     //===------------------------------------------------------------------===//
     // OpAsmOpInterface Methods
     //===------------------------------------------------------------------===//
