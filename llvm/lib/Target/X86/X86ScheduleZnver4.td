@@ -1109,15 +1109,31 @@ def Zn4WriteVecOpMaskKRMov : SchedWriteRes<[Zn4FPOpMask4]> {
 }
 def : InstRW<[Zn4WriteVecOpMaskKRMov], (instrs KMOVBkr, KMOVDkr, KMOVQkr, KMOVWkr)>;
 
-def Zn4WriteVecALU2Slow : SchedWriteRes<[Zn4FPVAdd12]> {
-  // TODO: All align instructions are expected to be of 4 cycle latency
-  let Latency = 4;
+// 128-bit VALIGN
+def Zn4WriteXMMVecALU2Slow : SchedWriteRes<[Zn4FPVAdd12]> {
+  let Latency = 2;
   let ReleaseAtCycles = [1];
   let NumMicroOps = 1;
 }
-def : InstRW<[Zn4WriteVecALU2Slow], (instrs VALIGNDZrri, VALIGNDZ128rri, VALIGNDZ256rri,
-                                            VALIGNQZrri, VALIGNQZ128rri, VALIGNQZ256rri)
-                                            >;
+
+// 256-bit VALIGN
+def Zn4WriteYMMVecALU2Slow : SchedWriteRes<[Zn4FPVAdd12]> {
+  let Latency = 3;
+  let ReleaseAtCycles = [1];
+  let NumMicroOps = 1;
+}
+
+// 512-bit VALIGN
+def Zn4WriteZMMVecALU2Slow : SchedWriteRes<[Zn4FPVAdd12]> {
+  let Latency = 4;
+  let ReleaseAtCycles = [2];
+  let NumMicroOps = 1;
+}
+
+def : InstRW<[Zn4WriteXMMVecALU2Slow], (instrs VALIGNDZrri, VALIGNQZrri)>;
+def : InstRW<[Zn4WriteYMMVecALU2Slow], (instrs VALIGNDZ128rri, VALIGNQZ128rri)>;
+def : InstRW<[Zn4WriteZMMVecALU2Slow], (instrs VALIGNDZ256rri, VALIGNQZ256rri)>;
+
 defm : Zn4WriteResYMMPair<WriteVecALUY, [Zn4FPVAdd0123], 1, [1], 1>; // Vector integer ALU op, no logicals (YMM).
 
 def Zn4WriteVecALUYSlow : SchedWriteRes<[Zn4FPVAdd01]> {
