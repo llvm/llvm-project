@@ -35,6 +35,7 @@ CODEGENOPT(InstrumentFunctions, 1, 0) ///< Set when -finstrument_functions is
 
 CODEGENOPT(IsPIE, 1, 0) ///< PIE level is the same as PIC Level.
 CODEGENOPT(PICLevel, 2, 0) ///< PIC level of the LLVM module.
+CODEGENOPT(PrepareForFatLTO , 1, 0) ///<  Set when -ffat-lto-objects is enabled.
 CODEGENOPT(PrepareForFullLTO , 1, 0) ///< Set when -flto is enabled on the
                                      ///< compile step.
 CODEGENOPT(PrepareForThinLTO , 1, 0) ///< Set when -flto=thin is enabled on the

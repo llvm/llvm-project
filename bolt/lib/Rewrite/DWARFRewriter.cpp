@@ -504,9 +504,7 @@ static void emitDWOBuilder(const std::string &DWOName,
     }
     emitUnit(DWODIEBuilder, *Streamer, SplitCU);
   } else {
-    for (std::unique_ptr<llvm::DWARFUnit> &CU :
-         SplitCU.getContext().dwo_compile_units())
-      emitUnit(DWODIEBuilder, *Streamer, *CU);
+    emitUnit(DWODIEBuilder, *Streamer, SplitCU);
 
     // emit debug_types sections for dwarf4
     for (DWARFUnit *CU : DWODIEBuilder.getDWARF4TUVector())

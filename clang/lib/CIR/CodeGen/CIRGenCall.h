@@ -256,6 +256,7 @@ public:
   ReturnValueSlot() = default;
   ReturnValueSlot(Address addr) : addr(addr) {}
 
+  bool isNull() const { return !addr.isValid(); }
   Address getValue() const { return addr; }
 };
 
