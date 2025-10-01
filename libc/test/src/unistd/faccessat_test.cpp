@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/string.h"
 #include "src/fcntl/open.h"
 #include "src/sys/stat/mkdir.h"
 #include "src/unistd/close.h"
@@ -25,7 +24,6 @@
 
 namespace {
 
-namespace cpp = LIBC_NAMESPACE::cpp;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 

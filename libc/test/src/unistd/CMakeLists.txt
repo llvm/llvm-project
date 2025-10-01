@@ -101,7 +101,6 @@ add_libc_unittest(
     faccessat_test.cpp
   DEPENDS
     libc.include.unistd
-    libc.src.__support.CPP.string
     libc.src.sys.stat.mkdir
     libc.src.errno.errno
     libc.src.fcntl.open
