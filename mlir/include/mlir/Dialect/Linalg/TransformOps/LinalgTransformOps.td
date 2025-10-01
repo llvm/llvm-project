@@ -410,13 +410,15 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
     (ins TransformHandleTypeInterface:$target,
          DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
          DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_interchange,
-         DefaultValuedAttr<BoolAttr, "false">:$apply_cleanup);
+         DefaultValuedAttr<BoolAttr, "false">:$apply_cleanup,
+         DefaultValuedAttr<BoolAttr, "false">:$use_forall);
   let results = (outs TransformHandleTypeInterface:$transformed,
                       Variadic<TransformHandleTypeInterface>:$loops);
 
   let assemblyFormat = [{
     $target ($tile_sizes^)? (`interchange` $tile_interchange^)?
-    (`apply_cleanup` `=` $apply_cleanup^)? attr-dict
+    (`apply_cleanup` `=` $apply_cleanup^)?
+    (`use_forall` `=` $use_forall^)? attr-dict
     `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;

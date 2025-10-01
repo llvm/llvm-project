@@ -637,6 +637,10 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
 
   scf::SCFTilingOptions tilingOptions;
   tilingOptions.interchangeVector = tileInterchange;
+  bool useForall = getUseForall();
+  tilingOptions.setLoopType(useForall
+                                ? scf::SCFTilingOptions::LoopType::ForallOp
+                                : scf::SCFTilingOptions::LoopType::ForOp);
   SmallVector<OpFoldResult> tileSizesOfr =
       getAsIndexOpFoldResult(rewriter.getContext(), tileSizes);
   tilingOptions = tilingOptions.setTileSizes(tileSizesOfr);
@@ -652,9 +656,11 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
     tileAndFuseOptions.cleanupPatterns = std::move(patterns);
   }
 
+  size_t numLoops =
+      useForall ? 1 : tileSizes.size() - llvm::count(tileSizes, 0);
   LogicalResult result = applyTilingToAll(
-      rewriter, getOperation(), state.getPayloadOps(getTarget()),
-      tileSizes.size() - llvm::count(tileSizes, 0), transformResults,
+      rewriter, getOperation(), state.getPayloadOps(getTarget()), numLoops,
+      transformResults,
       [&](TilingInterface tilingInterfaceOp)
           -> FailureOr<scf::SCFTileAndFuseResult> {
         return tileConsumerAndFuseProducersUsingSCF(rewriter, tilingInterfaceOp,
@@ -676,7 +682,8 @@ LogicalResult transform::FuseOp::verify() {
 
   SmallVector<int64_t> sizes =
       extractFromIntegerArrayAttr<int64_t>(getTileSizes());
-  size_t numExpectedLoops = sizes.size() - llvm::count(sizes, 0);
+  size_t numExpectedLoops =
+      getUseForall() ? 1 : sizes.size() - llvm::count(sizes, 0);
   if (numExpectedLoops != getNumResults() - 1)
     return emitOpError() << "expects " << numExpectedLoops << " loop results";
 
