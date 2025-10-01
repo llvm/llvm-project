@@ -1808,12 +1808,10 @@ kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
       node = kmp_node_vector_get(tdg->record_map, new_taskdata->td_tdg_task_id);
     }
     if (node->task == nullptr) {
-      __kmp_acquire_bootstrap_lock(&tdg->graph_lock);
       node->task = new_task;
       node->parent_task = new_taskdata->td_parent;
       new_taskdata->td_tdg_node_info = node;
       KMP_ATOMIC_INC(&tdg->num_tasks);
-      __kmp_release_bootstrap_lock(&tdg->graph_lock);
     }
   }
 #endif

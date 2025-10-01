@@ -708,12 +708,10 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
       kmp_node_vector_resize(tdg->record_map, new_taskdata->td_tdg_task_id * 2);
       node = kmp_node_vector_get(tdg->record_map, new_taskdata->td_tdg_task_id);
     }
-    __kmp_acquire_bootstrap_lock(&tdg->graph_lock);
     node->task = new_task;
     node->parent_task = new_taskdata->td_parent;
     new_taskdata->td_tdg_node_info = node;
     KMP_ATOMIC_INC(&tdg->num_tasks);
-    __kmp_release_bootstrap_lock(&tdg->graph_lock);
   }
 #endif
 #if OMPT_SUPPORT

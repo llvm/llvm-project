@@ -2676,8 +2676,6 @@ typedef struct kmp_tdg_info {
       KMP_TDG_NONE; // Status of the TDG (recording, ready...)
   std::atomic<kmp_int32> num_tasks; // Number of TDG nodes
   std::atomic<kmp_int32> tdg_task_id_next; // Task id of next node
-  kmp_bootstrap_lock_t
-      graph_lock; // Protect graph attributes when updated via taskloop_recur
   // Taskloop reduction related
   void *rec_taskred_data; // Data to pass to __kmpc_task_reduction_init or
                           // __kmpc_taskred_init
