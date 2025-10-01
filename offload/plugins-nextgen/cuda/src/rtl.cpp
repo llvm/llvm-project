@@ -955,7 +955,9 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return Plugin::success();
 
     if (Interop->async_info) {
-      // TODO: release the stream back to the pool?
+      if (auto Err = CUDAStreamManager.returnResource(
+              *static_cast<CUstream *>(Interop->async_info->Queue)))
+        return Err;
       delete Interop->async_info;
     }
     delete Interop;
