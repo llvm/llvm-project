@@ -171,7 +171,7 @@
     #endif
   #else
     #ifdef __opencl_c_generic_address_space
-      #error "Incorrect __opencl_c_atomic_scope_all_devices define"
+      #error "Incorrect __opencl_c_generic_address_space define"
     #endif
   #endif
 #endif
