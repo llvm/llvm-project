@@ -69,7 +69,9 @@
 // |        SVE stack objects          | |-----------------------------------|
 // |                                   | |         ZPR stack objects         |
 // |-----------------------------------| |-----------------------------------|
-// |.empty.space.to.make.part.below....| ^ NB: FPR CSRs are are promoted to ZPRs
+//                                       ^ NB: FPR CSRs are are promoted to ZPRs
+// |-----------------------------------|
+// |.empty.space.to.make.part.below....|
 // |.aligned.in.case.it.needs.more.than| (size of this area is unknown at
 // |.the.standard.16-byte.alignment....|  compile time; if present)
 // |-----------------------------------|
