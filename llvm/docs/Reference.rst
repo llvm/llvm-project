@@ -14,8 +14,8 @@ LLVM and API reference documentation.
    BlockFrequencyTerminology
    BranchWeightMetadata
    Bugpoint
-   CallGraphSection
    CalleeTypeMetadata
+   CallGraphSection
    CIBestPractices
    CommandGuide/index
    ContentAddressableStorage
