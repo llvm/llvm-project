@@ -2285,14 +2285,17 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
     }
 
     auto checkPerfectNest = [&, this]() {
-      auto blockSize = block.size();
-      if (blockSize <= 1)
+      if (block.empty())
         return;
+      auto last = block.end();
+      --last;
 
-      if (parser::Unwrap<parser::ContinueStmt>(x))
-        blockSize -= 1;
+      // A trailing CONTINUE is not considered part of the loop body
+      if (parser::Unwrap<parser::ContinueStmt>(*last))
+        --last;
 
-      if (blockSize <= 1)
+      // In a perfectly nested loop, the nested loop must be the only statement
+      if (last == block.begin())
         return;
 
       // Non-perfectly nested loop
