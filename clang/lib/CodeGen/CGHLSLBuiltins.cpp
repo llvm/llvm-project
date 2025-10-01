@@ -560,6 +560,22 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getDegreesIntrinsic(),
         ArrayRef<Value *>{X}, nullptr, "hlsl.degrees");
   }
+  case Builtin::BI__builtin_hlsl_elementwise_f16tof32: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    llvm::Type *Xty = Op0->getType();
+    llvm::Type *retType = llvm::Type::getFloatTy(this->getLLVMContext());
+    if (Xty->isVectorTy()) {
+      auto *XVecTy = E->getArg(0)->getType()->castAs<VectorType>();
+      retType = llvm::VectorType::get(
+          retType, ElementCount::getFixed(XVecTy->getNumElements()));
+    }
+    if (!E->getArg(0)->getType()->hasUnsignedIntegerRepresentation())
+      llvm_unreachable(
+          "f16tof32 operand must have an unsigned int representation");
+    return Builder.CreateIntrinsic(
+        retType, CGM.getHLSLRuntime().getLegacyF16ToF32Intrinsic(),
+        ArrayRef<Value *>{Op0}, nullptr, "hlsl.f16tof32");
+  }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
