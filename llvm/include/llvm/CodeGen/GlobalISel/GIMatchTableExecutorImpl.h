@@ -901,6 +901,19 @@ bool GIMatchTableExecutor::executeMatchTable(
       if (MO.isCImm() && MO.getCImm()->equalsInt(Value))
         break;
 
+      if (MO.isReg()) {
+        LLT Ty = MRI.getType(MO.getReg());
+        if (Ty.getScalarSizeInBits() > 64) {
+          if (handleReject() == RejectAndGiveUp)
+            return false;
+          break;
+        }
+
+        Value = SignExtend64(Value, Ty.getScalarSizeInBits());
+        if (isOperandImmEqual(MO, Value, MRI, /*Splat=*/true))
+          break;
+      }
+
       if (handleReject() == RejectAndGiveUp)
         return false;
 
