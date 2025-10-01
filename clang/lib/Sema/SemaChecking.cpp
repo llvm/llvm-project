@@ -14880,12 +14880,12 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
 
       // Diag message shows element size in bits and in "bytes" (platform-
       // dependent CharUnits)
-      DiagRuntimeBehavior(
-          BaseExpr->getBeginLoc(), BaseExpr,
-          PDiag(DiagID) << index << AddrBits
-                        << (unsigned)ASTC.toBits(*ElemCharUnits) << ElemBytes
-                        << MaxElems << (unsigned)MaxElems.getLimitedValue(~0U)
-                        << IndexExpr->getSourceRange());
+      DiagRuntimeBehavior(BaseExpr->getBeginLoc(), BaseExpr,
+                          PDiag(DiagID) << index << AddrBits
+                                        << (unsigned)ASTC.toBits(*ElemCharUnits)
+                                        << ElemBytes << MaxElems
+                                        << MaxElems.getZExtValue()
+                                        << IndexExpr->getSourceRange());
 
       const NamedDecl *ND = nullptr;
       // Try harder to find a NamedDecl to point at in the note.
