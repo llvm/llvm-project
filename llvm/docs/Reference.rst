@@ -47,6 +47,7 @@ LLVM and API reference documentation.
    ScudoHardenedAllocator
    MemoryModelRelaxationAnnotations
    MemTagSanitizer
+   QualGroup
    Security
    SecurityTransparencyReports
    SegmentedStacks
