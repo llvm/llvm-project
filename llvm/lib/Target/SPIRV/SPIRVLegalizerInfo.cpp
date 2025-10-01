@@ -193,7 +193,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalFor(allIntScalarsAndVectors)
       .legalIf(extendedScalarsAndVectors);
 
-  getActionDefinitionsBuilder({G_FMA, G_STRICT_FMA})
+  getActionDefinitionsBuilder({G_FMA, G_STRICT_FMA, G_STRICT_FMULADD})
       .legalFor(allFloatScalarsAndVectors);
 
   getActionDefinitionsBuilder(G_STRICT_FLDEXP)
