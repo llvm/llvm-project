@@ -17,10 +17,6 @@
 include "flang/Optimizer/Dialect/MIF/MIFDialect.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
-include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
-include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
-include "mlir/Interfaces/LoopLikeInterface.td"
-include "mlir/IR/BuiltinAttributes.td"
 
 class mif_Op<string mnemonic, list<Trait> traits>
     : Op<MIFDialect, mnemonic, traits>;
@@ -41,8 +37,7 @@ def mif_InitOp : mif_Op<"init", []> {
 // Image Queries
 //===----------------------------------------------------------------------===//
 
-def mif_NumImagesOp
-    : mif_Op<"num_images", [NoMemoryEffect, AttrSizedOperandSegments]> {
+def mif_NumImagesOp : mif_Op<"num_images", [AttrSizedOperandSegments]> {
   let summary = "Query the number of images in the specified or current team";
   let description = [{
     This operation query the number of images in the specified or current
@@ -75,8 +70,7 @@ def mif_NumImagesOp
   }];
 }
 
-def mif_ThisImageOp
-    : mif_Op<"this_image", [NoMemoryEffect, AttrSizedOperandSegments]> {
+def mif_ThisImageOp : mif_Op<"this_image", [AttrSizedOperandSegments]> {
   let summary = "Determine the image index of the current image";
   let description = [{
     Arguments:
@@ -104,7 +98,7 @@ def mif_ThisImageOp
   }];
 
   let arguments = (ins Optional<fir_BoxType>:$coarray,
-                       Optional<AnyInteger>:$dim, Optional<fir_BoxType>:$team);
+      Optional<AnyInteger>:$dim, Optional<AnyRefOrBoxType>:$team);
   let results = (outs I32:$res);
 
   let builders = [OpBuilder<(ins "mlir::Value":$coarray, "mlir::Value":$team)>,
@@ -187,10 +181,10 @@ def mif_CoBroadcastOp : mif_Op<"co_broadcast", [AttrSizedOperandSegments,
     The co_broadcast operation broadcasts a value from one image to the other images.
   }];
 
-  let arguments = (ins fir_BoxType:$a, 
-                       AnyIntegerType:$source_image,
-                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+  let arguments = (ins Arg<fir_BoxType, "", [MemRead, MemWrite]>:$a,
+      AnyIntegerType:$source_image,
+      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
 
   let assemblyFormat = [{
     $a `:` qualified(type($a)) 
@@ -209,10 +203,10 @@ def mif_CoMaxOp
     across images.
   }];
 
-  let arguments = (ins fir_BoxType:$a, 
-                       Optional<AnyIntegerType>:$result_image,
-                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+  let arguments = (ins Arg<fir_BoxType, "", [MemRead, MemWrite]>:$a,
+      Optional<AnyIntegerType>:$result_image,
+      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
 
   let hasVerifier = 1;
   let assemblyFormat = [{
@@ -232,10 +226,10 @@ def mif_CoMinOp
     across images.
   }];
 
-  let arguments = (ins fir_BoxType:$a,
-                       Optional<AnyIntegerType>:$result_image,
-                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+  let arguments = (ins Arg<fir_BoxType, "", [MemRead, MemWrite]>:$a,
+      Optional<AnyIntegerType>:$result_image,
+      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
 
   let hasVerifier = 1;
   let assemblyFormat = [{
@@ -255,10 +249,10 @@ def mif_CoSumOp
     across images.
   }];
 
-  let arguments = (ins fir_BoxType:$a, 
-                       Optional<AnyIntegerType>:$result_image,
-                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+  let arguments = (ins Arg<fir_BoxType, "", [MemRead, MemWrite]>:$a,
+      Optional<AnyIntegerType>:$result_image,
+      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
 
   let hasVerifier = 1;
   let assemblyFormat = [{

@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -29,6 +30,22 @@ using namespace Fortran::runtime;
 
 namespace {
 
+// Default prefix for subroutines of PRIF compiled with LLVM
+static std::string getPRIFProcName(std::string fmt) {
+  std::ostringstream oss;
+  oss << "prif_" << fmt;
+  return fir::NameUniquer::doProcedure({"prif"}, {}, oss.str());
+}
+
+static mlir::Type getPRIFStatType(fir::FirOpBuilder &builder) {
+  return builder.getRefType(builder.getI32Type());
+}
+
+static mlir::Type getPRIFErrmsgType(fir::FirOpBuilder &builder) {
+  return fir::BoxType::get(fir::CharacterType::get(
+      builder.getContext(), 1, fir::CharacterType::unknownLen()));
+}
+
 // Most PRIF functions take `errmsg` and `errmsg_alloc` as two optional
 // arguments of intent (out). One is allocatable, the other is not.
 // It is the responsibility of the compiler to ensure that the appropriate
@@ -39,7 +56,8 @@ namespace {
 static std::pair<mlir::Value, mlir::Value>
 genErrmsgPRIF(fir::FirOpBuilder &builder, mlir::Location loc,
               mlir::Value errmsg) {
-  mlir::Value absent = fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE);
+  mlir::Value absent =
+      fir::AbsentOp::create(builder, loc, getPRIFErrmsgType(builder));
   if (!errmsg)
     return {absent, absent};
 
@@ -66,7 +84,7 @@ struct MIFInitOpConversion : public mlir::OpRewritePattern<mif::InitOp> {
         builder.getContext(),
         /*inputs*/ {builder.getRefType(i32Ty)}, /*results*/ {});
     mlir::func::FuncOp funcOp =
-        builder.createFunction(loc, PRIFNAME_SUB("init"), ftype);
+        builder.createFunction(loc, getPRIFProcName("init"), ftype);
     llvm::SmallVector<mlir::Value> args =
         fir::runtime::createArguments(builder, loc, ftype, result);
     fir::CallOp::create(builder, loc, funcOp, args);
@@ -101,7 +119,7 @@ struct MIFThisImageOpConversion
         teamArg = fir::AbsentOp::create(builder, loc, boxTy);
 
       mlir::func::FuncOp funcOp = builder.createFunction(
-          loc, PRIFNAME_SUB("this_image_no_coarray"), ftype);
+          loc, getPRIFProcName("this_image_no_coarray"), ftype);
       llvm::SmallVector<mlir::Value> args =
           fir::runtime::createArguments(builder, loc, ftype, teamArg, result);
       fir::CallOp::create(builder, loc, funcOp, args);
@@ -135,7 +153,8 @@ struct MIFNumImagesOpConversion
       mlir::FunctionType ftype = mlir::FunctionType::get(
           builder.getContext(),
           /*inputs*/ {builder.getRefType(i32Ty)}, /*results*/ {});
-      funcOp = builder.createFunction(loc, PRIFNAME_SUB("num_images"), ftype);
+      funcOp =
+          builder.createFunction(loc, getPRIFProcName("num_images"), ftype);
       args = fir::runtime::createArguments(builder, loc, ftype, result);
     } else {
       if (op.getTeam()) {
@@ -145,7 +164,7 @@ struct MIFNumImagesOpConversion
                                     {boxTy, builder.getRefType(i32Ty)},
                                     /*results*/ {});
         funcOp = builder.createFunction(
-            loc, PRIFNAME_SUB("num_images_with_team"), ftype);
+            loc, getPRIFProcName("num_images_with_team"), ftype);
         args = fir::runtime::createArguments(builder, loc, ftype, op.getTeam(),
                                              result);
       } else {
@@ -159,7 +178,7 @@ struct MIFNumImagesOpConversion
             /*inputs*/ {builder.getRefType(i64Ty), builder.getRefType(i32Ty)},
             /*results*/ {});
         funcOp = builder.createFunction(
-            loc, PRIFNAME_SUB("num_images_with_team_number"), ftype);
+            loc, getPRIFProcName("num_images_with_team_number"), ftype);
         args = fir::runtime::createArguments(builder, loc, ftype, teamNumber,
                                              result);
       }
@@ -181,18 +200,19 @@ struct MIFSyncAllOpConversion : public mlir::OpRewritePattern<mif::SyncAllOp> {
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
+    mlir::Type errmsgTy = getPRIFErrmsgType(builder);
     mlir::FunctionType ftype = mlir::FunctionType::get(
         builder.getContext(),
-        /*inputs*/ {PRIF_STAT_TYPE, PRIF_ERRMSG_TYPE, PRIF_ERRMSG_TYPE},
+        /*inputs*/ {getPRIFStatType(builder), errmsgTy, errmsgTy},
         /*results*/ {});
     mlir::func::FuncOp funcOp =
-        builder.createFunction(loc, PRIFNAME_SUB("sync_all"), ftype);
+        builder.createFunction(loc, getPRIFProcName("sync_all"), ftype);
 
     auto [errmsgArg, errmsgAllocArg] =
         genErrmsgPRIF(builder, loc, op.getErrmsg());
     mlir::Value stat = op.getStat();
     if (!stat)
-      stat = fir::AbsentOp::create(builder, loc, PRIF_STAT_TYPE);
+      stat = fir::AbsentOp::create(builder, loc, getPRIFStatType(builder));
     llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
         builder, loc, ftype, stat, errmsgArg, errmsgAllocArg);
     rewriter.replaceOpWithNewOp<fir::CallOp>(op, funcOp, args);
@@ -212,15 +232,16 @@ struct MIFSyncImagesOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
+    mlir::Type errmsgTy = getPRIFErrmsgType(builder);
     mlir::Type imgSetTy = fir::BoxType::get(fir::SequenceType::get(
         {fir::SequenceType::getUnknownExtent()}, builder.getI32Type()));
     mlir::FunctionType ftype = mlir::FunctionType::get(
         builder.getContext(),
         /*inputs*/
-        {imgSetTy, PRIF_STAT_TYPE, PRIF_ERRMSG_TYPE, PRIF_ERRMSG_TYPE},
+        {imgSetTy, getPRIFStatType(builder), errmsgTy, errmsgTy},
         /*results*/ {});
     mlir::func::FuncOp funcOp =
-        builder.createFunction(loc, PRIFNAME_SUB("sync_images"), ftype);
+        builder.createFunction(loc, getPRIFProcName("sync_images"), ftype);
 
     // If imageSet is scalar, PRIF require to pass an array of size 1.
     mlir::Value imageSet = op.getImageSet();
@@ -242,7 +263,7 @@ struct MIFSyncImagesOpConversion
         genErrmsgPRIF(builder, loc, op.getErrmsg());
     mlir::Value stat = op.getStat();
     if (!stat)
-      stat = fir::AbsentOp::create(builder, loc, PRIF_STAT_TYPE);
+      stat = fir::AbsentOp::create(builder, loc, getPRIFStatType(builder));
     llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
         builder, loc, ftype, imageSet, stat, errmsgArg, errmsgAllocArg);
     rewriter.replaceOpWithNewOp<fir::CallOp>(op, funcOp, args);
@@ -262,18 +283,19 @@ struct MIFSyncMemoryOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
+    mlir::Type errmsgTy = getPRIFErrmsgType(builder);
     mlir::FunctionType ftype = mlir::FunctionType::get(
         builder.getContext(),
-        /*inputs*/ {PRIF_STAT_TYPE, PRIF_ERRMSG_TYPE, PRIF_ERRMSG_TYPE},
+        /*inputs*/ {getPRIFStatType(builder), errmsgTy, errmsgTy},
         /*results*/ {});
     mlir::func::FuncOp funcOp =
-        builder.createFunction(loc, PRIFNAME_SUB("sync_memory"), ftype);
+        builder.createFunction(loc, getPRIFProcName("sync_memory"), ftype);
 
     auto [errmsgArg, errmsgAllocArg] =
         genErrmsgPRIF(builder, loc, op.getErrmsg());
     mlir::Value stat = op.getStat();
     if (!stat)
-      stat = fir::AbsentOp::create(builder, loc, PRIF_STAT_TYPE);
+      stat = fir::AbsentOp::create(builder, loc, getPRIFStatType(builder));
     llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
         builder, loc, ftype, stat, errmsgArg, errmsgAllocArg);
     rewriter.replaceOpWithNewOp<fir::CallOp>(op, funcOp, args);
@@ -288,18 +310,19 @@ static fir::CallOp genCollectiveSubroutine(fir::FirOpBuilder &builder,
                                            mlir::Value rootImage,
                                            mlir::Value stat, mlir::Value errmsg,
                                            std::string coName) {
+  mlir::Type errmsgTy = getPRIFErrmsgType(builder);
   mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
-  mlir::FunctionType ftype = mlir::FunctionType::get(
-      builder.getContext(),
-      /*inputs*/
-      {boxTy, builder.getRefType(builder.getI32Type()), PRIF_STAT_TYPE,
-       PRIF_ERRMSG_TYPE, PRIF_ERRMSG_TYPE},
-      /*results*/ {});
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(builder.getContext(),
+                              /*inputs*/
+                              {boxTy, builder.getRefType(builder.getI32Type()),
+                               getPRIFStatType(builder), errmsgTy, errmsgTy},
+                              /*results*/ {});
   mlir::func::FuncOp funcOp = builder.createFunction(loc, coName, ftype);
 
   auto [errmsgArg, errmsgAllocArg] = genErrmsgPRIF(builder, loc, errmsg);
   if (!stat)
-    stat = fir::AbsentOp::create(builder, loc, PRIF_STAT_TYPE);
+    stat = fir::AbsentOp::create(builder, loc, getPRIFStatType(builder));
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, ftype, A, rootImage, stat, errmsgArg, errmsgAllocArg);
   return fir::CallOp::create(builder, loc, funcOp, args);
@@ -326,7 +349,7 @@ struct MIFCoBroadcastOpConversion
 
     fir::CallOp callOp = genCollectiveSubroutine(
         builder, loc, op.getA(), sourceImage, op.getStat(), op.getErrmsg(),
-        PRIFNAME_SUB("co_broadcast"));
+        getPRIFProcName("co_broadcast"));
     rewriter.replaceOp(op, callOp);
     return mlir::success();
   }
@@ -362,11 +385,11 @@ struct MIFCoMaxOpConversion : public mlir::OpRewritePattern<mif::CoMaxOp> {
     if (mlir::isa<fir::CharacterType>(argTy))
       callOp = genCollectiveSubroutine(builder, loc, op.getA(), resultImage,
                                        op.getStat(), op.getErrmsg(),
-                                       PRIFNAME_SUB("co_max_character"));
+                                       getPRIFProcName("co_max_character"));
     else
       callOp = genCollectiveSubroutine(builder, loc, op.getA(), resultImage,
                                        op.getStat(), op.getErrmsg(),
-                                       PRIFNAME_SUB("co_max"));
+                                       getPRIFProcName("co_max"));
     rewriter.replaceOp(op, callOp);
     return mlir::success();
   }
@@ -402,11 +425,11 @@ struct MIFCoMinOpConversion : public mlir::OpRewritePattern<mif::CoMinOp> {
     if (mlir::isa<fir::CharacterType>(argTy))
       callOp = genCollectiveSubroutine(builder, loc, op.getA(), resultImage,
                                        op.getStat(), op.getErrmsg(),
-                                       PRIFNAME_SUB("co_min_character"));
+                                       getPRIFProcName("co_min_character"));
     else
       callOp = genCollectiveSubroutine(builder, loc, op.getA(), resultImage,
                                        op.getStat(), op.getErrmsg(),
-                                       PRIFNAME_SUB("co_min"));
+                                       getPRIFProcName("co_min"));
     rewriter.replaceOp(op, callOp);
     return mlir::success();
   }
@@ -438,7 +461,7 @@ struct MIFCoSumOpConversion : public mlir::OpRewritePattern<mif::CoSumOp> {
 
     fir::CallOp callOp = genCollectiveSubroutine(
         builder, loc, op.getA(), resultImage, op.getStat(), op.getErrmsg(),
-        PRIFNAME_SUB("co_sum"));
+        getPRIFProcName("co_sum"));
     rewriter.replaceOp(op, callOp);
     return mlir::success();
   }
@@ -451,17 +474,7 @@ public:
     mlir::RewritePatternSet patterns(ctx);
     mlir::ConversionTarget target(*ctx);
 
-    mlir::Operation *op = getOperation();
-    mlir::ModuleOp module = mlir::dyn_cast<mlir::ModuleOp>(op);
-    if (!module)
-      return signalPassFailure();
-    mlir::SymbolTable symtab(module);
-
-    std::optional<mlir::DataLayout> dl = fir::support::getOrSetMLIRDataLayout(
-        module, /*allowDefaultLayout=*/true);
-    fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
-                                         /*forceUnifiedTBAATree=*/false, *dl);
-    mif::populateMIFOpConversionPatterns(typeConverter, patterns);
+    mif::populateMIFOpConversionPatterns(patterns);
 
     target.addLegalDialect<fir::FIROpsDialect>();
     target.addLegalOp<mlir::ModuleOp>();
@@ -476,8 +489,7 @@ public:
 };
 } // namespace
 
-void mif::populateMIFOpConversionPatterns(fir::LLVMTypeConverter &converter,
-                                          mlir::RewritePatternSet &patterns) {
+void mif::populateMIFOpConversionPatterns(mlir::RewritePatternSet &patterns) {
   patterns.insert<MIFInitOpConversion, MIFThisImageOpConversion,
                   MIFNumImagesOpConversion, MIFSyncAllOpConversion,
                   MIFSyncImagesOpConversion, MIFSyncMemoryOpConversion,

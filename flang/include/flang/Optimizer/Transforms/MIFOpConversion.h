@@ -9,7 +9,6 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_MIFOPCONVERSION_H_
 #define FORTRAN_OPTIMIZER_TRANSFORMS_MIFOPCONVERSION_H_
 
-#include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -20,22 +19,9 @@ class LLVMTypeConverter;
 
 namespace mif {
 
-// Default prefix for subroutines of PRIF compiled with LLVM
-#define PRIFNAME_SUB(fmt)                                                      \
-  []() {                                                                       \
-    std::ostringstream oss;                                                    \
-    oss << "prif_" << fmt;                                                     \
-    return fir::NameUniquer::doProcedure({"prif"}, {}, oss.str());             \
-  }()
-
-#define PRIF_STAT_TYPE builder.getRefType(builder.getI32Type())
-#define PRIF_ERRMSG_TYPE                                                       \
-  fir::BoxType::get(fir::CharacterType::get(builder.getContext(), 1,           \
-                                            fir::CharacterType::unknownLen()))
-
 /// Patterns that convert MIF operations to runtime calls.
-void populateMIFOpConversionPatterns(fir::LLVMTypeConverter &converter,
-                                     mlir::RewritePatternSet &patterns);
+void populateMIFOpConversionPatterns(mlir::RewritePatternSet &patterns);
+
 } // namespace mif
 
 #endif // FORTRAN_OPTIMIZER_TRANSFORMS_MIFOPCONVERSION_H_

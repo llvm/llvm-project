@@ -70,8 +70,8 @@ llvm::LogicalResult mif::SyncImagesOp::verify() {
   if (getImageSet()) {
     mlir::Type t = getImageSet().getType();
     fir::BoxType boxTy = mlir::dyn_cast<fir::BoxType>(t);
-    if (auto seqTy =
-            mlir::dyn_cast<fir::SequenceType>(boxTy.getElementType())) {
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(
+            boxTy.getElementOrSequenceType())) {
       if (seqTy.getDimension() != 0 && seqTy.getDimension() != 1)
         return emitOpError(
             "`image_set` must be a boxed integer expression of rank 1.");
@@ -90,7 +90,7 @@ llvm::LogicalResult mif::SyncImagesOp::verify() {
 
 llvm::LogicalResult mif::CoMaxOp::verify() {
   fir::BoxType boxTy = mlir::dyn_cast<fir::BoxType>(getA().getType());
-  mlir::Type elemTy = boxTy.getElementType();
+  mlir::Type elemTy = boxTy.getElementOrSequenceType();
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(elemTy))
     elemTy = seqTy.getElementType();
 
@@ -106,7 +106,7 @@ llvm::LogicalResult mif::CoMaxOp::verify() {
 
 llvm::LogicalResult mif::CoMinOp::verify() {
   fir::BoxType boxTy = mlir::dyn_cast<fir::BoxType>(getA().getType());
-  mlir::Type elemTy = boxTy.getElementType();
+  mlir::Type elemTy = boxTy.getElementOrSequenceType();
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(elemTy))
     elemTy = seqTy.getElementType();
 
@@ -122,7 +122,7 @@ llvm::LogicalResult mif::CoMinOp::verify() {
 
 llvm::LogicalResult mif::CoSumOp::verify() {
   fir::BoxType boxTy = mlir::dyn_cast<fir::BoxType>(getA().getType());
-  mlir::Type elemTy = boxTy.getElementType();
+  mlir::Type elemTy = boxTy.getElementOrSequenceType();
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(elemTy))
     elemTy = seqTy.getElementType();
 
