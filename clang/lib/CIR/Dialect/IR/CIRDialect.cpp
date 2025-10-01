@@ -235,6 +235,54 @@ static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
                       /*printBlockTerminators=*/!omitRegionTerm(region));
 }
 
+static mlir::ParseResult
+parseAtomicCmpXchgMemOrder(mlir::OpAsmParser &parser,
+                           cir::MemOrderAttr &successOrder,
+                           cir::MemOrderAttr &failureOrder) {
+  auto parseMemOrder = [&](cir::MemOrderAttr *output) -> mlir::ParseResult {
+    mlir::SMLoc loc = parser.getCurrentLocation();
+    llvm::StringRef memOrderStr;
+    if (parser.parseKeyword(&memOrderStr))
+      return failure();
+    std::optional<cir::MemOrder> memOrder = symbolizeMemOrder(memOrderStr);
+    if (!memOrder.has_value())
+      return parser.emitError(loc, "unknown memory order \"")
+             << memOrderStr << "\"";
+    *output = cir::MemOrderAttr::get(parser.getContext(), *memOrder);
+    return success();
+  };
+
+  if (parser.parseOptionalKeyword("success")) {
+    // No "success" keyword found. successOrder and failureOrder will have the
+    // same value.
+    if (parseMemOrder(&successOrder))
+      return failure();
+    failureOrder = successOrder;
+    return success();
+  }
+
+  if (parser.parseLParen() || parseMemOrder(&successOrder) ||
+      parser.parseRParen())
+    return failure();
+
+  if (parser.parseKeyword("failure") || parser.parseLParen() ||
+      parseMemOrder(&failureOrder) || parser.parseRParen())
+    return failure();
+
+  return success();
+}
+
+static void printAtomicCmpXchgMemOrder(mlir::OpAsmPrinter &printer,
+                                       cir::AtomicCmpXchgOp &op,
+                                       cir::MemOrderAttr successOrder,
+                                       cir::MemOrderAttr failureOrder) {
+  if (successOrder.getValue() == failureOrder.getValue())
+    printer << stringifyMemOrder(successOrder.getValue());
+  else
+    printer << "success(" << stringifyMemOrder(successOrder.getValue()) << ") "
+            << "failure(" << stringifyMemOrder(failureOrder.getValue()) << ")";
+}
+
 //===----------------------------------------------------------------------===//
 // AllocaOp
 //===----------------------------------------------------------------------===//
@@ -2844,20 +2892,6 @@ mlir::LogicalResult cir::ThrowOp::verify() {
   }
 
   return failure();
-}
-
-//===----------------------------------------------------------------------===//
-// AtomicCmpXchg
-//===----------------------------------------------------------------------===//
-
-LogicalResult cir::AtomicCmpXchg::verify() {
-  mlir::Type pointeeType = getPtr().getType().getPointee();
-
-  if (pointeeType != getExpected().getType() ||
-      pointeeType != getDesired().getType())
-    return emitOpError("ptr, expected and desired types must match");
-
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
