@@ -531,8 +531,8 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         // If the next IR instruction exists and is already a NOP or TOC-restore
         // , don't inject.
         auto NextI = std::next(I);
-        if ((NextI != E && BC.MIB->isNoop(*NextI)) ||
-            BC.MIB->isTOCRestoreAfterCall(*NextI))
+        if (NextI != E &&
+            (BC.MIB->isNoop(*NextI) || BC.MIB->isTOCRestoreAfterCall(*NextI)))
           NeedSlot = false;
 
         if (NeedSlot) {
