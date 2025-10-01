@@ -820,7 +820,7 @@ define void @infiniteloop() {
 ; ENABLE-NEXT:    movq %rsp, %rax
 ; ENABLE-NEXT:    addq $-16, %rax
 ; ENABLE-NEXT:    movq %rax, %rsp
-; ENABLE-NEXT:    xorl    %ecx, %ecx
+; ENABLE-NEXT:    xorl %ecx, %ecx
 ; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB10_2: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -851,8 +851,8 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:  ## %bb.1: ## %if.then
 ; DISABLE-NEXT:    movq %rsp, %rax
 ; DISABLE-NEXT:    addq $-16, %rax
-; DISABLE-NEXT:    %rax, %rsp
-; DISABLE-NEXT:    xorl    %ecx, %ecx
+; DISABLE-NEXT:    movq %rax, %rsp
+; DISABLE-NEXT:    xorl %ecx, %ecx
 ; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB10_2: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -1185,10 +1185,10 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB14_2: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
-; ENABLE-NEXT:    cmpl %esi, %edi
-; ENABLE-NEXT:    setl %al
+; ENABLE-NEXT:    movl %esi, %eax
 ; ENABLE-NEXT:    xorl %esi, %esi
-; ENABLE-NEXT:    movb %al, %sil
+; ENABLE-NEXT:    cmpl %eax, %edi
+; ENABLE-NEXT:    setl %sil
 ; ENABLE-NEXT:    incb %dl
 ; ENABLE-NEXT:    cmpb $45, %dl
 ; ENABLE-NEXT:    jl LBB14_2
@@ -1220,10 +1220,10 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB14_2: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
-; DISABLE-NEXT:    cmpl %esi, %edi
-; DISABLE-NEXT:    setl %al
+; DISABLE-NEXT:    movl %esi, %eax
 ; DISABLE-NEXT:    xorl %esi, %esi
-; DISABLE-NEXT:    movb %al, %sil
+; DISABLE-NEXT:    cmpl %eax, %edi
+; DISABLE-NEXT:    setl %sil
 ; DISABLE-NEXT:    incb %dl
 ; DISABLE-NEXT:    cmpb $45, %dl
 ; DISABLE-NEXT:    jl LBB14_2

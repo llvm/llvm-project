@@ -49,15 +49,15 @@ define void @fmul_ctrloop_fp128() nounwind {
 ; PWR8-NEXT:    #
 ; PWR8-NEXT:    lxvd2x 0, 30, 28
 ; PWR8-NEXT:    vmr 2, 31
-; PWR8-NEXT:    addi 26, 30, 16
+; PWR8-NEXT:    mr 26, 30
+; PWR8-NEXT:    addi 30, 30, 16
 ; PWR8-NEXT:    xxswapd 35, 0
 ; PWR8-NEXT:    bl __mulkf3
 ; PWR8-NEXT:    nop
 ; PWR8-NEXT:    addi 29, 29, -1
 ; PWR8-NEXT:    xxswapd 0, 34
 ; PWR8-NEXT:    cmpldi 29, 0
-; PWR8-NEXT:    stxvd2x 0, 30, 27
-; PWR8-NEXT:    mr 30, 26
+; PWR8-NEXT:    stxvd2x 0, 26, 27
 ; PWR8-NEXT:    bc 12, 1, .LBB0_1
 ; PWR8-NEXT:  # %bb.2: # %for.end
 ; PWR8-NEXT:    li 3, 48

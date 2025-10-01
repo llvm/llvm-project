@@ -8,15 +8,15 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i1> @reshuffle_v4i1_nxv4i1(<vscale x 4 x i1> %a) #0 {
 ; CHECK-LABEL: reshuffle_v4i1_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    mov w9, v1.s[2]
+; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
+; CHECK-NEXT:    mov w8, v0.s[1]
+; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov v0.h[1], w8
+; CHECK-NEXT:    mov w8, v1.s[2]
+; CHECK-NEXT:    mov v0.h[2], w8
 ; CHECK-NEXT:    mov w8, v1.s[3]
-; CHECK-NEXT:    mov v0.h[2], w9
 ; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %el0 = extractelement <vscale x 4 x i1> %a, i32 0
   %el1 = extractelement <vscale x 4 x i1> %a, i32 1

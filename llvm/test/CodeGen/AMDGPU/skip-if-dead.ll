@@ -1797,8 +1797,8 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ; GFX10-WAVE32-NEXT:    s_cbranch_scc1 .LBB15_7
 ; GFX10-WAVE32-NEXT:  ; %bb.1: ; %.lr.ph
 ; GFX10-WAVE32-NEXT:    s_mov_b32 s1, exec_lo
-; GFX10-WAVE32-NEXT:    s_mov_b32 s0, 0
 ; GFX10-WAVE32-NEXT:    s_mov_b32 s2, 0
+; GFX10-WAVE32-NEXT:    s_mov_b32 s0, 0
 ; GFX10-WAVE32-NEXT:    s_branch .LBB15_3
 ; GFX10-WAVE32-NEXT:  .LBB15_2: ; %latch
 ; GFX10-WAVE32-NEXT:    ; in Loop: Header=BB15_3 Depth=1
