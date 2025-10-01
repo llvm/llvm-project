@@ -2504,6 +2504,12 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         VPValue *NewAddr = GetNewAddr(L->getAddr());
         return new VPWidenLoadEVLRecipe(*L, NewAddr, EVL, NewMask);
       })
+      .Case<VPWidenStridedLoadRecipe>([&](VPWidenStridedLoadRecipe *L) {
+        VPValue *NewMask = GetNewMask(L->getMask());
+        return new VPWidenStridedLoadRecipe(
+            *cast<LoadInst>(&L->getIngredient()), L->getAddr(), L->getStride(),
+            &EVL, NewMask, *L, L->getDebugLoc());
+      })
       .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
         VPValue *NewMask = GetNewMask(S->getMask());
         VPValue *NewAddr = GetNewAddr(S->getAddr());
@@ -2542,10 +2548,12 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
-  assert(all_of(Plan.getVF().users(),
-                IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
-                        VPWidenIntOrFpInductionRecipe>) &&
-         "User of VF that we can't transform to EVL.");
+  assert(
+      all_of(
+          Plan.getVF().users(),
+          IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
+                  VPWidenIntOrFpInductionRecipe, VPWidenStridedLoadRecipe>) &&
+      "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
     return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
   });
@@ -2640,8 +2648,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
            "New recipe must define the same number of values as the "
            "original.");
     EVLRecipe->insertBefore(CurRecipe);
-    if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe, VPInterleaveEVLRecipe>(
-            EVLRecipe)) {
+    if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe, VPWidenStridedLoadRecipe,
+            VPInterleaveEVLRecipe>(EVLRecipe)) {
       for (unsigned I = 0; I < NumDefVal; ++I) {
         VPValue *CurVPV = CurRecipe->getVPValue(I);
         CurVPV->replaceAllUsesWith(EVLRecipe->getVPValue(I));
@@ -4203,4 +4211,185 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(
   MDNode *BranchWeights =
       MDB.createBranchWeights({1, VectorStep - 1}, /*IsExpected=*/false);
   MiddleTerm->addMetadata(LLVMContext::MD_prof, BranchWeights);
+}
+
+static std::pair<VPValue *, VPValue *> matchStridedStart(VPValue *CurIndex) {
+  // TODO: Support VPWidenPointerInductionRecipe.
+  if (auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(CurIndex))
+    return {WidenIV, WidenIV->getStepValue()};
+
+  auto *WidenR = dyn_cast<VPWidenRecipe>(CurIndex);
+  if (!WidenR || !CurIndex->getUnderlyingValue())
+    return {nullptr, nullptr};
+
+  unsigned Opcode = WidenR->getOpcode();
+  // TODO: Support Instruction::Add and Instruction::Or.
+  if (Opcode != Instruction::Shl && Opcode != Instruction::Mul)
+    return {nullptr, nullptr};
+
+  // Match the pattern binop(variant, invariant), or binop(invariant, variant)
+  // if the binary operator is commutative.
+  bool IsLHSUniform = vputils::isSingleScalar(WidenR->getOperand(0));
+  if (IsLHSUniform == vputils::isSingleScalar(WidenR->getOperand(1)) ||
+      (IsLHSUniform && !Instruction::isCommutative(Opcode)))
+    return {nullptr, nullptr};
+  unsigned VarIdx = IsLHSUniform ? 1 : 0;
+
+  auto [Start, Stride] = matchStridedStart(WidenR->getOperand(VarIdx));
+  if (!Start)
+    return {nullptr, nullptr};
+
+  SmallVector<VPValue *> StartOps(WidenR->operands());
+  StartOps[VarIdx] = Start;
+  auto *StartR = new VPReplicateRecipe(WidenR->getUnderlyingInstr(), StartOps,
+                                       /*IsUniform*/ true);
+  StartR->insertBefore(WidenR);
+
+  unsigned InvIdx = VarIdx == 0 ? 1 : 0;
+  auto *StrideR =
+      new VPInstruction(Opcode, {Stride, WidenR->getOperand(InvIdx)});
+  StrideR->insertBefore(WidenR);
+  return {StartR, StrideR};
+}
+
+static std::tuple<VPValue *, VPValue *, Type *>
+determineBaseAndStride(VPWidenGEPRecipe *WidenGEP) {
+  // TODO: Check if the base pointer is strided.
+  if (!WidenGEP->isPointerLoopInvariant())
+    return {nullptr, nullptr, nullptr};
+
+  // Find the only one variant index.
+  std::optional<unsigned> VarIndex = WidenGEP->getUniqueVariantIndex();
+  if (!VarIndex)
+    return {nullptr, nullptr, nullptr};
+
+  Type *ElementTy = WidenGEP->getIndexedType(*VarIndex);
+  if (ElementTy->isScalableTy() || ElementTy->isStructTy() ||
+      ElementTy->isVectorTy())
+    return {nullptr, nullptr, nullptr};
+
+  unsigned VarOp = *VarIndex + 1;
+  VPValue *IndexVPV = WidenGEP->getOperand(VarOp);
+  auto [Start, Stride] = matchStridedStart(IndexVPV);
+  if (!Start)
+    return {nullptr, nullptr, nullptr};
+
+  SmallVector<VPValue *> Ops(WidenGEP->operands());
+  Ops[VarOp] = Start;
+  auto *BasePtr = new VPReplicateRecipe(WidenGEP->getUnderlyingInstr(), Ops,
+                                        /*IsUniform*/ true);
+  BasePtr->insertBefore(WidenGEP);
+
+  return {BasePtr, Stride, ElementTy};
+}
+
+void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
+                                               VFRange &Range) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  VPTypeAnalysis TypeInfo(Plan);
+  DenseMap<VPWidenGEPRecipe *, std::tuple<VPValue *, VPValue *, Type *>>
+      StrideCache;
+  SmallVector<VPRecipeBase *> ToErase;
+  SmallPtrSet<VPValue *, 4> PossiblyDead;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *MemR = dyn_cast<VPWidenMemoryRecipe>(&R);
+      // TODO: Support strided store.
+      // TODO: Transform reverse access into strided access with -1 stride.
+      // TODO: Transform gather/scatter with uniform address into strided access
+      // with 0 stride.
+      // TODO: Transform interleave access into multiple strided accesses.
+      if (!MemR || !isa<VPWidenLoadRecipe>(MemR) || MemR->isConsecutive())
+        continue;
+
+      auto *Ptr = dyn_cast<VPWidenGEPRecipe>(MemR->getAddr());
+      if (!Ptr)
+        continue;
+
+      // Memory cost model requires the pointer operand of memory access
+      // instruction.
+      Value *PtrUV = Ptr->getUnderlyingValue();
+      if (!PtrUV)
+        continue;
+
+      // Try to get base and stride here.
+      VPValue *BasePtr, *StrideInElement;
+      Type *ElementTy;
+      auto It = StrideCache.find(Ptr);
+      if (It != StrideCache.end())
+        std::tie(BasePtr, StrideInElement, ElementTy) = It->second;
+      else
+        std::tie(BasePtr, StrideInElement, ElementTy) = StrideCache[Ptr] =
+            determineBaseAndStride(Ptr);
+
+      // Skip if the memory access is not a strided access.
+      if (!BasePtr) {
+        assert(!StrideInElement && !ElementTy);
+        continue;
+      }
+      assert(StrideInElement && ElementTy);
+
+      Instruction &Ingredient = MemR->getIngredient();
+      auto IsProfitable = [&](ElementCount VF) -> bool {
+        Type *DataTy = toVectorTy(getLoadStoreType(&Ingredient), VF);
+        const Align Alignment = getLoadStoreAlignment(&Ingredient);
+        if (!Ctx.TTI.isLegalStridedLoadStore(DataTy, Alignment))
+          return false;
+        const InstructionCost CurrentCost = MemR->computeCost(VF, Ctx);
+        const InstructionCost StridedLoadStoreCost =
+            Ctx.TTI.getStridedMemoryOpCost(Instruction::Load, DataTy, PtrUV,
+                                           MemR->isMasked(), Alignment,
+                                           Ctx.CostKind, &Ingredient);
+        return StridedLoadStoreCost < CurrentCost;
+      };
+
+      if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable,
+                                                              Range)) {
+        PossiblyDead.insert(BasePtr);
+        PossiblyDead.insert(StrideInElement);
+        continue;
+      }
+      PossiblyDead.insert(Ptr);
+
+      // Create a new vector pointer for strided access.
+      auto *GEP = dyn_cast<GetElementPtrInst>(PtrUV->stripPointerCasts());
+      auto *NewPtr = new VPVectorPointerRecipe(
+          BasePtr, ElementTy, StrideInElement,
+          GEP ? GEP->getNoWrapFlags() : GEPNoWrapFlags::none(),
+          Ptr->getDebugLoc());
+      NewPtr->insertBefore(MemR);
+
+      const DataLayout &DL = Ingredient.getDataLayout();
+      TypeSize TS = DL.getTypeAllocSize(ElementTy);
+      unsigned TypeScale = TS.getFixedValue();
+      VPValue *StrideInBytes = StrideInElement;
+      // Scale the stride by the size of the indexed type.
+      if (TypeScale != 1) {
+        VPValue *ScaleVPV = Plan.getOrAddLiveIn(ConstantInt::get(
+            TypeInfo.inferScalarType(StrideInElement), TypeScale));
+        auto *ScaledStride =
+            new VPInstruction(Instruction::Mul, {StrideInElement, ScaleVPV});
+        ScaledStride->insertBefore(MemR);
+        StrideInBytes = ScaledStride;
+      }
+
+      auto *LoadR = cast<VPWidenLoadRecipe>(MemR);
+      auto *StridedLoad = new VPWidenStridedLoadRecipe(
+          *cast<LoadInst>(&Ingredient), NewPtr, StrideInBytes, &Plan.getVF(),
+          LoadR->getMask(), *LoadR, LoadR->getDebugLoc());
+      StridedLoad->insertBefore(LoadR);
+      LoadR->replaceAllUsesWith(StridedLoad);
+
+      ToErase.push_back(LoadR);
+    }
+  }
+
+  // Clean up dead memory access recipes, and unused base address and stride.
+  for (auto *R : ToErase)
+    R->eraseFromParent();
+  for (auto *V : PossiblyDead)
+    recursivelyDeleteDeadRecipes(V);
 }
