@@ -5184,18 +5184,16 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
       // phi(freeze(undef), C, C). Choose C for freeze so the PHI can be
       // removed.
       Constant *BestValue = nullptr;
-      Constant *C = nullptr;
       for (Value *V : PN.incoming_values()) {
         if (match(V, m_Freeze(m_Undef())))
           continue;
 
-        if (!isa<Constant>(V))
+        Constant *C = dyn_cast<Constant>(V);
+        if (!C)
           return nullptr;
 
-        if (!isGuaranteedNotToBeUndefOrPoison(V))
+        if (!isGuaranteedNotToBeUndefOrPoison(C))
           return nullptr;
-
-        C = cast<Constant>(V);
 
         if (BestValue && BestValue != C)
           return nullptr;
@@ -5206,7 +5204,6 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     };
 
     Value *NullValue = Constant::getNullValue(Ty);
-
     Value *BestValue = nullptr;
     for (auto *U : I.users()) {
       Value *V = NullValue;
@@ -5218,8 +5215,7 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
         if (!isGuaranteedNotToBeUndefOrPoison(V, &AC, &I, &DT))
           V = NullValue;
       } else if (auto *PHI = dyn_cast<PHINode>(U)) {
-        Value *MaybeV = pickCommonConstantFromPHI(*PHI);
-        if (MaybeV)
+        if (Value *MaybeV = pickCommonConstantFromPHI(*PHI))
           V = MaybeV;
       }
 
