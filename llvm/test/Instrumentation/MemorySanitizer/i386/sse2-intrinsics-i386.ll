@@ -800,11 +800,20 @@ define <4 x i32> @test_x86_sse2_pmadd_wd(<8 x i16> %a0, <8 x i16> %a1) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP3]] to <4 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i32> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i1> [[TMP5]] to <4 x i32>
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <8 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne <8 x i16> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne <8 x i16> [[A0:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ne <8 x i16> [[A1:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = and <8 x i1> [[TMP5]], [[TMP12]]
+; CHECK-NEXT:    [[TMP16:%.*]] = and <8 x i1> [[TMP14]], [[TMP12]]
+; CHECK-NEXT:    [[TMP17:%.*]] = and <8 x i1> [[TMP5]], [[TMP15]]
+; CHECK-NEXT:    [[TMP18:%.*]] = or <8 x i1> [[TMP13]], [[TMP16]]
+; CHECK-NEXT:    [[TMP19:%.*]] = or <8 x i1> [[TMP18]], [[TMP17]]
+; CHECK-NEXT:    [[TMP8:%.*]] = sext <8 x i1> [[TMP19]] to <8 x i16>
+; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <8 x i16> [[TMP8]] to <4 x i32>
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp ne <4 x i32> [[TMP20]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i1> [[TMP21]] to <4 x i32>
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> [[A0]], <8 x i16> [[A1]])
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;

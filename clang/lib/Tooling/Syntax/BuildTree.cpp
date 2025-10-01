@@ -974,13 +974,6 @@ public:
           BeginLoc = TST.getTemplateNameLoc();
         return buildSimpleTemplateName({BeginLoc, TST.getEndLoc()});
       }
-      case TypeLoc::DependentTemplateSpecialization: {
-        auto DT = TL.castAs<DependentTemplateSpecializationTypeLoc>();
-        SourceLocation BeginLoc = DT.getTemplateKeywordLoc();
-        if (BeginLoc.isInvalid())
-          BeginLoc = DT.getTemplateNameLoc();
-        return buildSimpleTemplateName({BeginLoc, DT.getEndLoc()});
-      }
       case TypeLoc::Decltype: {
         const auto DTL = TL.castAs<DecltypeTypeLoc>();
         if (!RecursiveASTVisitor::TraverseDecltypeTypeLoc(
@@ -1482,16 +1475,14 @@ public:
   }
 
   bool WalkUpFromContinueStmt(ContinueStmt *S) {
-    Builder.markChildToken(S->getContinueLoc(),
-                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markChildToken(S->getKwLoc(), syntax::NodeRole::IntroducerKeyword);
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::ContinueStatement, S);
     return true;
   }
 
   bool WalkUpFromBreakStmt(BreakStmt *S) {
-    Builder.markChildToken(S->getBreakLoc(),
-                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markChildToken(S->getKwLoc(), syntax::NodeRole::IntroducerKeyword);
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::BreakStatement, S);
     return true;

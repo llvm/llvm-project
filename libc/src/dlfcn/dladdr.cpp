@@ -15,7 +15,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 // TODO: https:// github.com/llvm/llvm-project/issues/97929
 LLVM_LIBC_FUNCTION(int, dladdr,
-                   (const void *__restrict addr, Dl_info *__restrict info)) {
+                   ([[maybe_unused]] const void *__restrict addr,
+                    [[maybe_unused]] Dl_info *__restrict info)) {
   return -1;
 }
 

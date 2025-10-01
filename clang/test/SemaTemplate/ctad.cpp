@@ -90,3 +90,17 @@ namespace AsValueParameter {
   // cxx17-error@-1 {{value of type 'foo::A<int>' is not implicitly convertible to 'int'}}
   // cxx20-error@-2 {{non-type template parameter has non-literal type 'foo::A<int>' (aka 'AsValueParameter::foo::A<int>')}}
 } // namespace AsValueParameter
+
+namespace ConvertDeducedTemplateArgument {
+  namespace A {
+    template <class> struct B {};
+  }
+
+  template <template <class> class TT1> struct C {
+    C(TT1<int>);
+  };
+
+  template <template <class> class TT2> using D = TT2<int>;
+
+  auto x = C(D<A::B>());
+}

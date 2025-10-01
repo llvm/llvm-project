@@ -269,6 +269,12 @@ static bool enableUnifiedLTO(Module &M) {
 }
 #endif
 
+bool mustEmitToMergedModule(const GlobalValue *GV) {
+  // The __cfi_check definition is filled in by the CrossDSOCFI pass which
+  // runs only in the merged module.
+  return GV->getName() == "__cfi_check";
+}
+
 // If it's possible to split M into regular and thin LTO parts, do so and write
 // a multi-module bitcode file with the two parts to OS. Otherwise, write only a
 // regular LTO bitcode file to OS.
@@ -356,6 +362,8 @@ void splitAndWriteThinLTOBitcode(
         if (const auto *C = GV->getComdat())
           if (MergedMComdats.count(C))
             return true;
+        if (mustEmitToMergedModule(GV))
+          return true;
         if (auto *F = dyn_cast<Function>(GV))
           return EligibleVirtualFns.count(F);
         if (auto *GVar =
@@ -372,7 +380,7 @@ void splitAndWriteThinLTOBitcode(
   cloneUsedGlobalVariables(M, *MergedM, /*CompilerUsed*/ true);
 
   for (Function &F : *MergedM)
-    if (!F.isDeclaration()) {
+    if (!F.isDeclaration() && !mustEmitToMergedModule(&F)) {
       // Reset the linkage of all functions eligible for virtual constant
       // propagation. The canonical definitions live in the thin LTO module so
       // that they can be imported.
@@ -398,6 +406,8 @@ void splitAndWriteThinLTOBitcode(
     if (const auto *C = GV->getComdat())
       if (MergedMComdats.count(C))
         return false;
+    if (mustEmitToMergedModule(GV))
+      return false;
     return true;
   });
 
@@ -519,10 +529,12 @@ bool enableSplitLTOUnit(Module &M) {
   return EnableSplitLTOUnit;
 }
 
-// Returns whether this module needs to be split because it uses type metadata.
-bool hasTypeMetadata(Module &M) {
+// Returns whether this module needs to be split (if splitting is enabled).
+bool requiresSplit(Module &M) {
   for (auto &GO : M.global_objects()) {
     if (GO.hasMetadata(LLVMContext::MD_type))
+      return true;
+    if (mustEmitToMergedModule(&GO))
       return true;
   }
   return false;
@@ -533,9 +545,9 @@ bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
                          Module &M, const ModuleSummaryIndex *Index,
                          const bool ShouldPreserveUseListOrder) {
   std::unique_ptr<ModuleSummaryIndex> NewIndex = nullptr;
-  // See if this module has any type metadata. If so, we try to split it
+  // See if this module needs to be split. If so, we try to split it
   // or at least promote type ids to enable WPD.
-  if (hasTypeMetadata(M)) {
+  if (requiresSplit(M)) {
     if (enableSplitLTOUnit(M)) {
       splitAndWriteThinLTOBitcode(OS, ThinLinkOS, AARGetter, M,
                                   ShouldPreserveUseListOrder);

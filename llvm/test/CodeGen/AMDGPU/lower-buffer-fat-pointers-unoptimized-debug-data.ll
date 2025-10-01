@@ -15,51 +15,52 @@ define float @debug_stash_pointer(ptr addrspace(8) %buf, i32 %idx, ptr addrspace
 ; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[BUF]], [[META13]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[META23]])
 ; CHECK-NEXT:    [[BUF_PTR_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[BUF]] to i160, !dbg [[DBG24:![0-9]+]]
 ; CHECK-NEXT:    [[BUF_PTR_INT:%.*]] = shl nuw i160 [[BUF_PTR_INT_RSRC]], 32, !dbg [[DBG24]]
-; CHECK-NEXT:    store i160 [[BUF_PTR_INT]], ptr addrspace(5) [[BUF_PTR_VAR]], align 32, !dbg [[DBG24]]
-; CHECK-NEXT:      #dbg_value(i32 0, [[META15:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), [[META25:![0-9]+]])
-; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[AUX]], [[META15]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[META25]])
-; CHECK-NEXT:    [[AUX_PTR_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[AUX]] to i160, !dbg [[DBG26:![0-9]+]]
-; CHECK-NEXT:    [[AUX_PTR_INT:%.*]] = shl nuw i160 [[AUX_PTR_INT_RSRC]], 32, !dbg [[DBG26]]
-; CHECK-NEXT:    store i160 [[AUX_PTR_INT]], ptr addrspace(5) [[AUX_PTR_VAR]], align 32, !dbg [[DBG26]]
-; CHECK-NEXT:    [[BUF_PTR_2:%.*]] = load i160, ptr addrspace(5) [[BUF_PTR_VAR]], align 32, !dbg [[DBG27:![0-9]+]]
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i160 [[BUF_PTR_2]], 32, !dbg [[DBG27]]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i128, !dbg [[DBG27]]
-; CHECK-NEXT:    [[BUF_PTR_2_PTR_RSRC:%.*]] = inttoptr i128 [[TMP2]] to ptr addrspace(8), !dbg [[DBG27]]
-; CHECK-NEXT:    [[BUF_PTR_2_PTR_OFF:%.*]] = trunc i160 [[BUF_PTR_2]] to i32, !dbg [[DBG27]]
-; CHECK-NEXT:      #dbg_value(i32 [[BUF_PTR_2_PTR_OFF]], [[META16:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), [[DBG27]])
-; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[BUF_PTR_2_PTR_RSRC]], [[META16]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[DBG27]])
-; CHECK-NEXT:    [[BUF_PTR_3_IDX:%.*]] = mul i32 [[IDX]], 4, !dbg [[DBG28:![0-9]+]]
-; CHECK-NEXT:    [[BUF_PTR_3:%.*]] = add i32 [[BUF_PTR_2_PTR_OFF]], [[BUF_PTR_3_IDX]], !dbg [[DBG28]]
-; CHECK-NEXT:      #dbg_value(i32 [[BUF_PTR_3]], [[META17:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), [[DBG28]])
-; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[BUF_PTR_2_PTR_RSRC]], [[META17]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[DBG28]])
-; CHECK-NEXT:    [[BUF_PTR_3_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[BUF_PTR_2_PTR_RSRC]] to i160, !dbg [[DBG29:![0-9]+]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i160 [[BUF_PTR_3_INT_RSRC]], 32, !dbg [[DBG29]]
-; CHECK-NEXT:    [[BUF_PTR_3_INT_OFF:%.*]] = zext i32 [[BUF_PTR_3]] to i160, !dbg [[DBG29]]
-; CHECK-NEXT:    [[BUF_PTR_3_INT:%.*]] = or i160 [[TMP3]], [[BUF_PTR_3_INT_OFF]], !dbg [[DBG29]]
-; CHECK-NEXT:    store i160 [[BUF_PTR_3_INT]], ptr addrspace(5) [[BUF_PTR_VAR]], align 32, !dbg [[DBG29]]
-; CHECK-NEXT:    [[BUF_PTR_4:%.*]] = load i160, ptr addrspace(5) [[BUF_PTR_VAR]], align 32, !dbg [[DBG30:![0-9]+]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i160 [[BUF_PTR_4]], 32, !dbg [[DBG30]]
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i160 [[TMP4]] to i128, !dbg [[DBG30]]
-; CHECK-NEXT:    [[BUF_PTR_4_PTR_RSRC:%.*]] = inttoptr i128 [[TMP5]] to ptr addrspace(8), !dbg [[DBG30]]
-; CHECK-NEXT:    [[BUF_PTR_4_PTR_OFF:%.*]] = trunc i160 [[BUF_PTR_4]] to i32, !dbg [[DBG30]]
-; CHECK-NEXT:      #dbg_value(i32 [[BUF_PTR_4_PTR_OFF]], [[META18:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), [[DBG30]])
-; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[BUF_PTR_4_PTR_RSRC]], [[META18]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[DBG30]])
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF_PTR_4_PTR_RSRC]], i32 [[BUF_PTR_4_PTR_OFF]], i32 0, i32 0), !dbg [[DBG31:![0-9]+]]
-; CHECK-NEXT:      #dbg_value(float [[RET]], [[META19:![0-9]+]], !DIExpression(), [[DBG31]])
-; CHECK-NEXT:    [[AUX_PTR_2:%.*]] = load i160, ptr addrspace(5) [[AUX_PTR_VAR]], align 32, !dbg [[DBG32:![0-9]+]]
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr i160 [[AUX_PTR_2]], 32, !dbg [[DBG32]]
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i160 [[TMP6]] to i128, !dbg [[DBG32]]
-; CHECK-NEXT:    [[AUX_PTR_2_PTR_RSRC:%.*]] = inttoptr i128 [[TMP7]] to ptr addrspace(8), !dbg [[DBG32]]
-; CHECK-NEXT:    [[AUX_PTR_2_PTR_OFF:%.*]] = trunc i160 [[AUX_PTR_2]] to i32, !dbg [[DBG32]]
-; CHECK-NEXT:      #dbg_value(i32 [[AUX_PTR_2_PTR_OFF]], [[META20:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), [[DBG32]])
-; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[AUX_PTR_2_PTR_RSRC]], [[META20]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[DBG32]])
-; CHECK-NEXT:    [[BUF_PTR_4_LEGAL:%.*]] = bitcast i160 [[BUF_PTR_4]] to <5 x i32>, !dbg [[DBG33:![0-9]+]]
-; CHECK-NEXT:    [[BUF_PTR_4_SLICE_0:%.*]] = shufflevector <5 x i32> [[BUF_PTR_4_LEGAL]], <5 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>, !dbg [[DBG33]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[BUF_PTR_4_SLICE_0]], ptr addrspace(8) align 32 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_OFF]], i32 0, i32 0), !dbg [[DBG33]]
-; CHECK-NEXT:    [[AUX_PTR_2_PTR_PART_4:%.*]] = add nuw i32 [[AUX_PTR_2_PTR_OFF]], 16, !dbg [[DBG33]]
-; CHECK-NEXT:    [[BUF_PTR_4_SLICE_4:%.*]] = extractelement <5 x i32> [[BUF_PTR_4_LEGAL]], i64 4, !dbg [[DBG33]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[BUF_PTR_4_SLICE_4]], ptr addrspace(8) align 16 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_PART_4]], i32 0, i32 0), !dbg [[DBG33]]
-; CHECK-NEXT:    ret float [[RET]], !dbg [[DBG34:![0-9]+]]
+; CHECK-NEXT:    store i160 [[BUF_PTR_INT]], ptr addrspace(5) [[BUF_PTR_VAR]], align 32, !dbg [[DBG24]], !DIAssignID [[DIASSIGNID25:![0-9]+]]
+; CHECK-NEXT:      #dbg_assign(i160 [[BUF_PTR_INT]], [[META13]], !DIExpression(), [[DIASSIGNID25]], ptr addrspace(5) [[BUF_PTR_VAR]], !DIExpression(), [[DBG21]])
+; CHECK-NEXT:      #dbg_value(i32 0, [[META15:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), [[META26:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[AUX]], [[META15]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[META26]])
+; CHECK-NEXT:    [[AUX_PTR_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[AUX]] to i160, !dbg [[DBG27:![0-9]+]]
+; CHECK-NEXT:    [[AUX_PTR_INT:%.*]] = shl nuw i160 [[AUX_PTR_INT_RSRC]], 32, !dbg [[DBG27]]
+; CHECK-NEXT:    store i160 [[AUX_PTR_INT]], ptr addrspace(5) [[AUX_PTR_VAR]], align 32, !dbg [[DBG27]]
+; CHECK-NEXT:    [[BUF_PTR_2:%.*]] = load i160, ptr addrspace(5) [[BUF_PTR_VAR]], align 32, !dbg [[DBG28:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i160 [[BUF_PTR_2]], 32, !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i128, !dbg [[DBG28]]
+; CHECK-NEXT:    [[BUF_PTR_2_PTR_RSRC:%.*]] = inttoptr i128 [[TMP2]] to ptr addrspace(8), !dbg [[DBG28]]
+; CHECK-NEXT:    [[BUF_PTR_2_PTR_OFF:%.*]] = trunc i160 [[BUF_PTR_2]] to i32, !dbg [[DBG28]]
+; CHECK-NEXT:      #dbg_value(i32 [[BUF_PTR_2_PTR_OFF]], [[META16:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), [[DBG28]])
+; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[BUF_PTR_2_PTR_RSRC]], [[META16]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[DBG28]])
+; CHECK-NEXT:    [[BUF_PTR_3_IDX:%.*]] = mul i32 [[IDX]], 4, !dbg [[DBG29:![0-9]+]]
+; CHECK-NEXT:    [[BUF_PTR_3:%.*]] = add i32 [[BUF_PTR_2_PTR_OFF]], [[BUF_PTR_3_IDX]], !dbg [[DBG29]]
+; CHECK-NEXT:      #dbg_value(i32 [[BUF_PTR_3]], [[META17:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), [[DBG29]])
+; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[BUF_PTR_2_PTR_RSRC]], [[META17]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[DBG29]])
+; CHECK-NEXT:    [[BUF_PTR_3_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[BUF_PTR_2_PTR_RSRC]] to i160, !dbg [[DBG30:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i160 [[BUF_PTR_3_INT_RSRC]], 32, !dbg [[DBG30]]
+; CHECK-NEXT:    [[BUF_PTR_3_INT_OFF:%.*]] = zext i32 [[BUF_PTR_3]] to i160, !dbg [[DBG30]]
+; CHECK-NEXT:    [[BUF_PTR_3_INT:%.*]] = or i160 [[TMP3]], [[BUF_PTR_3_INT_OFF]], !dbg [[DBG30]]
+; CHECK-NEXT:    store i160 [[BUF_PTR_3_INT]], ptr addrspace(5) [[BUF_PTR_VAR]], align 32, !dbg [[DBG30]]
+; CHECK-NEXT:    [[BUF_PTR_4:%.*]] = load i160, ptr addrspace(5) [[BUF_PTR_VAR]], align 32, !dbg [[DBG31:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i160 [[BUF_PTR_4]], 32, !dbg [[DBG31]]
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i160 [[TMP4]] to i128, !dbg [[DBG31]]
+; CHECK-NEXT:    [[BUF_PTR_4_PTR_RSRC:%.*]] = inttoptr i128 [[TMP5]] to ptr addrspace(8), !dbg [[DBG31]]
+; CHECK-NEXT:    [[BUF_PTR_4_PTR_OFF:%.*]] = trunc i160 [[BUF_PTR_4]] to i32, !dbg [[DBG31]]
+; CHECK-NEXT:      #dbg_value(i32 [[BUF_PTR_4_PTR_OFF]], [[META18:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), [[DBG31]])
+; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[BUF_PTR_4_PTR_RSRC]], [[META18]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[DBG31]])
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF_PTR_4_PTR_RSRC]], i32 [[BUF_PTR_4_PTR_OFF]], i32 0, i32 0), !dbg [[DBG32:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(float [[RET]], [[META19:![0-9]+]], !DIExpression(), [[DBG32]])
+; CHECK-NEXT:    [[AUX_PTR_2:%.*]] = load i160, ptr addrspace(5) [[AUX_PTR_VAR]], align 32, !dbg [[DBG33:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i160 [[AUX_PTR_2]], 32, !dbg [[DBG33]]
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i160 [[TMP6]] to i128, !dbg [[DBG33]]
+; CHECK-NEXT:    [[AUX_PTR_2_PTR_RSRC:%.*]] = inttoptr i128 [[TMP7]] to ptr addrspace(8), !dbg [[DBG33]]
+; CHECK-NEXT:    [[AUX_PTR_2_PTR_OFF:%.*]] = trunc i160 [[AUX_PTR_2]] to i32, !dbg [[DBG33]]
+; CHECK-NEXT:      #dbg_value(i32 [[AUX_PTR_2_PTR_OFF]], [[META20:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), [[DBG33]])
+; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[AUX_PTR_2_PTR_RSRC]], [[META20]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[DBG33]])
+; CHECK-NEXT:    [[BUF_PTR_4_LEGAL:%.*]] = bitcast i160 [[BUF_PTR_4]] to <5 x i32>, !dbg [[DBG34:![0-9]+]]
+; CHECK-NEXT:    [[BUF_PTR_4_SLICE_0:%.*]] = shufflevector <5 x i32> [[BUF_PTR_4_LEGAL]], <5 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>, !dbg [[DBG34]]
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[BUF_PTR_4_SLICE_0]], ptr addrspace(8) align 32 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_OFF]], i32 0, i32 0), !dbg [[DBG34]]
+; CHECK-NEXT:    [[AUX_PTR_2_PTR_PART_4:%.*]] = add nuw i32 [[AUX_PTR_2_PTR_OFF]], 16, !dbg [[DBG34]]
+; CHECK-NEXT:    [[BUF_PTR_4_SLICE_4:%.*]] = extractelement <5 x i32> [[BUF_PTR_4_LEGAL]], i64 4, !dbg [[DBG34]]
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[BUF_PTR_4_SLICE_4]], ptr addrspace(8) align 16 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_PART_4]], i32 0, i32 0), !dbg [[DBG34]]
+; CHECK-NEXT:    ret float [[RET]], !dbg [[DBG35:![0-9]+]]
 ;
   %buf.ptr.var = alloca ptr addrspace(7), align 32, addrspace(5), !dbg !20
   call void @llvm.dbg.value(metadata ptr addrspace(5) %buf.ptr.var, metadata !9, metadata !DIExpression()), !dbg !20
@@ -67,7 +68,8 @@ define float @debug_stash_pointer(ptr addrspace(8) %buf, i32 %idx, ptr addrspace
   call void @llvm.dbg.value(metadata ptr addrspace(5) %aux.ptr.var, metadata !11, metadata !DIExpression()), !dbg !21
   %buf.ptr = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7), !dbg !22
   call void @llvm.dbg.value(metadata ptr addrspace(7) %buf.ptr, metadata !12, metadata !DIExpression()), !dbg !22
-  store ptr addrspace(7) %buf.ptr, ptr addrspace(5) %buf.ptr.var, align 32, !dbg !23
+  store ptr addrspace(7) %buf.ptr, ptr addrspace(5) %buf.ptr.var, align 32, !dbg !23, !DIAssignID !40
+  call void @llvm.dbg.assign(metadata ptr addrspace(7) %buf.ptr, metadata !12, metadata !DIExpression(), metadata !40, metadata ptr addrspace(5) %buf.ptr.var, metadata !DIExpression()), !dbg !20
   %aux.ptr = addrspacecast ptr addrspace(8) %aux to ptr addrspace(7), !dbg !24
   call void @llvm.dbg.value(metadata ptr addrspace(7) %aux.ptr, metadata !14, metadata !DIExpression()), !dbg !24
   store ptr addrspace(7) %aux.ptr, ptr addrspace(5) %aux.ptr.var, align 32, !dbg !25
@@ -129,3 +131,4 @@ attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memo
 !31 = !DILocation(line: 12, column: 1, scope: !5)
 !32 = !DILocation(line: 13, column: 1, scope: !5)
 !33 = !DILocation(line: 14, column: 1, scope: !5)
+!40 = distinct !DIAssignID()

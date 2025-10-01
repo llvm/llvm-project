@@ -26,12 +26,12 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | Block
-!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
 !PARSE-TREE: | | | OmpBeginDirective
 !PARSE-TREE: | | | | OmpDirectiveName -> llvm::omp::Directive = target data
 !PARSE-TREE: | | | | OmpClauseList -> OmpClause -> Map -> OmpMapClause
@@ -69,7 +69,7 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | | OmpClauseList ->
@@ -108,7 +108,7 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | | OmpClauseList ->
@@ -147,7 +147,7 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | | OmpClauseList ->

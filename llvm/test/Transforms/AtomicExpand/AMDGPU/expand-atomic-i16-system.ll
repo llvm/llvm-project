@@ -151,8 +151,17 @@ define i16 @test_atomicrmw_and_i16_global_system(ptr addrspace(1) %ptr, i16 %val
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] seq_cst, align 4
-; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = and i32 [[LOADED]], [[ANDOPERAND]]
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP5]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
@@ -204,8 +213,17 @@ define i16 @test_atomicrmw_or_i16_global_system(ptr addrspace(1) %ptr, i16 %valu
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw or ptr addrspace(1) [[ALIGNEDADDR]], i32 [[VALOPERAND_SHIFTED]] seq_cst, align 4
-; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = or i32 [[LOADED]], [[VALOPERAND_SHIFTED]]
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP5]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
@@ -224,8 +242,17 @@ define i16 @test_atomicrmw_xor_i16_global_system(ptr addrspace(1) %ptr, i16 %val
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw xor ptr addrspace(1) [[ALIGNEDADDR]], i32 [[VALOPERAND_SHIFTED]] seq_cst, align 4
-; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[LOADED]], [[VALOPERAND_SHIFTED]]
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP5]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;

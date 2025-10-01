@@ -18,6 +18,7 @@ unittest("ClangReplInterpreterTests") {
     "IncrementalProcessingTest.cpp",
     "InterpreterExtensionsTest.cpp",
     "InterpreterTest.cpp",
+    "OutOfProcessInterpreterTests.cpp",
   ]
 
   # Support plugins.
@@ -26,12 +27,4 @@ unittest("ClangReplInterpreterTests") {
     # Corresponds to export_executable_symbols() in cmake.
     ldflags = [ "-rdynamic" ]
   }
-}
-
-# FIXME: This is included conditionally in the CMake build if
-#        compiler-rt is available. The test currently fails in the GN
-#        build. Figure out if we can get it to pass.
-group("dummy_sources") {
-  sources = [ "OutOfProcessInterpreterTests.cpp" ]
-  not_needed(sources)
 }
