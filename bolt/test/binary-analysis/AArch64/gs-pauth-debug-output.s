@@ -177,9 +177,9 @@ clobber:
 // CHECK-EMPTY:
 // CHECK-NEXT: Running detailed src register safety analysis...
 // CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   mov     w30, #0x0, src-state<SafeToDerefRegs: LR W30 W30_HI , TrustedRegs: LR W30 W30_HI , Insts: [0]()>)
-// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: W30_HI , TrustedRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}} )>)
-// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   ret     x30, src-state<SafeToDerefRegs: W30_HI , TrustedRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}} )>)
-// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: W30_HI , TrustedRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}} )>)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: W30_HI , TrustedRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}})>)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   ret     x30, src-state<SafeToDerefRegs: W30_HI , TrustedRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}})>)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: W30_HI , TrustedRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}})>)
 // CHECK-NEXT: After detailed src register safety analysis:
 // CHECK-NEXT: Binary Function "clobber"  {
 // ...
@@ -189,7 +189,7 @@ clobber:
 // Iterating over the reports and attaching clobbering info:
 
 // CHECK-EMPTY:
-// CHECK-NEXT:   Attaching clobbering info to:     00000000:         ret # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, TrustedRegs: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
+// CHECK-NEXT:   Attaching clobbering info to:     00000000:         ret # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, TrustedRegs: BitVector, Insts: [0](0x{{[0-9a-f]+}})>
 
         .globl  nocfg
         .type   nocfg,@function
@@ -315,7 +315,7 @@ auth_oracle:
 // AUTH-ORACLES-NEXT:   DstSafetyAnalysis::ComputeNext(       ret     x30, dst-state<CannotEscapeUnchecked: , Insts: [0]()>)
 // AUTH-ORACLES-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI , Insts: [0]()>)
 // AUTH-ORACLES-NEXT:   DstSafetyAnalysis::ComputeNext(       autia   x0, x1, dst-state<CannotEscapeUnchecked: LR W30 W30_HI , Insts: [0]()>)
-// AUTH-ORACLES-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI , Insts: [0](0x{{[0-9a-f]+}} )>)
+// AUTH-ORACLES-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI , Insts: [0](0x{{[0-9a-f]+}})>)
 // AUTH-ORACLES-NEXT: After detailed dst register safety analysis:
 // AUTH-ORACLES-NEXT: Binary Function "auth_oracle"  {
 // AUTH-ORACLES-NEXT:   Number      : 4
@@ -325,14 +325,14 @@ auth_oracle:
 // AUTH-ORACLES-NEXT: }
 // AUTH-ORACLES-NEXT: [[BB0]] (2 instructions, align : 1)
 // AUTH-ORACLES-NEXT:   Entry Point
-// AUTH-ORACLES-NEXT:     00000000:   autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
+// AUTH-ORACLES-NEXT:     00000000:   autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector, Insts: [0](0x{{[0-9a-f]+}})>
 // AUTH-ORACLES-NEXT:     00000004:   ret # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector, Insts: [0]()>
 // AUTH-ORACLES-EMPTY:
 // AUTH-ORACLES-NEXT: DWARF CFI Instructions:
 // AUTH-ORACLES-NEXT:     <empty>
 // AUTH-ORACLES-NEXT: End of Function "auth_oracle"
 // AUTH-ORACLES-EMPTY:
-// AUTH-ORACLES-NEXT:   Attaching leakage info to:     00000000:      autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
+// AUTH-ORACLES-NEXT:   Attaching leakage info to:     00000000:      autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector, Insts: [0](0x{{[0-9a-f]+}})>
 
 // Gadget scanner should not crash on CFI instructions, including when debug-printing them.
 // Note that the particular debug output is not checked, but BOLT should be
