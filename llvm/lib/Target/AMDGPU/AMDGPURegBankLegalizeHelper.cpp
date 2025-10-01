@@ -1363,13 +1363,7 @@ void RegBankLegalizeHelper::applyMappingTrivial(MachineInstr &MI) {
     B.setInstr(MI);
     for (unsigned i = NumDefs; i < NumOperands; ++i) {
       Register Reg = MI.getOperand(i).getReg();
-      // Helper to check if a register should be skipped for VGPR conversion
-      auto shouldSkipVGPRConversion = [&](Register Reg) {
-        MachineInstr *DefMI = MRI.getVRegDef(Reg);
-        // Skip if defining instruction is implicit_def
-        return DefMI && DefMI->getOpcode() == TargetOpcode::G_IMPLICIT_DEF;
-      };
-      if (MRI.getRegBank(Reg) != RB && !shouldSkipVGPRConversion(Reg)) {
+      if (MRI.getRegBank(Reg) != RB) {
         auto Copy = B.buildCopy({VgprRB, MRI.getType(Reg)}, Reg);
         MI.getOperand(i).setReg(Copy.getReg(0));
       }
