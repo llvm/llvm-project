@@ -1352,20 +1352,28 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
                                               DataRC1, SubReg);
     }
 
-    bool constrainData0 = MRI->constrainRegClass(Data0->getReg(), DataRC0);
-    bool constrainData1 = MRI->constrainRegClass(Data1->getReg(), DataRC1);
-    if (!constrainData0 && !constrainData1) {
+    bool canBeConstrainedData0 =
+        MRI->constrainRegClass(Data0->getReg(), DataRC0);
+    bool canBeConstrainedData1 =
+        MRI->constrainRegClass(Data1->getReg(), DataRC1);
+    if (!canBeConstrainedData0 && !canBeConstrainedData1) {
       return nullptr;
-    } else if (!constrainData0 || !constrainData1) {
+    }
+    if (!canBeConstrainedData0 || !canBeConstrainedData1) {
       MachineBasicBlock::iterator InsertBefore = CI.I;
       MachineBasicBlock *MBB = CI.I->getParent();
-      DebugLoc DL = CI.I->getDebugLoc();
-      const MachineOperand *activeData = !constrainData0 ? Data0 : Data1;
-      Register BaseReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      const DebugLoc &DL = DebugLoc::getMergedLocation(CI.I->getDebugLoc(),
+                                                       Paired.I->getDebugLoc());
+      const CombineInfo &ActiveCI = canBeConstrainedData0 ? Paired : CI;
+      MachineOperand *activeData =
+          TII->getNamedOperand(*ActiveCI.I, AMDGPU::OpName::data0);
       const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
+      const TargetRegisterClass *RC = getDataRegClass(*CI.I);
+      Register BaseReg = MRI->createVirtualRegister(RC);
       BuildMI(*MBB, InsertBefore, DL, CopyDesc, BaseReg)
           .addReg(activeData->getReg(), 0);
-      const_cast<MachineOperand *>(activeData)->setReg(BaseReg);
+
+      activeData->setReg(BaseReg);
     }
   }
 

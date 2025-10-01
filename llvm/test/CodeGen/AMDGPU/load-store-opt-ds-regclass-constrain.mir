@@ -247,3 +247,43 @@ body:             |
   DS_WRITE_B32_gfx9 %0, $vgpr1, 40, 0, implicit $exec :: (store (s32), addrspace 3)
   DS_WRITE_B32_gfx9 %0, %2, 96, 0, implicit $exec :: (store (s32), addrspace 3)
 ...
+
+
+---
+name:            ds_write_b64__physical_av64
+body:             |
+  bb.0:
+  liveins: $vgpr0, $vgpr2_vgpr3, $vgpr4_vgpr5
+
+    ; CHECK-LABEL: name: ds_write_b64__physical_av64
+    ; CHECK: liveins: $vgpr0, $vgpr2_vgpr3, $vgpr4_vgpr5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: DS_WRITE2_B64_gfx9 [[COPY]], [[COPY1]], [[COPY2]], 5, 12, 0, implicit $exec :: (store (s64), addrspace 3)
+  %0:vgpr_32 = COPY $vgpr0
+  %1:av_64_align2 = COPY $vgpr2_vgpr3
+  DS_WRITE_B64_gfx9 %0, %1, 40, 0, implicit $exec :: (store (s64), addrspace 3)
+  DS_WRITE_B64_gfx9 %0, $vgpr4_vgpr5, 96, 0, implicit $exec :: (store (s64), addrspace 3)
+
+
+...
+
+---
+name:            ds_write_b64__av64__physical
+body:             |
+  bb.0:
+  liveins: $vgpr0, $vgpr2_vgpr3, $vgpr4_vgpr5
+
+    ; CHECK-LABEL: name: ds_write_b64__av64__physical
+    ; CHECK: liveins: $vgpr0, $vgpr2_vgpr3, $vgpr4_vgpr5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: DS_WRITE2_B64_gfx9 [[COPY]], [[COPY2]], [[COPY1]], 5, 12, 0, implicit $exec :: (store (s64), addrspace 3)
+  %0:vgpr_32 = COPY $vgpr0
+  %2:av_64_align2 = COPY $vgpr4_vgpr5
+  DS_WRITE_B64_gfx9 %0, $vgpr2_vgpr3, 40, 0, implicit $exec :: (store (s64), addrspace 3)
+  DS_WRITE_B64_gfx9 %0, %2, 96, 0, implicit $exec :: (store (s64), addrspace 3)
