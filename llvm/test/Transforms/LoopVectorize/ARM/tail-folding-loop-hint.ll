@@ -52,7 +52,7 @@ define dso_local void @predicate_loop_hint(ptr noalias nocapture %A, ptr noalias
 ; CHECK:         %index.next = add nuw i64 %index, 4
 ; CHECK:         br i1 %{{.*}}, label %{{.*}}, label %vector.body, !llvm.loop [[VEC_LOOP2:![0-9]+]]
 ;
-; CHECK-NOT:         br i1 %{{.*}}, label %{{.*}}, label %for.body, !llvm.loop
+; CHECK-NOT:     br i1 %{{.*}}, label %{{.*}}, label %for.body, !llvm.loop
 entry:
   br label %for.body
 
