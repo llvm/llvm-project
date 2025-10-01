@@ -644,10 +644,10 @@ void test3() {
   clang_analyzer_eval(*a.m_ptr == 0); // expected-warning{{TRUE}}
 }
 
-void test4() {
-  A a(0, 314);
-  clang_analyzer_eval(a.m_buf[0] == 0); // expected-warning{{TRUE}}
-  clang_analyzer_eval(*a.m_ptr == 0); // expected-warning{{TRUE}}
+void test4(char arg) {
+  A a(arg, 314);
+  clang_analyzer_eval(a.m_buf[0] == arg); // expected-warning{{TRUE}}
+  clang_analyzer_eval(*a.m_ptr == arg); // expected-warning{{TRUE}}
 }
 
 } // namespace gh147686
