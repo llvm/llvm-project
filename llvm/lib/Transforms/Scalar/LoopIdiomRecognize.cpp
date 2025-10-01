@@ -1545,12 +1545,6 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   if (TT.getArch() == Triple::hexagon)
     return false;
 
-  // Check that the DataLayout allows us to index into the new 256-entry CRC
-  // table.
-  Type *IdxTy = SE->getDataLayout().getIndexType(M.getContext(), 0);
-  if (IdxTy->getIntegerBitWidth() < 8)
-    return false;
-
   // First, create a new GlobalVariable corresponding to the
   // Sarwate-lookup-table.
   Type *CRCTy = Info.LHS->getType();
@@ -1657,7 +1651,9 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
                                     : LoByte(Builder, Indexer, "indexer.lo");
 
     // Always index into a GEP using the index type.
-    Indexer = Builder.CreateZExt(Indexer, IdxTy, "indexer.ext");
+    Indexer = Builder.CreateZExt(
+        Indexer, SE->getDataLayout().getIndexType(GV->getType()),
+        "indexer.ext");
 
     // CRCTableLd = CRCTable[(iv'th byte of data) ^ (top|bottom) byte of CRC].
     Value *CRCTableGEP =
