@@ -4027,8 +4027,7 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   case RISCV::QC_SELECTINE:
   case RISCV::QC_SELECTIIEQ:
   case RISCV::QC_SELECTIINE:
-    return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1,
-                                                   OpIdx2);
+    return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
   case RISCV::QC_MVEQ:
   case RISCV::QC_MVNE:
   case RISCV::QC_MVLT:
