@@ -1522,7 +1522,7 @@ bool IsVarSubexpressionOf(
 std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
 
 // How many ancestors does have a derived type have?
-std::optional<int> DerivedTypeDepth(const semantics::Scope &);
+std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
 
 } // namespace Fortran::evaluate
 
