@@ -56,20 +56,20 @@
 // | async context if needed           |
 // | (a.k.a. "frame record")           |
 // |-----------------------------------| <- fp(=x29)
-//        Default SVE stack layout                Split SVE objects
-//   (aarch64-split-sve-objects=false)     (aarch64-split-sve-objects=true)
-// |-----------------------------------| |-----------------------------------|
-// |         <hazard padding>          | | callee-saved PPR registers        |
-// |-----------------------------------| |-----------------------------------|
-// |                                   | |         PPR stack objects         |
-// | callee-saved fp/simd/SVE regs     | |-----------------------------------|
-// |                                   | |         <hazard padding>          |
-// |-----------------------------------| |-----------------------------------|
-// |                                   | | callee-saved ZPR/FPR registers    |
-// |        SVE stack objects          | |-----------------------------------|
-// |                                   | |         ZPR stack objects         |
-// |-----------------------------------| |-----------------------------------|
-//                                       ^ NB: FPR CSRs are are promoted to ZPRs
+//        Default SVE stack layout                 Split SVE objects
+//   (aarch64-split-sve-objects=false)      (aarch64-split-sve-objects=true)
+// |-----------------------------------|  |-----------------------------------|
+// |         <hazard padding>          |  | callee-saved PPR registers        |
+// |-----------------------------------|  |-----------------------------------|
+// |                                   |  |         PPR stack objects         |
+// | callee-saved fp/simd/SVE regs     |  |-----------------------------------|
+// |                                   |  |         <hazard padding>          |
+// |-----------------------------------|  |-----------------------------------|
+// |                                   |  | callee-saved ZPR/FPR registers    |
+// |        SVE stack objects          |  |-----------------------------------|
+// |                                   |  |         ZPR stack objects         |
+// |-----------------------------------|  |-----------------------------------|
+//                                         ^ NB: FPR CSRs are promoted to ZPRs
 // |-----------------------------------|
 // |.empty.space.to.make.part.below....|
 // |.aligned.in.case.it.needs.more.than| (size of this area is unknown at
