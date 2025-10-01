@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i8 @add(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @add(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[C:%.*]] = add i8 [[A]], [[B]]
@@ -20,7 +20,7 @@ define i8 @add(i8 %a, i8 %b) {
 define i8 @sub(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @sub(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[C:%.*]] = sub i8 [[A]], [[B]]
@@ -34,7 +34,7 @@ define i8 @sub(i8 %a, i8 %b) {
 define i8 @mul(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @mul(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[C:%.*]] = mul i8 [[A]], [[B]]
@@ -48,7 +48,7 @@ define i8 @mul(i8 %a, i8 %b) {
 define i8 @sdiv(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @sdiv(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[C:%.*]] = sdiv i8 [[A]], [[B]]
@@ -62,7 +62,7 @@ define i8 @sdiv(i8 %a, i8 %b) {
 define i8 @udiv(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @udiv(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[C:%.*]] = udiv i8 [[A]], [[B]]
