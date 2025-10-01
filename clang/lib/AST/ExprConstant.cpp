@@ -11615,25 +11615,26 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
   return true;
 }
 
-
 static bool evalPshufBuiltin(EvalInfo &Info, const CallExpr *Call,
                              unsigned ElemBits, unsigned HalfBase,
                              APValue &Out) {
-  // Expect (vec, imm8)
   APValue Vec;
   APSInt Imm;
-  if (!EvaluateAsRValue(Info, Call->getArg(0), Vec)) return false;
-  if (!EvaluateInteger(Call->getArg(1), Imm, Info)) return false;
+  if (!EvaluateAsRValue(Info, Call->getArg(0), Vec))
+    return false;
+  if (!EvaluateInteger(Call->getArg(1), Imm, Info))
+    return false;
 
   const auto *VT = Call->getType()->getAs<VectorType>();
-  if (!VT) return false;
+  if (!VT)
+    return false;
   unsigned NumElts = VT->getNumElements();
 
-  // Lane geometry: MMX pshufw is a single 64-bit lane; others use 128-bit lanes.
   unsigned TotalBits = NumElts * ElemBits;
-  unsigned LaneBits  = (TotalBits == 64) ? 64u : 128u;
-  unsigned LaneElts  = LaneBits / ElemBits;
-  if (!LaneElts || (NumElts % LaneElts) != 0) return false;
+  unsigned LaneBits = (TotalBits == 64) ? 64u : 128u;
+  unsigned LaneElts = LaneBits / ElemBits;
+  if (!LaneElts || (NumElts % LaneElts) != 0)
+    return false;
 
   uint8_t ctl = static_cast<uint8_t>(Imm.getZExtValue());
 
@@ -11642,31 +11643,25 @@ static bool evalPshufBuiltin(EvalInfo &Info, const CallExpr *Call,
 
   for (unsigned idx = 0; idx != NumElts; idx++) {
     unsigned LaneBase = (idx / LaneElts) * LaneElts;
-    unsigned LaneIdx  = idx % LaneElts;
+    unsigned LaneIdx = idx % LaneElts;
 
-    unsigned SrcIdx = idx; 
+    unsigned SrcIdx = idx;
 
     if (ElemBits == 32) {
-      // PSHUFD: permute 4×i32 per 128-bit lane
       unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
       SrcIdx = LaneBase + sel;
     } else {
-      // elemBits == 16 (PSHUFLW / PSHUFHW / PSHUFW)
       if (LaneElts == 4) {
-        // MMX PSHUFW: permute entire 64-bit lane (4×i16)
         unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
         SrcIdx = LaneBase + sel;
       } else {
-        // SSE/AVX/AVX-512: 128-bit lane has 8×i16. Permute a 4×i16 half.
         constexpr unsigned HalfSize = 4;
         if (HalfBase == 0) {
-          // PSHUFLW: permute low half (words 0..3)
           if (LaneIdx < HalfSize) {
             unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
             SrcIdx = LaneBase + sel;
           }
         } else if (HalfBase == HalfSize) {
-          // PSHUFHW: permute high half (words 4..7)
           if (LaneIdx >= HalfSize) {
             unsigned rel = LaneIdx - HalfSize;
             unsigned sel = (ctl >> (2 * rel)) & 0x3;
