@@ -184,8 +184,7 @@ def mif_CoBroadcastOp : mif_Op<"co_broadcast", [AttrSizedOperandSegments,
                                                 MemoryEffects<[MemWrite]>]> {
   let summary = "Broadcast value to images.";
   let description = [{
-    The co_broadcast operation performs the computation of the sum
-    across images.
+    The co_broadcast operation broadcasts a value from one image to the other images.
   }];
 
   let arguments = (ins fir_BoxType:$a, 
