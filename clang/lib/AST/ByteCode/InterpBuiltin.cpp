@@ -20,6 +20,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SipHash.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cmath>
 
 namespace clang {
 namespace interp {
@@ -2995,9 +2996,80 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static llvm::APFloat apply_x86_sqrt(llvm::APFloat Val, const llvm::fltSemantics &Semantics) {
+  if (Val.isNegative() && !Val.isZero()) {
+    return llvm::APFloat::getQNaN(Semantics);
+  } else {
+    double DoubleValue = Val.convertToDouble();
+    double SqrtValue = ::sqrt(DoubleValue);
+
+    llvm::APFloat TempValue(SqrtValue);
+
+    bool LosesInfo;
+    TempValue.convert(Semantics, llvm::APFloat::rmNearestTiesToEven, &LosesInfo);
+    return TempValue;
+  }
+}
+
+static bool interp__builtin_x86_sqrt(InterpState &S, CodePtr OpPC,
+                                                 const CallExpr *Call,
+                                                 unsigned ID) {
+  llvm::errs() << "Entering x86 sqrtpd/ps interpretbuiltin\n";
+  
+  assert(Call->getNumArgs() == 1);
+  const Expr *ArgExpr = Call->getArg(0);
+  QualType ArgTy = ArgExpr->getType();
+  QualType ResultTy = Call->getType();
+  
+  if (!(ArgTy->isRealFloatingType() ||
+        (ArgTy->isVectorType() &&
+         ArgTy->castAs<VectorType>()->getElementType()->isRealFloatingType())))
+    return false;
+
+  const llvm::fltSemantics *SemanticsPtr;
+  if (ArgTy->isVectorType())
+    SemanticsPtr = &S.getContext().getFloatSemantics(ArgTy->castAs<VectorType>()->getElementType());
+  else
+    SemanticsPtr = &S.getContext().getFloatSemantics(ArgTy);
+  const llvm::fltSemantics &Semantics = *SemanticsPtr;
+
+
+  // Scalar case
+  if (!ArgTy->isVectorType()) {
+    llvm::APFloat Val = S.Stk.pop<Floating>().getAPFloat();
+    Val = apply_x86_sqrt(Val, Semantics);
+    S.Stk.push<Floating>(Val);
+    return true;
+  }
+
+  // Vector case
+  assert(ArgTy->isVectorType());
+  llvm::errs() << "Considering this as a vector\n";
+  const auto *VT = ArgTy->castAs<VectorType>();
+  
+  const Pointer &Arg = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  assert(Arg.getFieldDesc()->isPrimitiveArray());
+  assert(Dst.getFieldDesc()->isPrimitiveArray());
+  assert(Arg.getFieldDesc()->getNumElems() == Dst.getFieldDesc()->getNumElems());
+
+  PrimType ElemT = *S.getContext().classify(VT->getElementType());
+  unsigned NumElems = VT->getNumElements();
+
+  for (unsigned I = 0; I != NumElems; ++I) {
+    llvm::APFloat Val = Arg.elem<Floating>(I).getAPFloat();
+    Val = apply_x86_sqrt(Val, Semantics);
+    Dst.elem<Floating>(I) = Val;
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
-  llvm::errs() << "Calling InterpretBuiltin\n";
+  llvm::errs() << "Inside Interpretbuiltin for " << Call << "\n";
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
     return Invalid(S, OpPC);
 
@@ -3755,6 +3827,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vinsertf128_si256:
   case X86::BI__builtin_ia32_insert128i256:
     return interp__builtin_x86_insert_subvector(S, OpPC, Call, BuiltinID);
+  case X86::BI__builtin_ia32_sqrtpd:
+  case X86::BI__builtin_ia32_sqrtps:
+    return interp__builtin_x86_sqrt(S, OpPC, Call, BuiltinID);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),

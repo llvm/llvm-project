@@ -1433,6 +1433,7 @@ __m128d test_mm_sqrt_sd(__m128d A, __m128d B) {
   return _mm_sqrt_sd(A, B);
 }
 
+
 __m128i test_mm_sra_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_sra_epi16
   // CHECK: call <8 x i16> @llvm.x86.sse2.psra.w(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})

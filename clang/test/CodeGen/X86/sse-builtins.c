@@ -610,6 +610,7 @@ __m128 test_mm_rsqrt_ps(__m128 x) {
   return _mm_rsqrt_ps(x);
 }
 
+
 __m128 test_mm_rsqrt_ss(__m128 x) {
   // CHECK-LABEL: test_mm_rsqrt_ss
   // CHECK: call {{.*}}<4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> {{.*}})
@@ -741,6 +742,8 @@ __m128 test_mm_sqrt_ps(__m128 x) {
   // CHECK: call {{.*}}<4 x float> @llvm.sqrt.v4f32(<4 x float> {{.*}})
   return _mm_sqrt_ps(x);
 }
+
+TEST_CONSTEXPR(match_m128(_mm_sqrt_ps(_mm_set_ps(16.0f, 9.0f, 4.0f, 1.0f)), 1.0f, 2.0f, 3.0f, 4.0f));
 
 __m128 test_mm_sqrt_ss(__m128 x) {
   // CHECK-LABEL: test_mm_sqrt_ss
