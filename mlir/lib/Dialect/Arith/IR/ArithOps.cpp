@@ -1282,10 +1282,8 @@ OpFoldResult arith::MulFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_OneFloat()))
     return getLhs();
 
-  arith::FastMathFlags fmf = getFastmath();
-  if (arith::bitEnumContainsAll(fmf, arith::FastMathFlags::nnan |
-                                         arith::FastMathFlags::ninf |
-                                         arith::FastMathFlags::nsz)) {
+  if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::nnan |
+                                                   arith::FastMathFlags::nsz)) {
     // mulf(x, 0) -> 0
     if (matchPattern(adaptor.getRhs(), m_AnyZeroFloat()))
       return getRhs();

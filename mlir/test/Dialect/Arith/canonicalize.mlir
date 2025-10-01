@@ -2221,7 +2221,7 @@ func.func @test_mulf2(%arg0 : f32) -> f32 {
   // CHECK-NEXT:  %[[C0:.+]] = arith.constant 0.000000e+00 : f32
   // CHECK-NEXT:  return %[[C0]]
   %c0 = arith.constant 0.0 : f32
-  %0 = arith.mulf %c0, %arg0 fastmath<nnan,ninf,nsz> : f32
+  %0 = arith.mulf %c0, %arg0 fastmath<nnan,nsz> : f32
   return %0 : f32
 }
 
