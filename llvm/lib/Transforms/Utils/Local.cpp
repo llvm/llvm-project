@@ -3025,6 +3025,12 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         // Preserve !nosanitize if both K and J have it.
         K->setMetadata(Kind, JMD);
         break;
+      case LLVMContext::MD_captures:
+        K->setMetadata(
+            Kind, MDNode::fromCaptureComponents(
+                      K->getContext(), MDNode::toCaptureComponents(JMD) |
+                                           MDNode::toCaptureComponents(KMD)));
+        break;
       }
   }
   // Set !invariant.group from J if J has it. If both instructions have it

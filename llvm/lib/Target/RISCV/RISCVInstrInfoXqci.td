@@ -524,7 +524,7 @@ class QCIRVInstRI<bits<1> funct1, DAGOperand InTyImm11,
   let Inst{30-20} = imm11;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class QCISELECTIICC<bits<3> funct3, string opcodestr>
     : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$simm1, simm5:$simm2),
@@ -537,7 +537,7 @@ class QCISELECTIICC<bits<3> funct3, string opcodestr>
   let rs2 = simm1;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class QCISELECTICC<bits<3> funct3, string opcodestr>
     : RVInstR4<0b01, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm2),

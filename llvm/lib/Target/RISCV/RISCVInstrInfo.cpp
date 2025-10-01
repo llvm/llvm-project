@@ -3793,6 +3793,11 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
       return false;
     // Operands 1 and 2 are commutable, if we switch the opcode.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
+  case RISCV::QC_SELECTIEQ:
+  case RISCV::QC_SELECTINE:
+  case RISCV::QC_SELECTIIEQ:
+  case RISCV::QC_SELECTIINE:
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
   case RISCV::QC_MVEQ:
   case RISCV::QC_MVNE:
   case RISCV::QC_MVLT:
@@ -4018,6 +4023,11 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
                                                    OpIdx2);
   }
+  case RISCV::QC_SELECTIEQ:
+  case RISCV::QC_SELECTINE:
+  case RISCV::QC_SELECTIIEQ:
+  case RISCV::QC_SELECTIINE:
+    return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
   case RISCV::QC_MVEQ:
   case RISCV::QC_MVNE:
   case RISCV::QC_MVLT:
