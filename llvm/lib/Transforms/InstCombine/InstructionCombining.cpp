@@ -5180,7 +5180,7 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   // TODO: This could use getBinopAbsorber() / getBinopIdentity() to avoid
   //       duplicating logic for binops at least.
   auto getUndefReplacement = [&](Type *Ty) {
-    auto pickCommonConstantFromPHI = [&](PHINode &PN) -> Value * {
+    auto pickCommonConstantFromPHI = [](PHINode &PN) -> Value * {
       // phi(freeze(undef), C, C). Choose C for freeze so the PHI can be
       // removed.
       Constant *BestValue = nullptr;
@@ -5192,7 +5192,7 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
         if (!isa<Constant>(V))
           return nullptr;
 
-        if (!isGuaranteedNotToBeUndefOrPoison(V, &AC, &I, &DT))
+        if (!isGuaranteedNotToBeUndefOrPoison(V))
           return nullptr;
 
         C = cast<Constant>(V);
