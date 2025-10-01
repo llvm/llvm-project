@@ -343,7 +343,6 @@ ProgramHeaders:
     FileSize:     0xffffffffffffff88
     FirstSec:     .note.gnu.build-id
     LastSec:      .note.gnu.build-id
-
 Sections:
   - Name:         .note.gnu.build-id
     Type:         SHT_NOTE
