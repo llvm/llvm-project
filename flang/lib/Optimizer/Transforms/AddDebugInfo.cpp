@@ -286,10 +286,11 @@ mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
     modAttr = iter->getValue();
   } else {
     modAttr = mlir::LLVM::DIModuleAttr::get(
-        context, fileAttr, scope, mlir::StringAttr::get(context, name),
+        context, decl ? nullptr : fileAttr, decl ? nullptr : scope,
+        mlir::StringAttr::get(context, name),
         /* configMacros */ mlir::StringAttr(),
         /* includePath */ mlir::StringAttr(),
-        /* apinotes */ mlir::StringAttr(), line, decl);
+        /* apinotes */ mlir::StringAttr(), decl ? 0 : line, decl);
     moduleMap[name] = modAttr;
   }
   return modAttr;
