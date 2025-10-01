@@ -1871,11 +1871,15 @@ __m256d test_mm256_sqrt_pd(__m256d A) {
   return _mm256_sqrt_pd(A);
 }
 
+TEST_CONSTEXPR(match_m256d(_mm256_sqrt_pd(_mm256_set_pd(16.0, 9.0, 4.0, 1.0)), 1.0, 2.0, 3.0, 4.0));
+
 __m256 test_mm256_sqrt_ps(__m256 A) {
   // CHECK-LABEL: test_mm256_sqrt_ps
   // CHECK: call {{.*}}<8 x float> @llvm.sqrt.v8f32(<8 x float> %{{.*}})
   return _mm256_sqrt_ps(A);
 }
+
+TEST_CONSTEXPR(match_m256(_mm256_sqrt_ps(_mm256_set_ps(64.0f, 49.0f, 36.0f, 25.0f, 16.0f, 9.0f, 4.0f, 1.0f)), 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f));
 
 void test_mm256_store_pd(double* A, __m256d B) {
   // CHECK-LABEL: test_mm256_store_pd

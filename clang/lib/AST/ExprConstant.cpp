@@ -12237,7 +12237,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
   case X86::BI__builtin_ia32_sqrtpd: 
-  case X86::BI__builtin_ia32_sqrtps: {
+  case X86::BI__builtin_ia32_sqrtps: 
+  case X86::BI__builtin_ia32_sqrtpd256:
+  case X86::BI__builtin_ia32_sqrtps256: {
     llvm::errs() << "We are inside sqrtpd/sqrtps\n";
     APValue Source;
     if (!EvaluateAsRValue(Info, E->getArg(0), Source))

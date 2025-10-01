@@ -3829,6 +3829,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_x86_insert_subvector(S, OpPC, Call, BuiltinID);
   case X86::BI__builtin_ia32_sqrtpd:
   case X86::BI__builtin_ia32_sqrtps:
+  case X86::BI__builtin_ia32_sqrtpd256:
+  case X86::BI__builtin_ia32_sqrtps256:
     return interp__builtin_x86_sqrt(S, OpPC, Call, BuiltinID);
 
   default:
