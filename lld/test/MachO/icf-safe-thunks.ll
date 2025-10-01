@@ -27,8 +27,8 @@
 ; CHECK-ARM64:        _func_call_thunked_1_nomerge:
 ; CHECK-ARM64-NEXT:        stp	x29
 ;
-; CHECK-ARM64:        _func_call_thunked_2_nomerge:
-; CHECK-ARM64-NEXT:   _func_call_thunked_2_merge:
+; CHECK-ARM64:        _func_call_thunked_2_first:
+; CHECK-ARM64-NEXT:   _func_call_thunked_2_second:
 ; CHECK-ARM64-NEXT:        stp	x29
 ;
 ; CHECK-ARM64:        _call_all_funcs:
@@ -53,8 +53,8 @@
 ; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_3identical_v2_canmerge
 ; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_3identical_v3_canmerge
 ; CHECK-ARM64-MAP-NEXT: 0x00000020 [  2] _func_call_thunked_1_nomerge
-; CHECK-ARM64-MAP-NEXT: 0x00000020 [  2] _func_call_thunked_2_nomerge
-; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_call_thunked_2_merge
+; CHECK-ARM64-MAP-NEXT: 0x00000020 [  2] _func_call_thunked_2_first
+; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_call_thunked_2_second
 ; CHECK-ARM64-MAP-NEXT: 0x00000034 [  2] _call_all_funcs
 ; CHECK-ARM64-MAP-NEXT: 0x00000050 [  2] _take_func_addr
 ; CHECK-ARM64-MAP-NEXT: 0x00000004 [  2] _func_2identical_v2
@@ -93,12 +93,12 @@ ATTR void func_call_thunked_1_nomerge() {
     g_val = 77;
 }
 
-ATTR void func_call_thunked_2_nomerge() {
+ATTR void func_call_thunked_2_first() {
     func_2identical_v2();
     g_val = 77;
 }
 
-ATTR void func_call_thunked_2_merge() {
+ATTR void func_call_thunked_2_second() {
     func_2identical_v2();
     g_val = 77;
 }
@@ -205,14 +205,14 @@ define void @func_call_thunked_1_nomerge() local_unnamed_addr #1 {
 }
 
 ; Function Attrs: mustprogress nofree noinline norecurse nounwind ssp uwtable(sync)
-define void @func_call_thunked_2_nomerge() local_unnamed_addr #1 {
+define void @func_call_thunked_2_first() local_unnamed_addr #1 {
   tail call void @func_2identical_v2()
   store volatile i8 77, ptr @g_val, align 1, !tbaa !4
   ret void
 }
 
 ; Function Attrs: mustprogress nofree noinline norecurse nounwind ssp uwtable(sync)
-define void @func_call_thunked_2_merge() local_unnamed_addr #1 {
+define void @func_call_thunked_2_second() local_unnamed_addr #1 {
   tail call void @func_2identical_v2()
   store volatile i8 77, ptr @g_val, align 1, !tbaa !4
   ret void
