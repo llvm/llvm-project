@@ -245,7 +245,7 @@ Cost InstCostVisitor::getCodeSizeSavingsForUser(Instruction *User, Value *Use,
         LLVM_DEBUG(dbgs() << "FnSpecialization:   Function called: "
                           << F->getName() << " argument number: " << Idx
                           << "\n");
-        (*CallUsers)[CI].first.Args.push_back({F->getArg(Idx), C});
+        (*CallUsers)[CI].first.push_back({Idx, C});
         (*CallUsers)[CI].second = F;
         return true;
       } else {
@@ -1139,7 +1139,9 @@ bool FunctionSpecializer::findSpecializations(
         // Since the function might not yet be known when processing the
         // constants due to a function pointer, wait to extract the argument
         // pointer at a given index.
-        SpecSig NewS = CU.second.first;
+        SpecSig NewS;
+        for (auto &P : CU.second.first)
+          NewS.Args.push_back({NewF->getArg(P.first), P.second});
 
         Spec CallSpec(NewF, /*CallSite*/ CU.first, NewS,
                       /*Status*/ CallSiteStatusT::AWAITING_PARENT);

@@ -95,12 +95,12 @@
 namespace llvm {
 struct Spec;
 
-struct SpecSig;
-
 // Map of potential specializations for each function.
 using SpecMap = DenseMap<Function *, SmallVector<unsigned>>;
 
-using CallUserT = SmallMapVector<CallBase *, std::pair<SpecSig, Function *>, 4>;
+using CallUserT = SmallMapVector<
+    CallBase *,
+    std::pair<SmallVector<std::pair<unsigned, Constant *>, 4>, Function *>, 4>;
 
 // Just a shorter abbreviation to improve indentation.
 using Cost = InstructionCost;
