@@ -3,7 +3,7 @@
 // Test to demonstrate extracting the root signature to the specified
 // output file with /Frs.
 
-// CHECK: "{{.*}}llvm-objcopy{{(.exe)?}}" "{{.*}}.obj" "{{.*}}.dxo" "--extract-section=RTS0={{.*}}.rs.dxo"
+// CHECK: "{{.*}}llvm-objcopy{{(.exe)?}}" "{{.*}}.obj" "{{.*}}.{{(dxo|obj)}}" "--extract-section=RTS0={{.*}}.rs.dxo"
 
 [shader("compute"), RootSignature("")]
 [numthreads(1,1,1)]
