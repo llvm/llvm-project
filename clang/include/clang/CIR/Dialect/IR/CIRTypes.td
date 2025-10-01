@@ -248,16 +248,15 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
     !cir.ptr<!cir.int<u, 8>>
     !cir.ptr<!cir.float>
     !cir.ptr<!cir.record<struct "MyStruct">>
-    !cir.ptr<!cir.record<struct "MyStruct">, addrspace(offload_private)>
-    !cir.ptr<!cir.int<u, 8>, addrspace(target<1>)>
+    !cir.ptr<!cir.int<u, 8>, target_address_space(1)>
+    !cir.ptr<!cir.record<struct "MyStruct">, target_address_space(5)>
     ```
   }];
 
   let parameters = (ins
     "mlir::Type":$pointee,
-    CIR_DefaultValuedEnumParameter<
-      CIR_AddressSpace,
-      "cir::AddressSpace::Default"
+    OptionalParameter<
+    "cir::TargetAddressSpaceAttr"
     >:$addrSpace
   );
 
@@ -265,12 +264,12 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   let builders = [
     TypeBuilderWithInferredContext<(ins
       "mlir::Type":$pointee,
-      CArg<"cir::AddressSpace", "cir::AddressSpace::Default">:$addrSpace), [{
+       CArg<"cir::TargetAddressSpaceAttr", "nullptr">:$addrSpace), [{
         return $_get(pointee.getContext(), pointee, addrSpace);
     }]>,
     TypeBuilder<(ins
       "mlir::Type":$pointee,
-      CArg<"cir::AddressSpace", "cir::AddressSpace::Default">:$addrSpace), [{
+      CArg<"cir::TargetAddressSpaceAttr", "nullptr">:$addrSpace), [{
         return $_get($_ctxt, pointee, addrSpace);
     }]>
   ];
@@ -278,7 +277,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   let assemblyFormat = [{
     `<`
       $pointee
-      ( `,` `addrspace` `(` `` custom<AddressSpaceValue>($addrSpace)^ `)` )?
+      ( `,` ` ` custom<TargetAddressSpace>($addrSpace)^ )?
     `>`
   }];
 

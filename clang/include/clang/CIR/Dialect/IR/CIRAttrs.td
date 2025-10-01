@@ -602,78 +602,25 @@ def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
-// AddressSpaceAttr
+// TargetAddressSpaceAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_AddressSpaceAttr :  CIR_EnumAttr<CIR_AddressSpace, "address_space"> {
-  let summary = "Attribute representing memory address spaces";
+def CIR_TargetAddressSpaceAttr : CIR_Attr< "TargetAddressSpace",
+                                         "target_address_space"> {
+  let summary = "Attribute representing a target-specific numeric address space";
   let description = [{
-    Represents different memory address spaces for pointer types.
-    Address spaces distinguish between different types of memory regions,
-    such as global, local, or constant memory.
+    Represents a target-specific numeric address space for pointer types.
 
-    The `value` parameter is an extensible enum, which encodes target address
-    space as an offset to the last language address space. For that reason, the
-    attribute is implemented as custom AddressSpaceAttr, which provides custom
-    printer and parser for the `value` parameter.
-
-    CIR supports two categories:
-    - Language address spaces: Predefined spaces like `offload_global`,
-      `offload_constant`, `offload_private` for offload programming models
-    - Target address spaces: Numeric spaces `target<N>` for target-specific
-      memory regions, where N is the address space number
-
-    Examples:
+    Example:
     ```mlir
-    // Default address space (implicit)
-    !cir.ptr<!s32i>
-    
-    // Language-defined offload address spaces  
-    !cir.ptr<!s32i, addrspace(offload_global)>
-    !cir.ptr<!s32i, addrspace(offload_constant)>
-    !cir.ptr<!s32i, addrspace(offload_private)>
-    
     // Target-specific numeric address spaces
     !cir.ptr<!s32i, addrspace(target<1>)>
     !cir.ptr<!s32i, addrspace(target<10>)>
     ```
   }];
-  let builders = [
-    AttrBuilder<(ins "clang::LangAS":$langAS), [{
-      return $_get($_ctxt, cir::toCIRAddressSpace(langAS));
-    }]>
-  ];
 
-  let assemblyFormat = [{
-    `(` custom<AddressSpaceValue>($value) `)`
-  }];
-
-  let defaultValue = "cir::AddressSpace::Default";
-
-  let extraClassDeclaration = [{
-    bool isLang() const;
-    bool isTarget() const;
-    unsigned getTargetValue() const;
-    unsigned getAsUnsignedValue() const;
-  }];
-
-  let extraClassDefinition = [{
-    unsigned $cppClass::getAsUnsignedValue() const {
-      return static_cast<unsigned>(getValue());
-    }
-
-    bool $cppClass::isLang() const {
-      return cir::isLangAddressSpace(getValue());
-    }
-
-    bool $cppClass::isTarget() const {
-      return cir::isTargetAddressSpace(getValue());
-    }
-
-    unsigned $cppClass::getTargetValue() const {
-      return cir::getTargetAddressSpaceValue(getValue());
-    }
-  }];
+  let parameters = (ins "mlir::IntegerAttr":$value);
+  let assemblyFormat = "`<` `target` `<` $value `>` `>`";
 }
 
 //===----------------------------------------------------------------------===//

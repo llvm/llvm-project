@@ -32,6 +32,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/LoweringHelpers.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -2305,22 +2306,10 @@ mlir::LogicalResult CIRToLLVMSelectOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-static unsigned
-getTargetAddrSpaceFromCIRAddrSpace(cir::AddressSpace addrSpace) {
-  if (addrSpace == cir::AddressSpace::Default)
-    return 0; // Default address space is always 0 in LLVM.
-
-  if (cir::isTargetAddressSpace(addrSpace))
-    return cir::getTargetAddressSpaceValue(addrSpace);
-
-  llvm_unreachable("CIR target lowering is NYI");
-}
-
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
                                  mlir::DataLayout &dataLayout) {
   converter.addConversion([&](cir::PointerType type) -> mlir::Type {
-    unsigned addrSpace =
-        getTargetAddrSpaceFromCIRAddrSpace(type.getAddrSpace());
+    unsigned addrSpace = cir::getTargetAddrSpaceFromAttr(type.getAddrSpace());
     return mlir::LLVM::LLVMPointerType::get(type.getContext(), addrSpace);
   });
   converter.addConversion([&](cir::VPtrType type) -> mlir::Type {

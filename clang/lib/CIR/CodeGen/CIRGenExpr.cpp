@@ -2053,7 +2053,7 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
   // layout like original CodeGen. The data layout awareness should be done in
   // the lowering pass instead.
   cir::PointerType localVarPtrTy =
-      builder.getPointerTo(ty, getCIRAllocaAddressSpace());
+      builder.getPointerTo(ty, getASTAllocaAddressSpace());
   mlir::IntegerAttr alignIntAttr = cgm.getSize(alignment);
 
   mlir::Value addr;

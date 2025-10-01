@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CIR_CIRGENTYPECACHE_H
 
 #include "clang/AST/CharUnits.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 namespace clang::CIRGen {
@@ -73,7 +74,7 @@ struct CIRGenTypeCache {
   /// The alignment of size_t.
   unsigned char SizeAlignInBytes;
 
-  cir::AddressSpace cirAllocaAddressSpace;
+  LangAS ASTAllocaAddressSpace;
 
   clang::CharUnits getSizeAlign() const {
     return clang::CharUnits::fromQuantity(SizeAlignInBytes);
@@ -83,9 +84,7 @@ struct CIRGenTypeCache {
     return clang::CharUnits::fromQuantity(PointerAlignInBytes);
   }
 
-  cir::AddressSpace getCIRAllocaAddressSpace() const {
-    return cirAllocaAddressSpace;
-  }
+  LangAS getASTAllocaAddressSpace() const { return ASTAllocaAddressSpace; }
 };
 
 } // namespace clang::CIRGen

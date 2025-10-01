@@ -16,6 +16,7 @@
 
 #include "ABIInfo.h"
 #include "CIRGenTypes.h"
+#include "clang/Basic/AddressSpaces.h"
 
 #include <memory>
 #include <utility>
@@ -43,10 +44,8 @@ public:
   /// Returns ABI info helper for the target.
   const ABIInfo &getABIInfo() const { return *info; }
 
-  /// Get the CIR address space for alloca.
-  virtual cir::AddressSpace getCIRAllocaAddressSpace() const {
-    return cir::AddressSpace::Default;
-  }
+  /// Get the AST address space for alloca.
+  virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
 
   /// Determine whether a call to an unprototyped functions under
   /// the given calling convention should use the variadic
