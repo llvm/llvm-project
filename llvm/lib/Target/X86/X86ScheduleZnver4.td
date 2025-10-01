@@ -1408,8 +1408,8 @@ def : InstRW<[Zn4WriteVPERMYri], (instrs VPERMPDYri, VPERMQYri)>;
 
 def Zn4WriteVPERMPDYmi : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPVShuf]> {
   let Latency = !add(Znver4Model.VecLoadLatency, Zn4WriteVPERMYri.Latency);
-  let ReleaseAtCycles = [1, 1, 2];
-  let NumMicroOps = !add(Zn4WriteVPERMYri.NumMicroOps, 1);
+  let ReleaseAtCycles = [1, 1, 1];
+  let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WriteVPERMPDYmi], (instrs VPERMPDYmi)>;
 
@@ -1422,8 +1422,8 @@ def : InstRW<[Zn4WriteVPERMDYrr], (instrs VPERMDYrr)>;
 
 def Zn4WriteVPERMYm : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPVShuf]> {
   let Latency = !add(Znver4Model.VecLoadLatency, Zn4WriteVPERMDYrr.Latency);
-  let ReleaseAtCycles = [1, 1, 2];
-  let NumMicroOps = !add(Zn4WriteVPERMDYrr.NumMicroOps, 0);
+  let ReleaseAtCycles = [1, 1, 1];
+  let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WriteVPERMYm], (instrs VPERMQYmi, VPERMDYrm)>;
 
