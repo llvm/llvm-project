@@ -1067,7 +1067,10 @@ bool FunctionSpecializer::findSpecializations(
           break;
       }
       if (As.size() == Idx) {
-        Value *PossC = CS.getArgOperand(A->getArgNo());
+        unsigned ArgNo = A->getArgNo();
+        if (ArgNo >= CS.arg_size())
+          continue;
+        Value *PossC = CS.getArgOperand(ArgNo);
         Constant *C = getCandidateConstant(PossC);
         if (!C)
           continue;
