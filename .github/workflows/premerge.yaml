@@ -28,7 +28,8 @@ jobs:
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
-    runs-on: llvm-premerge-linux-runners
+    runs-on:
+      group: llvm-premerge-cluster-us-west
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
