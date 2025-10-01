@@ -495,13 +495,6 @@ public:
   bool isVMEMOrFlatVMEM(const MachineInstr &MI) const;
   bool run(MachineFunction &MF);
 
-  bool isForceEmitWaitcnt() const {
-    for (auto T : inst_counter_types())
-      if (ForceEmitWaitcnt[T])
-        return true;
-    return false;
-  }
-
   void setForceEmitWaitcnt() {
 // For non-debug builds, ForceEmitWaitcnt has been initialized to false;
 // For debug builds, get the debug counter info and adjust if need be
@@ -570,10 +563,6 @@ public:
     return VmemReadMapping[getVmemType(Inst)];
   }
 
-  bool hasXcnt() const { return ST->hasWaitXCnt(); }
-
-  bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
-  bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
   bool isVmemAccess(const MachineInstr &MI) const;
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
@@ -591,7 +580,6 @@ public:
                              WaitcntBrackets &ScoreBrackets);
   bool insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block,
                             WaitcntBrackets &ScoreBrackets);
-  static bool asynchronouslyWritesSCC(unsigned Opcode);
 };
 
 // This objects maintains the current score brackets of each wait counter, and
@@ -1109,7 +1097,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         setRegScore(FIRST_LDS_VGPR, T, CurrScore);
     }
 
-    if (Context->asynchronouslyWritesSCC(Inst.getOpcode())) {
+    if (SIInstrInfo::isSBarrierSCCWrite(Inst.getOpcode())) {
       setRegScore(SCC, T, CurrScore);
       PendingSCCWrite = &Inst;
     }
@@ -1831,12 +1819,6 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
   return Modified;
 }
 
-static bool readsVCCZ(const MachineInstr &MI) {
-  unsigned Opc = MI.getOpcode();
-  return (Opc == AMDGPU::S_CBRANCH_VCCNZ || Opc == AMDGPU::S_CBRANCH_VCCZ) &&
-         !MI.getOperand(1).isUndef();
-}
-
 /// \returns true if the callee inserts an s_waitcnt 0 on function entry.
 static bool callWaitsOnFunctionEntry(const MachineInstr &MI) {
   // Currently all conventions wait, but this may not always be the case.
@@ -2061,7 +2043,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           ScoreBrackets.determineWait(SmemAccessCounter, Interval, Wait);
         }
 
-        if (hasXcnt() && Op.isDef())
+        if (ST->hasWaitXCnt() && Op.isDef())
           ScoreBrackets.determineWait(X_CNT, Interval, Wait);
       }
     }
@@ -2087,10 +2069,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // TODO: Remove this work-around, enable the assert for Bug 457939
   //       after fixing the scheduler. Also, the Shader Compiler code is
   //       independent of target.
-  if (readsVCCZ(MI) && ST->hasReadVCCZBug()) {
-    if (ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
-      Wait.DsCnt = 0;
-    }
+  if (SIInstrInfo::isCBranchVCCZRead(MI) && ST->hasReadVCCZBug() &&
+      ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
+    Wait.DsCnt = 0;
   }
 
   // Verify that the wait is actually needed.
@@ -2185,73 +2166,9 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   return Modified;
 }
 
-// This is a flat memory operation. Check to see if it has memory tokens other
-// than LDS. Other address spaces supported by flat memory operations involve
-// global memory.
-bool SIInsertWaitcnts::mayAccessVMEMThroughFlat(const MachineInstr &MI) const {
-  assert(TII->isFLAT(MI));
-
-  // All flat instructions use the VMEM counter except prefetch.
-  if (!TII->usesVM_CNT(MI))
-    return false;
-
-  // If there are no memory operands then conservatively assume the flat
-  // operation may access VMEM.
-  if (MI.memoperands_empty())
-    return true;
-
-  // See if any memory operand specifies an address space that involves VMEM.
-  // Flat operations only supported FLAT, LOCAL (LDS), or address spaces
-  // involving VMEM such as GLOBAL, CONSTANT, PRIVATE (SCRATCH), etc. The REGION
-  // (GDS) address space is not supported by flat operations. Therefore, simply
-  // return true unless only the LDS address space is found.
-  for (const MachineMemOperand *Memop : MI.memoperands()) {
-    unsigned AS = Memop->getAddrSpace();
-    assert(AS != AMDGPUAS::REGION_ADDRESS);
-    if (AS != AMDGPUAS::LOCAL_ADDRESS)
-      return true;
-  }
-
-  return false;
-}
-
-// This is a flat memory operation. Check to see if it has memory tokens for
-// either LDS or FLAT.
-bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
-  assert(TII->isFLAT(MI));
-
-  // Flat instruction such as SCRATCH and GLOBAL do not use the lgkm counter.
-  if (!TII->usesLGKM_CNT(MI))
-    return false;
-
-  // If in tgsplit mode then there can be no use of LDS.
-  if (ST->isTgSplitEnabled())
-    return false;
-
-  // If there are no memory operands then conservatively assume the flat
-  // operation may access LDS.
-  if (MI.memoperands_empty())
-    return true;
-
-  // See if any memory operand specifies an address space that involves LDS.
-  for (const MachineMemOperand *Memop : MI.memoperands()) {
-    unsigned AS = Memop->getAddrSpace();
-    if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS)
-      return true;
-  }
-
-  return false;
-}
-
 bool SIInsertWaitcnts::isVmemAccess(const MachineInstr &MI) const {
-  return (TII->isFLAT(MI) && mayAccessVMEMThroughFlat(MI)) ||
+  return (TII->isFLAT(MI) && TII->mayAccessVMEMThroughFlat(MI)) ||
          (TII->isVMEM(MI) && !AMDGPU::getMUBUFIsBufferInv(MI.getOpcode()));
-}
-
-static bool isGFX12CacheInvOrWBInst(MachineInstr &Inst) {
-  auto Opc = Inst.getOpcode();
-  return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||
-         Opc == AMDGPU::GLOBAL_WBINV;
 }
 
 // Return true if the next instruction is S_ENDPGM, following fallthrough
@@ -2331,7 +2248,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
     }
   } else if (TII->isFLAT(Inst)) {
-    if (isGFX12CacheInvOrWBInst(Inst)) {
+    if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode())) {
       ScoreBrackets->updateByEvent(TII, TRI, MRI, getVmemWaitEventType(Inst),
                                    Inst);
       return;
@@ -2341,14 +2258,14 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
 
     int FlatASCount = 0;
 
-    if (mayAccessVMEMThroughFlat(Inst)) {
+    if (TII->mayAccessVMEMThroughFlat(Inst)) {
       ++FlatASCount;
       IsVMEMAccess = true;
       ScoreBrackets->updateByEvent(TII, TRI, MRI, getVmemWaitEventType(Inst),
                                    Inst);
     }
 
-    if (mayAccessLDSThroughFlat(Inst)) {
+    if (TII->mayAccessLDSThroughFlat(Inst)) {
       ++FlatASCount;
       ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
     }
@@ -2394,7 +2311,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_POS_ACCESS, Inst);
     else
       ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_GPR_LOCK, Inst);
-  } else if (asynchronouslyWritesSCC(Inst.getOpcode())) {
+  } else if (SIInstrInfo::isSBarrierSCCWrite(Inst.getOpcode())) {
     ScoreBrackets->updateByEvent(TII, TRI, MRI, SCC_WRITE, Inst);
   } else {
     switch (Inst.getOpcode()) {
@@ -2413,7 +2330,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     }
   }
 
-  if (!hasXcnt())
+  if (!ST->hasWaitXCnt())
     return;
 
   if (IsVMEMAccess)
@@ -2516,12 +2433,6 @@ static bool isWaitInstr(MachineInstr &Inst) {
          counterTypeForInstr(Opcode).has_value();
 }
 
-bool SIInsertWaitcnts::asynchronouslyWritesSCC(unsigned Opcode) {
-  return Opcode == AMDGPU::S_BARRIER_LEAVE ||
-         Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM ||
-         Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0;
-}
-
 // Generate s_waitcnt instructions where needed.
 bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
                                             MachineBasicBlock &Block,
@@ -2578,7 +2489,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     OldWaitcntInstr = nullptr;
 
     // Restore vccz if it's not known to be correct already.
-    bool RestoreVCCZ = !VCCZCorrect && readsVCCZ(Inst);
+    bool RestoreVCCZ = !VCCZCorrect && SIInstrInfo::isCBranchVCCZRead(Inst);
 
     // Don't examine operands unless we need to track vccz correctness.
     if (ST->hasReadVCCZBug() || !ST->partialVCCWritesUpdateVCCZ()) {
@@ -2701,7 +2612,7 @@ bool SIInsertWaitcnts::isPreheaderToFlush(
 
 bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
   if (SIInstrInfo::isFLAT(MI))
-    return mayAccessVMEMThroughFlat(MI);
+    return TII->mayAccessVMEMThroughFlat(MI);
   return SIInstrInfo::isVMEM(MI);
 }
 
