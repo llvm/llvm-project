@@ -7,10 +7,10 @@
 paddi 1, 1, 32, 1
 
 # CHECK: error: invalid operand for instruction
-pld 1, 32(1), 1
+paddis 10, 5, 1000000000, 1
 
 # CHECK: error: invalid operand for instruction
-paddi 1, 1, 32, 1
+pld 1, 32(1), 1
 
 # CHECK: error: invalid operand for instruction
 plbz 1, 32(1), 1
