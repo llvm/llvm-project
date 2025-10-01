@@ -87,6 +87,12 @@ getEffectiveLoongArchCodeModel(const Triple &TT,
   }
 }
 
+static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
+  if (TT.isOSBinFormatCOFF())
+    return std::make_unique<TargetLoweringObjectFileCOFF>();
+  return std::make_unique<TargetLoweringObjectFileELF>();
+}
+
 LoongArchTargetMachine::LoongArchTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
@@ -94,7 +100,7 @@ LoongArchTargetMachine::LoongArchTargetMachine(
     : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveLoongArchCodeModel(TT, CM), OL),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
+      TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
 }
 
