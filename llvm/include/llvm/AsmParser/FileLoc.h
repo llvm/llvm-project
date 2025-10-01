@@ -12,6 +12,8 @@
 #include <assert.h>
 #include <utility>
 
+namespace llvm {
+
 struct FileLoc {
   unsigned Line;
   unsigned Col;
@@ -44,5 +46,7 @@ struct FileLocRange {
     return contains(LR.Start) && contains(LR.End);
   }
 };
+
+} // namespace llvm
 
 #endif
