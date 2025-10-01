@@ -429,7 +429,7 @@ int CC1Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
 
   // Enabling the sandbox here allows us to restore its previous state even when
   // this cc1 invocation crashes.
-  auto EnableSandbox = llvm::sys::sandbox_scoped_enable();
+  auto EnableSandbox = llvm::sys::sandbox::scopedEnable();
 
   llvm::CrashRecoveryContext CRC;
   CRC.DumpStackAndCleanupOnFailure = true;

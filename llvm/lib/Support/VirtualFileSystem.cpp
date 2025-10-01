@@ -222,7 +222,7 @@ RealFile::~RealFile() { close(); }
 ErrorOr<Status> RealFile::status() {
   assert(FD != kInvalidFile && "cannot stat closed file");
   if (!S.isStatusKnown()) {
-    auto BypassSandbox = sys::sandbox_scoped_disable();
+    auto BypassSandbox = sys::sandbox::scopedDisable();
     file_status RealStatus;
     if (std::error_code EC = sys::fs::status(FD, RealStatus))
       return EC;
@@ -239,7 +239,7 @@ ErrorOr<std::unique_ptr<MemoryBuffer>>
 RealFile::getBuffer(const Twine &Name, int64_t FileSize,
                     bool RequiresNullTerminator, bool IsVolatile) {
   assert(FD != kInvalidFile && "cannot get buffer for closed file");
-  auto BypassSandbox = sys::sandbox_scoped_disable();
+  auto BypassSandbox = sys::sandbox::scopedDisable();
   return MemoryBuffer::getOpenFile(FD, Name, FileSize, RequiresNullTerminator,
                                    IsVolatile);
 }
@@ -309,7 +309,7 @@ private:
 
   ErrorOr<std::unique_ptr<File>>
   openFileForReadWithFlags(const Twine &Name, sys::fs::OpenFlags Flags) {
-    auto BypassSandbox = sys::sandbox_scoped_disable();
+    auto BypassSandbox = sys::sandbox::scopedDisable();
     SmallString<256> RealName, Storage;
     Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
         adjustPath(Name, Storage), Flags, &RealName);
@@ -331,7 +331,7 @@ private:
 } // namespace
 
 ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
-  auto BypassSandbox = sys::sandbox_scoped_disable();
+  auto BypassSandbox = sys::sandbox::scopedDisable();
   SmallString<256> Storage;
   sys::fs::file_status RealStatus;
   if (std::error_code EC =
@@ -356,7 +356,7 @@ llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {
   if (WD)
     return WD->getError();
 
-  auto BypassSandbox = sys::sandbox_scoped_disable();
+  auto BypassSandbox = sys::sandbox::scopedDisable();
   SmallString<128> Dir;
   if (std::error_code EC = llvm::sys::fs::current_path(Dir))
     return EC;
@@ -387,7 +387,7 @@ std::error_code RealFileSystem::isLocal(const Twine &Path, bool &Result) {
 
 std::error_code RealFileSystem::getRealPath(const Twine &Path,
                                             SmallVectorImpl<char> &Output) {
-  auto BypassSandbox = sys::sandbox_scoped_disable();
+  auto BypassSandbox = sys::sandbox::scopedDisable();
   SmallString<256> Storage;
   return llvm::sys::fs::real_path(adjustPath(Path, Storage), Output);
 }
@@ -406,12 +406,12 @@ void RealFileSystem::printImpl(raw_ostream &OS, PrintType Type,
 IntrusiveRefCntPtr<FileSystem> vfs::getRealFileSystem() {
   static IntrusiveRefCntPtr<FileSystem> FS =
       makeIntrusiveRefCnt<RealFileSystem>(true);
-  sys::sandbox_violation_if_enabled();
+  sys::sandbox::violationIfEnabled();
   return FS;
 }
 
 std::unique_ptr<FileSystem> vfs::createPhysicalFileSystem() {
-  sys::sandbox_violation_if_enabled();
+  sys::sandbox::violationIfEnabled();
   return std::make_unique<RealFileSystem>(false);
 }
 
@@ -422,14 +422,14 @@ class RealFSDirIter : public llvm::vfs::detail::DirIterImpl {
 
 public:
   RealFSDirIter(const Twine &Path, std::error_code &EC) {
-    auto BypassSandbox = sys::sandbox_scoped_disable();
+    auto BypassSandbox = sys::sandbox::scopedDisable();
     Iter = llvm::sys::fs::directory_iterator{Path, EC};
     if (Iter != llvm::sys::fs::directory_iterator())
       CurrentEntry = directory_entry(Iter->path(), Iter->type());
   }
 
   std::error_code increment() override {
-    auto BypassSandbox = sys::sandbox_scoped_disable();
+    auto BypassSandbox = sys::sandbox::scopedDisable();
     std::error_code EC;
     Iter.increment(EC);
     CurrentEntry = (Iter == llvm::sys::fs::directory_iterator())

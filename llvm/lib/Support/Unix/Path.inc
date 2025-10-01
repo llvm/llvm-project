@@ -114,7 +114,31 @@ typedef uint_t uint;
 #define STATVFS_F_FLAG(vfs) (vfs).f_flags
 #endif
 
-#include "IOSandboxInternal.h"
+#include <stdio.h>
+#include <sys/stat.h>
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#ifdef HAVE_SYS_MMAN_H
+#include <sys/mman.h>
+#endif
+#include <dirent.h>
+
+#include "llvm/Support/IOSandbox.h"
+
+namespace llvm {
+static constexpr auto read = sys::sandbox::interpose(::read);
+static constexpr auto pread = sys::sandbox::interpose(::pread);
+static constexpr auto mmap = sys::sandbox::interpose(::mmap);
+static constexpr auto readdir = sys::sandbox::interpose(::readdir);
+static constexpr auto access = sys::sandbox::interpose(::access);
+static constexpr auto stat = sys::sandbox::interpose(::stat);
+static constexpr auto lstat = sys::sandbox::interpose(::lstat);
+static constexpr auto fstat = sys::sandbox::interpose(::fstat);
+static constexpr auto getcwd = sys::sandbox::interpose(::getcwd);
+static constexpr auto realpath = sys::sandbox::interpose(::realpath);
+static constexpr auto readlink = sys::sandbox::interpose(::readlink);
+} // namespace llvm
 
 using namespace llvm;
 

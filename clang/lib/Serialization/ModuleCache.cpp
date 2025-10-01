@@ -29,7 +29,7 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
     return;
 
   // This is a compiler-internal input/output, let's bypass the sandbox.
-  auto BypassSandbox = llvm::sys::sandbox_scoped_disable();
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
 
   llvm::SmallString<128> TimestampFile(Path);
   llvm::sys::path::append(TimestampFile, "modules.timestamp");
@@ -120,7 +120,7 @@ public:
 
   std::time_t getModuleTimestamp(StringRef ModuleFilename) override {
     // This is a compiler-internal input/output, let's bypass the sandbox.
-    auto SandboxBypass = llvm::sys::sandbox_scoped_disable();
+    auto SandboxBypass = llvm::sys::sandbox::scopedDisable();
     std::string TimestampFilename =
         serialization::ModuleFile::getTimestampFilename(ModuleFilename);
     llvm::sys::fs::file_status Status;
