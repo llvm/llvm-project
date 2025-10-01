@@ -675,6 +675,26 @@ static void getOperandsForBranch(Register CondReg, RISCVCC::CondCode &CC,
   CC = getRISCVCCFromICmp(Pred);
 }
 
+/// Select the RISC-V opcode for the G_LOAD or G_STORE operation \p GenericOpc,
+/// appropriate for the GPR register bank and of memory access size \p OpSize.
+/// \returns \p GenericOpc if the combination is unsupported.
+static unsigned selectLoadStoreOp(unsigned GenericOpc, unsigned OpSizeInBytes) {
+  const bool IsStore = GenericOpc == TargetOpcode::G_STORE;
+  switch (OpSizeInBytes) {
+  case 1:
+    // Prefer unsigned due to no c.lb in Zcb.
+    return IsStore ? RISCV::SB : RISCV::LBU;
+  case 2:
+    return IsStore ? RISCV::SH : RISCV::LH;
+  case 4:
+    return IsStore ? RISCV::SW : RISCV::LW;
+  case 8:
+    return IsStore ? RISCV::SD : RISCV::LD;
+  }
+
+  return GenericOpc;
+}
+
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
   MachineIRBuilder MIB(MI);
 
@@ -836,6 +856,69 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectImplicitDef(MI, MIB);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(MI, MIB);
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE: {
+    GLoadStore &LdSt = cast<GLoadStore>(MI);
+    const Register ValReg = LdSt.getReg(0);
+    const Register PtrReg = LdSt.getPointerReg();
+    LLT PtrTy = MRI->getType(PtrReg);
+
+    const RegisterBank &RB = *RBI.getRegBank(ValReg, *MRI, TRI);
+    if (RB.getID() != RISCV::GPRBRegBankID)
+      return false;
+
+#ifndef NDEBUG
+    const RegisterBank &PtrRB =
+        *RBI.getRegBank(PtrReg, *MRI, TRI);
+    // Check that the pointer register is valid.
+    assert(PtrRB.getID() == RISCV::GPRBRegBankID &&
+           "Load/Store pointer operand isn't a GPR");
+    assert(PtrTy.isPointer() &&
+           "Load/Store pointer operand isn't a pointer");
+#endif
+
+    // Can only handle AddressSpace 0.
+    if (PtrTy.getAddressSpace() != 0)
+      return false;
+
+    unsigned MemSizeInBytes = LdSt.getMemSize().getValue();
+    AtomicOrdering Order = LdSt.getMMO().getSuccessOrdering();
+
+    if (isStrongerThanMonotonic(Order)) {
+      assert(MemSizeInBytes <= 8 && "Unexpected mem size!");
+      static constexpr unsigned LoadOpcodes[] = {
+        RISCV::LB_AQ, RISCV::LH_AQ, RISCV::LW_AQ, RISCV::LD_AQ
+      };
+      static constexpr unsigned StoreOpcodes[] = {
+        RISCV::SB_RL, RISCV::SH_RL, RISCV::SW_RL, RISCV::SD_RL
+      };
+      ArrayRef<unsigned> Opcodes = isa<GLoad>(LdSt) ? LoadOpcodes : StoreOpcodes;
+      MI.setDesc(TII.get(Opcodes[Log2_32(MemSizeInBytes)]));
+      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    }
+
+    const unsigned NewOpc = selectLoadStoreOp(MI.getOpcode(), MemSizeInBytes);
+    if (NewOpc == MI.getOpcode())
+      return false;
+
+    // Check if we can fold anything into the addressing mode.
+    auto AddrModeFns = selectAddrRegImm(MI.getOperand(1));
+    if (!AddrModeFns)
+      return false;
+
+    // Folded something. Create a new instruction and return it.
+    auto NewInst = MIB.buildInstr(NewOpc, {}, {}, MI.getFlags());
+    if (isa<GStore>(MI))
+      NewInst.addUse(ValReg);
+    else
+      NewInst.addDef(ValReg);
+    NewInst.cloneMemRefs(MI);
+    for (auto &Fn : *AddrModeFns)
+      Fn(NewInst);
+    MI.eraseFromParent();
+
+    return constrainSelectedInstRegOperands(*NewInst, TII, TRI, RBI);
+  }
   default:
     return false;
   }
