@@ -165,7 +165,7 @@ namespace clang {
       CharUnits operator% (QuantityType N) const {
         return CharUnits(Quantity % N);
       }
-      CharUnits operator% (const CharUnits &Other) const {
+      CharUnits operator%(const CharUnits &Other) const {
         return CharUnits(Quantity % Other.Quantity);
       }
       CharUnits operator+ (const CharUnits &Other) const {
