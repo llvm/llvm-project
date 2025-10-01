@@ -1218,13 +1218,17 @@ if (LLVM_BUILD_INSTRUMENTED)
         CMAKE_SHARED_LINKER_FLAGS)
     endif()
   elseif(uppercase_LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
-    append("-fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -fpseudo-probe-for-profiling"
-      CMAKE_CXX_FLAGS
-      CMAKE_C_FLAGS)
-    if(NOT LINKER_IS_LLD_LINK)
-      append("-fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -fpseudo-probe-for-profiling"
-        CMAKE_EXE_LINKER_FLAGS
-        CMAKE_SHARED_LINKER_FLAGS)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      append("-fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -fpseudo-probe-for-profiling -fdebug-info-for-profiling"
+        CMAKE_CXX_FLAGS
+        CMAKE_C_FLAGS)
+      if(NOT LINKER_IS_LLD_LINK)
+        append("-fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -fpseudo-probe-for-profiling -fdebug-info-for-profiling"
+          CMAKE_EXE_LINKER_FLAGS
+          CMAKE_SHARED_LINKER_FLAGS)
+      endif()
+    else()
+      message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED=CSSPGO can only be specified when compiling with clang")
     endif()
   else()
     append("-fprofile-instr-generate=\"${LLVM_PROFILE_FILE_PATTERN}\""
