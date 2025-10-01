@@ -1680,7 +1680,9 @@ processGlobal(GlobalValue &GV,
 /// FastCC.
 static void ChangeCalleesToFastCall(Function *F) {
   for (User *U : F->users())
-    cast<CallBase>(U)->setCallingConv(CallingConv::Fast);
+    if (auto *Call = dyn_cast<CallBase>(U))
+      if (Call->getCalledOperand() == F)
+        Call->setCallingConv(CallingConv::Fast);
 }
 
 static AttributeList StripAttr(LLVMContext &C, AttributeList Attrs,
@@ -1766,10 +1768,12 @@ isValidCandidateForColdCC(Function &F,
     return false;
 
   for (User *U : F.users()) {
-    CallBase &CB = cast<CallBase>(*U);
-    Function *CallerFunc = CB.getParent()->getParent();
+    CallBase *CB = dyn_cast<CallBase>(U);
+    if (!CB || CB->getCalledOperand() != &F)
+      continue;
+    Function *CallerFunc = CB->getParent()->getParent();
     BlockFrequencyInfo &CallerBFI = GetBFI(*CallerFunc);
-    if (!isColdCallSite(CB, CallerBFI))
+    if (!isColdCallSite(*CB, CallerBFI))
       return false;
     if (!llvm::is_contained(AllCallsCold, CallerFunc))
       return false;
@@ -1779,7 +1783,9 @@ isValidCandidateForColdCC(Function &F,
 
 static void changeCallSitesToColdCC(Function *F) {
   for (User *U : F->users())
-    cast<CallBase>(U)->setCallingConv(CallingConv::Cold);
+    if (auto *Call = dyn_cast<CallBase>(U))
+      if (Call->getCalledOperand() == F)
+        Call->setCallingConv(CallingConv::Cold);
 }
 
 // This function iterates over all the call instructions in the input Function

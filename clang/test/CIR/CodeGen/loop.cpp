@@ -205,10 +205,10 @@ void l4() {
 // CIR:     %[[N_ADDR:.*]] = cir.alloca {{.*}} ["n", init]
 // CIR:     cir.store{{.*}} %[[A_ADDR]], %[[RANGE_ADDR]]
 // CIR:     %[[RANGE_LOAD:.*]] = cir.load{{.*}} %[[RANGE_ADDR]]
-// CIR:     %[[RANGE_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[RANGE_LOAD]] : {{.*}})
+// CIR:     %[[RANGE_CAST:.*]] = cir.cast array_to_ptrdecay %[[RANGE_LOAD]] : {{.*}}
 // CIR:     cir.store{{.*}} %[[RANGE_CAST]], %[[BEGIN_ADDR]]
 // CIR:     %[[BEGIN:.*]] = cir.load{{.*}} %[[RANGE_ADDR]]
-// CIR:     %[[BEGIN_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[BEGIN]] : {{.*}})
+// CIR:     %[[BEGIN_CAST:.*]] = cir.cast array_to_ptrdecay %[[BEGIN]] : {{.*}}
 // CIR:     %[[TEN:.*]] = cir.const #cir.int<10>
 // CIR:     %[[END_PTR:.*]] = cir.ptr_stride(%[[BEGIN_CAST]] : {{.*}}, %[[TEN]] : {{.*}})
 // CIR:     cir.store{{.*}} %[[END_PTR]], %[[END_ADDR]]
@@ -312,7 +312,7 @@ void l5() {
 // CIR:     %[[BEGIN_ADDR:.*]] = cir.alloca {{.*}} ["__begin1", init]
 // CIR:     %[[END_ADDR:.*]] = cir.alloca {{.*}} ["__end1", init]
 // CIR:     %[[X_ADDR:.*]] = cir.alloca {{.*}} ["x", init]
-// CIR:     %[[ARR_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[ARR_ADDR]] : {{.*}})
+// CIR:     %[[ARR_CAST:.*]] = cir.cast array_to_ptrdecay %[[ARR_ADDR]] : {{.*}}
 // CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR:     cir.store{{.*}} %[[ONE]], %[[ARR_CAST]]
 // CIR:     %[[OFFSET1:.*]] = cir.const #cir.int<1> : !s64i
@@ -329,10 +329,10 @@ void l5() {
 // CIR:     cir.store{{.*}} %[[FOUR]], %[[STRIDE3]]
 // CIR:     cir.store{{.*}} %[[ARR_ADDR]], %[[RANGE_ADDR]]
 // CIR:     %[[RANGE_LOAD:.*]] = cir.load{{.*}} %[[RANGE_ADDR]]
-// CIR:     %[[RANGE_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[RANGE_LOAD]] : {{.*}})
+// CIR:     %[[RANGE_CAST:.*]] = cir.cast array_to_ptrdecay %[[RANGE_LOAD]] : {{.*}}
 // CIR:     cir.store{{.*}} %[[RANGE_CAST]], %[[BEGIN_ADDR]]
 // CIR:     %[[BEGIN:.*]] = cir.load{{.*}} %[[RANGE_ADDR]]
-// CIR:     %[[BEGIN_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[BEGIN]] : {{.*}})
+// CIR:     %[[BEGIN_CAST:.*]] = cir.cast array_to_ptrdecay %[[BEGIN]] : {{.*}}
 // CIR:     %[[FOUR:.*]] = cir.const #cir.int<4> : !s64i
 // CIR:     %[[END_PTR:.*]] = cir.ptr_stride(%[[BEGIN_CAST]] : {{.*}}, %[[FOUR]] : {{.*}})
 // CIR:     cir.store{{.*}} %[[END_PTR]], %[[END_ADDR]]
@@ -445,7 +445,7 @@ void test_do_while_false() {
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:     } while {
 // CIR-NEXT:       %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR-NEXT:       %[[FALSE:.*]] = cir.cast(int_to_bool, %[[ZERO]] : !s32i), !cir.bool
+// CIR-NEXT:       %[[FALSE:.*]] = cir.cast int_to_bool %[[ZERO]] : !s32i -> !cir.bool
 // CIR-NEXT:       cir.condition(%[[FALSE]])
 
 // LLVM: define{{.*}} void @_Z19test_do_while_falsev()

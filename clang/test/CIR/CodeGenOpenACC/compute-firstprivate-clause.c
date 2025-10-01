@@ -40,9 +40,9 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}):
-// CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_TO]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
-// CHECK-NEXT: %[[FROM_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[FROM_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[FROM_DECAY]] : !cir.ptr<!s32i>, %[[ZERO]] : !u64i), !cir.ptr<!s32i>
 // CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_DECAY]] : !s32i, !cir.ptr<!s32i>
@@ -50,7 +50,7 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!s32i>, %[[ONE]] : !s64i), !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ONE_2:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!s32i>, %[[ONE_2]] : !u64i), !cir.ptr<!s32i>
 // CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !s32i, !cir.ptr<!s32i>
@@ -58,7 +58,7 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!s32i>, %[[TWO]] : !s64i), !cir.ptr<!s32i>
 // CHECK-NEXT: %[[TWO_2:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!s32i>, %[[TWO_2]] : !u64i), !cir.ptr<!s32i>
 // CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !s32i, !cir.ptr<!s32i>
@@ -66,7 +66,7 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: %[[THREE:.*]] = cir.const #cir.int<3>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!s32i>, %[[THREE]] : !s64i), !cir.ptr<!s32i>
 // CHECK-NEXT: %[[THREE_2:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!s32i>, %[[THREE_2]] : !u64i), !cir.ptr<!s32i>
 // CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !s32i, !cir.ptr<!s32i>
@@ -74,7 +74,7 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: %[[FOUR:.*]] = cir.const #cir.int<4>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!s32i>, %[[FOUR]] : !s64i), !cir.ptr<!s32i>
 // CHECK-NEXT: %[[FOUR_2:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!s32i>, %[[FOUR_2]] : !u64i), !cir.ptr<!s32i>
 // CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !s32i, !cir.ptr<!s32i>
@@ -87,9 +87,9 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}):
-// CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_TO]] : !cir.ptr<!cir.array<!cir.float x 5>>), !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
-// CHECK-NEXT: %[[FROM_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>>), !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[FROM_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[FROM_DECAY]] : !cir.ptr<!cir.float>, %[[ZERO]] : !u64i), !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_DECAY]] : !cir.float, !cir.ptr<!cir.float>
@@ -97,7 +97,7 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!cir.float>, %[[ONE]] : !s64i), !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[ONE_2:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>>), !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!cir.float>, %[[ONE_2]] : !u64i), !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !cir.float, !cir.ptr<!cir.float>
@@ -105,7 +105,7 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!cir.float>, %[[TWO]] : !s64i), !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[TWO_2:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>>), !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!cir.float>, %[[TWO_2]] : !u64i), !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !cir.float, !cir.ptr<!cir.float>
@@ -113,7 +113,7 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: %[[THREE:.*]] = cir.const #cir.int<3>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!cir.float>, %[[THREE]] : !s64i), !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[THREE_2:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>>), !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!cir.float>, %[[THREE_2]] : !u64i), !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !cir.float, !cir.ptr<!cir.float>
@@ -121,7 +121,7 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: %[[FOUR:.*]] = cir.const #cir.int<4>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!cir.float>, %[[FOUR]] : !s64i), !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[FOUR_2:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>>), !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!cir.float>, %[[FOUR_2]] : !u64i), !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !cir.float, !cir.ptr<!cir.float>
@@ -134,37 +134,37 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}):
-// CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NoCopyConstruct>, %[[ZERO]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: cir.copy %[[FROM_OFFSET:.*]] to %[[TO_DECAY]] : !cir.ptr<!rec_NoCopyConstruct>
 //
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_NoCopyConstruct>, %[[ONE]] : !s64i), !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NoCopyConstruct>, %[[ONE]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: cir.copy %[[FROM_OFFSET]] to %[[TO_OFFSET]] : !cir.ptr<!rec_NoCopyConstruct>
 //
 // CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_NoCopyConstruct>, %[[TWO]] : !s64i), !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NoCopyConstruct>, %[[TWO]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: cir.copy %[[FROM_OFFSET]] to %[[TO_OFFSET]] : !cir.ptr<!rec_NoCopyConstruct>
 //
 // CHECK-NEXT: %[[THREE:.*]] = cir.const #cir.int<3>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_NoCopyConstruct>, %[[THREE]] : !s64i), !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: %[[THREE:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NoCopyConstruct>, %[[THREE]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: cir.copy %[[FROM_OFFSET]] to %[[TO_OFFSET]] : !cir.ptr<!rec_NoCopyConstruct>
 //
 // CHECK-NEXT: %[[FOUR:.*]] = cir.const #cir.int<4>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_NoCopyConstruct>, %[[FOUR]] : !s64i), !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: %[[FOUR:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NoCopyConstruct>, %[[FOUR]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: cir.copy %[[FROM_OFFSET]] to %[[TO_OFFSET]] : !cir.ptr<!rec_NoCopyConstruct>
 //

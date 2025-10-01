@@ -23,13 +23,13 @@ int varargs(int count, ...) {
 // CIR:   %[[VAAREA:.+]] = cir.alloca !cir.array<!rec___va_list_tag x 1>, !cir.ptr<!cir.array<!rec___va_list_tag x 1>>, ["args"]
 // CIR:   %[[RES_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["res", init]
 // CIR:   cir.store %arg0, %[[COUNT_ADDR]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[VA_PTR0:.+]] = cir.cast(array_to_ptrdecay, %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>), !cir.ptr<!rec___va_list_tag>
+// CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[COUNT_VAL:.+]] = cir.load{{.*}} %[[COUNT_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.va_start %[[VA_PTR0]] %[[COUNT_VAL]] : !cir.ptr<!rec___va_list_tag>, !s32i
-// CIR:   %[[VA_PTR1:.+]] = cir.cast(array_to_ptrdecay, %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>), !cir.ptr<!rec___va_list_tag>
+// CIR:   %[[VA_PTR1:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[VA_ARG:.+]] = cir.va_arg %[[VA_PTR1]] : (!cir.ptr<!rec___va_list_tag>) -> !s32i
 // CIR:   cir.store{{.*}} %[[VA_ARG]], %[[RES_ADDR]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[VA_PTR2:.+]] = cir.cast(array_to_ptrdecay, %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>), !cir.ptr<!rec___va_list_tag>
+// CIR:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[RESULT:.+]] = cir.load{{.*}} %[[RES_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.store %[[RESULT]], %[[RET_ADDR]] : !s32i, !cir.ptr<!s32i>
@@ -99,13 +99,13 @@ int stdarg_start(int count, ...) {
 // CIR:   %[[VAAREA:.+]] = cir.alloca !cir.array<!rec___va_list_tag x 1>, !cir.ptr<!cir.array<!rec___va_list_tag x 1>>, ["args"]
 // CIR:   %[[RES_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["res", init]
 // CIR:   cir.store %arg0, %[[COUNT_ADDR]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[VA_PTR0:.+]] = cir.cast(array_to_ptrdecay, %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>), !cir.ptr<!rec___va_list_tag>
+// CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[C12345:.+]] = cir.const #cir.int<12345> : !s32i
 // CIR:   cir.va_start %[[VA_PTR0]] %[[C12345]] : !cir.ptr<!rec___va_list_tag>, !s32i
-// CIR:   %[[VA_PTR1:.+]] = cir.cast(array_to_ptrdecay, %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>), !cir.ptr<!rec___va_list_tag>
+// CIR:   %[[VA_PTR1:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[VA_ARG:.+]] = cir.va_arg %[[VA_PTR1]] : (!cir.ptr<!rec___va_list_tag>) -> !s32i
 // CIR:   cir.store{{.*}} %[[VA_ARG]], %[[RES_ADDR]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[VA_PTR2:.+]] = cir.cast(array_to_ptrdecay, %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>), !cir.ptr<!rec___va_list_tag>
+// CIR:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[RESULT:.+]] = cir.load{{.*}} %[[RES_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.store %[[RESULT]], %[[RET_ADDR]] : !s32i, !cir.ptr<!s32i>
