@@ -11,12 +11,6 @@ from lldbsuite.test import lldbutil
 class TestStatsAPI(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def get_stats_as_json(self, target):
-        stats = target.GetStatistics()
-        stream = lldb.SBStream()
-        res = stats.GetAsJSON(stream)
-        return json.loads(stream.GetData())
-
     def test_stats_api(self):
         """
         Test SBTarget::GetStatistics() API.

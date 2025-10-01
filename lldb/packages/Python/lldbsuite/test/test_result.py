@@ -14,10 +14,9 @@ import traceback
 # Third-party modules
 import unittest
 
-from lldbsuite.test_event import build_exception
-
 # LLDB Modules
 from . import configuration
+from lldbsuite.test_event import build_exception
 
 
 class LLDBTestResult(unittest.TextTestResult):
@@ -42,8 +41,8 @@ class LLDBTestResult(unittest.TextTestResult):
         def ioctl_GWINSZ(fd):
             try:
                 import fcntl
-                import struct
                 import termios
+                import struct
 
                 cr = struct.unpack("hh", fcntl.ioctl(fd, termios.TIOCGWINSZ, "1234"))
             except:
@@ -161,7 +160,9 @@ class LLDBTestResult(unittest.TextTestResult):
 
     def hardMarkAsSkipped(self, test):
         getattr(test, test._testMethodName).__func__.__unittest_skip__ = True
-        getattr(test, test._testMethodName).__func__.__unittest_skip_why__ = (
+        getattr(
+            test, test._testMethodName
+        ).__func__.__unittest_skip_why__ = (
             "test case does not fall in any category of interest for this run"
         )
 
