@@ -317,6 +317,7 @@ public:
   void SetLaunchOrAttachTime();
   void SetFirstPrivateStopTime();
   void SetFirstPublicStopTime();
+  void SetFirstBtTime(lldb::ProcessSP process_sp, Thread &thread);
   void IncreaseSourceMapDeduceCount();
   void IncreaseSourceRealpathAttemptCount(uint32_t count);
   void IncreaseSourceRealpathCompatibleCount(uint32_t count);
@@ -330,6 +331,11 @@ public:
 protected:
   StatsDuration m_create_time;
   StatsDuration m_load_core_time;
+  StatsDuration m_active_time_to_first_bt;
+  // std::atomic doesn't play well with std::optional
+  // so add a simple flag, this should only ever be accessed
+  // by a single thread under the target lock.
+  bool m_first_bt_time_set = false;
   std::optional<StatsTimepoint> m_launch_or_attach_time;
   std::optional<StatsTimepoint> m_first_private_stop_time;
   std::optional<StatsTimepoint> m_first_public_stop_time;
