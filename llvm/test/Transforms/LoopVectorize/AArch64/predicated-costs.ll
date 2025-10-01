@@ -7,6 +7,8 @@ target triple = "aarch64-unknown-linux"
 ; Test case from https://github.com/llvm/llvm-project/issues/148431.
 define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8 %n, i64 %off) #0 {
 ; CHECK-LABEL: define void @test_predicated_load_cast_hint(
+; CHECK-SAME: ptr [[DST_1:%.*]], ptr [[DST_2:%.*]], ptr [[SRC:%.*]], i8 [[N:%.*]], i64 [[OFF:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[N_EXT:%.*]] = sext i8 [[N]] to i32
 ; CHECK-NEXT:    [[N_SUB:%.*]] = add i32 [[N_EXT]], -15
 ; CHECK-NEXT:    [[SMAX16:%.*]] = call i32 @llvm.smax.i32(i32 [[N_SUB]], i32 4)
@@ -65,6 +67,9 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK-NEXT:    [[CONFLICT_RDX15:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT14]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX15]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP2]], 3
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 0, i32 [[TMP2]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -119,10 +124,10 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK-NEXT:    store i8 0, ptr [[DST_2]], align 1, !alias.scope [[META5:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX_NEXT]], i32 [[TMP2]])
-; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
-; CHECK-NEXT:    [[TMP48:%.*]] = xor i1 [[TMP47]], true
+; CHECK-NEXT:    [[TMP48:%.*]] = xor <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 16)
-; CHECK-NEXT:    br i1 [[TMP48]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[TMP49:%.*]] = extractelement <4 x i1> [[TMP48]], i32 0
+; CHECK-NEXT:    br i1 [[TMP49]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:

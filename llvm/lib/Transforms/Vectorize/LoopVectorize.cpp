@@ -5739,6 +5739,20 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
           Worklist.push_back(InstOp);
   }
 
+  auto UpdateMemOpUserCost = [this, VF](LoadInst *LI) {
+    // If there are direct memory op users of the newly scalarized load,
+    // their cost may have changed because there's no scalarization
+    // overhead for the operand. Update it.
+    for (User *U : LI->users()) {
+      if (!isa<LoadInst, StoreInst>(U))
+        continue;
+      if (getWideningDecision(cast<Instruction>(U), VF) != CM_Scalarize)
+        continue;
+      setWideningDecision(
+          cast<Instruction>(U), VF, CM_Scalarize,
+          getMemInstScalarizationCost(cast<Instruction>(U), VF));
+    }
+  };
   for (auto *I : AddrDefs) {
     if (isa<LoadInst>(I)) {
       // Setting the desired widening decision should ideally be handled in
@@ -5748,21 +5762,24 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       InstWidening Decision = getWideningDecision(I, VF);
       if (Decision == CM_Widen || Decision == CM_Widen_Reverse ||
           (!isPredicatedInst(I) && !Legal->isUniformMemOp(*I, VF) &&
-           Decision == CM_Scalarize))
+           Decision == CM_Scalarize)) {
         // Scalarize a widened load of address or update the cost of a scalar
         // load of an address.
         setWideningDecision(
             I, VF, CM_Scalarize,
             (VF.getKnownMinValue() *
              getMemoryInstructionCost(I, ElementCount::getFixed(1))));
-      else if (const auto *Group = getInterleavedAccessGroup(I)) {
+        UpdateMemOpUserCost(cast<LoadInst>(I));
+      } else if (const auto *Group = getInterleavedAccessGroup(I)) {
         // Scalarize an interleave group of address loads.
         for (unsigned I = 0; I < Group->getFactor(); ++I) {
-          if (Instruction *Member = Group->getMember(I))
+          if (Instruction *Member = Group->getMember(I)) {
             setWideningDecision(
                 Member, VF, CM_Scalarize,
                 (VF.getKnownMinValue() *
                  getMemoryInstructionCost(Member, ElementCount::getFixed(1))));
+            UpdateMemOpUserCost(cast<LoadInst>(Member));
+          }
         }
       }
     } else {
