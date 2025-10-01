@@ -606,7 +606,6 @@ exit:
 }
 
 ; Loop with vscale-based trip count vscale x 1024.
-; TODO: No epilogue vectorizations should remain when choosing VF = vscale x 4.
 define void @trip_count_vscale_no_epilogue_iterations(ptr noalias %a, ptr noalias %b) vscale_range(1, 16) #0 {
 ; CHECK-LABEL: @trip_count_vscale_no_epilogue_iterations(
 ; CHECK-NEXT:  entry:
