@@ -36,9 +36,7 @@ entry:
 !4 = !{!5}
 !5 = !{i64 0, !"_ZTSFPvS_E.generalized"}
 
-
 ; CHECK: .section .callgraph,"o",@progbits,.text
-
 ;; Version
 ; CHECK-NEXT: .byte   0
 ;; Flags
