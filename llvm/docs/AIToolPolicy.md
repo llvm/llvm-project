@@ -16,7 +16,8 @@ fully accountable for their contributions.**
 * **Start with small contributions:** Open source communities operate on trust
   and reputation. Reviewing large contributions is expensive, and AI tools tend
   to generate large contributions. We encourage new contributors to keep their
-  first contributions small until they build personal expertise and maintainer
+  first contributions small, specifically below 150 additional lines of
+  non-test code insertions, until they build personal expertise and maintainer
   trust before taking on larger changes.
 
 * **Be transparent about your use of AI.** When a contribution has been
