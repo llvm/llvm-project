@@ -4,6 +4,7 @@
 @b = global i32 2, !ref !1
 @c = global i32 3, !ref !1, !ref !2
 @d = global i32 4, !ref !3
+@e = external global i32, !ref !1
 
 !0 = !{i32 1}
 !1 = !{ptr @b}
@@ -25,3 +26,6 @@
 ; CHECK: ref metadata must have one operand
 ; CHECK: ptr @d
 ; CHECK: !3 = !{ptr @c, ptr @a}
+
+; CHECK: ref metadata must not be placed on a declaration
+; CHECK: @e

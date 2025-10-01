@@ -771,6 +771,9 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
     }
 
     if (GO->hasMetadata(LLVMContext::MD_ref)) {
+      Check(!GO->isDeclaration(),
+            "ref metadata must not be placed on a declaration", GO);
+
       SmallVector<MDNode *> MDs;
       GO->getMetadata(LLVMContext::MD_ref, MDs);
       for (const MDNode *MD : MDs) {
