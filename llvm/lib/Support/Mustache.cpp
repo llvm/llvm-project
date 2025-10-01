@@ -440,8 +440,8 @@ static SmallVector<Token> tokenize(StringRef Template) {
   size_t Start = 0;
 
   while (Start < Template.size()) {
-    LLVM_DEBUG(dbgs() << "[Tokenize Loop] Start=" << Start << ", Open='" << Open
-                      << "', Close='" << Close << "'\n");
+    LLVM_DEBUG(dbgs() << "[Tokenize Loop] Start:" << Start << ", Open:'" << Open
+                      << "', Close:'" << Close << "'\n");
     Tag T = findNextTag(Template, Start, Open, Close);
 
     if (T.TagKind == Tag::Kind::None) {
@@ -571,8 +571,8 @@ protected:
     Indent.resize(Indentation, ' ');
 
     for (char C : Data) {
-      LLVM_DEBUG(dbgs() << "[IndentationStream] NeedsIndent=" << NeedsIndent
-                        << ", C='" << C << "', Indentation=" << Indentation
+      LLVM_DEBUG(dbgs() << "[Indentation Stream] NeedsIndent:" << NeedsIndent
+                        << ", C:'" << C << "', Indentation:" << Indentation
                         << "\n");
       if (NeedsIndent && C != '\n') {
         WrappedStream << Indent;
@@ -723,8 +723,8 @@ void ASTNode::renderText(MustacheOutputStream &OS) { OS << Body; }
 
 void ASTNode::renderPartial(const json::Value &CurrentCtx,
                             MustacheOutputStream &OS) {
-  LLVM_DEBUG(dbgs() << "[Render Partial] Accessor=" << AccessorValue[0]
-                    << ", Indentation=" << Indentation << "\n");
+  LLVM_DEBUG(dbgs() << "[Render Partial] Accessor:" << AccessorValue[0]
+                    << ", Indentation:" << Indentation << "\n");
   auto Partial = Ctx.Partials.find(AccessorValue[0]);
   if (Partial != Ctx.Partials.end())
     renderPartial(CurrentCtx, OS, Partial->getValue().get());
@@ -743,7 +743,7 @@ void ASTNode::renderVariable(const json::Value &CurrentCtx,
 
 void ASTNode::renderUnescapeVariable(const json::Value &CurrentCtx,
                                      MustacheOutputStream &OS) {
-  LLVM_DEBUG(dbgs() << "[Render UnescapeVariable] Accessor=" << AccessorValue[0]
+  LLVM_DEBUG(dbgs() << "[Render UnescapeVariable] Accessor:" << AccessorValue[0]
                     << "\n");
   auto Lambda = Ctx.Lambdas.find(AccessorValue[0]);
   if (Lambda != Ctx.Lambdas.end()) {
@@ -864,7 +864,7 @@ void ASTNode::renderChild(const json::Value &Contexts,
 
 void ASTNode::renderPartial(const json::Value &Contexts,
                             MustacheOutputStream &OS, ASTNode *Partial) {
-  LLVM_DEBUG(dbgs() << "[Render Partial Indentation] " << Indentation << "\n");
+  LLVM_DEBUG(dbgs() << "[Render Partial Indentation] Indentation: " << Indentation << "\n");
   AddIndentationStringStream IS(OS, Indentation);
   Partial->render(Contexts, IS);
 }
