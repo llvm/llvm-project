@@ -18909,8 +18909,7 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
     // 'bool'.
     if (BitfieldIsOverwide && !FieldTy->isBooleanType() && FieldName) {
       Diag(FieldLoc, diag::warn_bitfield_width_exceeds_type_width)
-          << FieldName << toString(Value, 10)
-          << (unsigned)TypeWidth;
+          << FieldName << Value << (unsigned)TypeWidth;
     }
   }
 

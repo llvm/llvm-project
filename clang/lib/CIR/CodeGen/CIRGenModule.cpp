@@ -119,6 +119,19 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                        cir::OptInfoAttr::get(&mlirContext,
                                              cgo.OptimizationLevel,
                                              cgo.OptimizeSize));
+  // Set the module name to be the name of the main file. TranslationUnitDecl
+  // often contains invalid source locations and isn't a reliable source for the
+  // module location.
+  FileID mainFileId = astContext.getSourceManager().getMainFileID();
+  const FileEntry &mainFile =
+      *astContext.getSourceManager().getFileEntryForID(mainFileId);
+  StringRef path = mainFile.tryGetRealPathName();
+  if (!path.empty()) {
+    theModule.setSymName(path);
+    theModule->setLoc(mlir::FileLineColLoc::get(&mlirContext, path,
+                                                /*line=*/0,
+                                                /*column=*/0));
+  }
 }
 
 CIRGenModule::~CIRGenModule() = default;
@@ -717,7 +730,6 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   // since this is the job for its original source.
   bool isDefinitionAvailableExternally =
       astContext.GetGVALinkageForVariable(vd) == GVA_AvailableExternally;
-  assert(!cir::MissingFeatures::needsGlobalCtorDtor());
 
   // It is useless to emit the definition for an available_externally variable
   // which can't be marked as const.
@@ -730,6 +742,10 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     return;
 
   mlir::Attribute init;
+  bool needsGlobalCtor = false;
+  bool needsGlobalDtor =
+      !isDefinitionAvailableExternally &&
+      vd->needsDestruction(astContext) == QualType::DK_cxx_destructor;
   const VarDecl *initDecl;
   const Expr *initExpr = vd->getAnyInitializer(initDecl);
 
@@ -764,8 +780,8 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
         if (initDecl->hasFlexibleArrayInit(astContext))
           errorNYI(vd->getSourceRange(), "flexible array initializer");
         init = builder.getZeroInitAttr(convertType(qt));
-        if (astContext.GetGVALinkageForVariable(vd) != GVA_AvailableExternally)
-          errorNYI(vd->getSourceRange(), "global constructor");
+        if (!isDefinitionAvailableExternally)
+          needsGlobalCtor = true;
       } else {
         errorNYI(vd->getSourceRange(), "static initializer");
       }
@@ -774,8 +790,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
       // We don't need an initializer, so remove the entry for the delayed
       // initializer position (just in case this entry was delayed) if we
       // also don't need to register a destructor.
-      if (vd->needsDestruction(astContext) == QualType::DK_cxx_destructor)
-        errorNYI(vd->getSourceRange(), "delayed destructor");
+      assert(!cir::MissingFeatures::deferredCXXGlobalInit());
     }
   }
 
@@ -814,6 +829,9 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   if (emitter)
     emitter->finalize(gv);
 
+  assert(!cir::MissingFeatures::opGlobalConstant());
+  assert(!cir::MissingFeatures::opGlobalSection());
+
   // Set CIR's linkage type as appropriate.
   cir::GlobalLinkageKind linkage =
       getCIRLinkageVarDefinition(vd, /*IsConstant=*/false);
@@ -831,6 +849,10 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
 
   maybeSetTrivialComdat(*vd, gv);
+
+  // Emit the initializer function if necessary.
+  if (needsGlobalCtor || needsGlobalDtor)
+    emitCXXGlobalVarDeclInitFunc(vd, gv, needsGlobalCtor);
 }
 
 void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
@@ -2171,8 +2193,13 @@ mlir::Attribute CIRGenModule::getAddrOfRTTIDescriptor(mlir::Location loc,
   if (!shouldEmitRTTI(forEh))
     return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
 
-  errorNYI(loc, "getAddrOfRTTIDescriptor");
-  return mlir::Attribute();
+  if (forEh && ty->isObjCObjectPointerType() &&
+      langOpts.ObjCRuntime.isGNUFamily()) {
+    errorNYI(loc, "getAddrOfRTTIDescriptor: Objc PtrType & Objc RT GUN");
+    return {};
+  }
+
+  return getCXXABI().getAddrOfRTTIDescriptor(loc, ty);
 }
 
 // TODO(cir): this can be shared with LLVM codegen.

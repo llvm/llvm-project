@@ -696,7 +696,8 @@ void AddDebugInfoPass::runOnOperation() {
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
       isOptimized, debugLevel,
       /*nameTableKind=*/mlir::LLVM::DINameTableKind::Default,
-      /*splitDebugFilename=*/mlir::StringAttr());
+      splitDwarfFile.empty() ? mlir::StringAttr()
+                             : mlir::StringAttr::get(context, splitDwarfFile));
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     handleFuncOp(funcOp, fileAttr, cuAttr, typeGen, &symbolTable);

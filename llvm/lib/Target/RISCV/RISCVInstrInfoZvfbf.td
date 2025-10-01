@@ -383,7 +383,7 @@ let Predicates = [HasStdExtZvfbfminOrZvfofp8min] in {
   defm : VPatConversionVF_WF_BF_RM<"int_riscv_vfncvtbf16_f_f_w",
                                    "PseudoVFNCVTBF16_F_F", isSEWAware=1>;
 
-  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = [HasVInstructionsBF16Minimal] in
@@ -545,11 +545,11 @@ let Predicates = [HasStdExtZvfbfminOrZvfofp8min] in {
 
 let Predicates = [HasStdExtZvfbfwma] in {
   defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmaccbf16", "PseudoVFWMACCBF16",
-                               AllWidenableBFloatToFloatVectors, isSEWAware=1>;
+                               AllWidenableBF16ToFloatVectors, isSEWAware=1>;
   defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmadd_vl, "PseudoVFWMACCBF16",
-                                      AllWidenableBFloatToFloatVectors>;
+                                      AllWidenableBF16ToFloatVectors>;
   defm : VPatWidenFPMulAccSDNode_VV_VF_RM<"PseudoVFWMACCBF16",
-                                          AllWidenableBFloatToFloatVectors>;
+                                          AllWidenableBF16ToFloatVectors>;
 }
 
 multiclass VPatConversionVI_VF_BF16<string intrinsic, string instruction> {
@@ -578,7 +578,7 @@ multiclass VPatConversionWF_VI_BF16<string intrinsic, string instruction,
 
 multiclass VPatConversionWF_VF_BF16<string intrinsic, string instruction,
                                     bit isSEWAware = 0> {
-  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = !listconcat(GetVTypeMinimalPredicates<fvti>.Predicates,
@@ -615,7 +615,7 @@ multiclass VPatConversionVI_WF_RM_BF16<string intrinsic, string instruction> {
 
 multiclass VPatConversionVF_WF_BF16<string intrinsic, string instruction,
                                     bit isSEWAware = 0> {
-  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
@@ -634,17 +634,17 @@ defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfsub", "PseudoVFSUB_ALT",
 defm : VPatBinaryV_VX_RM<"int_riscv_vfrsub", "PseudoVFRSUB_ALT",
                          AllBF16Vectors, isSEWAware = 1>;
 defm : VPatBinaryW_VV_VX_RM<"int_riscv_vfwadd", "PseudoVFWADD_ALT",
-                            AllWidenableBFloatToFloatVectors, isSEWAware=1>;
+                            AllWidenableBF16ToFloatVectors, isSEWAware=1>;
 defm : VPatBinaryW_VV_VX_RM<"int_riscv_vfwsub", "PseudoVFWSUB_ALT",
-                            AllWidenableBFloatToFloatVectors, isSEWAware=1>;
+                            AllWidenableBF16ToFloatVectors, isSEWAware=1>;
 defm : VPatBinaryW_WV_WX_RM<"int_riscv_vfwadd_w", "PseudoVFWADD_ALT",
-                            AllWidenableBFloatToFloatVectors, isSEWAware=1>;
+                            AllWidenableBF16ToFloatVectors, isSEWAware=1>;
 defm : VPatBinaryW_WV_WX_RM<"int_riscv_vfwsub_w", "PseudoVFWSUB_ALT",
-                            AllWidenableBFloatToFloatVectors, isSEWAware=1>;
+                            AllWidenableBF16ToFloatVectors, isSEWAware=1>;
 defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfmul", "PseudoVFMUL_ALT",
                             AllBF16Vectors, isSEWAware=1>;
 defm : VPatBinaryW_VV_VX_RM<"int_riscv_vfwmul", "PseudoVFWMUL_ALT",
-                            AllWidenableBFloatToFloatVectors, isSEWAware=1>;
+                            AllWidenableBF16ToFloatVectors, isSEWAware=1>;
 defm : VPatTernaryV_VV_VX_AAXA_RM<"int_riscv_vfmacc", "PseudoVFMACC_ALT",
                                   AllBF16Vectors, isSEWAware=1>;
 defm : VPatTernaryV_VV_VX_AAXA_RM<"int_riscv_vfnmacc", "PseudoVFNMACC_ALT",
@@ -662,13 +662,13 @@ defm : VPatTernaryV_VV_VX_AAXA_RM<"int_riscv_vfmsub", "PseudoVFMSUB_ALT",
 defm : VPatTernaryV_VV_VX_AAXA_RM<"int_riscv_vfnmsub", "PseudoVFNMSUB_ALT",
                                   AllBF16Vectors, isSEWAware=1>;
 defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmacc", "PseudoVFWMACC_ALT",
-                             AllWidenableBFloatToFloatVectors, isSEWAware=1>;
+                             AllWidenableBF16ToFloatVectors, isSEWAware=1>;
 defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwnmacc", "PseudoVFWNMACC_ALT",
-                             AllWidenableBFloatToFloatVectors, isSEWAware=1>;
+                             AllWidenableBF16ToFloatVectors, isSEWAware=1>;
 defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmsac", "PseudoVFWMSAC_ALT",
-                             AllWidenableBFloatToFloatVectors, isSEWAware=1>;
+                             AllWidenableBF16ToFloatVectors, isSEWAware=1>;
 defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwnmsac", "PseudoVFWNMSAC_ALT",
-                             AllWidenableBFloatToFloatVectors, isSEWAware=1>;
+                             AllWidenableBF16ToFloatVectors, isSEWAware=1>;
 defm : VPatUnaryV_V<"int_riscv_vfrsqrt7", "PseudoVFRSQRT7_ALT",
                     AllBF16Vectors, isSEWAware=1>;
 defm : VPatUnaryV_V_RM<"int_riscv_vfrec7", "PseudoVFREC7_ALT",
@@ -712,7 +712,7 @@ defm : VPatConversionVI_WF_RM_BF16<"int_riscv_vfncvt_x_f_w", "PseudoVFNCVT_X_F_A
 defm : VPatConversionVI_WF_BF16<"int_riscv_vfncvt_rtz_xu_f_w", "PseudoVFNCVT_RTZ_XU_F_ALT">;
 defm : VPatConversionVI_WF_BF16<"int_riscv_vfncvt_rtz_x_f_w", "PseudoVFNCVT_RTZ_X_F_ALT">;
 defm : VPatConversionVF_WF_RM<"int_riscv_vfncvt_f_f_w", "PseudoVFNCVT_F_F_ALT",
-                              AllWidenableBFloatToFloatVectors, isSEWAware=1>;
+                              AllWidenableBF16ToFloatVectors, isSEWAware=1>;
 defm : VPatConversionVF_WF_BF16<"int_riscv_vfncvt_rod_f_f_w", "PseudoVFNCVT_ROD_F_F_ALT",
                                 isSEWAware=1>;
 defm : VPatBinaryV_VX<"int_riscv_vfslide1up", "PseudoVFSLIDE1UP_ALT", AllBF16Vectors>;

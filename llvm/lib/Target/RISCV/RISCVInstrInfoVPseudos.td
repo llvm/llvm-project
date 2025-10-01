@@ -349,7 +349,7 @@ defset list<VTypeInfo> AllVectors = {
     }
   }
 
-  defset list<VTypeInfo> AllFloatAndBFloatVectors = {
+  defset list<VTypeInfo> AllFloatAndBF16Vectors = {
     defset list<VTypeInfo> AllFloatVectors = {
       defset list<VTypeInfo> NoGroupFloatVectors = {
         defset list<VTypeInfo> FractionalGroupFloatVectors = {
@@ -546,7 +546,7 @@ defset list<VTypeInfoToWide> AllWidenableIntToFloatVectors = {
   def : VTypeInfoToWide<VI32M4, VF64M8>;
 }
 
-defset list<VTypeInfoToWide> AllWidenableBFloatToFloatVectors = {
+defset list<VTypeInfoToWide> AllWidenableBF16ToFloatVectors = {
   def : VTypeInfoToWide<VBF16MF4, VF32MF2>;
   def : VTypeInfoToWide<VBF16MF2, VF32M1>;
   def : VTypeInfoToWide<VBF16M1, VF32M2>;
@@ -5874,7 +5874,7 @@ multiclass VPatConversionWF_VF<string intrinsic, string instruction,
 
 multiclass VPatConversionWF_VF_BF<string intrinsic, string instruction,
                                   bit isSEWAware = 0> {
-  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in
   {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
@@ -5981,7 +5981,7 @@ multiclass VPatConversionVF_WF_RTZ<string intrinsic, string instruction,
 
 multiclass VPatConversionVF_WF_BF_RM<string intrinsic, string instruction,
                                      bit isSEWAware = 0> {
-  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
@@ -7158,7 +7158,7 @@ defm : VPatConversionVI_VF<"int_riscv_vfclass", "PseudoVFCLASS">;
 // We can use vmerge.vvm to support vector-vector vfmerge.
 // NOTE: Clang previously used int_riscv_vfmerge for vector-vector, but now uses
 // int_riscv_vmerge. Support both for compatibility.
-foreach vti = AllFloatAndBFloatVectors in {
+foreach vti = AllFloatAndBF16Vectors in {
   let Predicates = GetVTypeMinimalPredicates<vti>.Predicates in
     defm : VPatBinaryCarryInTAIL<"int_riscv_vmerge", "PseudoVMERGE", "VVM",
                                  vti.Vector,

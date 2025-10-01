@@ -1294,95 +1294,6 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_ia32_bextr(InterpState &S, CodePtr OpPC,
-                                       const InterpFrame *Frame,
-                                       const CallExpr *Call) {
-  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
-      !Call->getArg(1)->getType()->isIntegerType())
-    return false;
-
-  APSInt Index = popToAPSInt(S, Call->getArg(1));
-  APSInt Val = popToAPSInt(S, Call->getArg(0));
-
-  unsigned BitWidth = Val.getBitWidth();
-  uint64_t Shift = Index.extractBitsAsZExtValue(8, 0);
-  uint64_t Length = Index.extractBitsAsZExtValue(8, 8);
-  Length = Length > BitWidth ? BitWidth : Length;
-
-  // Handle out of bounds cases.
-  if (Length == 0 || Shift >= BitWidth) {
-    pushInteger(S, 0, Call->getType());
-    return true;
-  }
-
-  uint64_t Result = Val.getZExtValue() >> Shift;
-  Result &= llvm::maskTrailingOnes<uint64_t>(Length);
-  pushInteger(S, Result, Call->getType());
-  return true;
-}
-
-static bool interp__builtin_ia32_bzhi(InterpState &S, CodePtr OpPC,
-                                      const InterpFrame *Frame,
-                                      const CallExpr *Call) {
-  QualType CallType = Call->getType();
-  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
-      !Call->getArg(1)->getType()->isIntegerType() ||
-      !CallType->isIntegerType())
-    return false;
-
-  APSInt Idx = popToAPSInt(S, Call->getArg(1));
-  APSInt Val = popToAPSInt(S, Call->getArg(0));
-
-  unsigned BitWidth = Val.getBitWidth();
-  uint64_t Index = Idx.extractBitsAsZExtValue(8, 0);
-
-  if (Index < BitWidth)
-    Val.clearHighBits(BitWidth - Index);
-
-  pushInteger(S, Val, CallType);
-  return true;
-}
-
-static bool interp__builtin_ia32_pdep(InterpState &S, CodePtr OpPC,
-                                      const InterpFrame *Frame,
-                                      const CallExpr *Call) {
-  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
-      !Call->getArg(1)->getType()->isIntegerType())
-    return false;
-
-  APSInt Mask = popToAPSInt(S, Call->getArg(1));
-  APSInt Val = popToAPSInt(S, Call->getArg(0));
-
-  unsigned BitWidth = Val.getBitWidth();
-  APInt Result = APInt::getZero(BitWidth);
-  for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
-    if (Mask[I])
-      Result.setBitVal(I, Val[P++]);
-  }
-  pushInteger(S, std::move(Result), Call->getType());
-  return true;
-}
-
-static bool interp__builtin_ia32_pext(InterpState &S, CodePtr OpPC,
-                                      const InterpFrame *Frame,
-                                      const CallExpr *Call) {
-  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
-      !Call->getArg(1)->getType()->isIntegerType())
-    return false;
-
-  APSInt Mask = popToAPSInt(S, Call->getArg(1));
-  APSInt Val = popToAPSInt(S, Call->getArg(0));
-
-  unsigned BitWidth = Val.getBitWidth();
-  APInt Result = APInt::getZero(BitWidth);
-  for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
-    if (Mask[I])
-      Result.setBitVal(P++, Val[I]);
-  }
-  pushInteger(S, std::move(Result), Call->getType());
-  return true;
-}
-
 /// (CarryIn, LHS, RHS, Result)
 static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
                                                     CodePtr OpPC,
@@ -3275,11 +3186,37 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_bextr_u64:
   case clang::X86::BI__builtin_ia32_bextri_u32:
   case clang::X86::BI__builtin_ia32_bextri_u64:
-    return interp__builtin_ia32_bextr(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &Val, const APSInt &Idx) {
+          unsigned BitWidth = Val.getBitWidth();
+          uint64_t Shift = Idx.extractBitsAsZExtValue(8, 0);
+          uint64_t Length = Idx.extractBitsAsZExtValue(8, 8);
+          if (Length > BitWidth) {
+            Length = BitWidth;
+          }
+
+          // Handle out of bounds cases.
+          if (Length == 0 || Shift >= BitWidth)
+            return APInt(BitWidth, 0);
+
+          uint64_t Result = Val.getZExtValue() >> Shift;
+          Result &= llvm::maskTrailingOnes<uint64_t>(Length);
+          return APInt(BitWidth, Result);
+        });
 
   case clang::X86::BI__builtin_ia32_bzhi_si:
   case clang::X86::BI__builtin_ia32_bzhi_di:
-    return interp__builtin_ia32_bzhi(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &Val, const APSInt &Idx) {
+          unsigned BitWidth = Val.getBitWidth();
+          uint64_t Index = Idx.extractBitsAsZExtValue(8, 0);
+          APSInt Result = Val;
+
+          if (Index < BitWidth)
+            Result.clearHighBits(BitWidth - Index);
+
+          return Result;
+        });
 
   case clang::X86::BI__builtin_ia32_lzcnt_u16:
   case clang::X86::BI__builtin_ia32_lzcnt_u32:
@@ -3299,11 +3236,33 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case clang::X86::BI__builtin_ia32_pdep_si:
   case clang::X86::BI__builtin_ia32_pdep_di:
-    return interp__builtin_ia32_pdep(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &Val, const APSInt &Mask) {
+          unsigned BitWidth = Val.getBitWidth();
+          APInt Result = APInt::getZero(BitWidth);
+
+          for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
+            if (Mask[I])
+              Result.setBitVal(I, Val[P++]);
+          }
+
+          return Result;
+        });
 
   case clang::X86::BI__builtin_ia32_pext_si:
   case clang::X86::BI__builtin_ia32_pext_di:
-    return interp__builtin_ia32_pext(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &Val, const APSInt &Mask) {
+          unsigned BitWidth = Val.getBitWidth();
+          APInt Result = APInt::getZero(BitWidth);
+
+          for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
+            if (Mask[I])
+              Result.setBitVal(P++, Val[I]);
+          }
+
+          return Result;
+        });
 
   case clang::X86::BI__builtin_ia32_addcarryx_u32:
   case clang::X86::BI__builtin_ia32_addcarryx_u64:

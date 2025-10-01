@@ -1203,6 +1203,18 @@ bool PeepholeOptimizer::optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter) {
     if (!NewSrc.Reg)
       continue;
 
+    if (NewSrc.SubReg) {
+      // Verify the register class supports the subregister index. ARM's
+      // copy-like queries return register:subreg pairs where the register's
+      // current class does not directly support the subregister index.
+      const TargetRegisterClass *RC = MRI->getRegClass(NewSrc.Reg);
+      const TargetRegisterClass *WithSubRC =
+          TRI->getSubClassWithSubReg(RC, NewSrc.SubReg);
+      if (!MRI->constrainRegClass(NewSrc.Reg, WithSubRC))
+        continue;
+      Changed = true;
+    }
+
     // Rewrite source.
     if (CpyRewriter.RewriteCurrentSource(NewSrc.Reg, NewSrc.SubReg)) {
       // We may have extended the live-range of NewSrc, account for that.
@@ -1274,6 +1286,18 @@ MachineInstr &PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
   // Insert the COPY.
   const TargetRegisterClass *DefRC = MRI->getRegClass(Def.Reg);
   Register NewVReg = MRI->createVirtualRegister(DefRC);
+
+  if (NewSrc.SubReg) {
+    const TargetRegisterClass *NewSrcRC = MRI->getRegClass(NewSrc.Reg);
+    const TargetRegisterClass *WithSubRC =
+        TRI->getSubClassWithSubReg(NewSrcRC, NewSrc.SubReg);
+
+    // The new source may not directly support the subregister, but we should be
+    // able to assume it is constrainable to support the subregister (otherwise
+    // ValueTracker was lying and reported a useless value).
+    if (!MRI->constrainRegClass(NewSrc.Reg, WithSubRC))
+      llvm_unreachable("replacement register cannot support subregister");
+  }
 
   MachineInstr *NewCopy =
       BuildMI(*CopyLike.getParent(), &CopyLike, CopyLike.getDebugLoc(),

@@ -1466,8 +1466,7 @@ class VOPSelectPat_t16 <ValueType vt> : GCNPat <
 
 def : VOPSelectModsPat <i32>;
 def : VOPSelectModsPat <f32>;
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in {
+let True16Predicate = NotUseRealTrue16Insts in {
   def : VOPSelectPat <f16>;
   def : VOPSelectPat <i16>;
 } // End True16Predicate = p
@@ -2137,8 +2136,7 @@ def : GCNPat <
 >;
 
 foreach fp16vt = [f16, bf16] in {
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let SubtargetPredicate = p in {
+let SubtargetPredicate = NotUseRealTrue16Insts in {
 def : GCNPat <
   (fabs (fp16vt VGPR_32:$src)),
   (V_AND_B32_e64 (S_MOV_B32 (i32 0x00007fff)), VGPR_32:$src)
@@ -2230,8 +2228,7 @@ def : GCNPat <
 }
 
 foreach fp16vt = [f16, bf16] in {
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in {
+let True16Predicate = NotUseRealTrue16Insts in {
 def : GCNPat <
   (fcopysign fp16vt:$src0, fp16vt:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)), $src0, $src1)
@@ -2354,23 +2351,21 @@ def : GCNPat <
   (S_MOV_B32 $ga)
 >;
 
-foreach pred = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in {
-  let True16Predicate = pred in {
+let True16Predicate = NotUseRealTrue16Insts in {
+  def : GCNPat <
+    (VGPRImm<(i16 imm)>:$imm),
+    (V_MOV_B32_e32 imm:$imm)
+  >;
+
+  // FIXME: Workaround for ordering issue with peephole optimizer where
+  // a register class copy interferes with immediate folding.  Should
+  // use s_mov_b32, which can be shrunk to s_movk_i32
+
+  foreach vt = [f16, bf16] in {
     def : GCNPat <
-      (VGPRImm<(i16 imm)>:$imm),
-      (V_MOV_B32_e32 imm:$imm)
+      (VGPRImm<(vt fpimm)>:$imm),
+      (V_MOV_B32_e32 (vt (bitcast_fpimm_to_i32 $imm)))
     >;
-
-    // FIXME: Workaround for ordering issue with peephole optimizer where
-    // a register class copy interferes with immediate folding.  Should
-    // use s_mov_b32, which can be shrunk to s_movk_i32
-
-    foreach vt = [f16, bf16] in {
-      def : GCNPat <
-        (VGPRImm<(vt fpimm)>:$imm),
-        (V_MOV_B32_e32 (vt (bitcast_fpimm_to_i32 $imm)))
-      >;
-    }
   }
 }
 
@@ -2859,8 +2854,7 @@ def : GCNPat<
   (i32 (DivergentSextInreg<i1> i32:$src)),
   (V_BFE_I32_e64 i32:$src, (i32 0), (i32 1))>;
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in {
+let True16Predicate = NotUseRealTrue16Insts in {
 def : GCNPat <
   (i16 (DivergentSextInreg<i1> i16:$src)),
   (V_BFE_I32_e64 $src, (i32 0), (i32 1))
@@ -3205,8 +3199,7 @@ def : GCNPat<
 }
 }  // AddedComplexity = 1
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in {
+let True16Predicate = NotUseRealTrue16Insts in {
 def : GCNPat<
   (i32 (DivergentUnaryFrag<zext> i16:$src)),
   (V_AND_B32_e64 (S_MOV_B32 (i32 0xffff)), $src)
@@ -3416,8 +3409,7 @@ def : GCNPat <
 
 // Magic number: 1 | (0 << 8) | (12 << 16) | (12 << 24)
 // The 12s emit 0s.
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in {
+let True16Predicate = NotUseRealTrue16Insts in {
 def : GCNPat <
   (i16 (bswap i16:$a)),
   (V_PERM_B32_e64  (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x0c0c0001)))
@@ -3670,8 +3662,7 @@ def : GCNPat <
   (S_LSHL_B32 SReg_32:$src1, (i16 16))
 >;
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in {
+let True16Predicate = NotUseRealTrue16Insts in {
 def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 0), (i16 VGPR_32:$src1))),
   (v2i16 (V_LSHLREV_B32_e64 (i16 16), VGPR_32:$src1))
@@ -3707,8 +3698,7 @@ def : GCNPat <
   (COPY_TO_REGCLASS SReg_32:$src0, SReg_32)
 >;
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in {
+let True16Predicate = NotUseRealTrue16Insts in {
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$src0), (Ty undef))),
   (COPY_TO_REGCLASS VGPR_32:$src0, VGPR_32)
@@ -3735,8 +3725,7 @@ def : GCNPat <
 >;
 
 let SubtargetPredicate = HasVOP3PInsts in {
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in
+let True16Predicate = NotUseRealTrue16Insts in
 def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_32:$src0), (i16 VGPR_32:$src1))),
   (v2i16 (V_LSHL_OR_B32_e64 $src1, (i32 16), (i32 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), $src0))))
@@ -3766,8 +3755,7 @@ def : GCNPat <
   (S_PACK_LL_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in {
+let True16Predicate = NotUseRealTrue16Insts in {
 // Take the lower 16 bits from each VGPR_32 and concat them
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$a), (Ty VGPR_32:$b))),
@@ -3838,8 +3826,7 @@ def : GCNPat <
 >;
 
 // Take the upper 16 bits from each VGPR_32 and concat them
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in
+let True16Predicate = NotUseRealTrue16Insts in
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector>
     (Ty !if(!eq(Ty, i16),
@@ -3881,8 +3868,7 @@ def : GCNPat <
   (v2i16 (S_PACK_HL_B32_B16 SReg_32:$src0, SReg_32:$src1))
 >;
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in {
+let True16Predicate = NotUseRealTrue16Insts in {
 def : GCNPat <
   (v2f16 (scalar_to_vector f16:$src0)),
   (COPY $src0)

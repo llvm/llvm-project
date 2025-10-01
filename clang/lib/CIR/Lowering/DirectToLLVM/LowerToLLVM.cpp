@@ -222,8 +222,9 @@ public:
     return llvm::TypeSwitch<mlir::Attribute, mlir::Value>(attr)
         .Case<cir::IntAttr, cir::FPAttr, cir::ConstComplexAttr,
               cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
-              cir::ConstPtrAttr, cir::GlobalViewAttr, cir::VTableAttr,
-              cir::ZeroAttr>([&](auto attrT) { return visitCirAttr(attrT); })
+              cir::ConstPtrAttr, cir::GlobalViewAttr, cir::TypeInfoAttr,
+              cir::VTableAttr, cir::ZeroAttr>(
+            [&](auto attrT) { return visitCirAttr(attrT); })
         .Default([&](auto attrT) { return mlir::Value(); });
   }
 
@@ -1694,7 +1695,7 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
   // TODO: Generalize this handling when more types are needed here.
   assert((isa<cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
               cir::ConstPtrAttr, cir::ConstComplexAttr, cir::GlobalViewAttr,
-              cir::VTableAttr, cir::ZeroAttr>(init)));
+              cir::TypeInfoAttr, cir::VTableAttr, cir::ZeroAttr>(init)));
 
   // TODO(cir): once LLVM's dialect has proper equivalent attributes this
   // should be updated. For now, we use a custom op to initialize globals
@@ -1710,6 +1711,11 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
 mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
     cir::GlobalOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
+  // If this global requires non-trivial initialization or destruction,
+  // that needs to be moved to runtime handlers during LoweringPrepare.
+  if (!op.getCtorRegion().empty() || !op.getDtorRegion().empty())
+    return op.emitError() << "GlobalOp ctor and dtor regions should be removed "
+                             "in LoweringPrepare";
 
   std::optional<mlir::Attribute> init = op.getInitialValue();
 
@@ -1749,7 +1755,8 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
     } else if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
                          cir::ConstRecordAttr, cir::ConstPtrAttr,
                          cir::ConstComplexAttr, cir::GlobalViewAttr,
-                         cir::VTableAttr, cir::ZeroAttr>(init.value())) {
+                         cir::TypeInfoAttr, cir::VTableAttr, cir::ZeroAttr>(
+                   init.value())) {
       // TODO(cir): once LLVM's dialect has proper equivalent attributes this
       // should be updated. For now, we use a custom op to initialize globals
       // to the appropriate value.

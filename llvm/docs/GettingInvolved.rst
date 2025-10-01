@@ -42,7 +42,7 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
    in the LLVM system.
 
 :doc:`BugLifeCycle`
-   Describes how bugs are reported, triaged and closed.
+   Describes how bugs are reported, triaged, and closed.
 
 :doc:`CodingStandards`
   Details the LLVM coding standards and provides useful information on writing
@@ -108,7 +108,7 @@ The :doc:`CodeOfConduct` applies to all these forums and mailing lists.
 `Commits Archive (llvm-commits)`__
   This list contains all commit messages that are made when LLVM developers
   commit code changes to the repository. It also serves as a forum for
-  patch review (i.e. send patches here). It is useful for those who want to
+  patch review (i.e., send patches here). It is useful for those who want to
   stay on the bleeding edge of LLVM development. This list is very high
   volume.
 
@@ -121,7 +121,7 @@ The :doc:`CodeOfConduct` applies to all these forums and mailing lists.
   .. __: http://lists.llvm.org/pipermail/llvm-bugs/
 
 `LLVM Announcements`__
-  If you just want project wide announcements such as releases, developers meetings, or blog posts, then you should check out the Announcement category on LLVM Discourse.
+  If you just want project-wide announcements such as releases, developers meetings, or blog posts, then you should check out the Announcement category on LLVM Discourse.
 
   .. __: https://discourse.llvm.org/c/announce/46
 
@@ -473,7 +473,7 @@ join one in your city. Or start a new one if there is none:
 Community wide proposals
 ------------------------
 
-Proposals for massive changes in how the community behaves and how the work flow
+Proposals for large-scale changes in how the community behaves and how the work flow
 can be better.
 
 .. toctree::
@@ -518,7 +518,7 @@ also be seen inline below:
 Note that the web view of the LLVM community calendar shows events in
 Coordinated Universal Time (UTC). If you use Google Calendar, consider
 subscribing to it with the + button in the bottom-right corner to view all
-events in your local timezone alongside your other calendars.
+events in your local time zone alongside your other calendars.
 
 .. _llvm-community-calendar-host-guidance:
 
@@ -554,9 +554,9 @@ An example invite looks as follows
   This event is a meetup for all developers of LLDB. Meeting agendas are posted
   on discourse before the event.
 
-  Attendees are required to adhere to the LLVM Code of Conduct
+  Attendees must adhere to the LLVM Code of Conduct
   (https://llvm.org/docs/CodeOfConduct.html). For any Code of Conduct reports,
-  please contact the organizers, and also email conduct@llvm.org.
+  please contact the organizers and also email conduct@llvm.org.
 
   Agenda/Meeting Minutes: Link to minutes
 

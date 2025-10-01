@@ -471,8 +471,7 @@ namespace llvm {
     // VBMI2 Concat & Shift.
     VSHLD,
     VSHRD,
-    VSHLDV,
-    VSHRDV,
+
     // Shuffle Packed Values at 128-bit granularity.
     SHUF128,
     MOVDDUP,

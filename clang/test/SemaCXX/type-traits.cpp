@@ -2038,6 +2038,49 @@ void is_implicit_lifetime(int n) {
   static_assert(__builtin_is_implicit_lifetime(int * __restrict));
 }
 
+namespace GH160610 {
+class NonAggregate {
+public:
+    NonAggregate() = default;
+
+    NonAggregate(const NonAggregate&)            = delete;
+    NonAggregate& operator=(const NonAggregate&) = delete;
+private:
+    int num;
+};
+
+class DataMemberInitializer {
+public:
+    DataMemberInitializer() = default;
+
+    DataMemberInitializer(const DataMemberInitializer&)            = delete;
+    DataMemberInitializer& operator=(const DataMemberInitializer&) = delete;
+private:
+    int num = 0;
+};
+
+class UserProvidedConstructor {
+public:
+    UserProvidedConstructor() {}
+
+    UserProvidedConstructor(const UserProvidedConstructor&)            = delete;
+    UserProvidedConstructor& operator=(const UserProvidedConstructor&) = delete;
+};
+
+static_assert(__builtin_is_implicit_lifetime(NonAggregate));
+static_assert(!__builtin_is_implicit_lifetime(DataMemberInitializer));
+static_assert(!__builtin_is_implicit_lifetime(UserProvidedConstructor));
+
+#if __cplusplus >= 202002L
+template <typename T>
+class Tpl {
+    Tpl() requires false = default ;
+};
+static_assert(!__builtin_is_implicit_lifetime(Tpl<int>));
+
+#endif
+}
+
 void is_signed()
 {
   //static_assert(__is_signed(char));

@@ -303,6 +303,16 @@ public:
   bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                          CombineLevel Level) const override;
 
+  /// Return true if it is profitable to fold a pair of shifts into a mask.
+  bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override {
+    EVT VT = Y.getValueType();
+
+    if (VT.isVector())
+      return false;
+
+    return VT.getScalarSizeInBits() <= 64;
+  }
+
   bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
                                             unsigned SelectOpcode, SDValue X,
                                             SDValue Y) const override;

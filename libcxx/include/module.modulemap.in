@@ -1225,6 +1225,7 @@ module std [system] {
     header "deque"
     export *
     export std.iterator.reverse_iterator
+    export std.algorithm.simd_utils // This is a workaround for https://llvm.org/PR120108.
   }
 
   module exception {
@@ -2238,6 +2239,7 @@ module std [system] {
     header "vector"
     export std.iterator.reverse_iterator
     export *
+    export std.algorithm.simd_utils // This is a workaround for https://llvm.org/PR120108.
   }
 
   // Experimental C++ Standard Library interfaces

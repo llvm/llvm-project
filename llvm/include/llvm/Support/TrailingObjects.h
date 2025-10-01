@@ -284,11 +284,8 @@ public:
   /// (which must be one of those specified in the class template). The
   /// array may have zero or more elements in it.
   template <typename T> T *getTrailingObjects() {
-    verifyTrailingObjectsAssertions<true>();
-    // Forwards to an impl function with overloads, since member
-    // function templates can't be specialized.
-    return this->getTrailingObjectsImpl(
-        static_cast<BaseTy *>(this), TrailingObjectsBase::OverloadToken<T>());
+    return const_cast<T *>(
+        static_cast<const TrailingObjects *>(this)->getTrailingObjects<T>());
   }
 
   // getTrailingObjects() specialization for a single trailing type.
@@ -306,13 +303,8 @@ public:
   }
 
   FirstTrailingType *getTrailingObjects() {
-    static_assert(sizeof...(TrailingTys) == 1,
-                  "Can use non-templated getTrailingObjects() only when there "
-                  "is a single trailing type");
-    verifyTrailingObjectsAssertions<false>();
-    return this->getTrailingObjectsImpl(
-        static_cast<BaseTy *>(this),
-        TrailingObjectsBase::OverloadToken<FirstTrailingType>());
+    return const_cast<FirstTrailingType *>(
+        static_cast<const TrailingObjects *>(this)->getTrailingObjects());
   }
 
   // Functions that return the trailing objects as ArrayRefs.
@@ -342,9 +334,8 @@ public:
   }
 
   template <typename T> T *getTrailingObjectsNonStrict() {
-    verifyTrailingObjectsAssertions<false>();
-    return this->getTrailingObjectsImpl(
-        static_cast<BaseTy *>(this), TrailingObjectsBase::OverloadToken<T>());
+    return const_cast<T *>(static_cast<const TrailingObjects *>(this)
+                               ->getTrailingObjectsNonStrict<T>());
   }
 
   template <typename T>

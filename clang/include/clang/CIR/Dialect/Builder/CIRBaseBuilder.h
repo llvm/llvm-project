@@ -243,6 +243,13 @@ public:
     return cir::AllocaOp::create(*this, loc, addrType, type, name, alignment);
   }
 
+  mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
+                           mlir::Type type, llvm::StringRef name,
+                           clang::CharUnits alignment) {
+    mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
+    return createAlloca(loc, addrType, type, name, alignmentAttr);
+  }
+
   /// Get constant address of a global variable as an MLIR attribute.
   /// This wrapper infers the attribute type through the global op.
   cir::GlobalViewAttr getGlobalViewAttr(cir::GlobalOp globalOp,

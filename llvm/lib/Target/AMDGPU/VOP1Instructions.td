@@ -1561,8 +1561,7 @@ def : GCNPat <
 
 } // End OtherPredicates = [isGFX8Plus]
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let OtherPredicates = [isGFX8Plus, p] in {
+let OtherPredicates = [isGFX8Plus, NotUseRealTrue16Insts] in {
 def : GCNPat<
   (i32 (anyext i16:$src)),
   (COPY $src)

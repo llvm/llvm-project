@@ -985,18 +985,21 @@ double test_mm256_cvtsd_f64(__m256d __a) {
   // CHECK: extractelement <4 x double> %{{.*}}, i32 0
   return _mm256_cvtsd_f64(__a);
 }
+TEST_CONSTEXPR(_mm256_cvtsd_f64((__m256d){8.0, 7.0, 6.0, 5.0}) == 8.0);
 
 int test_mm256_cvtsi256_si32(__m256i __a) {
   // CHECK-LABEL: test_mm256_cvtsi256_si32
   // CHECK: extractelement <8 x i32> %{{.*}}, i32 0
   return _mm256_cvtsi256_si32(__a);
 }
+TEST_CONSTEXPR(_mm256_cvtsi256_si32((__m256i)(__v8si){8, 7, 6, 5, 4, 3, 2, 1}) == 8);
 
 float test_mm256_cvtss_f32(__m256 __a) {
   // CHECK-LABEL: test_mm256_cvtss_f32
   // CHECK: extractelement <8 x float> %{{.*}}, i32 0
   return _mm256_cvtss_f32(__a);
 }
+TEST_CONSTEXPR(_mm256_cvtss_f32((__m256){8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f}) == 8.0f);
 
 __m128i test_mm256_cvttpd_epi32(__m256d A) {
   // CHECK-LABEL: test_mm256_cvttpd_epi32

@@ -62,15 +62,12 @@ define <4 x i32> @combine_blend_of_permutes_v4i32(<2 x i64> %a0, <2 x i64> %a1) 
 define <4 x float> @freeze_insertps(<4 x float> %a0, <4 x float> %a1) {
 ; SSE-LABEL: freeze_insertps:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; SSE-NEXT:    insertps {{.*#+}} xmm1 = xmm0[1],xmm1[1,2,3]
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: freeze_insertps:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[1],xmm1[1,2,3]
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %s0 = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 16)
   %f0 = freeze <4 x float> %s0

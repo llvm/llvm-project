@@ -969,10 +969,9 @@ multiclass DSReadPat_t16<DS_Pseudo inst, ValueType vt, string frag> {
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
-    foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-      let True16Predicate = p in {
-        def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
-      }
+    let True16Predicate = NotUseRealTrue16Insts in {
+      def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+    }
     let True16Predicate = UseRealTrue16Insts in {
       def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
     }
@@ -1050,10 +1049,9 @@ multiclass DSWritePat_t16 <DS_Pseudo inst, ValueType vt, string frag> {
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
-    foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-      let True16Predicate = p in {
-        def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
-      }
+    let True16Predicate = NotUseRealTrue16Insts in {
+      def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+    }
     let True16Predicate = UseRealTrue16Insts in {
       def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
     }

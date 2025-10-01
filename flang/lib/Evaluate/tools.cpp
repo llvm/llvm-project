@@ -1950,6 +1950,33 @@ bool IsVarSubexpressionOf(
   return VariableFinder{sub}(super);
 }
 
+std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &scope) {
+  if (scope.IsDerivedType()) {
+    for (auto iter{scope.cbegin()}; iter != scope.cend(); ++iter) {
+      const Symbol &symbol{*iter->second};
+      if (symbol.test(Symbol::Flag::ParentComp)) {
+        if (const semantics::DeclTypeSpec *type{symbol.GetType()}) {
+          if (const semantics::DerivedTypeSpec *derived{type->AsDerived()}) {
+            const semantics::Scope *parent{derived->scope()};
+            if (!parent) {
+              parent = derived->typeSymbol().scope();
+            }
+            if (parent) {
+              if (auto parentDepth{CountDerivedTypeAncestors(*parent)}) {
+                return 1 + *parentDepth;
+              }
+            }
+          }
+        }
+        return std::nullopt; // error recovery
+      }
+    }
+    return 0;
+  } else {
+    return std::nullopt; // error recovery
+  }
+}
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
