@@ -5971,6 +5971,12 @@ addr_t Process::FixAnyAddress(addr_t addr) {
   return addr;
 }
 
+addr_t Process::FixAnyAddressPreservingAuthentication(addr_t addr) {
+  if (ABISP abi_sp = GetABI())
+    addr = abi_sp->FixAnyAddressPreservingAuthentication(addr);
+  return addr;
+}
+
 void Process::DidExec() {
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "Process::%s()", __FUNCTION__);
