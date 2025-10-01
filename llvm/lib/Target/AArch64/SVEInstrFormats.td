@@ -3748,18 +3748,18 @@ multiclass sve2_int_mla_long_by_indexed_elem<bits<4> opc, string asm,
 // SVE Integer Dot Product Group
 //===----------------------------------------------------------------------===//
 
-class sve_intx_dot<bit sz, bit U, string asm, ZPRRegOp zprty1,
-                   ZPRRegOp zprty2>
+class sve_intx_dot<bits<2> sz, bits<5> op5, bit U, string asm,
+                   ZPRRegOp zprty1, ZPRRegOp zprty2>
 : I<(outs zprty1:$Zda), (ins zprty1:$_Zda, zprty2:$Zn, zprty2:$Zm), asm,
   "\t$Zda, $Zn, $Zm", "", []>, Sched<[]> {
   bits<5> Zda;
   bits<5> Zn;
   bits<5> Zm;
-  let Inst{31-23} = 0b010001001;
-  let Inst{22}    = sz;
+  let Inst{31-24} = 0b01000100;
+  let Inst{23-22} = sz;
   let Inst{21}    = 0;
   let Inst{20-16} = Zm;
-  let Inst{15-11} = 0;
+  let Inst{15-11} = op5;
   let Inst{10}    = U;
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zda;
@@ -3770,11 +3770,17 @@ class sve_intx_dot<bit sz, bit U, string asm, ZPRRegOp zprty1,
 }
 
 multiclass sve_intx_dot<bit opc, string asm, SDPatternOperator op> {
-  def _BtoS : sve_intx_dot<0b0, opc, asm, ZPR32, ZPR8>;
-  def _HtoD : sve_intx_dot<0b1, opc, asm, ZPR64, ZPR16>;
+  def _BtoS : sve_intx_dot<0b10, 0b00000, opc, asm, ZPR32, ZPR8>;
+  def _HtoD : sve_intx_dot<0b11, 0b00000, opc, asm, ZPR64, ZPR16>;
 
   def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32,  nxv16i8, nxv16i8, !cast<Instruction>(NAME # _BtoS)>;
   def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64,  nxv8i16, nxv8i16, !cast<Instruction>(NAME # _HtoD)>;
+}
+
+multiclass sve2p1_two_way_dot_vv<string mnemonic, bit u, SDPatternOperator intrinsic> {
+  def NAME : sve_intx_dot<0b00, 0b11001, u, mnemonic, ZPR32, ZPR16>;
+
+  def : SVE_3_Op_Pat<nxv4i32, intrinsic, nxv4i32, nxv8i16, nxv8i16, !cast<Instruction>(NAME)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -9891,32 +9897,6 @@ multiclass sve_fp_clamp_bfloat<string asm, SDPatternOperator op> {
   def NAME : sve_fp_clamp<asm, 0b00, ZPR16>;
 
   def : SVE_3_Op_Pat<nxv8bf16, op, nxv8bf16, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME)>;
-}
-
-// SVE two-way dot product
-class sve2p1_two_way_dot_vv<string mnemonic, bit u>
-    : I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR16:$Zm),
-        mnemonic, "\t$Zda, $Zn, $Zm",
-        "", []>, Sched<[]> {
-  bits<5> Zda;
-  bits<5> Zn;
-  bits<5> Zm;
-  let Inst{31-21} = 0b01000100000;
-  let Inst{20-16} = Zm;
-  let Inst{15-11} = 0b11001;
-  let Inst{10}    = u;
-  let Inst{9-5}   = Zn;
-  let Inst{4-0}   = Zda;
-
-  let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = DestructiveOther;
-  let hasSideEffects = 0;
-}
-
-multiclass sve2p1_two_way_dot_vv<string mnemonic, bit u, SDPatternOperator intrinsic> {
-  def NAME : sve2p1_two_way_dot_vv<mnemonic, u>;
-
-  def : SVE_3_Op_Pat<nxv4i32, intrinsic, nxv4i32, nxv8i16, nxv8i16, !cast<Instruction>(NAME)>;
 }
 
 // SVE two-way dot product (indexed)
