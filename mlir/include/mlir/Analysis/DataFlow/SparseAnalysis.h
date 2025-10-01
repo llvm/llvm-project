@@ -431,6 +431,11 @@ protected:
       CallOpInterface call, ArrayRef<AbstractSparseLattice *> operandLattices,
       ArrayRef<const AbstractSparseLattice *> resultLattices) = 0;
 
+  /// The transfer function for call operations.
+  virtual LogicalResult visitCallOperationImpl(
+      CallOpInterface call, ArrayRef<AbstractSparseLattice *> operandLattices,
+      ArrayRef<const AbstractSparseLattice *> resultLattices) = 0;
+
   // Visit operands on branch instructions that are not forwarded.
   virtual void visitBranchOperand(OpOperand &operand) = 0;
 
@@ -500,6 +505,7 @@ private:
   SmallVector<const AbstractSparseLattice *>
   getLatticeElementsFor(ProgramPoint *point, ValueRange values);
 
+protected:
   SymbolTableCollection &symbolTable;
 };
 
@@ -528,6 +534,13 @@ public:
   virtual LogicalResult visitOperation(Operation *op,
                                        ArrayRef<StateT *> operands,
                                        ArrayRef<const StateT *> results) = 0;
+
+  // implementation-specific hook for visitCallOperation.
+  virtual LogicalResult visitCallOperation(CallOpInterface call,
+                                       ArrayRef<StateT *> operands,
+                                       ArrayRef<const StateT *> results) {
+                                        return failure();
+                                       }
 
   /// Visit a call to an external function. This function is expected to set
   /// lattice values of the call operands. By default, calls `visitCallOperand`
@@ -583,6 +596,17 @@ private:
         {reinterpret_cast<const StateT *const *>(resultLattices.begin()),
          resultLattices.size()});
   }
+  LogicalResult visitCallOperationImpl(
+      CallOpInterface call, ArrayRef<AbstractSparseLattice *> operandLattices,
+      ArrayRef<const AbstractSparseLattice *> resultLattices) override {
+    return visitCallOperation(
+        call,
+        {reinterpret_cast<StateT *const *>(operandLattices.begin()),
+         operandLattices.size()},
+        {reinterpret_cast<const StateT *const *>(resultLattices.begin()),
+         resultLattices.size()});
+  }
+
 };
 
 } // end namespace dataflow

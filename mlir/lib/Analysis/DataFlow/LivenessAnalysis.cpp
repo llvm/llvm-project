@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include <cassert>
 #include <mlir/Analysis/DataFlow/LivenessAnalysis.h>
 
@@ -113,6 +114,27 @@ LivenessAnalysis::visitOperation(Operation *op, ArrayRef<Liveness *> operands,
     addDependency(const_cast<Liveness *>(r), getProgramPointAfter(op));
   }
   return success();
+}
+
+LogicalResult
+LivenessAnalysis::visitCallOperation(CallOpInterface call, ArrayRef<Liveness *> operands,
+                                 ArrayRef<const Liveness *> results) {
+  LDBG() << "[visitCallOperation] inspecting " <<  call;
+  // For thread-safety, check config first before accessing symbolTable.
+  if (!getSolverConfig().isInterprocedural()) {
+      visitExternalCall(call, operands, results);
+      return success();
+  }
+  Operation *callableOp = call.resolveCallableInTable(&symbolTable);
+  if (auto funcOp = dyn_cast<FunctionOpInterface>(callableOp)) {
+    if (funcOp.isPublic()) {
+      LDBG() << "[visitCallOperation] encounter a public function " <<  funcOp
+             << " Treat it as external.";
+      visitExternalCall(call, operands, results);
+      return success();
+    }
+  }
+  return failure();
 }
 
 void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
