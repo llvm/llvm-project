@@ -554,7 +554,7 @@ Error OnDiskOutputFile::keep() {
 }
 
 Error OnDiskOutputFile::discard() {
-  auto BypassSandbox = sys::sandbox_scoped_disable();
+  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   // Destroy the streams to flush them.
   if (auto E = reset())
@@ -585,7 +585,7 @@ Error OnDiskOutputBackend::makeAbsolute(SmallVectorImpl<char> &Path) const {
 Expected<std::unique_ptr<OutputFileImpl>>
 OnDiskOutputBackend::createFileImpl(StringRef Path,
                                     std::optional<OutputConfig> Config) {
-  auto BypassSandbox = sys::sandbox_scoped_disable();
+  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   SmallString<256> AbsPath;
   if (Path != "-") {

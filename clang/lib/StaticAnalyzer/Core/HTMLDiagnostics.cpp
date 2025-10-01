@@ -259,7 +259,7 @@ void HTMLDiagnostics::FlushDiagnosticsImpl(
 void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
                                  FilesMade *filesMade) {
   // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
-  auto SandboxBypass = llvm::sys::sandbox_scoped_disable();
+  auto SandboxBypass = llvm::sys::sandbox::scopedDisable();
 
   // Create the HTML directory if it is missing.
   if (!createdDir) {

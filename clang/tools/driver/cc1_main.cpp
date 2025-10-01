@@ -274,7 +274,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   /// Create the actual file system.
   auto VFS = [] {
-    auto BypassSandbox = llvm::sys::sandbox_scoped_disable();
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
     return llvm::vfs::getRealFileSystem();
   }();
   Clang->createVirtualFileSystem(std::move(VFS), DiagsBuffer);
@@ -309,7 +309,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // results now.  This happens in -disable-free mode.
   {
     // This isn't a formal input or output of the compiler.
-    auto BypassSandbox = llvm::sys::sandbox_scoped_disable();
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
     std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
     if (Clang->getCodeGenOpts().TimePassesJson) {
       *IOFile << "{\n";

@@ -1872,7 +1872,7 @@ bool Driver::getCrashDiagnosticFile(StringRef ReproCrashFilename,
   assert(llvm::Triple(llvm::sys::getProcessTriple()).isOSDarwin() &&
          "Only knows about .crash files on Darwin");
   // This is not a formal output of the compiler, let's bypass the sandbox.
-  auto BypassSandbox = sandbox_scoped_disable();
+  auto BypassSandbox = sandbox::scopedDisable();
 
   // The .crash file can be found on at ~/Library/Logs/DiagnosticReports/
   // (or /Library/Logs/DiagnosticReports for root) and has the filename pattern
