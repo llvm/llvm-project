@@ -95,7 +95,7 @@ llvm::LogicalResult mif::CoMaxOp::verify() {
     elemTy = seqTy.getElementType();
 
   if (!fir::isa_real(elemTy) && !fir::isa_integer(elemTy) &&
-      !fir::isa_complex(elemTy) && !fir::isa_char(elemTy))
+      !fir::isa_char(elemTy))
     return emitOpError("`A` shall be of type integer, real or character.");
   return mlir::success();
 }
