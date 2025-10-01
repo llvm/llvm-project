@@ -209,9 +209,10 @@ def CIR_CastOp : CIR_Op<"cast", [
     Example:
 
     ```mlir
-    %4 = cir.cast(int_to_bool, %3 : i32), !cir.bool
+    %4 = cir.cast int_to_bool %3 : i32 -> !cir.bool
     ...
-    %x = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
+    %x = cir.cast array_to_ptrdecay %0 
+       : !cir.ptr<!cir.array<i32 x 10>> -> !cir.ptr<i32>
     ```
   }];
 
@@ -219,8 +220,7 @@ def CIR_CastOp : CIR_Op<"cast", [
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
-    `(` $kind `,` $src `:` type($src) `)`
-    `,` type($result) attr-dict
+    $kind $src `:` type($src) `->` type($result) attr-dict
   }];
 
   // The input and output types should match the cast kind.
@@ -683,8 +683,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "IfOp", "ScopeOp",
-  "SwitchOp", "TernaryOp", "WhileOp"
+  "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "GlobalOp", "IfOp",
+  "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -1176,7 +1176,7 @@ def CIR_GotoOp : CIR_Op<"goto", [Terminator]> {
   ```mlir
     cir.scope {  // REGION #1
       %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-      %3 = cir.cast(int_to_bool, %2 : !s32i), !cir.bool
+      %3 = cir.cast int_to_bool %2 : !s32i -> !cir.bool
       cir.if %3 {
         cir.goto "label"
       }
@@ -1776,7 +1776,9 @@ def CIR_GlobalLinkageKind : CIR_I32EnumAttr<
 // is upstreamed.
 
 def CIR_GlobalOp : CIR_Op<"global", [
-  DeclareOpInterfaceMethods<CIRGlobalValueInterface>
+  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
+  NoRegionArguments
 ]> {
   let summary = "Declare or define a global variable";
   let description = [{
@@ -1807,6 +1809,9 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        UnitAttr:$dso_local,
                        OptionalAttr<I64Attr>:$alignment);
 
+  let regions = (region MaxSizedRegion<1>:$ctorRegion,
+                        MaxSizedRegion<1>:$dtorRegion);
+
   let assemblyFormat = [{
     ($sym_visibility^)?
     (`` $global_visibility^)?
@@ -1815,24 +1820,34 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`comdat` $comdat^)?
     (`dso_local` $dso_local^)?
     $sym_name
-    custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
+    custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
+                                        $ctorRegion, $dtorRegion)
     attr-dict
   }];
 
   let extraClassDeclaration = [{
-    bool isDeclaration() { return !getInitialValue(); }
+    bool isDeclaration() {
+      return !getInitialValue() && getCtorRegion().empty() && getDtorRegion().empty();
+    }
     bool hasInitializer() { return !isDeclaration(); }
   }];
 
   let skipDefaultBuilders = 1;
 
-  let builders = [OpBuilder<(ins
-    "llvm::StringRef":$sym_name,
-    "mlir::Type":$sym_type,
-    CArg<"bool", "false">:$isConstant,
-    // CIR defaults to external linkage.
-    CArg<"cir::GlobalLinkageKind",
-    "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)>];
+  let builders = [
+    OpBuilder<(ins
+      "llvm::StringRef":$sym_name,
+      "mlir::Type":$sym_type,
+      CArg<"bool", "false">:$isConstant,
+      // CIR defaults to external linkage.
+      CArg<"cir::GlobalLinkageKind",
+           "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
+      CArg<"llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>",
+           "nullptr">:$ctorBuilder,
+      CArg<"llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>",
+           "nullptr">:$dtorBuilder)
+    >
+  ];
 
   let hasVerifier = 1;
 
@@ -3979,9 +3994,9 @@ def CIR_VAStartOp : CIR_Op<"va_start"> {
 
     ```mlir
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
-    %p = cir.cast(array_to_ptrdecay, %args
-          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
-        !cir.ptr<!rec___va_list_tag>
+    %p = cir.cast array_to_ptrdecay %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>)
+          -> !cir.ptr<!rec___va_list_tag>
     %count = cir.load %0 : !cir.ptr<!s32i>, !s32i
     cir.va_start %p %count : !cir.ptr<!rec___va_list_tag>, !s32i
     ```
@@ -4018,9 +4033,9 @@ def CIR_VAEndOp : CIR_Op<"va_end"> {
     Example:
     ```mlir
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
-    %p = cir.cast(array_to_ptrdecay, %args
-          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
-        !cir.ptr<!rec___va_list_tag>
+    %p = cir.cast array_to_ptrdecay %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+          -> !cir.ptr<!rec___va_list_tag>
     cir.va_end %p : !cir.ptr<!rec___va_list_tag>
     ```
   }];
@@ -4053,9 +4068,9 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
     Example:
     ```mlir
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
-    %p = cir.cast(array_to_ptrdecay, %args
-            : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
-          !cir.ptr<!rec___va_list_tag>
+    %p = cir.cast array_to_ptrdecay %args
+            : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+            -> !cir.ptr<!rec___va_list_tag>
     cir.va.start %p : !cir.ptr<!rec___va_list_tag>
 
     // Fetch an `int` from the vararg list.
