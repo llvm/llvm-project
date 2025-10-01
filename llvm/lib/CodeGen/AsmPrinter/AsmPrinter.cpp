@@ -1863,8 +1863,7 @@ void AsmPrinter::handleCallsiteForCallgraph(
     FunctionCallGraphInfo &FuncCGInfo,
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
-  assert(MI.isCall() &&
-         "Callsite labels are meant for call instructions only.");
+  assert(MI.isCall() && "This method is meant for call instructions only.");
   const MachineOperand &CalleeOperand = MI.getOperand(0);
   if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
     // Handle direct calls.
@@ -1890,7 +1889,6 @@ void AsmPrinter::handleCallsiteForCallgraph(
   // Only indirect calls have type identifiers set.
   for (ConstantInt *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
     uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
-    // FuncCGInfo.IndirectCallsites.emplace_back(CalleeTypeIdVal, S);
     FuncCGInfo.IndirectCalleeTypeIDs.insert(CalleeTypeIdVal);
   }
 }
