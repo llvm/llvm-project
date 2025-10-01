@@ -5804,7 +5804,7 @@ Instruction *InstCombinerImpl::foldICmpWithClamp(ICmpInst &I, Value *X,
       return nullptr;
   }
 
-  ConstantRange CR(*Lo, *Hi + 1);
+  ConstantRange CR = ConstantRange::getNonEmpty(*Lo, *Hi + 1);
   ICmpInst::Predicate Pred;
   APInt C, Offset;
   if (I.getPredicate() == ICmpInst::ICMP_EQ)
