@@ -44,7 +44,7 @@ let Predicates = [HasStdExtZvfbfminOrZvfofp8min] in {
 let mayRaiseFPException = true, Predicates = [HasStdExtZvfbfwma] in
   defm PseudoVFWMACCBF16 : VPseudoVWMAC_VV_VF_BF_RM;
 
-defset list<VTypeInfoToWide> AllWidenableIntToBFloatVectors = {
+defset list<VTypeInfoToWide> AllWidenableIntToBF16Vectors = {
   def : VTypeInfoToWide<VI8MF8, VBF16MF4>;
   def : VTypeInfoToWide<VI8MF4, VBF16MF2>;
   def : VTypeInfoToWide<VI8MF2, VBF16M1>;
@@ -364,10 +364,9 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
     Sched<[WriteVMovFS, ReadVMovFS]>;
   let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F, isReMaterializable = 1,
       Constraints = "$rd = $passthru" in
-  def "PseudoVFMV_S_" # f.FX # "_ALT":
+  def "PseudoVFMV_S_" # f.FX # "_ALT" :
     RISCVVPseudo<(outs VR:$rd),
-           (ins VR:$passthru, f.fprclass:$rs1, AVL:$vl, sew:$sew),
-           []>,
+                 (ins VR:$passthru, f.fprclass:$rs1, AVL:$vl, sew:$sew)>,
     Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>;
 }
 
@@ -566,7 +565,7 @@ multiclass VPatConversionVI_VF_BF16<string intrinsic, string instruction> {
 
 multiclass VPatConversionWF_VI_BF16<string intrinsic, string instruction,
                                     bit isSEWAware = 0> {
-  foreach vtiToWti = AllWidenableIntToBFloatVectors in {
+  foreach vtiToWti = AllWidenableIntToBF16Vectors in {
     defvar vti = vtiToWti.Vti;
     defvar fwti = vtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
@@ -591,7 +590,7 @@ multiclass VPatConversionWF_VF_BF16<string intrinsic, string instruction,
 }
 
 multiclass VPatConversionVI_WF_BF16<string intrinsic, string instruction> {
-  foreach vtiToWti = AllWidenableIntToBFloatVectors in {
+  foreach vtiToWti = AllWidenableIntToBF16Vectors in {
     defvar vti = vtiToWti.Vti;
     defvar fwti = vtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
@@ -603,7 +602,7 @@ multiclass VPatConversionVI_WF_BF16<string intrinsic, string instruction> {
 }
 
 multiclass VPatConversionVI_WF_RM_BF16<string intrinsic, string instruction> {
-  foreach vtiToWti = AllWidenableIntToBFloatVectors in {
+  foreach vtiToWti = AllWidenableIntToBF16Vectors in {
     defvar vti = vtiToWti.Vti;
     defvar fwti = vtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,

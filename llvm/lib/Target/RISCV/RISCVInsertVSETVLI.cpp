@@ -164,7 +164,7 @@ struct DemandedFields {
   // If this is true, we demand that VTYPE is set to some legal state, i.e. that
   // vill is unset.
   bool VILL = false;
-  bool UseAltFmt = false;
+  bool AltFmt = false;
 
   // Return true if any part of VTYPE was used
   bool usedVTYPE() const {
@@ -184,7 +184,7 @@ struct DemandedFields {
     TailPolicy = true;
     MaskPolicy = true;
     VILL = true;
-    UseAltFmt = true;
+    AltFmt = true;
   }
 
   // Mark all VL properties as demanded
@@ -210,7 +210,7 @@ struct DemandedFields {
     TailPolicy |= B.TailPolicy;
     MaskPolicy |= B.MaskPolicy;
     VILL |= B.VILL;
-    UseAltFmt |= B.UseAltFmt;
+    AltFmt |= B.AltFmt;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -327,7 +327,7 @@ static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
   if (Used.MaskPolicy && RISCVVType::isMaskAgnostic(CurVType) !=
                              RISCVVType::isMaskAgnostic(NewVType))
     return false;
-  if (Used.UseAltFmt == true &&
+  if (Used.AltFmt == true &&
       RISCVVType::isAltFmt(CurVType) != RISCVVType::isAltFmt(NewVType))
     return false;
   return true;
@@ -481,8 +481,8 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     Res.TailPolicy = false;
   }
 
-  Res.UseAltFmt = RISCVII::getAltFmtType(MI.getDesc().TSFlags) !=
-                  RISCVII::AltFmtType::DontCare;
+  Res.AltFmt = RISCVII::getAltFmtType(MI.getDesc().TSFlags) !=
+               RISCVII::AltFmtType::DontCare;
 
   return Res;
 }
@@ -1254,7 +1254,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
           IncomingInfo.getTailAgnostic(),
       (Demanded.MaskPolicy ? IncomingInfo : Info).getMaskAgnostic() ||
           IncomingInfo.getMaskAgnostic(),
-      Demanded.UseAltFmt ? IncomingInfo.getAltFmt() : 0);
+      Demanded.AltFmt ? IncomingInfo.getAltFmt() : 0);
 
   // If we only knew the sew/lmul ratio previously, replace the VTYPE but keep
   // the AVL.

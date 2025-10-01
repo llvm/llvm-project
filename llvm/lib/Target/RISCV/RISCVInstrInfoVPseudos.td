@@ -368,7 +368,7 @@ defset list<VTypeInfo> AllVectors = {
         def VF16M4: GroupVTypeInfo<vfloat16m4_t, vfloat16m1_t, vbool4_t, 16,
                                    V_M4, f16, FPR16>;
         def VF16M8: GroupVTypeInfo<vfloat16m8_t, vfloat16m1_t, vbool2_t, 16,
-                                       V_M8, f16, FPR16>;
+                                   V_M8, f16, FPR16>;
 
         def VF32M2: GroupVTypeInfo<vfloat32m2_t, vfloat32m1_t, vbool16_t, 32,
                                    V_M2, f32, FPR32>;
