@@ -43,6 +43,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
@@ -56,6 +57,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -172,6 +174,7 @@ using RewriteableMemOps = SmallVector<RewriteableMemOp, 2>;
 class SROA {
   LLVMContext *const C;
   DomTreeUpdater *const DTU;
+  TargetTransformInfo *const TTI;
   AssumptionCache *const AC;
   const bool PreserveCFG;
   const bool DecomposeStructs;
@@ -236,9 +239,9 @@ class SROA {
   isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG);
 
 public:
-  SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
-       const SROAOptions &Options)
-      : C(C), DTU(DTU), AC(AC),
+  SROA(LLVMContext *C, DomTreeUpdater *DTU, TargetTransformInfo *TTI,
+       AssumptionCache *AC, const SROAOptions &Options)
+      : C(C), DTU(DTU), TTI(TTI), AC(AC),
         PreserveCFG(Options.PCFGOption == SROAOptions::PreserveCFG),
         DecomposeStructs(Options.DSOption == SROAOptions::DecomposeStructs) {}
 
@@ -248,6 +251,7 @@ public:
 private:
   friend class AllocaSliceRewriter;
 
+  bool decomposeStructAlloca(AllocaInst &AI);
   bool presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS);
   AllocaInst *rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P);
   bool splitAlloca(AllocaInst &AI, AllocaSlices &AS);
@@ -4513,6 +4517,299 @@ private:
 
 } // end anonymous namespace
 
+/// Returns the pointee type of a given pointer value.
+///
+/// This function inspects the provided `Value *Ptr`, which must be a pointer
+/// type, and attempts to determine the type of the object it points to. It
+/// handles several common LLVM IR constructs:
+///
+/// - `AllocaInst`: Returns the allocated type.
+/// - `GlobalValue`: Returns the value type of the global.
+/// - `GetElementPtrInst`: Returns the result element type.
+/// - `Argument`: If marked with `byval` or `byref`, returns the corresponding
+/// parameter type.
+///
+/// \param Ptr a pointer-typed Value.
+/// \returns the pointee `Type *` if it can be determined, or `nullptr`
+/// otherwise.
+static Type *getPointeeType(Value *Ptr) {
+  assert(Ptr->getType()->isPointerTy());
+  Type *Ty = nullptr;
+  if (AllocaInst *Alloca = dyn_cast<AllocaInst>(Ptr))
+    Ty = Alloca->getAllocatedType();
+  else if (GlobalValue *GV = dyn_cast<GlobalValue>(Ptr))
+    Ty = GV->getValueType();
+  else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+    Ty = GEP->getResultElementType();
+  else if (Argument *Arg = dyn_cast<Argument>(Ptr)) {
+    if (Arg->hasByValAttr())
+      Ty = Arg->getParamByValType();
+    else if (Arg->hasByRefAttr())
+      Ty = Arg->getParamByRefType();
+  }
+  return Ty;
+}
+
+namespace {
+
+/// A visitor that determines whether or not a struct-based alloca can be
+/// decomposed into separate allocas for each of its individual members.
+///
+/// The analysis walks through the uses of the alloca, validating each
+/// instruction to ensure it conforms to expected patterns (e.g., constant GEP
+/// indices, correct struct types). If any unsupported or ambiguous access is
+/// encountered, the visitor is aborted.
+///
+/// This visitor provides iteration support over valid accesses to be replaced,
+/// tracks dead users after struct alloca decomposition, and exposes the
+/// first instruction that caused an abort if the visit determines that the
+/// struct alloca can not be decomposed.
+class StructDecompositionAnalysis
+    : public InstVisitor<StructDecompositionAnalysis> {
+public:
+  StructDecompositionAnalysis(AllocaInst &AI) {
+    this->AI = &AI;
+
+    // Ensure the allocated type is a struct or (multi-dimensional) array of
+    // structs.
+    Type *Ty = AI.getAllocatedType();
+    while (isa<ArrayType>(Ty))
+      Ty = Ty->getArrayElementType();
+    StructTy = dyn_cast<StructType>(Ty);
+    if (!StructTy) {
+      AbortedInfo = &AI;
+      return;
+    }
+    const DataLayout &DL = AI.getDataLayout();
+    assert(DL.getTypeAllocSize(StructTy).isFixed() &&
+           "The struct must have a fixed size!");
+    StructSizeInBytes = DL.getTypeAllocSize(StructTy).getFixedValue();
+
+    enqueueUses(AI);
+
+    // Visit all the uses off the worklist until it is empty or we abort.
+    while (!Worklist.empty() && !isAborted()) {
+      Use *U = Worklist.pop_back_val();
+      Instruction *User = cast<Instruction>(U->getUser());
+      visit(User);
+    }
+  }
+
+  /// Support for iterating over the accesses to the struct alloca.
+  /// @{
+  using iterator = SmallVector<Instruction *>::iterator;
+  using range = iterator_range<iterator>;
+
+  iterator begin() { return Accesses.begin(); }
+  iterator end() { return Accesses.end(); }
+
+  using const_iterator = SmallVector<Instruction *>::const_iterator;
+  using const_range = iterator_range<const_iterator>;
+
+  const_iterator begin() const { return Accesses.begin(); }
+  const_iterator end() const { return Accesses.end(); }
+  /// @}
+
+  /// If there are instructions that are not handled by the struct decomposer,
+  /// then abort decomposing the struct.
+  bool isAborted() { return AbortedInfo != nullptr; }
+
+  /// Get the instruction causing the visit to abort.
+  /// \returns a pointer to the instruction causing the abort if one is
+  /// available; otherwise returns null.
+  Instruction *getAbortingInst() const { return AbortedInfo; }
+
+  /// Access the dead users for this alloca after struct decomposition.
+  ArrayRef<Instruction *> getDeadUsers() const { return DeadUsers; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void print(raw_ostream &OS, const_iterator I, StringRef Indent = "  ") const;
+  void print(raw_ostream &OS) const;
+  void dump(const_iterator I) const;
+  void dump() const;
+#endif
+
+private:
+  friend InstVisitor<StructDecompositionAnalysis>;
+
+  SmallVector<Instruction *> Accesses;
+
+  /// The AllocaInst being visited, its size, and its corresponding StructType.
+  AllocaInst *AI;
+  uint64_t StructSizeInBytes;
+  StructType *StructTy;
+
+  /// The worklist of to-visit uses.
+  SmallVector<Use *, 8> Worklist;
+
+  /// If the struct is invalid to be decomposed, this analysis will be aborted.
+  Instruction *AbortedInfo = nullptr;
+
+  /// Users of the Alloca which will be considered dead if the Alloca is
+  /// decomposed
+  SmallVector<Instruction *, 8> DeadUsers;
+
+  /// A set of visited uses to break cycles in unreachable code.
+  SmallPtrSet<Use *, 8> VisitedUses;
+
+  /// Set to de-duplicate dead instructions found in the use walk.
+  SmallPtrSet<Instruction *, 4> VisitedDeadInsts;
+
+  void enqueueUses(Value &I) {
+    for (Use &U : I.uses())
+      if (VisitedUses.insert(&U).second)
+        Worklist.push_back(&U);
+  }
+
+  void visitGetElementPtrInst(GetElementPtrInst &GEPI) {
+    // The GEPs visited must have a source element type of the struct or a
+    // (multi-dimensional) array of structs. Otherwise the intended access chain
+    // for the struct can be ambiguous.
+    unsigned StructMemberOperandIdx = 2;
+    Type *Ty = GEPI.getSourceElementType();
+    while (Ty->isArrayTy()) {
+      Ty = Ty->getArrayElementType();
+      StructMemberOperandIdx++;
+    }
+    if (Ty != StructTy) {
+      AbortedInfo = &GEPI;
+      return;
+    }
+
+    // If this GEP does not have the struct member index, then visit its uses.
+    if (GEPI.getNumOperands() < StructMemberOperandIdx + 1) {
+      markAsDead(GEPI);
+      enqueueUses(GEPI);
+      return;
+    }
+
+    // Ensure the struct member index is constant.
+    Value *StructMemberIdx = GEPI.getOperand(StructMemberOperandIdx);
+    if (!isa<ConstantInt>(StructMemberIdx)) {
+      AbortedInfo = &GEPI;
+      return;
+    }
+
+    Accesses.push_back(&GEPI);
+  }
+
+  void visitMemSetInst(MemSetInst &MSI) {
+    // Ensure the number of bytes set is a multiple of the struct size in
+    // bytes.
+    if (!MSI.getLengthInBytes()) {
+      AbortedInfo = &MSI;
+      return;
+    }
+    APInt Length = *MSI.getLengthInBytes();
+    if (Length.getZExtValue() % StructSizeInBytes != 0) {
+      AbortedInfo = &MSI;
+      return;
+    }
+
+    // Ensure we are setting the bytes of the correct type of struct.
+    Value *Dest = MSI.getDest();
+    if (AllocaInst *Alloca = dyn_cast<AllocaInst>(Dest))
+      assert(Alloca == AI &&
+             "It should be impossible to visit the allocas of other structs!");
+    else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Dest)) {
+      [[maybe_unused]] Type *Ty = GEP->getResultElementType();
+      while (Ty->isArrayTy())
+        Ty = Ty->getArrayElementType();
+      assert(Ty == StructTy &&
+             "GEP must have a result element type of the expected struct or a "
+             "(multi-dimensional) array of it!");
+    } else {
+      AbortedInfo = &MSI;
+      return;
+    }
+    Accesses.push_back(&MSI);
+  }
+
+  void visitMemTransferInst(MemTransferInst &MTI) {
+    // Ensure the number of bytes transferred is a multiple of the struct size
+    // in bytes.
+    if (!MTI.getLengthInBytes()) {
+      AbortedInfo = &MTI;
+      return;
+    }
+    APInt Length = *MTI.getLengthInBytes();
+    if (Length.getZExtValue() % StructSizeInBytes != 0) {
+      AbortedInfo = &MTI;
+      return;
+    }
+
+    // Ensure we are transferring the bytes of the correct type of struct.
+    auto IsStructTy = [&](Type *Ty) -> bool {
+      while (Ty->isArrayTy())
+        Ty = Ty->getArrayElementType();
+      return Ty == StructTy;
+    };
+
+    Value *Dest = MTI.getRawDest();
+    Type *DestPtrTy = getPointeeType(Dest);
+    Value *Src = MTI.getRawSource();
+    Type *SrcPtrTy = getPointeeType(Src);
+    if (!DestPtrTy || !SrcPtrTy || DestPtrTy != SrcPtrTy ||
+        !IsStructTy(DestPtrTy)) {
+      AbortedInfo = &MTI;
+      return;
+    }
+
+    Accesses.push_back(&MTI);
+  }
+
+  void visitInstruction(Instruction &I) { AbortedInfo = &I; }
+
+  void visitIntrinsicInst(IntrinsicInst &II) {
+    switch (II.getIntrinsicID()) {
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+      Accesses.push_back(&II);
+      break;
+    default:
+      AbortedInfo = &II;
+    }
+  }
+
+  void markAsDead(Instruction &I) {
+    if (VisitedDeadInsts.insert(&I).second)
+      DeadUsers.push_back(&I);
+  }
+};
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+
+void StructDecompositionAnalysis::print(raw_ostream &OS, const_iterator I,
+                                        StringRef Indent) const {
+  OS << Indent << **I << "\n";
+}
+
+void StructDecompositionAnalysis::print(raw_ostream &OS) const {
+  if (AbortedInfo) {
+    OS << "Can't decompose struct alloca: " << *AI << "\n"
+       << "  An access to this alloca is not supported:\n"
+       << "  " << *AbortedInfo << "\n";
+    return;
+  }
+
+  OS << "Instructions to rewrite for this alloca: " << *AI << "\n";
+  for (const_iterator I = begin(), E = end(); I != E; ++I)
+    print(OS, I);
+}
+
+LLVM_DUMP_METHOD void
+StructDecompositionAnalysis::dump(const_iterator I) const {
+  print(dbgs(), I);
+}
+
+LLVM_DUMP_METHOD void StructDecompositionAnalysis::dump() const {
+  print(dbgs());
+}
+
+#endif // !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+
+} // end anonymous namespace
+
 /// Strip aggregate type wrapping.
 ///
 /// This removes no-op aggregate types wrapping an underlying type. It will
@@ -4662,6 +4959,330 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
     return nullptr; // The sub-struct doesn't have quite the size needed.
 
   return SubTy;
+}
+
+/// Recursively rebuild a multi-dimensional array type, swapping the leaf
+/// element type from `OldLeaf` to `NewLeaf`.  If `ArrTy` is not an
+/// `ArrayType` the function simply returns `ArrTy` unchanged.
+///
+/// - `ArrTy`: The original (possibly multi‑dimensional) array type
+/// - `NewLeaf`: The desired new leaf element type (must be a non‑array type)
+///
+/// /returns the new (multi-dimensional) array type using the new leaf element
+/// type.
+static Type *replaceArrayLeafType(Type *ArrTy, Type *NewLeaf) {
+  if (!ArrTy->isArrayTy())
+    return NewLeaf;
+
+  // Peel off the outermost ArrayType, recurse on its element type, then re‑wrap
+  // the same number of elements.
+  auto *OuterArr = cast<ArrayType>(ArrTy);
+  uint64_t NumElems = OuterArr->getNumElements();
+
+  // Recurse to get the transformed inner type.
+  Type *InnerTransformed =
+      replaceArrayLeafType(OuterArr->getElementType(), NewLeaf);
+
+  return ArrayType::get(InnerTransformed, NumElems);
+}
+
+/// Retrieves or constructs a pointer for a specific member of a decomposed
+/// struct.
+///
+/// This helper recursively constructs a `GetElementPtrInst` (GEP) used to
+/// access a given member (`MemberId`) of a struct pointed to by `Ptr`. It uses
+/// a cache (`PtrMap`) to avoid redundant GEP creation for the same
+/// pointer-member pair and to resolve the base case where `Ptr` is the
+/// original struct alloca instruction.
+///
+/// If `Ptr` is not an alloca instruction, the function assumes that `Ptr` is a
+/// GEP instruction and walks back through the pointer operand chain to build a
+/// new GEP with the updated source element type (`MemberTy`). The resulting GEP
+/// is inserted at the same location as the original `Ptr` and cached in
+/// `PtrMap`.
+///
+/// If `Ptr` is an alloca instruction, the function assumes `PtrMap` contains
+/// the corresponding alloca instruction for the specific member of the
+/// decomposed struct alloca.
+///
+/// \param Builder the IRBuilder used to insert new instructions.
+/// \param Ptr a pointer value expected to be a `GetElementPtrInst` or
+/// `AllocaInst`
+/// \param PtrMap a mapping from (Ptr, MemberId) pairs to previously computed
+/// member pointers.
+/// \param MemberTy the type of the struct member being accessed.
+/// \param MemberId the index of the member within the struct.
+/// \returns a `Value *` pointing to memory for the specified struct member.
+static Value *getPtrForStructMemberAccess(
+    IRBuilder<> &Builder, Value *Ptr,
+    SmallMapVector<std::pair<Value *, uint64_t>, Value *, 8> PtrMap,
+    Type *MemberTy, uint64_t MemberId) {
+
+  if (PtrMap.contains({Ptr, MemberId}))
+    return PtrMap[{Ptr, MemberId}];
+
+  BasicBlock::iterator InsertPoint = Builder.GetInsertPoint();
+
+  assert(isa<GetElementPtrInst>(Ptr) &&
+         "Expected pointer operand to be a GEP!");
+
+  GetElementPtrInst *PtrGEP = cast<GetElementPtrInst>(Ptr);
+  Type *NewSrcElemTy =
+      replaceArrayLeafType(PtrGEP->getSourceElementType(), MemberTy);
+  Value *NewPtr = getPtrForStructMemberAccess(
+      Builder, PtrGEP->getPointerOperand(), PtrMap, MemberTy, MemberId);
+  SmallVector<Value *> Indices(PtrGEP->idx_begin(), PtrGEP->idx_end());
+  std::string Name = PtrGEP->getName().str() + "." + std::to_string(MemberId);
+
+  Builder.SetInsertPoint(PtrGEP->getIterator());
+  Value *NewPtrGEP = Builder.CreateGEP(NewSrcElemTy, NewPtr, Indices, Name,
+                                       PtrGEP->getNoWrapFlags());
+
+  PtrMap.insert({{Ptr, MemberId}, NewPtrGEP});
+
+  Builder.SetInsertPoint(InsertPoint);
+
+  return NewPtrGEP;
+}
+
+/// Attempt to decompose a struct-based alloca into separate member allocas.
+///
+/// If applicable, the function replaces the original struct alloca with
+/// individual allocas for each member of the struct. It then rewrites all
+/// relevant instructions (e.g., `memset`, `memcpy`, `GEP`, lifetime intrinsics)
+/// to operate on the member allocas instead. Unsupported or ambiguous accesses
+/// will cause the decomposition to abort, and no changes to the module will be
+/// made.
+///
+/// \warning This transformation is unsafe in languages that allow dynamic
+/// indexing across struct members (e.g., treating a pointer to one member as a
+/// base for accessing others via computed offsets). Such behavior can violate
+/// the assumptions of this decomposition, which expects each member to be
+/// accessed independently and explicitly.
+///
+/// \param AI the `AllocaInst` representing the struct or (multi-dimensional)
+/// array of structs to decompose.
+/// \returns `true` if the struct alloca was successfully decomposed; `false`
+/// otherwise.
+bool SROA::decomposeStructAlloca(AllocaInst &AI) {
+  // Ensure this is an allocation of a struct or (multi-dimensional) array of
+  // structs.
+  Type *Ty = AI.getAllocatedType();
+  while (Ty->isArrayTy())
+    Ty = Ty->getArrayElementType();
+  if (!Ty->isStructTy())
+    return false;
+  StructType *StructTy = cast<StructType>(Ty);
+
+  const DataLayout &DL = AI.getDataLayout();
+  assert(DL.getTypeAllocSize(StructTy).isFixed() &&
+         "The size of the struct must be fixed!");
+  uint64_t StructSize = DL.getTypeAllocSize(StructTy).getFixedValue();
+
+  // Determine whether or not the (array of) struct(s) can be transformed.
+  LLVM_DEBUG(dbgs() << "Decomposing struct alloca: " << AI << "\n");
+  StructDecompositionAnalysis SDA(AI);
+  LLVM_DEBUG(SDA.print(dbgs()));
+
+  if (SDA.isAborted())
+    return false;
+
+  IRBuilder<> Builder(&AI);
+
+  // A map to keep track of allocas and GEPs created for each struct member.
+  SmallMapVector<std::pair<Value *, uint64_t>, Value *, 8> StructMemberPtrMap;
+
+  // Create allocas for each struct member using the same array dimensions.
+  for (uint64_t I = 0; I < StructTy->getNumElements(); ++I) {
+    std::string Name = AI.getName().str() + "." + std::to_string(I);
+    Type *MemberAllocaType = replaceArrayLeafType(
+        AI.getAllocatedType(), StructTy->getContainedType(I));
+    AllocaInst *MemberAlloca =
+        Builder.CreateAlloca(MemberAllocaType, nullptr, Name);
+    StructMemberPtrMap.insert({{&AI, I}, MemberAlloca});
+  }
+
+  // Update struct accesses to point to the member allocations.
+  for (Instruction *StructAccess : SDA) {
+    Builder.SetInsertPoint(StructAccess);
+
+    if (MemSetInst *MS = dyn_cast<MemSetInst>(StructAccess)) {
+      // A memset over a struct or array of structs will be replaced with M
+      // memsets, where M is the number of struct members.
+
+      Value *Dest = MS->getRawDest();
+      for (unsigned M = 0; M < StructTy->getNumContainedTypes(); ++M) {
+        Type *StructMemberTy = StructTy->getContainedType(M);
+
+        Value *NewDest = getPtrForStructMemberAccess(
+            Builder, Dest, StructMemberPtrMap, StructMemberTy, M);
+
+        assert(DL.getTypeAllocSize(StructMemberTy).isFixed() &&
+               "Struct member types must have a fixed size!");
+        uint64_t StructMemberSize =
+            DL.getTypeAllocSize(StructMemberTy).getFixedValue();
+        assert(MS->getLengthInBytes().has_value() &&
+               "The number of bytes to set must be known!");
+        uint64_t Length = MS->getLengthInBytes()->getZExtValue();
+        Value *NewLength =
+            Builder.getInt64(StructMemberSize * (Length / StructSize));
+
+        Builder.CreateMemSet(NewDest, MS->getValue(), NewLength, std::nullopt,
+                             MS->isVolatile());
+      }
+
+    } else if (MemTransferInst *MT = dyn_cast<MemTransferInst>(StructAccess)) {
+      // A memory transfer instruction to copy a struct or (multi-dimensional)
+      // array of structs from one pointer to another is replaced with N * M
+      // memory transfer instructions, where N is the number of structs and M is
+      // the number of struct members.
+
+      Value *Dest = MT->getRawDest();
+      Value *Src = MT->getRawSource();
+
+      // This function returns true if Ptr points into the memory of the given
+      // alloca instruction Alloca using only GEPs.
+      auto IsPtrIntoAlloca = [](Value *Ptr, AllocaInst *Alloca) -> bool {
+        while (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+          Ptr = GEP->getPointerOperand();
+        return Ptr == Alloca;
+      };
+      bool DestIsFromAlloca = IsPtrIntoAlloca(Dest, &AI);
+      bool SrcIsFromAlloca = IsPtrIntoAlloca(Src, &AI);
+
+      for (unsigned M = 0; M < StructTy->getNumContainedTypes(); ++M) {
+        Type *StructMemberTy = StructTy->getContainedType(M);
+
+        Value *NewDestBasePtr = Dest;
+        if (DestIsFromAlloca)
+          NewDestBasePtr = getPtrForStructMemberAccess(
+              Builder, Dest, StructMemberPtrMap, StructMemberTy, M);
+
+        Value *NewSrcBasePtr = Src;
+        if (SrcIsFromAlloca)
+          NewSrcBasePtr = getPtrForStructMemberAccess(
+              Builder, Src, StructMemberPtrMap, StructMemberTy, M);
+
+        assert(DL.getTypeAllocSize(StructMemberTy).isFixed() &&
+               "Struct member types must have a fixed size!");
+        uint64_t StructMemberSize =
+            DL.getTypeAllocSize(StructMemberTy).getFixedValue();
+        assert(MT->getLengthInBytes().has_value() &&
+               "The number of bytes to transfer must be known!");
+        uint64_t Length = MT->getLengthInBytes()->getZExtValue();
+        uint64_t NumElems = Length / StructSize;
+        Value *NewLength = Builder.getInt64(StructMemberSize * NumElems);
+
+        assert(NumElems <= UINT32_MAX &&
+               "Number of elements to transfer must fit within a 32-bit "
+               "unsigned integer!");
+        for (uint32_t N = 0; N < NumElems; ++N) {
+          auto CreateGEPForIndexN = [&](Value *Ptr,
+                                        bool IsStructAccess) -> Value * {
+            Type *SourceElemTy = StructMemberTy;
+            SmallVector<Value *, 2> Indices = {Builder.getInt32(N)};
+            std::string Name = Ptr->getName().str() + "." + std::to_string(N);
+            if (IsStructAccess) {
+              SourceElemTy = StructTy;
+              Indices.push_back(Builder.getInt32(M));
+              Name += "." + std::to_string(M);
+            }
+            GEPNoWrapFlags NWF = GEPNoWrapFlags::inBounds();
+            if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+              NWF = GEP->getNoWrapFlags();
+            Value *V = Builder.CreateGEP(SourceElemTy, Ptr, Indices, Name, NWF);
+            return V;
+          };
+
+          Value *NewDest =
+              CreateGEPForIndexN(NewDestBasePtr, !DestIsFromAlloca);
+          Value *NewSrc = CreateGEPForIndexN(NewSrcBasePtr, !SrcIsFromAlloca);
+          Builder.CreateMemTransferInst(MT->getIntrinsicID(), NewDest,
+                                        std::nullopt, NewSrc, std::nullopt,
+                                        NewLength, MT->isVolatile());
+        }
+      }
+
+    } else if (GetElementPtrInst *GEP =
+                   dyn_cast<GetElementPtrInst>(StructAccess)) {
+      // Struct- or (multi-dimensional-)array-of-struct-typed GEPs will be
+      // replaced with a similar GEP with its source element type modified to
+      // use the struct member type instead of the struct type. The indices of
+      // the new GEP will have the struct membere index removed from the GEP
+      // indices.
+
+      // Get the iterator to the index specifying the struct member to access.
+      unsigned StructMemberOperandIdx = 2;
+      Type *Ty = GEP->getSourceElementType();
+      while (Ty->isArrayTy()) {
+        Ty = Ty->getArrayElementType();
+        StructMemberOperandIdx++;
+      }
+      GetElementPtrInst::op_iterator StructMemberIdxIter =
+          GEP->idx_begin() + StructMemberOperandIdx - 1;
+      assert(isa<ConstantInt>(*StructMemberIdxIter) &&
+             "Index to struct member must be constant!");
+
+      uint64_t StructMemberId =
+          cast<ConstantInt>(*StructMemberIdxIter)->getZExtValue();
+      Type *StructMemberTy = StructTy->getContainedType(StructMemberId);
+
+      Type *NewSrcElemTy =
+          replaceArrayLeafType(GEP->getSourceElementType(), StructMemberTy);
+      Value *NewPtr = getPtrForStructMemberAccess(
+          Builder, GEP->getPointerOperand(), StructMemberPtrMap, StructMemberTy,
+          StructMemberId);
+
+      SmallVector<Value *> NewIndices(GEP->idx_begin(), StructMemberIdxIter);
+      NewIndices.insert(NewIndices.end(), std::next(StructMemberIdxIter),
+                        GEP->idx_end());
+      std::string NewName =
+          GEP->getName().str() + "." + std::to_string(StructMemberId);
+
+      Value *NewGEP = Builder.CreateGEP(NewSrcElemTy, NewPtr, NewIndices,
+                                        NewName, GEP->getNoWrapFlags());
+      GEP->replaceAllUsesWith(NewGEP);
+
+    } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(StructAccess)) {
+      assert(II->isLifetimeStartOrEnd() &&
+             "Expected intrinsic instruction to be a lifetime start or end!");
+      // Replace lifetime start and end intrinsic instructions with M lifetime
+      // start and end intrinsic instructions, where M is the number of struct
+      // members.
+
+      Value *Ptr = II->getArgOperand(0);
+      assert(Ptr == &AI && "Expected pointer operand of lifetime start or end "
+                           "to be the struct alloca!");
+      for (unsigned M = 0; M < StructTy->getNumContainedTypes(); ++M) {
+        assert(StructMemberPtrMap.contains({Ptr, M}) &&
+               "The struct member pointer map must contain Ptr!");
+        Value *MemberAlloca = StructMemberPtrMap[{Ptr, M}];
+        assert(isa<AllocaInst>(MemberAlloca) &&
+               "The struct member pointer map must contain an alloca "
+               "instruction for this member!");
+        if (II->getIntrinsicID() == Intrinsic::lifetime_start)
+          Builder.CreateLifetimeStart(MemberAlloca);
+        else if (II->getIntrinsicID() == Intrinsic::lifetime_end)
+          Builder.CreateLifetimeEnd(MemberAlloca);
+      }
+    } else
+      llvm_unreachable(
+          "Invalid instruction encountered during struct decomposition!");
+
+    DeadInsts.push_back(StructAccess);
+  }
+
+  ArrayRef<Instruction *> DeadUsers = SDA.getDeadUsers();
+  for (Instruction *I : DeadUsers)
+    DeadInsts.push_back(I);
+  DeadInsts.push_back(&AI);
+
+  // Process the allocas of each struct member alloca in case there are further
+  // SROA or struct decomposition opportunities.
+  for (unsigned I = 0; I < StructTy->getNumElements(); ++I)
+    Worklist.insert(cast<AllocaInst>(StructMemberPtrMap[{&AI, I}]));
+
+  return true;
 }
 
 /// Pre-split loads and stores to simplify rewriting.
@@ -5856,6 +6477,17 @@ SROA::runOnAlloca(AllocaInst &AI) {
       Size.getFixedValue() == 0)
     return {Changed, CFGChanged};
 
+  // Decompose allocas for structs and (multi-dimensional) arrays of structs.
+  if (DecomposeStructs || TTI->shouldDecomposeStructAllocas()) {
+    Type *Ty = AT;
+    while (Ty->isArrayTy())
+      Ty = Ty->getArrayElementType();
+    if (Ty->isStructTy()) {
+      Changed = decomposeStructAlloca(AI);
+      return {Changed, CFGChanged};
+    }
+  }
+
   // First, split any FCA loads and stores touching this alloca to promote
   // better splitting and promotion opportunities.
   IRBuilderTy IRB(&AI);
@@ -6040,9 +6672,10 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
 PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
+  TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   auto [Changed, CFGChanged] =
-      SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
+      SROA(&F.getContext(), &DTU, &TTI, &AC, Options).runSROA(F);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -6083,7 +6716,10 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
+    TargetTransformInfo &TTI =
+        getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+
+    if (skipFunction(F) && !TTI.shouldDecomposeStructAllocas())
       return false;
 
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
@@ -6091,13 +6727,14 @@ public:
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
     auto [Changed, _] =
-        SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
+        SROA(&F.getContext(), &DTU, &TTI, &AC, Options).runSROA(F);
     return Changed;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
   }
