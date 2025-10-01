@@ -106,6 +106,8 @@ public:
 
   lldb::OperatingSystemInterfaceSP CreateOperatingSystemInterface() override;
 
+  lldb::JITLoaderInterfaceSP CreateJITLoaderInterface() override;
+
   StructuredData::ObjectSP
   LoadPluginModule(const FileSpec &file_spec,
                    lldb_private::Status &error) override;
