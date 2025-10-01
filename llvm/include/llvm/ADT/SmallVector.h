@@ -502,25 +502,22 @@ protected:
 
   /// Copy the range [I, E) onto the uninitialized memory
   /// starting with "Dest", constructing elements into it as needed.
-  template<typename It1, typename It2>
+  template <typename It1, typename It2>
   static void uninitialized_copy(It1 I, It1 E, It2 Dest) {
-    // Arbitrary iterator types; just use the basic implementation.
-    std::uninitialized_copy(I, E, Dest);
-  }
-
-  /// Copy the range [I, E) onto the uninitialized memory
-  /// starting with "Dest", constructing elements into it as needed.
-  template <typename T1, typename T2>
-  static void uninitialized_copy(
-      T1 *I, T1 *E, T2 *Dest,
-      std::enable_if_t<std::is_same<std::remove_const_t<T1>, T2>::value> * =
-          nullptr) {
-    // Use memcpy for PODs iterated by pointers (which includes SmallVector
-    // iterators): std::uninitialized_copy optimizes to memmove, but we can
-    // use memcpy here. Note that I and E are iterators and thus might be
-    // invalid for memcpy if they are equal.
-    if (I != E)
-      std::memcpy(reinterpret_cast<void *>(Dest), I, (E - I) * sizeof(T));
+    if constexpr (std::is_pointer_v<It1> && std::is_pointer_v<It2> &&
+                  std::is_same_v<
+                      std::remove_const_t<std::remove_pointer_t<It1>>,
+                      std::remove_pointer_t<It2>>) {
+      // Use memcpy for PODs iterated by pointers (which includes SmallVector
+      // iterators): std::uninitialized_copy optimizes to memmove, but we can
+      // use memcpy here. Note that I and E are iterators and thus might be
+      // invalid for memcpy if they are equal.
+      if (I != E)
+        std::memcpy(reinterpret_cast<void *>(Dest), I, (E - I) * sizeof(T));
+    } else {
+      // Arbitrary iterator types; just use the basic implementation.
+      std::uninitialized_copy(I, E, Dest);
+    }
   }
 
   /// Double the size of the allocated memory, guaranteeing space for at
