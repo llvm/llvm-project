@@ -40,7 +40,7 @@ bool Mangled::IsMangledName(llvm::StringRef name) {
   return Mangled::GetManglingScheme(name) != Mangled::eManglingSchemeNone;
 }
 
-Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
+Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef name) {
   if (name.empty())
     return Mangled::eManglingSchemeNone;
 
