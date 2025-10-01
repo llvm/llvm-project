@@ -52,6 +52,7 @@
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoExprs.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
@@ -234,6 +235,8 @@ class SROA {
   static std::optional<RewriteableMemOps>
   isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG);
 
+  DIExprBuf DIBuf;
+
 public:
   SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
        SROAOptions PreserveCFG_)
@@ -403,19 +406,20 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
           // relative fragment too?
           NewFragment.OffsetInBits -= CurrentFragment->OffsetInBits;
         }
+        DIExprBuf Buf(Expr);
         // Add the new fragment info to the existing expression if possible.
-        if (auto E = DIExpression::createFragmentExpression(
-                Expr, NewFragment.OffsetInBits, NewFragment.SizeInBits)) {
-          Expr = *E;
-        } else {
+        if (!Buf.createFragmentExpression(NewFragment.OffsetInBits,
+                                          NewFragment.SizeInBits)) {
           // Otherwise, add the new fragment info to an empty expression and
           // discard the value component of this dbg.assign as the value cannot
           // be computed with the new fragment.
-          Expr = *DIExpression::createFragmentExpression(
-              DIExpression::get(Expr->getContext(), {}),
-              NewFragment.OffsetInBits, NewFragment.SizeInBits);
+          Buf.clear();
+          auto Success = Buf.createFragmentExpression(NewFragment.OffsetInBits,
+                                                      NewFragment.SizeInBits);
+          assert(Success);
           SetKillLocation = true;
         }
+        Expr = Buf.toExpr();
       }
     }
 
@@ -5622,19 +5626,19 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
       return;
 
     const Value *DbgPtr = DbgVariable->getAddress();
+    const DIExpression *AddressExpr = getAddressExpression(DbgVariable);
     DIExpression::FragmentInfo VarFrag =
         DbgVariable->getFragmentOrEntireVariable();
     // Get the address expression constant offset if one exists and the ops
     // that come after it.
-    int64_t CurrentExprOffsetInBytes = 0;
-    SmallVector<uint64_t> PostOffsetOps;
-    if (!getAddressExpression(DbgVariable)
-             ->extractLeadingOffset(CurrentExprOffsetInBytes, PostOffsetOps))
+    auto Res = DIExprRef(AddressExpr).extractLeadingOffset();
+    if (!Res)
       return; // Couldn't interpret this DIExpression - drop the var.
+    auto [CurrentExprOffsetInBytes, PostOffsetOps] = *Res;
 
     // Offset defined by a DW_OP_LLVM_extract_bits_[sz]ext.
     int64_t ExtractOffsetInBits = 0;
-    for (auto Op : getAddressExpression(DbgVariable)->expr_ops()) {
+    for (auto Op : AddressExpr->expr_ops()) {
       if (Op.getOp() == dwarf::DW_OP_LLVM_extract_bits_zext ||
           Op.getOp() == dwarf::DW_OP_LLVM_extract_bits_sext) {
         ExtractOffsetInBits = Op.getArg(0);
@@ -5685,11 +5689,12 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
       //    {Offset(OffestFromNewAllocaInBits), PostOffsetOps, NewDbgFragment}
       // Add NewDbgFragment later, because dbg.assigns don't want it in the
       // address expression but the value expression instead.
-      DIExpression *NewExpr = DIExpression::get(AI.getContext(), PostOffsetOps);
+      DIBuf.assign(&DbgVariable->getContext(), PostOffsetOps);
       if (OffestFromNewAllocaInBits > 0) {
         int64_t OffsetInBytes = (OffestFromNewAllocaInBits + 7) / 8;
-        NewExpr = DIExpression::prepend(NewExpr, /*flags=*/0, OffsetInBytes);
+        DIBuf.prepend(/*flags=*/0, OffsetInBytes);
       }
+      DIExpression *NewExpr = DIBuf.toExpr();
 
       // Remove any existing intrinsics on the new alloca describing
       // the variable fragment.

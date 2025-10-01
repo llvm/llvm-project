@@ -21,6 +21,7 @@
 #include "llvm/Analysis/StackLifetime.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoExprs.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -1845,6 +1846,9 @@ salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
     ++InsertPt;
   Builder.SetInsertPoint(&F->getEntryBlock(), InsertPt);
 
+  DIExprBuf DIBuf(Expr);
+  DIExprBuf OpsToAppend;
+  uint64_t CurrentLocOps = Expr->getNumLocationOperands();
   while (auto *Inst = dyn_cast_or_null<Instruction>(Storage)) {
     if (auto *LdInst = dyn_cast<LoadInst>(Inst)) {
       Storage = LdInst->getPointerOperand();
@@ -1855,22 +1859,21 @@ salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
       // last direct load from an alloca is necessary.  This condition
       // effectively drops the *last* DW_OP_deref in the expression.
       if (!SkipOutermostLoad)
-        Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
+        DIBuf.prepend(DIExpression::DerefBefore);
     } else if (auto *StInst = dyn_cast<StoreInst>(Inst)) {
       Storage = StInst->getValueOperand();
     } else {
-      SmallVector<uint64_t, 16> Ops;
       SmallVector<Value *, 0> AdditionalValues;
-      Value *Op = llvm::salvageDebugInfoImpl(
-          *Inst, Expr ? Expr->getNumLocationOperands() : 0, Ops,
-          AdditionalValues);
+      OpsToAppend.clear();
+      Value *Op = llvm::salvageDebugInfoImpl(*Inst, CurrentLocOps, OpsToAppend,
+                                             AdditionalValues);
       if (!Op || !AdditionalValues.empty()) {
         // If salvaging failed or salvaging produced more than one location
         // operand, give up.
         break;
       }
       Storage = Op;
-      Expr = DIExpression::appendOpsToArg(Expr, Ops, 0, /*StackValue*/ false);
+      DIBuf.appendOpsToArg(OpsToAppend.asRef(), 0, /*StackValue*/ false);
     }
     SkipOutermostLoad = false;
   }
@@ -1884,9 +1887,9 @@ salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
   // Swift async arguments are described by an entry value of the ABI-defined
   // register containing the coroutine context.
   // Entry values in variadic expressions are not supported.
-  if (IsSwiftAsyncArg && UseEntryValue && !Expr->isEntryValue() &&
-      Expr->isSingleLocationExpression())
-    Expr = DIExpression::prepend(Expr, DIExpression::EntryValue);
+  if (IsSwiftAsyncArg && UseEntryValue && !DIBuf.asRef().isEntryValue() &&
+      DIBuf.asRef().isSingleLocationExpression())
+    DIBuf.prepend(DIExpression::EntryValue);
 
   // If the coroutine frame is an Argument, store it in an alloca to improve
   // its availability (e.g. registers may be clobbered).
@@ -1907,9 +1910,10 @@ salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
     // expression, we need to add a DW_OP_deref at the *start* of the
     // expression to first load the contents of the alloca before
     // adjusting it with the expression.
-    Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
+    DIBuf.prepend(DIExpression::DerefBefore);
   }
-
+  Expr = DIBuf.toExpr();
+  // FIXME:
   Expr = Expr->foldConstantMath();
   return {{*Storage, *Expr}};
 }

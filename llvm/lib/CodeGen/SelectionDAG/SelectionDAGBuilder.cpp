@@ -64,6 +64,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoExprs.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -1530,17 +1531,20 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
   if (handleDebugValue(V, Var, Expr, DL, SDOrder, /*IsVariadic=*/false))
     return;
 
+  DIExprBuf DIBuf(Expr);
+  DIExprBuf OpsToAppend;
+  uint64_t CurrentLocOps = Expr->getNumLocationOperands();
+
   // Attempt to salvage back through as many instructions as possible. Bail if
   // a non-instruction is seen, such as a constant expression or global
   // variable. FIXME: Further work could recover those too.
   while (isa<Instruction>(V)) {
     const Instruction &VAsInst = *cast<const Instruction>(V);
     // Temporary "0", awaiting real implementation.
-    SmallVector<uint64_t, 16> Ops;
+    OpsToAppend.clear();
     SmallVector<Value *, 4> AdditionalValues;
-    V = salvageDebugInfoImpl(const_cast<Instruction &>(VAsInst),
-                             Expr->getNumLocationOperands(), Ops,
-                             AdditionalValues);
+    V = salvageDebugInfoImpl(const_cast<Instruction &>(VAsInst), CurrentLocOps,
+                             OpsToAppend, AdditionalValues);
     // If we cannot salvage any further, and haven't yet found a suitable debug
     // expression, bail out.
     if (!V)
@@ -1553,11 +1557,12 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
       break;
 
     // New value and expr now represent this debuginfo.
-    Expr = DIExpression::appendOpsToArg(Expr, Ops, 0, StackValue);
+    DIBuf.appendOpsToArg(OpsToAppend.asRef(), 0, StackValue);
 
     // Some kind of simplification occurred: check whether the operand of the
     // salvaged debug expression can be encoded in this DAG.
-    if (handleDebugValue(V, Var, Expr, DL, SDOrder, /*IsVariadic=*/false)) {
+    if (handleDebugValue(V, Var, DIBuf.toExpr(), DL, SDOrder,
+                         /*IsVariadic=*/false)) {
       LLVM_DEBUG(
           dbgs() << "Salvaged debug location info for:\n  " << *Var << "\n"
                  << *OrigV << "\nBy stripping back to:\n  " << *V << "\n");
