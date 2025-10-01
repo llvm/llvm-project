@@ -891,11 +891,14 @@ void RemoveDeadValues::runOnOperation() {
   // end of this pass.
   RDVFinalCleanupList finalCleanupList;
 
+  // To delete the private function, the FunctionOpInterface is processed in
+  // advance.
   module->walk([&](FunctionOpInterface op) {
     processFuncOp(op, module, la, deadVals, finalCleanupList);
   });
+
   module->walk([&](Operation *op) {
-    if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
+    if (isa<FunctionOpInterface>(op)) {
       // The FunctionOpInterface has been processed in advance.
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
       processRegionBranchOp(regionBranchOp, la, deadVals, finalCleanupList);
