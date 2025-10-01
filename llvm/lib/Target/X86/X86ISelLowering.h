@@ -471,8 +471,7 @@ namespace llvm {
     // VBMI2 Concat & Shift.
     VSHLD,
     VSHRD,
-    VSHLDV,
-    VSHRDV,
+
     // Shuffle Packed Values at 128-bit granularity.
     SHUF128,
     MOVDDUP,
@@ -1004,13 +1003,14 @@ namespace llvm {
     /// Current rounding mode is represented in bits 11:10 of FPSR. These
     /// values are same as corresponding constants for rounding mode used
     /// in glibc.
-    enum RoundingMode {
-      rmToNearest   = 0,        // FE_TONEAREST
-      rmDownward    = 1 << 10,  // FE_DOWNWARD
-      rmUpward      = 2 << 10,  // FE_UPWARD
-      rmTowardZero  = 3 << 10,  // FE_TOWARDZERO
-      rmMask        = 3 << 10   // Bit mask selecting rounding mode
-    };
+  enum RoundingMode {
+    rmInvalid = -1,         // For handle Invalid rounding mode
+    rmToNearest = 0,        // FE_TONEAREST
+    rmDownward = 1 << 10,   // FE_DOWNWARD
+    rmUpward = 2 << 10,     // FE_UPWARD
+    rmTowardZero = 3 << 10, // FE_TOWARDZERO
+    rmMask = 3 << 10        // Bit mask selecting rounding mode
+  };
   }
 
   /// Define some predicates that are used for node matching.
@@ -1058,6 +1058,10 @@ namespace llvm {
     /// functions.
     bool isExtendedSwiftAsyncFrameSupported(const X86Subtarget &Subtarget,
                                             const MachineFunction &MF);
+
+    /// Convert LLVM rounding mode to X86 rounding mode.
+    int getRoundingModeX86(unsigned RM);
+
   } // end namespace X86
 
   //===--------------------------------------------------------------------===//
@@ -1364,8 +1368,6 @@ namespace llvm {
 
     SDValue getReturnAddressFrameIndex(SelectionDAG &DAG) const;
 
-    bool ExpandInlineAsm(CallInst *CI) const override;
-
     ConstraintType getConstraintType(StringRef Constraint) const override;
 
     /// Examine constraint string and operand type and determine a weight value.
@@ -1668,8 +1670,8 @@ namespace llvm {
     /// Lower interleaved store(s) into target specific
     /// instructions/intrinsics.
     bool lowerInterleavedStore(Instruction *Store, Value *Mask,
-                               ShuffleVectorInst *SVI,
-                               unsigned Factor) const override;
+                               ShuffleVectorInst *SVI, unsigned Factor,
+                               const APInt &GapMask) const override;
 
     SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value, SDValue Addr,
                                    int JTI, SelectionDAG &DAG) const override;

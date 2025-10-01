@@ -216,9 +216,7 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     // Skip dependent types; we can't do any checking on them now.
     if (BaseType->isDependentType())
       continue;
-    auto *BaseClassDecl =
-        cast<CXXRecordDecl>(BaseType->castAs<RecordType>()->getOriginalDecl())
-            ->getDefinitionOrSelf();
+    auto *BaseClassDecl = BaseType->castAsCXXRecordDecl();
 
     // C++2a [class]p7:
     //   A standard-layout class is a class that:
@@ -1437,6 +1435,13 @@ void CXXRecordDecl::addedMember(Decl *D) {
         data().StructuralIfLiteral = false;
     }
 
+    // If this type contains any address discriminated values we should
+    // have already indicated that the only special member functions that
+    // can possibly be trivial are the default constructor and destructor.
+    if (T.hasAddressDiscriminatedPointerAuth())
+      data().HasTrivialSpecialMembers &=
+          SMF_DefaultConstructor | SMF_Destructor;
+
     // C++14 [meta.unary.prop]p4:
     //   T is a class type [...] with [...] no non-static data members other
     //   than subobjects of zero size
@@ -2309,7 +2314,7 @@ bool CXXRecordDecl::mayBeAbstract() const {
 
   for (const auto &B : bases()) {
     const auto *BaseDecl = cast<CXXRecordDecl>(
-        B.getType()->castAs<RecordType>()->getOriginalDecl());
+        B.getType()->castAsCanonical<RecordType>()->getOriginalDecl());
     if (BaseDecl->isAbstract())
       return true;
   }
@@ -3114,6 +3119,22 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
   }
 }
 
+void CXXDestructorDecl::setOperatorGlobalDelete(FunctionDecl *OD) {
+  // FIXME: C++23 [expr.delete] specifies that the delete operator will be
+  // a usual deallocation function declared at global scope. A convenient
+  // function to assert that is lacking; Sema::isUsualDeallocationFunction()
+  // only works for CXXMethodDecl.
+  assert(!OD ||
+         (OD->getDeclName().getCXXOverloadedOperator() == OO_Delete &&
+          OD->getDeclContext()->getRedeclContext()->isTranslationUnit()));
+  auto *Canonical = cast<CXXDestructorDecl>(getCanonicalDecl());
+  if (!Canonical->OperatorGlobalDelete) {
+    Canonical->OperatorGlobalDelete = OD;
+    if (auto *L = getASTMutationListener())
+      L->ResolvedOperatorGlobDelete(Canonical, OD);
+  }
+}
+
 bool CXXDestructorDecl::isCalledByDelete(const FunctionDecl *OpDel) const {
   // C++20 [expr.delete]p6: If the value of the operand of the delete-
   // expression is not a null pointer value and the selected deallocation
@@ -3432,13 +3453,12 @@ SourceRange UsingDecl::getSourceRange() const {
 void UsingEnumDecl::anchor() {}
 
 UsingEnumDecl *UsingEnumDecl::Create(ASTContext &C, DeclContext *DC,
-                                     SourceLocation UL,
-                                     SourceLocation EL,
+                                     SourceLocation UL, SourceLocation EL,
                                      SourceLocation NL,
                                      TypeSourceInfo *EnumType) {
-  assert(isa<EnumDecl>(EnumType->getType()->getAsTagDecl()));
   return new (C, DC)
-      UsingEnumDecl(DC, EnumType->getType()->getAsTagDecl()->getDeclName(), UL, EL, NL, EnumType);
+      UsingEnumDecl(DC, EnumType->getType()->castAsEnumDecl()->getDeclName(),
+                    UL, EL, NL, EnumType);
 }
 
 UsingEnumDecl *UsingEnumDecl::CreateDeserialized(ASTContext &C,

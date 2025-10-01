@@ -2270,7 +2270,10 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
               : ConstVal.getActiveBits();
       if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context)) {
         Diag(ArraySize->getBeginLoc(), diag::err_array_too_large)
-            << toString(ConstVal, 10) << ArraySize->getSourceRange();
+            << toString(ConstVal, 10, ConstVal.isSigned(),
+                        /*formatAsCLiteral=*/false, /*UpperCase=*/false,
+                        /*InsertSeparators=*/true)
+            << ArraySize->getSourceRange();
         return QualType();
       }
 
@@ -6036,15 +6039,6 @@ namespace {
       assert(TInfo);
       TL.copy(TInfo->getTypeLoc().castAs<DependentNameTypeLoc>());
     }
-    void VisitDependentTemplateSpecializationTypeLoc(
-                                 DependentTemplateSpecializationTypeLoc TL) {
-      assert(DS.getTypeSpecType() == TST_typename);
-      TypeSourceInfo *TInfo = nullptr;
-      Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
-      assert(TInfo);
-      TL.copy(
-          TInfo->getTypeLoc().castAs<DependentTemplateSpecializationTypeLoc>());
-    }
     void VisitAutoTypeLoc(AutoTypeLoc TL) {
       assert(DS.getTypeSpecType() == TST_auto ||
              DS.getTypeSpecType() == TST_decltype_auto ||
@@ -9617,12 +9611,8 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
   if (T->isVariableArrayType())
     return true;
 
-  const RecordType *RT = ElemType->getAs<RecordType>();
-  if (!RT)
+  if (!ElemType->isRecordType())
     return true;
-
-  const CXXRecordDecl *RD =
-      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
 
   // A partially-defined class type can't be a literal type, because a literal
   // class type must have a trivial destructor (which can't be checked until
@@ -9630,6 +9620,7 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
   if (RequireCompleteType(Loc, ElemType, diag::note_non_literal_incomplete, T))
     return true;
 
+  const auto *RD = ElemType->castAsCXXRecordDecl();
   // [expr.prim.lambda]p3:
   //   This class type is [not] a literal type.
   if (RD->isLambda() && !getLangOpts().CPlusPlus17) {
@@ -9881,7 +9872,14 @@ static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,
   S.DiagnoseUseOfDecl(ED, Loc);
 
   QualType Underlying = ED->getIntegerType();
-  assert(!Underlying.isNull());
+  if (Underlying.isNull()) {
+    // This is an enum without a fixed underlying type which we skipped parsing
+    // the body because we saw its definition previously in another module.
+    // Use the definition's integer type in that case.
+    assert(ED->isThisDeclarationADemotedDefinition());
+    Underlying = ED->getDefinition()->getIntegerType();
+    assert(!Underlying.isNull());
+  }
 
   return Underlying;
 }

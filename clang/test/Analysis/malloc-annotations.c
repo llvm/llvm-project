@@ -2,7 +2,6 @@
 // RUN:   -Wno-alloc-size \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
-// RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config unix.DynamicMemoryModeling:Optimistic=true %s
@@ -219,15 +218,6 @@ void f7_realloc(void) {
   char *x = (char*) malloc(4);
   realloc(x,0);
   x[0] = 'a'; // expected-warning{{Use of memory after it is released}}
-}
-
-void PR6123(void) {
-  int *x = malloc(11); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
-}
-
-void PR7217(void) {
-  int *buf = malloc(2); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
-  buf[1] = 'c'; // not crash
 }
 
 void mallocCastToVoid(void) {

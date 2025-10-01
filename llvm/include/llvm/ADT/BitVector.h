@@ -40,12 +40,20 @@ template <typename BitVectorT> class const_set_bits_iterator_impl {
     Current = Parent.find_next(Current);
   }
 
+  void retreat() {
+    if (Current == -1) {
+      Current = Parent.find_last();
+    } else {
+      Current = Parent.find_prev(Current);
+    }
+  }
+
 public:
-  using iterator_category = std::forward_iterator_tag;
-  using difference_type   = std::ptrdiff_t;
-  using value_type        = int;
-  using pointer           = value_type*;
-  using reference         = value_type&;
+  using iterator_category = std::bidirectional_iterator_tag;
+  using difference_type = std::ptrdiff_t;
+  using value_type = unsigned;
+  using pointer = const value_type *;
+  using reference = value_type;
 
   const_set_bits_iterator_impl(const BitVectorT &Parent, int Current)
       : Parent(Parent), Current(Current) {}
@@ -61,6 +69,17 @@ public:
 
   const_set_bits_iterator_impl &operator++() {
     advance();
+    return *this;
+  }
+
+  const_set_bits_iterator_impl operator--(int) {
+    auto Prev = *this;
+    retreat();
+    return Prev;
+  }
+
+  const_set_bits_iterator_impl &operator--() {
+    retreat();
     return *this;
   }
 
@@ -327,7 +346,7 @@ public:
 
   /// find_prev_unset - Returns the index of the first unset bit that precedes
   /// the bit at \p PriorTo.  Returns -1 if all previous bits are set.
-  int find_prev_unset(unsigned PriorTo) {
+  int find_prev_unset(unsigned PriorTo) const {
     return find_last_unset_in(0, PriorTo);
   }
 
@@ -767,11 +786,6 @@ private:
 
     std::copy(Bits.begin() + Count, Bits.begin() + NumWords, Bits.begin());
     std::fill(Bits.begin() + NumWords - Count, Bits.begin() + NumWords, 0);
-  }
-
-  int next_unset_in_word(int WordIndex, BitWord Word) const {
-    unsigned Result = WordIndex * BITWORD_SIZE + llvm::countr_one(Word);
-    return Result < size() ? Result : -1;
   }
 
   unsigned NumBitWords(unsigned S) const {

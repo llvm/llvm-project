@@ -7,16 +7,112 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Protocol/MCP/Server.h"
+#include "lldb/Host/File.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Protocol/MCP/MCPError.h"
+#include "lldb/Protocol/MCP/Protocol.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/Signals.h"
 
-using namespace lldb_protocol::mcp;
 using namespace llvm;
+using namespace lldb_private;
+using namespace lldb_protocol::mcp;
 
-Server::Server(std::string name, std::string version,
-               std::unique_ptr<MCPTransport> transport_up,
-               lldb_private::MainLoop &loop)
-    : m_name(std::move(name)), m_version(std::move(version)),
-      m_transport_up(std::move(transport_up)), m_loop(loop) {
+ServerInfoHandle::ServerInfoHandle(StringRef filename) : m_filename(filename) {
+  if (!m_filename.empty())
+    sys::RemoveFileOnSignal(m_filename);
+}
+
+ServerInfoHandle::~ServerInfoHandle() { Remove(); }
+
+ServerInfoHandle::ServerInfoHandle(ServerInfoHandle &&other) {
+  *this = std::move(other);
+}
+
+ServerInfoHandle &
+ServerInfoHandle::operator=(ServerInfoHandle &&other) noexcept {
+  m_filename = std::move(other.m_filename);
+  return *this;
+}
+
+void ServerInfoHandle::Remove() {
+  if (m_filename.empty())
+    return;
+
+  sys::fs::remove(m_filename);
+  sys::DontRemoveFileOnSignal(m_filename);
+  m_filename.clear();
+}
+
+json::Value lldb_protocol::mcp::toJSON(const ServerInfo &SM) {
+  return json::Object{{"connection_uri", SM.connection_uri}};
+}
+
+bool lldb_protocol::mcp::fromJSON(const json::Value &V, ServerInfo &SM,
+                                  json::Path P) {
+  json::ObjectMapper O(V, P);
+  return O && O.map("connection_uri", SM.connection_uri);
+}
+
+Expected<ServerInfoHandle> ServerInfo::Write(const ServerInfo &info) {
+  std::string buf = formatv("{0}", toJSON(info)).str();
+  size_t num_bytes = buf.size();
+
+  FileSpec user_lldb_dir = HostInfo::GetUserLLDBDir();
+
+  Status error(sys::fs::create_directory(user_lldb_dir.GetPath()));
+  if (error.Fail())
+    return error.takeError();
+
+  FileSpec mcp_registry_entry_path = user_lldb_dir.CopyByAppendingPathComponent(
+      formatv("lldb-mcp-{0}.json", getpid()).str());
+
+  const File::OpenOptions flags = File::eOpenOptionWriteOnly |
+                                  File::eOpenOptionCanCreate |
+                                  File::eOpenOptionTruncate;
+  Expected<lldb::FileUP> file =
+      FileSystem::Instance().Open(mcp_registry_entry_path, flags);
+  if (!file)
+    return file.takeError();
+  if (llvm::Error error = (*file)->Write(buf.data(), num_bytes).takeError())
+    return error;
+  return ServerInfoHandle{mcp_registry_entry_path.GetPath()};
+}
+
+Expected<std::vector<ServerInfo>> ServerInfo::Load() {
+  namespace path = llvm::sys::path;
+  FileSpec user_lldb_dir = HostInfo::GetUserLLDBDir();
+  FileSystem &fs = FileSystem::Instance();
+  std::error_code EC;
+  vfs::directory_iterator it = fs.DirBegin(user_lldb_dir, EC);
+  vfs::directory_iterator end;
+  std::vector<ServerInfo> infos;
+  for (; it != end && !EC; it.increment(EC)) {
+    auto &entry = *it;
+    auto path = entry.path();
+    auto name = path::filename(path);
+    if (!name.starts_with("lldb-mcp-") || !name.ends_with(".json"))
+      continue;
+
+    auto buffer = fs.CreateDataBuffer(path);
+    auto info = json::parse<ServerInfo>(toStringRef(buffer->GetData()));
+    if (!info)
+      return info.takeError();
+
+    infos.emplace_back(std::move(*info));
+  }
+
+  return infos;
+}
+
+Server::Server(std::string name, std::string version, MCPTransport &client,
+               LogCallback log_callback, ClosedCallback closed_callback)
+    : m_name(std::move(name)), m_version(std::move(version)), m_client(client),
+      m_log_callback(std::move(log_callback)),
+      m_closed_callback(std::move(closed_callback)) {
   AddRequestHandlers();
 }
 
@@ -79,22 +175,23 @@ void Server::AddNotificationHandler(llvm::StringRef method,
 
 llvm::Expected<Response> Server::InitializeHandler(const Request &request) {
   Response response;
-  response.result = llvm::json::Object{
-      {"protocolVersion", mcp::kProtocolVersion},
-      {"capabilities", GetCapabilities()},
-      {"serverInfo",
-       llvm::json::Object{{"name", m_name}, {"version", m_version}}}};
+  InitializeResult result;
+  result.protocolVersion = mcp::kProtocolVersion;
+  result.capabilities = GetCapabilities();
+  result.serverInfo.name = m_name;
+  result.serverInfo.version = m_version;
+  response.result = std::move(result);
   return response;
 }
 
 llvm::Expected<Response> Server::ToolsListHandler(const Request &request) {
   Response response;
 
-  llvm::json::Array tools;
+  ListToolsResult result;
   for (const auto &tool : m_tools)
-    tools.emplace_back(toJSON(tool.second->GetDefinition()));
+    result.tools.emplace_back(tool.second->GetDefinition());
 
-  response.result = llvm::json::Object{{"tools", std::move(tools)}};
+  response.result = std::move(result);
 
   return response;
 }
@@ -104,16 +201,12 @@ llvm::Expected<Response> Server::ToolsCallHandler(const Request &request) {
 
   if (!request.params)
     return llvm::createStringError("no tool parameters");
+  CallToolParams params;
+  json::Path::Root root("params");
+  if (!fromJSON(request.params, params, root))
+    return root.getError();
 
-  const json::Object *param_obj = request.params->getAsObject();
-  if (!param_obj)
-    return llvm::createStringError("no tool parameters");
-
-  const json::Value *name = param_obj->get("name");
-  if (!name)
-    return llvm::createStringError("no tool name");
-
-  llvm::StringRef tool_name = name->getAsString().value_or("");
+  llvm::StringRef tool_name = params.name;
   if (tool_name.empty())
     return llvm::createStringError("no tool name");
 
@@ -122,10 +215,10 @@ llvm::Expected<Response> Server::ToolsCallHandler(const Request &request) {
     return llvm::createStringError(llvm::formatv("no tool \"{0}\"", tool_name));
 
   ToolArguments tool_args;
-  if (const json::Value *args = param_obj->get("arguments"))
-    tool_args = *args;
+  if (params.arguments)
+    tool_args = *params.arguments;
 
-  llvm::Expected<TextResult> text_result = it->second->Call(tool_args);
+  llvm::Expected<CallToolResult> text_result = it->second->Call(tool_args);
   if (!text_result)
     return text_result.takeError();
 
@@ -137,14 +230,13 @@ llvm::Expected<Response> Server::ToolsCallHandler(const Request &request) {
 llvm::Expected<Response> Server::ResourcesListHandler(const Request &request) {
   Response response;
 
-  llvm::json::Array resources;
-
+  ListResourcesResult result;
   for (std::unique_ptr<ResourceProvider> &resource_provider_up :
-       m_resource_providers) {
+       m_resource_providers)
     for (const Resource &resource : resource_provider_up->GetResources())
-      resources.push_back(resource);
-  }
-  response.result = llvm::json::Object{{"resources", std::move(resources)}};
+      result.resources.push_back(resource);
+
+  response.result = std::move(result);
 
   return response;
 }
@@ -155,21 +247,18 @@ llvm::Expected<Response> Server::ResourcesReadHandler(const Request &request) {
   if (!request.params)
     return llvm::createStringError("no resource parameters");
 
-  const json::Object *param_obj = request.params->getAsObject();
-  if (!param_obj)
-    return llvm::createStringError("no resource parameters");
+  ReadResourceParams params;
+  json::Path::Root root("params");
+  if (!fromJSON(request.params, params, root))
+    return root.getError();
 
-  const json::Value *uri = param_obj->get("uri");
-  if (!uri)
-    return llvm::createStringError("no resource uri");
-
-  llvm::StringRef uri_str = uri->getAsString().value_or("");
+  llvm::StringRef uri_str = params.uri;
   if (uri_str.empty())
     return llvm::createStringError("no resource uri");
 
   for (std::unique_ptr<ResourceProvider> &resource_provider_up :
        m_resource_providers) {
-    llvm::Expected<ResourceResult> result =
+    llvm::Expected<ReadResourceResult> result =
         resource_provider_up->ReadResource(uri_str);
     if (result.errorIsA<UnsupportedURI>()) {
       llvm::consumeError(result.takeError());
@@ -188,31 +277,24 @@ llvm::Expected<Response> Server::ResourcesReadHandler(const Request &request) {
       MCPError::kResourceNotFound);
 }
 
-Capabilities Server::GetCapabilities() {
-  lldb_protocol::mcp::Capabilities capabilities;
-  capabilities.tools.listChanged = true;
+ServerCapabilities Server::GetCapabilities() {
+  lldb_protocol::mcp::ServerCapabilities capabilities;
+  capabilities.supportsToolsList = true;
   // FIXME: Support sending notifications when a debugger/target are
   // added/removed.
-  capabilities.resources.listChanged = false;
+  capabilities.supportsResourcesList = false;
   return capabilities;
 }
 
-llvm::Error Server::Run() {
-  auto handle = m_transport_up->RegisterMessageHandler(m_loop, *this);
-  if (!handle)
-    return handle.takeError();
-
-  lldb_private::Status status = m_loop.Run();
-  if (status.Fail())
-    return status.takeError();
-
-  return llvm::Error::success();
+void Server::Log(llvm::StringRef message) {
+  if (m_log_callback)
+    m_log_callback(message);
 }
 
 void Server::Received(const Request &request) {
   auto SendResponse = [this](const Response &response) {
-    if (llvm::Error error = m_transport_up->Send(response))
-      m_transport_up->Log(llvm::toString(std::move(error)));
+    if (llvm::Error error = m_client.Send(response))
+      Log(llvm::toString(std::move(error)));
   };
 
   llvm::Expected<Response> response = Handle(request);
@@ -234,7 +316,7 @@ void Server::Received(const Request &request) {
 }
 
 void Server::Received(const Response &response) {
-  m_transport_up->Log("unexpected MCP message: response");
+  Log("unexpected MCP message: response");
 }
 
 void Server::Received(const Notification &notification) {
@@ -242,16 +324,11 @@ void Server::Received(const Notification &notification) {
 }
 
 void Server::OnError(llvm::Error error) {
-  m_transport_up->Log(llvm::toString(std::move(error)));
-  TerminateLoop();
+  Log(llvm::toString(std::move(error)));
 }
 
 void Server::OnClosed() {
-  m_transport_up->Log("EOF");
-  TerminateLoop();
-}
-
-void Server::TerminateLoop() {
-  m_loop.AddPendingCallback(
-      [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  Log("EOF");
+  if (m_closed_callback)
+    m_closed_callback();
 }

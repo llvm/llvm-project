@@ -25,21 +25,6 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-static ResourceClass toResourceClass(dxbc::DescriptorRangeType RangeType) {
-  using namespace dxbc;
-  switch (RangeType) {
-  case DescriptorRangeType::SRV:
-    return ResourceClass::SRV;
-  case DescriptorRangeType::UAV:
-    return ResourceClass::UAV;
-  case DescriptorRangeType::CBV:
-    return ResourceClass::CBuffer;
-  case DescriptorRangeType::Sampler:
-    return ResourceClass::Sampler;
-  }
-  llvm_unreachable("Unknown DescriptorRangeType");
-}
-
 static ResourceClass toResourceClass(dxbc::RootParameterType Type) {
   using namespace dxbc;
   switch (Type) {
@@ -95,7 +80,7 @@ static void reportOverlappingError(Module &M, ResourceInfo R1,
 }
 
 static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
-  bool ErrorFound = false;
+  [[maybe_unused]] bool ErrorFound = false;
   for (const auto &ResList :
        {DRM.srvs(), DRM.uavs(), DRM.cbuffers(), DRM.samplers()}) {
     if (ResList.empty())
@@ -118,10 +103,19 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
                        "true, yet no overlapping binding was found");
 }
 
-static void
-reportOverlappingRegisters(Module &M,
-                           const llvm::hlsl::BindingInfoBuilder::Binding &R1,
-                           const llvm::hlsl::BindingInfoBuilder::Binding &R2) {
+static void reportInvalidHandleTyError(Module &M, ResourceClass RC,
+                                       ResourceInfo::ResourceBinding Binding) {
+  SmallString<160> Message;
+  raw_svector_ostream OS(Message);
+  StringRef RCName = getResourceClassName(RC);
+  OS << RCName << " at register " << Binding.LowerBound << " and space "
+     << Binding.Space << " is bound to a texture or typed buffer. " << RCName
+     << " root descriptors can only be Raw or Structured buffers.";
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
+static void reportOverlappingRegisters(Module &M, const llvm::hlsl::Binding &R1,
+                                       const llvm::hlsl::Binding &R2) {
   SmallString<128> Message;
 
   raw_svector_ostream OS(Message);
@@ -130,6 +124,17 @@ reportOverlappingRegisters(Module &M,
      << "]) overlaps with resource " << getResourceClassName(R2.RC)
      << " (space=" << R2.Space << ", registers=[" << R2.LowerBound << ", "
      << R2.UpperBound << "])";
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
+static void
+reportRegNotBound(Module &M, ResourceClass Class,
+                  const llvm::dxil::ResourceInfo::ResourceBinding &Unbound) {
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  OS << getResourceClassName(Class) << " register " << Unbound.LowerBound
+     << " in space " << Unbound.Space
+     << " does not have a binding in the Root Signature";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
@@ -155,9 +160,46 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
   }
 }
 
+static void reportIfDeniedShaderStageAccess(Module &M,
+                                            const dxbc::RootFlags &Flags,
+                                            const dxbc::RootFlags &Mask) {
+  if ((Flags & Mask) != Mask)
+    return;
+
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  OS << "Shader has root bindings but root signature uses a DENY flag to "
+        "disallow root binding access to the shader stage.";
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
+static std::optional<dxbc::RootFlags>
+getEnvironmentDenyFlagMask(Triple::EnvironmentType ShaderProfile) {
+  switch (ShaderProfile) {
+  case Triple::Pixel:
+    return dxbc::RootFlags::DenyPixelShaderRootAccess;
+  case Triple::Vertex:
+    return dxbc::RootFlags::DenyVertexShaderRootAccess;
+  case Triple::Geometry:
+    return dxbc::RootFlags::DenyGeometryShaderRootAccess;
+  case Triple::Hull:
+    return dxbc::RootFlags::DenyHullShaderRootAccess;
+  case Triple::Domain:
+    return dxbc::RootFlags::DenyDomainShaderRootAccess;
+  case Triple::Mesh:
+    return dxbc::RootFlags::DenyMeshShaderRootAccess;
+  case Triple::Amplification:
+    return dxbc::RootFlags::DenyAmplificationShaderRootAccess;
+  default:
+    return std::nullopt;
+  }
+}
+
 static void validateRootSignature(Module &M,
                                   const mcdxbc::RootSignatureDesc &RSD,
-                                  dxil::ModuleMetadataInfo &MMI) {
+                                  dxil::ModuleMetadataInfo &MMI,
+                                  DXILResourceMap &DRM,
+                                  DXILResourceTypeMap &DRTM) {
 
   hlsl::BindingInfoBuilder Builder;
   dxbc::ShaderVisibility Visibility = tripleToVisibility(MMI.ShaderProfile);
@@ -171,7 +213,7 @@ static void validateRootSignature(Module &M,
     dxbc::RootParameterType ParamType = dxbc::RootParameterType(ParamInfo.Type);
     switch (ParamType) {
     case dxbc::RootParameterType::Constants32Bit: {
-      dxbc::RTS0::v1::RootConstants Const =
+      mcdxbc::RootConstants Const =
           RSD.ParametersContainer.getConstant(ParamInfo.Location);
       Builder.trackBinding(dxil::ResourceClass::CBuffer, Const.RegisterSpace,
                            Const.ShaderRegister, Const.ShaderRegister,
@@ -182,7 +224,7 @@ static void validateRootSignature(Module &M,
     case dxbc::RootParameterType::SRV:
     case dxbc::RootParameterType::UAV:
     case dxbc::RootParameterType::CBV: {
-      dxbc::RTS0::v2::RootDescriptor Desc =
+      mcdxbc::RootDescriptor Desc =
           RSD.ParametersContainer.getRootDescriptor(ParamInfo.Location);
       Builder.trackBinding(toResourceClass(ParamInfo.Type), Desc.RegisterSpace,
                            Desc.ShaderRegister, Desc.ShaderRegister,
@@ -194,33 +236,70 @@ static void validateRootSignature(Module &M,
       const mcdxbc::DescriptorTable &Table =
           RSD.ParametersContainer.getDescriptorTable(ParamInfo.Location);
 
-      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+      for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
         uint32_t UpperBound =
             Range.NumDescriptors == ~0U
                 ? Range.BaseShaderRegister
                 : Range.BaseShaderRegister + Range.NumDescriptors - 1;
-        Builder.trackBinding(
-            toResourceClass(
-                static_cast<dxbc::DescriptorRangeType>(Range.RangeType)),
-            Range.RegisterSpace, Range.BaseShaderRegister, UpperBound,
-            &ParamInfo);
+        Builder.trackBinding(Range.RangeType, Range.RegisterSpace,
+                             Range.BaseShaderRegister, UpperBound, &ParamInfo);
       }
       break;
     }
     }
   }
 
-  for (const dxbc::RTS0::v1::StaticSampler &S : RSD.StaticSamplers)
+  for (const mcdxbc::StaticSampler &S : RSD.StaticSamplers)
     Builder.trackBinding(dxil::ResourceClass::Sampler, S.RegisterSpace,
                          S.ShaderRegister, S.ShaderRegister, &S);
 
   Builder.calculateBindingInfo(
       [&M](const llvm::hlsl::BindingInfoBuilder &Builder,
-           const llvm::hlsl::BindingInfoBuilder::Binding &ReportedBinding) {
-        const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping =
+           const llvm::hlsl::Binding &ReportedBinding) {
+        const llvm::hlsl::Binding &Overlaping =
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
+
+  const hlsl::BoundRegs &BoundRegs = Builder.takeBoundRegs();
+  bool HasBindings = false;
+  for (const ResourceInfo &RI : DRM) {
+    const ResourceInfo::ResourceBinding &Binding = RI.getBinding();
+    const dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
+    dxil::ResourceClass RC = RTI.getResourceClass();
+    dxil::ResourceKind RK = RTI.getResourceKind();
+
+    const llvm::hlsl::Binding *Reg =
+        BoundRegs.findBoundReg(RC, Binding.Space, Binding.LowerBound,
+                               Binding.LowerBound + Binding.Size - 1);
+
+    if (!Reg) {
+      reportRegNotBound(M, RC, Binding);
+      continue;
+    }
+
+    const auto *ParamInfo =
+        static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
+
+    bool IsSRVOrUAV = RC == ResourceClass::SRV || RC == ResourceClass::UAV;
+    bool IsDescriptorTable =
+        ParamInfo->Type == dxbc::RootParameterType::DescriptorTable;
+    bool IsRawOrStructuredBuffer =
+        RK != ResourceKind::RawBuffer && RK != ResourceKind::StructuredBuffer;
+    if (IsSRVOrUAV && !IsDescriptorTable && IsRawOrStructuredBuffer) {
+      reportInvalidHandleTyError(M, RC, Binding);
+      continue;
+    }
+
+    HasBindings = true;
+  }
+
+  if (!HasBindings)
+    return;
+
+  if (std::optional<dxbc::RootFlags> Mask =
+          getEnvironmentDenyFlagMask(MMI.ShaderProfile))
+    reportIfDeniedShaderStageAccess(M, dxbc::RootFlags(RSD.Flags), *Mask);
 }
 
 static mcdxbc::RootSignatureDesc *
@@ -234,7 +313,8 @@ getRootSignature(RootSignatureBindingInfo &RSBI,
 static void reportErrors(Module &M, DXILResourceMap &DRM,
                          DXILResourceBindingInfo &DRBI,
                          RootSignatureBindingInfo &RSBI,
-                         dxil::ModuleMetadataInfo &MMI) {
+                         dxil::ModuleMetadataInfo &MMI,
+                         DXILResourceTypeMap &DRTM) {
   if (DRM.hasInvalidCounterDirection())
     reportInvalidDirection(M, DRM);
 
@@ -245,7 +325,7 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
                                        "DXILResourceImplicitBinding pass");
 
   if (mcdxbc::RootSignatureDesc *RSD = getRootSignature(RSBI, MMI))
-    validateRootSignature(M, *RSD, MMI);
+    validateRootSignature(M, *RSD, MMI, DRM, DRTM);
 }
 
 PreservedAnalyses
@@ -254,8 +334,9 @@ DXILPostOptimizationValidation::run(Module &M, ModuleAnalysisManager &MAM) {
   DXILResourceBindingInfo &DRBI = MAM.getResult<DXILResourceBindingAnalysis>(M);
   RootSignatureBindingInfo &RSBI = MAM.getResult<RootSignatureAnalysis>(M);
   ModuleMetadataInfo &MMI = MAM.getResult<DXILMetadataAnalysis>(M);
+  DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
 
-  reportErrors(M, DRM, DRBI, RSBI, MMI);
+  reportErrors(M, DRM, DRBI, RSBI, MMI, DRTM);
   return PreservedAnalyses::all();
 }
 
@@ -271,8 +352,10 @@ public:
         getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
     dxil::ModuleMetadataInfo &MMI =
         getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+    DXILResourceTypeMap &DRTM =
+        getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
-    reportErrors(M, DRM, DRBI, RSBI, MMI);
+    reportErrors(M, DRM, DRBI, RSBI, MMI, DRTM);
     return false;
   }
   StringRef getPassName() const override {
@@ -286,6 +369,7 @@ public:
     AU.addRequired<DXILResourceBindingWrapperPass>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addRequired<RootSignatureAnalysisWrapper>();
+    AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addPreserved<DXILResourceWrapperPass>();
     AU.addPreserved<DXILResourceBindingWrapperPass>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
@@ -303,6 +387,7 @@ INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RootSignatureAnalysisWrapper)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_END(DXILPostOptimizationValidationLegacy, DEBUG_TYPE,
                     "DXIL Post Optimization Validation", false, false)
 
