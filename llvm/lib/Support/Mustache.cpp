@@ -329,6 +329,36 @@ struct Tag {
   size_t StartPosition = StringRef::npos;
 };
 
+static const char *tagKindToString(Tag::Kind K) {
+  switch (K) {
+  case Tag::Kind::None:
+    return "None";
+  case Tag::Kind::Normal:
+    return "Normal";
+  case Tag::Kind::Triple:
+    return "Triple";
+  }
+  llvm_unreachable("Unknown Tag::Kind");
+}
+
+static const char *jsonKindToString(json::Value::Kind K) {
+  switch (K) {
+  case json::Value::Kind::Null:
+    return "JSON_KIND_NULL";
+  case json::Value::Kind::Boolean:
+    return "JSON_KIND_BOOLEAN";
+  case json::Value::Kind::Number:
+    return "JSON_KIND_NUMBER";
+  case json::Value::Kind::String:
+    return "JSON_KIND_STRING";
+  case json::Value::Kind::Array:
+    return "JSON_KIND_ARRAY";
+  case json::Value::Kind::Object:
+    return "JSON_KIND_OBJECT";
+  }
+  llvm_unreachable("Unknown json::Value::Kind");
+}
+
 static Tag findNextTag(StringRef Template, size_t StartPos, StringRef Open,
                        StringRef Close) {
   const StringLiteral TripleOpen("{{{");
@@ -373,11 +403,10 @@ static Tag findNextTag(StringRef Template, size_t StartPos, StringRef Open,
 
 static std::optional<std::pair<StringRef, StringRef>>
 processTag(const Tag &T, SmallVectorImpl<Token> &Tokens) {
-  LLVM_DEBUG(dbgs() << "  Found tag: \"" << T.FullMatch << "\", Content: \""
-                    << T.Content << "\"\n");
+  LLVM_DEBUG(dbgs() << "[Tag] " << T.FullMatch << ", Content: " << T.Content
+                    << ", Kind: " << tagKindToString(T.TagKind) << "\n");
   if (T.TagKind == Tag::Kind::Triple) {
     Tokens.emplace_back(T.FullMatch.str(), "&" + T.Content.str(), '&');
-    LLVM_DEBUG(dbgs() << "  Created UnescapeVariable token.\n");
     return std::nullopt;
   }
   StringRef Interpolated = T.Content;
@@ -385,7 +414,6 @@ processTag(const Tag &T, SmallVectorImpl<Token> &Tokens) {
   if (!Interpolated.trim().starts_with("=")) {
     char Front = Interpolated.empty() ? ' ' : Interpolated.trim().front();
     Tokens.emplace_back(RawBody, Interpolated.str(), Front);
-    LLVM_DEBUG(dbgs() << "  Created tag token of type '" << Front << "'\n");
     return std::nullopt;
   }
   Tokens.emplace_back(RawBody, Interpolated.str(), '=');
@@ -395,8 +423,8 @@ processTag(const Tag &T, SmallVectorImpl<Token> &Tokens) {
   DelimSpec = DelimSpec.trim();
 
   std::pair<StringRef, StringRef> Ret = DelimSpec.split(' ');
-  LLVM_DEBUG(dbgs() << "  Found Set Delimiter tag. NewOpen='" << Ret.first
-                    << "', NewClose='" << Ret.second << "'\n");
+  LLVM_DEBUG(dbgs() << "[Set Delimiter] NewOpen: " << Ret.first
+                    << ", NewClose: " << Ret.second << "\n");
   return Ret;
 }
 
@@ -405,15 +433,15 @@ processTag(const Tag &T, SmallVectorImpl<Token> &Tokens) {
 // but we don't support that here. An unescape variable
 // is represented only by {{& variable}}.
 static SmallVector<Token> tokenize(StringRef Template) {
-  LLVM_DEBUG(dbgs() << "Tokenizing template: \"" << Template << "\"\n");
+  LLVM_DEBUG(dbgs() << "[Tokenize Template] \"" << Template << "\"\n");
   SmallVector<Token> Tokens;
   SmallString<8> Open("{{");
   SmallString<8> Close("}}");
   size_t Start = 0;
 
   while (Start < Template.size()) {
-    LLVM_DEBUG(dbgs() << "Loop start. Start=" << Start << ", Open='" << Open
-                      << "', Close='" << Close << "'\n");
+    LLVM_DEBUG(dbgs() << "[Tokenize Loop] Start:" << Start << ", Open:'" << Open
+                      << "', Close:'" << Close << "'\n");
     Tag T = findNextTag(Template, Start, Open, Close);
 
     if (T.TagKind == Tag::Kind::None) {
@@ -428,7 +456,6 @@ static SmallVector<Token> tokenize(StringRef Template) {
     if (T.StartPosition > Start) {
       StringRef Text = Template.substr(Start, T.StartPosition - Start);
       Tokens.emplace_back(Text.str());
-      LLVM_DEBUG(dbgs() << "  Created Text token: \"" << Text << "\"\n");
     }
 
     if (auto NewDelims = processTag(T, Tokens)) {
@@ -479,7 +506,6 @@ static SmallVector<Token> tokenize(StringRef Template) {
     if ((!HasTextBehind && !HasTextAhead) || (!HasTextBehind && Idx == LastIdx))
       stripTokenBefore(Tokens, Idx, CurrentToken, CurrentType);
   }
-  LLVM_DEBUG(dbgs() << "Tokenizing finished.\n");
   return Tokens;
 }
 
@@ -545,8 +571,8 @@ protected:
     Indent.resize(Indentation, ' ');
 
     for (char C : Data) {
-      LLVM_DEBUG(dbgs() << "IndentationStream: NeedsIndent=" << NeedsIndent
-                        << ", C='" << C << "', Indentation=" << Indentation
+      LLVM_DEBUG(dbgs() << "[Indentation Stream] NeedsIndent:" << NeedsIndent
+                        << ", C:'" << C << "', Indentation:" << Indentation
                         << "\n");
       if (NeedsIndent && C != '\n') {
         WrappedStream << Indent;
@@ -654,7 +680,9 @@ void Parser::parseMustache(ASTNode *Parent) {
   }
 }
 static void toMustacheString(const json::Value &Data, raw_ostream &OS) {
-  LLVM_DEBUG(dbgs() << "toMustacheString: kind=" << (int)Data.kind() << "\n");
+  LLVM_DEBUG(dbgs() << "[To Mustache String] Kind: "
+                    << jsonKindToString(Data.kind()) << ", Data: " << Data
+                    << "\n");
   switch (Data.kind()) {
   case json::Value::Null:
     return;
@@ -667,7 +695,6 @@ static void toMustacheString(const json::Value &Data, raw_ostream &OS) {
   }
   case json::Value::String: {
     auto Str = *Data.getAsString();
-    LLVM_DEBUG(dbgs() << "  --> writing string: \"" << Str << "\"\n");
     OS << Str.str();
     return;
   }
@@ -696,8 +723,8 @@ void ASTNode::renderText(MustacheOutputStream &OS) { OS << Body; }
 
 void ASTNode::renderPartial(const json::Value &CurrentCtx,
                             MustacheOutputStream &OS) {
-  LLVM_DEBUG(dbgs() << "renderPartial: Accessor=" << AccessorValue[0]
-                    << ", Indentation=" << Indentation << "\n");
+  LLVM_DEBUG(dbgs() << "[Render Partial] Accessor:" << AccessorValue[0]
+                    << ", Indentation:" << Indentation << "\n");
   auto Partial = Ctx.Partials.find(AccessorValue[0]);
   if (Partial != Ctx.Partials.end())
     renderPartial(CurrentCtx, OS, Partial->getValue().get());
@@ -716,13 +743,12 @@ void ASTNode::renderVariable(const json::Value &CurrentCtx,
 
 void ASTNode::renderUnescapeVariable(const json::Value &CurrentCtx,
                                      MustacheOutputStream &OS) {
-  LLVM_DEBUG(dbgs() << "renderUnescapeVariable: Accessor=" << AccessorValue[0]
+  LLVM_DEBUG(dbgs() << "[Render UnescapeVariable] Accessor:" << AccessorValue[0]
                     << "\n");
   auto Lambda = Ctx.Lambdas.find(AccessorValue[0]);
   if (Lambda != Ctx.Lambdas.end()) {
     renderLambdas(CurrentCtx, OS, Lambda->getValue());
   } else if (const json::Value *ContextPtr = findContext()) {
-    LLVM_DEBUG(dbgs() << "  --> Found context value, writing to stream.\n");
     OS.suspendIndentation();
     toMustacheString(*ContextPtr, OS);
     OS.resumeIndentation();
@@ -792,8 +818,6 @@ void ASTNode::render(const llvm::json::Value &Data, MustacheOutputStream &OS) {
 }
 
 const json::Value *ASTNode::findContext() {
-  LLVM_DEBUG(dbgs() << "findContext: AccessorValue[0]=" << AccessorValue[0]
-                    << "\n");
   // The mustache spec allows for dot notation to access nested values
   // a single dot refers to the current context.
   // We attempt to find the JSON context in the current node, if it is not
@@ -808,22 +832,12 @@ const json::Value *ASTNode::findContext() {
   StringRef CurrentAccessor = AccessorValue[0];
   ASTNode *CurrentParent = Parent;
 
-  LLVM_DEBUG(dbgs() << "findContext: ParentContext: ";
-             if (ParentContext) ParentContext->print(dbgs());
-             else dbgs() << "nullptr"; dbgs() << "\n");
-
   while (!CurrentContext || !CurrentContext->get(CurrentAccessor)) {
-    LLVM_DEBUG(dbgs() << "findContext: climbing parent\n");
     if (CurrentParent->Ty != Root) {
       CurrentContext = CurrentParent->ParentContext->getAsObject();
       CurrentParent = CurrentParent->Parent;
-      LLVM_DEBUG(dbgs() << "findContext: new ParentContext: ";
-                 if (CurrentParent->ParentContext)
-                     CurrentParent->ParentContext->print(dbgs());
-                 else dbgs() << "nullptr"; dbgs() << "\n");
       continue;
     }
-    LLVM_DEBUG(dbgs() << "findContext: reached root, not found\n");
     return nullptr;
   }
   const json::Value *Context = nullptr;
@@ -839,9 +853,6 @@ const json::Value *ASTNode::findContext() {
       Context = CurrentValue;
     }
   }
-  LLVM_DEBUG(dbgs() << "findContext: found value: ";
-             if (Context) Context->print(dbgs()); else dbgs() << "nullptr";
-             dbgs() << "\n");
   return Context;
 }
 
@@ -853,8 +864,7 @@ void ASTNode::renderChild(const json::Value &Contexts,
 
 void ASTNode::renderPartial(const json::Value &Contexts,
                             MustacheOutputStream &OS, ASTNode *Partial) {
-  LLVM_DEBUG(dbgs() << "renderPartial (helper): Indentation=" << Indentation
-                    << "\n");
+  LLVM_DEBUG(dbgs() << "[Render Partial Indentation] Indentation: " << Indentation << "\n");
   AddIndentationStringStream IS(OS, Indentation);
   Partial->render(Contexts, IS);
 }
