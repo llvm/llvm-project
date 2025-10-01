@@ -422,6 +422,22 @@ set(arm_or_thumb2_base_SOURCES
   ${GENERIC_SOURCES}
 )
 
+option(COMPILER_RT_ARM_OPTIMIZED_FP
+  "On 32-bit Arm, use optimized assembly implementations of FP arithmetic" ON)
+
+if(COMPILER_RT_ARM_OPTIMIZED_FP)
+  set(arm_or_thumb2_base_SOURCES
+    arm/mulsf3.S
+    arm/divsf3.S
+    arm/fnan2.c
+    arm/fnorm2.c
+    arm/funder.c
+    ${arm_or_thumb2_base_SOURCES}
+  )
+endif()
+set_source_files_properties(arm/mulsf3.S arm/divsf3.S
+  PROPERTIES COMPILE_OPTIONS "-Wa,-mimplicit-it=always")
+
 set(arm_sync_SOURCES
   arm/sync_fetch_and_add_4.S
   arm/sync_fetch_and_add_8.S
@@ -454,6 +470,13 @@ set(thumb1_base_SOURCES
   arm/addsf3.S
   ${GENERIC_SOURCES}
 )
+
+if(COMPILER_RT_ARM_OPTIMIZED_FP)
+  set(thumb1_base_SOURCES
+    arm/thumb1/mulsf3.S
+    ${thumb1_base_SOURCES}
+  )
+endif()
 
 set(arm_EABI_RT_SOURCES
   arm/aeabi_cdcmp.S
