@@ -148,7 +148,7 @@ public:
   /// Mangled name get accessor.
   ///
   /// \return
-  ///     A the mangled name string object.
+  ///     The mangled name string object.
   ConstString GetMangledName() const { return m_mangled; }
 
   /// Best name get accessor.
