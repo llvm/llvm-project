@@ -25,6 +25,7 @@
 #include "lldb/Utility/UriParser.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -44,8 +45,10 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <condition_variable>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
 #include <fcntl.h>
 #include <map>
 #include <memory>
@@ -146,51 +149,68 @@ static void PrintVersion() {
 }
 
 #if not defined(_WIN32)
-static llvm::Error RedirectToFile(int fd, llvm::StringRef file, bool read,
-                                  bool write) {
-  if (!read && !write)
+struct FDGroup {
+  int GetFlags() const {
+    if (read && write)
+      return O_NOCTTY | O_CREAT | O_RDWR;
+    if (read)
+      return O_NOCTTY | O_RDONLY;
+    return O_NOCTTY | O_CREAT | O_WRONLY | O_TRUNC;
+  }
+
+  std::vector<int> fds;
+  bool read = false;
+  bool write = false;
+};
+
+static llvm::Error RedirectToFile(const FDGroup &fdg, llvm::StringRef file) {
+  if (!fdg.read && !fdg.write)
     return llvm::Error::success();
-  int flags = 0;
-  if (read && write)
-    flags = O_NOCTTY | O_CREAT | O_RDWR;
-  else if (read)
-    flags = O_NOCTTY | O_RDONLY;
-  else
-    flags = O_NOCTTY | O_CREAT | O_WRONLY | O_TRUNC;
-  int target_fd = lldb_private::FileSystem::Instance().Open(file.str().c_str(),
-                                                            flags, 0666);
+  int target_fd = lldb_private::FileSystem::Instance().Open(
+      file.str().c_str(), fdg.GetFlags(), 0666);
   if (target_fd == -1)
     return llvm::errorCodeToError(
         std::error_code(errno, std::generic_category()));
-  if (target_fd == fd)
-    return llvm::Error::success();
-  if (dup2(target_fd, fd) == -1)
-    return llvm::errorCodeToError(
-        std::error_code(errno, std::generic_category()));
-  close(target_fd);
+  for (int fd : fdg.fds) {
+    if (target_fd == fd)
+      continue;
+    if (::dup2(target_fd, fd) == -1)
+      return llvm::errorCodeToError(
+          std::error_code(errno, std::generic_category()));
+  }
+  ::close(target_fd);
   return llvm::Error::success();
 }
 
 static llvm::Error
 SetupIORedirection(const llvm::SmallVectorImpl<llvm::StringRef> &files) {
-  for (std::size_t i = 0; i < files.size(); i++) {
+  llvm::SmallDenseMap<llvm::StringRef, FDGroup> groups;
+  for (size_t i = 0; i < files.size(); i++) {
     if (files[i].empty())
       continue;
+    auto group = groups.find(files[i]);
+    if (group == groups.end())
+      group = groups.insert({files[i], {{static_cast<int>(i)}}}).first;
+    else
+      group->second.fds.push_back(i);
     switch (i) {
     case 0:
-      if (llvm::Error err = RedirectToFile(i, files[i], true, false))
-        return err;
+      group->second.read = true;
       break;
     case 1:
     case 2:
-      if (llvm::Error err = RedirectToFile(i, files[i], false, true))
-        return err;
+      group->second.write = true;
       break;
     default:
-      if (llvm::Error err = RedirectToFile(i, files[i], true, true))
-        return err;
+      group->second.read = true;
+      group->second.write = true;
       break;
     }
+  }
+  for (const auto &[file, group] : groups) {
+    if (llvm::Error err = RedirectToFile(group, file))
+      return llvm::createStringError(
+          llvm::formatv("{0}: {1}", file, llvm::toString(std::move(err))));
   }
   return llvm::Error::success();
 }

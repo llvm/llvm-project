@@ -889,7 +889,7 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
   if (!stdio.empty()) {
     req_args.push_back("--stdio");
     std::stringstream ss;
-    for (const auto &file : stdio) {
+    for (const std::optional<std::string> &file : stdio) {
       if (file)
         ss << *file;
       ss << ":";
