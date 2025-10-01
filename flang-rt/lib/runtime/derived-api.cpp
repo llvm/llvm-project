@@ -138,6 +138,8 @@ bool RTDEF(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
       return aType == moldType;
     }
   } else if (const auto *derivedTypeMold{GetDerivedType(mold)}) {
+    // If A is unlimited polymorphic and is either a disassociated pointer or
+    // unallocated allocatable, the result is false.
     // Otherwise if the dynamic type of A or MOLD is extensible, the result is
     // true if and only if the dynamic type of A is an extension type of the
     // dynamic type of MOLD.
