@@ -676,6 +676,10 @@ public:
   mlir::Value VisitRealImag(const UnaryOperator *e,
                             QualType promotionType = QualType());
 
+  mlir::Value VisitUnaryExtension(const UnaryOperator *e) {
+    return Visit(e->getSubExpr());
+  }
+
   mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
     CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
     return Visit(die->getExpr());
@@ -686,6 +690,10 @@ public:
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *e);
   mlir::Value VisitCXXNewExpr(const CXXNewExpr *e) {
     return cgf.emitCXXNewExpr(e);
+  }
+  mlir::Value VisitCXXDeleteExpr(const CXXDeleteExpr *e) {
+    cgf.emitCXXDeleteExpr(e);
+    return {};
   }
 
   mlir::Value VisitCXXThrowExpr(const CXXThrowExpr *e) {
@@ -1274,13 +1282,8 @@ mlir::Value ScalarExprEmitter::emitPromoted(const Expr *e,
   } else if (const auto *uo = dyn_cast<UnaryOperator>(e)) {
     switch (uo->getOpcode()) {
     case UO_Imag:
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "ScalarExprEmitter::emitPromoted unary imag");
-      return {};
     case UO_Real:
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "ScalarExprEmitter::emitPromoted unary real");
-      return {};
+      return VisitRealImag(uo, promotionType);
     case UO_Minus:
       return emitUnaryPlusOrMinus(uo, cir::UnaryOpKind::Minus, promotionType);
     case UO_Plus:
@@ -2087,9 +2090,13 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
   if (e->getType()->isVectorType() &&
       e->getType()->castAs<VectorType>()->getVectorKind() ==
           VectorKind::Generic) {
-    assert(!cir::MissingFeatures::vectorType());
-    cgf.cgm.errorNYI(e->getSourceRange(), "vector logical not");
-    return {};
+    mlir::Value oper = Visit(e->getSubExpr());
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    auto operVecTy = mlir::cast<cir::VectorType>(oper.getType());
+    auto exprVecTy = mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
+    mlir::Value zeroVec = builder.getNullValue(operVecTy, loc);
+    return cir::VecCmpOp::create(builder, loc, exprVecTy, cir::CmpOpKind::eq,
+                                 oper, zeroVec);
   }
 
   // Compare operand to zero.
@@ -2132,6 +2139,9 @@ mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
     // this won't work for, e.g. an Obj-C property
     mlir::Value complex = cgf.emitComplexExpr(op);
     if (e->isGLValue() && !promotionTy.isNull()) {
+      promotionTy = promotionTy->isAnyComplexType()
+                        ? promotionTy
+                        : cgf.getContext().getComplexType(promotionTy);
       complex = cgf.emitPromotedValue(complex, promotionTy);
     }
 
@@ -2141,8 +2151,10 @@ mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
   }
 
   if (e->getOpcode() == UO_Real) {
-    return promotionTy.isNull() ? Visit(op)
-                                : cgf.emitPromotedScalarExpr(op, promotionTy);
+    mlir::Value operand = promotionTy.isNull()
+                              ? Visit(op)
+                              : cgf.emitPromotedScalarExpr(op, promotionTy);
+    return builder.createComplexReal(loc, operand);
   }
 
   // __imag on a scalar returns zero. Emit the subexpr to ensure side

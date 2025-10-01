@@ -845,19 +845,10 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   if (VF.isScalable())
     return InstructionCost::getInvalid();
 
-  // First compute the cost of the conditionally executed recipes, followed by
-  // account for the branching cost, except if the mask is a header mask or
-  // uniform condition.
-  using namespace llvm::VPlanPatternMatch;
+  // Compute and return the cost of the conditionally executed recipes.
+  assert(VF.isVector() && "Can only compute vector cost at the moment.");
   VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
-  InstructionCost ThenCost = Then->cost(VF, Ctx);
-
-  // For the scalar case, we may not always execute the original predicated
-  // block, Thus, scale the block's cost by the probability of executing it.
-  if (VF.isScalar())
-    return ThenCost / getPredBlockCostDivisor(Ctx.CostKind);
-
-  return ThenCost;
+  return Then->cost(VF, Ctx);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -977,23 +968,25 @@ void VPlan::execute(VPTransformState *State) {
     // logic generic during VPlan execution.
     State->CFG.DTU.applyUpdates(
         {{DominatorTree::Delete, ScalarPh, ScalarPh->getSingleSuccessor()}});
-  } else {
-    Loop *OrigLoop =
-        State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
-    // If the original loop is unreachable, we need to delete it.
-    auto Blocks = OrigLoop->getBlocksVector();
-    Blocks.push_back(cast<VPIRBasicBlock>(ScalarPhVPBB)->getIRBasicBlock());
-    for (auto *BB : Blocks)
-      State->LI->removeBlock(BB);
-    State->LI->erase(OrigLoop);
   }
-
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Entry);
   // Generate code for the VPlan, in parts of the vector skeleton, loop body and
   // successor blocks including the middle, exit and scalar preheader blocks.
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
+
+  // If the original loop is unreachable, delete it and all its blocks.
+  if (!ScalarPhVPBB->hasPredecessors()) {
+    Loop *OrigLoop =
+        State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
+    auto Blocks = OrigLoop->getBlocksVector();
+    Blocks.push_back(cast<VPIRBasicBlock>(ScalarPhVPBB)->getIRBasicBlock());
+    for (auto *BB : Blocks)
+      State->LI->removeBlock(BB);
+    DeleteDeadBlocks(Blocks, &State->CFG.DTU);
+    State->LI->erase(OrigLoop);
+  }
 
   State->CFG.DTU.flush();
 

@@ -3501,6 +3501,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     case BuiltinType::VectorQuad:
     case BuiltinType::VectorPair:
     case BuiltinType::DMR1024:
+    case BuiltinType::DMR2048:
       OS << "?";
       return;
 
@@ -5873,8 +5874,14 @@ ASTContext::getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack) {
 
   QualType Canon;
   TemplateArgument CanonArgPack = getCanonicalTemplateArgument(ArgPack);
-  if (!CanonArgPack.structurallyEquals(ArgPack))
+  if (!CanonArgPack.structurallyEquals(ArgPack)) {
     Canon = getSubstBuiltinTemplatePack(CanonArgPack);
+    // Refresh InsertPos, in case the recursive call above caused rehashing,
+    // which would invalidate the bucket pointer.
+    [[maybe_unused]] const auto *Nothing =
+        SubstBuiltinTemplatePackTypes.FindNodeOrInsertPos(ID, InsertPos);
+    assert(!Nothing);
+  }
 
   auto *PackType = new (*this, alignof(SubstBuiltinTemplatePackType))
       SubstBuiltinTemplatePackType(Canon, ArgPack);
@@ -12582,6 +12589,10 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     }
     case 'b': {
       Type = Context.AMDGPUBufferRsrcTy;
+      break;
+    }
+    case 't': {
+      Type = Context.AMDGPUTextureTy;
       break;
     }
     default:
