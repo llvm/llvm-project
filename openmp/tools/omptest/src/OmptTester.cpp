@@ -192,14 +192,6 @@ static void on_ompt_callback_work(ompt_work_t work_type,
                                         task_data, count, codeptr_ra);
 }
 
-static void on_ompt_callback_dispatch(ompt_data_t *parallel_data,
-                                      ompt_data_t *task_data,
-                                      ompt_dispatch_t kind,
-                                      ompt_data_t instance) {
-  OmptCallbackHandler::get().handleDispatch(parallel_data, task_data, kind,
-                                            instance);
-}
-
 static void on_ompt_callback_sync_region(ompt_sync_region_t kind,
                                          ompt_scope_endpoint_t endpoint,
                                          ompt_data_t *parallel_data,
