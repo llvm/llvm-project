@@ -84,14 +84,15 @@ def testAlternativesOp(target):
     left_or_right = tune.AlternativesOp(
         [transform.AnyParamType.get()], "left_or_right", 2
     )
-    with ir.InsertionPoint(left_or_right.alternatives[_left:=0].blocks[0]):
+    idx_for_left, idx_for_right = 0, 1
+    with ir.InsertionPoint(left_or_right.alternatives[idx_for_left].blocks[0]):
         # CHECK: %[[C0:.*]] = transform.param.constant 0
         i32_0 = ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 0)
         c0 = transform.ParamConstantOp(transform.AnyParamType.get(), i32_0)
         # CHECK: transform.yield %[[C0]]
         transform.yield_(c0)
     # CHECK-NEXT: }, {
-    with ir.InsertionPoint(left_or_right.alternatives[_right:=1].blocks[0]):
+    with ir.InsertionPoint(left_or_right.alternatives[idx_for_right].blocks[0]):
         # CHECK: %[[C1:.*]] = transform.param.constant 1
         i32_1 = ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 1)
         c1 = transform.ParamConstantOp(transform.AnyParamType.get(), i32_1)
@@ -104,14 +105,14 @@ def testAlternativesOp(target):
     fork_in_the_road = tune.AlternativesOp(
         [transform.AnyParamType.get()], "fork_in_the_road", 2, selected_region=0
     )
-    with ir.InsertionPoint(fork_in_the_road.alternatives[_left:=0].blocks[0]):
+    with ir.InsertionPoint(fork_in_the_road.alternatives[idx_for_left].blocks[0]):
         # CHECK: %[[C0:.*]] = transform.param.constant 0
         i32_0 = ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 0)
         c0 = transform.ParamConstantOp(transform.AnyParamType.get(), i32_0)
         # CHECK: transform.yield %[[C0]]
         transform.yield_(c0)
     # CHECK-NEXT: }, {
-    with ir.InsertionPoint(fork_in_the_road.alternatives[_right:=1].blocks[0]):
+    with ir.InsertionPoint(fork_in_the_road.alternatives[idx_for_right].blocks[0]):
         # CHECK: %[[C1:.*]] = transform.param.constant 1
         i32_1 = ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 1)
         c1 = transform.ParamConstantOp(transform.AnyParamType.get(), i32_1)
