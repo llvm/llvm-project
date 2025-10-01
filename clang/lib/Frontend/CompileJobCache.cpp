@@ -271,7 +271,7 @@ static std::string fixupRelativePath(const std::string &Path, FileManager &FM,
   // Apply "normal" working directory.
   if (!WorkingDir.empty()) {
     SmallString<128> Tmp(Path);
-    llvm::sys::fs::make_absolute(WorkingDir, Tmp);
+    llvm::sys::path::make_absolute(WorkingDir, Tmp);
     return std::string(Tmp);
   }
   return Path;
