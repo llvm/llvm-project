@@ -9,7 +9,7 @@
 // RUN: %clang_host -c -g -fno-common %s -o %t.o
 // RUN: %clang_host %t.o -o %t.out
 // RUN: %lldb -b -x %t.out \
-// RUN:       -o "b 17" \
+// RUN:       -o "b 27" \
 // RUN:       -o "run" \
 // RUN:       -o "p OglobalVar" \
 // RUN:       -o "p Oabc" | FileCheck %s
