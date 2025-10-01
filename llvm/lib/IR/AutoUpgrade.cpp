@@ -5975,20 +5975,6 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
   }
 }
 
-// Check if the module attribute is present and set to one.
-static bool isModuleAttributeOne(Module &M, const StringRef &ModAttr) {
-  const auto *Attr =
-      mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(ModAttr));
-  return Attr && Attr->isOne();
-}
-
-// Check if the module attribute is present and set to two.
-static bool isModuleAttributeTwo(Module &M, const StringRef &ModAttr) {
-  const auto *Attr =
-      mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(ModAttr));
-  return Attr && Attr->getZExtValue() == 2;
-}
-
 // Check if the function attribute is not present and set it.
 static void SetFunctionAttrIfNotSet(Function &F, StringRef FnAttrName,
                                     StringRef Value) {
@@ -6019,26 +6005,54 @@ void llvm::CopyModuleAttrToFunctions(Module &M) {
   if (!T.isThumb() && !T.isARM() && !T.isAArch64())
     return;
 
-  if (isModuleAttributeTwo(M, "branch-target-enforcement"))
-    return;
-  if (isModuleAttributeTwo(M, "branch-protection-pauth-lr"))
-    return;
-  if (isModuleAttributeTwo(M, "guarded-control-stack"))
-    return;
-  if (isModuleAttributeTwo(M, "sign-return-address"))
-    return;
+  uint64_t BTEValue = 0;
+  uint64_t BPPLRValue = 0;
+  uint64_t GCSValue = 0;
+  uint64_t SRAValue = 0;
+  uint64_t SRAALLValue = 0;
+  uint64_t SRABKeyValue = 0;
 
-  bool BTE = isModuleAttributeOne(M, "branch-target-enforcement");
-  bool BPPLR = isModuleAttributeOne(M, "branch-protection-pauth-lr");
-  bool GCS = isModuleAttributeOne(M, "guarded-control-stack");
-  bool SRA = isModuleAttributeOne(M, "sign-return-address");
+  NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
+  if (ModFlags) {
+    for (unsigned I = 0, E = ModFlags->getNumOperands(); I != E; ++I) {
+      MDNode *Op = ModFlags->getOperand(I);
+      if (Op->getNumOperands() != 3)
+        continue;
+
+      MDString *ID = dyn_cast_or_null<MDString>(Op->getOperand(1));
+      auto *CI = mdconst::dyn_extract<ConstantInt>(Op->getOperand(2));
+      if (!ID || !CI)
+        continue;
+
+      StringRef IDStr = ID->getString();
+      uint64_t *ValPtr = IDStr == "branch-target-enforcement"    ? &BTEValue
+                         : IDStr == "branch-protection-pauth-lr" ? &BPPLRValue
+                         : IDStr == "guarded-control-stack"      ? &GCSValue
+                         : IDStr == "sign-return-address"        ? &SRAValue
+                         : IDStr == "sign-return-address-all"    ? &SRAALLValue
+                         : IDStr == "sign-return-address-with-bkey"
+                             ? &SRABKeyValue
+                             : nullptr;
+      if (!ValPtr)
+        continue;
+
+      *ValPtr = CI->getZExtValue();
+      if (*ValPtr == 2)
+        return;
+    }
+  }
+
+  bool BTE = BTEValue == 1;
+  bool BPPLR = BPPLRValue == 1;
+  bool GCS = GCSValue == 1;
+  bool SRA = SRAValue == 1;
 
   StringRef SignTypeValue = "non-leaf";
-  if (SRA && isModuleAttributeOne(M, "sign-return-address-all"))
+  if (SRA && SRAALLValue == 1)
     SignTypeValue = "all";
 
   StringRef SignKeyValue = "a_key";
-  if (SRA && isModuleAttributeOne(M, "sign-return-address-with-bkey"))
+  if (SRA && SRABKeyValue == 1)
     SignKeyValue = "b_key";
 
   for (Function &F : M.getFunctionList()) {
@@ -6068,9 +6082,9 @@ void llvm::CopyModuleAttrToFunctions(Module &M) {
     M.setModuleFlag(llvm::Module::Min, "guarded-control-stack", 2);
   if (SRA) {
     M.setModuleFlag(llvm::Module::Min, "sign-return-address", 2);
-    if (isModuleAttributeOne(M, "sign-return-address-all"))
+    if (SRAALLValue == 1)
       M.setModuleFlag(llvm::Module::Min, "sign-return-address-all", 2);
-    if (isModuleAttributeOne(M, "sign-return-address-with-bkey"))
+    if (SRABKeyValue == 1)
       M.setModuleFlag(llvm::Module::Min, "sign-return-address-with-bkey", 2);
   }
 }
