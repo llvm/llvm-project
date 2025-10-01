@@ -51,7 +51,8 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
       return failure();
 
     arith::FastMathFlags fastFlags = op.getFastmath();
-    if (!(static_cast<uint32_t>(fastFlags) & static_cast<uint32_t>(arith::FastMathFlags::afn)))
+    if (!(static_cast<uint32_t>(fastFlags) &
+          static_cast<uint32_t>(arith::FastMathFlags::afn)))
       return rewriter.notifyMatchFailure(op, "not a fastmath `afn` operation");
 
     SmallVector<Type, 1> operandTypes;
@@ -60,13 +61,15 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
       // supported vector sizes: Distributing unsupported vector sizes to SPIRV
       // supported vector sizes are done in other blocking optimization passes.
       if (!isSPIRVCompatibleFloatOrVec(operand.getType()))
-        return rewriter.notifyMatchFailure(op, "no equivalent native operation for operand type");
+        return rewriter.notifyMatchFailure(
+            op, "no equivalent native operation for operand type");
       operandTypes.push_back(operand.getType());
     }
 
     auto moduleOp = op->template getParentWithTrait<OpTrait::SymbolTable>();
-    auto funcOpRes =
-      LLVM::lookupOrCreateFn(rewriter, moduleOp, getMangledNativeFuncName(operandTypes), operandTypes, op.getType());
+    auto funcOpRes = LLVM::lookupOrCreateFn(
+        rewriter, moduleOp, getMangledNativeFuncName(operandTypes),
+        operandTypes, op.getType());
     assert(!failed(funcOpRes));
     LLVM::LLVMFuncOp funcOp = funcOpRes.value();
 
@@ -99,8 +102,8 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
     return false;
   }
 
-
-  inline std::string getMangledNativeFuncName(const ArrayRef<Type> operandTypes) const {
+  inline std::string
+  getMangledNativeFuncName(const ArrayRef<Type> operandTypes) const {
     std::string mangledFuncName =
         "_Z" + std::to_string(nativeFunc.size()) + nativeFunc.str();
 
@@ -170,6 +173,7 @@ void ConvertMathToXeVMPass::runOnOperation() {
   ConversionTarget target(getContext());
   target.addLegalDialect<BuiltinDialect, func::FuncDialect,
                          vector::VectorDialect, LLVM::LLVMDialect>();
-  if (failed(applyPartialConversion(getOperation(), target, std::move(patterns))))
+  if (failed(
+          applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
 }
