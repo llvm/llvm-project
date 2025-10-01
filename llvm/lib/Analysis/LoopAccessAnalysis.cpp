@@ -2098,7 +2098,7 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   uint64_t ASz = DL.getTypeAllocSize(ATy);
   uint64_t BSz = DL.getTypeAllocSize(BTy);
 
-  // Both the source and sink sizes are neeeded in dependence checks, depending
+  // Both the source and sink sizes are needed in dependence checks, depending
   // on the use.
   std::pair<uint64_t, uint64_t> TypeByteSize(ASz, BSz);
 
