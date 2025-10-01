@@ -97,20 +97,29 @@
 # CHECK-NEXT: RET_ReallyLR
 
 # ASM-LABEL: test_allocate_split_sve:
-# ASM:	.cfi_def_cfa_offset 16
-# ASM-NEXT:	.cfi_offset w29, -16
-# ASM:	sub	sp, sp, #1024
-# ASM:	.cfi_def_cfa_offset 1040
-# ASM:	.cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1040 + 8 * VG
-# ASM:	.cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
-# ASM:	.cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 2080 + 24 * VG
+# ASM:       str x29, [sp, #-16]!
+# ASM-NEXT:  .cfi_def_cfa_offset 16
+# ASM-NEXT:  .cfi_offset w29, -16
+# ASM-NEXT:  sub sp, sp, #1024
+# ASM-NEXT:  .cfi_def_cfa_offset 1040
+# ASM-NEXT:  addvl sp, sp, #-1
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1040 + 8 * VG
+# ASM-NEXT:  sub sp, sp, #1040
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
+# ASM-NEXT:  addvl sp, sp, #-2
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 2080 + 24 * VG
 #
-# ASM:	.cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
-# ASM:	.cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1056 + 8 * VG
-# ASM:	.cfi_def_cfa wsp, 1056
-# ASM:	.cfi_def_cfa_offset 16
-# ASM:	.cfi_def_cfa_offset 0
-# ASM:	.cfi_restore w29
+# ASM:	     addvl sp, sp, #2
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
+# ASM-NEXT:  add sp, sp, #1024
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1056 + 8 * VG
+# ASM-NEXT:  addvl sp, sp, #1
+# ASM-NEXT:  .cfi_def_cfa wsp, 1056
+# ASM-NEXT:  add sp, sp, #1040
+# ASM-NEXT:  .cfi_def_cfa_offset 16
+# ASM-NEXT:  ldr x29, [sp], #16
+# ASM-NEXT:  .cfi_def_cfa_offset 0
+# ASM-NEXT:  .cfi_restore w29
 
 # UNWINDINFO:      DW_CFA_def_cfa_offset: +16
 # UNWINDINFO-NEXT: DW_CFA_offset: reg29 -16
@@ -206,15 +215,23 @@ body:             |
 # CHECK-NEXT: RET_ReallyLR
 
 # ASM-LABEL: test_allocate_split_sve_realigned
-# ASM:	.cfi_def_cfa_offset 1040
-# ASM:	.cfi_def_cfa w29, 16
-# ASM-NEXT: .cfi_offset w30, -8
-# ASM-NEXT:	.cfi_offset w29, -16
+# ASM:	     sub sp, sp, #1040
+# ASM-NEXT:  .cfi_def_cfa_offset 1040
+# ASM-NEXT:  str x29, [sp, #1024]
+# ASM-NEXT:  str x30, [sp, #1032]
+# ASM-NEXT:  add x29, sp, #1024
+# ASM-NEXT:  .cfi_def_cfa w29, 16
+# ASM-NEXT:  .cfi_offset w30, -8
+# ASM-NEXT:  .cfi_offset w29, -16
 #
-# ASM:	.cfi_def_cfa wsp, 1040
-# ASM:   .cfi_def_cfa_offset 0
-# ASM-NEXT:	.cfi_restore w30
-# ASM-NEXT:	.cfi_restore w29
+# ASM:       sub sp, x29, #1024
+# ASM-NEXT:  .cfi_def_cfa wsp, 1040
+# ASM-NEXT:  ldr x30, [sp, #1032]
+# ASM-NEXT:  ldr x29, [sp, #1024]
+# ASM-NEXT:  add sp, sp, #1040
+# ASM-NEXT:  .cfi_def_cfa_offset 0
+# ASM-NEXT:  .cfi_restore w30
+# ASM-NEXT:  .cfi_restore w29
 
 # UNWINDINFO:       DW_CFA_def_cfa_offset: +1040
 # UNWINDINFO:       DW_CFA_def_cfa: reg29 +16
@@ -283,19 +300,29 @@ body:             |
 # CHECK-NEXT: RET_ReallyLR
 
 # ASM-LABEL: test_address_split_sve
-# ASM:	    .cfi_def_cfa_offset 16
-# ASM-NEXT:	.cfi_offset w29, -16
-# ASM:	    .cfi_def_cfa_offset 1040
-# ASM:	    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1040 + 8 * VG
-# ASM:	    .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
-# ASM:	    .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 2080 + 24 * VG
+# ASM:       str x29, [sp, #-16]!
+# ASM-NEXT:  .cfi_def_cfa_offset 16
+# ASM-NEXT:  .cfi_offset w29, -16
+# ASM-NEXT:  sub sp, sp, #1024
+# ASM-NEXT:  .cfi_def_cfa_offset 1040
+# ASM-NEXT:  addvl sp, sp, #-1
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1040 + 8 * VG
+# ASM-NEXT:  sub sp, sp, #1040
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
+# ASM-NEXT:  addvl sp, sp, #-2
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 2080 + 24 * VG
 #
-# ASM:	    .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
-# ASM:	    .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1056 + 8 * VG
-# ASM:	    .cfi_def_cfa wsp, 1056
-# ASM:	    .cfi_def_cfa_offset 16
-# ASM:	    .cfi_def_cfa_offset 0
-# ASM-NEXT:	.cfi_restore w29
+# ASM:       addvl sp, sp, #2
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
+# ASM-NEXT:  add sp, sp, #1024
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1056 + 8 * VG
+# ASM-NEXT:  addvl sp, sp, #1
+# ASM-NEXT:  .cfi_def_cfa wsp, 1056
+# ASM-NEXT:  add sp, sp, #1040
+# ASM-NEXT:  .cfi_def_cfa_offset 16
+# ASM-NEXT:  ldr x29, [sp], #16
+# ASM-NEXT:  .cfi_def_cfa_offset 0
+# ASM-NEXT:  .cfi_restore w29
 
 # UNWINDINFO: DW_CFA_def_cfa_offset: +16
 # UNWINDINFO-NEXT: DW_CFA_offset: reg29 -16
@@ -381,15 +408,26 @@ body:             |
 # CHECK-NEXT: RET_ReallyLR
 
 # ASM-LABEL: test_address_split_sve_fp
-# ASM:	     .cfi_def_cfa_offset 16
-# ASM:	     .cfi_def_cfa w29, 16
-# ASM-NEXT:	 .cfi_offset w30, -8
-# ASM-NEXT:	 .cfi_offset w29, -16
+# ASM:       stp x29, x30, [sp, #-16]!
+# ASM-NEXT:  .cfi_def_cfa_offset 16
+# ASM-NEXT:  mov x29, sp
+# ASM-NEXT:  .cfi_def_cfa w29, 16
+# ASM-NEXT:  .cfi_offset w30, -8
+# ASM-NEXT:  .cfi_offset w29, -16
+# ASM-NEXT:  sub sp, sp, #1024
+# ASM-NEXT:  addvl sp, sp, #-1
+# ASM-NEXT:  sub sp, sp, #1040
+# ASM-NEXT:  addvl sp, sp, #-2
 #
-# ASM:	     .cfi_def_cfa wsp, 16
-# ASM:	     .cfi_def_cfa_offset 0
-# ASM-NEXT:	 .cfi_restore w30
-# ASM-NEXT:	 .cfi_restore w29
+# ASM:       addvl sp, sp, #2
+# ASM-NEXT:  add sp, sp, #1024
+# ASM-NEXT:  addvl sp, sp, #1
+# ASM-NEXT:  add sp, sp, #1040
+# ASM-NEXT:  .cfi_def_cfa wsp, 16
+# ASM-NEXT:  ldp x29, x30, [sp], #16
+# ASM-NEXT:  .cfi_def_cfa_offset 0
+# ASM-NEXT:  .cfi_restore w30
+# ASM-NEXT:  .cfi_restore w29
 
 # UNWINDINFO:      DW_CFA_def_cfa_offset: +16
 # UNWINDINFO:      DW_CFA_def_cfa: reg29 +16
@@ -471,25 +509,47 @@ body:             |
 # CHECK-NEXT: RET_ReallyLR
 
 # ASM-LABEL: save_restore_ppr_zpr:
-# ASM:	     .cfi_def_cfa_offset 16
-# ASM-NEXT:	 .cfi_offset w29, -16
-# ASM:	     .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
-# ASM:	     .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1040 + 8 * VG
-# ASM:	     .cfi_escape 0x0f, 0x0a, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 1040 + 32 * VG
-# ASM:    	 .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8  @ cfa - 16 * VG - 1040
-# ASM-NEXT:	 .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d9  @ cfa - 24 * VG - 1040
-# ASM-NEXT:	 .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d10  @ cfa - 32 * VG - 1040
-# ASM:	     .cfi_escape 0x0f, 0x0a, 0x8f, 0xb0, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 2096 + 32 * VG
+# ASM:       str x29, [sp, #-16]!
+# ASM-NEXT:  .cfi_def_cfa_offset 16
+# ASM-NEXT:  .cfi_offset w29, -16
+# ASM-NEXT:  addvl sp, sp, #-1
+# ASM-NEXT:  .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
+# ASM-NEXT:  str p6, [sp, #5, mul vl]
+# ASM-NEXT:  str p5, [sp, #6, mul vl]
+# ASM-NEXT:  str p4, [sp, #7, mul vl]
+# ASM-NEXT:  sub sp, sp, #1024
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1040 + 8 * VG
+# ASM-NEXT:  addvl sp, sp, #-3
+# ASM-NEXT:  .cfi_escape 0x0f, 0x0a, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 1040 + 32 * VG
+# ASM-NEXT:  str z10, [sp]
+# ASM-NEXT:  str z9, [sp, #1, mul vl]
+# ASM-NEXT:  str z8, [sp, #2, mul vl]
+# ASM-NEXT:  .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8  @ cfa - 16 * VG - 1040
+# ASM-NEXT:  .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d9  @ cfa - 24 * VG - 1040
+# ASM-NEXT:  .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d10  @ cfa - 32 * VG - 1040
+# ASM-NEXT:  sub sp, sp, #1056
+# ASM-NEXT:  .cfi_escape 0x0f, 0x0a, 0x8f, 0xb0, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 2096 + 32 * VG
 #
-# ASM:	     .cfi_escape 0x0f, 0x0a, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 1040 + 32 * VG
-# ASM:	     .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
-# ASM:	     .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
+# ASM:       add sp, sp, #1056
+# ASM-NEXT:  .cfi_escape 0x0f, 0x0a, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 1040 + 32 * VG
+# ASM-NEXT:  ldr z10, [sp]
+# ASM-NEXT:  ldr z9, [sp, #1, mul vl]
+# ASM-NEXT:  ldr z8, [sp, #2, mul vl]
+# ASM-NEXT:  add sp, sp, #1024
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
+# ASM-NEXT:  addvl   sp, sp, #3
+# ASM-NEXT:  .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 # ASM-NEXT:  .cfi_restore z8
 # ASM-NEXT:  .cfi_restore z9
 # ASM-NEXT:  .cfi_restore z10
-# ASM:	     .cfi_def_cfa wsp, 16
-# ASM:     	 .cfi_def_cfa_offset 0
-# ASM-NEXT:	 .cfi_restore w29
+# ASM-NEXT:  ldr p6, [sp, #5, mul vl]
+# ASM-NEXT:  ldr p5, [sp, #6, mul vl]
+# ASM-NEXT:  ldr p4, [sp, #7, mul vl]
+# ASM-NEXT:  addvl sp, sp, #1
+# ASM-NEXT:  .cfi_def_cfa wsp, 16
+# ASM-NEXT:  ldr x29, [sp], #16
+# ASM-NEXT:  .cfi_def_cfa_offset 0
+# ASM-NEXT:  .cfi_restore w29
 
 # UNWINDINFO: DW_CFA_def_cfa_offset: +16
 # UNWINDINFO-NEXT: DW_CFA_offset: reg29 -16

@@ -56,20 +56,20 @@
 // | async context if needed           |
 // | (a.k.a. "frame record")           |
 // |-----------------------------------| <- fp(=x29)
-//        Default SVE stack layout                 Split SVE objects
-//   (aarch64-split-sve-objects=false)      (aarch64-split-sve-objects=true)
-// |-----------------------------------|  |-----------------------------------|
-// |         <hazard padding>          |  | callee-saved PPR registers        |
-// |-----------------------------------|  |-----------------------------------|
-// |                                   |  |         PPR stack objects         |
-// | callee-saved fp/simd/SVE regs     |  |-----------------------------------|
-// |                                   |  |         <hazard padding>          |
-// |-----------------------------------|  |-----------------------------------|
-// |                                   |  | callee-saved ZPR registers        |
-// |        SVE stack objects          |  |-----------------------------------|
-// |                                   |  |         ZPR stack objects         |
-// |-----------------------------------|  |-----------------------------------|
-// |.empty.space.to.make.part.below....|
+//        Default SVE stack layout                Split SVE objects
+//   (aarch64-split-sve-objects=false)     (aarch64-split-sve-objects=true)
+// |-----------------------------------| |-----------------------------------|
+// |         <hazard padding>          | | callee-saved PPR registers        |
+// |-----------------------------------| |-----------------------------------|
+// |                                   | |         PPR stack objects         |
+// | callee-saved fp/simd/SVE regs     | |-----------------------------------|
+// |                                   | |         <hazard padding>          |
+// |-----------------------------------| |-----------------------------------|
+// |                                   | | callee-saved ZPR/FPR registers    |
+// |        SVE stack objects          | |-----------------------------------|
+// |                                   | |         ZPR stack objects         |
+// |-----------------------------------| |-----------------------------------|
+// |.empty.space.to.make.part.below....| ^ NB: FPR CSRs are are promoted to ZPRs
 // |.aligned.in.case.it.needs.more.than| (size of this area is unknown at
 // |.the.standard.16-byte.alignment....|  compile time; if present)
 // |-----------------------------------|
@@ -2434,6 +2434,7 @@ void AArch64FrameLowering::determineStackHazardSlot(
     SavedRegs |= FPRZRegs;
 
     AFI->setSplitSVEObjects(true);
+    LLVM_DEBUG(dbgs() << "SplitSVEObjects enabled!\n");
   }
 }
 
