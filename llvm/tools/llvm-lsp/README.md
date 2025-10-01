@@ -25,6 +25,7 @@ The server supports the following standard LSP capabilities:
 * `textDocumentSync.openClose`: Synchronizes document content with the server.
 * `referencesProvider`: Finds all references to a symbol.
 * `codeActionProvider`: Provides code actions, such as quick fixes and refactorings. This server uses it to provide CFG views.
+* `documentsSymbolProvider`: Provides a tree of document symbols, enables breadcrums navigation in the editor.
 
 ---
 
