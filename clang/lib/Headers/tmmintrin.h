@@ -508,9 +508,8 @@ _mm_hsubs_pi16(__m64 __a, __m64 __b)
 ///    \a R6 := (\a __a12 * \a __b12) + (\a __a13 * \a __b13) \n
 ///    \a R7 := (\a __a14 * \a __b14) + (\a __a15 * \a __b15)
 static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
-_mm_maddubs_epi16(__m128i __a, __m128i __b)
-{
-    return (__m128i)__builtin_ia32_pmaddubsw128((__v16qi)__a, (__v16qi)__b);
+_mm_maddubs_epi16(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_pmaddubsw128((__v16qi)__a, (__v16qi)__b);
 }
 
 /// Multiplies corresponding pairs of packed 8-bit unsigned integer
@@ -538,10 +537,9 @@ _mm_maddubs_epi16(__m128i __a, __m128i __b)
 ///    \a R2 := (\a __a4 * \a __b4) + (\a __a5 * \a __b5) \n
 ///    \a R3 := (\a __a6 * \a __b6) + (\a __a7 * \a __b7)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
-_mm_maddubs_pi16(__m64 __a, __m64 __b)
-{
-    return __trunc64(__builtin_ia32_pmaddubsw128((__v16qi)__zext128(__a),
-                                                 (__v16qi)__zext128(__b)));
+_mm_maddubs_pi16(__m64 __a, __m64 __b) {
+  return __trunc64(__builtin_ia32_pmaddubsw128((__v16qi)__zext128(__a),
+                                               (__v16qi)__zext128(__b)));
 }
 
 /// Multiplies packed 16-bit signed integer values, truncates the 32-bit
