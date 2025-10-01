@@ -763,12 +763,15 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
       "                  backing:NSBackingStoreBuffered\n"
       "                    defer:NO]);\n"
       "}");
-  verifyFormat(R"(- (void)test {
-  if ([object
-          respondsToSelector:@selector(
-                                 selectorNameThatIsReallyLong:param1:param2:)])
-    return;
-})");
+  Style.ColumnLimit = 63;
+  verifyFormat(
+      "- (void)test {\n"
+      "  if ([object\n"
+      "          respondsToSelector:@selector(\n"
+      "                                 selectorName:param1:param2:)])\n"
+      "    return;\n"
+      "}");
+  Style.ColumnLimit = PreviousColumnLimit;
   verifyFormat("[contentsContainer replaceSubview:[subviews objectAtIndex:0]\n"
                "                             with:contentsNativeView];");
 
