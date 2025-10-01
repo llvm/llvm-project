@@ -5790,7 +5790,7 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
 ///   (X - (Hi + 1)) u< (Lo - (Hi + 1))
 Instruction *InstCombinerImpl::foldICmpWithClamp(ICmpInst &I, Value *X,
                                                  MinMaxIntrinsic *Min) {
-  if (!I.isEquality() || !Min->hasOneUse())
+  if (!I.isEquality() || !Min->hasOneUse() || !Min->isMin())
     return nullptr;
 
   const APInt *Lo = nullptr, *Hi = nullptr;
