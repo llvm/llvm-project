@@ -618,6 +618,8 @@ bool ShrinkWrapImpl::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
 
   DenseSet<const MachineBasicBlock *> DirtyBBs;
   for (MachineBasicBlock &MBB : MF) {
+    if (!MDT->isReachableFromEntry(&MBB))
+      continue;
     if (MBB.isEHPad()) {
       DirtyBBs.insert(&MBB);
       continue;

@@ -4169,7 +4169,8 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
 #undef CASE_VFMA_OPCODE_VV
 #undef CASE_VFMA_SPLATS
 
-bool RISCVInstrInfo::simplifyInstruction(MachineInstr &MI) const {
+bool RISCVInstrInfo::simplifyInstruction(MachineInstr &MI,
+                                         bool &AlteredTerminators) const {
   switch (MI.getOpcode()) {
   default:
     break;
