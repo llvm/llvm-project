@@ -2131,20 +2131,20 @@ static SymbolType GetSymbolType(const char *&symbol_name,
       if (symbol_name) {
         llvm::StringRef symbol_name_ref(symbol_name);
         if (symbol_name_ref.starts_with("OBJC_")) {
-          static const llvm::StringRef s_objc_v2_prefix_class("OBJC_CLASS_$_");
-          static const llvm::StringRef s_objc_v2_prefix_metaclass(
+          static const llvm::StringRef g_objc_v2_prefix_class("OBJC_CLASS_$_");
+          static const llvm::StringRef g_objc_v2_prefix_metaclass(
               "OBJC_METACLASS_$_");
-          static const llvm::StringRef s_objc_v2_prefix_ivar("OBJC_IVAR_$_");
-          if (symbol_name_ref.starts_with(s_objc_v2_prefix_class)) {
-            symbol_name = symbol_name + s_objc_v2_prefix_class.size();
+          static const llvm::StringRef g_objc_v2_prefix_ivar("OBJC_IVAR_$_");
+          if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
+            symbol_name = symbol_name + g_objc_v2_prefix_class.size();
             type = eSymbolTypeObjCClass;
             demangled_is_synthesized = true;
-          } else if (symbol_name_ref.starts_with(s_objc_v2_prefix_metaclass)) {
-            symbol_name = symbol_name + s_objc_v2_prefix_metaclass.size();
+          } else if (symbol_name_ref.starts_with(g_objc_v2_prefix_metaclass)) {
+            symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
             type = eSymbolTypeObjCMetaClass;
             demangled_is_synthesized = true;
-          } else if (symbol_name_ref.starts_with(s_objc_v2_prefix_ivar)) {
-            symbol_name = symbol_name + s_objc_v2_prefix_ivar.size();
+          } else if (symbol_name_ref.starts_with(g_objc_v2_prefix_ivar)) {
+            symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
             type = eSymbolTypeObjCIVar;
             demangled_is_synthesized = true;
           }
