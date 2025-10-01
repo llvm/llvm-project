@@ -845,19 +845,10 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   if (VF.isScalable())
     return InstructionCost::getInvalid();
 
-  // First compute the cost of the conditionally executed recipes, followed by
-  // account for the branching cost, except if the mask is a header mask or
-  // uniform condition.
-  using namespace llvm::VPlanPatternMatch;
+  // Compute and return the cost of the conditionally executed recipes.
+  assert(VF.isVector() && "Can only compute vector cost at the moment.");
   VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
-  InstructionCost ThenCost = Then->cost(VF, Ctx);
-
-  // For the scalar case, we may not always execute the original predicated
-  // block, Thus, scale the block's cost by the probability of executing it.
-  if (VF.isScalar())
-    return ThenCost / getPredBlockCostDivisor(Ctx.CostKind);
-
-  return ThenCost;
+  return Then->cost(VF, Ctx);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1701,26 +1692,6 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
     if (!VectorizingEpilogue) {
       LoopVectorizeHints Hints(VectorLoop, true, *ORE);
       Hints.setAlreadyVectorized();
-    }
-
-    // Check if it's EVL-vectorized and mark the corresponding metadata.
-    bool IsEVLVectorized =
-        llvm::any_of(*HeaderVPBB, [](const VPRecipeBase &Recipe) {
-          // Looking for the ExplictVectorLength VPInstruction.
-          if (const auto *VI = dyn_cast<VPInstruction>(&Recipe))
-            return VI->getOpcode() == VPInstruction::ExplicitVectorLength;
-          return false;
-        });
-    if (IsEVLVectorized) {
-      LLVMContext &Context = VectorLoop->getHeader()->getContext();
-      MDNode *LoopID = VectorLoop->getLoopID();
-      auto *IsEVLVectorizedMD = MDNode::get(
-          Context,
-          {MDString::get(Context, "llvm.loop.isvectorized.tailfoldingstyle"),
-           MDString::get(Context, "evl")});
-      MDNode *NewLoopID = makePostTransformationMetadata(Context, LoopID, {},
-                                                         {IsEVLVectorizedMD});
-      VectorLoop->setLoopID(NewLoopID);
     }
   }
   TargetTransformInfo::UnrollingPreferences UP;

@@ -287,7 +287,8 @@ public:
       assert(0 < Level && Level <= Levels && "Level out of range");
       return DV[Level - 1];
     } else {
-      assert(Levels < Level && Level <= Levels + SameSDLevels &&
+      assert(Levels < Level &&
+             Level <= static_cast<unsigned>(Levels) + SameSDLevels &&
              "isSameSD level out of range");
       return DVSameSD[Level - Levels - 1];
     }
