@@ -27544,11 +27544,11 @@ static SDValue performPTestFirstCombine(SDNode *N,
   auto Mask = N->getOperand(0);
   auto Pred = N->getOperand(1);
 
-  if (Pred->getOpcode() == AArch64ISD::REINTERPRET_CAST)
-    Pred = Pred->getOperand(0);
-
   if (!isLane0KnownActive(Mask))
     return SDValue();
+
+  if (Pred->getOpcode() == AArch64ISD::REINTERPRET_CAST)
+    Pred = Pred->getOperand(0);
 
   if (Pred->getOpcode() == ISD::CONCAT_VECTORS) {
     Pred = Pred->getOperand(0);
