@@ -2657,7 +2657,7 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
     SVal V = getBinding(B.asStore(), *MRV, R->getValueType());
     return bindAggregate(B, R, V);
   }
-  if (auto const *Value = Init.getAsInteger()) {
+  if (llvm::APSInt const *Value = Init.getAsInteger()) {
     auto SafeValue = StateMgr.getBasicVals().getValue(*Value);
     return bindAggregate(B, R, nonloc::ConcreteInt(SafeValue));
   }
