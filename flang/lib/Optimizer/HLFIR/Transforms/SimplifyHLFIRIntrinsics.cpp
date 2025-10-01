@@ -2298,6 +2298,57 @@ getVariable(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value val) {
   return {associate.getBase(), associate};
 }
 
+// Return character length if known at compile time. Unlike genCharLength
+// it does not create any new op as specifically is intended for analysis.
+// It is inspired by genLengthParameters that does the job for genCharLength.
+static std::optional<std::int64_t> getCharLengthIfConst(hlfir::Entity entity) {
+  if (!entity.isCharacter()) {
+    return std::nullopt;
+  }
+
+  if (mlir::isa<hlfir::ExprType>(entity.getType())) {
+    mlir::Value expr = entity;
+    if (auto reassoc = expr.getDefiningOp<hlfir::NoReassocOp>())
+      expr = reassoc.getVal();
+    // Going through fir::ExtendedValue would create a temp,
+    // which is not desired for an inquiry.
+    // TODO: make this an interface when adding further character producing ops.
+    if (auto concat = expr.getDefiningOp<hlfir::ConcatOp>()) {
+      return fir::getIntIfConstant(concat.getLength());
+    } else if (auto setLength = expr.getDefiningOp<hlfir::SetLengthOp>()) {
+      return fir::getIntIfConstant(setLength.getLength());
+    } else if (auto asExpr = expr.getDefiningOp<hlfir::AsExprOp>()) {
+      return getCharLengthIfConst(hlfir::Entity{asExpr.getVar()});
+    } else {
+      llvm::SmallVector<mlir::Value> param;
+      if (auto elemental = expr.getDefiningOp<hlfir::ElementalOp>()) {
+        param.append(elemental.getTypeparams().begin(),
+                     elemental.getTypeparams().end());
+      } else if (auto evalInMem =
+                     expr.getDefiningOp<hlfir::EvaluateInMemoryOp>()) {
+        param.append(evalInMem.getTypeparams().begin(),
+                     evalInMem.getTypeparams().end());
+      } else if (auto apply = expr.getDefiningOp<hlfir::ApplyOp>()) {
+        param.append(apply.getTypeparams().begin(),
+                     apply.getTypeparams().end());
+      } else {
+        return std::nullopt;
+      }
+      assert(param.size() == 1 && "characters must have one length parameters");
+      return fir::getIntIfConstant(param.pop_back_val());
+    }
+  }
+
+  if (auto varIface = entity.getMaybeDereferencedVariableInterface())
+    if (!varIface.getExplicitTypeParams().empty())
+      return fir::getIntIfConstant(varIface.getExplicitTypeParams()[0]);
+  auto charType =
+      mlir::cast<fir::CharacterType>(entity.getFortranElementType());
+  if (charType.hasConstantLen())
+    return charType.getLen();
+  return std::nullopt;
+}
+
 class IndexOpConversion : public mlir::OpRewritePattern<hlfir::IndexOp> {
 public:
   using mlir::OpRewritePattern<hlfir::IndexOp>::OpRewritePattern;
@@ -2321,22 +2372,19 @@ public:
 
     auto resultTy = op.getType();
     mlir::Value back = op.getBack();
-    mlir::Value substrLen =
-        hlfir::genCharLength(loc, builder, hlfir::Entity{op.getSubstr()});
-
-    auto substrLenCst = fir::getIntIfConstant(substrLen);
+    auto substrLenCst = getCharLengthIfConst(hlfir::Entity{op.getSubstr()});
     if (!substrLenCst) {
       return rewriter.notifyMatchFailure(
           op, "substring length unknown at compile time");
     }
-    mlir::Value strLen =
-        hlfir::genCharLength(loc, builder, hlfir::Entity{op.getStr()});
+    hlfir::Entity strEntity{op.getStr()};
     auto i1Ty = builder.getI1Type();
     auto idxTy = builder.getIndexType();
     if (*substrLenCst == 0) {
       mlir::Value oneIdx = builder.createIntegerConstant(loc, idxTy, 1);
       // zero length substring. For back search replace with
       // strLen+1, or otherwise with 1.
+      mlir::Value strLen = hlfir::genCharLength(loc, builder, strEntity);
       mlir::Value strEnd = mlir::arith::AddIOp::create(
           builder, loc, builder.createConvert(loc, idxTy, strLen), oneIdx);
       if (back)
@@ -2350,7 +2398,7 @@ public:
       return mlir::success();
     }
 
-    if (auto strLenCst = fir::getIntIfConstant(strLen)) {
+    if (auto strLenCst = getCharLengthIfConst(strEntity)) {
       if (*strLenCst < *substrLenCst) {
         rewriter.replaceOp(op, builder.createIntegerConstant(loc, resultTy, 0));
         return mlir::success();
@@ -2430,6 +2478,7 @@ public:
     //        result = str[at-1] == want ? at : result;
     //    }
     //  }
+    mlir::Value strLen = hlfir::genCharLength(loc, builder, strEntity);
     if (!back)
       back = builder.createIntegerConstant(loc, i1Ty, 0);
     else
