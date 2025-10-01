@@ -247,7 +247,7 @@ struct LegalizeVectorOuterProductOpsByDecomposition
           !accSMETiles.empty() ? accSMETiles[index] : Value{},
           outerProductOp.getKind());
 
-      auto maskedOuterProduct =
+      auto *maskedOuterProduct =
           vector::maskOperation(rewriter, smeOuterProduct, smeMask);
       resultSMETiles.push_back(maskedOuterProduct->getResult(0));
     }
