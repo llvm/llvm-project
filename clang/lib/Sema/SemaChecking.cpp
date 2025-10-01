@@ -15949,7 +15949,7 @@ void Sema::RefersToMemberWithReducedAlignment(
   }
 
   // Check if the synthesized offset fulfills the alignment.
-  if (Offset % ExpectedAlignment != 0 ||
+  if (!Offset.isMultipleOf(ExpectedAlignment) ||
       // It may fulfill the offset it but the effective alignment may still be
       // lower than the expected expression alignment.
       CompleteObjectAlignment < ExpectedAlignment) {

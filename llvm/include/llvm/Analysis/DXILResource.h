@@ -222,21 +222,19 @@ public:
   }
 };
 
-/// The dx.Layout target extension type
+/// The dx.Padding target extension type
 ///
-/// `target("dx.Layout", <Type>, <size>, [offsets...])`
-class LayoutExtType : public TargetExtType {
+/// `target("dx.Padding", NumBytes)`
+class PaddingExtType : public TargetExtType {
 public:
-  LayoutExtType() = delete;
-  LayoutExtType(const LayoutExtType &) = delete;
-  LayoutExtType &operator=(const LayoutExtType &) = delete;
+  PaddingExtType() = delete;
+  PaddingExtType(const PaddingExtType &) = delete;
+  PaddingExtType &operator=(const PaddingExtType &) = delete;
 
-  Type *getWrappedType() const { return getTypeParameter(0); }
-  uint32_t getSize() const { return getIntParameter(0); }
-  uint32_t getOffsetOfElement(int I) const { return getIntParameter(I + 1); }
+  unsigned getNumBytes() const { return getIntParameter(0); }
 
   static bool classof(const TargetExtType *T) {
-    return T->getName() == "dx.Layout";
+    return T->getName() == "dx.Padding";
   }
   static bool classof(const Type *T) {
     return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));

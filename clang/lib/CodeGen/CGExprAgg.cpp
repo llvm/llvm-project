@@ -19,12 +19,14 @@
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
 #include "EHScopeStack.h"
+#include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/StmtVisitor.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -2280,6 +2282,127 @@ AggValueSlot::Overlap_t CodeGenFunction::getOverlapForBaseInit(
   return AggValueSlot::MayOverlap;
 }
 
+namespace {
+class HLSLBufferCopyEmitter {
+  CodeGenFunction &CGF;
+  Address DestPtr;
+  Address SrcPtr;
+  llvm::Type *LayoutTy = nullptr;
+
+  SmallVector<llvm::Value *> CurStoreIndices;
+  SmallVector<llvm::Value *> CurLoadIndices;
+
+  void emitCopyAtIndices(llvm::Type *FieldTy, unsigned StoreIndex,
+                         unsigned LoadIndex) {
+    CurStoreIndices.push_back(llvm::ConstantInt::get(CGF.SizeTy, StoreIndex));
+    CurLoadIndices.push_back(llvm::ConstantInt::get(CGF.SizeTy, LoadIndex));
+    auto RestoreIndices = llvm::make_scope_exit([&]() {
+      CurStoreIndices.pop_back();
+      CurLoadIndices.pop_back();
+    });
+
+    if (processArray(FieldTy))
+      return;
+    if (processBufferLayoutArray(FieldTy))
+      return;
+    if (processStruct(FieldTy))
+      return;
+
+    // We have a scalar or vector element - emit a copy.
+    CharUnits Align = CharUnits::fromQuantity(
+        CGF.CGM.getDataLayout().getABITypeAlign(FieldTy));
+    Address SrcGEP = RawAddress(
+        CGF.Builder.CreateInBoundsGEP(LayoutTy, SrcPtr.getBasePointer(),
+                                      CurLoadIndices, "cbuf.src"),
+        FieldTy, Align, SrcPtr.isKnownNonNull());
+    Address DestGEP = CGF.Builder.CreateInBoundsGEP(
+        DestPtr, CurStoreIndices, FieldTy, Align, "cbuf.dest");
+    llvm::Value *Load = CGF.Builder.CreateLoad(SrcGEP, "cbuf.load");
+    CGF.Builder.CreateStore(Load, DestGEP);
+  }
+
+  bool processArray(llvm::Type *FieldTy) {
+    auto *AT = dyn_cast<llvm::ArrayType>(FieldTy);
+    if (!AT)
+      return false;
+
+    // If we have an array then there isn't any padding
+    // between elements. We just need to copy each element over.
+    for (unsigned I = 0, E = AT->getNumElements(); I < E; ++I)
+      emitCopyAtIndices(AT->getElementType(), I, I);
+    return true;
+  }
+
+  bool processBufferLayoutArray(llvm::Type *FieldTy) {
+    auto *ST = dyn_cast<llvm::StructType>(FieldTy);
+    if (!ST || ST->getNumElements() != 2)
+      return false;
+
+    auto *PaddedEltsTy = dyn_cast<llvm::ArrayType>(ST->getElementType(0));
+    if (!PaddedEltsTy)
+      return false;
+
+    auto *PaddedTy = dyn_cast<llvm::StructType>(PaddedEltsTy->getElementType());
+    if (!PaddedTy || PaddedTy->getNumElements() != 2)
+      return false;
+
+    if (!CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(
+            PaddedTy->getElementType(1)))
+      return false;
+
+    llvm::Type *ElementTy = ST->getElementType(1);
+    if (PaddedTy->getElementType(0) != ElementTy)
+      return false;
+
+    // All but the last of the logical array elements are in the padded array.
+    unsigned NumElts = PaddedEltsTy->getNumElements() + 1;
+
+    // Add an extra indirection to the load for the struct and walk the
+    // array prefix.
+    CurLoadIndices.push_back(llvm::ConstantInt::get(CGF.SizeTy, 0));
+    for (unsigned I = 0; I < NumElts - 1; ++I)
+      emitCopyAtIndices(ElementTy, I, I);
+    CurLoadIndices.pop_back();
+
+    // Now copy the last element.
+    emitCopyAtIndices(ElementTy, NumElts - 1, 1);
+
+    return true;
+  }
+
+  bool processStruct(llvm::Type *FieldTy) {
+    auto *ST = dyn_cast<llvm::StructType>(FieldTy);
+    if (!ST)
+      return false;
+
+    unsigned Skipped = 0;
+    for (unsigned I = 0, E = ST->getNumElements(); I < E; ++I) {
+      llvm::Type *ElementTy = ST->getElementType(I);
+      if (CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(ElementTy))
+        ++Skipped;
+      else
+        emitCopyAtIndices(ElementTy, I, I + Skipped);
+    }
+    return true;
+  }
+
+public:
+  HLSLBufferCopyEmitter(CodeGenFunction &CGF, Address DestPtr, Address SrcPtr)
+      : CGF(CGF), DestPtr(DestPtr), SrcPtr(SrcPtr) {}
+
+  bool emitCopy(QualType CType) {
+    LayoutTy = HLSLBufferLayoutBuilder(CGF.CGM).layOutType(CType);
+
+    // If we don't have an aggregate, we can just fall back to normal memcpy.
+    if (!LayoutTy->isAggregateType())
+      return false;
+
+    emitCopyAtIndices(LayoutTy, 0, 0);
+    return true;
+  }
+};
+} // namespace
+
 void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
                                         AggValueSlot::Overlap_t MayOverlap,
                                         bool isVolatile) {
@@ -2314,6 +2437,10 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
         return;
     }
   }
+
+  if (getLangOpts().HLSL && Ty.getAddressSpace() == LangAS::hlsl_constant)
+    if (HLSLBufferCopyEmitter(*this, DestPtr, SrcPtr).emitCopy(Ty))
+      return;
 
   // Aggregate assignment turns into llvm.memcpy.  This is almost valid per
   // C99 6.5.16.1p3, which states "If the value being stored in an object is
