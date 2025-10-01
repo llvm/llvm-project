@@ -44615,8 +44615,11 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     APInt DemandedMask = OriginalDemandedBits << ShAmt;
 
-    // If we just want the sign bit then we don't need to shift it.
-    if (OriginalDemandedBits.isSignMask())
+    // If we only want bits that already match the signbit then we don't need
+    // to shift.
+    unsigned NumHiDemandedBits = BitWidth - OriginalDemandedBits.countr_zero();
+    if (TLO.DAG.ComputeNumSignBits(Op0, OriginalDemandedElts, Depth + 1) >=
+        NumHiDemandedBits)
       return TLO.CombineTo(Op, Op0);
 
     // fold (VSRAI (VSHLI X, C1), C1) --> X iff NumSignBits(X) > C1
