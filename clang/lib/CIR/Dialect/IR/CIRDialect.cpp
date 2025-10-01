@@ -2851,20 +2851,6 @@ mlir::LogicalResult cir::ThrowOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// AtomicCmpXchg
-//===----------------------------------------------------------------------===//
-
-LogicalResult cir::AtomicCmpXchg::verify() {
-  mlir::Type pointeeType = getPtr().getType().getPointee();
-
-  if (pointeeType != getExpected().getType() ||
-      pointeeType != getDesired().getType())
-    return emitOpError("ptr, expected and desired types must match");
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // TypeInfoAttr
 //===----------------------------------------------------------------------===//
 
