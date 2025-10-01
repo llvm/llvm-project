@@ -6,10 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO(mordante) Investigate
+// UNSUPPORTED: apple-clang
+
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
 // REQUIRES: locale.ru_RU.UTF-8
+
+// ADDITIONAL_COMPILE_FLAGS: -DRU_MON_THOU_SEP=%{LOCALE_CONV_RU_RU_UTF_8_MON_THOUSANDS_SEP}
 
 // XFAIL: glibc-old-ru_RU-decimal-point
 
@@ -52,7 +57,8 @@ public:
 };
 
 static std::wstring convert_thousands_sep(std::wstring const& in) {
-  return LocaleHelpers::convert_thousands_sep_ru_RU(in);
+  const wchar_t ru_sep = LocaleHelpers::mon_thousands_sep_or_default(RU_MON_THOU_SEP);
+  return LocaleHelpers::convert_thousands_sep(in, ru_sep);
 }
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
 

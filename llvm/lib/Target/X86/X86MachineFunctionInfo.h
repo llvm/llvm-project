@@ -149,7 +149,7 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// other tools to detect the extended record.
   bool HasSwiftAsyncContext = false;
 
-  /// Ajust stack for push2/pop2
+  /// Adjust stack for push2/pop2
   bool PadForPush2Pop2 = false;
 
   /// Candidate registers for push2/pop2
@@ -173,6 +173,8 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   // True if a function clobbers FP/BP according to its calling convention.
   bool FPClobberedByCall = false;
   bool BPClobberedByCall = false;
+  bool FPClobberedByInvoke = false;
+  bool BPClobberedByInvoke = false;
 
 private:
   /// ForwardedMustTailRegParms - A list of virtual and physical registers
@@ -338,6 +340,12 @@ public:
 
   bool getBPClobberedByCall() const { return BPClobberedByCall; }
   void setBPClobberedByCall(bool C) { BPClobberedByCall = C; }
+
+  bool getFPClobberedByInvoke() const { return FPClobberedByInvoke; }
+  void setFPClobberedByInvoke(bool C) { FPClobberedByInvoke = C; }
+
+  bool getBPClobberedByInvoke() const { return BPClobberedByInvoke; }
+  void setBPClobberedByInvoke(bool C) { BPClobberedByInvoke = C; }
 };
 
 } // End llvm namespace

@@ -3,7 +3,6 @@
 ## Setting the umask to 0 ensures deterministic permissions across
 ## test environments.
 # UNSUPPORTED: system-windows
-# REQUIRES: shell
 
 # RUN: touch %t
 # RUN: chmod 0777 %t

@@ -37,10 +37,10 @@ bb3:                                              ; preds = %bb8, %bb3, %bb2
   br i1 false, label %bb4, label %bb3
 
 bb4:                                              ; preds = %bb8, %bb3
-  br i1 undef, label %bb1, label %bb6
+  br i1 true, label %bb1, label %bb6
 
 bb6:                                              ; preds = %bb4
-  br i1 undef, label %bb2, label %bb8
+  br i1 false, label %bb2, label %bb8
 
 bb8:                                              ; preds = %bb6
   br i1 true, label %bb4, label %bb3
@@ -78,7 +78,7 @@ bb3:
   br i1 false, label %bb4, label %bb3
 
 bb4:
-  br i1 undef, label %bb1, label %subloop1
+  br i1 %c, label %bb1, label %subloop1
 
 subloop1:
   br i1 %c, label %subloop2, label %subloop11
@@ -111,7 +111,7 @@ subloop2_latch:
   br label %subloop2
 
 bb6:
-  br i1 undef, label %bb2, label %bb8
+  br i1 %c, label %bb2, label %bb8
 
 bb8:
   br i1 true, label %bb4, label %bb3

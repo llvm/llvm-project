@@ -96,6 +96,7 @@ add_object_library(
     do_start.h
   DEPENDS
     libc.config.app_h
+    libc.hdr.stdint_proxy
     libc.include.sys_mman
     libc.include.sys_syscall
     libc.include.llvm-libc-macros.link_macros
@@ -138,6 +139,5 @@ foreach(target IN LISTS startup_components)
   install(FILES $<TARGET_OBJECTS:${fq_target_name}>
           DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
           RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
-          EXCLUDE_FROM_ALL
           COMPONENT libc)
 endforeach()

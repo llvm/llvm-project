@@ -444,21 +444,11 @@ define dso_local void @t15(ptr noalias sret(%struct.foo) %agg.result) nounwind  
 ;
 ; X64-LABEL: t15:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    callq f
-; X64-NEXT:    movq %rbx, %rax
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
+; X64-NEXT:    jmp f # TAILCALL
 ;
 ; X32-LABEL: t15:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movq %rdi, %rbx
-; X32-NEXT:    callq f
-; X32-NEXT:    movl %ebx, %eax
-; X32-NEXT:    popq %rbx
-; X32-NEXT:    retq
+; X32-NEXT:    jmp f # TAILCALL
   tail call fastcc void @f(ptr noalias sret(%struct.foo) %agg.result) nounwind
   ret void
 }
@@ -607,32 +597,15 @@ declare dso_local fastcc double @foo20(double) nounwind
 define fastcc void @t21_sret_to_sret(ptr noalias sret(%struct.foo) %agg.result) nounwind  {
 ; X86-LABEL: t21_sret_to_sret:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    calll t21_f_sret
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    retl
+; X86-NEXT:    jmp t21_f_sret # TAILCALL
 ;
 ; X64-LABEL: t21_sret_to_sret:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    callq t21_f_sret
-; X64-NEXT:    movq %rbx, %rax
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
+; X64-NEXT:    jmp t21_f_sret # TAILCALL
 ;
 ; X32-LABEL: t21_sret_to_sret:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movq %rdi, %rbx
-; X32-NEXT:    callq t21_f_sret
-; X32-NEXT:    movl %ebx, %eax
-; X32-NEXT:    popq %rbx
-; X32-NEXT:    retq
+; X32-NEXT:    jmp t21_f_sret # TAILCALL
   tail call fastcc void @t21_f_sret(ptr noalias sret(%struct.foo) %agg.result) nounwind
   ret void
 }
@@ -640,34 +613,15 @@ define fastcc void @t21_sret_to_sret(ptr noalias sret(%struct.foo) %agg.result) 
 define fastcc void @t21_sret_to_sret_more_args(ptr noalias sret(%struct.foo) %agg.result, i32 %a, i32 %b) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_more_args:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    calll f_sret@PLT
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    retl
+; X86-NEXT:    jmp f_sret@PLT # TAILCALL
 ;
 ; X64-LABEL: t21_sret_to_sret_more_args:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    callq f_sret@PLT
-; X64-NEXT:    movq %rbx, %rax
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
+; X64-NEXT:    jmp f_sret@PLT # TAILCALL
 ;
 ; X32-LABEL: t21_sret_to_sret_more_args:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movq %rdi, %rbx
-; X32-NEXT:    callq f_sret@PLT
-; X32-NEXT:    movl %ebx, %eax
-; X32-NEXT:    popq %rbx
-; X32-NEXT:    retq
+; X32-NEXT:    jmp f_sret@PLT # TAILCALL
   tail call fastcc void @f_sret(ptr noalias sret(%struct.foo) %agg.result, i32 %a, i32 %b) nounwind
   ret void
 }
@@ -675,35 +629,18 @@ define fastcc void @t21_sret_to_sret_more_args(ptr noalias sret(%struct.foo) %ag
 define fastcc void @t21_sret_to_sret_second_arg_sret(ptr noalias %agg.result, ptr noalias sret(%struct.foo) %ret) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_second_arg_sret:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    calll t21_f_sret
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    retl
+; X86-NEXT:    jmp t21_f_sret # TAILCALL
 ;
 ; X64-LABEL: t21_sret_to_sret_second_arg_sret:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    movq %rsi, %rbx
 ; X64-NEXT:    movq %rsi, %rdi
-; X64-NEXT:    callq t21_f_sret
-; X64-NEXT:    movq %rbx, %rax
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
+; X64-NEXT:    jmp t21_f_sret # TAILCALL
 ;
 ; X32-LABEL: t21_sret_to_sret_second_arg_sret:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movq %rsi, %rbx
 ; X32-NEXT:    movq %rsi, %rdi
-; X32-NEXT:    callq t21_f_sret
-; X32-NEXT:    movl %ebx, %eax
-; X32-NEXT:    popq %rbx
-; X32-NEXT:    retq
+; X32-NEXT:    jmp t21_f_sret # TAILCALL
   tail call fastcc void @t21_f_sret(ptr noalias sret(%struct.foo) %ret) nounwind
   ret void
 }
@@ -725,27 +662,17 @@ define fastcc void @t21_sret_to_sret_more_args2(ptr noalias sret(%struct.foo) %a
 ;
 ; X64-LABEL: t21_sret_to_sret_more_args2:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    movq %rdi, %rbx
 ; X64-NEXT:    movl %edx, %esi
 ; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    callq f_sret@PLT
-; X64-NEXT:    movq %rbx, %rax
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
+; X64-NEXT:    jmp f_sret@PLT # TAILCALL
 ;
 ; X32-LABEL: t21_sret_to_sret_more_args2:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushq %rbx
 ; X32-NEXT:    movl %esi, %eax
-; X32-NEXT:    movq %rdi, %rbx
 ; X32-NEXT:    movl %edx, %esi
 ; X32-NEXT:    movl %eax, %edx
-; X32-NEXT:    callq f_sret@PLT
-; X32-NEXT:    movl %ebx, %eax
-; X32-NEXT:    popq %rbx
-; X32-NEXT:    retq
+; X32-NEXT:    jmp f_sret@PLT # TAILCALL
   tail call fastcc void @f_sret(ptr noalias sret(%struct.foo) %agg.result, i32 %b, i32 %a) nounwind
   ret void
 }
@@ -976,6 +903,176 @@ define ccc void @t22_non_sret_to_sret(ptr %agg.result) nounwind  {
   tail call ccc void @t22_f_sret(ptr noalias sret(%struct.foo) %agg.result) nounwind
   ret void
 }
+
+; Not tailcallable, caller and callee have different return types.
+define void @t23_sret_to_non_sret(ptr noalias sret(%struct.foo) align 4 %agg.result, ptr %arg) {
+; X86-LABEL: t23_sret_to_non_sret:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 16
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll callee_1@PLT
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl $4
+;
+; X64-LABEL: t23_sret_to_non_sret:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    .cfi_offset %rbx, -16
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    movq %rsi, %rdi
+; X64-NEXT:    callq callee_1@PLT
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq
+;
+; X32-LABEL: t23_sret_to_non_sret:
+; X32:       # %bb.0:
+; X32-NEXT:    pushq %rbx
+; X32-NEXT:    .cfi_def_cfa_offset 16
+; X32-NEXT:    .cfi_offset %rbx, -16
+; X32-NEXT:    movq %rdi, %rbx
+; X32-NEXT:    movq %rsi, %rdi
+; X32-NEXT:    callq callee_1@PLT
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    popq %rbx
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    retq
+  tail call void @callee_1(ptr %arg)
+  ret void
+}
+
+; Not tailcallable, caller and callee have the same return type, but different return values.
+define void @t24_sret_to_sret_different_val(ptr noalias sret(%struct.foo) align 4 %agg.result, ptr %arg) {
+; X86-LABEL: t24_sret_to_sret_different_val:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    subl $24, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 32
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    xorps %xmm0, %xmm0
+; X86-NEXT:    movsd %xmm0, 8(%esi)
+; X86-NEXT:    movsd %xmm0, (%esi)
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll callee_2@PLT
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $24, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl $4
+;
+; X64-LABEL: t24_sret_to_sret_different_val:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    subq $16, %rsp
+; X64-NEXT:    .cfi_def_cfa_offset 32
+; X64-NEXT:    .cfi_offset %rbx, -16
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    movq $0, 8(%rdi)
+; X64-NEXT:    movq $0, (%rdi)
+; X64-NEXT:    movq %rsp, %rdi
+; X64-NEXT:    callq callee_2@PLT
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    addq $16, %rsp
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq
+;
+; X32-LABEL: t24_sret_to_sret_different_val:
+; X32:       # %bb.0:
+; X32-NEXT:    pushq %rbx
+; X32-NEXT:    .cfi_def_cfa_offset 16
+; X32-NEXT:    subl $16, %esp
+; X32-NEXT:    .cfi_def_cfa_offset 32
+; X32-NEXT:    .cfi_offset %rbx, -16
+; X32-NEXT:    movq %rdi, %rbx
+; X32-NEXT:    movq $0, 8(%ebx)
+; X32-NEXT:    movq $0, (%ebx)
+; X32-NEXT:    movl %esp, %edi
+; X32-NEXT:    callq callee_2@PLT
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    addl $16, %esp
+; X32-NEXT:    .cfi_def_cfa_offset 16
+; X32-NEXT:    popq %rbx
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    retq
+  %callee.return = alloca %struct.foo, align 4
+  tail call void @llvm.memset.p0.i64(ptr align 4 %agg.result, i8 0, i64 16, i1 false)
+  tail call void @callee_2(ptr sret(%struct.foo) align 4 %callee.return)
+  ret void
+}
+
+; Not tailcallable, caller and callee have the same return type, but different return values.
+define void @t25_sret_to_sret_different_val(ptr noalias sret(%struct.foo) align 8 %agg.result, ptr %arg) {
+; X86-LABEL: t25_sret_to_sret_different_val:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 16
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll callee_2@PLT
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl $4
+;
+; X64-LABEL: t25_sret_to_sret_different_val:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    .cfi_offset %rbx, -16
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    movq %rsi, %rdi
+; X64-NEXT:    callq callee_2@PLT
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq
+;
+; X32-LABEL: t25_sret_to_sret_different_val:
+; X32:       # %bb.0:
+; X32-NEXT:    pushq %rbx
+; X32-NEXT:    .cfi_def_cfa_offset 16
+; X32-NEXT:    .cfi_offset %rbx, -16
+; X32-NEXT:    movq %rdi, %rbx
+; X32-NEXT:    movq %rsi, %rdi
+; X32-NEXT:    callq callee_2@PLT
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    popq %rbx
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    retq
+  tail call void @callee_2(ptr sret(%struct.foo) align 8 %arg)
+  ret void
+}
+
+declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)
+declare void @callee_1(ptr)
+declare void @callee_2(ptr noalias sret(%struct.foo))
 
 declare dso_local fastcc void @t21_f_sret(ptr noalias sret(%struct.foo)) nounwind
 declare dso_local fastcc void @t21_f_sret2(ptr noalias sret(%struct.foo), ptr noalias) nounwind

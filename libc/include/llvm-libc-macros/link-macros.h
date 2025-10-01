@@ -6,8 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_MACROS_LINK_MACROS_H
+#define LLVM_LIBC_MACROS_LINK_MACROS_H
+
+#include "elf-macros.h"
+
 #ifdef __LP64__
-#define ElfW(type) Elf64_ ## type
+#define ElfW(type) Elf64_##type
 #else
-#define ElfW(type) Elf32_ ## type
+#define ElfW(type) Elf32_##type
+#endif
+
 #endif

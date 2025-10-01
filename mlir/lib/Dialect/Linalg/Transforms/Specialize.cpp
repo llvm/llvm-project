@@ -18,9 +18,7 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/TypeID.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/Support/Debug.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_LINALGSPECIALIZEGENERICOPSPASS
@@ -184,11 +182,9 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
 
   if (!mlir::linalg::detail::isContractionBody(
           *genericOp.getBlock(), [](Operation *first, Operation *second) {
-            if ((isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second)) ||
-                (isa<arith::MulIOp>(first) && isa<arith::AddIOp>(second)) ||
-                (isa<complex::MulOp>(first) && isa<complex::AddOp>(second)))
-              return true;
-            return false;
+            return (isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second)) ||
+                   (isa<arith::MulIOp>(first) && isa<arith::AddIOp>(second)) ||
+                   (isa<complex::MulOp>(first) && isa<complex::AddOp>(second));
           }))
     return failure();
 
@@ -227,9 +223,7 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   auto c =
       matchOperandMap(indexingMaps[2], numOfBatchDims, dims.m[0], dims.n[0]);
 
-  if (llvm::any_of(ArrayRef<IndexMatchResult>{a, b, c}, [](IndexMatchResult r) {
-        return r == IndexMatchResult::Mismatch;
-      }))
+  if (llvm::is_contained({a, b, c}, IndexMatchResult::Mismatch))
     return failure();
 
   if (c != IndexMatchResult::Match ||
@@ -238,19 +232,8 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
 
   /// Codegen the different matmul variants.
   if (numOfBatchDims) {
-    if (a == IndexMatchResult::Transposed)
-      return replaceWithMatmulVariant<BatchMatmulTransposeAOp>(rewriter,
-                                                               genericOp);
-    if (b == IndexMatchResult::Transposed)
-      return replaceWithMatmulVariant<BatchMatmulTransposeBOp>(rewriter,
-                                                               genericOp);
     return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp);
   }
-
-  if (a == IndexMatchResult::Transposed)
-    return replaceWithMatmulVariant<MatmulTransposeAOp>(rewriter, genericOp);
-  if (b == IndexMatchResult::Transposed)
-    return replaceWithMatmulVariant<MatmulTransposeBOp>(rewriter, genericOp);
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp);
 }
 
@@ -261,18 +244,44 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
 //===----------------------------------------------------------------------===//
 FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
                                                       GenericOp genericOp) {
+  // Copy
   if (isaCopyOpInterface(genericOp)) {
     LinalgOp namedOp = rewriter.replaceOpWithNewOp<CopyOp>(
         genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0]);
     return namedOp;
   }
 
-  if (isaFillOpInterface(genericOp)) {
+  // Fill
+  if (std::optional<Value> fillValue = isaFillOpInterface(genericOp)) {
+    // Always use the detected fill value, regardless of pattern
     LinalgOp namedOp = rewriter.replaceOpWithNewOp<FillOp>(
-        genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0]);
+        genericOp, *fillValue, genericOp.getDpsInits()[0]);
     return namedOp;
   }
 
+  // Broadcast
+  std::optional<SmallVector<int64_t>> equivalentToBroadcast =
+      isaBroadcastOpInterface(genericOp);
+  if (equivalentToBroadcast) {
+    auto dims = *equivalentToBroadcast;
+    LinalgOp namedOp = rewriter.replaceOpWithNewOp<BroadcastOp>(
+        genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0],
+        dims);
+    return namedOp;
+  }
+
+  // Transpose
+  std::optional<SmallVector<int64_t>> equivalentToTranspose =
+      isaTransposeOpInterface(genericOp);
+  if (equivalentToTranspose) {
+    auto permutation = *equivalentToTranspose;
+    LinalgOp namedOp = rewriter.replaceOpWithNewOp<TransposeOp>(
+        genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0],
+        permutation);
+    return namedOp;
+  }
+
+  // Elementwise Unary
   if (isaElemwiseSingleUnaryOpInterface(genericOp)) {
     Operation *op = &genericOp.getBody()->front();
     if (isa<math::ExpOp>(op)) {
@@ -281,6 +290,7 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
     }
   }
 
+  // Elementwise Binary
   if (isaElemwiseSingleBinaryOpInterface(genericOp)) {
     bool swap = areBinOpsSwapped(genericOp);
     Operation *op = &genericOp.getBody()->front();
@@ -302,6 +312,7 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
     }
   }
 
+  // Contraction - e.g. matmul
   if (isaContractionOpInterface(genericOp)) {
     return specializeLinalgContractions(rewriter, genericOp);
   }
@@ -322,8 +333,9 @@ struct LinalgSpecializeGenericOpsPass
 void LinalgSpecializeGenericOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateLinalgGenericOpsSpecializationPatterns(patterns);
+  populateDecomposeProjectedPermutationPatterns(patterns);
 
-  if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     signalPassFailure();
 }
 

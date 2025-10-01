@@ -19,7 +19,7 @@
 #if !defined(TEST_HAS_NO_CHAR8_T)
 using U = decltype(::c8rtomb);
 using V = decltype(::mbrtoc8);
-#  if defined(_LIBCPP_HAS_NO_C8RTOMB_MBRTOC8)
+#  if !_LIBCPP_HAS_C8RTOMB_MBRTOC8
 // expected-error@-3 {{no member named 'c8rtomb' in the global namespace}}
 // expected-error@-3 {{no member named 'mbrtoc8' in the global namespace}}
 #  else

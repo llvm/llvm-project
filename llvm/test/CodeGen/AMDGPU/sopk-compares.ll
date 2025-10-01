@@ -1,11 +1,11 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tahiti < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 ; Since this intrinsic is exposed as a constant after isel, use it to
 ; defeat the DAG's compare with constant canonicalizations.
 declare i32 @llvm.amdgcn.groupstaticsize() #1
 
-@lds = addrspace(3) global [512 x i32] undef, align 4
+@lds = addrspace(3) global [512 x i32] poison, align 4
 
 ; GCN-LABEL: {{^}}br_scc_eq_i32_inline_imm:
 ; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 4{{$}}

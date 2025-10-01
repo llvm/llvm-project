@@ -7,8 +7,7 @@
 @implementation Test
 - (void)rdar47403222:(Dictionary *)opts {
   [self undeclaredMethod:undeclaredArg];
-  // expected-error@-1{{no visible @interface for 'Test' declares the selector 'undeclaredMethod:'}}
-  // expected-error@-2{{use of undeclared identifier 'undeclaredArg}}
+  // expected-error@-1{{use of undeclared identifier 'undeclaredArg}}
   opts[(__bridge id)undeclaredKey] = 0;
   // expected-error@-1{{use of undeclared identifier 'undeclaredKey'}}
 }

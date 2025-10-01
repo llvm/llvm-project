@@ -7,7 +7,7 @@ define <2 x double> @fmaddsubpd_loop_128(i32 %iter, <2 x double> %a, <2 x double
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB0_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmaddsub231pd {{.*#+}} xmm2 = (xmm0 * xmm1) +/- xmm2
@@ -44,7 +44,7 @@ define <2 x double> @fmsubaddpd_loop_128(i32 %iter, <2 x double> %a, <2 x double
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB1_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmsubadd231pd {{.*#+}} xmm2 = (xmm0 * xmm1) -/+ xmm2
@@ -81,7 +81,7 @@ define <2 x double> @fmaddpd_loop_128(i32 %iter, <2 x double> %a, <2 x double> %
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB2_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmadd231pd {{.*#+}} xmm2 = (xmm0 * xmm1) + xmm2
@@ -118,7 +118,7 @@ define <2 x double> @fmsubpd_loop_128(i32 %iter, <2 x double> %a, <2 x double> %
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB3_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmsub231pd {{.*#+}} xmm2 = (xmm0 * xmm1) - xmm2
@@ -155,7 +155,7 @@ define <2 x double> @fnmaddpd_loop_128(i32 %iter, <2 x double> %a, <2 x double> 
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB4_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfnmadd231pd {{.*#+}} xmm2 = -(xmm0 * xmm1) + xmm2
@@ -192,7 +192,7 @@ define <2 x double> @fnmsubpd_loop_128(i32 %iter, <2 x double> %a, <2 x double> 
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB5_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB5_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfnmsub231pd {{.*#+}} xmm2 = -(xmm0 * xmm1) - xmm2
@@ -236,7 +236,7 @@ define <4 x float> @fmaddsubps_loop_128(i32 %iter, <4 x float> %a, <4 x float> %
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB6_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB6_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmaddsub231ps {{.*#+}} xmm2 = (xmm0 * xmm1) +/- xmm2
@@ -273,7 +273,7 @@ define <4 x float> @fmsubaddps_loop_128(i32 %iter, <4 x float> %a, <4 x float> %
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB7_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB7_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmsubadd231ps {{.*#+}} xmm2 = (xmm0 * xmm1) -/+ xmm2
@@ -310,7 +310,7 @@ define <4 x float> @fmaddps_loop_128(i32 %iter, <4 x float> %a, <4 x float> %b, 
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB8_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB8_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmadd231ps {{.*#+}} xmm2 = (xmm0 * xmm1) + xmm2
@@ -347,7 +347,7 @@ define <4 x float> @fmsubps_loop_128(i32 %iter, <4 x float> %a, <4 x float> %b, 
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB9_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB9_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmsub231ps {{.*#+}} xmm2 = (xmm0 * xmm1) - xmm2
@@ -384,7 +384,7 @@ define <4 x float> @fnmaddps_loop_128(i32 %iter, <4 x float> %a, <4 x float> %b,
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB10_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB10_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfnmadd231ps {{.*#+}} xmm2 = -(xmm0 * xmm1) + xmm2
@@ -421,7 +421,7 @@ define <4 x float> @fnmsubps_loop_128(i32 %iter, <4 x float> %a, <4 x float> %b,
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB11_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB11_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfnmsub231ps {{.*#+}} xmm2 = -(xmm0 * xmm1) - xmm2
@@ -465,7 +465,7 @@ define <4 x double> @fmaddsubpd_loop_256(i32 %iter, <4 x double> %a, <4 x double
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB12_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB12_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmaddsub231pd {{.*#+}} ymm2 = (ymm0 * ymm1) +/- ymm2
@@ -502,7 +502,7 @@ define <4 x double> @fmsubaddpd_loop_256(i32 %iter, <4 x double> %a, <4 x double
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB13_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB13_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmsubadd231pd {{.*#+}} ymm2 = (ymm0 * ymm1) -/+ ymm2
@@ -539,7 +539,7 @@ define <4 x double> @fmaddpd_loop_256(i32 %iter, <4 x double> %a, <4 x double> %
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB14_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB14_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmadd231pd {{.*#+}} ymm2 = (ymm0 * ymm1) + ymm2
@@ -576,7 +576,7 @@ define <4 x double> @fmsubpd_loop_256(i32 %iter, <4 x double> %a, <4 x double> %
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB15_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB15_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmsub231pd {{.*#+}} ymm2 = (ymm0 * ymm1) - ymm2
@@ -613,7 +613,7 @@ define <4 x double> @fnmaddpd_loop_256(i32 %iter, <4 x double> %a, <4 x double> 
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB16_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB16_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfnmadd231pd {{.*#+}} ymm2 = -(ymm0 * ymm1) + ymm2
@@ -650,7 +650,7 @@ define <4 x double> @fnmsubpd_loop_256(i32 %iter, <4 x double> %a, <4 x double> 
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB17_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB17_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfnmsub231pd {{.*#+}} ymm2 = -(ymm0 * ymm1) - ymm2
@@ -694,7 +694,7 @@ define <8 x float> @fmaddsubps_loop_256(i32 %iter, <8 x float> %a, <8 x float> %
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB18_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB18_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmaddsub231ps {{.*#+}} ymm2 = (ymm0 * ymm1) +/- ymm2
@@ -731,7 +731,7 @@ define <8 x float> @fmsubaddps_loop_256(i32 %iter, <8 x float> %a, <8 x float> %
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB19_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB19_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmsubadd231ps {{.*#+}} ymm2 = (ymm0 * ymm1) -/+ ymm2
@@ -768,7 +768,7 @@ define <8 x float> @fmaddps_loop_256(i32 %iter, <8 x float> %a, <8 x float> %b, 
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB20_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB20_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmadd231ps {{.*#+}} ymm2 = (ymm0 * ymm1) + ymm2
@@ -805,7 +805,7 @@ define <8 x float> @fmsubps_loop_256(i32 %iter, <8 x float> %a, <8 x float> %b, 
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB21_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB21_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfmsub231ps {{.*#+}} ymm2 = (ymm0 * ymm1) - ymm2
@@ -842,7 +842,7 @@ define <8 x float> @fnmaddps_loop_256(i32 %iter, <8 x float> %a, <8 x float> %b,
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB22_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB22_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfnmadd231ps {{.*#+}} ymm2 = -(ymm0 * ymm1) + ymm2
@@ -879,7 +879,7 @@ define <8 x float> @fnmsubps_loop_256(i32 %iter, <8 x float> %a, <8 x float> %b,
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jge .LBB23_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB23_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vfnmsub231ps {{.*#+}} ymm2 = -(ymm0 * ymm1) - ymm2

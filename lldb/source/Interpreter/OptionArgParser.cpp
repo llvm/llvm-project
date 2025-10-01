@@ -66,12 +66,12 @@ int64_t OptionArgParser::ToOptionEnum(llvm::StringRef s,
                                       int32_t fail_value, Status &error) {
   error.Clear();
   if (enum_values.empty()) {
-    error.SetErrorString("invalid enumeration argument");
+    error = Status::FromErrorString("invalid enumeration argument");
     return fail_value;
   }
 
   if (s.empty()) {
-    error.SetErrorString("empty enumeration string");
+    error = Status::FromErrorString("empty enumeration string");
     return fail_value;
   }
 
@@ -88,7 +88,7 @@ int64_t OptionArgParser::ToOptionEnum(llvm::StringRef s,
     strm.Printf("%s\"%s\"",
         is_first ? is_first = false,"" : ", ", enum_value.string_value);
   }
-  error.SetErrorString(strm.GetString());
+  error = Status(strm.GetString().str());
   return fail_value;
 }
 
@@ -125,13 +125,14 @@ Status OptionArgParser::ToFormat(const char *s, lldb::Format &format,
       if (byte_size_ptr)
         error_strm.PutCString(
             "An optional byte size can precede the format character.\n");
-      error.SetErrorString(error_strm.GetString());
+      error = Status(error_strm.GetString().str());
     }
 
     if (error.Fail())
       return error;
   } else {
-    error.SetErrorStringWithFormat("%s option string", s ? "empty" : "invalid");
+    error = Status::FromErrorStringWithFormat("%s option string",
+                                              s ? "empty" : "invalid");
   }
   return error;
 }
@@ -160,7 +161,7 @@ lldb::addr_t OptionArgParser::ToRawAddress(const ExecutionContext *exe_ctx,
                                            lldb::addr_t fail_value,
                                            Status *error_ptr) {
   std::optional<lldb::addr_t> maybe_addr = DoToAddress(exe_ctx, s, error_ptr);
-  return maybe_addr ? *maybe_addr : fail_value;
+  return maybe_addr.value_or(fail_value);
 }
 
 lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
@@ -174,8 +175,7 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
   lldb::addr_t addr = *maybe_addr;
 
   if (Process *process = exe_ctx->GetProcessPtr())
-    if (ABISP abi_sp = process->GetABI())
-      addr = abi_sp->FixCodeAddress(addr);
+    addr = process->FixAnyAddress(addr);
 
   return addr;
 }
@@ -185,8 +185,8 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
                              Status *error_ptr) {
   if (s.empty()) {
     if (error_ptr)
-      error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
-                                          s.str().c_str());
+      *error_ptr = Status::FromErrorStringWithFormat(
+          "invalid address expression \"%s\"", s.str().c_str());
     return {};
   }
 
@@ -210,8 +210,8 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
   Target *target = nullptr;
   if (!exe_ctx || !(target = exe_ctx->GetTargetPtr())) {
     if (error_ptr)
-      error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
-                                          s.str().c_str());
+      *error_ptr = Status::FromErrorStringWithFormat(
+          "invalid address expression \"%s\"", s.str().c_str());
     return {};
   }
 
@@ -239,7 +239,7 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
       return addr;
     }
     if (error_ptr)
-      error_ptr->SetErrorStringWithFormat(
+      *error_ptr = Status::FromErrorStringWithFormat(
           "address expression \"%s\" resulted in a value whose type "
           "can't be converted to an address: %s",
           s.str().c_str(), valobj_sp->GetTypeName().GetCString());
@@ -261,8 +261,10 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
   // 3: The symbol/reg name if there is an offset
   // 4: +/-
   // 5: The offset value.
+  // clang-format off
   static RegularExpression g_symbol_plus_offset_regex(
-      "^(\\$[^ +-]+)|(([^ +-]+)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*)$");
+      "^(\\$[^ +-]+)|(([^ +-]+)[[:space:]]*([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*)$");
+  // clang-format on
 
   llvm::SmallVector<llvm::StringRef, 4> matches;
   if (g_symbol_plus_offset_regex.Execute(sref, &matches)) {
@@ -314,7 +316,7 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
   }
 
   if (error_ptr)
-    error_ptr->SetErrorStringWithFormat(
+    *error_ptr = Status::FromErrorStringWithFormat(
         "address expression \"%s\" evaluation failed", s.str().c_str());
   return {};
 }

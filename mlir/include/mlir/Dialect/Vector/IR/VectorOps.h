@@ -25,12 +25,15 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Interfaces/IndexingMapOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/MemOpInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Alignment.h"
 
 // Pull in all enum type definitions and utility function declarations.
 #include "mlir/Dialect/Vector/IR/VectorEnums.h.inc"
@@ -55,6 +58,9 @@ class VectorDialect;
 namespace detail {
 struct BitmaskEnumStorage;
 } // namespace detail
+
+/// Predefined constant_mask kinds.
+enum class ConstantMaskKind { AllFalse = 0, AllTrue };
 
 /// Default callback to build a region with a 'vector.yield' terminator with no
 /// arguments.
@@ -163,10 +169,10 @@ SmallVector<int64_t> getAsIntegers(ArrayRef<OpFoldResult> foldResults);
 SmallVector<Value> getAsValues(OpBuilder &builder, Location loc,
                                ArrayRef<OpFoldResult> foldResults);
 
-/// Returns the constant index ops in `values`. `values` are expected to be
-/// constant operations.
-SmallVector<arith::ConstantIndexOp>
-getAsConstantIndexOps(ArrayRef<Value> values);
+/// If `value` is a constant multiple of `vector.vscale` (e.g. `%cst *
+/// vector.vscale`), return the multiplier (`%cst`). Otherwise, return
+/// `std::nullopt`.
+std::optional<int64_t> getConstantVscaleMultiplier(Value value);
 
 //===----------------------------------------------------------------------===//
 // Vector Masking Utilities

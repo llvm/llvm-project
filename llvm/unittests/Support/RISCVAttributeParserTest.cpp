@@ -38,14 +38,14 @@ static bool testAttribute(unsigned Tag, unsigned Value, unsigned ExpectedTag,
   raw_string_ostream OS(buffer);
   RISCVAttributeSection Section(Tag, Value);
   Section.write(OS);
-  ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(OS.str().c_str()),
-                          OS.str().size());
+  ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(buffer.c_str()),
+                          buffer.size());
 
   RISCVAttributeParser Parser;
   cantFail(Parser.parse(Bytes, llvm::endianness::little));
 
-  std::optional<unsigned> Attr = Parser.getAttributeValue(ExpectedTag);
-  return Attr && *Attr == ExpectedValue;
+  std::optional<unsigned> Attr = Parser.getAttributeValue("", ExpectedTag);
+  return Attr == ExpectedValue;
 }
 
 static bool testTagString(unsigned Tag, const char *name) {

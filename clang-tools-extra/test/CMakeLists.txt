@@ -9,6 +9,7 @@ set(CLANG_TOOLS_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/..")
 
 llvm_canonicalize_cmake_booleans(
   CLANG_TIDY_ENABLE_STATIC_ANALYZER
+  CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
   CLANG_PLUGIN_SUPPORT
   LLVM_INSTALL_TOOLCHAIN_ONLY
   )
@@ -28,9 +29,6 @@ configure_lit_site_cfg(
   )
 
 set(CLANG_TOOLS_TEST_DEPS
-  # For the clang-apply-replacements test that uses clang-rename.
-  clang-rename
-
   # For the clang-doc tests that emit bitcode files.
   llvm-bcanalyzer
 
@@ -53,13 +51,11 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-resource-headers
 
   clang-tidy
-  # Clang-tidy tests need clang for building modules.
-  clang
 )
 
 # Add lit test dependencies.
 set(LLVM_UTILS_DEPS
-  FileCheck count not
+  FileCheck count not split-file
 )
 foreach(dep ${LLVM_UTILS_DEPS})
   if(TARGET ${dep})

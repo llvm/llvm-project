@@ -5,7 +5,7 @@
 ## Apply category merging to swiftc code just make sure we can handle addends
 ## and don't erase category names for swift -- in order to not crash
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o cat_swift.o %s
-# RUN: %lld -arch arm64 -dylib -o cat_swift.dylib cat_swift.o -objc_category_merging
+# RUN: %lld -arch arm64 -dylib -o cat_swift.dylib cat_swift.o -objc_category_merging -no_objc_relative_method_lists
 # RUN: llvm-objdump --objc-meta-data --macho cat_swift.dylib | FileCheck %s --check-prefixes=CHECK-MERGE
 
 ; CHECK-MERGE:      Contents of (__DATA_CONST,__objc_classlist) section

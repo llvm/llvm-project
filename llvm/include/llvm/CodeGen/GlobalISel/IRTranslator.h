@@ -486,6 +486,10 @@ private:
   bool translatePtrToInt(const User &U, MachineIRBuilder &MIRBuilder) {
     return translateCast(TargetOpcode::G_PTRTOINT, U, MIRBuilder);
   }
+  bool translatePtrToAddr(const User &U, MachineIRBuilder &MIRBuilder) {
+    // FIXME: this is not correct for pointers with addr width != pointer width
+    return translatePtrToInt(U, MIRBuilder);
+  }
   bool translateTrunc(const User &U, MachineIRBuilder &MIRBuilder) {
     return translateCast(TargetOpcode::G_TRUNC, U, MIRBuilder);
   }
@@ -546,8 +550,10 @@ private:
   bool translateVAArg(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateInsertElement(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateInsertVector(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateExtractElement(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateExtractVector(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateShuffleVector(const User &U, MachineIRBuilder &MIRBuilder);
 

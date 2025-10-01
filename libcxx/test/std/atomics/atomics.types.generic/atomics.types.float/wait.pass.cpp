@@ -16,6 +16,7 @@
 #include <cassert>
 #include <concepts>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "test_helper.h"
@@ -116,7 +117,7 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // TODO https://llvm.org/PR48634
   // test<long double>();
 
   return 0;

@@ -1496,6 +1496,14 @@ clause. Examples for both are given below.
     $ clang++ -fopenmp --offload-arch=gfx90a -O3 shared.c
     $ env ./shared
 
+.. _libomptarget_device_allocator:
+
+Device Allocation
+^^^^^^^^^^^^^^^^^
+
+The device runtime supports basic runtime allocation via the ``omp_alloc`` 
+function. Currently, this allocates global memory for all default traits. Access 
+modifiers are currently not supported and return a null pointer.
 
 .. _libomptarget_device_debugging:
 
@@ -1514,3 +1522,4 @@ debugging features are supported.
     * Enable debugging assertions in the device. ``0x01``
     * Enable diagnosing common problems during offloading . ``0x4``
     * Enable device malloc statistics (amdgpu only). ``0x8``
+    * Dump device PGO counters (only if PGO on GPU is enabled). ``0x10``

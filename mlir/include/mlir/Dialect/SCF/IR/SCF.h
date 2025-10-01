@@ -40,12 +40,6 @@ void buildTerminatedBody(OpBuilder &builder, Location loc);
 namespace mlir {
 namespace scf {
 
-// Insert `loop.yield` at the end of the only region's only block if it
-// does not have a terminator already.  If a new `loop.yield` is inserted,
-// the location is specified by `loc`. If the region is empty, insert a new
-// block first.
-void ensureLoopTerminator(Region &region, Builder &builder, Location loc);
-
 /// Returns the loop parent of an induction variable. If the provided value is
 /// not an induction variable, then return nullptr.
 ForOp getForInductionVarOwner(Value val);
@@ -106,6 +100,17 @@ LoopNest buildLoopNest(OpBuilder &builder, Location loc, ValueRange lbs,
                        ValueRange ubs, ValueRange steps,
                        function_ref<void(OpBuilder &, Location, ValueRange)>
                            bodyBuilder = nullptr);
+
+/// Perform a replacement of one iter OpOperand of an scf.for to the
+/// `replacement` value with a different type. A callback is used to insert
+/// cast ops inside the block to account for type differences.
+using ValueTypeCastFnTy =
+    llvm::function_ref<Value(OpBuilder &, Location loc, Type, Value)>;
+SmallVector<Value> replaceAndCastForOpIterArg(RewriterBase &rewriter,
+                                              scf::ForOp forOp,
+                                              OpOperand &operand,
+                                              Value replacement,
+                                              const ValueTypeCastFnTy &castFn);
 
 } // namespace scf
 } // namespace mlir

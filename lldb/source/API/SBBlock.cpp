@@ -14,7 +14,6 @@
 #include "lldb/API/SBValue.h"
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/AddressRangeListImpl.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -22,6 +21,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -176,8 +176,7 @@ bool SBBlock::GetDescription(SBStream &description) {
     m_opaque_ptr->CalculateSymbolContext(&sc);
     if (sc.function) {
       m_opaque_ptr->DumpAddressRanges(
-          &strm,
-          sc.function->GetAddressRange().GetBaseAddress().GetFileAddress());
+          &strm, sc.function->GetAddress().GetFileAddress());
     }
   } else
     strm.PutCString("No value");

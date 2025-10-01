@@ -48,16 +48,16 @@ next:
 ; CHECK-NEXT:    [[D_LOC:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[E_LOC:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[E_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[D_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[DOTCE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[E_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[D_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DOTCE_LOC]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @outlined_ir_func_0(ptr [[TMP0]], ptr [[E_LOC]], ptr [[D_LOC]], ptr [[DOTCE_LOC]], i32 0)
 ; CHECK-NEXT:    [[E_RELOAD:%.*]] = load i32, ptr [[E_LOC]], align 4
 ; CHECK-NEXT:    [[D_RELOAD:%.*]] = load i32, ptr [[D_LOC]], align 4
 ; CHECK-NEXT:    [[DOTCE_RELOAD:%.*]] = load i32, ptr [[DOTCE_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[E_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[D_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[DOTCE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[E_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[D_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DOTCE_LOC]])
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[FIRST:%.*]], label [[NEXT:%.*]]
 ; CHECK:       first:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[DOTCE_RELOAD]], [[ENTRY:%.*]] ]
@@ -72,13 +72,13 @@ next:
 ; CHECK-NEXT:    [[D_LOC:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[E_LOC:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[E_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[D_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[E_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[D_LOC]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @outlined_ir_func_0(ptr [[TMP0]], ptr [[E_LOC]], ptr [[D_LOC]], ptr null, i32 1)
 ; CHECK-NEXT:    [[E_RELOAD:%.*]] = load i32, ptr [[E_LOC]], align 4
 ; CHECK-NEXT:    [[D_RELOAD:%.*]] = load i32, ptr [[D_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[E_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[D_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[E_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[D_LOC]])
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[FIRST:%.*]], label [[NEXT:%.*]]
 ; CHECK:       first:
 ; CHECK-NEXT:    ret void

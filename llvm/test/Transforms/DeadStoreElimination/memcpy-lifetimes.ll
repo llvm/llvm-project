@@ -15,7 +15,7 @@ define ptr @alloc_tree() {
 ; CHECK-LABEL: @alloc_tree(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FVAL:%.*]] = alloca [4 x ptr], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[FVAL]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[FVAL]])
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable_or_null(192) ptr @malloc(i64 192)
 ; CHECK-NEXT:    [[CALL3:%.*]] = tail call ptr @alloc(ptr [[CALL]])
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x ptr], ptr [[FVAL]], i64 0, i64 3
@@ -29,12 +29,12 @@ define ptr @alloc_tree() {
 ; CHECK-NEXT:    [[CALL3_3:%.*]] = tail call ptr @alloc(ptr [[CALL]])
 ; CHECK-NEXT:    store ptr [[CALL3_3]], ptr [[FVAL]], align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(32) [[CALL]], ptr nonnull align 16 dereferenceable(32) [[FVAL]], i64 32, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[FVAL]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[FVAL]])
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
   %fval = alloca [4 x ptr], align 16
-  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %fval) #7
+  call void @llvm.lifetime.start.p0(ptr nonnull %fval) #7
   %call = tail call dereferenceable_or_null(192) ptr @malloc(i64 192) #8
   %call3 = tail call ptr @alloc(ptr %call)
   %arrayidx = getelementptr inbounds [4 x ptr], ptr %fval, i64 0, i64 3
@@ -48,11 +48,11 @@ entry:
   %call3.3 = tail call ptr @alloc(ptr %call)
   store ptr %call3.3, ptr %fval, align 16
   call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(32) %call, ptr nonnull align 16 dereferenceable(32) %fval, i64 32, i1 false)
-  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %fval) #7
+  call void @llvm.lifetime.end.p0(ptr nonnull %fval) #7
   ret ptr %call
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare noalias ptr @malloc(i64)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)

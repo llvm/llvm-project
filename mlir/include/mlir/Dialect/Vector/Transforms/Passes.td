@@ -34,4 +34,9 @@ def LowerVectorMultiReduction : Pass<"lower-vector-multi-reduction", "func::Func
   ];
 }
 
+def LowerVectorToFromElementsToShuffleTree
+  : Pass<"lower-vector-to-from-elements-to-shuffle-tree", "func::FuncOp"> {
+  let summary = "Lower `vector.to_elements` and `vector.from_elements` to a tree of `vector.shuffle` operations";
+}
+
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_PASSES

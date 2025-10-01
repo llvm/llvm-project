@@ -145,4 +145,4 @@ define void @sub_bf16_vg1x4(i32 %slice, <vscale x 8 x bfloat> %zn0, <vscale x 8 
 
 attributes #0 = { nounwind "target-features"="+sme-f16f16" }
 attributes #1 = { nounwind "target-features"="+sme-f8f16" }
-attributes #2 = { nounwind "target-features"="+sme2,+bf16,+b16b16" }
+attributes #2 = { nounwind "target-features"="+sme-b16b16,+bf16" }

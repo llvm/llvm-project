@@ -37,6 +37,11 @@ MLIR_CAPI_EXPORTED MlirAttribute
 mlirGPUObjectAttrGet(MlirContext mlirCtx, MlirAttribute target, uint32_t format,
                      MlirStringRef objectStrRef, MlirAttribute mlirObjectProps);
 
+MLIR_CAPI_EXPORTED MlirAttribute mlirGPUObjectAttrGetWithKernels(
+    MlirContext mlirCtx, MlirAttribute target, uint32_t format,
+    MlirStringRef objectStrRef, MlirAttribute mlirObjectProps,
+    MlirAttribute mlirKernelsAttr);
+
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirGPUObjectAttrGetTarget(MlirAttribute mlirObjectAttr);
 
@@ -51,6 +56,12 @@ mlirGPUObjectAttrHasProperties(MlirAttribute mlirObjectAttr);
 
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirGPUObjectAttrGetProperties(MlirAttribute mlirObjectAttr);
+
+MLIR_CAPI_EXPORTED bool
+mlirGPUObjectAttrHasKernels(MlirAttribute mlirObjectAttr);
+
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirGPUObjectAttrGetKernels(MlirAttribute mlirObjectAttr);
 
 #ifdef __cplusplus
 }

@@ -5,11 +5,16 @@
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
-// RUN:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib | \
+// RUN:   -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib | \
 // RUN: FileCheck %s
 
 func.func @matmul_transpose_a(%A : tensor<?x?xf32>, %B : tensor<?x?xf32>, %C : tensor<?x?xf32>) {
-  %res = linalg.matmul_transpose_a ins(%A, %B: tensor<?x?xf32>, tensor<?x?xf32>)
+  %res = linalg.matmul
+            indexing_maps = [
+                    affine_map<(d0, d1, d2) -> (d2, d0)>,
+                    affine_map<(d0, d1, d2) -> (d2, d1)>,
+                    affine_map<(d0, d1, d2) -> (d0, d1)>]
+            ins(%A, %B: tensor<?x?xf32>, tensor<?x?xf32>)
                                    outs(%C: tensor<?x?xf32>) -> tensor<?x?xf32>
   %xf = tensor.cast %res : tensor<?x?xf32> to tensor<*xf32>
   call @printMemrefF32(%xf) : (tensor<*xf32>) -> ()
@@ -56,7 +61,7 @@ func.func @main() {
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module : !transform.any_op {transform.readonly}) {
-    %matmul_transpose_a = transform.structured.match ops{["linalg.matmul_transpose_a"]} in %module
+    %matmul_transpose_a = transform.structured.match ops{["linalg.matmul"]} in %module
       : (!transform.any_op) -> !transform.any_op
 
     // Step 1: Tile for size [4] x [4], which corresponds to SVLs x SVLs, where
@@ -82,8 +87,16 @@ module attributes {transform.with_named_sequence} {
     transform.apply_patterns to %func {
       transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
       transform.apply_patterns.vector.lower_masks
+      transform.apply_patterns.canonicalization
     } : !transform.any_op
 
+    // Step 5 (optional optimization): Hoist accumulator load/store.
+    %func_h = transform.structured.hoist_redundant_vector_transfers %func
+        : (!transform.any_op) -> !transform.any_op
+    %all_loops = transform.structured.match interface{LoopLikeInterface} in %module
+      : (!transform.any_op) -> !transform.any_op
+    transform.apply_licm to %all_loops : !transform.any_op
+    transform.loop.hoist_loop_invariant_subsets %all_loops : !transform.any_op
     transform.yield
   }
 }

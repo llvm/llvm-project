@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: vaddh(r{{[0-9]+}},r{{[0-9]+}})
 
 @g0 = external global i32

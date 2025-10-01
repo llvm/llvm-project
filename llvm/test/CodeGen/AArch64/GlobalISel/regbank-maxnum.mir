@@ -10,11 +10,13 @@ body:             |
     liveins: $s0, $s1
 
     ; CHECK-LABEL: name: fp_inputs
-    ; CHECK: %lhs:fpr(s32) = COPY $s0
-    ; CHECK: %rhs:fpr(s32) = COPY $s1
-    ; CHECK: %maxnum:fpr(s32) = G_FMAXNUM %lhs, %rhs
-    ; CHECK: $s0 = COPY %maxnum(s32)
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK: liveins: $s0, $s1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:fpr(s32) = COPY $s0
+    ; CHECK-NEXT: %rhs:fpr(s32) = COPY $s1
+    ; CHECK-NEXT: %maxnum:fpr(s32) = G_FMAXNUM %lhs, %rhs
+    ; CHECK-NEXT: $s0 = COPY %maxnum(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %lhs:_(s32) = COPY $s0
     %rhs:_(s32) = COPY $s1
     %maxnum:_(s32) = G_FMAXNUM %lhs, %rhs
@@ -30,13 +32,15 @@ body:             |
     liveins: $w0, $w1
 
     ; CHECK-LABEL: name: gp_inputs
-    ; CHECK: %lhs:gpr(s32) = COPY $w0
-    ; CHECK: %rhs:gpr(s32) = COPY $w1
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(s32) = COPY %lhs(s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr(s32) = COPY %rhs(s32)
-    ; CHECK: %maxnum:fpr(s32) = G_FMAXNUM [[COPY]], [[COPY1]]
-    ; CHECK: $s0 = COPY %maxnum(s32)
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:gpr(s32) = COPY $w0
+    ; CHECK-NEXT: %rhs:gpr(s32) = COPY $w1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s32) = COPY %lhs(s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s32) = COPY %rhs(s32)
+    ; CHECK-NEXT: %maxnum:fpr(s32) = G_FMAXNUM [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $s0 = COPY %maxnum(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %lhs:_(s32) = COPY $w0
     %rhs:_(s32) = COPY $w1
     %maxnum:_(s32) = G_FMAXNUM %lhs, %rhs
@@ -52,11 +56,13 @@ body:             |
     liveins: $s0, $s1
 
     ; CHECK-LABEL: name: gp_use
-    ; CHECK: %lhs:fpr(s32) = COPY $s0
-    ; CHECK: %rhs:fpr(s32) = COPY $s1
-    ; CHECK: %maxnum:fpr(s32) = G_FMAXNUM %lhs, %rhs
-    ; CHECK: $w0 = COPY %maxnum(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK: liveins: $s0, $s1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:fpr(s32) = COPY $s0
+    ; CHECK-NEXT: %rhs:fpr(s32) = COPY $s1
+    ; CHECK-NEXT: %maxnum:fpr(s32) = G_FMAXNUM %lhs, %rhs
+    ; CHECK-NEXT: $w0 = COPY %maxnum(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %lhs:_(s32) = COPY $s0
     %rhs:_(s32) = COPY $s1
     %maxnum:_(s32) = G_FMAXNUM %lhs, %rhs

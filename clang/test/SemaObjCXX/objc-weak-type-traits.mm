@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -fobjc-weak -fobjc-runtime-has-weak -verify -std=c++11 %s -Wno-deprecated-builtins
-// expected-no-diagnostics
 
 // Check the results of the various type-trait query functions on
 // lifetime-qualified types in ObjC Weak.
@@ -217,3 +216,9 @@ TRAIT_IS_TRUE(__is_trivially_relocatable, __unsafe_unretained id);
 TRAIT_IS_TRUE(__is_trivially_relocatable, HasStrong);
 TRAIT_IS_FALSE(__is_trivially_relocatable, HasWeak);
 TRAIT_IS_TRUE(__is_trivially_relocatable, HasUnsafeUnretained);
+
+
+static_assert(__builtin_is_cpp_trivially_relocatable(__weak id), "");
+//expected-error@-1 {{static assertion failed due to requirement '__builtin_is_cpp_trivially_relocatable(__weak id)'}}\
+//expected-note@-1 {{'__weak id' is not trivially relocatable}}\
+//expected-note@-1 {{because it has an ARC lifetime qualifier}}

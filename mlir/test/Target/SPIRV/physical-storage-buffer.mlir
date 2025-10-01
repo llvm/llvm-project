@@ -1,5 +1,10 @@
 // RUN: mlir-translate --no-implicit-module --test-spirv-roundtrip %s | FileCheck %s
 
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
 // Test file showing how the Physical Storage Buffer extension works end-2-end.
 
 !f32_binding = !spirv.struct<binding_f32_t, (!spirv.rtarray<f32, stride=4> [0])>
@@ -26,17 +31,17 @@ spirv.module PhysicalStorageBuffer64 GLSL450 requires #spirv.vce<v1.5,
     %idx1 = spirv.Constant 1 : i64
     %idx2 = spirv.Constant 2 : i64
     %set_0_addr = spirv.mlir.addressof @set_0 : !set_0_ptr
-    %s0_b2_ptr = spirv.AccessChain %set_0_addr[%idx2] : !set_0_ptr, i64
+    %s0_b2_ptr = spirv.AccessChain %set_0_addr[%idx2] : !set_0_ptr, i64 -> !spirv.ptr<!f32_binding_ptr, StorageBuffer>
     %b2_ptr = spirv.Load "StorageBuffer" %s0_b2_ptr : !f32_binding_ptr
-    %b2_data_ptr = spirv.AccessChain %b2_ptr[%idx0, %idx0] : !f32_binding_ptr, i64, i64
+    %b2_data_ptr = spirv.AccessChain %b2_ptr[%idx0, %idx0] : !f32_binding_ptr, i64, i64 -> !spirv.ptr<f32, PhysicalStorageBuffer>
 
     // CHECK: spirv.Load "PhysicalStorageBuffer"
     %b2_data = spirv.Load "PhysicalStorageBuffer" %b2_data_ptr ["Aligned", 4] : f32
 
     %set_1_addr = spirv.mlir.addressof @set_1 : !set_1_ptr
-    %s1_b1_ptr = spirv.AccessChain %set_1_addr[%idx1] : !set_1_ptr, i64
+    %s1_b1_ptr = spirv.AccessChain %set_1_addr[%idx1] : !set_1_ptr, i64 -> !spirv.ptr<!f32_binding_ptr, StorageBuffer>
     %b1_ptr = spirv.Load "StorageBuffer" %s1_b1_ptr : !f32_binding_ptr
-    %b1_data_ptr = spirv.AccessChain %b1_ptr[%idx0, %idx0] : !f32_binding_ptr, i64, i64
+    %b1_data_ptr = spirv.AccessChain %b1_ptr[%idx0, %idx0] : !f32_binding_ptr, i64, i64 -> !spirv.ptr<f32, PhysicalStorageBuffer>
 
     // CHECK: spirv.Store "PhysicalStorageBuffer"
     spirv.Store "PhysicalStorageBuffer" %b1_data_ptr, %b2_data ["Aligned", 4] : f32

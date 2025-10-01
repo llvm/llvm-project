@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64 -show-encoding %s | FileCheck %s
 # RUN: not llvm-mc -triple i386 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
-# ERROR-COUNT-276: error:
+# ERROR-COUNT-288: error:
 # ERROR-NOT: error:
 # CHECK: ctestbb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x02,0xf6,0x44,0x80,0x7b,0x7b]
@@ -835,3 +835,42 @@
 # CHECK: ctesttq	{dfv=}	%r9, %r15
 # CHECK: encoding: [0x62,0x54,0x84,0x0a,0x85,0xcf]
          {evex} testq	%r9, %r15
+
+## Condition Code Aliases
+
+# CHECK: ctestbl {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x02,0x85,0xca]
+         ctestcl {dfv=of} %ecx, %edx
+# CHECK: ctestbl {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x02,0x85,0xca]
+         ctestnael {dfv=of} %ecx, %edx
+# CHECK: ctestael {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x03,0x85,0xca]
+         ctestnbl {dfv=of} %ecx, %edx
+# CHECK: ctestael {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x03,0x85,0xca]
+         ctestncl {dfv=of} %ecx, %edx
+# CHECK: ctestel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x04,0x85,0xca]
+         ctestzl {dfv=of} %ecx, %edx
+# CHECK: ctestnel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x05,0x85,0xca]
+         ctestnzl {dfv=of} %ecx, %edx
+# CHECK: ctestal {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x07,0x85,0xca]
+         ctestnbel {dfv=of} %ecx, %edx
+# CHECK: ctestll {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0c,0x85,0xca]
+         ctestngel {dfv=of} %ecx, %edx
+# CHECK: ctestgel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0d,0x85,0xca]
+         ctestnll {dfv=of} %ecx, %edx
+# CHECK: ctestlel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0e,0x85,0xca]
+         ctestngl {dfv=of} %ecx, %edx
+# CHECK: ctestgl {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0f,0x85,0xca]
+         ctestnlel {dfv=of} %ecx, %edx
+# CHECK: ctestbel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x06,0x85,0xca]
+         ctestnal {dfv=of} %ecx, %edx

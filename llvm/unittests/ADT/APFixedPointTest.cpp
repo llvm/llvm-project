@@ -240,19 +240,20 @@ void CheckIntPart(const FixedPointSemantics &Sema, int64_t IntPart) {
   APFixedPoint ValWithFract(
       APInt(Sema.getWidth(),
             relativeShr(IntPart, Sema.getLsbWeight()) + FullFactPart,
-            Sema.isSigned()),
+            Sema.isSigned(), /*implicitTrunc=*/true),
       Sema);
   ASSERT_EQ(ValWithFract.getIntPart(), IntPart);
 
   // Just fraction
-  APFixedPoint JustFract(APInt(Sema.getWidth(), FullFactPart, Sema.isSigned()),
+  APFixedPoint JustFract(APInt(Sema.getWidth(), FullFactPart, Sema.isSigned(),
+                               /*implicitTrunc=*/true),
                          Sema);
   ASSERT_EQ(JustFract.getIntPart(), 0);
 
   // Whole number
   APFixedPoint WholeNum(APInt(Sema.getWidth(),
                               relativeShr(IntPart, Sema.getLsbWeight()),
-                              Sema.isSigned()),
+                              Sema.isSigned(), /*implicitTrunc=*/true),
                         Sema);
   ASSERT_EQ(WholeNum.getIntPart(), IntPart);
 
@@ -260,7 +261,7 @@ void CheckIntPart(const FixedPointSemantics &Sema, int64_t IntPart) {
   if (Sema.isSigned()) {
     APFixedPoint Negative(APInt(Sema.getWidth(),
                                 relativeShr(IntPart, Sema.getLsbWeight()),
-                                Sema.isSigned()),
+                                Sema.isSigned(), /*implicitTrunc=*/true),
                           Sema);
     ASSERT_EQ(Negative.getIntPart(), IntPart);
   }
@@ -1272,6 +1273,37 @@ TEST(FixedPoint, div) {
       APFixedPoint(1, getU8Neg10()), APFixedPoint::getMin(getS16Neg18()),
       APFixedPoint(-2048, FixedPointSemantics(17, FixedPointSemantics::Lsb{-18},
                                               true, false, false)));
+}
+
+TEST(FixedPoint, semanticsSerialization) {
+  auto roundTrip = [](FixedPointSemantics FPS) -> bool {
+    uint32_t I = FPS.toOpaqueInt();
+    FixedPointSemantics FPS2 = FixedPointSemantics::getFromOpaqueInt(I);
+    return FPS == FPS2;
+  };
+
+  ASSERT_TRUE(roundTrip(getS32Pos2()));
+  ASSERT_TRUE(roundTrip(getU8Pos4()));
+  ASSERT_TRUE(roundTrip(getS16Neg18()));
+  ASSERT_TRUE(roundTrip(getU8Neg10()));
+  ASSERT_TRUE(roundTrip(getPadULFractSema()));
+  ASSERT_TRUE(roundTrip(getPadUFractSema()));
+  ASSERT_TRUE(roundTrip(getPadUSFractSema()));
+  ASSERT_TRUE(roundTrip(getPadULAccumSema()));
+  ASSERT_TRUE(roundTrip(getPadUAccumSema()));
+  ASSERT_TRUE(roundTrip(getPadUSAccumSema()));
+  ASSERT_TRUE(roundTrip(getULFractSema()));
+  ASSERT_TRUE(roundTrip(getUFractSema()));
+  ASSERT_TRUE(roundTrip(getUSFractSema()));
+  ASSERT_TRUE(roundTrip(getULAccumSema()));
+  ASSERT_TRUE(roundTrip(getUAccumSema()));
+  ASSERT_TRUE(roundTrip(getUSAccumSema()));
+  ASSERT_TRUE(roundTrip(getLFractSema()));
+  ASSERT_TRUE(roundTrip(getFractSema()));
+  ASSERT_TRUE(roundTrip(getSFractSema()));
+  ASSERT_TRUE(roundTrip(getLAccumSema()));
+  ASSERT_TRUE(roundTrip(getAccumSema()));
+  ASSERT_TRUE(roundTrip(getSAccumSema()));
 }
 
 } // namespace

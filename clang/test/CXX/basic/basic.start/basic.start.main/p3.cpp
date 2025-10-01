@@ -11,6 +11,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s -DTEST11
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s -DTEST12
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s -DTEST13
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s -DTEST14
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm-only -verify -pedantic %s -DTEST15
 
 #if TEST1
 int main; // expected-error{{main cannot be declared as a variable in the global scope}}
@@ -78,12 +80,14 @@ namespace ns {
 extern "C" struct A { int main(); }; // ok
 
 namespace c {
-  extern "C" void main(); // expected-warning {{'main' should not be 'extern "C"'}}
+  extern "C" void main(); // expected-error {{'main' must return 'int'}} \
+                          // expected-warning {{'main' should not be 'extern "C"'}}
 }
 
 extern "C" {
   namespace Z {
-    void main(); // expected-warning {{'main' should not be 'extern "C"'}}
+    void main(); // expected-error {{'main' must return 'int'}} \
+                 // expected-warning {{'main' should not be 'extern "C"'}}
   }
 }
 
@@ -98,16 +102,12 @@ namespace ns {
 }
 
 #elif TEST13
+// expected-no-diagnostics
 extern "C++" {
-  int main(); // expected-warning {{'main' should not be 'extern "C++"'}}
+  int main();
 }
 
-extern "C" {
-  int main(); // expected-warning {{'main' should not be 'extern "C"'}}
-}
-
-extern "C" int main(); // expected-warning {{'main' should not be 'extern "C"'}}
-extern "C++" int main(); // expected-warning {{'main' should not be 'extern "C++"'}}
+extern "C++" int main();
 
 namespace ns1 {
   extern "C++" int main(); // ok
@@ -120,6 +120,21 @@ namespace ns1 {
 
 namespace ns2 {
   extern "C++" void main() {} // ok
+}
+
+#elif TEST14
+extern "C" {
+  int main(); // expected-warning {{'main' should not be 'extern "C"'}}
+}
+
+extern "C" int main(); // expected-warning {{'main' should not be 'extern "C"'}}
+
+#elif TEST15
+extern "C" __attribute__((visibility("default"))) __attribute__((weak))
+int main(); // expected-warning {{'main' should not be 'extern "C"'}}
+
+unsigned long g() {
+  return reinterpret_cast<unsigned long>(&main); // expected-warning {{referring to 'main' within an expression is a Clang extension}}
 }
 
 #else

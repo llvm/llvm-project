@@ -37,19 +37,14 @@ struct ELFRelocationEntry {
   const MCSymbolELF *Symbol; // The symbol to relocate with.
   unsigned Type;   // The type of the relocation.
   uint64_t Addend; // The addend to use.
-  const MCSymbolELF *OriginalSymbol; // The original value of Symbol if we changed it.
-  uint64_t OriginalAddend; // The original value of addend.
 
   ELFRelocationEntry(uint64_t Offset, const MCSymbolELF *Symbol, unsigned Type,
-                     uint64_t Addend, const MCSymbolELF *OriginalSymbol,
-                     uint64_t OriginalAddend)
-      : Offset(Offset), Symbol(Symbol), Type(Type), Addend(Addend),
-        OriginalSymbol(OriginalSymbol), OriginalAddend(OriginalAddend) {}
+                     uint64_t Addend)
+      : Offset(Offset), Symbol(Symbol), Type(Type), Addend(Addend) {}
 
   void print(raw_ostream &Out) const {
     Out << "Off=" << Offset << ", Sym=" << Symbol << ", Type=" << Type
-        << ", Addend=" << Addend << ", OriginalSymbol=" << OriginalSymbol
-        << ", OriginalAddend=" << OriginalAddend;
+        << ", Addend=" << Addend;
   }
 
   LLVM_DUMP_METHOD void dump() const { print(errs()); }
@@ -90,14 +85,14 @@ public:
     }
   }
 
-  virtual unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                                const MCFixup &Fixup, bool IsPCRel) const = 0;
+  virtual unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
+                                bool IsPCRel) const = 0;
 
-  virtual bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                                       unsigned Type) const;
+  virtual bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const {
+    return false;
+  }
 
-  virtual void sortRelocs(const MCAssembler &Asm,
-                          std::vector<ELFRelocationEntry> &Relocs);
+  virtual void sortRelocs(std::vector<ELFRelocationEntry> &Relocs);
 
   /// \name Accessors
   /// @{
@@ -142,14 +137,6 @@ public:
   unsigned setRSsym(unsigned Value, unsigned Type) const {
     return (Type & R_SSYM_MASK) | ((Value & 0xff) << R_SSYM_SHIFT);
   }
-
-  // On AArch64, return a new section to be added to the ELF object that
-  // contains relocations used to describe every symbol that should have memory
-  // tags applied. Returns nullptr if no such section is necessary (i.e. there's
-  // no tagged globals).
-  virtual MCSectionELF *getMemtagRelocsSection(MCContext &Ctx) const {
-    return nullptr;
-  }
 };
 
 class ELFObjectWriter final : public MCObjectWriter {
@@ -162,6 +149,8 @@ public:
 
   DenseMap<const MCSectionELF *, std::vector<ELFRelocationEntry>> Relocations;
   DenseMap<const MCSymbolELF *, const MCSymbolELF *> Renames;
+  // .weakref aliases
+  SmallVector<const MCSymbolELF *, 0> Weakrefs;
   bool IsLittleEndian = false;
   bool SeenGnuAbi = false;
   std::optional<uint8_t> OverrideABIVersion;
@@ -182,24 +171,22 @@ public:
                   bool IsLittleEndian);
 
   void reset() override;
-  void executePostLayoutBinding(MCAssembler &Asm) override;
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &SymA,
+  void setAssembler(MCAssembler *Asm) override;
+  void executePostLayoutBinding() override;
+  void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
+  bool isSymbolRefDifferenceFullyResolvedImpl(const MCSymbol &SymA,
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
 
   bool hasRelocationAddend() const;
   bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
 
-  bool shouldRelocateWithSymbol(const MCAssembler &Asm, const MCValue &Val,
-                                const MCSymbolELF *Sym, uint64_t C,
-                                unsigned Type) const;
+  bool useSectionSymbol(const MCValue &Val, const MCSymbolELF *Sym, uint64_t C,
+                        unsigned Type) const;
 
-  bool checkRelocation(MCContext &Ctx, SMLoc Loc, const MCSectionELF *From,
+  bool checkRelocation(SMLoc Loc, const MCSectionELF *From,
                        const MCSectionELF *To);
 
   unsigned getELFHeaderEFlags() const { return ELFHeaderEFlags; }

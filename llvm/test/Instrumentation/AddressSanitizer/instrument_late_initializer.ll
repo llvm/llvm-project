@@ -51,7 +51,7 @@ define internal void @__late_ctor() sanitize_address section ".text.startup" {
 ; CHECK-LABEL: define internal void @__late_ctor(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] section ".text.startup" {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @__asan_before_dynamic_init(i64 ptrtoint (ptr @___asan_gen_ to i64))
+; CHECK-NEXT:    call void @__asan_before_dynamic_init(i64 ptrtoint (ptr @___asan_gen_module to i64))
 ; CHECK-NEXT:    call void @__asan_after_dynamic_init()
 ; CHECK-NEXT:    ret void
 ;

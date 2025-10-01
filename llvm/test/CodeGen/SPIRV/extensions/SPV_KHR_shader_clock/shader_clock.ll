@@ -1,14 +1,16 @@
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_shader_clock %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_shader_clock %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_shader_clock %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-ERROR: LLVM ERROR: clock_read_device: the builtin requires the following SPIR-V extension: SPV_KHR_shader_clock
 
 ; CHECK: OpCapability ShaderClockKHR
 ; CHECK: OpExtension "SPV_KHR_shader_clock"
-; CHECK-DAG: [[uint:%[a-z0-9_]+]] = OpTypeInt 32
+; CHECK-DAG: [[uint:%[a-z0-9_]+]] = OpTypeInt 32 0
 ; CHECK-DAG: [[ulong:%[a-z0-9_]+]] = OpTypeInt 64
 ; CHECK-DAG: [[v2uint:%[a-z0-9_]+]] = OpTypeVector [[uint]] 2
+; CHECK-DAG: OpConstant [[uint]] 8
+; CHECK-DAG: OpConstant [[uint]] 16
 ; CHECK-DAG: [[uint_1:%[a-z0-9_]+]] = OpConstant [[uint]] 1
 ; CHECK-DAG: [[uint_2:%[a-z0-9_]+]] = OpConstant [[uint]] 2
 ; CHECK-DAG: [[uint_3:%[a-z0-9_]+]] = OpConstant [[uint]] 3
