@@ -82,8 +82,8 @@ void RootDescriptorsEntry() {}
 // checking minLOD, maxLOD
 // CHECK-SAME: float -1.280000e+02, float 1.280000e+02,
 
-// checking register, space and visibility
-// CHECK-SAME: i32 42, i32 0, i32 0}
+// checking register, space, visibility and flags
+// CHECK-SAME: i32 42, i32 0, i32 0, i32 0}
 
 #define SampleStaticSampler \
   "StaticSampler(s42, " \
