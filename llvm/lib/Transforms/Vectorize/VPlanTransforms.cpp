@@ -2195,7 +2195,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         auto [ProcessedIter, IterIsEmpty] = ProcessedTruncs.try_emplace(Op);
         VPWidenCastRecipe *NewOp =
             IterIsEmpty
-                ? new VPWidenCastRecipe(Instruction::Trunc, Op, NewResTy)
+                ? new VPWidenCastRecipe(Instruction::Trunc, Op, NewResTy,
+                                        VPIRFlags::TruncFlagsTy(false, false))
                 : ProcessedIter->second;
         R.setOperand(Idx, NewOp);
         if (!IterIsEmpty)
@@ -2852,6 +2853,7 @@ void VPlanTransforms::replaceSymbolicStrides(
     return R->getParent()->getParent() ||
            R->getParent() == Plan.getVectorLoopRegion()->getSinglePredecessor();
   };
+  ValueToSCEVMapTy RewriteMap;
   for (const SCEV *Stride : StridesMap.values()) {
     using namespace SCEVPatternMatch;
     auto *StrideV = cast<SCEVUnknown>(Stride)->getValue();
@@ -2878,6 +2880,22 @@ void VPlanTransforms::replaceSymbolicStrides(
           isa<SExtInst>(U) ? StrideConst->sext(BW) : StrideConst->zext(BW);
       VPValue *CI = Plan.getOrAddLiveIn(ConstantInt::get(U->getType(), C));
       StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
+    }
+    RewriteMap[StrideV] = PSE.getSCEV(StrideV);
+  }
+
+  for (VPRecipeBase &R : *Plan.getEntry()) {
+    auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
+    if (!ExpSCEV)
+      continue;
+    const SCEV *ScevExpr = ExpSCEV->getSCEV();
+    auto *NewSCEV =
+        SCEVParameterRewriter::rewrite(ScevExpr, *PSE.getSE(), RewriteMap);
+    if (NewSCEV != ScevExpr) {
+      VPValue *NewExp = vputils::getOrCreateVPValueForSCEVExpr(Plan, NewSCEV);
+      ExpSCEV->replaceAllUsesWith(NewExp);
+      if (Plan.getTripCount() == ExpSCEV)
+        Plan.resetTripCount(NewExp);
     }
   }
 }
@@ -3525,7 +3543,15 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   };
 
   VPValue *VecOp = Red->getVecOp();
+  VPRecipeBase *Sub = nullptr;
   VPValue *A, *B;
+  VPValue *Tmp = nullptr;
+  // Sub reductions could have a sub between the add reduction and vec op.
+  if (match(VecOp,
+            m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(Tmp)))) {
+    Sub = VecOp->getDefiningRecipe();
+    VecOp = Tmp;
+  }
   // Try to match reduce.add(mul(...)).
   if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
     auto *RecipeA =
@@ -3542,12 +3568,21 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
                                        Instruction::CastOps::ZExt,
                                    Mul, RecipeA, RecipeB, nullptr)) {
+      if (Sub)
+        return new VPExpressionRecipe(RecipeA, RecipeB, Mul,
+                                      cast<VPWidenRecipe>(Sub), Red);
       return new VPExpressionRecipe(RecipeA, RecipeB, Mul, Red);
     }
     // Match reduce.add(mul).
-    if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
+    // TODO: Add an expression type for this variant with a negated mul
+    if (!Sub &&
+        IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
       return new VPExpressionRecipe(Mul, Red);
   }
+  // TODO: Add an expression type for negated versions of other expression
+  // variants.
+  if (Sub)
+    return nullptr;
   // Match reduce.add(ext(mul(ext(A), ext(B)))).
   // All extend recipes must have same opcode or A == B
   // which can be transform to reduce.add(zext(mul(sext(A), sext(B)))).
@@ -3566,13 +3601,13 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                    Mul, Ext0, Ext1, Ext)) {
       auto *NewExt0 = new VPWidenCastRecipe(
           Ext0->getOpcode(), Ext0->getOperand(0), Ext->getResultType(), *Ext0,
-          Ext0->getDebugLoc());
+          *Ext0, Ext0->getDebugLoc());
       NewExt0->insertBefore(Ext0);
 
       VPWidenCastRecipe *NewExt1 = NewExt0;
       if (Ext0 != Ext1) {
         NewExt1 = new VPWidenCastRecipe(Ext1->getOpcode(), Ext1->getOperand(0),
-                                        Ext->getResultType(), *Ext1,
+                                        Ext->getResultType(), *Ext1, *Ext1,
                                         Ext1->getDebugLoc());
         NewExt1->insertBefore(Ext1);
       }

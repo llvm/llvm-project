@@ -556,6 +556,8 @@ namespace VectorCast {
   }
   static_assert(test2() == 0);
 
+  /// On s390x, S is only 8 bytes.
+#if !defined(__s390x__)
   struct S {
     unsigned __int128 a : 3;
   };
@@ -568,6 +570,7 @@ namespace VectorCast {
 #else
   static_assert(s.a == 0); // ref-error {{not an integral constant expression}} \
                            // ref-note {{initializer of 's' is not a constant expression}}
+#endif
 #endif
 }
 #endif

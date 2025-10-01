@@ -705,6 +705,9 @@ public:
   VPIRFlags(WrapFlagsTy WrapFlags)
       : OpType(OperationType::OverflowingBinOp), WrapFlags(WrapFlags) {}
 
+  VPIRFlags(TruncFlagsTy TruncFlags)
+      : OpType(OperationType::Trunc), TruncFlags(TruncFlags) {}
+
   VPIRFlags(FastMathFlags FMFs) : OpType(OperationType::FPMathOp), FMFs(FMFs) {}
 
   VPIRFlags(DisjointFlagsTy DisjointFlags)
@@ -1494,9 +1497,10 @@ public:
 
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
                     const VPIRFlags &Flags = {},
+                    const VPIRMetadata &Metadata = {},
                     DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, Flags, DL),
-        VPIRMetadata(), Opcode(Opcode), ResultTy(ResultTy) {
+        VPIRMetadata(Metadata), Opcode(Opcode), ResultTy(ResultTy) {
     assert(flagsValidForOpcode(Opcode) &&
            "Set flags not supported for the provided opcode");
   }
@@ -1504,11 +1508,11 @@ public:
   ~VPWidenCastRecipe() override = default;
 
   VPWidenCastRecipe *clone() override {
+    auto *New = new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy, *this,
+                                      *this, getDebugLoc());
     if (auto *UV = getUnderlyingValue())
-      return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy,
-                                   *cast<CastInst>(UV));
-
-    return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy);
+      New->setUnderlyingValue(UV);
+    return New;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCastSC)
@@ -2993,6 +2997,10 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
     /// vector operands, performing a reduction.add on the result, and adding
     /// the scalar result to a chain.
     MulAccReduction,
+    /// Represent an inloop multiply-accumulate reduction, multiplying the
+    /// extended vector operands, negating the multiplication, performing a
+    /// reduction.add on the result, and adding the scalar result to a chain.
+    ExtNegatedMulAccReduction,
   };
 
   /// Type of the expression.
@@ -3016,6 +3024,19 @@ public:
                      VPWidenRecipe *Mul, VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::ExtMulAccReduction,
                            {Ext0, Ext1, Mul, Red}) {}
+  VPExpressionRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
+                     VPWidenRecipe *Mul, VPWidenRecipe *Sub,
+                     VPReductionRecipe *Red)
+      : VPExpressionRecipe(ExpressionTypes::ExtNegatedMulAccReduction,
+                           {Ext0, Ext1, Mul, Sub, Red}) {
+    assert(Mul->getOpcode() == Instruction::Mul && "Expected a mul");
+    assert(Red->getRecurrenceKind() == RecurKind::Add &&
+           "Expected an add reduction");
+    assert(getNumOperands() >= 3 && "Expected at least three operands");
+    auto *SubConst = dyn_cast<ConstantInt>(getOperand(2)->getLiveInIRValue());
+    assert(SubConst && SubConst->getValue() == 0 &&
+           Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
+  }
 
   ~VPExpressionRecipe() override {
     for (auto *R : reverse(ExpressionRecipes))

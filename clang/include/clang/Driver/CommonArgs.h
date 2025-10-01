@@ -105,6 +105,16 @@ unsigned DwarfVersionNum(StringRef ArgValue);
 const llvm::opt::Arg *getDwarfNArg(const llvm::opt::ArgList &Args);
 unsigned getDwarfVersion(const ToolChain &TC, const llvm::opt::ArgList &Args);
 
+enum class DwarfFissionKind { None, Split, Single };
+
+DwarfFissionKind getDebugFissionKind(const Driver &D,
+                                     const llvm::opt::ArgList &Args,
+                                     llvm::opt::Arg *&Arg);
+
+bool checkDebugInfoOption(const llvm::opt::Arg *A,
+                          const llvm::opt::ArgList &Args, const Driver &D,
+                          const ToolChain &TC);
+
 void AddAssemblerKPIC(const ToolChain &ToolChain,
                       const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs);
