@@ -1,5 +1,4 @@
-//===----- LibraryScanner.cpp - Provide Library Scaning implementation
-//-----===//
+//===- LibraryScanner.cpp - Provide Library Scanning Implementation ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -670,24 +669,24 @@ void LibraryScanHelper::addBasePath(const std::string &Path, PathType K) {
             << Path << "\n";);
     return;
   }
-  std::unique_lock<std::shared_mutex> lock(Mtx);
+  std::unique_lock<std::shared_mutex> Lock(Mtx);
   if (LibSearchPaths.count(Canon)) {
     LLVM_DEBUG(dbgs() << "LibraryScanHelper::addBasePath: Already added: "
                       << Canon << "\n";);
     return;
   }
   K = K == PathType::Unknown ? classifyKind(Canon) : K;
-  auto unit = std::make_shared<LibrarySearchPath>(Canon, K);
-  LibSearchPaths[Canon] = unit;
+  auto SP = std::make_shared<LibrarySearchPath>(Canon, K);
+  LibSearchPaths[Canon] = SP;
 
   if (K == PathType::User) {
     LLVM_DEBUG(dbgs() << "LibraryScanHelper::addBasePath: Added User path: "
                       << Canon << "\n";);
-    UnscannedUsr.push_back(StringRef(unit->basePath));
+    UnscannedUsr.push_back(StringRef(SP->BasePath));
   } else {
     LLVM_DEBUG(dbgs() << "LibraryScanHelper::addBasePath: Added System path: "
                       << Canon << "\n";);
-    UnscannedSys.push_back(StringRef(unit->basePath));
+    UnscannedSys.push_back(StringRef(SP->BasePath));
   }
 }
 
@@ -696,16 +695,16 @@ LibraryScanHelper::getNextBatch(PathType K, size_t BatchSize) {
   std::vector<std::shared_ptr<LibrarySearchPath>> Result;
   auto &Queue = (K == PathType::User) ? UnscannedUsr : UnscannedSys;
 
-  std::unique_lock<std::shared_mutex> lock(Mtx);
+  std::unique_lock<std::shared_mutex> Lock(Mtx);
 
   while (!Queue.empty() && (BatchSize == 0 || Result.size() < BatchSize)) {
     StringRef Base = Queue.front();
-    auto it = LibSearchPaths.find(Base);
-    if (it != LibSearchPaths.end()) {
-      auto &unit = it->second;
-      ScanState expected = ScanState::NotScanned;
-      if (unit->State.compare_exchange_strong(expected, ScanState::Scanning)) {
-        Result.push_back(unit);
+    auto It = LibSearchPaths.find(Base);
+    if (It != LibSearchPaths.end()) {
+      auto &SP = It->second;
+      ScanState Expected = ScanState::NotScanned;
+      if (SP->State.compare_exchange_strong(Expected, ScanState::Scanning)) {
+        Result.push_back(SP);
       }
     }
     Queue.pop_front();
@@ -717,33 +716,35 @@ LibraryScanHelper::getNextBatch(PathType K, size_t BatchSize) {
 bool LibraryScanHelper::isTrackedBasePath(StringRef Path) const {
   std::error_code EC;
   std::string Canon = resolveCanonical(Path, EC);
-  if (EC) {
+  if (EC)
     return false;
-  }
+
   std::shared_lock<std::shared_mutex> Lock(Mtx);
   return LibSearchPaths.count(Canon) > 0;
 }
 
 bool LibraryScanHelper::leftToScan(PathType K) const {
   std::shared_lock<std::shared_mutex> Lock(Mtx);
-  for (const auto &SP : LibSearchPaths)
-    if (SP.second->Kind == K && SP.second->State == ScanState::NotScanned)
+  for (const auto &KV : LibSearchPaths) {
+    const auto &SP = KV.second;
+    if (SP->Kind == K && SP->State == ScanState::NotScanned)
       return true;
+  }
   return false;
 }
 
 void LibraryScanHelper::resetToScan() {
-  std::shared_lock<std::shared_mutex> lock(Mtx);
+  std::shared_lock<std::shared_mutex> Lock(Mtx);
 
   for (auto &[_, SP] : LibSearchPaths) {
-    ScanState expected = ScanState::Scanned;
+    ScanState Expected = ScanState::Scanned;
 
-    if (!SP->State.compare_exchange_strong(expected, ScanState::NotScanned))
+    if (!SP->State.compare_exchange_strong(Expected, ScanState::NotScanned))
       continue;
 
-    auto &targetList =
+    auto &TargetList =
         (SP->Kind == PathType::User) ? UnscannedUsr : UnscannedSys;
-    targetList.emplace_back(SP->basePath);
+    TargetList.emplace_back(SP->BasePath);
   }
 }
 
@@ -1060,8 +1061,8 @@ void LibraryScanner::handleLibrary(StringRef FilePath, PathType K, int level) {
     return;
   }
 
-  bool added = LibMgr.addLibrary(CanonicalPath, K);
-  if (!added) {
+  bool Added = LibMgr.addLibrary(CanonicalPath, K);
+  if (!Added) {
     LLVM_DEBUG(dbgs() << "  Already added: " << CanonicalPath << "\n";);
     return;
   }
@@ -1111,22 +1112,22 @@ void LibraryScanner::handleLibrary(StringRef FilePath, PathType K, int level) {
   }
 }
 
-void LibraryScanner::scanBaseDir(std::shared_ptr<LibrarySearchPath> Unit) {
-  if (!sys::fs::is_directory(Unit->basePath) || Unit->basePath.empty()) {
+void LibraryScanner::scanBaseDir(std::shared_ptr<LibrarySearchPath> SP) {
+  if (!sys::fs::is_directory(SP->BasePath) || SP->BasePath.empty()) {
     LLVM_DEBUG(
         dbgs() << "LibraryScanner::scanBaseDir: Invalid or empty basePath: "
-               << Unit->basePath << "\n";);
+               << SP->BasePath << "\n";);
     return;
   }
 
   LLVM_DEBUG(dbgs() << "LibraryScanner::scanBaseDir: Scanning directory: "
-                    << Unit->basePath << "\n";);
+                    << SP->BasePath << "\n";);
   std::error_code EC;
 
-  Unit->State.store(ScanState::Scanning);
+  SP->State.store(ScanState::Scanning);
 
-  for (sys::fs::directory_iterator It(Unit->basePath, EC), end;
-       It != end && !EC; It.increment(EC)) {
+  for (sys::fs::directory_iterator It(SP->BasePath, EC), end; It != end && !EC;
+       It.increment(EC)) {
     auto Entry = *It;
     if (!Entry.status())
       continue;
@@ -1135,11 +1136,11 @@ void LibraryScanner::scanBaseDir(std::shared_ptr<LibrarySearchPath> Unit) {
     if (sys::fs::is_regular_file(Status) || sys::fs::is_symlink_file(Status)) {
       LLVM_DEBUG(dbgs() << "  Found file: " << Entry.path() << "\n";);
       // async support ?
-      handleLibrary(Entry.path(), Unit->Kind);
+      handleLibrary(Entry.path(), SP->Kind);
     }
   }
 
-  Unit->State.store(ScanState::Scanned);
+  SP->State.store(ScanState::Scanned);
 }
 
 void LibraryScanner::scanNext(PathType K, size_t BatchSize) {
@@ -1147,9 +1148,9 @@ void LibraryScanner::scanNext(PathType K, size_t BatchSize) {
                     << BatchSize << " for kind "
                     << (K == PathType::User ? "User" : "System") << "\n";);
 
-  auto SPaths = ScanHelper.getNextBatch(K, BatchSize);
-  for (auto &SP : SPaths) {
-    LLVM_DEBUG(dbgs() << "  Scanning unit with basePath: " << SP->basePath
+  auto SearchPaths = ScanHelper.getNextBatch(K, BatchSize);
+  for (auto &SP : SearchPaths) {
+    LLVM_DEBUG(dbgs() << "  Scanning unit with basePath: " << SP->BasePath
                       << "\n";);
 
     scanBaseDir(SP);
