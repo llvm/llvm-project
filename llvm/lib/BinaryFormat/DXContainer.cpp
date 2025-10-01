@@ -89,6 +89,15 @@ ArrayRef<EnumEntry<DescriptorRangeFlags>> dxbc::getDescriptorRangeFlags() {
   return ArrayRef(DescriptorRangeFlagNames);
 }
 
+static const EnumEntry<StaticSamplerFlags> StaticSamplerFlagNames[] = {
+#define STATIC_SAMPLER_FLAG(Val, Enum, Flag) {#Enum, StaticSamplerFlags::Enum},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<StaticSamplerFlags>> dxbc::getStaticSamplerFlags() {
+  return ArrayRef(StaticSamplerFlagNames);
+}
+
 #define SHADER_VISIBILITY(Val, Enum) {#Enum, ShaderVisibility::Enum},
 
 static const EnumEntry<ShaderVisibility> ShaderVisibilityValues[] = {

@@ -17,7 +17,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// nature of it whenever possible.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/owning-memory.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/owning-memory.html
 class OwningMemoryCheck : public ClangTidyCheck {
 public:
   OwningMemoryCheck(StringRef Name, ClangTidyContext *Context)
