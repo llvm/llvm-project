@@ -7190,6 +7190,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_finline_max_stacksize_EQ);
 
+  // Forward -fno-inline-functions-called-once to LLVM so the pass is enabled.
+  if (Args.hasArg(options::OPT_fno_inline_functions_called_once)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-no-inline-functions-called-once");
+  }
+
   // FIXME: Find a better way to determine whether we are in C++20.
   bool HaveCxx20 =
       Std &&
