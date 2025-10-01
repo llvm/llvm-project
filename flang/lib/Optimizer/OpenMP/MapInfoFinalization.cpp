@@ -139,6 +139,23 @@ class MapInfoFinalizationPass
     if (mappedIndexPathExists(op, indexPath))
       return;
 
+    if (op.getMapperId()) {
+      mlir::omp::DeclareMapperOp symbol =
+          mlir::SymbolTable::lookupNearestSymbolFrom<
+              mlir::omp::DeclareMapperOp>(op, op.getMapperIdAttr());
+      assert(symbol && "missing symbol for declare mapper identifier");
+      mlir::omp::DeclareMapperInfoOp mapperInfo = symbol.getDeclareMapperInfo();
+      // TODO: Probably a way to cache these keys in someway so we don't
+      // constantly go through the process of rebuilding them on every check, to
+      // save some cycles, but it can wait for a subsequent patch.
+      for (auto v : mapperInfo.getMapVars()) {
+        mlir::omp::MapInfoOp map =
+            mlir::cast<mlir::omp::MapInfoOp>(v.getDefiningOp());
+        if (!map.getMembers().empty() && mappedIndexPathExists(map, indexPath))
+          return;
+      }
+    }
+
     builder.setInsertionPoint(op);
     fir::factory::AddrAndBoundsInfo info = fir::factory::getDataOperandBaseAddr(
         builder, coordRef, /*isOptional=*/false, loc);
