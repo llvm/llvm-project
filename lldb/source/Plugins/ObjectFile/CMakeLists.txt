@@ -1,3 +1,5 @@
+set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND ObjectFile)
+
 add_subdirectory(Breakpad)
 add_subdirectory(COFF)
 add_subdirectory(ELF)

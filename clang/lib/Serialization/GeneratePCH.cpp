@@ -25,13 +25,14 @@ using namespace clang;
 PCHGenerator::PCHGenerator(
     Preprocessor &PP, ModuleCache &ModCache, StringRef OutputFile,
     StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
+    const CodeGenOptions &CodeGenOpts,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     bool AllowASTWithErrors, bool IncludeTimestamps,
     bool BuildingImplicitModule, bool ShouldCacheASTInMemory,
     bool GeneratingReducedBMI)
     : PP(PP), Subject(&PP), OutputFile(OutputFile), isysroot(isysroot.str()),
       Buffer(std::move(Buffer)), Stream(this->Buffer->Data),
-      Writer(Stream, this->Buffer->Data, ModCache, Extensions,
+      Writer(Stream, this->Buffer->Data, ModCache, CodeGenOpts, Extensions,
              IncludeTimestamps, BuildingImplicitModule, GeneratingReducedBMI),
       AllowASTWithErrors(AllowASTWithErrors),
       ShouldCacheASTInMemory(ShouldCacheASTInMemory) {
@@ -102,11 +103,12 @@ void PCHGenerator::anchor() {}
 CXX20ModulesGenerator::CXX20ModulesGenerator(Preprocessor &PP,
                                              ModuleCache &ModCache,
                                              StringRef OutputFile,
+                                             const CodeGenOptions &CodeGenOpts,
                                              bool GeneratingReducedBMI,
                                              bool AllowASTWithErrors)
     : PCHGenerator(
           PP, ModCache, OutputFile, llvm::StringRef(),
-          std::make_shared<PCHBuffer>(),
+          std::make_shared<PCHBuffer>(), CodeGenOpts,
           /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
           AllowASTWithErrors, /*IncludeTimestamps=*/false,
           /*BuildingImplicitModule=*/false, /*ShouldCacheASTInMemory=*/false,
@@ -120,13 +122,6 @@ Module *CXX20ModulesGenerator::getEmittingModule(ASTContext &Ctx) {
 }
 
 void CXX20ModulesGenerator::HandleTranslationUnit(ASTContext &Ctx) {
-  // FIMXE: We'd better to wrap such options to a new class ASTWriterOptions
-  // since this is not about searching header really.
-  HeaderSearchOptions &HSOpts =
-      getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts();
-  HSOpts.ModulesSkipDiagnosticOptions = true;
-  HSOpts.ModulesSkipHeaderSearchPaths = true;
-
   PCHGenerator::HandleTranslationUnit(Ctx);
 
   if (!isComplete())

@@ -15,7 +15,6 @@
 #include "FormatToken.h"
 #include "ContinuationIndenter.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Debug.h"
 #include <climits>
 
 namespace clang {
@@ -34,8 +33,20 @@ const char *getTokenTypeName(TokenType Type) {
   return nullptr;
 }
 
+static constexpr std::array<StringRef, 14> QtPropertyKeywords = {
+    "BINDABLE",   "CONSTANT", "DESIGNABLE", "FINAL", "MEMBER",
+    "NOTIFY",     "READ",     "REQUIRED",   "RESET", "REVISION",
+    "SCRIPTABLE", "STORED",   "USER",       "WRITE",
+};
+
+bool FormatToken::isQtProperty() const {
+  assert(llvm::is_sorted(QtPropertyKeywords));
+  return std::binary_search(QtPropertyKeywords.begin(),
+                            QtPropertyKeywords.end(), TokenText);
+}
+
 // Sorted common C++ non-keyword types.
-static SmallVector<StringRef> CppNonKeywordTypes = {
+static constexpr std::array<StringRef, 14> CppNonKeywordTypes = {
     "clock_t",  "int16_t",   "int32_t", "int64_t",   "int8_t",
     "intptr_t", "ptrdiff_t", "size_t",  "time_t",    "uint16_t",
     "uint32_t", "uint64_t",  "uint8_t", "uintptr_t",
@@ -44,9 +55,9 @@ static SmallVector<StringRef> CppNonKeywordTypes = {
 bool FormatToken::isTypeName(const LangOptions &LangOpts) const {
   if (is(TT_TypeName) || Tok.isSimpleTypeSpecifier(LangOpts))
     return true;
-  return (LangOpts.CXXOperatorNames || LangOpts.C17) && is(tok::identifier) &&
-         std::binary_search(CppNonKeywordTypes.begin(),
-                            CppNonKeywordTypes.end(), TokenText);
+  assert(llvm::is_sorted(CppNonKeywordTypes));
+  return (LangOpts.CXXOperatorNames || LangOpts.C11) && is(tok::identifier) &&
+         llvm::binary_search(CppNonKeywordTypes, TokenText);
 }
 
 bool FormatToken::isTypeOrIdentifier(const LangOptions &LangOpts) const {
@@ -330,6 +341,8 @@ bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style) {
     return true;
   }
   if (Style.Language == FormatStyle::LK_Proto && Current.is(TT_SelectorName))
+    return true;
+  if (Current.is(TT_QtProperty))
     return true;
   return Previous.is(tok::comma) && !Current.isTrailingComment() &&
          ((Previous.isNot(TT_CtorInitializerComma) ||

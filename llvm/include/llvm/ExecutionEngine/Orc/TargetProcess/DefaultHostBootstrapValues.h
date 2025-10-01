@@ -15,11 +15,12 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm::orc {
 
-void addDefaultBootstrapValuesForHostProcess(
+LLVM_ABI void addDefaultBootstrapValuesForHostProcess(
     StringMap<std::vector<char>> &BootstrapMap,
     StringMap<ExecutorAddr> &BootstrapSymbols);
 

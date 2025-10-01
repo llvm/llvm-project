@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,GFX11 %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,GFX12 %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=+dynamic-vgpr -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,GFX12,DVGPR %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 < %s | FileCheck --check-prefixes=CHECK,GFX11 %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 < %s | FileCheck --check-prefixes=CHECK,GFX12 %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=+dynamic-vgpr < %s | FileCheck --check-prefixes=CHECK,GFX12,DVGPR %s
 
 ; CHECK:           .amdgpu_pal_metadata
 ; CHECK-NEXT: ---
@@ -19,6 +19,7 @@
 ; CHECK-NEXT:        .debug_mode:     0
 ; CHECK-NEXT:        .excp_en:        0
 ; CHECK-NEXT:        .float_mode:     0xc0
+; CHECK-NEXT:        .forward_progress: true
 ; GFX11-NEXT:        .ieee_mode:      true
 ; CHECK-NEXT:        .image_op:       false
 ; CHECK-NEXT:        .lds_size:       0x200

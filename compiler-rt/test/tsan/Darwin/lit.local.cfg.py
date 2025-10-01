@@ -6,7 +6,7 @@ def getRoot(config):
 
 root = getRoot(config)
 
-if root.host_os not in ["Darwin"]:
+if root.target_os not in ["Darwin"]:
     config.unsupported = True
 
 config.environment["TSAN_OPTIONS"] += ":ignore_noninstrumented_modules=1"

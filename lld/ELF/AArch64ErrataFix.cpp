@@ -33,8 +33,6 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/CommonLinkerContext.h"
-#include "lld/Common/Strings.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Endian.h"
 #include <algorithm>
@@ -461,12 +459,12 @@ void AArch64Err843419Patcher::init() {
     llvm::stable_sort(mapSyms, [](const Defined *a, const Defined *b) {
       return a->value < b->value;
     });
-    mapSyms.erase(
-        std::unique(mapSyms.begin(), mapSyms.end(),
-                    [=](const Defined *a, const Defined *b) {
-                      return isCodeMapSymbol(a) == isCodeMapSymbol(b);
-                    }),
-        mapSyms.end());
+    mapSyms.erase(llvm::unique(mapSyms,
+                               [=](const Defined *a, const Defined *b) {
+                                 return isCodeMapSymbol(a) ==
+                                        isCodeMapSymbol(b);
+                               }),
+                  mapSyms.end());
     // Always start with a Code Mapping Symbol.
     if (!mapSyms.empty() && !isCodeMapSymbol(mapSyms.front()))
       mapSyms.erase(mapSyms.begin());

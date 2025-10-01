@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitTracker.h"
+#include "Hexagon.h"
 #include "HexagonBitTracker.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
@@ -49,13 +50,6 @@ static unsigned CountBitSplit = 0;
 
 static cl::opt<unsigned> RegisterSetLimit("hexbit-registerset-limit",
   cl::Hidden, cl::init(1000));
-
-namespace llvm {
-
-  void initializeHexagonBitSimplifyPass(PassRegistry& Registry);
-  FunctionPass *createHexagonBitSimplify();
-
-} // end namespace llvm
 
 namespace {
 
@@ -1757,10 +1751,11 @@ namespace {
   class BitSimplification : public Transformation {
   public:
     BitSimplification(BitTracker &bt, const MachineDominatorTree &mdt,
-        const HexagonInstrInfo &hii, const HexagonRegisterInfo &hri,
-        MachineRegisterInfo &mri, MachineFunction &mf)
-      : Transformation(true), MDT(mdt), HII(hii), HRI(hri), MRI(mri),
-        MF(mf), BT(bt) {}
+                      const HexagonInstrInfo &hii,
+                      const HexagonRegisterInfo &hri, MachineRegisterInfo &mri,
+                      MachineFunction &mf)
+        : Transformation(true), MDT(mdt), HII(hii), HRI(hri), MRI(mri), BT(bt) {
+    }
 
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
 
@@ -1803,7 +1798,6 @@ namespace {
     const HexagonInstrInfo &HII;
     const HexagonRegisterInfo &HRI;
     MachineRegisterInfo &MRI;
-    MachineFunction &MF;
     BitTracker &BT;
   };
 
@@ -1892,7 +1886,7 @@ bool BitSimplification::matchHalf(unsigned SelfR,
 
 bool BitSimplification::validateReg(BitTracker::RegisterRef R, unsigned Opc,
       unsigned OpNum) {
-  auto *OpRC = HII.getRegClass(HII.get(Opc), OpNum, &HRI, MF);
+  auto *OpRC = HII.getRegClass(HII.get(Opc), OpNum, &HRI);
   auto *RRC = HBS::getFinalVRegClass(R, MRI);
   return OpRC->hasSubClassEq(RRC);
 }
@@ -2897,22 +2891,13 @@ bool HexagonBitSimplify::runOnMachineFunction(MachineFunction &MF) {
 //   r5:4 = memd(r0++#8)
 // }:endloop0
 
-namespace llvm {
-
-  FunctionPass *createHexagonLoopRescheduling();
-  void initializeHexagonLoopReschedulingPass(PassRegistry&);
-
-} // end namespace llvm
-
 namespace {
 
   class HexagonLoopRescheduling : public MachineFunctionPass {
   public:
     static char ID;
 
-    HexagonLoopRescheduling() : MachineFunctionPass(ID) {
-      initializeHexagonLoopReschedulingPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonLoopRescheduling() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -2957,8 +2942,8 @@ namespace {
 
 char HexagonLoopRescheduling::ID = 0;
 
-INITIALIZE_PASS(HexagonLoopRescheduling, "hexagon-loop-resched",
-  "Hexagon Loop Rescheduling", false, false)
+INITIALIZE_PASS(HexagonLoopRescheduling, "hexagon-loop-resched-pass",
+                "Hexagon Loop Rescheduling", false, false)
 
 HexagonLoopRescheduling::PhiInfo::PhiInfo(MachineInstr &P,
       MachineBasicBlock &B) {

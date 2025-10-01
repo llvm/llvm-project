@@ -10,6 +10,7 @@ static_library("TableGen") {
     "Record.cpp",
     "SetTheory.cpp",
     "StringMatcher.cpp",
+    "StringToOffsetTable.cpp",
     "TGLexer.cpp",
     "TGParser.cpp",
     "TGTimer.cpp",

@@ -42,10 +42,9 @@ namespace {
 ///
 /// Returns the name of anonymous union VarDecl or nullptr if it is not found.
 static const IdentifierInfo *findAnonymousUnionVarDeclName(const VarDecl& VD) {
-  const RecordType *RT = VD.getType()->getAs<RecordType>();
-  assert(RT && "type of VarDecl is expected to be RecordType.");
-  assert(RT->getDecl()->isUnion() && "RecordType is expected to be a union.");
-  if (const FieldDecl *FD = RT->getDecl()->findFirstNamedDataMember()) {
+  const auto *RD = VD.getType()->castAsRecordDecl();
+  assert(RD->isUnion() && "RecordType is expected to be a union.");
+  if (const FieldDecl *FD = RD->findFirstNamedDataMember()) {
     return FD->getIdentifier();
   }
 
@@ -110,7 +109,7 @@ struct DenseMapInfo<DecompositionDeclName> {
   }
   static unsigned getHashValue(DecompositionDeclName Key) {
     assert(!isEqual(Key, getEmptyKey()) && !isEqual(Key, getTombstoneKey()));
-    return llvm::hash_combine_range(Key.begin(), Key.end());
+    return llvm::hash_combine_range(Key);
   }
   static bool isEqual(DecompositionDeclName LHS, DecompositionDeclName RHS) {
     if (std::optional<bool> Result =

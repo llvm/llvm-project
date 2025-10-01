@@ -19,7 +19,7 @@ entry:
 ; CHECK:	func:
 ; CHECK:	.Lfunc_begin1:
 ; CHECK:		.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text{{$}}
-; CHECK-NEXT:		.byte 2			# version
+; CHECK-NEXT:		.byte 3			# version
 ; BASIC-NEXT:		.byte 0			# feature
 ; PGO-NEXT:		.byte 3			# feature
 ; CHECK-NEXT:		.quad	.Lfunc_begin1	# function address

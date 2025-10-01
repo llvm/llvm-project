@@ -62,7 +62,7 @@ inline static RT_API_ATTRS void MatrixTransposedTimesMatrix(
     std::size_t yColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
 
-  std::memset(product, 0, rows * cols * sizeof *product);
+  Fortran::runtime::memset(product, 0, rows * cols * sizeof *product);
   for (SubscriptValue j{0}; j < cols; ++j) {
     for (SubscriptValue i{0}; i < rows; ++i) {
       for (SubscriptValue k{0}; k < n; ++k) {
@@ -132,7 +132,7 @@ inline static RT_API_ATTRS void MatrixTransposedTimesVector(
     SubscriptValue n, const XT *RESTRICT x, const YT *RESTRICT y,
     std::size_t xColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
-  std::memset(product, 0, rows * sizeof *product);
+  Fortran::runtime::memset(product, 0, rows * sizeof *product);
   for (SubscriptValue i{0}; i < rows; ++i) {
     for (SubscriptValue k{0}; k < n; ++k) {
       ResultType x_ki;
@@ -183,7 +183,7 @@ inline static RT_API_ATTRS void DoMatmulTranspose(
     for (int j{0}; j < resRank; ++j) {
       result.GetDimension(j).SetBounds(1, extent[j]);
     }
-    if (int stat{result.Allocate()}) {
+    if (int stat{result.Allocate(kNoAsyncObject)}) {
       terminator.Crash(
           "MATMUL-TRANSPOSE: could not allocate memory for result; STAT=%d",
           stat);
@@ -331,6 +331,7 @@ template <bool IS_ALLOCATING, TypeCategory XCAT, int XKIND, TypeCategory YCAT,
 struct MatmulTransposeHelper {
   using ResultDescriptor =
       std::conditional_t<IS_ALLOCATING, Descriptor, const Descriptor>;
+  using ResultTy = Fortran::common::optional<std::pair<TypeCategory, int>>;
   RT_API_ATTRS void operator()(ResultDescriptor &result, const Descriptor &x,
       const Descriptor &y, const char *sourceFile, int line) const {
     Terminator terminator{sourceFile, line};
@@ -339,7 +340,7 @@ struct MatmulTransposeHelper {
     RUNTIME_CHECK(terminator, xCatKind.has_value() && yCatKind.has_value());
     RUNTIME_CHECK(terminator, xCatKind->first == XCAT);
     RUNTIME_CHECK(terminator, yCatKind->first == YCAT);
-    if constexpr (constexpr auto resultType{
+    if constexpr (constexpr ResultTy resultType{
                       GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
       return DoMatmulTranspose<IS_ALLOCATING, resultType->first,
           resultType->second, CppTypeFor<XCAT, XKIND>, CppTypeFor<YCAT, YKIND>>(

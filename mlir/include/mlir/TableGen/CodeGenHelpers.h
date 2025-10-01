@@ -153,6 +153,23 @@ public:
   std::optional<StringRef>
   getAttrConstraintFn(const Constraint &constraint) const;
 
+  /// Get the name of the static function used for the given property
+  /// constraint. These functions are in the form:
+  ///
+  ///   LogicalResult(Operation *op, T property, StringRef propName);
+  ///
+  /// where T is the interface type specified in the constraint.
+  /// If a uniqued constraint was not found, this function returns std::nullopt.
+  /// The uniqued constraints cannot be used in the context of an OpAdaptor.
+  ///
+  /// Pattern constraints have the form:
+  ///
+  ///   LogicalResult(PatternRewriter &rewriter, Operation *op, T property,
+  ///                 StringRef failureStr);
+  ///
+  std::optional<StringRef>
+  getPropConstraintFn(const Constraint &constraint) const;
+
   /// Get the name of the static function used for the given successor
   /// constraint. These functions are in the form:
   ///
@@ -175,6 +192,8 @@ private:
   void emitTypeConstraints();
   /// Emit static attribute constraint functions.
   void emitAttrConstraints();
+  /// Emit static property constraint functions.
+  void emitPropConstraints();
   /// Emit static successor constraint functions.
   void emitSuccessorConstraints();
   /// Emit static region constraint functions.
@@ -212,6 +231,8 @@ private:
   ConstraintMap typeConstraints;
   /// The set of attribute constraints used in the current file.
   ConstraintMap attrConstraints;
+  /// The set of property constraints used in the current file.
+  ConstraintMap propConstraints;
   /// The set of successor constraints used in the current file.
   ConstraintMap successorConstraints;
   /// The set of region constraints used in the current file.

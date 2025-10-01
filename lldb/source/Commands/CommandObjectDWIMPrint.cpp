@@ -90,7 +90,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   dump_options.SetHideRootName(suppress_result)
       .SetExpandPointerTypeFlags(lldb::eTypeIsObjC);
 
-  bool is_po = m_varobj_options.use_objc;
+  bool is_po = m_varobj_options.use_object_desc;
 
   StackFrame *frame = m_exe_ctx.GetFramePtr();
 
@@ -150,6 +150,8 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
         return;
       }
     }
+    m_interpreter.PrintWarningsIfNecessary(result.GetOutputStream(),
+                                           m_cmd_name);
     result.SetStatus(eReturnStatusSuccessFinishResult);
   };
 

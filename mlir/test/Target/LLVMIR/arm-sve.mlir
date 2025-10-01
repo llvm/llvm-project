@@ -48,6 +48,30 @@ llvm.func @arm_sve_ummla(%arg0: vector<[16]xi8>,
   llvm.return %0 : vector<[4]xi32>
 }
 
+// CHECK-LABEL: define <vscale x 4 x i32> @arm_sve_usmmla
+llvm.func @arm_sve_usmmla(%arg0: vector<[16]xi8>,
+                         %arg1: vector<[16]xi8>,
+                         %arg2: vector<[4]xi32>)
+                         -> vector<[4]xi32> {
+  // CHECK: call <vscale x 4 x i32> @llvm.aarch64.sve.usmmla.nxv4i32(<vscale x 4
+  %0 = "arm_sve.intr.usmmla"(%arg2, %arg0, %arg1) :
+    (vector<[4]xi32>, vector<[16]xi8>, vector<[16]xi8>)
+        -> vector<[4]xi32>
+  llvm.return %0 : vector<[4]xi32>
+}
+
+// CHECK-LABEL: define <vscale x 4 x float> @arm_sve_bfmmla
+llvm.func @arm_sve_bfmmla(%arg0: vector<[8]xbf16>,
+                          %arg1: vector<[8]xbf16>,
+                          %arg2: vector<[4]xf32>)
+                          -> vector<[4]xf32> {
+  // CHECK: call <vscale x 4 x float> @llvm.aarch64.sve.bfmmla(<vscale x 4 x float>
+  %0 = "arm_sve.intr.bfmmla"(%arg2, %arg0, %arg1) :
+    (vector<[4]xf32>, vector<[8]xbf16>, vector<[8]xbf16>)
+        -> vector<[4]xf32>
+  llvm.return %0 : vector<[4]xf32>
+}
+
 // CHECK-LABEL: define <vscale x 4 x i32> @arm_sve_arithi
 llvm.func @arm_sve_arithi(%arg0: vector<[4]xi32>,
                           %arg1: vector<[4]xi32>,
@@ -388,5 +412,37 @@ llvm.func @arm_sve_psel(%pn: vector<[16]xi1>, %p1: vector<[2]xi1>, %p2: vector<[
   "arm_sve.intr.psel"(%pn, %p3, %index) : (vector<[16]xi1>, vector<[8]xi1>, i32) -> vector<[16]xi1>
   // CHECK: call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv16i1(<vscale x 16 x i1> %[[PN]], <vscale x 16 x i1> %[[P4]], i32 %[[INDEX]])
   "arm_sve.intr.psel"(%pn, %p4, %index) : (vector<[16]xi1>, vector<[16]xi1>, i32) -> vector<[16]xi1>
+  llvm.return
+}
+
+// CHECK-LABEL: @arm_sve_dupq_lane
+// CHECK-SAME: <vscale x 16 x i8> %[[V0:[0-9]+]]
+// CHECK-SAME: <vscale x 8 x i16> %[[V1:[0-9]+]]
+// CHECK-SAME: <vscale x 8 x half> %[[V2:[0-9]+]]
+// CHECK-SAME: <vscale x 8 x bfloat> %[[V3:[0-9]+]]
+// CHECK-SAME: <vscale x 4 x i32> %[[V4:[0-9]+]]
+// CHECK-SAME: <vscale x 4 x float> %[[V5:[0-9]+]]
+// CHECK-SAME: <vscale x 2 x i64> %[[V6:[0-9]+]]
+// CHECK-SAME: <vscale x 2 x double> %[[V7:[0-9]+]]
+llvm.func @arm_sve_dupq_lane(%nxv16i8: vector<[16]xi8>, %nxv8i16:  vector<[8]xi16>,
+                             %nxv8f16: vector<[8]xf16>, %nxv8bf16: vector<[8]xbf16>,
+                             %nxv4i32: vector<[4]xi32>, %nxv4f32:  vector<[4]xf32>,
+                             %nxv2i64: vector<[2]xi64>, %nxv2f64:  vector<[2]xf64>) {
+  // CHECK: call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %[[V0]], i64 0)
+  %0 = "arm_sve.intr.dupq_lane"(%nxv16i8) <{lane = 0 : i64}> : (vector<[16]xi8>) -> vector<[16]xi8>
+  // CHECK: call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> %[[V1]], i64 1)
+  %1 = "arm_sve.intr.dupq_lane"(%nxv8i16) <{lane = 1 : i64}> : (vector<[8]xi16>) -> vector<[8]xi16>
+  // CHECK: call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %[[V2]], i64 2)
+  %2 = "arm_sve.intr.dupq_lane"(%nxv8f16) <{lane = 2 : i64}> : (vector<[8]xf16>) -> vector<[8]xf16>
+  // CHECK: call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> %[[V3]], i64 3)
+  %3 = "arm_sve.intr.dupq_lane"(%nxv8bf16) <{lane = 3 : i64}> : (vector<[8]xbf16>) -> vector<[8]xbf16>
+  // CHECK: call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %[[V4]], i64 4)
+  %4 = "arm_sve.intr.dupq_lane"(%nxv4i32) <{lane = 4 : i64}> : (vector<[4]xi32>) -> vector<[4]xi32>
+  // CHECK: call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %[[V5]], i64 5)
+  %5 = "arm_sve.intr.dupq_lane"(%nxv4f32) <{lane = 5 : i64}> : (vector<[4]xf32>) -> vector<[4]xf32>
+  // CHECK: call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %[[V6]], i64 6)
+  %6 = "arm_sve.intr.dupq_lane"(%nxv2i64) <{lane = 6 : i64}> : (vector<[2]xi64>) -> vector<[2]xi64>
+  // CHECK: call <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double> %[[V7]], i64 7)
+  %7 = "arm_sve.intr.dupq_lane"(%nxv2f64) <{lane = 7 : i64}> : (vector<[2]xf64>) -> vector<[2]xf64>
   llvm.return
 }

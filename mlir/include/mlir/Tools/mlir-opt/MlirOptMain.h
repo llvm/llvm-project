@@ -38,6 +38,12 @@ enum class VerbosityLevel {
   ErrorsWarningsAndRemarks
 };
 
+enum class RemarkFormat {
+  REMARK_FORMAT_STDOUT,
+  REMARK_FORMAT_YAML,
+  REMARK_FORMAT_BITSTREAM,
+};
+
 /// Configuration options for the mlir-opt tool.
 /// This is intended to help building tools like mlir-opt by collecting the
 /// supported options.
@@ -185,11 +191,20 @@ public:
 
   /// Set whether to check that emitted diagnostics match `expected-*` lines on
   /// the corresponding line. This is meant for implementing diagnostic tests.
-  MlirOptMainConfig &verifyDiagnostics(bool verify) {
+  MlirOptMainConfig &
+  verifyDiagnostics(SourceMgrDiagnosticVerifierHandler::Level verify) {
     verifyDiagnosticsFlag = verify;
     return *this;
   }
-  bool shouldVerifyDiagnostics() const { return verifyDiagnosticsFlag; }
+
+  bool shouldVerifyDiagnostics() const {
+    return verifyDiagnosticsFlag !=
+           SourceMgrDiagnosticVerifierHandler::Level::None;
+  }
+
+  SourceMgrDiagnosticVerifierHandler::Level verifyDiagnosticsLevel() const {
+    return verifyDiagnosticsFlag;
+  }
 
   /// Set whether to run the verifier after each transformation pass.
   MlirOptMainConfig &verifyPasses(bool verify) {
@@ -212,14 +227,52 @@ public:
   }
   bool shouldVerifyRoundtrip() const { return verifyRoundtripFlag; }
 
+  /// Checks if any remark filters are set.
+  bool shouldEmitRemarks() const {
+    // Emit all remarks only when no filters are specified.
+    const bool hasFilters =
+        !getRemarksAllFilter().empty() || !getRemarksPassedFilter().empty() ||
+        !getRemarksFailedFilter().empty() ||
+        !getRemarksMissedFilter().empty() || !getRemarksAnalyseFilter().empty();
+    return hasFilters;
+  }
+
   /// Reproducer file generation (no crash required).
   StringRef getReproducerFilename() const { return generateReproducerFileFlag; }
+
+  /// Set the reproducer output filename
+  RemarkFormat getRemarkFormat() const { return remarkFormatFlag; }
+  /// Set the remark format to use.
+  std::string getRemarksAllFilter() const { return remarksAllFilterFlag; }
+  /// Set the remark output file.
+  std::string getRemarksOutputFile() const { return remarksOutputFileFlag; }
+  /// Set the remark passed filters.
+  std::string getRemarksPassedFilter() const { return remarksPassedFilterFlag; }
+  /// Set the remark failed filters.
+  std::string getRemarksFailedFilter() const { return remarksFailedFilterFlag; }
+  /// Set the remark missed filters.
+  std::string getRemarksMissedFilter() const { return remarksMissedFilterFlag; }
+  /// Set the remark analyse filters.
+  std::string getRemarksAnalyseFilter() const {
+    return remarksAnalyseFilterFlag;
+  }
 
 protected:
   /// Allow operation with no registered dialects.
   /// This option is for convenience during testing only and discouraged in
   /// general.
   bool allowUnregisteredDialectsFlag = false;
+
+  /// Remark format
+  RemarkFormat remarkFormatFlag = RemarkFormat::REMARK_FORMAT_STDOUT;
+  /// Remark file to output to
+  std::string remarksOutputFileFlag = "";
+  /// Remark filters
+  std::string remarksAllFilterFlag = "";
+  std::string remarksPassedFilterFlag = "";
+  std::string remarksFailedFilterFlag = "";
+  std::string remarksMissedFilterFlag = "";
+  std::string remarksAnalyseFilterFlag = "";
 
   /// Configuration for the debugging hooks.
   tracing::DebugConfig debugConfig;
@@ -237,9 +290,6 @@ protected:
 
   /// Elide resources when generating bytecode.
   bool elideResourceDataFromBytecodeFlag = false;
-
-  /// Enable the Debugger action hook: Debugger can intercept MLIR Actions.
-  bool enableDebuggerActionHookFlag = false;
 
   /// IRDL file to register before processing the input.
   std::string irdlFileFlag = "";
@@ -279,7 +329,8 @@ protected:
 
   /// Set whether to check that emitted diagnostics match `expected-*` lines on
   /// the corresponding line. This is meant for implementing diagnostic tests.
-  bool verifyDiagnosticsFlag = false;
+  SourceMgrDiagnosticVerifierHandler::Level verifyDiagnosticsFlag =
+      SourceMgrDiagnosticVerifierHandler::Level::None;
 
   /// Run the verifier after each transformation pass.
   bool verifyPassesFlag = true;

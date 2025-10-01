@@ -6,7 +6,7 @@ define void @main.41() local_unnamed_addr #1 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpbroadcastw (%rax), %ymm0
 ; CHECK-NEXT:    vmovdqu (%rax), %ymm1
-; CHECK-NEXT:    vpmovsxbw {{.*#+}} ymm2 = [31,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [31,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
 ; CHECK-NEXT:    vpermi2w %ymm0, %ymm1, %ymm2
 ; CHECK-NEXT:    vcvtph2ps %ymm2, %zmm0
 ; CHECK-NEXT:    vcvtph2ps %ymm1, %zmm1

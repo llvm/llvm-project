@@ -1,9 +1,7 @@
 ; RUN: opt -S -mtriple=amdgcn- -passes=sroa %s -o %t.sroa.ll
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-promote-alloca -verify-machineinstrs < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-ALLOCA %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=+promote-alloca -verify-machineinstrs < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-PROMOTE %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-promote-alloca < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-ALLOCA %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=+promote-alloca < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-PROMOTE %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes='sroa,amdgpu-promote-alloca,instcombine' < %s | FileCheck -check-prefix=OPT %s
-
-target datalayout = "A5"
 
 ; OPT-LABEL: @vector_read_alloca_bitcast(
 ; OPT-NOT:   alloca

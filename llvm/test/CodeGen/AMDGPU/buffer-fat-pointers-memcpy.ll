@@ -12,14 +12,13 @@
 ; for buffer-related memcpy() calls turns into something reasonable in
 ; the backend, despite the wide intermediate vectors
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
 target triple = "amdgcn--"
 
 ;; memcpy
 
 declare void @llvm.memcpy.p7.p7.i32(ptr addrspace(7), ptr addrspace(7), i32, i1)
 
-define amdgpu_kernel void @memcpy_known(ptr addrspace(7) inreg %src, ptr addrspace(7) inreg %dst) {
+define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) %dst) {
 ; SDAG-LABEL: memcpy_known:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -236,14 +235,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) inreg %src, ptr addrspa
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ; SDAG-GFX942-LABEL: memcpy_known:
-; SDAG-GFX942:       ; %bb.3:
-; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; SDAG-GFX942-NEXT:    s_load_dword s12, s[4:5], 0x10
-; SDAG-GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX942-NEXT:    s_branch .LBB0_0
-; SDAG-GFX942-NEXT:    .p2align 8
-; SDAG-GFX942-NEXT:  ; %bb.4:
-; SDAG-GFX942-NEXT:  .LBB0_0:
+; SDAG-GFX942:       ; %bb.0:
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX942-NEXT:    s_load_dword s17, s[4:5], 0x34
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x44
@@ -452,14 +444,6 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) inreg %src, ptr addrspa
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[2:5], v62, s[8:11], 0 offen
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[6:9], v62, s[8:11], 0 offen offset:16
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[10:13], v62, s[8:11], 0 offen offset:32
-; GISEL-GFX942-NEXT:    v_add_u32_e32 v63, s12, v1
-; GISEL-GFX942-NEXT:    v_add_u32_e32 v1, 0x100, v1
-; GISEL-GFX942-NEXT:    v_cmp_lt_u32_e32 vcc, v1, v0
-; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a0, v13 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a1, v12 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a2, v11 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a3, v10 ; Reload Reuse
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[14:17], v62, s[8:11], 0 offen offset:48
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[18:21], v62, s[8:11], 0 offen offset:64
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[22:25], v62, s[8:11], 0 offen offset:80
@@ -472,20 +456,15 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) inreg %src, ptr addrspa
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[50:53], v62, s[8:11], 0 offen offset:192
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[54:57], v62, s[8:11], 0 offen offset:208
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[58:61], v62, s[8:11], 0 offen offset:224
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[10:13], v62, s[8:11], 0 offen offset:240
-; GISEL-GFX942-NEXT:    s_nop 0
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 a[0:3], v62, s[8:11], 0 offen offset:240
+; GISEL-GFX942-NEXT:    v_add_u32_e32 v63, s12, v1
+; GISEL-GFX942-NEXT:    v_add_u32_e32 v1, 0x100, v1
+; GISEL-GFX942-NEXT:    v_cmp_lt_u32_e32 vcc, v1, v0
+; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-GFX942-NEXT:    scratch_store_dwordx4 off, a[0:3], off ; 16-byte Folded Spill
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v63, s[4:7], 0 offen
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[6:9], v63, s[4:7], 0 offen offset:16
-; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(2)
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a4, v13 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v5, a0 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v4, a1 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v3, a2 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v2, a3 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a5, v12 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a6, v11 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a7, v10 ; Reload Reuse
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v63, s[4:7], 0 offen offset:32
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[10:13], v63, s[4:7], 0 offen offset:32
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[14:17], v63, s[4:7], 0 offen offset:48
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[18:21], v63, s[4:7], 0 offen offset:64
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[22:25], v63, s[4:7], 0 offen offset:80
@@ -498,10 +477,8 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) inreg %src, ptr addrspa
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[50:53], v63, s[4:7], 0 offen offset:192
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[54:57], v63, s[4:7], 0 offen offset:208
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[58:61], v63, s[4:7], 0 offen offset:224
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v5, a4 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v4, a5 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v3, a6 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v2, a7 ; Reload Reuse
+; GISEL-GFX942-NEXT:    scratch_load_dwordx4 v[2:5], off, off ; 16-byte Folded Reload
+; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v63, s[4:7], 0 offen offset:240
 ; GISEL-GFX942-NEXT:    s_cbranch_vccnz .LBB0_1
 ; GISEL-GFX942-NEXT:  ; %bb.2: ; %memcpy-split
@@ -595,7 +572,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) inreg %src, ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr addrspace(7) inreg %dst) {
+define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrspace(7) %dst) {
 ; SDAG-LABEL: memcpy_known_medium:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -803,14 +780,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ; SDAG-GFX942-LABEL: memcpy_known_medium:
-; SDAG-GFX942:       ; %bb.3:
-; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; SDAG-GFX942-NEXT:    s_load_dword s12, s[4:5], 0x10
-; SDAG-GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX942-NEXT:    s_branch .LBB1_0
-; SDAG-GFX942-NEXT:    .p2align 8
-; SDAG-GFX942-NEXT:  ; %bb.4:
-; SDAG-GFX942-NEXT:  .LBB1_0:
+; SDAG-GFX942:       ; %bb.0:
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX942-NEXT:    s_load_dword s13, s[4:5], 0x34
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x44
@@ -837,14 +807,6 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[2:5], v1, s[4:7], 0 offen
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[6:9], v1, s[4:7], 0 offen offset:16
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[10:13], v1, s[4:7], 0 offen offset:32
-; SDAG-GFX942-NEXT:    v_add_u32_e32 v62, s8, v0
-; SDAG-GFX942-NEXT:    v_add_co_u32_e32 v0, vcc, 0x100, v0
-; SDAG-GFX942-NEXT:    s_and_b64 vcc, exec, vcc
-; SDAG-GFX942-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-GFX942-NEXT:    v_accvgpr_write_b32 a0, v13 ; Reload Reuse
-; SDAG-GFX942-NEXT:    v_accvgpr_write_b32 a1, v12 ; Reload Reuse
-; SDAG-GFX942-NEXT:    v_accvgpr_write_b32 a2, v11 ; Reload Reuse
-; SDAG-GFX942-NEXT:    v_accvgpr_write_b32 a3, v10 ; Reload Reuse
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[14:17], v1, s[4:7], 0 offen offset:48
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[18:21], v1, s[4:7], 0 offen offset:64
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[22:25], v1, s[4:7], 0 offen offset:80
@@ -857,20 +819,16 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[50:53], v1, s[4:7], 0 offen offset:192
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[54:57], v1, s[4:7], 0 offen offset:208
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[58:61], v1, s[4:7], 0 offen offset:224
-; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[10:13], v1, s[4:7], 0 offen offset:240
-; SDAG-GFX942-NEXT:    s_nop 0
+; SDAG-GFX942-NEXT:    buffer_load_dwordx4 a[0:3], v1, s[4:7], 0 offen offset:240
+; SDAG-GFX942-NEXT:    v_add_u32_e32 v62, s8, v0
+; SDAG-GFX942-NEXT:    v_add_co_u32_e32 v0, vcc, 0x100, v0
+; SDAG-GFX942-NEXT:    s_and_b64 vcc, exec, vcc
+; SDAG-GFX942-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-GFX942-NEXT:    v_accvgpr_read_b32 v63, a3 ; Reload Reuse
+; SDAG-GFX942-NEXT:    scratch_store_dwordx3 off, a[0:2], off ; 12-byte Folded Spill
 ; SDAG-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v62, s[12:15], 0 offen
 ; SDAG-GFX942-NEXT:    buffer_store_dwordx4 v[6:9], v62, s[12:15], 0 offen offset:16
-; SDAG-GFX942-NEXT:    s_waitcnt vmcnt(2)
-; SDAG-GFX942-NEXT:    v_accvgpr_write_b32 a4, v13 ; Reload Reuse
-; SDAG-GFX942-NEXT:    v_accvgpr_read_b32 v5, a0 ; Reload Reuse
-; SDAG-GFX942-NEXT:    v_accvgpr_read_b32 v4, a1 ; Reload Reuse
-; SDAG-GFX942-NEXT:    v_accvgpr_read_b32 v3, a2 ; Reload Reuse
-; SDAG-GFX942-NEXT:    v_accvgpr_read_b32 v2, a3 ; Reload Reuse
-; SDAG-GFX942-NEXT:    v_accvgpr_write_b32 a5, v12 ; Reload Reuse
-; SDAG-GFX942-NEXT:    v_accvgpr_write_b32 a6, v11 ; Reload Reuse
-; SDAG-GFX942-NEXT:    v_accvgpr_write_b32 a7, v10 ; Reload Reuse
-; SDAG-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v62, s[12:15], 0 offen offset:32
+; SDAG-GFX942-NEXT:    buffer_store_dwordx4 v[10:13], v62, s[12:15], 0 offen offset:32
 ; SDAG-GFX942-NEXT:    buffer_store_dwordx4 v[14:17], v62, s[12:15], 0 offen offset:48
 ; SDAG-GFX942-NEXT:    buffer_store_dwordx4 v[18:21], v62, s[12:15], 0 offen offset:64
 ; SDAG-GFX942-NEXT:    buffer_store_dwordx4 v[22:25], v62, s[12:15], 0 offen offset:80
@@ -883,10 +841,8 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
 ; SDAG-GFX942-NEXT:    buffer_store_dwordx4 v[50:53], v62, s[12:15], 0 offen offset:192
 ; SDAG-GFX942-NEXT:    buffer_store_dwordx4 v[54:57], v62, s[12:15], 0 offen offset:208
 ; SDAG-GFX942-NEXT:    buffer_store_dwordx4 v[58:61], v62, s[12:15], 0 offen offset:224
-; SDAG-GFX942-NEXT:    v_accvgpr_read_b32 v5, a4 ; Reload Reuse
-; SDAG-GFX942-NEXT:    v_accvgpr_read_b32 v4, a5 ; Reload Reuse
-; SDAG-GFX942-NEXT:    v_accvgpr_read_b32 v3, a6 ; Reload Reuse
-; SDAG-GFX942-NEXT:    v_accvgpr_read_b32 v2, a7 ; Reload Reuse
+; SDAG-GFX942-NEXT:    scratch_load_dwordx3 v[2:4], off, off ; 12-byte Folded Reload
+; SDAG-GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v62, s[12:15], 0 offen offset:240
 ; SDAG-GFX942-NEXT:    s_cbranch_vccnz .LBB1_1
 ; SDAG-GFX942-NEXT:  ; %bb.2: ; %memcpy-split
@@ -1008,16 +964,6 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[2:5], v1, s[8:11], 0 offen
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[6:9], v1, s[8:11], 0 offen offset:16
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[10:13], v1, s[8:11], 0 offen offset:32
-; GISEL-GFX942-NEXT:    v_add_u32_e32 v62, s12, v0
-; GISEL-GFX942-NEXT:    v_add_co_u32_e32 v0, vcc, 0x100, v0
-; GISEL-GFX942-NEXT:    s_xor_b64 s[2:3], vcc, -1
-; GISEL-GFX942-NEXT:    s_xor_b64 s[2:3], s[2:3], -1
-; GISEL-GFX942-NEXT:    s_and_b64 vcc, s[2:3], exec
-; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a0, v13 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a1, v12 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a2, v11 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a3, v10 ; Reload Reuse
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[14:17], v1, s[8:11], 0 offen offset:48
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[18:21], v1, s[8:11], 0 offen offset:64
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[22:25], v1, s[8:11], 0 offen offset:80
@@ -1030,20 +976,18 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[50:53], v1, s[8:11], 0 offen offset:192
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[54:57], v1, s[8:11], 0 offen offset:208
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[58:61], v1, s[8:11], 0 offen offset:224
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[10:13], v1, s[8:11], 0 offen offset:240
-; GISEL-GFX942-NEXT:    s_nop 0
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 a[0:3], v1, s[8:11], 0 offen offset:240
+; GISEL-GFX942-NEXT:    v_add_u32_e32 v62, s12, v0
+; GISEL-GFX942-NEXT:    v_add_co_u32_e32 v0, vcc, 0x100, v0
+; GISEL-GFX942-NEXT:    s_xor_b64 s[2:3], vcc, -1
+; GISEL-GFX942-NEXT:    s_xor_b64 s[2:3], s[2:3], -1
+; GISEL-GFX942-NEXT:    s_and_b64 vcc, s[2:3], exec
+; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v63, a3 ; Reload Reuse
+; GISEL-GFX942-NEXT:    scratch_store_dwordx3 off, a[0:2], off ; 12-byte Folded Spill
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v62, s[4:7], 0 offen
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[6:9], v62, s[4:7], 0 offen offset:16
-; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(2)
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a4, v13 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v5, a0 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v4, a1 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v3, a2 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v2, a3 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a5, v12 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a6, v11 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a7, v10 ; Reload Reuse
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v62, s[4:7], 0 offen offset:32
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[10:13], v62, s[4:7], 0 offen offset:32
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[14:17], v62, s[4:7], 0 offen offset:48
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[18:21], v62, s[4:7], 0 offen offset:64
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[22:25], v62, s[4:7], 0 offen offset:80
@@ -1056,10 +1000,8 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[50:53], v62, s[4:7], 0 offen offset:192
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[54:57], v62, s[4:7], 0 offen offset:208
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[58:61], v62, s[4:7], 0 offen offset:224
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v5, a4 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v4, a5 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v3, a6 ; Reload Reuse
-; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v2, a7 ; Reload Reuse
+; GISEL-GFX942-NEXT:    scratch_load_dwordx3 v[2:4], off, off ; 12-byte Folded Reload
+; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v62, s[4:7], 0 offen offset:240
 ; GISEL-GFX942-NEXT:    s_cbranch_vccnz .LBB1_1
 ; GISEL-GFX942-NEXT:  ; %bb.2: ; %memcpy-split
@@ -1155,7 +1097,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
   ret void
 }
 
-define amdgpu_kernel void @memcpy_known_small(ptr addrspace(7) inreg %src, ptr addrspace(7) inreg %dst) {
+define amdgpu_kernel void @memcpy_known_small(ptr addrspace(7) %src, ptr addrspace(7) %dst) {
 ; SDAG-LABEL: memcpy_known_small:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1192,14 +1134,7 @@ define amdgpu_kernel void @memcpy_known_small(ptr addrspace(7) inreg %src, ptr a
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ; SDAG-GFX942-LABEL: memcpy_known_small:
-; SDAG-GFX942:       ; %bb.1:
-; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; SDAG-GFX942-NEXT:    s_load_dword s12, s[4:5], 0x10
-; SDAG-GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX942-NEXT:    s_branch .LBB2_0
-; SDAG-GFX942-NEXT:    .p2align 8
-; SDAG-GFX942-NEXT:  ; %bb.2:
-; SDAG-GFX942-NEXT:  .LBB2_0:
+; SDAG-GFX942:       ; %bb.0:
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX942-NEXT:    s_load_dword s13, s[4:5], 0x34
 ; SDAG-GFX942-NEXT:    s_mov_b32 s12, 0
@@ -1254,12 +1189,12 @@ define amdgpu_kernel void @memcpy_known_small(ptr addrspace(7) inreg %src, ptr a
 ; SDAG-GFX1100-NEXT:    s_load_b128 s[0:3], s[4:5], 0x44
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s5, s12
 ; SDAG-GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_mov_b32_e32 v5, s0
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s4, s3
-; SDAG-GFX1100-NEXT:    s_mov_b32 s3, s12
+; SDAG-GFX1100-NEXT:    v_mov_b32_e32 v5, s0
 ; SDAG-GFX1100-NEXT:    s_or_b64 s[6:7], s[4:5], s[12:13]
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s13, s2
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s2, s1
+; SDAG-GFX1100-NEXT:    s_mov_b32 s3, s12
 ; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-GFX1100-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0)
@@ -1325,12 +1260,12 @@ define amdgpu_kernel void @memcpy_known_small(ptr addrspace(7) inreg %src, ptr a
 ; GISEL-GFX1100-NEXT:    s_load_b32 s7, s[4:5], 0x54
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s4, s13
 ; GISEL-GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX1100-NEXT:    v_mov_b32_e32 v5, s8
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s12, s9
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s5, s10
-; GISEL-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GISEL-GFX1100-NEXT:    v_mov_b32_e32 v5, s8
 ; GISEL-GFX1100-NEXT:    s_or_b64 s[4:5], s[12:13], s[4:5]
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s12, s11
+; GISEL-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-GFX1100-NEXT:    s_or_b64 s[6:7], s[12:13], s[6:7]
 ; GISEL-GFX1100-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-GFX1100-NEXT:    buffer_store_b128 v[0:3], v5, s[4:7], 0 offen

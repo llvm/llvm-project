@@ -147,8 +147,6 @@ static TypeLoc lookThroughTypedefOrTypeAliasLocs(TypeLoc &SrcTL) {
     return BlockPointerTL.getPointeeLoc().getUnqualifiedLoc();
   if (MemberPointerTypeLoc MemberPointerTL = TL.getAs<MemberPointerTypeLoc>())
     return MemberPointerTL.getPointeeLoc().getUnqualifiedLoc();
-  if (ElaboratedTypeLoc ETL = TL.getAs<ElaboratedTypeLoc>())
-    return ETL.getNamedTypeLoc();
 
   return TL;
 }
@@ -289,6 +287,13 @@ void DeclInfo::fill() {
     Kind = ClassKind;
     TemplateKind = TemplatePartialSpecialization;
     TemplateParameters = CTPSD->getTemplateParameters();
+    break;
+  }
+  case Decl::VarTemplatePartialSpecialization: {
+    const auto *VTPSD = cast<VarTemplatePartialSpecializationDecl>(CommentDecl);
+    Kind = VariableKind;
+    TemplateKind = TemplatePartialSpecialization;
+    TemplateParameters = VTPSD->getTemplateParameters();
     break;
   }
   case Decl::ClassTemplateSpecialization:

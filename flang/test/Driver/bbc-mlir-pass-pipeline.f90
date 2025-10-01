@@ -47,6 +47,9 @@ end program
 
 ! CHECK-NEXT: PolymorphicOpConversion
 ! CHECK-NEXT: AssumedRankOpConversion
+! CHECK-NEXT: 'func.func' Pipeline
+! CHECK-NEXT:   OptimizeArrayRepacking
+! CHECK-NEXT: LowerRepackArraysPass
 ! CHECK-NEXT: SimplifyFIROperations
 
 ! CHECK-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
@@ -66,6 +69,7 @@ end program
 ! CHECK-NEXT: SCFToControlFlow
 ! CHECK-NEXT: Canonicalizer
 ! CHECK-NEXT: SimplifyRegionLite
+! CHECK-NEXT: ConvertComplexPow
 ! CHECK-NEXT: CSE
 ! CHECK-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! CHECK-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd

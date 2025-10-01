@@ -20,13 +20,12 @@ namespace {
 
 /// Prints a diagnostic with the given DiagnosticOptions and the given
 /// SourceLocation and returns the printed diagnostic text.
-static std::string PrintDiag(const DiagnosticOptions &Opts, FullSourceLoc Loc) {
+static std::string PrintDiag(DiagnosticOptions &Opts, FullSourceLoc Loc) {
   std::string Out;
   llvm::raw_string_ostream OS(Out);
   clang::LangOptions LangOpts;
   // Owned by TextDiagnostic.
-  DiagnosticOptions *DiagOpts = new DiagnosticOptions(Opts);
-  TextDiagnostic Diag(OS, LangOpts, DiagOpts);
+  TextDiagnostic Diag(OS, LangOpts, Opts);
   // Emit a dummy diagnostic that is just 'message'.
   Diag.emitDiagnostic(Loc, DiagnosticsEngine::Level::Warning, "message",
                       /*Ranges=*/{}, /*FixItHints=*/{});
@@ -37,8 +36,8 @@ TEST(TextDiagnostic, ShowLine) {
   // Create dummy FileManager and SourceManager.
   FileSystemOptions FSOpts;
   FileManager FileMgr(FSOpts);
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs);
-  DiagnosticsEngine DiagEngine(DiagID, new DiagnosticOptions,
+  DiagnosticOptions DiagEngineOpts;
+  DiagnosticsEngine DiagEngine(DiagnosticIDs::create(), DiagEngineOpts,
                                new IgnoringDiagConsumer());
   SourceManager SrcMgr(DiagEngine, FileMgr);
 

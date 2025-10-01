@@ -370,6 +370,16 @@ define <8 x float> @constant_fold_vpermilvar_ps_256() {
   ret <8 x float> %1
 }
 
+define <8 x float> @freeze_vpermilvar_ps_256(<8 x float> %a0) {
+; CHECK-LABEL: freeze_vpermilvar_ps_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret{{[l|q]}}
+  %s0 = call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 0, i32 3, i32 1, i32 2, i32 7, i32 6, i32 5, i32 4>)
+  %f0 = freeze <8 x float> %s0
+  %s1 = call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %f0, <8 x i32> <i32 0, i32 2, i32 3, i32 1, i32 7, i32 6, i32 5, i32 4>)
+  ret <8 x float> %s1
+}
+
 define void @PR39483() {
 ; X86-AVX1-LABEL: PR39483:
 ; X86-AVX1:       # %bb.0: # %entry
@@ -674,10 +684,9 @@ define <8 x i32> @concat_self_v8i32(<4 x i32> %x) {
 define <4 x double> @concat_vpermilvar_v4f64_v2f64(<2 x double> %a0, <2 x double> %a1, <4 x i64> %m) {
 ; CHECK-LABEL: concat_vpermilvar_v4f64_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; CHECK-NEXT:    vpermilpd %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vpermilpd %xmm3, %xmm1, %xmm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpermilpd %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %m0 = shufflevector <4 x i64> %m, <4 x i64> poison, <2 x i32> <i32 0, i32 1>
   %m1 = shufflevector <4 x i64> %m, <4 x i64> poison, <2 x i32> <i32 2, i32 3>

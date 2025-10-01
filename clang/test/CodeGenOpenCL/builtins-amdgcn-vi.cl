@@ -1,9 +1,9 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu tonga -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx900 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1012 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu tonga -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx900 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1012 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,AMDGCNSPIRV %s
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
@@ -169,7 +169,7 @@ void test_update_dpp_int(global int* out, int arg1, int arg2)
 
 // CHECK-LABEL: @test_update_dpp_long
 // CHECK:      %0 = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 %x, i64 %x, i32 257, i32 15, i32 15, i1 false)
-// CHECk-NEXT: store i64 %0,
+// CHECK-NEXT: store i64 %0,
 void test_update_dpp_long(long x, global long *p) {
   *p = __builtin_amdgcn_update_dpp(x, x, 0x101, 0xf, 0xf, 0);
 }
@@ -252,9 +252,11 @@ void test_update_dpp_const_int(global int* out, int arg1)
 // CHECK: atomicrmw fadd ptr addrspace(3) %out, float %src seq_cst, align 4{{$}}
 // CHECK: atomicrmw fadd ptr addrspace(3) %out, float %src seq_cst, align 4{{$}}
 
-// CHECK: atomicrmw fadd ptr addrspace(3) %out, float %src syncscope("agent") monotonic, align 4{{$}}
+// GCN: atomicrmw fadd ptr addrspace(3) %out, float %src syncscope("agent") monotonic, align 4{{$}}
+// AMDGCNSPIRV: atomicrmw fadd ptr addrspace(3) %out, float %src syncscope("device") monotonic, align 4{{$}}
 // CHECK: atomicrmw fadd ptr addrspace(3) %out, float %src syncscope("workgroup") monotonic, align 4{{$}}
-// CHECK: atomicrmw fadd ptr addrspace(3) %out, float %src syncscope("wavefront") monotonic, align 4{{$}}
+// GCN: atomicrmw fadd ptr addrspace(3) %out, float %src syncscope("wavefront") monotonic, align 4{{$}}
+// AMDGCNSPIRV: atomicrmw fadd ptr addrspace(3) %out, float %src syncscope("subgroup") monotonic, align 4{{$}}
 // CHECK: atomicrmw fadd ptr addrspace(3) %out, float %src syncscope("singlethread") monotonic, align 4{{$}}
 // CHECK: atomicrmw fadd ptr addrspace(3) %out, float %src monotonic, align 4{{$}}
 #if !defined(__SPIRV__)
@@ -293,9 +295,11 @@ void test_ds_faddf(local float *out, float src) {
 // CHECK: atomicrmw fmin ptr addrspace(3) %out, float %src seq_cst, align 4{{$}}
 // CHECK: atomicrmw fmin ptr addrspace(3) %out, float %src seq_cst, align 4{{$}}
 
-// CHECK: atomicrmw fmin ptr addrspace(3) %out, float %src syncscope("agent") monotonic, align 4{{$}}
+// GCN: atomicrmw fmin ptr addrspace(3) %out, float %src syncscope("agent") monotonic, align 4{{$}}
+// AMDGCNSPIRV: atomicrmw fmin ptr addrspace(3) %out, float %src syncscope("device") monotonic, align 4{{$}}
 // CHECK: atomicrmw fmin ptr addrspace(3) %out, float %src syncscope("workgroup") monotonic, align 4{{$}}
-// CHECK: atomicrmw fmin ptr addrspace(3) %out, float %src syncscope("wavefront") monotonic, align 4{{$}}
+// GCN: atomicrmw fmin ptr addrspace(3) %out, float %src syncscope("wavefront") monotonic, align 4{{$}}
+// AMDGCNSPIRV: atomicrmw fmin ptr addrspace(3) %out, float %src syncscope("subgroup") monotonic, align 4{{$}}
 // CHECK: atomicrmw fmin ptr addrspace(3) %out, float %src syncscope("singlethread") monotonic, align 4{{$}}
 // CHECK: atomicrmw fmin ptr addrspace(3) %out, float %src monotonic, align 4{{$}}
 
@@ -334,9 +338,11 @@ void test_ds_fminf(__attribute__((address_space(3))) float *out, float src) {
 // CHECK: atomicrmw fmax ptr addrspace(3) %out, float %src seq_cst, align 4{{$}}
 // CHECK: atomicrmw fmax ptr addrspace(3) %out, float %src seq_cst, align 4{{$}}
 
-// CHECK: atomicrmw fmax ptr addrspace(3) %out, float %src syncscope("agent") monotonic, align 4{{$}}
+// GCN: atomicrmw fmax ptr addrspace(3) %out, float %src syncscope("agent") monotonic, align 4{{$}}
+// AMDGCNSPIRV: atomicrmw fmax ptr addrspace(3) %out, float %src syncscope("device") monotonic, align 4{{$}}
 // CHECK: atomicrmw fmax ptr addrspace(3) %out, float %src syncscope("workgroup") monotonic, align 4{{$}}
-// CHECK: atomicrmw fmax ptr addrspace(3) %out, float %src syncscope("wavefront") monotonic, align 4{{$}}
+// GCN: atomicrmw fmax ptr addrspace(3) %out, float %src syncscope("wavefront") monotonic, align 4{{$}}
+// AMDGCNSPIRV: atomicrmw fmax ptr addrspace(3) %out, float %src syncscope("subgroup") monotonic, align 4{{$}}
 // CHECK: atomicrmw fmax ptr addrspace(3) %out, float %src syncscope("singlethread") monotonic, align 4{{$}}
 // CHECK: atomicrmw fmax ptr addrspace(3) %out, float %src monotonic, align 4{{$}}
 

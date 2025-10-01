@@ -46,14 +46,11 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // HOST:         call void{{.*}}@__kmpc_fork_call({{.*}}, ptr @[[PARALLEL_OUTLINE:.*]], {{.*}})
 
 // HOST:       define internal void @[[PARALLEL_OUTLINE]]
-// HOST:         call void @[[DISTRIBUTE_OUTLINE:.*]]({{.*}})
-
-// HOST:       define internal void @[[DISTRIBUTE_OUTLINE]]
 // HOST:         call void @__kmpc_dist_for_static_init{{.*}}(ptr {{.*}}, i32 {{.*}}, i32 34, ptr {{.*}}, ptr {{.*}}, ptr {{.*}}, ptr {{.*}}, ptr {{.*}}, i32 {{.*}}, i32 {{.*}})
 
 //--- device.mlir
 
-module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.is_gpu = true} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.is_gpu = true} {
   llvm.func @main(%x : i32) {
     omp.target host_eval(%x -> %lb, %x -> %ub, %x -> %step : i32, i32, i32) {
       omp.teams {

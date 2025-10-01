@@ -13,7 +13,6 @@
 #include "Symbols.h"
 #include "Target.h"
 
-#include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
@@ -25,7 +24,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/ObjCARC.h"
 
 using namespace lld;
 using namespace lld::macho;

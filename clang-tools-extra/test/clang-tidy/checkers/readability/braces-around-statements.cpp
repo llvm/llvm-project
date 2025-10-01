@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-braces-around-statements %t
+// RUN: %check_clang_tidy --match-partial-fixes %s readability-braces-around-statements %t
 
 void do_something(const char *) {}
 

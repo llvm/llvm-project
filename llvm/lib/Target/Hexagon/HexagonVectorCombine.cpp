@@ -43,6 +43,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Local.h"
 
+#include "Hexagon.h"
 #include "HexagonSubtarget.h"
 #include "HexagonTargetMachine.h"
 
@@ -1676,9 +1677,9 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
     return m_CombineOr(m_LShr(V, S), m_AShr(V, S));
   };
 
-  const APInt *Qn = nullptr;
-  if (Value * T; match(Exp, m_Shr(m_Value(T), m_APInt(Qn)))) {
-    Op.Frac = Qn->getZExtValue();
+  uint64_t Qn = 0;
+  if (Value *T; match(Exp, m_Shr(m_Value(T), m_ConstantInt(Qn)))) {
+    Op.Frac = Qn;
     Exp = T;
   } else {
     Op.Frac = 0;
@@ -1688,9 +1689,9 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
     return std::nullopt;
 
   // Check if there is rounding added.
-  const APInt *C = nullptr;
-  if (Value * T; Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_APInt(C)))) {
-    uint64_t CV = C->getZExtValue();
+  uint64_t CV;
+  if (Value *T;
+      Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_ConstantInt(CV)))) {
     if (CV != 0 && !isPowerOf2_64(CV))
       return std::nullopt;
     if (CV != 0)
@@ -2317,9 +2318,9 @@ auto HexagonVectorCombine::insertb(IRBuilderBase &Builder, Value *Dst,
   assert(0 <= Where && Where + Length <= DstLen);
 
   int P2Len = PowerOf2Ceil(SrcLen | DstLen);
-  auto *Undef = UndefValue::get(getByteTy());
-  Value *P2Src = vresize(Builder, Src, P2Len, Undef);
-  Value *P2Dst = vresize(Builder, Dst, P2Len, Undef);
+  auto *Poison = PoisonValue::get(getByteTy());
+  Value *P2Src = vresize(Builder, Src, P2Len, Poison);
+  Value *P2Dst = vresize(Builder, Dst, P2Len, Poison);
 
   SmallVector<int, 256> SMask(P2Len);
   for (int i = 0; i != P2Len; ++i) {
@@ -2330,7 +2331,7 @@ auto HexagonVectorCombine::insertb(IRBuilderBase &Builder, Value *Dst,
   }
 
   Value *P2Insert = Builder.CreateShuffleVector(P2Dst, P2Src, SMask, "shf");
-  return vresize(Builder, P2Insert, DstLen, Undef);
+  return vresize(Builder, P2Insert, DstLen, Poison);
 }
 
 auto HexagonVectorCombine::vlalignb(IRBuilderBase &Builder, Value *Lo,
@@ -2392,7 +2393,7 @@ auto HexagonVectorCombine::vralignb(IRBuilderBase &Builder, Value *Lo,
     Type *Int64Ty = Type::getInt64Ty(F.getContext());
     Value *Lo64 = Builder.CreateBitCast(Lo, Int64Ty, "cst");
     Value *Hi64 = Builder.CreateBitCast(Hi, Int64Ty, "cst");
-    Value *Call = Builder.CreateIntrinsic(Intrinsic::hexagon_S2_valignrb, {},
+    Value *Call = Builder.CreateIntrinsic(Intrinsic::hexagon_S2_valignrb,
                                           {Hi64, Lo64, Amt},
                                           /*FMFSource=*/nullptr, "cup");
     return Builder.CreateBitCast(Call, Lo->getType(), "cst");
@@ -2828,13 +2829,13 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
 auto HexagonVectorCombine::getNumSignificantBits(const Value *V,
                                                  const Instruction *CtxI) const
     -> unsigned {
-  return ComputeMaxSignificantBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT);
+  return ComputeMaxSignificantBits(V, DL, &AC, CtxI, &DT);
 }
 
 auto HexagonVectorCombine::getKnownBits(const Value *V,
                                         const Instruction *CtxI) const
     -> KnownBits {
-  return computeKnownBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT);
+  return computeKnownBits(V, DL, &AC, CtxI, &DT);
 }
 
 auto HexagonVectorCombine::isSafeToClone(const Instruction &In) const -> bool {
@@ -2930,11 +2931,6 @@ auto HexagonVectorCombine::getElementRange(IRBuilderBase &Builder, Value *Lo,
 }
 
 // Pass management.
-
-namespace llvm {
-void initializeHexagonVectorCombineLegacyPass(PassRegistry &);
-FunctionPass *createHexagonVectorCombineLegacyPass();
-} // namespace llvm
 
 namespace {
 class HexagonVectorCombineLegacy : public FunctionPass {

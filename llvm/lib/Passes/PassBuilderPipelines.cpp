@@ -24,7 +24,6 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
-#include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/OptimizationLevel.h"
@@ -77,7 +76,8 @@
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
-#include "llvm/Transforms/Instrumentation/MemProfiler.h"
+#include "llvm/Transforms/Instrumentation/MemProfInstrumentation.h"
+#include "llvm/Transforms/Instrumentation/MemProfUse.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfFlattening.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
@@ -92,6 +92,7 @@
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
 #include "llvm/Transforms/Scalar/DeadStoreElimination.h"
 #include "llvm/Transforms/Scalar/DivRemPairs.h"
+#include "llvm/Transforms/Scalar/DropUnnecessaryAssumes.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -104,6 +105,7 @@
 #include "llvm/Transforms/Scalar/LoopDeletion.h"
 #include "llvm/Transforms/Scalar/LoopDistribute.h"
 #include "llvm/Transforms/Scalar/LoopFlatten.h"
+#include "llvm/Transforms/Scalar/LoopFuse.h"
 #include "llvm/Transforms/Scalar/LoopIdiomRecognize.h"
 #include "llvm/Transforms/Scalar/LoopInstSimplify.h"
 #include "llvm/Transforms/Scalar/LoopInterchange.h"
@@ -313,6 +315,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   SLPVectorization = false;
   LoopUnrolling = true;
   LoopInterchange = EnableLoopInterchange;
+  LoopFusion = false;
   ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
   LicmMssaOptCap = SetLicmMssaOptCap;
   LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
@@ -501,9 +504,6 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
 
   LPM2.addPass(LoopDeletionPass());
 
-  if (PTO.LoopInterchange)
-    LPM2.addPass(LoopInterchangePass());
-
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
   // because it changes IR to makes profile annotation in back compile
   // inaccurate. The normal unroller doesn't pay attention to forced full unroll
@@ -628,7 +628,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
       !Level.isOptimizingForSize())
     FPM.addPass(PGOMemOPSizeOpt());
 
-  FPM.addPass(TailCallElimPass());
+  FPM.addPass(TailCallElimPass(/*UpdateFunctionEntryCount=*/
+                               isInstrumentedPGOUse()));
   FPM.addPass(
       SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
 
@@ -691,9 +692,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   invokeLateLoopOptimizationsEPCallbacks(LPM2, Level);
 
   LPM2.addPass(LoopDeletionPass());
-
-  if (PTO.LoopInterchange)
-    LPM2.addPass(LoopInterchangePass());
 
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
   // because it changes IR to makes profile annotation in back compile
@@ -850,8 +848,7 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
                                     OptimizationLevel Level, bool RunProfileGen,
                                     bool IsCS, bool AtomicCounterUpdate,
                                     std::string ProfileFile,
-                                    std::string ProfileRemappingFile,
-                                    IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+                                    std::string ProfileRemappingFile) {
   assert(Level != OptimizationLevel::O0 && "Not expecting O0 here!");
 
   if (!RunProfileGen) {
@@ -886,10 +883,11 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
   MPM.addPass(InstrProfilingLoweringPass(Options, IsCS));
 }
 
-void PassBuilder::addPGOInstrPassesForO0(
-    ModulePassManager &MPM, bool RunProfileGen, bool IsCS,
-    bool AtomicCounterUpdate, std::string ProfileFile,
-    std::string ProfileRemappingFile, IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+void PassBuilder::addPGOInstrPassesForO0(ModulePassManager &MPM,
+                                         bool RunProfileGen, bool IsCS,
+                                         bool AtomicCounterUpdate,
+                                         std::string ProfileFile,
+                                         std::string ProfileRemappingFile) {
   if (!RunProfileGen) {
     assert(!ProfileFile.empty() && "Profile use expecting a profile file!");
     MPM.addPass(
@@ -926,14 +924,14 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
     IP = getInlineParamsFromOptLevel(Level);
   else
     IP = getInlineParams(PTO.InlinerThreshold);
-  // For PreLinkThinLTO + SamplePGO, set hot-caller threshold to 0 to
-  // disable hot callsite inline (as much as possible [1]) because it makes
+  // For PreLinkThinLTO + SamplePGO or PreLinkFullLTO + SamplePGO,
+  // set hot-caller threshold to 0 to disable hot
+  // callsite inline (as much as possible [1]) because it makes
   // profile annotation in the backend inaccurate.
   //
   // [1] Note the cost of a function could be below zero due to erased
   // prologue / epilogue.
-  if (Phase == ThinOrFullLTOPhase::ThinLTOPreLink && PGOOpt &&
-      PGOOpt->Action == PGOOptions::SampleUse)
+  if (isLTOPreLink(Phase) && PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
     IP.HotCallSiteThreshold = 0;
 
   if (PGOOpt)
@@ -1023,14 +1021,14 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
   ModulePassManager MPM;
 
   InlineParams IP = getInlineParamsFromOptLevel(Level);
-  // For PreLinkThinLTO + SamplePGO, set hot-caller threshold to 0 to
-  // disable hot callsite inline (as much as possible [1]) because it makes
+  // For PreLinkThinLTO + SamplePGO or PreLinkFullLTO + SamplePGO,
+  // set hot-caller threshold to 0 to disable hot
+  // callsite inline (as much as possible [1]) because it makes
   // profile annotation in the backend inaccurate.
   //
   // [1] Note the cost of a function could be below zero due to erased
   // prologue / epilogue.
-  if (Phase == ThinOrFullLTOPhase::ThinLTOPreLink && PGOOpt &&
-      PGOOpt->Action == PGOOptions::SampleUse)
+  if (isLTOPreLink(Phase) && PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
     IP.HotCallSiteThreshold = 0;
 
   if (PGOOpt)
@@ -1048,7 +1046,7 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
   if (!UseCtxProfile.empty() && Phase == ThinOrFullLTOPhase::ThinLTOPostLink) {
     MPM.addPass(GlobalOptPass());
     MPM.addPass(GlobalDCEPass());
-    MPM.addPass(PGOCtxProfFlatteningPass());
+    MPM.addPass(PGOCtxProfFlatteningPass(/*IsPreThinlink=*/false));
   }
 
   MPM.addPass(createModuleToFunctionPassAdaptor(
@@ -1135,8 +1133,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (LoadSampleProfile) {
     // Annotate sample profile right after early FPM to ensure freshness of
     // the debug info.
-    MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
-                                        PGOOpt->ProfileRemappingFile, Phase));
+    MPM.addPass(SampleProfileLoaderPass(
+        PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile, Phase, FS));
     // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
     // RequireAnalysisPass for PSI before subsequent non-module passes.
     MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
@@ -1232,8 +1230,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     addPGOInstrPasses(MPM, Level,
                       /*RunProfileGen=*/IsPGOInstrGen,
                       /*IsCS=*/false, PGOOpt->AtomicCounterUpdate,
-                      PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile,
-                      PGOOpt->FS);
+                      PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile);
   } else if (IsCtxProfGen || IsCtxProfUse) {
     MPM.addPass(PGOInstrumentationGen(PGOInstrumentationType::CTXPROF));
     // In pre-link, we just want the instrumented IR. We use the contextual
@@ -1242,8 +1239,10 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // FIXME(mtrofin): move AssignGUIDPass if there is agreement to use this
     // mechanism for GUIDs.
     MPM.addPass(AssignGUIDPass());
-    if (IsCtxProfUse)
+    if (IsCtxProfUse) {
+      MPM.addPass(PGOCtxProfFlatteningPass(/*IsPreThinlink=*/true));
       return MPM;
+    }
     // Block further inlining in the instrumented ctxprof case. This avoids
     // confusingly collecting profiles for the same GUID corresponding to
     // different variants of the function. We could do like PGO and identify
@@ -1254,10 +1253,10 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     addPostPGOLoopRotation(MPM, Level);
     MPM.addPass(PGOCtxProfLoweringPass());
   } else if (IsColdFuncOnlyInstrGen) {
-    addPGOInstrPasses(
-        MPM, Level, /* RunProfileGen */ true, /* IsCS */ false,
-        /* AtomicCounterUpdate */ false, InstrumentColdFuncOnlyPath,
-        /* ProfileRemappingFile */ "", IntrusiveRefCntPtr<vfs::FileSystem>());
+    addPGOInstrPasses(MPM, Level, /* RunProfileGen */ true, /* IsCS */ false,
+                      /* AtomicCounterUpdate */ false,
+                      InstrumentColdFuncOnlyPath,
+                      /* ProfileRemappingFile */ "");
   }
 
   if (IsPGOInstrGen || IsPGOInstrUse || IsCtxProfGen)
@@ -1268,7 +1267,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                                                EnableSampledInstr));
 
   if (IsMemprofUse)
-    MPM.addPass(MemProfUsePass(PGOOpt->MemoryProfile, PGOOpt->FS));
+    MPM.addPass(MemProfUsePass(PGOOpt->MemoryProfile, FS));
 
   if (PGOOpt && (PGOOpt->Action == PGOOptions::IRUse ||
                  PGOOpt->Action == PGOOptions::SampleUse))
@@ -1284,6 +1283,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Remove any dead arguments exposed by cleanups, constant folding globals,
   // and argument promotion.
   MPM.addPass(DeadArgumentEliminationPass());
+
+  if (Phase == ThinOrFullLTOPhase::ThinLTOPostLink)
+    MPM.addPass(SimplifyTypeTestsPass());
 
   if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
     MPM.addPass(CoroCleanupPass());
@@ -1474,13 +1476,11 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     if (PGOOpt->CSAction == PGOOptions::CSIRInstr)
       addPGOInstrPasses(MPM, Level, /*RunProfileGen=*/true,
                         /*IsCS=*/true, PGOOpt->AtomicCounterUpdate,
-                        PGOOpt->CSProfileGenFile, PGOOpt->ProfileRemappingFile,
-                        PGOOpt->FS);
+                        PGOOpt->CSProfileGenFile, PGOOpt->ProfileRemappingFile);
     else if (PGOOpt->CSAction == PGOOptions::CSIRUse)
       addPGOInstrPasses(MPM, Level, /*RunProfileGen=*/false,
                         /*IsCS=*/true, PGOOpt->AtomicCounterUpdate,
-                        PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile,
-                        PGOOpt->FS);
+                        PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile);
   }
 
   // Re-compute GlobalsAA here prior to function passes. This is particularly
@@ -1496,6 +1496,13 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   invokeOptimizerEarlyEPCallbacks(MPM, Level, LTOPhase);
 
   FunctionPassManager OptimizePM;
+
+  // Only drop unnecessary assumes post-inline and post-link, as otherwise
+  // additional uses of the affected value may be introduced through inlining
+  // and CSE.
+  if (!isLTOPreLink(LTOPhase))
+    OptimizePM.addPass(DropUnnecessaryAssumesPass());
+
   // Scheduling LoopVersioningLICM when inlining is over, because after that
   // we may see more accurate aliasing. Reason to run this late is that too
   // early versioning may prevent further inlining due to increase of code
@@ -1544,8 +1551,17 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   //        this may need to be revisited once we run GVN before loop deletion
   //        in the simplification pipeline.
   LPM.addPass(LoopDeletionPass());
+
+  if (PTO.LoopInterchange)
+    LPM.addPass(LoopInterchangePass());
+
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(
       std::move(LPM), /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/false));
+
+  // FIXME: This may not be the right place in the pipeline.
+  // We need to have the data to support the right place.
+  if (PTO.LoopFusion)
+    OptimizePM.addPass(LoopFusePass());
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
   // into separate loop that would otherwise inhibit vectorization.  This is
@@ -1576,7 +1592,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   OptimizePM.addPass(DivRemPairsPass());
 
   // Try to annotate calls that were created during optimization.
-  OptimizePM.addPass(TailCallElimPass());
+  OptimizePM.addPass(
+      TailCallElimPass(/*UpdateFunctionEntryCount=*/isInstrumentedPGOUse()));
 
   // LoopSink (and other loop passes since the last simplifyCFG) might have
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
@@ -1692,6 +1709,19 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
   if (ThinLTO && PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
     MPM.addPass(buildThinLTODefaultPipeline(Level, /*ImportSummary=*/nullptr));
   else {
+    // ModuleSimplification does not run the coroutine passes for
+    // ThinLTOPreLink, so we need the coroutine passes to run for ThinLTO
+    // builds, otherwise they will miscompile.
+    if (ThinLTO) {
+      // TODO: replace w/ buildCoroWrapper() when it takes phase and level into
+      // consideration.
+      CGSCCPassManager CGPM;
+      CGPM.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
+      CGPM.addPass(CoroAnnotationElidePass());
+      MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+      MPM.addPass(CoroCleanupPass());
+    }
+
     // otherwise, just use module optimization
     MPM.addPass(
         buildModuleOptimizationPipeline(Level, ThinOrFullLTOPhase::None));
@@ -1798,6 +1828,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // in ICP.
     MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
                                    lowertypetests::DropTestKind::Assume));
+    MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::ThinLTOPostLink));
     // Drop available_externally and unreferenced globals. This is necessary
     // with ThinLTO in order to avoid leaving undefined references to dead
     // globals in the object file.
@@ -2037,13 +2068,11 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     if (PGOOpt->CSAction == PGOOptions::CSIRInstr)
       addPGOInstrPasses(MPM, Level, /*RunProfileGen=*/true,
                         /*IsCS=*/true, PGOOpt->AtomicCounterUpdate,
-                        PGOOpt->CSProfileGenFile, PGOOpt->ProfileRemappingFile,
-                        PGOOpt->FS);
+                        PGOOpt->CSProfileGenFile, PGOOpt->ProfileRemappingFile);
     else if (PGOOpt->CSAction == PGOOptions::CSIRUse)
       addPGOInstrPasses(MPM, Level, /*RunProfileGen=*/false,
                         /*IsCS=*/true, PGOOpt->AtomicCounterUpdate,
-                        PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile,
-                        PGOOpt->FS);
+                        PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile);
   }
 
   // Break up allocas
@@ -2051,7 +2080,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // LTO provides additional opportunities for tailcall elimination due to
   // link-time inlining, and visibility of nocapture attribute.
-  FPM.addPass(TailCallElimPass());
+  FPM.addPass(
+      TailCallElimPass(/*UpdateFunctionEntryCount=*/isInstrumentedPGOUse()));
 
   // Run a few AA driver optimizations here and now to cleanup the code.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM),
@@ -2202,7 +2232,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
         MPM,
         /*RunProfileGen=*/(PGOOpt->Action == PGOOptions::IRInstr),
         /*IsCS=*/false, PGOOpt->AtomicCounterUpdate, PGOOpt->ProfileFile,
-        PGOOpt->ProfileRemappingFile, PGOOpt->FS);
+        PGOOpt->ProfileRemappingFile);
 
   // Instrument function entry and exit before all inlining.
   MPM.addPass(createModuleToFunctionPassAdaptor(
@@ -2305,6 +2335,10 @@ AAManager PassBuilder::buildDefaultAAPipeline() {
   // The order in which these are registered determines their priority when
   // being queried.
 
+  // Add any target-specific alias analyses that should be run early.
+  if (TM)
+    TM->registerEarlyDefaultAliasAnalyses(AA);
+
   // First we register the basic alias analysis that provides the majority of
   // per-function local AA logic. This is a stateless, on-demand local set of
   // AA techniques.
@@ -2327,4 +2361,9 @@ AAManager PassBuilder::buildDefaultAAPipeline() {
     TM->registerDefaultAliasAnalyses(AA);
 
   return AA;
+}
+
+bool PassBuilder::isInstrumentedPGOUse() const {
+  return (PGOOpt && PGOOpt->Action == PGOOptions::IRUse) ||
+         !UseCtxProfile.empty();
 }

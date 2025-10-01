@@ -195,10 +195,10 @@ define void @smax() {
 define void @minnum16() {
 ; CHECK-NOF16-LABEL: 'minnum16'
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of 1 for: %f16 = call half @llvm.minnum.f16(half undef, half undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 4 for: %V2f16 = call <2 x half> @llvm.minnum.v2f16(<2 x half> undef, <2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 10 for: %V4f16 = call <4 x half> @llvm.minnum.v4f16(<4 x half> undef, <4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 22 for: %V8f16 = call <8 x half> @llvm.minnum.v8f16(<8 x half> undef, <8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 44 for: %V16f16 = call <16 x half> @llvm.minnum.v16f16(<16 x half> undef, <16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %V2f16 = call <2 x half> @llvm.minnum.v2f16(<2 x half> undef, <2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %V4f16 = call <4 x half> @llvm.minnum.v4f16(<4 x half> undef, <4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %V8f16 = call <8 x half> @llvm.minnum.v8f16(<8 x half> undef, <8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %V16f16 = call <16 x half> @llvm.minnum.v16f16(<16 x half> undef, <16 x half> undef)
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-F16-LABEL: 'minnum16'
@@ -220,10 +220,10 @@ define void @minnum16() {
 define void @maxnum16() {
 ; CHECK-NOF16-LABEL: 'maxnum16'
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of 1 for: %f16 = call half @llvm.maxnum.f16(half undef, half undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 4 for: %V2f16 = call <2 x half> @llvm.maxnum.v2f16(<2 x half> undef, <2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 10 for: %V4f16 = call <4 x half> @llvm.maxnum.v4f16(<4 x half> undef, <4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 22 for: %V8f16 = call <8 x half> @llvm.maxnum.v8f16(<8 x half> undef, <8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 44 for: %V16f16 = call <16 x half> @llvm.maxnum.v16f16(<16 x half> undef, <16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %V2f16 = call <2 x half> @llvm.maxnum.v2f16(<2 x half> undef, <2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %V4f16 = call <4 x half> @llvm.maxnum.v4f16(<4 x half> undef, <4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %V8f16 = call <8 x half> @llvm.maxnum.v8f16(<8 x half> undef, <8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %V16f16 = call <16 x half> @llvm.maxnum.v16f16(<16 x half> undef, <16 x half> undef)
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-F16-LABEL: 'maxnum16'
@@ -288,10 +288,10 @@ define void @maxnum() {
 define void @minimum16() {
 ; CHECK-NOF16-LABEL: 'minimum16'
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of 1 for: %f16 = call half @llvm.minimum.f16(half undef, half undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 4 for: %V2f16 = call <2 x half> @llvm.minimum.v2f16(<2 x half> undef, <2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 10 for: %V4f16 = call <4 x half> @llvm.minimum.v4f16(<4 x half> undef, <4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 22 for: %V8f16 = call <8 x half> @llvm.minimum.v8f16(<8 x half> undef, <8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 44 for: %V16f16 = call <16 x half> @llvm.minimum.v16f16(<16 x half> undef, <16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %V2f16 = call <2 x half> @llvm.minimum.v2f16(<2 x half> undef, <2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %V4f16 = call <4 x half> @llvm.minimum.v4f16(<4 x half> undef, <4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %V8f16 = call <8 x half> @llvm.minimum.v8f16(<8 x half> undef, <8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %V16f16 = call <16 x half> @llvm.minimum.v16f16(<16 x half> undef, <16 x half> undef)
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-F16-LABEL: 'minimum16'
@@ -313,10 +313,10 @@ define void @minimum16() {
 define void @maximum16() {
 ; CHECK-NOF16-LABEL: 'maximum16'
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of 1 for: %f16 = call half @llvm.maximum.f16(half undef, half undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 4 for: %V2f16 = call <2 x half> @llvm.maximum.v2f16(<2 x half> undef, <2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 10 for: %V4f16 = call <4 x half> @llvm.maximum.v4f16(<4 x half> undef, <4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 22 for: %V8f16 = call <8 x half> @llvm.maximum.v8f16(<8 x half> undef, <8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 44 for: %V16f16 = call <16 x half> @llvm.maximum.v16f16(<16 x half> undef, <16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %V2f16 = call <2 x half> @llvm.maximum.v2f16(<2 x half> undef, <2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %V4f16 = call <4 x half> @llvm.maximum.v4f16(<4 x half> undef, <4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %V8f16 = call <8 x half> @llvm.maximum.v8f16(<8 x half> undef, <8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %V16f16 = call <16 x half> @llvm.maximum.v16f16(<16 x half> undef, <16 x half> undef)
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-F16-LABEL: 'maximum16'
@@ -374,6 +374,144 @@ define void @maximum() {
   %V8f32 = call <8 x float> @llvm.maximum.v8f32(<8 x float> undef, <8 x float> undef)
   %V2f64 = call <2 x double> @llvm.maximum.v2f64(<2 x double> undef, <2 x double> undef)
   %V4f64 = call <4 x double> @llvm.maximum.v4f64(<4 x double> undef, <4 x double> undef)
+  ret void
+}
+
+define void @minimumnum() {
+; CHECK-LABEL: 'minimumnum'
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %1 = call float @llvm.minimumnum.f32(float poison, float poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %2 = call double @llvm.minimumnum.f64(double poison, double poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %3 = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> poison, <2 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %4 = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> poison, <4 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %5 = call <8 x float> @llvm.minimumnum.v8f32(<8 x float> poison, <8 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 20 for: %6 = call <16 x float> @llvm.minimumnum.v16f32(<16 x float> poison, <16 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %7 = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> poison, <2 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %8 = call <4 x double> @llvm.minimumnum.v4f64(<4 x double> poison, <4 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 20 for: %9 = call <8 x double> @llvm.minimumnum.v8f64(<8 x double> poison, <8 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 40 for: %10 = call <16 x double> @llvm.minimumnum.v16f64(<16 x double> poison, <16 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  call float @llvm.minimumnum.f32(float poison, float poison)
+  call double @llvm.minimumnum.f64(double poison, double poison)
+  call <2 x float> @llvm.minimumnum.v2f32(<2 x float> poison, <2 x float> poison)
+  call <4 x float> @llvm.minimumnum.v4f32(<4 x float> poison, <4 x float> poison)
+  call <8 x float> @llvm.minimumnum.v8f32(<8 x float> poison, <8 x float> poison)
+  call <16 x float> @llvm.minimumnum.v16f32(<16 x float> poison, <16 x float> poison)
+  call <2 x double> @llvm.minimumnum.v2f64(<2 x double> poison, <2 x double> poison)
+  call <4 x double> @llvm.minimumnum.v4f64(<4 x double> poison, <4 x double> poison)
+  call <8 x double> @llvm.minimumnum.v8f64(<8 x double> poison, <8 x double> poison)
+  call <16 x double> @llvm.minimumnum.v16f64(<16 x double> poison, <16 x double> poison)
+  ret void
+}
+
+define void @minimumnum_fp16() {
+; CHECK-NOF16-LABEL: 'minimumnum_fp16'
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of 1 for: %1 = call half @llvm.minimumnum.f16(half poison, half poison)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %2 = call <2 x half> @llvm.minimumnum.v2f16(<2 x half> poison, <2 x half> poison)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %3 = call <4 x half> @llvm.minimumnum.v4f16(<4 x half> poison, <4 x half> poison)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %4 = call <8 x half> @llvm.minimumnum.v8f16(<8 x half> poison, <8 x half> poison)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %5 = call <16 x half> @llvm.minimumnum.v16f16(<16 x half> poison, <16 x half> poison)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-F16-LABEL: 'minimumnum_fp16'
+; CHECK-F16-NEXT:  Cost Model: Found costs of 3 for: %1 = call half @llvm.minimumnum.f16(half poison, half poison)
+; CHECK-F16-NEXT:  Cost Model: Found costs of 3 for: %2 = call <2 x half> @llvm.minimumnum.v2f16(<2 x half> poison, <2 x half> poison)
+; CHECK-F16-NEXT:  Cost Model: Found costs of 3 for: %3 = call <4 x half> @llvm.minimumnum.v4f16(<4 x half> poison, <4 x half> poison)
+; CHECK-F16-NEXT:  Cost Model: Found costs of 3 for: %4 = call <8 x half> @llvm.minimumnum.v8f16(<8 x half> poison, <8 x half> poison)
+; CHECK-F16-NEXT:  Cost Model: Found costs of 10 for: %5 = call <16 x half> @llvm.minimumnum.v16f16(<16 x half> poison, <16 x half> poison)
+; CHECK-F16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  call half @llvm.minimumnum.f32(half poison, half poison)
+  call <2 x half> @llvm.minimumnum.v2f16(<2 x half> poison, <2 x half> poison)
+  call <4 x half> @llvm.minimumnum.v4f16(<4 x half> poison, <4 x half> poison)
+  call <8 x half> @llvm.minimumnum.v8f16(<8 x half> poison, <8 x half> poison)
+  call <16 x half> @llvm.minimumnum.v16f16(<16 x half> poison, <16 x half> poison)
+  ret void
+}
+
+define void @minimumnum_bf16() {
+; CHECK-LABEL: 'minimumnum_bf16'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %1 = call bfloat @llvm.minimumnum.bf16(bfloat poison, bfloat poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %2 = call <2 x bfloat> @llvm.minimumnum.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %3 = call <4 x bfloat> @llvm.minimumnum.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %4 = call <8 x bfloat> @llvm.minimumnum.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %5 = call <16 x bfloat> @llvm.minimumnum.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  call bfloat @llvm.minimumnum.f32(bfloat poison, bfloat poison)
+  call <2 x bfloat> @llvm.minimumnum.v2fb16(<2 x bfloat> poison, <2 x bfloat> poison)
+  call <4 x bfloat> @llvm.minimumnum.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison)
+  call <8 x bfloat> @llvm.minimumnum.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison)
+  call <16 x bfloat> @llvm.minimumnum.v6bf16(<16 x bfloat> poison, <16 x bfloat> poison)
+  ret void
+}
+
+define void @maximumnum() {
+; CHECK-LABEL: 'maximumnum'
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %1 = call float @llvm.maximumnum.f32(float poison, float poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %2 = call double @llvm.maximumnum.f64(double poison, double poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %3 = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> poison, <2 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %4 = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> poison, <4 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %5 = call <8 x float> @llvm.maximumnum.v8f32(<8 x float> poison, <8 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 20 for: %6 = call <16 x float> @llvm.maximumnum.v16f32(<16 x float> poison, <16 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %7 = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> poison, <2 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %8 = call <4 x double> @llvm.maximumnum.v4f64(<4 x double> poison, <4 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 20 for: %9 = call <8 x double> @llvm.maximumnum.v8f64(<8 x double> poison, <8 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 40 for: %10 = call <16 x double> @llvm.maximumnum.v16f64(<16 x double> poison, <16 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  call float @llvm.maximumnum.f32(float poison, float poison)
+  call double @llvm.maximumnum.f64(double poison, double poison)
+  call <2 x float> @llvm.maximumnum.v2f32(<2 x float> poison, <2 x float> poison)
+  call <4 x float> @llvm.maximumnum.v4f32(<4 x float> poison, <4 x float> poison)
+  call <8 x float> @llvm.maximumnum.v8f32(<8 x float> poison, <8 x float> poison)
+  call <16 x float> @llvm.maximumnum.v16f32(<16 x float> poison, <16 x float> poison)
+  call <2 x double> @llvm.maximumnum.v2f64(<2 x double> poison, <2 x double> poison)
+  call <4 x double> @llvm.maximumnum.v4f64(<4 x double> poison, <4 x double> poison)
+  call <8 x double> @llvm.maximumnum.v8f64(<8 x double> poison, <8 x double> poison)
+  call <16 x double> @llvm.maximumnum.v16f64(<16 x double> poison, <16 x double> poison)
+  ret void
+}
+
+define void @maximumnum_fp16() {
+; CHECK-NOF16-LABEL: 'maximumnum_fp16'
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of 1 for: %1 = call half @llvm.maximumnum.f16(half poison, half poison)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %2 = call <2 x half> @llvm.maximumnum.v2f16(<2 x half> poison, <2 x half> poison)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %3 = call <4 x half> @llvm.maximumnum.v4f16(<4 x half> poison, <4 x half> poison)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %4 = call <8 x half> @llvm.maximumnum.v8f16(<8 x half> poison, <8 x half> poison)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %5 = call <16 x half> @llvm.maximumnum.v16f16(<16 x half> poison, <16 x half> poison)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-F16-LABEL: 'maximumnum_fp16'
+; CHECK-F16-NEXT:  Cost Model: Found costs of 3 for: %1 = call half @llvm.maximumnum.f16(half poison, half poison)
+; CHECK-F16-NEXT:  Cost Model: Found costs of 3 for: %2 = call <2 x half> @llvm.maximumnum.v2f16(<2 x half> poison, <2 x half> poison)
+; CHECK-F16-NEXT:  Cost Model: Found costs of 3 for: %3 = call <4 x half> @llvm.maximumnum.v4f16(<4 x half> poison, <4 x half> poison)
+; CHECK-F16-NEXT:  Cost Model: Found costs of 3 for: %4 = call <8 x half> @llvm.maximumnum.v8f16(<8 x half> poison, <8 x half> poison)
+; CHECK-F16-NEXT:  Cost Model: Found costs of 10 for: %5 = call <16 x half> @llvm.maximumnum.v16f16(<16 x half> poison, <16 x half> poison)
+; CHECK-F16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  call half @llvm.maximumnum.f32(half poison, half poison)
+  call <2 x half> @llvm.maximumnum.v2f16(<2 x half> poison, <2 x half> poison)
+  call <4 x half> @llvm.maximumnum.v4f16(<4 x half> poison, <4 x half> poison)
+  call <8 x half> @llvm.maximumnum.v8f16(<8 x half> poison, <8 x half> poison)
+  call <16 x half> @llvm.maximumnum.v16f16(<16 x half> poison, <16 x half> poison)
+  ret void
+}
+
+define void @maximumnum_bf16() {
+; CHECK-LABEL: 'maximumnum_bf16'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %1 = call bfloat @llvm.maximumnum.bf16(bfloat poison, bfloat poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %2 = call <2 x bfloat> @llvm.maximumnum.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %3 = call <4 x bfloat> @llvm.maximumnum.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %4 = call <8 x bfloat> @llvm.maximumnum.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %5 = call <16 x bfloat> @llvm.maximumnum.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  call bfloat @llvm.maximumnum.f32(bfloat poison, bfloat poison)
+  call <2 x bfloat> @llvm.maximumnum.v2fb16(<2 x bfloat> poison, <2 x bfloat> poison)
+  call <4 x bfloat> @llvm.maximumnum.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison)
+  call <8 x bfloat> @llvm.maximumnum.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison)
+  call <16 x bfloat> @llvm.maximumnum.v6bf16(<16 x bfloat> poison, <16 x bfloat> poison)
   ret void
 }
 

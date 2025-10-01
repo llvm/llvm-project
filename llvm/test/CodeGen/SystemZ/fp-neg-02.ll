@@ -2,6 +2,16 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 | FileCheck %s
 
+; Test f16.
+define half @f0(half %f) {
+; CHECK-LABEL: f0:
+; CHECK:      # %bb.0:
+; CHECK-NEXT: lcdfr %f0, %f0
+; CHECK-NEXT: br %r14
+  %res = fneg half %f
+  ret half %res
+}
+
 ; Test f32.
 define float @f1(float %f) {
 ; CHECK-LABEL: f1:

@@ -22,51 +22,57 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     query about all their Fortran properties.
   }];
 
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/"Get the address produced by the definition",
-      /*retTy=*/"mlir::Value",
-      /*methodName=*/"getBase",
-      /*args=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
+  let methods =
+      [InterfaceMethod<
+           /*desc=*/"Get the address produced by the definition",
+           /*retTy=*/"mlir::Value",
+           /*methodName=*/"getBase",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
         ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
         return op.getResult();
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/"Get Fortran attributes",
-      /*retTy=*/"std::optional<fir::FortranVariableFlagsEnum>",
-      /*methodName=*/"getFortranAttrs",
-      /*args=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Get Fortran attributes",
+           /*retTy=*/"std::optional<fir::FortranVariableFlagsEnum>",
+           /*methodName=*/"getFortranAttrs",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
         ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
         return op.getFortran_attrs();
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/"Get the shape of the variable. May be a null value.",
-      /*retTy=*/"mlir::Value",
-      /*methodName=*/"getShape",
-      /*args=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Get the shape of the variable. May be a null value.",
+           /*retTy=*/"mlir::Value",
+           /*methodName=*/"getShape",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
         ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
         return op.getShape();
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/"Get explicit type parameters of the variable",
-      /*retTy=*/"mlir::OperandRange",
-      /*methodName=*/"getExplicitTypeParams",
-      /*args=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Get explicit type parameters of the variable",
+           /*retTy=*/"mlir::OperandRange",
+           /*methodName=*/"getExplicitTypeParams",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
         ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
         return op.getTypeparams();
-      }]
-    >,
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Set Fortran attributes",
+           /*retTy=*/"void",
+           /*methodName=*/"setFortranAttrs",
+           /*args=*/(ins "fir::FortranVariableFlagsEnum":$flags),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
+        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        op.setFortran_attrs(fir::FortranVariableFlagsAttr::get(op->getContext(), flags));
+      }]>,
   ];
 
   let extraClassDeclaration = [{
@@ -205,6 +211,58 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
 
   let cppNamespace = "fir";
 
+}
+
+def fir_FortranVariableStorageOpInterface
+    : OpInterface<"FortranVariableStorageOpInterface",
+                  [fir_FortranVariableOpInterface]> {
+  let description = [{
+    An extension of FortranVariableOpInterface for operations that provide
+    information about the physical storage layout of the variable.
+    The operations provide the raw address of the physical storage
+    and the byte offset where the variable begins within the physical
+    storage.
+    The storage is a reference to an array of known size consisting
+    of i8 elements. This is how Flang represents COMMON and EQUIVALENCE
+    storage blocks with the member variables located within the storage
+    at different offsets. The storage offset for a variable must not
+    exceed the storage size. Note that the zero-sized variables
+    may start at the offset that is after the final byte of the storage.
+    When getStorage() returns nullptr, getStorageOffset() must return 0.
+    This means that nothing is known about the physical storage
+    of the variable (beyond the information maybe provided
+    by the concrete operation itself, e.g. fir.declare defines
+    the physical storage of a variable via memref operand,
+    where the variable starts).
+  }];
+
+  let methods =
+      [InterfaceMethod<
+           /*desc=*/"Returns the raw address of the physical storage",
+           /*retTy=*/"mlir::Value",
+           /*methodName=*/"getStorage",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
+        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        return op.getStorage();
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Returns the byte offset where the variable begins "
+                    "within the physical storage",
+           /*retTy=*/"std::uint64_t",
+           /*methodName=*/"getStorageOffset",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
+        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        return op.getStorageOffset();
+      }]>,
+  ];
+
+  let cppNamespace = "fir";
+  let verify =
+      [{ return detail::verifyFortranVariableStorageOpInterface($_op); }];
 }
 
 #endif  // FORTRANVARIABLEINTERFACE

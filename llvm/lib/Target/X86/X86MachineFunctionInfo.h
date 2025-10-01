@@ -149,7 +149,7 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// other tools to detect the extended record.
   bool HasSwiftAsyncContext = false;
 
-  /// Ajust stack for push2/pop2
+  /// Adjust stack for push2/pop2
   bool PadForPush2Pop2 = false;
 
   /// Candidate registers for push2/pop2

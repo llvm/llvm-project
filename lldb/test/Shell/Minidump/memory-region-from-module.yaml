@@ -3,14 +3,14 @@
 
 # RUN: yaml2obj --docnum=1 %s -o %t1.dmp
 # RUN: yaml2obj --docnum=2 %s -o %t2.dmp
-# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %T/memory-region-from-module.exe
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %t.memory-region-from-module.exe
 
-# RUN: %lldb -b -c %t1.dmp %T/memory-region-from-module.exe \
+# RUN: %lldb -b -c %t1.dmp %t.memory-region-from-module.exe \
 # RUN:   -o "memory region 0" -o "memory region 0x4000" \
 # RUN:   -o "memory region 0x5000" -o "memory region 0x6000" \
 # RUN:   | FileCheck --check-prefix=ALL --check-prefix=CHECK1 %s
 
-# RUN: %lldb -b -c %t2.dmp %T/memory-region-from-module.exe \
+# RUN: %lldb -b -c %t2.dmp %t.memory-region-from-module.exe \
 # RUN:   -o "memory region 0" -o "memory region 0x4000" \
 # RUN:   -o "memory region 0x5000" -o "memory region 0x6000" \
 # RUN:   | FileCheck --check-prefix=ALL --check-prefix=CHECK2 %s

@@ -20,7 +20,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_EXPORTED_FROM_ABI error_condition;
+class error_condition;
 class _LIBCPP_EXPORTED_FROM_ABI error_code;
 
 class _LIBCPP_HIDDEN __do_message;
@@ -67,8 +67,8 @@ public:
   string message(int __ev) const override;
 };
 
-__attribute__((__const__)) _LIBCPP_EXPORTED_FROM_ABI const error_category& generic_category() _NOEXCEPT;
-__attribute__((__const__)) _LIBCPP_EXPORTED_FROM_ABI const error_category& system_category() _NOEXCEPT;
+[[__gnu__::__const__]] _LIBCPP_EXPORTED_FROM_ABI const error_category& generic_category() _NOEXCEPT;
+[[__gnu__::__const__]] _LIBCPP_EXPORTED_FROM_ABI const error_category& system_category() _NOEXCEPT;
 
 _LIBCPP_END_NAMESPACE_STD
 

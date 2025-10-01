@@ -5,8 +5,8 @@ void uses() {
   int I;
   float array[5];
 
-// CHECK: #pragma acc wait() if(I == array[I])
-#pragma acc wait() if(I == array[I])
+// CHECK: #pragma acc wait if(I == array[I])
+#pragma acc wait if(I == array[I])
 
 // CHECK: #pragma acc wait(*iPtr, I) async
 #pragma acc wait(*iPtr, I) async

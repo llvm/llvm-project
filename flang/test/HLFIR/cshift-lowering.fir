@@ -21,7 +21,7 @@ func.func @cshift1(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %a
 // CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_10:.*]] = fir.embox %[[VAL_8]](%[[VAL_9]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 // CHECK:           fir.store %[[VAL_10]] to %[[VAL_5]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-// CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_7]]#1 : !fir.ref<i32>
+// CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_11]] : (i32) -> i64

@@ -24,6 +24,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -47,14 +48,17 @@ static cl::opt<bool> AbortOnMaxDevirtIterationsReached(
 AnalysisKey ShouldNotRunFunctionPassesAnalysis::Key;
 
 // Explicit instantiations for the core proxy templates.
-template class AllAnalysesOn<LazyCallGraph::SCC>;
-template class AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
+template class LLVM_EXPORT_TEMPLATE AllAnalysesOn<LazyCallGraph::SCC>;
+template class LLVM_EXPORT_TEMPLATE
+    AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
 template class PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager,
                            LazyCallGraph &, CGSCCUpdateResult &>;
-template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
-template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
-                                         LazyCallGraph::SCC, LazyCallGraph &>;
-template class OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
+template class LLVM_EXPORT_TEMPLATE
+    InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
+template class LLVM_EXPORT_TEMPLATE OuterAnalysisManagerProxy<
+    ModuleAnalysisManager, LazyCallGraph::SCC, LazyCallGraph &>;
+template class LLVM_EXPORT_TEMPLATE
+    OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
 
 /// Explicitly specialize the pass manager run method to handle call graph
 /// updates.
@@ -515,9 +519,7 @@ PreservedAnalyses CGSCCToFunctionPassAdaptor::run(LazyCallGraph::SCC &C,
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
-  SmallVector<LazyCallGraph::Node *, 4> Nodes;
-  for (LazyCallGraph::Node &N : C)
-    Nodes.push_back(&N);
+  SmallVector<LazyCallGraph::Node *, 4> Nodes(llvm::make_pointer_range(C));
 
   // The SCC may get split while we are optimizing functions due to deleting
   // edges. If this happens, the current SCC can shift, so keep track of
@@ -1071,8 +1073,7 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
 
   // We added a ref edge earlier for new call edges, promote those to call edges
   // alongside PromotedRefTargets.
-  for (Node *E : NewCallEdges)
-    PromotedRefTargets.insert(E);
+  PromotedRefTargets.insert_range(NewCallEdges);
 
   // Now promote ref edges into call edges.
   for (Node *CallTarget : PromotedRefTargets) {

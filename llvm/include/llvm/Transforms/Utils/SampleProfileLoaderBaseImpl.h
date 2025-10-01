@@ -109,11 +109,12 @@ public:
   }
 
   const PseudoProbeDescriptor *getDesc(StringRef FProfileName) const {
-    return getDesc(Function::getGUID(FProfileName));
+    return getDesc(Function::getGUIDAssumingExternalLinkage(FProfileName));
   }
 
   const PseudoProbeDescriptor *getDesc(const Function &F) const {
-    return getDesc(Function::getGUID(FunctionSamples::getCanonicalFnName(F)));
+    return getDesc(Function::getGUIDAssumingExternalLinkage(
+        FunctionSamples::getCanonicalFnName(F)));
   }
 
   bool profileIsHashMismatched(const PseudoProbeDescriptor &FuncDesc,

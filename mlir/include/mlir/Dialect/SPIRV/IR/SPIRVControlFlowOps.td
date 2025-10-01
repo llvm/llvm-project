@@ -15,6 +15,7 @@
 #define MLIR_DIALECT_SPIRV_IR_CONTROLFLOW_OPS
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -187,7 +188,8 @@ def SPIRV_BranchConditionalOp : SPIRV_Op<"BranchConditional", [
 // -----
 
 def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
-    InFunctionScope, DeclareOpInterfaceMethods<CallOpInterface>]> {
+    InFunctionScope, DeclareOpInterfaceMethods<CallOpInterface>,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Call a function.";
 
   let description = [{
@@ -311,17 +313,27 @@ def SPIRV_LoopOp : SPIRV_Op<"mlir.loop", [InFunctionScope]> {
     The continue block should be the second to last block and it should have a
     branch to the loop header block. The loop continue block should be the only
     block, except the entry block, branching to the header block.
+
+    Values defined inside the loop regions cannot be directly used
+    outside of them; however, the loop region can yield values. These values are
+    yielded using a `spirv.mlir.merge` op and returned as a result of the loop op.
   }];
 
   let arguments = (ins
     SPIRV_LoopControlAttr:$loop_control
   );
 
-  let results = (outs);
+  let results = (outs Variadic<AnyType>:$results);
 
   let regions = (region AnyRegion:$body);
 
-  let builders = [OpBuilder<(ins)>];
+  let builders = [
+    OpBuilder<(ins)>,
+    OpBuilder<(ins "spirv::LoopControl":$loopControl),
+    [{
+      build($_builder, $_state, TypeRange(), loopControl);
+    }]>
+  ];
 
   let extraClassDeclaration = [{
     // Returns the entry block.
@@ -351,7 +363,8 @@ def SPIRV_LoopOp : SPIRV_Op<"mlir.loop", [InFunctionScope]> {
 
 // -----
 
-def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [Pure, Terminator]> {
+def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [
+    Pure, Terminator, ParentOneOf<["SelectionOp", "LoopOp"]>, ReturnLike]> {
   let summary = "A special terminator for merging a structured selection/loop.";
 
   let description = [{
@@ -360,17 +373,29 @@ def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [Pure, Terminator]> {
     merge point, which is the next op following the `spirv.mlir.selection` or
     `spirv.mlir.loop` op. This op does not have a corresponding instruction in the
     SPIR-V binary format; it's solely for structural purpose.
+
+    The instruction is also used to yield values from inside the selection/loop region
+    to the outside, as values that were sunk into the region cannot otherwise escape it.
   }];
 
-  let arguments = (ins);
+  let arguments = (ins Variadic<AnyType>:$operands);
 
   let results = (outs);
 
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+
+  let builders = [
+    OpBuilder<(ins),
+    [{
+      build($_builder, $_state, ValueRange());
+    }]>
+  ];
 
   let hasOpcode = 0;
 
   let autogenSerialization = 0;
+
+  let hasVerifier = 0;
 }
 
 // -----
@@ -462,13 +487,17 @@ def SPIRV_SelectionOp : SPIRV_Op<"mlir.selection", [InFunctionScope]> {
     header block, and one selection merge. The selection header block should be
     the first block. The selection merge block should be the last block.
     The merge block should only contain a `spirv.mlir.merge` op.
+
+    Values defined inside the selection regions cannot be directly used
+    outside of them; however, the selection region can yield values. These values are
+    yielded using a `spirv.mlir.merge` op and returned as a result of the selection op.
   }];
 
   let arguments = (ins
     SPIRV_SelectionControlAttr:$selection_control
   );
 
-  let results = (outs);
+  let results = (outs Variadic<AnyType>:$results);
 
   let regions = (region AnyRegion:$body);
 
@@ -490,6 +519,13 @@ def SPIRV_SelectionOp : SPIRV_Op<"mlir.selection", [InFunctionScope]> {
         function_ref<void(OpBuilder &builder)> thenBody,
         OpBuilder &builder);
   }];
+
+  let builders = [
+    OpBuilder<(ins "spirv::SelectionControl":$selectionControl),
+    [{
+      build($_builder, $_state, TypeRange(), selectionControl);
+    }]>
+  ];
 
   let hasOpcode = 0;
 

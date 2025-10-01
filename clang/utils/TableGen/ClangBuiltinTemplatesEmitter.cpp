@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
@@ -21,11 +22,14 @@ using namespace llvm;
 static std::string TemplateNameList;
 static std::string CreateBuiltinTemplateParameterList;
 
+static llvm::StringSet<> BuiltinClasses;
+
 namespace {
 struct ParserState {
   size_t UniqueCounter = 0;
   size_t CurrentDepth = 0;
   bool EmittedSizeTInfo = false;
+  bool EmittedUint32TInfo = false;
 };
 
 std::pair<std::string, std::string>
@@ -48,7 +52,8 @@ ParseTemplateParameterList(ParserState &PS,
       Code << TemplateCode << " auto *" << ParmName
            << " = TemplateTemplateParmDecl::Create(C, DC, SourceLocation(), "
            << PS.CurrentDepth << ", " << Position++
-           << ", /*ParameterPack=*/false, /*Id=*/nullptr, /*Typename=*/false, "
+           << ", /*ParameterPack=*/false, /*Id=*/nullptr, "
+              "/*Kind=*/TNK_Type_template, /*Typename=*/false, "
            << TPLName << ");\n";
     } else if (Arg->isSubClassOf("Class")) {
       Code << " auto *" << ParmName
@@ -60,10 +65,8 @@ ParseTemplateParameterList(ParserState &PS,
     } else if (Arg->isSubClassOf("NTTP")) {
       auto Type = Arg->getValueAsString("TypeName");
 
-      if (TemplateNameToParmName.find(Type.str()) ==
-          TemplateNameToParmName.end()) {
-        PrintFatalError("Unkown Type Name");
-      }
+      if (!TemplateNameToParmName.contains(Type.str()))
+        PrintFatalError("Unknown Type Name");
 
       auto TSIName = "TSI" + std::to_string(PS.UniqueCounter++);
       Code << " auto *" << TSIName << " = C.getTrivialTypeSourceInfo(QualType("
@@ -75,19 +78,32 @@ ParseTemplateParameterList(ParserState &PS,
            << TSIName << "->getType(), " << Arg->getValueAsBit("IsVariadic")
            << ", " << TSIName << ");\n";
     } else if (Arg->isSubClassOf("BuiltinNTTP")) {
-      if (Arg->getValueAsString("TypeName") != "size_t")
-        PrintFatalError("Unkown Type Name");
-      if (!PS.EmittedSizeTInfo) {
-        Code << "TypeSourceInfo *SizeTInfo = "
-                "C.getTrivialTypeSourceInfo(C.getSizeType());\n";
-        PS.EmittedSizeTInfo = true;
+      std::string SourceInfo;
+      if (Arg->getValueAsString("TypeName") == "size_t") {
+        SourceInfo = "SizeTInfo";
+        if (!PS.EmittedSizeTInfo) {
+          Code << "TypeSourceInfo *SizeTInfo = "
+                  "C.getTrivialTypeSourceInfo(C.getSizeType());\n";
+          PS.EmittedSizeTInfo = true;
+        }
+      } else if (Arg->getValueAsString("TypeName") == "uint32_t") {
+        SourceInfo = "Uint32TInfo";
+        if (!PS.EmittedUint32TInfo) {
+          Code << "TypeSourceInfo *Uint32TInfo = "
+                  "C.getTrivialTypeSourceInfo(C.UnsignedIntTy);\n";
+          PS.EmittedUint32TInfo = true;
+        }
+      } else {
+        PrintFatalError("Unknown Type Name");
       }
       Code << " auto *" << ParmName
            << " = NonTypeTemplateParmDecl::Create(C, DC, SourceLocation(), "
               "SourceLocation(), "
-           << PS.CurrentDepth << ", " << Position++
-           << ", /*Id=*/nullptr, SizeTInfo->getType(), "
-              "/*ParameterPack=*/false, SizeTInfo);\n";
+           << PS.CurrentDepth << ", " << Position++ << ", /*Id=*/nullptr, "
+           << SourceInfo
+           << "->getType(), "
+              "/*ParameterPack=*/false, "
+           << SourceInfo << ");\n";
     } else {
       PrintFatalError("Unknown Argument Type");
     }
@@ -107,7 +123,7 @@ ParseTemplateParameterList(ParserState &PS,
   }
 
   bool First = true;
-  for (auto e : Params) {
+  for (const auto &e : Params) {
     if (First) {
       First = false;
       Code << e;
@@ -134,7 +150,8 @@ EmitCreateBuiltinTemplateParameterList(std::vector<const Record *> TemplateArgs,
   CreateBuiltinTemplateParameterList += "  }\n";
 }
 
-void EmitBuiltinTemplate(raw_ostream &OS, const Record *BuiltinTemplate) {
+void EmitBuiltinTemplate(const Record *BuiltinTemplate) {
+  auto Class = BuiltinTemplate->getType()->getAsString();
   auto Name = BuiltinTemplate->getName();
 
   std::vector<const Record *> TemplateHead =
@@ -142,21 +159,49 @@ void EmitBuiltinTemplate(raw_ostream &OS, const Record *BuiltinTemplate) {
 
   EmitCreateBuiltinTemplateParameterList(TemplateHead, Name);
 
-  TemplateNameList += "BuiltinTemplate(";
+  TemplateNameList += Class + "(";
   TemplateNameList += Name;
   TemplateNameList += ")\n";
+
+  BuiltinClasses.insert(Class);
+}
+
+void EmitDefaultDefine(llvm::raw_ostream &OS, StringRef Name) {
+  OS << "#ifndef " << Name << "\n";
+  OS << "#define " << Name << "(NAME)" << " " << "BuiltinTemplate"
+     << "(NAME)\n";
+  OS << "#endif\n\n";
+}
+
+void EmitUndef(llvm::raw_ostream &OS, StringRef Name) {
+  OS << "#undef " << Name << "\n";
 }
 } // namespace
 
 void clang::EmitClangBuiltinTemplates(const llvm::RecordKeeper &Records,
                                       llvm::raw_ostream &OS) {
   emitSourceFileHeader("Tables and code for Clang's builtin templates", OS);
+
   for (const auto *Builtin :
        Records.getAllDerivedDefinitions("BuiltinTemplate"))
-    EmitBuiltinTemplate(OS, Builtin);
+    EmitBuiltinTemplate(Builtin);
+
+  for (const auto &ClassEntry : BuiltinClasses) {
+    StringRef Class = ClassEntry.getKey();
+    if (Class == "BuiltinTemplate")
+      continue;
+    EmitDefaultDefine(OS, Class);
+  }
 
   OS << "#if defined(CREATE_BUILTIN_TEMPLATE_PARAMETER_LIST)\n"
      << CreateBuiltinTemplateParameterList
      << "#undef CREATE_BUILTIN_TEMPLATE_PARAMETER_LIST\n#else\n"
      << TemplateNameList << "#undef BuiltinTemplate\n#endif\n";
+
+  for (const auto &ClassEntry : BuiltinClasses) {
+    StringRef Class = ClassEntry.getKey();
+    if (Class == "BuiltinTemplate")
+      continue;
+    EmitUndef(OS, Class);
+  }
 }

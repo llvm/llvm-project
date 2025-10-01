@@ -1144,6 +1144,9 @@ def : Pat<(wasm_shr_u
               (vec.splat (i32 1))),
             (i32 1)),
           (inst $lhs, $rhs)>;
+
+def : Pat<(vec.vt (avgceilu (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+          (inst $lhs, $rhs)>;
 }
 
 // Widening dot product: i32x4.dot_i16x8_s
@@ -1450,14 +1453,26 @@ if !ne(t1, t2) then
 def : Pat<(t1.vt (bitconvert (t2.vt V128:$v))), (t1.vt V128:$v)>;
 
 // Extended pairwise addition
-defm "" : SIMDConvert<I16x8, I8x16, int_wasm_extadd_pairwise_signed,
+def extadd_pairwise_u : SDNode<"WebAssemblyISD::EXT_ADD_PAIRWISE_U", extend_t>;
+def extadd_pairwise_s : SDNode<"WebAssemblyISD::EXT_ADD_PAIRWISE_S", extend_t>;
+
+defm "" : SIMDConvert<I16x8, I8x16, extadd_pairwise_s,
                       "extadd_pairwise_i8x16_s", 0x7c>;
-defm "" : SIMDConvert<I16x8, I8x16, int_wasm_extadd_pairwise_unsigned,
+defm "" : SIMDConvert<I16x8, I8x16, extadd_pairwise_u,
                       "extadd_pairwise_i8x16_u", 0x7d>;
-defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_signed,
+defm "" : SIMDConvert<I32x4, I16x8, extadd_pairwise_s,
                       "extadd_pairwise_i16x8_s", 0x7e>;
-defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_unsigned,
+defm "" : SIMDConvert<I32x4, I16x8, extadd_pairwise_u,
                       "extadd_pairwise_i16x8_u", 0x7f>;
+
+def : Pat<(v4i32 (int_wasm_extadd_pairwise_unsigned (v8i16 V128:$in))),
+          (extadd_pairwise_u_I32x4 V128:$in)>;
+def : Pat<(v8i16 (int_wasm_extadd_pairwise_unsigned (v16i8 V128:$in))),
+          (extadd_pairwise_u_I16x8 V128:$in)>;
+def : Pat<(v4i32 (int_wasm_extadd_pairwise_signed (v8i16 V128:$in))),
+          (extadd_pairwise_s_I32x4 V128:$in)>;
+def : Pat<(v8i16 (int_wasm_extadd_pairwise_signed (v16i8 V128:$in))),
+          (extadd_pairwise_s_I16x8 V128:$in)>;
 
 // f64x2 <-> f32x4 conversions
 def demote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
@@ -1488,6 +1503,51 @@ def : Pat<(v2f64 (extloadv2f32 (i64 I64:$addr))),
 
 defm Q15MULR_SAT_S :
   SIMDBinary<I16x8, int_wasm_q15mulr_sat_signed, "q15mulr_sat_s", 0x82>;
+
+//===----------------------------------------------------------------------===//
+// Partial reductions, using: dot, extmul and extadd_pairwise
+//===----------------------------------------------------------------------===//
+// MLA: v8i16 -> v4i32
+def : Pat<(v4i32 (partial_reduce_smla (v4i32 V128:$acc), (v8i16 V128:$lhs),
+                                                         (v8i16 V128:$rhs))),
+          (ADD_I32x4 (DOT $lhs, $rhs), $acc)>;
+def : Pat<(v4i32 (partial_reduce_umla (v4i32 V128:$acc), (v8i16 V128:$lhs),
+                                                         (v8i16 V128:$rhs))),
+          (ADD_I32x4 (ADD_I32x4 (EXTMUL_LOW_U_I32x4 $lhs, $rhs),
+                                (EXTMUL_HIGH_U_I32x4 $lhs, $rhs)),
+                     $acc)>;
+// MLA: v16i8 -> v4i32
+def : Pat<(v4i32 (partial_reduce_smla (v4i32 V128:$acc), (v16i8 V128:$lhs),
+                                                         (v16i8 V128:$rhs))),
+          (ADD_I32x4 (ADD_I32x4 (DOT (extend_low_s_I16x8 $lhs),
+                                     (extend_low_s_I16x8 $rhs)),
+                                (DOT (extend_high_s_I16x8 $lhs),
+                                     (extend_high_s_I16x8 $rhs))),
+                      $acc)>;
+def : Pat<(v4i32 (partial_reduce_umla (v4i32 V128:$acc), (v16i8 V128:$lhs),
+                                                         (v16i8 V128:$rhs))),
+          (ADD_I32x4 (ADD_I32x4 (extadd_pairwise_u_I32x4 (EXTMUL_LOW_U_I16x8 $lhs, $rhs)),
+                                (extadd_pairwise_u_I32x4 (EXTMUL_HIGH_U_I16x8 $lhs, $rhs))),
+                     $acc)>;
+
+// Accumulate: v8i16 -> v4i32
+def : Pat<(v4i32 (partial_reduce_smla (v4i32 V128:$acc), (v8i16 V128:$in),
+                                                         (I16x8.splat (i32 1)))),
+          (ADD_I32x4 (extadd_pairwise_s_I32x4 $in), $acc)>;
+
+def : Pat<(v4i32 (partial_reduce_umla (v4i32 V128:$acc), (v8i16 V128:$in),
+                                                         (I16x8.splat (i32 1)))),
+          (ADD_I32x4 (extadd_pairwise_u_I32x4 $in), $acc)>;
+
+// Accumulate: v16i8 -> v4i32
+def : Pat<(v4i32 (partial_reduce_smla (v4i32 V128:$acc), (v16i8 V128:$in),
+                                                         (I8x16.splat (i32 1)))),
+          (ADD_I32x4 (extadd_pairwise_s_I32x4 (extadd_pairwise_s_I16x8 $in)),
+                     $acc)>;
+def : Pat<(v4i32 (partial_reduce_umla (v4i32 V128:$acc), (v16i8 V128:$in),
+                                                         (I8x16.splat (i32 1)))),
+          (ADD_I32x4 (extadd_pairwise_u_I32x4 (extadd_pairwise_u_I16x8 $in)),
+                     $acc)>;
 
 //===----------------------------------------------------------------------===//
 // Relaxed swizzle
@@ -1536,6 +1596,12 @@ multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS, list<Predicate>
              (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
            vec.prefix#".relaxed_nmadd\t$dst, $a, $b, $c",
            vec.prefix#".relaxed_nmadd", simdopS, reqs>;
+
+  def : Pat<(fadd_contract (vec.vt V128:$a), (fmul_contract (vec.vt V128:$b), (vec.vt V128:$c))),
+             (!cast<Instruction>("MADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
+
+  def : Pat<(fsub_contract (vec.vt V128:$a), (fmul_contract (vec.vt V128:$b), (vec.vt V128:$c))),
+             (!cast<Instruction>("NMADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
 }
 
 defm "" : SIMDMADD<F32x4, 0x105, 0x106, [HasRelaxedSIMD]>;

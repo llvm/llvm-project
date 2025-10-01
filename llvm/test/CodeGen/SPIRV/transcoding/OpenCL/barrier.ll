@@ -25,8 +25,8 @@
   ;; barrier(flags);
 ;; }
 
-; CHECK-SPIRV: OpName %[[#TEST_CONST_FLAGS:]] "test_barrier_const_flags"
-; CHECK-SPIRV: %[[#UINT:]] = OpTypeInt 32 0
+; CHECK-SPIRV-DAG: OpName %[[#TEST_CONST_FLAGS:]] "test_barrier_const_flags"
+; CHECK-SPIRV-DAG: %[[#UINT:]] = OpTypeInt 32 0
 
 ;; In SPIR-V, barrier is represented as OpControlBarrier [3] and OpenCL
 ;; cl_mem_fence_flags are represented as part of Memory Semantics [2], which
@@ -35,19 +35,19 @@
 ;; bit more information than original source
 
 ;; 0x10 SequentiallyConsistent + 0x100 WorkgroupMemory
-; CHECK-SPIRV:     %[[#LOCAL:]] = OpConstant %[[#UINT]] 272
+; CHECK-SPIRV-DAG: %[[#LOCAL:]] = OpConstant %[[#UINT]] 272{{$}}
 ;; 0x2 Workgroup
-; CHECK-SPIRV:     %[[#WG:]] = OpConstant %[[#UINT]] 2
+; CHECK-SPIRV-DAG: %[[#WG:]] = OpConstant %[[#UINT]] 2{{$}}
 ;; 0x10 SequentiallyConsistent + 0x200 CrossWorkgroupMemory
-; CHECK-SPIRV-DAG: %[[#GLOBAL:]] = OpConstant %[[#UINT]] 528
+; CHECK-SPIRV-DAG: %[[#GLOBAL:]] = OpConstant %[[#UINT]] 528{{$}}
 ;; 0x10 SequentiallyConsistent + 0x800 ImageMemory
-; CHECK-SPIRV-DAG: %[[#IMAGE:]] = OpConstant %[[#UINT]] 2064
+; CHECK-SPIRV-DAG: %[[#IMAGE:]] = OpConstant %[[#UINT]] 2064{{$}}
 ;; 0x10 SequentiallyConsistent + 0x100 WorkgroupMemory + 0x200 CrossWorkgroupMemory
-; CHECK-SPIRV-DAG: %[[#LOCAL_GLOBAL:]] = OpConstant %[[#UINT]] 784
+; CHECK-SPIRV-DAG: %[[#LOCAL_GLOBAL:]] = OpConstant %[[#UINT]] 784{{$}}
 ;; 0x10 SequentiallyConsistent + 0x100 WorkgroupMemory + 0x800 ImageMemory
-; CHECK-SPIRV-DAG: %[[#LOCAL_IMAGE:]] = OpConstant %[[#UINT]] 2320
+; CHECK-SPIRV-DAG: %[[#LOCAL_IMAGE:]] = OpConstant %[[#UINT]] 2320{{$}}
 ;; 0x10 SequentiallyConsistent + 0x100 WorkgroupMemory + 0x200 CrossWorkgroupMemory + 0x800 ImageMemory
-; CHECK-SPIRV-DAG: %[[#LOCAL_GLOBAL_IMAGE:]] = OpConstant %[[#UINT]] 2832
+; CHECK-SPIRV-DAG: %[[#LOCAL_GLOBAL_IMAGE:]] = OpConstant %[[#UINT]] 2832{{$}}
 
 ; CHECK-SPIRV: %[[#TEST_CONST_FLAGS]] = OpFunction %[[#]]
 ; CHECK-SPIRV: OpControlBarrier %[[#WG]] %[[#WG]] %[[#LOCAL]]

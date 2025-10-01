@@ -41,8 +41,7 @@ public:
   std::pair<SDValue, SDValue>
   EmitTargetCodeForMemcmp(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
                           SDValue Src1, SDValue Src2, SDValue Size,
-                          MachinePointerInfo Op1PtrInfo,
-                          MachinePointerInfo Op2PtrInfo) const override;
+                          const CallInst *CI) const override;
 
   std::pair<SDValue, SDValue>
   EmitTargetCodeForMemchr(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
@@ -62,8 +61,7 @@ public:
 
   std::pair<SDValue, SDValue>
   EmitTargetCodeForStrlen(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
-                          SDValue Src,
-                          MachinePointerInfo SrcPtrInfo) const override;
+                          SDValue Src, const CallInst *CI) const override;
 
   std::pair<SDValue, SDValue>
   EmitTargetCodeForStrnlen(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,

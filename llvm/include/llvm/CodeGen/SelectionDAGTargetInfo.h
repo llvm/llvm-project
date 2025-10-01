@@ -16,12 +16,14 @@
 #define LLVM_CODEGEN_SELECTIONDAGTARGETINFO_H
 
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/SDNodeInfo.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/Support/CodeGen.h"
 #include <utility>
 
 namespace llvm {
 
+class CallInst;
 class SelectionDAG;
 
 //===----------------------------------------------------------------------===//
@@ -35,6 +37,12 @@ public:
   SelectionDAGTargetInfo &operator=(const SelectionDAGTargetInfo &) = delete;
   virtual ~SelectionDAGTargetInfo();
 
+  /// Returns the name of the given target-specific opcode, suitable for
+  /// debug printing.
+  virtual const char *getTargetNodeName(unsigned Opcode) const {
+    return nullptr;
+  }
+
   /// Returns true if a node with the given target-specific opcode has
   /// a memory operand. Nodes with such opcodes can only be created with
   /// `SelectionDAG::getMemIntrinsicNode`.
@@ -47,6 +55,10 @@ public:
   /// Returns true if a node with the given target-specific opcode
   /// may raise a floating-point exception.
   virtual bool mayRaiseFPException(unsigned Opcode) const;
+
+  /// Checks that the given target-specific node is valid. Aborts if it is not.
+  virtual void verifyTargetNode(const SelectionDAG &DAG,
+                                const SDNode *N) const {}
 
   /// Emit target-specific code that performs a memcpy.
   /// This can be used by targets to provide code sequences for cases
@@ -107,8 +119,7 @@ public:
   virtual std::pair<SDValue, SDValue>
   EmitTargetCodeForMemcmp(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
                           SDValue Op1, SDValue Op2, SDValue Op3,
-                          MachinePointerInfo Op1PtrInfo,
-                          MachinePointerInfo Op2PtrInfo) const {
+                          const CallInst *CI) const {
     return std::make_pair(SDValue(), SDValue());
   }
 
@@ -151,7 +162,7 @@ public:
 
   virtual std::pair<SDValue, SDValue>
   EmitTargetCodeForStrlen(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
-                          SDValue Src, MachinePointerInfo SrcPtrInfo) const {
+                          SDValue Src, const CallInst *CI) const {
     return std::make_pair(SDValue(), SDValue());
   }
 
@@ -173,6 +184,43 @@ public:
   // Return true if the DAG Combiner should disable generic combines.
   virtual bool disableGenericCombines(CodeGenOptLevel OptLevel) const {
     return false;
+  }
+};
+
+/// Proxy class that targets should inherit from if they wish to use
+/// the generated node descriptions.
+class SelectionDAGGenTargetInfo : public SelectionDAGTargetInfo {
+protected:
+  const SDNodeInfo &GenNodeInfo;
+
+  explicit SelectionDAGGenTargetInfo(const SDNodeInfo &GenNodeInfo)
+      : GenNodeInfo(GenNodeInfo) {}
+
+public:
+  ~SelectionDAGGenTargetInfo() override;
+
+  const char *getTargetNodeName(unsigned Opcode) const override {
+    assert(GenNodeInfo.hasDesc(Opcode) &&
+           "The name should be provided by the derived class");
+    return GenNodeInfo.getName(Opcode).data();
+  }
+
+  bool isTargetMemoryOpcode(unsigned Opcode) const override {
+    if (GenNodeInfo.hasDesc(Opcode))
+      return GenNodeInfo.getDesc(Opcode).hasProperty(SDNPMemOperand);
+    return false;
+  }
+
+  bool isTargetStrictFPOpcode(unsigned Opcode) const override {
+    if (GenNodeInfo.hasDesc(Opcode))
+      return GenNodeInfo.getDesc(Opcode).hasFlag(SDNFIsStrictFP);
+    return false;
+  }
+
+  void verifyTargetNode(const SelectionDAG &DAG,
+                        const SDNode *N) const override {
+    if (GenNodeInfo.hasDesc(N->getOpcode()))
+      GenNodeInfo.verifyNode(DAG, N);
   }
 };
 

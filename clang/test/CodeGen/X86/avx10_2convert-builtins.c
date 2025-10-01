@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64 -target-feature +avx10.2-256 \
+// RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64 -target-feature +avx10.2 \
 // RUN: -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=i386 -target-feature +avx10.2-256 \
+// RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=i386 -target-feature +avx10.2 \
 // RUN: -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
@@ -39,24 +39,6 @@ __m256h test_mm256_maskz_cvtx2ps_ph(__mmask16 __U, __m256 __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_maskz_cvtx2ps_ph(
   // CHECK: call <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256
   return _mm256_maskz_cvtx2ps_ph(__U, __A, __B);
-}
-
-__m256h test_mm256_cvtx_round2ps_ph(__m256 __A, __m256 __B) {
-  // CHECK-LABEL: @test_mm256_cvtx_round2ps_ph(
-  // CHECK: call <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256(
-  return _mm256_cvtx_round2ps_ph(__A, __B, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
-}
-
-__m256h test_mm256_mask_cvtx_round2ps_ph(__m256h __W, __mmask8 __U, __m256 __A, __m256 __B) {
-  // CHECK-LABEL: @test_mm256_mask_cvtx_round2ps_ph(
-  // CHECK: call <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256(
-  return _mm256_mask_cvtx_round2ps_ph(__W, __U, __A, __B, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
-}
-
-__m256h test_mm256_maskz_cvtx_round2ps_ph(__mmask8 __U, __m256 __A, __m256 __B) {
-  // CHECK-LABEL: @test_mm256_maskz_cvtx_round2ps_ph(
-  // CHECK: call <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256(
-  return _mm256_maskz_cvtx_round2ps_ph(__U, __A, __B, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 
 __m128i test_mm_cvtbiasph_bf8(__m128i __A, __m128h __B) {

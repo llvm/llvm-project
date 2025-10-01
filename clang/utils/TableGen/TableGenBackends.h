@@ -24,6 +24,7 @@ class RecordKeeper;
 
 namespace clang {
 
+void EmitCIRLowering(const llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
 void EmitClangDeclContext(const llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
 /**
   @param PriorizeIfSubclassOf These classes should be prioritized in the output.
@@ -51,6 +52,8 @@ void EmitClangAttrSubjectMatchRulesParserStringSwitches(
     const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitCXX11AttributeInfo(const llvm::RecordKeeper &Records,
                             llvm::raw_ostream &OS);
+void EmitAttributeSpellingList(const llvm::RecordKeeper &Records,
+                               llvm::raw_ostream &OS);
 void EmitClangAttrClass(const llvm::RecordKeeper &Records,
                         llvm::raw_ostream &OS);
 void EmitClangAttrImpl(const llvm::RecordKeeper &Records,
@@ -91,6 +94,9 @@ void EmitClangBuiltins(const llvm::RecordKeeper &Records,
 void EmitClangBuiltinTemplates(const llvm::RecordKeeper &Records,
                                llvm::raw_ostream &OS);
 
+void EmitClangDiagsCompatIDs(const llvm::RecordKeeper &Records,
+                             llvm::raw_ostream &OS,
+                             const std::string &Component);
 void EmitClangDiagsDefs(const llvm::RecordKeeper &Records,
                         llvm::raw_ostream &OS, const std::string &Component);
 void EmitClangDiagsEnums(const llvm::RecordKeeper &Records,
@@ -99,6 +105,8 @@ void EmitClangDiagGroups(const llvm::RecordKeeper &Records,
                          llvm::raw_ostream &OS);
 void EmitClangDiagsIndexName(const llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
+void EmitClangDiagsInterface(llvm::raw_ostream &OS,
+                             const std::string &Component);
 
 void EmitClangSACheckers(const llvm::RecordKeeper &Records,
                          llvm::raw_ostream &OS);
