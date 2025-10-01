@@ -478,17 +478,6 @@ static Messages getNonTaintMsgs(const ASTContext &ACtx,
           std::string(Buf)};
 }
 
-static Messages getTaintMsgs(const MemSpaceRegion *Space,
-                             const SubRegion *Region, const char *OffsetName,
-                             bool AlsoMentionUnderflow) {
-  std::string RegName = getRegionName(Space, Region);
-  return {formatv("Potential out of bound access to {0} with tainted {1}",
-                  RegName, OffsetName),
-          formatv("Access of {0} with a tainted {1} that may be {2}too large",
-                  RegName, OffsetName,
-                  AlsoMentionUnderflow ? "negative or " : "")};
-}
-
 const NoteTag *StateUpdateReporter::createNoteTag(CheckerContext &C) const {
   // Don't create a note tag if we didn't assume anything:
   if (!AssumedNonNegative && !AssumedUpperBound)
