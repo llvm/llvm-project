@@ -668,6 +668,8 @@ enum CommandArgumentType {
   eArgTypeCPUFeatures,
   eArgTypeManagedPlugin,
   eArgTypeProtocol,
+  eArgTypeExceptionStage,
+  eArgTypeNameMatchStyle,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -1397,6 +1399,22 @@ enum StopDisassemblyType {
   eStopDisassemblyTypeNoDebugInfo,
   eStopDisassemblyTypeNoSource,
   eStopDisassemblyTypeAlways
+};
+
+enum ExceptionStage {
+  eExceptionStageCreate = (1 << 0),
+  eExceptionStageThrow = (1 << 1),
+  eExceptionStageReThrow = (1 << 2),
+  eExceptionStageCatch = (1 << 3)
+};
+
+enum NameMatchStyle {
+  eNameMatchStyleAuto = eFunctionNameTypeAuto,
+  eNameMatchStyleFull = eFunctionNameTypeFull,
+  eNameMatchStyleBase = eFunctionNameTypeBase,
+  eNameMatchStyleMethod = eFunctionNameTypeMethod,
+  eNameMatchStyleSelector = eFunctionNameTypeSelector,
+  eNameMatchStyleRegex = eFunctionNameTypeSelector << 1
 };
 
 } // namespace lldb
