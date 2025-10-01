@@ -15,7 +15,7 @@ public:
   bool shouldRecordCodeRelocation(unsigned Type) const override;
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                              uint64_t &Target) const override;
+                      uint64_t &Target) const override;
 
   bool evaluateMemOperandTarget(const MCInst &Inst, uint64_t &Target,
                                 uint64_t Address = 0,
@@ -73,6 +73,8 @@ public:
   std::optional<Relocation>
   createRelocation(const MCFixup &Fixup,
                    const MCAsmBackend &MAB) const override;
+
+  bool isTOCRestoreAfterCall(const MCInst &I) const override;
 };
 
 } // namespace bolt
