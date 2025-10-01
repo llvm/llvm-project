@@ -559,6 +559,7 @@ containing 13 32-byte fields of various enum, float, and integer values.
 In version 1.2, the static sampler is 17 bytes. It matches the 1.0 static sampler
 but adds a 32-bit access flag. In Version 1.1, it matches static sampler 
 version 1.0.
+
 .. code-block:: c
 
    struct StaticSamplerDesc {
