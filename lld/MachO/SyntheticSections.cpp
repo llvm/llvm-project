@@ -1746,6 +1746,7 @@ void CStringSection::finalizeContents() {
 void DeduplicatedCStringSection::finalizeContents() {
   // Find the largest alignment required for each string.
   DenseMap<CachedHashStringRef, Align> strToAlignment;
+  // Used for tail merging only
   std::vector<CachedHashStringRef> deduplicatedStrs;
   for (const CStringInputSection *isec : inputs) {
     for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
@@ -1755,7 +1756,7 @@ void DeduplicatedCStringSection::finalizeContents() {
       assert(isec->align != 0);
       auto align = getStringPieceAlignment(isec, piece);
       auto [it, wasInserted] = strToAlignment.try_emplace(s, align);
-      if (wasInserted)
+      if (config->tailMergeStrings && wasInserted)
         deduplicatedStrs.push_back(s);
       if (!wasInserted && it->second < align)
         it->second = align;
@@ -1784,17 +1785,17 @@ void DeduplicatedCStringSection::finalizeContents() {
       mergeCandidate = s;
       continue;
     }
-    uint64_t tailOffset = mergeCandidate->size() - s.size();
+    uint64_t tailMergeOffset = mergeCandidate->size() - s.size();
     // TODO: If the tail offset is incompatible with this string's alignment, we
     // might be able to find another superstring with a compatible tail offset.
     // The difficulty is how to do this efficiently
     const auto &align = strToAlignment.at(s);
-    if (!isAligned(align, tailOffset))
+    if (!isAligned(align, tailMergeOffset))
       continue;
     auto &mergeCandidateAlign = strToAlignment[*mergeCandidate];
     if (align > mergeCandidateAlign)
       mergeCandidateAlign = align;
-    tailMergeMap.try_emplace(s, *mergeCandidate, tailOffset);
+    tailMergeMap.try_emplace(s, *mergeCandidate, tailMergeOffset);
   }
 
   // Sort the strings for performance and compression size win, and then
@@ -1803,9 +1804,18 @@ void DeduplicatedCStringSection::finalizeContents() {
   for (auto &[isec, i] : priorityBuilder.buildCStringPriorities(inputs)) {
     auto &piece = isec->pieces[i];
     auto s = isec->getCachedHashStringRef(i);
-    // Skip tail merged strings until their superstring offsets are resolved
-    if (tailMergeMap.count(s))
-      continue;
+    // Any string can be tail merged with itself with an offset of zero
+    uint64_t tailMergeOffset = 0;
+    auto mergeIt =
+        config->tailMergeStrings ? tailMergeMap.find(s) : tailMergeMap.end();
+    if (mergeIt != tailMergeMap.end()) {
+      auto &[superString, offset] = mergeIt->second;
+      // s can be tail merged with superString. Do not layout s. Instead layout
+      // superString if we haven't already
+      assert(superString.val().ends_with(s.val()));
+      s = superString;
+      tailMergeOffset = offset;
+    }
     auto [it, wasInserted] = stringOffsetMap.try_emplace(s, /*placeholder*/ 0);
     if (wasInserted) {
       // Avoid computing the offset until we are sure we will need to
@@ -1813,28 +1823,15 @@ void DeduplicatedCStringSection::finalizeContents() {
       it->second = offset;
       size = offset + s.size() + 1; // account for null terminator
     }
-    // If the string was already in stringOffsetMap, it is a duplicate and we
-    // only need to assign the offset.
-    piece.outSecOff = it->second;
-  }
-  for (CStringInputSection *isec : inputs) {
-    for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-      if (!piece.live)
-        continue;
-      auto s = isec->getCachedHashStringRef(i);
-      auto it = tailMergeMap.find(s);
-      if (it == tailMergeMap.end())
-        continue;
-      const auto &[superString, tailOffset] = it->second;
-      assert(superString.val().ends_with(s.val()));
-      assert(!tailMergeMap.count(superString));
-      auto &outSecOff = stringOffsetMap[s];
-      outSecOff = stringOffsetMap.at(superString) + tailOffset;
-      piece.outSecOff = outSecOff;
-      assert(isAligned(strToAlignment.at(s), piece.outSecOff));
+    piece.outSecOff = it->second + tailMergeOffset;
+    if (mergeIt != tailMergeMap.end()) {
+      auto &tailMergedString = mergeIt->first;
+      stringOffsetMap[tailMergedString] = piece.outSecOff;
+      assert(isAligned(strToAlignment.at(tailMergedString), piece.outSecOff));
     }
-    isec->isFinal = true;
   }
+  for (CStringInputSection *isec : inputs)
+    isec->isFinal = true;
 }
 
 void DeduplicatedCStringSection::writeTo(uint8_t *buf) const {
