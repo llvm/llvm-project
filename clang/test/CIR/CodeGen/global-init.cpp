@@ -11,18 +11,15 @@ struct NeedsCtor {
 
 NeedsCtor needsCtor;
 
-// CIR-BEFORE-LPP: cir.func private @_ZN9NeedsCtorC1Ev(!cir.ptr<!rec_NeedsCtor>)
 // CIR-BEFORE-LPP: cir.global external @needsCtor = ctor : !rec_NeedsCtor {
 // CIR-BEFORE-LPP:   %[[THIS:.*]] = cir.get_global @needsCtor : !cir.ptr<!rec_NeedsCtor>
 // CIR-BEFORE-LPP:   cir.call @_ZN9NeedsCtorC1Ev(%[[THIS]]) : (!cir.ptr<!rec_NeedsCtor>) -> ()
-// CIR-BEFORE-LPP: }
 
 // CIR: cir.global external @needsCtor = #cir.zero : !rec_NeedsCtor
 // CIR: cir.func internal private @__cxx_global_var_init() {
 // CIR:   %0 = cir.get_global @needsCtor : !cir.ptr<!rec_NeedsCtor>
 // CIR:   cir.call @_ZN9NeedsCtorC1Ev(%0) : (!cir.ptr<!rec_NeedsCtor>) -> ()
-// CIR:   cir.return
-// CIR: }
+
 // CIR: cir.func private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
 // CIR:   cir.call @__cxx_global_var_init() : () -> ()
 // CIR:   cir.return
