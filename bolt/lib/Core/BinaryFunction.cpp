@@ -1403,12 +1403,14 @@ Error BinaryFunction::disassemble() {
           bool NextIsNop = false;
 
           if (NextIt != Instructions.end()) {
-            NextIsNop = BC.MIB->isNoop(NextIt->second);
+            NextIsNop = BC.MIB->isNoop(NextIt->second) ||
+                        BC.MIB->isTOCRestoreAfterCall(NextIt->second);
           } else {
             // Fall back: peek original bytes and try to decode a single inst
             // there
             if (auto NextInstOpt = disassembleInstructionAtOffset(NextOff)) {
-              NextIsNop = BC.MIB->isNoop(*NextInstOpt);
+              NextIsNop = BC.MIB->isNoop(*NextInstOpt) ||
+                          BC.MIB->isTOCRestoreAfterCall(*NextInstOpt);
             }
           }
 
