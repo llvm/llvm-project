@@ -217,10 +217,11 @@ public:
 } // namespace
 
 void mlir::scf::populateSCFStructuralTypeConversions(
-    const TypeConverter &typeConverter, RewritePatternSet &patterns) {
+    const TypeConverter &typeConverter, RewritePatternSet &patterns,
+    PatternBenefit benefit) {
   patterns.add<ConvertForOpTypes, ConvertIfOpTypes, ConvertYieldOpTypes,
                ConvertWhileOpTypes, ConvertConditionOpTypes>(
-      typeConverter, patterns.getContext());
+      typeConverter, patterns.getContext(), benefit);
 }
 
 void mlir::scf::populateSCFStructuralTypeConversionTarget(
@@ -240,7 +241,7 @@ void mlir::scf::populateSCFStructuralTypeConversionTarget(
 
 void mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
     const TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target) {
-  populateSCFStructuralTypeConversions(typeConverter, patterns);
+    ConversionTarget &target, PatternBenefit benefit) {
+  populateSCFStructuralTypeConversions(typeConverter, patterns, benefit);
   populateSCFStructuralTypeConversionTarget(typeConverter, target);
 }

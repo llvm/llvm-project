@@ -71,7 +71,7 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided1
 ; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; PREDICATED_TAIL_FOLDING-NEXT:  entry:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br label [[VECTOR_PH:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.ph:
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
@@ -208,7 +208,7 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided2
 ; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias readnone captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; PREDICATED_TAIL_FOLDING-NEXT:  entry:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br label [[VECTOR_PH:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.ph:
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
@@ -337,7 +337,7 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided3
 ; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias readnone captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD1:%.*]], i8 zeroext [[GUARD2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; PREDICATED_TAIL_FOLDING-NEXT:  entry:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br label [[VECTOR_PH:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.ph:
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[CONV3:%.*]] = zext i8 [[GUARD2]] to i32
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD1]] to i32
@@ -491,7 +491,7 @@ define dso_local void @masked_strided_factor4(ptr noalias nocapture readonly %p,
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided_factor4
 ; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; PREDICATED_TAIL_FOLDING-NEXT:  entry:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br label [[VECTOR_PH:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.ph:
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()

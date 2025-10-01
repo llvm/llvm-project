@@ -83,6 +83,11 @@ constexpr int k(int n) {
 }
 constexpr int k0 = k(0);
 
+namespace ThreadLocalStore {
+  thread_local int &&a = 0;
+  void store() { a = 42; }
+}
+
 #if __cplusplus >= 202302L
 constexpr int &b = b; // all-error {{must be initialized by a constant expression}} \
                       // all-note {{initializer of 'b' is not a constant expression}} \

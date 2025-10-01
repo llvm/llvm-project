@@ -312,7 +312,7 @@ LogicalResult transform::TransformState::setParams(Value value,
 }
 
 template <typename Mapping, typename Key, typename Mapped>
-void dropMappingEntry(Mapping &mapping, Key key, Mapped mapped) {
+static void dropMappingEntry(Mapping &mapping, Key key, Mapped mapped) {
   auto it = mapping.find(key);
   if (it == mapping.end())
     return;
@@ -771,7 +771,7 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
 }
 
 template <typename T>
-DiagnosedSilenceableFailure
+static DiagnosedSilenceableFailure
 checkRepeatedConsumptionInOperand(ArrayRef<T> payload,
                                   transform::TransformOpInterface transform,
                                   unsigned operandNumber) {

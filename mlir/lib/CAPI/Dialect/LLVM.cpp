@@ -197,12 +197,12 @@ MlirAttribute mlirLLVMDICompositeTypeAttrGet(
       cast<StringAttr>(unwrap(name)), cast<DIFileAttr>(unwrap(file)), line,
       cast<DIScopeAttr>(unwrap(scope)), cast<DITypeAttr>(unwrap(baseType)),
       DIFlags(flags), sizeInBits, alignInBits,
-      llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
-                          [](Attribute a) { return cast<DINodeAttr>(a); }),
       cast<DIExpressionAttr>(unwrap(dataLocation)),
       cast<DIExpressionAttr>(unwrap(rank)),
       cast<DIExpressionAttr>(unwrap(allocated)),
-      cast<DIExpressionAttr>(unwrap(associated))));
+      cast<DIExpressionAttr>(unwrap(associated)),
+      llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
+                          [](Attribute a) { return cast<DINodeAttr>(a); })));
 }
 
 MlirAttribute mlirLLVMDIDerivedTypeAttrGet(

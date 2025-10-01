@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <new>
@@ -66,6 +67,21 @@ static void BM_StringCtorDefault(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_StringCtorDefault);
+
+static void BM_StringResizeAndOverwrite(benchmark::State& state) {
+  std::string str;
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(str);
+    str.resize_and_overwrite(10, [](char* ptr, size_t n) {
+      std::fill_n(ptr, n, 'a');
+      return n;
+    });
+    benchmark::DoNotOptimize(str);
+    str.clear();
+  }
+}
+BENCHMARK(BM_StringResizeAndOverwrite);
 
 enum class Length { Empty, Small, Large, Huge };
 struct AllLengths : EnumValuesAsTuple<AllLengths, Length, 4> {

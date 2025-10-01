@@ -384,6 +384,10 @@ private:
                OpeningParen.Previous->is(tok::kw__Generic)) {
       Contexts.back().ContextType = Context::C11GenericSelection;
       Contexts.back().IsExpression = true;
+    } else if (OpeningParen.Previous &&
+               OpeningParen.Previous->TokenText == "Q_PROPERTY") {
+      Contexts.back().ContextType = Context::QtProperty;
+      Contexts.back().IsExpression = false;
     } else if (Line.InPPDirective &&
                (!OpeningParen.Previous ||
                 OpeningParen.Previous->isNot(tok::identifier))) {
@@ -1045,6 +1049,14 @@ private:
       }
     }
     // Parse the [DagArgList] part
+    return parseTableGenDAGArgList(Opener, BreakInside);
+  }
+
+  // DagArgList   ::=  "," DagArg [DagArgList]
+  // This parses SimpleValue 6's [DagArgList] part.
+  bool parseTableGenDAGArgList(FormatToken *Opener, bool BreakInside) {
+    ScopedContextCreator ContextCreator(*this, tok::l_paren, 0);
+    Contexts.back().IsTableGenDAGArgList = true;
     bool FirstDAGArgListElm = true;
     while (CurrentToken) {
       if (!FirstDAGArgListElm && CurrentToken->is(tok::comma)) {
@@ -1101,6 +1113,9 @@ private:
     // SimpleValue6 ::=  "(" DagArg [DagArgList] ")"
     if (Tok->is(tok::l_paren)) {
       Tok->setType(TT_TableGenDAGArgOpener);
+      // Nested DAGArg requires space before '(' as separator.
+      if (Contexts.back().IsTableGenDAGArgList)
+        Tok->SpacesRequiredBefore = 1;
       return parseTableGenDAGArgAndList(Tok);
     }
     // SimpleValue 9: Bang operator
@@ -1792,6 +1807,11 @@ private:
             return false;
         }
       }
+      if (Style.AllowBreakBeforeQtProperty &&
+          Contexts.back().ContextType == Context::QtProperty &&
+          Tok->isQtProperty()) {
+        Tok->setFinalizedType(TT_QtProperty);
+      }
       break;
     case tok::arrow:
       if (Tok->isNot(TT_LambdaArrow) && Prev && Prev->is(tok::kw_noexcept))
@@ -2138,7 +2158,7 @@ private:
     // Whether the braces may mean concatenation instead of structure or array
     // literal.
     bool VerilogMayBeConcatenation = false;
-    bool IsTableGenDAGArg = false;
+    bool IsTableGenDAGArgList = false;
     bool IsTableGenBangOpe = false;
     bool IsTableGenCondOpe = false;
     enum {
@@ -2158,6 +2178,7 @@ private:
       TemplateArgument,
       // C11 _Generic selection.
       C11GenericSelection,
+      QtProperty,
       // Like in the outer parentheses in `ffnand ff1(.q());`.
       VerilogInstancePortList,
     } ContextType = Unknown;
@@ -3616,7 +3637,7 @@ void TokenAnnotator::setCommentLineLevels(
       // Align comments for preprocessor lines with the # in column 0 if
       // preprocessor lines are not indented. Otherwise, align with the next
       // line.
-      Line->Level = Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+      Line->Level = Style.IndentPPDirectives < FormatStyle::PPDIS_BeforeHash &&
                             PPDirectiveOrImportStmt
                         ? 0
                         : NextNonCommentLine->Level;
@@ -4012,7 +4033,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     auto *Tok = Line.Last->Previous;
     while (Tok->isNot(tok::r_brace))
       Tok = Tok->Previous;
-    if (auto *LBrace = Tok->MatchingParen; LBrace) {
+    if (auto *LBrace = Tok->MatchingParen; LBrace && LBrace->is(TT_Unknown)) {
       assert(LBrace->is(tok::l_brace));
       Tok->setBlockKind(BK_Block);
       LBrace->setBlockKind(BK_Block);
@@ -6243,7 +6264,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
               Right.Next->isOneOf(TT_FunctionDeclarationName, tok::kw_const)));
   }
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
-                    TT_ClassHeadName, tok::kw_operator)) {
+                    TT_ClassHeadName, TT_QtProperty, tok::kw_operator)) {
     return true;
   }
   if (Left.is(TT_PointerOrReference))

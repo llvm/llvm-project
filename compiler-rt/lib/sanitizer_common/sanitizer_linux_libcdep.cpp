@@ -29,6 +29,7 @@
 #  include "sanitizer_solaris.h"
 
 #  if SANITIZER_HAIKU
+#    define _GNU_SOURCE
 #    define _DEFAULT_SOURCE
 #  endif
 

@@ -13,7 +13,9 @@ DESCRIPTION
 
 :program:`llvm-ir2vec` is a standalone command-line tool for IR2Vec. It
 generates IR2Vec embeddings for LLVM IR and supports triplet generation 
-for vocabulary training. The tool provides three main subcommands:
+for vocabulary training. 
+
+The tool provides three main subcommands:
 
 1. **triplets**: Generates numeric triplets in train2id format for vocabulary
    training from LLVM IR.
@@ -93,7 +95,7 @@ Example Usage:
 
 .. code-block:: bash
 
-   llvm-ir2vec embeddings --ir2vec-vocab-path=vocab.json --level=func input.bc -o embeddings.txt
+   llvm-ir2vec embeddings --ir2vec-vocab-path=vocab.json --ir2vec-kind=symbolic --level=func input.bc -o embeddings.txt
 
 OPTIONS
 -------
@@ -128,6 +130,16 @@ Subcommand-specific options:
 .. option:: --function=<name>
 
    Process only the specified function instead of all functions in the module.
+
+.. option:: --ir2vec-kind=<kind>
+
+   Specify the kind of IR2Vec embeddings to generate. Valid values are:
+
+   * ``symbolic`` - Generate symbolic embeddings (default)
+   * ``flow-aware`` - Generate flow-aware embeddings
+
+   Flow-aware embeddings consider control flow relationships between instructions,
+   while symbolic embeddings focus on the symbolic representation of instructions.
 
 .. option:: --ir2vec-vocab-path=<path>
 

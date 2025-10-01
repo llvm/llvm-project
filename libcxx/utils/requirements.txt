@@ -1,0 +1,6 @@
+numpy
+pandas
+plotly
+statsmodels
+tabulate
+tqdm

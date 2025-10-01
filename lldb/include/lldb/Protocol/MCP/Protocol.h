@@ -55,11 +55,6 @@ enum ErrorCode : signed {
   eErrorCodeInvalidParams = -32602,
   /// Internal JSON-RPC error.
   eErrorCodeInternalError = -32603,
-
-  /// Additional MCP error codes.
-
-  /// Resource related uri not found.
-  eErrorCodeResourceNotFound = -32002,
 };
 
 struct Error {

@@ -151,35 +151,6 @@ function(add_entrypoint_library target_name)
   set_target_properties(${target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
 endfunction(add_entrypoint_library)
 
-# Rule to build a shared library of redirector objects.
-function(add_redirector_library target_name)
-  cmake_parse_arguments(
-    "REDIRECTOR_LIBRARY"
-    ""
-    ""
-    "DEPENDS"
-    ${ARGN}
-  )
-
-  set(obj_files "")
-  foreach(dep IN LISTS REDIRECTOR_LIBRARY_DEPENDS)
-    # TODO: Ensure that each dep is actually a add_redirector_object target.
-    list(APPEND obj_files $<TARGET_OBJECTS:${dep}>)
-  endforeach(dep)
-
-  # TODO: Call the linker explicitly instead of calling the compiler driver to
-  # prevent DT_NEEDED on C++ runtime.
-  add_library(
-    ${target_name}
-    EXCLUDE_FROM_ALL
-    SHARED
-    ${obj_files}
-  )
-  set_target_properties(${target_name}  PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
-  target_link_libraries(${target_name}  -nostdlib -lc -lm)
-  set_target_properties(${target_name}  PROPERTIES LINKER_LANGUAGE "C")
-endfunction(add_redirector_library)
-
 set(HDR_LIBRARY_TARGET_TYPE "HDR_LIBRARY")
 
 # Internal function, used by `add_header_library`.

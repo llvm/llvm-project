@@ -1,4 +1,4 @@
-//===--- SignalHandlerCheck.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -525,7 +525,7 @@ bool SignalHandlerCheck::isStandardFunctionAsyncSafe(
   if (!FD->isInStdNamespace() && !FD->isGlobal())
     return false;
 
-  if (ConformingFunctions.count(II->getName()))
+  if (ConformingFunctions.contains(II->getName()))
     return true;
 
   return false;

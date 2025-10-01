@@ -41,12 +41,6 @@ def SCFForLoopSpecialization : Pass<"scf-for-loop-specialization"> {
   let constructor = "mlir::createForLoopSpecializationPass()";
 }
 
-def SCFIfConditionPropagation : Pass<"scf-if-condition-propagation"> {
-  let summary = "Replace usages of if condition with true/false constants in "
-                "the conditional regions";
-  let dependentDialects = ["arith::ArithDialect"];
-}
-
 def SCFParallelLoopFusion : Pass<"scf-parallel-loop-fusion"> {
   let summary = "Fuse adjacent parallel loops";
   let constructor = "mlir::createParallelLoopFusionPass()";

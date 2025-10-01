@@ -423,9 +423,7 @@ Error offloading::intel::containerizeOpenMPSPIRVImage(
   Header.Class = ELF::ELFCLASS64;
   Header.Data = ELF::ELFDATA2LSB;
   Header.Type = ELF::ET_DYN;
-  // Use an existing Intel machine type as there is not one specifically for
-  // Intel GPUs.
-  Header.Machine = ELF::EM_IA_64;
+  Header.Machine = ELF::EM_INTELGT;
 
   // Create a section with notes.
   ELFYAML::NoteSection Section{};

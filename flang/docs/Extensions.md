@@ -910,6 +910,13 @@ print *, [(j,j=1,10)]
   `ALLOCATE` and `DEALLOCATE` statements with error recovery for
   multiple variables.
 
+* When a "null" value is encountered in list-directed input, the
+  corresponding effective item in the data list is left unchanged,
+  even when it has a derived type with a defined `READ(FORMATTED)`
+  subroutine.  This is the most literal reading of F'2023 13.10.3.2p2
+  and the portable interpretation across the most common Fortran
+  compilers.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
@@ -923,3 +930,6 @@ print *, [(j,j=1,10)]
   or contiguous array can be used as the initial element of a storage
   sequence.  For example, "&GRP A(1)=1. 2. 3./" is treated as if had been
   "&GRP A(1:)=1. 2. 3./".
+  This extension is necessarily disabled when the type of the array
+  has an accessible defined formatted READ subroutine.
+

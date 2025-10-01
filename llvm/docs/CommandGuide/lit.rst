@@ -664,6 +664,7 @@ TestRunner.py:
                          Otherwise, %t but with a single leading ``/`` removed.
  %:T                     On Windows, %/T but a ``:`` is removed if its the second character.
                          Otherwise, %T but with a single leading ``/`` removed.
+ %{readfile:<filename>}  Reads the file specified.
  ======================= ==============
 
 Other substitutions are provided that are variations on this base set and

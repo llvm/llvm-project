@@ -12,25 +12,34 @@
 #include "lldb/Host/JSONTransport.h"
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include <functional>
-#include <string>
 
 namespace lldb_protocol::mcp {
 
-class Transport
+/// Generic transport that uses the MCP protocol.
+using MCPTransport = lldb_private::Transport<Request, Response, Notification>;
+
+/// Generic logging callback, to allow the MCP server / client / transport layer
+/// to be independent of the lldb log implementation.
+using LogCallback = llvm::unique_function<void(llvm::StringRef message)>;
+
+class Transport final
     : public lldb_private::JSONRPCTransport<Request, Response, Notification> {
 public:
-  using LogCallback = std::function<void(llvm::StringRef message)>;
-
-  Transport(lldb::IOObjectSP in, lldb::IOObjectSP out, std::string client_name,
+  Transport(lldb::IOObjectSP in, lldb::IOObjectSP out,
             LogCallback log_callback = {});
   virtual ~Transport() = default;
+
+  /// Transport is not copyable.
+  /// @{
+  Transport(const Transport &) = delete;
+  void operator=(const Transport &) = delete;
+  /// @}
 
   void Log(llvm::StringRef message) override;
 
 private:
-  std::string m_client_name;
   LogCallback m_log_callback;
 };
 

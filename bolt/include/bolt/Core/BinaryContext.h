@@ -288,6 +288,12 @@ public:
   /// overwritten, but it is okay to re-generate debug info for them.
   std::set<const DWARFUnit *> ProcessedCUs;
 
+  /// DWARF-related container to manage lifecycle of groups of rows from line
+  /// tables associated with instructions. Since binary functions can span
+  /// multiple compilation units, instructions may reference debug line
+  /// information from multiple CUs.
+  ClusteredRowsContainer ClusteredRows;
+
   // Setup MCPlus target builder
   void initializeTarget(std::unique_ptr<MCPlusBuilder> TargetBuilder) {
     MIB = std::move(TargetBuilder);
@@ -319,6 +325,9 @@ public:
 
   /// Returns true if DWARF4 or lower is used.
   bool isDWARFLegacyUsed() const { return ContainsDwarfLegacy; }
+
+  /// Returns true if DWARFUnit is valid.
+  bool isValidDwarfUnit(DWARFUnit &DU) const;
 
   std::map<unsigned, DwarfLineTable> &getDwarfLineTables() {
     return DwarfLineTablesCUMap;

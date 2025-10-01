@@ -44,7 +44,7 @@ class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
                FP16InputMods:$src1_modifiers, Src1RC:$src1,
                FP16InputMods:$src2_modifiers, Src2RC:$src2);
     dag dpp_srcs =
-          (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0,
+          (ins FPVRegInputMods:$src0_modifiers, VGPROp_32:$src0,
                FPVRegInputMods:$src1_modifiers, VRegSrc_32:$src1,
                FP16InputMods:$src2_modifiers, Src2RC:$src2);
 
@@ -84,7 +84,6 @@ multiclass VOP3PInst<string OpName, VOPProfile P,
 multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P> {
   def NAME : VOP3P_Pseudo<OpName, P> {
     let Constraints = !if(P.UseTiedOutput, "$vdst = $vdst_in", "");
-    let DisableEncoding = !if(P.UseTiedOutput, "$vdst_in", "");
   }
   let SubtargetPredicate = isGFX11Plus in {
     if P.HasExtVOP3DPP then
@@ -92,7 +91,6 @@ multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P> {
         let VOP3P = 1;
         let PseudoInstr = OpName#"_dpp";
         let Constraints = !if(P.UseTiedOutput, "$vdst = $vdst_in", "");
-        let DisableEncoding = !if(P.UseTiedOutput, "$vdst_in", "");
       }
   } // end SubtargetPredicate = isGFX11Plus
 }
@@ -968,9 +966,14 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
 class ScaledMAIInst<string OpName, MAIInst BaseInst, SDPatternOperator node> :
   MAIInst<OpName, BaseInst.Pfl, node, /*Scaled=*/true> {
   // Append operands from V_MFMA_LD_SCALE_B32, but we need to rename them.
+  // Restrict to VGPR only (VRegSrc_32) for the scale operands to workaround a
+  // hardware design defect: For all Inline/SGPR constants, SP HW use bits
+  // [30:23] as the scale.
+  // TODO: We may still be able to allow Inline Constants/SGPR, with a proper
+  // shift, to obtain a potentially better performance.
   let InOperandList = !con(BaseInst.InOperandList,
-    (ins VSrc_b32:$scale_src0,
-         VSrc_b32:$scale_src1,
+    (ins VRegSrc_32:$scale_src0,
+         VRegSrc_32:$scale_src1,
          op_sel0:$src0_modifiers,
          op_sel_hi0:$src1_modifiers));
   let AsmOperands =
@@ -1166,7 +1169,7 @@ let SubtargetPredicate = HasFP8Insts, is_gfx940_xdl = 1 in {
 } // End SubtargetPredicate = HasFP8Insts, is_gfx940_xdl = 1
 
 multiclass SMFMACInst<string OpName, string P, SDPatternOperator node> {
-  let Constraints = "$vdst = $src2", DisableEncoding = "$src2",
+  let Constraints = "$vdst = $src2",
       isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1, is_gfx940_xdl = 1 in {
     def _e64 : MAIInst<OpName, !cast<VOPProfileSMFMAC>("VOPProfileSMFMAC_" # P), node>;
   }
@@ -1520,8 +1523,8 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   dag MatrixFMT = !if(HasMatrixFMT, (ins MatrixAFMT:$matrix_a_fmt, MatrixBFMT:$matrix_b_fmt),
                                    (ins));
   dag MatrixScaleSrc = !if(HasMatrixScale,
-                           !if(Scale16, (ins VCSrc_b64:$scale_src0, VCSrc_b64:$scale_src1),
-                                        (ins VCSrc_b32:$scale_src0, VCSrc_b32:$scale_src1)),
+                           !if(Scale16, (ins VCSrc_b64_Lo256:$scale_src0, VCSrc_b64_Lo256:$scale_src1),
+                                        (ins VCSrc_b32_Lo256:$scale_src0, VCSrc_b32_Lo256:$scale_src1)),
                            (ins));
   dag MatrixScale = !if(HasMatrixScale, (ins MatrixAScale:$matrix_a_scale, MatrixBScale:$matrix_b_scale,
                                              MatrixAScaleFmt:$matrix_a_scale_fmt, MatrixBScaleFmt:$matrix_b_scale_fmt),
@@ -1859,8 +1862,8 @@ defm V_WMMA_SCALE_F32_32X16X128_F4_w32   : WMMAInstGFX12<"v_wmma_scale_f32_32x16
 defm V_WMMA_SCALE16_F32_32X16X128_F4_w32 : WMMAInstGFX12<"v_wmma_scale16_f32_32x16x128_f4", F32_32X16X128_F4_SCALE16_w32, "_w32">;
 } // End is_wmma_xdl = 1.
 
-defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3PInst<"v_wmma_ld_scale_paired_b32",   VOP_WMMA_LD_SCALE<i32, VCSrc_b32>>;
-defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3PInst<"v_wmma_ld_scale16_paired_b64", VOP_WMMA_LD_SCALE<i64, VCSrc_b64>>;
+defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3PInst<"v_wmma_ld_scale_paired_b32",   VOP_WMMA_LD_SCALE<i32, VCSrc_b32_Lo256>>;
+defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3PInst<"v_wmma_ld_scale16_paired_b64", VOP_WMMA_LD_SCALE<i64, VCSrc_b64_Lo256>>;
 } // End SubtargetPredicate = isGFX125xOnly
 } // End WaveSizePredicate = isWave32
 
