@@ -688,6 +688,12 @@ public:
   /// to not hit scratch.
   bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
 
+  /// \returns true for FLAT instructions that can access VMEM.
+  bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
+
+  /// \returns true for FLAT instructions that can access LDS.
+  bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
+
   static bool isBlockLoadStore(uint16_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
@@ -746,6 +752,18 @@ public:
 
   static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
     return isLDSDMA(MI) && MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
+  }
+
+  static bool isSBarrierSCCWrite(unsigned Opcode) {
+    return Opcode == AMDGPU::S_BARRIER_LEAVE ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0;
+  }
+
+  static bool isCBranchVCCZRead(const MachineInstr &MI) {
+    unsigned Opc = MI.getOpcode();
+    return (Opc == AMDGPU::S_CBRANCH_VCCNZ || Opc == AMDGPU::S_CBRANCH_VCCZ) &&
+           !MI.getOperand(1).isUndef();
   }
 
   static bool isWQM(const MachineInstr &MI) {
@@ -1008,6 +1026,11 @@ public:
            Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
            Opcode == AMDGPU::S_BARRIER_LEAVE || Opcode == AMDGPU::DS_GWS_INIT ||
            Opcode == AMDGPU::DS_GWS_BARRIER;
+  }
+
+  static bool isGFX12CacheInvOrWBInst(unsigned Opc) {
+    return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||
+           Opc == AMDGPU::GLOBAL_WBINV;
   }
 
   static bool isF16PseudoScalarTrans(unsigned Opcode) {
