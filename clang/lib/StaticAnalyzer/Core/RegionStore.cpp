@@ -2657,16 +2657,18 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
     SVal V = getBinding(B.asStore(), *MRV, R->getValueType());
     return bindAggregate(B, R, V);
   }
-  if (llvm::APSInt const *Value = Init.getAsInteger()) {
-    auto SafeValue = StateMgr.getBasicVals().getValue(*Value);
-    return bindAggregate(B, R, nonloc::ConcreteInt(SafeValue));
-  }
+
+  // FIXME Single value constant should have been handled before this call to
+  // bindArray. This is only a hotfix to not crash.
+  if (Init.isConstant())
+    return bindAggregate(B, R, Init);
 
   if (std::optional LCV = Init.getAs<nonloc::LazyCompoundVal>()) {
     if (std::optional NewB = tryBindSmallArray(B, R, AT, *LCV))
       return *NewB;
     return bindAggregate(B, R, Init);
   }
+
   if (isa<nonloc::SymbolVal>(Init))
     return bindAggregate(B, R, Init);
 
