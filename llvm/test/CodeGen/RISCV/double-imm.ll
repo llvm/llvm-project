@@ -17,8 +17,8 @@ define double @double_imm() nounwind {
 ;
 ; CHECK64D-LABEL: double_imm:
 ; CHECK64D:       # %bb.0:
-; CHECK64D-NEXT:    lui a0, %hi(.promoted_doubles.double_imm)
-; CHECK64D-NEXT:    fld fa0, %lo(.promoted_doubles.double_imm)(a0)
+; CHECK64D-NEXT:    lui a0, %hi(.LCPI0_0)
+; CHECK64D-NEXT:    fld fa0, %lo(.LCPI0_0)(a0)
 ; CHECK64D-NEXT:    ret
 ;
 ; CHECKRV32ZDINX-LABEL: double_imm:
@@ -31,8 +31,8 @@ define double @double_imm() nounwind {
 ;
 ; CHECKRV64ZDINX-LABEL: double_imm:
 ; CHECKRV64ZDINX:       # %bb.0:
-; CHECKRV64ZDINX-NEXT:    lui a0, %hi(.promoted_doubles.double_imm)
-; CHECKRV64ZDINX-NEXT:    ld a0, %lo(.promoted_doubles.double_imm)(a0)
+; CHECKRV64ZDINX-NEXT:    lui a0, %hi(.LCPI0_0)
+; CHECKRV64ZDINX-NEXT:    ld a0, %lo(.LCPI0_0)(a0)
 ; CHECKRV64ZDINX-NEXT:    ret
   ret double 3.1415926535897931159979634685441851615905761718750
 }

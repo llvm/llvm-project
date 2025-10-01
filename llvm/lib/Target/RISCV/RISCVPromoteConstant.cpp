@@ -33,9 +33,10 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-promote-const"
+#define RISCV_PROMOTE_CONSTANT_NAME "RISC-V Promote Constants"
 
-STATISTIC(NumPromoted, "Number of promoted constants");
-STATISTIC(NumPromotedUses, "Number of promoted constants uses");
+STATISTIC(NumPromoted, "Number of constant literals promoted to globals");
+STATISTIC(NumPromotedUses, "Number of uses of promoted literal constants");
 
 namespace {
 
@@ -44,7 +45,7 @@ public:
   static char ID;
   RISCVPromoteConstant() : ModulePass(ID) {}
 
-  StringRef getPassName() const override { return "RISC-V Promote Constant"; }
+  StringRef getPassName() const override { return RISCV_PROMOTE_CONSTANT_NAME; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
@@ -54,18 +55,16 @@ public:
   /// Iterate over the functions and promote the double fp constants that
   /// would otherwise go into the constant pool to a constant array.
   bool runOnModule(Module &M) override {
-    LLVM_DEBUG(dbgs() << getPassName() << '\n');
-    // TargetMachine and Subtarget are needed to query isFPImmlegal. Get them
-    // from TargetPassConfig.
+    // TargetMachine and Subtarget are needed to query isFPImmlegal.
     const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
     const TargetMachine &TM = TPC.getTM<TargetMachine>();
     if (skipModule(M))
       return false;
     bool Changed = false;
-    for (auto &MF : M) {
-      const RISCVSubtarget &ST = TM.getSubtarget<RISCVSubtarget>(MF);
+    for (Function &F : M) {
+      const RISCVSubtarget &ST = TM.getSubtarget<RISCVSubtarget>(F);
       const RISCVTargetLowering *TLI = ST.getTargetLowering();
-      Changed |= runOnFunction(MF, TLI);
+      Changed |= runOnFunction(F, TLI);
     }
     return Changed;
   }
@@ -77,75 +76,61 @@ private:
 
 char RISCVPromoteConstant::ID = 0;
 
+INITIALIZE_PASS(RISCVPromoteConstant, DEBUG_TYPE, RISCV_PROMOTE_CONSTANT_NAME,
+                false, false)
+
 ModulePass *llvm::createRISCVPromoteConstantPass() {
   return new RISCVPromoteConstant();
 }
 
 bool RISCVPromoteConstant::runOnFunction(Function &F,
                                          const RISCVTargetLowering *TLI) {
+  if (F.hasOptNone())
+    return false;
+
   // Bail out and make no transformation if the target doesn't support
   // doubles, or if we're not targeting RV64 as we currently see some
   // regressions for those targets.
   if (!TLI->isTypeLegal(MVT::f64) || !TLI->isTypeLegal(MVT::i64))
     return false;
 
-  // Collect all unique double constants used in the function, and track their
-  // offset within the newly created global array. Also track uses that will
-  // be replaced later.
-  DenseMap<ConstantFP *, unsigned> ConstantMap;
-  SmallVector<Constant *, 16> ConstantVector;
-  DenseMap<ConstantFP *, SmallVector<Use *, 8>> UsesInFunc;
+  // Collect all unique double constants and their uses in the function. Use
+  // MapVector to preserve insertion order.
+  MapVector<ConstantFP *, SmallVector<Use *, 8>> ConstUsesMap;
 
   for (Instruction &I : instructions(F)) {
-    // PHI nodes are handled specially in a second loop below.
-    if (isa<PHINode>(I))
-      continue;
     for (Use &U : I.operands()) {
       if (auto *C = dyn_cast<ConstantFP>(U.get())) {
-        if (C->getType()->isDoubleTy()) {
-          if (TLI->isFPImmLegal(C->getValueAPF(), MVT::f64,
-                                /*ForCodeSize*/ false))
-            continue;
-          UsesInFunc[C].push_back(&U);
-          if (ConstantMap.find(C) == ConstantMap.end()) {
-            ConstantMap[C] = ConstantVector.size();
-            ConstantVector.push_back(C);
-            ++NumPromoted;
-          }
-        }
+        if (!C->getType()->isDoubleTy())
+          continue;
+        if (TLI->isFPImmLegal(C->getValueAPF(), MVT::f64,
+                              /*ForCodeSize=*/false))
+          continue;
+        ConstUsesMap[C].push_back(&U);
       }
     }
   }
 
-  // Collect uses from PHI nodes after other uses, because when transforming
-  // the function, we handle PHI uses afterwards.
-  for (BasicBlock &BB : F) {
-    for (PHINode &PN : BB.phis()) {
-      for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
-        if (auto *C = dyn_cast<ConstantFP>(PN.getIncomingValue(i))) {
-          if (C->getType()->isDoubleTy()) {
-            if (TLI->isFPImmLegal(C->getValueAPF(), MVT::f64,
-                                  /*ForCodeSize*/ false))
-              continue;
-            UsesInFunc[C].push_back(&PN.getOperandUse(i));
-            if (ConstantMap.find(C) == ConstantMap.end()) {
-              ConstantMap[C] = ConstantVector.size();
-              ConstantVector.push_back(C);
-              ++NumPromoted;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // Bail out if no promotable constants found.
-  if (ConstantVector.empty())
+  int PromotableConstants = ConstUsesMap.size();
+  LLVM_DEBUG(dbgs() << "Found " << PromotableConstants
+                    << " promotable constants in " << F.getName() << "\n");
+  // Bail out if no promotable constants found, or if only one is found.
+  if (PromotableConstants < 2) {
+    LLVM_DEBUG(dbgs() << "Performing no promotions as insufficient promotable "
+                         "constants found\n");
     return false;
+  }
+
+  NumPromoted += PromotableConstants;
 
   // Create a global array containing the promoted constants.
   Module *M = F.getParent();
   Type *DoubleTy = Type::getDoubleTy(M->getContext());
+
+  SmallVector<Constant *, 16> ConstantVector;
+  for (auto const &Pair : ConstUsesMap)
+    ConstantVector.push_back(Pair.first);
+
   ArrayType *ArrayTy = ArrayType::get(DoubleTy, ConstantVector.size());
   Constant *GlobalArrayInitializer =
       ConstantArray::get(ArrayTy, ConstantVector);
@@ -155,36 +140,31 @@ bool RISCVPromoteConstant::runOnFunction(Function &F,
       /*isConstant=*/true, GlobalValue::InternalLinkage, GlobalArrayInitializer,
       ".promoted_doubles." + F.getName());
 
-  // Create GEP for the base pointer in the function entry.
-  IRBuilder<> EntryBuilder(&F.getEntryBlock().front());
-  Value *BasePtr = EntryBuilder.CreateConstInBoundsGEP2_64(
-      GlobalArray->getValueType(), GlobalArray, 0, 0, "doubles.base");
-
   // A cache to hold the loaded value for a given constant within a basic block.
   DenseMap<std::pair<ConstantFP *, BasicBlock *>, Value *> LocalLoads;
 
   // Replace all uses with the loaded value.
-  for (Constant *ConstVal : ConstantVector) {
-    auto *Const = cast<ConstantFP>(ConstVal);
-    const auto &Uses = UsesInFunc.at(Const);
-    unsigned Idx = ConstantMap.at(Const);
+  unsigned Idx = 0;
+  for (auto const &Pair : ConstUsesMap) {
+    ConstantFP *Const = Pair.first;
+    const SmallVector<Use *, 8> &Uses = Pair.second;
 
     for (Use *U : Uses) {
       Instruction *UserInst = cast<Instruction>(U->getUser());
       BasicBlock *InsertionBB;
-      Instruction *InsertionPt;
+      BasicBlock::iterator InsertionPt;
 
       if (auto *PN = dyn_cast<PHINode>(UserInst)) {
         // If the user is a PHI node, we must insert the load in the
-        // corresponding predecessor basic block, before its terminator.
+        // corresponding predecessor basic block.
         unsigned OperandIdx = U->getOperandNo();
         InsertionBB = PN->getIncomingBlock(OperandIdx);
-        InsertionPt = InsertionBB->getTerminator();
       } else {
-        // For any other instruction, we can insert the load right before it.
         InsertionBB = UserInst->getParent();
-        InsertionPt = UserInst;
       }
+      // It is always safe to insert in the first insertion point in the BB,
+      // so do that and let other passes reorder.
+      InsertionPt = InsertionBB->getFirstInsertionPt();
 
       auto CacheKey = std::make_pair(Const, InsertionBB);
       Value *LoadedVal = nullptr;
@@ -194,9 +174,9 @@ bool RISCVPromoteConstant::runOnFunction(Function &F,
         LoadedVal = LocalLoads.at(CacheKey);
       } else {
         // Otherwise, create a new GEP and Load at the correct insertion point.
-        IRBuilder<> Builder(InsertionPt);
-        Value *ElementPtr = Builder.CreateConstInBoundsGEP1_64(
-            DoubleTy, BasePtr, Idx, "double.addr");
+        IRBuilder<> Builder(InsertionBB, InsertionPt);
+        Value *ElementPtr = Builder.CreateConstInBoundsGEP2_64(
+            GlobalArray->getValueType(), GlobalArray, 0, Idx, "double.addr");
         LoadedVal = Builder.CreateLoad(DoubleTy, ElementPtr, "double.val");
 
         // Cache the newly created load for this block.
@@ -206,6 +186,7 @@ bool RISCVPromoteConstant::runOnFunction(Function &F,
       U->set(LoadedVal);
       ++NumPromotedUses;
     }
+    ++Idx;
   }
 
   return true;

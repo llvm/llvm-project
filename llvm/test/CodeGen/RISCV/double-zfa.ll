@@ -103,33 +103,21 @@ define double @loadfpimm10() {
 
 ; Negative test. This is a qnan with payload of 1.
 define double @loadfpimm11() {
-; RV32IDZFA-LABEL: loadfpimm11:
-; RV32IDZFA:       # %bb.0:
-; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI10_0)
-; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI10_0)(a0)
-; RV32IDZFA-NEXT:    ret
-;
-; RV64DZFA-LABEL: loadfpimm11:
-; RV64DZFA:       # %bb.0:
-; RV64DZFA-NEXT:    lui a0, %hi(.promoted_doubles.loadfpimm11)
-; RV64DZFA-NEXT:    fld fa0, %lo(.promoted_doubles.loadfpimm11)(a0)
-; RV64DZFA-NEXT:    ret
+; CHECK-LABEL: loadfpimm11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI10_0)
+; CHECK-NEXT:    fld fa0, %lo(.LCPI10_0)(a0)
+; CHECK-NEXT:    ret
   ret double 0x7ff8000000000001
 }
 
 ; Negative test. This is an snan with payload of 1.
 define double @loadfpimm12() {
-; RV32IDZFA-LABEL: loadfpimm12:
-; RV32IDZFA:       # %bb.0:
-; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI11_0)
-; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI11_0)(a0)
-; RV32IDZFA-NEXT:    ret
-;
-; RV64DZFA-LABEL: loadfpimm12:
-; RV64DZFA:       # %bb.0:
-; RV64DZFA-NEXT:    lui a0, %hi(.promoted_doubles.loadfpimm12)
-; RV64DZFA-NEXT:    fld fa0, %lo(.promoted_doubles.loadfpimm12)(a0)
-; RV64DZFA-NEXT:    ret
+; CHECK-LABEL: loadfpimm12:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI11_0)
+; CHECK-NEXT:    fld fa0, %lo(.LCPI11_0)(a0)
+; CHECK-NEXT:    ret
   ret double 0x7ff0000000000001
 }
 

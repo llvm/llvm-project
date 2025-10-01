@@ -2945,24 +2945,24 @@ define void @va5_aligned_stack_caller() nounwind {
 ; RV64D-LP64F:       # %bb.0:
 ; RV64D-LP64F-NEXT:    addi sp, sp, -48
 ; RV64D-LP64F-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64D-LP64F-NEXT:    lui a0, %hi(.promoted_doubles.va5_aligned_stack_caller)
-; RV64D-LP64F-NEXT:    fld fa5, %lo(.promoted_doubles.va5_aligned_stack_caller)(a0)
 ; RV64D-LP64F-NEXT:    li t0, 17
 ; RV64D-LP64F-NEXT:    li t1, 16
 ; RV64D-LP64F-NEXT:    li t2, 15
 ; RV64D-LP64F-NEXT:    lui a2, %hi(.LCPI11_0)
 ; RV64D-LP64F-NEXT:    lui a3, %hi(.LCPI11_1)
-; RV64D-LP64F-NEXT:    lui a6, 2384
+; RV64D-LP64F-NEXT:    lui a6, %hi(.LCPI11_2)
+; RV64D-LP64F-NEXT:    lui t3, 2384
 ; RV64D-LP64F-NEXT:    li a0, 1
 ; RV64D-LP64F-NEXT:    li a1, 11
 ; RV64D-LP64F-NEXT:    li a4, 12
 ; RV64D-LP64F-NEXT:    li a5, 13
 ; RV64D-LP64F-NEXT:    li a7, 14
-; RV64D-LP64F-NEXT:    ld a2, %lo(.LCPI11_0)(a2)
-; RV64D-LP64F-NEXT:    ld a3, %lo(.LCPI11_1)(a3)
-; RV64D-LP64F-NEXT:    addi a6, a6, 761
+; RV64D-LP64F-NEXT:    ld t4, %lo(.LCPI11_0)(a2)
+; RV64D-LP64F-NEXT:    ld a2, %lo(.LCPI11_1)(a3)
+; RV64D-LP64F-NEXT:    ld a3, %lo(.LCPI11_2)(a6)
+; RV64D-LP64F-NEXT:    addi a6, t3, 761
 ; RV64D-LP64F-NEXT:    slli a6, a6, 11
-; RV64D-LP64F-NEXT:    fsd fa5, 0(sp)
+; RV64D-LP64F-NEXT:    sd t4, 0(sp)
 ; RV64D-LP64F-NEXT:    sd t2, 8(sp)
 ; RV64D-LP64F-NEXT:    sd t1, 16(sp)
 ; RV64D-LP64F-NEXT:    sd t0, 24(sp)
@@ -2975,24 +2975,24 @@ define void @va5_aligned_stack_caller() nounwind {
 ; RV64D-LP64D:       # %bb.0:
 ; RV64D-LP64D-NEXT:    addi sp, sp, -48
 ; RV64D-LP64D-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64D-LP64D-NEXT:    lui a0, %hi(.promoted_doubles.va5_aligned_stack_caller)
-; RV64D-LP64D-NEXT:    fld fa5, %lo(.promoted_doubles.va5_aligned_stack_caller)(a0)
 ; RV64D-LP64D-NEXT:    li t0, 17
 ; RV64D-LP64D-NEXT:    li t1, 16
 ; RV64D-LP64D-NEXT:    li t2, 15
 ; RV64D-LP64D-NEXT:    lui a2, %hi(.LCPI11_0)
 ; RV64D-LP64D-NEXT:    lui a3, %hi(.LCPI11_1)
-; RV64D-LP64D-NEXT:    lui a6, 2384
+; RV64D-LP64D-NEXT:    lui a6, %hi(.LCPI11_2)
+; RV64D-LP64D-NEXT:    lui t3, 2384
 ; RV64D-LP64D-NEXT:    li a0, 1
 ; RV64D-LP64D-NEXT:    li a1, 11
 ; RV64D-LP64D-NEXT:    li a4, 12
 ; RV64D-LP64D-NEXT:    li a5, 13
 ; RV64D-LP64D-NEXT:    li a7, 14
-; RV64D-LP64D-NEXT:    ld a2, %lo(.LCPI11_0)(a2)
-; RV64D-LP64D-NEXT:    ld a3, %lo(.LCPI11_1)(a3)
-; RV64D-LP64D-NEXT:    addi a6, a6, 761
+; RV64D-LP64D-NEXT:    ld t4, %lo(.LCPI11_0)(a2)
+; RV64D-LP64D-NEXT:    ld a2, %lo(.LCPI11_1)(a3)
+; RV64D-LP64D-NEXT:    ld a3, %lo(.LCPI11_2)(a6)
+; RV64D-LP64D-NEXT:    addi a6, t3, 761
 ; RV64D-LP64D-NEXT:    slli a6, a6, 11
-; RV64D-LP64D-NEXT:    fsd fa5, 0(sp)
+; RV64D-LP64D-NEXT:    sd t4, 0(sp)
 ; RV64D-LP64D-NEXT:    sd t2, 8(sp)
 ; RV64D-LP64D-NEXT:    sd t1, 16(sp)
 ; RV64D-LP64D-NEXT:    sd t0, 24(sp)

@@ -139,6 +139,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVExpandAtomicPseudoPass(*PR);
   initializeRISCVRedundantCopyEliminationPass(*PR);
   initializeRISCVAsmPrinterPass(*PR);
+  initializeRISCVPromoteConstantPass(*PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,

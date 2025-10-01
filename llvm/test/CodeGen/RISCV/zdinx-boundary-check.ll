@@ -203,8 +203,8 @@ define void @foo6(ptr %p, double %d) nounwind {
 ;
 ; RV64ZDINX-LABEL: foo6:
 ; RV64ZDINX:       # %bb.0: # %entry
-; RV64ZDINX-NEXT:    lui a2, %hi(.promoted_doubles.foo6)
-; RV64ZDINX-NEXT:    ld a2, %lo(.promoted_doubles.foo6)(a2)
+; RV64ZDINX-NEXT:    lui a2, %hi(.LCPI5_0)
+; RV64ZDINX-NEXT:    ld a2, %lo(.LCPI5_0)(a2)
 ; RV64ZDINX-NEXT:    fadd.d a1, a1, a2
 ; RV64ZDINX-NEXT:    sd a1, 2044(a0)
 ; RV64ZDINX-NEXT:    ret
