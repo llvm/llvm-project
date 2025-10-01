@@ -44,20 +44,6 @@ define <vscale x 2 x i64> @mul_neg_fold_i64(<vscale x 2 x i1> %pg, <vscale x 2 x
   ret <vscale x 2 x i64> %2
 }
 
-define <vscale x 8 x i16> @mul_neg_fold_two_dups(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
-  ; Edge case -- make sure that the case where we're multiplying two dups
-  ; together is sane.
-; CHECK-LABEL: mul_neg_fold_two_dups:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    neg z0.h, p0/m, z0.h
-; CHECK-NEXT:    ret
-  %1 = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 -1)
-  %2 = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 -1)
-  %3 = call <vscale x 8 x i16> @llvm.aarch64.sve.mul.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %1, <vscale x 8 x i16> %2)
-  ret <vscale x 8 x i16> %3
-}
-
 define <vscale x 16 x i8> @mul_neg_fold_u_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) {
 ; CHECK-LABEL: mul_neg_fold_u_i8:
 ; CHECK:       // %bb.0:
@@ -98,133 +84,51 @@ define <vscale x 2 x i64> @mul_neg_fold_u_i64(<vscale x 2 x i1> %pg, <vscale x 2
   ret <vscale x 2 x i64> %2
 }
 
-define <vscale x 8 x i16> @mul_neg_fold_u_two_dups(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
-; CHECK-LABEL: mul_neg_fold_u_two_dups:
+define <vscale x 16 x i8> @mul_neg_fold_different_argument_order_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) {
+; CHECK-LABEL: mul_neg_fold_different_argument_order_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    neg z0.h, p0/m, z0.h
-; CHECK-NEXT:    ret
-  %1 = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 -1)
-  %2 = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 -1)
-  %3 = call <vscale x 8 x i16> @llvm.aarch64.sve.mul.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %1, <vscale x 8 x i16> %2)
-  ret <vscale x 8 x i16> %3
-}
-
-; Undefined mul is commutative
-define <vscale x 16 x i8> @mul_neg_fold_u_different_argument_order_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) {
-; CHECK-LABEL: mul_neg_fold_u_different_argument_order_i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg z0.b, p0/m, z0.b
+; CHECK-NEXT:    mov z1.b, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    neg z1.b, p0/m, z0.b
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.x.nxv16i8(i8 -1)
-  %2 = call <vscale x 16 x i8> @llvm.aarch64.sve.mul.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %1, <vscale x 16 x i8> %a)
+  %2 = call <vscale x 16 x i8> @llvm.aarch64.sve.mul.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %1, <vscale x 16 x i8> %a)
   ret <vscale x 16 x i8> %2
 }
 
-define <vscale x 8 x i16> @mul_neg_fold_u_different_argument_order_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
-; CHECK-LABEL: mul_neg_fold_u_different_argument_order_i16:
+define <vscale x 8 x i16> @mul_neg_fold_different_argument_order_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
+; CHECK-LABEL: mul_neg_fold_different_argument_order_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg z0.h, p0/m, z0.h
+; CHECK-NEXT:    mov z1.h, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    neg z1.h, p0/m, z0.h
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 -1)
-  %2 = call <vscale x 8 x i16> @llvm.aarch64.sve.mul.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %1, <vscale x 8 x i16> %a)
+  %2 = call <vscale x 8 x i16> @llvm.aarch64.sve.mul.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %1, <vscale x 8 x i16> %a)
   ret <vscale x 8 x i16> %2
 }
 
-define <vscale x 4 x i32> @mul_neg_fold_u_different_argument_order_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
-; CHECK-LABEL: mul_neg_fold_u_different_argument_order_i32:
+define <vscale x 4 x i32> @mul_neg_fold_different_argument_order_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
+; CHECK-LABEL: mul_neg_fold_different_argument_order_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg z0.s, p0/m, z0.s
+; CHECK-NEXT:    mov z1.s, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    neg z1.s, p0/m, z0.s
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 -1)
-  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a)
+  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a)
   ret <vscale x 4 x i32> %2
 }
 
-define <vscale x 2 x i64> @mul_neg_fold_u_different_argument_order_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
-; CHECK-LABEL: mul_neg_fold_u_different_argument_order_i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg z0.d, p0/m, z0.d
-; CHECK-NEXT:    ret
-  %1 = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 -1)
-  %2 = call <vscale x 2 x i64> @llvm.aarch64.sve.mul.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %1, <vscale x 2 x i64> %a)
-  ret <vscale x 2 x i64> %2
-}
-
-; Non foldable muls -- we don't expect these to be optimised out.
-define <vscale x 8 x i16> @no_mul_neg_fold_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
-; CHECK-LABEL: no_mul_neg_fold_i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.h, #-2 // =0xfffffffffffffffe
-; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    ret
-  %1 = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 -2)
-  %2 = call <vscale x 8 x i16> @llvm.aarch64.sve.mul.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %1)
-  ret <vscale x 8 x i16> %2
-}
-
-define <vscale x 4 x i32> @no_mul_neg_fold_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
-; CHECK-LABEL: no_mul_neg_fold_i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.s, #-2 // =0xfffffffffffffffe
-; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    ret
-  %1 = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 -2)
-  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %1)
-  ret <vscale x 4 x i32> %2
-}
-
-define <vscale x 2 x i64> @no_mul_neg_fold_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
-; CHECK-LABEL: no_mul_neg_fold_i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, #-2 // =0xfffffffffffffffe
-; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    ret
-  %1 = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 -2)
-  %2 = call <vscale x 2 x i64> @llvm.aarch64.sve.mul.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %1)
-  ret <vscale x 2 x i64> %2
-}
-
-; Merge mul is non commutative
-define <vscale x 2 x i64> @no_mul_neg_fold_different_argument_order(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
-; CHECK-LABEL: no_mul_neg_fold_different_argument_order:
+define <vscale x 2 x i64> @mul_neg_fold_different_argument_order_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
+; CHECK-LABEL: mul_neg_fold_different_argument_order_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    neg z1.d, p0/m, z0.d
 ; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 -1)
   %2 = call <vscale x 2 x i64> @llvm.aarch64.sve.mul.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %1, <vscale x 2 x i64> %a)
-  ret <vscale x 2 x i64> %2
-}
-
-define <vscale x 8 x i16> @no_mul_neg_fold_u_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
-; CHECK-LABEL: no_mul_neg_fold_u_i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul z0.h, z0.h, #-2
-; CHECK-NEXT:    ret
-  %1 = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 -2)
-  %2 = call <vscale x 8 x i16> @llvm.aarch64.sve.mul.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %1)
-  ret <vscale x 8 x i16> %2
-}
-
-define <vscale x 4 x i32> @no_mul_neg_fold_u_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
-; CHECK-LABEL: no_mul_neg_fold_u_i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul z0.s, z0.s, #-2
-; CHECK-NEXT:    ret
-  %1 = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 -2)
-  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %1)
-  ret <vscale x 4 x i32> %2
-}
-
-define <vscale x 2 x i64> @no_mul_neg_fold_u_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
-; CHECK-LABEL: no_mul_neg_fold_u_i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul z0.d, z0.d, #-2
-; CHECK-NEXT:    ret
-  %1 = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 -2)
-  %2 = call <vscale x 2 x i64> @llvm.aarch64.sve.mul.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %1)
   ret <vscale x 2 x i64> %2
 }
 

@@ -737,10 +737,10 @@ let Predicates = [HasSVE_or_SME] in {
   def : SVE_2_Op_Neg_One_Passthru_Pat<nxv2i64, AArch64mul_m1, nxv2i1, NEG_ZPmZ_D , i64>;
 
   let AddedComplexity = 5 in {
-    defm : SVE_2_Op_Neg_One_Passthru_Pat_Comm<nxv16i8, AArch64mul_p, nxv16i1, NEG_ZPmZ_B_UNDEF, i32>;
-    defm : SVE_2_Op_Neg_One_Passthru_Pat_Comm<nxv8i16, AArch64mul_p, nxv8i1, NEG_ZPmZ_H_UNDEF, i32>;
-    defm : SVE_2_Op_Neg_One_Passthru_Pat_Comm<nxv4i32, AArch64mul_p, nxv4i1, NEG_ZPmZ_S_UNDEF, i32>;
-    defm : SVE_2_Op_Neg_One_Passthru_Pat_Comm<nxv2i64, AArch64mul_p, nxv2i1, NEG_ZPmZ_D_UNDEF, i64>;
+    def : SVE_2_Op_Neg_One_Passthru_Pat<nxv16i8, AArch64mul_p, nxv16i1, NEG_ZPmZ_B_UNDEF, i32>;
+    def : SVE_2_Op_Neg_One_Passthru_Pat<nxv8i16, AArch64mul_p, nxv8i1, NEG_ZPmZ_H_UNDEF, i32>;
+    def : SVE_2_Op_Neg_One_Passthru_Pat<nxv4i32, AArch64mul_p, nxv4i1, NEG_ZPmZ_S_UNDEF, i32>;
+    def : SVE_2_Op_Neg_One_Passthru_Pat<nxv2i64, AArch64mul_p, nxv2i1, NEG_ZPmZ_D_UNDEF, i64>;
   }
 
   defm CLS_ZPmZ  : sve_int_un_pred_arit_bitwise<   0b000, "cls",  AArch64cls_mt>;
@@ -1025,6 +1025,11 @@ let Predicates = [HasSVE_or_SME] in {
   defm SEL_ZPZZ   : sve_int_sel_vvv<"sel", vselect>;
 
   defm SPLICE_ZPZ : sve_int_perm_splice<"splice", AArch64splice>;
+
+  def : SVE_2_Op_Neg_One_Replace_Pat<nxv16i8, AArch64mul_m1, nxv16i1, NEG_ZPmZ_B , DUP_ZI_B, i32>;
+  def : SVE_2_Op_Neg_One_Replace_Pat<nxv8i16, AArch64mul_m1, nxv8i1, NEG_ZPmZ_H , DUP_ZI_H, i32>;
+  def : SVE_2_Op_Neg_One_Replace_Pat<nxv4i32, AArch64mul_m1, nxv4i1, NEG_ZPmZ_S , DUP_ZI_S, i32>;
+  def : SVE_2_Op_Neg_One_Replace_Pat<nxv2i64, AArch64mul_m1, nxv2i1, NEG_ZPmZ_D , DUP_ZI_D, i64>;
 } // End HasSVE_or_SME
 
 // COMPACT - word and doubleword

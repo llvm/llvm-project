@@ -723,19 +723,16 @@ class SVE2p1_Cvt_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType out
     : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2)),
                   (!cast<Instruction>(name) (REG_SEQUENCE ZPR2Mul2, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1))>;
 
-class SVE_2_Op_Neg_One_Passthru_Pat<ValueType vt, SDPatternOperator op, ValueType pt,
+class SVE_2_Op_Neg_One_Replace_Pat<ValueType vt, SDPatternOperator op,  ValueType pt,
+                             Instruction inst, Instruction dup_inst, ValueType immT>
+: Pat<(vt (op pt:$Op1, (vt (splat_vector (immT -1))), vt:$Op2)),
+      (inst (dup_inst -1, 0) , $Op1, $Op2)>;
+
+class SVE_2_Op_Neg_One_Passthru_Pat<ValueType vt, SDPatternOperator op,  ValueType pt,
                              Instruction inst, ValueType immT>
 : Pat<(vt (op pt:$Op1, vt:$Op2, (vt (splat_vector (immT -1))))),
       (inst $Op2, $Op1, $Op2)>;
 
-// Same as above, but commutative
-multiclass SVE_2_Op_Neg_One_Passthru_Pat_Comm<ValueType vt, SDPatternOperator op, ValueType pt,
-                                         Instruction inst, ValueType immT> {
-def : Pat<(vt (op pt:$Op1, vt:$Op2, (vt (splat_vector (immT -1))))),
-      (inst $Op2, $Op1, $Op2)>;
-def : Pat<(vt (op pt:$Op1, (vt (splat_vector (immT -1))), vt:$Op2)),
-      (inst $Op2, $Op1, $Op2)>;
-}
 //===----------------------------------------------------------------------===//
 // SVE pattern match helpers.
 //===----------------------------------------------------------------------===//
