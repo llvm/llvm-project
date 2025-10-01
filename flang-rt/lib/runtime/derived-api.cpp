@@ -127,7 +127,7 @@ bool RTDEF(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
   if ((mold.IsPointer() && !mold.IsAssociated()) ||
       (mold.IsAllocatable() && !mold.IsAllocated())) {
     return true;
-  } else if ((a.IsPointer() && !mold.IsAssociated()) ||
+  } else if ((a.IsPointer() && !a.IsAssociated()) ||
       (a.IsAllocatable() && !a.IsAllocated())) {
     return false;
   }
