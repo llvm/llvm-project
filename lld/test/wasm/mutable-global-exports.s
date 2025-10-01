@@ -73,6 +73,9 @@ _start:
 # CHECK-ALL-NEXT:      - Name:            __wasm_call_ctors
 # CHECK-ALL-NEXT:        Kind:            FUNCTION
 # CHECK-ALL-NEXT:        Index:           0
+# CHECK-ALL-NEXT:      - Name:            __stack_pointer
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           0
 # CHECK-ALL-NEXT:      - Name:            _start
 # CHECK-ALL-NEXT:        Kind:            FUNCTION
 # CHECK-ALL-NEXT:        Index:           1

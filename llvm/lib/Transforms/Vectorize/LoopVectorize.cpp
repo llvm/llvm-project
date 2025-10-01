@@ -1762,9 +1762,10 @@ public:
   GeneratedRTChecks(PredicatedScalarEvolution &PSE, DominatorTree *DT,
                     LoopInfo *LI, TargetTransformInfo *TTI,
                     const DataLayout &DL, TTI::TargetCostKind CostKind)
-      : DT(DT), LI(LI), TTI(TTI), SCEVExp(*PSE.getSE(), DL, "scev.check"),
-        MemCheckExp(*PSE.getSE(), DL, "scev.check"), PSE(PSE),
-        CostKind(CostKind) {}
+      : DT(DT), LI(LI), TTI(TTI),
+        SCEVExp(*PSE.getSE(), DL, "scev.check", /*PreserveLCSSA=*/false),
+        MemCheckExp(*PSE.getSE(), DL, "scev.check", /*PreserveLCSSA=*/false),
+        PSE(PSE), CostKind(CostKind) {}
 
   /// Generate runtime checks in SCEVCheckBlock and MemCheckBlock, so we can
   /// accurately estimate the cost of the runtime checks. The blocks are
@@ -2438,8 +2439,9 @@ struct CSEDenseMapInfo {
 
 } // end anonymous namespace
 
-///Perform cse of induction variable instructions.
-static void cse(BasicBlock *BB) {
+/// FIXME: This legacy common-subexpression-elimination routine is scheduled for
+/// removal, in favor of the VPlan-based one.
+static void legacyCSE(BasicBlock *BB) {
   // Perform simple cse.
   SmallDenseMap<Instruction *, Instruction *, 4, CSEDenseMapInfo> CSEMap;
   for (Instruction &In : llvm::make_early_inc_range(*BB)) {
@@ -2543,7 +2545,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   BasicBlock *HeaderBB = State.CFG.VPBB2IRBB[HeaderVPBB];
 
   // Remove redundant induction instructions.
-  cse(HeaderBB);
+  legacyCSE(HeaderBB);
 }
 
 void InnerLoopVectorizer::fixNonInductionPHIs(VPTransformState &State) {
@@ -7207,7 +7209,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::narrowInterleaveGroups(
       BestVPlan, BestVF,
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
-  VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
@@ -7221,6 +7222,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
       CM.requiresScalarEpilogue(BestVF.isVector()));
   VPlanTransforms::materializeVFAndVFxUF(BestVPlan, VectorPH, BestVF);
+  VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
 
   // 0. Generate SCEV-dependent code in the entry, including TripCount, before
@@ -7482,12 +7484,13 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     VPSingleDefRecipe *VectorPtr;
     if (Reverse) {
       // When folding the tail, we may compute an address that we don't in the
-      // original scalar loop and it may not be inbounds. Drop Inbounds in that
-      // case.
+      // original scalar loop: drop the GEP no-wrap flags in this case.
+      // Otherwise preserve existing flags without no-unsigned-wrap, as we will
+      // emit negative indices.
       GEPNoWrapFlags Flags =
-          (CM.foldTailByMasking() || !GEP || !GEP->isInBounds())
+          CM.foldTailByMasking() || !GEP
               ? GEPNoWrapFlags::none()
-              : GEPNoWrapFlags::inBounds();
+              : GEP->getNoWrapFlags().withoutNoUnsignedWrap();
       VectorPtr =
           new VPVectorEndPointerRecipe(Ptr, &Plan.getVF(), getLoadStoreType(I),
                                        /*Stride*/ -1, Flags, I->getDebugLoc());
@@ -8159,14 +8162,12 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(
             std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange, &LVer)) {
-      bool HasScalarVF = Plan->hasScalarVFOnly();
       // Now optimize the initial VPlan.
-      if (!HasScalarVF)
-        VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
-                                 *Plan, CM.getMinimalBitwidths());
+      VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
+                               *Plan, CM.getMinimalBitwidths());
       VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
       // TODO: try to put it close to addActiveLaneMask().
-      if (CM.foldTailWithEVL() && !HasScalarVF)
+      if (CM.foldTailWithEVL())
         VPlanTransforms::runPass(VPlanTransforms::addExplicitVectorLength,
                                  *Plan, CM.getMaxSafeElements());
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
