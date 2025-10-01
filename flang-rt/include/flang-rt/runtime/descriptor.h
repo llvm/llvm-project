@@ -227,7 +227,6 @@ public:
   RT_API_ATTRS bool IsPointer() const {
     return raw_.attribute == CFI_attribute_pointer;
   }
-  RT_API_ATTRS bool IsAssociated() const { return raw_.base_addr != nullptr; }
   RT_API_ATTRS bool IsAllocatable() const {
     return raw_.attribute == CFI_attribute_allocatable;
   }

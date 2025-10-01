@@ -124,11 +124,9 @@ bool RTDEF(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
   // F'23 16.9.86 p 5
   // If MOLD is unlimited polymorphic and is either a disassociated pointer or
   // unallocated allocatable variable, the result is true;
-  if ((mold.IsPointer() && !mold.IsAssociated()) ||
-      (mold.IsAllocatable() && !mold.IsAllocated())) {
+  if ((mold.IsPointer() || mold.IsAllocatable()) && !mold.IsAllocated()) {
     return true;
-  } else if ((a.IsPointer() && !a.IsAssociated()) ||
-      (a.IsAllocatable() && !a.IsAllocated())) {
+  } else if ((a.IsPointer() || a.IsAllocatable()) && !a.IsAllocated()) {
     return false;
   }
   auto aType{a.raw().type};
