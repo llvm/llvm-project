@@ -665,8 +665,7 @@ Error MetadataParser::validateRootSignature(
                              "NumDescriptors", Range.NumDescriptors));
 
         if (!hlsl::rootsig::verifyDescriptorRangeFlag(
-                RSD.Version, Range.RangeType,
-                dxbc::DescriptorRangeFlags(Range.Flags)))
+                RSD.Version, Range.RangeType, Range.Flags))
           DeferredErrs =
               joinErrors(std::move(DeferredErrs),
                          make_error<RootSignatureValidationError<uint32_t>>(

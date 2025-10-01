@@ -36,6 +36,11 @@ bool verifyRegisterSpace(uint32_t RegisterSpace) {
 
 bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
   using FlagT = dxbc::RootDescriptorFlags;
+  uint32_t LargestValue =
+      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
+  if (FlagsVal >= NextPowerOf2(LargestValue))
+    return false;
+
   FlagT Flags = FlagT(FlagsVal);
   if (Version == 1)
     return Flags == FlagT::DataVolatile;
@@ -54,9 +59,14 @@ bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
 }
 
 bool verifyDescriptorRangeFlag(uint32_t Version, dxil::ResourceClass Type,
-                               dxbc::DescriptorRangeFlags Flags) {
+                               uint32_t FlagsVal) {
   using FlagT = dxbc::DescriptorRangeFlags;
+  uint32_t LargestValue =
+      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
+  if (FlagsVal >= NextPowerOf2(LargestValue))
+    return false;
 
+  FlagT Flags = FlagT(FlagsVal);
   const bool IsSampler = (Type == dxil::ResourceClass::Sampler);
 
   if (Version == 1) {

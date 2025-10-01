@@ -32,7 +32,7 @@ LLVM_ABI bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal);
 LLVM_ABI bool verifyRangeType(uint32_t Type);
 LLVM_ABI bool verifyDescriptorRangeFlag(uint32_t Version,
                                         dxil::ResourceClass Type,
-                                        dxbc::DescriptorRangeFlags FlagsVal);
+                                        uint32_t FlagsVal);
 LLVM_ABI bool verifyStaticSamplerFlags(uint32_t Version, uint32_t FlagsNumber);
 LLVM_ABI bool verifyNumDescriptors(uint32_t NumDescriptors);
 LLVM_ABI bool verifyMipLODBias(float MipLODBias);
