@@ -513,25 +513,31 @@ and LLVMIR.
 The core Linalg operation tree has three forms:
 * **Generic:** Represented by `linalg.generic` and can encode all perfectly-nested
 loop operations.
-* **Category:** Represented by `linalg.contract` and `linalg.elementwise`,
-which are special (einsum) forms of the `generic` operation. In the future, other
-category operations are planned (e.g.: `linalg.convolution` and `linalg.pooling`).
-* **Named:** All _named_ forms that can lower to either _category_ or
-_generic_ forms. For example, `linalg.matmul`, `linalg.add`, etc.
+* **Category:** For example, `linalg.contract` and `linalg.elementwise`, that encode
+higher-level semantics of a `linalg.generic` while still representing multiple _named_
+operations via attributes and syntax. In the future, other category operations are
+planned (e.g.: `linalg.convolution` and `linalg.pooling`).
+* **Named:** For example, `linalg.matmul`, `linalg.add`, etc. All _named_ forms that
+can be converted to either a single _category_ or _generic_ forms, ie. are _perfectly nested_.
+* **Composite:** For example `linalg.softmax` and the `winograd` variations. These
+operations are not perfectly nested, and are converted to a list of other operations
+(of various dialects).
 
-Unlike lowering to loops, the different Linalg forms that are derived from
-`linalg.generic` are *equivalent*. It should always be possible to convert
-a named operation into a generic and back to named, if the semantics are
-preserved. The various forms in the Linalg dialect are meant to facilitate
+The different Linalg forms that are derived from `linalg.generic` are *equivalent*.
+It should always be possible to convert a **named** operation into a **category** and that
+into a **generic** and back to **named**. However, it may not be possible to convert a
+**generic** into a **named** if there is no such named form.
+
+**Composite** operations cannot be converted to the other three classes and forms a
+sub-set on its own. But they can use other Linalg forms when expanding. There can be
+a pattern-matching transform to detect a graph of operations and convert into a
+**composite** operation.
+
+The various forms in the Linalg dialect are meant to facilitate
 pattern matching (single operations or DAGs) and to be able to consider
 different forms as *canonical* for different transforms.
 
-In addition to the three forms above, there's a separate class that does not
-belong to the tree, as it does not generalize. These are **composite:** operations
-that compose multiple Linalg operations, for example `linalg.softmax` and
-`linalg.winograd*`. These can be converted to a DAG of Linalg operations.
-
-Linalg's various forms (named, generic) also carry information, and that
+Linalg's various forms also carry information, and that
 information should be preserved as much as possible during the progressive
 lowering. A `matmul` operation is a special case of a `contract` operation,
 which in turn is a special case of `generic` operation. Transformations on
