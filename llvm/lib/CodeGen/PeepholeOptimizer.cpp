@@ -1935,18 +1935,17 @@ ValueTrackerResult ValueTracker::getNextSourceFromCopy() {
   if (DefSubReg) {
     const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
     SubReg = TRI->composeSubRegIndices(SubReg, DefSubReg);
-    if (SubReg) {
-      if (SrcReg.isVirtual()) {
-        // TODO: Try constraining on rewrite if we can
-        const TargetRegisterClass *RegRC = MRI.getRegClass(SrcReg);
-        const TargetRegisterClass *SrcWithSubRC =
-            TRI->getSubClassWithSubReg(RegRC, SubReg);
-        if (RegRC != SrcWithSubRC)
-          return ValueTrackerResult();
-      } else {
-        if (!TRI->getSubReg(SrcReg, SubReg))
-          return ValueTrackerResult();
-      }
+
+    if (SrcReg.isVirtual()) {
+      // TODO: Try constraining on rewrite if we can
+      const TargetRegisterClass *RegRC = MRI.getRegClass(SrcReg);
+      const TargetRegisterClass *SrcWithSubRC =
+          TRI->getSubClassWithSubReg(RegRC, SubReg);
+      if (RegRC != SrcWithSubRC)
+        return ValueTrackerResult();
+    } else {
+      if (!TRI->getSubReg(SrcReg, SubReg))
+        return ValueTrackerResult();
     }
   }
 
