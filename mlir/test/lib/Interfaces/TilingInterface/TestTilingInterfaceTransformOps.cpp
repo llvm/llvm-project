@@ -594,9 +594,8 @@ DiagnosedSilenceableFailure transform::TestTileUsingCustomLoopOp::apply(
     }
     LoopLikeOpInterface loop = loops.front();
     scf::ForOp *forOp = dyn_cast<scf::ForOp>(&loop);
-    if (!forOp) {
+    if (!forOp)
       return emitOpError("unexpected loop type. Expecting scf::ForOp");
-    }
     rewriter.setInsertionPointToEnd(forOp->getBody());
 
     SmallVector<Value> yieldValues;
