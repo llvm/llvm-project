@@ -5,6 +5,8 @@ String actualTarget = env.CHANGE_TARGET ?: env.BRANCH_NAME
 String upstreamBranch = 'upstream-main', stagingBranch = 'amd-staging'
 String releaseBranchPrefix = 'aocc_'
 
+Boolean targetIsRelBranch = actualTarget.startsWith(releaseBranchPrefix)
+
 /**
  * Coerce Result enums to String, seems to
  * be required by CatchErrorStep.setStageResult()
@@ -13,7 +15,7 @@ String abortedResultStr = Result.ABORTED, failureResultStr = Result.FAILURE
 String notBuiltResultStr = Result.NOT_BUILT, successResultStr = Result.SUCCESS
 
 if (!(actualTarget in [stagingBranch, upstreamBranch]) &&
-    !(actualTarget.startsWith(releaseBranchPrefix))) {
+    !targetIsRelBranch) {
     echo 'Pipeline skipped for base branch ' + actualTarget
     return this
 }
@@ -23,7 +25,7 @@ Boolean isPrBranch = env.CHANGE_BRANCH != null
 
 if (!isPrBranch &&
     !(actualTarget in [stagingBranch, upstreamBranch]) &&
-    !(actualTarget.startsWith(releaseBranchPrefix))) {
+    !targetIsRelBranch) {
     echo 'Pipeline skipped for non-PR branch ' + actualHead + ' of base ' + actualTarget
     return this
 }
@@ -44,7 +46,7 @@ Boolean postsub = (
         (
         (actualTarget == upstreamBranch && actualHead == upstreamBranch) ||
             (actualTarget == stagingBranch && actualHead == stagingBranch) ||
-            (actualTarget.startsWith(releaseBranchPrefix) &&
+            (targetIsRelBranch &&
              actualHead.startsWith(releaseBranchPrefix))
     )
 )
@@ -59,12 +61,13 @@ if (postsub && !(env.BRANCH_NAME in [stagingBranch, upstreamBranch]) &&
 Boolean intraJobRepoSync = postsub && env.BRANCH_NAME == upstreamBranch
 
 Boolean disableStaging = false, disableRelease = true
+Boolean timerTrigger = currentBuild.getBuildCauses('hudson.triggers.TimerTrigger$TimerTriggerCause')
 if (((disableStaging &&
      actualTarget == stagingBranch) ||
      (disableRelease &&
-      actualTarget.startsWith(releaseBranchPrefix))) &&
+      targetIsRelBranch)) &&
     !currentBuild.getBuildCauses(manualCause) &&
-    !currentBuild.getBuildCauses('hudson.triggers.TimerTrigger$TimerTriggerCause')) {
+    !timerTrigger) {
     String cause = currentBuild.getBuildCauses().shortDescription // groovylint-disable-line UnnecessaryGetter
     echo 'Pipeline for base ' + actualTarget + ' not built for cause ' + cause
     echo 'Pipeline only runs if manually or timer triggered.'
@@ -75,10 +78,10 @@ if (((disableStaging &&
 Boolean runDownstream = (
     actualTarget == upstreamBranch ||
         (actualTarget == stagingBranch && isPrBranch) ||
-        (actualTarget.startsWith(releaseBranchPrefix) && isPrBranch)
+        targetIsRelBranch
 )
 
-String space = ' ', andChain = '&&', underScore = '_', slash = '/'
+String space = ' ', andChain = '&&', underScore = '_', slash = '/', dash = '-'
 String gitCommitEnv = 'GIT_COMMIT'
 
 List propsList = []
@@ -114,12 +117,21 @@ String theUrl
 Boolean hasSourceChanges = true
 Integer successStat = 0
 
-String jobName = (
-    (isPrBranch ? 'presub' : 'update') + underScore +
-        (env.CHANGE_TARGET ?: (env.BRANCH_NAME ?: 'NoSuchBranchName'))
-)
-if (env.CHANGE_BRANCH) {
-    jobName += underScore + env.BRANCH_NAME // Sic, the PR-<n> string.
+String jobName
+if (postsub && targetIsRelBranch) {
+    // llvmVer is processed by automation:
+    String llvmVer = '21.1.2'
+    // stageBuildNum is processed during branch creation:
+    String stageBuildNum = '12786'
+    jobName = 'aocc-compiler-llvm-flang-rel' + dash + llvmVer + dash + stageBuildNum
+} else {
+    jobName = (
+        (isPrBranch ? 'presub' : 'update') + underScore +
+            (env.CHANGE_TARGET ?: (env.BRANCH_NAME ?: 'NoSuchBranchName'))
+    )
+    if (env.CHANGE_BRANCH) {
+        jobName += underScore + env.BRANCH_NAME // Sic, the PR-<n> string.
+    }
 }
 
 def gitVars // groovylint-disable-line NoDef,VariableTypeRequired
@@ -348,6 +360,9 @@ try {
                     failFast: false,
                 ]
                 List<String> downstreamSuites = ['GFortran', 'NAGLLVM']
+                if (timerTrigger) {
+                    downstreamSuites += 'Fujitsu'
+                }
                 for (suite in downstreamSuites) {
                     String suiteName = suite
                     allTasks[suiteName] = {
@@ -362,7 +377,7 @@ try {
                                         name: 'CUT',
                                         value: (
                                             env.BUILD_URL + 'artifact/' +
-                                                jobName + '-' + env.BUILD_NUMBER + '.tar.xz'
+                                                jobName + dash + env.BUILD_NUMBER + '.tar.xz'
                                         )
                                     ),
                                     string(name: 'CHANGE_ID', value: env.CHANGE_ID ?: ''),

@@ -3,6 +3,8 @@
 ^.*SPEC_perf_cfgs/cpuV8/
 ^.*SPEC_perf_cfgs/cpuv8_.*
 ^.*_jenkins_excludes.txt
+^.*/bump_aocc_ver.sh
+^.*/bump_llvm_ver.sh
 ^.*/create_rel_branch.sh
 # Other pipelines or their test materials:
 ^aocc-essentials/build_essentials/Jenkinsfile.*
