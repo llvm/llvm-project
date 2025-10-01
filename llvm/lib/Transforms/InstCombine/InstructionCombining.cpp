@@ -5212,7 +5212,7 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
       else if (match(U, m_Select(m_Specific(&I), m_Constant(), m_Value())))
         V = ConstantInt::getTrue(Ty);
       else if (match(U, m_c_Select(m_Specific(&I), m_Value(V)))) {
-        if (!isGuaranteedNotToBeUndefOrPoison(V, &AC, &I, &DT))
+        if (V == &I || !isGuaranteedNotToBeUndefOrPoison(V, &AC, &I, &DT))
           V = NullValue;
       } else if (auto *PHI = dyn_cast<PHINode>(U)) {
         if (Value *MaybeV = pickCommonConstantFromPHI(*PHI))
@@ -5225,6 +5225,7 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
         BestValue = NullValue;
     }
     assert(BestValue && "Must have at least one use");
+    assert(BestValue != &I && "Cannot replace with itself");
     return BestValue;
   };
 
