@@ -1054,12 +1054,35 @@ public:
         std::forward<_Args>(__args)...);
   }
 
+
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool>
+  __emplace_hint_unique__sfinae(true_type, const_iterator __p, _Args&&... __args) {
+      return __emplace_hint_unique(__p, __args...);
+  }
+
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool>
+  __emplace_hint_unique__sfinae(false_type, const_iterator , _Args&&... ) {
+    // This method body should never be run. It only exists to allow for compilation. See note in __insert_unique_from_orphaned_node for more information.
+    return pair<iterator, bool>(iterator(__node_pointer()), false);
+  }
+
   template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __insert_unique_from_orphaned_node(const_iterator __p, __get_node_value_type_t<_Tp>&& __value) {
 #if _LIBCPP_STD_VER >= 26
-    if constexpr (std::is_copy_constructible_v<decltype(__value.first)>) {
-      __emplace_hint_unique(__p, std::move(__value.first), std::move(__value.second));
+    if (std::is_constant_evaluated() && std::is_copy_constructible_v<decltype(__value.first)>) {
+
+      // We create a sfinae wrapper method here, because if the __emplace_hint_unique method gets template instantiated within __insert_unique_from_orphaned_node, the code will fail to compile where the value is not copy_constructible for runtime execution as well; unless we use `if constexpr`.
+      // Given the copy-constructible code path will be a performance regression, we want to restrict it to only execute during constant evaluation
+      //, we need to delay the template instantiation
+      __emplace_hint_unique__sfinae(
+        integral_constant <
+          bool,
+          std::is_copy_constructible_v<decltype(__value.first)>
+        >(),
+      __p, std::move(__value.first), std::move(__value.second));
     } else
 #endif
     {
