@@ -27236,12 +27236,12 @@ static bool isLanes1toNKnownZero(SDValue Op) {
 
 // Return true if the vector operation can guarantee that the first lane of its
 // result is active.
-static bool isLane1KnownActive(SDValue Op) {
+static bool isLane0KnownActive(SDValue Op) {
   switch (Op.getOpcode()) {
   default:
     return false;
   case AArch64ISD::REINTERPRET_CAST:
-    return isLane1KnownActive(Op->getOperand(0));
+    return isLane0KnownActive(Op->getOperand(0));
   case ISD::SPLAT_VECTOR:
     return isOneConstant(Op.getOperand(0));
   case AArch64ISD::PTRUE:
@@ -27547,7 +27547,7 @@ static SDValue performPTestFirstCombine(SDNode *N,
   if (Pred->getOpcode() == AArch64ISD::REINTERPRET_CAST)
     Pred = Pred->getOperand(0);
 
-  if (!isLane1KnownActive(Mask))
+  if (!isLane0KnownActive(Mask))
     return SDValue();
 
   if (Pred->getOpcode() == ISD::CONCAT_VECTORS) {
