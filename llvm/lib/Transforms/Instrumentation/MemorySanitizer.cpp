@@ -1923,8 +1923,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// Shadow = ParamTLS+ArgOffset.
   Value *getShadowPtrForArgument(IRBuilder<> &IRB, int ArgOffset) {
-    if (ArgOffset == 0)
-      return MS.ParamTLS;
     return IRB.CreatePtrAdd(MS.ParamTLS,
                             ConstantInt::get(MS.IntptrTy, ArgOffset));
   }
@@ -1933,8 +1931,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   Value *getOriginPtrForArgument(IRBuilder<> &IRB, int ArgOffset) {
     if (!MS.TrackOrigins)
       return nullptr;
-    if (ArgOffset == 0)
-      return MS.ParamOriginTLS;
     return IRB.CreatePtrAdd(MS.ParamOriginTLS,
                             ConstantInt::get(MS.IntptrTy, ArgOffset));
   }
@@ -7219,8 +7215,6 @@ struct VarArgHelperBase : public VarArgHelper {
 
   /// Compute the shadow address for a given va_arg.
   Value *getShadowPtrForVAArgument(IRBuilder<> &IRB, unsigned ArgOffset) {
-    if (ArgOffset == 0)
-      return MS.VAArgTLS;
     return IRB.CreatePtrAdd(MS.VAArgTLS,
                             ConstantInt::get(MS.IntptrTy, ArgOffset));
   }
@@ -7236,8 +7230,6 @@ struct VarArgHelperBase : public VarArgHelper {
 
   /// Compute the origin address for a given va_arg.
   Value *getOriginPtrForVAArgument(IRBuilder<> &IRB, int ArgOffset) {
-    if (ArgOffset == 0)
-      return MS.VAArgOriginTLS;
     // getOriginPtrForVAArgument() is always called after
     // getShadowPtrForVAArgument(), so __msan_va_arg_origin_tls can never
     // overflow.
