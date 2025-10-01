@@ -32,7 +32,8 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
       hasParent(typedefNameDecl()), hasParent(templateTypeParmDecl()),
       hasParent(nonTypeTemplateParmDecl()), hasParent(cxxNamedCastExpr()),
       hasParent(cxxNewExpr()), hasParent(friendDecl()), hasParent(fieldDecl()),
-      hasParent(varDecl(unless(hasDeclContext(functionDecl())))),
+      hasParent(varDecl(
+          hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())))),
       hasParent(parmVarDecl(hasParent(expr(requiresExpr())))),
       hasParent(parmVarDecl(hasParent(typeLoc(hasParent(
           namedDecl(anyOf(cxxMethodDecl(), hasParent(friendDecl()),
