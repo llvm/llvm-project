@@ -69,6 +69,7 @@ public:
 
   const char *GetString(lldb::SBError &error, lldb::offset_t offset);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   size_t ReadRawData(lldb::SBError &error, lldb::offset_t offset, void *buf,
                      size_t size);
 
@@ -80,9 +81,11 @@ public:
   // DataExtractor, but having two SetData() signatures triggers a SWIG bug
   // where the typemap isn't applied before resolving the overload, and thus
   // the right function never gets called
+  LLDB_RPC_POINTER_PLUS_LEN
   void SetData(lldb::SBError &error, const void *buf, size_t size,
                lldb::ByteOrder endian, uint8_t addr_size);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   void SetDataWithOwnership(lldb::SBError &error, const void *buf, size_t size,
                             lldb::ByteOrder endian, uint8_t addr_size);
 
@@ -96,26 +99,31 @@ public:
   // in the following CreateData*() and SetData*() prototypes, the two
   // parameters array and array_len should not be renamed or rearranged,
   // because doing so will break the SWIG typemap
+  LLDB_RPC_POINTER_PLUS_LEN
   static lldb::SBData CreateDataFromUInt64Array(lldb::ByteOrder endian,
                                                 uint32_t addr_byte_size,
                                                 uint64_t *array,
                                                 size_t array_len);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   static lldb::SBData CreateDataFromUInt32Array(lldb::ByteOrder endian,
                                                 uint32_t addr_byte_size,
                                                 uint32_t *array,
                                                 size_t array_len);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   static lldb::SBData CreateDataFromSInt64Array(lldb::ByteOrder endian,
                                                 uint32_t addr_byte_size,
                                                 int64_t *array,
                                                 size_t array_len);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   static lldb::SBData CreateDataFromSInt32Array(lldb::ByteOrder endian,
                                                 uint32_t addr_byte_size,
                                                 int32_t *array,
                                                 size_t array_len);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   static lldb::SBData CreateDataFromDoubleArray(lldb::ByteOrder endian,
                                                 uint32_t addr_byte_size,
                                                 double *array,
@@ -123,14 +131,19 @@ public:
 
   bool SetDataFromCString(const char *data);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   bool SetDataFromUInt64Array(uint64_t *array, size_t array_len);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   bool SetDataFromUInt32Array(uint32_t *array, size_t array_len);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   bool SetDataFromSInt64Array(int64_t *array, size_t array_len);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   bool SetDataFromSInt32Array(int32_t *array, size_t array_len);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   bool SetDataFromDoubleArray(double *array, size_t array_len);
 
 protected:
