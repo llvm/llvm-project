@@ -1378,19 +1378,21 @@ Error BinaryFunction::disassemble() {
         if (NextOff < getSize()) {
           // Look it up in the decoded map (if present) or peek raw bytes
           auto NextIt = Instructions.find(NextOff);
-          bool NextIsNop = false;
+          bool NextIsGood = false;
 
           if (NextIt != Instructions.end()) {
-            NextIsNop = BC.MIB->isNoop(NextIt->second);
+            NextIsGood = BC.MIB->isNoop(NextIt->second) ||
+                         BC.MIB->isTOCRestoreAfterCall(NextIt->second);
           } else {
             // Fall back: peek original bytes and try to decode a single inst
             // there
             if (auto NextInstOpt = disassembleInstructionAtOffset(NextOff)) {
-              NextIsNop = BC.MIB->isNoop(*NextInstOpt);
+              NextIsGood = BC.MIB->isNoop(*NextInstOpt) ||
+                           BC.MIB->isTOCRestoreAfterCall(*NextInstOpt);
             }
           }
 
-          if (!NextIsNop) {
+          if (!NextIsGood) {
             // Mark current call: in order to insert a NOP on emission
             // afterwards.
             BC.MIB->addAnnotation(Instruction, "PPCNeedsCallSlotNOP", true);
@@ -1399,8 +1401,8 @@ Error BinaryFunction::disassemble() {
                      << "PPC mark: call at 0x"
                      << Twine::utohexstr(Address + Offset) << " size=" << Size
                      << " nextOff=0x" << Twine::utohexstr(Address + NextOff)
-                     << (NextIsNop ? " (already has NOP)\n"
-                                   : " (will need NOP)\n"));
+                     << (NextIsGood ? " (already has NOP)\n"
+                                    : " (will need NOP)\n"));
         } else {
           // Call is last instruction: also needs a NOP on emission.
           BC.MIB->addAnnotation(Instruction, "PPCNeedsCallSlotNOP", true);

@@ -446,6 +446,20 @@ PPCMCPlusBuilder::createRelocation(const MCFixup &Fixup,
   return std::nullopt;
 }
 
+bool PPCMCPlusBuilder::isTOCRestoreAfterCall(const MCInst &I) const {
+  if (I.getOpcode() != PPC::LD)
+    return false;
+  if (!I.getOperand(0).isReg() || I.getOperand(0).getReg() != PPC::X2)
+    return false;
+  if (!I.getOperand(1).isReg() || I.getOperand(1).getReg() != PPC::X1)
+    return false;
+  if (!I.getOperand(2).isImm() || I.getOperand(2).getImm() != 24)
+    return false;
+  // This fuction returns true iff I is exactly the canonical TOC-restore ld
+  // r2, 24(r1)
+  return true;
+}
+
 namespace llvm {
 namespace bolt {
 
