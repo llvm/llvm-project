@@ -9,6 +9,17 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
 
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -fno-signed-char -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx -fno-signed-char -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -fno-signed-char -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx -fno-signed-char -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+
 
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
@@ -76,24 +87,34 @@ __m256d test_mm256_blend_pd(__m256d A, __m256d B) {
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
   return _mm256_blend_pd(A, B, 0x05);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_blend_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), 0x00), 1.0, 2.0, 3.0, 4.0));
+TEST_CONSTEXPR(match_m256d(_mm256_blend_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), 0x05), 5.0, 2.0, 7.0, 4.0));
+TEST_CONSTEXPR(match_m256d(_mm256_blend_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), 0x0A), 1.0, 6.0, 3.0, 8.0));
+TEST_CONSTEXPR(match_m256d(_mm256_blend_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), 0x0F), 5.0, 6.0, 7.0, 8.0));
 
 __m256 test_mm256_blend_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_blend_ps
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 13, i32 6, i32 7>
   return _mm256_blend_ps(A, B, 0x35);
 }
+TEST_CONSTEXPR(match_m256(_mm256_blend_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){-1.0f, -2.0f, -3.0f, -4.0f, -5.0f, -6.0f, -7.0f, -8.0f}), 0x00), 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f));
+TEST_CONSTEXPR(match_m256(_mm256_blend_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){-1.0f, -2.0f, -3.0f, -4.0f, -5.0f, -6.0f, -7.0f, -8.0f}), 0x35), -1.0f, 2.0f, -3.0f, 4.0f, -5.0f, -6.0f, 7.0f, 8.0f));
+TEST_CONSTEXPR(match_m256(_mm256_blend_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){-1.0f, -2.0f, -3.0f, -4.0f, -5.0f, -6.0f, -7.0f, -8.0f}), 0xAA), 1.0f, -2.0f, 3.0f, -4.0f, 5.0f, -6.0f, 7.0f, -8.0f));
+TEST_CONSTEXPR(match_m256(_mm256_blend_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){-1.0f, -2.0f, -3.0f, -4.0f, -5.0f, -6.0f, -7.0f, -8.0f}), 0xFF), -1.0f, -2.0f, -3.0f, -4.0f, -5.0f, -6.0f, -7.0f, -8.0f));
 
 __m256d test_mm256_blendv_pd(__m256d V1, __m256d V2, __m256d V3) {
   // CHECK-LABEL: test_mm256_blendv_pd
   // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_blendv_pd(V1, V2, V3);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_blendv_pd((__m256d)(__v4df){1.0, 2.0, 3.0, 4.0},(__m256d)(__v4df){-100.0, -101.0, -102.0, -103.0},(__m256d)(__v4df){0.0, -1.0, 1.0, -1.0}), 1.0f, -101.0, 3.0, -103.0));
 
 __m256 test_mm256_blendv_ps(__m256 V1, __m256 V2, __m256 V3) {
   // CHECK-LABEL: test_mm256_blendv_ps
   // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_blendv_ps(V1, V2, V3);
 }
+TEST_CONSTEXPR(match_m256(_mm256_blendv_ps((__m256)(__v8sf){0.0f,1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f},(__m256)(__v8sf){-100.0f, -101.0f, -102.0f, -103.0f, -104.0f, -105.0f, -106.0f, -107.0f},(__m256)(__v8sf){-1.0f, 2.0f, -3.0f, 4.0f, -5.0f, -6.0f, 7.0f, -0.0f}), -100.0f, 1.0f, -102.0f, 3.0f, -104.0f, -105.0f, 6.0f, -107.0f));
 
 __m256d test_mm256_broadcast_pd(__m128d* A) {
   // CHECK-LABEL: test_mm256_broadcast_pd
@@ -923,11 +944,15 @@ __m256d test_mm256_cvtepi32_pd(__m128i A) {
   return _mm256_cvtepi32_pd(A);
 }
 
+TEST_CONSTEXPR(match_m256d(_mm256_cvtepi32_pd((__m128i)(__v4si){-2, -1, 0, 1}), -2.0, -1.0, 0.0, 1.0));
+
 __m256 test_mm256_cvtepi32_ps(__m256i A) {
   // CHECK-LABEL: test_mm256_cvtepi32_ps
   // CHECK: sitofp <8 x i32> %{{.*}} to <8 x float>
   return _mm256_cvtepi32_ps(A);
 }
+
+TEST_CONSTEXPR(match_m256(_mm256_cvtepi32_ps((__m256i)(__v8si){-8, -4, -2, -1, 0, 1, 2, 4}), -8.0f, -4.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 4.0f));
 
 __m128i test_mm256_cvtpd_epi32(__m256d A) {
   // CHECK-LABEL: test_mm256_cvtpd_epi32
@@ -953,23 +978,28 @@ __m256d test_mm256_cvtps_pd(__m128 A) {
   return _mm256_cvtps_pd(A);
 }
 
+TEST_CONSTEXPR(match_m256d(_mm256_cvtps_pd((__m128){0.25f, 1.75f, -1.75f, 16777216.0f}), 0.25, 1.75, -1.75, 16777216.0));
+
 double test_mm256_cvtsd_f64(__m256d __a) {
   // CHECK-LABEL: test_mm256_cvtsd_f64
   // CHECK: extractelement <4 x double> %{{.*}}, i32 0
   return _mm256_cvtsd_f64(__a);
 }
+TEST_CONSTEXPR(_mm256_cvtsd_f64((__m256d){8.0, 7.0, 6.0, 5.0}) == 8.0);
 
 int test_mm256_cvtsi256_si32(__m256i __a) {
   // CHECK-LABEL: test_mm256_cvtsi256_si32
   // CHECK: extractelement <8 x i32> %{{.*}}, i32 0
   return _mm256_cvtsi256_si32(__a);
 }
+TEST_CONSTEXPR(_mm256_cvtsi256_si32((__m256i)(__v8si){8, 7, 6, 5, 4, 3, 2, 1}) == 8);
 
 float test_mm256_cvtss_f32(__m256 __a) {
   // CHECK-LABEL: test_mm256_cvtss_f32
   // CHECK: extractelement <8 x float> %{{.*}}, i32 0
   return _mm256_cvtss_f32(__a);
 }
+TEST_CONSTEXPR(_mm256_cvtss_f32((__m256){8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f}) == 8.0f);
 
 __m128i test_mm256_cvttpd_epi32(__m256d A) {
   // CHECK-LABEL: test_mm256_cvttpd_epi32
@@ -1117,6 +1147,7 @@ __m256d test_mm256_insertf128_pd(__m256d A, __m128d B) {
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
   return _mm256_insertf128_pd(A, B, 0);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_insertf128_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m128d){5.0, 6.0}), 0), 5.0, 6.0, 3.0, 4.0));
 
 __m256 test_mm256_insertf128_ps(__m256 A, __m128 B) {
   // CHECK-LABEL: test_mm256_insertf128_ps
@@ -1124,6 +1155,7 @@ __m256 test_mm256_insertf128_ps(__m256 A, __m128 B) {
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   return _mm256_insertf128_ps(A, B, 1);
 }
+TEST_CONSTEXPR(match_m256(_mm256_insertf128_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m128){10.0f, 20.0f, 30.0f, 40.0f}), 1), 1.0f, 2.0f, 3.0f, 4.0f, 10.0f, 20.0f, 30.0f, 40.0f));
 
 __m256i test_mm256_insertf128_si256(__m256i A, __m128i B) {
   // CHECK-LABEL: test_mm256_insertf128_si256
@@ -1131,6 +1163,7 @@ __m256i test_mm256_insertf128_si256(__m256i A, __m128i B) {
   // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
   return _mm256_insertf128_si256(A, B, 0);
 }
+TEST_CONSTEXPR(match_m256i(_mm256_insertf128_si256(((__m256i){1ULL, 2ULL, 3ULL, 4ULL}), ((__m128i){10ULL, 20ULL}), 0), 10ULL, 20ULL, 3ULL, 4ULL));
 
 __m256i test_mm256_lddqu_si256(__m256i* A) {
   // CHECK-LABEL: test_mm256_lddqu_si256
@@ -1521,18 +1554,21 @@ __m256 test_mm256_set_m128(__m128 A, __m128 B) {
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm256_set_m128(A, B);
 }
+TEST_CONSTEXPR(match_m256(_mm256_set_m128((__m128){10.0f, 20.0f, 30.0f, 40.0f}, (__m128){1.0f, 2.0f, 3.0f, 4.0f}), 1.0f, 2.0f, 3.0f, 4.0f, 10.0f, 20.0f, 30.0f, 40.0f));
 
 __m256d test_mm256_set_m128d(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm256_set_m128d
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_set_m128d(A, B);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_set_m128d((__m128d){10.0, 20.0}, (__m128d){1.0, 2.0}), 1.0, 2.0, 10.0, 20.0));
 
 __m256i test_mm256_set_m128i(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm256_set_m128i
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_set_m128i(A, B);
 }
+TEST_CONSTEXPR(match_m256i(_mm256_set_m128i((__m128i){10LL, 20LL}, (__m128i){1LL, 2LL}), 1LL, 2LL, 10LL, 20LL));
 
 __m256d test_mm256_set_pd(double A0, double A1, double A2, double A3) {
   // CHECK-LABEL: test_mm256_set_pd
@@ -1759,18 +1795,21 @@ __m256 test_mm256_setr_m128(__m128 A, __m128 B) {
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm256_setr_m128(A, B);
 }
+TEST_CONSTEXPR(match_m256(_mm256_setr_m128((__m128){1.0f, 2.0f, 3.0f, 4.0f}, (__m128){10.0f, 20.0f, 30.0f, 40.0f}), 1.0f, 2.0f, 3.0f, 4.0f, 10.0f, 20.0f, 30.0f, 40.0f));
 
 __m256d test_mm256_setr_m128d(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm256_setr_m128d
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_setr_m128d(A, B);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_setr_m128d((__m128d){1.0, 2.0}, (__m128d){10.0, 20.0}), 1.0, 2.0, 10.0, 20.0));
 
 __m256i test_mm256_setr_m128i(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm256_setr_m128i
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_setr_m128i(A, B);
 }
+TEST_CONSTEXPR(match_m256i(_mm256_setr_m128i((__m128i){1LL, 2LL}, (__m128i){10LL, 20LL}), 1LL, 2LL, 10LL, 20LL));
 
 __m256d test_mm256_setr_pd(double A0, double A1, double A2, double A3) {
   // CHECK-LABEL: test_mm256_setr_pd
@@ -2134,6 +2173,7 @@ __m256d test_mm256_zextpd128_pd256(__m128d A) {
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_zextpd128_pd256(A);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_zextpd128_pd256((__m128d){-4.0, -5.0}), -4.0, -5.0, +0.0, +0.0));
 
 __m256 test_mm256_zextps128_ps256(__m128 A) {
   // CHECK-LABEL: test_mm256_zextps128_ps256
@@ -2141,6 +2181,7 @@ __m256 test_mm256_zextps128_ps256(__m128 A) {
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm256_zextps128_ps256(A);
 }
+TEST_CONSTEXPR(match_m256(_mm256_zextps128_ps256((__m128){1.0f, 2.0f, 3.0f, 4.0f}), 1.0f, 2.0f, 3.0f, 4.0f, 0.0f, 0.0f, 0.0f, 0.0f));
 
 __m256i test_mm256_zextsi128_si256(__m128i A) {
   // CHECK-LABEL: test_mm256_zextsi128_si256
@@ -2148,3 +2189,4 @@ __m256i test_mm256_zextsi128_si256(__m128i A) {
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_zextsi128_si256(A);
 }
+TEST_CONSTEXPR(match_m256i(_mm256_zextsi128_si256((__m128i){1, 2}), 1, 2, 0, 0));

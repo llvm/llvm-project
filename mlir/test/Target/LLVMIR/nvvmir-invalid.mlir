@@ -104,22 +104,6 @@ llvm.func @nvvm_fence_proxy_release() {
 
 // -----
 
-llvm.func @tma_reduce_0d(%src : !llvm.ptr<3>, %tma_desc : !llvm.ptr, %ch : i64) {
-  // expected-error @below {{expects coordinates between 1 to 5 dimension}}
-  nvvm.cp.async.bulk.tensor.reduce %tma_desc, %src, box[] {redKind = #nvvm.tma_redux_kind<add>}: !llvm.ptr, !llvm.ptr<3>
-  llvm.return
-}
-
-// -----
-
-llvm.func @tma_reduce_2d_im2col(%src : !llvm.ptr<3>, %tma_desc : !llvm.ptr, %d0 : i32, %d1 : i32, %ch : i64) {
-  // expected-error @below {{to use im2col mode, the tensor has to be at least 3-dimensional}}
-  nvvm.cp.async.bulk.tensor.reduce %tma_desc, %src, box[%d0, %d1] {redKind = #nvvm.tma_redux_kind<and>, mode = #nvvm.tma_store_mode<im2col>}: !llvm.ptr, !llvm.ptr<3>
-  llvm.return
-}
-
-// -----
-
 llvm.func @convert_float_to_tf32_rna_relu(%src : f32) -> i32 {
   // expected-error @below {{Relu not supported with rna rounding mode.}}
   %res = nvvm.convert.float.to.tf32 %src {rnd = #nvvm.fp_rnd_mode<rna>, relu=true}
@@ -264,7 +248,7 @@ llvm.func @nvvm_cvt_bf16x2_to_f8x2_invalid_rounding(%src : vector<2xbf16>) {
 
 llvm.func @nvvm_prefetch_L1_with_evict_priority(%global_ptr: !llvm.ptr<1>) {
   // expected-error @below {{cache eviction priority supported only for cache level L2}}
-  nvvm.prefetch level = L1, %global_ptr, evict_priority = evict_last : !llvm.ptr<1>
+  nvvm.prefetch level = L1, evict_priority = evict_last, %global_ptr : !llvm.ptr<1>
   llvm.return
 }
 
@@ -272,7 +256,7 @@ llvm.func @nvvm_prefetch_L1_with_evict_priority(%global_ptr: !llvm.ptr<1>) {
 
 llvm.func @nvvm_prefetch_L2_with_evict_last_invalid_addr_space(%local_ptr: !llvm.ptr<5>) {
   // expected-error @below {{cache eviction priority requires a global pointer}}
-  nvvm.prefetch level = L2, %local_ptr, evict_priority = evict_last : !llvm.ptr<5>
+  nvvm.prefetch level = L2, evict_priority = evict_last, %local_ptr : !llvm.ptr<5>
   llvm.return
 }
 
@@ -280,7 +264,7 @@ llvm.func @nvvm_prefetch_L2_with_evict_last_invalid_addr_space(%local_ptr: !llvm
 
 llvm.func @nvvm_prefetch_L2_with_evict_normal_invalid_addr_space(%local_ptr: !llvm.ptr<5>) {
   // expected-error @below {{cache eviction priority requires a global pointer}}
-  nvvm.prefetch level = L2, %local_ptr, evict_priority = evict_normal : !llvm.ptr<5>
+  nvvm.prefetch level = L2, evict_priority = evict_normal, %local_ptr : !llvm.ptr<5>
   llvm.return
 }
 
@@ -288,7 +272,7 @@ llvm.func @nvvm_prefetch_L2_with_evict_normal_invalid_addr_space(%local_ptr: !ll
 
 llvm.func @nvvm_prefetch_L2_with_invalid_evict_first(%global_ptr: !llvm.ptr<1>) {
   // expected-error @below {{unsupported cache eviction priority, only evict_last and evict_normal are supported}}
-  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_first : !llvm.ptr<1>
+  nvvm.prefetch level = L2, evict_priority = evict_first, %global_ptr : !llvm.ptr<1>
   llvm.return
 }
 
@@ -296,7 +280,7 @@ llvm.func @nvvm_prefetch_L2_with_invalid_evict_first(%global_ptr: !llvm.ptr<1>) 
 
 llvm.func @nvvm_prefetch_L2_with_invalid_evict_unchanged(%global_ptr: !llvm.ptr<1>) {
   // expected-error @below {{unsupported cache eviction priority, only evict_last and evict_normal are supported}}
-  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_unchanged : !llvm.ptr<1>
+  nvvm.prefetch level = L2, evict_priority = evict_unchanged, %global_ptr : !llvm.ptr<1>
   llvm.return
 }
 
@@ -304,7 +288,7 @@ llvm.func @nvvm_prefetch_L2_with_invalid_evict_unchanged(%global_ptr: !llvm.ptr<
 
 llvm.func @nvvm_prefetch_L2_with_invalid_no_allocate(%global_ptr: !llvm.ptr<1>) {
   // expected-error @below {{unsupported cache eviction priority, only evict_last and evict_normal are supported}}
-  nvvm.prefetch level = L2, %global_ptr, evict_priority = no_allocate : !llvm.ptr<1>
+  nvvm.prefetch level = L2, evict_priority = no_allocate, %global_ptr : !llvm.ptr<1>
   llvm.return
 }
 
@@ -321,6 +305,62 @@ llvm.func @nvvm_prefetch_uniform_with_L2(%gen_ptr: !llvm.ptr) {
 llvm.func @nvvm_prefetch_uniform_with_invalid_addr_space(%global_ptr: !llvm.ptr<1>) {
   // expected-error @below {{prefetch to uniform cache requires a generic pointer}}
   nvvm.prefetch level = L1 uniform, %global_ptr : !llvm.ptr<1>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_both_tensormap_and_cache_level(%gen_ptr: !llvm.ptr) {
+  // expected-error @below {{cannot specify both tensormap and cache level}}
+  nvvm.prefetch level = L1, tensormap, %gen_ptr : !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_tensormap_invalid_addr_space(%global_ptr: !llvm.ptr<1>) {
+  // expected-error @below {{prefetch tensormap requires a generic or constant pointer}}
+  nvvm.prefetch tensormap, %global_ptr : !llvm.ptr<1>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_tensormap_with_evict_priority(%gen_ptr: !llvm.ptr) {
+  // expected-error @below {{prefetch tensormap does not support eviction priority}}
+  nvvm.prefetch tensormap, evict_priority = evict_last, %gen_ptr : !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_tensormap_in_param_space_non_generic(%const_ptr: !llvm.ptr<4>) {
+  // expected-error @below {{in_param_space can only be specified for a generic pointer}}
+  nvvm.prefetch tensormap in_param_space, %const_ptr : !llvm.ptr<4>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_cache_level_invalid_addr_space(%const_ptr: !llvm.ptr<4>) {
+  // expected-error @below {{prefetch to cache level requires a generic, global, or local pointer}}
+  nvvm.prefetch level = L1, %const_ptr : !llvm.ptr<4>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_predicate_without_tensormap(%gen_ptr: !llvm.ptr, %pred: i1) {
+  // expected-error @below {{predicate supported only on prefetch tensormap}}
+  nvvm.prefetch level = L1, %gen_ptr, predicate = %pred : !llvm.ptr, i1
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_no_level_or_tensormap(%gen_ptr: !llvm.ptr) {
+  // expected-error @below {{requires specification of either cache level or tensormap}}
+  nvvm.prefetch %gen_ptr : !llvm.ptr
   llvm.return
 }
 
@@ -493,5 +533,21 @@ llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
 llvm.func @nanosleep() {
   // expected-error@+1 {{integer constant out of range for attribute}}
   nvvm.nanosleep 100000000000000
+  llvm.return
+}
+
+// -----
+
+llvm.func @clusterlaunchcontrol_query_cancel_is_canceled_invalid_return_type(%try_cancel_response: i128) {
+  // expected-error@+1 {{'nvvm.clusterlaunchcontrol.query.cancel' op is_canceled query type returns an i1}}
+  %res = nvvm.clusterlaunchcontrol.query.cancel query = is_canceled, %try_cancel_response : i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @clusterlaunchcontrol_query_cancel_get_first_cta_id_invalid_return_type(%try_cancel_response: i128) {
+  // expected-error@+1 {{'nvvm.clusterlaunchcontrol.query.cancel' op get_first_cta_id_x, get_first_cta_id_y, get_first_cta_id_z query types return an i32}}
+  %res = nvvm.clusterlaunchcontrol.query.cancel query = get_first_cta_id_x, %try_cancel_response : i1
   llvm.return
 }

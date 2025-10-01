@@ -19,3 +19,35 @@ module {
 // CHECK: ![[DECO2]] = !{i32 6442, i32 0, i32 1, i32 0}
 // CHECK: ![[DECO3]] = !{i32 6442, i32 1, i32 1, i32 0}
 
+// -----
+module {
+  // CHECK-LABEL: define i32 @load(ptr addrspace(1)
+  // CHECK-SAME: %[[ARG0:.*]]) {
+  llvm.func @load(%arg0: !llvm.ptr<1>) -> i32 {
+    // CHECK: load i32, ptr addrspace(1) %[[ARG0]], align 4,
+    // CHECK-SAME: !spirv.DecorationCacheControlINTEL ![[DECO1:.*]]
+    %0 = llvm.load %arg0 {xevm.DecorationCacheControl = [[6442 : i32, 0 : i32, 1 : i32, 0 : i32], [6442 : i32, 1 : i32, 1 : i32, 0 : i32]]} : !llvm.ptr<1> -> i32
+    llvm.return %0 : i32
+  }
+}
+
+// CHECK: ![[DECO1]] = !{![[DECO2:.*]], ![[DECO3:.*]]}
+// CHECK: ![[DECO2]] = !{i32 6442, i32 0, i32 1, i32 0}
+// CHECK: ![[DECO3]] = !{i32 6442, i32 1, i32 1, i32 0}
+
+// -----
+module {
+  // CHECK-LABEL: define void @store(ptr addrspace(1)
+  // CHECK-SAME: %[[ARG0:.*]], i32 %[[ARG1:.*]]) {
+  llvm.func @store(%arg0: !llvm.ptr<1>, %arg1: i32) {
+    // CHECK: store i32 %[[ARG1]], ptr addrspace(1) %[[ARG0]], align 4,
+    // CHECK-SAME: !spirv.DecorationCacheControlINTEL ![[DECO1:.*]]
+    llvm.store %arg1, %arg0 {xevm.DecorationCacheControl = [[6443 : i32, 0 : i32, 2 : i32, 0 : i32], [6443 : i32, 1 : i32, 2 : i32, 0 : i32]]} : i32, !llvm.ptr<1>
+    llvm.return
+  }
+}
+
+// CHECK: ![[DECO1]] = !{![[DECO2:.*]], ![[DECO3:.*]]}
+// CHECK: ![[DECO2]] = !{i32 6443, i32 0, i32 2, i32 0}
+// CHECK: ![[DECO3]] = !{i32 6443, i32 1, i32 2, i32 0}
+

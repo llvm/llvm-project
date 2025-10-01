@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include <algorithm>
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -109,7 +110,8 @@ public:
   SparcV9ABIInfo(CodeGenTypes &CGT) : ABIInfo(CGT) {}
 
 private:
-  ABIArgInfo classifyType(QualType RetTy, unsigned SizeLimit) const;
+  ABIArgInfo classifyType(QualType RetTy, unsigned SizeLimit,
+                          unsigned &RegOffset) const;
   void computeInfo(CGFunctionInfo &FI) const override;
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
@@ -222,128 +224,114 @@ private:
 };
 } // end anonymous namespace
 
-ABIArgInfo
-SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
+ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
+                                        unsigned &RegOffset) const {
   if (Ty->isVoidType())
     return ABIArgInfo::getIgnore();
 
-  uint64_t Size = getContext().getTypeSize(Ty);
+  auto &Context = getContext();
+  auto &VMContext = getVMContext();
+
+  uint64_t Size = Context.getTypeSize(Ty);
+  unsigned Alignment = Context.getTypeAlign(Ty);
+  bool NeedPadding = (Alignment > 64) && (RegOffset % 2 != 0);
 
   // Anything too big to fit in registers is passed with an explicit indirect
   // pointer / sret pointer.
-  if (Size > SizeLimit)
+  if (Size > SizeLimit) {
+    RegOffset += 1;
     return getNaturalAlignIndirect(
         Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
         /*ByVal=*/false);
+  }
 
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   // Integer types smaller than a register are extended.
-  if (Size < 64 && Ty->isIntegerType())
+  if (Size < 64 && Ty->isIntegerType()) {
+    RegOffset += 1;
     return ABIArgInfo::getExtend(Ty);
+  }
 
   if (const auto *EIT = Ty->getAs<BitIntType>())
-    if (EIT->getNumBits() < 64)
+    if (EIT->getNumBits() < 64) {
+      RegOffset += 1;
       return ABIArgInfo::getExtend(Ty);
+    }
 
   // Other non-aggregates go in registers.
-  if (!isAggregateTypeForABI(Ty))
+  if (!isAggregateTypeForABI(Ty)) {
+    RegOffset += Size / 64;
     return ABIArgInfo::getDirect();
+  }
 
   // If a C++ object has either a non-trivial copy constructor or a non-trivial
   // destructor, it is passed with an explicit indirect pointer / sret pointer.
-  if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
+  if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
+    RegOffset += 1;
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                    RAA == CGCXXABI::RAA_DirectInMemory);
+  }
 
   // This is a small aggregate type that should be passed in registers.
   // Build a coercion type from the LLVM struct type.
   llvm::StructType *StrTy = dyn_cast<llvm::StructType>(CGT.ConvertType(Ty));
-  if (!StrTy)
+  if (!StrTy) {
+    RegOffset += Size / 64;
     return ABIArgInfo::getDirect();
+  }
 
-  CoerceBuilder CB(getVMContext(), getDataLayout());
+  CoerceBuilder CB(VMContext, getDataLayout());
   CB.addStruct(0, StrTy);
   // All structs, even empty ones, should take up a register argument slot,
   // so pin the minimum struct size to one bit.
   CB.pad(llvm::alignTo(
       std::max(CB.DL.getTypeSizeInBits(StrTy).getKnownMinValue(), uint64_t(1)),
       64));
+  RegOffset += CB.Size / 64;
+
+  // If we're dealing with overaligned structs we may need to add a padding in
+  // the front, to preserve the correct register-memory mapping.
+  //
+  // See SCD 2.4.1, pages 3P-11 and 3P-12.
+  llvm::Type *Padding =
+      NeedPadding ? llvm::Type::getInt64Ty(VMContext) : nullptr;
+  RegOffset += NeedPadding ? 1 : 0;
 
   // Try to use the original type for coercion.
   llvm::Type *CoerceTy = CB.isUsableType(StrTy) ? StrTy : CB.getType();
 
-  if (CB.InReg)
-    return ABIArgInfo::getDirectInReg(CoerceTy);
-  else
-    return ABIArgInfo::getDirect(CoerceTy);
+  ABIArgInfo AAI = ABIArgInfo::getDirect(CoerceTy, 0, Padding);
+  AAI.setInReg(CB.InReg);
+  return AAI;
 }
 
 RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                  QualType Ty, AggValueSlot Slot) const {
-  ABIArgInfo AI = classifyType(Ty, 16 * 8);
-  llvm::Type *ArgTy = CGT.ConvertType(Ty);
-  if (AI.canHaveCoerceToType() && !AI.getCoerceToType())
-    AI.setCoerceToType(ArgTy);
-
   CharUnits SlotSize = CharUnits::fromQuantity(8);
+  auto TInfo = getContext().getTypeInfoInChars(Ty);
 
-  CGBuilderTy &Builder = CGF.Builder;
-  Address Addr = Address(Builder.CreateLoad(VAListAddr, "ap.cur"),
-                         getVAListElementType(CGF), SlotSize);
-  llvm::Type *ArgPtrTy = CGF.UnqualPtrTy;
+  // Zero-sized types have a width of one byte for parameter passing purposes.
+  TInfo.Width = std::max(TInfo.Width, CharUnits::fromQuantity(1));
 
-  auto TypeInfo = getContext().getTypeInfoInChars(Ty);
-
-  Address ArgAddr = Address::invalid();
-  CharUnits Stride;
-  switch (AI.getKind()) {
-  case ABIArgInfo::Expand:
-  case ABIArgInfo::CoerceAndExpand:
-  case ABIArgInfo::InAlloca:
-  case ABIArgInfo::TargetSpecific:
-    llvm_unreachable("Unsupported ABI kind for va_arg");
-
-  case ABIArgInfo::Extend: {
-    Stride = SlotSize;
-    CharUnits Offset = SlotSize - TypeInfo.Width;
-    ArgAddr = Builder.CreateConstInBoundsByteGEP(Addr, Offset, "extend");
-    break;
-  }
-
-  case ABIArgInfo::Direct: {
-    auto AllocSize = getDataLayout().getTypeAllocSize(AI.getCoerceToType());
-    Stride = CharUnits::fromQuantity(AllocSize).alignTo(SlotSize);
-    ArgAddr = Addr;
-    break;
-  }
-
-  case ABIArgInfo::Indirect:
-  case ABIArgInfo::IndirectAliased:
-    Stride = SlotSize;
-    ArgAddr = Addr.withElementType(ArgPtrTy);
-    ArgAddr = Address(Builder.CreateLoad(ArgAddr, "indirect.arg"), ArgTy,
-                      TypeInfo.Align);
-    break;
-
-  case ABIArgInfo::Ignore:
-    return Slot.asRValue();
-  }
-
-  // Update VAList.
-  Address NextPtr = Builder.CreateConstInBoundsByteGEP(Addr, Stride, "ap.next");
-  Builder.CreateStore(NextPtr.emitRawPointer(CGF), VAListAddr);
-
-  return CGF.EmitLoadOfAnyValue(
-      CGF.MakeAddrLValue(ArgAddr.withElementType(ArgTy), Ty), Slot);
+  // Arguments bigger than 2*SlotSize bytes are passed indirectly.
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty,
+                          /*IsIndirect=*/TInfo.Width > 2 * SlotSize, TInfo,
+                          SlotSize,
+                          /*AllowHigherAlign=*/true, Slot);
 }
 
 void SparcV9ABIInfo::computeInfo(CGFunctionInfo &FI) const {
-  FI.getReturnInfo() = classifyType(FI.getReturnType(), 32 * 8);
+  unsigned RetOffset = 0;
+  ABIArgInfo RetType = classifyType(FI.getReturnType(), 32 * 8, RetOffset);
+  FI.getReturnInfo() = RetType;
+
+  // Indirect returns will have its pointer passed as an argument.
+  unsigned ArgOffset = RetType.isIndirect() ? RetOffset : 0;
   for (auto &I : FI.arguments())
-    I.info = classifyType(I.type, 16 * 8);
+    I.info = classifyType(I.type, 16 * 8, ArgOffset);
 }
 
 namespace {

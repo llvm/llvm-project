@@ -18,7 +18,7 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
@@ -1872,11 +1872,10 @@ public:
     if (!getLocalData()->QualifierData)
       return NestedNameSpecifierLoc();
 
-    auto *QTN =
-        getTypePtr()->getTemplateName().getAsAdjustedQualifiedTemplateName();
-    assert(QTN && "missing qualification");
-    return NestedNameSpecifierLoc(QTN->getQualifier(),
-                                  getLocalData()->QualifierData);
+    NestedNameSpecifier Qualifier =
+        getTypePtr()->getTemplateName().getQualifier();
+    assert(Qualifier && "missing qualification");
+    return NestedNameSpecifierLoc(Qualifier, getLocalData()->QualifierData);
   }
 
   SourceLocation getTemplateKeywordLoc() const {
@@ -2503,10 +2502,9 @@ public:
     void *Data = getLocalData()->QualifierData;
     if (!Data)
       return NestedNameSpecifierLoc();
-    NestedNameSpecifier Qualifier = getTypePtr()
-                                        ->getTemplateName()
-                                        .getAsAdjustedQualifiedTemplateName()
-                                        ->getQualifier();
+    NestedNameSpecifier Qualifier =
+        getTypePtr()->getTemplateName().getQualifier();
+    assert(Qualifier && "missing qualification");
     return NestedNameSpecifierLoc(Qualifier, Data);
   }
 
@@ -2521,10 +2519,7 @@ public:
     }
 
     assert(QualifierLoc.getNestedNameSpecifier() ==
-               getTypePtr()
-                   ->getTemplateName()
-                   .getAsAdjustedQualifiedTemplateName()
-                   ->getQualifier() &&
+               getTypePtr()->getTemplateName().getQualifier() &&
            "Inconsistent nested-name-specifier pointer");
     getLocalData()->QualifierData = QualifierLoc.getOpaqueData();
   }
@@ -2601,134 +2596,6 @@ public:
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc);
-};
-
-struct DependentTemplateSpecializationLocInfo : DependentNameLocInfo {
-  SourceLocation TemplateKWLoc;
-  SourceLocation LAngleLoc;
-  SourceLocation RAngleLoc;
-  // followed by a TemplateArgumentLocInfo[]
-};
-
-class DependentTemplateSpecializationTypeLoc :
-    public ConcreteTypeLoc<UnqualTypeLoc,
-                           DependentTemplateSpecializationTypeLoc,
-                           DependentTemplateSpecializationType,
-                           DependentTemplateSpecializationLocInfo> {
-public:
-  SourceLocation getElaboratedKeywordLoc() const {
-    return this->getLocalData()->ElaboratedKWLoc;
-  }
-
-  void setElaboratedKeywordLoc(SourceLocation Loc) {
-    this->getLocalData()->ElaboratedKWLoc = Loc;
-  }
-
-  NestedNameSpecifierLoc getQualifierLoc() const {
-    if (!getLocalData()->QualifierData)
-      return NestedNameSpecifierLoc();
-
-    return NestedNameSpecifierLoc(
-        getTypePtr()->getDependentTemplateName().getQualifier(),
-        getLocalData()->QualifierData);
-  }
-
-  void setQualifierLoc(NestedNameSpecifierLoc QualifierLoc) {
-    if (!QualifierLoc) {
-      // Even if we have a nested-name-specifier in the dependent
-      // template specialization type, we won't record the nested-name-specifier
-      // location information when this type-source location information is
-      // part of a nested-name-specifier.
-      getLocalData()->QualifierData = nullptr;
-      return;
-    }
-
-    assert(QualifierLoc.getNestedNameSpecifier() ==
-               getTypePtr()->getDependentTemplateName().getQualifier() &&
-           "Inconsistent nested-name-specifier pointer");
-    getLocalData()->QualifierData = QualifierLoc.getOpaqueData();
-  }
-
-  SourceLocation getTemplateKeywordLoc() const {
-    return getLocalData()->TemplateKWLoc;
-  }
-
-  void setTemplateKeywordLoc(SourceLocation Loc) {
-    getLocalData()->TemplateKWLoc = Loc;
-  }
-
-  SourceLocation getTemplateNameLoc() const {
-    return this->getLocalData()->NameLoc;
-  }
-
-  void setTemplateNameLoc(SourceLocation Loc) {
-    this->getLocalData()->NameLoc = Loc;
-  }
-
-  SourceLocation getLAngleLoc() const {
-    return this->getLocalData()->LAngleLoc;
-  }
-
-  void setLAngleLoc(SourceLocation Loc) {
-    this->getLocalData()->LAngleLoc = Loc;
-  }
-
-  SourceLocation getRAngleLoc() const {
-    return this->getLocalData()->RAngleLoc;
-  }
-
-  void setRAngleLoc(SourceLocation Loc) {
-    this->getLocalData()->RAngleLoc = Loc;
-  }
-
-  unsigned getNumArgs() const {
-    return getTypePtr()->template_arguments().size();
-  }
-
-  void setArgLocInfo(unsigned i, TemplateArgumentLocInfo AI) {
-    getArgInfos()[i] = AI;
-  }
-
-  TemplateArgumentLocInfo getArgLocInfo(unsigned i) const {
-    return getArgInfos()[i];
-  }
-
-  TemplateArgumentLoc getArgLoc(unsigned i) const {
-    return TemplateArgumentLoc(getTypePtr()->template_arguments()[i],
-                               getArgLocInfo(i));
-  }
-
-  SourceRange getLocalSourceRange() const {
-    if (getElaboratedKeywordLoc().isValid())
-      return SourceRange(getElaboratedKeywordLoc(), getRAngleLoc());
-    else if (getQualifierLoc())
-      return SourceRange(getQualifierLoc().getBeginLoc(), getRAngleLoc());
-    else if (getTemplateKeywordLoc().isValid())
-      return SourceRange(getTemplateKeywordLoc(), getRAngleLoc());
-    else
-      return SourceRange(getTemplateNameLoc(), getRAngleLoc());
-  }
-
-  void copy(DependentTemplateSpecializationTypeLoc Loc) {
-    unsigned size = getFullDataSize();
-    assert(size == Loc.getFullDataSize());
-    memcpy(Data, Loc.Data, size);
-  }
-
-  void initializeLocal(ASTContext &Context, SourceLocation Loc);
-
-  unsigned getExtraLocalDataSize() const {
-    return getNumArgs() * sizeof(TemplateArgumentLocInfo);
-  }
-
-  unsigned getExtraLocalDataAlignment() const {
-    return alignof(TemplateArgumentLocInfo);
-  }
-
-private:
-  TemplateArgumentLocInfo *getArgInfos() const {
-    return static_cast<TemplateArgumentLocInfo*>(getExtraLocalData());
-  }
 };
 
 struct PackExpansionTypeLocInfo {

@@ -1,5 +1,4 @@
-//===--- InefficientStringConcatenationCheck.h - clang-tidy-----------*- C++
-//-*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +17,7 @@ namespace clang::tidy::performance {
 /// concatenating strings, using the operator+, instead of operator+=.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance/inefficient-string-concatenation.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/performance/inefficient-string-concatenation.html
 class InefficientStringConcatenationCheck : public ClangTidyCheck {
 public:
   InefficientStringConcatenationCheck(StringRef Name,

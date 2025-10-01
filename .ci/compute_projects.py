@@ -26,6 +26,7 @@ PROJECT_DEPENDENCIES = {
     "libc": {"clang", "lld"},
     "openmp": {"clang", "lld"},
     "flang": {"llvm", "clang"},
+    "flang-rt": {"flang"},
     "lldb": {"llvm", "clang"},
     "libclc": {"llvm", "clang"},
     "lld": {"llvm"},
@@ -82,7 +83,9 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "clang-tools-extra": {"libc"},
     "libc": {"libc"},
     "compiler-rt": {"compiler-rt"},
-    ".ci": {"compiler-rt", "libc"},
+    "flang": {"flang-rt"},
+    "flang-rt": {"flang-rt"},
+    ".ci": {"compiler-rt", "libc", "flang-rt"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},
@@ -98,7 +101,6 @@ EXCLUDE_LINUX = {
 
 EXCLUDE_WINDOWS = {
     "cross-project-tests",  # TODO(issues/132797): Tests are failing.
-    "compiler-rt",  # TODO(issues/132798): Tests take excessive time.
     "openmp",  # TODO(issues/132799): Does not detect perl installation.
     "libc",  # No Windows Support.
     "lldb",  # TODO(issues/132800): Needs environment setup.
@@ -106,6 +108,7 @@ EXCLUDE_WINDOWS = {
     "libcxx",
     "libcxxabi",
     "libunwind",
+    "flang-rt",
 }
 
 # These are projects that we should test if the project itself is changed but
@@ -143,15 +146,17 @@ PROJECT_CHECK_TARGETS = {
     "bolt": "check-bolt",
     "lld": "check-lld",
     "flang": "check-flang",
+    "flang-rt": "check-flang-rt",
     "libc": "check-libc",
     "lld": "check-lld",
     "lldb": "check-lldb",
     "mlir": "check-mlir",
     "openmp": "check-openmp",
     "polly": "check-polly",
+    "lit": "check-lit",
 }
 
-RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc"}
+RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc", "flang-rt"}
 
 # Meta projects are projects that need explicit handling but do not reside
 # in their own top level folder. To add a meta project, the start of the path
@@ -165,7 +170,11 @@ META_PROJECTS = {
     ("llvm", "utils", "gn"): "gn",
     (".github", "workflows", "premerge.yaml"): ".ci",
     ("third-party",): ".ci",
+    ("llvm", "utils", "lit"): "lit",
 }
+
+# Projects that should run tests but cannot be explicitly built.
+SKIP_BUILD_PROJECTS = ["CIR", "lit"]
 
 # Projects that should not run any tests. These need to be metaprojects.
 SKIP_PROJECTS = ["docs", "gn"]
@@ -313,7 +322,9 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     # clang build, but it requires an explicit option to enable. We set that
     # option here, and remove it from the projects_to_build list.
     enable_cir = "ON" if "CIR" in projects_to_build else "OFF"
-    projects_to_build.discard("CIR")
+    # Remove any metaprojects from the list of projects to build.
+    for project in SKIP_BUILD_PROJECTS:
+        projects_to_build.discard(project)
 
     # We use a semicolon to separate the projects/runtimes as they get passed
     # to the CMake invocation and thus we need to use the CMake list separator
@@ -335,6 +346,7 @@ if __name__ == "__main__":
     current_platform = platform.system()
     if len(sys.argv) == 2:
         current_platform = sys.argv[1]
-    env_variables = get_env_variables(sys.stdin.readlines(), current_platform)
+    changed_files = [line.strip() for line in sys.stdin.readlines()]
+    env_variables = get_env_variables(changed_files, current_platform)
     for env_variable in env_variables:
         print(f"{env_variable}='{env_variables[env_variable]}'")

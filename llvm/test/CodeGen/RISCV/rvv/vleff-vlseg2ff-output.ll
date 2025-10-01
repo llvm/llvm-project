@@ -18,7 +18,7 @@ define i64 @test_vleff_nxv8i8(ptr %p, i64 %vl) {
   ; CHECK-NEXT:   $x10 = COPY [[PseudoVLE8FF_V_M1_1]]
   ; CHECK-NEXT:   PseudoRET implicit $x10
 entry:
-  %0 = call { <vscale x 8 x i8>, i64 } @llvm.riscv.vleff.nxv8i8(<vscale x 8 x i8> undef, ptr %p, i64 %vl)
+  %0 = call { <vscale x 8 x i8>, i64 } @llvm.riscv.vleff.nxv8i8(<vscale x 8 x i8> poison, ptr %p, i64 %vl)
   %1 = extractvalue { <vscale x 8 x i8>, i64 } %0, 1
   ret i64 %1
 }
@@ -70,7 +70,7 @@ define i64 @test_vlseg2ff_nxv8i8(ptr %base, i64 %vl, ptr %outvl) {
   ; CHECK-NEXT:   $x10 = COPY [[PseudoVLSEG2E8FF_V_M1_1]]
   ; CHECK-NEXT:   PseudoRET implicit $x10
 entry:
-  %0 = tail call {target("riscv.vector.tuple", <vscale x 8 x i8>, 2), i64} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) undef, ptr %base, i64 %vl, i64 3)
+  %0 = tail call {target("riscv.vector.tuple", <vscale x 8 x i8>, 2), i64} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, ptr %base, i64 %vl, i64 3)
   %1 = extractvalue {target("riscv.vector.tuple", <vscale x 8 x i8>, 2), i64} %0, 1
   ret i64 %1
 }
