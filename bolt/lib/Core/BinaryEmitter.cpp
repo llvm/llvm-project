@@ -521,7 +521,13 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         }
       }
 
+      LLVM_DEBUG(dbgs() << "EMIT " << BC.MII->getName(Instr.getOpcode())
+                        << "\n");
+
       Streamer.emitInstruction(Instr, *BC.STI);
+
+      if (BC.isPPC64() && BC.MIB->isTOCRestoreAfterCall(Instr))
+        LLVM_DEBUG(dbgs() << "EMIT is TOC-restore\n");
 
       // --- PPC64 ELFv2: guarantee a post-call NOP (call slot)
       if (BC.isPPC64() && BC.MIB->isCall(Instr)) {
@@ -532,8 +538,9 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         // , don't inject.
         auto NextI = std::next(I);
         if (NextI != E &&
-            (BC.MIB->isNoop(*NextI) || BC.MIB->isTOCRestoreAfterCall(*NextI)))
+            (BC.MIB->isNoop(*NextI) || BC.MIB->isTOCRestoreAfterCall(*NextI))) {
           NeedSlot = false;
+        }
 
         if (NeedSlot) {
           LLVM_DEBUG(dbgs() << "PPC emit: inserting post-call NOP\n");
