@@ -1465,7 +1465,8 @@ struct AsmWriterContext {
 //===----------------------------------------------------------------------===//
 
 static void WriteAsOperandInternal(raw_ostream &Out, const Value *V,
-                                   AsmWriterContext &WriterCtx);
+                                   AsmWriterContext &WriterCtx,
+                                   bool PrintType = false);
 
 static void WriteAsOperandInternal(raw_ostream &Out, const Metadata *MD,
                                    AsmWriterContext &WriterCtx,
@@ -1685,23 +1686,19 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     ListSeparator LS;
     for (unsigned i = 0, e = NumOpsToWrite; i != e; ++i) {
       Out << LS;
-      WriterCtx.TypePrinter->print(CPA->getOperand(i)->getType(), Out);
-      Out << ' ';
-      WriteAsOperandInternal(Out, CPA->getOperand(i), WriterCtx);
+      WriteAsOperandInternal(Out, CPA->getOperand(i), WriterCtx,
+                             /*PrintType=*/true);
     }
     Out << ')';
     return;
   }
 
   if (const ConstantArray *CA = dyn_cast<ConstantArray>(CV)) {
-    Type *ETy = CA->getType()->getElementType();
     Out << '[';
     ListSeparator LS;
     for (const Value *Op : CA->operands()) {
       Out << LS;
-      WriterCtx.TypePrinter->print(ETy, Out);
-      Out << ' ';
-      WriteAsOperandInternal(Out, Op, WriterCtx);
+      WriteAsOperandInternal(Out, Op, WriterCtx, /*PrintType=*/true);
     }
     Out << ']';
     return;
@@ -1717,14 +1714,12 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
       return;
     }
 
-    Type *ETy = CA->getType()->getElementType();
     Out << '[';
     ListSeparator LS;
     for (uint64_t i = 0, e = CA->getNumElements(); i != e; ++i) {
       Out << LS;
-      WriterCtx.TypePrinter->print(ETy, Out);
-      Out << ' ';
-      WriteAsOperandInternal(Out, CA->getElementAsConstant(i), WriterCtx);
+      WriteAsOperandInternal(Out, CA->getElementAsConstant(i), WriterCtx,
+                             /*PrintType=*/true);
     }
     Out << ']';
     return;
@@ -1739,9 +1734,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
       ListSeparator LS;
       for (const Value *Op : CS->operands()) {
         Out << LS;
-        WriterCtx.TypePrinter->print(Op->getType(), Out);
-        Out << ' ';
-        WriteAsOperandInternal(Out, Op, WriterCtx);
+        WriteAsOperandInternal(Out, Op, WriterCtx, /*PrintType=*/true);
       }
       Out << ' ';
     }
@@ -1753,7 +1746,6 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
 
   if (isa<ConstantVector>(CV) || isa<ConstantDataVector>(CV)) {
     auto *CVVTy = cast<FixedVectorType>(CV->getType());
-    Type *ETy = CVVTy->getElementType();
 
     // Use the same shorthand for splat vector (i.e. "splat(Ty val)") as is
     // permitted on IR input to reduce the output changes when enabling
@@ -1763,9 +1755,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     if (auto *SplatVal = CV->getSplatValue()) {
       if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
         Out << "splat (";
-        WriterCtx.TypePrinter->print(ETy, Out);
-        Out << ' ';
-        WriteAsOperandInternal(Out, SplatVal, WriterCtx);
+        WriteAsOperandInternal(Out, SplatVal, WriterCtx, /*PrintType=*/true);
         Out << ')';
         return;
       }
@@ -1775,9 +1765,8 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     ListSeparator LS;
     for (unsigned i = 0, e = CVVTy->getNumElements(); i != e; ++i) {
       Out << LS;
-      WriterCtx.TypePrinter->print(ETy, Out);
-      Out << ' ';
-      WriteAsOperandInternal(Out, CV->getAggregateElement(i), WriterCtx);
+      WriteAsOperandInternal(Out, CV->getAggregateElement(i), WriterCtx,
+                             /*PrintType=*/true);
     }
     Out << '>';
     return;
@@ -1813,9 +1802,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
       if (auto *SplatVal = CE->getSplatValue()) {
         if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
           Out << "splat (";
-          WriterCtx.TypePrinter->print(SplatVal->getType(), Out);
-          Out << ' ';
-          WriteAsOperandInternal(Out, SplatVal, WriterCtx);
+          WriteAsOperandInternal(Out, SplatVal, WriterCtx, /*PrintType=*/true);
           Out << ')';
           return;
         }
@@ -1834,9 +1821,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     ListSeparator LS;
     for (const Value *Op : CE->operands()) {
       Out << LS;
-      WriterCtx.TypePrinter->print(Op->getType(), Out);
-      Out << ' ';
-      WriteAsOperandInternal(Out, Op, WriterCtx);
+      WriteAsOperandInternal(Out, Op, WriterCtx, /*PrintType=*/true);
     }
 
     if (CE->isCast()) {
@@ -1864,9 +1849,7 @@ static void writeMDTuple(raw_ostream &Out, const MDTuple *Node,
       Out << "null";
     } else if (auto *MDV = dyn_cast<ValueAsMetadata>(MD)) {
       Value *V = MDV->getValue();
-      WriterCtx.TypePrinter->print(V->getType(), Out);
-      Out << ' ';
-      WriteAsOperandInternal(Out, V, WriterCtx);
+      WriteAsOperandInternal(Out, V, WriterCtx, /*PrintType=*/true);
     } else {
       WriteAsOperandInternal(Out, MD, WriterCtx);
       WriterCtx.onWriteMetadataAsOperand(MD);
@@ -2634,7 +2617,7 @@ static void writeDIArgList(raw_ostream &Out, const DIArgList *N,
   Out << "!DIArgList(";
   ListSeparator FS;
   MDFieldPrinter Printer(Out, WriterCtx);
-  for (Metadata *Arg : N->getArgs()) {
+  for (const Metadata *Arg : N->getArgs()) {
     Out << FS;
     WriteAsOperandInternal(Out, Arg, WriterCtx, true);
   }
@@ -2700,7 +2683,13 @@ static void WriteMDNodeBodyInternal(raw_ostream &Out, const MDNode *Node,
 // Full implementation of printing a Value as an operand with support for
 // TypePrinting, etc.
 static void WriteAsOperandInternal(raw_ostream &Out, const Value *V,
-                                   AsmWriterContext &WriterCtx) {
+                                   AsmWriterContext &WriterCtx,
+                                   bool PrintType) {
+  if (PrintType) {
+    WriterCtx.TypePrinter->print(V->getType(), Out);
+    Out << ' ';
+  }
+
   if (V->hasName()) {
     PrintLLVMName(Out, V);
     return;
@@ -2825,9 +2814,7 @@ static void WriteAsOperandInternal(raw_ostream &Out, const Metadata *MD,
   assert((FromValue || !isa<LocalAsMetadata>(V)) &&
          "Unexpected function-local metadata outside of value argument");
 
-  WriterCtx.TypePrinter->print(V->getValue()->getType(), Out);
-  Out << ' ';
-  WriteAsOperandInternal(Out, V->getValue(), WriterCtx);
+  WriteAsOperandInternal(Out, V->getValue(), WriterCtx, /*PrintType=*/true);
 }
 
 namespace {
@@ -2965,12 +2952,8 @@ void AssemblyWriter::writeOperand(const Value *Operand, bool PrintType) {
     Out << "<null operand!>";
     return;
   }
-  if (PrintType) {
-    TypePrinter.print(Operand->getType(), Out);
-    Out << ' ';
-  }
-  auto WriterCtx = getContext();
-  WriteAsOperandInternal(Out, Operand, WriterCtx);
+  auto WriteCtx = getContext();
+  WriteAsOperandInternal(Out, Operand, WriteCtx, PrintType);
 }
 
 void AssemblyWriter::writeSyncScope(const LLVMContext &Context,
@@ -3049,20 +3032,14 @@ void AssemblyWriter::writeOperandBundles(const CallBase *Call) {
 
     Out << '(';
 
-    bool FirstInput = true;
+    ListSeparator InnerLS;
     auto WriterCtx = getContext();
     for (const auto &Input : BU.Inputs) {
-      if (!FirstInput)
-        Out << ", ";
-      FirstInput = false;
-
+      Out << InnerLS;
       if (Input == nullptr)
         Out << "<null operand bundle!>";
-      else {
-        TypePrinter.print(Input->getType(), Out);
-        Out << " ";
-        WriteAsOperandInternal(Out, Input, WriterCtx);
-      }
+      else
+        WriteAsOperandInternal(Out, Input, WriterCtx, /*PrintType=*/true);
     }
 
     Out << ')';
@@ -5265,13 +5242,8 @@ static bool printWithoutType(const Value &V, raw_ostream &O,
 static void printAsOperandImpl(const Value &V, raw_ostream &O, bool PrintType,
                                ModuleSlotTracker &MST) {
   TypePrinting TypePrinter(MST.getModule());
-  if (PrintType) {
-    TypePrinter.print(V.getType(), O);
-    O << ' ';
-  }
-
   AsmWriterContext WriterCtx(&TypePrinter, MST.getMachine(), MST.getModule());
-  WriteAsOperandInternal(O, &V, WriterCtx);
+  WriteAsOperandInternal(O, &V, WriterCtx, PrintType);
 }
 
 void Value::printAsOperand(raw_ostream &O, bool PrintType,
