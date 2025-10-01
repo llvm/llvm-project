@@ -22,15 +22,17 @@ entry:
 
 ;; Check that the numeric type id (md5 hash) for the below type ids are emitted
 ;; to the callgraph section.
-
-; CHECK: Hex dump of section '.callgraph':
-
-; CHECK-DAG: 2444f7 31f5eecb 3e
 !0 = !{i64 0, !"_ZTSFvE.generalized"}
 !1 = !{!0}
-; CHECK-DAG: 5486bc 59814b8e 30
 !2 = !{i64 0, !"_ZTSFicE.generalized"}
 !3 = !{!2}
-; CHECK-DAG: 7ade68 14f897fd 77
 !4 = !{!5}
 !5 = !{i64 0, !"_ZTSFPvS_E.generalized"}
+
+;; Make sure following type IDs are in call graph section
+;; 0x5eecb3e2444f731f, 0x814b8e305486bc59, 0xf897fd777ade6814
+; CHECK:      Hex dump of section '.callgraph':
+; CHECK-NEXT: 0x00000000 00010000 00000000 00000000 00000000
+; CHECK-NEXT: 0x00000010 00000000 00000300 00002444 f731f5ee
+; CHECK-NEXT: 0x00000020 cb3e5486 bc59814b 8e307ade 6814f897
+; CHECK-NEXT: 0x00000030 fd77

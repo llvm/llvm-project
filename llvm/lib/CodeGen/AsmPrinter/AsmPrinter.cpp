@@ -1697,7 +1697,7 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
 
   uint8_t Flags = 0;
   if (IsIndirectTarget)
-    Flags |= 1 << 0; // Set the 0th bit to 1.
+    Flags |= 1 << 0; // Set the LSB bit to 1.
 
   // Emit function's call graph information.
   // 1) CallGraphSectionFormatVersion
@@ -1707,7 +1707,6 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   // otherwise it is set to 0. 5) Number of unique direct callees. 6) Number of
   // unique indirect target type IDs. 7) For each unique direct callee, the
   // callee's PC. 8) Each unique indirect target type id.
-
   OutStreamer->emitInt8(CallGraphSectionFormatVersion::V_0);
   OutStreamer->emitInt8(Flags);
   OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
@@ -1720,13 +1719,13 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   const auto &IndirectCalleeTypeIDs = FuncCGInfo.IndirectCalleeTypeIDs;
   OutStreamer->emitInt32(DirectCallees.size());
   OutStreamer->emitInt32(IndirectCalleeTypeIDs.size());
-  for (const auto &CalleeTypeId : IndirectCalleeTypeIDs)
-    OutStreamer->emitInt64(CalleeTypeId);
-  FuncCGInfo.IndirectCalleeTypeIDs.clear();
   for (const auto &CalleeSymbol : DirectCallees)
     OutStreamer->emitSymbolValue(CalleeSymbol, TM.getProgramPointerSize());
   FuncCGInfo.DirectCallees.clear();
-
+  for (const auto &CalleeTypeId : IndirectCalleeTypeIDs)
+    OutStreamer->emitInt64(CalleeTypeId);
+  FuncCGInfo.IndirectCalleeTypeIDs.clear();
+  // End of emitting call graph section contents.
   OutStreamer->popSection();
 }
 
@@ -1890,8 +1889,6 @@ void AsmPrinter::handleCallsiteForCallgraph(
   // Handle indirect callsite info.
   // Only indirect calls have type identifiers set.
   for (ConstantInt *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
-    MCSymbol *S = MF->getContext().createTempSymbol();
-    OutStreamer->emitLabel(S);
     uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
     // FuncCGInfo.IndirectCallsites.emplace_back(CalleeTypeIdVal, S);
     FuncCGInfo.IndirectCalleeTypeIDs.insert(CalleeTypeIdVal);

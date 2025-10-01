@@ -22,15 +22,15 @@ declare !type !2 i32 @foo(i8 signext)
 
 declare !type !2 i32 @bar(i8 signext)
 
-;; Check that the numeric type id (md5 hash) for the below type ids are emitted
-;; to the callgraph section.
-
-; CHECK: Hex dump of section '.callgraph':
-
 !0 = !{i64 0, !"_ZTSFiPvcE.generalized"}
 !1 = !{!2}
-;; Verify that the type id 0x308e4b8159bc8654 is in section.
-; CHECK:      {{.*}} 005486bc 59814b8e
-; CHECK-NEXT: 0x00000020 30000000 00000000 00000000 00000000
 !2 = !{i64 0, !"_ZTSFicE.generalized"}
 !3 = !{i64 0, !"_ZTSFiiE.generalized"}
+
+; CHECK: Hex dump of section '.callgraph':
+; CHECK-NEXT: 0x00000000 00010000 00000000 00008e19 0b7f3326
+; CHECK-NEXT: 0x00000010 e3000000 00000100 00005486 bc59814b
+; CHECK-NEXT: 0x00000020 8e300001 00000000 00000000 a150b83e
+;; Verify that the type id 0x308e4b8159bc8654 is in section.
+; CHECK-NEXT: 0x00000030 0cfe3cb2 00000000 01000000 5486bc59
+; CHECK-NEXT: 0x00000040 814b8e30
