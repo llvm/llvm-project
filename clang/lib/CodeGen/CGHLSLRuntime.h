@@ -200,11 +200,7 @@ private:
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
                                     llvm::GlobalVariable *BufGV);
   void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
-                                   llvm::GlobalVariable *GV,
-                                   HLSLVkBindingAttr *VkBinding);
-  void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
-                                   llvm::GlobalVariable *GV,
-                                   HLSLResourceBindingAttr *RBA);
+                                   llvm::GlobalVariable *GV);
   llvm::Triple::ArchType getArch();
 
   llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;

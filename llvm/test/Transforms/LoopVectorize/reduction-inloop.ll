@@ -3351,6 +3351,129 @@ for.end:                                          ; preds = %for.body, %entry
   ret i32 %x.0.lcssa
 }
 
+; Test that bundling recipes that share an operand into an expression works.
+; In this case the two extends are the recipes that share an operand.
+define i64 @reduction_expression_same_operands(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
+; CHECK-LABEL: define i64 @reduction_expression_same_operands(
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[X]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i16> [[WIDE_LOAD]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <4 x i64> [[TMP3]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP4]])
+; CHECK-NEXT:    [[TMP6]] = add i64 [[VEC_PHI]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP6]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i64 [ [[RDX_NEXT:%.*]], %[[LOOP]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[X]], i32 [[IV]]
+; CHECK-NEXT:    [[LOAD0:%.*]] = load i16, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CONV0:%.*]] = sext i16 [[LOAD0]] to i32
+; CHECK-NEXT:    [[CONV1:%.*]] = sext i16 [[LOAD0]] to i32
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i32 [[CONV0]], [[CONV1]]
+; CHECK-NEXT:    [[MUL:%.*]] = sext i32 [[MUL1]] to i64
+; CHECK-NEXT:    [[RDX_NEXT]] = add nsw i64 [[RDX]], [[MUL]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP34:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i64 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[R_0_LCSSA]]
+;
+; CHECK-INTERLEAVED-LABEL: define i64 @reduction_expression_same_operands(
+; CHECK-INTERLEAVED-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]], i32 [[N:%.*]]) {
+; CHECK-INTERLEAVED-NEXT:  [[ENTRY:.*]]:
+; CHECK-INTERLEAVED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 8
+; CHECK-INTERLEAVED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-INTERLEAVED:       [[VECTOR_PH]]:
+; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 8
+; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
+; CHECK-INTERLEAVED-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-INTERLEAVED:       [[VECTOR_BODY]]:
+; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[X]], i32 [[INDEX]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 4
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP1]], align 4
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP2]], align 4
+; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = sext <4 x i16> [[WIDE_LOAD]] to <4 x i64>
+; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = mul nsw <4 x i64> [[TMP4]], [[TMP4]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP5]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP7]] = add i64 [[VEC_PHI]], [[TMP6]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = sext <4 x i16> [[WIDE_LOAD2]] to <4 x i64>
+; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = mul nsw <4 x i64> [[TMP9]], [[TMP9]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP10]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP12]] = add i64 [[VEC_PHI1]], [[TMP11]]
+; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
+; CHECK-INTERLEAVED:       [[MIDDLE_BLOCK]]:
+; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = add i64 [[TMP12]], [[TMP7]]
+; CHECK-INTERLEAVED-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-INTERLEAVED:       [[SCALAR_PH]]:
+; CHECK-INTERLEAVED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-INTERLEAVED-NEXT:    br label %[[LOOP:.*]]
+; CHECK-INTERLEAVED:       [[LOOP]]:
+; CHECK-INTERLEAVED-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-INTERLEAVED-NEXT:    [[RDX:%.*]] = phi i64 [ [[RDX_NEXT:%.*]], %[[LOOP]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-INTERLEAVED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[X]], i32 [[IV]]
+; CHECK-INTERLEAVED-NEXT:    [[LOAD0:%.*]] = load i16, ptr [[ARRAYIDX]], align 4
+; CHECK-INTERLEAVED-NEXT:    [[CONV0:%.*]] = sext i16 [[LOAD0]] to i32
+; CHECK-INTERLEAVED-NEXT:    [[CONV1:%.*]] = sext i16 [[LOAD0]] to i32
+; CHECK-INTERLEAVED-NEXT:    [[MUL1:%.*]] = mul nsw i32 [[CONV0]], [[CONV1]]
+; CHECK-INTERLEAVED-NEXT:    [[MUL:%.*]] = sext i32 [[MUL1]] to i64
+; CHECK-INTERLEAVED-NEXT:    [[RDX_NEXT]] = add nsw i64 [[RDX]], [[MUL]]
+; CHECK-INTERLEAVED-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-INTERLEAVED-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP34:![0-9]+]]
+; CHECK-INTERLEAVED:       [[EXIT]]:
+; CHECK-INTERLEAVED-NEXT:    [[R_0_LCSSA:%.*]] = phi i64 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ]
+; CHECK-INTERLEAVED-NEXT:    ret i64 [[R_0_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %rdx = phi i64 [ %rdx.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i16, ptr %x, i32 %iv
+  %load0 = load i16, ptr %arrayidx, align 4
+  %conv0 = sext i16 %load0 to i32
+  %conv1 = sext i16 %load0 to i32
+  %mul = mul nsw i32 %conv0, %conv1
+  %conv = sext i32 %mul to i64
+  %rdx.next = add nsw i64 %rdx, %conv
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %r.0.lcssa = phi i64 [ %rdx.next, %loop ]
+  ret i64 %r.0.lcssa
+}
+
 declare float @llvm.fmuladd.f32(float, float, float)
 
 !6 = distinct !{!6, !7, !8}
