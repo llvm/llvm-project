@@ -58,7 +58,7 @@ void RedundantTypenameCheck::check(const MatchFinder::MatchResult &Result) {
     return SourceLocation();
   }();
 
-  if (!TypenameKeywordLoc.isValid())
+  if (TypenameKeywordLoc.isInvalid())
     return;
 
   diag(TypenameKeywordLoc, "redundant 'typename'")
