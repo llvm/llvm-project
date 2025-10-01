@@ -2662,7 +2662,6 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
     return bindAggregate(B, R, nonloc::ConcreteInt(SafeValue));
   }
 
-  // Handle lazy compound values and symbolic values.
   if (std::optional LCV = Init.getAs<nonloc::LazyCompoundVal>()) {
     if (std::optional NewB = tryBindSmallArray(B, R, AT, *LCV))
       return *NewB;
