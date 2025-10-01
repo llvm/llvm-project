@@ -473,6 +473,7 @@
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zba"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zbb"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zbs"
+// MCPU-SIFIVE-P450-SAME: "-target-feature" "+zkt"
 // MCPU-SIFIVE-P450-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p470 | FileCheck -check-prefix=MCPU-SIFIVE-P470 %s
@@ -503,6 +504,7 @@
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zba"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zbb"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zbs"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zkt"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvbb"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvbc"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zve32f"
@@ -564,6 +566,7 @@
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zba"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zbb"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zbs"
+// MCPU-SIFIVE-P670-SAME: "-target-feature" "+zkt"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvbb"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvbc"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zve32f"
