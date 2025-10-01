@@ -116,6 +116,19 @@ def testFuseOpCompact(target):
 
 @run
 @create_sequence
+def testFuseOpCompactForall(target):
+    structured.FuseOp(
+        target, tile_sizes=[4, 8], apply_cleanup=True, use_forall=True,
+    )
+    # CHECK-LABEL: TEST: testFuseOpCompact
+    # CHECK: transform.sequence
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}}[4, 8]
+    # CHECK-SAME: apply_cleanup = true use_forall = true
+    # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
 def testFuseOpNoArg(target):
     structured.FuseOp(target)
     # CHECK-LABEL: TEST: testFuseOpNoArg

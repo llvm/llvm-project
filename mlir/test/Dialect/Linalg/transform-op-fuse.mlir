@@ -57,6 +57,31 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: func.func @fuse_unary_forall
+func.func @fuse_unary_forall(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+
+  //     CHECK: %[[RES:.*]] = scf.forall
+  //     CHECK:       linalg.exp
+  //     CHECK:       linalg.add
+  //     CHECK: return %[[RES]]
+  %0 = linalg.exp ins(%arg0 : tensor<?x?xf32>)
+                             outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
+  %1 = linalg.add ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
+                             outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loop = transform.structured.fuse %0 [32, 32] use_forall = true
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: func.func @interchange_reduction
 //  CHECK-SAME: (%[[INPUT:.+]]: tensor<12x7x25xf32>)
 func.func @interchange_reduction(%input: tensor<12x7x25xf32>) -> tensor<12x25xf32> {
