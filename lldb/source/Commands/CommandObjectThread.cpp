@@ -251,7 +251,8 @@ protected:
       }
     }
 
-    thread->CalculateTarget()->GetStatistics().SetFirstBtTime(thread->CalculateProcess(), *thread);
+    thread->CalculateTarget()->GetStatistics().SetFirstBtTime(
+        thread->CalculateProcess(), *thread);
 
     return true;
   }

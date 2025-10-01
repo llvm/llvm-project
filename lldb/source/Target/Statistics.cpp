@@ -523,8 +523,8 @@ void TargetStats::SetFirstBtTime(lldb::ProcessSP process_sp, Thread &thread) {
     return;
 
   // Our goal here is to calculate the total active time to get to the first bt
-  // so this will be the target creation time, or the load core time plus all the time
-  // to load and index modules and their debug info.
+  // so this will be the target creation time, or the load core time plus all
+  // the time to load and index modules and their debug info.
   double elapsed_time = 0.0;
   // GetStackFrameCount can be expensive, but at this point we should
   // have completed a BT successfully, so the frames should already
@@ -534,7 +534,8 @@ void TargetStats::SetFirstBtTime(lldb::ProcessSP process_sp, Thread &thread) {
     if (!frame_sp)
       continue;
 
-    lldb::ModuleSP module_sp = frame_sp->GetSymbolContext(lldb::eSymbolContextModule).module_sp;
+    lldb::ModuleSP module_sp =
+        frame_sp->GetSymbolContext(lldb::eSymbolContextModule).module_sp;
     if (!module_sp)
       continue;
 
@@ -543,7 +544,8 @@ void TargetStats::SetFirstBtTime(lldb::ProcessSP process_sp, Thread &thread) {
     elapsed_time += module_sp->GetSymtabParseTime().get().count();
 
     // Add the time it took to load and index the debug info. Can create
-    // false is very important here. We don't want this call to have any side effects.
+    // false is very important here. We don't want this call to have any side
+    // effects.
     SymbolFile *sym_file = module_sp->GetSymbolFile(/*can_create=*/false);
     if (!sym_file)
       continue;
