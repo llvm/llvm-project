@@ -1,6 +1,7 @@
 // RUN: %clang %cflags -march=armv8.3-a %s -o %t.exe
-// RUN: llvm-bolt-binary-analysis --scanners=pacret %t.exe 2>&1 | FileCheck -check-prefix=PACRET %s
-// RUN: llvm-bolt-binary-analysis --scanners=pauth  %t.exe 2>&1 | FileCheck %s
+// RUN: llvm-bolt-binary-analysis --scanners=pacret                        %t.exe 2>&1 | FileCheck -check-prefix=PACRET %s
+// RUN: llvm-bolt-binary-analysis --scanners=pauth --auth-traps-on-failure %t.exe 2>&1 | FileCheck -check-prefix=FPAC %s
+// RUN: llvm-bolt-binary-analysis --scanners=pauth                         %t.exe 2>&1 | FileCheck %s
 
 // The detection of compiler-generated explicit pointer checks is tested in
 // gs-pauth-address-checks.s, for that reason only test here "dummy-load" and
@@ -8,6 +9,7 @@
 // detected per-instruction and per-BB.
 
 // PACRET-NOT: authentication oracle found in function
+// FPAC-NOT:   authentication oracle found in function
 
         .text
 
