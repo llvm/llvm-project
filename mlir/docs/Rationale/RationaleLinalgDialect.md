@@ -510,7 +510,7 @@ and LLVMIR.
 
 #### The Linalg Forms
 
-The core Linalg operation tree has three forms:
+The core Linalg operation set has four forms:
 * **Generic:** Represented by `linalg.generic` and can encode all perfectly-nested
 loop operations.
 * **Category:** For example, `linalg.contract` and `linalg.elementwise`, that encode
@@ -523,15 +523,23 @@ can be converted to either a single _category_ or _generic_ forms, ie. are _perf
 operations are not perfectly nested, and are converted to a list of other operations
 (of various dialects).
 
-The different Linalg forms that are derived from `linalg.generic` are *equivalent*.
-It should always be possible to convert a **named** operation into a **category** and that
-into a **generic** and back to **named**. However, it may not be possible to convert a
-**generic** into a **named** if there is no such named form.
+The forms correlate in the following manner:
+```
++ generic
+ \__ + category
+      \__ + named
++ composite
+```
 
-**Composite** operations cannot be converted to the other three classes and forms a
+The `category` and `named` forms are derived from `linalg.generic` and are *equivalent*.
+It should always be possible to convert a `named` operation into a `category` and that
+into a `generic` and back to `named`. However, it may not be possible to convert a
+`generic` into a `named` if there is no such `named` form.
+
+`Composite` operations cannot be converted to the other three classes and forms a
 sub-set on its own. But they can use other Linalg forms when expanding. There can be
 a pattern-matching transform to detect a graph of operations and convert into a
-**composite** operation.
+`composite` operation.
 
 The various forms in the Linalg dialect are meant to facilitate
 pattern matching (single operations or DAGs) and to be able to consider
