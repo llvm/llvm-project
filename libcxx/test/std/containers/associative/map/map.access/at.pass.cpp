@@ -44,7 +44,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
 
     // throwing is not allowed during constant evaluation
-    if (!std::is_constant_evaluated())
+    if (!TEST_IS_CONSTANT_EVALUATED)
       try {
         TEST_IGNORE_NODISCARD m.at(6);
         assert(false);
@@ -76,7 +76,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(5) == 5.5);
 #ifndef TEST_HAS_NO_EXCEPTIONS
     // throwing is not allowed during constant evaluation
-    if (!std::is_constant_evaluated())
+    if (!TEST_IS_CONSTANT_EVALUATED)
       try {
         TEST_IGNORE_NODISCARD m.at(6);
         assert(false);
@@ -112,7 +112,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 #  ifndef TEST_HAS_NO_EXCEPTIONS
 
     // throwing is not allowed during constant evaluation
-    if (!std::is_constant_evaluated())
+    if (!TEST_IS_CONSTANT_EVALUATED)
       try {
         TEST_IGNORE_NODISCARD m.at(6);
         assert(false);
@@ -143,7 +143,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(5) == 5.5);
 #  ifndef TEST_HAS_NO_EXCEPTIONS
     // throwing is not allowed during constant evaluation
-    if (!std::is_constant_evaluated())
+    if (!TEST_IS_CONSTANT_EVALUATED)
       try {
         TEST_IGNORE_NODISCARD m.at(6);
         assert(false);
