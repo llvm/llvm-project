@@ -12610,17 +12610,87 @@ void SelectionDAG::ReplaceAllUsesOfValuesWith(const SDValue *From,
 /// based on their topological order. It returns the maximum id and a vector
 /// of the SDNodes* in assigned order by reference.
 unsigned SelectionDAG::AssignTopologicalOrder() {
-  SmallVector<const SDNode *> SortedNodes(AllNodes.size());
-  getTopologicallyOrderedNodes(SortedNodes);
+  unsigned DAGSize = 0;
 
-  for (auto [Idx, ConstN] : enumerate(SortedNodes)) {
-    auto *N = const_cast<SDNode *>(ConstN);
-    N->setNodeId(Idx);
-    if (N->getIterator() != std::prev(allnodes_end()))
-      AllNodes.push_back(AllNodes.remove(N));
+  // SortedPos tracks the progress of the algorithm. Nodes before it are
+  // sorted, nodes after it are unsorted. When the algorithm completes
+  // it is at the end of the list.
+  allnodes_iterator SortedPos = allnodes_begin();
+
+  // Visit all the nodes. Move nodes with no operands to the front of
+  // the list immediately. Annotate nodes that do have operands with their
+  // operand count. Before we do this, the Node Id fields of the nodes
+  // may contain arbitrary values. After, the Node Id fields for nodes
+  // before SortedPos will contain the topological sort index, and the
+  // Node Id fields for nodes At SortedPos and after will contain the
+  // count of outstanding operands.
+  for (SDNode &N : llvm::make_early_inc_range(allnodes())) {
+    checkForCycles(&N, this);
+    unsigned Degree = N.getNumOperands();
+    if (Degree == 0) {
+      // A node with no uses, add it to the result array immediately.
+      N.setNodeId(DAGSize++);
+      allnodes_iterator Q(&N);
+      if (Q != SortedPos)
+        SortedPos = AllNodes.insert(SortedPos, AllNodes.remove(Q));
+      assert(SortedPos != AllNodes.end() && "Overran node list");
+      ++SortedPos;
+    } else {
+      // Temporarily use the Node Id as scratch space for the degree count.
+      N.setNodeId(Degree);
+    }
   }
 
-  return SortedNodes.size();
+  // Visit all the nodes. As we iterate, move nodes into sorted order,
+  // such that by the time the end is reached all nodes will be sorted.
+  for (SDNode &Node : allnodes()) {
+    SDNode *N = &Node;
+    checkForCycles(N, this);
+    // N is in sorted position, so all its uses have one less operand
+    // that needs to be sorted.
+    for (SDNode *P : N->users()) {
+      unsigned Degree = P->getNodeId();
+      assert(Degree != 0 && "Invalid node degree");
+      --Degree;
+      if (Degree == 0) {
+        // All of P's operands are sorted, so P may sorted now.
+        P->setNodeId(DAGSize++);
+        if (P->getIterator() != SortedPos)
+          SortedPos = AllNodes.insert(SortedPos, AllNodes.remove(P));
+        assert(SortedPos != AllNodes.end() && "Overran node list");
+        ++SortedPos;
+      } else {
+        // Update P's outstanding operand count.
+        P->setNodeId(Degree);
+      }
+    }
+    if (Node.getIterator() == SortedPos) {
+#ifndef NDEBUG
+      allnodes_iterator I(N);
+      SDNode *S = &*++I;
+      dbgs() << "Overran sorted position:\n";
+      S->dumprFull(this); dbgs() << "\n";
+      dbgs() << "Checking if this is due to cycles\n";
+      checkForCycles(this, true);
+#endif
+      llvm_unreachable(nullptr);
+    }
+  }
+
+  assert(SortedPos == AllNodes.end() &&
+         "Topological sort incomplete!");
+  assert(AllNodes.front().getOpcode() == ISD::EntryToken &&
+         "First node in topological sort is not the entry token!");
+  assert(AllNodes.front().getNodeId() == 0 &&
+         "First node in topological sort has non-zero id!");
+  assert(AllNodes.front().getNumOperands() == 0 &&
+         "First node in topological sort has operands!");
+  assert(AllNodes.back().getNodeId() == (int)DAGSize-1 &&
+         "Last node in topologic sort has unexpected id!");
+  assert(AllNodes.back().use_empty() &&
+         "Last node in topologic sort has users!");
+  assert(DAGSize == allnodes_size() && "Node count mismatch!");
+  return DAGSize;
 }
 
 void SelectionDAG::getTopologicallyOrderedNodes(
