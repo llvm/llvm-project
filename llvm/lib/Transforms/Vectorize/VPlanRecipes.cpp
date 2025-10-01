@@ -2755,9 +2755,7 @@ VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
     : VPSingleDefRecipe(VPDef::VPExpressionSC, {}, {}),
-      ExpressionRecipes(SmallVector<VPSingleDefRecipe *>(
-          ExpressionRecipes.begin(), ExpressionRecipes.end())),
-      ExpressionType(ExpressionType) {
+      ExpressionRecipes(ExpressionRecipes), ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(
       none_of(ExpressionRecipes,
