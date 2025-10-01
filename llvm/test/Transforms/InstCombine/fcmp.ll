@@ -1814,7 +1814,7 @@ define i1 @fcmp_ule_fsub_const(float %x, float %y) {
 
 define i1 @fcmp_ninf_ule_fsub_const(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_ninf_ule_fsub_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf ule float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fs = fsub float %x, %y
@@ -1834,7 +1834,7 @@ define i1 @fcmp_nnan_ule_fsub_const(float %x, float %y) {
 
 define i1 @fcmp_ule_fsub_ninf_const(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_ule_fsub_ninf_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf ule float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fs = fsub ninf float %x, %y
@@ -1844,7 +1844,7 @@ define i1 @fcmp_ule_fsub_ninf_const(float %x, float %y) {
 
 define i1 @fcmp_ule_fsub_nnan_const(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_ule_fsub_nnan_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ule float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fs = fsub nnan float %x, %y
