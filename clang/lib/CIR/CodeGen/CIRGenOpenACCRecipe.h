@@ -37,8 +37,7 @@ class OpenACCRecipeBuilderBase {
 
   void makeBoundsInit(mlir::Value alloca, mlir::Location loc,
                       mlir::Block *block, const VarDecl *allocaDecl,
-                      QualType origType, const Expr *initExpr,
-                      bool isInitSection);
+                      QualType origType, bool isInitSection);
 
 protected:
   CIRGen::CIRGenFunction &cgf;

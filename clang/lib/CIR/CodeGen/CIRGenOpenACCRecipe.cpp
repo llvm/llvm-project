@@ -402,8 +402,7 @@ void OpenACCRecipeBuilderBase::createRecipeDestroySection(
 }
 void OpenACCRecipeBuilderBase::makeBoundsInit(
     mlir::Value alloca, mlir::Location loc, mlir::Block *block,
-    const VarDecl *allocaDecl, QualType origType, const Expr *initExpr,
-    bool isInitSection) {
+    const VarDecl *allocaDecl, QualType origType, bool isInitSection) {
   mlir::OpBuilder::InsertionGuard guardCase(builder);
   builder.setInsertionPointToEnd(block);
   CIRGenFunction::LexicalScope ls(cgf, loc, block);
@@ -472,8 +471,12 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
     mlir::Value alloca = makeBoundsAlloca(
         block, exprRange, loc, "openacc.private.init", numBounds, boundTypes);
 
-    if (initExpr)
-      makeBoundsInit(alloca, loc, block, allocaDecl, origType, initExpr,
+    // If the initializer is trivial, there is nothing to do here, so save
+    // ourselves some effort.
+    if (initExpr && (!cgf.isTrivialInitializer(initExpr) ||
+                     cgf.getContext().getLangOpts().getTrivialAutoVarInit() !=
+                         LangOptions::TrivialAutoVarInitKind::Uninitialized))
+      makeBoundsInit(alloca, loc, block, allocaDecl, origType,
                      /*isInitSection=*/true);
   }
 
