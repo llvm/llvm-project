@@ -225,6 +225,7 @@ body:             |
   %1:av_32 = COPY $vgpr1
   DS_WRITE_B32_gfx9 %0, %1, 40, 0, implicit $exec :: (store (s32), addrspace 3)
   DS_WRITE_B32_gfx9 %0, $vgpr2, 96, 0, implicit $exec :: (store (s32), addrspace 3)
+...
 
 ...
 
