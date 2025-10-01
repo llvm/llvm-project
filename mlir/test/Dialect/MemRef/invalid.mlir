@@ -1169,3 +1169,19 @@ func.func @expand_shape_invalid_output_shape(
       into memref<2x15x20xf32, strided<[60000, 4000, 2], offset: 100>>
   return
 }
+
+// -----
+
+func.func @distinct_objects_types_mismatch(%arg0: memref<?xf32>, %arg1: memref<?xi32>) -> (memref<?xi32>, memref<?xf32>) {
+  // expected-error @+1 {{operand types and result types must match}}
+  %0, %1 = "memref.distinct_objects"(%arg0, %arg1) : (memref<?xf32>, memref<?xi32>) -> (memref<?xi32>, memref<?xf32>)
+  return %0, %1 : memref<?xi32>, memref<?xf32>
+}
+
+// -----
+
+func.func @distinct_objects_0_operands() {
+  // expected-error @+1 {{expected at least one operand}}
+  "memref.distinct_objects"() : () -> ()
+  return
+}

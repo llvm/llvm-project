@@ -127,7 +127,7 @@ public:
         mlirPythonFrozenRewritePatternSetToCapsule(get()));
   }
 
-  static nb::object createFromCapsule(nb::object capsule) {
+  static nb::object createFromCapsule(const nb::object &capsule) {
     MlirFrozenRewritePatternSet rawPm =
         mlirPythonCapsuleToFrozenRewritePatternSet(capsule.ptr());
     if (rawPm.ptr == nullptr)
