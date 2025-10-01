@@ -1853,26 +1853,24 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   assert(!MI.isMetaInstruction());
 
   AMDGPU::Waitcnt Wait;
+  const unsigned Opc = MI.getOpcode();
 
   // FIXME: This should have already been handled by the memory legalizer.
   // Removing this currently doesn't affect any lit tests, but we need to
   // verify that nothing was relying on this. The number of buffer invalidates
   // being handled here should not be expanded.
-  if (MI.getOpcode() == AMDGPU::BUFFER_WBINVL1 ||
-      MI.getOpcode() == AMDGPU::BUFFER_WBINVL1_SC ||
-      MI.getOpcode() == AMDGPU::BUFFER_WBINVL1_VOL ||
-      MI.getOpcode() == AMDGPU::BUFFER_GL0_INV ||
-      MI.getOpcode() == AMDGPU::BUFFER_GL1_INV) {
+  if (Opc == AMDGPU::BUFFER_WBINVL1 || Opc == AMDGPU::BUFFER_WBINVL1_SC ||
+      Opc == AMDGPU::BUFFER_WBINVL1_VOL || Opc == AMDGPU::BUFFER_GL0_INV ||
+      Opc == AMDGPU::BUFFER_GL1_INV) {
     Wait.LoadCnt = 0;
   }
 
   // All waits must be resolved at call return.
   // NOTE: this could be improved with knowledge of all call sites or
   //   with knowledge of the called routines.
-  if (MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
-      MI.getOpcode() == AMDGPU::SI_RETURN ||
-      MI.getOpcode() == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
-      MI.getOpcode() == AMDGPU::S_SETPC_B64_return ||
+  if (Opc == AMDGPU::SI_RETURN_TO_EPILOG || Opc == AMDGPU::SI_RETURN ||
+      Opc == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
+      Opc == AMDGPU::S_SETPC_B64_return ||
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
     Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
   }
@@ -1884,8 +1882,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // send a message to explicitly release all VGPRs before the stores have
   // completed, but it is only safe to do this if there are no outstanding
   // scratch stores.
-  else if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
-           MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
+  else if (Opc == AMDGPU::S_ENDPGM || Opc == AMDGPU::S_ENDPGM_SAVED) {
     if (!WCG->isOptNone() &&
         (MI.getMF()->getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled() ||
          (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
@@ -1894,8 +1891,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       ReleaseVGPRInsts.insert(&MI);
   }
   // Resolve vm waits before gs-done.
-  else if ((MI.getOpcode() == AMDGPU::S_SENDMSG ||
-            MI.getOpcode() == AMDGPU::S_SENDMSGHALT) &&
+  else if ((Opc == AMDGPU::S_SENDMSG || Opc == AMDGPU::S_SENDMSGHALT) &&
            ST->hasLegacyGeometry() &&
            ((MI.getOperand(0).getImm() & AMDGPU::SendMsg::ID_MASK_PreGFX11_) ==
             AMDGPU::SendMsg::ID_GS_DONE_PreGFX11)) {
@@ -1920,7 +1916,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
     // Wait for any pending GDS instruction to complete before any
     // "Always GDS" instruction.
-    if (TII->isAlwaysGDS(MI.getOpcode()) && ScoreBrackets.hasPendingGDS())
+    if (TII->isAlwaysGDS(Opc) && ScoreBrackets.hasPendingGDS())
       addWait(Wait, DS_CNT, ScoreBrackets.getPendingGDSWait());
 
     if (MI.isCall() && callWaitsOnFunctionEntry(MI)) {
@@ -1946,7 +1942,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
                                       Wait);
         }
       }
-    } else if (MI.getOpcode() == AMDGPU::S_BARRIER_WAIT) {
+    } else if (Opc == AMDGPU::S_BARRIER_WAIT) {
       ScoreBrackets.tryClearSCCWriteEvent(&MI);
     } else {
       // FIXME: Should not be relying on memoperands.
@@ -2061,8 +2057,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   //
   // In all other cases, ensure safety by ensuring that there are no outstanding
   // memory operations.
-  if (MI.getOpcode() == AMDGPU::S_BARRIER &&
-      !ST->hasAutoWaitcntBeforeBarrier() && !ST->supportsBackOffBarrier()) {
+  if (Opc == AMDGPU::S_BARRIER && !ST->hasAutoWaitcntBeforeBarrier() &&
+      !ST->supportsBackOffBarrier()) {
     Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/true));
   }
 
@@ -2146,19 +2142,19 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   }
 
   // XCnt may be already consumed by a load wait.
-  if (Wait.KmCnt == 0 && Wait.XCnt != ~0u &&
-      !ScoreBrackets.hasPendingEvent(SMEM_GROUP))
-    Wait.XCnt = ~0u;
+  if (Wait.XCnt != ~0u) {
+    if (Wait.KmCnt == 0 && !ScoreBrackets.hasPendingEvent(SMEM_GROUP))
+      Wait.XCnt = ~0u;
 
-  if (Wait.LoadCnt == 0 && Wait.XCnt != ~0u &&
-      !ScoreBrackets.hasPendingEvent(VMEM_GROUP))
-    Wait.XCnt = ~0u;
+    if (Wait.LoadCnt == 0 && !ScoreBrackets.hasPendingEvent(VMEM_GROUP))
+      Wait.XCnt = ~0u;
 
-  // Since the translation for VMEM addresses occur in-order, we can skip the
-  // XCnt if the current instruction is of VMEM type and has a memory dependency
-  // with another VMEM instruction in flight.
-  if (Wait.XCnt != ~0u && isVmemAccess(*It))
-    Wait.XCnt = ~0u;
+    // Since the translation for VMEM addresses occur in-order, we can skip the
+    // XCnt if the current instruction is of VMEM type and has a memory
+    // dependency with another VMEM instruction in flight.
+    if (isVmemAccess(*It))
+      Wait.XCnt = ~0u;
+  }
 
   if (WCG->createNewWaitcnt(Block, It, Wait))
     Modified = true;
@@ -2395,9 +2391,8 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
         unsigned OldEventsHasSCCWrite = OldEvents & (1 << SCC_WRITE);
         if (!OldEventsHasSCCWrite) {
           PendingSCCWrite = Other.PendingSCCWrite;
-        } else {
-          if (PendingSCCWrite != Other.PendingSCCWrite)
-            PendingSCCWrite = nullptr;
+        } else if (PendingSCCWrite != Other.PendingSCCWrite) {
+          PendingSCCWrite = nullptr;
         }
       }
     }
@@ -2635,11 +2630,10 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
   for (MachineBasicBlock *MBB : ML->blocks()) {
     for (MachineInstr &MI : *MBB) {
       if (isVMEMOrFlatVMEM(MI)) {
-        if (MI.mayLoad())
-          HasVMemLoad = true;
-        if (MI.mayStore())
-          HasVMemStore = true;
+        HasVMemLoad |= MI.mayLoad();
+        HasVMemStore |= MI.mayStore();
       }
+
       for (const MachineOperand &Op : MI.all_uses()) {
         if (Op.isDebug() || !TRI->isVectorRegister(*MRI, Op.getReg()))
           continue;

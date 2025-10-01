@@ -1033,6 +1033,11 @@ public:
            Opc == AMDGPU::GLOBAL_WBINV;
   }
 
+  static bool isGFX12CacheInvOrWBInst(unsigned Opc) {
+    return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||
+           Opc == AMDGPU::GLOBAL_WBINV;
+  }
+
   static bool isF16PseudoScalarTrans(unsigned Opcode) {
     return Opcode == AMDGPU::V_S_EXP_F16_e64 ||
            Opcode == AMDGPU::V_S_LOG_F16_e64 ||
