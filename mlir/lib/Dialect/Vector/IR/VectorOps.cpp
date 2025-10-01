@@ -2398,7 +2398,6 @@ foldToElementsFromElements(ToElementsOp toElementsOp,
 
 /// Folds vector.to_elements(vector.broadcast(%x)) for the scalar case only.
 ///
-/// takes a scalar %x: replicate the scalar across all results.
 /// Example:
 ///  %b = vector.broadcast %x : i32 to vector<3xf32>
 ///  %e:3 = vector.to_elements %b : vector<3xf32>
@@ -2442,7 +2441,7 @@ ToElementsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
 }
 
 /// Canonicalize `vector.to_elements(vector.broadcast(%v))` where `%v` is a
-/// vector:
+/// vector.
 /// - Build `vector.to_elements %v` and remap each destination element to the
 ///   corresponding source element using broadcast rules (match or 1 →
 ///   replicate).
@@ -2454,7 +2453,6 @@ ToElementsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
 ///   %src_elems:2 = vector.to_elements %src : vector<2xf32>
 ///   // uses: %src_elems#0, %src_elems#1, %src_elems#0,
 ///   //       %src_elems#1, %src_elems#0, %src_elems#1
-
 class ToElementsOfBroadcast final : public OpRewritePattern<ToElementsOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -2494,6 +2492,16 @@ class ToElementsOfBroadcast final : public OpRewritePattern<ToElementsOp> {
     // the source size is 1 (replication). This mapping is needed so we can
     // replace each result of to_elements with the corresponding element from
     // the broadcast source.
+    // Inner-dimension stretch example:
+    //   %v = vector.broadcast %src : vector<2x1x2xf32> to vector<2x3x2xf32>
+    //   %e:12 = vector.to_elements %v : vector<2x3x2xf32>
+    // becomes:
+    //   %src_elems:4 = vector.to_elements %src : vector<2x1x2xf32>
+    //   // uses: %src_elems#0, %src_elems#1, %src_elems#0,
+    //   //       %src_elems#1, %src_elems#0, %src_elems#1,
+    //   //       %src_elems#2, %src_elems#3, %src_elems#2,
+    //   //       %src_elems#3, %src_elems#2, %src_elems#3
+
     SmallVector<int64_t> dstIdx(dstShape.size());
     for (int64_t lin = 0; lin < dstCount; ++lin) {
       int64_t temp = lin;
