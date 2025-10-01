@@ -19,12 +19,12 @@ needs more offload patches
 [Offload] Port llvm-offload-device-info to new offload API (#155626)
 [Offload]  Implement 'olIsValidBinary' in offload
 ---
-need to resole API changes downstream
-[Offload] Use Error for allocating/deallocating in plugins
----
 breaks smoke flags, wgs64
 [clang] Use the VFS to get the OpenMP entry info (#160935)
 ---
 breaks 463.swim build
 [Flang] Add perfect-nest and rectangular-loop semantic tests (#160283)
+---
+needs post merge ingtegration
+[NFC][LLVM] Use ListSeparator in AsmWriter (#161422)
 ---
