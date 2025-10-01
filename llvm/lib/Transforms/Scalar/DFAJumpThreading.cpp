@@ -192,7 +192,7 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
   PHINode *SIUse = SIToUnfold.getUse();
   assert(SI->hasOneUse());
   // The select may come indirectly, instead of from where it is defined.
-  BasicBlock *StartBlock = SIUse->getIncomingBlock(SI->user_begin().getUse());
+  BasicBlock *StartBlock = SIUse->getIncomingBlock(*SI->use_begin());
   BranchInst *StartBlockTerm =
       dyn_cast<BranchInst>(StartBlock->getTerminator());
   assert(StartBlockTerm);
