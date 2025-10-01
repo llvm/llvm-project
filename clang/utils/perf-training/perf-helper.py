@@ -153,7 +153,14 @@ def perf2prof(args):
     profgen_args = [opts.profgen, f"--binary={opts.binary}"]
     for path in opts.paths:
         for filename in findFilesWithExtension(path, "perf.data"):
-            subprocess.run([*profgen_args, f"--perfdata={filename}", f"--output={filename}.profraw"], check=True)
+            subprocess.run(
+                [
+                    *profgen_args,
+                    f"--perfdata={filename}",
+                    f"--output={filename}.profraw",
+                ],
+                check=True,
+            )
     return 0
 
 
