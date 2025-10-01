@@ -15,10 +15,10 @@ lock cmpxchg16b (%rax)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  19     3     6.00    *      *            cmpxchg8b	(%rax)
-# CHECK-NEXT:  28     4     14.75   *      *            cmpxchg16b	(%rax)
-# CHECK-NEXT:  19     3     6.00    *      *            lock		cmpxchg8b	(%rax)
-# CHECK-NEXT:  28     4     14.75   *      *            lock		cmpxchg16b	(%rax)
+# CHECK-NEXT:  15     3     6.00    *      *            cmpxchg8b	(%rax)
+# CHECK-NEXT:  26     4     14.75   *      *            cmpxchg16b	(%rax)
+# CHECK-NEXT:  15     3     6.00    *      *            lock		cmpxchg8b	(%rax)
+# CHECK-NEXT:  26     4     14.75   *      *            lock		cmpxchg16b	(%rax)
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn4AGU0
