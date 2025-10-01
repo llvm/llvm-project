@@ -4,29 +4,29 @@
 // RUN:   | FileCheck %s -check-prefixes='CHECK,CHECK-NO-ARITH'
 
 module @test_module {
-  // CHECK: llvm.func @_Z22__spirv_ocl_native_expDh(f16) -> f16
-  // CHECK: llvm.func @_Z22__spirv_ocl_native_expf(f32) -> f32
-  // CHECK: llvm.func @_Z22__spirv_ocl_native_expd(f64) -> f64
+  // CHECK-DAG: llvm.func @_Z22__spirv_ocl_native_expDh(f16) -> f16
+  // CHECK-DAG: llvm.func @_Z22__spirv_ocl_native_expf(f32) -> f32
+  // CHECK-DAG: llvm.func @_Z22__spirv_ocl_native_expd(f64) -> f64
   //
-  // CHECK: llvm.func @_Z22__spirv_ocl_native_expDv2_d(vector<2xf64>) -> vector<2xf64>
-  // CHECK: llvm.func @_Z22__spirv_ocl_native_expDv3_d(vector<3xf64>) -> vector<3xf64>
-  // CHECK: llvm.func @_Z22__spirv_ocl_native_expDv4_d(vector<4xf64>) -> vector<4xf64>
-  // CHECK: llvm.func @_Z22__spirv_ocl_native_expDv8_d(vector<8xf64>) -> vector<8xf64>
-  // CHECK: llvm.func @_Z22__spirv_ocl_native_expDv16_d(vector<16xf64>) -> vector<16xf64>
-  // CHECK: llvm.func @_Z22__spirv_ocl_native_expDv16_f(vector<16xf32>) -> vector<16xf32>
-  // CHECK: llvm.func @_Z22__spirv_ocl_native_expDv4_Dh(vector<4xf16>) -> vector<4xf16>
+  // CHECK-DAG: llvm.func @_Z22__spirv_ocl_native_expDv2_d(vector<2xf64>) -> vector<2xf64>
+  // CHECK-DAG: llvm.func @_Z22__spirv_ocl_native_expDv3_d(vector<3xf64>) -> vector<3xf64>
+  // CHECK-DAG: llvm.func @_Z22__spirv_ocl_native_expDv4_d(vector<4xf64>) -> vector<4xf64>
+  // CHECK-DAG: llvm.func @_Z22__spirv_ocl_native_expDv8_d(vector<8xf64>) -> vector<8xf64>
+  // CHECK-DAG: llvm.func @_Z22__spirv_ocl_native_expDv16_d(vector<16xf64>) -> vector<16xf64>
+  // CHECK-DAG: llvm.func @_Z22__spirv_ocl_native_expDv16_f(vector<16xf32>) -> vector<16xf32>
+  // CHECK-DAG: llvm.func @_Z22__spirv_ocl_native_expDv4_Dh(vector<4xf16>) -> vector<4xf16>
   //
-  // CHECK: llvm.func @_Z22__spirv_ocl_native_cosDh(f16) -> f16
-  // CHECK: llvm.func @_Z23__spirv_ocl_native_exp2f(f32) -> f32
-  // CHECK: llvm.func @_Z22__spirv_ocl_native_logDh(f16) -> f16
-  // CHECK: llvm.func @_Z23__spirv_ocl_native_log2f(f32) -> f32
-  // CHECK: llvm.func @_Z24__spirv_ocl_native_log10d(f64) -> f64
-  // CHECK: llvm.func @_Z23__spirv_ocl_native_powrDhDh(f16, f16) -> f16
-  // CHECK: llvm.func @_Z24__spirv_ocl_native_rsqrtd(f64) -> f64
-  // CHECK: llvm.func @_Z22__spirv_ocl_native_sinDh(f16) -> f16
-  // CHECK: llvm.func @_Z23__spirv_ocl_native_sqrtf(f32) -> f32
-  // CHECK: llvm.func @_Z22__spirv_ocl_native_tand(f64) -> f64
-  // CHECK-ARITH: llvm.func @_Z25__spirv_ocl_native_divideff(f32, f32) -> f32
+  // CHECK-DAG: llvm.func @_Z22__spirv_ocl_native_cosDh(f16) -> f16
+  // CHECK-DAG: llvm.func @_Z23__spirv_ocl_native_exp2f(f32) -> f32
+  // CHECK-DAG: llvm.func @_Z22__spirv_ocl_native_logDh(f16) -> f16
+  // CHECK-DAG: llvm.func @_Z23__spirv_ocl_native_log2f(f32) -> f32
+  // CHECK-DAG: llvm.func @_Z24__spirv_ocl_native_log10d(f64) -> f64
+  // CHECK-DAG: llvm.func @_Z23__spirv_ocl_native_powrDhDh(f16, f16) -> f16
+  // CHECK-DAG: llvm.func @_Z24__spirv_ocl_native_rsqrtd(f64) -> f64
+  // CHECK-DAG: llvm.func @_Z22__spirv_ocl_native_sinDh(f16) -> f16
+  // CHECK-DAG: llvm.func @_Z23__spirv_ocl_native_sqrtf(f32) -> f32
+  // CHECK-DAG: llvm.func @_Z22__spirv_ocl_native_tand(f64) -> f64
+  // CHECK-ARITH-DAG: llvm.func @_Z25__spirv_ocl_native_divideff(f32, f32) -> f32
 
   // CHECK-LABEL: func @math_ops
   func.func @math_ops() {

@@ -12,6 +12,7 @@
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -50,21 +51,29 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
       return failure();
 
     arith::FastMathFlags fastFlags = op.getFastmath();
-    if (!((uint32_t)fastFlags & (uint32_t)arith::FastMathFlags::afn))
-      return failure();
+    if (!(static_cast<uint32_t>(fastFlags) & static_cast<uint32_t>(arith::FastMathFlags::afn)))
+      return rewriter.notifyMatchFailure(op, "not a fastmath `afn` operation");
 
     SmallVector<Type, 1> operandTypes;
     for (auto operand : adaptor.getOperands()) {
       // This pass only supports operations on vectors that are already in SPIRV
       // supported vector sizes: Distributing unsupported vector sizes to SPIRV
-      // supported vetor sizes are done in other blocking optimization passes.
+      // supported vector sizes are done in other blocking optimization passes.
       if (!isSPIRVCompatibleFloatOrVec(operand.getType()))
-        return failure();
+        return rewriter.notifyMatchFailure(op, "no equivalent native operation for operand type");
       operandTypes.push_back(operand.getType());
     }
-    LLVM::LLVMFuncOp funcOp = appendOrGetFuncOp(op, operandTypes);
+
+    auto moduleOp = op->template getParentWithTrait<OpTrait::SymbolTable>();
+    auto funcOpRes =
+      LLVM::lookupOrCreateFn(rewriter, moduleOp, getMangledNativeFuncName(operandTypes), operandTypes, op.getType());
+    assert(!failed(funcOpRes));
+    LLVM::LLVMFuncOp funcOp = funcOpRes.value();
+
     auto callOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
         op, funcOp, adaptor.getOperands());
+    // Preserve the fastmath flags in our MLIR op for later use: We need to
+    // convert our MLIR fastmath attrs into something compatible with llvm.
     arith::AttrConvertFastMathToLLVM<Op, LLVM::CallOp> fastAttrConverter(op);
     mlir::NamedAttribute fastAttr = fastAttrConverter.getAttrs()[0];
     callOp->setAttr(fastAttr.getName(), fastAttr.getValue());
@@ -90,49 +99,29 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
     return false;
   }
 
-  LLVM::LLVMFuncOp
-  appendOrGetFuncOp(Op &op, const SmallVector<Type, 1> &operandTypes) const {
-    // This function assumes op types have already been validated using
-    // isSPIRVCompatibleFloatOrVec.
-    using LLVM::LLVMFuncOp;
 
-    std::string mangledNativeFunc =
+  inline std::string getMangledNativeFuncName(const ArrayRef<Type> operandTypes) const {
+    std::string mangledFuncName =
         "_Z" + std::to_string(nativeFunc.size()) + nativeFunc.str();
 
-    auto appendFloatToMangledFunc = [&mangledNativeFunc](Type type) {
+    auto appendFloatToMangledFunc = [&mangledFuncName](Type type) {
       if (type.isF32())
-        mangledNativeFunc += "f";
+        mangledFuncName += "f";
       else if (type.isF16())
-        mangledNativeFunc += "Dh";
+        mangledFuncName += "Dh";
       else if (type.isF64())
-        mangledNativeFunc += "d";
+        mangledFuncName += "d";
     };
 
     for (auto type : operandTypes) {
       if (auto vecType = dyn_cast<VectorType>(type)) {
-        mangledNativeFunc += "Dv" + std::to_string(vecType.getShape()[0]) + "_";
+        mangledFuncName += "Dv" + std::to_string(vecType.getShape()[0]) + "_";
         appendFloatToMangledFunc(vecType.getElementType());
       } else
         appendFloatToMangledFunc(type);
     }
 
-    auto funcAttr = StringAttr::get(op->getContext(), mangledNativeFunc);
-    auto funcOp =
-        SymbolTable::lookupNearestSymbolFrom<LLVMFuncOp>(op, funcAttr);
-    if (funcOp)
-      return funcOp;
-
-    auto parentFunc = op->template getParentOfType<FunctionOpInterface>();
-    assert(parentFunc && "expected there to be a parent function");
-    OpBuilder b(parentFunc);
-
-    // Create a valid global location removing any metadata attached to the
-    // location, as debug info metadata inside of a function cannot be used
-    // outside of that function.
-    auto funcType = LLVM::LLVMFunctionType::get(op.getType(), operandTypes);
-    auto globalloc =
-        op->getLoc()->template findInstanceOfOrUnknown<FileLineColLoc>();
-    return LLVMFuncOp::create(b, globalloc, mangledNativeFunc, funcType);
+    return mangledFuncName;
   }
 
   const StringRef nativeFunc;
@@ -176,13 +165,11 @@ struct ConvertMathToXeVMPass
 } // namespace
 
 void ConvertMathToXeVMPass::runOnOperation() {
-  auto m = getOperation();
-
   RewritePatternSet patterns(&getContext());
   populateMathToXeVMConversionPatterns(patterns, convertArith);
   ConversionTarget target(getContext());
   target.addLegalDialect<BuiltinDialect, func::FuncDialect,
                          vector::VectorDialect, LLVM::LLVMDialect>();
-  if (failed(applyPartialConversion(m, target, std::move(patterns))))
+  if (failed(applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
 }
