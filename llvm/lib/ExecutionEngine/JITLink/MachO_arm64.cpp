@@ -599,8 +599,7 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromMachOObject_arm64(
 }
 
 static Error applyPACSigningToModInitPointers(LinkGraph &G) {
-  assert(G.getTargetTriple().getSubArch() == Triple::AArch64SubArch_arm64e &&
-         "PAC signing only valid for arm64e");
+  assert(G.getTargetTriple().isArm64e() && "PAC signing only valid for arm64e");
 
   if (auto *ModInitSec = G.findSectionByName("__DATA,__mod_init_func")) {
     for (auto *B : ModInitSec->blocks()) {

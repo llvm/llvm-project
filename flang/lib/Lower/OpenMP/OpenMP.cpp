@@ -761,19 +761,17 @@ static void promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(
 static void getDeclareTargetInfo(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval,
-    const parser::OpenMPDeclareTargetConstruct &declareTargetConstruct,
+    const parser::OpenMPDeclareTargetConstruct &construct,
     mlir::omp::DeclareTargetOperands &clauseOps,
     llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &symbolAndClause) {
-  const auto &spec =
-      std::get<parser::OmpDeclareTargetSpecifier>(declareTargetConstruct.t);
-  if (const auto *objectList{parser::Unwrap<parser::OmpObjectList>(spec.u)}) {
-    ObjectList objects{makeObjects(*objectList, semaCtx)};
+
+  if (!construct.v.Arguments().v.empty()) {
+    ObjectList objects{makeObjects(construct.v.Arguments(), semaCtx)};
     // Case: declare target(func, var1, var2)
     gatherFuncAndVarSyms(objects, mlir::omp::DeclareTargetCaptureClause::to,
                          symbolAndClause, /*automap=*/false);
-  } else if (const auto *clauseList{
-                 parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
-    List<Clause> clauses = makeClauses(*clauseList, semaCtx);
+  } else {
+    List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
     if (clauses.empty()) {
       Fortran::lower::pft::FunctionLikeUnit *owningProc =
           eval.getOwningProcedure();

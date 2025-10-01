@@ -1943,13 +1943,15 @@ void CGDebugInfo::CollectRecordLambdaFields(
       // by using AT_object_pointer for the function and having that be
       // used as 'this' for semantic references.
       Loc = Field->getLocation();
-    } else {
+    } else if (Capture.capturesVariable()) {
       Loc = Capture.getLocation();
 
       const ValueDecl *CaptureDecl = Capture.getCapturedVar();
       assert(CaptureDecl && "Expected valid decl for captured variable.");
 
       Align = getDeclAlignIfRequired(CaptureDecl, CGM.getContext());
+    } else {
+      continue;
     }
 
     llvm::DIFile *VUnit = getOrCreateFile(Loc);

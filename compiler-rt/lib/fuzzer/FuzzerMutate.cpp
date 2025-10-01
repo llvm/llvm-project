@@ -101,7 +101,7 @@ size_t MutationDispatcher::Mutate_CustomCrossOver(uint8_t *Data, size_t Size,
 
   if (!NewSize)
     return 0;
-  assert(NewSize <= MaxSize && "CustomCrossOver returned overisized unit");
+  assert(NewSize <= MaxSize && "CustomCrossOver returned oversized unit");
   memcpy(Data, U.data(), NewSize);
   return NewSize;
 }
@@ -463,7 +463,7 @@ size_t MutationDispatcher::Mutate_CrossOver(uint8_t *Data, size_t Size,
     default: assert(0);
   }
   assert(NewSize > 0 && "CrossOver returned empty unit");
-  assert(NewSize <= MaxSize && "CrossOver returned overisized unit");
+  assert(NewSize <= MaxSize && "CrossOver returned oversized unit");
   return NewSize;
 }
 
