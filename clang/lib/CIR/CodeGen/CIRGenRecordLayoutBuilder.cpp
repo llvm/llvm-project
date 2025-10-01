@@ -824,7 +824,7 @@ void CIRRecordLowering::lowerUnion() {
     appendPaddingBytes(layoutSize - getSize(storageType));
 
   // Set packed if we need it.
-  if (layoutSize % getAlignment(storageType))
+  if (!layoutSize.isMultipleOf(getAlignment(storageType)))
     packed = true;
 }
 
