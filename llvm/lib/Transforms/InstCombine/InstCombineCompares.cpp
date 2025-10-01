@@ -5812,7 +5812,8 @@ Instruction *InstCombinerImpl::foldICmpWithClamp(ICmpInst &I, Value *X,
   else
     CR.inverse().getEquivalentICmp(Pred, C, Offset);
 
-  X = Builder.CreateAdd(X, ConstantInt::get(X->getType(), Offset));
+  if (!Offset.isZero())
+    X = Builder.CreateAdd(X, ConstantInt::get(X->getType(), Offset));
 
   return replaceInstUsesWith(
       I, Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), C)));
