@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -triple x86_64-linux-gnu %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -triple x86_64-linux-gnu %s -fexperimental-new-constant-interpreter
 
 int n;
 constexpr int *p = 0;
@@ -48,3 +47,9 @@ constexpr void *s1 = __builtin_assume_aligned(x, 32);
 constexpr void *s2 = __builtin_assume_aligned(x, 32, 5);
 constexpr void *s3 = __builtin_assume_aligned(x, 32, -1);
 
+
+constexpr int add(int a, int b) {
+  return a+b;
+}
+constexpr void *c1 = __builtin_assume_aligned(p, add(1,1));
+constexpr void *c2 = __builtin_assume_aligned(p, add(2,1)); // expected-error {{not a power of 2}}

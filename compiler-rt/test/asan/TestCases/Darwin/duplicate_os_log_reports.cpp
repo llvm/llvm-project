@@ -1,7 +1,4 @@
 // UNSUPPORTED: ios
-// Don't re-enable until rdar://problem/62141527 is fixed.
-// REQUIRES: rdar_62141527
-// REQUIRES: shell
 // REQUIRES: darwin_log_cmd
 // RUN: %clangxx_asan -fsanitize-recover=address %s -o %t
 // RUN: { %env_asan_opts=halt_on_error=0,log_to_syslog=1 %run %t > %t.process_output.txt 2>&1 & } \
@@ -11,11 +8,17 @@
 // RUN: FileCheck %s --check-prefixes CHECK,CHECK-PROC -input-file=%t.process_output.txt
 
 // Check syslog output. We filter recent system logs based on PID to avoid
-// getting the logs of previous test runs.
-// RUN: log show --debug --last 5m  --predicate "processID == ${TEST_PID}" --style syslog > %t.process_syslog_output.txt
+// getting the logs of previous test runs. Make some reattempts in case there
+// is a delay.
+// RUN: for I in {1..3}; do \
+// RUN:   log show --debug --last $((SECONDS + 30))s --predicate "processID == ${TEST_PID}" --style syslog > %t.process_syslog_output.txt; \
+// RUN:   if grep -q "use-after-poison" %t.process_syslog_output.txt; then break; fi; \
+// RUN:   sleep 5; \
+// RUN: done
 // RUN: FileCheck %s -input-file=%t.process_syslog_output.txt
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <sanitizer/asan_interface.h>
 

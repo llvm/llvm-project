@@ -160,7 +160,7 @@ def CondCodeOperand : AsmOperandClass {
   let DefaultMethod = "defaultCondCodeOp";
   let IsOptional = true;
 }
-def pred : PredicateOperand<OtherVT, (ops i32imm, i32imm),
+def pred : PredicateOperand<OtherVT, (ops i32imm, CCR),
                                      (ops (i32 14), (i32 zero_reg))> {
   let PrintMethod = "printPredicateOperand";
   let ParserMatchClass = CondCodeOperand;
@@ -686,6 +686,8 @@ class AIstr_ex_or_rel<bits<2> opcod, bits<2> opcod2, dag oops, dag iops, InstrIt
   let Inst{9-8}   = opcod2;
   let Inst{7-4}   = 0b1001;
   let Inst{3-0}   = Rt;
+
+  let mayStore = 1;
 }
 // Atomic load/store instructions
 class AIldrex<bits<2> opcod, dag oops, dag iops, InstrItinClass itin,
@@ -1217,6 +1219,7 @@ class Thumb1sI<dag oops, dag iops, AddrMode am, int sz,
                InstrItinClass itin,
                string opc, string asm, string cstr, list<dag> pattern>
   : InstThumb<am, sz, IndexModeNone, ThumbFrm, GenericDomain, cstr, itin> {
+  bits<0> s;
   let OutOperandList = !con(oops, (outs s_cc_out:$s));
   let InOperandList = !con(iops, (ins pred:$p));
   let AsmString = !strconcat(opc, "${s}${p}", asm);

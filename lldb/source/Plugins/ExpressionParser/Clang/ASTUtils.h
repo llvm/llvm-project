@@ -33,8 +33,9 @@ class ExternalASTSourceWrapper : public clang::ExternalSemaSource {
   llvm::IntrusiveRefCntPtr<ExternalASTSource> m_Source;
 
 public:
-  explicit ExternalASTSourceWrapper(ExternalASTSource *Source)
-      : m_Source(Source) {
+  explicit ExternalASTSourceWrapper(
+      llvm::IntrusiveRefCntPtr<ExternalASTSource> Source)
+      : m_Source(std::move(Source)) {
     assert(m_Source && "Can't wrap nullptr ExternalASTSource");
   }
 
@@ -70,9 +71,10 @@ public:
     m_Source->updateOutOfDateIdentifier(II);
   }
 
-  bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                      clang::DeclarationName Name) override {
-    return m_Source->FindExternalVisibleDeclsByName(DC, Name);
+  bool FindExternalVisibleDeclsByName(
+      const clang::DeclContext *DC, clang::DeclarationName Name,
+      const clang::DeclContext *OriginalDC) override {
+    return m_Source->FindExternalVisibleDeclsByName(DC, Name, OriginalDC);
   }
 
   bool LoadExternalSpecializations(const clang::Decl *D,
@@ -283,7 +285,8 @@ class SemaSourceWithPriorities : public clang::ExternalSemaSource {
 
 private:
   /// The sources ordered in decreasing priority.
-  llvm::SmallVector<clang::ExternalSemaSource *, 2> Sources;
+  llvm::SmallVector<llvm::IntrusiveRefCntPtr<clang::ExternalSemaSource>, 2>
+      Sources;
 
 public:
   /// Construct a SemaSourceWithPriorities with a 'high quality' source that
@@ -291,16 +294,14 @@ public:
   /// as a fallback.
   ///
   /// This class assumes shared ownership of the sources provided to it.
-  SemaSourceWithPriorities(clang::ExternalSemaSource *high_quality_source,
-                           clang::ExternalSemaSource *low_quality_source) {
+  SemaSourceWithPriorities(
+      llvm::IntrusiveRefCntPtr<clang::ExternalSemaSource> high_quality_source,
+      llvm::IntrusiveRefCntPtr<clang::ExternalSemaSource> low_quality_source) {
     assert(high_quality_source);
     assert(low_quality_source);
 
-    high_quality_source->Retain();
-    low_quality_source->Retain();
-
-    Sources.push_back(high_quality_source);
-    Sources.push_back(low_quality_source);
+    Sources.push_back(std::move(high_quality_source));
+    Sources.push_back(std::move(low_quality_source));
   }
 
   ~SemaSourceWithPriorities() override;
@@ -373,7 +374,7 @@ public:
 
   clang::CXXCtorInitializer **
   GetExternalCXXCtorInitializers(uint64_t Offset) override {
-    for (auto *S : Sources)
+    for (const auto &S : Sources)
       if (auto *R = S->GetExternalCXXCtorInitializers(Offset))
         return R;
     return nullptr;
@@ -387,10 +388,11 @@ public:
     return EK_ReplyHazy;
   }
 
-  bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                      clang::DeclarationName Name) override {
+  bool FindExternalVisibleDeclsByName(
+      const clang::DeclContext *DC, clang::DeclarationName Name,
+      const clang::DeclContext *OriginalDC) override {
     for (size_t i = 0; i < Sources.size(); ++i)
-      if (Sources[i]->FindExternalVisibleDeclsByName(DC, Name))
+      if (Sources[i]->FindExternalVisibleDeclsByName(DC, Name, OriginalDC))
         return true;
     return false;
   }
@@ -420,7 +422,7 @@ public:
   }
 
   void CompleteType(clang::TagDecl *Tag) override {
-    for (clang::ExternalSemaSource *S : Sources) {
+    for (const auto &S : Sources) {
       S->CompleteType(Tag);
       // Stop after the first source completed the type.
       if (Tag->isCompleteDefinition())

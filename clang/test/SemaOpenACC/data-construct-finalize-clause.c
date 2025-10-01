@@ -13,7 +13,6 @@ void Test() {
   // finalize is valid only on exit data, otherwise has no other rules.
 #pragma acc exit data copyout(I) finalize
   ;
-  // expected-warning@+2{{OpenACC clause 'use_device' not yet implemented}}
   // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'host_data' directive}}
 #pragma acc host_data use_device(I) finalize
   ;

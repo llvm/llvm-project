@@ -1,24 +1,26 @@
 ; REQUIRES: asserts
 ; RUN: opt --passes=loop-vectorize --mtriple loongarch64-linux-gnu \
-; RUN:   --mattr=+lsx -debug-only=loop-vectorize --force-vector-width=1 \
+; RUN:   --mattr=+lsx -debug-only=loop-vectorize,vplan --force-vector-width=1 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SCALAR
 ; RUN: opt --passes=loop-vectorize --mtriple loongarch64-linux-gnu \
-; RUN:   --mattr=+lsx -debug-only=loop-vectorize --force-vector-width=4 \
+; RUN:   --mattr=+lsx -debug-only=loop-vectorize,vplan --force-vector-width=4 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-VECTOR
 
 define void @bar(ptr %A, i32 signext %n) {
 ; CHECK-LABEL: bar
 ; CHECK-SCALAR:      LV(REG): Found max usage: 2 item
-; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: LoongArch::GPRRC, 2 registers
+; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: LoongArch::GPRRC, 3 registers
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: LoongArch::FPRRC, 1 registers
 ; CHECK-SCALAR-NEXT: LV(REG): Found invariant usage: 1 item
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: LoongArch::GPRRC, 1 registers
 ; CHECK-SCALAR-NEXT: LV: The target has 30 registers of LoongArch::GPRRC register class
 ; CHECK-SCALAR-NEXT: LV: The target has 32 registers of LoongArch::FPRRC register class
-; CHECK-VECTOR:      LV(REG): Found max usage: 1 item
-; CHECK-VECTOR-NEXT: LV(REG): RegisterClass: LoongArch::VRRC, 3 registers
+; CHECK-VECTOR:      LV(REG): Found max usage: 2 item
+; CHECK-VECTOR-NEXT: LV(REG): RegisterClass: LoongArch::GPRRC, 2 registers
+; CHECK-VECTOR-NEXT: LV(REG): RegisterClass: LoongArch::VRRC, 2 registers
 ; CHECK-VECTOR-NEXT: LV(REG): Found invariant usage: 1 item
 ; CHECK-VECTOR-NEXT: LV(REG): RegisterClass: LoongArch::GPRRC, 1 registers
+; CHECK-VECTOR-NEXT: LV: The target has 30 registers of LoongArch::GPRRC register class
 ; CHECK-VECTOR-NEXT: LV: The target has 32 registers of LoongArch::VRRC register class
 
 entry:

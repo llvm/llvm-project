@@ -286,12 +286,16 @@ struct Symbol {
 };
 
 Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
-  std::string CudaPath = Args.getLastArgValue(OPT_cuda_path_EQ).str();
-  std::string GivenPath = Args.getLastArgValue(OPT_ptxas_path_EQ).str();
-  Expected<std::string> PTXAsPath =
-      findProgram(Args, "ptxas", {CudaPath + "/bin", GivenPath});
+  SmallVector<StringRef, 1> SearchPaths;
+  if (Arg *A = Args.getLastArg(OPT_cuda_path_EQ))
+    SearchPaths.push_back(Args.MakeArgString(A->getValue() + Twine("/bin")));
+  if (Arg *A = Args.getLastArg(OPT_ptxas_path_EQ))
+    SearchPaths.push_back(Args.MakeArgString(A->getValue()));
+
+  Expected<std::string> PTXAsPath = findProgram(Args, "ptxas", SearchPaths);
   if (!PTXAsPath)
     return PTXAsPath.takeError();
+
   if (!Args.hasArg(OPT_arch))
     return createStringError(
         "must pass in an explicit nvptx64 gpu architecture to 'ptxas'");
@@ -341,11 +345,16 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   Conf.CPU = Args.getLastArgValue(OPT_arch);
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
 
-  Conf.RemarksFilename = RemarksFilename;
-  Conf.RemarksPasses = RemarksPasses;
-  Conf.RemarksWithHotness = RemarksWithHotness;
+  Conf.RemarksFilename =
+      Args.getLastArgValue(OPT_opt_remarks_filename, RemarksFilename);
+  Conf.RemarksPasses =
+      Args.getLastArgValue(OPT_opt_remarks_filter, RemarksPasses);
+  Conf.RemarksFormat =
+      Args.getLastArgValue(OPT_opt_remarks_format, RemarksFormat);
+
+  Conf.RemarksWithHotness =
+      Args.hasArg(OPT_opt_remarks_with_hotness) || RemarksWithHotness;
   Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
-  Conf.RemarksFormat = RemarksFormat;
 
   Conf.MAttrs = llvm::codegen::getMAttrs();
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
@@ -686,9 +695,11 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
   if (Args.hasArg(OPT_lto_emit_asm) || Args.hasArg(OPT_lto_emit_llvm))
     return Error::success();
 
-  std::string CudaPath = Args.getLastArgValue(OPT_cuda_path_EQ).str();
-  Expected<std::string> NVLinkPath =
-      findProgram(Args, "nvlink", {CudaPath + "/bin"});
+  SmallVector<StringRef, 1> SearchPaths;
+  if (Arg *A = Args.getLastArg(OPT_cuda_path_EQ))
+    SearchPaths.push_back(Args.MakeArgString(A->getValue() + Twine("/bin")));
+
+  Expected<std::string> NVLinkPath = findProgram(Args, "nvlink", SearchPaths);
   if (!NVLinkPath)
     return NVLinkPath.takeError();
 

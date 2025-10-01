@@ -11,11 +11,13 @@ add_libc_unittest(
   DEPENDS
     libc.hdr.fcntl_macros
     libc.include.sys_stat
-    libc.src.errno.errno 
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.sendfile.sendfile
     libc.src.unistd.close
     libc.src.unistd.read
     libc.src.unistd.unlink
     libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

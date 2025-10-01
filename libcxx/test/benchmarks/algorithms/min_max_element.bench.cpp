@@ -6,33 +6,42 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <algorithm>
+#include <vector>
 
-#include "common.h"
+#include <benchmark/benchmark.h>
 
-namespace {
-template <class ValueType, class Order>
-struct MinMaxElement {
-  size_t Quantity;
-
-  void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(state, Quantity, Order(), BatchSize::CountElements, [](auto& Copy) {
-      benchmark::DoNotOptimize(std::minmax_element(Copy.begin(), Copy.end()));
-    });
-  }
-
-  std::string name() const {
-    return "BM_MinMaxElement" + ValueType::name() + Order::name() + "_" + std::to_string(Quantity);
-  }
-};
-} // namespace
-
-int main(int argc, char** argv) {
-  benchmark::Initialize(&argc, argv);
-  if (benchmark::ReportUnrecognizedArguments(argc, argv))
-    return 1;
-  makeCartesianProductBenchmark<MinMaxElement, AllValueTypes, AllOrders>(Quantities);
-  benchmark::RunSpecifiedBenchmarks();
+void run_sizes(auto benchmark) {
+  benchmark->Arg(1)
+      ->Arg(2)
+      ->Arg(3)
+      ->Arg(4)
+      ->Arg(64)
+      ->Arg(512)
+      ->Arg(1024)
+      ->Arg(4000)
+      ->Arg(4096)
+      ->Arg(5500)
+      ->Arg(64000)
+      ->Arg(65536)
+      ->Arg(70000);
 }
+
+template <class T>
+void BM_std_minmax_element(benchmark::State& state) {
+  std::vector<T> vec(state.range(), 3);
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(vec);
+    benchmark::DoNotOptimize(std::minmax_element(vec.begin(), vec.end()));
+  }
+}
+
+BENCHMARK(BM_std_minmax_element<char>)->Apply(run_sizes);
+BENCHMARK(BM_std_minmax_element<short>)->Apply(run_sizes);
+BENCHMARK(BM_std_minmax_element<int>)->Apply(run_sizes);
+BENCHMARK(BM_std_minmax_element<long long>)->Apply(run_sizes);
+
+BENCHMARK_MAIN();

@@ -31,6 +31,7 @@
 #ifdef EXPENSIVE_CHECKS
 #include <cstdint>
 #endif
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {
@@ -86,12 +87,16 @@ enum class ThinOrFullLTOPhase {
   FullLTOPostLink
 };
 
+#ifndef NDEBUG
+const char *to_string(ThinOrFullLTOPhase Phase);
+#endif
+
 //===----------------------------------------------------------------------===//
 /// Pass interface - Implemented by all 'passes'.  Subclass this if you are an
 /// interprocedural optimization or you do not fit into any of the more
 /// constrained passes described below.
 ///
-class Pass {
+class LLVM_ABI Pass {
   AnalysisResolver *Resolver = nullptr;  // Used to resolve analysis
   const void *PassID;
   PassKind Kind;
@@ -108,6 +113,10 @@ public:
   /// implemented in terms of the name that is registered by one of the
   /// Registration templates, but can be overloaded directly.
   virtual StringRef getPassName() const;
+
+  /// Return a nice clean name for a pass
+  /// corresponding to that used to enable the pass in opt.
+  StringRef getPassArgument() const;
 
   /// getPassID - Return the PassID number that corresponds to this pass.
   AnalysisID getPassID() const {
@@ -170,11 +179,6 @@ public:
   /// longer used.
   virtual void releaseMemory();
 
-  /// getAdjustedAnalysisPointer - This method is used when a pass implements
-  /// an analysis interface through multiple inheritance.  If needed, it should
-  /// override this to adjust the this pointer as needed for the specified pass
-  /// info.
-  virtual void *getAdjustedAnalysisPointer(AnalysisID ID);
   virtual ImmutablePass *getAsImmutablePass();
   virtual PMDataManager *getAsPMDataManager();
 
@@ -248,7 +252,7 @@ public:
 /// interprocedural optimizations and analyses.  ModulePasses may do anything
 /// they want to the program.
 ///
-class ModulePass : public Pass {
+class LLVM_ABI ModulePass : public Pass {
 public:
   explicit ModulePass(char &pid) : Pass(PT_Module, pid) {}
 
@@ -271,14 +275,14 @@ public:
 protected:
   /// Optional passes call this function to check whether the pass should be
   /// skipped. This is the case when optimization bisect is over the limit.
-  bool skipModule(Module &M) const;
+  bool skipModule(const Module &M) const;
 };
 
 //===----------------------------------------------------------------------===//
 /// ImmutablePass class - This class is used to provide information that does
 /// not need to be run.  This is useful for things like target information.
 ///
-class ImmutablePass : public ModulePass {
+class LLVM_ABI ImmutablePass : public ModulePass {
 public:
   explicit ImmutablePass(char &pid) : ModulePass(pid) {}
 
@@ -307,7 +311,7 @@ public:
 ///  2. Optimizing a function does not cause the addition or removal of any
 ///     functions in the module
 ///
-class FunctionPass : public Pass {
+class LLVM_ABI FunctionPass : public Pass {
 public:
   explicit FunctionPass(char &pid) : Pass(PT_Function, pid) {}
 
@@ -334,13 +338,13 @@ protected:
 /// If the user specifies the -time-passes argument on an LLVM tool command line
 /// then the value of this boolean will be true, otherwise false.
 /// This is the storage for the -time-passes option.
-extern bool TimePassesIsEnabled;
+LLVM_ABI extern bool TimePassesIsEnabled;
 /// If TimePassesPerRun is true, there would be one line of report for
 /// each pass invocation.
 /// If TimePassesPerRun is false, there would be only one line of
 /// report for each pass (even there are more than one pass objects).
 /// (For new pass manager only)
-extern bool TimePassesPerRun;
+LLVM_ABI extern bool TimePassesPerRun;
 
 } // end namespace llvm
 

@@ -113,9 +113,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 
   ParamTypeRecs.push_back(R->getValueAsDef("result"));
 
-  for (const Record *ArgTy : R->getValueAsListOfDefs("arguments")) {
-    ParamTypeRecs.push_back(ArgTy);
-  }
+  llvm::append_range(ParamTypeRecs, R->getValueAsListOfDefs("arguments"));
   size_t ParamTypeRecsSize = ParamTypeRecs.size();
   // Populate OpTypes with return type and parameter types
 
@@ -148,9 +146,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of DXIL version
   ascendingSortByVersion(Recs);
 
-  for (const Record *CR : Recs) {
-    OverloadRecs.push_back(CR);
-  }
+  llvm::append_range(OverloadRecs, Recs);
 
   // Get stage records
   Recs = R->getValueAsListOfDefs("stages");
@@ -163,9 +159,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of DXIL version
   ascendingSortByVersion(Recs);
 
-  for (const Record *CR : Recs) {
-    StageRecs.push_back(CR);
-  }
+  llvm::append_range(StageRecs, Recs);
 
   // Get attribute records
   Recs = R->getValueAsListOfDefs("attributes");
@@ -173,17 +167,14 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of DXIL version
   ascendingSortByVersion(Recs);
 
-  for (const Record *CR : Recs) {
-    AttrRecs.push_back(CR);
-  }
+  llvm::append_range(AttrRecs, Recs);
 
   // Get the operation class
   OpClass = R->getValueAsDef("OpClass")->getName();
 
-  if (!OpClass.str().compare("UnknownOpClass")) {
+  if (OpClass.str() == "UnknownOpClass")
     PrintFatalError(R, Twine("Unspecified DXIL OpClass for DXIL operation - ") +
                            OpName);
-  }
 
   auto IntrinsicSelectRecords = R->getValueAsListOfDefs("intrinsics");
   if (IntrinsicSelectRecords.size()) {
@@ -218,8 +209,16 @@ static StringRef getOverloadKindStr(const Record *R) {
       .Case("Int64Ty", "OverloadKind::I64")
       .Case("ResRetHalfTy", "OverloadKind::HALF")
       .Case("ResRetFloatTy", "OverloadKind::FLOAT")
+      .Case("ResRetDoubleTy", "OverloadKind::DOUBLE")
       .Case("ResRetInt16Ty", "OverloadKind::I16")
-      .Case("ResRetInt32Ty", "OverloadKind::I32");
+      .Case("ResRetInt32Ty", "OverloadKind::I32")
+      .Case("ResRetInt64Ty", "OverloadKind::I64")
+      .Case("CBufRetHalfTy", "OverloadKind::HALF")
+      .Case("CBufRetFloatTy", "OverloadKind::FLOAT")
+      .Case("CBufRetDoubleTy", "OverloadKind::DOUBLE")
+      .Case("CBufRetInt16Ty", "OverloadKind::I16")
+      .Case("CBufRetInt32Ty", "OverloadKind::I32")
+      .Case("CBufRetInt64Ty", "OverloadKind::I64");
 }
 
 /// Return a string representation of valid overload information denoted
@@ -311,45 +310,18 @@ static std::string getStageMaskString(ArrayRef<const Record *> Recs) {
   return MaskString;
 }
 
-/// Return a string representation of valid attribute information denoted
-// by input records
-//
-/// \param Recs A vector of records of TableGen Attribute records
-/// \return std::string string representation of stages mask string
-///         predicated by DXIL Version. E.g.,
-//          {{{1, 0}, Mask1}, {{1, 2}, Mask2}, ...}
-static std::string getAttributeMaskString(ArrayRef<const Record *> Recs) {
-  std::string MaskString = "";
-  std::string Prefix = "";
-  MaskString.append("{");
-
-  for (const auto *Rec : Recs) {
-    unsigned Major = Rec->getValueAsDef("dxil_version")->getValueAsInt("Major");
-    unsigned Minor = Rec->getValueAsDef("dxil_version")->getValueAsInt("Minor");
-    MaskString.append(Prefix)
-        .append("{{")
-        .append(std::to_string(Major))
-        .append(", ")
-        .append(std::to_string(Minor).append("}, "));
-
-    std::string PipePrefix = "";
-    auto Attrs = Rec->getValueAsListOfDefs("op_attrs");
-    if (Attrs.empty()) {
-      MaskString.append("Attribute::None");
-    } else {
-      for (const auto *Attr : Attrs) {
-        MaskString.append(PipePrefix)
-            .append("Attribute::")
-            .append(Attr->getName());
-        PipePrefix = " | ";
-      }
-    }
-
-    MaskString.append("}");
-    Prefix = ", ";
+/// Emit a list valid DXIL Version records
+static void emitDXILVersions(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#ifdef DXIL_VERSION\n";
+  for (const Record *Version : Records.getAllDerivedDefinitions("Version")) {
+    unsigned Major = Version->getValueAsInt("Major");
+    unsigned Minor = Version->getValueAsInt("Minor");
+    OS << "DXIL_VERSION(";
+    OS << std::to_string(Major) << ", " << std::to_string(Minor);
+    OS << ")\n";
   }
-  MaskString.append("}");
-  return MaskString;
+  OS << "#undef DXIL_VERSION\n";
+  OS << "#endif\n\n";
 }
 
 /// Emit a mapping of DXIL opcode to opname
@@ -378,6 +350,64 @@ static void emitDXILOpParamTypes(const RecordKeeper &Records, raw_ostream &OS) {
        Records.getAllDerivedDefinitions("DXILOpParamType"))
     OS << "DXIL_OP_PARAM_TYPE(" << OpParamType->getName() << ")\n";
   OS << "#undef DXIL_OP_PARAM_TYPE\n";
+  OS << "#endif\n\n";
+}
+
+/// Emit a list of DXIL op function attributes
+static void emitDXILAttributes(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#ifdef DXIL_ATTRIBUTE\n";
+  for (const Record *Attr : Records.getAllDerivedDefinitions("DXILAttribute"))
+    OS << "DXIL_ATTRIBUTE(" << Attr->getName() << ")\n";
+  OS << "#undef DXIL_ATTRIBUTE\n";
+  OS << "#endif\n\n";
+}
+
+// Helper function to determine if the given Attr is defined in the vector
+// Attrs, by comparing the names
+static bool attrIsDefined(std::vector<const Record *> Attrs,
+                          const Record *Attr) {
+  for (auto CurAttr : Attrs)
+    if (CurAttr->getName() == Attr->getName())
+      return true;
+  return false;
+}
+
+/// Emit a table of bools denoting a DXIL op's function attributes
+static void emitDXILOpAttributes(const RecordKeeper &Records,
+                                 ArrayRef<DXILOperationDesc> Ops,
+                                 raw_ostream &OS) {
+  // A DXIL op can have multiple function attributes that are specific to a
+  // specific DXIL version and higher. AttrRecs models this by grouping the
+  // attributes by the versions. So we will output a macro for each version
+  // number with a table of bools in the following format:
+  //
+  //     OpName, VersionMajor, VersionMinor, FnAttr1, FnAttr2, ...
+  // Eg)    Abs,            1,            0,    true,   false, ...
+  OS << "#ifdef DXIL_OP_ATTRIBUTES\n";
+  for (const auto &Op : Ops) {
+    for (const auto *Rec : Op.AttrRecs) {
+      unsigned Major =
+          Rec->getValueAsDef("dxil_version")->getValueAsInt("Major");
+      unsigned Minor =
+          Rec->getValueAsDef("dxil_version")->getValueAsInt("Minor");
+      OS << "DXIL_OP_ATTRIBUTES(dxil::OpCode::" << Op.OpName << ", ";
+      OS << std::to_string(Major) << ", " << std::to_string(Minor);
+      // These Attrs are the ones set for above DXIL version
+      auto Attrs = Rec->getValueAsListOfDefs("fn_attrs");
+      // We will then iteratre through all possible attributes and mark the
+      // present ones as 'true' and all the others as 'false' to create the
+      // boolean table, eg) true, false, false, false
+      for (const Record *Attr :
+           Records.getAllDerivedDefinitions("DXILAttribute")) {
+        std::string HasAttr = ", false";
+        if (attrIsDefined(Attrs, Attr))
+          HasAttr = ", true";
+        OS << HasAttr;
+      }
+      OS << ")\n";
+    }
+  }
+  OS << "#undef DXIL_OP_ATTRIBUTES\n";
   OS << "#endif\n\n";
 }
 
@@ -476,8 +506,7 @@ static void emitDXILOperationTable(ArrayRef<DXILOperationDesc> Ops,
        << OpStrings.get(Op.OpName) << ", OpCodeClass::" << Op.OpClass << ", "
        << OpClassStrings.get(Op.OpClass.data()) << ", "
        << getOverloadMaskString(Op.OverloadRecs) << ", "
-       << getStageMaskString(Op.StageRecs) << ", "
-       << getAttributeMaskString(Op.AttrRecs) << ", " << Op.OverloadParamIndex
+       << getStageMaskString(Op.StageRecs) << ", " << Op.OverloadParamIndex
        << " }";
     Prefix = ",\n";
   }
@@ -579,9 +608,12 @@ static void emitDxilOperation(const RecordKeeper &Records, raw_ostream &OS) {
     PrevOp = Desc.OpCode;
   }
 
+  emitDXILVersions(Records, OS);
   emitDXILOpCodes(DXILOps, OS);
   emitDXILOpClasses(Records, OS);
   emitDXILOpParamTypes(Records, OS);
+  emitDXILAttributes(Records, OS);
+  emitDXILOpAttributes(Records, DXILOps, OS);
   emitDXILOpFunctionTypes(DXILOps, OS);
   emitDXILIntrinsicArgSelectTypes(Records, OS);
   emitDXILIntrinsicMap(DXILOps, OS);

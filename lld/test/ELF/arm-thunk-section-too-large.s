@@ -1,4 +1,6 @@
 // REQUIRES: arm
+// This test intentionally checks for fatal errors, and fatal errors aren't supported for testing when main is run twice.
+// XFAIL: main-run-twice
 // RUN: llvm-mc %s -triple=armv7a-linux-gnueabihf -arm-add-build-attributes -filetype=obj -o %t.o
 // RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 

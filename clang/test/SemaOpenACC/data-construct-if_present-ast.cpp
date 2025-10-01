@@ -17,6 +17,8 @@ void Uses() {
 #pragma acc host_data use_device(I) if_present
   ;
   // CHECK-NEXT: OpenACCHostDataConstruct{{.*}}host_data
+  // CHECK-NEXT: use_device clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'I' 'int'
   // CHECK-NEXT: if_present clause
   // CHECK-NEXT: NullStmt
 }
@@ -35,6 +37,8 @@ void TemplUses() {
 #pragma acc host_data use_device(I) if_present
   ;
   // CHECK-NEXT: OpenACCHostDataConstruct{{.*}}host_data
+  // CHECK-NEXT: use_device clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'I' 'T'
   // CHECK-NEXT: if_present clause
   // CHECK-NEXT: NullStmt
 
@@ -48,6 +52,8 @@ void TemplUses() {
   // CHECK-NEXT: VarDecl
 
   // CHECK-NEXT: OpenACCHostDataConstruct{{.*}}host_data
+  // CHECK-NEXT: use_device clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'I' 'int'
   // CHECK-NEXT: if_present clause
   // CHECK-NEXT: NullStmt
 }

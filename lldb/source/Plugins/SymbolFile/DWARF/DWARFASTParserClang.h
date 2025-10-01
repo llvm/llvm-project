@@ -112,6 +112,20 @@ public:
   void MapDeclDIEToDefDIE(const lldb_private::plugin::dwarf::DWARFDIE &decl_die,
                           const lldb_private::plugin::dwarf::DWARFDIE &def_die);
 
+  /// Get the object parameter DIE if one exists, otherwise returns
+  /// a default DWARFDIE.
+  ///
+  /// \param[in] subprogram DIE of function for which to get the object
+  /// parameter. \param[in] containing_decl_ctx DIE representing declaration
+  /// context of \a subprogram. If this DIE isn't a valid declaration context
+  /// for class methods, assume no object parameter exists.
+  ///
+  /// \returns DIE of object parameter if one exists.
+  ///
+  lldb_private::plugin::dwarf::DWARFDIE
+  GetObjectParameter(const lldb_private::plugin::dwarf::DWARFDIE &subprogram,
+                     const lldb_private::plugin::dwarf::DWARFDIE &decl_ctx_die);
+
 protected:
   /// Protected typedefs and members.
   /// @{
@@ -186,14 +200,12 @@ protected:
       const lldb::AccessType default_accessibility,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
-  size_t
-  ParseChildParameters(clang::DeclContext *containing_decl_ctx,
-                       const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
-                       bool skip_artificial, bool &is_static, bool &is_variadic,
-                       bool &has_template_params,
-                       std::vector<lldb_private::CompilerType> &function_args,
-                       std::vector<clang::ParmVarDecl *> &function_param_decls,
-                       unsigned &type_quals);
+  void ParseChildParameters(
+      clang::DeclContext *containing_decl_ctx,
+      const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
+      bool &is_variadic, bool &has_template_params,
+      std::vector<lldb_private::CompilerType> &function_param_types,
+      llvm::SmallVectorImpl<llvm::StringRef> &function_param_names);
 
   size_t ParseChildEnumerators(
       const lldb_private::CompilerType &compiler_type, bool is_signed,
@@ -421,7 +433,6 @@ private:
       const lldb_private::CompilerType &class_clang_type);
 
   bool CompleteRecordType(const lldb_private::plugin::dwarf::DWARFDIE &die,
-                          lldb_private::Type *type,
                           const lldb_private::CompilerType &clang_type);
   bool CompleteEnumType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                         lldb_private::Type *type,
@@ -452,7 +463,7 @@ private:
   ///
   /// \returns true on success
   bool
-  ParseObjCMethod(const lldb_private::ObjCLanguage::MethodName &objc_method,
+  ParseObjCMethod(const lldb_private::ObjCLanguage::ObjCMethodName &objc_method,
                   const lldb_private::plugin::dwarf::DWARFDIE &die,
                   lldb_private::CompilerType clang_type,
                   const ParsedDWARFTypeAttributes &attrs, bool is_variadic);
@@ -469,7 +480,8 @@ private:
   /// \param[in] decl_ctx_die The DIE representing the DeclContext of the C++
   ///                         method being parsed.
   ///
-  /// \param[in] is_static Is true iff we're parsing a static method.
+  /// \param[in] object_parameter The DIE of this subprogram's object parameter.
+  ///                             May be an invalid DIE for C++ static methods.
   ///
   /// \param[out] ignore_containing_context Will get set to true if the caller
   ///             should treat this C++ method as-if it was not a C++ method.
@@ -484,7 +496,8 @@ private:
                  lldb_private::CompilerType clang_type,
                  const ParsedDWARFTypeAttributes &attrs,
                  const lldb_private::plugin::dwarf::DWARFDIE &decl_ctx_die,
-                 bool is_static, bool &ignore_containing_context);
+                 const lldb_private::plugin::dwarf::DWARFDIE &object_parameter,
+                 bool &ignore_containing_context);
 
   lldb::TypeSP ParseArrayType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                               const ParsedDWARFTypeAttributes &attrs);
@@ -554,7 +567,6 @@ struct ParsedDWARFTypeAttributes {
   const char *mangled_name = nullptr;
   lldb_private::ConstString name;
   lldb_private::Declaration decl;
-  lldb_private::plugin::dwarf::DWARFDIE object_pointer;
   lldb_private::plugin::dwarf::DWARFFormValue abstract_origin;
   lldb_private::plugin::dwarf::DWARFFormValue containing_type;
   lldb_private::plugin::dwarf::DWARFFormValue signature;
@@ -567,10 +579,14 @@ struct ParsedDWARFTypeAttributes {
   uint32_t bit_stride = 0;
   uint32_t byte_stride = 0;
   uint32_t encoding = 0;
-  clang::RefQualifierKind ref_qual =
-      clang::RQ_None; ///< Indicates ref-qualifier of
-                      ///< C++ member function if present.
-                      ///< Is RQ_None otherwise.
+
+  ///< Indicates ref-qualifier of C++ member function if present.
+  ///< Is RQ_None otherwise.
+  clang::RefQualifierKind ref_qual = clang::RQ_None;
+
+  ///< Has a value if this DIE represents an enum that was declared
+  ///< with enum_extensibility.
+  std::optional<clang::EnumExtensibilityAttr::Kind> enum_kind;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSERCLANG_H

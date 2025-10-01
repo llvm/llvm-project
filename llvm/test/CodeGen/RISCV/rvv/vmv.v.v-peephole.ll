@@ -82,6 +82,18 @@ define <vscale x 4 x i32> @diff_avl_vlmax(<vscale x 4 x i32> %passthru, <vscale 
   ret <vscale x 4 x i32> %w
 }
 
+define <vscale x 4 x i32> @diff_avl_non_uimm5(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: diff_avl_non_uimm5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 42
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vadd.vv v8, v10, v12
+; CHECK-NEXT:    ret
+  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen 42)
+  %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen 123)
+  ret <vscale x 4 x i32> %w
+}
+
 define <vscale x 4 x i32> @vadd_mask_ma(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask, iXLen %vl) {
 ; CHECK-LABEL: vadd_mask_ma:
 ; CHECK:       # %bb.0:
@@ -203,6 +215,33 @@ define <vscale x 1 x i64> @undef_passthru(<vscale x 1 x i64> %passthru, <vscale 
 ; CHECK-NEXT:    vadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, iXLen %avl)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vmv.v.v.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %a, iXLen %avl)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmv.v.v.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %a, iXLen %avl)
+  ret <vscale x 1 x i64> %b
+}
+
+; Check that we can fold into vle64ff.v even if we need to move it past the
+; passthru and it's safe.
+define <vscale x 1 x i64> @vleff_move_past_passthru(ptr %p, ptr %q, iXLen %avl) {
+; CHECK-LABEL: vleff_move_past_passthru:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl1re64.v v8, (a1)
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, tu, ma
+; CHECK-NEXT:    vle64ff.v v8, (a0)
+; CHECK-NEXT:    ret
+  %a = call { <vscale x 1 x i64>, iXLen } @llvm.riscv.vleff(<vscale x 1 x i64> poison, ptr %p, iXLen %avl)
+  %vec = extractvalue { <vscale x 1 x i64>, iXLen } %a, 0
+  %passthru = load <vscale x 1 x i64>, ptr %q
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmv.v.v.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %vec, iXLen %avl)
+  ret <vscale x 1 x i64> %b
+}
+
+define <vscale x 1 x i64> @vmerge(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, <vscale x 1 x i1> %m, iXLen %avl) {
+; CHECK-LABEL: vmerge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
+; CHECK-NEXT:    vmerge.vvm v8, v9, v10, v0
+; CHECK-NEXT:    ret
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmerge.nxv1i64.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, <vscale x 1 x i1> %m, iXLen %avl)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmv.v.v.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %a, iXLen %avl)
   ret <vscale x 1 x i64> %b
 }

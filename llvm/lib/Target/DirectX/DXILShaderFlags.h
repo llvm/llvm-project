@@ -14,6 +14,7 @@
 #ifndef LLVM_TARGET_DIRECTX_DXILSHADERFLAGS_H
 #define LLVM_TARGET_DIRECTX_DXILSHADERFLAGS_H
 
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -26,6 +27,8 @@
 namespace llvm {
 class Module;
 class GlobalVariable;
+class DXILResourceTypeMap;
+class DXILResourceMap;
 
 namespace dxil {
 
@@ -70,13 +73,11 @@ struct ComputedShaderFlags {
     return FeatureFlags;
   }
 
-  void merge(const uint64_t IVal) {
+  void merge(const ComputedShaderFlags CSF) {
 #define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleBit, FlagName, Str)          \
-  FlagName |= (IVal & getMask(DxilModuleBit));
-#define DXIL_MODULE_FLAG(DxilModuleBit, FlagName, Str)                         \
-  FlagName |= (IVal & getMask(DxilModuleBit));
+  FlagName |= CSF.FlagName;
+#define DXIL_MODULE_FLAG(DxilModuleBit, FlagName, Str) FlagName |= CSF.FlagName;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-    return;
   }
 
   void print(raw_ostream &OS = dbgs()) const;
@@ -84,17 +85,27 @@ struct ComputedShaderFlags {
 };
 
 struct ModuleShaderFlags {
-  void initialize(const Module &);
+  void initialize(Module &, DXILResourceTypeMap &DRTM,
+                  const DXILResourceMap &DRM, const ModuleMetadataInfo &MMDI);
   const ComputedShaderFlags &getFunctionFlags(const Function *) const;
   const ComputedShaderFlags &getCombinedFlags() const { return CombinedSFMask; }
 
 private:
-  /// Vector of sorted Function-Shader Flag mask pairs representing properties
-  /// of each of the functions in the module. Shader Flags of each function
-  /// represent both module-level and function-level flags
-  SmallVector<std::pair<Function const *, ComputedShaderFlags>> FunctionFlags;
+  // This boolean is inversely set by the LLVM module flag dx.resmayalias to
+  // determine whether or not the ResMayNotAlias DXIL module flag can be set
+  bool CanSetResMayNotAlias;
+
+  /// Map of Function-Shader Flag Mask pairs representing properties of each of
+  /// the functions in the module. Shader Flags of each function represent both
+  /// module-level and function-level flags
+  DenseMap<const Function *, ComputedShaderFlags> FunctionFlags;
   /// Combined Shader Flag Mask of all functions of the module
   ComputedShaderFlags CombinedSFMask{};
+  ComputedShaderFlags gatherGlobalModuleFlags(const Module &M,
+                                              const DXILResourceMap &,
+                                              const ModuleMetadataInfo &);
+  void updateFunctionFlags(ComputedShaderFlags &, const Instruction &,
+                           DXILResourceTypeMap &, const ModuleMetadataInfo &);
 };
 
 class ShaderFlagsAnalysis : public AnalysisInfoMixin<ShaderFlagsAnalysis> {
@@ -135,9 +146,7 @@ public:
 
   bool runOnModule(Module &M) override;
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
 } // namespace dxil

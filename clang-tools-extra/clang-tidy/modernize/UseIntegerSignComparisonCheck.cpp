@@ -1,4 +1,4 @@
-//===--- UseIntegerSignComparisonCheck.cpp - clang-tidy -------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -80,11 +80,13 @@ UseIntegerSignComparisonCheck::UseIntegerSignComparisonCheck(
     : ClangTidyCheck(Name, Context),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()) {}
+                      areDiagsSelfContained()),
+      EnableQtSupport(Options.get("EnableQtSupport", false)) {}
 
 void UseIntegerSignComparisonCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
+  Options.store(Opts, "EnableQtSupport", EnableQtSupport);
 }
 
 void UseIntegerSignComparisonCheck::registerMatchers(MatchFinder *Finder) {
@@ -136,9 +138,9 @@ void UseIntegerSignComparisonCheck::check(
     return;
   const Expr *SubExprLHS = nullptr;
   const Expr *SubExprRHS = nullptr;
-  SourceRange R1 = SourceRange(LHS->getBeginLoc());
-  SourceRange R2 = SourceRange(BinaryOp->getOperatorLoc());
-  SourceRange R3 = SourceRange(Lexer::getLocForEndOfToken(
+  SourceRange R1(LHS->getBeginLoc());
+  SourceRange R2(BinaryOp->getOperatorLoc());
+  SourceRange R3(Lexer::getLocForEndOfToken(
       RHS->getEndLoc(), 0, *Result.SourceManager, getLangOpts()));
   if (const auto *LHSCast = llvm::dyn_cast<ExplicitCastExpr>(LHS)) {
     SubExprLHS = LHSCast->getSubExpr();
@@ -154,8 +156,17 @@ void UseIntegerSignComparisonCheck::check(
   DiagnosticBuilder Diag =
       diag(BinaryOp->getBeginLoc(),
            "comparison between 'signed' and 'unsigned' integers");
-  const std::string CmpNamespace = ("std::" + parseOpCode(OpCode)).str();
-  const std::string CmpHeader = "<utility>";
+  std::string CmpNamespace;
+  llvm::StringRef CmpHeader;
+
+  if (getLangOpts().CPlusPlus20) {
+    CmpHeader = "<utility>";
+    CmpNamespace = llvm::Twine("std::" + parseOpCode(OpCode)).str();
+  } else if (getLangOpts().CPlusPlus17 && EnableQtSupport) {
+    CmpHeader = "<QtCore/q20utility.h>";
+    CmpNamespace = llvm::Twine("q20::" + parseOpCode(OpCode)).str();
+  }
+
   // Prefer modernize-use-integer-sign-comparison when C++20 is available!
   Diag << FixItHint::CreateReplacement(
       CharSourceRange(R1, SubExprLHS != nullptr),

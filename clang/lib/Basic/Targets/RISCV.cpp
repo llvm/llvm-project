@@ -102,7 +102,7 @@ bool RISCVTargetInfo::validateAsmConstraint(
     return true;
   case 'c':
     // A RVC register - GPR or FPR
-    if (Name[1] == 'r' || Name[1] == 'f') {
+    if (Name[1] == 'r' || Name[1] == 'R' || Name[1] == 'f') {
       Info.setAllowsRegister();
       Name += 1;
       return true;
@@ -222,7 +222,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   // Currently we support the v1.0 RISC-V V intrinsics.
   Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(1, 0)));
 
-  auto VScale = getVScaleRange(Opts);
+  auto VScale = getVScaleRange(Opts, ArmStreamingKind::NotStreaming);
   if (VScale && VScale->first && VScale->first == VScale->second)
     Builder.defineMacro("__riscv_v_fixed_vlen",
                         Twine(VScale->first * llvm::RISCV::RVVBitsPerBlock));
@@ -238,30 +238,101 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     else
       Builder.defineMacro("__riscv_32e");
   }
+
+  if (Opts.CFProtectionReturn && ISAInfo->hasExtension("zicfiss"))
+    Builder.defineMacro("__riscv_shadow_stack");
+
+  if (Opts.CFProtectionBranch) {
+    auto Scheme = Opts.getCFBranchLabelScheme();
+    if (Scheme == CFBranchLabelSchemeKind::Default)
+      Scheme = getDefaultCFBranchLabelScheme();
+
+    Builder.defineMacro("__riscv_landing_pad");
+    switch (Scheme) {
+    case CFBranchLabelSchemeKind::Unlabeled:
+      Builder.defineMacro("__riscv_landing_pad_unlabeled");
+      break;
+    case CFBranchLabelSchemeKind::FuncSig:
+      // TODO: Define macros after the func-sig scheme is implemented
+      break;
+    case CFBranchLabelSchemeKind::Default:
+      llvm_unreachable("default cf-branch-label scheme should already be "
+                       "transformed to other scheme");
+    }
+  }
 }
 
+static constexpr int NumRVVBuiltins =
+    RISCVVector::FirstSiFiveBuiltin - Builtin::FirstTSBuiltin;
+static constexpr int NumRVVSiFiveBuiltins =
+    RISCVVector::FirstAndesBuiltin - RISCVVector::FirstSiFiveBuiltin;
+static constexpr int NumRVVAndesBuiltins =
+    RISCVVector::FirstTSBuiltin - RISCVVector::FirstAndesBuiltin;
+static constexpr int NumRISCVBuiltins =
+    RISCV::LastTSBuiltin - RISCVVector::FirstTSBuiltin;
 static constexpr int NumBuiltins =
-    clang::RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin;
+    RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static_assert(NumBuiltins == (NumRVVBuiltins + NumRVVSiFiveBuiltins +
+                              NumRVVAndesBuiltins + NumRISCVBuiltins));
 
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsRISCVVector.def"
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsRISCV.inc"
-    , {
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsRISCVVector.def"
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsRISCV.inc"
-      });
+namespace RVV {
+#define GET_RISCVV_BUILTIN_STR_TABLE
+#include "clang/Basic/riscv_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_STR_TABLE
+static_assert(BuiltinStrings.size() < 100'000);
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-RISCVTargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+static constexpr std::array<Builtin::Info, NumRVVBuiltins> BuiltinInfos = {
+#define GET_RISCVV_BUILTIN_INFOS
+#include "clang/Basic/riscv_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_INFOS
+};
+} // namespace RVV
+
+namespace RVVSiFive {
+#define GET_RISCVV_BUILTIN_STR_TABLE
+#include "clang/Basic/riscv_sifive_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumRVVSiFiveBuiltins> BuiltinInfos =
+    {
+#define GET_RISCVV_BUILTIN_INFOS
+#include "clang/Basic/riscv_sifive_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_INFOS
+};
+} // namespace RVVSiFive
+
+namespace RVVAndes {
+#define GET_RISCVV_BUILTIN_STR_TABLE
+#include "clang/Basic/riscv_andes_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumRVVAndesBuiltins> BuiltinInfos =
+    {
+#define GET_RISCVV_BUILTIN_INFOS
+#include "clang/Basic/riscv_andes_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_INFOS
+};
+} // namespace RVVAndes
+
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsRISCV.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsRISCV.inc"
+#undef GET_BUILTIN_INFOS
+};
+static_assert(std::size(BuiltinInfos) == NumRISCVBuiltins);
+
+llvm::SmallVector<Builtin::InfosShard>
+RISCVTargetInfo::getTargetBuiltins() const {
+  return {
+      {&RVV::BuiltinStrings, RVV::BuiltinInfos, "__builtin_rvv_"},
+      {&RVVSiFive::BuiltinStrings, RVVSiFive::BuiltinInfos, "__builtin_rvv_"},
+      {&RVVAndes::BuiltinStrings, RVVAndes::BuiltinInfos, "__builtin_rvv_"},
+      {&BuiltinStrings, BuiltinInfos},
+  };
 }
 
 bool RISCVTargetInfo::initFeatureMap(
@@ -295,7 +366,9 @@ bool RISCVTargetInfo::initFeatureMap(
 }
 
 std::optional<std::pair<unsigned, unsigned>>
-RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
+RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts,
+                                ArmStreamingKind IsArmStreamingFunction,
+                                llvm::StringMap<bool> *FeatureMap) const {
   // RISCV::RVVBitsPerBlock is 64.
   unsigned VScaleMin = ISAInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
 
@@ -354,7 +427,7 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     ABI = ISAInfo->computeDefaultABI().str();
 
   if (ISAInfo->hasExtension("zfh") || ISAInfo->hasExtension("zhinx"))
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
 
   FastScalarUnalignedAccess =
       llvm::is_contained(Features, "+unaligned-scalar-mem");
@@ -401,7 +474,7 @@ static void populateNegativeRISCVFeatures(std::vector<std::string> &Features) {
 
   std::vector<std::string> FeatStrings =
       (*RII)->toFeatures(/* AddAllExtensions */ true);
-  Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
+  llvm::append_range(Features, FeatStrings);
 }
 
 static void handleFullArchString(StringRef FullArchStr,
@@ -417,7 +490,7 @@ static void handleFullArchString(StringRef FullArchStr,
     populateNegativeRISCVFeatures(Features);
     std::vector<std::string> FeatStrings =
         (*RII)->toFeatures(/* AddAllExtensions */ true);
-    Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
+    llvm::append_range(Features, FeatStrings);
   }
 }
 
@@ -495,7 +568,8 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
   return Ret;
 }
 
-unsigned RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+llvm::APInt
+RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
   // Priority is explicitly specified on RISC-V unlike on other targets, where
   // it is derived by all the features of a specific version. Therefore if a
   // feature contains the priority string, then return it immediately.
@@ -509,10 +583,10 @@ unsigned RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
       continue;
     unsigned Priority;
     if (!Feature.getAsInteger(0, Priority))
-      return Priority;
+      return llvm::APInt(32, Priority);
   }
   // Default Priority is zero.
-  return 0;
+  return llvm::APInt::getZero(32);
 }
 
 TargetInfo::CallingConvCheckResult
@@ -522,6 +596,18 @@ RISCVTargetInfo::checkCallingConvention(CallingConv CC) const {
     return CCCR_Warning;
   case CC_C:
   case CC_RISCVVectorCall:
+  case CC_RISCVVLSCall_32:
+  case CC_RISCVVLSCall_64:
+  case CC_RISCVVLSCall_128:
+  case CC_RISCVVLSCall_256:
+  case CC_RISCVVLSCall_512:
+  case CC_RISCVVLSCall_1024:
+  case CC_RISCVVLSCall_2048:
+  case CC_RISCVVLSCall_4096:
+  case CC_RISCVVLSCall_8192:
+  case CC_RISCVVLSCall_16384:
+  case CC_RISCVVLSCall_32768:
+  case CC_RISCVVLSCall_65536:
     return CCCR_OK;
   }
 }

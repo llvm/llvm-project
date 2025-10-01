@@ -19,15 +19,69 @@
 #ifndef MLIR_BINDINGS_PYTHON_NANOBINDADAPTORS_H
 #define MLIR_BINDINGS_PYTHON_NANOBINDADAPTORS_H
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/string.h>
-
+#include <atomic>
 #include <cstdint>
+#include <memory>
+#include <optional>
 
-#include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
+// clang-format off
+#include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+// clang-format on
 #include "llvm/ADT/Twine.h"
+
+namespace mlir {
+namespace python {
+namespace {
+
+// Safely calls Python initialization code on first use, avoiding deadlocks.
+template <typename T>
+class SafeInit {
+public:
+  typedef std::unique_ptr<T> (*F)();
+
+  explicit SafeInit(F init_fn) : initFn(init_fn) {}
+
+  T &get() {
+    if (T *result = output.load()) {
+      return *result;
+    }
+
+    // Note: init_fn() may be called multiple times if, for example, the GIL is
+    // released during its execution. The intended use case is for module
+    // imports which are safe to perform multiple times. We are careful not to
+    // hold a lock across init_fn() to avoid lock ordering problems.
+    std::unique_ptr<T> m = initFn();
+    {
+      nanobind::ft_lock_guard lock(mu);
+      if (T *result = output.load()) {
+        return *result;
+      }
+      T *p = m.release();
+      output.store(p);
+      return *p;
+    }
+  }
+
+private:
+  nanobind::ft_mutex mu;
+  std::atomic<T *> output{nullptr};
+  F initFn;
+};
+
+nanobind::module_ &irModule() {
+  static SafeInit<nanobind::module_> init([]() {
+    return std::make_unique<nanobind::module_>(
+        nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir")));
+  });
+  return init.get();
+}
+
+} // namespace
+} // namespace python
+} // namespace mlir
 
 // Raw CAPI type casters need to be declared before use, so always include them
 // first.
@@ -43,17 +97,15 @@ namespace detail {
 /// with a raw handle (unowned). The returned object's lifetime may not extend
 /// beyond the apiObject handle without explicitly having its refcount increased
 /// (i.e. on return).
-static nanobind::object mlirApiObjectToCapsule(nanobind::handle apiObject) {
+static std::optional<nanobind::object>
+mlirApiObjectToCapsule(nanobind::handle apiObject) {
   if (PyCapsule_CheckExact(apiObject.ptr()))
     return nanobind::borrow<nanobind::object>(apiObject);
-  if (!nanobind::hasattr(apiObject, MLIR_PYTHON_CAPI_PTR_ATTR)) {
-    std::string repr = nanobind::cast<std::string>(nanobind::repr(apiObject));
-    throw nanobind::type_error(
-        (llvm::Twine("Expected an MLIR object (got ") + repr + ").")
-            .str()
-            .c_str());
-  }
-  return apiObject.attr(MLIR_PYTHON_CAPI_PTR_ATTR);
+  nanobind::object api =
+      nanobind::getattr(apiObject, MLIR_PYTHON_CAPI_PTR_ATTR, nanobind::none());
+  if (api.is_none())
+    return {};
+  return api;
 }
 
 // Note: Currently all of the following support cast from nanobind::object to
@@ -64,20 +116,19 @@ static nanobind::object mlirApiObjectToCapsule(nanobind::handle apiObject) {
 /// Casts object <-> MlirAffineMap.
 template <>
 struct type_caster<MlirAffineMap> {
-  NB_TYPE_CASTER(MlirAffineMap, const_name("MlirAffineMap"));
-  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
-    nanobind::object capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToAffineMap(capsule.ptr());
-    if (mlirAffineMapIsNull(value)) {
-      return false;
+  NB_TYPE_CASTER(MlirAffineMap, const_name("MlirAffineMap"))
+  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
+      value = mlirPythonCapsuleToAffineMap(capsule->ptr());
+      return !mlirAffineMapIsNull(value);
     }
-    return !mlirAffineMapIsNull(value);
+    return false;
   }
   static handle from_cpp(MlirAffineMap v, rv_policy,
                          cleanup_list *cleanup) noexcept {
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonAffineMapToCapsule(v));
-    return nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+    return mlir::python::irModule()
         .attr("AffineMap")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
@@ -87,17 +138,19 @@ struct type_caster<MlirAffineMap> {
 /// Casts object <-> MlirAttribute.
 template <>
 struct type_caster<MlirAttribute> {
-  NB_TYPE_CASTER(MlirAttribute, const_name("MlirAttribute"));
-  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
-    nanobind::object capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToAttribute(capsule.ptr());
-    return !mlirAttributeIsNull(value);
+  NB_TYPE_CASTER(MlirAttribute, const_name("MlirAttribute"))
+  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
+      value = mlirPythonCapsuleToAttribute(capsule->ptr());
+      return !mlirAttributeIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirAttribute v, rv_policy,
                          cleanup_list *cleanup) noexcept {
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonAttributeToCapsule(v));
-    return nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+    return mlir::python::irModule()
         .attr("Attribute")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)()
@@ -108,30 +161,30 @@ struct type_caster<MlirAttribute> {
 /// Casts object -> MlirBlock.
 template <>
 struct type_caster<MlirBlock> {
-  NB_TYPE_CASTER(MlirBlock, const_name("MlirBlock"));
-  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
-    nanobind::object capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToBlock(capsule.ptr());
-    return !mlirBlockIsNull(value);
+  NB_TYPE_CASTER(MlirBlock, const_name("MlirBlock"))
+  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
+      value = mlirPythonCapsuleToBlock(capsule->ptr());
+      return !mlirBlockIsNull(value);
+    }
+    return false;
   }
 };
 
 /// Casts object -> MlirContext.
 template <>
 struct type_caster<MlirContext> {
-  NB_TYPE_CASTER(MlirContext, const_name("MlirContext"));
-  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
+  NB_TYPE_CASTER(MlirContext, const_name("MlirContext"))
+  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (src.is_none()) {
       // Gets the current thread-bound context.
       // TODO: This raises an error of "No current context" currently.
       // Update the implementation to pretty-print the helpful error that the
       // core implementations print in this case.
-      src = nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
-                .attr("Context")
-                .attr("current");
+      src = mlir::python::irModule().attr("Context").attr("current");
     }
-    nanobind::object capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToContext(capsule.ptr());
+    std::optional<nanobind::object> capsule = mlirApiObjectToCapsule(src);
+    value = mlirPythonCapsuleToContext(capsule->ptr());
     return !mlirContextIsNull(value);
   }
 };
@@ -139,17 +192,19 @@ struct type_caster<MlirContext> {
 /// Casts object <-> MlirDialectRegistry.
 template <>
 struct type_caster<MlirDialectRegistry> {
-  NB_TYPE_CASTER(MlirDialectRegistry, const_name("MlirDialectRegistry"));
-  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
-    nanobind::object capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToDialectRegistry(capsule.ptr());
-    return !mlirDialectRegistryIsNull(value);
+  NB_TYPE_CASTER(MlirDialectRegistry, const_name("MlirDialectRegistry"))
+  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
+      value = mlirPythonCapsuleToDialectRegistry(capsule->ptr());
+      return !mlirDialectRegistryIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirDialectRegistry v, rv_policy,
                          cleanup_list *cleanup) noexcept {
     nanobind::object capsule = nanobind::steal<nanobind::object>(
         mlirPythonDialectRegistryToCapsule(v));
-    return nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+    return mlir::python::irModule()
         .attr("DialectRegistry")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
@@ -159,23 +214,23 @@ struct type_caster<MlirDialectRegistry> {
 /// Casts object <-> MlirLocation.
 template <>
 struct type_caster<MlirLocation> {
-  NB_TYPE_CASTER(MlirLocation, const_name("MlirLocation"));
-  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
+  NB_TYPE_CASTER(MlirLocation, const_name("MlirLocation"))
+  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (src.is_none()) {
       // Gets the current thread-bound context.
-      src = nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
-                .attr("Location")
-                .attr("current");
+      src = mlir::python::irModule().attr("Location").attr("current");
     }
-    nanobind::object capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToLocation(capsule.ptr());
-    return !mlirLocationIsNull(value);
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
+      value = mlirPythonCapsuleToLocation(capsule->ptr());
+      return !mlirLocationIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirLocation v, rv_policy,
                          cleanup_list *cleanup) noexcept {
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonLocationToCapsule(v));
-    return nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+    return mlir::python::irModule()
         .attr("Location")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
@@ -185,17 +240,19 @@ struct type_caster<MlirLocation> {
 /// Casts object <-> MlirModule.
 template <>
 struct type_caster<MlirModule> {
-  NB_TYPE_CASTER(MlirModule, const_name("MlirModule"));
-  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
-    nanobind::object capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToModule(capsule.ptr());
-    return !mlirModuleIsNull(value);
+  NB_TYPE_CASTER(MlirModule, const_name("MlirModule"))
+  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
+      value = mlirPythonCapsuleToModule(capsule->ptr());
+      return !mlirModuleIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirModule v, rv_policy,
                          cleanup_list *cleanup) noexcept {
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonModuleToCapsule(v));
-    return nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+    return mlir::python::irModule()
         .attr("Module")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
@@ -206,13 +263,16 @@ struct type_caster<MlirModule> {
 template <>
 struct type_caster<MlirFrozenRewritePatternSet> {
   NB_TYPE_CASTER(MlirFrozenRewritePatternSet,
-                 const_name("MlirFrozenRewritePatternSet"));
-  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
-    nanobind::object capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToFrozenRewritePatternSet(capsule.ptr());
-    return value.ptr != nullptr;
+                 const_name("MlirFrozenRewritePatternSet"))
+  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
+      value = mlirPythonCapsuleToFrozenRewritePatternSet(capsule->ptr());
+      return value.ptr != nullptr;
+    }
+    return false;
   }
-  static handle from_cpp(MlirFrozenRewritePatternSet v, rv_policy, handle) {
+  static handle from_cpp(MlirFrozenRewritePatternSet v, rv_policy,
+                         handle) noexcept {
     nanobind::object capsule = nanobind::steal<nanobind::object>(
         mlirPythonFrozenRewritePatternSetToCapsule(v));
     return nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("rewrite"))
@@ -225,11 +285,13 @@ struct type_caster<MlirFrozenRewritePatternSet> {
 /// Casts object <-> MlirOperation.
 template <>
 struct type_caster<MlirOperation> {
-  NB_TYPE_CASTER(MlirOperation, const_name("MlirOperation"));
-  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
-    nanobind::object capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToOperation(capsule.ptr());
-    return !mlirOperationIsNull(value);
+  NB_TYPE_CASTER(MlirOperation, const_name("MlirOperation"))
+  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
+      value = mlirPythonCapsuleToOperation(capsule->ptr());
+      return !mlirOperationIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirOperation v, rv_policy,
                          cleanup_list *cleanup) noexcept {
@@ -237,7 +299,7 @@ struct type_caster<MlirOperation> {
       return nanobind::none();
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonOperationToCapsule(v));
-    return nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+    return mlir::python::irModule()
         .attr("Operation")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
@@ -247,11 +309,13 @@ struct type_caster<MlirOperation> {
 /// Casts object <-> MlirValue.
 template <>
 struct type_caster<MlirValue> {
-  NB_TYPE_CASTER(MlirValue, const_name("MlirValue"));
-  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
-    nanobind::object capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToValue(capsule.ptr());
-    return !mlirValueIsNull(value);
+  NB_TYPE_CASTER(MlirValue, const_name("MlirValue"))
+  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
+      value = mlirPythonCapsuleToValue(capsule->ptr());
+      return !mlirValueIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirValue v, rv_policy,
                          cleanup_list *cleanup) noexcept {
@@ -259,7 +323,7 @@ struct type_caster<MlirValue> {
       return nanobind::none();
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonValueToCapsule(v));
-    return nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+    return mlir::python::irModule()
         .attr("Value")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)()
@@ -270,22 +334,26 @@ struct type_caster<MlirValue> {
 /// Casts object -> MlirPassManager.
 template <>
 struct type_caster<MlirPassManager> {
-  NB_TYPE_CASTER(MlirPassManager, const_name("MlirPassManager"));
-  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
-    nanobind::object capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToPassManager(capsule.ptr());
-    return !mlirPassManagerIsNull(value);
+  NB_TYPE_CASTER(MlirPassManager, const_name("MlirPassManager"))
+  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
+      value = mlirPythonCapsuleToPassManager(capsule->ptr());
+      return !mlirPassManagerIsNull(value);
+    }
+    return false;
   }
 };
 
 /// Casts object <-> MlirTypeID.
 template <>
 struct type_caster<MlirTypeID> {
-  NB_TYPE_CASTER(MlirTypeID, const_name("MlirTypeID"));
-  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
-    nanobind::object capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToTypeID(capsule.ptr());
-    return !mlirTypeIDIsNull(value);
+  NB_TYPE_CASTER(MlirTypeID, const_name("MlirTypeID"))
+  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
+      value = mlirPythonCapsuleToTypeID(capsule->ptr());
+      return !mlirTypeIDIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirTypeID v, rv_policy,
                          cleanup_list *cleanup) noexcept {
@@ -293,7 +361,7 @@ struct type_caster<MlirTypeID> {
       return nanobind::none();
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonTypeIDToCapsule(v));
-    return nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+    return mlir::python::irModule()
         .attr("TypeID")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
@@ -303,21 +371,33 @@ struct type_caster<MlirTypeID> {
 /// Casts object <-> MlirType.
 template <>
 struct type_caster<MlirType> {
-  NB_TYPE_CASTER(MlirType, const_name("MlirType"));
-  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
-    nanobind::object capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToType(capsule.ptr());
-    return !mlirTypeIsNull(value);
+  NB_TYPE_CASTER(MlirType, const_name("MlirType"))
+  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
+      value = mlirPythonCapsuleToType(capsule->ptr());
+      return !mlirTypeIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirType t, rv_policy,
                          cleanup_list *cleanup) noexcept {
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonTypeToCapsule(t));
-    return nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+    return mlir::python::irModule()
         .attr("Type")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)()
         .release();
+  }
+};
+
+/// Casts MlirStringRef -> object.
+template <>
+struct type_caster<MlirStringRef> {
+  NB_TYPE_CASTER(MlirStringRef, const_name("MlirStringRef"))
+  static handle from_cpp(MlirStringRef s, rv_policy,
+                         cleanup_list *cleanup) noexcept {
+    return nanobind::str(s.data, s.length).release();
   }
 };
 
@@ -351,6 +431,7 @@ public:
     thisClass = metaclass(derivedClassName, nanobind::make_tuple(superClass),
                           attributes);
     scope.attr(derivedClassName) = thisClass;
+    thisClass.attr("__module__") = scope.attr("__name__");
   }
 
   template <typename Func, typename... Extra>
@@ -421,11 +502,9 @@ public:
   mlir_attribute_subclass(nanobind::handle scope, const char *attrClassName,
                           IsAFunctionTy isaFunction,
                           GetTypeIDFunctionTy getTypeIDFunction = nullptr)
-      : mlir_attribute_subclass(
-            scope, attrClassName, isaFunction,
-            nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
-                .attr("Attribute"),
-            getTypeIDFunction) {}
+      : mlir_attribute_subclass(scope, attrClassName, isaFunction,
+                                irModule().attr("Attribute"),
+                                getTypeIDFunction) {}
 
   /// Subclasses with a provided mlir.ir.Attribute super-class. This must
   /// be used if the subclass is being defined in the same extension module
@@ -436,7 +515,7 @@ public:
                           const nanobind::object &superCls,
                           GetTypeIDFunctionTy getTypeIDFunction = nullptr)
       : pure_subclass(scope, typeClassName, superCls) {
-    // Casting constructor. Note that it hard, if not impossible, to properly
+    // Casting constructor. Note that it is hard, if not impossible, to properly
     // call chain to parent `__init__` in nanobind due to its special handling
     // for init functions that don't have a fully constructed self-reference,
     // which makes it impossible to forward it to `__init__` of a superclass.
@@ -449,9 +528,10 @@ public:
     nanobind::object newCf = nanobind::cpp_function(
         [superCls, isaFunction, captureTypeName](
             nanobind::object cls, nanobind::object otherAttribute) {
-          MlirAttribute rawAttribute =
-              nanobind::cast<MlirAttribute>(otherAttribute);
-          if (!isaFunction(rawAttribute)) {
+          MlirAttribute rawAttribute;
+          if (!nanobind::try_cast<MlirAttribute>(otherAttribute,
+                                                 rawAttribute) ||
+              !isaFunction(rawAttribute)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherAttribute));
             throw std::invalid_argument(
@@ -467,17 +547,25 @@ public:
     thisClass.attr("__new__") = newCf;
 
     // 'isinstance' method.
+    static const char kIsinstanceSig[] =
+        "def isinstance(other_attribute: " MAKE_MLIR_PYTHON_QUALNAME(
+            "ir") ".Attribute) -> bool";
     def_staticmethod(
         "isinstance",
         [isaFunction](MlirAttribute other) { return isaFunction(other); },
-        nanobind::arg("other_attribute"));
+        nanobind::arg("other_attribute"), nanobind::sig(kIsinstanceSig));
     def("__repr__", [superCls, captureTypeName](nanobind::object self) {
       return nanobind::repr(superCls(self))
           .attr("replace")(superCls.attr("__name__"), captureTypeName);
     });
     if (getTypeIDFunction) {
-      def_staticmethod("get_static_typeid",
-                       [getTypeIDFunction]() { return getTypeIDFunction(); });
+      def_staticmethod(
+          "get_static_typeid",
+          [getTypeIDFunction]() { return getTypeIDFunction(); },
+          // clang-format off
+          nanobind::sig("def get_static_typeid() -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID"))
+          // clang-format on
+      );
       nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
           .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(
               getTypeIDFunction())(nanobind::cpp_function(
@@ -499,11 +587,8 @@ public:
   mlir_type_subclass(nanobind::handle scope, const char *typeClassName,
                      IsAFunctionTy isaFunction,
                      GetTypeIDFunctionTy getTypeIDFunction = nullptr)
-      : mlir_type_subclass(
-            scope, typeClassName, isaFunction,
-            nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
-                .attr("Type"),
-            getTypeIDFunction) {}
+      : mlir_type_subclass(scope, typeClassName, isaFunction,
+                           irModule().attr("Type"), getTypeIDFunction) {}
 
   /// Subclasses with a provided mlir.ir.Type super-class. This must
   /// be used if the subclass is being defined in the same extension module
@@ -514,7 +599,7 @@ public:
                      const nanobind::object &superCls,
                      GetTypeIDFunctionTy getTypeIDFunction = nullptr)
       : pure_subclass(scope, typeClassName, superCls) {
-    // Casting constructor. Note that it hard, if not impossible, to properly
+    // Casting constructor. Note that it is hard, if not impossible, to properly
     // call chain to parent `__init__` in nanobind due to its special handling
     // for init functions that don't have a fully constructed self-reference,
     // which makes it impossible to forward it to `__init__` of a superclass.
@@ -527,8 +612,9 @@ public:
     nanobind::object newCf = nanobind::cpp_function(
         [superCls, isaFunction, captureTypeName](nanobind::object cls,
                                                  nanobind::object otherType) {
-          MlirType rawType = nanobind::cast<MlirType>(otherType);
-          if (!isaFunction(rawType)) {
+          MlirType rawType;
+          if (!nanobind::try_cast<MlirType>(otherType, rawType) ||
+              !isaFunction(rawType)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherType));
             throw std::invalid_argument((llvm::Twine("Cannot cast type to ") +
@@ -544,13 +630,18 @@ public:
     thisClass.attr("__new__") = newCf;
 
     // 'isinstance' method.
+    static const char kIsinstanceSig[] =
+        // clang-format off
+        "def isinstance(other_type: " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") ") -> bool";
+    // clang-format on
     def_staticmethod(
         "isinstance",
         [isaFunction](MlirType other) { return isaFunction(other); },
-        nanobind::arg("other_type"));
+        nanobind::arg("other_type"), nanobind::sig(kIsinstanceSig));
     def("__repr__", [superCls, captureTypeName](nanobind::object self) {
-      return nanobind::repr(superCls(self))
-          .attr("replace")(superCls.attr("__name__"), captureTypeName);
+      return nanobind::cast<std::string>(
+          nanobind::repr(superCls(self))
+              .attr("replace")(superCls.attr("__name__"), captureTypeName));
     });
     if (getTypeIDFunction) {
       // 'get_static_typeid' method.
@@ -558,8 +649,13 @@ public:
       // `def_property_readonly_static` is not available in `pure_subclass` and
       // we do not want to introduce the complexity that pybind uses to
       // implement it.
-      def_staticmethod("get_static_typeid",
-                       [getTypeIDFunction]() { return getTypeIDFunction(); });
+      def_staticmethod(
+          "get_static_typeid",
+          [getTypeIDFunction]() { return getTypeIDFunction(); },
+          // clang-format off
+          nanobind::sig("def get_static_typeid() -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID"))
+          // clang-format on
+      );
       nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
           .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(
               getTypeIDFunction())(nanobind::cpp_function(
@@ -579,10 +675,8 @@ public:
   /// Subclasses by looking up the super-class dynamically.
   mlir_value_subclass(nanobind::handle scope, const char *valueClassName,
                       IsAFunctionTy isaFunction)
-      : mlir_value_subclass(
-            scope, valueClassName, isaFunction,
-            nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
-                .attr("Value")) {}
+      : mlir_value_subclass(scope, valueClassName, isaFunction,
+                            irModule().attr("Value")) {}
 
   /// Subclasses with a provided mlir.ir.Value super-class. This must
   /// be used if the subclass is being defined in the same extension module
@@ -592,7 +686,7 @@ public:
                       IsAFunctionTy isaFunction,
                       const nanobind::object &superCls)
       : pure_subclass(scope, valueClassName, superCls) {
-    // Casting constructor. Note that it hard, if not impossible, to properly
+    // Casting constructor. Note that it is hard, if not impossible, to properly
     // call chain to parent `__init__` in nanobind due to its special handling
     // for init functions that don't have a fully constructed self-reference,
     // which makes it impossible to forward it to `__init__` of a superclass.
@@ -605,8 +699,9 @@ public:
     nanobind::object newCf = nanobind::cpp_function(
         [superCls, isaFunction, captureValueName](nanobind::object cls,
                                                   nanobind::object otherValue) {
-          MlirValue rawValue = nanobind::cast<MlirValue>(otherValue);
-          if (!isaFunction(rawValue)) {
+          MlirValue rawValue;
+          if (!nanobind::try_cast<MlirValue>(otherValue, rawValue) ||
+              !isaFunction(rawValue)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherValue));
             throw std::invalid_argument((llvm::Twine("Cannot cast value to ") +
@@ -622,48 +717,18 @@ public:
     thisClass.attr("__new__") = newCf;
 
     // 'isinstance' method.
+    static const char kIsinstanceSig[] =
+        // clang-format off
+        "def isinstance(other_value: " MAKE_MLIR_PYTHON_QUALNAME("ir.Value") ") -> bool";
+    // clang-format on
     def_staticmethod(
         "isinstance",
         [isaFunction](MlirValue other) { return isaFunction(other); },
-        nanobind::arg("other_value"));
+        nanobind::arg("other_value"), nanobind::sig(kIsinstanceSig));
   }
 };
 
 } // namespace nanobind_adaptors
-
-/// RAII scope intercepting all diagnostics into a string. The message must be
-/// checked before this goes out of scope.
-class CollectDiagnosticsToStringScope {
-public:
-  explicit CollectDiagnosticsToStringScope(MlirContext ctx) : context(ctx) {
-    handlerID = mlirContextAttachDiagnosticHandler(ctx, &handler, &errorMessage,
-                                                   /*deleteUserData=*/nullptr);
-  }
-  ~CollectDiagnosticsToStringScope() {
-    assert(errorMessage.empty() && "unchecked error message");
-    mlirContextDetachDiagnosticHandler(context, handlerID);
-  }
-
-  [[nodiscard]] std::string takeMessage() { return std::move(errorMessage); }
-
-private:
-  static MlirLogicalResult handler(MlirDiagnostic diag, void *data) {
-    auto printer = +[](MlirStringRef message, void *data) {
-      *static_cast<std::string *>(data) +=
-          llvm::StringRef(message.data, message.length);
-    };
-    MlirLocation loc = mlirDiagnosticGetLocation(diag);
-    *static_cast<std::string *>(data) += "at ";
-    mlirLocationPrint(loc, printer, data);
-    *static_cast<std::string *>(data) += ": ";
-    mlirDiagnosticPrint(diag, printer, data);
-    return mlirLogicalResultSuccess();
-  }
-
-  MlirContext context;
-  MlirDiagnosticHandlerID handlerID;
-  std::string errorMessage = "";
-};
 
 } // namespace python
 } // namespace mlir

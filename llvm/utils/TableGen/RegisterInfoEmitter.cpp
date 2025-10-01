@@ -47,7 +47,7 @@
 
 using namespace llvm;
 
-cl::OptionCategory RegisterInfoCat("Options for -gen-register-info");
+static cl::OptionCategory RegisterInfoCat("Options for -gen-register-info");
 
 static cl::opt<bool>
     RegisterInfoDebug("register-info-debug", cl::init(false),
@@ -660,17 +660,17 @@ static void printMask(raw_ostream &OS, LaneBitmask Val) {
 // Try to combine Idx's compose map into Vec if it is compatible.
 // Return false if it's not possible.
 static bool combine(const CodeGenSubRegIndex *Idx,
-                    SmallVectorImpl<CodeGenSubRegIndex *> &Vec) {
+                    SmallVectorImpl<const CodeGenSubRegIndex *> &Vec) {
   const CodeGenSubRegIndex::CompMap &Map = Idx->getComposites();
   for (const auto &I : Map) {
-    CodeGenSubRegIndex *&Entry = Vec[I.first->EnumValue - 1];
+    const CodeGenSubRegIndex *&Entry = Vec[I.first->EnumValue - 1];
     if (Entry && Entry != I.second)
       return false;
   }
 
   // All entries are compatible. Make it so.
   for (const auto &I : Map) {
-    auto *&Entry = Vec[I.first->EnumValue - 1];
+    const CodeGenSubRegIndex *&Entry = Vec[I.first->EnumValue - 1];
     assert((!Entry || Entry == I.second) && "Expected EnumValue to be unique");
     Entry = I.second;
   }
@@ -680,8 +680,6 @@ static bool combine(const CodeGenSubRegIndex *Idx,
 void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
                                                    StringRef ClassName) {
   const auto &SubRegIndices = RegBank.getSubRegIndices();
-  OS << "unsigned " << ClassName
-     << "::composeSubRegIndicesImpl(unsigned IdxA, unsigned IdxB) const {\n";
 
   // Many sub-register indexes are composition-compatible, meaning that
   //
@@ -692,7 +690,7 @@ void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
 
   // Map each Sub-register index to a compatible table row.
   SmallVector<unsigned, 4> RowMap;
-  SmallVector<SmallVector<CodeGenSubRegIndex *, 4>, 4> Rows;
+  SmallVector<SmallVector<const CodeGenSubRegIndex *, 4>, 4> Rows;
 
   auto SubRegIndicesSize =
       std::distance(SubRegIndices.begin(), SubRegIndices.end());
@@ -713,7 +711,10 @@ void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
     RowMap.push_back(Found);
   }
 
-  // Output the row map if there is multiple rows.
+  OS << "unsigned " << ClassName
+     << "::composeSubRegIndicesImpl(unsigned IdxA, unsigned IdxB) const {\n";
+
+  // Output the row map if there are multiple rows.
   if (Rows.size() > 1) {
     OS << "  static const " << getMinimalTypeForRange(Rows.size(), 32)
        << " RowMap[" << SubRegIndicesSize << "] = {\n    ";
@@ -725,11 +726,12 @@ void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
   // Output the rows.
   OS << "  static const " << getMinimalTypeForRange(SubRegIndicesSize + 1, 32)
      << " Rows[" << Rows.size() << "][" << SubRegIndicesSize << "] = {\n";
-  for (unsigned r = 0, re = Rows.size(); r != re; ++r) {
+  for (const auto &Row : Rows) {
     OS << "    { ";
-    for (unsigned i = 0, e = SubRegIndicesSize; i != e; ++i)
-      if (Rows[r][i])
-        OS << Rows[r][i]->getQualifiedName() << ", ";
+    for (const llvm::CodeGenSubRegIndex *Elem :
+         ArrayRef(&Row[0], SubRegIndicesSize))
+      if (Elem)
+        OS << Elem->getQualifiedName() << ", ";
       else
         OS << "0, ";
     OS << "},\n";
@@ -743,6 +745,51 @@ void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
   else
     OS << "  return Rows[0][IdxB];\n";
   OS << "}\n\n";
+
+  // Generate the reverse case.
+  //
+  // FIXME: This is the brute force approach. Compress the table similar to the
+  // forward case.
+  OS << "unsigned " << ClassName
+     << "::reverseComposeSubRegIndicesImpl(unsigned IdxA, unsigned IdxB) const "
+        "{\n";
+  OS << "  static const " << getMinimalTypeForRange(SubRegIndicesSize + 1, 32)
+     << " Table[" << SubRegIndicesSize << "][" << SubRegIndicesSize
+     << "] = {\n";
+
+  // Find values where composeSubReg(A, X) == B;
+  for (const auto &IdxA : SubRegIndices) {
+    OS << "    { ";
+
+    SmallVectorImpl<const CodeGenSubRegIndex *> &Row =
+        Rows[RowMap[IdxA.EnumValue - 1]];
+    for (const auto &IdxB : SubRegIndices) {
+      const CodeGenSubRegIndex *FoundReverse = nullptr;
+
+      for (unsigned i = 0, e = SubRegIndicesSize; i != e; ++i) {
+        const CodeGenSubRegIndex *This = &SubRegIndices[i];
+        const CodeGenSubRegIndex *Composed = Row[i];
+        if (Composed == &IdxB) {
+          if (FoundReverse && FoundReverse != This) // Not unique
+            break;
+          FoundReverse = This;
+        }
+      }
+
+      if (FoundReverse) {
+        OS << FoundReverse->getQualifiedName() << ", ";
+      } else {
+        OS << "0, ";
+      }
+    }
+    OS << "},\n";
+  }
+
+  OS << "  };\n\n";
+  OS << "  --IdxA; assert(IdxA < " << SubRegIndicesSize << ");\n"
+     << "  --IdxB; assert(IdxB < " << SubRegIndicesSize << ");\n";
+  OS << "  return Table[IdxA][IdxB];\n";
+  OS << "  }\n\n";
 }
 
 void RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
@@ -784,8 +831,7 @@ void RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
   for (size_t s = 0, se = Sequences.size(); s != se; ++s) {
     OS << "    ";
     const SmallVectorImpl<MaskRolPair> &Sequence = Sequences[s];
-    for (size_t p = 0, pe = Sequence.size(); p != pe; ++p) {
-      const MaskRolPair &P = Sequence[p];
+    for (const MaskRolPair &P : Sequence) {
       printMask(OS << "{ ", P.Mask);
       OS << format(", %2u }, ", P.RotateLeft);
     }
@@ -891,7 +937,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   unsigned i = 0;
   for (auto I = Regs.begin(), E = Regs.end(); I != E; ++I, ++i) {
     const auto &Reg = *I;
-    RegStrings.add(std::string(Reg.getName()));
+    RegStrings.add(Reg.getName().str());
 
     // Compute the ordered sub-register list.
     SetVector<const CodeGenRegister *> SR;
@@ -928,7 +974,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
 
   OS << "namespace llvm {\n\n";
 
-  const std::string &TargetName = std::string(Target.getName());
+  const std::string &TargetName = Target.getName().str();
 
   // Emit the shared table of differential lists.
   OS << "extern const int16_t " << TargetName << "RegDiffLists[] = {\n";
@@ -963,7 +1009,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
     constexpr unsigned RegUnitBits = 12;
     assert(isUInt<RegUnitBits>(FirstRU) && "Too many regunits");
     assert(isUInt<32 - RegUnitBits>(Offset) && "Offset is too big");
-    OS << "  { " << RegStrings.get(std::string(Reg.getName())) << ", "
+    OS << "  { " << RegStrings.get(Reg.getName().str()) << ", "
        << DiffSeqs.get(SubRegLists[i]) << ", " << DiffSeqs.get(SuperRegLists[i])
        << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i]) << ", "
        << (Offset << RegUnitBits | FirstRU) << ", "
@@ -1061,11 +1107,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   for (const auto &RE : Regs) {
     const Record *Reg = RE.TheDef;
     const BitsInit *BI = Reg->getValueAsBitsInit("HWEncoding");
-    uint64_t Value = 0;
-    for (unsigned b = 0, be = BI->getNumBits(); b != be; ++b) {
-      if (const BitInit *B = dyn_cast<BitInit>(BI->getBit(b)))
-        Value |= (uint64_t)B->getValue() << b;
-    }
+    uint64_t Value = BI->convertKnownBitsToInt();
     OS << "  " << Value << ",\n";
   }
   OS << "};\n"; // End of HW encoding table
@@ -1098,7 +1140,7 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS) {
   OS << "\n#ifdef GET_REGINFO_HEADER\n";
   OS << "#undef GET_REGINFO_HEADER\n\n";
 
-  const std::string &TargetName = std::string(Target.getName());
+  const std::string &TargetName = Target.getName().str();
   std::string ClassName = TargetName + "GenRegisterInfo";
 
   OS << "#include \"llvm/CodeGen/TargetRegisterInfo.h\"\n\n";
@@ -1113,6 +1155,8 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS) {
      << "      unsigned PC = 0, unsigned HwMode = 0);\n";
   if (!RegBank.getSubRegIndices().empty()) {
     OS << "  unsigned composeSubRegIndicesImpl"
+       << "(unsigned, unsigned) const override;\n"
+       << "  unsigned reverseComposeSubRegIndicesImpl"
        << "(unsigned, unsigned) const override;\n"
        << "  LaneBitmask composeSubRegIndexLaneMaskImpl"
        << "(unsigned, LaneBitmask) const override;\n"
@@ -1355,10 +1399,10 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
     for (const auto &RC : RegisterClasses) {
       if (!RC.AltOrderSelect.empty()) {
         OS << "\nstatic inline unsigned " << RC.getName()
-           << "AltOrderSelect(const MachineFunction &MF) {" << RC.AltOrderSelect
-           << "}\n\n"
+           << "AltOrderSelect(const MachineFunction &MF, bool Rev) {"
+           << RC.AltOrderSelect << "}\n\n"
            << "static ArrayRef<MCPhysReg> " << RC.getName()
-           << "GetRawAllocationOrder(const MachineFunction &MF) {\n";
+           << "GetRawAllocationOrder(const MachineFunction &MF, bool Rev) {\n";
         for (unsigned oi = 1, oe = RC.getNumOrders(); oi != oe; ++oi) {
           ArrayRef<const Record *> Elems = RC.getOrder(oi);
           if (!Elems.empty()) {
@@ -1378,8 +1422,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
           else
             OS << "),\n    ArrayRef(AltOrder" << oi;
         OS << ")\n  };\n  const unsigned Select = " << RC.getName()
-           << "AltOrderSelect(MF);\n  assert(Select < " << RC.getNumOrders()
-           << ");\n  return Order[Select];\n}\n";
+           << "AltOrderSelect(MF, Rev);\n  assert(Select < "
+           << RC.getNumOrders() << ");\n  return Order[Select];\n}\n";
       }
     }
 
@@ -1424,7 +1468,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
   OS << "} // end anonymous namespace\n";
 
   // Emit extra information about registers.
-  const std::string &TargetName = std::string(Target.getName());
+  const std::string &TargetName = Target.getName().str();
   const auto &Regs = RegBank.getRegisters();
   unsigned NumRegCosts = 1;
   for (const auto &Reg : Regs)
@@ -1439,7 +1483,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
   // each register. Fill with zero for values which are not explicitly given.
   for (const auto &Reg : Regs) {
     auto Costs = Reg.CostPerUse;
-    AllRegCostPerUse.insert(AllRegCostPerUse.end(), Costs.begin(), Costs.end());
+    llvm::append_range(AllRegCostPerUse, Costs);
     if (NumRegCosts > Costs.size())
       AllRegCostPerUse.insert(AllRegCostPerUse.end(),
                               NumRegCosts - Costs.size(), 0);
@@ -1596,7 +1640,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
       for (const CodeGenRegister &Reg : Regs) {
         const CodeGenRegisterClass *BaseRC = nullptr;
         for (const CodeGenRegisterClass *RC : BaseClasses) {
-          if (is_contained(RC->getMembers(), &Reg)) {
+          if (RC->contains(&Reg)) {
             BaseRC = RC;
             break;
           }
@@ -1608,7 +1652,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
       }
       OS << "  };\n\n"
             "  assert(Reg < ArrayRef(Mapping).size());\n"
-            "  unsigned RCID = Mapping[Reg];\n"
+            "  unsigned RCID = Mapping[Reg.id()];\n"
             "  if (RCID == InvalidRegClassID)\n"
             "    return nullptr;\n"
             "  return RegisterClasses[RCID];\n"
@@ -1882,11 +1926,12 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     OS << '\n';
     OS << "\tCoveredBySubregs: " << R.CoveredBySubRegs << '\n';
     OS << "\tHasDisjunctSubRegs: " << R.HasDisjunctSubRegs << '\n';
-    for (std::pair<CodeGenSubRegIndex *, CodeGenRegister *> P :
-         R.getSubRegs()) {
-      OS << "\tSubReg " << P.first->getName() << " = " << P.second->getName()
+    for (auto &[SubIdx, SubReg] : R.getSubRegs()) {
+      OS << "\tSubReg " << SubIdx->getName() << " = " << SubReg->getName()
          << '\n';
     }
+    for (unsigned U : R.getNativeRegUnits())
+      OS << "\tRegUnit " << U << '\n';
   }
 }
 

@@ -14,6 +14,7 @@
 #include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPCELFStreamer.h"
+#include "PPCMCAsmInfo.h"
 #include "PPCTargetStreamer.h"
 #include "PPCXCOFFStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
@@ -40,6 +41,7 @@
 #include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
@@ -117,8 +119,8 @@ const char *PPC::stripRegisterPrefix(const char *RegName) {
 /// The operand number argument will be useful when we need to extend this
 /// to instructions that use both Altivec and VSX numbering (for different
 /// operands).
-unsigned PPC::getRegNumForOperand(const MCInstrDesc &Desc, unsigned Reg,
-                                  unsigned OpNo) {
+MCRegister PPC::getRegNumForOperand(const MCInstrDesc &Desc, MCRegister Reg,
+                                    unsigned OpNo) {
   int16_t regClass = Desc.operands()[OpNo].RegClass;
   switch (regClass) {
     // We store F0-F31, VF0-VF31 in MCOperand and it should be F0-F31,
@@ -199,24 +201,6 @@ static MCAsmInfo *createPPCMCAsmInfo(const MCRegisterInfo &MRI,
   return MAI;
 }
 
-static MCStreamer *
-createPPCELFStreamer(const Triple &T, MCContext &Context,
-                     std::unique_ptr<MCAsmBackend> &&MAB,
-                     std::unique_ptr<MCObjectWriter> &&OW,
-                     std::unique_ptr<MCCodeEmitter> &&Emitter) {
-  return createPPCELFStreamer(Context, std::move(MAB), std::move(OW),
-                              std::move(Emitter));
-}
-
-static MCStreamer *
-createPPCXCOFFStreamer(const Triple &T, MCContext &Context,
-                       std::unique_ptr<MCAsmBackend> &&MAB,
-                       std::unique_ptr<MCObjectWriter> &&OW,
-                       std::unique_ptr<MCCodeEmitter> &&Emitter) {
-  return createPPCXCOFFStreamer(Context, std::move(MAB), std::move(OW),
-                                std::move(Emitter));
-}
-
 namespace {
 
 class PPCTargetAsmStreamer : public PPCTargetStreamer {
@@ -226,11 +210,10 @@ public:
   PPCTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS)
       : PPCTargetStreamer(S), OS(OS) {}
 
-  void emitTCEntry(const MCSymbol &S,
-                   MCSymbolRefExpr::VariantKind Kind) override {
-    if (const MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(&S)) {
+  void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
+    if (getContext().isXCOFF()) {
       MCSymbolXCOFF *TCSym =
-          cast<MCSectionXCOFF>(Streamer.getCurrentSectionOnly())
+          static_cast<const MCSectionXCOFF *>(Streamer.getCurrentSectionOnly())
               ->getQualNameSymbol();
       // On AIX, we have TLS variable offsets (symbol@({gd|ie|le|ld}) depending
       // on the TLS access method (or model). For the general-dynamic access
@@ -239,16 +222,13 @@ public:
       // variables. Finally for local-exec and initial-exec, we have a thread
       // pointer, in r13 for 64-bit mode and returned by .__get_tpointer for
       // 32-bit mode.
-      if (Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML)
-        OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
-           << MCSymbolRefExpr::getVariantKindName(Kind) << '\n';
+      if (Kind == PPC::S_AIX_TLSGD || Kind == PPC::S_AIX_TLSGDM ||
+          Kind == PPC::S_AIX_TLSIE || Kind == PPC::S_AIX_TLSLE ||
+          Kind == PPC::S_AIX_TLSLD || Kind == PPC::S_AIX_TLSML)
+        OS << "\t.tc " << TCSym->getName() << "," << S.getName() << "@"
+           << getContext().getAsmInfo()->getSpecifierName(Kind) << '\n';
       else
-        OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
+        OS << "\t.tc " << TCSym->getName() << "," << S.getName() << '\n';
 
       if (TCSym->hasRename())
         Streamer.emitXCOFFRenameDirective(TCSym, TCSym->getSymbolTableName());
@@ -276,7 +256,7 @@ public:
     OS << "\t.localentry\t";
     S->print(OS, MAI);
     OS << ", ";
-    LocalOffset->print(OS, MAI);
+    MAI->printExpr(OS, *LocalOffset);
     OS << '\n';
   }
 };
@@ -289,8 +269,7 @@ public:
     return static_cast<MCELFStreamer &>(Streamer);
   }
 
-  void emitTCEntry(const MCSymbol &S,
-                   MCSymbolRefExpr::VariantKind Kind) override {
+  void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
     // Creates a R_PPC64_TOC relocation
     Streamer.emitValueToAlignment(Align(8));
     Streamer.emitSymbolValue(&S, 8);
@@ -329,7 +308,7 @@ public:
   }
 
   void emitAssignment(MCSymbol *S, const MCExpr *Value) override {
-    auto *Symbol = cast<MCSymbolELF>(S);
+    auto *Symbol = static_cast<MCSymbolELF *>(S);
 
     // When encoding an assignment to set symbol A to symbol B, also copy
     // the st_other bits encoding the local entry point offset.
@@ -356,7 +335,7 @@ private:
     auto *Ref = dyn_cast<const MCSymbolRefExpr>(S);
     if (!Ref)
       return false;
-    const auto &RhsSym = cast<MCSymbolELF>(Ref->getSymbol());
+    auto &RhsSym = static_cast<const MCSymbolELF &>(Ref->getSymbol());
     unsigned Other = D->getOther();
     Other &= ~ELF::STO_PPC64_LOCAL_MASK;
     Other |= RhsSym.getOther() & ELF::STO_PPC64_LOCAL_MASK;
@@ -394,8 +373,7 @@ class PPCTargetMachOStreamer : public PPCTargetStreamer {
 public:
   PPCTargetMachOStreamer(MCStreamer &S) : PPCTargetStreamer(S) {}
 
-  void emitTCEntry(const MCSymbol &S,
-                   MCSymbolRefExpr::VariantKind Kind) override {
+  void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
     llvm_unreachable("Unknown pseudo-op: .tc");
   }
 
@@ -417,8 +395,7 @@ class PPCTargetXCOFFStreamer : public PPCTargetStreamer {
 public:
   PPCTargetXCOFFStreamer(MCStreamer &S) : PPCTargetStreamer(S) {}
 
-  void emitTCEntry(const MCSymbol &S,
-                   MCSymbolRefExpr::VariantKind Kind) override {
+  void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
     const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
     const unsigned PointerSize = MAI->getCodePointerSize();
     Streamer.emitValueToAlignment(Align(PointerSize));
@@ -495,7 +472,8 @@ static MCInstrAnalysis *createPPCMCInstrAnalysis(const MCInstrInfo *Info) {
   return new PPCMCInstrAnalysis(Info);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializePowerPCTargetMC() {
   for (Target *T : {&getThePPC32Target(), &getThePPC32LETarget(),
                     &getThePPC64Target(), &getThePPC64LETarget()}) {
     // Register the MC asm info.

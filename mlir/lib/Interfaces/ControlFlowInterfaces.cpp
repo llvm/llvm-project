@@ -10,7 +10,6 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 
@@ -81,6 +80,47 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 }
 
 //===----------------------------------------------------------------------===//
+// WeightedBranchOpInterface
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyWeights(Operation *op,
+                                   llvm::ArrayRef<int32_t> weights,
+                                   std::size_t expectedWeightsNum,
+                                   llvm::StringRef weightAnchorName,
+                                   llvm::StringRef weightRefName) {
+  if (weights.empty())
+    return success();
+
+  if (weights.size() != expectedWeightsNum)
+    return op->emitError() << "expects number of " << weightAnchorName
+                           << " weights to match number of " << weightRefName
+                           << ": " << weights.size() << " vs "
+                           << expectedWeightsNum;
+
+  if (llvm::all_of(weights, [](int32_t value) { return value == 0; }))
+    return op->emitError() << "branch weights cannot all be zero";
+
+  return success();
+}
+
+LogicalResult detail::verifyBranchWeights(Operation *op) {
+  llvm::ArrayRef<int32_t> weights =
+      cast<WeightedBranchOpInterface>(op).getWeights();
+  return verifyWeights(op, weights, op->getNumSuccessors(), "branch",
+                       "successors");
+}
+
+//===----------------------------------------------------------------------===//
+// WeightedRegionBranchOpInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult detail::verifyRegionBranchWeights(Operation *op) {
+  llvm::ArrayRef<int32_t> weights =
+      cast<WeightedRegionBranchOpInterface>(op).getWeights();
+  return verifyWeights(op, weights, op->getNumRegions(), "region", "regions");
+}
+
+//===----------------------------------------------------------------------===//
 // RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
@@ -120,7 +160,7 @@ verifyTypesAlongAllEdges(Operation *op, RegionBranchPoint sourcePoint,
 
     TypeRange succInputsTypes = succ.getSuccessorInputs().getTypes();
     if (sourceTypes->size() != succInputsTypes.size()) {
-      InFlightDiagnostic diag = op->emitOpError(" region control flow edge ");
+      InFlightDiagnostic diag = op->emitOpError("region control flow edge ");
       return printRegionEdgeName(diag, sourcePoint, succ)
              << ": source has " << sourceTypes->size()
              << " operands, but target successor needs "
@@ -132,7 +172,7 @@ verifyTypesAlongAllEdges(Operation *op, RegionBranchPoint sourcePoint,
       Type sourceType = std::get<0>(typesIdx.value());
       Type inputType = std::get<1>(typesIdx.value());
       if (!regionInterface.areTypesCompatible(sourceType, inputType)) {
-        InFlightDiagnostic diag = op->emitOpError(" along control flow edge ");
+        InFlightDiagnostic diag = op->emitOpError("along control flow edge ");
         return printRegionEdgeName(diag, sourcePoint, succ)
                << ": source type #" << typesIdx.index() << " " << sourceType
                << " should match input type #" << typesIdx.index() << " "
@@ -202,7 +242,7 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
         // types match with the first one.
         if (!areTypesCompatible(regionReturnOperands->getTypes(),
                                 terminatorOperands.getTypes())) {
-          InFlightDiagnostic diag = op->emitOpError(" along control flow edge");
+          InFlightDiagnostic diag = op->emitOpError("along control flow edge");
           return printRegionEdgeName(diag, region, point)
                  << " operands mismatch between return-like terminators";
         }

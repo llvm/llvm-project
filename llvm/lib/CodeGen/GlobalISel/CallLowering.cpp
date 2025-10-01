@@ -96,7 +96,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              Register SwiftErrorVReg,
                              std::optional<PtrAuthInfo> PAI,
                              Register ConvergenceCtrlToken,
-                             std::function<unsigned()> GetCalleeReg) const {
+                             std::function<Register()> GetCalleeReg) const {
   CallLoweringInfo Info;
   const DataLayout &DL = MIRBuilder.getDataLayout();
   MachineFunction &MF = MIRBuilder.getMF();
@@ -132,9 +132,10 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   unsigned i = 0;
   unsigned NumFixedArgs = CB.getFunctionType()->getNumParams();
   for (const auto &Arg : CB.args()) {
-    ArgInfo OrigArg{ArgRegs[i], *Arg.get(), i, getAttributesForArgIdx(CB, i),
-                    i < NumFixedArgs};
+    ArgInfo OrigArg{ArgRegs[i], *Arg.get(), i, getAttributesForArgIdx(CB, i)};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CB);
+    if (i >= NumFixedArgs)
+      OrigArg.Flags[0].setVarArg();
 
     // If we have an explicit sret argument that is an Instruction, (i.e., it
     // might point to function-local memory), we can't meaningfully tail-call.
@@ -301,7 +302,7 @@ void CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
     // double] -> double).
     SplitArgs.emplace_back(OrigArg.Regs[0], SplitVTs[0].getTypeForEVT(Ctx),
                            OrigArg.OrigArgIndex, OrigArg.Flags[0],
-                           OrigArg.IsFixed, OrigArg.OrigValue);
+                           OrigArg.OrigValue);
     return;
   }
 
@@ -313,7 +314,7 @@ void CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   for (unsigned i = 0, e = SplitVTs.size(); i < e; ++i) {
     Type *SplitTy = SplitVTs[i].getTypeForEVT(Ctx);
     SplitArgs.emplace_back(OrigArg.Regs[i], SplitTy, OrigArg.OrigArgIndex,
-                           OrigArg.Flags[0], OrigArg.IsFixed);
+                           OrigArg.Flags[0]);
     if (NeedsRegBlock)
       SplitArgs.back().Flags[0].setInConsecutiveRegs();
   }
@@ -354,7 +355,7 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   int NumDst = LCMTy.getSizeInBits() / LLTy.getSizeInBits();
 
   SmallVector<Register, 8> PadDstRegs(NumDst);
-  std::copy(DstRegs.begin(), DstRegs.end(), PadDstRegs.begin());
+  llvm::copy(DstRegs, PadDstRegs.begin());
 
   // Create the excess dead defs for the unmerge.
   for (int I = DstRegs.size(); I != NumDst; ++I)
@@ -1009,7 +1010,8 @@ void CallLowering::insertSRetLoads(MachineIRBuilder &MIRBuilder, Type *RetTy,
 
   for (unsigned I = 0; I < NumValues; ++I) {
     Register Addr;
-    MIRBuilder.materializePtrAdd(Addr, DemoteReg, OffsetLLTy, Offsets[I]);
+    MIRBuilder.materializeObjectPtrOffset(Addr, DemoteReg, OffsetLLTy,
+                                          Offsets[I]);
     auto *MMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
                                         MRI.getType(VRegs[I]),
                                         commonAlignment(BaseAlign, Offsets[I]));
@@ -1039,7 +1041,8 @@ void CallLowering::insertSRetStores(MachineIRBuilder &MIRBuilder, Type *RetTy,
 
   for (unsigned I = 0; I < NumValues; ++I) {
     Register Addr;
-    MIRBuilder.materializePtrAdd(Addr, DemoteReg, OffsetLLTy, Offsets[I]);
+    MIRBuilder.materializeObjectPtrOffset(Addr, DemoteReg, OffsetLLTy,
+                                          Offsets[I]);
     auto *MMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
                                         MRI.getType(VRegs[I]),
                                         commonAlignment(BaseAlign, Offsets[I]));
@@ -1054,7 +1057,7 @@ void CallLowering::insertSRetIncomingArgument(
   DemoteReg = MRI.createGenericVirtualRegister(
       LLT::pointer(AS, DL.getPointerSizeInBits(AS)));
 
-  Type *PtrTy = PointerType::get(F.getReturnType(), AS);
+  Type *PtrTy = PointerType::get(F.getContext(), AS);
 
   SmallVector<EVT, 1> ValueVTs;
   ComputeValueVTs(*TLI, DL, PtrTy, ValueVTs);
@@ -1081,7 +1084,7 @@ void CallLowering::insertSRetOutgoingArgument(MachineIRBuilder &MIRBuilder,
       DL.getTypeAllocSize(RetTy), DL.getPrefTypeAlign(RetTy), false);
 
   Register DemoteReg = MIRBuilder.buildFrameIndex(FramePtrTy, FI).getReg(0);
-  ArgInfo DemoteArg(DemoteReg, PointerType::get(RetTy, AS),
+  ArgInfo DemoteArg(DemoteReg, PointerType::get(RetTy->getContext(), AS),
                     ArgInfo::NoArgIndex);
   setArgFlags(DemoteArg, AttributeList::ReturnIndex, DL, CB);
   DemoteArg.Flags[0].setSRet();
@@ -1096,7 +1099,7 @@ bool CallLowering::checkReturn(CCState &CCInfo,
                                CCAssignFn *Fn) const {
   for (unsigned I = 0, E = Outs.size(); I < E; ++I) {
     MVT VT = MVT::getVT(Outs[I].Ty);
-    if (Fn(I, VT, VT, CCValAssign::Full, Outs[I].Flags[0], CCInfo))
+    if (Fn(I, VT, VT, CCValAssign::Full, Outs[I].Flags[0], Outs[I].Ty, CCInfo))
       return false;
   }
   return true;
@@ -1253,7 +1256,7 @@ LLT CallLowering::ValueHandler::getStackValueStoreType(
     if (Flags.isPointer()) {
       LLT PtrTy = LLT::pointer(Flags.getPointerAddrSpace(),
                                ValTy.getScalarSizeInBits());
-      if (ValVT.isVector())
+      if (ValVT.isVector() && ValVT.getVectorNumElements() != 1)
         return LLT::vector(ValTy.getElementCount(), PtrTy);
       return PtrTy;
     }

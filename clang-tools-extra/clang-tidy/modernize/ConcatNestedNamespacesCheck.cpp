@@ -1,4 +1,4 @@
-//===--- ConcatNestedNamespacesCheck.cpp - clang-tidy----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceLocation.h"
-#include <algorithm>
 #include <optional>
 
 namespace clang::tidy::modernize {
@@ -153,14 +152,14 @@ void ConcatNestedNamespacesCheck::reportDiagnostic(
       ConcatNameSpace.append("::");
   }
 
-  for (SourceRange const &Front : Fronts)
+  for (const SourceRange &Front : Fronts)
     DB << FixItHint::CreateRemoval(Front);
   DB << FixItHint::CreateReplacement(
       Namespaces.back().getReplacedNamespaceFrontRange(), ConcatNameSpace);
   if (LastRBrace != Namespaces.back().getDefaultNamespaceBackRange())
     DB << FixItHint::CreateReplacement(LastRBrace,
                                        ("} // " + ConcatNameSpace).str());
-  for (SourceRange const &Back : llvm::reverse(Backs))
+  for (const SourceRange &Back : llvm::reverse(Backs))
     DB << FixItHint::CreateRemoval(Back);
 }
 

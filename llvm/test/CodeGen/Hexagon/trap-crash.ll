@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon --verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon --verify-machineinstrs < %s | FileCheck %s
 
 ; Generate code that is guaranteed to crash. At the moment, it's a
 ; misaligned load.

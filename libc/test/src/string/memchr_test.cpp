@@ -7,8 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/memchr.h"
-#include "test/UnitTest/Test.h"
+
 #include <stddef.h>
+
+#include "hdr/signal_macros.h"
+#include "test/UnitTest/Test.h"
+
+namespace {
 
 // A helper function that calls memchr and abstracts away the explicit cast for
 // readability purposes.
@@ -120,3 +125,14 @@ TEST(LlvmLibcMemChrTest, SignedCharacterFound) {
   // Should find the first character 'c'.
   ASSERT_EQ(actual[0], c);
 }
+
+#if defined(LIBC_ADD_NULL_CHECKS)
+
+TEST(LlvmLibcMemChrTest, CrashOnNullPtr) {
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::memchr(nullptr, 1, 1); },
+               WITH_SIGNAL(-1));
+}
+
+#endif // defined(LIBC_ADD_NULL_CHECKS)
+
+} // namespace

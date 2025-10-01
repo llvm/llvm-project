@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MachineInstr;
@@ -52,11 +53,11 @@ public:
   /// For convenience, finishedChangingAllUsesOfReg() will report the completion
   /// of the changes. The use list may change between this call and
   /// finishedChangingAllUsesOfReg().
-  void changingAllUsesOfReg(const MachineRegisterInfo &MRI, Register Reg);
+  LLVM_ABI void changingAllUsesOfReg(const MachineRegisterInfo &MRI,
+                                     Register Reg);
   /// All instructions reported as changing by changingAllUsesOfReg() have
   /// finished being changed.
-  void finishedChangingAllUsesOfReg();
-
+  LLVM_ABI void finishedChangingAllUsesOfReg();
 };
 
 /// Simple wrapper observer that takes several observers, and calls
@@ -112,8 +113,9 @@ class RAIIDelegateInstaller {
   MachineFunction::Delegate *Delegate;
 
 public:
-  RAIIDelegateInstaller(MachineFunction &MF, MachineFunction::Delegate *Del);
-  ~RAIIDelegateInstaller();
+  LLVM_ABI RAIIDelegateInstaller(MachineFunction &MF,
+                                 MachineFunction::Delegate *Del);
+  LLVM_ABI ~RAIIDelegateInstaller();
 };
 
 /// A simple RAII based Observer installer.
@@ -123,8 +125,9 @@ class RAIIMFObserverInstaller {
   MachineFunction &MF;
 
 public:
-  RAIIMFObserverInstaller(MachineFunction &MF, GISelChangeObserver &Observer);
-  ~RAIIMFObserverInstaller();
+  LLVM_ABI RAIIMFObserverInstaller(MachineFunction &MF,
+                                   GISelChangeObserver &Observer);
+  LLVM_ABI ~RAIIMFObserverInstaller();
 };
 
 /// Class to install both of the above.
@@ -143,9 +146,10 @@ public:
 /// it at the end of the scope.
 class RAIITemporaryObserverInstaller {
 public:
+  LLVM_ABI
   RAIITemporaryObserverInstaller(GISelObserverWrapper &Observers,
                                  GISelChangeObserver &TemporaryObserver);
-  ~RAIITemporaryObserverInstaller();
+  LLVM_ABI ~RAIITemporaryObserverInstaller();
 
 private:
   GISelObserverWrapper &Observers;

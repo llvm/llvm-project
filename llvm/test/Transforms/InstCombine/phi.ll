@@ -2822,3 +2822,234 @@ for.cond:                                         ; preds = %for.cond, %entry
 exit:                                             ; preds = %for.cond
   ret i64 0
 }
+
+define i1 @test_zext_icmp_eq_0(i1 %a, i1 %b, i32 %c) {
+; CHECK-LABEL: @test_zext_icmp_eq_0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[A:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[B:%.*]], true
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ [[TMP0]], [[IF]] ], [ [[TMP1]], [[ELSE]] ]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br i1 %a, label %if, label %else
+
+if:
+  %b.ext = zext i1 %b to i32
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi i32 [ %b.ext, %if ], [ %c, %else ]
+  %cmp = icmp eq i32 %phi, 0
+  ret i1 %cmp
+}
+
+define i1 @test_zext_icmp_ne_0(i1 %a, i1 %b, i32 %c) {
+; CHECK-LABEL: @test_zext_icmp_ne_0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[A:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i32 [[C:%.*]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[B:%.*]], [[IF]] ], [ [[TMP0]], [[ELSE]] ]
+; CHECK-NEXT:    ret i1 [[PHI]]
+;
+entry:
+  br i1 %a, label %if, label %else
+
+if:
+  %b.ext = zext i1 %b to i32
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi i32 [ %b.ext, %if ], [ %c, %else ]
+  %cmp = icmp ne i32 %phi, 0
+  ret i1 %cmp
+}
+
+define i1 @test_zext_icmp_eq_1(i1 %a, i1 %b, i32 %c) {
+; CHECK-LABEL: @test_zext_icmp_eq_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[A:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[C:%.*]], 1
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[B:%.*]], [[IF]] ], [ [[TMP0]], [[ELSE]] ]
+; CHECK-NEXT:    ret i1 [[PHI]]
+;
+entry:
+  br i1 %a, label %if, label %else
+
+if:
+  %b.ext = zext i1 %b to i32
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi i32 [ %b.ext, %if ], [ %c, %else ]
+  %cmp = icmp eq i32 %phi, 1
+  ret i1 %cmp
+}
+
+define i1 @test_zext_icmp_eq_0_loop(i1 %c, i1 %b) {
+; CHECK-LABEL: @test_zext_icmp_eq_0_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[X:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[TMP0:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[Y:%.*]] = and i1 [[X]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP0]] = xor i1 [[Y]], true
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[X]]
+;
+entry:
+  br label %loop
+
+loop:
+  %phi = phi i32 [ 1, %entry ], [ %ext, %loop ]
+  %x = icmp eq i32 %phi, 0
+  %y = and i1 %x, %b
+  %ext = zext i1 %y to i32
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret i1 %x
+}
+
+define i1 @test_zext_icmp_eq_0_multi_use(i1 %a, i1 %b, i32 %c) {
+; CHECK-LABEL: @test_zext_icmp_eq_0_multi_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[A:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[B_EXT:%.*]] = zext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[B_EXT]])
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[B_EXT]], [[IF]] ], [ [[C:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br i1 %a, label %if, label %else
+
+if:
+  %b.ext = zext i1 %b to i32
+  call void @use(i32 %b.ext)
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi i32 [ %b.ext, %if ], [ %c, %else ]
+  %cmp = icmp eq i32 %phi, 0
+  ret i1 %cmp
+}
+
+define i1 @test_zext_icmp_eq_0_not_bool(i1 %a, i2 %b, i32 %c) {
+; CHECK-LABEL: @test_zext_icmp_eq_0_not_bool(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[A:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[B_EXT:%.*]] = zext i2 [[B:%.*]] to i32
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[B_EXT]], [[IF]] ], [ [[C:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br i1 %a, label %if, label %else
+
+if:
+  %b.ext = zext i2 %b to i32
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi i32 [ %b.ext, %if ], [ %c, %else ]
+  %cmp = icmp eq i32 %phi, 0
+  ret i1 %cmp
+}
+
+declare void @may_exit()
+
+define i32 @intrinsic_over_phi_noundef(i1 %c, i1 %c2, i32 %a) {
+; CHECK-LABEL: @intrinsic_over_phi_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 1)
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[TMP0]], [[IF]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @may_exit()
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi i32 [ %a, %if ], [ 0, %entry ]
+  call void @may_exit()
+  %umax = call noundef i32 @llvm.umax(i32 noundef %phi, i32 1)
+  ret i32 %umax
+}
+
+define i32 @multiple_intrinsics_with_multiple_phi_uses(i1 %c, i32 %arg) {
+; CHECK-LABEL: @multiple_intrinsics_with_multiple_phi_uses(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[IF_END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[ARG:%.*]], -8
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[ADD]], i32 [[ADD]], i32 29)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 1
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[TMP1]], [[IF]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %if.end
+
+if:
+  %add = add i32 %arg, -8
+  br label %if.end
+
+if.end:
+  %phi = phi i32 [ %add, %if ], [ 0, %entry ]
+  %fshl1 = call i32 @llvm.fshl.i32(i32 %phi, i32 %phi, i32 29)
+  %fshl2 = call i32 @llvm.fshl.i32(i32 %phi, i32 %phi, i32 29)
+  %add2 = add i32 %fshl1, %fshl2
+  ret i32 %add2
+}

@@ -9,8 +9,8 @@
 #ifndef FORTRAN_COMMON_TARGET_ROUNDING_H_
 #define FORTRAN_COMMON_TARGET_ROUNDING_H_
 
-#include "flang/Common/Fortran-consts.h"
-#include "flang/Common/enum-set.h"
+#include "Fortran-consts.h"
+#include "enum-set.h"
 
 namespace Fortran::common {
 
@@ -21,7 +21,7 @@ struct Rounding {
   // (viz., fail to set the Underflow flag when an inexact product of a
   // multiplication is rounded up to a normal number from a subnormal
   // in some rounding modes)
-#if __x86_64__ || __riscv || __loongarch__
+#if __x86_64__ || _M_X64 || __riscv || __loongarch__
   bool x86CompatibleBehavior{true};
 #else
   bool x86CompatibleBehavior{false};

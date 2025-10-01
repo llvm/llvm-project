@@ -16,9 +16,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Target/CGPassBuilderOption.h"
@@ -28,6 +29,8 @@
 #include <string>
 #include <utility>
 
+LLVM_ABI extern llvm::cl::opt<bool> NoKernelInfoEndLTO;
+
 namespace llvm {
 
 class AAManager;
@@ -35,22 +38,25 @@ using ModulePassManager = PassManager<Module>;
 
 class Function;
 class GlobalValue;
+class MachineInstr;
 class MachineModuleInfoWrapperPass;
+struct MachineSchedContext;
 class Mangler;
 class MCAsmInfo;
 class MCContext;
 class MCInstrInfo;
 class MCRegisterInfo;
+class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
 class raw_pwrite_stream;
 class PassBuilder;
 class PassInstrumentationCallbacks;
 struct PerFunctionMIParsingState;
+class ScheduleDAGInstrs;
 class SMDiagnostic;
 class SMRange;
 class Target;
-class TargetIntrinsicInfo;
 class TargetIRAnalysis;
 class TargetTransformInfo;
 class TargetLoweringObjectFile;
@@ -74,7 +80,7 @@ struct MachineFunctionInfo;
 /// machine.  All target-specific information should be accessible through this
 /// interface.
 ///
-class TargetMachine {
+class LLVM_ABI TargetMachine {
 protected: // Can only create subclasses.
   TargetMachine(const Target &T, StringRef DataLayoutString,
                 const Triple &TargetTriple, StringRef CPU, StringRef FS,
@@ -141,6 +147,28 @@ public:
   virtual MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const {
+    return nullptr;
+  }
+
+  /// Create an instance of ScheduleDAGInstrs to be run within the standard
+  /// MachineScheduler pass for this function and target at the current
+  /// optimization level.
+  ///
+  /// This can also be used to plug a new MachineSchedStrategy into an instance
+  /// of the standard ScheduleDAGMI:
+  ///   return new ScheduleDAGMI(C, std::make_unique<MyStrategy>(C),
+  ///   /*RemoveKillFlags=*/false)
+  ///
+  /// Return NULL to select the default (generic) machine scheduler.
+  virtual ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const {
+    return nullptr;
+  }
+
+  /// Similar to createMachineScheduler but used when postRA machine scheduling
+  /// is enabled.
+  virtual ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const {
     return nullptr;
   }
 
@@ -215,9 +243,13 @@ public:
   const MCInstrInfo *getMCInstrInfo() const { return MII.get(); }
   const MCSubtargetInfo *getMCSubtargetInfo() const { return STI.get(); }
 
-  /// If intrinsic information is available, return it.  If not, return null.
-  virtual const TargetIntrinsicInfo *getIntrinsicInfo() const {
-    return nullptr;
+  /// Return the ExceptionHandling to use, considering TargetOptions and the
+  /// Triple's default.
+  ExceptionHandling getExceptionModel() const {
+    // FIXME: This interface fails to distinguish default from not supported.
+    return Options.ExceptionModel == ExceptionHandling::None
+               ? TargetTriple.getDefaultExceptionHandling()
+               : Options.ExceptionModel;
   }
 
   bool requiresStructuredCFG() const { return RequireStructuredCFG; }
@@ -305,6 +337,10 @@ public:
     return Options.FunctionSections;
   }
 
+  bool getEnableStaticDataPartitioning() const {
+    return Options.EnableStaticDataPartitioning;
+  }
+
   /// Return true if visibility attribute should not be emitted in XCOFF,
   /// corresponding to -mignore-xcoff-visibility.
   bool getIgnoreXCOFFVisibility() const {
@@ -371,6 +407,11 @@ public:
   // TODO: Populate all pass names by using <Target>PassRegistry.def.
   virtual void registerPassBuilderCallbacks(PassBuilder &) {}
 
+  /// Allow the target to register early alias analyses (AA before BasicAA) with
+  /// the AAManager for use with the new pass manager. Only affects the
+  /// "default" AAManager.
+  virtual void registerEarlyDefaultAliasAnalyses(AAManager &) {}
+
   /// Allow the target to register alias analyses with the AAManager for use
   /// with the new pass manager. Only affects the "default" AAManager.
   virtual void registerDefaultAliasAnalyses(AAManager &) {}
@@ -426,6 +467,9 @@ public:
   /// Entry point for module splitting. Targets can implement custom module
   /// splitting logic, mainly used by LTO for --lto-partitions.
   ///
+  /// On success, this guarantees that between 1 and \p NumParts modules were
+  /// created and passed to \p ModuleCallBack.
+  ///
   /// \returns `true` if the module was split, `false` otherwise. When  `false`
   /// is returned, it is assumed that \p ModuleCallback has never been called
   /// and \p M has not been modified.
@@ -465,9 +509,7 @@ public:
 
   virtual Expected<std::unique_ptr<MCStreamer>>
   createMCStreamer(raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-                   CodeGenFileType FileType, MCContext &Ctx) {
-    return nullptr;
-  }
+                   CodeGenFileType FileType, MCContext &Ctx);
 
   /// True if the target uses physical regs (as nearly all targets do). False
   /// for stack machines such as WebAssembly and other virtual-register
@@ -487,6 +529,15 @@ public:
 
   // MachineRegisterInfo callback function
   virtual void registerMachineRegisterInfoCallback(MachineFunction &MF) const {}
+
+  /// Remove all Linker Optimization Hints (LOH) associated with instructions in
+  /// \p MIs and \return the number of hints removed. This is useful in
+  /// transformations that cause these hints to be illegal, like in the machine
+  /// outliner.
+  virtual size_t clearLinkerOptimizationHints(
+      const SmallPtrSetImpl<MachineInstr *> &MIs) const {
+    return 0;
+  }
 };
 
 } // end namespace llvm

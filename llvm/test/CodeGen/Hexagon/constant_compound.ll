@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s 2>&1 | FileCheck %s
 
 ; Generating a compound instruction with a constant is not profitable.
 ; The constant needs to be kept in a register before it is fed to compound

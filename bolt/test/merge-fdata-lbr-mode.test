@@ -7,9 +7,9 @@
 # RUN: FileCheck %s --input-file %t/merged.fdata
 
 # CHECK-NOT: no_lbr
-# CHECK: main 2
+# CHECK: 1 main 0 1 main 2 1 3
 
 #--- a.fdata
-main 1
+1 main 0 1 main 2 0 1
 #--- b.fdata
-main 1
+1 main 0 1 main 2 1 2

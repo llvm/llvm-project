@@ -729,9 +729,9 @@ LLVMOrcThreadSafeContextRef LLVMOrcCreateNewThreadSafeContext(void) {
   return wrap(new ThreadSafeContext(std::make_unique<LLVMContext>()));
 }
 
-LLVMContextRef
-LLVMOrcThreadSafeContextGetContext(LLVMOrcThreadSafeContextRef TSCtx) {
-  return wrap(unwrap(TSCtx)->getContext());
+LLVMOrcThreadSafeContextRef
+LLVMOrcCreateNewThreadSafeContextFromLLVMContext(LLVMContextRef Ctx) {
+  return wrap(new ThreadSafeContext(std::unique_ptr<LLVMContext>(unwrap(Ctx))));
 }
 
 void LLVMOrcDisposeThreadSafeContext(LLVMOrcThreadSafeContextRef TSCtx) {
@@ -911,12 +911,11 @@ void LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(
 void LLVMOrcLLJITBuilderSetObjectLinkingLayerCreator(
     LLVMOrcLLJITBuilderRef Builder,
     LLVMOrcLLJITBuilderObjectLinkingLayerCreatorFunction F, void *Ctx) {
-  unwrap(Builder)->setObjectLinkingLayerCreator(
-      [=](ExecutionSession &ES, const Triple &TT) {
-        auto TTStr = TT.str();
-        return std::unique_ptr<ObjectLayer>(
-            unwrap(F(Ctx, wrap(&ES), TTStr.c_str())));
-      });
+  unwrap(Builder)->setObjectLinkingLayerCreator([=](ExecutionSession &ES) {
+    auto TTStr = ES.getTargetTriple().str();
+    return std::unique_ptr<ObjectLayer>(
+        unwrap(F(Ctx, wrap(&ES), TTStr.c_str())));
+  });
 }
 
 LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,
@@ -1022,8 +1021,10 @@ LLVMOrcObjectLayerRef
 LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManager(
     LLVMOrcExecutionSessionRef ES) {
   assert(ES && "ES must not be null");
-  return wrap(new RTDyldObjectLinkingLayer(
-      *unwrap(ES), [] { return std::make_unique<SectionMemoryManager>(); }));
+  return wrap(
+      new RTDyldObjectLinkingLayer(*unwrap(ES), [](const MemoryBuffer &) {
+        return std::make_unique<SectionMemoryManager>();
+      }));
 }
 
 LLVMOrcObjectLayerRef
@@ -1129,9 +1130,10 @@ LLVMOrcCreateRTDyldObjectLinkingLayerWithMCJITMemoryManagerLikeCallbacks(
       CreateContextCtx, CreateContext, NotifyTerminating, AllocateCodeSection,
       AllocateDataSection, FinalizeMemory, Destroy);
 
-  return wrap(new RTDyldObjectLinkingLayer(*unwrap(ES), [CBs = std::move(CBs)] {
-    return std::make_unique<MCJITMemoryManagerLikeCallbacksMemMgr>(CBs);
-  }));
+  return wrap(new RTDyldObjectLinkingLayer(
+      *unwrap(ES), [CBs = std::move(CBs)](const MemoryBuffer &) {
+        return std::make_unique<MCJITMemoryManagerLikeCallbacksMemMgr>(CBs);
+      }));
 
   return nullptr;
 }

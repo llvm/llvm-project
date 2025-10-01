@@ -7,14 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Hexagon.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
-#include "clang/Driver/SanitizerArgs.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -216,8 +213,7 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       "-mcpu=hexagon" +
       toolchains::HexagonToolChain::GetTargetCPUVersion(Args)));
 
-  SanitizerArgs SanArgs = HTC.getSanitizerArgs(Args);
-  addSanitizerRuntimes(HTC, Args, SanArgs, CmdArgs);
+  addSanitizerRuntimes(HTC, Args, CmdArgs);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
@@ -303,8 +299,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool UseShared = IsShared && !IsStatic;
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 
-  const SanitizerArgs &SanArgs = HTC.getSanitizerArgs(Args);
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, SanArgs, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(HTC, Args, CmdArgs);
 
   //----------------------------------------------------------------------------
@@ -316,6 +311,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
                                      // handled somewhere else.
   Args.ClaimAllArgs(options::OPT_static_libgcc);
 
+  CmdArgs.push_back("--eh-frame-hdr");
   //----------------------------------------------------------------------------
   //
   //----------------------------------------------------------------------------
@@ -374,7 +370,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
     if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       if (NeedsSanitizerDeps) {
-        linkSanitizerRuntimeDeps(HTC, Args, SanArgs, CmdArgs);
+        linkSanitizerRuntimeDeps(HTC, Args, CmdArgs);
 
         if (UNW != ToolChain::UNW_None)
           CmdArgs.push_back("-lunwind");
@@ -805,9 +801,7 @@ bool HexagonToolChain::isAutoHVXEnabled(const llvm::opt::ArgList &Args) {
 // Returns the default CPU for Hexagon. This is the default compilation target
 // if no Hexagon processor is selected at the command-line.
 //
-StringRef HexagonToolChain::GetDefaultCPU() {
-  return "hexagonv60";
-}
+StringRef HexagonToolChain::GetDefaultCPU() { return "hexagonv68"; }
 
 StringRef HexagonToolChain::GetTargetCPUVersion(const ArgList &Args) {
   Arg *CpuArg = nullptr;

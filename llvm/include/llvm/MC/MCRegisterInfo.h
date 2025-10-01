@@ -20,6 +20,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -63,7 +64,7 @@ public:
 
   /// getRegister - Return the specified register in the class.
   ///
-  unsigned getRegister(unsigned i) const {
+  MCRegister getRegister(unsigned i) const {
     assert(i < getNumRegs() && "Register number out of range!");
     return RegsBegin[i];
   }
@@ -146,7 +147,7 @@ struct MCRegisterDesc {
 /// TableGen generated physical register data. It must not be extended with
 /// virtual methods.
 ///
-class MCRegisterInfo {
+class LLVM_ABI MCRegisterInfo {
 public:
   using regclass_iterator = const MCRegisterClass *;
 
@@ -530,7 +531,7 @@ public:
 
   MCSubRegIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
                    bool IncludeSelf = false) {
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SubRegs);
     // Initially, the iterator points to Reg itself.
     Val = MCPhysReg(*I);
@@ -600,7 +601,7 @@ public:
 
   MCSuperRegIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
                      bool IncludeSelf = false) {
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SuperRegs);
     // Initially, the iterator points to Reg itself.
     Val = MCPhysReg(*I);
@@ -646,8 +647,7 @@ public:
   MCRegUnitIterator() = default;
 
   MCRegUnitIterator(MCRegister Reg, const MCRegisterInfo *MCRI) {
-    assert(Reg && "Null register has no regunits");
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     // Decode the RegUnits MCRegisterDesc field.
     unsigned RU = MCRI->get(Reg).RegUnits;
     unsigned FirstRU = RU & ((1u << RegUnitBits) - 1);

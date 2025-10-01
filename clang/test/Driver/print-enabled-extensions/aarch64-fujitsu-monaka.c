@@ -65,14 +65,13 @@
 // CHECK-NEXT:     FEAT_SM4, FEAT_SM3                                     Enable SM3 and SM4 support
 // CHECK-NEXT:     FEAT_SPECRES                                           Enable Armv8.5-A execution and data prediction invalidation instructions
 // CHECK-NEXT:     FEAT_SPECRES2                                          Enable Speculation Restriction Instruction
-// CHECK-NEXT:     FEAT_SPEv1p2                                           Enable extra register in the Statistical Profiling Extension
 // CHECK-NEXT:     FEAT_SSBS, FEAT_SSBS2                                  Enable Speculative Store Bypass Safe bit
 // CHECK-NEXT:     FEAT_SVE                                               Enable Scalable Vector Extension (SVE) instructions
 // CHECK-NEXT:     FEAT_SVE2                                              Enable Scalable Vector Extension 2 (SVE2) instructions
 // CHECK-NEXT:     FEAT_SVE_AES, FEAT_SVE_PMULL128                        Enable SVE AES and quadword SVE polynomial multiply instructions
 // CHECK-NEXT:     FEAT_SVE_BitPerm                                       Enable bit permutation SVE2 instructions
-// CHECK-NEXT:     FEAT_SVE_SHA3                                          Enable SHA3 SVE2 instructions
-// CHECK-NEXT:     FEAT_SVE_SM4                                           Enable SM4 SVE2 instructions
+// CHECK-NEXT:     FEAT_SVE_SHA3                                          Enable SVE SHA3 instructions
+// CHECK-NEXT:     FEAT_SVE_SM4                                           Enable SVE SM4 instructions
 // CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance instructions
 // CHECK-NEXT:     FEAT_TRBE                                              Enable Trace Buffer Extension
 // CHECK-NEXT:     FEAT_TRF                                               Enable Armv8.4-A Trace extension

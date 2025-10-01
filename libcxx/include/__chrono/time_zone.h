@@ -14,7 +14,7 @@
 
 #include <version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
-#if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #  include <__chrono/calendar.h>
 #  include <__chrono/duration.h>
@@ -103,9 +103,13 @@ public:
   to_sys(const local_time<_Duration>& __time, choose __z) const {
     local_info __info = get_info(__time);
     switch (__info.result) {
-    case local_info::unique:
-    case local_info::nonexistent: // first and second are the same
+    case local_info::unique: // first and second are the same
       return sys_time<common_type_t<_Duration, seconds>>{__time.time_since_epoch() - __info.first.offset};
+
+    case local_info::nonexistent:
+      // first and second are the same
+      // All non-existing values are converted to the same time.
+      return sys_time<common_type_t<_Duration, seconds>>{__info.first.end};
 
     case local_info::ambiguous:
       switch (__z) {
@@ -176,6 +180,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #endif // _LIBCPP___CHRONO_TIME_ZONE_H

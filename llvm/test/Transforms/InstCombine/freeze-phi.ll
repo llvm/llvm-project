@@ -53,7 +53,7 @@ define <2 x i32> @vec_undef(i1 %cond) {
 ; CHECK:       B:
 ; CHECK-NEXT:    br label [[C]]
 ; CHECK:       C:
-; CHECK-NEXT:    [[Y:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[A]] ], [ <i32 2, i32 0>, [[B]] ]
+; CHECK-NEXT:    [[Y:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[A]] ], [ splat (i32 2), [[B]] ]
 ; CHECK-NEXT:    ret <2 x i32> [[Y]]
 ;
   br i1 %cond, label %A, label %B

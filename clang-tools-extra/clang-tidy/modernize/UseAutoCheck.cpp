@@ -1,4 +1,4 @@
-//===--- UseAutoCheck.cpp - clang-tidy-------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,12 +38,11 @@ size_t getTypeNameLength(bool RemoveStars, StringRef Text) {
     else if (C == '>')
       --TemplateTypenameCntr;
     const CharType NextChar =
-        isAlphanumeric(C)
-            ? Alpha
-            : (isWhitespace(C) ||
-               (!RemoveStars && TemplateTypenameCntr == 0 && C == '*'))
-                  ? Space
-                  : Punctuation;
+        isAlphanumeric(C) ? Alpha
+        : (isWhitespace(C) ||
+           (!RemoveStars && TemplateTypenameCntr == 0 && C == '*'))
+            ? Space
+            : Punctuation;
     if (NextChar != Space) {
       ++NumChars; // Count the non-space character.
       if (LastChar == Space && NextChar == Alpha && BeforeSpace == Alpha)
@@ -187,16 +186,14 @@ TypeMatcher nestedIterator() {
 /// declarations and which name standard iterators for standard containers.
 TypeMatcher iteratorFromUsingDeclaration() {
   auto HasIteratorDecl = hasDeclaration(namedDecl(hasStdIteratorName()));
-  // Types resulting from using declarations are represented by elaboratedType.
-  return elaboratedType(
-      // Unwrap the nested name specifier to test for one of the standard
-      // containers.
-      hasQualifier(specifiesType(templateSpecializationType(hasDeclaration(
-          namedDecl(hasStdContainerName(), isInStdNamespace()))))),
-      // the named type is what comes after the final '::' in the type. It
-      // should name one of the standard iterator names.
-      namesType(
-          anyOf(typedefType(HasIteratorDecl), recordType(HasIteratorDecl))));
+  // Unwrap the nested name specifier to test for one of the standard
+  // containers.
+  auto Qualifier = hasQualifier(specifiesType(templateSpecializationType(
+      hasDeclaration(namedDecl(hasStdContainerName(), isInStdNamespace())))));
+  // the named type is what comes after the final '::' in the type. It should
+  // name one of the standard iterator names.
+  return anyOf(typedefType(HasIteratorDecl, Qualifier),
+               recordType(HasIteratorDecl, Qualifier));
 }
 
 /// This matcher returns declaration statements that contain variable
@@ -337,14 +334,14 @@ void UseAutoCheck::replaceIterators(const DeclStmt *D, ASTContext *Context) {
 
 static void ignoreTypeLocClasses(
     TypeLoc &Loc,
-    std::initializer_list<TypeLoc::TypeLocClass> const &LocClasses) {
+    const std::initializer_list<TypeLoc::TypeLocClass> &LocClasses) {
   while (llvm::is_contained(LocClasses, Loc.getTypeLocClass()))
     Loc = Loc.getNextTypeLoc();
 }
 
-static bool isMutliLevelPointerToTypeLocClasses(
+static bool isMultiLevelPointerToTypeLocClasses(
     TypeLoc Loc,
-    std::initializer_list<TypeLoc::TypeLocClass> const &LocClasses) {
+    const std::initializer_list<TypeLoc::TypeLocClass> &LocClasses) {
   ignoreTypeLocClasses(Loc, {TypeLoc::Paren, TypeLoc::Qualified});
   TypeLoc::TypeLocClass TLC = Loc.getTypeLocClass();
   if (TLC != TypeLoc::Pointer && TLC != TypeLoc::MemberPointer)
@@ -424,7 +421,7 @@ void UseAutoCheck::replaceExpr(
 
   auto Diag = diag(Range.getBegin(), Message);
 
-  bool ShouldReplenishVariableName = isMutliLevelPointerToTypeLocClasses(
+  bool ShouldReplenishVariableName = isMultiLevelPointerToTypeLocClasses(
       TSI->getTypeLoc(), {TypeLoc::FunctionProto, TypeLoc::ConstantArray});
 
   // Space after 'auto' to handle cases where the '*' in the pointer type is
@@ -444,10 +441,10 @@ void UseAutoCheck::check(const MatchFinder::MatchResult &Result) {
     replaceIterators(Decl, Result.Context);
   } else if (const auto *Decl =
                  Result.Nodes.getNodeAs<DeclStmt>(DeclWithNewId)) {
-    replaceExpr(Decl, Result.Context,
-                [](const Expr *Expr) { return Expr->getType(); },
-                "use auto when initializing with new to avoid "
-                "duplicating the type name");
+    replaceExpr(
+        Decl, Result.Context, [](const Expr *Expr) { return Expr->getType(); },
+        "use auto when initializing with new to avoid "
+        "duplicating the type name");
   } else if (const auto *Decl =
                  Result.Nodes.getNodeAs<DeclStmt>(DeclWithCastId)) {
     replaceExpr(

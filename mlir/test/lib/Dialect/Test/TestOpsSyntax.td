@@ -69,6 +69,12 @@ def TestAttrWithLoc : TEST_Op<"attr_with_loc"> {
   let assemblyFormat = "`(` $value `` custom<OptionalLoc>($loc) `)` attr-dict";
 }
 
+def ParseCustomOperationNameAPI : TEST_Op<"parse_custom_operation_name_api"> {
+  let summary = "noop that exercises the parseCustomOperationName API";
+  let arguments = (ins StrAttr:$name);
+  let assemblyFormat = "`(` custom<CustomOperationNameEntry>($name) `)` attr-dict";
+}
+
 // -----
 
 // This is used to test that the fallback for a custom op's parser and printer
@@ -88,12 +94,12 @@ def OIListTrivial : TEST_Op<"oilist_with_keywords_only"> {
 
 // Ops related to OIList primitive
 def OIListTrivialProperties : TEST_Op<"oilist_with_keywords_only_properties"> {
-  let arguments = (ins UnitProperty:$keyword, UnitProperty:$otherKeyword,
-                       UnitProperty:$diffNameUnitPropertyKeyword);
+  let arguments = (ins UnitProp:$keyword, UnitProp:$otherKeyword,
+                       UnitProp:$diffNameUnitPropKeyword);
   let assemblyFormat = [{
     oilist( `keyword` $keyword
           | `otherKeyword` $otherKeyword
-          | `thirdKeyword` $diffNameUnitPropertyKeyword) attr-dict
+          | `thirdKeyword` $diffNameUnitPropKeyword) attr-dict
   }];
 }
 
@@ -404,13 +410,13 @@ def FormatOptionalUnitAttrNoElide
 }
 
 def FormatOptionalUnitProperty : TEST_Op<"format_optional_unit_property"> {
-  let arguments = (ins UnitProperty:$is_optional);
+  let arguments = (ins UnitProp:$is_optional);
   let assemblyFormat = "(`is_optional` $is_optional^)? attr-dict";
 }
 
 def FormatOptionalUnitPropertyNoElide
     : TEST_Op<"format_optional_unit_property_no_elide"> {
-  let arguments = (ins UnitProperty:$is_optional);
+  let arguments = (ins UnitProp:$is_optional);
   let assemblyFormat = "($is_optional^)? attr-dict";
 }
 
@@ -429,6 +435,13 @@ def FormatOptionalDefaultAttrs : TEST_Op<"format_optional_default_attrs"> {
 def FormatOptionalWithElse : TEST_Op<"format_optional_else"> {
   let arguments = (ins UnitAttr:$isFirstBranchPresent);
   let assemblyFormat = "(`then` $isFirstBranchPresent^):(`else`)? attr-dict";
+}
+
+def FormatOptionalPropDict : TEST_Op<"format_optional_prop_dict"> {
+  let arguments = (ins
+    OptionalProp<StringProp>:$a,
+    DefaultValuedProp<I32Prop, "1">:$b);
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 def FormatCompoundAttr : TEST_Op<"format_compound_attr"> {
@@ -468,6 +481,7 @@ def FormatQualifiedNestedType : TEST_Op<"format_qual_cpmd_nested_type"> {
 
 //===----------------------------------------------------------------------===//
 // Custom Directives
+//===----------------------------------------------------------------------===//
 
 def FormatCustomDirectiveOperands
     : TEST_Op<"format_custom_directive_operands", [AttrSizedOperandSegments]> {
@@ -592,6 +606,7 @@ def FormatLiteralFollowingOptionalGroup
 
 //===----------------------------------------------------------------------===//
 // AllTypesMatch type inference
+//===----------------------------------------------------------------------===//
 
 def FormatAllTypesMatchVarOp : TEST_Op<"format_all_types_match_var", [
     AllTypesMatch<["value1", "value2", "result"]>
@@ -611,6 +626,7 @@ def FormatAllTypesMatchAttrOp : TEST_Op<"format_all_types_match_attr", [
 
 //===----------------------------------------------------------------------===//
 // TypesMatchWith type inference
+//===----------------------------------------------------------------------===//
 
 def FormatTypesMatchVarOp : TEST_Op<"format_types_match_var", [
     TypesMatchWith<"result type matches operand", "value", "result", "$_self">
@@ -648,6 +664,7 @@ def FormatTypesMatchContextOp : TEST_Op<"format_types_match_context", [
 
 //===----------------------------------------------------------------------===//
 // InferTypeOpInterface type inference in assembly format
+//===----------------------------------------------------------------------===//
 
 def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
   let results = (outs AnyType);
@@ -758,6 +775,11 @@ def FormatInferTypeVariadicOperandsOp
       return ::mlir::success();
     }
   }];
+}
+
+def VariadicArgsTypesSplit : TEST_Op<"variadic_args_types_split"> {
+  let arguments = (ins StrAttr:$str, Variadic<AnyType>:$args);
+  let assemblyFormat = "$str (`,` $args^)? attr-dict (`:` type($args)^)?";
 }
 
 #endif  // TEST_OPS_SYNTAX

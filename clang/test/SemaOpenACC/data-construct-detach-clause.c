@@ -61,7 +61,6 @@ void uses() {
   ;
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'enter data' directive}}
 #pragma acc enter data copyin(LocalInt) detach(PtrArray[0])
-  // expected-warning@+2{{OpenACC clause 'use_device' not yet implemented}}
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'host_data' directive}}
 #pragma acc host_data use_device(LocalInt) detach(PtrArray[0])
   ;

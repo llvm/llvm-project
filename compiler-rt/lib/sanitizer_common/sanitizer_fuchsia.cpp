@@ -14,6 +14,7 @@
 #include "sanitizer_fuchsia.h"
 #if SANITIZER_FUCHSIA
 
+#  include <limits.h>
 #  include <pthread.h>
 #  include <stdlib.h>
 #  include <unistd.h>
@@ -68,7 +69,7 @@ int internal_dlinfo(void *handle, int request, void *p) { UNIMPLEMENTED(); }
 
 uptr GetThreadSelf() { return reinterpret_cast<uptr>(thrd_current()); }
 
-tid_t GetTid() { return GetThreadSelf(); }
+ThreadID GetTid() { return GetThreadSelf(); }
 
 void Abort() { abort(); }
 
@@ -117,11 +118,37 @@ uptr GetMmapGranularity() { return _zx_system_get_page_size(); }
 
 sanitizer_shadow_bounds_t ShadowBounds;
 
+// Any sanitizer that utilizes shadow should explicitly call whenever it's
+// appropriate for that sanitizer to reference shadow bounds. For ASan, this is
+// done in `InitializeShadowMemory` and for HWASan, this is done in
+// `InitShadow`.
 void InitShadowBounds() { ShadowBounds = __sanitizer_shadow_bounds(); }
 
+// TODO(leonardchan): It's not immediately clear from a user perspective if
+// `GetMaxUserVirtualAddress` should be called exatly once on runtime startup
+// or can be called multiple times. Currently it looks like most instances of
+// `GetMaxUserVirtualAddress` are meant to be called once, but if someone
+// decides to call this multiple times in the future, we should have a separate
+// function that's ok to call multiple times. Ideally we would just invoke this
+// syscall once. Also for Fuchsia, this syscall technically gets invoked twice
+// since `__sanitizer_shadow_bounds` also invokes this syscall under the hood.
 uptr GetMaxUserVirtualAddress() {
-  InitShadowBounds();
-  return ShadowBounds.memory_limit - 1;
+  zx_info_vmar_t info;
+  zx_status_t status = _zx_object_get_info(_zx_vmar_root_self(), ZX_INFO_VMAR,
+                                           &info, sizeof(info), NULL, NULL);
+  CHECK_EQ(status, ZX_OK);
+
+  // Find the top of the accessible address space.
+  uintptr_t top = info.base + info.len;
+
+  // Round it up to a power-of-two size.  There may be some pages at
+  // the top that can't actually be mapped, but for purposes of the
+  // the shadow, we'll pretend they could be.
+  int bit = (sizeof(uintptr_t) * CHAR_BIT) - __builtin_clzl(top);
+  if (top != (uintptr_t)1 << bit)
+    top = (uintptr_t)1 << (bit + 1);
+
+  return top - 1;
 }
 
 uptr GetMaxVirtualAddress() { return GetMaxUserVirtualAddress(); }
@@ -547,6 +574,8 @@ void __sanitizer_startup_hook(int argc, char **argv, char **envp,
   __sanitizer::StoredEnviron = envp;
   __sanitizer::MainThreadStackBase = reinterpret_cast<uintptr_t>(stack_base);
   __sanitizer::MainThreadStackSize = stack_size;
+
+  EarlySanitizerInit();
 }
 
 void __sanitizer_set_report_path(const char *path) {

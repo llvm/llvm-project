@@ -9,16 +9,17 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H
 
+#include "hdr/stdint_proxy.h" // intptr_t / uintptr_t / INT32_MAX / INT32_MIN
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/endian_internal.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/compiler.h"
 
 #include <stddef.h> // size_t
-#include <stdint.h> // intptr_t / uintptr_t / INT32_MAX / INT32_MIN
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -90,18 +91,22 @@ LIBC_INLINE void memcpy_inline(void *__restrict dst,
   // different value of the Size parameter. This doesn't play well with GCC's
   // Value Range Analysis that wrongly detects out of bounds accesses. We
   // disable these warnings for the purpose of this function.
+#ifndef LIBC_COMPILER_IS_MSVC
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #pragma GCC diagnostic ignored "-Wstringop-overread"
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif // !LIBC_COMPILER_IS_MSVC
   for (size_t i = 0; i < Size; ++i)
     static_cast<char *>(dst)[i] = static_cast<const char *>(src)[i];
+#ifndef LIBC_COMPILER_IS_MSVC
 #pragma GCC diagnostic pop
+#endif // !LIBC_COMPILER_IS_MSVC
 #endif
 }
 
 using Ptr = cpp::byte *;        // Pointer to raw data.
-using CPtr = const cpp::byte *; // Const pointer to raw data.
+using CPtr = const cpp::byte *; // Pointer to const raw data.
 
 // This type makes sure that we don't accidentally promote an integral type to
 // another one. It is only constructible from the exact T type.
@@ -263,7 +268,7 @@ LIBC_INLINE void store_aligned(ValueType value, Ptr dst) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
   constexpr size_t SHIFT = sizeof(T) * 8;
   if constexpr (Endian::IS_LITTLE) {
-    store<T>(assume_aligned<sizeof(T)>(dst), value & ~T(0));
+    store<T>(assume_aligned<sizeof(T)>(dst), T(value & T(~0)));
     if constexpr (sizeof...(TS) > 0)
       store_aligned<ValueType, TS...>(value >> SHIFT, dst + sizeof(T));
   } else if constexpr (Endian::IS_BIG) {
@@ -297,7 +302,7 @@ LIBC_INLINE void adjust(ptrdiff_t offset, T1 *__restrict &p1,
                         T2 *__restrict &p2, size_t &count) {
   p1 += offset;
   p2 += offset;
-  count -= offset;
+  count -= static_cast<size_t>(offset);
 }
 
 // Advances p1 and p2 so p1 gets aligned to the next SIZE bytes boundary
@@ -306,7 +311,8 @@ LIBC_INLINE void adjust(ptrdiff_t offset, T1 *__restrict &p1,
 template <size_t SIZE, typename T1, typename T2>
 void align_p1_to_next_boundary(T1 *__restrict &p1, T2 *__restrict &p2,
                                size_t &count) {
-  adjust(distance_to_next_aligned<SIZE>(p1), p1, p2, count);
+  adjust(static_cast<ptrdiff_t>(distance_to_next_aligned<SIZE>(p1)), p1, p2,
+         count);
   p1 = assume_aligned<SIZE>(p1);
 }
 

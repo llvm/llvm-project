@@ -337,6 +337,8 @@ module AtomicRMWBinOp : sig
   | UDec_Wrap
   | USub_Cond
   | USub_Sat
+  | FMaximum
+  | FMinimum
 end
 
 (** The kind of an [llvalue], the result of [classify_value v].
@@ -766,6 +768,18 @@ val void_type : llcontext -> lltype
     [llvm::Type::LabelTy]. *)
 val label_type : llcontext -> lltype
 
+(** [x86_amx_type c] creates an X86 AMX type in the context [c]. See
+    [llvm::Type::getX86_AMXTy]. *)
+val x86_amx_type : llcontext -> lltype
+
+(** [token_type c] creates a token type in the context [c]. See
+    [llvm::Type::getTokenTy]. *)
+val token_type : llcontext -> lltype
+
+(** [metadata_type c] creates a metadata type in the context [c]. See
+    [llvm::Type::getMetadataTy]. *)
+val metadata_type : llcontext -> lltype
+
 (** [type_by_name m name] returns the specified type from the current module
     if it exists.
     See the method [llvm::Module::getTypeByName] *)
@@ -1119,20 +1133,6 @@ val const_nsw_sub : llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getNSWSub]. *)
 val const_nuw_sub : llvalue -> llvalue -> llvalue
 
-(** [const_mul c1 c2] returns the constant product of two constants.
-    See the method [llvm::ConstantExpr::getMul]. *)
-val const_mul : llvalue -> llvalue -> llvalue
-
-(** [const_nsw_mul c1 c2] returns the constant product of two constants with
-    no signed wrapping. The result is undefined if the sum overflows.
-    See the method [llvm::ConstantExpr::getNSWMul]. *)
-val const_nsw_mul : llvalue -> llvalue -> llvalue
-
-(** [const_nuw_mul c1 c2] returns the constant product of two constants with
-    no unsigned wrapping. The result is undefined if the sum overflows.
-    See the method [llvm::ConstantExpr::getNSWMul]. *)
-val const_nuw_mul : llvalue -> llvalue -> llvalue
-
 (** [const_xor c1 c2] returns the constant bitwise [XOR] of two integer
     constants.
     See the method [llvm::ConstantExpr::getXor]. *)
@@ -1359,6 +1359,12 @@ val is_global_constant : llvalue -> bool
     [c] is [true] and not if [c] is [false].
     See the method [llvm::GlobalVariable::setConstant]. *)
 val set_global_constant : bool -> llvalue -> unit
+
+(** [global_set_metadata g k md] sets the metadata attachment of the global
+    value [g] to the metadata [md] for the given kind [k], erasing the existing
+    metadata attachment if it already exists for the given kind.
+    See the method [llvm::GlobalObject::setMetadata]. *)
+val global_set_metadata : llvalue -> llmdkind -> llmetadata -> unit
 
 (** [global_initializer gv] If global variable [gv] has an initializer it is returned,
     otherwise returns [None]. See the method [llvm::GlobalVariable::getInitializer]. *)

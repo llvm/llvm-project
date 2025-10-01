@@ -17,8 +17,9 @@
 
 */
 
-#if 0
-#else // 0
+#if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/complex.h>
+#else
 #  include <__config>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -30,6 +31,6 @@
 #  elif __has_include_next(<complex.h>)
 #    include_next <complex.h>
 #  endif
-#endif // 0
+#endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_COMPLEX_H

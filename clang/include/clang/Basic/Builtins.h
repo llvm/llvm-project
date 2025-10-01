@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include <cstring>
 
 // VC++ defines 'alloca' as an object-like macro, which interferes with our
@@ -43,6 +44,7 @@ enum LanguageID : uint16_t {
   OCL_DSE = 0x400,           // builtin requires OpenCL device side enqueue.
   ALL_OCL_LANGUAGES = 0x800, // builtin for OCL languages.
   HLSL_LANG = 0x1000,        // builtin requires HLSL.
+  C23_LANG = 0x2000,         // builtin requires C23 or later.
   ALL_LANGUAGES = C_LANG | CXX_LANG | OBJC_LANG, // builtin for all languages.
   ALL_GNU_LANGUAGES = ALL_LANGUAGES | GNU_LANG,  // builtin requires GNU mode.
   ALL_MS_LANGUAGES = ALL_LANGUAGES | MS_LANG     // builtin requires MS mode.
@@ -63,66 +65,74 @@ struct HeaderDesc {
 
 namespace Builtin {
 enum ID {
-  NotBuiltin  = 0,      // This is not a builtin function.
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+  NotBuiltin = 0, // This is not a builtin function.
+#define GET_BUILTIN_ENUMERATORS
 #include "clang/Basic/Builtins.inc"
+#undef GET_BUILTIN_ENUMERATORS
   FirstTSBuiltin
 };
 
-// The info used to represent each builtin.
+struct InfosShard;
+
+/// The info used to represent each builtin.
 struct Info {
   // Rather than store pointers to the string literals describing these four
   // aspects of builtins, we store offsets into a common string table.
   struct StrOffsets {
-    int Name;
-    int Type;
-    int Attributes;
-    int Features;
+    llvm::StringTable::Offset Name = {};
+    llvm::StringTable::Offset Type = {};
+    llvm::StringTable::Offset Attributes = {};
+
+    // Defaults to the empty string offset.
+    llvm::StringTable::Offset Features = {};
   } Offsets;
 
-  HeaderDesc Header;
-  LanguageID Langs;
+  HeaderDesc Header = HeaderDesc::NO_HEADER;
+  LanguageID Langs = ALL_LANGUAGES;
+
+  /// Get the name for the builtin represented by this `Info` object.
+  ///
+  /// Must be provided the `Shard` for this `Info` object.
+  std::string getName(const InfosShard &Shard) const;
 };
 
-// The storage for `N` builtins. This contains a single pointer to the string
-// table used for these builtins and an array of metadata for each builtin.
-template <size_t N> struct Storage {
-  const char *StringTable;
-
-  std::array<Info, N> Infos;
-
-  // A constexpr function to construct the storage for a a given string table in
-  // the first argument and an array in the second argument. This is *only*
-  // expected to be used at compile time, we should mark it `consteval` when
-  // available.
-  //
-  // The `Infos` array is particularly special. This function expects an array
-  // of `Info` structs, where the string offsets of each entry refer to the
-  // *sizes* of those strings rather than their offsets, and for the target
-  // string to be in the provided string table at an offset the sum of all
-  // previous string sizes. This function walks the `Infos` array computing the
-  // running sum and replacing the sizes with the actual offsets in the string
-  // table that should be used. This arrangement is designed to make it easy to
-  // expand `.def` and `.inc` files with X-macros to construct both the string
-  // table and the `Info` structs in the arguments to this function.
-  static constexpr Storage<N> Make(const char *Strings,
-                                   std::array<Info, N> Infos) {
-    // Translate lengths to offsets.
-    int Offset = 0;
-    for (auto &I : Infos) {
-      Info::StrOffsets NewOffsets = {};
-      NewOffsets.Name = Offset;
-      Offset += I.Offsets.Name;
-      NewOffsets.Type = Offset;
-      Offset += I.Offsets.Type;
-      NewOffsets.Attributes = Offset;
-      Offset += I.Offsets.Attributes;
-      NewOffsets.Features = Offset;
-      Offset += I.Offsets.Features;
-      I.Offsets = NewOffsets;
-    }
-    return {Strings, Infos};
+/// A constexpr function to construct an infos array from X-macros.
+///
+/// The input array uses the same data structure, but the offsets are actually
+/// _lengths_ when input. This is all we can compute from the X-macro approach
+/// to builtins. This function will convert these lengths into actual offsets to
+/// a string table built up through sequentially appending strings with the
+/// given lengths.
+template <size_t N>
+static constexpr std::array<Info, N> MakeInfos(std::array<Info, N> Infos) {
+  // Translate lengths to offsets. We start past the initial empty string at
+  // offset zero.
+  unsigned Offset = 1;
+  for (Info &I : Infos) {
+    Info::StrOffsets NewOffsets = {};
+    NewOffsets.Name = Offset;
+    Offset += I.Offsets.Name.value();
+    NewOffsets.Type = Offset;
+    Offset += I.Offsets.Type.value();
+    NewOffsets.Attributes = Offset;
+    Offset += I.Offsets.Attributes.value();
+    NewOffsets.Features = Offset;
+    Offset += I.Offsets.Features.value();
+    I.Offsets = NewOffsets;
   }
+  return Infos;
+}
+
+/// A shard of a target's builtins string table and info.
+///
+/// Target builtins are sharded across multiple tables due to different
+/// structures, origins, and also to improve the overall scaling by avoiding a
+/// single table across all builtins.
+struct InfosShard {
+  const llvm::StringTable *Strings;
+  llvm::ArrayRef<Info> Infos;
+
+  llvm::StringLiteral NamePrefix = "";
 };
 
 // A detail macro used below to emit a string literal that, after string literal
@@ -140,6 +150,12 @@ template <size_t N> struct Storage {
 #else
 #define CLANG_BUILTIN_DETAIL_STR_TABLE(S) S
 #endif
+
+// We require string tables to start with an empty string so that a `0` offset
+// can always be used to refer to an empty string. To satisfy that when building
+// string tables with X-macros, we use this start macro prior to expanding the
+// X-macros.
+#define CLANG_BUILTIN_STR_TABLE_START CLANG_BUILTIN_DETAIL_STR_TABLE("\0")
 
 // A macro that can be used with `Builtins.def` and similar files as an X-macro
 // to add the string arguments to a builtin string table. This is typically the
@@ -163,7 +179,7 @@ template <size_t N> struct Storage {
   CLANG_BUILTIN_DETAIL_STR_TABLE(#ID "\0" TYPE "\0" ATTRS "\0" FEATURE "\0")
 
 // A detail macro used internally to compute the desired string table
-// `StrOffsets` struct for arguments to `Storage::Make`.
+// `StrOffsets` struct for arguments to `MakeInfos`.
 #define CLANG_BUILTIN_DETAIL_STR_OFFSETS(ID, TYPE, ATTRS)                      \
   Builtin::Info::StrOffsets {                                                  \
     sizeof(#ID), sizeof(TYPE), sizeof(ATTRS), sizeof("")                       \
@@ -179,7 +195,7 @@ template <size_t N> struct Storage {
 // A set of macros that can be used with builtin `.def' files as an X-macro to
 // create an `Info` struct for a particular builtin. It both computes the
 // `StrOffsets` value for the string table (the lengths here, translated to
-// offsets by the Storage::Make function), and the other metadata for each
+// offsets by the `MakeInfos` function), and the other metadata for each
 // builtin.
 //
 // There is a corresponding macro for each of `BUILTIN`, `LANGBUILTIN`,
@@ -210,14 +226,16 @@ template <size_t N> struct Storage {
 /// AuxTSRecords. Their IDs are shifted up by TSRecords.size() and need to
 /// be translated back with getAuxBuiltinID() before use.
 class Context {
-  const char *TSStrTable = nullptr;
-  const char *AuxTSStrTable = nullptr;
+  llvm::SmallVector<InfosShard> BuiltinShards;
 
-  llvm::ArrayRef<Info> TSInfos;
-  llvm::ArrayRef<Info> AuxTSInfos;
+  llvm::SmallVector<InfosShard> TargetShards;
+  llvm::SmallVector<InfosShard> AuxTargetShards;
+
+  unsigned NumTargetBuiltins = 0;
+  unsigned NumAuxTargetBuiltins = 0;
 
 public:
-  Context() = default;
+  Context();
 
   /// Perform target-specific initialization
   /// \param AuxTarget Target info to incorporate builtins from. May be nullptr.
@@ -230,7 +248,11 @@ public:
 
   /// Return the identifier name for the specified builtin,
   /// e.g. "__builtin_abs".
-  llvm::StringRef getName(unsigned ID) const;
+  std::string getName(unsigned ID) const;
+
+  /// Return the identifier name for the specified builtin inside single quotes
+  /// for a diagnostic, e.g. "'__builtin_abs'".
+  std::string getQuotedName(unsigned ID) const;
 
   /// Get the type descriptor string for the specified builtin.
   const char *getTypeString(unsigned ID) const;
@@ -387,14 +409,15 @@ public:
 
   unsigned getRequiredVectorWidth(unsigned ID) const;
 
-  /// Return true if builtin ID belongs to AuxTarget.
+  /// Return true if the builtin ID belongs exclusively to the AuxTarget,
+  /// and false if it belongs to both primary and aux target, or neither.
   bool isAuxBuiltinID(unsigned ID) const {
-    return ID >= (Builtin::FirstTSBuiltin + TSInfos.size());
+    return ID >= (Builtin::FirstTSBuiltin + NumTargetBuiltins);
   }
 
   /// Return real builtin ID (i.e. ID it would have during compilation
   /// for AuxTarget).
-  unsigned getAuxBuiltinID(unsigned ID) const { return ID - TSInfos.size(); }
+  unsigned getAuxBuiltinID(unsigned ID) const { return ID - NumTargetBuiltins; }
 
   /// Returns true if this is a libc/libm function without the '__builtin_'
   /// prefix.
@@ -415,11 +438,10 @@ public:
   }
 
 private:
-  std::pair<const char *, const Info &> getStrTableAndInfo(unsigned ID) const;
+  std::pair<const InfosShard &, const Info &>
+  getShardAndInfo(unsigned ID) const;
 
-  const Info &getInfo(unsigned ID) const {
-    return getStrTableAndInfo(ID).second;
-  }
+  const Info &getInfo(unsigned ID) const { return getShardAndInfo(ID).second; }
 
   /// Helper function for isPrintfLike and isScanfLike.
   bool isLike(unsigned ID, unsigned &FormatIdx, bool &HasVAListArg,
@@ -438,14 +460,8 @@ bool evaluateRequiredTargetFeatures(
 
 /// Kinds of BuiltinTemplateDecl.
 enum BuiltinTemplateKind : int {
-  /// This names the __make_integer_seq BuiltinTemplateDecl.
-  BTK__make_integer_seq,
-
-  /// This names the __type_pack_element BuiltinTemplateDecl.
-  BTK__type_pack_element,
-
-  /// This names the __builtin_common_type BuiltinTemplateDecl.
-  BTK__builtin_common_type,
+#define BuiltinTemplate(BTName) BTK##BTName,
+#include "clang/Basic/BuiltinTemplates.inc"
 };
 
 } // end namespace clang

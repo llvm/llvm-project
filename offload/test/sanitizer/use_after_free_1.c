@@ -5,12 +5,10 @@
 // RUN: %not --crash env -u LLVM_DISABLE_SYMBOLIZATION OFFLOAD_TRACK_ALLOCATION_TRACES=1 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK,TRACE
 // clang-format on
 
-// UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-// UNSUPPORTED: x86_64-unknown-linux-gnu
-// UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
-// UNSUPPORTED: s390x-ibm-linux-gnu
-// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
+// FIXME: https://github.com/llvm/llvm-project/issues/161265
+// UNSUPPORTED: nvidiagpu
+//
+// REQUIRES: gpu
 
 #include <omp.h>
 
@@ -28,7 +26,7 @@ int main() {
   }
   llvm_omp_target_free_host(A, omp_get_default_device());
   // clang-format off
-// CHECK: OFFLOAD ERROR: Memory access fault by GPU {{.*}} (agent 0x{{.*}}) at virtual address [[PTR:0x[0-9a-z]*]]. Reasons: {{.*}}
+// CHECK: OFFLOAD ERROR: memory access fault by GPU {{.*}} (agent 0x{{.*}}) at virtual address [[PTR:0x[0-9a-z]*]]. Reasons: {{.*}}
 // NTRCE: Use 'OFFLOAD_TRACK_ALLOCATION_TRACES=true' to track device allocations
 // TRACE: Device pointer [[PTR]] points into prior host-issued allocation:
 // TRACE: Last deallocation:

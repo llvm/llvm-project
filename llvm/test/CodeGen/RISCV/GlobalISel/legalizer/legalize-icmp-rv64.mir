@@ -805,10 +805,9 @@ body:             |
     ; CHECK-LABEL: name: cmp_ugt_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ugt), [[AND]](s64), [[AND1]]
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY1]], 32
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ugt), [[SEXT_INREG]](s64), [[SEXT_INREG1]]
     ; CHECK-NEXT: $x10 = COPY [[ICMP]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
@@ -983,10 +982,9 @@ body:             |
     ; CHECK-LABEL: name: cmp_ult_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ult), [[AND]](s64), [[AND1]]
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY1]], 32
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ult), [[SEXT_INREG]](s64), [[SEXT_INREG1]]
     ; CHECK-NEXT: $x10 = COPY [[ICMP]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
@@ -1161,10 +1159,9 @@ body:             |
     ; CHECK-LABEL: name: cmp_uge_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(uge), [[AND]](s64), [[AND1]]
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY1]], 32
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(uge), [[SEXT_INREG]](s64), [[SEXT_INREG1]]
     ; CHECK-NEXT: $x10 = COPY [[ICMP]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
@@ -1339,10 +1336,9 @@ body:             |
     ; CHECK-LABEL: name: cmp_ule_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ule), [[AND]](s64), [[AND1]]
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY1]], 32
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ule), [[SEXT_INREG]](s64), [[SEXT_INREG1]]
     ; CHECK-NEXT: $x10 = COPY [[ICMP]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
@@ -1517,10 +1513,9 @@ body:             |
     ; CHECK-LABEL: name: cmp_eq_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(eq), [[AND]](s64), [[AND1]]
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY1]], 32
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(eq), [[SEXT_INREG]](s64), [[SEXT_INREG1]]
     ; CHECK-NEXT: $x10 = COPY [[ICMP]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
@@ -1691,10 +1686,9 @@ body:             |
     ; CHECK-LABEL: name: cmp_ne_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ne), [[AND]](s64), [[AND1]]
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY1]], 32
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ne), [[SEXT_INREG]](s64), [[SEXT_INREG1]]
     ; CHECK-NEXT: $x10 = COPY [[ICMP]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10

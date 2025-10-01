@@ -1,8 +1,8 @@
 ! Test delayed privatization for both `private` and `firstprivate` clauses.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %s 2>&1 | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %s 2>&1 \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - %s 2>&1 \
 ! RUN:   | FileCheck %s
 
 subroutine delayed_privatization_private_firstprivate
@@ -17,13 +17,11 @@ subroutine delayed_privatization_private_firstprivate
 end subroutine
 
 ! CHECK-LABEL: omp.private {type = firstprivate}
-! CHECK-SAME: @[[VAR2_PRIVATIZER_SYM:.*]] : !fir.ref<i32> alloc {
-! CHECK: } copy {
+! CHECK-SAME: @[[VAR2_PRIVATIZER_SYM:.*]] : i32 copy {
 ! CHECK: }
 
 ! CHECK-LABEL: omp.private {type = private}
-! CHECK-SAME: @[[VAR1_PRIVATIZER_SYM:.*]] : !fir.ref<i32> alloc {
-! CHECK: }
+! CHECK-SAME: @[[VAR1_PRIVATIZER_SYM:.*]] : i32
 
 ! CHECK-LABEL: func.func @_QPdelayed_privatization_private_firstprivate() {
 ! CHECK:  %[[VAR1_ALLOC:.*]] = fir.alloca i32 {bindc_name = "var1"

@@ -15,8 +15,6 @@
 
 #include "ObjCPropertyAttributeOrderFixer.h"
 
-#include <algorithm>
-
 namespace clang {
 namespace format {
 
@@ -68,7 +66,7 @@ void ObjCPropertyAttributeOrderFixer::sortPropertyAttributes(
       return;
     }
 
-    const StringRef Attribute{Tok->TokenText};
+    const StringRef Attribute(Tok->TokenText);
     StringRef Value;
 
     // Also handle `getter=getFoo` attributes.

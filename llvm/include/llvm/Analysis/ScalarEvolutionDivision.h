@@ -25,8 +25,21 @@ struct SCEVCouldNotCompute;
 
 struct SCEVDivision : public SCEVVisitor<SCEVDivision, void> {
 public:
-  // Computes the Quotient and Remainder of the division of Numerator by
-  // Denominator.
+  /// Computes the Quotient and Remainder of the division of Numerator by
+  /// Denominator. We are not actually performing the division here. Instead, we
+  /// are trying to find SCEV expressions Quotient and Remainder that satisfy:
+  ///
+  /// Numerator = Denominator * Quotient + Remainder
+  ///
+  /// There may be multiple valid answers for Quotient and Remainder. This
+  /// function finds one of them. Especially, there is always a trivial
+  /// solution: (Quotient, Remainder) = (0, Numerator).
+  ///
+  /// Note the following:
+  /// * The condition Remainder < Denominator is NOT necessarily required.
+  /// * Division of constants is performed as signed.
+  /// * The multiplication of Quotient and Denominator may wrap.
+  /// * The addition of Quotient*Denominator and Remainder may wrap.
   static void divide(ScalarEvolution &SE, const SCEV *Numerator,
                      const SCEV *Denominator, const SCEV **Quotient,
                      const SCEV **Remainder);
@@ -66,6 +79,15 @@ private:
 
   ScalarEvolution &SE;
   const SCEV *Denominator, *Quotient, *Remainder, *Zero, *One;
+};
+
+class SCEVDivisionPrinterPass : public PassInfoMixin<SCEVDivisionPrinterPass> {
+  raw_ostream &OS;
+  void runImpl(Function &F, ScalarEvolution &SE);
+
+public:
+  explicit SCEVDivisionPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

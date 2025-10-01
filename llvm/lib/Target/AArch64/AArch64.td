@@ -58,33 +58,36 @@ include "AArch64SystemOperands.td"
 
 class AArch64Unsupported { list<Predicate> F; }
 
-let F = [HasSVE2p1, HasSVE2p1_or_HasSME2, HasSVE2p1_or_HasSME2p1] in
+let F = [HasSVE2p1, HasSVE2p1_or_SME2, HasSVE2p1_or_StreamingSME2, HasSVE2p1_or_SME2p1] in
 def SVE2p1Unsupported : AArch64Unsupported;
 
 def SVE2Unsupported : AArch64Unsupported {
-  let F = !listconcat([HasSVE2, HasSVE2orSME, HasSVE2orSME2, HasSSVE_FP8FMA, HasSMEF8F16,
-                       HasSMEF8F32, HasSVEAES, HasSVE2SHA3, HasSVE2SM4, HasSVE2BitPerm,
+  let F = !listconcat([HasSVE2, HasSVE2_or_SME, HasNonStreamingSVE2_or_SME2, HasSSVE_FP8FMA, HasSMEF8F16,
+                       HasSMEF8F32, HasSVEAES, HasSVESHA3, HasSVESM4, HasSVEBitPerm,
                        HasSVEB16B16],
                        SVE2p1Unsupported.F);
 }
 
 def SVEUnsupported : AArch64Unsupported {
-  let F = !listconcat([HasSVE, HasSVEorSME],
+  let F = !listconcat([HasSVE, HasSVE_or_SME],
                       SVE2Unsupported.F);
 }
 
-let F = [HasSME2p2, HasSVE2p2orSME2p2, HasNonStreamingSVEorSME2p2,
-         HasNonStreamingSVE2p2orSME2p2] in
+let F = [HasSME2p2, HasSVE2p2_or_SME2p2, HasNonStreamingSVE_or_SME2p2,
+         HasNonStreamingSVE2p2_or_SME2p2] in
 def SME2p2Unsupported : AArch64Unsupported;
 
 def SME2p1Unsupported : AArch64Unsupported {
-  let F = !listconcat([HasSME2p1, HasSVE2p1_or_HasSME2p1, HasNonStreamingSVE2p1orSSVE_AES],
-                      SME2p2Unsupported.F);
+  let F = !listconcat([HasSME2p1, HasSVE2p1_or_SME2p1,
+                       HasSME_MOP4, HasSME_TMOP, HasNonStreamingSVE_or_SSVE_FEXPA, 
+                       HasNonStreamingSVE_or_SSVE_BitPerm],
+                       SME2p2Unsupported.F);
 }
 
 def SME2Unsupported : AArch64Unsupported {
-  let F = !listconcat([HasSME2, HasSVE2orSME2, HasSVE2p1_or_HasSME2, HasSSVE_FP8FMA,
-                      HasSMEF8F16, HasSMEF8F32, HasSMEF16F16orSMEF8F16, HasSMEB16B16],
+  let F = !listconcat([HasSME2, HasNonStreamingSVE2_or_SME2, HasSVE2p1_or_SME2, HasSSVE_FP8FMA,
+                      HasSMEF8F16, HasSMEF8F32, HasSMEF16F16_or_SMEF8F16, HasSMEB16B16,
+                      HasNonStreamingSVE_or_SSVE_AES, HasSVE2p1_or_StreamingSME2],
                       SME2p1Unsupported.F);
 }
 
@@ -100,6 +103,7 @@ def MTEUnsupported : AArch64Unsupported {
 let F = [HasPAuth, HasPAuthLR] in
 def PAUnsupported : AArch64Unsupported;
 
+include "AArch64SchedA320.td"
 include "AArch64SchedA53.td"
 include "AArch64SchedA55.td"
 include "AArch64SchedA510.td"

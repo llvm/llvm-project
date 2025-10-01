@@ -81,10 +81,6 @@ public:
     I->second.MayInline = 0;
   }
 
-  void markReachedMaxBlockCount(const Decl *D) {
-    markShouldNotInline(D);
-  }
-
   std::optional<bool> mayInline(const Decl *D) {
     MapTy::const_iterator I = Map.find(D);
     if (I != Map.end() && I->second.InlineChecked)

@@ -59,10 +59,12 @@ constexpr Parser<IntegerTypeSpec> integerTypeSpec; // R705
 constexpr Parser<KindSelector> kindSelector; // R706
 constexpr Parser<SignedIntLiteralConstant> signedIntLiteralConstant; // R707
 constexpr Parser<IntLiteralConstant> intLiteralConstant; // R708
+constexpr Parser<UnsignedLiteralConstant> unsignedLiteralConstant;
 constexpr Parser<KindParam> kindParam; // R709
 constexpr Parser<RealLiteralConstant> realLiteralConstant; // R714
 constexpr Parser<CharLength> charLength; // R723
 constexpr Parser<CharLiteralConstant> charLiteralConstant; // R724
+constexpr Parser<CharLiteralConstantSubstring> charLiteralConstantSubstring;
 constexpr Parser<Initialization> initialization; // R743 & R805
 constexpr Parser<DerivedTypeSpec> derivedTypeSpec; // R754
 constexpr Parser<TypeDeclarationStmt> typeDeclarationStmt; // R801
@@ -135,6 +137,7 @@ constexpr Parser<CompilerDirective> compilerDirective;
 constexpr Parser<OpenACCConstruct> openaccConstruct;
 constexpr Parser<OpenACCDeclarativeConstruct> openaccDeclarativeConstruct;
 constexpr Parser<OpenMPConstruct> openmpConstruct;
+constexpr Parser<OpenMPExecDirective> openmpExecDirective;
 constexpr Parser<OpenMPDeclarativeConstruct> openmpDeclarativeConstruct;
 constexpr Parser<OmpEndLoopDirective> ompEndLoopDirective;
 constexpr Parser<IntrinsicVectorTypeSpec> intrinsicVectorTypeSpec; // Extension
