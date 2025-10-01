@@ -722,8 +722,6 @@ void AArch64PrologueEmitter::emitPrologue() {
   StackOffset SVECalleeSavesSize = PPRCalleeSavesSize + ZPRCalleeSavesSize;
   StackOffset PPRLocalsSize = AFL.getPPRStackSize(MF) - PPRCalleeSavesSize;
   StackOffset ZPRLocalsSize = AFL.getZPRStackSize(MF) - ZPRCalleeSavesSize;
-  std::optional<MachineBasicBlock::iterator> ZPRCalleeSavesBegin,
-      ZPRCalleeSavesEnd, PPRCalleeSavesBegin, PPRCalleeSavesEnd;
 
   StackOffset CFAOffset =
       StackOffset::getFixed((int64_t)MFI.getStackSize() - NumBytes);
@@ -731,28 +729,25 @@ void AArch64PrologueEmitter::emitPrologue() {
   if (!FPAfterSVECalleeSaves) {
     // Process the SVE callee-saves to find the starts/ends of the ZPR and PPR
     // areas.
-    PPRCalleeSavesBegin = AfterGPRSavesI;
     if (PPRCalleeSavesSize) {
       LLVM_DEBUG(dbgs() << "PPRCalleeSavedStackSize = "
                         << PPRCalleeSavesSize.getScalable() << "\n");
 
-      assert(isPartOfPPRCalleeSaves(*PPRCalleeSavesBegin) &&
+      assert(isPartOfPPRCalleeSaves(AfterSVESavesI) &&
              "Unexpected instruction");
       while (isPartOfPPRCalleeSaves(AfterSVESavesI) &&
              AfterSVESavesI != MBB.getFirstTerminator())
         ++AfterSVESavesI;
     }
-    PPRCalleeSavesEnd = ZPRCalleeSavesBegin = AfterSVESavesI;
     if (ZPRCalleeSavesSize) {
       LLVM_DEBUG(dbgs() << "ZPRCalleeSavedStackSize = "
                         << ZPRCalleeSavesSize.getScalable() << "\n");
-      assert(isPartOfZPRCalleeSaves(*ZPRCalleeSavesBegin) &&
+      assert(isPartOfZPRCalleeSaves(AfterSVESavesI) &&
              "Unexpected instruction");
       while (isPartOfZPRCalleeSaves(AfterSVESavesI) &&
              AfterSVESavesI != MBB.getFirstTerminator())
         ++AfterSVESavesI;
     }
-    ZPRCalleeSavesEnd = AfterSVESavesI;
   }
 
   if (EmitAsyncCFI)
