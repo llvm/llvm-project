@@ -63,6 +63,23 @@ void skep(KT k, int a, int b) {
 }
 };
 
+struct auto_name;
+
+template <typename KernelName, typename KernelType>
+[[clang::sycl_kernel_entry_point(KernelName)]]
+void __kernel_single_task(const KernelType KernelFunc) {
+  KernelFunc();
+}
+
+template <typename KernelType, typename KernelName = auto_name>
+void pf(KernelType K) {
+  __kernel_single_task<KernelName>(K);
+}
+struct DCopyable {
+  int i;
+  ~DCopyable();
+};
+
 int main() {
   single_purpose_kernel obj;
   single_purpose_kernel_task(obj);
@@ -72,6 +89,9 @@ int main() {
   kernel_single_task<\u03b4\u03c4\u03c7>([](int){});
   Handler H;
   H.skep<class notaverygoodkernelname>([=](int a, int b){return a+b;}, 1, 2);
+
+  DCopyable b;
+  pf([b](){});
 }
 
 // Verify that SYCL kernel caller functions are not emitted during host
@@ -140,6 +160,17 @@ int main() {
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 
+// CHECK-HOST-LINUX: define internal void @_Z20__kernel_single_taskI9auto_nameZ4mainEUlvE_EvT0_(ptr noundef %KernelFunc)
+// CHECK-HOST-LINUX-NEXT: entry:
+// CHECK-HOST-LINUX-NEXT:   %KernelFunc.indirect_addr = alloca ptr, align 8
+// CHECK-HOST-LINUX-NEXT:   %agg.tmp = alloca %class.anon.3, align 4
+// CHECK-HOST-LINUX-NEXT:   store ptr %KernelFunc, ptr %KernelFunc.indirect_addr, align 8
+// CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %KernelFunc, i64 4, i1 false)
+// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI9auto_nameZ4mainEUlvE_EvPKcT0_(ptr noundef @.str.4, ptr noundef %agg.tmp)
+// CHECK-HOST-LINUX-NEXT:   call void @_ZZ4mainENUlvE_D1Ev(ptr noundef nonnull align 4 dereferenceable(4) %agg.tmp) #4
+// CHECK-HOST-LINUX-NEXT:   ret void
+// CHECK-HOST-LINUX-NEXT: }
+
 // CHECK-HOST-WINDOWS:      define dso_local void @"?single_purpose_kernel_task@@YAXUsingle_purpose_kernel@@@Z"(i8 %kernelFunc.coerce) #{{[0-9]+}} {
 // CHECK-HOST-WINDOWS-NEXT: entry:
 // CHECK-HOST-WINDOWS-NEXT:   %kernelFunc = alloca %struct.single_purpose_kernel, align 1
@@ -196,6 +227,22 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive2 = getelementptr inbounds nuw %class.anon.1, ptr %agg.tmp, i32 0, i32 0
 // CHECK-HOST-WINDOWS-NEXT:   %2 = load i8, ptr %coerce.dive2, align 1
 // CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@Vnotaverygoodkernelname@?1??main@@9@V<lambda_3>@?0??2@9@HH@Handler@@AEAAXPEBDV<lambda_3>@?0??main@@9@HH@Z"(ptr noundef nonnull align 1 dereferenceable(1) %this1, ptr noundef @"??_C@_0CE@NJIGCEIA@_ZTSZ4mainE22notaverygoodkerneln@", i8 %2, i32 noundef %1, i32 noundef %0)
+// CHECK-HOST-WINDOWS-NEXT:   ret void
+// CHECK-HOST-WINDOWS-NEXT: }
+
+// CHECK-HOST-WINDOWS: define internal void @"??$__kernel_single_task@Uauto_name@@V<lambda_4>@?0??main@@9@@@YAXV<lambda_4>@?0??main@@9@@Z"(i32 %KernelFunc.coerce)
+// CHECK-HOST-WINDOWS-NEXT: entry:
+// CHECK-HOST-WINDOWS-NEXT:   %KernelFunc = alloca %class.anon.3, align 4
+// CHECK-HOST-WINDOWS-NEXT:   %agg.tmp = alloca %class.anon.3, align 4
+// CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon.3, ptr %KernelFunc, i32 0, i32 0
+// CHECK-HOST-WINDOWS-NEXT:   %coerce.dive1 = getelementptr inbounds nuw %struct.DCopyable, ptr %coerce.dive, i32 0, i32 0
+// CHECK-HOST-WINDOWS-NEXT:   store i32 %KernelFunc.coerce, ptr %coerce.dive1, align 4
+// CHECK-HOST-WINDOWS-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %KernelFunc, i64 4, i1 false)
+// CHECK-HOST-WINDOWS-NEXT:   %coerce.dive2 = getelementptr inbounds nuw %class.anon.3, ptr %agg.tmp, i32 0, i32 0
+// CHECK-HOST-WINDOWS-NEXT:   %coerce.dive3 = getelementptr inbounds nuw %struct.DCopyable, ptr %coerce.dive2, i32 0, i32 0
+// CHECK-HOST-WINDOWS-NEXT:   %0 = load i32, ptr %coerce.dive3, align 4
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@Uauto_name@@V<lambda_4>@?0??main@@9@@@YAXPEBDV<lambda_4>@?0??main@@9@@Z"(ptr noundef @"??_C@_0P@HMAAEHI@_ZTS9auto_name?$AA@", i32 %0)
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??1<lambda_4>@?0??main@@9@QEAA@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %KernelFunc)
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
 

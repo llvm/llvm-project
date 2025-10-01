@@ -511,7 +511,7 @@ StmtResult BuildSYCLKernelLaunchStmt(Sema &SemaRef,
     if (LaunchResult.isInvalid())
       return StmtError();
 
-    Stmts.push_back(LaunchResult.get());
+    Stmts.push_back(SemaRef.MaybeCreateExprWithCleanups(LaunchResult).get());
   }
 
   return CompoundStmt::Create(SemaRef.getASTContext(), Stmts,
