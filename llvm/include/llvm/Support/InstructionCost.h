@@ -59,10 +59,8 @@ private:
       State = Invalid;
   }
 
-  static inline constexpr CostType MaxValue =
-      std::numeric_limits<CostType>::max();
-  static inline constexpr CostType MinValue =
-      std::numeric_limits<CostType>::min();
+  static constexpr CostType MaxValue = std::numeric_limits<CostType>::max();
+  static constexpr CostType MinValue = std::numeric_limits<CostType>::min();
 
 public:
   // A default constructed InstructionCost is a valid zero cost
