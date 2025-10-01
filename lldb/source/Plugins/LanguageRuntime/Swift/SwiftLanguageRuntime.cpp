@@ -2317,14 +2317,15 @@ private:
       }
 
       TaskInspector task_inspector;
-      auto task_addr_or_err = task_inspector.GetTaskAddrFromThreadLocalStorage(
-          m_exe_ctx.GetThreadRef());
-      if (auto error = task_addr_or_err.takeError()) {
-        result.AppendError(toString(std::move(error)));
+      std::optional<lldb::addr_t> maybe_task_addr =
+          task_inspector.GetTaskAddrFromThreadLocalStorage(
+              m_exe_ctx.GetThreadRef());
+      if (!task_addr) {
+        result.AppendError("could find the task address");
         return;
       }
 
-      task_addr = task_addr_or_err.get();
+      task_addr = *maybe_task_addr;
     }
 
     auto ts_or_err = m_exe_ctx.GetTargetRef().GetScratchTypeSystemForLanguage(
@@ -2915,19 +2916,6 @@ std::optional<lldb::addr_t> SwiftLanguageRuntime::TrySkipVirtualParentProlog(
   return pc_value;
 }
 
-/// Attempts to read the memory location at `task_addr_location`, producing
-/// the Task pointer if possible.
-static llvm::Expected<lldb::addr_t>
-ReadTaskAddr(lldb::addr_t task_addr_location, Process &process) {
-  Status status;
-  addr_t task_addr = process.ReadPointerFromMemory(task_addr_location, status);
-  if (status.Fail())
-    return llvm::joinErrors(
-        llvm::createStringError("could not get current task from thread"),
-        status.takeError());
-  return task_addr;
-}
-
 /// Compute the location where the Task pointer for `real_thread` is stored by
 /// the runtime.
 static llvm::Expected<lldb::addr_t>
@@ -2955,48 +2943,154 @@ ComputeTaskAddrLocationFromThreadLocalStorage(Thread &real_thread) {
 #endif
 }
 
-llvm::Expected<lldb::addr_t>
-TaskInspector::GetTaskAddrFromThreadLocalStorage(Thread &thread) {
-  // Look through backing threads when inspecting TLS.
-  Thread &real_thread =
-      thread.GetBackingThread() ? *thread.GetBackingThread() : thread;
+/// Helper function to read all `pointers` from process memory at once.
+/// Consumes any errors from the input by propagating them to the output.
+static llvm::SmallVector<std::optional<addr_t>>
+MultiReadPointers(Process &process,
+                  llvm::MutableArrayRef<std::optional<addr_t>> maybe_pointers) {
+  llvm::SmallVector<std::optional<addr_t>> final_results;
+  llvm::SmallVector<addr_t> to_read;
+  final_results.reserve(maybe_pointers.size());
+  to_read.reserve(maybe_pointers.size());
 
-  if (auto it = m_tid_to_task_addr_location.find(real_thread.GetID());
-      it != m_tid_to_task_addr_location.end()) {
-#ifndef NDEBUG
-    // In assert builds, check that caching did not produce incorrect results.
-    llvm::Expected<lldb::addr_t> task_addr_location =
-        ComputeTaskAddrLocationFromThreadLocalStorage(real_thread);
-    assert(task_addr_location);
-    assert(it->second == *task_addr_location);
-#endif
-    llvm::Expected<lldb::addr_t> task_addr =
-        ReadTaskAddr(it->second, *thread.GetProcess());
-    if (task_addr)
-      return task_addr;
-    // If the cached task addr location became invalid, invalidate the cache.
-    m_tid_to_task_addr_location.erase(it);
-    LLDB_LOG_ERROR(GetLog(LLDBLog::OS), task_addr.takeError(),
-                   "TaskInspector: evicted task location address due to "
-                   "invalid memory read: {0}");
+  /// Filter the input: propagate input errors directly to the output, forward
+  /// proper inputs to `to_read`.
+  for (std::optional<addr_t> &maybe_ptr : maybe_pointers) {
+    if (!maybe_ptr)
+      final_results.emplace_back(std::nullopt);
+    else {
+      final_results.push_back(LLDB_INVALID_ADDRESS);
+      to_read.push_back(*maybe_ptr);
+    }
   }
 
-  llvm::Expected<lldb::addr_t> task_addr_location =
+  /// TODO: convert this loop into a call to the vectorized memory read, once
+  /// that is available in Process.
+  llvm::SmallVector<std::optional<addr_t>> read_results;
+  for (addr_t pointer : to_read) {
+    Status status;
+    addr_t result = process.ReadPointerFromMemory(pointer, status);
+    if (status.Fail())
+      read_results.push_back(std::nullopt);
+    else
+      read_results.push_back(result);
+  }
+
+  llvm::MutableArrayRef<std::optional<addr_t>> results_ref = read_results;
+
+  // Move the results in the slots not filled by errors from the input.
+  for (std::optional<addr_t> &maybe_result : final_results)
+    if (maybe_result)
+      maybe_result = results_ref.consume_front();
+
+  assert(results_ref.empty());
+  return final_results;
+}
+
+/// Helper function to read `addr` from process memory. Errors in the input are
+/// propagated to to the output.
+static std::optional<addr_t> ReadPointer(Process &process,
+                                         std::optional<addr_t> addr) {
+  return MultiReadPointers(process, addr)[0];
+}
+
+std::optional<lldb::addr_t>
+TaskInspector::GetTaskAddrFromThreadLocalStorage(Thread &thread) {
+  return GetTaskAddrFromThreadLocalStorage(&thread)[0];
+}
+
+llvm::SmallVector<std::optional<lldb::addr_t>>
+TaskInspector::GetTaskAddrLocations(llvm::ArrayRef<Thread *> threads) {
+  llvm::SmallVector<std::optional<addr_t>> addr_locations;
+  addr_locations.reserve(threads.size());
+
+  for (auto [idx, thread] : llvm::enumerate(threads)) {
+    Thread &real_thread =
+        thread->GetBackingThread() ? *thread->GetBackingThread() : *thread;
+
+    auto it = m_tid_to_task_addr_location.find(real_thread.GetID());
+    if (it != m_tid_to_task_addr_location.end()) {
+      addr_locations.push_back(it->second);
+#ifndef NDEBUG
+      // In assert builds, check that caching did not produce incorrect results.
+      llvm::Expected<lldb::addr_t> task_addr_location =
+          ComputeTaskAddrLocationFromThreadLocalStorage(real_thread);
+      assert(task_addr_location);
+      assert(it->second == *task_addr_location);
+#endif
+      continue;
+    }
+    llvm::Expected<addr_t> addr_loc =
+        ComputeTaskAddrLocationFromThreadLocalStorage(real_thread);
+    if (!addr_loc) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::OS), addr_loc.takeError(),
+                     "TaskInspector: failed to compute task address location "
+                     "from TLS: {0}");
+      addr_locations.push_back(std::nullopt);
+    } else
+      addr_locations.push_back(*addr_loc);
+  }
+  return addr_locations;
+}
+
+std::optional<addr_t> TaskInspector::RetryRead(Thread &thread,
+                                               addr_t task_addr_location) {
+  Thread &real_thread =
+      thread.GetBackingThread() ? *thread.GetBackingThread() : thread;
+  user_id_t tid = real_thread.GetID();
+
+  // For unsuccessful reads whose address was not cached, don't try again.
+  if (!m_tid_to_task_addr_location.erase(tid))
+    return std::nullopt;
+
+  LLDB_LOG(GetLog(LLDBLog::OS), "TaskInspector: evicted task location "
+                                "address due to invalid memory read");
+
+  // The cached address could not be loaded. "This should never happen", but
+  // recompute the address and try again for completeness.
+  llvm::Expected<addr_t> task_addr_loc =
       ComputeTaskAddrLocationFromThreadLocalStorage(real_thread);
-  if (!task_addr_location)
-    return task_addr_location;
+  if (!task_addr_loc) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::OS), task_addr_loc.takeError(),
+                   "TaskInspector: failed to compute task address location "
+                   "from TLS: {0}");
+    return std::nullopt;
+  }
 
-  llvm::Expected<lldb::addr_t> task_addr =
-      ReadTaskAddr(*task_addr_location, *thread.GetProcess());
+  std::optional<addr_t> read_retry_result =
+      ReadPointer(*thread.GetProcess(), *task_addr_loc);
+  if (read_retry_result)
+    m_tid_to_task_addr_location[tid] = *task_addr_loc;
+  return read_retry_result;
+}
 
-  // If the read from this TLS address is successful, cache the TLS address.
-  // Caching without a valid read is dangerous: earlier in the thread
-  // lifetime, the result of GetExtendedInfo can be invalid.
-  if (task_addr &&
-      real_thread.GetProcess()->GetTarget().GetSwiftCacheTaskPointerLocation())
-    m_tid_to_task_addr_location.try_emplace(real_thread.GetID(),
-                                            *task_addr_location);
-  return task_addr;
+llvm::SmallVector<std::optional<addr_t>>
+TaskInspector::GetTaskAddrFromThreadLocalStorage(
+    llvm::ArrayRef<Thread *> threads) {
+  if (threads.empty())
+    return {};
+
+  llvm::SmallVector<std::optional<addr_t>> addr_locations =
+      GetTaskAddrLocations(threads);
+
+  Process &process = *threads[0]->GetProcess();
+  llvm::SmallVector<std::optional<addr_t>> mem_read_results =
+      MultiReadPointers(process, addr_locations);
+
+  for (auto [idx, thread] : llvm::enumerate(threads)) {
+    if (!addr_locations[idx])
+      continue;
+    // If the read was successful, cache the address.
+    if (mem_read_results[idx]) {
+      Thread &real_thread =
+          thread->GetBackingThread() ? *thread->GetBackingThread() : *thread;
+      m_tid_to_task_addr_location[real_thread.GetID()] = *addr_locations[idx];
+      continue;
+    }
+    mem_read_results[idx] = RetryRead(*thread, *addr_locations[idx]);
+  }
+
+  return mem_read_results;
 }
 
 namespace {
