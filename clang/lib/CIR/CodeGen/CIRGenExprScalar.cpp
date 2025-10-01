@@ -2151,8 +2151,10 @@ mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
   }
 
   if (e->getOpcode() == UO_Real) {
-    return promotionTy.isNull() ? Visit(op)
-                                : cgf.emitPromotedScalarExpr(op, promotionTy);
+    mlir::Value operand = promotionTy.isNull()
+                              ? Visit(op)
+                              : cgf.emitPromotedScalarExpr(op, promotionTy);
+    return builder.createComplexReal(loc, operand);
   }
 
   // __imag on a scalar returns zero. Emit the subexpr to ensure side

@@ -5954,6 +5954,9 @@ bool Sema::BuiltinAssumeAligned(CallExpr *TheCall) {
     if (Result > Sema::MaximumAlignment)
       Diag(TheCall->getBeginLoc(), diag::warn_assume_aligned_too_great)
           << SecondArg->getSourceRange() << Sema::MaximumAlignment;
+
+    TheCall->setArg(1,
+                    ConstantExpr::Create(Context, SecondArg, APValue(Result)));
   }
 
   if (NumArgs > 2) {
@@ -15946,7 +15949,7 @@ void Sema::RefersToMemberWithReducedAlignment(
   }
 
   // Check if the synthesized offset fulfills the alignment.
-  if (Offset % ExpectedAlignment != 0 ||
+  if (!Offset.isMultipleOf(ExpectedAlignment) ||
       // It may fulfill the offset it but the effective alignment may still be
       // lower than the expected expression alignment.
       CompleteObjectAlignment < ExpectedAlignment) {

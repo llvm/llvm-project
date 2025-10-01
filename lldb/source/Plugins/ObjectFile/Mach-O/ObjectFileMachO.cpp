@@ -2805,32 +2805,29 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                         is_gsym = true;
                         sym[sym_idx].SetExternal(true);
 
-                        if (symbol_name && symbol_name[0] == '_' &&
-                            symbol_name[1] == 'O') {
-                          llvm::StringRef symbol_name_ref(symbol_name);
-                          if (symbol_name_ref.starts_with(
-                                  g_objc_v2_prefix_class)) {
-                            symbol_name_non_abi_mangled = symbol_name + 1;
-                            symbol_name =
-                                symbol_name + g_objc_v2_prefix_class.size();
-                            type = eSymbolTypeObjCClass;
-                            demangled_is_synthesized = true;
+                        llvm::StringRef symbol_name_ref(symbol_name);
+                        if (symbol_name_ref.starts_with(
+                                g_objc_v2_prefix_class)) {
+                          symbol_name_non_abi_mangled = symbol_name + 1;
+                          symbol_name =
+                              symbol_name + g_objc_v2_prefix_class.size();
+                          type = eSymbolTypeObjCClass;
+                          demangled_is_synthesized = true;
 
-                          } else if (symbol_name_ref.starts_with(
-                                         g_objc_v2_prefix_metaclass)) {
-                            symbol_name_non_abi_mangled = symbol_name + 1;
-                            symbol_name =
-                                symbol_name + g_objc_v2_prefix_metaclass.size();
-                            type = eSymbolTypeObjCMetaClass;
-                            demangled_is_synthesized = true;
-                          } else if (symbol_name_ref.starts_with(
-                                         g_objc_v2_prefix_ivar)) {
-                            symbol_name_non_abi_mangled = symbol_name + 1;
-                            symbol_name =
-                                symbol_name + g_objc_v2_prefix_ivar.size();
-                            type = eSymbolTypeObjCIVar;
-                            demangled_is_synthesized = true;
-                          }
+                        } else if (symbol_name_ref.starts_with(
+                                       g_objc_v2_prefix_metaclass)) {
+                          symbol_name_non_abi_mangled = symbol_name + 1;
+                          symbol_name =
+                              symbol_name + g_objc_v2_prefix_metaclass.size();
+                          type = eSymbolTypeObjCMetaClass;
+                          demangled_is_synthesized = true;
+                        } else if (symbol_name_ref.starts_with(
+                                       g_objc_v2_prefix_ivar)) {
+                          symbol_name_non_abi_mangled = symbol_name + 1;
+                          symbol_name =
+                              symbol_name + g_objc_v2_prefix_ivar.size();
+                          type = eSymbolTypeObjCIVar;
+                          demangled_is_synthesized = true;
                         } else {
                           if (nlist.n_value != 0)
                             symbol_section = section_info.GetSection(
@@ -3652,7 +3649,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
       if (is_debug) {
         switch (nlist.n_type) {
-        case N_GSYM:
+        case N_GSYM: {
           // global symbol: name,,NO_SECT,type,0
           // Sometimes the N_GSYM value contains the address.
 
@@ -3668,33 +3665,30 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           is_gsym = true;
           sym[sym_idx].SetExternal(true);
 
-          if (symbol_name && symbol_name[0] == '_' && symbol_name[1] == 'O') {
-            llvm::StringRef symbol_name_ref(symbol_name);
-            if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
-              symbol_name_non_abi_mangled = symbol_name + 1;
-              symbol_name = symbol_name + g_objc_v2_prefix_class.size();
-              type = eSymbolTypeObjCClass;
-              demangled_is_synthesized = true;
+          llvm::StringRef symbol_name_ref(symbol_name);
+          if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
+            symbol_name_non_abi_mangled = symbol_name + 1;
+            symbol_name = symbol_name + g_objc_v2_prefix_class.size();
+            type = eSymbolTypeObjCClass;
+            demangled_is_synthesized = true;
 
-            } else if (symbol_name_ref.starts_with(
-                           g_objc_v2_prefix_metaclass)) {
-              symbol_name_non_abi_mangled = symbol_name + 1;
-              symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
-              type = eSymbolTypeObjCMetaClass;
-              demangled_is_synthesized = true;
-            } else if (symbol_name_ref.starts_with(g_objc_v2_prefix_ivar)) {
-              symbol_name_non_abi_mangled = symbol_name + 1;
-              symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
-              type = eSymbolTypeObjCIVar;
-              demangled_is_synthesized = true;
-            }
+          } else if (symbol_name_ref.starts_with(g_objc_v2_prefix_metaclass)) {
+            symbol_name_non_abi_mangled = symbol_name + 1;
+            symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
+            type = eSymbolTypeObjCMetaClass;
+            demangled_is_synthesized = true;
+          } else if (symbol_name_ref.starts_with(g_objc_v2_prefix_ivar)) {
+            symbol_name_non_abi_mangled = symbol_name + 1;
+            symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
+            type = eSymbolTypeObjCIVar;
+            demangled_is_synthesized = true;
           } else {
             if (nlist.n_value != 0)
               symbol_section =
                   section_info.GetSection(nlist.n_sect, nlist.n_value);
             type = eSymbolTypeData;
           }
-          break;
+        } break;
 
         case N_FNAME:
           // procedure name (f77 kludge): name,,NO_SECT,0,0

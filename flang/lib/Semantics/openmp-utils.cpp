@@ -41,6 +41,24 @@
 namespace Fortran::semantics::omp {
 using namespace Fortran::parser::omp;
 
+const Scope &GetScopingUnit(const Scope &scope) {
+  const Scope *iter{&scope};
+  for (; !iter->IsTopLevel(); iter = &iter->parent()) {
+    switch (iter->kind()) {
+    case Scope::Kind::BlockConstruct:
+    case Scope::Kind::BlockData:
+    case Scope::Kind::DerivedType:
+    case Scope::Kind::MainProgram:
+    case Scope::Kind::Module:
+    case Scope::Kind::Subprogram:
+      return *iter;
+    default:
+      break;
+    }
+  }
+  return *iter;
+}
+
 SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x) {
   if (x == nullptr) {
     return SourcedActionStmt{};

@@ -473,11 +473,9 @@ bool AsmPrinter::doInitialization(Module &M) {
   AddrLabelSymbols = nullptr;
 
   // Initialize TargetLoweringObjectFile.
-  const_cast<TargetLoweringObjectFile&>(getObjFileLowering())
-    .Initialize(OutContext, TM);
+  TM.getObjFileLowering()->Initialize(OutContext, TM);
 
-  const_cast<TargetLoweringObjectFile &>(getObjFileLowering())
-      .getModuleMetadata(M);
+  TM.getObjFileLowering()->getModuleMetadata(M);
 
   // On AIX, we delay emitting any section information until
   // after emitting the .file pseudo-op. This allows additional

@@ -248,7 +248,6 @@ struct MissingFeatures {
   static bool metaDataNode() { return false; }
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
-  static bool needsGlobalCtorDtor() { return false; }
   static bool nrvo() { return false; }
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }

@@ -53,18 +53,9 @@ define void @VF1-VPlanExe(ptr %dst) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
-; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[DST_PTR:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i32 0, ptr [[DST_PTR]], align 4
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 15
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ;
 entry:
   br label %for.body
@@ -132,17 +123,9 @@ define void @VF1-VPWidenCanonicalIVRecipeExe(ptr %ptr1) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
-; CHECK:       for.body:
-; CHECK-NEXT:    [[ADDR:%.*]] = phi ptr [ [[PTR:%.*]], [[FOR_BODY]] ], [ [[PTR1]], [[SCALAR_PH:%.*]] ]
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[ADDR]], align 8
-; CHECK-NEXT:    [[PTR]] = getelementptr inbounds double, ptr [[ADDR]], i64 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[PTR]], [[PTR2]]
-; CHECK-NEXT:    br i1 [[COND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ;
 entry:
   %ptr2 = getelementptr inbounds double, ptr %ptr1, i64 15

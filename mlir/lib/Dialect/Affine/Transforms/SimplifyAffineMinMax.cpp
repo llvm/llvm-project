@@ -246,6 +246,6 @@ void SimplifyAffineMinMaxPass::runOnOperation() {
   patterns.add<SimplifyAffineMaxOp, SimplifyAffineMinOp, SimplifyAffineApplyOp>(
       func.getContext());
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
-  if (failed(applyPatternsGreedily(func, std::move(frozenPatterns))))
+  if (failed(applyPatternsGreedily(func, frozenPatterns)))
     return signalPassFailure();
 }

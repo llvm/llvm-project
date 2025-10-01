@@ -960,6 +960,12 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     if (type_name == "long double" &&
         QualTypeMatchesBitSize(bit_size, ast, ast.LongDoubleTy))
       return GetType(ast.LongDoubleTy);
+    if (type_name == "__bf16" &&
+        QualTypeMatchesBitSize(bit_size, ast, ast.BFloat16Ty))
+      return GetType(ast.BFloat16Ty);
+    if (type_name == "_Float16" &&
+        QualTypeMatchesBitSize(bit_size, ast, ast.Float16Ty))
+      return GetType(ast.Float16Ty);
     // As Rust currently uses `TypeSystemClang`, match `f128` here as well so it
     // doesn't get misinterpreted as `long double` on targets where they are
     // the same size but different formats.
@@ -1792,6 +1798,8 @@ bool TypeSystemClang::RecordHasFields(const RecordDecl *record_decl) {
     for (base_class = cxx_record_decl->bases_begin(),
         base_class_end = cxx_record_decl->bases_end();
          base_class != base_class_end; ++base_class) {
+      assert(record_decl != base_class->getType()->getAsCXXRecordDecl() &&
+             "Base can't inherit from itself.");
       if (RecordHasFields(base_class->getType()->getAsCXXRecordDecl()))
         return true;
     }

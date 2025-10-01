@@ -1664,8 +1664,9 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           else if (OverwriteExistingWeights)
             I.setMetadata(LLVMContext::MD_prof, nullptr);
         } else if (!isa<IntrinsicInst>(&I)) {
-          setBranchWeights(I, {static_cast<uint32_t>(BlockWeights[BB])},
-                           /*IsExpected=*/false);
+          setBranchWeights(
+              I, ArrayRef<uint32_t>{static_cast<uint32_t>(BlockWeights[BB])},
+              /*IsExpected=*/false);
         }
       }
     } else if (OverwriteExistingWeights || ProfileSampleBlockAccurate) {
@@ -1676,7 +1677,8 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           if (cast<CallBase>(I).isIndirectCall()) {
             I.setMetadata(LLVMContext::MD_prof, nullptr);
           } else {
-            setBranchWeights(I, {uint32_t(0)}, /*IsExpected=*/false);
+            setBranchWeights(I, ArrayRef<uint32_t>{uint32_t(0)},
+                             /*IsExpected=*/false);
           }
         }
       }

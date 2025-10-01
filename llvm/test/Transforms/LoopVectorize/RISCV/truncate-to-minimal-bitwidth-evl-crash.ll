@@ -22,20 +22,6 @@ define void @truncate_to_minimal_bitwidths_widen_cast_recipe(ptr %src) {
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP_SRC1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IV1]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[GEP_SRC1]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP11]] to i32
-; CHECK-NEXT:    [[MUL16:%.*]] = mul i32 0, [[CONV]]
-; CHECK-NEXT:    [[SHR35:%.*]] = lshr i32 [[MUL16]], 1
-; CHECK-NEXT:    [[CONV36:%.*]] = trunc i32 [[SHR35]] to i8
-; CHECK-NEXT:    store i8 [[CONV36]], ptr null, align 1
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV1]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV1]], 8
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

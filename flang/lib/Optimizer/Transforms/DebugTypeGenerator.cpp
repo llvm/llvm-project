@@ -682,10 +682,11 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
 static mlir::StringAttr getBasicTypeName(mlir::MLIRContext *context,
                                          llvm::StringRef baseName,
                                          unsigned bitSize) {
-  std::string name(baseName.str());
+  std::ostringstream oss;
+  oss << baseName.str();
   if (bitSize != 32)
-    name += "*" + std::to_string(bitSize / 8);
-  return mlir::StringAttr::get(context, name);
+    oss << "(kind=" << (bitSize / 8) << ")";
+  return mlir::StringAttr::get(context, oss.str());
 }
 
 mlir::LLVM::DITypeAttr

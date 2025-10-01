@@ -379,24 +379,6 @@ public:
   explicit OmpAttributeVisitor(SemanticsContext &context)
       : DirectiveAttributeVisitor(context) {}
 
-  static const Scope &scopingUnit(const Scope &scope) {
-    const Scope *iter{&scope};
-    for (; !iter->IsTopLevel(); iter = &iter->parent()) {
-      switch (iter->kind()) {
-      case Scope::Kind::BlockConstruct:
-      case Scope::Kind::BlockData:
-      case Scope::Kind::DerivedType:
-      case Scope::Kind::MainProgram:
-      case Scope::Kind::Module:
-      case Scope::Kind::Subprogram:
-        return *iter;
-      default:
-        break;
-      }
-    }
-    return *iter;
-  }
-
   template <typename A> void Walk(const A &x) { parser::Walk(x, *this); }
   template <typename A> bool Pre(const A &) { return true; }
   template <typename A> void Post(const A &) {}
@@ -3086,8 +3068,8 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
       checkScope = ompFlag == Symbol::Flag::OmpExecutableAllocateDirective;
     }
     if (checkScope) {
-      if (scopingUnit(GetContext().scope) !=
-          scopingUnit(symbol->GetUltimate().owner())) {
+      if (omp::GetScopingUnit(GetContext().scope) !=
+          omp::GetScopingUnit(symbol->GetUltimate().owner())) {
         context_.Say(designator.source, // 2.15.3
             "List items must be declared in the same scoping unit in which the %s directive appears"_err_en_US,
             parser::ToUpperCaseLetters(

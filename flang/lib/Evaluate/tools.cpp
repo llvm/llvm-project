@@ -1950,7 +1950,7 @@ bool IsVarSubexpressionOf(
   return VariableFinder{sub}(super);
 }
 
-std::optional<int> DerivedTypeDepth(const semantics::Scope &scope) {
+std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &scope) {
   if (scope.IsDerivedType()) {
     for (auto iter{scope.cbegin()}; iter != scope.cend(); ++iter) {
       const Symbol &symbol{*iter->second};
@@ -1962,7 +1962,7 @@ std::optional<int> DerivedTypeDepth(const semantics::Scope &scope) {
               parent = derived->typeSymbol().scope();
             }
             if (parent) {
-              if (auto parentDepth{DerivedTypeDepth(*parent)}) {
+              if (auto parentDepth{CountDerivedTypeAncestors(*parent)}) {
                 return 1 + *parentDepth;
               }
             }

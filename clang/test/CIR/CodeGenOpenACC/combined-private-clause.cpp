@@ -125,7 +125,7 @@ struct HasDtor {
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>), !cir.ptr<!rec_HasDtor>
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>> -> !cir.ptr<!rec_HasDtor>
 // CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_HasDtor>, %[[ITR_LOAD]] : !u64i), !cir.ptr<!rec_HasDtor>
 // CHECK-NEXT: cir.call @_ZN7HasDtorD1Ev(%[[STRIDE]]) nothrow : (!cir.ptr<!rec_HasDtor>) -> ()
 // CHECK-NEXT: cir.yield

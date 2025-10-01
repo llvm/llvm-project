@@ -173,8 +173,6 @@ struct TestXeGPUUnrollingPatterns
 
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "test-xegpu-layout-interface"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 // Test pattern for distributing vector::StepOp from workgroup to subgroup.
 // Validates DistributeLayoutAttr interfaces for offset computation

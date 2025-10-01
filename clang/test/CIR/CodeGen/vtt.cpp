@@ -281,23 +281,23 @@ D::D() {}
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CIR-COMMON:        %[[VTT:.*]] = cir.load{{.*}} %[[VTT_ADDR]]
 // CIR-COMMON:        %[[VTT_ADDR_POINT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[VPTR_ADDR:.*]] = cir.cast(bitcast, %[[VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+// CIR-COMMON:        %[[VPTR_ADDR:.*]] = cir.cast bitcast %[[VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]]
 // CIR-COMMON:        %[[B_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]]
 // CIR-COMMON:        cir.store{{.*}} %[[VPTR]], %[[B_VPTR_ADDR]]
 // CIR-COMMON:        %[[B_VTT_ADDR_POINT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[B_VPTR_ADDR:.*]] = cir.cast(bitcast, %[[B_VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+// CIR-COMMON:        %[[B_VPTR_ADDR:.*]] = cir.cast bitcast %[[B_VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        %[[B_VPTR:.*]] = cir.load{{.*}} %[[B_VPTR_ADDR]]
 // CIR-COMMON:        %[[B_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]]
 // CIR-COMMON:        %[[VPTR:.*]] = cir.load{{.*}} %[[B_VPTR_ADDR]]
-// CIR-COMMON:        %[[VPTR_ADDR2:.*]] = cir.cast(bitcast, %[[VPTR]] : !cir.vptr), !cir.ptr<!u8i>
+// CIR-COMMON:        %[[VPTR_ADDR2:.*]] = cir.cast bitcast %[[VPTR]] : !cir.vptr -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[CONST_24:.*]] = cir.const #cir.int<-24>
 // CIR-COMMON:        %[[BASE_OFFSET_ADDR:.*]] = cir.ptr_stride(%[[VPTR_ADDR2]] : !cir.ptr<!u8i>, %[[CONST_24]] : !s64i), !cir.ptr<!u8i>
-// CIR-COMMON:        %[[BASE_OFFSET_PTR:.*]] = cir.cast(bitcast, %[[BASE_OFFSET_ADDR]] : !cir.ptr<!u8i>), !cir.ptr<!s64i>
+// CIR-COMMON:        %[[BASE_OFFSET_PTR:.*]] = cir.cast bitcast %[[BASE_OFFSET_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
 // CIR-COMMON:        %[[BASE_OFFSET:.*]] = cir.load{{.*}} %[[BASE_OFFSET_PTR]] : !cir.ptr<!s64i>, !s64i
-// CIR-COMMON:        %[[THIS_PTR:.*]] = cir.cast(bitcast, %[[THIS]] : !cir.ptr<!rec_B>), !cir.ptr<!u8i>
+// CIR-COMMON:        %[[THIS_PTR:.*]] = cir.cast bitcast %[[THIS]] : !cir.ptr<!rec_B> -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[BASE_PTR:.*]] = cir.ptr_stride(%[[THIS_PTR]] : !cir.ptr<!u8i>, %[[BASE_OFFSET]] : !s64i), !cir.ptr<!u8i>
-// CIR-COMMON:        %[[BASE_CAST:.*]] = cir.cast(bitcast, %[[BASE_PTR]] : !cir.ptr<!u8i>), !cir.ptr<!rec_B>
+// CIR-COMMON:        %[[BASE_CAST:.*]] = cir.cast bitcast %[[BASE_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_B>
 // CIR-COMMON:        %[[BASE_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[BASE_CAST]]
 // CIR-COMMON:        cir.store{{.*}} %[[B_VPTR]], %[[BASE_VPTR_ADDR]]
 
@@ -347,23 +347,23 @@ D::D() {}
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CIR-COMMON:        %[[VTT:.*]] = cir.load{{.*}} %[[VTT_ADDR]]
 // CIR-COMMON:        %[[VTT_ADDR_POINT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[VPTR_ADDR:.*]] = cir.cast(bitcast, %[[VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+// CIR-COMMON:        %[[VPTR_ADDR:.*]] = cir.cast bitcast %[[VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]]
 // CIR-COMMON:        %[[C_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]]
 // CIR-COMMON:        cir.store{{.*}} %[[VPTR]], %[[C_VPTR_ADDR]]
 // CIR-COMMON:        %[[C_VTT_ADDR_POINT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[C_VPTR_ADDR:.*]] = cir.cast(bitcast, %[[C_VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+// CIR-COMMON:        %[[C_VPTR_ADDR:.*]] = cir.cast bitcast %[[C_VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        %[[C_VPTR:.*]] = cir.load{{.*}} %[[C_VPTR_ADDR]]
 // CIR-COMMON:        %[[C_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]]
 // CIR-COMMON:        %[[VPTR:.*]] = cir.load{{.*}} %[[C_VPTR_ADDR]]
-// CIR-COMMON:        %[[VPTR_ADDR2:.*]] = cir.cast(bitcast, %[[VPTR]] : !cir.vptr), !cir.ptr<!u8i>
+// CIR-COMMON:        %[[VPTR_ADDR2:.*]] = cir.cast bitcast %[[VPTR]] : !cir.vptr -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[CONST_24:.*]] = cir.const #cir.int<-24>
 // CIR-COMMON:        %[[BASE_OFFSET_ADDR:.*]] = cir.ptr_stride(%[[VPTR_ADDR2]] : !cir.ptr<!u8i>, %[[CONST_24]] : !s64i), !cir.ptr<!u8i>
-// CIR-COMMON:        %[[BASE_OFFSET_PTR:.*]] = cir.cast(bitcast, %[[BASE_OFFSET_ADDR]] : !cir.ptr<!u8i>), !cir.ptr<!s64i>
+// CIR-COMMON:        %[[BASE_OFFSET_PTR:.*]] = cir.cast bitcast %[[BASE_OFFSET_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
 // CIR-COMMON:        %[[BASE_OFFSET:.*]] = cir.load{{.*}} %[[BASE_OFFSET_PTR]] : !cir.ptr<!s64i>, !s64i
-// CIR-COMMON:        %[[THIS_PTR:.*]] = cir.cast(bitcast, %[[THIS]] : !cir.ptr<!rec_C>), !cir.ptr<!u8i>
+// CIR-COMMON:        %[[THIS_PTR:.*]] = cir.cast bitcast %[[THIS]] : !cir.ptr<!rec_C> -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[BASE_PTR:.*]] = cir.ptr_stride(%[[THIS_PTR]] : !cir.ptr<!u8i>, %[[BASE_OFFSET]] : !s64i), !cir.ptr<!u8i>
-// CIR-COMMON:        %[[BASE_CAST:.*]] = cir.cast(bitcast, %[[BASE_PTR]] : !cir.ptr<!u8i>), !cir.ptr<!rec_C>
+// CIR-COMMON:        %[[BASE_CAST:.*]] = cir.cast bitcast %[[BASE_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_C>
 // CIR-COMMON:        %[[BASE_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[BASE_CAST]]
 // CIR-COMMON:        cir.store{{.*}} %[[C_VPTR]], %[[BASE_VPTR_ADDR]]
 
@@ -419,27 +419,27 @@ D::D() {}
 // CIR-COMMON:        %[[C_VTT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 3 -> !cir.ptr<!cir.ptr<!void>>
 // CIR-COMMON:        cir.call @_ZN1CC2Ev(%[[C_ADDR]], %[[C_VTT]]) nothrow : (!cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!void>>) -> ()
 // CIR-COMMON:        %[[D_VTT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[VPTR_ADDR:.*]] = cir.cast(bitcast, %[[D_VTT]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+// CIR-COMMON:        %[[VPTR_ADDR:.*]] = cir.cast bitcast %[[D_VTT]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR-COMMON:        %[[D_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]]
 // CIR-COMMON:        cir.store{{.*}} %[[VPTR]], %[[D_VPTR_ADDR]]
 // CIR-COMMON:        %[[D_VTT_ADDR_POINT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 5 -> !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[D_VPTR_ADDR:.*]] = cir.cast(bitcast, %[[D_VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+// CIR-COMMON:        %[[D_VPTR_ADDR:.*]] = cir.cast bitcast %[[D_VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        %[[D_VPTR:.*]] = cir.load{{.*}} %[[D_VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR-COMMON:        %[[D_VPTR_ADDR2:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_D> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        %[[VPTR2:.*]] = cir.load{{.*}} %[[D_VPTR_ADDR2]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR-COMMON:        %[[VPTR_ADDR2:.*]] = cir.cast(bitcast, %[[VPTR2]] : !cir.vptr), !cir.ptr<!u8i>
+// CIR-COMMON:        %[[VPTR_ADDR2:.*]] = cir.cast bitcast %[[VPTR2]] : !cir.vptr -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[CONST_24:.*]] = cir.const #cir.int<-24> : !s64i
 // CIR-COMMON:        %[[BASE_OFFSET_ADDR:.*]] = cir.ptr_stride(%[[VPTR_ADDR2]] : !cir.ptr<!u8i>, %[[CONST_24]] : !s64i), !cir.ptr<!u8i>
-// CIR-COMMON:        %[[BASE_OFFSET_PTR:.*]] = cir.cast(bitcast, %[[BASE_OFFSET_ADDR]] : !cir.ptr<!u8i>), !cir.ptr<!s64i>
+// CIR-COMMON:        %[[BASE_OFFSET_PTR:.*]] = cir.cast bitcast %[[BASE_OFFSET_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
 // CIR-COMMON:        %[[BASE_OFFSET:.*]] = cir.load{{.*}} %[[BASE_OFFSET_PTR]] : !cir.ptr<!s64i>, !s64i
-// CIR-COMMON:        %[[THIS_PTR:.*]] = cir.cast(bitcast, %[[THIS]] : !cir.ptr<!rec_D>), !cir.ptr<!u8i>
+// CIR-COMMON:        %[[THIS_PTR:.*]] = cir.cast bitcast %[[THIS]] : !cir.ptr<!rec_D> -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[BASE_PTR:.*]] = cir.ptr_stride(%[[THIS_PTR]] : !cir.ptr<!u8i>, %[[BASE_OFFSET]] : !s64i), !cir.ptr<!u8i>
-// CIR-COMMON:        %[[BASE_CAST:.*]] = cir.cast(bitcast, %[[BASE_PTR]] : !cir.ptr<!u8i>), !cir.ptr<!rec_D>
+// CIR-COMMON:        %[[BASE_CAST:.*]] = cir.cast bitcast %[[BASE_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_D>
 // CIR-COMMON:        %[[BASE_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[BASE_CAST]]
 // CIR-COMMON:        cir.store{{.*}} %[[D_VPTR]], %[[BASE_VPTR_ADDR]]
 // CIR-COMMON:        %[[C_VTT_ADDR_POINT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 6 -> !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[C_VPTR_ADDR:.*]] = cir.cast(bitcast, %[[C_VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+// CIR-COMMON:        %[[C_VPTR_ADDR:.*]] = cir.cast bitcast %[[C_VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        %[[C_VPTR:.*]] = cir.load{{.*}} %[[C_VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR-COMMON:        %[[C_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [16] -> !cir.ptr<!rec_C>
 // CIR-COMMON:        %[[C_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[C_ADDR]] : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>

@@ -182,7 +182,7 @@ static ParseResult parseClauseAttr(AsmParser &parser, ClauseAttr &attr) {
 }
 
 template <typename ClauseAttr>
-void printClauseAttr(OpAsmPrinter &p, Operation *op, ClauseAttr attr) {
+static void printClauseAttr(OpAsmPrinter &p, Operation *op, ClauseAttr attr) {
   p << stringifyEnum(attr.getValue());
 }
 
@@ -1511,8 +1511,8 @@ static LogicalResult verifySynchronizationHint(Operation *op, uint64_t hint) {
 //===----------------------------------------------------------------------===//
 
 // Helper function to get bitwise AND of `value` and 'flag'
-uint64_t mapTypeToBitFlag(uint64_t value,
-                          llvm::omp::OpenMPOffloadMappingFlags flag) {
+static uint64_t mapTypeToBitFlag(uint64_t value,
+                                 llvm::omp::OpenMPOffloadMappingFlags flag) {
   return value & llvm::to_underlying(flag);
 }
 

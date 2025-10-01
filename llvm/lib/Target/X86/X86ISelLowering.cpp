@@ -44615,8 +44615,11 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     APInt DemandedMask = OriginalDemandedBits << ShAmt;
 
-    // If we just want the sign bit then we don't need to shift it.
-    if (OriginalDemandedBits.isSignMask())
+    // If we only want bits that already match the signbit then we don't need
+    // to shift.
+    unsigned NumHiDemandedBits = BitWidth - OriginalDemandedBits.countr_zero();
+    if (TLO.DAG.ComputeNumSignBits(Op0, OriginalDemandedElts, Depth + 1) >=
+        NumHiDemandedBits)
       return TLO.CombineTo(Op, Op0);
 
     // fold (VSRAI (VSHLI X, C1), C1) --> X iff NumSignBits(X) > C1
@@ -45169,6 +45172,18 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::Wrapper:
   case X86ISD::WrapperRIP:
     return true;
+  case X86ISD::PACKSS:
+  case X86ISD::PACKUS: {
+    APInt DemandedLHS, DemandedRHS;
+    getPackDemandedElts(Op.getSimpleValueType(), DemandedElts, DemandedLHS,
+                        DemandedRHS);
+    return (!DemandedLHS ||
+            DAG.isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedLHS,
+                                                 PoisonOnly, Depth + 1)) &&
+           (!DemandedRHS ||
+            DAG.isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedRHS,
+                                                 PoisonOnly, Depth + 1));
+  }
   case X86ISD::INSERTPS:
   case X86ISD::BLENDI:
   case X86ISD::PSHUFB:
@@ -45238,6 +45253,10 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   // SSE blends.
   case X86ISD::BLENDI:
   case X86ISD::BLENDV:
+    return false;
+  // SSE packs.
+  case X86ISD::PACKSS:
+  case X86ISD::PACKUS:
     return false;
   // SSE target shuffles.
   case X86ISD::INSERTPS:

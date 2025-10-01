@@ -1603,18 +1603,7 @@ add_entrypoint_object(
   HDRS
     ../exp10m1f16.h
   DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.macros.optimization
-    libc.src.__support.macros.properties.cpu_features
-    libc.src.__support.math.exp10f16_utils
+    libc.src.__support.math.exp10m1f16
 )
 
 add_entrypoint_object(

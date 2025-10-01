@@ -753,3 +753,50 @@ exit:
   %r.0.lcssa = phi i64 [ %rdx.next, %loop ]
   ret i64 %r.0.lcssa
 }
+
+define i64 @print_mulacc_duplicate_extends(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
+; CHECK-LABEL: 'print_mulacc_duplicate_extends'
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK:      vector.ph:
+; CHECK-NEXT:   EMIT vp<[[RDX_START:%.+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vector.body:
+; CHECK-NEXT:     EMIT vp<[[IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[IV_NEXT:%.+]]>
+; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<[[RDX:%.+]]> = phi vp<[[RDX_START]]>, vp<[[RDX_NEXT:%.+]]>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[IV]]>, ir<1>
+; CHECK-NEXT:     CLONE ir<[[ARRAYIDX0:%.+]]> = getelementptr inbounds ir<%x>, vp<[[STEPS]]>
+; CHECK-NEXT:     vp<[[ADDR0:%.+]]> = vector-pointer ir<[[ARRAYIDX0]]>
+; CHECK-NEXT:     WIDEN ir<[[LOAD0:%.+]]> = load vp<[[ADDR0]]>
+; CHECK-NEXT:     EXPRESSION vp<[[RDX_NEXT:%.+]]> = ir<[[RDX]]> + reduce.sub (mul nsw (ir<[[LOAD0]]> sext to i64), (ir<[[LOAD0]]> sext to i64))
+; CHECK-NEXT:     EMIT vp<[[IV_NEXT]]> = add nuw vp<[[IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT branch-on-count vp<[[IV_NEXT]]>, vp<[[VTC]]>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %rdx = phi i64 [ %rdx.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i16, ptr %x, i32 %iv
+  %load0 = load i16, ptr %arrayidx, align 4
+  %conv0 = sext i16 %load0 to i32
+  %mul = mul nsw i32 %conv0, %conv0
+  %conv = sext i32 %mul to i64
+  %rdx.next = sub nsw i64 %rdx, %conv
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %r.0.lcssa = phi i64 [ %rdx.next, %loop ]
+  ret i64 %r.0.lcssa
+}

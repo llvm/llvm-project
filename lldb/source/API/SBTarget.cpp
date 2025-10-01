@@ -255,6 +255,7 @@ SBProcess SBTarget::LoadCore(const char *core_file, lldb::SBError &error) {
     ProcessSP process_sp(target_sp->CreateProcess(
         target_sp->GetDebugger().GetListener(), "", &filespec, false));
     if (process_sp) {
+      ElapsedTime loadCoreTime(target_sp->GetStatistics().GetLoadCoreTime());
       error.SetError(process_sp->LoadCore());
       if (error.Success())
         sb_process.SetSP(process_sp);

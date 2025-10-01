@@ -2388,14 +2388,23 @@ OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::ComplexRealOp::verify() {
-  if (getType() != getOperand().getType().getElementType()) {
+  mlir::Type operandTy = getOperand().getType();
+  if (auto complexOperandTy = mlir::dyn_cast<cir::ComplexType>(operandTy)) {
+    operandTy = complexOperandTy.getElementType();
+  }
+
+  if (getType() != operandTy) {
     emitOpError() << ": result type does not match operand type";
     return failure();
   }
+
   return success();
 }
 
 OpFoldResult cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
+  if (!mlir::isa<cir::ComplexType>(getOperand().getType()))
+    return nullptr;
+
   if (auto complexCreateOp = getOperand().getDefiningOp<cir::ComplexCreateOp>())
     return complexCreateOp.getOperand(0);
 
