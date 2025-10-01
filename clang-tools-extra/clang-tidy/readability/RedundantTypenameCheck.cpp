@@ -28,22 +28,18 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
 
   // NOLINTBEGIN(readability-identifier-naming)
   const VariadicDynCastAllOfMatcher<Stmt, CXXNamedCastExpr> cxxNamedCastExpr;
-  const auto inImplicitTypenameContext = [&] {
-    return anyOf(hasParent(typedefNameDecl()),
-                 hasParent(templateTypeParmDecl()),
-                 hasParent(nonTypeTemplateParmDecl()),
-                 hasParent(cxxNamedCastExpr()), hasParent(cxxNewExpr()),
-                 hasParent(friendDecl()), hasParent(fieldDecl()),
-                 hasParent(parmVarDecl(hasParent(expr(requiresExpr())))),
-                 hasParent(parmVarDecl(hasParent(typeLoc(hasParent(namedDecl(
-                     anyOf(cxxMethodDecl(), hasParent(friendDecl()),
-                           functionDecl(has(nestedNameSpecifier()))))))))),
-                 // Match return types.
-                 hasParent(functionDecl(unless(cxxConversionDecl()))));
-  };
+  const auto inImplicitTypenameContext = anyOf(
+      hasParent(typedefNameDecl()), hasParent(templateTypeParmDecl()),
+      hasParent(nonTypeTemplateParmDecl()), hasParent(cxxNamedCastExpr()),
+      hasParent(cxxNewExpr()), hasParent(friendDecl()), hasParent(fieldDecl()),
+      hasParent(parmVarDecl(hasParent(expr(requiresExpr())))),
+      hasParent(parmVarDecl(hasParent(typeLoc(hasParent(
+          namedDecl(anyOf(cxxMethodDecl(), hasParent(friendDecl()),
+                          functionDecl(has(nestedNameSpecifier()))))))))),
+      // Match return types.
+      hasParent(functionDecl(unless(cxxConversionDecl()))));
   // NOLINTEND(readability-identifier-naming)
-  Finder->addMatcher(typeLoc(inImplicitTypenameContext()).bind("typeloc"),
-                     this);
+  Finder->addMatcher(typeLoc(inImplicitTypenameContext).bind("typeloc"), this);
 }
 
 void RedundantTypenameCheck::check(const MatchFinder::MatchResult &Result) {
