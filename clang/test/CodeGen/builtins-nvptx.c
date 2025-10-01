@@ -1237,7 +1237,7 @@ __device__ void nvvm_cvt_sm100a_sm103a() {
 // CHECK_PTX87_SM100a: %[[R4:.*]] = call <2 x half> @llvm.nvvm.ff2f16x2.rs.relu.satfinite(float 1.000000e+00, float 1.000000e+00, i32 0)
 // CHECK_PTX87_SM100a: store <2 x half> %[[R4]], ptr %r4
 // CHECK_PTX87_SM103a: %[[R4:.*]] = call <2 x half> @llvm.nvvm.ff2f16x2.rs.relu.satfinite(float 1.000000e+00, float 1.000000e+00, i32 0)
-// CHECK_PTX87_SM103a: store <2 x half> %[[R4]], ptr
+// CHECK_PTX87_SM103a: store <2 x half> %[[R4]], ptr %r4
   f16x2 r4 =  __nvvm_ff2f16x2_rs_relu_satfinite(1.0f, 1.0f, 0);
 
 // CHECK_PTX87_SM100a: %[[R5:.*]] = call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rs(float 1.000000e+00, float 1.000000e+00, i32 0)
