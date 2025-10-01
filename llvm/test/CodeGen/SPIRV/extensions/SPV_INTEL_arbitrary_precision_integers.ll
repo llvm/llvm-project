@@ -8,6 +8,10 @@ define i13 @getConstantI13() {
   ret i13 42
 }
 
+define i96 @getConstantI96() {
+  ret i96 18446744073709551620
+} 
+
 ;; Capabilities:
 ; CHECK-DAG: OpExtension "SPV_INTEL_arbitrary_precision_integers"
 ; CHECK-DAG: OpCapability ArbitraryPrecisionIntegersINTEL
