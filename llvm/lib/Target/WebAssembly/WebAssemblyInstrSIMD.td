@@ -1597,17 +1597,11 @@ multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS, list<Predicate>
            vec.prefix#".relaxed_nmadd\t$dst, $a, $b, $c",
            vec.prefix#".relaxed_nmadd", simdopS, reqs>;
 
-  def : Pat<(fadd_contract (vec.vt V128:$a), (fmul_contract (vec.vt V128:$b), (vec.vt V128:$c))),
+  def : Pat<(fma (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)),
              (!cast<Instruction>("MADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
 
-  def : Pat<(fma (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)),
-             (!cast<Instruction>("MADD_"#vec) V128:$c, V128:$a, V128:$b)>, Requires<[HasRelaxedSIMD]>;
-
-  def : Pat<(fsub_contract (vec.vt V128:$a), (fmul_contract (vec.vt V128:$b), (vec.vt V128:$c))),
-             (!cast<Instruction>("NMADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
-
   def : Pat<(fma (fneg (vec.vt V128:$a)), (vec.vt V128:$b), (vec.vt V128:$c)),
-             (!cast<Instruction>("NMADD_"#vec) V128:$c, V128:$a, V128:$b)>, Requires<[HasRelaxedSIMD]>;
+             (!cast<Instruction>("NMADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
 
 }
 
