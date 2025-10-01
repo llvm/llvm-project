@@ -2843,9 +2843,9 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                 symbol_name, symbol_name_non_abi_mangled,
                                 type)) {
                           demangled_is_synthesized = true;
-                        } else if (nlist.n_value != 0)
-                            symbol_section = section_info.GetSection(
-                                nlist.n_sect, nlist.n_value);
+                        } else if (nlist.n_value != 0) {
+                          symbol_section = section_info.GetSection(
+                              nlist.n_sect, nlist.n_value);
                           type = eSymbolTypeData;
                         }
                         break;
@@ -3643,9 +3643,9 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           if (TryParseV2ObjCMetadataSymbol(symbol_name,
                                            symbol_name_non_abi_mangled, type)) {
             demangled_is_synthesized = true;
-          } else if (nlist.n_value != 0)
-              symbol_section =
-                  section_info.GetSection(nlist.n_sect, nlist.n_value);
+          } else if (nlist.n_value != 0) {
+            symbol_section =
+                section_info.GetSection(nlist.n_sect, nlist.n_value);
             type = eSymbolTypeData;
           }
         } break;
