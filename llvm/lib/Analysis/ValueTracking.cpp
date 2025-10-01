@@ -7651,9 +7651,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         return true;
     }
 
-    if (!::canCreateUndefOrPoison(Opr, Kind,
-                                  /*ConsiderFlagsAndMetadata=*/true)) {
-      if (const auto *PN = dyn_cast<PHINode>(V)) {
+    if (const auto *PN = dyn_cast<PHINode>(V)) {
+      if (!includesPoison(Kind) || !PN->hasPoisonGeneratingFlags()) {
         unsigned Num = PN->getNumIncomingValues();
         bool IsWellDefined = true;
         for (unsigned i = 0; i < Num; ++i) {
@@ -7668,9 +7667,11 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         }
         if (IsWellDefined)
           return true;
-      } else if (all_of(Opr->operands(), OpCheck))
-        return true;
-    }
+      }
+    } else if (!::canCreateUndefOrPoison(Opr, Kind,
+                                         /*ConsiderFlagsAndMetadata=*/true) &&
+               all_of(Opr->operands(), OpCheck))
+      return true;
   }
 
   if (auto *I = dyn_cast<LoadInst>(V))
