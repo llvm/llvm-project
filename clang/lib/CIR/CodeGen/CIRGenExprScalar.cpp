@@ -1904,7 +1904,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                                         Src, MiddleTy);
 
     if (cgf.cgm.getCodeGenOpts().StrictVTablePointers)
-      llvm_unreachable("NYI");
+      cgf.cgm.errorNYI(subExpr->getSourceRange(), "IntegralToPointer: strict vtable pointers");
 
     return builder.createIntToPtr(MiddleVal, DestCIRTy);
   }
