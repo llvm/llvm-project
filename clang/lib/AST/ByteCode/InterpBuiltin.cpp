@@ -2773,10 +2773,8 @@ static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-enum class Half { None, Low, High };
-
 static bool interp__builtin_ia32_pshuf(InterpState &S, CodePtr OpPC,
-                                       const CallExpr *Call, Half whichHalf) {
+                                       const CallExpr *Call, bool IsShufHW) {
   assert(Call->getNumArgs() == 2 && "masked forms handled via select*");
   APSInt ControlImm = popToAPSInt(S, Call->getArg(1));
   const Pointer &Src = S.Stk.pop<Pointer>();
@@ -2792,38 +2790,28 @@ static bool interp__builtin_ia32_pshuf(InterpState &S, CodePtr OpPC,
   unsigned LaneElts = 128u / ElemBits;
   assert(LaneElts && (NumElems % LaneElts == 0));
 
-  uint8_t ctl = static_cast<uint8_t>(ControlImm.getZExtValue());
+  uint8_t Ctl = static_cast<uint8_t>(ControlImm.getZExtValue());
 
-  for (unsigned idx = 0; idx != NumElems; idx++) {
-    unsigned LaneBase = (idx / LaneElts) * LaneElts;
-    unsigned LaneIdx = idx % LaneElts;
-
-    unsigned SrcIdx = idx;
+  for (unsigned Idx = 0; Idx != NumElems; Idx++) {
+    unsigned LaneBase = (Idx / LaneElts) * LaneElts;
+    unsigned LaneIdx = Idx % LaneElts;
+    unsigned SrcIdx = Idx;
+    unsigned Sel = (Ctl >> (2 * LaneIdx)) & 0x3;
 
     if (ElemBits == 32) {
-      unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
-      SrcIdx = LaneBase + sel;
+      SrcIdx = LaneBase + Sel;
     } else {
-      if (LaneElts == 4) {
-        unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
-        SrcIdx = LaneBase + sel;
-      } else {
-        constexpr unsigned HalfSize = 4;
-        if (whichHalf == Half::Low && LaneIdx < HalfSize) {
-          unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
-          SrcIdx = LaneBase + sel;
-        } else if (whichHalf == Half::High && LaneIdx >= HalfSize) {
-          unsigned rel = LaneIdx - HalfSize;
-          unsigned sel = (ctl >> (2 * rel)) & 0x3;
-          SrcIdx = LaneBase + HalfSize + sel;
-        } else if (whichHalf == Half::None) {
-          unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
-          SrcIdx = LaneBase + sel;
-        }
+      unsigned HalfSize = 4;
+      if (!IsShufHW && LaneIdx < HalfSize) {
+        SrcIdx = LaneBase + Sel;
+      } else if (IsShufHW && LaneIdx >= HalfSize) {
+        unsigned Rel = LaneIdx - HalfSize;
+        Sel = (Ctl >> (2 * Rel)) & 0x3;
+        SrcIdx = LaneBase + HalfSize + Sel;
       }
     }
 
-    INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(idx) = Src.elem<T>(SrcIdx); });
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(Idx) = Src.elem<T>(SrcIdx); });
   }
   Dst.initializeAllElements();
   return true;
@@ -3665,17 +3653,17 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_pshuflw:
   case X86::BI__builtin_ia32_pshuflw256:
   case X86::BI__builtin_ia32_pshuflw512:
-    return interp__builtin_ia32_pshuf(S, OpPC, Call, Half::Low);
+    return interp__builtin_ia32_pshuf(S, OpPC, Call, false);
 
   case X86::BI__builtin_ia32_pshufhw:
   case X86::BI__builtin_ia32_pshufhw256:
   case X86::BI__builtin_ia32_pshufhw512:
-    return interp__builtin_ia32_pshuf(S, OpPC, Call, Half::High);
+    return interp__builtin_ia32_pshuf(S, OpPC, Call, true);
 
   case X86::BI__builtin_ia32_pshufd:
   case X86::BI__builtin_ia32_pshufd256:
   case X86::BI__builtin_ia32_pshufd512:
-    return interp__builtin_ia32_pshuf(S, OpPC, Call, Half::None);
+    return interp__builtin_ia32_pshuf(S, OpPC, Call, false);
 
   case X86::BI__builtin_ia32_kandqi:
   case X86::BI__builtin_ia32_kandhi:
