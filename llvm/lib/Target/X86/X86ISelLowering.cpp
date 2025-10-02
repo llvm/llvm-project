@@ -25504,8 +25504,9 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // Promote small integer types to avoid partial register stalls
-  // Exception: For i8 without CMOV, prefer native 8-bit constant-time operations
-  if ((Op.getValueType() == MVT::i8 && Subtarget.canUseCMOV()) ||
+  // Exception: For i8 without CMOV, we can generate a shorter instruction
+  // sequence without movzx so keep it as is.
+  if ((Op.getValueType() == MVT::i8 && Subtarget.hasCMOV()) ||
       (Op.getValueType() == MVT::i16 && !X86::mayFoldLoad(TrueOp, Subtarget) &&
        !X86::mayFoldLoad(FalseOp, Subtarget))) {
     TrueOp = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, TrueOp);

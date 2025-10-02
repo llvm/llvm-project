@@ -114,7 +114,7 @@ let Uses = [EFLAGS], isNotDuplicable = 1, isPseudo = 1 in {
 
   multiclass CTSELECT<X86TypeInfo t> {
     // register-only
-    let isCommutable = 0, SchedRW = [WriteCMOV], Predicates = [HasCMOV],
+    let isCommutable = 0, SchedRW = [WriteCMOV], Predicates = [HasNativeCMOV],
         AsmString = "ctselect\\t$dst, $src1, $src2, $cond" in {
       def rr : PseudoI<(outs t.RegClass:$dst),
                        (ins t.RegClass:$src1, t.RegClass:$src2, i8imm:$cond),
@@ -122,7 +122,7 @@ let Uses = [EFLAGS], isNotDuplicable = 1, isPseudo = 1 in {
     }
 
     // register-memory
-    let SchedRW = [WriteCMOV.Folded, WriteCMOV.ReadAfterFold], Predicates = [HasCMOV],
+    let SchedRW = [WriteCMOV.Folded, WriteCMOV.ReadAfterFold], Predicates = [HasNativeCMOV],
         AsmString = "ctselect\\t$dst, $src1, $src2, $cond" in {
       def rm : PseudoI<(outs t.RegClass:$dst),
                        (ins t.RegClass:$src1, t.MemOperand:$src2, i8imm:$cond),
