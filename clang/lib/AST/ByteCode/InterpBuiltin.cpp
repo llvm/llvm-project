@@ -2969,18 +2969,18 @@ static bool interp__builtin_ia32_pternlog_maskz(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_ia32_pternlog_mask(InterpState &S, CodePtr OpPC,
-                                               const CallExpr *Call) {
+static bool interp__builtin_ia32_pternlog(InterpState &S, CodePtr OpPC,
+                                               const CallExpr *Call, bool MaskZ) {
   assert(Call->getNumArgs() == 5);
 
   const VectorType *VecT = Call->getArg(0)->getType()->castAs<VectorType>();
-  const unsigned DstLen = VecT->getNumElements();
   const PrimType &DstElemT = *S.getContext().classify(VecT->getElementType());
-  const bool DstUnsigned =
+  unsigned DstLen = VecT->getNumElements();
+  bool DstUnsigned =
       VecT->getElementType()->isUnsignedIntegerOrEnumerationType();
 
-  const APInt U = popToAPSInt(S, Call->getArg(4));
-  const APInt Imm = popToAPSInt(S, Call->getArg(3));
+  APInt U = popToAPSInt(S, Call->getArg(4));
+  APInt Imm = popToAPSInt(S, Call->getArg(3));
   const Pointer &C = S.Stk.pop<Pointer>();
   const Pointer &B = S.Stk.pop<Pointer>();
   const Pointer &A = S.Stk.pop<Pointer>();
@@ -2999,7 +2999,7 @@ static bool interp__builtin_ia32_pternlog_mask(InterpState &S, CodePtr OpPC,
     const unsigned BitWidth = ALane.getBitWidth();
     APInt RLane(BitWidth, 0);
 
-    if (U[I]) {
+    if (U[I]) { // If lane not masked, compute ternary logic
       for (unsigned Bit = 0; Bit < BitWidth; ++Bit) {
         unsigned ABit = ALane[Bit];
         unsigned BBit = BLane[Bit];
@@ -3011,7 +3011,11 @@ static bool interp__builtin_ia32_pternlog_mask(InterpState &S, CodePtr OpPC,
       INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
         Dst.elem<T>(I) = static_cast<T>(APSInt(RLane, DstUnsigned));
       });
-    } else {
+    } else if (MaskZ) { // If zero masked, zero the lane
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+        Dst.elem<T>(I) = static_cast<T>(APSInt(RLane, DstUnsigned));
+            });
+    } else { // Just masked, put in A lane
       INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
         Dst.elem<T>(I) = static_cast<T>(APSInt(ALane, DstUnsigned));
       });
@@ -3880,14 +3884,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_pternlogq128_mask:
   case X86::BI__builtin_ia32_pternlogq256_mask:
   case X86::BI__builtin_ia32_pternlogq512_mask:
-    return interp__builtin_ia32_pternlog_mask(S, OpPC, Call);
+    return interp__builtin_ia32_pternlog(S, OpPC, Call, /* MaskZ = */false);
   case X86::BI__builtin_ia32_pternlogd128_maskz:
   case X86::BI__builtin_ia32_pternlogd256_maskz:
   case X86::BI__builtin_ia32_pternlogd512_maskz:
   case X86::BI__builtin_ia32_pternlogq128_maskz:
   case X86::BI__builtin_ia32_pternlogq256_maskz:
   case X86::BI__builtin_ia32_pternlogq512_maskz:
-    return interp__builtin_ia32_pternlog_maskz(S, OpPC, Call);
+    return interp__builtin_ia32_pternlog(S, OpPC, Call, /* MaskZ = */true);
   case Builtin::BI__builtin_elementwise_fshl:
     return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshl);
