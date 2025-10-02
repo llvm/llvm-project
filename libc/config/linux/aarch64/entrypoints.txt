@@ -325,7 +325,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.dup2
     libc.src.unistd.dup3
     libc.src.unistd.execve
-    libc.src.unistd.faccessat
+    # Disabled while SYS_faccessat2 is unavailable on the buildbot.
+    # libc.src.unistd.faccessat
     libc.src.unistd.fchdir
     libc.src.unistd.fpathconf
     libc.src.unistd.fsync

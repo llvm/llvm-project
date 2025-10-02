@@ -220,7 +220,6 @@ private:
   std::vector<std::string> VisibleModules;
   std::vector<Command> Commands;
   std::string ContextHash;
-  std::vector<std::string> OutputPaths;
   const llvm::DenseSet<ModuleID> &AlreadySeen;
 };
 
