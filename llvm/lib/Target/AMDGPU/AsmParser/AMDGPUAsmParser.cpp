@@ -9180,15 +9180,15 @@ static bool isRegOrImmWithInputMods(const MCInstrDesc &Desc, unsigned OpNum) {
 
 void AMDGPUAsmParser::cvtOpSelHelper(MCInst &Inst, unsigned OpSel) {
   unsigned Opc = Inst.getOpcode();
-  const AMDGPU::OpName Ops[] = {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
+  constexpr AMDGPU::OpName Ops[] = {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
                                 AMDGPU::OpName::src2};
-  const AMDGPU::OpName ModOps[] = {AMDGPU::OpName::src0_modifiers,
+  constexpr AMDGPU::OpName ModOps[] = {AMDGPU::OpName::src0_modifiers,
                                    AMDGPU::OpName::src1_modifiers,
                                    AMDGPU::OpName::src2_modifiers};
-  // Some v_interp instructions in GFX9 have src0, src2, but no src1.
   for (int J = 0; J < 3; ++J) {
     int OpIdx = AMDGPU::getNamedOperandIdx(Opc, Ops[J]);
     if (OpIdx == -1)
+      // Some instructions, e.g. v_interp_p2_f16 in GFX9, have src0, src2, but no src1. So continue instead of break.
       continue;
 
     int ModIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
