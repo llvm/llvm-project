@@ -2762,7 +2762,7 @@ static bool interp_builtin_horizontal_int_binop(
       });
     }
 
-for (unsigned I = 0; I < EltsPerLane; I += 2) {
+    for (unsigned I = 0; I < EltsPerLane; I += 2) {
       INT_TYPE_SWITCH_NO_BOOL(ElemT, {
         APSInt Elem1 = RHS.elem<T>(LaneStart + I).toAPSInt();
         APSInt Elem2 = RHS.elem<T>(LaneStart + I + 1).toAPSInt();
