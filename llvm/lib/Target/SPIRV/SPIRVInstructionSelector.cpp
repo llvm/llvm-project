@@ -3505,7 +3505,7 @@ bool SPIRVInstructionSelector::selectCounterHandleFromBinding(
   uint32_t Binding = getIConstVal(Intr.getOperand(3).getReg(), MRI);
   uint32_t ArraySize = getIConstVal(MainHandleDef->getOperand(4).getReg(), MRI);
   Register IndexReg = MainHandleDef->getOperand(5).getReg();
-  bool IsNonUniform = false;
+  const bool IsNonUniform = false;
   std::string CounterName =
       getStringValueFromReg(MainHandleDef->getOperand(6).getReg(), *MRI) +
       ".counter";
