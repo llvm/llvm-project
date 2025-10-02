@@ -507,10 +507,14 @@ if(build_runtimes)
   endif()
 
   # Forward user-provived system configuration to runtimes for requirement introspection.
-  # CMAKE_PREFIX_PATH is the search path for CMake packages.
+  # CMAKE_PREFIX_PATH is the search path for CMake packages. In order to pass through
+  # the command line interface, the CMake semicolon separator needs to be replaced
+  # with $<SEMICOLON>
   if(CMAKE_PREFIX_PATH)
-    list(APPEND extra_cmake_args "-DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
+    string(JOIN "$<SEMICOLON>" escaped_cmake_prefix_path ${CMAKE_PREFIX_PATH})
+    list(APPEND extra_cmake_args "-DCMAKE_PREFIX_PATH=${escaped_cmake_prefix_path}")
   endif()
+
   # CMAKE_PROGRAM_PATH is the search path for executables such as python.
   if(CMAKE_PROGRAM_PATH)
     list(APPEND extra_cmake_args "-DCMAKE_PROGRAM_PATH=${CMAKE_PROGRAM_PATH}")
@@ -531,6 +535,10 @@ if(build_runtimes)
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
+  endif()
+  # Allow openmp to see the Fortran compiler
+  if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND "flang" IN_LIST LLVM_ENABLE_PROJECTS)
+    list(APPEND extra_args ENABLE_FORTRAN)
   endif()
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
     if (${LLVM_TOOL_FLANG_BUILD})
