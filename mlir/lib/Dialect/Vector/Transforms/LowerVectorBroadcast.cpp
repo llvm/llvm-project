@@ -34,7 +34,7 @@ namespace {
 /// convertible to the lower level target dialect (LLVM, SPIR-V, etc.) directly.
 class BroadcastOpLowering : public OpRewritePattern<vector::BroadcastOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::BroadcastOp op,
                                 PatternRewriter &rewriter) const override {

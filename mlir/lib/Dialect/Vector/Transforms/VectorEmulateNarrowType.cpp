@@ -548,7 +548,7 @@ namespace {
 // NOTE: By default, all RMW sequences are atomic. Set `disableAtomicRMW` to
 // `false` to generate non-atomic RMW sequences.
 struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   ConvertVectorStore(MLIRContext *context, bool disableAtomicRMW)
       : OpConversionPattern<vector::StoreOp>(context),
@@ -827,7 +827,7 @@ private:
 /// adjusted mask .
 struct ConvertVectorMaskedStore final
     : OpConversionPattern<vector::MaskedStoreOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::MaskedStoreOp op, OpAdaptor adaptor,
@@ -950,7 +950,7 @@ struct ConvertVectorMaskedStore final
 /// those cases, loads are converted to byte-aligned, byte-sized loads and the
 /// target vector is extracted from the loaded vector.
 struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::LoadOp op, OpAdaptor adaptor,
@@ -1059,7 +1059,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
 /// bitcasting, since each `i8` container element holds two `i4` values.
 struct ConvertVectorMaskedLoad final
     : OpConversionPattern<vector::MaskedLoadOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::MaskedLoadOp op, OpAdaptor adaptor,
@@ -1257,7 +1257,7 @@ static bool fitsInMultiByteContainerTy(VectorType subByteVecTy,
 // TODO: Document-me
 struct ConvertVectorTransferRead final
     : OpConversionPattern<vector::TransferReadOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::TransferReadOp op, OpAdaptor adaptor,
@@ -1942,7 +1942,7 @@ namespace {
 /// advantage of high-level information to avoid leaving LLVM to scramble with
 /// peephole optimizations.
 struct RewriteBitCastOfTruncI : OpRewritePattern<vector::BitCastOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::BitCastOp bitCastOp,
                                 PatternRewriter &rewriter) const override {
@@ -2147,7 +2147,7 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
 ///   %5 = vector.bitcast %4 : vector<4xi8> to vector<8xi4>
 ///
 struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
-  using OpRewritePattern<arith::TruncIOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::TruncIOp truncOp,
                                 PatternRewriter &rewriter) const override {
@@ -2200,7 +2200,7 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
 ///   %2 = arith.trunci %1 : vector<16x8xi8> to vector<16x8xi4>
 ///
 struct RewriteVectorTranspose : OpRewritePattern<vector::TransposeOp> {
-  using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
+  using Base::Base;
 
   RewriteVectorTranspose(MLIRContext *context, PatternBenefit benefit)
       : OpRewritePattern<vector::TransposeOp>(context, benefit) {}
