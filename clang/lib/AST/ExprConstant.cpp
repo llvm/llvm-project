@@ -12258,7 +12258,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
-  
+
   case Builtin::BI__builtin_elementwise_clzg:
   case Builtin::BI__builtin_elementwise_ctzg: {
     APValue SourceLHS;

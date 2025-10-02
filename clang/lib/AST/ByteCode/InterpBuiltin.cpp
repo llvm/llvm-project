@@ -3012,8 +3012,9 @@ static bool interp__builtin_ia32_pternlog_mask(InterpState &S, CodePtr OpPC,
         Dst.elem<T>(I) = static_cast<T>(APSInt(RLane, DstUnsigned));
       });
     } else {
-      INT_TYPE_SWITCH_NO_BOOL(DstElemT,
-                              { Dst.elem<T>(I) = static_cast<T>(APSInt(ALane, DstUnsigned)); });
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+        Dst.elem<T>(I) = static_cast<T>(APSInt(ALane, DstUnsigned));
+      });
     }
   }
   Dst.initializeAllElements();
