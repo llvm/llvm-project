@@ -3160,7 +3160,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_AdjustNumTeamsForXteamRedSmallBlockSize(
             "LIBOMPTARGET_AMDGPU_ADJUST_XTEAM_RED_TEAMS", 1),
         OMPX_GenericSpmdUseSmallBlockSize(
-            "LIBOMPTARGET_AMDGPU_GENERIC_SPMD_USE_SMALL_BLOCKSIZE", 0),
+            "LIBOMPTARGET_AMDGPU_GENERIC_SPMD_USE_SMALL_BLOCKSIZE", 1),
         OMPX_MaxAsyncCopyBytes("LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES",
                                64 * 1024),
         OMPX_InitialNumSignals("LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS",
