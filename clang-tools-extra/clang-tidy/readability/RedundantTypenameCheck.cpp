@@ -25,18 +25,18 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
     return;
 
   const auto InImplicitTypenameContext = anyOf(
-      hasParent(typedefNameDecl()), hasParent(templateTypeParmDecl()),
-      hasParent(nonTypeTemplateParmDecl()), hasParent(cxxNamedCastExpr()),
-      hasParent(cxxNewExpr()), hasParent(friendDecl()), hasParent(fieldDecl()),
-      hasParent(
+      hasParent(decl(anyOf(
+          typedefNameDecl(), templateTypeParmDecl(), nonTypeTemplateParmDecl(),
+          friendDecl(), fieldDecl(),
           varDecl(hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())),
-                  unless(parmVarDecl()))),
-      hasParent(parmVarDecl(hasParent(expr(requiresExpr())))),
-      hasParent(parmVarDecl(hasParent(typeLoc(hasParent(
-          namedDecl(anyOf(cxxMethodDecl(), hasParent(friendDecl()),
-                          functionDecl(has(nestedNameSpecifier()))))))))),
-      // Match return types.
-      hasParent(functionDecl(unless(cxxConversionDecl()))));
+                  unless(parmVarDecl())),
+          parmVarDecl(hasParent(expr(requiresExpr()))),
+          parmVarDecl(hasParent(typeLoc(hasParent(
+              decl(anyOf(cxxMethodDecl(), hasParent(friendDecl()),
+                         functionDecl(has(nestedNameSpecifier())))))))),
+          // Match return types.
+          functionDecl(unless(cxxConversionDecl()))))),
+      hasParent(expr(anyOf(cxxNamedCastExpr(), cxxNewExpr()))));
   Finder->addMatcher(typeLoc(InImplicitTypenameContext).bind("typeloc"), this);
 }
 
