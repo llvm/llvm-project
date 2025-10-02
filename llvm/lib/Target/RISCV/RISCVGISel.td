@@ -110,16 +110,15 @@ def : StPat<truncstorei8, SB, GPR, i16>;
 
 let Predicates = [HasAtomicLdSt] in {
   // Prefer unsigned due to no c.lb in Zcb.
-  def : LdPat<atomic_load_aext_8,    LBU, i16>;
-  def : LdPat<atomic_load_nonext_16, LH,  i16>;
+  def : LdPat<relaxed_load<atomic_load_aext_8>,    LBU, i16>;
+  def : LdPat<relaxed_load<atomic_load_nonext_16>, LH,  i16>;
 
-  def : StPat<atomic_store_8,  SB, GPR, i16>;
-  def : StPat<atomic_store_16, SH, GPR, i16>;
+  def : StPat<relaxed_store<atomic_store_8>,  SB, GPR, i16>;
+  def : StPat<relaxed_store<atomic_store_16>, SH, GPR, i16>;
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
-  def : LdPat<atomic_load_nonext_32, LW, i32>;
-  def : StPat<atomic_store_32, SW, GPR, i32>;
+  def : StPat<relaxed_store<atomic_store_32>, SW, GPR, i32>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -201,4 +200,29 @@ def : Pat<(i32 (zext (i16 GPR:$rs))), (PACK GPR:$rs, (XLenVT X0))>;
 let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV64] in {
 def : Pat<(i64 (zext (i16 GPR:$rs))), (PACKW GPR:$rs, (XLenVT X0))>;
 def : Pat<(i32 (zext (i16 GPR:$rs))), (PACKW GPR:$rs, (XLenVT X0))>;
+}
+
+//===----------------------------------------------------------------------===//
+// Zalasr patterns not used by SelectionDAG
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtZalasr] in {
+  // the sequentially consistent loads use
+  //  .aq instead of .aqrl to match the psABI/A.7
+  def : PatLAQ<acquiring_load<atomic_load_aext_8>, LB_AQ, i16>;
+  def : PatLAQ<seq_cst_load<atomic_load_aext_8>, LB_AQ, i16>;
+
+  def : PatLAQ<acquiring_load<atomic_load_nonext_16>, LH_AQ, i16>;
+  def : PatLAQ<seq_cst_load<atomic_load_nonext_16>, LH_AQ, i16>;
+
+  def : PatSRL<releasing_store<atomic_store_8>, SB_RL, i16>;
+  def : PatSRL<seq_cst_store<atomic_store_8>, SB_RL, i16>;
+
+  def : PatSRL<releasing_store<atomic_store_16>, SH_RL, i16>;
+  def : PatSRL<seq_cst_store<atomic_store_16>, SH_RL, i16>;
+}
+
+let Predicates = [HasStdExtZalasr, IsRV64] in {
+  def : PatSRL<releasing_store<atomic_store_32>, SW_RL, i32>;
+  def : PatSRL<seq_cst_store<atomic_store_32>, SW_RL, i32>;
 }
