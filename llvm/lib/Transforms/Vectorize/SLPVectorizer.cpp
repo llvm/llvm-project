@@ -2242,7 +2242,7 @@ public:
   ///       may not be necessary.
   bool isLoadCombineCandidate(ArrayRef<Value *> Stores) const;
   bool isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
-                     Align Alignment, int64_t Diff, size_t VecSz) const;
+                     Align Alignment, int64_t Diff, size_t Sz) const;
   /// Given a set of pointers, check if they can be rearranged as follows (%s is
   /// a constant):
   ///  %b + 0 * %s + 0
@@ -6845,7 +6845,7 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 /// current graph (for masked gathers extra extractelement instructions
 /// might be required).
 bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
-                            Align Alignment, int64_t Diff, size_t VecSz) const {
+                            Align Alignment, int64_t Diff, size_t Sz) const {
   // Try to generate strided load node.
   auto IsAnyPointerUsedOutGraph = any_of(PointerOps, [&](Value *V) {
     return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
@@ -6854,15 +6854,15 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
   });
 
   const uint64_t AbsoluteDiff = std::abs(Diff);
-  auto *VecTy = getWidenedType(ScalarTy, VecSz);
+  auto *VecTy = getWidenedType(ScalarTy, Sz);
   if (IsAnyPointerUsedOutGraph ||
-      (AbsoluteDiff > VecSz &&
-       (VecSz > MinProfitableStridedLoads ||
-        (AbsoluteDiff <= MaxProfitableLoadStride * VecSz &&
-         AbsoluteDiff % VecSz == 0 && has_single_bit(AbsoluteDiff / VecSz)))) ||
-      Diff == -(static_cast<int64_t>(VecSz) - 1)) {
-    int64_t Stride = Diff / static_cast<int64_t>(VecSz - 1);
-    if (Diff != Stride * static_cast<int64_t>(VecSz - 1))
+      (AbsoluteDiff > Sz &&
+       (Sz > MinProfitableStridedLoads ||
+        (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
+         AbsoluteDiff % Sz == 0 && has_single_bit(AbsoluteDiff / Sz)))) ||
+      Diff == -(static_cast<int64_t>(Sz) - 1)) {
+    int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
+    if (Diff != Stride * static_cast<int64_t>(Sz - 1))
       return false;
     if (!TTI->isLegalStridedLoadStore(VecTy, Alignment))
       return false;
