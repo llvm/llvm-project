@@ -2918,7 +2918,105 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
   });
 
   Dst.initializeAllElements();
+  return true;
+}
 
+static bool interp__builtin_ia32_pternlog_maskz(InterpState &S, CodePtr OpPC,
+                                                const CallExpr *Call) {
+  assert(Call->getNumArgs() == 5);
+
+  const VectorType *VecT = Call->getArg(0)->getType()->castAs<VectorType>();
+  const unsigned DstLen = VecT->getNumElements();
+  const PrimType &DstElemT = *S.getContext().classify(VecT->getElementType());
+  const bool DstUnsigned =
+      VecT->getElementType()->isUnsignedIntegerOrEnumerationType();
+
+  const APInt U = popToAPSInt(S, Call->getArg(4));
+  const APInt Imm = popToAPSInt(S, Call->getArg(3));
+  const Pointer &C = S.Stk.pop<Pointer>();
+  const Pointer &B = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  for (unsigned I = 0; I < DstLen; ++I) {
+    APInt ALane;
+    APInt BLane;
+    APInt CLane;
+    INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+      ALane = A.elem<T>(I).toAPSInt();
+      BLane = B.elem<T>(I).toAPSInt();
+      CLane = C.elem<T>(I).toAPSInt();
+    });
+    const unsigned BitWidth = ALane.getBitWidth();
+    APInt RLane(BitWidth, 0);
+
+    if (U[I]) {
+      for (unsigned Bit = 0; Bit < BitWidth; ++Bit) {
+        unsigned ABit = ALane[Bit];
+        unsigned BBit = BLane[Bit];
+        unsigned CBit = CLane[Bit];
+
+        unsigned Idx = (ABit << 2) | (BBit << 1) | (CBit);
+        RLane.setBitVal(Bit, Imm[Idx]);
+      }
+    }
+    INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+      Dst.elem<T>(I) = static_cast<T>(APSInt(RLane, DstUnsigned));
+    });
+  }
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp__builtin_ia32_pternlog_mask(InterpState &S, CodePtr OpPC,
+                                               const CallExpr *Call) {
+  assert(Call->getNumArgs() == 5);
+
+  const VectorType *VecT = Call->getArg(0)->getType()->castAs<VectorType>();
+  const unsigned DstLen = VecT->getNumElements();
+  const PrimType &DstElemT = *S.getContext().classify(VecT->getElementType());
+  const bool DstUnsigned =
+      VecT->getElementType()->isUnsignedIntegerOrEnumerationType();
+
+  const APInt U = popToAPSInt(S, Call->getArg(4));
+  const APInt Imm = popToAPSInt(S, Call->getArg(3));
+  const Pointer &C = S.Stk.pop<Pointer>();
+  const Pointer &B = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  for (unsigned I = 0; I < DstLen; ++I) {
+    APInt ALane;
+    APInt BLane;
+    APInt CLane;
+    INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+      ALane = A.elem<T>(I).toAPSInt();
+      BLane = B.elem<T>(I).toAPSInt();
+      CLane = C.elem<T>(I).toAPSInt();
+    });
+    const unsigned BitWidth = ALane.getBitWidth();
+    APInt RLane(BitWidth, 0);
+
+    if (U[I]) {
+      for (unsigned Bit = 0; Bit < BitWidth; ++Bit) {
+        unsigned ABit = ALane[Bit];
+        unsigned BBit = BLane[Bit];
+        unsigned CBit = CLane[Bit];
+
+        unsigned Idx = (ABit << 2) | (BBit << 1) | (CBit);
+        RLane.setBitVal(Bit, Imm[Idx]);
+      }
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+        Dst.elem<T>(I) = static_cast<T>(APSInt(RLane, DstUnsigned));
+      });
+    } else {
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT,
+                              { Dst.elem<T>(I) = static_cast<T>(APSInt(ALane, DstUnsigned)); });
+    }
+  }
+  Dst.initializeAllElements();
   return true;
 }
 
@@ -3775,6 +3873,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
 
+  case X86::BI__builtin_ia32_pternlogd128_mask:
+  case X86::BI__builtin_ia32_pternlogd256_mask:
+  case X86::BI__builtin_ia32_pternlogd512_mask:
+  case X86::BI__builtin_ia32_pternlogq128_mask:
+  case X86::BI__builtin_ia32_pternlogq256_mask:
+  case X86::BI__builtin_ia32_pternlogq512_mask:
+    return interp__builtin_ia32_pternlog_mask(S, OpPC, Call);
+  case X86::BI__builtin_ia32_pternlogd128_maskz:
+  case X86::BI__builtin_ia32_pternlogd256_maskz:
+  case X86::BI__builtin_ia32_pternlogd512_maskz:
+  case X86::BI__builtin_ia32_pternlogq128_maskz:
+  case X86::BI__builtin_ia32_pternlogq256_maskz:
+  case X86::BI__builtin_ia32_pternlogq512_maskz:
+    return interp__builtin_ia32_pternlog_maskz(S, OpPC, Call);
   case Builtin::BI__builtin_elementwise_fshl:
     return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshl);
