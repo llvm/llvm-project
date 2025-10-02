@@ -51,10 +51,6 @@
 //          Moreover, the order of operands reflects the order of operands
 //          in the encoding.
 
-//-------------------------- Predicate definitions ---------------------------//
-def IsPPC32 : Predicate<"!Subtarget->isPPC64()">;
-
-
 //===----------------------------------------------------------------------===//
 // PowerPC ISA 3.1 specific type constraints.
 //
@@ -634,9 +630,6 @@ multiclass 8LS_DForm_R_SI34_XT6_RA5_MEM_p<bits<5> opcode, dag OOL, dag IOL,
   }
 }
 
-def PrefixInstrs : Predicate<"Subtarget->hasPrefixInstrs()">;
-def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
-def PairedVectorMemops : Predicate<"Subtarget->pairedVectorMemops()">;
 def RCCp {
   dag AToVSRC = (COPY_TO_REGCLASS $XA, VSRC);
   dag BToVSRC = (COPY_TO_REGCLASS $XB, VSRC);
@@ -870,7 +863,7 @@ class DQForm_XTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
   let Inst{28...31} = xo;
 }
 
-class XForm_XTp5_XAB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+class XForm_XTp5_RAB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
                       string asmstr, InstrItinClass itin, list<dag> pattern>
   : I<opcode, OOL, IOL, asmstr, itin>, XFormMemOp {
   bits<5> XTp;
@@ -1159,7 +1152,7 @@ let Predicates = [PairedVectorMemops] in {
     def LXVP : DQForm_XTp5_RA17_MEM<6, 0, (outs vsrprc:$XTp),
                                     (ins (memrix16 $DQ, $RA):$addr), "lxvp $XTp, $addr",
                                     IIC_LdStLFD, []>;
-    def LXVPX : XForm_XTp5_XAB5<31, 333, (outs vsrprc:$XTp), (ins (memrr $RA, $RB):$addr),
+    def LXVPX : XForm_XTp5_RAB5<31, 333, (outs vsrprc:$XTp), (ins (memrr $RA, $RB):$addr),
                                 "lxvpx $XTp, $addr", IIC_LdStLFD,
                                 []>;
   }
@@ -1168,7 +1161,7 @@ let Predicates = [PairedVectorMemops] in {
     def STXVP : DQForm_XTp5_RA17_MEM<6, 1, (outs), (ins vsrprc:$XTp,
                                      (memrix16 $DQ, $RA):$addr), "stxvp $XTp, $addr",
                                      IIC_LdStLFD, []>;
-    def STXVPX : XForm_XTp5_XAB5<31, 461, (outs), (ins vsrprc:$XTp, (memrr $RA, $RB):$addr),
+    def STXVPX : XForm_XTp5_RAB5<31, 461, (outs), (ins vsrprc:$XTp, (memrr $RA, $RB):$addr),
                                  "stxvpx $XTp, $addr", IIC_LdStLFD,
                                  []>;
   }
@@ -2326,6 +2319,91 @@ multiclass XXEvalTernarySelectC<ValueType Vt>{
   def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), Vt:$vC), 94>;
 }
 
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectXor
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : XOR(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {B, C, AND(B,C), OR(B,C), NOR(B,C)} 
+// - XOR(B,C) is the "false" case op on vectors B and C
+// =============================================================================
+multiclass XXEvalTernarySelectXor<ValueType Vt> {
+  // Pattern: A ? AND(B,C) : XOR(B,C) XXEVAL immediate value: 97
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VXor Vt:$vB, Vt:$vC)),
+            97>;
+  
+  // Pattern: A ? B : XOR(B,C) XXEVAL immediate value: 99
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, Vt:$vB, (VXor Vt:$vB, Vt:$vC)),
+            99>;
+  
+  // Pattern: A ? C : XOR(B,C) XXEVAL immediate value: 101
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, Vt:$vC, (VXor Vt:$vB, Vt:$vC)),
+            101>;
+  
+  // Pattern: A ? OR(B,C) : XOR(B,C) XXEVAL immediate value: 103
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VXor Vt:$vB, Vt:$vC)),
+            103>;
+  
+  // Pattern: A ? NOR(B,C) : XOR(B,C) XXEVAL immediate value: 104
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VNor Vt:$vB, Vt:$vC), (VXor Vt:$vB, Vt:$vC)),
+            104>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectOr
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : OR(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {B, C, AND(B,C), EQV(B,C), NOT(B), 
+//   NOT(C), NAND(B,C)} 
+// - OR(B,C) is the "false" case op on vectors B and C
+// =============================================================================
+multiclass XXEvalTernarySelectOr<ValueType Vt> {
+  // Pattern: A ? AND(B,C) : OR(B,C) XXEVAL immediate value: 113
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VOr Vt:$vB, Vt:$vC)),
+            113>;
+  
+  // Pattern: A ? B : OR(B,C) XXEVAL immediate value: 115
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, Vt:$vB, (VOr Vt:$vB, Vt:$vC)),
+            115>;
+  
+  // Pattern: A ? C : OR(B,C) XXEVAL immediate value: 117
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, Vt:$vC, (VOr Vt:$vB, Vt:$vC)),
+            117>;
+  
+  // Pattern: A ? EQV(B,C) : OR(B,C) XXEVAL immediate value: 121
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VEqv Vt:$vB, Vt:$vC), (VOr Vt:$vB, Vt:$vC)),
+            121>;
+  
+  // Pattern: A ? NOT(C) : OR(B,C) XXEVAL immediate value: 122
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VNot Vt:$vC), (VOr Vt:$vB, Vt:$vC)),
+            122>;
+  
+  // Pattern: A ? NOT(B) : OR(B,C) XXEVAL immediate value: 124
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VNot Vt:$vB), (VOr Vt:$vB, Vt:$vC)),
+            124>;
+  
+  // Pattern: A ? NAND(B,C) : OR(B,C) XXEVAL immediate value: 126
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VOr Vt:$vB, Vt:$vC)),
+            126>;
+}
+
 let Predicates = [PrefixInstrs, HasP10Vector] in {
   let AddedComplexity = 400 in {
     def : Pat<(v4i32 (build_vector i32immNonAllOneNonZero:$A,
@@ -2438,7 +2516,9 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     foreach Ty = [v4i32, v2i64, v8i16, v16i8] in {
         defm : XXEvalTernarySelectAnd<Ty>;
         defm : XXEvalTernarySelectB<Ty>;
-        defm : XXEvalTernarySelectC<Ty>; 
+        defm : XXEvalTernarySelectC<Ty>;
+        defm : XXEvalTernarySelectXor<Ty>;
+        defm : XXEvalTernarySelectOr<Ty>;
     }
 
     // Anonymous patterns to select prefixed VSX loads and stores.

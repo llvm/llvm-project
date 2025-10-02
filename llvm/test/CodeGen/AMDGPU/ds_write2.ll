@@ -1012,7 +1012,7 @@ define amdgpu_kernel void @store_constant_adjacent_offsets() {
 ;
 ; GFX1250-LABEL: store_constant_adjacent_offsets:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], lit64(0x7b0000007b)
+; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], 0x7b0000007b
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    ds_store_b64 v2, v[0:1]
 ; GFX1250-NEXT:    s_endpgm
@@ -1350,7 +1350,7 @@ define amdgpu_kernel void @write2_v2i32_align1_odd_offset() {
 ;
 ; GFX1250-LABEL: write2_v2i32_align1_odd_offset:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], lit64(0x1c80000007b)
+; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], 0x1c80000007b
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    ds_store_b64 v2, v[0:1] offset:65
 ; GFX1250-NEXT:    s_endpgm

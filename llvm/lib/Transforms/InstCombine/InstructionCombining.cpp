@@ -1735,7 +1735,7 @@ Instruction *InstCombinerImpl::foldBinopOfSextBoolToSelect(BinaryOperator &BO) {
   Constant *Zero = ConstantInt::getNullValue(BO.getType());
   Value *TVal = Builder.CreateBinOp(BO.getOpcode(), Ones, C);
   Value *FVal = Builder.CreateBinOp(BO.getOpcode(), Zero, C);
-  return SelectInst::Create(X, TVal, FVal);
+  return createSelectInst(X, TVal, FVal);
 }
 
 static Value *simplifyOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
@@ -5169,6 +5169,7 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   // - or: pick -1
   // - select's condition: if the true value is constant, choose it by making
   //                       the condition true.
+  // - phi: pick the common constant across operands
   // - default: pick 0
   //
   // Note that this transform is intentionally done here rather than
@@ -5179,9 +5180,32 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   // TODO: This could use getBinopAbsorber() / getBinopIdentity() to avoid
   //       duplicating logic for binops at least.
   auto getUndefReplacement = [&](Type *Ty) {
-    Value *BestValue = nullptr;
+    auto pickCommonConstantFromPHI = [](PHINode &PN) -> Value * {
+      // phi(freeze(undef), C, C). Choose C for freeze so the PHI can be
+      // removed.
+      Constant *BestValue = nullptr;
+      for (Value *V : PN.incoming_values()) {
+        if (match(V, m_Freeze(m_Undef())))
+          continue;
+
+        Constant *C = dyn_cast<Constant>(V);
+        if (!C)
+          return nullptr;
+
+        if (!isGuaranteedNotToBeUndefOrPoison(C))
+          return nullptr;
+
+        if (BestValue && BestValue != C)
+          return nullptr;
+
+        BestValue = C;
+      }
+      return BestValue;
+    };
+
     Value *NullValue = Constant::getNullValue(Ty);
-    for (const auto *U : I.users()) {
+    Value *BestValue = nullptr;
+    for (auto *U : I.users()) {
       Value *V = NullValue;
       if (match(U, m_Or(m_Value(), m_Value())))
         V = ConstantInt::getAllOnesValue(Ty);
@@ -5190,6 +5214,9 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
       else if (match(U, m_c_Select(m_Specific(&I), m_Value(V)))) {
         if (!isGuaranteedNotToBeUndefOrPoison(V, &AC, &I, &DT))
           V = NullValue;
+      } else if (auto *PHI = dyn_cast<PHINode>(U)) {
+        if (Value *MaybeV = pickCommonConstantFromPHI(*PHI))
+          V = MaybeV;
       }
 
       if (!BestValue)
@@ -5934,8 +5961,8 @@ static bool combineInstructionsOverFunction(
     LLVM_DEBUG(dbgs() << "\n\nINSTCOMBINE ITERATION #" << Iteration << " on "
                       << F.getName() << "\n");
 
-    InstCombinerImpl IC(Worklist, Builder, F.hasMinSize(), AA, AC, TLI, TTI, DT,
-                        ORE, BFI, BPI, PSI, DL, RPOT);
+    InstCombinerImpl IC(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI,
+                        BPI, PSI, DL, RPOT);
     IC.MaxArraySizeForCombine = MaxArraySize;
     bool MadeChangeInThisIteration = IC.prepareWorklist(F);
     MadeChangeInThisIteration |= IC.run();
