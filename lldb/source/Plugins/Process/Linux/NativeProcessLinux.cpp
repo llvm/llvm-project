@@ -219,7 +219,8 @@ static llvm::Error AddPtraceScopeNote(llvm::Error original_error) {
   Expected<int> ptrace_scope = GetPtraceScope();
   if (auto E = ptrace_scope.takeError()) {
     Log *log = GetLog(POSIXLog::Process);
-    LLDB_LOG(log, "error reading value of ptrace_scope: {0}", E);
+    LLDB_LOG(log, "error reading value of ptrace_scope: {0}",
+             llvm::toString(std::move(E)));
 
     // The original error is probably more interesting than not being able to
     // read or interpret ptrace_scope.
@@ -230,6 +231,7 @@ static llvm::Error AddPtraceScopeNote(llvm::Error original_error) {
   switch (*ptrace_scope) {
   case 1:
   case 2:
+    llvm::consumeError(std::move(original_error));
     return llvm::createStringError(
         std::error_code(errno, std::generic_category()),
         "The current value of ptrace_scope is %d, which can cause ptrace to "
@@ -239,6 +241,7 @@ static llvm::Error AddPtraceScopeNote(llvm::Error original_error) {
         "https://www.kernel.org/doc/Documentation/security/Yama.txt.",
         *ptrace_scope);
   case 3:
+    llvm::consumeError(std::move(original_error));
     return llvm::createStringError(
         std::error_code(errno, std::generic_category()),
         "The current value of ptrace_scope is 3, which will cause ptrace to "
