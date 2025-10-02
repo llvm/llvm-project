@@ -71,7 +71,6 @@ set(LLVM_TEST_DEPENDS
   ${LLVM_TEST_DEPENDS_COMMON}
   BugpointPasses
   LLVMWindowsDriver
-  UnitTests
   bugpoint
   llc
   lli
@@ -270,10 +269,11 @@ add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
   ${exclude_from_check_all}
   DEPENDS ${LLVM_TEST_DEPENDS}
   FOLDER "Tests/Subdirectories"
-  SKIP "^FileCheck" "^TableGen"
+  SKIP "^FileCheck" "^TableGen" "^Unit"
   )
 add_subdirectory(FileCheck)
 add_subdirectory(TableGen)
+add_subdirectory(Unit)
 
 # Setup an alias for 'check-all'.
 add_custom_target(check)
