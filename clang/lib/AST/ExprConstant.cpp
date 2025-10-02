@@ -11926,6 +11926,85 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+
+  // vector extract
+  case X86::BI__builtin_ia32_extract128i256: // avx2
+  case X86::BI__builtin_ia32_vextractf128_pd256:
+  case X86::BI__builtin_ia32_vextractf128_ps256:
+  case X86::BI__builtin_ia32_vextractf128_si256: {
+    APValue SourceVec, SourceImm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceImm))
+      return false;
+    
+    if (!SourceVec.isVector())
+      return false;
+
+    const auto *RetVT = E->getType()->castAs<VectorType>();
+    if (!RetVT) return false;
+
+    unsigned RetLen = RetVT->getNumElements();
+    unsigned SrcLen = SourceVec.getVectorLength();
+    if (SrcLen != RetLen * 2) 
+      return false;
+
+    unsigned idx = SourceImm.getInt().getZExtValue() & 1;
+    
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(RetLen);
+
+    for (unsigned i = 0; i < RetLen; i++)
+      ResultElements.push_back(SourceVec.getVectorElt(idx * RetLen + i));
+    
+    return Success(APValue(ResultElements.data(), RetLen), E);
+  }
+
+  case X86::BI__builtin_ia32_extracti32x4_256_mask: 
+  case X86::BI__builtin_ia32_extractf32x4_256_mask:
+  case X86::BI__builtin_ia32_extracti32x4_mask:     
+  case X86::BI__builtin_ia32_extractf32x4_mask:   
+  case X86::BI__builtin_ia32_extracti32x8_mask:      
+  case X86::BI__builtin_ia32_extractf32x8_mask:     
+  case X86::BI__builtin_ia32_extracti64x2_256_mask: 
+  case X86::BI__builtin_ia32_extractf64x2_256_mask: 
+  case X86::BI__builtin_ia32_extracti64x2_512_mask: 
+  case X86::BI__builtin_ia32_extractf64x2_512_mask:
+  case X86::BI__builtin_ia32_extracti64x4_mask:
+  case X86::BI__builtin_ia32_extractf64x4_mask:{ 
+    APValue A, W;
+    APSInt Imm, U;
+
+    if (!EvaluateAsRValue(Info, E->getArg(0), A) ||   // A
+      !EvaluateInteger(E->getArg(1), Imm, Info) ||  // imm
+      !EvaluateAsRValue(Info, E->getArg(2), W)  ||  // W (merge)
+      !EvaluateInteger(E->getArg(3), U, Info))      // U (mask)
+    return false;
+
+    const auto *RetVT = E->getType()->castAs<VectorType>();
+    // QualType EltTy = RetVT->getElementType();
+    unsigned RetLen = RetVT->getNumElements();
+
+    if (!A.isVector() || !W.isVector()) return false;
+    unsigned SrcLen = A.getVectorLength();
+    if (!SrcLen || !RetLen || (SrcLen % RetLen) != 0) return false;
+
+    unsigned lanes = SrcLen / RetLen;
+    unsigned lane  = static_cast<unsigned>(Imm.getZExtValue() % lanes);
+    unsigned base  = lane * RetLen;
+    uint64_t K     = U.getZExtValue();
+
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(RetLen);
+    for (unsigned i = 0; i < RetLen; ++i) {
+      if ((K >> i) & 1)
+        ResultElements.push_back(A.getVectorElt(base + i));
+      else
+        ResultElements.push_back(W.getVectorElt(i)); // maskz/unmasked 모두 헤더에서 맞춰줌
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  
+
   case X86::BI__builtin_ia32_vpshldd128:
   case X86::BI__builtin_ia32_vpshldd256:
   case X86::BI__builtin_ia32_vpshldd512:
