@@ -980,8 +980,7 @@ static Value *tryToFoldLiveIns(VPSingleDefRecipe &R,
       return nullptr;
     unsigned ID = OpcodeOrIID.second;
     return Folder.FoldBinaryIntrinsic(
-        ID, Ops[0], Ops[1], TypeInfo.inferScalarType(R.getVPSingleValue()),
-        R.getUnderlyingInstr());
+        ID, Ops[0], Ops[1], TypeInfo.inferScalarType(R.getVPSingleValue()));
   }
   unsigned Opcode = OpcodeOrIID.second;
   if (Instruction::isBinaryOp(Opcode))
