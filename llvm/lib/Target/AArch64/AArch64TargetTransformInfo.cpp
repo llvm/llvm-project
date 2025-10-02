@@ -5644,14 +5644,16 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       OpAExtend == TTI::PR_None)
     return Invalid;
 
+  assert((BinOp || (OpBExtend == TTI::PR_None && !InputTypeB)) &&
+         (!BinOp || (OpBExtend != TTI::PR_None && InputTypeB)) &&
+         "Unexpected values for OpBExtend or InputTypeB");
+
   // We only support multiply binary operations for now, and for muls we
   // require the types being extended to be the same.
   if (BinOp && (*BinOp != Instruction::Mul || InputTypeA != InputTypeB))
     return Invalid;
-  assert((BinOp || (OpBExtend == TTI::PR_None && !InputTypeB)) &&
-         "Unexpected values for OpBExtend or InputTypeB");
 
-  bool IsUSDot = OpBExtend && OpAExtend != OpBExtend;
+  bool IsUSDot = OpBExtend != TTI::PR_None && OpAExtend != OpBExtend;
   if (IsUSDot && !ST->hasMatMulInt8())
     return Invalid;
 
@@ -5663,8 +5665,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   VectorType *InputVectorType = VectorType::get(InputTypeA, VF);
   VectorType *AccumVectorType =
       VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));
-  // We don't yet support all kinds of legalization (e.g. widening
-  // of <[vscale x] 1 x ..> accumulators)
+  // We don't yet support all kinds of legalization.
   auto TA = TLI->getTypeAction(AccumVectorType->getContext(),
                                EVT::getEVT(AccumVectorType));
   switch (TA) {
