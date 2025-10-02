@@ -163,14 +163,6 @@ public:
   LLVM_ABI static bool areAllUsesIn(Instruction *I,
                                     SmallPtrSetImpl<Instruction *> &Set);
 
-  /// Returns a struct describing if the instruction is a llvm.(s/u)(min/max),
-  /// llvm.minnum/maxnum or a Select(ICmp(X, Y), X, Y) pair of instructions
-  /// corresponding to a min(X, Y) or max(X, Y), matching the recurrence kind \p
-  /// Kind. \p Prev specifies the description of an already processed select
-  /// instruction, so its corresponding cmp can be matched to it.
-  LLVM_ABI static InstDesc isMinMaxPattern(Instruction *I, RecurKind Kind,
-                                           const InstDesc &Prev);
-
   /// Returns a struct describing whether the instruction is either a
   ///   Select(ICmp(A, B), X, Y), or
   ///   Select(FCmp(A, B), X, Y)
