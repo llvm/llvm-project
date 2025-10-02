@@ -441,16 +441,36 @@ PPCMCPlusBuilder::createRelocation(const MCFixup &Fixup,
 }
 
 bool PPCMCPlusBuilder::isTOCRestoreAfterCall(const MCInst &I) const {
+  LLVM_DEBUG({
+    dbgs() << "TOC-RESTORE check: " << I.getOpcode() << " (";
+    for (unsigned k = 0; k < I.getNumOperands(); ++k) {
+      if (k)
+        dbgs() << ", ";
+      const auto &Op = I.getOperand(k);
+      if (Op.isReg())
+        dbgs() << Op.getReg(); // will print the reg number, not pretty
+      else if (Op.isImm())
+        dbgs() << Op.getImm();
+      else
+        dbgs() << "<op" << k << ">";
+    }
+    dbgs() << ")\n";
+  });
+
   if (I.getOpcode() != PPC::LD)
     return false;
-  if (!I.getOperand(0).isReg() || I.getOperand(0).getReg() != PPC::X2)
+
+  auto isR1 = [](unsigned R) { return R == PPC::X1 || R == PPC::R1; };
+  auto isR2 = [](unsigned R) { return R == PPC::X2 || R == PPC::R2; };
+
+  // ld r2, 24(r1) -> (dst, imm, base)
+  if (!I.getOperand(0).isReg() || !isR2(I.getOperand(0).getReg()))
     return false;
-  if (!I.getOperand(1).isReg() || I.getOperand(1).getReg() != PPC::X1)
+  if (!I.getOperand(1).isImm() || I.getOperand(1).getImm() != 24)
     return false;
-  if (!I.getOperand(2).isImm() || I.getOperand(2).getImm() != 24)
+  if (!I.getOperand(2).isReg() || !isR1(I.getOperand(2).getReg()))
     return false;
-  // This fuction returns true iff I is exactly the canonical TOC-restore ld
-  // r2, 24(r1)
+
   return true;
 }
 
