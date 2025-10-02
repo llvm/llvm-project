@@ -156,7 +156,10 @@ void ns::f(
   // CHECK-FIXES-20: T::R2
 );
 
-template <typename T>
+template <typename... Ts>
+void p(typename Ts::R...);
+
+template <typename T, typename... Ts>
 class A {
 public:
   friend typename T::R;
@@ -185,6 +188,10 @@ public:
   void h(typename T::R = typename T::R()) {}
   // CHECK-MESSAGES-20: :[[@LINE-1]]:10: warning: redundant 'typename' [readability-redundant-typename]
   // CHECK-FIXES-20: void h(T::R = typename T::R()) {}
+
+  void p(typename Ts::R...);
+  // CHECK-MESSAGES-20: :[[@LINE-1]]:10: warning: redundant 'typename' [readability-redundant-typename]
+  // CHECK-FIXES-20: void p(Ts::R...);
 
   friend void k(typename T::R) {}
   // CHECK-MESSAGES-20: :[[@LINE-1]]:17: warning: redundant 'typename' [readability-redundant-typename]
