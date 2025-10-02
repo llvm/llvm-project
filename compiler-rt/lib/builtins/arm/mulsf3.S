@@ -28,22 +28,22 @@ DEFINE_COMPILERRT_FUNCTION(__mulsf3)
   // also extracted the exponents of the input values r0/r1 into bits 16..23 of
   // r2/r3. But if we do, then that hasn't necessarily been done (because the
   // second AND might have been skipped).
-  MOV     r12, #0xFF0000
-  ANDS    r2, r12, r0, LSR #7  // sets Z if exponent of x is 0
-  ANDSNE  r3, r12, r1, LSR #7  // otherwise, sets Z if exponent of y is 0
-  TEQNE   r2, r12              // otherwise, sets Z if exponent of x is FF
-  TEQNE   r3, r12              // otherwise, sets Z if exponent of y is FF
-  BEQ     LOCAL_LABEL(uncommon)        // branch out of line to handle inf/NaN/0/denorm
+  mov     r12, #0xFF0000
+  ands    r2, r12, r0, lsr #7  // sets Z if exponent of x is 0
+  andsne  r3, r12, r1, lsr #7  // otherwise, sets Z if exponent of y is 0
+  teqne   r2, r12              // otherwise, sets Z if exponent of x is FF
+  teqne   r3, r12              // otherwise, sets Z if exponent of y is FF
+  beq     LOCAL_LABEL(uncommon)        // branch out of line to handle inf/NaN/0/denorm
 
   // Calculate the sign of the result, and put it in an unused bit of r2.
-  TEQ     r0, r1               // sets N to the XOR of x and y's sign bits
-  ORRMI   r2, r2, #0x100       // if N set, set bit 8 of r2
+  teq     r0, r1               // sets N to the XOR of x and y's sign bits
+  orrmi   r2, r2, #0x100       // if N set, set bit 8 of r2
 
   // Move the input mantissas to the high end of r0/r1, each with its leading
   // bit set explicitly, so that they're in the right form to be multiplied.
-  MOV     r12, #0x80000000
-  ORR     r0, r12, r0, LSL #8
-  ORR     r1, r12, r1, LSL #8
+  mov     r12, #0x80000000
+  orr     r0, r12, r0, lsl #8
+  orr     r1, r12, r1, lsl #8
 
   // Now we're ready to multiply mantissas. This is also the place we'll come
   // back to after decoding denormal inputs. The denormal decoding will also
@@ -60,9 +60,9 @@ LOCAL_LABEL(mul):
   // The exponent is rebiased by subtracting 0x80, rather than the 0x7F you'd
   // expect. That compensates for the leading bit of the mantissa overlapping
   // it, when we recombine the exponent and mantissa by addition.
-  ADD     r2, r2, r3           // r2 has sum of exponents, freeing up r3
-  UMULL   r1, r3, r0, r1       // r3:r1 has the double-width product
-  SUB     r2, r2, #(0x80 << 16) // rebias the summed exponent
+  add     r2, r2, r3           // r2 has sum of exponents, freeing up r3
+  umull   r1, r3, r0, r1       // r3:r1 has the double-width product
+  sub     r2, r2, #(0x80 << 16) // rebias the summed exponent
 
   // Compress the double-word product into just the high-order word r3, by
   // setting its bit 0 if any bit of the low-order word is nonzero. This
@@ -70,16 +70,16 @@ LOCAL_LABEL(mul):
   // rounding, because rounding only depends on the bit below the last output
   // bit, and the general question of whether _any_ nonzero bit exists below
   // that.
-  CMP     r1, #0                // if low word of full product is nonzero
-  ORRNE   r3, r3, #1            //   then set LSB of high word
+  cmp     r1, #0                // if low word of full product is nonzero
+  orrne   r3, r3, #1            //   then set LSB of high word
 
   // The two inputs to UMULL had their high bits set, that is, were at least
   // 0x80000000. So the 64-bit product was at least 0x4000000000000000, i.e.
   // the high bit of the product could be at the top of the word or one bit
   // below. Check which, by experimentally shifting left, and then undoing it
   // via RRX if we turned out to have shifted off a 1 bit.
-  LSLS    r3, r3, #1            // shift left, setting C to the bit shifted off
-  RRXCS   r3, r3                // if that bit was 1, put it back again
+  lsls    r3, r3, #1            // shift left, setting C to the bit shifted off
+  rrxcs   r3, r3                // if that bit was 1, put it back again
 
   // That ensured the leading 1 bit of the product is now the top of r3, but
   // also, set C if the leading 1 was _already_ in the top bit. So now we know
@@ -92,14 +92,14 @@ LOCAL_LABEL(mul):
   // are exactly what we need to combine with the rounded mantissa. But the
   // full output exponent (with extra bits) is still available in the high half
   // of r2, so that we can check _whether_ we overflowed or underflowed.
-  ADC     r2, r2, r2, ASR #16
+  adc     r2, r2, r2, asr #16
 
   // Recombine the exponent and mantissa, doing most of the rounding as a side
   // effect: we shift the mantissa right so as to put the round bit into C, and
   // then we recombine with the exponent using ADC, to increment the mantissa
   // if C was set.
-  MOVS    r12, r3, LSR #8
-  ADC     r0, r12, r2, LSL #23
+  movs    r12, r3, lsr #8
+  adc     r0, r12, r2, lsl #23
 
   // To complete the rounding, we must check for the round-to-even tiebreaking
   // case, by checking if we're in the exact halfway case, which occurs if and
@@ -130,8 +130,8 @@ LOCAL_LABEL(mul):
   // catches a few very large cases that _don't_ quite overflow (exponents of
   // 0xFC and above that don't get maximally unlucky); those will also be
   // handled by the slow path.
-  TSTCS   r3, #0x7F
-  CMPNE   r2, #0xFC0000
+  tstcs   r3, #0x7F
+  cmpne   r2, #0xFC0000
 #else
   // In Thumb, switching between different conditions has a higher cost due to
   // the (implicit in this code) IT instructions, so we prefer a strategy that
@@ -155,13 +155,13 @@ LOCAL_LABEL(mul):
   //
   // The check for over/underflow is exactly as in the Arm branch above, except
   // based on a different condition.
-  CMPCS   r12, r3, LSL #25  // now C is set iff we're rounding to even
-  CMPCC   r2, #0xFC0000     // and now it's also set if we've over/underflowed
+  cmpcs   r12, r3, lsl #25  // now C is set iff we're rounding to even
+  cmpcc   r2, #0xFC0000     // and now it's also set if we've over/underflowed
 #endif
 
   // That's all the checks for difficult cases done. If C is clear, we can
   // return.
-  BXCC    lr
+  bxcc    lr
 
   // Now the slower path begins. We have to recover enough information to
   // handle all of round-to-even, overflow and underflow.
@@ -175,20 +175,20 @@ LOCAL_LABEL(mul):
   // leave any unambiguous indicator of RTE, so we must retest by checking all
   // the bits shifted off the bottom of the mantissa to see if they're exactly
   // the half-way value.
-  LSL     r12, r3, #24           // r12 = round bit and everything below
-  CMP     r12, #0x80000000       // set Z if that is exactly 0x80000000
+  lsl     r12, r3, #24           // r12 = round bit and everything below
+  cmp     r12, #0x80000000       // set Z if that is exactly 0x80000000
 #endif
 
   // Now Z is clear iff we have already rounded up and now must replace that
   // with rounding to even, which is done by just clearing the low bit of the
   // mantissa.
-  BICEQ   r0, r0, #1
+  biceq   r0, r0, #1
 
   // Redo the over/underflow check (the same way as in both branches above),
   // and if it doesn't report a danger, we can return the rounded-to-even
   // answer.
-  CMP     r2, #0xFC0000         // check for over/underflow
-  BXCC    lr                    // and return if none.
+  cmp     r2, #0xFC0000         // check for over/underflow
+  bxcc    lr                    // and return if none.
 
   // Now we only have overflow and underflow left to handle. First, find out
   // which we're looking at. This is easy by testing the top bit of r2, but
@@ -197,21 +197,21 @@ LOCAL_LABEL(mul):
   // the CMP above won't have made any difference. So the N flag output from
   // that comparison _already_ tells us which condition we have: if N is set we
   // have underflow, and if N is clear, overflow.
-  BPL     LOCAL_LABEL(overflow)
+  bpl     LOCAL_LABEL(overflow)
 
   // Here we're handling underflow.
 
   // Add the IEEE 754:1985 exponent bias which funder will expect. This also
   // brings the exponent back into a range where it can't possibly have carried
   // into the sign bit, so the output sign will now be right.
-  ADD     r0, r0, #(0xC0 << 23)
+  add     r0, r0, #(0xC0 << 23)
 
   // Determine whether we rounded up, down or not at all.
-  LSLS    r2, r3, #1              // input mantissa, without its leading 1
-  SUBS    r1, r2, r0, LSL #9      // subtract the output mantissa (likewise)
+  lsls    r2, r3, #1              // input mantissa, without its leading 1
+  subs    r1, r2, r0, lsl #9      // subtract the output mantissa (likewise)
 
   // And let funder handle the rest.
-  B     SYMBOL_NAME(__compiler_rt_funder)
+  b     SYMBOL_NAME(__compiler_rt_funder)
 
 LOCAL_LABEL(overflow):
   // We come here to handle overflow, but it's not guaranteed that an overflow
@@ -222,22 +222,22 @@ LOCAL_LABEL(overflow):
   // the high bit clear, are overflows; 0xFE down to 0xFC are not overflows.
   //
   // The value in r0 is correct to return, if there's no overflow.
-  ADD     r12, r0, #(1 << 23)     // add 1 to the exponent so 0xFF wraps to 0
-  MOVS    r12, r12, LSL #1        // test the top bit of the modified value
-  BXMI    lr                      // if top bit is still 1, not an overflow
+  add     r12, r0, #(1 << 23)     // add 1 to the exponent so 0xFF wraps to 0
+  movs    r12, r12, lsl #1        // test the top bit of the modified value
+  bxmi    lr                      // if top bit is still 1, not an overflow
 
   // This is an overflow, so we need to replace it with an appropriately signed
   // infinity. First we correct the sign by applying a downward bias to the
   // exponent (the one suggested in IEEE 754:1985, which was chosen to bring
   // all possible overflowed results back into range).
-  SUBS    r0, r0, #(0xC0 << 23)
+  subs    r0, r0, #(0xC0 << 23)
 
   // Now the sign bit of r0 is correct. Replace everything else with the
   // encoding of an infinity.
-  MOV     r1, #0xFF
-  AND     r0, r0, #0x80000000
-  ORR     r0, r0, r1, LSL #23
-  BX      lr
+  mov     r1, #0xFF
+  and     r0, r0, #0x80000000
+  orr     r0, r0, r1, lsl #23
+  bx      lr
 
 LOCAL_LABEL(uncommon):
   // Handle zeros, denorms, infinities and NaNs. We arrive here knowing that
@@ -248,37 +248,37 @@ LOCAL_LABEL(uncommon):
   // So, first repeat some instructions from the prologue, which were either
   // conditionally skipped in the sequence leading to the branch, or skipped
   // because they happened after the branch.
-  AND     r3, r12, r1, LSR #7  // get exponent of y in r3 bits 16..23
-  TEQ     r0, r1               // calculate the sign of the result
-  ORRMI   r2, r2, #0x100       // and put it in bit 8 of r2 as before
+  and     r3, r12, r1, lsr #7  // get exponent of y in r3 bits 16..23
+  teq     r0, r1               // calculate the sign of the result
+  orrmi   r2, r2, #0x100       // and put it in bit 8 of r2 as before
 
   // Check for infinities and NaNs, by testing each of r2,r3 to see if it's at
   // least 0xFF0000 (hence the exponent field is equal to 0xFF).
-  CMP     r2, r12
-  CMPLO   r3, r12
-  BHS     LOCAL_LABEL(inf_NaN)
+  cmp     r2, r12
+  cmplo   r3, r12
+  bhs     LOCAL_LABEL(inf_NaN)
 
   // If we didn't take that branch, then we have only finite numbers, but at
   // least one is denormal or zero. A zero makes the result easy (and also is a
   // more likely input than a denormal), so check those first, as fast as
   // possible.
-  MOVS    r12, r0, LSL #1          // Z set if x == 0
-  MOVSNE  r12, r1, LSL #1          // now Z set if either input is 0
-  MOVEQ   r0, r2, LSL #23          // in either case, make 0 of the output sign
-  BXEQ    lr                       // and return it
+  movs    r12, r0, lsl #1          // Z set if x == 0
+  movsne  r12, r1, lsl #1          // now Z set if either input is 0
+  moveq   r0, r2, lsl #23          // in either case, make 0 of the output sign
+  bxeq    lr                       // and return it
 
   // Now we know we only have denormals to deal with. Call fnorm2 to sort
   // them out, and rejoin the main code path above.
-  AND     r12, r2, #0x100          // save the result sign from r2
-  LSR     r2, #16                  // shift extracted exponents down to bit 0
-  LSR     r3, #16                  // where fnorm2 will expect them
-  PUSH    {r0, r1, r2, r3, r12, lr}
-  MOV     r0, sp                   // tell fnorm2 where to find its data
-  BL      SYMBOL_NAME(__compiler_rt_fnorm2)
-  POP     {r0, r1, r2, r3, r12, lr}
-  LSL     r3, #16                  // shift exponents back up to bit 16
-  ORR     r2, r12, r2, LSL #16     // and put the result sign back in r2
-  B       LOCAL_LABEL(mul)
+  and     r12, r2, #0x100          // save the result sign from r2
+  lsr     r2, #16                  // shift extracted exponents down to bit 0
+  lsr     r3, #16                  // where fnorm2 will expect them
+  push    {r0, r1, r2, r3, r12, lr}
+  mov     r0, sp                   // tell fnorm2 where to find its data
+  bl      SYMBOL_NAME(__compiler_rt_fnorm2)
+  pop     {r0, r1, r2, r3, r12, lr}
+  lsl     r3, #16                  // shift exponents back up to bit 16
+  orr     r2, r12, r2, lsl #16     // and put the result sign back in r2
+  b       LOCAL_LABEL(mul)
 
 LOCAL_LABEL(inf_NaN):
   // We come here if at least one input is a NaN or infinity. If either or both
@@ -286,23 +286,23 @@ LOCAL_LABEL(inf_NaN):
   // the input; otherwise any multiplication involving infinity returns
   // infinity, unless it's infinity * 0 which is an invalid operation and
   // returns NaN again.
-  MOV     r12, #0xFF000000
-  CMP     r12, r0, LSL #1          // if (r0 << 1) > 0xFF000000, r0 is a NaN
-  BLO     SYMBOL_NAME(__compiler_rt_fnan2)
-  CMP     r12, r1, LSL #1
-  BLO     SYMBOL_NAME(__compiler_rt_fnan2)
+  mov     r12, #0xFF000000
+  cmp     r12, r0, lsl #1          // if (r0 << 1) > 0xFF000000, r0 is a NaN
+  blo     SYMBOL_NAME(__compiler_rt_fnan2)
+  cmp     r12, r1, lsl #1
+  blo     SYMBOL_NAME(__compiler_rt_fnan2)
 
   // NaNs are dealt with, so now we have at least one infinity. Check if the
   // other operand is 0. This is conveniently done by XORing the two: because
   // we know that the low 31 bits of one operand are exactly 0x7F800000, we can
   // test if the low 31 bits of the other one are all 0 by checking whether the
   // low 31 bits of (x XOR y) equal 0x7F800000.
-  EOR     r3, r0, r1
-  CMP     r12, r3, LSL #1          // if inf * 0, this sets Z
-  LSR     r0, r12, #1              // set up return value of +infinity
-  ORRNE   r0, r0, r2, LSL #23      // if not inf * 0, put on the output sign
-  ORREQ   r0, r0, #0x400000        // otherwise, set the 'quiet NaN' bit
-  BX      lr                       // and return
+  eor     r3, r0, r1
+  cmp     r12, r3, lsl #1          // if inf * 0, this sets Z
+  lsr     r0, r12, #1              // set up return value of +infinity
+  orrne   r0, r0, r2, lsl #23      // if not inf * 0, put on the output sign
+  orreq   r0, r0, #0x400000        // otherwise, set the 'quiet NaN' bit
+  bx      lr                       // and return
 
 END_COMPILERRT_FUNCTION(__mulsf3)
 

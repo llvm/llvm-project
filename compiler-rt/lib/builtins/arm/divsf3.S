@@ -33,17 +33,17 @@ DEFINE_COMPILERRT_FUNCTION(__divsf3)
   // will have to redo it just in case. That saves an instruction here,
   // executed for _all_ inputs, and moves it to the uncommon path run for only
   // some inputs.
-  MOV     r12, #0xFF0000
-  ANDS    r2, r12, r0, LSR #7   // r2 has exponent of numerator. (Is it 0?)
-  ANDSNE  r3, r12, r1, LSR #7   // r3 has exponent of denominator. (Is it 0?)
-  TEQNE   r2, r12               // if neither was 0, is one FF?
-  TEQNE   r3, r12               // or the other?
-  BEQ     LOCAL_LABEL(uncommon)         // branch out of line if any answer was yes
+  mov     r12, #0xFF0000
+  ands    r2, r12, r0, lsr #7   // r2 has exponent of numerator. (Is it 0?)
+  andsne  r3, r12, r1, lsr #7   // r3 has exponent of denominator. (Is it 0?)
+  teqne   r2, r12               // if neither was 0, is one FF?
+  teqne   r3, r12               // or the other?
+  beq     LOCAL_LABEL(uncommon)         // branch out of line if any answer was yes
 
   // Calculate the output sign, which is always just the XOR of the input
   // signs. Store it in bit 8 of r2, below the numerator exponent.
-  TEQ     r0, r1                // is the output sign bit 1?
-  ORRMI   r2, r2, #0x100        // if so, set bit 8 of r2
+  teq     r0, r1                // is the output sign bit 1?
+  orrmi   r2, r2, #0x100        // if so, set bit 8 of r2
 
   // Isolate the mantissas of both values, by setting bit 23 of each one and
   // clearing the 8 bits above that.
@@ -52,10 +52,10 @@ DEFINE_COMPILERRT_FUNCTION(__divsf3)
   // instructions if we do it as part of this manipulation). We want the
   // numerator not to be in r0, because r0 is where we'll build up the quotient
   // while subtracting things from the numerator.
-  ORR     r12, r0, #1 << 23
-  ORR     r0, r1, #1 << 23
-  BIC     r1, r12, #0xFF000000
-  BIC     r0, r0, #0xFF000000
+  orr     r12, r0, #1 << 23
+  orr     r0, r1, #1 << 23
+  bic     r1, r12, #0xFF000000
+  bic     r0, r0, #0xFF000000
 
 LOCAL_LABEL(div):
   // Start of the main division. We get here knowing that:
@@ -65,11 +65,11 @@ LOCAL_LABEL(div):
   //   r2 = (exponent of numerator << 16) + (result sign << 8)
   //   r3 = (exponent of denominator << 16)
 
-  PUSH    {r14}                 // we'll need an extra register
+  push    {r14}                 // we'll need an extra register
 
   // Calculate the initial result exponent by just subtracting the two input
   // exponents. This doesn't affect the sign bit lower down in r2.
-  SUB     r2, r2, r3
+  sub     r2, r2, r3
 
   // That initial exponent might need to be adjusted by 1, depending on whether
   // dividing the mantissas gives a value >=1 or <1. We don't need to wait
@@ -78,7 +78,7 @@ LOCAL_LABEL(div):
   //
   // The basic idea is to do the comparison in a way that sets the C flag if
   // numerator >= denominator. Then we recombine the sign and exponent by doing
-  // "ADC r2, r2, r2, ASR #16": the exponent in the top half of r2 is shifted
+  // "ADC r2, r2, r2, asr #16": the exponent in the top half of r2 is shifted
   // down to the low 8 bits, just below the sign bit, and using ADC rather than
   // ADD folds in the conditional increment from the mantissa comparison.
   //
@@ -98,9 +98,9 @@ LOCAL_LABEL(div):
   // Putting all of that together, what we _want_ to do is this:
   //
   // [#1]   CMP     r1, r0                // set C if num >= den
-  // [#2]   MOVLO   r1, r1, LSL #1        // if num < den, shift num left
+  // [#2]   MOVLO   r1, r1, lsl #1        // if num < den, shift num left
   // [#3]   ADD     r2, r2, #0x7D0000     // rebias exponent
-  // [#4]   ADC     r2, r2, r2, ASR #16   // combine sign + exp + adjustment
+  // [#4]   ADC     r2, r2, r2, asr #16   // combine sign + exp + adjustment
   //
   // However, we only do the first of those four instructions right here. The
   // other three are distributed through the code below, after unrelated load
@@ -109,7 +109,7 @@ LOCAL_LABEL(div):
   //
   // (Since instruction #4 depends on the flags set up by #2, we must avoid
   // clobbering the flags in _any_ of the instructions interleaved with this!)
-  CMP     r1, r0                // exponent setup [#1]
+  cmp     r1, r0                // exponent setup [#1]
 
   // Start the mantissa division by making an approximation to the reciprocal
   // of the denominator. We first obtain an 8-bit approximation using a table
@@ -119,15 +119,15 @@ LOCAL_LABEL(div):
   // (r0 >> 17) is the table index, and its top bit is always set, so it ranges
   // from 64 to 127 inclusive. So we point the base register 64 bytes before
   // the actual table.
-  ADR     r12, LOCAL_LABEL(tab) - 64
+  adr     r12, LOCAL_LABEL(tab) - 64
 #if __thumb__
   // Thumb can't do this particular shift+add+load in one instruction - it only
   // supports left shifts of 0 to 3 bits, not right shifts of 17. So we must
   // calculate the load offset separately.
-  ADD     r14, r12, r0, LSR #17
-  LDRB    r14, [r14]
+  add     r14, r12, r0, lsr #17
+  ldrb    r14, [r14]
 #else
-  LDRB    r14, [r12, r0, LSR #17]
+  ldrb    r14, [r12, r0, lsr #17]
 #endif
 
   // Now do an iteration of Newton-Raphson to improve that 8-bit approximation
@@ -157,12 +157,12 @@ LOCAL_LABEL(div):
   // <2^24 with something <2^8; but we must shift it right before multiplying
   // by x again.
 
-  MUL     r12, r0, r14          // r12  = dx
-  MOVLO   r1, r1, LSL #1        //   exponent setup [#2] in the MUL delay slot
-  MVN     r12, r12, LSR #8      // r12 ~= -dx/2^8
-  MUL     r3, r12, r14          // r3  ~= -dx^2/2^8
-  MOV     r14, r14, LSL #9      // r14  = 2^9 x
-  ADD     r14, r14, r3, ASR #15 // r14 ~= 2^9 x - dx^2 / 2^23
+  mul     r12, r0, r14          // r12  = dx
+  movlo   r1, r1, lsl #1        //   exponent setup [#2] in the MUL delay slot
+  mvn     r12, r12, lsr #8      // r12 ~= -dx/2^8
+  mul     r3, r12, r14          // r3  ~= -dx^2/2^8
+  mov     r14, r14, lsl #9      // r14  = 2^9 x
+  add     r14, r14, r3, asr #15 // r14 ~= 2^9 x - dx^2 / 2^23
 
   // Now r14 is a 16-bit approximation to the reciprocal of the input mantissa,
   // scaled by 2^39 (so that the min mantissa 2^23 would have reciprocal 2^16
@@ -189,13 +189,13 @@ LOCAL_LABEL(div):
   // First iteration of long division. We shift the numerator left 11 bits, and
   // since the quotient approximation is scaled by 2^31, we must shift that
   // right by 20 to make the right product to subtract from the numerator.
-  MOV     r12, r1, LSR #8       // shift the numerator down
-  MUL     r12, r14, r12         // make the quotient approximation
-  MOV     r1, r1, LSL #11       // shift numerator left, ready for subtraction
-  MOV     r3, r12, LSR #20      // make first 12-bit block of quotient bits
-  MLS     r1, r0, r3, r1        // subtract that multiple of den from num
+  mov     r12, r1, lsr #8       // shift the numerator down
+  mul     r12, r14, r12         // make the quotient approximation
+  mov     r1, r1, lsl #11       // shift numerator left, ready for subtraction
+  mov     r3, r12, lsr #20      // make first 12-bit block of quotient bits
+  mls     r1, r0, r3, r1        // subtract that multiple of den from num
 
-  ADD     r2, r2, #0x7D0000     //   exponent setup [#3] in the MLS delay slot
+  add     r2, r2, #0x7D0000     //   exponent setup [#3] in the MLS delay slot
 
   // Second iteration of long division. Differences from the first step: this
   // time we shift the numerator 12 bits instead of 11, so that the total of
@@ -203,13 +203,13 @@ LOCAL_LABEL(div):
   // the output mantissa. Also, the block of output quotient bits is left in a
   // different register: it was in r3 the first time, and this time it's in
   // r12, so that we still have both available at the end of the process.
-  MOV     r12, r1, LSR #8       // shift the numerator down
-  MUL     r12, r14, r12         // make the quotient approximation
-  MOV     r1, r1, LSL #12       // shift numerator left, ready for subtraction
-  MOV     r12, r12, LSR #19     // make second 11-bit block of quotient
-  MLS     r1, r0, r12, r1       // subtract that multiple of den from num
+  mov     r12, r1, lsr #8       // shift the numerator down
+  mul     r12, r14, r12         // make the quotient approximation
+  mov     r1, r1, lsl #12       // shift numerator left, ready for subtraction
+  mov     r12, r12, lsr #19     // make second 11-bit block of quotient
+  mls     r1, r0, r12, r1       // subtract that multiple of den from num
 
-  ADC     r2, r2, r2, ASR #16   //   exponent setup [#4] in the MLS delay slot
+  adc     r2, r2, r2, asr #16   //   exponent setup [#4] in the MLS delay slot
 
   // Now r1 contains the original numerator, shifted left 23, minus _some_
   // multiple of the original denominator (which is still in r0). The bounds on
@@ -222,12 +222,12 @@ LOCAL_LABEL(div):
   // recombines them, by doing the comparison in such a way that it sets the
   // carry flag if the increment is needed.
 
-  CMP     r1, r0                // Set carry flag if num >= den
-  SUBHS   r1, r1, r0            // If so, subtract den from num
-  ADC     r3, r12, r3, LSL #12  // Recombine quotient halves, plus optional +1
+  cmp     r1, r0                // Set carry flag if num >= den
+  subhs   r1, r1, r0            // If so, subtract den from num
+  adc     r3, r12, r3, lsl #12  // Recombine quotient halves, plus optional +1
 
   // We've finished with r14 as a temporary register, so we can unstack it now.
-  POP     {r14}
+  pop     {r14}
 
   // Now r3 contains the _rounded-down_ output quotient, and r1 contains the
   // remainder. That is, (denominator * r3 + r1) = (numerator << 23), and
@@ -259,16 +259,16 @@ LOCAL_LABEL(div):
   // course in integers it's easier to compare 2*remainder with denominator. So
   // we start by shifting the remainder left by 1, and in the process, set Z if
   // it's exactly 0 (i.e. the result needs no rounding at all).
-  LSLS    r1, r1, #1
+  lsls    r1, r1, #1
   // Now trial-subtract the denominator. We don't do this at all if the result
   // was exact. If we do do it, r1 goes negative precisely if we need to round
   // up, which sets the C flag. (The previous instruction will have left C
   // clear, since r1 had its top 8 bits all clear. So now C is set _only_ if
   // we're rounding up.)
-  SUBSNE  r1, r1, r0
+  subsne  r1, r1, r0
   // Recombine the quotient with the sign + exponent, and use the C flag from
   // the previous instruction to increment the quotient if we're rounding up.
-  ADC     r0, r3, r2, LSL #23
+  adc     r0, r3, r2, lsl #23
 
   // If we haven't either overflowed or underflowed, we're done. We can
   // identify most of the safe cases by doing an unsigned comparison of the
@@ -290,14 +290,14 @@ LOCAL_LABEL(div):
   // further); if the exponent was less than that then r2 wraps round and looks
   // like a very large positive integer from the point of view of this unsigned
   // comparison.
-  CMP     r2, #0xFC0000
-  BXLO    lr
+  cmp     r2, #0xFC0000
+  bxlo    lr
 
   // The same comparison will have set the N and V flags to reflect the result
   // of comparing r2 with 0xFC0000 as a _signed_ integer. That reliably
   // distinguishes potential underflow (r2 is negative) from potential overflow
   // (r2 is positive and at least 0xFC0000)
-  BGE     LOCAL_LABEL(overflow)
+  bge     LOCAL_LABEL(overflow)
 
   // Here we might or might not have underflow (but we know we don't have
   // overflow). To check more carefully, we look at the _bottom_ half of r2,
@@ -322,17 +322,17 @@ LOCAL_LABEL(div):
   // 0x60 or greater for a (pre-rounding) underflow, and zero for a
   // non-underflow.
 
-  TST     r2, #0xF0
-  BXEQ    lr                    // no underflow after all; return
+  tst     r2, #0xF0
+  bxeq    lr                    // no underflow after all; return
 
   // Rebias the exponent for funder, which also corrects the sign bit.
-  ADD     r0, r0, #192 << 23
+  add     r0, r0, #192 << 23
   // Tell funder whether the true value is greater or less than the number in
   // r0. This is obtained from the sign of the remainder (still in r1), with
   // the only problem being that it's currently reversed. So negate r1 (leaving
   // 0 at 0 to indicate exactness).
-  RSBS    r1, r1, #0
-  B     SYMBOL_NAME(__compiler_rt_funder)
+  rsbs    r1, r1, #0
+  b     SYMBOL_NAME(__compiler_rt_funder)
 
 LOCAL_LABEL(overflow):
   // Here we might or might not have overflow (but we know we don't have
@@ -346,18 +346,18 @@ LOCAL_LABEL(overflow):
   // (moving the exponent field to the top), increment it once more (so that
   // the smallest overflowed exponent 0xFF wraps round to 0), and then compare
   // against 0xFE000000 as an unsigned integer.
-  MOV     r12, r0, LSL #1
-  ADD     r12, r12, #1 << 24
-  CMP     r12, #0xFE << 24      // Check for exp = 253 or 254
-  BXHS    lr
+  mov     r12, r0, lsl #1
+  add     r12, r12, #1 << 24
+  cmp     r12, #0xFE << 24      // Check for exp = 253 or 254
+  bxhs    lr
   // We have actual overflow. Rebias r0 to bring the exponent back into range,
   // which ensures its sign is correct. Then make an infinity of that sign to
   // return.
-  SUBS    r0, r0, #0xC0 << 23
-  MOVS    r12, #0xFF            // exponent of infinity
-  ORRS    r12, r12, r0, LSR #23 // exponent and sign at bottom of r12
-  MOVS    r0, r12, LSL #23      // shift it up to the top of r0 to return
-  BX      lr
+  subs    r0, r0, #0xC0 << 23
+  movs    r12, #0xFF            // exponent of infinity
+  orrs    r12, r12, r0, lsr #23 // exponent and sign at bottom of r12
+  movs    r0, r12, lsl #23      // shift it up to the top of r0 to return
+  bx      lr
 
 LOCAL_LABEL(uncommon):
   // We come here from the start of the function if either input is an uncommon
@@ -367,57 +367,57 @@ LOCAL_LABEL(uncommon):
   // in bits 16..23. But r3 doesn't necessarily contain the exponent of y,
   // because the instruction that set it up was conditional. So first we
   // unconditionally repeat it.
-  AND     r3, r12, r1, LSR #7
+  and     r3, r12, r1, lsr #7
 
   // In all cases not involving a NaN as output, the sign of the output is made
   // in the same way as for finite numbers, as the XOR of the input signs. So
   // repeat the sign setup from the main branch.
-  TEQ     r0, r1                // is the output sign bit 1?
-  ORRMI   r2, r2, #0x100        // if so, set bit 8 of r2
+  teq     r0, r1                // is the output sign bit 1?
+  orrmi   r2, r2, #0x100        // if so, set bit 8 of r2
 
   // Detect infinities and NaNs, by checking if either of r2 or r3 is at least
   // 0xFF0000.
-  CMP     r2, #0xFF0000
-  CMPLO   r3, #0xFF0000
-  BHS     LOCAL_LABEL(inf_NaN)
+  cmp     r2, #0xFF0000
+  cmplo   r3, #0xFF0000
+  bhs     LOCAL_LABEL(inf_NaN)
 
   // Now we know there are no infinities or NaNs, but there's at least one zero
   // or denormal.
-  MOVS    r12, r1, LSL #1       // is y zero?
-  BEQ     LOCAL_LABEL(divbyzero)        // if so, go and handle division by zero
-  MOVS    r12, r0, LSL #1       // is x zero? (now we know that y is not)
-  MOVEQ   r0, r2, LSL #23       // if so, 0/nonzero is just 0 (of right sign)
-  BXEQ    lr
+  movs    r12, r1, lsl #1       // is y zero?
+  beq     LOCAL_LABEL(divbyzero)        // if so, go and handle division by zero
+  movs    r12, r0, lsl #1       // is x zero? (now we know that y is not)
+  moveq   r0, r2, lsl #23       // if so, 0/nonzero is just 0 (of right sign)
+  bxeq    lr
 
   // Now we've eliminated zeroes as well, leaving only denormals: either x or
   // y, or both, is a denormal. Call fnorm2 to convert both into a normalised
   // mantissa and a (potentially small) exponent.
-  AND     r12, r2, #0x100       // save the result sign from r2
-  LSR     r2, #16               // shift extracted exponents down to bit 0
-  LSR     r3, #16               // where fnorm2 will expect them
-  PUSH    {r0, r1, r2, r3, r12, lr}
-  MOV     r0, sp                // tell fnorm2 where to find its data
-  BL      SYMBOL_NAME(__compiler_rt_fnorm2)
-  POP     {r0, r1, r2, r3, r12, lr}
-  LSL     r3, #16               // shift exponents back up to bit 16
-  ORR     r2, r12, r2, LSL #16  // and put the result sign back in r2
+  and     r12, r2, #0x100       // save the result sign from r2
+  lsr     r2, #16               // shift extracted exponents down to bit 0
+  lsr     r3, #16               // where fnorm2 will expect them
+  push    {r0, r1, r2, r3, r12, lr}
+  mov     r0, sp                // tell fnorm2 where to find its data
+  bl      SYMBOL_NAME(__compiler_rt_fnorm2)
+  pop     {r0, r1, r2, r3, r12, lr}
+  lsl     r3, #16               // shift exponents back up to bit 16
+  orr     r2, r12, r2, lsl #16  // and put the result sign back in r2
 
   // Now rejoin the main code path, having finished the setup it will expect:
   // swap x and y, and shift the fractions back down to the low 24 bits.
-  MOV     r12, r0, LSR #8
-  MOV     r0, r1, LSR #8
-  MOV     r1, r12
-  B       LOCAL_LABEL(div)
+  mov     r12, r0, lsr #8
+  mov     r0, r1, lsr #8
+  mov     r1, r12
+  b       LOCAL_LABEL(div)
 
 LOCAL_LABEL(inf_NaN):
   // We come here if at least one input is a NaN or infinity. If either or both
   // inputs are NaN then we hand off to fnan2 to propagate a NaN from the
   // input.
-  MOV     r12, #0xFF000000
-  CMP     r12, r0, LSL #1       // if (r0 << 1) > 0xFF000000, r0 is a NaN
-  BLO     SYMBOL_NAME(__compiler_rt_fnan2)
-  CMP     r12, r1, LSL #1
-  BLO     SYMBOL_NAME(__compiler_rt_fnan2)
+  mov     r12, #0xFF000000
+  cmp     r12, r0, lsl #1       // if (r0 << 1) > 0xFF000000, r0 is a NaN
+  blo     SYMBOL_NAME(__compiler_rt_fnan2)
+  cmp     r12, r1, lsl #1
+  blo     SYMBOL_NAME(__compiler_rt_fnan2)
 
   // No NaNs, so we have three options: inf/inf = NaN, inf/finite = inf, and
   // finite/inf = 0.
@@ -425,26 +425,26 @@ LOCAL_LABEL(inf_NaN):
   // If both operands are infinity, we return a NaN. Since we know at
   // least _one_ is infinity, we can test this by checking if they're
   // equal apart from the sign bits.
-  EOR     r3, r0, r1
-  LSLS    r3, #1                // were all bits of XOR zero other than top?
-  BEQ     LOCAL_LABEL(invalid)          // if so, both operands are infinity
+  eor     r3, r0, r1
+  lsls    r3, #1                // were all bits of XOR zero other than top?
+  beq     LOCAL_LABEL(invalid)          // if so, both operands are infinity
 
   // See if x is infinite
-  CMP     r12, r0, LSL #1       // (r0 << 1) == 0xFF000000?
-  BEQ     LOCAL_LABEL(infret)           // if so, infinity/finite = infinity
+  cmp     r12, r0, lsl #1       // (r0 << 1) == 0xFF000000?
+  beq     LOCAL_LABEL(infret)           // if so, infinity/finite = infinity
 
   // y is infinite and x is not, so we return a zero of the
   // combined sign.
-  EOR     r0, r0, r1            // calculate the right sign
-  AND     r0, r0, #0x80000000   // throw away everything else
-  BX      lr
+  eor     r0, r0, r1            // calculate the right sign
+  and     r0, r0, #0x80000000   // throw away everything else
+  bx      lr
 
 LOCAL_LABEL(divbyzero):
   // Here, we know y is zero. But we don't know if x is zero or nonzero. So we
   // might be calculating 0/0 (invalid operation, generating a NaN), or
   // nonzero/0 (the IEEE "division by zero" exception, generating infinity).
-  MOVS    r12, r0, LSL #1       // is x zero too?
-  BEQ     LOCAL_LABEL(invalid)          // if so, go and return a NaN
+  movs    r12, r0, lsl #1       // is x zero too?
+  beq     LOCAL_LABEL(invalid)          // if so, go and return a NaN
 
 LOCAL_LABEL(infret):
   // Here, we're either dividing infinity by a finite number, or dividing a
@@ -460,15 +460,15 @@ LOCAL_LABEL(infret):
   // r2 contains the output sign in bit 8, which is a convenient place to find
   // it when making an infinity, because we can fill in the 8 exponent bits
   // below that and then shift it left.
-  ORR     r2, r2, #0xff         // sign + maximum exponent
-  LSL     r0, r2, #23           // shift up to the top
-  BX      lr
+  orr     r2, r2, #0xff         // sign + maximum exponent
+  lsl     r0, r2, #23           // shift up to the top
+  bx      lr
 
 LOCAL_LABEL(invalid):
   // Return the default NaN, from an invalid operation (either dividing
   // infinity by infinity, or 0 by 0).
-  LDR     r0, =0x7FC00000
-  BX      lr
+  ldr     r0, =0x7FC00000
+  bx      lr
 
 // Finally, the lookup table for the initial reciprocal approximation.
 //
