@@ -2482,15 +2482,13 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   // We have a broken hint, check if it is possible to fix it by
   // reusing PhysReg for the copy-related live-ranges. Indeed, we evicted
   // some register and PhysReg may be available for the other live-ranges.
-  SmallSet<Register, 4> Visited;
-  SmallVector<Register, 2> RecoloringCandidates;
   HintsInfo Info;
   Register Reg = VirtReg.reg();
   MCRegister PhysReg = VRM->getPhys(Reg);
   // Start the recoloring algorithm from the input live-interval, then
   // it will propagate to the ones that are copy-related with it.
-  Visited.insert(Reg);
-  RecoloringCandidates.push_back(Reg);
+  SmallSet<Register, 4> Visited = {Reg};
+  SmallVector<Register, 2> RecoloringCandidates = {Reg};
 
   LLVM_DEBUG(dbgs() << "Trying to reconcile hints for: " << printReg(Reg, TRI)
                     << '(' << printReg(PhysReg, TRI) << ")\n");
