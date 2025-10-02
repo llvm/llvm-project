@@ -14,7 +14,6 @@
 #define MLIR_TOOLS_MLIROPT_MLIROPTMAIN_H
 
 #include "mlir/Debug/CLOptionsSetup.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/ToolUtilities.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -31,6 +30,19 @@ namespace mlir {
 class DialectRegistry;
 class PassPipelineCLParser;
 class PassManager;
+
+/// enum class to indicate the verbosity level of the diagnostic filter.
+enum class VerbosityLevel {
+  ErrorsOnly = 0,
+  ErrorsAndWarnings,
+  ErrorsWarningsAndRemarks
+};
+
+enum class RemarkFormat {
+  REMARK_FORMAT_STDOUT,
+  REMARK_FORMAT_YAML,
+  REMARK_FORMAT_BITSTREAM,
+};
 
 /// Configuration options for the mlir-opt tool.
 /// This is intended to help building tools like mlir-opt by collecting the
@@ -75,6 +87,11 @@ public:
     dumpPassPipelineFlag = dump;
     return *this;
   }
+
+  VerbosityLevel getDiagnosticVerbosityLevel() const {
+    return diagnosticVerbosityLevelFlag;
+  }
+
   bool shouldDumpPassPipeline() const { return dumpPassPipelineFlag; }
 
   /// Set the output format to bytecode instead of textual IR.
@@ -83,9 +100,12 @@ public:
     return *this;
   }
   bool shouldEmitBytecode() const { return emitBytecodeFlag; }
+
   bool shouldElideResourceDataFromBytecode() const {
     return elideResourceDataFromBytecodeFlag;
   }
+
+  bool shouldShowNotes() const { return !disableDiagnosticNotesFlag; }
 
   /// Set the IRDL file to load before processing the input.
   MlirOptMainConfig &setIrdlFile(StringRef file) {
@@ -119,6 +139,13 @@ public:
       return passPipelineCallback(pm);
     return success();
   }
+
+  /// List the registered passes and return.
+  MlirOptMainConfig &listPasses(bool list) {
+    listPassesFlag = list;
+    return *this;
+  }
+  bool shouldListPasses() const { return listPassesFlag; }
 
   /// Enable running the reproducer information stored in resources (if
   /// present).
@@ -164,11 +191,20 @@ public:
 
   /// Set whether to check that emitted diagnostics match `expected-*` lines on
   /// the corresponding line. This is meant for implementing diagnostic tests.
-  MlirOptMainConfig &verifyDiagnostics(bool verify) {
+  MlirOptMainConfig &
+  verifyDiagnostics(SourceMgrDiagnosticVerifierHandler::Level verify) {
     verifyDiagnosticsFlag = verify;
     return *this;
   }
-  bool shouldVerifyDiagnostics() const { return verifyDiagnosticsFlag; }
+
+  bool shouldVerifyDiagnostics() const {
+    return verifyDiagnosticsFlag !=
+           SourceMgrDiagnosticVerifierHandler::Level::None;
+  }
+
+  SourceMgrDiagnosticVerifierHandler::Level verifyDiagnosticsLevel() const {
+    return verifyDiagnosticsFlag;
+  }
 
   /// Set whether to run the verifier after each transformation pass.
   MlirOptMainConfig &verifyPasses(bool verify) {
@@ -177,6 +213,13 @@ public:
   }
   bool shouldVerifyPasses() const { return verifyPassesFlag; }
 
+  /// Set whether to run the verifier on parsing.
+  MlirOptMainConfig &verifyOnParsing(bool verify) {
+    disableVerifierOnParsingFlag = !verify;
+    return *this;
+  }
+  bool shouldVerifyOnParsing() const { return !disableVerifierOnParsingFlag; }
+
   /// Set whether to run the verifier after each transformation pass.
   MlirOptMainConfig &verifyRoundtrip(bool verify) {
     verifyRoundtripFlag = verify;
@@ -184,8 +227,35 @@ public:
   }
   bool shouldVerifyRoundtrip() const { return verifyRoundtripFlag; }
 
+  /// Checks if any remark filters are set.
+  bool shouldEmitRemarks() const {
+    // Emit all remarks only when no filters are specified.
+    const bool hasFilters =
+        !getRemarksAllFilter().empty() || !getRemarksPassedFilter().empty() ||
+        !getRemarksFailedFilter().empty() ||
+        !getRemarksMissedFilter().empty() || !getRemarksAnalyseFilter().empty();
+    return hasFilters;
+  }
+
   /// Reproducer file generation (no crash required).
   StringRef getReproducerFilename() const { return generateReproducerFileFlag; }
+
+  /// Set the reproducer output filename
+  RemarkFormat getRemarkFormat() const { return remarkFormatFlag; }
+  /// Set the remark format to use.
+  std::string getRemarksAllFilter() const { return remarksAllFilterFlag; }
+  /// Set the remark output file.
+  std::string getRemarksOutputFile() const { return remarksOutputFileFlag; }
+  /// Set the remark passed filters.
+  std::string getRemarksPassedFilter() const { return remarksPassedFilterFlag; }
+  /// Set the remark failed filters.
+  std::string getRemarksFailedFilter() const { return remarksFailedFilterFlag; }
+  /// Set the remark missed filters.
+  std::string getRemarksMissedFilter() const { return remarksMissedFilterFlag; }
+  /// Set the remark analyse filters.
+  std::string getRemarksAnalyseFilter() const {
+    return remarksAnalyseFilterFlag;
+  }
 
 protected:
   /// Allow operation with no registered dialects.
@@ -193,8 +263,24 @@ protected:
   /// general.
   bool allowUnregisteredDialectsFlag = false;
 
+  /// Remark format
+  RemarkFormat remarkFormatFlag = RemarkFormat::REMARK_FORMAT_STDOUT;
+  /// Remark file to output to
+  std::string remarksOutputFileFlag = "";
+  /// Remark filters
+  std::string remarksAllFilterFlag = "";
+  std::string remarksPassedFilterFlag = "";
+  std::string remarksFailedFilterFlag = "";
+  std::string remarksMissedFilterFlag = "";
+  std::string remarksAnalyseFilterFlag = "";
+
   /// Configuration for the debugging hooks.
   tracing::DebugConfig debugConfig;
+
+  /// Verbosity level of diagnostic information. 0: Errors only,
+  /// 1: Errors and warnings, 2: Errors, warnings and remarks.
+  VerbosityLevel diagnosticVerbosityLevelFlag =
+      VerbosityLevel::ErrorsWarningsAndRemarks;
 
   /// Print the pipeline that will be run.
   bool dumpPassPipelineFlag = false;
@@ -204,9 +290,6 @@ protected:
 
   /// Elide resources when generating bytecode.
   bool elideResourceDataFromBytecodeFlag = false;
-
-  /// Enable the Debugger action hook: Debugger can intercept MLIR Actions.
-  bool enableDebuggerActionHookFlag = false;
 
   /// IRDL file to register before processing the input.
   std::string irdlFileFlag = "";
@@ -220,11 +303,19 @@ protected:
   /// The callback to populate the pass manager.
   std::function<LogicalResult(PassManager &)> passPipelineCallback;
 
+  /// List the registered passes and return.
+  bool listPassesFlag = false;
+
   /// Enable running the reproducer.
   bool runReproducerFlag = false;
 
   /// Show the registered dialects before trying to load the input file.
   bool showDialectsFlag = false;
+
+  /// Show the notes in diagnostic information. Notes can be included in
+  /// any diagnostic information, so it is not specified in the verbosity
+  /// level.
+  bool disableDiagnosticNotesFlag = true;
 
   /// Split the input file based on the given marker into chunks and process
   /// each chunk independently. Input is not split if empty.
@@ -238,10 +329,14 @@ protected:
 
   /// Set whether to check that emitted diagnostics match `expected-*` lines on
   /// the corresponding line. This is meant for implementing diagnostic tests.
-  bool verifyDiagnosticsFlag = false;
+  SourceMgrDiagnosticVerifierHandler::Level verifyDiagnosticsFlag =
+      SourceMgrDiagnosticVerifierHandler::Level::None;
 
   /// Run the verifier after each transformation pass.
   bool verifyPassesFlag = true;
+
+  /// Disable the verifier on parsing.
+  bool disableVerifierOnParsingFlag = false;
 
   /// Verify that the input IR round-trips perfectly.
   bool verifyRoundtripFlag = false;
@@ -281,7 +376,7 @@ LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
                           DialectRegistry &registry);
 
 /// Implementation for tools like `mlir-opt`.
-/// This function can be used with registrationAndParseCLIOptions so that
+/// This function can be used with registerAndParseCLIOptions so that
 /// CLI options can be accessed before running MlirOptMain.
 /// - inputFilename is the name of the input mlir file.
 /// - outputFilename is the name of the output file.

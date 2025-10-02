@@ -1,8 +1,8 @@
-; RUN: opt %loadPolly -S \
-; RUN: -polly-analyze-read-only-scalars=false -polly-codegen < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S \
+; RUN: -polly-analyze-read-only-scalars=false -passes=polly-codegen < %s | FileCheck %s
 
-; RUN: opt %loadPolly -S \
-; RUN: -polly-analyze-read-only-scalars=true -polly-codegen < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S \
+; RUN: -polly-analyze-read-only-scalars=true -passes=polly-codegen < %s | FileCheck %s
 ;
 ;    float f(float *A, int N) {
 ;      float tmp = 0;
@@ -29,7 +29,7 @@
 
 ; CHECK-LABEL: polly.stmt.bb4:
 ; CHECK:         %tmp.0.s2a.reload[[R3:[0-9]*]] = load float, ptr %tmp.0.s2a
-; CHECK:         %tmp[[R5:[0-9]*]]_p_scalar_ = load float, ptr %scevgep, align 4, !alias.scope !0, !noalias !3
+; CHECK:         %tmp[[R5:[0-9]*]]_p_scalar_ = load float, ptr %scevgep, align 4, !alias.scope !2, !noalias !5
 ; CHECK:         %p_tmp[[R4:[0-9]*]] = fadd float %tmp.0.s2a.reload[[R3]], %tmp[[R5]]_p_scalar_
 ; CHECK:         store float %p_tmp[[R4]], ptr %tmp.0.phiops
 

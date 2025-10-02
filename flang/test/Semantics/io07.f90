@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 1001 format(A)
 
      !ERROR: Format statement must be labeled
@@ -23,9 +23,13 @@
      endif
 
      ! C1302 warnings; no errors
+     !WARNING: Expected ',' or ')' in format expression
 2051 format(1X3/)
+     !WARNING: Expected ',' or ')' in format expression
 2052 format(1X003/)
+     !WARNING: Expected ',' or ')' in format expression
 2053 format(3P7I2)
+     !WARNING: Expected ',' or ')' in format expression
 2054 format(3PI2)
 
      !ERROR: Expected ',' or ')' in format expression
@@ -37,13 +41,14 @@
      !ERROR: Expected ',' or ')' in format expression
 2103 format(3I8 3Z8)
 
-     !ERROR: Expected ',' or ')' in format expression
+     !WARNING: Expected ',' or ')' in format expression
 2104 format(3I8 Z8)
 
 3001 format(*(I3))
 3002 format(5X,*(2(A)))
 
      !ERROR: Unlimited format item list must contain a data edit descriptor
+     !WARNING: 'X' edit descriptor must have a positive position value
 3101 format(*(X))
 
      !ERROR: Unlimited format item list must contain a data edit descriptor
@@ -52,19 +57,21 @@
      !ERROR: Unlimited format item list must contain a data edit descriptor
 3103 format(5X, 'abc', *((:)))
 
+     !WARNING: 'X' edit descriptor must have a positive position value
 4001 format(2(X))
 
      !ERROR: List repeat specifier must be positive
+     !WARNING: 'X' edit descriptor must have a positive position value
      !ERROR: 'DT' edit descriptor repeat specifier must be positive
 4101 format(0(X), 0dt)
 
 6001 format(((I0, B0)))
 
      !ERROR: 'A' edit descriptor 'w' value must be positive
-     !ERROR: 'L' edit descriptor 'w' value must be positive
+     !WARNING: 'L' edit descriptor 'w' value should be positive
 6101 format((A0), ((L0)))
 
-     !ERROR: 'L' edit descriptor 'w' value must be positive
+     !WARNING: 'L' edit descriptor 'w' value should be positive
 6102 format((3(((L 0 0 0)))))
 
 7001 format(17G8.1, 17G8.1e3)

@@ -1,4 +1,5 @@
 # RUN: llc -mtriple amdgcn -run-pass livevars -run-pass phi-node-elimination -o - %s | FileCheck %s
+# RUN: llc -mtriple amdgcn --passes='require<live-vars>,phi-node-elimination' -o - %s | FileCheck %s
 
 ################################################################################
 # This test used to hit an assert in PHIElimination:

@@ -17,7 +17,6 @@
 
 #include "ARM.h"
 #include "ARMSubtarget.h"
-#include "MCTargetDesc/ARMBaseInfo.h"
 #include "MVETailPredUtils.h"
 #include "Thumb2InstrInfo.h"
 #include "llvm/ADT/SmallVector.h"
@@ -57,10 +56,10 @@ public:
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineLoopInfo>();
-    AU.addPreserved<MachineLoopInfo>();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -92,8 +91,8 @@ char MVETPAndVPTOptimisations::ID = 0;
 INITIALIZE_PASS_BEGIN(MVETPAndVPTOptimisations, DEBUG_TYPE,
                       "ARM MVE TailPred and VPT Optimisations pass", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MVETPAndVPTOptimisations, DEBUG_TYPE,
                     "ARM MVE TailPred and VPT Optimisations pass", false, false)
 
@@ -304,8 +303,7 @@ MachineInstr *MVETPAndVPTOptimisations::CheckForLRUseInPredecessors(
     }
 
     Visited.insert(MBB);
-    for (auto *Pred : MBB->predecessors())
-      Worklist.push_back(Pred);
+    llvm::append_range(Worklist, MBB->predecessors());
   }
   return LoopStart;
 }
@@ -924,7 +922,7 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
   // the function.
   unsigned LastVPTImm = 0;
   Register LastVPTReg = 0;
-  SmallSet<MachineInstr *, 4> DeadInstructions;
+  SmallPtrSet<MachineInstr *, 4> DeadInstructions;
 
   for (MachineInstr &Instr : MBB.instrs()) {
     // Look for predicated MVE instructions.
@@ -986,6 +984,7 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
         if (MRI->hasOneUse(GPR))
           DeadInstructions.insert(MRI->getVRegDef(GPR));
       }
+      MRI->clearKillFlags(LastVPTReg);
       LLVM_DEBUG(dbgs() << "Adding VPNot: " << *VPNot << "  to replace use at "
                         << Instr);
       VPR = NewVPR;
@@ -1064,14 +1063,15 @@ bool MVETPAndVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
 
   TII = static_cast<const Thumb2InstrInfo *>(STI.getInstrInfo());
   MRI = &Fn.getRegInfo();
-  MachineLoopInfo *MLI = &getAnalysis<MachineLoopInfo>();
-  MachineDominatorTree *DT = &getAnalysis<MachineDominatorTree>();
+  MachineLoopInfo *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MachineDominatorTree *DT =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   LLVM_DEBUG(dbgs() << "********** ARM MVE VPT Optimisations **********\n"
                     << "********** Function: " << Fn.getName() << '\n');
 
   bool Modified = false;
-  for (MachineLoop *ML : MLI->getBase().getLoopsInPreorder()) {
+  for (MachineLoop *ML : MLI->getLoopsInPreorder()) {
     Modified |= LowerWhileLoopStart(ML);
     Modified |= MergeLoopEnd(ML);
     Modified |= ConvertTailPredLoop(ML, DT);

@@ -15,9 +15,10 @@
 #define LLVM_CLANG_AST_ASTCONCEPT_H
 
 #include "clang/AST/DeclarationName.h"
-#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/UnsignedOrNone.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
@@ -26,6 +27,7 @@
 namespace clang {
 
 class ConceptDecl;
+class TemplateDecl;
 class Expr;
 class NamedDecl;
 struct PrintingPolicy;
@@ -43,9 +45,8 @@ public:
   ConstraintSatisfaction() = default;
 
   ConstraintSatisfaction(const NamedDecl *ConstraintOwner,
-                         ArrayRef<TemplateArgument> TemplateArgs) :
-      ConstraintOwner(ConstraintOwner), TemplateArgs(TemplateArgs.begin(),
-                                                     TemplateArgs.end()) { }
+                         ArrayRef<TemplateArgument> TemplateArgs)
+      : ConstraintOwner(ConstraintOwner), TemplateArgs(TemplateArgs) {}
 
   using SubstitutionDiagnostic = std::pair<SourceLocation, StringRef>;
   using Detail = llvm::PointerUnion<Expr *, SubstitutionDiagnostic *>;
@@ -53,11 +54,10 @@ public:
   bool IsSatisfied = false;
   bool ContainsErrors = false;
 
-  /// \brief Pairs of unsatisfied atomic constraint expressions along with the
-  /// substituted constraint expr, if the template arguments could be
+  /// \brief The substituted constraint expr, if the template arguments could be
   /// substituted into them, or a diagnostic if substitution resulted in an
   /// invalid expression.
-  llvm::SmallVector<std::pair<const Expr *, Detail>, 4> Details;
+  llvm::SmallVector<Detail, 4> Details;
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &C) {
     Profile(ID, C, ConstraintOwner, TemplateArgs);
@@ -69,7 +69,7 @@ public:
 
   bool HasSubstitutionFailure() {
     for (const auto &Detail : Details)
-      if (Detail.second.dyn_cast<SubstitutionDiagnostic *>())
+      if (Detail.dyn_cast<SubstitutionDiagnostic *>())
         return true;
     return false;
   }
@@ -80,9 +80,7 @@ public:
 /// substituted into them, or a diagnostic if substitution resulted in
 /// an invalid expression.
 using UnsatisfiedConstraintRecord =
-    std::pair<const Expr *,
-              llvm::PointerUnion<Expr *,
-                                 std::pair<SourceLocation, StringRef> *>>;
+    llvm::PointerUnion<Expr *, std::pair<SourceLocation, StringRef> *>;
 
 /// \brief The result of a constraint satisfaction check, containing the
 /// necessary information to diagnose an unsatisfied constraint.
@@ -96,11 +94,11 @@ struct ASTConstraintSatisfaction final :
   bool ContainsErrors : 1;
 
   const UnsatisfiedConstraintRecord *begin() const {
-    return getTrailingObjects<UnsatisfiedConstraintRecord>();
+    return getTrailingObjects();
   }
 
   const UnsatisfiedConstraintRecord *end() const {
-    return getTrailingObjects<UnsatisfiedConstraintRecord>() + NumRecords;
+    return getTrailingObjects() + NumRecords;
   }
 
   ASTConstraintSatisfaction(const ASTContext &C,
@@ -126,6 +124,7 @@ struct ASTConstraintSatisfaction final :
 ///   template <std::derives_from<Expr> T> void dump();
 ///             ~~~~~~~~~~~~~~~~~~~~~~~ (in TemplateTypeParmDecl)
 class ConceptReference {
+protected:
   // \brief The optional nested name specifier used when naming the concept.
   NestedNameSpecifierLoc NestedNameSpec;
 
@@ -143,7 +142,7 @@ class ConceptReference {
   NamedDecl *FoundDecl;
 
   /// \brief The concept named.
-  ConceptDecl *NamedConcept;
+  TemplateDecl *NamedConcept;
 
   /// \brief The template argument list source info used to specialize the
   /// concept.
@@ -151,7 +150,7 @@ class ConceptReference {
 
   ConceptReference(NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
                    DeclarationNameInfo ConceptNameInfo, NamedDecl *FoundDecl,
-                   ConceptDecl *NamedConcept,
+                   TemplateDecl *NamedConcept,
                    const ASTTemplateArgumentListInfo *ArgsAsWritten)
       : NestedNameSpec(NNS), TemplateKWLoc(TemplateKWLoc),
         ConceptName(ConceptNameInfo), FoundDecl(FoundDecl),
@@ -161,7 +160,7 @@ public:
   static ConceptReference *
   Create(const ASTContext &C, NestedNameSpecifierLoc NNS,
          SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
-         NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
+         NamedDecl *FoundDecl, TemplateDecl *NamedConcept,
          const ASTTemplateArgumentListInfo *ArgsAsWritten);
 
   const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
@@ -178,12 +177,7 @@ public:
 
   SourceLocation getLocation() const { return getConceptNameLoc(); }
 
-  SourceLocation getBeginLoc() const LLVM_READONLY {
-    // Note that if the qualifier is null the template KW must also be null.
-    if (auto QualifierLoc = getNestedNameSpecifierLoc())
-      return QualifierLoc.getBeginLoc();
-    return getConceptNameInfo().getBeginLoc();
-  }
+  SourceLocation getBeginLoc() const LLVM_READONLY;
 
   SourceLocation getEndLoc() const LLVM_READONLY {
     return getTemplateArgsAsWritten() &&
@@ -200,9 +194,7 @@ public:
     return FoundDecl;
   }
 
-  ConceptDecl *getNamedConcept() const {
-    return NamedConcept;
-  }
+  TemplateDecl *getNamedConcept() const { return NamedConcept; }
 
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
     return ArgsAsWritten;
@@ -233,12 +225,14 @@ class TypeConstraint {
   /// type-constraint.
   Expr *ImmediatelyDeclaredConstraint = nullptr;
   ConceptReference *ConceptRef;
+  UnsignedOrNone ArgPackSubstIndex;
 
 public:
   TypeConstraint(ConceptReference *ConceptRef,
-                 Expr *ImmediatelyDeclaredConstraint)
+                 Expr *ImmediatelyDeclaredConstraint,
+                 UnsignedOrNone ArgPackSubstIndex)
       : ImmediatelyDeclaredConstraint(ImmediatelyDeclaredConstraint),
-        ConceptRef(ConceptRef) {}
+        ConceptRef(ConceptRef), ArgPackSubstIndex(ArgPackSubstIndex) {}
 
   /// \brief Get the immediately-declared constraint expression introduced by
   /// this type-constraint, that is - the constraint expression that is added to
@@ -249,9 +243,13 @@ public:
 
   ConceptReference *getConceptReference() const { return ConceptRef; }
 
+  UnsignedOrNone getArgPackSubstIndex() const { return ArgPackSubstIndex; }
+
   // FIXME: Instead of using these concept related functions the callers should
   // directly work with the corresponding ConceptReference.
-  ConceptDecl *getNamedConcept() const { return ConceptRef->getNamedConcept(); }
+  TemplateDecl *getNamedConcept() const {
+    return ConceptRef->getNamedConcept();
+  }
 
   SourceLocation getConceptNameLoc() const {
     return ConceptRef->getConceptNameLoc();

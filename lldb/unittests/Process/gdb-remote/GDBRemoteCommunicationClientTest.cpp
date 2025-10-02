@@ -8,6 +8,7 @@
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
 #include "GDBRemoteTestUtils.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/DataBuffer.h"
@@ -63,8 +64,12 @@ std::string one_register_hex = "41424344";
 class GDBRemoteCommunicationClientTest : public GDBRemoteTest {
 public:
   void SetUp() override {
-    ASSERT_THAT_ERROR(GDBRemoteCommunication::ConnectLocally(client, server),
-                      llvm::Succeeded());
+    llvm::Expected<Socket::Pair> pair = Socket::CreatePair();
+    ASSERT_THAT_EXPECTED(pair, llvm::Succeeded());
+    client.SetConnection(
+        std::make_unique<ConnectionFileDescriptor>(std::move(pair->first)));
+    server.SetConnection(
+        std::make_unique<ConnectionFileDescriptor>(std::move(pair->second)));
   }
 
 protected:
@@ -343,24 +348,39 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetExecutable());
   EXPECT_EQ("/foo/bar.so", region_info.GetName().GetStringRef());
   EXPECT_EQ(MemoryRegionInfo::eDontKnow, region_info.GetMemoryTagged());
+  EXPECT_EQ(MemoryRegionInfo::eDontKnow, region_info.IsStackMemory());
+  EXPECT_EQ(MemoryRegionInfo::eDontKnow, region_info.IsShadowStack());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
   });
 
   HandlePacket(server, "qMemoryRegionInfo:a000",
-               "start:a000;size:2000;flags:;");
+               "start:a000;size:2000;flags:;type:stack;");
   EXPECT_TRUE(result.get().Success());
   EXPECT_EQ(MemoryRegionInfo::eNo, region_info.GetMemoryTagged());
+  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.IsStackMemory());
+  EXPECT_EQ(MemoryRegionInfo::eNo, region_info.IsShadowStack());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
   });
 
   HandlePacket(server, "qMemoryRegionInfo:a000",
-               "start:a000;size:2000;flags: mt  zz mt  ;");
+               "start:a000;size:2000;flags: mt  zz mt ss  ;type:ha,ha,stack;");
   EXPECT_TRUE(result.get().Success());
   EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetMemoryTagged());
+  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.IsStackMemory());
+  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.IsShadowStack());
+
+  result = std::async(std::launch::async, [&] {
+    return client.GetMemoryRegionInfo(addr, region_info);
+  });
+
+  HandlePacket(server, "qMemoryRegionInfo:a000",
+               "start:a000;size:2000;type:heap;");
+  EXPECT_TRUE(result.get().Success());
+  EXPECT_EQ(MemoryRegionInfo::eNo, region_info.IsStackMemory());
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
@@ -593,6 +613,10 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteMemoryTags) {
                  "E03", false);
 }
 
+// Prior to this verison, constructing a std::future for a type without a
+// default constructor is not possible.
+// https://developercommunity.visualstudio.com/t/c-shared-state-futuresstate-default-constructs-the/60897
+#if !defined(_MSC_VER) || _MSC_VER >= 1932
 TEST_F(GDBRemoteCommunicationClientTest, CalculateMD5) {
   FileSpec file_spec("/foo/bar", FileSpec::Style::posix);
   std::future<ErrorOr<MD5::MD5Result>> async_result = std::async(
@@ -614,3 +638,4 @@ TEST_F(GDBRemoteCommunicationClientTest, CalculateMD5) {
   EXPECT_EQ(expected_low, result->low());
   EXPECT_EQ(expected_high, result->high());
 }
+#endif

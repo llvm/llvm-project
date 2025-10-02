@@ -11,15 +11,14 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "OutputSegment.h"
+#include "Sections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "UnwindInfoSection.h"
 #include "Writer.h"
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
 
 using namespace llvm;
@@ -64,15 +63,13 @@ void lld::macho::addInputSection(InputSection *inputSection) {
     isec->parent = osec;
     inputSections.push_back(isec);
   } else if (auto *isec = dyn_cast<CStringInputSection>(inputSection)) {
-    if (isec->getName() == section_names::objcMethname) {
-      if (in.objcMethnameSection->inputOrder == UnspecifiedInputOrder)
-        in.objcMethnameSection->inputOrder = inputSectionsOrder++;
-      in.objcMethnameSection->addInput(isec);
-    } else {
-      if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
-        in.cStringSection->inputOrder = inputSectionsOrder++;
-      in.cStringSection->addInput(isec);
-    }
+    bool useSectionName = config->separateCstringLiteralSections ||
+                          isec->getName() == section_names::objcMethname;
+    auto *osec = in.getOrCreateCStringSection(
+        useSectionName ? isec->getName() : section_names::cString);
+    if (osec->inputOrder == UnspecifiedInputOrder)
+      osec->inputOrder = inputSectionsOrder++;
+    osec->addInput(isec);
   } else if (auto *isec = dyn_cast<WordLiteralInputSection>(inputSection)) {
     if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
       in.wordLiteralSection->inputOrder = inputSectionsOrder++;
@@ -166,8 +163,7 @@ std::string InputSection::getSourceLocation(uint64_t off) const {
     // Symbols are generally prefixed with an underscore, which is not included
     // in the debug information.
     StringRef symName = sym->getName();
-    if (!symName.empty() && symName[0] == '_')
-      symName = symName.substr(1);
+    symName.consume_front("_");
 
     if (std::optional<std::pair<std::string, unsigned>> fileLine =
             dwarf->getVariableLoc(symName))
@@ -189,13 +185,14 @@ const Reloc *InputSection::getRelocAt(uint32_t off) const {
   return &*it;
 }
 
-void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
+void ConcatInputSection::foldIdentical(ConcatInputSection *copy,
+                                       Symbol::ICFFoldKind foldKind) {
   align = std::max(align, copy->align);
   copy->live = false;
   copy->wasCoalesced = true;
   copy->replacement = this;
   for (auto &copySym : copy->symbols)
-    copySym->wasIdenticalCodeFolded = true;
+    copySym->identicalCodeFoldingKind = foldKind;
 
   symbols.insert(symbols.end(), copy->symbols.begin(), copy->symbols.end());
   copy->symbols.clear();
@@ -225,13 +222,13 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
     const bool needsFixup = config->emitChainedFixups &&
                             target->hasAttr(r.type, RelocAttrBits::UNSIGNED);
     if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
-      const Symbol *fromSym = r.referent.get<Symbol *>();
+      const Symbol *fromSym = cast<Symbol *>(r.referent);
       const Reloc &minuend = relocs[++i];
       uint64_t minuendVA;
       if (const Symbol *toSym = minuend.referent.dyn_cast<Symbol *>())
         minuendVA = toSym->getVA() + minuend.addend;
       else {
-        auto *referentIsec = minuend.referent.get<InputSection *>();
+        auto *referentIsec = cast<InputSection *>(minuend.referent);
         assert(!::shouldOmitFromOutput(referentIsec));
         minuendVA = referentIsec->getVA(minuend.addend);
       }
@@ -366,20 +363,8 @@ uint64_t WordLiteralInputSection::getOffset(uint64_t off) const {
 }
 
 bool macho::isCodeSection(const InputSection *isec) {
-  uint32_t type = sectionType(isec->getFlags());
-  if (type != S_REGULAR && type != S_COALESCED)
-    return false;
-
-  uint32_t attr = isec->getFlags() & SECTION_ATTRIBUTES_USR;
-  if (attr == S_ATTR_PURE_INSTRUCTIONS)
-    return true;
-
-  if (isec->getSegName() == segment_names::text)
-    return StringSwitch<bool>(isec->getName())
-        .Cases(section_names::textCoalNt, section_names::staticInit, true)
-        .Default(false);
-
-  return false;
+  return sections::isCodeSection(isec->getName(), isec->getSegName(),
+                                 isec->getFlags());
 }
 
 bool macho::isCfStringSection(const InputSection *isec) {

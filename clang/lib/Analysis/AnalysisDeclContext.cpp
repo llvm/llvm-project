@@ -36,11 +36,9 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -71,8 +69,8 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(
     bool addLoopExit, bool addScopes, bool synthesizeBodies,
     bool addStaticInitBranch, bool addCXXNewAllocator,
     bool addRichCXXConstructors, bool markElidedCXXConstructors,
-    bool addVirtualBaseBranches, CodeInjector *injector)
-    : Injector(injector), FunctionBodyFarm(ASTCtx, injector),
+    bool addVirtualBaseBranches, std::unique_ptr<CodeInjector> injector)
+    : Injector(std::move(injector)), FunctionBodyFarm(ASTCtx, Injector.get()),
       SynthesizeBodies(synthesizeBodies) {
   cfgBuildOptions.PruneTriviallyFalseEdges = !useUnoptimizedCFG;
   cfgBuildOptions.AddImplicitDtors = addImplicitDtors;

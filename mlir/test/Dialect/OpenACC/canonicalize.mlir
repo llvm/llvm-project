@@ -116,10 +116,10 @@ func.func @testhostdataop(%a: memref<f32>, %ifCond: i1) -> () {
   acc.host_data dataOperands(%0 : memref<f32>) if(%false) {
     acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
       acc.yield
-    } attributes { inclusiveUpperbound = array<i1: true> }
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
     acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
       acc.yield
-    } attributes { inclusiveUpperbound = array<i1: true> }
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
     acc.terminator
   }
   return

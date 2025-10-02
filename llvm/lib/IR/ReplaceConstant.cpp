@@ -49,13 +49,25 @@ static SmallVector<Instruction *, 4> expandUser(BasicBlock::iterator InsertPt,
   return NewInsts;
 }
 
-bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
+bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
+                                           Function *RestrictToFunc,
+                                           bool RemoveDeadConstants,
+                                           bool IncludeSelf) {
   // Find all expandable direct users of Consts.
   SmallVector<Constant *> Stack;
-  for (Constant *C : Consts)
-    for (User *U : C->users())
-      if (isExpandableUser(U))
-        Stack.push_back(cast<Constant>(U));
+  for (Constant *C : Consts) {
+    assert(!isa<ConstantData>(C) &&
+           "should not be expanding trivial constant users");
+
+    if (IncludeSelf) {
+      assert(isExpandableUser(C) && "One of the constants is not expandable");
+      Stack.push_back(C);
+    } else {
+      for (User *U : C->users())
+        if (isExpandableUser(U))
+          Stack.push_back(cast<Constant>(U));
+    }
+  }
 
   // Include transitive users.
   SetVector<Constant *> ExpandableUsers;
@@ -74,7 +86,8 @@ bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
   for (Constant *C : ExpandableUsers)
     for (User *U : C->users())
       if (auto *I = dyn_cast<Instruction>(U))
-        InstructionWorklist.insert(I);
+        if (!RestrictToFunc || I->getFunction() == RestrictToFunc)
+          InstructionWorklist.insert(I);
 
   // Replace those expandable operands with instructions
   bool Changed = false;
@@ -95,15 +108,16 @@ bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
           auto NewInsts = expandUser(BI, C);
           for (auto *NI : NewInsts)
             NI->setDebugLoc(Loc);
-          InstructionWorklist.insert(NewInsts.begin(), NewInsts.end());
+          InstructionWorklist.insert_range(NewInsts);
           U.set(NewInsts.back());
         }
       }
     }
   }
 
-  for (Constant *C : Consts)
-    C->removeDeadConstantUsers();
+  if (RemoveDeadConstants)
+    for (Constant *C : Consts)
+      C->removeDeadConstantUsers();
 
   return Changed;
 }

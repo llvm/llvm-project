@@ -21,7 +21,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Operator.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -150,7 +149,7 @@ namespace {
     Address getAtomicAddress() const {
       llvm::Type *ElTy;
       if (LVal.isSimple())
-        ElTy = LVal.getAddress(CGF).getElementType();
+        ElTy = LVal.getAddress().getElementType();
       else if (LVal.isBitField())
         ElTy = LVal.getBitFieldAddress().getElementType();
       else if (LVal.isVectorElt())
@@ -363,7 +362,7 @@ bool AtomicInfo::requiresMemSetZero(llvm::Type *type) const {
 
 bool AtomicInfo::emitMemSetZeroIfNecessary() const {
   assert(LVal.isSimple());
-  Address addr = LVal.getAddress(CGF);
+  Address addr = LVal.getAddress();
   if (!requiresMemSetZero(addr.getElementType()))
     return false;
 
@@ -389,6 +388,7 @@ static void emitAtomicCmpXchg(CodeGenFunction &CGF, AtomicExpr *E, bool IsWeak,
       Ptr, Expected, Desired, SuccessOrder, FailureOrder, Scope);
   Pair->setVolatile(E->isVolatile());
   Pair->setWeak(IsWeak);
+  CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Pair, E);
 
   // Cmp holds the result of the compare-exchange operation: true on success,
   // false on failure.
@@ -411,7 +411,9 @@ static void emitAtomicCmpXchg(CodeGenFunction &CGF, AtomicExpr *E, bool IsWeak,
 
   CGF.Builder.SetInsertPoint(StoreExpectedBB);
   // Update the memory at Expected with Old's value.
-  CGF.Builder.CreateStore(Old, Val1);
+  auto *I = CGF.Builder.CreateStore(Old, Val1);
+  CGF.addInstToCurrentSourceAtom(I, Old);
+
   // Finally, branch to the exit point.
   CGF.Builder.CreateBr(ContinueBB);
 
@@ -590,7 +592,9 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     llvm::LoadInst *Load = CGF.Builder.CreateLoad(Ptr);
     Load->setAtomic(Order, Scope);
     Load->setVolatile(E->isVolatile());
-    CGF.Builder.CreateStore(Load, Dest);
+    CGF.maybeAttachRangeForLoad(Load, E->getValueType(), E->getExprLoc());
+    auto *I = CGF.Builder.CreateStore(Load, Dest);
+    CGF.addInstToCurrentSourceAtom(I, Load);
     return;
   }
 
@@ -605,6 +609,7 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     llvm::StoreInst *Store = CGF.Builder.CreateStore(LoadVal1, Ptr);
     Store->setAtomic(Order, Scope);
     Store->setVolatile(E->isVolatile());
+    CGF.addInstToCurrentSourceAtom(Store, LoadVal1);
     return;
   }
 
@@ -723,11 +728,32 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__scoped_atomic_fetch_nand:
     Op = llvm::AtomicRMWInst::Nand;
     break;
+
+  case AtomicExpr::AO__atomic_test_and_set: {
+    llvm::AtomicRMWInst *RMWI =
+        CGF.emitAtomicRMWInst(llvm::AtomicRMWInst::Xchg, Ptr,
+                              CGF.Builder.getInt8(1), Order, Scope, E);
+    RMWI->setVolatile(E->isVolatile());
+    llvm::Value *Result = CGF.EmitToMemory(
+        CGF.Builder.CreateIsNotNull(RMWI, "tobool"), E->getType());
+    auto *I = CGF.Builder.CreateStore(Result, Dest);
+    CGF.addInstToCurrentSourceAtom(I, Result);
+    return;
+  }
+
+  case AtomicExpr::AO__atomic_clear: {
+    llvm::StoreInst *Store =
+        CGF.Builder.CreateStore(CGF.Builder.getInt8(0), Ptr);
+    Store->setAtomic(Order, Scope);
+    Store->setVolatile(E->isVolatile());
+    CGF.addInstToCurrentSourceAtom(Store, nullptr);
+    return;
+  }
   }
 
   llvm::Value *LoadVal1 = CGF.Builder.CreateLoad(Val1);
   llvm::AtomicRMWInst *RMWI =
-      CGF.Builder.CreateAtomicRMW(Op, Ptr, LoadVal1, Order, Scope);
+      CGF.emitAtomicRMWInst(Op, Ptr, LoadVal1, Order, Scope, E);
   RMWI->setVolatile(E->isVolatile());
 
   // For __atomic_*_fetch operations, perform the operation again to
@@ -743,7 +769,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   if (E->getOp() == AtomicExpr::AO__atomic_nand_fetch ||
       E->getOp() == AtomicExpr::AO__scoped_atomic_nand_fetch)
     Result = CGF.Builder.CreateNot(Result);
-  CGF.Builder.CreateStore(Result, Dest);
+  auto *I = CGF.Builder.CreateStore(Result, Dest);
+  CGF.addInstToCurrentSourceAtom(I, Result);
 }
 
 // This function emits any expression (scalar, complex, or aggregate)
@@ -763,11 +790,22 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *Expr, Address Dest,
                          llvm::Value *Scope) {
   auto ScopeModel = Expr->getScopeModel();
 
-  // LLVM atomic instructions always have synch scope. If clang atomic
-  // expression has no scope operand, use default LLVM synch scope.
+  // LLVM atomic instructions always have sync scope. If clang atomic
+  // expression has no scope operand, use default LLVM sync scope.
   if (!ScopeModel) {
+    llvm::SyncScope::ID SS;
+    if (CGF.getLangOpts().OpenCL)
+      // OpenCL approach is: "The functions that do not have memory_scope
+      // argument have the same semantics as the corresponding functions with
+      // the memory_scope argument set to memory_scope_device." See ref.:
+      // https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_C.html#atomic-functions
+      SS = CGF.getTargetHooks().getLLVMSyncScopeID(CGF.getLangOpts(),
+                                                   SyncScope::OpenCLDevice,
+                                                   Order, CGF.getLLVMContext());
+    else
+      SS = llvm::SyncScope::System;
     EmitAtomicOp(CGF, Expr, Dest, Ptr, Val1, Val2, IsWeak, FailureOrder, Size,
-                 Order, CGF.CGM.getLLVMContext().getOrInsertSyncScopeID(""));
+                 Order, SS);
     return;
   }
 
@@ -792,8 +830,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *Expr, Address Dest,
       CGF.createBasicBlock("atomic.scope.continue", CGF.CurFn);
 
   auto *SC = Builder.CreateIntCast(Scope, Builder.getInt32Ty(), false);
-  // If unsupported synch scope is encountered at run time, assume a fallback
-  // synch scope value.
+  // If unsupported sync scope is encountered at run time, assume a fallback
+  // sync scope value.
   auto FallBack = ScopeModel->getFallBackValue();
   llvm::SwitchInst *SI = Builder.CreateSwitch(SC, BB[FallBack]);
   for (auto S : Scopes) {
@@ -815,6 +853,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *Expr, Address Dest,
 }
 
 RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
+  ApplyAtomGroup Grp(getDebugInfo());
+
   QualType AtomicTy = E->getPtr()->getType()->getPointeeType();
   QualType MemTy = AtomicTy;
   if (const AtomicType *AT = AtomicTy->getAs<AtomicType>())
@@ -840,7 +880,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   CharUnits MaxInlineWidth =
       getContext().toCharUnitsFromBits(MaxInlineWidthInBits);
   DiagnosticsEngine &Diags = CGM.getDiags();
-  bool Misaligned = (Ptr.getAlignment() % TInfo.Width) != 0;
+  bool Misaligned = !Ptr.getAlignment().isMultipleOf(TInfo.Width);
   bool Oversized = getContext().toBits(TInfo.Width) > MaxInlineWidthInBits;
   if (Misaligned) {
     Diags.Report(E->getBeginLoc(), diag::warn_atomic_op_misaligned)
@@ -867,6 +907,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__c11_atomic_load:
   case AtomicExpr::AO__opencl_atomic_load:
   case AtomicExpr::AO__hip_atomic_load:
+  case AtomicExpr::AO__atomic_test_and_set:
+  case AtomicExpr::AO__atomic_clear:
     break;
 
   case AtomicExpr::AO__atomic_load:
@@ -1052,8 +1094,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       auto DestAS = getContext().getTargetAddressSpace(LangAS::opencl_generic);
       auto *DestType = llvm::PointerType::get(getLLVMContext(), DestAS);
 
-      return getTargetHooks().performAddrSpaceCast(
-          *this, V, AS, LangAS::opencl_generic, DestType, false);
+      return getTargetHooks().performAddrSpaceCast(*this, V, AS, DestType,
+                                                   false);
     };
 
     Args.add(RValue::get(CastToGenericAddrSpace(Ptr.emitRawPointer(*this),
@@ -1189,6 +1231,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__opencl_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_max_fetch:
+    case AtomicExpr::AO__atomic_test_and_set:
+    case AtomicExpr::AO__atomic_clear:
       llvm_unreachable("Integral atomic operations always become atomicrmw!");
     }
 
@@ -1228,7 +1272,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
                  E->getOp() == AtomicExpr::AO__atomic_store ||
                  E->getOp() == AtomicExpr::AO__atomic_store_n ||
                  E->getOp() == AtomicExpr::AO__scoped_atomic_store ||
-                 E->getOp() == AtomicExpr::AO__scoped_atomic_store_n;
+                 E->getOp() == AtomicExpr::AO__scoped_atomic_store_n ||
+                 E->getOp() == AtomicExpr::AO__atomic_clear;
   bool IsLoad = E->getOp() == AtomicExpr::AO__c11_atomic_load ||
                 E->getOp() == AtomicExpr::AO__opencl_atomic_load ||
                 E->getOp() == AtomicExpr::AO__hip_atomic_load ||
@@ -1603,7 +1648,7 @@ Address AtomicInfo::materializeRValue(RValue rvalue) const {
   LValue TempLV = CGF.MakeAddrLValue(CreateTempAlloca(), getAtomicType());
   AtomicInfo Atomics(CGF, TempLV);
   Atomics.emitCopyIntoMemory(rvalue);
-  return TempLV.getAddress(CGF);
+  return TempLV.getAddress();
 }
 
 llvm::Value *AtomicInfo::getScalarRValValueOrNull(RValue RVal) const {
@@ -1951,7 +1996,7 @@ void CodeGenFunction::EmitAtomicStore(RValue rvalue, LValue dest,
   // maybe for address-space qualification.
   assert(!rvalue.isAggregate() ||
          rvalue.getAggregateAddress().getElementType() ==
-             dest.getAddress(*this).getElementType());
+             dest.getAddress().getElementType());
 
   AtomicInfo atomics(*this, dest);
   LValue LVal = atomics.getAtomicLValue();
@@ -2024,14 +2069,25 @@ std::pair<RValue, llvm::Value *> CodeGenFunction::EmitAtomicCompareExchange(
   // maybe for address-space qualification.
   assert(!Expected.isAggregate() ||
          Expected.getAggregateAddress().getElementType() ==
-             Obj.getAddress(*this).getElementType());
+             Obj.getAddress().getElementType());
   assert(!Desired.isAggregate() ||
          Desired.getAggregateAddress().getElementType() ==
-             Obj.getAddress(*this).getElementType());
+             Obj.getAddress().getElementType());
   AtomicInfo Atomics(*this, Obj);
 
   return Atomics.EmitAtomicCompareExchange(Expected, Desired, Success, Failure,
                                            IsWeak);
+}
+
+llvm::AtomicRMWInst *
+CodeGenFunction::emitAtomicRMWInst(llvm::AtomicRMWInst::BinOp Op, Address Addr,
+                                   llvm::Value *Val, llvm::AtomicOrdering Order,
+                                   llvm::SyncScope::ID SSID,
+                                   const AtomicExpr *AE) {
+  llvm::AtomicRMWInst *RMW =
+      Builder.CreateAtomicRMW(Op, Addr, Val, Order, SSID);
+  getTargetHooks().setTargetAtomicMetadata(*this, *RMW, AE);
+  return RMW;
 }
 
 void CodeGenFunction::EmitAtomicUpdate(
@@ -2068,7 +2124,7 @@ void CodeGenFunction::EmitAtomicInit(Expr *init, LValue dest) {
 
     // Evaluate the expression directly into the destination.
     AggValueSlot slot = AggValueSlot::forLValue(
-        dest, *this, AggValueSlot::IsNotDestructed,
+        dest, AggValueSlot::IsNotDestructed,
         AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
         AggValueSlot::DoesNotOverlap,
         Zeroed ? AggValueSlot::IsZeroed : AggValueSlot::IsNotZeroed);

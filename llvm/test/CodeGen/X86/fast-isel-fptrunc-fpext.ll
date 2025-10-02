@@ -78,7 +78,7 @@ define double @single_to_double_rm_optsize(ptr %x) optsize {
 ;
 ; AVX-LABEL: single_to_double_rm_optsize:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtss2sd (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vcvtss2sd (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %0 = load float, ptr %x, align 4
@@ -112,7 +112,7 @@ define float @double_to_single_rm_optsize(ptr %x) optsize {
 ;
 ; AVX-LABEL: double_to_single_rm_optsize:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsd2ss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vcvtsd2ss (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %0 = load double, ptr %x, align 8

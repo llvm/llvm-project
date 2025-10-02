@@ -127,8 +127,8 @@ defm ATOMIC_LOAD_I32 : AtomicLoad<I32, "i32.atomic.load", 0x10>;
 defm ATOMIC_LOAD_I64 : AtomicLoad<I64, "i64.atomic.load", 0x11>;
 
 // Select loads
-defm : LoadPat<i32, atomic_load_32, "ATOMIC_LOAD_I32">;
-defm : LoadPat<i64, atomic_load_64, "ATOMIC_LOAD_I64">;
+defm : LoadPat<i32, atomic_load_nonext_32, "ATOMIC_LOAD_I32">;
+defm : LoadPat<i64, atomic_load_nonext_64, "ATOMIC_LOAD_I64">;
 
 // Extending loads. Note that there are only zero-extending atomic loads, no
 // sign-extending loads.
@@ -144,28 +144,28 @@ defm ATOMIC_LOAD32_U_I64 : AtomicLoad<I64, "i64.atomic.load32_u", 0x16>;
 // we match the patterns that the type legalizer expands them to.
 
 // Unlike regular loads, extension to i64 is handled differently than i32.
-// i64 (zext (i8 (atomic_load_8))) gets legalized to
-// i64 (and (i64 (anyext (i32 (atomic_load_8)))), 255)
+// i64 (zext (i8 (atomic_load_nonext_8))) gets legalized to
+// i64 (and (i64 (anyext (i32 (atomic_load_zext_8)))), 255)
 // Extension to i32 is elided by SelectionDAG as our atomic loads are
 // zero-extending.
 def zext_aload_8_64 :
   PatFrag<(ops node:$addr),
-          (i64 (zext (i32 (atomic_load_8 node:$addr))))>;
+          (i64 (zext (i32 (atomic_load_azext_8 node:$addr))))>;
 def zext_aload_16_64 :
   PatFrag<(ops node:$addr),
-          (i64 (zext (i32 (atomic_load_16 node:$addr))))>;
+          (i64 (zext (i32 (atomic_load_azext_16 node:$addr))))>;
 def zext_aload_32_64 :
   PatFrag<(ops node:$addr),
-          (i64 (zext (i32 (atomic_load_32 node:$addr))))>;
+          (i64 (zext (i32 (atomic_load_nonext_32 node:$addr))))>;
 
 // We don't have single sext atomic load instructions. So for sext loads, we
 // match bare subword loads (for 32-bit results) and anyext loads (for 64-bit
 // results) and select a zext load; the next instruction will be sext_inreg
 // which is selected by itself.
 def sext_aload_8_64 :
-  PatFrag<(ops node:$addr), (anyext (i32 (atomic_load_8 node:$addr)))>;
+  PatFrag<(ops node:$addr), (anyext (i32 (atomic_load_azext_8 node:$addr)))>;
 def sext_aload_16_64 :
-  PatFrag<(ops node:$addr), (anyext (i32 (atomic_load_16 node:$addr)))>;
+  PatFrag<(ops node:$addr), (anyext (i32 (atomic_load_azext_16 node:$addr)))>;
 
 // Select zero-extending loads
 defm : LoadPat<i64, zext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
@@ -173,8 +173,8 @@ defm : LoadPat<i64, zext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
 defm : LoadPat<i64, zext_aload_32_64, "ATOMIC_LOAD32_U_I64">;
 
 // Select sign-extending loads
-defm : LoadPat<i32, atomic_load_8, "ATOMIC_LOAD8_U_I32">;
-defm : LoadPat<i32, atomic_load_16, "ATOMIC_LOAD16_U_I32">;
+defm : LoadPat<i32, atomic_load_zext_8, "ATOMIC_LOAD8_U_I32">;
+defm : LoadPat<i32, atomic_load_zext_16, "ATOMIC_LOAD16_U_I32">;
 defm : LoadPat<i64, sext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
 defm : LoadPat<i64, sext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
 // 32->64 sext load gets selected as i32.atomic.load, i64.extend_i32_s
@@ -351,17 +351,17 @@ multiclass BinRMWPattern<PatFrag rmw_32, PatFrag rmw_64, string inst_32,
   defm : BinRMWPat<i64, rmw_64, inst_64>;
 }
 
-defm : BinRMWPattern<atomic_load_add_32, atomic_load_add_64,
+defm : BinRMWPattern<atomic_load_add_i32, atomic_load_add_i64,
                      "ATOMIC_RMW_ADD_I32", "ATOMIC_RMW_ADD_I64">;
-defm : BinRMWPattern<atomic_load_sub_32, atomic_load_sub_64,
+defm : BinRMWPattern<atomic_load_sub_i32, atomic_load_sub_i64,
                      "ATOMIC_RMW_SUB_I32", "ATOMIC_RMW_SUB_I64">;
-defm : BinRMWPattern<atomic_load_and_32, atomic_load_and_64,
+defm : BinRMWPattern<atomic_load_and_i32, atomic_load_and_i64,
                      "ATOMIC_RMW_AND_I32", "ATOMIC_RMW_AND_I64">;
-defm : BinRMWPattern<atomic_load_or_32, atomic_load_or_64,
+defm : BinRMWPattern<atomic_load_or_i32, atomic_load_or_i64,
                      "ATOMIC_RMW_OR_I32", "ATOMIC_RMW_OR_I64">;
-defm : BinRMWPattern<atomic_load_xor_32, atomic_load_xor_64,
+defm : BinRMWPattern<atomic_load_xor_i32, atomic_load_xor_i64,
                      "ATOMIC_RMW_XOR_I32", "ATOMIC_RMW_XOR_I64">;
-defm : BinRMWPattern<atomic_swap_32, atomic_swap_64,
+defm : BinRMWPattern<atomic_swap_i32, atomic_swap_i64,
                      "ATOMIC_RMW_XCHG_I32", "ATOMIC_RMW_XCHG_I64">;
 
 // Truncating & zero-extending binary RMW patterns.
@@ -408,27 +408,27 @@ multiclass BinRMWTruncExtPattern<
 }
 
 defm : BinRMWTruncExtPattern<
-  atomic_load_add_8, atomic_load_add_16, atomic_load_add_32,
+  atomic_load_add_i8, atomic_load_add_i16, atomic_load_add_i32,
   "ATOMIC_RMW8_U_ADD_I32", "ATOMIC_RMW16_U_ADD_I32",
   "ATOMIC_RMW8_U_ADD_I64", "ATOMIC_RMW16_U_ADD_I64", "ATOMIC_RMW32_U_ADD_I64">;
 defm : BinRMWTruncExtPattern<
-  atomic_load_sub_8, atomic_load_sub_16, atomic_load_sub_32,
+  atomic_load_sub_i8, atomic_load_sub_i16, atomic_load_sub_i32,
   "ATOMIC_RMW8_U_SUB_I32", "ATOMIC_RMW16_U_SUB_I32",
   "ATOMIC_RMW8_U_SUB_I64", "ATOMIC_RMW16_U_SUB_I64", "ATOMIC_RMW32_U_SUB_I64">;
 defm : BinRMWTruncExtPattern<
-  atomic_load_and_8, atomic_load_and_16, atomic_load_and_32,
+  atomic_load_and_i8, atomic_load_and_i16, atomic_load_and_i32,
   "ATOMIC_RMW8_U_AND_I32", "ATOMIC_RMW16_U_AND_I32",
   "ATOMIC_RMW8_U_AND_I64", "ATOMIC_RMW16_U_AND_I64", "ATOMIC_RMW32_U_AND_I64">;
 defm : BinRMWTruncExtPattern<
-  atomic_load_or_8, atomic_load_or_16, atomic_load_or_32,
+  atomic_load_or_i8, atomic_load_or_i16, atomic_load_or_i32,
   "ATOMIC_RMW8_U_OR_I32", "ATOMIC_RMW16_U_OR_I32",
   "ATOMIC_RMW8_U_OR_I64", "ATOMIC_RMW16_U_OR_I64", "ATOMIC_RMW32_U_OR_I64">;
 defm : BinRMWTruncExtPattern<
-  atomic_load_xor_8, atomic_load_xor_16, atomic_load_xor_32,
+  atomic_load_xor_i8, atomic_load_xor_i16, atomic_load_xor_i32,
   "ATOMIC_RMW8_U_XOR_I32", "ATOMIC_RMW16_U_XOR_I32",
   "ATOMIC_RMW8_U_XOR_I64", "ATOMIC_RMW16_U_XOR_I64", "ATOMIC_RMW32_U_XOR_I64">;
 defm : BinRMWTruncExtPattern<
-  atomic_swap_8, atomic_swap_16, atomic_swap_32,
+  atomic_swap_i8, atomic_swap_i16, atomic_swap_i32,
   "ATOMIC_RMW8_U_XCHG_I32", "ATOMIC_RMW16_U_XCHG_I32",
   "ATOMIC_RMW8_U_XCHG_I64", "ATOMIC_RMW16_U_XCHG_I64",
   "ATOMIC_RMW32_U_XCHG_I64">;
@@ -485,8 +485,8 @@ multiclass TerRMWPat<ValueType ty, PatFrag kind, string inst> {
         Requires<[HasAddr64, HasAtomics]>;
 }
 
-defm : TerRMWPat<i32, atomic_cmp_swap_32, "ATOMIC_RMW_CMPXCHG_I32">;
-defm : TerRMWPat<i64, atomic_cmp_swap_64, "ATOMIC_RMW_CMPXCHG_I64">;
+defm : TerRMWPat<i32, atomic_cmp_swap_i32, "ATOMIC_RMW_CMPXCHG_I32">;
+defm : TerRMWPat<i64, atomic_cmp_swap_i64, "ATOMIC_RMW_CMPXCHG_I64">;
 
 // Truncating & zero-extending ternary RMW patterns.
 // DAG legalization & optimization before instruction selection may introduce
@@ -524,13 +524,13 @@ class sext_ter_rmw_8_64<PatFrag kind> :
 class sext_ter_rmw_16_64<PatFrag kind> : sext_ter_rmw_8_64<kind>;
 // 32->64 sext RMW gets selected as i32.atomic.rmw.***, i64.extend_i32_s
 
-defm : TerRMWPat<i32, zext_ter_rmw_8_32<atomic_cmp_swap_8>, "ATOMIC_RMW8_U_CMPXCHG_I32">;
-defm : TerRMWPat<i32, zext_ter_rmw_16_32<atomic_cmp_swap_16>, "ATOMIC_RMW16_U_CMPXCHG_I32">;
-defm : TerRMWPat<i64, zext_ter_rmw_8_64<atomic_cmp_swap_8>, "ATOMIC_RMW8_U_CMPXCHG_I64">;
-defm : TerRMWPat<i64, zext_ter_rmw_16_64<atomic_cmp_swap_16>, "ATOMIC_RMW16_U_CMPXCHG_I64">;
-defm : TerRMWPat<i64, zext_ter_rmw_32_64<atomic_cmp_swap_32>, "ATOMIC_RMW32_U_CMPXCHG_I64">;
+defm : TerRMWPat<i32, zext_ter_rmw_8_32<atomic_cmp_swap_i8>, "ATOMIC_RMW8_U_CMPXCHG_I32">;
+defm : TerRMWPat<i32, zext_ter_rmw_16_32<atomic_cmp_swap_i16>, "ATOMIC_RMW16_U_CMPXCHG_I32">;
+defm : TerRMWPat<i64, zext_ter_rmw_8_64<atomic_cmp_swap_i8>, "ATOMIC_RMW8_U_CMPXCHG_I64">;
+defm : TerRMWPat<i64, zext_ter_rmw_16_64<atomic_cmp_swap_i16>, "ATOMIC_RMW16_U_CMPXCHG_I64">;
+defm : TerRMWPat<i64, zext_ter_rmw_32_64<atomic_cmp_swap_i32>, "ATOMIC_RMW32_U_CMPXCHG_I64">;
 
-defm : TerRMWPat<i32, sext_ter_rmw_8_32<atomic_cmp_swap_8>, "ATOMIC_RMW8_U_CMPXCHG_I32">;
-defm : TerRMWPat<i32, sext_ter_rmw_16_32<atomic_cmp_swap_16>, "ATOMIC_RMW16_U_CMPXCHG_I32">;
-defm : TerRMWPat<i64, sext_ter_rmw_8_64<atomic_cmp_swap_8>, "ATOMIC_RMW8_U_CMPXCHG_I64">;
-defm : TerRMWPat<i64, sext_ter_rmw_16_64<atomic_cmp_swap_16>, "ATOMIC_RMW16_U_CMPXCHG_I64">;
+defm : TerRMWPat<i32, sext_ter_rmw_8_32<atomic_cmp_swap_i8>, "ATOMIC_RMW8_U_CMPXCHG_I32">;
+defm : TerRMWPat<i32, sext_ter_rmw_16_32<atomic_cmp_swap_i16>, "ATOMIC_RMW16_U_CMPXCHG_I32">;
+defm : TerRMWPat<i64, sext_ter_rmw_8_64<atomic_cmp_swap_i8>, "ATOMIC_RMW8_U_CMPXCHG_I64">;
+defm : TerRMWPat<i64, sext_ter_rmw_16_64<atomic_cmp_swap_i16>, "ATOMIC_RMW16_U_CMPXCHG_I64">;

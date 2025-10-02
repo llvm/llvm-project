@@ -12,17 +12,42 @@
 
 #include "llvm/ADT/StringExtras.h"
 
+#include <limits>
 #include <numeric>
 #include <optional>
 
 using namespace lldb_private;
 
 RegisterFlags::Field::Field(std::string name, unsigned start, unsigned end)
-    : m_name(std::move(name)), m_start(start), m_end(end) {
+    : m_name(std::move(name)), m_start(start), m_end(end),
+      m_enum_type(nullptr) {
   assert(m_start <= m_end && "Start bit must be <= end bit.");
 }
 
-void RegisterFlags::Field::log(Log *log) const {
+RegisterFlags::Field::Field(std::string name, unsigned bit_position)
+    : m_name(std::move(name)), m_start(bit_position), m_end(bit_position),
+      m_enum_type(nullptr) {}
+
+RegisterFlags::Field::Field(std::string name, unsigned start, unsigned end,
+                            const FieldEnum *enum_type)
+    : m_name(std::move(name)), m_start(start), m_end(end),
+      m_enum_type(enum_type) {
+  if (m_enum_type) {
+    // Check that all values fit into this field. The XML parser will also
+    // do this check so at runtime nothing should fail this check.
+    // We can also make enums in C++ at compile time, which might fail this
+    // check, so we catch them before it makes it into a release.
+    uint64_t max_value = GetMaxValue();
+    UNUSED_IF_ASSERT_DISABLED(max_value);
+    for (const auto &enumerator : m_enum_type->GetEnumerators()) {
+      UNUSED_IF_ASSERT_DISABLED(enumerator);
+      assert(enumerator.m_value <= max_value &&
+             "Enumerator value exceeds maximum value for this field");
+    }
+  }
+}
+
+void RegisterFlags::Field::DumpToLog(Log *log) const {
   LLDB_LOG(log, "  Name: \"{0}\" Start: {1} End: {2}", m_name.c_str(), m_start,
            m_end);
 }
@@ -53,11 +78,36 @@ unsigned RegisterFlags::Field::PaddingDistance(const Field &other) const {
   return lhs_start - rhs_end - 1;
 }
 
-void RegisterFlags::SetFields(const std::vector<Field> &fields) {
-  // We expect that the XML processor will discard anything describing flags but
-  // with no fields.
-  assert(fields.size() && "Some fields must be provided.");
+unsigned RegisterFlags::Field::GetSizeInBits(unsigned start, unsigned end) {
+  return end - start + 1;
+}
 
+unsigned RegisterFlags::Field::GetSizeInBits() const {
+  return GetSizeInBits(m_start, m_end);
+}
+
+uint64_t RegisterFlags::Field::GetMaxValue(unsigned start, unsigned end) {
+  uint64_t max = std::numeric_limits<uint64_t>::max();
+  unsigned bits = GetSizeInBits(start, end);
+  // If the field is >= 64 bits the shift below would be undefined.
+  // We assume the GDB client has discarded any field that would fail this
+  // assert, it's only to check information we define directly in C++.
+  assert(bits <= 64 && "Cannot handle field with size > 64 bits");
+  if (bits < 64) {
+    max = ((uint64_t)1 << bits) - 1;
+  }
+  return max;
+}
+
+uint64_t RegisterFlags::Field::GetMaxValue() const {
+  return GetMaxValue(m_start, m_end);
+}
+
+uint64_t RegisterFlags::Field::GetMask() const {
+  return GetMaxValue() << m_start;
+}
+
+void RegisterFlags::SetFields(const std::vector<Field> &fields) {
   // We expect that these are unsorted but do not overlap.
   // They could fill the register but may have gaps.
   std::vector<Field> provided_fields = fields;
@@ -102,10 +152,10 @@ RegisterFlags::RegisterFlags(std::string id, unsigned size,
   SetFields(fields);
 }
 
-void RegisterFlags::log(Log *log) const {
+void RegisterFlags::DumpToLog(Log *log) const {
   LLDB_LOG(log, "ID: \"{0}\" Size: {1}", m_id.c_str(), m_size);
   for (const Field &field : m_fields)
-    field.log(log);
+    field.DumpToLog(log);
 }
 
 static StreamString FormatCell(const StreamString &content,
@@ -190,7 +240,143 @@ std::string RegisterFlags::AsTable(uint32_t max_width) const {
   return table;
 }
 
-void RegisterFlags::ToXML(StreamString &strm) const {
+// Print enums as:
+// value = name, value2 = name2
+// Subject to the limits of the terminal width.
+static void DumpEnumerators(StreamString &strm, size_t indent,
+                            size_t current_width, uint32_t max_width,
+                            const FieldEnum::Enumerators &enumerators) {
+  for (auto it = enumerators.cbegin(); it != enumerators.cend(); ++it) {
+    StreamString enumerator_strm;
+    // The first enumerator of a line doesn't need to be separated.
+    if (current_width != indent)
+      enumerator_strm << ' ';
+
+    enumerator_strm.Printf("%" PRIu64 " = %s", it->m_value, it->m_name.c_str());
+
+    // Don't put "," after the last enumerator.
+    if (std::next(it) != enumerators.cend())
+      enumerator_strm << ",";
+
+    llvm::StringRef enumerator_string = enumerator_strm.GetString();
+    // If printing the next enumerator would take us over the width, start
+    // a new line. However, if we're printing the first enumerator of this
+    // line, don't start a new one. Resulting in there being at least one per
+    // line.
+    //
+    // This means for very small widths we get:
+    // A: 0 = foo,
+    //    1 = bar
+    // Instead of:
+    // A:
+    //    0 = foo,
+    //    1 = bar
+    if ((current_width + enumerator_string.size() > max_width) &&
+        current_width != indent) {
+      current_width = indent;
+      strm << '\n' << std::string(indent, ' ');
+      // We're going to a new line so we don't need a space before the
+      // name of the enumerator.
+      enumerator_string = enumerator_string.drop_front();
+    }
+
+    current_width += enumerator_string.size();
+    strm << enumerator_string;
+  }
+}
+
+std::string RegisterFlags::DumpEnums(uint32_t max_width) const {
+  StreamString strm;
+  bool printed_enumerators_once = false;
+
+  for (const auto &field : m_fields) {
+    const FieldEnum *enum_type = field.GetEnum();
+    if (!enum_type)
+      continue;
+
+    const FieldEnum::Enumerators &enumerators = enum_type->GetEnumerators();
+    if (enumerators.empty())
+      continue;
+
+    // Break between enumerators of different fields.
+    if (printed_enumerators_once)
+      strm << "\n\n";
+    else
+      printed_enumerators_once = true;
+
+    std::string name_string = field.GetName() + ": ";
+    size_t indent = name_string.size();
+    size_t current_width = indent;
+
+    strm << name_string;
+
+    DumpEnumerators(strm, indent, current_width, max_width, enumerators);
+  }
+
+  return strm.GetString().str();
+}
+
+void RegisterFlags::EnumsToXML(Stream &strm, llvm::StringSet<> &seen) const {
+  for (const Field &field : m_fields)
+    if (const FieldEnum *enum_type = field.GetEnum()) {
+      const std::string &id = enum_type->GetID();
+      if (!seen.contains(id)) {
+        enum_type->ToXML(strm, GetSize());
+        seen.insert(id);
+      }
+    }
+}
+
+void FieldEnum::ToXML(Stream &strm, unsigned size) const {
+  // Example XML:
+  // <enum id="foo" size="4">
+  //  <evalue name="bar" value="1"/>
+  // </enum>
+  // Note that "size" is only emitted for GDB compatibility, LLDB does not need
+  // it.
+
+  strm.Indent();
+  strm << "<enum id=\"" << GetID() << "\" ";
+  // This is the size of the underlying enum type if this were a C type.
+  // In other words, the size of the register in bytes.
+  strm.Printf("size=\"%d\"", size);
+
+  const Enumerators &enumerators = GetEnumerators();
+  if (enumerators.empty()) {
+    strm << "/>\n";
+    return;
+  }
+
+  strm << ">\n";
+  strm.IndentMore();
+  for (const auto &enumerator : enumerators) {
+    strm.Indent();
+    enumerator.ToXML(strm);
+    strm.PutChar('\n');
+  }
+  strm.IndentLess();
+  strm.Indent("</enum>\n");
+}
+
+void FieldEnum::Enumerator::ToXML(Stream &strm) const {
+  std::string escaped_name;
+  llvm::raw_string_ostream escape_strm(escaped_name);
+  llvm::printHTMLEscaped(m_name, escape_strm);
+  strm.Printf("<evalue name=\"%s\" value=\"%" PRIu64 "\"/>",
+              escaped_name.c_str(), m_value);
+}
+
+void FieldEnum::Enumerator::DumpToLog(Log *log) const {
+  LLDB_LOG(log, "  Name: \"{0}\" Value: {1}", m_name.c_str(), m_value);
+}
+
+void FieldEnum::DumpToLog(Log *log) const {
+  LLDB_LOG(log, "ID: \"{0}\"", m_id.c_str());
+  for (const auto &enumerator : GetEnumerators())
+    enumerator.DumpToLog(log);
+}
+
+void RegisterFlags::ToXML(Stream &strm) const {
   // Example XML:
   // <flags id="cpsr_flags" size="4">
   //   <field name="incorrect" start="0" end="0"/>
@@ -213,8 +399,10 @@ void RegisterFlags::ToXML(StreamString &strm) const {
   strm.Indent("</flags>\n");
 }
 
-void RegisterFlags::Field::ToXML(StreamString &strm) const {
-  // Example XML:
+void RegisterFlags::Field::ToXML(Stream &strm) const {
+  // Example XML with an enum:
+  // <field name="correct" start="0" end="0" type="some_enum">
+  // Without:
   // <field name="correct" start="0" end="0"/>
   strm.Indent();
   strm << "<field name=\"";
@@ -225,5 +413,17 @@ void RegisterFlags::Field::ToXML(StreamString &strm) const {
   strm << escaped_name << "\" ";
 
   strm.Printf("start=\"%d\" end=\"%d\"", GetStart(), GetEnd());
+
+  if (const FieldEnum *enum_type = GetEnum())
+    strm << " type=\"" << enum_type->GetID() << "\"";
+
   strm << "/>";
+}
+
+FieldEnum::FieldEnum(std::string id, const Enumerators &enumerators)
+    : m_id(id), m_enumerators(enumerators) {
+  for (const auto &enumerator : m_enumerators) {
+    UNUSED_IF_ASSERT_DISABLED(enumerator);
+    assert(enumerator.m_name.size() && "Enumerator name cannot be empty");
+  }
 }

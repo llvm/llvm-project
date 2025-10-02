@@ -2,15 +2,11 @@
 // RUN: %libomptarget-compile-generic
 // RUN: env LIBOMPTARGET_INFO=16 \
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=DEFAULT
+// RUN: %libomptarget-compile-generic -g
+// RUN: env LIBOMPTARGET_INFO=16 \
+// RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=DEFAULT
 
-// UNSUPPORTED: nvptx64-nvidia-cuda
-// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-// UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-// UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
-// UNSUPPORTED: s390x-ibm-linux-gnu
-// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
+// REQUIRES: amdgpu
 
 __attribute__((optnone)) int optnone() { return 1; }
 
@@ -33,7 +29,7 @@ int main() {
     optnone();
   }
 // DEFAULT: [[NT:(128|256)]] (MaxFlatWorkGroupSize: [[NT]]
-#pragma omp target 
+#pragma omp target
 #pragma omp teams distribute parallel for
   for (int i = 0; i < N; ++i) {
     optnone();

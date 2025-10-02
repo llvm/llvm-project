@@ -31,8 +31,8 @@ bb3:
 }
 
 declare void @_Z3barv() #1
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind argmemonly
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind argmemonly
+declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind argmemonly
+declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind argmemonly
 
 attributes #0 = { uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
@@ -64,8 +64,8 @@ attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "fra
 
 
 ; PROBE: ![[CALL1]] = !DILocation(line: 4, column: 3, scope: ![[CALL1BLOCK:[0-9]+]])
-; PROBE: ![[CALL1BLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 186646559)
+; PROBE: ![[CALL1BLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 455147551)
 ; PROBE: ![[CALL2]] = !DILocation(line: 4, column: 9, scope: ![[CALL2BLOCK:[0-9]+]])
-; PROBE: ![[CALL2BLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 186646567)
+; PROBE: ![[CALL2BLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 455344167)
 ; PROBE: ![[INST]] = !DILocation(line: 4, column: 15, scope: ![[INSTBLOCK:[0-9]+]])
 ; PROBE: ![[INSTBLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 4)

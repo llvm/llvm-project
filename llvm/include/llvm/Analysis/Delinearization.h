@@ -22,6 +22,7 @@ namespace llvm {
 class raw_ostream;
 template <typename T> class SmallVectorImpl;
 class GetElementPtrInst;
+class Instruction;
 class ScalarEvolution;
 class SCEV;
 
@@ -110,6 +111,35 @@ void computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
 void delinearize(ScalarEvolution &SE, const SCEV *Expr,
                  SmallVectorImpl<const SCEV *> &Subscripts,
                  SmallVectorImpl<const SCEV *> &Sizes, const SCEV *ElementSize);
+
+/// Compute the dimensions of fixed size array from \Expr and save the results
+/// in \p Sizes.
+bool findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
+                                  SmallVectorImpl<uint64_t> &Sizes,
+                                  const SCEV *ElementSize);
+
+/// Split this SCEVAddRecExpr into two vectors of SCEVs representing the
+/// subscripts and sizes of an access to a fixed size array. This is a special
+/// case of delinearization for fixed size arrays.
+///
+/// The delinearization is a 2 step process: the first step estimates the sizes
+/// of each dimension of the array. The second step computes the access
+/// functions for the delinearized array:
+///
+/// 1. Compute the array size
+/// 2. Compute the access function: same as normal delinearization
+///
+/// Different from the normal delinearization, this function assumes that NO
+/// terms exist in the \p Expr. In other words, it assumes that the all step
+/// values are constant.
+///
+/// This function is intended to replace getIndexExpressionsFromGEP and
+/// tryDelinearizeFixedSizeImpl. They rely on the GEP source element type so
+/// that they will be removed in the future.
+bool delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
+                               SmallVectorImpl<const SCEV *> &Subscripts,
+                               SmallVectorImpl<const SCEV *> &Sizes,
+                               const SCEV *ElementSize);
 
 /// Gathers the individual index expressions from a GEP instruction.
 ///

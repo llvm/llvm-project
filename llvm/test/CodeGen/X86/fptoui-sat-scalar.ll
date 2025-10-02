@@ -1883,7 +1883,7 @@ define i1 @test_unsigned_i1_f16(half %f) nounwind {
 ; X86-X87-NEXT:    subl $12, %esp
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
-; X86-X87-NEXT:    calll __gnu_h2f_ieee
+; X86-X87-NEXT:    calll __extendhfsf2
 ; X86-X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -1965,7 +1965,7 @@ define i8 @test_unsigned_i8_f16(half %f) nounwind {
 ; X86-X87-NEXT:    subl $12, %esp
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
-; X86-X87-NEXT:    calll __gnu_h2f_ieee
+; X86-X87-NEXT:    calll __extendhfsf2
 ; X86-X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -2047,7 +2047,7 @@ define i13 @test_unsigned_i13_f16(half %f) nounwind {
 ; X86-X87-NEXT:    subl $12, %esp
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
-; X86-X87-NEXT:    calll __gnu_h2f_ieee
+; X86-X87-NEXT:    calll __extendhfsf2
 ; X86-X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -2128,7 +2128,7 @@ define i16 @test_unsigned_i16_f16(half %f) nounwind {
 ; X86-X87-NEXT:    subl $12, %esp
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
-; X86-X87-NEXT:    calll __gnu_h2f_ieee
+; X86-X87-NEXT:    calll __extendhfsf2
 ; X86-X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -2209,7 +2209,7 @@ define i19 @test_unsigned_i19_f16(half %f) nounwind {
 ; X86-X87-NEXT:    subl $28, %esp
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
-; X86-X87-NEXT:    calll __gnu_h2f_ieee
+; X86-X87-NEXT:    calll __extendhfsf2
 ; X86-X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -2295,7 +2295,7 @@ define i32 @test_unsigned_i32_f16(half %f) nounwind {
 ; X86-X87-NEXT:    subl $28, %esp
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
-; X86-X87-NEXT:    calll __gnu_h2f_ieee
+; X86-X87-NEXT:    calll __extendhfsf2
 ; X86-X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -2382,7 +2382,7 @@ define i50 @test_unsigned_i50_f16(half %f) nounwind {
 ; X86-X87-NEXT:    subl $24, %esp
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
-; X86-X87-NEXT:    calll __gnu_h2f_ieee
+; X86-X87-NEXT:    calll __extendhfsf2
 ; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-X87-NEXT:    fxch %st(1)
 ; X86-X87-NEXT:    fucom %st(1)
@@ -2526,7 +2526,7 @@ define i64 @test_unsigned_i64_f16(half %f) nounwind {
 ; X86-X87-NEXT:    subl $20, %esp
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
-; X86-X87-NEXT:    calll __gnu_h2f_ieee
+; X86-X87-NEXT:    calll __extendhfsf2
 ; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-X87-NEXT:    fxch %st(1)
 ; X86-X87-NEXT:    fucom %st(1)
@@ -2667,7 +2667,7 @@ define i100 @test_unsigned_i100_f16(half %f) nounwind {
 ; X86-X87-NEXT:    subl $44, %esp
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
-; X86-X87-NEXT:    calll __gnu_h2f_ieee
+; X86-X87-NEXT:    calll __extendhfsf2
 ; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
 ; X86-X87-NEXT:    fsts {{[0-9]+}}(%esp)
@@ -2821,7 +2821,7 @@ define i128 @test_unsigned_i128_f16(half %f) nounwind {
 ; X86-X87-NEXT:    subl $60, %esp
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
-; X86-X87-NEXT:    calll __gnu_h2f_ieee
+; X86-X87-NEXT:    calll __extendhfsf2
 ; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
 ; X86-X87-NEXT:    fsts {{[0-9]+}}(%esp)

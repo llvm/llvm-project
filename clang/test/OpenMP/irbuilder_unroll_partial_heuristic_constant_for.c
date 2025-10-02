@@ -50,9 +50,9 @@ void unroll_partial_heuristic_constant_for(float *a, float *b, float *c, float *
 // CHECK-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 8
 // CHECK-NEXT:    store float [[OFFSET]], ptr [[OFFSET_ADDR]], align 4
 // CHECK-NEXT:    store i32 0, ptr [[I]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[I]], ptr [[TMP0]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], ptr [[AGG_CAPTURED1]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_0]], ptr [[AGG_CAPTURED1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP1]], align 4
 // CHECK-NEXT:    call void @__captured_stmt(ptr [[DOTCOUNT_ADDR]], ptr [[AGG_CAPTURED]])
@@ -85,7 +85,7 @@ void unroll_partial_heuristic_constant_for(float *a, float *b, float *c, float *
 // CHECK-NEXT:    br i1 [[OMP_FLOOR0_CMP]], label [[OMP_FLOOR0_BODY:%.*]], label [[OMP_FLOOR0_EXIT:%.*]]
 // CHECK:       omp_floor0.body:
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[OMP_FLOOR0_IV]], [[TMP8]]
-// CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP12]], [[OMP_FLOOR0_TRIPCOUNT]]
+// CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP12]], [[TMP3]]
 // CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP4]], i32 4
 // CHECK-NEXT:    br label [[OMP_TILE0_PREHEADER:%.*]]
 // CHECK:       omp_tile0.preheader:
@@ -175,7 +175,7 @@ void unroll_partial_heuristic_constant_for(float *a, float *b, float *c, float *
 // CHECK-NEXT:    store ptr [[DISTANCE]], ptr [[DISTANCE_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[DOTSTART]], align 4
@@ -214,7 +214,7 @@ void unroll_partial_heuristic_constant_for(float *a, float *b, float *c, float *
 // CHECK-NEXT:    store i32 [[LOGICAL]], ptr [[LOGICAL_ADDR]], align 4
 // CHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_0:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[LOGICAL_ADDR]], align 4
 // CHECK-NEXT:    [[MUL:%.*]] = mul i32 1, [[TMP3]]

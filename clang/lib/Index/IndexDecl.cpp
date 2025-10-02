@@ -132,8 +132,8 @@ public:
         }
       }
     }
-    if (auto *C = D->getTrailingRequiresClause())
-      IndexCtx.indexBody(C, Parent);
+    if (const AssociatedConstraint &C = D->getTrailingRequiresClause())
+      IndexCtx.indexBody(C.ConstraintExpr, Parent);
   }
 
   bool handleObjCMethod(const ObjCMethodDecl *D,
@@ -665,9 +665,9 @@ public:
                        ClassTemplatePartialSpecializationDecl *>
         Template = D->getSpecializedTemplateOrPartial();
     const Decl *SpecializationOf =
-        Template.is<ClassTemplateDecl *>()
-            ? (Decl *)Template.get<ClassTemplateDecl *>()
-            : Template.get<ClassTemplatePartialSpecializationDecl *>();
+        isa<ClassTemplateDecl *>(Template)
+            ? (Decl *)cast<ClassTemplateDecl *>(Template)
+            : cast<ClassTemplatePartialSpecializationDecl *>(Template);
     if (!D->isThisDeclarationADefinition())
       IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), D);
     IndexCtx.indexTagDecl(
@@ -703,14 +703,16 @@ public:
         IndexCtx.handleDecl(TP);
       if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(TP)) {
         if (TTP->hasDefaultArgument())
-          IndexCtx.indexTypeSourceInfo(TTP->getDefaultArgumentInfo(), Parent);
+          handleTemplateArgumentLoc(TTP->getDefaultArgument(), Parent,
+                                    TP->getLexicalDeclContext());
         if (auto *C = TTP->getTypeConstraint())
           IndexCtx.handleReference(C->getNamedConcept(), C->getConceptNameLoc(),
                                    Parent, TTP->getLexicalDeclContext());
       } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TP)) {
         IndexCtx.indexTypeSourceInfo(NTTP->getTypeSourceInfo(), Parent);
         if (NTTP->hasDefaultArgument())
-          IndexCtx.indexBody(NTTP->getDefaultArgument(), Parent);
+          handleTemplateArgumentLoc(NTTP->getDefaultArgument(), Parent,
+                                    TP->getLexicalDeclContext());
       } else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(TP)) {
         if (TTPD->hasDefaultArgument())
           handleTemplateArgumentLoc(TTPD->getDefaultArgument(), Parent,

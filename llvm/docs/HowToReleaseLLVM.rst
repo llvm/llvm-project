@@ -38,8 +38,8 @@ Releases should be tagged on Tuesdays.
 =============================== =========================
 Release                         Approx. Date
 =============================== =========================
-*release branch: even releases* *4th Tue in January*
-*release branch: odd releases*  *4th Tue in July*
+*release branch: even releases* *2nd Tue in January*
+*release branch: odd releases*  *2nd Tue in July*
 X.1.0-rc1                       3 days after branch.
 X.1.0-rc2                       2 weeks after branch.
 X.1.0-rc3                       4 weeks after branch
@@ -49,7 +49,11 @@ X.1.0-rc3                       4 weeks after branch
 **X.1.3**                       **12 weeks after branch**
 **X.1.4**                       **14 weeks after branch**
 **X.1.5**                       **16 weeks after branch**
-**X.1.6 (if necessary)**        **18 weeks after branch**
+**X.1.6**                       **18 weeks after branch**
+**X.1.7**                       **20 weeks after branch**
+**X.1.8**                       **22 weeks after branch**
+**X.1.9** (If necessary)        **24 weeks after branch**
+**Next release branches**       **~25 weeks after branch**
 =============================== =========================
 
 Release Process Summary
@@ -97,8 +101,8 @@ release process to begin.  Specifically, it involves:
 
 * Tagging release candidates for the release team to begin testing.
 
-Create Release Branch
-^^^^^^^^^^^^^^^^^^^^^
+Create Release Branch and Update LLVM Version
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Branch the Git trunk using the following procedure:
 
@@ -110,14 +114,16 @@ Branch the Git trunk using the following procedure:
 #. Verify that the current git trunk is in decent shape by
    examining nightly tester and buildbot results.
 
-#. Bump the version in trunk to N.0.0git and tag the commit with llvmorg-N-init.
+#. Bump the version in trunk to N.0.0git with the script in
+   ``llvm/utils/release/bump-version.py``, and tag the commit with llvmorg-N-init.
    If ``X`` is the version to be released, then ``N`` is ``X + 1``.
 
 ::
 
   $ git tag -sa llvmorg-N-init
 
-#. Clear the release notes in trunk.
+4. Clear the release notes in trunk with the script in
+   ``llvm/utils/release/clear-release-notes.py``.
 
 #. Create the release branch from the last known good revision from before the
    version bump.  The branch's name is release/X.x where ``X`` is the major version
@@ -129,12 +135,6 @@ Branch the Git trunk using the following procedure:
 #. All tags and branches need to be created in both the llvm/llvm-project and
    llvm/llvm-test-suite repos.
 
-Update LLVM Version
-^^^^^^^^^^^^^^^^^^^
-
-After creating the LLVM release branch, update the release branches'
-version with the script in ``llvm/utils/release/bump-version.py``.
-
 Tagging the LLVM Release Candidates
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -144,8 +144,17 @@ Tag release candidates:
 
   $ git tag -sa llvmorg-X.Y.Z-rcN
 
-The Release Manager must supply pre-packaged source tarballs for users.  This can
-be done with the export.sh script in utils/release.
+The pre-packaged source tarballs will be automatically generated via the
+"Release Sources" workflow on GitHub.  This workflow will create an artifact
+containing all the release tarballs and the artifact attestation.  The
+Release Manager should download the artifact, verify the tarballs, sign them,
+and then upload them to the release page.
+
+::
+
+  $ unzip artifact.zip
+  $ gh auth login
+  $ for f in *.xz; do gh attestation verify --owner llvm $f && gpg -b $f; done
 
 Tarballs, release binaries,  or any other release artifacts must be uploaded to
 GitHub.  This can be done using the github-upload-release.py script in utils/release.
@@ -154,12 +163,6 @@ GitHub.  This can be done using the github-upload-release.py script in utils/rel
 
   $ github-upload-release.py upload --token <github-token> --release X.Y.Z-rcN --files <release_files>
 
-::
-
-  $ ./export.sh -release X.Y.Z -rc $RC
-
-This will generate source tarballs for each LLVM project being validated, which
-can be uploaded to github for further testing.
 
 Build The Binary Distribution
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -325,29 +328,28 @@ Release Patch Rules
 Below are the rules regarding patching the release branch:
 
 #. Patches applied to the release branch may only be applied by the release
-   manager, the official release testers or the code owners with approval from
+   manager, the official release testers or the maintainers with approval from
    the release manager.
 
-#. Release managers are encouraged, but not required, to get approval from code
-   owners before approving patches.  If there is no code owner or the code owner
-   is unreachable then release managers can ask approval from patch reviewers or
-   other developers active in that area.
+#. Release managers are encouraged, but not required, to get approval from a
+   maintainer before approving patches.  If there are no reachable maintainers
+   then release managers can ask approval from patch reviewers or other
+   developers active in that area.
 
 #. *Before RC1* Patches should be limited to bug fixes, important optimization
    improvements, or completion of features that were started before the branch
-   was created.  As with all phases, release managers and code owners can reject
+   was created.  As with all phases, release managers and maintainers can reject
    patches that are deemed too invasive.
 
-#. *Before RC2* Patches should be limited to bug fixes or backend specific
+#. *Before RC2/RC3* Patches should be limited to bug fixes or backend specific
    improvements that are determined to be very safe.
 
-#. *Before RC3/Final Major Release* Patches should be limited to critical
+#. *Before Final Major Release* Patches should be limited to critical
    bugs or regressions.
 
 #. *Bug fix releases* Patches should be limited to bug fixes or very safe
    and critical performance improvements.  Patches must maintain both API and
-   ABI compatibility with the previous major release.
-
+   ABI compatibility with the X.1.0 release.
 
 Release Final Tasks
 -------------------

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
@@ -30,7 +30,7 @@
 #endif
 
 using namespace std::chrono;
-namespace fs = std::__fs::filesystem;
+namespace fs = std::filesystem;
 using fs::file_time_type;
 using fs::detail::time_util;
 

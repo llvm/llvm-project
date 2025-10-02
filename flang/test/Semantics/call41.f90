@@ -5,7 +5,7 @@ module m
     class(*), intent(in) :: x
   end
   subroutine test
-    !PORTABILITY: passing Hollerith to unlimited polymorphic as if it were CHARACTER
+    !PORTABILITY: passing Hollerith to unlimited polymorphic as if it were CHARACTER [-Whollerith-polymorphic]
     call unlimited(6HHERMAN)
     call unlimited('abc') ! ok
   end

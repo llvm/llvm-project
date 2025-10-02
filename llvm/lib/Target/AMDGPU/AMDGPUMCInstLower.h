@@ -22,9 +22,6 @@
 namespace llvm {
 class AsmPrinter;
 class MCContext;
-} // namespace llvm
-
-using namespace llvm;
 
 class AMDGPUMCInstLower {
   MCContext &Ctx;
@@ -39,6 +36,9 @@ public:
 
   /// Lower a MachineInstr to an MCInst
   void lower(const MachineInstr *MI, MCInst &OutMI) const;
+
+  void lowerT16D16Helper(const MachineInstr *MI, MCInst &OutMI) const;
+  void lowerT16FmaMixFP16(const MachineInstr *MI, MCInst &OutMI) const;
 };
 
 namespace {
@@ -55,7 +55,7 @@ static inline const MCExpr *lowerAddrSpaceCast(const TargetMachine &TM,
   // Clang generates addrspacecast for null pointers in private and local
   // address space, which needs to be lowered.
   if (CE && CE->getOpcode() == Instruction::AddrSpaceCast) {
-    auto Op = CE->getOperand(0);
+    auto *Op = CE->getOperand(0);
     auto SrcAddr = Op->getType()->getPointerAddressSpace();
     if (Op->isNullValue() && AT.getNullPointerValue(SrcAddr) == 0) {
       auto DstAddr = CE->getType()->getPointerAddressSpace();
@@ -66,4 +66,5 @@ static inline const MCExpr *lowerAddrSpaceCast(const TargetMachine &TM,
   return nullptr;
 }
 } // namespace
+} // namespace llvm
 #endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUMCINSTLOWER_H

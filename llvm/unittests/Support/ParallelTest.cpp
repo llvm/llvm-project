@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Parallel.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/Support/ThreadPool.h"
 #include "gtest/gtest.h"
 #include <array>
@@ -66,17 +67,17 @@ TEST(Parallel, TransformReduce) {
 
   // Check that we handle non-divisible task sizes as above.
   uint32_t range[2050];
-  std::fill(std::begin(range), std::end(range), 1);
+  llvm::fill(range, 1);
   sum = parallelTransformReduce(range, 0U, std::plus<uint32_t>(), identity);
   EXPECT_EQ(sum, 2050U);
 
-  std::fill(std::begin(range), std::end(range), 2);
+  llvm::fill(range, 2);
   sum = parallelTransformReduce(range, 0U, std::plus<uint32_t>(), identity);
   EXPECT_EQ(sum, 4100U);
 
   // Avoid one large task.
   uint32_t range2[3060];
-  std::fill(std::begin(range2), std::end(range2), 1);
+  llvm::fill(range2, 1);
   sum = parallelTransformReduce(range2, 0U, std::plus<uint32_t>(), identity);
   EXPECT_EQ(sum, 3060U);
 }
@@ -91,16 +92,6 @@ TEST(Parallel, ForEachError) {
   EXPECT_TRUE(e.isA<ErrorList>());
   std::string errText = toString(std::move(e));
   EXPECT_EQ(errText, std::string("asdf\nasdf\nasdf"));
-}
-
-TEST(Parallel, TaskGroupSequentialFor) {
-  size_t Count = 0;
-  {
-    parallel::TaskGroup tg;
-    for (size_t Idx = 0; Idx < 500; Idx++)
-      tg.spawn([&Count, Idx]() { EXPECT_EQ(Count++, Idx); }, true);
-  }
-  EXPECT_EQ(Count, 500ul);
 }
 
 #if LLVM_ENABLE_THREADS

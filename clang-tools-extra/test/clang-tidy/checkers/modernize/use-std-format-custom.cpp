@@ -2,7 +2,7 @@
 // RUN:   -std=c++20 %s modernize-use-std-format %t --                  \
 // RUN:   -config="{CheckOptions: {                                     \
 // RUN:              modernize-use-std-format.StrictMode: true,         \
-// RUN:              modernize-use-std-format.StrFormatLikeFunctions: '::strprintf; mynamespace::strprintf2', \
+// RUN:              modernize-use-std-format.StrFormatLikeFunctions: '::strprintf; mynamespace::strprintf2; any_format_type_strprintf', \
 // RUN:              modernize-use-std-format.ReplacementFormatFunction: 'fmt::format', \
 // RUN:              modernize-use-std-format.FormatHeader: '<fmt/core.h>' \
 // RUN:            }}"                                                  \
@@ -10,7 +10,7 @@
 // RUN: %check_clang_tidy -check-suffixes=,NOTSTRICT                    \
 // RUN:   -std=c++20 %s modernize-use-std-format %t --                  \
 // RUN:   -config="{CheckOptions: {                                     \
-// RUN:              modernize-use-std-format.StrFormatLikeFunctions: '::strprintf; mynamespace::strprintf2', \
+// RUN:              modernize-use-std-format.StrFormatLikeFunctions: '::strprintf; mynamespace::strprintf2; any_format_type_strprintf', \
 // RUN:              modernize-use-std-format.ReplacementFormatFunction: 'fmt::format', \
 // RUN:              modernize-use-std-format.FormatHeader: '<fmt/core.h>' \
 // RUN:            }}"                                                  \
@@ -49,4 +49,24 @@ std::string StrFormat_strict_conversion() {
 std::string A(const std::string &in)
 {
     return "_" + in;
+}
+
+// Issue #92896: Ensure that the check doesn't assert if the argument is
+// promoted to something that isn't a string.
+struct S {
+  S(...);
+};
+std::string any_format_type_strprintf(const S &, ...);
+
+void unsupported_format_parameter_types()
+{
+  // No fixes here because the format parameter of the function called is not a
+  // string.
+  auto s1 = any_format_type_strprintf(L"");
+  auto s2 = any_format_type_strprintf(42);
+
+  // But if we do pass a character string then that ought to be acceptable.
+  auto s3 = any_format_type_strprintf("Hello %s", "world");
+  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'fmt::format' instead of 'any_format_type_strprintf' [modernize-use-std-format]
+  // CHECK-FIXES: auto s3 = fmt::format("Hello {}", "world");
 }

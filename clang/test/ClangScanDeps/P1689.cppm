@@ -1,15 +1,14 @@
 // UNSUPPORTED: target={{.*}}-aix{{.*}}
 //
-// The slash direction in linux and windows are different.
-// UNSUPPORTED: system-windows
-//
 // RUN: rm -fr %t
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
 //
 // RUN: sed "s|DIR|%/t|g" %t/P1689.json.in > %t/P1689.json
 // RUN: clang-scan-deps -compilation-database %t/P1689.json -format=p1689 | FileCheck %t/Checks.cpp -DPREFIX=%/t
-// RUN: clang-scan-deps --mode=preprocess-dependency-directives -compilation-database %t/P1689.json -format=p1689 | FileCheck %t/Checks.cpp -DPREFIX=%/t
+// RUN: clang-scan-deps --mode=preprocess-dependency-directives -compilation-database %t/P1689.json -format=p1689 \
+// RUN:   | sed 's:\\\\\?:/:g' \
+// RUN:   | FileCheck %t/Checks.cpp -DPREFIX=%/t
 //
 // Check the separated dependency format. This is required by CMake for the case
 // that we have non-exist files in a fresh build and potentially out-of-date after that.
@@ -17,25 +16,32 @@
 // which is not so good. So here is the per file mode for P1689.
 // RUN: clang-scan-deps -format=p1689 \
 // RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/M.cppm -o %t/M.o \
+// RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %t/M.cppm -DPREFIX=%/t
 // RUN: clang-scan-deps -format=p1689 \
 // RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/Impl.cpp -o %t/Impl.o \
+// RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %t/Impl.cpp -DPREFIX=%/t
 // RUN: clang-scan-deps -format=p1689 \
 // RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/impl_part.cppm -o %t/impl_part.o \
+// RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %t/impl_part.cppm -DPREFIX=%/t
 // RUN: clang-scan-deps -format=p1689 \
 // RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/interface_part.cppm -o %t/interface_part.o \
+// RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %t/interface_part.cppm -DPREFIX=%/t
 // RUN: clang-scan-deps -format=p1689 \
 // RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/User.cpp -o %t/User.o \
+// RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %t/User.cpp -DPREFIX=%/t
 //
 // Check we can generate the make-style dependencies as expected.
 // RUN: clang-scan-deps -format=p1689 \
 // RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/impl_part.cppm -o %t/impl_part.o \
 // RUN:      -MT %t/impl_part.o.ddi -MD -MF %t/impl_part.dep
-// RUN:   cat %t/impl_part.dep | FileCheck %t/impl_part.cppm -DPREFIX=%/t --check-prefix=CHECK-MAKE
+// RUN: cat %t/impl_part.dep \
+// RUN:   | sed 's:\\\\\?:/:g' \
+// RUN:   | FileCheck %t/impl_part.cppm -DPREFIX=%/t --check-prefix=CHECK-MAKE
 //
 // Check that we can generate multiple make-style dependency information with compilation database.
 // RUN: cat %t/P1689.dep | FileCheck %t/Checks.cpp -DPREFIX=%/t --check-prefix=CHECK-MAKE
@@ -43,6 +49,7 @@
 // Check that we can mix the use of -format=p1689 and -fmodules.
 // RUN: clang-scan-deps -format=p1689 \
 // RUN:   -- %clang++ -std=c++20 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -c %t/impl_part.cppm -o %t/impl_part.o \
+// RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %t/impl_part.cppm -DPREFIX=%/t
 //
 // Check the path in the make style dependencies are generated in relative path form
@@ -50,7 +57,9 @@
 // RUN: clang-scan-deps -format=p1689 \
 // RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t impl_part.cppm -o impl_part.o \
 // RUN:      -MT impl_part.o.ddi -MD -MF impl_part.dep
-// RUN:   cat impl_part.dep | FileCheck impl_part.cppm -DPREFIX=%/t --check-prefix=CHECK-MAKE-RELATIVE
+// RUN: cat impl_part.dep \
+// RUN:   | sed 's:\\\\\?:/:g' \
+// RUN:   | FileCheck impl_part.cppm -DPREFIX=%/t --check-prefix=CHECK-MAKE-RELATIVE
 
 
 //--- P1689.json.in

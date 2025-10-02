@@ -12,7 +12,6 @@
 
 #include "BPFTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/IR/DerivedTypes.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "bpf-selectiondag-info"

@@ -40,14 +40,7 @@ int main(int, char**)
     {
         const std::optional<X> opt; ((void)opt);
         ASSERT_SAME_TYPE(decltype(opt.operator->()), X const*);
-        // ASSERT_NOT_NOEXCEPT(opt.operator->());
-        // FIXME: This assertion fails with GCC because it can see that
-        // (A) operator->() is constexpr, and
-        // (B) there is no path through the function that throws.
-        // It's arguable if this is the correct behavior for the noexcept
-        // operator.
-        // Regardless this function should still be noexcept(false) because
-        // it has a narrow contract.
+        ASSERT_NOEXCEPT(opt.operator->());
     }
     {
         constexpr optional<X> opt(X{});

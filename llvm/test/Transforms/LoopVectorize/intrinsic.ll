@@ -162,6 +162,60 @@ for.end:                                          ; preds = %for.body, %entry
 
 declare double @llvm.cos.f64(double)
 
+define void @tan_f32(i32 %n, ptr %y, ptr %x) {
+; CHECK-LABEL: @tan_f32(
+; CHECK: llvm.tan.v4f32
+; CHECK: ret void
+;
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.tan.f32(float %0)
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+declare float @llvm.tan.f32(float)
+
+define void @tan_f64(i32 %n, ptr %y, ptr %x) {
+; CHECK-LABEL: @tan_f64(
+; CHECK: llvm.tan.v4f64
+; CHECK: ret void
+;
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds double, ptr %y, i64 %indvars.iv
+  %0 = load double, ptr %arrayidx, align 8
+  %call = tail call double @llvm.tan.f64(double %0)
+  %arrayidx2 = getelementptr inbounds double, ptr %x, i64 %indvars.iv
+  store double %call, ptr %arrayidx2, align 8
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+declare double @llvm.tan.f64(double)
+
 define void @exp_f32(i32 %n, ptr %y, ptr %x) {
 ; CHECK-LABEL: @exp_f32(
 ; CHECK: llvm.exp.v4f32
@@ -269,6 +323,56 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 declare double @llvm.exp2.f64(double)
+
+define void @ldexp_f32i32(i32 %n, ptr %y, ptr %x, i32 %exp) {
+; CHECK-LABEL: @ldexp_f32i32(
+; CHECK: llvm.ldexp.v4f32.v4i32
+; CHECK: ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i32 %iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.ldexp.f32.i32(float %0, i32 %exp)
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i32 %iv
+  store float %call, ptr %arrayidx2, align 4
+  %iv.next = add i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+declare float @llvm.ldexp.f32.i32(float, i32)
+
+define void @ldexp_f64i32(i32 %n, ptr %y, ptr %x, i32 %exp) {
+; CHECK-LABEL: @ldexp_f64i32(
+; CHECK: llvm.ldexp.v4f64.v4i32
+; CHECK: ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds double, ptr %y, i32 %iv
+  %0 = load double, ptr %arrayidx, align 8
+  %call = tail call double @llvm.ldexp.f64.i32(double %0, i32 %exp)
+  %arrayidx2 = getelementptr inbounds double, ptr %x, i32 %iv
+  store double %call, ptr %arrayidx2, align 8
+  %iv.next = add i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+declare double @llvm.ldexp.f64.i32(double, i32)
 
 define void @log_f32(i32 %n, ptr %y, ptr %x) {
 ; CHECK-LABEL: @log_f32(
@@ -921,6 +1025,157 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 declare double @llvm.roundeven.f64(double)
+
+
+define void @lround_i32f32(i32 %n, ptr %y, ptr %x) {
+; CHECK-LABEL: @lround_i32f32(
+; CHECK: llvm.lround.v4i32.v4f32
+; CHECK: ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i32 %iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call i32 @llvm.lround.i32.f32(float %0)
+  %arrayidx2 = getelementptr inbounds i32, ptr %x, i32 %iv
+  store i32 %call, ptr %arrayidx2, align 4
+  %iv.next = add i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+declare i32 @llvm.lround.i32.f32(float)
+
+define void @lround_i32f64(i32 %n, ptr %y, ptr %x) {
+; CHECK-LABEL: @lround_i32f64(
+; CHECK: llvm.lround.v4i32.v4f64
+; CHECK: ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds double, ptr %y, i32 %iv
+  %0 = load double, ptr %arrayidx, align 8
+  %call = tail call i32 @llvm.lround.i32.f64(double %0)
+  %arrayidx2 = getelementptr inbounds i32, ptr %x, i32 %iv
+  store i32 %call, ptr %arrayidx2, align 8
+  %iv.next = add i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+declare i32 @llvm.lround.i32.f64(double)
+
+define void @lround_i64f32(i32 %n, ptr %y, ptr %x) {
+; CHECK-LABEL: @lround_i64f32(
+; CHECK: llvm.lround.v4i64.v4f32
+; CHECK: ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i32 %iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call i64 @llvm.lround.i64.f32(float %0)
+  %arrayidx2 = getelementptr inbounds i64, ptr %x, i32 %iv
+  store i64 %call, ptr %arrayidx2, align 4
+  %iv.next = add i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+declare i64 @llvm.lround.i64.f32(float)
+
+define void @lround_i64f64(i32 %n, ptr %y, ptr %x) {
+; CHECK-LABEL: @lround_i64f64(
+; CHECK: llvm.lround.v4i64.v4f64
+; CHECK: ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds double, ptr %y, i32 %iv
+  %0 = load double, ptr %arrayidx, align 8
+  %call = tail call i64 @llvm.lround.i64.f64(double %0)
+  %arrayidx2 = getelementptr inbounds i64, ptr %x, i32 %iv
+  store i64 %call, ptr %arrayidx2, align 8
+  %iv.next = add i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+declare i64 @llvm.lround.i64.f64(double)
+
+define void @llround_i64f32(i32 %n, ptr %y, ptr %x) {
+; CHECK-LABEL: @llround_i64f32(
+; CHECK: llvm.llround.v4i64.v4f32
+; CHECK: ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i32 %iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call i64 @llvm.llround.i64.f32(float %0)
+  %arrayidx2 = getelementptr inbounds i64, ptr %x, i32 %iv
+  store i64 %call, ptr %arrayidx2, align 4
+  %iv.next = add i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+declare i64 @llvm.llround.i64.f32(float)
+
+define void @llround_i64f64(i32 %n, ptr %y, ptr %x) {
+; CHECK-LABEL: @llround_i64f64(
+; CHECK: llvm.llround.v4i64.v4f64
+; CHECK: ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds double, ptr %y, i32 %iv
+  %0 = load double, ptr %arrayidx, align 8
+  %call = tail call i64 @llvm.llround.i64.f64(double %0)
+  %arrayidx2 = getelementptr inbounds i64, ptr %x, i32 %iv
+  store i64 %call, ptr %arrayidx2, align 8
+  %iv.next = add i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+declare i64 @llvm.llround.i64.f64(double)
 
 define void @fma_f32(i32 %n, ptr %y, ptr %x, ptr %z, ptr %w) {
 ; CHECK-LABEL: @fma_f32(

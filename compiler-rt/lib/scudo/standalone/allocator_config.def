@@ -31,6 +31,9 @@
 #ifndef SECONDARY_REQUIRED_TEMPLATE_TYPE
 #define SECONDARY_REQUIRED_TEMPLATE_TYPE(...)
 #endif
+#ifndef SECONDARY_OPTIONAL
+#define SECONDARY_OPTIONAL(...)
+#endif
 #ifndef SECONDARY_CACHE_OPTIONAL
 #define SECONDARY_CACHE_OPTIONAL(...)
 #endif
@@ -51,21 +54,16 @@ BASE_REQUIRED_TEMPLATE_TYPE(SecondaryT)
 // Indicates possible support for Memory Tagging.
 BASE_OPTIONAL(const bool, MaySupportMemoryTagging, false)
 
+// Disable the quarantine code.
+BASE_OPTIONAL(const bool, QuarantineDisabled, false)
+
 // PRIMARY_REQUIRED_TYPE(NAME)
 //
 // SizeClassMap to use with the Primary.
 PRIMARY_REQUIRED_TYPE(SizeClassMap)
 
-// Defines the type and scale of a compact pointer. A compact pointer can
-// be understood as the offset of a pointer within the region it belongs
-// to, in increments of a power-of-2 scale. See `CompactPtrScale` also.
-PRIMARY_REQUIRED_TYPE(CompactPtrT)
-
 // PRIMARY_REQUIRED(TYPE, NAME)
 //
-// The scale of a compact pointer. E.g., Ptr = Base + (CompactPtr << Scale).
-PRIMARY_REQUIRED(const uptr, CompactPtrScale)
-
 // Log2 of the size of a size class region, as used by the Primary.
 PRIMARY_REQUIRED(const uptr, RegionSizeLog)
 
@@ -86,6 +84,13 @@ PRIMARY_REQUIRED(const s32, MaxReleaseToOsIntervalMs)
 
 // PRIMARY_OPTIONAL(TYPE, NAME, DEFAULT)
 //
+
+// Enables/disables primary block caching. Batch class still caches.
+PRIMARY_OPTIONAL(const bool, EnableBlockCache, true)
+
+// The scale of a compact pointer. E.g., Ptr = Base + (CompactPtr << Scale).
+PRIMARY_OPTIONAL(const uptr, CompactPtrScale, SCUDO_MIN_ALIGNMENT_LOG)
+
 // Indicates support for offsetting the start of a region by a random number of
 // pages. This is only used if `EnableContiguousRegions` is enabled.
 PRIMARY_OPTIONAL(const bool, EnableRandomOffset, false)
@@ -104,10 +109,20 @@ PRIMARY_OPTIONAL(const bool, EnableContiguousRegions, true)
 // guarantee a performance benefit.
 PRIMARY_OPTIONAL_TYPE(ConditionVariableT, ConditionVariableDummy)
 
+// Defines the type and scale of a compact pointer. A compact pointer can
+// be understood as the offset of a pointer within the region it belongs
+// to, in increments of a power-of-2 scale. See `CompactPtrScale` also.
+PRIMARY_OPTIONAL_TYPE(CompactPtrT, uptr)
+
 // SECONDARY_REQUIRED_TEMPLATE_TYPE(NAME)
 //
 // Defines the type of Secondary Cache to use.
 SECONDARY_REQUIRED_TEMPLATE_TYPE(CacheT)
+
+// SECONDARY_OPTIONAL(TYPE, NAME, DEFAULT)
+//
+// Add one guard page at the front and back for each allocation.
+SECONDARY_OPTIONAL(const bool, EnableGuardPages, true)
 
 // SECONDARY_CACHE_OPTIONAL(TYPE, NAME, DEFAULT)
 //
@@ -122,6 +137,7 @@ SECONDARY_CACHE_OPTIONAL(const s32, MaxReleaseToOsIntervalMs, INT32_MAX)
 SECONDARY_CACHE_OPTIONAL(const s32, DefaultReleaseToOsIntervalMs, INT32_MIN)
 
 #undef SECONDARY_CACHE_OPTIONAL
+#undef SECONDARY_OPTIONAL
 #undef SECONDARY_REQUIRED_TEMPLATE_TYPE
 #undef PRIMARY_OPTIONAL_TYPE
 #undef PRIMARY_OPTIONAL

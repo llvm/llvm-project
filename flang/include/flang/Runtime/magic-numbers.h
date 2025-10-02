@@ -69,6 +69,11 @@ Additional status code for a bad pointer DEALLOCATE.
 #define FORTRAN_RUNTIME_STAT_BAD_POINTER_DEALLOCATION 110
 
 #if 0
+Status codes for GETCWD.
+#endif
+#define FORTRAN_RUNTIME_STAT_MISSING_CWD 111
+
+#if 0
 ieee_class_type values
 The sequence is that of F18 Clause 17.2p3, but nothing depends on that.
 #endif
@@ -95,10 +100,14 @@ The denorm value is a nonstandard extension.
 #define _FORTRAN_RUNTIME_IEEE_OVERFLOW 8
 #define _FORTRAN_RUNTIME_IEEE_UNDERFLOW 16
 #define _FORTRAN_RUNTIME_IEEE_INEXACT 32
+#define _FORTRAN_RUNTIME_IEEE_ALL \
+  _FORTRAN_RUNTIME_IEEE_INVALID | _FORTRAN_RUNTIME_IEEE_DENORM | \
+      _FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO | _FORTRAN_RUNTIME_IEEE_OVERFLOW | \
+      _FORTRAN_RUNTIME_IEEE_UNDERFLOW | _FORTRAN_RUNTIME_IEEE_INEXACT
 
 #if 0
 ieee_round_type values
-The values are those of the llvm.get.rounding instrinsic, which is assumed by
+The values are those of the llvm.get.rounding intrinsic, which is assumed by
 ieee_arithmetic module rounding procedures.
 #endif
 #define _FORTRAN_RUNTIME_IEEE_TO_ZERO 0
@@ -109,11 +118,10 @@ ieee_arithmetic module rounding procedures.
 #define _FORTRAN_RUNTIME_IEEE_OTHER 5
 
 #if 0
-The size of derived types ieee_modes_type and ieee_status_type from intrinsic
-module ieee_exceptions must be large enough to hold an fenv.h object of type
-femode_t and fenv_t, respectively. These types have members that are declared
-as int arrays with the following extents to allow build time validation of
-these sizes in cross compilation environments.
+INTEGER(kind=4) extents for ieee_exceptions module types ieee_modes_type and
+ieee_status_type. These extent values are large enough to hold femode_t and
+fenv_t data in many environments. An environment that does not meet these
+size constraints may allocate memory with runtime size values.
 #endif
 #define _FORTRAN_RUNTIME_IEEE_FEMODE_T_EXTENT 2
 #define _FORTRAN_RUNTIME_IEEE_FENV_T_EXTENT 8

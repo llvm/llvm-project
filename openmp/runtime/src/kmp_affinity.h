@@ -29,6 +29,8 @@ public:
       mask = hwloc_bitmap_alloc();
       this->zero();
     }
+    Mask(const Mask &other) = delete;
+    Mask &operator=(const Mask &other) = delete;
     ~Mask() { hwloc_bitmap_free(mask); }
     void set(int i) override { hwloc_bitmap_set(mask, i); }
     bool is_set(int i) const override { return hwloc_bitmap_isset(mask, i); }
@@ -307,6 +309,17 @@ public:
 #ifndef __NR_sched_getaffinity
 #define __NR_sched_getaffinity 240
 #elif __NR_sched_getaffinity != 240
+#error Wrong code for getaffinity system call.
+#endif /* __NR_sched_getaffinity */
+#elif KMP_ARCH_SPARC
+#ifndef __NR_sched_setaffinity
+#define __NR_sched_setaffinity 261
+#elif __NR_sched_setaffinity != 261
+#error Wrong code for setaffinity system call.
+#endif /* __NR_sched_setaffinity */
+#ifndef __NR_sched_getaffinity
+#define __NR_sched_getaffinity 260
+#elif __NR_sched_getaffinity != 260
 #error Wrong code for getaffinity system call.
 #endif /* __NR_sched_getaffinity */
 #else
@@ -846,6 +859,7 @@ public:
   int sub_ids[KMP_HW_LAST];
   bool leader;
   int os_id;
+  int original_idx;
   kmp_hw_attr_t attrs;
 
   void print() const;
@@ -904,9 +918,6 @@ class kmp_topology_t {
 
   // Compact value used during sort_compact()
   int compact;
-
-  // Insert a new topology layer after allocation
-  void _insert_layer(kmp_hw_t type, const int *ids);
 
 #if KMP_GROUP_AFFINITY
   // Insert topology information about Windows Processor groups
@@ -967,6 +978,10 @@ public:
     qsort(hw_threads, num_hw_threads, sizeof(kmp_hw_thread_t),
           kmp_hw_thread_t::compare_ids);
   }
+
+  // Insert a new topology layer after allocation
+  void insert_layer(kmp_hw_t type, const int *ids);
+
   // Check if the hardware ids are unique, if they are
   // return true, otherwise return false
   bool check_ids() const;
@@ -1269,7 +1284,7 @@ public:
       leaf. It corresponds to the number of entries in numPerLevel if we exclude
       all but one trailing 1. */
   kmp_uint32 depth;
-  kmp_uint32 base_num_threads;
+  kmp_uint32 base_num_threads = 0;
   enum init_status { initialized = 0, not_initialized = 1, initializing = 2 };
   volatile kmp_int8 uninitialized; // 0=initialized, 1=not initialized,
   // 2=initialization in progress
@@ -1279,8 +1294,8 @@ public:
       the parent of a node at level i has. For example, if we have a machine
       with 4 packages, 4 cores/package and 2 HT per core, then numPerLevel =
       {2, 4, 4, 1, 1}. All empty levels are set to 1. */
-  kmp_uint32 *numPerLevel;
-  kmp_uint32 *skipPerLevel;
+  kmp_uint32 *numPerLevel = nullptr;
+  kmp_uint32 *skipPerLevel = nullptr;
 
   void deriveLevels() {
     int hier_depth = __kmp_topology->get_depth();

@@ -2,7 +2,7 @@
 // RUN: %clang_analyze_cc1 -DUSE_BUILTINS -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
 // RUN: %clang_analyze_cc1 -DVARIANT -analyzer-checker=core,unix.cstring,alpha.unix.cstring,unix.Malloc,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
 // RUN: %clang_analyze_cc1 -DUSE_BUILTINS -DVARIANT -analyzer-checker=core,unix.cstring,alpha.unix.cstring,unix.Malloc,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -DSUPPRESS_OUT_OF_BOUND -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring.BufferOverlap,alpha.unix.cstring.NotNullTerminated,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -DSUPPRESS_OUT_OF_BOUND -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring.BufferOverlap,unix.cstring.NotNullTerminated,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
 
 #include "Inputs/system-header-simulator-cxx.h"
 #include "Inputs/system-header-simulator-for-malloc.h"

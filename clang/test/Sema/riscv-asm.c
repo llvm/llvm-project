@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 %s -triple riscv32 -verify -fsyntax-only
 // RUN: %clang_cc1 %s -triple riscv64 -verify -fsyntax-only
 
-// expected-no-diagnostics
-
 void i (void) {
   asm volatile ("" ::: "x0",  "x1",  "x2",  "x3",  "x4",  "x5",  "x6",  "x7");
   asm volatile ("" ::: "x8",  "x9",  "x10", "x11", "x12", "x13", "x14", "x15");
@@ -26,3 +24,18 @@ void f (void) {
   asm volatile ("" ::: "fa6", "fa7", "fs2",  "fs3",  "fs4", "fs5", "fs6",  "fs7");
   asm volatile ("" ::: "fs8", "fs9", "fs10", "fs11", "ft8", "ft9", "ft10", "ft11");
 }
+
+register char i1 __asm__ ("x1"); // expected-error {{size of register 'x1' does not match variable size}}
+#if __riscv_xlen == 32
+register long long ll2 __asm__ ("x2"); // expected-error {{size of register 'x2' does not match variable size}}
+register int i2 __asm__ ("x3");
+#endif
+register long l3 __asm__ ("x4");
+register long ra __asm__ ("ra");
+register long sp __asm__ ("sp");
+register int *gp __asm__ ("gp");
+register char *tp __asm__ ("tp");
+register long a7 __asm__ ("a7");
+register long s11 __asm__ ("s11");
+register long t5 __asm__ ("t5");
+register long* f1 __asm__ ("f1"); // expected-error {{register 'f1' unsuitable for global register variables on this target}}

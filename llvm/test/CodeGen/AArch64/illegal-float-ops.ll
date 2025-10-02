@@ -159,6 +159,174 @@ define void @test_sin(float %float, double %double, fp128 %fp128) {
 
 }
 
+declare float @llvm.tan.f32(float)
+declare double @llvm.tan.f64(double)
+declare fp128 @llvm.tan.f128(fp128)
+
+define void @test_tan(float %float, double %double, fp128 %fp128) {
+; CHECK-LABEL: test_tan:
+
+   %tanfloat = call float @llvm.tan.f32(float %float)
+   store float %tanfloat, ptr @varfloat
+; CHECK: bl tanf
+
+   %tandouble = call double @llvm.tan.f64(double %double)
+   store double %tandouble, ptr @vardouble
+; CHECK: bl tan
+
+   %tanfp128 = call fp128 @llvm.tan.f128(fp128 %fp128)
+   store fp128 %tanfp128, ptr @varfp128
+; CHECK: bl tanl
+  ret void
+}
+
+declare float @llvm.acos.f32(float)
+declare double @llvm.acos.f64(double)
+declare fp128 @llvm.acos.f128(fp128)
+
+define void @test_acos(float %float, double %double, fp128 %fp128) {
+; CHECK-LABEL: test_acos:
+
+   %acosfloat = call float @llvm.acos.f32(float %float)
+   store float %acosfloat, ptr @varfloat
+; CHECK: bl acosf
+
+   %acosdouble = call double @llvm.acos.f64(double %double)
+   store double %acosdouble, ptr @vardouble
+; CHECK: bl acos
+
+   %acosfp128 = call fp128 @llvm.acos.f128(fp128 %fp128)
+   store fp128 %acosfp128, ptr @varfp128
+; CHECK: bl acosl
+  ret void
+}
+
+declare float @llvm.asin.f32(float)
+declare double @llvm.asin.f64(double)
+declare fp128 @llvm.asin.f128(fp128)
+
+define void @test_asin(float %float, double %double, fp128 %fp128) {
+; CHECK-LABEL: test_asin:
+
+   %asinfloat = call float @llvm.asin.f32(float %float)
+   store float %asinfloat, ptr @varfloat
+; CHECK: bl asinf
+
+   %asindouble = call double @llvm.asin.f64(double %double)
+   store double %asindouble, ptr @vardouble
+; CHECK: bl asin
+
+   %asinfp128 = call fp128 @llvm.asin.f128(fp128 %fp128)
+   store fp128 %asinfp128, ptr @varfp128
+; CHECK: bl asinl
+  ret void
+}
+
+declare float @llvm.atan.f32(float)
+declare double @llvm.atan.f64(double)
+declare fp128 @llvm.atan.f128(fp128)
+
+define void @test_atan(float %float, double %double, fp128 %fp128) {
+; CHECK-LABEL: test_atan:
+
+   %atanfloat = call float @llvm.atan.f32(float %float)
+   store float %atanfloat, ptr @varfloat
+; CHECK: bl atanf
+
+   %atandouble = call double @llvm.atan.f64(double %double)
+   store double %atandouble, ptr @vardouble
+; CHECK: bl atan
+
+   %atanfp128 = call fp128 @llvm.atan.f128(fp128 %fp128)
+   store fp128 %atanfp128, ptr @varfp128
+; CHECK: bl atanl
+  ret void
+}
+
+declare float @llvm.atan2.f32(float, float)
+declare double @llvm.atan2.f64(double, double)
+declare fp128 @llvm.atan2.f128(fp128, fp128)
+
+define void @test_atan2(float %float1, double %double1, fp128 %fp1281, float %float2, double %double2, fp128 %fp1282) {
+; CHECK-LABEL: test_atan2:
+
+   %atan2float = call float @llvm.atan2.f32(float %float1, float %float2)
+   store float %atan2float, ptr @varfloat
+; CHECK: bl atan2f
+
+   %atan2double = call double @llvm.atan2.f64(double %double1, double %double2)
+   store double %atan2double, ptr @vardouble
+; CHECK: bl atan2
+
+   %atan2fp128 = call fp128 @llvm.atan2.f128(fp128 %fp1281, fp128 %fp1282)
+   store fp128 %atan2fp128, ptr @varfp128
+; CHECK: bl atan2l
+  ret void
+}
+
+declare float @llvm.cosh.f32(float)
+declare double @llvm.cosh.f64(double)
+declare fp128 @llvm.cosh.f128(fp128)
+
+define void @test_cosh(float %float, double %double, fp128 %fp128) {
+; CHECK-LABEL: test_cosh:
+
+   %coshfloat = call float @llvm.cosh.f32(float %float)
+   store float %coshfloat, ptr @varfloat
+; CHECK: bl coshf
+
+   %coshdouble = call double @llvm.cosh.f64(double %double)
+   store double %coshdouble, ptr @vardouble
+; CHECK: bl cosh
+
+   %coshfp128 = call fp128 @llvm.cosh.f128(fp128 %fp128)
+   store fp128 %coshfp128, ptr @varfp128
+; CHECK: bl coshl
+  ret void
+}
+
+declare float @llvm.sinh.f32(float)
+declare double @llvm.sinh.f64(double)
+declare fp128 @llvm.sinh.f128(fp128)
+
+define void @test_sinh(float %float, double %double, fp128 %fp128) {
+; CHECK-LABEL: test_sinh:
+
+   %sinhfloat = call float @llvm.sinh.f32(float %float)
+   store float %sinhfloat, ptr @varfloat
+; CHECK: bl sinhf
+
+   %sinhdouble = call double @llvm.sinh.f64(double %double)
+   store double %sinhdouble, ptr @vardouble
+; CHECK: bl sinh
+
+   %sinhfp128 = call fp128 @llvm.sinh.f128(fp128 %fp128)
+   store fp128 %sinhfp128, ptr @varfp128
+; CHECK: bl sinhl
+  ret void
+}
+
+declare float @llvm.tanh.f32(float)
+declare double @llvm.tanh.f64(double)
+declare fp128 @llvm.tanh.f128(fp128)
+
+define void @test_tanh(float %float, double %double, fp128 %fp128) {
+; CHECK-LABEL: test_tanh:
+
+   %tanhfloat = call float @llvm.tanh.f32(float %float)
+   store float %tanhfloat, ptr @varfloat
+; CHECK: bl tanhf
+
+   %tanhdouble = call double @llvm.tanh.f64(double %double)
+   store double %tanhdouble, ptr @vardouble
+; CHECK: bl tanh
+
+   %tanhfp128 = call fp128 @llvm.tanh.f128(fp128 %fp128)
+   store fp128 %tanhfp128, ptr @varfp128
+; CHECK: bl tanhl
+  ret void
+}
+
 declare float @llvm.pow.f32(float, float)
 declare double @llvm.pow.f64(double, double)
 declare fp128 @llvm.pow.f128(fp128, fp128)

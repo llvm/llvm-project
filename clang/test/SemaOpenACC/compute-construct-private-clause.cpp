@@ -64,34 +64,34 @@ void uses(int IntParam, char *PointerParam, float ArrayParam[5], Complete Compos
 
   // Invalid cases, arbitrary expressions.
   Incomplete *I;
-  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel private(*I)
   while(true);
-  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel private(GlobalInt + IntParam)
   while(true);
-  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel private(+GlobalInt)
   while(true);
 }
 
 template<typename T, unsigned I, typename V>
 void TemplUses(T t, T (&arrayT)[I], V TemplComp) {
-  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel private(+t)
   while(true);
 
-  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel private(+I)
   while(true);
 
   // NTTP's are only valid if it is a reference to something.
-  // expected-error@+2{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+  // expected-error@+2{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
   // expected-note@#TEMPL_USES_INST{{in instantiation of}}
 #pragma acc parallel private(I)
   while(true);
 
-  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel private(t, I)
   while(true);
 
@@ -120,7 +120,7 @@ void TemplUses(T t, T (&arrayT)[I], V TemplComp) {
 template<unsigned I, auto &NTTP_REF>
 void NTTP() {
   // NTTP's are only valid if it is a reference to something.
-  // expected-error@+2{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+  // expected-error@+2{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
   // expected-note@#NTTP_INST{{in instantiation of}}
 #pragma acc parallel private(I)
   while(true);
@@ -158,3 +158,17 @@ void Inst() {
   TemplUses(i, Arr, C); // #TEMPL_USES_INST
   NTTP<5, NTTP_REFed>(); // #NTTP_INST
 }
+
+template<typename T>
+void ThisCrashed(unsigned A, unsigned B) {
+  T ***ThreePtr;
+  // expected-error@+1 2{{OpenACC sub-array length is unspecified and cannot be inferred because the subscripted value is not an array}}
+#pragma acc parallel private(ThreePtr[A:B][B][B])
+  ;
+}
+
+void inst_crash() {
+  // expected-note@+1{{in instantiation}}
+  ThisCrashed<int>(1, 2);
+}
+

@@ -1,4 +1,4 @@
-//===--- ConstCorrectnessCheck.h - clang-tidy -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::misc {
 /// This check warns on variables which could be declared const but are not.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/const-correctness.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/const-correctness.html
 class ConstCorrectnessCheck : public ClangTidyCheck {
 public:
   ConstCorrectnessCheck(StringRef Name, ClangTidyContext *Context);
@@ -32,19 +32,25 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void registerScope(const CompoundStmt *LocalScope, ASTContext *Context);
+  void registerScope(const Stmt *LocalScope, ASTContext *Context);
 
   using MutationAnalyzer = std::unique_ptr<ExprMutationAnalyzer>;
-  llvm::DenseMap<const CompoundStmt *, MutationAnalyzer> ScopesCache;
+  llvm::DenseMap<const Stmt *, MutationAnalyzer> ScopesCache;
   llvm::DenseSet<SourceLocation> TemplateDiagnosticsCache;
 
-  const bool AnalyzeValues;
+  const bool AnalyzePointers;
   const bool AnalyzeReferences;
+  const bool AnalyzeValues;
+
+  const bool WarnPointersAsPointers;
   const bool WarnPointersAsValues;
 
-  const bool TransformValues;
-  const bool TransformReferences;
+  const bool TransformPointersAsPointers;
   const bool TransformPointersAsValues;
+  const bool TransformReferences;
+  const bool TransformValues;
+
+  const std::vector<StringRef> AllowedTypes;
 };
 
 } // namespace clang::tidy::misc

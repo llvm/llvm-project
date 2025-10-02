@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s | FileCheck %s
 
 ; This test case has two scops in a row. When code generating the first scop,
 ; the second scop is invalidated. This test case verifies that we do not crash
@@ -6,7 +6,7 @@
 
 ; We explicitly check here that the second scop is not code generated. Later
 ; improvements may make this possible (e.g., Polly gaining support for
-; parameteric conditional expressions or a changed code generation order).
+; parametric conditional expressions or a changed code generation order).
 ; However, in case this happens, we want to ensure this test case is been
 ; reasoned about and updated accordingly.
 

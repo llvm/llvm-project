@@ -58,6 +58,11 @@ void MultiplexASTDeserializationListener::DeclRead(GlobalDeclID ID,
     Listeners[i]->DeclRead(ID, D);
 }
 
+void MultiplexASTDeserializationListener::PredefinedDeclBuilt(PredefinedDeclIDs ID, const Decl *D) {
+  for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    Listeners[i]->PredefinedDeclBuilt(ID, D);
+}
+
 void MultiplexASTDeserializationListener::SelectorRead(
     serialization::SelectorID ID, Selector Sel) {
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)
@@ -102,6 +107,8 @@ public:
   void ResolvedOperatorDelete(const CXXDestructorDecl *DD,
                               const FunctionDecl *Delete,
                               Expr *ThisArg) override;
+  void ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
+                                  const FunctionDecl *GlobDelete) override;
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void InstantiationRequested(const ValueDecl *D) override;
   void VariableDefinitionInstantiated(const VarDecl *D) override;
@@ -178,6 +185,11 @@ void MultiplexASTMutationListener::ResolvedOperatorDelete(
     const CXXDestructorDecl *DD, const FunctionDecl *Delete, Expr *ThisArg) {
   for (auto *L : Listeners)
     L->ResolvedOperatorDelete(DD, Delete, ThisArg);
+}
+void MultiplexASTMutationListener::ResolvedOperatorGlobDelete(
+    const CXXDestructorDecl *DD, const FunctionDecl *GlobDelete) {
+  for (auto *L : Listeners)
+    L->ResolvedOperatorGlobDelete(DD, GlobDelete);
 }
 void MultiplexASTMutationListener::CompletedImplicitDefinition(
                                                         const FunctionDecl *D) {
@@ -293,6 +305,13 @@ MultiplexConsumer::MultiplexConsumer(
   }
 }
 
+MultiplexConsumer::MultiplexConsumer(std::unique_ptr<ASTConsumer> C)
+    : MultiplexConsumer([](std::unique_ptr<ASTConsumer> Consumer) {
+        std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+        Consumers.push_back(std::move(Consumer));
+        return Consumers;
+      }(std::move(C))) {}
+
 MultiplexConsumer::~MultiplexConsumer() {}
 
 void MultiplexConsumer::Initialize(ASTContext &Context) {
@@ -357,7 +376,7 @@ void MultiplexConsumer::CompleteTentativeDefinition(VarDecl *D) {
     Consumer->CompleteTentativeDefinition(D);
 }
 
-void MultiplexConsumer::CompleteExternalDeclaration(VarDecl *D) {
+void MultiplexConsumer::CompleteExternalDeclaration(DeclaratorDecl *D) {
   for (auto &Consumer : Consumers)
     Consumer->CompleteExternalDeclaration(D);
 }

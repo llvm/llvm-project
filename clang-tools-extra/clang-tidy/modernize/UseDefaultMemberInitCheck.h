@@ -1,4 +1,4 @@
-//===--- UseDefaultMemberInitCheck.h - clang-tidy----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::modernize {
 /// member initializer.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-default-member-init.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-default-member-init.html
 class UseDefaultMemberInitCheck : public ClangTidyCheck {
 public:
   UseDefaultMemberInitCheck(StringRef Name, ClangTidyContext *Context);

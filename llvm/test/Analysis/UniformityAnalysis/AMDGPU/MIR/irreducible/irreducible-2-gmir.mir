@@ -1,12 +1,13 @@
 # RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-- -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
 
 #        bb0(div)
 #       /    \
 #     bb1 <-> bb2
 #              |
 #             bb3
-# CHECK-LABEL: MachineUniformityInfo for function: cycle_diverge_enter
-# CHECK-NEXT: CYCLES ASSSUMED DIVERGENT:
+# CHECK-LABEL: MachineUniformityInfo for function:  @cycle_diverge_enter
+# CHECK-NEXT: CYCLES ASSUMED DIVERGENT:
 # CHECK-NEXT: depth=1: entries(bb.2 bb.1)
 # CHECK-NEXT: CYCLES WITH DIVERGENT EXIT:
 # CHECK-NEXT: depth=1: entries(bb.2 bb.1)
@@ -46,7 +47,7 @@ body:             |
 ...
 
 
-# CHECK-LABEL: MachineUniformityInfo for function: cycle_diverge_exit
+# CHECK-LABEL: MachineUniformityInfo for function:  @cycle_diverge_exit
 # CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32), %{{[0-9]*}}:_(s1) = G_UADDO %8:_, %{{[0-9]*}}:_
 #        bb0
 #       /    \

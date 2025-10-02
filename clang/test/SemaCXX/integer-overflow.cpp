@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only -std=gnu++98 -triple x86_64-pc-linux-gnu
 // RUN: %clang_cc1 %s -verify -fsyntax-only -std=gnu++2a -triple x86_64-pc-linux-gnu
 
+// RUN: %clang_cc1 %s -verify -fsyntax-only -std=gnu++98 -triple x86_64-pc-linux-gnu -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -verify -fsyntax-only -std=gnu++2a -triple x86_64-pc-linux-gnu -fexperimental-new-constant-interpreter
+
+
 typedef unsigned long long uint64_t;
 typedef unsigned int uint32_t;
 
@@ -167,7 +171,7 @@ uint64_t check_integer_overflows(int i) { //expected-note 0+{{declared here}}
   uint64_t a[10];
   a[4608 * 1024 * 1024] = 1;
 #if __cplusplus < 201103L
-// expected-warning@-2 {{array index 536870912 is past the end of the array (that has type 'uint64_t[10]' (aka 'unsigned long long[10]'))}}
+// expected-warning@-2 {{array index 536'870'912 is past the end of the array (that has type 'uint64_t[10]' (aka 'unsigned long long[10]'))}}
 // expected-note@-4 {{array 'a' declared here}}
 #endif
 
@@ -240,6 +244,12 @@ int m() {
     int64_t x = Pass(30 * 24 * 60 * 59 * 1000);  // expected-warning {{overflow in expression; result is -1'746'167'296 with type 'int'}}
     auto r = Wrap(Pass(30 * 24 * 60 * 59 * 1000));  // expected-warning {{overflow in expression; result is -1'746'167'296 with type 'int'}}
     return 0;
+}
+}
+
+namespace GH46755 {
+void f() {
+    struct { int v; } &&r = {512 * 1024 * 1024 * 1024}; // expected-warning {{overflow in expression; result is 0 with type 'int'}}
 }
 }
 #endif

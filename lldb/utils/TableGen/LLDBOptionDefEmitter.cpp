@@ -23,6 +23,33 @@ using namespace llvm;
 using namespace lldb_private;
 
 namespace {
+/// Parses curly braces and replaces them with ANSI underline formatting.
+std::string underline(llvm::StringRef Str) {
+  llvm::StringRef OpeningHead, OpeningTail, ClosingHead, ClosingTail;
+  std::string Result;
+  llvm::raw_string_ostream Stream(Result);
+  while (!Str.empty()) {
+    // Find the opening brace.
+    std::tie(OpeningHead, OpeningTail) = Str.split("${");
+    Stream << OpeningHead;
+
+    // No opening brace: we're done.
+    if (OpeningHead == Str)
+      break;
+
+    assert(!OpeningTail.empty());
+
+    // Find the closing brace.
+    std::tie(ClosingHead, ClosingTail) = OpeningTail.split('}');
+    assert(!ClosingTail.empty() &&
+           "unmatched curly braces in command option description");
+
+    Stream << "${ansi.underline}" << ClosingHead << "${ansi.normal}";
+    Str = ClosingTail;
+  }
+  return Result;
+}
+
 struct CommandOption {
   std::vector<std::string> GroupsArg;
   bool Required = false;
@@ -35,7 +62,7 @@ struct CommandOption {
   std::string Description;
 
   CommandOption() = default;
-  CommandOption(Record *Option) {
+  CommandOption(const Record *Option) {
     if (Option->getValue("Groups")) {
       // The user specified a list of groups.
       auto Groups = Option->getValueAsListOfInts("Groups");
@@ -68,7 +95,7 @@ struct CommandOption {
       Completions = Option->getValueAsListOfStrings("Completions");
 
     if (auto D = Option->getValue("Description"))
-      Description = D->getValue()->getAsUnquotedString();
+      Description = underline(D->getValue()->getAsUnquotedString());
   }
 };
 } // namespace
@@ -145,14 +172,12 @@ static void emitOption(const CommandOption &O, raw_ostream &OS) {
 }
 
 /// Emits all option initializers to the raw_ostream.
-static void emitOptions(std::string Command, std::vector<Record *> Records,
+static void emitOptions(std::string Command, ArrayRef<const Record *> Records,
                         raw_ostream &OS) {
-  std::vector<CommandOption> Options;
-  for (Record *R : Records)
-    Options.emplace_back(R);
+  std::vector<CommandOption> Options(Records.begin(), Records.end());
 
   std::string ID = Command;
-  std::replace(ID.begin(), ID.end(), ' ', '_');
+  llvm::replace(ID, ' ', '_');
   // Generate the macro that the user needs to define before including the
   // *.inc file.
   std::string NeededMacro = "LLDB_OPTIONS_" + ID;
@@ -170,10 +195,11 @@ static void emitOptions(std::string Command, std::vector<Record *> Records,
   OS << "#endif // " << Command << " command\n\n";
 }
 
-void lldb_private::EmitOptionDefs(RecordKeeper &Records, raw_ostream &OS) {
+void lldb_private::EmitOptionDefs(const RecordKeeper &Records,
+                                  raw_ostream &OS) {
   emitSourceFileHeader("Options for LLDB command line commands.", OS, Records);
 
-  std::vector<Record *> Options = Records.getAllDerivedDefinitions("Option");
+  ArrayRef<const Record *> Options = Records.getAllDerivedDefinitions("Option");
   for (auto &CommandRecordPair : getRecordsByName(Options, "Command")) {
     emitOptions(CommandRecordPair.first, CommandRecordPair.second, OS);
   }

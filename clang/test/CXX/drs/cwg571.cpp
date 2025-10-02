@@ -12,7 +12,7 @@ namespace cwg571 { // cwg571: 2.7
   const ir r = n;
   // expected-warning@-1 {{'const' qualifier on reference type 'ir' (aka 'int &') has no effect}}
   ir r2 = n;
-}
+} // namespace cwg571
 
 // Entities have external linkage by default.
 

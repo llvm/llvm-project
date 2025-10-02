@@ -16,14 +16,21 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
+
+cl::opt<bool> llvm::NoKernelInfoEndLTO(
+    "no-kernel-info-end-lto",
+    cl::desc("remove the kernel-info pass at the end of the full LTO pipeline"),
+    cl::init(false), cl::Hidden);
 
 //---------------------------------------------------------------------------
 // TargetMachine Class
@@ -38,6 +45,13 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
       O0WantsFastISel(false), Options(Options) {}
 
 TargetMachine::~TargetMachine() = default;
+
+Expected<std::unique_ptr<MCStreamer>>
+TargetMachine::createMCStreamer(raw_pwrite_stream &Out,
+                                raw_pwrite_stream *DwoOut,
+                                CodeGenFileType FileType, MCContext &Ctx) {
+  return nullptr;
+}
 
 bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
   if (getTargetTriple().getArch() != Triple::x86_64)
@@ -105,7 +119,20 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
                                 GV->getName().starts_with("__start_") ||
                                 GV->getName().starts_with("__stop_")))
       return true;
-    const DataLayout &DL = GV->getParent()->getDataLayout();
+    // Linkers do not currently support PT_GNU_RELRO for SHF_X86_64_LARGE
+    // sections; that would require the linker to emit more than one
+    // PT_GNU_RELRO because large sections are discontiguous by design, and most
+    // ELF dynamic loaders do not support that (bionic appears to support it but
+    // glibc/musl/FreeBSD/NetBSD/OpenBSD appear not to). With current linkers
+    // these sections will end up in .ldata which results in silently disabling
+    // RELRO. If this ever gets supported by downstream components in the future
+    // we could add an opt-in flag for moving these sections to .ldata.rel.ro
+    // which would trigger the creation of a second PT_GNU_RELRO.
+    if (!GV->isDeclarationForLinker() &&
+        TargetLoweringObjectFile::getKindForGlobal(GV, *this)
+            .isReadOnlyWithRel())
+      return false;
+    const DataLayout &DL = GV->getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     return Size == 0 || Size > LargeDataThreshold;
   }
@@ -135,7 +162,6 @@ void TargetMachine::resetTargetOptions(const Function &F) const {
   RESET_OPTION(NoInfsFPMath, "no-infs-fp-math");
   RESET_OPTION(NoNaNsFPMath, "no-nans-fp-math");
   RESET_OPTION(NoSignedZerosFPMath, "no-signed-zeros-fp-math");
-  RESET_OPTION(ApproxFuncFPMath, "approx-func-fp-math");
 }
 
 /// Returns the code generation relocation model. The choices are static, PIC,
@@ -203,7 +229,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const GlobalValue *GV) const {
     // don't assume the variables to be DSO local unless we actually know
     // that for sure. This only has to be done for variables; for functions
     // the linker can insert thunks for calling functions from another DLL.
-    if (TT.isWindowsGNUEnvironment() && GV->isDeclarationForLinker() &&
+    if (TT.isOSCygMing() && GV->isDeclarationForLinker() &&
         isa<GlobalVariable>(GV))
       return false;
 
@@ -261,14 +287,9 @@ TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
   return Model;
 }
 
-/// Returns the optimization level: None, Less, Default, or Aggressive.
-CodeGenOptLevel TargetMachine::getOptLevel() const { return OptLevel; }
-
-void TargetMachine::setOptLevel(CodeGenOptLevel Level) { OptLevel = Level; }
-
 TargetTransformInfo
 TargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(F.getParent()->getDataLayout());
+  return TargetTransformInfo(F.getDataLayout());
 }
 
 void TargetMachine::getNameWithPrefix(SmallVectorImpl<char> &Name,

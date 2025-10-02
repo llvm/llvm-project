@@ -22,7 +22,6 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <optional>
@@ -128,9 +127,12 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
   Operation *op = result.getOwner();
 
   // If this is a view, unwrap to the source.
-  if (ViewLikeOpInterface view = dyn_cast<ViewLikeOpInterface>(op))
-    return collectUnderlyingAddressValues(view.getViewSource(), maxDepth,
-                                          visited, output);
+  if (ViewLikeOpInterface view = dyn_cast<ViewLikeOpInterface>(op)) {
+    if (result == view.getViewDest()) {
+      return collectUnderlyingAddressValues(view.getViewSource(), maxDepth,
+                                            visited, output);
+    }
+  }
   // Check to see if we can reason about the control flow of this op.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     return collectUnderlyingAddressValues(branch, /*region=*/nullptr, result,

@@ -19,7 +19,7 @@ struct resumable {
   };
 };
 
-resumable f1() { // expected-error {{'operator new' provided by 'std::coroutine_traits<resumable>::promise_type' (aka 'resumable::promise_type') is not usable with the function signature of 'f1'}}
+resumable f1() { // expected-error {{'operator new' provided by 'std::coroutine_traits<resumable>::promise_type' (aka 'typename resumable::promise_type') is not usable with the function signature of 'f1'}}
   co_return;
 }
 
@@ -27,7 +27,7 @@ resumable f1() { // expected-error {{'operator new' provided by 'std::coroutine_
 // allocation function in resumable::promise_type have lvalue references, it looks
 // the signature of f2 is invalid. But according to [dcl.fct.def.coroutine]p4:
 //
-//   In the following, pi is an lvalue of type Pi, where p1 denotes the object 
+//   In the following, pi is an lvalue of type Pi, where p1 denotes the object
 //   parameter and pi+1 denotes the ith non-object function parameter for a
 //   non-static member function.
 //
@@ -38,7 +38,7 @@ resumable f1() { // expected-error {{'operator new' provided by 'std::coroutine_
 //   The lvalues p1…pn are the succeeding arguments.
 //
 // So the actual type passed to resumable::promise_type::operator new is lvalue
-// Allocator. It is allowed  to convert a lvalue to a lvalue reference. So the 
+// Allocator. It is allowed  to convert a lvalue to a lvalue reference. So the
 // following one is valid.
 resumable f2(Allocator &&) {
   co_return;
@@ -52,11 +52,11 @@ resumable f4(Allocator) {
   co_return;
 }
 
-resumable f5(const Allocator) { // expected-error {{operator new' provided by 'std::coroutine_traits<resumable, const Allocator>::promise_type' (aka 'resumable::promise_type') is not usable}}
+resumable f5(const Allocator) { // expected-error {{operator new' provided by 'std::coroutine_traits<resumable, const Allocator>::promise_type' (aka 'typename resumable::promise_type') is not usable}}
   co_return;
 }
 
-resumable f6(const Allocator &) { // expected-error {{operator new' provided by 'std::coroutine_traits<resumable, const Allocator &>::promise_type' (aka 'resumable::promise_type') is not usable}}
+resumable f6(const Allocator &) { // expected-error {{operator new' provided by 'std::coroutine_traits<resumable, const Allocator &>::promise_type' (aka 'typename resumable::promise_type') is not usable}}
   co_return;
 }
 

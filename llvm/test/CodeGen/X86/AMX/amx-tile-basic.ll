@@ -77,7 +77,7 @@ define void @PR90954(ptr %0, ptr %1, i32 %2) nounwind {
 ; CHECK-NEXT:    xorl %r9d, %r9d
 ; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    jmp .LBB1_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_5: # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    incq %r10
 ; CHECK-NEXT:    addl %edx, %r9d
@@ -88,7 +88,7 @@ define void @PR90954(ptr %0, ptr %1, i32 %2) nounwind {
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    jmp .LBB1_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_4: # in Loop: Header=BB1_2 Depth=2
 ; CHECK-NEXT:    tilestored %tmm1, (%r11,%rax)
 ; CHECK-NEXT:    incq %r14
@@ -107,7 +107,7 @@ define void @PR90954(ptr %0, ptr %1, i32 %2) nounwind {
 ; CHECK-NEXT:    tdpbf16ps %tmm2, %tmm1, %tmm0
 ; CHECK-NEXT:    movabsq $64, %rbp
 ; CHECK-NEXT:    tilestored %tmm0, 896(%rsp,%rbp) # 1024-byte Folded Spill
-; CHECK-NEXT:    tileloadd {{[-0-9]+}}(%r{{[sb]}}p), %tmm1 # 1024-byte Folded Reload
+; CHECK-NEXT:    tileloadd 896(%rsp,%rbp), %tmm1 # 1024-byte Folded Reload
 ; CHECK-NEXT:    jmp .LBB1_4
   %4 = shl i32 %2, 4
   %5 = icmp eq i64 0, 0
@@ -150,6 +150,38 @@ define void @PR90954(ptr %0, ptr %1, i32 %2) nounwind {
 31:                                               ; preds = %25
   %32 = add nuw nsw i64 %7, 1
   br label %6
+}
+
+define void @multi_use() nounwind {
+; CHECK-LABEL: multi_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    subq $2928, %rsp # imm = 0xB70
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $16, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $64, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $16, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $64, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $64, %ax
+; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $16, %cx
+; CHECK-NEXT:    tilezero %tmm0
+; CHECK-NEXT:    movabsq $64, %rbp
+; CHECK-NEXT:    tilestored %tmm0, 896(%rsp,%rbp) # 1024-byte Folded Spill
+; CHECK-NEXT:    tileloadd 896(%rsp,%rbp), %tmm1 # 1024-byte Folded Reload
+; CHECK-NEXT:    tdpbf16ps %tmm0, %tmm0, %tmm1
+; CHECK-NEXT:    tdpbf16ps %tmm0, %tmm0, %tmm0
+; CHECK-NEXT:    addq $2928, %rsp # imm = 0xB70
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    tilerelease
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %1 = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %2 = call x86_amx @llvm.x86.tdpbf16ps.internal(i16 16, i16 64, i16 64, x86_amx %1, x86_amx %1, x86_amx %1)
+  %3 = call x86_amx @llvm.x86.tdpbf16ps.internal(i16 16, i16 64, i16 64, x86_amx %1, x86_amx %1, x86_amx %1)
+  ret void
 }
 
 declare x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32>)

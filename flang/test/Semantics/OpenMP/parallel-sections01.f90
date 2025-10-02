@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang %openmp_flags
 ! OpenMP version 5.0.0
 ! 2.13.3 parallel sections Construct
 ! The restrictions for the parallel construct and the sections construct apply
@@ -35,6 +35,8 @@ program OmpConstructSections01
    !$omp section
    print *, "This is a single statement structured block"
    !$omp section
+   !ERROR: invalid branch into an OpenMP structured block
+   !ERROR: invalid branch leaving an OpenMP structured block
    open (10, file="random-file-name.txt", err=30)
    !ERROR: invalid branch into an OpenMP structured block
    !ERROR: invalid branch leaving an OpenMP structured block

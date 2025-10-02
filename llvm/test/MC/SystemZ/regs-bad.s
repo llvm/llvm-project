@@ -262,8 +262,6 @@
 
 # Test general register parsing, with no predetermined class in mind.
 #
-#CHECK: error: register expected
-#CHECK: .cfi_offset r0,0
 #CHECK: error: invalid register
 #CHECK: .cfi_offset %,0
 #CHECK: error: invalid register
@@ -289,7 +287,6 @@
 #CHECK: error: invalid register
 #CHECK: .cfi_offset %arid,0
 
-	.cfi_offset r0,0
 	.cfi_offset %,0
 	.cfi_offset %r,0
 	.cfi_offset %f,0

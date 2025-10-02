@@ -53,7 +53,7 @@ public:
   /// value is not an instance of `T`.
   template <typename T,
             typename ResultT = std::conditional_t<
-                std::is_convertible<T, bool>::value, T, std::optional<T>>>
+                std::is_constructible_v<bool, T>, T, std::optional<T>>>
   ResultT dyn_cast() const {
     return isa<T>() ? castImpl<T>() : ResultT();
   }
@@ -625,7 +625,7 @@ template <typename PDLFnT, std::size_t... I>
 void assertArgs(PatternRewriter &rewriter, ArrayRef<PDLValue> values,
                 std::index_sequence<I...>) {
   // We only want to do verification in debug builds, same as with `assert`.
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifndef NDEBUG
   using FnTraitsT = llvm::function_traits<PDLFnT>;
   auto errorFn = [&](const Twine &msg) -> LogicalResult {
     llvm::report_fatal_error(msg);

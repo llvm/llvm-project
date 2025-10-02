@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
@@ -73,10 +74,11 @@ struct SubtargetSubTypeKV {
 ///
 /// Generic base class for all target subtargets.
 ///
-class MCSubtargetInfo {
+class LLVM_ABI MCSubtargetInfo {
   Triple TargetTriple;
   std::string CPU; // CPU being targeted.
   std::string TuneCPU; // CPU being tuned for.
+  ArrayRef<StringRef> ProcNames; // Processor list, including aliases
   ArrayRef<SubtargetFeatureKV> ProcFeatures;  // Processor feature list
   ArrayRef<SubtargetSubTypeKV> ProcDesc;  // Processor descriptions
 
@@ -95,7 +97,8 @@ class MCSubtargetInfo {
 public:
   MCSubtargetInfo(const MCSubtargetInfo &) = default;
   MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                  StringRef FS, ArrayRef<SubtargetFeatureKV> PF,
+                  StringRef FS, ArrayRef<StringRef> PN,
+                  ArrayRef<SubtargetFeatureKV> PF,
                   ArrayRef<SubtargetSubTypeKV> PD,
                   const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,
                   const MCReadAdvanceEntry *RA, const InstrStage *IS,
@@ -225,7 +228,7 @@ public:
   }
 
   /// Check whether the CPU string is valid.
-  bool isCPUStringValid(StringRef CPU) const {
+  virtual bool isCPUStringValid(StringRef CPU) const {
     auto Found = llvm::lower_bound(ProcDesc, CPU);
     return Found != ProcDesc.end() && StringRef(Found->Key) == CPU;
   }
@@ -240,6 +243,9 @@ public:
     return ProcFeatures;
   }
 
+  /// Return the list of processor features currently enabled.
+  std::vector<SubtargetFeatureKV> getEnabledProcessorFeatures() const;
+
   /// HwMode IDs are stored and accessed in a bit set format, enabling
   /// users to efficiently retrieve specific IDs, such as the RegInfo
   /// HwMode ID, from the set as required. Using this approach, various
@@ -249,10 +255,10 @@ public:
   /// this method also supports controlling multiple attributes with a single
   /// HwMode ID, just as was done previously.
   enum HwModeType {
-    HwMode_Default,   // Return the smallest HwMode ID of current subtarget.
-    HwMode_ValueType, // Return the HwMode ID that controls the ValueType.
-    HwMode_RegInfo,   // Return the HwMode ID that controls the RegSizeInfo and
-                      // SubRegRange.
+    HwMode_Default,     // Return the smallest HwMode ID of current subtarget.
+    HwMode_ValueType,   // Return the HwMode ID that controls the ValueType.
+    HwMode_RegInfo,     // Return the HwMode ID that controls the RegSizeInfo,
+                        // SubRegRange, and RegisterClass.
     HwMode_EncodingInfo // Return the HwMode ID that controls the EncodingInfo.
   };
 

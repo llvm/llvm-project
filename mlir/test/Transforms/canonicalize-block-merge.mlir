@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(canonicalize))' -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(canonicalize{region-simplify=aggressive}))' -split-input-file | FileCheck %s
 
 // Check the simple case of single operation blocks with a return.
 
@@ -87,7 +87,7 @@ func.func @mismatch_operands_matching_arguments(%cond : i1, %arg0 : i32, %arg1 :
 
 // CHECK-LABEL: func @mismatch_argument_uses(
 func.func @mismatch_argument_uses(%cond : i1, %arg0 : i32, %arg1 : i32) -> (i32, i32) {
-  // CHECK: cf.cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
+  // CHECK: return {{.*}}, {{.*}}
 
   cf.cond_br %cond, ^bb1(%arg1 : i32), ^bb2(%arg0 : i32)
 
@@ -101,7 +101,7 @@ func.func @mismatch_argument_uses(%cond : i1, %arg0 : i32, %arg1 : i32) -> (i32,
 
 // CHECK-LABEL: func @mismatch_argument_types(
 func.func @mismatch_argument_types(%cond : i1, %arg0 : i32, %arg1 : i16) {
-  // CHECK: cf.cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
+  // CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 
   cf.cond_br %cond, ^bb1(%arg0 : i32), ^bb2(%arg1 : i16)
 
@@ -115,7 +115,7 @@ func.func @mismatch_argument_types(%cond : i1, %arg0 : i32, %arg1 : i16) {
 
 // CHECK-LABEL: func @mismatch_argument_count(
 func.func @mismatch_argument_count(%cond : i1, %arg0 : i32) {
-  // CHECK: cf.cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
+  // CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 
   cf.cond_br %cond, ^bb1(%arg0 : i32), ^bb2
 
@@ -274,4 +274,47 @@ func.func @mismatch_dominance() -> i32 {
 
 ^bb4(%3: i32):
   return %3 : i32
+}
+
+// CHECK-LABEL: func @dead_dealloc_fold_multi_use
+func.func @dead_dealloc_fold_multi_use(%cond : i1) {
+  // CHECK-NEXT: return
+  %a = memref.alloc() : memref<4xf32>
+  cf.cond_br %cond, ^bb1, ^bb2
+
+^bb1:
+  memref.dealloc %a: memref<4xf32>
+  return
+
+^bb2:
+  memref.dealloc %a: memref<4xf32>
+  return
+}
+
+// CHECK-LABEL: func @nested_loop
+func.func @nested_loop(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32, %arg4: i32, %arg5: i1) {
+// Irreducible control-flow: enter the middle of the loop in LoopBody_entry here.
+  "test.foo_br"(%arg0, %arg4)[^LoopBody_entry] : (i32, i32) -> ()
+
+// Loop exit condition: jump to exit or LoobBody blocks
+^Loop_header:  // 2 preds: ^bb2, ^bb3
+  // Consumes the block arg from LoopBody_entry
+  // Because of this use here, we can't merge the two blocks below.
+  "test.foo_br2"(%0)[^EXIT, ^LoopBody_entry, ^LoopBody_other] : (i32) -> ()
+
+// LoopBody_entry is jumped in from the entry block (bb0) and Loop_header
+// It **dominates** the Loop_header.
+^LoopBody_entry(%0: i32):  // 2 preds: ^bb0, ^Loop_header
+ // CHECK: test.bar
+  %1 = "test.bar"(%0) : (i32) -> i32
+  cf.br ^Loop_header
+
+// Other block inside the loop, not dominating the header
+^LoopBody_other(%2: i32):  // pred: ^Loop_header
+ // CHECK: test.bar
+  %3 = "test.bar"(%2) : (i32) -> i32
+  cf.br ^Loop_header
+
+^EXIT:  // pred: ^Loop_header
+  return
 }

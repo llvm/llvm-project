@@ -8,7 +8,6 @@
 
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPU.h"
-#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -108,6 +107,14 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
   case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
     return std::tuple(WorkGroupIDZ ? &WorkGroupIDZ : nullptr,
                       &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X:
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y:
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z:
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X:
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y:
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z:
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID:
+    return std::tuple(nullptr, &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
   case AMDGPUFunctionArgInfo::LDS_KERNEL_ID:
     return std::tuple(LDSKernelId ? &LDSKernelId : nullptr,
                       &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
@@ -115,6 +122,9 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
     return std::tuple(
         PrivateSegmentWaveByteOffset ? &PrivateSegmentWaveByteOffset : nullptr,
         &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_SIZE:
+    return {PrivateSegmentSize ? &PrivateSegmentSize : nullptr,
+            &AMDGPU::SGPR_32RegClass, LLT::scalar(32)};
   case AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR:
     return std::tuple(KernargSegmentPtr ? &KernargSegmentPtr : nullptr,
                       &AMDGPU::SGPR_64RegClass,
