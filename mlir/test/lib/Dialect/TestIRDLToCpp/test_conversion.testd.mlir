@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --allow-unregistered-dialect --pass-pipeline="builtin.module(test-irdl-conversion-check)" | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline="builtin.module(test-irdl-conversion-check)" | FileCheck %s
 // CHECK-LABEL: module {
 module {
     // CHECK: func.func @test(%[[test_arg:[^ ]*]]: i1) {
@@ -14,15 +14,15 @@ module {
         "test_irdl_to_cpp.conditional"(%test_arg) ({
         ^cond(%test: i1):
           %3 = "test_irdl_to_cpp.bar"() : () -> i32
-          "fake.terminator"() : () -> ()
+          "test.terminator"() : ()->()
         }, {
         ^then(%what: i1, %ever: i32):
           %4 = "test_irdl_to_cpp.bar"() : () -> i32
-          "fake.terminator"() : () -> ()
+          "test.terminator"() : ()->()
         }, {
         ^else():
           %5 = "test_irdl_to_cpp.bar"() : () -> i32
-          "fake.terminator"() : () -> ()
+          "test.terminator"() : ()->()
         }) : (i1) -> ()
         return
     }
