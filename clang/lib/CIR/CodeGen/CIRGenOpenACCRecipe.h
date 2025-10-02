@@ -24,6 +24,21 @@
 
 namespace clang::CIRGen {
 class OpenACCRecipeBuilderBase {
+  // makes the copy of the addresses of an alloca to the previous allocation.
+  void makeAllocaCopy(mlir::Location loc, mlir::Type copyType,
+                      mlir::Value numEltsToCopy, mlir::Value offsetPerSubarray,
+                      mlir::Value destAlloca, mlir::Value srcAlloca);
+  // This function generates the required alloca, similar to
+  // 'emitAutoVarAlloca', except for the OpenACC array/pointer types.
+  mlir::Value makeBoundsAlloca(mlir::Block *block, SourceRange exprRange,
+                               mlir::Location loc, std::string_view allocaName,
+                               size_t numBounds,
+                               llvm::ArrayRef<QualType> boundTypes);
+
+  void makeBoundsInit(mlir::Value alloca, mlir::Location loc,
+                      mlir::Block *block, const VarDecl *allocaDecl,
+                      QualType origType, bool isInitSection);
+
 protected:
   CIRGen::CIRGenFunction &cgf;
   CIRGen::CIRGenBuilderTy &builder;
@@ -165,28 +180,9 @@ class OpenACCRecipeBuilder : OpenACCRecipeBuilderBase {
         cgf.emitAutoVarAlloca(*varRecipe, builder.saveInsertionPoint());
 
     // 'firstprivate' doesn't do its initialization in the 'init' section,
-    // instead does it in the 'copy' section.  SO only do init here.
-    // 'reduction' appears to use it too (rather than a 'copy' section), so
-    // we probably have to do it here too, but we can do that when we get to
-    // reduction implementation.
-    if constexpr (std::is_same_v<RecipeTy, mlir::acc::PrivateRecipeOp>) {
-      // We are OK with no init for builtins, arrays of builtins, or pointers,
-      // else we should NYI so we know to go look for these.
-      if (cgf.getContext().getLangOpts().CPlusPlus &&
-          !varRecipe->getType()
-               ->getPointeeOrArrayElementType()
-               ->isBuiltinType() &&
-          !varRecipe->getType()->isPointerType() && !varRecipe->getInit()) {
-        // If we don't have any initialization recipe, we failed during Sema to
-        // initialize this correctly. If we disable the
-        // Sema::TentativeAnalysisScopes in SemaOpenACC::CreateInitRecipe, it'll
-        // emit an error to tell us.  However, emitting those errors during
-        // production is a violation of the standard, so we cannot do them.
-        cgf.cgm.errorNYI(exprRange, "private default-init recipe");
-      }
-      cgf.emitAutoVarInit(tempDeclEmission);
-    } else if constexpr (std::is_same_v<RecipeTy,
-                                        mlir::acc::ReductionRecipeOp>) {
+    // instead it does it in the 'copy' section.  SO, only do 'init' here for
+    // reduction.
+    if constexpr (std::is_same_v<RecipeTy, mlir::acc::ReductionRecipeOp>) {
       // Unlike Private, the recipe here is always required as it has to do
       // init, not just 'default' init.
       if (!varRecipe->getInit())

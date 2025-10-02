@@ -40,7 +40,7 @@
 using namespace llvm;
 using namespace VPlanPatternMatch;
 
-cl::opt<bool> EnableWideActiveLaneMask(
+static cl::opt<bool> EnableWideActiveLaneMask(
     "enable-wide-lane-mask", cl::init(false), cl::Hidden,
     cl::desc("Enable use of wide get active lane mask instructions"));
 
@@ -2124,6 +2124,8 @@ static void licm(VPlan &Plan) {
 
 void VPlanTransforms::truncateToMinimalBitwidths(
     VPlan &Plan, const MapVector<Instruction *, uint64_t> &MinBWs) {
+  if (Plan.hasScalarVFOnly())
+    return;
   // Keep track of created truncates, so they can be re-used. Note that we
   // cannot use RAUW after creating a new truncate, as this would could make
   // other uses have different types for their operands, making them invalidly
@@ -2704,6 +2706,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 ///
 void VPlanTransforms::addExplicitVectorLength(
     VPlan &Plan, const std::optional<unsigned> &MaxSafeElements) {
+  if (Plan.hasScalarVFOnly())
+    return;
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
 
   auto *CanonicalIVPHI = Plan.getCanonicalIV();

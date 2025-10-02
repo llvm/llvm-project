@@ -541,6 +541,13 @@ void AArch64PrologueEmitter::emitPrologue() {
   // to determine the end of the prologue.
   DebugLoc DL;
 
+  // In some cases, particularly with CallingConv::SwiftTail, it is possible to
+  // have a tail-call where the caller only needs to adjust the stack pointer in
+  // the epilogue. In this case, we still need to emit a SEH prologue sequence.
+  // See `seh-minimal-prologue-epilogue.ll` test cases.
+  if (AFI->getArgumentStackToRestore())
+    HasWinCFI = true;
+
   if (AFI->shouldSignReturnAddress(MF)) {
     // If pac-ret+leaf is in effect, PAUTH_PROLOGUE pseudo instructions
     // are inserted by emitPacRetPlusLeafHardening().
@@ -1158,7 +1165,7 @@ void AArch64PrologueEmitter::emitCalleeSavedGPRLocations(
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
   for (const auto &Info : CSI) {
     unsigned FrameIdx = Info.getFrameIdx();
-    if (MFI.getStackID(FrameIdx) == TargetStackID::ScalableVector)
+    if (MFI.isScalableStackID(FrameIdx))
       continue;
 
     assert(!Info.isSpilledToReg() && "Spilling to registers not implemented");
@@ -1185,7 +1192,7 @@ void AArch64PrologueEmitter::emitCalleeSavedSVELocations(
   }
 
   for (const auto &Info : CSI) {
-    if (MFI.getStackID(Info.getFrameIdx()) != TargetStackID::ScalableVector)
+    if (!MFI.isScalableStackID(Info.getFrameIdx()))
       continue;
 
     // Not all unwinders may know about SVE registers, so assume the lowest
@@ -1617,8 +1624,7 @@ void AArch64EpilogueEmitter::emitCalleeSavedRestores(
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameDestroy);
 
   for (const auto &Info : CSI) {
-    if (SVE !=
-        (MFI.getStackID(Info.getFrameIdx()) == TargetStackID::ScalableVector))
+    if (SVE != MFI.isScalableStackID(Info.getFrameIdx()))
       continue;
 
     MCRegister Reg = Info.getReg();
