@@ -72,14 +72,9 @@ public:
                     AccessSpecifier Access = AccessSpecifier::AS_private);
 
   BuiltinTypeDeclBuilder &
-  addHandleMembers(ResourceClass RC, bool IsROV, bool RawBuffer,
+  addBufferHandles(ResourceClass RC, bool IsROV, bool RawBuffer,
+                   bool HasCounter,
                    AccessSpecifier Access = AccessSpecifier::AS_private);
-  BuiltinTypeDeclBuilder &
-  addHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
-                  AccessSpecifier Access = AccessSpecifier::AS_private);
-  BuiltinTypeDeclBuilder &
-  addCounterHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
-                         AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addArraySubscriptOperators();
 
   // Builtin types constructors
@@ -101,6 +96,16 @@ public:
   BuiltinTypeDeclBuilder &addConsumeMethod();
 
 private:
+  BuiltinTypeDeclBuilder &addResourceMember(StringRef MemberName,
+                                            ResourceClass RC, bool IsROV,
+                                            bool RawBuffer, bool IsCounter,
+                                            AccessSpecifier Access);
+  BuiltinTypeDeclBuilder &
+  addHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
+                  AccessSpecifier Access = AccessSpecifier::AS_private);
+  BuiltinTypeDeclBuilder &
+  addCounterHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
+                         AccessSpecifier Access = AccessSpecifier::AS_private);
   FieldDecl *getResourceHandleField() const;
   FieldDecl *getResourceCounterHandleField() const;
   QualType getFirstTemplateTypeParam();

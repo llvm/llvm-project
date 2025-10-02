@@ -799,10 +799,12 @@ BuiltinTypeDeclBuilder::addMemberVariable(StringRef Name, QualType Type,
   return *this;
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMembers(
-    ResourceClass RC, bool IsROV, bool RawBuffer, AccessSpecifier Access) {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addBufferHandles(ResourceClass RC, bool IsROV,
+                                         bool RawBuffer, bool HasCounter,
+                                         AccessSpecifier Access) {
   addHandleMember(RC, IsROV, RawBuffer, Access);
-  if (resourceHasCounter(Record)) {
+  if (HasCounter) {
     addCounterHandleMember(RC, IsROV, RawBuffer, Access);
   }
   return *this;
@@ -810,6 +812,19 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMembers(
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
     ResourceClass RC, bool IsROV, bool RawBuffer, AccessSpecifier Access) {
+  return addResourceMember("__handle", RC, IsROV, RawBuffer,
+                           /*IsCounter=*/false, Access);
+}
+
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCounterHandleMember(
+    ResourceClass RC, bool IsROV, bool RawBuffer, AccessSpecifier Access) {
+  return addResourceMember("__counter_handle", RC, IsROV, RawBuffer,
+                           /*IsCounter=*/true, Access);
+}
+
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
+    StringRef MemberName, ResourceClass RC, bool IsROV, bool RawBuffer,
+    bool IsCounter, AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &Ctx = SemaRef.getASTContext();
@@ -825,33 +840,12 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
       ElementTypeInfo
           ? HLSLContainedTypeAttr::CreateImplicit(Ctx, ElementTypeInfo)
           : nullptr};
+  if (IsCounter)
+    Attrs.push_back(HLSLIsCounterAttr::CreateImplicit(Ctx));
+
   if (CreateHLSLAttributedResourceType(SemaRef, Ctx.HLSLResourceTy, Attrs,
                                        AttributedResTy))
-    addMemberVariable("__handle", AttributedResTy, {}, Access);
-  return *this;
-}
-
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCounterHandleMember(
-    ResourceClass RC, bool IsROV, bool RawBuffer, AccessSpecifier Access) {
-  assert(!Record->isCompleteDefinition() && "record is already complete");
-
-  ASTContext &Ctx = SemaRef.getASTContext();
-  TypeSourceInfo *ElementTypeInfo =
-      Ctx.getTrivialTypeSourceInfo(getHandleElementType(), SourceLocation());
-
-  // add handle member with resource type attributes
-  QualType AttributedResTy = QualType();
-  SmallVector<const Attr *> Attrs = {
-      HLSLResourceClassAttr::CreateImplicit(Ctx, RC),
-      IsROV ? HLSLROVAttr::CreateImplicit(Ctx) : nullptr,
-      RawBuffer ? HLSLRawBufferAttr::CreateImplicit(Ctx) : nullptr,
-      ElementTypeInfo
-          ? HLSLContainedTypeAttr::CreateImplicit(Ctx, ElementTypeInfo)
-          : nullptr,
-      HLSLIsCounterAttr::CreateImplicit(Ctx)};
-  if (CreateHLSLAttributedResourceType(SemaRef, Ctx.HLSLResourceTy, Attrs,
-                                       AttributedResTy))
-    addMemberVariable("__counter_handle", AttributedResTy, {}, Access);
+    addMemberVariable(MemberName, AttributedResTy, {}, Access);
   return *this;
 }
 
@@ -960,10 +954,9 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
       .accessHandleFieldOnResource(PH::_0)
       .assign(PH::Handle, PH::LastStmt);
 
-  if (getResourceCounterHandleField()) {
+  if (getResourceCounterHandleField())
     MMB.accessCounterHandleFieldOnResource(PH::_0).assign(PH::CounterHandle,
                                                           PH::LastStmt);
-  }
 
   return MMB.finalize();
 }
@@ -984,10 +977,9 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
       .accessHandleFieldOnResource(PH::_0)
       .assign(PH::Handle, PH::LastStmt);
 
-  if (getResourceCounterHandleField()) {
+  if (getResourceCounterHandleField())
     MMB.accessCounterHandleFieldOnResource(PH::_0).assign(PH::CounterHandle,
                                                           PH::LastStmt);
-  }
 
   return MMB.returnThis().finalize();
 }
@@ -1026,7 +1018,8 @@ FieldDecl *BuiltinTypeDeclBuilder::getResourceHandleField() const {
 
 FieldDecl *BuiltinTypeDeclBuilder::getResourceCounterHandleField() const {
   auto I = Fields.find("__counter_handle");
-  if (I == Fields.end())
+  if (I == Fields.end() ||
+      !I->second->getType()->isHLSLAttributedResourceType())
     return nullptr;
   return I->second;
 }
