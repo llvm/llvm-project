@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -Wno-array-bounds -analyzer-checker=unix,core,security.ArrayBound -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -Wno-array-bounds -analyzer-config unroll-loops=true -analyzer-checker=unix,core,security.ArrayBound -verify %s
 
 // Test the interactions of `security.ArrayBound` with C++ features.
 
