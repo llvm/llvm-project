@@ -408,7 +408,7 @@ void OpenACCRecipeBuilderBase::makeBoundsInit(
   CIRGenFunction::LexicalScope ls(cgf, loc, block);
 
   CIRGenFunction::AutoVarEmission tempDeclEmission{*allocaDecl};
-  tempDeclEmission.EmittedAsOffload = true;
+  tempDeclEmission.emittedAsOffload = true;
 
   // The init section is the only one of the handful that only has a single
   // argument for the 'type', so we have to drop 1 for init, and future calls
@@ -504,7 +504,7 @@ void OpenACCRecipeBuilderBase::createFirstprivateRecipeCopy(
   // that instead of the variable in the other block.
   tempDeclEmission.setAllocatedAddress(
       Address{toArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
-  tempDeclEmission.EmittedAsOffload = true;
+  tempDeclEmission.emittedAsOffload = true;
 
   CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, temporary};
   cgf.setAddrOfLocalVar(

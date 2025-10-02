@@ -518,7 +518,7 @@ bool mlir::tblgen::isValidLiteral(StringRef value,
   // If there is only one character, this must either be punctuation or a
   // single character bare identifier.
   if (value.size() == 1) {
-    StringRef bare = "_:,=<>()[]{}?+*";
+    StringRef bare = "_:,=<>()[]{}?+-*";
     if (isalpha(front) || bare.contains(front))
       return true;
     if (emitError)
