@@ -342,9 +342,8 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     ExtBType = GetExtendKind(ExtBR);
 
     if (!ExtBR && Widen->getOperand(1)->isLiveIn()) {
-      auto *CI =
-          dyn_cast<ConstantInt>(Widen->getOperand(1)->getLiveInIRValue());
-      if (CI && canConstantBeExtended(CI, InputTypeA, ExtAType)) {
+      auto *CI = cast<ConstantInt>(Widen->getOperand(1)->getLiveInIRValue());
+      if (canConstantBeExtended(CI, InputTypeA, ExtAType)) {
         InputTypeB = InputTypeA;
         ExtBType = ExtAType;
       }
