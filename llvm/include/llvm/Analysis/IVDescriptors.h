@@ -267,8 +267,10 @@ public:
       return RecurKind::SMin;
     case RecurKind::SMaxMultiUse:
       return RecurKind::SMax;
+    default:
+      return Kind;
     }
-    return Kind;
+    llvm_unreachable("all cases must be handled above");
   }
 
   /// Returns true if the recurrence kind is a floating-point min/max kind.
