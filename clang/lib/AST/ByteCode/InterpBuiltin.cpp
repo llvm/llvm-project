@@ -2738,42 +2738,38 @@ static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
 static bool interp_builtin_horizontal_int_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
-  assert(Call->getNumArgs() == 2);
-
-  assert(Call->getArg(0)->getType()->isVectorType() &&
-         Call->getArg(1)->getType()->isVectorType());
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
-  assert(VT->getElementType()->isIntegralOrEnumerationType());
   PrimType ElemT = *S.getContext().classify(VT->getElementType());
   bool DestUnsigned = Call->getType()->isUnsignedIntegerOrEnumerationType();
 
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
+  unsigned NumElts = VT->getNumElements();
+  unsigned EltBits = S.getASTContext().getIntWidth(VT->getElementType());
+  unsigned EltsPerLane = 128 / EltBits;
+  unsigned Lanes = NumElts * EltBits / 128;
+  unsigned DestIndex = 0;
 
-  unsigned SourceLen = VT->getNumElements();
-  assert(SourceLen % 2 == 0 &&
-         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements() ==
-             SourceLen);
-  unsigned DstElem = 0;
+  for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
+    unsigned LaneStart = Lane * EltsPerLane;
+    for (unsigned I = 0; I < EltsPerLane; I += 2) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+        APSInt Elem1 = LHS.elem<T>(LaneStart + I).toAPSInt();
+        APSInt Elem2 = LHS.elem<T>(LaneStart + I + 1).toAPSInt();
+        APSInt ResL = APSInt(Fn(Elem1, Elem2), DestUnsigned);
+        Dst.elem<T>(DestIndex++) = static_cast<T>(ResL);
+      });
+    }
 
-  for (unsigned I = 0; I != SourceLen; I += 2) {
-    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      APSInt Elem1 = LHS.elem<T>(I).toAPSInt();
-      APSInt Elem2 = LHS.elem<T>(I + 1).toAPSInt();
-      Dst.elem<T>(DstElem) =
-          static_cast<T>(APSInt(Fn(Elem1, Elem2), DestUnsigned));
-    });
-    ++DstElem;
-  }
-  for (unsigned I = 0; I != SourceLen; I += 2) {
-    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      APSInt Elem1 = RHS.elem<T>(I).toAPSInt();
-      APSInt Elem2 = RHS.elem<T>(I + 1).toAPSInt();
-      Dst.elem<T>(DstElem) =
-          static_cast<T>(APSInt(Fn(Elem1, Elem2), DestUnsigned));
-    });
-    ++DstElem;
+for (unsigned I = 0; I < EltsPerLane; I += 2) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+        APSInt Elem1 = RHS.elem<T>(LaneStart + I).toAPSInt();
+        APSInt Elem2 = RHS.elem<T>(LaneStart + I + 1).toAPSInt();
+        APSInt ResR = APSInt(Fn(Elem1, Elem2), DestUnsigned);
+        Dst.elem<T>(DestIndex++) = static_cast<T>(ResR);
+      });
+    }
   }
   Dst.initializeAllElements();
   return true;
@@ -2784,9 +2780,6 @@ static bool interp_builtin_horizontal_fp_binop(
     llvm::function_ref<APFloat(const APFloat &, const APFloat &,
                                llvm::RoundingMode)>
         Fn) {
-  assert(Call->getNumArgs() == 2);
-  assert(Call->getArg(0)->getType()->isVectorType() &&
-         Call->getArg(1)->getType()->isVectorType());
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
@@ -2795,9 +2788,6 @@ static bool interp_builtin_horizontal_fp_binop(
   llvm::RoundingMode RM = getRoundingMode(FPO);
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   unsigned SourceLen = VT->getNumElements();
-  assert(SourceLen % 2 == 0 &&
-         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements() ==
-             SourceLen);
   unsigned DstElem = 0;
   for (unsigned I = 0; I != SourceLen; I += 2) {
     using T = PrimConv<PT_Float>::T;
@@ -2820,9 +2810,6 @@ static bool interp_builtin_horizontal_fps256_binop(
     llvm::function_ref<APFloat(const APFloat &, const APFloat &,
                                llvm::RoundingMode)>
         Fn) {
-  assert(Call->getNumArgs() == 2);
-  assert(Call->getArg(0)->getType()->isVectorType() &&
-         Call->getArg(1)->getType()->isVectorType());
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
@@ -2830,11 +2817,6 @@ static bool interp_builtin_horizontal_fps256_binop(
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
   llvm::RoundingMode RM = getRoundingMode(FPO);
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
-  unsigned SourceLen = VT->getNumElements();
-  assert(SourceLen % 2 == 0 &&
-         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements() ==
-             SourceLen);
-  unsigned DstElem = 0;
   for (unsigned I = 0; I < 4; ++I) {
     using T = PrimConv<PT_Float>::T;
     unsigned SrcIdx = 2 * I;
@@ -2860,9 +2842,6 @@ static bool interp_builtin_horizontal_fpd256_binop(
     llvm::function_ref<APFloat(const APFloat &, const APFloat &,
                                llvm::RoundingMode)>
         Fn) {
-  assert(Call->getNumArgs() == 2);
-  assert(Call->getArg(0)->getType()->isVectorType() &&
-         Call->getArg(1)->getType()->isVectorType());
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
@@ -2870,10 +2849,6 @@ static bool interp_builtin_horizontal_fpd256_binop(
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
   llvm::RoundingMode RM = getRoundingMode(FPO);
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
-  unsigned SourceLen = VT->getNumElements();
-  assert(SourceLen % 2 == 0 &&
-         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements() ==
-             SourceLen);
   for (unsigned I = 0; I < 2; ++I) {
     using T = PrimConv<PT_Float>::T;
     APFloat Elem1 = LHS.elem<T>(2 * I).getAPFloat();

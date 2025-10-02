@@ -12169,7 +12169,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_phsubd128:
   case clang::X86::BI__builtin_ia32_phsubd256:
   case clang::X86::BI__builtin_ia32_phsubsw128:
-  case clang::X86::BI__builtin_ia32_phsubsw256:{
+  case clang::X86::BI__builtin_ia32_phsubsw256: {
     APValue SourceLHS, SourceRHS;
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
         !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
@@ -12177,70 +12177,90 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
     bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
 
-      unsigned SourceLen = SourceLHS.getVectorLength();
-      SmallVector<APValue, 4> ResultElements;
-      ResultElements.reserve(SourceLen);
-      for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
-        APSInt LHSA = SourceLHS.getVectorElt(EltNum).getInt();
-        APSInt LHSB = SourceLHS.getVectorElt(EltNum + 1).getInt();
+    unsigned NumElts = SourceLHS.getVectorLength();
+    unsigned EltBits = Info.Ctx.getIntWidth(DestEltTy);
+    unsigned EltsPerLane = 128 / EltBits;
+    unsigned Lanes = NumElts * EltBits / 128;
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(NumElts);
 
+    for (unsigned LaneStart = 0; LaneStart != NumElts;
+         LaneStart += EltsPerLane) {
+      for (unsigned I = 0; I != EltsPerLane; I += 2) {
+        APSInt LHSA = SourceLHS.getVectorElt(LaneStart + I).getInt();
+        APSInt LHSB = SourceLHS.getVectorElt(LaneStart + I + 1).getInt();
         switch (E->getBuiltinCallee()) {
         case clang::X86::BI__builtin_ia32_phaddw128:
         case clang::X86::BI__builtin_ia32_phaddw256:
         case clang::X86::BI__builtin_ia32_phaddd128:
-        case clang::X86::BI__builtin_ia32_phaddd256:
-        ResultElements.push_back(
-            APValue(APSInt(LHSA+LHSB, DestUnsigned)));
-        break;
-        case clang::X86::BI__builtin_ia32_phaddsw128:
-        case clang::X86::BI__builtin_ia32_phaddsw256:
-          ResultElements.push_back(APValue(APSInt(
-              LHSA.isSigned() ? LHSA.sadd_sat(LHSB) : LHSA.uadd_sat(LHSB),
-              DestUnsigned)));
+        case clang::X86::BI__builtin_ia32_phaddd256: {
+          APSInt Res(LHSA + LHSB, DestUnsigned);
+          ResultElements.push_back(APValue(Res));
           break;
+        }
+        case clang::X86::BI__builtin_ia32_phaddsw128:
+        case clang::X86::BI__builtin_ia32_phaddsw256: {
+          APSInt Res(LHSA.isSigned() ? LHSA.sadd_sat(LHSB)
+                                     : LHSA.uadd_sat(LHSB),
+                     DestUnsigned);
+          ResultElements.push_back(APValue(Res));
+          break;
+        }
         case clang::X86::BI__builtin_ia32_phsubw128:
         case clang::X86::BI__builtin_ia32_phsubw256:
         case clang::X86::BI__builtin_ia32_phsubd128:
-        case clang::X86::BI__builtin_ia32_phsubd256:
-          ResultElements.push_back(APValue(APSInt(LHSA - LHSB, DestUnsigned)));
+        case clang::X86::BI__builtin_ia32_phsubd256: {
+          APSInt Res(LHSA - LHSB, DestUnsigned);
+          ResultElements.push_back(APValue(Res));
           break;
+        }
         case clang::X86::BI__builtin_ia32_phsubsw128:
-        case clang::X86::BI__builtin_ia32_phsubsw256:
-          ResultElements.push_back(APValue(APSInt(
-              LHSA.isSigned() ? LHSA.ssub_sat(LHSB) : LHSA.usub_sat(LHSB),
-              DestUnsigned)));
+        case clang::X86::BI__builtin_ia32_phsubsw256: {
+          APSInt Res(LHSA.isSigned() ? LHSA.ssub_sat(LHSB)
+                                     : LHSA.usub_sat(LHSB),
+                     DestUnsigned);
+          ResultElements.push_back(APValue(Res));
           break;
+        }
+        }
       }
-    }
-    for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
-      APSInt RHSA = SourceRHS.getVectorElt(EltNum).getInt();
-      APSInt RHSB = SourceRHS.getVectorElt(EltNum + 1).getInt();
-
-      switch (E->getBuiltinCallee()) {
-      case clang::X86::BI__builtin_ia32_phaddw128:
-      case clang::X86::BI__builtin_ia32_phaddw256:
-      case clang::X86::BI__builtin_ia32_phaddd128:
-      case clang::X86::BI__builtin_ia32_phaddd256:
-        ResultElements.push_back(APValue(APSInt(RHSA + RHSB, DestUnsigned)));
-        break;
-      case clang::X86::BI__builtin_ia32_phaddsw128:
-      case clang::X86::BI__builtin_ia32_phaddsw256:
-        ResultElements.push_back(APValue(
-            APSInt(RHSA.isSigned() ? RHSA.sadd_sat(RHSB) : RHSA.uadd_sat(RHSB),
-                   DestUnsigned)));
-        break;
-      case clang::X86::BI__builtin_ia32_phsubw128:
-      case clang::X86::BI__builtin_ia32_phsubw256:
-      case clang::X86::BI__builtin_ia32_phsubd128:
-      case clang::X86::BI__builtin_ia32_phsubd256:
-        ResultElements.push_back(APValue(APSInt(RHSA - RHSB, DestUnsigned)));
-        break;
-      case clang::X86::BI__builtin_ia32_phsubsw128:
-      case clang::X86::BI__builtin_ia32_phsubsw256:
-        ResultElements.push_back(APValue(
-            APSInt(RHSA.isSigned() ? RHSA.ssub_sat(RHSB) : RHSA.usub_sat(RHSB),
-                   DestUnsigned)));
-        break;
+      for (unsigned I = 0; I != EltsPerLane; I += 2) {
+        APSInt RHSA = SourceRHS.getVectorElt(LaneStart + I).getInt();
+        APSInt RHSB = SourceRHS.getVectorElt(LaneStart + I + 1).getInt();
+        switch (E->getBuiltinCallee()) {
+        case clang::X86::BI__builtin_ia32_phaddw128:
+        case clang::X86::BI__builtin_ia32_phaddw256:
+        case clang::X86::BI__builtin_ia32_phaddd128:
+        case clang::X86::BI__builtin_ia32_phaddd256: {
+          APSInt Res(RHSA + RHSB, DestUnsigned);
+          ResultElements.push_back(APValue(Res));
+          break;
+        }
+        case clang::X86::BI__builtin_ia32_phaddsw128:
+        case clang::X86::BI__builtin_ia32_phaddsw256: {
+          APSInt Res(RHSA.isSigned() ? RHSA.sadd_sat(RHSB)
+                                     : RHSA.uadd_sat(RHSB),
+                     DestUnsigned);
+          ResultElements.push_back(APValue(Res));
+          break;
+        }
+        case clang::X86::BI__builtin_ia32_phsubw128:
+        case clang::X86::BI__builtin_ia32_phsubw256:
+        case clang::X86::BI__builtin_ia32_phsubd128:
+        case clang::X86::BI__builtin_ia32_phsubd256: {
+          APSInt Res(RHSA - RHSB, DestUnsigned);
+          ResultElements.push_back(APValue(Res));
+          break;
+        }
+        case clang::X86::BI__builtin_ia32_phsubsw128:
+        case clang::X86::BI__builtin_ia32_phsubsw256: {
+          APSInt Res(RHSA.isSigned() ? RHSA.ssub_sat(RHSB)
+                                     : RHSA.usub_sat(RHSB),
+                     DestUnsigned);
+          ResultElements.push_back(APValue(Res));
+          break;
+        }
+        }
       }
     }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
