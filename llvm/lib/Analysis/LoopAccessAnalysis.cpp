@@ -234,9 +234,14 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
 
   // Check if we have a suitable dereferencable assumption we can use.
   if (!StartPtrV->canBeFreed()) {
+    Instruction *CtxI = &*L->getHeader()->getFirstNonPHIIt();
+    if (BasicBlock *LoopPred = L->getLoopPredecessor()) {
+      if (isa<BranchInst>(LoopPred->getTerminator()))
+        CtxI = LoopPred->getTerminator();
+    }
+
     RetainedKnowledge DerefRK = getKnowledgeValidInContext(
-        StartPtrV, {Attribute::Dereferenceable}, *AC,
-        L->getLoopPredecessor()->getTerminator(), DT);
+        StartPtrV, {Attribute::Dereferenceable}, *AC, CtxI, DT);
     if (DerefRK) {
       DerefBytesSCEV =
           SE.getUMaxExpr(DerefBytesSCEV, SE.getSCEV(DerefRK.IRArgValue));

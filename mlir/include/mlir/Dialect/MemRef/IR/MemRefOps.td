@@ -155,7 +155,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
       The `assume_alignment` operation takes a memref and an integer alignment
       value. It returns a new SSA value of the same memref type, but associated
       with the assumption that the underlying buffer is aligned to the given
-      alignment. 
+      alignment.
 
       If the buffer isn't aligned to the given alignment, its result is poison.
       This operation doesn't affect the semantics of a program where the
@@ -170,12 +170,47 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
   let assemblyFormat = "$memref `,` $alignment attr-dict `:` type($memref)";
   let extraClassDeclaration = [{
     MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
-    
+
     Value getViewSource() { return getMemref(); }
   }];
 
   let hasVerifier = 1;
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// DistinctObjectsOp
+//===----------------------------------------------------------------------===//
+
+def DistinctObjectsOp : MemRef_Op<"distinct_objects", [
+      Pure,
+      DeclareOpInterfaceMethods<InferTypeOpInterface>
+      // ViewLikeOpInterface TODO: ViewLikeOpInterface only supports a single argument
+    ]> {
+  let summary = "assumption that acesses to specific memrefs will never alias";
+  let description = [{
+      The `distinct_objects` operation takes a list of memrefs and returns the same
+      memrefs, with the additional assumption that accesses to them will never
+      alias with each other. This means that loads and stores to different
+      memrefs in the list can be safely reordered.
+
+      If the memrefs do alias, the load/store behavior is undefined. This
+      operation doesn't affect the semantics of a valid program. It is
+      intended for optimization purposes, allowing the compiler to generate more
+      efficient code based on the non-aliasing assumption. The optimization is
+      best-effort.
+
+      Example:
+
+      ```mlir
+      %1, %2 = memref.distinct_objects %a, %b : memref<?xf32>, memref<?xf32>
+      ```
+  }];
+  let arguments = (ins Variadic<AnyMemRef>:$operands);
+  let results = (outs Variadic<AnyMemRef>:$results);
+
+  let assemblyFormat = "$operands attr-dict `:` type($operands)";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
