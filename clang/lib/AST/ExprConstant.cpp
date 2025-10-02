@@ -13774,42 +13774,33 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
           return false;
 
         unsigned SourceLen = SourceLHS.getVectorLength();
-
         const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
-        QualType ElemQT = VT->getElementType();
+        const QualType ElemQT = VT->getElementType();
+        unsigned LaneWidth = Info.Ctx.getTypeSize(ElemQT);
+        APInt SignMask = APInt::getSignMask(LaneWidth);
 
-        if (ElemQT->isIntegerType()) {
-          const unsigned LaneWidth =
-              SourceLHS.getVectorElt(0).getInt().getBitWidth();
-          APInt AWide(LaneWidth * SourceLen, 0);
-          APInt BWide(LaneWidth * SourceLen, 0);
+        APInt AWide(LaneWidth * SourceLen, 0);
+        APInt BWide(LaneWidth * SourceLen, 0);
 
-          for (unsigned I = 0; I != SourceLen; ++I) {
-            APInt ALane = SourceLHS.getVectorElt(I).getInt();
-            APInt BLane = SourceRHS.getVectorElt(I).getInt();
-            AWide.insertBits(ALane, I * LaneWidth);
-            BWide.insertBits(BLane, I * LaneWidth);
+        for (unsigned I = 0; I != SourceLen; ++I) {
+          APInt ALane;
+          APInt BLane;
+
+          if (ElemQT->isIntegerType()) { // Get value
+            ALane = SourceLHS.getVectorElt(I).getInt();
+            BLane = SourceRHS.getVectorElt(I).getInt();
+          } else if (ElemQT->isFloatingType()) { // Get only sign bit
+            ALane = SourceLHS.getVectorElt(I).getFloat().bitcastToAPInt() &
+                    SignMask;
+            BLane = SourceRHS.getVectorElt(I).getFloat().bitcastToAPInt() &
+                    SignMask;
+          } else { // Must be integer or floating type
+            return false;
           }
-          return Success(Fn(AWide, BWide), E);
-
-        } else if (ElemQT->isFloatingType()) {
-          APInt ASignBits(SourceLen, 0);
-          APInt BSignBits(SourceLen, 0);
-
-          for (unsigned I = 0; I != SourceLen; ++I) {
-            APInt ALane = SourceLHS.getVectorElt(I).getFloat().bitcastToAPInt();
-            APInt BLane = SourceRHS.getVectorElt(I).getFloat().bitcastToAPInt();
-            const unsigned SignBit = ALane.getBitWidth() - 1;
-            const bool ALaneSign = ALane[SignBit];
-            const bool BLaneSign = BLane[SignBit];
-            ASignBits.setBitVal(I, ALaneSign);
-            BSignBits.setBitVal(I, BLaneSign);
-          }
-          return Success(Fn(ASignBits, BSignBits), E);
-
-        } else { // Must be integer or float type
-          return false;
+          AWide.insertBits(ALane, I * LaneWidth);
+          BWide.insertBits(BLane, I * LaneWidth);
         }
+        return Success(Fn(AWide, BWide), E);
       };
 
   auto HandleMaskBinOp =

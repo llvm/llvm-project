@@ -2824,6 +2824,7 @@ static bool interp__builtin_ia32_test_op(
   const Pointer &LHS = S.Stk.pop<Pointer>();
 
   assert(LHS.getNumElems() == RHS.getNumElems());
+
   assert(LHS.getFieldDesc()->isPrimitiveArray() &&
          RHS.getFieldDesc()->isPrimitiveArray());
 
@@ -2831,50 +2832,36 @@ static bool interp__builtin_ia32_test_op(
                                                 getElemType(RHS)))
     return false;
 
-  const unsigned SourceLen = LHS.getNumElems();
+  unsigned SourceLen = LHS.getNumElems();
   const QualType ElemQT = getElemType(LHS);
   const OptPrimType ElemPT = S.getContext().classify(ElemQT);
+  unsigned LaneWidth = S.getASTContext().getTypeSize(ElemQT);
+  APInt SignMask = APInt::getSignMask(LaneWidth);
 
-  if (ElemQT->isIntegerType()) {
-    APInt FirstElem;
-    INT_TYPE_SWITCH_NO_BOOL(*ElemPT,
-                            { FirstElem = LHS.elem<T>(0).toAPSInt(); });
-    const unsigned LaneWidth = FirstElem.getBitWidth();
+  APInt AWide(LaneWidth * SourceLen, 0);
+  APInt BWide(LaneWidth * SourceLen, 0);
 
-    APInt AWide(LaneWidth * SourceLen, 0);
-    APInt BWide(LaneWidth * SourceLen, 0);
+  for (unsigned I = 0; I != SourceLen; ++I) {
+    APInt ALane;
+    APInt BLane;
 
-    for (unsigned I = 0; I != SourceLen; ++I) {
-      APInt ALane;
-      APInt BLane;
+    if (ElemQT->isIntegerType()) { // Get value
       INT_TYPE_SWITCH_NO_BOOL(*ElemPT, {
         ALane = LHS.elem<T>(I).toAPSInt();
         BLane = RHS.elem<T>(I).toAPSInt();
       });
-      AWide.insertBits(ALane, I * LaneWidth);
-      BWide.insertBits(BLane, I * LaneWidth);
-    }
-    pushInteger(S, Fn(AWide, BWide) ? 1 : 0, Call->getType());
-    return true;
-  } else if (ElemQT->isFloatingType()) {
-    APInt ASignBits(SourceLen, 0);
-    APInt BSignBits(SourceLen, 0);
-
-    for (unsigned I = 0; I != SourceLen; ++I) {
+    } else if (ElemQT->isFloatingType()) { // Get only sign bit
       using T = PrimConv<PT_Float>::T;
-      APInt ALane = LHS.elem<T>(I).getAPFloat().bitcastToAPInt();
-      APInt BLane = RHS.elem<T>(I).getAPFloat().bitcastToAPInt();
-      const unsigned SignBit = ALane.getBitWidth() - 1;
-      const bool ALaneSign = ALane[SignBit];
-      const bool BLaneSign = BLane[SignBit];
-      ASignBits.setBitVal(I, ALaneSign);
-      BSignBits.setBitVal(I, BLaneSign);
+      ALane = LHS.elem<T>(I).getAPFloat().bitcastToAPInt() & SignMask;
+      BLane = RHS.elem<T>(I).getAPFloat().bitcastToAPInt() & SignMask;
+    } else { // Must be integer or floating type
+      return false;
     }
-    pushInteger(S, Fn(ASignBits, BSignBits) ? 1 : 0, Call->getType());
-    return true;
-  } else { // Must be integer or float type
-    return false;
+    AWide.insertBits(ALane, I * LaneWidth);
+    BWide.insertBits(BLane, I * LaneWidth);
   }
+  pushInteger(S, Fn(AWide, BWide), Call->getType());
+  return true;
 }
 
 static bool interp__builtin_elementwise_triop(
