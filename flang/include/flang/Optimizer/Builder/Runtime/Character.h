@@ -128,6 +128,14 @@ mlir::Value genVerify(fir::FirOpBuilder &builder, mlir::Location loc, int kind,
                       mlir::Value setBase, mlir::Value setLen,
                       mlir::Value back);
 
+/// Generate call to the split runtime routine that is specialized on
+/// \param kind.
+/// The \param kind represents the kind of the elements in the strings.
+mlir::Value genSplit(fir::FirOpBuilder &builder, mlir::Location loc, int kind,
+                     mlir::Value stringBase, mlir::Value stringLen,
+                     mlir::Value setBase, mlir::Value setLen, mlir::Value pos,
+                     mlir::Value back);
+
 } // namespace fir::runtime
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_CHARACTER_H

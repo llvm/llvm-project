@@ -570,6 +570,35 @@ static RT_API_ATTRS void MaxMin(Descriptor &accumulator, const Descriptor &x,
   }
 }
 
+template <typename CHAR>
+inline RT_API_ATTRS std::size_t Split(const CHAR *x, std::size_t xLen,
+    const CHAR *set, std::size_t setLen, std::size_t pos, bool back,
+    const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+
+  if (!back) {
+    RUNTIME_CHECK(terminator, pos <= xLen);
+    for (std::size_t i{pos + 1}; i <= xLen; ++i) {
+      for (std::size_t j{0}; j < setLen; ++j) {
+        if (x[i - 1] == set[j]) {
+          return i;
+        }
+      }
+    }
+    return xLen + 1;
+  } else {
+    RUNTIME_CHECK(terminator, pos >= 1 && pos <= xLen + 1);
+    for (std::size_t i{pos - 1}; i != 0; --i) {
+      for (std::size_t j{0}; j < setLen; ++j) {
+        if (x[i - 1] == set[j]) {
+          return i;
+        }
+      }
+    }
+    return 0;
+  }
+}
+
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
@@ -915,6 +944,24 @@ void RTDEF(CharacterMax)(Descriptor &accumulator, const Descriptor &x,
 void RTDEF(CharacterMin)(Descriptor &accumulator, const Descriptor &x,
     const char *sourceFile, int sourceLine) {
   MaxMin<true>(accumulator, x, sourceFile, sourceLine);
+}
+
+std::size_t RTDEF(Split1)(const char *x, std::size_t xLen, const char *set,
+    std::size_t setLen, std::size_t pos, bool back, const char *sourceFile,
+    int sourceLine) {
+  return Split<char>(x, xLen, set, setLen, pos, back, sourceFile, sourceLine);
+}
+std::size_t RTDEF(Split2)(const char16_t *x, std::size_t xLen,
+    const char16_t *set, std::size_t setLen, std::size_t pos, bool back,
+    const char *sourceFile, int sourceLine) {
+  return Split<char16_t>(
+      x, xLen, set, setLen, pos, back, sourceFile, sourceLine);
+}
+std::size_t RTDEF(Split4)(const char32_t *x, std::size_t xLen,
+    const char32_t *set, std::size_t setLen, std::size_t pos, bool back,
+    const char *sourceFile, int sourceLine) {
+  return Split<char32_t>(
+      x, xLen, set, setLen, pos, back, sourceFile, sourceLine);
 }
 
 RT_EXT_API_GROUP_END

@@ -958,6 +958,12 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"sleep", &I::genSleep, {{{"seconds", asValue}}}, /*isElemental=*/false},
     {"spacing", &I::genSpacing},
+    {"split",
+     &I::genSplit,
+     {{{"string", asAddr},
+       {"set", asAddr},
+       {"pos", asAddr},
+       {"back", asValue, handleDynamicOptional}}}},
     {"spread",
      &I::genSpread,
      {{{"source", asBox}, {"dim", asValue}, {"ncopies", asValue}}},
@@ -8761,6 +8767,42 @@ mlir::Value IntrinsicLibrary::genSpacing(mlir::Type resultType,
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genSpacing(builder, loc, fir::getBase(args[0])));
+}
+
+// SPLIT
+void IntrinsicLibrary::genSplit(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+
+  // Handle required string base arg
+  mlir::Value stringBase = fir::getBase(args[0]);
+
+  // Handle required set string base arg
+  mlir::Value setBase = fir::getBase(args[1]);
+
+  // Handle kind argument; it is the kind of character in this case
+  fir::KindTy kind =
+      fir::factory::CharacterExprHelper{builder, loc}.getCharacterKind(
+          stringBase.getType());
+
+  // Handle string length argument
+  mlir::Value stringLen = fir::getLen(args[0]);
+
+  // Handle set string length argument
+  mlir::Value setLen = fir::getLen(args[1]);
+
+  // Handle pos argument
+  mlir::Value posAddr = fir::getBase(args[2]);
+  mlir::Value pos = fir::LoadOp::create(builder, loc, posAddr);
+
+  // Handle optional back argument
+  mlir::Value back =
+      isStaticallyAbsent(args[3])
+          ? builder.createIntegerConstant(loc, builder.getI1Type(), 0)
+          : fir::getBase(args[3]);
+
+  pos = fir::runtime::genSplit(builder, loc, kind, stringBase, stringLen,
+                               setBase, setLen, pos, back);
+  builder.createStoreWithConvert(loc, pos, posAddr);
 }
 
 // SPREAD

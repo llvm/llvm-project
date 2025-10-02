@@ -436,6 +436,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genSizeOf(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSpacing(mlir::Type resultType,
                          llvm::ArrayRef<mlir::Value> args);
+  void genSplit(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSpread(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genStorageSize(mlir::Type,
                                     llvm::ArrayRef<fir::ExtendedValue>);
