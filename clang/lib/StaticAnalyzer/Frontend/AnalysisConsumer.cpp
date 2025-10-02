@@ -659,8 +659,11 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
 AnalysisConsumer::AnalysisMode
 AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
   if (!Opts.AnalyzeSpecificFunction.empty() &&
-      AnalysisDeclContext::getFunctionName(D) != Opts.AnalyzeSpecificFunction)
+      AnalysisDeclContext::getFunctionName(D) != Opts.AnalyzeSpecificFunction &&
+      cross_tu::CrossTranslationUnitContext::getLookupName(D).value_or("") !=
+          Opts.AnalyzeSpecificFunction) {
     return AM_None;
+  }
 
   // Unless -analyze-all is specified, treat decls differently depending on
   // where they came from:
