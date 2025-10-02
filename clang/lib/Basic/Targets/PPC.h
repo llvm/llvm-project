@@ -445,27 +445,17 @@ public:
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
     IntMaxType = SignedLong;
     Int64Type = SignedLong;
-    std::string DataLayout;
 
     if (Triple.isOSAIX()) {
       // TODO: Set appropriate ABI for AIX platform.
-      DataLayout = "E-m:a-Fi64-i64:64-i128:128-n32:64";
       LongDoubleWidth = 64;
       LongDoubleAlign = DoubleAlign = 32;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
-    } else if ((Triple.getArch() == llvm::Triple::ppc64le)) {
-      DataLayout = "e-m:e-Fn32-i64:64-i128:128-n32:64";
+    } else if ((Triple.getArch() == llvm::Triple::ppc64le) ||
+               Triple.isPPC64ELFv2ABI()) {
       ABI = "elfv2";
     } else {
-      DataLayout = "E-m:e";
-      if (Triple.isPPC64ELFv2ABI()) {
-        ABI = "elfv2";
-        DataLayout += "-Fn32";
-      } else {
-        ABI = "elfv1";
-        DataLayout += "-Fi64";
-      }
-      DataLayout += "-i64:64-i128:128-n32:64";
+      ABI = "elfv1";
     }
 
     if (Triple.isOSFreeBSD() || Triple.isOSOpenBSD() || Triple.isMusl()) {
@@ -473,14 +463,12 @@ public:
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     }
 
-    if (Triple.isOSAIX() || Triple.isOSLinux())
-      DataLayout += "-S128-v256:256:256-v512:512:512";
-    resetDataLayout(DataLayout);
-
     // Newer PPC64 instruction sets support atomics up to 16 bytes.
     MaxAtomicPromoteWidth = 128;
     // Baseline PPC64 supports inlining atomics up to 8 bytes.
     MaxAtomicInlineWidth = 64;
+
+    calculateDataLayout();
   }
 
   void setMaxAtomicWidth() override {
@@ -495,10 +483,33 @@ public:
     return TargetInfo::CharPtrBuiltinVaList;
   }
 
+  void calculateDataLayout() {
+    std::string DataLayout;
+
+    if (getTriple().isOSAIX()) {
+      DataLayout = "E-m:a-Fi64-i64:64-i128:128-n32:64";
+    } else if ((getTriple().getArch() == llvm::Triple::ppc64le)) {
+      DataLayout = "e-m:e-Fn32-i64:64-i128:128-n32:64";
+    } else {
+      DataLayout = "E-m:e";
+      if (ABI == "elfv2") {
+        DataLayout += "-Fn32";
+      } else {
+        DataLayout += "-Fi64";
+      }
+      DataLayout += "-i64:64-i128:128-n32:64";
+    }
+
+    if (getTriple().isOSAIX() || getTriple().isOSLinux())
+      DataLayout += "-S128-v256:256:256-v512:512:512";
+    resetDataLayout(DataLayout);
+  }
+
   // PPC64 Linux-specific ABI options.
   bool setABI(const std::string &Name) override {
     if (Name == "elfv1" || Name == "elfv2") {
       ABI = Name;
+      calculateDataLayout();
       return true;
     }
     return false;
