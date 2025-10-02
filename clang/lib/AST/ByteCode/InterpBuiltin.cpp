@@ -2887,22 +2887,22 @@ static bool interp__builtin_vec_ext(InterpState &S, CodePtr OpPC,
   if (!Vec.getFieldDesc()->isPrimitiveArray())
     return false;
 
-  unsigned NumElts = Vec.getNumElems();
-  unsigned Index = static_cast<unsigned>(ImmAPS.getZExtValue() & (NumElts - 1));
+  unsigned NumElems = Vec.getNumElems();
+  unsigned Index =
+      static_cast<unsigned>(ImmAPS.getZExtValue() & (NumElems - 1));
 
-  switch (ID) {
-  case X86::BI__builtin_ia32_vec_ext_v4sf:
+  PrimType ElemPT = Vec.getFieldDesc()->getPrimType();
+  // FIXME(#161685): Replace float+int split with a numeric-only type switch
+  if (ElemPT == PT_Float) {
     S.Stk.push<Floating>(Vec.elem<Floating>(Index));
     return true;
-  default: {
-    PrimType ElemPT = Vec.getFieldDesc()->getPrimType();
-    INT_TYPE_SWITCH_NO_BOOL(ElemPT, {
-      APSInt V = Vec.elem<T>(Index).toAPSInt();
-      pushInteger(S, V, Call->getType());
-    });
-    return true;
   }
-  }
+  INT_TYPE_SWITCH_NO_BOOL(ElemPT, {
+    APSInt V = Vec.elem<T>(Index).toAPSInt();
+    pushInteger(S, V, Call->getType());
+  });
+
+  return true;
 }
 
 static bool interp__builtin_vec_set(InterpState &S, CodePtr OpPC,
@@ -2918,12 +2918,13 @@ static bool interp__builtin_vec_set(InterpState &S, CodePtr OpPC,
 
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  unsigned NumElts = Base.getNumElems();
-  unsigned Index = static_cast<unsigned>(ImmAPS.getZExtValue() & (NumElts - 1));
+  unsigned NumElems = Base.getNumElems();
+  unsigned Index =
+      static_cast<unsigned>(ImmAPS.getZExtValue() & (NumElems - 1));
 
   PrimType ElemPT = Base.getFieldDesc()->getPrimType();
   INT_TYPE_SWITCH_NO_BOOL(ElemPT, {
-    for (unsigned I = 0; I != NumElts; ++I)
+    for (unsigned I = 0; I != NumElems; ++I)
       Dst.elem<T>(I) = Base.elem<T>(I);
     Dst.elem<T>(Index) = static_cast<T>(ValAPS);
   });

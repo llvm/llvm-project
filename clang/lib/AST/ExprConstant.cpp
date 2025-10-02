@@ -12259,16 +12259,16 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     APSInt ElemAPS = Scalar.extOrTrunc(ElemWidth);
     APValue ElemAV(ElemAPS);
 
-    unsigned NumElts = VecVal.getVectorLength();
+    unsigned NumElems = VecVal.getVectorLength();
     unsigned Index =
-        static_cast<unsigned>(IndexAPS.getZExtValue() & (NumElts - 1));
+        static_cast<unsigned>(IndexAPS.getZExtValue() & (NumElems - 1));
 
-    SmallVector<APValue, 4> Elts;
-    Elts.reserve(NumElts);
-    for (unsigned EltNum = 0; EltNum != NumElts; ++EltNum)
-      Elts.push_back(EltNum == Index ? ElemAV : VecVal.getVectorElt(EltNum));
+    SmallVector<APValue, 4> Elems;
+    Elems.reserve(NumElems);
+    for (unsigned ElemNum = 0; ElemNum != NumElems; ++ElemNum)
+      Elems.push_back(ElemNum == Index ? ElemAV : VecVal.getVectorElt(ElemNum));
 
-    return Success(APValue(Elts.data(), NumElts), E);
+    return Success(APValue(Elems.data(), NumElems), E);
   }
   }
 }
