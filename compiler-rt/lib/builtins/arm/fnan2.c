@@ -33,6 +33,5 @@ uint32_t __compiler_rt_fnan2(uint32_t a, uint32_t b) {
     return b | 0x00400000; //   if so, return it with the quiet bit set
   if (aadj < 0x00800000)   // a is a quiet NaN?
     return a;              // if so, return it
-  else                     // expect (badj < 0x00800000)
-    return b;              // in that case b must be a quiet NaN
+  return b;                // otherwise we expect b must be a quiet NaN
 }
