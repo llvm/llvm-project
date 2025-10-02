@@ -602,6 +602,59 @@ def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// DynamicCastInfoAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_DynamicCastInfoAttr : CIR_Attr<"DynamicCastInfo", "dyn_cast_info"> {
+  let summary = "ABI specific information about a dynamic cast";
+  let description = [{
+    Provide ABI specific information about a dynamic cast operation.
+
+    The `srcRtti` and the `destRtti` parameters give the RTTI of the source
+    record type and the destination record type, respectively.
+
+    The `runtimeFunc` parameter gives the `__dynamic_cast` function which is
+    provided by the runtime. The `badCastFunc` parameter gives the
+    `__cxa_bad_cast` function which is also provided by the runtime.
+
+    The `offsetHint` parameter gives the hint value that should be passed to the
+    `__dynamic_cast` runtime function.
+  }];
+
+  let parameters = (ins
+    CIR_GlobalViewAttr:$srcRtti,
+    CIR_GlobalViewAttr:$destRtti,
+    "mlir::FlatSymbolRefAttr":$runtimeFunc,
+    "mlir::FlatSymbolRefAttr":$badCastFunc,
+    CIR_IntAttr:$offsetHint
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "GlobalViewAttr":$srcRtti,
+                                        "GlobalViewAttr":$destRtti,
+                                        "mlir::FlatSymbolRefAttr":$runtimeFunc,
+                                        "mlir::FlatSymbolRefAttr":$badCastFunc,
+                                        "IntAttr":$offsetHint), [{
+      return $_get(srcRtti.getContext(), srcRtti, destRtti, runtimeFunc,
+                   badCastFunc, offsetHint);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<`
+      qualified($srcRtti) `,` qualified($destRtti) `,`
+      $runtimeFunc `,` $badCastFunc `,` qualified($offsetHint)
+    `>`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Get attribute alias name for this attribute.
+    std::string getAlias() const;
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // TargetAddressSpaceAttr
 //===----------------------------------------------------------------------===//
 
