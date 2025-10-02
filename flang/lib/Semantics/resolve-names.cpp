@@ -24,6 +24,7 @@
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -955,7 +956,7 @@ private:
   bool HandlePreviousCalls(const parser::Name &, Symbol &, Symbol::Flag);
   const Symbol *CheckExtantProc(const parser::Name &, Symbol::Flag);
   // Create a subprogram symbol in the current scope and push a new scope.
-  Symbol &PushSubprogramScope(const parser::Name &, Symbol::Flag,
+  Symbol *PushSubprogramScope(const parser::Name &, Symbol::Flag,
       const parser::LanguageBindingSpec * = nullptr,
       bool hasModulePrefix = false);
   Symbol *GetSpecificFromGeneric(const parser::Name &);
@@ -1386,6 +1387,8 @@ private:
 // Create scopes for OpenACC constructs
 class AccVisitor : public virtual DeclarationVisitor {
 public:
+  explicit AccVisitor(SemanticsContext &context) : context_{context} {}
+
   void AddAccSourceRange(const parser::CharBlock &);
 
   static bool NeedsScope(const parser::OpenACCBlockConstruct &);
@@ -1394,6 +1397,7 @@ public:
   void Post(const parser::OpenACCBlockConstruct &);
   bool Pre(const parser::OpenACCCombinedConstruct &);
   void Post(const parser::OpenACCCombinedConstruct &);
+  bool Pre(const parser::AccClause::UseDevice &x);
   bool Pre(const parser::AccBeginBlockDirective &x) {
     AddAccSourceRange(x.source);
     return true;
@@ -1429,6 +1433,11 @@ public:
   void Post(const parser::AccBeginLoopDirective &x) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+
+  void CopySymbolWithDevice(const parser::Name *name);
+
+private:
+  SemanticsContext &context_;
 };
 
 bool AccVisitor::NeedsScope(const parser::OpenACCBlockConstruct &x) {
@@ -1456,6 +1465,60 @@ bool AccVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
     PushScope(Scope::Kind::OpenACCConstruct, nullptr);
   }
   return true;
+}
+
+void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
+  // When CUDA Fortran is enabled together with OpenACC, new
+  // symbols are created for the one appearing in the use_device
+  // clause. These new symbols have the CUDA Fortran device
+  // attribute.
+  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
+    name->symbol = currScope().CopySymbol(*name->symbol);
+    if (auto *object{name->symbol->detailsIf<ObjectEntityDetails>()}) {
+      object->set_cudaDataAttr(common::CUDADataAttr::Device);
+    }
+  }
+}
+
+bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
+  for (const auto &accObject : x.v.v) {
+    common::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              if (const auto *name{
+                      semantics::getDesignatorNameIfDataRef(designator)}) {
+                Symbol *prev{currScope().FindSymbol(name->source)};
+                if (prev != name->symbol) {
+                  name->symbol = prev;
+                }
+                CopySymbolWithDevice(name);
+              } else {
+                if (const auto *dataRef{
+                        std::get_if<parser::DataRef>(&designator.u)}) {
+                  using ElementIndirection =
+                      common::Indirection<parser::ArrayElement>;
+                  if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
+                    const parser::ArrayElement &arrayElement{ind->value()};
+                    Walk(arrayElement.subscripts);
+                    const parser::DataRef &base{arrayElement.base};
+                    if (auto *name{std::get_if<parser::Name>(&base.u)}) {
+                      Symbol *prev{currScope().FindSymbol(name->source)};
+                      if (prev != name->symbol) {
+                        name->symbol = prev;
+                      }
+                      CopySymbolWithDevice(name);
+                    }
+                  }
+                }
+              }
+            },
+            [&](const parser::Name &name) {
+              // TODO: common block in use_device?
+            },
+        },
+        accObject.u);
+  }
+  return false;
 }
 
 void AccVisitor::Post(const parser::OpenACCBlockConstruct &x) {
@@ -1540,31 +1603,12 @@ public:
 
   bool Pre(const parser::OmpDeclareVariantDirective &x) {
     AddOmpSourceRange(x.source);
-    auto FindSymbolOrError = [&](const parser::Name &procName) {
-      auto *symbol{FindSymbol(NonDerivedTypeScope(), procName)};
-      if (!symbol) {
-        context().Say(procName.source,
-            "Implicit subroutine declaration '%s' in !$OMP DECLARE VARIANT"_err_en_US,
-            procName.source);
-      }
-    };
-    auto &baseProcName = std::get<std::optional<parser::Name>>(x.t);
-    if (baseProcName) {
-      FindSymbolOrError(*baseProcName);
-    }
-    auto &varProcName = std::get<parser::Name>(x.t);
-    FindSymbolOrError(varProcName);
     return true;
   }
 
   bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
     AddOmpSourceRange(x.source);
-    parser::OmpClauseList empty(std::list<parser::OmpClause>{});
-    auto &maybeClauses{std::get<std::optional<parser::OmpClauseList>>(x.t)};
-    ProcessReductionSpecifier(
-        std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
-        maybeClauses ? *maybeClauses : empty, declaratives_.back());
-    return false;
+    return true;
   }
   bool Pre(const parser::OmpMapClause &);
 
@@ -1591,51 +1635,41 @@ public:
   }
   void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
   bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
-    const auto &spec{std::get<parser::OmpDeclareTargetSpecifier>(x.t)};
-    auto populateDeclareTargetNames{[this](const parser::OmpObjectList
-                                            &objectList) {
-      for (const auto &ompObject : objectList.v) {
-        common::visit(
-            common::visitors{
-                [&](const parser::Designator &designator) {
-                  if (const auto *name{
-                          semantics::getDesignatorNameIfDataRef(designator)}) {
-                    specPartState_.declareTargetNames.insert(name->source);
-                  }
-                },
-                [&](const parser::Name &name) {
-                  specPartState_.declareTargetNames.insert(name.source);
-                },
-                [&](const parser::OmpObject::Invalid &invalid) {
-                  switch (invalid.v) {
-                    SWITCH_COVERS_ALL_CASES
-                  case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
-                    context().Say(invalid.source,
-                        "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
-                    break;
-                  }
-                },
-            },
-            ompObject.u);
-      }
+    auto addObjectName{[&](const parser::OmpObject &object) {
+      common::visit(
+          common::visitors{
+              [&](const parser::Designator &designator) {
+                if (const auto *name{
+                        semantics::getDesignatorNameIfDataRef(designator)}) {
+                  specPartState_.declareTargetNames.insert(name->source);
+                }
+              },
+              [&](const parser::Name &name) {
+                specPartState_.declareTargetNames.insert(name.source);
+              },
+              [&](const parser::OmpObject::Invalid &invalid) {
+                switch (invalid.v) {
+                  SWITCH_COVERS_ALL_CASES
+                case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
+                  context().Say(invalid.source,
+                      "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
+                  break;
+                }
+              },
+          },
+          object.u);
     }};
 
-    if (const auto *objectList{parser::Unwrap<parser::OmpObjectList>(spec.u)}) {
-      populateDeclareTargetNames(*objectList);
-    } else if (const auto *clauseList{
-                   parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
-      for (const auto &clause : clauseList->v) {
-        if (const auto *toClause{
-                std::get_if<parser::OmpClause::To>(&clause.u)}) {
-          populateDeclareTargetNames(
-              std::get<parser::OmpObjectList>(toClause->v.t));
-        } else if (const auto *linkClause{
-                       std::get_if<parser::OmpClause::Link>(&clause.u)}) {
-          populateDeclareTargetNames(linkClause->v);
-        } else if (const auto *enterClause{
-                       std::get_if<parser::OmpClause::Enter>(&clause.u)}) {
-          populateDeclareTargetNames(
-              std::get<parser::OmpObjectList>(enterClause->v.t));
+    for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+      if (auto *object{omp::GetArgumentObject(arg)}) {
+        addObjectName(*object);
+      }
+    }
+
+    for (const parser::OmpClause &clause : x.v.Clauses().v) {
+      if (auto *objects{parser::omp::GetOmpObjectList(clause)}) {
+        for (const parser::OmpObject &object : objects->v) {
+          addObjectName(object);
         }
       }
     }
@@ -1646,12 +1680,14 @@ public:
   void Post(const parser::OpenMPDeclareTargetConstruct &) {
     SkipImplicitTyping(false);
   }
-  bool Pre(const parser::OpenMPDeclarativeAllocate &) {
+  bool Pre(const parser::OpenMPDeclarativeAllocate &x) {
+    AddOmpSourceRange(x.source);
     SkipImplicitTyping(true);
     return true;
   }
   void Post(const parser::OpenMPDeclarativeAllocate &) {
     SkipImplicitTyping(false);
+    messageHandler().set_currStmtSource(std::nullopt);
   }
   bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
     AddOmpSourceRange(x.source);
@@ -1692,11 +1728,19 @@ public:
       PopScope();
     }
   }
+
+  // These objects are handled explicitly, and the AST traversal should not
+  // reach a point where it calls the Pre functions for them.
   bool Pre(const parser::OmpMapperSpecifier &x) {
-    // OmpMapperSpecifier is handled explicitly, and the AST traversal
-    // should not reach a point where it calls this function.
     llvm_unreachable("This function should not be reached by AST traversal");
   }
+  bool Pre(const parser::OmpReductionSpecifier &x) {
+    llvm_unreachable("This function should not be reached by AST traversal");
+  }
+  bool Pre(const parser::OmpBaseVariantNames &x) {
+    llvm_unreachable("This function should not be reached by AST traversal");
+  }
+
   bool Pre(const parser::OmpDirectiveSpecification &x);
   void Post(const parser::OmpDirectiveSpecification &) {
     messageHandler().set_currStmtSource(std::nullopt);
@@ -1724,8 +1768,7 @@ private:
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
       const parser::OmpClauseList &clauses);
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
-      const parser::OmpClauseList &clauses,
-      const parser::OpenMPDeclarativeConstruct *wholeConstruct);
+      const parser::OmpClauseList &clauses);
 
   void ResolveCriticalName(const parser::OmpArgument &arg);
 
@@ -1856,8 +1899,7 @@ std::string MangleDefinedOperator(const parser::CharBlock &name) {
 
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
-    const parser::OmpClauseList &clauses,
-    const parser::OpenMPDeclarativeConstruct *construct) {
+    const parser::OmpClauseList &clauses) {
   const parser::Name *name{nullptr};
   parser::CharBlock mangledName;
   UserReductionDetails reductionDetailsTemp;
@@ -1944,7 +1986,7 @@ void OmpVisitor::ProcessReductionSpecifier(
     PopScope();
   }
 
-  reductionDetails->AddDecl(construct);
+  reductionDetails->AddDecl(declaratives_.back());
 
   if (!symbol) {
     symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
@@ -1997,8 +2039,12 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
               visitClauses = false;
             },
             [&](const parser::OmpReductionSpecifier &spec) {
-              ProcessReductionSpecifier(spec, clauses, declaratives_.back());
+              ProcessReductionSpecifier(spec, clauses);
               visitClauses = false;
+            },
+            [&](const parser::OmpBaseVariantNames &names) {
+              Walk(std::get<0>(names.t));
+              Walk(std::get<1>(names.t));
             },
             [&](const parser::OmpLocator &locator) {
               // Manually resolve names in CRITICAL directives. This is because
@@ -2054,7 +2100,8 @@ public:
 
   ResolveNamesVisitor(
       SemanticsContext &context, ImplicitRulesMap &rules, Scope &top)
-      : BaseVisitor{context, *this, rules}, topScope_{top} {
+      : BaseVisitor{context, *this, rules}, AccVisitor(context),
+        topScope_{top} {
     PushScope(top);
   }
 
@@ -3361,7 +3408,8 @@ bool ScopeHandler::CheckPossibleBadForwardRef(const Symbol &symbol) {
       context().SetError(symbol);
       return true;
     }
-    if ((IsDummy(symbol) || FindCommonBlockContaining(symbol)) &&
+    if ((IsDummy(symbol) ||
+            (!symbol.has<UseDetails>() && FindCommonBlockContaining(symbol))) &&
         isImplicitNoneType() && symbol.test(Symbol::Flag::Implicit) &&
         !context().HasError(symbol)) {
       // Dummy or COMMON was implicitly typed despite IMPLICIT NONE(TYPE) in
@@ -4494,10 +4542,13 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
         "'%s' has not been declared as an array or pointer-valued function"_err_en_US);
     return false;
   }
-  auto &symbol{PushSubprogramScope(name, Symbol::Flag::Function)};
-  symbol.set(Symbol::Flag::StmtFunction);
-  EraseSymbol(symbol); // removes symbol added by PushSubprogramScope
-  auto &details{symbol.get<SubprogramDetails>()};
+  Symbol *symbol{PushSubprogramScope(name, Symbol::Flag::Function)};
+  if (!symbol) {
+    return false;
+  }
+  symbol->set(Symbol::Flag::StmtFunction);
+  EraseSymbol(*symbol); // removes symbol added by PushSubprogramScope
+  auto &details{symbol->get<SubprogramDetails>()};
   for (const auto &dummyName : std::get<std::list<parser::Name>>(x.t)) {
     ObjectEntityDetails dummyDetails{true};
     if (auto *dummySymbol{FindInScope(currScope().parent(), dummyName)}) {
@@ -5126,19 +5177,22 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
       }
     }
   }
-  Symbol &newSymbol{
+  Symbol *newSymbol{
       PushSubprogramScope(name, subpFlag, bindingSpec, hasModulePrefix)};
+  if (!newSymbol) {
+    return false;
+  }
   if (moduleInterface) {
-    newSymbol.get<SubprogramDetails>().set_moduleInterface(*moduleInterface);
+    newSymbol->get<SubprogramDetails>().set_moduleInterface(*moduleInterface);
     if (moduleInterface->attrs().test(Attr::PRIVATE)) {
-      SetImplicitAttr(newSymbol, Attr::PRIVATE);
+      SetImplicitAttr(*newSymbol, Attr::PRIVATE);
     } else if (moduleInterface->attrs().test(Attr::PUBLIC)) {
-      SetImplicitAttr(newSymbol, Attr::PUBLIC);
+      SetImplicitAttr(*newSymbol, Attr::PUBLIC);
     }
   }
   if (entryStmts) {
     for (const auto &ref : *entryStmts) {
-      CreateEntry(*ref, newSymbol);
+      CreateEntry(*ref, *newSymbol);
     }
   }
   return true;
@@ -5245,12 +5299,16 @@ const Symbol *SubprogramVisitor::CheckExtantProc(
   return prev;
 }
 
-Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
+Symbol *SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     Symbol::Flag subpFlag, const parser::LanguageBindingSpec *bindingSpec,
     bool hasModulePrefix) {
   Symbol *symbol{GetSpecificFromGeneric(name)};
   const DeclTypeSpec *previousImplicitType{nullptr};
   SourceName previousName;
+  if (symbol && inInterfaceBlock() && !symbol->has<SubprogramDetails>()) {
+    SayAlreadyDeclared(name, *symbol);
+    return nullptr;
+  }
   if (!symbol) {
     if (bindingSpec && currScope().IsGlobal() &&
         std::get<std::optional<parser::ScalarDefaultCharConstantExpr>>(
@@ -5279,9 +5337,7 @@ Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
   if (subpFlag == Symbol::Flag::Function) {
     auto &funcResultTop{funcResultStack().Push(currScope(), name.source)};
     funcResultTop.previousImplicitType = previousImplicitType;
-    ;
     funcResultTop.previousName = previousName;
-    ;
   }
   if (inInterfaceBlock()) {
     auto &details{symbol->get<SubprogramDetails>()};
@@ -5307,7 +5363,7 @@ Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
       found && found->has<HostAssocDetails>()) {
     found->set(subpFlag); // PushScope() created symbol
   }
-  return *symbol;
+  return symbol;
 }
 
 void SubprogramVisitor::PushBlockDataScope(const parser::Name &name) {
@@ -5733,7 +5789,8 @@ void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
       }
     }
     if (!symbol.test(Symbol::Flag::Function) &&
-        !symbol.test(Symbol::Flag::Subroutine)) {
+        !symbol.test(Symbol::Flag::Subroutine) &&
+        !context().intrinsics().IsDualIntrinsic(name.source.ToString())) {
       if (context().intrinsics().IsIntrinsicFunction(name.source.ToString())) {
         symbol.set(Symbol::Flag::Function);
       } else if (context().intrinsics().IsIntrinsicSubroutine(
