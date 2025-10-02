@@ -93,6 +93,15 @@ protected:
   }
 };
 
+// Function to find an opcode by name
+static int findOpcodeByName(const TargetInstrInfo *TII, StringRef Name) {
+  for (unsigned Opcode = 1; Opcode < TII->getNumOpcodes(); ++Opcode) {
+    if (TII->getName(Opcode) == Name)
+      return Opcode;
+  }
+  return -1; // Not found
+}
+
 TEST_F(MIR2VecVocabTestFixture, CanonicalOpcodeMappingTest) {
   // Test that same base opcodes get same canonical indices
   std::string baseName1 = MIRVocabulary::extractBaseOpcodeName("ADD16ri");
@@ -138,9 +147,19 @@ TEST_F(MIR2VecVocabTestFixture, CanonicalOpcodeMappingTest) {
             6880u); // X86 has >6880 unique base opcodes
 
   // Check that the embeddings for opcodes not in the vocab are zero vectors
-  EXPECT_TRUE(testVocab[addIndex].approximatelyEquals(Val));
-  EXPECT_TRUE(testVocab[subIndex].approximatelyEquals(Embedding(64, 0.0f)));
-  EXPECT_TRUE(testVocab[movIndex].approximatelyEquals(Embedding(64, 0.0f)));
+  int add32rrOpcode = findOpcodeByName(TII, "ADD32rr");
+  ASSERT_NE(add32rrOpcode, -1) << "ADD32rr opcode not found";
+  EXPECT_TRUE(testVocab[add32rrOpcode].approximatelyEquals(Val));
+
+  int sub32rrOpcode = findOpcodeByName(TII, "SUB32rr");
+  ASSERT_NE(sub32rrOpcode, -1) << "SUB32rr opcode not found";
+  EXPECT_TRUE(
+      testVocab[sub32rrOpcode].approximatelyEquals(Embedding(64, 0.0f)));
+
+  int mov32rrOpcode = findOpcodeByName(TII, "MOV32rr");
+  ASSERT_NE(mov32rrOpcode, -1) << "MOV32rr opcode not found";
+  EXPECT_TRUE(
+      testVocab[mov32rrOpcode].approximatelyEquals(Embedding(64, 0.0f)));
 }
 
 // Test deterministic mapping
@@ -170,9 +189,6 @@ TEST_F(MIR2VecVocabTestFixture, DeterministicMapping) {
 
 // Test MIRVocabulary construction
 TEST_F(MIR2VecVocabTestFixture, VocabularyConstruction) {
-  // Test empty MIRVocabulary
-  MIRVocabulary emptyVocab;
-  EXPECT_FALSE(emptyVocab.isValid());
 
   // Test MIRVocabulary with embeddings via VocabMap
   VocabMap vocabMap;
