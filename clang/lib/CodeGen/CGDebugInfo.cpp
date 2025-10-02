@@ -1119,7 +1119,7 @@ llvm::DIType *CGDebugInfo::CreateType(const ComplexType *Ty) {
   // Bit size and offset of the type.
   llvm::dwarf::TypeKind Encoding = llvm::dwarf::DW_ATE_complex_float;
   if (Ty->isComplexIntegerType())
-    Encoding = llvm::dwarf::DW_ATE_lo_user;
+    Encoding = llvm::dwarf::DW_ATE_GNU_complex_signed;
 
   uint64_t Size = CGM.getContext().getTypeSize(Ty);
   return DBuilder.createBasicType("complex", Size, Encoding);
