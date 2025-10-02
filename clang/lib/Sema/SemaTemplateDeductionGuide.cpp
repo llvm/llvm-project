@@ -1179,30 +1179,38 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
     TemplateArgumentLoc Input =
         SemaRef.getTrivialTemplateArgumentLoc(D, QualType(), SourceLocation{});
     TemplateArgumentListInfo Output;
-    if (!SemaRef.SubstTemplateArguments(Input, Args, Output)) {
-      assert(TemplateArgsForBuildingFPrime[Index].isNull() &&
-             "InstantiatedArgs must be null before setting");
-      Sema::CheckTemplateArgumentInfo CTAI;
-      if (Input.getArgument().getKind() == TemplateArgument::Pack) {
-        for (auto TA : Output.arguments()) {
-          if (SemaRef.CheckTemplateArgument(
-                  TP, TA, F, F->getLocation(), F->getLocation(),
-                  /*ArgumentPackIndex=*/-1, CTAI,
-                  Sema::CheckTemplateArgumentKind::CTAK_Specified))
-            return nullptr;
-        }
-        TemplateArgsForBuildingFPrime[Index] =
-            TemplateArgument::CreatePackCopy(Context, CTAI.SugaredConverted);
-      } else {
-        assert(Output.arguments().size() == 1);
-        TemplateArgumentLoc Transformed = Output.arguments()[0];
+    if (SemaRef.SubstTemplateArguments(Input, Args, Output))
+      return nullptr;
+    assert(TemplateArgsForBuildingFPrime[Index].isNull() &&
+           "InstantiatedArgs must be null before setting");
+    // CheckTemplateArgument is necessary for NTTP initializations.
+    // FIXME: We may want to call CheckTemplateArguments instead, but we cannot
+    // match packs as usual, since packs can appear in the middle of the
+    // parameter list of a synthesized CTAD guide. See also the FIXME in
+    // test/SemaCXX/cxx20-ctad-type-alias.cpp:test25.
+    Sema::CheckTemplateArgumentInfo CTAI;
+    if (Input.getArgument().getKind() == TemplateArgument::Pack) {
+      for (auto TA : Output.arguments()) {
         if (SemaRef.CheckTemplateArgument(
-                TP, Transformed, F, F->getLocation(), F->getLocation(),
+                TP, TA, F, F->getLocation(), F->getLocation(),
                 /*ArgumentPackIndex=*/-1, CTAI,
                 Sema::CheckTemplateArgumentKind::CTAK_Specified))
           return nullptr;
-        TemplateArgsForBuildingFPrime[Index] = CTAI.SugaredConverted[0];
       }
+      // We will substitute the non-deduced template arguments with these
+      // transformed (unpacked at this point) arguments, where that substitution
+      // requires a pack for the corresponding parameter packs.
+      TemplateArgsForBuildingFPrime[Index] =
+          TemplateArgument::CreatePackCopy(Context, CTAI.SugaredConverted);
+    } else {
+      assert(Output.arguments().size() == 1);
+      TemplateArgumentLoc Transformed = Output.arguments()[0];
+      if (SemaRef.CheckTemplateArgument(
+              TP, Transformed, F, F->getLocation(), F->getLocation(),
+              /*ArgumentPackIndex=*/-1, CTAI,
+              Sema::CheckTemplateArgumentKind::CTAK_Specified))
+        return nullptr;
+      TemplateArgsForBuildingFPrime[Index] = CTAI.SugaredConverted[0];
     }
   }
 
