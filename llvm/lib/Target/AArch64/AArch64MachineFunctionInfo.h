@@ -481,6 +481,8 @@ public:
     StackHazardCSRSlotIndex = Index;
   }
 
+  bool hasSplitSVEObjects() const { return false; }
+
   SMEAttrs getSMEFnAttrs() const { return SMEFnAttrs; }
 
   unsigned getSRetReturnReg() const { return SRetReturnReg; }
