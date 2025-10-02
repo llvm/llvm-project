@@ -36,6 +36,7 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
   bool indirect = false;
   bool is_block = false;
   m_value.data = nullptr;
+  uint8_t ref_addr_size;
   // Read the value for the form into value and follow and DW_FORM_indirect
   // instances we run into
   do {
@@ -76,9 +77,10 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
     case DW_FORM_strp:
     case DW_FORM_line_strp:
     case DW_FORM_sec_offset:
-      assert(m_unit);
-      m_value.uval = data.GetMaxU64(
-          offset_ptr, m_unit->GetFormParams().getDwarfOffsetByteSize());
+      //FIXME: For AIX
+      assert(m_unit); // Unit must be valid
+      ref_addr_size = m_unit->GetFormParams().getDwarfOffsetByteSize();
+      m_value.uval = data.GetMaxU64(offset_ptr, ref_addr_size);
       break;
     case DW_FORM_addrx1:
     case DW_FORM_strx1:
@@ -120,8 +122,8 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
       break;
     case DW_FORM_ref_addr:
       assert(m_unit);
-      m_value.uval = data.GetMaxU64(
-          offset_ptr, m_unit->GetFormParams().getRefAddrByteSize());
+      ref_addr_size = m_unit->GetFormParams().getRefAddrByteSize();
+      m_value.uval = data.GetMaxU64(offset_ptr, ref_addr_size);
       break;
     case DW_FORM_indirect:
       m_form = static_cast<dw_form_t>(data.GetULEB128(offset_ptr));
@@ -163,7 +165,7 @@ static FormSize g_form_sizes[] = {
     {1, 1}, // 0x0b DW_FORM_data1
     {1, 1}, // 0x0c DW_FORM_flag
     {0, 0}, // 0x0d DW_FORM_sdata
-    {0, 0}, // 0x0e DW_FORM_strp (4 bytes for DWARF32, 8 bytes for DWARF64)
+    {0, 0}, // 0x0e DW_FORM_strp
     {0, 0}, // 0x0f DW_FORM_udata
     {0, 0}, // 0x10 DW_FORM_ref_addr (addr size for DWARF2 and earlier, 4 bytes
             // for DWARF32, 8 bytes for DWARF32 in DWARF 3 and later
@@ -173,7 +175,7 @@ static FormSize g_form_sizes[] = {
     {1, 8},  // 0x14 DW_FORM_ref8
     {0, 0},  // 0x15 DW_FORM_ref_udata
     {0, 0},  // 0x16 DW_FORM_indirect
-    {0, 0}, // 0x17 DW_FORM_sec_offset (4 bytes for DWARF32,8 bytes for DWARF64)
+    {0, 0},  // 0x17 DW_FORM_sec_offset
     {0, 0},  // 0x18 DW_FORM_exprloc
     {1, 0},  // 0x19 DW_FORM_flag_present
     {0, 0},  // 0x1a DW_FORM_strx (ULEB128)
@@ -181,7 +183,7 @@ static FormSize g_form_sizes[] = {
     {1, 4},  // 0x1c DW_FORM_ref_sup4
     {0, 0},  // 0x1d DW_FORM_strp_sup (4 bytes for DWARF32, 8 bytes for DWARF64)
     {1, 16}, // 0x1e DW_FORM_data16
-    {0, 0}, // 0x1f DW_FORM_line_strp (4 bytes for DWARF32, 8 bytes for DWARF64)
+    {0, 0},  // 0x1f DW_FORM_line_strp
     {1, 8},  // 0x20 DW_FORM_ref_sig8
 };
 
@@ -207,6 +209,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
                                const DWARFDataExtractor &debug_info_data,
                                lldb::offset_t *offset_ptr,
                                const DWARFUnit *unit) {
+  uint8_t ref_addr_size;
   switch (form) {
   // Blocks if inlined data that have a length field and the data bytes inlined
   // in the .debug_info
@@ -245,7 +248,8 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
   case DW_FORM_ref_addr:
     assert(unit); // Unit must be valid for DW_FORM_ref_addr objects or we will
                   // get this wrong
-    *offset_ptr += unit->GetFormParams().getRefAddrByteSize();
+    ref_addr_size = unit->GetFormParams().getRefAddrByteSize();
+    *offset_ptr += ref_addr_size;
     return true;
 
   // 0 bytes values (implied from DW_FORM)
@@ -280,8 +284,8 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
     case DW_FORM_sec_offset:
     case DW_FORM_strp:
     case DW_FORM_line_strp:
-      assert(unit);
-      *offset_ptr += unit->GetFormParams().getDwarfOffsetByteSize();
+      ref_addr_size = unit->GetFormParams().getDwarfOffsetByteSize();
+      *offset_ptr += ref_addr_size;
       return true;
 
     // 4 byte values
@@ -412,8 +416,12 @@ void DWARFFormValue::Dump(Stream &s) const {
   case DW_FORM_ref_addr: {
     assert(m_unit); // Unit must be valid for DW_FORM_ref_addr objects or we
                     // will get this wrong
-    DumpAddress(s.AsRawOstream(), uvalue,
-                m_unit->GetFormParams().getRefAddrByteSize());
+    if (m_unit->GetVersion() <= 2)
+      DumpAddress(s.AsRawOstream(), uvalue, sizeof(uint64_t) * 2);
+    else
+      DumpAddress(s.AsRawOstream(), uvalue,
+                  4 * 2); // 4 for DWARF32, 8 for DWARF64, but we don't
+                          // support DWARF64 yet
     break;
   }
   case DW_FORM_ref1:
@@ -532,7 +540,6 @@ DWARFFormValue::ReferencedUnitAndOffset() const {
       return {nullptr, 0};
     return {tu, tu->GetTypeOffset()};
   }
-
   default:
     return {nullptr, 0};
   }
