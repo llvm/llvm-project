@@ -948,6 +948,23 @@ public:
   using WebAssemblyOSTargetInfo<Target>::WebAssemblyOSTargetInfo;
 };
 
+// WALI target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY WALITargetInfo
+    : public WebAssemblyOSTargetInfo<Target> {
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const final {
+    WebAssemblyOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
+    // Linux defines; list based off of gcc output
+    DefineStd(Builder, "unix", Opts);
+    DefineStd(Builder, "linux", Opts);
+    Builder.defineMacro("__wali__");
+  }
+
+public:
+  using WebAssemblyOSTargetInfo<Target>::WebAssemblyOSTargetInfo;
+};
+
 // Emscripten target
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY EmscriptenTargetInfo

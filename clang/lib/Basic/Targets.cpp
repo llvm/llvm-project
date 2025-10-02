@@ -694,7 +694,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
   }
   case llvm::Triple::wasm32:
     if (Triple.getSubArch() != llvm::Triple::NoSubArch ||
-        Triple.getVendor() != llvm::Triple::UnknownVendor ||
+        (!Triple.isWALI() &&
+         Triple.getVendor() != llvm::Triple::UnknownVendor) ||
         !Triple.isOSBinFormatWasm())
       return nullptr;
     switch (os) {
@@ -704,6 +705,10 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       case llvm::Triple::Emscripten:
       return std::make_unique<EmscriptenTargetInfo<WebAssembly32TargetInfo>>(
           Triple, Opts);
+      // WALI OS target
+      case llvm::Triple::Linux:
+        return std::make_unique<WALITargetInfo<WebAssembly32TargetInfo>>(Triple,
+                                                                         Opts);
       case llvm::Triple::UnknownOS:
       return std::make_unique<WebAssemblyOSTargetInfo<WebAssembly32TargetInfo>>(
           Triple, Opts);
