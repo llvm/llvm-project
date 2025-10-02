@@ -442,7 +442,7 @@ void IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request) {
 }
 
 void IOHandlerEditline::RedrawCallback() {
-  m_debugger.RedrawStatusline(/*update=*/false);
+  m_debugger.RedrawStatusline(std::nullopt);
 }
 
 #endif

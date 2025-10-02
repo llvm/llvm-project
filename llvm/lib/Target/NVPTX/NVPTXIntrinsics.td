@@ -5282,3 +5282,420 @@ foreach dim = ["x", "y", "z"] in {
   def CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_ # dim:
         CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID<dim>;
 }
+
+//
+// tcgen05.mma Instructions
+//
+
+class Tcgen05MMAInst<bit Sp, string KindStr, string ASpace,
+                     int CtaGroup, string CollectorUsage,
+                     bit ScaleInputD, bit AShift,
+                     list<Predicate> PTXPredicates> :
+         NVPTXInst<(outs), (ins), "?", []>,
+         Requires<PTXPredicates> {
+
+  Intrinsic Intrin = !cast<Intrinsic>(
+                        NVVM_TCGEN05_MMA<Sp, ASpace, AShift, ScaleInputD>.record
+                     );
+
+  dag ScaleInpIns = !if(!eq(ScaleInputD, 1), (ins i64imm:$scale_input_d), (ins));
+  string ScaleInpStr = !if(!eq(ScaleInputD, 1), ", $scale_input_d", "");
+  dag ScaleInpInput = !if(!eq(ScaleInputD, 1), (Intrin i64:$scale_input_d), (Intrin));
+
+  dag SparseMetadataIns = !if(!eq(Sp, 1), (ins B32:$spmetadata), (ins));
+  dag SparseMetadataIntr = !if(!eq(Sp, 1), (Intrin B32:$spmetadata), (Intrin));
+  string SparseMetadataStr = !if(!eq(Sp, 1), ", [$spmetadata]", "");
+
+  int KindVal = !cond(
+                  !eq(KindStr, "f16"): 0,
+                  !eq(KindStr, "tf32"): 1,
+                  !eq(KindStr, "f8f6f4"): 2,
+                  !eq(KindStr, "i8"): 3,
+                );
+
+  int CollectorUsageVal = !cond(
+    !eq(CollectorUsage, "discard"): 0,
+    !eq(CollectorUsage, "lastuse"): 1,
+    !eq(CollectorUsage, "fill"): 2,
+    !eq(CollectorUsage, "use"): 3
+  );
+
+  string AOperandStr = !if(!eq(ASpace, "tensor"), "[$a]", "$a");
+
+  NVPTXRegClass ARegClass = !if(!eq(ASpace, "tensor"), B32, B64);
+
+  dag input = !con((ins B32:$dtmem,
+                        ARegClass:$a, ADDR:$b,
+                        B32:$idesc,
+                        B1:$enable_inp_d),
+                        SparseMetadataIns,
+                        ScaleInpIns);
+
+  let InOperandList = input;
+  let OutOperandList = (outs);
+  let AsmString = "tcgen05.mma"
+                   # !if(!eq(Sp, 1), ".sp", "")
+                   # ".cta_group::" # CtaGroup
+                   # ".kind::" # KindStr
+                   # ".collector::a::" # CollectorUsage
+                   # !if(!eq(AShift, 1), ".ashift", "")
+                   # " [$dtmem], " # AOperandStr # ", $b"
+                   # SparseMetadataStr
+                   # ", $idesc, $enable_inp_d"
+                   # ScaleInpStr
+                   # ";";
+
+  dag IntrinsicPattern = !con((Intrin i32:$dtmem,
+                               ARegClass:$a, addr:$b,
+                               i32:$idesc,
+                               i1:$enable_inp_d),
+                               SparseMetadataIntr,
+                               ScaleInpInput);
+
+  dag FlagOperands = (Intrin (i32 KindVal), (i32 CtaGroup),
+                             (i32 CollectorUsageVal));
+
+  let Pattern = [!con(IntrinsicPattern, FlagOperands)];
+}
+
+// tcgen05.mma
+foreach sp = [0, 1] in {
+  foreach space = ["tensor", "shared"] in {
+    foreach kind = ["f16", "tf32", "f8f6f4", "i8"] in {
+      foreach cta_group = [1, 2] in {
+        foreach collector_usage = ["discard", "lastuse", "fill", "use"] in {
+          foreach scale_input_d = !if(!or(!eq(kind, "f16"),
+                                          !eq(kind, "tf32")), [0, 1], [0]) in {
+            foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
+
+              def : Tcgen05MMAInst<sp, kind, space, cta_group, collector_usage,
+                                    scale_input_d, ashift,
+                                    !if(!eq(scale_input_d, 1),
+                                            [hasTcgen05MMAScaleInputDImm],
+                                            [hasTcgen05Instructions])>;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+class Tcgen05MMADisableOutputLaneTypeProfile<bit Sp, string ASpace,
+                                             int CtaGroup, bit ScaleInputD>:
+        SDTypeProfile<0, 0, []> {
+  int DisableOutputLaneVecSize = !mul(4, CtaGroup);
+
+  list<ValueType> VTs = !listconcat(
+    [i32],                                      // d
+    !if(!eq(ASpace, "tensor"), [i32], [i64]),   // a
+    [i64, i32, i1],                             // b, idesc, enable_inp_d
+    !if(!eq(Sp, 1), [i32], []),                 // spmetadata
+    !if(!eq(ScaleInputD, 1), [i64], []),        // scale_input_d
+    !listsplat(i32, DisableOutputLaneVecSize),  // disable_output_lane
+    [i32, i32]                                  // kind, collector_usage
+  );
+  let Constraints = !foreach(x, !range(!size(VTs)), SDTCisVT<x, VTs[x]>);
+  let NumOperands = !size(Constraints);
+}
+
+class Tcgen05MMADisableOutputLaneSDNode<bit Sp, string ASpace,
+                                        int CtaGroup, bit ScaleInput, bit AShift>:
+        SDNode<"NVPTXISD::TCGEN05_MMA"
+                # !if(!eq(Sp, 1), "_SP", "")
+                # "_" # !toupper(ASpace)
+                # !if(!eq(ScaleInput, 1), "_SCALE_D", "")
+                # "_DISABLE_OUTPUT_LANE_CG" # CtaGroup
+                # !if(!eq(AShift, 1), "_ASHIFT", ""),
+        Tcgen05MMADisableOutputLaneTypeProfile<Sp, ASpace, CtaGroup, ScaleInput>,
+                    [SDNPHasChain, SDNPSideEffect]>;
+
+class Tcgen05MMADisableOutputLaneInst<bit Sp, string ASpace,
+                     string Kind, int CtaGroup, string CollectorUsageStr,
+                     bit ScaleInputD, bit AShift,
+                     list<Predicate> PTXPredicates> :
+         NVPTXInst<(outs), (ins), "?", []>,
+         Requires<PTXPredicates> {
+
+  SDNode Opcode = Tcgen05MMADisableOutputLaneSDNode<Sp, ASpace, CtaGroup,
+                                                    ScaleInputD, AShift>;
+
+
+  dag ScaleInpIns = !if(!eq(ScaleInputD, 1), (ins i64imm:$scale_input_d), (ins));
+  string ScaleInpStr = !if(!eq(ScaleInputD, 1), ", $scale_input_d", "");
+  dag ScaleInpInput = !if(!eq(ScaleInputD, 1), (Opcode i64:$scale_input_d), (Opcode));
+
+  // disable output lane
+  int DisableOutputLaneVecSize = !mul(4, CtaGroup);
+
+  dag DisableOutputLaneIns = !dag(ins,
+                              !listsplat(B32, DisableOutputLaneVecSize),
+                              !foreach(x,
+                                      !range(DisableOutputLaneVecSize),
+                                      "disable_output_lane" # x));
+
+  dag DisableOutputLaneInput = !dag(Opcode,
+                                !listsplat(i32, DisableOutputLaneVecSize),
+                                !foreach(x,
+                                         !range(DisableOutputLaneVecSize),
+                                         "disable_output_lane" # x));
+
+  string DisableOutputLaneStr = "{{" #
+                                  !interleave(
+                                    !foreach(x,
+                                      !range(DisableOutputLaneVecSize),
+                                              "$disable_output_lane" # x),
+                                    ", ")
+                                # "}}";
+
+  dag SparseMetadataIns = !if(!eq(Sp, 1), (ins B32:$spmetadata), (ins));
+  dag SparseMetadataIntr = !if(!eq(Sp, 1), (Opcode i32:$spmetadata), (Opcode));
+  string SparseMetadataStr = !if(!eq(Sp, 1), ", [$spmetadata]", "");
+
+  int KindVal = !cond(
+                  !eq(Kind, "f16"): 0,
+                  !eq(Kind, "tf32"): 1,
+                  !eq(Kind, "f8f6f4"): 2,
+                  !eq(Kind, "i8"): 3,
+                );
+
+  int CollectorUsage = !cond(
+    !eq(CollectorUsageStr, "discard"): 0,
+    !eq(CollectorUsageStr, "lastuse"): 1,
+    !eq(CollectorUsageStr, "fill"): 2,
+    !eq(CollectorUsageStr, "use"): 3,
+  );
+
+  string AOperandStr = !if(!eq(ASpace, "tensor"), "[$a]", "$a");
+
+  NVPTXRegClass ARegClass = !if(!eq(ASpace, "tensor"), B32, B64);
+
+  dag InOperandList = !con((ins B32:$dtmem,
+                            ARegClass:$a, B64:$b,
+                            B32:$idesc,
+                            B1:$enable_inp_d),
+                            SparseMetadataIns,
+                            ScaleInpIns,
+                            DisableOutputLaneIns);
+
+  let OutOperandList = (outs);
+  let AsmString = "tcgen05.mma"
+                   # !if(!eq(Sp, 1), ".sp", "")
+                   # ".cta_group::" # CtaGroup
+                   # ".kind::" # Kind
+                   # !if(!eq(AShift, 1), ".ashift", "")
+                   # ".collector::a::" # CollectorUsageStr
+                   # " " # "[$dtmem], " # AOperandStr # ", $b"
+                   # SparseMetadataStr
+                   # ", " # "$idesc"
+                   # ", " # DisableOutputLaneStr
+                   # ", $enable_inp_d"
+                   # ScaleInpStr
+                   # ";";
+
+  dag IntrinsicPattern = !con((Opcode i32:$dtmem,
+                               ARegClass:$a, i64:$b,
+                               i32:$idesc,
+                               i1:$enable_inp_d),
+                               SparseMetadataIntr,
+                               ScaleInpInput,
+                               DisableOutputLaneInput);
+
+  dag FlagOperands = (Opcode (i32 KindVal), (i32 CollectorUsage));
+
+  let Pattern = [!con(IntrinsicPattern, FlagOperands)];
+}
+
+// tcgen05.mma.disable_output_lane
+foreach sp = [0, 1] in {
+  foreach space = ["tensor", "shared"] in {
+    foreach kind = ["f16", "tf32", "f8f6f4", "i8"] in {
+      foreach cta_group = [1, 2] in {
+        foreach collector_usage = ["fill", "use", "lastuse", "discard"] in {
+          foreach scale_input_d = !if(!or(!eq(kind, "f16"),
+                                          !eq(kind, "tf32")), [0, 1], [0]) in {
+            foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
+              def :
+                Tcgen05MMADisableOutputLaneInst<sp, space, kind, cta_group,
+                                               collector_usage, scale_input_d,
+                                               ashift,
+                                               !if(!eq(scale_input_d, 1),
+                                                    [hasTcgen05MMAScaleInputDImm],
+                                                    [hasTcgen05Instructions])>;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+class Tcgen05MMABlockScaleInst<bit Sp, string ASpace, string KindStr,
+                     int CtaGroup, string ScaleVecSize, string CollectorUsageStr,
+                     Predicate PTXPredicate>:
+         NVPTXInst<(outs), (ins), "?", []>,
+         Requires<[hasTcgen05Instructions, PTXPredicate]> {
+
+  Intrinsic Intrin = !cast<Intrinsic>(
+                             NVVM_TCGEN05_MMA_BLOCKSCALE<Sp, ASpace, KindStr, ScaleVecSize>.record);
+
+  dag SparseMetadataIns = !if(!eq(Sp, 1), (ins B32:$spmetadata), (ins));
+  dag SparseMetadataIntr = !if(!eq(Sp, 1), (Intrin i32:$spmetadata), (Intrin));
+  string SparseMetadataStr = !if(!eq(Sp, 1), ", [$spmetadata]", "");
+
+  int KindVal = !cond(
+                  !eq(KindStr, "mxf8f6f4") : 0,
+                  !eq(KindStr, "mxf4")     : 1,
+                  !eq(KindStr, "mxf4nvf4") : 2,
+                );
+
+  int CollectorUsage = !cond(
+    !eq(CollectorUsageStr, "discard") : 0,
+    !eq(CollectorUsageStr, "lastuse") : 1,
+    !eq(CollectorUsageStr, "fill")    : 2,
+    !eq(CollectorUsageStr, "use")     : 3,
+  );
+
+  string AOperandStr = !if(!eq(ASpace, "tensor"), "[$a]", "$a");
+  NVPTXRegClass ARegClass = !if(!eq(ASpace, "tensor"), B32, B64);
+
+  dag input = !con((ins B32:$dtmem, ARegClass:$a, B64:$b,
+                        B32:$idesc, B1:$enable_inp_d),
+                    SparseMetadataIns,
+                    (ins B32:$scale_a,
+                         B32:$scale_b));
+
+  let InOperandList = input;
+  let OutOperandList = (outs);
+  let AsmString = "tcgen05.mma"
+                   # !if(!eq(Sp, 1), ".sp", "")
+                   # ".cta_group::" # CtaGroup
+                   # ".kind::" # KindStr
+                   # ".block_scale" # ScaleVecSize
+                   # ".collector::a::" # CollectorUsageStr
+                   # " [$dtmem], " # AOperandStr # ", $b"
+                   # SparseMetadataStr
+                   # ", $idesc, [$scale_a], [$scale_b], $enable_inp_d;";
+
+  dag IntrinsicPattern = !con((Intrin i32:$dtmem,
+                                      ARegClass:$a, i64:$b,
+                                      i32:$idesc,
+                                      i1:$enable_inp_d),
+                               SparseMetadataIntr,
+                               (Intrin i32:$scale_a,
+                                       i32:$scale_b));
+
+  dag FlagOperands = (Intrin (i32 CtaGroup), (i32 CollectorUsage));
+
+  let Pattern = [!con(IntrinsicPattern, FlagOperands)];
+}
+
+// tcgen05.mma.block_scale
+foreach sp = [0, 1] in {
+  foreach space = ["tensor", "shared"] in {
+    foreach kind = ["mxf8f6f4", "mxf4", "mxf4nvf4"] in {
+      foreach scale_vec_size = ["", ".block16", ".block32"] in {
+        foreach cta_group = [1, 2] in {
+          foreach collector_usage = ["fill", "use", "lastuse", "discard"] in {
+            if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
+              def : Tcgen05MMABlockScaleInst<sp, space, kind, cta_group, scale_vec_size,
+                                             collector_usage,
+                                             !if(!ne(scale_vec_size, ""),
+                                                  hasPTX<88>, hasPTX<86>)>;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+//
+// tcgen05.mma.ws Instructions
+//
+
+class Tcgen05MMAWSInst<bit Sp, string ASpace, string KindStr,
+                       int CollectorBufferB, string CollectorUsageOpStr,
+                       bit HasZeroColMask> :
+         NVPTXInst<(outs), (ins), "?", []>,
+         Requires<[hasTcgen05Instructions]> {
+
+  Intrinsic Intrin = !cast<Intrinsic>(
+                            NVVM_TCGEN05_MMA_WS<Sp, ASpace, HasZeroColMask>.record);
+
+  dag ZeroColMaskIns = !if(!eq(HasZeroColMask, 1),
+                              (ins B64:$zero_col_mask), (ins));
+  string ZeroColMaskStr = !if(!eq(HasZeroColMask, 1), ", $zero_col_mask", "");
+  dag ZeroColMaskIntr = !if(!eq(HasZeroColMask, 1),
+                               (Intrin i64:$zero_col_mask), (Intrin));
+
+  dag SparseMetadataIns = !if(!eq(Sp, 1), (ins B32:$spmetadata), (ins));
+  dag SparseMetadataIntr = !if(!eq(Sp, 1), (Intrin B32:$spmetadata), (Intrin));
+  string SparseMetadataStr = !if(!eq(Sp, 1), ", [$spmetadata]", "");
+
+  int KindVal = !cond(
+                  !eq(KindStr, "f16")   : 0,
+                  !eq(KindStr, "tf32")  : 1,
+                  !eq(KindStr, "f8f6f4"): 2,
+                  !eq(KindStr, "i8")    : 3,
+                );
+
+  int CollectorUsageOp = !cond(
+    !eq(CollectorUsageOpStr, "discard"): 0,
+    !eq(CollectorUsageOpStr, "lastuse"): 1,
+    !eq(CollectorUsageOpStr, "fill")   : 2,
+    !eq(CollectorUsageOpStr, "use")    : 3,
+  );
+
+  string AOperandStr = !if(!eq(ASpace, "tensor"), "[$a]", "$a");
+  NVPTXRegClass ARegClass = !if(!eq(ASpace, "tensor"), B32, B64);
+
+  dag input = !con((ins B32:$dtmem,
+                        ARegClass:$a, B64:$b,
+                        B32:$idesc,
+                        B1:$enable_inp_d),
+                        SparseMetadataIns,
+                        ZeroColMaskIns);
+
+  let InOperandList = input;
+  let OutOperandList = (outs);
+  let AsmString = "tcgen05.mma.ws"
+                   # !if(!eq(Sp, 1), ".sp", "")
+                   # ".cta_group::1"
+                   # ".kind::" # KindStr
+                   # ".collector::b" # CollectorBufferB
+                   # "::" # CollectorUsageOpStr
+                   # " [$dtmem], " # AOperandStr # ", $b"
+                   # SparseMetadataStr
+                   # ", $idesc, $enable_inp_d"
+                   # ZeroColMaskStr
+                   # ";";
+
+  dag IntrinsicPattern = !con((Intrin i32:$dtmem,
+                                      ARegClass:$a, i64:$b,
+                                      i32:$idesc,
+                                      i1:$enable_inp_d),
+                               SparseMetadataIntr,
+                               ZeroColMaskIntr);
+
+  dag FlagOperands = (Intrin (i32 KindVal), (i32 CollectorBufferB),
+                             (i32 CollectorUsageOp));
+
+  let Pattern = [!con(IntrinsicPattern, FlagOperands)];
+}
+
+// tcgen05.mma.ws
+foreach sp = [0, 1] in {
+  foreach space = ["shared", "tensor"] in {
+    foreach kind = ["f16", "tf32", "f8f6f4", "i8"] in {
+      foreach collector_buffer_b = [0, 1, 2, 3] in {
+        foreach collector_usage_op = ["discard", "fill", "use", "lastuse"] in {
+          foreach zero_col_mask = [0, 1] in {
+              def : Tcgen05MMAWSInst<sp, space, kind, collector_buffer_b,
+                                     collector_usage_op, zero_col_mask>;
+          }
+        }
+      }
+    }
+  }
+}

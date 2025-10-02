@@ -152,26 +152,6 @@ Other tools that support remarks:
     .. option:: -opt-remarks-format=<format>
     .. option:: -opt-remarks-with-hotness
 
-Serialization modes
-===================
-
-There are two modes available for serializing remarks:
-
-``Separate``
-
-    In this mode, the remarks and the metadata are serialized separately. The
-    client is responsible for parsing the metadata first, then use the metadata
-    to correctly parse the remarks.
-
-``Standalone``
-
-    In this mode, the remarks and the metadata are serialized to the same
-    stream. The metadata will always come before the remarks.
-
-    The compiler does not support emitting standalone remarks. This mode is
-    more suited for post-processing tools like linkers, that can merge the
-    remarks for one whole project.
-
 .. _yamlremarks:
 
 YAML remarks
@@ -374,27 +354,11 @@ This block can contain the following records:
 The remark container
 --------------------
 
-Bitstream remarks are designed to be used in two different modes:
+The bitstream remark container supports multiple types:
 
-``The separate mode``
+.. _bitstreamremarksfileexternal:
 
-    The separate mode is the mode that is typically used during compilation. It
-    provides a way to serialize the remark entries to a stream while some
-    metadata is kept in memory to be emitted in the product of the compilation
-    (typically, an object file).
-
-``The standalone mode``
-
-    The standalone mode is typically stored and used after the distribution of
-    a program. It contains all the information that allows the parsing of all
-    the remarks without having any external dependencies.
-
-In order to support multiple modes, the format introduces the concept of a
-bitstream remark container type.
-
-.. _bitstreamremarksseparateremarksmeta:
-
-``SeparateRemarksMeta: the metadata emitted separately``
+``RemarksFileExternal: a link to an external remarks file``
 
     This container type expects only a :ref:`META_BLOCK <bitstreamremarksmetablock>` containing only:
 
@@ -406,84 +370,33 @@ bitstream remark container type.
     clients to retrieve remarks and their associated metadata directly from
     intermediate products.
 
-``SeparateRemarksFile: the remark entries emitted separately``
+    The container versions of the external separate container should match in order to
+    have a well-formed file.
 
-    This container type expects only a :ref:`META_BLOCK <bitstreamremarksmetablock>` containing only:
+.. _bitstreamremarksfile:
 
-    * :ref:`RECORD_META_CONTAINER_INFO <bitstreamremarksrecordmetacontainerinfo>`
-    * :ref:`RECORD_META_REMARK_VERSION <bitstreamremarksrecordmetaremarkversion>`
+``RemarksFile: a standalone remarks file``
 
-    This container type expects 0 or more :ref:`REMARK_BLOCK <bitstreamremarksremarkblock>`.
-
-    Typically, this is emitted in a side-file alongside an object file, and is
-    made to be able to stream to without increasing the memory consumption of
-    the compiler. This is referenced by the :ref:`RECORD_META_EXTERNAL_FILE
-    <bitstreamremarksrecordmetaexternalfile>` entry in the
-    :ref:`SeparateRemarksMeta <bitstreamremarksseparateremarksmeta>` container.
-
-When the parser tries to parse a container that contains the metadata for the
-separate remarks, it should parse the version and type, then keep the string
-table in memory while opening the external file, validating its metadata and
-parsing the remark entries.
-
-The container versions from the separate container should match in order to
-have a well-formed file.
-
-``Standalone: the metadata and the remark entries emitted together``
-
-    This container type expects only a :ref:`META_BLOCK <bitstreamremarksmetablock>` containing only:
+    This container type expects a :ref:`META_BLOCK <bitstreamremarksmetablock>` containing only:
 
     * :ref:`RECORD_META_CONTAINER_INFO <bitstreamremarksrecordmetacontainerinfo>`
     * :ref:`RECORD_META_REMARK_VERSION <bitstreamremarksrecordmetaremarkversion>`
+
+    Then, this container type expects 1 or more :ref:`REMARK_BLOCK <bitstreamremarksremarkblock>`.
+    If no remarks are emitted, the meta blocks are also not emitted, so the file is empty.
+
+    After the remark blocks, another :ref:`META_BLOCK <bitstreamremarksmetablock>` is emitted, containing:
     * :ref:`RECORD_META_STRTAB <bitstreamremarksrecordmetastrtab>`
 
-    This container type expects 0 or more :ref:`REMARK_BLOCK <bitstreamremarksremarkblock>`.
+    When the parser reads this container type, it jumps to the end of the file
+    to read the string table before parsing the individual remarks.
 
-A complete output of :program:`llvm-bcanalyzer` on the different container types:
+    Standalone remarks files can be referenced by the
+    :ref:`RECORD_META_EXTERNAL_FILE <bitstreamremarksrecordmetaexternalfile>`
+    entry in the :ref:`RemarksFileExternal
+    <bitstreamremarksfileexternal>` container.
 
-``SeparateRemarksMeta``
-
-.. code-block:: none
-
-    <BLOCKINFO_BLOCK/>
-    <Meta BlockID=8 NumWords=13 BlockCodeSize=3>
-      <Container info codeid=1 abbrevid=4 op0=5 op1=0/>
-      <String table codeid=3 abbrevid=5/> blob data = 'pass\\x00key\\x00value\\x00'
-      <External File codeid=4 abbrevid=6/> blob data = '/path/to/file/name'
-    </Meta>
-
-``SeparateRemarksFile``
-
-.. code-block:: none
-
-    <BLOCKINFO_BLOCK/>
-    <Meta BlockID=8 NumWords=3 BlockCodeSize=3>
-      <Container info codeid=1 abbrevid=4 op0=0 op1=1/>
-      <Remark version codeid=2 abbrevid=5 op0=0/>
-    </Meta>
-    <Remark BlockID=9 NumWords=8 BlockCodeSize=4>
-      <Remark header codeid=5 abbrevid=4 op0=2 op1=0 op2=1 op3=2/>
-      <Remark debug location codeid=6 abbrevid=5 op0=3 op1=99 op2=55/>
-      <Remark hotness codeid=7 abbrevid=6 op0=999999999/>
-      <Argument with debug location codeid=8 abbrevid=7 op0=4 op1=5 op2=6 op3=11 op4=66/>
-    </Remark>
-
-``Standalone``
-
-.. code-block:: none
-
-    <BLOCKINFO_BLOCK/>
-    <Meta BlockID=8 NumWords=15 BlockCodeSize=3>
-      <Container info codeid=1 abbrevid=4 op0=5 op1=2/>
-      <Remark version codeid=2 abbrevid=5 op0=30/>
-      <String table codeid=3 abbrevid=6/> blob data = 'pass\\x00remark\\x00function\\x00path\\x00key\\x00value\\x00argpath\\x00'
-    </Meta>
-    <Remark BlockID=9 NumWords=8 BlockCodeSize=4>
-      <Remark header codeid=5 abbrevid=4 op0=2 op1=1 op2=0 op3=2/>
-      <Remark debug location codeid=6 abbrevid=5 op0=3 op1=99 op2=55/>
-      <Remark hotness codeid=7 abbrevid=6 op0=999999999/>
-      <Argument with debug location codeid=8 abbrevid=7 op0=4 op1=5 op2=6 op3=11 op4=66/>
-    </Remark>
+.. FIXME: Add complete output of :program:`llvm-bcanalyzer` on the different container types (once format changes are completed)
 
 opt-viewer
 ==========
