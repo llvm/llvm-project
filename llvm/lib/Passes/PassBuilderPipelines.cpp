@@ -611,7 +611,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Jump table to switch conversion.
   if (EnableJumpTableToSwitch)
-    FPM.addPass(JumpTableToSwitchPass());
+    FPM.addPass(JumpTableToSwitchPass(
+        /*InLTO=*/Phase == ThinOrFullLTOPhase::ThinLTOPostLink ||
+        Phase == ThinOrFullLTOPhase::FullLTOPostLink));
 
   FPM.addPass(
       SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
