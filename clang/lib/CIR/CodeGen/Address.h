@@ -90,6 +90,13 @@ public:
     return getPointer();
   }
 
+  /// Return the pointer contained in this class after authenticating it and
+  /// adding offset to it if necessary.
+  mlir::Value emitRawPointer() const {
+    // TODO(cir): update this class with latest traditional LLVM codegen bits
+    return getBasePointer();
+  }
+
   mlir::Type getType() const {
     assert(mlir::cast<cir::PointerType>(
                pointerAndKnownNonNull.getPointer().getType())
