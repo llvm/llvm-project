@@ -3200,9 +3200,9 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *useDevice =
                    std::get_if<Fortran::parser::AccClause::UseDevice>(
                        &clause.u)) {
-      // When CUDA Fotran is enabled, extra symbolds are used in the host_data
-      // region. Look for them and bind their value with the symbol in the outer
-      // scope. 
+      // When CUDA Fotran is enabled, extra symbols are used in the host_data
+      // region. Look for them and bind their values with the symbols in the
+      // outer scope. 
       if (semanticsContext.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
         const Fortran::parser::AccObjectList &objectList{useDevice->v};
         for (const auto &accObject : objectList.v) {
