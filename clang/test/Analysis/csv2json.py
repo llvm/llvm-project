@@ -59,6 +59,7 @@ def csv_to_json_dict(csv_filepath):
                 return
 
             header_length = len(header)
+            other_column_names = header[1:]
 
             data_dict = {}
 
@@ -70,7 +71,7 @@ def csv_to_json_dict(csv_filepath):
                 key = row[0]
                 value_map = {}
 
-                for i, col_name in enumerate(header[1:]):
+                for i, col_name in enumerate(other_column_names):
                     # +1 to skip the first column
                     value_map[col_name] = row[i + 1].strip()
 
