@@ -423,7 +423,7 @@ set(arm_or_thumb2_base_SOURCES
 )
 
 option(COMPILER_RT_ARM_OPTIMIZED_FP
-  "On 32-bit Arm, use optimized assembly implementations of FP arithmetic" ON)
+  "On 32-bit Arm, use optimized assembly implementations of FP arithmetic. Likely to increase code size, but be faster." ON)
 
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(arm_or_thumb2_base_SOURCES
