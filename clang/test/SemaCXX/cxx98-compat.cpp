@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat -verify %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++14 -Wc++98-compat -verify %s -DCXX14COMPAT
-// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-compat -verify %s -DCXX14COMPAT -DCXX17COMPAT
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat -verify=expected,not-cpp20 %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++14 -Wc++98-compat -verify=expected,not-cpp20 %s -DCXX14COMPAT
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-compat -verify=expected,not-cpp20 %s -DCXX14COMPAT -DCXX17COMPAT
 // RUN: %clang_cc1 -fsyntax-only -std=c++20 -Wc++98-compat -verify=expected,cpp20 %s -DCXX14COMPAT -DCXX17COMPAT -DCXX20COMPAT
 
 namespace std {
@@ -226,12 +226,10 @@ void TrivialButNonPODThroughEllipsis() {
   Ellipsis(1, TrivialButNonPOD()); // expected-warning {{passing object of trivial but non-POD type 'TrivialButNonPOD' through variadic function is incompatible with C++98}}
 }
 
-// FIXME I think we should generate this diagnostic in C++20
-#ifndef CXX20COMPAT
 struct HasExplicitConversion {
-  explicit operator bool(); // expected-warning {{explicit conversion functions are incompatible with C++98}}
+  // FIXME I think we should generate this diagnostic in C++20
+  explicit operator bool(); // not-cpp20-warning {{explicit conversion functions are incompatible with C++98}}
 };
-#endif
 
 struct Struct {};
 enum Enum { enum_val = 0 };
@@ -439,9 +437,7 @@ namespace GH161702 {
 struct S {
   enum E { A };
   using E::A; // expected-warning {{enumeration type in nested name specifier is incompatible with C++98}}
-#ifndef CXX20COMPAT 
-	      // expected-error@-2 {{using declaration refers to its own class}}
-#endif
-              // cpp20-warning@-4 {{member using declaration naming non-class ''E'' enumerator is incompatible with C++ standards before C++20}}
+	      // not-cpp20-error@-1 {{using declaration refers to its own class}}
+              // cpp20-warning@-2 {{member using declaration naming non-class ''E'' enumerator is incompatible with C++ standards before C++20}}
 };
 }
