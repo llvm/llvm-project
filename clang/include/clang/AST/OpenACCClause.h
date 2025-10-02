@@ -845,7 +845,9 @@ struct OpenACCPrivateRecipe {
 
   bool isSet() const { return AllocaDecl; }
 
-  static OpenACCPrivateRecipe Empty() { return OpenACCPrivateRecipe(nullptr); }
+  static OpenACCPrivateRecipe Empty() {
+    return OpenACCPrivateRecipe(/*AllocaDecl=*/nullptr);
+  }
 };
 
 class OpenACCPrivateClause final
@@ -905,7 +907,8 @@ struct OpenACCFirstPrivateRecipe {
   bool isSet() const { return AllocaDecl; }
 
   static OpenACCFirstPrivateRecipe Empty() {
-    return OpenACCFirstPrivateRecipe(nullptr, nullptr);
+    return OpenACCFirstPrivateRecipe(/*AllocaDecl=*/nullptr,
+                                     /*InitFromTemporary=*/nullptr);
   }
 };
 
@@ -1283,7 +1286,7 @@ struct OpenACCReductionRecipe {
 
   bool isSet() const { return AllocaDecl; }
   static OpenACCReductionRecipe Empty() {
-    return OpenACCReductionRecipe(nullptr);
+    return OpenACCReductionRecipe(/*AllocaDecl=*/nullptr);
   }
 };
 
