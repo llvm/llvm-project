@@ -1111,8 +1111,6 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
   assert(!BinaryOperator::isComparisonOp(op) &&
          "arguments to comparison ops must be of the same type");
 
-  // Constraints may have changed since the creation of a bound SVal. Check if
-  // the value can be simplified based on those new constraints.
   SVal simplifiedRhs = simplifySVal(state, rhs);
   if (auto simplifiedRhsAsNonLoc = simplifiedRhs.getAs<NonLoc>())
     rhs = *simplifiedRhsAsNonLoc;
