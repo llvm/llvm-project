@@ -109,7 +109,7 @@ TEST(CFG, SwitchCoveredEnumNoDefault) {
   CFG::BuildOptions Options;
   Options.AssumeReachableDefaultInSwitchStatements = true;
   BuildResult B = BuildCFG(Code, Options);
-  EXPECT_EQ(BuildResult::BuiltCFG, B.getStatus());
+  ASSERT_EQ(BuildResult::BuiltCFG, B.getStatus());
 
   // [B5 (ENTRY)]
   //   Succs (1): B2
@@ -156,7 +156,7 @@ TEST(CFG, SwitchCoveredEnumNoDefault) {
   // Checking that the same node is Unreachable without this setting
   Options.AssumeReachableDefaultInSwitchStatements = false;
   B = BuildCFG(Code, Options);
-  EXPECT_EQ(BuildResult::BuiltCFG, B.getStatus());
+  ASSERT_EQ(BuildResult::BuiltCFG, B.getStatus());
 
   const auto &Entry2 = B.getCFG()->getEntry();
   ASSERT_EQ(1u, Entry2.succ_size());
@@ -184,7 +184,7 @@ TEST(CFG, SwitchCoveredEnumWithDefault) {
   CFG::BuildOptions Options;
   Options.AssumeReachableDefaultInSwitchStatements = true;
   BuildResult B = BuildCFG(Code, Options);
-  EXPECT_EQ(BuildResult::BuiltCFG, B.getStatus());
+  ASSERT_EQ(BuildResult::BuiltCFG, B.getStatus());
 
   // [B6 (ENTRY)]
   //   Succs (1): B2
@@ -236,7 +236,7 @@ TEST(CFG, SwitchCoveredEnumWithDefault) {
   // Checking that the same node is Unreachable without this setting
   Options.AssumeReachableDefaultInSwitchStatements = false;
   B = BuildCFG(Code, Options);
-  EXPECT_EQ(BuildResult::BuiltCFG, B.getStatus());
+  ASSERT_EQ(BuildResult::BuiltCFG, B.getStatus());
 
   const auto &Entry2 = B.getCFG()->getEntry();
   ASSERT_EQ(1u, Entry2.succ_size());
