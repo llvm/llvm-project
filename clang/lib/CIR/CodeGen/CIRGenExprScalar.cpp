@@ -1890,7 +1890,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return v;
   }
   case CK_IntegralToPointer: {
-    auto DestCIRTy = cgf.convertType(destTy);
+    mlir:Type destCIRTy = cgf.convertType(destTy);
     mlir::Value Src = Visit(const_cast<Expr *>(subExpr));
 
     // Properly resize by casting to an int of the same size as the pointer.
