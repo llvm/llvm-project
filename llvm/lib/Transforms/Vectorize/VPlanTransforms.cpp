@@ -40,7 +40,7 @@
 using namespace llvm;
 using namespace VPlanPatternMatch;
 
-cl::opt<bool> EnableWideActiveLaneMask(
+static cl::opt<bool> EnableWideActiveLaneMask(
     "enable-wide-lane-mask", cl::init(false), cl::Hidden,
     cl::desc("Enable use of wide get active lane mask instructions"));
 
@@ -2124,6 +2124,8 @@ static void licm(VPlan &Plan) {
 
 void VPlanTransforms::truncateToMinimalBitwidths(
     VPlan &Plan, const MapVector<Instruction *, uint64_t> &MinBWs) {
+  if (Plan.hasScalarVFOnly())
+    return;
   // Keep track of created truncates, so they can be re-used. Note that we
   // cannot use RAUW after creating a new truncate, as this would could make
   // other uses have different types for their operands, making them invalidly
@@ -2704,6 +2706,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 ///
 void VPlanTransforms::addExplicitVectorLength(
     VPlan &Plan, const std::optional<unsigned> &MaxSafeElements) {
+  if (Plan.hasScalarVFOnly())
+    return;
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
 
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
@@ -3342,12 +3346,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         VectorStep = Builder.createWidenCast(CastOp, VectorStep, IVTy);
       }
 
-      [[maybe_unused]] auto *ConstStep =
-          ScalarStep->isLiveIn()
-              ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
-              : nullptr;
-      assert(!ConstStep || ConstStep->getValue() != 1);
-      (void)ConstStep;
+      assert(!match(ScalarStep, m_One()) && "Expected non-unit scalar-step");
       if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
         ScalarStep =
             Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);

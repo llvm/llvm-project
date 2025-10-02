@@ -114,7 +114,7 @@ public:
   using SlotT = std::atomic<int64_t>;
 
   static int64_t getSlotsSize(uint32_t NumBits) {
-    return sizeof(int64_t) * (1u << NumBits);
+    return sizeof(int64_t) * (1ull << NumBits);
   }
 
   static int64_t getSize(uint32_t NumBits) {
@@ -191,7 +191,8 @@ private:
   MutableArrayRef<SlotT> Slots;
 
   static MutableArrayRef<SlotT> getSlots(Header &H) {
-    return MutableArrayRef(reinterpret_cast<SlotT *>(&H + 1), 1u << H.NumBits);
+    return MutableArrayRef(reinterpret_cast<SlotT *>(&H + 1),
+                           1ull << H.NumBits);
   }
 };
 

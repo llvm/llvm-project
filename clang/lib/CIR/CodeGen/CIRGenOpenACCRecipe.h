@@ -24,12 +24,20 @@
 
 namespace clang::CIRGen {
 class OpenACCRecipeBuilderBase {
+  // makes the copy of the addresses of an alloca to the previous allocation.
+  void makeAllocaCopy(mlir::Location loc, mlir::Type copyType,
+                      mlir::Value numEltsToCopy, mlir::Value offsetPerSubarray,
+                      mlir::Value destAlloca, mlir::Value srcAlloca);
   // This function generates the required alloca, similar to
   // 'emitAutoVarAlloca', except for the OpenACC array/pointer types.
   mlir::Value makeBoundsAlloca(mlir::Block *block, SourceRange exprRange,
                                mlir::Location loc, std::string_view allocaName,
                                size_t numBounds,
                                llvm::ArrayRef<QualType> boundTypes);
+
+  void makeBoundsInit(mlir::Value alloca, mlir::Location loc,
+                      mlir::Block *block, const VarDecl *allocaDecl,
+                      QualType origType, bool isInitSection);
 
 protected:
   CIRGen::CIRGenFunction &cgf;

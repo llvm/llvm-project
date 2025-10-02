@@ -44615,8 +44615,11 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     APInt DemandedMask = OriginalDemandedBits << ShAmt;
 
-    // If we just want the sign bit then we don't need to shift it.
-    if (OriginalDemandedBits.isSignMask())
+    // If we only want bits that already match the signbit then we don't need
+    // to shift.
+    unsigned NumHiDemandedBits = BitWidth - OriginalDemandedBits.countr_zero();
+    if (TLO.DAG.ComputeNumSignBits(Op0, OriginalDemandedElts, Depth + 1) >=
+        NumHiDemandedBits)
       return TLO.CombineTo(Op, Op0);
 
     // fold (VSRAI (VSHLI X, C1), C1) --> X iff NumSignBits(X) > C1
@@ -45169,6 +45172,18 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::Wrapper:
   case X86ISD::WrapperRIP:
     return true;
+  case X86ISD::PACKSS:
+  case X86ISD::PACKUS: {
+    APInt DemandedLHS, DemandedRHS;
+    getPackDemandedElts(Op.getSimpleValueType(), DemandedElts, DemandedLHS,
+                        DemandedRHS);
+    return (!DemandedLHS ||
+            DAG.isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedLHS,
+                                                 PoisonOnly, Depth + 1)) &&
+           (!DemandedRHS ||
+            DAG.isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedRHS,
+                                                 PoisonOnly, Depth + 1));
+  }
   case X86ISD::INSERTPS:
   case X86ISD::BLENDI:
   case X86ISD::PSHUFB:
@@ -45238,6 +45253,10 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   // SSE blends.
   case X86ISD::BLENDI:
   case X86ISD::BLENDV:
+    return false;
+  // SSE packs.
+  case X86ISD::PACKSS:
+  case X86ISD::PACKUS:
     return false;
   // SSE target shuffles.
   case X86ISD::INSERTPS:
@@ -52369,16 +52388,41 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
     // Do not flip "e > c", where "c" is a constant, because Cmp instruction
     // cannot take an immediate as its first operand.
     //
-    if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.getNode()->hasOneUse() &&
-        EFLAGS.getValueType().isInteger() &&
-        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
-      SDValue NewSub =
-          DAG.getNode(X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
-                      EFLAGS.getOperand(1), EFLAGS.getOperand(0));
-      SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+    // If EFLAGS is from a CMP that compares the same operands as the earlier
+    // SUB producing X (i.e. CMP X, Y), we can directly use the carry flag with
+    // SBB/ADC without creating a flipped SUB.
+    if (EFLAGS.getOpcode() == X86ISD::CMP &&
+        EFLAGS.getValueType().isInteger() && X == EFLAGS.getOperand(0)) {
       return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
                          DAG.getVTList(VT, MVT::i32), X,
-                         DAG.getConstant(0, DL, VT), NewEFLAGS);
+                         DAG.getConstant(0, DL, VT), EFLAGS);
+    }
+
+    if (EFLAGS.getOpcode() == X86ISD::SUB &&
+        EFLAGS.getValueType().isInteger() &&
+        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
+      // Only create NewSub if we know one of the folds will succeed to avoid
+      // introducing a temporary node that may persist and affect one-use checks
+      // below.
+      if (EFLAGS.getNode()->hasOneUse()) {
+        SDValue NewSub = DAG.getNode(
+            X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+            EFLAGS.getOperand(1), EFLAGS.getOperand(0));
+        SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+        return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
+                           DAG.getVTList(VT, MVT::i32), X,
+                           DAG.getConstant(0, DL, VT), NewEFLAGS);
+      }
+
+      if (IsSub && X == EFLAGS.getValue(0)) {
+        SDValue NewSub = DAG.getNode(
+            X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+            EFLAGS.getOperand(1), EFLAGS.getOperand(0));
+        SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+        return DAG.getNode(X86ISD::SBB, DL, DAG.getVTList(VT, MVT::i32),
+                           EFLAGS.getOperand(0), EFLAGS.getOperand(1),
+                           NewEFLAGS);
+      }
     }
   }
 

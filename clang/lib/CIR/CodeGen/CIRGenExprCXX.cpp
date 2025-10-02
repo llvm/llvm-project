@@ -740,11 +740,11 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
   const auto *deleteFTy = deleteFD->getType()->castAs<FunctionProtoType>();
   CallArgList deleteArgs;
 
-  UsualDeleteParams params = getUsualDeleteParams(deleteFD);
+  UsualDeleteParams params = deleteFD->getUsualDeleteParams();
   auto paramTypeIt = deleteFTy->param_type_begin();
 
   // Pass std::type_identity tag if present
-  if (isTypeAwareAllocation(params.typeAwareDelete))
+  if (isTypeAwareAllocation(params.TypeAwareDelete))
     cgm.errorNYI(deleteFD->getSourceRange(),
                  "emitDeleteCall: type aware delete");
 
@@ -755,12 +755,12 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
   deleteArgs.add(RValue::get(deletePtr), argTy);
 
   // Pass the std::destroying_delete tag if present.
-  if (params.destroyingDelete)
+  if (params.DestroyingDelete)
     cgm.errorNYI(deleteFD->getSourceRange(),
                  "emitDeleteCall: destroying delete");
 
   // Pass the size if the delete function has a size_t parameter.
-  if (params.size) {
+  if (params.Size) {
     QualType sizeType = *paramTypeIt++;
     CharUnits deleteTypeSize = getContext().getTypeSizeInChars(deleteTy);
     assert(mlir::isa<cir::IntType>(convertType(sizeType)) &&
@@ -772,7 +772,7 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
   }
 
   // Pass the alignment if the delete function has an align_val_t parameter.
-  if (isAlignedAllocation(params.alignment))
+  if (isAlignedAllocation(params.Alignment))
     cgm.errorNYI(deleteFD->getSourceRange(),
                  "emitDeleteCall: aligned allocation");
 
