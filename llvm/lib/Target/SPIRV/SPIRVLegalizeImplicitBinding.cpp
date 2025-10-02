@@ -39,8 +39,11 @@ private:
   void collectBindingInfo(Module &M);
   uint32_t getAndReserveFirstUnusedBinding(uint32_t DescSet);
   void replaceImplicitBindingCalls(Module &M);
-  void replaceResourceHandleCall(Module &M, CallInst *OldCI);
-  void replaceCounterHandleCall(Module &M, CallInst *OldCI);
+  void replaceResourceHandleCall(Module &M, CallInst *OldCI,
+                                 uint32_t NewBinding);
+  void replaceCounterHandleCall(Module &M, CallInst *OldCI,
+                                uint32_t NewBinding);
+  void verifyUniqueOrderIdPerResource(SmallVectorImpl<CallInst *> &Calls);
 
   // A map from descriptor set to a bit vector of used binding numbers.
   std::vector<BitVector> UsedBindings;
@@ -93,14 +96,35 @@ struct BindingInfoCollector : public InstVisitor<BindingInfoCollector> {
 };
 
 static uint32_t getOrderId(const CallInst *CI) {
+  uint32_t OrderIdArgIdx = 0;
   switch (CI->getIntrinsicID()) {
   case Intrinsic::spv_resource_handlefromimplicitbinding:
-    return cast<ConstantInt>(CI->getArgOperand(0))->getZExtValue();
+    OrderIdArgIdx = 0;
+    break;
   case Intrinsic::spv_resource_counterhandlefromimplicitbinding:
-    return cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+    OrderIdArgIdx = 1;
+    break;
   default:
     llvm_unreachable("CallInst is not an implicit binding intrinsic");
   }
+  return cast<ConstantInt>(CI->getArgOperand(OrderIdArgIdx))->getZExtValue();
+}
+
+static uint32_t getDescSet(const CallInst *CI) {
+  uint32_t DescSetArgIdx;
+  switch (CI->getIntrinsicID()) {
+  case Intrinsic::spv_resource_handlefromimplicitbinding:
+  case Intrinsic::spv_resource_handlefrombinding:
+    DescSetArgIdx = 1;
+    break;
+  case Intrinsic::spv_resource_counterhandlefromimplicitbinding:
+  case Intrinsic::spv_resource_counterhandlefrombinding:
+    DescSetArgIdx = 2;
+    break;
+  default:
+    llvm_unreachable("CallInst is not an implicit binding intrinsic");
+  }
+  return cast<ConstantInt>(CI->getArgOperand(DescSetArgIdx))->getZExtValue();
 }
 
 void SPIRVLegalizeImplicitBinding::collectBindingInfo(Module &M) {
@@ -112,6 +136,23 @@ void SPIRVLegalizeImplicitBinding::collectBindingInfo(Module &M) {
             [](const CallInst *A, const CallInst *B) {
               return getOrderId(A) < getOrderId(B);
             });
+}
+
+void SPIRVLegalizeImplicitBinding::verifyUniqueOrderIdPerResource(
+    SmallVectorImpl<CallInst *> &Calls) {
+  // Check that the order Id is unique per resource.
+  for (uint32_t i = 1; i < Calls.size(); ++i) {
+    const uint32_t OrderA = getOrderId(Calls[i - 1]);
+    const uint32_t OrderB = getOrderId(Calls[i]);
+    if (OrderA == OrderB) {
+      const uint32_t DescSetA = getDescSet(Calls[i - 1]);
+      const uint32_t DescSetB = getDescSet(Calls[i]);
+      if (DescSetA != DescSetB) {
+        report_fatal_error("Implicit binding calls with the same order ID must "
+                           "have the same descriptor set");
+      }
+    }
+  }
 }
 
 uint32_t SPIRVLegalizeImplicitBinding::getAndReserveFirstUnusedBinding(
@@ -132,16 +173,30 @@ uint32_t SPIRVLegalizeImplicitBinding::getAndReserveFirstUnusedBinding(
 }
 
 void SPIRVLegalizeImplicitBinding::replaceImplicitBindingCalls(Module &M) {
+  uint32_t lastOrderId = -1;
+  uint32_t lastBindingNumber = -1;
+
   for (CallInst *OldCI : ImplicitBindingCalls) {
+    const uint32_t OrderId = getOrderId(OldCI);
+    uint32_t BindingNumber;
+    if (OrderId == lastOrderId) {
+      BindingNumber = lastBindingNumber;
+    } else {
+      const uint32_t DescSet = getDescSet(OldCI);
+      BindingNumber = getAndReserveFirstUnusedBinding(DescSet);
+    }
+
     if (OldCI->getIntrinsicID() ==
         Intrinsic::spv_resource_handlefromimplicitbinding) {
-      replaceResourceHandleCall(M, OldCI);
+      replaceResourceHandleCall(M, OldCI, BindingNumber);
     } else {
       assert(OldCI->getIntrinsicID() ==
                  Intrinsic::spv_resource_counterhandlefromimplicitbinding &&
              "Unexpected implicit binding intrinsic");
-      replaceCounterHandleCall(M, OldCI);
+      replaceCounterHandleCall(M, OldCI, BindingNumber);
     }
+    lastOrderId = OrderId;
+    lastBindingNumber = BindingNumber;
   }
 }
 
@@ -150,6 +205,7 @@ bool SPIRVLegalizeImplicitBinding::runOnModule(Module &M) {
   if (ImplicitBindingCalls.empty()) {
     return false;
   }
+  verifyUniqueOrderIdPerResource(ImplicitBindingCalls);
 
   replaceImplicitBindingCalls(M);
   return true;
@@ -165,12 +221,11 @@ ModulePass *llvm::createSPIRVLegalizeImplicitBindingPass() {
   return new SPIRVLegalizeImplicitBinding();
 }
 
-void SPIRVLegalizeImplicitBinding::replaceResourceHandleCall(Module &M,
-                                                             CallInst *OldCI) {
+void SPIRVLegalizeImplicitBinding::replaceResourceHandleCall(
+    Module &M, CallInst *OldCI, uint32_t NewBinding) {
   IRBuilder<> Builder(OldCI);
   const uint32_t DescSet =
       cast<ConstantInt>(OldCI->getArgOperand(1))->getZExtValue();
-  const uint32_t NewBinding = getAndReserveFirstUnusedBinding(DescSet);
 
   SmallVector<Value *, 8> Args;
   Args.push_back(Builder.getInt32(DescSet));
@@ -190,12 +245,11 @@ void SPIRVLegalizeImplicitBinding::replaceResourceHandleCall(Module &M,
   OldCI->eraseFromParent();
 }
 
-void SPIRVLegalizeImplicitBinding::replaceCounterHandleCall(Module &M,
-                                                            CallInst *OldCI) {
+void SPIRVLegalizeImplicitBinding::replaceCounterHandleCall(
+    Module &M, CallInst *OldCI, uint32_t NewBinding) {
   IRBuilder<> Builder(OldCI);
   const uint32_t DescSet =
       cast<ConstantInt>(OldCI->getArgOperand(2))->getZExtValue();
-  const uint32_t NewBinding = getAndReserveFirstUnusedBinding(DescSet);
 
   SmallVector<Value *, 8> Args;
   Args.push_back(OldCI->getArgOperand(0));

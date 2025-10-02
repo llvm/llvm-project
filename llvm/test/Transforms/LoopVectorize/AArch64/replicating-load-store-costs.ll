@@ -616,6 +616,45 @@ exit:
   ret double  %red.next
 }
 
+define i32 @test_ptr_iv_load_used_by_other_load(ptr %start, ptr %end) {
+; CHECK-LABEL: define i32 @test_ptr_iv_load_used_by_other_load(
+; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ null, %[[ENTRY]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ [[RED_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[IV]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[C_EXT:%.*]] = zext i1 [[C]] to i32
+; CHECK-NEXT:    [[RED_NEXT]] = or i32 [[RED]], [[C_EXT]]
+; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i64 32
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[IV]], [[END]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RED_LCSSA:%.*]] = phi i32 [ [[RED]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[RED_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:                                 ; preds = %loop, %entry
+  %iv = phi ptr [ %iv.next, %loop ], [ null, %entry ]
+  %red = phi i32 [ %red.next, %loop ], [ 0, %entry ]
+  %0 = load ptr, ptr %iv, align 8
+  %1 = load i8, ptr %0, align 8
+  %c = icmp ne i8 %1, 0
+  %c.ext = zext i1 %c to i32
+  %red.next = or i32 %red, %c.ext
+  %iv.next = getelementptr nusw i8, ptr %iv, i64 32
+  %ec = icmp eq ptr %iv, %end
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %red
+}
+
 attributes #0 = { "target-cpu"="neoverse-512tvb" }
 
 !0 = !{!1, !2, i64 0}
