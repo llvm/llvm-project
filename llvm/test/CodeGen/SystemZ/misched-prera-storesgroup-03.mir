@@ -15,9 +15,8 @@
 # therefore not considered as a group.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun0:%bb.0
-# CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      No StoresGroup.
+# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK:      SU(10):   STG %2:gr64bit, %0:addr64bit, 0, $noreg ::
 # CHECK-NEXT: SU(11):   STD %3:fp64bit, %1:addr64bit, 0, $noreg ::
@@ -62,9 +61,8 @@ body:             |
 # CHECK-NEXT: fun1:%bb.0
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun1:%bb.1
-# CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      No StoresGroup.
+# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      *** Final schedule for %bb.1 ***
 # CHECK:      SU(6):   VST32 %8:fp32bit, %3:addr64bit, 0, $noreg
 # CHECK-NEXT: SU(7):   VST32 %8:fp32bit, $noreg, 0, $noreg
@@ -113,9 +111,8 @@ body:             |
 # as a group.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun2:%bb.0
-# CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      No StoresGroup.
+# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK:      SU(10):   STG %2:gr64bit, %0:addr64bit, 0, $noreg :: (store (s64) into %ir.Arg2)
 # CHECK-NEXT: SU(11):   STG %3:gr64bit, %1:addr64bit, 0, $noreg :: (store (s64) into %ir.Arg0)

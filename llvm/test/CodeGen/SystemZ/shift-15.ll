@@ -115,10 +115,10 @@ define i128 @f7(i128 %a, i128 %sh) {
 define i128 @f8(i128 %a, i128 %b, i128 %sh) {
 ; CHECK-LABEL: f8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 0(%r4), 3
-; CHECK-NEXT:    vl %v1, 0(%r5), 3
-; CHECK-NEXT:    vn %v0, %v1, %v0
-; CHECK-NEXT:    vlgvf %r0, %v0, 3
+; CHECK-NEXT:    vl %v1, 0(%r4), 3
+; CHECK-NEXT:    vl %v2, 0(%r5), 3
+; CHECK-NEXT:    vn %v1, %v2, %v1
+; CHECK-NEXT:    vlgvf %r0, %v1, 3
 ; CHECK-NEXT:    vlvgp %v1, %r0, %r0
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vrepb %v1, %v1, 15

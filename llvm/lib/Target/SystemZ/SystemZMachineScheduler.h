@@ -9,10 +9,7 @@
 // -------------------------- Pre RA scheduling ----------------------------- //
 //
 // SystemZPreRASchedStrategy tries to reduce register pressure by applying
-// OOO heuristics and then also in certain regions reduces latency. Tiny
-// regions are mostly left alone as the input order is usually then preferred
-// (due to copys involving physregs and comparison elimination
-// opportunities).
+// OOO heuristics and then also in certain regions reduces scheduled latency.
 //
 // -------------------------- Post RA scheduling ---------------------------- //
 //
@@ -36,14 +33,24 @@ namespace llvm {
 
 /// A MachineSchedStrategy implementation for SystemZ pre RA scheduling.
 class SystemZPreRASchedStrategy : public GenericScheduler {
-  // A TinyRegion has up to 10 instructions and is scheduled less
-  // aggressively. Reordering these are more likely to disrupt copy /
-  // comparison elimination while the potential benefit is less than in
-  // bigger regions.
-  bool TinyRegion;
-
-  // Num instructions left to schedule.
+  // Number of instructions left to schedule (above).
   unsigned NumLeft;
+
+  void initializeLivenessReduction();
+  void initializeStoresGroup();
+  void initializeLatencyReduction();
+
+  Register Cmp0SrcReg;
+  // Return true if MI defines the Cmp0SrcReg that is used by a scheduled
+  // compare with 0. If CCDef is true MI must also have an implicit def of CC.
+  bool definesCmp0Src(const MachineInstr *MI, bool CCDef = true) const;
+
+  // The highest SUs that are not to be scheduled "low" to reduce liveness.
+  std::set<const SUnit *> HighSUs;
+
+  // Make sure a large group of stores do not all end up at the bottom.
+  std::set<const SUnit *> StoresGroup;
+  bool FirstStoreInGroupScheduled;
 
   // True if there are many more SUs than the overall height of the DAG.
   bool IsWideDAG;
@@ -52,17 +59,9 @@ class SystemZPreRASchedStrategy : public GenericScheduler {
   // likely benefit from latency reduction.
   bool HasDataSequences;
 
-  // Return true if the scheduled latency should be minimized.
-  bool shouldReduceLatency(SchedBoundary *Zone) const;
-
-  // Only call computeRemLatency() once before each scheduled node.
-  mutable unsigned RemLat;
-  unsigned getRemLat(SchedBoundary *Zone) const;
-
-  // Make sure a large group of stores do not all end up at the bottom.
-  std::set<const SUnit *> StoresGroup;
-  bool FirstStoreInGroupScheduled;
-  void initializeStoresGroup();
+  // Before pulling down a load to its user (to close the live range), check
+  // the liveness of the use operands.
+  bool isSchedLowCand(const SUnit *SU, ScheduleDAGMILive *DAG) const;
 
   // Compute the effect on register liveness by scheduling C next. An
   // instruction that defines a live register without causing any other
@@ -70,6 +69,13 @@ class SystemZPreRASchedStrategy : public GenericScheduler {
   // register would increase it.
   int computeSULivenessScore(SchedCandidate &C, ScheduleDAGMILive *DAG,
                              SchedBoundary *Zone) const;
+
+  // Return true if the scheduled latency should be minimized.
+  bool shouldReduceLatency(SchedBoundary *Zone) const;
+
+  // Only call computeRemLatency() once before each scheduled node.
+  mutable unsigned RemLat;
+  unsigned getRemLat(SchedBoundary *Zone) const;
 
 protected:
   bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,

@@ -504,12 +504,12 @@ define void @fun4(ptr %Src, ptr %Dst) {
 ; NOVEC-NEXT:    lgdr %r2, %f0
 ; NOVEC-NEXT:    sllg %r14, %r14, 48
 ; NOVEC-NEXT:    srlg %r2, %r2, 48
-; NOVEC-NEXT:    ldgr %f1, %r14
+; NOVEC-NEXT:    ldgr %f0, %r14
 ; NOVEC-NEXT:    sth %r2, 182(%r15)
-; NOVEC-NEXT:    lgdr %r2, %f1
+; NOVEC-NEXT:    lgdr %r2, %f0
 ; NOVEC-NEXT:    sllg %r5, %r5, 48
-; NOVEC-NEXT:    ldgr %f0, %r5
 ; NOVEC-NEXT:    srlg %r2, %r2, 48
+; NOVEC-NEXT:    ldgr %f0, %r5
 ; NOVEC-NEXT:    sth %r2, 174(%r15)
 ; NOVEC-NEXT:    lgdr %r2, %f0
 ; NOVEC-NEXT:    srlg %r2, %r2, 48
@@ -528,35 +528,29 @@ define void @fun4(ptr %Src, ptr %Dst) {
 ; NOVEC-NEXT:    ldgr %f6, %r4
 ; NOVEC-NEXT:    # kill: def $f6h killed $f6h killed $f6d
 ; NOVEC-NEXT:    brasl %r14, foo@PLT
-; NOVEC-NEXT:    lgh %r0, 206(%r15)
-; NOVEC-NEXT:    sllg %r0, %r0, 48
-; NOVEC-NEXT:    ldgr %f0, %r0
+; NOVEC-NEXT:    lgh %r14, 206(%r15)
+; NOVEC-NEXT:    sllg %r14, %r14, 48
+; NOVEC-NEXT:    ldgr %f0, %r14
 ; NOVEC-NEXT:    lgh %r12, 204(%r15)
-; NOVEC-NEXT:    lgdr %r0, %f0
-; NOVEC-NEXT:    srlg %r3, %r0, 48
+; NOVEC-NEXT:    lgh %r5, 202(%r15)
+; NOVEC-NEXT:    lgdr %r14, %f0
+; NOVEC-NEXT:    lgh %r4, 200(%r15)
+; NOVEC-NEXT:    lgh %r3, 198(%r15)
+; NOVEC-NEXT:    lgh %r2, 196(%r15)
+; NOVEC-NEXT:    srlg %r14, %r14, 48
 ; NOVEC-NEXT:    lgh %r0, 192(%r15)
 ; NOVEC-NEXT:    lgh %r1, 194(%r15)
-; NOVEC-NEXT:    lgh %r2, 196(%r15)
-; NOVEC-NEXT:    lgh %r4, 198(%r15)
-; NOVEC-NEXT:    lgh %r5, 200(%r15)
-; NOVEC-NEXT:    lgh %r14, 202(%r15)
-; NOVEC-NEXT:    sth %r3, 14(%r13)
-; NOVEC-NEXT:    sllg %r3, %r12, 48
-; NOVEC-NEXT:    ldgr %f0, %r3
-; NOVEC-NEXT:    lgdr %r3, %f0
-; NOVEC-NEXT:    srlg %r3, %r3, 48
-; NOVEC-NEXT:    sth %r3, 12(%r13)
-; NOVEC-NEXT:    sllg %r3, %r14, 48
-; NOVEC-NEXT:    ldgr %f0, %r3
-; NOVEC-NEXT:    lgdr %r3, %f0
-; NOVEC-NEXT:    srlg %r3, %r3, 48
-; NOVEC-NEXT:    sth %r3, 10(%r13)
-; NOVEC-NEXT:    sllg %r3, %r5, 48
-; NOVEC-NEXT:    ldgr %f0, %r3
-; NOVEC-NEXT:    lgdr %r3, %f0
-; NOVEC-NEXT:    srlg %r3, %r3, 48
-; NOVEC-NEXT:    sth %r3, 8(%r13)
-; NOVEC-NEXT:    sllg %r3, %r4, 48
+; NOVEC-NEXT:    sth %r14, 14(%r13)
+; NOVEC-NEXT:    sllg %r14, %r12, 48
+; NOVEC-NEXT:    ldgr %f0, %r14
+; NOVEC-NEXT:    sllg %r5, %r5, 48
+; NOVEC-NEXT:    lgdr %r14, %f0
+; NOVEC-NEXT:    ldgr %f0, %r5
+; NOVEC-NEXT:    sllg %r4, %r4, 48
+; NOVEC-NEXT:    lgdr %r5, %f0
+; NOVEC-NEXT:    ldgr %f0, %r4
+; NOVEC-NEXT:    sllg %r3, %r3, 48
+; NOVEC-NEXT:    lgdr %r4, %f0
 ; NOVEC-NEXT:    ldgr %f0, %r3
 ; NOVEC-NEXT:    sllg %r2, %r2, 48
 ; NOVEC-NEXT:    lgdr %r3, %f0
@@ -568,10 +562,16 @@ define void @fun4(ptr %Src, ptr %Dst) {
 ; NOVEC-NEXT:    lgdr %r1, %f0
 ; NOVEC-NEXT:    ldgr %f0, %r0
 ; NOVEC-NEXT:    lgdr %r0, %f0
+; NOVEC-NEXT:    srlg %r14, %r14, 48
+; NOVEC-NEXT:    srlg %r5, %r5, 48
+; NOVEC-NEXT:    srlg %r4, %r4, 48
 ; NOVEC-NEXT:    srlg %r3, %r3, 48
 ; NOVEC-NEXT:    srlg %r2, %r2, 48
 ; NOVEC-NEXT:    srlg %r1, %r1, 48
 ; NOVEC-NEXT:    srlg %r0, %r0, 48
+; NOVEC-NEXT:    sth %r14, 12(%r13)
+; NOVEC-NEXT:    sth %r5, 10(%r13)
+; NOVEC-NEXT:    sth %r4, 8(%r13)
 ; NOVEC-NEXT:    sth %r3, 6(%r13)
 ; NOVEC-NEXT:    sth %r2, 4(%r13)
 ; NOVEC-NEXT:    sth %r1, 2(%r13)

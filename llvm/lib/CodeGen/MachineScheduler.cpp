@@ -3429,7 +3429,7 @@ void GenericSchedulerBase::traceCandidate(const SchedCandidate &Cand) {
 ///
 /// These computations are expensive, especially in DAGs with many edges, so
 /// only do them if necessary.
-unsigned computeRemLatency(SchedBoundary &CurrZone) {
+unsigned llvm::computeRemLatency(SchedBoundary &CurrZone) {
   unsigned RemLatency = CurrZone.getDependentLatency();
   RemLatency = std::max(RemLatency,
                         CurrZone.findMaxLatency(CurrZone.Available.elements()));

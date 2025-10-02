@@ -10,7 +10,6 @@
 # CHECK-NEXT: fun0:%bb.0
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun0:%bb.1
-# CHECK:      Region is not tiny.
 # CHECK:      Latency scheduling enabled for data sequences.
 # CHECK:      SU(2):   %3:addr64bit = LA %3:addr64bit, 1, $noreg
 # CHECK:        Depth              : 0
@@ -68,8 +67,7 @@ body:             |
 # the COPYs instead of all ending up at the bottom.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun1:%bb.0
-# CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling not enabled for data sequences.
+# CHECK:      Latency scheduling not enabled for data sequences.
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK-NEXT: SU(0):   %0:gr64bit = COPY undef %1:gr64bit
 # CHECK-NEXT: SU(1):   dead %2:gr64bit = AGRK %0:gr64bit, %0:gr64bit,
@@ -106,14 +104,13 @@ body:             |
 # Schedule the WFDDB high as it extends the scheduled latency.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun2:%bb.0
-# CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling enabled for data sequences.
-# CHECK: Queue BotQ.A: 7 1
-# CHECK: Pick Bot BOT-HEIGHT
-# CHECK: Scheduling SU(1)
+# CHECK: Number of nodes in def-use sequences: 8. Latency scheduling enabled for data sequences.
 # CHECK: Queue BotQ.A: 7 2
 # CHECK: Pick Bot BOT-HEIGHT
 # CHECK: Scheduling SU(2)
+# CHECK: Queue BotQ.A: 7 1
+# CHECK: Pick Bot BOT-HEIGHT
+# CHECK: Scheduling SU(1)
 # CHECK: Queue BotQ.A: 7 0
 # CHECK: Pick Bot PHYS-REG
 # CHECK: Scheduling SU(7) {{.*}} WFDDB
@@ -122,10 +119,10 @@ body:             |
 # CHECK-NEXT: SU(5):   %5:vr64bit = COPY undef %6:vr64bit
 # CHECK-NEXT: SU(6):   %7:vr64bit = COPY %5:vr64bit
 # CHECK-NEXT: SU(7):   undef %8.subreg_h64:vr128bit = WFDDB %7:vr64bit, %5:vr64bit,
-# CHECK-NEXT: SU(2):   dead %2:fp64bit = nofpexcept CDFBR %0:gr32bit, implicit $fpc
-# CHECK-NEXT: SU(1):   %1:vr64bit = VL64 $noreg, 0, $noreg :: (load 
+# CHECK-NEXT: SU(1):   dead %1:fp64bit = nofpexcept CDFBR %0:gr32bit, implicit $fpc
+# CHECK-NEXT: SU(2):   %2:vr64bit = VL64 $noreg, 0, $noreg :: (load 
 # CHECK-NEXT: SU(8):   %9:vr64bit = COPY %8.subreg_h64:vr128bit
-# CHECK-NEXT: SU(3):   %3:vr64bit = COPY %1:vr64bit
+# CHECK-NEXT: SU(3):   %3:vr64bit = COPY %2:vr64bit
 # CHECK-NEXT: SU(9):   %10:vr64bit = COPY %9:vr64bit
 # CHECK-NEXT: SU(4):   dead %4:vr64bit = COPY %3:vr64bit
 # CHECK-NEXT: SU(10):  dead %11:vr64bit = COPY %10:vr64bit
@@ -137,23 +134,22 @@ body:             |
     liveins: $r2l
 
     %0:gr32bit = COPY $r2l
-    %1:vr64bit = VL64 $noreg, 0, $noreg :: (load (s64) from `ptr null`)
-    %2:fp64bit = nofpexcept CDFBR %0, implicit $fpc
-    %3:vr64bit = COPY %1:vr64bit
+    %1:fp64bit = nofpexcept CDFBR %0, implicit $fpc
+    %2:vr64bit = VL64 $noreg, 0, $noreg :: (load (s64) from `ptr null`)
+    %3:vr64bit = COPY %2:vr64bit
     %4:vr64bit = COPY %3:vr64bit
-    %6:vr64bit = COPY undef %5:vr64bit
-    %7:vr64bit = COPY %6:vr64bit
-    undef %10.subreg_h64:vr128bit = WFDDB %7, %6, implicit $fpc
-    %11:vr64bit = COPY %10.subreg_h64:vr128bit   ; Make region non-tiny.
-    %12:vr64bit = COPY %11:vr64bit
-    %13:vr64bit = COPY %12:vr64bit
+    %5:vr64bit = COPY undef %6:vr64bit
+    %7:vr64bit = COPY %5:vr64bit
+    undef %8.subreg_h64:vr128bit = WFDDB %7, %5, implicit $fpc
+    %9:vr64bit = COPY %8.subreg_h64:vr128bit   ; Make region non-tiny.
+    %10:vr64bit = COPY %9:vr64bit
+    %11:vr64bit = COPY %10:vr64bit
     Return
 ...
 
 # Use the GenericScheduler latency heuristic for this single block loop.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun3:%bb.1
-# CHECK: Region is not tiny.
 # CHECK: Latency scheduling not enabled for data sequences.
 # CHECK: ACYCLIC LATENCY LIMIT
 # CHECK: Pick Bot BOT-HEIGHT [pre-RA]

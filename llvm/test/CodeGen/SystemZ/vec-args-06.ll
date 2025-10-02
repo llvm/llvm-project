@@ -16,14 +16,14 @@ define { <2 x double>, <2 x double>, <2 x double>, <2 x double>,
 ; CHECK: vl %v28, 0([[TMP]])
 ; CHECK: larl [[TMP:%r[0-5]]], .LCPI
 ; CHECK: vl %v30, 0([[TMP]])
-; CHECK: larl [[TMP:%r[0-5]]], .LCPI
-; CHECK: vl %v25, 0([[TMP]])
-; CHECK: larl [[TMP:%r[0-5]]], .LCPI
-; CHECK: vl %v27, 0([[TMP]])
-; CHECK: larl [[TMP:%r[0-5]]], .LCPI
-; CHECK: vl %v29, 0([[TMP]])
-; CHECK: larl [[TMP:%r[0-5]]], .LCPI
-; CHECK: vl %v31, 0([[TMP]])
+; CHECK: larl [[TMP1:%r[0-5]]], .LCPI
+; CHECK: larl [[TMP2:%r[0-5]]], .LCPI
+; CHECK: larl [[TMP3:%r[0-5]]], .LCPI
+; CHECK: larl [[TMP4:%r[0-5]]], .LCPI
+; CHECK: vl %v25, 0([[TMP1]])
+; CHECK: vl %v27, 0([[TMP2]])
+; CHECK: vl %v29, 0([[TMP3]])
+; CHECK: vl %v31, 0([[TMP4]])
 ; CHECK: br %r14
 
 ; SOFT-FLOAT-LABEL: f1:

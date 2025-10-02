@@ -566,9 +566,9 @@ define void @fun11() {
 ; NOVEC-NEXT:    lghrl %r0, .LCPI11_0
 ; NOVEC-NEXT:    lghrl %r1, .LCPI11_1
 ; NOVEC-NEXT:    lzer %f2
+; NOVEC-NEXT:    lcdfr %f0, %f2
 ; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    sllg %r1, %r1, 48
-; NOVEC-NEXT:    lcdfr %f0, %f2
 ; NOVEC-NEXT:    ldgr %f4, %r0
 ; NOVEC-NEXT:    # kill: def $f4h killed $f4h killed $f4d
 ; NOVEC-NEXT:    ldgr %f6, %r1

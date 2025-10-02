@@ -43,9 +43,9 @@ define <2 x double> @constrained_vector_fdiv_v2f64() #0 {
 ; SZ13-LABEL: constrained_vector_fdiv_v2f64:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI1_0
+; SZ13-NEXT:    larl %r2, .LCPI1_1
 ; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    larl %r1, .LCPI1_1
-; SZ13-NEXT:    vl %v1, 0(%r1), 3
+; SZ13-NEXT:    vl %v1, 0(%r2), 3
 ; SZ13-NEXT:    vfddb %v24, %v1, %v0
 ; SZ13-NEXT:    br %r14
 entry:
@@ -76,9 +76,9 @@ define <3 x float> @constrained_vector_fdiv_v3f32() #0 {
 ; SZ13-LABEL: constrained_vector_fdiv_v3f32:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI2_0
-; SZ13-NEXT:    larl %r2, .LCPI2_1
 ; SZ13-NEXT:    lde %f0, 0(%r1)
-; SZ13-NEXT:    lde %f1, 0(%r2)
+; SZ13-NEXT:    larl %r1, .LCPI2_1
+; SZ13-NEXT:    lde %f1, 0(%r1)
 ; SZ13-NEXT:    debr %f1, %f0
 ; SZ13-NEXT:    vgmf %v2, 2, 8
 ; SZ13-NEXT:    vgmf %v3, 1, 1
@@ -159,13 +159,13 @@ define <4 x double> @constrained_vector_fdiv_v4f64() #0 {
 ; SZ13-LABEL: constrained_vector_fdiv_v4f64:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI4_0
+; SZ13-NEXT:    larl %r2, .LCPI4_1
+; SZ13-NEXT:    larl %r3, .LCPI4_2
 ; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    larl %r1, .LCPI4_1
-; SZ13-NEXT:    vl %v1, 0(%r1), 3
+; SZ13-NEXT:    vl %v1, 0(%r2), 3
 ; SZ13-NEXT:    vfddb %v26, %v1, %v0
-; SZ13-NEXT:    larl %r1, .LCPI4_2
-; SZ13-NEXT:    vl %v1, 0(%r1), 3
-; SZ13-NEXT:    vfddb %v24, %v1, %v0
+; SZ13-NEXT:    vl %v2, 0(%r3), 3
+; SZ13-NEXT:    vfddb %v24, %v2, %v0
 ; SZ13-NEXT:    br %r14
 entry:
   %div = call <4 x double> @llvm.experimental.constrained.fdiv.v4f64(
@@ -331,10 +331,10 @@ define <3 x float> @constrained_vector_frem_v3f32() #0 {
 ; SZ13-NEXT:    .cfi_def_cfa_offset 360
 ; SZ13-NEXT:    std %f8, 192(%r15) # 8-byte Spill
 ; SZ13-NEXT:    .cfi_offset %f8, -168
+; SZ13-NEXT:    larl %r2, .LCPI7_1
 ; SZ13-NEXT:    larl %r1, .LCPI7_0
+; SZ13-NEXT:    lde %f8, 0(%r2)
 ; SZ13-NEXT:    lde %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI7_1
-; SZ13-NEXT:    lde %f8, 0(%r1)
 ; SZ13-NEXT:    ldr %f2, %f8
 ; SZ13-NEXT:    brasl %r14, fmodf@PLT
 ; SZ13-NEXT:    # kill: def $f0s killed $f0s def $v0
@@ -596,9 +596,9 @@ define <2 x double> @constrained_vector_fmul_v2f64() #0 {
 ; SZ13-LABEL: constrained_vector_fmul_v2f64:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI11_0
+; SZ13-NEXT:    larl %r2, .LCPI11_1
 ; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    larl %r1, .LCPI11_1
-; SZ13-NEXT:    vl %v1, 0(%r1), 3
+; SZ13-NEXT:    vl %v1, 0(%r2), 3
 ; SZ13-NEXT:    vfmdb %v24, %v1, %v0
 ; SZ13-NEXT:    br %r14
 entry:
@@ -627,17 +627,17 @@ define <3 x float> @constrained_vector_fmul_v3f32() #0 {
 ;
 ; SZ13-LABEL: constrained_vector_fmul_v3f32:
 ; SZ13:       # %bb.0: # %entry
-; SZ13-NEXT:    larl %r1, .LCPI12_0
-; SZ13-NEXT:    vgmf %v1, 1, 8
-; SZ13-NEXT:    vgmf %v2, 2, 8
 ; SZ13-NEXT:    vgmf %v0, 1, 8
-; SZ13-NEXT:    meeb %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI12_1
-; SZ13-NEXT:    meebr %f2, %f1
+; SZ13-NEXT:    larl %r1, .LCPI12_0
+; SZ13-NEXT:    vgmf %v2, 2, 8
+; SZ13-NEXT:    vgmf %v1, 1, 8
 ; SZ13-NEXT:    meeb %f1, 0(%r1)
-; SZ13-NEXT:    vmrhf %v1, %v2, %v1
-; SZ13-NEXT:    vrepf %v0, %v0, 0
-; SZ13-NEXT:    vmrhg %v24, %v1, %v0
+; SZ13-NEXT:    larl %r1, .LCPI12_1
+; SZ13-NEXT:    meebr %f2, %f0
+; SZ13-NEXT:    meeb %f0, 0(%r1)
+; SZ13-NEXT:    vmrhf %v0, %v2, %v0
+; SZ13-NEXT:    vrepf %v1, %v1, 0
+; SZ13-NEXT:    vmrhg %v24, %v0, %v1
 ; SZ13-NEXT:    br %r14
 entry:
   %mul = call <3 x float> @llvm.experimental.constrained.fmul.v3f32(
@@ -709,13 +709,13 @@ define <4 x double> @constrained_vector_fmul_v4f64() #0 {
 ; SZ13-LABEL: constrained_vector_fmul_v4f64:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI14_0
+; SZ13-NEXT:    larl %r2, .LCPI14_1
+; SZ13-NEXT:    larl %r3, .LCPI14_2
 ; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    larl %r1, .LCPI14_1
-; SZ13-NEXT:    vl %v1, 0(%r1), 3
-; SZ13-NEXT:    larl %r1, .LCPI14_2
+; SZ13-NEXT:    vl %v1, 0(%r2), 3
+; SZ13-NEXT:    vl %v2, 0(%r3), 3
 ; SZ13-NEXT:    vfmdb %v26, %v1, %v0
-; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    vfmdb %v24, %v1, %v0
+; SZ13-NEXT:    vfmdb %v24, %v1, %v2
 ; SZ13-NEXT:    br %r14
 entry:
   %mul = call <4 x double> @llvm.experimental.constrained.fmul.v4f64(
@@ -768,9 +768,9 @@ define <2 x double> @constrained_vector_fadd_v2f64() #0 {
 ; SZ13-LABEL: constrained_vector_fadd_v2f64:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI16_0
+; SZ13-NEXT:    larl %r2, .LCPI16_1
 ; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    larl %r1, .LCPI16_1
-; SZ13-NEXT:    vl %v1, 0(%r1), 3
+; SZ13-NEXT:    vl %v1, 0(%r2), 3
 ; SZ13-NEXT:    vfadb %v24, %v1, %v0
 ; SZ13-NEXT:    br %r14
 entry:
@@ -879,13 +879,13 @@ define <4 x double> @constrained_vector_fadd_v4f64() #0 {
 ; SZ13-LABEL: constrained_vector_fadd_v4f64:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI19_0
+; SZ13-NEXT:    larl %r2, .LCPI19_1
+; SZ13-NEXT:    larl %r3, .LCPI19_2
 ; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    larl %r1, .LCPI19_1
-; SZ13-NEXT:    vl %v1, 0(%r1), 3
-; SZ13-NEXT:    larl %r1, .LCPI19_2
+; SZ13-NEXT:    vl %v1, 0(%r2), 3
+; SZ13-NEXT:    vl %v2, 0(%r3), 3
 ; SZ13-NEXT:    vfadb %v26, %v1, %v0
-; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    vfadb %v24, %v1, %v0
+; SZ13-NEXT:    vfadb %v24, %v1, %v2
 ; SZ13-NEXT:    br %r14
 entry:
   %add = call <4 x double> @llvm.experimental.constrained.fadd.v4f64(
@@ -968,17 +968,17 @@ define <3 x float> @constrained_vector_fsub_v3f32() #0 {
 ;
 ; SZ13-LABEL: constrained_vector_fsub_v3f32:
 ; SZ13:       # %bb.0: # %entry
-; SZ13-NEXT:    vgbm %v1, 61440
-; SZ13-NEXT:    lzer %f0
-; SZ13-NEXT:    sebr %f1, %f0
-; SZ13-NEXT:    vgmf %v0, 1, 1
 ; SZ13-NEXT:    vgbm %v2, 61440
-; SZ13-NEXT:    sebr %f2, %f0
+; SZ13-NEXT:    lzer %f1
+; SZ13-NEXT:    sebr %f2, %f1
+; SZ13-NEXT:    vgmf %v1, 1, 1
+; SZ13-NEXT:    vgbm %v3, 61440
 ; SZ13-NEXT:    vgbm %v0, 61440
-; SZ13-NEXT:    vgmf %v3, 2, 8
-; SZ13-NEXT:    sebr %f0, %f3
-; SZ13-NEXT:    vmrhf %v0, %v2, %v0
-; SZ13-NEXT:    vrepf %v1, %v1, 0
+; SZ13-NEXT:    sebr %f3, %f1
+; SZ13-NEXT:    vgmf %v1, 2, 8
+; SZ13-NEXT:    sebr %f0, %f1
+; SZ13-NEXT:    vmrhf %v0, %v3, %v0
+; SZ13-NEXT:    vrepf %v1, %v2, 0
 ; SZ13-NEXT:    vmrhg %v24, %v0, %v1
 ; SZ13-NEXT:    br %r14
 entry:
@@ -1049,12 +1049,12 @@ define <4 x double> @constrained_vector_fsub_v4f64() #0 {
 ; SZ13-LABEL: constrained_vector_fsub_v4f64:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI24_0
+; SZ13-NEXT:    larl %r2, .LCPI24_1
 ; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    vgmg %v1, 12, 10
-; SZ13-NEXT:    larl %r1, .LCPI24_1
-; SZ13-NEXT:    vfsdb %v26, %v1, %v0
-; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    vfsdb %v24, %v1, %v0
+; SZ13-NEXT:    vl %v1, 0(%r2), 3
+; SZ13-NEXT:    vgmg %v2, 12, 10
+; SZ13-NEXT:    vfsdb %v26, %v2, %v0
+; SZ13-NEXT:    vfsdb %v24, %v2, %v1
 ; SZ13-NEXT:    br %r14
 entry:
   %sub = call <4 x double> @llvm.experimental.constrained.fsub.v4f64(
@@ -1126,11 +1126,11 @@ define <3 x float> @constrained_vector_sqrt_v3f32() #0 {
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI27_0
 ; SZ13-NEXT:    sqeb %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI27_1
+; SZ13-NEXT:    larl %r2, .LCPI27_1
+; SZ13-NEXT:    larl %r3, .LCPI27_2
+; SZ13-NEXT:    sqeb %f1, 0(%r2)
 ; SZ13-NEXT:    vrepf %v0, %v0, 0
-; SZ13-NEXT:    sqeb %f1, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI27_2
-; SZ13-NEXT:    sqeb %f2, 0(%r1)
+; SZ13-NEXT:    sqeb %f2, 0(%r3)
 ; SZ13-NEXT:    vmrhf %v1, %v1, %v2
 ; SZ13-NEXT:    vmrhg %v24, %v1, %v0
 ; SZ13-NEXT:    br %r14
@@ -1187,11 +1187,11 @@ define <4 x double> @constrained_vector_sqrt_v4f64() #0 {
 ; SZ13-LABEL: constrained_vector_sqrt_v4f64:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI29_0
+; SZ13-NEXT:    larl %r2, .LCPI29_1
 ; SZ13-NEXT:    vl %v0, 0(%r1), 3
 ; SZ13-NEXT:    vfsqdb %v26, %v0
-; SZ13-NEXT:    larl %r1, .LCPI29_1
-; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    vfsqdb %v24, %v0
+; SZ13-NEXT:    vl %v1, 0(%r2), 3
+; SZ13-NEXT:    vfsqdb %v24, %v1
 ; SZ13-NEXT:    br %r14
  entry:
   %sqrt = call <4 x double> @llvm.experimental.constrained.sqrt.v4f64(
@@ -1226,9 +1226,9 @@ define <1 x float> @constrained_vector_pow_v1f32() #0 {
 ; SZ13-NEXT:    aghi %r15, -160
 ; SZ13-NEXT:    .cfi_def_cfa_offset 320
 ; SZ13-NEXT:    larl %r1, .LCPI30_0
+; SZ13-NEXT:    larl %r2, .LCPI30_1
 ; SZ13-NEXT:    lde %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI30_1
-; SZ13-NEXT:    lde %f2, 0(%r1)
+; SZ13-NEXT:    lde %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, powf@PLT
 ; SZ13-NEXT:    # kill: def $f0s killed $f0s def $v0
 ; SZ13-NEXT:    vlr %v24, %v0
@@ -1282,10 +1282,10 @@ define <2 x double> @constrained_vector_pow_v2f64() #0 {
 ; SZ13-NEXT:    .cfi_def_cfa_offset 344
 ; SZ13-NEXT:    std %f8, 176(%r15) # 8-byte Spill
 ; SZ13-NEXT:    .cfi_offset %f8, -168
+; SZ13-NEXT:    larl %r2, .LCPI31_1
 ; SZ13-NEXT:    larl %r1, .LCPI31_0
+; SZ13-NEXT:    ld %f8, 0(%r2)
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI31_1
-; SZ13-NEXT:    ld %f8, 0(%r1)
 ; SZ13-NEXT:    ldr %f2, %f8
 ; SZ13-NEXT:    brasl %r14, pow@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI31_2
@@ -1358,10 +1358,10 @@ define <3 x float> @constrained_vector_pow_v3f32() #0 {
 ; SZ13-NEXT:    .cfi_def_cfa_offset 360
 ; SZ13-NEXT:    std %f8, 192(%r15) # 8-byte Spill
 ; SZ13-NEXT:    .cfi_offset %f8, -168
+; SZ13-NEXT:    larl %r2, .LCPI32_1
 ; SZ13-NEXT:    larl %r1, .LCPI32_0
+; SZ13-NEXT:    lde %f8, 0(%r2)
 ; SZ13-NEXT:    lde %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI32_1
-; SZ13-NEXT:    lde %f8, 0(%r1)
 ; SZ13-NEXT:    ldr %f2, %f8
 ; SZ13-NEXT:    brasl %r14, powf@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI32_2
@@ -1548,10 +1548,10 @@ define <4 x double> @constrained_vector_pow_v4f64() #0 {
 ; SZ13-NEXT:    .cfi_def_cfa_offset 360
 ; SZ13-NEXT:    std %f8, 192(%r15) # 8-byte Spill
 ; SZ13-NEXT:    .cfi_offset %f8, -168
+; SZ13-NEXT:    larl %r2, .LCPI34_1
 ; SZ13-NEXT:    larl %r1, .LCPI34_0
+; SZ13-NEXT:    ld %f8, 0(%r2)
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI34_1
-; SZ13-NEXT:    ld %f8, 0(%r1)
 ; SZ13-NEXT:    ldr %f2, %f8
 ; SZ13-NEXT:    brasl %r14, pow@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI34_2
@@ -4544,9 +4544,9 @@ define <1 x float> @constrained_vector_maxnum_v1f32() #0 {
 ; SZ13-NEXT:    aghi %r15, -160
 ; SZ13-NEXT:    .cfi_def_cfa_offset 320
 ; SZ13-NEXT:    larl %r1, .LCPI85_0
+; SZ13-NEXT:    larl %r2, .LCPI85_1
 ; SZ13-NEXT:    lde %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI85_1
-; SZ13-NEXT:    lde %f2, 0(%r1)
+; SZ13-NEXT:    lde %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, fmaxf@PLT
 ; SZ13-NEXT:    # kill: def $f0s killed $f0s def $v0
 ; SZ13-NEXT:    vlr %v24, %v0
@@ -4594,16 +4594,16 @@ define <2 x double> @constrained_vector_maxnum_v2f64() #0 {
 ; SZ13-NEXT:    aghi %r15, -176
 ; SZ13-NEXT:    .cfi_def_cfa_offset 336
 ; SZ13-NEXT:    larl %r1, .LCPI86_0
+; SZ13-NEXT:    larl %r2, .LCPI86_1
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI86_1
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, fmax@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI86_2
+; SZ13-NEXT:    larl %r2, .LCPI86_3
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI86_3
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, fmax@PLT
 ; SZ13-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
@@ -4667,10 +4667,10 @@ define <3 x float> @constrained_vector_maxnum_v3f32() #0 {
 ; SZ13-NEXT:    .cfi_def_cfa_offset 360
 ; SZ13-NEXT:    std %f8, 192(%r15) # 8-byte Spill
 ; SZ13-NEXT:    .cfi_offset %f8, -168
+; SZ13-NEXT:    larl %r2, .LCPI87_1
 ; SZ13-NEXT:    larl %r1, .LCPI87_0
+; SZ13-NEXT:    lde %f8, 0(%r2)
 ; SZ13-NEXT:    lde %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI87_1
-; SZ13-NEXT:    lde %f8, 0(%r1)
 ; SZ13-NEXT:    ldr %f2, %f8
 ; SZ13-NEXT:    brasl %r14, fmaxf@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI87_2
@@ -4680,11 +4680,11 @@ define <3 x float> @constrained_vector_maxnum_v3f32() #0 {
 ; SZ13-NEXT:    ldr %f0, %f8
 ; SZ13-NEXT:    brasl %r14, fmaxf@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI87_3
+; SZ13-NEXT:    larl %r2, .LCPI87_4
 ; SZ13-NEXT:    # kill: def $f0s killed $f0s def $v0
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    lde %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI87_4
-; SZ13-NEXT:    lde %f2, 0(%r1)
+; SZ13-NEXT:    lde %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, fmaxf@PLT
 ; SZ13-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
 ; SZ13-NEXT:    # kill: def $f0s killed $f0s def $v0
@@ -4850,32 +4850,33 @@ define <4 x double> @constrained_vector_maxnum_v4f64() #0 {
 ; SZ13-NEXT:    aghi %r15, -192
 ; SZ13-NEXT:    .cfi_def_cfa_offset 352
 ; SZ13-NEXT:    larl %r1, .LCPI89_0
+; SZ13-NEXT:    larl %r2, .LCPI89_1
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI89_1
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, fmax@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI89_2
+; SZ13-NEXT:    larl %r2, .LCPI89_3
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI89_3
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, fmax@PLT
-; SZ13-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
-; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
-; SZ13-NEXT:    vmrhg %v0, %v0, %v1
+; SZ13-NEXT:    vl %v3, 160(%r15), 3 # 16-byte Reload
 ; SZ13-NEXT:    larl %r1, .LCPI89_4
+; SZ13-NEXT:    larl %r2, .LCPI89_5
+; SZ13-NEXT:    ld %f1, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
+; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
+; SZ13-NEXT:    vmrhg %v0, %v0, %v3
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
-; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI89_5
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ldr %f0, %f1
 ; SZ13-NEXT:    brasl %r14, fmax@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI89_6
+; SZ13-NEXT:    larl %r2, .LCPI89_7
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
 ; SZ13-NEXT:    vst %v0, 176(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI89_7
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, fmax@PLT
 ; SZ13-NEXT:    vl %v1, 176(%r15), 3 # 16-byte Reload
 ; SZ13-NEXT:    vl %v24, 160(%r15), 3 # 16-byte Reload
@@ -4917,9 +4918,9 @@ define <1 x float> @constrained_vector_minnum_v1f32() #0 {
 ; SZ13-NEXT:    aghi %r15, -160
 ; SZ13-NEXT:    .cfi_def_cfa_offset 320
 ; SZ13-NEXT:    larl %r1, .LCPI90_0
+; SZ13-NEXT:    larl %r2, .LCPI90_1
 ; SZ13-NEXT:    lde %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI90_1
-; SZ13-NEXT:    lde %f2, 0(%r1)
+; SZ13-NEXT:    lde %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, fminf@PLT
 ; SZ13-NEXT:    # kill: def $f0s killed $f0s def $v0
 ; SZ13-NEXT:    vlr %v24, %v0
@@ -4967,16 +4968,16 @@ define <2 x double> @constrained_vector_minnum_v2f64() #0 {
 ; SZ13-NEXT:    aghi %r15, -176
 ; SZ13-NEXT:    .cfi_def_cfa_offset 336
 ; SZ13-NEXT:    larl %r1, .LCPI91_0
+; SZ13-NEXT:    larl %r2, .LCPI91_1
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI91_1
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, fmin@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI91_2
+; SZ13-NEXT:    larl %r2, .LCPI91_3
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI91_3
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, fmin@PLT
 ; SZ13-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
@@ -5040,10 +5041,10 @@ define <3 x float> @constrained_vector_minnum_v3f32() #0 {
 ; SZ13-NEXT:    .cfi_def_cfa_offset 360
 ; SZ13-NEXT:    std %f8, 192(%r15) # 8-byte Spill
 ; SZ13-NEXT:    .cfi_offset %f8, -168
+; SZ13-NEXT:    larl %r2, .LCPI92_1
 ; SZ13-NEXT:    larl %r1, .LCPI92_0
+; SZ13-NEXT:    lde %f8, 0(%r2)
 ; SZ13-NEXT:    lde %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI92_1
-; SZ13-NEXT:    lde %f8, 0(%r1)
 ; SZ13-NEXT:    ldr %f2, %f8
 ; SZ13-NEXT:    brasl %r14, fminf@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI92_2
@@ -5053,11 +5054,11 @@ define <3 x float> @constrained_vector_minnum_v3f32() #0 {
 ; SZ13-NEXT:    ldr %f0, %f8
 ; SZ13-NEXT:    brasl %r14, fminf@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI92_3
+; SZ13-NEXT:    larl %r2, .LCPI92_4
 ; SZ13-NEXT:    # kill: def $f0s killed $f0s def $v0
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    lde %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI92_4
-; SZ13-NEXT:    lde %f2, 0(%r1)
+; SZ13-NEXT:    lde %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, fminf@PLT
 ; SZ13-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
 ; SZ13-NEXT:    # kill: def $f0s killed $f0s def $v0
@@ -5227,32 +5228,33 @@ define <4 x double> @constrained_vector_minnum_v4f64() #0 {
 ; SZ13-NEXT:    aghi %r15, -192
 ; SZ13-NEXT:    .cfi_def_cfa_offset 352
 ; SZ13-NEXT:    larl %r1, .LCPI94_0
+; SZ13-NEXT:    larl %r2, .LCPI94_1
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI94_1
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, fmin@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI94_2
+; SZ13-NEXT:    larl %r2, .LCPI94_3
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI94_3
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, fmin@PLT
-; SZ13-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
-; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
-; SZ13-NEXT:    vmrhg %v0, %v0, %v1
+; SZ13-NEXT:    vl %v3, 160(%r15), 3 # 16-byte Reload
 ; SZ13-NEXT:    larl %r1, .LCPI94_4
+; SZ13-NEXT:    larl %r2, .LCPI94_5
+; SZ13-NEXT:    ld %f1, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
+; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
+; SZ13-NEXT:    vmrhg %v0, %v0, %v3
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
-; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI94_5
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ldr %f0, %f1
 ; SZ13-NEXT:    brasl %r14, fmin@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI94_6
+; SZ13-NEXT:    larl %r2, .LCPI94_7
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
 ; SZ13-NEXT:    vst %v0, 176(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI94_7
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, fmin@PLT
 ; SZ13-NEXT:    vl %v1, 176(%r15), 3 # 16-byte Reload
 ; SZ13-NEXT:    vl %v24, 160(%r15), 3 # 16-byte Reload
@@ -5306,9 +5308,9 @@ define <2 x float> @constrained_vector_fptrunc_v2f64() #0 {
 ; SZ13-LABEL: constrained_vector_fptrunc_v2f64:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI96_0
+; SZ13-NEXT:    larl %r2, .LCPI96_1
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI96_1
-; SZ13-NEXT:    ld %f1, 0(%r1)
+; SZ13-NEXT:    ld %f1, 0(%r2)
 ; SZ13-NEXT:    ledbra %f0, 0, %f0, 0
 ; SZ13-NEXT:    ledbra %f1, 0, %f1, 0
 ; SZ13-NEXT:    vmrhf %v0, %v1, %v0
@@ -5342,15 +5344,15 @@ define void @constrained_vector_fptrunc_v3f64(ptr %src, ptr %dest) #0 {
 ;
 ; SZ13-LABEL: constrained_vector_fptrunc_v3f64:
 ; SZ13:       # %bb.0: # %entry
-; SZ13-NEXT:    vl %v0, 0(%r2), 4
-; SZ13-NEXT:    ld %f1, 16(%r2)
-; SZ13-NEXT:    vledb %v0, %v0, 0, 0
+; SZ13-NEXT:    vl %v1, 0(%r2), 4
+; SZ13-NEXT:    ld %f0, 16(%r2)
+; SZ13-NEXT:    vledb %v1, %v1, 0, 0
 ; SZ13-NEXT:    larl %r1, .LCPI97_0
-; SZ13-NEXT:    ledbra %f1, 0, %f1, 0
+; SZ13-NEXT:    ledbra %f0, 0, %f0, 0
 ; SZ13-NEXT:    vl %v2, 0(%r1), 3
-; SZ13-NEXT:    vperm %v0, %v0, %v0, %v2
-; SZ13-NEXT:    ste %f1, 8(%r3)
-; SZ13-NEXT:    vsteg %v0, 0(%r3), 0
+; SZ13-NEXT:    vperm %v1, %v1, %v1, %v2
+; SZ13-NEXT:    ste %f0, 8(%r3)
+; SZ13-NEXT:    vsteg %v1, 0(%r3), 0
 ; SZ13-NEXT:    br %r14
 entry:
   %b = load <3 x double>, ptr %src
@@ -5438,9 +5440,9 @@ define <2 x double> @constrained_vector_fpext_v2f32() #0 {
 ; SZ13-LABEL: constrained_vector_fpext_v2f32:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI100_0
+; SZ13-NEXT:    larl %r2, .LCPI100_1
 ; SZ13-NEXT:    ldeb %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI100_1
-; SZ13-NEXT:    ldeb %f1, 0(%r1)
+; SZ13-NEXT:    ldeb %f1, 0(%r2)
 ; SZ13-NEXT:    vmrhg %v24, %v1, %v0
 ; SZ13-NEXT:    br %r14
 entry:
@@ -6722,9 +6724,9 @@ define <1 x float> @constrained_vector_atan2_v1f32() #0 {
 ; SZ13-NEXT:    aghi %r15, -160
 ; SZ13-NEXT:    .cfi_def_cfa_offset 320
 ; SZ13-NEXT:    larl %r1, .LCPI128_0
+; SZ13-NEXT:    larl %r2, .LCPI128_1
 ; SZ13-NEXT:    lde %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI128_1
-; SZ13-NEXT:    lde %f2, 0(%r1)
+; SZ13-NEXT:    lde %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, atan2f@PLT
 ; SZ13-NEXT:    # kill: def $f0s killed $f0s def $v0
 ; SZ13-NEXT:    vlr %v24, %v0
@@ -6774,16 +6776,16 @@ define <2 x double> @constrained_vector_atan2_v2f64() #0 {
 ; SZ13-NEXT:    aghi %r15, -176
 ; SZ13-NEXT:    .cfi_def_cfa_offset 336
 ; SZ13-NEXT:    larl %r1, .LCPI129_0
+; SZ13-NEXT:    larl %r2, .LCPI129_1
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI129_1
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, atan2@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI129_2
+; SZ13-NEXT:    larl %r2, .LCPI129_3
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI129_3
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, atan2@PLT
 ; SZ13-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
@@ -6845,23 +6847,23 @@ define <3 x float> @constrained_vector_atan2_v3f32() #0 {
 ; SZ13-NEXT:    aghi %r15, -192
 ; SZ13-NEXT:    .cfi_def_cfa_offset 352
 ; SZ13-NEXT:    larl %r1, .LCPI130_0
+; SZ13-NEXT:    larl %r2, .LCPI130_1
 ; SZ13-NEXT:    lde %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI130_1
-; SZ13-NEXT:    lde %f2, 0(%r1)
+; SZ13-NEXT:    lde %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, atan2f@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI130_2
+; SZ13-NEXT:    larl %r2, .LCPI130_3
 ; SZ13-NEXT:    # kill: def $f0s killed $f0s def $v0
 ; SZ13-NEXT:    vst %v0, 176(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    lde %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI130_3
-; SZ13-NEXT:    lde %f2, 0(%r1)
+; SZ13-NEXT:    lde %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, atan2f@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI130_4
+; SZ13-NEXT:    larl %r2, .LCPI130_5
 ; SZ13-NEXT:    # kill: def $f0s killed $f0s def $v0
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    lde %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI130_5
-; SZ13-NEXT:    lde %f2, 0(%r1)
+; SZ13-NEXT:    lde %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, atan2f@PLT
 ; SZ13-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
 ; SZ13-NEXT:    # kill: def $f0s killed $f0s def $v0
@@ -7039,32 +7041,33 @@ define <4 x double> @constrained_vector_atan2_v4f64() #0 {
 ; SZ13-NEXT:    aghi %r15, -192
 ; SZ13-NEXT:    .cfi_def_cfa_offset 352
 ; SZ13-NEXT:    larl %r1, .LCPI132_0
+; SZ13-NEXT:    larl %r2, .LCPI132_1
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI132_1
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, atan2@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI132_2
+; SZ13-NEXT:    larl %r2, .LCPI132_3
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI132_3
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, atan2@PLT
-; SZ13-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
-; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
-; SZ13-NEXT:    vmrhg %v0, %v0, %v1
+; SZ13-NEXT:    vl %v3, 160(%r15), 3 # 16-byte Reload
 ; SZ13-NEXT:    larl %r1, .LCPI132_4
+; SZ13-NEXT:    larl %r2, .LCPI132_5
+; SZ13-NEXT:    ld %f1, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
+; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
+; SZ13-NEXT:    vmrhg %v0, %v0, %v3
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
-; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI132_5
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ldr %f0, %f1
 ; SZ13-NEXT:    brasl %r14, atan2@PLT
 ; SZ13-NEXT:    larl %r1, .LCPI132_6
+; SZ13-NEXT:    larl %r2, .LCPI132_7
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
 ; SZ13-NEXT:    vst %v0, 176(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ld %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI132_7
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    ld %f2, 0(%r2)
 ; SZ13-NEXT:    brasl %r14, atan2@PLT
 ; SZ13-NEXT:    vl %v1, 176(%r15), 3 # 16-byte Reload
 ; SZ13-NEXT:    vl %v24, 160(%r15), 3 # 16-byte Reload

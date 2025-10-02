@@ -14,9 +14,8 @@
 # it.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun0:%bb.0
-# CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      Has StoresGroup of 9 stores.
+# CHECK:      Latency scheduling not enabled for data sequences.
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK-NEXT: SU(0):   %0:addr64bit = COPY $r3d
 # CHECK-NEXT: SU(1):   %1:addr64bit = COPY $r2d
@@ -86,9 +85,8 @@ body:             |
 # register live.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun1:%bb.0
-# CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      Has StoresGroup of 8 stores.
+# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK-NEXT: SU(0):   %0:addr64bit = COPY $r3d
 # CHECK-NEXT: SU(1):   %1:addr64bit = COPY $r2d
@@ -157,9 +155,8 @@ body:             |
 # Test that stores are not rescheduled in smaller groups.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun2:%bb.0
-# CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      No StoresGroup.
+# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK-NEXT: SU(0):   %0:addr64bit = COPY $r3d
 # CHECK-NEXT: SU(1):   %1:addr64bit = COPY $r2d
