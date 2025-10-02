@@ -63,13 +63,14 @@ defm SD : SRL_r_aq_rl<0b011, "sd">;
 //===----------------------------------------------------------------------===//
 
 class PatLAQ<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
-    : Pat<(vt (OpNode (vt GPRMemZeroOffset:$rs1))), (Inst GPRMemZeroOffset:$rs1)>;
+    : Pat<(vt (OpNode (XLenVT GPRMemZeroOffset:$rs1))),
+          (Inst GPRMemZeroOffset:$rs1)>;
 
 // n.b. this switches order of arguments
 //  to deal with the fact that SRL has addr, data
 //  while atomic_store has data, addr
 class PatSRL<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
-    : Pat<(OpNode (vt GPR:$rs2), (vt GPRMemZeroOffset:$rs1)),
+    : Pat<(OpNode (vt GPR:$rs2), (XLenVT GPRMemZeroOffset:$rs1)),
           (Inst GPRMemZeroOffset:$rs1, GPR:$rs2)>;
 
 

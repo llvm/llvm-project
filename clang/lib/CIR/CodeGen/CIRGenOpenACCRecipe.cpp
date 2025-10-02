@@ -435,7 +435,7 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
     mlir::Location loc, mlir::Location locEnd, SourceRange exprRange,
     mlir::Value mainOp, mlir::acc::PrivateRecipeOp recipe, size_t numBounds,
     llvm::ArrayRef<QualType> boundTypes, const VarDecl *allocaDecl,
-    QualType origType, const Expr *initExpr) {
+    QualType origType) {
   assert(allocaDecl && "Required recipe variable not set?");
   CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, allocaDecl};
 
@@ -473,9 +473,10 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
 
     // If the initializer is trivial, there is nothing to do here, so save
     // ourselves some effort.
-    if (initExpr && (!cgf.isTrivialInitializer(initExpr) ||
-                     cgf.getContext().getLangOpts().getTrivialAutoVarInit() !=
-                         LangOptions::TrivialAutoVarInitKind::Uninitialized))
+    if (allocaDecl->getInit() &&
+        (!cgf.isTrivialInitializer(allocaDecl->getInit()) ||
+         cgf.getContext().getLangOpts().getTrivialAutoVarInit() !=
+             LangOptions::TrivialAutoVarInitKind::Uninitialized))
       makeBoundsInit(alloca, loc, block, allocaDecl, origType,
                      /*isInitSection=*/true);
   }

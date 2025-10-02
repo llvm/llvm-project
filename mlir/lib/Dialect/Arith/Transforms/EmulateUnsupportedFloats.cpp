@@ -123,7 +123,8 @@ void mlir::arith::populateEmulateUnsupportedFloatsLegality(
                                vector::OuterProductOp, vector::ScanOp>(
       [&](Operation *op) { return converter.isLegal(op); });
   target.addLegalOp<arith::BitcastOp, arith::ExtFOp, arith::TruncFOp,
-                    arith::ConstantOp, vector::SplatOp, vector::BroadcastOp>();
+                    arith::ConstantOp, arith::SelectOp, vector::SplatOp,
+                    vector::BroadcastOp>();
 }
 
 void EmulateUnsupportedFloatsPass::runOnOperation() {

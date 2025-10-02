@@ -125,24 +125,6 @@ bool llvm::memprof::hasSingleAllocType(uint8_t AllocTypes) {
   return NumAllocTypes == 1;
 }
 
-void llvm::memprof::removeAnyExistingAmbiguousAttribute(CallBase *CB) {
-  if (!CB->hasFnAttr("memprof"))
-    return;
-  assert(CB->getFnAttr("memprof").getValueAsString() == "ambiguous");
-  CB->removeFnAttr("memprof");
-}
-
-void llvm::memprof::addAmbiguousAttribute(CallBase *CB) {
-  // We may have an existing ambiguous attribute if we are reanalyzing
-  // after inlining.
-  if (CB->hasFnAttr("memprof")) {
-    assert(CB->getFnAttr("memprof").getValueAsString() == "ambiguous");
-  } else {
-    auto A = llvm::Attribute::get(CB->getContext(), "memprof", "ambiguous");
-    CB->addFnAttr(A);
-  }
-}
-
 void CallStackTrie::addCallStack(
     AllocationType AllocType, ArrayRef<uint64_t> StackIds,
     std::vector<ContextTotalSize> ContextSizeInfo) {
@@ -488,9 +470,6 @@ void CallStackTrie::addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
                                                 StringRef Descriptor) {
   auto AllocTypeString = getAllocTypeAttributeString(AT);
   auto A = llvm::Attribute::get(CI->getContext(), "memprof", AllocTypeString);
-  // After inlining we may be able to convert an existing ambiguous allocation
-  // to an unambiguous one.
-  removeAnyExistingAmbiguousAttribute(CI);
   CI->addFnAttr(A);
   if (MemProfReportHintedSizes) {
     std::vector<ContextTotalSize> ContextSizeInfo;
@@ -550,7 +529,6 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
     assert(MIBCallStack.size() == 1 &&
            "Should only be left with Alloc's location in stack");
     CI->setMetadata(LLVMContext::MD_memprof, MDNode::get(Ctx, MIBNodes));
-    addAmbiguousAttribute(CI);
     return true;
   }
   // If there exists corner case that CallStackTrie has one chain to leaf

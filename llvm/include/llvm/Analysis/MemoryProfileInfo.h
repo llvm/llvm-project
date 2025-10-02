@@ -59,14 +59,6 @@ LLVM_ABI std::string getAllocTypeAttributeString(AllocationType Type);
 /// True if the AllocTypes bitmask contains just a single type.
 LLVM_ABI bool hasSingleAllocType(uint8_t AllocTypes);
 
-/// Removes any existing "ambiguous" memprof attribute. Called before we apply a
-/// specific allocation type such as "cold", "notcold", or "hot".
-LLVM_ABI void removeAnyExistingAmbiguousAttribute(CallBase *CB);
-
-/// Adds an "ambiguous" memprof attribute to call with a matched allocation
-/// profile but that we haven't yet been able to disambiguate.
-LLVM_ABI void addAmbiguousAttribute(CallBase *CB);
-
 /// Class to build a trie of call stack contexts for a particular profiled
 /// allocation call, along with their associated allocation types.
 /// The allocation will be at the root of the trie, which is then used to
