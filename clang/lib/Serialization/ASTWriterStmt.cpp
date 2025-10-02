@@ -482,20 +482,14 @@ addConstraintSatisfaction(ASTRecordWriter &Record,
   if (!Satisfaction.IsSatisfied) {
     Record.push_back(Satisfaction.NumRecords);
     for (const auto &DetailRecord : Satisfaction) {
-      if (auto *Diag = dyn_cast<const ConstraintSubstitutionDiagnostic *>(
-              DetailRecord)) {
-        Record.push_back(/*Kind=*/0);
+      auto *E = dyn_cast<Expr *>(DetailRecord);
+      Record.push_back(/* IsDiagnostic */ E == nullptr);
+      if (E)
+        Record.AddStmt(E);
+      else {
+        auto *Diag = cast<std::pair<SourceLocation, StringRef> *>(DetailRecord);
         Record.AddSourceLocation(Diag->first);
         Record.AddString(Diag->second);
-        continue;
-      }
-      if (auto *E = dyn_cast<const Expr *>(DetailRecord)) {
-        Record.push_back(/*Kind=*/1);
-        Record.AddStmt(const_cast<Expr *>(E));
-      } else {
-        Record.push_back(/*Kind=*/2);
-        auto *CR = cast<const ConceptReference *>(DetailRecord);
-        Record.AddConceptReference(CR);
       }
     }
   }

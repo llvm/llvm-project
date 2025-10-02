@@ -801,7 +801,7 @@ public:
       AccPrivate, AccFirstPrivate, AccShared,
       // OpenACC data-mapping attribute
       AccCopy, AccCopyIn, AccCopyInReadOnly, AccCopyOut, AccCreate, AccDelete,
-      AccPresent, AccLink, AccDeviceResident, AccDevicePtr,
+      AccPresent, AccLink, AccDeviceResident, AccDevicePtr, AccUseDevice,
       // OpenACC declare
       AccDeclare,
       // OpenACC data-movement attribute

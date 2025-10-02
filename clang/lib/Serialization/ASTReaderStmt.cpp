@@ -807,19 +807,15 @@ readConstraintSatisfaction(ASTRecordReader &Record) {
   if (!Satisfaction.IsSatisfied) {
     unsigned NumDetailRecords = Record.readInt();
     for (unsigned i = 0; i != NumDetailRecords; ++i) {
-      auto Kind = Record.readInt();
-      if (Kind == 0) {
+      if (/* IsDiagnostic */Record.readInt()) {
         SourceLocation DiagLocation = Record.readSourceLocation();
         StringRef DiagMessage = C.backupStr(Record.readString());
 
-        Satisfaction.Details.emplace_back(new (
-            C) ConstraintSubstitutionDiagnostic(DiagLocation, DiagMessage));
-      } else if (Kind == 1) {
+        Satisfaction.Details.emplace_back(
+            new (C) ConstraintSatisfaction::SubstitutionDiagnostic(
+                DiagLocation, DiagMessage));
+      } else
         Satisfaction.Details.emplace_back(Record.readExpr());
-      } else {
-        assert(Kind == 2);
-        Satisfaction.Details.emplace_back(Record.readConceptReference());
-      }
     }
   }
   return Satisfaction;

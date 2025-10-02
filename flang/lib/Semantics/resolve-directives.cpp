@@ -328,6 +328,11 @@ public:
     return false;
   }
 
+  bool Pre(const parser::AccClause::UseDevice &x) {
+    ResolveAccObjectList(x.v, Symbol::Flag::AccUseDevice);
+    return false;
+  }
+
   void Post(const parser::Name &);
 
 private:

@@ -234,25 +234,21 @@ enum class TemplateSubstitutionKind : char {
     /// Replaces the current 'innermost' level with the provided argument list.
     /// This is useful for type deduction cases where we need to get the entire
     /// list from the AST, but then add the deduced innermost list.
-    void replaceInnermostTemplateArguments(Decl *AssociatedDecl, ArgList Args,
-                                           bool Final = false) {
+    void replaceInnermostTemplateArguments(Decl *AssociatedDecl, ArgList Args) {
       assert((!TemplateArgumentLists.empty() || NumRetainedOuterLevels) &&
              "Replacing in an empty list?");
 
       if (!TemplateArgumentLists.empty()) {
+        assert((TemplateArgumentLists[0].AssociatedDeclAndFinal.getPointer() ||
+                TemplateArgumentLists[0].AssociatedDeclAndFinal.getPointer() ==
+                    AssociatedDecl) &&
+               "Trying to change incorrect declaration?");
         TemplateArgumentLists[0].Args = Args;
-        return;
+      } else {
+        --NumRetainedOuterLevels;
+        TemplateArgumentLists.push_back(
+            {{AssociatedDecl, /*Final=*/false}, Args});
       }
-      --NumRetainedOuterLevels;
-      TemplateArgumentLists.push_back(
-          {{AssociatedDecl, /*Final=*/Final}, Args});
-    }
-
-    void replaceOutermostTemplateArguments(Decl *AssociatedDecl, ArgList Args) {
-      assert((!TemplateArgumentLists.empty()) && "Replacing in an empty list?");
-      TemplateArgumentLists.back().AssociatedDeclAndFinal.setPointer(
-          AssociatedDecl);
-      TemplateArgumentLists.back().Args = Args;
     }
 
     /// Add an outermost level that we are not substituting. We have no

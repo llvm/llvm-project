@@ -260,6 +260,10 @@ public:
     return lookupSymbol(*sym);
   }
 
+  /// Find a symbol by name and return its value if it appears in the current
+  /// mappings. This lookup is more expensive as it iterates over the map.
+  const semantics::Symbol *lookupSymbolByName(llvm::StringRef symName);
+
   /// Find `symbol` and return its value if it appears in the inner-most level
   /// map.
   SymbolBox shallowLookupSymbol(semantics::SymbolRef sym);

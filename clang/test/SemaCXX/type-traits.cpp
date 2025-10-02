@@ -5129,12 +5129,12 @@ namespace GH121278 {
 #if __cplusplus >= 202002L
 template <typename B, typename D>
 concept C = __is_base_of(B, D);
-// expected-error@-1 {{incomplete type 'S' used in type trait expression}}
+// expected-error@-1 {{incomplete type 'GH121278::S' used in type trait expression}}
 // expected-note@-2 {{while substituting template arguments into constraint expression here}}
 
 struct T;
 struct S;
 bool b = C<T, S>;
-// expected-note@-1 {{while checking the satisfaction of concept 'C<T, S>' requested here}}
+// expected-note@-1 {{while checking the satisfaction of concept 'C<GH121278::T, GH121278::S>' requested here}}
 #endif
 }
