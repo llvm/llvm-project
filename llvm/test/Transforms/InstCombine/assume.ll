@@ -1056,12 +1056,13 @@ define i1 @neg_assume_trunc_eq_one(i8 %x) {
   ret i1 %q
 }
 
-; Test AMDGPU ballot uniformity pattern optimization  
-; This demonstrates that assume(ballot(cmp) == -1) enables the optimization
-; of cmp to true, which then optimizes the branch condition
+; Test AMDGPU ballot pattern optimization  
+; assume(ballot(cmp) == -1) means cmp is true on all active lanes
+; so dominated uses of cmp can be replaced with true
 define void @assume_ballot_uniform(i32 %x) {
 ; CHECK-LABEL: @assume_ballot_uniform(
-; CHECK-NEXT:    [[BALLOT:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[BALLOT:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 ; CHECK-NEXT:    [[ALL:%.*]] = icmp eq i64 [[BALLOT]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ALL]])
 ; CHECK-NEXT:    br i1 true, label [[FOO:%.*]], label [[BAR:%.*]]
