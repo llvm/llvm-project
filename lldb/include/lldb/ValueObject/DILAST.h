@@ -33,6 +33,8 @@ enum class NodeKind {
 enum class UnaryOpKind {
   AddrOf, // "&"
   Deref,  // "*"
+  Minus,  // "-"
+  Plus,   // "+"
 };
 
 /// Forward declaration, for use in DIL AST nodes. Definition is at the very
