@@ -586,12 +586,15 @@ computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
 }
 
 std::unique_ptr<DependencyOutputOptions>
-getDependencyOutputOptions(CompilerInstance &ScanInstance) {
+takeDependencyOutputOptionsFrom(CompilerInstance &ScanInstance) {
   // This function moves the existing dependency output options from the
   // invocation to the collector. The options in the invocation are reset,
   // which ensures that the compiler won't create new dependency collectors,
   // and thus won't write out the extra '.d' files to disk.
   auto Opts = std::make_unique<DependencyOutputOptions>();
+
+  // We need at least one -MT equivalent for the generator of make dependency
+  // files to work.
   std::swap(*Opts, ScanInstance.getInvocation().getDependencyOutputOpts());
   if (Opts->Targets.empty())
     Opts->Targets = {deduceDepTarget(ScanInstance.getFrontendOpts().OutputFile,
@@ -603,29 +606,24 @@ getDependencyOutputOptions(CompilerInstance &ScanInstance) {
 
 std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
     CompilerInstance &ScanInstance,
-    const DependencyOutputOptions &DepOutputOpts, StringRef WorkingDirectory,
-    DependencyConsumer &Consumer, DependencyScanningService &Service,
-    CompilerInvocation &Inv, DependencyActionController &Controller,
+    std::unique_ptr<DependencyOutputOptions> DepOutputOpts,
+    StringRef WorkingDirectory, DependencyConsumer &Consumer,
+    DependencyScanningService &Service, CompilerInvocation &Inv,
+    DependencyActionController &Controller,
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
     llvm::SmallVector<StringRef> &StableDirs) {
-  // Create the dependency collector that will collect the produced
-  // dependencies. May return the created ModuleDepCollector depending
-  // on the scanning format.
-
-  auto Opts = std::make_unique<DependencyOutputOptions>(DepOutputOpts);
-
   std::shared_ptr<ModuleDepCollector> MDC;
   switch (Service.getFormat()) {
   case ScanningOutputFormat::Make:
     ScanInstance.addDependencyCollector(
         std::make_shared<DependencyConsumerForwarder>(
-            std::move(Opts), WorkingDirectory, Consumer));
+            std::move(DepOutputOpts), WorkingDirectory, Consumer));
     break;
   case ScanningOutputFormat::P1689:
   case ScanningOutputFormat::Full:
     MDC = std::make_shared<ModuleDepCollector>(
-        Service, std::move(Opts), ScanInstance, Consumer, Controller, Inv,
-        std::move(PrebuiltModulesASTMap), StableDirs);
+        Service, std::move(DepOutputOpts), ScanInstance, Consumer, Controller,
+        Inv, std::move(PrebuiltModulesASTMap), StableDirs);
     ScanInstance.addDependencyCollector(MDC);
     break;
   }
@@ -676,11 +674,12 @@ bool DependencyScanningAction::runInvocation(
   if (!MaybePrebuiltModulesASTMap)
     return false;
 
-  auto DepOutputOpts = getDependencyOutputOptions(ScanInstance);
+  auto DepOutputOpts = takeDependencyOutputOptionsFrom(ScanInstance);
 
   MDC = initializeScanInstanceDependencyCollector(
-      ScanInstance, *DepOutputOpts, WorkingDirectory, Consumer, Service,
-      OriginalInvocation, Controller, *MaybePrebuiltModulesASTMap, StableDirs);
+      ScanInstance, std::move(DepOutputOpts), WorkingDirectory, Consumer,
+      Service, OriginalInvocation, Controller, *MaybePrebuiltModulesASTMap,
+      StableDirs);
 
   std::unique_ptr<FrontendAction> Action;
 
