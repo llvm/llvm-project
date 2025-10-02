@@ -561,6 +561,35 @@ struct Derived : Base {
 
 } // namespace ns_retained_return_value
 
+namespace template_function {
+
+class Base {
+public:
+    virtual ~Base() = default;
+    void send(dispatch_queue_t) const;
+    void ref() const;
+    void deref() const;
+};
+
+template<typename Traits>
+class Derived : public Base {
+public:
+    virtual ~Derived() = default;
+
+    void send(typename Traits::MessageType) const;
+
+    virtual OSObjectPtr<dispatch_queue_t> msg(typename Traits::MessageType) const = 0;
+};
+
+template<typename Traits>
+void Derived<Traits>::send(typename Traits::MessageType messageType) const
+{
+    OSObjectPtr dictionary = msg(messageType);
+    Base::send(dictionary.get());
+}
+
+} // namespace template_function
+
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
