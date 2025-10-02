@@ -755,12 +755,10 @@ public:
                     const CodeGenOptions *CodeGenOpts = nullptr);
 
   /// Create the file manager and replace any existing one with it.
-  ///
-  /// \return The new file manager on success, or null on failure.
-  FileManager *createFileManager();
+  void createFileManager();
 
   /// Create the source manager and replace any existing one with it.
-  void createSourceManager(FileManager &FileMgr);
+  void createSourceManager();
 
   /// Create the preprocessor, using the invocation, file, and source managers,
   /// and replace any existing one with it.

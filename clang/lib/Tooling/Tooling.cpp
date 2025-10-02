@@ -457,7 +457,7 @@ bool FrontendActionFactory::runInvocation(
   if (!Compiler.hasDiagnostics())
     return false;
 
-  Compiler.createSourceManager(*Files);
+  Compiler.createSourceManager();
 
   const bool Success = Compiler.ExecuteAction(*ScopedToolAction);
 
