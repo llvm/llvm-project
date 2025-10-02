@@ -65,15 +65,23 @@ struct t1 {
   constexpr t1(int) { }
 };
 extern const t1 v1;
-__attribute__((section("non_trivial_ctor"))) const t1 v1; // expected-note {{declared here}}
+__attribute__((section("non_trivial_ctor"))) const t1 v1; // expected-note 2 {{declared here}}
 extern const t1 v2;
 __attribute__((section("non_trivial_ctor"))) const t1 v2{3}; // expected-error {{'v2' causes a section type conflict with 'v1'}}
 } // namespace non_trivial_ctor
 
-namespace incomplete_type {
+namespace dependent_context {
 template <class T>
 struct A {
   struct B;
-  static constexpr B b{nullptr};
+  static constexpr B b{nullptr}; // This used to crash.
 };
+
+template <class T>
+struct C {
+  __attribute__((section("non_trivial_ctor")))
+  static constexpr int m{123}; // expected-error {{'m' causes a section type conflict with 'v1'}}
+};
+
+auto *p = &C<int>::m; // expected-note {{in instantiation of static data member 'dependent_context::C<int>::m' requested here}}
 }
