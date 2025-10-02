@@ -439,7 +439,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_coro_end:
   case Builtin::BI__builtin_coro_suspend:
   case Builtin::BI__builtin_coro_align:
-    llvm_unreachable("BI__builtin_coro_id like NYI");
+    llvm_unreachable("Error NYI");
 
   case Builtin::BI__builtin_coro_frame: {
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_frame NYI");

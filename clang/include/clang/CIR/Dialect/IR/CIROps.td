@@ -2344,7 +2344,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     A compiler builtin function must be marked as `builtin` for further
     processing when lowering from CIR.
 
-    The `coroutine` keyword is used to mark coroutine function, which requires
+    The `coroutine` keyword is used to mark a coroutine function, which requires
     at least one `cir.await` instruction to be used in its body.
 
     The `lambda` translates to a C++ `operator()` that implements a lambda, this

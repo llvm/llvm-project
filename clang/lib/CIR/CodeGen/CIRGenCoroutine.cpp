@@ -32,12 +32,9 @@ CIRGenFunction::CGCoroInfo::~CGCoroInfo() {}
 static void createCoroData(CIRGenFunction &cgf,
                            CIRGenFunction::CGCoroInfo &curCoro,
                            cir::CallOp coroId) {
-  if (curCoro.data) {
-    llvm_unreachable("EmitCoroutineBodyStatement called twice?");
-    return;
-  }
+  assert(!curCoro.data && "EmitCoroutineBodyStatement called twice?");
 
-  curCoro.data = std::unique_ptr<CGCoroData>(new CGCoroData);
+  curCoro.data = std::make_unique<CGCoroData>();
   curCoro.data->coroId = coroId;
 }
 
@@ -57,8 +54,9 @@ cir::CallOp CIRGenFunction::emitCoroIDBuiltinCall(mlir::Location loc,
         cir::FuncType::get({int32Ty, VoidPtrTy, VoidPtrTy, VoidPtrTy}, int32Ty),
         /*FD=*/nullptr);
     assert(fnOp && "should always succeed");
-  } else
+  } else {
     fnOp = cast<cir::FuncOp>(builtin);
+  }
 
   return builder.createCallOp(loc, fnOp,
                               mlir::ValueRange{builder.getUInt32(newAlign, loc),
@@ -70,8 +68,7 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   mlir::Location openCurlyLoc = getLoc(s.getBeginLoc());
   cir::ConstantOp nullPtrCst = builder.getNullPtr(VoidPtrTy, openCurlyLoc);
 
-  auto fn = dyn_cast<cir::FuncOp>(curFn);
-  assert(fn && "other callables are NYI");
+  auto fn = mlir::cast<cir::FuncOp>(curFn);
   fn.setCoroutine(true);
   cir::CallOp coroId = emitCoroIDBuiltinCall(openCurlyLoc, nullPtrCst);
   createCoroData(*this, curCoro, coroId);
