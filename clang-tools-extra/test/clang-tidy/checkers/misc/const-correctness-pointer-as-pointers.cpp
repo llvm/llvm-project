@@ -48,3 +48,7 @@ void ignore_const_alias() {
   p_local0 = &a[1];
 }
 
+void *return_non_const() {
+  void *const a = nullptr;
+  return a;
+}
