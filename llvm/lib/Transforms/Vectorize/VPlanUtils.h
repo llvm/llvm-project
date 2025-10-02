@@ -103,6 +103,10 @@ inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
          "Expected int induction");
   return VPIRFlags::WrapFlagsTy(false, false);
 }
+
+/// Returns a single-scalar version of \p R, creating a fresh single-scalar
+/// VPReplicateRecipe or just cloning the recipe.
+VPSingleDefRecipe *getSingleScalarClone(VPSingleDefRecipe *R);
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//
