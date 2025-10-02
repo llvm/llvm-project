@@ -1361,9 +1361,19 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareSimdConstruct &x) {
     return;
   }
 
+  auto isValidSymbol{[](const Symbol *sym) {
+    if (IsProcedure(*sym) || IsFunction(*sym)) {
+      return true;
+    }
+    if (const Symbol *owner{GetScopingUnit(sym->owner()).symbol()}) {
+      return IsProcedure(*owner) || IsFunction(*owner);
+    }
+    return false;
+  }};
+
   const parser::OmpArgument &arg{args.v.front()};
   if (auto *sym{GetArgumentSymbol(arg)}) {
-    if (!IsProcedure(*sym) && !IsFunction(*sym)) {
+    if (!isValidSymbol(sym)) {
       auto &msg{context_.Say(arg.source,
           "The name '%s' should refer to a procedure"_err_en_US, sym->name())};
       if (sym->test(Symbol::Flag::Implicit)) {
