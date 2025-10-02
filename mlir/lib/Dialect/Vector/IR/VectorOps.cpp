@@ -7603,89 +7603,66 @@ void StepOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 namespace {
 
-/// Constant fold vector.step when it is compared to constant with arith.cmpi
-/// and the result is the same at all indices. For example, rewrite:
+/// Fold `vector.step -> arith.cmpi` when the step value is compared to a
+/// constant large enough such that the result is the same at all indices.
+///
+/// For example, rewrite the 'greater than' comparison below,
 ///
 /// %cst = arith.constant dense<7> : vector<3xindex>
-/// %0 = vector.step : vector<3xindex>
-/// %1 = arith.cmpi ugt, %0, %cst : vector<3xindex>
+/// %stp = vector.step : vector<3xindex>
+/// %out = arith.cmpi ugt, %stp, %cst : vector<3xindex>
 ///
-/// as
+/// as,
 ///
-/// %out = arith.constant dense<false> : vector<3xi1>
+/// %out = arith.constant dense<false> : vector<3xi1>.
 ///
 /// Above [0, 1, 2] > [7, 7, 7] => [false, false, false]. Because the result is
-/// false at ALL indices we fold to the constant. false. If the constant was 1,
-/// then [0, 1, 2] > [1, 1, 1] => [false, false, true] and we do not constant
-/// fold, preferring the more 'compact' vector.step representation.
+/// false at ALL indices we fold. If the constant was 1, then
+/// [0, 1, 2] > [1, 1, 1] => [false, false, true] and we do fold, conservatively
+/// preferring the 'compact' vector.step representation.
 struct StepCompareFolder : public OpRewritePattern<StepOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(StepOp stepOp,
                                 PatternRewriter &rewriter) const override {
-
-    int64_t stepSize = stepOp.getResult().getType().getNumElements();
+    const int64_t stepSize = stepOp.getResult().getType().getNumElements();
 
     for (auto &use : stepOp.getResult().getUses()) {
       if (auto cmpiOp = dyn_cast<arith::CmpIOp>(use.getOwner())) {
-        unsigned stepOperandNumber = use.getOperandNumber();
+        const unsigned stepOperandNumber = use.getOperandNumber();
 
-        // arith.cmpi has a canonicalizer to put constants on operand 1. Let it
-        // run first.
-        if (stepOperandNumber != 0) {
+        // arith.cmpi canonicalizer makes constants final operands.
+        if (stepOperandNumber != 0)
           continue;
-        }
 
         // Check that operand 1 is a constant.
-        unsigned otherOperandNumber = 1;
-        Value otherOperand = cmpiOp.getOperand(otherOperandNumber);
+        unsigned constOperandNumber = 1;
+        Value otherOperand = cmpiOp.getOperand(constOperandNumber);
         auto maybeConstValue = getConstantIntValue(otherOperand);
         if (!maybeConstValue.has_value())
           continue;
-        int64_t constValue = maybeConstValue.value();
 
+        int64_t constValue = maybeConstValue.value();
         arith::CmpIPredicate pred = cmpiOp.getPredicate();
 
         auto maybeSplat = [&]() -> std::optional<bool> {
           // Handle ult (unsigned less than) and uge (unsigned greater equal).
-          // Examples where stepSize = constValue = 3, for the 4
-          // cases of [ult, uge] x [stepOperandNumber = 0, 1]:
-          //
-          // pred stepOperandNumber
-          // ==== =================
-          // ult  0                 [0, 1, 2] < 3  ==> true.
-          // ult  1                 3 < [0, 1, 2]  ==> false.
-          // uge  0                 [0, 1, 2] >= 3 ==> true.
-          // uge  1                 3 >= [0, 1, 2] ==> false.
-          //
-          // If constValue is any smaller, the comparison is not constant.
-          if (pred == arith::CmpIPredicate::ult ||
-              pred == arith::CmpIPredicate::uge) {
-            if (stepSize <= constValue) {
-              return pred == arith::CmpIPredicate::ult;
-            }
-          }
+          if ((pred == arith::CmpIPredicate::ult ||
+               pred == arith::CmpIPredicate::uge) &&
+              stepSize <= constValue)
+            return pred == arith::CmpIPredicate::ult;
 
           // Handle ule and ugt.
-          //
-          // pred stepOperandNumber
-          // ==== =================
-          // ule  0                 [0, 1, 2] <= 2  ==> true
-          // (stepSize = 3, constValue = 2).
-          if (pred == arith::CmpIPredicate::ule ||
-              pred == arith::CmpIPredicate::ugt) {
-            if (stepSize <= constValue + 1) {
-              return pred == arith::CmpIPredicate::ule;
-            }
-          }
+          if ((pred == arith::CmpIPredicate::ule ||
+               pred == arith::CmpIPredicate::ugt) &&
+              stepSize <= constValue + 1)
+            return pred == arith::CmpIPredicate::ule;
 
-          // Handle eq and ne
-          if (pred == arith::CmpIPredicate::eq ||
-              pred == arith::CmpIPredicate::ne) {
-            if (stepSize <= constValue) {
-              return pred == arith::CmpIPredicate::ne;
-            }
-          }
+          // Handle eq and ne.
+          if ((pred == arith::CmpIPredicate::eq ||
+               pred == arith::CmpIPredicate::ne) &&
+              stepSize <= constValue)
+            return pred == arith::CmpIPredicate::ne;
 
           return std::optional<bool>();
         }();
@@ -7694,13 +7671,17 @@ struct StepCompareFolder : public OpRewritePattern<StepOp> {
           continue;
 
         rewriter.setInsertionPointAfter(cmpiOp);
-        auto boolConst = mlir::arith::ConstantOp::create(
-            rewriter, cmpiOp.getLoc(),
-            rewriter.getBoolAttr(maybeSplat.value()));
-        auto splat = vector::BroadcastOp::create(
-            rewriter, cmpiOp.getLoc(), cmpiOp.getResult().getType(), boolConst);
 
-        rewriter.replaceOp(cmpiOp, splat.getResult());
+        auto type = dyn_cast<VectorType>(cmpiOp.getResult().getType());
+        if (!type)
+          continue;
+
+        DenseElementsAttr boolAttr =
+            DenseElementsAttr::get(type, maybeSplat.value());
+        Value splat = mlir::arith::ConstantOp::create(rewriter, cmpiOp.getLoc(),
+                                                      type, boolAttr);
+
+        rewriter.replaceOp(cmpiOp, splat);
         return success();
       }
     }

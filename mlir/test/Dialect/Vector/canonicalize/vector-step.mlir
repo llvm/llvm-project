@@ -5,9 +5,9 @@
 ///===----------------------------------------------===//
 
 
-///===--------------===//
+///===------------------------------------===//
 ///  Tests of `ugt` (unsigned greater than)
-///===--------------===//
+///===------------------------------------===//
 
 // CHECK-LABEL: @check_ugt_constant_3_lhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<3xi1>
@@ -87,9 +87,9 @@ func.func @check_ugt_constant_1_rhs() -> vector<3xi1> {
 
 // -----
 
-///===--------------===//
+///===------------------------------------===//
 ///  Tests of `uge` (unsigned greater than or equal)
-///===--------------===//
+///===------------------------------------===//
 
 // CHECK-LABEL: @check_uge_constant_3_lhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<3xi1>
@@ -171,9 +171,9 @@ func.func @check_uge_constant_1_rhs() -> vector<3xi1> {
 
 
 
-///===--------------===//
+///===------------------------------------===//
 ///  Tests of `ult` (unsigned less than)
-///===--------------===//
+///===------------------------------------===//
 
 // CHECK-LABEL: @check_ult_constant_3_lhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<false> : vector<3xi1>
@@ -247,9 +247,9 @@ func.func @check_ult_constant_1_rhs() -> vector<3xi1> {
 
 // -----
 
-///===--------------===//
+///===------------------------------------===//
 ///  Tests of `ule` (unsigned less than or equal)
-///===--------------===//
+///===------------------------------------===//
 
 // CHECK-LABEL: @check_ule_constant_3_lhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<false> : vector<3xi1>
@@ -323,9 +323,9 @@ func.func @check_ule_constant_1_rhs() -> vector<3xi1> {
 
 // -----
 
-///===--------------===//
+///===------------------------------------===//
 ///  Tests of `eq` (equal)
-///===--------------===//
+///===------------------------------------===//
 
 // CHECK-LABEL: @check_eq_constant_3
 //       CHECK: %[[CST:.*]] = arith.constant dense<false> : vector<3xi1>
@@ -351,9 +351,9 @@ func.func @check_eq_constant_2() -> vector<3xi1> {
 
 // -----
 
-///===--------------===//
+///===------------------------------------===//
 ///  Tests of `ne` (not equal)
-///===--------------===//
+///===------------------------------------===//
 
 // CHECK-LABEL: @check_ne_constant_3
 //       CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<3xi1>
