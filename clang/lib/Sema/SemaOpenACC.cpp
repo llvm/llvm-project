@@ -2907,9 +2907,6 @@ OpenACCReductionRecipe SemaOpenACC::CreateReductionInitRecipe(
           dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
     VarTy = ArraySectionExpr::getBaseOriginalType(ASE);
 
-  // TODO: OpenACC: for arrays/bounds versions, we're going to have to do a
-  // different initializer, but for now we can go ahead with this.
-
   VarDecl *AllocaDecl = CreateAllocaDecl(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
       &getASTContext().Idents.get("openacc.reduction.init"), VarTy);
