@@ -101,15 +101,11 @@ add_libc_unittest(
     faccessat_test.cpp
   DEPENDS
     libc.include.unistd
-    libc.src.sys.stat.mkdir
     libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.faccessat
     libc.src.unistd.close
-    libc.src.unistd.symlink
     libc.src.unistd.unlink
-    libc.src.unistd.unlinkat
-    libc.src.unistd.rmdir
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

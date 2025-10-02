@@ -7,13 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/fcntl/open.h"
-#include "src/sys/stat/mkdir.h"
 #include "src/unistd/close.h"
 #include "src/unistd/faccessat.h"
-#include "src/unistd/rmdir.h"
-#include "src/unistd/symlink.h"
 #include "src/unistd/unlink.h"
-#include "src/unistd/unlinkat.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
