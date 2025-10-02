@@ -239,7 +239,7 @@ void InitializePlatformEarly() {
     Report(
         "ThreadSanitizer: Unsupported virtual memory layout: Address %p is "
         "already mapped.\n",
-        HiAppMemEnd() - 1);
+        (void*)(HiAppMemEnd() - 1));
     Die();
   }
 #endif
