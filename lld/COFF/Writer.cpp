@@ -1620,7 +1620,7 @@ void Writer::createSymbolAndStringTable() {
             dthunk->wrappedSym->writtenToSymtab = true;
             if (std::optional<coff_symbol16> sym =
                     createSymbol(dthunk->wrappedSym)) {
-              if (d->getName().size() > COFF::NameSize)
+              if (dthunk->wrappedSym->getName().size() > COFF::NameSize)
                 longNameSymbols.emplace_back(outputSymtab.size(),
                                              dthunk->wrappedSym->getName());
               outputSymtab.push_back(*sym);

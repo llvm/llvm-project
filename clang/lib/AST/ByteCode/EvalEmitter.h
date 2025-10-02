@@ -16,6 +16,7 @@
 #include "EvaluationResult.h"
 #include "InterpState.h"
 #include "PrimType.h"
+#include "Record.h"
 #include "Source.h"
 
 namespace clang {
