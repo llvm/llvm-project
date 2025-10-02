@@ -17876,13 +17876,15 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
         findFailedBooleanCondition(Converted.get());
       if (const auto *ConceptIDExpr =
               dyn_cast_or_null<ConceptSpecializationExpr>(InnerCond)) {
-        // Drill down into concept specialization expressions to see why they
-        // weren't satisfied.
-        Diag(AssertExpr->getBeginLoc(), diag::err_static_assert_failed)
-            << !HasMessage << Msg.str() << AssertExpr->getSourceRange();
-        ConstraintSatisfaction Satisfaction;
-        if (!CheckConstraintSatisfaction(ConceptIDExpr, Satisfaction))
-          DiagnoseUnsatisfiedConstraint(Satisfaction);
+        const ASTConstraintSatisfaction &Satisfaction =
+            ConceptIDExpr->getSatisfaction();
+        if (!Satisfaction.ContainsErrors || Satisfaction.NumRecords) {
+          Diag(AssertExpr->getBeginLoc(), diag::err_static_assert_failed)
+              << !HasMessage << Msg.str() << AssertExpr->getSourceRange();
+          // Drill down into concept specialization expressions to see why they
+          // weren't satisfied.
+          DiagnoseUnsatisfiedConstraint(ConceptIDExpr);
+        }
       } else if (InnerCond && !isa<CXXBoolLiteralExpr>(InnerCond) &&
                  !isa<IntegerLiteral>(InnerCond)) {
         Diag(InnerCond->getBeginLoc(),
