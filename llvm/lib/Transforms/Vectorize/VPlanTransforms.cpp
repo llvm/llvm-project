@@ -1224,12 +1224,10 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  VPValue *Idx;
-  if (match(&R, m_VPInstruction<Instruction::ExtractElement>(m_BuildVector(),
-                                                             m_VPValue(Idx)))) {
+  uint64_t Idx;
+  if (match(&R, m_ExtractElement(m_BuildVector(), m_ConstantInt(Idx)))) {
     auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
-    Def->replaceAllUsesWith(BuildVector->getOperand(
-        cast<ConstantInt>(Idx->getLiveInIRValue())->getZExtValue()));
+    Def->replaceAllUsesWith(BuildVector->getOperand(Idx));
     return;
   }
 
@@ -3806,8 +3804,7 @@ void VPlanTransforms::materializeBuildAndUnpackVectors(VPlan &Plan) {
   }
 
   // Create explicit VPInstructions to convert vectors to scalars.
-  for (VPBasicBlock *VPBB :
-       concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
+  for (VPBasicBlock *VPBB : VPBBsInsideLoopRegion) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (isa<VPReplicateRecipe, VPInstruction, VPScalarIVStepsRecipe>(&R))
         continue;
@@ -3815,20 +3812,15 @@ void VPlanTransforms::materializeBuildAndUnpackVectors(VPlan &Plan) {
         if (vputils::isSingleScalar(Def) || vputils::onlyFirstLaneUsed(Def))
           continue;
 
-        if (VPBB->getParent() != Plan.getVectorLoopRegion())
-          continue;
-
-        auto UsesVectorOrInsideReplicateRegion = [LoopRegion](VPUser *U) {
+        auto IsInsideReplicateRegion = [LoopRegion](VPUser *U) {
           VPRegionBlock *ParentRegion =
               cast<VPRecipeBase>(U)->getParent()->getParent();
           return ParentRegion && ParentRegion != LoopRegion;
         };
 
-        if (none_of(Def->users(),
-                    [Def, &UsesVectorOrInsideReplicateRegion](VPUser *U) {
-                      return !UsesVectorOrInsideReplicateRegion(U) &&
-                             U->usesScalars(Def);
-                    }))
+        if (none_of(Def->users(), [Def, &IsInsideReplicateRegion](VPUser *U) {
+              return !IsInsideReplicateRegion(U) && U->usesScalars(Def);
+            }))
           continue;
 
         auto *UnpackVector =
@@ -3838,10 +3830,8 @@ void VPlanTransforms::materializeBuildAndUnpackVectors(VPlan &Plan) {
         else
           UnpackVector->insertAfter(&R);
         Def->replaceUsesWithIf(
-            UnpackVector,
-            [Def, &UsesVectorOrInsideReplicateRegion](VPUser &U, unsigned) {
-              return !UsesVectorOrInsideReplicateRegion(&U) &&
-                     U.usesScalars(Def);
+            UnpackVector, [Def, &IsInsideReplicateRegion](VPUser &U, unsigned) {
+              return !IsInsideReplicateRegion(&U) && U.usesScalars(Def);
             });
       }
     }
