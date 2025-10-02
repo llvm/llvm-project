@@ -6211,9 +6211,7 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   //   %cond     = select %overflow, %a, %sub
   if (N0.getOpcode() == ISD::SUB) {
     SDValue A, B, C;
-    if (sd_match(N,
-                 m_AnyOf(m_UMin(m_Sub(m_Value(A), m_Value(B)), m_Value(C)),
-                         m_SMin(m_Sub(m_Value(A), m_Value(B)), m_Value(C))))) {
+    if (sd_match(N, m_UMin(m_Sub(m_Value(A), m_Value(B)), m_Value(C)))) {
       EVT AVT = A.getValueType();
       if (A == C && TLI.isOperationLegalOrCustom(ISD::USUBO, AVT)) {
         SDVTList VTs = DAG.getVTList(AVT, MVT::i1);
