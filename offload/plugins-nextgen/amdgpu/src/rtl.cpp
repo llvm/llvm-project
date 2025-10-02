@@ -5804,8 +5804,7 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
   return Alloc;
 }
 
-#ifdef OMPT_SUPPORT
-/// Casts and validated the OMPT-related info passed to the action function.
+/// Casts and checks the Profiler related information to not be nullptr.
 static ProfilingInfoTy *getProfilingInfo(void *Data) {
   ProfilingInfoTy *Args = reinterpret_cast<ProfilingInfoTy *>(Data);
 
@@ -5864,7 +5863,6 @@ getCopyStartAndEndTime(const ProfilingInfoTy *Args) {
 
   return {StartTime, EndTime};
 }
-#endif
 
 void AMDGPUQueueTy::callbackError(hsa_status_t Status, hsa_queue_t *Source,
                                   void *Data) {

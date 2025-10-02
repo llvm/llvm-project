@@ -57,8 +57,6 @@ public:
   GenericProfilerTy() = default;
   virtual ~GenericProfilerTy() = default;
 
-  void showItself() { DP("GenericProfilerTy: %p\n", this); }
-
   /// Obtain a pointer to profiler-specific data, if any.
   virtual void *getProfilerSpecificData() { return nullptr; }
 
