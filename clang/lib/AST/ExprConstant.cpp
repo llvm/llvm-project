@@ -12248,7 +12248,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
     const llvm::fltSemantics &Semantics =
-        Info.Ctx.getFloatTypeSemantics(DestEltTy); // Retrieve correct semantics
+        Info.Ctx.getFloatTypeSemantics(DestEltTy);
     unsigned SourceLen = Source.getVectorLength();
     SmallVector<APValue, 4> ResultElements;
     ResultElements.reserve(SourceLen);
