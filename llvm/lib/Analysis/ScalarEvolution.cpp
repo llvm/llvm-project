@@ -15857,12 +15857,17 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
         To = SE.getUMaxExpr(FromRewritten, RHS);
         if (auto *UMin = dyn_cast<SCEVUMinExpr>(FromRewritten))
           EnqueueOperands(UMin);
+        if (RHS->isOne())
+          ExprsToRewrite.push_back(From);
         break;
       case CmpInst::ICMP_SGT:
       case CmpInst::ICMP_SGE:
         To = SE.getSMaxExpr(FromRewritten, RHS);
-        if (auto *SMin = dyn_cast<SCEVSMinExpr>(FromRewritten))
+        if (auto *SMin = dyn_cast<SCEVSMinExpr>(FromRewritten)) {
           EnqueueOperands(SMin);
+        }
+        if (RHS->isOne())
+          ExprsToRewrite.push_back(From);
         break;
       case CmpInst::ICMP_EQ:
         if (isa<SCEVConstant>(RHS))
@@ -15993,7 +15998,22 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     for (const SCEV *Expr : ExprsToRewrite) {
       const SCEV *RewriteTo = Guards.RewriteMap[Expr];
       Guards.RewriteMap.erase(Expr);
-      Guards.RewriteMap.insert({Expr, Guards.rewrite(RewriteTo)});
+      const SCEV *Rewritten = Guards.rewrite(RewriteTo);
+
+      // Try to strengthen divisibility of SMax/UMax expressions coming from >=
+      // 1 conditions.
+      if (auto *SMax = dyn_cast<SCEVSMaxExpr>(Rewritten)) {
+        unsigned MinTrailingZeros = SE.getMinTrailingZeros(SMax->getOperand(1));
+        for (const SCEV *Op : drop_begin(SMax->operands(), 2))
+          MinTrailingZeros =
+              std::min(MinTrailingZeros, SE.getMinTrailingZeros(Op));
+        if (MinTrailingZeros != 0)
+          Rewritten = SE.getSMaxExpr(
+              SE.getConstant(APInt(SMax->getType()->getScalarSizeInBits(), 1)
+                                 .shl(MinTrailingZeros)),
+              SMax);
+      }
+      Guards.RewriteMap.insert({Expr, Rewritten});
     }
   }
 }
@@ -16066,16 +16086,32 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     }
 
     const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
-      // Trip count expressions sometimes consist of adding 3 operands, i.e.
-      // (Const + A + B). There may be guard info for A + B, and if so, apply
-      // it.
-      // TODO: Could more generally apply guards to Add sub-expressions.
-      if (isa<SCEVConstant>(Expr->getOperand(0)) &&
-          Expr->getNumOperands() == 3) {
-        if (const SCEV *S = Map.lookup(
-                SE.getAddExpr(Expr->getOperand(1), Expr->getOperand(2))))
-          return SE.getAddExpr(Expr->getOperand(0), S);
+      if (const SCEV *S = Map.lookup(Expr))
+        return S;
+      if (isa<SCEVConstant>(Expr->getOperand(0))) {
+        // Trip count expressions sometimes consist of adding 3 operands, i.e.
+        // (Const + A + B). There may be guard info for A + B, and if so, apply
+        // it.
+        // TODO: Could more generally apply guards to Add sub-expressions.
+        if (Expr->getNumOperands() == 3) {
+          if (const SCEV *S = Map.lookup(
+                  SE.getAddExpr(Expr->getOperand(1), Expr->getOperand(2))))
+            return SE.getAddExpr(Expr->getOperand(0), S);
+        }
+
+        // For expressions of the form (Const + A), check if we have guard info
+        // for (Const + 1 + A), and rewrite to ((Const + 1 + A) - 1). This makes
+        // sure we don't loose information when rewriting expressions based on
+        // back-edge taken counts in some cases..
+        if (Expr->getNumOperands() == 2) {
+          auto *NewC =
+              SE.getAddExpr(Expr->getOperand(0), SE.getOne(Expr->getType()));
+          if (const SCEV *S =
+                  Map.lookup(SE.getAddExpr(NewC, Expr->getOperand(1))))
+            return SE.getMinusSCEV(S, SE.getOne(Expr->getType()));
+        }
       }
+
       SmallVector<const SCEV *, 2> Operands;
       bool Changed = false;
       for (const auto *Op : Expr->operands()) {
