@@ -1941,6 +1941,35 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     // Set the first operand of RecurSplice to FOR again, after replacing
     // all users.
     RecurSplice->setOperand(0, FOR);
+
+    // Check for users extracting the second-to-last active lane of the FOR. If
+    // only a single lane is active in the current iteration, we need to select
+    // the last element of the value from the previous iteration, directly from
+    // the FOR phi.
+    for (VPUser *U : RecurSplice->users()) {
+      if (!match(U, m_VPInstruction<VPInstruction::ExtractLane>(
+                        m_Sub(m_VPInstruction<VPInstruction::FirstActiveLane>(
+                                  m_VPValue()),
+                              m_SpecificInt(1)),
+                        m_Specific(RecurSplice))))
+        continue;
+
+      VPBuilder B(cast<VPInstruction>(U));
+      VPValue *LastActiveLane = cast<VPInstruction>(U)->getOperand(0);
+      Type *I64Ty = Type::getInt64Ty(Plan.getContext());
+      VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 0));
+      VPValue *One = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 1));
+      VPValue *PenultimateIndex =
+          B.createNaryOp(Instruction::Sub, {LastActiveLane, One});
+      VPValue *PenultimateLastIter =
+          B.createNaryOp(VPInstruction::ExtractLane,
+                         {PenultimateIndex, FOR->getBackedgeValue()});
+      VPValue *LastPrevIter =
+          B.createNaryOp(VPInstruction::ExtractLastElement, {FOR});
+      VPValue *Cmp = B.createICmp(CmpInst::ICMP_EQ, LastActiveLane, Zero);
+      VPValue *Sel = B.createSelect(Cmp, LastPrevIter, PenultimateLastIter);
+      cast<VPInstruction>(U)->replaceAllUsesWith(Sel);
+    }
   }
   return true;
 }
