@@ -1285,12 +1285,10 @@ typeContainsPointer(QualType T,
   for (QualType CurrentT = T; const auto *TT = CurrentT->getAs<TypedefType>();
        CurrentT = TT->getDecl()->getUnderlyingType()) {
     const IdentifierInfo *II = TT->getDecl()->getIdentifier();
-    if (!II)
-      continue;
     // Special Case: Syntactically uintptr_t is not a pointer; semantically,
     // however, very likely used as such. Therefore, classify uintptr_t as a
     // pointer, too.
-    if (II->isStr("uintptr_t"))
+    if (II && II->isStr("uintptr_t"))
       return true;
   }
 
@@ -1356,8 +1354,9 @@ void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
   CB->setMetadata(llvm::LLVMContext::MD_alloc_token, MDN);
 }
 
+namespace {
 /// Infer type from a simple sizeof expression.
-static QualType inferTypeFromSizeofExpr(const Expr *E) {
+QualType inferTypeFromSizeofExpr(const Expr *E) {
   const Expr *Arg = E->IgnoreParenImpCasts();
   if (const auto *UET = dyn_cast<UnaryExprOrTypeTraitExpr>(Arg)) {
     if (UET->getKind() == UETT_SizeOf) {
@@ -1370,8 +1369,20 @@ static QualType inferTypeFromSizeofExpr(const Expr *E) {
   return QualType();
 }
 
-/// Infer type from an arithmetic expression involving a sizeof.
-static QualType inferTypeFromArithSizeofExpr(const Expr *E) {
+/// Infer type from an arithmetic expression involving a sizeof. For example:
+///
+///   malloc(sizeof(MyType) + padding);  // infers 'MyType'
+///   malloc(sizeof(MyType) * 32);       // infers 'MyType'
+///   malloc(32 * sizeof(MyType));       // infers 'MyType'
+///   malloc(sizeof(MyType) << 1);       // infers 'MyType'
+///   ...
+///
+/// More complex arithmetic expressions are supported, but are a heuristic, e.g.
+/// when considering allocations for structs with flexible array members:
+///
+///   malloc(sizeof(HasFlexArray) + sizeof(int) * 32);  // infers 'HasFlexArray'
+///
+QualType inferPossibleTypeFromArithSizeofExpr(const Expr *E) {
   const Expr *Arg = E->IgnoreParenImpCasts();
   // The argument is a lone sizeof expression.
   if (QualType T = inferTypeFromSizeofExpr(Arg); !T.isNull())
@@ -1386,9 +1397,11 @@ static QualType inferTypeFromArithSizeofExpr(const Expr *E) {
     case BO_Shl:
     case BO_Shr:
     case BO_Sub:
-      if (QualType T = inferTypeFromArithSizeofExpr(BO->getLHS()); !T.isNull())
+      if (QualType T = inferPossibleTypeFromArithSizeofExpr(BO->getLHS());
+          !T.isNull())
         return T;
-      if (QualType T = inferTypeFromArithSizeofExpr(BO->getRHS()); !T.isNull())
+      if (QualType T = inferPossibleTypeFromArithSizeofExpr(BO->getRHS());
+          !T.isNull())
         return T;
       break;
     default:
@@ -1400,22 +1413,29 @@ static QualType inferTypeFromArithSizeofExpr(const Expr *E) {
 
 /// If the expression E is a reference to a variable, infer the type from a
 /// variable's initializer if it contains a sizeof. Beware, this is a heuristic
-/// and ignores if a variable is later reassigned.
-static QualType inferTypeFromVarInitSizeofExpr(const Expr *E) {
+/// and ignores if a variable is later reassigned. For example:
+///
+///   size_t my_size = sizeof(MyType);
+///   void *x = malloc(my_size);  // infers 'MyType'
+///
+QualType inferPossibleTypeFromVarInitSizeofExpr(const Expr *E) {
   const Expr *Arg = E->IgnoreParenImpCasts();
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
     if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
       if (const Expr *Init = VD->getInit())
-        return inferTypeFromArithSizeofExpr(Init);
+        return inferPossibleTypeFromArithSizeofExpr(Init);
     }
   }
   return QualType();
 }
 
 /// Deduces the allocated type by checking if the allocation call's result
-/// is immediately used in a cast expression.
-static QualType inferTypeFromCastExpr(const CallExpr *CallE,
-                                      const CastExpr *CastE) {
+/// is immediately used in a cast expression. For example:
+///
+///   MyType *x = (MyType *)malloc(4096);  // infers 'MyType'
+///
+QualType inferPossibleTypeFromCastExpr(const CallExpr *CallE,
+                                       const CastExpr *CastE) {
   if (!CastE)
     return QualType();
   QualType PtrType = CastE->getType();
@@ -1423,20 +1443,21 @@ static QualType inferTypeFromCastExpr(const CallExpr *CallE,
     return PtrType->getPointeeType();
   return QualType();
 }
+} // end anonymous namespace
 
 void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {
   QualType AllocType;
   // First check arguments.
   for (const Expr *Arg : E->arguments()) {
-    AllocType = inferTypeFromArithSizeofExpr(Arg);
+    AllocType = inferPossibleTypeFromArithSizeofExpr(Arg);
     if (AllocType.isNull())
-      AllocType = inferTypeFromVarInitSizeofExpr(Arg);
+      AllocType = inferPossibleTypeFromVarInitSizeofExpr(Arg);
     if (!AllocType.isNull())
       break;
   }
   // Then check later casts.
   if (AllocType.isNull())
-    AllocType = inferTypeFromCastExpr(E, CurCast);
+    AllocType = inferPossibleTypeFromCastExpr(E, CurCast);
   // Emit if we were able to infer the type.
   if (!AllocType.isNull())
     EmitAllocToken(CB, AllocType);
@@ -6772,7 +6793,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
     }
     if (CalleeDecl->hasAttr<RestrictAttr>() ||
         CalleeDecl->hasAttr<AllocSizeAttr>()) {
-      // Function has malloc or alloc_size attribute.
+      // Function has 'malloc' (aka. 'restrict') or 'alloc_size' attribute.
       if (SanOpts.has(SanitizerKind::AllocToken)) {
         // Set !alloc_token metadata.
         EmitAllocToken(LocalCallOrInvoke, E);
