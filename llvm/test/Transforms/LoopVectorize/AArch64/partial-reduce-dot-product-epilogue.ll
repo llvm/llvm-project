@@ -28,7 +28,8 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE]])
 ; CHECK-NEXT:    br label [[FOR_EXIT:%.*]]
-; CHECK:       scalar.ph:
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
 entry:
   br label %for.body
@@ -87,8 +88,7 @@ define void @dotp_small_epilogue_vf(i64 %idx.neg, i8 %a) #1 {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[IND_END6:%.*]] = add i64 [[IDX_NEG]], [[IV_NEXT]]
-; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP0]], [[IV_NEXT]]
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 4
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF4:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT]], [[WHILE_BODY]] ], [ 0, [[ENTRY]] ]
@@ -499,7 +499,8 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP182:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[TMP182]]
 ;
 entry:
   br label %for.body
