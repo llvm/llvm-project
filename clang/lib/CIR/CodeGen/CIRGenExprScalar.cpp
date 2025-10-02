@@ -1891,7 +1891,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
   }
   case CK_IntegralToPointer: {
     mlir:Type destCIRTy = cgf.convertType(destTy);
-    mlir::Value Src = Visit(const_cast<Expr *>(subExpr));
+    mlir::Value src = Visit(const_cast<Expr *>(subExpr));
 
     // Properly resize by casting to an int of the same size as the pointer.
     // Clang's IntegralToPointer includes 'bool' as the source, but in CIR
