@@ -107,7 +107,7 @@ TEST(CFG, SwitchCoveredEnumNoDefault) {
     }
   )";
   CFG::BuildOptions Options;
-  Options.SwitchKeepDefaultCoveredEnum = true;
+  Options.AssumeReachableDefaultInSwitchStatements = true;
   BuildResult B = BuildCFG(Code, Options);
   EXPECT_EQ(BuildResult::BuiltCFG, B.getStatus());
 
@@ -143,24 +143,25 @@ TEST(CFG, SwitchCoveredEnumNoDefault) {
   // [B0 (EXIT)]
   //   Preds (3): B1 B3 B4
 
-  const auto &Entry = B.getCFG()->getEntry();
-  EXPECT_EQ(1u, Entry.succ_size());
+  auto *CFG = B.getCFG();
+  const auto &Entry = CFG->getEntry();
+  ASSERT_EQ(1u, Entry.succ_size());
   // First successor of Entry is the switch
   CFGBlock *SwitchBlock = *Entry.succ_begin();
-  EXPECT_EQ(3u, SwitchBlock->succ_size());
+  ASSERT_EQ(3u, SwitchBlock->succ_size());
   // Last successor of the switch is after the switch
   auto NoCaseSucc = SwitchBlock->succ_rbegin();
   EXPECT_TRUE(NoCaseSucc->isReachable());
 
   // Checking that the same node is Unreachable without this setting
-  Options.SwitchKeepDefaultCoveredEnum = false;
+  Options.AssumeReachableDefaultInSwitchStatements = false;
   B = BuildCFG(Code, Options);
   EXPECT_EQ(BuildResult::BuiltCFG, B.getStatus());
 
   const auto &Entry2 = B.getCFG()->getEntry();
-  EXPECT_EQ(1u, Entry2.succ_size());
+  ASSERT_EQ(1u, Entry2.succ_size());
   CFGBlock *SwitchBlock2 = *Entry2.succ_begin();
-  EXPECT_EQ(3u, SwitchBlock2->succ_size());
+  ASSERT_EQ(3u, SwitchBlock2->succ_size());
   auto NoCaseSucc2 = SwitchBlock2->succ_rbegin();
   EXPECT_FALSE(NoCaseSucc2->isReachable());
 }
@@ -181,7 +182,7 @@ TEST(CFG, SwitchCoveredEnumWithDefault) {
     }
   )";
   CFG::BuildOptions Options;
-  Options.SwitchKeepDefaultCoveredEnum = true;
+  Options.AssumeReachableDefaultInSwitchStatements = true;
   BuildResult B = BuildCFG(Code, Options);
   EXPECT_EQ(BuildResult::BuiltCFG, B.getStatus());
 
@@ -224,23 +225,23 @@ TEST(CFG, SwitchCoveredEnumWithDefault) {
   //   Preds (4): B1 B3 B4 B5
 
   const auto &Entry = B.getCFG()->getEntry();
-  EXPECT_EQ(1u, Entry.succ_size());
+  ASSERT_EQ(1u, Entry.succ_size());
   // First successor of Entry is the switch
   CFGBlock *SwitchBlock = *Entry.succ_begin();
-  EXPECT_EQ(3u, SwitchBlock->succ_size());
+  ASSERT_EQ(3u, SwitchBlock->succ_size());
   // Last successor of the switch is the default branch
   auto defaultBlock = SwitchBlock->succ_rbegin();
   EXPECT_TRUE(defaultBlock->isReachable());
 
   // Checking that the same node is Unreachable without this setting
-  Options.SwitchKeepDefaultCoveredEnum = false;
+  Options.AssumeReachableDefaultInSwitchStatements = false;
   B = BuildCFG(Code, Options);
   EXPECT_EQ(BuildResult::BuiltCFG, B.getStatus());
 
   const auto &Entry2 = B.getCFG()->getEntry();
-  EXPECT_EQ(1u, Entry2.succ_size());
+  ASSERT_EQ(1u, Entry2.succ_size());
   CFGBlock *SwitchBlock2 = *Entry2.succ_begin();
-  EXPECT_EQ(3u, SwitchBlock2->succ_size());
+  ASSERT_EQ(3u, SwitchBlock2->succ_size());
   auto defaultBlock2 = SwitchBlock2->succ_rbegin();
   EXPECT_FALSE(defaultBlock2->isReachable());
 }

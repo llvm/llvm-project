@@ -4520,9 +4520,9 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
   //       BuildOpts.SwitchReqDefaultCoveredEnum is true.
   bool SwitchAlwaysHasSuccessor = false;
   SwitchAlwaysHasSuccessor |= switchExclusivelyCovered;
-  SwitchAlwaysHasSuccessor |= !BuildOpts.SwitchKeepDefaultCoveredEnum &&
-                              Terminator->isAllEnumCasesCovered() &&
-                              Terminator->getSwitchCaseList();
+  SwitchAlwaysHasSuccessor |=
+      !BuildOpts.AssumeReachableDefaultInSwitchStatements &&
+      Terminator->isAllEnumCasesCovered() && Terminator->getSwitchCaseList();
   addSuccessor(SwitchTerminatedBlock, DefaultCaseBlock,
                !SwitchAlwaysHasSuccessor);
 

@@ -1251,7 +1251,7 @@ public:
     bool MarkElidedCXXConstructors = false;
     bool AddVirtualBaseBranches = false;
     bool OmitImplicitValueInitializers = false;
-    bool SwitchKeepDefaultCoveredEnum = false;
+    bool AssumeReachableDefaultInSwitchStatements = false;
 
     BuildOptions() = default;
 
