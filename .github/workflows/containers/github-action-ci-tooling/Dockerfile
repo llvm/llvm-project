@@ -1,40 +1,18 @@
-FROM docker.io/library/ubuntu:24.04 AS base
-ENV LLVM_SYSROOT=/opt/llvm
+FROM docker.io/library/ubuntu:24.04 AS llvm-downloader
 
-FROM base AS clang-format-toolchain
-ENV LLVM_VERSION=21.1.1
+ENV LLVM_VERSION=21.1.2
 
 RUN apt-get update && \
-    apt-get install -y \
-    wget \
-    gcc \
-    g++ \
-    cmake \
-    ninja-build \
-    python3 \
-    git \
-    curl \
-    zlib1g-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y wget pixz && \
+    wget --progress=bar:force -O llvm.tar.xz https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz && \
+    mkdir -p /llvm-extract && \
+    pixz -d llvm.tar.xz && \
+    tar -xvf llvm.tar -C /llvm-extract LLVM-${LLVM_VERSION}-Linux-X64/bin/ && \
+    rm llvm.tar
 
-RUN curl -O -L https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$LLVM_VERSION.tar.gz && \
-  tar -xf llvmorg-$LLVM_VERSION.tar.gz && \
-  rm -f llvmorg-$LLVM_VERSION.tar.gz
+FROM docker.io/library/ubuntu:24.04 AS base
 
-WORKDIR /llvm-project-llvmorg-$LLVM_VERSION
-
-RUN cmake -B ./build -G Ninja ./llvm \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX="$LLVM_SYSROOT" \
-  -DLLVM_ENABLE_PROJECTS="clang" \
-  -DLLVM_DISTRIBUTION_COMPONENTS="clang-format"
-
-RUN ninja -C ./build install-distribution
-
-FROM base AS ci-container-code-format
-
-COPY --from=clang-format-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
+ENV LLVM_SYSROOT=/opt/llvm
 
 # Need nodejs for some of the GitHub actions.
 # Need git for git-clang-format.
@@ -53,8 +31,6 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-ENV LLVM_SYSROOT=$LLVM_SYSROOT
-ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
 
 # Create a new user to avoid test failures related to a lack of expected
 # permissions issues in some tests. Set the user id to 1001 as that is the
@@ -69,8 +45,31 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER gha
 WORKDIR /home/gha
 
+FROM base AS ci-container-code-format
+
+ENV LLVM_VERSION=21.1.2
+
+COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-format ${LLVM_SYSROOT}/bin/clang-format
+
+ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
+
 # Install dependencies for 'pr-code-format.yml' job
 COPY llvm/utils/git/requirements_formatting.txt /home/gha/requirements_formatting.txt
 RUN python -m venv venv && \
     venv/bin/pip install -r /home/gha/requirements_formatting.txt && \
     rm /home/gha/requirements_formatting.txt
+
+# Stage 4: clang-lint container
+FROM base AS ci-container-code-lint
+
+ENV LLVM_VERSION=21.1.2
+
+COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-tidy ${LLVM_SYSROOT}/bin/
+COPY clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py ${LLVM_SYSROOT}/bin/clang-tidy-diff.py
+
+ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
+
+COPY llvm/utils/git/requirements_linting.txt /home/gha/requirements_linting.txt
+RUN python -m venv venv && \
+    venv/bin/pip install -r /home/gha/requirements_linting.txt && \
+    rm /home/gha/requirements_linting.txt
