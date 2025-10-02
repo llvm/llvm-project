@@ -409,6 +409,31 @@ TEST(ErrorTest, ExpectedError) {
   }
 }
 
+// Test that Expected<Expected<T>> works as expected.
+TEST(ErrorTest, ExpectedExpected) {
+  {
+    // Test success-success case.
+    Expected<Expected<int>> E(Expected<int>(42), ForceExpectedSuccessValue());
+    EXPECT_TRUE(!!E);
+    cantFail(E.takeError());
+    auto EI = std::move(*E);
+    EXPECT_TRUE(!!EI);
+    cantFail(EI.takeError());
+    EXPECT_EQ(*EI, 42);
+  }
+
+  {
+    // Test "failure" success case.
+    Expected<Expected<int>> E(Expected<int>(make_error<StringError>("foo")),
+                              ForceExpectedSuccessValue());
+    EXPECT_TRUE(!!E);
+    cantFail(E.takeError());
+    auto EI = std::move(*E);
+    EXPECT_FALSE(!!EI);
+    EXPECT_EQ(toString(EI.takeError()), "foo");
+  }
+}
+
 // Test that the ExitOnError utility works as expected.
 TEST(ErrorTest, CantFailSuccess) {
   cantFail(Error::success());

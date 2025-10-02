@@ -62,7 +62,7 @@ class CPUFeature:
 class AArch64:
     FPMR = CPUFeature("fpmr")
     GCS = CPUFeature("gcs")
-    MTE = CPUFeature("mte")
+    MTE = CPUFeature("mte", "hw.optional.arm.FEAT_MTE4")
     MTE_STORE_ONLY = CPUFeature("mtestoreonly")
     PTR_AUTH = CPUFeature("paca", "hw.optional.arm.FEAT_PAuth2")
     SME = CPUFeature("sme", "hw.optional.arm.FEAT_SME")
