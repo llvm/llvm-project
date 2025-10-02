@@ -190,8 +190,9 @@ def XeVM_StoreCacheControlAttr
 
 def XeVM_BlockLoadOp
     : XeVM_Op<"blockload">,
-      Results<(
-          outs FixedVectorOfRankAndType<[1], [XeVM_1DBlockElemType]>:$res)>,
+      Results<(outs AnyTypeOf<
+          [XeVM_1DBlockElemType,
+           FixedVectorOfRankAndType<[1], [XeVM_1DBlockElemType]>]>:$res)>,
       Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr,
           OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
   let summary = "subgroup block load";
@@ -228,7 +229,9 @@ def XeVM_BlockLoadOp
 def XeVM_BlockStoreOp
     : XeVM_Op<"blockstore">,
       Arguments<(ins Arg<LLVM_AnyPointer, "", [MemWrite]>:$ptr,
-          FixedVectorOfRankAndType<[1], [XeVM_1DBlockElemType]>:$val,
+          AnyTypeOf<[XeVM_1DBlockElemType,
+                     FixedVectorOfRankAndType<[1],
+                                              [XeVM_1DBlockElemType]>]>:$val,
           OptionalAttr<XeVM_StoreCacheControlAttr>:$cache_control)> {
   let summary = "subgroup block store";
   let description = [{
