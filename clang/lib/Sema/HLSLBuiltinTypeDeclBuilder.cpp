@@ -57,15 +57,6 @@ CXXConstructorDecl *lookupCopyConstructor(QualType ResTy) {
       return CD;
   return nullptr;
 }
-
-/// Set up common members and attributes for buffer types
-static bool resourceHasCounter(const CXXRecordDecl *Decl) {
-  StringRef Name = Decl->getName();
-  return Name == "RWStructuredBuffer" || Name == "AppendStructuredBuffer" ||
-         Name == "ConsumeStructuredBuffer" ||
-         Name == "RasterizerOrderedStructuredBuffer";
-}
-
 } // namespace
 
 // Builder for template arguments of builtin types. Used internally
