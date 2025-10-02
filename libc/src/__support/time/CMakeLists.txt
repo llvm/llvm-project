@@ -20,9 +20,11 @@ add_object_library(
     libc.src.__support.time.${LIBC_TARGET_OS}.clock_gettime
 )
 
-add_object_library(
-  clock_settime
-  ALIAS
-  DEPENDS
-    libc.src.__support.time.${LIBC_TARGET_OS}.clock_settime
-)
+if(LIBC_TARGET_OS_IS_LINUX)
+  add_object_library(
+    clock_settime
+    ALIAS
+    DEPENDS
+      libc.src.__support.time.${LIBC_TARGET_OS}.clock_settime
+  )
+endif()
