@@ -1415,11 +1415,7 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
           Mask = ~Mask;
 
         if (any_of(VirtReg.subranges(), [=](const LiveInterval::SubRange &S) {
-              if ((S.LaneMask & Mask).any()) {
-                if (S.liveAt(Index))
-                  return true;
-              }
-              return false;
+              return (S.LaneMask & Mask).any() && S.liveAt(Index);
             })) {
           continue;
         }
