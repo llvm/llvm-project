@@ -340,6 +340,14 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
                                                  : Widen->getOperand(1));
     ExtAType = GetExtendKind(ExtAR);
     ExtBType = GetExtendKind(ExtBR);
+
+    if (!ExtBR && Widen->getOperand(1)->isLiveIn()) {
+      auto *CI = cast<ConstantInt>(Widen->getOperand(1)->getLiveInIRValue());
+      if (canConstantBeExtended(CI, InputTypeA, ExtAType)) {
+        InputTypeB = InputTypeA;
+        ExtBType = ExtAType;
+      }
+    }
   };
 
   if (isa<VPWidenCastRecipe>(OpR)) {
@@ -2755,10 +2763,7 @@ VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
     : VPSingleDefRecipe(VPDef::VPExpressionSC, {}, {}),
-      ExpressionRecipes(SetVector<VPSingleDefRecipe *>(
-                            ExpressionRecipes.begin(), ExpressionRecipes.end())
-                            .takeVector()),
-      ExpressionType(ExpressionType) {
+      ExpressionRecipes(ExpressionRecipes), ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(
       none_of(ExpressionRecipes,
@@ -2802,14 +2807,22 @@ VPExpressionRecipe::VPExpressionRecipe(
         continue;
       addOperand(Op);
       LiveInPlaceholders.push_back(new VPValue());
-      R->setOperand(Idx, LiveInPlaceholders.back());
     }
   }
+
+  // Replace each external operand with the first one created for it in
+  // LiveInPlaceholders.
+  for (auto *R : ExpressionRecipes)
+    for (auto const &[LiveIn, Tmp] : zip(operands(), LiveInPlaceholders))
+      R->replaceUsesOfWith(LiveIn, Tmp);
 }
 
 void VPExpressionRecipe::decompose() {
   for (auto *R : ExpressionRecipes)
-    R->insertBefore(this);
+    // Since the list could contain duplicates, make sure the recipe hasn't
+    // already been inserted.
+    if (!R->getParent())
+      R->insertBefore(this);
 
   for (const auto &[Idx, Op] : enumerate(operands()))
     LiveInPlaceholders[Idx]->replaceAllUsesWith(Op);
@@ -2839,11 +2852,16 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
     return Ctx.TTI.getMulAccReductionCost(false, Opcode, RedTy, SrcVecTy,
                                           Ctx.CostKind);
 
-  case ExpressionTypes::ExtMulAccReduction:
+  case ExpressionTypes::ExtNegatedMulAccReduction:
+    assert(Opcode == Instruction::Add && "Unexpected opcode");
+    Opcode = Instruction::Sub;
+    LLVM_FALLTHROUGH;
+  case ExpressionTypes::ExtMulAccReduction: {
     return Ctx.TTI.getMulAccReductionCost(
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
             Instruction::ZExt,
         Opcode, RedTy, SrcVecTy, Ctx.CostKind);
+  }
   }
   llvm_unreachable("Unknown VPExpressionRecipe::ExpressionTypes enum");
 }
@@ -2888,6 +2906,30 @@ void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
       Red->getCondOp()->printAsOperand(O, SlotTracker);
     }
     O << ")";
+    break;
+  }
+  case ExpressionTypes::ExtNegatedMulAccReduction: {
+    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    O << " + reduce."
+      << Instruction::getOpcodeName(
+             RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
+      << " (sub (0, mul";
+    auto *Mul = cast<VPWidenRecipe>(ExpressionRecipes[2]);
+    Mul->printFlags(O);
+    O << "(";
+    getOperand(0)->printAsOperand(O, SlotTracker);
+    auto *Ext0 = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
+    O << " " << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
+      << *Ext0->getResultType() << "), (";
+    getOperand(1)->printAsOperand(O, SlotTracker);
+    auto *Ext1 = cast<VPWidenCastRecipe>(ExpressionRecipes[1]);
+    O << " " << Instruction::getOpcodeName(Ext1->getOpcode()) << " to "
+      << *Ext1->getResultType() << ")";
+    if (Red->isConditional()) {
+      O << ", ";
+      Red->getCondOp()->printAsOperand(O, SlotTracker);
+    }
+    O << "))";
     break;
   }
   case ExpressionTypes::MulAccReduction:

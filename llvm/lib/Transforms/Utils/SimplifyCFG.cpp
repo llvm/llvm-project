@@ -84,7 +84,6 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
-#include <numeric>
 #include <optional>
 #include <set>
 #include <tuple>
@@ -96,7 +95,9 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "simplifycfg"
 
-cl::opt<bool> llvm::RequireAndPreserveDomTree(
+namespace llvm {
+
+cl::opt<bool> RequireAndPreserveDomTree(
     "simplifycfg-require-and-preserve-domtree", cl::Hidden,
 
     cl::desc(
@@ -205,6 +206,8 @@ static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
              "to be live in"));
 
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+} // end namespace llvm
 
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
@@ -956,33 +959,6 @@ static bool valuesOverlap(std::vector<ValueEqualityComparisonCase> &C1,
   return false;
 }
 
-// Set branch weights on SwitchInst. This sets the metadata if there is at
-// least one non-zero weight.
-static void setBranchWeights(SwitchInst *SI, ArrayRef<uint32_t> Weights,
-                             bool IsExpected) {
-  // Check that there is at least one non-zero weight. Otherwise, pass
-  // nullptr to setMetadata which will erase the existing metadata.
-  MDNode *N = nullptr;
-  if (llvm::any_of(Weights, [](uint32_t W) { return W != 0; }))
-    N = MDBuilder(SI->getParent()->getContext())
-            .createBranchWeights(Weights, IsExpected);
-  SI->setMetadata(LLVMContext::MD_prof, N);
-}
-
-// Similar to the above, but for branch and select instructions that take
-// exactly 2 weights.
-static void setBranchWeights(Instruction *I, uint32_t TrueWeight,
-                             uint32_t FalseWeight, bool IsExpected) {
-  assert(isa<BranchInst>(I) || isa<SelectInst>(I));
-  // Check that there is at least one non-zero weight. Otherwise, pass
-  // nullptr to setMetadata which will erase the existing metadata.
-  MDNode *N = nullptr;
-  if (TrueWeight || FalseWeight)
-    N = MDBuilder(I->getParent()->getContext())
-            .createBranchWeights(TrueWeight, FalseWeight, IsExpected);
-  I->setMetadata(LLVMContext::MD_prof, N);
-}
-
 /// If TI is known to be a terminator instruction and its block is known to
 /// only have a single predecessor block, check to see if that predecessor is
 /// also a value comparison with the same value, and if that comparison
@@ -1179,16 +1155,6 @@ static void getBranchWeights(Instruction *TI,
 
     if (ICI->getPredicate() == ICmpInst::ICMP_EQ)
       std::swap(Weights.front(), Weights.back());
-  }
-}
-
-/// Keep halving the weights until all can fit in uint32_t.
-static void fitWeights(MutableArrayRef<uint64_t> Weights) {
-  uint64_t Max = *llvm::max_element(Weights);
-  if (Max > UINT_MAX) {
-    unsigned Offset = 32 - llvm::countl_zero(Max);
-    for (uint64_t &I : Weights)
-      I >>= Offset;
   }
 }
 
@@ -1447,14 +1413,9 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
   for (ValueEqualityComparisonCase &V : PredCases)
     NewSI->addCase(V.Value, V.Dest);
 
-  if (PredHasWeights || SuccHasWeights) {
-    // Halve the weights if any of them cannot fit in an uint32_t
-    fitWeights(Weights);
-
-    SmallVector<uint32_t, 8> MDWeights(Weights.begin(), Weights.end());
-
-    setBranchWeights(NewSI, MDWeights, /*IsExpected=*/false);
-  }
+  if (PredHasWeights || SuccHasWeights)
+    setFittedBranchWeights(*NewSI, Weights, /*IsExpected=*/false,
+                           /*ElideAllZero=*/true);
 
   eraseTerminatorAndDCECond(PTI);
 
@@ -4054,39 +4015,34 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   // Try to update branch weights.
   uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
-  SmallVector<uint32_t, 2> MDWeights;
+  SmallVector<uint64_t, 2> MDWeights;
   if (extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
                              SuccTrueWeight, SuccFalseWeight)) {
-    SmallVector<uint64_t, 8> NewWeights;
 
     if (PBI->getSuccessor(0) == BB) {
       // PBI: br i1 %x, BB, FalseDest
       // BI:  br i1 %y, UniqueSucc, FalseDest
       // TrueWeight is TrueWeight for PBI * TrueWeight for BI.
-      NewWeights.push_back(PredTrueWeight * SuccTrueWeight);
+      MDWeights.push_back(PredTrueWeight * SuccTrueWeight);
       // FalseWeight is FalseWeight for PBI * TotalWeight for BI +
       //               TrueWeight for PBI * FalseWeight for BI.
       // We assume that total weights of a BranchInst can fit into 32 bits.
       // Therefore, we will not have overflow using 64-bit arithmetic.
-      NewWeights.push_back(PredFalseWeight *
-                               (SuccFalseWeight + SuccTrueWeight) +
-                           PredTrueWeight * SuccFalseWeight);
+      MDWeights.push_back(PredFalseWeight * (SuccFalseWeight + SuccTrueWeight) +
+                          PredTrueWeight * SuccFalseWeight);
     } else {
       // PBI: br i1 %x, TrueDest, BB
       // BI:  br i1 %y, TrueDest, UniqueSucc
       // TrueWeight is TrueWeight for PBI * TotalWeight for BI +
       //              FalseWeight for PBI * TrueWeight for BI.
-      NewWeights.push_back(PredTrueWeight * (SuccFalseWeight + SuccTrueWeight) +
-                           PredFalseWeight * SuccTrueWeight);
+      MDWeights.push_back(PredTrueWeight * (SuccFalseWeight + SuccTrueWeight) +
+                          PredFalseWeight * SuccTrueWeight);
       // FalseWeight is FalseWeight for PBI * FalseWeight for BI.
-      NewWeights.push_back(PredFalseWeight * SuccFalseWeight);
+      MDWeights.push_back(PredFalseWeight * SuccFalseWeight);
     }
 
-    // Halve the weights if any of them cannot fit in an uint32_t
-    fitWeights(NewWeights);
-
-    append_range(MDWeights, NewWeights);
-    setBranchWeights(PBI, MDWeights[0], MDWeights[1], /*IsExpected=*/false);
+    setFittedBranchWeights(*PBI, MDWeights, /*IsExpected=*/false,
+                           /*ElideAllZero=*/true);
 
     // TODO: If BB is reachable from all paths through PredBlock, then we
     // could replace PBI's branch probabilities with BI's.
@@ -4126,8 +4082,8 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
     if (auto *SI = dyn_cast<SelectInst>(PBI->getCondition()))
       if (!MDWeights.empty()) {
         assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
-        setBranchWeights(SI, MDWeights[0], MDWeights[1],
-                         /*IsExpected=*/false);
+        setFittedBranchWeights(*SI, {MDWeights[0], MDWeights[1]},
+                               /*IsExpected=*/false, /*ElideAllZero=*/true);
       }
 
   ++NumFoldBranchToCommonDest;
@@ -4479,9 +4435,9 @@ static bool mergeConditionalStoreToAddress(
     if (InvertQCond)
       std::swap(QWeights[0], QWeights[1]);
     auto CombinedWeights = getDisjunctionWeights(PWeights, QWeights);
-    setBranchWeights(PostBB->getTerminator(), CombinedWeights[0],
-                     CombinedWeights[1],
-                     /*IsExpected=*/false);
+    setFittedBranchWeights(*PostBB->getTerminator(),
+                           {CombinedWeights[0], CombinedWeights[1]},
+                           /*IsExpected=*/false, /*ElideAllZero=*/true);
   }
 
   QB.SetInsertPoint(T);
@@ -4837,10 +4793,9 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     uint64_t NewWeights[2] = {PredCommon * (SuccCommon + SuccOther) +
                                   PredOther * SuccCommon,
                               PredOther * SuccOther};
-    // Halve the weights if any of them cannot fit in an uint32_t
-    fitWeights(NewWeights);
 
-    setBranchWeights(PBI, NewWeights[0], NewWeights[1], /*IsExpected=*/false);
+    setFittedBranchWeights(*PBI, NewWeights, /*IsExpected=*/false,
+                           /*ElideAllZero=*/true);
     // Cond may be a select instruction with the first operand set to "true", or
     // the second to "false" (see how createLogicalOp works for `and` and `or`)
     if (!ProfcheckDisableMetadataFixes)
@@ -4850,8 +4805,8 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
         assert(dyn_cast<SelectInst>(SI)->getCondition() == PBICond);
         // The corresponding probabilities are what was referred to above as
         // PredCommon and PredOther.
-        setBranchWeights(SI, PredCommon, PredOther,
-                         /*IsExpected=*/false);
+        setFittedBranchWeights(*SI, {PredCommon, PredOther},
+                               /*IsExpected=*/false, /*ElideAllZero=*/true);
       }
   }
 
@@ -4877,8 +4832,8 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
       if (HasWeights) {
         uint64_t TrueWeight = PBIOp ? PredFalseWeight : PredTrueWeight;
         uint64_t FalseWeight = PBIOp ? PredTrueWeight : PredFalseWeight;
-        setBranchWeights(NV, TrueWeight, FalseWeight,
-                         /*IsExpected=*/false);
+        setFittedBranchWeights(*NV, {TrueWeight, FalseWeight},
+                               /*IsExpected=*/false, /*ElideAllZero=*/true);
       }
     }
   }
@@ -4941,7 +4896,8 @@ bool SimplifyCFGOpt::simplifyTerminatorOnSelect(Instruction *OldTerm,
       // Create a conditional branch sharing the condition of the select.
       BranchInst *NewBI = Builder.CreateCondBr(Cond, TrueBB, FalseBB);
       if (TrueWeight != FalseWeight)
-        setBranchWeights(NewBI, TrueWeight, FalseWeight, /*IsExpected=*/false);
+        setBranchWeights(*NewBI, {TrueWeight, FalseWeight},
+                         /*IsExpected=*/false, /*ElideAllZero=*/true);
     }
   } else if (KeepEdge1 && (KeepEdge2 || TrueBB == FalseBB)) {
     // Neither of the selected blocks were successors, so this
@@ -5890,7 +5846,8 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
         TrueWeight /= 2;
         FalseWeight /= 2;
       }
-      setBranchWeights(NewBI, TrueWeight, FalseWeight, /*IsExpected=*/false);
+      setFittedBranchWeights(*NewBI, {TrueWeight, FalseWeight},
+                             /*IsExpected=*/false, /*ElideAllZero=*/true);
     }
   }
 
@@ -6356,25 +6313,25 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
     if (DefaultResult) {
       Value *ValueCompare =
           Builder.CreateICmpEQ(Condition, SecondCase, "switch.selectcmp");
-      SelectInst *SelectValueInst = cast<SelectInst>(Builder.CreateSelect(
-          ValueCompare, ResultVector[1].first, DefaultResult, "switch.select"));
-      SelectValue = SelectValueInst;
-      if (HasBranchWeights) {
+      SelectValue = Builder.CreateSelect(ValueCompare, ResultVector[1].first,
+                                         DefaultResult, "switch.select");
+      if (auto *SI = dyn_cast<SelectInst>(SelectValue);
+          SI && HasBranchWeights) {
         // We start with 3 probabilities, where the numerator is the
         // corresponding BranchWeights[i], and the denominator is the sum over
         // BranchWeights. We want the probability and negative probability of
         // Condition == SecondCase.
         assert(BranchWeights.size() == 3);
-        setBranchWeights(SelectValueInst, BranchWeights[2],
-                         BranchWeights[0] + BranchWeights[1],
-                         /*IsExpected=*/false);
+        setBranchWeights(
+            *SI, {BranchWeights[2], BranchWeights[0] + BranchWeights[1]},
+            /*IsExpected=*/false, /*ElideAllZero=*/true);
       }
     }
     Value *ValueCompare =
         Builder.CreateICmpEQ(Condition, FirstCase, "switch.selectcmp");
-    SelectInst *Ret = cast<SelectInst>(Builder.CreateSelect(
-        ValueCompare, ResultVector[0].first, SelectValue, "switch.select"));
-    if (HasBranchWeights) {
+    Value *Ret = Builder.CreateSelect(ValueCompare, ResultVector[0].first,
+                                      SelectValue, "switch.select");
+    if (auto *SI = dyn_cast<SelectInst>(Ret); SI && HasBranchWeights) {
       // We may have had a DefaultResult. Base the position of the first and
       // second's branch weights accordingly. Also the proability that Condition
       // != FirstCase needs to take that into account.
@@ -6382,9 +6339,10 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
       size_t FirstCasePos = (Condition != nullptr);
       size_t SecondCasePos = FirstCasePos + 1;
       uint32_t DefaultCase = (Condition != nullptr) ? BranchWeights[0] : 0;
-      setBranchWeights(Ret, BranchWeights[FirstCasePos],
-                       DefaultCase + BranchWeights[SecondCasePos],
-                       /*IsExpected=*/false);
+      setBranchWeights(*SI,
+                       {BranchWeights[FirstCasePos],
+                        DefaultCase + BranchWeights[SecondCasePos]},
+                       /*IsExpected=*/false, /*ElideAllZero=*/true);
     }
     return Ret;
   }
@@ -6422,14 +6380,16 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
           Value *And = Builder.CreateAnd(Condition, AndMask);
           Value *Cmp = Builder.CreateICmpEQ(
               And, Constant::getIntegerValue(And->getType(), AndMask));
-          SelectInst *Ret = cast<SelectInst>(
-              Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult));
-          if (HasBranchWeights) {
+          Value *Ret =
+              Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+          if (auto *SI = dyn_cast<SelectInst>(Ret); SI && HasBranchWeights) {
             // We know there's a Default case. We base the resulting branch
             // weights off its probability.
             assert(BranchWeights.size() >= 2);
-            setBranchWeights(Ret, accumulate(drop_begin(BranchWeights), 0),
-                             BranchWeights[0], /*IsExpected=*/false);
+            setBranchWeights(
+                *SI,
+                {accumulate(drop_begin(BranchWeights), 0U), BranchWeights[0]},
+                /*IsExpected=*/false, /*ElideAllZero=*/true);
           }
           return Ret;
         }
@@ -6448,12 +6408,14 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
         Value *And = Builder.CreateAnd(Condition, ~BitMask, "switch.and");
         Value *Cmp = Builder.CreateICmpEQ(
             And, Constant::getNullValue(And->getType()), "switch.selectcmp");
-        SelectInst *Ret = cast<SelectInst>(
-            Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult));
-        if (HasBranchWeights) {
+        Value *Ret =
+            Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+        if (auto *SI = dyn_cast<SelectInst>(Ret); SI && HasBranchWeights) {
           assert(BranchWeights.size() >= 2);
-          setBranchWeights(Ret, accumulate(drop_begin(BranchWeights), 0),
-                           BranchWeights[0], /*IsExpected=*/false);
+          setBranchWeights(
+              *SI,
+              {accumulate(drop_begin(BranchWeights), 0U), BranchWeights[0]},
+              /*IsExpected=*/false, /*ElideAllZero=*/true);
         }
         return Ret;
       }
@@ -6466,12 +6428,13 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
       Value *Cmp2 = Builder.CreateICmpEQ(Condition, CaseValues[1],
                                          "switch.selectcmp.case2");
       Value *Cmp = Builder.CreateOr(Cmp1, Cmp2, "switch.selectcmp");
-      SelectInst *Ret = cast<SelectInst>(
-          Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult));
-      if (HasBranchWeights) {
+      Value *Ret =
+          Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+      if (auto *SI = dyn_cast<SelectInst>(Ret); SI && HasBranchWeights) {
         assert(BranchWeights.size() >= 2);
-        setBranchWeights(Ret, accumulate(drop_begin(BranchWeights), 0),
-                         BranchWeights[0], /*IsExpected=*/false);
+        setBranchWeights(
+            *SI, {accumulate(drop_begin(BranchWeights), 0U), BranchWeights[0]},
+            /*IsExpected=*/false, /*ElideAllZero=*/true);
       }
       return Ret;
     }
@@ -8153,8 +8116,8 @@ static bool mergeNestedCondBranch(BranchInst *BI, DomTreeUpdater *DTU) {
   if (HasWeight) {
     uint64_t Weights[2] = {BBTWeight * BB1FWeight + BBFWeight * BB2TWeight,
                            BBTWeight * BB1TWeight + BBFWeight * BB2FWeight};
-    fitWeights(Weights);
-    setBranchWeights(BI, Weights[0], Weights[1], /*IsExpected=*/false);
+    setFittedBranchWeights(*BI, Weights, /*IsExpected=*/false,
+                           /*ElideAllZero=*/true);
   }
   return true;
 }

@@ -262,6 +262,7 @@ public:
     case Storage::Typeid:
       return false;
     }
+    llvm_unreachable("Unknown clang::interp::Storage enum");
   }
   /// Checks if the pointer is live.
   bool isLive() const {
