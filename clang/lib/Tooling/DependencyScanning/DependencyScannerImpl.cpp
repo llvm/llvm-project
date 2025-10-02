@@ -592,10 +592,9 @@ takeDependencyOutputOptionsFrom(CompilerInstance &ScanInstance) {
   // which ensures that the compiler won't create new dependency collectors,
   // and thus won't write out the extra '.d' files to disk.
   auto Opts = std::make_unique<DependencyOutputOptions>();
-
+  std::swap(*Opts, ScanInstance.getInvocation().getDependencyOutputOpts());
   // We need at least one -MT equivalent for the generator of make dependency
   // files to work.
-  std::swap(*Opts, ScanInstance.getInvocation().getDependencyOutputOpts());
   if (Opts->Targets.empty())
     Opts->Targets = {deduceDepTarget(ScanInstance.getFrontendOpts().OutputFile,
                                      ScanInstance.getFrontendOpts().Inputs)};
