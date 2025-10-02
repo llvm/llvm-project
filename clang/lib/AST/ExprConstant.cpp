@@ -11631,7 +11631,7 @@ static bool evalPshufBuiltin(EvalInfo &Info, const CallExpr *Call,
   unsigned NumElts = VT->getNumElements();
 
   unsigned TotalBits = NumElts * ElemBits;
-  unsigned LaneBits  = 128u;
+  unsigned LaneBits = 128u;
   unsigned LaneElts = LaneBits / ElemBits;
   if (!LaneElts || (NumElts % LaneElts) != 0)
     return false;
