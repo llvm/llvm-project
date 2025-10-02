@@ -77,19 +77,19 @@ void CIRGenCXXABI::setCXXABIThisValue(CIRGenFunction &cgf,
   cgf.cxxabiThisValue = thisPtr;
 }
 
-CharUnits CIRGenCXXABI::getArrayCookieSize(const CXXNewExpr *E) {
-  if (!requiresArrayCookie(E))
+CharUnits CIRGenCXXABI::getArrayCookieSize(const CXXNewExpr *e) {
+  if (!requiresArrayCookie(e))
     return CharUnits::Zero();
 
-  cgm.errorNYI(E->getSourceRange(), "CIRGenCXXABI::getArrayCookieSize");
+  cgm.errorNYI(e->getSourceRange(), "CIRGenCXXABI::getArrayCookieSize");
   return CharUnits::Zero();
 }
 
-bool CIRGenCXXABI::requiresArrayCookie(const CXXNewExpr *E) {
+bool CIRGenCXXABI::requiresArrayCookie(const CXXNewExpr *e) {
   // If the class's usual deallocation function takes two arguments,
   // it needs a cookie.
-  if (E->doesUsualArrayDeleteWantSize())
+  if (e->doesUsualArrayDeleteWantSize())
     return true;
 
-  return E->getAllocatedType().isDestructedType();
+  return e->getAllocatedType().isDestructedType();
 }

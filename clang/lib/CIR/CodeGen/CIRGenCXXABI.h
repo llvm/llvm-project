@@ -28,7 +28,7 @@ protected:
   CIRGenModule &cgm;
   std::unique_ptr<clang::MangleContext> mangleContext;
 
-  virtual bool requiresArrayCookie(const CXXNewExpr *E);
+  virtual bool requiresArrayCookie(const CXXNewExpr *e);
 
 public:
   // TODO(cir): make this protected when target-specific CIRGenCXXABIs are
@@ -255,7 +255,7 @@ public:
   ///   - calls to \::operator new(size_t, void*) never need a cookie
   ///
   /// \param E - the new-expression being allocated.
-  virtual CharUnits getArrayCookieSize(const CXXNewExpr *E);
+  virtual CharUnits getArrayCookieSize(const CXXNewExpr *e);
 };
 
 /// Creates and Itanium-family ABI

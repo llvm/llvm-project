@@ -339,7 +339,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     unsigned numElementsWidth = count.getBitWidth();
 
     // The equivalent code in CodeGen/CGExprCXX.cpp handles these cases as
-    // overflow, but they should never happen. The size argument is implicitly
+    // overflow, but that should never happen. The size argument is implicitly
     // cast to a size_t, so it can never be negative and numElementsWidth will
     // always equal sizeWidth.
     assert(!count.isNegative() && "Expected non-negative array size");
@@ -350,7 +350,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     llvm::APInt adjustedCount = count.zextOrTrunc(sizeWidth);
 
     // Scale numElements by that.  This might overflow, but we don't
-    // care because it only overflows if allocationSize does, too, and
+    // care because it only overflows if allocationSize does too, and
     // if that overflows then we shouldn't use this.
     // This emits a constant that may not be used, but we can't tell here
     // whether it will be needed or not.
