@@ -153,10 +153,13 @@ template <TypeCategory CAT,
     class HELPER>
 struct NumericFindlocHelper {
   template <int KIND> struct Functor {
-    RT_API_ATTRS void operator()(TypeCategory targetCat, int targetKind,
-        Descriptor &result, const Descriptor &x, const Descriptor &target,
-        int kind, int dim, const Descriptor *mask, bool back,
-        Terminator &terminator) const {
+#if defined(__CUDACC__)
+    __attribute__((noinline))
+#endif
+    RT_API_ATTRS void
+    operator()(TypeCategory targetCat, int targetKind, Descriptor &result,
+        const Descriptor &x, const Descriptor &target, int kind, int dim,
+        const Descriptor *mask, bool back, Terminator &terminator) const {
       switch (targetCat) {
       case TypeCategory::Integer:
       case TypeCategory::Unsigned:
