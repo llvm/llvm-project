@@ -9,6 +9,9 @@
 #ifndef LLVM_CLANG_LIB_CIR_ABIINFO_H
 #define LLVM_CLANG_LIB_CIR_ABIINFO_H
 
+#include "clang/Basic/LangOptions.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
+
 namespace clang::CIRGen {
 
 class CIRGenFunctionInfo;
@@ -23,6 +26,12 @@ public:
   ABIInfo(CIRGenTypes &cgt) : cgt(cgt) {}
 
   virtual ~ABIInfo();
+
+  /// Returns the optimal vector memory type based on the given vector type. For
+  /// example, on certain targets, a vector with 3 elements might be promoted to
+  /// one with 4 elements to improve performance.
+  virtual cir::VectorType
+  getOptimalVectorMemoryType(cir::VectorType ty, const LangOptions &opt) const;
 };
 
 } // namespace clang::CIRGen
