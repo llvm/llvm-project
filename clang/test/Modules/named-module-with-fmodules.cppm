@@ -7,7 +7,7 @@
 // RUN: split-file %s %t
 
 // RUN: %clang -std=c++23 -fmodules -fmodule-map-file=%t/module.modulemap \
-// RUN:   --precompile %t/A.cppm -o %t/A.pcm
+// RUN:   -fmodules-cache-path=%t --precompile %t/A.cppm -o %t/A.pcm
 
 //--- module.modulemap
 module foo { header "foo.h" }

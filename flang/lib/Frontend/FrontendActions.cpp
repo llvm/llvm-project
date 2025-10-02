@@ -277,6 +277,14 @@ bool CodeGenAction::beginSourceFileAction() {
                               ci.getInvocation().getLangOpts().OpenMPVersion);
   }
 
+  if (ci.getInvocation().getLangOpts().NoFastRealMod) {
+    mlir::ModuleOp mod = lb.getModule();
+    mod.getOperation()->setAttr(
+        mlir::StringAttr::get(mod.getContext(),
+                              llvm::Twine{"fir.no_fast_real_mod"}),
+        mlir::BoolAttr::get(mod.getContext(), true));
+  }
+
   // Create a parse tree and lower it to FIR
   parseAndLowerTree(ci, lb);
 
@@ -898,7 +906,19 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
                                    ? llvm::CodeGenFileType::AssemblyFile
                                    : llvm::CodeGenFileType::ObjectFile;
-  if (tm.addPassesToEmitFile(codeGenPasses, os, nullptr, cgft)) {
+  std::unique_ptr<llvm::ToolOutputFile> dwoOS;
+  if (!codeGenOpts.SplitDwarfOutput.empty()) {
+    std::error_code ec;
+    dwoOS = std::make_unique<llvm::ToolOutputFile>(codeGenOpts.SplitDwarfOutput,
+                                                   ec, llvm::sys::fs::OF_None);
+    if (ec) {
+      diags.Report(clang::diag::err_fe_unable_to_open_output)
+          << codeGenOpts.SplitDwarfOutput << ec.message();
+      return;
+    }
+  }
+  if (tm.addPassesToEmitFile(codeGenPasses, os, dwoOS ? &dwoOS->os() : nullptr,
+                             cgft)) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
                               "emission of this file type is not supported");
@@ -908,6 +928,9 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
 
   // Run the passes
   codeGenPasses.run(llvmModule);
+
+  if (dwoOS)
+    dwoOS->keep();
 
   // Cleanup
   delete tlii;
@@ -936,20 +959,18 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
     pgoOpt = llvm::PGOOptions(opts.InstrProfileOutput.empty()
                                   ? llvm::driver::getDefaultProfileGenName()
                                   : opts.InstrProfileOutput,
-                              "", "", opts.MemoryProfileUsePath, nullptr,
+                              "", "", opts.MemoryProfileUsePath,
                               llvm::PGOOptions::IRInstr,
                               llvm::PGOOptions::NoCSAction,
                               llvm::PGOOptions::ColdFuncOpt::Default, false,
                               /*PseudoProbeForProfiling=*/false, false);
   } else if (opts.hasProfileIRUse()) {
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-        llvm::vfs::getRealFileSystem();
     // -fprofile-use.
     auto CSAction = opts.hasProfileCSIRUse() ? llvm::PGOOptions::CSIRUse
                                              : llvm::PGOOptions::NoCSAction;
     pgoOpt = llvm::PGOOptions(
         opts.ProfileInstrumentUsePath, "", opts.ProfileRemappingFile,
-        opts.MemoryProfileUsePath, VFS, llvm::PGOOptions::IRUse, CSAction,
+        opts.MemoryProfileUsePath, llvm::PGOOptions::IRUse, CSAction,
         llvm::PGOOptions::ColdFuncOpt::Default, false);
   }
 
@@ -1324,6 +1345,7 @@ void CodeGenAction::executeAction() {
   llvm::TargetMachine &targetMachine = ci.getTargetMachine();
 
   targetMachine.Options.MCOptions.AsmVerbose = targetOpts.asmVerbose;
+  targetMachine.Options.MCOptions.SplitDwarfFile = codeGenOpts.SplitDwarfFile;
 
   const llvm::Triple &theTriple = targetMachine.getTargetTriple();
 
@@ -1352,7 +1374,7 @@ void CodeGenAction::executeAction() {
       std::make_unique<BackendRemarkConsumer>(remarkConsumer));
 
   // write optimization-record
-  llvm::Expected<std::unique_ptr<llvm::ToolOutputFile>> optRecordFileOrErr =
+  llvm::Expected<llvm::LLVMRemarkFileHandle> optRecordFileOrErr =
       setupLLVMOptimizationRemarks(
           llvmModule->getContext(), codeGenOpts.OptRecordFile,
           codeGenOpts.OptRecordPasses, codeGenOpts.OptRecordFormat,
@@ -1364,8 +1386,7 @@ void CodeGenAction::executeAction() {
     return;
   }
 
-  std::unique_ptr<llvm::ToolOutputFile> optRecordFile =
-      std::move(*optRecordFileOrErr);
+  llvm::LLVMRemarkFileHandle optRecordFile = std::move(*optRecordFileOrErr);
 
   if (optRecordFile) {
     optRecordFile->keep();

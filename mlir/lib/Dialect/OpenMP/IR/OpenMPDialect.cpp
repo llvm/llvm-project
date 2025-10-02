@@ -79,37 +79,77 @@ struct LLVMPointerPointerLikeModel
 } // namespace
 
 /// Generate a name of a canonical loop nest of the format
-/// `<prefix>(_s<num>_r<num>)*` that describes its nesting inside parent
-/// operations (`_r<num>`) and that operation's region (`_s<num>`). The region
-/// number is omitted if the parent operation has just one region. If a loop
-/// nest just consists of canonical loops nested inside each other, also uses
-/// `d<num>` where <num> is the nesting depth of the loop.
+/// `<prefix>(_r<idx>_s<idx>)*`. Hereby, `_r<idx>` identifies the region
+/// argument index of an operation that has multiple regions, if the operation
+/// has multiple regions.
+/// `_s<idx>` identifies the position of an operation within a region, where
+/// only operations that may potentially contain loops ("container operations"
+/// i.e. have region arguments) are counted. Again, it is omitted if there is
+/// only one such operation in a region. If there are canonical loops nested
+/// inside each other, also may also use the format `_d<num>` where <num> is the
+/// nesting depth of the loop.
+///
+/// The generated name is a best-effort to make canonical loop unique within an
+/// SSA namespace. This also means that regions with IsolatedFromAbove property
+/// do not consider any parents or siblings.
 static std::string generateLoopNestingName(StringRef prefix,
                                            CanonicalLoopOp op) {
   struct Component {
-    // An region argument of an operation
-    Operation *parentOp;
-    size_t regionInOpIdx;
-    bool isOnlyRegionInOp;
-    bool skipRegion;
+    /// If true, this component describes a region operand of an operation (the
+    /// operand's owner) If false, this component describes an operation located
+    /// in a parent region
+    bool isRegionArgOfOp;
+    bool skip = false;
+    bool isUnique = false;
 
-    // An operation somewhere in a parent region
-    Operation *thisOp;
+    size_t idx;
+    Operation *op;
     Region *parentRegion;
-    size_t opInRegionIdx;
-    bool isOnlyOpInRegion;
-    bool skipOp;
-    int depth = -1;
+    size_t loopDepth;
+
+    Operation *&getOwnerOp() {
+      assert(isRegionArgOfOp && "Must describe a region operand");
+      return op;
+    }
+    size_t &getArgIdx() {
+      assert(isRegionArgOfOp && "Must describe a region operand");
+      return idx;
+    }
+
+    Operation *&getContainerOp() {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return op;
+    }
+    size_t &getOpPos() {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return idx;
+    }
+    bool isLoopOp() const {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return isa<CanonicalLoopOp>(op);
+    }
+    Region *&getParentRegion() {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return parentRegion;
+    }
+    size_t &getLoopDepth() {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return loopDepth;
+    }
+
+    void skipIf(bool v = true) { skip = skip || v; }
   };
+
+  // List of ancestors, from inner to outer.
+  // Alternates between
+  //  * region argument of an operation
+  //  * operation within a region
   SmallVector<Component> components;
 
   // Gather a list of parent regions and operations, and the position within
   // their parent
   Operation *o = op.getOperation();
   while (o) {
-    if (o->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>())
-      break;
-
     // Operation within a region
     Region *r = o->getParentRegion();
     if (!r)
@@ -119,7 +159,7 @@ static std::string generateLoopNestingName(StringRef prefix,
     size_t idx = 0;
     bool found = false;
     size_t sequentialIdx = -1;
-    bool isOnlyLoop = true;
+    bool isOnlyContainerOp = true;
     for (Block *b : traversal) {
       for (Operation &op : *b) {
         if (&op == o && !found) {
@@ -129,26 +169,38 @@ static std::string generateLoopNestingName(StringRef prefix,
         if (op.getNumRegions()) {
           idx += 1;
           if (idx > 1)
-            isOnlyLoop = false;
+            isOnlyContainerOp = false;
         }
-        if (found && !isOnlyLoop)
+        if (found && !isOnlyContainerOp)
           break;
       }
     }
 
-    Component &comp = components.emplace_back();
-    comp.thisOp = o;
-    comp.parentRegion = r;
-    comp.opInRegionIdx = sequentialIdx;
-    comp.isOnlyOpInRegion = isOnlyLoop;
+    Component &containerOpInRegion = components.emplace_back();
+    containerOpInRegion.isRegionArgOfOp = false;
+    containerOpInRegion.isUnique = isOnlyContainerOp;
+    containerOpInRegion.getContainerOp() = o;
+    containerOpInRegion.getOpPos() = sequentialIdx;
+    containerOpInRegion.getParentRegion() = r;
 
-    // Region argument of an operation
     Operation *parent = r->getParentOp();
 
-    comp.parentOp = parent;
-    comp.regionInOpIdx = 0;
-    comp.isOnlyRegionInOp = true;
-    if (parent && parent->getRegions().size() > 1) {
+    // Region argument of an operation
+    Component &regionArgOfOperation = components.emplace_back();
+    regionArgOfOperation.isRegionArgOfOp = true;
+    regionArgOfOperation.isUnique = true;
+    regionArgOfOperation.getArgIdx() = 0;
+    regionArgOfOperation.getOwnerOp() = parent;
+
+    // The IsolatedFromAbove trait of the parent operation implies that each
+    // individual region argument has its own separate namespace, so no
+    // ambiguity.
+    if (!parent || parent->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>())
+      break;
+
+    // Component only needed if operation has multiple region operands. Region
+    // arguments may be optional, but we currently do not consider this.
+    if (parent->getRegions().size() > 1) {
       auto getRegionIndex = [](Operation *o, Region *r) {
         for (auto [idx, region] : llvm::enumerate(o->getRegions())) {
           if (&region == r)
@@ -156,97 +208,100 @@ static std::string generateLoopNestingName(StringRef prefix,
         }
         llvm_unreachable("Region not child of its parent operation");
       };
-      comp.regionInOpIdx = getRegionIndex(parent, r);
-      comp.isOnlyRegionInOp = false;
+      regionArgOfOperation.isUnique = false;
+      regionArgOfOperation.getArgIdx() = getRegionIndex(parent, r);
     }
-
-    if (!parent)
-      break;
 
     // next parent
     o = parent;
   }
 
-  // Reorder components from outermost to innermost
-  std::reverse(components.begin(), components.end());
+  // Determine whether a region-argument component is not needed
+  for (Component &c : components)
+    c.skipIf(c.isRegionArgOfOp && c.isUnique);
 
-  // Determine whether a component is not needed
+  // Find runs of nested loops and determine each loop's depth in the loop nest
+  size_t numSurroundingLoops = 0;
+  for (Component &c : llvm::reverse(components)) {
+    if (c.skip)
+      continue;
+
+    // non-skipped multi-argument operands interrupt the loop nest
+    if (c.isRegionArgOfOp) {
+      numSurroundingLoops = 0;
+      continue;
+    }
+
+    // Multiple loops in a region means each of them is the outermost loop of a
+    // new loop nest
+    if (!c.isUnique)
+      numSurroundingLoops = 0;
+
+    c.getLoopDepth() = numSurroundingLoops;
+
+    // Next loop is surrounded by one more loop
+    if (isa<CanonicalLoopOp>(c.getContainerOp()))
+      numSurroundingLoops += 1;
+  }
+
+  // In loop nests, skip all but the innermost loop that contains the depth
+  // number
+  bool isLoopNest = false;
   for (Component &c : components) {
-    c.skipRegion = c.isOnlyRegionInOp;
-    c.skipOp = c.isOnlyOpInRegion && !isa<CanonicalLoopOp>(c.thisOp);
+    if (c.skip || c.isRegionArgOfOp)
+      continue;
+
+    if (!isLoopNest && c.getLoopDepth() >= 1) {
+      // Innermost loop of a loop nest of at least two loops
+      isLoopNest = true;
+    } else if (isLoopNest) {
+      // Non-innermost loop of a loop nest
+      c.skipIf(c.isUnique);
+
+      // If there is no surrounding loop left, this must have been the outermost
+      // loop; leave loop-nest mode for the next iteration
+      if (c.getLoopDepth() == 0)
+        isLoopNest = false;
+    }
   }
 
-  // Find runs of perfect nests and merge them into a single component
-  size_t curNestRoot = 0;
-  size_t curNestDepth = 1;
-  auto mergeLoopNest = [&](size_t innermost) {
-    size_t outermost = curNestRoot;
+  // Skip non-loop unambiguous regions (but they should interrupt loop nests, so
+  // we mark them as skipped only after computing loop nests)
+  for (Component &c : components)
+    c.skipIf(!c.isRegionArgOfOp && c.isUnique &&
+             !isa<CanonicalLoopOp>(c.getContainerOp()));
 
-    // Don't do enything if it does not consist of at least 2 loops
-    if (outermost < innermost) {
-      for (auto i : llvm::seq<int>(outermost + 1, innermost))
-        components[i].skipOp = true;
-      components[innermost].depth = curNestDepth;
-    }
+  // Components can be skipped if they are already disambiguated by their parent
+  // (or does not have a parent)
+  bool newRegion = true;
+  for (Component &c : llvm::reverse(components)) {
+    c.skipIf(newRegion && c.isUnique);
 
-    // Start new root
-    curNestRoot = innermost + 1;
-    curNestDepth = 1;
-  };
-  for (auto &&[i, c] : llvm::enumerate(components)) {
-    if (i <= curNestRoot)
-      continue;
+    // non-skipped components disambiguate unique children
+    if (!c.skip)
+      newRegion = true;
 
-    // Check whether this region can be included
-    if (!c.skipRegion) {
-      mergeLoopNest(i);
-      continue;
-    }
-
-    if (c.skipOp)
-      continue;
-
-    if (!c.isOnlyOpInRegion) {
-      mergeLoopNest(i);
-      continue;
-    }
-
-    curNestDepth += 1;
+    // ...except canonical loops that need a suffix for each nest
+    if (!c.isRegionArgOfOp && c.getContainerOp())
+      newRegion = false;
   }
 
-  // Finalize innermost loop nest
-  mergeLoopNest(components.size() - 1);
-
-  // Outermost loop does not need a suffix if it has no sibling
-  for (auto &c : components) {
-    if (c.skipOp)
-      continue;
-    if (c.isOnlyOpInRegion)
-      c.skipOp = true;
-    break;
-  }
-
-  // Compile name
+  // Compile the nesting name string
   SmallString<64> Name{prefix};
-  for (auto &c : components) {
-    auto addComponent = [&Name](char letter, int64_t idx) {
-      Name += '_';
-      Name += letter;
-      Name += idx;
-    };
+  llvm::raw_svector_ostream NameOS(Name);
+  for (auto &c : llvm::reverse(components)) {
+    if (c.skip)
+      continue;
 
-    if (!c.skipRegion)
-      addComponent('r', c.regionInOpIdx);
-
-    if (!c.skipOp) {
-      if (c.depth >= 0)
-        addComponent('d', c.depth - 1);
-      else
-        addComponent('s', c.opInRegionIdx);
-    }
+    if (c.isRegionArgOfOp)
+      NameOS << "_r" << c.getArgIdx();
+    else if (c.getLoopDepth() >= 1)
+      NameOS << "_d" << c.getLoopDepth();
+    else
+      NameOS << "_s" << c.getOpPos();
   }
 
-  return Name.str().str();
+  return NameOS.str().str();
 }
 
 void OpenMPDialect::initialize() {
@@ -354,7 +409,7 @@ static ParseResult parseClauseAttr(AsmParser &parser, ClauseAttr &attr) {
 }
 
 template <typename ClauseAttr>
-void printClauseAttr(OpAsmPrinter &p, Operation *op, ClauseAttr attr) {
+static void printClauseAttr(OpAsmPrinter &p, Operation *op, ClauseAttr attr) {
   p << stringifyEnum(attr.getValue());
 }
 
@@ -1683,8 +1738,8 @@ static LogicalResult verifySynchronizationHint(Operation *op, uint64_t hint) {
 //===----------------------------------------------------------------------===//
 
 // Helper function to get bitwise AND of `value` and 'flag'
-uint64_t mapTypeToBitFlag(uint64_t value,
-                          llvm::omp::OpenMPOffloadMappingFlags flag) {
+static uint64_t mapTypeToBitFlag(uint64_t value,
+                                 llvm::omp::OpenMPOffloadMappingFlags flag) {
   return value & llvm::to_underlying(flag);
 }
 
@@ -2283,6 +2338,31 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
       });
 }
 
+/// Check if we can promote SPMD kernel to No-Loop kernel.
+static bool canPromoteToNoLoop(Operation *capturedOp, TeamsOp teamsOp,
+                               WsloopOp *wsLoopOp) {
+  // num_teams clause can break no-loop teams/threads assumption.
+  if (teamsOp.getNumTeamsUpper())
+    return false;
+
+  // Reduction kernels are slower in no-loop mode.
+  if (teamsOp.getNumReductionVars())
+    return false;
+  if (wsLoopOp->getNumReductionVars())
+    return false;
+
+  // Check if the user allows the promotion of kernels to no-loop mode.
+  OffloadModuleInterface offloadMod =
+      capturedOp->getParentOfType<omp::OffloadModuleInterface>();
+  if (!offloadMod)
+    return false;
+  auto ompFlags = offloadMod.getFlags();
+  if (!ompFlags)
+    return false;
+  return ompFlags.getAssumeTeamsOversubscription() &&
+         ompFlags.getAssumeThreadsOversubscription();
+}
+
 TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
   // A non-null captured op is only valid if it resides inside of a TargetOp
   // and is the result of calling getInnermostCapturedOmpOp() on it.
@@ -2311,7 +2391,8 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
 
   // Detect target-teams-distribute-parallel-wsloop[-simd].
   if (numWrappers == 2) {
-    if (!isa<WsloopOp>(innermostWrapper))
+    WsloopOp *wsloopOp = dyn_cast<WsloopOp>(innermostWrapper);
+    if (!wsloopOp)
       return TargetRegionFlags::generic;
 
     innermostWrapper = std::next(innermostWrapper);
@@ -2322,12 +2403,17 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
     if (!isa_and_present<ParallelOp>(parallelOp))
       return TargetRegionFlags::generic;
 
-    Operation *teamsOp = parallelOp->getParentOp();
-    if (!isa_and_present<TeamsOp>(teamsOp))
+    TeamsOp teamsOp = dyn_cast<TeamsOp>(parallelOp->getParentOp());
+    if (!teamsOp)
       return TargetRegionFlags::generic;
 
-    if (teamsOp->getParentOp() == targetOp.getOperation())
-      return TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+    if (teamsOp->getParentOp() == targetOp.getOperation()) {
+      TargetRegionFlags result =
+          TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+      if (canPromoteToNoLoop(capturedOp, teamsOp, wsloopOp))
+        result = result | TargetRegionFlags::no_loop;
+      return result;
+    }
   }
   // Detect target-teams-distribute[-simd] and target-teams-loop.
   else if (isa<DistributeOp, LoopOp>(innermostWrapper)) {
