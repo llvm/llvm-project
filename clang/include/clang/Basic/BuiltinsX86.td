@@ -950,7 +950,7 @@ let Features = "pku", Attributes = [NoThrow] in {
   def wrpkru : X86Builtin<"void(unsigned int)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def sqrtpd512 : X86Builtin<"_Vector<8, double>(_Vector<8, double>, _Constant int)">;
   def sqrtps512 : X86Builtin<"_Vector<16, float>(_Vector<16, float>, _Constant int)">;
 }

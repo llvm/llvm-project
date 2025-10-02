@@ -3016,7 +3016,12 @@ static bool interp__builtin_x86_sqrt(InterpState &S, CodePtr OpPC,
                                                  unsigned ID) {
   llvm::errs() << "Entering x86 sqrtpd/ps interpretbuiltin\n";
   
-  assert(Call->getNumArgs() == 1);
+  llvm::errs() << "BI__builtin_ia32_sqrtpd512 " << X86::BI__builtin_ia32_sqrtpd512 << '\n';
+  llvm::errs() << "BI__builtin_ia32_sqrtps512 " << X86::BI__builtin_ia32_sqrtps512 << '\n';
+  llvm::errs() << "Current ID " << ID << '\n';
+  llvm::errs() << "GetNumArgs " << Call->getNumArgs() << '\n';
+  unsigned NumArgs = Call->getNumArgs();
+  assert(NumArgs == 1 || NumArgs == 2);
   const Expr *ArgExpr = Call->getArg(0);
   QualType ArgTy = ArgExpr->getType();
   QualType ResultTy = Call->getType();
@@ -3032,6 +3037,16 @@ static bool interp__builtin_x86_sqrt(InterpState &S, CodePtr OpPC,
   else
     SemanticsPtr = &S.getContext().getFloatSemantics(ArgTy);
   const llvm::fltSemantics &Semantics = *SemanticsPtr;
+
+  if (NumArgs == 2) {
+    if (!Call->getArg(1)->getType()->isIntegerType()) {
+      return false;
+    }
+    APSInt RoundingMode = popToAPSInt(S, Call->getArg(1));
+    if (RoundingMode.getZExtValue() != 4) {
+      return false;
+    }
+  }
 
 
   // Scalar case
@@ -3831,6 +3846,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_sqrtps:
   case X86::BI__builtin_ia32_sqrtpd256:
   case X86::BI__builtin_ia32_sqrtps256:
+  case X86::BI__builtin_ia32_sqrtps512:
+  case X86::BI__builtin_ia32_sqrtpd512:
     return interp__builtin_x86_sqrt(S, OpPC, Call, BuiltinID);
 
   default:

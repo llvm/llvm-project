@@ -1458,7 +1458,7 @@ _mm512_mask_mullox_epi64(__m512i __W, __mmask8 __U, __m512i __A, __m512i __B) {
                                        (__v8df)_mm512_sqrt_round_pd((A), (R)), \
                                        (__v8df)_mm512_setzero_pd()))
 
-static  __inline__ __m512d __DEFAULT_FN_ATTRS512
+static  __inline__ __m512d __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_sqrt_pd(__m512d __A)
 {
   return (__m512d)__builtin_ia32_sqrtpd512((__v8df)__A,
@@ -1494,7 +1494,7 @@ _mm512_maskz_sqrt_pd (__mmask8 __U, __m512d __A)
                                       (__v16sf)_mm512_sqrt_round_ps((A), (R)), \
                                       (__v16sf)_mm512_setzero_ps()))
 
-static  __inline__ __m512 __DEFAULT_FN_ATTRS512
+static  __inline__ __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_sqrt_ps(__m512 __A)
 {
   return (__m512)__builtin_ia32_sqrtps512((__v16sf)__A,
