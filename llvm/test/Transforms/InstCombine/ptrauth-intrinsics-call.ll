@@ -3,7 +3,9 @@
 
 define i32 @test_ptrauth_call_sign(ptr %p) {
 ; CHECK-LABEL: @test_ptrauth_call_sign(
-; CHECK-NEXT:    [[V3:%.*]] = call i32 [[P:%.*]]()
+; CHECK-NEXT:    [[V0:%.*]] = ptrtoint ptr [[P1:%.*]] to i64
+; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[V0]] to ptr
+; CHECK-NEXT:    [[V3:%.*]] = call i32 [[P]]()
 ; CHECK-NEXT:    ret i32 [[V3]]
 ;
   %v0 = ptrtoint ptr %p to i64
@@ -15,7 +17,9 @@ define i32 @test_ptrauth_call_sign(ptr %p) {
 
 define i32 @test_ptrauth_call_sign_otherbundle(ptr %p) {
 ; CHECK-LABEL: @test_ptrauth_call_sign_otherbundle(
-; CHECK-NEXT:    [[V3:%.*]] = call i32 [[P:%.*]]() [ "somebundle"(ptr null), "otherbundle"(i64 0) ]
+; CHECK-NEXT:    [[V0:%.*]] = ptrtoint ptr [[P1:%.*]] to i64
+; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[V0]] to ptr
+; CHECK-NEXT:    [[V3:%.*]] = call i32 [[P]]() [ "somebundle"(ptr null), "otherbundle"(i64 0) ]
 ; CHECK-NEXT:    ret i32 [[V3]]
 ;
   %v0 = ptrtoint ptr %p to i64
@@ -27,7 +31,9 @@ define i32 @test_ptrauth_call_sign_otherbundle(ptr %p) {
 
 define i32 @test_ptrauth_call_resign(ptr %p) {
 ; CHECK-LABEL: @test_ptrauth_call_resign(
-; CHECK-NEXT:    [[V3:%.*]] = call i32 [[P:%.*]]() [ "ptrauth"(i32 1, i64 1234) ]
+; CHECK-NEXT:    [[V0:%.*]] = ptrtoint ptr [[P1:%.*]] to i64
+; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[V0]] to ptr
+; CHECK-NEXT:    [[V3:%.*]] = call i32 [[P]]() [ "ptrauth"(i32 1, i64 1234) ]
 ; CHECK-NEXT:    ret i32 [[V3]]
 ;
   %v0 = ptrtoint ptr %p to i64
@@ -40,7 +46,9 @@ define i32 @test_ptrauth_call_resign(ptr %p) {
 define i32 @test_ptrauth_call_resign_blend(ptr %pp) {
 ; CHECK-LABEL: @test_ptrauth_call_resign_blend(
 ; CHECK-NEXT:    [[V01:%.*]] = load ptr, ptr [[PP:%.*]], align 8
-; CHECK-NEXT:    [[V6:%.*]] = call i32 [[V01]]() [ "ptrauth"(i32 1, i64 1234) ]
+; CHECK-NEXT:    [[V2:%.*]] = ptrtoint ptr [[V01]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[V2]] to ptr
+; CHECK-NEXT:    [[V6:%.*]] = call i32 [[TMP1]]() [ "ptrauth"(i32 1, i64 1234) ]
 ; CHECK-NEXT:    ret i32 [[V6]]
 ;
   %v0 = load ptr, ptr %pp, align 8
@@ -57,8 +65,10 @@ define i32 @test_ptrauth_call_resign_blend_2(ptr %pp) {
 ; CHECK-LABEL: @test_ptrauth_call_resign_blend_2(
 ; CHECK-NEXT:    [[V01:%.*]] = load ptr, ptr [[PP:%.*]], align 8
 ; CHECK-NEXT:    [[V1:%.*]] = ptrtoint ptr [[PP]] to i64
+; CHECK-NEXT:    [[V2:%.*]] = ptrtoint ptr [[V01]] to i64
 ; CHECK-NEXT:    [[V3:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[V1]], i64 5678)
-; CHECK-NEXT:    [[V6:%.*]] = call i32 [[V01]]() [ "ptrauth"(i32 0, i64 [[V3]]) ]
+; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[V2]] to ptr
+; CHECK-NEXT:    [[V6:%.*]] = call i32 [[TMP1]]() [ "ptrauth"(i32 0, i64 [[V3]]) ]
 ; CHECK-NEXT:    ret i32 [[V6]]
 ;
   %v0 = load ptr, ptr %pp, align 8

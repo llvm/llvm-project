@@ -54,7 +54,7 @@
 using namespace llvm;
 
 static cl::opt<bool> DisableI2pP2iOpt(
-    "disable-i2p-p2i-opt", cl::init(false),
+    "disable-i2p-p2i-opt", cl::init(true),
     cl::desc("Disables inttoptr/ptrtoint roundtrip optimization"));
 
 //===----------------------------------------------------------------------===//
