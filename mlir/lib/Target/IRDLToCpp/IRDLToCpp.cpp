@@ -274,8 +274,7 @@ static void generateOpBuilderDeclarations(irdl::detail::dictionary &dict,
 }
 
 // add traits to the dictionary, return true if any were added
-static SmallVector<std::string> generateTraits(irdl::detail::dictionary &dict,
-                                               irdl::OperationOp op,
+static SmallVector<std::string> generateTraits(irdl::OperationOp op,
                                                const OpStrings &strings) {
   SmallVector<std::string> cppTraitNames;
   if (!strings.opRegionNames.empty()) {
@@ -299,7 +298,7 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
   const auto opStrings = getStrings(op);
   fillDict(dict, opStrings);
 
-  SmallVector<std::string> traitNames = generateTraits(dict, op, opStrings);
+  SmallVector<std::string> traitNames = generateTraits(op, opStrings);
   if (traitNames.empty())
     dict["OP_TEMPLATE_ARGS"] = opStrings.opCppName;
   else
