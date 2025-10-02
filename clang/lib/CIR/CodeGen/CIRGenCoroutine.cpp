@@ -70,7 +70,7 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   mlir::Location openCurlyLoc = getLoc(s.getBeginLoc());
   cir::ConstantOp nullPtrCst = builder.getNullPtr(VoidPtrTy, openCurlyLoc);
 
-  cir::FuncOp fn = curFn;
+  auto fn = dyn_cast<cir::FuncOp>(curFn);
   assert(fn && "other callables are NYI");
   fn.setCoroutine(true);
   cir::CallOp coroId = emitCoroIDBuiltinCall(openCurlyLoc, nullPtrCst);
