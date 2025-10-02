@@ -17,7 +17,6 @@
 // expanded.  Similarly, suppose we have an ISD::SRA of type v16i8 on PowerPC;
 // the operation must be unrolled, which introduces nodes with the illegal
 // type i8 which must be promoted.
-//
 // This does not legalize vector manipulations like ISD::BUILD_VECTOR,
 // or operations that happen to take a vector which are custom-lowered;
 // the legalization for such operations never produces nodes
