@@ -18867,21 +18867,25 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       (!ST->hasSVE2p1() && !(ST->hasSME2() && ST->isStreaming())))
     return SDValue();
 
-  unsigned NumUses = N->use_size();
+  // Count the number of users which are extract_vectors.
+  unsigned NumExts = count_if(N->users(), [](SDNode *Use) {
+    return Use->getOpcode() == ISD::EXTRACT_SUBVECTOR;
+  });
+
   auto MaskEC = N->getValueType(0).getVectorElementCount();
-  if (!MaskEC.isKnownMultipleOf(NumUses))
+  if (!MaskEC.isKnownMultipleOf(NumExts))
     return SDValue();
 
-  ElementCount ExtMinEC = MaskEC.divideCoefficientBy(NumUses);
+  ElementCount ExtMinEC = MaskEC.divideCoefficientBy(NumExts);
   if (ExtMinEC.getKnownMinValue() < 2)
     return SDValue();
 
-  SmallVector<SDNode *> Extracts(NumUses, nullptr);
+  SmallVector<SDNode *> Extracts(NumExts, nullptr);
   for (SDNode *Use : N->users()) {
     if (Use->getOpcode() != ISD::EXTRACT_SUBVECTOR)
-      return SDValue();
+      continue;
 
-    // Ensure the extract type is correct (e.g. if NumUses is 4 and
+    // Ensure the extract type is correct (e.g. if NumExts is 4 and
     // the mask return type is nxv8i1, each extract should be nxv2i1.
     if (Use->getValueType(0).getVectorElementCount() != ExtMinEC)
       return SDValue();
@@ -18902,32 +18906,39 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   SDValue Idx = N->getOperand(0);
   SDValue TC = N->getOperand(1);
-  EVT OpVT = Idx.getValueType();
-  if (OpVT != MVT::i64) {
+  if (Idx.getValueType() != MVT::i64) {
     Idx = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Idx);
     TC = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, TC);
   }
 
   // Create the whilelo_x2 intrinsics from each pair of extracts
   EVT ExtVT = Extracts[0]->getValueType(0);
+  EVT DoubleExtVT = ExtVT.getDoubleNumVectorElementsVT(*DAG.getContext());
   auto R =
       DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {ExtVT, ExtVT}, {ID, Idx, TC});
   DCI.CombineTo(Extracts[0], R.getValue(0));
   DCI.CombineTo(Extracts[1], R.getValue(1));
+  SmallVector<SDValue> Concats = {DAG.getNode(
+      ISD::CONCAT_VECTORS, DL, DoubleExtVT, R.getValue(0), R.getValue(1))};
 
-  if (NumUses == 2)
-    return SDValue(N, 0);
+  if (NumExts == 2) {
+    assert(N->getValueType(0) == DoubleExtVT);
+    return Concats[0];
+  }
 
-  auto Elts = DAG.getElementCount(DL, OpVT, ExtVT.getVectorElementCount() * 2);
-  for (unsigned I = 2; I < NumUses; I += 2) {
+  auto Elts =
+      DAG.getElementCount(DL, MVT::i64, ExtVT.getVectorElementCount() * 2);
+  for (unsigned I = 2; I < NumExts; I += 2) {
     // After the first whilelo_x2, we need to increment the starting value.
-    Idx = DAG.getNode(ISD::UADDSAT, DL, OpVT, Idx, Elts);
+    Idx = DAG.getNode(ISD::UADDSAT, DL, MVT::i64, Idx, Elts);
     R = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {ExtVT, ExtVT}, {ID, Idx, TC});
     DCI.CombineTo(Extracts[I], R.getValue(0));
     DCI.CombineTo(Extracts[I + 1], R.getValue(1));
+    Concats.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, DoubleExtVT,
+                                  R.getValue(0), R.getValue(1)));
   }
 
-  return SDValue(N, 0);
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0), Concats);
 }
 
 // Turn a v8i8/v16i8 extended vecreduce into a udot/sdot and vecreduce
@@ -25512,6 +25523,32 @@ SDValue performCONDCombine(SDNode *N,
                                              CmpIndex, CC))
     return Val;
 
+  // X & M ?= C --> (C << clz(M)) ?= (X << clz(M)) where M is a non-empty
+  // sequence of ones starting at the least significant bit with the remainder
+  // zero and C is a constant s.t. (C & ~M) == 0 that cannot be materialised
+  // into a SUBS (immediate). The transformed form can be matched into a SUBS
+  // (shifted register).
+  if ((CC == AArch64CC::EQ || CC == AArch64CC::NE) && AndNode->hasOneUse() &&
+      isa<ConstantSDNode>(AndNode->getOperand(1)) &&
+      isa<ConstantSDNode>(SubsNode->getOperand(1))) {
+    SDValue X = AndNode->getOperand(0);
+    APInt M = AndNode->getConstantOperandAPInt(1);
+    APInt C = SubsNode->getConstantOperandAPInt(1);
+
+    if (M.isMask() && C.isSubsetOf(M) && !isLegalArithImmed(C.getZExtValue())) {
+      SDLoc DL(SubsNode);
+      EVT VT = SubsNode->getValueType(0);
+      unsigned ShiftAmt = M.countl_zero();
+      SDValue ShiftedX = DAG.getNode(
+          ISD::SHL, DL, VT, X, DAG.getShiftAmountConstant(ShiftAmt, VT, DL));
+      SDValue ShiftedC = DAG.getConstant(C << ShiftAmt, DL, VT);
+      SDValue NewSubs = DAG.getNode(AArch64ISD::SUBS, DL, SubsNode->getVTList(),
+                                    ShiftedC, ShiftedX);
+      DCI.CombineTo(SubsNode, NewSubs, NewSubs.getValue(1));
+      return SDValue(N, 0);
+    }
+  }
+
   if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(AndNode->getOperand(1))) {
     uint32_t CNV = CN->getZExtValue();
     if (CNV == 255)
@@ -27197,6 +27234,21 @@ static bool isLanes1toNKnownZero(SDValue Op) {
   }
 }
 
+// Return true if the vector operation can guarantee that the first lane of its
+// result is active.
+static bool isLane0KnownActive(SDValue Op) {
+  switch (Op.getOpcode()) {
+  default:
+    return false;
+  case AArch64ISD::REINTERPRET_CAST:
+    return isLane0KnownActive(Op->getOperand(0));
+  case ISD::SPLAT_VECTOR:
+    return isOneConstant(Op.getOperand(0));
+  case AArch64ISD::PTRUE:
+    return Op.getConstantOperandVal(0) == AArch64SVEPredPattern::all;
+  };
+}
+
 static SDValue removeRedundantInsertVectorElt(SDNode *N) {
   assert(N->getOpcode() == ISD::INSERT_VECTOR_ELT && "Unexpected node!");
   SDValue InsertVec = N->getOperand(0);
@@ -27478,6 +27530,32 @@ static SDValue performMULLCombine(SDNode *N,
 
   if (SDValue Val = tryCombineMULLWithUZP1(N, DCI, DAG))
     return Val;
+
+  return SDValue();
+}
+
+static SDValue performPTestFirstCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        SelectionDAG &DAG) {
+  if (DCI.isBeforeLegalize())
+    return SDValue();
+
+  SDLoc DL(N);
+  auto Mask = N->getOperand(0);
+  auto Pred = N->getOperand(1);
+
+  if (!isLane0KnownActive(Mask))
+    return SDValue();
+
+  if (Pred->getOpcode() == AArch64ISD::REINTERPRET_CAST)
+    Pred = Pred->getOperand(0);
+
+  if (Pred->getOpcode() == ISD::CONCAT_VECTORS) {
+    Pred = Pred->getOperand(0);
+    Pred = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Pred);
+    return DAG.getNode(AArch64ISD::PTEST_FIRST, DL, N->getValueType(0), Mask,
+                       Pred);
+  }
 
   return SDValue();
 }
@@ -27838,6 +27916,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::UMULL:
   case AArch64ISD::PMULL:
     return performMULLCombine(N, DCI, DAG);
+  case AArch64ISD::PTEST_FIRST:
+    return performPTestFirstCombine(N, DCI, DAG);
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN:
     switch (N->getConstantOperandVal(1)) {

@@ -5726,7 +5726,8 @@ void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
       }
     }
     if (!symbol.test(Symbol::Flag::Function) &&
-        !symbol.test(Symbol::Flag::Subroutine)) {
+        !symbol.test(Symbol::Flag::Subroutine) &&
+        !context().intrinsics().IsDualIntrinsic(name.source.ToString())) {
       if (context().intrinsics().IsIntrinsicFunction(name.source.ToString())) {
         symbol.set(Symbol::Flag::Function);
       } else if (context().intrinsics().IsIntrinsicSubroutine(

@@ -4141,23 +4141,6 @@ void SwitchInst::growOperands() {
   growHungoffUses(ReservedSpace);
 }
 
-MDNode *SwitchInstProfUpdateWrapper::buildProfBranchWeightsMD() {
-  assert(Changed && "called only if metadata has changed");
-
-  if (!Weights)
-    return nullptr;
-
-  assert(SI.getNumSuccessors() == Weights->size() &&
-         "num of prof branch_weights must accord with num of successors");
-
-  bool AllZeroes = all_of(*Weights, [](uint32_t W) { return W == 0; });
-
-  if (AllZeroes || Weights->size() < 2)
-    return nullptr;
-
-  return MDBuilder(SI.getParent()->getContext()).createBranchWeights(*Weights);
-}
-
 void SwitchInstProfUpdateWrapper::init() {
   MDNode *ProfileData = getBranchWeightMDNode(SI);
   if (!ProfileData)

@@ -802,6 +802,7 @@ defm RoundingModeRTPINTEL : ExecutionModeOperand<5620, [RoundToInfinityINTEL]>;
 defm RoundingModeRTNINTEL : ExecutionModeOperand<5621, [RoundToInfinityINTEL]>;
 defm FloatingPointModeALTINTEL : ExecutionModeOperand<5622, [FloatingPointModeINTEL]>;
 defm FloatingPointModeIEEEINTEL : ExecutionModeOperand<5623, [FloatingPointModeINTEL]>;
+defm FPFastMathDefault : ExecutionModeOperand<6028, [FloatControls2]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define StorageClass enum values and at the same time
@@ -1153,6 +1154,9 @@ defm NotInf : FPFastMathModeOperand<0x2, [Kernel]>;
 defm NSZ : FPFastMathModeOperand<0x4, [Kernel]>;
 defm AllowRecip : FPFastMathModeOperand<0x8, [Kernel]>;
 defm Fast : FPFastMathModeOperand<0x10, [Kernel]>;
+defm AllowContract : FPFastMathModeOperand<0x10000, [FloatControls2]>;
+defm AllowReassoc : FPFastMathModeOperand<0x20000, [FloatControls2]>;
+defm AllowTransform : FPFastMathModeOperand<0x40000, [FloatControls2]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define FPRoundingMode enum values and at the same time
