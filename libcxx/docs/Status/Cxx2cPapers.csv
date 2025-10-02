@@ -149,7 +149,7 @@
 "`P3503R3 <https://wg21.link/P3503R3>`__","Make type-erased allocator use in ``promise`` and ``packaged_task`` consistent","2025-06 (Sofia)","","","`#148164 <https://github.com/llvm/llvm-project/issues/148164>`__",""
 "`P3008R6 <https://wg21.link/P3008R6>`__","Atomic floating-point min/max","2025-06 (Sofia)","","","`#148168 <https://github.com/llvm/llvm-project/issues/148168>`__",""
 "`P3111R8 <https://wg21.link/P3111R8>`__","Atomic Reduction Operations","2025-06 (Sofia)","","","`#148174 <https://github.com/llvm/llvm-project/issues/148174>`__",""
-"`P3060R3 <https://wg21.link/P3060R3>`__","Add ``std::views::indices(n)``","2025-06 (Sofia)","","","`#148175 <https://github.com/llvm/llvm-project/issues/148175>`__",""
+"`P3060R3 <https://wg21.link/P3060R3>`__","Add ``std::views::indices(n)``","2025-06 (Sofia)","|Complete|","22","`#148175 <https://github.com/llvm/llvm-project/issues/148175>`__",""
 "`P2319R5 <https://wg21.link/P2319R5>`__","Prevent ``path`` presentation problems","2025-06 (Sofia)","","","`#148177 <https://github.com/llvm/llvm-project/issues/148177>`__",""
 "`P3223R2 <https://wg21.link/P3223R2>`__","Making ``std::istream::ignore`` less surprising","2025-06 (Sofia)","|Complete|","22","`#148178 <https://github.com/llvm/llvm-project/issues/148178>`__",""
 "`P2781R9 <https://wg21.link/P2781R9>`__","``std::constant_wrapper``","2025-06 (Sofia)","","","`#148179 <https://github.com/llvm/llvm-project/issues/148179>`__",""
