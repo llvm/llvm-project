@@ -3495,7 +3495,7 @@ bool SPIRVInstructionSelector::selectCounterHandleFromBinding(
   assert(Intr.getIntrinsicID() ==
          Intrinsic::spv_resource_counterhandlefrombinding);
 
-  // Extract information from the intrinsic call
+  // Extract information from the intrinsic call.
   Register MainHandleReg = Intr.getOperand(2).getReg();
   auto *MainHandleDef = cast<GIntrinsic>(getVRegDef(*MRI, MainHandleReg));
   assert(MainHandleDef->getIntrinsicID() ==
