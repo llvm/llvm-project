@@ -2118,3 +2118,82 @@ define float @tanh_f32(float %a) nounwind {
   %1 = call float @llvm.tanh.f32(float %a)
   ret float %1
 }
+
+define { float, float } @test_modf_f32(float %a) {
+; RV32IF-LABEL: test_modf_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    addi sp, sp, -16
+; RV32IF-NEXT:    .cfi_def_cfa_offset 16
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    .cfi_offset ra, -4
+; RV32IF-NEXT:    addi a0, sp, 8
+; RV32IF-NEXT:    call modff
+; RV32IF-NEXT:    flw fa1, 8(sp)
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    .cfi_restore ra
+; RV32IF-NEXT:    addi sp, sp, 16
+; RV32IF-NEXT:    .cfi_def_cfa_offset 0
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: test_modf_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    .cfi_def_cfa_offset 16
+; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IF-NEXT:    .cfi_offset ra, -8
+; RV64IF-NEXT:    addi a0, sp, 4
+; RV64IF-NEXT:    call modff
+; RV64IF-NEXT:    flw fa1, 4(sp)
+; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    .cfi_restore ra
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    .cfi_def_cfa_offset 0
+; RV64IF-NEXT:    ret
+;
+; RV64IFD-LABEL: test_modf_f32:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    addi sp, sp, -16
+; RV64IFD-NEXT:    .cfi_def_cfa_offset 16
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    .cfi_offset ra, -8
+; RV64IFD-NEXT:    addi a0, sp, 4
+; RV64IFD-NEXT:    call modff
+; RV64IFD-NEXT:    flw fa1, 4(sp)
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    .cfi_restore ra
+; RV64IFD-NEXT:    addi sp, sp, 16
+; RV64IFD-NEXT:    .cfi_def_cfa_offset 0
+; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: test_modf_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    addi a1, sp, 8
+; RV32I-NEXT:    call modff
+; RV32I-NEXT:    lw a1, 8(sp)
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: test_modf_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    .cfi_def_cfa_offset 16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    addi a1, sp, 4
+; RV64I-NEXT:    call modff
+; RV64I-NEXT:    lw a1, 4(sp)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-NEXT:    ret
+  %result = call { float, float } @llvm.modf.f32(float %a)
+  ret { float, float } %result
+}
