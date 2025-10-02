@@ -69,19 +69,30 @@ enum class TokenMode : unsigned {
 
   /// Token ID based on allocated type hash.
   TypeHash = 2,
+
+  /// Token ID based on allocated type hash, where the top half ID-space is
+  /// reserved for types that contain pointers and the bottom half for types
+  /// that do not contain pointers.
+  TypeHashPointerSplit = 3,
 };
 
 //===--- Command-line options ---------------------------------------------===//
 
-cl::opt<TokenMode>
-    ClMode("alloc-token-mode", cl::Hidden, cl::desc("Token assignment mode"),
-           cl::init(TokenMode::TypeHash),
-           cl::values(clEnumValN(TokenMode::Increment, "increment",
-                                 "Incrementally increasing token ID"),
-                      clEnumValN(TokenMode::Random, "random",
-                                 "Statically-assigned random token ID"),
-                      clEnumValN(TokenMode::TypeHash, "typehash",
-                                 "Token ID based on allocated type hash")));
+cl::opt<TokenMode> ClMode(
+    "alloc-token-mode", cl::Hidden, cl::desc("Token assignment mode"),
+    cl::init(TokenMode::TypeHashPointerSplit),
+    cl::values(
+        clEnumValN(TokenMode::Increment, "increment",
+                   "Incrementally increasing token ID"),
+        clEnumValN(TokenMode::Random, "random",
+                   "Statically-assigned random token ID"),
+        clEnumValN(TokenMode::TypeHash, "typehash",
+                   "Token ID based on allocated type hash"),
+        clEnumValN(
+            TokenMode::TypeHashPointerSplit, "typehashpointersplit",
+            "Token ID based on allocated type hash, where the top half "
+            "ID-space is reserved for types that contain pointers and the "
+            "bottom half for types that do not contain pointers. ")));
 
 cl::opt<std::string> ClFuncPrefix("alloc-token-prefix",
                                   cl::desc("The allocation function prefix"),
@@ -127,14 +138,21 @@ STATISTIC(NumAllocationsInstrumented, "Allocations instrumented");
 
 /// Returns the !alloc_token metadata if available.
 ///
-/// Expected format is: !{<type-name>}
+/// Expected format is: !{<type-name>, <contains-pointer>}
 MDNode *getAllocTokenMetadata(const CallBase &CB) {
   MDNode *Ret = CB.getMetadata(LLVMContext::MD_alloc_token);
   if (!Ret)
     return nullptr;
-  assert(Ret->getNumOperands() == 1 && "bad !alloc_token");
+  assert(Ret->getNumOperands() == 2 && "bad !alloc_token");
   assert(isa<MDString>(Ret->getOperand(0)));
+  assert(isa<ConstantAsMetadata>(Ret->getOperand(1)));
   return Ret;
+}
+
+bool containsPointer(const MDNode *MD) {
+  ConstantAsMetadata *C = cast<ConstantAsMetadata>(MD->getOperand(1));
+  auto *CI = cast<ConstantInt>(C->getValue());
+  return CI->getValue().getBoolValue();
 }
 
 class ModeBase {
@@ -188,12 +206,20 @@ public:
   using ModeBase::ModeBase;
 
   uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
+    const auto [N, H] = getHash(CB, ORE);
+    return N ? boundedToken(H) : H;
+  }
+
+protected:
+  std::pair<MDNode *, uint64_t> getHash(const CallBase &CB,
+                                        OptimizationRemarkEmitter &ORE) {
     if (MDNode *N = getAllocTokenMetadata(CB)) {
       MDString *S = cast<MDString>(N->getOperand(0));
-      return boundedToken(getStableSipHash(S->getString()));
+      return {N, getStableSipHash(S->getString())};
     }
+    // Fallback.
     remarkNoMetadata(CB, ORE);
-    return ClFallbackToken;
+    return {nullptr, ClFallbackToken};
   }
 
   /// Remark that there was no precise type information.
@@ -207,6 +233,29 @@ public:
              << "Call to '" << CalleeNV << "' in '" << FuncNV
              << "' without source-level type token";
     });
+  }
+};
+
+/// Implementation for TokenMode::TypeHashPointerSplit.
+class TypeHashPointerSplitMode : public TypeHashMode {
+public:
+  using TypeHashMode::TypeHashMode;
+
+  uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
+    if (MaxTokens == 1)
+      return 0;
+    const uint64_t HalfTokens = MaxTokens / 2;
+    const auto [N, H] = getHash(CB, ORE);
+    if (!N) {
+      // Pick the fallback token (ClFallbackToken), which by default is 0,
+      // meaning it'll fall into the pointer-less bucket. Override by setting
+      // -alloc-token-fallback if that is the wrong choice.
+      return H;
+    }
+    uint64_t Hash = H % HalfTokens; // base hash
+    if (containsPointer(N))
+      Hash += HalfTokens;
+    return Hash;
   }
 };
 
@@ -235,6 +284,9 @@ public:
       break;
     case TokenMode::TypeHash:
       Mode.emplace<TypeHashMode>(*IntPtrTy, *Options.MaxTokens);
+      break;
+    case TokenMode::TypeHashPointerSplit:
+      Mode.emplace<TypeHashPointerSplitMode>(*IntPtrTy, *Options.MaxTokens);
       break;
     }
   }
@@ -275,7 +327,9 @@ private:
   // Cache for replacement functions.
   DenseMap<std::pair<LibFunc, uint64_t>, FunctionCallee> TokenAllocFunctions;
   // Selected mode.
-  std::variant<IncrementMode, RandomMode, TypeHashMode> Mode;
+  std::variant<IncrementMode, RandomMode, TypeHashMode,
+               TypeHashPointerSplitMode>
+      Mode;
 };
 
 bool AllocToken::instrumentFunction(Function &F) {
