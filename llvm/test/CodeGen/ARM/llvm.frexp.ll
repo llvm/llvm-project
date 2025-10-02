@@ -362,33 +362,31 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) {
 define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) {
 ; CHECK-LABEL: test_frexp_v4f32_v4i32_only_use_fract:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    sub sp, #16
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    mov r0, r3
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    sub sp, #20
+; CHECK-NEXT:    mov r6, r1
 ; CHECK-NEXT:    add r1, sp, #4
-; CHECK-NEXT:    vmov s19, r0
-; CHECK-NEXT:    mov r0, r4
+; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    mov r5, r2
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    add r1, sp, #8
-; CHECK-NEXT:    vmov s18, r0
+; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    add r1, sp, #12
-; CHECK-NEXT:    vmov s17, r0
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    bl frexpf
-; CHECK-NEXT:    vmov s16, r0
-; CHECK-NEXT:    vmov r2, r3, d9
-; CHECK-NEXT:    vmov r0, r1, d8
-; CHECK-NEXT:    add sp, #16
-; CHECK-NEXT:    vpop {d8, d9}
-; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    add r1, sp, #16
+; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    mov r2, r5
+; CHECK-NEXT:    mov r3, r4
+; CHECK-NEXT:    add sp, #20
+; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
   %result = call { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float> %a)
   %result.0 = extractvalue { <4 x float>, <4 x i32> } %result, 0
   ret <4 x float> %result.0
