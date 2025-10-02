@@ -114,7 +114,7 @@ private:
   void setChecked(bool Checked) { ErrPtr = (ErrPtr & ~uintptr_t(1)) | Checked; }
 
   template <typename ErrT = ErrorInfoBase> std::unique_ptr<ErrT> takePayload() {
-    static_assert(std::is_base_of<ErrorInfoBase, ErrT>::value,
+    static_assert(std::is_base_of_v<ErrorInfoBase, ErrT>,
                   "ErrT is not an ErrorInfoBase subclass");
     std::unique_ptr<ErrT> Tmp(getPtr<ErrT>());
     setPtr(nullptr);
@@ -292,7 +292,7 @@ template <typename T> class ORC_RT_NODISCARD Expected {
 
   template <class OtherT> friend class Expected;
 
-  static constexpr bool IsRef = std::is_reference<T>::value;
+  static constexpr bool IsRef = std::is_reference_v<T>;
   using wrap = std::reference_wrapper<std::remove_reference_t<T>>;
   using error_type = std::unique_ptr<ErrorInfoBase>;
   using storage_type = std::conditional_t<IsRef, wrap, T>;
@@ -313,7 +313,7 @@ public:
   /// Create an Expected from a T value.
   template <typename OtherT>
   Expected(OtherT &&Val,
-           std::enable_if_t<std::is_convertible<OtherT, T>::value> * = nullptr)
+           std::enable_if_t<std::is_convertible_v<OtherT, T>> * = nullptr)
       : HasError(false), Unchecked(true) {
     new (getStorage()) storage_type(std::forward<OtherT>(Val));
   }
@@ -324,9 +324,8 @@ public:
   /// Move construct an Expected<T> value from an Expected<OtherT>, where OtherT
   /// must be convertible to T.
   template <class OtherT>
-  Expected(
-      Expected<OtherT> &&Other,
-      std::enable_if_t<std::is_convertible<OtherT, T>::value> * = nullptr) {
+  Expected(Expected<OtherT> &&Other,
+           std::enable_if_t<std::is_convertible_v<OtherT, T>> * = nullptr) {
     moveConstruct(std::move(Other));
   }
 
@@ -335,7 +334,7 @@ public:
   template <class OtherT>
   explicit Expected(
       Expected<OtherT> &&Other,
-      std::enable_if_t<!std::is_convertible<OtherT, T>::value> * = nullptr) {
+      std::enable_if_t<!std::is_convertible_v<OtherT, T>> * = nullptr) {
     moveConstruct(std::move(Other));
   }
 

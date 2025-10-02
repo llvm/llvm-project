@@ -3485,15 +3485,21 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           },
           "Shortcut to get an op result if it has only one (throws an error "
           "otherwise).")
-      .def_prop_ro(
+      .def_prop_rw(
           "location",
           [](PyOperationBase &self) {
             PyOperation &operation = self.getOperation();
             return PyLocation(operation.getContext(),
                               mlirOperationGetLocation(operation.get()));
           },
-          "Returns the source location the operation was defined or derived "
-          "from.")
+          [](PyOperationBase &self, const PyLocation &location) {
+            PyOperation &operation = self.getOperation();
+            mlirOperationSetLocation(operation.get(), location.get());
+          },
+          nb::for_getter("Returns the source location the operation was "
+                         "defined or derived from."),
+          nb::for_setter("Sets the source location the operation was defined "
+                         "or derived from."))
       .def_prop_ro("parent",
                    [](PyOperationBase &self)
                        -> std::optional<nb::typed<nb::object, PyOperation>> {

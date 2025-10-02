@@ -286,12 +286,13 @@ VocabStorage::VocabStorage(std::vector<std::vector<Embedding>> &&SectionData)
 
         // Verify that all embeddings across all sections have the same
         // dimension
-        auto allSameDim = [ExpectedDim](const std::vector<Embedding> &Section) {
-          return std::all_of(Section.begin(), Section.end(),
-                             [ExpectedDim](const Embedding &Emb) {
-                               return Emb.size() == ExpectedDim;
-                             });
-        };
+        [[maybe_unused]] auto allSameDim =
+            [ExpectedDim](const std::vector<Embedding> &Section) {
+              return std::all_of(Section.begin(), Section.end(),
+                                 [ExpectedDim](const Embedding &Emb) {
+                                   return Emb.size() == ExpectedDim;
+                                 });
+            };
         assert(std::all_of(Sections.begin(), Sections.end(), allSameDim) &&
                "All embeddings must have the same dimension");
 
