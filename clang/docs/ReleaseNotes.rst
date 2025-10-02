@@ -160,10 +160,6 @@ C++23 Feature Support
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
-- Clang now normalizes constraints before checking whether they are satisfied, as mandated by the standard.
-  As a result, Clang no longer incorrectly diagnoses substitution failures in template arguments only
-  used in concept-ids, and produces better diagnostics for satisfaction failure. (#GH61811) (#GH135190)
-
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

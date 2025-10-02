@@ -7,7 +7,8 @@ template<typename T>
 constexpr bool is_same_v<T, T> = true;
 
 template<typename T, typename U>
-concept same_as = is_same_v<T, U>; //#is_same_v
+concept same_as = is_same_v<T, U>;
+// expected-note@-1{{because 'is_same_v<int, bool>' evaluated to false}}
 
 template<typename T, typename... Us>
 concept either = (is_same_v<T, Us> || ...);
@@ -16,7 +17,6 @@ template<typename... Ts>
 struct T {
     template<same_as<Ts>... Us>
     // expected-note@-1{{because 'same_as<int, bool>' evaluated to false}}
-    // expected-note@#is_same_v{{because 'is_same_v<int, bool>' evaluated to false}}
     static void foo(Us... u, int x) { };
     // expected-note@-1{{candidate template ignored: deduced too few arguments}}
     // expected-note@-2{{candidate template ignored: constraints not satisfied}}
