@@ -11616,8 +11616,7 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
 }
 
 static bool evalPshufBuiltin(EvalInfo &Info, const CallExpr *Call,
-                             unsigned ElemBits, unsigned HalfBase,
-                             APValue &Out) {
+                             bool IsShufHW, APValue &Out) {
   APValue Vec;
   APSInt Imm;
   if (!EvaluateAsRValue(Info, Call->getArg(0), Vec))
@@ -11628,49 +11627,39 @@ static bool evalPshufBuiltin(EvalInfo &Info, const CallExpr *Call,
   const auto *VT = Call->getType()->getAs<VectorType>();
   if (!VT)
     return false;
+
+  QualType ElemT = VT->getElementType();
+  unsigned ElemBits = Info.Ctx.getTypeSize(ElemT);
   unsigned NumElts = VT->getNumElements();
 
-  unsigned TotalBits = NumElts * ElemBits;
   unsigned LaneBits = 128u;
   unsigned LaneElts = LaneBits / ElemBits;
   if (!LaneElts || (NumElts % LaneElts) != 0)
     return false;
 
-  uint8_t ctl = static_cast<uint8_t>(Imm.getZExtValue());
+  uint8_t Ctl = static_cast<uint8_t>(Imm.getZExtValue());
 
   SmallVector<APValue, 32> ResultElements;
   ResultElements.reserve(NumElts);
 
-  for (unsigned idx = 0; idx != NumElts; idx++) {
-    unsigned LaneBase = (idx / LaneElts) * LaneElts;
-    unsigned LaneIdx = idx % LaneElts;
-
-    unsigned SrcIdx = idx;
+  for (unsigned Idx = 0; Idx != NumElts; Idx++) {
+    unsigned LaneBase = (Idx / LaneElts) * LaneElts;
+    unsigned LaneIdx = Idx % LaneElts;
+    unsigned SrcIdx = Idx;
 
     if (ElemBits == 32) {
-      unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
-      SrcIdx = LaneBase + sel;
+      unsigned Sel = (Ctl >> (2 * LaneIdx)) & 0x3;
+      SrcIdx = LaneBase + Sel;
     } else {
-      if (LaneElts == 4) {
-        unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
-        SrcIdx = LaneBase + sel;
-      } else {
-        constexpr unsigned HalfSize = 4;
-        if (HalfBase == 0) {
-          if (LaneIdx < HalfSize) {
-            unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
-            SrcIdx = LaneBase + sel;
-          }
-        } else if (HalfBase == HalfSize) {
-          if (LaneIdx >= HalfSize) {
-            unsigned rel = LaneIdx - HalfSize;
-            unsigned sel = (ctl >> (2 * rel)) & 0x3;
-            SrcIdx = LaneBase + HalfBase + sel;
-          }
-        } else {
-          unsigned sel = (ctl >> (2 * LaneIdx)) & 0x3;
-          SrcIdx = LaneBase + sel;
-        }
+      constexpr unsigned HalfSize = 4;
+      bool InHigh = LaneIdx >= HalfSize;
+      if (!IsShufHW && !InHigh) {
+        unsigned Sel = (Ctl >> (2 * LaneIdx)) & 0x3;
+        SrcIdx = LaneBase + Sel;
+      } else if (IsShufHW && InHigh) {
+        unsigned Rel = LaneIdx - HalfSize;
+        unsigned Sel = (Ctl >> (2 * Rel)) & 0x3;
+        SrcIdx = LaneBase + HalfSize + Sel;
       }
     }
 
@@ -12157,7 +12146,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_pshuflw256:
   case X86::BI__builtin_ia32_pshuflw512: {
     APValue R;
-    if (!evalPshufBuiltin(Info, E, /*ElemBits=*/16, /*HalfBaseElems=*/0, R))
+    if (!evalPshufBuiltin(Info, E, false, R))
       return false;
     return Success(R, E);
   }
@@ -12166,7 +12155,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_pshufhw256:
   case X86::BI__builtin_ia32_pshufhw512: {
     APValue R;
-    if (!evalPshufBuiltin(Info, E, /*ElemBits=*/16, /*HalfBaseElems=*/4, R))
+    if (!evalPshufBuiltin(Info, E, true, R))
       return false;
     return Success(R, E);
   }
@@ -12175,7 +12164,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_pshufd256:
   case X86::BI__builtin_ia32_pshufd512: {
     APValue R;
-    if (!evalPshufBuiltin(Info, E, /*ElemBits=*/32, /*HalfBaseElems=*/~0u, R))
+    if (!evalPshufBuiltin(Info, E, false, R))
       return false;
     return Success(R, E);
   }
