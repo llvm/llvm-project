@@ -179,6 +179,9 @@ private:
   bool selectSplatVector(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
 
+  bool selectFwidth(Register ResVReg, const SPIRVType *ResType,
+                    MachineInstr &I) const;
+
   bool selectCmp(Register ResVReg, const SPIRVType *ResType,
                  unsigned comparisonOpcode, MachineInstr &I) const;
   bool selectDiscard(Register ResVReg, const SPIRVType *ResType,
@@ -2616,6 +2619,15 @@ bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
+bool SPIRVInstructionSelector::selectFwidth(Register ResVReg,
+                                            const SPIRVType *ResType,
+                                            MachineInstr &I) const {
+  return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpFwidth))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg());
+}
+
 bool SPIRVInstructionSelector::selectCmp(Register ResVReg,
                                          const SPIRVType *ResType,
                                          unsigned CmpOpc,
@@ -3452,6 +3464,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   }
   case Intrinsic::spv_discard: {
     return selectDiscard(ResVReg, ResType, I);
+  }
+  case Intrinsic::spv_fwidth: {
+    return selectFwidth(ResVReg, ResType, I);
   }
   case Intrinsic::modf: {
     return selectModf(ResVReg, ResType, I);

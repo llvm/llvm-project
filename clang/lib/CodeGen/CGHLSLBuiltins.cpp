@@ -532,6 +532,24 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getFracIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.frac");
   }
+  case Builtin::BI__builtin_hlsl_elementwise_deriv_coarse_x: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable(
+          "deriv coarse x operand must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Op0->getType(), llvm::Intrinsic::dx_deriv_coarse_x,
+        ArrayRef<Value *>{Op0}, nullptr, "hlsl.deriv.coarse.x");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_deriv_coarse_y: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable(
+          "deriv coarse x operand must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Op0->getType(), llvm::Intrinsic::dx_deriv_coarse_y,
+        ArrayRef<Value *>{Op0}, nullptr, "hlsl.deriv.coarse.y");
+  }
   case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     llvm::Type *Xty = Op0->getType();

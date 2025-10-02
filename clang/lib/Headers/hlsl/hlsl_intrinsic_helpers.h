@@ -148,6 +148,31 @@ template <typename T> constexpr T ldexp_impl(T X, T Exp) {
   return exp2(Exp) * X;
 }
 
+template <typename T> constexpr T fwidth_impl(T input) {
+#if (__has_builtin(__builtin_spirv_fwidth))
+  return __builtin_spirv_fwidth(input);
+#else
+  T derivCoarseX = __builtin_hlsl_elementwise_deriv_coarse_x(input);
+  derivCoarseX = abs(derivCoarseX);
+  T derivCoarseY = __builtin_hlsl_elementwise_deriv_coarse_y(input);
+  derivCoarseY = abs(derivCoarseY);
+  return derivCoarseX + derivCoarseY;
+#endif
+}
+
+template <typename T, int N>
+constexpr vector<T, N> fwidth_vec_impl(vector<T, N> input) {
+#if (__has_builtin(__builtin_spirv_fwidth))
+  return __builtin_spirv_fwidth(input);
+#else
+  vector<T, N> derivCoarseX = __builtin_hlsl_elementwise_deriv_coarse_x(input);
+  derivCoarseX = abs(derivCoarseX);
+  vector<T, N> derivCoarseY = __builtin_hlsl_elementwise_deriv_coarse_y(input);
+  derivCoarseY = abs(derivCoarseY);
+  return derivCoarseX + derivCoarseY;
+#endif
+}
+
 } // namespace __detail
 } // namespace hlsl
 
