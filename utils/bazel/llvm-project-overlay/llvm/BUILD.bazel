@@ -4970,6 +4970,22 @@ cc_binary(
 )
 
 cc_binary(
+    name = "llvm-remarkutil",
+    srcs = glob([
+        "tools/llvm-remarkutil/**/*.cpp",
+        "tools/llvm-remarkutil/**/*.h",
+    ]),
+    copts = llvm_copts,
+    includes = ["tools/llvm-remarkutil"],
+    stamp = 0,
+    deps = [
+        ":Demangle",
+        ":Remarks",
+        ":Support",
+    ],
+)
+
+cc_binary(
     name = "llvm-rtdyld",
     srcs = glob([
         "tools/llvm-rtdyld/*.cpp",

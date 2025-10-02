@@ -64,6 +64,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
@@ -2405,6 +2406,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
               matchBSwapOrBitReverse(*II, /*MatchBSwaps*/ true,
                                      /*MatchBitReversals*/ true))
         return BitOp;
+
+      // R = fshl(X, X, C2)
+      // fshl(R, R, C1) --> fshl(X, X, (C1 + C2) % bitsize)
+      Value *InnerOp;
+      const APInt *ShAmtInnerC, *ShAmtOuterC;
+      if (match(Op0, m_FShl(m_Value(InnerOp), m_Deferred(InnerOp),
+                            m_APInt(ShAmtInnerC))) &&
+          match(ShAmtC, m_APInt(ShAmtOuterC)) && Op0 == Op1) {
+        APInt Sum = *ShAmtOuterC + *ShAmtInnerC;
+        APInt Modulo = Sum.urem(APInt(Sum.getBitWidth(), BitWidth));
+        if (Modulo.isZero())
+          return replaceInstUsesWith(*II, InnerOp);
+        Constant *ModuloC = ConstantInt::get(Ty, Modulo);
+        return CallInst::Create(cast<IntrinsicInst>(Op0)->getCalledFunction(),
+                                {InnerOp, InnerOp, ModuloC});
+      }
     }
 
     // fshl(X, X, Neg(Y)) --> fshr(X, X, Y)
@@ -3412,6 +3429,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             !isPowerOf2_64(RK.ArgValue) || !isa<ConstantInt>(RK.IRArgValue))
           continue;
 
+        // Remove align 1 bundles; they don't add any useful information.
+        if (RK.ArgValue == 1)
+          return CallBase::removeOperandBundle(II, OBU.getTagID());
+
         // Don't try to remove align assumptions for pointers derived from
         // arguments. We might lose information if the function gets inline and
         // the align argument attribute disappears.
@@ -3760,6 +3781,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
               Res = Builder.CreateNeg(Res);
             return replaceInstUsesWith(CI, Res);
           }
+      }
+
+      // vector.reduce.add.vNiM(splat(%x)) -> mul(%x, N)
+      if (Value *Splat = getSplatValue(Arg)) {
+        ElementCount VecToReduceCount =
+            cast<VectorType>(Arg->getType())->getElementCount();
+        if (VecToReduceCount.isFixed()) {
+          unsigned VectorSize = VecToReduceCount.getFixedValue();
+          return BinaryOperator::CreateMul(
+              Splat, ConstantInt::get(Splat->getType(), VectorSize));
+        }
       }
     }
     [[fallthrough]];

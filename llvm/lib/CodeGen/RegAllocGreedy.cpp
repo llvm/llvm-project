@@ -1383,21 +1383,53 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
   // Compute the cost of assigning a non Hint physical register to VirtReg.
   // We define it as the total frequency of broken COPY instructions to/from
   // Hint register, and after split, they can be deleted.
-  for (const MachineInstr &Instr : MRI->reg_nodbg_instructions(Reg)) {
-    if (!TII->isFullCopyInstr(Instr))
+
+  // FIXME: This is miscounting the costs with subregisters. In particular, this
+  // should support recognizing SplitKit formed copy bundles instead of direct
+  // copy instructions, which will appear in the same block.
+  for (const MachineOperand &Opnd : MRI->reg_nodbg_operands(Reg)) {
+    const MachineInstr &Instr = *Opnd.getParent();
+    if (!Instr.isCopy() || Opnd.isImplicit())
       continue;
-    Register OtherReg = Instr.getOperand(1).getReg();
-    if (OtherReg == Reg) {
-      OtherReg = Instr.getOperand(0).getReg();
-      if (OtherReg == Reg)
-        continue;
-      // Check if VirtReg interferes with OtherReg after this COPY instruction.
-      if (VirtReg.liveAt(LIS->getInstructionIndex(Instr).getRegSlot()))
-        continue;
+
+    // Look for the other end of the copy.
+    const bool IsDef = Opnd.isDef();
+    const MachineOperand &OtherOpnd = Instr.getOperand(IsDef);
+    Register OtherReg = OtherOpnd.getReg();
+    assert(Reg == Opnd.getReg());
+    if (OtherReg == Reg)
+      continue;
+
+    unsigned SubReg = Opnd.getSubReg();
+    unsigned OtherSubReg = OtherOpnd.getSubReg();
+    if (SubReg && OtherSubReg && SubReg != OtherSubReg)
+      continue;
+
+    // Check if VirtReg interferes with OtherReg after this COPY instruction.
+    if (Opnd.readsReg()) {
+      SlotIndex Index = LIS->getInstructionIndex(Instr).getRegSlot();
+
+      if (SubReg) {
+        LaneBitmask Mask = TRI->getSubRegIndexLaneMask(SubReg);
+        if (IsDef)
+          Mask = ~Mask;
+
+        if (any_of(VirtReg.subranges(), [=](const LiveInterval::SubRange &S) {
+              return (S.LaneMask & Mask).any() && S.liveAt(Index);
+            })) {
+          continue;
+        }
+      } else {
+        if (VirtReg.liveAt(Index))
+          continue;
+      }
     }
+
     MCRegister OtherPhysReg =
         OtherReg.isPhysical() ? OtherReg.asMCReg() : VRM->getPhys(OtherReg);
-    if (OtherPhysReg == Hint)
+    MCRegister ThisHint =
+        SubReg ? TRI->getSubReg(Hint, SubReg) : MCRegister(Hint);
+    if (OtherPhysReg == ThisHint)
       Cost += MBFI->getBlockFreq(Instr.getParent());
   }
 
@@ -2389,22 +2421,18 @@ void RAGreedy::initializeCSRCost() {
 void RAGreedy::collectHintInfo(Register Reg, HintsInfo &Out) {
   const TargetRegisterClass *RC = MRI->getRegClass(Reg);
 
-  for (const MachineInstr &Instr : MRI->reg_nodbg_instructions(Reg)) {
-    if (!Instr.isCopy())
+  for (const MachineOperand &Opnd : MRI->reg_nodbg_operands(Reg)) {
+    const MachineInstr &Instr = *Opnd.getParent();
+    if (!Instr.isCopy() || Opnd.isImplicit())
       continue;
 
     // Look for the other end of the copy.
-    Register OtherReg = Instr.getOperand(0).getReg();
-    unsigned OtherSubReg = Instr.getOperand(0).getSubReg();
-    unsigned SubReg = Instr.getOperand(1).getSubReg();
-
-    if (OtherReg == Reg) {
-      OtherReg = Instr.getOperand(1).getReg();
-      OtherSubReg = Instr.getOperand(1).getSubReg();
-      SubReg = Instr.getOperand(0).getSubReg();
-      if (OtherReg == Reg)
-        continue;
-    }
+    const MachineOperand &OtherOpnd = Instr.getOperand(Opnd.isDef());
+    Register OtherReg = OtherOpnd.getReg();
+    if (OtherReg == Reg)
+      continue;
+    unsigned OtherSubReg = OtherOpnd.getSubReg();
+    unsigned SubReg = Opnd.getSubReg();
 
     // Get the current assignment.
     MCRegister OtherPhysReg =
