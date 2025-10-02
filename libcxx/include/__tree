@@ -1356,11 +1356,7 @@ private:
   __assign_value__sfinae(true_type, __get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
     __node_allocator& __na = __node_alloc();
     __node_traits::destroy(__na, std::addressof(__lhs));
-
-    using __node_value_type = __get_node_value_type_t<value_type>;
-    __node_value_type __tmp(__rhs.first, __rhs.second);
-
-    __node_traits::construct(__na, std::addressof(__lhs), std::move(__tmp));
+    __node_traits::construct(__na, std::addressof(__lhs), __rhs.first, __rhs.second);
   }
 
   template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
