@@ -70,12 +70,11 @@ struct __eager_compare_result {
 };
 
 template <class _Comparator, class _LHS, class _RHS>
-struct __lazy_synth_three_way_comparator<
-    _Comparator,
-    _LHS,
-    _RHS,
-    __enable_if_t<_And<__desugars_to<__less_tag, _Comparator, _LHS, _RHS>,
-                       __has_default_three_way_comparator<_LHS, _RHS> >::value> > {
+struct __lazy_synth_three_way_comparator<_Comparator,
+                                         _LHS,
+                                         _RHS,
+                                         __enable_if_t<_And<__desugars_to<__less_tag, _Comparator, _LHS, _RHS>,
+                                                            __has_default_three_way_comparator<_LHS, _RHS> >::value> > {
   // This lifetimebound annotation is technically incorrect, but other specializations actually capture the lifetime of
   // the comparator.
   _LIBCPP_HIDE_FROM_ABI __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator&) {}
@@ -84,6 +83,23 @@ struct __lazy_synth_three_way_comparator<
   _LIBCPP_HIDE_FROM_ABI static __eager_compare_result
   operator()(_LIBCPP_LIFETIMEBOUND const _LHS& __lhs, _LIBCPP_LIFETIMEBOUND const _RHS& __rhs) {
     return __eager_compare_result(__default_three_way_comparator<_LHS, _RHS>()(__lhs, __rhs));
+  }
+};
+
+template <class _Comparator, class _LHS, class _RHS>
+struct __lazy_synth_three_way_comparator<_Comparator,
+                                         _LHS,
+                                         _RHS,
+                                         __enable_if_t<_And<__desugars_to<__greater_tag, _Comparator, _LHS, _RHS>,
+                                                            __has_default_three_way_comparator<_LHS, _RHS> >::value> > {
+  // This lifetimebound annotation is technically incorrect, but other specializations actually capture the lifetime of
+  // the comparator.
+  _LIBCPP_HIDE_FROM_ABI __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator&) {}
+
+  // Same comment as above.
+  _LIBCPP_HIDE_FROM_ABI static __eager_compare_result
+  operator()(_LIBCPP_LIFETIMEBOUND const _LHS& __lhs, _LIBCPP_LIFETIMEBOUND const _RHS& __rhs) {
+    return __eager_compare_result(-__default_three_way_comparator<_LHS, _RHS>()(__lhs, __rhs));
   }
 };
 
