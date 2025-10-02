@@ -29,6 +29,12 @@ __m512d test_mm512_mask_sqrt_pd (__m512d __W, __mmask8 __U, __m512d __A)
   return _mm512_mask_sqrt_pd (__W,__U,__A);
 }
 
+TEST_CONSTEXPR(match_m512d(_mm512_mask_sqrt_pd(
+    _mm512_set_pd(800.0, 700.0, 600.0, 500.0, 400.0, 300.0, 200.0, 100.0),
+    0b11000011,
+    _mm512_set_pd(64.0, 49.0, 36.0, 25.0, 16.0, 9.0, 4.0, 1.0)),
+    1.0, 2.0, 300.0, 400.0, 500.0, 600.0, 7.0, 8.0));
+
 __m512d test_mm512_maskz_sqrt_pd (__mmask8 __U, __m512d __A)
 {
   // CHECK-LABEL: test_mm512_maskz_sqrt_pd 
@@ -37,6 +43,10 @@ __m512d test_mm512_maskz_sqrt_pd (__mmask8 __U, __m512d __A)
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> {{.*}}
   return _mm512_maskz_sqrt_pd (__U,__A);
 }
+
+TEST_CONSTEXPR(match_m512d(_mm512_maskz_sqrt_pd(0b00001111,
+    _mm512_set_pd(64.0, 49.0, 36.0, 25.0, 16.0, 9.0, 4.0, 1.0)),
+    1.0, 2.0, 3.0, 4.0, 0.0, 0.0, 0.0, 0.0));
 
 __m512d test_mm512_mask_sqrt_round_pd(__m512d __W,__mmask8 __U,__m512d __A)
 {
