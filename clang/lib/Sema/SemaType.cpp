@@ -3780,7 +3780,7 @@ static CallingConv getCCForDeclaratorChunk(
       }
     }
   }
-  if (!S.getLangOpts().isSYCL()) {
+  if (S.getLangOpts().OpenCL || S.getLangOpts().CUDA) {
     for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
       if (AL.getKind() == ParsedAttr::AT_DeviceKernel) {
         CC = CC_DeviceKernel;
