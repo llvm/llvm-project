@@ -2435,25 +2435,28 @@ void RAGreedy::collectHintInfo(Register Reg, HintsInfo &Out) {
     unsigned SubReg = Opnd.getSubReg();
 
     // Get the current assignment.
-    MCRegister OtherPhysReg =
-        OtherReg.isPhysical() ? OtherReg.asMCReg() : VRM->getPhys(OtherReg);
-    if (OtherSubReg) {
-      if (OtherReg.isPhysical()) {
-        MCRegister Tuple =
-            TRI->getMatchingSuperReg(OtherPhysReg, OtherSubReg, RC);
-        if (!Tuple)
-          continue;
-        OtherPhysReg = Tuple;
-      } else {
-        // TODO: There should be a hinting mechanism for subregisters
-        if (SubReg != OtherSubReg)
-          continue;
-      }
+    MCRegister OtherPhysReg;
+    if (OtherReg.isPhysical()) {
+      if (OtherSubReg)
+        OtherPhysReg = TRI->getMatchingSuperReg(OtherReg, OtherSubReg, RC);
+      else if (SubReg)
+        OtherPhysReg = TRI->getMatchingSuperReg(OtherReg, SubReg, RC);
+      else
+        OtherPhysReg = OtherReg;
+    } else {
+      OtherPhysReg = VRM->getPhys(OtherReg);
+      // TODO: Should find matching superregister, but applying this in the
+      // non-hint case currently causes regressions
+
+      if (SubReg && OtherSubReg && SubReg != OtherSubReg)
+        continue;
     }
 
     // Push the collected information.
-    Out.push_back(HintInfo(MBFI->getBlockFreq(Instr.getParent()), OtherReg,
-                           OtherPhysReg));
+    if (OtherPhysReg) {
+      Out.push_back(HintInfo(MBFI->getBlockFreq(Instr.getParent()), OtherReg,
+                             OtherPhysReg));
+    }
   }
 }
 
@@ -2482,15 +2485,13 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   // We have a broken hint, check if it is possible to fix it by
   // reusing PhysReg for the copy-related live-ranges. Indeed, we evicted
   // some register and PhysReg may be available for the other live-ranges.
-  SmallSet<Register, 4> Visited;
-  SmallVector<Register, 2> RecoloringCandidates;
   HintsInfo Info;
   Register Reg = VirtReg.reg();
   MCRegister PhysReg = VRM->getPhys(Reg);
   // Start the recoloring algorithm from the input live-interval, then
   // it will propagate to the ones that are copy-related with it.
-  Visited.insert(Reg);
-  RecoloringCandidates.push_back(Reg);
+  SmallSet<Register, 4> Visited = {Reg};
+  SmallVector<Register, 2> RecoloringCandidates = {Reg};
 
   LLVM_DEBUG(dbgs() << "Trying to reconcile hints for: " << printReg(Reg, TRI)
                     << '(' << printReg(PhysReg, TRI) << ")\n");
