@@ -496,12 +496,6 @@ private:
   /// stage to their pre-stage values.
   void finalizeGCNSchedStage() override;
 
-  /// \p Returns true if all the uses in \p InstToRemat defined at \p
-  /// OriginalIdx are live at \p RematIdx. This only checks liveness of virtual
-  /// reg uses.
-  bool allUsesAvailableAt(const MachineInstr *InstToRemat,
-                          SlotIndex OriginalIdx, SlotIndex RematIdx) const;
-
 public:
   bool initGCNSchedStage() override;
 

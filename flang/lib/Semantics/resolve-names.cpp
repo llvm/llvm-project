@@ -1618,12 +1618,14 @@ public:
   void Post(const parser::OpenMPDeclareTargetConstruct &) {
     SkipImplicitTyping(false);
   }
-  bool Pre(const parser::OpenMPDeclarativeAllocate &) {
+  bool Pre(const parser::OpenMPDeclarativeAllocate &x) {
+    AddOmpSourceRange(x.source);
     SkipImplicitTyping(true);
     return true;
   }
   void Post(const parser::OpenMPDeclarativeAllocate &) {
     SkipImplicitTyping(false);
+    messageHandler().set_currStmtSource(std::nullopt);
   }
   bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
     AddOmpSourceRange(x.source);
@@ -5724,7 +5726,8 @@ void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
       }
     }
     if (!symbol.test(Symbol::Flag::Function) &&
-        !symbol.test(Symbol::Flag::Subroutine)) {
+        !symbol.test(Symbol::Flag::Subroutine) &&
+        !context().intrinsics().IsDualIntrinsic(name.source.ToString())) {
       if (context().intrinsics().IsIntrinsicFunction(name.source.ToString())) {
         symbol.set(Symbol::Flag::Function);
       } else if (context().intrinsics().IsIntrinsicSubroutine(

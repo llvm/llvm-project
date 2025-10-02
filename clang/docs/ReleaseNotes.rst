@@ -142,8 +142,8 @@ What's New in Clang |release|?
 C++ Language Changes
 --------------------
 
-- A new family of builtins ``__builtin_*_synthesises_from_spaceship`` has been added. These can be queried to know
-  whether the ``<`` (``lt``), ``>`` (``gt``), ``<=`` (``le``), or ``>=`` (``ge``) operators are synthesised from a
+- A new family of builtins ``__builtin_*_synthesizes_from_spaceship`` has been added. These can be queried to know
+  whether the ``<`` (``lt``), ``>`` (``gt``), ``<=`` (``le``), or ``>=`` (``ge``) operators are synthesized from a
   ``<=>``. This makes it possible to optimize certain facilities by using the ``<=>`` operation directly instead of
   doing multiple comparisons.
 
@@ -249,6 +249,8 @@ Non-comprehensive list of changes in this release
   specifiers, it also must be used within a template context.
 
 - ``__builtin_assume_dereferenceable`` now accepts non-constant size operands.
+
+- Fixed a crash when the second argument to ``__builtin_assume_aligned`` was not constant (#GH161314)
 
 New Compiler Flags
 ------------------
@@ -436,6 +438,9 @@ Bug Fixes to C++ Support
 - Fix an assertion failure when taking the address on a non-type template parameter argument of
   object type. (#GH151531)
 - Suppress ``-Wdouble-promotion`` when explicitly asked for with C++ list initialization (#GH33409).
+- Fix the result of `__builtin_is_implicit_lifetime` for types with a user-provided constructor. (#GH160610)
+- Correctly deduce return types in ``decltype`` expressions. (#GH160497) (#GH56652) (#GH116319) (#GH161196)
+- Fixed a crash in the pre-C++23 warning for attributes before a lambda declarator (#GH161070).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -584,6 +589,7 @@ Moved checkers
 
 Sanitizers
 ----------
+- Improved documentation for legacy ``no_sanitize`` attributes.
 
 Python Binding Changes
 ----------------------

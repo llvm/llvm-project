@@ -190,7 +190,7 @@ static bool DiagRecursiveConstraintEval(
   }
   if (S.SatisfactionStackContains(Templ, ID)) {
     S.Diag(E->getExprLoc(), diag::err_constraint_depends_on_self)
-        << const_cast<Expr *>(E) << E->getSourceRange();
+        << E << E->getSourceRange();
     return true;
   }
   return false;

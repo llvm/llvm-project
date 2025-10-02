@@ -584,14 +584,14 @@ bool CoalescerPair::isCoalescable(const MachineInstr *MI) const {
       return DstReg == Dst;
     // This is a partial register copy. Check that the parts match.
     return Register(TRI.getSubReg(DstReg, SrcSub)) == Dst;
-  } else {
-    // DstReg is virtual.
-    if (DstReg != Dst)
-      return false;
-    // Registers match, do the subregisters line up?
-    return TRI.composeSubRegIndices(SrcIdx, SrcSub) ==
-           TRI.composeSubRegIndices(DstIdx, DstSub);
   }
+
+  // DstReg is virtual.
+  if (DstReg != Dst)
+    return false;
+  // Registers match, do the subregisters line up?
+  return TRI.composeSubRegIndices(SrcIdx, SrcSub) ==
+         TRI.composeSubRegIndices(DstIdx, DstSub);
 }
 
 void RegisterCoalescerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -2914,8 +2914,7 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
     if ((V.ValidLanes & OtherV.ValidLanes).any())
       // Overlapping lanes can't be resolved.
       return CR_Impossible;
-    else
-      return CR_Merge;
+    return CR_Merge;
   }
 
   // No simultaneous def. Is Other live at the def?

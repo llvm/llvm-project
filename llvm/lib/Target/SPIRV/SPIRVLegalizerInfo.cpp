@@ -300,6 +300,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder({G_STRICT_FSQRT,
                                G_FPOW,
                                G_FEXP,
+                               G_FMODF,
                                G_FEXP2,
                                G_FLOG,
                                G_FLOG2,
@@ -587,7 +588,8 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
   }
 
   if (FPClassTest PartialCheck = Mask & fcNan) {
-    auto InfWithQnanBitC = buildSPIRVConstant(IntTy, Inf | QNaNBitMask);
+    auto InfWithQnanBitC =
+        buildSPIRVConstant(IntTy, std::move(Inf) | QNaNBitMask);
     if (PartialCheck == fcNan) {
       // isnan(V) ==> abs(V) u> int(inf)
       appendToRes(
@@ -613,7 +615,7 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
     APInt ExpLSB = ExpMask & ~(ExpMask.shl(1));
     auto ExpMinusOne = assignSPIRVTy(
         MIRBuilder.buildSub(IntTy, Abs, buildSPIRVConstant(IntTy, ExpLSB)));
-    APInt MaxExpMinusOne = ExpMask - ExpLSB;
+    APInt MaxExpMinusOne = std::move(ExpMask) - ExpLSB;
     auto NormalRes = assignSPIRVTy(
         MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_ULT, DstTy, ExpMinusOne,
                              buildSPIRVConstant(IntTy, MaxExpMinusOne)));
