@@ -301,11 +301,11 @@ InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
   std::optional<unsigned> Opcode;
-  VPValue *Op = getOperand(0);
+  VPValue *Op = getOperand(1);
   VPRecipeBase *OpR = Op->getDefiningRecipe();
 
-  // If the partial reduction is predicated, a select will be operand 0
-  if (match(getOperand(1), m_Select(m_VPValue(), m_VPValue(Op), m_VPValue()))) {
+  // If the partial reduction is predicated, a select will be operand 1
+  if (match(Op, m_Select(m_VPValue(), m_VPValue(Op), m_VPValue()))) {
     OpR = Op->getDefiningRecipe();
   }
 
@@ -2914,10 +2914,8 @@ void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
   switch (ExpressionType) {
   case ExpressionTypes::ExtendedReduction: {
     getOperand(1)->printAsOperand(O, SlotTracker);
-    O << " + ";
-    if (IsPartialReduction)
-      O << "partial.";
-    O << "reduce." << Instruction::getOpcodeName(Opcode) << " (";
+    O << " + " << (IsPartialReduction ? "partial." : "") << "reduce.";
+    O << Instruction::getOpcodeName(Opcode) << " (";
     getOperand(0)->printAsOperand(O, SlotTracker);
     Red->printFlags(O);
 
@@ -2933,11 +2931,8 @@ void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
   }
   case ExpressionTypes::ExtNegatedMulAccReduction: {
     getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
-    O << " + ";
-    if (IsPartialReduction)
-      O << "partial.";
-    O << "reduce."
-      << Instruction::getOpcodeName(
+    O << " + " << (IsPartialReduction ? "partial." : "") << "reduce.";
+    O << Instruction::getOpcodeName(
              RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
       << " (sub (0, mul";
     auto *Mul = cast<VPWidenRecipe>(ExpressionRecipes[2]);
@@ -2961,11 +2956,8 @@ void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
   case ExpressionTypes::MulAccReduction:
   case ExpressionTypes::ExtMulAccReduction: {
     getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
-    O << " + ";
-    if (IsPartialReduction)
-      O << "partial.";
-    O << "reduce."
-      << Instruction::getOpcodeName(
+    O << " + " << (IsPartialReduction ? "partial." : "") << "reduce.";
+    O << Instruction::getOpcodeName(
              RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
       << " (";
     O << "mul";

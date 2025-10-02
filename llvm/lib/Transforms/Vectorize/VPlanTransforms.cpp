@@ -3515,7 +3515,6 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 static VPExpressionRecipe *
 tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                           VPCostContext &Ctx, VFRange &Range) {
-  using namespace VPlanPatternMatch;
   bool IsPartialReduction = isa<VPPartialReductionRecipe>(Red);
 
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
@@ -3534,6 +3533,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
             // The VF ranges have already been clamped for a partial reduction
             // and its existence confirms that it's valid, so we don't need to
             // perform any cost checks or more clamping.
+            // FIXME: Move partial reduction creation, costing and clamping
+            // here.
             return true;
           }
 
