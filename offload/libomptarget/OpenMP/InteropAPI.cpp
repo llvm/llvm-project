@@ -124,7 +124,7 @@ void *getProperty<void *>(omp_interop_val_t &InteropVal,
   case omp_ipr_device_context:
     return InteropVal.device_info.Context;
   case omp_ipr_targetsync:
-    return InteropVal.async_info->Queue;
+    return InteropVal.async_info ? InteropVal.async_info->Queue : nullptr;
   default:;
   }
   getTypeMismatch(Property, Err);
@@ -167,7 +167,6 @@ bool getPropertyCheck(omp_interop_val_t **InteropPtr,
                                        omp_interop_property_t property_id,     \
                                        int *err) {                             \
     omp_interop_val_t *interop_val = (omp_interop_val_t *)interop;             \
-    assert((interop_val)->interop_type == kmp_interop_type_targetsync);        \
     if (!getPropertyCheck(&interop_val, property_id, err)) {                   \
       return (RETURN_TYPE)(0);                                                 \
     }                                                                          \

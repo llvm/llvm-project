@@ -2716,7 +2716,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                          int32_t NumPrefers,
                                          interop_spec_t *Prefers) override {
     // TODO: update once targetsync is supported
-    if (InteropType != kmp_interop_type_target)
+    if (InteropType == kmp_interop_type_target)
       return interop_spec_t{tgt_fr_hsa, {false, 0}, 0};
     return interop_spec_t{tgt_fr_none, {false, 0}, 0};
   }
