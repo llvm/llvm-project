@@ -1720,6 +1720,12 @@ public:
   ArrayRef<SMLoc> getLoc() const { return Locs; }
   void appendLoc(SMLoc Loc) { Locs.push_back(Loc); }
 
+  // Returns the location of the "top" def or defm that instantiated this
+  // concrete record. For a record defined using `def`, this is the location of
+  // the def. For a record defined using `defm`, this is the location of the
+  // topmost/outermost defm that lead to the instantiation of this record.
+  SMLoc getTopDefLoc() const { return Locs.back(); }
+
   ArrayRef<SMLoc> getForwardDeclarationLocs() const {
     return ForwardDeclarationLocs;
   }
