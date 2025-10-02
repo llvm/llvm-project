@@ -65,7 +65,6 @@
 #include "clang/Sema/Redeclaration.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
-#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
 #include "llvm/ADT/APInt.h"
@@ -11695,9 +11694,8 @@ public:
   ExprResult
   CheckConceptTemplateId(const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
                          const DeclarationNameInfo &ConceptNameInfo,
-                         NamedDecl *FoundDecl, TemplateDecl *NamedConcept,
-                         const TemplateArgumentListInfo *TemplateArgs,
-                         bool DoCheckConstraintSatisfaction = true);
+                         NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
+                         const TemplateArgumentListInfo *TemplateArgs);
 
   void diagnoseMissingTemplateArguments(TemplateName Name, SourceLocation Loc);
   void diagnoseMissingTemplateArguments(const CXXScopeSpec &SS,
@@ -12026,13 +12024,6 @@ public:
                                  CheckTemplateArgumentInfo &CTAI,
                                  bool UpdateArgsWithConversions = true,
                                  bool *ConstraintsNotSatisfied = nullptr);
-
-  bool CheckTemplateArgumentList(
-      TemplateDecl *Template, TemplateParameterList *Params,
-      SourceLocation TemplateLoc, TemplateArgumentListInfo &TemplateArgs,
-      const DefaultArguments &DefaultArgs, bool PartialTemplateArgs,
-      CheckTemplateArgumentInfo &CTAI, bool UpdateArgsWithConversions = true,
-      bool *ConstraintsNotSatisfied = nullptr);
 
   bool CheckTemplateTypeArgument(
       TemplateTypeParmDecl *Param, TemplateArgumentLoc &Arg,
@@ -12792,18 +12783,6 @@ public:
   void MarkUsedTemplateParameters(const Expr *E, bool OnlyDeduced,
                                   unsigned Depth, llvm::SmallBitVector &Used);
 
-  /// Mark which template parameters are named in a given expression.
-  ///
-  /// Unlike MarkUsedTemplateParameters, this excludes parameter that
-  /// are used but not directly named by an expression - i.e. it excludes
-  /// any template parameter that denotes the type of a referenced NTTP.
-  ///
-  /// \param Used a bit vector whose elements will be set to \c true
-  /// to indicate when the corresponding template parameter will be
-  /// deduced.
-  void MarkUsedTemplateParametersForSubsumptionParameterMapping(
-      const Expr *E, unsigned Depth, llvm::SmallBitVector &Used);
-
   /// Mark which template parameters can be deduced from a given
   /// template argument list.
   ///
@@ -12818,9 +12797,6 @@ public:
                                   llvm::SmallBitVector &Used);
 
   void MarkUsedTemplateParameters(ArrayRef<TemplateArgument> TemplateArgs,
-                                  unsigned Depth, llvm::SmallBitVector &Used);
-
-  void MarkUsedTemplateParameters(ArrayRef<TemplateArgumentLoc> TemplateArgs,
                                   unsigned Depth, llvm::SmallBitVector &Used);
 
   void
@@ -13120,9 +13096,6 @@ public:
     /// Whether we're substituting into constraints.
     bool InConstraintSubstitution;
 
-    /// Whether we're substituting into the parameter mapping of a constraint.
-    bool InParameterMappingSubstitution;
-
     /// The point of instantiation or synthesis within the source code.
     SourceLocation PointOfInstantiation;
 
@@ -13385,11 +13358,6 @@ public:
   SubstTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
                          const MultiLevelTemplateArgumentList &TemplateArgs,
                          TemplateArgumentListInfo &Outputs);
-
-  bool SubstTemplateArgumentsInParameterMapping(
-      ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
-      const MultiLevelTemplateArgumentList &TemplateArgs,
-      TemplateArgumentListInfo &Out, bool BuildPackExpansionTypes);
 
   /// Retrieve the template argument list(s) that should be used to
   /// instantiate the definition of the given declaration.
@@ -13850,12 +13818,6 @@ public:
   bool inConstraintSubstitution() const {
     return !CodeSynthesisContexts.empty() &&
            CodeSynthesisContexts.back().InConstraintSubstitution;
-  }
-
-  bool inParameterMappingSubstitution() const {
-    return !CodeSynthesisContexts.empty() &&
-           CodeSynthesisContexts.back().InParameterMappingSubstitution &&
-           !inConstraintSubstitution();
   }
 
   using EntityPrinter = llvm::function_ref<void(llvm::raw_ostream &)>;
@@ -14742,10 +14704,6 @@ public:
     SatisfactionStack.swap(NewSS);
   }
 
-  using ConstrainedDeclOrNestedRequirement =
-      llvm::PointerUnion<const NamedDecl *,
-                         const concepts::NestedRequirement *>;
-
   /// Check whether the given expression is a valid constraint expression.
   /// A diagnostic is emitted if it is not, false is returned, and
   /// PossibleNonPrimary will be set to true if the failure might be due to a
@@ -14770,12 +14728,44 @@ public:
   /// \returns true if an error occurred and satisfaction could not be checked,
   /// false otherwise.
   bool CheckConstraintSatisfaction(
-      ConstrainedDeclOrNestedRequirement Entity,
+      const NamedDecl *Template,
       ArrayRef<AssociatedConstraint> AssociatedConstraints,
       const MultiLevelTemplateArgumentList &TemplateArgLists,
-      SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction,
-      const ConceptReference *TopLevelConceptId = nullptr,
-      Expr **ConvertedExpr = nullptr);
+      SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction) {
+    llvm::SmallVector<Expr *, 4> Converted;
+    return CheckConstraintSatisfaction(Template, AssociatedConstraints,
+                                       Converted, TemplateArgLists,
+                                       TemplateIDRange, Satisfaction);
+  }
+
+  /// \brief Check whether the given list of constraint expressions are
+  /// satisfied (as if in a 'conjunction') given template arguments.
+  /// Additionally, takes an empty list of Expressions which is populated with
+  /// the instantiated versions of the ConstraintExprs.
+  /// \param Template the template-like entity that triggered the constraints
+  /// check (either a concept or a constrained entity).
+  /// \param ConstraintExprs a list of constraint expressions, treated as if
+  /// they were 'AND'ed together.
+  /// \param ConvertedConstraints a out parameter that will get populated with
+  /// the instantiated version of the ConstraintExprs if we successfully checked
+  /// satisfaction.
+  /// \param TemplateArgList the multi-level list of template arguments to
+  /// substitute into the constraint expression. This should be relative to the
+  /// top-level (hence multi-level), since we need to instantiate fully at the
+  /// time of checking.
+  /// \param TemplateIDRange The source range of the template id that
+  /// caused the constraints check.
+  /// \param Satisfaction if true is returned, will contain details of the
+  /// satisfaction, with enough information to diagnose an unsatisfied
+  /// expression.
+  /// \returns true if an error occurred and satisfaction could not be checked,
+  /// false otherwise.
+  bool CheckConstraintSatisfaction(
+      const NamedDecl *Template,
+      ArrayRef<AssociatedConstraint> AssociatedConstraints,
+      llvm::SmallVectorImpl<Expr *> &ConvertedConstraints,
+      const MultiLevelTemplateArgumentList &TemplateArgList,
+      SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction);
 
   /// \brief Check whether the given non-dependent constraint expression is
   /// satisfied. Returns false and updates Satisfaction with the satisfaction
@@ -14841,17 +14831,16 @@ public:
   /// \param First whether this is the first time an unsatisfied constraint is
   /// diagnosed for this error.
   void DiagnoseUnsatisfiedConstraint(const ConstraintSatisfaction &Satisfaction,
-                                     SourceLocation Loc = {},
                                      bool First = true);
 
   /// \brief Emit diagnostics explaining why a constraint expression was deemed
   /// unsatisfied.
   void
-  DiagnoseUnsatisfiedConstraint(const ConceptSpecializationExpr *ConstraintExpr,
+  DiagnoseUnsatisfiedConstraint(const ASTConstraintSatisfaction &Satisfaction,
                                 bool First = true);
 
   const NormalizedConstraint *getNormalizedAssociatedConstraints(
-      ConstrainedDeclOrNestedRequirement Entity,
+      const NamedDecl *ConstrainedDecl,
       ArrayRef<AssociatedConstraint> AssociatedConstraints);
 
   /// \brief Check whether the given declaration's associated constraints are
@@ -14876,15 +14865,6 @@ public:
       const NamedDecl *D1, ArrayRef<AssociatedConstraint> AC1,
       const NamedDecl *D2, ArrayRef<AssociatedConstraint> AC2);
 
-  /// Cache the satisfaction of an atomic constraint.
-  /// The key is based on the unsubstituted expression and the parameter
-  /// mapping. This lets us not substituting the mapping more than once,
-  /// which is (very!) expensive.
-  /// FIXME: this should be private.
-  llvm::DenseMap<llvm::FoldingSetNodeID,
-                 UnsubstitutedConstraintSatisfactionCacheResult>
-      UnsubstitutedConstraintSatisfactionCache;
-
 private:
   /// Caches pairs of template-like decls whose associated constraints were
   /// checked for subsumption and whether or not the first's constraints did in
@@ -14895,11 +14875,8 @@ private:
   /// constrained declarations). If an error occurred while normalizing the
   /// associated constraints of the template or concept, nullptr will be cached
   /// here.
-  llvm::DenseMap<ConstrainedDeclOrNestedRequirement, NormalizedConstraint *>
-      NormalizationCache;
+  llvm::DenseMap<const NamedDecl *, NormalizedConstraint *> NormalizationCache;
 
-  /// Cache whether the associated constraint of a declaration
-  /// is satisfied.
   llvm::ContextualFoldingSet<ConstraintSatisfaction, const ASTContext &>
       SatisfactionCache;
 
