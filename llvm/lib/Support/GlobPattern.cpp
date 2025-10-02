@@ -137,7 +137,7 @@ GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns) {
   GlobPattern Pat;
 
   // Store the prefix that does not contain any metacharacter.
-  size_t PrefixSize = S.find_first_of("?*[{\\");
+  size_t PrefixSize = S.find_first_of("?*[{\\/");
   Pat.Prefix = S.substr(0, PrefixSize);
   if (PrefixSize == std::string::npos)
     return Pat;
