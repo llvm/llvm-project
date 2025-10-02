@@ -253,14 +253,13 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
 
 VPSingleDefRecipe *vputils::getSingleScalarClone(VPSingleDefRecipe *R) {
   return TypeSwitch<VPSingleDefRecipe *, VPSingleDefRecipe *>(R)
-      .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-            VPWidenSelectRecipe, VPWidenCallRecipe, VPReplicateRecipe>(
-          [](auto *I) {
-            return new VPReplicateRecipe(I->getUnderlyingInstr(), I->operands(),
-                                         /*IsSingleScalar*/ true,
-                                         /*Mask*/ nullptr,
-                                         /*Metadata*/ *I);
-          })
+      .Case<VPInstruction, VPWidenRecipe, VPWidenSelectRecipe,
+            VPWidenCallRecipe, VPReplicateRecipe>([](auto *I) {
+        return new VPReplicateRecipe(I->getUnderlyingInstr(), I->operands(),
+                                     /*IsSingleScalar*/ true,
+                                     /*Mask*/ nullptr,
+                                     /*Metadata*/ *I);
+      })
       .Case<VPWidenGEPRecipe>([](auto *I) {
         // WidenGEP does not have metadata.
         return new VPReplicateRecipe(I->getUnderlyingInstr(), I->operands(),
