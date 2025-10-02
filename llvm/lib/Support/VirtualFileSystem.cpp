@@ -133,7 +133,7 @@ std::error_code FileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
   if (!WorkingDir)
     return WorkingDir.getError();
 
-  llvm::sys::fs::make_absolute(WorkingDir.get(), Path);
+  sys::path::make_absolute(WorkingDir.get(), Path);
   return {};
 }
 
@@ -300,7 +300,7 @@ private:
     if (!WD || !*WD)
       return Path;
     Path.toVector(Storage);
-    sys::fs::make_absolute(WD->get().Resolved, Storage);
+    sys::path::make_absolute(WD->get().Resolved, Storage);
     return Storage;
   }
 
