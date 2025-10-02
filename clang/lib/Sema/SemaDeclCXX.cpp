@@ -13660,7 +13660,7 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
 
     if (Cxx20Enumerator) {
       Diag(NameLoc, diag::warn_cxx17_compat_using_decl_non_member_enumerator)
-          << SS.getRange();
+          << SS.getScopeRep() << SS.getRange();
       return false;
     }
 

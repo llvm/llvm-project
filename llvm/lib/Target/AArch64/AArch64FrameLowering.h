@@ -24,6 +24,11 @@ class AArch64FunctionInfo;
 class AArch64PrologueEmitter;
 class AArch64EpilogueEmitter;
 
+struct SVEStackSizes {
+  uint64_t ZPRStackSize{0};
+  uint64_t PPRStackSize{0};
+};
+
 class AArch64FrameLowering : public TargetFrameLowering {
 public:
   explicit AArch64FrameLowering()
@@ -147,7 +152,16 @@ public:
 
   bool requiresSaveVG(const MachineFunction &MF) const;
 
-  StackOffset getSVEStackSize(const MachineFunction &MF) const;
+  /// Returns the size of the entire ZPR stackframe (calleesaves + spills).
+  StackOffset getZPRStackSize(const MachineFunction &MF) const;
+
+  /// Returns the size of the entire PPR stackframe (calleesaves + spills).
+  StackOffset getPPRStackSize(const MachineFunction &MF) const;
+
+  /// Returns the size of the entire SVE stackframe (PPRs + ZPRs).
+  StackOffset getSVEStackSize(const MachineFunction &MF) const {
+    return getZPRStackSize(MF) + getPPRStackSize(MF);
+  }
 
   friend class AArch64PrologueEpilogueCommon;
   friend class AArch64PrologueEmitter;
@@ -167,10 +181,6 @@ private:
   /// Returns true if CSRs should be paired.
   bool producePairRegisters(MachineFunction &MF) const;
 
-  int64_t estimateSVEStackObjectOffsets(MachineFrameInfo &MF) const;
-  int64_t assignSVEStackObjectOffsets(MachineFrameInfo &MF,
-                                      int &MinCSFrameIndex,
-                                      int &MaxCSFrameIndex) const;
   /// Make a determination whether a Hazard slot is used and create it if
   /// needed.
   void determineStackHazardSlot(MachineFunction &MF,
