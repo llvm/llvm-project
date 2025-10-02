@@ -131,12 +131,7 @@ STATISTIC(NumVirtConstProp1Bit,
           "Number of 1 bit virtual constant propagations");
 STATISTIC(NumVirtConstProp, "Number of virtual constant propagations");
 
-// TODO: This option eventually should support any public visibility vtables
-// with/out LTO.
-static cl::opt<bool> ClDevirtualizeSpeculatively(
-    "devirtualize-speculatively",
-    cl::desc("Enable speculative devirtualization optimization"),
-    cl::init(false));
+namespace llvm {
 
 static cl::opt<PassSummaryAction> ClSummaryAction(
     "wholeprogramdevirt-summary-action",
@@ -160,6 +155,13 @@ static cl::opt<std::string> ClWriteSummary(
              "Output file format is deduced from extension: *.bc means writing "
              "bitcode, otherwise YAML"),
     cl::Hidden);
+
+// TODO: This option eventually should support any public visibility vtables
+// with/out LTO.
+static cl::opt<bool> ClDevirtualizeSpeculatively(
+    "devirtualize-speculatively",
+    cl::desc("Enable speculative devirtualization optimization"),
+    cl::init(false));
 
 static cl::opt<unsigned>
     ClThreshold("wholeprogramdevirt-branch-funnel-threshold", cl::Hidden,
