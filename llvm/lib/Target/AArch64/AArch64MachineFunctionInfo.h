@@ -137,6 +137,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   uint64_t StackSizeZPR = 0;
   uint64_t StackSizePPR = 0;
 
+  /// Are SVE objects (vectors and predicates) split into separate regions on
+  /// the stack.
+  bool SplitSVEObjects = false;
+
   /// HasCalculatedStackSizeSVE indicates whether StackSizeZPR/PPR is valid.
   bool HasCalculatedStackSizeSVE = false;
 
@@ -336,7 +340,6 @@ public:
 
   bool isStackRealigned() const { return StackRealigned; }
   void setStackRealigned(bool s) { StackRealigned = s; }
-
   bool hasCalleeSaveStackFreeSpace() const {
     return CalleeSaveStackHasFreeSpace;
   }
@@ -438,12 +441,18 @@ public:
   }
 
   unsigned getSVECalleeSavedStackSize() const {
+    assert(!hasSplitSVEObjects() &&
+           "ZPRs and PPRs are split. Use get[ZPR|PPR]CalleeSavedStackSize()");
     return getZPRCalleeSavedStackSize() + getPPRCalleeSavedStackSize();
   }
 
   void incNumLocalDynamicTLSAccesses() { ++NumLocalDynamicTLSAccesses; }
   unsigned getNumLocalDynamicTLSAccesses() const {
     return NumLocalDynamicTLSAccesses;
+  }
+
+  bool isStackHazardIncludedInCalleeSaveArea() const {
+    return hasStackHazardSlotIndex() && !hasSplitSVEObjects();
   }
 
   std::optional<bool> hasRedZone() const { return HasRedZone; }
@@ -481,7 +490,14 @@ public:
     StackHazardCSRSlotIndex = Index;
   }
 
-  bool hasSplitSVEObjects() const { return false; }
+  bool hasSplitSVEObjects() const { return SplitSVEObjects; }
+  void setSplitSVEObjects(bool s) { SplitSVEObjects = s; }
+
+  bool hasSVE_AAPCS(const MachineFunction &MF) const {
+    return hasSplitSVEObjects() || isSVECC() ||
+           MF.getFunction().getCallingConv() ==
+               CallingConv::AArch64_SVE_VectorCall;
+  }
 
   SMEAttrs getSMEFnAttrs() const { return SMEFnAttrs; }
 
