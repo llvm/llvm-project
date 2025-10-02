@@ -6121,7 +6121,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
           .addImm(0);
     }
 
-    unsigned Opc = (MI.getOpcode() == AMDGPU::S_ADD_CO_PSEUDO)
+    unsigned Opc = MI.getOpcode() == AMDGPU::S_ADD_CO_PSEUDO
                        ? AMDGPU::S_ADDC_U32
                        : AMDGPU::S_SUBB_U32;
 
@@ -16583,26 +16583,24 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
                           sd_match(LHS, m_Sub(m_Specific(RHS), m_Value()))) ||
                          (CC == ISD::SETEQ && CRHS && CRHS->isZero() &&
                           sd_match(LHS, m_Add(m_Value(), m_One()))))) {
-    EVT TargetType = MVT::i32;
-    EVT CarryVT = MVT::i1;
     bool IsAdd = LHS.getOpcode() == ISD::ADD;
 
     SDValue Op0 = LHS.getOperand(0);
     SDValue Op1 = LHS.getOperand(1);
 
-    SDValue Op0Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, Op0);
-    SDValue Op1Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, Op1);
+    SDValue Op0Lo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Op0);
+    SDValue Op1Lo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Op1);
 
     SDValue Op0Hi = getHiHalf64(Op0, DAG);
     SDValue Op1Hi = getHiHalf64(Op1, DAG);
 
     SDValue NodeLo =
         DAG.getNode(IsAdd ? ISD::UADDO : ISD::USUBO, SL,
-                    DAG.getVTList(TargetType, CarryVT), {Op0Lo, Op1Lo});
+                    DAG.getVTList(MVT::i32, MVT::i1), {Op0Lo, Op1Lo});
 
     SDValue CarryInHi = NodeLo.getValue(1);
     SDValue NodeHi = DAG.getNode(IsAdd ? ISD::UADDO_CARRY : ISD::USUBO_CARRY,
-                                 SL, DAG.getVTList(TargetType, CarryVT),
+                                 SL, DAG.getVTList(MVT::i32, MVT::i1),
                                  {Op0Hi, Op1Hi, CarryInHi});
 
     SDValue ResultLo = NodeLo.getValue(0);
