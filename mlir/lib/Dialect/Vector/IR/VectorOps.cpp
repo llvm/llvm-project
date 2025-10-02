@@ -7628,62 +7628,64 @@ struct StepCompareFolder : public OpRewritePattern<StepOp> {
     const int64_t stepSize = stepOp.getResult().getType().getNumElements();
 
     for (auto &use : stepOp.getResult().getUses()) {
-      if (auto cmpiOp = dyn_cast<arith::CmpIOp>(use.getOwner())) {
-        const unsigned stepOperandNumber = use.getOperandNumber();
+      auto cmpiOp = dyn_cast<arith::CmpIOp>(use.getOwner());
+      if (!cmpiOp)
+        continue;
 
-        // arith.cmpi canonicalizer makes constants final operands.
-        if (stepOperandNumber != 0)
-          continue;
+      // arith.cmpi canonicalizer makes constants final operands.
+      const unsigned stepOperandNumber = use.getOperandNumber();
+      if (stepOperandNumber != 0)
+        continue;
 
-        // Check that operand 1 is a constant.
-        unsigned constOperandNumber = 1;
-        Value otherOperand = cmpiOp.getOperand(constOperandNumber);
-        auto maybeConstValue = getConstantIntValue(otherOperand);
-        if (!maybeConstValue.has_value())
-          continue;
+      // Check that operand 1 is a constant.
+      unsigned constOperandNumber = 1;
+      Value otherOperand = cmpiOp.getOperand(constOperandNumber);
+      auto maybeConstValue = getConstantIntValue(otherOperand);
+      if (!maybeConstValue.has_value())
+        continue;
 
-        int64_t constValue = maybeConstValue.value();
-        arith::CmpIPredicate pred = cmpiOp.getPredicate();
+      int64_t constValue = maybeConstValue.value();
+      arith::CmpIPredicate pred = cmpiOp.getPredicate();
 
-        auto maybeSplat = [&]() -> std::optional<bool> {
-          // Handle ult (unsigned less than) and uge (unsigned greater equal).
-          if ((pred == arith::CmpIPredicate::ult ||
-               pred == arith::CmpIPredicate::uge) &&
-              stepSize <= constValue)
-            return pred == arith::CmpIPredicate::ult;
+      auto maybeSplat = [&]() -> std::optional<bool> {
+        // Handle ult (unsigned less than) and uge (unsigned greater equal).
+        if ((pred == arith::CmpIPredicate::ult ||
+             pred == arith::CmpIPredicate::uge) &&
+            stepSize <= constValue)
+          return pred == arith::CmpIPredicate::ult;
 
-          // Handle ule and ugt.
-          if ((pred == arith::CmpIPredicate::ule ||
-               pred == arith::CmpIPredicate::ugt) &&
-              stepSize <= constValue + 1)
-            return pred == arith::CmpIPredicate::ule;
+        // Handle ule and ugt.
+        if ((pred == arith::CmpIPredicate::ule ||
+             pred == arith::CmpIPredicate::ugt) &&
+            stepSize - 1 <= constValue) {
+          return pred == arith::CmpIPredicate::ule;
+        }
 
-          // Handle eq and ne.
-          if ((pred == arith::CmpIPredicate::eq ||
-               pred == arith::CmpIPredicate::ne) &&
-              stepSize <= constValue)
-            return pred == arith::CmpIPredicate::ne;
+        // Handle eq and ne.
+        if ((pred == arith::CmpIPredicate::eq ||
+             pred == arith::CmpIPredicate::ne) &&
+            stepSize <= constValue)
+          return pred == arith::CmpIPredicate::ne;
 
-          return std::optional<bool>();
-        }();
+        return std::nullopt;
+      }();
 
-        if (!maybeSplat.has_value())
-          continue;
+      if (!maybeSplat.has_value())
+        continue;
 
-        rewriter.setInsertionPointAfter(cmpiOp);
+      rewriter.setInsertionPointAfter(cmpiOp);
 
-        auto type = dyn_cast<VectorType>(cmpiOp.getResult().getType());
-        if (!type)
-          continue;
+      auto type = dyn_cast<VectorType>(cmpiOp.getResult().getType());
+      if (!type)
+        continue;
 
-        DenseElementsAttr boolAttr =
-            DenseElementsAttr::get(type, maybeSplat.value());
-        Value splat = mlir::arith::ConstantOp::create(rewriter, cmpiOp.getLoc(),
-                                                      type, boolAttr);
+      DenseElementsAttr boolAttr =
+          DenseElementsAttr::get(type, maybeSplat.value());
+      Value splat = mlir::arith::ConstantOp::create(rewriter, cmpiOp.getLoc(),
+                                                    type, boolAttr);
 
-        rewriter.replaceOp(cmpiOp, splat);
-        return success();
-      }
+      rewriter.replaceOp(cmpiOp, splat);
+      return success();
     }
 
     return failure();

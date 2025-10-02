@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize="test-convergence" -split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -canonicalize="test-convergence" -split-input-file | FileCheck %s
 
 ///===----------------------------------------------===//
 ///  Tests of `StepCompareFolder`
@@ -58,6 +58,20 @@ func.func @check_ugt_constant_3_rhs() -> vector<3xi1> {
   %1 = arith.cmpi ugt, %0, %cst : vector<3xindex>
   return %1 : vector<3xi1>
 }
+
+// -----
+
+// CHECK-LABEL: @check_ugt_constant_max_rhs
+//       CHECK: %[[CST:.*]] = arith.constant dense<false> : vector<3xi1>
+//       CHECK: return %[[CST]] : vector<3xi1>
+func.func @check_ugt_constant_max_rhs() -> vector<3xi1> {
+  // The largest i64 possible:
+  %cst = arith.constant dense<0x7fffffffffffffff> : vector<3xindex>
+  %0 = vector.step : vector<3xindex>
+  %1 = arith.cmpi ugt, %0, %cst: vector<3xindex>
+  return %1 : vector<3xi1>
+}
+
 
 // -----
 
