@@ -9,7 +9,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginInterface.h"
-#include "OpenMP/OMPT/OmptCommonDefs.h"
 
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
@@ -23,13 +22,6 @@
 #include "omptarget.h"
 #include "print_tracing.h"
 #include "trace.h"
-
-#ifdef OMPT_SUPPORT
-#include "OmptDeviceTracing.h"
-#include "OpenMP/OMPT/Callback.h"
-#include "OpenMP/OMPT/Interface.h"
-#include "omp-tools.h"
-#endif
 
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -47,29 +39,6 @@ using namespace omp;
 using namespace target;
 using namespace plugin;
 using namespace error;
-
-#ifdef OMPT_SUPPORT
-using namespace ompt;
-extern void ompt::setOmptTimestamp(uint64_t Start, uint64_t End);
-extern void ompt::setOmptGrantedNumTeams(uint64_t NumTeams);
-
-extern uint64_t getSystemTimestampInNs();
-
-/// RAII used for timing certain plugin functionality and transferring the
-/// information to libomptarget
-struct OmptTimestampRAII {
-  OmptTimestampRAII() { OMPT_IF_TRACING_ENABLED(setStart();); }
-  ~OmptTimestampRAII() { OMPT_IF_ENABLED(setTimestamp();); }
-
-private:
-  uint64_t StartTime = 0;
-  void setStart() { StartTime = getSystemTimestampInNs(); }
-  void setTimestamp() {
-    uint64_t EndTime = getSystemTimestampInNs();
-    ompt::setOmptTimestamp(StartTime, EndTime);
-  }
-};
-#endif
 
 namespace llvm::omp::target::plugin {
 // Used for kernel tracing implementation
@@ -739,16 +708,9 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                                  NumBlocks, MultiDeviceLB, MultiDeviceUB))
     return Err;
 
-  OMPT_IF_TRACING_ENABLED(if (llvm::omp::target::ompt::isTracedDevice(
-                                  getDeviceId(&GenericDevice))) {
-    __tgt_async_info *AI = AsyncInfoWrapper;
-    if (AI->ProfilerData != nullptr) {
-      // Set number of granted teams for OMPT
-      setOmptGrantedNumTeams(NumBlocks[0]);
-      reinterpret_cast<OmptEventInfoTy *>(AI->ProfilerData)->NumTeams =
-          NumBlocks[0];
-    }
-  });
+  if (GenericDevice.Plugin.getProfiler())
+    GenericDevice.Plugin.getProfiler()->handlePreKernelLaunch(
+        &GenericDevice, NumBlocks, AsyncInfoWrapper);
 
   return launchImpl(GenericDevice, NumThreads, NumBlocks, KernelArgs,
                     LaunchParams, AsyncInfoWrapper);
@@ -913,50 +875,18 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
       OMPX_KernelDurationTracing("LIBOMPTARGET_KERNEL_EXE_TIME", false),
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
-      PinnedAllocs(*this), RPCServer(nullptr), KernelRunRecords(nullptr) {
-#ifdef OMPT_SUPPORT
-  OmptInitialized.store(false);
-  // Bind the callbacks to this device's member functions
-#define bindOmptCallback(Name, Type, Code)                                     \
-  if (ompt::Initialized && ompt::lookupCallbackByCode) {                       \
-    ompt::lookupCallbackByCode((ompt_callbacks_t)(Code),                       \
-                               ((ompt_callback_t *)&(Name##_fn)));             \
-    DP("class bound %s=%p\n", #Name, ((void *)(uint64_t)Name##_fn));           \
-  }
-
-  FOREACH_OMPT_DEVICE_EVENT(bindOmptCallback);
-#undef bindOmptCallback
-
-#define bindOmptTracingFunction(FunctionName)                                  \
-  if (ompt::Initialized && ompt::lookupDeviceTracingFn) {                      \
-    FunctionName##_fn = ompt::lookupDeviceTracingFn(#FunctionName);            \
-    DP("device tracing fn bound %s=%p\n", #FunctionName,                       \
-       ((void *)(uint64_t)FunctionName##_fn));                                 \
-  }
-
-  FOREACH_OMPT_DEVICE_TRACING_FN_COMMON(bindOmptTracingFunction);
-#undef bindOmptTracingFunction
-
-#endif
-}
+      PinnedAllocs(*this), RPCServer(nullptr), KernelRunRecords(nullptr) {}
 
 Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
+  auto Profiler = Plugin.getProfiler();
+
   if (auto Err = initImpl(Plugin))
     return Err;
 
-#ifdef OMPT_SUPPORT
-  auto DevicePtr = reinterpret_cast<ompt_device_t *>(this);
-  ompt::setDeviceId(DevicePtr, Plugin.getUserId(DeviceId));
-  if (ompt::Initialized) {
-    bool ExpectedStatus = false;
-    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
-      performOmptCallback(device_initialize, Plugin.getUserId(DeviceId),
-                          /*type=*/getComputeUnitKind().c_str(),
-                          /*device=*/DevicePtr,
-                          /*lookup=*/ompt::lookupDeviceTracingFn,
-                          /*documentation=*/nullptr);
-  }
-#endif
+  if (Profiler)
+    // Invokes profiler backend to dispatch event. Required here to enable
+    // capture hardware-time slope data
+    Profiler->handleInit(this, &Plugin);
 
   // Read and reinitialize the envars that depend on the device initialization.
   // Notice these two envars may change the stack size and heap size of the
@@ -1085,17 +1015,12 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     }
   }
 
-#ifdef OMPT_SUPPORT
-  if (ompt::Initialized) {
-    bool ExpectedStatus = true;
-    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
-      performOmptCallback(device_finalize, Plugin.getUserId(DeviceId));
-  }
-  ompt::removeDeviceId(reinterpret_cast<ompt_device_t *>(this));
-#endif
+  if (auto Profiler = Plugin.getProfiler(); Profiler)
+    Profiler->handleDeinit(this, &Plugin);
 
   return deinitImpl();
 }
+
 Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                                                       StringRef InputTgtImage) {
   DP("Load data from image " DPxMOD "\n", DPxPTR(InputTgtImage.bytes_begin()));
@@ -1138,17 +1063,8 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   if (auto Err = setupRPCServer(Plugin, *Image))
     return std::move(Err);
 
-#ifdef OMPT_SUPPORT
-  if (ompt::Initialized) {
-    size_t Bytes = InputTgtImage.size();
-    performOmptCallback(
-        device_load, Plugin.getUserId(DeviceId),
-        /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
-        /*ImgSize=*/Bytes,
-        /*HostAddr=*/const_cast<unsigned char *>(InputTgtImage.bytes_begin()),
-        /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
-  }
-#endif
+  if (auto Profiler = Plugin.getProfiler(); Profiler)
+    Profiler->handleLoadBinary(this, &Plugin, InputTgtImage);
 
   // Call any global constructors present on the device.
   if (auto Err = callGlobalConstructors(Plugin, *Image))
@@ -1530,6 +1446,11 @@ Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
 
 Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
                                             TargetAllocTy Kind) {
+  // Uses RAII to get timing for this operation through the DataAllocTimer
+  // object
+  auto DataAllocTimer =
+      Plugin.getProfiler()->getScopedDataAllocTimer(this, HostPtr, Size);
+
   void *Alloc = nullptr;
 
   if (Plugin.getRecordReplay().isRecordingOrReplaying())
@@ -1596,6 +1517,10 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
 }
 
 Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
+
+  auto DataDeleteTimer =
+      Plugin.getProfiler()->getScopedDataDeleteTimer(this, TgtPtr);
+
   // Free is a noop when recording or replaying.
   if (Plugin.getRecordReplay().isRecordingOrReplaying())
     return Plugin::success();
@@ -2278,12 +2203,8 @@ void *GenericPluginTy::data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
                                   int32_t Kind) {
   auto T = logger::log<void *>(__func__, DeviceId, Size, HostPtr, Kind);
   auto R = [&]() -> void * {
-#ifdef OMPT_SUPPORT
-    // If OMPT is enabled, collect start and end times for the allocation.
-    OmptTimestampRAII Ts;
-#endif
-    auto AllocOrErr =
-        getDevice(DeviceId).dataAlloc(Size, HostPtr, (TargetAllocTy)Kind);
+    auto &Dev = getDevice(DeviceId);
+    auto AllocOrErr = Dev.dataAlloc(Size, HostPtr, (TargetAllocTy)Kind);
     if (!AllocOrErr) {
       auto Err = AllocOrErr.takeError();
       REPORT("Failure to allocate device memory: %s\n",
@@ -2302,11 +2223,8 @@ int32_t GenericPluginTy::data_delete(int32_t DeviceId, void *TgtPtr,
                                      int32_t Kind) {
   auto T = logger::log<int32_t>(__func__, DeviceId, TgtPtr, Kind);
   auto R = [&]() {
-#ifdef OMPT_SUPPORT
-    // If OMPT is enabled, collect start and end times for the data delete.
-    OmptTimestampRAII Ts;
-#endif
-    auto Err = getDevice(DeviceId).dataDelete(TgtPtr, (TargetAllocTy)Kind);
+    auto &Dev = getDevice(DeviceId);
+    auto Err = Dev.dataDelete(TgtPtr, (TargetAllocTy)Kind);
     if (Err) {
       REPORT("Failure to deallocate device pointer %p: %s\n", TgtPtr,
              toString(std::move(Err)).data());

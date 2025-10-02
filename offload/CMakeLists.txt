@@ -468,8 +468,7 @@ add_subdirectory(docs)
 # Build target agnostic offloading library.
 add_subdirectory(libomptarget)
 
-# FIXME: Re-enable once OMPT design allows
-# add_subdirectory(liboffload)
+add_subdirectory(liboffload)
 
 # Add tests.
 if(OFFLOAD_INCLUDE_TESTS)

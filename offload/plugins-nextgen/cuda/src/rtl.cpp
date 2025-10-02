@@ -35,6 +35,9 @@
 
 using namespace error;
 
+extern std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy>
+getProfilerToAttach();
+
 namespace llvm {
 namespace omp {
 namespace target {

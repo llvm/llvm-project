@@ -55,6 +55,9 @@
 #define LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE ""
 #endif
 
+extern std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy>
+getProfilerToAttach();
+
 namespace llvm {
 namespace omp {
 namespace target {
