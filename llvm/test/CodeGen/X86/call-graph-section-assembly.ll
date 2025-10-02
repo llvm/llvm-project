@@ -40,15 +40,15 @@ entry:
 ;; Version
 ; CHECK-NEXT: .byte   0
 ;; Flags
-; CHECK-NEXT: .byte   1
+; CHECK-NEXT: .byte   7
 ;; Function Entry PC
 ; CHECK-NEXT: .quad   [[LABEL_FUNC]]
 ;; Function type ID -- set to 0 as no type metadata attached to function.
 ; CHECK-NEXT: .quad   0
 ;; Number of unique direct callees.
-; CHECK-NEXT: .long	  3
+; CHECK-NEXT: .byte	  3
 ;; Number of unique indirect target type IDs.
-; CHECK-NEXT: .long   3
+; CHECK-NEXT: .byte   3
 ;; Direct callees.
 ; CHECK-NEXT: .quad	direct_foo
 ; CHECK-NEXT: .quad	direct_bar

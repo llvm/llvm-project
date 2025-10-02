@@ -1695,19 +1695,30 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
                                                 /*IgnoreAssumeLikeCalls=*/true,
                                                 /*IgnoreLLVMUsed=*/false);
 
+  const auto &DirectCallees = FuncCGInfo.DirectCallees;
+  const auto &IndirectCalleeTypeIDs = FuncCGInfo.IndirectCalleeTypeIDs;
+
   uint8_t Flags = 0;
   if (IsIndirectTarget)
-    Flags |= 1 << 0; // Set the LSB bit to 1.
+    Flags |= 1u << 0; // Set the first LSB bit to 1.
+  if (DirectCallees.size() > 0)
+    Flags |= 1u << 1; // Set the second LSB bit to 1.
+  if (IndirectCalleeTypeIDs.size() > 0)
+    Flags |= 1u << 2; // Set the third LSB bit to 1.
 
   // Emit function's call graph information.
   // 1) CallGraphSectionFormatVersion
-  // 2) Flags - Bit 0 is set to 1 if the function is a valid indirect target.
-  // Other bits are reserved for future use.
+  // 2) Flags
+  //    a. LSB bit 0 is set to 1 if the function is a potential indirect
+  //       target.
+  //    b. LSB bit 1 is set to 1 if there are direct callees.
+  //    c. LSB bit 2 is set to 1 if there are indirect callees.
+  //    d. Rest of the 5 bits in Flags are reserved for any future use.
   // 3) Function entry PC.
   // 4) FunctionTypeID if the function is indirect target and its type id is
   // known, otherwise it is set to 0.
-  // 5) Number of unique direct callees.
-  // 6) Number of unique indirect target type IDs.
+  // 5) Number of unique direct callees, if at least one exists.
+  // 6) Number of unique indirect target type IDs, if at least one exists.
   // 7) For each unique direct callee, the callee's PC.
   // 8) Each unique indirect target type id.
   OutStreamer->emitInt8(CallGraphSectionFormatVersion::V_0);
@@ -1718,10 +1729,11 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
     OutStreamer->emitInt64(TypeId->getZExtValue());
   else
     OutStreamer->emitInt64(0);
-  const auto &DirectCallees = FuncCGInfo.DirectCallees;
-  const auto &IndirectCalleeTypeIDs = FuncCGInfo.IndirectCalleeTypeIDs;
-  OutStreamer->emitInt32(DirectCallees.size());
-  OutStreamer->emitInt32(IndirectCalleeTypeIDs.size());
+
+  if (DirectCallees.size() > 0)
+    OutStreamer->emitULEB128IntValue(DirectCallees.size());
+  if (IndirectCalleeTypeIDs.size() > 0)
+    OutStreamer->emitULEB128IntValue(IndirectCalleeTypeIDs.size());
   for (const auto &CalleeSymbol : DirectCallees)
     OutStreamer->emitSymbolValue(CalleeSymbol, TM.getProgramPointerSize());
   FuncCGInfo.DirectCallees.clear();
