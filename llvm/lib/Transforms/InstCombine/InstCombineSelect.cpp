@@ -17,6 +17,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OverflowInstAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -1411,6 +1412,8 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // in the cmp and in f(Y).
     if (TrueVal == OldOp && (isa<Constant>(OldOp) || !isa<Constant>(NewOp)))
       return nullptr;
+    if (!canReplacePointersIfEqual(OldOp, NewOp, DL))
+      return nullptr;
 
     if (Value *V = simplifyWithOpReplaced(TrueVal, OldOp, NewOp, SQ,
                                           /* AllowRefinement=*/true)) {
@@ -1466,12 +1469,14 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   // Example:
   // (X == 42) ? 43 : (X + 1) --> (X == 42) ? (X + 1) : (X + 1) --> X + 1
   SmallVector<Instruction *> DropFlags;
-  if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, SQ,
-                             /* AllowRefinement */ false,
-                             &DropFlags) == TrueVal ||
-      simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, SQ,
-                             /* AllowRefinement */ false,
-                             &DropFlags) == TrueVal) {
+  if ((canReplacePointersIfEqual(CmpLHS, CmpRHS, DL) &&
+       simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, SQ,
+                              /* AllowRefinement */ false,
+                              &DropFlags) == TrueVal) ||
+      (canReplacePointersIfEqual(CmpRHS, CmpLHS, DL) &&
+       simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, SQ,
+                              /* AllowRefinement */ false,
+                              &DropFlags) == TrueVal)) {
     for (Instruction *I : DropFlags) {
       I->dropPoisonGeneratingAnnotations();
       Worklist.add(I);

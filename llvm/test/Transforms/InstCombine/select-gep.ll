@@ -290,7 +290,10 @@ define <2 x ptr> @test7(<2 x ptr> %p1, i64 %idx, <2 x i1> %cc) {
 define ptr @ptr_eq_replace_freeze1(ptr %p, ptr %q) {
 ; CHECK-LABEL: @ptr_eq_replace_freeze1(
 ; CHECK-NEXT:    [[Q_FR:%.*]] = freeze ptr [[Q:%.*]]
-; CHECK-NEXT:    ret ptr [[Q_FR]]
+; CHECK-NEXT:    [[Q_FR1:%.*]] = freeze ptr [[Q1:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[Q_FR]], [[Q_FR1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], ptr [[Q_FR]], ptr [[Q_FR1]]
+; CHECK-NEXT:    ret ptr [[SELECT]]
 ;
   %p.fr = freeze ptr %p
   %q.fr = freeze ptr %q
@@ -302,7 +305,10 @@ define ptr @ptr_eq_replace_freeze1(ptr %p, ptr %q) {
 define ptr @ptr_eq_replace_freeze2(ptr %p, ptr %q) {
 ; CHECK-LABEL: @ptr_eq_replace_freeze2(
 ; CHECK-NEXT:    [[P_FR:%.*]] = freeze ptr [[P:%.*]]
-; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr i8, ptr [[P_FR]], i64 16
+; CHECK-NEXT:    [[P_FR1:%.*]] = freeze ptr [[P1:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P_FR1]], [[P_FR]]
+; CHECK-NEXT:    [[SELECT_V:%.*]] = select i1 [[CMP]], ptr [[P_FR1]], ptr [[P_FR]]
+; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr i8, ptr [[SELECT_V]], i64 16
 ; CHECK-NEXT:    ret ptr [[SELECT]]
 ;
   %gep1 = getelementptr i32, ptr %p, i64 4
