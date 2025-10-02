@@ -1898,7 +1898,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     // 'bool' is not an integral type.  So check the source type to get the
     // correct CIR conversion.
     auto MiddleTy = cgf.cgm.getDataLayout().getIntPtrType(DestCIRTy);
-    auto MiddleVal = builder.createCast(subExpr->getType()->isBooleanType()
+    cir::CastOp middleVal = builder.createCast(subExpr->getType()->isBooleanType()
                                             ? cir::CastKind::bool_to_int
                                             : cir::CastKind::integral,
                                         Src, MiddleTy);
