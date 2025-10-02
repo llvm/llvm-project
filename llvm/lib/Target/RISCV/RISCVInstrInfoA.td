@@ -174,15 +174,14 @@ let Predicates = [HasAtomicLdSt] in {
   def : StPat<relaxed_store<atomic_store_8>,  SB, GPR, XLenVT>;
   def : StPat<relaxed_store<atomic_store_16>, SH, GPR, XLenVT>;
   def : StPat<relaxed_store<atomic_store_32>, SW, GPR, XLenVT>;
-}
 
-let Predicates = [HasAtomicLdSt, IsRV32] in {
-  def : LdPat<relaxed_load<atomic_load_nonext_32>, LW>;
+  // Used by GISel for RV32 and RV64.
+  def : LdPat<relaxed_load<atomic_load_nonext_32>, LW, i32>;
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
-  def : LdPat<relaxed_load<atomic_load_asext_32>, LW>;
-  def : LdPat<relaxed_load<atomic_load_zext_32>, LWU>;
+  def : LdPat<relaxed_load<atomic_load_asext_32>, LW, i64>;
+  def : LdPat<relaxed_load<atomic_load_zext_32>, LWU, i64>;
   def : LdPat<relaxed_load<atomic_load_nonext_64>, LD, i64>;
   def : StPat<relaxed_store<atomic_store_64>, SD, GPR, i64>;
 }
