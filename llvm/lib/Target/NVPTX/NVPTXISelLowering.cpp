@@ -640,6 +640,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::VECTOR_SHUFFLE, {MVT::v2f32, MVT::v2i32}, Expand);
 
   setOperationAction(ISD::TRUNCATE, MVT::v2i16, Expand);
+  setOperationAction({ISD::ANY_EXTEND, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND},
+                     MVT::v2i32, Expand);
 
   // Need custom lowering in case the index is dynamic.
   if (STI.hasF32x2Instructions())
