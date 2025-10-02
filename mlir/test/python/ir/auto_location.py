@@ -1,4 +1,5 @@
 # RUN: %PYTHON %s | FileCheck %s
+# RUN: %PYTHON -m mypy %s --config-file %mlir_src_root/test/python/mypy.ini
 # REQUIRES: python-ge-311
 import gc
 from contextlib import contextmanager

@@ -1,4 +1,5 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
+# RUN: %PYTHON -m mypy %s --config-file %mlir_src_root/test/python/mypy.ini
 
 import ctypes
 import sys
