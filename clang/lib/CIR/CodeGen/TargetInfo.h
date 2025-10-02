@@ -46,7 +46,7 @@ public:
 
   /// Get the address space for alloca.
   virtual cir::TargetAddressSpaceAttr getCIRAllocaAddressSpace() const {
-    return nullptr;
+    return {};
   }
 
   /// Determine whether a call to an unprototyped functions under
