@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
     omp_interop_t iobj = omp_interop_none;
 
     // TODO: Change targetsync to target when AMD toolchain supports it.
-#pragma omp interop init(targetsync : iobj) device(id)
+#pragma omp interop init(target : iobj) device(id)
 
     int err;
     int interop_int = omp_get_interop_int(iobj, omp_ipr_fr_id, &err);
