@@ -96,71 +96,71 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 
 // CHECK:      const uint8_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
-// CHECK-NEXT:      /*   0 */ GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2(99), GIMT_Encode2(210), /*)*//*default:*//*Label 5*/ GIMT_Encode4(520),
-// CHECK-NEXT:      /* 10 */ /*TargetOpcode::G_STORE*//*Label 0*/ GIMT_Encode4(454), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0),
-// CHECK-NEXT:      /* 182 */ /*TargetOpcode::G_SEXT*//*Label 1*/ GIMT_Encode4(472), GIMT_Encode4(0),
-// CHECK-NEXT:      /* 190 */ /*TargetOpcode::G_ZEXT*//*Label 2*/ GIMT_Encode4(484), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0),
-// CHECK-NEXT:      /* 414 */ /*TargetOpcode::G_FNEG*//*Label 3*/ GIMT_Encode4(496), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0),
-// CHECK-NEXT:      /* 450 */ /*TargetOpcode::G_FABS*//*Label 4*/ GIMT_Encode4(508),
-// CHECK-NEXT:      /* 454 */ // Label 0: @454
-// CHECK-NEXT:      /* 454 */ GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(471), // Rule ID 2 //
-// CHECK-NEXT:      /* 459 */ GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule2Enabled),
-// CHECK-NEXT:      /* 462 */ // MIs[0] x
-// CHECK-NEXT:      /* 462 */ // No operand predicates
-// CHECK-NEXT:      /* 462 */ // MIs[0] y
-// CHECK-NEXT:      /* 462 */ // No operand predicates
-// CHECK-NEXT:      /* 462 */ GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner0),
-// CHECK-NEXT:      /* 466 */ GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner1),
-// CHECK-NEXT:      /* 470 */ // Combiner Rule #2: TwoMatchNoApply
-// CHECK-NEXT:      /* 470 */ GIR_EraseRootFromParent_Done,
-// CHECK-NEXT:      /* 471 */ // Label 6: @471
-// CHECK-NEXT:      /* 471 */ GIM_Reject,
-// CHECK-NEXT:      /* 472 */ // Label 1: @472
-// CHECK-NEXT:      /* 472 */ GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4(483), // Rule ID 3 //
-// CHECK-NEXT:      /* 477 */ GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule3Enabled),
-// CHECK-NEXT:      /* 480 */ // MIs[0] a
-// CHECK-NEXT:      /* 480 */ // No operand predicates
-// CHECK-NEXT:      /* 480 */ // MIs[0] y
-// CHECK-NEXT:      /* 480 */ // No operand predicates
-// CHECK-NEXT:      /* 480 */ // Combiner Rule #3: NoMatchTwoApply
-// CHECK-NEXT:      /* 480 */ GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner2),
-// CHECK-NEXT:      /* 483 */ // Label 7: @483
-// CHECK-NEXT:      /* 483 */ GIM_Reject,
-// CHECK-NEXT:      /* 484 */ // Label 2: @484
-// CHECK-NEXT:      /* 484 */ GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4(495), // Rule ID 4 //
-// CHECK-NEXT:      /* 489 */ GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule4Enabled),
-// CHECK-NEXT:      /* 492 */ // MIs[0] a
-// CHECK-NEXT:      /* 492 */ // No operand predicates
-// CHECK-NEXT:      /* 492 */ // MIs[0] y
-// CHECK-NEXT:      /* 492 */ // No operand predicates
-// CHECK-NEXT:      /* 492 */ // Combiner Rule #4: CombineCXXOrder
-// CHECK-NEXT:      /* 492 */ GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner3),
-// CHECK-NEXT:      /* 495 */ // Label 8: @495
-// CHECK-NEXT:      /* 495 */ GIM_Reject,
-// CHECK-NEXT:      /* 496 */ // Label 3: @496
-// CHECK-NEXT:      /* 496 */ GIM_Try, /*On fail goto*//*Label 9*/ GIMT_Encode4(507), // Rule ID 1 //
-// CHECK-NEXT:      /* 501 */ GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule1Enabled),
-// CHECK-NEXT:      /* 504 */ // MIs[0] a
-// CHECK-NEXT:      /* 504 */ // No operand predicates
-// CHECK-NEXT:      /* 504 */ // MIs[0] b
-// CHECK-NEXT:      /* 504 */ // No operand predicates
-// CHECK-NEXT:      /* 504 */ // Combiner Rule #1: TwoMatchTwoApply
-// CHECK-NEXT:      /* 504 */ GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner1),
-// CHECK-NEXT:      /* 507 */ // Label 9: @507
-// CHECK-NEXT:      /* 507 */ GIM_Reject,
-// CHECK-NEXT:      /* 508 */ // Label 4: @508
-// CHECK-NEXT:      /* 508 */ GIM_Try, /*On fail goto*//*Label 10*/ GIMT_Encode4(519), // Rule ID 0 //
-// CHECK-NEXT:      /* 513 */ GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
-// CHECK-NEXT:      /* 516 */ // MIs[0] a
-// CHECK-NEXT:      /* 516 */ // No operand predicates
-// CHECK-NEXT:      /* 516 */ // MIs[0] b
-// CHECK-NEXT:      /* 516 */ // No operand predicates
-// CHECK-NEXT:      /* 516 */ // Combiner Rule #0: OneMatchOneApply
-// CHECK-NEXT:      /* 516 */ GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
-// CHECK-NEXT:      /* 519 */ // Label 10: @519
-// CHECK-NEXT:      /* 519 */ GIM_Reject,
-// CHECK-NEXT:      /* 520 */ // Label 5: @520
-// CHECK-NEXT:      /* 520 */ GIM_Reject,
-// CHECK-NEXT:      /* 521 */ }; // Size: 521 bytes
+// CHECK-NEXT:      /*   0 */ GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2(99), GIMT_Encode2(211), /*)*//*default:*//*Label 5*/ GIMT_Encode4(524),
+// CHECK-NEXT:      /* 10 */ /*TargetOpcode::G_STORE*//*Label 0*/ GIMT_Encode4(458), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0),
+// CHECK-NEXT:      /* 182 */ /*TargetOpcode::G_SEXT*//*Label 1*/ GIMT_Encode4(476), GIMT_Encode4(0),
+// CHECK-NEXT:      /* 190 */ /*TargetOpcode::G_ZEXT*//*Label 2*/ GIMT_Encode4(488), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0),
+// CHECK-NEXT:      /* 418 */ /*TargetOpcode::G_FNEG*//*Label 3*/ GIMT_Encode4(500), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0),
+// CHECK-NEXT:      /* 454 */ /*TargetOpcode::G_FABS*//*Label 4*/ GIMT_Encode4(512),
+// CHECK-NEXT:      /* 458 */ // Label 0: @458
+// CHECK-NEXT:      /* 458 */ GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(475), // Rule ID 2 //
+// CHECK-NEXT:      /* 463 */ GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule2Enabled),
+// CHECK-NEXT:      /* 466 */ // MIs[0] x
+// CHECK-NEXT:      /* 466 */ // No operand predicates
+// CHECK-NEXT:      /* 466 */ // MIs[0] y
+// CHECK-NEXT:      /* 466 */ // No operand predicates
+// CHECK-NEXT:      /* 466 */ GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner0),
+// CHECK-NEXT:      /* 470 */ GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner1),
+// CHECK-NEXT:      /* 474 */ // Combiner Rule #2: TwoMatchNoApply
+// CHECK-NEXT:      /* 474 */ GIR_EraseRootFromParent_Done,
+// CHECK-NEXT:      /* 475 */ // Label 6: @475
+// CHECK-NEXT:      /* 475 */ GIM_Reject,
+// CHECK-NEXT:      /* 476 */ // Label 1: @476
+// CHECK-NEXT:      /* 476 */ GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4(487), // Rule ID 3 //
+// CHECK-NEXT:      /* 481 */ GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule3Enabled),
+// CHECK-NEXT:      /* 484 */ // MIs[0] a
+// CHECK-NEXT:      /* 484 */ // No operand predicates
+// CHECK-NEXT:      /* 484 */ // MIs[0] y
+// CHECK-NEXT:      /* 484 */ // No operand predicates
+// CHECK-NEXT:      /* 484 */ // Combiner Rule #3: NoMatchTwoApply
+// CHECK-NEXT:      /* 484 */ GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner2),
+// CHECK-NEXT:      /* 487 */ // Label 7: @487
+// CHECK-NEXT:      /* 487 */ GIM_Reject,
+// CHECK-NEXT:      /* 488 */ // Label 2: @488
+// CHECK-NEXT:      /* 488 */ GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4(499), // Rule ID 4 //
+// CHECK-NEXT:      /* 493 */ GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule4Enabled),
+// CHECK-NEXT:      /* 496 */ // MIs[0] a
+// CHECK-NEXT:      /* 496 */ // No operand predicates
+// CHECK-NEXT:      /* 496 */ // MIs[0] y
+// CHECK-NEXT:      /* 496 */ // No operand predicates
+// CHECK-NEXT:      /* 496 */ // Combiner Rule #4: CombineCXXOrder
+// CHECK-NEXT:      /* 496 */ GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner3),
+// CHECK-NEXT:      /* 499 */ // Label 8: @499
+// CHECK-NEXT:      /* 499 */ GIM_Reject,
+// CHECK-NEXT:      /* 500 */ // Label 3: @500
+// CHECK-NEXT:      /* 500 */ GIM_Try, /*On fail goto*//*Label 9*/ GIMT_Encode4(511), // Rule ID 1 //
+// CHECK-NEXT:      /* 505 */ GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule1Enabled),
+// CHECK-NEXT:      /* 508 */ // MIs[0] a
+// CHECK-NEXT:      /* 508 */ // No operand predicates
+// CHECK-NEXT:      /* 508 */ // MIs[0] b
+// CHECK-NEXT:      /* 508 */ // No operand predicates
+// CHECK-NEXT:      /* 508 */ // Combiner Rule #1: TwoMatchTwoApply
+// CHECK-NEXT:      /* 508 */ GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner1),
+// CHECK-NEXT:      /* 511 */ // Label 9: @511
+// CHECK-NEXT:      /* 511 */ GIM_Reject,
+// CHECK-NEXT:      /* 512 */ // Label 4: @512
+// CHECK-NEXT:      /* 512 */ GIM_Try, /*On fail goto*//*Label 10*/ GIMT_Encode4(523), // Rule ID 0 //
+// CHECK-NEXT:      /* 517 */ GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
+// CHECK-NEXT:      /* 520 */ // MIs[0] a
+// CHECK-NEXT:      /* 520 */ // No operand predicates
+// CHECK-NEXT:      /* 520 */ // MIs[0] b
+// CHECK-NEXT:      /* 520 */ // No operand predicates
+// CHECK-NEXT:      /* 520 */ // Combiner Rule #0: OneMatchOneApply
+// CHECK-NEXT:      /* 520 */ GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
+// CHECK-NEXT:      /* 523 */ // Label 10: @523
+// CHECK-NEXT:      /* 523 */ GIM_Reject,
+// CHECK-NEXT:      /* 524 */ // Label 5: @524
+// CHECK-NEXT:      /* 524 */ GIM_Reject,
+// CHECK-NEXT:      /* 525 */ }; // Size: 525 bytes
 // CHECK-NEXT:   return MatchTable0;
 // CHECK-NEXT: }

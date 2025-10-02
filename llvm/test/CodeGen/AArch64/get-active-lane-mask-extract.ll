@@ -327,9 +327,6 @@ define void @test_2x8bit_mask_with_extracts_and_ptest(i64 %i, i64 %n) {
 ; CHECK-SVE2p1-SME2-LABEL: test_2x8bit_mask_with_extracts_and_ptest:
 ; CHECK-SVE2p1-SME2:       // %bb.0: // %entry
 ; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.h, p1.h }, x0, x1
-; CHECK-SVE2p1-SME2-NEXT:    ptrue p2.b
-; CHECK-SVE2p1-SME2-NEXT:    uzp1 p3.b, p0.b, p1.b
-; CHECK-SVE2p1-SME2-NEXT:    ptest p2, p3.b
 ; CHECK-SVE2p1-SME2-NEXT:    b.pl .LBB11_2
 ; CHECK-SVE2p1-SME2-NEXT:  // %bb.1: // %if.then
 ; CHECK-SVE2p1-SME2-NEXT:    b use
@@ -368,9 +365,6 @@ define void @test_2x8bit_mask_with_extracts_and_reinterpret_casts(i64 %i, i64 %n
 ; CHECK-SVE2p1-SME2-LABEL: test_2x8bit_mask_with_extracts_and_reinterpret_casts:
 ; CHECK-SVE2p1-SME2:       // %bb.0: // %entry
 ; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.s, p1.s }, x0, x1
-; CHECK-SVE2p1-SME2-NEXT:    ptrue p2.h
-; CHECK-SVE2p1-SME2-NEXT:    uzp1 p3.h, p0.h, p1.h
-; CHECK-SVE2p1-SME2-NEXT:    ptest p2, p3.b
 ; CHECK-SVE2p1-SME2-NEXT:    b.pl .LBB12_2
 ; CHECK-SVE2p1-SME2-NEXT:  // %bb.1: // %if.then
 ; CHECK-SVE2p1-SME2-NEXT:    b use
@@ -413,14 +407,9 @@ define void @test_4x4bit_mask_with_extracts_and_ptest(i64 %i, i64 %n) {
 ; CHECK-SVE2p1-SME2-NEXT:    adds x8, x0, x8
 ; CHECK-SVE2p1-SME2-NEXT:    csinv x8, x8, xzr, lo
 ; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.s, p1.s }, x0, x1
-; CHECK-SVE2p1-SME2-NEXT:    whilelo { p2.s, p3.s }, x8, x1
-; CHECK-SVE2p1-SME2-NEXT:    uzp1 p4.h, p0.h, p1.h
-; CHECK-SVE2p1-SME2-NEXT:    uzp1 p5.h, p2.h, p3.h
-; CHECK-SVE2p1-SME2-NEXT:    uzp1 p4.b, p4.b, p5.b
-; CHECK-SVE2p1-SME2-NEXT:    ptrue p5.b
-; CHECK-SVE2p1-SME2-NEXT:    ptest p5, p4.b
 ; CHECK-SVE2p1-SME2-NEXT:    b.pl .LBB13_2
 ; CHECK-SVE2p1-SME2-NEXT:  // %bb.1: // %if.then
+; CHECK-SVE2p1-SME2-NEXT:    whilelo { p2.s, p3.s }, x8, x1
 ; CHECK-SVE2p1-SME2-NEXT:    b use
 ; CHECK-SVE2p1-SME2-NEXT:  .LBB13_2: // %if.end
 ; CHECK-SVE2p1-SME2-NEXT:    ret
@@ -463,14 +452,9 @@ define void @test_4x2bit_mask_with_extracts_and_reinterpret_casts(i64 %i, i64 %n
 ; CHECK-SVE2p1-SME2-NEXT:    adds x8, x0, x8
 ; CHECK-SVE2p1-SME2-NEXT:    csinv x8, x8, xzr, lo
 ; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.d, p1.d }, x0, x1
-; CHECK-SVE2p1-SME2-NEXT:    whilelo { p2.d, p3.d }, x8, x1
-; CHECK-SVE2p1-SME2-NEXT:    uzp1 p4.s, p0.s, p1.s
-; CHECK-SVE2p1-SME2-NEXT:    uzp1 p5.s, p2.s, p3.s
-; CHECK-SVE2p1-SME2-NEXT:    uzp1 p4.h, p4.h, p5.h
-; CHECK-SVE2p1-SME2-NEXT:    ptrue p5.h
-; CHECK-SVE2p1-SME2-NEXT:    ptest p5, p4.b
 ; CHECK-SVE2p1-SME2-NEXT:    b.pl .LBB14_2
 ; CHECK-SVE2p1-SME2-NEXT:  // %bb.1: // %if.then
+; CHECK-SVE2p1-SME2-NEXT:    whilelo { p2.d, p3.d }, x8, x1
 ; CHECK-SVE2p1-SME2-NEXT:    b use
 ; CHECK-SVE2p1-SME2-NEXT:  .LBB14_2: // %if.end
 ; CHECK-SVE2p1-SME2-NEXT:    ret

@@ -822,6 +822,9 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
                                          complexRangeKindToStr(Range)));
   }
 
+  if (Args.hasArg(options::OPT_fno_fast_real_mod))
+    CmdArgs.push_back("-fno-fast-real-mod");
+
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&
       (FPContract == "fast" || FPContract.empty())) {

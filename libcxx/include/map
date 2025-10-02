@@ -600,7 +600,10 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__ranges/from_range.h>
 #  include <__tree>
 #  include <__type_traits/container_traits.h>
+#  include <__type_traits/desugars_to.h>
 #  include <__type_traits/is_allocator.h>
+#  include <__type_traits/is_convertible.h>
+#  include <__type_traits/make_transparent.h>
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/type_identity.h>
 #  include <__utility/forward.h>
@@ -664,6 +667,11 @@ public:
     return __comp_(__x.first, __y);
   }
 #  endif
+};
+
+template <class _Key, class _MapValueT, class _Compare>
+struct __make_transparent<__map_value_compare<_Key, _MapValueT, _Compare> > {
+  using type _LIBCPP_NODEBUG = __map_value_compare<_Key, _MapValueT, __make_transparent_t<_Compare> >;
 };
 
 #  if _LIBCPP_STD_VER >= 14
@@ -1048,6 +1056,24 @@ public:
   _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](key_type&& __k);
 #  endif
 
+  template <class _Arg,
+            __enable_if_t<__is_transparently_comparable_v<_Compare, key_type, __remove_cvref_t<_Arg> >, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI mapped_type& at(_Arg&& __arg) {
+    auto [_, __child] = __tree_.__find_equal(__arg);
+    if (__child == nullptr)
+      std::__throw_out_of_range("map::at:  key not found");
+    return static_cast<__node_pointer>(__child)->__get_value().second;
+  }
+
+  template <class _Arg,
+            __enable_if_t<__is_transparently_comparable_v<_Compare, key_type, __remove_cvref_t<_Arg> >, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI const mapped_type& at(_Arg&& __arg) const {
+    auto [_, __child] = __tree_.__find_equal(__arg);
+    if (__child == nullptr)
+      std::__throw_out_of_range("map::at:  key not found");
+    return static_cast<__node_pointer>(__child)->__get_value().second;
+  }
+
   _LIBCPP_HIDE_FROM_ABI mapped_type& at(const key_type& __k);
   _LIBCPP_HIDE_FROM_ABI const mapped_type& at(const key_type& __k) const;
 
@@ -1242,11 +1268,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) { return __tree_.find(__k); }
   _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const { return __tree_.find(__k); }
 #  if _LIBCPP_STD_VER >= 14
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2,
+            enable_if_t<__is_transparent_v<_Compare, _K2> || __is_transparently_comparable_v<_Compare, key_type, _K2>,
+                        int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator find(const _K2& __k) {
     return __tree_.find(__k);
   }
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2,
+            enable_if_t<__is_transparent_v<_Compare, _K2> || __is_transparently_comparable_v<_Compare, key_type, _K2>,
+                        int> = 0>
   _LIBCPP_HIDE_FROM_ABI const_iterator find(const _K2& __k) const {
     return __tree_.find(__k);
   }
@@ -1262,7 +1292,9 @@ public:
 
 #  if _LIBCPP_STD_VER >= 20
   _LIBCPP_HIDE_FROM_ABI bool contains(const key_type& __k) const { return find(__k) != end(); }
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2,
+            enable_if_t<__is_transparent_v<_Compare, _K2> || __is_transparently_comparable_v<_Compare, key_type, _K2>,
+                        int> = 0>
   _LIBCPP_HIDE_FROM_ABI bool contains(const _K2& __k) const {
     return find(__k) != end();
   }
@@ -1271,12 +1303,16 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __k) { return __tree_.lower_bound(__k); }
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __k) const { return __tree_.lower_bound(__k); }
 #  if _LIBCPP_STD_VER >= 14
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2,
+            enable_if_t<__is_transparent_v<_Compare, _K2> || __is_transparently_comparable_v<_Compare, key_type, _K2>,
+                        int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _K2& __k) {
     return __tree_.lower_bound(__k);
   }
 
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2,
+            enable_if_t<__is_transparent_v<_Compare, _K2> || __is_transparently_comparable_v<_Compare, key_type, _K2>,
+                        int> = 0>
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _K2& __k) const {
     return __tree_.lower_bound(__k);
   }
@@ -1285,11 +1321,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __k) { return __tree_.upper_bound(__k); }
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __k) const { return __tree_.upper_bound(__k); }
 #  if _LIBCPP_STD_VER >= 14
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2,
+            enable_if_t<__is_transparent_v<_Compare, _K2> || __is_transparently_comparable_v<_Compare, key_type, _K2>,
+                        int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _K2& __k) {
     return __tree_.upper_bound(__k);
   }
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2,
+            enable_if_t<__is_transparent_v<_Compare, _K2> || __is_transparently_comparable_v<_Compare, key_type, _K2>,
+                        int> = 0>
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _K2& __k) const {
     return __tree_.upper_bound(__k);
   }
