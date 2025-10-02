@@ -168,7 +168,7 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
 
   // Before pulling down a load (to close the live range), the liveness of
   // the use operands is checked.
-  bool UsesLivePrio = false, UsesLiveAll = false;
+  bool UsesLive = false;
   if (isRegDef(MO0)) {
     // Extract the PressureChanges that all fp/vector or GR64/GR32/GRH32 regs
     // affect respectively. misched-prera-pdiffs.mir tests against any future
@@ -188,22 +188,17 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
     int RegWeight = TRI->getRegClassWeight(RC).RegWeight;
     bool PrioDefNoKill = PrioPressureChange == -RegWeight;
     bool GPRDefNoKill = GPRPressureChange == -RegWeight;
-    UsesLivePrio = (PrioDefNoKill || (!PrioPressureChange && GPRDefNoKill));
-    UsesLiveAll = (PrioDefNoKill && !GPRPressureChange) ||
-      (!PrioPressureChange && GPRDefNoKill);
+    UsesLive = (PrioDefNoKill || (!PrioPressureChange && GPRDefNoKill));
   }
 
   bool IsKillingStore = isStoreOfVReg(MI) &&
     !DAG->getBotRPTracker().isRegLive(MO0.getReg());
 
   // Pull down a defining SU if it preserves the scheduled latency while not
-  // causing any (vector) registers to become live. If however there will be
-  // relatively many SUs scheduled above this one and all uses are already
-  // live it should not be a problem to increase the scheduled latency given
-  // the OOO execution.
-  // TODO: Try scheduling small (DFSResult) subtrees as a unit.
-  bool SchedLow = (PreservesSchedLat && UsesLivePrio) ||
-                  (HasDistToTop && UsesLiveAll);
+  // causing any (vector) registers to become live. It should also be ok if
+  // there will be relatively many SUs scheduled above this one given the OOO
+  // execution.  TODO: Try scheduling small (DFSResult) subtrees as a unit.
+  bool SchedLow = UsesLive && (PreservesSchedLat || HasDistToTop);
 
   // This handles regions with many chained stores of the same depth at the
   // bottom in the input order (cactus). Push them upwards during scheduling.
@@ -239,12 +234,11 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
     return TryCand.Reason != NoCand;
   }
 
-  if (TinyRegion) {
-    // Prioritize instructions that read unbuffered resources by stall cycles.
-    if (tryLess(Zone->getLatencyStallCycles(TryCand.SU),
-                Zone->getLatencyStallCycles(Cand.SU), TryCand, Cand, Stall))
-      return TryCand.Reason != NoCand;
-  } else {
+  // Schedule for latency after first trying to reduce register
+  // liveness. Don't do this with tiny regions: the input order is typically
+  // fairly good generally and it doesn't seem like a good idea to move only
+  // a few instructions around too much.
+  if (!TinyRegion) {
     // Look for an opportunity to reduce register liveness.
     int TryCandScore = computeSULivenessScore(TryCand, DAG, Zone);
     int CandScore = computeSULivenessScore(Cand, DAG, Zone);
@@ -258,8 +252,8 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
          Zone->getScheduledLatency())) {
       // Put the higher SU above only if its depth is less than what's remaining.
       unsigned HigherSUDepth = TryCand.SU->getHeight() < Cand.SU->getHeight()
-                                   ? Cand.SU->getDepth()
-                                   : TryCand.SU->getDepth();
+        ? Cand.SU->getDepth()
+        : TryCand.SU->getDepth();
       if (HigherSUDepth != getRemLat(Zone) &&
           tryLess(TryCand.SU->getHeight(), Cand.SU->getHeight(), TryCand, Cand,
                   GenericSchedulerBase::BotHeightReduce)) {
