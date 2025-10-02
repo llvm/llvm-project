@@ -845,9 +845,7 @@ struct OpenACCPrivateRecipe {
 
   bool isSet() const { return AllocaDecl; }
 
-  static OpenACCPrivateRecipe Empty() {
-    return OpenACCPrivateRecipe(nullptr);
-  }
+  static OpenACCPrivateRecipe Empty() { return OpenACCPrivateRecipe(nullptr); }
 };
 
 class OpenACCPrivateClause final
