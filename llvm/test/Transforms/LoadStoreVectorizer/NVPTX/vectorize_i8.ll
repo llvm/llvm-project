@@ -40,8 +40,7 @@ define void @int8x3a4(ptr nocapture align 4 %ptr) {
   ret void
 
 ; CHECK-LABEL: @int8x3a4
-; CHECK: load <2 x i8>
-; CHECK: load i8
+; CHECK: load <4 x i8>
 ; CHECK: store <2 x i8>
 ; CHECK: store i8
 }
