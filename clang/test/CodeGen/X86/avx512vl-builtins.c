@@ -5514,48 +5514,72 @@ __m128d test_mm_mask_sqrt_pd(__m128d __W, __mmask8 __U, __m128d __A) {
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm_mask_sqrt_pd(__W,__U,__A); 
 }
+
+TEST_CONSTEXPR(match_m128d(_mm_mask_sqrt_pd(_mm_set_pd(200.0, 100.0), 0b01, _mm_set_pd(9.0, 4.0)), 2.0, 200.0));
+
 __m128d test_mm_maskz_sqrt_pd(__mmask8 __U, __m128d __A) {
   // CHECK-LABEL: test_mm_maskz_sqrt_pd
   // CHECK: @llvm.sqrt.v2f64
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm_maskz_sqrt_pd(__U,__A); 
 }
+
+TEST_CONSTEXPR(match_m128d(_mm_maskz_sqrt_pd(0b10, _mm_set_pd(9.0, 4.0)), 0.0, 3.0));
+
 __m256d test_mm256_mask_sqrt_pd(__m256d __W, __mmask8 __U, __m256d __A) {
   // CHECK-LABEL: test_mm256_mask_sqrt_pd
   // CHECK: @llvm.sqrt.v4f64
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_mask_sqrt_pd(__W,__U,__A); 
 }
+
+TEST_CONSTEXPR(match_m256d(_mm256_mask_sqrt_pd(_mm256_set_pd(400.0, 300.0, 200.0, 100.0), 0b1001, _mm256_set_pd(25.0, 16.0, 9.0, 4.0)), 2.0, 200.0, 300.0, 5.0));
+
 __m256d test_mm256_maskz_sqrt_pd(__mmask8 __U, __m256d __A) {
   // CHECK-LABEL: test_mm256_maskz_sqrt_pd
   // CHECK: @llvm.sqrt.v4f64
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_maskz_sqrt_pd(__U,__A); 
 }
+
+TEST_CONSTEXPR(match_m256d(_mm256_maskz_sqrt_pd(0b0110, _mm256_set_pd(25.0, 16.0, 9.0, 4.0)), 0.0, 3.0, 4.0, 0.0));
+
 __m128 test_mm_mask_sqrt_ps(__m128 __W, __mmask8 __U, __m128 __A) {
   // CHECK-LABEL: test_mm_mask_sqrt_ps
   // CHECK: @llvm.sqrt.v4f32
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_mask_sqrt_ps(__W,__U,__A); 
 }
+
+TEST_CONSTEXPR(match_m128(_mm_mask_sqrt_ps(_mm_set_ps(400.0f, 300.0f, 200.0f, 100.0f), 0b1010, _mm_set_ps(25.0f, 16.0f, 9.0f, 4.0f)), 100.0f, 3.0f, 300.0f, 5.0f));
+
 __m128 test_mm_maskz_sqrt_ps(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: test_mm_maskz_sqrt_ps
   // CHECK: @llvm.sqrt.v4f32
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_maskz_sqrt_ps(__U,__A); 
 }
+
+TEST_CONSTEXPR(match_m128(_mm_maskz_sqrt_ps(0b0011, _mm_set_ps(25.0f, 16.0f, 9.0f, 4.0f)), 2.0f, 3.0f, 0.0f, 0.0f));
+
 __m256 test_mm256_mask_sqrt_ps(__m256 __W, __mmask8 __U, __m256 __A) {
   // CHECK-LABEL: test_mm256_mask_sqrt_ps
   // CHECK: @llvm.sqrt.v8f32
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask_sqrt_ps(__W,__U,__A); 
 }
+
+TEST_CONSTEXPR(match_m256(_mm256_mask_sqrt_ps(_mm256_set_ps(800.0f, 700.0f, 600.0f, 500.0f, 400.0f, 300.0f, 200.0f, 100.0f), 0b11001100, _mm256_set_ps(64.0f, 49.0f, 36.0f, 25.0f, 16.0f, 9.0f, 4.0f, 1.0f)), 100.0f, 200.0f, 3.0f, 4.0f, 500.0f, 600.0f, 7.0f, 8.0f));
+
 __m256 test_mm256_maskz_sqrt_ps(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: test_mm256_maskz_sqrt_ps
   // CHECK: @llvm.sqrt.v8f32
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_sqrt_ps(__U,__A); 
 }
+
+TEST_CONSTEXPR(match_m256(_mm256_maskz_sqrt_ps(0b11110000, _mm256_set_ps(64.0f, 49.0f, 36.0f, 25.0f, 16.0f, 9.0f, 4.0f, 1.0f)), 0.0f, 0.0f, 0.0f, 0.0f, 5.0f, 6.0f, 7.0f, 8.0f));
+
 __m128d test_mm_mask_sub_pd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B) {
   // CHECK-LABEL: test_mm_mask_sub_pd
   // CHECK: fsub <2 x double> %{{.*}}, %{{.*}}
