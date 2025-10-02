@@ -21,7 +21,7 @@
 
 DEFINE_AEABI_FUNCTION_ALIAS(__aeabi_fmul, __mulsf3)
 
-DEFINE_COMPILERRT_FUNCTION(__mulsf3)
+DEFINE_COMPILERRT_THUMB_FUNCTION(__mulsf3)
   PUSH {r4,r5,r6,lr}
 
   // Get exponents of the inputs, and check for uncommon values. In the process
