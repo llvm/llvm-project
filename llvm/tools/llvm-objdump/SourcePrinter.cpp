@@ -126,10 +126,10 @@ void LiveElementPrinter::addInlinedFunction(DWARFDie FuncDie,
       InlinedFuncName, U, FuncDie, InlinedFuncDie, Range));
   // Map the element's low address (LowPC) to its pointer for fast range start
   // lookup.
-  LiveElementsByAddress.emplace(FuncLowPC, LiveElements.back().get());
+  LiveElementsByAddress[FuncLowPC].push_back(LiveElements.back().get());
   // Map the element's high address (HighPC) to its pointer for fast range end
   // lookup.
-  LiveElementsByEndAddress.emplace(FuncHighPC, LiveElements.back().get());
+  LiveElementsByEndAddress[FuncHighPC].push_back(LiveElements.back().get());
   // Map the pointer to its DWARF discovery index (ElementIdx) for deterministic
   // ordering.
   ElementPtrToIndex[LiveElements.back().get()] = LiveElements.size() - 1;
@@ -175,10 +175,10 @@ void LiveElementPrinter::addVariable(DWARFDie FuncDie, DWARFDie VarDie) {
       ElementPtrToIndex.emplace(CurrentVar, LiveElements.size() - 1);
       if (CurrentVar->getLocExpr().Range) {
         // Add the variable to address-based maps.
-        LiveElementsByAddress.emplace(CurrentVar->getLocExpr().Range->LowPC,
-                                      CurrentVar);
-        LiveElementsByEndAddress.emplace(CurrentVar->getLocExpr().Range->HighPC,
-                                         CurrentVar);
+        LiveElementsByAddress[CurrentVar->getLocExpr().Range->LowPC].push_back(
+            CurrentVar);
+        LiveElementsByEndAddress[CurrentVar->getLocExpr().Range->HighPC]
+            .push_back(CurrentVar);
       }
     }
   }
@@ -345,12 +345,13 @@ void LiveElementPrinter::update(object::SectionedAddress ThisAddr,
   if (IncludeDefinedVars) {
     // Collect all elements starting at ThisAddr and NextAddr.
     std::vector<std::pair<unsigned, LiveElement *>> NewLiveElements;
-    // Process elements from a map range and add them to NewLiveElements.
-    auto CollectNewElements = [&](const auto &Range) {
-      for (auto it = Range.first; it != Range.second; ++it) {
-        LiveElement *LE = it->second;
+    auto CollectNewElements = [&](const auto &It) {
+      if (It == LiveElementsByAddress.end())
+        return;
 
-        // Get the ElementIdx for sorting and column management.
+      const std::vector<LiveElement *> &ElementList = It->second;
+      // Get the ElementIdx for sorting and column management.
+      for (LiveElement *LE : ElementList) {
         auto IndexIt = ElementPtrToIndex.find(LE);
         if (IndexIt == ElementPtrToIndex.end()) {
           LLVM_DEBUG(
@@ -374,10 +375,10 @@ void LiveElementPrinter::update(object::SectionedAddress ThisAddr,
     };
 
     // Collect elements starting at ThisAddr.
-    CollectNewElements(LiveElementsByAddress.equal_range(ThisAddr.Address));
-    // Collect elements starting at NextAddr (the address immediately following
-    // the instruction).
-    CollectNewElements(LiveElementsByAddress.equal_range(NextAddr.Address));
+    CollectNewElements(LiveElementsByAddress.find(ThisAddr.Address));
+    // Collect elements starting at NextAddr (the address immediately
+    // following the instruction).
+    CollectNewElements(LiveElementsByAddress.find(NextAddr.Address));
     // Sort elements by DWARF discovery order (ElementIdx) for deterministic
     // column assignment.
     llvm::stable_sort(NewLiveElements, [](const auto &A, const auto &B) {
@@ -573,14 +574,15 @@ void LiveElementPrinter::printStartLine(formatted_raw_ostream &OS,
     return;
 
   // Use the map to find all elements that start at the given address.
-  auto Range = LiveElementsByAddress.equal_range(Addr.Address);
   std::vector<unsigned> ElementIndices;
-  for (auto it = Range.first; it != Range.second; ++it) {
-    LiveElement *LE = it->second;
-    // Look up the ElementIdx from the pointer.
-    auto IndexIt = ElementPtrToIndex.find(LE);
-    if (IndexIt != ElementPtrToIndex.end())
-      ElementIndices.push_back(IndexIt->second);
+  auto It = LiveElementsByAddress.find(Addr.Address);
+  if (It != LiveElementsByAddress.end()) {
+    for (LiveElement *LE : It->second) {
+      // Look up the ElementIdx from the pointer.
+      auto IndexIt = ElementPtrToIndex.find(LE);
+      if (IndexIt != ElementPtrToIndex.end())
+        ElementIndices.push_back(IndexIt->second);
+    }
   }
 
   // Sort the indices to ensure deterministic output order (by DWARF discovery
@@ -601,14 +603,15 @@ void LiveElementPrinter::printEndLine(formatted_raw_ostream &OS,
     return;
 
   // Use the map to find elements that end at the given address.
-  auto Range = LiveElementsByEndAddress.equal_range(Addr.Address);
   std::vector<unsigned> ElementIndices;
-  for (auto it = Range.first; it != Range.second; ++it) {
-    LiveElement *LE = it->second;
-    // Look up the ElementIdx from the pointer.
-    auto IndexIt = ElementPtrToIndex.find(LE);
-    if (IndexIt != ElementPtrToIndex.end())
-      ElementIndices.push_back(IndexIt->second);
+  auto It = LiveElementsByEndAddress.find(Addr.Address);
+  if (It != LiveElementsByEndAddress.end()) {
+    for (LiveElement *LE : It->second) {
+      // Look up the ElementIdx from the pointer.
+      auto IndexIt = ElementPtrToIndex.find(LE);
+      if (IndexIt != ElementPtrToIndex.end())
+        ElementIndices.push_back(IndexIt->second);
+    }
   }
 
   // Sort the indices to ensure deterministic output order (by DWARF discovery

@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_LLVM_OBJDUMP_SOURCEPRINTER_H
 
 #include "llvm/ADT/IndexedMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
@@ -101,9 +102,10 @@ class LiveElementPrinter {
   // Vector that owns all LiveElement objects for memory management.
   std::vector<std::unique_ptr<LiveElement>> LiveElements;
   // Map for fast lookup of live elements by their starting address (LowPC).
-  std::unordered_multimap<uint64_t, LiveElement *> LiveElementsByAddress;
+  llvm::MapVector<uint64_t, std::vector<LiveElement *>> LiveElementsByAddress;
   // Map for fast lookup of live elements by their ending address (HighPC).
-  std::unordered_multimap<uint64_t, LiveElement *> LiveElementsByEndAddress;
+  llvm::MapVector<uint64_t, std::vector<LiveElement *>>
+      LiveElementsByEndAddress;
   // Map from a LiveElement pointer to its index in the LiveElements vector.
   std::unordered_map<LiveElement *, unsigned> ElementPtrToIndex;
   // Map from a live element index to column index for efficient lookup.
