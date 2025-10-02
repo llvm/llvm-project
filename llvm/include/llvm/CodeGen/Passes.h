@@ -88,6 +88,11 @@ LLVM_ABI MachineFunctionPass *
 createMachineFunctionPrinterPass(raw_ostream &OS,
                                  const std::string &Banner = "");
 
+/// MIR2VecVocabPrinter pass - This pass prints out the MIR2Vec vocabulary
+/// contents to the given stream as a debugging tool.
+LLVM_ABI MachineFunctionPass *
+createMIR2VecVocabPrinterLegacyPass(raw_ostream &OS);
+
 /// StackFramePrinter pass - This pass prints out the machine function's
 /// stack frame to the given stream as a debugging tool.
 LLVM_ABI MachineFunctionPass *createStackFrameLayoutAnalysisPass();
