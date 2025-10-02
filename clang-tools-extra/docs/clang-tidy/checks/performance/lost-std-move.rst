@@ -30,7 +30,7 @@ Also it does notice variable references "behind the scenes":
      y.f();  // because x is still used via y
    }
 
-If you want to ignore assigns to reference variables, set :option: `StrictMode`
+If you want to ignore assigns to reference variables, set :option:`StrictMode`
 to `true`.
 
 
