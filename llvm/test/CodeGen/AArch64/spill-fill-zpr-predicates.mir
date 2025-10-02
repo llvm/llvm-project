@@ -983,26 +983,22 @@ body:             |
     ; EXPAND-LABEL: name: zpr_predicate_spill_p4_saved
     ; EXPAND: liveins: $p0, $p1, $p2, $p3, $fp, $p8, $p4
     ; EXPAND-NEXT: {{  $}}
-    ; EXPAND-NEXT: $sp = frame-setup SUBXri $sp, 1040, 0
-    ; EXPAND-NEXT: frame-setup STRXui killed $fp, $sp, 128 :: (store (s64) into %stack.3)
+    ; EXPAND-NEXT: early-clobber $sp = frame-setup STRXpre killed $fp, $sp, -16 :: (store (s64) into %stack.2)
     ; EXPAND-NEXT: $sp = frame-setup ADDVL_XXI $sp, -2, implicit $vg
     ; EXPAND-NEXT: $z0 = frame-setup CPY_ZPzI_B killed $p8, 1, 0
-    ; EXPAND-NEXT: frame-setup STR_ZXI $z0, $sp, 0 :: (store (s128) into %stack.2)
+    ; EXPAND-NEXT: frame-setup STR_ZXI $z0, $sp, 0 :: (store (s128) into %stack.1)
     ; EXPAND-NEXT: $z0 = frame-setup CPY_ZPzI_B killed $p4, 1, 0
-    ; EXPAND-NEXT: frame-setup STR_ZXI $z0, $sp, 1 :: (store (s128) into %stack.1)
-    ; EXPAND-NEXT: $sp = frame-setup SUBXri $sp, 1024, 0
+    ; EXPAND-NEXT: frame-setup STR_ZXI $z0, $sp, 1 :: (store (s128) into %stack.0)
     ;
     ; EXPAND-NEXT: $p8 = IMPLICIT_DEF
     ;
-    ; EXPAND-NEXT: $sp = frame-destroy ADDXri $sp, 1024, 0
-    ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 0 :: (load (s128) from %stack.2)
+    ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 0 :: (load (s128) from %stack.1)
     ; EXPAND-NEXT: $p4 = frame-destroy PTRUE_B 31, implicit $vg
     ; EXPAND-NEXT: $p8 = frame-destroy CMPNE_PPzZI_B $p4, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
-    ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 1 :: (load (s128) from %stack.1)
+    ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 1 :: (load (s128) from %stack.0)
     ; EXPAND-NEXT: $p4 = frame-destroy CMPNE_PPzZI_B $p4, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 2, implicit $vg
-    ; EXPAND-NEXT: $fp = frame-destroy LDRXui $sp, 128 :: (load (s64) from %stack.3)
-    ; EXPAND-NEXT: $sp = frame-destroy ADDXri $sp, 1040, 0
+    ; EXPAND-NEXT: early-clobber $sp, $fp = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.2)
     ; EXPAND-NEXT: RET undef $lr, implicit $p0, implicit $p1, implicit $p2, implicit $p3
 
     ; If we spill a register above p8, p4 must also be saved, so we can guarantee

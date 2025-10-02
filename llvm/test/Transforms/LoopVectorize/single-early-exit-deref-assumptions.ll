@@ -500,3 +500,50 @@ exit:
   %first.addr.0.lcssa.i = phi ptr [ %first, %entry ], [ %iv, %loop.header ], [ %iv.next, %loop.latch ]
   ret ptr %first.addr.0.lcssa.i
 }
+
+define i64 @early_exit_alignment_and_deref_known_via_assumption_with_constant_size_nofree_via_context(ptr noalias %p1, ptr noalias %p2) nosync {
+; CHECK-LABEL: define i64 @early_exit_alignment_and_deref_known_via_assumption_with_constant_size_nofree_via_context(
+; CHECK-SAME: ptr noalias [[P1:%.*]], ptr noalias [[P2:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P1]], i64 4), "dereferenceable"(ptr [[P1]], i64 1024) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P2]], i64 4), "dereferenceable"(ptr [[P2]], i64 1024) ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], %[[LOOP_INC:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX1]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX1]]
+; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[LD1]], [[LD2]]
+; CHECK-NEXT:    br i1 [[CMP3]], label %[[LOOP_INC]], label %[[LOOP_END:.*]]
+; CHECK:       [[LOOP_INC]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX1]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[LOOP]], label %[[LOOP_END]]
+; CHECK:       [[LOOP_END]]:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX1]], %[[LOOP]] ], [ -1, %[[LOOP_INC]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  call void @llvm.assume(i1 true) [ "align"(ptr %p1, i64 4), "dereferenceable"(ptr %p1, i64 1024) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %p2, i64 4), "dereferenceable"(ptr %p2, i64 1024) ]
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 1024
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop ], [ -1, %loop.inc ]
+  ret i64 %retval
+}

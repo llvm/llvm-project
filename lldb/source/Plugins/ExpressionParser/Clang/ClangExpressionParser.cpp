@@ -792,7 +792,7 @@ ClangExpressionParser::ClangExpressionParser(
   // 6. Set up the source management objects inside the compiler
   m_compiler->createFileManager();
   if (!m_compiler->hasSourceManager())
-    m_compiler->createSourceManager(m_compiler->getFileManager());
+    m_compiler->createSourceManager();
   m_compiler->createPreprocessor(TU_Complete);
 
   switch (expr.Language().AsLanguageType()) {

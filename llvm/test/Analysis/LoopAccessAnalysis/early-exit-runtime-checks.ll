@@ -756,3 +756,129 @@ e.1:
 e.2:
   ret void
 }
+
+define void @all_exits_dominate_latch_countable_exits_at_most_500_iterations_known_deref_via_assumption_nofree_via_context(ptr %A, ptr %B) nosync {
+; CHECK-LABEL: 'all_exits_dominate_latch_countable_exits_at_most_500_iterations_known_deref_via_assumption_nofree_via_context'
+; CHECK-NEXT:    loop.header:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %B High: inttoptr (i64 -1 to ptr))
+; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %A High: inttoptr (i64 -1 to ptr))
+; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %A, i64 2000) ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %B, i64 2000) ]
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+  %l = load i32, ptr %gep.A, align 4
+  store i32 0, ptr %gep.B, align 4
+  %cntable.c.1 = icmp ult i64 %iv, 1000
+  %iv.next = add nuw nsw i64 %iv, 1
+  br i1 %cntable.c.1, label %b2, label %e.1
+
+b2:
+  %uncntable.c.0 = icmp eq i32 %l, 0
+  br i1 %uncntable.c.0, label %e.2, label %b3
+
+b3:
+  %cntable.c.2 = icmp eq i64 %iv.next, 500
+  br i1 %cntable.c.2, label %cleanup4, label %latch
+
+latch:
+  br label %loop.header
+
+cleanup4:
+  ret void
+
+e.1:
+  ret void
+
+e.2:
+  ret void
+}
+
+define void @all_exits_dominate_latch_countable_exits_at_most_500_iterations_known_deref_via_assumption_missing_nofree_multiple_predecessors(ptr %A, ptr %B, i1 %c) nosync {
+; CHECK-LABEL: 'all_exits_dominate_latch_countable_exits_at_most_500_iterations_known_deref_via_assumption_missing_nofree_multiple_predecessors'
+; CHECK-NEXT:    loop.header:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %B High: inttoptr (i64 -1 to ptr))
+; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %A High: inttoptr (i64 -1 to ptr))
+; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %A, i64 2000) ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %B, i64 2000) ]
+  br i1 %c, label %then, label %else
+
+then:
+  br label %loop.header
+
+else:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %then ], [ 0, %else ], [ %iv.next, %latch ]
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+  %l = load i32, ptr %gep.A, align 4
+  store i32 0, ptr %gep.B, align 4
+  %cntable.c.1 = icmp ult i64 %iv, 1000
+  %iv.next = add nuw nsw i64 %iv, 1
+  br i1 %cntable.c.1, label %b2, label %e.1
+
+b2:
+  %uncntable.c.0 = icmp eq i32 %l, 0
+  br i1 %uncntable.c.0, label %e.2, label %b3
+
+b3:
+  %cntable.c.2 = icmp eq i64 %iv.next, 500
+  br i1 %cntable.c.2, label %cleanup4, label %latch
+
+latch:
+  br label %loop.header
+
+cleanup4:
+  ret void
+
+e.1:
+  ret void
+
+e.2:
+  ret void
+}

@@ -216,7 +216,7 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
   Ins->getTarget().adjust(Ins->getDiagnostics(), Ins->getLangOpts(),
                           /*AuxTarget=*/nullptr);
   Ins->createFileManager();
-  Ins->createSourceManager(Ins->getFileManager());
+  Ins->createSourceManager();
   Ins->createPreprocessor(TU_Complete);
 
   return Ins;
