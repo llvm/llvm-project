@@ -386,6 +386,29 @@ TEST(ErrorTest, ExpectedCovariance) {
   (void)!!A2;
 }
 
+// Test that Expected<Error> works as expected with .
+TEST(ErrorTest, ExpectedError) {
+  {
+    // Test success-success case.
+    Expected<Error> E(Error::success(), ForceExpectedSuccessValue());
+    EXPECT_TRUE(!!E);
+    cantFail(E.takeError());
+    auto Err = std::move(*E);
+    EXPECT_FALSE(!!Err);
+  }
+
+  {
+    // Test "failure" success case.
+    Expected<Error> E(make_error<StringError>("foo"),
+                      ForceExpectedSuccessValue());
+    EXPECT_TRUE(!!E);
+    cantFail(E.takeError());
+    auto Err = std::move(*E);
+    EXPECT_TRUE(!!Err);
+    EXPECT_EQ(toString(std::move(Err)), "foo");
+  }
+}
+
 // Test that the ExitOnError utility works as expected.
 TEST(ErrorTest, CantFailSuccess) {
   cantFail(Error::success());
