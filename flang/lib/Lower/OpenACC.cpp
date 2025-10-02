@@ -3202,7 +3202,7 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
                        &clause.u)) {
       // When CUDA Fotran is enabled, extra symbols are used in the host_data
       // region. Look for them and bind their values with the symbols in the
-      // outer scope. 
+      // outer scope.
       if (semanticsContext.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
         const Fortran::parser::AccObjectList &objectList{useDevice->v};
         for (const auto &accObject : objectList.v) {
