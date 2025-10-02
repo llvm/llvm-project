@@ -190,9 +190,6 @@ public:
   template <typename T>
   BuiltinTypeMethodBuilder &
   accessCounterHandleFieldOnResource(T ResourceRecord);
-  template <typename ResourceT, typename ValueT>
-  BuiltinTypeMethodBuilder &
-  setCounterHandleFieldOnResource(ResourceT ResourceRecord, ValueT HandleValue);
   template <typename T> BuiltinTypeMethodBuilder &returnValue(T ReturnValue);
   BuiltinTypeMethodBuilder &returnThis();
   BuiltinTypeDeclBuilder &finalize();
@@ -629,28 +626,6 @@ BuiltinTypeMethodBuilder::accessCounterHandleFieldOnResource(T ResourceRecord) {
   return *this;
 }
 
-template <typename ResourceT, typename ValueT>
-BuiltinTypeMethodBuilder &
-BuiltinTypeMethodBuilder::setCounterHandleFieldOnResource(
-    ResourceT ResourceRecord, ValueT HandleValue) {
-  ensureCompleteDecl();
-
-  Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
-  Expr *HandleValueExpr = convertPlaceholder(HandleValue);
-
-  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
-  FieldDecl *HandleField = DeclBuilder.getResourceCounterHandleField();
-  MemberExpr *HandleMemberExpr = MemberExpr::CreateImplicit(
-      AST, ResourceExpr, false, HandleField, HandleField->getType(), VK_LValue,
-      OK_Ordinary);
-  Stmt *AssignStmt = BinaryOperator::Create(
-      DeclBuilder.SemaRef.getASTContext(), HandleMemberExpr, HandleValueExpr,
-      BO_Assign, HandleMemberExpr->getType(), ExprValueKind::VK_PRValue,
-      ExprObjectKind::OK_Ordinary, SourceLocation(), FPOptionsOverride());
-  StmtsList.push_back(AssignStmt);
-  return *this;
-}
-
 template <typename T>
 BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnValue(T ReturnValue) {
   ensureCompleteDecl();
@@ -795,9 +770,8 @@ BuiltinTypeDeclBuilder::addBufferHandles(ResourceClass RC, bool IsROV,
                                          bool RawBuffer, bool HasCounter,
                                          AccessSpecifier Access) {
   addHandleMember(RC, IsROV, RawBuffer, Access);
-  if (HasCounter) {
+  if (HasCounter)
     addCounterHandleMember(RC, IsROV, RawBuffer, Access);
-  }
   return *this;
 }
 
