@@ -13766,6 +13766,51 @@ static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
 
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
+  auto EvalTestOp =
+      [&](llvm::function_ref<bool(const APInt &, const APInt &)> Fn) {
+        APValue SourceLHS, SourceRHS;
+        if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+            !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+          return false;
+
+        unsigned SourceLen = SourceLHS.getVectorLength();
+
+        const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
+        QualType ElemQT = VT->getElementType();
+
+        if (ElemQT->isIntegerType()) {
+          const unsigned LaneWidth =
+              SourceLHS.getVectorElt(0).getInt().getBitWidth();
+          APInt AWide(LaneWidth * SourceLen, 0);
+          APInt BWide(LaneWidth * SourceLen, 0);
+
+          for (unsigned I = 0; I != SourceLen; ++I) {
+            APInt ALane = SourceLHS.getVectorElt(I).getInt();
+            APInt BLane = SourceRHS.getVectorElt(I).getInt();
+            AWide.insertBits(ALane, I * LaneWidth);
+            BWide.insertBits(BLane, I * LaneWidth);
+          }
+          return Success(Fn(AWide, BWide), E);
+
+        } else if (ElemQT->isFloatingType()) {
+          APInt ASignBits(SourceLen, 0);
+          APInt BSignBits(SourceLen, 0);
+
+          for (unsigned I = 0; I != SourceLen; ++I) {
+            APInt ALane = SourceLHS.getVectorElt(I).getFloat().bitcastToAPInt();
+            APInt BLane = SourceRHS.getVectorElt(I).getFloat().bitcastToAPInt();
+            const unsigned SignBit = ALane.getBitWidth() - 1;
+            const bool ALaneSign = ALane[SignBit];
+            const bool BLaneSign = BLane[SignBit];
+            ASignBits.setBitVal(I, ALaneSign);
+            BSignBits.setBitVal(I, BLaneSign);
+          }
+          return Success(Fn(ASignBits, BSignBits), E);
+
+        } else { // Must be integer or float type
+          return false;
+        }
+      };
 
   auto HandleMaskBinOp =
       [&](llvm::function_ref<APSInt(const APSInt &, const APSInt &)> Fn)
@@ -14879,7 +14924,34 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         Result.setBitVal(P++, Val[I]);
     return Success(Result, E);
   }
-
+  case X86::BI__builtin_ia32_ptestz128:
+  case X86::BI__builtin_ia32_ptestz256:
+  case X86::BI__builtin_ia32_vtestzps:
+  case X86::BI__builtin_ia32_vtestzps256:
+  case X86::BI__builtin_ia32_vtestzpd:
+  case X86::BI__builtin_ia32_vtestzpd256: {
+    return EvalTestOp(
+        [](const APInt &A, const APInt &B) { return (A & B) == 0; });
+  }
+  case X86::BI__builtin_ia32_ptestc128:
+  case X86::BI__builtin_ia32_ptestc256:
+  case X86::BI__builtin_ia32_vtestcps:
+  case X86::BI__builtin_ia32_vtestcps256:
+  case X86::BI__builtin_ia32_vtestcpd:
+  case X86::BI__builtin_ia32_vtestcpd256: {
+    return EvalTestOp(
+        [](const APInt &A, const APInt &B) { return (~A & B) == 0; });
+  }
+  case X86::BI__builtin_ia32_ptestnzc128:
+  case X86::BI__builtin_ia32_ptestnzc256:
+  case X86::BI__builtin_ia32_vtestnzcps:
+  case X86::BI__builtin_ia32_vtestnzcps256:
+  case X86::BI__builtin_ia32_vtestnzcpd:
+  case X86::BI__builtin_ia32_vtestnzcpd256: {
+    return EvalTestOp([](const APInt &A, const APInt &B) {
+      return ((A & B) != 0) && ((~A & B) != 0);
+    });
+  }
   case X86::BI__builtin_ia32_kandqi:
   case X86::BI__builtin_ia32_kandhi:
   case X86::BI__builtin_ia32_kandsi:
