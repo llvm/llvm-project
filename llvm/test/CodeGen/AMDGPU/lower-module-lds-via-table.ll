@@ -49,8 +49,8 @@ define void @f0() {
 ; GCN-NEXT:    s_add_u32 s6, s6, llvm.amdgcn.lds.offset.table@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s7, s7, llvm.amdgcn.lds.offset.table@rel32@hi+12
 ; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], 4
-; GCN-NEXT:    s_add_u32 s4, s4, s6
-; GCN-NEXT:    s_addc_u32 s5, s5, s7
+; GCN-NEXT:    s_add_u32 s4, s6, s4
+; GCN-NEXT:    s_addc_u32 s5, s7, s5
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
@@ -90,8 +90,8 @@ define void @f1() {
 ; GCN-NEXT:    s_add_u32 s6, s6, llvm.amdgcn.lds.offset.table@rel32@lo+8
 ; GCN-NEXT:    s_addc_u32 s7, s7, llvm.amdgcn.lds.offset.table@rel32@hi+16
 ; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], 4
-; GCN-NEXT:    s_add_u32 s4, s4, s6
-; GCN-NEXT:    s_addc_u32 s5, s5, s7
+; GCN-NEXT:    s_add_u32 s4, s6, s4
+; GCN-NEXT:    s_addc_u32 s5, s7, s5
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
@@ -131,8 +131,8 @@ define void @f2() {
 ; GCN-NEXT:    s_add_u32 s6, s6, llvm.amdgcn.lds.offset.table@rel32@lo+12
 ; GCN-NEXT:    s_addc_u32 s7, s7, llvm.amdgcn.lds.offset.table@rel32@hi+20
 ; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], 4
-; GCN-NEXT:    s_add_u32 s4, s4, s6
-; GCN-NEXT:    s_addc_u32 s5, s5, s7
+; GCN-NEXT:    s_add_u32 s4, s6, s4
+; GCN-NEXT:    s_addc_u32 s5, s7, s5
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v2, s4
@@ -172,8 +172,8 @@ define void @f3() {
 ; GCN-NEXT:    s_add_u32 s6, s6, llvm.amdgcn.lds.offset.table@rel32@lo+16
 ; GCN-NEXT:    s_addc_u32 s7, s7, llvm.amdgcn.lds.offset.table@rel32@hi+24
 ; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], 4
-; GCN-NEXT:    s_add_u32 s4, s4, s6
-; GCN-NEXT:    s_addc_u32 s5, s5, s7
+; GCN-NEXT:    s_add_u32 s4, s6, s4
+; GCN-NEXT:    s_addc_u32 s5, s7, s5
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4

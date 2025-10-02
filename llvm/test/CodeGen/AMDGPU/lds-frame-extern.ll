@@ -46,8 +46,8 @@ define void @use_extern_normal() #0 {
 ; CHECK-NEXT:    s_ashr_i32 s5, s15, 31
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x4048f5c3
 ; CHECK-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; CHECK-NEXT:    s_add_u32 s4, s4, s6
-; CHECK-NEXT:    s_addc_u32 s5, s5, s7
+; CHECK-NEXT:    s_add_u32 s4, s6, s4
+; CHECK-NEXT:    s_addc_u32 s5, s7, s5
 ; CHECK-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s4
@@ -70,8 +70,8 @@ define void @use_extern_overalign() #0 {
 ; CHECK-NEXT:    s_ashr_i32 s5, s15, 31
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x42280000
 ; CHECK-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; CHECK-NEXT:    s_add_u32 s4, s4, s6
-; CHECK-NEXT:    s_addc_u32 s5, s5, s7
+; CHECK-NEXT:    s_add_u32 s4, s6, s4
+; CHECK-NEXT:    s_addc_u32 s5, s7, s5
 ; CHECK-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s4

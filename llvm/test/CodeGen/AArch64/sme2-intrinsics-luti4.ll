@@ -15,12 +15,15 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16
 }
 
 ; Tests multiple identical luti4 intrinsics with ZT0 loads interspersed, are not CSD'd.
-; FIXME: This is currently broken!
 define void @test_multiple_luti4_zt_i8(ptr %ptrA, ptr %ptrB, <vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1) #0 {
 ; CHECK-LABEL: test_multiple_luti4_zt_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr zt0, [x0]
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    luti4 { z4.b - z7.b }, zt0, { z0, z1 }
+; CHECK-NEXT:    // fake_use: $z4 $z4_z5_z6_z7
+; CHECK-NEXT:    ldr zt0, [x1]
 ; CHECK-NEXT:    luti4 { z0.b - z3.b }, zt0, { z0, z1 }
 ; CHECK-NEXT:    // fake_use: $z0 $z0_z1_z2_z3
 ; CHECK-NEXT:    ret
