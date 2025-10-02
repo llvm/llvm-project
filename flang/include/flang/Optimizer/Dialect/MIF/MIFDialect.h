@@ -28,4 +28,4 @@
 
 #include "flang/Optimizer/Dialect/MIF/MIFDialect.h.inc"
 
-#endif // FORTRAN_OPTIMIZER_DIALECT_MIF_MIF_H
+#endif // FORTRAN_OPTIMIZER_DIALECT_MIF_MIFDIALECT_H
