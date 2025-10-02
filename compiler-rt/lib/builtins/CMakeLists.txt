@@ -474,6 +474,9 @@ set(thumb1_base_SOURCES
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(thumb1_base_SOURCES
     arm/thumb1/mulsf3.S
+    arm/fnan2.c
+    arm/fnorm2.c
+    arm/funder.c
     ${thumb1_base_SOURCES}
   )
 endif()

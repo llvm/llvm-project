@@ -145,7 +145,7 @@ LOCAL_LABEL(outflow):
   // To handle underflow, we construct an intermediate value in the IEEE 754
   // style (using our existing full-length mantissa, and bias the exponent by
   // +0xC0), and indicate whether that intermediate was rounded up, down or not
-  // at all. Then call the helper function __funder, which will denormalise and
+  // at all. Then call the helper function funder, which will denormalise and
   // re-round correctly.
   LSLS    r1, r0, #7    // shift up the post-rounding mantissa
   SUBS    r1, r3, r1    //   and subtract it from the pre-rounding version
@@ -159,7 +159,7 @@ LOCAL_LABEL(outflow):
   LSLS    r3, r2, #23
   ADDS    r0, r0, r3    // put on the biased exponent
 
-  BL      __funder
+  BL      SYMBOL_NAME(__compiler_rt_funder)
   POP     {r4,r5,r6,pc}
 
 LOCAL_LABEL(overflow):
@@ -196,15 +196,15 @@ LOCAL_LABEL(zero):
   LSLS    r0, r4, #31    // shift up the output sign to make the return value
   POP     {r4,r5,r6,pc}
 
-  // Handle denormals via the helper function __fnorm2, which will break both
+  // Handle denormals via the helper function fnorm2, which will break both
   // inputs up into mantissa and exponent, renormalising and generating a
   // negative exponent if necessary.
 LOCAL_LABEL(denorm):
   PUSH    {r0,r1,r2,r3}
   MOV     r0, sp
-  BL      __fnorm2
+  BL      SYMBOL_NAME(__compiler_rt_fnorm2)
   POP     {r0,r1,r2,r3}
-  // Convert __fnorm2's return values into the right form to rejoin the main
+  // Convert fnorm2's return values into the right form to rejoin the main
   // code path.
   LSLS    r0, r0, #1
   LSLS    r1, r1, #1
@@ -234,11 +234,11 @@ LOCAL_LABEL(naninf):
   // an appropriately signed infinity.
   B       LOCAL_LABEL(overflow)         // reuse the code there
 
-  // We come here if at least one input is a NaN. Hand off to __fnan2, which
+  // We come here if at least one input is a NaN. Hand off to fnan2, which
   // propagates an appropriate NaN to the output, dealing with the special
   // cases of signalling/quiet NaNs.
 LOCAL_LABEL(nan):
-  BL      __fnan2
+  BL      SYMBOL_NAME(__compiler_rt_fnan2)
   POP     {r4,r5,r6,pc}
 
   // Return a quiet NaN as the result of infinity * zero.
