@@ -15,7 +15,7 @@
 // LLVM_DEBUG() requires the DEBUG_TYPE macro to be defined. Set it to "foo"
 // specify that your debug code belongs to class "foo". Be careful that you only
 // do this after including Debug.h and not around any #include of headers.
-// Headers should define and undef the macro acround the code that needs to use
+// Headers should define and undef the macro around the code that needs to use
 // the LLVM_DEBUG() macro. Then, on the command line, you can specify
 // '-debug-only=foo' to enable JUST the debug information for the foo class.
 //

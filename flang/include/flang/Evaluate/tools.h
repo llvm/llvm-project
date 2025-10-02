@@ -82,27 +82,6 @@ template <typename A> bool IsVariable(const A &x) {
   }
 }
 
-// Predicate: true when an expression is assumed-rank
-bool IsAssumedRank(const Symbol &);
-bool IsAssumedRank(const ActualArgument &);
-template <typename A> bool IsAssumedRank(const A &) { return false; }
-template <typename A> bool IsAssumedRank(const Designator<A> &designator) {
-  if (const auto *symbol{std::get_if<SymbolRef>(&designator.u)}) {
-    return IsAssumedRank(symbol->get());
-  } else {
-    return false;
-  }
-}
-template <typename T> bool IsAssumedRank(const Expr<T> &expr) {
-  return common::visit([](const auto &x) { return IsAssumedRank(x); }, expr.u);
-}
-template <typename A> bool IsAssumedRank(const std::optional<A> &x) {
-  return x && IsAssumedRank(*x);
-}
-template <typename A> bool IsAssumedRank(const A *x) {
-  return x && IsAssumedRank(*x);
-}
-
 // Finds the corank of an entity, possibly packaged in various ways.
 // Unlike rank, only data references have corank > 0.
 int GetCorank(const ActualArgument &);
@@ -771,11 +750,11 @@ Expr<SomeKind<CAT>> PromoteAndCombine(
 // one of the operands to the type of the other.  Handles special cases with
 // typeless literal operands and with REAL/COMPLEX exponentiation to INTEGER
 // powers.
-template <template <typename> class OPR, bool CAN_BE_UNSIGNED = true>
+template <template <typename> class OPR>
 std::optional<Expr<SomeType>> NumericOperation(parser::ContextualMessages &,
     Expr<SomeType> &&, Expr<SomeType> &&, int defaultRealKind);
 
-extern template std::optional<Expr<SomeType>> NumericOperation<Power, false>(
+extern template std::optional<Expr<SomeType>> NumericOperation<Power>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
     int defaultRealKind);
 extern template std::optional<Expr<SomeType>> NumericOperation<Multiply>(
@@ -1123,6 +1102,10 @@ extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
 
 // Predicate: does a variable contain a vector-valued subscript (not a triplet)?
 bool HasVectorSubscript(const Expr<SomeType> &);
+bool HasVectorSubscript(const ActualArgument &);
+
+// Predicate: is an expression a section of an array?
+bool IsArraySection(const Expr<SomeType> &expr);
 
 // Predicate: does an expression contain constant?
 bool HasConstant(const Expr<SomeType> &);
@@ -1135,6 +1118,18 @@ template <typename MESSAGES, typename... A>
 parser::Message *SayWithDeclaration(
     MESSAGES &messages, const Symbol &symbol, A &&...x) {
   return AttachDeclaration(messages.Say(std::forward<A>(x)...), symbol);
+}
+template <typename... A>
+parser::Message *WarnWithDeclaration(FoldingContext context,
+    const Symbol &symbol, common::LanguageFeature feature, A &&...x) {
+  return AttachDeclaration(
+      context.Warn(feature, std::forward<A>(x)...), symbol);
+}
+template <typename... A>
+parser::Message *WarnWithDeclaration(FoldingContext &context,
+    const Symbol &symbol, common::UsageWarning warning, A &&...x) {
+  return AttachDeclaration(
+      context.Warn(warning, std::forward<A>(x)...), symbol);
 }
 
 // Check for references to impure procedures; returns the name
@@ -1526,6 +1521,9 @@ bool IsVarSubexpressionOf(
 // it returns std::nullopt.
 std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
 
+// How many ancestors does have a derived type have?
+std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
@@ -1535,6 +1533,12 @@ class Scope;
 // If a symbol represents an ENTRY, return the symbol of the main entry
 // point to its subprogram.
 const Symbol *GetMainEntry(const Symbol *);
+
+inline bool IsAlternateEntry(const Symbol *symbol) {
+  // If symbol is not alternate entry symbol, GetMainEntry() returns the same
+  // symbol.
+  return symbol && GetMainEntry(symbol) != symbol;
+}
 
 // These functions are used in Evaluate so they are defined here rather than in
 // Semantics to avoid a link-time dependency on Semantics.
@@ -1555,7 +1559,19 @@ bool IsAllocatableOrObjectPointer(const Symbol *);
 bool IsAutomatic(const Symbol &);
 bool IsSaved(const Symbol &); // saved implicitly or explicitly
 bool IsDummy(const Symbol &);
+
+bool IsAssumedRank(const Symbol &);
+template <typename A> bool IsAssumedRank(const A &x) {
+  auto *symbol{UnwrapWholeSymbolDataRef(x)};
+  return symbol && IsAssumedRank(*symbol);
+}
+
 bool IsAssumedShape(const Symbol &);
+template <typename A> bool IsAssumedShape(const A &x) {
+  auto *symbol{UnwrapWholeSymbolDataRef(x)};
+  return symbol && IsAssumedShape(*symbol);
+}
+
 bool IsDeferredShape(const Symbol &);
 bool IsFunctionResult(const Symbol &);
 bool IsKindTypeParameter(const Symbol &);

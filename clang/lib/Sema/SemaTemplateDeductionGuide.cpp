@@ -995,8 +995,8 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
     // Cases where template arguments in the RHS of the alias are not
     // dependent. e.g.
     //   using AliasFoo = Foo<bool>;
-    if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(
-            RT->getAsCXXRecordDecl())) {
+    if (const auto *CTSD =
+            dyn_cast<ClassTemplateSpecializationDecl>(RT->getOriginalDecl())) {
       Template = CTSD->getSpecializedTemplate();
       AliasRhsTemplateArgs = CTSD->getTemplateArgs().asArray();
     }
@@ -1056,7 +1056,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // The (trailing) return type of the deduction guide.
   const TemplateSpecializationType *FReturnType =
       RType->getAs<TemplateSpecializationType>();
-  if (const auto *ICNT = RType->getAs<InjectedClassNameType>())
+  if (const auto *ICNT = RType->getAsCanonical<InjectedClassNameType>())
     // implicitly-generated deduction guide.
     FReturnType = cast<TemplateSpecializationType>(
         ICNT->getOriginalDecl()->getCanonicalTemplateSpecializationType(
@@ -1428,10 +1428,13 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
     DeclareImplicitDeductionGuidesForTypeAlias(*this, AliasTemplate, Loc);
     return;
   }
-  if (CXXRecordDecl *DefRecord =
-          cast<CXXRecordDecl>(Template->getTemplatedDecl())->getDefinition()) {
+  CXXRecordDecl *DefRecord =
+      dyn_cast_or_null<CXXRecordDecl>(Template->getTemplatedDecl());
+  if (!DefRecord)
+    return;
+  if (const CXXRecordDecl *Definition = DefRecord->getDefinition()) {
     if (TemplateDecl *DescribedTemplate =
-            DefRecord->getDescribedClassTemplate())
+            Definition->getDescribedClassTemplate())
       Template = DescribedTemplate;
   }
 

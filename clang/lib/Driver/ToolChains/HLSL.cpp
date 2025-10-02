@@ -62,11 +62,15 @@ bool isLegalShaderModel(Triple &T) {
     VersionTuple MinVer(6, 5);
     return MinVer <= Version;
   } break;
+  case Triple::EnvironmentType::RootSignature:
+    VersionTuple MinVer(1, 0);
+    VersionTuple MaxVer(1, 2);
+    return MinVer <= Version && Version <= MaxVer;
   }
   return false;
 }
 
-std::optional<std::string> tryParseProfile(StringRef Profile) {
+std::optional<llvm::Triple> tryParseTriple(StringRef Profile) {
   // [ps|vs|gs|hs|ds|cs|ms|as]_[major]_[minor]
   SmallVector<StringRef, 3> Parts;
   Profile.split(Parts, "_");
@@ -84,6 +88,7 @@ std::optional<std::string> tryParseProfile(StringRef Profile) {
           .Case("lib", Triple::EnvironmentType::Library)
           .Case("ms", Triple::EnvironmentType::Mesh)
           .Case("as", Triple::EnvironmentType::Amplification)
+          .Case("rootsig", Triple::EnvironmentType::RootSignature)
           .Default(Triple::EnvironmentType::UnknownEnvironment);
   if (Kind == Triple::EnvironmentType::UnknownEnvironment)
     return std::nullopt;
@@ -132,6 +137,9 @@ std::optional<std::string> tryParseProfile(StringRef Profile) {
   case 8:
     SubArch = llvm::Triple::DXILSubArch_v1_8;
     break;
+  case 9:
+    SubArch = llvm::Triple::DXILSubArch_v1_9;
+    break;
   case OfflineLibMinor:
     // Always consider minor version x as the latest supported DXIL version
     SubArch = llvm::Triple::LatestDXILSubArch;
@@ -144,8 +152,14 @@ std::optional<std::string> tryParseProfile(StringRef Profile) {
   T.setOSName(Triple::getOSTypeName(Triple::OSType::ShaderModel).str() +
               VersionTuple(Major, Minor).getAsString());
   T.setEnvironment(Kind);
-  if (isLegalShaderModel(T))
-    return T.getTriple();
+
+  return T;
+}
+
+std::optional<std::string> tryParseProfile(StringRef Profile) {
+  std::optional<llvm::Triple> MaybeT = tryParseTriple(Profile);
+  if (MaybeT && isLegalShaderModel(*MaybeT))
+    return MaybeT->getTriple();
   else
     return std::nullopt;
 }
@@ -215,7 +229,6 @@ void getSpirvExtOperand(StringRef SpvExtensionArg, raw_ostream &out) {
     return;
   }
   out << SpvExtensionArg;
-  return;
 }
 
 SmallString<1024> getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
@@ -256,6 +269,19 @@ bool checkExtensionArgsAreValid(ArrayRef<std::string> SpvExtensionArgs,
   }
   return AllValid;
 }
+
+bool isRootSignatureTarget(StringRef Profile) {
+  if (std::optional<llvm::Triple> T = tryParseTriple(Profile))
+    return T->getEnvironment() == Triple::EnvironmentType::RootSignature;
+  return false;
+}
+
+bool isRootSignatureTarget(DerivedArgList &Args) {
+  if (const Arg *A = Args.getLastArg(options::OPT_target_profile))
+    return isRootSignatureTarget(A->getValue());
+  return false;
+}
+
 } // namespace
 
 void tools::hlsl::Validator::ConstructJob(Compilation &C, const JobAction &JA,
@@ -295,6 +321,44 @@ void tools::hlsl::MetalConverter::ConstructJob(
                                          Exec, CmdArgs, Inputs, Input));
 }
 
+void tools::hlsl::LLVMObjcopy::ConstructJob(Compilation &C, const JobAction &JA,
+                                            const InputInfo &Output,
+                                            const InputInfoList &Inputs,
+                                            const ArgList &Args,
+                                            const char *LinkingOutput) const {
+
+  std::string ObjcopyPath = getToolChain().GetProgramPath("llvm-objcopy");
+  const char *Exec = Args.MakeArgString(ObjcopyPath);
+
+  ArgStringList CmdArgs;
+  assert(Inputs.size() == 1 && "Unable to handle multiple inputs.");
+  const InputInfo &Input = Inputs[0];
+  CmdArgs.push_back(Input.getFilename());
+  CmdArgs.push_back(Output.getFilename());
+
+  if (Args.hasArg(options::OPT_dxc_strip_rootsignature)) {
+    const char *StripRS = Args.MakeArgString("--remove-section=RTS0");
+    CmdArgs.push_back(StripRS);
+  }
+
+  if (Arg *Arg = Args.getLastArg(options::OPT_dxc_Frs)) {
+    const char *Frs =
+        Args.MakeArgString("--extract-section=RTS0=" + Twine(Arg->getValue()));
+    CmdArgs.push_back(Frs);
+  }
+
+  if (const Arg *A = Args.getLastArg(options::OPT_target_profile))
+    if (isRootSignatureTarget(A->getValue())) {
+      const char *Fos = Args.MakeArgString("--only-section=RTS0");
+      CmdArgs.push_back(Fos);
+    }
+
+  assert(CmdArgs.size() > 2 && "Unnecessary invocation of objcopy.");
+
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Exec, CmdArgs, Inputs, Input));
+}
+
 /// DirectX Toolchain
 HLSLToolChain::HLSLToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
@@ -315,6 +379,10 @@ Tool *clang::driver::toolchains::HLSLToolChain::getTool(
     if (!MetalConverter)
       MetalConverter.reset(new tools::hlsl::MetalConverter(*this));
     return MetalConverter.get();
+  case Action::ObjcopyJobClass:
+    if (!LLVMObjcopy)
+      LLVMObjcopy.reset(new tools::hlsl::LLVMObjcopy(*this));
+    return LLVMObjcopy.get();
   default:
     return ToolChain::getTool(AC);
   }
@@ -348,6 +416,13 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     if (A->getOption().getID() == options::OPT_dxc_rootsig_ver) {
       DAL->AddJoinedArg(nullptr,
                         Opts.getOption(options::OPT_fdx_rootsignature_version),
+                        A->getValue());
+      A->claim();
+      continue;
+    }
+    if (A->getOption().getID() == options::OPT_dxc_rootsig_define) {
+      DAL->AddJoinedArg(nullptr,
+                        Opts.getOption(options::OPT_fdx_rootsignature_define),
                         A->getValue());
       A->claim();
       continue;
@@ -452,16 +527,23 @@ bool HLSLToolChain::requiresBinaryTranslation(DerivedArgList &Args) const {
   return Args.hasArg(options::OPT_metal) && Args.hasArg(options::OPT_dxc_Fo);
 }
 
+bool HLSLToolChain::requiresObjcopy(DerivedArgList &Args) const {
+  return Args.hasArg(options::OPT_dxc_Fo) &&
+         (Args.hasArg(options::OPT_dxc_strip_rootsignature) ||
+          Args.hasArg(options::OPT_dxc_Frs) || isRootSignatureTarget(Args));
+}
+
 bool HLSLToolChain::isLastJob(DerivedArgList &Args,
                               Action::ActionClass AC) const {
-  bool HasTranslation = requiresBinaryTranslation(Args);
-  bool HasValidation = requiresValidation(Args);
-  // If translation and validation are not required, we should only have one
-  // action.
-  if (!HasTranslation && !HasValidation)
-    return true;
-  if ((HasTranslation && AC == Action::BinaryTranslatorJobClass) ||
-      (!HasTranslation && HasValidation && AC == Action::BinaryAnalyzeJobClass))
-    return true;
-  return false;
+  // Note: we check in the reverse order of execution
+  if (requiresBinaryTranslation(Args))
+    return AC == Action::Action::BinaryTranslatorJobClass;
+  if (requiresValidation(Args))
+    return AC == Action::Action::BinaryAnalyzeJobClass;
+  if (requiresObjcopy(Args))
+    return AC == Action::Action::ObjcopyJobClass;
+
+  // No translation, validation, or objcopy are required, so this action must
+  // output to the result file.
+  return true;
 }

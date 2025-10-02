@@ -93,6 +93,9 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
               astContext.getTargetInfo().getPointerAlign(LangAS::Default))
           .getQuantity();
 
+  const unsigned charSize = astContext.getTargetInfo().getCharWidth();
+  UCharTy = cir::IntType::get(&getMLIRContext(), charSize, /*isSigned=*/false);
+
   // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
   const unsigned sizeTypeSize =
       astContext.getTypeSize(astContext.getSignedSizeType());
@@ -103,6 +106,11 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   PtrDiffTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/true);
 
+  std::optional<cir::SourceLanguage> sourceLanguage = getCIRSourceLanguage();
+  if (sourceLanguage)
+    theModule->setAttr(
+        cir::CIRDialect::getSourceLanguageAttrName(),
+        cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
 
@@ -111,6 +119,19 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                        cir::OptInfoAttr::get(&mlirContext,
                                              cgo.OptimizationLevel,
                                              cgo.OptimizeSize));
+  // Set the module name to be the name of the main file. TranslationUnitDecl
+  // often contains invalid source locations and isn't a reliable source for the
+  // module location.
+  FileID mainFileId = astContext.getSourceManager().getMainFileID();
+  const FileEntry &mainFile =
+      *astContext.getSourceManager().getFileEntryForID(mainFileId);
+  StringRef path = mainFile.tryGetRealPathName();
+  if (!path.empty()) {
+    theModule.setSymName(path);
+    theModule->setLoc(mlir::FileLineColLoc::get(&mlirContext, path,
+                                                /*line=*/0,
+                                                /*column=*/0));
+  }
 }
 
 CIRGenModule::~CIRGenModule() = default;
@@ -510,6 +531,24 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
   assert(!cir::MissingFeatures::setTargetAttributes());
 }
 
+std::optional<cir::SourceLanguage> CIRGenModule::getCIRSourceLanguage() const {
+  using ClangStd = clang::LangStandard;
+  using CIRLang = cir::SourceLanguage;
+  auto opts = getLangOpts();
+
+  if (opts.CPlusPlus)
+    return CIRLang::CXX;
+  if (opts.C99 || opts.C11 || opts.C17 || opts.C23 || opts.C2y ||
+      opts.LangStd == ClangStd::lang_c89 ||
+      opts.LangStd == ClangStd::lang_gnu89)
+    return CIRLang::C;
+
+  // TODO(cir): support remaining source languages.
+  assert(!cir::MissingFeatures::sourceLanguageCases());
+  errorNYI("CIR does not yet support the given source language");
+  return std::nullopt;
+}
+
 static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
   // Set linkage and visibility in case we never see a definition.
   LinkageInfo lv = nd->getLinkageAndVisibility();
@@ -691,7 +730,6 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   // since this is the job for its original source.
   bool isDefinitionAvailableExternally =
       astContext.GetGVALinkageForVariable(vd) == GVA_AvailableExternally;
-  assert(!cir::MissingFeatures::needsGlobalCtorDtor());
 
   // It is useless to emit the definition for an available_externally variable
   // which can't be marked as const.
@@ -704,6 +742,10 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     return;
 
   mlir::Attribute init;
+  bool needsGlobalCtor = false;
+  bool needsGlobalDtor =
+      !isDefinitionAvailableExternally &&
+      vd->needsDestruction(astContext) == QualType::DK_cxx_destructor;
   const VarDecl *initDecl;
   const Expr *initExpr = vd->getAnyInitializer(initDecl);
 
@@ -738,8 +780,8 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
         if (initDecl->hasFlexibleArrayInit(astContext))
           errorNYI(vd->getSourceRange(), "flexible array initializer");
         init = builder.getZeroInitAttr(convertType(qt));
-        if (astContext.GetGVALinkageForVariable(vd) != GVA_AvailableExternally)
-          errorNYI(vd->getSourceRange(), "global constructor");
+        if (!isDefinitionAvailableExternally)
+          needsGlobalCtor = true;
       } else {
         errorNYI(vd->getSourceRange(), "static initializer");
       }
@@ -748,8 +790,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
       // We don't need an initializer, so remove the entry for the delayed
       // initializer position (just in case this entry was delayed) if we
       // also don't need to register a destructor.
-      if (vd->needsDestruction(astContext) == QualType::DK_cxx_destructor)
-        errorNYI(vd->getSourceRange(), "delayed destructor");
+      assert(!cir::MissingFeatures::deferredCXXGlobalInit());
     }
   }
 
@@ -788,6 +829,9 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   if (emitter)
     emitter->finalize(gv);
 
+  assert(!cir::MissingFeatures::opGlobalConstant());
+  assert(!cir::MissingFeatures::opGlobalSection());
+
   // Set CIR's linkage type as appropriate.
   cir::GlobalLinkageKind linkage =
       getCIRLinkageVarDefinition(vd, /*IsConstant=*/false);
@@ -805,6 +849,10 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
 
   maybeSetTrivialComdat(*vd, gv);
+
+  // Emit the initializer function if necessary.
+  if (needsGlobalCtor || needsGlobalDtor)
+    emitCXXGlobalVarDeclInitFunc(vd, gv, needsGlobalCtor);
 }
 
 void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
@@ -825,7 +873,7 @@ void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
         emitGlobalFunctionDefinition(gd, op);
 
       if (method->isVirtual())
-        errorNYI(method->getSourceRange(), "virtual member function");
+        getVTables().emitThunks(gd);
 
       return;
     }
@@ -978,10 +1026,17 @@ cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
       mlir::SymbolTable::lookupSymbolIn(theModule, name));
 
   if (gv) {
-    // There should be handling added here to check the type as assert that
-    // gv was a declaration if the type doesn't match and handling below
-    // to replace the variable if it was a declaration.
-    errorNYI(loc, "createOrReplaceCXXRuntimeVariable: already exists");
+    // Check if the variable has the right type.
+    if (gv.getSymType() == ty)
+      return gv;
+
+    // Because of C++ name mangling, the only way we can end up with an already
+    // existing global with the same name is if it has been declared extern
+    // "C".
+    assert(gv.isDeclaration() && "Declaration has wrong type!");
+
+    errorNYI(loc, "createOrReplaceCXXRuntimeVariable: declaration exists with "
+                  "wrong type");
     return gv;
   }
 
@@ -1054,8 +1109,7 @@ static bool isVarDeclStrongDefinition(const ASTContext &astContext,
     if (astContext.isAlignmentRequired(varType))
       return true;
 
-    if (const auto *rt = varType->getAs<RecordType>()) {
-      const RecordDecl *rd = rt->getOriginalDecl()->getDefinitionOrSelf();
+    if (const auto *rd = varType->getAsRecordDecl()) {
       for (const FieldDecl *fd : rd->fields()) {
         if (fd->isBitField())
           continue;
@@ -2131,6 +2185,23 @@ bool CIRGenModule::verifyModule() const {
   return mlir::verify(theModule).succeeded();
 }
 
+mlir::Attribute CIRGenModule::getAddrOfRTTIDescriptor(mlir::Location loc,
+                                                      QualType ty, bool forEh) {
+  // Return a bogus pointer if RTTI is disabled, unless it's for EH.
+  // FIXME: should we even be calling this method if RTTI is disabled
+  // and it's not for EH?
+  if (!shouldEmitRTTI(forEh))
+    return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
+
+  if (forEh && ty->isObjCObjectPointerType() &&
+      langOpts.ObjCRuntime.isGNUFamily()) {
+    errorNYI(loc, "getAddrOfRTTIDescriptor: Objc PtrType & Objc RT GUN");
+    return {};
+  }
+
+  return getCXXABI().getAddrOfRTTIDescriptor(loc, ty);
+}
+
 // TODO(cir): this can be shared with LLVM codegen.
 CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
     const CXXRecordDecl *derivedClass,
@@ -2146,10 +2217,7 @@ CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
     // Get the layout.
     const ASTRecordLayout &layout = astContext.getASTRecordLayout(rd);
 
-    const auto *baseDecl =
-        cast<CXXRecordDecl>(
-            base->getType()->castAs<clang::RecordType>()->getOriginalDecl())
-            ->getDefinitionOrSelf();
+    const auto *baseDecl = base->getType()->castAsCXXRecordDecl();
 
     // Add the offset.
     offset += layout.getBaseClassOffset(baseDecl);

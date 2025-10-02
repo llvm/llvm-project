@@ -185,26 +185,44 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
     InterfaceMethod<"Check the availability of workgroup level layouts",
                     "bool",
                     "isForWorkgroup">,
+    InterfaceMethod<"Check the availability of subgroup level layouts",
+                    "bool",
+                    "isForSubgroup">,
     InterfaceMethod<"Get the rank of attribute",
                     "int64_t",
                     "getRank">,
     InterfaceMethod<"Get the num of effective subgroups",
                     "int64_t",
                     "getNumSubgroups", (ins), [{
-                        std::optional<SmallVector<int64_t>> sgLayout = llvm::cast<ConcreteAttr>(tablegen_opaque_val).getSgLayoutAsInt();
+                        std::optional<SmallVector<int64_t>> sgLayout = llvm::cast<ConcreteAttr>(tablegen_opaque_val).getEffectiveSgLayoutAsInt();
                         if (sgLayout.has_value())
                           return computeProduct(*sgLayout);
                         return 0;
                     }], [{}]>,
-    InterfaceMethod<"Get the SgLayout field of the attribute as integer array",
-                    "std::optional<SmallVector<int64_t>>",
-                    "getSgLayoutAsInt">,
-    InterfaceMethod<"Get the SgData field of the attribute as integer array",
-                    "std::optional<SmallVector<int64_t>>",
-                    "getSgDataAsInt">,
+    InterfaceMethod<"Get the order of the layout attribute",
+                    "DenseI32ArrayAttr",
+                    "getOrder">,
+    InterfaceMethod<"Get the effective SgLayout of the layout attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getEffectiveSgLayoutAsInt">,
+    InterfaceMethod<"Get the effective SgData of the layout attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getEffectiveSgDataAsInt">,
+    InterfaceMethod<"Get the effective InstData of the layout attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getEffectiveInstDataAsInt">,
+    InterfaceMethod<"Get the effective LaneLayout of the layout attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getEffectiveLaneLayoutAsInt">,
+    InterfaceMethod<"Get the effective LaneData of the layout attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getEffectiveLaneDataAsInt">,
     InterfaceMethod<"Derive a new layout by dropping sgLayout and sgData",
                     "xegpu::DistributeLayoutAttr",
                     "dropSgLayoutAndData">,
+    InterfaceMethod<"Derive a new layout by dropping InstData",
+                    "xegpu::DistributeLayoutAttr",
+                    "dropInstData">,
     InterfaceMethod<[{Delinearizes a linear subgroup ID into its multidimensional
                       indices based on the effective subgroup layout.}],
                     "FailureOr<SmallVector<Value>>",
@@ -216,7 +234,59 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                       multiple blocks according to round-robin distribution rules.}],
                     "FailureOr<SmallVector<SmallVector<Value>>>",
                     "getOffsets",
-                    (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>
+                    (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>,
+    InterfaceMethod</*desc=*/[{Check if this layout can be achieved by applying a transpose
+                     to some other layout according to given permutation of (0...n-1).}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isTransposeOf",
+                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other, "ArrayRef<int64_t>": $perm),
+                    /*methodBody=*/[{
+                      if (!other)
+                        return false;
+                      if ($_self.getRank() != other.getRank() || perm.size() != static_cast<size_t>($_self.getRank()))
+                        return false;
+                      // Check if the permutation is valid
+                      if (!isPermutationVector(perm))
+                        return false;
+                      auto checkTranspose = [](ArrayRef<int64_t> dst, ArrayRef<int64_t> src, ArrayRef<int64_t> perm) {
+                        // If both `dst` and `src` are empty, conservatively return true
+                        // here because some layout fields can be empty.
+                        if (dst.empty() && src.empty())
+                          return true;
+                        for (const auto &ta : llvm::enumerate(perm)) {
+                          if (src[ta.index()] != dst[ta.value()])
+                            return false;
+                        }
+                        return true;
+                      };
+                      // Check sgLayout
+                      if (!checkTranspose($_self.getEffectiveSgLayoutAsInt(), other.getEffectiveSgLayoutAsInt(), perm))
+                        return false;
+                      // Check sgData
+                      if (!checkTranspose($_self.getEffectiveSgDataAsInt(), other.getEffectiveSgDataAsInt(), perm))
+                        return false;
+                      // Check instData
+                      if (!checkTranspose($_self.getEffectiveInstDataAsInt(), other.getEffectiveInstDataAsInt(), perm))
+                        return false;
+                      // Check laneLayout
+                      if (!checkTranspose($_self.getEffectiveLaneLayoutAsInt(), other.getEffectiveLaneLayoutAsInt(), perm))
+                        return false;
+                      // Check laneData
+                      if (!checkTranspose($_self.getEffectiveLaneDataAsInt(), other.getEffectiveLaneDataAsInt(), perm))
+                        return false;
+                      // Check order if both sides have order field.
+                      if ($_self.getOrder() && other.getOrder()) {
+                        auto thisOrderAsInt = llvm::to_vector_of<int64_t>($_self.getOrder().asArrayRef());
+                        auto otherOrderAsInt = llvm::to_vector_of<int64_t>(other.getOrder().asArrayRef());
+                        if (!checkTranspose(thisOrderAsInt, otherOrderAsInt, perm))
+                          return false;
+                      }
+                      return true;
+                    }]>,
+    InterfaceMethod</*desc=*/[{Check if this layout is a slice of some other layout.}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isSliceOf",
+                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other)>
   ];
 }
 
@@ -376,16 +446,34 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
                              getLaneLayout(), getLaneData(), getOrder());
     }
 
-    std::optional<SmallVector<int64_t>> getSgLayoutAsInt() const {
+    SmallVector<int64_t> getEffectiveSgLayoutAsInt() const {
       if (DenseI32ArrayAttr layout = getSgLayout())
         return llvm::to_vector_of<int64_t>(layout.asArrayRef());
-      return std::nullopt;
+      return {};
     }
 
-    std::optional<SmallVector<int64_t>> getSgDataAsInt() const {
+    SmallVector<int64_t> getEffectiveSgDataAsInt() const {
       if (DenseI32ArrayAttr data = getSgData())
         return llvm::to_vector_of<int64_t>(data.asArrayRef());
-      return std::nullopt;
+      return {};
+    }
+
+    SmallVector<int64_t> getEffectiveInstDataAsInt() const {
+      if (DenseI32ArrayAttr inst = getInstData())
+        return llvm::to_vector_of<int64_t>(inst.asArrayRef());
+      return {};
+    }
+
+    SmallVector<int64_t> getEffectiveLaneLayoutAsInt() const {
+      if (DenseI32ArrayAttr layout = getLaneLayout())
+        return llvm::to_vector_of<int64_t>(layout.asArrayRef());
+      return {};
+    }
+
+    SmallVector<int64_t> getEffectiveLaneDataAsInt() const {
+      if (DenseI32ArrayAttr data = getLaneData())
+        return llvm::to_vector_of<int64_t>(data.asArrayRef());
+      return {};
     }
 
     /// Delinearizes a linear subgroup ID into its multidimensional indices
@@ -399,6 +487,9 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     /// multiple blocks according to round-robin distribution rules.
     FailureOr<SmallVector<SmallVector<Value>>>
     getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+
+    /// Check if this is slice of some other layout.
+    bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
 
   }];
 
@@ -466,26 +557,67 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
 
     /// Returns the SgLayout of the attribute, computed by applying
     /// the slice dimensions to the underlying LayoutAttr.
-    std::optional<SmallVector<int64_t>> getSgLayoutAsInt() const {
+    SmallVector<int64_t> getEffectiveSgLayoutAsInt() const {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
-      if (auto layout = parent.getSgLayoutAsInt()) {
+      auto layout = parent.getEffectiveSgLayoutAsInt();
+      if (layout.size()) {
         ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
-        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(*layout), dims);
+        return XeGPUDialect::slice(ArrayRef<int64_t>(layout), dims);
       }
-      return std::nullopt;
+      return {};
     }
 
     /// Returns the SgData of the attribute, computed by applying
     /// the slice dimensions to the underlying LayoutAttr.
-    std::optional<SmallVector<int64_t>> getSgDataAsInt() const {
+    SmallVector<int64_t> getEffectiveSgDataAsInt() const {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
-      if (auto data = parent.getSgDataAsInt()) {
+      auto data = parent.getEffectiveSgDataAsInt();
+      if (data.size()) {
         ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
-        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(*data), dims);
+        return XeGPUDialect::slice(ArrayRef<int64_t>(data), dims);
       }
-      return std::nullopt;
+      return {};
+    }
+
+    /// Returns the InstData of the attribute, computed by applying
+    /// the slice dimensions to the underlying LayoutAttr.
+    SmallVector<int64_t> getEffectiveInstDataAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      auto inst = parent.getEffectiveInstDataAsInt();
+      if (inst.size()) {
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(inst), dims);
+      }
+      return {};
+    }
+
+    /// Returns the LaneLayout of the attribute, computed by applying
+    /// the slice dimensions to the underlying LayoutAttr.
+    SmallVector<int64_t> getEffectiveLaneLayoutAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      auto layout = parent.getEffectiveLaneLayoutAsInt();
+      if (layout.size()) {
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(layout), dims);
+      }
+      return {};
+    }
+
+    /// Returns the LaneData of the attribute, computed by applying
+    /// the slice dimensions to the underlying LayoutAttr.
+    SmallVector<int64_t> getEffectiveLaneDataAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      auto data = parent.getEffectiveLaneDataAsInt();
+      if (data.size()) {
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(data), dims);
+      }
+      return {};
     }
 
     SliceAttr dropSgLayoutAndData() {
@@ -519,6 +651,9 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     /// multiple blocks according to round-robin distribution rules.
     FailureOr<SmallVector<SmallVector<Value>>>
     getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+
+    /// Check if this is slice of some other layout.
+    bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
 
   }];
 

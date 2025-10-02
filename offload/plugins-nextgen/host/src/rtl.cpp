@@ -131,8 +131,8 @@ private:
 struct GenELF64DeviceImageTy : public DeviceImageTy {
   /// Create the GenELF64 image with the id and the target image pointer.
   GenELF64DeviceImageTy(int32_t ImageId, GenericDeviceTy &Device,
-                        const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, Device, TgtImage), DynLib() {}
+                        std::unique_ptr<MemoryBuffer> &&TgtImage)
+      : DeviceImageTy(ImageId, Device, std::move(TgtImage)), DynLib() {}
 
   /// Getter and setter for the dynamic library.
   DynamicLibrary &getDynamicLibrary() { return DynLib; }
@@ -189,11 +189,12 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error setContext() override { return Plugin::success(); }
 
   /// Load the binary image into the device and allocate an image object.
-  Expected<DeviceImageTy *> loadBinaryImpl(const __tgt_device_image *TgtImage,
-                                           int32_t ImageId) override {
+  Expected<DeviceImageTy *>
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
+                 int32_t ImageId) override {
     // Allocate and initialize the image object.
     GenELF64DeviceImageTy *Image = Plugin.allocate<GenELF64DeviceImageTy>();
-    new (Image) GenELF64DeviceImageTy(ImageId, *this, TgtImage);
+    new (Image) GenELF64DeviceImageTy(ImageId, *this, std::move(TgtImage));
 
     // Create a temporary file.
     char TmpFileName[] = "/tmp/tmpfile_XXXXXX";
@@ -239,7 +240,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory. Use std::malloc in all cases.
-  void *allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
     if (Size == 0)
       return nullptr;
 
@@ -249,7 +250,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     case TARGET_ALLOC_DEVICE:
     case TARGET_ALLOC_HOST:
     case TARGET_ALLOC_SHARED:
-    case TARGET_ALLOC_DEVICE_NON_BLOCKING:
       MemAlloc = std::malloc(Size);
       break;
     }
@@ -257,9 +257,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Free the memory. Use std::free in all cases.
-  int free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, TargetAllocTy Kind) override {
     std::free(TgtPtr);
-    return OFFLOAD_SUCCESS;
+    return Plugin::success();
   }
 
   /// This plugin does nothing to lock buffers. Do not return an error, just
@@ -307,6 +307,21 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   /// operations. This is a no-op for Host devices as operations inserted into
   /// a queue are in-order.
   Error dataFence(__tgt_async_info *Async) override {
+    return Plugin::success();
+  }
+
+  Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
+                     int64_t Size,
+                     AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    if (PatternSize == 1) {
+      std::memset(TgtPtr, *static_cast<const char *>(PatternPtr), Size);
+    } else {
+      for (unsigned int Step = 0; Step < Size; Step += PatternSize) {
+        auto *Dst = static_cast<char *>(TgtPtr) + Step;
+        std::memcpy(Dst, PatternPtr, PatternSize);
+      }
+    }
+
     return Plugin::success();
   }
 
@@ -358,6 +373,10 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
     return true;
   }
+  Expected<bool> isEventCompleteImpl(void *Event,
+                                     AsyncInfoWrapperTy &AsyncInfo) override {
+    return true;
+  }
   Error syncEventImpl(void *EventPtr) override { return Plugin::success(); }
 
   /// Print information about the device.
@@ -368,7 +387,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// This plugin should not setup the device environment or memory pool.
-  virtual bool shouldSetupDeviceEnvironment() const override { return false; };
   virtual bool shouldSetupDeviceMemoryPool() const override { return false; };
 
   /// Getters and setters for stack size and heap size not relevant.

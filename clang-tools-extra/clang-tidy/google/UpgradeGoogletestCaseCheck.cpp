@@ -1,4 +1,4 @@
-//===--- UpgradeGoogletestCaseCheck.cpp - clang-tidy ----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -308,7 +308,7 @@ void UpgradeGoogletestCaseCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     if (IsInInstantiation) {
-      if (MatchedTemplateLocations.count(ReplacementRange.getBegin()) == 0) {
+      if (!MatchedTemplateLocations.contains(ReplacementRange.getBegin())) {
         // For each location matched in a template instantiation, we check if
         // the location can also be found in `MatchedTemplateLocations`. If it
         // is not found, that means the expression did not create a match

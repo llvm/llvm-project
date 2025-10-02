@@ -20,26 +20,15 @@ define i32 @fold_urem_positive_odd(i32 %x) {
 }
 
 define i32 @fold_urem_positive_even(i32 %x) {
-; CHECK-SD-LABEL: fold_urem_positive_even:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #16323 // =0x3fc3
-; CHECK-SD-NEXT:    mov w9, #1060 // =0x424
-; CHECK-SD-NEXT:    movk w8, #63310, lsl #16
-; CHECK-SD-NEXT:    umull x8, w0, w8
-; CHECK-SD-NEXT:    lsr x8, x8, #42
-; CHECK-SD-NEXT:    msub w0, w8, w9, w0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fold_urem_positive_even:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #16323 // =0x3fc3
-; CHECK-GI-NEXT:    mov w9, #1060 // =0x424
-; CHECK-GI-NEXT:    movk w8, #63310, lsl #16
-; CHECK-GI-NEXT:    umull x8, w0, w8
-; CHECK-GI-NEXT:    lsr x8, x8, #32
-; CHECK-GI-NEXT:    lsr w8, w8, #10
-; CHECK-GI-NEXT:    msub w0, w8, w9, w0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fold_urem_positive_even:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #16323 // =0x3fc3
+; CHECK-NEXT:    mov w9, #1060 // =0x424
+; CHECK-NEXT:    movk w8, #63310, lsl #16
+; CHECK-NEXT:    umull x8, w0, w8
+; CHECK-NEXT:    lsr x8, x8, #42
+; CHECK-NEXT:    msub w0, w8, w9, w0
+; CHECK-NEXT:    ret
   %1 = urem i32 %x, 1060
   ret i32 %1
 }

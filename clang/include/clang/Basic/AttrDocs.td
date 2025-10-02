@@ -13,16 +13,16 @@
 // version control.
 //
 // To run clang-tblgen to generate the .rst file:
-// clang-tblgen -gen-attr-docs -I <root>/llvm/tools/clang/include
-//   <root>/llvm/tools/clang/include/clang/Basic/Attr.td -o
-//   <root>/llvm/tools/clang/docs/AttributeReference.rst
+// clang-tblgen -gen-attr-docs -I <root>/clang/include
+//   <root>/clang/include/clang/Basic/Attr.td -o
+//   <root>/clang/docs/AttributeReference.rst
 //
 // To run sphinx to generate the .html files (note that sphinx-build must be
 // available on the PATH):
 // Windows (from within the clang\docs directory):
 //   make.bat html
-// Non-Windows (from within the clang\docs directory):
-//   sphinx-build -b html _build/html
+// Non-Windows (from within the clang/docs directory):
+//   sphinx-build -b html . _build/html
 
 def GlobalDocumentation {
   code Intro =[{..
@@ -971,6 +971,21 @@ An example of how to use ``alloc_size``
     assert(__builtin_object_size(p, 0) == 100);
     void *const a = my_calloc(20, 5);
     assert(__builtin_object_size(a, 0) == 100);
+  }
+
+When ``-Walloc-size`` is enabled, this attribute allows the compiler to
+diagnose cases when the allocated memory is insufficient for the size of the
+type the returned pointer is cast to.
+
+.. code-block:: c
+
+  void *my_malloc(int a) __attribute__((alloc_size(1)));
+  void consumer_func(int *);
+
+  int main() {
+    int *ptr = my_malloc(sizeof(int)); // no warning
+    int *w = my_malloc(1); // warning: allocation of insufficient size '1' for type 'int' with size '4'
+    consumer_func(my_malloc(1)); // warning: allocation of insufficient size '1' for type 'int' with size '4'
   }
 
 .. Note:: This attribute works differently in clang than it does in GCC.
@@ -3614,6 +3629,7 @@ instrumentations should not be applied.
 
 The attribute takes a list of string literals with the following accepted
 values:
+
 * all values accepted by ``-fno-sanitize=``;
 * ``coverage``, to disable SanitizerCoverage instrumentation.
 
@@ -3737,33 +3753,33 @@ functions intended for different purposes have distinct CFI identities.
 
   // Header file - define convenience macros
   #define __cfi_salt(s) __attribute__((cfi_salt(s)))
-  
+
   // Typedef for regular function pointers
   typedef int (*fptr_t)(void);
-  
-  // Typedef for salted function pointers  
+
+  // Typedef for salted function pointers
   typedef int (*fptr_salted_t)(void) __cfi_salt("pepper");
-  
+
   struct widget_ops {
     fptr_t init;          // Regular CFI
     fptr_salted_t exec;   // Salted CFI
     fptr_t cleanup;       // Regular CFI
   };
-  
+
   // Function implementations
   static int widget_init(void) { return 0; }
   static int widget_exec(void) __cfi_salt("pepper") { return 1; }
   static int widget_cleanup(void) { return 0; }
-  
+
   static struct widget_ops ops = {
     .init = widget_init,      // OK - compatible types
     .exec = widget_exec,      // OK - both use "pepper" salt
     .cleanup = widget_cleanup // OK - compatible types
   };
-  
+
   // Using C++11 attribute syntax
   void secure_callback(void) [[clang::cfi_salt("secure")]];
-  
+
   // This would cause a compilation error:
   // fptr_t bad_ptr = widget_exec;  // Error: incompatible types
 
@@ -3771,11 +3787,11 @@ functions intended for different purposes have distinct CFI identities.
 
 * The salt string can contain non-NULL ASCII characters, including spaces and
   quotes
-* This attribute only applies to function types; using it on non-function 
+* This attribute only applies to function types; using it on non-function
   types will generate a warning
-* All declarations and definitions of the same function must use identical 
+* All declarations and definitions of the same function must use identical
   salt values
-* The attribute affects type compatibility during compilation and CFI hash 
+* The attribute affects type compatibility during compilation and CFI hash
   generation during code generation
   }];
 }
@@ -6704,7 +6720,7 @@ if omitted.``Section`` defaults  to the ``-fpatchable-function-entry`` section n
 set, or to ``__patchable_function_entries`` otherwise.
 
 This attribute is only supported on
-aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64 targets.
+aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64/ppc64le targets.
 For ppc/ppc64 targets, AIX is still not supported.
 }];
 }
@@ -8352,6 +8368,23 @@ flag.
   }];
 }
 
+def DocHLSLSemantics : DocumentationCategory<"HLSL Semantics"> {
+  let Content = [{
+A semantic is a string attached to a shader input or output that conveys
+information about the intended use of a parameter. Semantics are required on
+all variables passed between shader stages. The syntax for adding a semantic
+to a shader variable is shown here (Variable Syntax (DirectX HLSL)).
+
+In general, data passed between pipeline stages is completely generic and is
+not uniquely interpreted by the system; arbitrary semantics are allowed which
+have no special meaning. Parameters (in Direct3D 10 and later) which contain
+these special semantics are referred to as System-Value Semantics.
+
+More information is available here:
+https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics
+  }];
+}
+
 def WaveSizeDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8589,7 +8622,7 @@ randomized.
 }
 
 def HLSLSV_GroupThreadIDDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocHLSLSemantics;
   let Content = [{
 The ``SV_GroupThreadID`` semantic, when applied to an input parameter, specifies which
 individual thread within a thread group is executing in. This attribute is
@@ -8600,7 +8633,7 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
 }
 
 def HLSLSV_GroupIDDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocHLSLSemantics;
   let Content = [{
 The ``SV_GroupID`` semantic, when applied to an input parameter, specifies which
 thread group a shader is executing in. This attribute is only supported in compute shaders.
@@ -8610,7 +8643,7 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
 }
 
 def HLSLSV_GroupIndexDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocHLSLSemantics;
   let Content = [{
 The ``SV_GroupIndex`` semantic, when applied to an input parameter, specifies a
 data binding to map the group index to the specified parameter. This attribute
@@ -8667,7 +8700,7 @@ The full documentation is available here: https://learn.microsoft.com/en-us/wind
 }
 
 def HLSLSV_DispatchThreadIDDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocHLSLSemantics;
   let Content = [{
 The ``SV_DispatchThreadID`` semantic, when applied to an input parameter,
 specifies a data binding to map the global thread offset within the Dispatch
@@ -8682,7 +8715,7 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
 }
 
 def HLSLSV_PositionDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocHLSLSemantics;
   let Content = [{
 The ``SV_Position`` semantic, when applied to an input parameter in a pixel
 shader, contains the location of the pixel center (x, y) in screen space.

@@ -6,7 +6,7 @@
 // RUN:     bugprone-easily-swappable-parameters.QualifiersMix: 0, \
 // RUN:     bugprone-easily-swappable-parameters.ModelImplicitConversions: 1, \
 // RUN:     bugprone-easily-swappable-parameters.SuppressParametersUsedTogether: 0, \
-// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold: 0 \
+// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityThreshold: 0 \
 // RUN:  }}' --
 
 void implicitDoesntBreakOtherStuff(int A, int B) {}

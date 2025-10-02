@@ -38,6 +38,13 @@ static cl::opt<bool>
     EnableRsqrtOpt("nvptx-rsqrt-approx-opt", cl::init(true), cl::Hidden,
                    cl::desc("Enable reciprocal sqrt optimization"));
 
+// FIXME: This is a WAR to recover lost performance from #155024.
+// We still need to investigate the regression and find a more permanent
+// solution.
+static cl::opt<bool> EnableMADWide("nvptx-mad-wide-opt", cl::init(false),
+                                   cl::Hidden,
+                                   cl::desc("Enable MAD wide optimization"));
+
 /// createNVPTXISelDag - This pass converts a legalized DAG into a
 /// NVPTX-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createNVPTXISelDag(NVPTXTargetMachine &TM,
@@ -83,6 +90,8 @@ bool NVPTXDAGToDAGISel::allowFMA() const {
 }
 
 bool NVPTXDAGToDAGISel::doRsqrtOpt() const { return EnableRsqrtOpt; }
+
+bool NVPTXDAGToDAGISel::doMADWideOpt() const { return EnableMADWide; }
 
 /// Select - Select instructions not customized! Used for
 /// expanded, promoted and normal instructions.
@@ -170,6 +179,10 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     }
     break;
   }
+  case NVPTXISD::ATOMIC_CMP_SWAP_B128:
+  case NVPTXISD::ATOMIC_SWAP_B128:
+    selectAtomicSwap128(N);
+    return;
   case ISD::FADD:
   case ISD::FMUL:
   case ISD::FSUB:
@@ -1014,6 +1027,7 @@ pickOpcodeForVT(MVT::SimpleValueType VT, std::optional<unsigned> Opcode_i16,
   case MVT::f32:
     return Opcode_i32;
   case MVT::v2f32:
+  case MVT::v2i32:
   case MVT::i64:
   case MVT::f64:
     return Opcode_i64;
@@ -1097,11 +1111,6 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   if (PlainLoad && PlainLoad->isIndexed())
     return false;
 
-  const EVT LoadedEVT = LD->getMemoryVT();
-  if (!LoadedEVT.isSimple())
-    return false;
-  const MVT LoadedVT = LoadedEVT.getSimpleVT();
-
   // Address Space Setting
   const auto CodeAddrSpace = getAddrSpace(LD);
   if (canLowerToLDG(*LD, *Subtarget, CodeAddrSpace))
@@ -1111,7 +1120,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   SDValue Chain = N->getOperand(0);
   const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, LD);
 
-  const unsigned FromTypeWidth = LoadedVT.getSizeInBits();
+  const unsigned FromTypeWidth = LD->getMemoryVT().getSizeInBits();
 
   // Vector Setting
   const unsigned FromType =
@@ -1165,9 +1174,6 @@ static unsigned getStoreVectorNumElts(SDNode *N) {
 
 bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   MemSDNode *LD = cast<MemSDNode>(N);
-  const EVT MemEVT = LD->getMemoryVT();
-  if (!MemEVT.isSimple())
-    return false;
 
   // Address Space Setting
   const auto CodeAddrSpace = getAddrSpace(LD);
@@ -1237,10 +1243,6 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 }
 
 bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
-  const EVT LoadedEVT = LD->getMemoryVT();
-  if (!LoadedEVT.isSimple())
-    return false;
-
   SDLoc DL(LD);
 
   unsigned ExtensionType;
@@ -1357,10 +1359,6 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   if (PlainStore && PlainStore->isIndexed())
     return false;
 
-  const EVT StoreVT = ST->getMemoryVT();
-  if (!StoreVT.isSimple())
-    return false;
-
   // Address Space Setting
   const auto CodeAddrSpace = getAddrSpace(ST);
 
@@ -1369,7 +1367,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, ST);
 
   // Vector Setting
-  const unsigned ToTypeWidth = StoreVT.getSimpleVT().getSizeInBits();
+  const unsigned ToTypeWidth = ST->getMemoryVT().getSizeInBits();
 
   // Create the machine instruction DAG
   SDValue Value = PlainStore ? PlainStore->getValue() : AtomicStore->getVal();
@@ -1406,8 +1404,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
 
 bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   MemSDNode *ST = cast<MemSDNode>(N);
-  const EVT StoreVT = ST->getMemoryVT();
-  assert(StoreVT.isSimple() && "Store value is not simple");
+  const unsigned TotalWidth = ST->getMemoryVT().getSizeInBits();
 
   // Address Space Setting
   const auto CodeAddrSpace = getAddrSpace(ST);
@@ -1419,10 +1416,6 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   SDLoc DL(ST);
   SDValue Chain = ST->getChain();
   const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, ST);
-
-  // Type Setting: toType + toTypeWidth
-  // - for integer type, always use 'u'
-  const unsigned TotalWidth = StoreVT.getSimpleVT().getSizeInBits();
 
   const unsigned NumElts = getStoreVectorNumElts(ST);
 
@@ -2336,4 +2329,31 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
     return true;
   }
   }
+}
+
+void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
+  MemSDNode *AN = cast<MemSDNode>(N);
+  SDLoc dl(N);
+
+  const SDValue Chain = N->getOperand(0);
+  const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
+  SmallVector<SDValue, 5> Ops{Base, Offset};
+  Ops.append(N->op_begin() + 2, N->op_end());
+  Ops.append({
+      getI32Imm(getMemOrder(AN), dl),
+      getI32Imm(getAtomicScope(AN), dl),
+      getI32Imm(getAddrSpace(AN), dl),
+      Chain,
+  });
+
+  assert(N->getOpcode() == NVPTXISD::ATOMIC_CMP_SWAP_B128 ||
+         N->getOpcode() == NVPTXISD::ATOMIC_SWAP_B128);
+  unsigned Opcode = N->getOpcode() == NVPTXISD::ATOMIC_SWAP_B128
+                        ? NVPTX::ATOM_EXCH_B128
+                        : NVPTX::ATOM_CAS_B128;
+
+  auto *ATOM = CurDAG->getMachineNode(Opcode, dl, N->getVTList(), Ops);
+  CurDAG->setNodeMemRefs(ATOM, AN->getMemOperand());
+
+  ReplaceNode(N, ATOM);
 }

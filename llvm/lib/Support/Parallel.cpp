@@ -60,7 +60,7 @@ public:
     auto &Thread0 = Threads[0];
     Thread0 = std::thread([this, S] {
       for (unsigned I = 1; I < ThreadCount; ++I) {
-        Threads.emplace_back([=] { work(S, I); });
+        Threads.emplace_back([this, S, I] { work(S, I); });
         if (Stop)
           break;
       }

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -debug-only=gcn-subtarget -o /dev/null %s 2>&1 | FileCheck --check-prefix=WARN %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx700 -debug-only=gcn-subtarget -o /dev/null %s 2>&1 | FileCheck --check-prefix=WARN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -debug-only=gcn-subtarget -filetype=null %s 2>&1 | FileCheck --check-prefix=WARN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx700 -debug-only=gcn-subtarget -filetype=null %s 2>&1 | FileCheck --check-prefix=WARN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=OFF %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=OFF %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=OFF %s
