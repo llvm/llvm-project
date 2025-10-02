@@ -214,10 +214,11 @@ static cl::opt<bool> MemProfRequireDefinitionForPromotion(
     "memprof-require-definition-for-promotion", cl::init(false), cl::Hidden,
     cl::desc(
         "Require target function definition when promoting indirect calls"));
-} // namespace llvm
 
 extern cl::opt<bool> MemProfReportHintedSizes;
 extern cl::opt<unsigned> MinClonedColdBytePercent;
+
+} // namespace llvm
 
 namespace {
 /// CRTP base for graphs built from either IR or ThinLTO summary index.
@@ -3980,7 +3981,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
 void ModuleCallsiteContextGraph::updateAllocationCall(
     CallInfo &Call, AllocationType AllocType) {
   std::string AllocTypeString = getAllocTypeAttributeString(AllocType);
-  removeAnyExistingAmbiguousAttribute(cast<CallBase>(Call.call()));
   auto A = llvm::Attribute::get(Call.call()->getFunction()->getContext(),
                                 "memprof", AllocTypeString);
   cast<CallBase>(Call.call())->addFnAttr(A);
@@ -5642,7 +5642,6 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
               // clone J-1 (J==0 is the original clone and does not have a VMaps
               // entry).
               CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
-            removeAnyExistingAmbiguousAttribute(CBClone);
             CBClone->addFnAttr(A);
             ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", CBClone)
                      << ore::NV("AllocationCall", CBClone) << " in clone "

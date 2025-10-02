@@ -2750,6 +2750,9 @@ def fno_unsafe_math_optimizations : Flag<["-"], "fno-unsafe-math-optimizations">
   Group<f_Group>;
 def fassociative_math : Flag<["-"], "fassociative-math">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
 def fno_associative_math : Flag<["-"], "fno-associative-math">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
+def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">,
+  Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Disable optimization of MOD for REAL types in presence of -ffast-math">;
 defm reciprocal_math : BoolFOption<"reciprocal-math",
   LangOpts<"AllowRecip">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option, FC1Option, FlangOption],
@@ -9473,7 +9476,7 @@ def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
          "lib_6_3, lib_6_4, lib_6_5, lib_6_6, lib_6_7, lib_6_x,"
          "ms_6_5, ms_6_6, ms_6_7,"
          "as_6_5, as_6_6, as_6_7,"
-         "rootsig_1_0, rootsig_1_1">;
+         "rootsig_1_0, rootsig_1_1, rootsig_1_2">;
 def emit_pristine_llvm : DXCFlag<"emit-pristine-llvm">,
   HelpText<"Emit pristine LLVM IR from the frontend by not running any LLVM passes at all."
            "Same as -S + -emit-llvm + -disable-llvm-passes.">;
@@ -9486,9 +9489,9 @@ def fdx_rootsignature_version :
   Group<dxc_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Root Signature Version">,
-  Values<"rootsig_1_0,rootsig_1_1">,
+  Values<"rootsig_1_0,rootsig_1_1,rootsig_1_2">,
   NormalizedValuesScope<"llvm::dxbc::RootSignatureVersion">,
-  NormalizedValues<["V1_0", "V1_1"]>,
+  NormalizedValues<["V1_0", "V1_1", "V1_2"]>,
   MarshallingInfoEnum<LangOpts<"HLSLRootSigVer">, "V1_1">;
 def dxc_rootsig_ver :
   Separate<["/", "-"], "force-rootsig-ver">,

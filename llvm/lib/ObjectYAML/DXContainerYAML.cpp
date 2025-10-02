@@ -154,7 +154,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
         if (Error E = readDescriptorRanges<dxbc::RTS0::v1::DescriptorRange>(
                 Header, RootSigDesc, DTV))
           return std::move(E);
-      } else if (Version == 2) {
+      } else if (Version == 2 || Version == 3) {
         if (Error E = readDescriptorRanges<dxbc::RTS0::v2::DescriptorRange>(
                 Header, RootSigDesc, DTV))
           return std::move(E);
