@@ -600,11 +600,16 @@ public:
 
   bool IsDummyTarget() const { return m_is_dummy_target; }
 
-  /// Get the unique ID for this target.
+  /// Get the globally unique ID for this target.
+  ///
+  /// This ID is unique across all debugger instances and all targets,
+  /// not just within this debugger's target list. The ID is assigned
+  /// during target construction and remains constant for the target's lifetime.
+  /// The first target created (typically the dummy target) gets ID 1.
   ///
   /// \return
-  ///     The unique ID for this target.
-  lldb::user_id_t GetUniqueID() const { return m_target_unique_id; }
+  ///     The globally unique ID for this target.
+  lldb::user_id_t GetGloballyUniqueID() const { return m_target_unique_id; }
 
   const std::string &GetLabel() const { return m_label; }
 

@@ -357,7 +357,12 @@ public:
 
   const char *GetLabel() const;
 
-  lldb::user_id_t GetUniqueID() const;
+  /// Get the globally unique ID for this target.
+  ///
+  /// \return
+  ///     The globally unique ID for this target, or LLDB_INVALID_TARGET_ID if
+  ///     the target is invalid.
+  lldb::user_id_t GetGloballyUniqueID() const;
 
   SBError SetLabel(const char *label);
 
@@ -660,15 +665,14 @@ public:
       const char *symbol_name,
       uint32_t
           name_type_mask, // Logical OR one or more FunctionNameType enum bits
-      const SBFileSpecList &module_list,
-      const SBFileSpecList &comp_unit_list);
+      const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list);
 
   lldb::SBBreakpoint BreakpointCreateByName(
       const char *symbol_name,
       uint32_t
           name_type_mask, // Logical OR one or more FunctionNameType enum bits
-      lldb::LanguageType symbol_language,
-      const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list);
+      lldb::LanguageType symbol_language, const SBFileSpecList &module_list,
+      const SBFileSpecList &comp_unit_list);
 
   lldb::SBBreakpoint BreakpointCreateByName(
       const char *symbol_name,
@@ -705,23 +709,21 @@ public:
       const char *symbol_name[], uint32_t num_names,
       uint32_t
           name_type_mask, // Logical OR one or more FunctionNameType enum bits
-      const SBFileSpecList &module_list,
-      const SBFileSpecList &comp_unit_list);
-
-  lldb::SBBreakpoint BreakpointCreateByNames(
-      const char *symbol_name[], uint32_t num_names,
-      uint32_t
-          name_type_mask, // Logical OR one or more FunctionNameType enum bits
-      lldb::LanguageType symbol_language,
       const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list);
 
   lldb::SBBreakpoint BreakpointCreateByNames(
       const char *symbol_name[], uint32_t num_names,
       uint32_t
           name_type_mask, // Logical OR one or more FunctionNameType enum bits
-      lldb::LanguageType symbol_language,
-      lldb::addr_t offset, const SBFileSpecList &module_list,
+      lldb::LanguageType symbol_language, const SBFileSpecList &module_list,
       const SBFileSpecList &comp_unit_list);
+
+  lldb::SBBreakpoint BreakpointCreateByNames(
+      const char *symbol_name[], uint32_t num_names,
+      uint32_t
+          name_type_mask, // Logical OR one or more FunctionNameType enum bits
+      lldb::LanguageType symbol_language, lldb::addr_t offset,
+      const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list);
 #endif
 
   lldb::SBBreakpoint BreakpointCreateByRegex(const char *symbol_name_regex,
@@ -780,10 +782,8 @@ public:
   ///     An SBBreakpoint that will set locations based on the logic in the
   ///     resolver's search callback.
   lldb::SBBreakpoint BreakpointCreateFromScript(
-      const char *class_name,
-      SBStructuredData &extra_args,
-      const SBFileSpecList &module_list,
-      const SBFileSpecList &file_list,
+      const char *class_name, SBStructuredData &extra_args,
+      const SBFileSpecList &module_list, const SBFileSpecList &file_list,
       bool request_hardware = false);
 
   /// Read breakpoints from source_file and return the newly created

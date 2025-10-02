@@ -313,17 +313,17 @@ class DebuggerAPITestCase(TestBase):
         self.assertTrue(target.IsValid())
 
         # Find the target using its unique ID
-        unique_id = target.GetUniqueID()
+        unique_id = target.GetGloballyUniqueID()
         self.assertNotEqual(unique_id, 0)
         found_target = self.dbg.FindTargetWithUniqueID(unique_id)
         self.assertTrue(found_target.IsValid())
         self.assertEqual(
             self.dbg.GetIndexOfTarget(target), self.dbg.GetIndexOfTarget(found_target)
         )
-        self.assertEqual(found_target.GetUniqueID(), unique_id)
+        self.assertEqual(found_target.GetGloballyUniqueID(), unique_id)
 
     def test_target_unique_id_uniqueness(self):
-        """Test that Target.GetUniqueID() returns unique values across multiple targets."""
+        """Test that Target.GetGloballyUniqueID() returns unique values across multiple targets."""
 
         # Create multiple targets and verify they all have unique IDs
         self.build()
@@ -335,7 +335,7 @@ class DebuggerAPITestCase(TestBase):
             target = self.dbg.CreateTarget(exe)
             self.assertTrue(target.IsValid())
 
-            unique_id = target.GetUniqueID()
+            unique_id = target.GetGloballyUniqueID()
             self.assertNotEqual(unique_id, 0)
 
             # Verify this ID hasn't been used before
@@ -348,10 +348,10 @@ class DebuggerAPITestCase(TestBase):
 
         # Verify all targets can still be found by their IDs
         for target in targets:
-            unique_id = target.GetUniqueID()
+            unique_id = target.GetGloballyUniqueID()
             found = self.dbg.FindTargetWithUniqueID(unique_id)
             self.assertTrue(found.IsValid())
-            self.assertEqual(found.GetUniqueID(), unique_id)
+            self.assertEqual(found.GetGloballyUniqueID(), unique_id)
 
     def test_target_unique_id_uniqueness_after_deletion(self):
         """Test finding targets have unique ID after target deletion."""
@@ -363,8 +363,8 @@ class DebuggerAPITestCase(TestBase):
         self.assertTrue(target1.IsValid())
         self.assertTrue(target2.IsValid())
 
-        unique_id1 = target1.GetUniqueID()
-        unique_id2 = target2.GetUniqueID()
+        unique_id1 = target1.GetGloballyUniqueID()
+        unique_id2 = target2.GetGloballyUniqueID()
         self.assertNotEqual(unique_id1, 0)
         self.assertNotEqual(unique_id2, 0)
         self.assertNotEqual(unique_id1, unique_id2)
@@ -390,10 +390,40 @@ class DebuggerAPITestCase(TestBase):
         # Target list index of target3 should be the same as target2's
         # since it was deleted, but it should have a distinct unique ID
         target3_index = self.dbg.GetIndexOfTarget(target3)
-        unique_id3 = target3.GetUniqueID()
+        unique_id3 = target3.GetGloballyUniqueID()
         self.assertEqual(target3_index, target2_index)
         self.assertNotEqual(unique_id3, unique_id2)
         self.assertNotEqual(unique_id3, unique_id1)
         # Make sure we can find the new target
-        found_target3 = self.dbg.FindTargetWithUniqueID(target3.GetUniqueID())
+        found_target3 = self.dbg.FindTargetWithUniqueID(target3.GetGloballyUniqueID())
         self.assertTrue(found_target3.IsValid())
+
+    def test_target_globally_unique_id_across_debuggers(self):
+        """Test that target IDs are globally unique across multiple debuggers."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        # Create two debuggers with targets each
+        debugger1 = lldb.SBDebugger.Create()
+        debugger2 = lldb.SBDebugger.Create()
+        
+        # Create 2 targets per debugger
+        targets_d1 = [debugger1.CreateTarget(exe), debugger1.CreateTarget(exe)]
+        targets_d2 = [debugger2.CreateTarget(exe), debugger2.CreateTarget(exe)]
+        targets = targets_d1 + targets_d2
+        
+        # Get all IDs and verify they're unique
+        ids = [target.GetGloballyUniqueID() for target in targets]
+        self.assertEqual(len(set(ids)), len(ids), f"IDs should be globally unique: {ids}")
+        self.assertTrue(all(uid > 0 for uid in ids), "All IDs should be non-zero")
+        
+        # Verify targets can be found by their IDs in respective debuggers
+        for debugger, target_pair in [(debugger1, targets[:2]), (debugger2, targets[2:])]:
+            for target in target_pair:
+                found = debugger.FindTargetWithUniqueID(target.GetGloballyUniqueID())
+                self.assertTrue(found.IsValid(), "Target should be found by its unique ID")
+                self.assertEqual(found.GetGloballyUniqueID(), target.GetGloballyUniqueID())
+
+        # Clean up
+        lldb.SBDebugger.Destroy(debugger1)
+        lldb.SBDebugger.Destroy(debugger2)
