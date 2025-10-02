@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -fnative-half-type -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 struct S {
   int X;
@@ -244,4 +244,69 @@ struct Empty {
 export void call12() {
   int4 I = {1,2,3,4};
   Empty E = (Empty)I;
+}
+
+struct MoreBFields {
+  int A;
+  uint64_t B: 60;
+  float C;
+  uint16_t D: 10;
+  uint16_t E: 6;
+  int : 32;
+  double F;
+  int : 8;
+  uint G;
+};
+
+// more complicated bitfield case
+// CHECK-LABEL: call13
+// CHECK: [[AA:%.*]] = alloca i32, align 4
+// CHECK-NEXT: [[MBF:%.*]] = alloca %struct.MoreBFields, align 1
+// CHECK-NEXT: store i32 %A, ptr [[AA]], align 4
+// CHECK-NEXT: [[Z:%.*]] = load i32, ptr [[AA]], align 4
+// get the gep for the struct.
+// CHECK-NEXT: [[Gep:%.*]] = getelementptr inbounds %struct.MoreBFields, ptr [[MBF]], i32 0
+// CHECK-NEXT: [[FieldB:%.*]] = getelementptr inbounds nuw %struct.MoreBFields, ptr [[Gep]], i32 0, i32 1
+// D and E share the same field index
+// CHECK-NEXT: [[FieldD:%.*]] = getelementptr inbounds nuw %struct.MoreBFields, ptr [[Gep]], i32 0, i32 3
+// CHECK-NEXT: [[FieldE:%.*]] = getelementptr inbounds nuw %struct.MoreBFields, ptr [[Gep]], i32 0, i32 3
+// CHECK-NEXT: [[FieldA:%.*]] = getelementptr inbounds %struct.MoreBFields, ptr [[MBF]], i32 0, i32 0
+// CHECK-NEXT: [[FieldC:%.*]] = getelementptr inbounds %struct.MoreBFields, ptr [[MBF]], i32 0, i32 2
+// CHECK-NEXT: [[FieldF:%.*]] = getelementptr inbounds %struct.MoreBFields, ptr [[MBF]], i32 0, i32 5
+// CHECK-NEXT: [[FieldG:%.*]] = getelementptr inbounds %struct.MoreBFields, ptr [[MBF]], i32 0, i32 7
+// store int A into field A
+// CHECK-NEXT: store i32 [[Z]], ptr [[FieldA]], align 4
+// store int A in bitField B, do necessary conversions
+// CHECK-NEXT: [[Conv:%.*]] = sext i32 [[Z]] to i64
+// CHECK-NEXT: [[BFL:%.*]] = load i64, ptr [[FieldB]], align 1
+// CHECK-NEXT: [[BFV:%.*]] = and i64 [[Conv]], 1152921504606846975
+// CHECK-NEXT: [[BFC:%.*]] = and i64 [[BFL]], -1152921504606846976
+// CHECK-NEXT: [[BFS:%.*]] = or i64 [[BFC]], [[BFV]]
+// CHECK-NEXT: store i64 [[BFS]], ptr [[FieldB]], align 1
+// store int A into field C
+// CHECK-NEXT: [[Conv5:%.*]] = sitofp i32 [[Z]] to float
+// CHECK-NEXT: store float [[Conv5]], ptr [[FieldC]], align 4
+// store int A into bitfield D
+// CHECK-NEXT: [[Conv6:%.*]] = trunc i32 [[Z]] to i16
+// CHECK-NEXT: [[FDL:%.*]] = load i16, ptr [[FieldD]], align 1
+// CHECK-NEXT: [[FDV:%.*]] = and i16 [[Conv6]], 1023
+// CHECK-NEXT: [[FDC:%.*]] = and i16 [[FDL]], -1024
+// CHECK-NEXT: [[FDS:%.*]] = or i16 [[FDC]], [[FDV]]
+// CHECK-NEXT: store i16 [[FDS]], ptr [[FieldD]], align 1
+// store int A into bitfield E;
+// CHECK-NEXT: [[Conv11:%.*]] = trunc i32 [[Z]] to i16
+// CHECK-NEXT: [[FEL:%.*]] = load i16, ptr [[FieldE]], align 1
+// CHECK-NEXT: [[FEV:%.*]] = and i16 [[Conv11]], 63
+// CHECK-NEXT: [[FESHL:%.*]] = shl i16 [[FEV]], 10
+// CHECK-NEXT: [[FEC:%.*]] = and i16 [[FEL]], 1023
+// CHECK-NEXT: [[FES:%.*]] = or i16 [[FEC]], [[FESHL]]
+// CHECK-NEXT: store i16 [[FES]], ptr [[FieldE]], align 1
+// store int A into field F
+// CHECK-NEXT: [[Conv16:%.*]] = sitofp i32 [[Z]] to double
+// CHECK-NEXT: store double [[Conv16]], ptr [[FieldF]], align 8
+// store int A into field G
+// CHECK-NEXT: store i32 [[Z]], ptr [[FieldG]], align 4
+// CHECK-NEXT: ret void
+export void call13(int A) {
+  MoreBFields MBF = (MoreBFields)A;
 }

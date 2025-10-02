@@ -54,18 +54,16 @@ struct S {
 
 // struct splats
 // CHECK-LABEL: define void {{.*}}call3
-// CHECK: [[A:%.*]] = alloca <1 x i32>, align 4
+// CHECK: [[AA:%.*]] = alloca i32, align 4
 // CHECK: [[s:%.*]] = alloca %struct.S, align 1
-// CHECK-NEXT: store <1 x i32> splat (i32 1), ptr [[A]], align 4
-// CHECK-NEXT: [[L:%.*]] = load <1 x i32>, ptr [[A]], align 4
-// CHECK-NEXT: [[VL:%.*]] = extractelement <1 x i32> [[L]], i32 0
+// CHECK-NEXT: store i32 %A, ptr [[AA]], align 4
+// CHECK-NEXT: [[L:%.*]] = load i32, ptr [[AA]], align 4
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 1
-// CHECK-NEXT: store i32 [[VL]], ptr [[G1]], align 4
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[VL]] to float
+// CHECK-NEXT: store i32 [[L]], ptr [[G1]], align 4
+// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[L]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G2]], align 4
-export void call3() {
-  int1 A = {1};
+export void call3(int A) {
   S s = (S)A;
 }
 
@@ -87,7 +85,7 @@ export void call5() {
 }
 
 struct BFields {
-  double D;
+  double DF;
   int E: 15;
   int : 8;
   float F;
@@ -110,9 +108,9 @@ struct Derived : BFields {
 // CHECK-NEXT: [[Gep3:%.*]] = getelementptr inbounds %struct.Derived, ptr [[D]], i32 0, i32 1
 // CHECK-NEXT: [[C:%.*]] = sitofp i32 [[B]] to double
 // CHECK-NEXT: store double [[C]], ptr [[Gep1]], align 8
-// CHECK-NEXT: [[D:%.*]] = trunc i32 [[B]] to i24
+// CHECK-NEXT: [[H:%.*]] = trunc i32 [[B]] to i24
 // CHECK-NEXT: [[BFL:%.*]] = load i24, ptr [[E]], align 1
-// CHECK-NEXT: [[BFV:%.*]] = and i24 [[D]], 32767
+// CHECK-NEXT: [[BFV:%.*]] = and i24 [[H]], 32767
 // CHECK-NEXT: [[BFC:%.*]] = and i24 [[BFL]], -32768
 // CHECK-NEXT: [[BFS:%.*]] = or i24 [[BFC]], [[BFV]]
 // CHECK-NEXT: store i24 [[BFS]], ptr [[E]], align 1

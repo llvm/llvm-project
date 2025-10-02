@@ -2400,7 +2400,8 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
   // if its a vector create a temp alloca to store into and return that
   if (auto *VecTy = DestTy->getAs<VectorType>()) {
     assert(LoadList.size() >= VecTy->getNumElements() &&
-           "Flattened type on RHS must have more elements than vector on LHS.");
+           "Flattened type on RHS must have the same number or more elements "
+           "than vector on LHS.");
     llvm::Value *V =
         CGF.Builder.CreateLoad(CGF.CreateIRTemp(DestTy, "flatcast.tmp"));
     // write to V.

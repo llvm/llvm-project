@@ -6803,7 +6803,7 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
       for (int64_t I = Size - 1; I > -1; I--) {
         llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
         IdxListCopy.push_back(llvm::ConstantInt::get(IdxTy, I));
-        WorkList.push_back({LVal, CAT->getElementType(), IdxListCopy});
+        WorkList.emplace_back(LVal, CAT->getElementType(), IdxListCopy);
       }
     } else if (const auto *RT = dyn_cast<RecordType>(T)) {
       const RecordDecl *Record = RT->getOriginalDecl()->getDefinitionOrSelf();
@@ -6826,8 +6826,7 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
           llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
           IdxListCopy.push_back(llvm::ConstantInt::get(
               IdxTy, 0)); // base struct should be at index zero
-          ReverseList.insert(ReverseList.end(),
-                             {LVal, Base->getType(), IdxListCopy});
+          ReverseList.emplace_back(LVal, Base->getType(), IdxListCopy);
         }
       }
 
@@ -6848,13 +6847,12 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
             RLValue = MakeAddrLValue(GEP, T);
           }
           LValue FieldLVal = EmitLValueForField(RLValue, FD, true);
-          ReverseList.insert(ReverseList.end(), {FieldLVal, FD->getType(), {}});
+          ReverseList.push_back({FieldLVal, FD->getType(), {}});
         } else {
           llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
           IdxListCopy.push_back(
               llvm::ConstantInt::get(IdxTy, Layout.getLLVMFieldNo(FD)));
-          ReverseList.insert(ReverseList.end(),
-                             {LVal, FD->getType(), IdxListCopy});
+          ReverseList.emplace_back(LVal, FD->getType(), IdxListCopy);
         }
       }
 
