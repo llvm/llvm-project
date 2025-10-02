@@ -354,6 +354,8 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
         CheckTypenameType(ElaboratedTypeKeyword::None, SourceLocation(),
                           SS.getWithLocInContext(Context), II, NameLoc, &TSI,
                           /*DeducedTSTContext=*/true);
+    if (T.isNull())
+      return ParsedType();
     return CreateParsedType(T, TSI);
   }
 
@@ -2393,7 +2395,10 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
         if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context))
           return ExprError(
               Diag((*ArraySize)->getBeginLoc(), diag::err_array_too_large)
-              << toString(*Value, 10) << (*ArraySize)->getSourceRange());
+              << toString(*Value, 10, Value->isSigned(),
+                          /*formatAsCLiteral=*/false, /*UpperCase=*/false,
+                          /*InsertSeparators=*/true)
+              << (*ArraySize)->getSourceRange());
       }
 
       KnownArraySize = Value->getZExtValue();

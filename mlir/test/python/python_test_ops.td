@@ -269,4 +269,9 @@ def ResultsVariadicOp : TestOp<"results_variadic"> {
   let results = (outs Variadic<AnyType>:$res);
 }
 
+def VariadicAndNormalRegionOp : TestOp<"variadic_and_normal_region"> {
+  let regions = (region AnyRegion:$region, VariadicRegion<AnyRegion>:$variadic);
+  let assemblyFormat = "$region $variadic attr-dict";
+}
+
 #endif // PYTHON_TEST_OPS

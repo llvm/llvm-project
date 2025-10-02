@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 def isWave32 : Predicate<"Subtarget->isWave32()">,
-  AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
+  AssemblerPredicate <(any_of FeatureWavefrontSize32,
+                              FeatureAssemblerPermissiveWavesize)>;
 def isWave64 : Predicate<"Subtarget->isWave64()">,
-  AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
+  AssemblerPredicate <(any_of FeatureWavefrontSize64,
+                              FeatureAssemblerPermissiveWavesize)>;
 
 class AMDGPUMnemonicAlias<string From, string To, string VariantName = "">
     : MnemonicAlias<From, To, VariantName>, PredicateControl;
@@ -2636,7 +2638,7 @@ class getAlign2RegOp<RegisterOperand RC> {
 }
 
 class getEquivalentAGPROperand<RegisterOperand RC> {
-  defvar Size = RC.RegClass.Size;
+  defvar Size = !cast<RegisterClass>(RC.RegClass).Size;
   RegisterOperand ret =
     !cond(!eq(Size, 32)   : RegisterOperand<AGPR_32>,
           !eq(Size, 64)   : RegisterOperand<AReg_64>,
@@ -2647,7 +2649,7 @@ class getEquivalentAGPROperand<RegisterOperand RC> {
 }
 
 class getEquivalentVGPROperand<RegisterOperand RC> {
-  defvar Size = RC.RegClass.Size;
+  defvar Size = !cast<RegisterClass>(RC.RegClass).Size;
   RegisterOperand ret =
     !cond(!eq(Size, 32)   : RegisterOperand<VGPR_32>,
           !eq(Size, 64)   : RegisterOperand<VReg_64>,
