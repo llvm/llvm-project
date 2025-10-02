@@ -495,8 +495,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX900-NEXT:    v_mov_b32_e32 v1, s35
 ; GFX900-NEXT:    v_add_co_u32_e32 v0, vcc, s34, v0
 ; GFX900-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
-; GFX900-NEXT:    s_movk_i32 s0, 0x5000
-; GFX900-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
+; GFX900-NEXT:    v_add_co_u32_e32 v0, vcc, 0x5000, v0
 ; GFX900-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX900-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX900-NEXT:    v_mov_b32_e32 v5, 0
@@ -609,8 +608,8 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX10-NEXT:    v_mov_b32_e32 v7, 0x7f
 ; GFX10-NEXT:    v_and_b32_e32 v6, 0xfe000000, v1
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 3, v6
-; GFX10-NEXT:    v_add_co_u32 v0, s0, v0, s34
-; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s0, 0, s35, s0
+; GFX10-NEXT:    v_add_co_u32 v0, s0, s34, v0
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s0, s35, 0, s0
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x5000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:  .LBB1_1: ; %for.cond.preheader
@@ -718,8 +717,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, s35
 ; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, s34, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
-; GFX90A-NEXT:    s_movk_i32 s0, 0x5000
-; GFX90A-NEXT:    v_add_co_u32_e32 v2, vcc, s0, v1
+; GFX90A-NEXT:    v_add_co_u32_e32 v2, vcc, 0x5000, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], 0, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x7f
@@ -821,8 +819,8 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    v_and_b32_e32 v6, 0xfe000000, v1
 ; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 3, v6
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_add_co_u32 v0, s0, v0, s34
-; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, s35, s0
+; GFX11-NEXT:    v_add_co_u32 v0, s0, s34, v0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s35, 0, s0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0x5000, v0
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo

@@ -113,7 +113,8 @@ struct TestXeGPUUnrollingPatterns
     });
 
     options.setUnrolledTypesFn(
-        [&](ShapedType type, ArrayRef<int64_t> tileShape) -> SmallVector<Type> {
+        [&](ShapedType type, ArrayRef<int64_t> tileShape,
+            bool returnSingleType = false) -> SmallVector<Type> {
           Type elemTy = type.getElementType();
           Type newTy;
 
@@ -155,6 +156,8 @@ struct TestXeGPUUnrollingPatterns
             newTy = type.clone(tileShape, elemTy);
           }
 
+          if (returnSingleType)
+            return SmallVector<Type>{newTy};
           std::optional<SmallVector<int64_t>> ratio =
               computeShapeRatio(type.getShape(), tileShape);
           assert(ratio && "Expecting the ratio to be valid.");
@@ -170,8 +173,6 @@ struct TestXeGPUUnrollingPatterns
 
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "test-xegpu-layout-interface"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 // Test pattern for distributing vector::StepOp from workgroup to subgroup.
 // Validates DistributeLayoutAttr interfaces for offset computation

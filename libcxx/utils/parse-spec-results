@@ -58,7 +58,10 @@ def main(argv):
              'sure to use appropriate quoting for header names that contain spaces. This option only makes sense '
              'when the output format is CSV.')
     parser.add_argument('--keep-not-run', action='store_true',
-        help='Keep entries whose \'Base Status\' is marked as \'NR\', aka \'Not Run\'. By default, such entries are discarded.')
+        help='Keep entries whose "Base Status" is marked as "NR" (aka "Not Run"). By default, such entries are discarded.')
+    parser.add_argument('--keep-failed', action='store_true',
+        help='Keep entries whose "Base Status" is marked as "CE" (aka "Compilation Error") or "RE" (aka "Runtime Error"). '
+             'By default, such entries are discarded.')
     args = parser.parse_args(argv)
 
     if args.table == 'full':
@@ -76,10 +79,12 @@ def main(argv):
         headers = parsed_headers
         rows.extend(parsed_rows)
 
-    # Remove rows that were not run unless we were asked to keep them
+    # Remove rows that were not run (or failed) unless we were asked to keep them
+    status = headers.index('Base Status')
     if not args.keep_not_run:
-        not_run = headers.index('Base Status')
-        rows = [row for row in rows if row[not_run] != 'NR']
+        rows = [row for row in rows if row[status] != 'NR']
+    if not args.keep_failed:
+        rows = [row for row in rows if row[status] not in ('CE', 'RE')]
 
     if args.extract is not None:
         if args.output_format != 'csv':

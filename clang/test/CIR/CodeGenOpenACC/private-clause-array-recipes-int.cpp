@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
 
 template<typename T>
 void do_things(unsigned A, unsigned B) {
@@ -6,6 +6,7 @@ void do_things(unsigned A, unsigned B) {
 #pragma acc parallel private(OneArr[A:B])
 // CHECK: acc.private.recipe @privatization__Bcnt1__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> init {
 // CHECK-NEXT: ^bb0(%arg0: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}):
+// CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.private.init"] {alignment = 4 : i64}
 // TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -24,6 +25,7 @@ void do_things(unsigned A, unsigned B) {
 #pragma acc parallel private(TwoArr[B][B])
 // CHECK-NEXT: acc.private.recipe @privatization__Bcnt2__ZTSA5_A5_i : !cir.ptr<!cir.array<!cir.array<!s32i x 5> x 5>> init {
 // CHECK-NEXT: ^bb0(%arg0: !cir.ptr<!cir.array<!cir.array<!s32i x 5> x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}, %[[BOUND2:.*]]: !acc.data_bounds_ty {{.*}}):
+// CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca !cir.array<!cir.array<!s32i x 5> x 5>, !cir.ptr<!cir.array<!cir.array<!s32i x 5> x 5>>, ["openacc.private.init"] {alignment = 4 : i64}
 // TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT:}
@@ -44,6 +46,7 @@ void do_things(unsigned A, unsigned B) {
 #pragma acc parallel private(ThreeArr[B][B][B])
 // CHECK-NEXT:acc.private.recipe @privatization__Bcnt3__ZTSA5_A5_A5_i : !cir.ptr<!cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}, %[[BOUND2:.*]]: !acc.data_bounds_ty {{.*}}, %[[BOUND3:.*]]: !acc.data_bounds_ty {{.*}}):
+// CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca !cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>, !cir.ptr<!cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>>, ["openacc.private.init"] {alignment = 4 : i64}
 // TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT:}
@@ -57,6 +60,7 @@ void do_things(unsigned A, unsigned B) {
 #pragma acc parallel private(ThreeArr[B][B])
 // CHECK-NEXT: acc.private.recipe @privatization__Bcnt2__ZTSA5_A5_A5_i : !cir.ptr<!cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}, %[[BOUND2:.*]]: !acc.data_bounds_ty {{.*}}):
+// CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca !cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>, !cir.ptr<!cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>>, ["openacc.private.init"] {alignment = 4 : i64}
 // TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT:}
