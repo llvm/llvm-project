@@ -574,8 +574,9 @@ static_assert(x.size == 4);
 // CHECK-NEXT: | |-ParmVarDecl 0x{{.+}} <col:18, col:24> col:21 'U (&)[3]'
 // CHECK-NEXT: | `-ConceptSpecializationExpr 0x{{.+}} <col:36, col:42> 'bool' Concept 0x{{.+}} 'True'
 // CHECK-NEXT: |   |-ImplicitConceptSpecializationDecl 0x{{.+}} <{{.+}}> col:28
-// CHECK-NEXT: |   | `-TemplateArgument type 'type-parameter-0-0'
-// CHECK-NEXT: |   |   `-TemplateTypeParmType 0x{{.+}} 'type-parameter-0-0' dependent depth 0 index 0
+// CHECK-NEXT: |   | `-TemplateArgument type 'T'
+// CHECK-NEXT: |   |   `-TemplateTypeParmType 0x{{.+}} 'T' dependent depth 0 index 0
+// CHECK-NEXT: |   |     `-TemplateTypeParm 0x{{.+}} 'T'
 // CHECK-NEXT: |   `-TemplateArgument <{{.+}}> type 'T':'type-parameter-0-0'
 // CHECK-NEXT: |     `-TemplateTypeParmType 0x{{.+}} 'T' dependent depth 0 index 0
 // CHECK-NEXT: |       `-TemplateTypeParm 0x{{.+}} 'T'
@@ -588,8 +589,9 @@ static_assert(x.size == 4);
 // CHECK-NEXT:   |-ParmVarDecl 0x{{.+}} <col:18, col:24> col:21 'double (&)[3]'
 // CHECK-NEXT:   `-ConceptSpecializationExpr 0x{{.+}} <col:36, col:42> 'bool' Concept 0x{{.+}} 'True'
 // CHECK-NEXT:     |-ImplicitConceptSpecializationDecl 0x{{.+}} <{{.+}}> col:28
-// CHECK-NEXT:     | `-TemplateArgument type 'type-parameter-0-0'
-// CHECK-NEXT:     |   `-TemplateTypeParmType 0x{{.+}} 'type-parameter-0-0' dependent depth 0 index 0
+// CHECK-NEXT:     | `-TemplateArgument type 'T'
+// CHECK-NEXT:     |   `-TemplateTypeParmType 0x{{.+}} 'T' dependent depth 0 index 0
+// CHECK-NEXT:     |     `-TemplateTypeParm 0x{{.+}} 'T'
 // CHECK-NEXT:     `-TemplateArgument <{{.+}}> type 'T':'type-parameter-0-0'
 // CHECK-NEXT:       `-TemplateTypeParmType 0x{{.+}} 'T' dependent depth 0 index 0
 // CHECK-NEXT:         `-TemplateTypeParm 0x{{.+}} 'T'
@@ -660,8 +662,9 @@ Test test(42);
 // CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} Concept {{.*}} 'Constraint' depth 0 index 1 auto:1
 // CHECK-NEXT: | `-ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}} 'Constraint'
 // CHECK-NEXT: |   |-ImplicitConceptSpecializationDecl {{.*}}
-// CHECK-NEXT: |   | |-TemplateArgument type 'type-parameter-0-1'
-// CHECK-NEXT: |   | | `-TemplateTypeParmType {{.*}} 'type-parameter-0-1' dependent depth 0 index 1
+// CHECK-NEXT: |   | |-TemplateArgument type 'auto:1'
+// CHECK-NEXT: |   | | `-TemplateTypeParmType {{.*}} 'auto:1' dependent depth 0 index 1
+// CHECK-NEXT: |   | |   `-TemplateTypeParm {{.*}} 'auto:1'
 // CHECK-NEXT: |   | `-TemplateArgument type 'int'
 // CHECK-NEXT: |   |   `-BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |   |-TemplateArgument {{.*}} type 'auto:1':'type-parameter-0-1'
