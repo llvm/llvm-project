@@ -12264,8 +12264,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
           double SqrtValue = sqrt(DoubleValue);
           llvm::APFloat TempValue(SqrtValue);
           bool LosesInfo;
-          auto RetStatus = TempValue.convert(
-              Semantics, llvm::RoundingMode::NearestTiesToEven, &LosesInfo);
+          TempValue.convert(Semantics, llvm::RoundingMode::NearestTiesToEven,
+                            &LosesInfo);
           Value = TempValue;
         }
         ResultElements.push_back(APValue(Value));

@@ -3018,7 +3018,6 @@ static bool interp__builtin_x86_sqrt(InterpState &S, CodePtr OpPC,
   assert(NumArgs == 1 || NumArgs == 2);
   const Expr *ArgExpr = Call->getArg(0);
   QualType ArgTy = ArgExpr->getType();
-  QualType ResultTy = Call->getType();
 
   if (!(ArgTy->isRealFloatingType() ||
         (ArgTy->isVectorType() &&
@@ -3063,7 +3062,6 @@ static bool interp__builtin_x86_sqrt(InterpState &S, CodePtr OpPC,
   assert(Arg.getFieldDesc()->getNumElems() ==
          Dst.getFieldDesc()->getNumElems());
 
-  PrimType ElemT = *S.getContext().classify(VT->getElementType());
   unsigned NumElems = VT->getNumElements();
 
   for (unsigned I = 0; I != NumElems; ++I) {
