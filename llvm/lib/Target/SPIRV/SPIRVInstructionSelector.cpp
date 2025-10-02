@@ -3510,7 +3510,7 @@ bool SPIRVInstructionSelector::selectCounterHandleFromBinding(
       getStringValueFromReg(MainHandleDef->getOperand(6).getReg(), *MRI) +
       ".counter";
 
-  // Create the counter variable
+  // Create the counter variable.
   MachineIRBuilder MIRBuilder(I);
   Register CounterVarReg = buildPointerToResource(
       GR.getPointeeType(ResType), GR.getPointerStorageClass(ResType), Set,
