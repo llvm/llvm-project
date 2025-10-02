@@ -140,7 +140,9 @@ MDNode *getAllocTokenMetadata(const CallBase &CB) {
 class ModeBase {
 public:
   explicit ModeBase(const IntegerType &TokenTy, uint64_t MaxTokens)
-      : MaxTokens(MaxTokens ? MaxTokens : TokenTy.getBitMask()) {}
+      : MaxTokens(MaxTokens ? MaxTokens : TokenTy.getBitMask()) {
+    assert(MaxTokens <= TokenTy.getBitMask());
+  }
 
 protected:
   uint64_t boundedToken(uint64_t Val) const {
