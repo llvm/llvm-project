@@ -74,13 +74,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// Amount of stack frame size, not including callee-saved registers.
   uint64_t LocalStackSize = 0;
 
-  /// The start and end frame indices for the SVE callee saves.
-  int MinSVECSFrameIndex = 0;
-  int MaxSVECSFrameIndex = 0;
-
   /// Amount of stack frame size used for saving callee-saved registers.
   unsigned CalleeSavedStackSize = 0;
-  unsigned SVECalleeSavedStackSize = 0;
+  unsigned ZPRCalleeSavedStackSize = 0;
+  unsigned PPRCalleeSavedStackSize = 0;
   bool HasCalleeSavedStackSize = false;
   bool HasSVECalleeSavedStackSize = false;
 
@@ -137,9 +134,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// SVE stack size (for predicates and data vectors) are maintained here
   /// rather than in FrameInfo, as the placement and Stack IDs are target
   /// specific.
-  uint64_t StackSizeSVE = 0;
+  uint64_t StackSizeZPR = 0;
+  uint64_t StackSizePPR = 0;
 
-  /// HasCalculatedStackSizeSVE indicates whether StackSizeSVE is valid.
+  /// HasCalculatedStackSizeSVE indicates whether StackSizeZPR/PPR is valid.
   bool HasCalculatedStackSizeSVE = false;
 
   /// Has a value when it is known whether or not the function uses a
@@ -312,16 +310,25 @@ public:
     TailCallReservedStack = bytes;
   }
 
-  bool hasCalculatedStackSizeSVE() const { return HasCalculatedStackSizeSVE; }
-
-  void setStackSizeSVE(uint64_t S) {
+  void setStackSizeSVE(uint64_t ZPR, uint64_t PPR) {
+    StackSizeZPR = ZPR;
+    StackSizePPR = PPR;
     HasCalculatedStackSizeSVE = true;
-    StackSizeSVE = S;
   }
 
-  uint64_t getStackSizeSVE() const {
+  uint64_t getStackSizeZPR() const {
     assert(hasCalculatedStackSizeSVE());
-    return StackSizeSVE;
+    return StackSizeZPR;
+  }
+  uint64_t getStackSizePPR() const {
+    assert(hasCalculatedStackSizeSVE());
+    return StackSizePPR;
+  }
+
+  bool hasCalculatedStackSizeSVE() const { return HasCalculatedStackSizeSVE; }
+
+  bool hasSVEStackSize() const {
+    return getStackSizeZPR() > 0 || getStackSizePPR() > 0;
   }
 
   bool hasStackFrame() const { return HasStackFrame; }
@@ -414,23 +421,25 @@ public:
   }
 
   // Saves the CalleeSavedStackSize for SVE vectors in 'scalable bytes'
-  void setSVECalleeSavedStackSize(unsigned Size) {
-    SVECalleeSavedStackSize = Size;
+  void setSVECalleeSavedStackSize(unsigned ZPR, unsigned PPR) {
+    ZPRCalleeSavedStackSize = ZPR;
+    PPRCalleeSavedStackSize = PPR;
     HasSVECalleeSavedStackSize = true;
   }
-  unsigned getSVECalleeSavedStackSize() const {
+  unsigned getZPRCalleeSavedStackSize() const {
     assert(HasSVECalleeSavedStackSize &&
-           "SVECalleeSavedStackSize has not been calculated");
-    return SVECalleeSavedStackSize;
+           "ZPRCalleeSavedStackSize has not been calculated");
+    return ZPRCalleeSavedStackSize;
+  }
+  unsigned getPPRCalleeSavedStackSize() const {
+    assert(HasSVECalleeSavedStackSize &&
+           "PPRCalleeSavedStackSize has not been calculated");
+    return PPRCalleeSavedStackSize;
   }
 
-  void setMinMaxSVECSFrameIndex(int Min, int Max) {
-    MinSVECSFrameIndex = Min;
-    MaxSVECSFrameIndex = Max;
+  unsigned getSVECalleeSavedStackSize() const {
+    return getZPRCalleeSavedStackSize() + getPPRCalleeSavedStackSize();
   }
-
-  int getMinSVECSFrameIndex() const { return MinSVECSFrameIndex; }
-  int getMaxSVECSFrameIndex() const { return MaxSVECSFrameIndex; }
 
   void incNumLocalDynamicTLSAccesses() { ++NumLocalDynamicTLSAccesses; }
   unsigned getNumLocalDynamicTLSAccesses() const {
@@ -611,7 +620,8 @@ private:
 namespace yaml {
 struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   std::optional<bool> HasRedZone;
-  std::optional<uint64_t> StackSizeSVE;
+  std::optional<uint64_t> StackSizeZPR;
+  std::optional<uint64_t> StackSizePPR;
   std::optional<bool> HasStackFrame;
 
   AArch64FunctionInfo() = default;
@@ -624,7 +634,8 @@ struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
 template <> struct MappingTraits<AArch64FunctionInfo> {
   static void mapping(IO &YamlIO, AArch64FunctionInfo &MFI) {
     YamlIO.mapOptional("hasRedZone", MFI.HasRedZone);
-    YamlIO.mapOptional("stackSizeSVE", MFI.StackSizeSVE);
+    YamlIO.mapOptional("stackSizeZPR", MFI.StackSizeZPR);
+    YamlIO.mapOptional("stackSizePPR", MFI.StackSizePPR);
     YamlIO.mapOptional("hasStackFrame", MFI.HasStackFrame);
   }
 };
