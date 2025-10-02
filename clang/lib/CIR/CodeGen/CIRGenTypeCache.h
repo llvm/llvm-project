@@ -74,7 +74,7 @@ struct CIRGenTypeCache {
   /// The alignment of size_t.
   unsigned char SizeAlignInBytes;
 
-  LangAS ASTAllocaAddressSpace;
+  cir::TargetAddressSpaceAttr cirAllocaAddressSpace;
 
   clang::CharUnits getSizeAlign() const {
     return clang::CharUnits::fromQuantity(SizeAlignInBytes);
@@ -84,7 +84,9 @@ struct CIRGenTypeCache {
     return clang::CharUnits::fromQuantity(PointerAlignInBytes);
   }
 
-  LangAS getASTAllocaAddressSpace() const { return ASTAllocaAddressSpace; }
+  cir::TargetAddressSpaceAttr getCIRAllocaAddressSpace() const {
+    return cirAllocaAddressSpace;
+  }
 };
 
 } // namespace clang::CIRGen

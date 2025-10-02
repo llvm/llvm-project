@@ -607,9 +607,14 @@ def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
 
 def CIR_TargetAddressSpaceAttr : CIR_Attr< "TargetAddressSpace",
                                          "target_address_space"> {
-  let summary = "Attribute representing a target-specific numeric address space";
+  let summary = "Represents a target-specific numeric address space";
   let description = [{
-    Represents a target-specific numeric address space for pointer types.
+    The TargetAddressSpaceAttr represents a target-specific numeric address space,
+    corresponding to the LLVM IR `addressspace` qualifier and the clang
+     `address_space` attribute.
+    
+    A value of zero represents the default address space. The semantics of non-zero
+    address spaces are target-specific.
 
     Example:
     ```mlir

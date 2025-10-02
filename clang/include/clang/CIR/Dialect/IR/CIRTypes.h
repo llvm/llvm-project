@@ -38,13 +38,6 @@ bool isValidFundamentalIntWidth(unsigned width);
 /// void, or abstract types.
 bool isSized(mlir::Type ty);
 
-//===----------------------------------------------------------------------===//
-// AddressSpace helpers
-//===----------------------------------------------------------------------===//
-
-/// Returns the integer value of a CIR address space for LLVM.
-unsigned getTargetAddrSpaceFromAttr(cir::TargetAddressSpaceAttr attr);
-
 } // namespace cir
 
 //===----------------------------------------------------------------------===//

@@ -44,8 +44,10 @@ public:
   /// Returns ABI info helper for the target.
   const ABIInfo &getABIInfo() const { return *info; }
 
-  /// Get the AST address space for alloca.
-  virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
+  /// Get the address space for alloca.
+  virtual cir::TargetAddressSpaceAttr getCIRAllocaAddressSpace() const {
+    return nullptr;
+  }
 
   /// Determine whether a call to an unprototyped functions under
   /// the given calling convention should use the variadic

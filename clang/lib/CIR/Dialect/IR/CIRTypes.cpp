@@ -805,13 +805,6 @@ mlir::LogicalResult cir::VectorType::verify(
 // TargetAddressSpace definitions
 //===----------------------------------------------------------------------===//
 
-// Convert from TargetAddressSpaceAttr to the actual integer address space.
-unsigned cir::getTargetAddrSpaceFromAttr(cir::TargetAddressSpaceAttr attr) {
-  if (!attr)
-    return 0; // Default address space is 0 in LLVM.
-  return attr.getValue().getUInt();
-}
-
 mlir::ParseResult parseTargetAddressSpace(mlir::AsmParser &p,
                                           cir::TargetAddressSpaceAttr &attr) {
   if (failed(p.parseKeyword("target_address_space")))
@@ -820,7 +813,7 @@ mlir::ParseResult parseTargetAddressSpace(mlir::AsmParser &p,
   if (failed(p.parseLParen()))
     return mlir::failure();
 
-  int64_t targetValue;
+  int32_t targetValue;
   if (failed(p.parseInteger(targetValue)))
     return p.emitError(p.getCurrentLocation(),
                        "expected integer address space value");
@@ -830,9 +823,8 @@ mlir::ParseResult parseTargetAddressSpace(mlir::AsmParser &p,
                        "expected ')' after address space value");
 
   mlir::MLIRContext *context = p.getBuilder().getContext();
-  auto intTy = mlir::IntegerType::get(context, 32);
   attr = cir::TargetAddressSpaceAttr::get(
-      context, mlir::IntegerAttr::get(intTy, targetValue));
+      context, p.getBuilder().getUI32IntegerAttr(targetValue));
   return mlir::success();
 }
 

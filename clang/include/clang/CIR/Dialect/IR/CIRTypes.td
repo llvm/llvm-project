@@ -238,10 +238,6 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
     records, arrays, vectors, functions, and other pointers. It can also point
     to incomplete types, such as incomplete records.
 
-    Note: Data-member pointers and method pointers are represented by
-    `!cir.data_member` and `!cir.method` types, respectively not by
-    `!cir.ptr` type.
-
     Examples:
 
     ```mlir
@@ -256,8 +252,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   let parameters = (ins
     "mlir::Type":$pointee,
     OptionalParameter<
-    "cir::TargetAddressSpaceAttr"
-    >:$addrSpace
+        "cir::TargetAddressSpaceAttr">:$addrSpace
   );
 
   let skipDefaultBuilders = 1;
