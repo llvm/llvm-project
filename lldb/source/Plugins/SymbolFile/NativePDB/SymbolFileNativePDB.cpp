@@ -118,7 +118,10 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
   // executable.
   if (!FileSystem::Instance().Exists(pdb_file)) {
     const auto exe_dir = FileSpec(exe_path).CopyByRemovingLastPathComponent();
-    const auto pdb_name = FileSpec(pdb_file).GetFilename().GetCString();
+    const auto pdb_path_style =
+        FileSpec::GuessPathStyle(pdb_file).value_or(FileSpec::Style::native);
+    const auto pdb_name =
+        FileSpec(pdb_file, pdb_path_style).GetFilename().GetCString();
     pdb_file = exe_dir.CopyByAppendingPathComponent(pdb_name).GetPathAsConstString().GetStringRef();
   }
 
