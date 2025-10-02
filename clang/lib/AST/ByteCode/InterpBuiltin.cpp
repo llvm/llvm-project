@@ -2788,7 +2788,7 @@ static bool interp__builtin_ia32_pshuf(InterpState &S, CodePtr OpPC,
   unsigned ElemBits = static_cast<unsigned>(primSize(ElemT) * 8);
   if (ElemBits != 16 && ElemBits != 32)
     return false;
-  
+
   unsigned LaneElts = 128u / ElemBits;
   assert(LaneElts && (NumElems % LaneElts == 0));
 
