@@ -24,18 +24,13 @@ static void
 CreateUnsatisfiedConstraintRecord(const ASTContext &C,
                                   const UnsatisfiedConstraintRecord &Detail,
                                   UnsatisfiedConstraintRecord *TrailingObject) {
-  if (Detail.isNull())
-    new (TrailingObject) UnsatisfiedConstraintRecord(nullptr);
-  else if (const auto *E = llvm::dyn_cast<const Expr *>(Detail))
+  if (auto *E = dyn_cast<Expr *>(Detail))
     new (TrailingObject) UnsatisfiedConstraintRecord(E);
-  else if (const auto *Concept =
-               llvm::dyn_cast<const ConceptReference *>(Detail))
-    new (TrailingObject) UnsatisfiedConstraintRecord(Concept);
   else {
     auto &SubstitutionDiagnostic =
-        *cast<const clang::ConstraintSubstitutionDiagnostic *>(Detail);
+        *cast<std::pair<SourceLocation, StringRef> *>(Detail);
     StringRef Message = C.backupStr(SubstitutionDiagnostic.second);
-    auto *NewSubstDiag = new (C) clang::ConstraintSubstitutionDiagnostic(
+    auto *NewSubstDiag = new (C) std::pair<SourceLocation, StringRef>(
         SubstitutionDiagnostic.first, Message);
     new (TrailingObject) UnsatisfiedConstraintRecord(NewSubstDiag);
   }
@@ -79,10 +74,9 @@ ASTConstraintSatisfaction *ASTConstraintSatisfaction::Rebuild(
   return new (Mem) ASTConstraintSatisfaction(C, Satisfaction);
 }
 
-void ConstraintSatisfaction::Profile(llvm::FoldingSetNodeID &ID,
-                                     const ASTContext &C,
-                                     const NamedDecl *ConstraintOwner,
-                                     ArrayRef<TemplateArgument> TemplateArgs) {
+void ConstraintSatisfaction::Profile(
+    llvm::FoldingSetNodeID &ID, const ASTContext &C,
+    const NamedDecl *ConstraintOwner, ArrayRef<TemplateArgument> TemplateArgs) {
   ID.AddPointer(ConstraintOwner);
   ID.AddInteger(TemplateArgs.size());
   for (auto &Arg : TemplateArgs)
@@ -120,19 +114,6 @@ void ConceptReference::print(llvm::raw_ostream &OS,
     }
     OS << ">";
   }
-}
-
-const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
-                                             const ConceptReference *C) {
-  std::string NameStr;
-  llvm::raw_string_ostream OS(NameStr);
-  LangOptions LO;
-  LO.CPlusPlus = true;
-  LO.Bool = true;
-  OS << '\'';
-  C->print(OS, PrintingPolicy(LO));
-  OS << '\'';
-  return DB << NameStr;
 }
 
 concepts::ExprRequirement::ExprRequirement(
