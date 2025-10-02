@@ -8,7 +8,7 @@ define i64 @subIfNoUnderflow_umin(i64 %a, i64 %b) {
 ; CHECK-NEXT: movq    %rdi, %rax
 ; CHECK-NEXT: subq    %rsi, %rax
 ; CHECK-NEXT: cmovbq  %rdi, %rax
-; retq
+; CHECK-NEXT: retq
 entry:
   %sub = sub i64 %a, %b
   %cond = tail call i64 @llvm.umin.i64(i64 %sub, i64 %a)
