@@ -408,7 +408,7 @@ void OpenACCRecipeBuilderBase::makeBoundsInit(
   CIRGenFunction::LexicalScope ls(cgf, loc, block);
 
   CIRGenFunction::AutoVarEmission tempDeclEmission{*allocaDecl};
-  tempDeclEmission.EmittedAsOffload = true;
+  tempDeclEmission.emittedAsOffload = true;
 
   // The init section is the only one of the handful that only has a single
   // argument for the 'type', so we have to drop 1 for init, and future calls
@@ -435,7 +435,7 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
     mlir::Location loc, mlir::Location locEnd, SourceRange exprRange,
     mlir::Value mainOp, mlir::acc::PrivateRecipeOp recipe, size_t numBounds,
     llvm::ArrayRef<QualType> boundTypes, const VarDecl *allocaDecl,
-    QualType origType, const Expr *initExpr) {
+    QualType origType) {
   assert(allocaDecl && "Required recipe variable not set?");
   CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, allocaDecl};
 
@@ -473,9 +473,10 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
 
     // If the initializer is trivial, there is nothing to do here, so save
     // ourselves some effort.
-    if (initExpr && (!cgf.isTrivialInitializer(initExpr) ||
-                     cgf.getContext().getLangOpts().getTrivialAutoVarInit() !=
-                         LangOptions::TrivialAutoVarInitKind::Uninitialized))
+    if (allocaDecl->getInit() &&
+        (!cgf.isTrivialInitializer(allocaDecl->getInit()) ||
+         cgf.getContext().getLangOpts().getTrivialAutoVarInit() !=
+             LangOptions::TrivialAutoVarInitKind::Uninitialized))
       makeBoundsInit(alloca, loc, block, allocaDecl, origType,
                      /*isInitSection=*/true);
   }
@@ -504,7 +505,7 @@ void OpenACCRecipeBuilderBase::createFirstprivateRecipeCopy(
   // that instead of the variable in the other block.
   tempDeclEmission.setAllocatedAddress(
       Address{toArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
-  tempDeclEmission.EmittedAsOffload = true;
+  tempDeclEmission.emittedAsOffload = true;
 
   CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, temporary};
   cgf.setAddrOfLocalVar(
