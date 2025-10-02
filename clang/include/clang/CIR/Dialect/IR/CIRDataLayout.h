@@ -87,7 +87,7 @@ public:
 
   llvm::TypeSize getTypeSizeInBits(mlir::Type ty) const;
 
-    llvm::TypeSize getPointerTypeSizeInBits(mlir::Type Ty) const {
+  llvm::TypeSize getPointerTypeSizeInBits(mlir::Type Ty) const {
     assert(mlir::isa<cir::PointerType>(Ty) &&
            "This should only be called with a pointer type");
     return layout.getTypeSizeInBits(Ty);

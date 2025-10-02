@@ -1907,7 +1907,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
       llvm_unreachable("NYI");
 
     return builder.createIntToPtr(MiddleVal, DestCIRTy);
-  }  
+  }
 
   case CK_ArrayToPointerDecay:
     return cgf.emitArrayToPointerDecay(subExpr).getPointer();
