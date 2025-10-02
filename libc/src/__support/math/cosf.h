@@ -33,7 +33,7 @@ LIBC_INLINE static constexpr float cosf(float x) {
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
 
-#else // !LIBC_MATH_COSF_FLOAT_ONLY
+#else // !LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT
 
 #include "sincosf_utils.h"
 
@@ -171,4 +171,4 @@ LIBC_INLINE static constexpr float cosf(float x) {
 
 #endif // LIBC_SRC___SUPPORT_MATH_COSF_H
 
-#endif // LIBC_MATH_COSF_FLOAT_ONLY
+#endif // LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT

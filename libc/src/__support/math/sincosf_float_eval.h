@@ -24,7 +24,7 @@ namespace sincosf_float_eval {
 
 // Since the worst case of `x mod pi` in single precision is > 2^-28, in order
 // to be bounded by 1 ULP, the range reduction accuracy will need to be at
-// lest 2^(-28 - 23) = 2^-51.
+// least 2^(-28 - 23) = 2^-51.
 // For fast small range reduction, we will compute as follow:
 //   Let pi ~ c0 + c1 + c2
 // with |c1| < ulp(c0)/2 and |c2| < ulp(c1)/2

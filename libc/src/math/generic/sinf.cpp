@@ -32,7 +32,7 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#else // !LIBC_MATH_SINF_FLOAT_ONLY
+#else // !LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT
 
 #include "src/__support/math/sincosf_utils.h"
 
@@ -179,4 +179,4 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
 }
 
 } // namespace LIBC_NAMESPACE_DECL
-#endif // LIBC_MATH_SINF_FLOAT_ONLY
+#endif // LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT
