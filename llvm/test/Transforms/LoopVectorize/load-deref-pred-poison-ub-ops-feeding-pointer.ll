@@ -44,10 +44,10 @@ define void @ptr_depends_on_sdiv(ptr noalias %dst, i16 noundef %off) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP19]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i16> [[TMP23]], i32 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP13]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP24]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP10]]
 ; CHECK-NEXT:    store i64 [[TMP9]], ptr [[TMP11]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
@@ -55,10 +55,10 @@ define void @ptr_depends_on_sdiv(ptr noalias %dst, i16 noundef %off) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4]]
 ; CHECK:       [[PRED_STORE_IF3]]:
-; CHECK-NEXT:    [[TMP16:%.*]] = add i16 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <2 x i16> [[TMP23]], i32 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP25]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP20]], align 1
+; CHECK-NEXT:    [[TMP16:%.*]] = add i16 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP16]]
 ; CHECK-NEXT:    store i64 [[TMP15]], ptr [[TMP17]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
@@ -120,10 +120,10 @@ define void @ptr_depends_on_possibly_poison_value(ptr noalias %dst, i16 %off) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP14]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP7]]
 ; CHECK-NEXT:    store i64 [[TMP9]], ptr [[TMP8]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
@@ -131,10 +131,10 @@ define void @ptr_depends_on_possibly_poison_value(ptr noalias %dst, i16 %off) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = add i16 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i16> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP15]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i64, ptr [[TMP16]], align 1
+; CHECK-NEXT:    [[TMP11:%.*]] = add i16 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP11]]
 ; CHECK-NEXT:    store i64 [[TMP13]], ptr [[TMP12]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
@@ -266,10 +266,10 @@ define void @ptr_depends_on_possibly_poison_value_from_load(ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i16> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP6]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP15]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP8]]
 ; CHECK-NEXT:    store i64 [[TMP10]], ptr [[TMP9]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
@@ -277,10 +277,10 @@ define void @ptr_depends_on_possibly_poison_value_from_load(ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = add i16 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i16> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP16]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP17]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = add i16 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP12]]
 ; CHECK-NEXT:    store i64 [[TMP14]], ptr [[TMP13]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
