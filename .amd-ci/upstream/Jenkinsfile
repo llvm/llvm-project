@@ -83,6 +83,8 @@ Boolean runDownstream = (
 
 String space = ' ', andChain = '&&', underScore = '_', slash = '/', dash = '-'
 String gitCommitEnv = 'GIT_COMMIT'
+String skipStr = 'Skipping build.', contStr = 'Continuing build.'
+String contTimerReason = 'Timer trigger.' + space + contStr
 
 List propsList = []
 if (isPrBranch) {
@@ -284,9 +286,13 @@ try {
                             error 'Unexpected exit checking file activity.'
                         }
                         if (activeStat == 1) {
-                            echo('Skipping build.')
-                            hasSourceChanges = false
-                            return // From stage
+                            if (timerTrigger) {
+                                echo(contTimerReason)
+                            } else {
+                                echo(skipStr)
+                                hasSourceChanges = false
+                                return // From stage
+                            }
                         }
 
                         String mstat
@@ -309,14 +315,19 @@ try {
                             }
                         }
                         if (mstat && mstat != 'None') {
-                            echo('Skipping build, merge status is ' + mstat)
-                            hasSourceChanges = false
-                            return // From stage
+                            echo('Merge status is ' + mstat)
+                            if (timerTrigger) {
+                                echo(contTimerReason)
+                            } else {
+                                echo(skipStr)
+                                hasSourceChanges = false
+                                return // From stage
+                            }
                         }
                     }
                 }
             }
-            if (!hasSourceChanges) {
+            if (!timerTrigger && !hasSourceChanges) {
                 cleanWs(
                     deleteDirs: true,
                     patterns: cleanExcludes
@@ -351,7 +362,7 @@ try {
                 }
             }
         }
-        if (!hasSourceChanges) {
+        if (!timerTrigger && !hasSourceChanges) {
             return // From timeout
         }
         if (runDownstream) {
