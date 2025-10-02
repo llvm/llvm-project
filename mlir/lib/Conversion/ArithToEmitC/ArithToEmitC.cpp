@@ -52,7 +52,7 @@ namespace {
 class ArithConstantOpConversionPattern
     : public OpConversionPattern<arith::ConstantOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::ConstantOp arithConst,
@@ -94,7 +94,7 @@ Value adaptValueType(Value val, ConversionPatternRewriter &rewriter, Type ty) {
 
 class CmpFOpConversion : public OpConversionPattern<arith::CmpFOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
@@ -248,7 +248,7 @@ private:
 
 class CmpIOpConversion : public OpConversionPattern<arith::CmpIOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   bool needsUnsignedCmp(arith::CmpIPredicate pred) const {
     switch (pred) {
@@ -314,7 +314,7 @@ public:
 
 class NegFOpConversion : public OpConversionPattern<arith::NegFOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::NegFOp op, OpAdaptor adaptor,
@@ -610,16 +610,19 @@ public:
              ? rewriter.getIntegerAttr(arithmeticType, 0)
              : rewriter.getIndexAttr(0)));
 
-    emitc::ExpressionOp ternary = emitc::ExpressionOp::create(
-        rewriter, op.getLoc(), arithmeticType, /*do_not_inline=*/false);
-    Block &bodyBlock = ternary.getBodyRegion().emplaceBlock();
+    emitc::ExpressionOp ternary =
+        emitc::ExpressionOp::create(rewriter, op.getLoc(), arithmeticType,
+                                    ValueRange({lhs, rhs, excessCheck, poison}),
+                                    /*do_not_inline=*/false);
+    Block &bodyBlock = ternary.createBody();
     auto currentPoint = rewriter.getInsertionPoint();
     rewriter.setInsertionPointToStart(&bodyBlock);
     Value arithmeticResult =
-        EmitCOp::create(rewriter, op.getLoc(), arithmeticType, lhs, rhs);
-    Value resultOrPoison =
-        emitc::ConditionalOp::create(rewriter, op.getLoc(), arithmeticType,
-                                     excessCheck, arithmeticResult, poison);
+        EmitCOp::create(rewriter, op.getLoc(), arithmeticType,
+                        bodyBlock.getArgument(0), bodyBlock.getArgument(1));
+    Value resultOrPoison = emitc::ConditionalOp::create(
+        rewriter, op.getLoc(), arithmeticType, bodyBlock.getArgument(2),
+        arithmeticResult, bodyBlock.getArgument(3));
     emitc::YieldOp::create(rewriter, op.getLoc(), resultOrPoison);
     rewriter.setInsertionPoint(op->getBlock(), currentPoint);
 
@@ -644,7 +647,7 @@ class UnsignedShiftOpConversion final
 
 class SelectOpConversion : public OpConversionPattern<arith::SelectOp> {
 public:
-  using OpConversionPattern<arith::SelectOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::SelectOp selectOp, OpAdaptor adaptor,

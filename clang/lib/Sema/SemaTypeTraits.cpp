@@ -16,6 +16,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
@@ -23,6 +24,7 @@
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 
@@ -1161,13 +1163,16 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     //   - it has at least one trivial eligible constructor and a trivial,
     //     non-deleted destructor.
     const CXXDestructorDecl *Dtor = RD->getDestructor();
-    if (UnqualT->isAggregateType())
-      if (Dtor && !Dtor->isUserProvided())
-        return true;
-    if (RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted()))
-      if (RD->hasTrivialDefaultConstructor() ||
-          RD->hasTrivialCopyConstructor() || RD->hasTrivialMoveConstructor())
-        return true;
+    if (UnqualT->isAggregateType() && (!Dtor || !Dtor->isUserProvided()))
+      return true;
+    if (RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted())) {
+      for (CXXConstructorDecl *Ctr : RD->ctors()) {
+        if (Ctr->isIneligibleOrNotSelected() || Ctr->isDeleted())
+          continue;
+        if (Ctr->isTrivial())
+          return true;
+      }
+    }
     return false;
   }
   case UTT_IsIntangibleType:
@@ -1825,6 +1830,51 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
 
     return Self.HLSL().IsScalarizedLayoutCompatible(LhsT, RhsT);
   }
+  case BTT_LtSynthesizesFromSpaceship:
+  case BTT_LeSynthesizesFromSpaceship:
+  case BTT_GtSynthesizesFromSpaceship:
+  case BTT_GeSynthesizesFromSpaceship: {
+    EnterExpressionEvaluationContext UnevaluatedContext(
+        Self, Sema::ExpressionEvaluationContext::Unevaluated);
+    Sema::SFINAETrap SFINAE(Self, /*ForValidityCheck=*/true);
+    Sema::ContextRAII TUContext(Self, Self.Context.getTranslationUnitDecl());
+
+    OpaqueValueExpr LHS(KeyLoc, LhsT.getNonReferenceType(),
+                        LhsT->isLValueReferenceType() ? ExprValueKind::VK_LValue
+                        : LhsT->isRValueReferenceType()
+                            ? ExprValueKind::VK_XValue
+                            : ExprValueKind::VK_PRValue);
+    OpaqueValueExpr RHS(KeyLoc, RhsT.getNonReferenceType(),
+                        RhsT->isLValueReferenceType() ? ExprValueKind::VK_LValue
+                        : RhsT->isRValueReferenceType()
+                            ? ExprValueKind::VK_XValue
+                            : ExprValueKind::VK_PRValue);
+
+    auto OpKind = [&] {
+      switch (BTT) {
+      case BTT_LtSynthesizesFromSpaceship:
+        return BinaryOperatorKind::BO_LT;
+      case BTT_LeSynthesizesFromSpaceship:
+        return BinaryOperatorKind::BO_LE;
+      case BTT_GtSynthesizesFromSpaceship:
+        return BinaryOperatorKind::BO_GT;
+      case BTT_GeSynthesizesFromSpaceship:
+        return BinaryOperatorKind::BO_GE;
+      default:
+        llvm_unreachable("Trying to Synthesize non-comparison operator?");
+      }
+    }();
+
+    UnresolvedSet<16> Functions;
+    Self.LookupBinOp(Self.TUScope, KeyLoc, OpKind, Functions);
+
+    ExprResult Result =
+        Self.CreateOverloadedBinOp(KeyLoc, OpKind, Functions, &LHS, &RHS);
+    if (Result.isInvalid() || SFINAE.hasErrorOccurred())
+      return false;
+
+    return isa<CXXRewrittenBinaryOperator>(Result.get());
+  }
   default:
     llvm_unreachable("not a BTT");
   }
@@ -1964,8 +2014,10 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
       .Case("is_assignable", TypeTrait::BTT_IsAssignable)
       .Case("is_empty", TypeTrait::UTT_IsEmpty)
       .Case("is_standard_layout", TypeTrait::UTT_IsStandardLayout)
+      .Case("is_aggregate", TypeTrait::UTT_IsAggregate)
       .Case("is_constructible", TypeTrait::TT_IsConstructible)
       .Case("is_final", TypeTrait::UTT_IsFinal)
+      .Case("is_abstract", TypeTrait::UTT_IsAbstract)
       .Default(std::nullopt);
 }
 
@@ -2640,6 +2692,161 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
+static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
+                                       const CXXRecordDecl *D) {
+  for (const CXXConstructorDecl *Ctor : D->ctors()) {
+    if (Ctor->isUserProvided())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::UserDeclaredCtr;
+    if (Ctor->isInheritingConstructor())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::InheritedCtr;
+  }
+
+  if (llvm::any_of(D->decls(), [](auto const *Sub) {
+        return isa<ConstructorUsingShadowDecl>(Sub);
+      })) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::InheritedCtr;
+  }
+
+  if (D->isPolymorphic())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::PolymorphicType
+        << D->getSourceRange();
+
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    if (B.isVirtual()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
+          << B.getSourceRange();
+      continue;
+    }
+    auto AccessSpecifier = B.getAccessSpecifier();
+    switch (AccessSpecifier) {
+    case AS_private:
+    case AS_protected:
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::PrivateProtectedDirectBase
+          << (AccessSpecifier == AS_protected);
+      break;
+    default:
+      break;
+    }
+  }
+
+  for (const CXXMethodDecl *Method : D->methods()) {
+    if (Method->isVirtual()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VirtualFunction << Method
+          << Method->getSourceRange();
+    }
+  }
+
+  for (const FieldDecl *Field : D->fields()) {
+    auto AccessSpecifier = Field->getAccess();
+    switch (AccessSpecifier) {
+    case AS_private:
+    case AS_protected:
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::PrivateProtectedDirectDataMember
+          << (AccessSpecifier == AS_protected);
+      break;
+    default:
+      break;
+    }
+  }
+
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
+static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
+                                       QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::Aggregate;
+
+  if (T->isVoidType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::CVVoidType;
+
+  T = T.getNonReferenceType();
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (!D || D->isInvalidDecl())
+    return;
+
+  if (D->hasDefinition())
+    DiagnoseNonAggregateReason(SemaRef, Loc, D);
+}
+
+static void DiagnoseNonAbstractReason(Sema &SemaRef, SourceLocation Loc,
+                                      const CXXRecordDecl *D) {
+  // If this type has any abstract base classes, their respective virtual
+  // functions must have been overridden.
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    if (B.getType()->castAsCXXRecordDecl()->isAbstract()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::OverridesAllPureVirtual
+          << B.getType() << B.getSourceRange();
+    }
+  }
+}
+
+static void DiagnoseNonAbstractReason(Sema &SemaRef, SourceLocation Loc,
+                                      QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::Abstract;
+
+  if (T->isReferenceType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotStructOrClass;
+    return;
+  }
+
+  if (T->isUnionType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::UnionType;
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotStructOrClass;
+    return;
+  }
+
+  if (SemaRef.Context.getAsArrayType(T)) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::ArrayType;
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotStructOrClass;
+    return;
+  }
+
+  if (T->isFunctionType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::FunctionType;
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotStructOrClass;
+    return;
+  }
+
+  if (T->isPointerType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::PointerType;
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotStructOrClass;
+    return;
+  }
+
+  if (!T->isStructureOrClassType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotStructOrClass;
+    return;
+  }
+
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (D->hasDefinition())
+    DiagnoseNonAbstractReason(SemaRef, Loc, D);
+}
+
 void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   E = E->IgnoreParenImpCasts();
   if (E->containsErrors())
@@ -2672,6 +2879,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   case TT_IsConstructible:
     DiagnoseNonConstructibleReason(*this, E->getBeginLoc(), Args);
     break;
+  case UTT_IsAggregate:
+    DiagnoseNonAggregateReason(*this, E->getBeginLoc(), Args[0]);
+    break;
   case UTT_IsFinal: {
     QualType QT = Args[0];
     if (QT->isDependentType())
@@ -2681,6 +2891,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
       DiagnoseIsFinalReason(*this, E->getBeginLoc(), QT); // unsatisfied
     break;
   }
+  case UTT_IsAbstract:
+    DiagnoseNonAbstractReason(*this, E->getBeginLoc(), Args[0]);
+    break;
   default:
     break;
   }

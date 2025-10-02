@@ -1536,6 +1536,67 @@ TEST(TransferTest, BaseClassInitializer) {
       llvm::Succeeded());
 }
 
+TEST(TransferTest, BaseClassInitializerFromSiblingDerivedInstance) {
+  using ast_matchers::cxxConstructorDecl;
+  using ast_matchers::hasName;
+  using ast_matchers::ofClass;
+
+  std::string Code = R"(
+    struct Base {
+      bool BaseField;
+      char UnmodeledField;
+    };
+
+    struct DerivedOne : public Base {
+      int DerivedOneField;
+    };
+
+    struct DerivedTwo : public Base {
+      int DerivedTwoField;
+
+      DerivedTwo(const DerivedOne& D1)
+          : Base(D1), DerivedTwoField(D1.DerivedOneField) {
+          (void)BaseField;
+          }
+    };
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // Regression test only; we used to crash when transferring the base
+        // class initializer from the DerivedToBase-cast `D1`.
+      },
+      LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "DerivedTwo");
+}
+
+TEST(TransferTest, CopyAssignmentToDerivedToBase) {
+  std::string Code = R"cc(
+  struct Base {};
+
+struct DerivedOne : public Base {
+    int DerivedOneField;
+};
+
+struct DerivedTwo : public Base {
+    int DerivedTwoField;
+
+    explicit DerivedTwo(const DerivedOne& D1) {
+        *static_cast<Base*>(this) = D1;
+    }
+};
+)cc";
+
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // Regression test only; we used to crash when transferring the copy
+        // assignment operator in the constructor for `DerivedTwo`.
+      },
+      LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "DerivedTwo");
+}
+
 TEST(TransferTest, FieldsDontHaveValuesInConstructor) {
   // In a constructor, unlike in regular member functions, we don't want fields
   // to be pre-initialized with values, because doing so is the job of the
