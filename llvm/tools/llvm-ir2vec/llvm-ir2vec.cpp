@@ -162,8 +162,8 @@ public:
 
     for (const BasicBlock &BB : F) {
       for (const auto &I : BB.instructionsWithoutDebug()) {
-        unsigned Opcode = Vocabulary::getSlotIndex(I.getOpcode());
-        unsigned TypeID = Vocabulary::getSlotIndex(I.getType()->getTypeID());
+        unsigned Opcode = Vocabulary::getIndex(I.getOpcode());
+        unsigned TypeID = Vocabulary::getIndex(I.getType()->getTypeID());
 
         // Add "Next" relationship with previous instruction
         if (HasPrevOpcode) {
@@ -184,7 +184,7 @@ public:
         // Add "Arg" relationships
         unsigned ArgIndex = 0;
         for (const Use &U : I.operands()) {
-          unsigned OperandID = Vocabulary::getSlotIndex(*U.get());
+          unsigned OperandID = Vocabulary::getIndex(*U.get());
           unsigned RelationID = ArgRelation + ArgIndex;
           OS << Opcode << '\t' << OperandID << '\t' << RelationID << '\n';
 
