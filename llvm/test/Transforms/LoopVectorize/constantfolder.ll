@@ -288,3 +288,80 @@ loop.latch:
 exit:
   ret void
 }
+
+define void @const_fold_binaryintrinsic(ptr %dst, i64 %d) {
+; CHECK-LABEL: define void @const_fold_binaryintrinsic(
+; CHECK-SAME: ptr [[DST:%.*]], i64 [[D:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i64> @llvm.umax.v4i64(<4 x i64> zeroinitializer, <4 x i64> splat (i64 3))
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[TMP0]], i32 3
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[DST]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %const.0 = xor i64 %d, %d
+  %trunc = call i64 @llvm.umax.i64(i64 %const.0, i64 3)
+  store i64 %trunc, ptr %dst, align 2
+  %iv.next = add i64 %iv, 1
+  %cmp = icmp ult i64 %iv.next, 100
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @const_fold_widegep(ptr noalias %A, ptr noalias %B) {
+; CHECK-LABEL: define void @const_fold_widegep(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    store ptr [[A]], ptr [[B]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  br i1 true, label %loop.latch, label %else
+
+else:
+  br label %loop.latch
+
+loop.latch:
+  %const.0 = phi i64 [ 0, %loop.header ], [ %iv, %else ]
+  %gep.A = getelementptr i64, ptr %A, i64 %const.0
+  %gep.B = getelementptr i64, ptr %B, i64 %const.0
+  store ptr %gep.A, ptr %gep.B
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit.cond = icmp ult i64 %iv.next, 100
+  br i1 %exit.cond, label %loop.header, label %exit
+
+exit:
+  ret void
+}
