@@ -1889,6 +1889,25 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     }
     return v;
   }
+  case CK_IntegralToPointer: {
+    auto DestCIRTy = cgf.convertType(destTy);
+    mlir::Value Src = Visit(const_cast<Expr *>(subExpr));
+
+    // Properly resize by casting to an int of the same size as the pointer.
+    // Clang's IntegralToPointer includes 'bool' as the source, but in CIR
+    // 'bool' is not an integral type.  So check the source type to get the
+    // correct CIR conversion.
+    auto MiddleTy = cgf.cgm.getDataLayout().getIntPtrType(DestCIRTy);
+    auto MiddleVal = builder.createCast(subExpr->getType()->isBooleanType()
+                                            ? cir::CastKind::bool_to_int
+                                            : cir::CastKind::integral,
+                                        Src, MiddleTy);
+
+    if (cgf.cgm.getCodeGenOpts().StrictVTablePointers)
+      llvm_unreachable("NYI");
+
+    return builder.createIntToPtr(MiddleVal, DestCIRTy);
+  }  
 
   case CK_ArrayToPointerDecay:
     return cgf.emitArrayToPointerDecay(subExpr).getPointer();
