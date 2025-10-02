@@ -355,14 +355,30 @@ public:
   void visitBinaryOperator(const BinaryOperator *BO) const {
     if (!BO->isAssignmentOp())
       return;
-    if (!isa<ObjCIvarRefExpr>(BO->getLHS()))
-      return;
+    auto *LHS = BO->getLHS();
     auto *RHS = BO->getRHS()->IgnoreParenCasts();
-    const Expr *Inner = nullptr;
-    if (isAllocInit(RHS, &Inner)) {
-      CreateOrCopyFnCall.insert(RHS);
-      if (Inner)
-        CreateOrCopyFnCall.insert(Inner);
+    if (isa<ObjCIvarRefExpr>(LHS)) {
+      const Expr *Inner = nullptr;
+      if (isAllocInit(RHS, &Inner)) {
+        CreateOrCopyFnCall.insert(RHS);
+        if (Inner)
+          CreateOrCopyFnCall.insert(Inner);
+      }
+      return;
+    } else if (auto *UO = dyn_cast<UnaryOperator>(LHS)) {
+      auto OpCode = UO->getOpcode();
+      if (OpCode == UO_Deref) {
+        if (auto *DerefTarget = UO->getSubExpr()) {
+          DerefTarget = DerefTarget->IgnoreParenCasts();
+          auto *DRE = dyn_cast<DeclRefExpr>(DerefTarget);
+          if (auto *Decl = DRE->getDecl()) {
+            if (!isa<ParmVarDecl>(Decl) || !isCreateOrCopy(RHS))
+              return;
+            if (Decl->hasAttr<CFReturnsRetainedAttr>())
+              CreateOrCopyFnCall.insert(RHS);
+          }
+        }
+      }
     }
   }
 
