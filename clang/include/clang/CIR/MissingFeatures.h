@@ -133,7 +133,6 @@ struct MissingFeatures {
   // RecordType
   static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
-  static bool recordZeroInit() { return false; }
   static bool recordZeroInitPadding() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
 
@@ -192,6 +191,7 @@ struct MissingFeatures {
   static bool builtinCheckKind() { return false; }
   static bool cgCapturedStmtInfo() { return false; }
   static bool cgFPOptionsRAII() { return false; }
+  static bool checkBitfieldClipping() { return false; }
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
   static bool cleanupsToDeactivate() { return false; }
