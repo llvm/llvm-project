@@ -54,6 +54,12 @@ public:
                             Address thisAddr, const CXXRecordDecl *classDecl,
                             const CXXRecordDecl *baseClassDecl) = 0;
 
+  virtual mlir::Value emitDynamicCast(CIRGenFunction &cgf, mlir::Location loc,
+                                      QualType srcRecordTy,
+                                      QualType destRecordTy,
+                                      cir::PointerType destCIRTy,
+                                      bool isRefCast, Address src) = 0;
+
 public:
   /// Similar to AddedStructorArgs, but only notes the number of additional
   /// arguments.

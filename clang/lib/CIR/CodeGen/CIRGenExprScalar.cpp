@@ -1894,6 +1894,11 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return v;
   }
 
+  case CK_Dynamic: {
+    Address v = cgf.emitPointerWithAlignment(subExpr);
+    const auto *dce = cast<CXXDynamicCastExpr>(ce);
+    return cgf.emitDynamicCast(v, dce);
+  }
   case CK_ArrayToPointerDecay:
     return cgf.emitArrayToPointerDecay(subExpr).getPointer();
 
