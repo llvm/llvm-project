@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -47,7 +48,10 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -74,6 +78,7 @@
 #include <optional>
 #include <string>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -181,6 +186,29 @@ struct GroupSection {
   uint32_t Info;
   uint32_t Type;
   std::vector<GroupMember> Members;
+};
+
+// Call graph function kind.
+enum class FunctionKind : uint64_t {
+  // Function cannot be target to indirect calls.
+  NOT_INDIRECT_TARGET = 0,
+  // Function may be target to indirect calls but its type id is unknown.
+  INDIRECT_TARGET_UNKNOWN_TID = 1,
+  // Function may be target to indirect calls and its type id is known.
+  INDIRECT_TARGET_KNOWN_TID = 2,
+
+  // Available in the binary but not listed in the call graph section.
+  NOT_LISTED = 3,
+};
+
+// Per-function call graph information.
+template <typename AddrType> struct FunctionCallgraphInfoImpl {
+  uint64_t FormatVersionNumber;
+  FunctionKind Kind;
+  uint64_t
+      FunctionTypeId; // Only if Kind == FunctionKind::INDIRECT_TARGET_KNOWN_TID
+  DenseMap<AddrType, uint64_t> IndirectCallsites;
+  SmallSet<AddrType, 4> DirectCallees;
 };
 
 namespace {
@@ -433,6 +461,23 @@ protected:
       const typename SFrameParser<ELFT::Endianness>::FDERange::iterator FDE,
       ArrayRef<Relocation<ELFT>> Relocations, const Elf_Shdr *RelocSymTab);
 
+  using FunctionCallgraphInfo =
+      ::FunctionCallgraphInfoImpl<typename ELFT::uint>;
+
+  // Callgraph - Main data structure to maintain per function callgraph
+  // information.
+  MapVector<typename ELFT::uint, FunctionCallgraphInfo> FuncCGInfos;
+
+  // // Callgraph - 64 bit type id mapped to entry PC addresses of functions
+  // which
+  // // are of the given type id.
+  // MapVector<uint64_t, SmallVector<typename ELFT::uint>> TypeIdToIndirTargets;
+
+  // Callgraph - Read callgraph section and process its contents to populate
+  // Callgraph related data structures which will be used to dump callgraph
+  // info. Returns false if there is no .callgraph section in the input file.
+  bool processCallGraphSection();
+
 private:
   mutable SmallVector<std::optional<VersionEntry>, 0> VersionMap;
 };
@@ -619,6 +664,7 @@ public:
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
+  void printCallGraphInfo() override;
   void printBBAddrMaps(bool PrettyPGOAnalysis) override;
   void printAddrsig() override;
   void printNotes() override;
@@ -730,6 +776,7 @@ public:
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
+  void printCallGraphInfo() override;
   void printBBAddrMaps(bool PrettyPGOAnalysis) override;
   void printAddrsig() override;
   void printNotes() override;
@@ -5264,6 +5311,247 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
 }
 
 template <class ELFT>
+static std::optional<object::SectionRef>
+getCallGraphSection(const object::ELFObjectFile<ELFT> &ObjF) {
+  // Get the .callgraph section.
+  StringRef CallGraphSectionName(".callgraph");
+  std::optional<object::SectionRef> CallGraphSection;
+  for (auto Sec : ObjF.sections()) {
+    StringRef Name;
+    if (Expected<StringRef> NameOrErr = Sec.getName())
+      Name = *NameOrErr;
+    else
+      consumeError(NameOrErr.takeError());
+
+    if (Name == CallGraphSectionName)
+      return Sec;
+  }
+  return CallGraphSection;
+}
+
+template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
+  const Elf_Shdr *CGSection = findSectionByName(".callgraph");
+  if (!CGSection) {
+    Error NoSectionErr = createError("No .callgraph section found.");
+    reportError(std::move(NoSectionErr), "Missing section");
+  }
+
+  Expected<ArrayRef<uint8_t>> SectionBytesOrErr =
+      Obj.getSectionContents(*CGSection);
+  if (!SectionBytesOrErr) {
+    Error SectionReadErr = SectionBytesOrErr.takeError();
+    reportError(std::move(SectionReadErr),
+                "Unable to read the .callgraph section");
+  }
+
+  auto PrintMalformedError = [&](Error &E, Twine FuncPC, StringRef Component) {
+    // auto Msg = llvm::Twine("Malformed callgraph section while reading [") +
+    // Component + llvm::Twine("] .\n");
+    std::string Msg =
+        (StringRef("While reading call graph info's [") + Component +
+         StringRef("] for function at [0x") + StringRef(FuncPC.str()) + "]")
+            .str();
+    reportError(std::move(E), StringRef(Msg));
+  };
+
+  DataExtractor Data(SectionBytesOrErr.get(), Obj.isLE(),
+                     ObjF.getBytesInAddress());
+
+  uint64_t NotListedCount = 0;
+  uint64_t UnknownCount = 0;
+
+  uint64_t Offset = 0;
+  while (Offset < CGSection->sh_size) {
+    Error CGSectionErr = Error::success();
+    // Format version number.
+    uint64_t FormatVersionNumber = Data.getU64(&Offset, &CGSectionErr);
+
+    if (CGSectionErr)
+      reportError(std::move(CGSectionErr),
+                  "While reading call graph info FormatVersionNumber");
+
+    if (FormatVersionNumber != 0) {
+      Error FormatErr = createError("Unknown format version value [" +
+                                    std::to_string(FormatVersionNumber) +
+                                    "] in .callgraph section.");
+      reportError(std::move(FormatErr), "Unknown value");
+    }
+
+    // Read function address.
+    typename ELFT::uint FuncAddr =
+        Data.getUnsigned(&Offset, sizeof(FuncAddr), &CGSectionErr);
+    if (CGSectionErr)
+      reportError(std::move(CGSectionErr),
+                  "While reading call graph info function entry PC");
+
+    if (FuncCGInfos.find(FuncAddr) != FuncCGInfos.end()) {
+      Error DuplicatePcErr =
+          createError("for function PC: 0x" + Twine::utohexstr(FuncAddr));
+      reportError(std::move(DuplicatePcErr), "Duplicate call graph entry");
+    }
+
+    using FunctionCallgraphInfo =
+        ::FunctionCallgraphInfoImpl<typename ELFT::uint>;
+
+    // Create a new entry for this function.
+    FunctionCallgraphInfo CGInfo;
+    CGInfo.FormatVersionNumber = FormatVersionNumber;
+
+    // Read function kind.
+    uint64_t KindVal = Data.getU64(&Offset, &CGSectionErr);
+    if (CGSectionErr)
+      PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr), "Kind");
+
+    if (KindVal > 3) {
+      Error KindErr =
+          createError("Unknown value [" + std::to_string(KindVal) + "].");
+      PrintMalformedError(KindErr, Twine::utohexstr(FuncAddr), "FunctionKind");
+    }
+
+    FunctionKind Kind = static_cast<FunctionKind>(KindVal);
+    CGInfo.Kind = Kind;
+    if (Kind == FunctionKind::INDIRECT_TARGET_KNOWN_TID) {
+      // Read type id if this function is an indirect call target.
+      uint64_t TypeId = Data.getU64(&Offset, &CGSectionErr);
+      if (CGSectionErr)
+        PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
+                            "indirect type id");
+      CGInfo.FunctionTypeId = TypeId;
+    }
+    if (Kind == FunctionKind::INDIRECT_TARGET_UNKNOWN_TID)
+      UnknownCount++;
+    if (Kind == FunctionKind::NOT_LISTED)
+      NotListedCount++;
+
+    // Read number of indirect call sites for this function.
+    uint64_t NumIndirectCallsites = Data.getU64(&Offset, &CGSectionErr);
+    if (CGSectionErr)
+      PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
+                          "number of indirect callsites");
+
+    for (unsigned long I = 0; I < NumIndirectCallsites; I++) {
+      uint64_t TypeId = Data.getU64(&Offset, &CGSectionErr);
+      if (CGSectionErr)
+        PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
+                            "indirect target type id");
+      typename ELFT::uint CallSitePc =
+          Data.getUnsigned(&Offset, sizeof(CallSitePc), &CGSectionErr);
+      if (CGSectionErr)
+        PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
+                            "indirect callsite PC");
+      CGInfo.IndirectCallsites.try_emplace(CallSitePc, TypeId);
+    }
+
+    // Read number of direct call sites for this function.
+    uint64_t NumDirectCallees = Data.getU64(&Offset, &CGSectionErr);
+    if (CGSectionErr)
+      PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
+                          "number of direct callsites");
+    // Read direct call sites and populate FuncCGInfos.
+    for (uint64_t I = 0; I < NumDirectCallees; ++I) {
+      typename ELFT::uint Callee =
+          Data.getUnsigned(&Offset, sizeof(Callee), &CGSectionErr);
+      if (CGSectionErr)
+        PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
+                            "direct callee PC");
+      CGInfo.DirectCallees.insert(Callee);
+    }
+    FuncCGInfos[FuncAddr] = CGInfo;
+  }
+
+  if (NotListedCount)
+    reportUniqueWarning(".callgraph section does not have information for " +
+                        std::to_string(NotListedCount) + " functions.");
+  if (UnknownCount)
+    reportUniqueWarning(".callgraph section has unknown type id for " +
+                        std::to_string(UnknownCount) + " indirect targets.");
+
+  // Sort function info by function PC.
+  llvm::sort(FuncCGInfos,
+             [](const auto &A, const auto &B) { return A.first < B.first; });
+  return true;
+}
+
+static StringRef GetFuntionKindString(FunctionKind Kind) {
+  switch (Kind) {
+  case FunctionKind::NOT_INDIRECT_TARGET:
+    return "NOT_INDIRECT";
+  case FunctionKind::INDIRECT_TARGET_UNKNOWN_TID:
+    return "UNKNOWN_TID";
+  case FunctionKind::INDIRECT_TARGET_KNOWN_TID:
+    return "KNOWN_TID";
+  case FunctionKind::NOT_LISTED:
+    return "NO_INFO";
+  }
+  llvm_unreachable("Unknown FunctionKind.");
+}
+
+template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
+  if (!this->processCallGraphSection())
+    return;
+  if (this->FuncCGInfos.size() == 0)
+    return;
+  using FunctionCallgraphInfo =
+      ::FunctionCallgraphInfoImpl<typename ELFT::uint>;
+
+  auto GetFunctionName = [&](typename ELFT::uint EntryPc) {
+    SmallVector<uint32_t> FuncSymIndexes =
+        this->getSymbolIndexesForFunctionAddress(EntryPc, std::nullopt);
+    if (FuncSymIndexes.empty())
+      return std::string("");
+
+    SmallVector<std::string> FuncSymNames;
+    for (uint32_t Index : FuncSymIndexes)
+      FuncSymNames.push_back(this->getStaticSymbolName(Index));
+    return join(FuncSymNames, ", ");
+  };
+
+  OS << "Per-function call graph information:: \n";
+  for (const auto &El : this->FuncCGInfos) {
+    typename ELFT::uint FuncEntryPc = El.first;
+    FunctionCallgraphInfo CGInfo = El.second;
+    std::string FuncSymNames = GetFunctionName(FuncEntryPc);
+    if (!FuncSymNames.empty())
+      OS << "\nFunction:: " << FuncSymNames;
+    OS << "\nFunction PC:: " << format("0x%lx", FuncEntryPc);
+    OS << "\nFormatVersionNumber:: " << CGInfo.FormatVersionNumber;
+    OS << "\nFunction Kind:: " << GetFuntionKindString(CGInfo.Kind);
+    if (CGInfo.Kind == FunctionKind::INDIRECT_TARGET_KNOWN_TID)
+      OS << "\nFunction Type ID:: 0x" << format("%lx", CGInfo.FunctionTypeId);
+    OS << "\nIndirect callee count:: " << CGInfo.IndirectCallsites.size();
+    if (CGInfo.IndirectCallsites.size() > 0) {
+      OS << "\n{";
+      for (auto &[IndirCallSitePc, TypeId] : CGInfo.IndirectCallsites) {
+        OS << "\n";
+        OS.PadToColumn(2);
+        OS << "callsite: 0x" << format("%lx", IndirCallSitePc);
+        OS << "\n";
+        OS.PadToColumn(2);
+        OS << "calleeTypeId: 0x" << format("%lx", TypeId);
+      }
+      OS << "\n}";
+    }
+    OS << "\nDirect callee count:: " << CGInfo.DirectCallees.size();
+    if (CGInfo.DirectCallees.size() > 0) {
+      OS << "\n{";
+      for (auto CalleePC : CGInfo.DirectCallees) {
+        std::string FuncSymNames = GetFunctionName(CalleePC);
+        if (!FuncSymNames.empty()) {
+          OS << "\n";
+          OS.PadToColumn(2);
+          OS << "Callee:: " << FuncSymNames;
+        }
+        OS << "\n";
+        OS.PadToColumn(2);
+        OS << "CalleePC:: 0x" << format("%lx", CalleePC);
+      }
+      OS << "\n}";
+    }
+    OS << "\n";
+  }
+}
+
+template <class ELFT>
 void GNUELFDumper<ELFT>::printBBAddrMaps(bool /*PrettyPGOAnalysis*/) {
   OS << "GNUStyle::printBBAddrMaps not implemented\n";
 }
@@ -8090,6 +8378,65 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
         W.printNumber("To", this->getStaticSymbolName(To), To);
       }
       W.printNumber("Weight", CGPE.cgp_weight);
+    }
+  }
+}
+
+template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
+  if (!this->processCallGraphSection())
+    return;
+  if (this->FuncCGInfos.size() == 0)
+    return;
+  using FunctionCallgraphInfo =
+      ::FunctionCallgraphInfoImpl<typename ELFT::uint>;
+
+  auto GetFunctionName = [&](typename ELFT::uint EntryPc) {
+    SmallVector<uint32_t> FuncSymIndexes =
+        this->getSymbolIndexesForFunctionAddress(EntryPc, std::nullopt);
+    if (FuncSymIndexes.empty())
+      return std::string("");
+
+    SmallVector<std::string> FuncSymNames;
+    for (uint32_t Index : FuncSymIndexes)
+      FuncSymNames.push_back(this->getStaticSymbolName(Index));
+    return join(FuncSymNames, ", ");
+  };
+
+  ListScope CGI(W, "callgraph_info");
+
+  for (const auto &El : this->FuncCGInfos) {
+    DictScope D(W, "Function");
+    typename ELFT::uint FuncEntryPc = El.first;
+    FunctionCallgraphInfo CGInfo = El.second;
+    std::string FuncSymName = GetFunctionName(FuncEntryPc);
+    if (!FuncSymName.empty())
+      W.printString("Name", FuncSymName);
+
+    W.printHex("Address", FuncEntryPc);
+    W.printNumber("Version", CGInfo.FormatVersionNumber);
+    W.printString("KindStr", GetFuntionKindString(CGInfo.Kind));
+    W.printNumber("Kind", (uint64_t)CGInfo.Kind);
+    if (CGInfo.Kind == FunctionKind::INDIRECT_TARGET_KNOWN_TID)
+      W.printHex("TypeId", CGInfo.FunctionTypeId);
+    W.printNumber("NumIndirectCallSites", CGInfo.IndirectCallsites.size());
+    if (CGInfo.IndirectCallsites.size() > 0) {
+      ListScope ICSs(W, "IndirectCallsites");
+      for (auto &[IndirCallSitePc, TypeId] : CGInfo.IndirectCallsites) {
+        DictScope ICS(W, "IndirectCallsite");
+        W.printHex("Address", IndirCallSitePc);
+        W.printHex("TypeId", TypeId);
+      }
+    }
+    W.printNumber("NumDirectCallSites", CGInfo.DirectCallees.size());
+    if (CGInfo.DirectCallees.size() > 0) {
+      ListScope DCs(W, "DirectCallees");
+      for (auto CalleePC : CGInfo.DirectCallees) {
+        DictScope DCs(W, "Entry");
+        std::string CalleeSymName = GetFunctionName(CalleePC);
+        if (!CalleeSymName.empty())
+          W.printString("Name", CalleeSymName);
+        W.printHex("Address", CalleePC);
+      }
     }
   }
 }
