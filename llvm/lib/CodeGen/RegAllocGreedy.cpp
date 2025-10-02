@@ -2482,15 +2482,13 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   // We have a broken hint, check if it is possible to fix it by
   // reusing PhysReg for the copy-related live-ranges. Indeed, we evicted
   // some register and PhysReg may be available for the other live-ranges.
-  SmallSet<Register, 4> Visited;
-  SmallVector<Register, 2> RecoloringCandidates;
   HintsInfo Info;
   Register Reg = VirtReg.reg();
   MCRegister PhysReg = VRM->getPhys(Reg);
   // Start the recoloring algorithm from the input live-interval, then
   // it will propagate to the ones that are copy-related with it.
-  Visited.insert(Reg);
-  RecoloringCandidates.push_back(Reg);
+  SmallSet<Register, 4> Visited = {Reg};
+  SmallVector<Register, 2> RecoloringCandidates = {Reg};
 
   LLVM_DEBUG(dbgs() << "Trying to reconcile hints for: " << printReg(Reg, TRI)
                     << '(' << printReg(PhysReg, TRI) << ")\n");
@@ -2498,12 +2496,10 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   do {
     Reg = RecoloringCandidates.pop_back_val();
 
-    // We cannot recolor physical register.
-    if (Reg.isPhysical())
-      continue;
+    MCRegister CurrPhys = VRM->getPhys(Reg);
 
     // This may be a skipped register.
-    if (!VRM->hasPhys(Reg)) {
+    if (!CurrPhys) {
       assert(!shouldAllocateRegister(Reg) &&
              "We have an unallocated variable which should have been handled");
       continue;
@@ -2512,7 +2508,6 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
     // Get the live interval mapped with this virtual register to be able
     // to check for the interference with the new color.
     LiveInterval &LI = LIS->getInterval(Reg);
-    MCRegister CurrPhys = VRM->getPhys(Reg);
     // Check that the new color matches the register class constraints and
     // that it is free for this live range.
     if (CurrPhys != PhysReg && (!MRI->getRegClass(Reg)->contains(PhysReg) ||
@@ -2549,7 +2544,8 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
     // Push all copy-related live-ranges to keep reconciling the broken
     // hints.
     for (const HintInfo &HI : Info) {
-      if (Visited.insert(HI.Reg).second)
+      // We cannot recolor physical register.
+      if (HI.Reg.isVirtual() && Visited.insert(HI.Reg).second)
         RecoloringCandidates.push_back(HI.Reg);
     }
   } while (!RecoloringCandidates.empty());
