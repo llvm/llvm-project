@@ -266,5 +266,8 @@ VPSingleDefRecipe *vputils::getSingleScalarClone(VPSingleDefRecipe *R) {
                                      /*IsSingleScalar*/ true, /*Mask*/ nullptr);
       })
       .Case<VPScalarIVStepsRecipe>([](auto *I) { return I->clone(); })
-      .Default([](auto *I) { return nullptr; });
+      .Default([](auto *I) {
+        llvm_unreachable("Recipe not convertible to single-scalar");
+        return nullptr;
+      });
 }
