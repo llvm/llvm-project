@@ -20,7 +20,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcMincoreTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-//TODO: Replace with sysconf call once the function is properly implemented.
+// TODO: Replace with sysconf call once the function is properly implemented.
 constexpr size_t PAGE_SIZE = 4096;
 
 TEST_F(LlvmLibcMincoreTest, UnMappedMemory) {

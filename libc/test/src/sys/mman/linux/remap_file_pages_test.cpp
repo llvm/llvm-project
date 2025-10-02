@@ -18,7 +18,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h> // For S_IRWXU
 
-//TODO: Replace with sysconf call once the function is properly implemented.
+// TODO: Replace with sysconf call once the function is properly implemented.
 constexpr size_t PAGE_SIZE = 4096;
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;

@@ -15,7 +15,7 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-//TODO: Replace with sysconf call once the function is properly implemented.
+// TODO: Replace with sysconf call once the function is properly implemented.
 constexpr size_t PAGE_SIZE = 4096;
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
