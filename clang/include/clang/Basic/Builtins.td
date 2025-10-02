@@ -3515,6 +3515,8 @@ def StrnCaseCmp : GNULibBuiltin<"strings.h"> {
   let RequiresUndef = 1;
 }
 
+// POSIX unistd.h
+
 def GNU_Exit : GNULibBuiltin<"unistd.h"> {
   let Spellings = ["_exit"];
   let Attributes = [NoReturn];
@@ -3525,6 +3527,69 @@ def VFork : LibBuiltin<"unistd.h"> {
   let Spellings = ["vfork"];
   let Attributes = [ReturnsTwice, IgnoreSignature];
   let Prototype = "pid_t()";
+}
+
+def Read : LibBuiltin<"unistd.h"> {
+  let Spellings = ["read"];
+  let Attributes = [NoThrow];
+  let Prototype = "ssize_t(int, void*, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def PRead : LibBuiltin<"unistd.h"> {
+  let Spellings = ["pread"];
+  let Attributes = [NoThrow];
+  let Prototype = "ssize_t(int, void*, size_t, off_t)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def PRead64 : LibBuiltin<"unistd.h"> {
+  let Spellings = ["pread64"];
+  let Attributes = [NoThrow];
+  let Prototype = "ssize_t(int, void*, size_t, off64_t)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def Write : LibBuiltin<"unistd.h"> {
+  let Spellings = ["write"];
+  let Attributes = [NoThrow];
+  let Prototype = "ssize_t(int, void const*, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def PWrite : LibBuiltin<"unistd.h"> {
+  let Spellings = ["pwrite"];
+  let Attributes = [NoThrow];
+  let Prototype = "ssize_t(int, void const*, size_t, off_t)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def PWrite64 : LibBuiltin<"unistd.h"> {
+  let Spellings = ["pwrite64"];
+  let Attributes = [NoThrow];
+  let Prototype = "ssize_t(int, void const*, size_t, off64_t)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def GetCWD : LibBuiltin<"unistd.h"> {
+  let Spellings = ["getcwd"];
+  let Attributes = [NoThrow];
+  let Prototype = "char*(char*, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def ReadLink : LibBuiltin<"unistd.h"> {
+  let Spellings = ["readlink"];
+  let Attributes = [NoThrow];
+  let Prototype = "ssize_t(char const* restrict, char* restrict, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def ReadLinkAt : LibBuiltin<"unistd.h"> {
+  let Spellings = ["readlinkat"];
+  let Attributes = [NoThrow];
+  let Prototype = "ssize_t(int, char const* restrict, char* restrict, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 // POSIX pthread.h

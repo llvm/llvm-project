@@ -1244,6 +1244,14 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   std::optional<llvm::APSInt> DestinationSize;
   unsigned DiagID = 0;
   bool IsChkVariant = false;
+  bool IsTriggered = false;
+
+  auto CompareSizeSourceToDest = [&]() {
+    return SourceSize && DestinationSize
+               ? std::optional<int>{llvm::APSInt::compareValues(
+                     *SourceSize, *DestinationSize)}
+               : std::nullopt;
+  };
 
   auto GetFunctionName = [&]() {
     std::string FunctionNameStr =
@@ -1273,6 +1281,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     DiagID = diag::warn_fortify_strlen_overflow;
     SourceSize = ComputeStrLenArgument(1);
     DestinationSize = ComputeSizeArgument(0);
+    IsTriggered = CompareSizeSourceToDest() > 0;
     break;
   }
 
@@ -1283,6 +1292,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     SourceSize = ComputeStrLenArgument(1);
     DestinationSize = ComputeExplicitObjectSizeArgument(2);
     IsChkVariant = true;
+    IsTriggered = CompareSizeSourceToDest() > 0;
     break;
   }
 
@@ -1353,11 +1363,13 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
         } else {
           DestinationSize = ComputeSizeArgument(0);
         }
+        IsTriggered = CompareSizeSourceToDest() > 0;
         break;
       }
     }
     return;
   }
+
   case Builtin::BI__builtin___memcpy_chk:
   case Builtin::BI__builtin___memmove_chk:
   case Builtin::BI__builtin___memset_chk:
@@ -1373,6 +1385,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     DestinationSize =
         ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
     IsChkVariant = true;
+    IsTriggered = CompareSizeSourceToDest() > 0;
     break;
   }
 
@@ -1382,6 +1395,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     SourceSize = ComputeExplicitObjectSizeArgument(1);
     DestinationSize = ComputeExplicitObjectSizeArgument(3);
     IsChkVariant = true;
+    IsTriggered = CompareSizeSourceToDest() > 0;
     break;
   }
 
@@ -1399,6 +1413,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     DiagID = diag::warn_fortify_source_size_mismatch;
     SourceSize = ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
     DestinationSize = ComputeSizeArgument(0);
+    IsTriggered = CompareSizeSourceToDest() > 0;
     break;
   }
 
@@ -1413,8 +1428,58 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     DiagID = diag::warn_fortify_source_overflow;
     SourceSize = ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
     DestinationSize = ComputeSizeArgument(0);
+    IsTriggered = CompareSizeSourceToDest() > 0;
     break;
   }
+
+  case Builtin::BIread:
+  case Builtin::BI__builtin_read:
+  case Builtin::BIreadlink:
+  case Builtin::BI__builtin_readlink:
+  case Builtin::BIreadlinkat:
+  case Builtin::BI__builtin_readlinkat:
+  case Builtin::BIgetcwd:
+  case Builtin::BI__builtin_getcwd: {
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    SourceSize = ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
+    DestinationSize = ComputeSizeArgument(TheCall->getNumArgs() - 2);
+    IsTriggered = CompareSizeSourceToDest() > 0;
+    break;
+  }
+
+  case Builtin::BIpread:
+  case Builtin::BI__builtin_pread:
+  case Builtin::BIpread64:
+  case Builtin::BI__builtin_pread64: {
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    SourceSize = ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 2);
+    DestinationSize = ComputeSizeArgument(TheCall->getNumArgs() - 3);
+    IsTriggered = CompareSizeSourceToDest() > 0;
+    break;
+  }
+
+  case Builtin::BIwrite:
+  case Builtin::BI__builtin_write: {
+    DiagID = diag::warn_fortify_destination_size_mismatch;
+    SourceSize = ComputeSizeArgument(TheCall->getNumArgs() - 2);
+    DestinationSize =
+        ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
+    IsTriggered = CompareSizeSourceToDest() < 0;
+    break;
+  }
+
+  case Builtin::BIpwrite:
+  case Builtin::BI__builtin_pwrite:
+  case Builtin::BIpwrite64:
+  case Builtin::BI__builtin_pwrite64: {
+    DiagID = diag::warn_fortify_destination_size_mismatch;
+    SourceSize = ComputeSizeArgument(TheCall->getNumArgs() - 3);
+    DestinationSize =
+        ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 2);
+    IsTriggered = CompareSizeSourceToDest() < 0;
+    break;
+  }
+
   case Builtin::BIsnprintf:
   case Builtin::BI__builtin_snprintf:
   case Builtin::BIvsnprintf:
@@ -1450,11 +1515,12 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       }
     }
     DestinationSize = ComputeSizeArgument(0);
+    IsTriggered = CompareSizeSourceToDest() > 0;
+    break;
   }
   }
 
-  if (!SourceSize || !DestinationSize ||
-      llvm::APSInt::compareValues(*SourceSize, *DestinationSize) <= 0)
+  if (!IsTriggered)
     return;
 
   std::string FunctionName = GetFunctionName();

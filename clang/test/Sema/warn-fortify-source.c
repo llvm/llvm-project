@@ -104,6 +104,61 @@ void call_memset(void) {
   __builtin_memset(buf, 0xff, 11); // expected-warning {{'memset' will always overflow; destination buffer has size 10, but size argument is 11}}
 }
 
+void call_read(void) {
+  char buf[10];
+  __builtin_read(0, buf, 10);
+  __builtin_read(0, buf, 20); // expected-warning {{'read' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
+void call_pread(void) {
+  char buf[10];
+  __builtin_pread(0, buf, 10, 0);
+  __builtin_pread(0, buf, 20, 0); // expected-warning {{'pread' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
+void call_pread64(void) {
+  char buf[10];
+  __builtin_pread64(0, buf, 10, 0);
+  __builtin_pread64(0, buf, 20, 0); // expected-warning {{'pread64' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
+void call_write(void) {
+  char buf[10];
+  __builtin_write(0, buf, 10);
+  __builtin_write(0, buf, 20); // expected-warning {{'write' size argument is too large; source buffer has size 10, but size argument is 20}}
+}
+
+void call_pwrite(void) {
+  char buf[10];
+  __builtin_pwrite(0, buf, 10, 0);
+  __builtin_pwrite(0, buf, 20, 0); // expected-warning {{'pwrite' size argument is too large; source buffer has size 10, but size argument is 20}}
+}
+
+void call_pwrite64(void) {
+  char buf[10];
+  __builtin_pwrite64(0, buf, 10, 0);
+  __builtin_pwrite64(0, buf, 20, 0); // expected-warning {{'pwrite64' size argument is too large; source buffer has size 10, but size argument is 20}}
+}
+
+void call_getcwd(void) {
+  char buf[10];
+  __builtin_getcwd(buf, 10);
+  __builtin_getcwd(buf, 20); // expected-warning {{'getcwd' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
+void call_readlink(void) {
+  char buf[10];
+  __builtin_readlink("path", buf, 10);
+  __builtin_readlink("path", buf, 20); // expected-warning {{'readlink' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
+void call_readlinkat(void) {
+  char buf[10];
+  __builtin_readlinkat(0, "path", buf, 10);
+  __builtin_readlinkat(0, "path", buf, 20); // expected-warning {{'readlinkat' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
+
 void call_snprintf(double d, int n) {
   char buf[10];
   __builtin_snprintf(buf, 10, "merp");
