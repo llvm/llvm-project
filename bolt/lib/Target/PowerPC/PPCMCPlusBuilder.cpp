@@ -39,21 +39,15 @@ static const MCSymbol *getBranchTargetSymbol(const MCInst &I) {
 
 static inline unsigned opc(const MCInst &I) { return I.getOpcode(); }
 
-// Create instructions to push two registers onto the stack
 void PPCMCPlusBuilder::createPushRegisters(MCInst &Inst1, MCInst &Inst2,
                                            MCPhysReg Reg1, MCPhysReg /*Reg2*/) {
-
+  // Emit two NOPs (ori r0, r0, 0)
   Inst1.clear();
-  Inst1.setOpcode(PPC::STDU);
-  Inst1.addOperand(MCOperand::createReg(PPC::R1)); // destination (SP)
-  Inst1.addOperand(MCOperand::createReg(PPC::R1)); // base (SP)
-  Inst1.addOperand(MCOperand::createImm(-16));     // offset
-
-  Inst2.clear();
-  Inst2.setOpcode(PPC::STD);
-  Inst2.addOperand(MCOperand::createReg(Reg1));    // source register
-  Inst2.addOperand(MCOperand::createReg(PPC::R1)); // base (SP)
-  Inst2.addOperand(MCOperand::createImm(0));       // offset
+  Inst1.setOpcode(PPC::ORI);
+  Inst1.addOperand(MCOperand::createReg(PPC::R0));
+  Inst1.addOperand(MCOperand::createReg(PPC::R0));
+  Inst1.addOperand(MCOperand::createImm(0));
+  Inst2 = Inst1;
 }
 
 bool PPCMCPlusBuilder::shouldRecordCodeRelocation(unsigned Type) const {
