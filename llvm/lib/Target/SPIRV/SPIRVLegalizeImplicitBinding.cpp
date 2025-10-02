@@ -39,6 +39,7 @@ private:
   void collectBindingInfo(Module &M);
   uint32_t getAndReserveFirstUnusedBinding(uint32_t DescSet);
   void replaceImplicitBindingCalls(Module &M);
+  void verifyUniqueOrderIdPerResource(SmallVectorImpl<CallInst *> &Calls);
 
   // A map from descriptor set to a bit vector of used binding numbers.
   std::vector<BitVector> UsedBindings;
@@ -94,6 +95,33 @@ void SPIRVLegalizeImplicitBinding::collectBindingInfo(Module &M) {
       });
 }
 
+void SPIRVLegalizeImplicitBinding::verifyUniqueOrderIdPerResource(
+    SmallVectorImpl<CallInst *> &Calls) {
+  // Check that the order Id is unique per resource.
+  for (uint32_t i = 1; i < Calls.size(); ++i) {
+    const uint32_t OrderIdArgIdx = 0;
+    const uint32_t DescSetArgIdx = 1;
+    const uint32_t OrderA =
+        cast<ConstantInt>(Calls[i - 1]->getArgOperand(OrderIdArgIdx))
+            ->getZExtValue();
+    const uint32_t OrderB =
+        cast<ConstantInt>(Calls[i]->getArgOperand(OrderIdArgIdx))
+            ->getZExtValue();
+    if (OrderA == OrderB) {
+      const uint32_t DescSetA =
+          cast<ConstantInt>(Calls[i - 1]->getArgOperand(DescSetArgIdx))
+              ->getZExtValue();
+      const uint32_t DescSetB =
+          cast<ConstantInt>(Calls[i]->getArgOperand(DescSetArgIdx))
+              ->getZExtValue();
+      if (DescSetA != DescSetB) {
+        report_fatal_error("Implicit binding calls with the same order ID must "
+                           "have the same descriptor set");
+      }
+    }
+  }
+}
+
 uint32_t SPIRVLegalizeImplicitBinding::getAndReserveFirstUnusedBinding(
     uint32_t DescSet) {
   if (UsedBindings.size() <= DescSet) {
@@ -112,11 +140,23 @@ uint32_t SPIRVLegalizeImplicitBinding::getAndReserveFirstUnusedBinding(
 }
 
 void SPIRVLegalizeImplicitBinding::replaceImplicitBindingCalls(Module &M) {
+  uint32_t lastOrderId = -1;
+  uint32_t lastBindingNumber = -1;
+
   for (CallInst *OldCI : ImplicitBindingCalls) {
     IRBuilder<> Builder(OldCI);
+    const uint32_t OrderId =
+        cast<ConstantInt>(OldCI->getArgOperand(0))->getZExtValue();
     const uint32_t DescSet =
         cast<ConstantInt>(OldCI->getArgOperand(1))->getZExtValue();
-    const uint32_t NewBinding = getAndReserveFirstUnusedBinding(DescSet);
+
+    // Reuse an existing binding for this order ID, if one was already assigned.
+    // Otherwise, assign a new binding.
+    const uint32_t NewBinding = (lastOrderId == OrderId)
+                                    ? lastBindingNumber
+                                    : getAndReserveFirstUnusedBinding(DescSet);
+    lastOrderId = OrderId;
+    lastBindingNumber = NewBinding;
 
     SmallVector<Value *, 8> Args;
     Args.push_back(Builder.getInt32(DescSet));
@@ -142,6 +182,7 @@ bool SPIRVLegalizeImplicitBinding::runOnModule(Module &M) {
   if (ImplicitBindingCalls.empty()) {
     return false;
   }
+  verifyUniqueOrderIdPerResource(ImplicitBindingCalls);
 
   replaceImplicitBindingCalls(M);
   return true;
