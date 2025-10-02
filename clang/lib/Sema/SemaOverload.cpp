@@ -804,7 +804,7 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
   case TemplateDeductionResult::ConstraintsNotSatisfied: {
     CNSInfo *Saved = new (Context) CNSInfo;
     Saved->TemplateArgs = Info.takeSugared();
-    Saved->Satisfaction = Info.AssociatedConstraintsSatisfaction;
+    Saved->Satisfaction = std::move(Info.AssociatedConstraintsSatisfaction);
     Result.Data = Saved;
     break;
   }
@@ -852,6 +852,7 @@ void DeductionFailureInfo::Destroy() {
 
   case TemplateDeductionResult::ConstraintsNotSatisfied:
     // FIXME: Destroy the template argument list?
+    static_cast<CNSInfo *>(Data)->Satisfaction.~ConstraintSatisfaction();
     Data = nullptr;
     if (PartialDiagnosticAt *Diag = getSFINAEDiagnostic()) {
       Diag->~PartialDiagnosticAt();
