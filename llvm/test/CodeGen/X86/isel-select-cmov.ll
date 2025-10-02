@@ -73,11 +73,9 @@ define zeroext i8 @select_cmov_i8(i1 zeroext %cond, i8 zeroext %a, i8 zeroext %b
 ; FAST-X86-NEXT:    jne LBB0_1
 ; FAST-X86-NEXT:  ## %bb.2:
 ; FAST-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; FAST-X86-NEXT:    movzbl %al, %eax
 ; FAST-X86-NEXT:    retl
 ; FAST-X86-NEXT:  LBB0_1:
 ; FAST-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; FAST-X86-NEXT:    movzbl %al, %eax
 ; FAST-X86-NEXT:    retl
 ;
 ; FAST-X86-CMOV-LABEL: select_cmov_i8:
@@ -86,11 +84,9 @@ define zeroext i8 @select_cmov_i8(i1 zeroext %cond, i8 zeroext %a, i8 zeroext %b
 ; FAST-X86-CMOV-NEXT:    jne LBB0_1
 ; FAST-X86-CMOV-NEXT:  ## %bb.2:
 ; FAST-X86-CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; FAST-X86-CMOV-NEXT:    movzbl %al, %eax
 ; FAST-X86-CMOV-NEXT:    retl
 ; FAST-X86-CMOV-NEXT:  LBB0_1:
 ; FAST-X86-CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; FAST-X86-CMOV-NEXT:    movzbl %al, %eax
 ; FAST-X86-CMOV-NEXT:    retl
 ;
 ; GISEL-X86-LABEL: select_cmov_i8:

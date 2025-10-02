@@ -22,7 +22,6 @@ define i8 @test_udiv_i8(i8 %arg1, i8 %arg2) nounwind {
 ; GISEL-X86-LABEL: test_udiv_i8:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    movzbl %al, %eax
 ; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    divb %cl
 ; GISEL-X86-NEXT:    retl
