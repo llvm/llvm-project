@@ -30,11 +30,11 @@ _LIBCPP_HIDE_FROM_ABI _OutputIterator __pad_and_output(
     __ns -= __sz;
   else
     __ns = 0;
-  for (; __ob < __op; ++__ob, ++__s)
+  for (; __ob < __op; ++__ob, (void)++__s)
     *__s = *__ob;
-  for (; __ns; --__ns, ++__s)
+  for (; __ns; --__ns, (void)++__s)
     *__s = __fl;
-  for (; __ob < __oe; ++__ob, ++__s)
+  for (; __ob < __oe; ++__ob, (void)++__s)
     *__s = *__ob;
   __iob.width(0);
   return __s;
