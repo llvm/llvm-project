@@ -79,17 +79,7 @@ define void @bottom_tested(ptr %p, i32 %n) {
 ; TAILFOLD-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; TAILFOLD-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; TAILFOLD:       middle.block:
-; TAILFOLD-NEXT:    br label [[IF_END:%.*]]
-; TAILFOLD:       scalar.ph:
 ; TAILFOLD-NEXT:    br label [[FOR_COND:%.*]]
-; TAILFOLD:       for.cond:
-; TAILFOLD-NEXT:    [[I:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[INC:%.*]], [[FOR_COND]] ]
-; TAILFOLD-NEXT:    [[IPROM:%.*]] = sext i32 [[I]] to i64
-; TAILFOLD-NEXT:    [[B:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[IPROM]]
-; TAILFOLD-NEXT:    store i16 0, ptr [[B]], align 4
-; TAILFOLD-NEXT:    [[INC]] = add nsw i32 [[I]], 1
-; TAILFOLD-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N]]
-; TAILFOLD-NEXT:    br i1 [[CMP]], label [[FOR_COND]], label [[IF_END]]
 ; TAILFOLD:       if.end:
 ; TAILFOLD-NEXT:    ret void
 ;

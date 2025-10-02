@@ -51,7 +51,7 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, s4, v2
 ; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, v3, v7, vcc
 ; CHECK-NEXT:    s_add_u32 s4, s4, 1
-; CHECK-NEXT:    s_addc_u32 s5, s5, 0
+; CHECK-NEXT:    s_addc_u32 s5, 0, s5
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[6:7], v10
 ; CHECK-NEXT:  ; %bb.7:

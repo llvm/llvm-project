@@ -241,42 +241,8 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    [[TMP44:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[TMP41]])
 ; PRED-NEXT:    br label %[[EXIT:.*]]
-; PRED:       [[SCALAR_PH:.*]]:
-; PRED-NEXT:    br label %[[LOOP:.*]]
-; PRED:       [[LOOP]]:
-; PRED-NEXT:    [[TMP45:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[TMP53:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[SCALAR_RECUR10:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[TMP45]], %[[LOOP]] ]
-; PRED-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[SUM_RED:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[RED_2:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[TMP52:%.*]] = add i64 [[Y]], 1
-; PRED-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[SRC_1]], i64 [[TMP52]]
-; PRED-NEXT:    [[TMP53]] = load i32, ptr [[GEP_1]], align 4
-; PRED-NEXT:    [[OR3:%.*]] = or i32 [[SCALAR_RECUR10]], [[X]]
-; PRED-NEXT:    [[IV_NEXT1]] = add i64 [[IV1]], 1
-; PRED-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], 1
-; PRED-NEXT:    [[TMP54:%.*]] = shl i32 [[OR3]], 1
-; PRED-NEXT:    [[TMP55:%.*]] = or i32 [[TMP54]], 2
-; PRED-NEXT:    [[SHL19:%.*]] = shl i32 [[X]], 1
-; PRED-NEXT:    [[TMP56:%.*]] = or i32 [[SHR]], [[SHL19]]
-; PRED-NEXT:    [[TMP57:%.*]] = or i32 [[TMP56]], [[TMP55]]
-; PRED-NEXT:    [[TMP58:%.*]] = or i32 [[TMP57]], [[X]]
-; PRED-NEXT:    [[OR20:%.*]] = or i32 [[Z]], [[X]]
-; PRED-NEXT:    [[NOT:%.*]] = and i32 [[OR20]], 1
-; PRED-NEXT:    [[AND:%.*]] = xor i32 [[NOT]], 1
-; PRED-NEXT:    [[IDX_EXT_1:%.*]] = zext i32 [[AND]] to i64
-; PRED-NEXT:    [[GEP_2:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[IDX_EXT_1]]
-; PRED-NEXT:    [[TMP59:%.*]] = load i32, ptr [[GEP_2]], align 4
-; PRED-NEXT:    [[SHR24:%.*]] = lshr i32 [[TMP58]], 1
-; PRED-NEXT:    [[IDX_EXT_2:%.*]] = zext i32 [[SHR24]] to i64
-; PRED-NEXT:    [[GEP_3:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[IDX_EXT_2]]
-; PRED-NEXT:    [[TMP60:%.*]] = load i32, ptr [[GEP_3]], align 4
-; PRED-NEXT:    [[RED_1:%.*]] = or i32 [[TMP59]], [[SUM_RED]]
-; PRED-NEXT:    [[RED_2]] = or i32 [[RED_1]], [[TMP60]]
-; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV1]], [[Y]]
-; PRED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; PRED:       [[EXIT]]:
-; PRED-NEXT:    [[RED_2_LCSSA:%.*]] = phi i32 [ [[RED_2]], %[[LOOP]] ], [ [[TMP44]], %[[MIDDLE_BLOCK]] ]
-; PRED-NEXT:    ret i32 [[RED_2_LCSSA]]
+; PRED-NEXT:    ret i32 [[TMP44]]
 ;
 entry:
   br label %loop
@@ -497,21 +463,8 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    [[TMP19:%.*]] = call i16 @llvm.vector.reduce.or.nxv8i16(<vscale x 8 x i16> [[TMP16]])
 ; PRED-NEXT:    br label %[[EXIT:.*]]
-; PRED:       [[SCALAR_PH:.*]]:
-; PRED-NEXT:    br label %[[LOOP:.*]]
-; PRED:       [[LOOP]]:
-; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[RED:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV]]
-; PRED-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2
-; PRED-NEXT:    [[DIV:%.*]] = udiv i16 [[L]], [[X]]
-; PRED-NEXT:    [[RED_NEXT]] = or i16 [[DIV]], [[RED]]
-; PRED-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
-; PRED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; PRED:       [[EXIT]]:
-; PRED-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i16 [ [[RED_NEXT]], %[[LOOP]] ], [ [[TMP19]], %[[MIDDLE_BLOCK]] ]
-; PRED-NEXT:    ret i16 [[RED_NEXT_LCSSA]]
+; PRED-NEXT:    ret i16 [[TMP19]]
 ;
 entry:
   br label %loop

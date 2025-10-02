@@ -5699,6 +5699,20 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
           Worklist.push_back(InstOp);
   }
 
+  auto UpdateMemOpUserCost = [this, VF](LoadInst *LI) {
+    // If there are direct memory op users of the newly scalarized load,
+    // their cost may have changed because there's no scalarization
+    // overhead for the operand. Update it.
+    for (User *U : LI->users()) {
+      if (!isa<LoadInst, StoreInst>(U))
+        continue;
+      if (getWideningDecision(cast<Instruction>(U), VF) != CM_Scalarize)
+        continue;
+      setWideningDecision(
+          cast<Instruction>(U), VF, CM_Scalarize,
+          getMemInstScalarizationCost(cast<Instruction>(U), VF));
+    }
+  };
   for (auto *I : AddrDefs) {
     if (isa<LoadInst>(I)) {
       // Setting the desired widening decision should ideally be handled in
@@ -5708,21 +5722,24 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       InstWidening Decision = getWideningDecision(I, VF);
       if (Decision == CM_Widen || Decision == CM_Widen_Reverse ||
           (!isPredicatedInst(I) && !Legal->isUniformMemOp(*I, VF) &&
-           Decision == CM_Scalarize))
+           Decision == CM_Scalarize)) {
         // Scalarize a widened load of address or update the cost of a scalar
         // load of an address.
         setWideningDecision(
             I, VF, CM_Scalarize,
             (VF.getKnownMinValue() *
              getMemoryInstructionCost(I, ElementCount::getFixed(1))));
-      else if (const auto *Group = getInterleavedAccessGroup(I)) {
+        UpdateMemOpUserCost(cast<LoadInst>(I));
+      } else if (const auto *Group = getInterleavedAccessGroup(I)) {
         // Scalarize an interleave group of address loads.
         for (unsigned I = 0; I < Group->getFactor(); ++I) {
-          if (Instruction *Member = Group->getMember(I))
+          if (Instruction *Member = Group->getMember(I)) {
             setWideningDecision(
                 Member, VF, CM_Scalarize,
                 (VF.getKnownMinValue() *
                  getMemoryInstructionCost(Member, ElementCount::getFixed(1))));
+            UpdateMemOpUserCost(cast<LoadInst>(Member));
+          }
         }
       }
     } else {
@@ -9521,55 +9538,52 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
   Header->setName("vec.epilog.vector.body");
 
-  DenseMap<Value *, Value *> ToFrozen;
-  SmallVector<Instruction *> InstsToMove;
   // Ensure that the start values for all header phi recipes are updated before
   // vectorizing the epilogue loop.
-  for (VPRecipeBase &R : Header->phis()) {
-    if (auto *IV = dyn_cast<VPCanonicalIVPHIRecipe>(&R)) {
-      // When vectorizing the epilogue loop, the canonical induction start
-      // value needs to be changed from zero to the value after the main
-      // vector loop. Find the resume value created during execution of the main
-      // VPlan. It must be the first phi in the loop preheader.
-      // FIXME: Improve modeling for canonical IV start values in the epilogue
-      // loop.
-      using namespace llvm::PatternMatch;
-      PHINode *EPResumeVal = &*L->getLoopPreheader()->phis().begin();
-      for (Value *Inc : EPResumeVal->incoming_values()) {
-        if (match(Inc, m_SpecificInt(0)))
-          continue;
-        assert(!EPI.VectorTripCount &&
-               "Must only have a single non-zero incoming value");
-        EPI.VectorTripCount = Inc;
-      }
-      // If we didn't find a non-zero vector trip count, all incoming values
-      // must be zero, which also means the vector trip count is zero. Pick the
-      // first zero as vector trip count.
-      // TODO: We should not choose VF * UF so the main vector loop is known to
-      // be dead.
-      if (!EPI.VectorTripCount) {
-        assert(
-            EPResumeVal->getNumIncomingValues() > 0 &&
-            all_of(EPResumeVal->incoming_values(),
-                   [](Value *Inc) { return match(Inc, m_SpecificInt(0)); }) &&
-            "all incoming values must be 0");
-        EPI.VectorTripCount = EPResumeVal->getOperand(0);
-      }
-      VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
-      assert(all_of(IV->users(),
-                    [](const VPUser *U) {
-                      return isa<VPScalarIVStepsRecipe>(U) ||
-                             isa<VPDerivedIVRecipe>(U) ||
-                             cast<VPRecipeBase>(U)->isScalarCast() ||
-                             cast<VPInstruction>(U)->getOpcode() ==
-                                 Instruction::Add;
-                    }) &&
-             "the canonical IV should only be used by its increment or "
-             "ScalarIVSteps when resetting the start value");
-      IV->setOperand(0, VPV);
+  VPCanonicalIVPHIRecipe *IV = Plan.getCanonicalIV();
+  // When vectorizing the epilogue loop, the canonical induction start
+  // value needs to be changed from zero to the value after the main
+  // vector loop. Find the resume value created during execution of the main
+  // VPlan. It must be the first phi in the loop preheader.
+  // FIXME: Improve modeling for canonical IV start values in the epilogue
+  // loop.
+  using namespace llvm::PatternMatch;
+  PHINode *EPResumeVal = &*L->getLoopPreheader()->phis().begin();
+  for (Value *Inc : EPResumeVal->incoming_values()) {
+    if (match(Inc, m_SpecificInt(0)))
       continue;
-    }
+    assert(!EPI.VectorTripCount &&
+           "Must only have a single non-zero incoming value");
+    EPI.VectorTripCount = Inc;
+  }
+  // If we didn't find a non-zero vector trip count, all incoming values
+  // must be zero, which also means the vector trip count is zero. Pick the
+  // first zero as vector trip count.
+  // TODO: We should not choose VF * UF so the main vector loop is known to
+  // be dead.
+  if (!EPI.VectorTripCount) {
+    assert(EPResumeVal->getNumIncomingValues() > 0 &&
+           all_of(EPResumeVal->incoming_values(),
+                  [](Value *Inc) { return match(Inc, m_SpecificInt(0)); }) &&
+           "all incoming values must be 0");
+    EPI.VectorTripCount = EPResumeVal->getOperand(0);
+  }
+  VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
+  assert(all_of(IV->users(),
+                [](const VPUser *U) {
+                  return isa<VPScalarIVStepsRecipe>(U) ||
+                         isa<VPDerivedIVRecipe>(U) ||
+                         cast<VPRecipeBase>(U)->isScalarCast() ||
+                         cast<VPInstruction>(U)->getOpcode() ==
+                             Instruction::Add;
+                }) &&
+         "the canonical IV should only be used by its increment or "
+         "ScalarIVSteps when resetting the start value");
+  IV->setOperand(0, VPV);
 
+  DenseMap<Value *, Value *> ToFrozen;
+  SmallVector<Instruction *> InstsToMove;
+  for (VPRecipeBase &R : drop_begin(Header->phis())) {
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {

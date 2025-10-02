@@ -62,7 +62,7 @@ mlir::Value CIRGenFunction::createOpenACCConstantInt(mlir::Location loc,
   auto constOp = builder.create<mlir::arith::ConstantOp>(
       loc, builder.getIntegerAttr(ty, value));
 
-  return constOp.getResult();
+  return constOp;
 }
 
 CIRGenFunction::OpenACCDataOperandInfo

@@ -327,7 +327,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[UB2_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB2]] : index to !u64i 
 //
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u64i
-// CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[TL_ALLOCA]] : !cir.ptr<!cir.array<!cir.ptr<!s32i> x 5>>), !cir.ptr<!cir.ptr<!s32i>>
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[TL_ALLOCA]] : !cir.ptr<!cir.array<!cir.ptr<!s32i> x 5>> -> !cir.ptr<!cir.ptr<!s32i>>
 // CHECK-NEXT: %[[TL_DEREF:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!cir.ptr<!s32i>>, %[[ZERO]] : !u64i), !cir.ptr<!cir.ptr<!s32i>>
 //
 // CHECK-NEXT: %[[UB1:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
@@ -437,7 +437,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[UB3_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB3]] : index to !u64i 
 //
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u64i
-// CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[TL_ALLOCA]] : !cir.ptr<!cir.array<!cir.ptr<!cir.ptr<!s32i>> x 5>>), !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[TL_ALLOCA]] : !cir.ptr<!cir.array<!cir.ptr<!cir.ptr<!s32i>> x 5>> -> !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 // CHECK-NEXT: %[[TL_DEREF:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, %[[ZERO]] : !u64i), !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 //
 // CHECK-NEXT: %[[UB2:.*]] = acc.get_upperbound %[[BOUND2]] : (!acc.data_bounds_ty) -> index
@@ -518,7 +518,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[UB2_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB2]] : index to !u64i 
 //
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u64i
-// CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[TL_ALLOCA]] : !cir.ptr<!cir.array<!cir.ptr<!cir.ptr<!s32i>> x 5>>), !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[TL_ALLOCA]] : !cir.ptr<!cir.array<!cir.ptr<!cir.ptr<!s32i>> x 5>> -> !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 // CHECK-NEXT: %[[TL_DEREF:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, %[[ZERO]] : !u64i), !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 //
 // CHECK-NEXT: %[[UB1:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
@@ -765,7 +765,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[NUM_ELTS:.*]] = cir.binop(mul, %[[UB2_CAST]], %[[UB3_CAST]]) : !u64i
 //
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u64i
-// CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARR_ALLOCA]] : !cir.ptr<!cir.array<!cir.ptr<!s32i> x 5>>), !cir.ptr<!cir.ptr<!s32i>>
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARR_ALLOCA]] : !cir.ptr<!cir.array<!cir.ptr<!s32i> x 5>> -> !cir.ptr<!cir.ptr<!s32i>>
 // CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!cir.ptr<!s32i>>, %[[ZERO]] : !u64i), !cir.ptr<!cir.ptr<!s32i>>
 //
 // CHECK-NEXT: %[[UB1:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index

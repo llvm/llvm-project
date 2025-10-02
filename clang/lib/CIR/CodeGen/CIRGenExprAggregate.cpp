@@ -133,8 +133,7 @@ public:
   }
   void VisitParenExpr(ParenExpr *pe) { Visit(pe->getSubExpr()); }
   void VisitGenericSelectionExpr(GenericSelectionExpr *ge) {
-    cgf.cgm.errorNYI(ge->getSourceRange(),
-                     "AggExprEmitter: VisitGenericSelectionExpr");
+    Visit(ge->getResultExpr());
   }
   void VisitCoawaitExpr(CoawaitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCoawaitExpr");

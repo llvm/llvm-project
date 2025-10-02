@@ -123,6 +123,13 @@ a.bataev@outlook.com (email), [alexey-bataev](https://github.com/alexey-bataev) 
 Chandler Carruth \
 chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
 
+#### DFAJumpThreading
+
+Hongyu Chen \
+xxs\_chy@outlook.com (email), [XChy](https://github.com/XChy) (Github) \
+Usman Nadeem \
+mnadeem@quicinc.com (email), [UsmanNadeem](https://github.com/UsmanNadeem) (Github)
+
 ### Instrumentation and sanitizers
 
 #### Sanitizers not covered by someone else

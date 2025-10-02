@@ -72,6 +72,7 @@ STATISTIC(NumImportedModules, "Number of modules imported from");
 STATISTIC(NumDeadSymbols, "Number of dead stripped symbols in index");
 STATISTIC(NumLiveSymbols, "Number of live symbols in index");
 
+namespace llvm {
 cl::opt<bool>
     ForceImportAll("force-import-all", cl::init(false), cl::Hidden,
                    cl::desc("Import functions with noinline attribute"));
@@ -185,9 +186,8 @@ static cl::opt<bool> CtxprofMoveRootsToOwnModule(
 
 extern cl::list<GlobalValue::GUID> MoveSymbolGUID;
 
-namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
-}
+} // end namespace llvm
 
 // Load lazily a module from \p FileName in \p Context.
 static std::unique_ptr<Module> loadFile(const std::string &FileName,

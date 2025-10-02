@@ -696,6 +696,7 @@ def testOperationPrint():
     # CHECK: resource1: "0x08
     module.operation.print(large_elements_limit=2)
 
+
 # CHECK-LABEL: TEST: testKnownOpView
 @run
 def testKnownOpView():
@@ -968,6 +969,13 @@ def testOperationLoc():
         op = Operation.create("custom.op", loc=loc)
         assert op.location == loc
         assert op.operation.location == loc
+
+        another_loc = Location.name("another_loc")
+        op.location = another_loc
+        assert op.location == another_loc
+        assert op.operation.location == another_loc
+        # CHECK: loc("another_loc")
+        print(op.location)
 
 
 # CHECK-LABEL: TEST: testModuleMerge

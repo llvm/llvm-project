@@ -23,26 +23,7 @@ define void @test_not_first_lane_only_constant(ptr %A, ptr noalias %B)  {
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i16, ptr [[A]], i16 [[IV]]
-; CHECK-NEXT:    br i1 false, label [[LOOP_LATCH]], label [[ELSE_1:%.*]]
-; CHECK:       else.1:
-; CHECK-NEXT:    br i1 false, label [[THEN_2:%.*]], label [[ELSE_2:%.*]]
-; CHECK:       then.2:
-; CHECK-NEXT:    br label [[ELSE_2]]
-; CHECK:       else.2:
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi ptr [ [[B]], [[ELSE_2]] ], [ poison, [[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[MERGE]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
-; CHECK-NEXT:    store i16 [[L]], ptr [[GEP_A]], align 2
-; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i16 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT]], label [[LOOP_HEADER]]
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -98,29 +79,7 @@ define void @test_not_first_lane_only_wide_compare(ptr %A, ptr noalias %B, i16 %
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i16, ptr [[A]], i16 [[IV]]
-; CHECK-NEXT:    [[L_0:%.*]] = load i16, ptr [[GEP_A]], align 2
-; CHECK-NEXT:    [[C_0:%.*]] = icmp ult i16 [[L_0]], [[X]]
-; CHECK-NEXT:    br i1 [[C_0]], label [[LOOP_LATCH]], label [[ELSE_1:%.*]]
-; CHECK:       else.1:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i16 [[L_0]], [[Y]]
-; CHECK-NEXT:    br i1 [[C_1]], label [[THEN_2:%.*]], label [[ELSE_2:%.*]]
-; CHECK:       then.2:
-; CHECK-NEXT:    br label [[ELSE_2]]
-; CHECK:       else.2:
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi ptr [ [[B]], [[ELSE_2]] ], [ poison, [[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[MERGE]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
-; CHECK-NEXT:    store i16 [[L]], ptr [[GEP_A]], align 2
-; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i16 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT]], label [[LOOP_HEADER]]
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -179,29 +138,7 @@ define void @test_not_first_lane_only_wide_compare_incoming_order_swapped(ptr %A
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i16, ptr [[A]], i16 [[IV]]
-; CHECK-NEXT:    [[L_0:%.*]] = load i16, ptr [[GEP_A]], align 2
-; CHECK-NEXT:    [[C_0:%.*]] = icmp ult i16 [[L_0]], [[X]]
-; CHECK-NEXT:    br i1 [[C_0]], label [[LOOP_LATCH]], label [[ELSE_1:%.*]]
-; CHECK:       else.1:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i16 [[L_0]], [[Y]]
-; CHECK-NEXT:    br i1 [[C_1]], label [[THEN_2:%.*]], label [[ELSE_2:%.*]]
-; CHECK:       then.2:
-; CHECK-NEXT:    br label [[ELSE_2]]
-; CHECK:       else.2:
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi ptr [ poison, [[LOOP_HEADER]] ], [ [[B]], [[ELSE_2]] ]
-; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[MERGE]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
-; CHECK-NEXT:    store i16 [[L]], ptr [[GEP_A]], align 2
-; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i16 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT]], label [[LOOP_HEADER]]
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

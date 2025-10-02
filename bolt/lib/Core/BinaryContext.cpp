@@ -1662,7 +1662,7 @@ void BinaryContext::preprocessDWODebugInfo() {
                "files.\n";
       }
       // Prevent failures when DWOName is already an absolute path.
-      sys::fs::make_absolute(DWOCompDir, AbsolutePath);
+      sys::path::make_absolute(DWOCompDir, AbsolutePath);
       DWARFUnit *DWOCU =
           DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {

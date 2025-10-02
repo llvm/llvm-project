@@ -32,6 +32,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/OperandTraits.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -3536,8 +3537,6 @@ class SwitchInstProfUpdateWrapper {
   bool Changed = false;
 
 protected:
-  LLVM_ABI MDNode *buildProfBranchWeightsMD();
-
   LLVM_ABI void init();
 
 public:
@@ -3549,8 +3548,8 @@ public:
   SwitchInstProfUpdateWrapper(SwitchInst &SI) : SI(SI) { init(); }
 
   ~SwitchInstProfUpdateWrapper() {
-    if (Changed)
-      SI.setMetadata(LLVMContext::MD_prof, buildProfBranchWeightsMD());
+    if (Changed && Weights.has_value() && Weights->size() >= 2)
+      setBranchWeights(SI, Weights.value(), /*IsExpected=*/false);
   }
 
   /// Delegate the call to the underlying SwitchInst::removeCase() and remove

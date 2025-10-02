@@ -24,7 +24,9 @@
 using namespace llvm;
 using namespace llvm::memprof;
 
+namespace llvm {
 LLVM_ABI extern cl::opt<bool> MemProfKeepAllNotColdContexts;
+} // end namespace llvm
 
 namespace {
 

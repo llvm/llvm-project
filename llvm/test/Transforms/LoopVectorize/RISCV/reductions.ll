@@ -29,20 +29,8 @@ define i32 @add(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP8]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP10]], [[SUM_07]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[FOR_BODY]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
 entry:
   br label %for.body
@@ -85,20 +73,8 @@ define i32 @sub(ptr %a, i64 %n) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP3]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 1024, %[[SCALAR_PH]] ], [ [[SUB:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[SUB]] = sub i32 [[RDX]], [[X]]
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[SUB_LCSSA:%.*]] = phi i32 [ [[SUB]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[SUB_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 entry:
   br label %loop
@@ -144,23 +120,8 @@ define i32 @addsub(ptr %a, ptr %b, i64 %n) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP5]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[SUB:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[GEP_A]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[RDX]], [[X]]
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr i32, ptr [[B]], i64 [[IV]]
-; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr [[GEP_B]], align 4
-; CHECK-NEXT:    [[SUB]] = sub i32 [[ADD]], [[Y]]
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[SUB_LCSSA:%.*]] = phi i32 [ [[SUB]], %[[LOOP]] ], [ [[TMP8]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[SUB_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP8]]
 ;
 entry:
   br label %loop
@@ -209,20 +170,8 @@ define i32 @or(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[TMP8]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[OR:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[OR]] = or i32 [[TMP10]], [[SUM_07]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[OR_LCSSA:%.*]] = phi i32 [ [[OR]], %[[FOR_BODY]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[OR_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
 entry:
   br label %for.body
@@ -267,20 +216,8 @@ define i32 @and(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.and.nxv4i32(<vscale x 4 x i32> [[TMP8]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[AND:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[AND]] = and i32 [[TMP10]], [[SUM_07]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[AND_LCSSA:%.*]] = phi i32 [ [[AND]], %[[FOR_BODY]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[AND_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
 entry:
   br label %for.body
@@ -325,20 +262,8 @@ define i32 @xor(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.xor.nxv4i32(<vscale x 4 x i32> [[TMP8]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[XOR]] = xor i32 [[TMP10]], [[SUM_07]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[XOR_LCSSA:%.*]] = phi i32 [ [[XOR]], %[[FOR_BODY]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[XOR_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
 entry:
   br label %for.body
@@ -384,21 +309,8 @@ define i32 @smin(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.smin.nxv4i32(<vscale x 4 x i32> [[TMP9]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_010:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[TMP11]], [[SUM_010]]
-; CHECK-NEXT:    [[DOTSROA_SPECULATED]] = select i1 [[CMP_I]], i32 [[TMP11]], i32 [[SUM_010]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[DOTSROA_SPECULATED_LCSSA:%.*]] = phi i32 [ [[DOTSROA_SPECULATED]], %[[FOR_BODY]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[DOTSROA_SPECULATED_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP12]]
 ;
 entry:
   br label %for.body
@@ -445,21 +357,8 @@ define i32 @umax(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.umax.nxv4i32(<vscale x 4 x i32> [[TMP9]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_010:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ugt i32 [[TMP11]], [[SUM_010]]
-; CHECK-NEXT:    [[DOTSROA_SPECULATED]] = select i1 [[CMP_I]], i32 [[TMP11]], i32 [[SUM_010]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[DOTSROA_SPECULATED_LCSSA:%.*]] = phi i32 [ [[DOTSROA_SPECULATED]], %[[FOR_BODY]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[DOTSROA_SPECULATED_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP12]]
 ;
 entry:
   br label %for.body
@@ -505,20 +404,8 @@ define float @fadd_fast(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.vector.reduce.fadd.nxv4f32(float 0.000000e+00, <vscale x 4 x float> [[TMP8]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ADD]] = fadd fast float [[TMP10]], [[SUM_07]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], %[[FOR_BODY]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret float [[ADD_LCSSA]]
+; CHECK-NEXT:    ret float [[TMP11]]
 ;
 entry:
   br label %for.body
@@ -561,20 +448,8 @@ define half @fadd_fast_half_zvfh(ptr noalias nocapture readonly %a, i64 %n) "tar
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast half @llvm.vector.reduce.fadd.nxv8f16(half 0xH0000, <vscale x 8 x half> [[TMP8]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi half [ 0xH0000, %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds half, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load half, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ADD]] = fadd fast half [[TMP10]], [[SUM_07]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi half [ [[ADD]], %[[FOR_BODY]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret half [[ADD_LCSSA]]
+; CHECK-NEXT:    ret half [[TMP11]]
 ;
 entry:
   br label %for.body
@@ -744,21 +619,8 @@ define float @fmin_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = call float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> [[TMP9]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[TMP11]], [[SUM_07]]
-; CHECK-NEXT:    [[DOTSROA_SPECULATED]] = select i1 [[CMP_I]], float [[TMP11]], float [[SUM_07]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[DOTSROA_SPECULATED_LCSSA:%.*]] = phi float [ [[DOTSROA_SPECULATED]], %[[FOR_BODY]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret float [[DOTSROA_SPECULATED_LCSSA]]
+; CHECK-NEXT:    ret float [[TMP12]]
 ;
 entry:
   br label %for.body
@@ -803,21 +665,8 @@ define half @fmin_fast_half_zvfhmin(ptr noalias nocapture readonly %a, i64 %n) #
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = call half @llvm.vector.reduce.fmin.nxv8f16(<vscale x 8 x half> [[TMP9]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi half [ 0xH0000, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds half, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load half, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt half [[TMP11]], [[SUM_07]]
-; CHECK-NEXT:    [[DOTSROA_SPECULATED]] = select i1 [[CMP_I]], half [[TMP11]], half [[SUM_07]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[DOTSROA_SPECULATED_LCSSA:%.*]] = phi half [ [[DOTSROA_SPECULATED]], %[[FOR_BODY]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret half [[DOTSROA_SPECULATED_LCSSA]]
+; CHECK-NEXT:    ret half [[TMP12]]
 ;
 entry:
   br label %for.body
@@ -862,21 +711,8 @@ define bfloat @fmin_fast_bfloat_zvfbfmin(ptr noalias nocapture readonly %a, i64 
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = call bfloat @llvm.vector.reduce.fmin.nxv8bf16(<vscale x 8 x bfloat> [[TMP9]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi bfloat [ 0xR0000, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds bfloat, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load bfloat, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt bfloat [[TMP11]], [[SUM_07]]
-; CHECK-NEXT:    [[DOTSROA_SPECULATED]] = select i1 [[CMP_I]], bfloat [[TMP11]], bfloat [[SUM_07]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[DOTSROA_SPECULATED_LCSSA:%.*]] = phi bfloat [ [[DOTSROA_SPECULATED]], %[[FOR_BODY]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret bfloat [[DOTSROA_SPECULATED_LCSSA]]
+; CHECK-NEXT:    ret bfloat [[TMP12]]
 ;
 entry:
   br label %for.body
@@ -923,21 +759,8 @@ define float @fmax_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.vector.reduce.fmax.nxv4f32(<vscale x 4 x float> [[TMP9]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast ogt float [[TMP11]], [[SUM_07]]
-; CHECK-NEXT:    [[DOTSROA_SPECULATED]] = select i1 [[CMP_I]], float [[TMP11]], float [[SUM_07]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[DOTSROA_SPECULATED_LCSSA:%.*]] = phi float [ [[DOTSROA_SPECULATED]], %[[FOR_BODY]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret float [[DOTSROA_SPECULATED_LCSSA]]
+; CHECK-NEXT:    ret float [[TMP12]]
 ;
 entry:
   br label %for.body
@@ -982,21 +805,8 @@ define half @fmax_fast_half_zvfhmin(ptr noalias nocapture readonly %a, i64 %n) #
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast half @llvm.vector.reduce.fmax.nxv8f16(<vscale x 8 x half> [[TMP9]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi half [ 0xH0000, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds half, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load half, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast ogt half [[TMP11]], [[SUM_07]]
-; CHECK-NEXT:    [[DOTSROA_SPECULATED]] = select i1 [[CMP_I]], half [[TMP11]], half [[SUM_07]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[DOTSROA_SPECULATED_LCSSA:%.*]] = phi half [ [[DOTSROA_SPECULATED]], %[[FOR_BODY]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret half [[DOTSROA_SPECULATED_LCSSA]]
+; CHECK-NEXT:    ret half [[TMP12]]
 ;
 entry:
   br label %for.body
@@ -1041,21 +851,8 @@ define bfloat @fmax_fast_bfloat_zvfbfmin(ptr noalias nocapture readonly %a, i64 
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast bfloat @llvm.vector.reduce.fmax.nxv8bf16(<vscale x 8 x bfloat> [[TMP9]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi bfloat [ 0xR0000, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds bfloat, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load bfloat, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast ogt bfloat [[TMP11]], [[SUM_07]]
-; CHECK-NEXT:    [[DOTSROA_SPECULATED]] = select i1 [[CMP_I]], bfloat [[TMP11]], bfloat [[SUM_07]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[DOTSROA_SPECULATED_LCSSA:%.*]] = phi bfloat [ [[DOTSROA_SPECULATED]], %[[FOR_BODY]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret bfloat [[DOTSROA_SPECULATED_LCSSA]]
+; CHECK-NEXT:    ret bfloat [[TMP12]]
 ;
 entry:
   br label %for.body
@@ -1243,22 +1040,8 @@ define float @fmuladd(ptr %a, ptr %b, i64 %n) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP16:%.*]] = call reassoc float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP9]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[MULADD:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[MULADD]] = tail call reassoc float @llvm.fmuladd.f32(float [[TMP11]], float [[TMP12]], float [[SUM_07]])
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[MULADD_LCSSA:%.*]] = phi float [ [[MULADD]], %[[FOR_BODY]] ], [ [[TMP16]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret float [[MULADD_LCSSA]]
+; CHECK-NEXT:    ret float [[TMP16]]
 ;
 entry:
   br label %for.body
@@ -1305,22 +1088,8 @@ define half @fmuladd_f16_zvfh(ptr %a, ptr %b, i64 %n) "target-features"="+zvfh" 
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP16:%.*]] = call reassoc half @llvm.vector.reduce.fadd.nxv8f16(half 0xH8000, <vscale x 8 x half> [[TMP9]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi half [ 0xH0000, %[[SCALAR_PH]] ], [ [[MULADD:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds half, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load half, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds half, ptr [[B]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load half, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[MULADD]] = tail call reassoc half @llvm.fmuladd.f16(half [[TMP11]], half [[TMP12]], half [[SUM_07]])
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[MULADD_LCSSA:%.*]] = phi half [ [[MULADD]], %[[FOR_BODY]] ], [ [[TMP16]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret half [[MULADD_LCSSA]]
+; CHECK-NEXT:    ret half [[TMP16]]
 ;
 entry:
   br label %for.body

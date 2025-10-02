@@ -64,4 +64,12 @@ def MathExpandOpsPass : Pass<"math-expand-ops"> {
   ];
 }
 
+def MathSincosFusionPass : Pass<"math-sincos-fusion"> {
+  let summary = "Fuse sin and cos operations.";
+  let description = [{
+    Fuse sin and cos operations into a sincos operation.
+  }];
+  let dependentDialects = ["math::MathDialect"];
+}
+
 #endif // MLIR_DIALECT_MATH_TRANSFORMS_PASSES

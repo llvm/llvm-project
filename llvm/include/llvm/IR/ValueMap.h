@@ -42,18 +42,15 @@
 
 namespace llvm {
 
-template<typename KeyT, typename ValueT, typename Config>
+template <typename KeyT, typename ValueT, typename Config>
 class ValueMapCallbackVH;
-template<typename DenseMapT, typename KeyT>
-class ValueMapIterator;
-template<typename DenseMapT, typename KeyT>
-class ValueMapConstIterator;
+template <typename DenseMapT, typename KeyT> class ValueMapIterator;
+template <typename DenseMapT, typename KeyT> class ValueMapConstIterator;
 
 /// This class defines the default behavior for configurable aspects of
 /// ValueMap<>.  User Configs should inherit from this class to be as compatible
 /// as possible with future versions of ValueMap.
-template<typename KeyT, typename MutexT = sys::Mutex>
-struct ValueMapConfig {
+template <typename KeyT, typename MutexT = sys::Mutex> struct ValueMapConfig {
   using mutex_type = MutexT;
 
   /// If FollowRAUW is true, the ValueMap will update mappings on RAUW. If it's
@@ -66,21 +63,24 @@ struct ValueMapConfig {
   // override all the defaults.
   struct ExtraData {};
 
-  template<typename ExtraDataT>
+  template <typename ExtraDataT>
   static void onRAUW(const ExtraDataT & /*Data*/, KeyT /*Old*/, KeyT /*New*/) {}
-  template<typename ExtraDataT>
-  static void onDelete(const ExtraDataT &/*Data*/, KeyT /*Old*/) {}
+  template <typename ExtraDataT>
+  static void onDelete(const ExtraDataT & /*Data*/, KeyT /*Old*/) {}
 
   /// Returns a mutex that should be acquired around any changes to the map.
   /// This is only acquired from the CallbackVH (and held around calls to onRAUW
   /// and onDelete) and not inside other ValueMap methods.  NULL means that no
   /// mutex is necessary.
-  template<typename ExtraDataT>
-  static mutex_type *getMutex(const ExtraDataT &/*Data*/) { return nullptr; }
+  template <typename ExtraDataT>
+  static mutex_type *getMutex(const ExtraDataT & /*Data*/) {
+    return nullptr;
+  }
 };
 
 /// See the file comment.
-template<typename KeyT, typename ValueT, typename Config =ValueMapConfig<KeyT>>
+template <typename KeyT, typename ValueT,
+          typename Config = ValueMapConfig<KeyT>>
 class ValueMap {
   friend class ValueMapCallbackVH<KeyT, ValueT, Config>;
 
@@ -157,9 +157,7 @@ public:
     return Map.find_as(Val) == Map.end() ? 0 : 1;
   }
 
-  iterator find(const KeyT &Val) {
-    return iterator(Map.find_as(Val));
-  }
+  iterator find(const KeyT &Val) { return iterator(Map.find_as(Val)); }
   const_iterator find(const KeyT &Val) const {
     return const_iterator(Map.find_as(Val));
   }
@@ -186,8 +184,7 @@ public:
   }
 
   /// insert - Range insertion of pairs.
-  template<typename InputIt>
-  void insert(InputIt I, InputIt E) {
+  template <typename InputIt> void insert(InputIt I, InputIt E) {
     for (; I != E; ++I)
       insert(*I);
   }
@@ -200,17 +197,13 @@ public:
     Map.erase(I);
     return true;
   }
-  void erase(iterator I) {
-    return Map.erase(I.base());
-  }
+  void erase(iterator I) { return Map.erase(I.base()); }
 
-  value_type& FindAndConstruct(const KeyT &Key) {
+  value_type &FindAndConstruct(const KeyT &Key) {
     return Map.FindAndConstruct(Wrap(Key));
   }
 
-  ValueT &operator[](const KeyT &Key) {
-    return Map[Wrap(Key)];
-  }
+  ValueT &operator[](const KeyT &Key) { return Map[Wrap(Key)]; }
 
   /// isPointerIntoBucketsArray - Return true if the specified pointer points
   /// somewhere into the ValueMap's array of buckets (i.e. either to a key or
@@ -235,7 +228,7 @@ private:
     // the const_cast incorrect) is if it gets inserted into the map.  But then
     // this function must have been called from a non-const method, making the
     // const_cast ok.
-    return ValueMapCVH(key, const_cast<ValueMap*>(this));
+    return ValueMapCVH(key, const_cast<ValueMap *>(this));
   }
 };
 
@@ -252,7 +245,7 @@ class ValueMapCallbackVH final : public CallbackVH {
   ValueMapT *Map;
 
   ValueMapCallbackVH(KeyT Key, ValueMapT *Map)
-      : CallbackVH(const_cast<Value*>(static_cast<const Value*>(Key))),
+      : CallbackVH(const_cast<Value *>(static_cast<const Value *>(Key))),
         Map(Map) {}
 
   // Private constructor used to create empty/tombstone DenseMap keys.
@@ -268,8 +261,8 @@ public:
     std::unique_lock<typename Config::mutex_type> Guard;
     if (M)
       Guard = std::unique_lock<typename Config::mutex_type>(*M);
-    Config::onDelete(Copy.Map->Data, Copy.Unwrap());  // May destroy *this.
-    Copy.Map->Map.erase(Copy);  // Definitely destroys *this.
+    Config::onDelete(Copy.Map->Data, Copy.Unwrap()); // May destroy *this.
+    Copy.Map->Map.erase(Copy); // Definitely destroys *this.
   }
 
   void allUsesReplacedWith(Value *new_key) override {
@@ -291,14 +284,14 @@ public:
       // removed the old mapping.
       if (I != Copy.Map->Map.end()) {
         ValueT Target(std::move(I->second));
-        Copy.Map->Map.erase(I);  // Definitely destroys *this.
+        Copy.Map->Map.erase(I); // Definitely destroys *this.
         Copy.Map->insert(std::make_pair(typed_new_key, std::move(Target)));
       }
     }
   }
 };
 
-template<typename KeyT, typename ValueT, typename Config>
+template <typename KeyT, typename ValueT, typename Config>
 struct DenseMapInfo<ValueMapCallbackVH<KeyT, ValueT, Config>> {
   using VH = ValueMapCallbackVH<KeyT, ValueT, Config>;
 
@@ -318,9 +311,7 @@ struct DenseMapInfo<ValueMapCallbackVH<KeyT, ValueT, Config>> {
     return DenseMapInfo<KeyT>::getHashValue(Val);
   }
 
-  static bool isEqual(const VH &LHS, const VH &RHS) {
-    return LHS == RHS;
-  }
+  static bool isEqual(const VH &LHS, const VH &RHS) { return LHS == RHS; }
 
   static bool isEqual(const KeyT &LHS, const VH &RHS) {
     return LHS == RHS.getValPtr();
@@ -347,7 +338,7 @@ public:
 
   struct ValueTypeProxy {
     const KeyT first;
-    ValueT& second;
+    ValueT &second;
 
     ValueTypeProxy *operator->() { return this; }
 
@@ -361,23 +352,19 @@ public:
     return Result;
   }
 
-  ValueTypeProxy operator->() const {
-    return operator*();
-  }
+  ValueTypeProxy operator->() const { return operator*(); }
 
-  bool operator==(const ValueMapIterator &RHS) const {
-    return I == RHS.I;
-  }
-  bool operator!=(const ValueMapIterator &RHS) const {
-    return I != RHS.I;
-  }
+  bool operator==(const ValueMapIterator &RHS) const { return I == RHS.I; }
+  bool operator!=(const ValueMapIterator &RHS) const { return I != RHS.I; }
 
-  inline ValueMapIterator& operator++() {  // Preincrement
+  inline ValueMapIterator &operator++() { // Preincrement
     ++I;
     return *this;
   }
-  ValueMapIterator operator++(int) {  // Postincrement
-    ValueMapIterator tmp = *this; ++*this; return tmp;
+  ValueMapIterator operator++(int) { // Postincrement
+    ValueMapIterator tmp = *this;
+    ++*this;
+    return tmp;
   }
 };
 
@@ -397,13 +384,13 @@ public:
   ValueMapConstIterator() : I() {}
   ValueMapConstIterator(BaseT I) : I(I) {}
   ValueMapConstIterator(ValueMapIterator<DenseMapT, KeyT> Other)
-    : I(Other.base()) {}
+      : I(Other.base()) {}
 
   BaseT base() const { return I; }
 
   struct ValueTypeProxy {
     const KeyT first;
-    const ValueT& second;
+    const ValueT &second;
     ValueTypeProxy *operator->() { return this; }
     operator std::pair<KeyT, ValueT>() const {
       return std::make_pair(first, second);
@@ -415,23 +402,19 @@ public:
     return Result;
   }
 
-  ValueTypeProxy operator->() const {
-    return operator*();
-  }
+  ValueTypeProxy operator->() const { return operator*(); }
 
-  bool operator==(const ValueMapConstIterator &RHS) const {
-    return I == RHS.I;
-  }
-  bool operator!=(const ValueMapConstIterator &RHS) const {
-    return I != RHS.I;
-  }
+  bool operator==(const ValueMapConstIterator &RHS) const { return I == RHS.I; }
+  bool operator!=(const ValueMapConstIterator &RHS) const { return I != RHS.I; }
 
-  inline ValueMapConstIterator& operator++() {  // Preincrement
+  inline ValueMapConstIterator &operator++() { // Preincrement
     ++I;
     return *this;
   }
-  ValueMapConstIterator operator++(int) {  // Postincrement
-    ValueMapConstIterator tmp = *this; ++*this; return tmp;
+  ValueMapConstIterator operator++(int) { // Postincrement
+    ValueMapConstIterator tmp = *this;
+    ++*this;
+    return tmp;
   }
 };
 

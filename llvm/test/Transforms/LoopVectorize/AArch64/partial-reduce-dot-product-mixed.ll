@@ -261,7 +261,8 @@ define i32 @sudot_neon(ptr %a, ptr %b) #1 {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-NEXT:    br label [[FOR_EXIT:%.*]]
-; CHECK:       scalar.ph:
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret i32 [[TMP13]]
 ;
 ; CHECK-NOI8MM-LABEL: define i32 @sudot_neon(
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR1:[0-9]+]] {
@@ -296,7 +297,8 @@ define i32 @sudot_neon(ptr %a, ptr %b) #1 {
 ; CHECK-NOI8MM-NEXT:    [[BIN_RDX:%.*]] = add <16 x i32> [[TMP13]], [[TMP12]]
 ; CHECK-NOI8MM-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[BIN_RDX]])
 ; CHECK-NOI8MM-NEXT:    br label [[FOR_EXIT:%.*]]
-; CHECK-NOI8MM:       scalar.ph:
+; CHECK-NOI8MM:       for.exit:
+; CHECK-NOI8MM-NEXT:    ret i32 [[TMP15]]
 ;
 entry:
   br label %for.body
@@ -349,12 +351,13 @@ define i32 @usdot_neon(ptr %a, ptr %b) #1 {
 ; CHECK-NEXT:    [[PARTIAL_REDUCE5]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI1]], <16 x i32> [[TMP11]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-NEXT:    br label [[FOR_EXIT:%.*]]
-; CHECK:       scalar.ph:
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret i32 [[TMP13]]
 ;
 ; CHECK-NOI8MM-LABEL: define i32 @usdot_neon(
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR1]] {
@@ -384,12 +387,13 @@ define i32 @usdot_neon(ptr %a, ptr %b) #1 {
 ; CHECK-NOI8MM-NEXT:    [[TMP13]] = add <16 x i32> [[TMP11]], [[VEC_PHI1]]
 ; CHECK-NOI8MM-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NOI8MM-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NOI8MM-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NOI8MM-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-NOI8MM:       middle.block:
 ; CHECK-NOI8MM-NEXT:    [[BIN_RDX:%.*]] = add <16 x i32> [[TMP13]], [[TMP12]]
 ; CHECK-NOI8MM-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[BIN_RDX]])
 ; CHECK-NOI8MM-NEXT:    br label [[FOR_EXIT:%.*]]
-; CHECK-NOI8MM:       scalar.ph:
+; CHECK-NOI8MM:       for.exit:
+; CHECK-NOI8MM-NEXT:    ret i32 [[TMP15]]
 ;
 entry:
   br label %for.body

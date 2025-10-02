@@ -240,7 +240,7 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
 
     if (auto arrayTy = dyn_cast<cir::ArrayType>(eltTy))
       return builder.getArrayElement(loc, loc, subVal, arrayTy.getElementType(),
-                                     idxLoad.getResult(),
+                                     idxLoad,
                                      /*shouldDecay=*/true);
 
     assert(isa<cir::PointerType>(eltTy));
@@ -248,8 +248,8 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
     auto eltLoad = cir::LoadOp::create(builder, loc, {subVal});
 
     return cir::PtrStrideOp::create(builder, loc, eltLoad.getType(), eltLoad,
-                                    idxLoad.getResult())
-        .getResult();
+                                    idxLoad);
+        
   };
 
   auto forStmtBuilder = [&]() {
@@ -271,12 +271,11 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
     if (inverse) {
       cir::ConstantOp constOne = builder.getConstInt(loc, itrTy, 1);
 
-      auto sub =
-          cir::BinOp::create(builder, loc, itrTy, cir::BinOpKind::Sub,
-                             ubConversion.getResult(0), constOne.getResult());
+      auto sub = cir::BinOp::create(builder, loc, itrTy, cir::BinOpKind::Sub,
+                                    ubConversion.getResult(0), constOne);
 
       // Upperbound is exclusive, so subtract 1.
-      builder.CIRBaseBuilderTy::createStore(loc, sub.getResult(), itr);
+      builder.CIRBaseBuilderTy::createStore(loc, sub, itr);
     } else {
       // Lowerbound is inclusive, so we can include it.
       builder.CIRBaseBuilderTy::createStore(loc, lbConversion.getResult(0),
@@ -294,8 +293,8 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
           auto loadCur = cir::LoadOp::create(builder, loc, {itr});
           // Use 'not equal' since we are just doing an increment/decrement.
           auto cmp = builder.createCompare(
-              loc, inverse ? cir::CmpOpKind::ge : cir::CmpOpKind::lt,
-              loadCur.getResult(), endItr.getResult(0));
+              loc, inverse ? cir::CmpOpKind::ge : cir::CmpOpKind::lt, loadCur,
+              endItr.getResult(0));
           builder.createCondition(cmp);
         },
         /*bodyBuilder=*/
@@ -309,11 +308,10 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
         /*stepBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto load = cir::LoadOp::create(builder, loc, {itr});
-          auto unary = cir::UnaryOp::create(builder, loc, load.getType(),
-                                            inverse ? cir::UnaryOpKind::Dec
-                                                    : cir::UnaryOpKind::Inc,
-                                            load.getResult());
-          builder.CIRBaseBuilderTy::createStore(loc, unary.getResult(), itr);
+          auto unary = cir::UnaryOp::create(
+              builder, loc, load.getType(),
+              inverse ? cir::UnaryOpKind::Dec : cir::UnaryOpKind::Inc, load);
+          builder.CIRBaseBuilderTy::createStore(loc, unary, itr);
           builder.createYield(loc);
         });
   };

@@ -40,7 +40,7 @@
 using namespace llvm;
 using namespace VPlanPatternMatch;
 
-cl::opt<bool> EnableWideActiveLaneMask(
+static cl::opt<bool> EnableWideActiveLaneMask(
     "enable-wide-lane-mask", cl::init(false), cl::Hidden,
     cl::desc("Enable use of wide get active lane mask instructions"));
 

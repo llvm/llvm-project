@@ -165,10 +165,11 @@ class seq_cst_store<PatFrag base>
 // any ordering. This is necessary because AtomicExpandPass has added fences to
 // atomic load/stores and changed them to unordered ones.
 let Predicates = [HasAtomicLdSt] in {
-  def : LdPat<relaxed_load<atomic_load_asext_8>,  LB>;
+  // Use unsigned for aext due to no c.lb in Zcb.
+  def : LdPat<relaxed_load<atomic_load_sext_8>,   LB>;
+  def : LdPat<relaxed_load<atomic_load_azext_8>,  LBU>;
   def : LdPat<relaxed_load<atomic_load_asext_16>, LH>;
-  def : LdPat<relaxed_load<atomic_load_zext_8>,  LBU>;
-  def : LdPat<relaxed_load<atomic_load_zext_16>, LHU>;
+  def : LdPat<relaxed_load<atomic_load_zext_16>,  LHU>;
 
   def : StPat<relaxed_store<atomic_store_8>,  SB, GPR, XLenVT>;
   def : StPat<relaxed_store<atomic_store_16>, SH, GPR, XLenVT>;

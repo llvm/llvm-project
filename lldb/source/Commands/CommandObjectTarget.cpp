@@ -418,7 +418,11 @@ protected:
         if (process_sp) {
           // Seems weird that we Launch a core file, but that is what we
           // do!
-          error = process_sp->LoadCore();
+          {
+            ElapsedTime loadCoreTime(
+                target_sp->GetStatistics().GetLoadCoreTime());
+            error = process_sp->LoadCore();
+          }
 
           if (error.Fail()) {
             result.AppendError(error.AsCString("unknown core file format"));
