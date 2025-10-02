@@ -10,8 +10,7 @@
 // SPV-NEXT: IntegerLiteral {{.*}} 'unsigned int' 102
 // DXIL-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
 // DXIL-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
-// SPV: HLSLVkBindingAttr {{.*}} 23 102
-// DXIL-NOT: HLSLVkBindingAttr
+// CHECK: HLSLVkBindingAttr {{.*}} 23 102
 [[vk::binding(23, 102)]] StructuredBuffer<float> Buf;
 
 // CHECK: VarDecl {{.*}} Buf2 'StructuredBuffer<float>':'hlsl::StructuredBuffer<float>'
@@ -23,8 +22,7 @@
 // SPV-NEXT: IntegerLiteral {{.*}} 'unsigned int' 1
 // DXIL-NEXT: IntegerLiteral {{.*}} 'unsigned int' 23
 // DXIL-NEXT: IntegerLiteral {{.*}} 'unsigned int' 102
-// SPV: HLSLVkBindingAttr {{.*}} 14 1
-// DXIL-NOT: HLSLVkBindingAttr
+// CHECK: HLSLVkBindingAttr {{.*}} 14 1
 // CHECK: HLSLResourceBindingAttr {{.*}} "t23" "space102"
 [[vk::binding(14, 1)]] StructuredBuffer<float> Buf2 : register(t23, space102);
 
@@ -37,15 +35,13 @@
 // SPV-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
 // DXIL-NEXT: IntegerLiteral {{.*}} 'unsigned int' 23
 // DXIL-NEXT: IntegerLiteral {{.*}} 'unsigned int' 102
-// SPV: HLSLVkBindingAttr {{.*}} 14 0
-// DXIL-NOT: HLSLVkBindingAttr
+// CHECK: HLSLVkBindingAttr {{.*}} 14 0
 // CHECK: HLSLResourceBindingAttr {{.*}} "t23" "space102"
 [[vk::binding(14)]] StructuredBuffer<float> Buf3 : register(t23, space102);
  
 // CHECK: HLSLBufferDecl {{.*}} cbuffer CB
 // CHECK-NEXT: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// SPV-NEXT: HLSLVkBindingAttr {{.*}} 1 2
-// DXIL-NOT: HLSLVkBindingAttr
+// CHECK: HLSLVkBindingAttr {{.*}} 1 2
 [[vk::binding(1, 2)]] cbuffer CB {
   float a;
 }
@@ -54,15 +50,14 @@
 // CHECK-NEXT: CallExpr {{.*}} 'Buffer<int>':'hlsl::Buffer<int>'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'hlsl::Buffer<int> (*)(unsigned int, unsigned int, int, unsigned int, const char *)' <FunctionToPointerDecay>
 // SPV-NEXT: DeclRefExpr {{.*}} 'hlsl::Buffer<int> (unsigned int, unsigned int, int, unsigned int, const char *)' 
-// SPV-NEXT-SAME: CXXMethod {{.*}} '__createFromBinding' 'Buffer<int> (unsigned int, unsigned int, int, unsigned int, const char *)'
+// SPV-NEXT-SAME: CXXMethod {{.*}} '__createFromBinding' 'hlsl::Buffer<int> (unsigned int, unsigned int, int, unsigned int, const char *)'
 // SPV-NEXT: IntegerLiteral {{.*}} 'unsigned int' 24
 // SPV-NEXT: IntegerLiteral {{.*}} 'unsigned int' 103
-// DXIL-NEXT: DeclRefExpr {{.*}} 'hlsl::Buffer<int> (unsigned int, unsigned int, int, unsigned int, const char *)' 
-// DXIL-NEXT-SAME: CXXMethod {{.*}} '__createFromImplicitBinding' 'Buffer<int> (unsigned int, unsigned int, int, unsigned int, const char *)'
+// DXIL-NEXT: DeclRefExpr {{.*}} 'hlsl::Buffer<int> (unsigned int, unsigned int, int, unsigned int, const char *)'
+// DXIL-NEXT-SAME: CXXMethod {{.*}} '__createFromImplicitBinding' 'hlsl::Buffer<int> (unsigned int, unsigned int, int, unsigned int, const char *)'
 // DXIL-NEXT: IntegerLiteral {{.*}} 'unsigned int' 2
 // DXIL-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
-// SPV: HLSLVkBindingAttr {{.*}} 24 103
-// DXIL-NOT: HLSLVkBindingAttr
+// CHECK: HLSLVkBindingAttr {{.*}} 24 103
 [[vk::binding(24, 103)]] Buffer<int> Buf4;
 
 // CHECK: VarDecl {{.*}} Buf5 'RWBuffer<int2>':'hlsl::RWBuffer<vector<int, 2>>'
@@ -76,8 +71,7 @@
 // DXIL-NEXT-SAME: CXXMethod {{.*}} '__createFromImplicitBinding' 'Buffer<int2> (unsigned int, unsigned int, int, unsigned int, const char *)'
 // DXIL-NEXT: IntegerLiteral {{.*}} 'unsigned int' 3
 // DXIL-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
-// SPV: HLSLVkBindingAttr {{.*}} 25 104
-// DXIL-NOT: HLSLVkBindingAttr
+// CHECK: HLSLVkBindingAttr {{.*}} 25 104
 [[vk::binding(25, 104)]] RWBuffer<int2> Buf5;
 
 // CHECK: VarDecl {{.*}} Buf6 'RWStructuredBuffer<int>':'hlsl::RWStructuredBuffer<int>'
@@ -91,6 +85,5 @@
 // DXIL-NEXT-SAME: CXXMethod {{.*}} '__createFromBinding' 'hlsl::RWStructuredBuffer<int> (unsigned int, unsigned int, int, unsigned int, const char *)'
 // DXIL-NEXT: IntegerLiteral {{.*}} 'unsigned int' 4
 // DXIL-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
-// SPV: HLSLVkBindingAttr {{.*}} 26 105
-// DXIL-NOT: HLSLVkBindingAttr
+// CHECK: HLSLVkBindingAttr {{.*}} 26 105
 [[vk::binding(26, 105)]] RWStructuredBuffer<int> Buf6;

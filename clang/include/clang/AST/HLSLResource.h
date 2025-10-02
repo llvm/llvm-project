@@ -69,6 +69,11 @@ struct ResourceBindingAttrs {
     assert(hasImplicitOrderID());
     return RegBinding->getImplicitBindingOrderID();
   }
+
+  void setImplicitOrderID(unsigned Value) const {
+    assert(hasBinding() && !isExplicit() && !hasImplicitOrderID());
+    RegBinding->setImplicitBindingOrderID(Value);
+  }
 };
 
 } // namespace hlsl
