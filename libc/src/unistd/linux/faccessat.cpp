@@ -1,4 +1,4 @@
-//===-- Linux implementation of access ------------------------------------===//
+//===-- Linux implementation of faccessat ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/unistd/access.h"
+#include "src/unistd/faccessat.h"
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
@@ -18,14 +18,13 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, access, (const char *path, int mode)) {
-#ifdef SYS_access
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_access, path, mode);
-#elif defined(SYS_faccessat)
+LLVM_LIBC_FUNCTION(int, faccessat,
+                   (int fd, const char *path, int amode, int flag)) {
+#ifdef SYS_faccessat2
   int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_faccessat, AT_FDCWD, path, mode);
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_faccessat2, fd, path, amode, flag);
 #else
-#error "access and faccessat syscalls not available."
+#error "faccessat2 syscall is not available."
 #endif
 
   if (ret < 0) {
