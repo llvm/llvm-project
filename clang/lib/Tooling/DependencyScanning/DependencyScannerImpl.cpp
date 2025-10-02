@@ -31,7 +31,7 @@ public:
     for (const auto &File : getDependencies()) {
       CanonPath = File;
       llvm::sys::path::remove_dots(CanonPath, /*remove_dot_dot=*/true);
-      llvm::sys::fs::make_absolute(WorkingDirectory, CanonPath);
+      llvm::sys::path::make_absolute(WorkingDirectory, CanonPath);
       C.handleFileDependency(CanonPath);
     }
   }
