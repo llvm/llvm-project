@@ -390,12 +390,6 @@ public:
                              bool IsCrossAddrSpaceOrdering,
                              Position Pos) const = 0;
 
-  /// Inserts any necessary instructions before the barrier start instruction
-  /// \p MI in order to support pairing of barriers and fences.
-  virtual bool insertBarrierStart(MachineBasicBlock::iterator &MI) const {
-    return false;
-  };
-
   /// Virtual destructor to allow derivations to be deleted.
   virtual ~SICacheControl() = default;
 };
@@ -576,12 +570,8 @@ public:
                   bool IsCrossAddrSpaceOrdering, Position Pos,
                   AtomicOrdering Order, bool AtomicsOnly) const override;
 
-  bool insertAcquire(MachineBasicBlock::iterator &MI,
-                     SIAtomicScope Scope,
-                     SIAtomicAddrSpace AddrSpace,
-                     Position Pos) const override;
-
-  bool insertBarrierStart(MachineBasicBlock::iterator &MI) const override;
+  bool insertAcquire(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                     SIAtomicAddrSpace AddrSpace, Position Pos) const override;
 };
 
 class SIGfx11CacheControl : public SIGfx10CacheControl {
@@ -2046,8 +2036,11 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
       // the WGP. Therefore need to wait for operations to complete to ensure
       // they are visible to waves in the other CU as the L0 is per CU.
       // Otherwise in CU mode and all waves of a work-group are on the same CU
-      // which shares the same L0.
-      if (!ST.isCuModeEnabled()) {
+      // which shares the same L0. Note that we still need to wait when
+      // performing a release in this mode to respect the transitivity of
+      // happens-before, e.g. other waves of the workgroup must be able to
+      // release the memory from another wave at a wider scope.
+      if (!ST.isCuModeEnabled() || isReleaseOrStronger(Order)) {
         if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
           VMCnt |= true;
         if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
@@ -2200,22 +2193,6 @@ bool SIGfx10CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     --MI;
 
   return Changed;
-}
-
-bool SIGfx10CacheControl::insertBarrierStart(
-    MachineBasicBlock::iterator &MI) const {
-  // We need to wait on vm_vsrc so barriers can pair with fences in GFX10+ CU
-  // mode. This is because a CU mode release fence does not emit any wait, which
-  // is fine when only dealing with vmem, but isn't sufficient in the presence
-  // of barriers which do not go through vmem.
-  // GFX12.5 does not require this additional wait.
-  if (!ST.isCuModeEnabled() || ST.hasGFX1250Insts())
-    return false;
-
-  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-          TII->get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0));
-  return true;
 }
 
 bool SIGfx11CacheControl::enableLoadCacheBypass(
@@ -2396,15 +2373,20 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
       //   In WGP mode the waves of a work-group can be executing on either CU
       //   of the WGP. Therefore need to wait for operations to complete to
       //   ensure they are visible to waves in the other CU as the L0 is per CU.
+      //
       //   Otherwise in CU mode and all waves of a work-group are on the same CU
-      //   which shares the same L0.
+      //   which shares the same L0. Note that we still need to wait when
+      //   performing a release in this mode to respect the transitivity of
+      //   happens-before, e.g. other waves of the workgroup must be able to
+      //   release the memory from another wave at a wider scope.
       //
       // GFX12.5:
       //   CU$ has two ports. To ensure operations are visible at the workgroup
       //   level, we need to ensure all operations in this port have completed
       //   so the other SIMDs in the WG can see them. There is no ordering
       //   guarantee between the ports.
-      if (!ST.isCuModeEnabled() || ST.hasGFX1250Insts()) {
+      if (!ST.isCuModeEnabled() || ST.hasGFX1250Insts() ||
+          isReleaseOrStronger(Order)) {
         if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
           LOADCnt |= true;
         if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
@@ -2975,11 +2957,6 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
 
         MI->eraseFromParent();
         MI = II->getIterator();
-      }
-
-      if (ST.getInstrInfo()->isBarrierStart(MI->getOpcode())) {
-        Changed |= CC->insertBarrierStart(MI);
-        continue;
       }
 
       if (!(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic))
