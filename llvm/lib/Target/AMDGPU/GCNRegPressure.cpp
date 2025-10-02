@@ -461,6 +461,8 @@ GCNRPTracker::LiveRegSet llvm::getLiveRegs(SlotIndex SI,
                                            const LiveIntervals &LIS,
                                            const MachineRegisterInfo &MRI) {
   GCNRPTracker::LiveRegSet LiveRegs;
+  if (!SI.isValid())
+    return LiveRegs;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     auto Reg = Register::index2VirtReg(I);
     if (!LIS.hasInterval(Reg))
@@ -906,32 +908,31 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
 
     SlotIndex MBBStartSlot = LIS.getSlotIndexes()->getMBBStartIdx(&MBB);
     SlotIndex MBBEndSlot = LIS.getSlotIndexes()->getMBBEndIdx(&MBB);
+    SlotIndex MBBLastSlot = LIS.getSlotIndexes()->getMBBLastIdx(&MBB);
 
     GCNRPTracker::LiveRegSet LiveIn, LiveOut;
     GCNRegPressure RPAtMBBEnd;
 
-    if (UseDownwardTracker) {
-      if (MBB.empty()) {
-        LiveIn = LiveOut = getLiveRegs(MBBStartSlot, LIS, MRI);
-        RPAtMBBEnd = getRegPressure(MRI, LiveIn);
-      } else {
-        GCNDownwardRPTracker RPT(LIS);
-        RPT.reset(MBB.front());
+    if (!MBBLastSlot.isValid()) { // MBB doesn't have any non-debug instrs.
+      LiveIn = LiveOut = getLiveRegs(MBBStartSlot, LIS, MRI);
+      RPAtMBBEnd = getRegPressure(MRI, LiveIn);
+    } else if (UseDownwardTracker) {
+      GCNDownwardRPTracker RPT(LIS);
+      RPT.reset(MBB.front());
 
-        LiveIn = RPT.getLiveRegs();
+      LiveIn = RPT.getLiveRegs();
 
-        while (!RPT.advanceBeforeNext()) {
-          GCNRegPressure RPBeforeMI = RPT.getPressure();
-          RPT.advanceToNext();
-          RP.emplace_back(RPBeforeMI, RPT.getPressure());
-        }
-
-        LiveOut = RPT.getLiveRegs();
-        RPAtMBBEnd = RPT.getPressure();
+      while (!RPT.advanceBeforeNext()) {
+        GCNRegPressure RPBeforeMI = RPT.getPressure();
+        RPT.advanceToNext();
+        RP.emplace_back(RPBeforeMI, RPT.getPressure());
       }
+
+      LiveOut = RPT.getLiveRegs();
+      RPAtMBBEnd = RPT.getPressure();
     } else {
       GCNUpwardRPTracker RPT(LIS);
-      RPT.reset(MRI, MBBEndSlot);
+      RPT.reset(MRI, MBBLastSlot);
 
       LiveOut = RPT.getLiveRegs();
       RPAtMBBEnd = RPT.getPressure();
@@ -965,8 +966,8 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
     OS << printRP(RPAtMBBEnd) << '\n';
 
     OS << PFX "  Live-out:" << llvm::print(LiveOut, MRI);
-    if (UseDownwardTracker)
-      ReportLISMismatchIfAny(LiveOut, getLiveRegs(MBBEndSlot, LIS, MRI));
+    if (UseDownwardTracker && MBBLastSlot.isValid())
+      ReportLISMismatchIfAny(LiveOut, getLiveRegs(MBBLastSlot, LIS, MRI));
 
     GCNRPTracker::LiveRegSet LiveThrough;
     for (auto [Reg, Mask] : LiveIn) {
