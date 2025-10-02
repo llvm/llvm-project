@@ -1530,6 +1530,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__SANITIZE_HWADDRESS__");
   if (LangOpts.Sanitize.has(SanitizerKind::Thread))
     Builder.defineMacro("__SANITIZE_THREAD__");
+  if (LangOpts.Sanitize.has(SanitizerKind::AllocToken))
+    Builder.defineMacro("__SANITIZE_ALLOC_TOKEN__");
 
   // Target OS macro definitions.
   if (PPOpts.DefineTargetOSMacros) {

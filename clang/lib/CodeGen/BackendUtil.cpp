@@ -60,11 +60,13 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
+#include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
+#include "llvm/Transforms/Instrumentation/AllocToken.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
@@ -231,6 +233,14 @@ public:
                     BackendConsumer *BC);
 };
 } // namespace
+
+static AllocTokenOptions getAllocTokenOptions(const CodeGenOptions &CGOpts) {
+  AllocTokenOptions Opts;
+  Opts.MaxTokens = CGOpts.AllocTokenMax;
+  Opts.Extended = CGOpts.SanitizeAllocTokenExtended;
+  Opts.FastABI = CGOpts.SanitizeAllocTokenFastABI;
+  return Opts;
+}
 
 static SanitizerCoverageOptions
 getSancovOptsFromCGOpts(const CodeGenOptions &CGOpts) {
@@ -788,6 +798,16 @@ static void addSanitizers(const Triple &TargetTriple,
     if (LangOpts.Sanitize.has(SanitizerKind::DataFlow)) {
       MPM.addPass(DataFlowSanitizerPass(LangOpts.NoSanitizeFiles,
                                         PB.getVirtualFileSystemPtr()));
+    }
+
+    if (LangOpts.Sanitize.has(SanitizerKind::AllocToken)) {
+      if (Level == OptimizationLevel::O0) {
+        // The default pass builder only infers libcall function attrs when
+        // optimizing, so we insert it here because we need it for accurate
+        // memory allocation function detection.
+        MPM.addPass(InferFunctionAttrsPass());
+      }
+      MPM.addPass(AllocTokenPass(getAllocTokenOptions(CodeGenOpts)));
     }
   };
   if (ClSanitizeOnOptimizerEarlyEP) {
