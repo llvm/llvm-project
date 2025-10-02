@@ -2,7 +2,11 @@
 // RUN:   %libomptarget-run-generic 2>&1 | \
 // RUN:   %fcheck-generic -check-prefix=AMDCHECK
 
-// REQUIRES: amdgpu
+// RUN: %libomptarget-compile-nvptx64-nvidia-cuda
+// RUN:   %libomptarget-run-generic 2>&1 | \
+// RUN:   %fcheck-generic -check-prefix=NVIDIACHECK
+
+// REQUIRES: gpu
 
 #include <omp.h>
 #include <stdio.h>
@@ -29,41 +33,49 @@ const char *interop_int_to_string(const int interop_int) {
 }
 
 int main(int argc, char **argv) {
-  omp_interop_t iobj = omp_interop_none;
-#pragma omp interop init(targetsync : iobj)
 
-  int err;
-  int interop_int = omp_get_interop_int(iobj, omp_ipr_fr_id, &err);
+  // Loop over all available devices
+  // XXX What happens in machines w/ GPUs from different vendors?
+  for (int id = 0; id < omp_get_num_devices(); ++id) {
+    omp_interop_t iobj = omp_interop_none;
+#pragma omp interop init(target : iobj) device(id)
 
-  if (err) {
-    fprintf(stderr, "omp_get_interop_int failed: %d\n", err);
-    return -1;
-  }
+    int err;
+    int interop_int = omp_get_interop_int(iobj, omp_ipr_fr_id, &err);
 
-  // AMDCHECK: {{.*}} hsa
-  printf("omp_get_interop_int returned %s\n",
-         interop_int_to_string(interop_int));
+    if (err) {
+      fprintf(stderr, "omp_get_interop_int failed: %d\n", err);
+      return -1;
+    }
 
-  const char *interop_vendor =
-      omp_get_interop_str(iobj, omp_ipr_vendor_name, &err);
-  if (err) {
-    fprintf(stderr, "omp_get_interop_str failed: %d\n", err);
-    return -1;
-  }
+    // AMDCHECK: {{.*}} hsa
+    // NVIDIACHECK: {{.*}} cuda
+    printf("omp_get_interop_int returned %s\n",
+           interop_int_to_string(interop_int));
 
-  // AMDCHECK: {{.*}} amd
-  printf("omp_get_interop_str returned %s\n", interop_vendor);
+    const char *interop_vendor =
+        omp_get_interop_str(iobj, omp_ipr_vendor_name, &err);
+    if (err) {
+      fprintf(stderr, "omp_get_interop_str failed: %d\n", err);
+      return -1;
+    }
 
-  const char *interop_fr_name =
-      omp_get_interop_str(iobj, omp_ipr_fr_name, &err);
-  if (err) {
-    fprintf(stderr, "omp_get_interop_str failed: %d\n", err);
-    return -1;
-  }
+    // AMDCHECK: {{.*}} amd
+    // NVIDIACHECK: {{.*}} nvidia
+    printf("omp_get_interop_str returned %s\n", interop_vendor);
 
-  // AMDCHECK: {{.*}} hsa
-  printf("omp_get_interop_str returned %s\n", interop_fr_name);
+    const char *interop_fr_name =
+        omp_get_interop_str(iobj, omp_ipr_fr_name, &err);
+    if (err) {
+      fprintf(stderr, "omp_get_interop_str failed: %d\n", err);
+      return -1;
+    }
+
+    // AMDCHECK: {{.*}} hsa
+    // NVIDIACHECK: {{.*}} cuda
+    printf("omp_get_interop_str returned %s\n", interop_fr_name);
 
 #pragma omp interop destroy(iobj)
+  }
   return 0;
 }
