@@ -17,11 +17,10 @@ define i32 @countholes(ptr %s) {
 ; CHECK-NEXT:  # %bb.1: # %while.body.preheader
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    .p2align 4{{$}}
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %while.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NOT:     movzbl %cl, %ecx
-; CHECK:         addl {{.*}}, %eax
+; CHECK-NEXT:    addl pre_table-192(,%rcx,4), %eax
 ; CHECK-NEXT:    movzbl (%rdi), %ecx
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    cmpb $47, %cl
