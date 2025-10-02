@@ -7,6 +7,7 @@
 // RUN:   %fcheck-nvptx64-nvidia-cuda -check-prefixes=NVIDIA
 
 // REQUIRES: gpu
+// XFAIL: nvptx64-nvidia-cuda
 
 #include <omp.h>
 #include <stdio.h>
@@ -37,6 +38,8 @@ int main(int argc, char **argv) {
   // Loop over all available devices
   for (int id = 0; id < omp_get_num_devices(); ++id) {
     omp_interop_t iobj = omp_interop_none;
+
+    // TODO: Change targetsync to target when AMD toolchain supports it.
 #pragma omp interop init(targetsync : iobj) device(id)
 
     int err;
