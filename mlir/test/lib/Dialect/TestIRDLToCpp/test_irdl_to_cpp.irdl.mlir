@@ -77,5 +77,8 @@ irdl.dialect @test_irdl_to_cpp {
         %v0 = irdl.any
         %r2 = irdl.region(%v0) // Region with one i1 entry block argument
         irdl.regions(cond: %r2, then: %r0, else: %r1)
+
+        %0 = irdl.any
+        irdl.operands(input: %0)
     }
 }
