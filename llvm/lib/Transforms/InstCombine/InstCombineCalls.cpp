@@ -3446,9 +3446,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         KnownBits Known = computeKnownBits(RK.WasOn, /*CtxI=*/nullptr);
         unsigned TZ = std::min(Known.countMinTrailingZeros(),
                                Value::MaxAlignmentExponent);
-        if ((1ULL << TZ) < RK.ArgValue)
-          continue;
-        return CallBase::removeOperandBundle(II, OBU.getTagID());
+        if ((1ULL << TZ) >= RK.ArgValue)
+          return CallBase::removeOperandBundle(II, OBU.getTagID());
+
+        auto *LI = dyn_cast<LoadInst>(OBU.Inputs[0]);
+        if (LI &&
+            isValidAssumeForContext(II, LI, &DT, /*AllowEphemerals=*/true)) {
+          LI->setMetadata(LLVMContext::MD_align,
+                          MDNode::get(II->getContext(),
+                                      ValueAsMetadata::getConstant(
+                                          Builder.getInt64(RK.ArgValue))));
+          return CallBase::removeOperandBundle(II, OBU.getTagID());
+        }
       }
     }
 

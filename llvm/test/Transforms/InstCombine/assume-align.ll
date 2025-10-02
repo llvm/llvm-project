@@ -123,15 +123,23 @@ define i8 @assume_align_non_pow2(ptr %p) {
   ret i8 %v
 }
 
-; TODO: Can fold alignment assumption into !align metadata on load.
 define ptr @fold_assume_align_pow2_of_loaded_pointer_into_align_metadata(ptr %p) {
 ; CHECK-LABEL: @fold_assume_align_pow2_of_loaded_pointer_into_align_metadata(
-; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P2]], i64 8) ]
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8, !align [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
   %p2 = load ptr, ptr %p
   call void @llvm.assume(i1 true) [ "align"(ptr %p2, i64 8) ]
+  ret ptr %p2
+}
+
+define ptr @fold_assume_align_i32_pow2_of_loaded_pointer_into_align_metadata(ptr %p) {
+; CHECK-LABEL: @fold_assume_align_i32_pow2_of_loaded_pointer_into_align_metadata(
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8, !align [[META0]]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+  %p2 = load ptr, ptr %p
+  call void @llvm.assume(i1 true) [ "align"(ptr %p2, i32 8) ]
   ret ptr %p2
 }
 
@@ -187,7 +195,7 @@ define ptr @redundant_assume_align_1(ptr %p) {
 
 define ptr @redundant_assume_align_8_via_align_metadata(ptr %p) {
 ; CHECK-LABEL: @redundant_assume_align_8_via_align_metadata(
-; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8, !align [[META0:![0-9]+]]
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8, !align [[META0]]
 ; CHECK-NEXT:    call void @foo(ptr [[P2]])
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
@@ -199,8 +207,7 @@ define ptr @redundant_assume_align_8_via_align_metadata(ptr %p) {
 
 define ptr @assume_align_16_via_align_metadata(ptr %p) {
 ; CHECK-LABEL: @assume_align_16_via_align_metadata(
-; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8, !align [[META0]]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P2]], i32 16) ]
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8, !align [[META1:![0-9]+]]
 ; CHECK-NEXT:    call void @foo(ptr [[P2]])
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
@@ -283,4 +290,5 @@ define ptr @assume_load_pointer_result(ptr %p, i64 %align) {
 
 ;.
 ; CHECK: [[META0]] = !{i64 8}
+; CHECK: [[META1]] = !{i64 16}
 ;.
