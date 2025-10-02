@@ -1280,10 +1280,13 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
         (ModIdx != -1) ? MI->getOperand(ModIdx).getImm() : DefaultValue;
   }
 
-  // Some instructions, e.g. v_interp_p2_f16 in GFX9, have src0, src2, but no src1.
-  if (NumOps == 1 && AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src2) && !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src1)) {
+  // Some instructions, e.g. v_interp_p2_f16 in GFX9, have src0, src2, but no
+  // src1.
+  if (NumOps == 1 && AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src2) &&
+      !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src1)) {
     Ops[NumOps++] = DefaultValue; // Set src1_modifiers to default.
-    int Mod2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers);
+    int Mod2Idx =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers);
     assert(Mod2Idx != -1);
     Ops[NumOps++] = MI->getOperand(Mod2Idx).getImm();
   }
