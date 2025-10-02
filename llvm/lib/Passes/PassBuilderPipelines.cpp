@@ -150,6 +150,8 @@
 
 using namespace llvm;
 
+namespace llvm {
+
 static cl::opt<InliningAdvisorMode> UseInlineAdvisor(
     "enable-ml-inliner", cl::init(InliningAdvisorMode::Default), cl::Hidden,
     cl::desc("Enable ML policy for inliner. Currently trained for -Oz only"),
@@ -310,7 +312,6 @@ static cl::opt<bool> EnableEarlyOpenMPOpt(
     cl::desc("Enable early execution of the OpenMP optimization pass"
              " (default = off)"));
 
-namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 } // namespace llvm
 
