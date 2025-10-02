@@ -1753,14 +1753,14 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
 }
 #endif
 
-bool llvm::canConstantBeExtended(const ConstantInt *CI, Type *NarrowType,
+bool llvm::canConstantBeExtended(const APInt *C, Type *NarrowType,
                                  TTI::PartialReductionExtendKind ExtKind) {
-  APInt TruncatedVal = CI->getValue().trunc(NarrowType->getScalarSizeInBits());
-  unsigned WideSize = CI->getType()->getScalarSizeInBits();
+  APInt TruncatedVal = C->trunc(NarrowType->getScalarSizeInBits());
+  unsigned WideSize = C->getBitWidth();
   APInt ExtendedVal = ExtKind == TTI::PR_SignExtend
                           ? TruncatedVal.sext(WideSize)
                           : TruncatedVal.zext(WideSize);
-  return ExtendedVal == CI->getValue();
+  return ExtendedVal == *C;
 }
 
 TargetTransformInfo::OperandValueInfo
