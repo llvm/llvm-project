@@ -19,29 +19,25 @@ using namespace clang::ast_matchers::internal;
 namespace clang::tidy::readability {
 
 void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  const VariadicDynCastAllOfMatcher<TypeLoc, TypedefTypeLoc> typedefTypeLoc;
   Finder->addMatcher(typedefTypeLoc().bind("typedefTypeLoc"), this);
 
   if (!getLangOpts().CPlusPlus20)
     return;
 
-  // NOLINTBEGIN(readability-identifier-naming)
-  const VariadicDynCastAllOfMatcher<Stmt, CXXNamedCastExpr> cxxNamedCastExpr;
-  const auto inImplicitTypenameContext = anyOf(
+  const auto InImplicitTypenameContext = anyOf(
       hasParent(typedefNameDecl()), hasParent(templateTypeParmDecl()),
       hasParent(nonTypeTemplateParmDecl()), hasParent(cxxNamedCastExpr()),
       hasParent(cxxNewExpr()), hasParent(friendDecl()), hasParent(fieldDecl()),
-      hasParent(varDecl(
-          hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())))),
+      hasParent(
+          varDecl(hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())),
+                  unless(parmVarDecl()))),
       hasParent(parmVarDecl(hasParent(expr(requiresExpr())))),
       hasParent(parmVarDecl(hasParent(typeLoc(hasParent(
           namedDecl(anyOf(cxxMethodDecl(), hasParent(friendDecl()),
                           functionDecl(has(nestedNameSpecifier()))))))))),
       // Match return types.
       hasParent(functionDecl(unless(cxxConversionDecl()))));
-  // NOLINTEND(readability-identifier-naming)
-  Finder->addMatcher(typeLoc(inImplicitTypenameContext).bind("typeloc"), this);
+  Finder->addMatcher(typeLoc(InImplicitTypenameContext).bind("typeloc"), this);
 }
 
 void RedundantTypenameCheck::check(const MatchFinder::MatchResult &Result) {
