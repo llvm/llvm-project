@@ -536,7 +536,7 @@ for prefix in range(64, 128):
 
 */
 
-  .p2align 2  // make sure we start on a 32-bit boundary, even in Thumb
+  .p2align 2  // make sure we start on a 4-byte boundary, even in Thumb
 LOCAL_LABEL(tab):
   .byte 0xfe  // input [0x800000,0x81ffff], candidate outputs [0xfd,0xff]
   .byte 0xfa  // input [0x820000,0x83ffff], candidate outputs [0xf9,0xfc]
