@@ -324,7 +324,7 @@ AArch64FrameLowering::getArgumentStackToRestore(MachineFunction &MF,
 static bool produceCompactUnwindFrame(const AArch64FrameLowering &,
                                       MachineFunction &MF);
 
-// Conservatively, returns true if the function is likely to have an SVE vectors
+// Conservatively, returns true if the function is likely to have SVE vectors
 // on the stack. This function is safe to be called before callee-saves or
 // object offsets have been determined.
 static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
@@ -338,7 +338,7 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   for (int FI = MFI.getObjectIndexBegin(); FI < MFI.getObjectIndexEnd(); FI++) {
-    if (MFI.getStackID(FI) == TargetStackID::ScalableVector)
+    if (MFI.isScalableStackID(FI))
       return true;
   }
 
@@ -1228,7 +1228,7 @@ AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
   const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool FPAfterSVECalleeSaves =
       isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
-  if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+  if (MFI.isScalableStackID(FI)) {
     if (FPAfterSVECalleeSaves &&
         -ObjectOffset <= (int64_t)AFI->getSVECalleeSavedStackSize())
       return StackOffset::getScalable(ObjectOffset);
@@ -1294,7 +1294,7 @@ StackOffset AArch64FrameLowering::resolveFrameIndexReference(
   const auto &MFI = MF.getFrameInfo();
   int64_t ObjectOffset = MFI.getObjectOffset(FI);
   bool isFixed = MFI.isFixedObjectIndex(FI);
-  bool isSVE = MFI.getStackID(FI) == TargetStackID::ScalableVector;
+  bool isSVE = MFI.isScalableStackID(FI);
   return resolveFrameOffsetReference(MF, ObjectOffset, isFixed, isSVE, FrameReg,
                                      PreferFP, ForSimm);
 }
@@ -2021,10 +2021,14 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     }
     // Update the StackIDs of the SVE stack slots.
     MachineFrameInfo &MFI = MF.getFrameInfo();
-    if (RPI.Type == RegPairInfo::ZPR || RPI.Type == RegPairInfo::PPR) {
+    if (RPI.Type == RegPairInfo::ZPR) {
       MFI.setStackID(FrameIdxReg1, TargetStackID::ScalableVector);
       if (RPI.isPaired())
         MFI.setStackID(FrameIdxReg2, TargetStackID::ScalableVector);
+    } else if (RPI.Type == RegPairInfo::PPR) {
+      MFI.setStackID(FrameIdxReg1, TargetStackID::ScalablePredicateVector);
+      if (RPI.isPaired())
+        MFI.setStackID(FrameIdxReg2, TargetStackID::ScalablePredicateVector);
     }
   }
   return true;
@@ -2232,8 +2236,7 @@ void AArch64FrameLowering::determineStackHazardSlot(
       for (auto &MI : MBB) {
         std::optional<int> FI = getLdStFrameID(MI, MFI);
         if (FI && *FI >= 0 && *FI < (int)FrameObjects.size()) {
-          if (MFI.getStackID(*FI) == TargetStackID::ScalableVector ||
-              AArch64InstrInfo::isFpOrNEON(MI))
+          if (MFI.isScalableStackID(*FI) || AArch64InstrInfo::isFpOrNEON(MI))
             FrameObjects[*FI] |= 2;
           else
             FrameObjects[*FI] |= 1;
@@ -2678,7 +2681,7 @@ static int64_t determineSVEStackObjectOffsets(MachineFrameInfo &MFI,
 #ifndef NDEBUG
   // First process all fixed stack objects.
   for (int I = MFI.getObjectIndexBegin(); I != 0; ++I)
-    assert(MFI.getStackID(I) != TargetStackID::ScalableVector &&
+    assert(!MFI.isScalableStackID(I) &&
            "SVE vectors should never be passed on the stack by value, only by "
            "reference.");
 #endif
@@ -2712,12 +2715,11 @@ static int64_t determineSVEStackObjectOffsets(MachineFrameInfo &MFI,
   int StackProtectorFI = -1;
   if (MFI.hasStackProtectorIndex()) {
     StackProtectorFI = MFI.getStackProtectorIndex();
-    if (MFI.getStackID(StackProtectorFI) == TargetStackID::ScalableVector)
+    if (MFI.isScalableStackID(StackProtectorFI))
       ObjectsToAllocate.push_back(StackProtectorFI);
   }
   for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
-    unsigned StackID = MFI.getStackID(I);
-    if (StackID != TargetStackID::ScalableVector)
+    if (!MFI.isScalableStackID(I))
       continue;
     if (I == StackProtectorFI)
       continue;
@@ -3721,8 +3723,7 @@ void AArch64FrameLowering::orderFrameObjects(
       if (AFI.hasStackHazardSlotIndex()) {
         std::optional<int> FI = getLdStFrameID(MI, MFI);
         if (FI && *FI >= 0 && *FI < (int)FrameObjects.size()) {
-          if (MFI.getStackID(*FI) == TargetStackID::ScalableVector ||
-              AArch64InstrInfo::isFpOrNEON(MI))
+          if (MFI.isScalableStackID(*FI) || AArch64InstrInfo::isFpOrNEON(MI))
             FrameObjects[*FI].Accesses |= FrameObject::AccessFPR;
           else
             FrameObjects[*FI].Accesses |= FrameObject::AccessGPR;
@@ -4080,7 +4081,7 @@ void AArch64FrameLowering::emitRemarks(
           }
 
           unsigned RegTy = StackAccess::AccessType::GPR;
-          if (MFI.getStackID(FrameIdx) == TargetStackID::ScalableVector) {
+          if (MFI.isScalableStackID(FrameIdx)) {
             // SPILL_PPR_TO_ZPR_SLOT_PSEUDO and FILL_PPR_FROM_ZPR_SLOT_PSEUDO
             // spill/fill the predicate as a data vector (so are an FPR access).
             if (MI.getOpcode() != AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO &&
