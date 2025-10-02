@@ -36,7 +36,7 @@ exit:
 ; CHECK-SCO-SR: stdu 1, -{{[0-9]+}}(1)
 ; CHECK-SCO-SR: bl __assert_fail
 
-; CHECK-AIX: LLVM ERROR: Tail call support is unimplemented on AIX.
+; CHECK-AIX: LLVM ERROR: Tail call support for non-fastcc calling convention is unimplemented on AIX.
 }
 
 define dso_local fastcc i8 @LVComputationKind(
