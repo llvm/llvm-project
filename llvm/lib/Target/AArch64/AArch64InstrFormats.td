@@ -10176,28 +10176,6 @@ multiclass SIMDScalarLShiftBHSD<bit U, bits<5> opc, string asm,
             (!cast<Instruction>(NAME # "d") FPR64:$Rn, vecshiftL64:$imm)>;
 }
 
-multiclass SIMDScalarRShiftBHSD<bit U, bits<5> opc, string asm> {
-  def b : BaseSIMDScalarShift<U, opc, {0,0,0,1,?,?,?},
-                              FPR8, FPR8, vecshiftR8, asm, []> {
-    let Inst{18-16} = imm{2-0};
-  }
-
-  def h : BaseSIMDScalarShift<U, opc, {0,0,1,?,?,?,?},
-                              FPR16, FPR16, vecshiftR16, asm, []> {
-    let Inst{19-16} = imm{3-0};
-  }
-
-  def s : BaseSIMDScalarShift<U, opc, {0,1,?,?,?,?,?},
-                              FPR32, FPR32, vecshiftR32, asm, []> {
-    let Inst{20-16} = imm{4-0};
-  }
-
-  def d : BaseSIMDScalarShift<U, opc, {1,?,?,?,?,?,?},
-                              FPR64, FPR64, vecshiftR64, asm, []> {
-    let Inst{21-16} = imm{5-0};
-  }
-}
-
 //----------------------------------------------------------------------------
 // AdvSIMD vector x indexed element
 //----------------------------------------------------------------------------

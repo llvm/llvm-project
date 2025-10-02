@@ -1753,6 +1753,16 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
 }
 #endif
 
+bool llvm::canConstantBeExtended(const ConstantInt *CI, Type *NarrowType,
+                                 TTI::PartialReductionExtendKind ExtKind) {
+  APInt TruncatedVal = CI->getValue().trunc(NarrowType->getScalarSizeInBits());
+  unsigned WideSize = CI->getType()->getScalarSizeInBits();
+  APInt ExtendedVal = ExtKind == TTI::PR_SignExtend
+                          ? TruncatedVal.sext(WideSize)
+                          : TruncatedVal.zext(WideSize);
+  return ExtendedVal == CI->getValue();
+}
+
 TargetTransformInfo::OperandValueInfo
 VPCostContext::getOperandInfo(VPValue *V) const {
   if (!V->isLiveIn())

@@ -1,4 +1,4 @@
-// RUN: cir-opt %s | FileCheck %s
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !u8i = !cir.int<u, 8>
 !u16i = !cir.int<u, 16>
