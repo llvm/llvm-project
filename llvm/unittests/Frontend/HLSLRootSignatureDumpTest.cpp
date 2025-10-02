@@ -266,8 +266,7 @@ TEST(HLSLRootSignatureTest, DefaultStaticSamplerDump) {
                          "minLOD = 0.000000e+00, "
                          "maxLOD = 3.402823e+38, "
                          "space = 0, "
-                         "visibility = All, "
-                         "flags = None"
+                         "visibility = All"
                          ")";
   EXPECT_EQ(Out, Expected);
 }
@@ -288,7 +287,6 @@ TEST(HLSLRootSignatureTest, DefinedStaticSamplerDump) {
   Sampler.MaxLOD = 32.0f;
   Sampler.Space = 7;
   Sampler.Visibility = llvm::dxbc::ShaderVisibility::Domain;
-  Sampler.Flags = llvm::dxbc::StaticSamplerFlags::NonNormalizedCoordinates;
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -307,8 +305,7 @@ TEST(HLSLRootSignatureTest, DefinedStaticSamplerDump) {
                          "minLOD = 1.000000e+00, "
                          "maxLOD = 3.200000e+01, "
                          "space = 7, "
-                         "visibility = Domain, "
-                         "flags = NonNormalizedCoordinates"
+                         "visibility = Domain"
                          ")";
   EXPECT_EQ(Out, Expected);
 }

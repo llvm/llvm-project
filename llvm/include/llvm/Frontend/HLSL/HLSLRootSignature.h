@@ -56,8 +56,7 @@ struct RootDescriptor {
       return;
     }
 
-    assert((Version == llvm::dxbc::RootSignatureVersion::V1_1 ||
-            Version == llvm::dxbc::RootSignatureVersion::V1_2) &&
+    assert(Version == llvm::dxbc::RootSignatureVersion::V1_1 &&
            "Specified an invalid root signature version");
     switch (Type) {
     case dxil::ResourceClass::CBuffer:
@@ -101,8 +100,7 @@ struct DescriptorTableClause {
       return;
     }
 
-    assert((Version == dxbc::RootSignatureVersion::V1_1 ||
-            Version == dxbc::RootSignatureVersion::V1_2) &&
+    assert(Version == dxbc::RootSignatureVersion::V1_1 &&
            "Specified an invalid root signature version");
     switch (Type) {
     case dxil::ResourceClass::CBuffer:
