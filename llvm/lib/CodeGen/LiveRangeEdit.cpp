@@ -68,40 +68,11 @@ Register LiveRangeEdit::createFrom(Register OldReg) {
   return VReg;
 }
 
-void LiveRangeEdit::scanRemattable() {
-  for (VNInfo *VNI : getParent().valnos) {
-    if (VNI->isUnused())
-      continue;
-    Register Original = VRM->getOriginal(getReg());
-    LiveInterval &OrigLI = LIS.getInterval(Original);
-    VNInfo *OrigVNI = OrigLI.getVNInfoAt(VNI->def);
-    if (!OrigVNI)
-      continue;
-    MachineInstr *DefMI = LIS.getInstructionFromIndex(OrigVNI->def);
-    if (!DefMI)
-      continue;
-    if (TII.isReMaterializable(*DefMI))
-      Remattable.insert(OrigVNI);
-  }
-  ScannedRemattable = true;
-}
-
-bool LiveRangeEdit::anyRematerializable() {
-  if (!ScannedRemattable)
-    scanRemattable();
-  return !Remattable.empty();
-}
-
-bool LiveRangeEdit::canRematerializeAt(Remat &RM, VNInfo *OrigVNI,
-                                       SlotIndex UseIdx) {
-  assert(ScannedRemattable && "Call anyRematerializable first");
-
-  // Use scanRemattable info.
-  if (!Remattable.count(OrigVNI))
-    return false;
-
-  // No defining instruction provided.
+bool LiveRangeEdit::canRematerializeAt(Remat &RM, SlotIndex UseIdx) {
   assert(RM.OrigMI && "No defining instruction for remattable value");
+
+  if (!TII.isReMaterializable(*RM.OrigMI))
+    return false;
 
   // Verify that all used registers are available with the same values.
   if (!VirtRegAuxInfo::allUsesAvailableAt(RM.OrigMI, UseIdx, LIS, MRI, TII))
