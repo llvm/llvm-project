@@ -193,7 +193,7 @@ void t_new_constant_size() {
 // CHECK:    %[[#NUM_ELEMENTS:]] = cir.const #cir.int<16> : !u64i
 // CHECK:    %[[#ALLOCATION_SIZE:]] = cir.const #cir.int<128> : !u64i
 // CHECK:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
-// CHECK:    %[[TYPED_PTR:.*]] = cir.cast(bitcast, %[[RAW_PTR]] : !cir.ptr<!void>), !cir.ptr<!cir.double>
+// CHECK:    %[[TYPED_PTR:.*]] = cir.cast bitcast %[[RAW_PTR]] : !cir.ptr<!void> -> !cir.ptr<!cir.double>
 // CHECK:    cir.store align(8) %[[TYPED_PTR]], %[[P_ADDR]] : !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>
 // CHECK:    cir.return
 // CHECK:  }
@@ -220,7 +220,7 @@ void t_new_multidim_constant_size() {
 // CHECK:    %[[#NUM_ELEMENTS:]] = cir.const #cir.int<24> : !u64i
 // CHECK:    %[[#ALLOCATION_SIZE:]] = cir.const #cir.int<192> : !u64i
 // CHECK:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
-// CHECK:    %[[TYPED_PTR:.*]] = cir.cast(bitcast, %[[RAW_PTR]] : !cir.ptr<!void>), !cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>
+// CHECK:    %[[TYPED_PTR:.*]] = cir.cast bitcast %[[RAW_PTR]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>
 // CHECK:    cir.store align(8) %[[TYPED_PTR]], %[[P_ADDR]] : !cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>, !cir.ptr<!cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>>
 // CHECK:  }
 

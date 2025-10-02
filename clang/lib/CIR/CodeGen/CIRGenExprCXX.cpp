@@ -211,60 +211,6 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
   return emitCall(fnInfo, callee, returnValue, args, nullptr, loc);
 }
 
-namespace {
-/// The parameters to pass to a usual operator delete.
-struct UsualDeleteParams {
-  TypeAwareAllocationMode typeAwareDelete = TypeAwareAllocationMode::No;
-  bool destroyingDelete = false;
-  bool size = false;
-  AlignedAllocationMode alignment = AlignedAllocationMode::No;
-};
-} // namespace
-
-// FIXME(cir): this should be shared with LLVM codegen
-static UsualDeleteParams getUsualDeleteParams(const FunctionDecl *fd) {
-  UsualDeleteParams params;
-
-  const FunctionProtoType *fpt = fd->getType()->castAs<FunctionProtoType>();
-  auto ai = fpt->param_type_begin(), ae = fpt->param_type_end();
-
-  if (fd->isTypeAwareOperatorNewOrDelete()) {
-    params.typeAwareDelete = TypeAwareAllocationMode::Yes;
-    assert(ai != ae);
-    ++ai;
-  }
-
-  // The first argument after the type-identity parameter (if any) is
-  // always a void* (or C* for a destroying operator delete for class
-  // type C).
-  ++ai;
-
-  // The next parameter may be a std::destroying_delete_t.
-  if (fd->isDestroyingOperatorDelete()) {
-    params.destroyingDelete = true;
-    assert(ai != ae);
-    ++ai;
-  }
-
-  // Figure out what other parameters we should be implicitly passing.
-  if (ai != ae && (*ai)->isIntegerType()) {
-    params.size = true;
-    ++ai;
-  } else {
-    assert(!isTypeAwareAllocation(params.typeAwareDelete));
-  }
-
-  if (ai != ae && (*ai)->isAlignValT()) {
-    params.alignment = AlignedAllocationMode::Yes;
-    ++ai;
-  } else {
-    assert(!isTypeAwareAllocation(params.typeAwareDelete));
-  }
-
-  assert(ai == ae && "unexpected usual deallocation function parameter");
-  return params;
-}
-
 static CharUnits calculateCookiePadding(CIRGenFunction &cgf,
                                         const CXXNewExpr *e) {
   if (!e->isArray())
