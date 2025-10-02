@@ -49,7 +49,7 @@ class TestStatsAPI(TestBase):
         self.assertIn(
             "expressionEvaluation",
             stats_json,
-            'Make sure the "expressionEvaluation" key in in target.GetStatistics()["targets"][0]',
+            'Make sure the "expressionEvaluation" key is in target.GetStatistics()["targets"][0]',
         )
         self.assertIn(
             "frameVariable",
@@ -201,6 +201,6 @@ class TestStatsAPI(TestBase):
         self.assertIn(
             "activeTimeToFirstBt",
             target_stats,
-            'Make sure the "activeTimeToFirstBt" key in in target.GetStatistics()["targets"][0]',
+            'Make sure the "activeTimeToFirstBt" key is in target.GetStatistics()["targets"][0]',
         )
         self.assertTrue(float(target_stats["activeTimeToFirstBt"]) > 0.0)
