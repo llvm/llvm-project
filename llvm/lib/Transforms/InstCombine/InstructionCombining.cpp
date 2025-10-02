@@ -5077,9 +5077,6 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
       if (U == OrigUse)
         return nullptr;
 
-      if (isa<PoisonValue>(V))
-        continue;
-
       auto *UserI = cast<Instruction>(U->getUser());
       if (auto *PN = dyn_cast<PHINode>(UserI))
         Builder.SetInsertPoint(PN->getIncomingBlock(*U)->getTerminator());
