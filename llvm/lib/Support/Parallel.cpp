@@ -9,6 +9,7 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/ExponentialBackoff.h"
 #include "llvm/Support/Jobserver.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Threading.h"
@@ -122,32 +123,62 @@ private:
   void work(ThreadPoolStrategy S, unsigned ThreadID) {
     threadIndex = ThreadID;
     S.apply_thread_strategy(ThreadID);
-    while (true) {
-      std::unique_lock<std::mutex> Lock(Mutex);
-      Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
-      if (Stop)
-        break;
-      auto Task = std::move(WorkStack.back());
-      WorkStack.pop_back();
-      Lock.unlock();
+    // Note on jobserver deadlock avoidance:
+    // GNU Make grants each invoked process one implicit job slot. Our
+    // JobserverClient models this by returning an implicit JobSlot on the
+    // first successful tryAcquire() in a process. This guarantees forward
+    // progress without requiring a dedicated "always-on" thread here.
 
+    static thread_local std::unique_ptr<ExponentialBackoff> Backoff;
+
+    while (true) {
       if (TheJobserver) {
-        JobSlot Slot = TheJobserver->tryAcquire();
-        if (Slot.isValid()) {
+        // Jobserver-mode scheduling:
+        // - Acquire one job slot (with exponential backoff to avoid busy-wait).
+        // - While holding the slot, drain and run tasks from the local queue.
+        // - Release the slot when the queue is empty or when shutting down.
+        // Rationale: Holding a slot amortizes acquire/release overhead over
+        // multiple tasks and avoids requeue/yield churn, while still enforcing
+        // the jobserver’s global concurrency limit. With K available slots,
+        // up to K workers run tasks in parallel; within each worker tasks run
+        // sequentially until the local queue is empty.
+        ExponentialBackoff Backoff(std::chrono::hours(24));
+        JobSlot Slot;
+        do {
+          if (Stop)
+            return;
+          Slot = TheJobserver->tryAcquire();
+          if (Slot.isValid())
+            break;
+        } while (Backoff.waitForNextAttempt());
+
+        auto SlotReleaser = llvm::make_scope_exit(
+            [&] { TheJobserver->release(std::move(Slot)); });
+
+        while (true) {
+          std::function<void()> Task;
+          {
+            std::unique_lock<std::mutex> Lock(Mutex);
+            Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
+            if (Stop && WorkStack.empty())
+              return;
+            if (WorkStack.empty())
+              break;
+            Task = std::move(WorkStack.back());
+            WorkStack.pop_back();
+          }
           Task();
-          TheJobserver->release(std::move(Slot));
-        } else {
-          // The task could not be run because no job slot was
-          // available. Re-queue the task so that another thread can try
-          // to run it later.
-          std::lock_guard<std::mutex> RequeueLock(Mutex);
-          WorkStack.push_back(std::move(Task));
-          Cond.notify_one();
-          // Yield to give another thread a chance to release a token.
-          std::this_thread::yield();
         }
-      } else
+      } else {
+        std::unique_lock<std::mutex> Lock(Mutex);
+        Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
+        if (Stop)
+          break;
+        auto Task = std::move(WorkStack.back());
+        WorkStack.pop_back();
+        Lock.unlock();
         Task();
+      }
     }
   }
 

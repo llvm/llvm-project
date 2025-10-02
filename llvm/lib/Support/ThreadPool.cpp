@@ -51,6 +51,11 @@ void StdThreadPool::grow(int requested) {
     Threads.emplace_back([this, ThreadID] {
       set_thread_name(formatv("llvm-worker-{0}", ThreadID));
       Strategy.apply_thread_strategy(ThreadID);
+      // Note on jobserver deadlock avoidance:
+      // GNU Make grants each invoked process one implicit job slot.
+      // JobserverClient::tryAcquire() returns that implicit slot on the first
+      // successful call in a process, ensuring forward progress without a
+      // dedicated "always-on" thread.
       if (TheJobserver)
         processTasksWithJobserver();
       else

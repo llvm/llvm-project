@@ -53,11 +53,13 @@
 //    Before exiting, it must write the 3 tokens it read back to the pipe.
 //
 // For more context, see:
+//   - GNU Make manual on job slots:
+//     https://www.gnu.org/software/make/manual/html_node/Job-Slots.html
 //   - LLVM RFC discussion on jobserver support:
 //     https://discourse.llvm.org/t/rfc-adding-gnu-make-jobserver-
 //     support-to-llvm-for-coordinated-parallelism/87034
 //   - Ninja’s jobserver support PR:
-//     https://github.com/ninja-build/ninja/pull/2260//
+//     https://github.com/ninja-build/ninja/pull/2506
 //
 //===----------------------------------------------------------------------===//
 
