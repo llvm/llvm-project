@@ -2970,7 +2970,7 @@ static bool interp__builtin_ia32_pternlog_maskz(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_ia32_pternlog(InterpState &S, CodePtr OpPC,
-                                               const CallExpr *Call, bool MaskZ) {
+                                          const CallExpr *Call, bool MaskZ) {
   assert(Call->getNumArgs() == 5);
 
   const VectorType *VecT = Call->getArg(0)->getType()->castAs<VectorType>();
@@ -3014,7 +3014,7 @@ static bool interp__builtin_ia32_pternlog(InterpState &S, CodePtr OpPC,
     } else if (MaskZ) { // If zero masked, zero the lane
       INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
         Dst.elem<T>(I) = static_cast<T>(APSInt(RLane, DstUnsigned));
-            });
+      });
     } else { // Just masked, put in A lane
       INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
         Dst.elem<T>(I) = static_cast<T>(APSInt(ALane, DstUnsigned));
@@ -3884,14 +3884,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_pternlogq128_mask:
   case X86::BI__builtin_ia32_pternlogq256_mask:
   case X86::BI__builtin_ia32_pternlogq512_mask:
-    return interp__builtin_ia32_pternlog(S, OpPC, Call, /* MaskZ = */false);
+    return interp__builtin_ia32_pternlog(S, OpPC, Call, /* MaskZ = */ false);
   case X86::BI__builtin_ia32_pternlogd128_maskz:
   case X86::BI__builtin_ia32_pternlogd256_maskz:
   case X86::BI__builtin_ia32_pternlogd512_maskz:
   case X86::BI__builtin_ia32_pternlogq128_maskz:
   case X86::BI__builtin_ia32_pternlogq256_maskz:
   case X86::BI__builtin_ia32_pternlogq512_maskz:
-    return interp__builtin_ia32_pternlog(S, OpPC, Call, /* MaskZ = */true);
+    return interp__builtin_ia32_pternlog(S, OpPC, Call, /* MaskZ = */ true);
   case Builtin::BI__builtin_elementwise_fshl:
     return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshl);
