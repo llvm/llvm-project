@@ -148,7 +148,7 @@ public:
                             StringRef SubCommand) const {
     assert(!SubCommand.empty() &&
            "This helper is only for valid registered subcommands.");
-    typename ArrayRef<OptTable::SubCommand>::iterator SCIT =
+    auto SCIT =
         std::find_if(SubCommands.begin(), SubCommands.end(),
                      [&](const auto &C) { return SubCommand == C.Name; });
     assert(SCIT != SubCommands.end() &&
@@ -228,7 +228,7 @@ public:
   /// Return the string table used for option names.
   const StringTable &getStrTable() const { return *StrTable; }
 
-  const ArrayRef<SubCommand> getSubCommands() const { return SubCommands; }
+  ArrayRef<SubCommand> getSubCommands() const { return SubCommands; }
 
   /// Return the prefixes table used for option names.
   ArrayRef<StringTable::Offset> getPrefixesTable() const {

@@ -756,7 +756,7 @@ void OptTable::internalPrintHelp(
   // pairs.
   std::map<std::string, std::vector<OptionInfo>> GroupedOptionHelp;
 
-  typename ArrayRef<OptTable::SubCommand>::iterator ActiveSubCommand =
+  auto ActiveSubCommand =
       std::find_if(SubCommands.begin(), SubCommands.end(),
                    [&](const auto &C) { return SubCommand == C.Name; });
   if (!SubCommand.empty()) {
