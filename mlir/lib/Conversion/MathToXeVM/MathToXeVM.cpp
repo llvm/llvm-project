@@ -20,6 +20,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #include "../GPUCommon/GPUOpsLowering.h"
 #include "../GPUCommon/OpToFuncCallLowering.h"
@@ -57,13 +58,14 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
 
     SmallVector<Type, 1> operandTypes;
     for (auto operand : adaptor.getOperands()) {
+      Type opTy = operand.getType();
       // This pass only supports operations on vectors that are already in SPIRV
       // supported vector sizes: Distributing unsupported vector sizes to SPIRV
       // supported vector sizes are done in other blocking optimization passes.
-      if (!isSPIRVCompatibleFloatOrVec(operand.getType()))
+      if (!isSPIRVCompatibleFloatOrVec(opTy))
         return rewriter.notifyMatchFailure(
-            op, "no equivalent native operation for operand type");
-      operandTypes.push_back(operand.getType());
+            op, llvm::formatv("incompatible operand type: '{0}'", opTy));
+      operandTypes.push_back(opTy);
     }
 
     auto moduleOp = op->template getParentWithTrait<OpTrait::SymbolTable>();
