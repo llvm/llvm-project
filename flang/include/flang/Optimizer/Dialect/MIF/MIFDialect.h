@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_OPTIMIZER_DIALECT_MIF_MIF_H
-#define FORTRAN_OPTIMIZER_DIALECT_MIF_MIF_H
+#ifndef FORTRAN_OPTIMIZER_DIALECT_MIF_MIFDIALECT_H
+#define FORTRAN_OPTIMIZER_DIALECT_MIF_MIFDIALECT_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/Dialect.h"
