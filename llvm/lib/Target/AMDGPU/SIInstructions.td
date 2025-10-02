@@ -565,7 +565,9 @@ def SI_LOOP : CFPseudoInstSI <
   let IsNeverUniform = 1;
 }
 
-def SI_WAVE_CF_EDGE : CFPseudoInstSI<(outs), (ins)>;
+def SI_WAVE_CF_EDGE : CFPseudoInstSI<(outs), (ins)> {
+  let isMeta = 1;
+}
 
 } // End isTerminator = 1
 

@@ -406,6 +406,12 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
     }
 
+    if (MI->getOpcode() == AMDGPU::SI_WAVE_CF_EDGE) {
+      if (isVerbose())
+        OutStreamer->emitRawComment(" divergent control-flow edge");
+      return;
+    }
+
     if (MI->isMetaInstruction()) {
       if (isVerbose())
         OutStreamer->emitRawComment(" meta instruction");
