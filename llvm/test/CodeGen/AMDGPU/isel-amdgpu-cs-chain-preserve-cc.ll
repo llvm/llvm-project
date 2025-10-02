@@ -84,13 +84,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc(<4 x i32> inre
   ; DAGISEL-GFX11-WF32-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY5]], [[COPY1]], 0, implicit $exec
   ; DAGISEL-GFX11-WF32-NEXT:   [[V_ADD_U32_e64_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY6]], [[COPY2]], 0, implicit $exec
   ; DAGISEL-GFX11-WF32-NEXT:   [[V_ADD_U32_e64_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY7]], [[COPY3]], 0, implicit $exec
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF32-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_ADD_U32_e64_3]], %subreg.sub0, [[V_ADD_U32_e64_2]], %subreg.sub1, [[V_ADD_U32_e64_1]], %subreg.sub2, [[V_ADD_U32_e64_]], %subreg.sub3
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF4:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[DEF4]]
+  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY9:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX11-WF32-NEXT:   FLAT_STORE_DWORDX4 killed [[COPY8]], killed [[COPY9]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into `ptr poison`)
   ; DAGISEL-GFX11-WF32-NEXT:   S_ENDPGM 0
@@ -111,13 +107,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc(<4 x i32> inre
   ; DAGISEL-GFX11-WF64-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY5]], [[COPY1]], 0, implicit $exec
   ; DAGISEL-GFX11-WF64-NEXT:   [[V_ADD_U32_e64_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY6]], [[COPY2]], 0, implicit $exec
   ; DAGISEL-GFX11-WF64-NEXT:   [[V_ADD_U32_e64_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY7]], [[COPY3]], 0, implicit $exec
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF64-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_ADD_U32_e64_3]], %subreg.sub0, [[V_ADD_U32_e64_2]], %subreg.sub1, [[V_ADD_U32_e64_1]], %subreg.sub2, [[V_ADD_U32_e64_]], %subreg.sub3
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF4:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[DEF4]]
+  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY9:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX11-WF64-NEXT:   FLAT_STORE_DWORDX4 killed [[COPY8]], killed [[COPY9]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into `ptr poison`)
   ; DAGISEL-GFX11-WF64-NEXT:   S_ENDPGM 0
@@ -138,13 +130,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc(<4 x i32> inre
   ; DAGISEL-GFX10-WF32-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY5]], [[COPY1]], 0, implicit $exec
   ; DAGISEL-GFX10-WF32-NEXT:   [[V_ADD_U32_e64_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY6]], [[COPY2]], 0, implicit $exec
   ; DAGISEL-GFX10-WF32-NEXT:   [[V_ADD_U32_e64_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY7]], [[COPY3]], 0, implicit $exec
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF32-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_ADD_U32_e64_3]], %subreg.sub0, [[V_ADD_U32_e64_2]], %subreg.sub1, [[V_ADD_U32_e64_1]], %subreg.sub2, [[V_ADD_U32_e64_]], %subreg.sub3
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF4:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[DEF4]]
+  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY9:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX10-WF32-NEXT:   FLAT_STORE_DWORDX4 killed [[COPY8]], killed [[COPY9]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into `ptr poison`)
   ; DAGISEL-GFX10-WF32-NEXT:   S_ENDPGM 0
@@ -165,13 +153,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc(<4 x i32> inre
   ; DAGISEL-GFX10-WF64-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY5]], [[COPY1]], 0, implicit $exec
   ; DAGISEL-GFX10-WF64-NEXT:   [[V_ADD_U32_e64_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY6]], [[COPY2]], 0, implicit $exec
   ; DAGISEL-GFX10-WF64-NEXT:   [[V_ADD_U32_e64_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY7]], [[COPY3]], 0, implicit $exec
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF64-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_ADD_U32_e64_3]], %subreg.sub0, [[V_ADD_U32_e64_2]], %subreg.sub1, [[V_ADD_U32_e64_1]], %subreg.sub2, [[V_ADD_U32_e64_]], %subreg.sub3
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF4:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[DEF4]]
+  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY9:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX10-WF64-NEXT:   FLAT_STORE_DWORDX4 killed [[COPY8]], killed [[COPY9]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into `ptr poison`)
   ; DAGISEL-GFX10-WF64-NEXT:   S_ENDPGM 0
@@ -260,14 +244,10 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_ptr(ptr inreg 
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY12]], %subreg.sub0, [[COPY13]], %subreg.sub1
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF32-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY10]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY14]], %subreg.sub0, [[COPY15]], %subreg.sub1
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF32-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY16:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE3]]
   ; DAGISEL-GFX11-WF32-NEXT:   FLAT_STORE_DWORDX2 killed [[COPY16]], killed [[REG_SEQUENCE2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s64) into %ir.b)
@@ -298,14 +278,10 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_ptr(ptr inreg 
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY12]], %subreg.sub0, [[COPY13]], %subreg.sub1
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF64-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY10]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY14]], %subreg.sub0, [[COPY15]], %subreg.sub1
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF64-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY16:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE3]]
   ; DAGISEL-GFX11-WF64-NEXT:   FLAT_STORE_DWORDX2 killed [[COPY16]], killed [[REG_SEQUENCE2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s64) into %ir.b)
@@ -336,14 +312,10 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_ptr(ptr inreg 
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY12]], %subreg.sub0, [[COPY13]], %subreg.sub1
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF32-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY10]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY14]], %subreg.sub0, [[COPY15]], %subreg.sub1
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF32-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY16:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE3]]
   ; DAGISEL-GFX10-WF32-NEXT:   FLAT_STORE_DWORDX2 killed [[COPY16]], killed [[REG_SEQUENCE2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s64) into %ir.b)
@@ -374,14 +346,10 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_ptr(ptr inreg 
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY12]], %subreg.sub0, [[COPY13]], %subreg.sub1
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF64-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY10]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY14]], %subreg.sub0, [[COPY15]], %subreg.sub1
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF64-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY16:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE3]]
   ; DAGISEL-GFX10-WF64-NEXT:   FLAT_STORE_DWORDX2 killed [[COPY16]], killed [[REG_SEQUENCE2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s64) into %ir.b)
@@ -498,41 +466,35 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_struct( {ptr, 
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY11:%[0-9]+]]:sgpr_32 = COPY $sgpr2
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY12:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY13:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF32-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY1]], %subreg.sub2, [[COPY]], %subreg.sub3
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY10]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY9]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY16:%[0-9]+]]:vgpr_32 = COPY [[COPY8]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY14]], %subreg.sub0, [[COPY15]], %subreg.sub1, [[COPY16]], %subreg.sub2, [[COPY17]], %subreg.sub3
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF32-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY13]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[COPY12]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY18]], %subreg.sub0, [[COPY19]], %subreg.sub1
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF6:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY20:%[0-9]+]]:vreg_64 = COPY [[DEF6]]
+  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY20:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF32-NEXT:   GLOBAL_STORE_DWORDX2 [[COPY20]], killed [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF7:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY21:%[0-9]+]]:vreg_64 = COPY [[DEF7]]
+  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY21:%[0-9]+]]:vreg_64 = COPY [[DEF1]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY22:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
   ; DAGISEL-GFX11-WF32-NEXT:   GLOBAL_STORE_DWORD [[COPY21]], [[COPY22]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF8:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY23:%[0-9]+]]:vreg_64 = COPY [[DEF8]]
+  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF2:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY23:%[0-9]+]]:vreg_64 = COPY [[DEF2]]
   ; DAGISEL-GFX11-WF32-NEXT:   GLOBAL_STORE_DWORDX4 [[COPY23]], killed [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s128) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF9:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY24:%[0-9]+]]:vreg_64 = COPY [[DEF9]]
+  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF3:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY24:%[0-9]+]]:vreg_64 = COPY [[DEF3]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY25:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX11-WF32-NEXT:   GLOBAL_STORE_DWORDX4 [[COPY24]], killed [[COPY25]], 0, 0, implicit $exec :: (store (s128) into `ptr addrspace(1) poison` + 16, addrspace 1)
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF10:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY26:%[0-9]+]]:vreg_64 = COPY [[DEF10]]
+  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF4:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY26:%[0-9]+]]:vreg_64 = COPY [[DEF4]]
   ; DAGISEL-GFX11-WF32-NEXT:   GLOBAL_STORE_DWORD [[COPY26]], [[COPY4]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison` + 8, align 8, basealign 16, addrspace 1)
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF11:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY27:%[0-9]+]]:vreg_64 = COPY [[DEF11]]
+  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF5:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY27:%[0-9]+]]:vreg_64 = COPY [[DEF5]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY28:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE2]]
   ; DAGISEL-GFX11-WF32-NEXT:   GLOBAL_STORE_DWORDX2 [[COPY27]], killed [[COPY28]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; DAGISEL-GFX11-WF32-NEXT:   S_ENDPGM 0
@@ -555,41 +517,35 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_struct( {ptr, 
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY11:%[0-9]+]]:sgpr_32 = COPY $sgpr2
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY12:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY13:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF64-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY1]], %subreg.sub2, [[COPY]], %subreg.sub3
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY10]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY9]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY16:%[0-9]+]]:vgpr_32 = COPY [[COPY8]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY14]], %subreg.sub0, [[COPY15]], %subreg.sub1, [[COPY16]], %subreg.sub2, [[COPY17]], %subreg.sub3
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF64-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY13]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[COPY12]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY18]], %subreg.sub0, [[COPY19]], %subreg.sub1
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF6:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY20:%[0-9]+]]:vreg_64 = COPY [[DEF6]]
+  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY20:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF64-NEXT:   GLOBAL_STORE_DWORDX2 [[COPY20]], killed [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF7:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY21:%[0-9]+]]:vreg_64 = COPY [[DEF7]]
+  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY21:%[0-9]+]]:vreg_64 = COPY [[DEF1]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY22:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
   ; DAGISEL-GFX11-WF64-NEXT:   GLOBAL_STORE_DWORD [[COPY21]], [[COPY22]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF8:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY23:%[0-9]+]]:vreg_64 = COPY [[DEF8]]
+  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF2:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY23:%[0-9]+]]:vreg_64 = COPY [[DEF2]]
   ; DAGISEL-GFX11-WF64-NEXT:   GLOBAL_STORE_DWORDX4 [[COPY23]], killed [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s128) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF9:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY24:%[0-9]+]]:vreg_64 = COPY [[DEF9]]
+  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF3:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY24:%[0-9]+]]:vreg_64 = COPY [[DEF3]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY25:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX11-WF64-NEXT:   GLOBAL_STORE_DWORDX4 [[COPY24]], killed [[COPY25]], 0, 0, implicit $exec :: (store (s128) into `ptr addrspace(1) poison` + 16, addrspace 1)
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF10:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY26:%[0-9]+]]:vreg_64 = COPY [[DEF10]]
+  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF4:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY26:%[0-9]+]]:vreg_64 = COPY [[DEF4]]
   ; DAGISEL-GFX11-WF64-NEXT:   GLOBAL_STORE_DWORD [[COPY26]], [[COPY4]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison` + 8, align 8, basealign 16, addrspace 1)
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF11:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY27:%[0-9]+]]:vreg_64 = COPY [[DEF11]]
+  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF5:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY27:%[0-9]+]]:vreg_64 = COPY [[DEF5]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY28:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE2]]
   ; DAGISEL-GFX11-WF64-NEXT:   GLOBAL_STORE_DWORDX2 [[COPY27]], killed [[COPY28]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; DAGISEL-GFX11-WF64-NEXT:   S_ENDPGM 0
@@ -612,41 +568,35 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_struct( {ptr, 
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY11:%[0-9]+]]:sgpr_32 = COPY $sgpr2
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY12:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY13:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF32-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY1]], %subreg.sub2, [[COPY]], %subreg.sub3
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY10]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY9]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY16:%[0-9]+]]:vgpr_32 = COPY [[COPY8]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY14]], %subreg.sub0, [[COPY15]], %subreg.sub1, [[COPY16]], %subreg.sub2, [[COPY17]], %subreg.sub3
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF32-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY13]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[COPY12]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY18]], %subreg.sub0, [[COPY19]], %subreg.sub1
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF6:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY20:%[0-9]+]]:vreg_64 = COPY [[DEF6]]
+  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY20:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX10-WF32-NEXT:   GLOBAL_STORE_DWORDX2 [[COPY20]], killed [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF7:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY21:%[0-9]+]]:vreg_64 = COPY [[DEF7]]
+  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY21:%[0-9]+]]:vreg_64 = COPY [[DEF1]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY22:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
   ; DAGISEL-GFX10-WF32-NEXT:   GLOBAL_STORE_DWORD [[COPY21]], [[COPY22]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF8:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY23:%[0-9]+]]:vreg_64 = COPY [[DEF8]]
+  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF2:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY23:%[0-9]+]]:vreg_64 = COPY [[DEF2]]
   ; DAGISEL-GFX10-WF32-NEXT:   GLOBAL_STORE_DWORDX4 [[COPY23]], killed [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s128) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF9:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY24:%[0-9]+]]:vreg_64 = COPY [[DEF9]]
+  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF3:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY24:%[0-9]+]]:vreg_64 = COPY [[DEF3]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY25:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX10-WF32-NEXT:   GLOBAL_STORE_DWORDX4 [[COPY24]], killed [[COPY25]], 0, 0, implicit $exec :: (store (s128) into `ptr addrspace(1) poison` + 16, addrspace 1)
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF10:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY26:%[0-9]+]]:vreg_64 = COPY [[DEF10]]
+  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF4:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY26:%[0-9]+]]:vreg_64 = COPY [[DEF4]]
   ; DAGISEL-GFX10-WF32-NEXT:   GLOBAL_STORE_DWORD [[COPY26]], [[COPY4]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison` + 8, align 8, basealign 16, addrspace 1)
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF11:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY27:%[0-9]+]]:vreg_64 = COPY [[DEF11]]
+  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF5:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY27:%[0-9]+]]:vreg_64 = COPY [[DEF5]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY28:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE2]]
   ; DAGISEL-GFX10-WF32-NEXT:   GLOBAL_STORE_DWORDX2 [[COPY27]], killed [[COPY28]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; DAGISEL-GFX10-WF32-NEXT:   S_ENDPGM 0
@@ -669,41 +619,35 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_struct( {ptr, 
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY11:%[0-9]+]]:sgpr_32 = COPY $sgpr2
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY12:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY13:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF64-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY1]], %subreg.sub2, [[COPY]], %subreg.sub3
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY10]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY9]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY16:%[0-9]+]]:vgpr_32 = COPY [[COPY8]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY14]], %subreg.sub0, [[COPY15]], %subreg.sub1, [[COPY16]], %subreg.sub2, [[COPY17]], %subreg.sub3
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF64-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY13]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[COPY12]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY18]], %subreg.sub0, [[COPY19]], %subreg.sub1
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF6:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY20:%[0-9]+]]:vreg_64 = COPY [[DEF6]]
+  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY20:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX10-WF64-NEXT:   GLOBAL_STORE_DWORDX2 [[COPY20]], killed [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF7:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY21:%[0-9]+]]:vreg_64 = COPY [[DEF7]]
+  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY21:%[0-9]+]]:vreg_64 = COPY [[DEF1]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY22:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
   ; DAGISEL-GFX10-WF64-NEXT:   GLOBAL_STORE_DWORD [[COPY21]], [[COPY22]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF8:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY23:%[0-9]+]]:vreg_64 = COPY [[DEF8]]
+  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF2:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY23:%[0-9]+]]:vreg_64 = COPY [[DEF2]]
   ; DAGISEL-GFX10-WF64-NEXT:   GLOBAL_STORE_DWORDX4 [[COPY23]], killed [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s128) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF9:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY24:%[0-9]+]]:vreg_64 = COPY [[DEF9]]
+  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF3:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY24:%[0-9]+]]:vreg_64 = COPY [[DEF3]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY25:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX10-WF64-NEXT:   GLOBAL_STORE_DWORDX4 [[COPY24]], killed [[COPY25]], 0, 0, implicit $exec :: (store (s128) into `ptr addrspace(1) poison` + 16, addrspace 1)
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF10:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY26:%[0-9]+]]:vreg_64 = COPY [[DEF10]]
+  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF4:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY26:%[0-9]+]]:vreg_64 = COPY [[DEF4]]
   ; DAGISEL-GFX10-WF64-NEXT:   GLOBAL_STORE_DWORD [[COPY26]], [[COPY4]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison` + 8, align 8, basealign 16, addrspace 1)
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF11:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY27:%[0-9]+]]:vreg_64 = COPY [[DEF11]]
+  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF5:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY27:%[0-9]+]]:vreg_64 = COPY [[DEF5]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY28:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE2]]
   ; DAGISEL-GFX10-WF64-NEXT:   GLOBAL_STORE_DWORDX2 [[COPY27]], killed [[COPY28]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; DAGISEL-GFX10-WF64-NEXT:   S_ENDPGM 0
@@ -1289,22 +1233,14 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_v16i16(<16 x i
   ; DAGISEL-GFX11-WF32-NEXT:   [[V_PK_ADD_U16_5:%[0-9]+]]:vgpr_32 = V_PK_ADD_U16 8, [[COPY9]], 8, [[COPY1]], 0, 0, 0, 0, 0, implicit $exec
   ; DAGISEL-GFX11-WF32-NEXT:   [[V_PK_ADD_U16_6:%[0-9]+]]:vgpr_32 = V_PK_ADD_U16 8, [[COPY10]], 8, [[COPY2]], 0, 0, 0, 0, 0, implicit $exec
   ; DAGISEL-GFX11-WF32-NEXT:   [[V_PK_ADD_U16_7:%[0-9]+]]:vgpr_32 = V_PK_ADD_U16 8, [[COPY11]], 8, [[COPY3]], 0, 0, 0, 0, 0, implicit $exec
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF32-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_PK_ADD_U16_7]], %subreg.sub0, [[V_PK_ADD_U16_6]], %subreg.sub1, [[V_PK_ADD_U16_5]], %subreg.sub2, [[V_PK_ADD_U16_4]], %subreg.sub3
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF4:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY16:%[0-9]+]]:vreg_64 = COPY [[DEF4]]
+  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY16:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY17:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX11-WF32-NEXT:   FLAT_STORE_DWORDX4 [[COPY16]], killed [[COPY17]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into `ptr poison` + 16)
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF8:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF32-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_PK_ADD_U16_3]], %subreg.sub0, [[V_PK_ADD_U16_2]], %subreg.sub1, [[V_PK_ADD_U16_1]], %subreg.sub2, [[V_PK_ADD_U16_]], %subreg.sub3
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF9:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY18:%[0-9]+]]:vreg_64 = COPY [[DEF9]]
+  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY18:%[0-9]+]]:vreg_64 = COPY [[DEF1]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY19:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE1]]
   ; DAGISEL-GFX11-WF32-NEXT:   FLAT_STORE_DWORDX4 [[COPY18]], killed [[COPY19]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into `ptr poison`, align 32)
   ; DAGISEL-GFX11-WF32-NEXT:   S_ENDPGM 0
@@ -1337,22 +1273,14 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_v16i16(<16 x i
   ; DAGISEL-GFX11-WF64-NEXT:   [[V_PK_ADD_U16_5:%[0-9]+]]:vgpr_32 = V_PK_ADD_U16 8, [[COPY9]], 8, [[COPY1]], 0, 0, 0, 0, 0, implicit $exec
   ; DAGISEL-GFX11-WF64-NEXT:   [[V_PK_ADD_U16_6:%[0-9]+]]:vgpr_32 = V_PK_ADD_U16 8, [[COPY10]], 8, [[COPY2]], 0, 0, 0, 0, 0, implicit $exec
   ; DAGISEL-GFX11-WF64-NEXT:   [[V_PK_ADD_U16_7:%[0-9]+]]:vgpr_32 = V_PK_ADD_U16 8, [[COPY11]], 8, [[COPY3]], 0, 0, 0, 0, 0, implicit $exec
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF64-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_PK_ADD_U16_7]], %subreg.sub0, [[V_PK_ADD_U16_6]], %subreg.sub1, [[V_PK_ADD_U16_5]], %subreg.sub2, [[V_PK_ADD_U16_4]], %subreg.sub3
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF4:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY16:%[0-9]+]]:vreg_64 = COPY [[DEF4]]
+  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY16:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY17:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX11-WF64-NEXT:   FLAT_STORE_DWORDX4 [[COPY16]], killed [[COPY17]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into `ptr poison` + 16)
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF8:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF64-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_PK_ADD_U16_3]], %subreg.sub0, [[V_PK_ADD_U16_2]], %subreg.sub1, [[V_PK_ADD_U16_1]], %subreg.sub2, [[V_PK_ADD_U16_]], %subreg.sub3
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF9:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY18:%[0-9]+]]:vreg_64 = COPY [[DEF9]]
+  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY18:%[0-9]+]]:vreg_64 = COPY [[DEF1]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY19:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE1]]
   ; DAGISEL-GFX11-WF64-NEXT:   FLAT_STORE_DWORDX4 [[COPY18]], killed [[COPY19]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into `ptr poison`, align 32)
   ; DAGISEL-GFX11-WF64-NEXT:   S_ENDPGM 0
@@ -1385,22 +1313,14 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_v16i16(<16 x i
   ; DAGISEL-GFX10-WF32-NEXT:   [[V_PK_ADD_U16_5:%[0-9]+]]:vgpr_32 = V_PK_ADD_U16 8, [[COPY9]], 8, [[COPY1]], 0, 0, 0, 0, 0, implicit $exec
   ; DAGISEL-GFX10-WF32-NEXT:   [[V_PK_ADD_U16_6:%[0-9]+]]:vgpr_32 = V_PK_ADD_U16 8, [[COPY10]], 8, [[COPY2]], 0, 0, 0, 0, 0, implicit $exec
   ; DAGISEL-GFX10-WF32-NEXT:   [[V_PK_ADD_U16_7:%[0-9]+]]:vgpr_32 = V_PK_ADD_U16 8, [[COPY11]], 8, [[COPY3]], 0, 0, 0, 0, 0, implicit $exec
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF32-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_PK_ADD_U16_7]], %subreg.sub0, [[V_PK_ADD_U16_6]], %subreg.sub1, [[V_PK_ADD_U16_5]], %subreg.sub2, [[V_PK_ADD_U16_4]], %subreg.sub3
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF4:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY16:%[0-9]+]]:vreg_64 = COPY [[DEF4]]
+  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY16:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY17:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX10-WF32-NEXT:   FLAT_STORE_DWORDX4 [[COPY16]], killed [[COPY17]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into `ptr poison` + 16)
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF8:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF32-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_PK_ADD_U16_3]], %subreg.sub0, [[V_PK_ADD_U16_2]], %subreg.sub1, [[V_PK_ADD_U16_1]], %subreg.sub2, [[V_PK_ADD_U16_]], %subreg.sub3
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF9:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY18:%[0-9]+]]:vreg_64 = COPY [[DEF9]]
+  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY18:%[0-9]+]]:vreg_64 = COPY [[DEF1]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY19:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE1]]
   ; DAGISEL-GFX10-WF32-NEXT:   FLAT_STORE_DWORDX4 [[COPY18]], killed [[COPY19]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into `ptr poison`, align 32)
   ; DAGISEL-GFX10-WF32-NEXT:   S_ENDPGM 0
@@ -1433,22 +1353,14 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_v16i16(<16 x i
   ; DAGISEL-GFX10-WF64-NEXT:   [[V_PK_ADD_U16_5:%[0-9]+]]:vgpr_32 = V_PK_ADD_U16 8, [[COPY9]], 8, [[COPY1]], 0, 0, 0, 0, 0, implicit $exec
   ; DAGISEL-GFX10-WF64-NEXT:   [[V_PK_ADD_U16_6:%[0-9]+]]:vgpr_32 = V_PK_ADD_U16 8, [[COPY10]], 8, [[COPY2]], 0, 0, 0, 0, 0, implicit $exec
   ; DAGISEL-GFX10-WF64-NEXT:   [[V_PK_ADD_U16_7:%[0-9]+]]:vgpr_32 = V_PK_ADD_U16 8, [[COPY11]], 8, [[COPY3]], 0, 0, 0, 0, 0, implicit $exec
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF64-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_PK_ADD_U16_7]], %subreg.sub0, [[V_PK_ADD_U16_6]], %subreg.sub1, [[V_PK_ADD_U16_5]], %subreg.sub2, [[V_PK_ADD_U16_4]], %subreg.sub3
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF4:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY16:%[0-9]+]]:vreg_64 = COPY [[DEF4]]
+  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY16:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY17:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX10-WF64-NEXT:   FLAT_STORE_DWORDX4 [[COPY16]], killed [[COPY17]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into `ptr poison` + 16)
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF8:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF64-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_PK_ADD_U16_3]], %subreg.sub0, [[V_PK_ADD_U16_2]], %subreg.sub1, [[V_PK_ADD_U16_1]], %subreg.sub2, [[V_PK_ADD_U16_]], %subreg.sub3
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF9:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY18:%[0-9]+]]:vreg_64 = COPY [[DEF9]]
+  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY18:%[0-9]+]]:vreg_64 = COPY [[DEF1]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY19:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE1]]
   ; DAGISEL-GFX10-WF64-NEXT:   FLAT_STORE_DWORDX4 [[COPY18]], killed [[COPY19]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into `ptr poison`, align 32)
   ; DAGISEL-GFX10-WF64-NEXT:   S_ENDPGM 0
@@ -1503,11 +1415,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_many_regs(<36 x i
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
   ; DAGISEL-GFX11-WF32-NEXT:   GLOBAL_STORE_DWORD [[COPY3]], [[COPY4]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF32-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
-  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF3:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[DEF3]]
+  ; DAGISEL-GFX11-WF32-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[DEF1]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX11-WF32-NEXT:   GLOBAL_STORE_DWORDX2 [[COPY5]], killed [[COPY6]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, addrspace 1)
   ; DAGISEL-GFX11-WF32-NEXT:   S_ENDPGM 0
@@ -1523,11 +1433,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_many_regs(<36 x i
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
   ; DAGISEL-GFX11-WF64-NEXT:   GLOBAL_STORE_DWORD [[COPY3]], [[COPY4]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF64-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
-  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF3:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[DEF3]]
+  ; DAGISEL-GFX11-WF64-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[DEF1]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX11-WF64-NEXT:   GLOBAL_STORE_DWORDX2 [[COPY5]], killed [[COPY6]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, addrspace 1)
   ; DAGISEL-GFX11-WF64-NEXT:   S_ENDPGM 0
@@ -1543,11 +1451,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_many_regs(<36 x i
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
   ; DAGISEL-GFX10-WF32-NEXT:   GLOBAL_STORE_DWORD [[COPY3]], [[COPY4]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF32-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
-  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF3:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[DEF3]]
+  ; DAGISEL-GFX10-WF32-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[DEF1]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX10-WF32-NEXT:   GLOBAL_STORE_DWORDX2 [[COPY5]], killed [[COPY6]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, addrspace 1)
   ; DAGISEL-GFX10-WF32-NEXT:   S_ENDPGM 0
@@ -1563,11 +1469,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_many_regs(<36 x i
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
   ; DAGISEL-GFX10-WF64-NEXT:   GLOBAL_STORE_DWORD [[COPY3]], [[COPY4]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF64-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
-  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF3:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[DEF3]]
+  ; DAGISEL-GFX10-WF64-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[DEF1]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
   ; DAGISEL-GFX10-WF64-NEXT:   GLOBAL_STORE_DWORDX2 [[COPY5]], killed [[COPY6]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, addrspace 1)
   ; DAGISEL-GFX10-WF64-NEXT:   S_ENDPGM 0

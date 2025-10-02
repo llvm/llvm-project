@@ -1570,6 +1570,18 @@ SBModule SBTarget::FindModule(const SBFileSpec &sb_file_spec) {
   return sb_module;
 }
 
+SBModule SBTarget::FindModule(const SBModuleSpec &sb_module_spec) {
+  LLDB_INSTRUMENT_VA(this, sb_module_spec);
+
+  SBModule sb_module;
+  if (TargetSP target_sp = GetSP(); target_sp && sb_module_spec.IsValid()) {
+    // The module list is thread safe, no need to lock.
+    sb_module.SetSP(
+        target_sp->GetImages().FindFirstModule(*sb_module_spec.m_opaque_up));
+  }
+  return sb_module;
+}
+
 SBSymbolContextList SBTarget::FindCompileUnits(const SBFileSpec &sb_file_spec) {
   LLDB_INSTRUMENT_VA(this, sb_file_spec);
 

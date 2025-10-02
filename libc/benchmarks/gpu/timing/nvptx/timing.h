@@ -13,9 +13,7 @@
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/atomic.h"
-#include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"
-#include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
@@ -66,7 +64,7 @@ template <typename F, typename T>
   uint64_t stop = gpu::processor_clock();
   cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   asm("" ::"r"(stop));
-  volatile T output = result;
+  volatile auto output = result;
 
   // Return the time elapsed.
   return stop - start;
@@ -108,6 +106,8 @@ throughput_baseline(const cpp::array<T, N> &inputs) {
   asm("" ::"llr"(start));
 
   T result{};
+
+#pragma clang loop unroll(disable)
   for (auto input : inputs) {
     asm("" ::"r"(input));
     result = input;
@@ -137,6 +137,8 @@ static LIBC_INLINE uint64_t throughput(F f, const cpp::array<T, N> &inputs) {
   asm("" ::"llr"(start));
 
   T result{};
+
+#pragma clang loop unroll(disable)
   for (auto input : inputs) {
     asm("" ::"r"(input));
     result = f(input);
@@ -165,6 +167,8 @@ static LIBC_INLINE uint64_t throughput_baseline(
   asm("" ::"llr"(start));
 
   T result{};
+
+#pragma clang loop unroll(disable)
   for (size_t i = 0; i < N; i++) {
     T x = inputs1[i];
     T y = inputs2[i];
@@ -197,6 +201,8 @@ static LIBC_INLINE uint64_t throughput(F f, const cpp::array<T, N> &inputs1,
   asm("" ::"llr"(start));
 
   T result{};
+
+#pragma clang loop unroll(disable)
   for (size_t i = 0; i < N; i++) {
     T x = inputs1[i];
     T y = inputs2[i];

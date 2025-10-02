@@ -15,8 +15,6 @@
 // basic_stringstream() : basic_stringstream(ios_base::out | ios_base::in) {}            // C++20
 // explicit basic_stringstream(ios_base::openmode which);                                // C++20
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <sstream>
 #include <cassert>
 

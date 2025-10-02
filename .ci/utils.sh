@@ -24,6 +24,7 @@ function at-exit {
   retcode=$?
 
   mkdir -p artifacts
+  sccache --show-stats
   sccache --show-stats >> artifacts/sccache_stats.txt
   cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
   cp "${MONOREPO_ROOT}"/*.log artifacts/ || :
@@ -51,3 +52,10 @@ function start-group {
     echo "Starting $groupname"
   fi
 }
+
+export PIP_BREAK_SYSTEM_PACKAGES=1
+pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
+
+if [[ "$GITHUB_ACTIONS" != "" ]]; then
+  python .ci/cache_lit_timing_files.py download
+fi

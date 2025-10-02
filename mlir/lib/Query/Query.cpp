@@ -141,7 +141,7 @@ LogicalResult MatchQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
   os << "\n";
   for (auto &results : matches) {
     os << "Match #" << ++matchCount << ":\n\n";
-    for (auto op : results.matchedOps) {
+    for (Operation *op : results.matchedOps) {
       if (op == results.rootOp) {
         finder.printMatch(os, qs, op, "root");
       } else {

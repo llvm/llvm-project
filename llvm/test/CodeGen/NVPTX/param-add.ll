@@ -14,7 +14,7 @@ declare i32 @callee(%struct.1float %a)
 define i32 @test(%struct.1float alignstack(32) %data) {
 ; CHECK-LABEL: test(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_param_0];

@@ -36,7 +36,7 @@ public:
   bool isBigEndian() const { return bigEndian; }
 
   /// Internal helper method that returns requested alignment for type.
-  llvm::Align getAlignment(mlir::Type ty, bool abiOrPref) const;
+  llvm::Align getAlignment(mlir::Type ty, bool useABIAlign) const;
 
   llvm::Align getABITypeAlign(mlir::Type ty) const {
     return getAlignment(ty, true);
@@ -66,6 +66,18 @@ public:
   llvm::TypeSize getTypeAllocSize(mlir::Type ty) const {
     // Round up to the next alignment boundary.
     return llvm::alignTo(getTypeStoreSize(ty), getABITypeAlign(ty).value());
+  }
+
+  /// Returns the offset in bits between successive objects of the
+  /// specified type, including alignment padding; always a multiple of 8.
+  ///
+  /// If Ty is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
+  /// This is the amount that alloca reserves for this type. For example,
+  /// returns 96 or 128 for x86_fp80, depending on alignment.
+  llvm::TypeSize getTypeAllocSizeInBits(mlir::Type ty) const {
+    return 8 * getTypeAllocSize(ty);
   }
 
   llvm::TypeSize getTypeSizeInBits(mlir::Type ty) const;

@@ -49,6 +49,13 @@ static APSInt popToAPSInt(InterpStack &Stk, PrimType T) {
   INT_TYPE_SWITCH(T, return Stk.pop<T>().toAPSInt());
 }
 
+static APSInt popToAPSInt(InterpState &S, const Expr *E) {
+  return popToAPSInt(S.Stk, *S.getContext().classify(E->getType()));
+}
+static APSInt popToAPSInt(InterpState &S, QualType T) {
+  return popToAPSInt(S.Stk, *S.getContext().classify(T));
+}
+
 /// Pushes \p Val on the stack as the type given by \p QT.
 static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   assert(QT->isSignedIntegerOrEnumerationType() ||
@@ -141,6 +148,22 @@ static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
     S.CCEDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
 }
 
+static llvm::APSInt convertBoolVectorToInt(const Pointer &Val) {
+  assert(Val.getFieldDesc()->isPrimitiveArray() &&
+         Val.getFieldDesc()->getElemQualType()->isBooleanType() &&
+         "Not a boolean vector");
+  unsigned NumElems = Val.getNumElems();
+
+  // Each element is one bit, so create an integer with NumElts bits.
+  llvm::APSInt Result(NumElems, 0);
+  for (unsigned I = 0; I != NumElems; ++I) {
+    if (Val.elem<bool>(I))
+      Result.setBit(I);
+  }
+
+  return Result;
+}
+
 static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
                                                   const InterpFrame *Frame,
                                                   const CallExpr *Call) {
@@ -205,6 +228,8 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
 
   if (A.isDummy() || B.isDummy())
     return false;
+  if (!A.isBlockPointer() || !B.isBlockPointer())
+    return false;
 
   bool IsWide = ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp ||
                 ID == Builtin::BI__builtin_wcscmp ||
@@ -212,7 +237,10 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   assert(A.getFieldDesc()->isPrimitiveArray());
   assert(B.getFieldDesc()->isPrimitiveArray());
 
-  assert(getElemType(A).getTypePtr() == getElemType(B).getTypePtr());
+  // Different element types shouldn't happen, but with casts they can.
+  if (!S.getASTContext().hasSameUnqualifiedType(getElemType(A), getElemType(B)))
+    return false;
+
   PrimType ElemT = *S.getContext().classify(getElemType(A));
 
   auto returnResult = [&](int V) -> bool {
@@ -277,6 +305,9 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
     return false;
 
   if (!CheckDummy(S, OpPC, StrPtr.block(), AK_Read))
+    return false;
+
+  if (!StrPtr.getFieldDesc()->isPrimitiveArray())
     return false;
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
@@ -532,9 +563,9 @@ static bool interp_floating_comparison(InterpState &S, CodePtr OpPC,
         case Builtin::BI__builtin_islessequal:
           return LHS <= RHS;
         case Builtin::BI__builtin_islessgreater: {
-          ComparisonCategoryResult cmp = LHS.compare(RHS);
-          return cmp == ComparisonCategoryResult::Less ||
-                 cmp == ComparisonCategoryResult::Greater;
+          ComparisonCategoryResult Cmp = LHS.compare(RHS);
+          return Cmp == ComparisonCategoryResult::Less ||
+                 Cmp == ComparisonCategoryResult::Greater;
         }
         case Builtin::BI__builtin_isunordered:
           return LHS.compare(RHS) == ComparisonCategoryResult::Unordered;
@@ -552,8 +583,7 @@ static bool interp_floating_comparison(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_isfpclass(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const CallExpr *Call) {
-  PrimType FPClassArgT = *S.getContext().classify(Call->getArg(1)->getType());
-  APSInt FPClassArg = popToAPSInt(S.Stk, FPClassArgT);
+  APSInt FPClassArg = popToAPSInt(S, Call->getArg(1));
   const Floating &F = S.Stk.pop<Floating>();
 
   int32_t Result = static_cast<int32_t>(
@@ -624,8 +654,7 @@ static bool interp__builtin_fabs(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_abs(InterpState &S, CodePtr OpPC,
                                 const InterpFrame *Frame,
                                 const CallExpr *Call) {
-  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-  APSInt Val = popToAPSInt(S.Stk, ArgT);
+  APSInt Val = popToAPSInt(S, Call->getArg(0));
   if (Val ==
       APSInt(APInt::getSignedMinValue(Val.getBitWidth()), /*IsUnsigned=*/false))
     return false;
@@ -638,8 +667,13 @@ static bool interp__builtin_abs(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
                                      const InterpFrame *Frame,
                                      const CallExpr *Call) {
-  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-  APSInt Val = popToAPSInt(S.Stk, ArgT);
+  APSInt Val;
+  if (Call->getArg(0)->getType()->isExtVectorBoolType()) {
+    const Pointer &Arg = S.Stk.pop<Pointer>();
+    Val = convertBoolVectorToInt(Arg);
+  } else {
+    Val = popToAPSInt(S, Call->getArg(0));
+  }
   pushInteger(S, Val.popcount(), Call->getType());
   return true;
 }
@@ -647,8 +681,7 @@ static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_parity(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call) {
-  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-  APSInt Val = popToAPSInt(S.Stk, ArgT);
+  APSInt Val = popToAPSInt(S, Call->getArg(0));
   pushInteger(S, Val.popcount() % 2, Call->getType());
   return true;
 }
@@ -656,8 +689,7 @@ static bool interp__builtin_parity(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_clrsb(InterpState &S, CodePtr OpPC,
                                   const InterpFrame *Frame,
                                   const CallExpr *Call) {
-  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-  APSInt Val = popToAPSInt(S.Stk, ArgT);
+  APSInt Val = popToAPSInt(S, Call->getArg(0));
   pushInteger(S, Val.getBitWidth() - Val.getSignificantBits(), Call->getType());
   return true;
 }
@@ -665,8 +697,7 @@ static bool interp__builtin_clrsb(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_bitreverse(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
                                        const CallExpr *Call) {
-  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-  APSInt Val = popToAPSInt(S.Stk, ArgT);
+  APSInt Val = popToAPSInt(S, Call->getArg(0));
   pushInteger(S, Val.reverseBits(), Call->getType());
   return true;
 }
@@ -709,11 +740,8 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call, bool Right) {
-  PrimType AmountT = *S.getContext().classify(Call->getArg(1)->getType());
-  PrimType ValueT = *S.getContext().classify(Call->getArg(0)->getType());
-
-  APSInt Amount = popToAPSInt(S.Stk, AmountT);
-  APSInt Value = popToAPSInt(S.Stk, ValueT);
+  APSInt Amount = popToAPSInt(S, Call->getArg(1));
+  APSInt Value = popToAPSInt(S, Call->getArg(0));
 
   APSInt Result;
   if (Right)
@@ -730,8 +758,7 @@ static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
                                 const InterpFrame *Frame,
                                 const CallExpr *Call) {
-  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-  APSInt Value = popToAPSInt(S.Stk, ArgT);
+  APSInt Value = popToAPSInt(S, Call->getArg(0));
 
   uint64_t N = Value.countr_zero();
   pushInteger(S, N == Value.getBitWidth() ? 0 : N + 1, Call->getType());
@@ -759,8 +786,7 @@ static bool interp__builtin_move(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_eh_return_data_regno(InterpState &S, CodePtr OpPC,
                                                  const InterpFrame *Frame,
                                                  const CallExpr *Call) {
-  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-  APSInt Arg = popToAPSInt(S.Stk, ArgT);
+  APSInt Arg = popToAPSInt(S, Call->getArg(0));
 
   int Result = S.getASTContext().getTargetInfo().getEHDataRegisterNumber(
       Arg.getZExtValue());
@@ -883,6 +909,9 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   APSInt RHS = popToAPSInt(S.Stk, RHST);
   APSInt LHS = popToAPSInt(S.Stk, LHST);
 
+  if (CarryOutPtr.isDummy())
+    return false;
+
   APSInt CarryOut;
 
   APSInt Result;
@@ -931,12 +960,16 @@ static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
                                 unsigned BuiltinOp) {
 
   std::optional<APSInt> Fallback;
-  if (BuiltinOp == Builtin::BI__builtin_clzg && Call->getNumArgs() == 2) {
-    PrimType FallbackT = *S.getContext().classify(Call->getArg(1));
-    Fallback = popToAPSInt(S.Stk, FallbackT);
+  if (BuiltinOp == Builtin::BI__builtin_clzg && Call->getNumArgs() == 2)
+    Fallback = popToAPSInt(S, Call->getArg(1));
+
+  APSInt Val;
+  if (Call->getArg(0)->getType()->isExtVectorBoolType()) {
+    const Pointer &Arg = S.Stk.pop<Pointer>();
+    Val = convertBoolVectorToInt(Arg);
+  } else {
+    Val = popToAPSInt(S, Call->getArg(0));
   }
-  PrimType ValT = *S.getContext().classify(Call->getArg(0));
-  const APSInt &Val = popToAPSInt(S.Stk, ValT);
 
   // When the argument is 0, the result of GCC builtins is undefined, whereas
   // for Microsoft intrinsics, the result is the bit-width of the argument.
@@ -962,12 +995,16 @@ static bool interp__builtin_ctz(InterpState &S, CodePtr OpPC,
                                 const InterpFrame *Frame, const CallExpr *Call,
                                 unsigned BuiltinID) {
   std::optional<APSInt> Fallback;
-  if (BuiltinID == Builtin::BI__builtin_ctzg && Call->getNumArgs() == 2) {
-    PrimType FallbackT = *S.getContext().classify(Call->getArg(1));
-    Fallback = popToAPSInt(S.Stk, FallbackT);
+  if (BuiltinID == Builtin::BI__builtin_ctzg && Call->getNumArgs() == 2)
+    Fallback = popToAPSInt(S, Call->getArg(1));
+
+  APSInt Val;
+  if (Call->getArg(0)->getType()->isExtVectorBoolType()) {
+    const Pointer &Arg = S.Stk.pop<Pointer>();
+    Val = convertBoolVectorToInt(Arg);
+  } else {
+    Val = popToAPSInt(S, Call->getArg(0));
   }
-  PrimType ValT = *S.getContext().classify(Call->getArg(0));
-  const APSInt &Val = popToAPSInt(S.Stk, ValT);
 
   if (Val == 0) {
     if (Fallback) {
@@ -984,13 +1021,10 @@ static bool interp__builtin_ctz(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_bswap(InterpState &S, CodePtr OpPC,
                                   const InterpFrame *Frame,
                                   const CallExpr *Call) {
-  PrimType ReturnT = *S.getContext().classify(Call->getType());
-  PrimType ValT = *S.getContext().classify(Call->getArg(0));
-  const APSInt &Val = popToAPSInt(S.Stk, ValT);
+  const APSInt &Val = popToAPSInt(S, Call->getArg(0));
   assert(Val.getActiveBits() <= 64);
 
-  INT_TYPE_SWITCH(ReturnT,
-                  { S.Stk.push<T>(T::from(Val.byteSwap().getZExtValue())); });
+  pushInteger(S, Val.byteSwap(), Call->getType());
   return true;
 }
 
@@ -1005,9 +1039,8 @@ static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
     return true;
   };
 
-  PrimType ValT = *S.getContext().classify(Call->getArg(0));
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  const APSInt &SizeVal = popToAPSInt(S.Stk, ValT);
+  const APSInt &SizeVal = popToAPSInt(S, Call->getArg(0));
 
   // For __atomic_is_lock_free(sizeof(_Atomic(T))), if the size is a power
   // of two less than or equal to the maximum inline atomic width, we know it
@@ -1073,21 +1106,17 @@ static bool interp__builtin_c11_atomic_is_lock_free(InterpState &S,
                                                     CodePtr OpPC,
                                                     const InterpFrame *Frame,
                                                     const CallExpr *Call) {
-  PrimType ValT = *S.getContext().classify(Call->getArg(0));
-  const APSInt &SizeVal = popToAPSInt(S.Stk, ValT);
-
-  auto returnBool = [&S](bool Value) -> bool {
-    S.Stk.push<Boolean>(Value);
-    return true;
-  };
+  const APSInt &SizeVal = popToAPSInt(S, Call->getArg(0));
 
   CharUnits Size = CharUnits::fromQuantity(SizeVal.getZExtValue());
   if (Size.isPowerOfTwo()) {
     // Check against inlining width.
     unsigned InlineWidthBits =
         S.getASTContext().getTargetInfo().getMaxAtomicInlineWidth();
-    if (Size <= S.getASTContext().toCharUnitsFromBits(InlineWidthBits))
-      return returnBool(true);
+    if (Size <= S.getASTContext().toCharUnitsFromBits(InlineWidthBits)) {
+      S.Stk.push<Boolean>(true);
+      return true;
+    }
   }
 
   return false; // returnBool(false);
@@ -1117,8 +1146,7 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
                                                const InterpFrame *Frame,
                                                const CallExpr *Call,
                                                unsigned BuiltinOp) {
-  PrimType AlignmentT = *S.Ctx.classify(Call->getArg(1));
-  const APSInt &Alignment = popToAPSInt(S.Stk, AlignmentT);
+  const APSInt &Alignment = popToAPSInt(S, Call->getArg(1));
 
   if (Alignment < 0 || !Alignment.isPowerOf2()) {
     S.FFDiag(Call, diag::note_constexpr_invalid_alignment) << Alignment;
@@ -1132,8 +1160,7 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // The first parameter is either an integer or a pointer (but not a function
-  // pointer).
+  // The first parameter is either an integer or a pointer.
   PrimType FirstArgT = *S.Ctx.classify(Call->getArg(0));
 
   if (isIntegralType(FirstArgT)) {
@@ -1152,12 +1179,12 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
     }
     return true;
   }
-
   assert(FirstArgT == PT_Ptr);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (!Ptr.isBlockPointer())
+    return false;
 
-  unsigned PtrOffset = Ptr.getByteOffset();
-  PtrOffset = Ptr.getIndex();
+  unsigned PtrOffset = Ptr.getIndex();
   CharUnits BaseAlignment =
       S.getASTContext().getDeclAlign(Ptr.getDeclDesc()->asValueDecl());
   CharUnits PtrAlign =
@@ -1267,132 +1294,6 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_ia32_bextr(InterpState &S, CodePtr OpPC,
-                                       const InterpFrame *Frame,
-                                       const CallExpr *Call) {
-  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
-      !Call->getArg(1)->getType()->isIntegerType())
-    return false;
-
-  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
-  PrimType IndexT = *S.Ctx.classify(Call->getArg(1));
-  APSInt Index = popToAPSInt(S.Stk, IndexT);
-  APSInt Val = popToAPSInt(S.Stk, ValT);
-
-  unsigned BitWidth = Val.getBitWidth();
-  uint64_t Shift = Index.extractBitsAsZExtValue(8, 0);
-  uint64_t Length = Index.extractBitsAsZExtValue(8, 8);
-  Length = Length > BitWidth ? BitWidth : Length;
-
-  // Handle out of bounds cases.
-  if (Length == 0 || Shift >= BitWidth) {
-    pushInteger(S, 0, Call->getType());
-    return true;
-  }
-
-  uint64_t Result = Val.getZExtValue() >> Shift;
-  Result &= llvm::maskTrailingOnes<uint64_t>(Length);
-  pushInteger(S, Result, Call->getType());
-  return true;
-}
-
-static bool interp__builtin_ia32_bzhi(InterpState &S, CodePtr OpPC,
-                                      const InterpFrame *Frame,
-                                      const CallExpr *Call) {
-  QualType CallType = Call->getType();
-  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
-      !Call->getArg(1)->getType()->isIntegerType() ||
-      !CallType->isIntegerType())
-    return false;
-
-  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
-  PrimType IndexT = *S.Ctx.classify(Call->getArg(1));
-
-  APSInt Idx = popToAPSInt(S.Stk, IndexT);
-  APSInt Val = popToAPSInt(S.Stk, ValT);
-
-  unsigned BitWidth = Val.getBitWidth();
-  uint64_t Index = Idx.extractBitsAsZExtValue(8, 0);
-
-  if (Index < BitWidth)
-    Val.clearHighBits(BitWidth - Index);
-
-  pushInteger(S, Val, CallType);
-  return true;
-}
-
-static bool interp__builtin_ia32_lzcnt(InterpState &S, CodePtr OpPC,
-                                       const InterpFrame *Frame,
-                                       const CallExpr *Call) {
-  QualType CallType = Call->getType();
-  if (!CallType->isIntegerType() ||
-      !Call->getArg(0)->getType()->isIntegerType())
-    return false;
-
-  APSInt Val = popToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
-  pushInteger(S, Val.countLeadingZeros(), CallType);
-  return true;
-}
-
-static bool interp__builtin_ia32_tzcnt(InterpState &S, CodePtr OpPC,
-                                       const InterpFrame *Frame,
-                                       const CallExpr *Call) {
-  QualType CallType = Call->getType();
-  if (!CallType->isIntegerType() ||
-      !Call->getArg(0)->getType()->isIntegerType())
-    return false;
-
-  APSInt Val = popToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
-  pushInteger(S, Val.countTrailingZeros(), CallType);
-  return true;
-}
-
-static bool interp__builtin_ia32_pdep(InterpState &S, CodePtr OpPC,
-                                      const InterpFrame *Frame,
-                                      const CallExpr *Call) {
-  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
-      !Call->getArg(1)->getType()->isIntegerType())
-    return false;
-
-  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
-  PrimType MaskT = *S.Ctx.classify(Call->getArg(1));
-
-  APSInt Mask = popToAPSInt(S.Stk, MaskT);
-  APSInt Val = popToAPSInt(S.Stk, ValT);
-
-  unsigned BitWidth = Val.getBitWidth();
-  APInt Result = APInt::getZero(BitWidth);
-  for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
-    if (Mask[I])
-      Result.setBitVal(I, Val[P++]);
-  }
-  pushInteger(S, std::move(Result), Call->getType());
-  return true;
-}
-
-static bool interp__builtin_ia32_pext(InterpState &S, CodePtr OpPC,
-                                      const InterpFrame *Frame,
-                                      const CallExpr *Call) {
-  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
-      !Call->getArg(1)->getType()->isIntegerType())
-    return false;
-
-  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
-  PrimType MaskT = *S.Ctx.classify(Call->getArg(1));
-
-  APSInt Mask = popToAPSInt(S.Stk, MaskT);
-  APSInt Val = popToAPSInt(S.Stk, ValT);
-
-  unsigned BitWidth = Val.getBitWidth();
-  APInt Result = APInt::getZero(BitWidth);
-  for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
-    if (Mask[I])
-      Result.setBitVal(P++, Val[I]);
-  }
-  pushInteger(S, std::move(Result), Call->getType());
-  return true;
-}
-
 /// (CarryIn, LHS, RHS, Result)
 static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
                                                     CodePtr OpPC,
@@ -1406,12 +1307,9 @@ static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
 
   const Pointer &CarryOutPtr = S.Stk.pop<Pointer>();
 
-  PrimType CarryInT = *S.getContext().classify(Call->getArg(0));
-  PrimType LHST = *S.getContext().classify(Call->getArg(1));
-  PrimType RHST = *S.getContext().classify(Call->getArg(2));
-  APSInt RHS = popToAPSInt(S.Stk, RHST);
-  APSInt LHS = popToAPSInt(S.Stk, LHST);
-  APSInt CarryIn = popToAPSInt(S.Stk, CarryInT);
+  APSInt RHS = popToAPSInt(S, Call->getArg(2));
+  APSInt LHS = popToAPSInt(S, Call->getArg(1));
+  APSInt CarryIn = popToAPSInt(S, Call->getArg(0));
 
   bool IsAdd = BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u32 ||
                BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u64;
@@ -1501,7 +1399,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
       discard(S.Stk, *S.getContext().classify(Arg));
   }
 
-  APSInt Bytes = popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(0)));
+  APSInt Bytes = popToAPSInt(S, Call->getArg(0));
   CharUnits ElemSize = S.getASTContext().getTypeSizeInChars(ElemType);
   assert(!ElemSize.isZero());
   // Divide the number of bytes by sizeof(ElemType), so we get the number of
@@ -1695,9 +1593,7 @@ static bool interp__builtin_elementwise_abs(InterpState &S, CodePtr OpPC,
   assert(Call->getNumArgs() == 1);
   QualType Ty = Call->getArg(0)->getType();
   if (Ty->isIntegerType()) {
-    PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-    APSInt Val = popToAPSInt(S.Stk, ArgT);
-
+    APSInt Val = popToAPSInt(S, Call->getArg(0));
     pushInteger(S, Val.abs(), Call->getType());
     return true;
   }
@@ -1746,8 +1642,7 @@ static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
                                                  unsigned BuiltinID) {
   assert(Call->getNumArgs() == 1);
   if (Call->getArg(0)->getType()->isIntegerType()) {
-    PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-    APSInt Val = popToAPSInt(S.Stk, ArgT);
+    APSInt Val = popToAPSInt(S, Call->getArg(0));
 
     if (BuiltinID == Builtin::BI__builtin_elementwise_popcount) {
       pushInteger(S, Val.popcount(), Call->getType());
@@ -1785,13 +1680,100 @@ static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// Can be called with an integer or vector as the first and only parameter.
+static bool interp__builtin_elementwise_countzeroes(InterpState &S,
+                                                    CodePtr OpPC,
+                                                    const InterpFrame *Frame,
+                                                    const CallExpr *Call,
+                                                    unsigned BuiltinID) {
+  const bool HasZeroArg = Call->getNumArgs() == 2;
+  const bool IsCTTZ = BuiltinID == Builtin::BI__builtin_elementwise_ctzg;
+  assert(Call->getNumArgs() == 1 || HasZeroArg);
+  if (Call->getArg(0)->getType()->isIntegerType()) {
+    PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+    APSInt Val = popToAPSInt(S.Stk, ArgT);
+    std::optional<APSInt> ZeroVal;
+    if (HasZeroArg) {
+      ZeroVal = Val;
+      Val = popToAPSInt(S.Stk, ArgT);
+    }
+
+    if (Val.isZero()) {
+      if (ZeroVal) {
+        pushInteger(S, *ZeroVal, Call->getType());
+        return true;
+      }
+      // If we haven't been provided the second argument, the result is
+      // undefined
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_countzeroes_zero)
+          << /*IsTrailing=*/IsCTTZ;
+      return false;
+    }
+
+    if (BuiltinID == Builtin::BI__builtin_elementwise_clzg) {
+      pushInteger(S, Val.countLeadingZeros(), Call->getType());
+    } else {
+      pushInteger(S, Val.countTrailingZeros(), Call->getType());
+    }
+    return true;
+  }
+  // Otherwise, the argument must be a vector.
+  const ASTContext &ASTCtx = S.getASTContext();
+  Pointer ZeroArg;
+  if (HasZeroArg) {
+    assert(Call->getArg(1)->getType()->isVectorType() &&
+           ASTCtx.hasSameUnqualifiedType(Call->getArg(0)->getType(),
+                                         Call->getArg(1)->getType()));
+    (void)ASTCtx;
+    ZeroArg = S.Stk.pop<Pointer>();
+    assert(ZeroArg.getFieldDesc()->isPrimitiveArray());
+  }
+  assert(Call->getArg(0)->getType()->isVectorType());
+  const Pointer &Arg = S.Stk.pop<Pointer>();
+  assert(Arg.getFieldDesc()->isPrimitiveArray());
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  assert(Dst.getFieldDesc()->isPrimitiveArray());
+  assert(Arg.getFieldDesc()->getNumElems() ==
+         Dst.getFieldDesc()->getNumElems());
+
+  QualType ElemType = Arg.getFieldDesc()->getElemQualType();
+  PrimType ElemT = *S.getContext().classify(ElemType);
+  unsigned NumElems = Arg.getNumElems();
+
+  // FIXME: Reading from uninitialized vector elements?
+  for (unsigned I = 0; I != NumElems; ++I) {
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      APInt EltVal = Arg.atIndex(I).deref<T>().toAPSInt();
+      if (EltVal.isZero()) {
+        if (HasZeroArg) {
+          Dst.atIndex(I).deref<T>() = ZeroArg.atIndex(I).deref<T>();
+        } else {
+          // If we haven't been provided the second argument, the result is
+          // undefined
+          S.FFDiag(S.Current->getSource(OpPC),
+                   diag::note_constexpr_countzeroes_zero)
+              << /*IsTrailing=*/IsCTTZ;
+          return false;
+        }
+      } else if (IsCTTZ) {
+        Dst.atIndex(I).deref<T>() = T::from(EltVal.countTrailingZeros());
+      } else {
+        Dst.atIndex(I).deref<T>() = T::from(EltVal.countLeadingZeros());
+      }
+      Dst.atIndex(I).initialize();
+    });
+  }
+
+  return true;
+}
+
 static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call, unsigned ID) {
   assert(Call->getNumArgs() == 3);
   const ASTContext &ASTCtx = S.getASTContext();
-  PrimType SizeT = *S.getContext().classify(Call->getArg(2));
-  APSInt Size = popToAPSInt(S.Stk, SizeT);
+  APSInt Size = popToAPSInt(S, Call->getArg(2));
   const Pointer SrcPtr = S.Stk.pop<Pointer>();
   const Pointer DestPtr = S.Stk.pop<Pointer>();
 
@@ -1957,8 +1939,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call, unsigned ID) {
   assert(Call->getNumArgs() == 3);
-  PrimType SizeT = *S.getContext().classify(Call->getArg(2));
-  const APSInt &Size = popToAPSInt(S.Stk, SizeT);
+  const APSInt &Size = popToAPSInt(S, Call->getArg(2));
   const Pointer &PtrB = S.Stk.pop<Pointer>();
   const Pointer &PtrA = S.Stk.pop<Pointer>();
 
@@ -2073,12 +2054,10 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
   std::optional<APSInt> MaxLength;
-  PrimType DesiredT = *S.getContext().classify(Call->getArg(1));
-  if (Call->getNumArgs() == 3) {
-    PrimType MaxT = *S.getContext().classify(Call->getArg(2));
-    MaxLength = popToAPSInt(S.Stk, MaxT);
-  }
-  APSInt Desired = popToAPSInt(S.Stk, DesiredT);
+  if (Call->getNumArgs() == 3)
+    MaxLength = popToAPSInt(S, Call->getArg(2));
+
+  APSInt Desired = popToAPSInt(S, Call->getArg(1));
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
   if (MaxLength && MaxLength->isZero()) {
@@ -2170,29 +2149,32 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static unsigned computeFullDescSize(const ASTContext &ASTCtx,
-                                    const Descriptor *Desc) {
-
+static std::optional<unsigned> computeFullDescSize(const ASTContext &ASTCtx,
+                                                   const Descriptor *Desc) {
   if (Desc->isPrimitive())
     return ASTCtx.getTypeSizeInChars(Desc->getType()).getQuantity();
-
   if (Desc->isArray())
     return ASTCtx.getTypeSizeInChars(Desc->getElemQualType()).getQuantity() *
            Desc->getNumElems();
+  if (Desc->isRecord()) {
+    // Can't use Descriptor::getType() as that may return a pointer type. Look
+    // at the decl directly.
+    return ASTCtx
+        .getTypeSizeInChars(
+            ASTCtx.getCanonicalTagType(Desc->ElemRecord->getDecl()))
+        .getQuantity();
+  }
 
-  if (Desc->isRecord())
-    return ASTCtx.getTypeSizeInChars(Desc->getType()).getQuantity();
-
-  llvm_unreachable("Unhandled descriptor type");
-  return 0;
+  return std::nullopt;
 }
 
+/// Compute the byte offset of \p Ptr in the full declaration.
 static unsigned computePointerOffset(const ASTContext &ASTCtx,
                                      const Pointer &Ptr) {
   unsigned Result = 0;
 
   Pointer P = Ptr;
-  while (P.isArrayElement() || P.isField()) {
+  while (P.isField() || P.isArrayElement()) {
     P = P.expand();
     const Descriptor *D = P.getFieldDesc();
 
@@ -2205,7 +2187,6 @@ static unsigned computePointerOffset(const ASTContext &ASTCtx,
         Result += ElemSize * P.getIndex();
       P = P.expand().getArray();
     } else if (P.isBaseClass()) {
-
       const auto *RD = cast<CXXRecordDecl>(D->asDecl());
       bool IsVirtual = Ptr.isVirtualBaseClass();
       P = P.getBase();
@@ -2234,30 +2215,135 @@ static unsigned computePointerOffset(const ASTContext &ASTCtx,
   return Result;
 }
 
+/// Does Ptr point to the last subobject?
+static bool pointsToLastObject(const Pointer &Ptr) {
+  Pointer P = Ptr;
+  while (!P.isRoot()) {
+
+    if (P.isArrayElement()) {
+      P = P.expand().getArray();
+      continue;
+    }
+    if (P.isBaseClass()) {
+      if (P.getRecord()->getNumFields() > 0)
+        return false;
+      P = P.getBase();
+      continue;
+    }
+
+    Pointer Base = P.getBase();
+    if (const Record *R = Base.getRecord()) {
+      assert(P.getField());
+      if (P.getField()->getFieldIndex() != R->getNumFields() - 1)
+        return false;
+    }
+    P = Base;
+  }
+
+  return true;
+}
+
+/// Does Ptr point to the last object AND to a flexible array member?
+static bool isUserWritingOffTheEnd(const ASTContext &Ctx, const Pointer &Ptr) {
+  auto isFlexibleArrayMember = [&](const Descriptor *FieldDesc) {
+    using FAMKind = LangOptions::StrictFlexArraysLevelKind;
+    FAMKind StrictFlexArraysLevel =
+        Ctx.getLangOpts().getStrictFlexArraysLevel();
+
+    if (StrictFlexArraysLevel == FAMKind::Default)
+      return true;
+
+    unsigned NumElems = FieldDesc->getNumElems();
+    if (NumElems == 0 && StrictFlexArraysLevel != FAMKind::IncompleteOnly)
+      return true;
+
+    if (NumElems == 1 && StrictFlexArraysLevel == FAMKind::OneZeroOrIncomplete)
+      return true;
+    return false;
+  };
+
+  const Descriptor *FieldDesc = Ptr.getFieldDesc();
+  if (!FieldDesc->isArray())
+    return false;
+
+  return Ptr.isDummy() && pointsToLastObject(Ptr) &&
+         isFlexibleArrayMember(FieldDesc);
+}
+
 static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
                                         const InterpFrame *Frame,
                                         const CallExpr *Call) {
-  PrimType KindT = *S.getContext().classify(Call->getArg(1));
-  [[maybe_unused]] unsigned Kind = popToAPSInt(S.Stk, KindT).getZExtValue();
-
+  const ASTContext &ASTCtx = S.getASTContext();
+  // From the GCC docs:
+  // Kind is an integer constant from 0 to 3. If the least significant bit is
+  // clear, objects are whole variables. If it is set, a closest surrounding
+  // subobject is considered the object a pointer points to. The second bit
+  // determines if maximum or minimum of remaining bytes is computed.
+  unsigned Kind = popToAPSInt(S, Call->getArg(1)).getZExtValue();
   assert(Kind <= 3 && "unexpected kind");
-
+  bool UseFieldDesc = (Kind & 1u);
+  bool ReportMinimum = (Kind & 2u);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isZero())
+  if (Call->getArg(0)->HasSideEffects(ASTCtx)) {
+    // "If there are any side effects in them, it returns (size_t) -1
+    // for type 0 or 1 and (size_t) 0 for type 2 or 3."
+    pushInteger(S, Kind <= 1 ? -1 : 0, Call->getType());
+    return true;
+  }
+
+  if (Ptr.isZero() || !Ptr.isBlockPointer())
     return false;
 
+  // We can't load through pointers.
+  if (Ptr.isDummy() && Ptr.getType()->isPointerType())
+    return false;
+
+  bool DetermineForCompleteObject = Ptr.getFieldDesc() == Ptr.getDeclDesc();
   const Descriptor *DeclDesc = Ptr.getDeclDesc();
-  if (!DeclDesc)
+  assert(DeclDesc);
+
+  if (!UseFieldDesc || DetermineForCompleteObject) {
+    // Lower bound, so we can't fall back to this.
+    if (ReportMinimum && !DetermineForCompleteObject)
+      return false;
+
+    // Can't read beyond the pointer decl desc.
+    if (!UseFieldDesc && !ReportMinimum && DeclDesc->getType()->isPointerType())
+      return false;
+  } else {
+    if (isUserWritingOffTheEnd(ASTCtx, Ptr.expand())) {
+      // If we cannot determine the size of the initial allocation, then we
+      // can't given an accurate upper-bound. However, we are still able to give
+      // conservative lower-bounds for Type=3.
+      if (Kind == 1)
+        return false;
+    }
+  }
+
+  const Descriptor *Desc = UseFieldDesc ? Ptr.getFieldDesc() : DeclDesc;
+  assert(Desc);
+
+  std::optional<unsigned> FullSize = computeFullDescSize(ASTCtx, Desc);
+  if (!FullSize)
     return false;
 
-  const ASTContext &ASTCtx = S.getASTContext();
+  unsigned ByteOffset;
+  if (UseFieldDesc) {
+    if (Ptr.isBaseClass())
+      ByteOffset = computePointerOffset(ASTCtx, Ptr.getBase()) -
+                   computePointerOffset(ASTCtx, Ptr);
+    else
+      ByteOffset =
+          computePointerOffset(ASTCtx, Ptr) -
+          computePointerOffset(ASTCtx, Ptr.expand().atIndex(0).narrow());
+  } else
+    ByteOffset = computePointerOffset(ASTCtx, Ptr);
 
-  unsigned ByteOffset = computePointerOffset(ASTCtx, Ptr);
-  unsigned FullSize = computeFullDescSize(ASTCtx, DeclDesc);
+  assert(ByteOffset <= *FullSize);
+  unsigned Result = *FullSize - ByteOffset;
 
-  pushInteger(S, FullSize - ByteOffset, Call->getType());
-
+  pushInteger(S, Result, Call->getType());
   return true;
 }
 
@@ -2304,12 +2390,8 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
   }
 
   // Check if we're currently running an initializer.
-  for (InterpFrame *Frame = S.Current; Frame; Frame = Frame->Caller) {
-    if (const Function *F = Frame->getFunction();
-        F && F->isConstructor() && Frame->getThis().block() == Ptr.block()) {
-      return Error(2);
-    }
-  }
+  if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
+    return Error(2);
   if (S.EvaluatingDecl && Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl)
     return Error(2);
 
@@ -2317,35 +2399,66 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
-                                            const CallExpr *Call,
-                                            unsigned BuiltinID) {
+static bool interp__builtin_elementwise_int_unaryop(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<APInt(const APSInt &)> Fn) {
+  assert(Call->getNumArgs() == 1);
+  assert(Call->getType()->isIntegerType());
+
+  // Single integer case.
+  if (!Call->getArg(0)->getType()->isVectorType()) {
+    APSInt Src = popToAPSInt(S, Call->getArg(0));
+    APInt Result = Fn(Src);
+    pushInteger(S, APSInt(std::move(Result), !Src.isSigned()), Call->getType());
+    return true;
+  }
+
+  // TODO: Add vector integer handling.
+  return false;
+}
+
+static bool interp__builtin_elementwise_int_binop(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
   assert(Call->getNumArgs() == 2);
 
   // Single integer case.
   if (!Call->getArg(0)->getType()->isVectorType()) {
     assert(!Call->getArg(1)->getType()->isVectorType());
-    APSInt RHS = popToAPSInt(
-        S.Stk, *S.getContext().classify(Call->getArg(1)->getType()));
-    APSInt LHS = popToAPSInt(
-        S.Stk, *S.getContext().classify(Call->getArg(0)->getType()));
-    APInt Result;
-    if (BuiltinID == Builtin::BI__builtin_elementwise_add_sat) {
-      Result = LHS.isSigned() ? LHS.sadd_sat(RHS) : LHS.uadd_sat(RHS);
-    } else if (BuiltinID == Builtin::BI__builtin_elementwise_sub_sat) {
-      Result = LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
-    } else {
-      llvm_unreachable("Wrong builtin ID");
-    }
-
+    APSInt RHS = popToAPSInt(S, Call->getArg(1));
+    APSInt LHS = popToAPSInt(S, Call->getArg(0));
+    APInt Result = Fn(LHS, RHS);
     pushInteger(S, APSInt(std::move(Result), !LHS.isSigned()), Call->getType());
+    return true;
+  }
+
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  assert(VT->getElementType()->isIntegralOrEnumerationType());
+  PrimType ElemT = *S.getContext().classify(VT->getElementType());
+  unsigned NumElems = VT->getNumElements();
+  bool DestUnsigned = Call->getType()->isUnsignedIntegerOrEnumerationType();
+
+  // Vector + Scalar case.
+  if (!Call->getArg(1)->getType()->isVectorType()) {
+    assert(Call->getArg(1)->getType()->isIntegralOrEnumerationType());
+
+    APSInt RHS = popToAPSInt(S, Call->getArg(1));
+    const Pointer &LHS = S.Stk.pop<Pointer>();
+    const Pointer &Dst = S.Stk.peek<Pointer>();
+
+    for (unsigned I = 0; I != NumElems; ++I) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+        Dst.elem<T>(I) = static_cast<T>(
+            APSInt(Fn(LHS.elem<T>(I).toAPSInt(), RHS), DestUnsigned));
+      });
+    }
+    Dst.initializeAllElements();
     return true;
   }
 
   // Vector case.
   assert(Call->getArg(0)->getType()->isVectorType() &&
          Call->getArg(1)->getType()->isVectorType());
-  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   assert(VT->getElementType() ==
          Call->getArg(1)->getType()->castAs<VectorType>()->getElementType());
   assert(VT->getNumElements() ==
@@ -2355,34 +2468,61 @@ static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
-  PrimType ElemT = *S.getContext().classify(VT->getElementType());
-  unsigned NumElems = VT->getNumElements();
   for (unsigned I = 0; I != NumElems; ++I) {
-    APSInt Elem1;
-    APSInt Elem2;
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      Elem1 = LHS.elem<T>(I).toAPSInt();
-      Elem2 = RHS.elem<T>(I).toAPSInt();
+      APSInt Elem1 = LHS.elem<T>(I).toAPSInt();
+      APSInt Elem2 = RHS.elem<T>(I).toAPSInt();
+      Dst.elem<T>(I) = static_cast<T>(APSInt(Fn(Elem1, Elem2), DestUnsigned));
     });
-
-    APSInt Result;
-    if (BuiltinID == Builtin::BI__builtin_elementwise_add_sat) {
-      Result = APSInt(Elem1.isSigned() ? Elem1.sadd_sat(Elem2)
-                                       : Elem1.uadd_sat(Elem2),
-                      Call->getType()->isUnsignedIntegerOrEnumerationType());
-    } else if (BuiltinID == Builtin::BI__builtin_elementwise_sub_sat) {
-      Result = APSInt(Elem1.isSigned() ? Elem1.ssub_sat(Elem2)
-                                       : Elem1.usub_sat(Elem2),
-                      Call->getType()->isUnsignedIntegerOrEnumerationType());
-    } else {
-      llvm_unreachable("Wrong builtin ID");
-    }
-
-    INT_TYPE_SWITCH_NO_BOOL(ElemT,
-                            { Dst.elem<T>(I) = static_cast<T>(Result); });
   }
   Dst.initializeAllElements();
 
+  return true;
+}
+
+static bool
+interp__builtin_x86_pack(InterpState &S, CodePtr, const CallExpr *E,
+                         llvm::function_ref<APInt(const APSInt &)> PackFn) {
+  const auto *VT0 = E->getArg(0)->getType()->castAs<VectorType>();
+  [[maybe_unused]] const auto *VT1 =
+      E->getArg(1)->getType()->castAs<VectorType>();
+  assert(VT0 && VT1 && "pack builtin VT0 and VT1 must be VectorType");
+  assert(VT0->getElementType() == VT1->getElementType() &&
+         VT0->getNumElements() == VT1->getNumElements() &&
+         "pack builtin VT0 and VT1 ElementType must be same");
+
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const ASTContext &ASTCtx = S.getASTContext();
+  const unsigned SrcBits = ASTCtx.getIntWidth(VT0->getElementType());
+  const unsigned LHSVecLen = VT0->getNumElements();
+  const unsigned SrcPerLane = 128 / SrcBits;
+  const unsigned Lanes = LHSVecLen * SrcBits / 128;
+
+  PrimType SrcT = *S.getContext().classify(VT0->getElementType());
+  PrimType DstT = *S.getContext().classify(getElemType(Dst));
+  const bool IsUnsigend = getElemType(Dst)->isUnsignedIntegerType();
+
+  for (unsigned Lane = 0; Lane != Lanes; ++Lane) {
+    const unsigned BaseSrc = Lane * SrcPerLane;
+    const unsigned BaseDst = Lane * (2 * SrcPerLane);
+
+    for (unsigned I = 0; I != SrcPerLane; ++I) {
+      INT_TYPE_SWITCH_NO_BOOL(SrcT, {
+        APSInt A = LHS.elem<T>(BaseSrc + I).toAPSInt();
+        APSInt B = RHS.elem<T>(BaseSrc + I).toAPSInt();
+
+        assignInteger(S, Dst.atIndex(BaseDst + I), DstT,
+                      APSInt(PackFn(A), IsUnsigend));
+        assignInteger(S, Dst.atIndex(BaseDst + SrcPerLane + I), DstT,
+                      APSInt(PackFn(B), IsUnsigend));
+      });
+    }
+  }
+
+  Dst.initializeAllElements();
   return true;
 }
 
@@ -2401,10 +2541,8 @@ static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
 
   if (!Arg0Type->isVectorType()) {
     assert(!Call->getArg(1)->getType()->isVectorType());
-    APSInt RHS = popToAPSInt(
-        S.Stk, *S.getContext().classify(Call->getArg(1)->getType()));
-    APSInt LHS = popToAPSInt(
-        S.Stk, *S.getContext().classify(Call->getArg(0)->getType()));
+    APSInt RHS = popToAPSInt(S, Call->getArg(1));
+    APSInt LHS = popToAPSInt(S, Arg0Type);
     APInt Result;
     if (BuiltinID == Builtin::BI__builtin_elementwise_max) {
       Result = std::max(LHS, RHS);
@@ -2455,6 +2593,286 @@ static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
     INT_TYPE_SWITCH_NO_BOOL(ElemT,
                             { Dst.elem<T>(I) = static_cast<T>(Result); });
   }
+  Dst.initializeAllElements();
+
+  return true;
+}
+
+static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
+                                      const CallExpr *Call,
+                                      unsigned BuiltinID) {
+  assert(Call->getArg(0)->getType()->isVectorType() &&
+         Call->getArg(1)->getType()->isVectorType());
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  PrimType ElemT = *S.getContext().classify(VT->getElementType());
+  unsigned SourceLen = VT->getNumElements();
+
+  PrimType DstElemT = *S.getContext().classify(
+      Call->getType()->castAs<VectorType>()->getElementType());
+  unsigned DstElem = 0;
+  for (unsigned I = 0; I != SourceLen; I += 2) {
+    APSInt Elem1;
+    APSInt Elem2;
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      Elem1 = LHS.elem<T>(I).toAPSInt();
+      Elem2 = RHS.elem<T>(I).toAPSInt();
+    });
+
+    APSInt Result;
+    switch (BuiltinID) {
+    case clang::X86::BI__builtin_ia32_pmuludq128:
+    case clang::X86::BI__builtin_ia32_pmuludq256:
+    case clang::X86::BI__builtin_ia32_pmuludq512:
+      Result = APSInt(llvm::APIntOps::muluExtended(Elem1, Elem2),
+                      /*IsUnsigned=*/true);
+      break;
+    case clang::X86::BI__builtin_ia32_pmuldq128:
+    case clang::X86::BI__builtin_ia32_pmuldq256:
+    case clang::X86::BI__builtin_ia32_pmuldq512:
+      Result = APSInt(llvm::APIntOps::mulsExtended(Elem1, Elem2),
+                      /*IsUnsigned=*/false);
+      break;
+    }
+    INT_TYPE_SWITCH_NO_BOOL(DstElemT,
+                            { Dst.elem<T>(DstElem) = static_cast<T>(Result); });
+    ++DstElem;
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp__builtin_elementwise_triop_fp(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<APFloat(const APFloat &, const APFloat &,
+                               const APFloat &, llvm::RoundingMode)>
+        Fn) {
+  assert(Call->getNumArgs() == 3);
+
+  FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
+  llvm::RoundingMode RM = getRoundingMode(FPO);
+  const QualType Arg1Type = Call->getArg(0)->getType();
+  const QualType Arg2Type = Call->getArg(1)->getType();
+  const QualType Arg3Type = Call->getArg(2)->getType();
+
+  // Non-vector floating point types.
+  if (!Arg1Type->isVectorType()) {
+    assert(!Arg2Type->isVectorType());
+    assert(!Arg3Type->isVectorType());
+    (void)Arg2Type;
+    (void)Arg3Type;
+
+    const Floating &Z = S.Stk.pop<Floating>();
+    const Floating &Y = S.Stk.pop<Floating>();
+    const Floating &X = S.Stk.pop<Floating>();
+    APFloat F = Fn(X.getAPFloat(), Y.getAPFloat(), Z.getAPFloat(), RM);
+    Floating Result = S.allocFloat(X.getSemantics());
+    Result.copy(F);
+    S.Stk.push<Floating>(Result);
+    return true;
+  }
+
+  // Vector type.
+  assert(Arg1Type->isVectorType() && Arg2Type->isVectorType() &&
+         Arg3Type->isVectorType());
+
+  const VectorType *VecT = Arg1Type->castAs<VectorType>();
+  const QualType ElemT = VecT->getElementType();
+  unsigned NumElems = VecT->getNumElements();
+
+  assert(ElemT == Arg2Type->castAs<VectorType>()->getElementType() &&
+         ElemT == Arg3Type->castAs<VectorType>()->getElementType());
+  assert(NumElems == Arg2Type->castAs<VectorType>()->getNumElements() &&
+         NumElems == Arg3Type->castAs<VectorType>()->getNumElements());
+  assert(ElemT->isRealFloatingType());
+  (void)ElemT;
+
+  const Pointer &VZ = S.Stk.pop<Pointer>();
+  const Pointer &VY = S.Stk.pop<Pointer>();
+  const Pointer &VX = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  for (unsigned I = 0; I != NumElems; ++I) {
+    using T = PrimConv<PT_Float>::T;
+    APFloat X = VX.elem<T>(I).getAPFloat();
+    APFloat Y = VY.elem<T>(I).getAPFloat();
+    APFloat Z = VZ.elem<T>(I).getAPFloat();
+    APFloat F = Fn(X, Y, Z, RM);
+    Dst.elem<Floating>(I) = Floating(F);
+  }
+  Dst.initializeAllElements();
+  return true;
+}
+
+/// AVX512 predicated move: "Result = Mask[] ? LHS[] : RHS[]".
+static bool interp__builtin_select(InterpState &S, CodePtr OpPC,
+                                   const CallExpr *Call) {
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  APSInt Mask = popToAPSInt(S, Call->getArg(0));
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  assert(LHS.getNumElems() == RHS.getNumElems());
+  assert(LHS.getNumElems() == Dst.getNumElems());
+  unsigned NumElems = LHS.getNumElems();
+  PrimType ElemT = LHS.getFieldDesc()->getPrimType();
+  PrimType DstElemT = Dst.getFieldDesc()->getPrimType();
+
+  for (unsigned I = 0; I != NumElems; ++I) {
+    if (ElemT == PT_Float) {
+      assert(DstElemT == PT_Float);
+      Dst.elem<Floating>(I) =
+          Mask[I] ? LHS.elem<Floating>(I) : RHS.elem<Floating>(I);
+    } else {
+      APSInt Elem;
+      INT_TYPE_SWITCH(ElemT, {
+        Elem = Mask[I] ? LHS.elem<T>(I).toAPSInt() : RHS.elem<T>(I).toAPSInt();
+      });
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT,
+                              { Dst.elem<T>(I) = static_cast<T>(Elem); });
+    }
+  }
+  Dst.initializeAllElements();
+
+  return true;
+}
+
+static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
+                                  const CallExpr *Call) {
+  APSInt Mask = popToAPSInt(S, Call->getArg(2));
+  const Pointer &TrueVec = S.Stk.pop<Pointer>();
+  const Pointer &FalseVec = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  assert(FalseVec.getNumElems() == TrueVec.getNumElems());
+  assert(FalseVec.getNumElems() == Dst.getNumElems());
+  unsigned NumElems = FalseVec.getNumElems();
+  PrimType ElemT = FalseVec.getFieldDesc()->getPrimType();
+  PrimType DstElemT = Dst.getFieldDesc()->getPrimType();
+
+  for (unsigned I = 0; I != NumElems; ++I) {
+    bool MaskBit = Mask[I % 8];
+    if (ElemT == PT_Float) {
+      assert(DstElemT == PT_Float);
+      Dst.elem<Floating>(I) =
+          MaskBit ? TrueVec.elem<Floating>(I) : FalseVec.elem<Floating>(I);
+    } else {
+      assert(DstElemT == ElemT);
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+        Dst.elem<T>(I) =
+            static_cast<T>(MaskBit ? TrueVec.elem<T>(I).toAPSInt()
+                                   : FalseVec.elem<T>(I).toAPSInt());
+      });
+    }
+  }
+  Dst.initializeAllElements();
+
+  return true;
+}
+
+static bool interp__builtin_elementwise_triop(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<APInt(const APSInt &, const APSInt &, const APSInt &)>
+        Fn) {
+  assert(Call->getNumArgs() == 3);
+
+  QualType Arg0Type = Call->getArg(0)->getType();
+  QualType Arg2Type = Call->getArg(2)->getType();
+  // Non-vector integer types.
+  if (!Arg0Type->isVectorType()) {
+    const APSInt &Op2 = popToAPSInt(S, Arg2Type);
+    const APSInt &Op1 = popToAPSInt(S, Call->getArg(1));
+    const APSInt &Op0 = popToAPSInt(S, Arg0Type);
+    APSInt Result = APSInt(Fn(Op0, Op1, Op2), Op0.isUnsigned());
+    pushInteger(S, Result, Call->getType());
+    return true;
+  }
+
+  const auto *VecT = Arg0Type->castAs<VectorType>();
+  const PrimType &ElemT = *S.getContext().classify(VecT->getElementType());
+  unsigned NumElems = VecT->getNumElements();
+  bool DestUnsigned = Call->getType()->isUnsignedIntegerOrEnumerationType();
+
+  // Vector + Vector + Scalar case.
+  if (!Arg2Type->isVectorType()) {
+    APSInt Op2 = popToAPSInt(S, Arg2Type);
+
+    const Pointer &Op1 = S.Stk.pop<Pointer>();
+    const Pointer &Op0 = S.Stk.pop<Pointer>();
+    const Pointer &Dst = S.Stk.peek<Pointer>();
+    for (unsigned I = 0; I != NumElems; ++I) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+        Dst.elem<T>(I) = static_cast<T>(APSInt(
+            Fn(Op0.elem<T>(I).toAPSInt(), Op1.elem<T>(I).toAPSInt(), Op2),
+            DestUnsigned));
+      });
+    }
+    Dst.initializeAllElements();
+
+    return true;
+  }
+
+  // Vector type.
+  const Pointer &Op2 = S.Stk.pop<Pointer>();
+  const Pointer &Op1 = S.Stk.pop<Pointer>();
+  const Pointer &Op0 = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  for (unsigned I = 0; I != NumElems; ++I) {
+    APSInt Val0, Val1, Val2;
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      Val0 = Op0.elem<T>(I).toAPSInt();
+      Val1 = Op1.elem<T>(I).toAPSInt();
+      Val2 = Op2.elem<T>(I).toAPSInt();
+    });
+    APSInt Result = APSInt(Fn(Val0, Val1, Val2), Val0.isUnsigned());
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { Dst.elem<T>(I) = static_cast<T>(Result); });
+  }
+  Dst.initializeAllElements();
+
+  return true;
+}
+
+static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
+                                                 const CallExpr *Call,
+                                                 unsigned ID) {
+  assert(Call->getNumArgs() == 3);
+
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(2));
+  uint64_t Index = ImmAPS.getZExtValue();
+
+  const Pointer &SubVec = S.Stk.pop<Pointer>();
+  if (!SubVec.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  const Pointer &BaseVec = S.Stk.pop<Pointer>();
+  if (!BaseVec.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned BaseElements = BaseVec.getNumElems();
+  unsigned SubElements = SubVec.getNumElems();
+
+  assert(SubElements != 0 && BaseElements != 0 &&
+         (BaseElements % SubElements) == 0);
+
+  unsigned NumLanes = BaseElements / SubElements;
+  unsigned Lane = static_cast<unsigned>(Index % NumLanes);
+  unsigned InsertPos = Lane * SubElements;
+
+  PrimType ElemPT = BaseVec.getFieldDesc()->getPrimType();
+
+  TYPE_SWITCH(ElemPT, {
+    for (unsigned I = 0; I != BaseElements; ++I)
+      Dst.elem<T>(I) = BaseVec.elem<T>(I);
+    for (unsigned I = 0; I != SubElements; ++I)
+      Dst.elem<T>(InsertPos + I) = SubVec.elem<T>(I);
+  });
+
   Dst.initializeAllElements();
 
   return true;
@@ -2736,6 +3154,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_ctzg:
     return interp__builtin_ctz(S, OpPC, Frame, Call, BuiltinID);
 
+  case Builtin::BI__builtin_elementwise_clzg:
+  case Builtin::BI__builtin_elementwise_ctzg:
+    return interp__builtin_elementwise_countzeroes(S, OpPC, Frame, Call,
+                                                   BuiltinID);
+
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64:
@@ -2763,29 +3186,83 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_bextr_u64:
   case clang::X86::BI__builtin_ia32_bextri_u32:
   case clang::X86::BI__builtin_ia32_bextri_u64:
-    return interp__builtin_ia32_bextr(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &Val, const APSInt &Idx) {
+          unsigned BitWidth = Val.getBitWidth();
+          uint64_t Shift = Idx.extractBitsAsZExtValue(8, 0);
+          uint64_t Length = Idx.extractBitsAsZExtValue(8, 8);
+          if (Length > BitWidth) {
+            Length = BitWidth;
+          }
+
+          // Handle out of bounds cases.
+          if (Length == 0 || Shift >= BitWidth)
+            return APInt(BitWidth, 0);
+
+          uint64_t Result = Val.getZExtValue() >> Shift;
+          Result &= llvm::maskTrailingOnes<uint64_t>(Length);
+          return APInt(BitWidth, Result);
+        });
 
   case clang::X86::BI__builtin_ia32_bzhi_si:
   case clang::X86::BI__builtin_ia32_bzhi_di:
-    return interp__builtin_ia32_bzhi(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &Val, const APSInt &Idx) {
+          unsigned BitWidth = Val.getBitWidth();
+          uint64_t Index = Idx.extractBitsAsZExtValue(8, 0);
+          APSInt Result = Val;
+
+          if (Index < BitWidth)
+            Result.clearHighBits(BitWidth - Index);
+
+          return Result;
+        });
 
   case clang::X86::BI__builtin_ia32_lzcnt_u16:
   case clang::X86::BI__builtin_ia32_lzcnt_u32:
   case clang::X86::BI__builtin_ia32_lzcnt_u64:
-    return interp__builtin_ia32_lzcnt(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Src) {
+          return APInt(Src.getBitWidth(), Src.countLeadingZeros());
+        });
 
   case clang::X86::BI__builtin_ia32_tzcnt_u16:
   case clang::X86::BI__builtin_ia32_tzcnt_u32:
   case clang::X86::BI__builtin_ia32_tzcnt_u64:
-    return interp__builtin_ia32_tzcnt(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Src) {
+          return APInt(Src.getBitWidth(), Src.countTrailingZeros());
+        });
 
   case clang::X86::BI__builtin_ia32_pdep_si:
   case clang::X86::BI__builtin_ia32_pdep_di:
-    return interp__builtin_ia32_pdep(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &Val, const APSInt &Mask) {
+          unsigned BitWidth = Val.getBitWidth();
+          APInt Result = APInt::getZero(BitWidth);
+
+          for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
+            if (Mask[I])
+              Result.setBitVal(I, Val[P++]);
+          }
+
+          return Result;
+        });
 
   case clang::X86::BI__builtin_ia32_pext_si:
   case clang::X86::BI__builtin_ia32_pext_di:
-    return interp__builtin_ia32_pext(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &Val, const APSInt &Mask) {
+          unsigned BitWidth = Val.getBitWidth();
+          APInt Result = APInt::getZero(BitWidth);
+
+          for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
+            if (Mask[I])
+              Result.setBitVal(P++, Val[I]);
+          }
+
+          return Result;
+        });
 
   case clang::X86::BI__builtin_ia32_addcarryx_u32:
   case clang::X86::BI__builtin_ia32_addcarryx_u64:
@@ -2867,12 +3344,347 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_is_within_lifetime(S, OpPC, Call);
 
   case Builtin::BI__builtin_elementwise_add_sat:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          return LHS.isSigned() ? LHS.sadd_sat(RHS) : LHS.uadd_sat(RHS);
+        });
+
   case Builtin::BI__builtin_elementwise_sub_sat:
-    return interp__builtin_elementwise_sat(S, OpPC, Call, BuiltinID);
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
+        });
+
+  case clang::X86::BI__builtin_ia32_pavgb128:
+  case clang::X86::BI__builtin_ia32_pavgw128:
+  case clang::X86::BI__builtin_ia32_pavgb256:
+  case clang::X86::BI__builtin_ia32_pavgw256:
+  case clang::X86::BI__builtin_ia32_pavgb512:
+  case clang::X86::BI__builtin_ia32_pavgw512:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::avgCeilU);
+
+  case clang::X86::BI__builtin_ia32_pmulhuw128:
+  case clang::X86::BI__builtin_ia32_pmulhuw256:
+  case clang::X86::BI__builtin_ia32_pmulhuw512:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::mulhu);
+
+  case clang::X86::BI__builtin_ia32_pmulhw128:
+  case clang::X86::BI__builtin_ia32_pmulhw256:
+  case clang::X86::BI__builtin_ia32_pmulhw512:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::mulhs);
+
+  case clang::X86::BI__builtin_ia32_psllv2di:
+  case clang::X86::BI__builtin_ia32_psllv4di:
+  case clang::X86::BI__builtin_ia32_psllv4si:
+  case clang::X86::BI__builtin_ia32_psllv8di:
+  case clang::X86::BI__builtin_ia32_psllv8hi:
+  case clang::X86::BI__builtin_ia32_psllv8si:
+  case clang::X86::BI__builtin_ia32_psllv16hi:
+  case clang::X86::BI__builtin_ia32_psllv16si:
+  case clang::X86::BI__builtin_ia32_psllv32hi:
+  case clang::X86::BI__builtin_ia32_psllwi128:
+  case clang::X86::BI__builtin_ia32_psllwi256:
+  case clang::X86::BI__builtin_ia32_psllwi512:
+  case clang::X86::BI__builtin_ia32_pslldi128:
+  case clang::X86::BI__builtin_ia32_pslldi256:
+  case clang::X86::BI__builtin_ia32_pslldi512:
+  case clang::X86::BI__builtin_ia32_psllqi128:
+  case clang::X86::BI__builtin_ia32_psllqi256:
+  case clang::X86::BI__builtin_ia32_psllqi512:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          if (RHS.uge(LHS.getBitWidth())) {
+            return APInt::getZero(LHS.getBitWidth());
+          }
+          return LHS.shl(RHS.getZExtValue());
+        });
+
+  case clang::X86::BI__builtin_ia32_psrav4si:
+  case clang::X86::BI__builtin_ia32_psrav8di:
+  case clang::X86::BI__builtin_ia32_psrav8hi:
+  case clang::X86::BI__builtin_ia32_psrav8si:
+  case clang::X86::BI__builtin_ia32_psrav16hi:
+  case clang::X86::BI__builtin_ia32_psrav16si:
+  case clang::X86::BI__builtin_ia32_psrav32hi:
+  case clang::X86::BI__builtin_ia32_psravq128:
+  case clang::X86::BI__builtin_ia32_psravq256:
+  case clang::X86::BI__builtin_ia32_psrawi128:
+  case clang::X86::BI__builtin_ia32_psrawi256:
+  case clang::X86::BI__builtin_ia32_psrawi512:
+  case clang::X86::BI__builtin_ia32_psradi128:
+  case clang::X86::BI__builtin_ia32_psradi256:
+  case clang::X86::BI__builtin_ia32_psradi512:
+  case clang::X86::BI__builtin_ia32_psraqi128:
+  case clang::X86::BI__builtin_ia32_psraqi256:
+  case clang::X86::BI__builtin_ia32_psraqi512:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          if (RHS.uge(LHS.getBitWidth())) {
+            return LHS.ashr(LHS.getBitWidth() - 1);
+          }
+          return LHS.ashr(RHS.getZExtValue());
+        });
+
+  case clang::X86::BI__builtin_ia32_psrlv2di:
+  case clang::X86::BI__builtin_ia32_psrlv4di:
+  case clang::X86::BI__builtin_ia32_psrlv4si:
+  case clang::X86::BI__builtin_ia32_psrlv8di:
+  case clang::X86::BI__builtin_ia32_psrlv8hi:
+  case clang::X86::BI__builtin_ia32_psrlv8si:
+  case clang::X86::BI__builtin_ia32_psrlv16hi:
+  case clang::X86::BI__builtin_ia32_psrlv16si:
+  case clang::X86::BI__builtin_ia32_psrlv32hi:
+  case clang::X86::BI__builtin_ia32_psrlwi128:
+  case clang::X86::BI__builtin_ia32_psrlwi256:
+  case clang::X86::BI__builtin_ia32_psrlwi512:
+  case clang::X86::BI__builtin_ia32_psrldi128:
+  case clang::X86::BI__builtin_ia32_psrldi256:
+  case clang::X86::BI__builtin_ia32_psrldi512:
+  case clang::X86::BI__builtin_ia32_psrlqi128:
+  case clang::X86::BI__builtin_ia32_psrlqi256:
+  case clang::X86::BI__builtin_ia32_psrlqi512:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          if (RHS.uge(LHS.getBitWidth())) {
+            return APInt::getZero(LHS.getBitWidth());
+          }
+          return LHS.lshr(RHS.getZExtValue());
+        });
+  case clang::X86::BI__builtin_ia32_packsswb128:
+  case clang::X86::BI__builtin_ia32_packsswb256:
+  case clang::X86::BI__builtin_ia32_packsswb512:
+  case clang::X86::BI__builtin_ia32_packssdw128:
+  case clang::X86::BI__builtin_ia32_packssdw256:
+  case clang::X86::BI__builtin_ia32_packssdw512:
+    return interp__builtin_x86_pack(S, OpPC, Call, [](const APSInt &Src) {
+      return APInt(Src).truncSSat(Src.getBitWidth() / 2);
+    });
+  case clang::X86::BI__builtin_ia32_packusdw128:
+  case clang::X86::BI__builtin_ia32_packusdw256:
+  case clang::X86::BI__builtin_ia32_packusdw512:
+  case clang::X86::BI__builtin_ia32_packuswb128:
+  case clang::X86::BI__builtin_ia32_packuswb256:
+  case clang::X86::BI__builtin_ia32_packuswb512:
+    return interp__builtin_x86_pack(S, OpPC, Call, [](const APSInt &Src) {
+      unsigned DstBits = Src.getBitWidth() / 2;
+      if (Src.isNegative())
+        return APInt::getZero(DstBits);
+      if (Src.isIntN(DstBits))
+        return APInt(Src).trunc(DstBits);
+      return APInt::getAllOnes(DstBits);
+    });
+
+  case clang::X86::BI__builtin_ia32_vprotbi:
+  case clang::X86::BI__builtin_ia32_vprotdi:
+  case clang::X86::BI__builtin_ia32_vprotqi:
+  case clang::X86::BI__builtin_ia32_vprotwi:
+  case clang::X86::BI__builtin_ia32_prold128:
+  case clang::X86::BI__builtin_ia32_prold256:
+  case clang::X86::BI__builtin_ia32_prold512:
+  case clang::X86::BI__builtin_ia32_prolq128:
+  case clang::X86::BI__builtin_ia32_prolq256:
+  case clang::X86::BI__builtin_ia32_prolq512:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS.rotl(RHS); });
+
+  case clang::X86::BI__builtin_ia32_prord128:
+  case clang::X86::BI__builtin_ia32_prord256:
+  case clang::X86::BI__builtin_ia32_prord512:
+  case clang::X86::BI__builtin_ia32_prorq128:
+  case clang::X86::BI__builtin_ia32_prorq256:
+  case clang::X86::BI__builtin_ia32_prorq512:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS.rotr(RHS); });
 
   case Builtin::BI__builtin_elementwise_max:
   case Builtin::BI__builtin_elementwise_min:
     return interp__builtin_elementwise_maxmin(S, OpPC, Call, BuiltinID);
+
+  case clang::X86::BI__builtin_ia32_pmuldq128:
+  case clang::X86::BI__builtin_ia32_pmuldq256:
+  case clang::X86::BI__builtin_ia32_pmuldq512:
+  case clang::X86::BI__builtin_ia32_pmuludq128:
+  case clang::X86::BI__builtin_ia32_pmuludq256:
+  case clang::X86::BI__builtin_ia32_pmuludq512:
+    return interp__builtin_ia32_pmul(S, OpPC, Call, BuiltinID);
+
+  case Builtin::BI__builtin_elementwise_fma:
+    return interp__builtin_elementwise_triop_fp(
+        S, OpPC, Call,
+        [](const APFloat &X, const APFloat &Y, const APFloat &Z,
+           llvm::RoundingMode RM) {
+          APFloat F = X;
+          F.fusedMultiplyAdd(Y, Z, RM);
+          return F;
+        });
+
+  case X86::BI__builtin_ia32_vpshldd128:
+  case X86::BI__builtin_ia32_vpshldd256:
+  case X86::BI__builtin_ia32_vpshldd512:
+  case X86::BI__builtin_ia32_vpshldq128:
+  case X86::BI__builtin_ia32_vpshldq256:
+  case X86::BI__builtin_ia32_vpshldq512:
+  case X86::BI__builtin_ia32_vpshldw128:
+  case X86::BI__builtin_ia32_vpshldw256:
+  case X86::BI__builtin_ia32_vpshldw512:
+    return interp__builtin_elementwise_triop(
+        S, OpPC, Call,
+        [](const APSInt &Hi, const APSInt &Lo, const APSInt &Amt) {
+          return llvm::APIntOps::fshl(Hi, Lo, Amt);
+        });
+
+  case X86::BI__builtin_ia32_vpshrdd128:
+  case X86::BI__builtin_ia32_vpshrdd256:
+  case X86::BI__builtin_ia32_vpshrdd512:
+  case X86::BI__builtin_ia32_vpshrdq128:
+  case X86::BI__builtin_ia32_vpshrdq256:
+  case X86::BI__builtin_ia32_vpshrdq512:
+  case X86::BI__builtin_ia32_vpshrdw128:
+  case X86::BI__builtin_ia32_vpshrdw256:
+  case X86::BI__builtin_ia32_vpshrdw512:
+    // NOTE: Reversed Hi/Lo operands.
+    return interp__builtin_elementwise_triop(
+        S, OpPC, Call,
+        [](const APSInt &Lo, const APSInt &Hi, const APSInt &Amt) {
+          return llvm::APIntOps::fshr(Hi, Lo, Amt);
+        });
+
+  case clang::X86::BI__builtin_ia32_blendpd:
+  case clang::X86::BI__builtin_ia32_blendpd256:
+  case clang::X86::BI__builtin_ia32_blendps:
+  case clang::X86::BI__builtin_ia32_blendps256:
+  case clang::X86::BI__builtin_ia32_pblendw128:
+  case clang::X86::BI__builtin_ia32_pblendw256:
+  case clang::X86::BI__builtin_ia32_pblendd128:
+  case clang::X86::BI__builtin_ia32_pblendd256:
+    return interp__builtin_blend(S, OpPC, Call);
+
+  case clang::X86::BI__builtin_ia32_blendvpd:
+  case clang::X86::BI__builtin_ia32_blendvpd256:
+  case clang::X86::BI__builtin_ia32_blendvps:
+  case clang::X86::BI__builtin_ia32_blendvps256:
+    return interp__builtin_elementwise_triop_fp(
+        S, OpPC, Call,
+        [](const APFloat &F, const APFloat &T, const APFloat &C,
+           llvm::RoundingMode) { return C.isNegative() ? T : F; });
+
+  case clang::X86::BI__builtin_ia32_pblendvb128:
+  case clang::X86::BI__builtin_ia32_pblendvb256:
+    return interp__builtin_elementwise_triop(
+        S, OpPC, Call, [](const APSInt &F, const APSInt &T, const APSInt &C) {
+          return ((APInt)C).isNegative() ? T : F;
+        });
+
+  case X86::BI__builtin_ia32_selectb_128:
+  case X86::BI__builtin_ia32_selectb_256:
+  case X86::BI__builtin_ia32_selectb_512:
+  case X86::BI__builtin_ia32_selectw_128:
+  case X86::BI__builtin_ia32_selectw_256:
+  case X86::BI__builtin_ia32_selectw_512:
+  case X86::BI__builtin_ia32_selectd_128:
+  case X86::BI__builtin_ia32_selectd_256:
+  case X86::BI__builtin_ia32_selectd_512:
+  case X86::BI__builtin_ia32_selectq_128:
+  case X86::BI__builtin_ia32_selectq_256:
+  case X86::BI__builtin_ia32_selectq_512:
+  case X86::BI__builtin_ia32_selectph_128:
+  case X86::BI__builtin_ia32_selectph_256:
+  case X86::BI__builtin_ia32_selectph_512:
+  case X86::BI__builtin_ia32_selectpbf_128:
+  case X86::BI__builtin_ia32_selectpbf_256:
+  case X86::BI__builtin_ia32_selectpbf_512:
+  case X86::BI__builtin_ia32_selectps_128:
+  case X86::BI__builtin_ia32_selectps_256:
+  case X86::BI__builtin_ia32_selectps_512:
+  case X86::BI__builtin_ia32_selectpd_128:
+  case X86::BI__builtin_ia32_selectpd_256:
+  case X86::BI__builtin_ia32_selectpd_512:
+    return interp__builtin_select(S, OpPC, Call);
+
+  case X86::BI__builtin_ia32_kandqi:
+  case X86::BI__builtin_ia32_kandhi:
+  case X86::BI__builtin_ia32_kandsi:
+  case X86::BI__builtin_ia32_kanddi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS & RHS; });
+
+  case X86::BI__builtin_ia32_kandnqi:
+  case X86::BI__builtin_ia32_kandnhi:
+  case X86::BI__builtin_ia32_kandnsi:
+  case X86::BI__builtin_ia32_kandndi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return ~LHS & RHS; });
+
+  case X86::BI__builtin_ia32_korqi:
+  case X86::BI__builtin_ia32_korhi:
+  case X86::BI__builtin_ia32_korsi:
+  case X86::BI__builtin_ia32_kordi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS | RHS; });
+
+  case X86::BI__builtin_ia32_kxnorqi:
+  case X86::BI__builtin_ia32_kxnorhi:
+  case X86::BI__builtin_ia32_kxnorsi:
+  case X86::BI__builtin_ia32_kxnordi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return ~(LHS ^ RHS); });
+
+  case X86::BI__builtin_ia32_kxorqi:
+  case X86::BI__builtin_ia32_kxorhi:
+  case X86::BI__builtin_ia32_kxorsi:
+  case X86::BI__builtin_ia32_kxordi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS ^ RHS; });
+
+  case X86::BI__builtin_ia32_knotqi:
+  case X86::BI__builtin_ia32_knothi:
+  case X86::BI__builtin_ia32_knotsi:
+  case X86::BI__builtin_ia32_knotdi:
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Src) { return ~Src; });
+
+  case X86::BI__builtin_ia32_kaddqi:
+  case X86::BI__builtin_ia32_kaddhi:
+  case X86::BI__builtin_ia32_kaddsi:
+  case X86::BI__builtin_ia32_kadddi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
+
+  case Builtin::BI__builtin_elementwise_fshl:
+    return interp__builtin_elementwise_triop(S, OpPC, Call,
+                                             llvm::APIntOps::fshl);
+  case Builtin::BI__builtin_elementwise_fshr:
+    return interp__builtin_elementwise_triop(S, OpPC, Call,
+                                             llvm::APIntOps::fshr);
+
+  case X86::BI__builtin_ia32_insertf32x4_256:
+  case X86::BI__builtin_ia32_inserti32x4_256:
+  case X86::BI__builtin_ia32_insertf64x2_256:
+  case X86::BI__builtin_ia32_inserti64x2_256:
+  case X86::BI__builtin_ia32_insertf32x4:
+  case X86::BI__builtin_ia32_inserti32x4:
+  case X86::BI__builtin_ia32_insertf64x2_512:
+  case X86::BI__builtin_ia32_inserti64x2_512:
+  case X86::BI__builtin_ia32_insertf32x8:
+  case X86::BI__builtin_ia32_inserti32x8:
+  case X86::BI__builtin_ia32_insertf64x4:
+  case X86::BI__builtin_ia32_inserti64x4:
+  case X86::BI__builtin_ia32_vinsertf128_ps256:
+  case X86::BI__builtin_ia32_vinsertf128_pd256:
+  case X86::BI__builtin_ia32_vinsertf128_si256:
+  case X86::BI__builtin_ia32_insert128i256:
+    return interp__builtin_x86_insert_subvector(S, OpPC, Call, BuiltinID);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
@@ -2898,11 +3710,8 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
     switch (Node.getKind()) {
     case OffsetOfNode::Field: {
       const FieldDecl *MemberDecl = Node.getField();
-      const RecordType *RT = CurrentType->getAs<RecordType>();
-      if (!RT)
-        return false;
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-      if (RD->isInvalidDecl())
+      const auto *RD = CurrentType->getAsRecordDecl();
+      if (!RD || RD->isInvalidDecl())
         return false;
       const ASTRecordLayout &RL = S.getASTContext().getASTRecordLayout(RD);
       unsigned FieldIndex = MemberDecl->getFieldIndex();
@@ -2931,23 +3740,19 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
         return false;
 
       // Find the layout of the class whose base we are looking into.
-      const RecordType *RT = CurrentType->getAs<RecordType>();
-      if (!RT)
-        return false;
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-      if (RD->isInvalidDecl())
+      const auto *RD = CurrentType->getAsCXXRecordDecl();
+      if (!RD || RD->isInvalidDecl())
         return false;
       const ASTRecordLayout &RL = S.getASTContext().getASTRecordLayout(RD);
 
       // Find the base class itself.
       CurrentType = BaseSpec->getType();
-      const RecordType *BaseRT = CurrentType->getAs<RecordType>();
-      if (!BaseRT)
+      const auto *BaseRD = CurrentType->getAsCXXRecordDecl();
+      if (!BaseRD)
         return false;
 
       // Add the offset to the base.
-      Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(
-          BaseRT->getOriginalDecl()->getDefinitionOrSelf()));
+      Result += RL.getBaseClassOffset(BaseRD);
       break;
     }
     case OffsetOfNode::Identifier:

@@ -250,6 +250,23 @@ static bool CheckSYCLKernelName(Sema &S, SourceLocation Loc,
   return false;
 }
 
+void SemaSYCL::CheckSYCLExternalFunctionDecl(FunctionDecl *FD) {
+  const auto *SEAttr = FD->getAttr<SYCLExternalAttr>();
+  assert(SEAttr && "Missing sycl_external attribute");
+  if (!FD->isInvalidDecl() && !FD->isTemplated()) {
+    if (!FD->isExternallyVisible())
+      if (!FD->isFunctionTemplateSpecialization() ||
+          FD->getTemplateSpecializationInfo()->isExplicitSpecialization())
+        Diag(SEAttr->getLocation(), diag::err_sycl_external_invalid_linkage)
+            << SEAttr;
+  }
+  if (FD->isDeletedAsWritten()) {
+    Diag(SEAttr->getLocation(),
+         diag::err_sycl_external_invalid_deleted_function)
+        << SEAttr;
+  }
+}
+
 void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
   // Ensure that all attributes present on the declaration are consistent
   // and warn about any redundant ones.

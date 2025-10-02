@@ -254,7 +254,6 @@ bool llvm::applyDebugifyMetadata(
     }
     if (ApplyToMF)
       ApplyToMF(DIB, F);
-    DIB.finalizeSubprogram(SP);
   }
   DIB.finalize();
 
@@ -712,7 +711,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
   // it is propagated to other instructions.
   for (auto &L : DILocsAfter)
     if (!L.second)
-      L.first->setDebugLoc(DebugLoc::getUnknown());
+      const_cast<Instruction *>(L.first)->setDebugLoc(DebugLoc::getUnknown());
 #endif
 
   bool ResultForVars = checkVars(DIVarsBefore, DIVarsAfter, NameOfWrappedPass,

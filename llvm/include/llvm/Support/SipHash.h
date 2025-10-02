@@ -33,6 +33,13 @@ LLVM_ABI void getSipHash_2_4_64(ArrayRef<uint8_t> In, const uint8_t (&K)[16],
 LLVM_ABI void getSipHash_2_4_128(ArrayRef<uint8_t> In, const uint8_t (&K)[16],
                                  uint8_t (&Out)[16]);
 
+/// Compute a stable 64-bit hash of the given string.
+///
+/// The exact algorithm is the little-endian interpretation of the
+/// non-doubled (i.e. 64-bit) result of applying a SipHash-2-4 using
+/// a specific seed value which can be found in the source.
+LLVM_ABI uint64_t getStableSipHash(StringRef Str);
+
 /// Compute a stable non-zero 16-bit hash of the given string.
 ///
 /// The exact algorithm is the little-endian interpretation of the

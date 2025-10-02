@@ -176,13 +176,9 @@ public:
   Register create() { return createFrom(getReg()); }
 
   /// anyRematerializable - Return true if any parent values may be
-  /// rematerializable.
-  /// This function must be called before any rematerialization is attempted.
+  /// rematerializable.  This function must be called before
+  /// canRematerializeAt is called..
   bool anyRematerializable();
-
-  /// checkRematerializable - Manually add VNI to the list of rematerializable
-  /// values if DefMI may be rematerializable.
-  bool checkRematerializable(VNInfo *VNI, const MachineInstr *DefMI);
 
   /// Remat - Information needed to rematerialize at a specific location.
   struct Remat {
@@ -192,11 +188,6 @@ public:
 
     explicit Remat(const VNInfo *ParentVNI) : ParentVNI(ParentVNI) {}
   };
-
-  /// allUsesAvailableAt - Return true if all registers used by OrigMI at
-  /// OrigIdx are also available with the same value at UseIdx.
-  bool allUsesAvailableAt(const MachineInstr *OrigMI, SlotIndex OrigIdx,
-                          SlotIndex UseIdx) const;
 
   /// canRematerializeAt - Determine if ParentVNI can be rematerialized at
   /// UseIdx. It is assumed that parent_.getVNINfoAt(UseIdx) == ParentVNI.

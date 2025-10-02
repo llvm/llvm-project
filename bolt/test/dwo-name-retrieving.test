@@ -1,0 +1,19 @@
+## Test DWO retrieval via relative path with a missing CompDir.
+## Also, verify no crash for an absolute DWOName path.
+
+## The case where DWOName is a relative path, and debug compilation directory does not exist.
+# RUN: rm -rf %t && mkdir -p %t && cd %t
+# RUN: %clang %cflags -g -gsplit-dwarf -fdebug-compilation-dir=/path/does/not/exist %p/Inputs/hello.c -o main.exe
+# RUN: llvm-bolt %t/main.exe -o %t/main.exe.bolt -update-debug-sections 2>&1 | FileCheck %s -check-prefix=DWO-NAME-REL
+
+# DWO-NAME-REL: BOLT-WARNING: Debug Fission: Debug Compilation Directory of main.exe-hello.dwo does not exist.
+# DWO-NAME-REL-NOT: Debug Fission: DWO debug information for
+
+## The case where DWOName is a absolute path, and a dwp file is provided.
+# RUN: %clang %cflags -g -gsplit-dwarf %p/Inputs/hello.c -o %t/main.exe
+# RUN: llvm-dwp -e %t/main.exe -o  %t/main.exe.dwp
+# RUN: llvm-bolt %t/main.exe -o %t/main.exe.bolt -update-debug-sections -dwp=%t/main.exe.dwp 2>&1 | FileCheck %s -check-prefix=DWO-NAME-ABS
+
+# DWO-NAME-ABS-NOT: BOLT-WARNING: Debug Fission: Debug Compilation Directory of {{.*}}/main.exe-hello.dwo does not exist.
+# DWO-NAME-ABS-NOT: Debug Fission: DWO debug information for
+# DWO-NAME-ABS-NOT: Assertion `FD >= 0 && "File not yet open!"' failed.

@@ -34,12 +34,6 @@ class AMDGPUInst <dag outs, dag ins, string asm = "",
   let Pattern = pattern;
   let Itinerary = NullALU;
 
-  // SoftFail is a field the disassembler can use to provide a way for
-  // instructions to not match without killing the whole decode process. It is
-  // mainly used for ARM, but Tablegen expects this field to exist or it fails
-  // to build the decode table.
-  field bits<128> SoftFail = 0; // FIXME: If this is smaller than largest instruction, DecodeEmitter crashes
-
   let DecoderNamespace = Namespace;
 
   let TSFlags{63} = isRegisterLoad;
@@ -450,7 +444,9 @@ def LoadAddress_constant : AddressSpaceList<[ AddrSpaces.Constant,
 def LoadAddress_global : AddressSpaceList<[ AddrSpaces.Global,
                                             AddrSpaces.Constant,
                                             AddrSpaces.Constant32Bit ]>;
-def StoreAddress_global : AddressSpaceList<[ AddrSpaces.Global ]>;
+def StoreAddress_global : AddressSpaceList<[ AddrSpaces.Global,
+                                             AddrSpaces.Constant,
+                                             AddrSpaces.Constant32Bit ]>;
 
 def LoadAddress_flat : AddressSpaceList<[ AddrSpaces.Flat,
                                           AddrSpaces.Global,
@@ -510,6 +506,10 @@ def atomic_load_nonext_32_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_32 
 }
 
 def atomic_load_nonext_64_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_64 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
+def atomic_load_nonext_128_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_128 node:$ptr)> {
   let IsAtomic = 1;
 }
 
@@ -577,6 +577,8 @@ def atomic_store_32_#as : PatFrag<(ops node:$val, node:$ptr),
                                   (atomic_store_32 node:$val, node:$ptr)>;
 def atomic_store_64_#as : PatFrag<(ops node:$val, node:$ptr),
                                   (atomic_store_64 node:$val, node:$ptr)>;
+def atomic_store_128_#as : PatFrag<(ops node:$val, node:$ptr),
+                                   (atomic_store_128 node:$val, node:$ptr)>;
 } // End let IsAtomic = 1, AddressSpaces = ...
 } // End foreach as
 

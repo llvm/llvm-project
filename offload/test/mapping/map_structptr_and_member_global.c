@@ -1,4 +1,9 @@
-// RUN: %libomptarget-compilexx-run-and-check-generic
+// RUN: %libomptarget-compile-run-and-check-generic
+
+// REQUIRES: libc
+//
+// FIXME: https://github.com/llvm/llvm-project/issues/161265
+// XFAIL: gpu
 
 #include <omp.h>
 #include <stdio.h>

@@ -19,8 +19,7 @@ use omp_lib
     !$omp allocate(y)
         print *, a
 
-    !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead. [-Wopen-mp-usage]
-    !ERROR: List items must be declared in the same scoping unit in which the ALLOCATE directive appears
+    !WARNING: The executable form of the OpenMP ALLOCATE directive has been deprecated, please use ALLOCATORS instead [-Wopen-mp-usage]
     !$omp allocate(x) allocator(omp_default_mem_alloc)
       allocate ( x(a), darray(a, b) )
     end subroutine sema

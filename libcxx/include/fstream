@@ -299,6 +299,16 @@ protected:
   int sync() override;
   void imbue(const locale& __loc) override;
 
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL streamsize xsputn(const char_type* __str, streamsize __len) override {
+    if (__always_noconv_ && __len >= (this->epptr() - this->pbase())) {
+      if (traits_type::eq_int_type(overflow(), traits_type::eof()))
+        return 0;
+
+      return std::fwrite(__str, sizeof(char_type), __len, __file_);
+    }
+    return basic_streambuf<_CharT, _Traits>::xsputn(__str, __len);
+  }
+
 private:
   char* __extbuf_;
   const char* __extbufnext_;
