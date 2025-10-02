@@ -1,5 +1,3 @@
-REQUIRES: shell
-
 RUN: %scan-build sh -c 'echo "CLANG_CXX=/$(basename "$CLANG_CXX")/"' | FileCheck %s
 
 Check that scan-build sets the CLANG_CXX environment variable (meant to be

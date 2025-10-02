@@ -47,6 +47,49 @@ cir::RecordType CIRGenVTables::getVTableType(const VTableLayout &layout) {
   return cgm.getBuilder().getAnonRecordTy(tys, /*incomplete=*/false);
 }
 
+/// At this point in the translation unit, does it appear that can we
+/// rely on the vtable being defined elsewhere in the program?
+///
+/// The response is really only definitive when called at the end of
+/// the translation unit.
+///
+/// The only semantic restriction here is that the object file should
+/// not contain a vtable definition when that vtable is defined
+/// strongly elsewhere.  Otherwise, we'd just like to avoid emitting
+/// vtables when unnecessary.
+/// TODO(cir): this should be merged into common AST helper for codegen.
+bool CIRGenVTables::isVTableExternal(const CXXRecordDecl *rd) {
+  assert(rd->isDynamicClass() && "Non-dynamic classes have no VTable.");
+
+  // We always synthesize vtables if they are needed in the MS ABI. MSVC doesn't
+  // emit them even if there is an explicit template instantiation.
+  if (cgm.getTarget().getCXXABI().isMicrosoft())
+    return false;
+
+  // If we have an explicit instantiation declaration (and not a
+  // definition), the vtable is defined elsewhere.
+  TemplateSpecializationKind tsk = rd->getTemplateSpecializationKind();
+  if (tsk == TSK_ExplicitInstantiationDeclaration)
+    return true;
+
+  // Otherwise, if the class is an instantiated template, the
+  // vtable must be defined here.
+  if (tsk == TSK_ImplicitInstantiation ||
+      tsk == TSK_ExplicitInstantiationDefinition)
+    return false;
+
+  // Otherwise, if the class doesn't have a key function (possibly
+  // anymore), the vtable must be defined here.
+  const CXXMethodDecl *keyFunction =
+      cgm.getASTContext().getCurrentKeyFunction(rd);
+  if (!keyFunction)
+    return false;
+
+  // Otherwise, if we don't have a definition of the key function, the
+  // vtable must be defined somewhere else.
+  return !keyFunction->hasBody();
+}
+
 /// This is a callback from Sema to tell us that a particular vtable is
 /// required to be emitted in this translation unit.
 ///
@@ -390,6 +433,52 @@ void CIRGenVTables::emitVTTDefinition(cir::GlobalOp vttOp,
 
   if (cgm.supportsCOMDAT() && vttOp.isWeakForLinker())
     vttOp.setComdat(true);
+}
+
+uint64_t CIRGenVTables::getSubVTTIndex(const CXXRecordDecl *rd,
+                                       BaseSubobject base) {
+  BaseSubobjectPairTy classSubobjectPair(rd, base);
+
+  SubVTTIndiciesMapTy::iterator it = subVTTIndicies.find(classSubobjectPair);
+  if (it != subVTTIndicies.end())
+    return it->second;
+
+  VTTBuilder builder(cgm.getASTContext(), rd, /*GenerateDefinition=*/false);
+
+  for (const auto &entry : builder.getSubVTTIndices()) {
+    // Insert all indices.
+    BaseSubobjectPairTy subclassSubobjectPair(rd, entry.first);
+
+    subVTTIndicies.insert(std::make_pair(subclassSubobjectPair, entry.second));
+  }
+
+  it = subVTTIndicies.find(classSubobjectPair);
+  assert(it != subVTTIndicies.end() && "Did not find index!");
+
+  return it->second;
+}
+
+uint64_t CIRGenVTables::getSecondaryVirtualPointerIndex(const CXXRecordDecl *rd,
+                                                        BaseSubobject base) {
+  auto it = secondaryVirtualPointerIndices.find(std::make_pair(rd, base));
+
+  if (it != secondaryVirtualPointerIndices.end())
+    return it->second;
+
+  VTTBuilder builder(cgm.getASTContext(), rd, /*GenerateDefinition=*/false);
+
+  // Insert all secondary vpointer indices.
+  for (const auto &entry : builder.getSecondaryVirtualPointerIndices()) {
+    std::pair<const CXXRecordDecl *, BaseSubobject> pair =
+        std::make_pair(rd, entry.first);
+
+    secondaryVirtualPointerIndices.insert(std::make_pair(pair, entry.second));
+  }
+
+  it = secondaryVirtualPointerIndices.find(std::make_pair(rd, base));
+  assert(it != secondaryVirtualPointerIndices.end() && "Did not find index!");
+
+  return it->second;
 }
 
 void CIRGenVTables::emitThunks(GlobalDecl gd) {

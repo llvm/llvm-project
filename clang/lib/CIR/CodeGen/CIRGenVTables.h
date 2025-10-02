@@ -32,6 +32,19 @@ class CIRGenVTables {
 
   /// Address points for a single vtable.
   using VTableAddressPointsMapTy = clang::VTableLayout::AddressPointsMapTy;
+  using BaseSubobjectPairTy =
+      std::pair<const clang::CXXRecordDecl *, clang::BaseSubobject>;
+  using SubVTTIndiciesMapTy = llvm::DenseMap<BaseSubobjectPairTy, uint64_t>;
+
+  /// Contains indices into the various sub-VTTs.
+  SubVTTIndiciesMapTy subVTTIndicies;
+
+  using SecondaryVirtualPointerIndicesMapTy =
+      llvm::DenseMap<BaseSubobjectPairTy, uint64_t>;
+
+  /// Contains the secondary virtual pointer
+  /// indices.
+  SecondaryVirtualPointerIndicesMapTy secondaryVirtualPointerIndices;
 
   mlir::Attribute
   getVTableComponent(const VTableLayout &layout, unsigned componentIndex,
@@ -70,6 +83,14 @@ public:
   /// Emit the definition of the given vtable.
   void emitVTTDefinition(cir::GlobalOp vttOp, cir::GlobalLinkageKind linkage,
                          const CXXRecordDecl *rd);
+  /// Return the index of the sub-VTT for the base class of the given record
+  /// decl.
+  uint64_t getSubVTTIndex(const CXXRecordDecl *rd, BaseSubobject base);
+
+  /// Return the index in the VTT where the virtual pointer for the given
+  /// subobject is located.
+  uint64_t getSecondaryVirtualPointerIndex(const CXXRecordDecl *rd,
+                                           BaseSubobject base);
 
   /// Emit the associated thunks for the given global decl.
   void emitThunks(GlobalDecl gd);
@@ -78,6 +99,8 @@ public:
   /// KeyFunction. This includes the vtable, the RTTI data structure (if RTTI
   /// is enabled) and the VTT (if the class has virtual bases).
   void generateClassData(const CXXRecordDecl *rd);
+
+  bool isVTableExternal(const clang::CXXRecordDecl *rd);
 
   /// Returns the type of a vtable with the given layout. Normally a struct of
   /// arrays of pointers, with one struct element for each vtable in the vtable

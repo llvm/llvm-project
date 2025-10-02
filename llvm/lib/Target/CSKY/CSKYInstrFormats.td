@@ -168,7 +168,9 @@ class I_16_RET<bits<5> sop, bits<5> pcode, string op, list<dag> pattern>
 // Instructions(3): cmpnei32, cmphsi32, cmplti32
 class I_16_X<bits<5> sop, string op, Operand operand>
     : CSKY32Inst<AddrModeNone, 0x3a, (outs CARRY:$ca),
-    (ins GPR:$rx, operand:$imm16), !strconcat(op, "\t$rx, $imm16"), []> {
+                 (ins GPR:$rx, operand:$imm16),
+                 !strconcat(op, "\t$rx, $imm16"), []> {
+  bits<0> ca;
   bits<16> imm16;
   bits<5> rx;
   let Inst{25 - 21} = sop;
@@ -263,8 +265,9 @@ class I_12_PP<bits<5> sop, bits<5> pcode, dag outs, dag ins, string op>
 class I_5_ZX<bits<6> sop, bits<5> pcode, string op, ImmLeaf ImmType,
              list<dag> pattern>
     : CSKY32Inst<AddrModeNone, 0x31, (outs GPR:$rz),
-    (ins CARRY:$cond, GPR:$false, GPR:$rx, ImmType:$imm5),
-    !strconcat(op, "\t$rz, $rx, $imm5"), pattern> {
+                 (ins CARRY:$cond, GPR:$false, GPR:$rx, ImmType:$imm5),
+                 !strconcat(op, "\t$rz, $rx, $imm5"), pattern> {
+  bits<0> cond;
   bits<5> rz;
   bits<5> rx;
   bits<5> imm5;
@@ -469,9 +472,10 @@ class I_5_XZ_UZ<bits<6> sop, bits<5> lsb, bits<5> msb, string op, int v>
 // Instructions(1): btsti32
 class I_5_X<bits<6> sop, bits<5> pcode, string op, ImmLeaf ImmType,
             list<dag> pattern>
-    : CSKY32Inst<AddrModeNone, 0x31,
-    (outs CARRY:$ca), (ins GPR:$rx, ImmType:$imm5),
-    !strconcat(op, "\t$rx, $imm5"), pattern> {
+    : CSKY32Inst<AddrModeNone, 0x31, (outs CARRY:$ca),
+                 (ins GPR:$rx, ImmType:$imm5),
+                 !strconcat(op, "\t$rx, $imm5"), pattern> {
+  bits<0> ca;
   bits<5> imm5;
   bits<5> rx;
   let Inst{25 - 21} = imm5;
@@ -581,9 +585,9 @@ class R_XXZ<bits<6> sop, bits<5> pcode, dag outs, dag ins, string op,
 // Format< OP[6] | RY[5] | RX[5] | SOP[6] | PCODE[5] | 00000[5] >
 // Instructions:(4) cmpne32, cmphs32, cmplt32, tst32
 class R_YX<bits<6> sop, bits<5> pcode, string op>
-    : CSKY32Inst<AddrModeNone, 0x31, (outs CARRY:$ca),
-                 (ins GPR:$rx, GPR:$ry),
+    : CSKY32Inst<AddrModeNone, 0x31, (outs CARRY:$ca), (ins GPR:$rx, GPR:$ry),
                  !strconcat(op, "\t$rx, $ry"), []> {
+  bits<0> ca;
   bits<5> ry;
   bits<5> rx;
   let Inst{25 - 21} = ry;
@@ -642,8 +646,9 @@ class R_X<bits<6> sop, bits<5> pcode, dag outs, dag ins, string op, list<dag> pa
 // Format< OP[6] | 00000[5] | 00000[5] | SOP[6] | PCODE[5] | RZ[5] >
 // Instructions:(2) mvc32, mvcv32
 class R_Z_1<bits<6> sop, bits<5> pcode, string op>
-    : CSKY32Inst<AddrModeNone, 0x31, (outs GPR:$rz),
-                 (ins CARRY:$ca), !strconcat(op, "\t$rz"), []> {
+    : CSKY32Inst<AddrModeNone, 0x31, (outs GPR:$rz), (ins CARRY:$ca),
+                 !strconcat(op, "\t$rz"), []> {
+  bits<0> ca;
   bits<5> rz;
   let Inst{25 - 21} = 0;
   let Inst{20 - 16} = 0;
@@ -656,7 +661,8 @@ class R_Z_1<bits<6> sop, bits<5> pcode, string op>
 // Instructions:(2) clrf32, clrt32
 class R_Z_2<bits<6> sop, bits<5> pcode, string op>
     : CSKY32Inst<AddrModeNone, 0x31, (outs GPR:$rz),
-    (ins CARRY:$ca, GPR:$false), !strconcat(op, "\t$rz"), []> {
+                 (ins CARRY:$ca, GPR:$false), !strconcat(op, "\t$rz"), []> {
+  bits<0> ca;
   bits<5> rz;
   let Inst{25 - 21} = rz;
   let Inst{20 - 16} = 0;

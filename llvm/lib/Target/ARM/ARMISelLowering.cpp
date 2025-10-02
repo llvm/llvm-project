@@ -647,6 +647,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   if (!Subtarget->hasV8_1MMainlineOps())
     setOperationAction(ISD::UCMP, MVT::i32, Custom);
 
+  if (!Subtarget->isThumb1Only())
+    setOperationAction(ISD::ABS, MVT::i32, Custom);
+
   setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
   setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
 
@@ -1479,7 +1482,7 @@ bool ARMTargetLowering::useSoftFloat() const {
   return Subtarget->useSoftFloat();
 }
 
-bool ARMTargetLowering::shouldExpandCmpUsingSelects(EVT VT) const {
+bool ARMTargetLowering::preferSelectsOverBooleanArithmetic(EVT VT) const {
   return !Subtarget->isThumb1Only() && VT.getSizeInBits() <= 32;
 }
 
@@ -5570,7 +5573,7 @@ static void expandf64Toi32(SDValue Op, SelectionDAG &DAG,
   llvm_unreachable("Unknown VFP cmp argument!");
 }
 
-/// OptimizeVFPBrcond - With -enable-unsafe-fp-math, it's legal to optimize some
+/// OptimizeVFPBrcond - With nnan and without daz, it's legal to optimize some
 /// f32 and even f64 comparisons to integer ones.
 SDValue
 ARMTargetLowering::OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const {
@@ -5619,6 +5622,19 @@ ARMTargetLowering::OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const {
   }
 
   return SDValue();
+}
+
+// Generate CMP + CMOV for integer abs.
+SDValue ARMTargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  SDValue Neg = DAG.getNegative(Op.getOperand(0), DL, MVT::i32);
+
+  // Generate CMP & CMOV.
+  SDValue Cmp = DAG.getNode(ARMISD::CMP, DL, FlagsVT, Op.getOperand(0),
+                            DAG.getConstant(0, DL, MVT::i32));
+  return DAG.getNode(ARMISD::CMOV, DL, MVT::i32, Op.getOperand(0), Neg,
+                     DAG.getConstant(ARMCC::MI, DL, MVT::i32), Cmp);
 }
 
 SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
@@ -5712,9 +5728,12 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc, Cmp);
   }
 
-  if (getTargetMachine().Options.UnsafeFPMath &&
-      (CC == ISD::SETEQ || CC == ISD::SETOEQ ||
-       CC == ISD::SETNE || CC == ISD::SETUNE)) {
+  SDNodeFlags Flags = Op->getFlags();
+  if (Flags.hasNoNaNs() &&
+      DAG.getDenormalMode(MVT::f32) == DenormalMode::getIEEE() &&
+      DAG.getDenormalMode(MVT::f64) == DenormalMode::getIEEE() &&
+      (CC == ISD::SETEQ || CC == ISD::SETOEQ || CC == ISD::SETNE ||
+       CC == ISD::SETUNE)) {
     if (SDValue Result = OptimizeVFPBrcond(Op, DAG))
       return Result;
   }
@@ -10700,6 +10719,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UCMP:
   case ISD::SCMP:
     return LowerCMP(Op, DAG);
+  case ISD::ABS:
+    return LowerABS(Op, DAG);
   }
 }
 
@@ -12285,89 +12306,6 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case ARM::Int_eh_sjlj_setup_dispatch:
     EmitSjLjDispatchBlock(MI, BB);
     return BB;
-
-  case ARM::ABS:
-  case ARM::t2ABS: {
-    // To insert an ABS instruction, we have to insert the
-    // diamond control-flow pattern.  The incoming instruction knows the
-    // source vreg to test against 0, the destination vreg to set,
-    // the condition code register to branch on, the
-    // true/false values to select between, and a branch opcode to use.
-    // It transforms
-    //     V1 = ABS V0
-    // into
-    //     V2 = MOVS V0
-    //     BCC                      (branch to SinkBB if V0 >= 0)
-    //     RSBBB: V3 = RSBri V2, 0  (compute ABS if V2 < 0)
-    //     SinkBB: V1 = PHI(V2, V3)
-    const BasicBlock *LLVM_BB = BB->getBasicBlock();
-    MachineFunction::iterator BBI = ++BB->getIterator();
-    MachineFunction *Fn = BB->getParent();
-    MachineBasicBlock *RSBBB = Fn->CreateMachineBasicBlock(LLVM_BB);
-    MachineBasicBlock *SinkBB  = Fn->CreateMachineBasicBlock(LLVM_BB);
-    Fn->insert(BBI, RSBBB);
-    Fn->insert(BBI, SinkBB);
-
-    // Set the call frame size on entry to the new basic blocks.
-    unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
-    RSBBB->setCallFrameSize(CallFrameSize);
-    SinkBB->setCallFrameSize(CallFrameSize);
-
-    Register ABSSrcReg = MI.getOperand(1).getReg();
-    Register ABSDstReg = MI.getOperand(0).getReg();
-    bool ABSSrcKIll = MI.getOperand(1).isKill();
-    bool isThumb2 = Subtarget->isThumb2();
-    MachineRegisterInfo &MRI = Fn->getRegInfo();
-    // In Thumb mode S must not be specified if source register is the SP or
-    // PC and if destination register is the SP, so restrict register class
-    Register NewRsbDstReg = MRI.createVirtualRegister(
-        isThumb2 ? &ARM::rGPRRegClass : &ARM::GPRRegClass);
-
-    // Transfer the remainder of BB and its successor edges to sinkMBB.
-    SinkBB->splice(SinkBB->begin(), BB,
-                   std::next(MachineBasicBlock::iterator(MI)), BB->end());
-    SinkBB->transferSuccessorsAndUpdatePHIs(BB);
-
-    BB->addSuccessor(RSBBB);
-    BB->addSuccessor(SinkBB);
-
-    // fall through to SinkMBB
-    RSBBB->addSuccessor(SinkBB);
-
-    // insert a cmp at the end of BB
-    BuildMI(BB, dl, TII->get(isThumb2 ? ARM::t2CMPri : ARM::CMPri))
-        .addReg(ABSSrcReg)
-        .addImm(0)
-        .add(predOps(ARMCC::AL));
-
-    // insert a bcc with opposite CC to ARMCC::MI at the end of BB
-    BuildMI(BB, dl,
-      TII->get(isThumb2 ? ARM::t2Bcc : ARM::Bcc)).addMBB(SinkBB)
-      .addImm(ARMCC::getOppositeCondition(ARMCC::MI)).addReg(ARM::CPSR);
-
-    // insert rsbri in RSBBB
-    // Note: BCC and rsbri will be converted into predicated rsbmi
-    // by if-conversion pass
-    BuildMI(*RSBBB, RSBBB->begin(), dl,
-            TII->get(isThumb2 ? ARM::t2RSBri : ARM::RSBri), NewRsbDstReg)
-        .addReg(ABSSrcReg, ABSSrcKIll ? RegState::Kill : 0)
-        .addImm(0)
-        .add(predOps(ARMCC::AL))
-        .add(condCodeOp());
-
-    // insert PHI in SinkBB,
-    // reuse ABSDstReg to not change uses of ABS instruction
-    BuildMI(*SinkBB, SinkBB->begin(), dl,
-      TII->get(ARM::PHI), ABSDstReg)
-      .addReg(NewRsbDstReg).addMBB(RSBBB)
-      .addReg(ABSSrcReg).addMBB(BB);
-
-    // remove ABS instruction
-    MI.eraseFromParent();
-
-    // return last added BB
-    return SinkBB;
-  }
   case ARM::COPY_STRUCT_BYVAL_I32:
     ++NumLoopByVals;
     return EmitStructByval(MI, BB);
@@ -14079,6 +14017,41 @@ static SDValue PerformSubCSINCCombine(SDNode *N, SelectionDAG &DAG) {
                      CSINC.getOperand(3));
 }
 
+static bool isNegatedInteger(SDValue Op) {
+  return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0));
+}
+
+// Try to fold
+//
+// (neg (cmov X, Y)) -> (cmov (neg X), (neg Y))
+//
+// The folding helps cmov to be matched with csneg without generating
+// redundant neg instruction.
+static SDValue performNegCMovCombine(SDNode *N, SelectionDAG &DAG) {
+  if (!isNegatedInteger(SDValue(N, 0)))
+    return SDValue();
+
+  SDValue CMov = N->getOperand(1);
+  if (CMov.getOpcode() != ARMISD::CMOV || !CMov->hasOneUse())
+    return SDValue();
+
+  SDValue N0 = CMov.getOperand(0);
+  SDValue N1 = CMov.getOperand(1);
+
+  // If neither of them are negations, it's not worth the folding as it
+  // introduces two additional negations while reducing one negation.
+  if (!isNegatedInteger(N0) && !isNegatedInteger(N1))
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT VT = CMov.getValueType();
+
+  SDValue N0N = DAG.getNegative(N0, DL, VT);
+  SDValue N1N = DAG.getNegative(N1, DL, VT);
+  return DAG.getNode(ARMISD::CMOV, DL, VT, N0N, N1N, CMov.getOperand(2),
+                     CMov.getOperand(3));
+}
+
 /// PerformSUBCombine - Target-specific dag combine xforms for ISD::SUB.
 ///
 static SDValue PerformSUBCombine(SDNode *N,
@@ -14094,6 +14067,9 @@ static SDValue PerformSUBCombine(SDNode *N,
 
   if (SDValue R = PerformSubCSINCCombine(N, DCI.DAG))
     return R;
+
+  if (SDValue Val = performNegCMovCombine(N, DCI.DAG))
+    return Val;
 
   if (!Subtarget->hasMVEIntegerOps() || !N->getValueType(0).isVector())
     return SDValue();
@@ -20065,6 +20041,29 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = KnownOp0.intersectWith(KnownOp1);
     break;
   }
+  case ARMISD::VORRIMM:
+  case ARMISD::VBICIMM: {
+    unsigned Encoded = Op.getConstantOperandVal(1);
+    unsigned DecEltBits = 0;
+    uint64_t DecodedVal = ARM_AM::decodeVMOVModImm(Encoded, DecEltBits);
+
+    unsigned EltBits = Op.getScalarValueSizeInBits();
+    if (EltBits != DecEltBits) {
+      // Be conservative: only update Known when EltBits == DecEltBits.
+      // This is believed to always be true for VORRIMM/VBICIMM today, but if
+      // that changes in the future, doing nothing here is safer than risking
+      // subtle bugs.
+      break;
+    }
+
+    KnownBits KnownLHS = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    bool IsVORR = Op.getOpcode() == ARMISD::VORRIMM;
+    APInt Imm(DecEltBits, DecodedVal);
+
+    Known.One = IsVORR ? (KnownLHS.One | Imm) : (KnownLHS.One & ~Imm);
+    Known.Zero = IsVORR ? (KnownLHS.Zero & ~Imm) : (KnownLHS.Zero | Imm);
+    break;
+  }
   }
 }
 
@@ -20192,37 +20191,6 @@ bool ARMTargetLowering::SimplifyDemandedBitsForTargetNode(
 //                           ARM Inline Assembly Support
 //===----------------------------------------------------------------------===//
 
-bool ARMTargetLowering::ExpandInlineAsm(CallInst *CI) const {
-  // Looking for "rev" which is V6+.
-  if (!Subtarget->hasV6Ops())
-    return false;
-
-  InlineAsm *IA = cast<InlineAsm>(CI->getCalledOperand());
-  StringRef AsmStr = IA->getAsmString();
-  SmallVector<StringRef, 4> AsmPieces;
-  SplitString(AsmStr, AsmPieces, ";\n");
-
-  switch (AsmPieces.size()) {
-  default: return false;
-  case 1:
-    AsmStr = AsmPieces[0];
-    AsmPieces.clear();
-    SplitString(AsmStr, AsmPieces, " \t,");
-
-    // rev $0, $1
-    if (AsmPieces.size() == 3 && AsmPieces[0] == "rev" &&
-        AsmPieces[1] == "$0" && AsmPieces[2] == "$1" &&
-        IA->getConstraintString().starts_with("=l,l")) {
-      IntegerType *Ty = dyn_cast<IntegerType>(CI->getType());
-      if (Ty && Ty->getBitWidth() == 32)
-        return IntrinsicLowering::LowerToByteSwap(CI);
-    }
-    break;
-  }
-
-  return false;
-}
-
 const char *ARMTargetLowering::LowerXConstraint(EVT ConstraintVT) const {
   // At this point, we have to lower this constraint to something else, so we
   // lower it to an "r" or "w". However, by doing this we will force the result
@@ -20309,9 +20277,11 @@ ARMTargetLowering::getSingleConstraintMatchWeight(
 static bool isIncompatibleReg(const MCPhysReg &PR, MVT VT) {
   if (PR == 0 || VT == MVT::Other)
     return false;
-  return (ARM::SPRRegClass.contains(PR) && VT != MVT::f32 && VT != MVT::i32) ||
-         (ARM::DPRRegClass.contains(PR) && VT != MVT::f64 &&
-          !VT.is64BitVector());
+  if (ARM::SPRRegClass.contains(PR))
+    return VT != MVT::f32 && VT != MVT::f16 && VT != MVT::i32;
+  if (ARM::DPRRegClass.contains(PR))
+    return VT != MVT::f64 && !VT.is64BitVector();
+  return false;
 }
 
 using RCPair = std::pair<unsigned, const TargetRegisterClass *>;
@@ -20458,9 +20428,9 @@ void ARMTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
           if (CVal >= -255 && CVal <= -1)
             break;
         } else {
-          // This must be a constant between -4095 and 4095. It is not clear
-          // what this constraint is intended for. Implemented for
-          // compatibility with GCC.
+          // This must be a constant between -4095 and 4095. This is suitable
+          // for use as the immediate offset field in LDR and STR instructions
+          // such as LDR r0,[r1,#offset].
           if (CVal >= -4095 && CVal <= 4095)
             break;
         }
@@ -21369,6 +21339,19 @@ bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
     return true;
   }
   return false;
+}
+
+bool ARMTargetLowering::canCreateUndefOrPoisonForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+  unsigned Opcode = Op.getOpcode();
+  switch (Opcode) {
+  case ARMISD::VORRIMM:
+  case ARMISD::VBICIMM:
+    return false;
+  }
+  return TargetLowering::canCreateUndefOrPoisonForTargetNode(
+      Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
 }
 
 bool ARMTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {

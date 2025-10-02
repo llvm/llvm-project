@@ -216,6 +216,7 @@ set(files
   __atomic/check_memory_order.h
   __atomic/contention_t.h
   __atomic/fence.h
+  __atomic/floating_point_helper.h
   __atomic/is_always_lock_free.h
   __atomic/kill_dependency.h
   __atomic/memory_order.h
@@ -838,6 +839,7 @@ set(files
   __type_traits/is_floating_point.h
   __type_traits/is_function.h
   __type_traits/is_fundamental.h
+  __type_traits/is_generic_transparent_comparator.h
   __type_traits/is_implicit_lifetime.h
   __type_traits/is_implicitly_default_constructible.h
   __type_traits/is_integral.h
@@ -880,6 +882,7 @@ set(files
   __type_traits/make_32_64_or_128_bit.h
   __type_traits/make_const_lvalue_ref.h
   __type_traits/make_signed.h
+  __type_traits/make_transparent.h
   __type_traits/make_unsigned.h
   __type_traits/maybe_const.h
   __type_traits/nat.h
@@ -911,6 +914,7 @@ set(files
   __utility/cmp.h
   __utility/convert_to_integral.h
   __utility/declval.h
+  __utility/default_three_way_comparator.h
   __utility/element_count.h
   __utility/empty.h
   __utility/exception_guard.h
@@ -921,6 +925,7 @@ set(files
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
   __utility/is_valid_range.h
+  __utility/lazy_synth_three_way_comparator.h
   __utility/move.h
   __utility/no_destroy.h
   __utility/pair.h

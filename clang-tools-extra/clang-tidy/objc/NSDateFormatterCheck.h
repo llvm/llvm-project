@@ -1,4 +1,4 @@
-//===--- NSDateFormatterCheck.h - clang-tidy --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::objc {
 /// warnings if it contains any incorrect sub-pattern.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc/nsdate-formatter.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/objc/nsdate-formatter.html
 class NSDateFormatterCheck : public ClangTidyCheck {
 public:
   NSDateFormatterCheck(StringRef Name, ClangTidyContext *Context)

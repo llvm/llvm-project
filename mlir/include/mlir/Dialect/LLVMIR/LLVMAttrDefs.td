@@ -30,6 +30,7 @@ class LLVM_Attr<string name, string attrMnemonic,
 
 def LLVM_AddressSpaceAttr :
     LLVM_Attr<"AddressSpace", "address_space", [
+    LLVM_LLVMAddrSpaceAttrInterface,
     DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
   ]> {
   let summary = "LLVM address space";
@@ -424,17 +425,19 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
     OptionalParameter<"StringAttr">:$producer,
     "bool":$isOptimized,
     "DIEmissionKind":$emissionKind,
-    OptionalParameter<"DINameTableKind">:$nameTableKind
+    OptionalParameter<"DINameTableKind">:$nameTableKind,
+    OptionalParameter<"StringAttr">:$splitDebugFilename
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
       "DistinctAttr":$id, "unsigned":$sourceLanguage, "DIFileAttr":$file,
       "StringAttr":$producer, "bool":$isOptimized,
       "DIEmissionKind":$emissionKind,
-      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind
+      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind,
+      CArg<"StringAttr", "{}">:$splitDebugFilename
     ), [{
       return $_get(id.getContext(), id, sourceLanguage, file, producer,
-                   isOptimized, emissionKind, nameTableKind);
+                   isOptimized, emissionKind, nameTableKind, splitDebugFilename);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -464,25 +467,25 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     OptionalParameter<"DIFlags">:$flags,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint64_t">:$alignInBits,
-    OptionalArrayRefParameter<"DINodeAttr">:$elements,
     OptionalParameter<"DIExpressionAttr">:$dataLocation,
     OptionalParameter<"DIExpressionAttr">:$rank,
     OptionalParameter<"DIExpressionAttr">:$allocated,
-    OptionalParameter<"DIExpressionAttr">:$associated
+    OptionalParameter<"DIExpressionAttr">:$associated,
+    OptionalArrayRefParameter<"DINodeAttr">:$elements
   );
   let builders = [
     AttrBuilder<(ins
       "unsigned":$tag, "StringAttr":$name, "DIFileAttr":$file,
       "uint32_t":$line, "DIScopeAttr":$scope, "DITypeAttr":$baseType,
       "DIFlags":$flags, "uint64_t":$sizeInBits, "uint64_t":$alignInBits,
-      "ArrayRef<DINodeAttr>":$elements, "DIExpressionAttr":$dataLocation,
-      "DIExpressionAttr":$rank, "DIExpressionAttr":$allocated,
-      "DIExpressionAttr":$associated
+      "DIExpressionAttr":$dataLocation, "DIExpressionAttr":$rank,
+      "DIExpressionAttr":$allocated, "DIExpressionAttr":$associated,
+      "ArrayRef<DINodeAttr>":$elements
     ), [{
       return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/nullptr,
                    tag, name, file, line, scope, baseType, flags, sizeInBits,
-                   alignInBits, elements, dataLocation, rank, allocated,
-                   associated);
+                   alignInBits, dataLocation, rank, allocated,
+                   associated, elements);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -1230,6 +1233,47 @@ def LLVM_TBAATagArrayAttr
     : TypedArrayAttrBase<LLVM_TBAATagAttr,
                          LLVM_TBAATagAttr.summary # " array"> {
   let constBuilderCall = ?;
+}
+
+//===----------------------------------------------------------------------===//
+// MMRATagAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_MMRATagAttr : LLVM_Attr<"MMRATag", "mmra_tag"> {
+  let parameters = (ins
+    StringRefParameter<>:$prefix,
+    StringRefParameter<>:$suffix
+  );
+
+  let summary = "MLIR wrapper around a prefix:suffix MMRA tag";
+
+  let description = [{
+    Defines a single memory model relaxation annotation (MMRA) entry
+    with prefix `$prefix` and suffix `$suffix`. This corresponds directly
+    to a LLVM `!{prefix, suffix}` metadata tuple, which is often written
+    `prefix:shuffix` as shorthand.
+
+    Example:
+    ```mlir
+    #mmra_tag = #llvm.mmmra_tag<"amdgpu-synchronize-as":"local">
+    #mmra_tag1 = #llvm.mmra_tag<"foo":"bar">
+    ```
+
+    Either one MMRA tag or an array of them may be added to any LLVM
+    operation that operates on memory.
+
+    ```mlir
+    %v = llvm.load %ptr {llvm.mmra = #mmra_tag} : !llvm.ptr -> i8
+    llvm.store %v, %ptr2 {llvm.mmra [#mmra_tag, #mmra_tag1]} : i8, !llvm.ptr
+    ```
+
+    See the following link for more details:
+    https://llvm.org/docs/MemoryModelRelaxationAnnotations.html
+  }];
+
+  let assemblyFormat = "`<` $prefix `` `:` `` $suffix `>`";
+
+  let genMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//

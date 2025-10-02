@@ -23,7 +23,7 @@
 namespace mlir {
 namespace xegpu {
 
-bool isSharedMemory(const MemRefType &memrefTy) {
+static bool isSharedMemory(const MemRefType &memrefTy) {
   Attribute attr = memrefTy.getMemorySpace();
   if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attr))
     return intAttr.getInt() == 3;
@@ -249,7 +249,7 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            llvm::ArrayRef<OpFoldResult> offsets,
                            llvm::ArrayRef<OpFoldResult> shape,
                            llvm::ArrayRef<OpFoldResult> strides) {
-  assert(shape.size() && offsets.size() && strides.size() &&
+  assert(!shape.empty() && !offsets.empty() && !strides.empty() &&
          shape.size() == strides.size() && shape.size() == offsets.size());
 
   Type srcTy = source.getType();
@@ -340,7 +340,7 @@ LogicalResult CreateNdDescOp::verify() {
   return success();
 }
 
-ParseResult parseOptionalDynamicIndexList(
+static ParseResult parseOptionalDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
@@ -378,9 +378,9 @@ ParseResult parseOptionalDynamicIndexList(
   return success();
 }
 
-void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
-                                   OperandRange values,
-                                   DenseI64ArrayAttr integers) {
+static void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
+                                          OperandRange values,
+                                          DenseI64ArrayAttr integers) {
   if (!integers || integers.empty())
     return;
   printDynamicIndexList(printer, op, values, integers,
