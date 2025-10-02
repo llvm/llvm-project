@@ -12,6 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
 #include "GISel/WebAssemblyCallLowering.h"
 #include "GISel/WebAssemblyLegalizerInfo.h"
@@ -75,9 +76,9 @@ WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT,
   Legalizer.reset(new WebAssemblyLegalizerInfo(*this));
   auto *RBI = new WebAssemblyRegisterBankInfo(*getRegisterInfo());
   RegBankInfo.reset(RBI);
-/*
+
   InstSelector.reset(createWebAssemblyInstructionSelector(
-  *static_cast<const WebAssemblyTargetMachine *>(&TM), *this, *RBI));*/
+  *static_cast<const WebAssemblyTargetMachine *>(&TM), *this, *RBI));
 }
 
 bool WebAssemblySubtarget::enableAtomicExpand() const {
