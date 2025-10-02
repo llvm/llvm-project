@@ -196,6 +196,18 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
           break;
         }
       }
+
+      // If the parentOp is live and it implements the LoopLiveOpInterface, then
+      // set its IV as live.
+      if (mayLive && isa<LoopLikeOpInterface>(parentOp)) {
+        auto loopOp = cast<LoopLikeOpInterface>(parentOp);
+        std::optional<SmallVector<Value>> ivs = loopOp.getLoopInductionVars();
+        if (ivs.has_value()) {
+          for (auto iv : *ivs) {
+            getLatticeElement(iv)->markLive();
+          }
+        }
+      }
     } else {
       // When the op is a `RegionBranchTerminatorOpInterface`, like an
       // `scf.condition` op or return-like, like an `scf.yield` op, its branch
@@ -310,29 +322,16 @@ RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
              << " has no liveness info (unreachable), mark dead";
       solver.getOrCreateState<Liveness>(result.value());
     }
-    SmallVector<Value> mustLiveValues;
-    if (auto loopOp = dyn_cast<LoopLikeOpInterface>(op)) {
-      std::optional<SmallVector<Value>> ivs = loopOp.getLoopInductionVars();
-      if (ivs.has_value())
-        mustLiveValues.append(*ivs);
-    }
+
     for (auto &region : op->getRegions()) {
       for (auto &block : region) {
         for (auto blockArg : llvm::enumerate(block.getArguments())) {
           if (getLiveness(blockArg.value()))
             continue;
-          if (llvm::find(mustLiveValues, blockArg.value())) {
-            LDBG() << "Block argument: " << blockArg.index() << " of "
-                   << OpWithFlags(op, OpPrintingFlags().skipRegions())
-                   << " is must value, mark live";
-            (void)solver.getOrCreateState<Liveness>(blockArg.value())
-                ->markLive();
-          } else {
-            LDBG() << "Block argument: " << blockArg.index() << " of "
-                   << OpWithFlags(op, OpPrintingFlags().skipRegions())
-                   << " has no liveness info, mark dead";
-            solver.getOrCreateState<Liveness>(blockArg.value());
-          }
+          LDBG() << "Block argument: " << blockArg.index() << " of "
+                 << OpWithFlags(op, OpPrintingFlags().skipRegions())
+                 << " has no liveness info, mark dead";
+          solver.getOrCreateState<Liveness>(blockArg.value());
         }
       }
     }
