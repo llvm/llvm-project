@@ -840,7 +840,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{B128, Ptr32}, {{}, {VgprB128, VgprPtr32}}});
   // clang-format on
 
-  addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD}, StandardB)
+  addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD, G_AMDGPU_BUFFER_LOAD_FORMAT,
+                    G_AMDGPU_TBUFFER_LOAD_FORMAT},
+                   StandardB)
       .Div(B32, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Uni(B32, {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Div(B64, {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
