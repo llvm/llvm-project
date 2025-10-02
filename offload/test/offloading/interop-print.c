@@ -1,10 +1,10 @@
 // RUN: %libomptarget-compile-amdgcn-amd-amdhsa
 // RUN:   %libomptarget-run-generic 2>&1 | \
-// RUN:   %fcheck-generic -check-prefix=AMDCHECK
+// RUN:   %fcheck-amdgcn-amd-amdhsa -check-prefixes=AMD
 
 // RUN: %libomptarget-compile-nvptx64-nvidia-cuda
 // RUN:   %libomptarget-run-generic 2>&1 | \
-// RUN:   %fcheck-generic -check-prefix=NVIDIACHECK
+// RUN:   %fcheck-nvptx64-nvidia-cuda -check-prefixes=NVIDIA
 
 // REQUIRES: gpu
 
@@ -35,10 +35,9 @@ const char *interop_int_to_string(const int interop_int) {
 int main(int argc, char **argv) {
 
   // Loop over all available devices
-  // XXX What happens in machines w/ GPUs from different vendors?
   for (int id = 0; id < omp_get_num_devices(); ++id) {
     omp_interop_t iobj = omp_interop_none;
-#pragma omp interop init(target : iobj) device(id)
+#pragma omp interop init(targetsync : iobj) device(id)
 
     int err;
     int interop_int = omp_get_interop_int(iobj, omp_ipr_fr_id, &err);
@@ -48,8 +47,8 @@ int main(int argc, char **argv) {
       return -1;
     }
 
-    // AMDCHECK: {{.*}} hsa
-    // NVIDIACHECK: {{.*}} cuda
+    // AMD: {{.*}} hsa
+    // NVIDIA: {{.*}} cuda
     printf("omp_get_interop_int returned %s\n",
            interop_int_to_string(interop_int));
 
@@ -60,8 +59,8 @@ int main(int argc, char **argv) {
       return -1;
     }
 
-    // AMDCHECK: {{.*}} amd
-    // NVIDIACHECK: {{.*}} nvidia
+    // AMD: {{.*}} amd
+    // NVIDIA: {{.*}} nvidia
     printf("omp_get_interop_str returned %s\n", interop_vendor);
 
     const char *interop_fr_name =
@@ -71,8 +70,8 @@ int main(int argc, char **argv) {
       return -1;
     }
 
-    // AMDCHECK: {{.*}} hsa
-    // NVIDIACHECK: {{.*}} cuda
+    // AMD: {{.*}} hsa
+    // NVIDIA: {{.*}} cuda
     printf("omp_get_interop_str returned %s\n", interop_fr_name);
 
 #pragma omp interop destroy(iobj)
