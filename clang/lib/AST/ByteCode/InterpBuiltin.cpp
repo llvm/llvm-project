@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SipHash.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cmath>
 
 namespace clang {
@@ -3015,14 +3014,6 @@ static llvm::APFloat apply_x86_sqrt(llvm::APFloat Val,
 
 static bool interp__builtin_x86_sqrt(InterpState &S, CodePtr OpPC,
                                      const CallExpr *Call, unsigned ID) {
-  llvm::errs() << "Entering x86 sqrtpd/ps interpretbuiltin\n";
-
-  llvm::errs() << "BI__builtin_ia32_sqrtpd512 "
-               << X86::BI__builtin_ia32_sqrtpd512 << '\n';
-  llvm::errs() << "BI__builtin_ia32_sqrtps512 "
-               << X86::BI__builtin_ia32_sqrtps512 << '\n';
-  llvm::errs() << "Current ID " << ID << '\n';
-  llvm::errs() << "GetNumArgs " << Call->getNumArgs() << '\n';
   unsigned NumArgs = Call->getNumArgs();
   assert(NumArgs == 1 || NumArgs == 2);
   const Expr *ArgExpr = Call->getArg(0);
@@ -3062,7 +3053,6 @@ static bool interp__builtin_x86_sqrt(InterpState &S, CodePtr OpPC,
 
   // Vector case
   assert(ArgTy->isVectorType());
-  llvm::errs() << "Considering this as a vector\n";
   const auto *VT = ArgTy->castAs<VectorType>();
 
   const Pointer &Arg = S.Stk.pop<Pointer>();
@@ -3088,7 +3078,6 @@ static bool interp__builtin_x86_sqrt(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
-  llvm::errs() << "Inside Interpretbuiltin for " << Call << "\n";
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
     return Invalid(S, OpPC);
 

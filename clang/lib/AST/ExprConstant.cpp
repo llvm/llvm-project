@@ -12242,7 +12242,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_sqrtps256:
   case X86::BI__builtin_ia32_sqrtps512:
   case X86::BI__builtin_ia32_sqrtpd512: {
-    llvm::errs() << "We are inside sqrtpd/sqrtps\n";
     APValue Source;
     if (!EvaluateAsRValue(Info, E->getArg(0), Source))
       return false;
@@ -12254,10 +12253,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     SmallVector<APValue, 4> ResultElements;
     ResultElements.reserve(SourceLen);
 
-    llvm::errs() << "SourceLen " << SourceLen << '\n';
-
     for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
-      llvm::errs() << "We are inside for loop\n";
       APValue CurrentEle = Source.getVectorElt(EltNum);
       if (DestEltTy->isFloatingType()) {
         llvm::APFloat Value = CurrentEle.getFloat();
@@ -12271,16 +12267,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
           auto RetStatus = TempValue.convert(
               Semantics, llvm::RoundingMode::NearestTiesToEven, &LosesInfo);
           Value = TempValue;
-          // llvm::errs() << "Pushing " << SqrtValue << ' ' << Value2 << " to
-          // resultelements\n";
         }
         ResultElements.push_back(APValue(Value));
       } else {
         return false;
       }
     }
-    llvm::errs() << "Outside the loop, about to exit " << "res size "
-                 << ResultElements.size() << "\n";
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
   }
