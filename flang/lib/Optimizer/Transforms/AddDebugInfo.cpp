@@ -285,6 +285,10 @@ mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
   if (auto iter{moduleMap.find(name)}; iter != moduleMap.end()) {
     modAttr = iter->getValue();
   } else {
+    // When decl is true, it means that module is only being used in this
+    // compilation unit and it is defined elsewhere. But if the file/line/scope
+    // fields are valid, the module is not merged with its definition and is
+    // considered different. So we only set those fields when decl is false.
     modAttr = mlir::LLVM::DIModuleAttr::get(
         context, decl ? nullptr : fileAttr, decl ? nullptr : scope,
         mlir::StringAttr::get(context, name),
