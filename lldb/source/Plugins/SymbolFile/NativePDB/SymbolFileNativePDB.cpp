@@ -2677,6 +2677,7 @@ SymbolFileNativePDB::FindMangledFunctionName(PdbCompilandSymId func_id) {
 
   ProcSym proc(static_cast<SymbolRecordKind>(sym_record.kind()));
   cantFail(SymbolDeserializer::deserializeAs<ProcSym>(sym_record, proc));
+
   return FindMangledSymbol(SegmentOffset(proc.Segment, proc.CodeOffset));
 }
 
@@ -2686,7 +2687,21 @@ SymbolFileNativePDB::FindMangledSymbol(SegmentOffset so) {
                                                  so.segment, so.offset);
   if (!symbol)
     return std::nullopt;
-  return symbol->first.Name;
+
+  llvm::StringRef name = symbol->first.Name;
+  // "In non-64 bit environments" (on x86 in pactice), __cdecl functions get
+  // prefixed with an underscore. For compilers using LLVM, this happens in LLVM
+  // (as opposed to the compiler frontend). Because of this, DWARF doesn't
+  // contain the "full" mangled name in DW_AT_linkage_name for these functions.
+  // We strip the mangling here for compatibility with DWARF. See
+  // llvm.org/pr161676 and
+  // https://learn.microsoft.com/en-us/cpp/build/reference/decorated-names#FormatC
+  if ((symbol->first.Flags & PublicSymFlags::Function) !=
+          PublicSymFlags::None &&
+      m_index->dbi().getMachineType() == PDB_Machine::x86)
+    name = StripCDeclPrefix(name);
+
+  return name;
 }
 
 void SymbolFileNativePDB::CacheUdtDeclarations() {

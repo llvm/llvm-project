@@ -1118,3 +1118,21 @@ size_t lldb_private::npdb::GetSizeOfType(PdbTypeSymId id,
   }
   return 0;
 }
+
+llvm::StringRef lldb_private::npdb::StripCDeclPrefix(llvm::StringRef mangled) {
+  // See
+  // https://learn.microsoft.com/en-us/cpp/build/reference/decorated-names#FormatC
+  if (!mangled.starts_with('_'))
+    return mangled;
+
+  // make sure this isn't __stdcall (`_{name}@{sizeof(params)}`) or __vectorcall
+  // (`{name}@@{sizeof(params)}`).
+  size_t last_at_pos = mangled.find_last_of('@');
+  if (last_at_pos != llvm::StringRef::npos &&
+      last_at_pos < mangled.size() - 1 &&
+      llvm::all_of(mangled.slice(last_at_pos + 1, mangled.size()),
+                   llvm::isDigit))
+    return mangled;
+
+  return mangled.drop_front();
+}
