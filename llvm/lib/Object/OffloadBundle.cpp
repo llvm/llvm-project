@@ -160,8 +160,8 @@ OffloadBundleFatBin::create(MemoryBufferRef Buf, uint64_t SectionOffset,
        file_magic::offload_bundle_compressed))
     return errorCodeToError(object_error::parse_failed);
 
-  OffloadBundleFatBin *TheBundle =
-      new OffloadBundleFatBin(Buf, FileName, Decompress);
+  std::unique_ptr<OffloadBundleFatBin> TheBundle(
+      new OffloadBundleFatBin(Buf, FileName));
 
   // Read the Bundle Entries
   Error Err =
@@ -169,7 +169,7 @@ OffloadBundleFatBin::create(MemoryBufferRef Buf, uint64_t SectionOffset,
   if (Err)
     return Err;
 
-  return std::unique_ptr<OffloadBundleFatBin>(TheBundle);
+  return std::move(TheBundle);
 }
 
 Error OffloadBundleFatBin::extractBundle(const ObjectFile &Source) {
