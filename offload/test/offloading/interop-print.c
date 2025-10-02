@@ -40,8 +40,7 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  // FIXME: This should be hsa instead of hip
-  // AMDCHECK: {{.*}} hip
+  // AMDCHECK: {{.*}} hsa
   printf("omp_get_interop_int returned %s\n",
          interop_int_to_string(interop_int));
 
@@ -62,8 +61,7 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  // FIXME: This should be hsa instead of hip
-  // AMDCHECK: {{.*}} hip
+  // AMDCHECK: {{.*}} hsa
   printf("omp_get_interop_str returned %s\n", interop_fr_name);
 
 #pragma omp interop destroy(iobj)
