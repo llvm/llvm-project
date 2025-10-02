@@ -638,6 +638,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // No support for these operations with v2f32/v2i32
   setOperationAction(ISD::INSERT_VECTOR_ELT, {MVT::v2f32, MVT::v2i32}, Expand);
   setOperationAction(ISD::VECTOR_SHUFFLE, {MVT::v2f32, MVT::v2i32}, Expand);
+
+  setOperationAction(ISD::TRUNCATE, MVT::v2i16, Expand);
+  setOperationAction({ISD::ANY_EXTEND, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND},
+                     MVT::v2i32, Expand);
+
   // Need custom lowering in case the index is dynamic.
   if (STI.hasF32x2Instructions())
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, {MVT::v2f32, MVT::v2i32},

@@ -118,7 +118,7 @@ let Predicates = [HasAtomicLdSt] in {
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
-  def : LdPat<atomic_load_nonext_32, LW, i32>;
+  // Load pattern is in RISCVInstrInfoA.td and shared with RV32.
   def : StPat<atomic_store_32, SW, GPR, i32>;
 }
 

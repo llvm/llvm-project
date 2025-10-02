@@ -284,6 +284,7 @@ cc_library(
         "//mlir:InferTypeOpInterface",
         "//mlir:LLVMToLLVMIRTranslation",
         "//mlir:Pass",
+        "//mlir:SCFDialect",
         "//mlir:ToLLVMIRTranslation",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
