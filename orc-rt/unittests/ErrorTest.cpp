@@ -386,7 +386,7 @@ TEST(ErrorTest, ExpectedCovariance) {
   (void)!!A2;
 }
 
-// Test that Expected<Error> works as expected with .
+// Test that Expected<Error> works as expected.
 TEST(ErrorTest, ExpectedError) {
   {
     // Test success-success case.
