@@ -497,7 +497,14 @@ public:
   /// Should this stack ID be considered in MaxAlignment.
   bool contributesToMaxAlignment(uint8_t StackID) {
     return StackID == TargetStackID::Default ||
-           StackID == TargetStackID::ScalableVector;
+           StackID == TargetStackID::ScalableVector ||
+           StackID == TargetStackID::ScalablePredicateVector;
+  }
+
+  bool isScalableStackID(int ObjectIdx) const {
+    uint8_t StackID = getStackID(ObjectIdx);
+    return StackID == TargetStackID::ScalableVector ||
+           StackID == TargetStackID::ScalablePredicateVector;
   }
 
   /// setObjectAlignment - Change the alignment of the specified stack object.

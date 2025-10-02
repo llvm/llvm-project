@@ -2498,10 +2498,6 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   do {
     Reg = RecoloringCandidates.pop_back_val();
 
-    // We cannot recolor physical register.
-    if (Reg.isPhysical())
-      continue;
-
     // This may be a skipped register.
     if (!VRM->hasPhys(Reg)) {
       assert(!shouldAllocateRegister(Reg) &&
@@ -2549,7 +2545,8 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
     // Push all copy-related live-ranges to keep reconciling the broken
     // hints.
     for (const HintInfo &HI : Info) {
-      if (Visited.insert(HI.Reg).second)
+      // We cannot recolor physical register.
+      if (HI.Reg.isVirtual() && Visited.insert(HI.Reg).second)
         RecoloringCandidates.push_back(HI.Reg);
     }
   } while (!RecoloringCandidates.empty());

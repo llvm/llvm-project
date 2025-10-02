@@ -35,6 +35,10 @@ class OpenACCRecipeBuilderBase {
                                size_t numBounds,
                                llvm::ArrayRef<QualType> boundTypes);
 
+  void makeBoundsInit(mlir::Value alloca, mlir::Location loc,
+                      mlir::Block *block, const VarDecl *allocaDecl,
+                      QualType origType, bool isInitSection);
+
 protected:
   CIRGen::CIRGenFunction &cgf;
   CIRGen::CIRGenBuilderTy &builder;

@@ -1165,7 +1165,7 @@ void AArch64PrologueEmitter::emitCalleeSavedGPRLocations(
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
   for (const auto &Info : CSI) {
     unsigned FrameIdx = Info.getFrameIdx();
-    if (MFI.getStackID(FrameIdx) == TargetStackID::ScalableVector)
+    if (MFI.isScalableStackID(FrameIdx))
       continue;
 
     assert(!Info.isSpilledToReg() && "Spilling to registers not implemented");
@@ -1192,7 +1192,7 @@ void AArch64PrologueEmitter::emitCalleeSavedSVELocations(
   }
 
   for (const auto &Info : CSI) {
-    if (MFI.getStackID(Info.getFrameIdx()) != TargetStackID::ScalableVector)
+    if (!MFI.isScalableStackID(Info.getFrameIdx()))
       continue;
 
     // Not all unwinders may know about SVE registers, so assume the lowest
@@ -1624,8 +1624,7 @@ void AArch64EpilogueEmitter::emitCalleeSavedRestores(
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameDestroy);
 
   for (const auto &Info : CSI) {
-    if (SVE !=
-        (MFI.getStackID(Info.getFrameIdx()) == TargetStackID::ScalableVector))
+    if (SVE != MFI.isScalableStackID(Info.getFrameIdx()))
       continue;
 
     MCRegister Reg = Info.getReg();

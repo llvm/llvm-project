@@ -400,6 +400,32 @@ void OpenACCRecipeBuilderBase::createRecipeDestroySection(
 
   mlir::acc::YieldOp::create(builder, locEnd);
 }
+void OpenACCRecipeBuilderBase::makeBoundsInit(
+    mlir::Value alloca, mlir::Location loc, mlir::Block *block,
+    const VarDecl *allocaDecl, QualType origType, bool isInitSection) {
+  mlir::OpBuilder::InsertionGuard guardCase(builder);
+  builder.setInsertionPointToEnd(block);
+  CIRGenFunction::LexicalScope ls(cgf, loc, block);
+
+  CIRGenFunction::AutoVarEmission tempDeclEmission{*allocaDecl};
+  tempDeclEmission.EmittedAsOffload = true;
+
+  // The init section is the only one of the handful that only has a single
+  // argument for the 'type', so we have to drop 1 for init, and future calls
+  // to this will need to drop 2.
+  llvm::MutableArrayRef<mlir::BlockArgument> boundsRange =
+      block->getArguments().drop_front(isInitSection ? 1 : 2);
+
+  mlir::Value subscriptedValue = alloca;
+  for (mlir::BlockArgument boundArg : llvm::reverse(boundsRange))
+    subscriptedValue = createBoundsLoop(subscriptedValue, boundArg, loc,
+                                        /*inverse=*/false);
+
+  tempDeclEmission.setAllocatedAddress(
+      Address{subscriptedValue, cgf.convertType(origType),
+              cgf.getContext().getDeclAlign(allocaDecl)});
+  cgf.emitAutoVarInit(tempDeclEmission);
+}
 
 // TODO: OpenACC: When we get this implemented for the reduction/firstprivate,
 // this might end up re-merging with createRecipeInitCopy.  For now, keep it
@@ -442,11 +468,16 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
         cgf.emitAutoVarAlloca(*allocaDecl, builder.saveInsertionPoint());
     cgf.emitAutoVarInit(tempDeclEmission);
   } else {
-    makeBoundsAlloca(block, exprRange, loc, "openacc.private.init", numBounds,
-                     boundTypes);
+    mlir::Value alloca = makeBoundsAlloca(
+        block, exprRange, loc, "openacc.private.init", numBounds, boundTypes);
 
-    if (initExpr)
-      cgf.cgm.errorNYI(exprRange, "private-init with bounds initialization");
+    // If the initializer is trivial, there is nothing to do here, so save
+    // ourselves some effort.
+    if (initExpr && (!cgf.isTrivialInitializer(initExpr) ||
+                     cgf.getContext().getLangOpts().getTrivialAutoVarInit() !=
+                         LangOptions::TrivialAutoVarInitKind::Uninitialized))
+      makeBoundsInit(alloca, loc, block, allocaDecl, origType,
+                     /*isInitSection=*/true);
   }
 
   mlir::acc::YieldOp::create(builder, locEnd);
