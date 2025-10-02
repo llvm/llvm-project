@@ -1071,7 +1071,8 @@ LLVM_DUMP_METHOD void SelectionDAG::dump(bool Sorted) const {
   };
 
   if (Sorted) {
-    SmallVector<const SDNode *> SortedNodes(AllNodes.size());
+    SmallVector<const SDNode *> SortedNodes;
+    SortedNodes.reserve(AllNodes.size());
     getTopologicallyOrderedNodes(SortedNodes);
     for (const SDNode *N : SortedNodes)
       dumpEachNode(*N);
