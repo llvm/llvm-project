@@ -537,6 +537,16 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         // If the next IR instruction exists and is already a NOP or TOC-restore
         // , don't inject.
         auto NextI = std::next(I);
+        LLVM_DEBUG({
+          dbgs() << "PPC emit: CALL seen: next=";
+          if (NextI == E)
+            dbgs() << "<end>\n";
+          else
+            dbgs() << BC.MII->getName(NextI->getOpcode())
+                   << (BC.MIB->isTOCRestoreAfterCall(*NextI)
+                           ? " (TOC restore)\n"
+                           : "\n");
+        });
         if (NextI != E &&
             (BC.MIB->isNoop(*NextI) || BC.MIB->isTOCRestoreAfterCall(*NextI))) {
           NeedSlot = false;
