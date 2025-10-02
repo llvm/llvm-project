@@ -2435,25 +2435,28 @@ void RAGreedy::collectHintInfo(Register Reg, HintsInfo &Out) {
     unsigned SubReg = Opnd.getSubReg();
 
     // Get the current assignment.
-    MCRegister OtherPhysReg =
-        OtherReg.isPhysical() ? OtherReg.asMCReg() : VRM->getPhys(OtherReg);
-    if (OtherSubReg) {
-      if (OtherReg.isPhysical()) {
-        MCRegister Tuple =
-            TRI->getMatchingSuperReg(OtherPhysReg, OtherSubReg, RC);
-        if (!Tuple)
-          continue;
-        OtherPhysReg = Tuple;
-      } else {
-        // TODO: There should be a hinting mechanism for subregisters
-        if (SubReg != OtherSubReg)
-          continue;
-      }
+    MCRegister OtherPhysReg;
+    if (OtherReg.isPhysical()) {
+      if (OtherSubReg)
+        OtherPhysReg = TRI->getMatchingSuperReg(OtherReg, OtherSubReg, RC);
+      else if (SubReg)
+        OtherPhysReg = TRI->getMatchingSuperReg(OtherReg, SubReg, RC);
+      else
+        OtherPhysReg = OtherReg;
+    } else {
+      OtherPhysReg = VRM->getPhys(OtherReg);
+      // TODO: Should find matching superregister, but applying this in the
+      // non-hint case currently causes regressions
+
+      if (SubReg && OtherSubReg && SubReg != OtherSubReg)
+        continue;
     }
 
     // Push the collected information.
-    Out.push_back(HintInfo(MBFI->getBlockFreq(Instr.getParent()), OtherReg,
-                           OtherPhysReg));
+    if (OtherPhysReg) {
+      Out.push_back(HintInfo(MBFI->getBlockFreq(Instr.getParent()), OtherReg,
+                             OtherPhysReg));
+    }
   }
 }
 
