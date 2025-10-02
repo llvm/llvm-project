@@ -1157,7 +1157,7 @@ bool Sema::CheckConstraintSatisfaction(
   if (::CheckConstraintSatisfaction(
           *this, Template, AssociatedConstraints, TemplateArgsLists,
           TemplateIDRange, *Satisfaction, ConvertedExpr, TopLevelConceptId)) {
-    OutSatisfaction = *Satisfaction;
+    OutSatisfaction = std::move(*Satisfaction);
     return true;
   }
 

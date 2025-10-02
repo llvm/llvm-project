@@ -2804,7 +2804,6 @@ TemplateInstantiator::TransformNestedRequirement(
   ASTContext &C = SemaRef.Context;
 
   Expr *Constraint = Req->getConstraintExpr();
-  ExprResult TransConstraint = Constraint;
   ConstraintSatisfaction Satisfaction;
 
   auto NestedReqWithDiag = [&C, this](Expr *E,
