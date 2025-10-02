@@ -350,16 +350,13 @@ Status PlatformDarwin::GetSharedModule(
                                       old_modules, did_create_ptr);
 
     const FileSpec &platform_file = module_spec.GetFileSpec();
-    // Get module search paths from the target if available
-    ModuleSpec module_spec_copy(module_spec);
-    Target *target = module_spec_copy.GetTargetPtr();
+    // Get module search paths from the target if available.
+    TargetSP target_sp = module_spec.GetTargetSP();
     FileSpecList module_search_paths;
-    FileSpecList *module_search_paths_ptr = nullptr;
-    if (target) {
-      module_search_paths = target->GetExecutableSearchPaths();
-      module_search_paths_ptr = &module_search_paths;
+    if (target_sp) {
+      module_search_paths = target_sp->GetExecutableSearchPaths();
     }
-    if (!module_sp && module_search_paths_ptr && platform_file) {
+    if (!module_sp && !module_search_paths.IsEmpty() && platform_file) {
       // We can try to pull off part of the file path up to the bundle
       // directory level and try any module search paths...
       FileSpec bundle_directory;
@@ -382,10 +379,10 @@ Status PlatformDarwin::GetSharedModule(
           const size_t bundle_directory_len =
               bundle_directory.GetPath(bundle_dir, sizeof(bundle_dir));
           char new_path[PATH_MAX];
-          size_t num_module_search_paths = module_search_paths_ptr->GetSize();
+          size_t num_module_search_paths = module_search_paths.GetSize();
           for (size_t i = 0; i < num_module_search_paths; ++i) {
             const size_t search_path_len =
-                module_search_paths_ptr->GetFileSpecAtIndex(i).GetPath(
+                module_search_paths.GetFileSpecAtIndex(i).GetPath(
                     new_path, sizeof(new_path));
             if (search_path_len < sizeof(new_path)) {
               snprintf(new_path + search_path_len,
@@ -1311,17 +1308,14 @@ lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   const FileSpec &platform_file = module_spec.GetFileSpec();
-  ModuleSpec module_spec_copy(module_spec);
-  Target *target = module_spec_copy.GetTargetPtr();
+  TargetSP target_sp = module_spec.GetTargetSP();
   FileSpecList module_search_paths;
-  FileSpecList *module_search_paths_ptr = nullptr;
-  if (target) {
-    module_search_paths = target->GetExecutableSearchPaths();
-    module_search_paths_ptr = &module_search_paths;
+  if (target_sp) {
+    module_search_paths = target_sp->GetExecutableSearchPaths();
   }
-  // See if the file is present in any of the module_search_paths_ptr
+  // See if the file is present in any of the module_search_paths
   // directories.
-  if (!module_sp && module_search_paths_ptr && platform_file) {
+  if (!module_sp && !module_search_paths.IsEmpty() && platform_file) {
     // create a vector of all the file / directory names in platform_file e.g.
     // this might be
     // /System/Library/PrivateFrameworks/UIFoundation.framework/UIFoundation
@@ -1335,21 +1329,21 @@ lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
     std::reverse(path_parts.begin(), path_parts.end());
     const size_t path_parts_size = path_parts.size();
 
-    size_t num_module_search_paths = module_search_paths_ptr->GetSize();
+    size_t num_module_search_paths = module_search_paths.GetSize();
     for (size_t i = 0; i < num_module_search_paths; ++i) {
       Log *log_verbose = GetLog(LLDBLog::Host);
       LLDB_LOGF(
           log_verbose,
           "PlatformRemoteDarwinDevice::GetSharedModule searching for binary in "
           "search-path %s",
-          module_search_paths_ptr->GetFileSpecAtIndex(i).GetPath().c_str());
+          module_search_paths.GetFileSpecAtIndex(i).GetPath().c_str());
       // Create a new FileSpec with this module_search_paths_ptr plus just the
       // filename ("UIFoundation"), then the parent dir plus filename
       // ("UIFoundation.framework/UIFoundation") etc - up to four names (to
       // handle "Foo.framework/Contents/MacOS/Foo")
 
       for (size_t j = 0; j < 4 && j < path_parts_size - 1; ++j) {
-        FileSpec path_to_try(module_search_paths_ptr->GetFileSpecAtIndex(i));
+        FileSpec path_to_try(module_search_paths.GetFileSpecAtIndex(i));
 
         // Add the components backwards.  For
         // .../PrivateFrameworks/UIFoundation.framework/UIFoundation path_parts

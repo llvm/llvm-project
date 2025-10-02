@@ -764,15 +764,14 @@ Status Platform::ResolveExecutable(const ModuleSpec &module_spec,
   for (const ArchSpec &arch : GetSupportedArchitectures(process_host_arch)) {
     resolved_module_spec.GetArchitecture() = arch;
 
-    // Call locate module callback first, then fallback to standard path
+    // Call locate module callback first, then fallback to standard path.
     FileSpec symbol_file_spec;
     CallLocateModuleCallbackIfSet(resolved_module_spec, exe_module_sp,
                                   symbol_file_spec, nullptr);
 
-    if (!exe_module_sp) {
+    if (!exe_module_sp)
       error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                           nullptr, nullptr);
-    }
 
     error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                         nullptr, nullptr);

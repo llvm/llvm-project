@@ -478,7 +478,7 @@ public:
   GetSharedModule(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
                   llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                   bool *did_create_ptr, bool always_create = false,
-                  bool allow_locate_callback = true);
+                  bool invoke_locate_callback = true);
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 

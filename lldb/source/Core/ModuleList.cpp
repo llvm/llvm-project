@@ -1033,7 +1033,7 @@ Status
 ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
                             llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                             bool *did_create_ptr, bool always_create,
-                            bool allow_locate_callback) {
+                            bool invoke_locate_callback) {
   ModuleList &shared_module_list = GetSharedModuleList();
   std::lock_guard<std::recursive_mutex> guard(
       shared_module_list.m_modules_mutex);
@@ -1089,18 +1089,16 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   if (module_sp)
     return error;
 
-  // Try target's platform locate module callback before second attempt
-  if (allow_locate_callback) {
-    ModuleSpec module_spec_copy(module_spec);
-    Target *target = module_spec_copy.GetTargetPtr();
-    if (target && target->IsValid()) {
-      Platform *platform = target->GetPlatform().get();
-      if (platform) {
+  // Try target's platform locate module callback before second attempt.
+  if (invoke_locate_callback) {
+    TargetSP target_sp = module_spec.GetTargetSP();
+    if (target_sp && target_sp->IsValid()) {
+      if (PlatformSP platform_sp = target_sp->GetPlatform()) {
         FileSpec symbol_file_spec;
-        platform->CallLocateModuleCallbackIfSet(
+        platform_sp->CallLocateModuleCallbackIfSet(
             module_spec, module_sp, symbol_file_spec, did_create_ptr);
         if (module_sp) {
-          // Success! The callback found a module
+          // The callback found a module.
           return error;
         }
       }
@@ -1134,13 +1132,12 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
     module_sp.reset();
   }
 
-  // Get module search paths from the target if available
-  ModuleSpec module_spec_copy(module_spec);
-  Target *target = module_spec_copy.GetTargetPtr();
+  // Get module search paths from the target if available.
+  lldb::TargetSP target_sp = module_spec.GetTargetSP();
   FileSpecList module_search_paths;
   FileSpecList *module_search_paths_ptr = nullptr;
-  if (target && target->IsValid()) {
-    module_search_paths = target->GetExecutableSearchPaths();
+  if (target_sp && target_sp->IsValid()) {
+    module_search_paths = target_sp->GetExecutableSearchPaths();
     module_search_paths_ptr = &module_search_paths;
   }
 

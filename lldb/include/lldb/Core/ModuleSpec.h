@@ -16,6 +16,7 @@
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UUID.h"
+#include "lldb/lldb-forward.h"
 
 #include "llvm/Support/Chrono.h"
 
@@ -127,15 +128,9 @@ public:
 
   lldb::DataBufferSP GetData() const { return m_data; }
 
-  Target *GetTargetPtr() {
-    auto locked = m_target.lock();
-    return locked.get();
-  }
+  lldb::TargetSP GetTargetSP() { return m_target.lock(); }
 
-  const Target *GetTargetPtr() const {
-    auto locked = m_target.lock();
-    return locked.get();
-  }
+  lldb::TargetSP GetTargetSP() const { return m_target.lock(); }
 
   void SetTarget(std::shared_ptr<Target> target) { m_target = target; }
 
