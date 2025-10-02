@@ -589,7 +589,7 @@ defm VSELVS : vsel_inst<"vs", 0b01, 6>;
 
 multiclass vmaxmin_inst<string op, bit opc, SDNode SD> {
   let DecoderNamespace = "VFPV8", PostEncoderMethod = "",
-      isUnpredicable = 1 in {
+      isUnpredicable = 1, mayRaiseFPException = 1 in {
     def H : AHbInp<0b11101, 0b00, opc,
                    (outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm),
                    NoItinerary, !strconcat(op, ".f16\t$Sd, $Sn, $Sm"),
@@ -940,7 +940,8 @@ def VCVTTDH : ADuI<0b11101, 0b11, 0b0011, 0b11, 0,
 
 multiclass vcvt_inst<string opc, bits<2> rm,
                      SDPatternOperator node = null_frag> {
-  let PostEncoderMethod = "", DecoderNamespace = "VFPV8", hasSideEffects = 0 in {
+  let PostEncoderMethod = "", DecoderNamespace = "VFPV8", hasSideEffects = 0, 
+      mayRaiseFPException = 1 in {
     def SH : AHuInp<0b11101, 0b11, 0b1100, 0b11, 0,
                     (outs SPR:$Sd), (ins HPR:$Sm),
                     NoItinerary, !strconcat("vcvt", opc, ".s32.f16\t$Sd, $Sm"),
@@ -1061,7 +1062,9 @@ def VNEGH  : AHuI<0b11101, 0b11, 0b0001, 0b01, 0,
                   IIC_fpUNA16, "vneg", ".f16\t$Sd, $Sm",
                   [(set (f16 HPR:$Sd), (fneg (f16 HPR:$Sm)))]>;
 
-multiclass vrint_inst_zrx<string opc, bit op, bit op2, SDPatternOperator node> {
+multiclass vrint_inst_zrx<string opc, bit op, bit op2, SDPatternOperator node,
+                          list<Register> uses = [], bit fpexc = 0> {
+  let Uses = uses, mayRaiseFPException = fpexc in {
   def H : AHuI<0b11101, 0b11, 0b0110, 0b11, 0,
                (outs HPR:$Sd), (ins HPR:$Sm),
                NoItinerary, !strconcat("vrint", opc), ".f16\t$Sd, $Sm",
@@ -1087,6 +1090,7 @@ multiclass vrint_inst_zrx<string opc, bit op, bit op2, SDPatternOperator node> {
     let Inst{7} = op2;
     let Inst{16} = op;
   }
+  }
 
   def : InstAlias<!strconcat("vrint", opc, "$p.f16.f16\t$Sd, $Sm"),
                   (!cast<Instruction>(NAME#"H") SPR:$Sd, SPR:$Sm, pred:$p), 0>,
@@ -1099,9 +1103,9 @@ multiclass vrint_inst_zrx<string opc, bit op, bit op2, SDPatternOperator node> {
         Requires<[HasFPARMv8,HasDPVFP]>;
 }
 
-defm VRINTZ : vrint_inst_zrx<"z", 0, 1, ftrunc>;
-defm VRINTR : vrint_inst_zrx<"r", 0, 0, fnearbyint>;
-defm VRINTX : vrint_inst_zrx<"x", 1, 0, frint>;
+defm VRINTZ : vrint_inst_zrx<"z", 0, 1, ftrunc, [], 0>;
+defm VRINTR : vrint_inst_zrx<"r", 0, 0, fnearbyint, [FPSCR_RM], 0>;
+defm VRINTX : vrint_inst_zrx<"x", 1, 0, frint, [FPSCR_RM], 1>;
 
 multiclass vrint_inst_anpm<string opc, bits<2> rm,
                            SDPatternOperator node = null_frag> {
@@ -1649,6 +1653,7 @@ class AVConv1IsH_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
 }
 
 // Always set Z bit in the instruction, i.e. "round towards zero" variants.
+let mayRaiseFPException = 1 in
 def VTOSIZD : AVConv1IsD_Encode<0b11101, 0b11, 0b1101, 0b1011,
                                 (outs SPR:$Sd), (ins DPR:$Dm),
                                 IIC_fpCVTDI, "vcvt", ".s32.f64\t$Sd, $Dm",
@@ -1669,6 +1674,7 @@ let Predicates=[HasVFP2, HasDPVFP] in {
                (VSTRS (VTOSIZD DPR:$a), addrmode5:$ptr)>;
 }
 
+let mayRaiseFPException = 1 in
 def VTOSIZS : AVConv1InsS_Encode<0b11101, 0b11, 0b1101, 0b1010,
                                  (outs SPR:$Sd), (ins SPR:$Sm),
                                  IIC_fpCVTSI, "vcvt", ".s32.f32\t$Sd, $Sm",
@@ -1693,6 +1699,7 @@ def : VFPPat<(alignedstore32 (i32 (fp_to_sint_sat (f32 SPR:$a), i32)),
                                    addrmode5:$ptr),
              (VSTRS (VTOSIZS SPR:$a), addrmode5:$ptr)>;
 
+let mayRaiseFPException = 1 in
 def VTOSIZH : AVConv1IsH_Encode<0b11101, 0b11, 0b1101, 0b1001,
                                  (outs SPR:$Sd), (ins HPR:$Sm),
                                  IIC_fpCVTHI, "vcvt", ".s32.f16\t$Sd, $Sm",
@@ -1707,6 +1714,7 @@ def : VFPNoNEONPat<(i32 (fp_to_sint (f16 HPR:$a))),
 def : VFPPat<(i32 (fp_to_sint_sat (f16 HPR:$a), i32)),
              (COPY_TO_REGCLASS (VTOSIZH (f16 HPR:$a)), GPR)>;
 
+let mayRaiseFPException = 1 in
 def VTOUIZD : AVConv1IsD_Encode<0b11101, 0b11, 0b1100, 0b1011,
                                (outs SPR:$Sd), (ins DPR:$Dm),
                                IIC_fpCVTDI, "vcvt", ".u32.f64\t$Sd, $Dm",
@@ -1727,6 +1735,7 @@ let Predicates=[HasVFP2, HasDPVFP] in {
                (VSTRS (VTOUIZD DPR:$a), addrmode5:$ptr)>;
 }
 
+let mayRaiseFPException = 1 in
 def VTOUIZS : AVConv1InsS_Encode<0b11101, 0b11, 0b1100, 0b1010,
                                  (outs SPR:$Sd), (ins SPR:$Sm),
                                  IIC_fpCVTSI, "vcvt", ".u32.f32\t$Sd, $Sm",
@@ -1751,6 +1760,7 @@ def : VFPPat<(alignedstore32 (i32 (fp_to_uint_sat (f32 SPR:$a), i32)),
                                    addrmode5:$ptr),
              (VSTRS (VTOUIZS SPR:$a), addrmode5:$ptr)>;
 
+let mayRaiseFPException = 1 in
 def VTOUIZH : AVConv1IsH_Encode<0b11101, 0b11, 0b1100, 0b1001,
                                  (outs SPR:$Sd), (ins HPR:$Sm),
                                  IIC_fpCVTHI, "vcvt", ".u32.f16\t$Sd, $Sm",
@@ -1766,7 +1776,7 @@ def : VFPPat<(i32 (fp_to_uint_sat (f16 HPR:$a), i32)),
              (COPY_TO_REGCLASS (VTOUIZH (f16 HPR:$a)), GPR)>;
 
 // And the Z bit '0' variants, i.e. use the rounding mode specified by FPSCR.
-let Uses = [FPSCR_RM] in {
+let mayRaiseFPException = 1, Uses = [FPSCR_RM] in {
 def VTOSIRD : AVConv1IsD_Encode<0b11101, 0b11, 0b1101, 0b1011,
                                 (outs SPR:$Sd), (ins DPR:$Dm),
                                 IIC_fpCVTDI, "vcvtr", ".s32.f64\t$Sd, $Dm",
@@ -1865,7 +1875,7 @@ class AVConv1XInsD_Encode<bits<5> op1, bits<2> op2, bits<4> op3, bits<4> op4,
   let Predicates = [HasVFP2, HasDPVFP];
 }
 
-let isUnpredicable = 1 in {
+let isUnpredicable = 1, mayRaiseFPException = 1 in {
 
 def VTOSHH : AVConv1XInsS_Encode<0b11101, 0b11, 0b1110, 0b1001, 0,
                        (outs SPR:$dst), (ins SPR:$a, fbits16:$fbits),
@@ -1891,8 +1901,9 @@ def VTOULH : AVConv1XInsS_Encode<0b11101, 0b11, 0b1111, 0b1001, 1,
              Requires<[HasFullFP16]>,
              Sched<[WriteFPCVT]>;
 
-} // End of 'let isUnpredicable = 1 in'
+} // End of 'let isUnpredicable = 1, mayRaiseFPException = 1 in'
 
+let mayRaiseFPException = 1 in {
 def VTOSHS : AVConv1XInsS_Encode<0b11101, 0b11, 0b1110, 0b1010, 0,
                        (outs SPR:$dst), (ins SPR:$a, fbits16:$fbits),
                  IIC_fpCVTSI, "vcvt", ".s16.f32\t$dst, $a, $fbits", []>,
@@ -1948,6 +1959,7 @@ def VTOULD : AVConv1XInsD_Encode<0b11101, 0b11, 0b1111, 0b1011, 1,
                        (outs DPR:$dst), (ins DPR:$a, fbits32:$fbits),
                  IIC_fpCVTDI, "vcvt", ".u32.f64\t$dst, $a, $fbits", []>,
              Sched<[WriteFPCVT]>;
+} // let mayRaiseFPException = 1
 
 // Fixed-Point to FP:
 

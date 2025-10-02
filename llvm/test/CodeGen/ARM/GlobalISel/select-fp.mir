@@ -93,7 +93,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK-NEXT: [[VADDS:%[0-9]+]]:spr = nofpexcept VADDS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
+    ; CHECK-NEXT: [[VADDS:%[0-9]+]]:spr = nofpexcept VADDS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $s0 = COPY [[VADDS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $s0
@@ -124,7 +124,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK-NEXT: [[VADDD:%[0-9]+]]:dpr = nofpexcept VADDD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
+    ; CHECK-NEXT: [[VADDD:%[0-9]+]]:dpr = nofpexcept VADDD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $d0 = COPY [[VADDD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0(s64) = COPY $d0
@@ -155,7 +155,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK-NEXT: [[VSUBS:%[0-9]+]]:spr = nofpexcept VSUBS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
+    ; CHECK-NEXT: [[VSUBS:%[0-9]+]]:spr = nofpexcept VSUBS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $s0 = COPY [[VSUBS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $s0
@@ -186,7 +186,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK-NEXT: [[VSUBD:%[0-9]+]]:dpr = nofpexcept VSUBD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
+    ; CHECK-NEXT: [[VSUBD:%[0-9]+]]:dpr = nofpexcept VSUBD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $d0 = COPY [[VSUBD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0(s64) = COPY $d0
@@ -217,7 +217,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK-NEXT: [[VMULS:%[0-9]+]]:spr = nofpexcept VMULS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
+    ; CHECK-NEXT: [[VMULS:%[0-9]+]]:spr = nofpexcept VMULS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $s0 = COPY [[VMULS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $s0
@@ -248,7 +248,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK-NEXT: [[VMULD:%[0-9]+]]:dpr = nofpexcept VMULD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
+    ; CHECK-NEXT: [[VMULD:%[0-9]+]]:dpr = nofpexcept VMULD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $d0 = COPY [[VMULD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0(s64) = COPY $d0
@@ -279,7 +279,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK-NEXT: [[VDIVS:%[0-9]+]]:spr = nofpexcept VDIVS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
+    ; CHECK-NEXT: [[VDIVS:%[0-9]+]]:spr = nofpexcept VDIVS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $s0 = COPY [[VDIVS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $s0
@@ -310,7 +310,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK-NEXT: [[VDIVD:%[0-9]+]]:dpr = nofpexcept VDIVD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
+    ; CHECK-NEXT: [[VDIVD:%[0-9]+]]:dpr = nofpexcept VDIVD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $d0 = COPY [[VDIVD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0(s64) = COPY $d0
@@ -398,7 +398,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:spr = COPY $s1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:spr = COPY $s2
-    ; CHECK-NEXT: [[VFMAS:%[0-9]+]]:spr = nofpexcept VFMAS [[COPY2]], [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
+    ; CHECK-NEXT: [[VFMAS:%[0-9]+]]:spr = nofpexcept VFMAS [[COPY2]], [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $s0 = COPY [[VFMAS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $s0
@@ -433,7 +433,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:dpr = COPY $d1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:dpr = COPY $d2
-    ; CHECK-NEXT: [[VFMAD:%[0-9]+]]:dpr = nofpexcept VFMAD [[COPY2]], [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
+    ; CHECK-NEXT: [[VFMAD:%[0-9]+]]:dpr = nofpexcept VFMAD [[COPY2]], [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $d0 = COPY [[VFMAD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0(s64) = COPY $d0
@@ -464,7 +464,7 @@ body:             |
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:spr = COPY $s0
-    ; CHECK-NEXT: [[VCVTDS:%[0-9]+]]:dpr = nofpexcept VCVTDS [[COPY]], 14 /* CC::al */, $noreg, implicit $fpscr
+    ; CHECK-NEXT: [[VCVTDS:%[0-9]+]]:dpr = nofpexcept VCVTDS [[COPY]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $d0 = COPY [[VCVTDS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0(s32) = COPY $s0
@@ -491,7 +491,7 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:dpr = COPY $d0
-    ; CHECK-NEXT: [[VCVTSD:%[0-9]+]]:spr = nofpexcept VCVTSD [[COPY]], 14 /* CC::al */, $noreg, implicit $fpscr
+    ; CHECK-NEXT: [[VCVTSD:%[0-9]+]]:spr = nofpexcept VCVTSD [[COPY]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $s0 = COPY [[VCVTSD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s64) = COPY $d0
@@ -518,7 +518,7 @@ body:             |
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:spr = COPY $s0
-    ; CHECK-NEXT: [[VTOSIZS:%[0-9]+]]:spr = VTOSIZS [[COPY]], 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: [[VTOSIZS:%[0-9]+]]:spr = nofpexcept VTOSIZS [[COPY]], 14 /* CC::al */, $noreg
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[VTOSIZS]]
     ; CHECK-NEXT: $r0 = COPY [[COPY1]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
@@ -546,7 +546,7 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:dpr = COPY $d0
-    ; CHECK-NEXT: [[VTOSIZD:%[0-9]+]]:spr = VTOSIZD [[COPY]], 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: [[VTOSIZD:%[0-9]+]]:spr = nofpexcept VTOSIZD [[COPY]], 14 /* CC::al */, $noreg
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[VTOSIZD]]
     ; CHECK-NEXT: $r0 = COPY [[COPY1]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
@@ -574,7 +574,7 @@ body:             |
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:spr = COPY $s0
-    ; CHECK-NEXT: [[VTOUIZS:%[0-9]+]]:spr = VTOUIZS [[COPY]], 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: [[VTOUIZS:%[0-9]+]]:spr = nofpexcept VTOUIZS [[COPY]], 14 /* CC::al */, $noreg
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[VTOUIZS]]
     ; CHECK-NEXT: $r0 = COPY [[COPY1]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
@@ -602,7 +602,7 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:dpr = COPY $d0
-    ; CHECK-NEXT: [[VTOUIZD:%[0-9]+]]:spr = VTOUIZD [[COPY]], 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: [[VTOUIZD:%[0-9]+]]:spr = nofpexcept VTOUIZD [[COPY]], 14 /* CC::al */, $noreg
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[VTOUIZD]]
     ; CHECK-NEXT: $r0 = COPY [[COPY1]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
