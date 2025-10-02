@@ -1429,12 +1429,12 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
     return;
   }
   CXXRecordDecl *DefRecord =
-      llvm::dyn_cast_or_null<CXXRecordDecl>(Template->getTemplatedDecl());
+      dyn_cast_or_null<CXXRecordDecl>(Template->getTemplatedDecl());
   if (!DefRecord)
     return;
-  if (DefRecord->getDefinition()) {
+  if (const CXXRecordDecl *Definition = DefRecord->getDefinition()) {
     if (TemplateDecl *DescribedTemplate =
-            DefRecord->getDescribedClassTemplate())
+            Definition->getDescribedClassTemplate())
       Template = DescribedTemplate;
   }
 
