@@ -248,9 +248,7 @@ _mm_sqrt_ss(__m128 __a)
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the square roots of the
 ///    values in the operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
-_mm_sqrt_ps(__m128 __a)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_sqrt_ps(__m128 __a) {
   return __builtin_ia32_sqrtps((__v4sf)__a);
 }
 

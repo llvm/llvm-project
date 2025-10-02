@@ -2996,7 +2996,8 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static llvm::APFloat apply_x86_sqrt(llvm::APFloat Val, const llvm::fltSemantics &Semantics) {
+static llvm::APFloat apply_x86_sqrt(llvm::APFloat Val,
+                                    const llvm::fltSemantics &Semantics) {
   if (Val.isNegative() && !Val.isZero()) {
     return llvm::APFloat::getQNaN(Semantics);
   } else {
@@ -3006,18 +3007,20 @@ static llvm::APFloat apply_x86_sqrt(llvm::APFloat Val, const llvm::fltSemantics 
     llvm::APFloat TempValue(SqrtValue);
 
     bool LosesInfo;
-    TempValue.convert(Semantics, llvm::APFloat::rmNearestTiesToEven, &LosesInfo);
+    TempValue.convert(Semantics, llvm::APFloat::rmNearestTiesToEven,
+                      &LosesInfo);
     return TempValue;
   }
 }
 
 static bool interp__builtin_x86_sqrt(InterpState &S, CodePtr OpPC,
-                                                 const CallExpr *Call,
-                                                 unsigned ID) {
+                                     const CallExpr *Call, unsigned ID) {
   llvm::errs() << "Entering x86 sqrtpd/ps interpretbuiltin\n";
-  
-  llvm::errs() << "BI__builtin_ia32_sqrtpd512 " << X86::BI__builtin_ia32_sqrtpd512 << '\n';
-  llvm::errs() << "BI__builtin_ia32_sqrtps512 " << X86::BI__builtin_ia32_sqrtps512 << '\n';
+
+  llvm::errs() << "BI__builtin_ia32_sqrtpd512 "
+               << X86::BI__builtin_ia32_sqrtpd512 << '\n';
+  llvm::errs() << "BI__builtin_ia32_sqrtps512 "
+               << X86::BI__builtin_ia32_sqrtps512 << '\n';
   llvm::errs() << "Current ID " << ID << '\n';
   llvm::errs() << "GetNumArgs " << Call->getNumArgs() << '\n';
   unsigned NumArgs = Call->getNumArgs();
@@ -3025,7 +3028,7 @@ static bool interp__builtin_x86_sqrt(InterpState &S, CodePtr OpPC,
   const Expr *ArgExpr = Call->getArg(0);
   QualType ArgTy = ArgExpr->getType();
   QualType ResultTy = Call->getType();
-  
+
   if (!(ArgTy->isRealFloatingType() ||
         (ArgTy->isVectorType() &&
          ArgTy->castAs<VectorType>()->getElementType()->isRealFloatingType())))
@@ -3033,7 +3036,8 @@ static bool interp__builtin_x86_sqrt(InterpState &S, CodePtr OpPC,
 
   const llvm::fltSemantics *SemanticsPtr;
   if (ArgTy->isVectorType())
-    SemanticsPtr = &S.getContext().getFloatSemantics(ArgTy->castAs<VectorType>()->getElementType());
+    SemanticsPtr = &S.getContext().getFloatSemantics(
+        ArgTy->castAs<VectorType>()->getElementType());
   else
     SemanticsPtr = &S.getContext().getFloatSemantics(ArgTy);
   const llvm::fltSemantics &Semantics = *SemanticsPtr;
@@ -3048,7 +3052,6 @@ static bool interp__builtin_x86_sqrt(InterpState &S, CodePtr OpPC,
     }
   }
 
-
   // Scalar case
   if (!ArgTy->isVectorType()) {
     llvm::APFloat Val = S.Stk.pop<Floating>().getAPFloat();
@@ -3061,13 +3064,14 @@ static bool interp__builtin_x86_sqrt(InterpState &S, CodePtr OpPC,
   assert(ArgTy->isVectorType());
   llvm::errs() << "Considering this as a vector\n";
   const auto *VT = ArgTy->castAs<VectorType>();
-  
+
   const Pointer &Arg = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
   assert(Arg.getFieldDesc()->isPrimitiveArray());
   assert(Dst.getFieldDesc()->isPrimitiveArray());
-  assert(Arg.getFieldDesc()->getNumElems() == Dst.getFieldDesc()->getNumElems());
+  assert(Arg.getFieldDesc()->getNumElems() ==
+         Dst.getFieldDesc()->getNumElems());
 
   PrimType ElemT = *S.getContext().classify(VT->getElementType());
   unsigned NumElems = VT->getNumElements();

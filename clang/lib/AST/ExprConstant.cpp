@@ -64,11 +64,11 @@
 #include "llvm/Support/SipHash.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cmath>
 #include <cstring>
 #include <functional>
 #include <limits>
 #include <optional>
-#include <cmath>
 
 #define DEBUG_TYPE "exprconstant"
 
@@ -12236,10 +12236,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
-  case X86::BI__builtin_ia32_sqrtpd: 
-  case X86::BI__builtin_ia32_sqrtps: 
+  case X86::BI__builtin_ia32_sqrtpd:
+  case X86::BI__builtin_ia32_sqrtps:
   case X86::BI__builtin_ia32_sqrtpd256:
-  case X86::BI__builtin_ia32_sqrtps256: 
+  case X86::BI__builtin_ia32_sqrtps256:
   case X86::BI__builtin_ia32_sqrtps512:
   case X86::BI__builtin_ia32_sqrtpd512: {
     llvm::errs() << "We are inside sqrtpd/sqrtps\n";
@@ -12248,7 +12248,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
 
     QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
-    const llvm::fltSemantics &Semantics = Info.Ctx.getFloatTypeSemantics(DestEltTy); // Retrieve correct semantics
+    const llvm::fltSemantics &Semantics =
+        Info.Ctx.getFloatTypeSemantics(DestEltTy); // Retrieve correct semantics
     unsigned SourceLen = Source.getVectorLength();
     SmallVector<APValue, 4> ResultElements;
     ResultElements.reserve(SourceLen);
@@ -12263,20 +12264,23 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         if (Value.isNegative() && !Value.isZero()) {
           Value = llvm::APFloat::getQNaN(Value.getSemantics());
         } else {
-double DoubleValue = Value.convertToDouble();
-double SqrtValue = sqrt(DoubleValue);
-llvm::APFloat TempValue(SqrtValue);
-bool LosesInfo;
-auto RetStatus = TempValue.convert(Semantics, llvm::RoundingMode::NearestTiesToEven, &LosesInfo);
-Value = TempValue;
-          //llvm::errs() << "Pushing " << SqrtValue << ' ' << Value2 << " to resultelements\n";
+          double DoubleValue = Value.convertToDouble();
+          double SqrtValue = sqrt(DoubleValue);
+          llvm::APFloat TempValue(SqrtValue);
+          bool LosesInfo;
+          auto RetStatus = TempValue.convert(
+              Semantics, llvm::RoundingMode::NearestTiesToEven, &LosesInfo);
+          Value = TempValue;
+          // llvm::errs() << "Pushing " << SqrtValue << ' ' << Value2 << " to
+          // resultelements\n";
         }
         ResultElements.push_back(APValue(Value));
       } else {
         return false;
       }
     }
-    llvm::errs() << "Outside the loop, about to exit " << "res size " << ResultElements.size() << "\n";
+    llvm::errs() << "Outside the loop, about to exit " << "res size "
+                 << ResultElements.size() << "\n";
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
   }

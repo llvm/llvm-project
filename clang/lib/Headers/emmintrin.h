@@ -256,7 +256,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sqrt_sd(__m128d __a,
 ///    A 128-bit vector of [2 x double].
 /// \returns A 128-bit vector of [2 x double] containing the square roots of the
 ///    values in the operand.
-static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_sqrt_pd(__m128d __a) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sqrt_pd(__m128d __a) {
   return __builtin_ia32_sqrtpd((__v2df)__a);
 }
 
