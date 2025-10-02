@@ -3613,6 +3613,10 @@ def : Pat<(v4i32 (build_vector immSExt5NonZero:$A, immSExt5NonZero:$A,
                                immSExt5NonZero:$A, immSExt5NonZero:$A)),
           (v4i32 (VSPLTISW imm:$A))>;
 
+// Optimize for vector of 1s addition operation
+def : Pat<(add v4i32:$A, (build_vector (i32 1), (i32 1), (i32 1), (i32 1))),
+          (VSUBUWM $A, (v4i32 (COPY_TO_REGCLASS (XXLEQVOnes), VSRC)))>;
+
 // Splat loads.
 def : Pat<(v8i16 (PPCldsplat ForceXForm:$A)),
           (v8i16 (VSPLTHs 3, (MTVSRWZ (LHZX ForceXForm:$A))))>;
