@@ -48,7 +48,6 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
 // CHECK-NEXT: }
-// TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
   ;
@@ -122,7 +121,6 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: }
 // CHECK-NEXT: }
 //
-// TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
   ;
@@ -233,7 +231,6 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: }
 // CHECK-NEXT: }
 //
-// TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
   ;
@@ -291,7 +288,6 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: }
 // CHECK-NEXT: }
 //
-// TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
   ;
@@ -365,7 +361,6 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: }
 // CHECK-NEXT: }
 //
-// TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
   ;
@@ -420,7 +415,6 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
 // CHECK-NEXT: }
-// TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
   ;
