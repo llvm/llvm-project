@@ -179,6 +179,9 @@ class ParserHead;
 /// Wrapper around SmallVector to only allow access as push and pop on the
 /// stack. Makes sure that there are no "free accesses" on the stack to preserve
 /// its state.
+/// This class also keep tracks of the Wasm labels defined by different ops,
+/// which can be targeted by control flow ops. This can be modeled as part of
+/// the Value Stack as Wasm control flow ops can only target enclosing labels.
 class ValueStack {
 private:
   struct LabelLevel {
@@ -308,16 +311,19 @@ private:
     }
   }
 
-  struct NestingContext {
-    NestingContext(ExpressionParser &parser, LabelLevelOpInterface levelOp)
+  ///
+  /// RAII guard class for creating a nesting level
+  ///
+  struct NestingContextGuard {
+    NestingContextGuard(ExpressionParser &parser, LabelLevelOpInterface levelOp)
         : parser{parser} {
       parser.addNestingContextLevel(levelOp);
     }
-    NestingContext(NestingContext &&other) : parser{other.parser} {
+    NestingContextGuard(NestingContextGuard &&other) : parser{other.parser} {
       other.shouldDropOnDestruct = false;
     }
-    NestingContext(NestingContext const &) = delete;
-    ~NestingContext() {
+    NestingContextGuard(NestingContextGuard const &) = delete;
+    ~NestingContextGuard() {
       if (shouldDropOnDestruct)
         parser.dropNestingContextLevel();
     }
@@ -342,11 +348,11 @@ private:
 
   llvm::FailureOr<FunctionType> getFuncTypeFor(OpBuilder &builder,
                                                TypeIdxRecord type) {
-    if (type.id > symbols.moduleFuncTypes.size())
+    if (type.id >= symbols.moduleFuncTypes.size())
       return emitError(*currentOpLoc,
-                       "Type index references nonexistent type: ")
-             << type.id << ". Only " << symbols.moduleFuncTypes.size()
-             << " types are registered.";
+                       "type index references nonexistent type (")
+             << type.id << "). Only " << symbols.moduleFuncTypes.size()
+             << " types are registered";
     return symbols.moduleFuncTypes[type.id];
   }
 
@@ -386,7 +392,7 @@ private:
                     FilterT parseEndBytes = {}) {
     OpBuilder::InsertionGuard guard{builder};
     builder.setInsertionPointToStart(blockToFill);
-    LDBG() << "Parsing a block of type "
+    LDBG() << "parsing a block of type "
            << builder.getFunctionType(blockToFill->getArgumentTypes(),
                                       resTypes);
     auto nC = addNesting(levelOp);
@@ -400,7 +406,7 @@ private:
     if (failed(returnOperands))
       return failure();
     builder.create<BlockReturnOp>(opLoc, *returnOperands);
-    LDBG() << "End of parsing of a block";
+    LDBG() << "end of parsing of a block";
     return bodyParsingRes->endingByte;
   }
 
@@ -413,8 +419,8 @@ public:
   parse(OpBuilder &builder,
         ByteSequence<ExpressionParseEnd...> parsingEndFilters);
 
-  NestingContext addNesting(LabelLevelOpInterface levelOp) {
-    return NestingContext{*this, levelOp};
+  NestingContextGuard addNesting(LabelLevelOpInterface levelOp) {
+    return NestingContextGuard{*this, levelOp};
   }
 
   FailureOr<llvm::SmallVector<Value>> popOperands(TypeRange operandTypes) {
@@ -902,7 +908,7 @@ parsed_inst_t ValueStack::popOperands(TypeRange operandTypes, Location *opLoc) {
     return emitError(*opLoc,
                      "stack doesn't contain enough values. trying to get ")
            << operandTypes.size() << " operands on a stack containing only "
-           << values.size() << " values.";
+           << values.size() << " values";
   size_t stackIdxOffset = values.size() - operandTypes.size();
   SmallVector<Value> res{};
   res.reserve(operandTypes.size());
@@ -911,8 +917,7 @@ parsed_inst_t ValueStack::popOperands(TypeRange operandTypes, Location *opLoc) {
     Type stackType = operand.getType();
     if (stackType != operandTypes[i])
       return emitError(*opLoc, "invalid operand type on stack. expecting ")
-             << operandTypes[i] << ", value on stack is of type " << stackType
-             << ".";
+             << operandTypes[i] << ", value on stack is of type " << stackType;
     LDBG() << "    POP: " << operand;
     res.push_back(operand);
   }
@@ -1155,7 +1160,7 @@ parsed_inst_t ExpressionParser::parseSetOrTee(OpBuilder &builder) {
   if (valueStack.empty())
     return emitError(
         *currentOpLoc,
-        "invalid stack access, trying to access a value on an empty stack.");
+        "invalid stack access, trying to access a value on an empty stack");
 
   parsed_inst_t poppedOp = popOperands(locals[*id].getType().getElementType());
   if (failed(poppedOp))
@@ -1588,7 +1593,7 @@ private:
     if (tid.id >= symbols.moduleFuncTypes.size())
       return emitError(loc, "invalid type id: ")
              << tid.id << ". Only " << symbols.moduleFuncTypes.size()
-             << " type registration.";
+             << " type registrations";
     FunctionType type = symbols.moduleFuncTypes[tid.id];
     std::string symbol = symbols.getNewFuncSymbolName();
     auto funcOp = FuncImportOp::create(builder, loc, symbol, moduleName,
@@ -1656,7 +1661,7 @@ public:
     FileLineColLoc magicLoc = parser.getLocation();
     FailureOr<StringRef> magic = parser.consumeNBytes(wasmHeader.size());
     if (failed(magic) || magic->compare(wasmHeader)) {
-      emitError(magicLoc, "source file does not contain valid Wasm header.");
+      emitError(magicLoc, "source file does not contain valid Wasm header");
       return;
     }
     auto const expectedVersionString = StringRef{"\1\0\0\0", 4};
