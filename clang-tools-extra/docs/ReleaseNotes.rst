@@ -54,6 +54,10 @@ Potentially Breaking Changes
   :program:`clang-tidy-20`. Users should use the check-specific options of the
   same name instead.
 
+- Removed `clang-analyzer-*` check from default checks in :program:`clang-tidy`.
+  From now on, users should specify explicitly that they want CSA checks to run
+  in :program:`clang-tidy`.
+
 - Renamed :program:`clang-tidy`'s option name of check
   :doc:`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` from
@@ -157,6 +161,10 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py`
   scripts by adding the `-hide-progress` option to suppress progress and
   informational messages.
+
+- Removed `clang-analyzer-*` check from default checks in :program:`clang-tidy`.
+  From now on, users should specify explicitly that they want CSA checks to run
+  in :program:`clang-tidy`.
 
 New checks
 ^^^^^^^^^^
