@@ -106,7 +106,7 @@ concept BinaryDefaultedFalse = false;
 
 template <template <typename...> concept C, typename T>
 struct S {
-    template <C TT> // expected-note 2{{because 'int' does not satisfy 'UnaryFalse'}}
+    template <C TT> // expected-note {{because 'int' does not satisfy 'UnaryFalse'}}
     void f(TT); // expected-note {{ignored}}
     void g(C auto); // expected-note {{ignored}} \
                     // expected-note {{because 'int' does not satisfy 'UnaryFalse'}}
@@ -171,7 +171,7 @@ concept BinaryDefaultedFalse = false;
 
 template <template <typename...> concept C, typename T>
 struct S {
-    template <C TT> // expected-note 2{{because 'int' does not satisfy 'UnaryFalse'}}
+    template <C TT> // expected-note {{because 'int' does not satisfy 'UnaryFalse'}}
     void f(TT); // expected-note {{ignored}}
     void g(C auto); // expected-note {{ignored}} \
                     // expected-note {{because 'int' does not satisfy 'UnaryFalse'}}

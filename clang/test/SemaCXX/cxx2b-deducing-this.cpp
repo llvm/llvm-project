@@ -1257,13 +1257,13 @@ void f() {
     (&A::e)(a, a);
     // expected-error@-1 {{no matching function for call to 'e'}} \
     // expected-note@#tpl-address-e{{candidate template ignored: constraints not satisfied [with T = A, U = A]}} \
-    // expected-note@#tpl-address-e{{because '__is_same(A, int)' evaluated to false}}
+    // expected-note@#tpl-address-e{{because '__is_same(tpl_address::A, int)' evaluated to false}}
 
     (&A::e<A>)(a, 0);
     (&A::e<A>)(a, a);
     // expected-error@-1 {{no matching function for call to 'e'}} \
     // expected-note@#tpl-address-e{{candidate template ignored: constraints not satisfied [with T = A, U = A]}} \
-    // expected-note@#tpl-address-e{{because '__is_same(A, int)' evaluated to false}}
+    // expected-note@#tpl-address-e{{because '__is_same(tpl_address::A, int)' evaluated to false}}
 
     (&A::e<A, int>)(a, 0);
 
@@ -1273,12 +1273,12 @@ void f() {
     (&A::f<A>)(a);
     // expected-error@-1 {{no matching function for call to 'f'}} \
     // expected-note@#tpl-address-f{{candidate template ignored: constraints not satisfied [with T = A]}} \
-    // expected-note@#tpl-address-f{{because '__is_same(A, int)' evaluated to false}}
+    // expected-note@#tpl-address-f{{because '__is_same(tpl_address::A, int)' evaluated to false}}
 
     (&A::f)(a);
     // expected-error@-1 {{no matching function for call to 'f'}} \
     // expected-note@#tpl-address-f{{candidate template ignored: constraints not satisfied [with T = A]}} \
-    // expected-note@#tpl-address-f{{because '__is_same(A, int)' evaluated to false}}
+    // expected-note@#tpl-address-f{{because '__is_same(tpl_address::A, int)' evaluated to false}}
 
     (&A::g)(a);
     (&A::g)(a, 0);
