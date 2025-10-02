@@ -359,24 +359,13 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
   return success();
 }
 
-static void generateVerifiers(irdl::detail::dictionary &dict,
-                              irdl::OperationOp op, const OpStrings &strings) {
-  SmallVector<std::string> verifierHelpers;
-  SmallVector<std::string> verifierCalls;
+static void generateRegionConstraintVerifiers(
+    irdl::detail::dictionary &dict, irdl::OperationOp op,
+    const OpStrings &strings, SmallVectorImpl<std::string> &verifierHelpers,
+    SmallVectorImpl<std::string> &verifierCalls) {
   auto regionsOp = op.getOp<irdl::RegionsOp>();
-  if (strings.opRegionNames.empty() || !regionsOp) {
-    // Currently IRDL regions are the only reason to generate a nontrivial
-    // verifier, though this will likely change as
-    // https://github.com/llvm/llvm-project/issues/158040 is implemented
-    std::string verifierDef = llvm::formatv(R"(
-::llvm::LogicalResult {0}::verifyInvariantsImpl() {{
-  return ::mlir::success();
-})",
-                                            strings.opCppName);
-    dict["OP_VERIFIER_HELPERS"] = "";
-    dict["OP_VERIFIER"] = verifierDef;
+  if (strings.opRegionNames.empty() || !regionsOp)
     return;
-  }
 
   for (size_t i = 0; i < strings.opRegionNames.size(); ++i) {
     std::string regionName = strings.opRegionNames[i];
@@ -447,6 +436,15 @@ static void generateVerifiers(irdl::detail::dictionary &dict,
                                           helperFnName, i, regionName)
                                 .str());
   }
+}
+
+static void generateVerifiers(irdl::detail::dictionary &dict,
+                              irdl::OperationOp op, const OpStrings &strings) {
+  SmallVector<std::string> verifierHelpers;
+  SmallVector<std::string> verifierCalls;
+
+  generateRegionConstraintVerifiers(dict, op, strings, verifierHelpers,
+                                    verifierCalls);
 
   // Add an overall verifier that sequences the helper calls
   std::string verifierDef =
