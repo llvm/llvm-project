@@ -28,8 +28,9 @@ template<typename T> requires requires {
   requires S<T>{};
   // expected-error@-1{{atomic constraint must be of type 'bool' (found 'S<int>')}}
   // expected-note@-2{{while checking the satisfaction}}
-  // expected-note@-3{{while checking the satisfaction of nested requirement}}
-  // expected-note@-5{{while substituting template arguments}}
+  // expected-note@-3{{in instantiation of requirement}}
+  // expected-note@-4{{while checking the satisfaction}}
+  // expected-note@-6{{while substituting template arguments}}
   // expected-note@#F3INST{{while checking constraint satisfaction}}
   // expected-note@#F3INST{{while substituting deduced template arguments into function template 'f3' [with T = int]}}
   //

@@ -160,10 +160,6 @@ C++23 Feature Support
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
-- Clang now normalizes constraints before checking whether they are satisfied, as mandated by the standard.
-  As a result, Clang no longer incorrectly diagnoses substitution failures in template arguments only
-  used in concept-ids, and produces better diagnostics for satisfaction failure. (#GH61811) (#GH135190)
-
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -249,8 +245,6 @@ Non-comprehensive list of changes in this release
   specifiers, it also must be used within a template context.
 
 - ``__builtin_assume_dereferenceable`` now accepts non-constant size operands.
-
-- Fixed a crash when the second argument to ``__builtin_assume_aligned`` was not constant (#GH161314)
 
 New Compiler Flags
 ------------------
@@ -450,6 +444,7 @@ Bug Fixes to AST Handling
   legal representation. This is fixed because ElaboratedTypes don't exist anymore. (#GH43179) (#GH68670) (#GH92757)
 - Fix unrecognized html tag causing undesirable comment lexing (#GH152944)
 - Fix comment lexing of special command names (#GH152943)
+- Use `extern` as a hint to continue parsing when recovering from a malformed declaration.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
