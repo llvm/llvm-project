@@ -1191,7 +1191,7 @@ bool X86LowerAMXCast::combineTilezero(IntrinsicInst *Cast) {
 
   IRBuilder<> Builder(Cast);
   Value *NewInst =
-      Builder.CreateIntrinsic( Intrinsic::x86_tilezero_internal, {}, {Row, Col});
+      Builder.CreateIntrinsic(Intrinsic::x86_tilezero_internal, {}, {Row, Col});
   Cast->replaceAllUsesWith(NewInst);
   return true;
 }
