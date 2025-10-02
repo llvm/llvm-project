@@ -39,6 +39,7 @@ private:
   void collectBindingInfo(Module &M);
   uint32_t getAndReserveFirstUnusedBinding(uint32_t DescSet);
   void replaceImplicitBindingCalls(Module &M);
+  void verifyUniqueOrderIdPerResource(SmallVectorImpl<CallInst *> &Calls);
 
   // A map from descriptor set to a bit vector of used binding numbers.
   std::vector<BitVector> UsedBindings;
@@ -92,30 +93,31 @@ void SPIRVLegalizeImplicitBinding::collectBindingInfo(Module &M) {
             cast<ConstantInt>(B->getArgOperand(OrderIdArgIdx))->getZExtValue();
         return OrderA < OrderB;
       });
+}
 
+void SPIRVLegalizeImplicitBinding::verifyUniqueOrderIdPerResource(
+    SmallVectorImpl<CallInst *> &Calls) {
   // Check that the order Id is unique per resource.
-  for (uint32_t i = 1; i < ImplicitBindingCalls.size(); ++i) {
+  for (uint32_t i = 1; i < Calls.size(); ++i) {
     const uint32_t OrderIdArgIdx = 0;
     const uint32_t DescSetArgIdx = 1;
     const uint32_t OrderA =
-        cast<ConstantInt>(
-            ImplicitBindingCalls[i - 1]->getArgOperand(OrderIdArgIdx))
+        cast<ConstantInt>(Calls[i - 1]->getArgOperand(OrderIdArgIdx))
             ->getZExtValue();
     const uint32_t OrderB =
-        cast<ConstantInt>(ImplicitBindingCalls[i]->getArgOperand(OrderIdArgIdx))
+        cast<ConstantInt>(Calls[i]->getArgOperand(OrderIdArgIdx))
             ->getZExtValue();
     if (OrderA == OrderB) {
       const uint32_t DescSetA =
-          cast<ConstantInt>(
-              ImplicitBindingCalls[i - 1]->getArgOperand(DescSetArgIdx))
+          cast<ConstantInt>(Calls[i - 1]->getArgOperand(DescSetArgIdx))
               ->getZExtValue();
       const uint32_t DescSetB =
-          cast<ConstantInt>(
-              ImplicitBindingCalls[i]->getArgOperand(DescSetArgIdx))
+          cast<ConstantInt>(Calls[i]->getArgOperand(DescSetArgIdx))
               ->getZExtValue();
-      assert(DescSetA == DescSetB &&
-             "If two implicit binding calls have the same order ID, they must "
-             "also have the same descriptor set.");
+      if (DescSetA != DescSetB) {
+        report_fatal_error("Implicit binding calls with the same order ID must "
+                           "have the same descriptor set");
+      }
     }
   }
 }
@@ -180,6 +182,7 @@ bool SPIRVLegalizeImplicitBinding::runOnModule(Module &M) {
   if (ImplicitBindingCalls.empty()) {
     return false;
   }
+  verifyUniqueOrderIdPerResource(ImplicitBindingCalls);
 
   replaceImplicitBindingCalls(M);
   return true;

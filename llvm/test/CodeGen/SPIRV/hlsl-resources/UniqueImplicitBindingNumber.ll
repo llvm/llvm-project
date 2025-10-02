@@ -1,6 +1,5 @@
-; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv1.6-vulkan1.3-library %s -o - 
-; This is to test that all resources, even if they have different descriptor sets, get unique binding numbers
-; XFAIL: *
+; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; CHECK-ERROR: LLVM ERROR: Implicit binding calls with the same order ID must have the same descriptor set
 
 @.str = private unnamed_addr constant [2 x i8] c"b\00", align 1
 @.str.2 = private unnamed_addr constant [2 x i8] c"c\00", align 1
