@@ -47,12 +47,12 @@ entry:
 ; CHECK-NEXT: .quad   0
 ;; Number of unique direct callees.
 ; CHECK-NEXT: .byte	  3
-;; Number of unique indirect target type IDs.
-; CHECK-NEXT: .byte   3
 ;; Direct callees.
 ; CHECK-NEXT: .quad	direct_foo
 ; CHECK-NEXT: .quad	direct_bar
 ; CHECK-NEXT: .quad	direct_baz
+;; Number of unique indirect target type IDs.
+; CHECK-NEXT: .byte   3
 ;; Indirect type IDs.
 ; CHECK-NEXT: .quad   4524972987496481828
 ; CHECK-NEXT: .quad   3498816979441845844

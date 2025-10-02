@@ -1713,11 +1713,11 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   //    c. LSB bit 2 is set to 1 if there are indirect callees.
   //    d. Rest of the 5 bits in Flags are reserved for any future use.
   // 3) Function entry PC.
-  // 4) FunctionTypeID if the function is indirect target and its type id is
-  // known, otherwise it is set to 0.
+  // 4) FunctionTypeID if the function is indirect target and its type id
+  //    is known, otherwise it is set to 0.
   // 5) Number of unique direct callees, if at least one exists.
-  // 6) Number of unique indirect target type IDs, if at least one exists.
-  // 7) For each unique direct callee, the callee's PC.
+  // 6) For each unique direct callee, the callee's PC.
+  // 7) Number of unique indirect target type IDs, if at least one exists.
   // 8) Each unique indirect target type id.
   OutStreamer->emitInt8(CallGraphSectionFormatVersion::V_0);
   OutStreamer->emitInt8(Flags);
@@ -1728,16 +1728,18 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   else
     OutStreamer->emitInt64(0);
 
-  if (DirectCallees.size() > 0)
+  if (DirectCallees.size() > 0) {
     OutStreamer->emitULEB128IntValue(DirectCallees.size());
-  if (IndirectCalleeTypeIDs.size() > 0)
+    for (const auto &CalleeSymbol : DirectCallees)
+      OutStreamer->emitSymbolValue(CalleeSymbol, TM.getProgramPointerSize());
+    FuncCGInfo.DirectCallees.clear();
+  }
+  if (IndirectCalleeTypeIDs.size() > 0) {
     OutStreamer->emitULEB128IntValue(IndirectCalleeTypeIDs.size());
-  for (const auto &CalleeSymbol : DirectCallees)
-    OutStreamer->emitSymbolValue(CalleeSymbol, TM.getProgramPointerSize());
-  FuncCGInfo.DirectCallees.clear();
-  for (const auto &CalleeTypeId : IndirectCalleeTypeIDs)
-    OutStreamer->emitInt64(CalleeTypeId);
-  FuncCGInfo.IndirectCalleeTypeIDs.clear();
+    for (const auto &CalleeTypeId : IndirectCalleeTypeIDs)
+      OutStreamer->emitInt64(CalleeTypeId);
+    FuncCGInfo.IndirectCalleeTypeIDs.clear();
+  }
   // End of emitting call graph section contents.
   OutStreamer->popSection();
 }
