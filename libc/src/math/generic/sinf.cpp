@@ -22,7 +22,7 @@
     defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT) &&                       \
     defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
 
-#include "sincosf_float_eval.h"
+#include "src/__support/math/sincosf_float_eval.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
