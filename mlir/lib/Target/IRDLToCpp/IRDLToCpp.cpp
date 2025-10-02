@@ -141,14 +141,6 @@ static void fillDict(irdl::detail::dictionary &dict, const OpStrings &strings) {
   dict["OP_RESULT_INITIALIZER_LIST"] =
       resultCount ? joinNameList(strings.opResultNames) : "{\"\"}";
   dict["OP_REGION_COUNT"] = std::to_string(regionCount);
-  dict["OP_ADD_REGIONS"] = regionCount
-                               ? std::string(llvm::formatv(
-                                     R"(for (unsigned i = 0; i != {0}; ++i) {{
-    (void)odsState.addRegion();
-  }
-)",
-                                     regionCount))
-                               : "";
 }
 
 /// Fills a dictionary with values from DialectStrings

@@ -21,7 +21,9 @@ void __OP_CPP_NAME__::build(::mlir::OpBuilder &odsBuilder,
   odsState.addOperands(operands);
   odsState.addAttributes(attributes);
   odsState.addTypes(resultTypes);
-  __OP_ADD_REGIONS__
+  for (unsigned i = 0; i != __OP_REGION_COUNT__; ++i) {
+    (void)odsState.addRegion();
+  }
 }
 
 __OP_CPP_NAME__
