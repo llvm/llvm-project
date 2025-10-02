@@ -428,7 +428,7 @@ TargetSP TargetList::FindTargetWithProcess(Process *process) const {
   return target_sp;
 }
 
-TargetSP TargetList::FindTargetWithUniqueID(lldb::user_id_t id) const {
+TargetSP TargetList::FindTargetByGloballyUniqueID(lldb::user_id_t id) const {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
   auto it = llvm::find_if(m_target_list, [id](const TargetSP &item) {
     return item->GetGloballyUniqueID() == id;

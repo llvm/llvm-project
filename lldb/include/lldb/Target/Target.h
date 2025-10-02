@@ -603,7 +603,7 @@ public:
   /// Get the globally unique ID for this target.
   ///
   /// This ID is unique across all debugger instances and all targets,
-  /// not just within this debugger's target list. The ID is assigned
+  /// within the same lldb process. The ID is assigned
   /// during target construction and remains constant for the target's lifetime.
   /// The first target created (typically the dummy target) gets ID 1.
   ///
@@ -1663,7 +1663,8 @@ protected:
   bool m_is_dummy_target;
   unsigned m_next_persistent_variable_index = 0;
   lldb::user_id_t m_target_unique_id =
-      LLDB_INVALID_TARGET_ID; /// The unique ID assigned to this target
+      LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID; /// The globally unique ID
+                                              /// assigned to this target
   /// An optional \a lldb_private::Trace object containing processor trace
   /// information of this target.
   lldb::TraceSP m_trace_sp;

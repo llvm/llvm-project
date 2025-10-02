@@ -1637,7 +1637,7 @@ lldb::user_id_t SBTarget::GetGloballyUniqueID() const {
 
   if (TargetSP target_sp = GetSP())
     return target_sp->GetGloballyUniqueID();
-  return LLDB_INVALID_TARGET_ID;
+  return LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID;
 }
 
 SBError SBTarget::SetLabel(const char *label) {

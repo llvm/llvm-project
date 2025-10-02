@@ -983,12 +983,13 @@ uint32_t SBDebugger::GetIndexOfTarget(lldb::SBTarget target) {
   return m_opaque_sp->GetTargetList().GetIndexOfTarget(target.GetSP());
 }
 
-SBTarget SBDebugger::FindTargetWithUniqueID(lldb::user_id_t id) {
+SBTarget SBDebugger::FindTargetByGloballyUniqueID(lldb::user_id_t id) {
   LLDB_INSTRUMENT_VA(this, id);
   SBTarget sb_target;
   if (m_opaque_sp) {
     // No need to lock, the target list is thread safe
-    sb_target.SetSP(m_opaque_sp->GetTargetList().FindTargetWithUniqueID(id));
+    sb_target.SetSP(
+        m_opaque_sp->GetTargetList().FindTargetByGloballyUniqueID(id));
   }
   return sb_target;
 }

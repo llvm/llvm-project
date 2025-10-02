@@ -357,11 +357,12 @@ public:
 
   const char *GetLabel() const;
 
-  /// Get the globally unique ID for this target.
+  /// Get the globally unique ID for this target. This ID is unique
+  /// across all debugger instances within the same lldb process.
   ///
   /// \return
-  ///     The globally unique ID for this target, or LLDB_INVALID_TARGET_ID if
-  ///     the target is invalid.
+  ///     The globally unique ID for this target, or
+  ///     LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID if the target is invalid.
   lldb::user_id_t GetGloballyUniqueID() const;
 
   SBError SetLabel(const char *label);

@@ -168,7 +168,7 @@ public:
   ///     A shared pointer to a target object. The returned shared
   ///     pointer will contain nullptr if no target objects has a
   ///     matching target ID.
-  lldb::TargetSP FindTargetWithUniqueID(lldb::user_id_t id) const;
+  lldb::TargetSP FindTargetByGloballyUniqueID(lldb::user_id_t id) const;
 
   lldb::TargetSP GetTargetSP(Target *target) const;
 
