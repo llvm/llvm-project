@@ -206,8 +206,8 @@ Filler::findDelayInstr(MachineBasicBlock &MBB,
     if (!done)
       --I;
 
-    // Skip debug and generic instructions.
-    if (I->isDebugInstr() || (I->getOpcode() <= TargetOpcode::GENERIC_OP_END))
+    // Skip debug and meta instructions.
+    if (I->isDebugInstr() || I->isMetaInstruction())
       continue;
 
     if (I->hasUnmodeledSideEffects() || I->isInlineAsm() || I->isPosition() ||
