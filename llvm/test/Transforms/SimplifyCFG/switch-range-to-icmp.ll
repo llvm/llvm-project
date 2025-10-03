@@ -306,11 +306,11 @@ else:
 define i32 @one_case_1(i32 %x) {
 ; CHECK-LABEL: @one_case_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X:%.*]], -5
-; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[X_OFF]], 3
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X:%.*]], -10
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[X_OFF]], 1
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[TMP0:%.*]], [[A]] ], [ [[TMP1:%.*]], [[B]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[TMP0:%.*]], [[B]] ], [ [[TMP1:%.*]], [[A]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       a:
 ; CHECK-NEXT:    [[TMP0]] = call i32 @f(i32 0)

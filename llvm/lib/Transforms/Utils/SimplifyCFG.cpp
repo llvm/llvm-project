@@ -5838,10 +5838,24 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   bool IsWrapping = false;
   SmallVectorImpl<ConstantInt *> *ContiguousCases = &CasesA;
   SmallVectorImpl<ConstantInt *> *OtherCases = &CasesB;
+
+  // Only one icmp is needed when there is only one case.
+  if (!HasDefault && CasesA.size() == 1) {
+    ContiguousCasesMax = CasesA[0];
+    ContiguousCasesMin = CasesA[0];
+    ContiguousDest = DestA;
+    OtherDest = DestB;
+  } else if (CasesB.size() == 1) {
+    ContiguousCasesMax = CasesB[0];
+    ContiguousCasesMin = CasesB[0];
+    ContiguousDest = DestB;
+    OtherDest = DestA;
+    std::swap(ContiguousCases, OtherCases);
+  }
   // Correctness: Cases to the default destination cannot be contiguous cases.
-  if (!HasDefault && !CasesA.empty() &&
-      casesAreContiguous(SI->getCondition(), CasesA, ContiguousCasesMin,
-                         ContiguousCasesMax, IsWrapping)) {
+  else if (!HasDefault && !CasesA.empty() &&
+           casesAreContiguous(SI->getCondition(), CasesA, ContiguousCasesMin,
+                              ContiguousCasesMax, IsWrapping)) {
     ContiguousDest = DestA;
     OtherDest = DestB;
   } else if (casesAreContiguous(SI->getCondition(), CasesB, ContiguousCasesMin,
