@@ -277,6 +277,9 @@ private:
 
   std::optional<llvm::StringRef> FindMangledSymbol(SegmentOffset so);
 
+  llvm::StringRef StripMangledFunctionName(llvm::StringRef mangled,
+                                           PdbTypeSymId func_ty);
+
   llvm::BumpPtrAllocator m_allocator;
 
   lldb::addr_t m_obj_load_address = 0;

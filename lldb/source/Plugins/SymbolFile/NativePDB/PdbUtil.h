@@ -161,18 +161,6 @@ PdbTypeSymId GetBestPossibleDecl(PdbTypeSymId id, llvm::pdb::TpiStream &tpi);
 
 size_t GetSizeOfType(PdbTypeSymId id, llvm::pdb::TpiStream &tpi);
 
-/// Strips the leading underscore of mangled __cdecl functions.
-///
-/// If the name comes from another calling convention, it is returned as-is.
-///
-/// \pre \c mangled must not be from a 64-bit environment as __cdecl names
-///     aren't mangled there.
-///
-/// \param[in] mangled A mangled symbol name
-/// \returns The stripped name if this name is a mangled __cdecl one. Otherwise,
-///     the input is returned.
-llvm::StringRef StripCDeclPrefix(llvm::StringRef mangled);
-
 } // namespace npdb
 } // namespace lldb_private
 
