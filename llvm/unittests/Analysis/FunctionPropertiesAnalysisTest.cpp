@@ -46,8 +46,8 @@ public:
     MAM.registerPass([VocabVector = std::move(VocabVector)]() mutable {
       return IR2VecVocabAnalysis(std::move(VocabVector));
     });
-    IR2VecVocab =
-        std::make_unique<ir2vec::Vocabulary>(ir2vec::Vocabulary::createDummyVocabForTest(1));
+    IR2VecVocab = std::make_unique<ir2vec::Vocabulary>(
+        ir2vec::Vocabulary::createDummyVocabForTest(1));
     MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
     FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
     FAM.registerPass([&] { return DominatorTreeAnalysis(); });
