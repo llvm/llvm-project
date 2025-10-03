@@ -130,6 +130,9 @@ private:
   void emitTraitMethods(const InterfaceTrait &trait);
   /// Emit a trait method.
   void emitTraitMethod(const InterfaceMethod &method);
+  /// Generate a using declaration for a trait method.
+  void genTraitMethodUsingDecl(const InterfaceTrait &trait,
+                               const InterfaceMethod &method);
 
   //===--------------------------------------------------------------------===//
   // OpAsm{Type,Attr}Interface Default Method Emission
@@ -176,6 +179,9 @@ private:
   StringRef valueType;
   /// The prefix/suffix of the TableGen def name, either "Attr" or "Type".
   StringRef defType;
+
+  /// The set of using declarations for trait methods.
+  llvm::StringSet<> interfaceUsingNames;
 };
 } // namespace
 
@@ -632,8 +638,10 @@ void DefGen::emitTraitMethods(const InterfaceTrait &trait) {
     // Don't declare if the method has a body. Or if the method has a default
     // implementation and the def didn't request that it always be declared.
     if (method.getBody() || (method.getDefaultImplementation() &&
-                             !alwaysDeclared.count(method.getName())))
+                             !alwaysDeclared.count(method.getName()))) {
+      genTraitMethodUsingDecl(trait, method);
       continue;
+    }
     emitTraitMethod(method);
   }
 }
@@ -647,6 +655,15 @@ void DefGen::emitTraitMethod(const InterfaceMethod &method) {
     params.emplace_back(param.type, param.name);
   defCls.addMethod(method.getReturnType(), method.getName(), props,
                    std::move(params));
+}
+
+void DefGen::genTraitMethodUsingDecl(const InterfaceTrait &trait,
+                                     const InterfaceMethod &method) {
+  std::string name = (llvm::Twine(trait.getFullyQualifiedTraitName()) + "<" +
+                      def.getCppClassName() + ">::" + method.getName())
+                         .str();
+  if (interfaceUsingNames.insert(name).second)
+    defCls.declare<UsingDeclaration>(std::move(name));
 }
 
 //===----------------------------------------------------------------------===//
