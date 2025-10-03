@@ -142,11 +142,6 @@ constexpr bool llvm_is_multithreaded() { return LLVM_ENABLE_THREADS; }
     /// the thread shall remain on the actual CPU socket.
     LLVM_ABI std::optional<unsigned>
     compute_cpu_socket(unsigned ThreadPoolNum) const;
-
-    /// If true, the thread pool will attempt to coordinate with a GNU Make
-    /// jobserver, acquiring a job slot before processing a task. If no
-    /// jobserver is found in the environment, this is ignored.
-    bool UseJobserver = false;
   };
 
   /// Build a strategy from a number of threads as a string provided in \p Num.
@@ -212,19 +207,6 @@ constexpr bool llvm_is_multithreaded() { return LLVM_ENABLE_THREADS; }
     ThreadPoolStrategy S;
     S.Limit = true;
     S.ThreadsRequested = TaskCount;
-    return S;
-  }
-
-  /// Returns a thread strategy that attempts to coordinate with a GNU Make
-  /// jobserver. The number of active threads will be limited by the number of
-  /// available job slots. If no jobserver is detected in the environment, this
-  /// strategy falls back to the default hardware_concurrency() behavior.
-  inline ThreadPoolStrategy jobserver_concurrency() {
-    ThreadPoolStrategy S;
-    S.UseJobserver = true;
-    // We can still request all threads be created, as they will simply
-    // block waiting for a job slot if the jobserver is the limiting factor.
-    S.ThreadsRequested = 0; // 0 means 'use all available'
     return S;
   }
 
