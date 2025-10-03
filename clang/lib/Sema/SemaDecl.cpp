@@ -8382,6 +8382,11 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   emitReadOnlyPlacementAttrWarning(*this, NewVD);
 
+  if (NewVD) {
+    if (S->getFlags() & Scope::ControlScope)
+      IfScopeVars[NewVD] = S;
+  }
+
   return NewVD;
 }
 

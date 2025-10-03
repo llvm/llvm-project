@@ -1571,6 +1571,12 @@ private:
   Sema(const Sema &) = delete;
   void operator=(const Sema &) = delete;
 
+  /// Tracks condition variables declared in `if` statements,
+  /// mapping each VarDecl to the `Scope*` where it was created.
+  /// Used to detect references to these variables outside their
+  /// lifetime (e.g. in the `else` branch or after the `if`).
+  llvm::DenseMap<const VarDecl*, Scope*> IfScopeVars;
+
   /// The handler for the FileChanged preprocessor events.
   ///
   /// Used for diagnostics that implement custom semantic analysis for #include

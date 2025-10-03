@@ -2425,6 +2425,33 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
     if (const auto *BE = BD->getBinding())
       E->setObjectKind(BE->getObjectKind());
 
+  auto IsScopeContaining = [](Scope *S, Scope *DeclaredScope) -> bool {
+    while (S) {
+      if (S == DeclaredScope)
+        return true;
+
+      // If we hit an if/else scope boundary, stop searching
+      if (S->getFlags() & Scope::ControlScope)
+        return false;
+
+      S = S->getParent();
+    }
+
+    return false;
+  };
+
+  if (auto *VD = dyn_cast_or_null<VarDecl>(D)) {
+    auto It = IfScopeVars.find(VD);
+
+    if (It != IfScopeVars.end()) {
+      Scope *DeclaredScope = It->second;
+
+      if (!IsScopeContaining(CurScope, DeclaredScope))
+        Diag(NameInfo.getLoc(), diag::warn_out_of_scope_var_usage)
+          << VD->getName();
+    }
+  }
+
   return E;
 }
 
