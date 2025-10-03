@@ -481,10 +481,10 @@ void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
   std::size_t errorsEmitted{0};
   for (const Message *msg : sorted) {
     bool shouldSkipMsg{false};
-    // Don't emit two identical messages for the same location
-    // At the same location messages are sorted by the order they were
-    // added to the list, which is a decent proxy for the causality
-    // of the messages.
+    // Don't emit two identical messages for the same location.
+    // At the same location, messages are sorted by the order they were
+    // added to the Messages buffer, which is a decent proxy for the
+    // causality of the messages.
     if (!msgsWithLastLocation.empty()) {
       if (msgsWithLastLocation[0]->AtSameLocation(*msg)) {
         for (const Message *msgAtThisLocation : msgsWithLastLocation) {
