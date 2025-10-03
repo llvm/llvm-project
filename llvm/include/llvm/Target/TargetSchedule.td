@@ -377,6 +377,11 @@ class MCSchedPredicate<MCInstPredicate P> : SchedPredicateBase {
   SchedMachineModel SchedModel = ?;
 }
 
+class FeatureSchedPredicate<SubtargetFeature SF> : SchedPredicateBase {
+  SubtargetFeature Feature = SF;
+  SchedMachineModel SchedModel = ?;
+}
+
 // Define a predicate to determine which SchedVariant applies to a
 // particular MachineInstr. The code snippet is used as an
 // if-statement's expression. Available variables are MI, SchedModel,

@@ -1586,6 +1586,17 @@ static void emitPredicates(const CodeGenSchedTransition &T,
         continue;
       }
 
+      if (Rec->isSubClassOf("FeatureSchedPredicate")) {
+        const Record *FR = Rec->getValueAsDef("Feature");
+        if (PE.shouldExpandForMC())
+          SS << "STI.";
+        else
+          SS << "this->";
+        SS << "hasFeature(" << PE.getTargetName() << "::" << FR->getName()
+           << ")";
+        continue;
+      }
+
       // Expand this legacy predicate and wrap it around braces if there is more
       // than one predicate to expand.
       SS << ((NumNonTruePreds > 1) ? "(" : "")
@@ -1618,7 +1629,8 @@ static void emitSchedModelHelperEpilogue(raw_ostream &OS,
 
 static bool hasMCSchedPredicates(const CodeGenSchedTransition &T) {
   return all_of(T.PredTerm, [](const Record *Rec) {
-    return Rec->isSubClassOf("MCSchedPredicate");
+    return Rec->isSubClassOf("MCSchedPredicate") ||
+           Rec->isSubClassOf("FeatureSchedPredicate");
   });
 }
 
