@@ -409,15 +409,11 @@ define i64 @sh3adduw_2(i64 %0, i64 %1) {
 ;
 ; RV64ZBA-LABEL: sh3adduw_2:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a0, a0, 3
-; RV64ZBA-NEXT:    srli a0, a0, 3
 ; RV64ZBA-NEXT:    sh3add.uw a0, a0, a1
 ; RV64ZBA-NEXT:    ret
 ;
 ; RV64XANDESPERF-LABEL: sh3adduw_2:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    slli a0, a0, 3
-; RV64XANDESPERF-NEXT:    srli a0, a0, 3
 ; RV64XANDESPERF-NEXT:    nds.lea.d.ze a0, a1, a0
 ; RV64XANDESPERF-NEXT:    ret
   %3 = shl i64 %0, 3
@@ -436,15 +432,11 @@ define i64 @sh3adduw_3(i64 %0, i64 %1) {
 ;
 ; RV64ZBA-LABEL: sh3adduw_3:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a0, a0, 3
-; RV64ZBA-NEXT:    srli a0, a0, 3
 ; RV64ZBA-NEXT:    sh3add.uw a0, a0, a1
 ; RV64ZBA-NEXT:    ret
 ;
 ; RV64XANDESPERF-LABEL: sh3adduw_3:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    slli a0, a0, 3
-; RV64XANDESPERF-NEXT:    srli a0, a0, 3
 ; RV64XANDESPERF-NEXT:    nds.lea.d.ze a0, a1, a0
 ; RV64XANDESPERF-NEXT:    ret
   %3 = shl i64 %0, 3
@@ -2681,7 +2673,7 @@ define i64 @srliw_3_sh3add(ptr %0, i32 signext %1) {
 ; RV64ZBA-LABEL: srliw_3_sh3add:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srliw a1, a1, 3
-; RV64ZBA-NEXT:    sh3add.uw a0, a1, a0
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
 ;
