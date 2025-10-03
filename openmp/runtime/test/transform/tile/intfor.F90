@@ -1,7 +1,6 @@
 ! This test checks lowering of the OpenMP tile directive
 ! It is done 3 times corresponding to every possible fraction of the last
 ! iteration before passing beyond UB.
-! XFAIL: *
 ! RUN: %flang %flags %openmp_flags -fopenmp-version=51 -DUB=16 %s -o %t-ub16.exe
 ! RUN: %flang %flags %openmp_flags -fopenmp-version=51 -DUB=17 %s -o %t-ub17.exe
 ! RUN: %flang %flags %openmp_flags -fopenmp-version=51 -DUB=18 %s -o %t-ub18.exe
