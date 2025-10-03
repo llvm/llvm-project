@@ -2600,8 +2600,8 @@ public:
   StringRef getDirectory() const { return getScope()->getDirectory(); }
   std::optional<StringRef> getSource() const { return getScope()->getSource(); }
 
-  /// Walk through \a getInlinedAt() and return the \a DILocation of the outermost
-  /// call site in the inlining chain.
+  /// Walk through \a getInlinedAt() and return the \a DILocation of the
+  /// outermost call site in the inlining chain.
   const DILocation *getInlinedAtLocation() const {
     const DILocation *Current = this;
     while (const DILocation *Next = Current->getInlinedAt())
@@ -2609,7 +2609,8 @@ public:
     return Current;
   }
 
-  // Return the \a DILocalScope of the outermost call site in the inlining chain.
+  // Return the \a DILocalScope of the outermost call site in the inlining
+  // chain.
   DILocalScope *getInlinedAtScope() const {
     return getInlinedAtLocation()->getScope();
   }

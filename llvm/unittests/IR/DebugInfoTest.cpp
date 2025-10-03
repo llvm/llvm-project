@@ -1434,7 +1434,8 @@ TEST(DILocationTest, InlinedAtMethodsWithMultipleLevels) {
   EXPECT_EQ(OutermostLoc->getInlinedAt(), nullptr);
   EXPECT_EQ(cast<DISubprogram>(OutermostLoc->getScope())->getName(), "main");
 
-  // Test getInlinedAtScope() - should return the scope of the outermost location.
+  // Test getInlinedAtScope() - should return the scope of the outermost
+  // location.
   DILocalScope *InlinedAtScope = InnermostLoc->getInlinedAtScope();
   ASSERT_TRUE(InlinedAtScope);
   EXPECT_TRUE(isa<DISubprogram>(InlinedAtScope));
