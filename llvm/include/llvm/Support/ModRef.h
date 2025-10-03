@@ -186,7 +186,7 @@ public:
   setTargetMemLocationModRef(ModRefInfo MR = ModRefInfo::NoModRef) {
     MemoryEffectsBase FRMB = none();
     for (unsigned I = static_cast<int>(LocationEnum::FirstTarget);
-         I < static_cast<int>(LocationEnum::Last); I++)
+         I <= static_cast<int>(LocationEnum::Last); I++)
       FRMB.setModRef(static_cast<Location>(I), MR);
     return FRMB;
   }
