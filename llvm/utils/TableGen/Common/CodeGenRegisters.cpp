@@ -1189,7 +1189,7 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
     // causes some failures in MIPS - perhaps they have duplicate register name
     // entries? (or maybe there's a reason for it - I don't know much about this
     // code, just drive-by refactoring)
-    RegistersByName.try_emplace(Reg.TheDef->getValueAsString("AsmName"), &Reg);
+    RegistersByName.try_emplace(Reg.getName().lower(), &Reg);
 
   // Precompute all sub-register maps.
   // This will create Composite entries for all inferred sub-register indices.
