@@ -271,6 +271,10 @@ const char *Language::GetNameForLanguageType(LanguageType language) {
     return language_names[eLanguageTypeUnknown].name;
 }
 
+llvm::StringRef Language::GetDisplayNameForLanguageType(LanguageType language) {
+  return SourceLanguage(language).GetDescription();
+}
+
 void Language::PrintSupportedLanguagesForExpressions(Stream &s,
                                                      llvm::StringRef prefix,
                                                      llvm::StringRef suffix) {
