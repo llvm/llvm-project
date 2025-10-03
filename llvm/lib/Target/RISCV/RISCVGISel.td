@@ -126,8 +126,6 @@ let Predicates = [HasAtomicLdSt, IsRV64] in {
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//
 
-def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
-
 def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
   KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0), 0);
   return Known.isNonNegative();
