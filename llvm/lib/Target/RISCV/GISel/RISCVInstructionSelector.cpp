@@ -736,6 +736,62 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_SEXT: {
+    bool IsSigned = Opc != TargetOpcode::G_ZEXT;
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI->getType(SrcReg);
+    unsigned SrcSize = SrcTy.getSizeInBits();
+
+    if (SrcTy.isVector())
+      return false; // Should be handled by imported patterns.
+
+    assert((*RBI.getRegBank(DstReg, *MRI, TRI)).getID() ==
+               RISCV::GPRBRegBankID &&
+           "Unexpected ext regbank");
+
+    // Use addiw SrcReg, 0 (sext.w) for i32.
+    if (IsSigned && SrcSize == 32) {
+      MI.setDesc(TII.get(RISCV::ADDIW));
+      MI.addOperand(MachineOperand::CreateImm(0));
+      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    }
+
+    // Use add.uw SrcReg, X0 (zext.w) for i32 with Zba.
+    if (!IsSigned && SrcSize == 32 && STI.hasStdExtZba()) {
+      MI.setDesc(TII.get(RISCV::ADD_UW));
+      MI.addOperand(MachineOperand::CreateReg(RISCV::X0, /*isDef=*/false));
+      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    }
+
+    // Use sext.h/zext.h for i16 with Zbb.
+    if (SrcSize == 16 && STI.hasStdExtZbb()) {
+      MI.setDesc(TII.get(IsSigned       ? RISCV::SEXT_H
+                         : STI.isRV64() ? RISCV::ZEXT_H_RV64
+                                        : RISCV::ZEXT_H_RV32));
+      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    }
+
+    // Use pack(w) SrcReg, X0 for i16 zext with Zbkb.
+    if (!IsSigned && SrcSize == 16 && STI.hasStdExtZbkb()) {
+      MI.setDesc(TII.get(STI.is64Bit() ? RISCV::PACKW : RISCV::PACK));
+      MI.addOperand(MachineOperand::CreateReg(RISCV::X0, /*isDef=*/false));
+      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    }
+
+    // Fall back to shift pair.
+    auto ShiftLeft =
+        MIB.buildInstr(RISCV::SLLI, {&RISCV::GPRRegClass}, {SrcReg})
+            .addImm(STI.getXLen() - SrcSize);
+    constrainSelectedInstRegOperands(*ShiftLeft, TII, TRI, RBI);
+    auto ShiftRight = MIB.buildInstr(IsSigned ? RISCV::SRAI : RISCV::SRLI,
+                                     {DstReg}, {ShiftLeft})
+                          .addImm(STI.getXLen() - SrcSize);
+    constrainSelectedInstRegOperands(*ShiftRight, TII, TRI, RBI);
+    MI.eraseFromParent();
+    return true;
+  }
   case TargetOpcode::G_FCONSTANT: {
     // TODO: Use constant pool for complex constants.
     Register DstReg = MI.getOperand(0).getReg();
