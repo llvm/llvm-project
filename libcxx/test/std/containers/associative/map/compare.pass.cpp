@@ -10,7 +10,7 @@
 
 // template <class Key, class T, class Compare = less<Key>,
 //           class Allocator = allocator<pair<const Key, T>>>
-// class map
+// class map // constexpr since C++26
 
 // https://llvm.org/PR16538
 // https://llvm.org/PR16549
@@ -23,11 +23,11 @@
 
 struct Key {
   template <typename T>
-  Key(const T&) {}
-  bool operator<(const Key&) const { return false; }
+  TEST_CONSTEXPR_CXX26 Key(const T&) {}
+  TEST_CONSTEXPR_CXX26 bool operator<(const Key&) const { return false; }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   typedef std::map<Key, int> MapT;
   typedef MapT::iterator Iter;
   typedef std::pair<Iter, bool> IterBool;
@@ -50,6 +50,13 @@ int main(int, char**) {
     assert(!result2.second);
     assert(map[Key(0)] == 42);
   }
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }
