@@ -144,8 +144,8 @@ class FuseOp(FuseOp):
         loop_types: Union[Type, Sequence[Type]],
         target: Union[Operation, Value, OpView],
         *,
-        tile_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
-        tile_interchange: OptionalIntList = None,
+        tile_sizes: Optional[MixedValues] = None,
+        tile_interchange: Optional[MixedValues] = None,
         apply_cleanup: Optional[bool] = False,
         use_forall: Optional[bool] = False,
         loc=None,
@@ -158,8 +158,8 @@ class FuseOp(FuseOp):
         self,
         target: Union[Operation, Value, OpView],
         *,
-        tile_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
-        tile_interchange: OptionalIntList = None,
+        tile_sizes: Optional[MixedValues] = None,
+        tile_interchange: Optional[MixedValues] = None,
         apply_cleanup: Optional[bool] = False,
         use_forall: Optional[bool] = False,
         loc=None,
@@ -172,8 +172,8 @@ class FuseOp(FuseOp):
         loop_types_or_target: Union[Type, Sequence[Type], Operation, OpView, Value],
         target_or_none: Optional[Union[Operation, Value, OpView]] = None,
         *,
-        tile_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
-        tile_interchange: OptionalIntList = None,
+        tile_sizes: Optional[MixedValues] = None,
+        tile_interchange: Optional[MixedValues] = None,
         apply_cleanup: Optional[bool] = False,
         use_forall: Optional[bool] = False,
         loc=None,
@@ -181,9 +181,17 @@ class FuseOp(FuseOp):
     ):
         tile_sizes = tile_sizes if tile_sizes else []
         tile_interchange = tile_interchange if tile_interchange else []
-        _, tile_sizes, _ = _dispatch_dynamic_index_list(tile_sizes)
-        _, tile_interchange, _ = _dispatch_dynamic_index_list(tile_interchange)
-        num_loops = 1 if use_forall else sum(0 if v == 0 else 1 for v in tile_sizes)
+        (
+            dynamic_tile_sizes,
+            static_tile_sizes,
+            _,
+        ) = _dispatch_dynamic_index_list(tile_sizes)
+        (
+            dynamic_tile_interchange,
+            static_tile_interchange,
+            _,
+        ) = _dispatch_dynamic_index_list(tile_interchange)
+        num_loops = 1 if use_forall else sum(0 if v == 0 else 1 for v in static_tile_sizes)
 
         if isinstance(loop_types_or_target, (Operation, Value, OpView)):
             loop_types = [transform.AnyOpType.get()] * num_loops
@@ -200,8 +208,10 @@ class FuseOp(FuseOp):
             target.type,
             loop_types,
             target,
-            tile_sizes=tile_sizes,
-            tile_interchange=tile_interchange,
+            tile_sizes=dynamic_tile_sizes,
+            tile_interchange=dynamic_tile_interchange,
+            static_tile_sizes=static_tile_sizes,
+            static_tile_interchange=static_tile_interchange,
             apply_cleanup=apply_cleanup,
             use_forall=use_forall,
             loc=loc,
