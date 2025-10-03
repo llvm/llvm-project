@@ -67,6 +67,8 @@ Improvements and New Features
 
 - The performance of ``std::find`` has been improved by up to 2x for integral types
 
+- The ``num_get::do_get`` integral overloads have been optimized, resulting in a performance improvement of up to 2.8x.
+
 Deprecations and Removals
 -------------------------
 
