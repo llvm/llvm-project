@@ -293,3 +293,33 @@ void FromPaper1() {
 void FromPaper2(_BitInt(8) a1, _BitInt(24) a2) {
   static_assert(is_same<decltype(a1 * (_BitInt(32))a2), _BitInt(32)>::value, "");
 }
+
+// Check sub-byte integer vector size and alignment, expecting packing.
+template <int Bits, int N>
+using packed_vec_t = _BitInt(Bits) __attribute__((ext_vector_type(N)));
+void SubByteVecPacking() {
+  static_assert(sizeof(packed_vec_t<2, 2>) == 1);
+  static_assert(sizeof(packed_vec_t<2, 3>) == 1);
+  static_assert(sizeof(packed_vec_t<2, 4>) == 1);
+  static_assert(sizeof(packed_vec_t<2, 8>) == 2);
+  static_assert(sizeof(packed_vec_t<2, 16>) == 4);
+  static_assert(sizeof(packed_vec_t<2, 32>) == 8);
+  static_assert(sizeof(packed_vec_t<4, 2>) == 1);
+  static_assert(sizeof(packed_vec_t<4, 4>) == 2);
+  static_assert(sizeof(packed_vec_t<4, 8>) == 4);
+  static_assert(sizeof(packed_vec_t<4, 16>) == 8);
+  static_assert(sizeof(packed_vec_t<4, 32>) == 16);
+
+  static_assert(alignof(packed_vec_t<2, 2>) == 1);
+  static_assert(alignof(packed_vec_t<2, 3>) == 1);
+  static_assert(alignof(packed_vec_t<2, 4>) == 1);
+  static_assert(alignof(packed_vec_t<2, 8>) == 2);
+  static_assert(alignof(packed_vec_t<2, 16>) == 4);
+  static_assert(alignof(packed_vec_t<2, 32>) == 8);
+  static_assert(alignof(packed_vec_t<4, 2>) == 1);
+  static_assert(alignof(packed_vec_t<4, 3>) == 2);
+  static_assert(alignof(packed_vec_t<4, 4>) == 2);
+  static_assert(alignof(packed_vec_t<4, 8>) == 4);
+  static_assert(alignof(packed_vec_t<4, 16>) == 8);
+  static_assert(alignof(packed_vec_t<4, 32>) == 16);
+}

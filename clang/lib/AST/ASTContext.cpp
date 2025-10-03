@@ -2093,10 +2093,15 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   case Type::ExtVector:
   case Type::Vector: {
     const auto *VT = cast<VectorType>(T);
-    TypeInfo EltInfo = getTypeInfo(VT->getElementType());
-    Width = VT->isPackedVectorBoolType(*this)
-                ? VT->getNumElements()
-                : EltInfo.Width * VT->getNumElements();
+    QualType Elt = VT->getElementType();
+    uint64_t EltWidth = [&]() -> uint64_t {
+      if (VT->isPackedVectorBoolType(*this))
+        return 1;
+      if (Elt.getTypePtrOrNull() && Elt.getTypePtr()->isBitIntType())
+        return Elt.getTypePtr()->castAs<BitIntType>()->getNumBits();
+      return getTypeInfo(Elt).Width;
+    }();
+    Width = EltWidth * VT->getNumElements();
     // Enforce at least byte size and alignment.
     Width = std::max<unsigned>(8, Width);
     Align = std::max<unsigned>(8, Width);
