@@ -19,9 +19,6 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 
-// #include "flang/Optimizer/Dialect/FIRAttr.h"
-// #include "flang/Optimizer/Dialect/FIRType.h"
-
 //===----------------------------------------------------------------------===//
 // MIFDialect
 //===----------------------------------------------------------------------===//
