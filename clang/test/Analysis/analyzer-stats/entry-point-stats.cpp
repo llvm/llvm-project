@@ -5,9 +5,7 @@
 // RUN: %csv2json "%t.csv" | FileCheck --check-prefix=CHECK %s
 //
 // CHECK:      {
-// CHECK-NEXT:   "c:@F@fib#i#": {
-// CHECK-NEXT:     "File": "{{.*}}entry-point-stats.cpp",
-// CHECK-NEXT:     "DebugName": "fib(unsigned int)",
+// CHECK-NEXT:   "fib(unsigned int)": {
 // CHECK-NEXT:     "NumBlocks": "{{[0-9]+}}",
 // CHECK-NEXT:     "NumBlocksUnreachable": "{{[0-9]+}}",
 // CHECK-NEXT:     "NumCTUSteps": "{{[0-9]+}}",
@@ -42,9 +40,7 @@
 // CHECK-NEXT:     "MaxValidBugClassSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "PathRunningTime": "{{[0-9]+}}"
 // CHECK-NEXT:   },
-// CHECK-NEXT:   "c:@F@main#I#**C#": {
-// CHECK-NEXT:     "File": "{{.*}}entry-point-stats.cpp",
-// CHECK-NEXT:     "DebugName": "main(int, char **)",
+// CHECK-NEXT:   "main(int, char **)": {
 // CHECK-NEXT:     "NumBlocks": "{{[0-9]+}}",
 // CHECK-NEXT:     "NumBlocksUnreachable": "{{[0-9]+}}",
 // CHECK-NEXT:     "NumCTUSteps": "{{[0-9]+}}",
