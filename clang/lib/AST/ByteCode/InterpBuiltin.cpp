@@ -2825,13 +2825,6 @@ static bool interp__builtin_ia32_test_op(
 
   assert(LHS.getNumElems() == RHS.getNumElems());
 
-  assert(LHS.getFieldDesc()->isPrimitiveArray() &&
-         RHS.getFieldDesc()->isPrimitiveArray());
-
-  if (!S.getASTContext().hasSameUnqualifiedType(getElemType(LHS),
-                                                getElemType(RHS)))
-    return false;
-
   unsigned SourceLen = LHS.getNumElems();
   const QualType ElemQT = getElemType(LHS);
   const OptPrimType ElemPT = S.getContext().classify(ElemQT);
