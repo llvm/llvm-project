@@ -89,6 +89,9 @@ using namespace llvm::PatternMatch;
 static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
                                               cl::Hidden, cl::init(20));
 
+/// Maximum number of instructions to check between assume and context
+/// instruction.
+static constexpr unsigned MaxInstrsToCheckForFree = 16;
 
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,
 /// returns the element type's bitwidth.
@@ -559,6 +562,29 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   }
 
   return false;
+}
+
+bool llvm::willNotFreeBetween(const Instruction *Assume,
+                              const Instruction *CtxI) {
+  if (CtxI->getParent() != Assume->getParent() || !Assume->comesBefore(CtxI))
+    return false;
+  // Make sure the current function cannot arrange for another thread to free on
+  // its behalf.
+  if (!CtxI->getFunction()->hasNoSync())
+    return false;
+
+  // Check if there are any calls between the assume and CtxI that may
+  // free memory.
+  for (const auto &[Idx, I] :
+       enumerate(make_range(Assume->getIterator(), CtxI->getIterator()))) {
+    // Limit number of instructions to walk.
+    if (Idx > MaxInstrsToCheckForFree)
+      return false;
+    if (const auto *CB = dyn_cast<CallBase>(&I))
+      if (!CB->hasFnAttr(Attribute::NoFree))
+        return false;
+  }
+  return true;
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
