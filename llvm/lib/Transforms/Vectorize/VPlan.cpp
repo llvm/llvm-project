@@ -968,23 +968,35 @@ void VPlan::execute(VPTransformState *State) {
     // logic generic during VPlan execution.
     State->CFG.DTU.applyUpdates(
         {{DominatorTree::Delete, ScalarPh, ScalarPh->getSingleSuccessor()}});
-  } else {
-    Loop *OrigLoop =
-        State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
-    // If the original loop is unreachable, we need to delete it.
-    auto Blocks = OrigLoop->getBlocksVector();
-    Blocks.push_back(cast<VPIRBasicBlock>(ScalarPhVPBB)->getIRBasicBlock());
-    for (auto *BB : Blocks)
-      State->LI->removeBlock(BB);
-    State->LI->erase(OrigLoop);
   }
-
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Entry);
   // Generate code for the VPlan, in parts of the vector skeleton, loop body and
   // successor blocks including the middle, exit and scalar preheader blocks.
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
+
+  // If the original loop is unreachable, delete it and all its blocks.
+  if (!ScalarPhVPBB->hasPredecessors()) {
+    // DeleteDeadBlocks will remove single-entry phis. Remove them from the exit
+    // VPIRBBs in VPlan as well, otherwise we would retain references to deleted
+    // IR instructions.
+    for (VPIRBasicBlock *EB : getExitBlocks()) {
+      for (VPRecipeBase &R : make_early_inc_range(EB->phis())) {
+        if (R.getNumOperands() == 1)
+          R.eraseFromParent();
+      }
+    }
+
+    Loop *OrigLoop =
+        State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
+    auto Blocks = OrigLoop->getBlocksVector();
+    Blocks.push_back(cast<VPIRBasicBlock>(ScalarPhVPBB)->getIRBasicBlock());
+    for (auto *BB : Blocks)
+      State->LI->removeBlock(BB);
+    DeleteDeadBlocks(Blocks, &State->CFG.DTU);
+    State->LI->erase(OrigLoop);
+  }
 
   State->CFG.DTU.flush();
 
@@ -1741,6 +1753,16 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
 }
 #endif
 
+bool llvm::canConstantBeExtended(const ConstantInt *CI, Type *NarrowType,
+                                 TTI::PartialReductionExtendKind ExtKind) {
+  APInt TruncatedVal = CI->getValue().trunc(NarrowType->getScalarSizeInBits());
+  unsigned WideSize = CI->getType()->getScalarSizeInBits();
+  APInt ExtendedVal = ExtKind == TTI::PR_SignExtend
+                          ? TruncatedVal.sext(WideSize)
+                          : TruncatedVal.zext(WideSize);
+  return ExtendedVal == CI->getValue();
+}
+
 TargetTransformInfo::OperandValueInfo
 VPCostContext::getOperandInfo(VPValue *V) const {
   if (!V->isLiveIn())
@@ -1774,6 +1796,8 @@ InstructionCost VPCostContext::getScalarizationOverhead(
     if (Op->isLiveIn() ||
         (!AlwaysIncludeReplicatingR &&
          isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op)) ||
+        (isa<VPReplicateRecipe>(Op) &&
+         cast<VPReplicateRecipe>(Op)->getOpcode() == Instruction::Load) ||
         !UniqueOperands.insert(Op).second)
       continue;
     Tys.push_back(toVectorizedTy(Types.inferScalarType(Op), VF));

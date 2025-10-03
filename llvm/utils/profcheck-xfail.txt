@@ -838,8 +838,6 @@ Transforms/InstCombine/2011-02-14-InfLoop.ll
 Transforms/InstCombine/AArch64/sve-intrinsic-sel.ll
 Transforms/InstCombine/AArch64/sve-intrinsic-simplify-binop.ll
 Transforms/InstCombine/AArch64/sve-intrinsic-simplify-shift.ll
-Transforms/InstCombine/add2.ll
-Transforms/InstCombine/add.ll
 Transforms/InstCombine/add-mask.ll
 Transforms/InstCombine/add-shl-mul-umax.ll
 Transforms/InstCombine/add-shl-sdiv-to-srem.ll
@@ -1416,7 +1414,6 @@ Transforms/SimplifyCFG/merge-cond-stores.ll
 Transforms/SimplifyCFG/multiple-phis.ll
 Transforms/SimplifyCFG/PhiBlockMerge.ll
 Transforms/SimplifyCFG/pr48641.ll
-Transforms/SimplifyCFG/preserve-branchweights.ll
 Transforms/SimplifyCFG/preserve-store-alignment.ll
 Transforms/SimplifyCFG/rangereduce.ll
 Transforms/SimplifyCFG/RISCV/select-trunc-i64.ll
@@ -1426,7 +1423,6 @@ Transforms/SimplifyCFG/safe-abs.ll
 Transforms/SimplifyCFG/SimplifyEqualityComparisonWithOnlyPredecessor-domtree-preservation-edgecase.ll
 Transforms/SimplifyCFG/speculate-blocks.ll
 Transforms/SimplifyCFG/speculate-derefable-load.ll
-Transforms/SimplifyCFG/suppress-zero-branch-weights.ll
 Transforms/SimplifyCFG/switch_create-custom-dl.ll
 Transforms/SimplifyCFG/switch_create.ll
 Transforms/SimplifyCFG/switch-dup-bbs.ll

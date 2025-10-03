@@ -15,7 +15,9 @@
 #include <__functional/unary_function.h>
 #include <__fwd/functional.h>
 #include <__type_traits/desugars_to.h>
+#include <__type_traits/is_generic_transparent_comparator.h>
 #include <__type_traits/is_integral.h>
+#include <__type_traits/make_transparent.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -377,6 +379,14 @@ struct less<void> {
   typedef void is_transparent;
 };
 
+template <class _Tp>
+struct __make_transparent<less<_Tp> > {
+  using type _LIBCPP_NODEBUG = less<>;
+};
+
+template <>
+inline const bool __is_generic_transparent_comparator_v<less<>> = true;
+
 template <class _Tp, class _Up>
 inline const bool __desugars_to_v<__less_tag, less<>, _Tp, _Up> = true;
 
@@ -466,6 +476,14 @@ struct greater<void> {
 
 template <class _Tp, class _Up>
 inline const bool __desugars_to_v<__greater_tag, greater<>, _Tp, _Up> = true;
+
+template <class _Tp>
+struct __make_transparent<greater<_Tp>> {
+  using type _LIBCPP_NODEBUG = greater<>;
+};
+
+template <>
+inline const bool __is_generic_transparent_comparator_v<greater<>> = true;
 #endif
 
 // Logical operations
