@@ -13,10 +13,10 @@
 #ifndef MLIR_DIALECT_IRDL_IR_IRDLOPS
 #define MLIR_DIALECT_IRDL_IR_IRDLOPS
 
-include "IRDL.td"
-include "IRDLAttributes.td"
-include "IRDLTypes.td"
-include "IRDLInterfaces.td"
+include "mlir/Dialect/IRDL/IR/IRDL.td"
+include "mlir/Dialect/IRDL/IR/IRDLAttributes.td"
+include "mlir/Dialect/IRDL/IR/IRDLTypes.td"
+include "mlir/Dialect/IRDL/IR/IRDLInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -91,6 +91,7 @@ def IRDL_TypeOp : IRDL_Op<"type",
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat =
     "$sym_name attr-dict-with-keyword custom<SingleBlockRegion>($body)";
+  let hasVerifier = 1;
 }
 
 def IRDL_AttributeOp : IRDL_Op<"attribute",
@@ -126,6 +127,8 @@ def IRDL_AttributeOp : IRDL_Op<"attribute",
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat =
     "$sym_name attr-dict-with-keyword custom<SingleBlockRegion>($body)";
+
+  let hasVerifier = 1;
 }
 
 def IRDL_ParametersOp : IRDL_Op<"parameters",
@@ -202,6 +205,7 @@ def IRDL_OperationOp : IRDL_Op<"operation",
   let assemblyFormat =
     "$sym_name attr-dict-with-keyword custom<SingleBlockRegion>($body)";
   let hasRegionVerifier = true;
+  let hasVerifier = 1;
 }
 
 def IRDL_OperandsOp : IRDL_Op<"operands", [HasParent<"OperationOp">]> {
@@ -597,7 +601,7 @@ def IRDL_AnyOfOp : IRDL_ConstraintOp<"any_of",
     ```
 
     The above program defines a type `complex` inside the dialect `cmath` that
-    can have a single type parameter that can be either `i32`, `i64`, `f32` or
+    has a single type parameter that can be either `i32`, `i64`, `f32` or
     `f64`.
   }];
 
@@ -634,7 +638,7 @@ def IRDL_AllOfOp : IRDL_ConstraintOp<"all_of",
     ```
 
     The above program defines a type `complex` inside the dialect `cmath` that
-    can has one parameter that must be 32-bit long and a float (in other
+    has one parameter that must be 32-bit long and a float (in other
     words, that must be `f32`).
   }];
 

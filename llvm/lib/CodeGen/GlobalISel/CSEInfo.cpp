@@ -385,7 +385,7 @@ GISelInstProfileBuilder::addNodeIDImmediate(int64_t Imm) const {
 
 const GISelInstProfileBuilder &
 GISelInstProfileBuilder::addNodeIDRegNum(Register Reg) const {
-  ID.AddInteger(Reg);
+  ID.AddInteger(Reg.id());
   return *this;
 }
 

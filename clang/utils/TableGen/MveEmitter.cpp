@@ -753,7 +753,7 @@ public:
     OS << "})";
   }
   void morePrerequisites(std::vector<Ptr> &output) const override {
-    output.insert(output.end(), Args.begin(), Args.end());
+    llvm::append_range(output, Args);
   }
 };
 
@@ -1550,18 +1550,14 @@ struct OutputIntrinsic {
   std::string Name;
   ComparableStringVector ParamValues;
   bool operator<(const OutputIntrinsic &rhs) const {
-    if (Name != rhs.Name)
-      return Name < rhs.Name;
-    return ParamValues < rhs.ParamValues;
+    return std::tie(Name, ParamValues) < std::tie(rhs.Name, rhs.ParamValues);
   }
 };
 struct MergeableGroup {
   std::string Code;
   ComparableStringVector ParamTypes;
   bool operator<(const MergeableGroup &rhs) const {
-    if (Code != rhs.Code)
-      return Code < rhs.Code;
-    return ParamTypes < rhs.ParamTypes;
+    return std::tie(Code, ParamTypes) < std::tie(rhs.Code, rhs.ParamTypes);
   }
 };
 
@@ -1629,17 +1625,10 @@ void EmitterBase::EmitBuiltinCG(raw_ostream &OS) {
       for (const auto &OI : kv.second)
         key.push_back(OI.ParamValues[i]);
 
-      auto Found = ParamNumberMap.find(key);
-      if (Found != ParamNumberMap.end()) {
-        // Yes, an existing parameter variable can be reused for this.
-        ParamNumbers.push_back(Found->second);
-        continue;
-      }
-
-      // No, we need a new parameter variable.
-      int ExistingIndex = ParamNumberMap.size();
-      ParamNumberMap[key] = ExistingIndex;
-      ParamNumbers.push_back(ExistingIndex);
+      // Obtain a new parameter variable if we don't have one.
+      int ParamNum =
+          ParamNumberMap.try_emplace(key, ParamNumberMap.size()).first->second;
+      ParamNumbers.push_back(ParamNum);
     }
 
     // Now we're ready to do the pass 2 code generation, which will emit the

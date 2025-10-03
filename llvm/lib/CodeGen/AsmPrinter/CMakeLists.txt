@@ -38,6 +38,7 @@ add_llvm_component_library(LLVMAsmPrinter
   Core
   DebugInfoCodeView
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   MC
   MCParser
   Remarks

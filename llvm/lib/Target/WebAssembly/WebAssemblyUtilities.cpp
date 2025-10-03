@@ -104,16 +104,15 @@ const MachineOperand &WebAssembly::getCalleeOp(const MachineInstr &MI) {
 MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
     MCContext &Ctx, const WebAssemblySubtarget *Subtarget) {
   StringRef Name = "__indirect_function_table";
-  MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(Name));
+  auto *Sym = static_cast<MCSymbolWasm *>(Ctx.lookupSymbol(Name));
   if (Sym) {
     if (!Sym->isFunctionTable())
       Ctx.reportError(SMLoc(), "symbol is not a wasm funcref table");
   } else {
     bool is64 = Subtarget && Subtarget->getTargetTriple().isArch64Bit();
-    Sym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(Name));
+    Sym = static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(Name));
     Sym->setFunctionTable(is64);
     // The default function table is synthesized by the linker.
-    Sym->setUndefined();
   }
   // MVP object files can't have symtab entries for tables.
   if (!(Subtarget && Subtarget->hasCallIndirectOverlong()))
@@ -124,18 +123,18 @@ MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
 MCSymbolWasm *WebAssembly::getOrCreateFuncrefCallTableSymbol(
     MCContext &Ctx, const WebAssemblySubtarget *Subtarget) {
   StringRef Name = "__funcref_call_table";
-  MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(Name));
+  auto *Sym = static_cast<MCSymbolWasm *>(Ctx.lookupSymbol(Name));
   if (Sym) {
     if (!Sym->isFunctionTable())
       Ctx.reportError(SMLoc(), "symbol is not a wasm funcref table");
   } else {
-    Sym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(Name));
+    Sym = static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(Name));
 
     // Setting Weak ensure only one table is left after linking when multiple
     // modules define the table.
     Sym->setWeak(true);
 
-    wasm::WasmLimits Limits = {0, 1, 1};
+    wasm::WasmLimits Limits = {0, 1, 1, 0};
     wasm::WasmTableType TableType = {wasm::ValType::FUNCREF, Limits};
     Sym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
     Sym->setTableType(TableType);

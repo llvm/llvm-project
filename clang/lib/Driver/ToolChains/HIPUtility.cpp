@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPUtility.h"
-#include "Clang.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
@@ -45,7 +44,7 @@ static std::string normalizeForBundler(const llvm::Triple &T,
   return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
                         T.getOSName() + "-" + T.getEnvironmentName())
                            .str()
-                     : T.normalize();
+                     : T.normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
 }
 
 // Collect undefined __hip_fatbin* and __hip_gpubin_handle* symbols from all
@@ -190,8 +189,7 @@ private:
 
         processInput(BufferOrErr.get()->getMemBufferRef());
       } else
-        WorkList.insert(WorkList.end(), CurrentAction->getInputs().begin(),
-                        CurrentAction->getInputs().end());
+        llvm::append_range(WorkList, CurrentAction->getInputs());
     }
   }
 

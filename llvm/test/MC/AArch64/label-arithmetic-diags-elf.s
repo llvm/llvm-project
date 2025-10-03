@@ -1,5 +1,8 @@
-// RUN: not llvm-mc -triple aarch64-elf -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: not llvm-mc -triple aarch64-elf -filetype=obj a.s -o /dev/null 2>&1 | FileCheck a.s
+// RUN: not llvm-mc -triple aarch64-elf -filetype=obj b.s -o /dev/null 2>&1 | FileCheck b.s
 
+//--- a.s
   .data
 b:
   .fill 300
@@ -9,6 +12,7 @@ e:
   // CHECK-NEXT: .byte e - b
   // CHECK-NEXT:       ^
 
+//--- b.s
   .section sec_x
 start:
   .space 5000
@@ -45,24 +49,14 @@ negative:
   // CHECK-NEXT: ^
 
   add w0, w1, #:lo12:external - end
-  // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Unsupported pc-relative fixup kind
+  // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected relocatable expression
   // CHECK-NEXT: add w0, w1, #:lo12:external - end
-  // CHECK-NEXT: ^
 
   cmp w0, #:lo12:external - end
-  // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Unsupported pc-relative fixup kind
-  // CHECK-NEXT: cmp w0, #:lo12:external - end
-  // CHECK-NEXT: ^
+  // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected relocatable expression
 
   add w0, w1, #:got_lo12:external - end
-  // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Unsupported pc-relative fixup kind
-  // CHECK-NEXT: add w0, w1, #:got_lo12:external - end
-  // CHECK-NEXT: ^
-
-  cmp w0, #:got_lo12:external - end
-  // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Unsupported pc-relative fixup kind
-  // CHECK-NEXT: cmp w0, #:got_lo12:external - end
-  // CHECK-NEXT: ^
+  // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected relocatable expression
 
   .section sec_y
 end_across_sec:

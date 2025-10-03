@@ -9,7 +9,7 @@
 // CHECK-RV64-LABEL: define dso_local <vscale x 64 x i1> @test_vlm_v_b1
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.riscv.vlm.nxv64i1.i64(ptr [[BASE]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.riscv.vlm.nxv64i1.p0.i64(ptr [[BASE]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 64 x i1> [[TMP0]]
 //
 vbool1_t test_vlm_v_b1(const uint8_t *base, size_t vl) {
@@ -19,7 +19,7 @@ vbool1_t test_vlm_v_b1(const uint8_t *base, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i1> @test_vlm_v_b2
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i1> @llvm.riscv.vlm.nxv32i1.i64(ptr [[BASE]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i1> @llvm.riscv.vlm.nxv32i1.p0.i64(ptr [[BASE]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i1> [[TMP0]]
 //
 vbool2_t test_vlm_v_b2(const uint8_t *base, size_t vl) {
@@ -29,7 +29,7 @@ vbool2_t test_vlm_v_b2(const uint8_t *base, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i1> @test_vlm_v_b4
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.riscv.vlm.nxv16i1.i64(ptr [[BASE]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.riscv.vlm.nxv16i1.p0.i64(ptr [[BASE]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 vbool4_t test_vlm_v_b4(const uint8_t *base, size_t vl) {
@@ -39,7 +39,7 @@ vbool4_t test_vlm_v_b4(const uint8_t *base, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i1> @test_vlm_v_b8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.riscv.vlm.nxv8i1.i64(ptr [[BASE]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.riscv.vlm.nxv8i1.p0.i64(ptr [[BASE]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i1> [[TMP0]]
 //
 vbool8_t test_vlm_v_b8(const uint8_t *base, size_t vl) {
@@ -49,7 +49,7 @@ vbool8_t test_vlm_v_b8(const uint8_t *base, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i1> @test_vlm_v_b16
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.riscv.vlm.nxv4i1.i64(ptr [[BASE]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.riscv.vlm.nxv4i1.p0.i64(ptr [[BASE]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i1> [[TMP0]]
 //
 vbool16_t test_vlm_v_b16(const uint8_t *base, size_t vl) {
@@ -59,7 +59,7 @@ vbool16_t test_vlm_v_b16(const uint8_t *base, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i1> @test_vlm_v_b32
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.riscv.vlm.nxv2i1.i64(ptr [[BASE]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.riscv.vlm.nxv2i1.p0.i64(ptr [[BASE]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i1> [[TMP0]]
 //
 vbool32_t test_vlm_v_b32(const uint8_t *base, size_t vl) {
@@ -69,7 +69,7 @@ vbool32_t test_vlm_v_b32(const uint8_t *base, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i1> @test_vlm_v_b64
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vlm.nxv1i1.i64(ptr [[BASE]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vlm.nxv1i1.p0.i64(ptr [[BASE]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
 //
 vbool64_t test_vlm_v_b64(const uint8_t *base, size_t vl) {

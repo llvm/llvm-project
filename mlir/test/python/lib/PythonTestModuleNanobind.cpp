@@ -11,9 +11,12 @@
 #include "PythonTestCAPI.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
+#include "mlir/Bindings/Python/Diagnostics.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "nanobind/nanobind.h"
 
 namespace nb = nanobind;
 using namespace mlir::python::nanobind_adaptors;
@@ -34,7 +37,10 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
           mlirDialectHandleLoadDialect(pythonTestDialect, context);
         }
       },
-      nb::arg("context"), nb::arg("load") = true);
+      nb::arg("context"), nb::arg("load") = true,
+      // clang-format off
+      nb::sig("def register_python_test_dialect(context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") ", load: bool = True) -> None"));
+  // clang-format on
 
   m.def(
       "register_dialect",
@@ -43,7 +49,21 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
             mlirGetDialectHandle__python_test__();
         mlirDialectHandleInsertDialect(pythonTestDialect, registry);
       },
-      nb::arg("registry"));
+      nb::arg("registry"),
+      // clang-format off
+      nb::sig("def register_dialect(registry: " MAKE_MLIR_PYTHON_QUALNAME("ir.DialectRegistry") ") -> None"));
+  // clang-format on
+
+  m.def(
+      "test_diagnostics_with_errors_and_notes",
+      [](MlirContext ctx) {
+        mlir::python::CollectDiagnosticsToStringScope handler(ctx);
+        mlirPythonTestEmitDiagnosticWithNote(ctx);
+        throw nb::value_error(handler.takeMessage().c_str());
+      },
+      // clang-format off
+      nb::sig("def test_diagnostics_with_errors_and_notes(arg: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") ", /) -> None"));
+  // clang-format on
 
   mlir_attribute_subclass(m, "TestAttr",
                           mlirAttributeIsAPythonTestTestAttribute,
@@ -53,6 +73,9 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
           [](const nb::object &cls, MlirContext ctx) {
             return cls(mlirPythonTestTestAttributeGet(ctx));
           },
+          // clang-format off
+          nb::sig("def get(cls: object, context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> object"),
+          // clang-format on
           nb::arg("cls"), nb::arg("context").none() = nb::none());
 
   mlir_type_subclass(m, "TestType", mlirTypeIsAPythonTestTestType,
@@ -62,6 +85,9 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
           [](const nb::object &cls, MlirContext ctx) {
             return cls(mlirPythonTestTestTypeGet(ctx));
           },
+          // clang-format off
+          nb::sig("def get(cls: object, context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> object"),
+          // clang-format on
           nb::arg("cls"), nb::arg("context").none() = nb::none());
 
   auto typeCls =
@@ -78,6 +104,9 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
                     shape.size(), shape.data(), mlirIntegerTypeGet(ctx, width),
                     encoding));
               },
+              // clang-format off
+              nb::sig("def get(cls: object, shape: collections.abc.Sequence[int], width: int, context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> object"),
+              // clang-format on
               nb::arg("cls"), nb::arg("shape"), nb::arg("width"),
               nb::arg("context").none() = nb::none());
 
@@ -103,8 +132,10 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
       .attr(MLIR_PYTHON_CAPI_VALUE_CASTER_REGISTER_ATTR)(
           mlirRankedTensorTypeID)(
           nanobind::cpp_function([valueCls](const nb::object &valueObj) {
-            nb::object capsule = mlirApiObjectToCapsule(valueObj);
-            MlirValue v = mlirPythonCapsuleToValue(capsule.ptr());
+            std::optional<nb::object> capsule =
+                mlirApiObjectToCapsule(valueObj);
+            assert(capsule.has_value() && "capsule is not null");
+            MlirValue v = mlirPythonCapsuleToValue(capsule.value().ptr());
             MlirType t = mlirValueGetType(v);
             // This is hyper-specific in order to exercise/test registering a
             // value caster from cpp (but only for a single test case; see

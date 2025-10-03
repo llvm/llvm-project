@@ -301,7 +301,7 @@ struct DeductionFailureInfo {
 
   /// Return the index of the call argument that this deduction
   /// failure refers to, if any.
-  std::optional<unsigned> getCallArgIndex();
+  UnsignedOrNone getCallArgIndex();
 
   /// Free any memory associated with this deduction failure.
   void Destroy();

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXLowerAggrCopies.h"
+#include "NVPTX.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/Constants.h"
@@ -136,10 +137,6 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
 }
 
 } // namespace
-
-namespace llvm {
-void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
-}
 
 INITIALIZE_PASS(NVPTXLowerAggrCopies, "nvptx-lower-aggr-copies",
                 "Lower aggregate copies, and llvm.mem* intrinsics into loops",

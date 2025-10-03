@@ -14,7 +14,7 @@ define amdgpu_kernel void @test_sink_small_offset_global_atomic_fadd_f32(ptr add
 ; OPT:       [[IF]]:
 ; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr float, ptr addrspace(1) [[IN]], i32 7
 ; OPT-NEXT:    [[FADD2:%.*]] = atomicrmw fadd ptr addrspace(1) [[IN_GEP]], float 2.000000e+00 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]], !amdgpu.ignore.denormal.mode [[META0]]
-; OPT-NEXT:    [[VAL:%.*]] = load volatile float, ptr addrspace(1) undef, align 4
+; OPT-NEXT:    [[VAL:%.*]] = load volatile float, ptr addrspace(1) poison, align 4
 ; OPT-NEXT:    br label %[[ENDIF]]
 ; OPT:       [[ENDIF]]:
 ; OPT-NEXT:    [[X:%.*]] = phi float [ [[VAL]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
@@ -55,7 +55,7 @@ entry:
 if:
   %in.gep = getelementptr float, ptr addrspace(1) %in, i32 7
   %fadd2 = atomicrmw fadd ptr addrspace(1) %in.gep, float 2.000000e+00 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
-  %val = load volatile float, ptr addrspace(1) undef
+  %val = load volatile float, ptr addrspace(1) poison
   br label %endif
 
 endif:

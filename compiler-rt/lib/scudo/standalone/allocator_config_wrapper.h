@@ -60,6 +60,10 @@ template <typename AllocatorConfig> struct PrimaryConfig {
     return BaseConfig<AllocatorConfig>::getMaySupportMemoryTagging();
   }
 
+  static constexpr bool getQuarantineDisabled() {
+    return BaseConfig<AllocatorConfig>::getQuarantineDisabled();
+  }
+
 #define PRIMARY_REQUIRED_TYPE(NAME)                                            \
   using NAME = typename AllocatorConfig::Primary::NAME;
 
@@ -92,6 +96,10 @@ template <typename AllocatorConfig> struct SecondaryConfig {
     return BaseConfig<AllocatorConfig>::getMaySupportMemoryTagging();
   }
 
+  static constexpr bool getQuarantineDisabled() {
+    return BaseConfig<AllocatorConfig>::getQuarantineDisabled();
+  }
+
 #define SECONDARY_REQUIRED_TEMPLATE_TYPE(NAME)                                 \
   template <typename T>                                                        \
   using NAME = typename AllocatorConfig::Secondary::template NAME<T>;
@@ -109,6 +117,10 @@ template <typename AllocatorConfig> struct SecondaryConfig {
     //       function.
     static constexpr bool getMaySupportMemoryTagging() {
       return BaseConfig<AllocatorConfig>::getMaySupportMemoryTagging();
+    }
+
+    static constexpr bool getQuarantineDisabled() {
+      return BaseConfig<AllocatorConfig>::getQuarantineDisabled();
     }
 
 #define SECONDARY_CACHE_OPTIONAL(TYPE, NAME, DEFAULT)                          \

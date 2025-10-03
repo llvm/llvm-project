@@ -7,18 +7,17 @@
 # ===----------------------------------------------------------------------===##
 #
 # This file defines the buildkite and github actions builder images.
-# You can build both images using:
+# This images are tagged with <tag>. You can build both images using:
 #
-#   docker compose build
+#   TAG=<tag> docker compose build
 #
 # Or you can select a single image to build
 #
-#  docker compose build buildkite-builder
+#  TAG=test docker compose build actions-builder
 #
 # The final images can be found at
 #
-#  ghcr.io/libcxx/buildkite-builder
-#  ghcr.io/libcxx/actions-builder
+#  ghcr.io/libcxx/libcxx-linux-builder
 #  ghcr.io/libcxx/android-buildkite-builder
 #
 # Members of the github.com/libcxx/ organizations can push new images to the CI.
@@ -39,18 +38,25 @@
 # If you're only looking to run the Docker image locally for debugging a
 # build bot, see the `run-buildbot-container` script located in this directory.
 
+ARG ACTIONS_BASE_IMAGE
 
 # HACK: We set the base image in the docker-compose file depending on the final target (buildkite vs github actions).
 # This means we have a much slower container build, but we can use the same Dockerfile for both targets.
 ARG BASE_IMAGE
 FROM $BASE_IMAGE AS builder-base
 
+# Changing this file causes a rebuild of the image in a GitHub action.
+# However, it does not cause the CI runners to switch to that image
+# automatically, that must be done by updating the SHA in the Github workflow
+# file. The date uses the ISO format YYYY-MM-DD.
+RUN echo "Last forced update executed on 2025-04-28."
+
 # Make sure apt-get doesn't try to prompt for stuff like our time zone, etc.
 ENV DEBIAN_FRONTEND=noninteractive
 
 # populated in the docker-compose file
-ARG GCC_LATEST_VERSION
-ENV GCC_LATEST_VERSION=${GCC_LATEST_VERSION}
+ARG GCC_HEAD_VERSION
+ENV GCC_HEAD_VERSION=${GCC_HEAD_VERSION}
 
 # populated in the docker-compose file
 ARG LLVM_HEAD_VERSION
@@ -70,6 +76,9 @@ RUN sudo apt-get update \
     && sudo apt-get install -y \
         tzdata
 
+# Install various tools used by the build or the test suite
+# TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual
+# installation below.
 RUN sudo apt-get update \
     && sudo apt-get install -y \
         bash \
@@ -102,9 +111,6 @@ RUN sudo apt-get update \
         xz-utils \
     && sudo rm -rf /var/lib/apt/lists/*
 
-# Install various tools used by the build or the test suite
-#RUN apt-get update && apt-get install -y ninja-build python3 python3-distutils python3-psutil git gdb ccache
-# TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual installation.
 RUN <<EOF
   set -e
   wget -qO /tmp/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip
@@ -148,12 +154,18 @@ RUN <<EOF
   set -e
   sudo git clone https://github.com/compiler-explorer/infra.git /tmp/ce-infra
   (cd /tmp/ce-infra && sudo make ce)
-  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $GCC_LATEST_VERSION.1.0
-  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $((GCC_LATEST_VERSION - 1)).1.0
-  sudo ln -s /opt/compiler-explorer/gcc-$GCC_LATEST_VERSION.1.0/bin/gcc /usr/bin/gcc-$GCC_LATEST_VERSION
-  sudo ln -s /opt/compiler-explorer/gcc-$GCC_LATEST_VERSION.1.0/bin/g++ /usr/bin/g++-$GCC_LATEST_VERSION
-  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_LATEST_VERSION - 1)).1.0/bin/gcc /usr/bin/gcc-$((GCC_LATEST_VERSION - 1))
-  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_LATEST_VERSION - 1)).1.0/bin/g++ /usr/bin/g++-$((GCC_LATEST_VERSION - 1))
+  # Current ToT, we do not guarantee any support in our support matrix.
+  sudo /tmp/ce-infra/bin/ce_install --enable nightly install compilers/c++/nightly/gcc trunk
+  sudo ln -s /opt/compiler-explorer/gcc-snapshot/bin/gcc /usr/bin/gcc-$GCC_HEAD_VERSION
+  sudo ln -s /opt/compiler-explorer/gcc-snapshot/bin/g++ /usr/bin/g++-$GCC_HEAD_VERSION
+  # The latest release.
+  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $((GCC_HEAD_VERSION - 1)).1.0
+  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 1)).1.0/bin/gcc /usr/bin/gcc-$((GCC_HEAD_VERSION - 1))
+  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 1)).1.0/bin/g++ /usr/bin/g++-$((GCC_HEAD_VERSION - 1))
+  # For CI transitions.
+  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $((GCC_HEAD_VERSION - 2)).1.0
+  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 2)).1.0/bin/gcc /usr/bin/gcc-$((GCC_HEAD_VERSION - 2))
+  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 2)).1.0/bin/g++ /usr/bin/g++-$((GCC_HEAD_VERSION - 2))
   sudo rm -rf /tmp/ce-infra
 EOF
 
@@ -173,7 +185,7 @@ FROM ubuntu:jammy AS android-builder-base
 
 ARG ANDROID_CLANG_VERSION
 ARG ANDROID_CLANG_PREBUILTS_COMMIT
-ARG ANDROID_SYSROOT_BID
+ARG ANDROID_SYSROOT_COMMIT
 
 RUN apt-get update && apt-get install -y curl bzip2 git unzip
 
@@ -206,19 +218,18 @@ RUN <<EOF
     ls /opt/android/clang/clang-current/bin/clang
 EOF
 
-# Install an Android sysroot. New AOSP sysroots are available at
-# https://ci.android.com/builds/branches/aosp-main/grid, the "ndk" target. The
-# NDK also makes its sysroot prebuilt available at
-# https://android.googlesource.com/platform/prebuilts/ndk/+/refs/heads/dev/platform/sysroot.
+# Install an Android sysroot. New Android sysroots are available at
+# https://android.googlesource.com/platform/prebuilts/ndk/+/refs/heads/mirror-goog-main-ndk/platform/sysroot.
 
-ENV ANDROID_SYSROOT_BID=$ANDROID_SYSROOT_BID
+ENV ANDROID_SYSROOT_COMMIT=$ANDROID_SYSROOT_COMMIT
 RUN <<EOF
   set -e
-  cd /opt/android
-  curl -L -o ndk_platform.tar.bz2 \
-      https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${ANDROID_SYSROOT_BID}/ndk/attempts/latest/artifacts/ndk_platform.tar.bz2/url
-  tar xf ndk_platform.tar.bz2
-  rm ndk_platform.tar.bz2
+  mkdir -p /opt/android/ndk
+  cd /opt/android/ndk
+  git clone --filter=blob:none https://android.googlesource.com/platform/prebuilts/ndk tmp
+  git -C tmp checkout ${ANDROID_SYSROOT_COMMIT}
+  mv tmp/platform/sysroot .
+  rm -rf tmp
 EOF
 
 # ===----------------------------------------------------------------------===##
@@ -299,7 +310,20 @@ CMD /opt/android/container-setup.sh && buildkite-agent start
 #
 # IMAGE: ghcr.io/libcxx/actions-builder.
 #
-FROM builder-base AS actions-builder
+FROM $ACTIONS_BASE_IMAGE AS actions-builder
 
-WORKDIR /home/runner
-USER runner
+ARG GITHUB_RUNNER_VERSION
+
+RUN useradd gha -u 1001 -m -s /bin/bash
+RUN adduser gha sudo
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+WORKDIR /home/gha
+USER gha
+
+ENV RUNNER_MANUALLY_TRAP_SIG=1
+ENV ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT=1
+RUN mkdir actions-runner && \
+    cd actions-runner && \
+    curl -O -L https://github.com/actions/runner/releases/download/v$GITHUB_RUNNER_VERSION/actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz && \
+    tar xzf ./actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz && \
+    rm ./actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz

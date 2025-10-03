@@ -62,8 +62,9 @@ SystemRuntime *SystemRuntimeMacOSX::CreateInstance(Process *process) {
       case llvm::Triple::IOS:
       case llvm::Triple::TvOS:
       case llvm::Triple::WatchOS:
-      case llvm::Triple::XROS:
       case llvm::Triple::BridgeOS:
+      case llvm::Triple::DriverKit:
+      case llvm::Triple::XROS:
         create = triple_ref.getVendor() == llvm::Triple::Apple;
         break;
       default:
@@ -543,9 +544,9 @@ ThreadSP SystemRuntimeMacOSX::GetExtendedBacktraceThread(ThreadSP real_thread,
     if (!thread_extended_info->ForEach(extract_frame_pc))
       return {};
 
-    originating_thread_sp =
-        std::make_shared<HistoryThread>(*m_process, real_thread->GetIndexID(),
-                                        app_specific_backtrace_pcs, true);
+    originating_thread_sp = std::make_shared<HistoryThread>(
+        *m_process, real_thread->GetIndexID(), app_specific_backtrace_pcs,
+        HistoryPCType::Calls);
     originating_thread_sp->SetQueueName(type.AsCString());
   }
   return originating_thread_sp;

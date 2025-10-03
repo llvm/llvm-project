@@ -12,10 +12,8 @@
 #include "InputSection.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
-#include "UnwindInfoSection.h"
 
 #include "lld/Common/CommonLinkerContext.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -27,6 +25,8 @@ using namespace lld;
 using namespace lld::macho;
 
 static constexpr bool verboseDiagnostics = false;
+// This counter is used to generate unique thunk names.
+static uint64_t icfThunkCounter = 0;
 
 class ICF {
 public:
@@ -263,6 +263,31 @@ void ICF::forEachClassRange(size_t begin, size_t end,
   }
 }
 
+// Find or create a symbol at offset 0 in the given section
+static Symbol *getThunkTargetSymbol(ConcatInputSection *isec) {
+  for (Symbol *sym : isec->symbols)
+    if (auto *d = dyn_cast<Defined>(sym))
+      if (d->value == 0)
+        return sym;
+
+  std::string thunkName;
+  if (isec->symbols.size() == 0)
+    thunkName = isec->getName().str() + ".icf.0";
+  else
+    thunkName = isec->getName().str() + "icf.thunk.target" +
+                std::to_string(icfThunkCounter++);
+
+  // If no symbol found at offset 0, create one
+  auto *sym = make<Defined>(thunkName, /*file=*/nullptr, isec,
+                            /*value=*/0, /*size=*/isec->getSize(),
+                            /*isWeakDef=*/false, /*isExternal=*/false,
+                            /*isPrivateExtern=*/false, /*isThumb=*/false,
+                            /*isReferencedDynamically=*/false,
+                            /*noDeadStrip=*/false);
+  isec->symbols.push_back(sym);
+  return sym;
+}
+
 // Given a range of identical icfInputs, replace address significant functions
 // with a thunk that is just a direct branch to the first function in the
 // series. This way we keep only one main body of the function but we still
@@ -270,15 +295,27 @@ void ICF::forEachClassRange(size_t begin, size_t end,
 // direct branch thunk rather than containing a full copy of the actual function
 // body.
 void ICF::applySafeThunksToRange(size_t begin, size_t end) {
-  // If the functions we're dealing with are smaller than the thunk size, then
-  // just leave them all as-is - creating thunks would be a net loss.
-  uint32_t thunkSize = target->getICFSafeThunkSize();
-  if (icfInputs[begin]->data.size() <= thunkSize)
-    return;
-
   // When creating a unique ICF thunk, use the first section as the section that
   // all thunks will branch to.
   ConcatInputSection *masterIsec = icfInputs[begin];
+
+  // If the first section is not address significant, sorting guarantees that
+  // there are no address significant functions. So we can skip this range.
+  if (!masterIsec->keepUnique)
+    return;
+
+  // Skip anything that is not a code section.
+  if (!isCodeSection(masterIsec))
+    return;
+
+  // If the functions we're dealing with are smaller than the thunk size, then
+  // just leave them all as-is - creating thunks would be a net loss.
+  uint32_t thunkSize = target->getICFSafeThunkSize();
+  if (masterIsec->data.size() <= thunkSize)
+    return;
+
+  // Get the symbol that all thunks will branch to.
+  Symbol *masterSym = getThunkTargetSymbol(masterIsec);
 
   for (size_t i = begin + 1; i < end; ++i) {
     ConcatInputSection *isec = icfInputs[i];
@@ -291,7 +328,7 @@ void ICF::applySafeThunksToRange(size_t begin, size_t end) {
         makeSyntheticInputSection(isec->getSegName(), isec->getName());
     addInputSection(thunk);
 
-    target->initICFSafeThunkBody(thunk, masterIsec);
+    target->initICFSafeThunkBody(thunk, masterSym);
     thunk->foldIdentical(isec, Symbol::ICFFoldKind::Thunk);
 
     // Since we're folding the target function into a thunk, we need to adjust
@@ -412,7 +449,7 @@ void ICF::run() {
 
     ConcatInputSection *beginIsec = icfInputs[begin];
     for (size_t i = begin + 1; i < end; ++i) {
-      // Skip keepUnique inputs when using safe_thunks (already handeled above)
+      // Skip keepUnique inputs when using safe_thunks (already handled above)
       if (useSafeThunks && icfInputs[i]->keepUnique) {
         // Assert keepUnique sections are either small or replaced with thunks.
         assert(!icfInputs[i]->live ||
@@ -495,18 +532,11 @@ Defined *macho::getBodyForThunkFoldedSym(Defined *foldedSym) {
   // the actual body of the function.
   InputSection *thunkBody = foldedSec->replacement;
 
-  // The actual (merged) body of the function that the thunk jumps to. This will
-  // end up in the final binary.
-  InputSection *functionBody = target->getThunkBranchTarget(thunkBody);
+  // The symbol of the merged body of the function that the thunk jumps to. This
+  // will end up in the final binary.
+  Symbol *targetSym = target->getThunkBranchTarget(thunkBody);
 
-  for (Symbol *sym : functionBody->symbols) {
-    Defined *d = dyn_cast<Defined>(sym);
-    // The symbol needs to be at the start of the InputSection
-    if (d && d->value == 0)
-      return d;
-  }
-
-  llvm_unreachable("could not find body symbol for ICF-generated thunk");
+  return cast<Defined>(targetSym);
 }
 void macho::foldIdenticalSections(bool onlyCfStrings) {
   TimeTraceScope timeScope("Fold Identical Code Sections");
@@ -526,6 +556,8 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
   // ICF::segregate()
   std::vector<ConcatInputSection *> foldable;
   uint64_t icfUniqueID = inputSections.size();
+  // Reset the thunk counter for each run of ICF.
+  icfThunkCounter = 0;
   for (ConcatInputSection *isec : inputSections) {
     bool isFoldableWithAddendsRemoved = isCfStringSection(isec) ||
                                         isClassRefsSection(isec) ||

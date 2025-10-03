@@ -21,6 +21,44 @@
 namespace llvm {
 namespace {
 
+// Check that use count checks treat ConstantData like they have no uses.
+TEST(ConstantsTest, UseCounts) {
+  LLVMContext Context;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Constant *Zero = ConstantInt::get(Int32Ty, 0);
+
+  EXPECT_TRUE(Zero->use_empty());
+  EXPECT_EQ(Zero->getNumUses(), 0u);
+  EXPECT_TRUE(Zero->hasNUses(0));
+  EXPECT_FALSE(Zero->hasOneUse());
+  EXPECT_FALSE(Zero->hasOneUser());
+  EXPECT_FALSE(Zero->hasNUses(1));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(1));
+  EXPECT_FALSE(Zero->hasNUses(2));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(2));
+
+  std::unique_ptr<Module> M(new Module("MyModule", Context));
+
+  // Introduce some uses
+  new GlobalVariable(*M, Int32Ty, /*isConstant=*/false,
+                     GlobalValue::ExternalLinkage, /*Initializer=*/Zero,
+                     "gv_user0");
+  new GlobalVariable(*M, Int32Ty, /*isConstant=*/false,
+                     GlobalValue::ExternalLinkage, /*Initializer=*/Zero,
+                     "gv_user1");
+
+  // Still looks like use_empty with uses.
+  EXPECT_TRUE(Zero->use_empty());
+  EXPECT_EQ(Zero->getNumUses(), 0u);
+  EXPECT_TRUE(Zero->hasNUses(0));
+  EXPECT_FALSE(Zero->hasOneUse());
+  EXPECT_FALSE(Zero->hasOneUser());
+  EXPECT_FALSE(Zero->hasNUses(1));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(1));
+  EXPECT_FALSE(Zero->hasNUses(2));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(2));
+}
+
 TEST(ConstantsTest, Integer_i1) {
   LLVMContext Context;
   IntegerType *Int1 = IntegerType::get(Context, 1);
@@ -64,7 +102,7 @@ TEST(ConstantsTest, Integer_i1) {
 
   // @n = constant i1 mul(i1 -1, i1 1)
   // @n = constant i1 true
-  EXPECT_EQ(One, ConstantExpr::getMul(NegOne, One));
+  EXPECT_EQ(One, ConstantFoldBinaryInstruction(Instruction::Mul, NegOne, One));
 
   // @o = constant i1 sdiv(i1 -1, i1 1) ; overflow
   // @o = constant i1 true
@@ -213,7 +251,6 @@ TEST(ConstantsTest, AsInstructionsTest) {
   CHECK(ConstantExpr::getAdd(P0, P0, true, true),
         "add nuw nsw i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getSub(P0, P0), "sub i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getMul(P0, P0), "mul i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getXor(P0, P0), "xor i32 " P0STR ", " P0STR);
 
   std::vector<Constant *> V;
@@ -737,12 +774,12 @@ TEST(ConstantsTest, ComdatUserTracking) {
   EXPECT_TRUE(Users.size() == 0);
 
   Type *Ty = Type::getInt8Ty(Context);
-  GlobalVariable *GV1 = cast<GlobalVariable>(M.getOrInsertGlobal("gv1", Ty));
+  GlobalVariable *GV1 = M.getOrInsertGlobal("gv1", Ty);
   GV1->setComdat(C);
   EXPECT_TRUE(Users.size() == 1);
   EXPECT_TRUE(Users.contains(GV1));
 
-  GlobalVariable *GV2 = cast<GlobalVariable>(M.getOrInsertGlobal("gv2", Ty));
+  GlobalVariable *GV2 = M.getOrInsertGlobal("gv2", Ty);
   GV2->setComdat(C);
   EXPECT_TRUE(Users.size() == 2);
   EXPECT_TRUE(Users.contains(GV2));

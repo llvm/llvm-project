@@ -13,9 +13,9 @@
 #include "llvm/ObjectYAML/MachOYAML.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/TargetParser/Host.h"
 #include <cstdint>
 #include <cstring>

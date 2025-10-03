@@ -14,7 +14,7 @@ subroutine simple_parallel_do
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
   !$OMP PARALLEL DO
   do i=1, 9
-  ! CHECK:      fir.store %[[I]] to %[[IV_ADDR:.*]]#1 : !fir.ref<i32>
+  ! CHECK:      hlfir.assign %[[I]] to %[[IV_ADDR:.*]]#0 : i32, !fir.ref<i32>
   ! CHECK:      %[[LOAD_IV:.*]] = fir.load %[[IV_ADDR]]#0 : !fir.ref<i32>
   ! CHECK:      fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -43,7 +43,7 @@ subroutine parallel_do_with_parallel_clauses(cond, nt)
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
   !$OMP PARALLEL DO IF(cond) NUM_THREADS(nt) PROC_BIND(close)
   do i=1, 9
-  ! CHECK:      fir.store %[[I]] to %[[IV_ADDR:.*]]#1 : !fir.ref<i32>
+  ! CHECK:      hlfir.assign %[[I]] to %[[IV_ADDR:.*]]#0 : i32, !fir.ref<i32>
   ! CHECK:      %[[LOAD_IV:.*]] = fir.load %[[IV_ADDR]]#0 : !fir.ref<i32>
   ! CHECK:      fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -68,7 +68,7 @@ subroutine parallel_do_with_clauses(nt)
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
   !$OMP PARALLEL DO NUM_THREADS(nt) SCHEDULE(dynamic)
   do i=1, 9
-  ! CHECK:      fir.store %[[I]] to %[[IV_ADDR:.*]]#1 : !fir.ref<i32>
+  ! CHECK:      hlfir.assign %[[I]] to %[[IV_ADDR:.*]]#0 : i32, !fir.ref<i32>
   ! CHECK:      %[[LOAD_IV:.*]] = fir.load %[[IV_ADDR]]#0 : !fir.ref<i32>
   ! CHECK:      fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -102,7 +102,7 @@ subroutine parallel_do_with_privatisation_clauses(cond,nt)
   do i=1, 9
   ! CHECK:      %[[PRIVATE_COND_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_COND_REF]] {uniq_name = "_QFparallel_do_with_privatisation_clausesEcond"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
   ! CHECK:      %[[PRIVATE_NT_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_NT_REF]] {uniq_name = "_QFparallel_do_with_privatisation_clausesEnt"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! CHECK:      fir.store %[[I]] to %[[IV_ADDR:.*]]#1 : !fir.ref<i32>
+  ! CHECK:      hlfir.assign %[[I]] to %[[IV_ADDR:.*]]#0 : i32, !fir.ref<i32>
   ! CHECK:      %[[LOAD_IV:.*]] = fir.load %[[IV_ADDR]]#0 : !fir.ref<i32>
   ! CHECK:      fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
   ! CHECK:      %[[PRIVATE_COND_VAL:.*]] = fir.load %[[PRIVATE_COND_DECL]]#0 : !fir.ref<!fir.logical<4>>
@@ -152,8 +152,8 @@ end subroutine parallel_private_do
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[I_PRIV:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[I:.*]]) : i32 = (%[[VAL_7]]) to (%[[VAL_8]]) inclusive step (%[[VAL_9]]) {
 ! CHECK:                 %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_PRIV]] {uniq_name = "_QFparallel_private_doEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 fir.store %[[I]] to %[[I_PRIV_DECL]]#1 : !fir.ref<i32>
-! CHECK:                 fir.call @_QPfoo(%[[I_PRIV_DECL]]#1, %[[COND_DECL]]#1, %[[NT_PRIV_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.logical<4>>, !fir.ref<i32>) -> ()
+! CHECK:                 hlfir.assign %[[I]] to %[[I_PRIV_DECL]]#0 : i32, !fir.ref<i32>
+! CHECK:                 fir.call @_QPfoo(%[[I_PRIV_DECL]]#0, %[[COND_DECL]]#0, %[[NT_PRIV_DECL]]#0) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.logical<4>>, !fir.ref<i32>) -> ()
 ! CHECK:                 omp.yield
 ! CHECK:               }
 ! CHECK:             }
@@ -197,8 +197,8 @@ end subroutine omp_parallel_multiple_firstprivate_do
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[I_PRIV_ADDR:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[I:.*]]) : i32 = (%[[VAL_8]]) to (%[[VAL_9]]) inclusive step (%[[VAL_10]]) {
 ! CHECK:                 %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_PRIV_ADDR]] {uniq_name = "_QFomp_parallel_multiple_firstprivate_doEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 fir.store %[[I]] to %[[I_PRIV_DECL]]#1 : !fir.ref<i32>
-! CHECK:                 fir.call @_QPbar(%[[I_PRIV_DECL]]#1, %[[A_PRIV_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
+! CHECK:                 hlfir.assign %[[I]] to %[[I_PRIV_DECL]]#0 : i32, !fir.ref<i32>
+! CHECK:                 fir.call @_QPbar(%[[I_PRIV_DECL]]#0, %[[A_PRIV_DECL]]#0) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
 ! CHECK:                 omp.yield
 ! CHECK:               }
 ! CHECK:             }
@@ -240,8 +240,8 @@ end subroutine parallel_do_private
 ! CHECK:                 %[[NT_PRIV_DECL:.*]]:2 = hlfir.declare %[[NT_PRIV_ADDR]] {uniq_name = "_QFparallel_do_privateEnt"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_PRIV_ADDR]] {uniq_name = "_QFparallel_do_privateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-! CHECK:                 fir.store %[[I]] to %[[I_PRIV_DECL]]#1 : !fir.ref<i32>
-! CHECK:                 fir.call @_QPfoo(%[[I_PRIV_DECL]]#1, %[[COND_PRIV_DECL]]#1, %[[NT_PRIV_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.logical<4>>, !fir.ref<i32>) -> ()
+! CHECK:                 hlfir.assign %[[I]] to %[[I_PRIV_DECL]]#0 : i32, !fir.ref<i32>
+! CHECK:                 fir.call @_QPfoo(%[[I_PRIV_DECL]]#0, %[[COND_PRIV_DECL]]#0, %[[NT_PRIV_DECL]]#0) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.logical<4>>, !fir.ref<i32>) -> ()
 ! CHECK:                 omp.yield
 ! CHECK:               }
 ! CHECK:             }
@@ -282,8 +282,8 @@ end subroutine omp_parallel_do_multiple_firstprivate
 ! CHECK:                 %[[B_PRIV_DECL:.*]]:2 = hlfir.declare %[[B_PRIV_ADDR]] {uniq_name = "_QFomp_parallel_do_multiple_firstprivateEb"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_PRIV_ADDR]] {uniq_name = "_QFomp_parallel_do_multiple_firstprivateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-! CHECK:                 fir.store %[[I]] to %[[I_PRIV_DECL]]#1 : !fir.ref<i32>
-! CHECK:                 fir.call @_QPbar(%[[I_PRIV_DECL]]#1, %[[A_PRIV_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
+! CHECK:                 hlfir.assign %[[I]] to %[[I_PRIV_DECL]]#0 : i32, !fir.ref<i32>
+! CHECK:                 fir.call @_QPbar(%[[I_PRIV_DECL]]#0, %[[A_PRIV_DECL]]#0) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
 ! CHECK:                 omp.yield
 ! CHECK:               }
 ! CHECK:             }

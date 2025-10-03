@@ -802,6 +802,7 @@ public:
   using size_type = size_t;
 
   NamedAttrList() : dictionarySorted({}, true) {}
+  LLVM_DEPRECATED("Use NamedAttrList() instead", "NamedAttrList()")
   NamedAttrList(std::nullopt_t none) : NamedAttrList() {}
   NamedAttrList(ArrayRef<NamedAttribute> attributes);
   NamedAttrList(DictionaryAttr attributes);
@@ -985,9 +986,9 @@ public:
                  BlockRange successors = {},
                  MutableArrayRef<std::unique_ptr<Region>> regions = {});
   OperationState(OperationState &&other) = default;
-  OperationState(const OperationState &other) = default;
   OperationState &operator=(OperationState &&other) = default;
-  OperationState &operator=(const OperationState &other) = default;
+  OperationState(const OperationState &other) = delete;
+  OperationState &operator=(const OperationState &other) = delete;
   ~OperationState();
 
   /// Get (or create) a properties of the provided type to be set on the
@@ -997,13 +998,25 @@ public:
     if (!properties) {
       T *p = new T{};
       properties = p;
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic push
+// https://github.com/llvm/llvm-project/issues/126600
+#pragma clang diagnostic ignored "-Wdangling-assignment-gsl"
+#endif
+#endif
       propertiesDeleter = [](OpaqueProperties prop) {
         delete prop.as<const T *>();
       };
-      propertiesSetter = [](OpaqueProperties new_prop,
+      propertiesSetter = [](OpaqueProperties newProp,
                             const OpaqueProperties prop) {
-        *new_prop.as<T *>() = *prop.as<const T *>();
+        *newProp.as<T *>() = *prop.as<const T *>();
       };
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic pop
+#endif
+#endif
       propertiesId = TypeID::get<T>();
     }
     assert(propertiesId == TypeID::get<T>() && "Inconsistent properties");
@@ -1016,6 +1029,36 @@ public:
   LogicalResult
   setProperties(Operation *op,
                 function_ref<InFlightDiagnostic()> emitError) const;
+
+  // Make `newProperties` the source of the properties that will be copied into
+  // the operation. The memory referenced by `newProperties` must remain live
+  // until after the `Operation` is created, at which time it may be
+  // deallocated. Calls to `getOrAddProperties<>() will return references to
+  // this memory.
+  template <typename T>
+  void useProperties(T &newProperties) {
+    assert(!properties &&
+           "Can't provide a properties struct when one has been allocated");
+    properties = &newProperties;
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic push
+// https://github.com/llvm/llvm-project/issues/126600
+#pragma clang diagnostic ignored "-Wdangling-assignment-gsl"
+#endif
+#endif
+    propertiesDeleter = [](OpaqueProperties) {};
+    propertiesSetter = [](OpaqueProperties newProp,
+                          const OpaqueProperties prop) {
+      *newProp.as<T *>() = *prop.as<const T *>();
+    };
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic pop
+#endif
+#endif
+    propertiesId = TypeID::get<T>();
+  }
 
   void addOperands(ValueRange newOperands);
 
@@ -1133,6 +1176,7 @@ private:
 class OpPrintingFlags {
 public:
   OpPrintingFlags();
+  LLVM_DEPRECATED("Use OpPrintingFlags() instead", "OpPrintingFlags()")
   OpPrintingFlags(std::nullopt_t) : OpPrintingFlags() {}
 
   /// Enables the elision of large elements attributes by printing a lexically
@@ -1182,6 +1226,9 @@ public:
   /// Print unique SSA ID numbers for values, block arguments and naming
   /// conflicts across all regions
   OpPrintingFlags &printUniqueSSAIDs(bool enable = true);
+
+  /// Print SSA IDs using their NameLoc, if provided, as prefix.
+  OpPrintingFlags &printNameLocAsPrefix(bool enable = true);
 
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
@@ -1277,7 +1324,14 @@ struct OperationEquivalence {
     // When provided, the location attached to the operation are ignored.
     IgnoreLocations = 1,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreLocations)
+    // When provided, the discardable attributes attached to the operation are
+    // ignored.
+    IgnoreDiscardableAttrs = 2,
+
+    // When provided, the properties attached to the operation are ignored.
+    IgnoreProperties = 4,
+
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreProperties)
   };
 
   /// Compute a hash for the given operation.

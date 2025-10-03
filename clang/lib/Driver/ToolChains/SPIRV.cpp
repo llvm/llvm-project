@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "SPIRV.h"
-#include "CommonArgs.h"
-#include "clang/Basic/Version.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
@@ -93,12 +92,6 @@ void SPIRV::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   constructAssembleCommand(C, *this, JA, Output, Inputs[0], {});
 }
 
-clang::driver::Tool *SPIRVToolChain::getTranslator() const {
-  if (!Translator)
-    Translator = std::make_unique<SPIRV::Translator>(*this);
-  return Translator.get();
-}
-
 clang::driver::Tool *SPIRVToolChain::getAssembler() const {
   if (!Assembler)
     Assembler = std::make_unique<SPIRV::Assembler>(*this);
@@ -114,8 +107,6 @@ clang::driver::Tool *SPIRVToolChain::getTool(Action::ActionClass AC) const {
   switch (AC) {
   default:
     break;
-  case Action::BackendJobClass:
-    return SPIRVToolChain::getTranslator();
   case Action::AssembleJobClass:
     return SPIRVToolChain::getAssembler();
   }

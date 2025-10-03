@@ -116,19 +116,17 @@ struct RegisterRef {
   static constexpr bool isUnitId(unsigned Id) {
     return Register::isVirtualRegister(Id);
   }
-  static constexpr bool isMaskId(unsigned Id) {
-    return Register::isStackSlot(Id);
-  }
+  static constexpr bool isMaskId(unsigned Id) { return Register(Id).isStack(); }
 
   static constexpr RegisterId toUnitId(unsigned Idx) {
-    return Idx | MCRegister::VirtualRegFlag;
+    return Idx | Register::VirtualRegFlag;
   }
 
   static constexpr unsigned toIdx(RegisterId Id) {
     // Not using virtReg2Index or stackSlot2Index, because they are
     // not constexpr.
     if (isUnitId(Id))
-      return Id & ~MCRegister::VirtualRegFlag;
+      return Id & ~Register::VirtualRegFlag;
     // RegId and MaskId are unchanged.
     return Id;
   }
@@ -147,7 +145,7 @@ struct PhysicalRegisterInfo {
   }
 
   const uint32_t *getRegMaskBits(RegisterId R) const {
-    return RegMasks.get(Register::stackSlot2Index(R));
+    return RegMasks.get(Register(R).stackSlotIndex());
   }
 
   bool alias(RegisterRef RA, RegisterRef RB) const;
@@ -160,7 +158,7 @@ struct PhysicalRegisterInfo {
   }
 
   const BitVector &getMaskUnits(RegisterId MaskId) const {
-    return MaskInfos[Register::stackSlot2Index(MaskId)].Units;
+    return MaskInfos[Register(MaskId).stackSlotIndex()].Units;
   }
 
   std::set<RegisterId> getUnits(RegisterRef RR) const;
@@ -199,6 +197,33 @@ private:
   std::vector<UnitInfo> UnitInfos;
   std::vector<MaskInfo> MaskInfos;
   std::vector<AliasInfo> AliasInfos;
+};
+
+struct RegisterRefEqualTo {
+  constexpr RegisterRefEqualTo(const llvm::rdf::PhysicalRegisterInfo &pri)
+      : PRI(&pri) {}
+
+  bool operator()(llvm::rdf::RegisterRef A, llvm::rdf::RegisterRef B) const {
+    return PRI->equal_to(A, B);
+  }
+
+private:
+  // Make it a pointer just in case. See comment in `RegisterRefLess` below.
+  const llvm::rdf::PhysicalRegisterInfo *PRI;
+};
+
+struct RegisterRefLess {
+  constexpr RegisterRefLess(const llvm::rdf::PhysicalRegisterInfo &pri)
+      : PRI(&pri) {}
+
+  bool operator()(llvm::rdf::RegisterRef A, llvm::rdf::RegisterRef B) const {
+    return PRI->less(A, B);
+  }
+
+private:
+  // Make it a pointer because apparently some versions of MSVC use std::swap
+  // on the comparator object.
+  const llvm::rdf::PhysicalRegisterInfo *PRI;
 };
 
 struct RegisterAggr {
@@ -336,18 +361,6 @@ template <> struct hash<llvm::rdf::RegisterAggr> {
   }
 };
 
-template <> struct equal_to<llvm::rdf::RegisterRef> {
-  constexpr equal_to(const llvm::rdf::PhysicalRegisterInfo &pri) : PRI(&pri) {}
-
-  bool operator()(llvm::rdf::RegisterRef A, llvm::rdf::RegisterRef B) const {
-    return PRI->equal_to(A, B);
-  }
-
-private:
-  // Make it a pointer just in case. See comment in `less` below.
-  const llvm::rdf::PhysicalRegisterInfo *PRI;
-};
-
 template <> struct equal_to<llvm::rdf::RegisterAggr> {
   bool operator()(const llvm::rdf::RegisterAggr &A,
                   const llvm::rdf::RegisterAggr &B) const {
@@ -355,23 +368,10 @@ template <> struct equal_to<llvm::rdf::RegisterAggr> {
   }
 };
 
-template <> struct less<llvm::rdf::RegisterRef> {
-  constexpr less(const llvm::rdf::PhysicalRegisterInfo &pri) : PRI(&pri) {}
-
-  bool operator()(llvm::rdf::RegisterRef A, llvm::rdf::RegisterRef B) const {
-    return PRI->less(A, B);
-  }
-
-private:
-  // Make it a pointer because apparently some versions of MSVC use std::swap
-  // on the std::less specialization.
-  const llvm::rdf::PhysicalRegisterInfo *PRI;
-};
-
 } // namespace std
 
 namespace llvm::rdf {
-using RegisterSet = std::set<RegisterRef, std::less<RegisterRef>>;
+using RegisterSet = std::set<RegisterRef, RegisterRefLess>;
 } // namespace llvm::rdf
 
 #endif // LLVM_CODEGEN_RDFREGISTERS_H

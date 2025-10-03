@@ -104,3 +104,6 @@ Internally this will go through the changes and run any finalization required.
 
 Please note that after a call to `revert()` or `accept()` tracking will stop.
 To start tracking again, the user needs to call `save()`.
+
+# Users of Sandbox IR
+- [The Sandbox Vectorizer](project:SandboxVectorizer.md)

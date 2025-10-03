@@ -1244,6 +1244,48 @@ define i1 @extract_value_smul_fail(i8 %xx, i8 %yy) {
   ret i1 %r
 }
 
+define i8 @known_self_mul_bit_0_set(i8 noundef %x) {
+; CHECK-LABEL: @known_self_mul_bit_0_set(
+; CHECK-NEXT:    ret i8 0
+;
+  %bit_0_set = or i8 %x, 1
+  %self_mul = mul i8 %bit_0_set, %bit_0_set
+  %r = and i8 %self_mul, 4
+  ret i8 %r
+}
+
+define i8 @known_self_mul_bit_0_unset(i8 noundef %x) {
+; CHECK-LABEL: @known_self_mul_bit_0_unset(
+; CHECK-NEXT:    ret i8 0
+;
+  %bit_0_unset = and i8 %x, -2
+  %self_mul = mul i8 %bit_0_unset, %bit_0_unset
+  %r = and i8 %self_mul, 8
+  ret i8 %r
+}
+
+define i8 @known_self_mul_bit_1_set_bit_0_unset(i8 noundef %x) {
+; CHECK-LABEL: @known_self_mul_bit_1_set_bit_0_unset(
+; CHECK-NEXT:    ret i8 0
+;
+  %lower_2_unset = and i8 %x, -4
+  %bit_1_set_bit_0_unset = or disjoint i8 %lower_2_unset, 2
+  %self_mul = mul i8 %bit_1_set_bit_0_unset, %bit_1_set_bit_0_unset
+  %r = and i8 %self_mul, 24
+  ret i8 %r
+}
+
+define i4 @known_self_mul_bit_1_set_bit_0_unset_i4(i4 noundef %x) {
+; CHECK-LABEL: @known_self_mul_bit_1_set_bit_0_unset_i4(
+; CHECK-NEXT:    ret i4 0
+;
+  %lower_2_unset = and i4 %x, -4
+  %bit_1_set_bit_0_unset = or disjoint i4 %lower_2_unset, 2
+  %self_mul = mul i4 %bit_1_set_bit_0_unset, %bit_1_set_bit_0_unset
+  %r = and i4 %self_mul, 24
+  ret i4 %r
+}
+
 define i8 @known_reduce_or(<2 x i8> %xx) {
 ; CHECK-LABEL: @known_reduce_or(
 ; CHECK-NEXT:    ret i8 1
@@ -2167,11 +2209,9 @@ define i8 @test_trunc_and_1(i8 %a) {
 ; CHECK-NEXT:    [[CAST:%.*]] = trunc i8 [[A:%.*]] to i1
 ; CHECK-NEXT:    br i1 [[CAST]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[B:%.*]] = and i8 [[A]], 1
-; CHECK-NEXT:    ret i8 [[B]]
+; CHECK-NEXT:    ret i8 1
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[C:%.*]] = and i8 [[A]], 1
-; CHECK-NEXT:    ret i8 [[C]]
+; CHECK-NEXT:    ret i8 0
 ;
 entry:
   %cast = trunc i8 %a to i1
@@ -2192,11 +2232,9 @@ define i8 @test_not_trunc_and_1(i8 %a) {
 ; CHECK-NEXT:    [[CAST:%.*]] = trunc i8 [[A:%.*]] to i1
 ; CHECK-NEXT:    br i1 [[CAST]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[B:%.*]] = and i8 [[A]], 1
-; CHECK-NEXT:    ret i8 [[B]]
+; CHECK-NEXT:    ret i8 0
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[C:%.*]] = and i8 [[A]], 1
-; CHECK-NEXT:    ret i8 [[C]]
+; CHECK-NEXT:    ret i8 1
 ;
 entry:
   %cast = trunc i8 %a to i1
@@ -2243,11 +2281,9 @@ define i8 @test_trunc_nuw_and_1(i8 %a) {
 ; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw i8 [[A:%.*]] to i1
 ; CHECK-NEXT:    br i1 [[CAST]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[B:%.*]] = and i8 [[A]], 1
-; CHECK-NEXT:    ret i8 [[B]]
+; CHECK-NEXT:    ret i8 0
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[C:%.*]] = and i8 [[A]], 1
-; CHECK-NEXT:    ret i8 [[C]]
+; CHECK-NEXT:    ret i8 1
 ;
 entry:
   %cast = trunc nuw i8 %a to i1
@@ -2268,11 +2304,9 @@ define i8 @test_trunc_nuw_or_2(i8 %a) {
 ; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw i8 [[A:%.*]] to i1
 ; CHECK-NEXT:    br i1 [[CAST]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[B:%.*]] = or i8 [[A]], 2
-; CHECK-NEXT:    ret i8 [[B]]
+; CHECK-NEXT:    ret i8 2
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[C:%.*]] = or i8 [[A]], 2
-; CHECK-NEXT:    ret i8 [[C]]
+; CHECK-NEXT:    ret i8 3
 ;
 entry:
   %cast = trunc nuw i8 %a to i1
@@ -2293,11 +2327,9 @@ define i8 @test_not_trunc_nuw_and_1(i8 %a) {
 ; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw i8 [[A:%.*]] to i1
 ; CHECK-NEXT:    br i1 [[CAST]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[B:%.*]] = and i8 [[A]], 1
-; CHECK-NEXT:    ret i8 [[B]]
+; CHECK-NEXT:    ret i8 0
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[C:%.*]] = and i8 [[A]], 1
-; CHECK-NEXT:    ret i8 [[C]]
+; CHECK-NEXT:    ret i8 1
 ;
 entry:
   %cast = trunc nuw i8 %a to i1
@@ -2319,8 +2351,7 @@ define i8 @test_trunc_cond_and(i8 %x, i1 %c) {
 ; CHECK-NEXT:    [[COND:%.*]] = and i1 [[C:%.*]], [[CMP]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -2
-; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK-NEXT:    ret i8 -1
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -2
 ; CHECK-NEXT:    ret i8 [[OR2]]
@@ -2345,8 +2376,7 @@ define i8 @test_not_trunc_cond_and(i8 %x, i1 %c) {
 ; CHECK-NEXT:    [[COND:%.*]] = and i1 [[C:%.*]], [[NOT]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -2
-; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK-NEXT:    ret i8 -2
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -2
 ; CHECK-NEXT:    ret i8 [[OR2]]
@@ -2362,6 +2392,36 @@ if:
 
 exit:
   %or2 = or i8 %x, -2
+  ret i8 %or2
+}
+
+define i8 @test_inv_cond_and(i8 %x, i1 %c) {
+; CHECK-LABEL: @test_inv_cond_and(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[COND:%.*]] = and i1 [[C:%.*]], [[NOT]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    ret i8 -4
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR2]]
+;
+  %and = and i8 %x, 3
+  %cmp = icmp ne i8 %and, 0
+  call void @use(i1 %cmp)
+  %not = xor i1 %cmp, true
+  %cond = and i1 %not, %c
+  br i1 %cond, label %if, label %exit
+
+if:
+  %or1 = or i8 %x, -4
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -4
   ret i8 %or2
 }
 

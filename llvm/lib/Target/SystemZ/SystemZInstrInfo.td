@@ -424,8 +424,10 @@ defm CondStore64 : CondStores<GR64, simple_store,
 //===----------------------------------------------------------------------===//
 
 // Register moves.
-def LR  : UnaryRR <"lr",  0x18,   null_frag, GR32, GR32>;
-def LGR : UnaryRRE<"lgr", 0xB904, null_frag, GR64, GR64>;
+let isMoveReg = 1 in {
+  def LR  : UnaryRR <"lr",  0x18,   null_frag, GR32, GR32>;
+  def LGR : UnaryRRE<"lgr", 0xB904, null_frag, GR64, GR64>;
+}
 
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
   def LTR  : UnaryRR <"ltr",  0x12,   null_frag, GR32, GR32>;
@@ -1556,38 +1558,38 @@ def RLLG : BinaryRSY<"rllg", 0xEB1C, shiftop<rotl>, GR64>;
 // end bits (operands 2 and 3) are in the range [32, 64).
 let Defs = [CC] in {
   let isCodeGenOnly = 1 in
-    def RISBG32 : RotateSelectRIEf<"risbg", 0xEC55, GR32, GR32>;
+    defm RISBG32 : RotateSelectRIEf<"risbg", 0xEC55, GR32, GR32>;
   let CCValues = 0xE, CompareZeroCCMask = 0xE in {
-    def RISBG : RotateSelectRIEf<"risbg", 0xEC55, GR64, GR64>;
-    def RISBGZ : RotateSelectRIEf<"risbgz", 0xEC55, GR64, GR64, 0, 128>;
+    defm RISBG : RotateSelectRIEf<"risbg", 0xEC55, GR64, GR64>;
+    defm RISBGZ : RotateSelectRIEf<"risbgz", 0xEC55, GR64, GR64, 0, 128>;
   }
 }
 
 // On zEC12 we have a variant of RISBG that does not set CC.
 let Predicates = [FeatureMiscellaneousExtensions] in {
-  def RISBGN : RotateSelectRIEf<"risbgn", 0xEC59, GR64, GR64>;
-  def RISBGNZ : RotateSelectRIEf<"risbgnz", 0xEC59, GR64, GR64, 0, 128>;
+  defm RISBGN : RotateSelectRIEf<"risbgn", 0xEC59, GR64, GR64>;
+  defm RISBGNZ : RotateSelectRIEf<"risbgnz", 0xEC59, GR64, GR64, 0, 128>;
 }
 
 // Forms of RISBG that only affect one word of the destination register.
 // They do not set CC.
 let Predicates = [FeatureHighWord] in {
-  def RISBMux : RotateSelectRIEfPseudo<GRX32, GRX32>;
-  def RISBLL  : RotateSelectAliasRIEf<GR32,  GR32>;
-  def RISBLH  : RotateSelectAliasRIEf<GR32,  GRH32>;
-  def RISBHL  : RotateSelectAliasRIEf<GRH32, GR32>;
-  def RISBHH  : RotateSelectAliasRIEf<GRH32, GRH32>;
-  def RISBLG  : RotateSelectRIEf<"risblg", 0xEC51, GR32, GR64>;
-  def RISBHG  : RotateSelectRIEf<"risbhg", 0xEC5D, GRH32, GR64>;
+  def  RISBMux : RotateSelectRIEfPseudo<GRX32, GRX32>;
+  defm RISBLL  : RotateSelectAliasRIEf<GR32,  GR32>;
+  defm RISBLH  : RotateSelectAliasRIEf<GR32,  GRH32>;
+  defm RISBHL  : RotateSelectAliasRIEf<GRH32, GR32>;
+  defm RISBHH  : RotateSelectAliasRIEf<GRH32, GRH32>;
+  defm RISBLG  : RotateSelectRIEf<"risblg", 0xEC51, GR32, GR64>;
+  defm RISBHG  : RotateSelectRIEf<"risbhg", 0xEC5D, GRH32, GR64>;
 }
 
 // Rotate second operand left and perform a logical operation with selected
 // bits of the first operand.  The CC result only describes the selected bits,
 // so isn't useful for a full comparison against zero.
 let Defs = [CC] in {
-  def RNSBG : RotateSelectRIEf<"rnsbg", 0xEC54, GR64, GR64>;
-  def ROSBG : RotateSelectRIEf<"rosbg", 0xEC56, GR64, GR64>;
-  def RXSBG : RotateSelectRIEf<"rxsbg", 0xEC57, GR64, GR64>;
+  defm RNSBG : RotateSelectRIEf<"rnsbg", 0xEC54, GR64, GR64>;
+  defm ROSBG : RotateSelectRIEf<"rosbg", 0xEC56, GR64, GR64>;
+  defm RXSBG : RotateSelectRIEf<"rxsbg", 0xEC57, GR64, GR64>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2183,7 +2185,7 @@ let mayLoad = 1, mayStore = 1, Defs = [CC, R0D, R1D, R2D, R3D, R5D],
 
 // Checksum.
 let mayLoad = 1, Defs = [CC] in
-  def CKSM : SideEffectBinaryMemMemRRE<"cksm", 0xB241, GR64, GR128>;
+  def CKSM : SideEffectBinaryMemMemRRE<"cksm", 0xB241, GR32, GR128>;
 
 // Compression call.
 let mayLoad = 1, mayStore = 1, Defs = [CC, R1D], Uses = [R0L, R1D] in

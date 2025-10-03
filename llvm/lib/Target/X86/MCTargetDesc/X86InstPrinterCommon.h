@@ -17,11 +17,13 @@
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
+class MCExpr;
 
 class X86InstPrinterCommon : public MCInstPrinter {
 public:
   using MCInstPrinter::MCInstPrinter;
 
+  virtual void printExprOperand(raw_ostream &OS, const MCExpr &E);
   virtual void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O) = 0;
   void printCondCode(const MCInst *MI, unsigned Op, raw_ostream &OS);
   void printCondFlags(const MCInst *MI, unsigned Op, raw_ostream &OS);

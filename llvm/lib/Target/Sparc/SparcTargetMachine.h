@@ -23,7 +23,6 @@ namespace llvm {
 
 class SparcTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  bool is64Bit;
   mutable StringMap<std::unique_ptr<SparcSubtarget>> SubtargetMap;
 
 public:
@@ -31,7 +30,7 @@ public:
                      StringRef FS, const TargetOptions &Options,
                      std::optional<Reloc::Model> RM,
                      std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
-                     bool JIT, bool is64bit);
+                     bool JIT);
   ~SparcTargetMachine() override;
 
   const SparcSubtarget *getSubtargetImpl(const Function &F) const override;

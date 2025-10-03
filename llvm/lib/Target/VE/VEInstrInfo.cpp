@@ -34,8 +34,8 @@ using namespace llvm;
 // Pin the vtable to this file.
 void VEInstrInfo::anchor() {}
 
-VEInstrInfo::VEInstrInfo(VESubtarget &ST)
-    : VEGenInstrInfo(VE::ADJCALLSTACKDOWN, VE::ADJCALLSTACKUP), RI() {}
+VEInstrInfo::VEInstrInfo(const VESubtarget &ST)
+    : VEGenInstrInfo(ST, VE::ADJCALLSTACKDOWN, VE::ADJCALLSTACKUP), RI() {}
 
 static bool IsIntegerCC(unsigned CC) { return (CC < VECC::CC_AF); }
 
@@ -357,9 +357,8 @@ static void copyPhysSubRegs(MachineBasicBlock &MBB,
 
 void VEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator I, const DebugLoc &DL,
-                              MCRegister DestReg, MCRegister SrcReg,
-                              bool KillSrc, bool RenamableDest,
-                              bool RenamableSrc) const {
+                              Register DestReg, Register SrcReg, bool KillSrc,
+                              bool RenamableDest, bool RenamableSrc) const {
 
   if (IsAliasOfSX(SrcReg) && IsAliasOfSX(DestReg)) {
     BuildMI(MBB, I, DL, get(VE::ORri), DestReg)

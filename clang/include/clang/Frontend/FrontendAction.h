@@ -84,6 +84,8 @@ protected:
   /// \return True on success; on failure ExecutionAction() and
   /// EndSourceFileAction() will not be called.
   virtual bool BeginSourceFileAction(CompilerInstance &CI) {
+    if (CurrentInput.isPreprocessed())
+      CI.getPreprocessor().SetMacroExpansionOnlyInDirectives();
     return true;
   }
 
@@ -98,7 +100,11 @@ protected:
   ///
   /// This is guaranteed to only be called following a successful call to
   /// BeginSourceFileAction (and BeginSourceFile).
-  virtual void EndSourceFileAction() {}
+  virtual void EndSourceFileAction() {
+    if (CurrentInput.isPreprocessed())
+      // Reset the preprocessor macro expansion to the default.
+      getCompilerInstance().getPreprocessor().SetEnableMacroExpansion();
+  }
 
   /// Callback at the end of processing a single input, to determine
   /// if the output files should be erased or not.

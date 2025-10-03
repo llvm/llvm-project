@@ -59,8 +59,8 @@ entry:
   store i8 %value, ptr %value.addr, align 1, !tbaa !3
   store ptr %pDst, ptr %pDst.addr, align 4, !tbaa !6
   store i32 %blockSize, ptr %blockSize.addr, align 4, !tbaa !8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %blkCnt) #3
-  call void @llvm.lifetime.start.p0(i64 4, ptr %packedValue) #3
+  call void @llvm.lifetime.start.p0(ptr %blkCnt) #3
+  call void @llvm.lifetime.start.p0(ptr %packedValue) #3
   %0 = load i8, ptr %value.addr, align 1, !tbaa !3
   %conv = sext i8 %0 to i32
   %shl = shl i32 %conv, 0
@@ -122,13 +122,13 @@ while.body16:                                     ; preds = %while.cond13
   br label %while.cond13, !llvm.loop !12
 
 while.end18:                                      ; preds = %while.cond13
-  call void @llvm.lifetime.end.p0(i64 4, ptr %packedValue) #3
-  call void @llvm.lifetime.end.p0(i64 4, ptr %blkCnt) #3
+  call void @llvm.lifetime.end.p0(ptr %packedValue) #3
+  call void @llvm.lifetime.end.p0(ptr %blkCnt) #3
   ret void
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: alwaysinline nounwind
 define internal void @write_q7x4_ia(ptr %pQ7, i32 %value) #2 {
@@ -138,7 +138,7 @@ entry:
   %val = alloca i32, align 4
   store ptr %pQ7, ptr %pQ7.addr, align 4, !tbaa !6
   store i32 %value, ptr %value.addr, align 4, !tbaa !8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %val) #3
+  call void @llvm.lifetime.start.p0(ptr %val) #3
   %0 = load i32, ptr %value.addr, align 4, !tbaa !8
   store i32 %0, ptr %val, align 4, !tbaa !8
   %1 = load i32, ptr %val, align 4, !tbaa !8
@@ -175,12 +175,12 @@ entry:
   %14 = load ptr, ptr %13, align 4, !tbaa !6
   %add.ptr = getelementptr inbounds i8, ptr %14, i32 4
   store ptr %add.ptr, ptr %13, align 4, !tbaa !6
-  call void @llvm.lifetime.end.p0(i64 4, ptr %val) #3
+  call void @llvm.lifetime.end.p0(ptr %val) #3
   ret void
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 attributes #0 = { nounwind "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-m0plus" "target-features"="+armv6-m,+strict-align,+thumb-mode,-aes,-bf16,-cdecp0,-cdecp1,-cdecp2,-cdecp3,-cdecp4,-cdecp5,-cdecp6,-cdecp7,-crc,-crypto,-dotprod,-dsp,-fp16fml,-fullfp16,-hwdiv,-hwdiv-arm,-i8mm,-lob,-mve,-mve.fp,-ras,-sb,-sha2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }

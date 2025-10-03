@@ -102,7 +102,7 @@ static bool partitionOuterLoopBlocks(
     Loop &Root, Loop &JamLoop, BasicBlockSet &JamLoopBlocks,
     DenseMap<Loop *, BasicBlockSet> &ForeBlocksMap,
     DenseMap<Loop *, BasicBlockSet> &AftBlocksMap, DominatorTree &DT) {
-  JamLoopBlocks.insert(JamLoop.block_begin(), JamLoop.block_end());
+  JamLoopBlocks.insert_range(JamLoop.blocks());
 
   for (Loop *L : Root.getLoopsInPreorder()) {
     if (L == &JamLoop)
@@ -122,7 +122,7 @@ static bool partitionOuterLoopBlocks(Loop *L, Loop *SubLoop,
                                      BasicBlockSet &SubLoopBlocks,
                                      BasicBlockSet &AftBlocks,
                                      DominatorTree *DT) {
-  SubLoopBlocks.insert(SubLoop->block_begin(), SubLoop->block_end());
+  SubLoopBlocks.insert_range(SubLoop->blocks());
   return partitionLoopBlocks(*L, ForeBlocks, AftBlocks, *DT);
 }
 
@@ -395,13 +395,15 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
       }
 
       // Update our running maps of newest clones
-      PrevItValueMap[New] = (It == 1 ? *BB : LastValueMap[*BB]);
-      LastValueMap[*BB] = New;
+      auto &Last = LastValueMap[*BB];
+      PrevItValueMap[New] = (It == 1 ? *BB : Last);
+      Last = New;
       for (ValueToValueMapTy::iterator VI = VMap.begin(), VE = VMap.end();
            VI != VE; ++VI) {
+        auto &LVM = LastValueMap[VI->first];
         PrevItValueMap[VI->second] =
-            const_cast<Value *>(It == 1 ? VI->first : LastValueMap[VI->first]);
-        LastValueMap[VI->first] = VI->second;
+            const_cast<Value *>(It == 1 ? VI->first : LVM);
+        LVM = VI->second;
       }
 
       NewBlocks.push_back(New);
@@ -578,9 +580,9 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 
   // Merge adjacent basic blocks, if possible.
   SmallPtrSet<BasicBlock *, 16> MergeBlocks;
-  MergeBlocks.insert(ForeBlocksLast.begin(), ForeBlocksLast.end());
-  MergeBlocks.insert(SubLoopBlocksLast.begin(), SubLoopBlocksLast.end());
-  MergeBlocks.insert(AftBlocksLast.begin(), AftBlocksLast.end());
+  MergeBlocks.insert_range(ForeBlocksLast);
+  MergeBlocks.insert_range(SubLoopBlocksLast);
+  MergeBlocks.insert_range(AftBlocksLast);
 
   MergeBlockSuccessorsIntoGivenBlocks(MergeBlocks, L, &DTU, LI);
 
@@ -709,7 +711,7 @@ static bool checkDependency(Instruction *Src, Instruction *Dst,
   //   (0,0,>=,*,*)
   // Now, the dependency is not necessarily non-negative anymore, i.e.
   // unroll-and-jam may violate correctness.
-  std::unique_ptr<Dependence> D = DI.depends(Src, Dst, true);
+  std::unique_ptr<Dependence> D = DI.depends(Src, Dst);
   if (!D)
     return true;
   assert(D->isOrdered() && "Expected an output, flow or anti dep.");

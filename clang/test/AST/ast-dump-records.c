@@ -47,7 +47,7 @@ struct C {
     int a;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 a 'int'
   } b;
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-5]]:3)':'struct C::(unnamed at {{.*}}:[[@LINE-5]]:3)'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-5]]:3)'
 
   union {
     // CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+5]]:3> line:[[@LINE-1]]:3 union definition
@@ -122,15 +122,13 @@ union E {
 };
 
 union G {
-  // CHECK: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+38]]:1> line:[[@LINE-1]]:7 union G definition
+  // CHECK: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+36]]:1> line:[[@LINE-1]]:7 union G definition
   struct {
     // CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+3]]:3> line:[[@LINE-1]]:3 struct definition
     int a;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 a 'int'
   } b;
-  // FIXME: note that it talks about 'struct G' below; the same happens in
-  // other cases with union G as well.
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-7]]:3, line:[[@LINE-3]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-7]]:3)':'struct G::(unnamed at {{.*}}:[[@LINE-7]]:3)'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-5]]:3)'
 
   union {
     // CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+5]]:3> line:[[@LINE-1]]:3 union definition

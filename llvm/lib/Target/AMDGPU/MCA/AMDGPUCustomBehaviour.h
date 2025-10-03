@@ -17,6 +17,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCA_AMDGPUCUSTOMBEHAVIOUR_H
 #define LLVM_LIB_TARGET_AMDGPU_MCA_AMDGPUCUSTOMBEHAVIOUR_H
 
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MCA/CustomBehaviour.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -25,7 +26,7 @@ namespace llvm {
 namespace mca {
 
 class AMDGPUInstrPostProcess : public InstrPostProcess {
-  void processWaitCnt(std::unique_ptr<Instruction> &Inst, const MCInst &MCI);
+  void processWaitCnt(Instruction &Inst, const MCInst &MCI);
 
 public:
   AMDGPUInstrPostProcess(const MCSubtargetInfo &STI, const MCInstrInfo &MCII)
@@ -33,8 +34,7 @@ public:
 
   ~AMDGPUInstrPostProcess() = default;
 
-  void postProcessInstruction(std::unique_ptr<Instruction> &Inst,
-                              const MCInst &MCI) override;
+  void postProcessInstruction(Instruction &Inst, const MCInst &MCI) override;
 };
 
 struct WaitCntInfo {
@@ -66,7 +66,7 @@ class AMDGPUCustomBehaviour : public CustomBehaviour {
   void generateWaitCntInfo();
   /// Helper function used in generateWaitCntInfo()
   bool hasModifiersSet(const std::unique_ptr<Instruction> &Inst,
-                       unsigned OpName) const;
+                       AMDGPU::OpName OpName) const;
   /// Helper function used in generateWaitCntInfo()
   bool isGWS(uint16_t Opcode) const;
   /// Helper function used in generateWaitCntInfo()

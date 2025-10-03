@@ -340,8 +340,8 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
           return createStringError(
               errc::invalid_argument,
               "failed to parse file entry because the MD5 hash is invalid");
-        std::uninitialized_copy_n(Value.getAsBlock()->begin(), 16,
-                                  FileEntry.Checksum.begin());
+        llvm::uninitialized_copy(*Value.getAsBlock(),
+                                 FileEntry.Checksum.begin());
         break;
       default:
         break;
@@ -1539,8 +1539,7 @@ bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
     return false;
   // Take file number and line/column from the row.
   const auto &Row = Rows[RowIndex];
-  if (Row.Line == 0 ||
-      !getFileNameByIndex(Row.File, CompDir, Kind, Result.FileName))
+  if (!getFileNameByIndex(Row.File, CompDir, Kind, Result.FileName))
     return false;
   Result.Line = Row.Line;
   Result.Column = Row.Column;

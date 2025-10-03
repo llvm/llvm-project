@@ -1,0 +1,1 @@
+RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited %S/Inputs/class-limited.cpp -o - | FileCheck %S/Inputs/class-limited.cpp

@@ -1,5 +1,10 @@
-#define __CLC_AS_GENTYPE(x) __CLC_XCONCAT(__clc_as_, __CLC_GENTYPE)(x)
-#define __CLC_AS_U_GENTYPE(x) __CLC_XCONCAT(__clc_as_, __CLC_U_GENTYPE)(x)
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
 // The rotate(A, B) builtin left-shifts corresponding to the usual OpenCL shift
 // modulo rules. These rules state that A is left-shifted by the log2(N) least

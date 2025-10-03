@@ -51,7 +51,7 @@ bb5:                                              ; preds = %bb5, %bb3
 
 define amdgpu_kernel void @entry() {
 ; CHECK-LABEL: define {{[^@]+}}@entry
-; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [[TMP0:%.*]], align 8, addrspace(5)
 ; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[ARST:%.*]] = call double @baz(ptr [[CAST]])
@@ -64,5 +64,4 @@ define amdgpu_kernel void @entry() {
 }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR1]] = { "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
 ;.

@@ -31,7 +31,6 @@ public:
   void emitWindowsUnwindTables() override;
   void emitWindowsUnwindTables(WinEH::FrameInfo *Frame) override;
 
-  void emitThumbFunc(MCSymbol *Symbol) override;
   void finishImpl() override;
 };
 
@@ -52,10 +51,6 @@ void ARMWinCOFFStreamer::emitWindowsUnwindTables() {
   if (!getNumWinFrameInfos())
     return;
   EHStreamer.Emit(*this);
-}
-
-void ARMWinCOFFStreamer::emitThumbFunc(MCSymbol *Symbol) {
-  getAssembler().setIsThumbFunc(Symbol);
 }
 
 void ARMWinCOFFStreamer::finishImpl() {
@@ -80,6 +75,11 @@ class ARMTargetWinCOFFStreamer : public llvm::ARMTargetStreamer {
 public:
   ARMTargetWinCOFFStreamer(llvm::MCStreamer &S) : ARMTargetStreamer(S) {}
 
+  ARMWinCOFFStreamer &getStreamer() {
+    return static_cast<ARMWinCOFFStreamer &>(Streamer);
+  }
+  void emitThumbFunc(MCSymbol *Symbol) override;
+
   // The unwind codes on ARM Windows are documented at
   // https://docs.microsoft.com/en-us/cpp/build/arm-exception-handling
   void emitARMWinCFIAllocStack(unsigned Size, bool Wide) override;
@@ -97,6 +97,10 @@ private:
   void emitARMWinUnwindCode(unsigned UnwindCode, int Reg, int Offset);
 };
 
+void ARMTargetWinCOFFStreamer::emitThumbFunc(MCSymbol *Symbol) {
+  getStreamer().getAssembler().setIsThumbFunc(Symbol);
+}
+
 // Helper function to common out unwind code setup for those codes that can
 // belong to both prolog and epilog.
 void ARMTargetWinCOFFStreamer::emitARMWinUnwindCode(unsigned UnwindCode,
@@ -108,7 +112,7 @@ void ARMTargetWinCOFFStreamer::emitARMWinUnwindCode(unsigned UnwindCode,
   MCSymbol *Label = S.emitCFILabel();
   auto Inst = WinEH::Instruction(UnwindCode, Label, Reg, Offset);
   if (S.isInEpilogCFI())
-    CurFrame->EpilogMap[S.getCurrentEpilog()].Instructions.push_back(Inst);
+    S.getCurrentWinEpilog()->Instructions.push_back(Inst);
   else
     CurFrame->Instructions.push_back(Inst);
 }
@@ -219,7 +223,7 @@ void ARMTargetWinCOFFStreamer::emitARMWinCFIEpilogStart(unsigned Condition) {
 
   S.emitWinCFIBeginEpilogue();
   if (S.isInEpilogCFI()) {
-    CurFrame->EpilogMap[S.getCurrentEpilog()].Condition = Condition;
+    S.getCurrentWinEpilog()->Condition = Condition;
   }
 }
 
@@ -231,7 +235,7 @@ void ARMTargetWinCOFFStreamer::emitARMWinCFIEpilogEnd() {
 
   if (S.isInEpilogCFI()) {
     std::vector<WinEH::Instruction> &Epilog =
-        CurFrame->EpilogMap[S.getCurrentEpilog()].Instructions;
+        S.getCurrentWinEpilog()->Instructions;
 
     unsigned UnwindCode = Win64EH::UOP_End;
     if (!Epilog.empty()) {
@@ -246,7 +250,7 @@ void ARMTargetWinCOFFStreamer::emitARMWinCFIEpilogEnd() {
     }
 
     WinEH::Instruction Inst = WinEH::Instruction(UnwindCode, nullptr, -1, 0);
-    CurFrame->EpilogMap[S.getCurrentEpilog()].Instructions.push_back(Inst);
+    S.getCurrentWinEpilog()->Instructions.push_back(Inst);
   }
   S.emitWinCFIEndEpilogue();
 }

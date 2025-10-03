@@ -11,6 +11,8 @@
 // template <class Iter>
 //   iterator insert(const_iterator position, Iter first, Iter last);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <vector>
 #include <cassert>
 #include <cstddef>
@@ -160,6 +162,24 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[j] == a[k]);
     for (; j < 105; ++j)
       assert(v[j] == 0);
+  }
+  { // Ensure that iterator-pair insert() doesn't use unexpected assignment.
+    struct Wrapper {
+      TEST_CONSTEXPR Wrapper(int n) : n_(n) {}
+
+      int n_;
+
+    private:
+      void operator=(int);
+    };
+
+    int a[]                 = {1, 2, 3, 4, 5};
+    const std::size_t count = sizeof(a) / sizeof(a[0]);
+    std::vector<Wrapper> v;
+    v.insert(v.end(), a, a + count);
+    assert(v.size() == count);
+    for (std::size_t i = 0; i != count; ++i)
+      assert(v[i].n_ == a[i]);
   }
 #if TEST_STD_VER >= 11
   {

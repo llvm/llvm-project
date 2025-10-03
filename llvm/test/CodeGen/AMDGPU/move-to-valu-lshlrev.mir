@@ -11,18 +11,16 @@ body:             |
     ; GFX8-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GFX8-NEXT: [[DEF2:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; GFX8-NEXT: [[V_LSHL_ADD_U64_e64_:%[0-9]+]]:vreg_64 = V_LSHL_ADD_U64_e64 [[DEF]], [[DEF1]], [[DEF2]], implicit $exec
-    ; GFX8-NEXT: [[DEF3:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-    ; GFX8-NEXT: [[DEF4:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GFX8-NEXT: [[V_LSHLREV_B64_e64_:%[0-9]+]]:vreg_64 = V_LSHLREV_B64_e64 [[DEF4]], [[V_LSHL_ADD_U64_e64_]], implicit $exec
+    ; GFX8-NEXT: [[DEF3:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GFX8-NEXT: [[V_LSHLREV_B64_e64_:%[0-9]+]]:vreg_64 = V_LSHLREV_B64_e64 [[DEF3]], [[V_LSHL_ADD_U64_e64_]], implicit $exec
     ;
     ; GFX12-LABEL: name: lshlrev_b64
     ; GFX12: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; GFX12-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GFX12-NEXT: [[DEF2:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; GFX12-NEXT: [[V_LSHL_ADD_U64_e64_:%[0-9]+]]:vreg_64 = V_LSHL_ADD_U64_e64 [[DEF]], [[DEF1]], [[DEF2]], implicit $exec
-    ; GFX12-NEXT: [[DEF3:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-    ; GFX12-NEXT: [[DEF4:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GFX12-NEXT: [[V_LSHLREV_B64_pseudo_e64_:%[0-9]+]]:vreg_64 = V_LSHLREV_B64_pseudo_e64 [[DEF4]], [[V_LSHL_ADD_U64_e64_]], implicit $exec
+    ; GFX12-NEXT: [[DEF3:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GFX12-NEXT: [[V_LSHLREV_B64_pseudo_e64_:%[0-9]+]]:vreg_64 = V_LSHLREV_B64_pseudo_e64 [[DEF3]], [[V_LSHL_ADD_U64_e64_]], implicit $exec
     %0:vreg_64 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vreg_64 = IMPLICIT_DEF

@@ -30,10 +30,7 @@ if (
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
 
-# Whether continous profile collection (%c) requires runtime counter relocation on this platform
-runtime_reloc = bool(config.host_os in ["AIX", "Linux"])
-
-if config.host_os in ["Linux"]:
+if config.target_os in ["Linux"]:
     extra_link_flags = ["-ldl"]
 elif target_is_msvc:
     # InstrProf is incompatible with incremental linking. Disable it as a
@@ -99,14 +96,6 @@ config.substitutions.append(
 )
 config.substitutions.append(
     (
-        "%clang_profgen_cont ",
-        build_invocation(clang_cflags)
-        + " -fprofile-instr-generate "
-        + ("-mllvm -runtime-counter-relocation " if runtime_reloc else ""),
-    )
-)
-config.substitutions.append(
-    (
         "%clangxx_profgen ",
         build_invocation(clang_cxxflags) + " -fprofile-instr-generate ",
     )
@@ -125,26 +114,10 @@ config.substitutions.append(
     ("%clang_pgogen=", build_invocation(clang_cflags) + " -fprofile-generate=")
 )
 config.substitutions.append(
-    (
-        "%clang_pgogen_cont ",
-        build_invocation(clang_cflags)
-        + " -fprofile-generate "
-        + ("-mllvm -runtime-counter-relocation " if runtime_reloc else ""),
-    )
-)
-config.substitutions.append(
     ("%clangxx_pgogen ", build_invocation(clang_cxxflags) + " -fprofile-generate ")
 )
 config.substitutions.append(
     ("%clangxx_pgogen=", build_invocation(clang_cxxflags) + " -fprofile-generate=")
-)
-config.substitutions.append(
-    (
-        "%clangxx_pgogen_cont ",
-        build_invocation(clang_cxxflags)
-        + " -fprofile-generate "
-        + ("-mllvm -runtime-counter-relocation " if runtime_reloc else ""),
-    )
 )
 
 config.substitutions.append(
@@ -181,7 +154,7 @@ config.substitutions.append(
     )
 )
 
-if config.host_os not in [
+if config.target_os not in [
     "Windows",
     "Darwin",
     "FreeBSD",
@@ -194,10 +167,10 @@ if config.host_os not in [
     config.unsupported = True
 
 config.substitutions.append(
-    ("%shared_lib_flag", "-dynamiclib" if (config.host_os == "Darwin") else "-shared")
+    ("%shared_lib_flag", "-dynamiclib" if (config.target_os == "Darwin") else "-shared")
 )
 
-if config.host_os in ["AIX"]:
+if config.target_os in ["AIX"]:
     config.available_features.add("system-aix")
     exclude_unsupported_files_for_aix(config.test_source_root)
     exclude_unsupported_files_for_aix(config.test_source_root + "/Posix")
@@ -211,5 +184,5 @@ if config.android:
 if config.have_curl:
     config.available_features.add("curl")
 
-if config.host_os in ("AIX", "Darwin", "Linux"):
+if config.target_os in ("AIX", "Darwin", "Linux"):
     config.available_features.add("continuous-mode")

@@ -1011,7 +1011,7 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
       if ((MK == NSAPI::NSNumberWithInteger ||
            MK == NSAPI::NSNumberWithUnsignedInteger) &&
           !isTruncated) {
-        if (OrigTy->getAs<EnumType>() || isEnumConstant(OrigArg))
+        if (OrigTy->isEnumeralType() || isEnumConstant(OrigArg))
           break;
         if ((MK==NSAPI::NSNumberWithInteger) == OrigTy->isSignedIntegerType() &&
             OrigTySize >= Ctx.getTypeSize(Ctx.IntTy))
@@ -1086,6 +1086,7 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
 
     case CK_HLSLVectorTruncation:
     case CK_HLSLElementwiseCast:
+    case CK_HLSLAggregateSplatCast:
       llvm_unreachable("HLSL-specific cast in Objective-C?");
       break;
 

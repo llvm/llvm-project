@@ -86,16 +86,8 @@ void FaultMaps::emitFunctionInfo(const MCSymbol *FnLabel,
   OS.emitInt32(0); // Reserved
 
   for (const auto &Fault : FFI) {
-    LLVM_DEBUG(dbgs() << WFMP << "    fault type: "
-                      << faultTypeToString(Fault.Kind) << "\n");
     OS.emitInt32(Fault.Kind);
-
-    LLVM_DEBUG(dbgs() << WFMP << "    faulting PC offset: "
-                      << *Fault.FaultingOffsetExpr << "\n");
     OS.emitValue(Fault.FaultingOffsetExpr, 4);
-
-    LLVM_DEBUG(dbgs() << WFMP << "    fault handler PC offset: "
-                      << *Fault.HandlerOffsetExpr << "\n");
     OS.emitValue(Fault.HandlerOffsetExpr, 4);
   }
 }

@@ -21,6 +21,10 @@
 #include <mach/exception_types.h>
 #include <mach/mach_vm.h>
 #include <mach/task_info.h>
+#include <memory>
+#if __has_include(<os/security_config.h>)
+#include <os/security_config.h>
+#endif
 #include <pwd.h>
 #include <string>
 #include <sys/stat.h>
@@ -37,7 +41,6 @@
 #include "DNBLog.h"
 #include "DNBThreadResumeActions.h"
 #include "JSON.h"
-#include "JSONGenerator.h"
 #include "JSONGenerator.h"
 #include "MacOSX/Genealogy.h"
 #include "OsLogger.h"
@@ -243,14 +246,10 @@ void RNBRemote::CreatePacketTable() {
                      "Read memory"));
   t.push_back(Packet(read_register, &RNBRemote::HandlePacket_p, NULL, "p",
                      "Read one register"));
-  t.push_back(Packet(read_general_regs, &RNBRemote::HandlePacket_g, NULL, "g",
-                     "Read registers"));
   t.push_back(Packet(write_memory, &RNBRemote::HandlePacket_M, NULL, "M",
                      "Write memory"));
   t.push_back(Packet(write_register, &RNBRemote::HandlePacket_P, NULL, "P",
                      "Write one register"));
-  t.push_back(Packet(write_general_regs, &RNBRemote::HandlePacket_G, NULL, "G",
-                     "Write registers"));
   t.push_back(Packet(insert_mem_bp, &RNBRemote::HandlePacket_z, NULL, "Z0",
                      "Insert memory breakpoint"));
   t.push_back(Packet(remove_mem_bp, &RNBRemote::HandlePacket_z, NULL, "z0",
@@ -506,6 +505,8 @@ void RNBRemote::CreatePacketTable() {
       memory_region_info, &RNBRemote::HandlePacket_MemoryRegionInfo, NULL,
       "qMemoryRegionInfo", "Return size and attributes of a memory region that "
                            "contains the given address"));
+  t.push_back(Packet(get_memory_tags, &RNBRemote::HandlePacket_qMemTags, NULL,
+                     "qMemTags", "Return tags for a region of memory"));
   t.push_back(Packet(get_profile_data, &RNBRemote::HandlePacket_GetProfileData,
                      NULL, "qGetProfileData",
                      "Return profiling data of the current target."));
@@ -824,7 +825,7 @@ rnb_err_t RNBRemote::GetPacketPayload(std::string &return_packet) {
   // (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
 
   {
-    PThreadMutex::Locker locker(m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     if (m_rx_packets.empty()) {
       // Only reset the remote command available event if we have no more
       // packets
@@ -1054,84 +1055,82 @@ rnb_err_t RNBRemote::HandleReceivedPacket(PacketEnum *type) {
 void RNBRemote::CommDataReceived(const std::string &new_data) {
   //  DNBLogThreadedIf (LOG_RNB_REMOTE, "%8d RNBRemote::%s called",
   //  (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
-  {
-    // Put the packet data into the buffer in a thread safe fashion
-    PThreadMutex::Locker locker(m_mutex);
 
-    std::string data;
-    // See if we have any left over data from a previous call to this
-    // function?
-    if (!m_rx_partial_data.empty()) {
-      // We do, so lets start with that data
-      data.swap(m_rx_partial_data);
-    }
-    // Append the new incoming data
-    data += new_data;
+  // Put the packet data into the buffer in a thread safe fashion
+  std::lock_guard<std::mutex> guard(m_mutex);
 
-    // Parse up the packets into gdb remote packets
-    size_t idx = 0;
-    const size_t data_size = data.size();
+  std::string data;
+  // See if we have any left over data from a previous call to this
+  // function?
+  if (!m_rx_partial_data.empty()) {
+    // We do, so lets start with that data
+    data.swap(m_rx_partial_data);
+  }
+  // Append the new incoming data
+  data += new_data;
 
-    while (idx < data_size) {
-      // end_idx must be one past the last valid packet byte. Start
-      // it off with an invalid value that is the same as the current
-      // index.
-      size_t end_idx = idx;
+  // Parse up the packets into gdb remote packets
+  size_t idx = 0;
+  const size_t data_size = data.size();
 
-      switch (data[idx]) {
-      case '+':            // Look for ack
-      case '-':            // Look for cancel
-      case '\x03':         // ^C to halt target
-        end_idx = idx + 1; // The command is one byte long...
-        break;
+  while (idx < data_size) {
+    // end_idx must be one past the last valid packet byte. Start
+    // it off with an invalid value that is the same as the current
+    // index.
+    size_t end_idx = idx;
 
-      case '$':
-        // Look for a standard gdb packet?
-        end_idx = data.find('#', idx + 1);
-        if (end_idx == std::string::npos || end_idx + 3 > data_size) {
-          end_idx = std::string::npos;
-        } else {
-          // Add two for the checksum bytes and 1 to point to the
-          // byte just past the end of this packet
-          end_idx += 3;
-        }
-        break;
+    switch (data[idx]) {
+    case '+':            // Look for ack
+    case '-':            // Look for cancel
+    case '\x03':         // ^C to halt target
+      end_idx = idx + 1; // The command is one byte long...
+      break;
 
-      default:
-        break;
-      }
-
-      if (end_idx == std::string::npos) {
-        // Not all data may be here for the packet yet, save it for
-        // next time through this function.
-        m_rx_partial_data += data.substr(idx);
-        // DNBLogThreadedIf (LOG_RNB_MAX, "%8d RNBRemote::%s saving data for
-        // later[%u, npos):
-        // '%s'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-        // __FUNCTION__, idx, m_rx_partial_data.c_str());
-        idx = end_idx;
-      } else if (idx < end_idx) {
-        m_packets_recvd++;
-        // Hack to get rid of initial '+' ACK???
-        if (m_packets_recvd == 1 && (end_idx == idx + 1) && data[idx] == '+') {
-          // DNBLogThreadedIf (LOG_RNB_REMOTE, "%8d RNBRemote::%s throwing first
-          // ACK away....[%u, npos):
-          // '+'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-          // __FUNCTION__, idx);
-        } else {
-          // We have a valid packet...
-          m_rx_packets.push_back(data.substr(idx, end_idx - idx));
-          DNBLogThreadedIf(LOG_RNB_PACKETS, "getpkt: %s",
-                           m_rx_packets.back().c_str());
-        }
-        idx = end_idx;
+    case '$':
+      // Look for a standard gdb packet?
+      end_idx = data.find('#', idx + 1);
+      if (end_idx == std::string::npos || end_idx + 3 > data_size) {
+        end_idx = std::string::npos;
       } else {
-        DNBLogThreadedIf(LOG_RNB_MAX,
-                         "%8d RNBRemote::%s tossing junk byte at %c",
-                         (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-                         __FUNCTION__, data[idx]);
-        idx = idx + 1;
+        // Add two for the checksum bytes and 1 to point to the
+        // byte just past the end of this packet
+        end_idx += 3;
       }
+      break;
+
+    default:
+      break;
+    }
+
+    if (end_idx == std::string::npos) {
+      // Not all data may be here for the packet yet, save it for
+      // next time through this function.
+      m_rx_partial_data += data.substr(idx);
+      // DNBLogThreadedIf (LOG_RNB_MAX, "%8d RNBRemote::%s saving data for
+      // later[%u, npos):
+      // '%s'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+      // __FUNCTION__, idx, m_rx_partial_data.c_str());
+      idx = end_idx;
+    } else if (idx < end_idx) {
+      m_packets_recvd++;
+      // Hack to get rid of initial '+' ACK???
+      if (m_packets_recvd == 1 && (end_idx == idx + 1) && data[idx] == '+') {
+        // DNBLogThreadedIf (LOG_RNB_REMOTE, "%8d RNBRemote::%s throwing first
+        // ACK away....[%u, npos):
+        // '+'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+        // __FUNCTION__, idx);
+      } else {
+        // We have a valid packet...
+        m_rx_packets.push_back(data.substr(idx, end_idx - idx));
+        DNBLogThreadedIf(LOG_RNB_PACKETS, "getpkt: %s",
+                         m_rx_packets.back().c_str());
+      }
+      idx = end_idx;
+    } else {
+      DNBLogThreadedIf(LOG_RNB_MAX, "%8d RNBRemote::%s tossing junk byte at %c",
+                       (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+                       __FUNCTION__, data[idx]);
+      idx = idx + 1;
     }
   }
 
@@ -1483,7 +1482,6 @@ bool RNBRemote::InitializeRegisters(bool force) {
 
 void RNBRemote::NotifyThatProcessStopped(void) {
   RNBRemote::HandlePacket_last_signal(NULL);
-  return;
 }
 
 /* 'A arglen,argnum,arg,...'
@@ -3290,97 +3288,6 @@ rnb_err_t RNBRemote::HandlePacket_X(const char *p) {
   return SendPacket("OK");
 }
 
-/* 'g' -- read registers
- Get the contents of the registers for the current thread,
- send them to gdb.
- Should the setting of the Hg packet determine which thread's registers
- are returned?  */
-
-rnb_err_t RNBRemote::HandlePacket_g(const char *p) {
-  std::ostringstream ostrm;
-  if (!m_ctx.HasValidProcessID()) {
-    return SendErrorPacket("E11");
-  }
-
-  if (g_num_reg_entries == 0)
-    InitializeRegisters();
-
-  nub_process_t pid = m_ctx.ProcessID();
-  nub_thread_t tid = ExtractThreadIDFromThreadSuffix(p + 1);
-  if (tid == INVALID_NUB_THREAD)
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "No thread specified in p packet");
-
-  // Get the register context size first by calling with NULL buffer
-  nub_size_t reg_ctx_size = DNBThreadGetRegisterContext(pid, tid, NULL, 0);
-  if (reg_ctx_size) {
-    // Now allocate enough space for the entire register context
-    std::vector<uint8_t> reg_ctx;
-    reg_ctx.resize(reg_ctx_size);
-    // Now read the register context
-    reg_ctx_size =
-        DNBThreadGetRegisterContext(pid, tid, &reg_ctx[0], reg_ctx.size());
-    if (reg_ctx_size) {
-      append_hex_value(ostrm, reg_ctx.data(), reg_ctx.size(), false);
-      return SendPacket(ostrm.str());
-    }
-  }
-  return SendErrorPacket("E74");
-}
-
-/* 'G XXX...' -- write registers
- How is the thread for these specified, beyond "the current thread"?
- Does gdb actually use the Hg packet to set this?  */
-
-rnb_err_t RNBRemote::HandlePacket_G(const char *p) {
-  if (!m_ctx.HasValidProcessID()) {
-    return SendErrorPacket("E11");
-  }
-
-  if (g_num_reg_entries == 0)
-    InitializeRegisters();
-
-  p += 1; // Skip the 'G'
-
-  nub_process_t pid = m_ctx.ProcessID();
-  nub_thread_t tid = ExtractThreadIDFromThreadSuffix(p);
-  if (tid == INVALID_NUB_THREAD)
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "No thread specified in p packet");
-  // Skip the thread specification in `G;thread:3488ea;[..data...]`
-  const char *last_semi = strrchr(p, ';');
-  if (last_semi)
-    p = last_semi + 1;
-
-  StdStringExtractor packet(p);
-
-  // Get the register context size first by calling with NULL buffer
-  nub_size_t reg_ctx_size = DNBThreadGetRegisterContext(pid, tid, NULL, 0);
-  if (reg_ctx_size) {
-    // Now allocate enough space for the entire register context
-    std::vector<uint8_t> reg_ctx;
-    reg_ctx.resize(reg_ctx_size);
-
-    const nub_size_t bytes_extracted =
-        packet.GetHexBytes(&reg_ctx[0], reg_ctx.size(), 0xcc);
-    if (bytes_extracted == reg_ctx.size()) {
-      // Now write the register context
-      reg_ctx_size =
-          DNBThreadSetRegisterContext(pid, tid, reg_ctx.data(), reg_ctx.size());
-      if (reg_ctx_size == reg_ctx.size())
-        return SendPacket("OK");
-      else
-        return SendErrorPacket("E55");
-    } else {
-      DNBLogError("RNBRemote::HandlePacket_G(%s): extracted %llu of %llu "
-                  "bytes, size mismatch\n",
-                  p, (uint64_t)bytes_extracted, (uint64_t)reg_ctx_size);
-      return SendErrorPacket("E64");
-    }
-  }
-  return SendErrorPacket("E65");
-}
-
 static bool RNBRemoteShouldCancelCallback(void *not_used) {
   RNBRemoteSP remoteSP(g_remoteSP);
   if (remoteSP.get() != NULL) {
@@ -3573,8 +3480,20 @@ static bool GetProcessNameFrom_vAttach(const char *&p,
   return return_val;
 }
 
+static bool supports_memory_tagging() {
+  const char *name = "hw.optional.arm.FEAT_MTE4";
+  uint32_t val;
+  size_t len = sizeof(val);
+  int ret = ::sysctlbyname(name, &val, &len, nullptr, 0);
+  if (ret != 0)
+    return false;
+
+  assert(len == sizeof(val));
+  return val;
+}
+
 rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
-  uint32_t max_packet_size = 128 * 1024; // 128KBytes is a reasonable max packet
+  uint32_t max_packet_size = 128 * 1024; // 128 KiB is a reasonable max packet
                                          // size--debugger can always use less
   std::stringstream reply;
   reply << "qXfer:features:read+;PacketSize=" << std::hex << max_packet_size
@@ -3602,6 +3521,9 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
 #if defined(__x86_64__)
   reply << "SupportedWatchpointTypes=x86_64;";
 #endif
+
+  if (supports_memory_tagging())
+    reply << "memory-tagging+;";
 
   return SendPacket(reply.str().c_str());
 }
@@ -4349,7 +4271,6 @@ rnb_err_t RNBRemote::HandlePacket_MemoryRegionInfo(const char *p) {
      is in unmapped memory
          Region lookup cannot be performed on this platform or process is not
      yet launched
-         This packet isn't implemented
 
      Examples of use:
         qMemoryRegionInfo:3a55140
@@ -4401,6 +4322,16 @@ rnb_err_t RNBRemote::HandlePacket_MemoryRegionInfo(const char *p) {
       ostrm << 'x';
     ostrm << ';';
 
+    if (!region_info.flags.empty()) {
+      ostrm << "flags:";
+      for (size_t i = 0; i < region_info.flags.size(); i++) {
+        if (i != 0)
+          ostrm << " "; // Separator is whitespace
+        ostrm << region_info.flags[i];
+      }
+      ostrm << ";";
+    }
+
     ostrm << "dirty-pages:";
     if (region_info.dirty_pages.size() > 0) {
       bool first = true;
@@ -4422,6 +4353,62 @@ rnb_err_t RNBRemote::HandlePacket_MemoryRegionInfo(const char *p) {
       ostrm << ";";
     }
   }
+  return SendPacket(ostrm.str());
+}
+
+// qMemTags:<hex address>,<hex length>:<hex type>
+rnb_err_t RNBRemote::HandlePacket_qMemTags(const char *p) {
+  nub_process_t pid = m_ctx.ProcessID();
+  if (pid == INVALID_NUB_PROCESS)
+    return SendPacket("OK");
+
+  StdStringExtractor packet(p);
+  packet.SetFilePos(strlen("qMemTags:"));
+
+  // Address
+  nub_addr_t addr =
+      packet.GetHexMaxU64(StdStringExtractor::BigEndian, INVALID_NUB_ADDRESS);
+  if (addr == INVALID_NUB_ADDRESS)
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid/missing address in qMemTags packet");
+  // ,
+  if (packet.GetChar() != ',')
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid qMemTags packet format");
+  // Length
+  uint64_t length = packet.GetHexMaxU64(StdStringExtractor::BigEndian, 0);
+  if (length == 0)
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid/missing length in qMemTags packet");
+  // :
+  if (packet.GetChar() != ':')
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid qMemTags packet format");
+  // Type
+  // On the LLDB side this is a `int32_t` serialized as (unsigned) hex, which
+  // means negative values will show up as large positive values here.  Right
+  // now, we only support MTE (type 1), so we can ignore this complication.
+  uint32_t type = packet.GetHexMaxU32(StdStringExtractor::BigEndian, 0);
+  if (type != 1 /* MTE */)
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid/missing type in qMemTags packet, "
+                                  "only MTE (type 1) is supported");
+  // <EOF>
+  if (packet.GetBytesLeft() != 0)
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid qMemTags packet format");
+
+  std::vector<uint8_t> tags;
+  bool ok = DNBProcessGetMemoryTags(pid, addr, length, tags);
+  if (!ok)
+    return SendErrorPacket("E91");
+
+  std::ostringstream ostrm;
+  ostrm << "m"; // Multi part replies
+  for (uint8_t tag : tags) {
+    ostrm << RAWHEX8(tag); // 2 hex chars per tag
+  }
+
   return SendPacket(ostrm.str());
 }
 
@@ -4521,12 +4508,12 @@ rnb_err_t RNBRemote::HandlePacket_qSpeedTest(const char *p) {
     return HandlePacket_ILLFORMED(
         __FILE__, __LINE__, p,
         "Didn't find response_size value at right offset");
-  else if (*end == ';') {
-    static char g_data[4 * 1024 * 1024 + 16];
-    strcpy(g_data, "data:");
-    memset(g_data + 5, 'a', response_size);
-    g_data[response_size + 5] = '\0';
-    return SendPacket(g_data);
+  else if (*end == ';' && response_size < (4 * 1024 * 1024)) {
+    std::vector<char> buf(response_size + 6, 'a');
+    memcpy(buf.data(), "data:", 5);
+    buf[buf.size() - 1] = '\0';
+    rnb_err_t return_value = SendPacket(buf.data());
+    return return_value;
   } else {
     return SendErrorPacket("E79");
   }
@@ -5509,9 +5496,8 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
             JSONGenerator::ArraySP medata_array_sp(new JSONGenerator::Array());
             for (nub_size_t i = 0;
                  i < tid_stop_info.details.exception.data_count; ++i) {
-              medata_array_sp->AddItem(
-                  JSONGenerator::IntegerSP(new JSONGenerator::Integer(
-                      tid_stop_info.details.exception.data[i])));
+              medata_array_sp->AddItem(std::make_shared<JSONGenerator::Integer>(
+                  tid_stop_info.details.exception.data[i]));
             }
             thread_dict_sp->AddItem("medata", medata_array_sp);
           }
@@ -6261,6 +6247,21 @@ GetCPUTypesFromHost(nub_process_t pid) {
   return {cputype, cpusubtype};
 }
 
+static bool ProcessRunningWithMemoryTagging(pid_t pid) {
+#if __has_include(<os/security_config.h>)
+  if (__builtin_available(macOS 26.0, iOS 26.0, tvOS 26.0, watchOS 26.0,
+                          visionOS 26.0, driverkit 25.0, *)) {
+    os_security_config_t config;
+    int ret = ::os_security_config_get_for_proc(pid, &config);
+    if (ret != 0)
+      return false;
+
+    return (config & OS_SECURITY_CONFIG_MTE);
+  }
+#endif
+  return false;
+}
+
 // Note that all numeric values returned by qProcessInfo are hex encoded,
 // including the pid and the cpu type.
 
@@ -6436,6 +6437,9 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
   }
 
   rep << "vendor:apple;";
+
+  if (ProcessRunningWithMemoryTagging(pid))
+    rep << "mte:enabled;";
 
 #if defined(__LITTLE_ENDIAN__)
   rep << "endian:little;";

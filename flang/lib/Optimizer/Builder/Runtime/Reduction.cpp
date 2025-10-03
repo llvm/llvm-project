@@ -1155,7 +1155,7 @@ mlir::Value genSpecial2Args(FN func, fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
   auto args = fir::runtime::createArguments(builder, loc, fTy, maskBox,
                                             sourceFile, sourceLine, dim);
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate calls to reduction intrinsics such as All and Any.
@@ -1171,7 +1171,7 @@ static void genReduction2Args(FN func, fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, resultBox, maskBox, dim, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 /// Generate calls to reduction intrinsics such as Maxval and Minval.
@@ -1189,7 +1189,7 @@ static void genReduction3Args(FN func, fir::FirOpBuilder &builder,
   auto args =
       fir::runtime::createArguments(builder, loc, fTy, resultBox, arrayBox, dim,
                                     sourceFile, sourceLine, maskBox);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 /// Generate calls to reduction intrinsics such as Maxloc and Minloc.
@@ -1206,7 +1206,7 @@ static void genReduction4Args(FN func, fir::FirOpBuilder &builder,
   auto args = fir::runtime::createArguments(builder, loc, fTy, resultBox,
                                             arrayBox, kind, sourceFile,
                                             sourceLine, maskBox, back);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 /// Generate calls to reduction intrinsics such as Maxloc and Minloc.
@@ -1223,7 +1223,7 @@ genReduction5Args(FN func, fir::FirOpBuilder &builder, mlir::Location loc,
   auto args = fir::runtime::createArguments(builder, loc, fTy, resultBox,
                                             arrayBox, kind, dim, sourceFile,
                                             sourceLine, maskBox, back);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 /// Generate call to `AllDim` runtime routine.
@@ -1296,7 +1296,7 @@ void fir::runtime::genCountDim(fir::FirOpBuilder &builder, mlir::Location loc,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, resultBox, maskBox, dim, kind, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 /// Generate call to `Findloc` intrinsic runtime routine. This is the version
@@ -1313,7 +1313,7 @@ void fir::runtime::genFindloc(fir::FirOpBuilder &builder, mlir::Location loc,
   auto args = fir::runtime::createArguments(builder, loc, fTy, resultBox,
                                             arrayBox, valBox, kind, sourceFile,
                                             sourceLine, maskBox, back);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 /// Generate call to `FindlocDim` intrinsic runtime routine. This is the version
@@ -1331,7 +1331,7 @@ void fir::runtime::genFindlocDim(fir::FirOpBuilder &builder, mlir::Location loc,
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, resultBox, arrayBox, valBox, kind, dim, sourceFile,
       sourceLine, maskBox, back);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 /// Generate call to `Maxloc` intrinsic runtime routine. This is the version
@@ -1392,7 +1392,7 @@ mlir::Value fir::runtime::genMaxval(fir::FirOpBuilder &builder,
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, arrayBox, sourceFile, sourceLine, dim, maskBox);
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to `MaxvalDim` intrinsic runtime routine. This is the version
@@ -1417,7 +1417,7 @@ void fir::runtime::genMaxvalChar(fir::FirOpBuilder &builder, mlir::Location loc,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, resultBox, arrayBox, sourceFile, sourceLine, maskBox);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 /// Generate call to `Minloc` intrinsic runtime routine. This is the version
@@ -1476,7 +1476,7 @@ void fir::runtime::genMinvalChar(fir::FirOpBuilder &builder, mlir::Location loc,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, resultBox, arrayBox, sourceFile, sourceLine, maskBox);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 /// Generate call to `Minval` intrinsic runtime routine. This is the version
@@ -1504,7 +1504,7 @@ mlir::Value fir::runtime::genMinval(fir::FirOpBuilder &builder,
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, arrayBox, sourceFile, sourceLine, dim, maskBox);
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to `Norm2Dim` intrinsic runtime routine. This is the version
@@ -1527,7 +1527,7 @@ void fir::runtime::genNorm2Dim(fir::FirOpBuilder &builder, mlir::Location loc,
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, resultBox, arrayBox, dim, sourceFile, sourceLine);
 
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 /// Generate call to `Norm2` intrinsic runtime routine. This is the version
@@ -1558,7 +1558,7 @@ mlir::Value fir::runtime::genNorm2(fir::FirOpBuilder &builder,
   auto args = fir::runtime::createArguments(builder, loc, fTy, arrayBox,
                                             sourceFile, sourceLine, dim);
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to `Parity` intrinsic runtime routine. This routine is
@@ -1604,7 +1604,7 @@ mlir::Value fir::runtime::genProduct(fir::FirOpBuilder &builder,
     auto args =
         fir::runtime::createArguments(builder, loc, fTy, resultBox, arrayBox,
                                       sourceFile, sourceLine, dim, maskBox);
-    builder.create<fir::CallOp>(loc, func, args);
+    fir::CallOp::create(builder, loc, func, args);
     return resultBox;
   }
 
@@ -1613,7 +1613,7 @@ mlir::Value fir::runtime::genProduct(fir::FirOpBuilder &builder,
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, arrayBox, sourceFile, sourceLine, dim, maskBox);
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to `DotProduct` intrinsic runtime routine.
@@ -1645,7 +1645,7 @@ mlir::Value fir::runtime::genDotProduct(fir::FirOpBuilder &builder,
     auto args =
         fir::runtime::createArguments(builder, loc, fTy, resultBox, vectorABox,
                                       vectorBBox, sourceFile, sourceLine);
-    builder.create<fir::CallOp>(loc, func, args);
+    fir::CallOp::create(builder, loc, func, args);
     return resultBox;
   }
 
@@ -1653,7 +1653,7 @@ mlir::Value fir::runtime::genDotProduct(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
   auto args = fir::runtime::createArguments(builder, loc, fTy, vectorABox,
                                             vectorBBox, sourceFile, sourceLine);
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 /// Generate call to `SumDim` intrinsic runtime routine. This is the version
 /// that handles any rank array with the dim argument specified.
@@ -1688,7 +1688,7 @@ mlir::Value fir::runtime::genSum(fir::FirOpBuilder &builder, mlir::Location loc,
     auto args =
         fir::runtime::createArguments(builder, loc, fTy, resultBox, arrayBox,
                                       sourceFile, sourceLine, dim, maskBox);
-    builder.create<fir::CallOp>(loc, func, args);
+    fir::CallOp::create(builder, loc, func, args);
     return resultBox;
   }
 
@@ -1697,7 +1697,7 @@ mlir::Value fir::runtime::genSum(fir::FirOpBuilder &builder, mlir::Location loc,
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, arrayBox, sourceFile, sourceLine, dim, maskBox);
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 // The IAll, IAny and IParity intrinsics have essentially the same
@@ -1733,7 +1733,7 @@ mlir::Value fir::runtime::genSum(fir::FirOpBuilder &builder, mlir::Location loc,
     auto args = fir::runtime::createArguments(                                 \
         builder, loc, fTy, arrayBox, sourceFile, sourceLine, dim, maskBox);    \
                                                                                \
-    return builder.create<fir::CallOp>(loc, func, args).getResult(0);          \
+    return fir::CallOp::create(builder, loc, func, args).getResult(0);         \
   }
 
 /// Generate call to `IAllDim` intrinsic runtime routine. This is the version
@@ -1819,11 +1819,12 @@ void fir::runtime::genReduce(fir::FirOpBuilder &builder, mlir::Location loc,
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
-  auto opAddr = builder.create<fir::BoxAddrOp>(loc, fTy.getInput(2), operation);
+  auto opAddr =
+      fir::BoxAddrOp::create(builder, loc, fTy.getInput(2), operation);
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, resultBox, arrayBox, opAddr, sourceFile, sourceLine,
       dim, maskBox, identity, ordered);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 /// Generate call to `Reduce` intrinsic runtime routine. This is the version
@@ -1864,11 +1865,12 @@ mlir::Value fir::runtime::genReduce(fir::FirOpBuilder &builder,
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
-  auto opAddr = builder.create<fir::BoxAddrOp>(loc, fTy.getInput(1), operation);
+  auto opAddr =
+      fir::BoxAddrOp::create(builder, loc, fTy.getInput(1), operation);
   auto args = fir::runtime::createArguments(builder, loc, fTy, arrayBox, opAddr,
                                             sourceFile, sourceLine, dim,
                                             maskBox, identity, ordered);
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 void fir::runtime::genReduceDim(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -1912,9 +1914,10 @@ void fir::runtime::genReduceDim(fir::FirOpBuilder &builder, mlir::Location loc,
 
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
-  auto opAddr = builder.create<fir::BoxAddrOp>(loc, fTy.getInput(2), operation);
+  auto opAddr =
+      fir::BoxAddrOp::create(builder, loc, fTy.getInput(2), operation);
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, resultBox, arrayBox, opAddr, sourceFile, sourceLine,
       dim, maskBox, identity, ordered);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
