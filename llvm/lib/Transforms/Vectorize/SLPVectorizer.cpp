@@ -6884,7 +6884,6 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
                                        Type *ScalarTy, Align CommonAlignment,
                                        SmallVectorImpl<unsigned> &SortedIndices,
                                        StridedPtrInfo &SPtrInfo) const {
-  return true;
   const unsigned Sz = PointerOps.size();
   // TODO: VecSz may change if we widen the strided load.
   unsigned VecSz = Sz;
