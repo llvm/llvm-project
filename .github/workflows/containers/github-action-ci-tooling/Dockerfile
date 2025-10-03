@@ -1,6 +1,6 @@
 FROM docker.io/library/ubuntu:24.04 AS llvm-downloader
 
-ENV LLVM_VERSION=21.1.2
+ENV LLVM_VERSION=21.1.1
 
 RUN apt-get update && \
     apt-get install -y wget xz-utils && \
@@ -9,10 +9,11 @@ RUN apt-get update && \
     tar -xvJf llvm.tar.xz -C /llvm-extract LLVM-${LLVM_VERSION}-Linux-X64/bin/ && \
     rm llvm.tar.xz
 
+
 FROM docker.io/library/ubuntu:24.04 AS base
 
 ENV LLVM_SYSROOT=/opt/llvm
-ENV LLVM_VERSION=21.1.2
+ENV LLVM_VERSION=21.1.1
 
 # Need nodejs for some of the GitHub actions.
 # Need git for git-clang-format.
@@ -43,6 +44,7 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER gha
 WORKDIR /home/gha
 
+
 FROM base AS ci-container-code-format
 
 COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-format ${LLVM_SYSROOT}/bin/clang-format
@@ -55,7 +57,7 @@ RUN python -m venv venv && \
     venv/bin/pip install -r /home/gha/requirements_formatting.txt && \
     rm /home/gha/requirements_formatting.txt
 
-# Stage 4: clang-lint container
+
 FROM base AS ci-container-code-lint
 
 COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-tidy ${LLVM_SYSROOT}/bin/
@@ -63,6 +65,7 @@ COPY clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py ${LLVM_SYSROOT}/bin/cl
 
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
 
+# Install dependencies for 'pr-code-lint.yml' job
 COPY llvm/utils/git/requirements_linting.txt /home/gha/requirements_linting.txt
 RUN python -m venv venv && \
     venv/bin/pip install -r /home/gha/requirements_linting.txt && \
