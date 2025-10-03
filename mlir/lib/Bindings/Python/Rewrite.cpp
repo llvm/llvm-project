@@ -26,6 +26,31 @@ using namespace mlir::python;
 
 namespace {
 
+class PyPatternRewriter {
+public:
+  PyPatternRewriter(MlirPatternRewriter rewriter)
+      : rewriter(rewriter), base(mlirPatternRewriterAsBase(rewriter)),
+        ctx(PyMlirContext::forContext(mlirRewriterBaseGetContext(base))) {}
+
+  PyInsertionPoint getInsertionPoint() const {
+    MlirBlock block = mlirRewriterBaseGetInsertionBlock(base);
+    MlirOperation op = mlirRewriterBaseGetOperationAfterInsertion(base);
+
+    if (mlirOperationIsNull(op)) {
+      MlirOperation owner = mlirBlockGetParentOperation(block);
+      auto parent = PyOperation::forOperation(ctx, owner);
+      return PyInsertionPoint(PyBlock(parent, block));
+    }
+
+    return PyInsertionPoint(PyOperation::forOperation(ctx, op));
+  }
+
+private:
+  MlirPatternRewriter rewriter [[maybe_unused]];
+  MlirRewriterBase base;
+  PyMlirContextRef ctx;
+};
+
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 static nb::object objectFromPDLValue(MlirPDLValue value) {
   if (MlirValue v = mlirPDLValueAsValue(value); !mlirValueIsNull(v))
@@ -84,7 +109,8 @@ public:
            void *userData) -> MlirLogicalResult {
           nb::handle f = nb::handle(static_cast<PyObject *>(userData));
           return logicalResultFromObject(
-              f(rewriter, results, objectsFromPDLValues(nValues, values)));
+              f(PyPatternRewriter(rewriter), results,
+                objectsFromPDLValues(nValues, values)));
         },
         fn.ptr());
   }
@@ -98,7 +124,8 @@ public:
            void *userData) -> MlirLogicalResult {
           nb::handle f = nb::handle(static_cast<PyObject *>(userData));
           return logicalResultFromObject(
-              f(rewriter, results, objectsFromPDLValues(nValues, values)));
+              f(PyPatternRewriter(rewriter), results,
+                objectsFromPDLValues(nValues, values)));
         },
         fn.ptr());
   }
@@ -143,21 +170,8 @@ private:
 
 /// Create the `mlir.rewrite` here.
 void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
-  nb::class_<MlirPatternRewriter>(m, "PatternRewriter")
-      .def("ip", [](MlirPatternRewriter rewriter) {
-        MlirRewriterBase base = mlirPatternRewriterAsBase(rewriter);
-        MlirBlock block = mlirRewriterBaseGetInsertionBlock(base);
-        MlirOperation op = mlirRewriterBaseGetOperationAfterInsertion(base);
-        MlirOperation owner = mlirBlockGetParentOperation(block);
-        auto ctx = PyMlirContext::forContext(mlirRewriterBaseGetContext(base))
-                       ->getRef();
-        if (mlirOperationIsNull(op)) {
-          auto parent = PyOperation::forOperation(ctx, owner);
-          return PyInsertionPoint(PyBlock(parent, block));
-        }
-
-        return PyInsertionPoint(*PyOperation::forOperation(ctx, op).get());
-      });
+  nb::class_<PyPatternRewriter>(m, "PyPatternRewriter")
+      .def("ip", &PyPatternRewriter::getInsertionPoint);
   //----------------------------------------------------------------------------
   // Mapping of the PDLResultList and PDLModule
   //----------------------------------------------------------------------------
