@@ -442,6 +442,15 @@ public:
     return createBitcast(src, getPointerTo(newPointeeTy));
   }
 
+  mlir::Value createAddrSpaceCast(mlir::Location loc, mlir::Value src,
+                                  mlir::Type newTy) {
+    return createCast(loc, cir::CastKind::address_space, src, newTy);
+  }
+
+  mlir::Value createAddrSpaceCast(mlir::Value src, mlir::Type newTy) {
+    return createAddrSpaceCast(src.getLoc(), src, newTy);
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
