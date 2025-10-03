@@ -2894,17 +2894,18 @@ SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
 
 OpenACCReductionRecipe SemaOpenACC::CreateReductionInitRecipe(
     OpenACCReductionOperator ReductionOperator, const Expr *VarExpr) {
-  // TODO: OpenACC: This shouldn't be necessary, see PrivateInitRecipe
-  VarExpr = StripOffBounds(VarExpr);
-
+  // We don't strip bounds here, so that we are doing our recipe init at the
+  // 'lowest' possible level.  Codegen is going to have to do its own 'looping'.
   if (!VarExpr || VarExpr->getType()->isDependentType())
     return OpenACCReductionRecipe::Empty();
 
   QualType VarTy =
       VarExpr->getType().getNonReferenceType().getUnqualifiedType();
 
-  // TODO: OpenACC: for arrays/bounds versions, we're going to have to do a
-  // different initializer, but for now we can go ahead with this.
+  // Array sections are special, and we have to treat them that way.
+  if (const auto *ASE =
+          dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
+    VarTy = ArraySectionExpr::getBaseOriginalType(ASE);
 
   VarDecl *AllocaDecl = CreateAllocaDecl(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),

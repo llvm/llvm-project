@@ -184,4 +184,29 @@ entry:
   ret i32 %2
 }
 
+define i32 @test_generic_inst(i32 %arg) #0 {
+;CHECK-LABEL: test_generic_inst:
+;CHECK: ! fake_use: {{.*}}
+;CHECK: bne {{.*}}
+;CHECK-NEXT: nop
+  %bar1 = call i32 @bar(i32 %arg)
+  %even = and i32 %bar1, 1
+  %cmp = icmp eq i32 %even, 0
+  ; This shouldn't get reordered into a delay slot
+  call void (...) @llvm.fake.use(i32 %arg)
+  br i1 %cmp, label %true, label %false
+true:
+  %bar2 = call i32 @bar(i32 %bar1)
+  br label %cont
+
+false:
+  %inc = add nsw i32 %bar1, 1
+  br label %cont
+
+cont:
+  %ret = phi i32 [ %bar2, %true ], [ %inc, %false ]
+  ret i32 %ret
+}
+
+declare void @llvm.fake.use(...)
 attributes #0 = { nounwind "disable-tail-calls"="true" }

@@ -2112,8 +2112,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   case AMDGPU::SI_RESTORE_S32_FROM_VGPR:
     MI.setDesc(get(AMDGPU::V_READLANE_B32));
-    MI.getMF()->getRegInfo().constrainRegClass(MI.getOperand(0).getReg(),
-                                               &AMDGPU::SReg_32_XM0RegClass);
     break;
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO: {
     Register Dst = MI.getOperand(0).getReg();
@@ -8117,21 +8115,14 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     // hope for the best.
     if (Inst.isCopy() && DstReg.isPhysical() &&
         RI.isVGPR(MRI, Inst.getOperand(1).getReg())) {
-      // TODO: Only works for 32 bit registers.
-      if (MRI.constrainRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass)) {
-        BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-                get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
-            .add(Inst.getOperand(1));
-      } else {
-        Register NewDst =
-            MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-        BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-                get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
-            .add(Inst.getOperand(1));
-        BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(), get(AMDGPU::COPY),
-                DstReg)
-            .addReg(NewDst);
-      }
+      Register NewDst = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+      BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
+              get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
+          .add(Inst.getOperand(1));
+      BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(), get(AMDGPU::COPY),
+              DstReg)
+          .addReg(NewDst);
+
       Inst.eraseFromParent();
       return;
     }

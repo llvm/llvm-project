@@ -427,22 +427,20 @@ void OpenACCRecipeBuilderBase::makeBoundsInit(
   cgf.emitAutoVarInit(tempDeclEmission);
 }
 
-// TODO: OpenACC: When we get this implemented for the reduction/firstprivate,
-// this might end up re-merging with createRecipeInitCopy.  For now, keep it
-// separate until we're sure what everything looks like to keep this as clean
-// as possible.
-void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
+// TODO: OpenACC: when we start doing firstprivate for array/vlas/etc, we
+// probably need to do a little work about the 'init' calls to put it in 'copy'
+// region instead.
+void OpenACCRecipeBuilderBase::createInitRecipe(
     mlir::Location loc, mlir::Location locEnd, SourceRange exprRange,
-    mlir::Value mainOp, mlir::acc::PrivateRecipeOp recipe, size_t numBounds,
+    mlir::Value mainOp, mlir::Region &recipeInitRegion, size_t numBounds,
     llvm::ArrayRef<QualType> boundTypes, const VarDecl *allocaDecl,
     QualType origType) {
   assert(allocaDecl && "Required recipe variable not set?");
   CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, allocaDecl};
 
-  mlir::Block *block =
-      createRecipeBlock(recipe.getInitRegion(), mainOp.getType(), loc,
-                        numBounds, /*isInit=*/true);
-  builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
+  mlir::Block *block = createRecipeBlock(recipeInitRegion, mainOp.getType(),
+                                         loc, numBounds, /*isInit=*/true);
+  builder.setInsertionPointToEnd(&recipeInitRegion.back());
   CIRGenFunction::LexicalScope ls(cgf, loc, block);
 
   const Type *allocaPointeeType =
@@ -458,7 +456,7 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
     // Sema::TentativeAnalysisScopes in SemaOpenACC::CreateInitRecipe, it'll
     // emit an error to tell us.  However, emitting those errors during
     // production is a violation of the standard, so we cannot do them.
-    cgf.cgm.errorNYI(exprRange, "private default-init recipe");
+    cgf.cgm.errorNYI(exprRange, "private/reduction default-init recipe");
   }
 
   if (!numBounds) {
@@ -469,7 +467,7 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
     cgf.emitAutoVarInit(tempDeclEmission);
   } else {
     mlir::Value alloca = makeBoundsAlloca(
-        block, exprRange, loc, "openacc.private.init", numBounds, boundTypes);
+        block, exprRange, loc, allocaDecl->getName(), numBounds, boundTypes);
 
     // If the initializer is trivial, there is nothing to do here, so save
     // ourselves some effort.
@@ -521,10 +519,10 @@ void OpenACCRecipeBuilderBase::createFirstprivateRecipeCopy(
 // doesn't restore it aftewards.
 void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
     mlir::Location loc, mlir::Location locEnd, mlir::Value mainOp,
-    mlir::acc::ReductionRecipeOp recipe) {
-  mlir::Block *block = builder.createBlock(
-      &recipe.getCombinerRegion(), recipe.getCombinerRegion().end(),
-      {mainOp.getType(), mainOp.getType()}, {loc, loc});
+    mlir::acc::ReductionRecipeOp recipe, size_t numBounds) {
+  mlir::Block *block =
+      createRecipeBlock(recipe.getCombinerRegion(), mainOp.getType(), loc,
+                        numBounds, /*isInit=*/false);
   builder.setInsertionPointToEnd(&recipe.getCombinerRegion().back());
   CIRGenFunction::LexicalScope ls(cgf, loc, block);
 
