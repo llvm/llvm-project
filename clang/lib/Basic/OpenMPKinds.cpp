@@ -881,6 +881,9 @@ void clang::getOpenMPCaptureRegions(
     case OMPD_taskloop:
       CaptureRegions.push_back(OMPD_taskloop);
       break;
+    case OMPD_taskgraph:
+      CaptureRegions.push_back(OMPD_taskgraph);
+      break;
     case OMPD_loop:
       // TODO: 'loop' may require different capture regions depending on the
       // bind clause or the parent directive when there is no bind clause.

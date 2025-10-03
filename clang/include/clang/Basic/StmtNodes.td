@@ -257,6 +257,7 @@ def OMPTaskDirective : StmtNode<OMPExecutableDirective>;
 def OMPTaskyieldDirective : StmtNode<OMPExecutableDirective>;
 def OMPBarrierDirective : StmtNode<OMPExecutableDirective>;
 def OMPTaskwaitDirective : StmtNode<OMPExecutableDirective>;
+def OMPTaskgraphDirective : StmtNode<OMPExecutableDirective>;
 def OMPTaskgroupDirective : StmtNode<OMPExecutableDirective>;
 def OMPFlushDirective : StmtNode<OMPExecutableDirective>;
 def OMPDepobjDirective : StmtNode<OMPExecutableDirective>;
