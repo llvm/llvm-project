@@ -102,6 +102,9 @@ public:
 
   const Liveness *getLiveness(Value val);
 
+  /// Return the configuration of the solver used for this analysis.
+  const DataFlowConfig &getSolverConfig() const { return solver.getConfig(); }
+
 private:
   /// Stores the result of the liveness analysis that was run.
   DataFlowSolver solver;

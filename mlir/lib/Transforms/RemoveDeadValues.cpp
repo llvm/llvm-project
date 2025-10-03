@@ -33,6 +33,7 @@
 
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/LivenessAnalysis.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
@@ -119,7 +120,6 @@ struct RDVFinalCleanupList {
 /// information in `la`.
 static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
                     const DenseSet<Value> &liveSet,
-
                     RunLivenessAnalysis &la) {
   for (Value value : values) {
     if (liveSet.contains(value)) {
@@ -151,7 +151,7 @@ static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
 /// Return a BitVector of size `values.size()` where its i-th bit is 1 iff the
 /// i-th value in `values` is live, given the liveness information in `la`.
 static BitVector markLives(ValueRange values, const DenseSet<Value> &nonLiveSet,
-                           RunLivenessAnalysis &la) {
+                           const DenseSet<Value> &liveSet, RunLivenessAnalysis &la) {
   BitVector lives(values.size(), true);
 
   for (auto [index, value] : llvm::enumerate(values)) {
@@ -161,7 +161,9 @@ static BitVector markLives(ValueRange values, const DenseSet<Value> &nonLiveSet,
              << " is already marked non-live (dead) at index " << index;
       continue;
     }
-
+    if (liveSet.contains(value)) {
+      continue;
+    }
     const Liveness *liveness = la.getLiveness(value);
     // It is important to note that when `liveness` is null, we can't tell if
     // `value` is live or not. So, the safe option is to consider it live. Also,
@@ -267,6 +269,16 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
                             DenseSet<Value> &liveSet, RDVFinalCleanupList &cl) {
+  for (Value val: op->getResults()) {
+    if (liveSet.contains(val)) {
+      LDBG() << "Simple op is used by a public function, "
+                "preserving it: "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
+      liveSet.insert_range(op->getOperands());
+      return;
+    }
+  }
+
   if (!isMemoryEffectFree(op) ||
       hasLive(op->getResults(), nonLiveSet, liveSet, la)) {
     LDBG() << "Simple op is not memory effect free or has live results, "
@@ -295,7 +307,7 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 ///       removal.
 ///   (6) Marking all its results as non-live values.
 static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
-                          RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet,
+                          RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet, DenseSet<Value> &liveSet,
                           RDVFinalCleanupList &cl) {
   LDBG() << "Processing function op: "
          << OpWithFlags(funcOp, OpPrintingFlags().skipRegions());
@@ -307,7 +319,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
 
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
   SmallVector<Value> arguments(funcOp.getArguments());
-  BitVector nonLiveArgs = markLives(arguments, nonLiveSet, la);
+  BitVector nonLiveArgs = markLives(arguments, nonLiveSet, liveSet, la);
   nonLiveArgs = nonLiveArgs.flip();
 
   // Do (1).
@@ -360,7 +372,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
-    BitVector liveCallRets = markLives(callOp->getResults(), nonLiveSet, la);
+    BitVector liveCallRets = markLives(callOp->getResults(), nonLiveSet, liveSet, la);
     nonLiveRets &= liveCallRets.flip();
   }
 
@@ -386,29 +398,52 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
     collectNonLiveValues(nonLiveSet, callOp->getResults(), nonLiveRets);
   }
 }
+// create a cheaper value with the same type of oldVal in front of CallOp.
+static Value createDummyArgument(CallOpInterface callOp, Value oldVal) {
+  OpBuilder builder(callOp.getOperation());
+  Type type = oldVal.getType();
+
+  // Create zero constant for any supported type
+  if (TypedAttr zeroAttr = builder.getZeroAttr(type)) {
+      return builder.create<arith::ConstantOp>(oldVal.getLoc(), type, zeroAttr);
+  }
+  return {};
+}
 
 static void processCallOp(CallOpInterface callOp, Operation *module,
-                          RunLivenessAnalysis &la, DenseSet<Value> &liveSet) {
-  auto callable = callOp.getCallableForCallee();
+                          RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet, DenseSet<Value> &liveSet) {
+  if (!la.getSolverConfig().isInterprocedural())
+    return;
 
-  if (auto symbolRef = callable.dyn_cast<SymbolRefAttr>()) {
-    Operation *calleeOp = SymbolTable::lookupSymbolIn(module, symbolRef);
+  Operation *callableOp = callOp.resolveCallable();
+  auto funcOp = dyn_cast<FunctionOpInterface>(callableOp);
+  if (!funcOp || !funcOp.isPublic()) {
+    return;
+  }
+  LDBG() << "processCallOp" << funcOp.getName();
+  // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
+  SmallVector<Value> arguments(funcOp.getArguments());
+  BitVector nonLiveArgs = markLives(arguments, nonLiveSet, liveSet, la);
+  nonLiveArgs = nonLiveArgs.flip();
 
-    if (auto funcOp =
-            llvm::dyn_cast_or_null<mlir::FunctionOpInterface>(calleeOp)) {
-      // Ensure the outgoing arguments of PUBLIC functions are live
-      // because processFuncOp can not process them.
-      //
-      // Liveness treats the external function as a blackbox.
-      if (funcOp.isPublic()) {
-        for (Value arg : callOp.getArgOperands()) {
-          const Liveness *liveness = la.getLiveness(arg);
-          if (liveness && !liveness->isLive) {
-            liveSet.insert(arg);
-          }
-        }
+  if (nonLiveArgs.count() > 0) {
+    LDBG() << funcOp.getName() << " contains NonLive arguments";
+    // The number of operands in the call op may not match the number of
+    // arguments in the func op.
+    SmallVector<OpOperand *> callOpOperands =
+        operandsToOpOperands(callOp.getArgOperands());
+
+    for (int index : nonLiveArgs.set_bits()) {
+      OpOperand *operand = callOpOperands[index];
+      Value oldVal = operand->get();
+      if (Value dummy = createDummyArgument(callOp, oldVal)) {
+        callOp->setOperand(operand->getOperandNumber(), dummy);
+        nonLiveSet.insert(oldVal);
+      } else {
+        liveSet.insert(oldVal);
       }
     }
+    LDBG() << "after changed " << callOp;
   }
 }
 
@@ -450,7 +485,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
          << OpWithFlags(regionBranchOp, OpPrintingFlags().skipRegions());
   // Mark live results of `regionBranchOp` in `liveResults`.
   auto markLiveResults = [&](BitVector &liveResults) {
-    liveResults = markLives(regionBranchOp->getResults(), nonLiveSet, la);
+    liveResults = markLives(regionBranchOp->getResults(), nonLiveSet, liveSet, la);
   };
 
   // Mark live arguments in the regions of `regionBranchOp` in `liveArgs`.
@@ -459,7 +494,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
       if (region.empty())
         continue;
       SmallVector<Value> arguments(region.front().getArguments());
-      BitVector regionLiveArgs = markLives(arguments, nonLiveSet, la);
+      BitVector regionLiveArgs = markLives(arguments, nonLiveSet, liveSet, la);
       liveArgs[&region] = regionLiveArgs;
     }
   };
@@ -731,7 +766,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 ///     as well as their corresponding arguments.
 
 static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
-                            DenseSet<Value> &nonLiveSet,
+                            DenseSet<Value> &nonLiveSet, DenseSet<Value> &liveSet,
                             RDVFinalCleanupList &cl) {
   LDBG() << "Processing branch op: " << *branchOp;
   unsigned numSuccessors = branchOp->getNumSuccessors();
@@ -750,7 +785,7 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
 
     // Do (2)
     BitVector successorNonLive =
-        markLives(operandValues, nonLiveSet, la).flip();
+        markLives(operandValues, nonLiveSet, liveSet, la).flip();
     collectNonLiveValues(nonLiveSet, successorBlock->getArguments(),
                          successorNonLive);
 
@@ -910,7 +945,7 @@ void RemoveDeadValues::runOnOperation() {
   // Tracks values eligible for erasure - complements liveness analysis to
   // identify "droppable" values.
   DenseSet<Value> deadVals;
-  // mark outgoing arguments to a public function LIVE.
+  // mark outgoing arguments to a public function LIVE. We also propagate liveness backward.
   DenseSet<Value> liveVals;
 
   // Maintains a list of Ops, values, branches, etc., slated for cleanup at the
@@ -919,23 +954,17 @@ void RemoveDeadValues::runOnOperation() {
 
   module->walk<WalkOrder::PostOrder, BackwardIterator>([&](Operation *op) {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
-      processFuncOp(funcOp, module, la, deadVals, finalCleanupList);
+      processFuncOp(funcOp, module, la, deadVals, liveVals, finalCleanupList);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
       processRegionBranchOp(regionBranchOp, la, deadVals, liveVals,
                             finalCleanupList);
     } else if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
-      processBranchOp(branchOp, la, deadVals, finalCleanupList);
+      processBranchOp(branchOp, la, deadVals, liveVals, finalCleanupList);
     } else if (op->hasTrait<::mlir::OpTrait::IsTerminator>()) {
       // Nothing to do here because this is a terminator op and it should be
       // honored with respect to its parent
     } else if (isa<CallOpInterface>(op)) {
-      // Nothing to do because this op is associated with a function op and gets
-      // cleaned when the latter is cleaned.
-      //
-      // The only exception is public callee. By default, Liveness analysis is
-      // inter-procedural. Unused arguments of a public function nonLive and are
-      // propagated to the caller. processCallOp puts them to liveVals.
-      processCallOp(cast<CallOpInterface>(op), module, la, liveVals);
+      processCallOp(cast<CallOpInterface>(op), module, la, deadVals, liveVals);
     } else {
       processSimpleOp(op, la, deadVals, liveVals, finalCleanupList);
     }
