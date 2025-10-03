@@ -71,7 +71,7 @@ StringRef getMainFileName(const CompilerInvocation &Invocation) {
     return Input.isFile() ? Input.getFile()
                           : Input.getBuffer().getBufferIdentifier();
   }
-  return {};
+  return "<no input>";
 }
 
 class AnalysisConsumer : public AnalysisASTConsumer,
