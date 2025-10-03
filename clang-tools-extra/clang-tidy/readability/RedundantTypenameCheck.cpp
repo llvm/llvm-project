@@ -11,6 +11,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Sema/DeclSpec.h"
 
 using namespace clang::ast_matchers;
@@ -41,7 +42,7 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void RedundantTypenameCheck::check(const MatchFinder::MatchResult &Result) {
-  const SourceLocation TypenameKeywordLoc = [&] {
+  const SourceLocation ElaboratedKeywordLoc = [&] {
     if (const auto *TTL =
             Result.Nodes.getNodeAs<TypedefTypeLoc>("typedefTypeLoc"))
       return TTL->getElaboratedKeywordLoc();
@@ -53,14 +54,24 @@ void RedundantTypenameCheck::check(const MatchFinder::MatchResult &Result) {
     if (const auto DNTL = InnermostTypeLoc.getAs<DependentNameTypeLoc>())
       return DNTL.getElaboratedKeywordLoc();
 
+    if (const auto TSTL =
+            InnermostTypeLoc.getAs<TemplateSpecializationTypeLoc>())
+      return TSTL.getElaboratedKeywordLoc();
+
     return SourceLocation();
   }();
 
-  if (TypenameKeywordLoc.isInvalid())
+  if (ElaboratedKeywordLoc.isInvalid())
     return;
 
-  diag(TypenameKeywordLoc, "redundant 'typename'")
-      << FixItHint::CreateRemoval(TypenameKeywordLoc);
+  if (Token ElaboratedKeyword;
+      Lexer::getRawToken(ElaboratedKeywordLoc, ElaboratedKeyword,
+                         *Result.SourceManager, getLangOpts()) ||
+      ElaboratedKeyword.getRawIdentifier() != "typename")
+    return;
+
+  diag(ElaboratedKeywordLoc, "redundant 'typename'")
+      << FixItHint::CreateRemoval(ElaboratedKeywordLoc);
 }
 
 } // namespace clang::tidy::readability

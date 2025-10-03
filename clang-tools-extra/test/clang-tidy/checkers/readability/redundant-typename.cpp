@@ -99,6 +99,11 @@ using trait = const typename T::R ****;
 // CHECK-FIXES-20: using trait = const T::R ****;
 
 template <typename T>
+using t = typename T::template R<T>;
+// CHECK-MESSAGES-20: :[[@LINE-1]]:11: warning: redundant 'typename' [readability-redundant-typename]
+// CHECK-FIXES-20: using t = T::template R<T>;
+
+template <typename T>
 trait<typename T::R> m();
 
 #if __cplusplus >= 202002L
@@ -197,6 +202,7 @@ public:
   // CHECK-MESSAGES-20: :[[@LINE-1]]:17: warning: redundant 'typename' [readability-redundant-typename]
   // CHECK-FIXES-20: friend void k(T::R) {}
 
+  friend struct T::R;
   enum E1 : typename T::R {};
   enum class E2 : typename T::R {};
   operator typename T::R();
