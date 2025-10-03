@@ -1051,6 +1051,32 @@ void mapped_file_region::unmapImpl() {
 
 void mapped_file_region::dontNeedImpl() {}
 
+void mapped_file_region::willNeedImpl() {
+#if (_WIN32_WINNT < _WIN32_WINNT_WIN8)
+  typedef struct _WIN32_MEMORY_RANGE_ENTRY {
+    PVOID VirtualAddress;
+    SIZE_T NumberOfBytes;
+  } WIN32_MEMORY_RANGE_ENTRY, *PWIN32_MEMORY_RANGE_ENTRY;
+#endif
+
+  HMODULE kernelM = llvm::sys::windows::loadSystemModuleSecure(L"kernel32.dll");
+  if (kernelM) {
+    // PrefetchVirtualMemory is only available on Windows 8 and later. Since we
+    // still support compilation on Windows 7, we load the function dynamically.
+    typedef BOOL(WINAPI * PrefetchVirtualMemory_t)(
+        HANDLE hProcess, ULONG_PTR NumberOfEntries,
+        _In_reads_(NumberOfEntries) PWIN32_MEMORY_RANGE_ENTRY VirtualAddresses,
+        ULONG Flags);
+    static const auto pfnPrefetchVirtualMemory =
+        (PrefetchVirtualMemory_t)::GetProcAddress(kernelM,
+                                                  "PrefetchVirtualMemory");
+    if (pfnPrefetchVirtualMemory) {
+      WIN32_MEMORY_RANGE_ENTRY Range{Mapping, Size};
+      pfnPrefetchVirtualMemory(::GetCurrentProcess(), 1, &Range, 0);
+    }
+  }
+}
+
 std::error_code mapped_file_region::sync() const {
   if (!::FlushViewOfFile(Mapping, Size))
     return mapWindowsError(GetLastError());
