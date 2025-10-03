@@ -52,13 +52,9 @@ public:
   }
   /// Perform address space cast of an expression of pointer type.
   /// \param V is the value to be casted to another address space.
-  /// \param SrcAddr is the CIR address space of \p V.
-  /// \param DestAddr is the targeted CIR address space.
   /// \param DestTy is the destination pointer type.
   /// \param IsNonNull is the flag indicating \p V is known to be non null.
   virtual mlir::Value performAddrSpaceCast(CIRGenFunction &cgf, mlir::Value v,
-                                           cir::AddressSpace srcAS,
-                                           cir::AddressSpace destAS,
                                            mlir::Type destTy,
                                            bool isNonNull = false) const;
 

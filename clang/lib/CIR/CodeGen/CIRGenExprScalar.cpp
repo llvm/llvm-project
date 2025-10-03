@@ -1889,12 +1889,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     }
     // Since target may map different address spaces in AST to the same address
     // space, an address space conversion may end up as a bitcast.
-    cir::AddressSpace srcAS = cir::toCIRAddressSpace(
-        subExpr->getType()->getPointeeType().getAddressSpace());
-    cir::AddressSpace destAS =
-        cir::toCIRAddressSpace(destTy->getPointeeType().getAddressSpace());
     return cgf.cgm.getTargetCIRGenInfo().performAddrSpaceCast(
-        cgf, Visit(subExpr), srcAS, destAS, convertType(destTy));
+        cgf, Visit(subExpr), convertType(destTy));
   }
 
   case CK_AtomicToNonAtomic: {

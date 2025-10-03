@@ -22,6 +22,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include <optional>
@@ -1200,13 +1202,10 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_AddressSpaceConversion: {
     LValue lv = emitLValue(e->getSubExpr());
     QualType destTy = getContext().getPointerType(e->getType());
-    cir::AddressSpace srcAS =
-        cir::toCIRAddressSpace(e->getSubExpr()->getType().getAddressSpace());
-    cir::AddressSpace destAS =
-        cir::toCIRAddressSpace(e->getType().getAddressSpace());
-    mlir::Value V = getTargetHooks().performAddrSpaceCast(
-        *this, lv.getPointer(), srcAS, destAS, convertType(destTy));
-    return makeAddrLValue(Address(V, convertTypeForMem(e->getType()),
+    mlir::Value v = getTargetHooks().performAddrSpaceCast(
+        *this, lv.getPointer(), convertType(destTy));
+
+    return makeAddrLValue(Address(v, convertTypeForMem(e->getType()),
                                   lv.getAddress().getAlignment()),
                           e->getType(), lv.getBaseInfo());
   }
@@ -2326,9 +2325,17 @@ Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
   // be different from the type defined by the language. For example,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
-  if (auto astAS = cir::toCIRAddressSpace(cgm.getLangTempAllocaAddressSpace());
-      getCIRAllocaAddressSpace() != astAS) {
-    llvm_unreachable("Requires address space cast which is NYI");
+
+  LangAS allocaAS = cgm.getLangTempAllocaAddressSpace();
+  LangAS dstTyAS = clang::LangAS::Default;
+  if (getCIRAllocaAddressSpace()) {
+    dstTyAS = clang::getLangASFromTargetAS(
+        getCIRAllocaAddressSpace().getValue().getUInt());
+  }
+
+  if (dstTyAS != allocaAS) {
+    getTargetHooks().performAddrSpaceCast(*this, v,
+                                          builder.getPointerTo(ty, dstTyAS));
   }
   return Address(v, ty, align);
 }

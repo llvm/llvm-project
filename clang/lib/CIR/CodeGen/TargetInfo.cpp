@@ -71,13 +71,14 @@ bool TargetCIRGenInfo::isNoProtoCallVariadic(
   return false;
 }
 
-mlir::Value TargetCIRGenInfo::performAddrSpaceCast(
-    CIRGenFunction &cgf, mlir::Value src, cir::AddressSpace srcAS,
-    cir::AddressSpace destAS, mlir::Type destTy, bool isNonNull) const {
+mlir::Value TargetCIRGenInfo::performAddrSpaceCast(CIRGenFunction &cgf,
+                                                   mlir::Value v,
+                                                   mlir::Type destTy,
+                                                   bool isNonNull) const {
   // Since target may map different address spaces in AST to the same address
   // space, an address space conversion may end up as a bitcast.
-  if (cir::GlobalOp globalOp = src.getDefiningOp<cir::GlobalOp>())
+  if (cir::GlobalOp globalOp = v.getDefiningOp<cir::GlobalOp>())
     cgf.cgm.errorNYI("Global op addrspace cast");
   // Try to preserve the source's name to make IR more readable.
-  return cgf.getBuilder().createAddrSpaceCast(src, destTy);
+  return cgf.getBuilder().createAddrSpaceCast(v, destTy);
 }

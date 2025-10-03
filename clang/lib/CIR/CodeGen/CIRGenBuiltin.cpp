@@ -198,16 +198,20 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     // default (e.g. in C / C++ auto vars are in the generic address space). At
     // the AST level this is handled within CreateTempAlloca et al., but for the
     // builtin / dynamic alloca we have to handle it here.
-    cir::AddressSpace aas = getCIRAllocaAddressSpace();
-    cir::AddressSpace eas = cir::toCIRAddressSpace(
-        e->getType()->getPointeeType().getAddressSpace());
-    if (eas != aas) {
+
+    LangAS allocaAddrSpace = clang::LangAS::Default;
+    if (getCIRAllocaAddressSpace()) {
+      allocaAddrSpace = clang::getLangASFromTargetAS(
+          getCIRAllocaAddressSpace().getValue().getUInt());
+    }
+    LangAS exprAddrSpace = e->getType()->getPointeeType().getAddressSpace();
+    if (exprAddrSpace != allocaAddrSpace) {
       cgm.errorNYI(e->getSourceRange(), "Non-default address space for alloca");
     }
 
     // Bitcast the alloca to the expected type.
-    return RValue::get(
-        builder.createBitcast(allocaAddr, builder.getVoidPtrTy(aas)));
+    return RValue::get(builder.createBitcast(
+        allocaAddr, builder.getVoidPtrTy(allocaAddrSpace)));
   }
 
   case Builtin::BIcos:
