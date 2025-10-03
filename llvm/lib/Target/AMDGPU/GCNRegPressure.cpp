@@ -461,8 +461,6 @@ GCNRPTracker::LiveRegSet llvm::getLiveRegs(SlotIndex SI,
                                            const LiveIntervals &LIS,
                                            const MachineRegisterInfo &MRI) {
   GCNRPTracker::LiveRegSet LiveRegs;
-  if (!SI.isValid())
-    return LiveRegs;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     auto Reg = Register::index2VirtReg(I);
     if (!LIS.hasInterval(Reg))
@@ -908,28 +906,29 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
 
     SlotIndex MBBStartSlot = LIS.getSlotIndexes()->getMBBStartIdx(&MBB);
     SlotIndex MBBLastSlot = LIS.getSlotIndexes()->getMBBLastIdx(&MBB);
-    bool MBBHasNonDebugInstrs = MBBStartSlot != MBBLastSlot.getBaseIndex();
 
     GCNRPTracker::LiveRegSet LiveIn, LiveOut;
     GCNRegPressure RPAtMBBEnd;
 
-    if (!MBBHasNonDebugInstrs) {
-      LiveIn = LiveOut = getLiveRegs(MBBStartSlot, LIS, MRI);
-      RPAtMBBEnd = getRegPressure(MRI, LiveIn);
-    } else if (UseDownwardTracker) {
-      GCNDownwardRPTracker RPT(LIS);
-      RPT.reset(MBB.front());
+    if (UseDownwardTracker) {
+      if (MBB.empty()) {
+        LiveIn = LiveOut = getLiveRegs(MBBStartSlot, LIS, MRI);
+        RPAtMBBEnd = getRegPressure(MRI, LiveIn);
+      } else {
+        GCNDownwardRPTracker RPT(LIS);
+        RPT.reset(MBB.front());
 
-      LiveIn = RPT.getLiveRegs();
+        LiveIn = RPT.getLiveRegs();
 
-      while (!RPT.advanceBeforeNext()) {
-        GCNRegPressure RPBeforeMI = RPT.getPressure();
-        RPT.advanceToNext();
-        RP.emplace_back(RPBeforeMI, RPT.getPressure());
+        while (!RPT.advanceBeforeNext()) {
+          GCNRegPressure RPBeforeMI = RPT.getPressure();
+          RPT.advanceToNext();
+          RP.emplace_back(RPBeforeMI, RPT.getPressure());
+        }
+
+        LiveOut = RPT.getLiveRegs();
+        RPAtMBBEnd = RPT.getPressure();
       }
-
-      LiveOut = RPT.getLiveRegs();
-      RPAtMBBEnd = RPT.getPressure();
     } else {
       GCNUpwardRPTracker RPT(LIS);
       RPT.reset(MRI, MBBLastSlot);
@@ -973,9 +972,8 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
     for (auto [Reg, Mask] : LiveIn) {
       LaneBitmask MaskIntersection = Mask & LiveOut.lookup(Reg);
       if (MaskIntersection.any()) {
-        SlotIndex MBBEndSlot = LIS.getSlotIndexes()->getMBBEndIdx(&MBB);
         LaneBitmask LTMask = getRegLiveThroughMask(
-            MRI, LIS, Reg, MBBStartSlot, MBBEndSlot, MaskIntersection);
+            MRI, LIS, Reg, MBBStartSlot, MBBLastSlot, MaskIntersection);
         if (LTMask.any())
           LiveThrough[Reg] = LTMask;
       }
