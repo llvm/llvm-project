@@ -275,8 +275,8 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
                       hasType(qualType(anyOf(PairType, lValueReferenceType(
                                                            pointee(PairType))))
                                   .bind(PairVarTypeName)),
-                      hasInitializer(expr(ignoringCopyCtorAndImplicitCast(
-                          expr().bind(InitExprName)))))
+                      hasInitializer(ignoringCopyCtorAndImplicitCast(
+                          expr().bind(InitExprName))))
                   .bind(PairDeclName)),
           hasNextTwoVarDecl(
               llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
@@ -296,8 +296,8 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
               varDecl(hasType(qualType(anyOf(PairType, lValueReferenceType(
                                                            pointee(PairType))))
                                   .bind(PairVarTypeName)),
-                      hasInitializer(expr(ignoringCopyCtorAndImplicitCast(
-                          expr().bind(InitExprName)))))
+                      hasInitializer(ignoringCopyCtorAndImplicitCast(
+                          expr().bind(InitExprName))))
                   .bind(PairDeclName)),
           hasBody(
               compoundStmt(
