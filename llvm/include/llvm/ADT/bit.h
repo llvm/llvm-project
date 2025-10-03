@@ -304,7 +304,7 @@ template <typename T> [[nodiscard]] constexpr int bit_width_constexpr(T Value) {
   int Width = 0;
   while (Value > 0) {
     Value >>= 1;
-    Width++;
+    ++Width;
   }
   return Width;
 }
