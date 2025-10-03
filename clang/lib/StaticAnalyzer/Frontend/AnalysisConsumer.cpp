@@ -65,6 +65,15 @@ STAT_MAX(MaxCFGSize, "The maximum number of basic blocks in a function.");
 
 namespace {
 
+StringRef getMainFileName(const CompilerInvocation &Invocation) {
+  if (!Invocation.getFrontendOpts().Inputs.empty()) {
+    const FrontendInputFile &Input = Invocation.getFrontendOpts().Inputs[0];
+    return Input.isFile() ? Input.getFile()
+                          : Input.getBuffer().getBufferIdentifier();
+  }
+  return "<no input>";
+}
+
 class AnalysisConsumer : public AnalysisASTConsumer,
                          public DynamicRecursiveASTVisitor {
   enum {
@@ -125,7 +134,8 @@ public:
         PP(CI.getPreprocessor()), OutDir(outdir), Opts(opts), Plugins(plugins),
         Injector(std::move(injector)), CTU(CI),
         MacroExpansions(CI.getLangOpts()) {
-    EntryPointStat::lockRegistry();
+
+    EntryPointStat::lockRegistry(getMainFileName(CI.getInvocation()));
     DigestAnalyzerOptions();
 
     if (Opts.AnalyzerDisplayProgress || Opts.PrintStats ||
