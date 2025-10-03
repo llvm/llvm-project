@@ -2112,8 +2112,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   case AMDGPU::SI_RESTORE_S32_FROM_VGPR:
     MI.setDesc(get(AMDGPU::V_READLANE_B32));
-    MI.getMF()->getRegInfo().constrainRegClass(MI.getOperand(0).getReg(),
-                                               &AMDGPU::SReg_32_XM0RegClass);
     break;
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO: {
     Register Dst = MI.getOperand(0).getReg();
