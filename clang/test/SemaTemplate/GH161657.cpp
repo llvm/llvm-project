@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++20 -ffp-exception-behavior=strict -verify %s
+// RUN: %clang_cc1 -triple=x86_64 -fsyntax-only -std=c++20 -ffp-exception-behavior=strict -verify %s
 // expected-no-diagnostics
 
 template <class T> struct S {
