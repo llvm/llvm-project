@@ -139,7 +139,7 @@ class StructuredYield<std::tuple<RetT>, Serializer>
 public:
   using StructuredYieldBase<Serializer>::StructuredYieldBase;
   void operator()(RetT &&R) {
-    if (auto ResultBytes = this->S.resultSerializer()(std::forward<RetT>(R)))
+    if (auto ResultBytes = this->S.result().serialize(std::forward<RetT>(R)))
       this->Return(this->Session, this->CallCtx, ResultBytes->release());
     else
       this->Return(this->Session, this->CallCtx,
@@ -166,9 +166,9 @@ template <typename T, typename Serializer>
 struct ResultDeserializer<std::tuple<Expected<T>>, Serializer> {
   static Expected<T> deserialize(WrapperFunctionBuffer ResultBytes,
                                  Serializer &S) {
-    T Val;
-    if (S.resultDeserializer()(ResultBytes, Val))
-      return std::move(Val);
+    if (auto Val = S.result().template deserialize<std::tuple<T>>(
+            std::move(ResultBytes)))
+      return std::move(std::get<0>(*Val));
     else
       return make_error<StringError>("Could not deserialize result");
   }
@@ -205,7 +205,7 @@ struct WrapperFunction {
         "Result-handler should have exactly one argument");
     typedef typename ResultHandlerTraits::args_tuple_type ResultTupleType;
 
-    if (auto ArgBytes = S.argumentSerializer()(std::forward<ArgTs>(Args)...)) {
+    if (auto ArgBytes = S.arguments().serialize(std::forward<ArgTs>(Args)...)) {
       C(
           [RH = std::move(RH),
            S = std::move(S)](orc_rt_SessionRef Session,
@@ -241,13 +241,12 @@ struct WrapperFunction {
     if (ArgBytes.getOutOfBandError())
       return Return(Session, CallCtx, ArgBytes.release());
 
-    ArgTuple Args;
-    if (std::apply(bind_front(S.argumentDeserializer(), std::move(ArgBytes)),
-                   Args))
+    if (auto Args =
+            S.arguments().template deserialize<ArgTuple>(std::move(ArgBytes)))
       std::apply(bind_front(std::forward<Handler>(H),
                             detail::StructuredYield<RetTupleType, Serializer>(
                                 Session, CallCtx, Return, std::move(S))),
-                 std::move(Args));
+                 std::move(*Args));
     else
       Return(Session, CallCtx,
              WrapperFunctionBuffer::createOutOfBandError(
