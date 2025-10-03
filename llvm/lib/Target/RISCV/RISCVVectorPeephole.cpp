@@ -382,7 +382,7 @@ bool RISCVVectorPeephole::convertAllOnesVMergeToVMv(MachineInstr &MI) const {
   // vmv.v.v doesn't have a mask operand, so we may be able to inflate the
   // register class for the destination and passthru operands e.g. VRNoV0 -> VR
   MRI->recomputeRegClass(MI.getOperand(0).getReg());
-  if (MI.getOperand(1).getReg())
+  if (MI.getOperand(1).getReg().isValid())
     MRI->recomputeRegClass(MI.getOperand(1).getReg());
   return true;
 }
@@ -467,7 +467,7 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
   // vmv.v.v doesn't have a mask operand, so we may be able to inflate the
   // register class for the destination and passthru operands e.g. VRNoV0 -> VR
   MRI->recomputeRegClass(MI.getOperand(0).getReg());
-  if (MI.getOperand(1).getReg())
+  if (MI.getOperand(1).getReg().isValid())
     MRI->recomputeRegClass(MI.getOperand(1).getReg());
   return true;
 }
@@ -576,7 +576,7 @@ static bool dominates(MachineBasicBlock::const_iterator A,
 bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
                                           MachineInstr &Src) const {
   assert(MO.getParent()->getParent() == Src.getParent());
-  if (!MO.isReg() || !MO.getReg())
+  if (!MO.isReg() || !MO.getReg().isValid())
     return true;
 
   MachineInstr *Def = MRI->getVRegDef(MO.getReg());
@@ -672,7 +672,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   if (SrcPassthru.getReg() != Passthru.getReg()) {
     SrcPassthru.setReg(Passthru.getReg());
     // If Src is masked then its passthru needs to be in VRNoV0.
-    if (Passthru.getReg())
+    if (Passthru.getReg().isValid())
       MRI->constrainRegClass(
           Passthru.getReg(),
           TII->getRegClass(Src->getDesc(), SrcPassthru.getOperandNo(), TRI));

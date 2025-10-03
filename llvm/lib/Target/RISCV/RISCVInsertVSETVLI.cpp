@@ -128,7 +128,7 @@ static bool hasUndefinedPassthru(const MachineInstr &MI) {
   // All undefined passthrus should be $noreg: see
   // RISCVDAGToDAGISel::doPeepholeNoRegPassThru
   const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
-  return !UseMO.getReg() || UseMO.isUndef();
+  return !UseMO.getReg().isValid() || UseMO.isUndef();
 }
 
 /// Return true if \p MI is a copy that will be lowered to one or more vmvNr.vs.
