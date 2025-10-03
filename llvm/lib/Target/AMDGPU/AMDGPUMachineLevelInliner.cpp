@@ -121,7 +121,170 @@ bool AMDGPUMachineLevelInliner::runOnMachineFunction(MachineFunction &MF) {
     return false;
   }
 
-  return false;
+  bool Changed = false;
+
+  // Can't inline anything if there aren't any calls.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (!MFI.hasCalls() && !MFI.hasTailCall())
+    return false;
+
+  // Collect calls to inline.
+  SmallVector<MachineInstr *, 4> CallsToInline;
+  const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
+
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (!MI.isCall())
+        continue;
+
+      const MachineOperand *CalleeOp =
+          TII->getNamedOperand(MI, AMDGPU::OpName::callee);
+      if (CalleeOp && CalleeOp->isGlobal()) {
+        if (auto *CalledFunc = dyn_cast<Function>(CalleeOp->getGlobal())) {
+          // Partial inlining is not supported yet, because the inlining pass
+          // manager does not run the rest of the pass pipeline on functions
+          // that get inlined (including outputting code for them).
+          if (CalledFunc == &F)
+            report_fatal_error("Recursive calls in whole wave functions are "
+                               "not supported yet");
+
+          if (shouldInlineCallsTo(*CalledFunc)) {
+            CallsToInline.push_back(&MI);
+          }
+        }
+      }
+    }
+  }
+
+  // Perform the actual inlining.
+  for (MachineInstr *CallMI : CallsToInline) {
+    const MachineOperand *CalleeOp =
+        TII->getNamedOperand(*CallMI, AMDGPU::OpName::callee);
+    assert(CalleeOp && CalleeOp->isGlobal() &&
+           isa<Function>(CalleeOp->getGlobal()));
+    auto *Callee = cast<Function>(CalleeOp->getGlobal());
+
+    MachineFunction *CalleeMF = MMI.getMachineFunction(*Callee);
+    assert(CalleeMF && "Couldn't get MachineFunction for callee");
+    assert(!CalleeMF->empty() && "Machine function body is empty");
+
+    LLVM_DEBUG(dbgs() << "    Inlining machine call to: " << Callee->getName()
+                      << " (" << CalleeMF->size() << " basic blocks)\n");
+
+    inlineMachineFunction(&MF, CallMI, CalleeMF, TII);
+    cleanupAfterInlining(&MF, CallMI, TII);
+    Changed = true;
+  }
+
+  return Changed;
+}
+
+void AMDGPUMachineLevelInliner::inlineMachineFunction(MachineFunction *CallerMF,
+                                                      MachineInstr *CallMI,
+                                                      MachineFunction *CalleeMF,
+                                                      const SIInstrInfo *TII) {
+
+  MachineBasicBlock *CallMBB = CallMI->getParent();
+  MachineBasicBlock *ContinuationMBB =
+      CallMBB->splitAt(*CallMI, /*UpdateLiveIns=*/true);
+
+  // Splitting marks the ContinuationMBB as a successor, but we want to
+  // fallthrough to the body of the inlined function instead.
+  CallMBB->removeSuccessor(ContinuationMBB);
+
+  // First we clone all the blocks and build a map, so we can patch up the
+  // control flow while cloning their content in a second pass.
+  DenseMap<const MachineBasicBlock *, MachineBasicBlock *> ClonedBlocks;
+  for (const MachineBasicBlock &OrigMBB : *CalleeMF) {
+    MachineBasicBlock *ClonedMBB =
+        CallerMF->CreateMachineBasicBlock(OrigMBB.getBasicBlock());
+    CallerMF->insert(ContinuationMBB->getIterator(), ClonedMBB);
+    ClonedBlocks[&OrigMBB] = ClonedMBB;
+  }
+
+  MachineBasicBlock *ClonedEntry = ClonedBlocks[&CalleeMF->front()];
+  CallMBB->addSuccessor(ClonedEntry);
+
+  for (const MachineBasicBlock &OrigMBB : *CalleeMF) {
+    MachineBasicBlock *ClonedMBB = ClonedBlocks[&OrigMBB];
+
+    for (MachineBasicBlock *OrigSucc : OrigMBB.successors())
+      ClonedMBB->addSuccessor(ClonedBlocks[OrigSucc]);
+
+    for (auto &LiveIn : OrigMBB.liveins())
+      ClonedMBB->addLiveIn(LiveIn);
+
+    for (const MachineInstr &OrigMI : OrigMBB) {
+      // Bundled instructions are handled by the bundle header.
+      if (OrigMI.isBundledWithPred())
+        continue;
+
+      if (OrigMI.isReturn()) {
+        assert(!OrigMI.isCall() && "Tail calls not supported yet"); // FIXME
+        TII->insertBranch(*ClonedMBB, ContinuationMBB, nullptr,
+                          SmallVector<MachineOperand, 0>(), DebugLoc());
+        ClonedMBB->addSuccessor(ContinuationMBB);
+      } else {
+        MachineInstr &ClonedMI = CallerMF->cloneMachineInstrBundle(
+            *ClonedMBB, ClonedMBB->end(), OrigMI);
+        ClonedMI.dropMemRefs(*CallerMF); // FIXME: Update them instead.
+
+        for (MachineOperand &MO : ClonedMI.operands())
+          if (MO.isMBB())
+            MO.setMBB(ClonedBlocks[MO.getMBB()]);
+      }
+    }
+  }
+}
+
+void AMDGPUMachineLevelInliner::cleanupAfterInlining(
+    MachineFunction *CallerMF, MachineInstr *CallMI,
+    const SIInstrInfo *TII) const {
+  MachineRegisterInfo &MRI = CallerMF->getRegInfo();
+  const TargetRegisterInfo *TRI = CallerMF->getSubtarget().getRegisterInfo();
+
+  // Clean up instructions setting up the callee operand (this is important
+  // because we won't be generating any code for that symbol, so we don't want
+  // references to it dangling around).
+  const MachineOperand *CalleeGlobalOp =
+      TII->getNamedOperand(*CallMI, AMDGPU::OpName::callee);
+  const MachineOperand *CalleeRegOp =
+      TII->getNamedOperand(*CallMI, AMDGPU::OpName::src0);
+
+  assert(CalleeGlobalOp && CalleeRegOp &&
+         "Couldn't get operands for call inst");
+  assert(CalleeGlobalOp->isGlobal() && "Unexpected operand kind");
+  assert(CalleeRegOp->isReg() && "Unexpected operand kind");
+
+  const GlobalValue *CalleeGV = CalleeGlobalOp->getGlobal();
+  Register CalleeReg = CalleeRegOp->getReg();
+
+  SmallVector<MachineInstr *, 4> ToErase;
+  ToErase.push_back(CallMI);
+
+  // Check each subreg of the callee register (e.g., s0 and s1 for s[0:1]).
+  for (MCSubRegIterator SR(CalleeReg, TRI, /*IncludeSelf=*/true); SR.isValid();
+       ++SR) {
+    MCPhysReg SubReg = *SR;
+
+    // Usually the instructions setting up the callee are a S_MOV_B32
+    // referencing the global op. Look for them and remove them. In the general
+    // case, we'll want to check that these instructions have no other uses, but
+    // for now this should be safe because the addresses of whole wave functions
+    // may not be used for anything other than direct calls.
+    for (MachineInstr &DefMI : MRI.def_instructions(SubReg)) {
+      // Check if this def instruction references the callee global
+      for (const MachineOperand &MO : DefMI.operands()) {
+        if (MO.isGlobal() && MO.getGlobal() == CalleeGV) {
+          ToErase.push_back(&DefMI);
+          break;
+        }
+      }
+    }
+  }
+
+  for (MachineInstr *MI : ToErase)
+    MI->eraseFromParent();
 }
 
 FunctionPass *llvm::createAMDGPUMachineLevelInlinerPass() {
