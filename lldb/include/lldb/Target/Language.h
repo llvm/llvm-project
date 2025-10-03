@@ -412,7 +412,14 @@ public:
   GetLanguageTypeFromString(const char *string) = delete;
   static lldb::LanguageType GetLanguageTypeFromString(llvm::StringRef string);
 
+  /// Returns the internal LLDB name for the specified language. When presenting
+  /// the language name to users, use \ref GetDisplayNameForLanguageType
+  /// instead.
   static const char *GetNameForLanguageType(lldb::LanguageType language);
+
+  /// Returns a user-friendly name for the specified language.
+  static llvm::StringRef
+  GetDisplayNameForLanguageType(lldb::LanguageType language);
 
   static void PrintAllLanguages(Stream &s, const char *prefix,
                                 const char *suffix);
