@@ -97,8 +97,7 @@ static bool containsUnreachable(const Loop &L,
       }
     }
   }
-  return static_cast<size_t>(std::distance(Latch->begin(), Latch->end())) !=
-         Visited.size();
+  return Latch->size() != Visited.size();
 }
 
 /// A structure that can hold either a Simple Recurrence or a Conditional
