@@ -1908,7 +1908,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
       return {};
     }
 
-    return builder.createIntToPtr(MiddleVal, DestCIRTy);
+    return builder.createIntToPtr(middleVal, destCIRTy);
   }
 
   case CK_ArrayToPointerDecay:
