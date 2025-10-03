@@ -912,15 +912,12 @@ define fp128 @tanh(fp128 %a) nounwind {
   ret fp128 %1
 }
 
-define { fp128, fp128 } @modf(fp128 %a) {
+define { fp128, fp128 } @modf(fp128 %a) nounwind {
 ; CHECK-LABEL: modf:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset ra, -8
-; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    mv a1, a2
@@ -934,10 +931,7 @@ define { fp128, fp128 } @modf(fp128 %a) {
 ; CHECK-NEXT:    sd a3, 24(s0)
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    .cfi_restore ra
-; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 32
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %result = call { fp128, fp128 } @llvm.modf.f128(fp128 %a)
   ret { fp128, fp128 } %result

@@ -190,15 +190,12 @@ define fp128 @fminimum(fp128 %x, fp128 %y) {
   ret fp128 %a
 }
 
-define { fp128, fp128 } @modf(fp128 %a) {
+define { fp128, fp128 } @modf(fp128 %a) nounwind {
 ; RV32I-LABEL: modf:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -64
-; RV32I-NEXT:    .cfi_def_cfa_offset 64
 ; RV32I-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    .cfi_offset ra, -4
-; RV32I-NEXT:    .cfi_offset s0, -8
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    lw a4, 4(a1)
 ; RV32I-NEXT:    lw a5, 8(a1)
@@ -230,10 +227,7 @@ define { fp128, fp128 } @modf(fp128 %a) {
 ; RV32I-NEXT:    sw a3, 12(s0)
 ; RV32I-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    .cfi_restore ra
-; RV32I-NEXT:    .cfi_restore s0
 ; RV32I-NEXT:    addi sp, sp, 64
-; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
   %result = call { fp128, fp128 } @llvm.modf.f128(fp128 %a)
   ret { fp128, fp128 } %result
