@@ -542,7 +542,7 @@ Language::Language() = default;
 // Destructor
 Language::~Language() = default;
 
-static llvm::dwarf::SourceLanguage
+static std::optional<llvm::dwarf::SourceLanguage>
 ToDwarfSourceLanguage(lldb::LanguageType language_type) {
   if (language_type < lldb::eLanguageTypeLastStandardLanguage)
     return static_cast<llvm::dwarf::SourceLanguage>(language_type);
@@ -551,12 +551,17 @@ ToDwarfSourceLanguage(lldb::LanguageType language_type) {
   case eLanguageTypeMipsAssembler:
     return llvm::dwarf::DW_LANG_Mips_Assembler;
   default:
-    llvm_unreachable("Unhandled language type");
+    return std::nullopt;
   }
 }
 
 SourceLanguage::SourceLanguage(lldb::LanguageType language_type) {
-  auto lname = llvm::dwarf::toDW_LNAME(ToDwarfSourceLanguage(language_type));
+  std::optional<llvm::dwarf::SourceLanguage> dwarf_lang =
+      ToDwarfSourceLanguage(language_type);
+  if (!dwarf_lang)
+    return;
+
+  auto lname = llvm::dwarf::toDW_LNAME(*dwarf_lang);
   if (!lname)
     return;
   name = lname->first;
