@@ -618,7 +618,21 @@ public:
     allocator_traits<_Alloc>::construct(__na, std::addressof(__get_value()), std::forward<_Args>(__args)...);
   }
 
+// This line fails with:
+// libcxx/test-suite-install/include/c++/v1/__memory/construct_at.h:38:49: note: non-literal type
+// 'std::__tree_node<std::__value_type<Key, int>, void *>' cannot be used in a constant expression
+//
+// during constant evaluation as part of P3372
+// on:
+// 1. Arm CI which is on clang 19.x (will be fixed in: https://github.com/llvm/llvm-project/issues/161159 )
+// 2. AppleClang is not yet using clang >= 20.x, which has "fixed" this issue
+// 3. A few others like FreeBSD/amd64, AArch64, AIX
+// FIXME: when AppleClang is based off of clang >= 20.x
+#if _LIBCPP_CLANG_VER < 2000
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~__tree_node() {}
+#else
   ~__tree_node()                             = delete;
+#endif
   __tree_node(__tree_node const&)            = delete;
   __tree_node& operator=(__tree_node const&) = delete;
 };
