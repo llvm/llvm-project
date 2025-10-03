@@ -39,25 +39,20 @@ define i32 @switch_of_powers_two_default_reachable(i32 %arg) {
 ; CHECK-LABEL: define i32 @switch_of_powers_two_default_reachable(
 ; CHECK-SAME: i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    switch i32 [[ARG]], label %[[RETURN:.*]] [
-; CHECK-NEXT:      i32 1, label %[[BB1:.*]]
-; CHECK-NEXT:      i32 8, label %[[BB2:.*]]
-; CHECK-NEXT:      i32 16, label %[[BB3:.*]]
-; CHECK-NEXT:      i32 32, label %[[BB4:.*]]
-; CHECK-NEXT:      i32 64, label %[[BB5:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[BB1]]:
-; CHECK-NEXT:    br label %[[RETURN]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    br label %[[RETURN]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    br label %[[RETURN]]
-; CHECK:       [[BB4]]:
-; CHECK-NEXT:    br label %[[RETURN]]
-; CHECK:       [[BB5]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[ARG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[RETURN:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 7
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[SWITCH_LOOKUP:.*]], label %[[RETURN]]
+; CHECK:       [[SWITCH_LOOKUP]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.switch_of_powers_two_default_reachable, i64 0, i64 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 3, %[[BB1]] ], [ 2, %[[BB2]] ], [ 1, %[[BB3]] ], [ 0, %[[BB4]] ], [ 42, %[[BB5]] ], [ 5, %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 5, %[[ENTRY]] ], [ 5, %[[ENTRY_SPLIT]] ], [ [[SWITCH_LOAD]], %[[SWITCH_LOOKUP]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:
@@ -87,25 +82,24 @@ define i32 @switch_of_powers_two_default_reachable_multipreds(i32 %arg, i1 %cond
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 [[COND]], label %[[SWITCH:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[SWITCH]]:
-; CHECK-NEXT:    switch i32 [[ARG]], label %[[RETURN]] [
-; CHECK-NEXT:      i32 1, label %[[BB1:.*]]
-; CHECK-NEXT:      i32 8, label %[[BB2:.*]]
-; CHECK-NEXT:      i32 16, label %[[BB3:.*]]
-; CHECK-NEXT:      i32 32, label %[[BB4:.*]]
-; CHECK-NEXT:      i32 64, label %[[BB5:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[BB1]]:
-; CHECK-NEXT:    br label %[[RETURN]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    br label %[[RETURN]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    br label %[[RETURN]]
-; CHECK:       [[BB4]]:
-; CHECK-NEXT:    br label %[[RETURN]]
-; CHECK:       [[BB5]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[ARG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[SWITCH_SPLIT:.*]], label %[[RETURN]]
+; CHECK:       [[SWITCH_SPLIT]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 7
+; CHECK-NEXT:    [[SWITCH_MASKINDEX:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[SWITCH_SHIFTED:%.*]] = lshr i8 121, [[SWITCH_MASKINDEX]]
+; CHECK-NEXT:    [[SWITCH_LOBIT:%.*]] = trunc i8 [[SWITCH_SHIFTED]] to i1
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP3]], i1 [[SWITCH_LOBIT]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label %[[SWITCH_LOOKUP:.*]], label %[[RETURN]]
+; CHECK:       [[SWITCH_LOOKUP]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.switch_of_powers_two_default_reachable_multipreds, i64 0, i64 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 3, %[[BB1]] ], [ 2, %[[BB2]] ], [ 1, %[[BB3]] ], [ 0, %[[BB4]] ], [ 42, %[[BB5]] ], [ 0, %[[ENTRY]] ], [ [[ARG]], %[[SWITCH]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ARG]], %[[SWITCH_SPLIT]] ], [ [[ARG]], %[[SWITCH]] ], [ [[SWITCH_LOAD]], %[[SWITCH_LOOKUP]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:
