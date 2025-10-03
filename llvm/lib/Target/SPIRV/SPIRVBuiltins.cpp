@@ -1096,25 +1096,6 @@ static bool build2DBlockIOINTELInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
-// Helper function for building Intel's predicated load/store instructions.
-static bool buildPredicatedLoadStoreInst(const SPIRV::IncomingCall *Call,
-                                          unsigned Opcode,
-                                          MachineIRBuilder &MIRBuilder,
-                                          SPIRVGlobalRegistry *GR) {
-  // Generate SPIRV instruction accordingly.
-  if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
-                              GR->getSPIRVTypeID(Call->ReturnType));
-
-  auto MIB = MIRBuilder.buildInstr(Opcode)
-                 .addDef(Call->ReturnRegister)
-                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
-  for (unsigned i = 0; i < Call->Arguments.size(); ++i)
-    MIB.addUse(Call->Arguments[i]);
-
-  return true;
-}
-
 static bool buildPipeInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
                           unsigned Scope, MachineIRBuilder &MIRBuilder,
                           SPIRVGlobalRegistry *GR) {
@@ -1148,6 +1129,24 @@ static bool buildPipeInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
     return buildOpFromWrapper(MIRBuilder, Opcode, Call,
                               GR->getSPIRVTypeID(Call->ReturnType));
   }
+}
+
+// Helper function for building Intel's predicated load/store instructions.
+static bool buildPredicatedLoadStoreInst(const SPIRV::IncomingCall *Call,
+                                          unsigned Opcode,
+                                          MachineIRBuilder &MIRBuilder,
+                                          SPIRVGlobalRegistry *GR) {
+  // Generate SPIRV instruction accordingly.
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
+
+  auto MIB = MIRBuilder.buildInstr(Opcode)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+  for (unsigned i = 0; i < Call->Arguments.size(); ++i)
+    MIB.addUse(Call->Arguments[i]);
+
+  return true;
 }
 
 static unsigned getNumComponentsForDim(SPIRV::Dim::Dim dim) {
