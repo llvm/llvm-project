@@ -109,7 +109,7 @@ def testFuseOpCompact(target):
     )
     # CHECK-LABEL: TEST: testFuseOpCompact
     # CHECK: transform.sequence
-    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}}[4, 8]
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}} tile_sizes [4, 8]
     # CHECK-SAME: interchange [0, 1] apply_cleanup = true
     # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
@@ -122,7 +122,7 @@ def testFuseOpCompactForall(target):
     )
     # CHECK-LABEL: TEST: testFuseOpCompact
     # CHECK: transform.sequence
-    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}}[4, 8]
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.fuse %{{.*}} tile_sizes [4, 8]
     # CHECK-SAME: apply_cleanup = true use_forall = true
     # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
@@ -139,13 +139,31 @@ def testFuseOpNoArg(target):
 
 @run
 @create_sequence
+def testFuseOpParams(target):
+    structured.FuseOp(
+        target,
+        tile_sizes=[constant_param(4), Attribute.parse("8")],
+        tile_interchange=[constant_param(0), Attribute.parse("1")]
+    )
+    # CHECK-LABEL: TEST: testFuseOpParams
+    # CHECK: transform.sequence
+    # CHECK-DAG: %[[P:.*]] = transform.param.constant 4
+    # CHECK-DAG: %[[I:.*]] = transform.param.constant 0
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse
+    # CHECK-SAME: tile_sizes [%[[P]], 8]
+    # CHECK-SAME: interchange [%[[I]], 1]
+    # CHECK-SAME: (!transform.any_op, !transform.param<i64>, !transform.param<i64>) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
 def testFuseOpAttributes(target):
     attr = DenseI64ArrayAttr.get([4, 8])
     ichange = DenseI64ArrayAttr.get([0, 1])
     structured.FuseOp(target, tile_sizes=attr, tile_interchange=ichange)
     # CHECK-LABEL: TEST: testFuseOpAttributes
     # CHECK: transform.sequence
-    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}}[4, 8]
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}} tile_sizes [4, 8]
     # CHECK-SAME: interchange [0, 1]
     # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 

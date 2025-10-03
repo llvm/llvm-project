@@ -395,33 +395,72 @@ def EliminateLinalgOpAnchoredEmptyTensorsOp
 //===----------------------------------------------------------------------===//
 
 def FuseOp : Op<Transform_Dialect, "structured.fuse",
-    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
-     DeclareOpInterfaceMethods<TransformOpInterface>,
-     ReportTrackingListenerFailuresOpTrait]> {
+       [AttrSizedOperandSegments,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+        TransformOpInterface, ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
     Tiles the operations pointed to by the target handle and fuses their
     producers greedily using the options provided as attributes.
 
     If `apply_cleanup` is true then slice canonicalization is applied between
-    fusion steps.
+    fusion steps. If `use_forall` is true then tiling method generates a
+    `scf.forall` loop instead of `scf.for` loops.
   }];
 
   let arguments =
     (ins TransformHandleTypeInterface:$target,
-         DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
-         DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_interchange,
-         DefaultValuedAttr<BoolAttr, "false">:$apply_cleanup,
-         DefaultValuedAttr<BoolAttr, "false">:$use_forall);
+        Variadic<TransformAnyParamTypeOrAnyHandle> : $tile_sizes,
+        Variadic<TransformAnyParamTypeOrAnyHandle> : $tile_interchange,
+        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_sizes,
+        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_interchange,
+        DefaultValuedAttr<BoolAttr, "false">:$apply_cleanup,
+        DefaultValuedAttr<BoolAttr, "false">:$use_forall);
   let results = (outs TransformHandleTypeInterface:$transformed,
                       Variadic<TransformHandleTypeInterface>:$loops);
+  let builders = [
+    OpBuilder<(ins "TypeRange":$loopTypes,
+                   "Value":$target,
+                   "ArrayRef<int64_t>":$staticTileSizes,
+                   "ArrayRef<int64_t>":$staticTileInterchange,
+                   CArg<"bool", "false">:$applyCleanup,
+                   CArg<"bool", "false">:$useForall)>,
+    OpBuilder<(ins "TypeRange":$loopTypes,
+                   "Value":$target,
+                   "ArrayRef<OpFoldResult>":$mixedTileSizes,
+                   "ArrayRef<OpFoldResult>":$mixedTileInterchange,
+                   CArg<"bool", "false">:$applyCleanup,
+                   CArg<"bool", "false">:$useForall)>,
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<int64_t>":$staticTileSizes,
+                   "ArrayRef<int64_t>":$staticTileInterchange,
+                   CArg<"bool", "false">:$applyCleanup,
+                   CArg<"bool", "false">:$useForall)>,
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<OpFoldResult>":$mixedTileSizes,
+                   "ArrayRef<OpFoldResult>":$mixedTileInterchange,
+                   CArg<"bool", "false">:$applyCleanup,
+                   CArg<"bool", "false">:$useForall)>,
+  ];
 
   let assemblyFormat = [{
-    $target ($tile_sizes^)? (`interchange` $tile_interchange^)?
+    $target
+    (`tile_sizes` custom<DynamicIndexList>($tile_sizes, $static_tile_sizes)^)?
+    (`interchange` custom<DynamicIndexList>($tile_interchange, $static_tile_interchange)^)?
     (`apply_cleanup` `=` $apply_cleanup^)?
     (`use_forall` `=` $use_forall^)? attr-dict
     `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure apply(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::transform::TransformResults &transformResults,
+        ::mlir::transform::TransformState &state);
+
+    ::mlir::SmallVector<::mlir::OpFoldResult> getMixedTileSizes();
+    ::mlir::SmallVector<::mlir::OpFoldResult> getMixedTileInterchange();
+  }];
 }
 
 //===----------------------------------------------------------------------===//

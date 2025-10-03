@@ -576,6 +576,86 @@ transform::EliminateLinalgOpAnchoredEmptyTensorsOp::apply(
 // FuseOp
 //===----------------------------------------------------------------------===//
 
+void transform::FuseOp::build(OpBuilder &builder, OperationState &result,
+                              TypeRange loopTypes, Value target,
+                              ArrayRef<int64_t> staticTileSizes,
+                              ArrayRef<int64_t> staticTileInterchange,
+                              bool applyCleanup, bool useForall) {
+  return build(
+      builder, result, loopTypes,
+      /*target=*/target,
+      /*mixedTileSizes=*/
+      getAsOpFoldResult(builder.getI64ArrayAttr(staticTileSizes)),
+      /*mixedTileInterchange=*/
+      getAsOpFoldResult(builder.getI64ArrayAttr(staticTileInterchange)),
+      applyCleanup, useForall);
+}
+
+void transform::FuseOp::build(OpBuilder &builder, OperationState &result,
+                              Value target, ArrayRef<int64_t> staticTileSizes,
+                              ArrayRef<int64_t> staticTileInterchange,
+                              bool applyCleanup, bool useForall) {
+  return build(
+      builder, result,
+      /*target=*/target,
+      /*mixedTileSizes=*/
+      getAsOpFoldResult(builder.getI64ArrayAttr(staticTileSizes)),
+      /*mixedTileInterchange=*/
+      getAsOpFoldResult(builder.getI64ArrayAttr(staticTileInterchange)),
+      applyCleanup, useForall);
+}
+
+void transform::FuseOp::build(OpBuilder &builder, OperationState &result,
+                              Value target,
+                              ArrayRef<OpFoldResult> mixedTileSizes,
+                              ArrayRef<OpFoldResult> mixedTileInterchange,
+                              bool applyCleanup, bool useForall) {
+  // Loop types are automaticaly splat by the callee, setting up one is
+  // enough.
+  SmallVector<Type> loopTypes(1, builder.getType<transform::AnyOpType>());
+  build(builder, result, loopTypes, target, mixedTileSizes,
+        mixedTileInterchange, applyCleanup, useForall);
+}
+
+void transform::FuseOp::build(OpBuilder &builder, OperationState &result,
+                              TypeRange loopTypes, Value target,
+                              ArrayRef<OpFoldResult> mixedTileSizes,
+                              ArrayRef<OpFoldResult> mixedTileInterchange,
+                              bool applyCleanup, bool useForall) {
+  SmallVector<int64_t> staticTileSizes;
+  SmallVector<Value> dynamicTileSizes;
+  dispatchIndexOpFoldResults(mixedTileSizes, dynamicTileSizes, staticTileSizes);
+  SmallVector<int64_t> staticTileInterchange;
+  SmallVector<Value> dynamicTileInterchange;
+  dispatchIndexOpFoldResults(mixedTileInterchange, dynamicTileInterchange,
+                             staticTileInterchange);
+  // Call the default builder which sets up the proper operands segment sizes
+  // attributes for multiple variadic operands. In the absence of this,
+  // horrible bugs ensue.
+  auto staticTileSizesAttr = builder.getDenseI64ArrayAttr(staticTileSizes);
+  auto staticTileInterchangeAttr =
+      builder.getDenseI64ArrayAttr(staticTileInterchange);
+  unsigned numExpectedLoops =
+      useForall ? 1 : staticTileSizes.size() - llvm::count(staticTileSizes, 0);
+  SmallVector<Type> resultTypes;
+  resultTypes.reserve(numExpectedLoops);
+  assert((loopTypes.size() == 1 || loopTypes.size() == numExpectedLoops) &&
+         "expected one loop type or as many as loops");
+  if (loopTypes.size() == 1)
+    resultTypes.append(numExpectedLoops, loopTypes[0]);
+  else
+    llvm::append_range(resultTypes, loopTypes);
+  build(builder, result, /*transformed=*/target.getType(),
+        /*loops=*/resultTypes,
+        /*target=*/target,
+        /*tile_sizes=*/dynamicTileSizes,
+        /*tile_interchange=*/dynamicTileInterchange,
+        /*static_tile_sizes=*/staticTileSizesAttr,
+        /*static_tile_interchange=*/staticTileInterchangeAttr,
+        /*apply_cleanup=*/applyCleanup,
+        /*use_forall=*/useForall);
+}
+
 /// Apply a tiling transformation to all payload ops and store both the
 /// tiled operation as well as the created tile loops.
 template <typename Range>
@@ -630,10 +710,18 @@ DiagnosedSilenceableFailure
 transform::FuseOp::apply(transform::TransformRewriter &rewriter,
                          mlir::transform::TransformResults &transformResults,
                          mlir::transform::TransformState &state) {
-  SmallVector<int64_t> tileSizes =
-      extractFromIntegerArrayAttr<int64_t>(getTileSizes());
-  SmallVector<int64_t> tileInterchange =
-      extractFromIntegerArrayAttr<int64_t>(getTileInterchange());
+  auto transformOp = cast<TransformOpInterface>(getOperation());
+
+  SmallVector<int64_t> tileSizes;
+  DiagnosedSilenceableFailure status = reifyMixedParamAndHandleResults(
+      state, transformOp, getMixedTileSizes(), tileSizes);
+  if (!status.succeeded())
+    return status;
+  SmallVector<int64_t> tileInterchange;
+  status = reifyMixedParamAndHandleResults(
+      state, transformOp, getMixedTileInterchange(), tileInterchange);
+  if (!status.succeeded())
+    return status;
 
   scf::SCFTilingOptions tilingOptions;
   tilingOptions.interchangeVector = tileInterchange;
@@ -671,23 +759,67 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
 }
 
 LogicalResult transform::FuseOp::verify() {
-  SmallVector<int64_t> permutation =
-      extractFromIntegerArrayAttr<int64_t>(getTileInterchange());
-  auto sequence = llvm::to_vector(llvm::seq<int64_t>(0, permutation.size()));
-  if (!std::is_permutation(sequence.begin(), sequence.end(),
-                           permutation.begin(), permutation.end())) {
-    return emitOpError() << "expects interchange to be a permutation, found "
-                         << getTileInterchange();
+  ArrayRef<int64_t> permutation = getStaticTileInterchange();
+  if (!llvm::any_of(permutation,
+                    [](int64_t v) { return ShapedType::isDynamic(v); })) {
+    auto sequence = llvm::to_vector(llvm::seq<int64_t>(0, permutation.size()));
+    if (!std::is_permutation(sequence.begin(), sequence.end(),
+                             permutation.begin(), permutation.end())) {
+      return emitOpError() << "expects interchange to be a permutation, found "
+                           << getTileInterchange();
+    }
   }
 
-  SmallVector<int64_t> sizes =
-      extractFromIntegerArrayAttr<int64_t>(getTileSizes());
+  ArrayRef<int64_t> sizes = getStaticTileSizes();
   size_t numExpectedLoops =
       getUseForall() ? 1 : sizes.size() - llvm::count(sizes, 0);
   if (numExpectedLoops != getNumResults() - 1)
     return emitOpError() << "expects " << numExpectedLoops << " loop results";
 
   return success();
+}
+
+SmallVector<OpFoldResult> transform::FuseOp::getMixedTileSizes() {
+  ValueRange dynamicValues = getTileSizes();
+  ArrayRef<int64_t> staticValues = getStaticTileSizes();
+  SmallVector<OpFoldResult> results;
+  results.reserve(staticValues.size());
+  unsigned dynamicPos = 0;
+  Builder builder(getContext());
+  for (int64_t size : staticValues) {
+    if (size == ShapedType::kDynamic) {
+      results.push_back(dynamicValues[dynamicPos++]);
+    } else {
+      results.push_back(builder.getIndexAttr(size));
+    }
+  }
+  return results;
+}
+
+SmallVector<OpFoldResult> transform::FuseOp::getMixedTileInterchange() {
+  ValueRange dynamicValues = getTileInterchange();
+  ArrayRef<int64_t> staticValues = getStaticTileInterchange();
+  SmallVector<OpFoldResult> results;
+  results.reserve(staticValues.size());
+  unsigned dynamicPos = 0;
+  Builder builder(getContext());
+  for (int64_t size : staticValues) {
+    if (size == ShapedType::kDynamic) {
+      results.push_back(dynamicValues[dynamicPos++]);
+    } else {
+      results.push_back(builder.getIndexAttr(size));
+    }
+  }
+  return results;
+}
+
+void transform::FuseOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getTileSizesMutable(), effects);
+  onlyReadsHandle(getTileInterchangeMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
+  modifiesPayload(effects);
 }
 
 //===----------------------------------------------------------------------===//
