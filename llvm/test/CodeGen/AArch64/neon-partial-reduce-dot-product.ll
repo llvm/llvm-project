@@ -1451,3 +1451,34 @@ define <4 x i32> @partial_reduce_shl_zext_non_const_rhs(<16 x i8> %l, <4 x i32> 
   %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
   ret <4 x i32> %red
 }
+
+define <2 x i32> @udot_v16i8tov2i32(<2 x i32> %acc, <16 x i8> %input) {
+; CHECK-COMMON-LABEL: udot_v16i8tov2i32:
+; CHECK-COMMON:       // %bb.0: // %entry
+; CHECK-COMMON-NEXT:    ushll v2.8h, v1.8b, #0
+; CHECK-COMMON-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-COMMON-NEXT:    ushll2 v1.8h, v1.16b, #0
+; CHECK-COMMON-NEXT:    ushll v3.4s, v2.4h, #0
+; CHECK-COMMON-NEXT:    uaddw v0.4s, v0.4s, v2.4h
+; CHECK-COMMON-NEXT:    ushll2 v4.4s, v2.8h, #0
+; CHECK-COMMON-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-COMMON-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-COMMON-NEXT:    add v0.2s, v3.2s, v0.2s
+; CHECK-COMMON-NEXT:    ext v3.16b, v4.16b, v4.16b, #8
+; CHECK-COMMON-NEXT:    uaddw v0.4s, v0.4s, v2.4h
+; CHECK-COMMON-NEXT:    ushll v2.4s, v1.4h, #0
+; CHECK-COMMON-NEXT:    add v0.2s, v3.2s, v0.2s
+; CHECK-COMMON-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-COMMON-NEXT:    ushll2 v3.4s, v1.8h, #0
+; CHECK-COMMON-NEXT:    uaddw v0.4s, v0.4s, v1.4h
+; CHECK-COMMON-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-COMMON-NEXT:    add v0.2s, v2.2s, v0.2s
+; CHECK-COMMON-NEXT:    ext v2.16b, v3.16b, v3.16b, #8
+; CHECK-COMMON-NEXT:    uaddw v0.4s, v0.4s, v1.4h
+; CHECK-COMMON-NEXT:    add v0.2s, v2.2s, v0.2s
+; CHECK-COMMON-NEXT:    ret
+entry:
+    %input.wide = zext <16 x i8> %input to <16 x i32>
+    %partial.reduce = tail call <2 x i32> @llvm.vector.partial.reduce.add(<2 x i32> %acc, <16 x i32> %input.wide)
+    ret <2 x i32> %partial.reduce
+}
