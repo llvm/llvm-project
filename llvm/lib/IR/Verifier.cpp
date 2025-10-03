@@ -6588,14 +6588,17 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     VectorType *AccTy = cast<VectorType>(Call.getArgOperand(0)->getType());
     VectorType *VecTy = cast<VectorType>(Call.getArgOperand(1)->getType());
 
-    unsigned VecWidth = VecTy->getElementCount().getKnownMinValue();
-    unsigned AccWidth = AccTy->getElementCount().getKnownMinValue();
+    ElementCount VecWidth = VecTy->getElementCount();
+    ElementCount AccWidth = AccTy->getElementCount();
 
-    Check((VecWidth % AccWidth) == 0,
+    Check(VecWidth.hasKnownScalarFactor(AccWidth),
           "Invalid vector widths for partial "
           "reduction. The width of the input vector "
-          "must be a positive integer multiple of "
-          "the width of the accumulator vector.");
+          "must be a known integer multiple of "
+          "the width of the accumulator vector.", &Call);
+
+    Check(AccTy->getElementType() == VecTy->getElementType(),
+          "Elements type of accumulator and input type must match", &Call);
     break;
   }
   case Intrinsic::experimental_noalias_scope_decl: {
