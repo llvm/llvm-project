@@ -6821,7 +6821,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
 
   // For HLSL ext vector types we allow list initialization behavior for C++
   // functional cast expressions which look like constructor syntax. This is
-  // accomplished by converting initialization arguments an InitListExpr.
+  // accomplished by converting initialization arguments to InitListExpr.
   if (S.getLangOpts().HLSL && Args.size() > 1 && DestType->isExtVectorType() &&
       (SourceType.isNull() ||
        !Context.hasSameUnqualifiedType(SourceType, DestType))) {
