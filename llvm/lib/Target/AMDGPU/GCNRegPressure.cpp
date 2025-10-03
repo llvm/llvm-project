@@ -907,13 +907,13 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
     OS << ":\n";
 
     SlotIndex MBBStartSlot = LIS.getSlotIndexes()->getMBBStartIdx(&MBB);
-    SlotIndex MBBEndSlot = LIS.getSlotIndexes()->getMBBEndIdx(&MBB);
     SlotIndex MBBLastSlot = LIS.getSlotIndexes()->getMBBLastIdx(&MBB);
+    bool MBBHasNonDebugInstrs = MBBStartSlot != MBBLastSlot.getBaseIndex();
 
     GCNRPTracker::LiveRegSet LiveIn, LiveOut;
     GCNRegPressure RPAtMBBEnd;
 
-    if (!MBBLastSlot.isValid()) { // MBB doesn't have any non-debug instrs.
+    if (!MBBHasNonDebugInstrs) {
       LiveIn = LiveOut = getLiveRegs(MBBStartSlot, LIS, MRI);
       RPAtMBBEnd = getRegPressure(MRI, LiveIn);
     } else if (UseDownwardTracker) {
@@ -966,13 +966,14 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
     OS << printRP(RPAtMBBEnd) << '\n';
 
     OS << PFX "  Live-out:" << llvm::print(LiveOut, MRI);
-    if (UseDownwardTracker && MBBLastSlot.isValid())
+    if (UseDownwardTracker)
       ReportLISMismatchIfAny(LiveOut, getLiveRegs(MBBLastSlot, LIS, MRI));
 
     GCNRPTracker::LiveRegSet LiveThrough;
     for (auto [Reg, Mask] : LiveIn) {
       LaneBitmask MaskIntersection = Mask & LiveOut.lookup(Reg);
       if (MaskIntersection.any()) {
+        SlotIndex MBBEndSlot = LIS.getSlotIndexes()->getMBBEndIdx(&MBB);
         LaneBitmask LTMask = getRegLiveThroughMask(
             MRI, LIS, Reg, MBBStartSlot, MBBEndSlot, MaskIntersection);
         if (LTMask.any())
