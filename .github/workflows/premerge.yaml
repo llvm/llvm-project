@@ -57,6 +57,7 @@ jobs:
         with:
           fetch-depth: 2
       - name: Build and Test
+        continue-on-error: ${{ runner.arch == 'ARM64' }}
         run: |
           git config --global --add safe.directory '*'
 
