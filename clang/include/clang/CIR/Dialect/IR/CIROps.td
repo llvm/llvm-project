@@ -209,9 +209,10 @@ def CIR_CastOp : CIR_Op<"cast", [
     Example:
 
     ```mlir
-    %4 = cir.cast(int_to_bool, %3 : i32), !cir.bool
+    %4 = cir.cast int_to_bool %3 : i32 -> !cir.bool
     ...
-    %x = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
+    %x = cir.cast array_to_ptrdecay %0 
+       : !cir.ptr<!cir.array<i32 x 10>> -> !cir.ptr<i32>
     ```
   }];
 
@@ -219,8 +220,7 @@ def CIR_CastOp : CIR_Op<"cast", [
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
-    `(` $kind `,` $src `:` type($src) `)`
-    `,` type($result) attr-dict
+    $kind $src `:` type($src) `->` type($result) attr-dict
   }];
 
   // The input and output types should match the cast kind.
@@ -1176,7 +1176,7 @@ def CIR_GotoOp : CIR_Op<"goto", [Terminator]> {
   ```mlir
     cir.scope {  // REGION #1
       %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-      %3 = cir.cast(int_to_bool, %2 : !s32i), !cir.bool
+      %3 = cir.cast int_to_bool %2 : !s32i -> !cir.bool
       cir.if %3 {
         cir.goto "label"
       }
@@ -3260,18 +3260,20 @@ def CIR_ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
 def CIR_ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
   let summary = "Extract the real part of a complex value";
   let description = [{
-    `cir.complex.real` operation takes an operand of `!cir.complex` type and
-    yields the real part of it.
+    `cir.complex.real` operation takes an operand of `!cir.complex`, `!cir.int`
+    or `!cir.float`. If the operand is `!cir.complex`, the real part of it will
+    be returned, otherwise the value returned unmodified. 
 
     Example:
 
     ```mlir
-    %1 = cir.complex.real %0 : !cir.complex<!cir.float> -> !cir.float
+    %real = cir.complex.real %complex : !cir.complex<!cir.float> -> !cir.float
+    %real = cir.complex.real %scalar : !cir.float -> !cir.float
     ```
   }];
 
   let results = (outs CIR_AnyIntOrFloatType:$result);
-  let arguments = (ins CIR_ComplexType:$operand);
+  let arguments = (ins CIR_AnyComplexOrIntOrFloatType:$operand);
 
   let assemblyFormat = [{
     $operand `:` qualified(type($operand)) `->` qualified(type($result))
@@ -3994,9 +3996,9 @@ def CIR_VAStartOp : CIR_Op<"va_start"> {
 
     ```mlir
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
-    %p = cir.cast(array_to_ptrdecay, %args
-          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
-        !cir.ptr<!rec___va_list_tag>
+    %p = cir.cast array_to_ptrdecay %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>)
+          -> !cir.ptr<!rec___va_list_tag>
     %count = cir.load %0 : !cir.ptr<!s32i>, !s32i
     cir.va_start %p %count : !cir.ptr<!rec___va_list_tag>, !s32i
     ```
@@ -4033,9 +4035,9 @@ def CIR_VAEndOp : CIR_Op<"va_end"> {
     Example:
     ```mlir
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
-    %p = cir.cast(array_to_ptrdecay, %args
-          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
-        !cir.ptr<!rec___va_list_tag>
+    %p = cir.cast array_to_ptrdecay %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+          -> !cir.ptr<!rec___va_list_tag>
     cir.va_end %p : !cir.ptr<!rec___va_list_tag>
     ```
   }];
@@ -4068,9 +4070,9 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
     Example:
     ```mlir
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
-    %p = cir.cast(array_to_ptrdecay, %args
-            : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
-          !cir.ptr<!rec___va_list_tag>
+    %p = cir.cast array_to_ptrdecay %args
+            : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+            -> !cir.ptr<!rec___va_list_tag>
     cir.va.start %p : !cir.ptr<!rec___va_list_tag>
 
     // Fetch an `int` from the vararg list.

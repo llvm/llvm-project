@@ -2674,6 +2674,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_exp10m1f16",
+    hdrs = ["src/__support/math/exp10m1f16.h"],
+    deps = [
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":__support_math_exp10f16_utils",
+        ":errno",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_erff",
     hdrs = ["src/__support/math/erff.h"],
     deps = [
@@ -3622,7 +3638,7 @@ libc_math_function(
 libc_math_function(
     name = "exp10m1f16",
     additional_deps = [
-        ":__support_math_exp10f16_utils",
+        ":__support_math_exp10m1f16",
     ],
 )
 
@@ -5320,6 +5336,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bitset",
         ":__support_cpp_type_traits",
+        ":__support_macros_attributes",
         ":__support_macros_optimization",
         ":hdr_limits_macros",
         ":llvm_libc_types_size_t",

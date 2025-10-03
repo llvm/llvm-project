@@ -7,9 +7,6 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
                                             const __ifunc_arg_t *arg) {
   unsigned long long feat = 0;
 #define setCPUFeature(F) feat |= 1ULL << F
-#define getCPUFeature(id, ftr) __asm__("mrs %0, " #id : "=r"(ftr))
-#define extractBits(val, start, number)                                        \
-  (val & ((1ULL << number) - 1ULL) << start) >> start
   unsigned long hwcap2 = 0;
   if (hwcap & _IFUNC_ARG_HWCAP)
     hwcap2 = arg->_hwcap2;
