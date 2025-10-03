@@ -4,7 +4,7 @@
 //      empty line.
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck --dump-input-context=999999999 %s
+// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: limit_steps_line_mismatch.cpp
 
 int main() {

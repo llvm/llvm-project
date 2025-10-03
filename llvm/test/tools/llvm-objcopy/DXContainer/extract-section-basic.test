@@ -1,0 +1,111 @@
+## Tests that a separate DXContainer is created for the RTS0 (root signature)
+## part, when--extract-section is specified.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t --extract-section=RTS0=%t.rts0.out
+# RUN: obj2yaml %t.rts0.out | FileCheck %s --implicit-check-not=Name:
+
+## The DXContainer described below was generated with:
+
+## `clang-dxc -T cs_6_7 test.hlsl /Fo temp.dxo`
+## `obj2yaml temp.dxo`
+
+## and has the DXIL section trimmed for readability.
+
+## ``` test.hlsl
+## [RootSignature("")]
+## [numthreads(1,1,1)]
+## void main() {}
+## ```
+
+# CHECK:      Header:
+# CHECK-NEXT:   Hash:
+# CHECK:        Version:
+# CHECK-NEXT:      Major:           1
+# CHECK-NEXT:      Minor:           0
+# CHECK-NEXT:   FileSize:       68
+# CHECK-NEXT:   PartCount:     1
+# CHECK-NEXT:   PartOffsets:   [ 36 ]
+# CHECK-NEXT:   Parts:
+# CHECK-NEXT:   Name:            RTS0
+# CHECK-NEXT    Size:            24
+# CHECK-NEXT    RootSignature:
+# CHECK-NEXT      Version:         2
+# CHECK-NEXT      NumRootParameters: 0
+# CHECK-NEXT      RootParametersOffset: 24
+# CHECK-NEXT      NumStaticSamplers: 0
+# CHECK-NEXT      StaticSamplersOffset: 24
+# CHECK-NEXT      Parameters:      []
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  FileSize:        1984
+  PartCount:       7
+  PartOffsets:     [ 60, 1792, 1808, 1836, 1852, 1868, 1900 ]
+Parts:
+  - Name:            DXIL
+    Size:            1724
+    Program:
+      MajorVersion:    6
+      MinorVersion:    7
+      ShaderKind:      5
+      Size:            28
+      DXILMajorVersion: 1
+      DXILMinorVersion: 7
+      DXILSize:        4
+      DXIL:            [ 0x42, 0x43, 0xC0, 0xDE, ]
+  - Name:            SFI0
+    Size:            8
+  - Name:            HASH
+    Size:            20
+    Hash:
+      IncludesSource:  false
+      Digest:          [ 0x9F, 0xD1, 0xD9, 0xE2, 0x49, 0xFB, 0x3A, 0x6C,
+                         0x8C, 0x14, 0x8A, 0x96, 0x1C, 0x7D, 0x85, 0xA9 ]
+  - Name:            ISG1
+    Size:            8
+    Signature:
+      Parameters:      []
+  - Name:            OSG1
+    Size:            8
+    Signature:
+      Parameters:      []
+  - Name:            RTS0
+    Size:            24
+    RootSignature:
+      Version:         2
+      NumRootParameters: 0
+      RootParametersOffset: 24
+      NumStaticSamplers: 0
+      StaticSamplersOffset: 24
+      Parameters:      []
+  - Name:            PSV0
+    Size:            76
+    PSVInfo:
+      Version:         3
+      ShaderStage:     5
+      MinimumWaveLaneCount: 0
+      MaximumWaveLaneCount: 4294967295
+      UsesViewID:      0
+      SigInputVectors: 0
+      SigOutputVectors: [ 0, 0, 0, 0 ]
+      NumThreadsX:     1
+      NumThreadsY:     1
+      NumThreadsZ:     1
+      EntryName:       main
+      ResourceStride:  24
+      Resources:       []
+      SigInputElements: []
+      SigOutputElements: []
+      SigPatchOrPrimElements: []
+      InputOutputMap:
+        - [  ]
+        - [  ]
+        - [  ]
+        - [  ]
+...
