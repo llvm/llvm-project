@@ -181,16 +181,6 @@ public:
 
   DirectedGraph() = default;
   explicit DirectedGraph(NodeType &N) : Nodes() { addNode(N); }
-  DirectedGraph(const DGraphType &G) : Nodes(G.Nodes) {}
-  DirectedGraph(DGraphType &&RHS) : Nodes(std::move(RHS.Nodes)) {}
-  DGraphType &operator=(const DGraphType &G) {
-    Nodes = G.Nodes;
-    return *this;
-  }
-  DGraphType &operator=(const DGraphType &&G) {
-    Nodes = std::move(G.Nodes);
-    return *this;
-  }
 
   const_iterator begin() const { return Nodes.begin(); }
   const_iterator end() const { return Nodes.end(); }
