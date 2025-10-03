@@ -166,7 +166,7 @@ public:
                               llvm::StringRef file_path);
 
   // return false from callback to stop iterating
-  static void ForEach(std::function<bool(Language *)> callback);
+  static void ForEach(llvm::function_ref<IterationAction(Language *)> callback);
 
   virtual lldb::LanguageType GetLanguageType() const = 0;
 
@@ -420,7 +420,8 @@ public:
                                                     llvm::StringRef suffix);
 
   // return false from callback to stop iterating
-  static void ForAllLanguages(std::function<bool(lldb::LanguageType)> callback);
+  static void ForAllLanguages(
+      llvm::function_ref<IterationAction(lldb::LanguageType)> callback);
 
   static bool LanguageIsCPlusPlus(lldb::LanguageType language);
 
