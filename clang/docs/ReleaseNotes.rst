@@ -361,7 +361,7 @@ Bug Fixes in This Version
   first parameter. (#GH113323).
 - Fixed a crash with incompatible pointer to integer conversions in designated
   initializers involving string literals. (#GH154046)
-- Fix crash on CTAD for alias template. (#GH131342)
+- Fix crash on CTAD for alias template. (#GH131342), (#GH131408)
 - Clang now emits a frontend error when a function marked with the `flatten` attribute
   calls another function that requires target features not enabled in the caller. This
   prevents a fatal error in the backend.
