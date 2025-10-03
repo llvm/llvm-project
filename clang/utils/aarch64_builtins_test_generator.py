@@ -243,7 +243,7 @@ def make_filename(prefix: str, ctx: BuiltinContext, ext: str) -> str:
 
 
 def emit_streaming_guard_run_lines(ctx: BuiltinContext) -> str:
-    """Emit lit RUN lines that will exercise the relevent Sema diagnistics."""
+    """Emit lit RUN lines that will exercise the relevant Sema diagnistics."""
     run_prefix = "// RUN: %clang_cc1 %s -fsyntax-only -triple aarch64-none-linux-gnu"
     out: List[str] = []
 
