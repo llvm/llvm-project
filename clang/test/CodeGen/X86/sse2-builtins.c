@@ -723,12 +723,14 @@ int test_mm_extract_epi16(__m128i A) {
   // CHECK: zext i16 %{{.*}} to i32
   return _mm_extract_epi16(A, 1);
 }
+TEST_CONSTEXPR(_mm_extract_epi16(((__m128i)(__v8hi){0, 10, 20, 30, 40, 50, 60, 70}), 25) == 10);
 
 __m128i test_mm_insert_epi16(__m128i A, int B) {
   // CHECK-LABEL: test_mm_insert_epi16
   // CHECK: insertelement <8 x i16> %{{.*}}, {{i32|i64}} 0
   return _mm_insert_epi16(A, B, 0);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_insert_epi16(((__m128i)(__v8hi){0, 10, 20, 30, 40, 50, 60, 70}), 555, 17), 0, 555, 20, 30, 40, 50, 60, 70));
 
 void test_mm_lfence(void) {
   // CHECK-LABEL: test_mm_lfence

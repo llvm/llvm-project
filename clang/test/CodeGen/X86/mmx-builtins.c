@@ -292,6 +292,7 @@ int test_mm_extract_pi16(__m64 a) {
   // CHECK: extractelement <4 x i16> {{%.*}}, i64 2
   return _mm_extract_pi16(a, 2);
 }
+TEST_CONSTEXPR(_mm_extract_pi16(((__m64)(__v4hi){10, 20, 30, 40}), 7) == 40);
 
 __m64 test_m_from_int(int a) {
   // CHECK-LABEL: test_m_from_int
@@ -347,6 +348,7 @@ __m64 test_mm_insert_pi16(__m64 a, int d) {
   // CHECK: insertelement <4 x i16>
   return _mm_insert_pi16(a, d, 2);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_insert_pi16(((__m64)(__v4hi){0, 1, 2, 3}), 77, 10), 0, 1, 77, 3));
 
 __m64 test_mm_madd_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_madd_pi16
