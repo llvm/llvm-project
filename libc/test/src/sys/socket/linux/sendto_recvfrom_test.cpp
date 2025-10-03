@@ -16,7 +16,6 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/_types/_ssize_t.h>
 #include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
