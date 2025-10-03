@@ -46,6 +46,8 @@ struct MutuallyExclusiveRegionsOp
   // Regions have no successors.
   void getSuccessorRegions(RegionBranchPoint point,
                            SmallVectorImpl<RegionSuccessor> &regions) {}
+  using RegionBranchOpInterface::Trait<
+      MutuallyExclusiveRegionsOp>::getSuccessorRegions;
 };
 
 /// All regions of this op call each other in a large circle.
@@ -70,6 +72,7 @@ struct LoopRegionsOp
       regions.push_back(RegionSuccessor(region));
     }
   }
+  using RegionBranchOpInterface::Trait<LoopRegionsOp>::getSuccessorRegions;
 };
 
 /// Each region branches back it itself or the parent.
@@ -93,6 +96,8 @@ struct DoubleLoopRegionsOp
       regions.push_back(RegionSuccessor(region));
     }
   }
+  using RegionBranchOpInterface::Trait<
+      DoubleLoopRegionsOp>::getSuccessorRegions;
 };
 
 /// Regions are executed sequentially.
@@ -113,6 +118,8 @@ struct SequentialRegionsOp
       regions.push_back(RegionSuccessor(&thisOp->getRegion(1)));
     }
   }
+  using RegionBranchOpInterface::Trait<
+      SequentialRegionsOp>::getSuccessorRegions;
 };
 
 /// A dialect putting all the above together.

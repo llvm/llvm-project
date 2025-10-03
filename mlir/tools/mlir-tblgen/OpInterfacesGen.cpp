@@ -374,7 +374,7 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
       os << tblgen::tgfmt("return $_self.", &nonStaticMethodFmt);
 
     // Add the arguments to the call.
-    os << method.getDedupName() << '(';
+    os << method.getName() << '(';
     llvm::interleaveComma(
         method.getArguments(), os,
         [&](const InterfaceMethod::Argument &arg) { os << arg.name; });
@@ -479,7 +479,7 @@ void InterfaceGenerator::emitInterfaceTraitDecl(const Interface &interface) {
     emitInterfaceMethodDoc(method, os, "    ");
     os << "    " << (method.isStatic() ? "static " : "");
     emitCPPType(method.getReturnType(), os);
-    emitMethodNameAndArgs(method, method.getDedupName(), os, valueType,
+    emitMethodNameAndArgs(method, method.getName(), os, valueType,
                           /*addThisArg=*/false,
                           /*addConst=*/!isOpInterface && !method.isStatic());
     os << " {\n      " << tblgen::tgfmt(defaultImpl->trim(), &traitMethodFmt)
