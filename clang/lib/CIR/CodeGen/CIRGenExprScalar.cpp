@@ -1903,8 +1903,10 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                                             : cir::CastKind::integral,
                                         src, middleTy);
 
-    if (cgf.cgm.getCodeGenOpts().StrictVTablePointers)
+    if (cgf.cgm.getCodeGenOpts().StrictVTablePointers) {
       cgf.cgm.errorNYI(subExpr->getSourceRange(), "IntegralToPointer: strict vtable pointers");
+      return {};
+    }
 
     return builder.createIntToPtr(MiddleVal, DestCIRTy);
   }
