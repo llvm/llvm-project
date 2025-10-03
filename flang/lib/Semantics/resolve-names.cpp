@@ -1106,8 +1106,9 @@ protected:
   // or nullptr on error.
   Symbol *DeclareStatementEntity(const parser::DoVariable &,
       const std::optional<parser::IntegerTypeSpec> &);
-  Symbol &MakeCommonBlockSymbol(const parser::Name &);
-  Symbol &MakeCommonBlockSymbol(const std::optional<parser::Name> &);
+  Symbol &MakeCommonBlockSymbol(const parser::Name &, SourceName);
+  Symbol &MakeCommonBlockSymbol(
+      const std::optional<parser::Name> &, SourceName);
   bool CheckUseError(const parser::Name &);
   void CheckAccessibility(const SourceName &, bool, Symbol &);
   void CheckCommonBlocks();
@@ -1244,8 +1245,6 @@ private:
   bool OkToAddComponent(const parser::Name &, const Symbol *extends = nullptr);
   ParamValue GetParamValue(
       const parser::TypeParamValue &, common::TypeParamAttr attr);
-  void CheckCommonBlockDerivedType(
-      const SourceName &, const Symbol &, UnorderedSymbolSet &);
   Attrs HandleSaveName(const SourceName &, Attrs);
   void AddSaveName(std::set<SourceName> &, const SourceName &);
   bool HandleUnrestrictedSpecificIntrinsicFunction(const parser::Name &);
@@ -5564,7 +5563,7 @@ bool DeclarationVisitor::Pre(const parser::BindEntity &x) {
   if (kind == parser::BindEntity::Kind::Object) {
     symbol = &HandleAttributeStmt(Attr::BIND_C, name);
   } else {
-    symbol = &MakeCommonBlockSymbol(name);
+    symbol = &MakeCommonBlockSymbol(name, name.source);
     SetExplicitAttr(*symbol, Attr::BIND_C);
   }
   // 8.6.4(1)
@@ -7147,7 +7146,7 @@ bool DeclarationVisitor::Pre(const parser::SaveStmt &x) {
       auto kind{std::get<parser::SavedEntity::Kind>(y.t)};
       const auto &name{std::get<parser::Name>(y.t)};
       if (kind == parser::SavedEntity::Kind::Common) {
-        MakeCommonBlockSymbol(name);
+        MakeCommonBlockSymbol(name, name.source);
         AddSaveName(specPartState_.saveInfo.commons, name.source);
       } else {
         HandleAttributeStmt(Attr::SAVE, name);
@@ -7227,101 +7226,27 @@ void DeclarationVisitor::CheckCommonBlocks() {
     if (symbol.get<CommonBlockDetails>().objects().empty() &&
         symbol.attrs().test(Attr::BIND_C)) {
       Say(symbol.name(),
-          "'%s' appears as a COMMON block in a BIND statement but not in"
-          " a COMMON statement"_err_en_US);
-    }
-  }
-  // check objects in common blocks
-  for (const auto &name : specPartState_.commonBlockObjects) {
-    const auto *symbol{currScope().FindSymbol(name)};
-    if (!symbol) {
-      continue;
-    }
-    const auto &attrs{symbol->attrs()};
-    if (attrs.test(Attr::ALLOCATABLE)) {
-      Say(name,
-          "ALLOCATABLE object '%s' may not appear in a COMMON block"_err_en_US);
-    } else if (attrs.test(Attr::BIND_C)) {
-      Say(name,
-          "Variable '%s' with BIND attribute may not appear in a COMMON block"_err_en_US);
-    } else if (IsNamedConstant(*symbol)) {
-      Say(name,
-          "A named constant '%s' may not appear in a COMMON block"_err_en_US);
-    } else if (IsDummy(*symbol)) {
-      Say(name,
-          "Dummy argument '%s' may not appear in a COMMON block"_err_en_US);
-    } else if (symbol->IsFuncResult()) {
-      Say(name,
-          "Function result '%s' may not appear in a COMMON block"_err_en_US);
-    } else if (const DeclTypeSpec * type{symbol->GetType()}) {
-      if (type->category() == DeclTypeSpec::ClassStar) {
-        Say(name,
-            "Unlimited polymorphic pointer '%s' may not appear in a COMMON block"_err_en_US);
-      } else if (const auto *derived{type->AsDerived()}) {
-        if (!IsSequenceOrBindCType(derived)) {
-          Say(name,
-              "Derived type '%s' in COMMON block must have the BIND or"
-              " SEQUENCE attribute"_err_en_US);
-        }
-        UnorderedSymbolSet typeSet;
-        CheckCommonBlockDerivedType(name, derived->typeSymbol(), typeSet);
-      }
+          "'%s' appears as a COMMON block in a BIND statement but not in a COMMON statement"_err_en_US);
     }
   }
   specPartState_.commonBlockObjects = {};
 }
 
-Symbol &DeclarationVisitor::MakeCommonBlockSymbol(const parser::Name &name) {
-  return Resolve(name, currScope().MakeCommonBlock(name.source));
+Symbol &DeclarationVisitor::MakeCommonBlockSymbol(
+    const parser::Name &name, SourceName location) {
+  return Resolve(name, currScope().MakeCommonBlock(name.source, location));
 }
 Symbol &DeclarationVisitor::MakeCommonBlockSymbol(
-    const std::optional<parser::Name> &name) {
+    const std::optional<parser::Name> &name, SourceName location) {
   if (name) {
-    return MakeCommonBlockSymbol(*name);
+    return MakeCommonBlockSymbol(*name, location);
   } else {
-    return MakeCommonBlockSymbol(parser::Name{});
+    return MakeCommonBlockSymbol(parser::Name{}, location);
   }
 }
 
 bool DeclarationVisitor::NameIsKnownOrIntrinsic(const parser::Name &name) {
   return FindSymbol(name) || HandleUnrestrictedSpecificIntrinsicFunction(name);
-}
-
-// Check if this derived type can be in a COMMON block.
-void DeclarationVisitor::CheckCommonBlockDerivedType(const SourceName &name,
-    const Symbol &typeSymbol, UnorderedSymbolSet &typeSet) {
-  if (auto iter{typeSet.find(SymbolRef{typeSymbol})}; iter != typeSet.end()) {
-    return;
-  }
-  typeSet.emplace(typeSymbol);
-  if (const auto *scope{typeSymbol.scope()}) {
-    for (const auto &pair : *scope) {
-      const Symbol &component{*pair.second};
-      if (component.attrs().test(Attr::ALLOCATABLE)) {
-        Say2(name,
-            "Derived type variable '%s' may not appear in a COMMON block"
-            " due to ALLOCATABLE component"_err_en_US,
-            component.name(), "Component with ALLOCATABLE attribute"_en_US);
-        return;
-      }
-      const auto *details{component.detailsIf<ObjectEntityDetails>()};
-      if (component.test(Symbol::Flag::InDataStmt) ||
-          (details && details->init())) {
-        Say2(name,
-            "Derived type variable '%s' may not appear in a COMMON block due to component with default initialization"_err_en_US,
-            component.name(), "Component with default initialization"_en_US);
-        return;
-      }
-      if (details) {
-        if (const auto *type{details->type()}) {
-          if (const auto *derived{type->AsDerived()}) {
-            const Symbol &derivedTypeSymbol{derived->typeSymbol()};
-            CheckCommonBlockDerivedType(name, derivedTypeSymbol, typeSet);
-          }
-        }
-      }
-    }
-  }
 }
 
 bool DeclarationVisitor::HandleUnrestrictedSpecificIntrinsicFunction(
@@ -9655,7 +9580,7 @@ void ResolveNamesVisitor::CreateCommonBlockSymbols(
     const parser::CommonStmt &commonStmt) {
   for (const parser::CommonStmt::Block &block : commonStmt.blocks) {
     const auto &[name, objects] = block.t;
-    Symbol &commonBlock{MakeCommonBlockSymbol(name)};
+    Symbol &commonBlock{MakeCommonBlockSymbol(name, commonStmt.source)};
     for (const auto &object : objects) {
       Symbol &obj{DeclareObjectEntity(std::get<parser::Name>(object.t))};
       if (auto *details{obj.detailsIf<ObjectEntityDetails>()}) {

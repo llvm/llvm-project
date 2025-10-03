@@ -625,7 +625,7 @@ public:
     for (const parser::OmpObject &obj : x.v) {
       auto *name{std::get_if<parser::Name>(&obj.u)};
       if (name && !name->symbol) {
-        Resolve(*name, currScope().MakeCommonBlock(name->source));
+        Resolve(*name, currScope().MakeCommonBlock(name->source, name->source));
       }
     }
   }
