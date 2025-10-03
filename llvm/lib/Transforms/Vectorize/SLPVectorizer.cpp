@@ -2245,6 +2245,11 @@ public:
                      Align Alignment, const int64_t Diff, Value *Ptr0,
                      Value *PtrN, StridedPtrInfo &SPtrInfo) const;
 
+  bool analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps, Type *ScalarTy,
+                                Align CommonAlignment,
+                                SmallVectorImpl<unsigned> &SortedIndices,
+                                StridedPtrInfo &SPtrInfo) const;
+
   /// Checks if the given array of loads can be represented as a vectorized,
   /// scatter or just simple gather.
   /// \param VL list of loads.
@@ -6875,6 +6880,27 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
   return false;
 }
 
+bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
+                                       Type *ScalarTy, Align CommonAlignment,
+                                       SmallVectorImpl<unsigned> &SortedIndices,
+                                       StridedPtrInfo &SPtrInfo) const {
+  return true;
+  const unsigned Sz = PointerOps.size();
+  // TODO: VecSz may change if we widen the strided load.
+  unsigned VecSz = Sz;
+  FixedVectorType *StridedLoadTy = getWidenedType(ScalarTy, VecSz);
+  if (!(Sz > MinProfitableStridedLoads && TTI->isTypeLegal(StridedLoadTy) &&
+        TTI->isLegalStridedLoadStore(StridedLoadTy, CommonAlignment)))
+    return false;
+  if (const SCEV *Stride =
+          calculateRtStride(PointerOps, ScalarTy, *DL, *SE, SortedIndices)) {
+    SPtrInfo.Ty = getWidenedType(ScalarTy, PointerOps.size());
+    SPtrInfo.StrideSCEV = Stride;
+    return true;
+  }
+  return false;
+}
+
 BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     ArrayRef<Value *> VL, const Value *VL0, SmallVectorImpl<unsigned> &Order,
     SmallVectorImpl<Value *> &PointerOps, StridedPtrInfo &SPtrInfo,
@@ -6915,15 +6941,9 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   auto *VecTy = getWidenedType(ScalarTy, Sz);
   Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
   if (!IsSorted) {
-    if (Sz > MinProfitableStridedLoads && TTI->isTypeLegal(VecTy)) {
-      if (const SCEV *Stride =
-              calculateRtStride(PointerOps, ScalarTy, *DL, *SE, Order);
-          Stride && TTI->isLegalStridedLoadStore(VecTy, CommonAlignment)) {
-        SPtrInfo.Ty = getWidenedType(ScalarTy, PointerOps.size());
-        SPtrInfo.StrideSCEV = Stride;
-        return LoadsState::StridedVectorize;
-      }
-    }
+    if (analyzeRtStrideCandidate(PointerOps, ScalarTy, CommonAlignment, Order,
+                                 SPtrInfo))
+      return LoadsState::StridedVectorize;
 
     if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
         TTI->forceScalarizeMaskedGather(VecTy, CommonAlignment))
