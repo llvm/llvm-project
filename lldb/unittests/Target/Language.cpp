@@ -54,3 +54,16 @@ TEST_F(LanguageTest, SourceLanguage_GetDescription) {
 
   EXPECT_EQ(SourceLanguage(eLanguageTypeUnknown).GetDescription(), "Unknown");
 }
+
+TEST_F(LanguageTest, SourceLanguage_AsLanguageType) {
+  EXPECT_EQ(SourceLanguage(eLanguageTypeC_plus_plus).AsLanguageType(),
+            eLanguageTypeC_plus_plus);
+  EXPECT_EQ(SourceLanguage(eLanguageTypeC_plus_plus_03).AsLanguageType(),
+            eLanguageTypeC_plus_plus_03);
+
+  // Vendor-specific language code.
+  EXPECT_EQ(SourceLanguage(eLanguageTypeMipsAssembler).AsLanguageType(),
+            eLanguageTypeAssembly);
+  EXPECT_EQ(SourceLanguage(eLanguageTypeUnknown).AsLanguageType(),
+            eLanguageTypeUnknown);
+}
