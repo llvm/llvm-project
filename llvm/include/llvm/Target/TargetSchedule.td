@@ -377,6 +377,7 @@ class MCSchedPredicate<MCInstPredicate P> : SchedPredicateBase {
   SchedMachineModel SchedModel = ?;
 }
 
+// A scheduling predicate whose logic depends on a SubtargetFeature.
 class FeatureSchedPredicate<SubtargetFeature SF> : SchedPredicateBase {
   SubtargetFeature Feature = SF;
   SchedMachineModel SchedModel = ?;
