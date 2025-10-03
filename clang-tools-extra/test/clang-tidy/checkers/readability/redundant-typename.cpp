@@ -203,6 +203,7 @@ public:
   // CHECK-FIXES-20: friend void k(T::R) {}
 
   friend struct T::R;
+  using typename T::R;
   enum E1 : typename T::R {};
   enum class E2 : typename T::R {};
   operator typename T::R();
