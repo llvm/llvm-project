@@ -6046,7 +6046,7 @@ static SDValue isSaturatingMinMax(SDValue N0, SDValue N1, SDValue N2,
     return N02;
   }
 
-  if (MaxC == 0 && MinCPlus1.isPowerOf2()) {
+  if (MaxC == 0 && MinC != 0 && MinCPlus1.isPowerOf2()) {
     BW = MinCPlus1.exactLogBase2();
     Unsigned = true;
     return N02;

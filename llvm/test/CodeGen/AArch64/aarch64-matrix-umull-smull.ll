@@ -902,7 +902,7 @@ define void @sink_v8z16_0(ptr %p, ptr %d, i64 %n, <16 x i8> %a) {
 ; CHECK-GI-NEXT:    subs x2, x2, #8
 ; CHECK-GI-NEXT:    add x8, x8, #8
 ; CHECK-GI-NEXT:    umull v1.8h, v1.8b, v0.8b
-; CHECK-GI-NEXT:    sshr v1.8h, v1.8h, #15
+; CHECK-GI-NEXT:    cmlt v1.8h, v1.8h, #0
 ; CHECK-GI-NEXT:    xtn v1.8b, v1.8h
 ; CHECK-GI-NEXT:    str d1, [x0], #32
 ; CHECK-GI-NEXT:    b.ne .LBB8_1
@@ -967,8 +967,8 @@ define void @sink_v16s16_8(ptr %p, ptr %d, i64 %n, <16 x i8> %a) {
 ; CHECK-GI-NEXT:    mov d2, v1.d[1]
 ; CHECK-GI-NEXT:    smull v1.8h, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    smull v2.8h, v2.8b, v0.8b
-; CHECK-GI-NEXT:    sshr v1.8h, v1.8h, #15
-; CHECK-GI-NEXT:    sshr v2.8h, v2.8h, #15
+; CHECK-GI-NEXT:    cmlt v1.8h, v1.8h, #0
+; CHECK-GI-NEXT:    cmlt v2.8h, v2.8h, #0
 ; CHECK-GI-NEXT:    uzp1 v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    str q1, [x0], #32
 ; CHECK-GI-NEXT:    b.ne .LBB9_1

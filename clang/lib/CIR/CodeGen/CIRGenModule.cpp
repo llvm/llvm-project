@@ -2069,6 +2069,15 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
   return func;
 }
 
+cir::FuncOp
+CIRGenModule::createCIRBuiltinFunction(mlir::Location loc, StringRef name,
+                                       cir::FuncType ty,
+                                       const clang::FunctionDecl *fd) {
+  cir::FuncOp fnOp = createCIRFunction(loc, name, ty, fd);
+  fnOp.setBuiltin(true);
+  return fnOp;
+}
+
 mlir::SymbolTable::Visibility
 CIRGenModule::getMLIRVisibility(cir::GlobalOp op) {
   // MLIR doesn't accept public symbols declarations (only

@@ -126,8 +126,6 @@ let Predicates = [HasAtomicLdSt, IsRV64] in {
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//
 
-def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
-
 def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
   KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0), 0);
   return Known.isNonNegative();
@@ -140,9 +138,7 @@ def : LdPat<extloadi16, LH, i32>;
 def : StPat<truncstorei8, SB, GPR, i32>;
 def : StPat<truncstorei16, SH, GPR, i32>;
 
-def : Pat<(anyext (i32 GPR:$src)), (COPY GPR:$src)>;
 def : Pat<(sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
-def : Pat<(i32 (trunc GPR:$src)), (COPY GPR:$src)>;
 
 def : Pat<(sext_inreg (i64 (add GPR:$rs1, simm12_lo:$imm)), i32),
           (ADDIW GPR:$rs1, simm12_lo:$imm)>;

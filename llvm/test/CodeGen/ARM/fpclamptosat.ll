@@ -383,8 +383,8 @@ entry:
   ret i32 %conv6
 }
 
-define i32 @utesth_f16i32(half %x) {
-; SOFT-LABEL: utesth_f16i32:
+define i32 @utest_f16i32(half %x) {
+; SOFT-LABEL: utest_f16i32:
 ; SOFT:       @ %bb.0: @ %entry
 ; SOFT-NEXT:    .save {r7, lr}
 ; SOFT-NEXT:    push {r7, lr}
@@ -400,7 +400,7 @@ define i32 @utesth_f16i32(half %x) {
 ; SOFT-NEXT:  .LBB7_2: @ %entry
 ; SOFT-NEXT:    pop {r7, pc}
 ;
-; VFP2-LABEL: utesth_f16i32:
+; VFP2-LABEL: utest_f16i32:
 ; VFP2:       @ %bb.0: @ %entry
 ; VFP2-NEXT:    .save {r7, lr}
 ; VFP2-NEXT:    push {r7, lr}
@@ -411,7 +411,7 @@ define i32 @utesth_f16i32(half %x) {
 ; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    pop {r7, pc}
 ;
-; FULL-LABEL: utesth_f16i32:
+; FULL-LABEL: utest_f16i32:
 ; FULL:       @ %bb.0: @ %entry
 ; FULL-NEXT:    vcvt.u32.f16 s0, s0
 ; FULL-NEXT:    vmov r0, s0
@@ -3982,6 +3982,46 @@ entry:
   %spec.store.select = select i1 %0, i32 %convt, i32 32767
   %1 = icmp sgt i32 %spec.store.select, -32768
   %spec.store.select7 = select i1 %1, i32 %spec.store.select, i32 -32768
+  ret i32 %spec.store.select7
+}
+
+; i32 non saturate
+
+define i32 @ustest_f16i32_nsat(half %x) {
+; SOFT-LABEL: ustest_f16i32_nsat:
+; SOFT:       @ %bb.0:
+; SOFT-NEXT:    .save {r7, lr}
+; SOFT-NEXT:    push {r7, lr}
+; SOFT-NEXT:    uxth r0, r0
+; SOFT-NEXT:    bl __aeabi_h2f
+; SOFT-NEXT:    bl __aeabi_f2iz
+; SOFT-NEXT:    asrs r1, r0, #31
+; SOFT-NEXT:    ands r0, r1
+; SOFT-NEXT:    asrs r1, r0, #31
+; SOFT-NEXT:    bics r0, r1
+; SOFT-NEXT:    pop {r7, pc}
+;
+; VFP2-LABEL: ustest_f16i32_nsat:
+; VFP2:       @ %bb.0:
+; VFP2-NEXT:    .save {r7, lr}
+; VFP2-NEXT:    push {r7, lr}
+; VFP2-NEXT:    vmov r0, s0
+; VFP2-NEXT:    bl __aeabi_h2f
+; VFP2-NEXT:    vmov s0, r0
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
+; VFP2-NEXT:    usat r0, #0, r0
+; VFP2-NEXT:    pop {r7, pc}
+;
+; FULL-LABEL: ustest_f16i32_nsat:
+; FULL:       @ %bb.0:
+; FULL-NEXT:    vcvt.s32.f16 s0, s0
+; FULL-NEXT:    vmov r0, s0
+; FULL-NEXT:    usat r0, #0, r0
+; FULL-NEXT:    bx lr
+  %conv = fptosi half %x to i32
+  %spec.store.select = call i32 @llvm.smin.i32(i32 0, i32 %conv)
+  %spec.store.select7 = call i32 @llvm.smax.i32(i32 %spec.store.select, i32 0)
   ret i32 %spec.store.select7
 }
 

@@ -465,7 +465,7 @@ define <8 x i16> @test_ushll_cmp(<8 x i8> %a, <8 x i8> %b) #0 {
 ; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-GI-NEXT:    sshr v0.8h, v0.8h, #15
+; CHECK-GI-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
   %cmp.i = icmp eq <8 x i8> %a, %b

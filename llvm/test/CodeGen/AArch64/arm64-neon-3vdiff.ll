@@ -999,16 +999,10 @@ entry:
 }
 
 define <8 x i8> @test_vaddhn_s16(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-SD-LABEL: test_vaddhn_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    addhn v0.8b, v0.8h, v1.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vaddhn_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    shrn v0.8b, v0.8h, #8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vaddhn_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addhn v0.8b, v0.8h, v1.8h
+; CHECK-NEXT:    ret
 entry:
   %vaddhn.i = add <8 x i16> %a, %b
   %vaddhn1.i = lshr <8 x i16> %vaddhn.i, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
@@ -1017,16 +1011,10 @@ entry:
 }
 
 define <4 x i16> @test_vaddhn_s32(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-SD-LABEL: test_vaddhn_s32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    addhn v0.4h, v0.4s, v1.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vaddhn_s32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    shrn v0.4h, v0.4s, #16
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vaddhn_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addhn v0.4h, v0.4s, v1.4s
+; CHECK-NEXT:    ret
 entry:
   %vaddhn.i = add <4 x i32> %a, %b
   %vaddhn1.i = lshr <4 x i32> %vaddhn.i, <i32 16, i32 16, i32 16, i32 16>
@@ -1035,16 +1023,10 @@ entry:
 }
 
 define <2 x i32> @test_vaddhn_s64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-SD-LABEL: test_vaddhn_s64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    addhn v0.2s, v0.2d, v1.2d
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vaddhn_s64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    shrn v0.2s, v0.2d, #32
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vaddhn_s64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addhn v0.2s, v0.2d, v1.2d
+; CHECK-NEXT:    ret
 entry:
   %vaddhn.i = add <2 x i64> %a, %b
   %vaddhn1.i = lshr <2 x i64> %vaddhn.i, <i64 32, i64 32>
@@ -1053,16 +1035,10 @@ entry:
 }
 
 define <8 x i8> @test_vaddhn_u16(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-SD-LABEL: test_vaddhn_u16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    addhn v0.8b, v0.8h, v1.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vaddhn_u16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    shrn v0.8b, v0.8h, #8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vaddhn_u16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addhn v0.8b, v0.8h, v1.8h
+; CHECK-NEXT:    ret
 entry:
   %vaddhn.i = add <8 x i16> %a, %b
   %vaddhn1.i = lshr <8 x i16> %vaddhn.i, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
@@ -1071,16 +1047,10 @@ entry:
 }
 
 define <4 x i16> @test_vaddhn_u32(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-SD-LABEL: test_vaddhn_u32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    addhn v0.4h, v0.4s, v1.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vaddhn_u32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    shrn v0.4h, v0.4s, #16
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vaddhn_u32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addhn v0.4h, v0.4s, v1.4s
+; CHECK-NEXT:    ret
 entry:
   %vaddhn.i = add <4 x i32> %a, %b
   %vaddhn1.i = lshr <4 x i32> %vaddhn.i, <i32 16, i32 16, i32 16, i32 16>
@@ -1089,16 +1059,10 @@ entry:
 }
 
 define <2 x i32> @test_vaddhn_u64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-SD-LABEL: test_vaddhn_u64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    addhn v0.2s, v0.2d, v1.2d
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vaddhn_u64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    shrn v0.2s, v0.2d, #32
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vaddhn_u64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addhn v0.2s, v0.2d, v1.2d
+; CHECK-NEXT:    ret
 entry:
   %vaddhn.i = add <2 x i64> %a, %b
   %vaddhn1.i = lshr <2 x i64> %vaddhn.i, <i64 32, i64 32>
@@ -1115,9 +1079,8 @@ define <16 x i8> @test_vaddhn_high_s16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) 
 ;
 ; CHECK-GI-LABEL: test_vaddhn_high_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    add v1.8h, v1.8h, v2.8h
+; CHECK-GI-NEXT:    addhn v1.8b, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    shrn v1.8b, v1.8h, #8
 ; CHECK-GI-NEXT:    fmov x8, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
@@ -1141,9 +1104,8 @@ define <8 x i16> @test_vaddhn_high_s32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b)
 ;
 ; CHECK-GI-LABEL: test_vaddhn_high_s32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    addhn v1.4h, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-GI-NEXT:    fmov x8, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
@@ -1167,9 +1129,8 @@ define <4 x i32> @test_vaddhn_high_s64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b)
 ;
 ; CHECK-GI-LABEL: test_vaddhn_high_s64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    add v1.2d, v1.2d, v2.2d
+; CHECK-GI-NEXT:    addhn v1.2s, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    shrn v1.2s, v1.2d, #32
 ; CHECK-GI-NEXT:    fmov x8, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
@@ -1193,9 +1154,8 @@ define <16 x i8> @test_vaddhn_high_u16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) 
 ;
 ; CHECK-GI-LABEL: test_vaddhn_high_u16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    add v1.8h, v1.8h, v2.8h
+; CHECK-GI-NEXT:    addhn v1.8b, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    shrn v1.8b, v1.8h, #8
 ; CHECK-GI-NEXT:    fmov x8, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
@@ -1219,9 +1179,8 @@ define <8 x i16> @test_vaddhn_high_u32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b)
 ;
 ; CHECK-GI-LABEL: test_vaddhn_high_u32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    addhn v1.4h, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-GI-NEXT:    fmov x8, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
@@ -1245,9 +1204,8 @@ define <4 x i32> @test_vaddhn_high_u64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b)
 ;
 ; CHECK-GI-LABEL: test_vaddhn_high_u64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    add v1.2d, v1.2d, v2.2d
+; CHECK-GI-NEXT:    addhn v1.2s, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    shrn v1.2s, v1.2d, #32
 ; CHECK-GI-NEXT:    fmov x8, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
@@ -1461,16 +1419,10 @@ entry:
 }
 
 define <8 x i8> @test_vsubhn_s16(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-SD-LABEL: test_vsubhn_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    subhn v0.8b, v0.8h, v1.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vsubhn_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    shrn v0.8b, v0.8h, #8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vsubhn_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subhn v0.8b, v0.8h, v1.8h
+; CHECK-NEXT:    ret
 entry:
   %vsubhn.i = sub <8 x i16> %a, %b
   %vsubhn1.i = lshr <8 x i16> %vsubhn.i, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
@@ -1479,16 +1431,10 @@ entry:
 }
 
 define <4 x i16> @test_vsubhn_s32(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-SD-LABEL: test_vsubhn_s32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    subhn v0.4h, v0.4s, v1.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vsubhn_s32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    shrn v0.4h, v0.4s, #16
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vsubhn_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subhn v0.4h, v0.4s, v1.4s
+; CHECK-NEXT:    ret
 entry:
   %vsubhn.i = sub <4 x i32> %a, %b
   %vsubhn1.i = lshr <4 x i32> %vsubhn.i, <i32 16, i32 16, i32 16, i32 16>
@@ -1497,16 +1443,10 @@ entry:
 }
 
 define <2 x i32> @test_vsubhn_s64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-SD-LABEL: test_vsubhn_s64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    subhn v0.2s, v0.2d, v1.2d
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vsubhn_s64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    shrn v0.2s, v0.2d, #32
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vsubhn_s64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subhn v0.2s, v0.2d, v1.2d
+; CHECK-NEXT:    ret
 entry:
   %vsubhn.i = sub <2 x i64> %a, %b
   %vsubhn1.i = lshr <2 x i64> %vsubhn.i, <i64 32, i64 32>
@@ -1515,16 +1455,10 @@ entry:
 }
 
 define <8 x i8> @test_vsubhn_u16(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-SD-LABEL: test_vsubhn_u16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    subhn v0.8b, v0.8h, v1.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vsubhn_u16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    shrn v0.8b, v0.8h, #8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vsubhn_u16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subhn v0.8b, v0.8h, v1.8h
+; CHECK-NEXT:    ret
 entry:
   %vsubhn.i = sub <8 x i16> %a, %b
   %vsubhn1.i = lshr <8 x i16> %vsubhn.i, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
@@ -1533,16 +1467,10 @@ entry:
 }
 
 define <4 x i16> @test_vsubhn_u32(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-SD-LABEL: test_vsubhn_u32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    subhn v0.4h, v0.4s, v1.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vsubhn_u32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    shrn v0.4h, v0.4s, #16
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vsubhn_u32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subhn v0.4h, v0.4s, v1.4s
+; CHECK-NEXT:    ret
 entry:
   %vsubhn.i = sub <4 x i32> %a, %b
   %vsubhn1.i = lshr <4 x i32> %vsubhn.i, <i32 16, i32 16, i32 16, i32 16>
@@ -1551,16 +1479,10 @@ entry:
 }
 
 define <2 x i32> @test_vsubhn_u64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-SD-LABEL: test_vsubhn_u64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    subhn v0.2s, v0.2d, v1.2d
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vsubhn_u64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    shrn v0.2s, v0.2d, #32
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vsubhn_u64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subhn v0.2s, v0.2d, v1.2d
+; CHECK-NEXT:    ret
 entry:
   %vsubhn.i = sub <2 x i64> %a, %b
   %vsubhn1.i = lshr <2 x i64> %vsubhn.i, <i64 32, i64 32>
@@ -1577,9 +1499,8 @@ define <16 x i8> @test_vsubhn_high_s16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) 
 ;
 ; CHECK-GI-LABEL: test_vsubhn_high_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub v1.8h, v1.8h, v2.8h
+; CHECK-GI-NEXT:    subhn v1.8b, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    shrn v1.8b, v1.8h, #8
 ; CHECK-GI-NEXT:    fmov x8, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
@@ -1603,9 +1524,8 @@ define <8 x i16> @test_vsubhn_high_s32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b)
 ;
 ; CHECK-GI-LABEL: test_vsubhn_high_s32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub v1.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    subhn v1.4h, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-GI-NEXT:    fmov x8, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
@@ -1629,9 +1549,8 @@ define <4 x i32> @test_vsubhn_high_s64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b)
 ;
 ; CHECK-GI-LABEL: test_vsubhn_high_s64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub v1.2d, v1.2d, v2.2d
+; CHECK-GI-NEXT:    subhn v1.2s, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    shrn v1.2s, v1.2d, #32
 ; CHECK-GI-NEXT:    fmov x8, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
@@ -1655,9 +1574,8 @@ define <16 x i8> @test_vsubhn_high_u16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) 
 ;
 ; CHECK-GI-LABEL: test_vsubhn_high_u16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub v1.8h, v1.8h, v2.8h
+; CHECK-GI-NEXT:    subhn v1.8b, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    shrn v1.8b, v1.8h, #8
 ; CHECK-GI-NEXT:    fmov x8, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
@@ -1681,9 +1599,8 @@ define <8 x i16> @test_vsubhn_high_u32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b)
 ;
 ; CHECK-GI-LABEL: test_vsubhn_high_u32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub v1.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    subhn v1.4h, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-GI-NEXT:    fmov x8, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
@@ -1707,9 +1624,8 @@ define <4 x i32> @test_vsubhn_high_u64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b)
 ;
 ; CHECK-GI-LABEL: test_vsubhn_high_u64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub v1.2d, v1.2d, v2.2d
+; CHECK-GI-NEXT:    subhn v1.2s, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    shrn v1.2s, v1.2d, #32
 ; CHECK-GI-NEXT:    fmov x8, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret

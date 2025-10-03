@@ -50,6 +50,9 @@
 using namespace llvm;
 using namespace PatternMatch;
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 /// Replace a select operand based on an equality comparison with the identity
 /// constant of a binop.
@@ -4492,8 +4495,21 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   auto FoldSelectWithAndOrCond = [&](bool IsAnd, Value *A,
                                      Value *B) -> Instruction * {
     if (Value *V = simplifySelectInst(B, TrueVal, FalseVal,
-                                      SQ.getWithInstruction(&SI)))
-      return SelectInst::Create(A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V);
+                                      SQ.getWithInstruction(&SI))) {
+      Value *NewTrueVal = IsAnd ? V : TrueVal;
+      Value *NewFalseVal = IsAnd ? FalseVal : V;
+
+      // If the True and False values don't change, then preserve the branch
+      // metadata of the original select as the net effect of this change is to
+      // simplify the conditional.
+      Instruction *MDFrom = nullptr;
+      if (NewTrueVal == TrueVal && NewFalseVal == FalseVal &&
+          !ProfcheckDisableMetadataFixes) {
+        MDFrom = &SI;
+      }
+      return SelectInst::Create(A, NewTrueVal, NewFalseVal, "", nullptr,
+                                MDFrom);
+    }
 
     // Is (select B, T, F) a SPF?
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {

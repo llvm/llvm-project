@@ -281,6 +281,10 @@ jobs:
       - name: Set up the MSVC dev environment
         if: ${{ matrix.mingw != true }}
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      - name: Add the installed Clang at the start of the path
+        if: ${{ matrix.mingw != true }}
+        run: |
+          echo "c:\Program Files\LLVM\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
       - name: Build and test
         run: |
           bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}

@@ -162,7 +162,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_2Arg_Scalar_Narrow_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                 [LLVMExtendedType<0>, llvm_i32_ty],
-                [IntrNoMem]>;
+                [IntrNoMem, ImmArg<ArgIndex<1>>]>;
   class AdvSIMD_2VectorArg_Scalar_Wide_BySize_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [LLVMTruncatedType<0>],
@@ -187,13 +187,13 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_3VectorArg_Scalar_Intrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
-               [IntrNoMem]>;
+               [IntrNoMem, ImmArg<ArgIndex<2>>]>;
   class AdvSIMD_CvtFxToFP_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty, llvm_i32_ty],
-                [IntrNoMem]>;
+                [IntrNoMem, ImmArg<ArgIndex<1>>]>;
   class AdvSIMD_CvtFPToFx_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty, llvm_i32_ty],
-                [IntrNoMem]>;
+                [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
   class AdvSIMD_1Arg_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrNoMem]>;
@@ -221,7 +221,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
 
 // Arithmetic ops
 
-let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
+let TargetPrefix = "aarch64" in {
   // Vector Add Across Lanes
   def int_aarch64_neon_saddv : AdvSIMD_1VectorArg_Int_Across_Intrinsic;
   def int_aarch64_neon_uaddv : AdvSIMD_1VectorArg_Int_Across_Intrinsic;
