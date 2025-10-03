@@ -533,7 +533,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FREM, ISD::FPOW, ISD::FPOWI,
                         ISD::FCOS, ISD::FSIN, ISD::FSINCOS, ISD::FEXP,
                         ISD::FEXP2, ISD::FEXP10, ISD::FLOG, ISD::FLOG2,
-                        ISD::FLOG10, ISD::FLDEXP, ISD::FFREXP},
+                        ISD::FLOG10, ISD::FLDEXP, ISD::FFREXP, ISD::FMODF},
                        MVT::f16, Promote);
 
     // FIXME: Need to promote f16 STRICT_* to f32 libcalls, but we don't have
@@ -24871,22 +24871,6 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
 
   // Only support fixed vectors if we know the minimum vector size.
   if (DataType.isFixedLengthVector() && !Subtarget.useRVVForFixedLengthVectors())
-    return false;
-
-  EVT ScalarType = DataType.getScalarType();
-  if (!isLegalElementTypeForRVV(ScalarType))
-    return false;
-
-  if (!Subtarget.enableUnalignedVectorMem() &&
-      Alignment < ScalarType.getStoreSize())
-    return false;
-
-  return true;
-}
-
-bool RISCVTargetLowering::isLegalFirstFaultLoad(EVT DataType,
-                                                Align Alignment) const {
-  if (!Subtarget.hasVInstructions())
     return false;
 
   EVT ScalarType = DataType.getScalarType();
