@@ -1647,7 +1647,9 @@ NewGVN::performSymbolicPredicateInfoEvaluation(BitCastInst *I) const {
 NewGVN::ExprResult NewGVN::performSymbolicCallEvaluation(Instruction *I) const {
   auto *CI = cast<CallInst>(I);
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    if (auto *ReturnedValue = II->getReturnedArgOperand())
+    auto *ReturnedValue = II->getReturnedArgOperand();
+    auto *MemDef = dyn_cast_or_null<MemoryDef>(getMemoryAccess(I));
+    if (ReturnedValue && !MemDef)
       return ExprResult::some(createVariableOrConstant(ReturnedValue));
   }
 
