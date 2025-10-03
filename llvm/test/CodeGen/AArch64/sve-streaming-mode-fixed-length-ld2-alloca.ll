@@ -174,14 +174,14 @@ define void @alloc_v8f64(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x0, sp
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-NEXT:    mov x20, sp
 ; CHECK-NEXT:    bl def
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x20]
 ; CHECK-NEXT:    ld2d { z2.d, z3.d }, p0/z, [x20, x8, lsl #3]
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    stp q0, q2, [x19]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #96

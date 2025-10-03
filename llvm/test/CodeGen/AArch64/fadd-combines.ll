@@ -185,12 +185,12 @@ define double @test7(double %a, double %b) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    fmov d2, #-2.00000000
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    fmul d1, d1, d2
 ; CHECK-NEXT:    fadd d8, d0, d1
 ; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    fmov d0, d8
 ; CHECK-NEXT:    ldr d8, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

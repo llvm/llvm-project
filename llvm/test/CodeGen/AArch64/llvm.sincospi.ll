@@ -62,35 +62,35 @@ define { <2 x half>, <2 x half> } @test_sincospi_v2f16(<2 x half> %a) {
 ; CHECK-LABEL: test_sincospi_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov h1, v0.h[1]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    add x0, sp, #36
 ; CHECK-NEXT:    add x1, sp, #32
 ; CHECK-NEXT:    fcvt s0, h1
 ; CHECK-NEXT:    bl sincospif
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    add x0, sp, #28
 ; CHECK-NEXT:    add x1, sp, #24
 ; CHECK-NEXT:    fcvt s0, h0
 ; CHECK-NEXT:    bl sincospif
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    add x0, sp, #44
 ; CHECK-NEXT:    add x1, sp, #40
 ; CHECK-NEXT:    mov h0, v0.h[2]
 ; CHECK-NEXT:    fcvt s0, h0
 ; CHECK-NEXT:    bl sincospif
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    add x0, sp, #60
 ; CHECK-NEXT:    add x1, sp, #56
 ; CHECK-NEXT:    mov h0, v0.h[3]
 ; CHECK-NEXT:    fcvt s0, h0
 ; CHECK-NEXT:    bl sincospif
 ; CHECK-NEXT:    ldp s2, s0, [sp, #32]
-; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; CHECK-NEXT:    ldp s3, s1, [sp, #24]
 ; CHECK-NEXT:    fcvt h4, s0
 ; CHECK-NEXT:    fcvt h2, s2
@@ -136,7 +136,7 @@ define { <3 x float>, <3 x float> } @test_sincospi_v3f32(<3 x float> %a) {
 ; CHECK-LABEL: test_sincospi_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
@@ -147,17 +147,17 @@ define { <3 x float>, <3 x float> } @test_sincospi_v3f32(<3 x float> %a) {
 ; CHECK-NEXT:    .cfi_offset w30, -48
 ; CHECK-NEXT:    add x0, sp, #20
 ; CHECK-NEXT:    add x1, sp, #16
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl sincospif
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    add x0, sp, #28
 ; CHECK-NEXT:    add x1, sp, #24
 ; CHECK-NEXT:    add x19, sp, #28
 ; CHECK-NEXT:    add x20, sp, #24
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    bl sincospif
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    add x0, sp, #44
 ; CHECK-NEXT:    add x1, sp, #40
 ; CHECK-NEXT:    add x21, sp, #44
@@ -165,7 +165,7 @@ define { <3 x float>, <3 x float> } @test_sincospi_v3f32(<3 x float> %a) {
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl sincospif
 ; CHECK-NEXT:    ldp s1, s0, [sp, #16]
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    ld1 { v0.s }[1], [x19]
 ; CHECK-NEXT:    ld1 { v1.s }[1], [x20]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
@@ -182,7 +182,7 @@ define { <2 x float>, <2 x float> } @test_sincospi_v2f32(<2 x float> %a) {
 ; CHECK-LABEL: test_sincospi_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w19, -8
@@ -191,10 +191,10 @@ define { <2 x float>, <2 x float> } @test_sincospi_v2f32(<2 x float> %a) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    add x0, sp, #44
 ; CHECK-NEXT:    add x1, sp, #40
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl sincospif
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    add x0, sp, #28
 ; CHECK-NEXT:    add x1, sp, #24
 ; CHECK-NEXT:    add x19, sp, #28
@@ -202,7 +202,7 @@ define { <2 x float>, <2 x float> } @test_sincospi_v2f32(<2 x float> %a) {
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    bl sincospif
 ; CHECK-NEXT:    ldp s1, s0, [sp, #40]
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    ld1 { v0.s }[1], [x19]
 ; CHECK-NEXT:    ld1 { v1.s }[1], [x20]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
@@ -218,7 +218,7 @@ define { double, double } @test_sincospi_f64(double %a) {
 ; CHECK-LABEL: test_sincospi_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    add x0, sp, #24
@@ -226,7 +226,7 @@ define { double, double } @test_sincospi_f64(double %a) {
 ; CHECK-NEXT:    bl sincospi
 ; CHECK-NEXT:    ldr d0, [sp, #24]
 ; CHECK-NEXT:    ldr d1, [sp, #8]
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %result = call { double, double } @llvm.sincospi.f64(double %a)
@@ -237,7 +237,7 @@ define { <2 x double>, <2 x double> } @test_sincospi_v2f64(<2 x double> %a) {
 ; CHECK-LABEL: test_sincospi_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset w19, -8
@@ -245,10 +245,10 @@ define { <2 x double>, <2 x double> } @test_sincospi_v2f64(<2 x double> %a) {
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    add x0, sp, #56
 ; CHECK-NEXT:    add x1, sp, #40
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    bl sincospi
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    add x0, sp, #32
 ; CHECK-NEXT:    add x1, sp, #24
 ; CHECK-NEXT:    add x19, sp, #32
@@ -257,7 +257,7 @@ define { <2 x double>, <2 x double> } @test_sincospi_v2f64(<2 x double> %a) {
 ; CHECK-NEXT:    bl sincospi
 ; CHECK-NEXT:    ldr d0, [sp, #56]
 ; CHECK-NEXT:    ldr d1, [sp, #40]
-; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; CHECK-NEXT:    ld1 { v0.d }[1], [x19]
 ; CHECK-NEXT:    ld1 { v1.d }[1], [x20]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload

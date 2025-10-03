@@ -61,9 +61,9 @@ define <vscale x 32 x i1> @reverse_nxv32i1(<vscale x 32 x i1> %a) #0 {
 ; CHECK-FASTISEL:       // %bb.0:
 ; CHECK-FASTISEL-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-FASTISEL-NEXT:    addvl sp, sp, #-1
-; CHECK-FASTISEL-NEXT:    str p1, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-FASTISEL-NEXT:    str p1, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-FASTISEL-NEXT:    mov p1.b, p0.b
-; CHECK-FASTISEL-NEXT:    ldr p0, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-FASTISEL-NEXT:    ldr p0, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-FASTISEL-NEXT:    rev p0.b, p0.b
 ; CHECK-FASTISEL-NEXT:    rev p1.b, p1.b
 ; CHECK-FASTISEL-NEXT:    addvl sp, sp, #1

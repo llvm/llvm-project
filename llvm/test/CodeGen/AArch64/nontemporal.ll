@@ -502,10 +502,10 @@ define void @test_stnp_v4f32_offset_alloca(<4 x float> %v) #0 {
 ; CHECK-LE-NEXT:    sub sp, sp, #32
 ; CHECK-LE-NEXT:    mov d1, v0.d[1]
 ; CHECK-LE-NEXT:    mov x0, sp
-; CHECK-LE-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-LE-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-LE-NEXT:    stnp d0, d1, [sp]
 ; CHECK-LE-NEXT:    bl dummy
-; CHECK-LE-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-LE-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-LE-NEXT:    add sp, sp, #32
 ; CHECK-LE-NEXT:    ret
 ;
@@ -513,10 +513,10 @@ define void @test_stnp_v4f32_offset_alloca(<4 x float> %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    sub sp, sp, #32
 ; CHECK-BE-NEXT:    mov x0, sp
-; CHECK-BE-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-BE-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-BE-NEXT:    str q0, [sp]
 ; CHECK-BE-NEXT:    bl dummy
-; CHECK-BE-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-BE-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-BE-NEXT:    add sp, sp, #32
 ; CHECK-BE-NEXT:    ret
   %tmp0 = alloca <4 x float>
@@ -531,10 +531,10 @@ define void @test_stnp_v4f32_offset_alloca_2(<4 x float> %v) #0 {
 ; CHECK-LE-NEXT:    sub sp, sp, #48
 ; CHECK-LE-NEXT:    mov d1, v0.d[1]
 ; CHECK-LE-NEXT:    mov x0, sp
-; CHECK-LE-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-LE-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-LE-NEXT:    stnp d0, d1, [sp, #16]
 ; CHECK-LE-NEXT:    bl dummy
-; CHECK-LE-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-LE-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-LE-NEXT:    add sp, sp, #48
 ; CHECK-LE-NEXT:    ret
 ;
@@ -542,10 +542,10 @@ define void @test_stnp_v4f32_offset_alloca_2(<4 x float> %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    sub sp, sp, #48
 ; CHECK-BE-NEXT:    mov x0, sp
-; CHECK-BE-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-BE-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-BE-NEXT:    str q0, [sp, #16]
 ; CHECK-BE-NEXT:    bl dummy
-; CHECK-BE-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-BE-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-BE-NEXT:    add sp, sp, #48
 ; CHECK-BE-NEXT:    ret
   %tmp0 = alloca <4 x float>, i32 2

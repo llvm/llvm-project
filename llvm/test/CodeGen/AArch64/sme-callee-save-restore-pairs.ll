@@ -12,18 +12,18 @@ define void @fbyte(<vscale x 16 x i8> %v) #0{
 ; NOPAIR-NEXT:    str x29, [sp, #-32]! // 8-byte Folded Spill
 ; NOPAIR-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; NOPAIR-NEXT:    addvl sp, sp, #-18
-; NOPAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; NOPAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; NOPAIR-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
 ; NOPAIR-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
 ; NOPAIR-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
@@ -76,18 +76,18 @@ define void @fbyte(<vscale x 16 x i8> %v) #0{
 ; NOPAIR-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
 ; NOPAIR-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; NOPAIR-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
-; NOPAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; NOPAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; NOPAIR-NEXT:    addvl sp, sp, #18
 ; NOPAIR-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
 ; NOPAIR-NEXT:    ldr x29, [sp], #32 // 8-byte Folded Reload
@@ -98,18 +98,18 @@ define void @fbyte(<vscale x 16 x i8> %v) #0{
 ; PAIR-NEXT:    str x29, [sp, #-32]! // 8-byte Folded Spill
 ; PAIR-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; PAIR-NEXT:    addvl sp, sp, #-18
-; PAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; PAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; PAIR-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
 ; PAIR-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
 ; PAIR-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
@@ -162,18 +162,18 @@ define void @fbyte(<vscale x 16 x i8> %v) #0{
 ; PAIR-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
 ; PAIR-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; PAIR-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
-; PAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; PAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; PAIR-NEXT:    addvl sp, sp, #18
 ; PAIR-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
 ; PAIR-NEXT:    ldr x29, [sp], #32 // 8-byte Folded Reload
@@ -187,18 +187,18 @@ define void @fhalf(<vscale x 8 x half> %v) #1{
 ; NOPAIR:       // %bb.0:
 ; NOPAIR-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; NOPAIR-NEXT:    addvl sp, sp, #-18
-; NOPAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; NOPAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; NOPAIR-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
 ; NOPAIR-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
 ; NOPAIR-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
@@ -234,18 +234,18 @@ define void @fhalf(<vscale x 8 x half> %v) #1{
 ; NOPAIR-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
 ; NOPAIR-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; NOPAIR-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
-; NOPAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; NOPAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; NOPAIR-NEXT:    addvl sp, sp, #18
 ; NOPAIR-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; NOPAIR-NEXT:    ret
@@ -254,26 +254,26 @@ define void @fhalf(<vscale x 8 x half> %v) #1{
 ; PAIR:       // %bb.0:
 ; PAIR-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; PAIR-NEXT:    addvl sp, sp, #-18
-; PAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
+; PAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
 ; PAIR-NEXT:    ptrue pn8.b
-; PAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
+; PAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
 ; PAIR-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
-; PAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
+; PAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
 ; PAIR-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
-; PAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
+; PAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
 ; PAIR-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
-; PAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
+; PAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
 ; PAIR-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
-; PAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; PAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; PAIR-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; PAIR-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
 ; PAIR-NEXT:    smstop sm
@@ -289,18 +289,18 @@ define void @fhalf(<vscale x 8 x half> %v) #1{
 ; PAIR-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
 ; PAIR-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; PAIR-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; PAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; PAIR-NEXT:    addvl sp, sp, #18
 ; PAIR-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; PAIR-NEXT:    ret
@@ -313,18 +313,18 @@ define void @ffloat(<vscale x 4 x i32> %v) #2 {
 ; NOPAIR:       // %bb.0:
 ; NOPAIR-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; NOPAIR-NEXT:    addsvl sp, sp, #-18
-; NOPAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; NOPAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; NOPAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; NOPAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; NOPAIR-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
 ; NOPAIR-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
 ; NOPAIR-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
@@ -360,18 +360,18 @@ define void @ffloat(<vscale x 4 x i32> %v) #2 {
 ; NOPAIR-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
 ; NOPAIR-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; NOPAIR-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
-; NOPAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; NOPAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; NOPAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; NOPAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; NOPAIR-NEXT:    addsvl sp, sp, #18
 ; NOPAIR-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; NOPAIR-NEXT:    ret
@@ -380,18 +380,18 @@ define void @ffloat(<vscale x 4 x i32> %v) #2 {
 ; PAIR:       // %bb.0:
 ; PAIR-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; PAIR-NEXT:    addsvl sp, sp, #-18
-; PAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; PAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; PAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; PAIR-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
 ; PAIR-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
 ; PAIR-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
@@ -427,18 +427,18 @@ define void @ffloat(<vscale x 4 x i32> %v) #2 {
 ; PAIR-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
 ; PAIR-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; PAIR-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
-; PAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; PAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; PAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; PAIR-NEXT:    addsvl sp, sp, #18
 ; PAIR-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; PAIR-NEXT:    ret

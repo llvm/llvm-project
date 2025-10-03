@@ -9,29 +9,29 @@ define i32 @f(<vscale x 2 x i64> %x) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    addvl sp, sp, #-18
 ; CHECK-NEXT:    .seh_allocz 18
-; CHECK-NEXT:    str p4, [sp] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    str z8, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
@@ -67,15 +67,15 @@ define i32 @f(<vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
 ; CHECK-NEXT:    str x28, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_reg_x x28, 16
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x30, 8
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    bl g
 ; CHECK-NEXT:    mov w0, #3 // =0x3
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 8
-; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
@@ -111,29 +111,29 @@ define i32 @f(<vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z22, 16
 ; CHECK-NEXT:    ldr z23, [sp, #17, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
-; CHECK-NEXT:    ldr p4, [sp] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    .seh_allocz 18
@@ -152,29 +152,29 @@ define void @f2(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    addvl sp, sp, #-18
 ; CHECK-NEXT:    .seh_allocz 18
-; CHECK-NEXT:    str p4, [sp] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    str z8, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
@@ -210,7 +210,7 @@ define void @f2(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
 ; CHECK-NEXT:    str x19, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_reg_x x19, 32
-; CHECK-NEXT:    str x28, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x28, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x28, 8
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_fplr 16
@@ -232,9 +232,9 @@ define void @f2(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_add_fp 16
 ; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 16
-; CHECK-NEXT:    ldr x28, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 8
-; CHECK-NEXT:    ldr x19, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x19, 0
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    .seh_stackalloc 32
@@ -270,29 +270,29 @@ define void @f2(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z22, 16
 ; CHECK-NEXT:    ldr z23, [sp, #17, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
-; CHECK-NEXT:    ldr p4, [sp] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    .seh_allocz 18
@@ -313,29 +313,29 @@ define void @f3(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    addvl sp, sp, #-18
 ; CHECK-NEXT:    .seh_allocz 18
-; CHECK-NEXT:    str p4, [sp] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    str z8, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
@@ -371,7 +371,7 @@ define void @f3(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
 ; CHECK-NEXT:    str x28, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_reg_x x28, 16
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x30, 8
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
@@ -382,9 +382,9 @@ define void @f3(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 8
-; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
@@ -420,29 +420,29 @@ define void @f3(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z22, 16
 ; CHECK-NEXT:    ldr z23, [sp, #17, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
-; CHECK-NEXT:    ldr p4, [sp] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    .seh_allocz 18
@@ -463,29 +463,29 @@ define void @f4(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    addvl sp, sp, #-18
 ; CHECK-NEXT:    .seh_allocz 18
-; CHECK-NEXT:    str p4, [sp] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    str z8, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
@@ -521,7 +521,7 @@ define void @f4(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
 ; CHECK-NEXT:    str x28, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_reg_x x28, 16
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x30, 8
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
@@ -536,9 +536,9 @@ define void @f4(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_allocz 1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 8
-; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
@@ -574,29 +574,29 @@ define void @f4(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z22, 16
 ; CHECK-NEXT:    ldr z23, [sp, #17, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
-; CHECK-NEXT:    ldr p4, [sp] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    .seh_allocz 18
@@ -617,29 +617,29 @@ define void @f5(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    addvl sp, sp, #-18
 ; CHECK-NEXT:    .seh_allocz 18
-; CHECK-NEXT:    str p4, [sp] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    str z8, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
@@ -675,7 +675,7 @@ define void @f5(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
 ; CHECK-NEXT:    str x19, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_reg_x x19, 32
-; CHECK-NEXT:    str x28, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x28, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x28, 8
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_fplr 16
@@ -700,9 +700,9 @@ define void @f5(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_add_fp 16
 ; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 16
-; CHECK-NEXT:    ldr x28, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 8
-; CHECK-NEXT:    ldr x19, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x19, 0
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    .seh_stackalloc 32
@@ -738,29 +738,29 @@ define void @f5(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z22, 16
 ; CHECK-NEXT:    ldr z23, [sp, #17, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
-; CHECK-NEXT:    ldr p4, [sp] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    .seh_allocz 18
@@ -788,29 +788,29 @@ define void @f6(<vscale x 2 x i64> %x, [8 x i64] %pad, i64 %n9) personality ptr 
 ; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    addvl sp, sp, #-18
 ; CHECK-NEXT:    .seh_allocz 18
-; CHECK-NEXT:    str p4, [sp] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    str z8, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
@@ -846,7 +846,7 @@ define void @f6(<vscale x 2 x i64> %x, [8 x i64] %pad, i64 %n9) personality ptr 
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
 ; CHECK-NEXT:    str x19, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_reg_x x19, 32
-; CHECK-NEXT:    str x28, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x28, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x28, 8
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_fplr 16
@@ -860,19 +860,19 @@ define void @f6(<vscale x 2 x i64> %x, [8 x i64] %pad, i64 %n9) personality ptr 
 ; CHECK-NEXT:    stur x0, [x8, #16]
 ; CHECK-NEXT:    addvl x8, x29, #18
 ; CHECK-NEXT:    ldr x1, [x8, #32]
-; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:  .Ltmp0: // EH_LABEL
 ; CHECK-NEXT:    add x0, x19, #0
 ; CHECK-NEXT:    bl g6
-; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:  .Ltmp1: // EH_LABEL
 ; CHECK-NEXT:  // %bb.1: // %invoke.cont
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    .seh_stackalloc 64
 ; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 16
-; CHECK-NEXT:    ldr x28, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 8
-; CHECK-NEXT:    ldr x19, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x19, 0
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    .seh_stackalloc 32
@@ -908,29 +908,29 @@ define void @f6(<vscale x 2 x i64> %x, [8 x i64] %pad, i64 %n9) personality ptr 
 ; CHECK-NEXT:    .seh_save_zreg z22, 16
 ; CHECK-NEXT:    ldr z23, [sp, #17, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
-; CHECK-NEXT:    ldr p4, [sp] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
@@ -955,29 +955,29 @@ define void @f6(<vscale x 2 x i64> %x, [8 x i64] %pad, i64 %n9) personality ptr 
 ; CHECK-NEXT:  .LBB5_2: // %ehcleanup
 ; CHECK-NEXT:    addvl sp, sp, #-18
 ; CHECK-NEXT:    .seh_allocz 18
-; CHECK-NEXT:    str p4, [sp] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    str z8, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
@@ -1013,7 +1013,7 @@ define void @f6(<vscale x 2 x i64> %x, [8 x i64] %pad, i64 %n9) personality ptr 
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
 ; CHECK-NEXT:    str x19, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_reg_x x19, 32
-; CHECK-NEXT:    str x28, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x28, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x28, 8
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_fplr 16
@@ -1022,9 +1022,9 @@ define void @f6(<vscale x 2 x i64> %x, [8 x i64] %pad, i64 %n9) personality ptr 
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 16
-; CHECK-NEXT:    ldr x28, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 8
-; CHECK-NEXT:    ldr x19, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x19, 0
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    .seh_stackalloc 32
@@ -1060,29 +1060,29 @@ define void @f6(<vscale x 2 x i64> %x, [8 x i64] %pad, i64 %n9) personality ptr 
 ; CHECK-NEXT:    .seh_save_zreg z22, 16
 ; CHECK-NEXT:    ldr z23, [sp, #17, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
-; CHECK-NEXT:    ldr p4, [sp] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    .seh_allocz 18
@@ -1107,7 +1107,7 @@ define void @f7(i64 %n) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    str x28, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_reg_x x28, 16
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x30, 8
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .seh_allocz 1
@@ -1117,7 +1117,7 @@ define void @f7(i64 %n) {
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    .seh_allocz 1
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 8
 ; CHECK-NEXT:    ldr x28, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_reg_x x28, 16
@@ -1144,7 +1144,7 @@ define void @f8(<vscale x 2 x i64> %v) {
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
@@ -1196,7 +1196,7 @@ define void @f9(<vscale x 2 x i64> %v, ...) {
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
@@ -1225,29 +1225,29 @@ define void @f10(i64 %n, <vscale x 2 x i64> %x) "frame-pointer"="all" {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    addvl sp, sp, #-18
 ; CHECK-NEXT:    .seh_allocz 18
-; CHECK-NEXT:    str p4, [sp] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    str z8, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
@@ -1301,7 +1301,7 @@ define void @f10(i64 %n, <vscale x 2 x i64> %x) "frame-pointer"="all" {
 ; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    ldp x29, x30, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 8
-; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 0
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    .seh_stackalloc 32
@@ -1337,29 +1337,29 @@ define void @f10(i64 %n, <vscale x 2 x i64> %x) "frame-pointer"="all" {
 ; CHECK-NEXT:    .seh_save_zreg z22, 16
 ; CHECK-NEXT:    ldr z23, [sp, #17, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
-; CHECK-NEXT:    ldr p4, [sp] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p4, 0
-; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p5, 1
-; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p6, 2
-; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p7, 3
-; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p8, 4
-; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p9, 5
-; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p10, 6
-; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p11, 7
-; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p12, 8
-; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p13, 9
-; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p14, 10
-; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    .seh_save_preg p15, 11
 ; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    .seh_allocz 18
@@ -1390,7 +1390,7 @@ define i32 @f11(double %d, <vscale x 4 x i32> %vs) "aarch64_pstate_sm_compatible
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    str d0, [sp, #8]
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
@@ -1431,7 +1431,7 @@ define i32 @f12(double %d, <vscale x 4 x i32> %vs) "aarch64_pstate_sm_compatible
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    .seh_allocz 1
-; CHECK-NEXT:    ldr x30, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
@@ -1475,7 +1475,7 @@ define i32 @f13(double %d, <vscale x 4 x i32> %vs) "frame-pointer"="all" {
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldp x29, x30, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 8
-; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 0
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    .seh_stackalloc 32
@@ -1521,7 +1521,7 @@ define i32 @f14(double %d, <vscale x 4 x i32> %vs) "frame-pointer"="all" {
 ; CHECK-NEXT:    .seh_allocz 1
 ; CHECK-NEXT:    ldp x29, x30, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 8
-; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 0
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    .seh_stackalloc 32
@@ -1552,7 +1552,7 @@ define tailcc void @f15(double %d, <vscale x 4 x i32> %vs, [9 x i64], i32 %i) {
 ; CHECK-NEXT:    .seh_save_zreg z8, 0
 ; CHECK-NEXT:    str x28, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_reg_x x28, 16
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x30, 8
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
@@ -1570,9 +1570,9 @@ define tailcc void @f15(double %d, <vscale x 4 x i32> %vs, [9 x i64], i32 %i) {
 ; CHECK-NEXT:    .seh_allocz 1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 8
-; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16

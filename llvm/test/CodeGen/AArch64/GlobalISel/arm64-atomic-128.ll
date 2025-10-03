@@ -89,23 +89,23 @@ define void @val_compare_and_swap(ptr %p, i128 %oldval, i128 %newval) {
 ; CHECK-OUTLINE-LLSC-O0-LABEL: val_compare_and_swap:
 ; CHECK-OUTLINE-LLSC-O0:       // %bb.0:
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    sub sp, sp, #32
-; CHECK-OUTLINE-LLSC-O0-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-OUTLINE-LLSC-O0-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    .cfi_offset w30, -16
-; CHECK-OUTLINE-LLSC-O0-NEXT:    str x0, [sp, #8] // 8-byte Folded Spill
+; CHECK-OUTLINE-LLSC-O0-NEXT:    str x0, [sp, #8] // 8-byte Spill
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x0, x2
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x1, x3
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x2, x4
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x4, [sp, #8] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x4, [sp, #8] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x3, x5
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    bl __aarch64_cas16_acq
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x8, x0
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x0, [sp, #8] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x0, [sp, #8] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    // implicit-def: $q0
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov v0.d[0], x8
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov v0.d[1], x1
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    str q0, [x0]
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    add sp, sp, #32
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    ret
 ;
@@ -113,9 +113,9 @@ define void @val_compare_and_swap(ptr %p, i128 %oldval, i128 %newval) {
 ; CHECK-CAS-O0:       // %bb.0:
 ; CHECK-CAS-O0-NEXT:    sub sp, sp, #16
 ; CHECK-CAS-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-CAS-O0-NEXT:    str x3, [sp, #8] // 8-byte Folded Spill
+; CHECK-CAS-O0-NEXT:    str x3, [sp, #8] // 8-byte Spill
 ; CHECK-CAS-O0-NEXT:    mov x1, x5
-; CHECK-CAS-O0-NEXT:    ldr x5, [sp, #8] // 8-byte Folded Reload
+; CHECK-CAS-O0-NEXT:    ldr x5, [sp, #8] // 8-byte Reload
 ; CHECK-CAS-O0-NEXT:    // kill: def $x2 killed $x2 def $x2_x3
 ; CHECK-CAS-O0-NEXT:    mov x3, x5
 ; CHECK-CAS-O0-NEXT:    // kill: def $x4 killed $x4 def $x4_x5
@@ -216,23 +216,23 @@ define void @val_compare_and_swap_monotonic_seqcst(ptr %p, i128 %oldval, i128 %n
 ; CHECK-OUTLINE-LLSC-O0-LABEL: val_compare_and_swap_monotonic_seqcst:
 ; CHECK-OUTLINE-LLSC-O0:       // %bb.0:
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    sub sp, sp, #32
-; CHECK-OUTLINE-LLSC-O0-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-OUTLINE-LLSC-O0-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    .cfi_offset w30, -16
-; CHECK-OUTLINE-LLSC-O0-NEXT:    str x0, [sp, #8] // 8-byte Folded Spill
+; CHECK-OUTLINE-LLSC-O0-NEXT:    str x0, [sp, #8] // 8-byte Spill
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x0, x2
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x1, x3
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x2, x4
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x4, [sp, #8] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x4, [sp, #8] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x3, x5
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    bl __aarch64_cas16_acq_rel
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x8, x0
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x0, [sp, #8] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x0, [sp, #8] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    // implicit-def: $q0
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov v0.d[0], x8
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov v0.d[1], x1
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    str q0, [x0]
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    add sp, sp, #32
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    ret
 ;
@@ -240,9 +240,9 @@ define void @val_compare_and_swap_monotonic_seqcst(ptr %p, i128 %oldval, i128 %n
 ; CHECK-CAS-O0:       // %bb.0:
 ; CHECK-CAS-O0-NEXT:    sub sp, sp, #16
 ; CHECK-CAS-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-CAS-O0-NEXT:    str x3, [sp, #8] // 8-byte Folded Spill
+; CHECK-CAS-O0-NEXT:    str x3, [sp, #8] // 8-byte Spill
 ; CHECK-CAS-O0-NEXT:    mov x1, x5
-; CHECK-CAS-O0-NEXT:    ldr x5, [sp, #8] // 8-byte Folded Reload
+; CHECK-CAS-O0-NEXT:    ldr x5, [sp, #8] // 8-byte Reload
 ; CHECK-CAS-O0-NEXT:    // kill: def $x2 killed $x2 def $x2_x3
 ; CHECK-CAS-O0-NEXT:    mov x3, x5
 ; CHECK-CAS-O0-NEXT:    // kill: def $x4 killed $x4 def $x4_x5
@@ -343,23 +343,23 @@ define void @val_compare_and_swap_release_acquire(ptr %p, i128 %oldval, i128 %ne
 ; CHECK-OUTLINE-LLSC-O0-LABEL: val_compare_and_swap_release_acquire:
 ; CHECK-OUTLINE-LLSC-O0:       // %bb.0:
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    sub sp, sp, #32
-; CHECK-OUTLINE-LLSC-O0-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-OUTLINE-LLSC-O0-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    .cfi_offset w30, -16
-; CHECK-OUTLINE-LLSC-O0-NEXT:    str x0, [sp, #8] // 8-byte Folded Spill
+; CHECK-OUTLINE-LLSC-O0-NEXT:    str x0, [sp, #8] // 8-byte Spill
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x0, x2
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x1, x3
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x2, x4
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x4, [sp, #8] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x4, [sp, #8] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x3, x5
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    bl __aarch64_cas16_acq_rel
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x8, x0
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x0, [sp, #8] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x0, [sp, #8] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    // implicit-def: $q0
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov v0.d[0], x8
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov v0.d[1], x1
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    str q0, [x0]
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    add sp, sp, #32
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    ret
 ;
@@ -367,9 +367,9 @@ define void @val_compare_and_swap_release_acquire(ptr %p, i128 %oldval, i128 %ne
 ; CHECK-CAS-O0:       // %bb.0:
 ; CHECK-CAS-O0-NEXT:    sub sp, sp, #16
 ; CHECK-CAS-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-CAS-O0-NEXT:    str x3, [sp, #8] // 8-byte Folded Spill
+; CHECK-CAS-O0-NEXT:    str x3, [sp, #8] // 8-byte Spill
 ; CHECK-CAS-O0-NEXT:    mov x1, x5
-; CHECK-CAS-O0-NEXT:    ldr x5, [sp, #8] // 8-byte Folded Reload
+; CHECK-CAS-O0-NEXT:    ldr x5, [sp, #8] // 8-byte Reload
 ; CHECK-CAS-O0-NEXT:    // kill: def $x2 killed $x2 def $x2_x3
 ; CHECK-CAS-O0-NEXT:    mov x3, x5
 ; CHECK-CAS-O0-NEXT:    // kill: def $x4 killed $x4 def $x4_x5
@@ -470,23 +470,23 @@ define void @val_compare_and_swap_monotonic(ptr %p, i128 %oldval, i128 %newval) 
 ; CHECK-OUTLINE-LLSC-O0-LABEL: val_compare_and_swap_monotonic:
 ; CHECK-OUTLINE-LLSC-O0:       // %bb.0:
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    sub sp, sp, #32
-; CHECK-OUTLINE-LLSC-O0-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-OUTLINE-LLSC-O0-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    .cfi_offset w30, -16
-; CHECK-OUTLINE-LLSC-O0-NEXT:    str x0, [sp, #8] // 8-byte Folded Spill
+; CHECK-OUTLINE-LLSC-O0-NEXT:    str x0, [sp, #8] // 8-byte Spill
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x0, x2
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x1, x3
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x2, x4
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x4, [sp, #8] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x4, [sp, #8] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x3, x5
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    bl __aarch64_cas16_acq_rel
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x8, x0
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x0, [sp, #8] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x0, [sp, #8] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    // implicit-def: $q0
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov v0.d[0], x8
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov v0.d[1], x1
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    str q0, [x0]
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    add sp, sp, #32
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    ret
 ;
@@ -494,9 +494,9 @@ define void @val_compare_and_swap_monotonic(ptr %p, i128 %oldval, i128 %newval) 
 ; CHECK-CAS-O0:       // %bb.0:
 ; CHECK-CAS-O0-NEXT:    sub sp, sp, #16
 ; CHECK-CAS-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-CAS-O0-NEXT:    str x3, [sp, #8] // 8-byte Folded Spill
+; CHECK-CAS-O0-NEXT:    str x3, [sp, #8] // 8-byte Spill
 ; CHECK-CAS-O0-NEXT:    mov x1, x5
-; CHECK-CAS-O0-NEXT:    ldr x5, [sp, #8] // 8-byte Folded Reload
+; CHECK-CAS-O0-NEXT:    ldr x5, [sp, #8] // 8-byte Reload
 ; CHECK-CAS-O0-NEXT:    // kill: def $x2 killed $x2 def $x2_x3
 ; CHECK-CAS-O0-NEXT:    mov x3, x5
 ; CHECK-CAS-O0-NEXT:    // kill: def $x4 killed $x4 def $x4_x5
@@ -580,22 +580,22 @@ define void @atomic_load_relaxed(i64, i64, ptr %p, ptr %p2) {
 ; CHECK-OUTLINE-LLSC-O0-LABEL: atomic_load_relaxed:
 ; CHECK-OUTLINE-LLSC-O0:       // %bb.0:
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    sub sp, sp, #32
-; CHECK-OUTLINE-LLSC-O0-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-OUTLINE-LLSC-O0-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    .cfi_offset w30, -16
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x4, x2
-; CHECK-OUTLINE-LLSC-O0-NEXT:    str x3, [sp, #8] // 8-byte Folded Spill
+; CHECK-OUTLINE-LLSC-O0-NEXT:    str x3, [sp, #8] // 8-byte Spill
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x3, xzr
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x0, x3
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x1, x3
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x2, x3
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    bl __aarch64_cas16_relax
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x3, [sp, #8] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x3, [sp, #8] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    // implicit-def: $q0
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov v0.d[0], x0
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov v0.d[1], x1
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    str q0, [x3]
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    add sp, sp, #32
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    ret
 ;
@@ -690,17 +690,17 @@ define i128 @val_compare_and_swap_return(ptr %p, i128 %oldval, i128 %newval) {
 ; CHECK-OUTLINE-LLSC-O0-LABEL: val_compare_and_swap_return:
 ; CHECK-OUTLINE-LLSC-O0:       // %bb.0:
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    sub sp, sp, #32
-; CHECK-OUTLINE-LLSC-O0-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-OUTLINE-LLSC-O0-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    .cfi_offset w30, -16
-; CHECK-OUTLINE-LLSC-O0-NEXT:    str x0, [sp, #8] // 8-byte Folded Spill
+; CHECK-OUTLINE-LLSC-O0-NEXT:    str x0, [sp, #8] // 8-byte Spill
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x0, x2
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x1, x3
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x2, x4
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x4, [sp, #8] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x4, [sp, #8] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x3, x5
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    bl __aarch64_cas16_acq
-; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    add sp, sp, #32
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    ret
 ;

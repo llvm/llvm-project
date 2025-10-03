@@ -9,7 +9,7 @@ define void @caller() sspreq {
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    .seh_stackalloc 32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x30, 16
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    adrp x8, __security_cookie
@@ -24,7 +24,7 @@ define void @caller() sspreq {
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 16
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    .seh_stackalloc 32
