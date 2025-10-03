@@ -1,6 +1,10 @@
 // Test that headers are not tripped up by the surrounding code defining various
 // alphabetic macros. Also ensure that we don't swallow the definition of user
 // provided macros (in other words, ensure that we push/pop correctly everywhere).
+//
+// The contents of this header is a lightly trimmed version of
+// libcxx/test/libcxx/system_reserved_names.gen.py; additions to that testcase
+// can be synced into this header as well.
 
 #define SYSTEM_RESERVED_NAME This name should not be used in Clang headers
 
