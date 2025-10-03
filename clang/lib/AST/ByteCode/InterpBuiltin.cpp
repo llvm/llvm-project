@@ -2797,7 +2797,6 @@ static bool interp__builtin_ia32_pshuf(InterpState &S, CodePtr OpPC,
     unsigned LaneIdx = Idx % LaneElts;
     unsigned SrcIdx = Idx;
     unsigned Sel = (Ctl >> (2 * LaneIdx)) & 0x3;
-    
     if (ElemBits == 32) {
       SrcIdx = LaneBase + Sel;
     } else {
