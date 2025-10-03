@@ -56,6 +56,20 @@ static APSInt popToAPSInt(InterpState &S, QualType T) {
   return popToAPSInt(S.Stk, *S.getContext().classify(T));
 }
 
+static APInt ROTL_fn(const APSInt &A, const APSInt &B) {
+  const APInt &X = static_cast<const APInt &>(A);
+  const unsigned BW = X.getBitWidth();
+  const uint64_t Amt = B.getZExtValue();
+  return X.rotl(static_cast<unsigned>(Amt % BW));
+}
+
+static APInt ROTR_fn(const APSInt &A, const APSInt &B) {
+  const APInt &X = static_cast<const APInt &>(A);
+  const unsigned BW = X.getBitWidth();
+  const uint64_t Amt = B.getZExtValue();
+  return X.rotr(static_cast<unsigned>(Amt % BW));
+}
+
 /// Pushes \p Val on the stack as the type given by \p QT.
 static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   assert(QT->isSignedIntegerOrEnumerationType() ||
@@ -3162,7 +3176,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI_rotl:
   case Builtin::BI_lrotl:
   case Builtin::BI_rotl64:
-    return interp__builtin_rotate(S, OpPC, Frame, Call, /*Right=*/false);
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call, ROTL_fn);
 
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
@@ -3173,7 +3187,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI_rotr:
   case Builtin::BI_lrotr:
   case Builtin::BI_rotr64:
-    return interp__builtin_rotate(S, OpPC, Frame, Call, /*Right=*/true);
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call, ROTR_fn);
 
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
