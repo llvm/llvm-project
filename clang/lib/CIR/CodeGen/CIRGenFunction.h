@@ -1279,6 +1279,8 @@ public:
   void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
                                clang::Expr *init);
 
+  LValue emitPredefinedLValue(const PredefinedExpr *e);
+
   mlir::Value emitPromotedComplexExpr(const Expr *e, QualType promotionType);
 
   mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
@@ -1473,7 +1475,8 @@ public:
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
 
-  LValue emitStringLiteralLValue(const StringLiteral *e);
+  LValue emitStringLiteralLValue(const StringLiteral *e,
+                                 llvm::StringRef name = ".str");
 
   mlir::LogicalResult emitSwitchBody(const clang::Stmt *s);
   mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
