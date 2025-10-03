@@ -436,8 +436,8 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
 
   const BasicBlock *LLVM_BB = BB.getBasicBlock();
   MachineBasicBlock *loopMBB = MF->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *loop1MBB;
-  MachineBasicBlock *loop2MBB;
+  MachineBasicBlock *loop1MBB = nullptr;
+  MachineBasicBlock *loop2MBB = nullptr;
   if (NoMovnInstr) {
     loop1MBB = MF->CreateMachineBasicBlock(LLVM_BB);
     loop2MBB = MF->CreateMachineBasicBlock(LLVM_BB);
@@ -463,12 +463,12 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
   } else {
     loopMBB->addSuccessor(sinkMBB);
     loopMBB->addSuccessor(loopMBB);
+    loopMBB->normalizeSuccProbs();
   }
-  loopMBB->normalizeSuccProbs();
   if (NoMovnInstr) {
     loop1MBB->addSuccessor(loop2MBB);
     loop2MBB->addSuccessor(loopMBB);
-    loop2MBB->addSuccessor(exitMBB, BranchProbability::getOne());
+    loop2MBB->addSuccessor(sinkMBB);
   }
 
   BuildMI(loopMBB, DL, TII->get(LL), OldVal).addReg(Ptr).addImm(0);
@@ -599,7 +599,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
           .addReg(Scratch4)
           .addReg(Mips::ZERO)
           .addMBB(loop1MBB);
-      BuildMI(loopMBB, DL, TII->get(Mips::B)).addMBB(loop2MBB);
+      BuildMI(loopMBB, DL, TII->get(Mips::J)).addMBB(loop2MBB);
     }
 
     //  and BinOpRes, BinOpRes, Mask
@@ -691,7 +691,8 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
 
   LivePhysRegs LiveRegs;
   computeAndAddLiveIns(LiveRegs, *loopMBB);
-  if (NoMovnInstr) {
+  if (loop1MBB) {
+    assert(loop2MBB && "should have 2 loop blocks");
     computeAndAddLiveIns(LiveRegs, *loop1MBB);
     computeAndAddLiveIns(LiveRegs, *loop2MBB);
   }
@@ -844,8 +845,8 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   bool NoMovnInstr = (IsMin || IsMax) && !STI->hasMips4() && !STI->hasMips32();
   const BasicBlock *LLVM_BB = BB.getBasicBlock();
   MachineBasicBlock *loopMBB = MF->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *loop1MBB;
-  MachineBasicBlock *loop2MBB;
+  MachineBasicBlock *loop1MBB = nullptr;
+  MachineBasicBlock *loop2MBB = nullptr;
   if (NoMovnInstr) {
     loop1MBB = MF->CreateMachineBasicBlock(LLVM_BB);
     loop2MBB = MF->CreateMachineBasicBlock(LLVM_BB);
@@ -874,7 +875,7 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   if (NoMovnInstr) {
     loop1MBB->addSuccessor(loop2MBB);
     loop2MBB->addSuccessor(loopMBB);
-    loop2MBB->addSuccessor(exitMBB, BranchProbability::getOne());
+    loop2MBB->addSuccessor(exitMBB);
   }
 
   BuildMI(loopMBB, DL, TII->get(LL), OldVal).addReg(Ptr).addImm(0);
@@ -961,7 +962,7 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
           .addReg(Scratch2_32)
           .addReg(ZERO)
           .addMBB(loop1MBB);
-      BuildMI(loopMBB, DL, TII->get(Mips::B)).addMBB(loop2MBB);
+      BuildMI(loopMBB, DL, TII->get(Mips::J)).addMBB(loop2MBB);
     }
 
   } else if (Opcode) {
@@ -1002,7 +1003,8 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
 
   LivePhysRegs LiveRegs;
   computeAndAddLiveIns(LiveRegs, *loopMBB);
-  if (!STI->hasMips4() && !STI->hasMips32()) {
+  if (loop1MBB) {
+    assert(loop2MBB && "should have 2 loop blocks");
     computeAndAddLiveIns(LiveRegs, *loop1MBB);
     computeAndAddLiveIns(LiveRegs, *loop2MBB);
   }

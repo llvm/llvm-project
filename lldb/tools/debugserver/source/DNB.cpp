@@ -1386,6 +1386,16 @@ int DNBProcessMemoryRegionInfo(nub_process_t pid, nub_addr_t addr,
   return -1;
 }
 
+nub_bool_t DNBProcessGetMemoryTags(nub_process_t pid, nub_addr_t addr,
+                                   nub_size_t size,
+                                   std::vector<uint8_t> &tags) {
+  MachProcessSP procSP;
+  if (GetProcessSP(pid, procSP))
+    return procSP->Task().GetMemoryTags(addr, size, tags);
+
+  return false;
+}
+
 std::string DNBProcessGetProfileData(nub_process_t pid,
                                      DNBProfileDataScanType scanType) {
   MachProcessSP procSP;
