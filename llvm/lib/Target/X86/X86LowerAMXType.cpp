@@ -1222,7 +1222,7 @@ bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
       //  %19 = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> zeroinitializer)
       //  -->
       //  %19 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %row, i16 %col)
-      if (dyn_cast<ConstantAggregateZero>(Cast->getOperand(0))) {
+      if (isa<ConstantAggregateZero>(Cast->getOperand(0))) {
         Change |= combineTilezero(cast<IntrinsicInst>(Cast));
         continue;
       }
