@@ -205,11 +205,13 @@ contents, and it is assumed that the contents are present, validate that
 assumption by using `x.value()` instead.
 1. We use `c_str()` rather than `data()` when converting a `std::string`
 to a `const char *` when the result is expected to be NUL-terminated.
-1. Avoid explicit comparisions of pointers to `nullptr` and tests of
+1. Avoid explicit comparisons of pointers to `nullptr` and tests of
 presence of `optional<>` values with `.has_value()` in the predicate
 expressions of control flow statements, but prefer them to implicit
 conversions to `bool` when initializing `bool` variables and arguments,
 and to the use of the idiom `!!`.
+(But please use `.has_value()` or `.value_or()` with `optional<bool>`
+to avoid a common pitfall or the appearance of having fallen into it.)
 
 #### Classes
 1. Define POD structures with `struct`.
