@@ -126,11 +126,6 @@ let Predicates = [HasAtomicLdSt, IsRV64] in {
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//
 
-def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
-  KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  return Known.isNonNegative();
-}]>;
-
 let Predicates = [IsRV64] in {
 def : LdPat<extloadi8, LBU, i32>; // Prefer unsigned due to no c.lb in Zcb.
 def : LdPat<extloadi16, LH, i32>;
@@ -142,9 +137,6 @@ def : Pat<(sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
 
 def : Pat<(sext_inreg (i64 (add GPR:$rs1, simm12_lo:$imm)), i32),
           (ADDIW GPR:$rs1, simm12_lo:$imm)>;
-
-// Use sext if the sign bit of the input is 0.
-def : Pat<(zext_is_sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
 }
 
 let Predicates = [IsRV64, NoStdExtZba] in
