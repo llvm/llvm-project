@@ -72,12 +72,12 @@ namespace type_requirement {
 
   template<typename T> requires
   false_v<requires { typename T::template temp<T>; }>
-  // expected-note@-1 {{because 'false_v<requires { typename type_requirement::contains_template<int>::template temp<type_requirement::contains_template<int>>; }>' evaluated to false}}
-  // expected-note@-2 {{because 'false_v<requires { typename type_requirement::contains_template<short>::template temp<type_requirement::contains_template<short>>; }>' evaluated to false}}
+  // expected-note@-1 {{because 'false_v<requires { typename contains_template<int>::template temp<contains_template<int>>; }>' evaluated to false}}
+  // expected-note@-2 {{because 'false_v<requires { typename contains_template<short>::template temp<contains_template<short>>; }>' evaluated to false}}
   struct r2 {};
 
-  using r2i1 = r2<contains_template<int>>; // expected-error{{constraints not satisfied for class template 'r2' [with T = type_requirement::contains_template<int>]}}
-  using r2i2 = r2<contains_template<short>>; // expected-error{{constraints not satisfied for class template 'r2' [with T = type_requirement::contains_template<short>]}}
+  using r2i1 = r2<contains_template<int>>; // expected-error{{constraints not satisfied for class template 'r2' [with T = contains_template<int>]}}
+  using r2i2 = r2<contains_template<short>>; // expected-error{{constraints not satisfied for class template 'r2' [with T = contains_template<short>]}}
 
   // substitution error occurs, then requires expr is instantiated again
 
@@ -108,7 +108,7 @@ namespace type_requirement {
   // expected-note@-1 {{because 'false_v<requires { <<error-type>>; } && requires { <<error-type>>; }>' evaluated to false}}
   struct r7 {};
 
-  using r7i = r7<int, A>; // expected-error{{constraints not satisfied for class template 'r7' [with Ts = <int, type_requirement::A>]}}
+  using r7i = r7<int, A>; // expected-error{{constraints not satisfied for class template 'r7' [with Ts = <int, A>]}}
 }
 
 namespace expr_requirement {
@@ -268,3 +268,13 @@ struct Foo {
 };
 
 } // namespace GH110785
+
+namespace sugared_instantiation {
+  template <class C1> concept C = requires { C1{}; };
+  template <class D1> concept D = requires { new D1; };
+
+  // Test that 'deduced auto' doesn't get confused with 'undeduced auto'.
+  auto f() { return 0; }
+  static_assert(requires { { f() } -> C; });
+  static_assert(requires { { f() } -> D; });
+} // namespace sugared_instantiation

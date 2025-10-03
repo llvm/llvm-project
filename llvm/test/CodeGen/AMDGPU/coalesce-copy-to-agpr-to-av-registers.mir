@@ -128,13 +128,13 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: undef [[COPY2:%[0-9]+]].sub0_sub1:areg_128 = COPY [[COPY]]
     ; CHECK-NEXT: [[COPY2:%[0-9]+]].sub2_sub3:areg_128 = COPY [[COPY1]]
-    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8323081 /* reguse:AReg_128 */, [[COPY2]]
+    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8847369 /* reguse:AReg_128 */, [[COPY2]]
     ; CHECK-NEXT: SI_RETURN
     %0:vreg_64 = COPY $vgpr0_vgpr1
     %1:vreg_64 = COPY $vgpr2_vgpr3
     undef %2.sub0_sub1:areg_128 = COPY %0
     %2.sub2_sub3:areg_128 = COPY %1
-    INLINEASM &"; use $0", 0 /* attdialect */, 8323081 /* reguse:AReg_128 */, killed %2
+    INLINEASM &"; use $0", 0 /* attdialect */, 8847369 /* reguse:AReg_128 */, killed %2
     SI_RETURN
 
 ...
@@ -153,13 +153,13 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: undef [[COPY2:%[0-9]+]].sub0_sub1:areg_128_align2 = COPY [[COPY]]
     ; CHECK-NEXT: [[COPY2:%[0-9]+]].sub2_sub3:areg_128_align2 = COPY [[COPY1]]
-    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8650761 /* reguse:AReg_128_Align2 */, [[COPY2]]
+    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 9568265 /* reguse:AReg_128_Align2 */, [[COPY2]]
     ; CHECK-NEXT: SI_RETURN
     %0:vreg_64 = COPY $vgpr0_vgpr1
     %1:vreg_64 = COPY $vgpr2_vgpr3
     undef %2.sub0_sub1:areg_128_align2 = COPY %0
     %2.sub2_sub3:areg_128_align2 = COPY %1
-    INLINEASM &"; use $0", 0 /* attdialect */, 8650761 /* reguse:AReg_128_Align2 */, %2
+    INLINEASM &"; use $0", 0 /* attdialect */, 9568265 /* reguse:AReg_128_Align2 */, %2
     SI_RETURN
 
 ...
@@ -398,14 +398,14 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub1:areg_128 = COPY [[COPY]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub2:areg_128 = COPY [[COPY]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub3:areg_128 = COPY [[COPY]]
-    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8323081 /* reguse:AReg_128 */, [[COPY1]]
+    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8847369 /* reguse:AReg_128 */, [[COPY1]]
     ; CHECK-NEXT: SI_RETURN
     %0:vgpr_32 = COPY $vgpr0
     undef %1.sub0:areg_128 = COPY %0
     %1.sub1:areg_128 = COPY %0
     %1.sub2:areg_128 = COPY %0
     %1.sub3:areg_128 = COPY %0
-    INLINEASM &"; use $0", 0 /* attdialect */, 8323081 /* reguse:AReg_128 */, killed %1
+    INLINEASM &"; use $0", 0 /* attdialect */, 8847369 /* reguse:AReg_128 */, killed %1
     SI_RETURN
 
 ...
@@ -425,14 +425,14 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub1:areg_128_align2 = COPY [[COPY]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub2:areg_128_align2 = COPY [[COPY]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub3:areg_128_align2 = COPY [[COPY]]
-    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8650761 /* reguse:AReg_128_Align2 */, [[COPY1]]
+    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 9568265 /* reguse:AReg_128_Align2 */, [[COPY1]]
     ; CHECK-NEXT: SI_RETURN
     %0:vgpr_32 = COPY $vgpr0
     undef %1.sub0:areg_128_align2 = COPY %0
     %1.sub1:areg_128_align2 = COPY %0
     %1.sub2:areg_128_align2 = COPY %0
     %1.sub3:areg_128_align2 = COPY %0
-    INLINEASM &"; use $0", 0 /* attdialect */, 8650761 /* reguse:AReg_128_Align2 */, %1
+    INLINEASM &"; use $0", 0 /* attdialect */, 9568265 /* reguse:AReg_128_Align2 */, %1
     SI_RETURN
 
 ...
@@ -641,13 +641,13 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]].sub2_sub3:vreg_128 = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: undef [[COPY1:%[0-9]+]].sub0_sub1:areg_128 = COPY [[COPY]].sub0_sub1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub2_sub3:areg_128 = COPY [[COPY]].sub2_sub3
-    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8323081 /* reguse:AReg_128 */, [[COPY1]]
+    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8847369 /* reguse:AReg_128 */, [[COPY1]]
     ; CHECK-NEXT: SI_RETURN
     undef %0.sub0_sub1:vreg_128 =COPY $vgpr0_vgpr1
     %0.sub2_sub3:vreg_128 = COPY $vgpr2_vgpr3
     undef %2.sub0_sub1:areg_128 = COPY %0.sub0_sub1
     %2.sub2_sub3:areg_128 = COPY %0.sub2_sub3
-    INLINEASM &"; use $0", 0 /* attdialect */, 8323081 /* reguse:AReg_128 */, killed %2
+    INLINEASM &"; use $0", 0 /* attdialect */, 8847369 /* reguse:AReg_128 */, killed %2
     SI_RETURN
 
 ...
@@ -668,13 +668,13 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]].sub1:vreg_128 = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: undef [[COPY1:%[0-9]+]].sub0_sub1:areg_128_align2 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub2_sub3:areg_128_align2 = COPY [[COPY]].sub1
-    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8650761 /* reguse:AReg_128_Align2 */, [[COPY1]]
+    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 9568265 /* reguse:AReg_128_Align2 */, [[COPY1]]
     ; CHECK-NEXT: SI_RETURN
     undef %0.sub0:vreg_128 =COPY $vgpr0_vgpr1
     %0.sub1:vreg_128 = COPY $vgpr2_vgpr3
     undef %2.sub0_sub1:areg_128_align2 = COPY %0.sub0
     %2.sub2_sub3:areg_128_align2 = COPY %0.sub1
-    INLINEASM &"; use $0", 0 /* attdialect */, 8650761 /* reguse:AReg_128_Align2 */, %2
+    INLINEASM &"; use $0", 0 /* attdialect */, 9568265 /* reguse:AReg_128_Align2 */, %2
     SI_RETURN
 
 ...
@@ -890,14 +890,14 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub1:areg_128 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub2:areg_128 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub3:areg_128 = COPY [[COPY]].sub0
-    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8323081 /* reguse:AReg_128 */, [[COPY1]]
+    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8847369 /* reguse:AReg_128 */, [[COPY1]]
     ; CHECK-NEXT: SI_RETURN
     undef %0.sub0:vreg_64 = COPY $vgpr0
     undef %1.sub0:areg_128 = COPY %0.sub0
     %1.sub1:areg_128 = COPY %0.sub0
     %1.sub2:areg_128 = COPY %0.sub0
     %1.sub3:areg_128 = COPY %0.sub0
-    INLINEASM &"; use $0", 0 /* attdialect */, 8323081 /* reguse:AReg_128 */, killed %1
+    INLINEASM &"; use $0", 0 /* attdialect */, 8847369 /* reguse:AReg_128 */, killed %1
     SI_RETURN
 
 ...
@@ -917,14 +917,14 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub1:areg_128_align2 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub2:areg_128_align2 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub3:areg_128_align2 = COPY [[COPY]].sub0
-    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8650761 /* reguse:AReg_128_Align2 */, [[COPY1]]
+    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 9568265 /* reguse:AReg_128_Align2 */, [[COPY1]]
     ; CHECK-NEXT: SI_RETURN
     undef %0.sub0:vreg_64 = COPY $vgpr0
     undef %1.sub0:areg_128_align2 = COPY %0.sub0
     %1.sub1:areg_128_align2 = COPY %0.sub0
     %1.sub2:areg_128_align2 = COPY %0.sub0
     %1.sub3:areg_128_align2 = COPY %0.sub0
-    INLINEASM &"; use $0", 0 /* attdialect */, 8650761 /* reguse:AReg_128_Align2 */, %1
+    INLINEASM &"; use $0", 0 /* attdialect */, 9568265 /* reguse:AReg_128_Align2 */, %1
     SI_RETURN
 
 ...
@@ -1051,13 +1051,13 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]].sub2_sub3:vreg_128 = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: undef [[COPY1:%[0-9]+]].sub0_sub1:areg_128 = COPY [[COPY]].sub0_sub1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub2_sub3:areg_128 = COPY [[COPY]].sub2_sub3
-    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8323081 /* reguse:AReg_128 */, [[COPY1]]
+    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8847369 /* reguse:AReg_128 */, [[COPY1]]
     ; CHECK-NEXT: SI_RETURN
     undef %0.sub0_sub1:vreg_128 = COPY $vgpr0_vgpr1
     %0.sub2_sub3:vreg_128 = COPY $vgpr2_vgpr3
     undef %2.sub0_sub1:areg_128 = COPY %0.sub0_sub1
     %2.sub2_sub3:areg_128 = COPY %0.sub2_sub3
-    INLINEASM &"; use $0", 0 /* attdialect */, 8323081 /* reguse:AReg_128 */, killed %2
+    INLINEASM &"; use $0", 0 /* attdialect */, 8847369 /* reguse:AReg_128 */, killed %2
     SI_RETURN
 
 ...
@@ -1076,13 +1076,13 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]].sub2_sub3:vreg_128_align2 = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: undef [[COPY1:%[0-9]+]].sub0_sub1:areg_128_align2 = COPY [[COPY]].sub0_sub1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub2_sub3:areg_128_align2 = COPY [[COPY]].sub2_sub3
-    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8650761 /* reguse:AReg_128_Align2 */, [[COPY1]]
+    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 9568265 /* reguse:AReg_128_Align2 */, [[COPY1]]
     ; CHECK-NEXT: SI_RETURN
     undef %0.sub0_sub1:vreg_128_align2 = COPY $vgpr0_vgpr1
     %0.sub2_sub3:vreg_128_align2 = COPY $vgpr2_vgpr3
     undef %2.sub0_sub1:areg_128_align2 = COPY %0.sub0_sub1
     %2.sub2_sub3:areg_128_align2 = COPY %0.sub2_sub3
-    INLINEASM &"; use $0", 0 /* attdialect */, 8650761 /* reguse:AReg_128_Align2 */, %2
+    INLINEASM &"; use $0", 0 /* attdialect */, 9568265 /* reguse:AReg_128_Align2 */, %2
     SI_RETURN
 
 ...
@@ -1358,11 +1358,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:areg_128 = COPY [[COPY]]
-    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8323081 /* reguse:AReg_128 */, [[COPY1]]
+    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8847369 /* reguse:AReg_128 */, [[COPY1]]
     ; CHECK-NEXT: SI_RETURN
     %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %2:areg_128 = COPY %0
-    INLINEASM &"; use $0", 0 /* attdialect */, 8323081 /* reguse:AReg_128 */, killed %2
+    INLINEASM &"; use $0", 0 /* attdialect */, 8847369 /* reguse:AReg_128 */, killed %2
     SI_RETURN
 
 ...
@@ -1379,11 +1379,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128_align2 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:areg_128_align2 = COPY [[COPY]]
-    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 8650761 /* reguse:AReg_128_Align2 */, [[COPY1]]
+    ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 9568265 /* reguse:AReg_128_Align2 */, [[COPY1]]
     ; CHECK-NEXT: SI_RETURN
     %0:vreg_128_align2 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %2:areg_128_align2 = COPY %0
-    INLINEASM &"; use $0", 0 /* attdialect */, 8650761 /* reguse:AReg_128_Align2 */, %2
+    INLINEASM &"; use $0", 0 /* attdialect */, 9568265 /* reguse:AReg_128_Align2 */, %2
     SI_RETURN
 
 ...

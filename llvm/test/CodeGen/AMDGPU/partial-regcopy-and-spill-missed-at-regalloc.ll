@@ -12,7 +12,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; REGALLOC-GFX908-NEXT:   liveins: $sgpr4_sgpr5
   ; REGALLOC-GFX908-NEXT: {{  $}}
   ; REGALLOC-GFX908-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2424841 /* reguse:AGPR_32 */, undef %6:agpr_32
-  ; REGALLOC-GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 7798794 /* regdef:VReg_128 */, def %25
+  ; REGALLOC-GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 7929866 /* regdef:VReg_128 */, def %25
   ; REGALLOC-GFX908-NEXT:   [[COPY:%[0-9]+]]:av_128 = COPY %25
   ; REGALLOC-GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3735562 /* regdef:VReg_64 */, def %27
   ; REGALLOC-GFX908-NEXT:   SI_SPILL_AV64_SAVE %27, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
@@ -37,7 +37,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; PEI-GFX908-NEXT:   $sgpr12 = S_ADD_U32 $sgpr12, $sgpr9, implicit-def $scc, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
   ; PEI-GFX908-NEXT:   $sgpr13 = S_ADDC_U32 $sgpr13, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
   ; PEI-GFX908-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2424841 /* reguse:AGPR_32 */, undef renamable $agpr0
-  ; PEI-GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 7798794 /* regdef:VReg_128 */, def renamable $vgpr0_vgpr1_vgpr2_vgpr3
+  ; PEI-GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 7929866 /* regdef:VReg_128 */, def renamable $vgpr0_vgpr1_vgpr2_vgpr3
   ; PEI-GFX908-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = COPY killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, implicit $exec
   ; PEI-GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3735562 /* regdef:VReg_64 */, def renamable $vgpr0_vgpr1
   ; PEI-GFX908-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr12_sgpr13_sgpr14_sgpr15, 0, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: (store (s32) into %stack.0, addrspace 5)
@@ -61,7 +61,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; REGALLOC-GFX90A-NEXT:   liveins: $sgpr4_sgpr5
   ; REGALLOC-GFX90A-NEXT: {{  $}}
   ; REGALLOC-GFX90A-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2424841 /* reguse:AGPR_32 */, undef %6:agpr_32
-  ; REGALLOC-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 7995402 /* regdef:VReg_128_Align2 */, def %23
+  ; REGALLOC-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 8257546 /* regdef:VReg_128_Align2 */, def %23
   ; REGALLOC-GFX90A-NEXT:   [[COPY:%[0-9]+]]:av_128_align2 = COPY %23
   ; REGALLOC-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3997706 /* regdef:VReg_64_Align2 */, def %21
   ; REGALLOC-GFX90A-NEXT:   [[COPY1:%[0-9]+]]:av_64_align2 = COPY %21
@@ -80,7 +80,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; PEI-GFX90A-NEXT:   liveins: $sgpr4_sgpr5
   ; PEI-GFX90A-NEXT: {{  $}}
   ; PEI-GFX90A-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2424841 /* reguse:AGPR_32 */, undef renamable $agpr0
-  ; PEI-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 7995402 /* regdef:VReg_128_Align2 */, def renamable $vgpr0_vgpr1_vgpr2_vgpr3
+  ; PEI-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 8257546 /* regdef:VReg_128_Align2 */, def renamable $vgpr0_vgpr1_vgpr2_vgpr3
   ; PEI-GFX90A-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = COPY killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, implicit $exec
   ; PEI-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3997706 /* regdef:VReg_64_Align2 */, def renamable $vgpr2_vgpr3
   ; PEI-GFX90A-NEXT:   GLOBAL_STORE_DWORDX4 undef renamable $vgpr0_vgpr1, killed renamable $agpr0_agpr1_agpr2_agpr3, 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) poison`, addrspace 1)

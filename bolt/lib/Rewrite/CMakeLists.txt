@@ -25,6 +25,7 @@ add_llvm_library(LLVMBOLTRewrite
   PseudoProbeRewriter.cpp
   RewriteInstance.cpp
   SDTRewriter.cpp
+  GNUPropertyRewriter.cpp
 
   NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB

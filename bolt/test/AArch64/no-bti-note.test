@@ -1,0 +1,10 @@
+// This test checks that the GNUPropertyRewriter can decode the BTI feature flag.
+// It decodes an executable without BTI, and checks for the warning.
+
+RUN: yaml2obj %p/Inputs/property-note-nobti.yaml &> %t.exe
+
+RUN: llvm-readelf -n %t.exe | FileCheck %s
+CHECK-NOT: BTI
+
+RUN: llvm-bolt %t.exe -o %t.exe.bolt | FileCheck %s -check-prefix=CHECK-BOLT
+CHECK-BOLT-NOT: BOLT-WARNING: binary is using BTI. Optimized binary may be corrupted
