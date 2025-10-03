@@ -33,12 +33,6 @@
 def AddrOps32 : ComplexPattern<i32, 2, "SelectAddrOperands32">;
 def AddrOps64 : ComplexPattern<i64, 2, "SelectAddrOperands64">;
 
-def gi_AddrOps32 : GIComplexOperandMatcher<s32, "selectAddrOperands32">,
-                   GIComplexPatternEquiv<AddrOps32>;
-
-def gi_AddrOps64 : GIComplexOperandMatcher<s64, "selectAddrOperands32">,
-                   GIComplexPatternEquiv<AddrOps64>;
-
 // Defines atomic and non-atomic loads, regular and extending.
 multiclass WebAssemblyLoad<WebAssemblyRegClass rc, string Name, int Opcode,
                            list<Predicate> reqs = []> {

@@ -687,6 +687,12 @@ bool WebAssemblyPassConfig::addRegBankSelect() {
 
 bool WebAssemblyPassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
+
+  addPass(createWebAssemblyArgumentMove());
+  addPass(createWebAssemblySetP2AlignOperands());
+  addPass(createWebAssemblyFixBrTableDefaults());
+  addPass(createWebAssemblyCleanCodeAfterTrap());
+
   return false;
 }
 

@@ -43,9 +43,7 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
   getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s32}).clampScalar(0, s32,
                                                                     s32);
-  getActionDefinitionsBuilder(G_BRJT)
-      .legalFor({{p0, s32}})
-      .clampScalar(1, s32, s32);
+  getActionDefinitionsBuilder(G_BRJT).legalFor({{p0, p0s}});
 
   getActionDefinitionsBuilder(G_SELECT)
       .legalFor({{s32, s32}, {s64, s32}, {p0, s32}})
@@ -62,7 +60,7 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .clampScalar(0, s32, s32);
 
   getActionDefinitionsBuilder(G_FCMP)
-      .legalFor({{s32, s32}, {s32, s64}})
+      .customFor({{s32, s32}, {s32, s64}})
       .clampScalar(0, s32, s32)
       .libcall();
 
@@ -150,8 +148,12 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .widenScalarToNextPow2(1)
       .clampScalar(1, s32, s64);
 
-  getActionDefinitionsBuilder(G_PTRTOINT).legalFor({{p0s, p0}});
-  getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, p0s}});
+  getActionDefinitionsBuilder(G_PTRTOINT)
+      .legalFor({p0s, p0})
+      .customForCartesianProduct({s32, s64}, {p0});
+  getActionDefinitionsBuilder(G_INTTOPTR)
+      .legalFor({p0, p0s})
+      .customForCartesianProduct({p0}, {s32, s64});
   getActionDefinitionsBuilder(G_PTR_ADD).legalFor({{p0, p0s}});
 
   getActionDefinitionsBuilder(G_LOAD)
@@ -260,6 +262,139 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
   auto &MIRBuilder = Helper.MIRBuilder;
 
   switch (MI.getOpcode()) {
+  case WebAssembly::G_PTRTOINT: {
+    auto TmpReg = MRI.createGenericVirtualRegister(
+        LLT::scalar(MIRBuilder.getDataLayout().getPointerSizeInBits(0)));
+
+    MIRBuilder.buildPtrToInt(TmpReg, MI.getOperand(1));
+    MIRBuilder.buildAnyExtOrTrunc(MI.getOperand(0), TmpReg);
+    MI.eraseFromParent();
+    return true;
+  }
+  case WebAssembly::G_INTTOPTR: {
+    auto TmpReg = MRI.createGenericVirtualRegister(
+        LLT::scalar(MIRBuilder.getDataLayout().getPointerSizeInBits(0)));
+
+    MIRBuilder.buildAnyExtOrTrunc(TmpReg, MI.getOperand(1));
+    MIRBuilder.buildIntToPtr(MI.getOperand(0), TmpReg);
+    MI.eraseFromParent();
+    return true;
+  }
+  case TargetOpcode::G_FCMP: {
+    Register LHS = MI.getOperand(2).getReg();
+    Register RHS = MI.getOperand(3).getReg();
+    CmpInst::Predicate Cond =
+        static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+
+    auto CmpWidth = MRI.getType(LHS).getSizeInBits();
+    assert(CmpWidth == MRI.getType(RHS).getSizeInBits() &&
+           "LHS and RHS for FCMP are diffrent lengths???");
+
+    auto IsI64 = CmpWidth == 64;
+
+    switch (Cond) {
+    case CmpInst::FCMP_FALSE:
+      return false;
+    case CmpInst::FCMP_OEQ:
+      return true;
+    case CmpInst::FCMP_OGT:
+      return true;
+    case CmpInst::FCMP_OGE:
+      return true;
+    case CmpInst::FCMP_OLT:
+      return true;
+    case CmpInst::FCMP_OLE:
+      return true;
+    case CmpInst::FCMP_ONE: {
+      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
+      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
+      auto TmpRegC = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+      MIRBuilder.buildFCmp(CmpInst::FCMP_OGT, TmpRegA, LHS, RHS);
+      MIRBuilder.buildFCmp(CmpInst::FCMP_OLT, TmpRegB, LHS, RHS);
+      MIRBuilder.buildOr(TmpRegC, TmpRegA, TmpRegB);
+      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegC);
+      break;
+    }
+    case CmpInst::FCMP_ORD: {
+      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
+      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
+      auto TmpRegC = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+      MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, TmpRegA, LHS, LHS);
+      MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, TmpRegB, RHS, RHS);
+      MIRBuilder.buildAnd(TmpRegC, TmpRegA, TmpRegB);
+      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegC);
+      break;
+    }
+    case CmpInst::FCMP_UNO: {
+      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
+      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
+      auto TmpRegC = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+      MIRBuilder.buildFCmp(CmpInst::FCMP_UNE, TmpRegA, LHS, LHS);
+      MIRBuilder.buildFCmp(CmpInst::FCMP_UNE, TmpRegB, RHS, RHS);
+      MIRBuilder.buildOr(TmpRegC, TmpRegA, TmpRegB);
+      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegC);
+      break;
+    }
+    case CmpInst::FCMP_UEQ: {
+      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
+      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+      MIRBuilder.buildFCmp(CmpInst::FCMP_ONE, TmpRegA, LHS, RHS);
+      MIRBuilder.buildNot(TmpRegB, TmpRegA);
+      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegB);
+      break;
+    }
+    case CmpInst::FCMP_UGT: {
+      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
+      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+      MIRBuilder.buildFCmp(CmpInst::FCMP_OLE, TmpRegA, LHS, RHS);
+      MIRBuilder.buildNot(TmpRegB, TmpRegA);
+      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegB);
+      break;
+    }
+    case CmpInst::FCMP_UGE: {
+      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
+      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+      MIRBuilder.buildFCmp(CmpInst::FCMP_OLT, TmpRegA, LHS, RHS);
+      MIRBuilder.buildNot(TmpRegB, TmpRegA);
+      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegB);
+      break;
+    }
+    case CmpInst::FCMP_ULT: {
+      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
+      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+      MIRBuilder.buildFCmp(CmpInst::FCMP_OGE, TmpRegA, LHS, RHS);
+      MIRBuilder.buildNot(TmpRegB, TmpRegA);
+      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegB);
+      break;
+    }
+    case CmpInst::FCMP_ULE: {
+      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
+      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+      MIRBuilder.buildFCmp(CmpInst::FCMP_OGT, TmpRegA, LHS, RHS);
+      MIRBuilder.buildNot(TmpRegB, TmpRegA);
+      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegB);
+      break;
+    }
+    case CmpInst::FCMP_UNE:
+      return true;
+    case CmpInst::FCMP_TRUE:
+      return false;
+    default:
+      llvm_unreachable("Unknown FCMP predicate");
+    }
+
+    MI.eraseFromParent();
+
+    return true;
+  }
   case TargetOpcode::G_SEXT_INREG: {
     assert(MI.getOperand(2).isImm() && "Expected immediate");
 
