@@ -66,6 +66,7 @@ DEFINE_C_API_STRUCT(MlirLocation, const void);
 DEFINE_C_API_STRUCT(MlirModule, const void);
 DEFINE_C_API_STRUCT(MlirType, const void);
 DEFINE_C_API_STRUCT(MlirValue, const void);
+DEFINE_C_API_STRUCT(MlirDialectHandle, const void);
 
 #undef DEFINE_C_API_STRUCT
 
@@ -207,11 +208,6 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirDialectGetNamespace(MlirDialect dialect);
 // registration schemes.
 //===----------------------------------------------------------------------===//
 
-struct MlirDialectHandle {
-  const void *ptr;
-};
-typedef struct MlirDialectHandle MlirDialectHandle;
-
 #define MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Name, Namespace)                \
   MLIR_CAPI_EXPORTED MlirDialectHandle mlirGetDialectHandle__##Namespace##__(  \
       void)
@@ -233,6 +229,11 @@ MLIR_CAPI_EXPORTED void mlirDialectHandleRegisterDialect(MlirDialectHandle,
 MLIR_CAPI_EXPORTED MlirDialect mlirDialectHandleLoadDialect(MlirDialectHandle,
                                                             MlirContext);
 
+/// Checks if the dialect handle is null.
+static inline bool mlirDialectHandleIsNull(MlirDialectHandle handle) {
+  return !handle.ptr;
+}
+
 //===----------------------------------------------------------------------===//
 // DialectRegistry API.
 //===----------------------------------------------------------------------===//
@@ -248,6 +249,13 @@ static inline bool mlirDialectRegistryIsNull(MlirDialectRegistry registry) {
 /// Takes a dialect registry owned by the caller and destroys it.
 MLIR_CAPI_EXPORTED void
 mlirDialectRegistryDestroy(MlirDialectRegistry registry);
+
+MLIR_CAPI_EXPORTED int64_t
+mlirDialectRegistryGetNumDialectNames(MlirDialectRegistry registry);
+
+MLIR_CAPI_EXPORTED void
+mlirDialectRegistryGetDialectNames(MlirDialectRegistry registry,
+                                   MlirStringRef *dialectNames);
 
 //===----------------------------------------------------------------------===//
 // Location API.

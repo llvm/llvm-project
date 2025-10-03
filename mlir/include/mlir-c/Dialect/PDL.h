@@ -66,6 +66,9 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAPDLValueType(MlirType type);
 
 MLIR_CAPI_EXPORTED MlirType mlirPDLValueTypeGet(MlirContext ctx);
 
+MLIR_CAPI_EXPORTED void
+mlirPDLRegisterTransformDialectExtension(MlirDialectRegistry registry);
+
 #ifdef __cplusplus
 }
 #endif
