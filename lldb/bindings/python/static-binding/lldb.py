@@ -7336,6 +7336,10 @@ class SBFrame(object):
         """
         return _lldb.SBFrame_IsArtificial(self, *args)
 
+    def IsSynthetic(self):
+        r"""IsSynthetic(SBFrame self) -> bool"""
+        return _lldb.SBFrame_IsSynthetic(self)
+
     def IsHidden(self):
         r"""
         Return whether a frame recognizer decided this frame should not
@@ -12230,6 +12234,56 @@ class SBStructuredData(object):
     def GetGenericValue(self):
         r"""Return the generic pointer if this data structure is a generic type."""
         return _lldb.SBStructuredData_GetGenericValue(self)
+
+    def SetValueForKey(self, key, value):
+        r"""
+        Set the value corresponding to a key. If this data structure
+        is not a dictionary type, reset the type to be dictionary and overwrite
+        the previous data.
+        """
+        return _lldb.SBStructuredData_SetValueForKey(self, key, value)
+
+    def SetUnsignedIntegerValue(self, value):
+        r"""
+        Change the type to unsigned interger and overwrite the previous data with
+        the new value.
+        """
+        return _lldb.SBStructuredData_SetUnsignedIntegerValue(self, value)
+
+    def SetSignedIntegerValue(self, value):
+        r"""
+        Change the type to signed interger and overwrite the previous data with
+        the new value.
+        """
+        return _lldb.SBStructuredData_SetSignedIntegerValue(self, value)
+
+    def SetFloatValue(self, value):
+        r"""
+        Change the type to float and overwrite the previous data with the new
+        value.
+        """
+        return _lldb.SBStructuredData_SetFloatValue(self, value)
+
+    def SetBooleanValue(self, value):
+        r"""
+        Change the type to boolean and overwrite the previous data with the new
+        value.
+        """
+        return _lldb.SBStructuredData_SetBooleanValue(self, value)
+
+    def SetStringValue(self, value):
+        r"""
+        Change the type to string and overwrite the previous data with the new
+        value.
+        """
+        return _lldb.SBStructuredData_SetStringValue(self, value)
+
+    def SetGenericValue(self, value):
+        r"""
+        Change the type to generic and overwrite the previous data with the new
+        value.
+        """
+        return _lldb.SBStructuredData_SetGenericValue(self, value)
 
     def __repr__(self):
         r"""__repr__(SBStructuredData self) -> std::string"""
