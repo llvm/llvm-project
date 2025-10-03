@@ -31,23 +31,6 @@ TEST_F(LlvmLibcExpBf16Test, PositiveRange) {
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp, x,
                                    LIBC_NAMESPACE::expbf16(x), 0.5);
   }
-
-  auto test_value = [&](uint16_t v) {
-    bfloat16 x = FPBits(v).get_val();
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp, x,
-                                   LIBC_NAMESPACE::expbf16(x), 0.5);
-  };
-
-  auto test_value_f = [&](float v) {
-    bfloat16 x(v);
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp, x,
-                                   LIBC_NAMESPACE::expbf16(x), 0.5);
-  };
-
-  test_value(0xc2c8);
-  test_value(0xc2ba);
-
-  test_value_f(17.45f);
 }
 
 TEST_F(LlvmLibcExpBf16Test, NegativeRange) {
