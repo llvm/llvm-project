@@ -10,6 +10,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUMachineModuleInfo.h"
 #include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/DenseMap.h"
@@ -128,15 +129,20 @@ bool AMDGPUMachineLevelInliner::runOnMachineFunction(MachineFunction &MF) {
   if (!MFI.hasCalls() && !MFI.hasTailCall())
     return false;
 
+  MaxInlinedCalleeStackSize = 0;
+  HasInlinedVarSizedStack = false;
+
   // Collect calls to inline.
   SmallVector<MachineInstr *, 4> CallsToInline;
   const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
 
+  size_t CallsFound = 0;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       if (!MI.isCall())
         continue;
 
+      CallsFound++;
       const MachineOperand *CalleeOp =
           TII->getNamedOperand(MI, AMDGPU::OpName::callee);
       if (CalleeOp && CalleeOp->isGlobal()) {
@@ -155,6 +161,11 @@ bool AMDGPUMachineLevelInliner::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
+
+  // Reset HasCalls if we're about to inline all of them. This will be updated
+  // further during inlining if any of the callees introduces its own calls.
+  // FIXME: HasTailCall!
+  MFI.setHasCalls(CallsFound != CallsToInline.size());
 
   // Perform the actual inlining.
   for (MachineInstr *CallMI : CallsToInline) {
@@ -176,6 +187,14 @@ bool AMDGPUMachineLevelInliner::runOnMachineFunction(MachineFunction &MF) {
     Changed = true;
   }
 
+  if (Changed) {
+    if (MaxInlinedCalleeStackSize != 0)
+      createCalleeStackObject(MFI);
+
+    if (HasInlinedVarSizedStack)
+      MFI.CreateVariableSizedObject(Align(1), /*Alloca=*/nullptr);
+  }
+
   return Changed;
 }
 
@@ -183,6 +202,9 @@ void AMDGPUMachineLevelInliner::inlineMachineFunction(MachineFunction *CallerMF,
                                                       MachineInstr *CallMI,
                                                       MachineFunction *CalleeMF,
                                                       const SIInstrInfo *TII) {
+
+  // TODO: update SIMachineFunctionInfo (e.g. Occupancy)
+  updateCallerFrameInfo(CallerMF->getFrameInfo(), *CalleeMF);
 
   MachineBasicBlock *CallMBB = CallMI->getParent();
   MachineBasicBlock *ContinuationMBB =
@@ -285,6 +307,55 @@ void AMDGPUMachineLevelInliner::cleanupAfterInlining(
 
   for (MachineInstr *MI : ToErase)
     MI->eraseFromParent();
+}
+
+void AMDGPUMachineLevelInliner::updateCallerFrameInfo(
+    MachineFrameInfo &CallerMFI, const MachineFunction &CalleeMF) {
+  const MachineFrameInfo &CalleeMFI = CalleeMF.getFrameInfo();
+  const GCNSubtarget &ST = CalleeMF.getSubtarget<GCNSubtarget>();
+  const TargetRegisterInfo &TRI = *ST.getRegisterInfo();
+
+  // Follow the prologue logic.
+  uint64_t CalleeStackSize = CalleeMFI.getStackSize();
+  if (TRI.hasStackRealignment(CalleeMF))
+    CalleeStackSize += CalleeMFI.getMaxAlign().value();
+  uint64_t TrueCalleeStackSize = CalleeStackSize * ST.getScratchScaleFactor();
+
+  // Only one of the stacks of the callees will
+  // be active at any given time, so we only need to make sure the largest one
+  // fits.
+  MaxInlinedCalleeStackSize =
+      std::max(MaxInlinedCalleeStackSize, TrueCalleeStackSize);
+
+  // Track if any callee has variable-sized stack objects.
+  if (CalleeMFI.hasVarSizedObjects())
+    HasInlinedVarSizedStack = true;
+
+#define SET_IF_ANY(SETTER, GETTER)                                             \
+  CallerMFI.SETTER(CallerMFI.GETTER() || CalleeMFI.GETTER())
+
+  SET_IF_ANY(setHasCalls, hasCalls);
+  SET_IF_ANY(setHasTailCall, hasTailCall);
+  SET_IF_ANY(setAdjustsStack, adjustsStack);
+  SET_IF_ANY(setFrameAddressIsTaken, isFrameAddressTaken);
+  SET_IF_ANY(setReturnAddressIsTaken, isReturnAddressTaken);
+  SET_IF_ANY(setHasVAStart, hasVAStart);
+  SET_IF_ANY(setHasMustTailInVarArgFunc, hasMustTailInVarArgFunc);
+  SET_IF_ANY(setHasOpaqueSPAdjustment, hasOpaqueSPAdjustment);
+  SET_IF_ANY(setHasCopyImplyingStackAdjustment, hasCopyImplyingStackAdjustment);
+
+#undef SET_IF_ANY
+}
+
+void AMDGPUMachineLevelInliner::createCalleeStackObject(
+    MachineFrameInfo &CallerMFI) {
+  // Create a stack object representing the maximum callee stack space
+  uint64_t CallerStackSize = CallerMFI.getStackSize();
+  int CalleeStackIdx =
+      CallerMFI.CreateStackObject(MaxInlinedCalleeStackSize, Align(1),
+                                  /*isSpillSlot=*/false);
+  CallerMFI.setObjectOffset(CalleeStackIdx, CallerStackSize);
+  CallerMFI.setStackSize(CallerStackSize + MaxInlinedCalleeStackSize);
 }
 
 FunctionPass *llvm::createAMDGPUMachineLevelInlinerPass() {
