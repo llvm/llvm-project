@@ -30,7 +30,7 @@ f18 supports the following type and kind combinations:
 | Type | Description |
 | :--: | :---------: |
 | INTEGER(KIND=1) | 8-bit two's-complement integer |
-| INTEGER(KIND=2) | 16-bit two's-complement integer | 
+| INTEGER(KIND=2) | 16-bit two's-complement integer |
 | INTEGER(KIND=4) | 32-bit two's-complement integer |
 | INTEGER(KIND=8) | 64-bit two's-complement integer |
 | INTEGER(KIND=16) | 128-bit two's-complement integer |
@@ -106,13 +106,13 @@ to interface with other languages.
 
 * `.TRUE.` is `-1_kind`.
 * `.FALSE.` is `0_kind`.
-* Any other values result in undefined behavior.  
-* Values with a low-bit set are treated as `.TRUE.`.  
-* Values with a low-bit clear are treated as `.FALSE.`.  
+* Any other values result in undefined behavior.
+* Values with a low-bit set are treated as `.TRUE.`.
+* Values with a low-bit clear are treated as `.FALSE.`.
 
 #### IBM XLF
 
 * `.TRUE.` is `1_kind`.
 * `.FALSE.` is `0_kind`.
-* Values with a low-bit set are treated as `.TRUE.`.  
-* Values with a low-bit clear are treated as `.FALSE.`.  
+* Values with a low-bit set are treated as `.TRUE.`.
+* Values with a low-bit clear are treated as `.FALSE.`.
