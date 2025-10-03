@@ -1009,7 +1009,7 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
 };
 
 /// Helper to rewrite a 2D VectorMultiReductionOp into a sequence of 1D
-/// VectorReductionOps.
+/// VectorReductionOps. We also insert layouts for the newly created ops.
 static Value lowerToVectorReductions(TypedValue<VectorType> src,
                                      TypedValue<VectorType> acc,
                                      vector::CombiningKind kind,
@@ -1026,6 +1026,9 @@ static Value lowerToVectorReductions(TypedValue<VectorType> src,
   Value reductionResult = arith::ConstantOp::create(
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
+  // Reduction result should have the same layout as the accumulator.
+  xegpu::setDistributeLayoutAttr(cast<OpResult>(reductionResult),
+                                 xegpu::getDistributeLayoutAttr(acc));
   // For each slice of the source, extract the slice vector, do a reduction
   // and, insert the reduced value back to the result vector.
   for (int i = 0; i < nSlices; ++i) {
@@ -1041,13 +1044,23 @@ static Value lowerToVectorReductions(TypedValue<VectorType> src,
         vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
                                               sliceSizes, {1, 1});
     int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
-    Value slice = vector::ShapeCastOp::create(
+    vector::ShapeCastOp slice = vector::ShapeCastOp::create(
         rewriter, loc,
         VectorType::get({nSliceElements}, sourceType.getElementType()),
         extractOp.getResult());
+    // Shape cast is currently handled in xegpu side. So layouts must be
+    // retained during lowering. Shape cast output has the same layout as the
+    // accumulator. Shape cast source has the same layout as the original
+    // reduction source.
+    // TODO: other ops generated here may also need layout attributes.
+    xegpu::setDistributeLayoutAttr(slice->getOpOperand(0),
+                                   xegpu::getDistributeLayoutAttr(src));
+    xegpu::setDistributeLayoutAttr(slice->getOpResult(0),
+                                   xegpu::getDistributeLayoutAttr(acc));
+    // Extract and reduction results in scalars, so no result layout is needed.
     Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
-    Value reduction =
-        vector::ReductionOp::create(rewriter, loc, kind, slice, accExtract);
+    Value reduction = vector::ReductionOp::create(
+        rewriter, loc, kind, slice.getResult(), accExtract);
     reductionResult =
         vector::InsertOp::create(rewriter, loc, reduction, reductionResult, i);
   }
@@ -1229,7 +1242,7 @@ struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
     auto resultDistTy =
         cast<VectorType>(warpOp.getResult(operandNumber).getType());
     xegpu::DistributeLayoutAttr sourceLayout =
-        xegpu::getDistributeLayoutAttr(shapeCastOp.getSource());
+        xegpu::getDistributeLayoutAttr(shapeCastOp->getOpOperand(0));
     xegpu::DistributeLayoutAttr resultLayout =
         xegpu::getDistributeLayoutAttr(shapeCastOp.getResult());
     if (!sourceLayout || !resultLayout)
