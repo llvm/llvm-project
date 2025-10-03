@@ -11849,9 +11849,7 @@ static bool isLegalToCombineMinNumMaxNum(SelectionDAG &DAG, SDValue LHS,
   if (!VT.isFloatingPoint())
     return false;
 
-  const TargetOptions &Options = DAG.getTarget().Options;
-
-  return (Flags.hasNoSignedZeros() || Options.NoSignedZerosFPMath) &&
+  return Flags.hasNoSignedZeros() &&
          TLI.isProfitableToCombineMinNumMaxNum(VT) &&
          (Flags.hasNoNaNs() ||
           (DAG.isKnownNeverNaN(RHS) && DAG.isKnownNeverNaN(LHS)));
@@ -12996,13 +12994,31 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   SDValue Op1 = N->getOperand(1);
   SDValue Op2 = N->getOperand(2);
 
-  APInt C;
-  if (Op1->getOpcode() != ISD::MUL ||
-      !ISD::isConstantSplatVector(Op2.getNode(), C) || !C.isOne())
+  unsigned Opc = Op1->getOpcode();
+  if (Opc != ISD::MUL && Opc != ISD::SHL)
     return SDValue();
 
   SDValue LHS = Op1->getOperand(0);
   SDValue RHS = Op1->getOperand(1);
+
+  // Try to treat (shl %a, %c) as (mul %a, (1 << %c)) for constant %c.
+  if (Opc == ISD::SHL) {
+    APInt C;
+    if (!ISD::isConstantSplatVector(RHS.getNode(), C))
+      return SDValue();
+
+    RHS =
+        DAG.getSplatVector(RHS.getValueType(), DL,
+                           DAG.getConstant(APInt(C.getBitWidth(), 1).shl(C), DL,
+                                           RHS.getValueType().getScalarType()));
+    Opc = ISD::MUL;
+  }
+
+  APInt C;
+  if (Opc != ISD::MUL || !ISD::isConstantSplatVector(Op2.getNode(), C) ||
+      !C.isOne())
+    return SDValue();
+
   unsigned LHSOpcode = LHS->getOpcode();
   if (!ISD::isExtOpcode(LHSOpcode))
     return SDValue();
@@ -17351,7 +17367,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   // Always prefer FMAD to FMA for precision.
   unsigned PreferredFusedOpcode = HasFMAD ? ISD::FMAD : ISD::FMA;
   bool Aggressive = TLI.enableAggressiveFMAFusion(VT);
-  bool NoSignedZero = Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros();
+  bool NoSignedZero = Flags.hasNoSignedZeros();
 
   // Is the node an FMUL and contractable either due to global flags or
   // SDNodeFlags.
@@ -17983,8 +17999,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 
   // (fsub A, 0) -> A
   if (N1CFP && N1CFP->isZero()) {
-    if (!N1CFP->isNegative() || Options.NoSignedZerosFPMath ||
-        Flags.hasNoSignedZeros()) {
+    if (!N1CFP->isNegative() || Flags.hasNoSignedZeros()) {
       return N0;
     }
   }
@@ -17997,8 +18012,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 
   // (fsub -0.0, N1) -> -N1
   if (N0CFP && N0CFP->isZero()) {
-    if (N0CFP->isNegative() ||
-        (Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros())) {
+    if (N0CFP->isNegative() || Flags.hasNoSignedZeros()) {
       // We cannot replace an FSUB(+-0.0,X) with FNEG(X) when denormals are
       // flushed to zero, unless all users treat denorms as zero (DAZ).
       // FIXME: This transform will change the sign of a NaN and the behavior
@@ -18014,8 +18028,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
     }
   }
 
-  if ((Options.NoSignedZerosFPMath ||
-       (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())) &&
+  if (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros() &&
       N1.getOpcode() == ISD::FADD) {
     // X - (X + Y) -> -Y
     if (N0 == N1->getOperand(0))
@@ -18330,11 +18343,9 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
       return matcher.getNode(ISD::FMA, DL, VT, NegN0, NegN1, N2);
   }
 
-  // FIXME: use fast math flags instead of Options.UnsafeFPMath
-  // TODO: Finally migrate away from global TargetOptions.
   if ((Options.NoNaNsFPMath && Options.NoInfsFPMath) ||
       (N->getFlags().hasNoNaNs() && N->getFlags().hasNoInfs())) {
-    if (Options.NoSignedZerosFPMath || N->getFlags().hasNoSignedZeros() ||
+    if (N->getFlags().hasNoSignedZeros() ||
         (N2CFP && !N2CFP->isExactlyValue(-0.0))) {
       if (N0CFP && N0CFP->isZero())
         return N2;
@@ -18639,8 +18650,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   }
 
   // Fold X/Sqrt(X) -> Sqrt(X)
-  if ((Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros()) &&
-      Flags.hasAllowReassociation())
+  if (Flags.hasNoSignedZeros() && Flags.hasAllowReassociation())
     if (N1.getOpcode() == ISD::FSQRT && N0 == N1.getOperand(0))
       return N1;
 

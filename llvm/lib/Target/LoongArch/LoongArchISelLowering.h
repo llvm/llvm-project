@@ -151,6 +151,7 @@ enum NodeType : unsigned {
   XVPERM,
   XVREPLVE0,
   XVREPLVE0Q,
+  XVINSVE0,
 
   // Extended vector element extraction
   VPICK_SEXT_ELT,
@@ -338,6 +339,9 @@ public:
                                          unsigned Depth) const override;
 
   bool shouldScalarizeBinop(SDValue VecOp) const override;
+  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+                               unsigned Index) const override;
+  bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
 
   /// Check if a constant splat can be generated using [x]vldi, where imm[12]
   /// is 1.

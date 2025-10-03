@@ -76,7 +76,7 @@ jobs:
         # https://github.com/actions/upload-artifact/issues/569
         continue-on-error: true
         if: '!cancelled()'
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Premerge Artifacts (Linux)
           path: artifacts/
@@ -130,7 +130,7 @@ jobs:
         # https://github.com/actions/upload-artifact/issues/569
         continue-on-error: true
         if: '!cancelled()'
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Premerge Artifacts (Windows)
           path: artifacts/
@@ -151,7 +151,7 @@ jobs:
         with:
           fetch-depth: 2
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
+        uses: hendrikmuhs/ccache-action@bfa03e1de4d7f7c3e80ad9109feedd05c4f5a716 # v1.2.19
         with:
           max-size: "2000M"
       - name: Install Ninja
