@@ -42,16 +42,6 @@ define void @dead_load(ptr %p, i16 %start) {
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START_EXT]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    store i16 0, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV]], 111
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -326,21 +316,6 @@ define void @test_phi_in_latch_redundant(ptr %dst, i32 %a) {
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    br i1 false, label %[[LOOP_LATCH]], label %[[THEN:.*]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[NOT_A:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[NOT_A]], %[[THEN]] ], [ 0, %[[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    store i32 [[P]], ptr [[GEP]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 9
-; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV]], 322
-; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_HEADER]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -408,21 +383,6 @@ define void @gather_interleave_group_with_dead_insert_pos(i64 %N, ptr noalias %s
 ; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[L_DEAD:%.*]] = load i8, ptr [[GEP_SRC_0]], align 1
-; CHECK-NEXT:    [[IV_1:%.*]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IV_1]]
-; CHECK-NEXT:    [[L_1:%.*]] = load i8, ptr [[GEP_SRC_1]], align 1
-; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[L_1]] to i32
-; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    store i32 [[EXT]], ptr [[GEP_DST]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

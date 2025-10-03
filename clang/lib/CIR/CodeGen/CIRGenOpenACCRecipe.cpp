@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <numeric>
+
 #include "CIRGenOpenACCRecipe.h"
 
 namespace clang::CIRGen {
@@ -34,6 +36,190 @@ mlir::Block *OpenACCRecipeBuilderBase::createRecipeBlock(mlir::Region &region,
   llvm::SmallVector<mlir::Location> locs{types.size(), loc};
   return builder.createBlock(&region, region.end(), types, locs);
 }
+void OpenACCRecipeBuilderBase::makeAllocaCopy(mlir::Location loc,
+                                              mlir::Type copyType,
+                                              mlir::Value numEltsToCopy,
+                                              mlir::Value offsetPerSubarray,
+                                              mlir::Value destAlloca,
+                                              mlir::Value srcAlloca) {
+  mlir::OpBuilder::InsertionGuard guardCase(builder);
+
+  mlir::Type itrTy = cgf.cgm.convertType(cgf.getContext().UnsignedLongLongTy);
+  auto itrPtrTy = cir::PointerType::get(itrTy);
+  mlir::IntegerAttr itrAlign =
+      cgf.cgm.getSize(cgf.getContext().getTypeAlignInChars(
+          cgf.getContext().UnsignedLongLongTy));
+
+  auto loopBuilder = [&]() {
+    auto itr =
+        cir::AllocaOp::create(builder, loc, itrPtrTy, itrTy, "itr", itrAlign);
+    cir::ConstantOp constZero = builder.getConstInt(loc, itrTy, 0);
+    builder.CIRBaseBuilderTy::createStore(loc, constZero, itr);
+    builder.createFor(
+        loc,
+        /*condBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          // itr < numEltsToCopy
+          // Enforce a trip count of 1 if there wasn't any element count, this
+          // way we can just use this loop with a constant bounds instead of a
+          // separate code path.
+          if (!numEltsToCopy)
+            numEltsToCopy = builder.getConstInt(loc, itrTy, 1);
+
+          auto loadCur = cir::LoadOp::create(builder, loc, {itr});
+          auto cmp = builder.createCompare(loc, cir::CmpOpKind::lt, loadCur,
+                                           numEltsToCopy);
+          builder.createCondition(cmp);
+        },
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          // destAlloca[itr] = srcAlloca[offsetPerSubArray * itr];
+          auto loadCur = cir::LoadOp::create(builder, loc, {itr});
+          auto srcOffset = builder.createMul(loc, offsetPerSubarray, loadCur);
+
+          auto ptrToOffsetIntoSrc = cir::PtrStrideOp::create(
+              builder, loc, copyType, srcAlloca, srcOffset);
+
+          auto offsetIntoDecayDest = cir::PtrStrideOp::create(
+              builder, loc, builder.getPointerTo(copyType), destAlloca,
+              loadCur);
+
+          builder.CIRBaseBuilderTy::createStore(loc, ptrToOffsetIntoSrc,
+                                                offsetIntoDecayDest);
+          builder.createYield(loc);
+        },
+        /*stepBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          // Simple increment of the iterator.
+          auto load = cir::LoadOp::create(builder, loc, {itr});
+          auto inc = cir::UnaryOp::create(builder, loc, load.getType(),
+                                          cir::UnaryOpKind::Inc, load);
+          builder.CIRBaseBuilderTy::createStore(loc, inc, itr);
+          builder.createYield(loc);
+        });
+  };
+
+  cir::ScopeOp::create(builder, loc,
+                       [&](mlir::OpBuilder &b, mlir::Location loc) {
+                         loopBuilder();
+                         builder.createYield(loc);
+                       });
+}
+
+mlir::Value OpenACCRecipeBuilderBase::makeBoundsAlloca(
+    mlir::Block *block, SourceRange exprRange, mlir::Location loc,
+    std::string_view allocaName, size_t numBounds,
+    llvm::ArrayRef<QualType> boundTypes) {
+  mlir::OpBuilder::InsertionGuard guardCase(builder);
+
+  // Get the range of bounds arguments, which are all but the 1st arg.
+  llvm::ArrayRef<mlir::BlockArgument> boundsRange =
+      block->getArguments().drop_front(1);
+
+  // boundTypes contains the before and after of each bounds, so it ends up
+  // having 1 extra. Assert this is the case to ensure we don't call this in the
+  // wrong 'block'.
+  assert(boundsRange.size() + 1 == boundTypes.size());
+
+  mlir::Type itrTy = cgf.cgm.convertType(cgf.getContext().UnsignedLongLongTy);
+  auto idxType = mlir::IndexType::get(&cgf.getMLIRContext());
+
+  auto getUpperBound = [&](mlir::Value bound) {
+    auto upperBoundVal =
+        mlir::acc::GetUpperboundOp::create(builder, loc, idxType, bound);
+    return mlir::UnrealizedConversionCastOp::create(builder, loc, itrTy,
+                                                    upperBoundVal.getResult())
+        .getResult(0);
+  };
+
+  auto isArrayTy = [&](QualType ty) {
+    if (ty->isArrayType() && !ty->isConstantArrayType())
+      cgf.cgm.errorNYI(exprRange, "OpenACC recipe init for VLAs");
+    return ty->isConstantArrayType();
+  };
+
+  mlir::Type topLevelTy = cgf.convertType(boundTypes.back());
+  cir::PointerType topLevelTyPtr = builder.getPointerTo(topLevelTy);
+  // Do an alloca for the 'top' level type without bounds.
+  mlir::Value initialAlloca = builder.createAlloca(
+      loc, topLevelTyPtr, topLevelTy, allocaName,
+      cgf.getContext().getTypeAlignInChars(boundTypes.back()));
+
+  bool lastBoundWasArray = isArrayTy(boundTypes.back());
+
+  // Make sure we track a moving version of this so we can get our
+  // 'copying' back to correct.
+  mlir::Value lastAlloca = initialAlloca;
+
+  // Since we're iterating the types in reverse, this sets up for each index
+  // corresponding to the boundsRange to be the 'after application of the
+  // bounds.
+  llvm::ArrayRef<QualType> boundResults = boundTypes.drop_back(1);
+
+  // Collect the 'do we have any allocas needed after this type' list.
+  llvm::SmallVector<bool> allocasLeftArr;
+  llvm::ArrayRef<QualType> resultTypes = boundTypes.drop_front();
+  std::transform_inclusive_scan(
+      resultTypes.begin(), resultTypes.end(),
+      std::back_inserter(allocasLeftArr), std::plus<bool>{},
+      [](QualType ty) { return !ty->isConstantArrayType(); }, false);
+
+  // Keep track of the number of 'elements' that we're allocating. Individual
+  // allocas should multiply this by the size of its current allocation.
+  mlir::Value cumulativeElts;
+  for (auto [bound, resultType, allocasLeft] : llvm::reverse(
+           llvm::zip_equal(boundsRange, boundResults, allocasLeftArr))) {
+
+    // if there is no further 'alloca' operation we need to do, we can skip
+    // creating the UB/multiplications/etc.
+    if (!allocasLeft)
+      break;
+
+    // First: figure out the number of elements in the current 'bound' list.
+    mlir::Value eltsPerSubArray = getUpperBound(bound);
+    mlir::Value eltsToAlloca;
+
+    // IF we are in a sub-bounds, the total number of elements to alloca is
+    // the product of that one and the current 'bounds' size.  That is,
+    // arr[5][5], we would need 25 elements, not just 5. Else it is just the
+    // current number of elements.
+    if (cumulativeElts)
+      eltsToAlloca = builder.createMul(loc, eltsPerSubArray, cumulativeElts);
+    else
+      eltsToAlloca = eltsPerSubArray;
+
+    if (!lastBoundWasArray) {
+      // If we have to do an allocation, figure out the size of the
+      // allocation.  alloca takes the number of bytes, not elements.
+      TypeInfoChars eltInfo = cgf.getContext().getTypeInfoInChars(resultType);
+      cir::ConstantOp eltSize = builder.getConstInt(
+          loc, itrTy, eltInfo.Width.alignTo(eltInfo.Align).getQuantity());
+      mlir::Value curSize = builder.createMul(loc, eltsToAlloca, eltSize);
+
+      mlir::Type eltTy = cgf.convertType(resultType);
+      cir::PointerType ptrTy = builder.getPointerTo(eltTy);
+      mlir::Value curAlloca = builder.createAlloca(
+          loc, ptrTy, eltTy, "openacc.init.bounds",
+          cgf.getContext().getTypeAlignInChars(resultType), curSize);
+
+      makeAllocaCopy(loc, ptrTy, cumulativeElts, eltsPerSubArray, lastAlloca,
+                     curAlloca);
+      lastAlloca = curAlloca;
+    } else {
+      // In the case of an array, we just need to decay the pointer, so just do
+      // a zero-offset stride on the last alloca to decay it down an array
+      // level.
+      cir::ConstantOp constZero = builder.getConstInt(loc, itrTy, 0);
+      lastAlloca = builder.getArrayElement(loc, loc, lastAlloca,
+                                           cgf.convertType(resultType),
+                                           constZero, /*shouldDecay=*/true);
+    }
+
+    cumulativeElts = eltsToAlloca;
+    lastBoundWasArray = isArrayTy(resultType);
+  }
+  return initialAlloca;
+}
 
 mlir::Value
 OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
@@ -54,7 +240,7 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
 
     if (auto arrayTy = dyn_cast<cir::ArrayType>(eltTy))
       return builder.getArrayElement(loc, loc, subVal, arrayTy.getElementType(),
-                                     idxLoad.getResult(),
+                                     idxLoad,
                                      /*shouldDecay=*/true);
 
     assert(isa<cir::PointerType>(eltTy));
@@ -62,8 +248,8 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
     auto eltLoad = cir::LoadOp::create(builder, loc, {subVal});
 
     return cir::PtrStrideOp::create(builder, loc, eltLoad.getType(), eltLoad,
-                                    idxLoad.getResult())
-        .getResult();
+                                    idxLoad);
+        
   };
 
   auto forStmtBuilder = [&]() {
@@ -85,12 +271,11 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
     if (inverse) {
       cir::ConstantOp constOne = builder.getConstInt(loc, itrTy, 1);
 
-      auto sub =
-          cir::BinOp::create(builder, loc, itrTy, cir::BinOpKind::Sub,
-                             ubConversion.getResult(0), constOne.getResult());
+      auto sub = cir::BinOp::create(builder, loc, itrTy, cir::BinOpKind::Sub,
+                                    ubConversion.getResult(0), constOne);
 
       // Upperbound is exclusive, so subtract 1.
-      builder.CIRBaseBuilderTy::createStore(loc, sub.getResult(), itr);
+      builder.CIRBaseBuilderTy::createStore(loc, sub, itr);
     } else {
       // Lowerbound is inclusive, so we can include it.
       builder.CIRBaseBuilderTy::createStore(loc, lbConversion.getResult(0),
@@ -108,8 +293,8 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
           auto loadCur = cir::LoadOp::create(builder, loc, {itr});
           // Use 'not equal' since we are just doing an increment/decrement.
           auto cmp = builder.createCompare(
-              loc, inverse ? cir::CmpOpKind::ge : cir::CmpOpKind::lt,
-              loadCur.getResult(), endItr.getResult(0));
+              loc, inverse ? cir::CmpOpKind::ge : cir::CmpOpKind::lt, loadCur,
+              endItr.getResult(0));
           builder.createCondition(cmp);
         },
         /*bodyBuilder=*/
@@ -123,11 +308,10 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
         /*stepBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto load = cir::LoadOp::create(builder, loc, {itr});
-          auto unary = cir::UnaryOp::create(builder, loc, load.getType(),
-                                            inverse ? cir::UnaryOpKind::Dec
-                                                    : cir::UnaryOpKind::Inc,
-                                            load.getResult());
-          builder.CIRBaseBuilderTy::createStore(loc, unary.getResult(), itr);
+          auto unary = cir::UnaryOp::create(
+              builder, loc, load.getType(),
+              inverse ? cir::UnaryOpKind::Dec : cir::UnaryOpKind::Inc, load);
+          builder.CIRBaseBuilderTy::createStore(loc, unary, itr);
           builder.createYield(loc);
         });
   };
@@ -216,6 +400,32 @@ void OpenACCRecipeBuilderBase::createRecipeDestroySection(
 
   mlir::acc::YieldOp::create(builder, locEnd);
 }
+void OpenACCRecipeBuilderBase::makeBoundsInit(
+    mlir::Value alloca, mlir::Location loc, mlir::Block *block,
+    const VarDecl *allocaDecl, QualType origType, bool isInitSection) {
+  mlir::OpBuilder::InsertionGuard guardCase(builder);
+  builder.setInsertionPointToEnd(block);
+  CIRGenFunction::LexicalScope ls(cgf, loc, block);
+
+  CIRGenFunction::AutoVarEmission tempDeclEmission{*allocaDecl};
+  tempDeclEmission.emittedAsOffload = true;
+
+  // The init section is the only one of the handful that only has a single
+  // argument for the 'type', so we have to drop 1 for init, and future calls
+  // to this will need to drop 2.
+  llvm::MutableArrayRef<mlir::BlockArgument> boundsRange =
+      block->getArguments().drop_front(isInitSection ? 1 : 2);
+
+  mlir::Value subscriptedValue = alloca;
+  for (mlir::BlockArgument boundArg : llvm::reverse(boundsRange))
+    subscriptedValue = createBoundsLoop(subscriptedValue, boundArg, loc,
+                                        /*inverse=*/false);
+
+  tempDeclEmission.setAllocatedAddress(
+      Address{subscriptedValue, cgf.convertType(origType),
+              cgf.getContext().getDeclAlign(allocaDecl)});
+  cgf.emitAutoVarInit(tempDeclEmission);
+}
 
 // TODO: OpenACC: When we get this implemented for the reduction/firstprivate,
 // this might end up re-merging with createRecipeInitCopy.  For now, keep it
@@ -225,7 +435,7 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
     mlir::Location loc, mlir::Location locEnd, SourceRange exprRange,
     mlir::Value mainOp, mlir::acc::PrivateRecipeOp recipe, size_t numBounds,
     llvm::ArrayRef<QualType> boundTypes, const VarDecl *allocaDecl,
-    QualType origType, const Expr *initExpr) {
+    QualType origType) {
   assert(allocaDecl && "Required recipe variable not set?");
   CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, allocaDecl};
 
@@ -258,7 +468,17 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
         cgf.emitAutoVarAlloca(*allocaDecl, builder.saveInsertionPoint());
     cgf.emitAutoVarInit(tempDeclEmission);
   } else {
-    cgf.cgm.errorNYI(exprRange, "private-init with bounds");
+    mlir::Value alloca = makeBoundsAlloca(
+        block, exprRange, loc, "openacc.private.init", numBounds, boundTypes);
+
+    // If the initializer is trivial, there is nothing to do here, so save
+    // ourselves some effort.
+    if (allocaDecl->getInit() &&
+        (!cgf.isTrivialInitializer(allocaDecl->getInit()) ||
+         cgf.getContext().getLangOpts().getTrivialAutoVarInit() !=
+             LangOptions::TrivialAutoVarInitKind::Uninitialized))
+      makeBoundsInit(alloca, loc, block, allocaDecl, origType,
+                     /*isInitSection=*/true);
   }
 
   mlir::acc::YieldOp::create(builder, locEnd);
@@ -285,7 +505,7 @@ void OpenACCRecipeBuilderBase::createFirstprivateRecipeCopy(
   // that instead of the variable in the other block.
   tempDeclEmission.setAllocatedAddress(
       Address{toArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
-  tempDeclEmission.EmittedAsOffload = true;
+  tempDeclEmission.emittedAsOffload = true;
 
   CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, temporary};
   cgf.setAddrOfLocalVar(
