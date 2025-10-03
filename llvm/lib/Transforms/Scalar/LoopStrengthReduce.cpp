@@ -1278,7 +1278,6 @@ struct LSRFixup {
   LSRFixup() = default;
 
   bool isUseFullyOutsideLoop(const Loop *L) const;
-  bool isUseUnconditional(const Loop *L) const;
 
   void print(raw_ostream &OS) const;
   void dump() const;
@@ -1657,12 +1656,6 @@ bool LSRFixup::isUseFullyOutsideLoop(const Loop *L) const {
   }
 
   return !L->contains(UserInst);
-}
-
-/// Test whether this fixup is for an instruction that's unconditional, i.e.
-/// it's executed in every loop iteration.
-bool LSRFixup::isUseUnconditional(const Loop *L) const {
-  return isGuaranteedToExecuteForEveryIteration(UserInst, L);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2234,6 +2227,7 @@ class LSRInstance {
   void InsertSupplementalFormula(const SCEV *S, LSRUse &LU, size_t LUIdx);
   void CountRegisters(const Formula &F, size_t LUIdx);
   bool InsertFormula(LSRUse &LU, unsigned LUIdx, const Formula &F);
+  bool IsFixupExecutedEachIncrement(const LSRFixup &LF) const;
 
   void CollectLoopInvariantFixupsAndFormulae();
 
@@ -3628,7 +3622,7 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
     LF.PostIncLoops = TmpPostIncLoops;
     LF.Offset = Offset;
     LU.AllFixupsOutsideLoop &= LF.isUseFullyOutsideLoop(L);
-    LU.AllFixupsUnconditional &= LF.isUseUnconditional(L);
+    LU.AllFixupsUnconditional &= IsFixupExecutedEachIncrement(LF);
 
     // Create SCEV as Formula for calculating baseline cost
     if (!VisitedLSRUse.count(LUIdx) && !LF.isUseFullyOutsideLoop(L)) {
@@ -3700,6 +3694,14 @@ bool LSRInstance::InsertFormula(LSRUse &LU, unsigned LUIdx, const Formula &F) {
 
   CountRegisters(F, LUIdx);
   return true;
+}
+
+/// Test whether this fixup will be executed each time the corresponding IV
+/// increment instruction is executed.
+bool LSRInstance::IsFixupExecutedEachIncrement(const LSRFixup &LF) const {
+  // If the fixup block dominates the IV increment block then there is no path
+  // through the loop to the increment that doesn't pass through the fixup.
+  return DT.dominates(LF.UserInst->getParent(), IVIncInsertPos->getParent());
 }
 
 /// Check for other uses of loop-invariant values which we're tracking. These
@@ -3825,7 +3827,7 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
         LF.OperandValToReplace = U;
         LF.Offset = Offset;
         LU.AllFixupsOutsideLoop &= LF.isUseFullyOutsideLoop(L);
-        LU.AllFixupsUnconditional &= LF.isUseUnconditional(L);
+        LU.AllFixupsUnconditional &= IsFixupExecutedEachIncrement(LF);
         if (!LU.WidestFixupType ||
             SE.getTypeSizeInBits(LU.WidestFixupType) <
             SE.getTypeSizeInBits(LF.OperandValToReplace->getType()))
