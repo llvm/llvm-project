@@ -550,9 +550,10 @@ ToDwarfSourceLanguage(lldb::LanguageType language_type) {
   switch (language_type) {
   case eLanguageTypeMipsAssembler:
     return llvm::dwarf::DW_LANG_Mips_Assembler;
-  default:
-    return llvm::dwarf::DW_LANG_hi_user;
+  default: break;
   }
+
+  llvm_unreachable("Unhandled language type");
 }
 
 SourceLanguage::SourceLanguage(lldb::LanguageType language_type) {
