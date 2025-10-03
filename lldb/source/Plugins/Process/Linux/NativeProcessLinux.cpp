@@ -218,9 +218,8 @@ static Status EnsureFDFlags(int fd, int flags) {
 static llvm::Error AddPtraceScopeNote(llvm::Error original_error) {
   Expected<int> ptrace_scope = GetPtraceScope();
   if (auto E = ptrace_scope.takeError()) {
-    Log *log = GetLog(POSIXLog::Process);
-    LLDB_LOG(log, "error reading value of ptrace_scope: {0}",
-             llvm::toString(std::move(E)));
+    LLDB_LOG_ERROR(GetLog(POSIXLog::Process), std::move(E),
+                   "error reading value of ptrace_scope: {0}");
 
     // The original error is probably more interesting than not being able to
     // read or interpret ptrace_scope.
