@@ -128,7 +128,7 @@ createMachOStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                     std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createMachOStreamer(Ctx, std::move(TAB), std::move(OW),
                              std::move(Emitter),
-			     /*DWARFMustBeAtTheEnd*/ false,
+                             /*DWARFMustBeAtTheEnd*/ false,
                              /*LabelSections*/ true);
 }
 
