@@ -2079,17 +2079,17 @@ INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
                     false, false)
 
 bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
-  // On wave32 targets, mbcnt.lo(~0, 0) can be replaced with workitem.id.x
+  // On wave32 targets, mbcnt.lo(~0, 0) can be replaced with workitem.id.x.
   if (!ST.isWave32())
     return false;
 
-  // Check for pattern mbcnt.lo(~0, 0)
+  // Check for pattern mbcnt.lo(~0, 0).
   auto *Arg0C = dyn_cast<ConstantInt>(I.getArgOperand(0));
   auto *Arg1C = dyn_cast<ConstantInt>(I.getArgOperand(1));
   if (!Arg0C || !Arg1C || !Arg0C->isAllOnesValue() || !Arg1C->isZero())
     return false;
 
-  // Check reqd_work_group_size similar to mbcnt_hi case
+  // Check reqd_work_group_size similar to mbcnt_hi case.
   Function *F = I.getFunction();
   if (!F)
     return false;
@@ -2113,8 +2113,8 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
       I.eraseFromParent();
       return true;
     }
-    // Handle bitmask case: when X dimension evenly splits into waves
-    // mbcnt.lo(~0, 0) = workitem.id.x() & (wave_size - 1)
+    // Handle bitmask case: when X dimension evenly splits into waves.
+    // mbcnt.lo(~0, 0) = workitem.id.x() & (wave_size - 1).
     if (ST.hasWavefrontsEvenlySplittingXDim(*F, /*RequiresUniformYZ=*/true)) {
       if (Wave != 0 && isPowerOf2_32(Wave)) {
         IRBuilder<> B(&I);
@@ -2124,7 +2124,7 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
         Constant *Mask = ConstantInt::get(ITy, Wave - 1);
         Instruction *AndInst = cast<Instruction>(B.CreateAnd(Tid, Mask));
         AndInst->takeName(&I);
-        // Note: Range metadata cannot be applied to 'and' instructions
+        // Note: Range metadata cannot be applied to 'and' instructions.
         I.replaceAllUsesWith(AndInst);
         I.eraseFromParent();
         return true;
@@ -2160,7 +2160,7 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) {
     }
   }
 
-  // Pattern: mbcnt.hi(~0, mbcnt.lo(~0, 0))
+  // Pattern: mbcnt.hi(~0, mbcnt.lo(~0, 0)).
   auto *HiArg1 = dyn_cast<CallInst>(I.getArgOperand(1));
   if (!HiArg1)
     return false;
@@ -2169,12 +2169,12 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) {
   if (!CalledF || CalledF->getIntrinsicID() != Intrinsic::amdgcn_mbcnt_lo)
     return false;
 
-  // hi arg0 must be all-ones
+  // hi arg0 must be all-ones.
   auto *HiArg0C = dyn_cast<ConstantInt>(I.getArgOperand(0));
   if (!HiArg0C || !HiArg0C->isAllOnesValue())
     return false;
 
-  // lo args: arg0 == ~0, arg1 == 0
+  // lo args: arg0 == ~0, arg1 == 0.
   Value *Lo0 = HiArg1->getArgOperand(0);
   Value *Lo1 = HiArg1->getArgOperand(1);
   auto *Lo0C = dyn_cast<ConstantInt>(Lo0);
