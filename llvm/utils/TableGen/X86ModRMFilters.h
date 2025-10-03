@@ -19,9 +19,7 @@
 
 #include <cstdint>
 
-namespace llvm {
-
-namespace X86Disassembler {
+namespace llvm::X86Disassembler {
 
 /// ModRMFilter - Abstract base class for clases that recognize patterns in
 ///   ModR/M bytes.
@@ -135,8 +133,6 @@ public:
   bool accepts(uint8_t modRM) const override { return (ModRM == modRM); }
 };
 
-} // namespace X86Disassembler
-
-} // namespace llvm
+} // namespace llvm::X86Disassembler
 
 #endif
