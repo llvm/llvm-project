@@ -1,14 +1,4 @@
 ---
-Revert: breaks build of hipCUB
-commit 55783bd0 [HIP] fix host min/max in header (#82956)
-Sam
----
-Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpAndBinOp` to work for more binops" (3rd Try)"
-    Backup fix for SWDEV-454675
-    This reverts commit 54ec8bcaf
-contact: Selehov
-b2659ca44 [InstCombine] Propagate flags in `foldSelectICmpAndBinOp` (#127437)
----
 revert: breaks rocBLAS build
 d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 ---
@@ -16,7 +6,6 @@ Revert "[SLP]Support LShr as base for copyable elements"
 breaks build rocPRIM
 ---
 needs more offload patches
-[Offload] Port llvm-offload-device-info to new offload API (#155626)
 [Offload]  Implement 'olIsValidBinary' in offload
 ---
 needs post merge ingtegration
