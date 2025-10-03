@@ -5136,6 +5136,10 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     if (!unrollExpandedOp())
       Res = WidenVecRes_UnaryOpWithTwoResults(N, ResNo);
     break;
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+    Res = WidenVecRes_PARTIAL_REDUCE_MLA(N);
+    break;
   }
   }
 
@@ -6995,6 +6999,34 @@ SDValue DAGTypeLegalizer::WidenVecRes_STRICT_FSETCC(SDNode *N) {
   return DAG.getBuildVector(WidenVT, dl, Scalars);
 }
 
+// Widening the result of a partial reductions is implemented by
+// accumulating into a wider (zero-padded) vector, then incrementally
+// reducing that (extract half vector and add) until it fits
+// the original type.
+SDValue DAGTypeLegalizer::WidenVecRes_PARTIAL_REDUCE_MLA(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT WideAccVT = TLI.getTypeToTransformTo(*DAG.getContext(),
+                                           N->getOperand(0).getValueType());
+  SDValue Zero = DAG.getConstant(0, DL, WideAccVT);
+  SDValue MulOp1 = N->getOperand(1);
+  SDValue MulOp2 = N->getOperand(2);
+  SDValue Acc = DAG.getInsertSubvector(DL, Zero, N->getOperand(0), 0);
+  SDValue WidenedRes =
+      DAG.getNode(N->getOpcode(), DL, WideAccVT, Acc, MulOp1, MulOp2);
+  while (ElementCount::isKnownLT(
+      VT.getVectorElementCount(),
+      WidenedRes.getValueType().getVectorElementCount())) {
+    EVT HalfVT =
+        WidenedRes.getValueType().getHalfNumVectorElementsVT(*DAG.getContext());
+    SDValue Lo = DAG.getExtractSubvector(DL, HalfVT, WidenedRes, 0);
+    SDValue Hi = DAG.getExtractSubvector(DL, HalfVT, WidenedRes,
+                                         HalfVT.getVectorMinNumElements());
+    WidenedRes = DAG.getNode(ISD::ADD, DL, HalfVT, Lo, Hi);
+  }
+  return DAG.getInsertSubvector(DL, Zero, WidenedRes, 0);
+}
+
 //===----------------------------------------------------------------------===//
 // Widen Vector Operand
 //===----------------------------------------------------------------------===//
@@ -7126,6 +7158,10 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_REDUCE_FMAXIMUM:
   case ISD::VP_REDUCE_FMINIMUM:
     Res = WidenVecOp_VP_REDUCE(N);
+    break;
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+    Res = WidenVecOp_PARTIAL_REDUCE_MLA(N);
     break;
   case ISD::VP_CTTZ_ELTS:
   case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
@@ -8024,6 +8060,21 @@ SDValue DAGTypeLegalizer::WidenVecOp_VP_CttzElements(SDNode *N) {
 
   return DAG.getNode(N->getOpcode(), DL, N->getValueType(0),
                      {Source, Mask, N->getOperand(2)}, N->getFlags());
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_PARTIAL_REDUCE_MLA(SDNode *N) {
+  // Widening of multiplicant operands only. The result and accumulator
+  // should already be legal types.
+  SDLoc DL(N);
+  EVT WideOpVT = TLI.getTypeToTransformTo(*DAG.getContext(),
+                                          N->getOperand(1).getValueType());
+  SDValue Acc = N->getOperand(0);
+  SDValue WidenedOp1 = DAG.getInsertSubvector(
+      DL, DAG.getConstant(0, DL, WideOpVT), N->getOperand(1), 0);
+  SDValue WidenedOp2 = DAG.getInsertSubvector(
+      DL, DAG.getConstant(0, DL, WideOpVT), N->getOperand(2), 0);
+  return DAG.getNode(N->getOpcode(), DL, Acc.getValueType(), Acc, WidenedOp1,
+                     WidenedOp2);
 }
 
 //===----------------------------------------------------------------------===//
