@@ -3110,8 +3110,9 @@ bool VPReplicateRecipe::shouldPack() const {
   });
 }
 
-/// Returns true if \p Ptr is a pointer computation for which the legacy cost
-/// model computes a SCEV expression when computing the address cost.
+/// Returns a SCEV expression for \p Ptr if it is a pointer computation for
+/// which the legacy cost model computes a SCEV expression when computing the
+/// address cost. Otherwise return nullptr.
 static const SCEV *getAddressAccessSCEV(const VPValue *Ptr, ScalarEvolution &SE,
                                         const Loop *L) {
   auto *PtrR = Ptr->getDefiningRecipe();
@@ -3296,7 +3297,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
 
     const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.SE, Ctx.L);
-    if (PtrSCEV && isa<SCEVCouldNotCompute>(PtrSCEV))
+    if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV))
       break;
     InstructionCost ScalarCost =
         ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(

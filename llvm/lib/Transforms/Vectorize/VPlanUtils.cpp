@@ -98,8 +98,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
         const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
         const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), SE, L);
         const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), SE, L);
-        if (isa<SCEVCouldNotCompute>(Start) || isa<SCEVCouldNotCompute>(IV) ||
-            isa<SCEVCouldNotCompute>(Scale))
+        if (any_of(ArrayRef({Start, IV, Scale}), IsaPred<SCEVCouldNotCompute>))
           return SE.getCouldNotCompute();
 
         return SE.getAddExpr(SE.getTruncateOrSignExtend(Start, IV->getType()),
@@ -167,7 +166,6 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
         // non-negative, we can use nuw.
         return SE.getAddExpr(Base, Offset);
       })
-
       .Default([&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
 }
 
