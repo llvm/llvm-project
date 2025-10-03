@@ -160,7 +160,6 @@ define void @store_zeromask(ptr %ptr, <2 x double> %val)  {
 
 define void @store_poisonmask(ptr %ptr, <2 x double> %val)  {
 ; CHECK-LABEL: @store_poisonmask(
-; CHECK-NEXT:    call void @llvm.masked.store.v2f64.p0(<2 x double> [[VAL:%.*]], ptr [[PTR:%.*]], i32 4, <2 x i1> poison)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.masked.store.v2f64.p0(<2 x double> %val, ptr %ptr, i32 4, <2 x i1> splat(i1 poison))
@@ -178,7 +177,7 @@ define void @store_onemask(ptr %ptr, <2 x double> %val)  {
 
 define void @store_one_withpoison_mask(ptr %ptr, <2 x double> %val)  {
 ; CHECK-LABEL: @store_one_withpoison_mask(
-; CHECK-NEXT:    call void @llvm.masked.store.v2f64.p0(<2 x double> [[VAL:%.*]], ptr [[PTR:%.*]], i32 4, <2 x i1> <i1 true, i1 poison>)
+; CHECK-NEXT:    store <2 x double> [[VAL:%.*]], ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.masked.store.v2f64.p0(<2 x double> %val, ptr %ptr, i32 4, <2 x i1> <i1 1, i1 poison>)
@@ -301,7 +300,6 @@ define void @scatter_zeromask(<2 x ptr> %ptrs, <2 x double> %val)  {
 
 define void @scatter_zero_withpoison_mask(<2 x ptr> %ptrs, <2 x double> %val)  {
 ; CHECK-LABEL: @scatter_zero_withpoison_mask(
-; CHECK-NEXT:    call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> [[VAL:%.*]], <2 x ptr> [[PTRS:%.*]], i32 8, <2 x i1> <i1 false, i1 poison>)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> %val, <2 x ptr> %ptrs, i32 8, <2 x i1> <i1 0, i1 poison>)
