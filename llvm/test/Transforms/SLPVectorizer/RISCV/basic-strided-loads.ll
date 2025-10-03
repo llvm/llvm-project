@@ -332,11 +332,85 @@ define void @rt_stride_1_no_reordering(ptr %pl, i64 %stride, ptr %ps) {
 ; CHECK-LABEL: define void @rt_stride_1_no_reordering(
 ; CHECK-SAME: ptr [[PL:%.*]], i64 [[STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[STRIDE0:%.*]] = mul nsw i64 [[STRIDE]], 0
+; CHECK-NEXT:    [[STRIDE1:%.*]] = mul nsw i64 [[STRIDE]], 1
+; CHECK-NEXT:    [[STRIDE2:%.*]] = mul nsw i64 [[STRIDE]], 2
+; CHECK-NEXT:    [[STRIDE3:%.*]] = mul nsw i64 [[STRIDE]], 3
+; CHECK-NEXT:    [[STRIDE4:%.*]] = mul nsw i64 [[STRIDE]], 4
+; CHECK-NEXT:    [[STRIDE5:%.*]] = mul nsw i64 [[STRIDE]], 5
+; CHECK-NEXT:    [[STRIDE6:%.*]] = mul nsw i64 [[STRIDE]], 6
+; CHECK-NEXT:    [[STRIDE7:%.*]] = mul nsw i64 [[STRIDE]], 7
+; CHECK-NEXT:    [[STRIDE8:%.*]] = mul nsw i64 [[STRIDE]], 8
+; CHECK-NEXT:    [[STRIDE9:%.*]] = mul nsw i64 [[STRIDE]], 9
+; CHECK-NEXT:    [[STRIDE10:%.*]] = mul nsw i64 [[STRIDE]], 10
+; CHECK-NEXT:    [[STRIDE11:%.*]] = mul nsw i64 [[STRIDE]], 11
+; CHECK-NEXT:    [[STRIDE12:%.*]] = mul nsw i64 [[STRIDE]], 12
+; CHECK-NEXT:    [[STRIDE13:%.*]] = mul nsw i64 [[STRIDE]], 13
+; CHECK-NEXT:    [[STRIDE14:%.*]] = mul nsw i64 [[STRIDE]], 14
+; CHECK-NEXT:    [[STRIDE15:%.*]] = mul nsw i64 [[STRIDE]], 15
 ; CHECK-NEXT:    [[GEP_L0:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE0]]
+; CHECK-NEXT:    [[GEP_L1:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE1]]
+; CHECK-NEXT:    [[GEP_L2:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE2]]
+; CHECK-NEXT:    [[GEP_L3:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE3]]
+; CHECK-NEXT:    [[GEP_L4:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE4]]
+; CHECK-NEXT:    [[GEP_L5:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE5]]
+; CHECK-NEXT:    [[GEP_L6:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE6]]
+; CHECK-NEXT:    [[GEP_L7:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE7]]
+; CHECK-NEXT:    [[GEP_L8:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE8]]
+; CHECK-NEXT:    [[GEP_L9:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE9]]
+; CHECK-NEXT:    [[GEP_L10:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE10]]
+; CHECK-NEXT:    [[GEP_L11:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE11]]
+; CHECK-NEXT:    [[GEP_L12:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE12]]
+; CHECK-NEXT:    [[GEP_L13:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE13]]
+; CHECK-NEXT:    [[GEP_L14:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE14]]
+; CHECK-NEXT:    [[GEP_L15:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE15]]
+; CHECK-NEXT:    [[LOAD0:%.*]] = load i8, ptr [[GEP_L0]], align 1
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, ptr [[GEP_L1]], align 1
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i8, ptr [[GEP_L2]], align 1
+; CHECK-NEXT:    [[LOAD3:%.*]] = load i8, ptr [[GEP_L3]], align 1
+; CHECK-NEXT:    [[LOAD4:%.*]] = load i8, ptr [[GEP_L4]], align 1
+; CHECK-NEXT:    [[LOAD5:%.*]] = load i8, ptr [[GEP_L5]], align 1
+; CHECK-NEXT:    [[LOAD6:%.*]] = load i8, ptr [[GEP_L6]], align 1
+; CHECK-NEXT:    [[LOAD7:%.*]] = load i8, ptr [[GEP_L7]], align 1
+; CHECK-NEXT:    [[LOAD8:%.*]] = load i8, ptr [[GEP_L8]], align 1
+; CHECK-NEXT:    [[LOAD9:%.*]] = load i8, ptr [[GEP_L9]], align 1
+; CHECK-NEXT:    [[LOAD10:%.*]] = load i8, ptr [[GEP_L10]], align 1
+; CHECK-NEXT:    [[LOAD11:%.*]] = load i8, ptr [[GEP_L11]], align 1
+; CHECK-NEXT:    [[LOAD12:%.*]] = load i8, ptr [[GEP_L12]], align 1
+; CHECK-NEXT:    [[LOAD13:%.*]] = load i8, ptr [[GEP_L13]], align 1
+; CHECK-NEXT:    [[LOAD14:%.*]] = load i8, ptr [[GEP_L14]], align 1
+; CHECK-NEXT:    [[LOAD15:%.*]] = load i8, ptr [[GEP_L15]], align 1
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[STRIDE]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.experimental.vp.strided.load.v16i8.p0.i64(ptr align 1 [[GEP_L0]], i64 [[TMP1]], <16 x i1> splat (i1 true), i32 16)
-; CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[GEP_S0]], align 1
+; CHECK-NEXT:    [[GEP_S1:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 1
+; CHECK-NEXT:    [[GEP_S2:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 2
+; CHECK-NEXT:    [[GEP_S3:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 3
+; CHECK-NEXT:    [[GEP_S4:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 4
+; CHECK-NEXT:    [[GEP_S5:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 5
+; CHECK-NEXT:    [[GEP_S6:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 6
+; CHECK-NEXT:    [[GEP_S7:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 7
+; CHECK-NEXT:    [[GEP_S8:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 8
+; CHECK-NEXT:    [[GEP_S9:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 9
+; CHECK-NEXT:    [[GEP_S10:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 10
+; CHECK-NEXT:    [[GEP_S11:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 11
+; CHECK-NEXT:    [[GEP_S12:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 12
+; CHECK-NEXT:    [[GEP_S13:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 13
+; CHECK-NEXT:    [[GEP_S14:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 14
+; CHECK-NEXT:    [[GEP_S15:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 15
+; CHECK-NEXT:    store i8 [[LOAD0]], ptr [[GEP_S0]], align 1
+; CHECK-NEXT:    store i8 [[LOAD1]], ptr [[GEP_S1]], align 1
+; CHECK-NEXT:    store i8 [[LOAD2]], ptr [[GEP_S2]], align 1
+; CHECK-NEXT:    store i8 [[LOAD3]], ptr [[GEP_S3]], align 1
+; CHECK-NEXT:    store i8 [[LOAD4]], ptr [[GEP_S4]], align 1
+; CHECK-NEXT:    store i8 [[LOAD5]], ptr [[GEP_S5]], align 1
+; CHECK-NEXT:    store i8 [[LOAD6]], ptr [[GEP_S6]], align 1
+; CHECK-NEXT:    store i8 [[LOAD7]], ptr [[GEP_S7]], align 1
+; CHECK-NEXT:    store i8 [[LOAD8]], ptr [[GEP_S8]], align 1
+; CHECK-NEXT:    store i8 [[LOAD9]], ptr [[GEP_S9]], align 1
+; CHECK-NEXT:    store i8 [[LOAD10]], ptr [[GEP_S10]], align 1
+; CHECK-NEXT:    store i8 [[LOAD11]], ptr [[GEP_S11]], align 1
+; CHECK-NEXT:    store i8 [[LOAD12]], ptr [[GEP_S12]], align 1
+; CHECK-NEXT:    store i8 [[LOAD13]], ptr [[GEP_S13]], align 1
+; CHECK-NEXT:    store i8 [[LOAD14]], ptr [[GEP_S14]], align 1
+; CHECK-NEXT:    store i8 [[LOAD15]], ptr [[GEP_S15]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %stride0  = mul nsw i64 %stride, 0
