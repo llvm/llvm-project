@@ -128,7 +128,7 @@ static bool hasUndefinedPassthru(const MachineInstr &MI) {
   // All undefined passthrus should be $noreg: see
   // RISCVDAGToDAGISel::doPeepholeNoRegPassThru
   const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
-  return UseMO.getReg() == RISCV::NoRegister || UseMO.isUndef();
+  return !UseMO.getReg().isValid() || UseMO.isUndef();
 }
 
 /// Return true if \p MI is a copy that will be lowered to one or more vmvNr.vs.
@@ -1454,7 +1454,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
           Register Reg = VLOp.getReg();
 
           // Erase the AVL operand from the instruction.
-          VLOp.setReg(RISCV::NoRegister);
+          VLOp.setReg(Register());
           VLOp.setIsKill(false);
           if (LIS) {
             LiveInterval &LI = LIS->getInterval(Reg);
@@ -1663,7 +1663,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
     if (!MO.isReg() || !MO.getReg().isVirtual())
       return;
     Register OldVLReg = MO.getReg();
-    MO.setReg(RISCV::NoRegister);
+    MO.setReg(Register());
 
     if (LIS)
       LIS->shrinkToUses(&LIS->getInterval(OldVLReg));
