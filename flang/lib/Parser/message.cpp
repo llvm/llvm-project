@@ -480,7 +480,7 @@ void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
   std::vector<const Message *> msgsWithLastLocation;
   std::size_t errorsEmitted{0};
   for (const Message *msg : sorted) {
-    bool shouldSkipMsg = false;
+    bool shouldSkipMsg{false};
     // Don't emit two identical messages for the same location
     // At the same location messages are sorted by the order they were
     // added to the list, which is a decent proxy for the causality
