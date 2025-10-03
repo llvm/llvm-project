@@ -153,6 +153,9 @@ template <TypeCategory CAT,
     class HELPER>
 struct NumericFindlocHelper {
   template <int KIND> struct Functor {
+    // NVCC inlines more aggressively which causes too many specializations of
+    // this function to be inlined causing compiler timeouts. Set as
+    // noinline to allow compilation to complete.
 #if defined(__CUDACC__)
     __attribute__((noinline))
 #endif
