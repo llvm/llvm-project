@@ -23,10 +23,12 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -126,10 +128,10 @@ WebAssemblyInstructionSelector::selectAddrOperands(LLT AddrType,
     // and offset for an add that needs wrapping.
     if (RootDef.getFlag(MachineInstr::MIFlag::NoUWrap)) {
       for (size_t i = 0; i < 2; ++i) {
-        //MachineOperand &Op = i == 0 ? LHS : RHS;
+        // MachineOperand &Op = i == 0 ? LHS : RHS;
         MachineInstr &OpDef = i == 0 ? LHSDef : RHSDef;
         MachineOperand &OtherOp = i == 0 ? RHS : LHS;
-        //MachineInstr &OtherOpDef = i == 0 ? RHSDef : LHSDef;
+        // MachineInstr &OtherOpDef = i == 0 ? RHSDef : LHSDef;
 
         if (OpDef.getOpcode() == TargetOpcode::G_CONSTANT) {
           auto Offset = OpDef.getOperand(1).getCImm()->getZExtValue();
@@ -172,6 +174,23 @@ WebAssemblyInstructionSelector::selectAddrOperands(LLT AddrType,
     }};
   }
 
+  if (!TM.isPositionIndependent() &&
+      RootDef.getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
+    auto *Offset = RootDef.getOperand(1).getGlobal();
+    auto Addr = MRI.createGenericVirtualRegister(AddrType);
+
+    MachineIRBuilder B(RootDef);
+
+    auto MIB = B.buildInstr(ConstOpc).addDef(Addr).addImm(0);
+    assert(constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI) &&
+           "Couldn't constrain registers for instruction");
+
+    return {{
+        [=](MachineInstrBuilder &MIB) { MIB.addGlobalAddress(Offset); },
+        [=](MachineInstrBuilder &MIB) { MIB.addReg(Addr); },
+    }};
+  }
+
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
       [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
@@ -195,29 +214,22 @@ bool WebAssemblyInstructionSelector::selectCopy(
   Register DstReg = I.getOperand(0).getReg();
   Register SrcReg = I.getOperand(1).getReg();
 
+  const TargetRegisterClass *DstRC;
   if (DstReg.isPhysical()) {
-    if (DstReg.id() == WebAssembly::SP32) {
-      if (!RBI.constrainGenericRegister(DstReg, WebAssembly::I32RegClass,
-                                        MRI)) {
-        LLVM_DEBUG(dbgs() << "Failed to constrain "
-                          << TII.getName(I.getOpcode()) << " operand\n");
-        return false;
-      }
-      return true;
+    switch (DstReg.id()) {
+    case WebAssembly::SP32:
+      DstRC = &WebAssembly::I32RegClass;
+      break;
+    case WebAssembly::SP64:
+      DstRC = &WebAssembly::I64RegClass;
+      break;
+    default:
+      llvm_unreachable("Copy to physical register other than SP32 or SP64?");
     }
-    if (DstReg.id() == WebAssembly::SP64) {
-      if (!RBI.constrainGenericRegister(DstReg, WebAssembly::I64RegClass,
-                                        MRI)) {
-        LLVM_DEBUG(dbgs() << "Failed to constrain "
-                          << TII.getName(I.getOpcode()) << " operand\n");
-        return false;
-      }
-      return true;
-    }
-    llvm_unreachable("Copy to physical register other than SP32 or SP64?");
+  } else {
+    DstRC = MRI.getRegClassOrNull(DstReg);
   }
 
-  const TargetRegisterClass *DstRC = MRI.getRegClassOrNull(DstReg);
   if (!DstRC) {
     const RegisterBank *DstBank = MRI.getRegBankOrNull(DstReg);
     if (!DstBank) {
@@ -240,14 +252,29 @@ bool WebAssemblyInstructionSelector::selectCopy(
     default:
       llvm_unreachable("Unknown reg bank to reg class mapping?");
     }
-    if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+    if (!constrainOperandRegClass(*MF, TRI, MRI, TII, RBI, I, *DstRC,
+                                  I.getOperand(0))) {
       LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
                         << " operand\n");
       return false;
     }
   }
 
-  const TargetRegisterClass *SrcRC = MRI.getRegClassOrNull(SrcReg);
+  const TargetRegisterClass *SrcRC;
+  if (SrcReg.isPhysical()) {
+    switch (SrcReg.id()) {
+    case WebAssembly::SP32:
+      SrcRC = &WebAssembly::I32RegClass;
+      break;
+    case WebAssembly::SP64:
+      SrcRC = &WebAssembly::I64RegClass;
+      break;
+    default:
+      llvm_unreachable("Copy to physical register other than SP32 or SP64?");
+    }
+  } else {
+    SrcRC = MRI.getRegClassOrNull(SrcReg);
+  }
   if (!SrcRC) {
     const RegisterBank *SrcBank = MRI.getRegBankOrNull(SrcReg);
     if (!SrcBank) {
@@ -270,7 +297,8 @@ bool WebAssemblyInstructionSelector::selectCopy(
     default:
       llvm_unreachable("Unknown reg bank to reg class mapping?");
     }
-    if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI)) {
+    if (!constrainOperandRegClass(*MF, TRI, MRI, TII, RBI, I, *SrcRC,
+                                  I.getOperand(1))) {
       LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
                         << " operand\n");
       return false;
@@ -311,11 +339,66 @@ bool WebAssemblyInstructionSelector::selectCopy(
   return true;
 }
 
+static const TargetRegisterClass *
+getRegClassForTypeOnBank(const RegisterBank &RB) {
+  switch (RB.getID()) {
+  case WebAssembly::I32RegBankID:
+    return &WebAssembly::I32RegClass;
+  case WebAssembly::I64RegBankID:
+    return &WebAssembly::I64RegClass;
+  case WebAssembly::F32RegBankID:
+    return &WebAssembly::F32RegClass;
+  case WebAssembly::F64RegBankID:
+    return &WebAssembly::F64RegClass;
+  case WebAssembly::EXNREFRegBankID:
+    return &WebAssembly::EXNREFRegClass;
+  case WebAssembly::EXTERNREFRegBankID:
+    return &WebAssembly::EXTERNREFRegClass;
+  case WebAssembly::FUNCREFRegBankID:
+    return &WebAssembly::FUNCREFRegClass;
+    // case WebAssembly::V128RegBankID:
+    //   return &WebAssembly::V128RegClass;
+  }
+
+  return nullptr;
+}
+
 bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetLowering &TLI = *STI.getTargetLowering();
+
+  if (!I.isPreISelOpcode() || I.getOpcode() == TargetOpcode::G_PHI) {
+    if (I.getOpcode() == TargetOpcode::PHI ||
+        I.getOpcode() == TargetOpcode::G_PHI) {
+      const Register DefReg = I.getOperand(0).getReg();
+      const LLT DefTy = MRI.getType(DefReg);
+
+      const RegClassOrRegBank &RegClassOrBank =
+          MRI.getRegClassOrRegBank(DefReg);
+
+      const TargetRegisterClass *DefRC =
+          dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
+
+      if (!DefRC) {
+        if (!DefTy.isValid()) {
+          LLVM_DEBUG(dbgs() << "PHI operand has no type, not a gvreg?\n");
+          return false;
+        }
+        const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
+        DefRC = getRegClassForTypeOnBank(RB);
+        if (!DefRC) {
+          LLVM_DEBUG(dbgs() << "PHI operand has unexpected size/bank\n");
+          return false;
+        }
+      }
+
+      I.setDesc(TII.get(TargetOpcode::PHI));
+
+      return RBI.constrainGenericRegister(DefReg, *DefRC, MRI) != nullptr;
+    }
+  }
 
   if (!isPreISelGenericOpcode(I.getOpcode())) {
     if (I.isCopy())
@@ -333,22 +416,61 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
   auto PtrIsI64 = PointerWidth == 64;
 
   switch (I.getOpcode()) {
-  case G_CONSTANT: {
-    assert(MRI.getType(I.getOperand(0).getReg()).isPointer() &&
-           "G_CONSTANT selection fell-through with non-pointer?");
+  case G_IMPLICIT_DEF: {
+    const Register DefReg = I.getOperand(0).getReg();
+    const LLT DefTy = MRI.getType(DefReg);
 
-    auto OrigImm = I.getOperand(1).getCImm()->getValue();
+    const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(DefReg);
 
-    auto MaskedVal = OrigImm.getLoBits(PointerWidth);
-    assert(MaskedVal.eq(OrigImm) &&
-           "Pointer immediate uses more bits than allowed");
+    const TargetRegisterClass *DefRC =
+        dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
 
-    I.setDesc(TII.get(PointerWidth == 64 ? WebAssembly::CONST_I64
-                                         : WebAssembly::CONST_I32));
-    I.removeOperand(1);
-    I.addOperand(MachineOperand::CreateImm(MaskedVal.getZExtValue()));
-    assert(constrainSelectedInstRegOperands(I, TII, TRI, RBI) &&
+    if (!DefRC) {
+      if (!DefTy.isValid()) {
+        LLVM_DEBUG(
+            dbgs() << "IMPLICIT_DEF operand has no type, not a gvreg?\n");
+        return false;
+      }
+      const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
+      DefRC = getRegClassForTypeOnBank(RB);
+      if (!DefRC) {
+        LLVM_DEBUG(dbgs() << "IMPLICIT_DEF operand has unexpected size/bank\n");
+        return false;
+      }
+    }
+
+    I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
+
+    return RBI.constrainGenericRegister(DefReg, *DefRC, MRI) != nullptr;
+    return true;
+  }
+  case G_BRJT: {
+    auto JT = I.getOperand(1);
+    auto Index = I.getOperand(2);
+
+    assert(JT.getTargetFlags() == 0 && "WebAssembly doesn't set target flags");
+
+    MachineIRBuilder B(I);
+
+    MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
+    const auto &MBBs = MJTI->getJumpTables()[JT.getIndex()].MBBs;
+
+    auto MIB = B.buildInstr(PtrIsI64 ? WebAssembly::BR_TABLE_I64
+                                     : WebAssembly::BR_TABLE_I32)
+                   .add(Index);
+
+    for (auto *MBB : MBBs)
+      MIB.addMBB(MBB);
+
+    // Add the first MBB as a dummy default target for now. This will be
+    // replaced with the proper default target (and the preceding range check
+    // eliminated) if possible by WebAssemblyFixBrTableDefaults.
+    MIB.addMBB(*MBBs.begin());
+
+    assert(constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI) &&
            "Couldn't constrain registers for instruction");
+
+    I.eraseFromParent();
     return true;
   }
   case G_PTR_ADD: {
@@ -367,7 +489,6 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
     assert(MRI.getType(I.getOperand(1).getReg()).isPointer() &&
            "G_PTRTOINT selection fell-through with non-pointer?");
 
-    auto PointerWidth = MF.getDataLayout().getPointerSizeInBits();
     I.setDesc(TII.get(PointerWidth == 64 ? WebAssembly::COPY_I64
                                          : WebAssembly::COPY_I32));
     assert(constrainSelectedInstRegOperands(I, TII, TRI, RBI) &&
@@ -375,56 +496,12 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
 
     return true;
   }
-  case G_ICMP: {
-    Register LHS = I.getOperand(2).getReg();
-    Register RHS = I.getOperand(3).getReg();
-    CmpInst::Predicate Cond =
-        static_cast<CmpInst::Predicate>(I.getOperand(1).getPredicate());
+  case G_INTTOPTR: {
+    assert(MRI.getType(I.getOperand(0).getReg()).isPointer() &&
+           "G_INTTOPTR selection fell-through with non-pointer?");
 
-    auto CmpWidth = MRI.getType(LHS).getSizeInBits();
-    assert(CmpWidth == MRI.getType(RHS).getSizeInBits() &&
-           "LHS and RHS for ICMP are diffrent lengths???");
-
-    auto IsI64 = CmpWidth == 64;
-
-    unsigned int CmpOpcode;
-    switch (Cond) {
-    case CmpInst::ICMP_EQ:
-      CmpOpcode = IsI64 ? WebAssembly::EQ_I64 : WebAssembly::EQ_I32;
-      break;
-    case CmpInst::ICMP_NE:
-      CmpOpcode = IsI64 ? WebAssembly::NE_I64 : WebAssembly::NE_I32;
-      break;
-    case CmpInst::ICMP_UGT:
-      CmpOpcode = IsI64 ? WebAssembly::GT_U_I64 : WebAssembly::GT_U_I32;
-      break;
-    case CmpInst::ICMP_UGE:
-      CmpOpcode = IsI64 ? WebAssembly::GE_U_I64 : WebAssembly::GE_U_I32;
-      break;
-    case CmpInst::ICMP_ULT:
-      CmpOpcode = IsI64 ? WebAssembly::LT_U_I64 : WebAssembly::LT_U_I32;
-      break;
-    case CmpInst::ICMP_ULE:
-      CmpOpcode = IsI64 ? WebAssembly::LE_U_I64 : WebAssembly::LE_U_I32;
-      break;
-    case CmpInst::ICMP_SGT:
-      CmpOpcode = IsI64 ? WebAssembly::GT_S_I64 : WebAssembly::GT_S_I32;
-      break;
-    case CmpInst::ICMP_SGE:
-      CmpOpcode = IsI64 ? WebAssembly::GE_S_I64 : WebAssembly::GE_S_I32;
-      break;
-    case CmpInst::ICMP_SLT:
-      CmpOpcode = IsI64 ? WebAssembly::LT_S_I64 : WebAssembly::LT_S_I32;
-      break;
-    case CmpInst::ICMP_SLE:
-      CmpOpcode = IsI64 ? WebAssembly::LE_S_I64 : WebAssembly::LE_S_I32;
-      break;
-    default:
-      llvm_unreachable("Unknown ICMP predicate");
-    }
-
-    I.setDesc(TII.get(CmpOpcode));
-    I.removeOperand(1);
+    I.setDesc(TII.get(PointerWidth == 64 ? WebAssembly::COPY_I64
+                                         : WebAssembly::COPY_I32));
     assert(constrainSelectedInstRegOperands(I, TII, TRI, RBI) &&
            "Couldn't constrain registers for instruction");
 
@@ -433,14 +510,10 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
   case G_FRAME_INDEX: {
     MachineIRBuilder B(I);
 
-    auto MIB = B.buildInstr(PtrIsI64 ? WebAssembly::ADD_I64 : WebAssembly::ADD_I32)
-                   .addDef(I.getOperand(0).getReg())
-                   .addReg(PtrIsI64 ? WebAssembly::SP64 : WebAssembly::SP32)
-                   .addFrameIndex(I.getOperand(1).getIndex());
-    assert(constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI) &&
+    I.setDesc(
+        TII.get(PtrIsI64 ? WebAssembly::COPY_I64 : WebAssembly::COPY_I32));
+    assert(constrainSelectedInstRegOperands(I, TII, TRI, RBI) &&
            "Couldn't constrain registers for instruction");
-
-    I.eraseFromParent();
     return true;
   }
   case G_GLOBAL_VALUE:
@@ -467,13 +540,17 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
         }
         MachineIRBuilder B(I);
 
-        auto MemBase = MRI.createGenericVirtualRegister(LLT::pointer(0, PointerWidth));
-        MRI.setRegClass(MemBase, PtrIsI64 ? &WebAssembly::I64RegClass : &WebAssembly::I32RegClass);
-        auto Offset = MRI.createGenericVirtualRegister(LLT::pointer(0, PointerWidth));
-        MRI.setRegClass(Offset, PtrIsI64 ? &WebAssembly::I64RegClass : &WebAssembly::I32RegClass);
+        auto MemBase =
+            MRI.createGenericVirtualRegister(LLT::pointer(0, PointerWidth));
+        MRI.setRegClass(MemBase, PtrIsI64 ? &WebAssembly::I64RegClass
+                                          : &WebAssembly::I32RegClass);
+        auto Offset =
+            MRI.createGenericVirtualRegister(LLT::pointer(0, PointerWidth));
+        MRI.setRegClass(Offset, PtrIsI64 ? &WebAssembly::I64RegClass
+                                         : &WebAssembly::I32RegClass);
 
         B.buildInstr(PtrIsI64 ? WebAssembly::GLOBAL_GET_I64
-                           : WebAssembly::GLOBAL_GET_I32)
+                              : WebAssembly::GLOBAL_GET_I32)
             .addDef(MemBase)
             .addExternalSymbol(BaseName);
 

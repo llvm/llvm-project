@@ -304,9 +304,8 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OperandsMapping = getOperandsMapping({&Op0IntValueMapping, nullptr});
     break;
   case G_BRJT:
-    OperandsMapping =
-        getOperandsMapping({&Op0IntValueMapping, nullptr,
-                            &WebAssembly::ValueMappings[WebAssembly::I32Idx]});
+    OperandsMapping = getOperandsMapping(
+        {&Op0IntValueMapping, nullptr, &Pointer0ValueMapping});
     break;
   case COPY: {
     Register DstReg = MI.getOperand(0).getReg();

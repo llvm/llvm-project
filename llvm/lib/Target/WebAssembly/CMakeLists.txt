@@ -7,13 +7,15 @@ tablegen(LLVM WebAssemblyGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM WebAssemblyGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM WebAssemblyGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM WebAssemblyGenFastISel.inc -gen-fast-isel)
-tablegen(LLVM WebAssemblyGenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM WebAssemblyGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM WebAssemblyGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM WebAssemblyGenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM WebAssemblyGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM WebAssemblyGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM WebAssemblyGenSubtargetInfo.inc -gen-subtarget)
+
+set(LLVM_TARGET_DEFINITIONS WebAssemblyGISel.td)
+tablegen(LLVM WebAssemblyGenGlobalISel.inc -gen-global-isel)
 
 add_public_tablegen_target(WebAssemblyCommonTableGen)
 

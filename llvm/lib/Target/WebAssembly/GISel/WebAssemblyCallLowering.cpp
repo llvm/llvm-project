@@ -527,7 +527,8 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
         auto NewOutReg = Arg.Regs[Part];
         if (!RBI.constrainGenericRegister(NewOutReg, NewRegClass, MRI)) {
           NewOutReg = MRI.createGenericVirtualRegister(NewLLT);
-          assert(RBI.constrainGenericRegister(NewOutReg, NewRegClass, MRI) && "Couldn't constrain brand-new register?");
+          assert(RBI.constrainGenericRegister(NewOutReg, NewRegClass, MRI) &&
+                 "Couldn't constrain brand-new register?");
           MIRBuilder.buildCopy(NewOutReg, Arg.Regs[Part]);
         }
         MIB.addUse(NewOutReg);
@@ -704,9 +705,12 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
         getLLTForType(*PointerType::get(Ctx, 0), DL));
     MFI->setVarargBufferVreg(VarargVreg);
 
-    MIRBuilder.buildInstr(getWASMArgOpcode(PtrVT))
-        .addDef(VarargVreg)
-        .addImm(FinalArgIdx);
+    auto ArgInst = MIRBuilder.buildInstr(getWASMArgOpcode(PtrVT))
+                       .addDef(VarargVreg)
+                       .addImm(FinalArgIdx);
+
+    constrainOperandRegClass(MF, TRI, MRI, TII, RBI, *ArgInst,
+                             ArgInst->getDesc(), ArgInst->getOperand(0), 0);
 
     MFI->addParam(PtrVT);
     ++FinalArgIdx;
@@ -911,7 +915,8 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           auto NewRetReg = Ret.Regs[Part];
           if (!RBI.constrainGenericRegister(NewRetReg, NewRegClass, MRI)) {
             NewRetReg = MRI.createGenericVirtualRegister(NewLLT);
-            assert(RBI.constrainGenericRegister(NewRetReg, NewRegClass, MRI) && "Couldn't constrain brand-new register?");
+            assert(RBI.constrainGenericRegister(NewRetReg, NewRegClass, MRI) &&
+                   "Couldn't constrain brand-new register?");
             MIRBuilder.buildCopy(NewRetReg, Ret.Regs[Part]);
           }
           CallInst.addDef(Ret.Regs[Part]);
