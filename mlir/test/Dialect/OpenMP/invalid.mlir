@@ -3153,3 +3153,31 @@ func.func @target_allocmem_invalid_bindc_name(%device : i32) -> () {
   %0 = omp.target_allocmem %device : i32, i64 {bindc_name=2}
   return
 }
+
+// -----
+func.func @target_freemem_invalid_ptr(%device : i32, %ptr : i64) -> () {
+  // expected-error @below {{op 'heapref' operand must be defined by an 'omp.target_allocmem' op}}
+  omp.target_freemem %device, %ptr : i32, i64
+  return
+}
+
+// -----
+func.func @alloc_shared_mem_invalid_uniq_name() -> () {
+  // expected-error @below {{op attribute 'uniq_name' failed to satisfy constraint: string attribute}}
+  %0 = omp.alloc_shared_mem i64 {uniq_name=2}
+  return
+}
+
+// -----
+func.func @alloc_shared_mem_invalid_bindc_name() -> () {
+  // expected-error @below {{op attribute 'bindc_name' failed to satisfy constraint: string attribute}}
+  %0 = omp.alloc_shared_mem i64 {bindc_name=2}
+  return
+}
+
+// -----
+func.func @free_shared_mem_invalid_ptr(%ptr : !llvm.ptr) -> () {
+  // expected-error @below {{op 'heapref' operand must be defined by an 'omp.alloc_shared_memory' op}}
+  omp.free_shared_mem %ptr : !llvm.ptr
+  return
+}
