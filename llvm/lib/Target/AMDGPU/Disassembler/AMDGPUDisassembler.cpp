@@ -2304,9 +2304,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   if (!hasArchitectedFlatScratch())
     KdStream << Indent << ".amdhsa_reserve_flat_scratch " << 0 << '\n';
   bool ReservedXnackMask = STI.hasFeature(AMDGPU::FeatureXNACK);
-#ifndef NDEBUG
   assert(!ReservedXnackMask || STI.hasFeature(AMDGPU::FeatureSupportsXNACK));
-#endif
   KdStream << Indent << ".amdhsa_reserve_xnack_mask " << ReservedXnackMask
            << '\n';
   KdStream << Indent << ".amdhsa_next_free_sgpr " << NextFreeSGPR << "\n";
