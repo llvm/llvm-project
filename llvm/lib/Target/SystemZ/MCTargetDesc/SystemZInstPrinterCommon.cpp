@@ -184,8 +184,8 @@ void SystemZInstPrinterCommon::printPCRelTLSOperand(const MCInst *MI,
   // Output the TLS marker if present.
   if ((unsigned)OpNum + 1 < MI->getNumOperands()) {
     const MCOperand &MO = MI->getOperand(OpNum + 1);
-    const MCSymbolRefExpr &refExp = cast<MCSymbolRefExpr>(*MO.getExpr());
-    switch (refExp.getSpecifier()) {
+    const MCSymbolRefExpr &RefExp = cast<MCSymbolRefExpr>(*MO.getExpr());
+    switch (RefExp.getSpecifier()) {
     case SystemZ::S_TLSGD:
       O << ":tls_gdcall:";
       break;
@@ -195,7 +195,7 @@ void SystemZInstPrinterCommon::printPCRelTLSOperand(const MCInst *MI,
     default:
       llvm_unreachable("Unexpected symbol kind");
     }
-    O << refExp.getSymbol().getName();
+    O << RefExp.getSymbol().getName();
   }
 }
 
