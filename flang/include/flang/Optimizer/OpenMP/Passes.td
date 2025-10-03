@@ -50,7 +50,7 @@ def FunctionFilteringPass : Pass<"omp-function-filtering"> {
   ];
 }
 
-def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::func::FuncOp"> {
+def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::ModuleOp"> {
   let summary = "Map `DO CONCURRENT` loops to OpenMP worksharing loops.";
 
   let description = [{ This is an experimental pass to map `DO CONCURRENT` loops
@@ -114,6 +114,17 @@ def GenericLoopConversionPass
 
 def SimdOnlyPass : Pass<"omp-simd-only", "mlir::ModuleOp"> {
   let summary = "Filters out non-simd OpenMP constructs";
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
+def AutomapToTargetDataPass
+    : Pass<"omp-automap-to-target-data", "::mlir::ModuleOp"> {
+  let summary = "Insert OpenMP target data operations for AUTOMAP variables";
+  let description = [{
+    Inserts `omp.target_enter_data` and `omp.target_exit_data` operations to
+    map variables marked with the `AUTOMAP` modifier when their allocation
+    or deallocation is detected in the FIR.
+  }];
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 

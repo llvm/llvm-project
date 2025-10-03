@@ -8,8 +8,8 @@
 
 #include <clc/internal/clc.h>
 
-#define FUNCTION __clc_copysign
-#define __IMPL_FUNCTION(x) __builtin_elementwise_copysign
+#define __CLC_FUNCTION __clc_copysign
+#define __CLC_IMPL_FUNCTION(x) __builtin_elementwise_copysign
 #define __CLC_BODY <clc/shared/binary_def.inc>
 
 #include <clc/math/gentype.inc>

@@ -19,6 +19,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <optional>
@@ -1170,7 +1171,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
 }
 
 template <class ELFT>
-void InputSectionBase::relocate(Ctx &ctx, uint8_t *buf, uint8_t *bufEnd) {
+void InputSection::relocate(Ctx &ctx, uint8_t *buf, uint8_t *bufEnd) {
   if ((flags & SHF_EXECINSTR) && LLVM_UNLIKELY(getFile<ELFT>()->splitStack))
     adjustSplitStackFunctionPrologues<ELFT>(ctx, buf, bufEnd);
 
@@ -1356,21 +1357,24 @@ SyntheticSection *EhInputSection::getParent() const {
 
 // .eh_frame is a sequence of CIE or FDE records.
 // This function splits an input section into records and returns them.
+// In rare cases (.eh_frame pieces are reordered by a linker script), the
+// relocations may be unordered.
 template <class ELFT> void EhInputSection::split() {
-  const RelsOrRelas<ELFT> rels = relsOrRelas<ELFT>(/*supportsCrel=*/false);
-  // getReloc expects the relocations to be sorted by r_offset. See the comment
-  // in scanRelocs.
-  if (rels.areRelocsRel()) {
-    SmallVector<typename ELFT::Rel, 0> storage;
-    split<ELFT>(sortRels(rels.rels, storage));
-  } else {
-    SmallVector<typename ELFT::Rela, 0> storage;
-    split<ELFT>(sortRels(rels.relas, storage));
-  }
-}
+  const RelsOrRelas<ELFT> elfRels = relsOrRelas<ELFT>();
+  if (elfRels.areRelocsCrel())
+    preprocessRelocs<ELFT>(elfRels.crels);
+  else if (elfRels.areRelocsRel())
+    preprocessRelocs<ELFT>(elfRels.rels);
+  else
+    preprocessRelocs<ELFT>(elfRels.relas);
 
-template <class ELFT, class RelTy>
-void EhInputSection::split(ArrayRef<RelTy> rels) {
+  // The loop below expects the relocations to be sorted by offset.
+  auto cmp = [](const Relocation &a, const Relocation &b) {
+    return a.offset < b.offset;
+  };
+  if (!llvm::is_sorted(rels, cmp))
+    llvm::stable_sort(rels, cmp);
+
   ArrayRef<uint8_t> d = content();
   const char *msg = nullptr;
   unsigned relI = 0;
@@ -1396,10 +1400,10 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
     // Find the first relocation that points to [off,off+size). Relocations
     // have been sorted by r_offset.
     const uint64_t off = d.data() - content().data();
-    while (relI != rels.size() && rels[relI].r_offset < off)
+    while (relI != rels.size() && rels[relI].offset < off)
       ++relI;
     unsigned firstRel = -1;
-    if (relI != rels.size() && rels[relI].r_offset < off + size)
+    if (relI != rels.size() && rels[relI].offset < off + size)
       firstRel = relI;
     (id == 0 ? cies : fdes).emplace_back(off, this, size, firstRel);
     d = d.slice(size);
@@ -1407,6 +1411,23 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
   if (msg)
     Err(file->ctx) << "corrupted .eh_frame: " << msg << "\n>>> defined in "
                    << getObjMsg(d.data() - content().data());
+}
+
+template <class ELFT, class RelTy>
+void EhInputSection::preprocessRelocs(Relocs<RelTy> elfRels) {
+  Ctx &ctx = file->ctx;
+  rels.reserve(elfRels.size());
+  for (auto rel : elfRels) {
+    uint64_t offset = rel.r_offset;
+    Symbol &sym = file->getSymbol(rel.getSymbol(ctx.arg.isMips64EL));
+    RelType type = rel.getType(ctx.arg.isMips64EL);
+    RelExpr expr = ctx.target->getRelExpr(type, sym, content().data() + offset);
+    int64_t addend =
+        RelTy::HasAddend
+            ? getAddend<ELFT>(rel)
+            : ctx.target->getImplicitAddend(content().data() + offset, type);
+    rels.push_back({expr, type, offset, addend, &sym});
+  }
 }
 
 // Return the offset in an output section for a given input offset.

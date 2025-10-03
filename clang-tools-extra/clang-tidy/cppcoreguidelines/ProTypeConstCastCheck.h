@@ -1,4 +1,4 @@
-//===--- ProTypeConstCastCheck.h - clang-tidy--------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// Imposes limitations on the use of const_cast within C++ code.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-type-const-cast.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-type-const-cast.html
 class ProTypeConstCastCheck : public ClangTidyCheck {
 public:
   ProTypeConstCastCheck(StringRef Name, ClangTidyContext *Context);

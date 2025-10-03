@@ -623,7 +623,7 @@ define amdgpu_kernel void @atomic_and_i64_offset(ptr addrspace(1) %out, i64 %in)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -695,7 +695,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_offset(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -771,7 +771,7 @@ define amdgpu_kernel void @atomic_and_i64_addr64_offset(ptr addrspace(1) %out, i
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -853,7 +853,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64_offset(ptr addrspace(1) %ou
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -912,7 +912,7 @@ define amdgpu_kernel void @atomic_and_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -983,7 +983,7 @@ define amdgpu_kernel void @atomic_and_i64_ret(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -1056,7 +1056,7 @@ define amdgpu_kernel void @atomic_and_i64_addr64(ptr addrspace(1) %out, i64 %in,
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -1135,7 +1135,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -1191,7 +1191,7 @@ define amdgpu_kernel void @atomic_sub_i64_offset(ptr addrspace(1) %out, i64 %in)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -1263,7 +1263,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_offset(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -1339,7 +1339,7 @@ define amdgpu_kernel void @atomic_sub_i64_addr64_offset(ptr addrspace(1) %out, i
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -1421,7 +1421,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64_offset(ptr addrspace(1) %ou
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -1480,7 +1480,7 @@ define amdgpu_kernel void @atomic_sub_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -1551,7 +1551,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -1624,7 +1624,7 @@ define amdgpu_kernel void @atomic_sub_i64_addr64(ptr addrspace(1) %out, i64 %in,
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -1703,7 +1703,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -1753,7 +1753,7 @@ define amdgpu_kernel void @atomic_max_i64_offset(ptr addrspace(1) %out, i64 %in)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile max ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile max ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -1822,7 +1822,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_offset(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile max ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile max ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -1892,7 +1892,7 @@ define amdgpu_kernel void @atomic_max_i64_addr64_offset(ptr addrspace(1) %out, i
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile max ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile max ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -1971,7 +1971,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64_offset(ptr addrspace(1) %ou
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile max ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile max ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -2024,7 +2024,7 @@ define amdgpu_kernel void @atomic_max_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile max ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile max ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -2092,7 +2092,7 @@ define amdgpu_kernel void @atomic_max_i64_ret(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile max ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile max ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -2159,7 +2159,7 @@ define amdgpu_kernel void @atomic_max_i64_addr64(ptr addrspace(1) %out, i64 %in,
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile max ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile max ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -2235,7 +2235,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile max ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile max ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -2285,7 +2285,7 @@ define amdgpu_kernel void @atomic_umax_i64_offset(ptr addrspace(1) %out, i64 %in
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -2354,7 +2354,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_offset(ptr addrspace(1) %out, ptr
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -2424,7 +2424,7 @@ define amdgpu_kernel void @atomic_umax_i64_addr64_offset(ptr addrspace(1) %out, 
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -2503,7 +2503,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64_offset(ptr addrspace(1) %o
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -2556,7 +2556,7 @@ define amdgpu_kernel void @atomic_umax_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -2624,7 +2624,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret(ptr addrspace(1) %out, ptr addrsp
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -2691,7 +2691,7 @@ define amdgpu_kernel void @atomic_umax_i64_addr64(ptr addrspace(1) %out, i64 %in
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -2767,7 +2767,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64(ptr addrspace(1) %out, ptr
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umax ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -2817,7 +2817,7 @@ define amdgpu_kernel void @atomic_min_i64_offset(ptr addrspace(1) %out, i64 %in)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile min ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile min ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -2886,7 +2886,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_offset(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile min ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile min ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -2956,7 +2956,7 @@ define amdgpu_kernel void @atomic_min_i64_addr64_offset(ptr addrspace(1) %out, i
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile min ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile min ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -3035,7 +3035,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr addrspace(1) %ou
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile min ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile min ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -3088,7 +3088,7 @@ define amdgpu_kernel void @atomic_min_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile min ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile min ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -3156,7 +3156,7 @@ define amdgpu_kernel void @atomic_min_i64_ret(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile min ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile min ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -3223,7 +3223,7 @@ define amdgpu_kernel void @atomic_min_i64_addr64(ptr addrspace(1) %out, i64 %in,
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile min ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile min ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -3299,7 +3299,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile min ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile min ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -3349,7 +3349,7 @@ define amdgpu_kernel void @atomic_umin_i64_offset(ptr addrspace(1) %out, i64 %in
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -3418,7 +3418,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret_offset(ptr addrspace(1) %out, ptr
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -3488,7 +3488,7 @@ define amdgpu_kernel void @atomic_umin_i64_addr64_offset(ptr addrspace(1) %out, 
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -3567,7 +3567,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret_addr64_offset(ptr addrspace(1) %o
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -3620,7 +3620,7 @@ define amdgpu_kernel void @atomic_umin_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -3688,7 +3688,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret(ptr addrspace(1) %out, ptr addrsp
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %out, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -3755,7 +3755,7 @@ define amdgpu_kernel void @atomic_umin_i64_addr64(ptr addrspace(1) %out, i64 %in
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -3831,7 +3831,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret_addr64(ptr addrspace(1) %out, ptr
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst
+  %tmp0 = atomicrmw volatile umin ptr addrspace(1) %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -3887,7 +3887,7 @@ define amdgpu_kernel void @atomic_or_i64_offset(ptr addrspace(1) %out, i64 %in) 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -3959,7 +3959,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_offset(ptr addrspace(1) %out, ptr a
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -4035,7 +4035,7 @@ define amdgpu_kernel void @atomic_or_i64_addr64_offset(ptr addrspace(1) %out, i6
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -4117,7 +4117,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64_offset(ptr addrspace(1) %out
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -4176,7 +4176,7 @@ define amdgpu_kernel void @atomic_or_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -4247,7 +4247,7 @@ define amdgpu_kernel void @atomic_or_i64_ret(ptr addrspace(1) %out, ptr addrspac
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -4320,7 +4320,7 @@ define amdgpu_kernel void @atomic_or_i64_addr64(ptr addrspace(1) %out, i64 %in, 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -4399,7 +4399,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64(ptr addrspace(1) %out, ptr a
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -4455,7 +4455,7 @@ define amdgpu_kernel void @atomic_xchg_i64_offset(ptr addrspace(1) %out, i64 %in
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -4510,7 +4510,7 @@ define amdgpu_kernel void @atomic_xchg_f64_offset(ptr addrspace(1) %out, double 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr double, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, double %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, double %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -4565,7 +4565,7 @@ define amdgpu_kernel void @atomic_xchg_pointer_offset(ptr addrspace(1) %out, ptr
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr ptr, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, ptr %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, ptr %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -4637,7 +4637,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_offset(ptr addrspace(1) %out, ptr
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -4713,7 +4713,7 @@ define amdgpu_kernel void @atomic_xchg_i64_addr64_offset(ptr addrspace(1) %out, 
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -4795,7 +4795,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64_offset(ptr addrspace(1) %o
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -4854,7 +4854,7 @@ define amdgpu_kernel void @atomic_xchg_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -4925,7 +4925,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret(ptr addrspace(1) %out, ptr addrsp
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -4998,7 +4998,7 @@ define amdgpu_kernel void @atomic_xchg_i64_addr64(ptr addrspace(1) %out, i64 %in
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -5077,7 +5077,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64(ptr addrspace(1) %out, ptr
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -5133,7 +5133,7 @@ define amdgpu_kernel void @atomic_xor_i64_offset(ptr addrspace(1) %out, i64 %in)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -5205,7 +5205,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_offset(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -5281,7 +5281,7 @@ define amdgpu_kernel void @atomic_xor_i64_addr64_offset(ptr addrspace(1) %out, i
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -5363,7 +5363,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64_offset(ptr addrspace(1) %ou
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -5422,7 +5422,7 @@ define amdgpu_kernel void @atomic_xor_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -5493,7 +5493,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -5566,7 +5566,7 @@ define amdgpu_kernel void @atomic_xor_i64_addr64(ptr addrspace(1) %out, i64 %in,
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -5645,7 +5645,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -7146,7 +7146,7 @@ define amdgpu_kernel void @atomic_inc_i64_offset(ptr addrspace(1) %out, i64 %in)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -7218,7 +7218,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret_offset(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -7294,7 +7294,7 @@ define amdgpu_kernel void @atomic_inc_i64_incr64_offset(ptr addrspace(1) %out, i
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -7349,7 +7349,7 @@ define amdgpu_kernel void @atomic_dec_i64_offset(ptr addrspace(1) %out, i64 %in)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -7421,7 +7421,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret_offset(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -7497,6 +7497,8 @@ define amdgpu_kernel void @atomic_dec_i64_decr64_offset(ptr addrspace(1) %out, i
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
+  %tmp0 = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
+
+!0 = !{}

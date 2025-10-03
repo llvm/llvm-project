@@ -184,45 +184,17 @@ public:
     bool operator>=(const GCCVersion &RHS) const { return !(*this < RHS); }
   };
 
-  /// This is a class to find a viable GCC installation for Clang to
-  /// use.
-  ///
-  /// This class tries to find a GCC installation on the system, and report
-  /// information about it. It starts from the host information provided to the
-  /// Driver, and has logic for fuzzing that where appropriate.
-  class GCCInstallationDetector {
-    bool IsValid;
-    llvm::Triple GCCTriple;
-    const Driver &D;
-
+  struct GCCInstallCandidate {
     // FIXME: These might be better as path objects.
     std::string GCCInstallPath;
     std::string GCCParentLibPath;
 
+    llvm::Triple GCCTriple;
+
     /// The primary multilib appropriate for the given flags.
     Multilib SelectedMultilib;
-    /// On Biarch systems, this corresponds to the default multilib when
-    /// targeting the non-default multilib. Otherwise, it is empty.
-    std::optional<Multilib> BiarchSibling;
 
     GCCVersion Version;
-
-    // We retain the list of install paths that were considered and rejected in
-    // order to print out detailed information in verbose mode.
-    std::set<std::string> CandidateGCCInstallPaths;
-
-    /// The set of multilibs that the detected installation supports.
-    MultilibSet Multilibs;
-
-    // Gentoo-specific toolchain configurations are stored here.
-    const std::string GentooConfigDir = "/etc/env.d/gcc";
-
-  public:
-    explicit GCCInstallationDetector(const Driver &D) : IsValid(false), D(D) {}
-    void init(const llvm::Triple &TargetTriple, const llvm::opt::ArgList &Args);
-
-    /// Check whether we detected a valid GCC install.
-    bool isValid() const { return IsValid; }
 
     /// Get the GCC triple for the detected install.
     const llvm::Triple &getTriple() const { return GCCTriple; }
@@ -236,6 +208,88 @@ public:
     /// Get the detected Multilib
     const Multilib &getMultilib() const { return SelectedMultilib; }
 
+    /// Get the detected GCC version string.
+    const GCCVersion &getVersion() const { return Version; }
+
+    bool addGCCLibStdCxxIncludePaths(llvm::vfs::FileSystem &vfs,
+                                     const llvm::opt::ArgList &DriverArgs,
+                                     llvm::opt::ArgStringList &CC1Args,
+                                     StringRef DebianMultiarch) const;
+  };
+
+  /// This is a class to find a viable GCC installation for Clang to
+  /// use.
+  ///
+  /// This class tries to find a GCC installation on the system, and report
+  /// information about it. It starts from the host information provided to the
+  /// Driver, and has logic for fuzzing that where appropriate.
+  class GCCInstallationDetector {
+    bool IsValid;
+
+    const Driver &D;
+
+    GCCInstallCandidate SelectedInstallation;
+
+    /// On Biarch systems, this corresponds to the default multilib when
+    /// targeting the non-default multilib. Otherwise, it is empty.
+    std::optional<Multilib> BiarchSibling;
+
+    // We retain the list of install paths that were considered and rejected in
+    // order to print out detailed information in verbose mode.
+    std::set<std::string> CandidateGCCInstallPaths;
+
+    /// The set of multilibs that the detected installation supports.
+    MultilibSet Multilibs;
+
+    // Gentoo-specific toolchain configurations are stored here.
+    const std::string GentooConfigDir = "/etc/env.d/gcc";
+
+  public:
+    /// Function for converting a triple to a Debian multiarch.  The
+    /// toolchains use this to adjust the target specific component of
+    /// include paths for Debian.
+    std::function<StringRef(const llvm::Triple &)> TripleToDebianMultiarch =
+        [](const llvm::Triple &T) {
+          StringRef S = T.str();
+          return S;
+        };
+
+    explicit GCCInstallationDetector(const Driver &D) : IsValid(false), D(D) {}
+
+    void init(const llvm::Triple &TargetTriple, const llvm::opt::ArgList &Args);
+
+    // TODO Replace isValid by changing SelectedInstallation into
+    // std::optional<SelectedInstallation>
+    // and move all accessors for fields of GCCInstallCandidate into
+    // that struct.
+
+    /// Check whether we detected a valid GCC install.
+    bool isValid() const { return IsValid; }
+
+    const GCCInstallCandidate &getSelectedInstallation() const {
+      return SelectedInstallation;
+    }
+
+    /// Get the GCC triple for the detected install.
+    const llvm::Triple &getTriple() const {
+      return SelectedInstallation.GCCTriple;
+    }
+
+    /// Get the detected GCC installation path.
+    StringRef getInstallPath() const {
+      return SelectedInstallation.GCCInstallPath;
+    }
+
+    /// Get the detected GCC parent lib path.
+    StringRef getParentLibPath() const {
+      return SelectedInstallation.GCCParentLibPath;
+    }
+
+    /// Get the detected Multilib
+    const Multilib &getMultilib() const {
+      return SelectedInstallation.SelectedMultilib;
+    }
+
     /// Get the whole MultilibSet
     const MultilibSet &getMultilibs() const { return Multilibs; }
 
@@ -244,7 +298,9 @@ public:
     bool getBiarchSibling(Multilib &M) const;
 
     /// Get the detected GCC version string.
-    const GCCVersion &getVersion() const { return Version; }
+    const GCCVersion &getVersion() const {
+      return SelectedInstallation.Version;
+    }
 
     /// Print information about the detected GCC installation.
     void print(raw_ostream &OS) const;
@@ -262,9 +318,21 @@ public:
                                SmallVectorImpl<std::string> &Prefixes,
                                StringRef SysRoot);
 
+    /// Checks if the \p GCCInstallation has libstdc++ include
+    /// directories.
+    bool GCCInstallationHasLibStdcxxIncludePaths(
+        const GCCInstallCandidate &GCCInstallation,
+        const llvm::opt::ArgList &DriverArgs) const;
+
+    /// Select a GCC installation directory from \p Installations and
+    /// set \p SelectedInstallation accordingly.
+    bool SelectGCCInstallationDirectory(
+        const SmallVector<GCCInstallCandidate, 3> &Installations,
+        const llvm::opt::ArgList &Args,
+        GCCInstallCandidate &SelectedInstallation) const;
+
     bool ScanGCCForMultilibs(const llvm::Triple &TargetTriple,
-                             const llvm::opt::ArgList &Args,
-                             StringRef Path,
+                             const llvm::opt::ArgList &Args, StringRef Path,
                              bool NeedsBiarchSuffix = false);
 
     void ScanLibDirForGCCTriple(const llvm::Triple &TargetArch,
@@ -349,8 +417,7 @@ protected:
                            llvm::opt::ArgStringList &CC1Args) const;
 
   bool addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                                   llvm::opt::ArgStringList &CC1Args,
-                                   StringRef DebianMultiarch) const;
+                                   llvm::opt::ArgStringList &CC) const;
 
   bool addLibStdCXXIncludePaths(Twine IncludeDir, StringRef Triple,
                                 Twine IncludeSuffix,

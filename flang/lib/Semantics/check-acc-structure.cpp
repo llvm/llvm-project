@@ -136,10 +136,10 @@ void AccStructureChecker::CheckNotInComputeConstruct() {
   }
 }
 
-bool AccStructureChecker::IsInsideParallelConstruct() const {
+bool AccStructureChecker::IsInsideKernelsConstruct() const {
   if (auto directive = getParentComputeConstruct())
-    if (*directive == llvm::acc::ACCD_parallel ||
-        *directive == llvm::acc::ACCD_parallel_loop)
+    if (*directive == llvm::acc::ACCD_kernels ||
+        *directive == llvm::acc::ACCD_kernels_loop)
       return true;
   return false;
 }
@@ -293,7 +293,10 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
           bool invalid{false};
           if (parentClause == llvm::acc::Clause::ACCC_gang &&
               cl == llvm::acc::Clause::ACCC_gang) {
-            if (IsInsideParallelConstruct()) {
+            if (IsInsideKernelsConstruct()) {
+              context_.Say(GetContext().clauseSource,
+                  "Nested GANG loops are not allowed in the region of a KERNELS construct"_err_en_US);
+            } else {
               auto parentDim = getGangDimensionSize(parent);
               auto currentDim = getGangDimensionSize(GetContext());
               std::int64_t parentDimNum = 1, currentDimNum = 1;
@@ -317,8 +320,6 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
                     parentDimStr);
                 continue;
               }
-            } else {
-              invalid = true;
             }
           } else if (parentClause == llvm::acc::Clause::ACCC_worker &&
               (cl == llvm::acc::Clause::ACCC_gang ||
@@ -983,24 +984,26 @@ void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
             [&](const parser::Designator &designator) {
               if (const auto *name = getDesignatorNameIfDataRef(designator)) {
                 if (name->symbol) {
-                  const auto *type{name->symbol->GetType()};
-                  if (type->IsNumeric(TypeCategory::Integer) &&
-                      !reductionIntegerSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for integer type"_err_en_US);
-                  } else if (type->IsNumeric(TypeCategory::Real) &&
-                      !reductionRealSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for real type"_err_en_US);
-                  } else if (type->IsNumeric(TypeCategory::Complex) &&
-                      !reductionComplexSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for complex type"_err_en_US);
-                  } else if (type->category() ==
-                          Fortran::semantics::DeclTypeSpec::Category::Logical &&
-                      !reductionLogicalSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for logical type"_err_en_US);
+                  if (const auto *type{name->symbol->GetType()}) {
+                    if (type->IsNumeric(TypeCategory::Integer) &&
+                        !reductionIntegerSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for integer type"_err_en_US);
+                    } else if (type->IsNumeric(TypeCategory::Real) &&
+                        !reductionRealSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for real type"_err_en_US);
+                    } else if (type->IsNumeric(TypeCategory::Complex) &&
+                        !reductionComplexSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for complex type"_err_en_US);
+                    } else if (type->category() ==
+                            Fortran::semantics::DeclTypeSpec::Category::
+                                Logical &&
+                        !reductionLogicalSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for logical type"_err_en_US);
+                    }
                   }
                   // TODO: check composite type.
                 }

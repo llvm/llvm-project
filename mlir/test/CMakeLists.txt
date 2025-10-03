@@ -84,6 +84,7 @@ llvm_canonicalize_cmake_booleans(
   MLIR_RUN_CUDA_SM80_TESTS
   MLIR_RUN_CUDA_SM80_LT_TESTS
   MLIR_RUN_CUDA_SM90_TESTS
+  BUILD_SHARED_LIBS
   )
 
 configure_lit_site_cfg(
@@ -123,7 +124,11 @@ set(MLIR_TEST_DEPENDS
   tblgen-to-irdl
   )
 if(NOT MLIR_STANDALONE_BUILD)
-  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file)
+  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file yaml2obj)
+endif()
+# Examples/standalone/test.toy (vis-a-vis the standalone example) depends on these.
+if(LLVM_INCLUDE_EXAMPLES)
+  list(APPEND MLIR_TEST_DEPENDS MLIRCAPIArith)
 endif()
 
 set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
@@ -141,6 +146,7 @@ if(LLVM_ENABLE_PIC AND TARGET ${LLVM_NATIVE_ARCH})
     llc
     mlir_async_runtime
     mlir-capi-execution-engine-test
+    mlir-capi-global-constructors-test
     mlir_c_runner_utils
     mlir_runner_utils
     mlir_float16_utils
@@ -156,7 +162,10 @@ if(MLIR_ENABLE_CUDA_RUNNER)
 endif()
 
 if(MLIR_ENABLE_EXECUTION_ENGINE)
-  list(APPEND MLIR_TEST_DEPENDS mlir-capi-execution-engine-test)
+  list(APPEND MLIR_TEST_DEPENDS
+    mlir-capi-execution-engine-test
+    mlir-capi-global-constructors-test
+  )
 endif()
 
 if(MLIR_ENABLE_ROCM_RUNNER)
@@ -243,4 +252,5 @@ add_lit_testsuite(check-mlir "Running the MLIR regression tests"
 
 add_lit_testsuites(MLIR ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}
+  SKIP "^python*"
 )

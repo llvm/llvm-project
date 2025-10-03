@@ -60,17 +60,6 @@ ArrayRef<EnumEntry<SigComponentType>> dxbc::getSigComponentTypes() {
   return ArrayRef(SigComponentTypes);
 }
 
-static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
-    {"SRV", llvm::dxil::ResourceClass::SRV},
-    {"UAV", llvm::dxil::ResourceClass::UAV},
-    {"CBV", llvm::dxil::ResourceClass::CBuffer},
-    {"Sampler", llvm::dxil::ResourceClass::Sampler},
-};
-
-ArrayRef<EnumEntry<llvm::dxil::ResourceClass>> dxbc::getResourceClasses() {
-  return ArrayRef(ResourceClassNames);
-}
-
 static const EnumEntry<RootFlags> RootFlagNames[] = {
 #define ROOT_SIGNATURE_FLAG(Val, Enum) {#Enum, RootFlags::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
@@ -98,6 +87,15 @@ static const EnumEntry<DescriptorRangeFlags> DescriptorRangeFlagNames[] = {
 
 ArrayRef<EnumEntry<DescriptorRangeFlags>> dxbc::getDescriptorRangeFlags() {
   return ArrayRef(DescriptorRangeFlagNames);
+}
+
+static const EnumEntry<StaticSamplerFlags> StaticSamplerFlagNames[] = {
+#define STATIC_SAMPLER_FLAG(Val, Enum, Flag) {#Enum, StaticSamplerFlags::Enum},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<StaticSamplerFlags>> dxbc::getStaticSamplerFlags() {
+  return ArrayRef(StaticSamplerFlagNames);
 }
 
 #define SHADER_VISIBILITY(Val, Enum) {#Enum, ShaderVisibility::Enum},

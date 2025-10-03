@@ -17,7 +17,7 @@ void init(double vertexx[]) {
 }
 
 void change(DV *dvptr) {
-#pragma omp target map(dvptr->dataptr[0 : 100])
+#pragma omp target map(dvptr->dataptr[0 : 100]) map(alloc : dvptr -> dataptr)
   {
     printf("In change: %lf, expected 77.0\n", dvptr->dataptr[77]);
     dvptr->dataptr[77] += 1.0;

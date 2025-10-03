@@ -255,6 +255,7 @@ SBProcess SBTarget::LoadCore(const char *core_file, lldb::SBError &error) {
     ProcessSP process_sp(target_sp->CreateProcess(
         target_sp->GetDebugger().GetListener(), "", &filespec, false));
     if (process_sp) {
+      ElapsedTime load_core_time(target_sp->GetStatistics().GetLoadCoreTime());
       error.SetError(process_sp->LoadCore());
       if (error.Success())
         sb_process.SetSP(process_sp);
@@ -1566,6 +1567,18 @@ SBModule SBTarget::FindModule(const SBFileSpec &sb_file_spec) {
     ModuleSpec module_spec(*sb_file_spec);
     // The module list is thread safe, no need to lock
     sb_module.SetSP(target_sp->GetImages().FindFirstModule(module_spec));
+  }
+  return sb_module;
+}
+
+SBModule SBTarget::FindModule(const SBModuleSpec &sb_module_spec) {
+  LLDB_INSTRUMENT_VA(this, sb_module_spec);
+
+  SBModule sb_module;
+  if (TargetSP target_sp = GetSP(); target_sp && sb_module_spec.IsValid()) {
+    // The module list is thread safe, no need to lock.
+    sb_module.SetSP(
+        target_sp->GetImages().FindFirstModule(*sb_module_spec.m_opaque_up));
   }
   return sb_module;
 }
