@@ -232,6 +232,100 @@ def CIR_CastOp : CIR_Op<"cast", [
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// DynamicCastOp
+//===----------------------------------------------------------------------===//
+
+def CIR_DynamicCastKind : CIR_I32EnumAttr<
+  "DynamicCastKind", "dynamic cast kind", [
+    I32EnumAttrCase<"Ptr", 0, "ptr">,
+    I32EnumAttrCase<"Ref", 1, "ref">
+]>;
+
+def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
+  let summary = "Perform dynamic cast on record pointers";
+  let description = [{
+    The `cir.dyn_cast` operation models part of the semantics of the
+    `dynamic_cast` operator in C++. It can be used to perform 3 kinds of casts
+    on record pointers:
+
+    - Down-cast, which casts a base class pointer to a derived class pointer;
+    - Side-cast, which casts a class pointer to a sibling class pointer;
+    - Cast-to-complete, which casts a class pointer to a void pointer.
+
+    The input of the operation must be a record pointer. The result of the
+    operation is either a record pointer or a void pointer.
+
+    The parameter `kind` specifies the semantics of this operation. If its value
+    is `ptr`, then the operation models dynamic casts on pointers. Otherwise, if
+    its value is `ref`, the operation models dynamic casts on references.
+    Specifically:
+
+    - When the input pointer is a null pointer value:
+      - If `kind` is `ref`, the operation will invoke undefined behavior. A
+        sanitizer check will be emitted if sanitizer is on.
+      - Otherwise, the operation will return a null pointer value as its result.
+    - When the runtime type check fails:
+      - If `kind` is `ref`, the operation will throw a `bad_cast` exception.
+      - Otherwise, the operation will return a null pointer value as its result.
+
+    The `info` argument gives detailed information about the requested dynamic
+    cast operation. It is an optional `#cir.dyn_cast_info` attribute that is
+    only present when the operation models a down-cast or a side-cast.
+
+    The `relative_layout` argument specifies whether the Itanium C++ ABI vtable
+    uses relative layout. It is only meaningful when the operation models a
+    cast-to-complete operation.
+
+    Examples:
+
+    ```mlir
+    %0 = cir.dyn_cast ptr %p : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
+    %1 = cir.dyn_cast ptr relative_layout %p : !cir.ptr<!rec_Base>
+              -> !cir.ptr<!rec_Derived>
+    %2 = cir.dyn_cast ref %r : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
+              #cir.dyn_cast_info<
+                srcRtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>,
+                destRtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>,
+                runtimeFunc = @__dynamic_cast,
+                badCastFunc = @__cxa_bad_cast,
+                offsetHint = #cir.int<0> : !s64i
+              >
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_DynamicCastKind:$kind,
+    CIR_PtrToRecordType:$src,
+    OptionalAttr<CIR_DynamicCastInfoAttr>:$info,
+    UnitAttr:$relative_layout
+  );
+
+  let results = (outs
+    CIR_PtrToAnyOf<[CIR_VoidType, CIR_RecordType]>:$result
+  );
+
+  let assemblyFormat = [{
+    $kind (`relative_layout` $relative_layout^)? $src
+    `:` qualified(type($src)) `->` qualified(type($result))
+    (qualified($info)^)? attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Determine whether this operation models reference casting in C++.
+    bool isRefCast() {
+      return getKind() == ::cir::DynamicCastKind::Ref;
+    }
+
+    /// Determine whether this operation represents a dynamic cast to a void
+    /// pointer.
+    bool isCastToVoid() {
+      return getType().isVoidPtr();
+    }
+  }];
+
+  let hasLLVMLowering = false;
+}
 
 //===----------------------------------------------------------------------===//
 // PtrStrideOp
