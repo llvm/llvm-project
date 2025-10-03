@@ -5177,7 +5177,7 @@ using NestedConstruct =
 struct OpenMPLoopConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
   OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
-      : t({std::move(a), std::nullopt, std::nullopt}) {}
+      : t({std::move(a), std::list<NestedConstruct>(), std::nullopt}) {}
 
   const OmpBeginLoopDirective &BeginDir() const {
     return std::get<OmpBeginLoopDirective>(t);
@@ -5185,7 +5185,7 @@ struct OpenMPLoopConstruct {
   const std::optional<OmpEndLoopDirective> &EndDir() const {
     return std::get<std::optional<OmpEndLoopDirective>>(t);
   }
-  std::tuple<OmpBeginLoopDirective, std::optional<NestedConstruct>,
+  std::tuple<OmpBeginLoopDirective, std::list<NestedConstruct>,
       std::optional<OmpEndLoopDirective>>
       t;
 };

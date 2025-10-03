@@ -1038,7 +1038,7 @@ Link make(const parser::OmpClause::Link &inp,
 
 LoopRange make(const parser::OmpClause::Looprange &inp,
                semantics::SemanticsContext &semaCtx) {
-  llvm_unreachable("Unimplemented: looprange");
+  TODO_NOLOC("looprange clause");
 }
 
 Map make(const parser::OmpClause::Map &inp,

@@ -286,10 +286,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   }
   SetLoopInfo(x);
 
-  auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-  if (optLoopCons.has_value()) {
-    if (const auto &doConstruct{
-            std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
+  auto &loopConsList = std::get<std::list<parser::NestedConstruct>>(x.t);
+  for (auto &loopCons : loopConsList) {
+    if (const auto &doConstruct{std::get_if<parser::DoConstruct>(&loopCons)}) {
       const auto &doBlock{std::get<parser::Block>(doConstruct->t)};
       CheckNoBranching(doBlock, beginName.v, beginName.source);
     }
@@ -306,6 +305,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
       beginName.v == llvm::omp::Directive::OMPD_distribute_simd) {
     CheckDistLinear(x);
   }
+  if (beginName.v == llvm::omp::Directive::OMPD_fuse) {
+    CheckLooprangeBounds(x);
+  }
 }
 
 const parser::Name OmpStructureChecker::GetLoopIndex(
@@ -315,10 +317,10 @@ const parser::Name OmpStructureChecker::GetLoopIndex(
 }
 
 void OmpStructureChecker::SetLoopInfo(const parser::OpenMPLoopConstruct &x) {
-  auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-  if (optLoopCons.has_value()) {
+  auto &loopConsList = std::get<std::list<parser::NestedConstruct>>(x.t);
+  if (loopConsList.size() == 1) {
     if (const auto &loopConstruct{
-            std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
+            std::get_if<parser::DoConstruct>(&loopConsList.front())}) {
       const parser::DoConstruct *loop{&*loopConstruct};
       if (loop && loop->IsDoNormal()) {
         const parser::Name &itrVal{GetLoopIndex(loop)};
@@ -330,10 +332,10 @@ void OmpStructureChecker::SetLoopInfo(const parser::OpenMPLoopConstruct &x) {
 
 void OmpStructureChecker::CheckLoopItrVariableIsInt(
     const parser::OpenMPLoopConstruct &x) {
-  auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-  if (optLoopCons.has_value()) {
+  auto &loopConsList = std::get<std::list<parser::NestedConstruct>>(x.t);
+  for (auto &loopCons : loopConsList) {
     if (const auto &loopConstruct{
-            std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
+            std::get_if<parser::DoConstruct>(&loopCons)}) {
 
       for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
         if (loop->IsDoNormal()) {
@@ -418,10 +420,11 @@ void OmpStructureChecker::CheckDistLinear(
 
     // Match the loop index variables with the collected symbols from linear
     // clauses.
-    auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-    if (optLoopCons.has_value()) {
+    auto &loopConsList = std::get<std::list<parser::NestedConstruct>>(x.t);
+    for (auto &loopCons : loopConsList) {
+      std::int64_t collapseVal_ = collapseVal;
       if (const auto &loopConstruct{
-              std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
+              std::get_if<parser::DoConstruct>(&loopCons)}) {
         for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
           if (loop->IsDoNormal()) {
             const parser::Name &itrVal{GetLoopIndex(loop)};
@@ -429,8 +432,8 @@ void OmpStructureChecker::CheckDistLinear(
               // Remove the symbol from the collected set
               indexVars.erase(&itrVal.symbol->GetUltimate());
             }
-            collapseVal--;
-            if (collapseVal == 0) {
+            collapseVal_--;
+            if (collapseVal_ == 0) {
               break;
             }
           }
@@ -449,6 +452,32 @@ void OmpStructureChecker::CheckDistLinear(
       context_.Say(source,
           "Variable '%s' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE"_err_en_US,
           root.name());
+    }
+  }
+}
+
+void OmpStructureChecker::CheckLooprangeBounds(
+    const parser::OpenMPLoopConstruct &x) {
+  const parser::OmpClauseList &clauseList = x.BeginDir().Clauses();
+  if (!clauseList.v.empty()) {
+    for (auto &clause : clauseList.v) {
+      if (const auto *lrClause{
+              std::get_if<parser::OmpClause::Looprange>(&clause.u)}) {
+        if (const auto first{GetIntValue(std::get<0>((lrClause->v).t))}) {
+          if (const auto count{GetIntValue(std::get<1>((lrClause->v).t))}) {
+            auto &loopConsList =
+                std::get<std::list<parser::NestedConstruct>>(x.t);
+            if (loopConsList.size() < (unsigned)(*first + *count - 1)) {
+              context_.Say(clause.source,
+                  "The loop range indicated in the %s clause"
+                  " must not be out of the bounds of the Loop Sequence"
+                  " following the construct."_err_en_US,
+                  parser::ToUpperCaseLetters(clause.source.ToString()));
+            }
+          }
+        }
+        return;
+      }
     }
   }
 }

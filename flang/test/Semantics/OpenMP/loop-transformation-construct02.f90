@@ -1,44 +1,24 @@
-! Testing the Semantics of nested Loop Transformation Constructs
+! Testing the Semantics of loop sequences combined with 
+! nested Loop Transformation Constructs
 
-!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=51
+!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=60
 
 subroutine loop_transformation_construct1
   implicit none
 
   !$omp do
-  !ERROR: A DO loop must follow the UNROLL directive
-  !$omp unroll
+  !ERROR: The FUSE construct requires the END FUSE directive
+  !$omp fuse 
 end subroutine
 
 subroutine loop_transformation_construct2
   implicit none
-  integer :: i = 5
-  integer :: y
-  integer :: v(i)
 
   !$omp do
-  !$omp tile
-  do x = 1, i
-    v(x) = x(x) * 2
-  end do
-  !$omp end tile
-  !$omp end do
-  !ERROR: The END TILE directive must follow the DO loop associated with the loop construct
-  !$omp end tile
-end subroutine
-
-subroutine loop_transformation_construct2
-  implicit none
-  integer :: i = 5
-  integer :: y
-  integer :: v(i)
-
-  !$omp do
-  !ERROR: Only Loop Transformation Constructs or Loop Nests can be nested within Loop Constructs
-  !$omp parallel do
-  do x = 1, i
-    v(x) = x(x) * 2
-  end do
+  !ERROR: A DO loop must follow the FUSE directive
+  !$omp fuse 
+  !ERROR: The END FUSE directive must follow the DO loop associated with the loop construct
+  !$omp end fuse
 end subroutine
 
 subroutine loop_transformation_construct3
@@ -48,11 +28,17 @@ subroutine loop_transformation_construct3
   integer :: v(i)
 
   !$omp do
+  !$omp fuse
   do x = 1, i
     v(x) = x(x) * 2
   end do
-  !ERROR: A DO loop must follow the TILE directive
-  !$omp tile
+  do x = 1, i
+    v(x) = x(x) * 2
+  end do
+  !$omp end fuse
+  !$omp end do
+  !ERROR: The END FUSE directive must follow the DO loop associated with the loop construct
+  !$omp end fuse
 end subroutine
 
 subroutine loop_transformation_construct4
@@ -62,12 +48,13 @@ subroutine loop_transformation_construct4
   integer :: v(i)
 
   !$omp do
-  !ERROR: If a loop construct has been fully unrolled, it cannot then be further transformed
-  !$omp tile
-  !$omp unroll full
   do x = 1, i
     v(x) = x(x) * 2
   end do
+  !ERROR: A DO loop must follow the FUSE directive
+  !$omp fuse
+  !ERROR: The END FUSE directive must follow the DO loop associated with the loop construct
+  !$omp end fuse
 end subroutine
 
 subroutine loop_transformation_construct5
@@ -78,11 +65,15 @@ subroutine loop_transformation_construct5
 
   !$omp do
   !ERROR: If a loop construct has been fully unrolled, it cannot then be further transformed
-  !$omp tile
-  !$omp unroll
+  !$omp fuse
+  !$omp unroll full
   do x = 1, i
     v(x) = x(x) * 2
   end do
+  do x = 1, i
+    v(x) = x(x) * 2
+  end do
+  !$omp end fuse
 end subroutine
 
 subroutine loop_transformation_construct6
@@ -92,9 +83,13 @@ subroutine loop_transformation_construct6
   integer :: v(i)
 
   !$omp do
-  !$omp tile
+  !$omp fuse
   !$omp unroll partial(2)
   do x = 1, i
     v(x) = x(x) * 2
   end do
+  do x = 1, i
+    v(x) = x(x) * 2
+  end do
+  !$omp end fuse 
 end subroutine
