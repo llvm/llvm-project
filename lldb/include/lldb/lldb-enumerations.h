@@ -532,7 +532,7 @@ enum LanguageType {
   eLanguageTypeRuby = 0x0040,
   eLanguageTypeMove = 0x0041,
   eLanguageTypeHylo = 0x0042,
-  eLanguageTypeLastStandardLanguage = eLanguageTypeMojo,
+  eLanguageTypeLastStandardLanguage = eLanguageTypeHylo,
 
   // Vendor Extensions
   // Note: Language::GetNameForLanguageType
