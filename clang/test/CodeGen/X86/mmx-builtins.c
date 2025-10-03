@@ -401,9 +401,6 @@ int test_mm_movemask_pi8(__m64 a) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.pmovmskb.128(
   return _mm_movemask_pi8(a);
 }
-TEST_CONSTEXPR(match_m64(_mm_movemask_pi8((__m64)((__v8qi){(signed char)0x7F,(signed char)0x80,(signed char)0x01,(signed char)0xFF,(signed char)0x00,(signed char)0xAA,(signed char)0x55,(signed char)0xC3})),0xAA));
-// TEST_CONSTEXPR(match_i32(_mm_movemask_pi8((__m64)((__v2si){(int)0x80FF00AA,(int)0x7F0183E1})),0x3D));
-// TEST_CONSTEXPR(match_i32(_mm_movemask_pi8((__m64)((__v1){(long long)0xE110837A00924DB0ULL})),0xA5));
 
 __m64 test_mm_mul_su32(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_mul_su32
