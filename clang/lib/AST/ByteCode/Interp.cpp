@@ -445,8 +445,7 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return true;
 }
 
-bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
-                   bool NoDiag) {
+bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   assert(Desc);
 
   const auto *D = Desc->asVarDecl();
@@ -471,7 +470,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
   }
 
   if (IsConstant) {
-    if (S.getLangOpts().CPlusPlus && !NoDiag) {
+    if (S.getLangOpts().CPlusPlus) {
       S.CCEDiag(S.Current->getLocation(OpPC),
                 S.getLangOpts().CPlusPlus11
                     ? diag::note_constexpr_ltor_non_constexpr
@@ -479,7 +478,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
                 1)
           << D << T;
       S.Note(D->getLocation(), diag::note_declared_at);
-    } else if (!NoDiag) {
+    } else {
       S.CCEDiag(S.Current->getLocation(OpPC));
     }
     return true;
@@ -494,18 +493,16 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
     return true;
   }
 
-  if (!NoDiag)
-    diagnoseNonConstVariable(S, OpPC, D);
+  diagnoseNonConstVariable(S, OpPC, D);
   return false;
 }
 
-static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                          bool NoDiag = false) {
+static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isStatic() || !Ptr.isBlockPointer())
     return true;
   if (!Ptr.getDeclID())
     return true;
-  return CheckConstant(S, OpPC, Ptr.getDeclDesc(), NoDiag);
+  return CheckConstant(S, OpPC, Ptr.getDeclDesc());
 }
 
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -1645,6 +1642,18 @@ static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
     TypePtr = TypePtr.getBase();
 
   QualType DynamicType = TypePtr.getType();
+  if (TypePtr.isStatic() || TypePtr.isConst()) {
+    const VarDecl *VD = TypePtr.getDeclDesc()->asVarDecl();
+    if (!VD->isConstexpr()) {
+      const Expr *E = S.Current->getExpr(OpPC);
+      APValue V = TypePtr.toAPValue(S.getASTContext());
+      QualType TT = S.getASTContext().getLValueReferenceType(DynamicType);
+      S.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
+          << AccessKinds::AK_MemberCall << V.getAsString(S.getASTContext(), TT);
+      return false;
+    }
+  }
+
   if (DynamicType->isPointerType() || DynamicType->isReferenceType()) {
     DynamicDecl = DynamicType->getPointeeCXXRecordDecl();
   } else if (DynamicType->isArrayType()) {
@@ -1653,15 +1662,6 @@ static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
     DynamicDecl = ElemType->getAsCXXRecordDecl();
   } else {
     DynamicDecl = DynamicType->getAsCXXRecordDecl();
-  }
-
-  if (!CheckConstant(S, OpPC, TypePtr, true)) {
-    const Expr *E = S.Current->getExpr(OpPC);
-    APValue V = TypePtr.toAPValue(S.getASTContext());
-    QualType TT = S.getASTContext().getLValueReferenceType(DynamicType);
-    S.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
-        << AccessKinds::AK_MemberCall << V.getAsString(S.getASTContext(), TT);
-    return false;
   }
   return true;
 }

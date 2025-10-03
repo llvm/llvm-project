@@ -1070,12 +1070,29 @@ namespace Virtual {
   public:
     int a = f();
 
-    virtual constexpr int f() { return 10; }
+    virtual constexpr int f() const { return 10; }
   };
 
   K k;
   static_assert(k.f() == 10); // both-error {{not an integral constant expression}} \
                               // both-note {{virtual function called on object 'k' whose dynamic type is not constant}}
+
+  void f() {
+    constexpr K k;
+    static_assert(k.f() == 10);
+  }
+
+  void f2() {
+    K k;
+    static_assert(k.f() == 10); // both-error {{not an integral constant expression}} \
+                                // both-note {{virtual function called on object 'k' whose dynamic type is not constant}}
+  }
+  
+  static_assert(K().f() == 10);
+
+  void f3() {
+    static_assert(K().f() == 10);
+  }
 
   class L : public K {
   public:
@@ -1087,6 +1104,7 @@ namespace Virtual {
   static_assert(l.a == 10);
   static_assert(l.b == 10);
   static_assert(l.c == 10);
+  static_assert(l.f() == 10);
 
   struct M {
     K& mk = k;
@@ -1099,6 +1117,29 @@ namespace Virtual {
   };
   static_assert(N{}.mk->f() == 10); // both-error {{not an integral constant expression}} \
                                     // both-note {{virtual function called on object 'k' whose dynamic type is not constant}}
+
+  extern K o;
+  static_assert(o.f() == 10); // both-error {{not an integral constant expression}} \
+                              // both-note {{virtual function called on object 'o' whose dynamic type is not constant}}
+  static K p;
+  static_assert(p.f() == 10); // both-error {{not an integral constant expression}} \
+                              // both-note {{virtual function called on object 'p' whose dynamic type is not constant}}
+  
+  void f4() {
+    static K p;
+    static_assert(p.f() == 10); // both-error {{not an integral constant expression}} \
+                                // both-note {{virtual function called on object 'p' whose dynamic type is not constant}}
+  }
+  
+  const K q;
+  static_assert(q.f() == 10); // both-error {{not an integral constant expression}} \
+                              // both-note {{virtual function called on object 'q' whose dynamic type is not constant}}
+
+  void f5() {
+    const K q;
+    static_assert(q.f() == 10); // both-error {{not an integral constant expression}} \
+                                // both-note {{virtual function called on object 'q' whose dynamic type is not constant}}
+  }
 }
 
 namespace DiscardedTrivialCXXConstructExpr {
