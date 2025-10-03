@@ -2878,6 +2878,35 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_byteshift(InterpState &S, CodePtr OpPC,
+                                      const CallExpr *Call, uint32_t BuiltinID,
+                                      bool isLeft) {
+  APSInt Amt = popToAPSInt(S, Call->getArg(1));
+  unsigned ShiftVal = (unsigned)Amt.getZExtValue() & 0xff;
+
+  const Pointer &VecPtr = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned NumElts = VecPtr.getNumElems();
+  const unsigned LaneBytes = 16;
+  assert(NumElts % LaneBytes == 0);
+
+  for (unsigned LaneBase = 0; LaneBase < NumElts; LaneBase += LaneBytes) {
+    for (unsigned I = 0; I < LaneBytes; ++I) {
+      int Src = isLeft ? (I + ShiftVal) : (int)I - (int)ShiftVal;
+      if (Src >= 0 && (unsigned)Src < LaneBytes) {
+        Dst.elem<uint8_t>(LaneBase + I) =
+            VecPtr.elem<uint8_t>(LaneBase + (unsigned)Src);
+      } else {
+        Dst.elem<uint8_t>(LaneBase + I) = 0;
+      }
+    }
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -3667,6 +3696,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_elementwise_fshr:
     return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshr);
+  case clang::X86::BI__builtin_ia32_pslldqi128_byteshift:
+  case clang::X86::BI__builtin_ia32_pslldqi256_byteshift:
+  case clang::X86::BI__builtin_ia32_pslldqi512_byteshift:
+    return interp__builtin_byteshift(S, OpPC, Call, BuiltinID, /*IsLeft=*/true);
+  case clang::X86::BI__builtin_ia32_psrldqi128_byteshift:
+  case clang::X86::BI__builtin_ia32_psrldqi256_byteshift:
+  case clang::X86::BI__builtin_ia32_psrldqi512_byteshift:
+    return interp__builtin_byteshift(S, OpPC, Call, BuiltinID,
+                                     /*IsLeft=*/false);
 
   case X86::BI__builtin_ia32_insertf32x4_256:
   case X86::BI__builtin_ia32_inserti32x4_256:
