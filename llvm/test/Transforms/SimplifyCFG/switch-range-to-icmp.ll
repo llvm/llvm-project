@@ -303,4 +303,73 @@ else:
   ret i32 %i1
 }
 
+define i32 @one_case_1(i32 %x) {
+; CHECK-LABEL: @one_case_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X:%.*]], -5
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[X_OFF]], 3
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[TMP0:%.*]], [[A]] ], [ [[TMP1:%.*]], [[B]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       a:
+; CHECK-NEXT:    [[TMP0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       b:
+; CHECK-NEXT:    [[TMP1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  switch i32 %x, label %unreachable [
+  i32 5, label %a
+  i32 6, label %a
+  i32 7, label %a
+  i32 10, label %b
+  ]
+
+unreachable:
+  unreachable
+a:
+  %0 = call i32 @f(i32 0)
+  ret i32 %0
+b:
+  %1 = call i32 @f(i32 1)
+  ret i32 %1
+}
+
+define i32 @one_case_2(i32 %x) {
+; CHECK-LABEL: @one_case_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X:%.*]], -5
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[X_OFF]], 1
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[TMP0:%.*]], [[A]] ], [ [[TMP1:%.*]], [[B]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       a:
+; CHECK-NEXT:    [[TMP0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       b:
+; CHECK-NEXT:    [[TMP1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  switch i32 %x, label %unreachable [
+  i32 5, label %a
+  i32 10, label %b
+  i32 11, label %b
+  i32 12, label %b
+  i32 13, label %b
+  ]
+
+unreachable:
+  unreachable
+a:
+  %0 = call i32 @f(i32 0)
+  ret i32 %0
+b:
+  %1 = call i32 @f(i32 1)
+  ret i32 %1
+}
+
 declare void @bar(ptr nonnull dereferenceable(4))
