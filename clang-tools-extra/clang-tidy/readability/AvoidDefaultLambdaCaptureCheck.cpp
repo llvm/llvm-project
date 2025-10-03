@@ -54,6 +54,11 @@ void AvoidDefaultLambdaCaptureCheck::check(
     ImplicitCaptures.push_back(generateCaptureText(Capture));
   }
 
+  // For template-dependent lambdas, the list of captures hasn't been created
+  // yet, so the list of implicit captures is empty.
+  if (ImplicitCaptures.empty() && Lambda->isGenericLambda())
+    return;
+
   const auto ReplacementText = [&ImplicitCaptures]() {
     return llvm::join(ImplicitCaptures, ", ");
   }();

@@ -95,13 +95,13 @@ public:
   }
 };
 
+// Lambda captures dependent on a template parameter don't have a fix it
 template<typename T>
 void test_template_lambdas() {
   T value{};
   
   auto lambda = [=](T x) { return value + x; };
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
-  // CHECK-FIXES: auto lambda = [value](T x) { return value + x; };
 }
 
 void instantiate_templates() {
