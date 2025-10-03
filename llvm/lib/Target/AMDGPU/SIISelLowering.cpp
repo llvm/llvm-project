@@ -64,14 +64,6 @@ static cl::opt<bool> UseDivergentRegisterIndexing(
     cl::desc("Use indirect register addressing for divergent indexes"),
     cl::init(false));
 
-// TODO: This option should be removed once we switch to always using PTRADD in
-// the SelectionDAG.
-static cl::opt<bool> UseSelectionDAGPTRADD(
-    "amdgpu-use-sdag-ptradd", cl::Hidden,
-    cl::desc("Generate ISD::PTRADD nodes for 64-bit pointer arithmetic in the "
-             "SelectionDAG ISel"),
-    cl::init(false));
-
 static bool denormalModeIsFlushAllF32(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   return Info->getMode().FP32Denormals == DenormalMode::getPreserveSign();
@@ -11466,7 +11458,7 @@ static bool isNoUnsignedWrap(SDValue Addr) {
 
 bool SITargetLowering::shouldPreservePtrArith(const Function &F,
                                               EVT PtrVT) const {
-  return UseSelectionDAGPTRADD && PtrVT == MVT::i64;
+  return PtrVT == MVT::i64;
 }
 
 bool SITargetLowering::canTransformPtrArithOutOfBounds(const Function &F,
@@ -18866,31 +18858,6 @@ SITargetLowering::getTargetMMOFlags(const Instruction &I) const {
   if (I.getMetadata("amdgpu.last.use"))
     Flags |= MOLastUse;
   return Flags;
-}
-
-bool SITargetLowering::checkForPhysRegDependency(
-    SDNode *Def, SDNode *User, unsigned Op, const TargetRegisterInfo *TRI,
-    const TargetInstrInfo *TII, MCRegister &PhysReg, int &Cost) const {
-  if (User->getOpcode() != ISD::CopyToReg)
-    return false;
-  if (!Def->isMachineOpcode())
-    return false;
-  MachineSDNode *MDef = dyn_cast<MachineSDNode>(Def);
-  if (!MDef)
-    return false;
-
-  unsigned ResNo = User->getOperand(Op).getResNo();
-  if (User->getOperand(Op)->getValueType(ResNo) != MVT::i1)
-    return false;
-  const MCInstrDesc &II = TII->get(MDef->getMachineOpcode());
-  if (II.isCompare() && II.hasImplicitDefOfPhysReg(AMDGPU::SCC)) {
-    PhysReg = AMDGPU::SCC;
-    const TargetRegisterClass *RC =
-        TRI->getMinimalPhysRegClass(PhysReg, Def->getSimpleValueType(ResNo));
-    Cost = RC->getCopyCost();
-    return true;
-  }
-  return false;
 }
 
 void SITargetLowering::emitExpandAtomicAddrSpacePredicate(

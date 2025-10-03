@@ -13783,10 +13783,12 @@ static SDValue lowerV4I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     // so prevents folding a load into this instruction or making a copy.
     const int UnpackLoMask[] = {0, 0, 1, 1};
     const int UnpackHiMask[] = {2, 2, 3, 3};
-    if (isShuffleEquivalent(Mask, {0, 0, 1, 1}, V1, V2))
-      Mask = UnpackLoMask;
-    else if (isShuffleEquivalent(Mask, {2, 2, 3, 3}, V1, V2))
-      Mask = UnpackHiMask;
+    if (!isSingleElementRepeatedMask(Mask)) {
+      if (isShuffleEquivalent(Mask, {0, 0, 1, 1}, V1, V2))
+        Mask = UnpackLoMask;
+      else if (isShuffleEquivalent(Mask, {2, 2, 3, 3}, V1, V2))
+        Mask = UnpackHiMask;
+    }
 
     return DAG.getNode(X86ISD::PSHUFD, DL, MVT::v4i32, V1,
                        getV4X86ShuffleImm8ForMask(Mask, DL, DAG));
@@ -45457,7 +45459,8 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
                                   const SDLoc &DL,
                                   const X86Subtarget &Subtarget) {
   EVT SrcVT = Src.getValueType();
-  if (!SrcVT.isSimple() || SrcVT.getScalarType() != MVT::i1)
+  if (Subtarget.useSoftFloat() || !SrcVT.isSimple() ||
+      SrcVT.getScalarType() != MVT::i1)
     return SDValue();
 
   // Recognize the IR pattern for the movmsk intrinsic under SSE1 before type
@@ -52388,16 +52391,41 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
     // Do not flip "e > c", where "c" is a constant, because Cmp instruction
     // cannot take an immediate as its first operand.
     //
-    if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.getNode()->hasOneUse() &&
-        EFLAGS.getValueType().isInteger() &&
-        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
-      SDValue NewSub =
-          DAG.getNode(X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
-                      EFLAGS.getOperand(1), EFLAGS.getOperand(0));
-      SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+    // If EFLAGS is from a CMP that compares the same operands as the earlier
+    // SUB producing X (i.e. CMP X, Y), we can directly use the carry flag with
+    // SBB/ADC without creating a flipped SUB.
+    if (EFLAGS.getOpcode() == X86ISD::CMP &&
+        EFLAGS.getValueType().isInteger() && X == EFLAGS.getOperand(0)) {
       return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
                          DAG.getVTList(VT, MVT::i32), X,
-                         DAG.getConstant(0, DL, VT), NewEFLAGS);
+                         DAG.getConstant(0, DL, VT), EFLAGS);
+    }
+
+    if (EFLAGS.getOpcode() == X86ISD::SUB &&
+        EFLAGS.getValueType().isInteger() &&
+        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
+      // Only create NewSub if we know one of the folds will succeed to avoid
+      // introducing a temporary node that may persist and affect one-use checks
+      // below.
+      if (EFLAGS.getNode()->hasOneUse()) {
+        SDValue NewSub = DAG.getNode(
+            X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+            EFLAGS.getOperand(1), EFLAGS.getOperand(0));
+        SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+        return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
+                           DAG.getVTList(VT, MVT::i32), X,
+                           DAG.getConstant(0, DL, VT), NewEFLAGS);
+      }
+
+      if (IsSub && X == EFLAGS.getValue(0)) {
+        SDValue NewSub = DAG.getNode(
+            X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+            EFLAGS.getOperand(1), EFLAGS.getOperand(0));
+        SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+        return DAG.getNode(X86ISD::SBB, DL, DAG.getVTList(VT, MVT::i32),
+                           EFLAGS.getOperand(0), EFLAGS.getOperand(1),
+                           NewEFLAGS);
+      }
     }
   }
 
@@ -58108,6 +58136,14 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   // Try to synthesize horizontal adds from adds of shuffles.
   if (SDValue V = combineToHorizontalAddSub(N, DAG, Subtarget))
     return V;
+
+  // Prefer VSHLI to reduce uses, X86FixupInstTunings may revert this depending
+  // on the scheduler model. Limit multiple users to AVX+ targets to prevent
+  // introducing extra register moves.
+  if (Op0 == Op1 && supportedVectorShiftWithImm(VT, Subtarget, ISD::SHL))
+    if (Subtarget.hasAVX() || N->isOnlyUserOf(Op0.getNode()))
+      return getTargetVShiftByConstNode(X86ISD::VSHLI, DL, VT.getSimpleVT(),
+                                        Op0, 1, DAG);
 
   // Canonicalize hidden LEA pattern:
   // Fold (add (sub (shl x, c), y), z) -> (sub (add (shl x, c), z), y)
