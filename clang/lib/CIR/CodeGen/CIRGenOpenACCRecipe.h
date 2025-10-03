@@ -216,15 +216,6 @@ public:
                        origType, /*emitInitExpr=*/false);
       createFirstprivateRecipeCopy(loc, locEnd, mainOp, varRecipe, temporary,
                                    recipe.getCopyRegion(), numBounds);
-
-      // TODO: CREATE TEH COPY REGION INIT
-      // TODO: OpenACC: we probably want this to call createInitRecipe as well,
-      // but do so in a way that omits the 'initialization', so that we can do
-      // it separately, since it belongs in the 'copy' region. It also might
-      // need a way of getting the tempDeclEmission out of it for that purpose.
-      // createRecipeInitCopy(loc, locEnd, varRef->getSourceRange(), mainOp,
-      //                     recipe, varRecipe, temporary);
-      // void OpenACCRecipeBuilderBase::createFirstprivateRecipeCopy(
     }
 
     if (origType.isDestructedType())
