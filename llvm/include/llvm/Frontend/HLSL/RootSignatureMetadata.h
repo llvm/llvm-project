@@ -28,7 +28,7 @@ class Metadata;
 namespace hlsl {
 namespace rootsig {
 
-enum class ErrorKind {
+enum class RSErrorKind {
   Validation,
   AppendAfterUnboundedRange,
   ShaderRegisterOverflow,
@@ -41,124 +41,97 @@ enum class ErrorKind {
 
 template <typename T>
 void formatImpl(raw_string_ostream &Buff,
-                std::integral_constant<ErrorKind, ErrorKind::Validation>,
-                StringRef ParamName, T Value) {
-  Buff << "Invalid value for: " << ParamName << ":" << Value;
-}
+                std::integral_constant<RSErrorKind, RSErrorKind::Validation>,
+                StringRef ParamName, T Value);
 
 void formatImpl(
     raw_string_ostream &Buff,
-    std::integral_constant<ErrorKind, ErrorKind::AppendAfterUnboundedRange>,
-    dxil::ResourceClass Type, uint32_t Register, uint32_t Space) {
-  Buff << "Range " << getResourceClassName(Type) << "(register=" << Register
-       << ", space=" << Space << ") "
-       << "cannot be appended after an unbounded range ";
-}
+    std::integral_constant<RSErrorKind, RSErrorKind::AppendAfterUnboundedRange>,
+    dxil::ResourceClass Type, uint32_t Register, uint32_t Space);
 
 void formatImpl(
     raw_string_ostream &Buff,
-    std::integral_constant<ErrorKind, ErrorKind::ShaderRegisterOverflow>,
-    dxil::ResourceClass Type, uint32_t Register, uint32_t Space) {
-  Buff << "Overflow for shader register range: " << getResourceClassName(Type)
-       << "(register=" << Register << ", space=" << Space << ").";
-}
+    std::integral_constant<RSErrorKind, RSErrorKind::ShaderRegisterOverflow>,
+    dxil::ResourceClass Type, uint32_t Register, uint32_t Space);
+
+void formatImpl(
+    raw_string_ostream &Buff,
+    std::integral_constant<RSErrorKind, RSErrorKind::OffsetOverflow>,
+    dxil::ResourceClass Type, uint32_t Register, uint32_t Space);
 
 void formatImpl(raw_string_ostream &Buff,
-                std::integral_constant<ErrorKind, ErrorKind::OffsetOverflow>,
-                dxil::ResourceClass Type, uint32_t Register, uint32_t Space) {
-  Buff << "Offset overflow for descriptor range: " << getResourceClassName(Type)
-       << "(register=" << Register << ", space=" << Space << ").";
-}
-
-void formatImpl(raw_string_ostream &Buff,
-                std::integral_constant<ErrorKind, ErrorKind::SamplerMixin>,
-                dxil::ResourceClass Type, uint32_t Location) {
-  Buff << "Samplers cannot be mixed with other "
-       << "resource types in a descriptor table, " << getResourceClassName(Type)
-       << "(location=" << Location << ")";
-}
+                std::integral_constant<RSErrorKind, RSErrorKind::SamplerMixin>,
+                dxil::ResourceClass Type, uint32_t Location);
 
 void formatImpl(
     raw_string_ostream &Buff,
-    std::integral_constant<ErrorKind, ErrorKind::InvalidMetadataFormat>,
-    StringRef ElementName) {
-  Buff << "Invalid format for  " << ElementName;
-}
+    std::integral_constant<RSErrorKind, RSErrorKind::InvalidMetadataFormat>,
+    StringRef ElementName);
 
 void formatImpl(
     raw_string_ostream &Buff,
-    std::integral_constant<ErrorKind, ErrorKind::InvalidMetadataValue>,
-    StringRef ParamName) {
-  Buff << "Invalid value for " << ParamName;
-}
+    std::integral_constant<RSErrorKind, RSErrorKind::InvalidMetadataValue>,
+    StringRef ParamName);
 
-void formatImpl(raw_string_ostream &Buff,
-                std::integral_constant<ErrorKind, ErrorKind::GenericMetadata>,
-                StringRef Message, MDNode *MD) {
-  Buff << Message;
-  if (MD) {
-    Buff << "\n";
-    MD->printTree(Buff);
-  }
-}
+void formatImpl(
+    raw_string_ostream &Buff,
+    std::integral_constant<RSErrorKind, RSErrorKind::GenericMetadata>,
+    StringRef Message, MDNode *MD);
 
 template <typename... ArgsTs>
-static void formatErrMsg(raw_string_ostream &Buff, ErrorKind Kind,
-                         ArgsTs... Args) {
+inline void formatImpl(raw_string_ostream &Buff, RSErrorKind Kind,
+                       ArgsTs... Args) {
   switch (Kind) {
-  case ErrorKind::Validation:
-    formatImpl(Buff, std::integral_constant<ErrorKind, ErrorKind::Validation>{},
-               Args...);
-    break;
-  case ErrorKind::AppendAfterUnboundedRange:
-    formatImpl(Buff,
-               std::integral_constant<ErrorKind,
-                                      ErrorKind::AppendAfterUnboundedRange>{},
-               Args...);
-    break;
-  case ErrorKind::ShaderRegisterOverflow:
-    formatImpl(
-        Buff,
-        std::integral_constant<ErrorKind, ErrorKind::ShaderRegisterOverflow>{},
+  case RSErrorKind::Validation:
+    return formatImpl(
+        Buff, std::integral_constant<RSErrorKind, RSErrorKind::Validation>(),
         Args...);
-    break;
-  case ErrorKind::OffsetOverflow:
-    formatImpl(Buff,
-               std::integral_constant<ErrorKind, ErrorKind::OffsetOverflow>{},
-               Args...);
-    break;
-  case ErrorKind::SamplerMixin:
-    formatImpl(Buff,
-               std::integral_constant<ErrorKind, ErrorKind::SamplerMixin>{},
-               Args...);
-    break;
-  case ErrorKind::GenericMetadata:
-    formatImpl(Buff,
-               std::integral_constant<ErrorKind, ErrorKind::GenericMetadata>{},
-               Args...);
-    break;
-
-  case ErrorKind::InvalidMetadataFormat:
-    formatImpl(
+  case RSErrorKind::AppendAfterUnboundedRange:
+    return formatImpl(
         Buff,
-        std::integral_constant<ErrorKind, ErrorKind::InvalidMetadataFormat>{},
+        std::integral_constant<RSErrorKind,
+                               RSErrorKind::AppendAfterUnboundedRange>(),
         Args...);
-    break;
-
-  case ErrorKind::InvalidMetadataValue:
-    formatImpl(
+  case RSErrorKind::ShaderRegisterOverflow:
+    return formatImpl(
         Buff,
-        std::integral_constant<ErrorKind, ErrorKind::InvalidMetadataValue>{},
+        std::integral_constant<RSErrorKind,
+                               RSErrorKind::ShaderRegisterOverflow>(),
         Args...);
-    break;
+  case RSErrorKind::OffsetOverflow:
+    return formatImpl(
+        Buff,
+        std::integral_constant<RSErrorKind, RSErrorKind::OffsetOverflow>(),
+        Args...);
+  case RSErrorKind::SamplerMixin:
+    return formatImpl(
+        Buff, std::integral_constant<RSErrorKind, RSErrorKind::SamplerMixin>(),
+        Args...);
+  case RSErrorKind::InvalidMetadataFormat:
+    return formatImpl(
+        Buff,
+        std::integral_constant<RSErrorKind,
+                               RSErrorKind::InvalidMetadataFormat>(),
+        Args...);
+  case RSErrorKind::InvalidMetadataValue:
+    return formatImpl(
+        Buff,
+        std::integral_constant<RSErrorKind,
+                               RSErrorKind::InvalidMetadataValue>(),
+        Args...);
+  case RSErrorKind::GenericMetadata:
+    return formatImpl(
+        Buff,
+        std::integral_constant<RSErrorKind, RSErrorKind::GenericMetadata>(),
+        Args...);
   }
 }
 
 template <typename... ArgsTs>
-static llvm::Error createRSError(ErrorKind Kind, ArgsTs... Args) {
+static llvm::Error createRSError(RSErrorKind Kind, ArgsTs... Args) {
   std::string Msg;
   raw_string_ostream Buff(Msg);
-  formatErrMsg(Buff, Kind, Args...);
+  formatImpl(Buff, Kind, Args...);
   return createStringError(std::move(Buff.str()), inconvertibleErrorCode());
 }
 
