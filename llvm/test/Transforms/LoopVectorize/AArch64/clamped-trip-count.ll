@@ -33,20 +33,7 @@ define void @clamped_tc_8(ptr nocapture %dst, i32 %n, i64 %val) vscale_range(1,1
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i64> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[P_OUT_TAIL_09:%.*]] = phi ptr [ [[DST]], [[SCALAR_PH]] ], [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP19:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[SHR3:%.*]] = lshr i64 [[VAL]], [[TMP19]]
-; CHECK-NEXT:    [[CONV4:%.*]] = trunc i64 [[SHR3]] to i8
-; CHECK-NEXT:    store i8 [[CONV4]], ptr [[P_OUT_TAIL_09]], align 1
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[P_OUT_TAIL_09]], i64 1
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 8
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ;
@@ -108,20 +95,7 @@ define void @clamped_tc_max_8(ptr nocapture %dst, i32 %n, i64 %val) vscale_range
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i64> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[P_OUT_TAIL_09:%.*]] = phi ptr [ [[DST]], [[SCALAR_PH]] ], [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP19:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[SHR3:%.*]] = lshr i64 [[VAL]], [[TMP19]]
-; CHECK-NEXT:    [[CONV4:%.*]] = trunc i64 [[SHR3]] to i8
-; CHECK-NEXT:    store i8 [[CONV4]], ptr [[P_OUT_TAIL_09]], align 1
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[P_OUT_TAIL_09]], i64 1
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:

@@ -24,6 +24,7 @@
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -1386,6 +1387,8 @@ private:
 // Create scopes for OpenACC constructs
 class AccVisitor : public virtual DeclarationVisitor {
 public:
+  explicit AccVisitor(SemanticsContext &context) : context_{context} {}
+
   void AddAccSourceRange(const parser::CharBlock &);
 
   static bool NeedsScope(const parser::OpenACCBlockConstruct &);
@@ -1394,6 +1397,7 @@ public:
   void Post(const parser::OpenACCBlockConstruct &);
   bool Pre(const parser::OpenACCCombinedConstruct &);
   void Post(const parser::OpenACCCombinedConstruct &);
+  bool Pre(const parser::AccClause::UseDevice &x);
   bool Pre(const parser::AccBeginBlockDirective &x) {
     AddAccSourceRange(x.source);
     return true;
@@ -1429,6 +1433,11 @@ public:
   void Post(const parser::AccBeginLoopDirective &x) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+
+  void CopySymbolWithDevice(const parser::Name *name);
+
+private:
+  SemanticsContext &context_;
 };
 
 bool AccVisitor::NeedsScope(const parser::OpenACCBlockConstruct &x) {
@@ -1456,6 +1465,60 @@ bool AccVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
     PushScope(Scope::Kind::OpenACCConstruct, nullptr);
   }
   return true;
+}
+
+void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
+  // When CUDA Fortran is enabled together with OpenACC, new
+  // symbols are created for the one appearing in the use_device
+  // clause. These new symbols have the CUDA Fortran device
+  // attribute.
+  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
+    name->symbol = currScope().CopySymbol(*name->symbol);
+    if (auto *object{name->symbol->detailsIf<ObjectEntityDetails>()}) {
+      object->set_cudaDataAttr(common::CUDADataAttr::Device);
+    }
+  }
+}
+
+bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
+  for (const auto &accObject : x.v.v) {
+    common::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              if (const auto *name{
+                      semantics::getDesignatorNameIfDataRef(designator)}) {
+                Symbol *prev{currScope().FindSymbol(name->source)};
+                if (prev != name->symbol) {
+                  name->symbol = prev;
+                }
+                CopySymbolWithDevice(name);
+              } else {
+                if (const auto *dataRef{
+                        std::get_if<parser::DataRef>(&designator.u)}) {
+                  using ElementIndirection =
+                      common::Indirection<parser::ArrayElement>;
+                  if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
+                    const parser::ArrayElement &arrayElement{ind->value()};
+                    Walk(arrayElement.subscripts);
+                    const parser::DataRef &base{arrayElement.base};
+                    if (auto *name{std::get_if<parser::Name>(&base.u)}) {
+                      Symbol *prev{currScope().FindSymbol(name->source)};
+                      if (prev != name->symbol) {
+                        name->symbol = prev;
+                      }
+                      CopySymbolWithDevice(name);
+                    }
+                  }
+                }
+              }
+            },
+            [&](const parser::Name &name) {
+              // TODO: common block in use_device?
+            },
+        },
+        accObject.u);
+  }
+  return false;
 }
 
 void AccVisitor::Post(const parser::OpenACCBlockConstruct &x) {
@@ -1572,51 +1635,41 @@ public:
   }
   void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
   bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
-    const auto &spec{std::get<parser::OmpDeclareTargetSpecifier>(x.t)};
-    auto populateDeclareTargetNames{[this](const parser::OmpObjectList
-                                            &objectList) {
-      for (const auto &ompObject : objectList.v) {
-        common::visit(
-            common::visitors{
-                [&](const parser::Designator &designator) {
-                  if (const auto *name{
-                          semantics::getDesignatorNameIfDataRef(designator)}) {
-                    specPartState_.declareTargetNames.insert(name->source);
-                  }
-                },
-                [&](const parser::Name &name) {
-                  specPartState_.declareTargetNames.insert(name.source);
-                },
-                [&](const parser::OmpObject::Invalid &invalid) {
-                  switch (invalid.v) {
-                    SWITCH_COVERS_ALL_CASES
-                  case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
-                    context().Say(invalid.source,
-                        "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
-                    break;
-                  }
-                },
-            },
-            ompObject.u);
-      }
+    auto addObjectName{[&](const parser::OmpObject &object) {
+      common::visit(
+          common::visitors{
+              [&](const parser::Designator &designator) {
+                if (const auto *name{
+                        semantics::getDesignatorNameIfDataRef(designator)}) {
+                  specPartState_.declareTargetNames.insert(name->source);
+                }
+              },
+              [&](const parser::Name &name) {
+                specPartState_.declareTargetNames.insert(name.source);
+              },
+              [&](const parser::OmpObject::Invalid &invalid) {
+                switch (invalid.v) {
+                  SWITCH_COVERS_ALL_CASES
+                case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
+                  context().Say(invalid.source,
+                      "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
+                  break;
+                }
+              },
+          },
+          object.u);
     }};
 
-    if (const auto *objectList{parser::Unwrap<parser::OmpObjectList>(spec.u)}) {
-      populateDeclareTargetNames(*objectList);
-    } else if (const auto *clauseList{
-                   parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
-      for (const auto &clause : clauseList->v) {
-        if (const auto *toClause{
-                std::get_if<parser::OmpClause::To>(&clause.u)}) {
-          populateDeclareTargetNames(
-              std::get<parser::OmpObjectList>(toClause->v.t));
-        } else if (const auto *linkClause{
-                       std::get_if<parser::OmpClause::Link>(&clause.u)}) {
-          populateDeclareTargetNames(linkClause->v);
-        } else if (const auto *enterClause{
-                       std::get_if<parser::OmpClause::Enter>(&clause.u)}) {
-          populateDeclareTargetNames(
-              std::get<parser::OmpObjectList>(enterClause->v.t));
+    for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+      if (auto *object{omp::GetArgumentObject(arg)}) {
+        addObjectName(*object);
+      }
+    }
+
+    for (const parser::OmpClause &clause : x.v.Clauses().v) {
+      if (auto *objects{parser::omp::GetOmpObjectList(clause)}) {
+        for (const parser::OmpObject &object : objects->v) {
+          addObjectName(object);
         }
       }
     }
@@ -1627,12 +1680,14 @@ public:
   void Post(const parser::OpenMPDeclareTargetConstruct &) {
     SkipImplicitTyping(false);
   }
-  bool Pre(const parser::OpenMPDeclarativeAllocate &) {
+  bool Pre(const parser::OpenMPDeclarativeAllocate &x) {
+    AddOmpSourceRange(x.source);
     SkipImplicitTyping(true);
     return true;
   }
   void Post(const parser::OpenMPDeclarativeAllocate &) {
     SkipImplicitTyping(false);
+    messageHandler().set_currStmtSource(std::nullopt);
   }
   bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
     AddOmpSourceRange(x.source);
@@ -2045,7 +2100,8 @@ public:
 
   ResolveNamesVisitor(
       SemanticsContext &context, ImplicitRulesMap &rules, Scope &top)
-      : BaseVisitor{context, *this, rules}, topScope_{top} {
+      : BaseVisitor{context, *this, rules}, AccVisitor(context),
+        topScope_{top} {
     PushScope(top);
   }
 
@@ -5733,7 +5789,8 @@ void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
       }
     }
     if (!symbol.test(Symbol::Flag::Function) &&
-        !symbol.test(Symbol::Flag::Subroutine)) {
+        !symbol.test(Symbol::Flag::Subroutine) &&
+        !context().intrinsics().IsDualIntrinsic(name.source.ToString())) {
       if (context().intrinsics().IsIntrinsicFunction(name.source.ToString())) {
         symbol.set(Symbol::Flag::Function);
       } else if (context().intrinsics().IsIntrinsicSubroutine(
