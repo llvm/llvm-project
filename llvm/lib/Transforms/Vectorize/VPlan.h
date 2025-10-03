@@ -1064,6 +1064,8 @@ public:
     ResumeForEpilogue,
     /// Returns the value for vscale.
     VScale,
+    /// mulh
+    UMulh,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
