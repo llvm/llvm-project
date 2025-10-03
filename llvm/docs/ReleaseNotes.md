@@ -146,6 +146,11 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
+* Added the following helper functions to configure thread local storage
+  settings for `LLVMCreateTargetMachineWithOptions`:
+    * `LLVMTargetMachineOptionsSetEmulatedTLS`
+    * `LLVMTargetMachineOptionsSetEnableTLSDESC`
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
