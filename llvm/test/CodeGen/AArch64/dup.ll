@@ -1469,9 +1469,8 @@ define <2 x half> @loaddup_str_v2half(ptr %p) {
 ; CHECK-GI-LABEL: loaddup_str_v2half:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr h0, [x0]
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    strh wzr, [x0]
 ; CHECK-GI-NEXT:    dup v0.4h, v0.h[0]
-; CHECK-GI-NEXT:    str h1, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load half, ptr %p
@@ -1527,9 +1526,8 @@ define <3 x half> @loaddup_str_v3half(ptr %p) {
 ; CHECK-GI-LABEL: loaddup_str_v3half:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr h0, [x0]
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    strh wzr, [x0]
 ; CHECK-GI-NEXT:    dup v0.4h, v0.h[0]
-; CHECK-GI-NEXT:    str h1, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load half, ptr %p
@@ -1585,9 +1583,8 @@ define <4 x half> @loaddup_str_v4half(ptr %p) {
 ; CHECK-GI-LABEL: loaddup_str_v4half:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr h0, [x0]
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    strh wzr, [x0]
 ; CHECK-GI-NEXT:    dup v0.4h, v0.h[0]
-; CHECK-GI-NEXT:    str h1, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load half, ptr %p
@@ -1642,9 +1639,8 @@ define <8 x half> @loaddup_str_v8half(ptr %p) {
 ; CHECK-GI-LABEL: loaddup_str_v8half:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr h0, [x0]
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    strh wzr, [x0]
 ; CHECK-GI-NEXT:    dup v0.8h, v0.h[0]
-; CHECK-GI-NEXT:    str h1, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load half, ptr %p
@@ -1717,10 +1713,9 @@ define <16 x half> @loaddup_str_v16half(ptr %p) {
 ; CHECK-GI-LABEL: loaddup_str_v16half:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr h1, [x0]
-; CHECK-GI-NEXT:    movi d2, #0000000000000000
+; CHECK-GI-NEXT:    strh wzr, [x0]
 ; CHECK-GI-NEXT:    dup v0.8h, v1.h[0]
 ; CHECK-GI-NEXT:    dup v1.8h, v1.h[0]
-; CHECK-GI-NEXT:    str h2, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load half, ptr %p
@@ -1776,9 +1771,8 @@ define <2 x bfloat> @loaddup_str_v2bfloat(ptr %p) {
 ; CHECK-GI-LABEL: loaddup_str_v2bfloat:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr h0, [x0]
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    strh wzr, [x0]
 ; CHECK-GI-NEXT:    dup v0.4h, v0.h[0]
-; CHECK-GI-NEXT:    str h1, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load bfloat, ptr %p
@@ -1834,9 +1828,8 @@ define <3 x bfloat> @loaddup_str_v3bfloat(ptr %p) {
 ; CHECK-GI-LABEL: loaddup_str_v3bfloat:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr h0, [x0]
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    strh wzr, [x0]
 ; CHECK-GI-NEXT:    dup v0.4h, v0.h[0]
-; CHECK-GI-NEXT:    str h1, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load bfloat, ptr %p
@@ -1892,9 +1885,8 @@ define <4 x bfloat> @loaddup_str_v4bfloat(ptr %p) {
 ; CHECK-GI-LABEL: loaddup_str_v4bfloat:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr h0, [x0]
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    strh wzr, [x0]
 ; CHECK-GI-NEXT:    dup v0.4h, v0.h[0]
-; CHECK-GI-NEXT:    str h1, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load bfloat, ptr %p
@@ -1949,9 +1941,8 @@ define <8 x bfloat> @loaddup_str_v8bfloat(ptr %p) {
 ; CHECK-GI-LABEL: loaddup_str_v8bfloat:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr h0, [x0]
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    strh wzr, [x0]
 ; CHECK-GI-NEXT:    dup v0.8h, v0.h[0]
-; CHECK-GI-NEXT:    str h1, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load bfloat, ptr %p
@@ -2024,10 +2015,9 @@ define <16 x bfloat> @loaddup_str_v16bfloat(ptr %p) {
 ; CHECK-GI-LABEL: loaddup_str_v16bfloat:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr h1, [x0]
-; CHECK-GI-NEXT:    movi d2, #0000000000000000
+; CHECK-GI-NEXT:    strh wzr, [x0]
 ; CHECK-GI-NEXT:    dup v0.8h, v1.h[0]
 ; CHECK-GI-NEXT:    dup v1.8h, v1.h[0]
-; CHECK-GI-NEXT:    str h2, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load bfloat, ptr %p

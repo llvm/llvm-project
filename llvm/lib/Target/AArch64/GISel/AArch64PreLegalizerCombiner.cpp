@@ -50,7 +50,7 @@ bool matchFConstantToConstant(MachineInstr &MI, MachineRegisterInfo &MRI) {
   assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
   Register DstReg = MI.getOperand(0).getReg();
   const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
-  if (DstSize != 32 && DstSize != 64)
+  if (DstSize != 16 && DstSize != 32 && DstSize != 64)
     return false;
 
   // When we're storing a value, it doesn't matter what register bank it's on.
