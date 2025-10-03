@@ -20,9 +20,9 @@
 namespace orc_rt {
 namespace detail {
 
-template <typename... SPSArgTs> struct WFSPSSerializer {
+template <typename... SPSArgTs> struct WFSPSHelper {
   template <typename... ArgTs>
-  std::optional<WrapperFunctionBuffer> operator()(const ArgTs &...Args) {
+  std::optional<WrapperFunctionBuffer> serialize(const ArgTs &...Args) {
     auto R =
         WrapperFunctionBuffer::allocate(SPSArgList<SPSArgTs...>::size(Args...));
     SPSOutputBuffer OB(R.data(), R.size());
@@ -30,15 +30,17 @@ template <typename... SPSArgTs> struct WFSPSSerializer {
       return std::nullopt;
     return std::move(R);
   }
-};
 
-template <typename... SPSArgTs> struct WFSPSDeserializer {
-  template <typename... ArgTs>
-  bool operator()(WrapperFunctionBuffer &ArgBytes, ArgTs &...Args) {
+  template <typename ArgTuple>
+  std::optional<ArgTuple> deserialize(WrapperFunctionBuffer ArgBytes) {
     assert(!ArgBytes.getOutOfBandError() &&
            "Should not attempt to deserialize out-of-band error");
     SPSInputBuffer IB(ArgBytes.data(), ArgBytes.size());
-    return SPSArgList<SPSArgTs...>::deserialize(IB, Args...);
+    ArgTuple Args;
+    if (!SPSSerializationTraits<SPSTuple<SPSArgTs...>, ArgTuple>::deserialize(
+            IB, Args))
+      return std::nullopt;
+    return Args;
   }
 };
 
@@ -48,19 +50,8 @@ template <typename SPSSig> struct WrapperFunctionSPSSerializer;
 
 template <typename SPSRetT, typename... SPSArgTs>
 struct WrapperFunctionSPSSerializer<SPSRetT(SPSArgTs...)> {
-  static detail::WFSPSSerializer<SPSArgTs...> argumentSerializer() noexcept {
-    return {};
-  }
-  static detail::WFSPSDeserializer<SPSArgTs...>
-  argumentDeserializer() noexcept {
-    return {};
-  }
-  static detail::WFSPSSerializer<SPSRetT> resultSerializer() noexcept {
-    return {};
-  }
-  static detail::WFSPSDeserializer<SPSRetT> resultDeserializer() noexcept {
-    return {};
-  }
+  static detail::WFSPSHelper<SPSArgTs...> arguments() noexcept { return {}; }
+  static detail::WFSPSHelper<SPSRetT> result() noexcept { return {}; }
 };
 
 /// Provides call and handle utilities to simplify writing and invocation of
