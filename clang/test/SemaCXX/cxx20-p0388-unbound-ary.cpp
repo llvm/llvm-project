@@ -170,4 +170,28 @@ void g3() {
 
 } // namespace Eight
 
-#endif
+namespace Nine {
+
+template<auto, class>
+constexpr bool is_of_type = false;
+
+template<class T, T expr>
+constexpr bool is_of_type<expr, T> = true;
+
+using T1 = int (*)[1];
+using T2 = int (*)[];
+static_assert(is_of_type<0 ? T1() : T2(), T2>);
+
+using U1 = int* (**)[1];
+using U2 = int* (**)[];
+using U3 = int* (* const*)[];
+static_assert(is_of_type<0 ? U1() : U2(), U3>);
+
+using V1 = int* (*(**)[])[1];
+using V2 = int* (*(**)[1])[];
+using V3 = int* (* const(* const*)[])[];
+static_assert(is_of_type<0 ? V1() : V2(), V3>);
+
+} // namespace Nine
+
+#endif // __cplusplus >= 202002
