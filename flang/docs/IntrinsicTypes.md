@@ -34,7 +34,7 @@ f18 supports the following type and kind combinations:
 | INTEGER(KIND=4) | 32-bit two's-complement integer |
 | INTEGER(KIND=8) | 64-bit two's-complement integer |
 | INTEGER(KIND=16) | 128-bit two's-complement integer |
-| REAL(KIND=2) | 16-bit IEEE 754 binary16 (5e11m) |  
+| REAL(KIND=2) | 16-bit IEEE 754 binary16 (5e11m) |
 | REAL(KIND=3) | 16-bit upper half of 32-bit IEEE 754 binary32 (8e8m) |
 | REAL(KIND=4) | 32-bit IEEE 754 binary32 (8e24m) |
 | REAL(KIND=8) | 64-bit IEEE 754 binary64 (11e53m) |
@@ -43,13 +43,13 @@ f18 supports the following type and kind combinations:
 | COMPLEX(KIND=2) | Two 16-bit IEEE 754 binary16 |
 | COMPLEX(KIND=3) | Two 16-bit upper half of 32-bit IEEE 754 binary32 |
 | COMPLEX(KIND=4) | Two 32-bit IEEE 754 binary32 |
-| COMPLEX(KIND=8) | Two 64-bit IEEE 754 binary64 | 
+| COMPLEX(KIND=8) | Two 64-bit IEEE 754 binary64 |
 | COMPLEX(KIND=10) | Two 80-bit extended precisions values |
 | COMPLEX(KIND=16) | Two 128-bit IEEE 754 binary128 |
 | LOGICAL(KIND=1) | 8-bit integer |
-| LOGICAL(KIND=2) | 16-bit integer | 
+| LOGICAL(KIND=2) | 16-bit integer |
 | LOGICAL(KIND=4) | 32-bit integer |
-| LOGICAL(KIND=8) | 64-bit integer | 
+| LOGICAL(KIND=8) | 64-bit integer |
 
 * No [double-double](https://en.wikipedia.org/wiki/Quadruple-precision_floating-point_format)
 quad precision type is supported.
@@ -59,9 +59,9 @@ quad precision type is supported.
 
 f18 defaults to the following kinds for these types:
 
-* `INTEGER` 4  
-* `REAL` 4 
-* `COMPLEX` 4   
+* `INTEGER` 4
+* `REAL` 4
+* `COMPLEX` 4
 * `DOUBLE PRECISION` 8
 * `LOGICAL` 4
 
@@ -70,8 +70,8 @@ may be freely mixed. Module files encode the kind value for every entity.
 
 #### Modifying the default kind with default-real-8.  
 
-* `REAL` 8  
-* `DOUBLE PRECISION` 8   
+* `REAL` 8
+* `DOUBLE PRECISION` 8
 * `COMPLEX` 8
 
 #### Modifying the default kind with default-integer-8:  
