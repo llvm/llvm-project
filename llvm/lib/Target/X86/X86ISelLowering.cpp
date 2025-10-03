@@ -58135,6 +58135,14 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineToHorizontalAddSub(N, DAG, Subtarget))
     return V;
 
+  // Prefer VSHLI to reduce uses, X86FixupInstTunings may revert this depending
+  // on the scheduler model. Limit multiple users to AVX+ targets to prevent
+  // introducing extra register moves.
+  if (Op0 == Op1 && supportedVectorShiftWithImm(VT, Subtarget, ISD::SHL))
+    if (Subtarget.hasAVX() || N->isOnlyUserOf(Op0.getNode()))
+      return getTargetVShiftByConstNode(X86ISD::VSHLI, DL, VT.getSimpleVT(),
+                                        Op0, 1, DAG);
+
   // Canonicalize hidden LEA pattern:
   // Fold (add (sub (shl x, c), y), z) -> (sub (add (shl x, c), z), y)
   // iff c < 4

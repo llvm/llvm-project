@@ -602,10 +602,10 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X64-AVX2-NEXT:    vpunpckhbw {{.*#+}} xmm5 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; X64-AVX2-NEXT:    vpblendvb %xmm5, %xmm4, %xmm3, %xmm3
 ; X64-AVX2-NEXT:    vpsraw $2, %xmm3, %xmm4
-; X64-AVX2-NEXT:    vpaddw %xmm5, %xmm5, %xmm5
-; X64-AVX2-NEXT:    vpblendvb %xmm5, %xmm4, %xmm3, %xmm3
+; X64-AVX2-NEXT:    vpaddw %xmm5, %xmm5, %xmm6
+; X64-AVX2-NEXT:    vpblendvb %xmm6, %xmm4, %xmm3, %xmm3
 ; X64-AVX2-NEXT:    vpsraw $1, %xmm3, %xmm4
-; X64-AVX2-NEXT:    vpaddw %xmm5, %xmm5, %xmm5
+; X64-AVX2-NEXT:    vpsllw $2, %xmm5, %xmm5
 ; X64-AVX2-NEXT:    vpblendvb %xmm5, %xmm4, %xmm3, %xmm3
 ; X64-AVX2-NEXT:    vpsrlw $8, %xmm3, %xmm3
 ; X64-AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm4 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
@@ -613,10 +613,10 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X64-AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X64-AVX2-NEXT:    vpblendvb %xmm1, %xmm5, %xmm4, %xmm4
 ; X64-AVX2-NEXT:    vpsraw $2, %xmm4, %xmm5
-; X64-AVX2-NEXT:    vpaddw %xmm1, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vpblendvb %xmm1, %xmm5, %xmm4, %xmm4
+; X64-AVX2-NEXT:    vpaddw %xmm1, %xmm1, %xmm6
+; X64-AVX2-NEXT:    vpblendvb %xmm6, %xmm5, %xmm4, %xmm4
 ; X64-AVX2-NEXT:    vpsraw $1, %xmm4, %xmm5
-; X64-AVX2-NEXT:    vpaddw %xmm1, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpsllw $2, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpblendvb %xmm1, %xmm5, %xmm4, %xmm1
 ; X64-AVX2-NEXT:    vpsrlw $8, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpackuswb %xmm3, %xmm1, %xmm1

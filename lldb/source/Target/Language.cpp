@@ -111,9 +111,9 @@ Language *Language::FindPlugin(llvm::StringRef file_path) {
   ForEach([&result, file_path](Language *language) {
     if (language->IsSourceFile(file_path)) {
       result = language;
-      return false;
+      return IterationAction::Stop;
     }
-    return true;
+    return IterationAction::Continue;
   });
   return result;
 }
@@ -128,7 +128,8 @@ Language *Language::FindPlugin(LanguageType language,
   return result;
 }
 
-void Language::ForEach(std::function<bool(Language *)> callback) {
+void Language::ForEach(
+    llvm::function_ref<IterationAction(Language *)> callback) {
   // If we want to iterate over all languages, we first have to complete the
   // LanguagesMap.
   static llvm::once_flag g_initialize;
@@ -153,7 +154,7 @@ void Language::ForEach(std::function<bool(Language *)> callback) {
   }
 
   for (auto *lang : loaded_plugins) {
-    if (!callback(lang))
+    if (callback(lang) == IterationAction::Stop)
       break;
   }
 }
@@ -289,9 +290,9 @@ void Language::PrintAllLanguages(Stream &s, const char *prefix,
 }
 
 void Language::ForAllLanguages(
-    std::function<bool(lldb::LanguageType)> callback) {
+    llvm::function_ref<IterationAction(lldb::LanguageType)> callback) {
   for (uint32_t i = 1; i < num_languages; i++) {
-    if (!callback(language_names[i].type))
+    if (callback(language_names[i].type) == IterationAction::Stop)
       break;
   }
 }
@@ -416,7 +417,7 @@ std::set<lldb::LanguageType> Language::GetSupportedLanguages() {
   std::set<lldb::LanguageType> supported_languages;
   ForEach([&](Language *lang) {
     supported_languages.emplace(lang->GetLanguageType());
-    return true;
+    return IterationAction::Continue;
   });
   return supported_languages;
 }

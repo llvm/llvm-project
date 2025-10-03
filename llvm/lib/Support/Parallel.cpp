@@ -7,17 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Parallel.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/ExponentialBackoff.h"
-#include "llvm/Support/Jobserver.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Threading.h"
 
 #include <atomic>
 #include <future>
-#include <memory>
-#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -54,9 +49,6 @@ public:
 class ThreadPoolExecutor : public Executor {
 public:
   explicit ThreadPoolExecutor(ThreadPoolStrategy S) {
-    if (S.UseJobserver)
-      TheJobserver = JobserverClient::getInstance();
-
     ThreadCount = S.compute_thread_count();
     // Spawn all but one of the threads in another thread as spawning threads
     // can take a while.
@@ -76,10 +68,6 @@ public:
       work(S, 0);
     });
   }
-
-  // To make sure the thread pool executor can only be created with a parallel
-  // strategy.
-  ThreadPoolExecutor() = delete;
 
   void stop() {
     {
@@ -123,62 +111,15 @@ private:
   void work(ThreadPoolStrategy S, unsigned ThreadID) {
     threadIndex = ThreadID;
     S.apply_thread_strategy(ThreadID);
-    // Note on jobserver deadlock avoidance:
-    // GNU Make grants each invoked process one implicit job slot. Our
-    // JobserverClient models this by returning an implicit JobSlot on the
-    // first successful tryAcquire() in a process. This guarantees forward
-    // progress without requiring a dedicated "always-on" thread here.
-
-    static thread_local std::unique_ptr<ExponentialBackoff> Backoff;
-
     while (true) {
-      if (TheJobserver) {
-        // Jobserver-mode scheduling:
-        // - Acquire one job slot (with exponential backoff to avoid busy-wait).
-        // - While holding the slot, drain and run tasks from the local queue.
-        // - Release the slot when the queue is empty or when shutting down.
-        // Rationale: Holding a slot amortizes acquire/release overhead over
-        // multiple tasks and avoids requeue/yield churn, while still enforcing
-        // the jobserver’s global concurrency limit. With K available slots,
-        // up to K workers run tasks in parallel; within each worker tasks run
-        // sequentially until the local queue is empty.
-        ExponentialBackoff Backoff(std::chrono::hours(24));
-        JobSlot Slot;
-        do {
-          if (Stop)
-            return;
-          Slot = TheJobserver->tryAcquire();
-          if (Slot.isValid())
-            break;
-        } while (Backoff.waitForNextAttempt());
-
-        auto SlotReleaser = llvm::make_scope_exit(
-            [&] { TheJobserver->release(std::move(Slot)); });
-
-        while (true) {
-          std::function<void()> Task;
-          {
-            std::unique_lock<std::mutex> Lock(Mutex);
-            Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
-            if (Stop && WorkStack.empty())
-              return;
-            if (WorkStack.empty())
-              break;
-            Task = std::move(WorkStack.back());
-            WorkStack.pop_back();
-          }
-          Task();
-        }
-      } else {
-        std::unique_lock<std::mutex> Lock(Mutex);
-        Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
-        if (Stop)
-          break;
-        auto Task = std::move(WorkStack.back());
-        WorkStack.pop_back();
-        Lock.unlock();
-        Task();
-      }
+      std::unique_lock<std::mutex> Lock(Mutex);
+      Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
+      if (Stop)
+        break;
+      auto Task = std::move(WorkStack.back());
+      WorkStack.pop_back();
+      Lock.unlock();
+      Task();
     }
   }
 
@@ -189,20 +130,9 @@ private:
   std::promise<void> ThreadsCreated;
   std::vector<std::thread> Threads;
   unsigned ThreadCount;
-
-  JobserverClient *TheJobserver = nullptr;
 };
 
-// A global raw pointer to the executor. Lifetime is managed by the
-// objects created within createExecutor().
-static Executor *TheExec = nullptr;
-static std::once_flag Flag;
-
-// This function will be called exactly once to create the executor.
-// It contains the necessary platform-specific logic. Since functions
-// called by std::call_once cannot return value, we have to set the
-// executor as a global variable.
-void createExecutor() {
+Executor *Executor::getDefaultExecutor() {
 #ifdef _WIN32
   // The ManagedStatic enables the ThreadPoolExecutor to be stopped via
   // llvm_shutdown() which allows a "clean" fast exit, e.g. via _exit(). This
@@ -226,21 +156,15 @@ void createExecutor() {
                        ThreadPoolExecutor::Deleter>
       ManagedExec;
   static std::unique_ptr<ThreadPoolExecutor> Exec(&(*ManagedExec));
-  TheExec = Exec.get();
+  return Exec.get();
 #else
   // ManagedStatic is not desired on other platforms. When `Exec` is destroyed
   // by llvm_shutdown(), worker threads will clean up and invoke TLS
   // destructors. This can lead to race conditions if other threads attempt to
   // access TLS objects that have already been destroyed.
   static ThreadPoolExecutor Exec(strategy);
-  TheExec = &Exec;
+  return &Exec;
 #endif
-}
-
-Executor *Executor::getDefaultExecutor() {
-  // Use std::call_once to lazily and safely initialize the executor.
-  std::call_once(Flag, createExecutor);
-  return TheExec;
 }
 } // namespace
 } // namespace detail
