@@ -118,7 +118,10 @@ def testFuseOpCompact(target):
 @create_sequence
 def testFuseOpCompactForall(target):
     structured.FuseOp(
-        target, tile_sizes=[4, 8], apply_cleanup=True, use_forall=True,
+        target,
+        tile_sizes=[4, 8],
+        apply_cleanup=True,
+        use_forall=True,
     )
     # CHECK-LABEL: TEST: testFuseOpCompact
     # CHECK: transform.sequence
@@ -143,7 +146,7 @@ def testFuseOpParams(target):
     structured.FuseOp(
         target,
         tile_sizes=[constant_param(4), Attribute.parse("8")],
-        tile_interchange=[constant_param(0), Attribute.parse("1")]
+        tile_interchange=[constant_param(0), Attribute.parse("1")],
     )
     # CHECK-LABEL: TEST: testFuseOpParams
     # CHECK: transform.sequence
