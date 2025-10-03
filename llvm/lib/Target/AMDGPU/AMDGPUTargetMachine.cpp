@@ -24,6 +24,7 @@
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPULowerVGPREncoding.h"
+#include "AMDGPUMachineLevelInliner.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
@@ -521,6 +522,11 @@ static cl::opt<bool>
                            cl::desc("Enable AMDGPUAttributorPass"),
                            cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableAMDGPUMachineLevelInliner(
+    "amdgpu-enable-machine-level-inliner",
+    cl::desc("Enable AMDGPU machine level inliner"), cl::init(false),
+    cl::Hidden);
+
 static cl::opt<bool> NewRegBankSelect(
     "new-reg-bank-select",
     cl::desc("Run amdgpu-regbankselect and amdgpu-regbanklegalize instead of "
@@ -626,6 +632,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
   initializeAMDGPUPreloadKernelArgumentsLegacyPass(*PR);
   initializeAMDGPUUniformIntrinsicCombineLegacyPass(*PR);
+  initializeAMDGPUMachineLevelInlinerPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -1773,6 +1780,10 @@ void GCNPassConfig::addPostRegAlloc() {
 void GCNPassConfig::addPreSched2() {
   if (TM->getOptLevel() > CodeGenOptLevel::None)
     addPass(createSIShrinkInstructionsLegacyPass());
+
+  if (EnableAMDGPUMachineLevelInliner)
+    addPass(createAMDGPUMachineLevelInlinerPass());
+
   addPass(&SIPostRABundlerLegacyID);
 }
 

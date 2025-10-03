@@ -10,7 +10,7 @@
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O2 %s
 ; RUN: llc -O3 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O3 %s
-; RUN: llc -O3 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN: llc -O3 -mtriple=amdgcn--amdhsa -disable-verify -amdgpu-enable-machine-level-inliner -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=INLINER %s
 
 ; REQUIRES: asserts
@@ -1745,9 +1745,15 @@
 ; INLINER-NEXT:        Machine Copy Propagation Pass
 ; INLINER-NEXT:        Post-RA pseudo instruction expansion pass
 ; INLINER-NEXT:        SI Shrink Instructions
+; INLINER-NEXT:      AMDGPU Inlining Pass Manager
+; INLINER-NEXT:        AMDGPU Inlining Anchor
+; INLINER-NEXT:        AMDGPU Machine Level Inliner
 ; INLINER-NEXT:        SI post-RA bundler
 ; INLINER-NEXT:        MachineDominator Tree Construction
 ; INLINER-NEXT:        Machine Natural Loop Construction
+; INLINER-NEXT:        Dominator Tree Construction
+; INLINER-NEXT:        Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:        Function Alias Analysis Results
 ; INLINER-NEXT:        PostRA Machine Instruction Scheduler
 ; INLINER-NEXT:        Machine Block Frequency Analysis
 ; INLINER-NEXT:        MachinePostDominator Tree Construction
