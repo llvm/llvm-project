@@ -619,15 +619,15 @@ static void SetupLangOpts(CompilerInstance &compiler,
   if (language_for_note != language)
     diagnostic_manager.AddDiagnostic(
         llvm::formatv(
-            "Requested expression evaluation as '{0}' but fell back to '{1}'.",
-            lldb_private::Language::GetNameForLanguageType(language),
-            lldb_private::Language::GetNameForLanguageType(language_for_note))
+            "Requested expression evaluation in '{0}' is not supported. Used '{1}' instead.",
+            lldb_private::Language::GetDisplayNameForLanguageType(language),
+            lldb_private::Language::GetDisplayNameForLanguageType(language_for_note))
             .str(),
         lldb::Severity::eSeverityInfo, DiagnosticOrigin::eDiagnosticOriginLLDB);
   else
     diagnostic_manager.AddDiagnostic(
-        llvm::formatv("Requested expression evaluation as '{0}'",
-                      lldb_private::Language::GetNameForLanguageType(language))
+        llvm::formatv("Requested expression evaluation as '{0}'.",
+                      lldb_private::Language::GetDisplayNameForLanguageType(language))
             .str(),
         lldb::Severity::eSeverityInfo, DiagnosticOrigin::eDiagnosticOriginLLDB);
 
