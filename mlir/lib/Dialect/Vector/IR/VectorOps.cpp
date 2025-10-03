@@ -2499,7 +2499,6 @@ static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
   return DenseElementsAttr::get(destVecType, convertedElements);
 }
 
-
 OpFoldResult FromElementsOp::fold(FoldAdaptor adaptor) {
   if (auto res = foldFromElementsToElements(*this))
     return res;
@@ -6726,11 +6725,9 @@ public:
 
 /// Folds transpose(from_elements(...)) into a new from_elements with permuted
 /// operands matching the transposed shape.
-class FoldTransposeFromElements final
-    : public OpRewritePattern<TransposeOp> {
+class FoldTransposeFromElements final : public OpRewritePattern<TransposeOp> {
 public:
-
-using Base::Base;
+  using Base::Base;
   LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
     auto fromElementsOp =
@@ -6776,7 +6773,7 @@ using Base::Base;
     }
 
     rewriter.replaceOpWithNewOp<FromElementsOp>(transposeOp, dstTy,
-                                                        newElements);
+                                                newElements);
     return success();
   }
 };
