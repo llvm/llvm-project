@@ -253,11 +253,15 @@ llvm::Constant *
 CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
                                             llvm::PointerType *PT,
                                             QualType QT) const {
-  auto &Ctx = CGM.getContext();
-  if (PT->getAddressSpace() ==
-      Ctx.getTargetAddressSpace(LangAS::opencl_generic))
+  LangAS AS;
+  if (QT->getUnqualifiedDesugaredType()->isNullPtrType())
+    AS = LangAS::Default;
+  else
+    AS = QT->getPointeeType().getAddressSpace();
+  if (AS == LangAS::Default || AS == LangAS::opencl_generic)
     return llvm::ConstantPointerNull::get(PT);
 
+  auto &Ctx = CGM.getContext();
   auto NPT = llvm::PointerType::get(
       PT->getContext(), Ctx.getTargetAddressSpace(LangAS::opencl_generic));
   return llvm::ConstantExpr::getAddrSpaceCast(
