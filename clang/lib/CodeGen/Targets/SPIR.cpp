@@ -61,6 +61,9 @@ public:
       QualType SampledType, CodeGenModule &CGM) const;
   void
   setOCLKernelStubCallingConvention(const FunctionType *&FT) const override;
+  llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
+                                 llvm::PointerType *T,
+                                 QualType QT) const override;
 };
 class SPIRVTargetCodeGenInfo : public CommonSPIRTargetCodeGenInfo {
 public:
@@ -238,6 +241,27 @@ void CommonSPIRTargetCodeGenInfo::setOCLKernelStubCallingConvention(
     const FunctionType *&FT) const {
   FT = getABIInfo().getContext().adjustFunctionType(
       FT, FT->getExtInfo().withCallingConv(CC_SpirFunction));
+}
+
+// LLVM currently assumes a null pointer has the bit pattern 0, but some GPU
+// targets use a non-zero encoding for null in certain address spaces.
+// Because SPIR(-V) is a virtual target and the bit pattern of a non-generic
+// null is unspecified, materialize non-generic null via an addrspacecast from
+// the generic null.
+// This allows later lowering to substitute the target’s real sentinel value.
+llvm::Constant *
+CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
+                                            llvm::PointerType *PT,
+                                            QualType QT) const {
+  auto &Ctx = CGM.getContext();
+  if (PT->getAddressSpace() ==
+      Ctx.getTargetAddressSpace(LangAS::opencl_generic))
+    return llvm::ConstantPointerNull::get(PT);
+
+  auto NPT = llvm::PointerType::get(
+      PT->getContext(), Ctx.getTargetAddressSpace(LangAS::opencl_generic));
+  return llvm::ConstantExpr::getAddrSpaceCast(
+      llvm::ConstantPointerNull::get(NPT), PT);
 }
 
 LangAS
