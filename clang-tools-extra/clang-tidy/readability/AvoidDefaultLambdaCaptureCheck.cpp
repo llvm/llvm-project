@@ -13,28 +13,17 @@
 
 using namespace clang::tidy::readability;
 
-static std::optional<std::string>
-generateCaptureText(const clang::LambdaCapture &Capture) {
+static std::string generateCaptureText(const clang::LambdaCapture &Capture) {
   if (Capture.capturesThis()) {
     return Capture.getCaptureKind() == clang::LCK_StarThis ? "*this" : "this";
   }
 
-  if (Capture.capturesVariable()) {
-    std::string Result;
-    if (Capture.getCaptureKind() == clang::LCK_ByRef) {
-      Result += "&";
-    }
-    Result += Capture.getCapturedVar()->getName().str();
-    return Result;
+  std::string Result;
+  if (Capture.getCaptureKind() == clang::LCK_ByRef) {
+    Result += "&";
   }
-
-  if (Capture.capturesVLAType()) {
-    // VLA captures are rare and complex - for now we skip them
-    // A full implementation would need to handle the VLA type properly
-    return std::nullopt;
-  }
-
-  return std::nullopt;
+  Result += Capture.getCapturedVar()->getName().str();
+  return Result;
 }
 
 void AvoidDefaultLambdaCaptureCheck::registerMatchers(
@@ -59,24 +48,16 @@ void AvoidDefaultLambdaCaptureCheck::check(
                    "lambda default captures are discouraged; "
                    "prefer to capture specific variables explicitly");
 
-  std::vector<std::string> AllCaptures;
+  std::vector<std::string> ImplicitCaptures;
 
-  for (const auto &Capture : Lambda->captures()) {
-    if (const auto CaptureText = generateCaptureText(Capture)) {
-      AllCaptures.push_back(CaptureText.value());
-    }
+  for (const auto &Capture : Lambda->implicit_captures()) {
+    ImplicitCaptures.push_back(generateCaptureText(Capture));
   }
 
-  const auto ReplacementText = [&AllCaptures]() -> std::string {
-    if (AllCaptures.empty()) {
-      return "[]";
-    }
-    return "[" + llvm::join(AllCaptures, ", ") + "]";
+  const auto ReplacementText = [&ImplicitCaptures]() {
+    return llvm::join(ImplicitCaptures, ", ");
   }();
 
-  const clang::SourceRange IntroducerRange = Lambda->getIntroducerRange();
-  if (IntroducerRange.isValid()) {
-    Diag << clang::FixItHint::CreateReplacement(IntroducerRange,
-                                                ReplacementText);
-  }
+  Diag << clang::FixItHint::CreateReplacement(Lambda->getCaptureDefaultLoc(),
+                                              ReplacementText);
 }

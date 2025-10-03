@@ -14,11 +14,11 @@ void test_default_captures() {
 
   auto lambda3 = [=, &another](int x) { return value + another + x; };
   // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
-  // CHECK-FIXES: auto lambda3 = [&another, value](int x) { return value + another + x; };
+  // CHECK-FIXES: auto lambda3 = [value, &another](int x) { return value + another + x; };
 
   auto lambda4 = [&, value](int x) { return value + another + x; };
   // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
-  // CHECK-FIXES: auto lambda4 = [value, &another](int x) { return value + another + x; };
+  // CHECK-FIXES: auto lambda4 = [&another, value](int x) { return value + another + x; };
 }
 
 void test_acceptable_captures() {
@@ -101,10 +101,31 @@ void test_template_lambdas() {
   
   auto lambda = [=](T x) { return value + x; };
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
-  // CHECK-FIXES: auto lambda = [](T x) { return value + x; };
+  // CHECK-FIXES: auto lambda = [value](T x) { return value + x; };
 }
 
 void instantiate_templates() {
   test_template_lambdas<int>();
   test_template_lambdas<double>();
+}
+
+void test_init_captures() {
+  int x = 3;
+  int nx = 5;
+
+  int y1 = [&, z = x + 5]() -> int {
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES: int y1 = [&nx, z = x + 5]() -> int {
+    return z * z + nx;
+  }();
+
+  int y2 = [=, &ref = x]() {
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES: int y2 = [nx, &ref = x]() {
+    ref += 1;
+    return nx - ref;
+  }();
+
+  (void)y1;
+  (void)y2;
 }
