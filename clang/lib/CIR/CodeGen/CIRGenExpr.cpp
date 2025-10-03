@@ -2379,9 +2379,9 @@ LValue CIRGenFunction::emitPredefinedLValue(const PredefinedExpr *e) {
   auto fn = cast<cir::FuncOp>(curFn);
   StringRef fnName = fn.getName();
   fnName.consume_front("\01");
-  StringRef nameItems[] = {PredefinedExpr::getIdentKindName(e->getIdentKind()),
-                           fnName};
-  std::string gvName = llvm::join(nameItems, nameItems + 2, ".");
+  std::array<StringRef, 2> nameItems = {
+      PredefinedExpr::getIdentKindName(e->getIdentKind()), fnName};
+  std::string gvName = llvm::join(nameItems, ".");
   if (isa_and_nonnull<BlockDecl>(curCodeDecl))
     cgm.errorNYI(e->getSourceRange(), "predefined lvalue in block");
 
