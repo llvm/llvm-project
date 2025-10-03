@@ -24,7 +24,6 @@ define void @masked_scatter2() {
 
 define void @masked_scatter3() {
 ; CHECK-LABEL: define void @masked_scatter3() {
-; CHECK-NEXT:    store i32 0, ptr @c, align 4
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> zeroinitializer, <2 x ptr> splat (ptr @c), i32 4, <2 x i1> undef)
@@ -50,7 +49,6 @@ define void @masked_scatter5() {
 
 define void @masked_scatter6() {
 ; CHECK-LABEL: define void @masked_scatter6() {
-; CHECK-NEXT:    store i32 0, ptr @c, align 4
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> zeroinitializer, <2 x ptr> splat (ptr @c), i32 4, <2 x i1> <i1 undef, i1 false>)
