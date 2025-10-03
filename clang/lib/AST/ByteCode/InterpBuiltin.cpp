@@ -2773,6 +2773,50 @@ static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_pshuf(InterpState &S, CodePtr OpPC,
+                                       const CallExpr *Call, bool IsShufHW) {
+  assert(Call->getNumArgs() == 2 && "masked forms handled via select*");
+  APSInt ControlImm = popToAPSInt(S, Call->getArg(1));
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned NumElems = Dst.getNumElems();
+  PrimType ElemT = Dst.getFieldDesc()->getPrimType();
+
+  unsigned ElemBits = static_cast<unsigned>(primSize(ElemT) * 8);
+  if (ElemBits != 16 && ElemBits != 32)
+    return false;
+
+  unsigned LaneElts = 128u / ElemBits;
+  assert(LaneElts && (NumElems % LaneElts == 0));
+
+  uint8_t Ctl = static_cast<uint8_t>(ControlImm.getZExtValue());
+
+  for (unsigned Idx = 0; Idx != NumElems; Idx++) {
+    unsigned LaneBase = (Idx / LaneElts) * LaneElts;
+    unsigned LaneIdx = Idx % LaneElts;
+    unsigned SrcIdx = Idx;
+    unsigned Sel = (Ctl >> (2 * LaneIdx)) & 0x3;
+    if (ElemBits == 32) {
+      SrcIdx = LaneBase + Sel;
+    } else {
+      constexpr unsigned HalfSize = 4;
+      bool InHigh = LaneIdx >= HalfSize;
+      if (!IsShufHW && !InHigh) {
+        SrcIdx = LaneBase + Sel;
+      } else if (IsShufHW && InHigh) {
+        unsigned Rel = LaneIdx - HalfSize;
+        Sel = (Ctl >> (2 * Rel)) & 0x3;
+        SrcIdx = LaneBase + HalfSize + Sel;
+      }
+    }
+
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(Idx) = Src.elem<T>(SrcIdx); });
+  }
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_elementwise_triop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &, const APSInt &)>
@@ -3660,6 +3704,21 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
     return interp__builtin_select(S, OpPC, Call);
+
+  case X86::BI__builtin_ia32_pshuflw:
+  case X86::BI__builtin_ia32_pshuflw256:
+  case X86::BI__builtin_ia32_pshuflw512:
+    return interp__builtin_ia32_pshuf(S, OpPC, Call, false);
+
+  case X86::BI__builtin_ia32_pshufhw:
+  case X86::BI__builtin_ia32_pshufhw256:
+  case X86::BI__builtin_ia32_pshufhw512:
+    return interp__builtin_ia32_pshuf(S, OpPC, Call, true);
+
+  case X86::BI__builtin_ia32_pshufd:
+  case X86::BI__builtin_ia32_pshufd256:
+  case X86::BI__builtin_ia32_pshufd512:
+    return interp__builtin_ia32_pshuf(S, OpPC, Call, false);
 
   case X86::BI__builtin_ia32_kandqi:
   case X86::BI__builtin_ia32_kandhi:

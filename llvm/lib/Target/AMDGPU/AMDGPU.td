@@ -2126,6 +2126,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
    Feature45BitNumRecordsBufferResource,
+   FeatureSupportsXNACK,
+   FeatureXNACK,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<

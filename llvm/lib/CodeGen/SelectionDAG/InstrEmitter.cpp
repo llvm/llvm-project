@@ -160,7 +160,7 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
 
   // If all uses are reading from the src physical register and copying the
   // register is either impossible or very expensive, then don't create a copy.
-  if (MatchReg && SrcRC->getCopyCost() < 0) {
+  if (MatchReg && SrcRC->expensiveOrImpossibleToCopy()) {
     VRBase = SrcReg;
   } else {
     // Create the reg, emit the copy.

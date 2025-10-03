@@ -186,12 +186,12 @@ define amdgpu_kernel void @mixed_inreg_block_count_x(ptr addrspace(1) %out, i32 
 ;
 ; GFX1250-LABEL: mixed_inreg_block_count_x:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_load_b32 s2, s[0:1], 0x10
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX1250-NEXT:    s_clause 0x1
+; GFX1250-NEXT:    s_load_b32 s4, s[0:1], 0x10
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
+; GFX1250-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   %imp_arg_ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %load = load i32, ptr addrspace(4) %imp_arg_ptr

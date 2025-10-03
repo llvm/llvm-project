@@ -18879,7 +18879,7 @@ bool SITargetLowering::checkForPhysRegDependency(
     PhysReg = AMDGPU::SCC;
     const TargetRegisterClass *RC =
         TRI->getMinimalPhysRegClass(PhysReg, Def->getSimpleValueType(ResNo));
-    Cost = RC->getCopyCost();
+    Cost = RC->expensiveOrImpossibleToCopy() ? -1 : RC->getCopyCost();
     return true;
   }
   return false;

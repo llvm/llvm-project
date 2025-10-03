@@ -109,10 +109,15 @@ public:
     return MC->contains(Reg1.asMCReg(), Reg2.asMCReg());
   }
 
-  /// Return the cost of copying a value between two registers in this class.
-  /// A negative number means the register class is very expensive
-  /// to copy e.g. status flag register classes.
-  int getCopyCost() const { return MC->getCopyCost(); }
+  /// Return the cost of copying a value between two registers in this class. If
+  /// this is the maximum value, the register may be impossible to copy.
+  uint8_t getCopyCost() const { return MC->getCopyCost(); }
+
+  /// \return true if register class is very expensive to copy e.g. status flag
+  /// register classes.
+  bool expensiveOrImpossibleToCopy() const {
+    return MC->getCopyCost() == std::numeric_limits<uint8_t>::max();
+  }
 
   /// Return true if this register class may be used to create virtual
   /// registers.

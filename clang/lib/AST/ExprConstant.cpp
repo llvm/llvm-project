@@ -11615,6 +11615,60 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
   return true;
 }
 
+static bool evalPshufBuiltin(EvalInfo &Info, const CallExpr *Call,
+                             bool IsShufHW, APValue &Out) {
+  APValue Vec;
+  APSInt Imm;
+  if (!EvaluateAsRValue(Info, Call->getArg(0), Vec))
+    return false;
+  if (!EvaluateInteger(Call->getArg(1), Imm, Info))
+    return false;
+
+  const auto *VT = Call->getType()->getAs<VectorType>();
+  if (!VT)
+    return false;
+
+  QualType ElemT = VT->getElementType();
+  unsigned ElemBits = Info.Ctx.getTypeSize(ElemT);
+  unsigned NumElts = VT->getNumElements();
+
+  unsigned LaneBits = 128u;
+  unsigned LaneElts = LaneBits / ElemBits;
+  if (!LaneElts || (NumElts % LaneElts) != 0)
+    return false;
+
+  uint8_t Ctl = static_cast<uint8_t>(Imm.getZExtValue());
+
+  SmallVector<APValue, 32> ResultElements;
+  ResultElements.reserve(NumElts);
+
+  for (unsigned Idx = 0; Idx != NumElts; Idx++) {
+    unsigned LaneBase = (Idx / LaneElts) * LaneElts;
+    unsigned LaneIdx = Idx % LaneElts;
+    unsigned SrcIdx = Idx;
+    unsigned Sel = (Ctl >> (2 * LaneIdx)) & 0x3;
+
+    if (ElemBits == 32) {
+      SrcIdx = LaneBase + Sel;
+    } else {
+      constexpr unsigned HalfSize = 4;
+      bool InHigh = LaneIdx >= HalfSize;
+      if (!IsShufHW && !InHigh) {
+        SrcIdx = LaneBase + Sel;
+      } else if (IsShufHW && InHigh) {
+        unsigned Rel = LaneIdx - HalfSize;
+        Sel = (Ctl >> (2 * Rel)) & 0x3;
+        SrcIdx = LaneBase + HalfSize + Sel;
+      }
+    }
+
+    ResultElements.push_back(Vec.getVectorElt(SrcIdx));
+  }
+
+  Out = APValue(ResultElements.data(), ResultElements.size());
+  return true;
+}
+
 bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -11868,7 +11922,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
-
   case clang::X86::BI__builtin_ia32_vprotbi:
   case clang::X86::BI__builtin_ia32_vprotdi:
   case clang::X86::BI__builtin_ia32_vprotqi:
@@ -12087,6 +12140,34 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+
+  case X86::BI__builtin_ia32_pshuflw:
+  case X86::BI__builtin_ia32_pshuflw256:
+  case X86::BI__builtin_ia32_pshuflw512: {
+    APValue R;
+    if (!evalPshufBuiltin(Info, E, false, R))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_pshufhw:
+  case X86::BI__builtin_ia32_pshufhw256:
+  case X86::BI__builtin_ia32_pshufhw512: {
+    APValue R;
+    if (!evalPshufBuiltin(Info, E, true, R))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_pshufd:
+  case X86::BI__builtin_ia32_pshufd256:
+  case X86::BI__builtin_ia32_pshufd512: {
+    APValue R;
+    if (!evalPshufBuiltin(Info, E, false, R))
+      return false;
+    return Success(R, E);
+  }
+
   case Builtin::BI__builtin_elementwise_clzg:
   case Builtin::BI__builtin_elementwise_ctzg: {
     APValue SourceLHS;

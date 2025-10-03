@@ -744,7 +744,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
     RSI.insertRegSizeForMode(DefaultMode, RI);
   }
 
-  CopyCost = R->getValueAsInt("CopyCost");
+  int CopyCostParsed = R->getValueAsInt("CopyCost");
   Allocatable = R->getValueAsBit("isAllocatable");
   AltOrderSelect = R->getValueAsString("AltOrderSelect");
   int AllocationPriority = R->getValueAsInt("AllocationPriority");
@@ -757,6 +757,14 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   const BitsInit *TSF = R->getValueAsBitsInit("TSFlags");
   for (auto [Idx, Bit] : enumerate(TSF->getBits()))
     TSFlags |= uint8_t(cast<BitInit>(Bit)->getValue()) << Idx;
+
+  // Saturate negative costs to the maximum
+  if (CopyCostParsed < 0)
+    CopyCost = std::numeric_limits<uint8_t>::max();
+  else if (!isUInt<8>(CopyCostParsed))
+    PrintFatalError(R->getLoc(), "'CopyCost' must be an 8-bit value");
+
+  CopyCost = CopyCostParsed;
 }
 
 // Create an inferred register class that was missing from the .td files.
