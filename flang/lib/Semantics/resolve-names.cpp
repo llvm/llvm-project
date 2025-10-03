@@ -3962,8 +3962,26 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     }
   }
 
+  auto AreSameModuleProcOrBothInterfaces{[](const Symbol &p1,
+                                             const Symbol &p2) {
+    if (IsProcedure(p1) && !IsPointer(p1) && IsProcedure(p2) &&
+        !IsPointer(p2)) {
+      auto classification{ClassifyProcedure(p1)};
+      if (classification == ClassifyProcedure(p2)) {
+        if (classification == ProcedureDefinitionClass::External) {
+          const auto *subp1{p1.detailsIf<SubprogramDetails>()};
+          const auto *subp2{p2.detailsIf<SubprogramDetails>()};
+          return subp1 && subp1->isInterface() && subp2 && subp2->isInterface();
+        } else if (classification == ProcedureDefinitionClass::Module) {
+          return AreSameModuleSymbol(p1, p2);
+        }
+      }
+    }
+    return false;
+  }};
+
   auto AreSameProcedure{[&](const Symbol &p1, const Symbol &p2) {
-    if (&p1 == &p2) {
+    if (&p1.GetUltimate() == &p2.GetUltimate()) {
       return true;
     } else if (p1.name() != p2.name()) {
       return false;
@@ -3971,31 +3989,16 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
         p2.attrs().test(Attr::INTRINSIC)) {
       return p1.attrs().test(Attr::INTRINSIC) &&
           p2.attrs().test(Attr::INTRINSIC);
-    } else if (!IsProcedure(p1) || !IsProcedure(p2)) {
-      return false;
-    } else if (IsPointer(p1) || IsPointer(p2)) {
-      return false;
-    } else if (const auto *subp{p1.detailsIf<SubprogramDetails>()};
-               subp && !subp->isInterface()) {
-      return false; // defined in module, not an external
-    } else if (const auto *subp{p2.detailsIf<SubprogramDetails>()};
-               subp && !subp->isInterface()) {
-      return false; // defined in module, not an external
+    } else if (AreSameModuleProcOrBothInterfaces(p1, p2)) {
+      // Both are external interfaces, perhaps to the same procedure,
+      // or both are module procedures from modules with the same name.
+      auto p1Chars{evaluate::characteristics::Procedure::Characterize(
+          p1, GetFoldingContext())};
+      auto p2Chars{evaluate::characteristics::Procedure::Characterize(
+          p2, GetFoldingContext())};
+      return p1Chars && p2Chars && *p1Chars == *p2Chars;
     } else {
-      // Both are external interfaces, perhaps to the same procedure
-      auto class1{ClassifyProcedure(p1)};
-      auto class2{ClassifyProcedure(p2)};
-      if (class1 == ProcedureDefinitionClass::External &&
-          class2 == ProcedureDefinitionClass::External) {
-        auto chars1{evaluate::characteristics::Procedure::Characterize(
-            p1, GetFoldingContext())};
-        auto chars2{evaluate::characteristics::Procedure::Characterize(
-            p2, GetFoldingContext())};
-        // same procedure interface defined identically in two modules?
-        return chars1 && chars2 && *chars1 == *chars2;
-      } else {
-        return false;
-      }
+      return false;
     }
   }};
 
@@ -4096,13 +4099,32 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       localSymbol = &newSymbol;
     }
     if (useGeneric) {
-      // Combine two use-associated generics
+      // Combine two use-associated generics.
       localSymbol->attrs() =
           useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE};
       localSymbol->flags() = useSymbol.flags();
       AddGenericUse(*localGeneric, localName, useUltimate);
-      localGeneric->clear_derivedType();
-      localGeneric->CopyFrom(*useGeneric);
+      // Don't duplicate specific procedures.
+      std::size_t originalLocalSpecifics{localGeneric->specificProcs().size()};
+      std::size_t useSpecifics{useGeneric->specificProcs().size()};
+      CHECK(originalLocalSpecifics == localGeneric->bindingNames().size());
+      CHECK(useSpecifics == useGeneric->bindingNames().size());
+      std::size_t j{0};
+      for (const Symbol &useSpecific : useGeneric->specificProcs()) {
+        SourceName useBindingName{useGeneric->bindingNames()[j++]};
+        bool isDuplicate{false};
+        std::size_t k{0};
+        for (const Symbol &localSpecific : localGeneric->specificProcs()) {
+          if (localGeneric->bindingNames()[k++] == useBindingName &&
+              AreSameProcedure(localSpecific, useSpecific)) {
+            isDuplicate = true;
+            break;
+          }
+        }
+        if (!isDuplicate) {
+          localGeneric->AddSpecificProc(useSpecific, useBindingName);
+        }
+      }
     }
     localGeneric->clear_derivedType();
     if (combinedDerivedType) {
