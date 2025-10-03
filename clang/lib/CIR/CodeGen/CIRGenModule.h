@@ -475,6 +475,13 @@ public:
                                 cir::FuncType funcType,
                                 const clang::FunctionDecl *funcDecl);
 
+  /// Create a CIR function with builtin attribute set.
+  cir::FuncOp createCIRBuiltinFunction(mlir::Location loc, llvm::StringRef name,
+                                       cir::FuncType ty,
+                                       const clang::FunctionDecl *fd);
+
+  static constexpr const char *builtinCoroId = "__builtin_coro_id";
+
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".
   cir::FuncOp getBuiltinLibFunction(const FunctionDecl *fd, unsigned builtinID);
