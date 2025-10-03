@@ -1,0 +1,40 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1 -fopenacc
+
+subroutine implicitDeviceInSameFile(v)
+  real, device :: v(10)
+end
+
+subroutine implicitNonDeviceInSameFile(v)
+  real :: v(10)
+end
+
+program p
+  real, device :: dev(10)
+  real :: host(10)
+  interface
+    subroutine explicitDevice(v)
+      real, device :: v(10)
+    end
+    subroutine explicitNonDevice(v)
+      real :: v(10)
+    end
+  end interface
+  !WARNING: Actual argument 'dev' with CUDA data attributes should be passed via an explicit interface [-Wcuda-usage]
+  call implicit1(dev)
+  call implicit2(host)
+  !WARNING: Actual argument 'dev' with CUDA data attributes should be passed via an explicit interface [-Wcuda-usage]
+  call implicitDeviceInSameFile(dev)
+  !WARNING: If the procedure's interface were explicit, this reference would be in error [-Wknown-bad-implicit-interface]
+  !BECAUSE: dummy argument 'v=' has ATTRIBUTES(DEVICE) but its associated actual argument has no CUDA data attribute
+  call implicitDeviceInSameFile(host)
+  !WARNING: If the procedure's interface were explicit, this reference would be in error [-Wknown-bad-implicit-interface]
+  !BECAUSE: dummy argument 'v=' has no CUDA data attribute but its associated actual argument has ATTRIBUTES(DEVICE)
+  call implicitNonDeviceInSameFile(dev)
+  call implicitNonDeviceInSameFile(host)
+  call explicitDevice(dev)
+  !ERROR: dummy argument 'v=' has ATTRIBUTES(DEVICE) but its associated actual argument has no CUDA data attribute
+  call explicitDevice(host)
+  !ERROR: dummy argument 'v=' has no CUDA data attribute but its associated actual argument has ATTRIBUTES(DEVICE)
+  call explicitNonDevice(dev)
+  call explicitNonDevice(host)
+end

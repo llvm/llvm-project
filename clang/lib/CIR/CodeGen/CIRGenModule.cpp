@@ -1343,32 +1343,36 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
 
   mlir::Attribute c = getConstantArrayFromStringLiteral(s);
 
-  if (getLangOpts().WritableStrings) {
-    errorNYI(s->getSourceRange(),
-             "getGlobalForStringLiteral: Writable strings");
+  cir::GlobalOp gv;
+  if (!getLangOpts().WritableStrings && constantStringMap.count(c)) {
+    gv = constantStringMap[c];
+    // The bigger alignment always wins.
+    if (!gv.getAlignment() ||
+        uint64_t(alignment.getQuantity()) > *gv.getAlignment())
+      gv.setAlignmentAttr(getSize(alignment));
+  } else {
+    // Mangle the string literal if that's how the ABI merges duplicate strings.
+    // Don't do it if they are writable, since we don't want writes in one TU to
+    // affect strings in another.
+    if (getCXXABI().getMangleContext().shouldMangleStringLiteral(s) &&
+        !getLangOpts().WritableStrings) {
+      errorNYI(s->getSourceRange(),
+               "getGlobalForStringLiteral: mangle string literals");
+    }
+
+    // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
+    // we need to do that explicitly.
+    std::string uniqueName = getUniqueGlobalName(name.str());
+    mlir::Location loc = getLoc(s->getSourceRange());
+    auto typedC = llvm::cast<mlir::TypedAttr>(c);
+    gv = generateStringLiteral(loc, typedC,
+                               cir::GlobalLinkageKind::PrivateLinkage, *this,
+                               uniqueName, alignment);
+    setDSOLocal(static_cast<mlir::Operation *>(gv));
+    constantStringMap[c] = gv;
+
+    assert(!cir::MissingFeatures::sanitizers());
   }
-
-  // Mangle the string literal if that's how the ABI merges duplicate strings.
-  // Don't do it if they are writable, since we don't want writes in one TU to
-  // affect strings in another.
-  if (getCXXABI().getMangleContext().shouldMangleStringLiteral(s) &&
-      !getLangOpts().WritableStrings) {
-    errorNYI(s->getSourceRange(),
-             "getGlobalForStringLiteral: mangle string literals");
-  }
-
-  // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
-  // we need to do that explicitly.
-  std::string uniqueName = getUniqueGlobalName(name.str());
-  mlir::Location loc = getLoc(s->getSourceRange());
-  auto typedC = llvm::cast<mlir::TypedAttr>(c);
-  cir::GlobalOp gv =
-      generateStringLiteral(loc, typedC, cir::GlobalLinkageKind::PrivateLinkage,
-                            *this, uniqueName, alignment);
-  setDSOLocal(static_cast<mlir::Operation *>(gv));
-
-  assert(!cir::MissingFeatures::sanitizers());
-
   return gv;
 }
 
