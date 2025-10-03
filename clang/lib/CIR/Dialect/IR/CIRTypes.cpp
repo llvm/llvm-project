@@ -323,6 +323,7 @@ llvm::TypeSize
 PointerType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                                ::mlir::DataLayoutEntryListRef params) const {
   // FIXME: improve this in face of address spaces
+  assert(!cir::MissingFeatures::dataLayoutPtrHandlingBasedOnLangAS());
   return llvm::TypeSize::getFixed(64);
 }
 
@@ -330,6 +331,7 @@ uint64_t
 PointerType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                              ::mlir::DataLayoutEntryListRef params) const {
   // FIXME: improve this in face of address spaces
+  assert(!cir::MissingFeatures::dataLayoutPtrHandlingBasedOnLangAS());
   return 8;
 }
 

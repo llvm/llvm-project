@@ -209,6 +209,7 @@ struct MissingFeatures {
   static bool dataLayoutTypeIsSized() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutTypeStoreSize() { return false; }
+  static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
