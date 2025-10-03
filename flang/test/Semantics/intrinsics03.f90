@@ -130,8 +130,5 @@ subroutine ichar_tests()
   integer, parameter :: a2 = ichar('B ')
   !ERROR: Character in intrinsic function ichar must have length one
   !ERROR: Value of named constant 'a3' (ichar("")) cannot be computed as a constant value
-  !ERROR: Character in intrinsic function ichar must have length one
-  !ERROR: Value of named constant 'a3' (ichar("")) cannot be computed as a constant value
-  !ERROR: Character in intrinsic function ichar must have length one
   integer, parameter :: a3 = ichar('')
 end subroutine
