@@ -1402,40 +1402,6 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     return nullptr;
   }
 
-  std::optional<bool> CanReplacePointersIfEqualCache[2] = {std::nullopt,
-                                                           std::nullopt};
-  std::optional<bool> ShareSameUnderlyingObject = std::nullopt;
-  auto CanReplacePointersIfEqual = [&](Value *From, Value *To,
-                                       std::optional<bool> &Cache) -> bool {
-    if (Cache.has_value())
-      return *Cache;
-
-    assert(From->getType() == To->getType() &&
-           "values must have matching types");
-    // Not a pointer, just return true.
-    if (!From->getType()->isPointerTy()) {
-      Cache = true;
-      return true;
-    }
-
-    if (isa<ConstantPointerNull>(To)) {
-      Cache = true;
-      return true;
-    }
-    if (isa<Constant>(To) &&
-        isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL)) {
-      Cache = true;
-      return true;
-    }
-
-    if (!ShareSameUnderlyingObject.has_value())
-      ShareSameUnderlyingObject = getUnderlyingObjectAggressive(From) ==
-                                  getUnderlyingObjectAggressive(To);
-
-    Cache = *ShareSameUnderlyingObject;
-    return *ShareSameUnderlyingObject;
-  };
-
   Value *CmpLHS = Cmp.getOperand(0), *CmpRHS = Cmp.getOperand(1);
   auto ReplaceOldOpWithNewOp = [&](Value *OldOp, Value *NewOp,
                                    uint32_t Direction) -> Instruction * {
@@ -1446,9 +1412,6 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // otherwise Y cannot be undef as we might pick different values for undef
     // in the cmp and in f(Y).
     if (TrueVal == OldOp && (isa<Constant>(OldOp) || !isa<Constant>(NewOp)))
-      return nullptr;
-    if (!CanReplacePointersIfEqual(OldOp, NewOp,
-                                   CanReplacePointersIfEqualCache[Direction]))
       return nullptr;
 
     if (Value *V = simplifyWithOpReplaced(TrueVal, OldOp, NewOp, SQ,
@@ -1487,10 +1450,16 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     return nullptr;
   };
 
-  if (Instruction *R = ReplaceOldOpWithNewOp(CmpLHS, CmpRHS, 0))
-    return R;
-  if (Instruction *R = ReplaceOldOpWithNewOp(CmpRHS, CmpLHS, 1))
-    return R;
+  bool CanReplaceCmpLHSWithRHS = canReplacePointersIfEqual(CmpLHS, CmpRHS, DL);
+  if (CanReplaceCmpLHSWithRHS) {
+    if (Instruction *R = ReplaceOldOpWithNewOp(CmpLHS, CmpRHS, 0))
+      return R;
+  }
+  bool CanReplaceCmpRHSWithLHS = canReplacePointersIfEqual(CmpRHS, CmpLHS, DL);
+  if (CanReplaceCmpRHSWithLHS) {
+    if (Instruction *R = ReplaceOldOpWithNewOp(CmpRHS, CmpLHS, 1))
+      return R;
+  }
 
   auto *FalseInst = dyn_cast<Instruction>(FalseVal);
   if (!FalseInst)
@@ -1505,13 +1474,11 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   // Example:
   // (X == 42) ? 43 : (X + 1) --> (X == 42) ? (X + 1) : (X + 1) --> X + 1
   SmallVector<Instruction *> DropFlags;
-  if ((CanReplacePointersIfEqual(CmpLHS, CmpRHS,
-                                 CanReplacePointersIfEqualCache[0]) &&
+  if ((CanReplaceCmpLHSWithRHS &&
        simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, SQ,
                               /* AllowRefinement */ false,
                               &DropFlags) == TrueVal) ||
-      (CanReplacePointersIfEqual(CmpRHS, CmpLHS,
-                                 CanReplacePointersIfEqualCache[1]) &&
+      (CanReplaceCmpRHSWithLHS &&
        simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, SQ,
                               /* AllowRefinement */ false,
                               &DropFlags) == TrueVal)) {
