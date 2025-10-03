@@ -42,9 +42,13 @@ public:
     emitNamespaceStarts(Name);
   }
 
-  ~NamespaceEmitter() {
+  ~NamespaceEmitter() { close(); }
+
+  // Explicit function to close the namespace scopes.
+  void close() {
     for (StringRef NS : llvm::reverse(Namespaces))
       OS << "} // namespace " << NS << "\n";
+    Namespaces.clear();
   }
 
 private:

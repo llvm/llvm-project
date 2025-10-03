@@ -281,13 +281,8 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#include <cstddef>\n"; // for size_t
   OS << "#include <utility>\n"; // for std::pair
   OS << "\n";
-  OS << "namespace llvm {\n";
-
-  // Open namespaces defined in the directive language
-  SmallVector<StringRef, 2> Namespaces;
-  SplitString(DirLang.getCppNamespace(), Namespaces, "::");
-  for (auto Ns : Namespaces)
-    OS << "namespace " << Ns << " {\n";
+  NamespaceEmitter LlvmNS(OS, "llvm");
+  NamespaceEmitter DirLangNS(OS, DirLang.getCppNamespace());
 
   if (DirLang.hasEnableBitmaskEnumInNamespace())
     OS << "\nLLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();\n";
@@ -364,9 +359,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "\n";
   }
 
-  // Closing namespaces
-  for (auto Ns : reverse(Namespaces))
-    OS << "} // namespace " << Ns << "\n";
+  DirLangNS.close();
 
   // These specializations need to be in ::llvm.
   for (StringRef Enum : {"Association", "Category", "Directive", "Clause"}) {
@@ -376,9 +369,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "  static constexpr bool is_iterable = true;\n";
     OS << "};\n";
   }
-
-  OS << "} // namespace llvm\n";
-
+  LlvmNS.close();
   OS << "#endif // LLVM_" << Lang << "_INC\n";
 }
 
