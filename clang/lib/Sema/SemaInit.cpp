@@ -9294,7 +9294,7 @@ bool InitializationSequence::Diagnose(Sema &S,
     // Unlike C/C++ list initialization, there is no fallback if it fails. This
     // allows us to diagnose the failure when it happens in the
     // TryListInitialization call instead of delaying the diagnosis, which is
-    // beneficial because the flattening is also expnsive.
+    // beneficial because the flattening is also expensive.
     break;
   }
 
