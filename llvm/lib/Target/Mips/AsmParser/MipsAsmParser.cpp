@@ -1247,6 +1247,11 @@ public:
     return isConstantImm() && getConstantImm() == 0;
   }
 
+  bool isRelocatableImm() const {
+    MCValue Res;
+    return isImm() && getImm()->evaluateAsRelocatable(Res, nullptr);
+  }
+
   template <unsigned Bits, int Offset = 0> bool isConstantUImm() const {
     return isConstantImm() && isUInt<Bits>(getConstantImm() - Offset);
   }
