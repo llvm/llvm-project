@@ -2868,11 +2868,12 @@ void VPlanTransforms::adjustFFLoadEarlyExitForPoisonSafety(VPlan &Plan) {
 
   VPValue *VPAnyOf = nullptr;
   VPValue *VecOp = nullptr;
-  assert(
+  [[maybe_unused]] bool IsExitingOnAnyOfOr =
       match(LatchExitingBr,
             m_BranchOnCond(m_BinaryOr(m_VPValue(VPAnyOf), m_VPValue()))) &&
-      match(VPAnyOf, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(VecOp))) &&
-      "unexpected exiting sequence in early exit loop");
+      match(VPAnyOf, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(VecOp)));
+  assert(IsExitingOnAnyOfOr &&
+         "unexpected exiting sequence in early exit loop");
 
   VPValue *OpVPEVLI32 = LastFFLoad->getVPValue(1);
   VPValue *Mask = LastFFLoad->getMask();
