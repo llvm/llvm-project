@@ -3,9 +3,9 @@
 readability-redundant-typename
 ==============================
 
-Finds unnecessary uses of the ``typename`` keyword.
+Finds redundant uses of the ``typename`` keyword.
 
-``typename`` is unnecessary in two cases. First, before non-dependent names:
+``typename`` is redundant in two cases. First, before non-dependent names:
 
 .. code-block:: c++
 

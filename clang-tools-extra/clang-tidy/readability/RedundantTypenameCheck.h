@@ -13,7 +13,7 @@
 
 namespace clang::tidy::readability {
 
-/// Finds unnecessary uses of the `typename` keyword.
+/// Finds redundant uses of the `typename` keyword.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-typename.html
