@@ -346,15 +346,19 @@ define i32 @ld_global_v8i32(ptr addrspace(1) %ptr) {
 ; SM100-LABEL: ld_global_v8i32(
 ; SM100:       {
 ; SM100-NEXT:    .reg .b32 %r<16>;
-; SM100-NEXT:    .reg .b64 %rd<2>;
+; SM100-NEXT:    .reg .b64 %rd<6>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
 ; SM100-NEXT:    ld.param.b64 %rd1, [ld_global_v8i32_param_0];
-; SM100-NEXT:    ld.global.nc.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; SM100-NEXT:    add.s32 %r9, %r1, %r2;
-; SM100-NEXT:    add.s32 %r10, %r3, %r4;
-; SM100-NEXT:    add.s32 %r11, %r5, %r6;
-; SM100-NEXT:    add.s32 %r12, %r7, %r8;
+; SM100-NEXT:    ld.global.nc.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
+; SM100-NEXT:    mov.b64 {%r1, %r2}, %rd5;
+; SM100-NEXT:    mov.b64 {%r3, %r4}, %rd4;
+; SM100-NEXT:    mov.b64 {%r5, %r6}, %rd3;
+; SM100-NEXT:    mov.b64 {%r7, %r8}, %rd2;
+; SM100-NEXT:    add.s32 %r9, %r7, %r8;
+; SM100-NEXT:    add.s32 %r10, %r5, %r6;
+; SM100-NEXT:    add.s32 %r11, %r3, %r4;
+; SM100-NEXT:    add.s32 %r12, %r1, %r2;
 ; SM100-NEXT:    add.s32 %r13, %r9, %r10;
 ; SM100-NEXT:    add.s32 %r14, %r11, %r12;
 ; SM100-NEXT:    add.s32 %r15, %r13, %r14;

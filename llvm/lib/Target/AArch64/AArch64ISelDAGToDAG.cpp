@@ -2089,7 +2089,8 @@ void AArch64DAGToDAGISel::SelectMultiVectorLutiLane(SDNode *Node,
   if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
     return;
 
-  SDValue Ops[] = {ZtValue, Node->getOperand(3), Node->getOperand(4)};
+  SDValue Chain = Node->getOperand(0);
+  SDValue Ops[] = {ZtValue, Node->getOperand(3), Node->getOperand(4), Chain};
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
 
@@ -2110,14 +2111,15 @@ void AArch64DAGToDAGISel::SelectMultiVectorLutiLane(SDNode *Node,
 void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
                                                 unsigned NumOutVecs,
                                                 unsigned Opc) {
-
   SDValue ZtValue;
-  SmallVector<SDValue, 4> Ops;
   if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
     return;
 
-  Ops.push_back(ZtValue);
-  Ops.push_back(createZMulTuple({Node->getOperand(3), Node->getOperand(4)}));
+  SDValue Chain = Node->getOperand(0);
+  SDValue Ops[] = {ZtValue,
+                   createZMulTuple({Node->getOperand(3), Node->getOperand(4)}),
+                   Chain};
+
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
 
@@ -4346,34 +4348,14 @@ bool AArch64DAGToDAGISel::SelectSVECpyDupImm(SDValue N, MVT VT, SDValue &Imm,
                     ->getAPIntValue()
                     .trunc(VT.getFixedSizeInBits())
                     .getSExtValue();
+  int32_t ImmVal, ShiftVal;
+  if (!AArch64_AM::isSVECpyDupImm(VT.getScalarSizeInBits(), Val, ImmVal,
+                                  ShiftVal))
+    return false;
 
-  switch (VT.SimpleTy) {
-  case MVT::i8:
-    // All immediates are supported.
-    Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
-    Imm = CurDAG->getTargetConstant(Val & 0xFF, DL, MVT::i32);
-    return true;
-  case MVT::i16:
-  case MVT::i32:
-  case MVT::i64:
-    // Support 8bit signed immediates.
-    if (Val >= -128 && Val <= 127) {
-      Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
-      Imm = CurDAG->getTargetConstant(Val & 0xFF, DL, MVT::i32);
-      return true;
-    }
-    // Support 16bit signed immediates that are a multiple of 256.
-    if (Val >= -32768 && Val <= 32512 && Val % 256 == 0) {
-      Shift = CurDAG->getTargetConstant(8, DL, MVT::i32);
-      Imm = CurDAG->getTargetConstant((Val >> 8) & 0xFF, DL, MVT::i32);
-      return true;
-    }
-    break;
-  default:
-    break;
-  }
-
-  return false;
+  Shift = CurDAG->getTargetConstant(ShiftVal, DL, MVT::i32);
+  Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
+  return true;
 }
 
 bool AArch64DAGToDAGISel::SelectSVESignedArithImm(SDValue N, SDValue &Imm) {
@@ -7515,7 +7497,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     int FI = cast<FrameIndexSDNode>(N)->getIndex();
     // We can only encode VL scaled offsets, so only fold in frame indexes
     // referencing SVE objects.
-    if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+    if (MFI.hasScalableStackID(FI)) {
       Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
       OffImm = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i64);
       return true;
@@ -7561,7 +7543,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     int FI = cast<FrameIndexSDNode>(Base)->getIndex();
     // We can only encode VL scaled offsets, so only fold in frame indexes
     // referencing SVE objects.
-    if (MFI.getStackID(FI) == TargetStackID::ScalableVector)
+    if (MFI.hasScalableStackID(FI))
       Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
   }
 

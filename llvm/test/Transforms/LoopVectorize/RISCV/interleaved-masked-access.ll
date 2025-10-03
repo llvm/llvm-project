@@ -96,7 +96,8 @@ define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PREDICATED_DATA:       middle.block:
 ; PREDICATED_DATA-NEXT:    br label [[FOR_END:%.*]]
-; PREDICATED_DATA:       scalar.ph:
+; PREDICATED_DATA:       for.end:
+; PREDICATED_DATA-NEXT:    ret void
 ;
 ; PREDICATED_DATA-WITH-EVL-LABEL: define void @masked_strided_factor2
 ; PREDICATED_DATA-WITH-EVL-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -135,9 +136,13 @@ define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL-NEXT:    call void @llvm.vp.store.nxv32i8.p0(<vscale x 32 x i8> [[INTERLEAVED_VEC]], ptr align 1 [[TMP10]], <vscale x 32 x i1> [[INTERLEAVED_MASK4]], i32 [[INTERLEAVE_EVL3]])
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP1]], [[EVL_BASED_IV]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP1]]
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
+; PREDICATED_DATA-WITH-EVL-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PREDICATED_DATA-WITH-EVL:       middle.block:
 ; PREDICATED_DATA-WITH-EVL-NEXT:    br label [[FOR_END:%.*]]
-; PREDICATED_DATA-WITH-EVL:       scalar.ph:
+; PREDICATED_DATA-WITH-EVL:       for.end:
+; PREDICATED_DATA-WITH-EVL-NEXT:    ret void
 ;
 entry:
   %conv = zext i8 %guard to i32
@@ -270,10 +275,11 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP1]]
 ; PREDICATED_DATA-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; PREDICATED_DATA-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; PREDICATED_DATA-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; PREDICATED_DATA-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; PREDICATED_DATA:       middle.block:
 ; PREDICATED_DATA-NEXT:    br label [[FOR_END:%.*]]
-; PREDICATED_DATA:       scalar.ph:
+; PREDICATED_DATA:       for.end:
+; PREDICATED_DATA-NEXT:    ret void
 ;
 ; PREDICATED_DATA-WITH-EVL-LABEL: define void @masked_strided_factor4
 ; PREDICATED_DATA-WITH-EVL-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) #[[ATTR0]] {
@@ -316,9 +322,13 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL-NEXT:    call void @llvm.vp.store.nxv64i8.p0(<vscale x 64 x i8> [[INTERLEAVED_VEC]], ptr align 1 [[TMP15]], <vscale x 64 x i1> [[INTERLEAVED_MASK4]], i32 [[INTERLEAVE_EVL3]])
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP1]], [[EVL_BASED_IV]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP1]]
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
+; PREDICATED_DATA-WITH-EVL-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; PREDICATED_DATA-WITH-EVL:       middle.block:
 ; PREDICATED_DATA-WITH-EVL-NEXT:    br label [[FOR_END:%.*]]
-; PREDICATED_DATA-WITH-EVL:       scalar.ph:
+; PREDICATED_DATA-WITH-EVL:       for.end:
+; PREDICATED_DATA-WITH-EVL-NEXT:    ret void
 ;
 entry:
   %conv = zext i8 %guard to i32

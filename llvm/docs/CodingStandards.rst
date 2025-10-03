@@ -1790,6 +1790,12 @@ would help to avoid running into a "dangling else" situation.
       markAsIgnored(D);
   }
 
+Use Unix line endings for files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use Unix line endings for all files. CRLF line endings are allowed as an
+exception for test files that intend to test CRLF handling or when the file
+format requires it (like ``.bat`` or ``.rc`` files).
 
 See Also
 ========
