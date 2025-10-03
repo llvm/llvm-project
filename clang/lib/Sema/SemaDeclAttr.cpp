@@ -5204,7 +5204,12 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleDeviceKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
   bool IsFunctionTemplate = FD && FD->getDescribedFunctionTemplate();
-  if (S.getLangOpts().SYCLIsDevice) {
+  if (!S.getLangOpts().OpenCL && !S.getLangOpts().CUDA &&
+      !DeviceKernelAttr::isAMDGPUSpelling(AL)) {
+    // This is already diagnosed for AMDGPU in getCCForDeclaratorChunk
+    S.Diag(AL.getLoc(), diag::warn_cconv_unsupported)
+        << AL << (int)Sema::CallingConventionIgnoredReason::ForThisTarget;
+  } else if (S.getLangOpts().SYCLIsDevice) {
     if (!IsFunctionTemplate) {
       S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
           << AL << AL.isRegularKeywordAttribute() << "function templates";
