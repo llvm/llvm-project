@@ -5,13 +5,22 @@
 # RUN: llvm-ranlib -help | FileCheck %s --check-prefix=HELP
 # RUN: llvm-ranlib --help | FileCheck %s --check-prefix=HELP
 # RUN: llvm-ranlib --version | FileCheck %s --check-prefix=VERSION
-# RUN: llvm-ranlib -version | FileCheck %s --check-prefix=VERSION
-# RUN: llvm-ranlib -v | FileCheck %s --check-prefix=VERSION
+# RUN: llvm-ranlib -V | FileCheck %s --check-prefix=VERSION
 
 ## Also check combined options (first -h/-v flag wins)
 # RUN: llvm-ranlib -Dh | FileCheck %s --check-prefix=HELP
-# RUN: llvm-ranlib -Dvh | FileCheck %s --check-prefix=VERSION
-# RUN: llvm-ranlib -Dhv | FileCheck %s --check-prefix=HELP
+# RUN: llvm-ranlib -DVh | FileCheck %s --check-prefix=VERSION
+# RUN: llvm-ranlib -DhV | FileCheck %s --check-prefix=HELP
 
 # HELP: USAGE: llvm-ranlib
 # VERSION: version
+
+## -v enables verbose output in BSD ranlib and GNU ar but is another alias
+## for --version in GNU ranlib. Reject -v.
+# RUN: not llvm-ranlib -v 2>&1 | FileCheck %s --check-prefix=ERR1
+# RUN: not llvm-ranlib -version 2>&1 | FileCheck %s --check-prefix=ERR2
+# RUN: not llvm-ranlib -Dvh 2>&1 | FileCheck %s --check-prefix=ERR3
+
+# ERR1: error: Invalid option: '-v'
+# ERR2: error: Invalid option: '-version'
+# ERR3: error: Invalid option: '-vh'

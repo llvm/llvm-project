@@ -403,6 +403,28 @@ def SPIRV_INotEqualOp : SPIRV_LogicalBinaryOp<"INotEqual",
 
 // -----
 
+def SPIRV_IsFiniteOp : SPIRV_LogicalUnaryOp<"IsFinite", SPIRV_Float, []> {
+  let summary = "Result is true if x is an IEEE Finite, otherwise result is false";
+
+  let description = [{
+    Result Type must be a scalar or vector of Boolean type.
+
+    x must be a scalar or vector of floating-point type.  It must have the
+    same number of components as Result Type.
+
+    Results are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.IsFinite %0: f32
+    %3 = spirv.IsFinite %1: vector<4xf32>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_IsInfOp : SPIRV_LogicalUnaryOp<"IsInf", SPIRV_Float, []> {
   let summary = "Result is true if x is an IEEE Inf, otherwise result is false";
 
@@ -418,7 +440,7 @@ def SPIRV_IsInfOp : SPIRV_LogicalUnaryOp<"IsInf", SPIRV_Float, []> {
 
     ```mlir
     %2 = spirv.IsInf %0: f32
-    %3 = spirv.IsInf %1: vector<4xi32>
+    %3 = spirv.IsInf %1: vector<4xf32>
     ```
   }];
 }
@@ -442,7 +464,7 @@ def SPIRV_IsNanOp : SPIRV_LogicalUnaryOp<"IsNan", SPIRV_Float, []> {
 
     ```mlir
     %2 = spirv.IsNan %0: f32
-    %3 = spirv.IsNan %1: vector<4xi32>
+    %3 = spirv.IsNan %1: vector<4xf32>
     ```
   }];
 }
@@ -659,6 +681,8 @@ def SPIRV_SGreaterThanOp : SPIRV_LogicalBinaryOp<"SGreaterThan",
 
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -688,6 +712,8 @@ def SPIRV_SGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"SGreaterThanEqual",
     %5 = spirv.SGreaterThanEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -716,6 +742,8 @@ def SPIRV_SLessThanOp : SPIRV_LogicalBinaryOp<"SLessThan",
 
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -745,6 +773,8 @@ def SPIRV_SLessThanEqualOp : SPIRV_LogicalBinaryOp<"SLessThanEqual",
     %5 = spirv.SLessThanEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -752,7 +782,8 @@ def SPIRV_SLessThanEqualOp : SPIRV_LogicalBinaryOp<"SLessThanEqual",
 def SPIRV_SelectOp : SPIRV_Op<"Select",
     [Pure,
      AllTypesMatch<["true_value", "false_value", "result"]>,
-     UsableInSpecConstantOp]> {
+     UsableInSpecConstantOp,
+     DeclareOpInterfaceMethods<SelectLikeOpInterface>]> {
   let summary = [{
     Select between two objects. Before version 1.4, results are only
     computed per component.
@@ -800,6 +831,8 @@ def SPIRV_SelectOp : SPIRV_Op<"Select",
   // These ops require dynamic availability specification based on operand and
   // result types.
   bit autogenAvailability = 0;
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -828,6 +861,8 @@ def SPIRV_UGreaterThanOp : SPIRV_LogicalBinaryOp<"UGreaterThan",
     %5 = spirv.UGreaterThan %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -857,6 +892,8 @@ def SPIRV_UGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"UGreaterThanEqual",
     %5 = spirv.UGreaterThanEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -884,6 +921,8 @@ def SPIRV_ULessThanOp : SPIRV_LogicalBinaryOp<"ULessThan",
     %5 = spirv.ULessThan %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -947,6 +986,8 @@ def SPIRV_ULessThanEqualOp : SPIRV_LogicalBinaryOp<"ULessThanEqual",
     %5 = spirv.ULessThanEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_LOGICAL_OPS

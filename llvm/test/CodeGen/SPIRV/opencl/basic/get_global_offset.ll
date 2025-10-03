@@ -1,22 +1,18 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 
-; CHECK: OpEntryPoint Kernel %[[#test_func:]] "test"
-; CHECK: OpDecorate %[[#f2_decl:]] LinkageAttributes "BuiltInGlobalOffset" Import
-; CHECK: %[[#int_ty:]] = OpTypeInt 8 0
-; CHECK: %[[#void_ty:]] = OpTypeVoid
-; CHECK: %[[#iptr_ty:]] = OpTypePointer CrossWorkgroup  %[[#int_ty]]
-; CHECK: %[[#func_ty:]] = OpTypeFunction %[[#void_ty]] %[[#iptr_ty]]
-; CHECK: %[[#int64_ty:]] = OpTypeInt 64 0
-; CHECK: %[[#vec_ty:]] = OpTypeVector %[[#int64_ty]] 3
-; CHECK: %[[#func2_ty:]] = OpTypeFunction %[[#vec_ty]]
-; CHECK: %[[#int32_ty:]] = OpTypeInt 32 0
-; CHECK: %[[#i32ptr_ty:]] = OpTypePointer CrossWorkgroup  %[[#int32_ty]]
+; CHECK-DAG: OpEntryPoint Kernel %[[#test_func:]] "test"
+; CHECK-DAG: OpDecorate %[[#f2_decl:]] LinkageAttributes "BuiltInGlobalOffset" Import
+; CHECK-DAG: %[[#int32_ty:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#i32ptr_ty:]] = OpTypePointer CrossWorkgroup  %[[#int32_ty]]
+; CHECK-DAG: %[[#void_ty:]] = OpTypeVoid
+; CHECK-DAG: %[[#func_ty:]] = OpTypeFunction %[[#void_ty]] %[[#i32ptr_ty]]
+; CHECK-DAG: %[[#int64_ty:]] = OpTypeInt 64 0
+; CHECK-DAG: %[[#vec_ty:]] = OpTypeVector %[[#int64_ty]] 3
+; CHECK-DAG: %[[#func2_ty:]] = OpTypeFunction %[[#vec_ty]]
 ;; TODO: add 64-bit constant defs
-; CHECK: %[[#f2_decl]] = OpFunction %[[#vec_ty]] Pure %[[#func2_ty]]
+; CHECK-DAG: %[[#f2_decl]] = OpFunction %[[#vec_ty]] Pure %[[#func2_ty]]
 ; CHECK: OpFunctionEnd
 ;; Check that the function register name does not match other registers
-; CHECK-NOT: %[[#int_ty]] = OpFunction
-; CHECK-NOT: %[[#iptr_ty]] = OpFunction
 ; CHECK-NOT: %[[#void_ty]] = OpFunction
 ; CHECK-NOT: %[[#func_ty]] = OpFunction
 ; CHECK-NOT: %[[#int64_ty]] = OpFunction

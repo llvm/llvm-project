@@ -20,7 +20,7 @@ int f() {
   // CHECK: [[LVALUE:%[a-z0-9.]+]] = alloca
   // CHECK-NEXT: [[I:%[a-z0-9]+]] = getelementptr inbounds {{.*}}, ptr [[LVALUE]], i32 0, i32 0
   // CHECK-NEXT: store i32 17, ptr [[I]]
-  // CHECK-NEXT: [[X:%[a-z0-9]+]] = getelementptr inbounds {{.*}} [[LVALUE]], i32 0, i32 1
+  // CHECK-NEXT: [[X:%[a-z0-9]+]] = getelementptr inbounds {{.*}} [[LVALUE]], i32 4
   // CHECK-NEXT: call noundef ptr @_ZN1XC1EPKc({{.*}}[[X]]
   // CHECK-NEXT: [[I:%[a-z0-9]+]] = getelementptr inbounds {{.*}} [[LVALUE]], i32 0, i32 0
   // CHECK-NEXT: [[RESULT:%[a-z0-9]+]] = load i32, ptr

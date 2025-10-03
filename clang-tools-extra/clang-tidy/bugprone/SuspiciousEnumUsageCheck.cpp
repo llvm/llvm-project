@@ -1,4 +1,4 @@
-//===--- SuspiciousEnumUsageCheck.cpp - clang-tidy-------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -106,7 +106,7 @@ static bool isPossiblyBitMask(const EnumDecl *EnumDec) {
 SuspiciousEnumUsageCheck::SuspiciousEnumUsageCheck(StringRef Name,
                                                    ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)) {}
+      StrictMode(Options.get("StrictMode", false)) {}
 
 void SuspiciousEnumUsageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
@@ -171,8 +171,7 @@ void SuspiciousEnumUsageCheck::check(const MatchFinder::MatchResult &Result) {
     // Skip when one of the parameters is an empty enum. The
     // hasDisjointValueRange function could not decide the values properly in
     // case of an empty enum.
-    if (EnumDec->enumerator_begin() == EnumDec->enumerator_end() ||
-        OtherEnumDec->enumerator_begin() == OtherEnumDec->enumerator_end())
+    if (EnumDec->enumerators().empty() || OtherEnumDec->enumerators().empty())
       return;
 
     if (!hasDisjointValueRange(EnumDec, OtherEnumDec))

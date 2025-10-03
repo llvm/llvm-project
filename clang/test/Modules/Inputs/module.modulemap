@@ -260,11 +260,6 @@ module cxx_decls_merged {
   header "cxx-decls-merged.h"
 }
 
-module config {
-  header "config.h"
-  config_macros [exhaustive] WANT_FOO, WANT_BAR
-}
-
 module diag_flags {
   header "diag_flags.h"
 }

@@ -6,13 +6,13 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 @global = external global ptr
 
-define void @bar() {
+define void @bar(i1 %arg) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = load ptr, ptr @global
+; CHECK-NEXT:    [[TMP:%.*]] = load ptr, ptr @global, align 8
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    br i1 undef, label [[BB2]], label [[BB7:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[BB2]], label [[BB7:%.*]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
@@ -28,7 +28,7 @@ bb2:                                              ; preds = %bb2, %bb
   %tmp4 = getelementptr %struct.foo, ptr %tmp3, i64 0, i32 1
   %tmp5 = load i32, ptr %tmp4
   %tmp6 = load ptr, ptr @global
-  br i1 undef, label %bb2, label %bb7
+  br i1 %arg, label %bb2, label %bb7
 
 bb7:                                              ; preds = %bb2
   %tmp8 = phi ptr [ %tmp6, %bb2 ]

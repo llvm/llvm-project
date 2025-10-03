@@ -3,7 +3,7 @@
 // An explicitly-defaulted function may be declared constexpr only if it would
 // have been implicitly declared as constexpr.
 struct S1 {
-  constexpr S1() = default; // expected-error {{defaulted definition of default constructor is not constexpr}}
+  constexpr S1() = default; // expected-error {{defaulted definition of default constructor cannot be marked constexpr}}
   constexpr S1(const S1&) = default;
   constexpr S1(S1&&) = default;
   constexpr S1 &operator=(const S1&) const = default; // expected-error {{explicitly-defaulted copy assignment operator may not have}}
@@ -18,8 +18,8 @@ struct NoCopyMove {
 };
 struct S2 {
   constexpr S2() = default;
-  constexpr S2(const S2&) = default; // expected-error {{defaulted definition of copy constructor is not constexpr}}
-  constexpr S2(S2&&) = default; // expected-error {{defaulted definition of move constructor is not constexpr}}
+  constexpr S2(const S2&) = default; // expected-error {{defaulted definition of copy constructor cannot be marked constexpr}}
+  constexpr S2(S2&&) = default; // expected-error {{defaulted definition of move constructor cannot be marked}}
   NoCopyMove ncm;
 };
 

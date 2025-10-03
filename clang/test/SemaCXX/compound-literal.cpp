@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++03 -verify -ast-dump %s > %t-03
+// RUN: %clang_cc1 -std=c++03 -verify -ast-dump %s > %t-03
 // RUN: FileCheck --input-file=%t-03 %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify -ast-dump %s > %t-11
+// RUN: %clang_cc1 -std=c++11 -verify -ast-dump %s > %t-11
 // RUN: FileCheck --input-file=%t-11 %s
 // RUN: FileCheck --input-file=%t-11 %s --check-prefix=CHECK-CXX11
 // RUN: %clang_cc1 -verify -std=c++17 %s
@@ -37,8 +37,8 @@ namespace brace_initializers {
 
   POD p = (POD){1, 2};
   // CHECK-NOT: CXXBindTemporaryExpr {{.*}} 'brace_initializers::POD'
-  // CHECK: CompoundLiteralExpr {{.*}} 'POD':'brace_initializers::POD'
-  // CHECK-NEXT: InitListExpr {{.*}} 'POD':'brace_initializers::POD'
+  // CHECK: CompoundLiteralExpr {{.*}} 'POD'{{$}}
+  // CHECK-NEXT: InitListExpr {{.*}} 'POD'{{$}}
   // CHECK-NEXT: ConstantExpr {{.*}}
   // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
   // CHECK-NEXT: ConstantExpr {{.*}}
@@ -46,34 +46,34 @@ namespace brace_initializers {
 
   void test() {
     (void)(POD){1, 2};
-    // CHECK-NOT: CXXBindTemporaryExpr {{.*}} 'POD':'brace_initializers::POD'
-    // CHECK-NOT: ConstantExpr {{.*}} 'POD':'brace_initializers::POD'
-    // CHECK: CompoundLiteralExpr {{.*}} 'POD':'brace_initializers::POD'
-    // CHECK-NEXT: InitListExpr {{.*}} 'POD':'brace_initializers::POD'
+    // CHECK-NOT: CXXBindTemporaryExpr {{.*}} 'POD'
+    // CHECK-NOT: ConstantExpr {{.*}} 'POD'
+    // CHECK: CompoundLiteralExpr {{.*}} 'POD'{{$}}
+    // CHECK-NEXT: InitListExpr {{.*}} 'POD'{{$}}
     // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
     (void)(HasDtor){1, 2};
-    // CHECK: CXXBindTemporaryExpr {{.*}} 'HasDtor':'brace_initializers::HasDtor'
-    // CHECK-NEXT: CompoundLiteralExpr {{.*}} 'HasDtor':'brace_initializers::HasDtor'
-    // CHECK-NEXT: InitListExpr {{.*}} 'HasDtor':'brace_initializers::HasDtor'
+    // CHECK: CXXBindTemporaryExpr {{.*}} 'HasDtor'
+    // CHECK-NEXT: CompoundLiteralExpr {{.*}} 'HasDtor'{{$}}
+    // CHECK-NEXT: InitListExpr {{.*}} 'HasDtor'{{$}}
     // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
 #if __cplusplus >= 201103L
     (void)(HasCtor){1, 2};
-    // CHECK-CXX11-NOT: CXXBindTemporaryExpr {{.*}} 'HasCtor':'brace_initializers::HasCtor'
-    // CHECK-CXX11-NOT: ConstantExpr {{.*}} 'HasCtor':'brace_initializers::HasCtor'
-    // CHECK-CXX11: CompoundLiteralExpr {{.*}} 'HasCtor':'brace_initializers::HasCtor'
-    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'HasCtor':'brace_initializers::HasCtor'
+    // CHECK-CXX11-NOT: CXXBindTemporaryExpr {{.*}} 'HasCtor'
+    // CHECK-CXX11-NOT: ConstantExpr {{.*}} 'HasCtor'
+    // CHECK-CXX11: CompoundLiteralExpr {{.*}} 'HasCtor'{{$}}
+    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'HasCtor'
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
     (void)(HasCtorDtor){1, 2};
-    // CHECK-CXX11: CXXBindTemporaryExpr {{.*}} 'HasCtorDtor':'brace_initializers::HasCtorDtor'
-    // CHECK-CXX11-NOT: ConstantExpr {{.*}} 'HasCtorDtor':'brace_initializers::HasCtorDtor'
-    // CHECK-CXX11: CompoundLiteralExpr {{.*}} 'HasCtorDtor':'brace_initializers::HasCtorDtor'
-    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'HasCtorDtor':'brace_initializers::HasCtorDtor'
+    // CHECK-CXX11: CXXBindTemporaryExpr {{.*}} 'HasCtorDtor'
+    // CHECK-CXX11-NOT: ConstantExpr {{.*}} 'HasCtorDtor'
+    // CHECK-CXX11: CompoundLiteralExpr {{.*}} 'HasCtorDtor'{{$}}
+    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'HasCtorDtor'
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 2{{$}}
 #endif
@@ -129,3 +129,11 @@ int f();
 #endif
 Foo o = (Foo){ {}, 1, f() };
 }
+
+#if __cplusplus >= 201103L
+namespace GH147949 {
+  // Make sure we handle transparent InitListExprs correctly.
+  struct S { int x : 3; };
+  const S* x = (const S[]){S{S{3}}};
+}
+#endif

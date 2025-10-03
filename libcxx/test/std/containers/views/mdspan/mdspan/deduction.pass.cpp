@@ -22,7 +22,11 @@
 //  template<class ElementType, class... Integrals>
 //    requires((is_convertible_v<Integrals, size_t> && ...) && sizeof...(Integrals) > 0)
 //    explicit mdspan(ElementType*, Integrals...)
-//      -> mdspan<ElementType, dextents<size_t, sizeof...(Integrals)>>;
+//      -> mdspan<ElementType, dextents<size_t, sizeof...(Integrals)>>;            // until C++26
+//  template<class ElementType, class... Integrals>
+//    requires((is_convertible_v<Integrals, size_t> && ...) && sizeof...(Integrals) > 0)
+//    explicit mdspan(ElementType*, Integrals...)
+//      -> mdspan<ElementType, extents<size_t, maybe-static-ext<Integrals>...>>;  // since C++26
 //
 //  template<class ElementType, class OtherIndexType, size_t N>
 //    mdspan(ElementType*, span<OtherIndexType, N>)
@@ -48,9 +52,10 @@
 //                typename MappingType::layout_type, AccessorType>;
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -101,6 +106,18 @@ constexpr bool test_no_layout_deduction_guides(const H& handle, const A&) {
   ASSERT_SAME_TYPE(decltype(std::mdspan(handle)), std::mdspan<T, std::extents<size_t>>);
   // deduction from pointer and integral like
   ASSERT_SAME_TYPE(decltype(std::mdspan(handle, 5, SizeTIntType(6))), std::mdspan<T, std::dextents<size_t, 2>>);
+
+#if _LIBCPP_STD_VER >= 26
+  // P3029R1: deduction from `integral_constant`
+  ASSERT_SAME_TYPE(
+      decltype(std::mdspan(handle, std::integral_constant<size_t, 5>{})), std::mdspan<T, std::extents<size_t, 5>>);
+  ASSERT_SAME_TYPE(decltype(std::mdspan(handle, std::integral_constant<size_t, 5>{}, std::dynamic_extent)),
+                   std::mdspan<T, std::extents<size_t, 5, std::dynamic_extent>>);
+  ASSERT_SAME_TYPE(
+      decltype(std::mdspan(
+          handle, std::integral_constant<size_t, 5>{}, std::dynamic_extent, std::integral_constant<size_t, 7>{})),
+      std::mdspan<T, std::extents<size_t, 5, std::dynamic_extent, 7>>);
+#endif
 
   std::array<char, 3> exts;
   // deduction from pointer and array

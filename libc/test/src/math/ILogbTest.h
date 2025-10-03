@@ -9,13 +9,16 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_ILOGBTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_ILOGBTEST_H
 
+#include "hdr/math_macros.h"
 #include "src/__support/CPP/limits.h" // INT_MAX
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
-class LlvmLibcILogbTest : public LIBC_NAMESPACE::testing::Test {
+using LIBC_NAMESPACE::Sign;
+
+class LlvmLibcILogbTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   template <typename T> struct ILogbFunc {
     typedef int (*Func)(T);
@@ -24,7 +27,7 @@ public:
   template <typename T>
   void test_special_numbers(typename ILogbFunc<T>::Func func) {
     using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-    using Sign = LIBC_NAMESPACE::fputil::Sign;
+
     EXPECT_EQ(FP_ILOGB0, func(FPBits::zero(Sign::POS).get_val()));
     EXPECT_EQ(FP_ILOGB0, func(FPBits::zero(Sign::NEG).get_val()));
     EXPECT_EQ(FP_ILOGBNAN, func(FPBits::quiet_nan().get_val()));
@@ -81,7 +84,7 @@ public:
     constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
     for (StorageType v = MIN_SUBNORMAL; v <= MAX_SUBNORMAL; v += STEP) {
       T x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x == 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x == 0.0)
         continue;
 
       int exponent;
@@ -100,7 +103,7 @@ public:
     constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
     for (StorageType v = MIN_NORMAL; v <= MAX_NORMAL; v += STEP) {
       T x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x == 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x == 0.0)
         continue;
 
       int exponent;

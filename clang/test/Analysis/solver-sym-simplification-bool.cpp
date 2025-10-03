@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyze -analyzer-checker=core \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core \
 // RUN: -analyzer-checker=debug.ExprInspection -verify %s
 
 void clang_analyzer_dump(bool);

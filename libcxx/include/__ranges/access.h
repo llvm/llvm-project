@@ -12,6 +12,7 @@
 
 #include <__concepts/class_or_enum.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__iterator/concepts.h>
 #include <__iterator/readable_traits.h>
 #include <__ranges/enable_borrowed_range.h>
@@ -21,7 +22,6 @@
 #include <__type_traits/remove_reference.h>
 #include <__utility/auto_cast.h>
 #include <__utility/declval.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -41,12 +41,11 @@ concept __can_borrow = is_lvalue_reference_v<_Tp> || enable_borrowed_range<remov
 namespace ranges {
 namespace __begin {
 template <class _Tp>
-concept __member_begin = __can_borrow<_Tp> && __workaround_52970<_Tp> && requires(_Tp&& __t) {
+concept __member_begin = __can_borrow<_Tp> && requires(_Tp&& __t) {
   { _LIBCPP_AUTO_CAST(__t.begin()) } -> input_or_output_iterator;
 };
 
-void begin(auto&)       = delete;
-void begin(const auto&) = delete;
+void begin() = delete;
 
 template <class _Tp>
 concept __unqualified_begin =
@@ -104,13 +103,12 @@ using iterator_t = decltype(ranges::begin(std::declval<_Tp&>()));
 namespace ranges {
 namespace __end {
 template <class _Tp>
-concept __member_end = __can_borrow<_Tp> && __workaround_52970<_Tp> && requires(_Tp&& __t) {
+concept __member_end = __can_borrow<_Tp> && requires(_Tp&& __t) {
   typename iterator_t<_Tp>;
   { _LIBCPP_AUTO_CAST(__t.end()) } -> sentinel_for<iterator_t<_Tp>>;
 };
 
-void end(auto&)       = delete;
-void end(const auto&) = delete;
+void end() = delete;
 
 template <class _Tp>
 concept __unqualified_end =
@@ -193,9 +191,8 @@ struct __fn {
 
   template <class _Tp>
     requires is_rvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(ranges::end(static_cast<const _Tp&&>(__t))))
-          -> decltype(ranges::end(static_cast<const _Tp&&>(__t))) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(
+      noexcept(ranges::end(static_cast<const _Tp&&>(__t)))) -> decltype(ranges::end(static_cast<const _Tp&&>(__t))) {
     return ranges::end(static_cast<const _Tp&&>(__t));
   }
 };

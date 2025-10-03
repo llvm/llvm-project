@@ -12,9 +12,7 @@
 namespace llvm {
 
 DwarfStringPoolEntryRef NonRelocatableStringpool::getEntry(StringRef S) {
-  if (Translator)
-    S = Translator(S);
-  auto I = Strings.insert({S, DwarfStringPoolEntry()});
+  auto I = Strings.try_emplace(S);
   auto &Entry = I.first->second;
   if (I.second || !Entry.isIndexed()) {
     Entry.Index = NumEntries++;
@@ -27,9 +25,6 @@ DwarfStringPoolEntryRef NonRelocatableStringpool::getEntry(StringRef S) {
 
 StringRef NonRelocatableStringpool::internString(StringRef S) {
   DwarfStringPoolEntry Entry{nullptr, 0, DwarfStringPoolEntry::NotIndexed};
-
-  if (Translator)
-    S = Translator(S);
 
   auto InsertResult = Strings.insert({S, Entry});
   return InsertResult.first->getKey();

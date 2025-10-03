@@ -22,6 +22,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 
 // Windows includes
@@ -29,6 +30,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+using llvm::sys::windows::UTF8ToUTF16;
 
 static bool GetTripleForProcess(const FileSpec &executable,
                                 llvm::Triple &triple) {
@@ -103,7 +106,9 @@ lldb::thread_t Host::GetCurrentThread() {
 }
 
 void Host::Kill(lldb::pid_t pid, int signo) {
-  TerminateProcess((HANDLE)pid, 1);
+  AutoHandle handle(::OpenProcess(PROCESS_TERMINATE, FALSE, pid), nullptr);
+  if (handle.IsValid())
+    ::TerminateProcess(handle.get(), 1);
 }
 
 const char *Host::GetSignalAsCString(int signo) { return NULL; }
@@ -204,13 +209,14 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
     FileSpec expand_tool_spec = HostInfo::GetSupportExeDir();
     if (!expand_tool_spec) {
-      error.SetErrorString("could not find support executable directory for "
-                           "the lldb-argdumper tool");
+      error = Status::FromErrorString(
+          "could not find support executable directory for "
+          "the lldb-argdumper tool");
       return error;
     }
     expand_tool_spec.AppendPathComponent("lldb-argdumper.exe");
     if (!FileSystem::Instance().Exists(expand_tool_spec)) {
-      error.SetErrorString("could not find the lldb-argdumper tool");
+      error = Status::FromErrorString("could not find the lldb-argdumper tool");
       return error;
     }
 
@@ -233,32 +239,32 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       return e;
 
     if (status != 0) {
-      error.SetErrorStringWithFormat("lldb-argdumper exited with error %d",
-                                     status);
+      error = Status::FromErrorStringWithFormat(
+          "lldb-argdumper exited with error %d", status);
       return error;
     }
 
     auto data_sp = StructuredData::ParseJSON(output);
     if (!data_sp) {
-      error.SetErrorString("invalid JSON");
+      error = Status::FromErrorString("invalid JSON");
       return error;
     }
 
     auto dict_sp = data_sp->GetAsDictionary();
     if (!dict_sp) {
-      error.SetErrorString("invalid JSON");
+      error = Status::FromErrorString("invalid JSON");
       return error;
     }
 
     auto args_sp = dict_sp->GetObjectForDotSeparatedPath("arguments");
     if (!args_sp) {
-      error.SetErrorString("invalid JSON");
+      error = Status::FromErrorString("invalid JSON");
       return error;
     }
 
     auto args_array_sp = args_sp->GetAsArray();
     if (!args_array_sp) {
-      error.SetErrorString("invalid JSON");
+      error = Status::FromErrorString("invalid JSON");
       return error;
     }
 
@@ -298,4 +304,29 @@ Environment Host::GetEnvironment() {
     environment_block += current_var_size;
   }
   return env;
+}
+
+void Host::SystemLog(Severity severity, llvm::StringRef message) {
+  if (message.empty())
+    return;
+
+  std::string log_msg;
+  llvm::raw_string_ostream stream(log_msg);
+
+  switch (severity) {
+  case lldb::eSeverityWarning:
+    stream << "[Warning] ";
+    break;
+  case lldb::eSeverityError:
+    stream << "[Error] ";
+    break;
+  case lldb::eSeverityInfo:
+    stream << "[Info] ";
+    break;
+  }
+
+  stream << message;
+  stream.flush();
+
+  OutputDebugStringA(log_msg.c_str());
 }

@@ -1,4 +1,4 @@
-//===--- ProTypeConstCastCheck.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,7 +32,7 @@ static bool hasVolatileQualifier(QualType Type) {
 ProTypeConstCastCheck::ProTypeConstCastCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)) {}
+      StrictMode(Options.get("StrictMode", false)) {}
 
 void ProTypeConstCastCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);

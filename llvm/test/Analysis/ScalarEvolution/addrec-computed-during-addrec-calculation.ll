@@ -27,19 +27,15 @@ define void @test(ptr %p) {
 ; CHECK-NEXT:    --> {{\{\{}}%iv,+,1}<%loop2>,+,1}<%loop3> U: full-set S: full-set --> {%iv,+,1}<%loop2> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.header: Variant, %loop2: Variant, %loop3: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test
 ; CHECK-NEXT:  Loop %loop2: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop2: constant max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop2: symbolic max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop2: Unpredictable predicated backedge-taken count.
-; CHECK-NEXT:  Loop %loop3: backedge-taken count is false
-; CHECK-NEXT:  Loop %loop3: constant max backedge-taken count is false
-; CHECK-NEXT:  Loop %loop3: symbolic max backedge-taken count is false
-; CHECK-NEXT:  Loop %loop3: Predicated backedge-taken count is false
-; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:  Loop %loop2: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop2: symbolic max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop3: backedge-taken count is i1 false
+; CHECK-NEXT:  Loop %loop3: constant max backedge-taken count is i1 false
+; CHECK-NEXT:  Loop %loop3: symbolic max backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %loop3: Trip multiple is 1
 ; CHECK-NEXT:  Loop %loop.header: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop.header: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop.header: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop.header: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop.header

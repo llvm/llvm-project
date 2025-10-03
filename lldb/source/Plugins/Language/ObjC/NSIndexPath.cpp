@@ -9,12 +9,12 @@
 #include "Cocoa.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 using namespace lldb;
@@ -40,9 +40,11 @@ public:
 
   ~NSIndexPathSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override { return m_impl.GetNumIndexes(); }
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
+    return m_impl.GetNumIndexes();
+  }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     return m_impl.GetIndexAtIndex(idx, m_uint_star_type);
   }
 
@@ -124,11 +126,16 @@ public:
 
   bool MightHaveChildren() override { return m_impl.m_mode != Mode::Invalid; }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    const char *item_name = name.GetCString();
-    uint32_t idx = ExtractIndexFromString(item_name);
-    if (idx < UINT32_MAX && idx >= CalculateNumChildren())
-      return UINT32_MAX;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+    auto optional_idx = ExtractIndexFromString(name.AsCString());
+    if (!optional_idx) {
+      return llvm::createStringError("Type has no child named '%s'",
+                                     name.AsCString());
+    }
+    uint32_t idx = *optional_idx;
+    if (idx >= CalculateNumChildrenIgnoringErrors())
+      return llvm::createStringError("Type has no child named '%s'",
+                                     name.AsCString());
     return idx;
   }
 

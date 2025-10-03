@@ -178,9 +178,9 @@ define i32 @abs_trailing_zeros_negative(i32 %x) {
 
 define <4 x i32> @abs_trailing_zeros_negative_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @abs_trailing_zeros_negative_vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[X:%.*]], <i32 -2, i32 -2, i32 -2, i32 -2>
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[X:%.*]], splat (i32 -2)
 ; CHECK-NEXT:    [[ABS:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[AND]], i1 false)
-; CHECK-NEXT:    [[AND2:%.*]] = and <4 x i32> [[ABS]], <i32 -4, i32 -4, i32 -4, i32 -4>
+; CHECK-NEXT:    [[AND2:%.*]] = and <4 x i32> [[ABS]], splat (i32 -4)
 ; CHECK-NEXT:    ret <4 x i32> [[AND2]]
 ;
   %and = and <4 x i32> %x, <i32 -2, i32 -2, i32 -2, i32 -2>
@@ -207,7 +207,7 @@ define i32 @abs_signbits(i30 %x) {
 define <4 x i32> @abs_signbits_vec(<4 x i30> %x) {
 ; CHECK-LABEL: @abs_signbits_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i30> @llvm.abs.v4i30(<4 x i30> [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[NARROW:%.*]] = add nuw <4 x i30> [[TMP1]], <i30 1, i30 1, i30 1, i30 1>
+; CHECK-NEXT:    [[NARROW:%.*]] = add nuw <4 x i30> [[TMP1]], splat (i30 1)
 ; CHECK-NEXT:    [[ADD:%.*]] = zext <4 x i30> [[NARROW]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[ADD]]
 ;
@@ -229,7 +229,7 @@ define i32 @abs_of_neg(i32 %x) {
 
 define <4 x i32> @abs_of_neg_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @abs_of_neg_vec(
-; CHECK-NEXT:    [[B:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[B:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[X:%.*]], i1 true)
 ; CHECK-NEXT:    ret <4 x i32> [[B]]
 ;
   %a = sub nsw <4 x i32> zeroinitializer, %x
@@ -317,7 +317,7 @@ define i32 @zext_abs(i31 %x) {
 
 define <3 x i82> @lshr_abs(<3 x i82> %x) {
 ; CHECK-LABEL: @lshr_abs(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i82> [[X:%.*]], <i82 1, i82 1, i82 1>
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i82> [[X:%.*]], splat (i82 1)
 ; CHECK-NEXT:    ret <3 x i82> [[LSHR]]
 ;
   %lshr = lshr <3 x i82> %x, <i82 1, i82 1, i82 1>
@@ -497,7 +497,7 @@ define i32 @demand_low_bit(i32 %x) {
 
 define <3 x i82> @demand_low_bit_int_min_is_poison(<3 x i82> %x) {
 ; CHECK-LABEL: @demand_low_bit_int_min_is_poison(
-; CHECK-NEXT:    [[R:%.*]] = shl <3 x i82> [[X:%.*]], <i82 81, i82 81, i82 81>
+; CHECK-NEXT:    [[R:%.*]] = shl <3 x i82> [[X:%.*]], splat (i82 81)
 ; CHECK-NEXT:    ret <3 x i82> [[R]]
 ;
   %a = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %x, i1 true)
@@ -530,9 +530,9 @@ define i32 @srem_by_2_int_min_is_poison(i32 %x) {
 
 define <3 x i82> @srem_by_2(<3 x i82> %x, ptr %p) {
 ; CHECK-LABEL: @srem_by_2(
-; CHECK-NEXT:    [[S:%.*]] = srem <3 x i82> [[X:%.*]], <i82 2, i82 2, i82 2>
+; CHECK-NEXT:    [[S:%.*]] = srem <3 x i82> [[X:%.*]], splat (i82 2)
 ; CHECK-NEXT:    store <3 x i82> [[S]], ptr [[P:%.*]], align 32
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i82> [[X]], <i82 1, i82 1, i82 1>
+; CHECK-NEXT:    [[R:%.*]] = and <3 x i82> [[X]], splat (i82 1)
 ; CHECK-NEXT:    ret <3 x i82> [[R]]
 ;
   %s = srem <3 x i82> %x, <i82 2, i82 2, i82 2>
@@ -800,7 +800,7 @@ define i32 @sub_abs_wrong_pred(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 true)
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
@@ -846,4 +846,154 @@ cond.true:
 cond.end:
   %r = phi i32 [ %0, %cond.true ], [ 0, %entry ]
   ret i32 %r
+}
+
+; The AND should be removable based on range metadata. Make sure
+; computeKnownBits doesn't lose this.
+define i32 @abs_range_metadata(i32 %x) {
+; CHECK-LABEL: @abs_range_metadata(
+; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[B]]
+;
+  %a = call i32 @llvm.abs.i32(i32 %x, i1 false), !range !1
+  %b = and i32 %a, 15
+  ret i32 %b
+}
+
+!1 = !{i32 0, i32 16}
+
+define i32 @abs_diff(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %x, %y
+  %cmp = icmp sgt i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_neg_no_nsw_neg(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_neg_no_nsw_neg(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 0, [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[SUB1]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub i32 %x, %y
+  %cmp = icmp sgt i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_neg(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_neg(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 0, [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[SUB1]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %y, %x
+  %cmp = icmp sgt i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_neg_no_nsw(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_neg_no_nsw(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 0, [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[SUB1]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub i32 %y, %x
+  %cmp = icmp sgt i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_ge(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_ge(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %x, %y
+  %cmp = icmp sge i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_slt_commute(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_slt_commute(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %x, %y
+  %cmp = icmp slt i32 %y, %x
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_sge_same(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_sge_same(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %x, %y
+  %cmp = icmp sge i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_sle_inverted(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_sle_inverted(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %x, %y
+  %cmp = icmp sle i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub1, i32 %sub
+  ret i32 %cond
+}
+
+define i32 @abs_diff_sle_commute(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_sle_commute(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %x, %y
+  %cmp = icmp sle i32 %y, %x
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i8 @abs_diff_sle_y_x(i8 %x, i8 %y) {
+; CHECK-LABEL: @abs_diff_sle_y_x(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i8 @llvm.abs.i8(i8 [[SUB]], i1 false)
+; CHECK-NEXT:    ret i8 [[COND]]
+;
+  %sub = sub nsw i8 %x, %y
+  %cmp = icmp sle i8 %y, %x
+  %sub1 = sub i8 0, %sub
+  %cond = select i1 %cmp, i8 %sub, i8 %sub1
+  ret i8 %cond
 }

@@ -23,4 +23,20 @@ module m
     !BECAUSE: 'ma' is a host-associated allocatable and is not definable in a device subprogram
     deallocate(ma)
   end subroutine
+
+  subroutine hostsub()
+    integer, allocatable, device :: ia(:)
+    logical :: plog
+
+    !WARNING: Object in ALLOCATE should have PINNED attribute when PINNED option is specified
+    allocate(ia(100), pinned = plog)
+  end subroutine
+
+  subroutine host2()
+    integer, allocatable, pinned :: ia(:)
+    integer :: istream
+
+    !ERROR: Object in ALLOCATE must have DEVICE attribute when STREAM option is specified
+    allocate(ia(100), stream = istream)
+  end subroutine
 end module

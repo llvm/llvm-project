@@ -16,8 +16,6 @@ class TestThreadBacktracePage(TestBase):
         """Run a simplified version of the test that just hits one breakpoint and
         doesn't care about synchronizing the two threads - hopefully this will
         run on more systems."""
-
-    def test_thread_backtrace_one_thread(self):
         self.build()
         (
             self.inferior_target,

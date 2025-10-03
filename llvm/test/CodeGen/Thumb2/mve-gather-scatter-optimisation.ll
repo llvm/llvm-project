@@ -609,7 +609,6 @@ define dso_local void @arm_mat_mult_q15(ptr noalias nocapture readonly %A, ptr n
 ; CHECK-NEXT:    strd r0, r2, [sp, #24] @ 8-byte Folded Spill
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    str r3, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    mov r0, r3
 ; CHECK-NEXT:    itt ne
 ; CHECK-NEXT:    ldrne r0, [sp, #136]
 ; CHECK-NEXT:    cmpne r0, #0
@@ -713,8 +712,8 @@ define dso_local void @arm_mat_mult_q15(ptr noalias nocapture readonly %A, ptr n
 ; CHECK-NEXT:  @ %bb.12: @ %middle.block
 ; CHECK-NEXT:    @ in Loop: Header=BB10_8 Depth=2
 ; CHECK-NEXT:    vaddv.u32 r10, q4
-; CHECK-NEXT:    cmp r2, r12
 ; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    cmp r2, r12
 ; CHECK-NEXT:    beq .LBB10_7
 ; CHECK-NEXT:  .LBB10_13: @ %for.body8.us.us.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB10_8 Depth=2

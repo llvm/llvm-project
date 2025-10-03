@@ -6,15 +6,15 @@
 
 // CHECK-SANITIZE-ANYRECOVER-DAG: @[[INT:.*]] = {{.*}} c"'int'\00" }
 // CHECK-SANITIZE-ANYRECOVER-DAG: @[[UNSIGNED_SHORT:.*]] = {{.*}} c"'unsigned short'\00" }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_100:.*]] = {{.*}}, i32 100, i32 11 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2 }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_200:.*]] = {{.*}}, i32 200, i32 11 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2 }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_300:.*]] = {{.*}}, i32 300, i32 10 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2 }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_400:.*]] = {{.*}}, i32 400, i32 10 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_100:.*]] = {{.*}}, i32 100, i32 11 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_200:.*]] = {{.*}}, i32 200, i32 11 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_300:.*]] = {{.*}}, i32 300, i32 10 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_400:.*]] = {{.*}}, i32 400, i32 10 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2, i32 0 }
 // CHECK-SANITIZE-ANYRECOVER-DAG: @[[SHORT:.*]] = {{.*}} c"'short'\00" }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_500:.*]] = {{.*}}, i32 500, i32 11 }, ptr @[[INT]], ptr @[[SHORT]], i8 2 }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_600:.*]] = {{.*}}, i32 600, i32 11 }, ptr @[[INT]], ptr @[[SHORT]], i8 2 }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_700:.*]] = {{.*}}, i32 700, i32 10 }, ptr @[[INT]], ptr @[[SHORT]], i8 2 }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_800:.*]] = {{.*}}, i32 800, i32 10 }, ptr @[[INT]], ptr @[[SHORT]], i8 2 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_500:.*]] = {{.*}}, i32 500, i32 11 }, ptr @[[INT]], ptr @[[SHORT]], i8 2, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_600:.*]] = {{.*}}, i32 600, i32 11 }, ptr @[[INT]], ptr @[[SHORT]], i8 2, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_700:.*]] = {{.*}}, i32 700, i32 10 }, ptr @[[INT]], ptr @[[SHORT]], i8 2, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_800:.*]] = {{.*}}, i32 800, i32 10 }, ptr @[[INT]], ptr @[[SHORT]], i8 2, i32 0 }
 
 unsigned short t0(unsigned short x) {
 // CHECK-NOSANITIZE-LABEL: @t0(

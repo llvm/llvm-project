@@ -285,7 +285,7 @@ define i32 @rem_euclid_wrong_operands_select(i32 %0) {
 
 define <2 x i32> @rem_euclid_vec(<2 x i32> %0) {
 ; CHECK-LABEL: @rem_euclid_vec(
-; CHECK-NEXT:    [[SEL:%.*]] = and <2 x i32> [[TMP0:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[SEL:%.*]] = and <2 x i32> [[TMP0:%.*]], splat (i32 7)
 ; CHECK-NEXT:    ret <2 x i32> [[SEL]]
 ;
   %rem = srem <2 x i32> %0, <i32 8, i32 8>
@@ -311,13 +311,28 @@ define i8 @rem_euclid_non_const_pow2(i8 %0, i8 %1) {
 ; CHECK-LABEL: @rem_euclid_non_const_pow2(
 ; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[TMP0:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[NOTMASK]], -1
-; CHECK-NEXT:    [[SEL:%.*]] = and i8 [[TMP3]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = and i8 [[TMP1:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %pow2 = shl i8 1, %0
   %rem = srem i8 %1, %pow2
   %cond = icmp slt i8 %rem, 0
   %add = add i8 %rem, %pow2
+  %sel = select i1 %cond, i8 %add, i8 %rem
+  ret i8 %sel
+}
+
+define i8 @rem_euclid_non_const_pow2_commuted(i8 %0, i8 %1) {
+; CHECK-LABEL: @rem_euclid_non_const_pow2_commuted(
+; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[NOTMASK]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = and i8 [[TMP1:%.*]], [[TMP3]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %pow2 = shl i8 1, %0
+  %rem = srem i8 %1, %pow2
+  %cond = icmp slt i8 %rem, 0
+  %add = add i8 %pow2, %rem
   %sel = select i1 %cond, i8 %add, i8 %rem
   ret i8 %sel
 }
@@ -342,4 +357,21 @@ define i32 @rem_euclid_pow2_false_arm_folded(i32 %n) {
   %nonneg = icmp sge i32 %rem, 0
   %res = select i1 %nonneg, i32 %rem, i32 1
   ret i32 %res
+}
+
+define i8 @pr89516(i8 %n, i8 %x) {
+; CHECK-LABEL: @pr89516(
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[POW2:%.*]] = shl nuw i8 1, [[N:%.*]]
+; CHECK-NEXT:    [[SREM:%.*]] = srem i8 1, [[POW2]]
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[COND]], i8 [[POW2]], i8 0
+; CHECK-NEXT:    [[RES:%.*]] = add nuw i8 [[SREM]], [[ADD]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cond = icmp slt i8 %x, 0
+  %pow2 = shl nuw i8 1, %n
+  %srem = srem i8 1, %pow2
+  %add = add nuw i8 %srem, %pow2
+  %res = select i1 %cond, i8 %add, i8 %srem
+  ret i8 %res
 }

@@ -14,10 +14,12 @@
 #ifndef LLVM_TOOLDRIVERS_LLVM_DLLTOOL_DLLTOOLDRIVER_H
 #define LLVM_TOOLDRIVERS_LLVM_DLLTOOL_DLLTOOLDRIVER_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 template <typename T> class ArrayRef;
 
-int dlltoolDriverMain(ArrayRef<const char *> ArgsArr);
+LLVM_ABI int dlltoolDriverMain(ArrayRef<const char *> ArgsArr);
 } // namespace llvm
 
 #endif

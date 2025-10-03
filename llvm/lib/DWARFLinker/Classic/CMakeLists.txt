@@ -10,12 +10,16 @@ add_llvm_component_library(LLVMDWARFLinkerClassic
   DEPENDS
   intrinsics_gen
 
+  LINK_LIBS
+  ${LLVM_PTHREAD_LIB}
+
   LINK_COMPONENTS
   AsmPrinter
   BinaryFormat
   CodeGen
   CodeGenTypes
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   DWARFLinker
   MC
   Object

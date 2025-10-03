@@ -112,9 +112,18 @@ def MxRet   : SDNode<"M68kISD::RET", MxSDT_Ret,
 def MxTCRet : SDNode<"M68kISD::TC_RETURN", MxSDT_TCRet,
                      [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
 
+def MxGlobalBaseReg : SDNode<"M68kISD::GLOBAL_BASE_REG",
+                             SDTypeProfile<1, 0, [SDTCisVT<0, iPTR>]>>;
+
+// A wrapper node for TargetConstantPool,
+// TargetExternalSymbol, and TargetGlobalAddress.
 def MxWrapper   : SDNode<"M68kISD::Wrapper",   MxSDT_Wrapper>;
+
+// Special wrapper used under M68k PIC mode for PC
+// relative displacements.
 def MxWrapperPC : SDNode<"M68kISD::WrapperPC", MxSDT_Wrapper>;
 
+// Arithmetic operations with CCR results.
 def MxAdd  : SDNode<"M68kISD::ADD",  MxSDT_BiArithCCROut, [SDNPCommutative]>;
 def MxSub  : SDNode<"M68kISD::SUB",  MxSDT_BiArithCCROut>;
 def MxOr   : SDNode<"M68kISD::OR",   MxSDT_BiArithCCROut, [SDNPCommutative]>;
@@ -127,15 +136,37 @@ def MxSubX : SDNode<"M68kISD::SUBX", MxSDT_BiArithCCRInOut>;
 def MxSMul : SDNode<"M68kISD::SMUL", MxSDT_BiArithCCROut, [SDNPCommutative]>;
 def MxUMul : SDNode<"M68kISD::UMUL", MxSDT_BiArithCCROut, [SDNPCommutative]>;
 
+// M68k compare and logical compare instructions. Subtracts the source
+// operand from the destination data register and sets the condition
+// codes according to the result. Immediate always goes first.
 def MxCmp     : SDNode<"M68kISD::CMP", MxSDT_CmpTest>;
+
+// M68k bit-test instructions.
 def MxBtst    : SDNode<"M68kISD::BTST", MxSDT_CmpTest>;
 
+// M68k conditional moves. Operand 0 and operand 1 are the two values
+// to select from. Operand 2 is the condition code, and operand 3 is the
+// flag operand produced by a CMP or TEST instruction. It also writes a
+// flag result.
 def MxCmov    : SDNode<"M68kISD::CMOV",        MxSDT_Cmov>;
+
+// M68k conditional branches. Operand 0 is the chain operand, operand 1
+// is the block to branch if condition is true, operand 2 is the
+// condition code, and operand 3 is the flag operand produced by a CMP
+// or TEST instruction.
 def MxBrCond  : SDNode<"M68kISD::BRCOND",      MxSDT_BrCond, [SDNPHasChain]>;
+
+// M68k SetCC. Operand 0 is condition code, and operand 1 is the CCR
+// operand, usually produced by a CMP instruction.
 def MxSetCC   : SDNode<"M68kISD::SETCC",       MxSDT_SetCC>;
+
+// Same as SETCC except it's materialized with a subx and the value is all
+// one's or all zero's.
 def MxSetCC_C : SDNode<"M68kISD::SETCC_CARRY", MxSDT_SetCC_C>;
 
-
+// For allocating variable amounts of stack space when using
+// segmented stacks. Check if the current stacklet has enough space, and
+// falls back to heap allocation if not.
 def MxSegAlloca : SDNode<"M68kISD::SEG_ALLOCA", MxSDT_SEG_ALLOCA,
                          [SDNPHasChain]>;
 
@@ -200,32 +231,35 @@ class MxRegOp<ValueType vt,
 
 // REGISTER DIRECT. The operand is in the data register specified by
 // the effective address register field.
-def MxXRD16 : MxRegOp<i16, XR16, MxSize16, "r">;
-def MxXRD32 : MxRegOp<i32, XR32, MxSize32, "r">;
-
-def MxXRD16_TC : MxRegOp<i16, XR16_TC, MxSize16, "r">;
-def MxXRD32_TC : MxRegOp<i32, XR32_TC, MxSize32, "r">;
+foreach size = [16, 32] in {
+  def MxXRD # size : MxRegOp<!cast<ValueType>("i"#size), !cast<MxRegClass>("XR"#size),
+                             !cast<MxSize>("MxSize"#size), "r">;
+  def MxXRD # size # _TC : MxRegOp<!cast<ValueType>("i"#size), !cast<MxRegClass>("XR"#size#"_TC"),
+                                   !cast<MxSize>("MxSize"#size), "r">;
+} // foreach size
 
 // DATA REGISTER DIRECT. The operand is in the data register specified by
 // the effective address register field.
 let ParserMatchClass = MxDRegClass in {
-  def MxDRD8  : MxRegOp<i8,  DR8,  MxSize8,  "d">;
-  def MxDRD16 : MxRegOp<i16, DR16, MxSize16, "d">;
-  def MxDRD32 : MxRegOp<i32, DR32, MxSize32, "d">;
-
-  def MxDRD16_TC : MxRegOp<i16, DR16_TC, MxSize16, "d">;
-  def MxDRD32_TC : MxRegOp<i32, DR32_TC, MxSize32, "d">;
-}
+foreach size = [8, 16, 32] in {
+  def MxDRD # size : MxRegOp<!cast<ValueType>("i"#size), !cast<MxRegClass>("DR"#size),
+                             !cast<MxSize>("MxSize"#size), "d">;
+  if !gt(size, 8) then
+  def MxDRD # size # _TC : MxRegOp<!cast<ValueType>("i"#size), !cast<MxRegClass>("DR"#size#"_TC"),
+                                   !cast<MxSize>("MxSize"#size), "d">;
+} // foreach size
+} // let ParserMatchClass
 
 // ADDRESS REGISTER DIRECT. The operand is in the address register specified by
 // the effective address register field.
 let ParserMatchClass = MxARegClass in {
-  def MxARD16 : MxRegOp<i16, AR16, MxSize16, "a">;
-  def MxARD32 : MxRegOp<i32, AR32, MxSize32, "a">;
-
-  def MxARD16_TC : MxRegOp<i16, AR16_TC, MxSize16, "a">;
-  def MxARD32_TC : MxRegOp<i32, AR32_TC, MxSize32, "a">;
-}
+foreach size = [16, 32] in {
+  def MxARD # size : MxRegOp<!cast<ValueType>("i"#size), !cast<MxRegClass>("AR"#size),
+                             !cast<MxSize>("MxSize"#size), "a">;
+  def MxARD # size # _TC : MxRegOp<!cast<ValueType>("i"#size), !cast<MxRegClass>("AR"#size#"_TC"),
+                                   !cast<MxSize>("MxSize"#size), "a">;
+} // foreach size
+} // let ParserMatchClass
 
 // FLOATING POINT DATA REGISTER.
 let ParserMatchClass = MxFPDRegClass in {
@@ -255,13 +289,11 @@ class MxMemOp<dag ops, MxSize size, string letter,
 // a data reference with the exception of the jump and jump-to-subroutine
 // instructions.
 def MxARI         : MxOpClass<"ARI">;
-def MxARI8        : MxMemOp<(ops AR32), MxSize8,  "j", "printARI8Mem", MxARI>;
-def MxARI16       : MxMemOp<(ops AR32), MxSize16, "j", "printARI16Mem", MxARI>;
-def MxARI32       : MxMemOp<(ops AR32), MxSize32, "j", "printARI32Mem", MxARI>;
-
-def MxARI8_TC     : MxMemOp<(ops AR32_TC), MxSize8,  "j", "printARI8Mem", MxARI>;
-def MxARI16_TC    : MxMemOp<(ops AR32_TC), MxSize16, "j", "printARI16Mem", MxARI>;
-def MxARI32_TC    : MxMemOp<(ops AR32_TC), MxSize32, "j", "printARI32Mem", MxARI>;
+foreach size = ["8", "16", "32"] in {
+  defvar ResSize = !cast<MxSize>("MxSize"#size);
+  def MxARI # size       : MxMemOp<(ops AR32),    ResSize, "j", "printARI"#size#"Mem", MxARI>;
+  def MxARI # size # _TC : MxMemOp<(ops AR32_TC), ResSize, "j", "printARI"#size#"Mem", MxARI>;
+} // foreach size
 
 // ADDRESS REGISTER INDIRECT WITH POSTINCREMENT. The address of the operand is
 // in the address register specified by the register field. After the operand
@@ -271,13 +303,11 @@ def MxARI32_TC    : MxMemOp<(ops AR32_TC), MxSize32, "j", "printARI32Mem", MxARI
 // by two rather than one to keep the stack pointer on a word boundary.
 // The reference is classified as a data reference.
 def MxARIPI       : MxOpClass<"ARIPI">;
-def MxARIPI8      : MxMemOp<(ops AR32), MxSize8,  "o", "printARIPI8Mem", MxARIPI>;
-def MxARIPI16     : MxMemOp<(ops AR32), MxSize16, "o", "printARIPI16Mem", MxARIPI>;
-def MxARIPI32     : MxMemOp<(ops AR32), MxSize32, "o", "printARIPI32Mem", MxARIPI>;
-
-def MxARIPI8_TC   : MxMemOp<(ops AR32_TC), MxSize8,  "o", "printARIPI8Mem", MxARIPI>;
-def MxARIPI16_TC  : MxMemOp<(ops AR32_TC), MxSize16, "o", "printARIPI16Mem", MxARIPI>;
-def MxARIPI32_TC  : MxMemOp<(ops AR32_TC), MxSize32, "o", "printARIPI32Mem", MxARIPI>;
+foreach size = ["8", "16", "32"] in {
+  defvar ResSize = !cast<MxSize>("MxSize"#size);
+  def MxARIPI # size       : MxMemOp<(ops AR32),    ResSize, "o", "printARIPI"#size#"Mem", MxARIPI>;
+  def MxARIPI # size # _TC : MxMemOp<(ops AR32_TC), ResSize, "o", "printARIPI"#size#"Mem", MxARIPI>;
+} // foreach size
 
 // ADDRESS REGISTER INDIRECT WITH PREDECREMENT. The address of the operand is in
 // the address register specified by the register field. Before the operand
@@ -287,13 +317,11 @@ def MxARIPI32_TC  : MxMemOp<(ops AR32_TC), MxSize32, "o", "printARIPI32Mem", MxA
 // two rather than one to keep the stack pointer on a word boundary.
 // The reference is classified as a data reference.
 def MxARIPD       : MxOpClass<"ARIPD">;
-def MxARIPD8      : MxMemOp<(ops AR32), MxSize8,  "e", "printARIPD8Mem", MxARIPD>;
-def MxARIPD16     : MxMemOp<(ops AR32), MxSize16, "e", "printARIPD16Mem", MxARIPD>;
-def MxARIPD32     : MxMemOp<(ops AR32), MxSize32, "e", "printARIPD32Mem", MxARIPD>;
-
-def MxARIPD8_TC   : MxMemOp<(ops AR32_TC), MxSize8,  "e", "printARIPD8Mem", MxARIPD>;
-def MxARIPD16_TC  : MxMemOp<(ops AR32_TC), MxSize16, "e", "printARIPD16Mem", MxARIPD>;
-def MxARIPD32_TC  : MxMemOp<(ops AR32_TC), MxSize32, "e", "printARIPD32Mem", MxARIPD>;
+foreach size = ["8", "16", "32"] in {
+  defvar ResSize = !cast<MxSize>("MxSize"#size);
+  def MxARIPD # size       : MxMemOp<(ops AR32),    ResSize, "e", "printARIPD"#size#"Mem", MxARIPD>;
+  def MxARIPD # size # _TC : MxMemOp<(ops AR32_TC), ResSize, "e", "printARIPD"#size#"Mem", MxARIPD>;
+} // foreach size
 
 // ADDRESS REGISTER INDIRECT WITH DISPLACEMENT. This addressing mode requires one
 // word of extension. The address of the operand is the sum of the address in
@@ -301,13 +329,11 @@ def MxARIPD32_TC  : MxMemOp<(ops AR32_TC), MxSize32, "e", "printARIPD32Mem", MxA
 // extension word. The reference is classified as a data reference with the
 // exception of the jump and jump-to-subroutine instructions.
 def MxARID        : MxOpClass<"ARID">;
-def MxARID8       : MxMemOp<(ops i16imm:$disp, AR32:$reg), MxSize8,  "p", "printARID8Mem", MxARID>;
-def MxARID16      : MxMemOp<(ops i16imm:$disp, AR32:$reg), MxSize16, "p", "printARID16Mem", MxARID>;
-def MxARID32      : MxMemOp<(ops i16imm:$disp, AR32:$reg), MxSize32, "p", "printARID32Mem", MxARID>;
-
-def MxARID8_TC    : MxMemOp<(ops i16imm:$disp, AR32_TC:$reg), MxSize8,  "p", "printARID8Mem", MxARID>;
-def MxARID16_TC   : MxMemOp<(ops i16imm:$disp, AR32_TC:$reg), MxSize16, "p", "printARID16Mem", MxARID>;
-def MxARID32_TC   : MxMemOp<(ops i16imm:$disp, AR32_TC:$reg), MxSize32, "p", "printARID32Mem", MxARID>;
+foreach size = ["8", "16", "32"] in {
+  defvar ResSize = !cast<MxSize>("MxSize"#size);
+  def MxARID # size       : MxMemOp<(ops i16imm:$disp, AR32:$reg),    ResSize, "p", "printARID"#size#"Mem", MxARID>;
+  def MxARID # size # _TC : MxMemOp<(ops i16imm:$disp, AR32_TC:$reg), ResSize, "p", "printARID"#size#"Mem", MxARID>;
+} // foreach size
 
 // ADDRESS REGISTER INDIRECT WITH INDEX. This addressing mode requires one word
 // of extension. The address of the operand is the sum of the address in the
@@ -316,19 +342,11 @@ def MxARID32_TC   : MxMemOp<(ops i16imm:$disp, AR32_TC:$reg), MxSize32, "p", "pr
 // The reference is classified as a data reference with the exception of the
 // jump and jump-to-subroutine instructions
 def MxARII       : MxOpClass<"ARII">;
-def MxARII8      : MxMemOp<(ops i8imm:$disp, AR32:$reg, XR32:$index),
-                           MxSize8,  "f", "printARII8Mem", MxARII>;
-def MxARII16     : MxMemOp<(ops i8imm:$disp, AR32:$reg, XR32:$index),
-                           MxSize16, "f", "printARII16Mem", MxARII>;
-def MxARII32     : MxMemOp<(ops i8imm:$disp, AR32:$reg, XR32:$index),
-                           MxSize32, "f", "printARII32Mem", MxARII>;
-
-def MxARII8_TC   : MxMemOp<(ops i8imm:$disp, AR32_TC:$reg, XR32_TC:$index),
-                           MxSize8,  "f", "printARII8Mem", MxARII>;
-def MxARII16_TC  : MxMemOp<(ops i8imm:$disp, AR32_TC:$reg, XR32_TC:$index),
-                           MxSize16, "f", "printARII16Mem", MxARII>;
-def MxARII32_TC  : MxMemOp<(ops i8imm:$disp, AR32_TC:$reg, XR32_TC:$index),
-                           MxSize32, "f", "printARII32Mem", MxARII>;
+foreach size = ["8", "16", "32"] in {
+  defvar ResSize = !cast<MxSize>("MxSize"#size);
+  def MxARII # size       : MxMemOp<(ops i8imm:$disp, AR32:$reg,    XR32:$index), ResSize, "f", "printARII"#size#"Mem", MxARII>;
+  def MxARII # size # _TC : MxMemOp<(ops i8imm:$disp, AR32_TC:$reg, XR32:$index), ResSize, "f", "printARII"#size#"Mem", MxARII>;
+} // foreach size
 
 // ABSOLUTE SHORT ADDRESS. This addressing mode requires one word of extension.
 // The address of the operand is the extension word. The 16-bit address is sign
@@ -361,14 +379,14 @@ def MxPCD : MxOpClass<"PCD">;
 def MxPCI : MxOpClass<"PCI">;
 
 let OperandType = "OPERAND_PCREL" in {
+foreach size = ["8", "16", "32"] in {
+defvar ResSize = !cast<MxSize>("MxSize"#size);
 // PROGRAM COUNTER WITH DISPLACEMENT. This addressing mode requires one word of
 // extension. The address of the operand is the sum of the address in the program
 // counter and the Sign-extended 16-bit displacement integer in the extension
 // word. The value in the program counter is the address of the extension word.
 // The reference is classified as a program reference.
-def MxPCD8     : MxMemOp<(ops i16imm), MxSize8,  "q", "printPCD8Mem", MxPCD>;
-def MxPCD16    : MxMemOp<(ops i16imm), MxSize16, "q", "printPCD16Mem", MxPCD>;
-def MxPCD32    : MxMemOp<(ops i16imm), MxSize32, "q", "printPCD32Mem", MxPCD>;
+def MxPCD # size : MxMemOp<(ops i16imm), ResSize,  "q", "printPCD"#size#"Mem", MxPCD>;
 
 // PROGRAM COUNTER WITH INDEX. This addressing mode requires one word of
 // extension. The address is the sum of the address in the program counter, the
@@ -376,9 +394,8 @@ def MxPCD32    : MxMemOp<(ops i16imm), MxSize32, "q", "printPCD32Mem", MxPCD>;
 // word, and the contents of the index register.  The value in the program
 // counter is the address of the extension word. This reference is classified as
 // a program reference.
-def MxPCI8   : MxMemOp<(ops i8imm:$disp, XR32:$index), MxSize8,  "k", "printPCI8Mem", MxPCI>;
-def MxPCI16  : MxMemOp<(ops i8imm:$disp, XR32:$index), MxSize16, "k", "printPCI16Mem", MxPCI>;
-def MxPCI32  : MxMemOp<(ops i8imm:$disp, XR32:$index), MxSize32, "k", "printPCI32Mem", MxPCI>;
+def MxPCI # size : MxMemOp<(ops i8imm:$disp, XR32:$index), ResSize,  "k", "printPCI"#size#"Mem", MxPCI>;
+} // foreach size
 } // OPERAND_PCREL
 
 def MxImm : AsmOperandClass {
@@ -421,10 +438,17 @@ def MxBrTarget32 : MxBrTargetOperand<32>;
 
 // Used with MOVEM
 def MxMoveMaskClass : MxOpClass<"MoveMask">;
-def MxMoveMask : MxOp<i16, MxSize16, "m"> {
+class MxMoveMaskOp : MxOp<i16, MxSize16, "m"> {
   let OperandType = "OPERAND_IMMEDIATE";
   let PrintMethod = "printMoveMask";
   let ParserMatchClass = MxMoveMaskClass;
+}
+
+def MxMoveMask : MxMoveMaskOp;
+// The encoding of mask is reversed when the memory operand has an addressing
+// mode of 'e', that is, pre-decrement.
+def MxInverseMoveMask : MxMoveMaskOp {
+  let EncoderMethod = "encodeInverseMoveMask";
 }
 
 //===----------------------------------------------------------------------===//
@@ -480,34 +504,28 @@ def MxCONDle  : PatLeaf<(i8 15)>; // Less or Equal
 
 // NOTE Though this CP is not strictly necessarily it will simplify instruciton
 // definitions
-def MxCP_ARI   : ComplexPattern<iPTR, 1, "SelectARI",
-                                [], [SDNPWantParent]>;
+let WantsParent = true in {
+  def MxCP_ARI   : ComplexPattern<iPTR, 1, "SelectARI">;
 
-def MxCP_ARIPI : ComplexPattern<iPTR, 1, "SelectARIPI",
-                                [], [SDNPWantParent]>;
+  def MxCP_ARIPI : ComplexPattern<iPTR, 1, "SelectARIPI">;
 
-def MxCP_ARIPD : ComplexPattern<iPTR, 1, "SelectARIPD",
-                                [], [SDNPWantParent]>;
+  def MxCP_ARIPD : ComplexPattern<iPTR, 1, "SelectARIPD">;
 
-def MxCP_ARID  : ComplexPattern<iPTR, 2, "SelectARID",
-                                [add, sub, mul, or, shl, frameindex],
-                                [SDNPWantParent]>;
+  def MxCP_ARID  : ComplexPattern<iPTR, 2, "SelectARID",
+                                  [add, sub, mul, or, shl, frameindex]>;
 
-def MxCP_ARII  : ComplexPattern<iPTR, 3, "SelectARII",
-                                [add, sub, mul, or, shl, frameindex],
-                                [SDNPWantParent]>;
+  def MxCP_ARII  : ComplexPattern<iPTR, 3, "SelectARII",
+                                  [add, sub, mul, or, shl, frameindex]>;
 
-def MxCP_AL    : ComplexPattern<iPTR, 1, "SelectAL",
-                                [add, sub, mul, or, shl],
-                                [SDNPWantParent]>;
+  def MxCP_AL    : ComplexPattern<iPTR, 1, "SelectAL",
+                                  [add, sub, mul, or, shl]>;
 
-def MxCP_PCD   : ComplexPattern<iPTR, 1, "SelectPCD",
-                                [add, sub, mul, or, shl],
-                                [SDNPWantParent]>;
+  def MxCP_PCD   : ComplexPattern<iPTR, 1, "SelectPCD",
+                                  [add, sub, mul, or, shl]>;
 
-def MxCP_PCI   : ComplexPattern<iPTR, 2, "SelectPCI",
-                                [add, sub, mul, or, shl], [SDNPWantParent]>;
-
+  def MxCP_PCI   : ComplexPattern<iPTR, 2, "SelectPCI",
+                                  [add, sub, mul, or, shl]>;
+}
 
 //===----------------------------------------------------------------------===//
 // Pattern Fragments

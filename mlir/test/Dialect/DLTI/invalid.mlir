@@ -5,6 +5,11 @@
 
 // -----
 
+// expected-error@below {{'dlti.map' is expected to be a #dlti.map attribute}}
+"test.unknown_op"() { dlti.map = 42 } : () -> ()
+
+// -----
+
 // expected-error@below {{'dlti.dl_spec' is expected to be a #dlti.dl_spec attribute}}
 "test.unknown_op"() { dlti.dl_spec = 42 } : () -> ()
 
@@ -20,7 +25,12 @@
 
 // -----
 
-// expected-error@below {{repeated layout entry key: test.id}}
+// expected-error@below {{empty string as DLTI key is not allowed}}
+"test.unknown_op"() { test.unknown_attr = #dlti.map<"" = 42> } : () -> ()
+
+// -----
+
+// expected-error@below {{repeated DLTI key: "test.id"}}
 "test.unknown_op"() { test.unknown_attr = #dlti.dl_spec<
   #dlti.dl_entry<"test.id", 42>,
   #dlti.dl_entry<"test.id", 43>
@@ -28,7 +38,15 @@
 
 // -----
 
-// expected-error@below {{repeated layout entry key: 'i32'}}
+// expected-error@below {{repeated DLTI key: i32}}
+"test.unknown_op"() { test.unknown_attr = #dlti.map<
+  #dlti.dl_entry<i32, 42>,
+  #dlti.dl_entry<i32, 42>
+>} : () -> ()
+
+// -----
+
+// expected-error@below {{repeated DLTI key: i32}}
 "test.unknown_op"() { test.unknown_attr = #dlti.dl_spec<
   #dlti.dl_entry<i32, 42>,
   #dlti.dl_entry<i32, 42>
@@ -36,7 +54,7 @@
 
 // -----
 
-// expected-error@below {{unknown attrribute type: unknown}}
+// expected-error@below {{unknown attribute `unknown` in dialect `dlti`}}
 "test.unknown_op"() { test.unknown_attr = #dlti.unknown } : () -> ()
 
 // -----
@@ -90,3 +108,59 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown
   // expected-note@above {{enclosing op with data layout}}
   "test.op_with_data_layout"() { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown", 32>>} : () -> ()
 }
+
+// -----
+
+// expected-error@below {{'dlti.target_system_spec' is expected to be a #dlti.target_system_spec attribute}}
+"test.unknown_op"() { dlti.target_system_spec = 42 } : () -> ()
+
+// -----
+
+// expected-error@below {{invalid kind of attribute specified}}
+"test.unknown_op"() { dlti.target_system_spec = #dlti.target_system_spec<[]> } : () -> ()
+
+// -----
+
+module attributes {
+  // Device ID is missing
+  //
+  // expected-error@below {{expected attribute value}}
+  dlti.target_system_spec = #dlti.target_system_spec<
+    = #dlti.target_device_spec<
+      #dlti.dl_entry<"L1_cache_size_in_bytes", 4096 : i32>>
+  >} {}
+
+// -----
+
+module attributes {
+  // Device ID is wrong type
+  //
+  // expected-error@+2 {{invalid kind of attribute specified}}
+  dlti.target_system_spec = #dlti.target_system_spec<
+    0 = #dlti.target_device_spec<
+        #dlti.dl_entry<"L1_cache_size_in_bytes", 4096 : i32>>
+  >} {}
+
+// -----
+
+module attributes {
+  // Repeated Device ID
+  //
+  // expected-error@+1 {{repeated device ID in dlti.target_system_spec: "CPU}}
+  dlti.target_system_spec = #dlti.target_system_spec<
+    "CPU" = #dlti.target_device_spec<
+            #dlti.dl_entry<"L1_cache_size_in_bytes", 4096>>,
+    "CPU" = #dlti.target_device_spec<
+            #dlti.dl_entry<"L1_cache_size_in_bytes", 8192>>
+  >} {}
+
+// -----
+
+module attributes {
+  // Repeated DLTI entry
+  //
+  // expected-error@+2 {{repeated DLTI key: "L1_cache_size_in_bytes"}}
+  dlti.target_system_spec = #dlti.target_system_spec<
+    "CPU" = #dlti.target_device_spec<"L1_cache_size_in_bytes" = 4096,
+                                     "L1_cache_size_in_bytes" = 8192>
+  >} {}

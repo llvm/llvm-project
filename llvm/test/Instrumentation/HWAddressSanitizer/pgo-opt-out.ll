@@ -1,14 +1,29 @@
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -stats 2>&1 \
-; RUN:   -hwasan-skip-hot-code=1 | FileCheck %s --check-prefix=DEFAULT
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -stats 2>&1 \
-; RUN:   -hwasan-skip-hot-code=1 -hwasan-percentile-cutoff-hot=700000 | FileCheck %s --check-prefix=PERCENT
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-percentile-cutoff-hot=700000 2>&1 | FileCheck %s --check-prefix=ALL
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-percentile-cutoff-hot=990000 2>&1 | FileCheck %s --check-prefix=NONE
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=1.0 2>&1 | FileCheck %s --check-prefix=ALL
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=0.0 2>&1 | FileCheck %s --check-prefix=NONE
+;
+; Skip check if either or both of the skip conditions (-hwasan-random-rate=0.0 or -hwasan-percentile-cutoff-hot=990000) is met.
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=1.0 -hwasan-percentile-cutoff-hot=700000 2>&1 | FileCheck %s --check-prefix=ALL
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=1.0 -hwasan-percentile-cutoff-hot=990000 2>&1 | FileCheck %s --check-prefix=NONE
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=0.0 -hwasan-percentile-cutoff-hot=700000 2>&1 | FileCheck %s --check-prefix=NONE
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=0.0 -hwasan-percentile-cutoff-hot=990000 2>&1 | FileCheck %s --check-prefix=NONE
 
-; DEFAULT: 1 hwasan - Number of total funcs HWASAN
+; ALL: remark: <unknown>:0:0: Sanitized: F=sanitize
+; ALL: @sanitized
+; ALL-NEXT: @__hwasan_tls
 
-; PERCENT: 1 hwasan - Number of HWASAN instrumented funcs
-; PERCENT: 1 hwasan - Number of total funcs HWASAN
+; NONE: remark: <unknown>:0:0: Skipped: F=sanitized
+; NONE: @sanitized
+; NONE-NEXT: %x = alloca i8, i64 4
 
-define void @sanitized() sanitize_hwaddress !prof !36 { ret void }
+declare void @use(ptr)
+
+define void @sanitized(i32 noundef %0) sanitize_hwaddress !prof !36 {
+  %x = alloca i8, i64 4
+  call void @use(ptr %x)
+  ret void
+}
 
 !llvm.module.flags = !{!6}
 !6 = !{i32 1, !"ProfileSummary", !7}

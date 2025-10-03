@@ -1,0 +1,1648 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x4016D0
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x400040
+    Align:           0x8
+    Offset:          0x40
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .interp
+    VAddr:           0x4002A8
+    Offset:          0x2A8
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .rela.plt
+    VAddr:           0x400000
+    Align:           0x1000
+    Offset:          0x0
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .init
+    LastSec:         .fini
+    VAddr:           0x401000
+    Align:           0x1000
+    Offset:          0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .rodata
+    LastSec:         .eh_frame
+    VAddr:           0x402000
+    Align:           0x1000
+    Offset:          0x2000
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .init_array
+    LastSec:         .bss
+    VAddr:           0x403E00
+    Align:           0x1000
+    Offset:          0x2E00
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x403E10
+    Align:           0x8
+    Offset:          0x2E10
+  - Type:            PT_NOTE
+    Flags:           [ PF_R ]
+    FirstSec:        .note.gnu.build-id
+    LastSec:         .note.ABI-tag
+    VAddr:           0x4002C4
+    Align:           0x4
+    Offset:          0x2C4
+  - Type:            PT_GNU_EH_FRAME
+    Flags:           [ PF_R ]
+    FirstSec:        .eh_frame_hdr
+    LastSec:         .eh_frame_hdr
+    VAddr:           0x402270
+    Align:           0x4
+    Offset:          0x2270
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x10
+    Offset:          0x0
+  - Type:            PT_GNU_RELRO
+    Flags:           [ PF_R ]
+    FirstSec:        .init_array
+    LastSec:         .got
+    VAddr:           0x403E00
+    Offset:          0x2E00
+Sections:
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4002A8
+    AddressAlign:    0x1
+    Content:         2F6C696236342F6C642D6C696E75782D7838362D36342E736F2E3200
+  - Name:            .note.gnu.build-id
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4002C4
+    AddressAlign:    0x4
+    Notes:
+      - Name:            GNU
+        Desc:            66CF856212C3B313EA98AD840984B20EA781118A
+        Type:            NT_PRPSINFO
+  - Name:            .note.ABI-tag
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4002E8
+    AddressAlign:    0x4
+    Notes:
+      - Name:            GNU
+        Desc:            '00000000030000000200000000000000'
+        Type:            NT_VERSION
+  - Name:            .gnu.hash
+    Type:            SHT_GNU_HASH
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400308
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Header:
+      SymNdx:          0x1
+      Shift2:          0x0
+    BloomFilter:     [ 0x0 ]
+    HashBuckets:     [ 0x0 ]
+    HashValues:      [  ]
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400328
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400430
+    AddressAlign:    0x1
+  - Name:            .gnu.version
+    Type:            SHT_GNU_versym
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4004BA
+    Link:            .dynsym
+    AddressAlign:    0x2
+    Entries:         [ 0, 2, 2, 3, 4, 2, 5, 5, 2, 0, 5 ]
+  - Name:            .gnu.version_r
+    Type:            SHT_GNU_verneed
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4004D0
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Dependencies:
+      - Version:         1
+        File:            libm.so.6
+        Entries:
+          - Name:            GLIBC_2.2.5
+            Hash:            157882997
+            Flags:           0
+            Other:           5
+          - Name:            GLIBC_2.29
+            Hash:            110530953
+            Flags:           0
+            Other:           3
+      - Version:         1
+        File:            libc.so.6
+        Entries:
+          - Name:            GLIBC_2.4
+            Hash:            225011988
+            Flags:           0
+            Other:           4
+          - Name:            GLIBC_2.2.5
+            Hash:            157882997
+            Flags:           0
+            Other:           2
+  - Name:            .rela.dyn
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400530
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Relocations:
+      - Offset:          0x403FF0
+        Symbol:          __libc_start_main
+        Type:            R_X86_64_GLOB_DAT
+      - Offset:          0x403FF8
+        Symbol:          __gmon_start__
+        Type:            R_X86_64_GLOB_DAT
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x400560
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x404018
+        Symbol:          putchar
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x404020
+        Symbol:          puts
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x404028
+        Symbol:          pow
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x404030
+        Symbol:          __stack_chk_fail
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x404038
+        Symbol:          printf
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x404040
+        Symbol:          cos
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x404048
+        Symbol:          acos
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x404050
+        Symbol:          sqrt
+        Type:            R_X86_64_JUMP_SLOT
+  - Name:            .init
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x401000
+    AddressAlign:    0x4
+    Offset:          0x1000
+    Content:         F30F1EFA4883EC08488B05E92F00004885C07402FFD04883C408C3
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x401020
+    AddressAlign:    0x10
+    EntSize:         0x10
+    Content:         FF35E22F0000FF25E42F00000F1F4000FF25E22F00006800000000E9E0FFFFFFFF25DA2F00006801000000E9D0FFFFFFFF25D22F00006802000000E9C0FFFFFFFF25CA2F00006803000000E9B0FFFFFFFF25C22F00006804000000E9A0FFFFFFFF25BA2F00006805000000E990FFFFFFFF25B22F00006806000000E980FFFFFFFF25AA2F00006807000000E970FFFFFF
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x4010B0
+    AddressAlign:    0x10
+    Content:         4156BF082040004155415455534883EC5064488B042528000000488944244831C0E86AFFFFFF488D742430488D7C2424488B0529100000F20F101529100000F20F100D2910000066480F6ED8488B050510000066480F6EC0E8F3060000BFBF20400031C0E857FFFFFF448B5C24244585DB7E2131DBF20F1044DC30BFCA204000B8010000004883C301E832FFFFFF395C24247FE1BF0A000000E8E2FEFFFF488D742430488D7C2424488B05B10F0000F20F1015C10F0000F20F100DC10F000066480F6ED8488B058D0F000066480F6EC0E87B060000BFBF20400031C0E8DFFEFFFF448B5424244585D27E2131DBF20F1044DC30BFCA204000B8010000004883C301E8BAFEFFFF395C24247FE1BF0A000000E86AFEFFFF488B053B0F0000F20F101D630F0000488D742430F20F10155E0F0000F20F100D5E0F0000488D7C242466480F6EC0E807060000BFBF20400031C0E86BFEFFFF448B4C24244585C97E2131DBF20F1044DC30BFCA204000B8010000004883C301E846FEFFFF395C24247FE1BF0A000000E8F6FDFFFF488D742430488D7C2424488B05BD0E0000F20F101DFD0E0000F20F100DFD0E000066480F6ED066480F6EC0E896050000BFBF20400031C0E8FAFDFFFF448B4424244585C07E2131DBF20F1044DC30BFCA204000B8010000004883C301E8D5FDFFFF395C24247FE1BF0A000000E885FDFFFF488B05460E0000F20F101DA60E0000488D742430F20F100DA10E0000F20F1005A10E0000488D7C242466480F6ED0E822050000BFBF20400031C0E886FDFFFF8B7C242485FF7E2131DBF20F1044DC30BFCA204000B8010000004883C301E863FDFFFF395C24247FE1BF0A000000E813FDFFFFF20F101D530E0000F20F1015530E0000488D742430F20F100D4E0E0000F20F10054E0E0000488D7C2424E8B4040000BFBF20400031C0E818FDFFFF8B74242485F67E2131DBF20F1044DC30BFCA204000B8010000004883C301E8F5FCFFFF395C24247FE1BF0A000000E8A5FCFFFFF20F101D050E0000F20F1015050E0000488D742430F20F100D000E0000F20F1005000E0000488D7C2424E846040000BFBF20400031C0E8AAFCFFFF8B4C242485C97E2131DBF20F1044DC30BFCA204000B8010000004883C301E887FCFFFF395C24247FE1BF0A000000E837FCFFFFF20F101DB70D0000F20F1015B70D0000488D742430F20F100DB20D0000F20F1005B20D0000488D7C2424E8D8030000BFBF20400031C0E83CFCFFFF8B54242485D27E2131DBF20F1044DC30BFCA204000B8010000004883C301E819FCFFFF395C24247FE1BF0A00000041BD09000000E8C3FBFFFF488B05940C00004889442410488B05800C000041BE280000004889442418488B05660C000041BC1100000048894424080F1F00488B05490C0000BD0900000048890424F20F101C24488D742430488D7C2424F20F10542408F20F104C2418F20F10442410E82A030000BFBF20400031C0E88EFBFFFF8B44242485C07E2131DBF20F1044DC30BFCA204000B8010000004883C301E86BFBFFFF395C24247FE1BF0A000000E81BFBFFFFF20F102424F20F5C25B60C0000F20F11242483ED017584F20F102DAC0C0000F20F586C2408F20F116C24084183EC010F8556FFFFFFF20F107C2418F20F5C3D900C0000F20F117C24184183EE010F8523FFFFFFF20F103D980B0000F20F587C2410F20F117C24104183ED010F85F3FEFFFFBF3020400031DBE8AEFAFFFF4889DF488D742428E8C10500008B54242889DEBFCE20400031C04883C302E8BBFAFFFF4881FBA086010075D4BF0A000000BB6901ED3FE863FAFFFF4889DF488D742428E8860500008B5424284889DE31C0BFDF2040004883C301E87FFAFFFF4881FB6941ED3F75D3BF58204000E83CFAFFFF660FEFD2660F28C2F20F111424E8CA010000F20F101424BF80204000B802000000660F28C8660F28C2E83EFAFFFFF20F101424F20F5815B10B0000F20F103DB10B0000660F2FFA73BBBFEE204000E8E9F9FFFF660FEFD2660F28C2F20F111424E857010000F20F101424BFA0204000B802000000660F28C8660F28C2E8EBF9FFFFF20F101424F20F58156E0B0000F20F103D6E0B0000660F2FFA73BB488B442448644833042528000000750F4883C45031C05B5D415C415D415EC3E89CF9FFFF662E0F1F8400000000006690F30F1EFA31ED4989D15E4889E24883E4F0505449C7C0201C400048C7C1B01B400048C7C7B0104000FF15F2280000F490F30F1EFAC3662E0F1F84000000000090B868404000483D684040007413B8000000004885C07409BF68404000FFE06690C30F1F440000662E0F1F840000000000BE684040004881EE684040004889F048C1EE3F48C1F8034801C648D1FE7411B8000000004885C07407BF68404000FFE0C30F1F440000662E0F1F840000000000803DE1280000007517554889E5E87EFFFFFFC605CF280000015DC30F1F440000C30F1F440000662E0F1F840000000000EB8E662E0F1F8400000000000F1F4000F20F5905480A0000F20F5E05480A0000C366662E0F1F8400000000000F1F4000F20F5905300A0000F20F5E05200A0000C3662E0F1F8400000000000F1F440000F20F5EC8534889F34883EC50F20F5ED0F20F110C24DD0424660FEFC9DB3C24DB2C24F20F5ED8F20F11542418DD442418D9C1D8CAD905E6090000D8CADEE9D905E0090000DCF9F20F115C2418D9C3D8C4D8CCD8CCD9CCDEC9DECAD9CADEE1D905C4090000DC4C2418DEC1D835BC090000D9C1D8CAD8CAD9C1D8CAD8E1DD5C2418F20F10442418660F2FC80F8398000000DDD8660F2EC8660F28D0C70701000000F20F51D20F87B6010000D9C9DB7C2430F20F100D90090000DD542418F20F10442418660F540586090000DB7C2420F20F58C2E879F7FFFFF20F11442418DD442418DB6C2430D8F1DEC1DD5C2418DB6C2420D9EEDFF1DDD87714F20F107C2418660F573D59090000F20F117C2418DB2C24D8350A090000DC6C2418DD1B4883C4505BC3660F1F440000DD5C2418F20F10442418C70703000000660F28F0660F2EC8F20F51F6F20F117424180F8736010000D9C9DB7C2420DC742418DD5C2418F20F10442418E827F7FFFFDB6C2420660FEFC9F20F11442418DD5C2420F20F10542420660F2ECA660F28DAF20F51DB0F870D010000F20F102DD5070000F20F591D8D080000F20F5EC5F20F116C2430F20F115C2420E8C8F6FFFFDB2C24F20F11442440F20F10442418D83553080000F20F580563080000F20F5E442430DB3C24E89DF6FFFFF20F104C2440F20F10642420DB2C24660F28D0F20F59CCF20F59D4D9C0F20F114C2440DC6C2440DD5C2440F20F10442440F20F11542440DC6C2440DD5C2440660F164424400F1103F20F10442418F20F580507080000F20F5E442430E83CF6FFFFF20F59442420DB2C24F20F11442418DC6C2418DD5B104883C4505BC3DB7C2430F20F11542418DB7C2420E82DF6FFFFF20F10542418DB6C2430DB6C2420E926FEFFFFDB7C2430DB7C2420E80DF6FFFFDB6C2430DB6C2420E9B2FEFFFF660F28C2F20F11542448F20F115C2420E8EBF5FFFFF20F103DB3060000F20F10442418F20F105C2420F20F591D5F070000F20F5EC7F20F117C2430F20F115C2420E89AF5FFFFDB2C24F20F10742420F20F10542448D83525070000F20F59F0660F28C2F20F11742440D9C0DB3C24DC6C2440DD1BE887F5FFFFF20F10442418F20F580511070000F20F5E442430E84EF5FFFFDB2C24F20F10542448F20F59442420F20F11442440DC6C2440660F28C2DD5B08E849F5FFFFE9CFFEFFFF0F1F400041B82000000031C031D2660F1F4400004889F948C1E70248C1E91E83E103488D1491488D0C85010000004801C04839CA72074829CA4883C0014183E80175D1488906C3662E0F1F8400000000000F1F00F30F1EFA41574C8D3D4322000041564989D641554989F541544189FC55488D2D34220000534C29FD4883EC08E81FF4FFFF48C1FD03741F31DB0F1F80000000004C89F24C89EE4489E741FF14DF4883C3014839DD75EA4883C4085B5D415C415D415E415FC366662E0F1F840000000000F30F1EFAC3
+  - Name:            .fini
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x401C28
+    AddressAlign:    0x4
+    Content:         F30F1EFA4883EC084883C408C3
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x402000
+    AddressAlign:    0x10
+    Offset:          0x2000
+    Content:         01000200000000002A2A2A2A2A2A2A2A2A2043554249432046554E4354494F4E53202A2A2A2A2A2A2A2A2A2A2A0000002A2A2A2A2A2A2A2A2A20494E54454745522053515220524F4F5453202A2A2A2A2A2A2A2A2A2A2A002A2A2A2A2A2A2A2A2A20414E474C4520434F4E56455253494F4E202A2A2A2A2A2A2A2A2A2A2A000025332E30662064656772656573203D20252E3132662072616469616E730A0000252E3132662072616469616E73203D2025332E306620646567726565730A00536F6C7574696F6E733A0020256600737172742825336429203D202532640A007371727428256C5829203D2025580A0000000000000000F0BF00000000000014400000000000002440000000000000F03F0000000000003EC0000000000000404000000000000025C0000000000000314000000000000012C00000000000003FC000000000000036400000000000000CC000000000008041C06666666666662BC00000000000002840AE47E17A14AE284000000000000008409A999999999937C00000000000001840295C8FC2F5F850C000000000000020C000000000000041400000000000001E40D7A3703D0A572140000000000080464000000000000030403333333333331540333333333333FBBF00000000000028C077BE9F1A2FDDDC3F85EB51B81E85E33F000000000000D03FFCA9F1D24D62503F0000000000807640399D52A246DF413F9B0B6097FB2119400000000000806640182D4454FB21094000004040000010410000D8410000584200000000000000C0182D4454FB211940182D4454FB212940555555555555D53FFFFFFFFFFFFFFF7F000000000000000000000000000000800000000000000000
+  - Name:            .eh_frame_hdr
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x402270
+    AddressAlign:    0x4
+    Content:         011B033B5C0000000A000000B0EDFFFFA000000040EEFFFFC800000060F4FFFF7800000090F4FFFF8C00000050F5FFFF1001000070F5FFFF2401000090F5FFFF38010000F0F8FFFF6801000040F9FFFF80010000B0F9FFFFC8010000
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4022D0
+    AddressAlign:    0x8
+    Content:         1400000000000000017A5200017810011B0C070890010000100000001C000000E0F3FFFF2F000000004407101000000030000000FCF3FFFF0500000000000000240000004400000008EDFFFF90000000000E10460E184A0F0B770880003F1A3B2A33242200000000440000006C00000070EDFFFF1406000000420E108E02470E188D03420E208C04410E288605410E308306440E800103F3050A0E30430E28410E20420E18420E10420E08410B00000010000000B400000038F4FFFF110000000000000010000000C800000044F4FFFF11000000000000002C000000DC00000050F4FFFF5C03000000450E108302470E600314010A0E10410E08470B0336010A0E10410E08410B00140000000C01000080F7FFFF4300000000000000000000004400000024010000B8F7FFFF6500000000460E108F02490E188E03450E208D04450E288C05440E308606480E388307470E406E0E38410E30410E28420E20420E18420E10420E0800100000006C010000E0F7FFFF050000000000000000000000
+  - Name:            .init_array
+    Type:            SHT_INIT_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x403E00
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Offset:          0x2E00
+    Content:         B017400000000000
+  - Name:            .fini_array
+    Type:            SHT_FINI_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x403E08
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '8017400000000000'
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x403E10
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_NEEDED
+        Value:           0x1
+      - Tag:             DT_NEEDED
+        Value:           0x28
+      - Tag:             DT_INIT
+        Value:           0x401000
+      - Tag:             DT_FINI
+        Value:           0x401C28
+      - Tag:             DT_INIT_ARRAY
+        Value:           0x403E00
+      - Tag:             DT_INIT_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_FINI_ARRAY
+        Value:           0x403E08
+      - Tag:             DT_FINI_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_GNU_HASH
+        Value:           0x400308
+      - Tag:             DT_STRTAB
+        Value:           0x400430
+      - Tag:             DT_SYMTAB
+        Value:           0x400328
+      - Tag:             DT_STRSZ
+        Value:           0x8A
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_DEBUG
+        Value:           0x0
+      - Tag:             DT_PLTGOT
+        Value:           0x404000
+      - Tag:             DT_PLTRELSZ
+        Value:           0xC0
+      - Tag:             DT_PLTREL
+        Value:           0x7
+      - Tag:             DT_JMPREL
+        Value:           0x400560
+      - Tag:             DT_RELA
+        Value:           0x400530
+      - Tag:             DT_RELASZ
+        Value:           0x30
+      - Tag:             DT_RELAENT
+        Value:           0x18
+      - Tag:             DT_VERNEED
+        Value:           0x4004D0
+      - Tag:             DT_VERNEEDNUM
+        Value:           0x2
+      - Tag:             DT_VERSYM
+        Value:           0x4004BA
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x403FF0
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '00000000000000000000000000000000'
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x404000
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         103E400000000000000000000000000000000000000000003610400000000000461040000000000056104000000000006610400000000000761040000000000086104000000000009610400000000000A610400000000000
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x404058
+    AddressAlign:    0x8
+    Content:         '00000000000000000000000000000000'
+  - Name:            .tm_clone_table
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x404068
+    AddressAlign:    0x8
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x404068
+    AddressAlign:    0x1
+    Size:            0x8
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         4743433A20285562756E747520392E342E302D317562756E7475317E31362E30342920392E342E3000
+  - Name:            .rela.init
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .init
+    Relocations:
+      - Offset:          0x40100B
+        Symbol:          __gmon_start__
+        Type:            R_X86_64_REX_GOTPCRELX
+        Addend:          -4
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x4010B3
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          8
+      - Offset:          0x4010D2
+        Symbol:          'puts@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4010E3
+        Symbol:          .LC6
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4010EB
+        Symbol:          .LC7
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4010F3
+        Symbol:          .LC8
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4010FF
+        Symbol:          .LC4
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401109
+        Symbol:          SolveCubic
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x40110E
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          191
+      - Offset:          0x401115
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x40112C
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          202
+      - Offset:          0x40113A
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x40114A
+        Symbol:          'putchar@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x40115B
+        Symbol:          .LC6
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401163
+        Symbol:          .LC11
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x40116B
+        Symbol:          .LC12
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401177
+        Symbol:          .LC4
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401181
+        Symbol:          SolveCubic
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401186
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          191
+      - Offset:          0x40118D
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4011A4
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          202
+      - Offset:          0x4011B2
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4011C2
+        Symbol:          'putchar@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4011C9
+        Symbol:          .LC4
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4011D1
+        Symbol:          .LC13
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4011DE
+        Symbol:          .LC14
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4011E6
+        Symbol:          .LC15
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4011F5
+        Symbol:          SolveCubic
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4011FA
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          191
+      - Offset:          0x401201
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401218
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          202
+      - Offset:          0x401226
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401236
+        Symbol:          'putchar@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401247
+        Symbol:          .LC4
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x40124F
+        Symbol:          .LC16
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401257
+        Symbol:          .LC17
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401266
+        Symbol:          SolveCubic
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x40126B
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          191
+      - Offset:          0x401272
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401289
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          202
+      - Offset:          0x401297
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4012A7
+        Symbol:          'putchar@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4012AE
+        Symbol:          .LC2
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4012B6
+        Symbol:          .LC18
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4012C3
+        Symbol:          .LC19
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4012CB
+        Symbol:          .LC20
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4012DA
+        Symbol:          SolveCubic
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4012DF
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          191
+      - Offset:          0x4012E6
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4012FB
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          202
+      - Offset:          0x401309
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401319
+        Symbol:          'putchar@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401321
+        Symbol:          .LC21
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401329
+        Symbol:          .LC22
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401336
+        Symbol:          .LC23
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x40133E
+        Symbol:          .LC24
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401348
+        Symbol:          SolveCubic
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x40134D
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          191
+      - Offset:          0x401354
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401369
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          202
+      - Offset:          0x401377
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401387
+        Symbol:          'putchar@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x40138F
+        Symbol:          .LC25
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401397
+        Symbol:          .LC26
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4013A4
+        Symbol:          .LC27
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4013AC
+        Symbol:          .LC28
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4013B6
+        Symbol:          SolveCubic
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4013BB
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          191
+      - Offset:          0x4013C2
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4013D7
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          202
+      - Offset:          0x4013E5
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4013F5
+        Symbol:          'putchar@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4013FD
+        Symbol:          .LC29
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401405
+        Symbol:          .LC30
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401412
+        Symbol:          .LC31
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x40141A
+        Symbol:          .LC32
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401424
+        Symbol:          SolveCubic
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401429
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          191
+      - Offset:          0x401430
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401445
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          202
+      - Offset:          0x401453
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401469
+        Symbol:          'putchar@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401470
+        Symbol:          .LC4
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x40147C
+        Symbol:          .LC3
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x40148E
+        Symbol:          .LC2
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4014A3
+        Symbol:          .LC0
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4014D2
+        Symbol:          SolveCubic
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4014D7
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          191
+      - Offset:          0x4014DE
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4014F3
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          202
+      - Offset:          0x401501
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401511
+        Symbol:          'putchar@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x40151E
+        Symbol:          .LC33
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401530
+        Symbol:          .LC34
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401554
+        Symbol:          .LC35
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x40156C
+        Symbol:          .LC4
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401587
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          48
+      - Offset:          0x40158E
+        Symbol:          'puts@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x40159B
+        Symbol:          usqrt
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4015A6
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          206
+      - Offset:          0x4015B1
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4015C9
+        Symbol:          'putchar@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4015D6
+        Symbol:          usqrt
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4015E4
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          223
+      - Offset:          0x4015ED
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4015FB
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          88
+      - Offset:          0x401600
+        Symbol:          'puts@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401612
+        Symbol:          deg2rad
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x40161C
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          128
+      - Offset:          0x40162E
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x40163B
+        Symbol:          .LC41
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401643
+        Symbol:          .LC42
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x40164E
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          238
+      - Offset:          0x401653
+        Symbol:          'puts@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401665
+        Symbol:          rad2deg
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x40166F
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          160
+      - Offset:          0x401681
+        Symbol:          'printf@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x40168E
+        Symbol:          .LC45
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401696
+        Symbol:          .LC46
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4016C0
+        Symbol:          '__stack_chk_fail@@GLIBC_2.4'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4016E6
+        Symbol:          __libc_csu_fini
+        Type:            R_X86_64_32S
+      - Offset:          0x4016ED
+        Symbol:          __libc_csu_init
+        Type:            R_X86_64_32S
+      - Offset:          0x4016F4
+        Symbol:          main
+        Type:            R_X86_64_32S
+      - Offset:          0x4016FA
+        Symbol:          '__libc_start_main@@GLIBC_2.2.5'
+        Type:            R_X86_64_GOTPCRELX
+        Addend:          -4
+      - Offset:          0x401711
+        Symbol:          __TMC_END__
+        Type:            R_X86_64_32
+      - Offset:          0x401717
+        Symbol:          .tm_clone_table
+        Type:            R_X86_64_32S
+      - Offset:          0x40171E
+        Symbol:          _ITM_deregisterTMCloneTable
+        Type:            R_X86_64_32
+      - Offset:          0x401728
+        Symbol:          .tm_clone_table
+        Type:            R_X86_64_32
+      - Offset:          0x401741
+        Symbol:          __TMC_END__
+        Type:            R_X86_64_32
+      - Offset:          0x401748
+        Symbol:          .tm_clone_table
+        Type:            R_X86_64_32S
+      - Offset:          0x401760
+        Symbol:          _ITM_registerTMCloneTable
+        Type:            R_X86_64_32
+      - Offset:          0x40176A
+        Symbol:          .tm_clone_table
+        Type:            R_X86_64_32
+      - Offset:          0x401782
+        Symbol:          .bss
+        Type:            R_X86_64_PC32
+        Addend:          -5
+      - Offset:          0x401794
+        Symbol:          .bss
+        Type:            R_X86_64_PC32
+        Addend:          -5
+      - Offset:          0x4017C4
+        Symbol:          '.LC0 (1)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4017CC
+        Symbol:          .LC1
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4017E4
+        Symbol:          .LC1
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4017EC
+        Symbol:          '.LC0 (1)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401836
+        Symbol:          '.LC0 (2)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401840
+        Symbol:          '.LC1 (1)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401860
+        Symbol:          '.LC2 (1)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x40186C
+        Symbol:          '.LC3 (1)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4018B4
+        Symbol:          .LC9
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4018C6
+        Symbol:          .LC10
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4018D3
+        Symbol:          'pow@@GLIBC_2.29'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401903
+        Symbol:          '.LC12 (1)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401912
+        Symbol:          '.LC0 (2)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401965
+        Symbol:          'acos@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401997
+        Symbol:          '.LC6 (1)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x40199F
+        Symbol:          .LC5
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4019B4
+        Symbol:          'cos@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4019C9
+        Symbol:          '.LC0 (2)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4019D1
+        Symbol:          '.LC7 (1)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4019DF
+        Symbol:          'cos@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401A35
+        Symbol:          '.LC8 (1)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401A40
+        Symbol:          'cos@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401A6F
+        Symbol:          'sqrt@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401A8F
+        Symbol:          'sqrt@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401AB1
+        Symbol:          'sqrt@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401AB9
+        Symbol:          '.LC6 (1)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401ACD
+        Symbol:          .LC5
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401AE2
+        Symbol:          'cos@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401AF7
+        Symbol:          '.LC0 (2)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401B15
+        Symbol:          'sqrt@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401B23
+        Symbol:          '.LC7 (1)'
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401B2E
+        Symbol:          'cos@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401B53
+        Symbol:          'sqrt@@GLIBC_2.2.5'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x401BB9
+        Symbol:          __init_array_start
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401BD0
+        Symbol:          __init_array_end
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x401BDD
+        Symbol:          _init
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+  - Name:            .rela.eh_frame
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .eh_frame
+    Relocations:
+      - Offset:          0x4022F0
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          1568
+      - Offset:          0x402304
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          1616
+      - Offset:          0x402340
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+      - Offset:          0x402388
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          1808
+      - Offset:          0x40239C
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          1840
+      - Offset:          0x4023B0
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          1872
+      - Offset:          0x4023E0
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          2736
+      - Offset:          0x4023F8
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          2816
+      - Offset:          0x402440
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          2928
+  - Name:            .rela.init_array
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .init_array
+    Relocations:
+      - Offset:          0x403E00
+        Symbol:          .text
+        Type:            R_X86_64_64
+        Addend:          1792
+  - Name:            .rela.fini_array
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .fini_array
+    Relocations:
+      - Offset:          0x403E08
+        Symbol:          .text
+        Type:            R_X86_64_64
+        Addend:          1744
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .interp
+      - Name:            .note.gnu.build-id
+      - Name:            .note.ABI-tag
+      - Name:            .gnu.hash
+      - Name:            .dynsym
+      - Name:            .dynstr
+      - Name:            .gnu.version
+      - Name:            .gnu.version_r
+      - Name:            .rela.dyn
+      - Name:            .rela.plt
+      - Name:            .init
+      - Name:            .rela.init
+      - Name:            .plt
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .fini
+      - Name:            .rodata
+      - Name:            .eh_frame_hdr
+      - Name:            .eh_frame
+      - Name:            .rela.eh_frame
+      - Name:            .init_array
+      - Name:            .rela.init_array
+      - Name:            .fini_array
+      - Name:            .rela.fini_array
+      - Name:            .dynamic
+      - Name:            .got
+      - Name:            .got.plt
+      - Name:            .data
+      - Name:            .tm_clone_table
+      - Name:            .bss
+      - Name:            .comment
+      - Name:            .symtab
+      - Name:            .strtab
+      - Name:            .shstrtab
+Symbols:
+  - Name:            .interp
+    Type:            STT_SECTION
+    Section:         .interp
+    Value:           0x4002A8
+  - Name:            .note.gnu.build-id
+    Type:            STT_SECTION
+    Section:         .note.gnu.build-id
+    Value:           0x4002C4
+  - Name:            .note.ABI-tag
+    Type:            STT_SECTION
+    Section:         .note.ABI-tag
+    Value:           0x4002E8
+  - Name:            .gnu.hash
+    Type:            STT_SECTION
+    Section:         .gnu.hash
+    Value:           0x400308
+  - Name:            .dynsym
+    Type:            STT_SECTION
+    Section:         .dynsym
+    Value:           0x400328
+  - Name:            .dynstr
+    Type:            STT_SECTION
+    Section:         .dynstr
+    Value:           0x400430
+  - Name:            .gnu.version
+    Type:            STT_SECTION
+    Section:         .gnu.version
+    Value:           0x4004BA
+  - Name:            .gnu.version_r
+    Type:            STT_SECTION
+    Section:         .gnu.version_r
+    Value:           0x4004D0
+  - Name:            .rela.dyn
+    Type:            STT_SECTION
+    Section:         .rela.dyn
+    Value:           0x400530
+  - Name:            .rela.plt
+    Type:            STT_SECTION
+    Section:         .rela.plt
+    Value:           0x400560
+  - Name:            .init
+    Type:            STT_SECTION
+    Section:         .init
+    Value:           0x401000
+  - Name:            .plt
+    Type:            STT_SECTION
+    Section:         .plt
+    Value:           0x401020
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+    Value:           0x4010B0
+  - Name:            .fini
+    Type:            STT_SECTION
+    Section:         .fini
+    Value:           0x401C28
+  - Name:            .rodata
+    Type:            STT_SECTION
+    Section:         .rodata
+    Value:           0x402000
+  - Name:            .eh_frame_hdr
+    Type:            STT_SECTION
+    Section:         .eh_frame_hdr
+    Value:           0x402270
+  - Name:            .eh_frame
+    Type:            STT_SECTION
+    Section:         .eh_frame
+    Value:           0x4022D0
+  - Name:            .init_array
+    Type:            STT_SECTION
+    Section:         .init_array
+    Value:           0x403E00
+  - Name:            .fini_array
+    Type:            STT_SECTION
+    Section:         .fini_array
+    Value:           0x403E08
+  - Name:            .dynamic
+    Type:            STT_SECTION
+    Section:         .dynamic
+    Value:           0x403E10
+  - Name:            .got
+    Type:            STT_SECTION
+    Section:         .got
+    Value:           0x403FF0
+  - Name:            .got.plt
+    Type:            STT_SECTION
+    Section:         .got.plt
+    Value:           0x404000
+  - Name:            .data
+    Type:            STT_SECTION
+    Section:         .data
+    Value:           0x404058
+  - Name:            .tm_clone_table
+    Type:            STT_SECTION
+    Section:         .tm_clone_table
+    Value:           0x404068
+  - Name:            .bss
+    Type:            STT_SECTION
+    Section:         .bss
+    Value:           0x404068
+  - Name:            .comment
+    Type:            STT_SECTION
+    Section:         .comment
+  - Name:            basicmath_large.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .LC6
+    Section:         .rodata
+    Value:           0x402110
+  - Name:            .LC7
+    Section:         .rodata
+    Value:           0x402118
+  - Name:            .LC8
+    Section:         .rodata
+    Value:           0x402120
+  - Name:            .LC4
+    Section:         .rodata
+    Value:           0x402108
+  - Name:            .LC11
+    Section:         .rodata
+    Value:           0x402128
+  - Name:            .LC12
+    Section:         .rodata
+    Value:           0x402130
+  - Name:            .LC13
+    Section:         .rodata
+    Value:           0x402138
+  - Name:            .LC14
+    Section:         .rodata
+    Value:           0x402140
+  - Name:            .LC15
+    Section:         .rodata
+    Value:           0x402148
+  - Name:            .LC16
+    Section:         .rodata
+    Value:           0x402150
+  - Name:            .LC17
+    Section:         .rodata
+    Value:           0x402158
+  - Name:            .LC2
+    Section:         .rodata
+    Value:           0x4020F8
+  - Name:            .LC18
+    Section:         .rodata
+    Value:           0x402160
+  - Name:            .LC19
+    Section:         .rodata
+    Value:           0x402168
+  - Name:            .LC20
+    Section:         .rodata
+    Value:           0x402170
+  - Name:            .LC21
+    Section:         .rodata
+    Value:           0x402178
+  - Name:            .LC22
+    Section:         .rodata
+    Value:           0x402180
+  - Name:            .LC23
+    Section:         .rodata
+    Value:           0x402188
+  - Name:            .LC24
+    Section:         .rodata
+    Value:           0x402190
+  - Name:            .LC25
+    Section:         .rodata
+    Value:           0x402198
+  - Name:            .LC26
+    Section:         .rodata
+    Value:           0x4021A0
+  - Name:            .LC27
+    Section:         .rodata
+    Value:           0x4021A8
+  - Name:            .LC28
+    Section:         .rodata
+    Value:           0x4021B0
+  - Name:            .LC29
+    Section:         .rodata
+    Value:           0x4021B8
+  - Name:            .LC30
+    Section:         .rodata
+    Value:           0x4021C0
+  - Name:            .LC31
+    Section:         .rodata
+    Value:           0x4021C8
+  - Name:            .LC32
+    Section:         .rodata
+    Value:           0x4021D0
+  - Name:            .LC3
+    Section:         .rodata
+    Value:           0x402100
+  - Name:            .LC0
+    Section:         .rodata
+    Value:           0x4020F0
+  - Name:            .LC33
+    Section:         .rodata
+    Value:           0x4021D8
+  - Name:            .LC34
+    Section:         .rodata
+    Value:           0x4021E0
+  - Name:            .LC35
+    Section:         .rodata
+    Value:           0x4021E8
+  - Name:            .LC41
+    Section:         .rodata
+    Value:           0x4021F0
+  - Name:            .LC42
+    Section:         .rodata
+    Value:           0x4021F8
+  - Name:            .LC45
+    Section:         .rodata
+    Value:           0x402200
+  - Name:            .LC46
+    Section:         .rodata
+    Value:           0x402208
+  - Name:            crtstuff.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            __TMC_LIST__
+    Type:            STT_OBJECT
+    Section:         .tm_clone_table
+    Value:           0x404068
+  - Name:            deregister_tm_clones
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x401710
+  - Name:            register_tm_clones
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x401740
+  - Name:            __do_global_dtors_aux
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x401780
+  - Name:            completed.8023
+    Type:            STT_OBJECT
+    Section:         .bss
+    Value:           0x404068
+    Size:            0x1
+  - Name:            __do_global_dtors_aux_fini_array_entry
+    Type:            STT_OBJECT
+    Section:         .fini_array
+    Value:           0x403E08
+  - Name:            frame_dummy
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x4017B0
+  - Name:            __frame_dummy_init_array_entry
+    Type:            STT_OBJECT
+    Section:         .init_array
+    Value:           0x403E00
+  - Name:            rad2deg.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            '.LC0 (1)'
+    Section:         .rodata
+    Value:           0x402210
+  - Name:            .LC1
+    Section:         .rodata
+    Value:           0x402218
+  - Name:            cubic.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            '.LC0 (2)'
+    Section:         .rodata
+    Value:           0x402220
+  - Name:            '.LC1 (1)'
+    Section:         .rodata
+    Value:           0x402224
+  - Name:            '.LC2 (1)'
+    Section:         .rodata
+    Value:           0x402228
+  - Name:            '.LC3 (1)'
+    Section:         .rodata
+    Value:           0x40222C
+  - Name:            .LC9
+    Section:         .rodata
+    Value:           0x402248
+  - Name:            .LC10
+    Section:         .rodata
+    Value:           0x402250
+  - Name:            '.LC12 (1)'
+    Section:         .rodata
+    Value:           0x402260
+  - Name:            '.LC6 (1)'
+    Section:         .rodata
+    Value:           0x402170
+  - Name:            .LC5
+    Section:         .rodata
+    Value:           0x402230
+  - Name:            '.LC7 (1)'
+    Section:         .rodata
+    Value:           0x402238
+  - Name:            '.LC8 (1)'
+    Section:         .rodata
+    Value:           0x402240
+  - Name:            isqrt.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            'crtstuff.c (1)'
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            __FRAME_END__
+    Type:            STT_OBJECT
+    Section:         .eh_frame
+    Value:           0x40244C
+  - Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            __init_array_end
+    Section:         .init_array
+    Value:           0x403E08
+  - Name:            _DYNAMIC
+    Type:            STT_OBJECT
+    Section:         .dynamic
+    Value:           0x403E10
+  - Name:            __init_array_start
+    Section:         .init_array
+    Value:           0x403E00
+  - Name:            __GNU_EH_FRAME_HDR
+    Section:         .eh_frame_hdr
+    Value:           0x402270
+  - Name:            _GLOBAL_OFFSET_TABLE_
+    Type:            STT_OBJECT
+    Section:         .got.plt
+    Value:           0x404000
+  - Name:            __libc_csu_fini
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x401C20
+    Size:            0x5
+  - Name:            'putchar@@GLIBC_2.2.5'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _ITM_deregisterTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            data_start
+    Section:         .data
+    Binding:         STB_WEAK
+    Value:           0x404058
+  - Name:            'puts@@GLIBC_2.2.5'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            usqrt
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x401B60
+    Size:            0x43
+  - Name:            _edata
+    Section:         .tm_clone_table
+    Binding:         STB_GLOBAL
+    Value:           0x404068
+  - Name:            'pow@@GLIBC_2.29'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _fini
+    Type:            STT_FUNC
+    Section:         .fini
+    Binding:         STB_GLOBAL
+    Value:           0x401C28
+    Other:           [ STV_HIDDEN ]
+  - Name:            '__stack_chk_fail@@GLIBC_2.4'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            'printf@@GLIBC_2.2.5'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            'cos@@GLIBC_2.2.5'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            'acos@@GLIBC_2.2.5'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            '__libc_start_main@@GLIBC_2.2.5'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            deg2rad
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x4017E0
+    Size:            0x11
+  - Name:            __data_start
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x404058
+  - Name:            SolveCubic
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x401800
+    Size:            0x35C
+  - Name:            __gmon_start__
+    Binding:         STB_WEAK
+  - Name:            __dso_handle
+    Type:            STT_OBJECT
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x404060
+    Other:           [ STV_HIDDEN ]
+  - Name:            _IO_stdin_used
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0x402000
+    Size:            0x4
+  - Name:            __libc_csu_init
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x401BB0
+    Size:            0x65
+  - Name:            _end
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x404070
+  - Name:            _dl_relocate_static_pie
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x401700
+    Size:            0x5
+    Other:           [ STV_HIDDEN ]
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x4016D0
+    Size:            0x2F
+  - Name:            rad2deg
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x4017C0
+    Size:            0x11
+  - Name:            __bss_start
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x404068
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x4010B0
+    Size:            0x614
+  - Name:            __TMC_END__
+    Type:            STT_OBJECT
+    Section:         .tm_clone_table
+    Binding:         STB_GLOBAL
+    Value:           0x404068
+    Other:           [ STV_HIDDEN ]
+  - Name:            _ITM_registerTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            'sqrt@@GLIBC_2.2.5'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _init
+    Type:            STT_FUNC
+    Section:         .init
+    Binding:         STB_GLOBAL
+    Value:           0x401000
+    Other:           [ STV_HIDDEN ]
+DynamicSymbols:
+  - Name:            putchar
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            puts
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            pow
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __stack_chk_fail
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            printf
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            cos
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            acos
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __libc_start_main
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __gmon_start__
+    Binding:         STB_WEAK
+  - Name:            sqrt
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+...

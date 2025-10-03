@@ -33,7 +33,7 @@
 ; SPV-DAG: %[[#int_8:]] = OpTypeInt 8 0
 ; SPV-DAG: %[[#int_16:]] = OpTypeInt 16 0
 ; SPV-DAG: %[[#int_64:]] = OpTypeInt 64 0
-; SPV-DAG: %[[#zero_32:]] = OpConstant %[[#int_32]] 0
+; SPV-DAG: %[[#zero_32:]] = OpConstantNull %[[#int_32]]
 ; SPV-DAG: %[[#one_32:]] = OpConstant %[[#int_32]] 1
 ; SPV-DAG: %[[#zero_8:]] = OpConstantNull %[[#int_8]]
 ; SPV-DAG: %[[#mone_8:]] = OpConstant %[[#int_8]] 255
@@ -69,7 +69,7 @@
 ; SPV-DAG: %[[#pointer:]] = OpTypePointer CrossWorkgroup %[[#float]]
 
 ; SPV-DAG: OpFunction
-; SPV-DAG: %[[#A:]] = OpFunctionParameter %[[#]]
+; SPV-DAG: %[[#A:]] = OpFunctionParameter %[[#pointer]]
 ; SPV-DAG: %[[#B:]] = OpFunctionParameter %[[#]]
 ; SPV-DAG: %[[#i1s:]] = OpFunctionParameter %[[#]]
 ; SPV-DAG: %[[#i1v:]] = OpFunctionParameter %[[#]]
@@ -82,8 +82,7 @@ entry:
 ; SPV-DAG: %[[#select_res:]] = OpSelect %[[#int_32]] %[[#cmp_res]] %[[#one_32]] %[[#zero_32]]
 ; SPV-DAG: %[[#utof_res:]] = OpConvertUToF %[[#float]] %[[#select_res]]
   %conv = uitofp i1 %cmp to float
-; SPV-DAG: %[[#bitcast:]] = OpBitcast %[[#pointer]] %[[#A]]
-; SPV-DAG: OpStore %[[#bitcast]] %[[#utof_res]]
+; SPV-DAG: OpStore %[[#A]] %[[#utof_res]]
   store float %conv, float addrspace(1)* %A, align 4;
 
 ; SPV-DAG: %[[#s1]] = OpSelect %[[#int_8]] %[[#i1s]] %[[#mone_8]] %[[#zero_8]]

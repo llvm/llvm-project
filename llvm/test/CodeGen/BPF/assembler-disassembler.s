@@ -289,3 +289,10 @@ r0 = *(u32*)skb[42]
 r0 = *(u8*)skb[r1]
 r0 = *(u16*)skb[r1]
 r0 = *(u32*)skb[r1]
+
+// CHECK: bf 10 01 00 01 00 00 00	r0 = addr_space_cast(r1, 0x0, 0x1)
+// CHECK: bf 21 01 00 00 00 01 00	r1 = addr_space_cast(r2, 0x1, 0x0)
+// CHECK: bf 43 01 00 2a 00 07 00	r3 = addr_space_cast(r4, 0x7, 0x2a)
+r0 = addr_space_cast(r1, 0, 1)
+r1 = addr_space_cast(r2, 1, 0)
+r3 = addr_space_cast(r4, 7, 42)

@@ -19,7 +19,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
 #include <optional>
@@ -322,8 +321,8 @@ void Operation::setAttrs(DictionaryAttr newAttrs) {
 }
 void Operation::setAttrs(ArrayRef<NamedAttribute> newAttrs) {
   if (getPropertiesStorageSize()) {
-    // We're spliting the providing array of attributes by removing the inherentAttr
-    // which will be stored in the properties.
+    // We're spliting the providing array of attributes by removing the
+    // inherentAttr which will be stored in the properties.
     SmallVector<NamedAttribute> discardableAttrs;
     discardableAttrs.reserve(newAttrs.size());
     for (NamedAttribute attr : newAttrs) {
@@ -406,7 +405,7 @@ void Operation::updateOrderIfNecessary() {
   assert(block && "expected valid parent");
 
   // If the order is valid for this operation there is nothing to do.
-  if (hasValidOrder())
+  if (hasValidOrder() || llvm::hasSingleElement(*block))
     return;
   Operation *blockFront = &block->front();
   Operation *blockBack = &block->back();
@@ -560,6 +559,8 @@ void Operation::moveBefore(Operation *existingOp) {
 /// before `iterator` in the specified basic block.
 void Operation::moveBefore(Block *block,
                            llvm::iplist<Operation>::iterator iterator) {
+  assert(getBlock() &&
+         "cannot move an operation that isn't contained in a block");
   block->getOperations().splice(iterator, getBlock()->getOperations(),
                                 getIterator());
 }
@@ -619,8 +620,8 @@ static void checkFoldResultTypes(Operation *op,
     if (auto value = dyn_cast<Value>(ofr)) {
       if (value.getType() != opResult.getType()) {
         op->emitOpError() << "folder produced a value of incorrect type: "
-                          << opResult.getType()
-                          << ", expected: " << value.getType();
+                          << value.getType()
+                          << ", expected: " << opResult.getType();
         assert(false && "incorrect fold result type");
       }
     }
@@ -790,15 +791,38 @@ void OpState::printOpName(Operation *op, OpAsmPrinter &p,
 /// Parse properties as a Attribute.
 ParseResult OpState::genericParseProperties(OpAsmParser &parser,
                                             Attribute &result) {
-  if (parser.parseLess() || parser.parseAttribute(result) ||
-      parser.parseGreater())
-    return failure();
+  if (succeeded(parser.parseOptionalLess())) { // The less is optional.
+    if (parser.parseAttribute(result) || parser.parseGreater())
+      return failure();
+  }
   return success();
 }
 
-/// Print the properties as a Attribute.
-void OpState::genericPrintProperties(OpAsmPrinter &p, Attribute properties) {
-  p << "<" << properties << ">";
+/// Print the properties as a Attribute with names not included within
+/// 'elidedProps'
+void OpState::genericPrintProperties(OpAsmPrinter &p, Attribute properties,
+                                     ArrayRef<StringRef> elidedProps) {
+  if (!properties)
+    return;
+  auto dictAttr = dyn_cast_or_null<::mlir::DictionaryAttr>(properties);
+  if (dictAttr && !elidedProps.empty()) {
+    ArrayRef<NamedAttribute> attrs = dictAttr.getValue();
+    llvm::SmallDenseSet<StringRef> elidedAttrsSet(elidedProps.begin(),
+                                                  elidedProps.end());
+    auto filteredAttrs =
+        llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
+          return !elidedAttrsSet.contains(attr.getName().strref());
+        });
+    if (!filteredAttrs.empty()) {
+      p << "<{";
+      interleaveComma(filteredAttrs, p, [&](NamedAttribute attr) {
+        p.printNamedAttribute(attr);
+      });
+      p << "}>";
+    }
+  } else {
+    p << "<" << properties << ">";
+  }
 }
 
 /// Emit an error about fatal conditions with this operation, reporting up to
@@ -1136,7 +1160,7 @@ LogicalResult OpTrait::impl::verifySameOperandsAndResultRank(Operation *op) {
 
   // delegate function that returns rank of shaped type with known rank
   auto getRank = [](const Type type) {
-    return type.cast<ShapedType>().getRank();
+    return cast<ShapedType>(type).getRank();
   };
 
   auto rank = !rankedOperandTypes.empty() ? getRank(*rankedOperandTypes.begin())
@@ -1288,13 +1312,11 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
 }
 
 LogicalResult OpTrait::impl::verifyElementwise(Operation *op) {
-  auto isMappableType = [](Type type) {
-    return llvm::isa<VectorType, TensorType>(type);
-  };
-  auto resultMappableTypes = llvm::to_vector<1>(
-      llvm::make_filter_range(op->getResultTypes(), isMappableType));
-  auto operandMappableTypes = llvm::to_vector<2>(
-      llvm::make_filter_range(op->getOperandTypes(), isMappableType));
+  auto isMappableType = llvm::IsaPred<VectorType, TensorType>;
+  auto resultMappableTypes =
+      llvm::filter_to_vector<1>(op->getResultTypes(), isMappableType);
+  auto operandMappableTypes =
+      llvm::filter_to_vector<2>(op->getOperandTypes(), isMappableType);
 
   // If the op only has scalar operand/result types, then we have nothing to
   // check.

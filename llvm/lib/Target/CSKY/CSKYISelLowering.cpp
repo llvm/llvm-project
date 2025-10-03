@@ -426,7 +426,8 @@ SDValue CSKYTargetLowering::LowerFormalArguments(
 
 bool CSKYTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> CSKYLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, CSKYLocs, Context);
   return CCInfo.CheckReturn(Outs, CCAssignFnForReturn(CallConv, IsVarArg));
@@ -556,7 +557,7 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
                           /*IsVolatile=*/false,
-                          /*AlwaysInline=*/false, IsTailCall,
+                          /*AlwaysInline=*/false, /*CI=*/nullptr, IsTailCall,
                           MachinePointerInfo(), MachinePointerInfo());
     ByValArgs.push_back(FIPtr);
   }
@@ -649,8 +650,7 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = S->getGlobal();
-    bool IsLocal =
-        getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
+    bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(GV);
 
     if (isPositionIndependent() || !Subtarget.has2E3()) {
       IsRegCall = true;
@@ -662,8 +662,7 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
           cast<GlobalAddressSDNode>(Callee), Ty, DAG, CSKYII::MO_None));
     }
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(
-        *MF.getFunction().getParent(), nullptr);
+    bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(nullptr);
 
     if (isPositionIndependent() || !Subtarget.has2E3()) {
       IsRegCall = true;
@@ -1118,33 +1117,6 @@ SDValue CSKYTargetLowering::getTargetNode(ConstantPoolSDNode *N, SDLoc DL,
                                    N->getOffset(), Flags);
 }
 
-const char *CSKYTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch (Opcode) {
-  default:
-    llvm_unreachable("unknown CSKYISD node");
-  case CSKYISD::NIE:
-    return "CSKYISD::NIE";
-  case CSKYISD::NIR:
-    return "CSKYISD::NIR";
-  case CSKYISD::RET:
-    return "CSKYISD::RET";
-  case CSKYISD::CALL:
-    return "CSKYISD::CALL";
-  case CSKYISD::CALLReg:
-    return "CSKYISD::CALLReg";
-  case CSKYISD::TAIL:
-    return "CSKYISD::TAIL";
-  case CSKYISD::TAILReg:
-    return "CSKYISD::TAILReg";
-  case CSKYISD::LOAD_ADDR:
-    return "CSKYISD::LOAD_ADDR";
-  case CSKYISD::BITCAST_TO_LOHI:
-    return "CSKYISD::BITCAST_TO_LOHI";
-  case CSKYISD::BITCAST_FROM_LOHI:
-    return "CSKYISD::BITCAST_FROM_LOHI";
-  }
-}
-
 SDValue CSKYTargetLowering::LowerGlobalAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -1153,7 +1125,7 @@ SDValue CSKYTargetLowering::LowerGlobalAddress(SDValue Op,
   int64_t Offset = N->getOffset();
 
   const GlobalValue *GV = N->getGlobal();
-  bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
+  bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(GV);
   SDValue Addr = getAddr<GlobalAddressSDNode, false>(N, DAG, IsLocal);
 
   // In order to maximise the opportunity for common subexpression elimination,
@@ -1234,9 +1206,6 @@ SDValue CSKYTargetLowering::LowerRETURNADDR(SDValue Op,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
-
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
@@ -1360,10 +1329,7 @@ SDValue CSKYTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
 
   // Prepare argument list to generate call.
   ArgListTy Args;
-  ArgListEntry Entry;
-  Entry.Node = Load;
-  Entry.Ty = CallTy;
-  Args.push_back(Entry);
+  Args.emplace_back(Load, CallTy);
 
   // Setup call to __tls_get_addr.
   TargetLowering::CallLoweringInfo CLI(DAG);

@@ -1,4 +1,4 @@
-//===--- AssertSideEffectCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,8 +15,6 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
-#include <algorithm>
 #include <string>
 
 using namespace clang::ast_matchers;
@@ -60,16 +58,26 @@ AST_MATCHER_P2(Expr, hasSideEffect, bool, CheckFunctionCalls,
   }
 
   if (const auto *CExpr = dyn_cast<CallExpr>(E)) {
-    bool Result = CheckFunctionCalls;
+    if (!CheckFunctionCalls)
+      return false;
     if (const auto *FuncDecl = CExpr->getDirectCallee()) {
       if (FuncDecl->getDeclName().isIdentifier() &&
           IgnoredFunctionsMatcher.matches(*FuncDecl, Finder,
                                           Builder)) // exceptions come here
-        Result = false;
-      else if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FuncDecl))
-        Result &= !MethodDecl->isConst();
+        return false;
+      for (size_t I = 0; I < FuncDecl->getNumParams(); I++) {
+        const ParmVarDecl *P = FuncDecl->getParamDecl(I);
+        const Expr *ArgExpr =
+            I < CExpr->getNumArgs() ? CExpr->getArg(I) : nullptr;
+        const QualType PT = P->getType().getCanonicalType();
+        if (ArgExpr && !ArgExpr->isXValue() && PT->isReferenceType() &&
+            !PT.getNonReferenceType().isConstQualified())
+          return true;
+      }
+      if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FuncDecl))
+        return !MethodDecl->isConst();
     }
-    return Result;
+    return true;
   }
 
   return isa<CXXNewExpr>(E) || isa<CXXDeleteExpr>(E) || isa<CXXThrowExpr>(E);
@@ -84,7 +92,7 @@ AssertSideEffectCheck::AssertSideEffectCheck(StringRef Name,
       RawAssertList(Options.get("AssertMacros", "assert,NSAssert,NSCAssert")),
       IgnoredFunctions(utils::options::parseListPair(
           "__builtin_expect;", Options.get("IgnoredFunctions", ""))) {
-  StringRef(RawAssertList).split(AssertMacros, ",", -1, false);
+  RawAssertList.split(AssertMacros, ",", -1, false);
 }
 
 // The options are explained in AssertSideEffectCheck.h.

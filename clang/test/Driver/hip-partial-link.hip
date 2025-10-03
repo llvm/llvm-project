@@ -1,14 +1,14 @@
-// REQUIRES: x86-registered-target, amdgpu-registered-target, lld, system-linux
+// REQUIRES: x86-registered-target, amdgpu-registered-target, lld
 
-// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN:   --offload-arch=gfx906 -c -nostdinc -nogpuinc -nohipwrapperinc \
 // RUN:   -nogpulib -fgpu-rdc -I%S/Inputs %s -o %t.1.o
 
-// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -DLIB \
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -DLIB --no-offload-new-driver \
 // RUN:   --offload-arch=gfx906 -c -nostdinc -nogpuinc -nohipwrapperinc \
 // RUN:   -nogpulib -fgpu-rdc -I%S/Inputs %s -o %t.2.o
 
-// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -DMAIN \
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -DMAIN --no-offload-new-driver \
 // RUN:   --offload-arch=gfx906 -c -nostdinc -nogpuinc -nohipwrapperinc \
 // RUN:   -nogpulib -fgpu-rdc -I%S/Inputs %s -o %t.main.o
 
@@ -24,7 +24,7 @@
 
 // Link %t.1.o and %t.2.o by -r and then link with %t.main.o
 
-// RUN: %clang -v --target=x86_64-unknown-linux-gnu \
+// RUN: %clang -v --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN:   --hip-link -fgpu-rdc --offload-arch=gfx906 \
 // RUN:   -r -fuse-ld=lld -nostdlib %t.1.o %t.2.o -o %t.lib.o \
 // RUN:   2>&1 | FileCheck -check-prefix=LD-R %s
@@ -32,11 +32,11 @@
 // LD-R: Found undefined HIP fatbin symbol: __hip_fatbin_[[ID2:[0-9a-f]+]]
 // LD-R: Found undefined HIP gpubin handle symbol: __hip_gpubin_handle_[[ID1]]
 // LD-R: Found undefined HIP gpubin handle symbol: __hip_gpubin_handle_[[ID2]]
-// LD-R: "{{.*}}/clang-offload-bundler" {{.*}}-unbundle
-// LD-R: "{{.*}}/lld" -flavor gnu -m elf64_amdgpu
-// LD-R: "{{.*}}/clang-offload-bundler"
-// LD-R: "{{.*}}/llvm-mc" -triple x86_64-unknown-linux-gnu
-// LD-R: "{{.*}}/ld.lld" {{.*}} -r
+// LD-R: "{{.*[/\\]}}clang-offload-bundler" {{.*}}-unbundle
+// LD-R: "{{.*[/\\]}}lld" -flavor gnu -m elf64_amdgpu
+// LD-R: "{{.*[/\\]}}clang-offload-bundler"
+// LD-R: "{{.*[/\\]}}clang{{.*}}" -target x86_64-unknown-linux-gnu
+// LD-R: "{{.*[/\\]}}ld.lld" {{.*}} -r
 
 // RUN: llvm-nm  %t.lib.o | FileCheck -check-prefix=OBJ %s
 // OBJ:  B __hip_cuid_[[ID1:[0-9a-f]+]]
@@ -46,15 +46,15 @@
 // OBJ:  D __hip_gpubin_handle_[[ID1]]
 // OBJ:  D __hip_gpubin_handle_[[ID2]]
 
-// RUN: %clang -v --target=x86_64-unknown-linux-gnu \
-// RUN:   --hip-link -no-hip-rt -fgpu-rdc --offload-arch=gfx906 \
+// RUN: %clang -v --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
+// RUN:   --hip-link -fgpu-rdc --offload-arch=gfx906 \
 // RUN:   -fuse-ld=lld -nostdlib -r %t.main.o %t.lib.o -o %t.final.o \
 // RUN:   2>&1 | FileCheck -check-prefix=LINK-O %s
 // LINK-O-NOT: Found undefined HIP {{.*}}symbol
 
 // Generate a static lib with %t.1.o and %t.2.o then link with %t.main.o
 
-// RUN: %clang -v --target=x86_64-unknown-linux-gnu \
+// RUN: %clang -v --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN:   --hip-link -fgpu-rdc --offload-arch=gfx906 \
 // RUN:   --emit-static-lib -fuse-ld=lld -nostdlib %t.1.o %t.2.o -o %t.a \
 // RUN:   2>&1 | FileCheck -check-prefix=STATIC %s
@@ -62,13 +62,13 @@
 // STATIC: Found undefined HIP fatbin symbol: __hip_fatbin_[[ID2:[0-9a-f]+]]
 // STATIC: Found undefined HIP gpubin handle symbol: __hip_gpubin_handle_[[ID1]]
 // STATIC: Found undefined HIP gpubin handle symbol: __hip_gpubin_handle_[[ID2]]
-// STATIC: "{{.*}}/clang-offload-bundler" {{.*}}-unbundle
-// STATIC: "{{.*}}/lld" -flavor gnu -m elf64_amdgpu
-// STATIC: "{{.*}}/clang-offload-bundler"
-// STATIC: "{{.*}}/llvm-mc" -triple x86_64-unknown-linux-gnu
-// STATIC: "{{.*}}/llvm-ar"
+// STATIC: "{{.*[/\\]}}clang-offload-bundler" {{.*}}-unbundle
+// STATIC: "{{.*[/\\]}}lld" -flavor gnu -m elf64_amdgpu
+// STATIC: "{{.*[/\\]}}clang-offload-bundler"
+// STATIC: "{{.*[/\\]}}clang{{.*}}" -target x86_64-unknown-linux-gnu
+// STATIC: "{{.*[/\\]}}llvm-ar"
 
-// RUN: %clang -v --target=x86_64-unknown-linux-gnu \
+// RUN: %clang -v --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN:   --hip-link -no-hip-rt -fgpu-rdc --offload-arch=gfx906 \
 // RUN:   -fuse-ld=lld -nostdlib -r %t.main.o %t.a -o %t.final.o \
 // RUN:   2>&1 | FileCheck -check-prefix=LINK-A %s

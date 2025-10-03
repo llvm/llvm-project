@@ -83,9 +83,11 @@ static auto [cx, cy, cz] = C();
 void f() {
   static thread_local auto [cx, cy, cz] = C();
 #if __cplusplus <= 201703L
-    // expected-warning@-2 {{decomposition declaration declared with 'static thread_local' specifiers is a C++20 extension}}
+    // expected-warning@-2 {{decomposition declaration declared 'static' is a C++20 extension}}
+    // expected-warning@-3 {{decomposition declaration declared 'thread_local' is a C++20 extension}}
 #else
-    // expected-warning@-4 {{decomposition declaration declared with 'static thread_local' specifiers is incompatible with C++ standards before C++20}}
+    // expected-warning@-5 {{decomposition declaration declared 'static' is incompatible with C++ standards before C++20}}
+    // expected-warning@-6 {{decomposition declaration declared 'thread_local' is incompatible with C++ standards before C++20}}
 #endif
 }
 
@@ -129,5 +131,16 @@ namespace NTTP {
   // expected-error@-2 {{non-type template parameter cannot have type 'A' before C++20}}
 #else
   // expected-warning@-4 {{non-type template parameter of type 'A' is incompatible with C++ standards before C++20}}
+#endif
+}
+
+namespace CTADForAliasTemplate {
+template<typename T> struct A { A(T); };
+template<typename T> using B = A<T>;
+B b = {1};
+#if __cplusplus <= 201703L
+  // expected-warning@-2 {{class template argument deduction for alias templates is a C++20 extension}}
+#else
+  // expected-warning@-4 {{class template argument deduction for alias templates is incompatible with C++ standards before C++20}}
 #endif
 }

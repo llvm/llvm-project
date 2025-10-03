@@ -51,6 +51,17 @@ static int c = 1;
 } // namespace deep_inner
 } // namespace inner
 
+template<typename T>
+static void printTemplate(T&&) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: 'printTemplate' is a static definition in anonymous namespace; static is redundant here [readability-static-definition-in-anonymous-namespace]
+// CHECK-FIXES: {{^}}void printTemplate(T&&) {}
+
+void testTemplate() {
+  printTemplate(5);
+  printTemplate(5U);
+  printTemplate("some string");
+}
+
 } // namespace
 
 namespace N {

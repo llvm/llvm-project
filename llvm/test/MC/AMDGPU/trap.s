@@ -45,7 +45,7 @@ s_and_b32     ttmp10, ttmp8, 0x00000080
 s_and_b32     ttmp9, tma_hi, 0x0000ffff
 // SICI: s_and_b32 ttmp9, tma_hi, 0xffff ; encoding: [0x6f,0xff,0x79,0x87,0xff,0xff,0x00,0x00]
 // VI:   s_and_b32 ttmp9, tma_hi, 0xffff ; encoding: [0x6f,0xff,0x79,0x86,0xff,0xff,0x00,0x00]
-// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: tma_hi register not available on this GPU
 
 s_and_b32     ttmp9, ttmp9, 0x000001ff
 // SICI: s_and_b32 ttmp9, ttmp9, 0x1ff   ; encoding: [0x79,0xff,0x79,0x87,0xff,0x01,0x00,0x00]
@@ -55,7 +55,7 @@ s_and_b32     ttmp9, ttmp9, 0x000001ff
 s_and_b32     ttmp9, tma_lo, 0xffff0000
 // SICI: s_and_b32 ttmp9, tma_lo, 0xffff0000 ; encoding: [0x6e,0xff,0x79,0x87,0x00,0x00,0xff,0xff]
 // VI:   s_and_b32 ttmp9, tma_lo, 0xffff0000 ; encoding: [0x6e,0xff,0x79,0x86,0x00,0x00,0xff,0xff]
-// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: tma_lo register not available on this GPU
 
 s_and_b32     ttmp9, ttmp9, ttmp8
 // SICI: s_and_b32 ttmp9, ttmp9, ttmp8   ; encoding: [0x79,0x78,0x79,0x87]
@@ -110,7 +110,7 @@ s_mov_b32     ttmp8, m0
 s_mov_b32     ttmp8, tma_lo
 // SICI: s_mov_b32 ttmp8, tma_lo         ; encoding: [0x6e,0x03,0xf8,0xbe]
 // VI:   s_mov_b32 ttmp8, tma_lo         ; encoding: [0x6e,0x00,0xf8,0xbe]
-// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: tma_lo register not available on this GPU
 
 s_mul_i32     ttmp8, 0x00000324, ttmp8
 // SICI: s_mul_i32 ttmp8, 0x324, ttmp8   ; encoding: [0xff,0x78,0x78,0x93,0x24,0x03,0x00,0x00]
@@ -125,19 +125,19 @@ s_or_b32      ttmp9, ttmp9, 0x00280000
 // ttmp12..ttmp15 (GFX9 only)
 
 s_add_u32     ttmp0, ttmp12, 4
-// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: ttmp12 register not available on this GPU
 // GFX9: s_add_u32 ttmp0, ttmp12, 4       ; encoding: [0x78,0x84,0x6c,0x80]
 
 s_add_u32     ttmp0, ttmp13, 4
-// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: ttmp13 register not available on this GPU
 // GFX9: s_add_u32 ttmp0, ttmp13, 4       ; encoding: [0x79,0x84,0x6c,0x80]
 
 s_add_u32     ttmp0, ttmp14, 4
-// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: ttmp14 register not available on this GPU
 // GFX9: s_add_u32 ttmp0, ttmp14, 4       ; encoding: [0x7a,0x84,0x6c,0x80]
 
 s_add_u32     ttmp0, ttmp15, 4
-// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: ttmp15 register not available on this GPU
 // GFX9: s_add_u32 ttmp0, ttmp15, 4       ; encoding: [0x7b,0x84,0x6c,0x80]
 
 //===----------------------------------------------------------------------===//
@@ -162,36 +162,36 @@ s_mov_b64     exec, [ttmp4,ttmp5]
 s_mov_b64     tba, ttmp[4:5]
 // SICI: s_mov_b64 tba, ttmp[4:5]        ; encoding: [0x74,0x04,0xec,0xbe]
 // VI:   s_mov_b64 tba, ttmp[4:5]        ; encoding: [0x74,0x01,0xec,0xbe]
-// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: tba register not available on this GPU
 
 s_mov_b64     ttmp[4:5], tba
 // SICI: s_mov_b64 ttmp[4:5], tba        ; encoding: [0x6c,0x04,0xf4,0xbe]
 // VI:   s_mov_b64 ttmp[4:5], tba        ; encoding: [0x6c,0x01,0xf4,0xbe]
-// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: tba register not available on this GPU
 
 s_mov_b64     tma, ttmp[4:5]
 // SICI: s_mov_b64 tma, ttmp[4:5]        ; encoding: [0x74,0x04,0xee,0xbe]
 // VI:   s_mov_b64 tma, ttmp[4:5]        ; encoding: [0x74,0x01,0xee,0xbe]
-// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: tma register not available on this GPU
 
 s_mov_b64     ttmp[4:5], tma
 // SICI: s_mov_b64 ttmp[4:5], tma        ; encoding: [0x6e,0x04,0xf4,0xbe]
 // VI:   s_mov_b64 ttmp[4:5], tma        ; encoding: [0x6e,0x01,0xf4,0xbe]
-// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: tma register not available on this GPU
 
 // ttmp12..ttmp15 (GFX9 only)
 
 s_mov_b64     ttmp[12:13], exec
-// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: ttmp[12:13] register not available on this GPU
 // GFX9: s_mov_b64 ttmp[12:13], exec       ; encoding: [0x7e,0x01,0xf8,0xbe]
 
 s_mov_b64     ttmp[14:15], exec
-// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: ttmp[14:15] register not available on this GPU
 // GFX9: s_mov_b64 ttmp[14:15], exec       ; encoding: [0x7e,0x01,0xfa,0xbe]
 
 //===----------------------------------------------------------------------===//
 // Trap Handler related - 8-dword registers
-// NB: gfx7 doc states that SMRD does not support trap registers for dst
+// N.B. gfx7 doc states that SMRD does not support trap registers for dst
 //===----------------------------------------------------------------------===//
 
 s_buffer_load_dwordx8 ttmp[0:7], s[0:3], s0
@@ -205,7 +205,7 @@ s_buffer_load_dwordx8 ttmp[4:11], s[0:3], s0
 // SICI: s_buffer_load_dwordx8 ttmp[4:11], s[0:3], s0 ; encoding: [0x00,0x00,0xfa,0xc2]
 
 s_buffer_load_dwordx8 ttmp[8:15], s[0:3], s0
-// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: ttmp[8:15] register not available on this GPU
 // GFX9: [0x00,0x1d,0x2c,0xc0,0x00,0x00,0x00,0x00]
 
 s_load_dwordx8 ttmp[0:7], s[0:1], s0
@@ -219,20 +219,20 @@ s_load_dwordx8 ttmp[4:11], s[0:1], s0
 // SICI: s_load_dwordx8 ttmp[4:11], s[0:1], s0 ; encoding: [0x00,0x00,0xfa,0xc0]
 
 s_load_dwordx8 ttmp[8:15], s[0:1], s0
-// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: ttmp[8:15] register not available on this GPU
 // GFX9: [0x00,0x1d,0x0c,0xc0,0x00,0x00,0x00,0x00]
 
 //===----------------------------------------------------------------------===//
 // Trap Handler related - 16-dword registers
-// NB: gfx7 doc states that SMRD does not support trap registers for dst
+// N.B. gfx7 doc states that SMRD does not support trap registers for dst
 //===----------------------------------------------------------------------===//
 
 s_buffer_load_dwordx16 ttmp[0:15], s[0:3], s0
-// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: ttmp[0:15] register not available on this GPU
 // GFX9: [0x00,0x1b,0x30,0xc0,0x00,0x00,0x00,0x00]
 
 s_load_dwordx16 ttmp[0:15], s[0:1], s0
-// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: ttmp[0:15] register not available on this GPU
 // GFX9: [0x00,0x1b,0x10,0xc0,0x00,0x00,0x00,0x00]
 
 //===----------------------------------------------------------------------===//
@@ -257,5 +257,5 @@ buffer_atomic_inc v1, off, ttmp[8:11], 56 glc
 // ttmp12..ttmp15 (GFX9 only)
 
 buffer_atomic_inc v1, off, ttmp[12:15], 56 glc
-// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: ttmp[12:15] register not available on this GPU
 // GFX9: buffer_atomic_inc v1, off, ttmp[12:15], 56 glc ; encoding: [0x00,0x40,0x2c,0xe1,0x00,0x01,0x1e,0xb8]

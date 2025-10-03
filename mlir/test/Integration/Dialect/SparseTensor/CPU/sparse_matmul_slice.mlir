@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 // DEFINE: %{run_opts} = -e main -entry-point-result=void
-// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run} = mlir-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -172,11 +173,13 @@ module {
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 5
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 5
-    // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3
-    // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8
+    // CHECK-NEXT: dim = ( 4, 4 )
+    // CHECK-NEXT: lvl = ( 4, 4 )
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 5 )
+    // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3 )
+    // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %2 : tensor<4x4xf64, #DCSR>
@@ -192,9 +195,11 @@ module {
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 5
-    // CHECK-NEXT: pos[1] : ( 0, 2, 2, 3, 5
-    // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3
-    // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8
+    // CHECK-NEXT: dim = ( 4, 4 )
+    // CHECK-NEXT: lvl = ( 4, 4 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 2, 3, 5 )
+    // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3 )
+    // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %3 : tensor<4x4xf64, #CSR>
@@ -204,9 +209,11 @@ module {
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 3
-    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 2, 3
-    // CHECK-NEXT: crd[1] : ( 0, 0, 0
-    // CHECK-NEXT: values : ( 2.3, 6.9, 12.6
+    // CHECK-NEXT: dim = ( 4, 4 )
+    // CHECK-NEXT: lvl = ( 4, 4 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 0, 0 )
+    // CHECK-NEXT: values : ( 2.3, 6.9, 12.6 )
     // CHECK-NEXT: ----
     //
     %s1 = tensor.extract_slice %tmp[0, 1][4, 4][2, 1] : tensor<8x8xf64, #DCSR> to tensor<4x4xf64, #DCSR_SLICE_1>
@@ -220,9 +227,11 @@ module {
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 3
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 0, 1, 0, 3, 0
-    // CHECK-NEXT: values : ( 2.3, 6.9, 12.6
+    // CHECK-NEXT: dim = ( 4, 4 )
+    // CHECK-NEXT: lvl = ( 4, 4 )
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 0, 1, 0, 3, 0 )
+    // CHECK-NEXT: values : ( 2.3, 6.9, 12.6 )
     // CHECK-NEXT: ----
     //
     %t1_coo = sparse_tensor.convert %sa : tensor<8x8xf64> to tensor<8x8xf64, #COO>
@@ -236,9 +245,11 @@ module {
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 3
-    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 2, 3
-    // CHECK-NEXT: crd[1] : ( 0, 0, 0
-    // CHECK-NEXT: values : ( 2.3, 6.9, 12.6
+    // CHECK-NEXT: dim = ( 4, 4 )
+    // CHECK-NEXT: lvl = ( 4, 4 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 0, 0 )
+    // CHECK-NEXT: values : ( 2.3, 6.9, 12.6 )
     // CHECK-NEXT: ----
     //
     %s1_dyn = tensor.extract_slice %tmp[%c_0, %c_1][4, 4][%c_2, %c_1] : tensor<8x8xf64, #DCSR> to tensor<4x4xf64, #DCSR_SLICE_dyn>

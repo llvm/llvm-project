@@ -11,10 +11,12 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Breakpoint/StoppointHitCounter.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Symbol/LineEntry.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
@@ -67,7 +69,7 @@ public:
   // The next section deals with various breakpoint options.
 
   /// If \a enabled is \b true, enable the breakpoint, if \b false disable it.
-  void SetEnabled(bool enabled);
+  llvm::Error SetEnabled(bool enabled);
 
   /// Check the Enable/Disable state.
   ///
@@ -126,15 +128,11 @@ public:
   /// Set the breakpoint location's condition.
   ///
   /// \param[in] condition
-  ///    The condition expression to evaluate when the breakpoint is hit.
-  void SetCondition(const char *condition);
+  ///    The condition to evaluate when the breakpoint is hit.
+  void SetCondition(StopCondition condition);
 
-  /// Return a pointer to the text of the condition expression.
-  ///
-  /// \return
-  ///    A pointer to the condition expression text, or nullptr if no
-  //     condition has been set.
-  const char *GetConditionText(size_t *hash = nullptr) const;
+  /// Return the breakpoint condition.
+  const StopCondition &GetCondition() const;
 
   bool ConditionSaysStop(ExecutionContext &exe_ctx, Status &error);
 
@@ -161,19 +159,11 @@ public:
   // The next section deals with this location's breakpoint sites.
 
   /// Try to resolve the breakpoint site for this location.
-  ///
-  /// \return
-  ///     \b true if we were successful at setting a breakpoint site,
-  ///     \b false otherwise.
-  bool ResolveBreakpointSite();
+  llvm::Error ResolveBreakpointSite();
 
   /// Clear this breakpoint location's breakpoint site - for instance when
   /// disabling the breakpoint.
-  ///
-  /// \return
-  ///     \b true if there was a breakpoint site to be cleared, \b false
-  ///     otherwise.
-  bool ClearBreakpointSite();
+  llvm::Error ClearBreakpointSite();
 
   /// Return whether this breakpoint location has a breakpoint site. \return
   ///     \b true if there was a breakpoint site for this breakpoint
@@ -233,7 +223,7 @@ public:
   ///     \b true if the target should stop at this breakpoint and \b
   ///     false not.
   bool InvokeCallback(StoppointCallbackContext *context);
-  
+
   /// Report whether the callback for this location is synchronous or not.
   ///
   /// \return
@@ -282,6 +272,25 @@ public:
   /// Returns the breakpoint location ID.
   lldb::break_id_t GetID() const { return m_loc_id; }
 
+  /// Set the line entry that should be shown to users for this location.
+  /// It is up to the caller to verify that this is a valid entry to show.
+  /// The current use of this is to distinguish among line entries from a
+  /// virtual inlined call stack that all share the same address.
+  /// The line entry must have the same start address as the address for this
+  /// location.
+  bool SetPreferredLineEntry(const LineEntry &line_entry) {
+    if (m_address == line_entry.range.GetBaseAddress()) {
+      m_preferred_line_entry = line_entry;
+      return true;
+    }
+    assert(0 && "Tried to set a preferred line entry with a different address");
+    return false;
+  }
+
+  const std::optional<LineEntry> GetPreferredLineEntry() {
+    return m_preferred_line_entry;
+  }
+
 protected:
   friend class BreakpointSite;
   friend class BreakpointLocationList;
@@ -305,6 +314,16 @@ protected:
   /// It also takes care of decrementing the ignore counters.
   /// If it returns false we should continue, otherwise stop.
   bool IgnoreCountShouldStop();
+
+  /// If this location knows that the virtual stack frame it represents is
+  /// not frame 0, return the suggested stack frame instead.  This will happen
+  /// when the location's address contains a "virtual inlined call stack" and
+  /// the breakpoint was set on a file & line that are not at the bottom of that
+  /// stack.  For now we key off the "preferred line entry" - looking for that
+  /// in the blocks that start with the stop PC.
+  /// This version of the API doesn't take an "inlined" parameter because it
+  /// only changes frames in the inline stack.
+  std::optional<uint32_t> GetSuggestedStackFrameIndex();
 
 private:
   void SwapLocation(lldb::BreakpointLocationSP swap_from);
@@ -340,11 +359,8 @@ private:
   ///     The thread for which this breakpoint location is valid, or
   ///     LLDB_INVALID_THREAD_ID if it is valid for all threads.
   ///
-  /// \param[in] hardware
-  ///     \b true if a hardware breakpoint is requested.
-
   BreakpointLocation(lldb::break_id_t bid, Breakpoint &owner,
-                     const Address &addr, lldb::tid_t tid, bool hardware,
+                     const Address &addr, lldb::tid_t tid,
                      bool check_for_resolver = true);
 
   // Data members:
@@ -369,6 +385,11 @@ private:
   lldb::break_id_t m_loc_id; ///< Breakpoint location ID.
   StoppointHitCounter m_hit_counter; ///< Number of times this breakpoint
                                      /// location has been hit.
+  /// If this exists, use it to print the stop description rather than the
+  /// LineEntry m_address resolves to directly.  Use this for instance when the
+  /// location was given somewhere in the virtual inlined call stack since the
+  /// Address always resolves to the lowest entry in the stack.
+  std::optional<LineEntry> m_preferred_line_entry;
 
   void SetShouldResolveIndirectFunctions(bool do_resolve) {
     m_should_resolve_indirect_functions = do_resolve;

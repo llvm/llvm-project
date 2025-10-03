@@ -66,11 +66,11 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Scalar.h"
 
 using namespace llvm;
 
@@ -260,10 +260,31 @@ static InstructionCost ComputeSpeculationCost(const Instruction *I,
   }
 }
 
+// Do not hoist any debug info intrinsics.
+// ...
+// if (cond) {
+//   x = y * z;
+//   foo();
+// }
+// ...
+// -------- Which then becomes:
+// ...
+// if.then:
+//   %x = mul i32 %y, %z
+//   call void @llvm.dbg.value(%x, !"x", !DIExpression())
+//   call void foo()
+//
+// SpeculativeExecution might decide to hoist the 'y * z' calculation
+// out of the 'if' block, because it is more efficient that way, so the
+// '%x = mul i32 %y, %z' moves to the block above. But it might also
+// decide to hoist the 'llvm.dbg.value' call.
+// This is incorrect, because even if we've moved the calculation of
+// 'y * z', we should not see the value of 'x' change unless we
+// actually go inside the 'if' block.
+
 bool SpeculativeExecutionPass::considerHoistingFromTo(
     BasicBlock &FromBlock, BasicBlock &ToBlock) {
   SmallPtrSet<const Instruction *, 8> NotHoisted;
-  SmallDenseMap<const Instruction *, SmallVector<DPValue *>> DPValuesToHoist;
   auto HasNoUnhoistedInstr = [&NotHoisted](auto Values) {
     for (const Value *V : Values) {
       if (const auto *I = dyn_cast_or_null<Instruction>(V))
@@ -274,29 +295,12 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   };
   auto AllPrecedingUsesFromBlockHoisted =
       [&HasNoUnhoistedInstr](const User *U) {
-        // Debug variable has special operand to check it's not hoisted.
-        if (const auto *DVI = dyn_cast<DbgVariableIntrinsic>(U))
-          return HasNoUnhoistedInstr(DVI->location_ops());
-
-        // Usially debug label intrinsic corresponds to label in LLVM IR. In
-        // these cases we should not move it here.
-        // TODO: Possible special processing needed to detect it is related to a
-        // hoisted instruction.
-        if (isa<DbgLabelInst>(U))
-          return false;
-
         return HasNoUnhoistedInstr(U->operand_values());
       };
 
   InstructionCost TotalSpeculationCost = 0;
   unsigned NotHoistedInstCount = 0;
   for (const auto &I : FromBlock) {
-    // Make note of any DPValues that need hoisting. DPLabels
-    // get left behind just like llvm.dbg.labels.
-    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
-      if (HasNoUnhoistedInstr(DPV.location_ops()))
-        DPValuesToHoist[DPV.getInstruction()].push_back(&DPV);
-    }
     const InstructionCost Cost = ComputeSpeculationCost(&I, *TTI);
     if (Cost.isValid() && isSafeToSpeculativelyExecute(&I) &&
         AllPrecedingUsesFromBlockHoisted(&I)) {
@@ -304,9 +308,7 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
       if (TotalSpeculationCost > SpecExecMaxSpeculationCost)
         return false;  // too much to hoist
     } else {
-      // Debug info intrinsics should not be counted for threshold.
-      if (!isa<DbgInfoIntrinsic>(I))
-        NotHoistedInstCount++;
+      NotHoistedInstCount++;
       if (NotHoistedInstCount > SpecExecMaxNotHoisted)
         return false; // too much left behind
       NotHoisted.insert(&I);
@@ -314,22 +316,13 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   }
 
   for (auto I = FromBlock.begin(); I != FromBlock.end();) {
-    // If any DPValues attached to this instruction should be hoisted, hoist
-    // them now - they will end up attached to either the next hoisted
-    // instruction or the ToBlock terminator.
-    if (DPValuesToHoist.contains(&*I)) {
-      for (auto *DPV : DPValuesToHoist[&*I]) {
-        DPV->removeFromParent();
-        ToBlock.insertDPValueBefore(DPV,
-                                    ToBlock.getTerminator()->getIterator());
-      }
-    }
     // We have to increment I before moving Current as moving Current
     // changes the list that I is iterating through.
     auto Current = I;
     ++I;
     if (!NotHoisted.count(&*Current)) {
-      Current->moveBefore(ToBlock.getTerminator());
+      Current->moveBefore(ToBlock.getTerminator()->getIterator());
+      Current->dropLocation();
     }
   }
   return true;

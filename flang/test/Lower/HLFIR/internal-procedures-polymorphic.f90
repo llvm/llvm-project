@@ -1,6 +1,6 @@
 ! Test lowering of internal procedure capturing OPTIONAL polymorphic
 ! objects.
-! RUN: bbc -emit-hlfir --polymorphic-type -o - %s -I nw | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s -I nw | FileCheck %s
 
 
 module captured_optional_polymorphic
@@ -50,7 +50,7 @@ end module
 ! CHECK:             %[[VAL_20:.*]] = fir.convert %[[VAL_18]] : (!fir.tdesc<!fir.type<_QMcaptured_optional_polymorphicTsometype>>) -> !fir.ref<none>
 ! CHECK:             %[[VAL_21:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_22:.*]] = arith.constant 0 : i32
-! CHECK:             %[[VAL_23:.*]] = fir.call @_FortranAPointerNullifyDerived(%[[VAL_19]], %[[VAL_20]], %[[VAL_21]], %[[VAL_22]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
+! CHECK:             fir.call @_FortranAPointerNullifyDerived(%[[VAL_19]], %[[VAL_20]], %[[VAL_21]], %[[VAL_22]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> ()
 ! CHECK:           }
 ! CHECK:           fir.call @_QMcaptured_optional_polymorphicFtestPinternal(%[[VAL_7]])
 

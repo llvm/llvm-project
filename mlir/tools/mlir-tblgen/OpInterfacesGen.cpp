@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CppGenUtilities.h"
 #include "DocGenUtilities.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
@@ -23,6 +24,8 @@
 #include "llvm/TableGen/TableGenBackend.h"
 
 using namespace mlir;
+using llvm::Record;
+using llvm::RecordKeeper;
 using mlir::tblgen::Interface;
 using mlir::tblgen::InterfaceMethod;
 using mlir::tblgen::OpInterface;
@@ -61,14 +64,13 @@ static void emitMethodNameAndArgs(const InterfaceMethod &method,
 
 /// Get an array of all OpInterface definitions but exclude those subclassing
 /// "DeclareOpInterfaceMethods".
-static std::vector<llvm::Record *>
-getAllInterfaceDefinitions(const llvm::RecordKeeper &recordKeeper,
-                           StringRef name) {
-  std::vector<llvm::Record *> defs =
-      recordKeeper.getAllDerivedDefinitions((name + "Interface").str());
+static std::vector<const Record *>
+getAllInterfaceDefinitions(const RecordKeeper &records, StringRef name) {
+  std::vector<const Record *> defs =
+      records.getAllDerivedDefinitions((name + "Interface").str());
 
   std::string declareName = ("Declare" + name + "InterfaceMethods").str();
-  llvm::erase_if(defs, [&](const llvm::Record *def) {
+  llvm::erase_if(defs, [&](const Record *def) {
     // Ignore any "declare methods" interfaces.
     if (def->isSubClassOf(declareName))
       return true;
@@ -88,18 +90,18 @@ public:
   bool emitInterfaceDocs();
 
 protected:
-  InterfaceGenerator(std::vector<llvm::Record *> &&defs, raw_ostream &os)
+  InterfaceGenerator(std::vector<const Record *> &&defs, raw_ostream &os)
       : defs(std::move(defs)), os(os) {}
 
   void emitConceptDecl(const Interface &interface);
   void emitModelDecl(const Interface &interface);
   void emitModelMethodsDef(const Interface &interface);
-  void emitTraitDecl(const Interface &interface, StringRef interfaceName,
-                     StringRef interfaceTraitsName);
+  void forwardDeclareInterface(const Interface &interface);
   void emitInterfaceDecl(const Interface &interface);
+  void emitInterfaceTraitDecl(const Interface &interface);
 
   /// The set of interface records to emit.
-  std::vector<llvm::Record *> defs;
+  std::vector<const Record *> defs;
   // The stream to emit to.
   raw_ostream &os;
   /// The C++ value type of the interface, e.g. Operation*.
@@ -118,7 +120,7 @@ protected:
 
 /// A specialized generator for attribute interfaces.
 struct AttrInterfaceGenerator : public InterfaceGenerator {
-  AttrInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
+  AttrInterfaceGenerator(const RecordKeeper &records, raw_ostream &os)
       : InterfaceGenerator(getAllInterfaceDefinitions(records, "Attr"), os) {
     valueType = "::mlir::Attribute";
     interfaceBaseType = "AttributeInterface";
@@ -133,7 +135,7 @@ struct AttrInterfaceGenerator : public InterfaceGenerator {
 };
 /// A specialized generator for operation interfaces.
 struct OpInterfaceGenerator : public InterfaceGenerator {
-  OpInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
+  OpInterfaceGenerator(const RecordKeeper &records, raw_ostream &os)
       : InterfaceGenerator(getAllInterfaceDefinitions(records, "Op"), os) {
     valueType = "::mlir::Operation *";
     interfaceBaseType = "OpInterface";
@@ -149,7 +151,7 @@ struct OpInterfaceGenerator : public InterfaceGenerator {
 };
 /// A specialized generator for type interfaces.
 struct TypeInterfaceGenerator : public InterfaceGenerator {
-  TypeInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
+  TypeInterfaceGenerator(const RecordKeeper &records, raw_ostream &os)
       : InterfaceGenerator(getAllInterfaceDefinitions(records, "Type"), os) {
     valueType = "::mlir::Type";
     interfaceBaseType = "TypeInterface";
@@ -443,9 +445,16 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
     os << "} // namespace " << ns << "\n";
 }
 
-void InterfaceGenerator::emitTraitDecl(const Interface &interface,
-                                       StringRef interfaceName,
-                                       StringRef interfaceTraitsName) {
+void InterfaceGenerator::emitInterfaceTraitDecl(const Interface &interface) {
+  llvm::SmallVector<StringRef, 2> namespaces;
+  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
+  for (StringRef ns : namespaces)
+    os << "namespace " << ns << " {\n";
+
+  os << "namespace detail {\n";
+
+  StringRef interfaceName = interface.getName();
+  auto interfaceTraitsName = (interfaceName + "InterfaceTraits").str();
   os << llvm::formatv("  template <typename {3}>\n"
                       "  struct {0}Trait : public ::mlir::{2}<{0},"
                       " detail::{1}>::Trait<{3}> {{\n",
@@ -480,7 +489,7 @@ void InterfaceGenerator::emitTraitDecl(const Interface &interface,
     tblgen::FmtContext verifyCtx;
     verifyCtx.addSubst("_op", "op");
     os << llvm::formatv(
-              "    static ::mlir::LogicalResult {0}(::mlir::Operation *op) ",
+              "    static ::llvm::LogicalResult {0}(::mlir::Operation *op) ",
               (interface.verifyWithRegions() ? "verifyRegionTrait"
                                              : "verifyTrait"))
        << "{\n      " << tblgen::tgfmt(verify->trim(), &verifyCtx)
@@ -492,6 +501,10 @@ void InterfaceGenerator::emitTraitDecl(const Interface &interface,
     os << tblgen::tgfmt(*extraTraitDecls, &traitMethodFmt) << "\n";
 
   os << "  };\n";
+  os << "}// namespace detail\n";
+
+  for (StringRef ns : llvm::reverse(namespaces))
+    os << "} // namespace " << ns << "\n";
 }
 
 static void emitInterfaceDeclMethods(const Interface &interface,
@@ -515,6 +528,27 @@ static void emitInterfaceDeclMethods(const Interface &interface,
     os << tblgen::tgfmt(extraDecls->rtrim(), &extraDeclsFmt) << "\n";
 }
 
+void InterfaceGenerator::forwardDeclareInterface(const Interface &interface) {
+  llvm::SmallVector<StringRef, 2> namespaces;
+  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
+  for (StringRef ns : namespaces)
+    os << "namespace " << ns << " {\n";
+
+  // Emit a forward declaration of the interface class so that it becomes usable
+  // in the signature of its methods.
+  std::string comments = tblgen::emitSummaryAndDescComments(
+      "", interface.getDescription().value_or(""));
+  if (!comments.empty()) {
+    os << comments << "\n";
+  }
+
+  StringRef interfaceName = interface.getName();
+  os << "class " << interfaceName << ";\n";
+
+  for (StringRef ns : llvm::reverse(namespaces))
+    os << "} // namespace " << ns << "\n";
+}
+
 void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
   llvm::SmallVector<StringRef, 2> namespaces;
   llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
@@ -526,14 +560,18 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
 
   // Emit a forward declaration of the interface class so that it becomes usable
   // in the signature of its methods.
-  os << "class " << interfaceName << ";\n";
+  std::string comments = tblgen::emitSummaryAndDescComments(
+      "", interface.getDescription().value_or(""));
+  if (!comments.empty()) {
+    os << comments << "\n";
+  }
 
   // Emit the traits struct containing the concept and model declarations.
   os << "namespace detail {\n"
      << "struct " << interfaceTraitsName << " {\n";
   emitConceptDecl(interface);
   emitModelDecl(interface);
-  os << "};";
+  os << "};\n";
 
   // Emit the derived trait for the interface.
   os << "template <typename " << valueTemplate << ">\n";
@@ -588,16 +626,13 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
        << "    auto* interface = getInterfaceFor(base);\n"
        << "    if (!interface)\n"
           "      return false;\n"
-          "    " << interfaceName << " odsInterfaceInstance(base, interface);\n"
+          "    "
+       << interfaceName << " odsInterfaceInstance(base, interface);\n"
        << "    " << tblgen::tgfmt(extraClassOf->trim(), &extraClassOfFmt)
        << "\n  }\n";
   }
 
   os << "};\n";
-
-  os << "namespace detail {\n";
-  emitTraitDecl(interface, interfaceName, interfaceTraitsName);
-  os << "}// namespace detail\n";
 
   for (StringRef ns : llvm::reverse(namespaces))
     os << "} // namespace " << ns << "\n";
@@ -607,14 +642,19 @@ bool InterfaceGenerator::emitInterfaceDecls() {
   llvm::emitSourceFileHeader("Interface Declarations", os);
   // Sort according to ID, so defs are emitted in the order in which they appear
   // in the Tablegen file.
-  std::vector<llvm::Record *> sortedDefs(defs);
-  llvm::sort(sortedDefs, [](llvm::Record *lhs, llvm::Record *rhs) {
+  std::vector<const Record *> sortedDefs(defs);
+  llvm::sort(sortedDefs, [](const Record *lhs, const Record *rhs) {
     return lhs->getID() < rhs->getID();
   });
-  for (const llvm::Record *def : sortedDefs)
+  for (const Record *def : sortedDefs)
+    forwardDeclareInterface(Interface(def));
+  for (const Record *def : sortedDefs)
     emitInterfaceDecl(Interface(def));
-  for (const llvm::Record *def : sortedDefs)
+  for (const Record *def : sortedDefs)
+    emitInterfaceTraitDecl(Interface(def));
+  for (const Record *def : sortedDefs)
     emitModelMethodsDef(Interface(def));
+
   return false;
 }
 
@@ -622,13 +662,12 @@ bool InterfaceGenerator::emitInterfaceDecls() {
 // GEN: Interface documentation
 //===----------------------------------------------------------------------===//
 
-static void emitInterfaceDoc(const llvm::Record &interfaceDef,
-                             raw_ostream &os) {
+static void emitInterfaceDoc(const Record &interfaceDef, raw_ostream &os) {
   Interface interface(&interfaceDef);
 
   // Emit the interface name followed by the description.
-  os << "## " << interface.getName() << " (`" << interfaceDef.getName()
-     << "`)\n\n";
+  os << "\n## " << interface.getName() << " (`" << interfaceDef.getName()
+     << "`)\n";
   if (auto description = interface.getDescription())
     mlir::tblgen::emitDescription(*description, os);
 
@@ -636,7 +675,7 @@ static void emitInterfaceDoc(const llvm::Record &interfaceDef,
   os << "\n### Methods:\n";
   for (const auto &method : interface.getMethods()) {
     // Emit the method name.
-    os << "#### `" << method.getName() << "`\n\n```c++\n";
+    os << "\n#### `" << method.getName() << "`\n\n```c++\n";
 
     // Emit the method signature.
     if (method.isStatic())
@@ -656,13 +695,13 @@ static void emitInterfaceDoc(const llvm::Record &interfaceDef,
     if (!method.getBody())
       os << "\nNOTE: This method *must* be implemented by the user.";
 
-    os << "\n\n";
+    os << "\n";
   }
 }
 
 bool InterfaceGenerator::emitInterfaceDocs() {
   os << "<!-- Autogenerated by mlir-tblgen; don't manually edit -->\n";
-  os << "# " << interfaceBaseType << " definitions\n";
+  os << "\n# " << interfaceBaseType << " definitions\n";
 
   for (const auto *def : defs)
     emitInterfaceDoc(*def, os);
@@ -684,15 +723,15 @@ struct InterfaceGenRegistration {
         genDefDesc(("Generate " + genDesc + " interface definitions").str()),
         genDocDesc(("Generate " + genDesc + " interface documentation").str()),
         genDecls(genDeclArg, genDeclDesc,
-                 [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                 [](const RecordKeeper &records, raw_ostream &os) {
                    return GeneratorT(records, os).emitInterfaceDecls();
                  }),
         genDefs(genDefArg, genDefDesc,
-                [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                [](const RecordKeeper &records, raw_ostream &os) {
                   return GeneratorT(records, os).emitInterfaceDefs();
                 }),
         genDocs(genDocArg, genDocDesc,
-                [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                [](const RecordKeeper &records, raw_ostream &os) {
                   return GeneratorT(records, os).emitInterfaceDocs();
                 }) {}
 

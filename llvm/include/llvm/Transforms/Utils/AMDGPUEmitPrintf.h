@@ -15,11 +15,12 @@
 #define LLVM_TRANSFORMS_UTILS_AMDGPUEMITPRINTF_H
 
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-Value *emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
-                            bool isBuffered);
+LLVM_ABI Value *emitAMDGPUPrintfCall(IRBuilder<> &Builder,
+                                     ArrayRef<Value *> Args, bool isBuffered);
 
 } // end namespace llvm
 

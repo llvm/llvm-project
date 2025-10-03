@@ -11,6 +11,7 @@
 
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolTableEntry.h"
 #include <cstdint>
 
 namespace llvm {
@@ -29,8 +30,11 @@ class MCSymbolCOFF : public MCSymbol {
   };
 
 public:
-  MCSymbolCOFF(const StringMapEntry<bool> *Name, bool isTemporary)
-      : MCSymbol(SymbolKindCOFF, Name, isTemporary) {}
+  MCSymbolCOFF(const MCSymbolTableEntry *Name, bool isTemporary)
+      : MCSymbol(Name, isTemporary) {}
+
+  bool isExternal() const { return IsExternal; }
+  void setExternal(bool Value) const { IsExternal = Value; }
 
   uint16_t getType() const {
     return Type;
@@ -64,8 +68,6 @@ public:
   void setIsSafeSEH() const {
     modifyFlags(SF_SafeSEH, SF_SafeSEH);
   }
-
-  static bool classof(const MCSymbol *S) { return S->isCOFF(); }
 };
 
 } // end namespace llvm

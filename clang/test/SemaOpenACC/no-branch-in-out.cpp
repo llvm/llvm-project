@@ -7,18 +7,30 @@ void ReturnTest() {
     (void)[]() { return; };
   }
 
+#pragma acc parallel loop
+  for (int i = 0; i < 5; ++i) {
+    (void)[]() { return; };
+  }
+
+
 #pragma acc parallel
   {
     try {}
     catch(...){
-      return; // expected-error{{invalid return out of OpenACC Compute Construct}}
+      return; // expected-error{{invalid return out of OpenACC Compute/Combined Construct}}
+    }
+  }
+#pragma acc parallel loop
+  for (int i = 0; i < 5; ++i) {
+    try {}
+    catch(...){
+      return; // expected-error{{invalid return out of OpenACC Compute/Combined Construct}}
     }
   }
 }
 
 template<typename T>
 void BreakContinue() {
-
 #pragma acc parallel
   for(int i =0; i < 5; ++i) {
     switch(i) {
@@ -31,7 +43,21 @@ void BreakContinue() {
     if (i == 2)
       continue;
 
-    break;  // expected-error{{invalid branch out of OpenACC Compute Construct}}
+    break;  // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
+  }
+#pragma acc parallel loop
+  for(int i =0; i < 5; ++i) {
+    switch(i) {
+      case 0:
+      break; // leaves switch, not 'for'.
+      default:
+      i +=2;
+      break;
+    }
+    if (i == 2)
+      continue;
+
+    break;  // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
   }
 
   int j;
@@ -39,7 +65,7 @@ void BreakContinue() {
     case 0:
 #pragma acc parallel
     {
-      break; // expected-error{{invalid branch out of OpenACC Compute Construct}}
+      break; // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
     }
     case 1:
 #pragma acc parallel
@@ -47,11 +73,29 @@ void BreakContinue() {
     }
     break;
   }
+  switch(j) {
+    case 0:
+#pragma acc parallel loop
+    for (int i = 0; i < 5; ++i) {
+      break; // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
+    }
+    case 1:
+#pragma acc parallel loop
+    for (int i = 0; i < 5; ++i) {
+    }
+    break;
+  }
 
 #pragma acc parallel
   for(int i = 0; i < 5; ++i) {
     if (i > 1)
-      break; // expected-error{{invalid branch out of OpenACC Compute Construct}}
+      break; // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
+  }
+
+#pragma acc parallel loop
+  for(int i = 0; i < 5; ++i) {
+    if (i > 1)
+      break; // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
   }
 
 #pragma acc parallel
@@ -59,6 +103,13 @@ void BreakContinue() {
     case 1:
       break;
   }
+
+#pragma acc parallel loop
+  for (int i = 0; i < 5; ++i)
+    switch(j) {
+      case 1:
+        break;
+    }
 
 #pragma acc parallel
   {
@@ -71,11 +122,16 @@ void BreakContinue() {
   for (int i =0; i < 5; ++i) {
 #pragma acc parallel
     {
-      continue; // expected-error{{invalid branch out of OpenACC Compute Construct}}
+      continue; // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
     }
   }
 
 #pragma acc parallel
+  for (int i =0; i < 5; ++i) {
+    continue;
+  }
+
+#pragma acc parallel loop
   for (int i =0; i < 5; ++i) {
     continue;
   }
@@ -87,10 +143,17 @@ void BreakContinue() {
     }
   }
 
+#pragma acc parallel loop
+  for (int i =0; i < 5; ++i) {
+    {
+      continue;
+    }
+  }
+
   for (int i =0; i < 5; ++i) {
 #pragma acc parallel
     {
-      break; // expected-error{{invalid branch out of OpenACC Compute Construct}}
+      break; // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
     }
   }
 
@@ -98,17 +161,209 @@ void BreakContinue() {
   while (j) {
     --j;
     if (j > 4)
-      break; // expected-error{{invalid branch out of OpenACC Compute Construct}}
+      break; // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
   }
 
 #pragma acc parallel
   do {
     --j;
     if (j > 4)
-      break; // expected-error{{invalid branch out of OpenACC Compute Construct}}
+      break; // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
   } while (j );
+}
+
+template<typename T>
+void DuffsDevice() {
+  int j;
+  switch (j) {
+#pragma acc parallel
+  for(int i =0; i < 5; ++i) {
+    case 0: // expected-error{{invalid branch into OpenACC Compute/Combined Construct}}
+      {}
+  }
+  }
+
+  switch (j) {
+#pragma acc parallel loop
+  for(int i =0; i < 5; ++i) {
+    case 0: // expected-error{{invalid branch into OpenACC Compute/Combined Construct}}
+      {}
+  }
+  }
+
+  switch (j) {
+#pragma acc parallel
+  for(int i =0; i < 5; ++i) {
+    default: // expected-error{{invalid branch into OpenACC Compute/Combined Construct}}
+      {}
+  }
+  }
+
+  switch (j) {
+#pragma acc parallel loop
+  for(int i =0; i < 5; ++i) {
+    default: // expected-error{{invalid branch into OpenACC Compute/Combined Construct}}
+      {}
+  }
+  }
+
+  switch (j) {
+#pragma acc parallel
+  for(int i =0; i < 5; ++i) {
+    case 'a' ... 'z': // expected-error{{invalid branch into OpenACC Compute/Combined Construct}}
+      {}
+  }
+  }
+
+  switch (j) {
+#pragma acc parallel loop
+  for(int i =0; i < 5; ++i) {
+    case 'a' ... 'z': // expected-error{{invalid branch into OpenACC Compute/Combined Construct}}
+      {}
+  }
+  }
+}
+
+void Exceptions() {
+#pragma acc parallel
+  for(int i = 0; i < 5; ++i) {
+    throw 5; // expected-error{{invalid throw out of OpenACC Compute/Combined Construct}}
+  }
+
+#pragma acc parallel loop
+  for(int i = 0; i < 5; ++i) {
+    throw 5; // expected-error{{invalid throw out of OpenACC Compute/Combined Construct}}
+  }
+
+#pragma acc parallel
+  for(int i = 0; i < 5; ++i) {
+    throw; // expected-error{{invalid throw out of OpenACC Compute/Combined Construct}}
+  }
+
+#pragma acc parallel loop
+  for(int i = 0; i < 5; ++i) {
+    throw; // expected-error{{invalid throw out of OpenACC Compute/Combined Construct}}
+  }
+
+#pragma acc serial
+  for(int i = 0; i < 5; ++i) {
+    throw; // expected-error{{invalid throw out of OpenACC Compute/Combined Construct}}
+  }
+
+#pragma acc serial loop
+  for(int i = 0; i < 5; ++i) {
+    throw; // expected-error{{invalid throw out of OpenACC Compute/Combined Construct}}
+  }
+
+#pragma acc kernels
+  for(int i = 0; i < 5; ++i) {
+    throw; // expected-error{{invalid throw out of OpenACC Compute/Combined Construct}}
+  }
+
+#pragma acc kernels loop
+  for(int i = 0; i < 5; ++i) {
+    throw; // expected-error{{invalid throw out of OpenACC Compute/Combined Construct}}
+  }
+
+#pragma acc parallel
+  for(int i = 0; i < 5; ++i) {
+    try {
+    throw 5;
+    } catch(float f) {
+    }
+  }
+
+#pragma acc parallel loop
+  for(int i = 0; i < 5; ++i) {
+    try {
+    throw 5;
+    } catch(float f) {
+    }
+  }
+
+#pragma acc parallel
+  for(int i = 0; i < 5; ++i) {
+    try {
+    throw 5;
+    } catch(int f) {
+    }
+  }
+
+#pragma acc parallel loop
+  for(int i = 0; i < 5; ++i) {
+    try {
+    throw 5;
+    } catch(int f) {
+    }
+  }
+
+#pragma acc parallel
+  for(int i = 0; i < 5; ++i) {
+    try {
+    throw 5;
+    } catch(...) {
+    }
+  }
+
+#pragma acc parallel loop
+  for(int i = 0; i < 5; ++i) {
+    try {
+    throw 5;
+    } catch(...) {
+    }
+  }
+
+#pragma acc parallel
+  for(int i = 0; i < 5; ++i) {
+    try {
+    throw;
+    } catch(...) {
+    }
+  }
+
+#pragma acc parallel loop
+  for(int i = 0; i < 5; ++i) {
+    try {
+    throw;
+    } catch(...) {
+    }
+  }
+
+#pragma acc parallel
+  for(int i = 0; i < 5; ++i) {
+    try {
+    throw;
+    } catch(...) {
+      throw; // expected-error{{invalid throw out of OpenACC Compute/Combined Construct}}
+    }
+  }
+#pragma acc parallel loop
+  for(int i = 0; i < 5; ++i) {
+    try {
+    throw;
+    } catch(...) {
+      throw; // expected-error{{invalid throw out of OpenACC Compute/Combined Construct}}
+    }
+  }
+#pragma acc parallel
+  for(int i = 0; i < 5; ++i) {
+    try {
+    throw;
+    } catch(int f) {
+      throw; // expected-error{{invalid throw out of OpenACC Compute/Combined Construct}}
+    }
+  }
+#pragma acc parallel loop
+  for(int i = 0; i < 5; ++i) {
+    try {
+    throw;
+    } catch(int f) {
+      throw; // expected-error{{invalid throw out of OpenACC Compute/Combined Construct}}
+    }
+  }
 }
 
 void Instantiate() {
   BreakContinue<int>();
+  DuffsDevice<int>();
 }

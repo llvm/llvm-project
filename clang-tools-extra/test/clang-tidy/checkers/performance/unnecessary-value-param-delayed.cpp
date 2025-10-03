@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- -- -fdelayed-template-parsing
+// RUN: %check_clang_tidy --match-partial-fixes %s performance-unnecessary-value-param %t -- -- -fdelayed-template-parsing
 
 struct ExpensiveToCopyType {
   const ExpensiveToCopyType & constReference() const {
@@ -26,14 +26,14 @@ class SomewhatTrivial {
 void positiveExpensiveConstValue(const ExpensiveToCopyType Obj);
 // CHECK-FIXES: void positiveExpensiveConstValue(const ExpensiveToCopyType& Obj);
 void positiveExpensiveConstValue(const ExpensiveToCopyType Obj) {
-  // CHECK-MESSAGES: [[@LINE-1]]:60: warning: the const qualified parameter 'Obj' is copied for each invocation; consider making it a reference [performance-unnecessary-value-param]
+  // CHECK-MESSAGES: [[@LINE-1]]:60: warning: the const qualified parameter 'Obj' of type 'const ExpensiveToCopyType' is copied for each invocation; consider making it a reference [performance-unnecessary-value-param]
   // CHECK-FIXES: void positiveExpensiveConstValue(const ExpensiveToCopyType& Obj) {
 }
 
 void positiveExpensiveValue(ExpensiveToCopyType Obj);
 // CHECK-FIXES: void positiveExpensiveValue(const ExpensiveToCopyType& Obj);
 void positiveExpensiveValue(ExpensiveToCopyType Obj) {
-  // CHECK-MESSAGES: [[@LINE-1]]:49: warning: the parameter 'Obj' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  // CHECK-MESSAGES: [[@LINE-1]]:49: warning: the parameter 'Obj' of type 'ExpensiveToCopyType' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   // CHECK-FIXES: void positiveExpensiveValue(const ExpensiveToCopyType& Obj) {
   Obj.constReference();
   useAsConstReference(Obj);
@@ -69,7 +69,8 @@ struct PositiveConstValueConstructor {
 
 template <typename T> void templateWithNonTemplatizedParameter(const ExpensiveToCopyType S, T V) {
   // CHECK-MESSAGES: [[@LINE-1]]:90: warning: the const qualified parameter 'S'
-  // CHECK-FIXES-NOT: template <typename T> void templateWithNonTemplatizedParameter(const ExpensiveToCopyType& S, T V) {
+  // CHECK-MESSAGES: [[@LINE-2]]:95: warning: the parameter 'V'
+  // CHECK-FIXES: template <typename T> void templateWithNonTemplatizedParameter(const ExpensiveToCopyType& S, const T& V) {
 }
 
 void instantiated() {

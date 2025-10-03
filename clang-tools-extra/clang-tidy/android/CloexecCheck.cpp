@@ -1,4 +1,4 @@
-//===--- CloexecCheck.cpp - clang-tidy-------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,7 +36,7 @@ std::string buildFixMsgForStringFlag(const Expr *Arg, const SourceManager &SM,
 
 const char *CloexecCheck::FuncDeclBindingStr = "funcDecl";
 
-const char *CloexecCheck::FuncBindingStr ="func";
+const char *CloexecCheck::FuncBindingStr = "func";
 
 void CloexecCheck::registerMatchersImpl(
     MatchFinder *Finder, internal::Matcher<FunctionDecl> Function) {

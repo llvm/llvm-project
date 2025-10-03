@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/ShrinkWrapping.h"
-#include "bolt/Core/MCPlus.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/MCF.h"
 #include "bolt/Utils/CommandLineOpts.h"
@@ -680,16 +679,15 @@ void StackLayoutModifier::performChanges() {
       if (StackPtrReg != BC.MIB->getFramePointer())
         Adjustment = -Adjustment;
       if (IsLoad)
-        Success = BC.MIB->createRestoreFromStack(
-            Inst, StackPtrReg, StackOffset + Adjustment, Reg, Size);
+        BC.MIB->createRestoreFromStack(Inst, StackPtrReg,
+                                       StackOffset + Adjustment, Reg, Size);
       else if (IsStore)
-        Success = BC.MIB->createSaveToStack(
-            Inst, StackPtrReg, StackOffset + Adjustment, Reg, Size);
+        BC.MIB->createSaveToStack(Inst, StackPtrReg, StackOffset + Adjustment,
+                                  Reg, Size);
       LLVM_DEBUG({
         dbgs() << "Adjusted instruction: ";
         Inst.dump();
       });
-      assert(Success);
     }
   }
 }
@@ -827,14 +825,13 @@ void ShrinkWrapping::computeSaveLocations() {
     if (!CSA.CalleeSaved[I])
       continue;
 
-    std::stable_sort(BestSavePos[I].begin(), BestSavePos[I].end(),
-                     [&](const MCInst *A, const MCInst *B) {
-                       const BinaryBasicBlock *BBA = InsnToBB[A];
-                       const BinaryBasicBlock *BBB = InsnToBB[B];
-                       const uint64_t CountA = BBA->getKnownExecutionCount();
-                       const uint64_t CountB = BBB->getKnownExecutionCount();
-                       return CountB < CountA;
-                     });
+    llvm::stable_sort(BestSavePos[I], [&](const MCInst *A, const MCInst *B) {
+      const BinaryBasicBlock *BBA = InsnToBB[A];
+      const BinaryBasicBlock *BBB = InsnToBB[B];
+      const uint64_t CountA = BBA->getKnownExecutionCount();
+      const uint64_t CountB = BBB->getKnownExecutionCount();
+      return CountB < CountA;
+    });
 
     for (MCInst *Pos : BestSavePos[I]) {
       const BinaryBasicBlock *BB = InsnToBB[Pos];
@@ -1653,19 +1650,13 @@ Expected<MCInst> ShrinkWrapping::createStackAccess(int SPVal, int FPVal,
   if (SPVal != StackPointerTracking::SUPERPOSITION &&
       SPVal != StackPointerTracking::EMPTY) {
     if (FIE.IsLoad) {
-      if (!BC.MIB->createRestoreFromStack(NewInst, BC.MIB->getStackPointer(),
-                                          FIE.StackOffset - SPVal, FIE.RegOrImm,
-                                          FIE.Size)) {
-        return createFatalBOLTError(
-            "createRestoreFromStack: not supported on this platform\n");
-      }
-    } else {
-      if (!BC.MIB->createSaveToStack(NewInst, BC.MIB->getStackPointer(),
+      BC.MIB->createRestoreFromStack(NewInst, BC.MIB->getStackPointer(),
                                      FIE.StackOffset - SPVal, FIE.RegOrImm,
-                                     FIE.Size)) {
-        return createFatalBOLTError(
-            "createSaveToStack: not supported on this platform\n");
-      }
+                                     FIE.Size);
+    } else {
+      BC.MIB->createSaveToStack(NewInst, BC.MIB->getStackPointer(),
+                                FIE.StackOffset - SPVal, FIE.RegOrImm,
+                                FIE.Size);
     }
     if (CreatePushOrPop)
       BC.MIB->changeToPushOrPop(NewInst);
@@ -1675,19 +1666,12 @@ Expected<MCInst> ShrinkWrapping::createStackAccess(int SPVal, int FPVal,
          FPVal != StackPointerTracking::EMPTY);
 
   if (FIE.IsLoad) {
-    if (!BC.MIB->createRestoreFromStack(NewInst, BC.MIB->getFramePointer(),
-                                        FIE.StackOffset - FPVal, FIE.RegOrImm,
-                                        FIE.Size)) {
-      return createFatalBOLTError(
-          "createRestoreFromStack: not supported on this platform\n");
-    }
-  } else {
-    if (!BC.MIB->createSaveToStack(NewInst, BC.MIB->getFramePointer(),
+    BC.MIB->createRestoreFromStack(NewInst, BC.MIB->getFramePointer(),
                                    FIE.StackOffset - FPVal, FIE.RegOrImm,
-                                   FIE.Size)) {
-      return createFatalBOLTError(
-          "createSaveToStack: not supported on this platform\n");
-    }
+                                   FIE.Size);
+  } else {
+    BC.MIB->createSaveToStack(NewInst, BC.MIB->getFramePointer(),
+                              FIE.StackOffset - FPVal, FIE.RegOrImm, FIE.Size);
   }
   return NewInst;
 }

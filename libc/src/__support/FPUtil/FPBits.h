@@ -6,21 +6,28 @@
 //
 //===----------------------------------------------------------------------===//
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This file is shared with libc++. You should also be careful when adding
+// dependencies to this file, since it needs to build for all libc++ targets.
+// -----------------------------------------------------------------------------
+
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/UInt128.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"       // LIBC_ASSERT
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_FLOAT128
 #include "src/__support/math_extras.h"             // mask_trailing_ones
+#include "src/__support/sign.h"                    // Sign
+#include "src/__support/uint128.h"
 
-#include <stdint.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 // The supported floating point types.
@@ -30,33 +37,8 @@ enum class FPType {
   IEEE754_Binary64,
   IEEE754_Binary128,
   X86_Binary80,
+  BFloat16
 };
-
-// A type to interact with floating point type signs.
-// This may be moved outside of 'fputil' if useful.
-struct Sign {
-  LIBC_INLINE constexpr bool is_pos() const { return !is_negative; }
-  LIBC_INLINE constexpr bool is_neg() const { return is_negative; }
-
-  LIBC_INLINE friend constexpr bool operator==(Sign a, Sign b) {
-    return a.is_negative == b.is_negative;
-  }
-  LIBC_INLINE friend constexpr bool operator!=(Sign a, Sign b) {
-    return !(a == b);
-  }
-
-  static const Sign POS;
-  static const Sign NEG;
-
-private:
-  LIBC_INLINE constexpr explicit Sign(bool is_negative)
-      : is_negative(is_negative) {}
-
-  bool is_negative;
-};
-
-LIBC_INLINE_VAR constexpr Sign Sign::NEG = Sign(true);
-LIBC_INLINE_VAR constexpr Sign Sign::POS = Sign(false);
 
 // The classes hierarchy is as follows:
 //
@@ -145,11 +127,23 @@ template <> struct FPLayout<FPType::IEEE754_Binary128> {
 };
 
 template <> struct FPLayout<FPType::X86_Binary80> {
+#if __SIZEOF_LONG_DOUBLE__ == 12
+  using StorageType = UInt<__SIZEOF_LONG_DOUBLE__ * CHAR_BIT>;
+#else
   using StorageType = UInt128;
+#endif
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 64;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = SIG_LEN - 1;
+};
+
+template <> struct FPLayout<FPType::BFloat16> {
+  using StorageType = uint16_t;
+  LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
+  LIBC_INLINE_VAR static constexpr int EXP_LEN = 8;
+  LIBC_INLINE_VAR static constexpr int SIG_LEN = 7;
+  LIBC_INLINE_VAR static constexpr int FRACTION_LEN = SIG_LEN;
 };
 
 // FPStorage derives useful constants from the FPLayout above.
@@ -261,11 +255,11 @@ protected:
     using UP::UP;
 
     LIBC_INLINE constexpr BiasedExponent(Exponent exp)
-        : UP(static_cast<int32_t>(exp) + EXP_BIAS) {}
+        : UP(static_cast<uint32_t>(static_cast<int32_t>(exp) + EXP_BIAS)) {}
 
     // Cast operator to get convert from BiasedExponent to Exponent.
     LIBC_INLINE constexpr operator Exponent() const {
-      return Exponent(UP::value - EXP_BIAS);
+      return Exponent(static_cast<int32_t>(UP::value - EXP_BIAS));
     }
 
     LIBC_INLINE constexpr BiasedExponent &operator++() {
@@ -640,6 +634,7 @@ public:
   using UP::EXP_MASK;
   using UP::FRACTION_MASK;
   using UP::SIG_LEN;
+  using UP::SIG_MASK;
   using UP::SIGN_MASK;
   LIBC_INLINE_VAR static constexpr int MAX_BIASED_EXPONENT =
       (1 << UP::EXP_LEN) - 1;
@@ -675,7 +670,7 @@ public:
 
   // Modifiers
   LIBC_INLINE constexpr RetT abs() const {
-    return RetT(bits & UP::EXP_SIG_MASK);
+    return RetT(static_cast<StorageType>(bits & UP::EXP_SIG_MASK));
   }
 
   // Observers
@@ -699,7 +694,7 @@ public:
   }
 
   LIBC_INLINE constexpr void set_biased_exponent(StorageType biased) {
-    UP::set_biased_exponent(BiasedExponent((int32_t)biased));
+    UP::set_biased_exponent(BiasedExponent(static_cast<uint32_t>(biased)));
   }
 
   LIBC_INLINE constexpr int get_exponent() const {
@@ -729,6 +724,9 @@ public:
     bits = UP::merge(bits, mantVal, FRACTION_MASK);
   }
 
+  LIBC_INLINE constexpr void set_significand(StorageType sigVal) {
+    bits = UP::merge(bits, sigVal, SIG_MASK);
+  }
   // Unsafe function to create a floating point representation.
   // It simply packs the sign, biased exponent and mantissa values without
   // checking bound nor normalization.
@@ -755,20 +753,19 @@ public:
   //   4) "number" zero value is not processed correctly.
   //   5) Number is unsigned, so the result can be only positive.
   LIBC_INLINE static constexpr RetT make_value(StorageType number, int ep) {
-    static_assert(fp_type != FPType::X86_Binary80,
-                  "This function is not tested for X86 Extended Precision");
-    FPRepImpl result;
-    // offset: +1 for sign, but -1 for implicit first bit
-    int lz = cpp::countl_zero(number) - UP::EXP_LEN;
+    FPRepImpl result(0);
+    int lz =
+        UP::FRACTION_LEN + 1 - (UP::STORAGE_LEN - cpp::countl_zero(number));
+
     number <<= lz;
     ep -= lz;
 
     if (LIBC_LIKELY(ep >= 0)) {
       // Implicit number bit will be removed by mask
-      result.set_mantissa(number);
-      result.set_biased_exponent(ep + 1);
+      result.set_significand(number);
+      result.set_biased_exponent(static_cast<StorageType>(ep + 1));
     } else {
-      result.set_mantissa(number >> -ep);
+      result.set_significand(number >> static_cast<unsigned>(-ep));
     }
     return RetT(result.uintval());
   }
@@ -792,16 +789,16 @@ struct FPRep : public FPRepImpl<fp_type, FPRep<fp_type>> {
 // Returns the FPType corresponding to C++ type T on the host.
 template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
   using UnqualT = cpp::remove_cv_t<T>;
-  if constexpr (cpp::is_same_v<UnqualT, float> && __FLT_MANT_DIG__ == 24)
+  if constexpr (cpp::is_same_v<UnqualT, float> && FLT_MANT_DIG == 24)
     return FPType::IEEE754_Binary32;
-  else if constexpr (cpp::is_same_v<UnqualT, double> && __DBL_MANT_DIG__ == 53)
+  else if constexpr (cpp::is_same_v<UnqualT, double> && DBL_MANT_DIG == 53)
     return FPType::IEEE754_Binary64;
   else if constexpr (cpp::is_same_v<UnqualT, long double>) {
-    if constexpr (__LDBL_MANT_DIG__ == 53)
+    if constexpr (LDBL_MANT_DIG == 53)
       return FPType::IEEE754_Binary64;
-    else if constexpr (__LDBL_MANT_DIG__ == 64)
+    else if constexpr (LDBL_MANT_DIG == 64)
       return FPType::X86_Binary80;
-    else if constexpr (__LDBL_MANT_DIG__ == 113)
+    else if constexpr (LDBL_MANT_DIG == 113)
       return FPType::IEEE754_Binary128;
   }
 #if defined(LIBC_TYPES_HAS_FLOAT16)
@@ -812,10 +809,18 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
   else if constexpr (cpp::is_same_v<UnqualT, float128>)
     return FPType::IEEE754_Binary128;
 #endif
+  else if constexpr (cpp::is_same_v<UnqualT, bfloat16>)
+    return FPType::BFloat16;
   else
     static_assert(cpp::always_false<UnqualT>, "Unsupported type");
 }
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++. You should also be careful when adding
+// dependencies to this file, since it needs to build for all libc++ targets.
+// -----------------------------------------------------------------------------
 // A generic class to manipulate C++ floating point formats.
 // It derives its functionality to FPRepImpl above.
 template <typename T>
@@ -846,6 +851,6 @@ struct FPBits final : public internal::FPRepImpl<get_fp_type<T>(), FPBits<T>> {
 };
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H

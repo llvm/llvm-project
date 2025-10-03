@@ -21,12 +21,11 @@ namespace clang {
 namespace format {
 namespace {
 
-class FormatTestRawStrings : public ::testing::Test {
+class FormatTestRawStrings : public testing::Test {
 protected:
   enum StatusCheck { SC_ExpectComplete, SC_ExpectIncomplete, SC_DoNotCheck };
 
-  std::string format(llvm::StringRef Code,
-                     const FormatStyle &Style = getLLVMStyle(),
+  std::string format(StringRef Code, const FormatStyle &Style = getLLVMStyle(),
                      StatusCheck CheckComplete = SC_ExpectComplete) {
     LLVM_DEBUG(llvm::errs() << "---\n");
     LLVM_DEBUG(llvm::errs() << Code << "\n\n");
@@ -989,6 +988,30 @@ fffffffffffffffffffff("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                       )pb");)test",
                    Style));
 }
+
+TEST_F(FormatTestRawStrings, Json) {
+  auto Style = getLLVMStyle();
+  Style.RawStringFormats = {
+      {
+          /*Language=*/FormatStyle::LK_Json,
+          /*Delimiters=*/{"json"},
+          /*EnclosingFunctions=*/{},
+          /*CanonicalDelimiter=*/"",
+          /*BasedOnStyle=*/"llvm",
+      },
+  };
+
+  EXPECT_EQ("json = R\"json({\n"
+            "                \"foo\": \"bar\",\n"
+            "                \"str\": \"test\"\n"
+            "              })json\";",
+            format("json = R\"json({\n"
+                   "  \"foo\": \"bar\",\n"
+                   "  \"str\": \"test\"\n"
+                   "})json\";",
+                   Style));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

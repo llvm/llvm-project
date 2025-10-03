@@ -1,10 +1,12 @@
 ; RUN: llc -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck --check-prefix=LINUX-I386 %s
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck --check-prefix=LINUX-X64 %s
 ; RUN: llc -code-model=kernel -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck --check-prefix=LINUX-KERNEL-X64 %s
+; RUN: llc -code-model=kernel -mtriple=x86_64-unknown-freebsd < %s -o - | FileCheck --check-prefix=FREEBSD-KERNEL-X64 %s
 ; RUN: llc -mtriple=x86_64-apple-darwin < %s -o - | FileCheck --check-prefix=DARWIN-X64 %s
 ; RUN: llc -mtriple=amd64-pc-openbsd < %s -o - | FileCheck --check-prefix=OPENBSD-AMD64 %s
 ; RUN: llc -mtriple=i386-pc-windows-msvc < %s -o - | FileCheck -check-prefix=MSVC-I386 %s
 ; RUN: llc -mtriple=x86_64-w64-mingw32 < %s -o - | FileCheck --check-prefix=MINGW-X64 %s
+; RUN: llc -mtriple=x86_64-pc-cygwin < %s -o - | FileCheck --check-prefix=MINGW-X64 %s
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck --check-prefix=IGNORE_INTRIN %s
 
 %struct.foo = type { [16 x i8] }
@@ -75,6 +77,10 @@ entry:
 ; LINUX-X64: mov{{l|q}} %fs:
 ; LINUX-X64: callq __stack_chk_fail
 
+; FREEBSD-KERNEL-X64-LABEL: test1b:
+; FREEBSD-KERNEL-X64-NOT: mov{{l|q}} __stack_chk_guard@GOTPCREL
+; FREEBSD-KERNEL-X64: callq __stack_chk_fail
+
 ; LINUX-KERNEL-X64-LABEL: test1b:
 ; LINUX-KERNEL-X64: mov{{l|q}} %gs:
 ; LINUX-KERNEL-X64: callq __stack_chk_fail
@@ -117,6 +123,10 @@ entry:
 ; LINUX-X64-LABEL: test1c:
 ; LINUX-X64: mov{{l|q}} %fs:
 ; LINUX-X64: callq __stack_chk_fail
+
+; FREEBSD-KERNEL-X64-LABEL: test1c:
+; FREEBSD-KERNEL-X64: mov{{l|q}} __stack_chk_guard(%rip)
+; FREEBSD-KERNEL-X64: callq __stack_chk_fail
 
 ; LINUX-KERNEL-X64-LABEL: test1c:
 ; LINUX-KERNEL-X64: mov{{l|q}} %gs:

@@ -15,19 +15,28 @@
 #ifndef MLIR_INTERFACES_DATALAYOUTINTERFACES_H
 #define MLIR_INTERFACES_DATALAYOUTINTERFACES_H
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace mlir {
 class DataLayout;
 class DataLayoutEntryInterface;
+class DLTIQueryInterface;
+class TargetDeviceSpecInterface;
+class TargetSystemSpecInterface;
 using DataLayoutEntryKey = llvm::PointerUnion<Type, StringAttr>;
 // Using explicit SmallVector size because we cannot infer the size from the
 // forward declaration, and we need the typedef in the actual declaration.
 using DataLayoutEntryList = llvm::SmallVector<DataLayoutEntryInterface, 4>;
 using DataLayoutEntryListRef = llvm::ArrayRef<DataLayoutEntryInterface>;
+using TargetDeviceSpecListRef = llvm::ArrayRef<TargetDeviceSpecInterface>;
+using TargetDeviceSpecEntry = std::pair<StringAttr, TargetDeviceSpecInterface>;
+using DataLayoutIdentifiedEntryMap =
+    ::llvm::MapVector<::mlir::StringAttr, ::mlir::DataLayoutEntryInterface>;
 class DataLayoutOpInterface;
 class DataLayoutSpecInterface;
 class ModuleOp;
@@ -57,9 +66,28 @@ uint64_t
 getDefaultPreferredAlignment(Type type, const DataLayout &dataLayout,
                              ArrayRef<DataLayoutEntryInterface> params);
 
+/// Default handler for the index bitwidth request. Computes the result for
+/// the built-in index type and dispatches to the DataLayoutTypeInterface for
+/// other types.
+std::optional<uint64_t>
+getDefaultIndexBitwidth(Type type, const DataLayout &dataLayout,
+                        ArrayRef<DataLayoutEntryInterface> params);
+
+/// Default handler for endianness request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultEndianness(DataLayoutEntryInterface entry);
+
+/// Default handler for the default memory space request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultMemorySpace(DataLayoutEntryInterface entry);
+
 /// Default handler for alloca memory space request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
 Attribute getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry);
+
+/// Default handler for mangling mode request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultManglingMode(DataLayoutEntryInterface entry);
 
 /// Default handler for program memory space request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
@@ -73,6 +101,18 @@ Attribute getDefaultGlobalMemorySpace(DataLayoutEntryInterface entry);
 /// DataLayoutInterface if specified, otherwise returns the default.
 uint64_t getDefaultStackAlignment(DataLayoutEntryInterface entry);
 
+/// Default handler for the function pointer alignment request. Dispatches to
+/// the DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultFunctionPointerAlignment(DataLayoutEntryInterface entry);
+
+/// Default handler for the legal int widths request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultLegalIntWidths(DataLayoutEntryInterface entry);
+
+/// Returns the value of the property from the specified DataLayoutEntry. If the
+/// property is missing from the entry, returns std::nullopt.
+std::optional<Attribute> getDevicePropertyValue(DataLayoutEntryInterface entry);
+
 /// Given a list of data layout entries, returns a new list containing the
 /// entries with keys having the given type ID, i.e. belonging to the same type
 /// class.
@@ -84,6 +124,11 @@ DataLayoutEntryList filterEntriesForType(DataLayoutEntryListRef entries,
 DataLayoutEntryInterface
 filterEntryForIdentifier(DataLayoutEntryListRef entries, StringAttr id);
 
+/// Given a list of target device entries, returns the entry that has the given
+/// identifier as key, if such an entry exists in the list.
+TargetDeviceSpecInterface
+filterEntryForIdentifier(TargetDeviceSpecListRef entries, StringAttr id);
+
 /// Verifies that the operation implementing the data layout interface, or a
 /// module operation, is valid. This calls the verifier of the spec attribute
 /// and checks if the layout is compatible with specs attached to the enclosing
@@ -94,6 +139,12 @@ LogicalResult verifyDataLayoutOp(Operation *op);
 /// entry verifiers, and then to the verifiers implemented by the relevant type
 /// and dialect interfaces for type and identifier keys respectively.
 LogicalResult verifyDataLayoutSpec(DataLayoutSpecInterface spec, Location loc);
+
+/// Verifies that a target system desc spec is valid. This dispatches to
+/// individual entry verifiers, and then to the verifiers implemented by the
+/// relevant dialect interfaces for identifier keys.
+LogicalResult verifyTargetSystemSpec(TargetSystemSpecInterface spec,
+                                     Location loc);
 
 /// Divides the known min value of the numerator by the denominator and rounds
 /// the result up to the next integer. Preserves the scalable flag.
@@ -122,6 +173,13 @@ public:
   /// Checks whether the given data layout entry is valid and reports any errors
   /// at the provided location. Derived classes should override this.
   virtual LogicalResult verifyEntry(DataLayoutEntryInterface entry,
+                                    Location loc) const {
+    return success();
+  }
+
+  /// Checks whether the given data layout entry is valid and reports any errors
+  /// at the provided location. Derived classes should override this.
+  virtual LogicalResult verifyEntry(TargetDeviceSpecInterface entry,
                                     Location loc) const {
     return success();
   }
@@ -180,8 +238,22 @@ public:
   /// Returns the preferred of the given type in the current scope.
   uint64_t getTypePreferredAlignment(Type t) const;
 
+  /// Returns the bitwidth that should be used when performing index
+  /// computations for the given pointer-like type in the current scope. If the
+  /// type is not a pointer-like type, it returns std::nullopt.
+  std::optional<uint64_t> getTypeIndexBitwidth(Type t) const;
+
+  /// Returns the specified endianness.
+  Attribute getEndianness() const;
+
+  /// Returns the default memory space used for memory operations.
+  Attribute getDefaultMemorySpace() const;
+
   /// Returns the memory space used for AllocaOps.
   Attribute getAllocaMemorySpace() const;
+
+  /// Returns the mangling mode.
+  Attribute getManglingMode() const;
 
   /// Returns the memory space used for program memory operations.
   Attribute getProgramMemorySpace() const;
@@ -195,9 +267,24 @@ public:
   /// unspecified.
   uint64_t getStackAlignment() const;
 
+  /// Returns function pointer alignment.
+  Attribute getFunctionPointerAlignment() const;
+
+  /// Returns the legal int widths.
+  Attribute getLegalIntWidths() const;
+
+  /// Returns the value of the specified property if the property is defined for
+  /// the given device ID, otherwise returns std::nullopt.
+  std::optional<Attribute>
+  getDevicePropertyValue(TargetSystemSpecInterface::DeviceID,
+                         StringAttr propertyName) const;
+
 private:
   /// Combined layout spec at the given scope.
   const DataLayoutSpecInterface originalLayout;
+
+  /// Combined target system desc spec at the given scope.
+  const TargetSystemSpecInterface originalTargetSystemDesc;
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// List of enclosing layout specs.
@@ -216,14 +303,24 @@ private:
   mutable DenseMap<Type, llvm::TypeSize> bitsizes;
   mutable DenseMap<Type, uint64_t> abiAlignments;
   mutable DenseMap<Type, uint64_t> preferredAlignments;
+  mutable DenseMap<Type, std::optional<uint64_t>> indexBitwidths;
 
-  /// Cache for alloca, global, and program memory spaces.
+  /// Cache for the endianness.
+  mutable std::optional<Attribute> endianness;
+  /// Cache for the mangling mode.
+  mutable std::optional<Attribute> manglingMode;
+  /// Cache for default, alloca, global, and program memory spaces.
+  mutable std::optional<Attribute> defaultMemorySpace;
   mutable std::optional<Attribute> allocaMemorySpace;
   mutable std::optional<Attribute> programMemorySpace;
   mutable std::optional<Attribute> globalMemorySpace;
 
   /// Cache for stack alignment.
   mutable std::optional<uint64_t> stackAlignment;
+  /// Cache for function pointer alignment.
+  mutable std::optional<Attribute> functionPointerAlignment;
+  /// Cache for legal int widths.
+  mutable std::optional<Attribute> legalIntWidths;
 };
 
 } // namespace mlir

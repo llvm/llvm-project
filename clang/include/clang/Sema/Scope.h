@@ -43,6 +43,9 @@ public:
   /// ScopeFlags - These are bitfields that are or'd together when creating a
   /// scope, which defines the sorts of things the scope contains.
   enum ScopeFlags {
+    // A bitfield value representing no scopes.
+    NoScope = 0,
+
     /// This indicates that the scope corresponds to a function, which
     /// means that labels are set here.
     FnScope = 0x01,
@@ -151,8 +154,19 @@ public:
     /// depth of recursion.
     LambdaScope = 0x8000000,
     /// This is the scope of an OpenACC Compute Construct, which restricts
-    /// jumping into/out of it.
+    /// jumping into/out of it. We also use this to represent 'combined'
+    /// constructs, since they have the same behavior.
     OpenACCComputeConstructScope = 0x10000000,
+
+    /// This is the scope of an OpenACC Loop/Combined construct, which is used
+    /// to determine whether a 'cache' construct variable reference is legal.
+    OpenACCLoopConstructScope = 0x20000000,
+
+    /// This is a scope of type alias declaration.
+    TypeAliasScope = 0x40000000,
+
+    /// This is a scope of friend declaration.
+    FriendScope = 0x80000000,
   };
 
 private:
@@ -203,6 +217,10 @@ private:
   /// other template parameter scopes as parents.
   Scope *TemplateParamParent;
 
+  /// DeclScopeParent - This is a direct link to the immediately containing
+  /// DeclScope, i.e. scope which can contain declarations.
+  Scope *DeclParent;
+
   /// DeclsInScope - This keeps track of all declarations in this scope.  When
   /// the declaration is added to the scope, it is set as the current
   /// declaration for the identifier in the IdentifierTable.  When the scope is
@@ -237,6 +255,10 @@ private:
   /// available for this variable in the current scope.
   llvm::SmallPtrSet<VarDecl *, 8> ReturnSlots;
 
+  /// If this scope belongs to a loop or switch statement, the label that
+  /// directly precedes it, if any.
+  LabelDecl *PrecedingLabel;
+
   void setFlags(Scope *Parent, unsigned F);
 
 public:
@@ -249,6 +271,14 @@ public:
   unsigned getFlags() const { return Flags; }
 
   void setFlags(unsigned F) { setFlags(getParent(), F); }
+
+  /// Get the label that precedes this scope.
+  LabelDecl *getPrecedingLabel() const { return PrecedingLabel; }
+  void setPrecedingLabel(LabelDecl *LD) {
+    assert((Flags & BreakScope || Flags & ContinueScope) &&
+           "not a loop or switch");
+    PrecedingLabel = LD;
+  }
 
   /// isBlockScope - Return true if this scope correspond to a closure.
   bool isBlockScope() const { return Flags & BlockScope; }
@@ -280,7 +310,7 @@ public:
   // is disallowed despite being a continue scope.
   void setIsConditionVarScope(bool InConditionVarScope) {
     Flags = (Flags & ~ConditionVarScope) |
-            (InConditionVarScope ? ConditionVarScope : 0);
+            (InConditionVarScope ? ConditionVarScope : NoScope);
   }
 
   bool isConditionVarScope() const {
@@ -301,6 +331,9 @@ public:
 
   Scope *getTemplateParamParent() { return TemplateParamParent; }
   const Scope *getTemplateParamParent() const { return TemplateParamParent; }
+
+  Scope *getDeclParent() { return DeclParent; }
+  const Scope *getDeclParent() const { return DeclParent; }
 
   /// Returns the depth of this scope. The translation-unit has scope depth 0.
   unsigned getDepth() const { return Depth; }
@@ -407,6 +440,17 @@ public:
       assert(FnS->getParent() && "TUScope not created?");
       return FnS->getParent()->isClassScope();
     }
+    return false;
+  }
+
+  /// isInObjcMethodScope - Return true if this scope is, or is contained, in an
+  /// C function body.
+  bool isInCFunctionScope() const {
+    for (const Scope *S = this; S; S = S->getParent()) {
+      if (S->isFunctionScope())
+        return true;
+    }
+
     return false;
   }
 
@@ -521,10 +565,21 @@ public:
     return getFlags() & Scope::OpenACCComputeConstructScope;
   }
 
-  bool isInOpenACCComputeConstructScope() const {
+  bool isOpenACCLoopConstructScope() const {
+    return getFlags() & Scope::OpenACCLoopConstructScope;
+  }
+
+  /// Determine if this scope (or its parents) are a compute construct. If the
+  /// argument is provided, the search will stop at any of the specified scopes.
+  /// Otherwise, it will stop only at the normal 'no longer search' scopes.
+  bool isInOpenACCComputeConstructScope(ScopeFlags Flags = NoScope) const {
     for (const Scope *S = this; S; S = S->getParent()) {
-      if (S->getFlags() & Scope::OpenACCComputeConstructScope)
+      if (S->isOpenACCComputeConstructScope())
         return true;
+
+      if (S->getFlags() & Flags)
+        return false;
+
       else if (S->getFlags() &
                (Scope::FnScope | Scope::ClassScope | Scope::BlockScope |
                 Scope::TemplateParamScope | Scope::FunctionPrototypeScope |
@@ -538,6 +593,12 @@ public:
   /// continue statements embedded into it.
   bool isContinueScope() const {
     return getFlags() & ScopeFlags::ContinueScope;
+  }
+
+  /// Determine whether this is a scope which can have 'break' or 'continue'
+  /// statements embedded into it.
+  bool isBreakOrContinueScope() const {
+    return getFlags() & (ContinueScope | BreakScope);
   }
 
   /// Determine whether this scope is a C++ 'try' block.
@@ -562,6 +623,12 @@ public:
   /// Determine whether this scope is a controlling scope in a
   /// if/switch/while/for statement.
   bool isControlScope() const { return getFlags() & Scope::ControlScope; }
+
+  /// Determine whether this scope is a type alias scope.
+  bool isTypeAliasScope() const { return getFlags() & Scope::TypeAliasScope; }
+
+  /// Determine whether this scope is a friend scope.
+  bool isFriendScope() const { return getFlags() & Scope::FriendScope; }
 
   /// Returns if rhs has a higher scope depth than this.
   ///

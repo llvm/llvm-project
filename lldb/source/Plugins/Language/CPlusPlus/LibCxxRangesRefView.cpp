@@ -8,9 +8,9 @@
 
 #include "LibCxx.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "llvm/ADT/APSInt.h"
 
 using namespace lldb;
@@ -27,12 +27,12 @@ public:
 
   ~LibcxxStdRangesRefViewSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override {
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
     // __range_ will be the sole child of this type
     return 1;
   }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     // Since we only have a single child, return it
     assert(idx == 0);
     return m_range_sp;
@@ -40,9 +40,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override { return true; }
-
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     // We only have a single child
     return 0;
   }

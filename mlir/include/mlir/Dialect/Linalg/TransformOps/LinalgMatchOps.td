@@ -10,7 +10,7 @@
 #define LINALG_MATCH_OPS
 
 include "mlir/Dialect/Linalg/TransformOps/LinalgTransformEnums.td"
-include "mlir/Dialect/Transform/IR/MatchInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
@@ -541,9 +541,10 @@ def MatchStructuredRankOp : Op<Transform_Dialect, "match.structured.rank", [
 
   let arguments = (ins TransformHandleTypeInterface:$operand_handle);
   let results = (outs TransformParamTypeInterface:$rank);
-  let assemblyFormat =
-      "$operand_handle attr-dict `:`"
-      "custom<SemiFunctionType>(type($operand_handle), type($rank))";
+  let assemblyFormat = [{
+      $operand_handle attr-dict `:`
+      custom<SemiFunctionType>(type($operand_handle), type($rank), "false")
+  }];
 
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
 }

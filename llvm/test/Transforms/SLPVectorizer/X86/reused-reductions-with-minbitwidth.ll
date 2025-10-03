@@ -7,12 +7,10 @@ define i1 @test(i1 %cmp5.not.31) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i1> <i1 poison, i1 false, i1 false, i1 false>, i1 [[CMP5_NOT_31]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i1> [[TMP2]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> [[TMP3]], <i32 2, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 0
-; CHECK-NEXT:    [[CMP_NOT_I_I:%.*]] = icmp eq i32 [[TMP6]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], <i32 2, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 0
+; CHECK-NEXT:    [[CMP_NOT_I_I:%.*]] = icmp eq i32 [[TMP4]], 0
 ; CHECK-NEXT:    ret i1 [[CMP_NOT_I_I]]
 ;
 entry:

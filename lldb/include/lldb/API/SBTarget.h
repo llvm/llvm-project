@@ -42,7 +42,8 @@ public:
     eBroadcastBitModulesLoaded = (1 << 1),
     eBroadcastBitModulesUnloaded = (1 << 2),
     eBroadcastBitWatchpointChanged = (1 << 3),
-    eBroadcastBitSymbolsLoaded = (1 << 4)
+    eBroadcastBitSymbolsLoaded = (1 << 4),
+    eBroadcastBitSymbolsChanged = (1 << 5),
   };
 
   // Constructors
@@ -99,6 +100,11 @@ public:
   /// \return
   ///     A SBStructuredData with the statistics collected.
   lldb::SBStructuredData GetStatistics(SBStatisticsOptions options);
+
+  /// Reset the statistics collected for this target.
+  /// This includes clearing symbol table and debug info parsing/index time for
+  /// all modules, breakpoint resolve time and target statistics.
+  void ResetStatistics();
 
   /// Return the platform object associated with the target.
   ///
@@ -318,6 +324,16 @@ public:
 
   lldb::SBModule FindModule(const lldb::SBFileSpec &file_spec);
 
+  /// Find a module with the given module specification.
+  ///
+  /// \param[in] module_spec
+  ///     A lldb::SBModuleSpec object that contains module specification.
+  ///
+  /// \return
+  ///     A lldb::SBModule object that represents the found module, or an
+  ///     invalid SBModule object if no module was found.
+  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec);
+
   /// Find compile units related to *this target and passed source
   /// file.
   ///
@@ -336,12 +352,24 @@ public:
   uint32_t GetAddressByteSize();
 
   const char *GetTriple();
-  
+
   const char *GetABIName();
 
   const char *GetLabel() const;
 
   SBError SetLabel(const char *label);
+
+  /// Architecture opcode byte size width accessor
+  ///
+  /// \return
+  /// The minimum size in 8-bit (host) bytes of an opcode.
+  uint32_t GetMinimumOpcodeByteSize() const;
+
+  /// Architecture opcode byte size width accessor
+  ///
+  /// \return
+  /// The maximum size in 8-bit (host) bytes of an opcode.
+  uint32_t GetMaximumOpcodeByteSize() const;
 
   /// Architecture data byte width accessor
   ///
@@ -640,6 +668,14 @@ public:
       lldb::LanguageType symbol_language,
       const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list);
 
+  lldb::SBBreakpoint BreakpointCreateByName(
+      const char *symbol_name,
+      uint32_t
+          name_type_mask, // Logical OR one or more FunctionNameType enum bits
+      lldb::LanguageType symbol_language, lldb::addr_t offset,
+      bool offset_is_insn_count, const SBFileSpecList &module_list,
+      const SBFileSpecList &comp_unit_list);
+
 #ifdef SWIG
   lldb::SBBreakpoint BreakpointCreateByNames(
       const char **symbol_name, uint32_t num_names,
@@ -878,6 +914,10 @@ public:
                                            uint32_t count,
                                            const char *flavor_string);
 
+  lldb::SBInstructionList ReadInstructions(lldb::SBAddress start_addr,
+                                           lldb::SBAddress end_addr,
+                                           const char *flavor_string);
+
   lldb::SBInstructionList GetInstructions(lldb::SBAddress base_addr,
                                           const void *buf, size_t size);
 
@@ -936,8 +976,11 @@ public:
   ///     An error if a Trace already exists or the trace couldn't be created.
   lldb::SBTrace CreateTrace(SBError &error);
 
+  lldb::SBMutex GetAPIMutex() const;
+
 protected:
   friend class SBAddress;
+  friend class SBAddressRange;
   friend class SBBlock;
   friend class SBBreakpoint;
   friend class SBBreakpointList;
@@ -953,6 +996,8 @@ protected:
   friend class SBSection;
   friend class SBSourceManager;
   friend class SBSymbol;
+  friend class SBType;
+  friend class SBTypeStaticField;
   friend class SBValue;
   friend class SBVariablesOptions;
 

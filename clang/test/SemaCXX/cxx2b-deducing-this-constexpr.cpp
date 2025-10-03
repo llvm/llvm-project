@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++2b %s -verify
+// RUN: %clang_cc1 -fsyntax-only -std=c++2b %s -verify -fexperimental-new-constant-interpreter
 // expected-no-diagnostics
 
 template <typename Base>
@@ -70,5 +71,34 @@ int test() {
   static_assert(a == 3);
   return f() + g();
 }
+
+}
+
+namespace GH142835 {
+struct MoveMe {
+  MoveMe& operator=(this MoveMe&, const MoveMe&) = default;
+  constexpr MoveMe& operator=(this MoveMe& self, MoveMe&& other) {
+    self.value = other.value;
+    other.value = 0;
+    return self;
+  }
+  int value = 4242;
+};
+
+struct S {
+  constexpr S& operator=(this S&, const S&) = default;
+  S& operator=(this S&, S&&) = default;
+
+  MoveMe move_me;
+};
+
+constexpr bool f() {
+  S s1{};
+  S s2{};
+  s2 = s1;
+  return true;
+}
+
+static_assert(f());
 
 }

@@ -1,4 +1,4 @@
-//===---------- ASTUtils.cpp - clang-tidy ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -96,7 +96,7 @@ bool areStatementsIdentical(const Stmt *FirstStmt, const Stmt *SecondStmt,
   if (FirstStmt == SecondStmt)
     return true;
 
-  if (FirstStmt->getStmtClass() != FirstStmt->getStmtClass())
+  if (FirstStmt->getStmtClass() != SecondStmt->getStmtClass())
     return false;
 
   if (isa<Expr>(FirstStmt) && isa<Expr>(SecondStmt)) {

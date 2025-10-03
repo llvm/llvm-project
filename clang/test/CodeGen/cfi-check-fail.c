@@ -13,7 +13,7 @@ void caller(void (*f)(void)) {
 // CHECK: %[[DATA:.*]] = load ptr, ptr %[[ALLOCA0]], align 8
 // CHECK: %[[ADDR:.*]] = load ptr, ptr %[[ALLOCA1]], align 8
 // CHECK: %[[ICMP_NOT_NULL:.*]] = icmp ne ptr %[[DATA]], null
-// CHECK: br i1 %[[ICMP_NOT_NULL]], label %[[CONT0:.*]], label %[[TRAP:.*]],
+// CHECK: br i1 %[[ICMP_NOT_NULL]], label %[[CONT0:.*]], label %[[TRAP:.*]], !prof
 
 // CHECK: [[TRAP]]:
 // CHECK-NEXT:   call void @llvm.ubsantrap(i8 2)
@@ -35,7 +35,7 @@ void caller(void (*f)(void)) {
 
 // CHECK: [[CONT1]]:
 // CHECK:   %[[NOT_1:.*]] = icmp ne i8 %[[KIND]], 1
-// CHECK:   br i1 %[[NOT_1]], label %[[CONT2:.*]], label %[[HANDLE1:.*]], !nosanitize
+// CHECK:   br i1 %[[NOT_1]], label %[[CONT2:.*]], label %[[HANDLE1:.*]], !prof !{{[0-9]+}}, !nosanitize
 
 // CHECK: [[HANDLE1]]:
 // CHECK-NEXT:   call void @llvm.ubsantrap(i8 2)
@@ -63,7 +63,7 @@ void caller(void (*f)(void)) {
 
 // CHECK: [[CONT4]]:
 // CHECK:   %[[NOT_4:.*]] = icmp ne i8 %[[KIND]], 4
-// CHECK:   br i1 %[[NOT_4]], label %[[CONT5:.*]], label %[[HANDLE4:.*]], !nosanitize
+// CHECK:   br i1 %[[NOT_4]], label %[[CONT5:.*]], label %[[HANDLE4:.*]], !prof !{{[0-9]+}}, !nosanitize
 
 // CHECK: [[HANDLE4]]:
 // CHECK-NEXT:   call void @llvm.ubsantrap(i8 2)
@@ -72,7 +72,7 @@ void caller(void (*f)(void)) {
 // CHECK: [[CONT5]]:
 // CHECK:   ret void
 
-// CHECK: define weak void @__cfi_check(i64 %[[TYPE:.*]], ptr %[[ADDR:.*]], ptr %[[DATA:.*]]) align 4096
+// CHECK: define weak void @__cfi_check(i64 noundef %[[TYPE:.*]], ptr noundef %[[ADDR:.*]], ptr noundef %[[DATA:.*]]){{.*}} align 4096
 // CHECK-NOT: }
 // CHECK: call void @__cfi_check_fail(ptr %[[DATA]], ptr %[[ADDR]])
 // CHECK-NEXT: ret void

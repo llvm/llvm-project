@@ -11,19 +11,18 @@ define ptr @foo() {
 ; otherwise a litpool entry.
   ret ptr @var
 
-
-; CHECK: adrp x[[ADDRHI:[0-9]+]], :got:var
-; CHECK: ldr x0, [x[[ADDRHI]], :got_lo12:var]
+; CHECK:            adrp x[[ADDRHI:[0-9]+]], :got:var
+; CHECK-NEXT:       ldr x0, [x[[ADDRHI]], :got_lo12:var]
 
   ; In the large model, the usual relocations are absolute and can
   ; materialise 0.
-; CHECK-LARGE: movz x0, #:abs_g0_nc:var
-; CHECK-LARGE: movk x0, #:abs_g1_nc:var
-; CHECK-LARGE: movk x0, #:abs_g2_nc:var
-; CHECK-LARGE: movk x0, #:abs_g3:var
+; CHECK-LARGE:      movz x0, #:abs_g0_nc:var
+; CHECK-LARGE-NEXT: movk x0, #:abs_g1_nc:var
+; CHECK-LARGE-NEXT: movk x0, #:abs_g2_nc:var
+; CHECK-LARGE-NEXT: movk x0, #:abs_g3:var
 
   ; In the tiny codemodel we us a got relocated LDR.
-; CHECK-TINY: ldr x0, :got:var
+; CHECK-TINY:       ldr x0, :got:var
 }
 
 
@@ -32,10 +31,9 @@ define ptr @foo() {
 define ptr @bar() {
   %addr = getelementptr [10 x i32], ptr @arr_var, i32 0, i32 5
 
-
-; CHECK: adrp x[[ADDRHI:[0-9]+]], :got:arr_var
-; CHECK: ldr [[BASE:x[0-9]+]], [x[[ADDRHI]], :got_lo12:arr_var]
-; CHECK: add x0, [[BASE]], #20
+; CHECK:            adrp x[[ADDRHI:[0-9]+]], :got:arr_var
+; CHECK-NEXT:       ldr [[BASE:x[0-9]+]], [x[[ADDRHI]], :got_lo12:arr_var]
+; CHECK-NEXT:       add x0, [[BASE]], #20
 
   ret ptr %addr
 
@@ -44,8 +42,8 @@ define ptr @bar() {
 ; CHECK-LARGE-NEXT: ldr x[[ADDR]], [x[[ADDR]], :got_lo12:arr_var]
 ; CHECK-LARGE-NEXT: add x0, x[[ADDR]], #20
 
-; CHECK-TINY: ldr [[BASE:x[0-9]+]], :got:arr_var
-; CHECK-TINY: add x0, [[BASE]], #20
+; CHECK-TINY:       ldr [[BASE:x[0-9]+]], :got:arr_var
+; CHECK-TINY-NEXT:  add x0, [[BASE]], #20
 }
 
 @defined_weak_var = internal unnamed_addr global i32 0
@@ -53,13 +51,13 @@ define ptr @bar() {
 define ptr @wibble() {
   ret ptr @defined_weak_var
 
-; CHECK: adrp [[BASE:x[0-9]+]], defined_weak_var
-; CHECK: add x0, [[BASE]], :lo12:defined_weak_var
+; CHECK:            adrp [[BASE:x[0-9]+]], defined_weak_var
+; CHECK-NEXT:       add x0, [[BASE]], :lo12:defined_weak_var
 
-; CHECK-LARGE: movz x0, #:abs_g0_nc:defined_weak_var
-; CHECK-LARGE: movk x0, #:abs_g1_nc:defined_weak_var
-; CHECK-LARGE: movk x0, #:abs_g2_nc:defined_weak_var
-; CHECK-LARGE: movk x0, #:abs_g3:defined_weak_var
+; CHECK-LARGE:      movz x0, #:abs_g0_nc:defined_weak_var
+; CHECK-LARGE-NEXT: movk x0, #:abs_g1_nc:defined_weak_var
+; CHECK-LARGE-NEXT: movk x0, #:abs_g2_nc:defined_weak_var
+; CHECK-LARGE-NEXT: movk x0, #:abs_g3:defined_weak_var
 
-; CHECK-TINY: adr x0, defined_weak_var
+; CHECK-TINY:       adr x0, defined_weak_var
 }

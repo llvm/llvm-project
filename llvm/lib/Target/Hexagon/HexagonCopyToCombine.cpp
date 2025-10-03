@@ -48,12 +48,6 @@ MaxNumOfInstsBetweenNewValueStoreAndTFR("max-num-inst-between-tfr-and-nv-store",
                    cl::desc("Maximum distance between a tfr feeding a store we "
                             "consider the store still to be newifiable"));
 
-namespace llvm {
-  FunctionPass *createHexagonCopyToCombine();
-  void initializeHexagonCopyToCombinePass(PassRegistry&);
-}
-
-
 namespace {
 
 class HexagonCopyToCombine : public MachineFunctionPass  {
@@ -81,8 +75,7 @@ public:
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -283,7 +276,7 @@ bool HexagonCopyToCombine::isSafeToMoveTogether(MachineInstr &I1,
     // uses I2's use reg we need to modify that (first) instruction to now kill
     // this reg.
     unsigned KilledOperand = 0;
-    if (I2.killsRegister(I2UseReg))
+    if (I2.killsRegister(I2UseReg, /*TRI=*/nullptr))
       KilledOperand = I2UseReg;
     MachineInstr *KillingInstr = nullptr;
 
@@ -360,11 +353,12 @@ bool HexagonCopyToCombine::isSafeToMoveTogether(MachineInstr &I1,
 
       if (isUnsafeToMoveAcross(MI, I1UseReg, I1DestReg, TRI) ||
           // Check for an aliased register kill. Bail out if we see one.
-          (!MI.killsRegister(I1UseReg) && MI.killsRegister(I1UseReg, TRI)))
+          (!MI.killsRegister(I1UseReg, /*TRI=*/nullptr) &&
+           MI.killsRegister(I1UseReg, TRI)))
         return false;
 
       // Check for an exact kill (registers match).
-      if (I1UseReg && MI.killsRegister(I1UseReg)) {
+      if (I1UseReg && MI.killsRegister(I1UseReg, /*TRI=*/nullptr)) {
         assert(!KillingInstr && "Should only see one killing instruction");
         KilledOperand = I1UseReg;
         KillingInstr = &MI;
@@ -384,7 +378,7 @@ bool HexagonCopyToCombine::isSafeToMoveTogether(MachineInstr &I1,
   return true;
 }
 
-/// findPotentialNewifiableTFRs - Finds tranfers that feed stores that could be
+/// findPotentialNewifiableTFRs - Finds transfers that feed stores that could be
 /// newified. (A use of a 64 bit register define can not be newified)
 void
 HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {
@@ -463,7 +457,7 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
   TII = ST->getInstrInfo();
 
   const Function &F = MF.getFunction();
-  bool OptForSize = F.hasFnAttribute(Attribute::OptimizeForSize);
+  bool OptForSize = F.hasOptSize();
 
   // Combine aggressively (for code size)
   ShouldCombineAggressively =
@@ -592,8 +586,8 @@ void HexagonCopyToCombine::combine(MachineInstr &I1, MachineInstr &I2,
     llvm_unreachable("Unexpected register class");
 
   // Get the double word register.
-  unsigned DoubleRegDest = TRI->getMatchingSuperReg(LoRegDef, SubLo, SuperRC);
-  assert(DoubleRegDest != 0 && "Expect a valid register");
+  MCRegister DoubleRegDest = TRI->getMatchingSuperReg(LoRegDef, SubLo, SuperRC);
+  assert(DoubleRegDest.isValid() && "Expect a valid register");
 
   // Setup source operands.
   MachineOperand &LoOperand = IsI1Loreg ? I1.getOperand(1) : I2.getOperand(1);

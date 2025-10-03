@@ -55,22 +55,22 @@
 
 // CHECK-NONARM: error: invalid instruction, any one of the following would fix this:
 // CHECK-NONARM-NEXT: mov pc, r0, lsl #0
-// CHECK-NONARM: note: operand must be a register in range [r0, r15]
 // CHECK-THUMBV7: note: operand must be a register in range [r0, r12] or r14
 // CHECK-THUMBV8: note: operand must be a register in range [r0, r14]
+// CHECK-NONARM: note: operand must be a register in range [r0, r15]
 
 // CHECK-NONARM: error: invalid instruction, any one of the following would fix this:
 // CHECK-NONARM-NEXT: mov r0, pc, lsl #0
-// CHECK-NONARM: note: operand must be a register in range [r0, r15]
 // CHECK-NONARM: note: invalid operand for instruction
 // CHECK-NONARM: note: invalid operand for instruction
 // CHECK-NONARM: note: operand must be an immediate in the range [256,65535]
+// CHECK-NONARM: note: operand must be a register in range [r0, r15]
 
 // CHECK-NONARM: error: invalid instruction, any one of the following would fix this:
 // CHECK-NONARM-NEXT: mov pc, pc, lsl #0
-// CHECK-NONARM: note: operand must be a register in range [r0, r15]
 // CHECK-THUMBV7: note: operand must be a register in range [r0, r12] or r14
 // CHECK-THUMBV8: note: operand must be a register in range [r0, r14]
+// CHECK-NONARM: note: operand must be a register in range [r0, r15]
 
 // CHECK-NONARM: error: invalid instruction, any one of the following would fix this:
 // CHECK-NONARM-NEXT: movs pc, r0, lsl #0
@@ -134,8 +134,8 @@
 // FIXME: We should consistently have the "requires ARMv8" error here
 // CHECK-THUMBV7: error: invalid instruction, any one of the following would fix this:
 // CHECK-THUMBV7-NEXT: mov sp, sp, lsl #0
-// CHECK-THUMBV7: note: operand must be a register in range [r0, r15]
 // CHECK-THUMBV7: note: operand must be a register in range [r0, r12] or r14
+// CHECK-THUMBV7: note: operand must be a register in range [r0, r15]
 
 // CHECK-THUMBV7: error: invalid instruction, any one of the following would fix this:
 // CHECK-THUMBV7-NEXT: movs sp, sp, lsl #0

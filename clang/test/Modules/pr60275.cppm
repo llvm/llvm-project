@@ -5,7 +5,12 @@
 // RUN: split-file %s %t
 //
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -emit-module-interface %t/a.cppm -o %t/a.pcm
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/b.cpp -fmodule-file=%t/a.pcm -emit-llvm -o - | FileCheck %t/b.cpp
+// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/b.cpp -fmodule-file=a=%t/a.pcm -emit-llvm -o - | FileCheck %t/b.cpp
+
+// Test again with reduced BMI
+// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -emit-reduced-module-interface %t/a.cppm -o %t/a.pcm
+// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/b.cpp -fmodule-file=a=%t/a.pcm -emit-llvm -o - | FileCheck %t/b.cpp
+
 //--- foo.h
 
 consteval void global() {}

@@ -50,6 +50,8 @@ private:
                                LegalizerHelper &Helper) const;
   bool legalizeRotate(MachineInstr &MI, MachineRegisterInfo &MRI,
                       LegalizerHelper &Helper) const;
+  bool legalizeICMP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                    MachineIRBuilder &MIRBuilder) const;
   bool legalizeFunnelShift(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer,
@@ -64,6 +66,7 @@ private:
                                 LegalizerHelper &Helper) const;
   bool legalizeDynStackAlloc(MachineInstr &MI, LegalizerHelper &Helper) const;
   bool legalizePrefetch(MachineInstr &MI, LegalizerHelper &Helper) const;
+  bool legalizeBitcast(MachineInstr &MI, LegalizerHelper &Helper) const;
   const AArch64Subtarget *ST;
 };
 } // End llvm namespace.

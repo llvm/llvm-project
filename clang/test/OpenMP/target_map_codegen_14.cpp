@@ -164,7 +164,7 @@ void implicit_maps_templated_class (int a){
 // CK15: [[REF0:%.+]] = load ptr, ptr [[ADDR0]],
 // CK15-64: {{.+}} = load i32,  ptr [[ADDR1]],
 // CK15-32: {{.+}} = load i32, ptr [[ADDR1]],
-// CK15: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF0]], i32 0, i32 0
+// CK15: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF0]], i32 0, i32 0
 
 // CK15: define internal void [[KERNEL2]](ptr noundef [[THIS:%.+]], i[[sz]] noundef [[ARG:%.+]])
 // CK15: [[ADDR0:%.+]] = alloca ptr,
@@ -174,7 +174,7 @@ void implicit_maps_templated_class (int a){
 // CK15: [[REF0:%.+]] = load ptr, ptr [[ADDR0]],
 // CK15-64: {{.+}} = load i32,  ptr [[ADDR1]],
 // CK15-32: {{.+}} = load i32, ptr [[ADDR1]],
-// CK15: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF0]], i32 0, i32 0
+// CK15: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF0]], i32 0, i32 0
 
 #endif // CK15
 #endif

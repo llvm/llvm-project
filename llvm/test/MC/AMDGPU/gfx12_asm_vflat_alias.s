@@ -1,4 +1,4 @@
-; RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck -check-prefix=GFX12 %s
+; RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck -check-prefix=GFX12 %s
 
 global_atomic_csub v1, v0, v2, s[0:1] offset:64 th:TH_ATOMIC_RETURN
 // GFX12: global_atomic_sub_clamp_u32 v1, v0, v2, s[0:1] offset:64 th:TH_ATOMIC_RETURN ; encoding: [0x00,0xc0,0x0d,0xee,0x01,0x00,0x10,0x01,0x00,0x40,0x00,0x00]

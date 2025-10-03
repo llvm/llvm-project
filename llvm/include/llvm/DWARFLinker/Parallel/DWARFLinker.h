@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
 /// ------------------------------------------------------------------
@@ -122,9 +123,8 @@ public:
   virtual ~DWARFLinker() = default;
 
   /// Creates dwarf linker instance.
-  static std::unique_ptr<DWARFLinker>
-  createLinker(MessageHandlerTy ErrorHandler, MessageHandlerTy WarningHandler,
-               TranslatorFuncTy StringsTranslator = nullptr);
+  LLVM_ABI static std::unique_ptr<DWARFLinker>
+  createLinker(MessageHandlerTy ErrorHandler, MessageHandlerTy WarningHandler);
 
   /// Set output DWARF handler. Result of linking DWARF is set of sections
   /// containing final debug info. DWARFLinkerBase::link() pass generated

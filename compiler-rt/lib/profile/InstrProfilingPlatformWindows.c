@@ -36,7 +36,6 @@
 #pragma section(".lprfc$Z", read, write)
 #pragma section(".lprfb$A", read, write)
 #pragma section(".lprfb$Z", read, write)
-#pragma section(".lorderfile$A", read, write)
 #pragma section(".lprfnd$A", read, write)
 #pragma section(".lprfnd$Z", read, write)
 #endif
@@ -51,7 +50,6 @@ char COMPILER_RT_SECTION(".lprfc$A") CountersStart;
 char COMPILER_RT_SECTION(".lprfc$Z") CountersEnd;
 char COMPILER_RT_SECTION(".lprfb$A") BitmapStart;
 char COMPILER_RT_SECTION(".lprfb$Z") BitmapEnd;
-uint32_t COMPILER_RT_SECTION(".lorderfile$A") OrderFileStart;
 
 ValueProfNode COMPILER_RT_SECTION(".lprfnd$A") VNodesStart;
 ValueProfNode COMPILER_RT_SECTION(".lprfnd$Z") VNodesEnd;
@@ -85,7 +83,6 @@ char *__llvm_profile_begin_counters(void) { return &CountersStart + 1; }
 char *__llvm_profile_end_counters(void) { return &CountersEnd; }
 char *__llvm_profile_begin_bitmap(void) { return &BitmapStart + 1; }
 char *__llvm_profile_end_bitmap(void) { return &BitmapEnd; }
-uint32_t *__llvm_profile_begin_orderfile(void) { return &OrderFileStart; }
 
 ValueProfNode *__llvm_profile_begin_vnodes(void) { return &VNodesStart + 1; }
 ValueProfNode *__llvm_profile_end_vnodes(void) { return &VNodesEnd; }
@@ -93,12 +90,13 @@ ValueProfNode *__llvm_profile_end_vnodes(void) { return &VNodesEnd; }
 ValueProfNode *CurrentVNode = &VNodesStart + 1;
 ValueProfNode *EndVNode = &VNodesEnd;
 
-/* lld-link provides __buildid symbol which ponits to the 16 bytes build id when
+/* lld-link provides __buildid symbol which points to the 16 bytes build id when
  * using /build-id flag. https://lld.llvm.org/windows_support.html#lld-flags */
 #define BUILD_ID_LEN 16
-COMPILER_RT_WEAK uint8_t __buildid[BUILD_ID_LEN];
+COMPILER_RT_WEAK uint8_t __buildid[BUILD_ID_LEN] = {0};
 COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
-  if (*__buildid) {
+  static const uint8_t zeros[BUILD_ID_LEN] = {0};
+  if (memcmp(__buildid, zeros, BUILD_ID_LEN) != 0) {
     if (Writer &&
         lprofWriteOneBinaryId(Writer, BUILD_ID_LEN, __buildid, 0) == -1)
       return -1;

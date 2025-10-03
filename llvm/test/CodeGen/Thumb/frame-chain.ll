@@ -1,30 +1,31 @@
 ; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=all --verify-machineinstrs | FileCheck %s --check-prefixes=FP,LEAF-FP
-; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=all -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-FP
-; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=all -mattr=+aapcs-frame-chain-leaf --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-FP-AAPCS
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=all -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-FP-AAPCS
 ; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=non-leaf --verify-machineinstrs | FileCheck %s --check-prefixes=FP,LEAF-NOFP
-; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=non-leaf -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-NOFP
-; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=non-leaf -mattr=+aapcs-frame-chain-leaf --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-NOFP-AAPCS
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=non-leaf -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-NOFP-AAPCS
 ; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=none --verify-machineinstrs | FileCheck %s --check-prefixes=NOFP,LEAF-NOFP
-; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=none -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=NOFP-AAPCS,LEAF-NOFP
-; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=none -mattr=+aapcs-frame-chain-leaf --verify-machineinstrs | FileCheck %s --check-prefixes=NOFP-AAPCS,LEAF-NOFP-AAPCS
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=none -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=NOFP-AAPCS,LEAF-NOFP-AAPCS
 
 define dso_local noundef i32 @leaf(i32 noundef %0) {
 ; LEAF-FP-LABEL: leaf:
 ; LEAF-FP:       @ %bb.0:
-; LEAF-FP-NEXT:    .pad #4
-; LEAF-FP-NEXT:    sub sp, #4
-; LEAF-FP-NEXT:    str r0, [sp]
-; LEAF-FP-NEXT:    adds r0, r0, #4
-; LEAF-FP-NEXT:    add sp, #4
-; LEAF-FP-NEXT:    bx lr
+; LEAF-FP-NEXT:    .save	{r7, lr}
+; LEAF-FP-NEXT:    push	{r7, lr}
+; LEAF-FP-NEXT:	   .setfp	r7, sp
+; LEAF-FP-NEXT:	   add	r7, sp, #0
+; LEAF-FP-NEXT:	   .pad	#4
+; LEAF-FP-NEXT:	   sub	sp, #4
+; LEAF-FP-NEXT:	   str	r0, [sp]
+; LEAF-FP-NEXT:	   adds	r0, r0, #4
+; LEAF-FP-NEXT:	   add	sp, #4
+; LEAF-FP-NEXT:	   pop	{r7, pc}
 ;
 ; LEAF-FP-AAPCS-LABEL: leaf:
 ; LEAF-FP-AAPCS:       @ %bb.0:
 ; LEAF-FP-AAPCS-NEXT:    .save {lr}
 ; LEAF-FP-AAPCS-NEXT:    push {lr}
-; LEAF-FP-AAPCS-NEXT:    mov lr, r11
+; LEAF-FP-AAPCS-NEXT:    mov r3, r11
 ; LEAF-FP-AAPCS-NEXT:    .save {r11}
-; LEAF-FP-AAPCS-NEXT:    push {lr}
+; LEAF-FP-AAPCS-NEXT:    push {r3}
 ; LEAF-FP-AAPCS-NEXT:    .setfp r11, sp
 ; LEAF-FP-AAPCS-NEXT:    mov r11, sp
 ; LEAF-FP-AAPCS-NEXT:    .pad #4
@@ -79,9 +80,9 @@ define dso_local noundef i32 @non_leaf(i32 noundef %0) {
 ; FP-AAPCS:       @ %bb.0:
 ; FP-AAPCS-NEXT:    .save {lr}
 ; FP-AAPCS-NEXT:    push {lr}
-; FP-AAPCS-NEXT:    mov lr, r11
+; FP-AAPCS-NEXT:    mov r3, r11
 ; FP-AAPCS-NEXT:    .save {r11}
-; FP-AAPCS-NEXT:    push {lr}
+; FP-AAPCS-NEXT:    push {r3}
 ; FP-AAPCS-NEXT:    .setfp r11, sp
 ; FP-AAPCS-NEXT:    mov r11, sp
 ; FP-AAPCS-NEXT:    .pad #8
@@ -160,9 +161,9 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; FP-AAPCS:       @ %bb.0:
 ; FP-AAPCS-NEXT:    .save {lr}
 ; FP-AAPCS-NEXT:    push {lr}
-; FP-AAPCS-NEXT:    mov lr, r11
+; FP-AAPCS-NEXT:    mov r3, r11
 ; FP-AAPCS-NEXT:    .save {r11}
-; FP-AAPCS-NEXT:    push {lr}
+; FP-AAPCS-NEXT:    push {r3}
 ; FP-AAPCS-NEXT:    .setfp r11, sp
 ; FP-AAPCS-NEXT:    mov r11, sp
 ; FP-AAPCS-NEXT:    .save {r4, r6}
@@ -226,9 +227,9 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; NOFP-AAPCS:       @ %bb.0:
 ; NOFP-AAPCS-NEXT:    .save {lr}
 ; NOFP-AAPCS-NEXT:    push {lr}
-; NOFP-AAPCS-NEXT:    mov lr, r11
+; NOFP-AAPCS-NEXT:    mov r3, r11
 ; NOFP-AAPCS-NEXT:    .save {r11}
-; NOFP-AAPCS-NEXT:    push {lr}
+; NOFP-AAPCS-NEXT:    push {r3}
 ; NOFP-AAPCS-NEXT:    .setfp r11, sp
 ; NOFP-AAPCS-NEXT:    mov r11, sp
 ; NOFP-AAPCS-NEXT:    .save {r4, r6}
@@ -271,4 +272,45 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
   %10 = alloca i32, i64 %8, align 4
   store i64 %8, ptr %6, align 8
   ret void
+}
+
+define dso_local noundef i32 @leaf_tailcall(i32 noundef %0) {
+; FP-LABEL: leaf_tailcall:
+; FP:       @ %bb.0:
+; FP-NEXT:    .save {r7, lr}
+; FP-NEXT:    push {r7, lr}
+; FP-NEXT:    .setfp r7, sp
+; FP-NEXT:    add r7, sp, #0
+; FP-NEXT:    bl leaf
+; FP-NEXT:    pop {r7, pc}
+;
+; FP-AAPCS-LABEL: leaf_tailcall:
+; FP-AAPCS:       @ %bb.0:
+; FP-AAPCS-NEXT:    .save {lr}
+; FP-AAPCS-NEXT:    push {lr}
+; FP-AAPCS-NEXT:    mov r3, r11
+; FP-AAPCS-NEXT:    .save {r11}
+; FP-AAPCS-NEXT:    push {r3}
+; FP-AAPCS-NEXT:    .setfp r11, sp
+; FP-AAPCS-NEXT:    mov r11, sp
+; FP-AAPCS-NEXT:    bl leaf
+; FP-AAPCS-NEXT:    pop {r1}
+; FP-AAPCS-NEXT:    mov r11, r1
+; FP-AAPCS-NEXT:    pop {pc}
+;
+; NOFP-LABEL: leaf_tailcall:
+; NOFP:       @ %bb.0:
+; NOFP-NEXT:    .save {r7, lr}
+; NOFP-NEXT:    push {r7, lr}
+; NOFP-NEXT:    bl leaf
+; NOFP-NEXT:    pop {r7, pc}
+;
+; NOFP-AAPCS-LABEL: leaf_tailcall:
+; NOFP-AAPCS:       @ %bb.0:
+; NOFP-AAPCS-NEXT:    .save {r7, lr}
+; NOFP-AAPCS-NEXT:    push {r7, lr}
+; NOFP-AAPCS-NEXT:    bl leaf
+; NOFP-AAPCS-NEXT:    pop {r7, pc}
+  %a = tail call noundef i32 @leaf(i32 noundef %0)
+  ret i32 %a
 }

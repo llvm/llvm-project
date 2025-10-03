@@ -88,5 +88,5 @@ void SymbolConverter::visitObjCInterface(const ObjCInterfaceRecord &ObjCR) {
 }
 
 void SymbolConverter::visitObjCCategory(const ObjCCategoryRecord &Cat) {
-  addIVars(Cat.getObjCIVars(), Cat.getName());
+  addIVars(Cat.getObjCIVars(), Cat.getSuperClassName());
 }

@@ -1117,7 +1117,7 @@ bb3:                                              ; preds = %bb
 
 bb4:                                              ; preds = %bb6, %bb3
   %tmp5 = phi i32 [ %tmp7, %bb6 ], [ 0, %bb3 ]
-  br i1 undef, label %bb10, label %bb6
+  br i1 true, label %bb10, label %bb6
 
 bb6:                                              ; preds = %bb4
   %tmp7 = add nuw nsw i32 %tmp5, 1

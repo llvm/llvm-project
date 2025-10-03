@@ -1,16 +1,14 @@
 // RUN: mlir-opt %s \
-// RUN:   -func-bufferize -tensor-bufferize -arith-bufferize --canonicalize \
+// RUN:   -one-shot-bufferize="bufferize-function-boundaries" --canonicalize \
 // RUN:   -convert-scf-to-cf --convert-complex-to-standard \
 // RUN:   -finalize-memref-to-llvm -convert-math-to-llvm -convert-math-to-libm \
 // RUN:   -convert-vector-to-llvm -convert-complex-to-llvm \
-// RUN:   -convert-func-to-llvm -reconcile-unrealized-casts |\
-// RUN: mlir-cpu-runner \
+// RUN:   -convert-func-to-llvm -convert-arith-to-llvm -convert-cf-to-llvm \
+// RUN:   -reconcile-unrealized-casts |\
+// RUN: mlir-runner \
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_c_runner_utils |\
 // RUN: FileCheck %s
-
-// XFAIL: target=aarch64{{.*}}
-// See: https://github.com/llvm/llvm-project/issues/58531
 
 func.func @test_unary(%input: tensor<?xcomplex<f32>>,
                       %func: (complex<f32>) -> complex<f32>) {
@@ -189,8 +187,9 @@ func.func @entry() {
     // CHECK-NEXT:  0
     // CHECK-NEXT:  0
     (0.0, 0.0), (-1.0, 0.0),
-    // CHECK-NEXT:  -nan
-    // CHECK-NEXT:  -nan
+    // Ignoring the sign of nan as that can't be tested in platform agnostic manner. See: #58531
+    // CHECK-NEXT:  nan
+    // CHECK-NEXT:  nan
     (1.0, 1.0), (1.0, 1.0)
     // CHECK-NEXT:  0.273
     // CHECK-NEXT:  0.583
@@ -244,7 +243,7 @@ func.func @entry() {
     // CHECK-NEXT:  0.321
     // CHECK-NEXT:  -0.776
     (0.0, 0.0),
-    // CHECK-NEXT:  nan
+    // CHECK-NEXT:  inf
     // CHECK-NEXT:  nan
     (0.0, 1.0),
     // CHECK-NEXT:  0.707

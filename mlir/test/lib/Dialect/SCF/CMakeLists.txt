@@ -4,11 +4,12 @@ add_mlir_library(MLIRSCFTestPasses
   TestLoopUnrolling.cpp
   TestSCFUtils.cpp
   TestSCFWrapInZeroTripCheck.cpp
+  TestUpliftWhileToFor.cpp
   TestWhileOpBuilder.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRSCFTestPasses PUBLIC
   MLIRMemRefDialect
   MLIRPass
   MLIRSCFDialect

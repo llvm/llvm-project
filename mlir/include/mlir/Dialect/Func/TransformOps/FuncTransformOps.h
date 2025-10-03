@@ -1,4 +1,4 @@
-//===- FuncTransformOps.h - CF transformation ops --------*- C++ -*-===//
+//===- FuncTransformOps.h - Function transformation ops --------*- C++ -*--===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 #define MLIR_DIALECT_FUNC_TRANSFORMOPS_FUNCTRANSFORMOPS_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
 
 #define GET_OP_CLASSES

@@ -12,26 +12,30 @@ define void @test_ins_ext_cost(ptr readonly %a, ptr readonly %b, ptr readonly %c
 ; CHECK-LABEL: define void @test_ins_ext_cost(
 ; CHECK-SAME: ptr readonly [[A:%.*]], ptr readonly [[B:%.*]], ptr readonly [[C:%.*]], ptr noalias [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[EXIT_COND:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[FOR_BODY]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ 1, [[FOR_BODY]] ]
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds <8 x float>, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[LOAD_A:%.*]] = load <8 x float>, ptr [[GEP_A]], align 16
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds <8 x float>, ptr [[B]], i64 [[IV]]
-; CHECK-NEXT:    [[LOAD_B:%.*]] = load <8 x float>, ptr [[GEP_B]], align 16
-; CHECK-NEXT:    [[GEP_C:%.*]] = getelementptr inbounds <8 x float>, ptr [[C]], i64 [[IV]]
-; CHECK-NEXT:    [[LOAD_C:%.*]] = load <8 x float>, ptr [[GEP_C]], align 16
+; CHECK-NEXT:    [[LOAD_A:%.*]] = load <8 x float>, ptr [[A]], align 16
+; CHECK-NEXT:    [[LOAD_B:%.*]] = load <8 x float>, ptr [[B]], align 16
+; CHECK-NEXT:    [[LOAD_C:%.*]] = load <8 x float>, ptr [[C]], align 16
 ; CHECK-NEXT:    [[CAST_SCALABLE_B:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v8f32(<vscale x 4 x float> undef, <8 x float> [[LOAD_B]], i64 0)
 ; CHECK-NEXT:    [[CAST_SCALABLE_C:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v8f32(<vscale x 4 x float> undef, <8 x float> [[LOAD_C]], i64 0)
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd <vscale x 4 x float> [[CAST_SCALABLE_B]], [[CAST_SCALABLE_C]]
 ; CHECK-NEXT:    [[CAST_SCALABLE_A:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v8f32(<vscale x 4 x float> undef, <8 x float> [[LOAD_A]], i64 0)
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul <vscale x 4 x float> [[CAST_SCALABLE_A]], [[ADD]]
 ; CHECK-NEXT:    [[CAST_FIXED_D:%.*]] = tail call <8 x float> @llvm.vector.extract.v8f32.nxv4f32(<vscale x 4 x float> [[MUL]], i64 0)
-; CHECK-NEXT:    [[GEP_D:%.*]] = getelementptr inbounds <8 x float>, ptr [[D]], i64 0, i64 [[IV]]
-; CHECK-NEXT:    store <8 x float> [[CAST_FIXED_D]], ptr [[GEP_D]], align 16
-; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[FOR_BODY]], label [[EXIT:%.*]]
-; CHECK:       exit:
+; CHECK-NEXT:    store <8 x float> [[CAST_FIXED_D]], ptr [[D]], align 16
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds <8 x float>, ptr [[A]], i64 1
+; CHECK-NEXT:    [[LOAD_A_1:%.*]] = load <8 x float>, ptr [[GEP_A_1]], align 16
+; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds <8 x float>, ptr [[B]], i64 1
+; CHECK-NEXT:    [[LOAD_B_1:%.*]] = load <8 x float>, ptr [[GEP_B_1]], align 16
+; CHECK-NEXT:    [[GEP_C_1:%.*]] = getelementptr inbounds <8 x float>, ptr [[C]], i64 1
+; CHECK-NEXT:    [[LOAD_C_1:%.*]] = load <8 x float>, ptr [[GEP_C_1]], align 16
+; CHECK-NEXT:    [[CAST_SCALABLE_B_1:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v8f32(<vscale x 4 x float> undef, <8 x float> [[LOAD_B_1]], i64 0)
+; CHECK-NEXT:    [[CAST_SCALABLE_C_1:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v8f32(<vscale x 4 x float> undef, <8 x float> [[LOAD_C_1]], i64 0)
+; CHECK-NEXT:    [[ADD_1:%.*]] = fadd <vscale x 4 x float> [[CAST_SCALABLE_B_1]], [[CAST_SCALABLE_C_1]]
+; CHECK-NEXT:    [[CAST_SCALABLE_A_1:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v8f32(<vscale x 4 x float> undef, <8 x float> [[LOAD_A_1]], i64 0)
+; CHECK-NEXT:    [[MUL_1:%.*]] = fmul <vscale x 4 x float> [[CAST_SCALABLE_A_1]], [[ADD_1]]
+; CHECK-NEXT:    [[CAST_FIXED_D_1:%.*]] = tail call <8 x float> @llvm.vector.extract.v8f32.nxv4f32(<vscale x 4 x float> [[MUL_1]], i64 0)
+; CHECK-NEXT:    [[GEP_D_1:%.*]] = getelementptr inbounds <8 x float>, ptr [[D]], i64 0, i64 1
+; CHECK-NEXT:    store <8 x float> [[CAST_FIXED_D_1]], ptr [[GEP_D_1]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:

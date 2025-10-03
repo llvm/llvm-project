@@ -22,15 +22,28 @@ from datetime import date
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-    "myst_parser",
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
     "sphinx.ext.autodoc",
 ]
 
+try:
+    import myst_parser
+
+    extensions.append("myst_parser")
+except ImportError:
+    raise ImportError(
+        "myst_parser is required to build documentation, including man pages."
+    )
+
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
 myst_heading_anchors = 6
 
 import sphinx
@@ -216,7 +229,15 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = []
+man_pages = [
+    (
+        "index",
+        "flang",
+        "flang - the Flang Fortran compiler",
+        ["Flang Contributors"],
+        1,
+    )
+]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False

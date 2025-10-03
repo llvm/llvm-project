@@ -42,10 +42,9 @@ define void @v2i32_v2i16(<2 x i32> %a, ptr %result) {
 ; CHECK-LABEL: v2i32_v2i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    strh w9, [x0]
-; CHECK-NEXT:    strh w8, [x0, #2]
+; CHECK-NEXT:    mov s1, v0.s[1]
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    str h1, [x0, #2]
 ; CHECK-NEXT:    ret
   %b = trunc <2 x i32> %a to <2 x i16>
   store <2 x i16> %b, ptr %result
@@ -90,10 +89,9 @@ define void @v2i32_v2i8(<2 x i32> %a, ptr %result) {
 ; CHECK-LABEL: v2i32_v2i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    strb w9, [x0]
-; CHECK-NEXT:    strb w8, [x0, #1]
+; CHECK-NEXT:    mov s1, v0.s[1]
+; CHECK-NEXT:    str b0, [x0]
+; CHECK-NEXT:    stur b1, [x0, #1]
 ; CHECK-NEXT:    ret
   %b = trunc <2 x i32> %a to <2 x i8>
   store <2 x i8> %b, ptr %result
@@ -104,7 +102,7 @@ define void @v4i32_v4i8(<4 x i32> %a, ptr %result) {
 ; CHECK-LABEL: v4i32_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
   %b = trunc <4 x i32> %a to <4 x i8>
@@ -157,10 +155,9 @@ define void @v2i16_v2i8(<2 x i16> %a, ptr %result) {
 ; CHECK-LABEL: v2i16_v2i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    strb w9, [x0]
-; CHECK-NEXT:    strb w8, [x0, #1]
+; CHECK-NEXT:    mov s1, v0.s[1]
+; CHECK-NEXT:    str b0, [x0]
+; CHECK-NEXT:    stur b1, [x0, #1]
 ; CHECK-NEXT:    ret
   %b = trunc <2 x i16> %a to <2 x i8>
   store <2 x i8> %b, ptr %result
@@ -170,8 +167,7 @@ define void @v2i16_v2i8(<2 x i16> %a, ptr %result) {
 define void @v4i16_v4i8(<4 x i16> %a, ptr %result) {
 ; CHECK-LABEL: v4i16_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
   %b = trunc <4 x i16> %a to <4 x i8>

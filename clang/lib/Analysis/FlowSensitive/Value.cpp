@@ -11,8 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/Value.h"
-#include "clang/Analysis/FlowSensitive/DebugSupport.h"
-#include "llvm/Support/Casting.h"
 
 namespace clang {
 namespace dataflow {
@@ -46,8 +44,6 @@ raw_ostream &operator<<(raw_ostream &OS, const Value &Val) {
     return OS << "Integer(@" << &Val << ")";
   case Value::Kind::Pointer:
     return OS << "Pointer(" << &cast<PointerValue>(Val).getPointeeLoc() << ")";
-  case Value::Kind::Record:
-    return OS << "Record(" << &cast<RecordValue>(Val).getLoc() << ")";
   case Value::Kind::TopBool:
     return OS << "TopBool(" << cast<TopBoolValue>(Val).getAtom() << ")";
   case Value::Kind::AtomicBool:

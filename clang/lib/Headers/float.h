@@ -10,24 +10,19 @@
 #ifndef __CLANG_FLOAT_H
 #define __CLANG_FLOAT_H
 
+#if defined(__MVS__) && __has_include_next(<float.h>)
+#include_next <float.h>
+#else
+
 /* If we're on MinGW, fall back to the system's float.h, which might have
  * additional definitions provided for Windows.
  * For more details see http://msdn.microsoft.com/en-us/library/y0ybw9fy.aspx
  *
- * Also fall back on Darwin and AIX to allow additional definitions and
+ * Also fall back on AIX to allow additional definitions and
  * implementation-defined values.
  */
-#if (defined(__APPLE__) || defined(__MINGW32__) || defined(_MSC_VER) ||        \
-     defined(_AIX)) &&                                                         \
+#if (defined(__MINGW32__) || defined(_MSC_VER) || defined(_AIX)) &&            \
     __STDC_HOSTED__ && __has_include_next(<float.h>)
-
-/* Prior to Apple's 10.7 SDK, float.h SDK header used to apply an extra level
- * of #include_next<float.h> to keep Metrowerks compilers happy. Avoid this
- * extra indirection.
- */
-#ifdef __APPLE__
-#define _FLOAT_H_
-#endif
 
 #  include_next <float.h>
 
@@ -82,6 +77,18 @@
 #    undef DBL_HAS_SUBNORM
 #    undef LDBL_HAS_SUBNORM
 #  endif
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
+    !defined(__STRICT_ANSI__)
+#    undef FLT_NORM_MAX
+#    undef DBL_NORM_MAX
+#    undef LDBL_NORM_MAX
+#endif
+#endif
+
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
+    !defined(__STRICT_ANSI__)
+#  undef INFINITY
+#  undef NAN
 #endif
 
 /* Characteristics of floating point types, C99 5.2.4.2.2 */
@@ -151,6 +158,17 @@
 #  define LDBL_HAS_SUBNORM __LDBL_HAS_DENORM__
 #endif
 
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
+    !defined(__STRICT_ANSI__)
+   /* C23 5.2.5.3.3p29-30 */
+#  define INFINITY (__builtin_inff())
+#  define NAN (__builtin_nanf(""))
+   /* C23 5.2.5.3.3p32 */
+#  define FLT_NORM_MAX __FLT_NORM_MAX__
+#  define DBL_NORM_MAX __DBL_NORM_MAX__
+#  define LDBL_NORM_MAX __LDBL_NORM_MAX__
+#endif
+
 #ifdef __STDC_WANT_IEC_60559_TYPES_EXT__
 #  define FLT16_MANT_DIG    __FLT16_MANT_DIG__
 #  define FLT16_DECIMAL_DIG __FLT16_DECIMAL_DIG__
@@ -165,4 +183,5 @@
 #  define FLT16_TRUE_MIN    __FLT16_TRUE_MIN__
 #endif /* __STDC_WANT_IEC_60559_TYPES_EXT__ */
 
+#endif /* __MVS__ */
 #endif /* __CLANG_FLOAT_H */

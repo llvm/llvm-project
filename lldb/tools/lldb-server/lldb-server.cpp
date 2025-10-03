@@ -41,7 +41,7 @@ int main_platform(int argc, char *argv[]);
 namespace llgs {
 static void initialize() {
   if (auto e = g_debugger_lifetime->Initialize(
-          std::make_unique<SystemInitializerLLGS>(), nullptr))
+          std::make_unique<SystemInitializerLLGS>()))
     llvm::consumeError(std::move(e));
 }
 

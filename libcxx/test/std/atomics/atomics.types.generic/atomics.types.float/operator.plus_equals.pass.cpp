@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: LIBCXX-AIX-FIXME
 // XFAIL: !has-64-bit-atomics
 
 // floating-point-type operator+=(floating-point-type) volatile noexcept;
@@ -16,6 +15,7 @@
 #include <cassert>
 #include <concepts>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "test_helper.h"
@@ -95,7 +95,7 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // TODO https://llvm.org/PR48634
   // test<long double>();
 
   return 0;

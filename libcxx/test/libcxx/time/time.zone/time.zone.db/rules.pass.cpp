@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
-// XFAIL: libcpp-has-no-incomplete-tzdb
+// XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 
 // <chrono>
@@ -17,12 +17,13 @@
 // Tests the IANA database rules parsing and operations.
 // This is not part of the public tzdb interface.
 // The test uses private implementation headers.
-// ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../../src/include
+// ADDITIONAL_COMPILE_FLAGS: -I %{libcxx-dir}/src/experimental/include
 
 #include <chrono>
+#include <cstdio>
 #include <fstream>
-#include <string>
 #include <string_view>
+#include <string>
 #include <variant>
 
 #include "assert_macros.h"
@@ -96,7 +97,7 @@ static void test_invalid() {
   test_exception("R r 0 mix", "corrupt tzdb: expected whitespace");
   test_exception("R r 0 1", "corrupt tzdb: expected whitespace");
 
-  test_exception("R r 0 1 X", "corrupt tzdb: expected character '-'");
+  test_exception("R r 0 1 X", "corrupt tzdb: expected character '-', got 'X' instead");
 
   test_exception("R r 0 1 -", "corrupt tzdb: expected whitespace");
 
@@ -106,13 +107,17 @@ static void test_invalid() {
 
   test_exception("R r 0 1 - Ja +", "corrupt tzdb weekday: invalid name");
   test_exception("R r 0 1 - Ja 32", "corrupt tzdb day: value too large");
-  test_exception("R r 0 1 - Ja l", "corrupt tzdb: expected string 'last'");
+  test_exception(
+      "R r 0 1 - Ja l",
+      std::string{"corrupt tzdb: expected character 'a' from string 'last', got '"} + (char)EOF + "' instead");
   test_exception("R r 0 1 - Ja last", "corrupt tzdb weekday: invalid name");
   test_exception("R r 0 1 - Ja lastS", "corrupt tzdb weekday: invalid name");
   test_exception("R r 0 1 - Ja S", "corrupt tzdb weekday: invalid name");
   test_exception("R r 0 1 - Ja Su", "corrupt tzdb on: expected '>=' or '<='");
-  test_exception("R r 0 1 - Ja Su>", "corrupt tzdb: expected character '='");
-  test_exception("R r 0 1 - Ja Su<", "corrupt tzdb: expected character '='");
+  test_exception(
+      "R r 0 1 - Ja Su>", std::string{"corrupt tzdb: expected character '=', got '"} + (char)EOF + "' instead");
+  test_exception(
+      "R r 0 1 - Ja Su<", std::string{"corrupt tzdb: expected character '=', got '"} + (char)EOF + "' instead");
   test_exception("R r 0 1 - Ja Su>=+", "corrupt tzdb: expected a non-zero digit");
   test_exception("R r 0 1 - Ja Su>=0", "corrupt tzdb: expected a non-zero digit");
   test_exception("R r 0 1 - Ja Su>=32", "corrupt tzdb day: value too large");
@@ -550,6 +555,29 @@ R a 0 1 - Ja Su>=31 1w 2s abc
   assert(result.rules[0].second[2].__letters == "abc");
 }
 
+static void test_mixed_order() {
+  // This is a part of the real database. The interesting part is that the
+  // rules NZ and Chatham are interleaved. Make sure the parse algorithm
+  // handles this correctly.
+  parse_result result{
+      R"(
+# Since 1957 Chatham has been 45 minutes ahead of NZ, but until 2018a
+# there was no documented single notation for the date and time of this
+# transition.  Duplicate the Rule lines for now, to give the 2018a change
+# time to percolate out.
+Rule NZ  1974    only    -   Nov Sun>=1  2:00s   1:00    D
+Rule Chatham 1974    only    -   Nov Sun>=1  2:45s   1:00    -
+Rule NZ  1975    only    -   Feb lastSun 2:00s   0   S
+Rule Chatham 1975    only    -   Feb lastSun 2:45s   0   -
+Rule NZ  1975    1988    -   Oct lastSun 2:00s   1:00    D
+Rule Chatham 1975    1988    -   Oct lastSun 2:45s   1:00    -
+)"};
+
+  assert(result.rules.size() == 2);
+  assert(result.rules[0].second.size() == 3);
+  assert(result.rules[1].second.size() == 3);
+}
+
 int main(int, const char**) {
   test_invalid();
   test_name();
@@ -560,6 +588,7 @@ int main(int, const char**) {
   test_at();
   test_save();
   test_letter();
+  test_mixed_order();
 
   return 0;
 }

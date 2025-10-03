@@ -2,8 +2,8 @@
 // RUN: %clang_cc1 -E %s -pedantic -std=c++11 | FileCheck -strict-whitespace %s
 // RUN: %clang_cc1 -E -x c %s -pedantic -std=c99 | FileCheck -strict-whitespace %s
 
-#define LPAREN ( 
-#define RPAREN ) 
+#define LPAREN (
+#define RPAREN )
 
 #define A0 expandedA0
 #define A1  expandedA1 A0
@@ -15,11 +15,11 @@
 #define C() D LPAREN )
 
 
-#define F(x, y) x + y 
+#define F(x, y) x + y
 #define ELLIP_FUNC(...) __VA_OPT__(__VA_ARGS__)
 
-1: ELLIP_FUNC(F, LPAREN, 'a', 'b', RPAREN); 
-2: ELLIP_FUNC(F LPAREN 'a', 'b' RPAREN); 
+1: ELLIP_FUNC(F, LPAREN, 'a', 'b', RPAREN);
+2: ELLIP_FUNC(F LPAREN 'a', 'b' RPAREN);
 #undef F
 #undef ELLIP_FUNC
 
@@ -27,26 +27,26 @@
 // CHECK: 2: 'a' + 'b';
 
 #define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)
-3: F(a, b, c) // replaced by f(0, a, b, c) 
+3: F(a, b, c) // replaced by f(0, a, b, c)
 4: F() // replaced by f(0)
 
-// CHECK: 3: f(0 , a, b, c) 
+// CHECK: 3: f(0 , a, b, c)
 // CHECK: 4: f(0 )
 #undef F
 
 #define G(X, ...) f(0, X __VA_OPT__(,) __VA_ARGS__)
 
-5: G(a, b, c) // replaced by f(0, a , b, c) 
-6: G(a) // replaced by f(0, a) 
-7: G(a,) // replaced by f(0, a) 
+5: G(a, b, c) // replaced by f(0, a , b, c)
+6: G(a) // replaced by f(0, a)
+7: G(a,) // replaced by f(0, a)
 7.1: G(a,,)
 
 
-// CHECK: 5: f(0, a , b, c) 
-// CHECK: 6: f(0, a ) 
-// CHECK: 7: f(0, a ) 
+// CHECK: 5: f(0, a , b, c)
+// CHECK: 6: f(0, a )
+// CHECK: 7: f(0, a )
 // CHECK: 7.1: f(0, a , ,)
-#undef G 
+#undef G
 
 #define HT_B() TONG
 
@@ -73,9 +73,9 @@
 12.0: F()
 12: F(,)
 13: F(B,)
-// CHECK: 12.0: 
-// CHECK: 12: 
-// CHECK: 13: BB 
+// CHECK: 12.0:
+// CHECK: 12:
+// CHECK: 13: BB
 #undef F
 
 #define F(...) #__VA_OPT__()  X ## __VA_OPT__()  #__VA_OPT__(        )
@@ -90,11 +90,11 @@
 
 #define SDEF(sname, ...) S sname __VA_OPT__(= { __VA_ARGS__ })
 
-16: SDEF(foo); // replaced by S foo; 
-17: SDEF(bar, 1, 2); // replaced by S bar = { 1, 2 }; 
+16: SDEF(foo); // replaced by S foo;
+17: SDEF(bar, 1, 2); // replaced by S bar = { 1, 2 };
 
 // CHECK: 16: S foo ;
-// CHECK: 17: S bar = { 1, 2 }; 
+// CHECK: 17: S bar = { 1, 2 };
 #undef SDEF
 
 #define F(a,...) A() #__VA_OPT__(A3 __VA_ARGS__ a ## __VA_ARGS__ ## a ## C A3) A()
@@ -105,8 +105,8 @@
 21: F(A3, A(),A0)
 
 
-// CHECK: 18: B ( ) "" B ( ) 
-// CHECK: 19: B ( ) "" B ( ) 
+// CHECK: 18: B ( ) "" B ( )
+// CHECK: 19: B ( ) "" B ( )
 // CHECK: 20: B ( ) "A3 expandedA3 expandedA2 expandedA1 expandedA0 A3C A3" B ( )
 // CHECK: 21: B ( ) "A3 B ( ),expandedA0 A3A(),A0A3C A3" B ( )
 
@@ -120,8 +120,8 @@
 25: F(A0, A(),A0)
 
 
-// CHECK: 22: B ( ) "" B ( ) 
-// CHECK: 23: B ( ) "" B ( ) 
+// CHECK: 22: B ( ) "" B ( )
+// CHECK: 23: B ( ) "" B ( )
 // CHECK: 24: B ( ) "A3 expandedA0 A0C A3" expandedA0 expandedA0 A0C expandedA0 B ( )
 // CHECK: 25: B ( ) "A3 B ( ),expandedA0 A0A(),A0A0C A3" expandedA0 expandedA0 C ( ),expandedA0 A0A(),A0A0C expandedA0 B ( )
 

@@ -31,7 +31,7 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp slt i32 %tmp2, 16
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: constant max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is i32 15
 }
 
 define void @f_sadd_1(ptr %a) {
@@ -66,7 +66,7 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp slt i32 %tmp2, 16
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: constant max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is i32 15
 }
 
 define void @f_sadd_2(ptr %a, ptr %c) {
@@ -216,7 +216,7 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp slt i32 %tmp2, 16
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: constant max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is i32 15
 }
 
 define void @f_ssub(ptr nocapture %a) {
@@ -247,7 +247,7 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp sgt i32 %tmp2, -1
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: constant max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is i32 15
 }
 
 define void @f_usub(ptr nocapture %a) {
@@ -278,7 +278,7 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp sgt i32 %tmp2, -1
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: constant max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is i32 15
 }
 
 define i32 @f_smul(i32 %val_a, i32 %val_b) {

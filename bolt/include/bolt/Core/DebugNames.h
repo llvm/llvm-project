@@ -14,7 +14,7 @@
 #ifndef BOLT_CORE_DEBUG_NAMES_H
 #define BOLT_CORE_DEBUG_NAMES_H
 
-#include "DebugData.h"
+#include "bolt/Core/DebugData.h"
 #include "llvm/CodeGen/AccelTable.h"
 
 namespace llvm {
@@ -24,20 +24,25 @@ public:
   BOLTDWARF5AccelTableData(const uint64_t DieOffset,
                            const std::optional<uint64_t> DefiningParentOffset,
                            const unsigned DieTag, const unsigned UnitID,
-                           const bool IsTU,
+                           const bool IsParentRoot, const bool IsTU,
                            const std::optional<unsigned> SecondUnitID)
       : DWARF5AccelTableData(DieOffset, DefiningParentOffset, DieTag, UnitID,
                              IsTU),
-        SecondUnitID(SecondUnitID) {}
+        SecondUnitID(SecondUnitID), IsParentRoot(IsParentRoot) {}
 
   uint64_t getDieOffset() const { return DWARF5AccelTableData::getDieOffset(); }
   unsigned getDieTag() const { return DWARF5AccelTableData::getDieTag(); }
   unsigned getUnitID() const { return DWARF5AccelTableData::getUnitID(); }
   bool isTU() const { return DWARF5AccelTableData::isTU(); }
+  bool isParentRoot() const { return IsParentRoot; }
   std::optional<unsigned> getSecondUnitID() const { return SecondUnitID; }
+
+  void setPatchOffset(uint64_t PatchOffset) { OffsetVal = PatchOffset; }
+  uint64_t getPatchOffset() const { return std::get<uint64_t>(OffsetVal); }
 
 private:
   std::optional<unsigned> SecondUnitID;
+  bool IsParentRoot;
 };
 
 class DWARF5AcceleratorTable {
@@ -49,10 +54,13 @@ public:
       Abbrev->~DebugNamesAbbrev();
   }
   /// Add DWARF5 Accelerator table entry.
-  /// Input is DWARFUnit being processed, DIE that belongs to it, and potential
-  /// SkeletonCU if the Unit comes from a DWO section.
-  void addAccelTableEntry(DWARFUnit &Unit, const DIE &Die,
-                          const std::optional<uint64_t> &DWOID);
+  /// Input is DWARFUnit being processed, DIE that belongs to it, potential
+  /// DWOID if the Unit comes from a DWO section, and potential parent entry.
+  std::optional<BOLTDWARF5AccelTableData *>
+  addAccelTableEntry(DWARFUnit &Unit, const DIE &Die,
+                     const std::optional<uint64_t> &DWOID,
+                     const uint32_t NumberParentsInChain,
+                     std::optional<BOLTDWARF5AccelTableData *> &Parent);
   /// Set current unit being processed.
   void setCurrentUnit(DWARFUnit &Unit, const uint64_t UnitStartOffset);
   /// Emit Accelerator table.
@@ -63,6 +71,16 @@ public:
   std::unique_ptr<DebugBufferVector> releaseBuffer() {
     return std::move(FullTableBuffer);
   }
+  /// Adds a DIE that is referenced across CUs.
+  void addCrossCUDie(DWARFUnit *Unit, const DIE *Die) {
+    CrossCUDies.insert({Die->getOffset(), {Unit, Die}});
+  }
+  /// Returns true if the DIE can generate an entry for a cross cu reference.
+  /// This only checks TAGs of a DIE because when this is invoked DIE might not
+  /// be fully constructed.
+  bool canGenerateEntryWithCrossCUReference(
+      const DWARFUnit &Unit, const DIE &Die,
+      const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec);
 
 private:
   BinaryContext &BC;
@@ -73,6 +91,10 @@ private:
   uint64_t CurrentUnitOffset = 0;
   const DWARFUnit *CurrentUnit = nullptr;
   std::unordered_map<uint32_t, uint32_t> AbbrevTagToIndexMap;
+  /// Contains a map of TU hashes to a Foreign TU indecies.
+  /// This is used to reduce the size of Foreign TU list since there could be
+  /// multiple TUs with the same hash.
+  DenseMap<uint64_t, uint32_t> TUHashToIndexMap;
 
   /// Represents a group of entries with identical name (and hence, hash value).
   struct HashData {
@@ -121,6 +143,9 @@ private:
   llvm::DenseMap<llvm::hash_code, uint64_t> StrCacheToOffsetMap;
   // Contains DWO ID to CUList Index.
   llvm::DenseMap<uint64_t, uint32_t> CUOffsetsToPatch;
+  // Contains a map of Entry ID to Entry relative offset.
+  llvm::DenseMap<uint64_t, uint32_t> EntryRelativeOffsets;
+  llvm::DenseMap<uint64_t, std::pair<DWARFUnit *, const DIE *>> CrossCUDies;
   /// Adds Unit to either CUList, LocalTUList or ForeignTUList.
   /// Input Unit being processed, and DWO ID if Unit is being processed comes
   /// from a DWO section.
@@ -143,7 +168,7 @@ private:
   /// Write Entries.
   void writeEntries();
   /// Write an Entry.
-  void writeEntry(const BOLTDWARF5AccelTableData &Entry);
+  void writeEntry(BOLTDWARF5AccelTableData &Entry);
   /// Write augmentation_string for BOLT.
   void writeAugmentationString();
   /// Emit out Header for DWARF5 Accelerator table.
@@ -166,6 +191,29 @@ private:
   void emitData();
   /// Emit augmentation string.
   void emitAugmentationString() const;
+  /// Creates a new entry for a given DIE.
+  std::optional<BOLTDWARF5AccelTableData *>
+  addEntry(DWARFUnit &DU, const DIE &CurrDie,
+           const std::optional<uint64_t> &DWOID,
+           const std::optional<BOLTDWARF5AccelTableData *> &Parent,
+           const std::optional<std::string> &Name,
+           const uint32_t NumberParentsInChain);
+  /// Returns UnitID for a given DWARFUnit.
+  uint32_t getUnitID(const DWARFUnit &Unit,
+                     const std::optional<uint64_t> &DWOID, bool &IsTU);
+  std::optional<std::string> getName(DWARFUnit &DU,
+                                     const std::optional<uint64_t> &DWOID,
+                                     const std::string &NameToUse,
+                                     DIEValue ValName);
+  /// Processes a DIE with references to other DIEs for DW_AT_name and
+  /// DW_AT_linkage_name resolution.
+  /// If DW_AT_name exists method creates a new entry for this DIE and returns
+  /// it.
+  std::optional<BOLTDWARF5AccelTableData *> processReferencedDie(
+      DWARFUnit &Unit, const DIE &Die, const std::optional<uint64_t> &DWOID,
+      const std::optional<BOLTDWARF5AccelTableData *> &Parent,
+      const std::string &NameToUse, const uint32_t NumberParentsInChain,
+      const dwarf::Attribute &Attr);
 };
 } // namespace bolt
 } // namespace llvm

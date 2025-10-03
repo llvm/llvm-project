@@ -138,6 +138,8 @@ namespace {
       assert(!M && "Replacing existing Module?");
       M.reset(new llvm::Module(ExpandModuleName(ModuleName, CodeGenOpts), C));
 
+      IRGenFinished = false;
+
       std::unique_ptr<CodeGenModule> OldBuilder = std::move(Builder);
 
       Initialize(*Ctx);
@@ -151,7 +153,7 @@ namespace {
     void Initialize(ASTContext &Context) override {
       Ctx = &Context;
 
-      M->setTargetTriple(Ctx->getTargetInfo().getTriple().getTriple());
+      M->setTargetTriple(Ctx->getTargetInfo().getTriple());
       M->setDataLayout(Ctx->getTargetInfo().getDataLayoutString());
       const auto &SDKVersion = Ctx->getTargetInfo().getSDKVersion();
       if (!SDKVersion.empty())
@@ -179,15 +181,19 @@ namespace {
     }
 
     bool HandleTopLevelDecl(DeclGroupRef DG) override {
+      // Ignore interesting decls from the AST reader after IRGen is finished.
+      if (IRGenFinished)
+        return true; // We can't CodeGen more but pass to other consumers.
+
       // FIXME: Why not return false and abort parsing?
-      if (Diags.hasErrorOccurred())
+      if (Diags.hasUnrecoverableErrorOccurred())
         return true;
 
       HandlingTopLevelDeclRAII HandlingDecl(*this);
 
       // Make sure to emit all elements of a Decl.
-      for (DeclGroupRef::iterator I = DG.begin(), E = DG.end(); I != E; ++I)
-        Builder->EmitTopLevelDecl(*I);
+      for (auto &I : DG)
+        Builder->EmitTopLevelDecl(I);
 
       return true;
     }
@@ -206,7 +212,7 @@ namespace {
     }
 
     void HandleInlineFunctionDefinition(FunctionDecl *D) override {
-      if (Diags.hasErrorOccurred())
+      if (Diags.hasUnrecoverableErrorOccurred())
         return;
 
       assert(D->doesThisDeclarationHaveABody());
@@ -233,7 +239,7 @@ namespace {
     /// client hack on the type, which can occur at any point in the file
     /// (because these can be defined in declspecs).
     void HandleTagDeclDefinition(TagDecl *D) override {
-      if (Diags.hasErrorOccurred())
+      if (Diags.hasUnrecoverableErrorOccurred())
         return;
 
       // Don't allow re-entrant calls to CodeGen triggered by PCH
@@ -269,7 +275,7 @@ namespace {
     }
 
     void HandleTagDeclRequiredDefinition(const TagDecl *D) override {
-      if (Diags.hasErrorOccurred())
+      if (Diags.hasUnrecoverableErrorOccurred())
         return;
 
       // Don't allow re-entrant calls to CodeGen triggered by PCH
@@ -283,7 +289,7 @@ namespace {
 
     void HandleTranslationUnit(ASTContext &Ctx) override {
       // Release the Builder when there is no error.
-      if (!Diags.hasErrorOccurred() && Builder)
+      if (!Diags.hasUnrecoverableErrorOccurred() && Builder)
         Builder->Release();
 
       // If there are errors before or when releasing the Builder, reset
@@ -292,30 +298,31 @@ namespace {
         if (Builder)
           Builder->clear();
         M.reset();
-        return;
       }
+
+      IRGenFinished = true;
     }
 
     void AssignInheritanceModel(CXXRecordDecl *RD) override {
-      if (Diags.hasErrorOccurred())
+      if (Diags.hasUnrecoverableErrorOccurred())
         return;
 
       Builder->RefreshTypeCacheForClass(RD);
     }
 
     void CompleteTentativeDefinition(VarDecl *D) override {
-      if (Diags.hasErrorOccurred())
+      if (Diags.hasUnrecoverableErrorOccurred())
         return;
 
       Builder->EmitTentativeDefinition(D);
     }
 
-    void CompleteExternalDeclaration(VarDecl *D) override {
+    void CompleteExternalDeclaration(DeclaratorDecl *D) override {
       Builder->EmitExternalDeclaration(D);
     }
 
     void HandleVTable(CXXRecordDecl *RD) override {
-      if (Diags.hasErrorOccurred())
+      if (Diags.hasUnrecoverableErrorOccurred())
         return;
 
       Builder->EmitVTable(RD);

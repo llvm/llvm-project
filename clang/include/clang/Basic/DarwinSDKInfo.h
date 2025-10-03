@@ -105,6 +105,30 @@ public:
     map(const VersionTuple &Key, const VersionTuple &MinimumValue,
         std::optional<VersionTuple> MaximumValue) const;
 
+    /// Remap the 'introduced' availability version.
+    /// If None is returned, the 'unavailable' availability should be used
+    /// instead.
+    std::optional<VersionTuple>
+    mapIntroducedAvailabilityVersion(const VersionTuple &Key) const {
+      // API_TO_BE_DEPRECATED is 100000.
+      if (Key.getMajor() == 100000)
+        return VersionTuple(100000);
+      // Use None for maximum to force unavailable behavior for
+      return map(Key, MinimumValue, std::nullopt);
+    }
+
+    /// Remap the 'deprecated' and 'obsoleted' availability version.
+    /// If None is returned for 'obsoleted', the 'unavailable' availability
+    /// should be used instead. If None is returned for 'deprecated', the
+    /// 'deprecated' version should be dropped.
+    std::optional<VersionTuple>
+    mapDeprecatedObsoletedAvailabilityVersion(const VersionTuple &Key) const {
+      // API_TO_BE_DEPRECATED is 100000.
+      if (Key.getMajor() == 100000)
+        return VersionTuple(100000);
+      return map(Key, MinimumValue, MaximumValue);
+    }
+
     static std::optional<RelatedTargetVersionMapping>
     parseJSON(const llvm::json::Object &Obj,
               VersionTuple MaximumDeploymentTarget);
@@ -119,15 +143,18 @@ public:
 
   DarwinSDKInfo(
       VersionTuple Version, VersionTuple MaximumDeploymentTarget,
+      llvm::Triple::OSType OS,
       llvm::DenseMap<OSEnvPair::StorageType,
                      std::optional<RelatedTargetVersionMapping>>
           VersionMappings =
               llvm::DenseMap<OSEnvPair::StorageType,
                              std::optional<RelatedTargetVersionMapping>>())
       : Version(Version), MaximumDeploymentTarget(MaximumDeploymentTarget),
-        VersionMappings(std::move(VersionMappings)) {}
+        OS(OS), VersionMappings(std::move(VersionMappings)) {}
 
   const llvm::VersionTuple &getVersion() const { return Version; }
+
+  const llvm::Triple::OSType &getOS() const { return OS; }
 
   // Returns the optional, target-specific version mapping that maps from one
   // target to another target.
@@ -153,6 +180,7 @@ public:
 private:
   VersionTuple Version;
   VersionTuple MaximumDeploymentTarget;
+  llvm::Triple::OSType OS;
   // Need to wrap the value in an optional here as the value has to be default
   // constructible, and std::unique_ptr doesn't like DarwinSDKInfo being
   // Optional as Optional is trying to copy it in emplace.

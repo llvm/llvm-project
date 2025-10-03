@@ -45,7 +45,6 @@ TEST(ModuleSummaryIndexTest, MemProfSummaryPrinting) {
   for (auto &AI : AllocSummary->allocs())
     OS << "\n" << AI;
 
-  OS.flush();
   EXPECT_EQ(Data, R"(
 Callee: 23 Clones: 0 StackIds: 2, 3
 Callee: 23 Clones: 0 StackIds: 2, 4

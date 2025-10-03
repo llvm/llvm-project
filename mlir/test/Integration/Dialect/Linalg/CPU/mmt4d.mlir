@@ -1,8 +1,8 @@
 // DEFINE: %{compile} =  mlir-opt %s \
 // DEFINE:    -transform-interpreter -test-transform-dialect-erase-schedule \
-// DEFINE:    -one-shot-bufferize -func-bufferize -cse -canonicalize -convert-vector-to-scf -test-lower-to-llvm -o %t
+// DEFINE:    -one-shot-bufferize="bufferize-function-boundaries" -buffer-deallocation-pipeline -cse -canonicalize -convert-vector-to-scf -test-lower-to-llvm -o %t
 // DEFINE: %{entry_point} = mmt4d
-// DEFINE: %{run} = mlir-cpu-runner %t -e %{entry_point} -entry-point-result=void \
+// DEFINE: %{run} = mlir-runner %t -e %{entry_point} -entry-point-result=void \
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
 // RUN: %{compile}
@@ -70,10 +70,10 @@ module @transforms attributes { transform.with_named_sequence } {
 
    // Step 1: Tile
    // Tile parallel dims
-   %tiled_linalg_op_p, %loops:4 = transform.structured.tile_using_for %mmt4d[1, 1, 0, 3, 3, 0]
+   %tiled_linalg_op_p, %loops:4 = transform.structured.tile_using_for %mmt4d tile_sizes [1, 1, 0, 3, 3, 0]
      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
    // Tile reduction dims
-   %tiled_linalg_op_r, %loops2:2 = transform.structured.tile_using_for %tiled_linalg_op_p[0, 0, 1, 0, 0, 1]
+   %tiled_linalg_op_r, %loops2:2 = transform.structured.tile_using_for %tiled_linalg_op_p tile_sizes [0, 0, 1, 0, 0, 1]
      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
    // Step 2: Vectorize

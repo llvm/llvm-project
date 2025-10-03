@@ -66,10 +66,8 @@ define void @mask-high(i64 %arg, ptr dereferenceable(4) %arg1) {
 ; CHECK-NEXT:    --> {(2 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>,+,1}<%bb6> U: full-set S: full-set Exits: (1 + ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>))<nsw> LoopDispositions: { %bb6: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @mask-high
 ; CHECK-NEXT:  Loop %bb6: backedge-taken count is (-1 + (-16 * (%arg /u 16)) + ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>))
-; CHECK-NEXT:  Loop %bb6: constant max backedge-taken count is -9223372034707292162
+; CHECK-NEXT:  Loop %bb6: constant max backedge-taken count is i64 -9223372034707292162
 ; CHECK-NEXT:  Loop %bb6: symbolic max backedge-taken count is (-1 + (-16 * (%arg /u 16)) + ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>))
-; CHECK-NEXT:  Loop %bb6: Predicated backedge-taken count is (-1 + (-16 * (%arg /u 16)) + ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>))
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %bb6: Trip multiple is 1
 ;
 bb:

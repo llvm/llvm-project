@@ -550,6 +550,11 @@ Error ResourceFileWriter::visitVersionStmt(const VersionStmt *Stmt) {
   return Error::success();
 }
 
+Error ResourceFileWriter::visitMenuStmt(const MenuStmt *Stmt) {
+  ObjectData.Menu = Stmt->Value;
+  return Error::success();
+}
+
 Error ResourceFileWriter::writeResource(
     const RCResource *Res,
     Error (ResourceFileWriter::*BodyWriter)(const RCResource *)) {
@@ -626,8 +631,8 @@ Error ResourceFileWriter::writeSingleAccelerator(
   if (IsASCII && IsVirtKey)
     return createAccError("Accelerator can't be both ASCII and VIRTKEY");
 
-  if (!IsVirtKey && (Obj.Flags & (Opt::ALT | Opt::SHIFT | Opt::CONTROL)))
-    return createAccError("Can only apply ALT, SHIFT or CONTROL to VIRTKEY"
+  if (!IsVirtKey && (Obj.Flags & (Opt::SHIFT | Opt::CONTROL)))
+    return createAccError("Can only apply SHIFT or CONTROL to VIRTKEY"
                           " accelerators");
 
   if (Obj.Event.isInt()) {
@@ -1132,9 +1137,8 @@ Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
            ulittle16_t(Res->Height)};
   writeObject(Middle);
 
-  // MENU field. As of now, we don't keep them in the state and can peacefully
-  // think there is no menu attached to the dialog.
-  writeInt<uint16_t>(0);
+  // MENU field.
+  RETURN_IF_ERROR(writeIntOrString(ObjectData.Menu));
 
   // Window CLASS field.
   RETURN_IF_ERROR(writeIntOrString(ObjectData.Class));
@@ -1537,15 +1541,14 @@ Error ResourceFileWriter::writeVersionInfoBody(const RCResource *Base) {
   };
 
   auto FileVer = GetField(VersionInfoFixed::FtFileVersion);
-  RETURN_IF_ERROR(checkNumberFits<uint16_t>(
-      *std::max_element(FileVer.begin(), FileVer.end()), "FILEVERSION fields"));
+  RETURN_IF_ERROR(checkNumberFits<uint16_t>(*llvm::max_element(FileVer),
+                                            "FILEVERSION fields"));
   FixedInfo.FileVersionMS = (FileVer[0] << 16) | FileVer[1];
   FixedInfo.FileVersionLS = (FileVer[2] << 16) | FileVer[3];
 
   auto ProdVer = GetField(VersionInfoFixed::FtProductVersion);
-  RETURN_IF_ERROR(checkNumberFits<uint16_t>(
-      *std::max_element(ProdVer.begin(), ProdVer.end()),
-      "PRODUCTVERSION fields"));
+  RETURN_IF_ERROR(checkNumberFits<uint16_t>(*llvm::max_element(ProdVer),
+                                            "PRODUCTVERSION fields"));
   FixedInfo.ProductVersionMS = (ProdVer[0] << 16) | ProdVer[1];
   FixedInfo.ProductVersionLS = (ProdVer[2] << 16) | ProdVer[3];
 
@@ -1570,7 +1573,6 @@ Expected<std::unique_ptr<MemoryBuffer>>
 ResourceFileWriter::loadFile(StringRef File) const {
   SmallString<128> Path;
   SmallString<128> Cwd;
-  std::unique_ptr<MemoryBuffer> Result;
 
   // 0. The file path is absolute or has a root directory, so we shouldn't
   // try to append it on top of other base directories. (An absolute path

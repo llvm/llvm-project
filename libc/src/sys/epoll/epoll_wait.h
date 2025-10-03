@@ -9,15 +9,13 @@
 #ifndef LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_WAIT_H
 #define LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_WAIT_H
 
-// TODO: Use this include once the include headers are also using quotes.
-// #include "include/llvm-libc-types/struct_epoll_event.h"
+#include "hdr/types/struct_epoll_event.h"
+#include "src/__support/macros/config.h"
 
-#include <sys/epoll.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int epoll_wait(int epfd, epoll_event *events, int maxevents, int timeout);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_WAIT_H

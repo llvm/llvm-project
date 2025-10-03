@@ -1,4 +1,4 @@
-//===--- MacroUsageCheck.cpp - clang-tidy----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "MacroUsageCheck.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Regex.h"
-#include <algorithm>
 #include <cctype>
 #include <functional>
 
@@ -37,7 +37,10 @@ public:
                     const MacroDirective *MD) override {
     if (SM.isWrittenInBuiltinFile(MD->getLocation()) ||
         MD->getMacroInfo()->isUsedForHeaderGuard() ||
-        MD->getMacroInfo()->getNumTokens() == 0)
+        MD->getMacroInfo()->tokens_empty() ||
+        llvm::any_of(MD->getMacroInfo()->tokens(), [](const Token &T) {
+          return T.isOneOf(tok::TokenKind::hash, tok::TokenKind::hashhash);
+        }))
       return;
 
     if (IgnoreCommandLineMacros &&

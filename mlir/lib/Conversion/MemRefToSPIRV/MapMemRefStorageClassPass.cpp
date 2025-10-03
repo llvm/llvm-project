@@ -59,7 +59,8 @@ using namespace mlir;
   MAP_FN(spirv::StorageClass::UniformConstant, 8)                              \
   MAP_FN(spirv::StorageClass::Input, 9)                                        \
   MAP_FN(spirv::StorageClass::Output, 10)                                      \
-  MAP_FN(spirv::StorageClass::PhysicalStorageBuffer, 11)
+  MAP_FN(spirv::StorageClass::PhysicalStorageBuffer, 11)                       \
+  MAP_FN(spirv::StorageClass::Image, 12)
 
 std::optional<spirv::StorageClass>
 spirv::mapMemorySpaceToVulkanStorageClass(Attribute memorySpaceAttr) {
@@ -272,14 +273,16 @@ public:
       const spirv::MemorySpaceToStorageClassMap &memorySpaceMap)
       : memorySpaceMap(memorySpaceMap) {}
 
-  LogicalResult initializeOptions(StringRef options) override {
-    if (failed(Pass::initializeOptions(options)))
+  LogicalResult initializeOptions(
+      StringRef options,
+      function_ref<LogicalResult(const Twine &)> errorHandler) override {
+    if (failed(Pass::initializeOptions(options, errorHandler)))
       return failure();
 
     if (clientAPI == "opencl")
       memorySpaceMap = spirv::mapMemorySpaceToOpenCLStorageClass;
     else if (clientAPI != "vulkan")
-      return failure();
+      return errorHandler(llvm::Twine("Invalid clienAPI: ") + clientAPI);
 
     return success();
   }

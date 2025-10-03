@@ -60,7 +60,7 @@ protected:
   llvm::SmallVector<Hinted<Header>> findHeaders(llvm::StringRef FileName) {
     return include_cleaner::findHeaders(
         AST->sourceManager().translateFileLineCol(
-            AST->fileManager().getFile(FileName).get(),
+            *AST->fileManager().getOptionalFileRef(FileName),
             /*Line=*/1, /*Col=*/1),
         AST->sourceManager(), &PI);
   }
@@ -306,7 +306,7 @@ protected:
     if (!V.Out)
       ADD_FAILURE() << "Couldn't find any decls named " << Name << ".";
     assert(V.Out);
-    return headersForSymbol(*V.Out, AST->sourceManager(), &PI);
+    return headersForSymbol(*V.Out, AST->preprocessor(), &PI);
   }
   llvm::SmallVector<Header> headersForFoo() { return headersFor("foo"); }
 };
@@ -611,21 +611,71 @@ TEST_F(HeadersForSymbolTest, AmbiguousStdSymbolsUsingShadow) {
   Visitor V;
   V.TraverseDecl(AST->context().getTranslationUnitDecl());
   ASSERT_TRUE(V.Out) << "Couldn't find a DeclRefExpr!";
-  EXPECT_THAT(headersForSymbol(*(V.Out->getFoundDecl()),
-                               AST->sourceManager(), &PI),
-              UnorderedElementsAre(
-                  Header(*tooling::stdlib::Header::named("<cstdio>"))));
+  EXPECT_THAT(
+      headersForSymbol(*(V.Out->getFoundDecl()), AST->preprocessor(), &PI),
+      UnorderedElementsAre(
+          Header(*tooling::stdlib::Header::named("<cstdio>"))));
 }
 
-
 TEST_F(HeadersForSymbolTest, StandardHeaders) {
-  Inputs.Code = "void assert();";
+  Inputs.Code = R"cpp(
+    #include "stdlib_internal.h"
+    void assert();
+    void foo() { assert(); }
+  )cpp";
+  Inputs.ExtraFiles["stdlib_internal.h"] = "void assert();";
   buildAST();
   EXPECT_THAT(
       headersFor("assert"),
       // Respect the ordering from the stdlib mapping.
+      // FIXME: Report physical locations too, stdlib_internal.h and main-file
+      // should also be candidates. But they should be down-ranked compared to
+      // stdlib providers.
       UnorderedElementsAre(tooling::stdlib::Header::named("<cassert>"),
                            tooling::stdlib::Header::named("<assert.h>")));
+}
+
+TEST_F(HeadersForSymbolTest, StdlibLangForMacros) {
+  Inputs.Code = R"cpp(
+    #define EOF 0
+    void foo() { EOF; }
+  )cpp";
+  {
+    buildAST();
+    const Macro Eof{AST->preprocessor().getIdentifierInfo("EOF"), {}};
+    EXPECT_THAT(
+        headersForSymbol(Eof, AST->preprocessor(), nullptr),
+        UnorderedElementsAre(tooling::stdlib::Header::named("<cstdio>"),
+                             tooling::stdlib::Header::named("<stdio.h>")));
+  }
+
+  {
+    Inputs.ExtraArgs.push_back("-xc");
+    buildAST();
+    const Macro Eof{AST->preprocessor().getIdentifierInfo("EOF"), {}};
+    EXPECT_THAT(headersForSymbol(Eof, AST->preprocessor(), nullptr),
+                UnorderedElementsAre(tooling::stdlib::Header::named(
+                    "<stdio.h>", tooling::stdlib::Lang::C)));
+  }
+}
+
+TEST_F(HeadersForSymbolTest, ExporterNoNameMatch) {
+  Inputs.Code = R"cpp(
+    #include "exporter/foo.h"
+    #include "foo_public.h"
+  )cpp";
+  Inputs.ExtraArgs.emplace_back("-I.");
+  // Deliberately named as foo_public to make sure it doesn't get name-match
+  // boost and also gets lexicographically bigger order than "exporter/foo.h".
+  Inputs.ExtraFiles["foo_public.h"] = guard(R"cpp(
+    struct foo {};
+  )cpp");
+  Inputs.ExtraFiles["exporter/foo.h"] = guard(R"cpp(
+    #include "foo_public.h" // IWYU pragma: export
+  )cpp");
+  buildAST();
+  EXPECT_THAT(headersForFoo(), ElementsAre(physicalHeader("foo_public.h"),
+                                           physicalHeader("exporter/foo.h")));
 }
 
 } // namespace

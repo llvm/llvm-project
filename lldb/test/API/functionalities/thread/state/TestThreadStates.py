@@ -30,7 +30,6 @@ class ThreadStateTestCase(TestBase):
     @expectedFailureAll(
         oslist=lldbplatformutil.getDarwinOSTriples(), bugnumber="llvm.org/pr23669"
     )
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24660")
     def test_state_after_continue(self):
         """Test thread state after continue."""
         self.build()
@@ -102,10 +101,6 @@ class ThreadStateTestCase(TestBase):
 
     def wait_for_running_event(self, process):
         listener = self.dbg.GetListener()
-        if lldb.remote_platform:
-            lldbutil.expect_state_changes(
-                self, listener, process, [lldb.eStateConnected]
-            )
         lldbutil.expect_state_changes(self, listener, process, [lldb.eStateRunning])
 
     def thread_state_after_continue_test(self):

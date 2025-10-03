@@ -10,15 +10,17 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_SQRT_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/cpu_features.h"
 
-#if !defined(LIBC_TARGET_ARCH_IS_X86)
-#error "Invalid include"
+#if !(defined(LIBC_TARGET_ARCH_IS_X86_64) && defined(LIBC_TARGET_CPU_HAS_SSE2))
+#error "sqrtss / sqrtsd need SSE2"
 #endif
 
 #include "src/__support/FPUtil/generic/sqrt.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <> LIBC_INLINE float sqrt<float>(float x) {
@@ -33,7 +35,7 @@ template <> LIBC_INLINE double sqrt<double>(double x) {
   return result;
 }
 
-#ifdef LIBC_LONG_DOUBLE_IS_FLOAT64
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 template <> LIBC_INLINE long double sqrt<long double>(long double x) {
   long double result;
   __asm__ __volatile__("sqrtsd %x1, %x0" : "=x"(result) : "x"(x));
@@ -47,6 +49,6 @@ template <> LIBC_INLINE long double sqrt<long double>(long double x) {
 #endif
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_SQRT_H

@@ -14,11 +14,13 @@
 #include "Options.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/InstallAPI/Frontend.h"
+#include "clang/InstallAPI/FrontendRecords.h"
+#include "clang/InstallAPI/InstallAPIDiagnostic.h"
+#include "clang/InstallAPI/MachO.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Option/Option.h"
@@ -29,8 +31,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TargetParser/Host.h"
-#include "llvm/TextAPI/RecordVisitor.h"
-#include "llvm/TextAPI/TextAPIWriter.h"
 #include <memory>
 
 using namespace clang;
@@ -39,8 +39,8 @@ using namespace clang::driver::options;
 using namespace llvm::opt;
 using namespace llvm::MachO;
 
-static bool runFrontend(StringRef ProgName, bool Verbose,
-                        const InstallAPIContext &Ctx,
+static bool runFrontend(StringRef ProgName, Twine Label, bool Verbose,
+                        InstallAPIContext &Ctx,
                         llvm::vfs::InMemoryFileSystem *FS,
                         const ArrayRef<std::string> InitialArgs) {
 
@@ -50,7 +50,7 @@ static bool runFrontend(StringRef ProgName, bool Verbose,
     return true;
 
   if (Verbose)
-    llvm::errs() << getName(Ctx.Type) << " Headers:\n"
+    llvm::errs() << Label << " Headers:\n"
                  << ProcessedInput->getBuffer() << "\n\n";
 
   std::string InputFile = ProcessedInput->getBufferIdentifier().str();
@@ -59,55 +59,42 @@ static bool runFrontend(StringRef ProgName, bool Verbose,
   // headers.
   std::vector<std::string> Args = {ProgName.data(), "-target",
                                    Ctx.Slice->getTriple().str().c_str()};
-  llvm::copy(InitialArgs, std::back_inserter(Args));
+  llvm::append_range(Args, InitialArgs);
   Args.push_back(InputFile);
 
   // Create & run invocation.
   clang::tooling::ToolInvocation Invocation(
-      std::move(Args), std::make_unique<InstallAPIAction>(*Ctx.Slice), Ctx.FM);
-
+      std::move(Args), std::make_unique<InstallAPIAction>(Ctx), Ctx.FM);
   return Invocation.run();
 }
 
 static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   // Setup Diagnostics engine.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  DiagnosticOptions DiagOpts;
   const llvm::opt::OptTable &ClangOpts = clang::driver::getDriverOptTable();
   unsigned MissingArgIndex, MissingArgCount;
   llvm::opt::InputArgList ParsedArgs = ClangOpts.ParseArgs(
       ArrayRef(Args).slice(1), MissingArgIndex, MissingArgCount);
-  ParseDiagnosticArgs(*DiagOpts, ParsedArgs);
+  ParseDiagnosticArgs(DiagOpts, ParsedArgs);
 
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diag = new clang::DiagnosticsEngine(
-      new clang::DiagnosticIDs(), DiagOpts.get(),
-      new clang::TextDiagnosticPrinter(llvm::errs(), DiagOpts.get()));
+  auto Diag = llvm::makeIntrusiveRefCnt<clang::DiagnosticsEngine>(
+      clang::DiagnosticIDs::create(), DiagOpts,
+      new clang::TextDiagnosticPrinter(llvm::errs(), DiagOpts));
 
   // Create file manager for all file operations and holding in-memory generated
   // inputs.
-  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
-      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto OverlayFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+          llvm::vfs::getRealFileSystem());
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  IntrusiveRefCntPtr<clang::FileManager> FM(
-      new FileManager(clang::FileSystemOptions(), OverlayFileSystem));
+  IntrusiveRefCntPtr<clang::FileManager> FM =
+      llvm::makeIntrusiveRefCnt<FileManager>(clang::FileSystemOptions(),
+                                             OverlayFileSystem);
 
-  // Set up driver to parse input arguments.
-  auto DriverArgs = llvm::ArrayRef(Args).slice(1);
-  clang::driver::Driver Driver(ProgName, llvm::sys::getDefaultTargetTriple(),
-                               *Diag, "clang installapi tool");
-  auto TargetAndMode =
-      clang::driver::ToolChain::getTargetAndModeFromProgramName(ProgName);
-  Driver.setTargetAndMode(TargetAndMode);
-  bool HasError = false;
-  llvm::opt::InputArgList ArgList =
-      Driver.ParseArgStrings(DriverArgs, /*UseDriverMode=*/true, HasError);
-  if (HasError)
-    return EXIT_FAILURE;
-  Driver.setCheckInputsExist(false);
-
-  // Capture InstallAPI specific options and diagnose any option errors.
-  Options Opts(*Diag, FM.get(), ArgList);
+  // Capture all options and diagnose any errors.
+  Options Opts(*Diag, FM.get(), Args, ProgName);
   if (Diag->hasErrorOccurred())
     return EXIT_FAILURE;
 
@@ -115,56 +102,102 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   if (Diag->hasErrorOccurred())
     return EXIT_FAILURE;
 
+  if (!Opts.DriverOpts.DylibToVerify.empty()) {
+    TargetList Targets;
+    for (const auto &T : Opts.DriverOpts.Targets)
+      Targets.push_back(T.first);
+    if (!Ctx.Verifier->verifyBinaryAttrs(Targets, Ctx.BA, Ctx.Reexports,
+                                         Opts.LinkerOpts.AllowableClients,
+                                         Opts.LinkerOpts.RPaths, Ctx.FT))
+      return EXIT_FAILURE;
+  };
+
   // Set up compilation.
   std::unique_ptr<CompilerInstance> CI(new CompilerInstance());
-  CI->setFileManager(FM.get());
+  CI->setFileManager(FM);
   CI->createDiagnostics();
   if (!CI->hasDiagnostics())
     return EXIT_FAILURE;
 
-  // Execute and gather AST results.
-  llvm::MachO::Records FrontendResults;
+  // Execute, verify and gather AST results.
+  // An invocation is ran for each unique target triple and for each header
+  // access level.
+  Records FrontendRecords;
   for (const auto &[Targ, Trip] : Opts.DriverOpts.Targets) {
+    Ctx.Verifier->setTarget(Targ);
+    Ctx.Slice = std::make_shared<FrontendRecordsSlice>(Trip);
     for (const HeaderType Type :
          {HeaderType::Public, HeaderType::Private, HeaderType::Project}) {
-      Ctx.Slice = std::make_shared<RecordsSlice>(Trip);
+      std::vector<std::string> ArgStrings = Opts.getClangFrontendArgs();
+      Opts.addConditionalCC1Args(ArgStrings, Trip, Type);
       Ctx.Type = Type;
-      if (!runFrontend(ProgName, Opts.DriverOpts.Verbose, Ctx,
-                       InMemoryFileSystem.get(), Opts.getClangFrontendArgs()))
+      StringRef HeaderLabel = getName(Ctx.Type);
+      if (!runFrontend(ProgName, HeaderLabel, Opts.DriverOpts.Verbose, Ctx,
+                       InMemoryFileSystem.get(), ArgStrings))
         return EXIT_FAILURE;
-      FrontendResults.emplace_back(std::move(Ctx.Slice));
+
+      // Run extra passes for unique compiler arguments.
+      for (const auto &[Label, ExtraArgs] : Opts.FEOpts.UniqueArgs) {
+        std::vector<std::string> FinalArguments = ArgStrings;
+        llvm::append_range(FinalArguments, ExtraArgs);
+        if (!runFrontend(ProgName, Label + " " + HeaderLabel,
+                         Opts.DriverOpts.Verbose, Ctx, InMemoryFileSystem.get(),
+                         FinalArguments))
+          return EXIT_FAILURE;
+      }
     }
+    FrontendRecords.emplace_back(std::move(Ctx.Slice));
   }
 
-  // After symbols have been collected, prepare to write output.
-  auto Out = CI->createOutputFile(Ctx.OutputLoc, /*Binary=*/false,
-                                  /*RemoveFileOnSignal=*/false,
-                                  /*UseTemporary=*/false,
-                                  /*CreateMissingDirectories=*/false);
-  if (!Out)
+  if (Ctx.Verifier->verifyRemainingSymbols() == DylibVerifier::Result::Invalid)
     return EXIT_FAILURE;
 
-  // Assign attributes for serialization.
-  auto Symbols = std::make_unique<SymbolSet>();
-  for (const auto &FR : FrontendResults) {
-    SymbolConverter Converter(Symbols.get(), FR->getTarget());
-    FR->visit(Converter);
+  // After symbols have been collected, prepare to write output.
+  auto Out = CI->getOrCreateOutputManager().createFile(
+      Ctx.OutputLoc, llvm::vfs::OutputConfig()
+                         .setTextWithCRLF()
+                         .setNoImplyCreateDirectories()
+                         .setNoAtomicWrite());
+  if (!Out) {
+    Diag->Report(diag::err_cannot_open_file) << Ctx.OutputLoc;
+    return EXIT_FAILURE;
   }
 
-  InterfaceFile IF(std::move(Symbols));
+  // Assign attributes for serialization.
+  InterfaceFile IF(Ctx.Verifier->takeExports());
+  // Assign attributes that are the same per slice first.
   for (const auto &TargetInfo : Opts.DriverOpts.Targets) {
     IF.addTarget(TargetInfo.first);
     IF.setFromBinaryAttrs(Ctx.BA, TargetInfo.first);
   }
+  // Then assign potentially different attributes per slice after.
+  auto assignLibAttrs =
+      [&IF](
+          const auto &Attrs,
+          std::function<void(InterfaceFile *, StringRef, const Target &)> Add) {
+        for (const auto &[Attr, ArchSet] : Attrs.get())
+          for (const auto &T : IF.targets(ArchSet))
+            Add(&IF, Attr, T);
+      };
+
+  assignLibAttrs(Opts.LinkerOpts.AllowableClients,
+                 &InterfaceFile::addAllowableClient);
+  assignLibAttrs(Opts.LinkerOpts.RPaths, &InterfaceFile::addRPath);
+  assignLibAttrs(Ctx.Reexports, &InterfaceFile::addReexportedLibrary);
 
   // Write output file and perform CI cleanup.
   if (auto Err = TextAPIWriter::writeToStream(*Out, IF, Ctx.FT)) {
-    Diag->Report(diag::err_cannot_open_file) << Ctx.OutputLoc;
-    CI->clearOutputFiles(/*EraseFiles=*/true);
+    Diag->Report(diag::err_cannot_write_file)
+        << Ctx.OutputLoc << std::move(Err);
+    if (auto Err = Out->discard())
+      llvm::consumeError(std::move(Err));
     return EXIT_FAILURE;
   }
-
-  CI->clearOutputFiles(/*EraseFiles=*/false);
+  if (auto Err = Out->keep()) {
+    Diag->Report(diag::err_cannot_write_file)
+        << Ctx.OutputLoc << std::move(Err);
+    return EXIT_FAILURE;
+  }
   return EXIT_SUCCESS;
 }
 

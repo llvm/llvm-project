@@ -16,6 +16,7 @@
 #include <vector>
 
 namespace lldb_private {
+class ScriptInterpreter;
 namespace python {
 class SWIGBridge;
 }
@@ -54,7 +55,9 @@ public:
   SBFrame GetFrame() const;
 
 protected:
+  friend class SBInstructionList;
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::ScriptInterpreter;
 
   lldb_private::ExecutionContextRef *get() const;
 
