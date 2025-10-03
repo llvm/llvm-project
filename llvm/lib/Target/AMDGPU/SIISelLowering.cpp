@@ -64,14 +64,6 @@ static cl::opt<bool> UseDivergentRegisterIndexing(
     cl::desc("Use indirect register addressing for divergent indexes"),
     cl::init(false));
 
-// TODO: This option should be removed once we switch to always using PTRADD in
-// the SelectionDAG.
-static cl::opt<bool> UseSelectionDAGPTRADD(
-    "amdgpu-use-sdag-ptradd", cl::Hidden,
-    cl::desc("Generate ISD::PTRADD nodes for 64-bit pointer arithmetic in the "
-             "SelectionDAG ISel"),
-    cl::init(false));
-
 static bool denormalModeIsFlushAllF32(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   return Info->getMode().FP32Denormals == DenormalMode::getPreserveSign();
@@ -5970,9 +5962,9 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .add(Src1);
     // clang-format on
 
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CSELECT_B64), Dest1.getReg())
-        .addImm(1)
-        .addImm(0);
+    unsigned SelOpc =
+        Subtarget->isWave64() ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
+    BuildMI(*BB, MI, DL, TII->get(SelOpc), Dest1.getReg()).addImm(-1).addImm(0);
 
     MI.eraseFromParent();
     return BB;
@@ -11466,7 +11458,7 @@ static bool isNoUnsignedWrap(SDValue Addr) {
 
 bool SITargetLowering::shouldPreservePtrArith(const Function &F,
                                               EVT PtrVT) const {
-  return UseSelectionDAGPTRADD && PtrVT == MVT::i64;
+  return PtrVT == MVT::i64;
 }
 
 bool SITargetLowering::canTransformPtrArithOutOfBounds(const Function &F,

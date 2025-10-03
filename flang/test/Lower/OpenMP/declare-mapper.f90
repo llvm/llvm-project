@@ -280,6 +280,10 @@ subroutine declare_mapper_nested_parent
   end type real_t
 
   !$omp declare mapper (custommapper : real_t :: t) map(tofrom: t%base_arr, t%real_arr)
+  ! CHECK: omp.declare_mapper @{{.*custommapper}}
+  ! CHECK-DAG: omp.map.info {{.*}} {name = "t%base_t%base_arr"}
+  ! CHECK-DAG: omp.map.info {{.*}} {name = "t%real_arr"}
+  ! CHECK: omp.declare_mapper.info
 
   type(real_t) :: r
 
@@ -290,12 +294,9 @@ subroutine declare_mapper_nested_parent
   r%inner%deep_arr = 4.0
   r%real_arr = 0.0
 
-  ! CHECK: omp.target
-  ! Check implicit maps for nested parent and deep nested allocatable payloads
-  ! CHECK-DAG: omp.map.info {{.*}} {name = "r.base_arr.implicit_map"}
+  ! Check implicit maps for deep nested allocatable payloads not covered by mapper
   ! CHECK-DAG: omp.map.info {{.*}} {name = "r.deep_arr.implicit_map"}
-  ! The declared mapper's own allocatable is still mapped implicitly
-  ! CHECK-DAG: omp.map.info {{.*}} {name = "r.real_arr.implicit_map"}
+  ! CHECK: omp.target
   !$omp target map(mapper(custommapper), tofrom: r)
     r%real_arr = r%base_arr(1) + r%inner%deep_arr(1)
   !$omp end target
