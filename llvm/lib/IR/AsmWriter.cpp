@@ -63,6 +63,7 @@
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/TypedPointerType.h"
 #include "llvm/IR/Use.h"
+#include "llvm/IR/UseListOrder.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -101,6 +102,13 @@ static cl::opt<bool> PrintInstDebugLocs(
 static cl::opt<bool> PrintProfData(
     "print-prof-data", cl::Hidden,
     cl::desc("Pretty print perf data (branch weights, etc) when dumping"));
+
+static cl::opt<std::optional<bool>, /*ExternalStorage=*/false,
+               PreserveUseListOrderOptionParser>
+    PreserveAssemblyUseListOrder(
+        "preserve-ll-uselistorder",
+        cl::desc("Preserve use-list order when writing LLVM assembly."),
+        cl::init(std::nullopt), cl::Hidden, cl::ValueOptional);
 
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
@@ -2929,7 +2937,8 @@ AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                bool IsForDebug, bool ShouldPreserveUseListOrder)
     : Out(o), TheModule(M), Machine(Mac), TypePrinter(M), AnnotationWriter(AAW),
       IsForDebug(IsForDebug),
-      ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {
+      ShouldPreserveUseListOrder(
+          PreserveAssemblyUseListOrder.value_or(ShouldPreserveUseListOrder)) {
   if (!TheModule)
     return;
   for (const GlobalObject &GO : TheModule->global_objects())
@@ -2940,7 +2949,9 @@ AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
 AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                const ModuleSummaryIndex *Index, bool IsForDebug)
     : Out(o), TheIndex(Index), Machine(Mac), TypePrinter(/*Module=*/nullptr),
-      IsForDebug(IsForDebug), ShouldPreserveUseListOrder(false) {}
+      IsForDebug(IsForDebug),
+      ShouldPreserveUseListOrder(PreserveAssemblyUseListOrder.value_or(false)) {
+}
 
 void AssemblyWriter::writeOperand(const Value *Operand, bool PrintType) {
   if (!Operand) {
