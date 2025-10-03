@@ -5819,8 +5819,9 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
                                               Depth + 1);
     }
 
-    // Case 2: Vector -> Scalar
-    if (SrcVT.isVector() && !TgtVT.isVector())
+    // Case 2: Vector -> Scalar, or Scalable Vector -> Scalable Vector
+    if ((SrcVT.isVector() && !TgtVT.isVector()) ||
+        (SrcVT.isScalableVT() && TgtVT.isScalableVT()))
       return isGuaranteedNotToBeUndefOrPoison(Src, PoisonOnly, Depth + 1);
 
     // Case 3: Vector -> Vector
