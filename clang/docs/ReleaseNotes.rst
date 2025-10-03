@@ -91,7 +91,7 @@ ABI Changes in This Version
 ---------------------------
 
 - Fixed Microsoft calling convention to match how MSVC returns vector types from
-  C++ member functions on x86-64. This change resolves incompatibilities with
+  C++ member functions on x86/x86-64. This change resolves incompatibilities with
   code compiled by MSVC but will introduce incompatibilities with code compiled
   by Clang 21 and earlier versions, unless the ``-fclang-abi-compat=21`` option
   is used. (#GH104)
