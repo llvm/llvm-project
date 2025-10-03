@@ -4488,6 +4488,25 @@ static SDValue lowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG,
   return DAG.getMergeValues({Sum, OutFlag}, DL);
 }
 
+static SDValue lowerIntNeonIntrinsic(SDValue Op, unsigned Opcode,
+                                     SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  EVT OrigVT = Op.getValueType();
+  assert((OrigVT == MVT::i32 || OrigVT == MVT::i64) &&
+         "lowerIntNeonIntrinsic expects 32/64-bit scalar operation.");
+
+  EVT NodeVT = (OrigVT == MVT::i32) ? MVT::f32 : MVT::f64;
+
+  SmallVector<SDValue, 2> NewOps;
+  NewOps.reserve(Op.getNumOperands() - 1);
+
+  for (unsigned I = 1, E = Op.getNumOperands(); I < E; ++I)
+    NewOps.push_back(DAG.getBitcast(NodeVT, Op.getOperand(I)));
+
+  SDValue OpNode = DAG.getNode(Opcode, DL, NodeVT, NewOps);
+  return DAG.getBitcast(OrigVT, OpNode);
+}
+
 static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
   // Let legalize expand this if it isn't a legal type yet.
   if (!DAG.getTargetLoweringInfo().isTypeLegal(Op.getValueType()))
@@ -6359,26 +6378,45 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
     return SDValue();
+  case Intrinsic::aarch64_neon_sqrshl:
+    if (Op.getValueType().isVector())
+      return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQRSHL, DAG);
+  case Intrinsic::aarch64_neon_sqshl:
+    if (Op.getValueType().isVector())
+      return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQSHL, DAG);
+  case Intrinsic::aarch64_neon_uqrshl:
+    if (Op.getValueType().isVector())
+      return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::UQRSHL, DAG);
+  case Intrinsic::aarch64_neon_uqshl:
+    if (Op.getValueType().isVector())
+      return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::UQSHL, DAG);
   case Intrinsic::aarch64_neon_sqadd:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::SADDSAT, DL, Op.getValueType(), Op.getOperand(1),
                          Op.getOperand(2));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQADD, DAG);
+
   case Intrinsic::aarch64_neon_sqsub:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::SSUBSAT, DL, Op.getValueType(), Op.getOperand(1),
                          Op.getOperand(2));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQSUB, DAG);
+
   case Intrinsic::aarch64_neon_uqadd:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::UADDSAT, DL, Op.getValueType(), Op.getOperand(1),
                          Op.getOperand(2));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::UQADD, DAG);
   case Intrinsic::aarch64_neon_uqsub:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::USUBSAT, DL, Op.getValueType(), Op.getOperand(1),
                          Op.getOperand(2));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::UQSUB, DAG);
+
   case Intrinsic::aarch64_sve_whilelt:
     return optimizeIncrementingWhile(Op.getNode(), DAG, /*IsSigned=*/true,
                                      /*IsEqual=*/false);
@@ -6713,6 +6751,52 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::experimental_vector_match: {
     return LowerVectorMatch(Op, DAG);
   }
+    // case Intrinsic::aarch64_neon_fcvtas:
+    // case Intrinsic::aarch64_neon_fcvtau:
+    // case Intrinsic::aarch64_neon_fcvtms:
+    // case Intrinsic::aarch64_neon_fcvtmu:
+    // case Intrinsic::aarch64_neon_fcvtns:
+    // case Intrinsic::aarch64_neon_fcvtnu:
+    // case Intrinsic::aarch64_neon_fcvtps:
+    // case Intrinsic::aarch64_neon_fcvtpu:
+    // case Intrinsic::aarch64_neon_fcvtzs:
+    // case Intrinsic::aarch64_neon_fcvtzu:
+    // case Intrinsic::aarch64_neon_sqabs:
+    // case Intrinsic::aarch64_neon_sqneg:
+    // case Intrinsic::aarch64_neon_scalar_sqxtn:
+    // case Intrinsic::aarch64_neon_scalar_sqxtun:
+    // case Intrinsic::aarch64_neon_scalar_uqxtn:
+    // case Intrinsic::aarch64_neon_sqadd:
+    // case Intrinsic::aarch64_neon_sqdmulh:
+    // case Intrinsic::aarch64_neon_sqrdmulh:
+    // case Intrinsic::aarch64_neon_sqrshl:
+    // case Intrinsic::aarch64_neon_sqshl:
+    // case Intrinsic::aarch64_neon_sqshlu:
+    // case Intrinsic::aarch64_neon_sqsub:
+    // case Intrinsic::aarch64_neon_srshl:
+    // case Intrinsic::aarch64_neon_sshl:
+    // case Intrinsic::aarch64_neon_suqadd:
+    // case Intrinsic::aarch64_neon_uqadd:
+    // case Intrinsic::aarch64_neon_uqrshl:
+    // case Intrinsic::aarch64_neon_uqshl:
+    // case Intrinsic::aarch64_neon_uqsub:
+    // case Intrinsic::aarch64_neon_urshl:
+    // case Intrinsic::aarch64_neon_ushl:
+    // case Intrinsic::aarch64_neon_usqadd:
+    // case Intrinsic::aarch64_neon_rshrn:
+    // case Intrinsic::aarch64_neon_sqrshrn:
+    // case Intrinsic::aarch64_neon_sqrshrun:
+    // case Intrinsic::aarch64_neon_sqshrn:
+    // case Intrinsic::aarch64_neon_sqshrun:
+    // case Intrinsic::aarch64_neon_uqrshrn:
+    // case Intrinsic::aarch64_neon_uqshrn:
+    // case Intrinsic::aarch64_neon_sqdmulh_lane:
+    // case Intrinsic::aarch64_neon_sqdmulh_laneq:
+    // case Intrinsic::aarch64_neon_sqrdmulh_lane:
+    // case Intrinsic::aarch64_neon_sqrdmulh_laneq:
+    // case Intrinsic::aarch64_neon_sqrdmlah:
+    // case Intrinsic::aarch64_neon_sqrdmlsh:
+    // case Intrinsic::aarch64_neon_abs:{
   }
 }
 
