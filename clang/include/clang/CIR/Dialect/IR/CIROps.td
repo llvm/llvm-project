@@ -285,11 +285,11 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
               -> !cir.ptr<!rec_Derived>
     %2 = cir.dyn_cast ref %r : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
               #cir.dyn_cast_info<
-                #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>,
-                #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>,
-                @__dynamic_cast,
-                @__cxa_bad_cast,
-                #cir.int<0> : !s64i
+                srcRtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>,
+                destRtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>,
+                runtimeFunc = @__dynamic_cast,
+                badCastFunc = @__cxa_bad_cast,
+                offsetHint = #cir.int<0> : !s64i
               >
     ```
   }];
@@ -313,7 +313,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
 
   let extraClassDeclaration = [{
     /// Determine whether this operation models reference casting in C++.
-    bool isRefcast() {
+    bool isRefCast() {
       return getKind() == ::cir::DynamicCastKind::Ref;
     }
 

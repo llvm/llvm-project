@@ -643,8 +643,9 @@ def CIR_DynamicCastInfoAttr : CIR_Attr<"DynamicCastInfo", "dyn_cast_info"> {
   let genVerifyDecl = 1;
   let assemblyFormat = [{
     `<`
-      qualified($srcRtti) `,` qualified($destRtti) `,`
-      $runtimeFunc `,` $badCastFunc `,` qualified($offsetHint)
+      `srcRtti` `=` qualified($srcRtti) `,` `destRtti` `=` qualified($destRtti)
+      `,` `runtimeFunc` `=` $runtimeFunc `,` `badCastFunc` `=` $badCastFunc `,`
+      `offsetHint` `=` qualified($offsetHint)
     `>`
   }];
 
