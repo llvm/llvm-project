@@ -3,16 +3,16 @@ FROM docker.io/library/ubuntu:24.04 AS llvm-downloader
 ENV LLVM_VERSION=21.1.2
 
 RUN apt-get update && \
-    apt-get install -y wget pixz && \
+    apt-get install -y wget xz-utils && \
     wget --progress=bar:force -O llvm.tar.xz https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz && \
     mkdir -p /llvm-extract && \
-    pixz -d llvm.tar.xz && \
-    tar -xvf llvm.tar -C /llvm-extract LLVM-${LLVM_VERSION}-Linux-X64/bin/ && \
-    rm llvm.tar
+    tar -xvJf llvm.tar.xz -C /llvm-extract LLVM-${LLVM_VERSION}-Linux-X64/bin/ && \
+    rm llvm.tar.xz
 
 FROM docker.io/library/ubuntu:24.04 AS base
 
 ENV LLVM_SYSROOT=/opt/llvm
+ENV LLVM_VERSION=21.1.2
 
 # Need nodejs for some of the GitHub actions.
 # Need git for git-clang-format.
@@ -21,10 +21,8 @@ RUN apt-get update && \
     git \
     nodejs \
     sudo \
-    # These are needed by the premerge pipeline. Pip and venv are used to
-    # install dependent python packages.
-    # Having a symlink from python to python3 enables code sharing between
-    # the Linux and Windows pipelines.
+    # These are needed by the premerge pipeline.
+    # Pip and venv are used to install dependent python packages.
     python3-pip \
     python3-venv \
     python-is-python3 && \
@@ -47,8 +45,6 @@ WORKDIR /home/gha
 
 FROM base AS ci-container-code-format
 
-ENV LLVM_VERSION=21.1.2
-
 COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-format ${LLVM_SYSROOT}/bin/clang-format
 
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
@@ -61,8 +57,6 @@ RUN python -m venv venv && \
 
 # Stage 4: clang-lint container
 FROM base AS ci-container-code-lint
-
-ENV LLVM_VERSION=21.1.2
 
 COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-tidy ${LLVM_SYSROOT}/bin/
 COPY clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py ${LLVM_SYSROOT}/bin/clang-tidy-diff.py
