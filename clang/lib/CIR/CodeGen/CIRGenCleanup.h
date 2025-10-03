@@ -138,5 +138,13 @@ inline EHScopeStack::iterator EHScopeStack::begin() const {
   return iterator(startOfData);
 }
 
+inline EHScopeStack::iterator
+EHScopeStack::find(stable_iterator savePoint) const {
+  assert(savePoint.isValid() && "finding invalid savepoint");
+  assert(savePoint.size <= stable_begin().size &&
+         "finding savepoint after pop");
+  return iterator(endOfBuffer - savePoint.size);
+}
+
 } // namespace clang::CIRGen
 #endif // CLANG_LIB_CIR_CODEGEN_CIRGENCLEANUP_H

@@ -178,3 +178,36 @@ void CIRGenFunction::popCleanupBlocks(
     popCleanupBlock();
   }
 }
+
+void CIRGenFunction::deactivateCleanupBlock(
+    EHScopeStack::stable_iterator cleanup, mlir::Operation *dominatingIP) {
+  assert(cleanup != ehStack.stable_end() && "deactivating bottom of stack?");
+  EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.find(cleanup));
+  assert(scope.isActive() && "double deactivation");
+
+  // If it's the top of the stack, just pop it, but do so only if it belongs
+  // to the current RunCleanupsScope.
+  if (cleanup == ehStack.stable_begin() &&
+      currentCleanupStackDepth.strictlyEncloses(cleanup)) {
+
+    // Per comment below, checking EHAsynch is not really necessary
+    // it's there to assure zero-impact w/o EHAsynch option
+    if (!scope.isNormalCleanup() && getLangOpts().EHAsynch) {
+      cgm.errorNYI("deactivateCleanupBlock: EHAsynch & non-normal cleanup");
+      return;
+    }
+
+    // From LLVM: If it's a normal cleanup, we need to pretend that the
+    // fallthrough is unreachable.
+    // CIR remarks: LLVM uses an empty insertion point to signal behavior
+    // change to other codegen paths (triggered by PopCleanupBlock).
+    // CIRGen doesn't do that yet, but let's mimic just in case.
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.clearInsertionPoint();
+    popCleanupBlock();
+    return;
+  }
+
+  // Otherwise, follow the general case.
+  cgm.errorNYI("deactivateCleanupBlock: the general case");
+}

@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
-void foo() {
+void rethrow() {
   throw;
 }
 
@@ -18,7 +18,7 @@ void foo() {
 // OGCG: call void @__cxa_rethrow()
 // OGCG: unreachable
 
-int foo1(int a, int b) {
+int rethrow_from_block(int a, int b) {
   if (b == 0)
     throw;
   return a / b;
@@ -83,3 +83,43 @@ int foo1(int a, int b) {
 // OGCG:  %[[TMP_B:.*]] = load i32, ptr %[[B_ADDR]], align 4
 // OGCG:  %[[DIV_A_B:.*]] = sdiv i32 %[[TMP_A]], %[[TMP_B]]
 // OGCG:  ret i32 %[[DIV_A_B]]
+
+void throw_scalar() { 
+  throw 1;
+}
+
+// CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
+// CIR: %[[EXCEPTION_VALUE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: cir.store{{.*}} %[[EXCEPTION_VALUE]], %[[EXCEPTION_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR: cir.unreachable
+
+// LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 4)
+// LLVM: store i32 1, ptr %[[EXCEPTION_ADDR]], align 16
+// LLVM: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIi, ptr null)
+// LLVM: unreachable
+
+// OGCG: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 4)
+// OGCG: store i32 1, ptr %[[EXCEPTION_ADDR]], align 16
+// OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIi, ptr null)
+// OGCG: unreachable
+
+void paren_expr() { (throw 0, 1 + 2); }
+
+// CIR:   %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
+// CIR:   %[[EXCEPTION_VALUE:.*]] = cir.const #cir.int<0> : !s32i
+// CIR:   cir.store{{.*}} %[[EXCEPTION_VALUE]], %[[EXCEPTION_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:   cir.unreachable
+// CIR: ^bb1:
+// CIR:   %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:   %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
+// CIR:   %[[ADD:.*]] = cir.binop(add, %[[CONST_1]], %[[CONST_2]]) nsw : !s32i
+
+// LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 4)
+// LLVM: store i32 0, ptr %[[EXCEPTION_ADDR]], align 16
+// LLVM: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIi, ptr null)
+
+// OGCG: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 4)
+// OGCG: store i32 0, ptr %[[EXCEPTION_ADDR]], align 16
+// OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIi, ptr null)
