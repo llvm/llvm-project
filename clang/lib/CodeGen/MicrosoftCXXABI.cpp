@@ -1168,26 +1168,32 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
 }
 
 bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
+  QualType RetTy = FI.getReturnType();
   bool isIndirectReturn = false;
-  if (const CXXRecordDecl *RD = FI.getReturnType()->getAsCXXRecordDecl()) {
-    bool isTrivialForABI = RD->canPassInRegisters() &&
-                           isTrivialForMSVC(RD, FI.getReturnType(), CGM);
+
+  if (const CXXRecordDecl *RD = RetTy->getAsCXXRecordDecl()) {
+    bool isTrivialForABI =
+        RD->canPassInRegisters() && isTrivialForMSVC(RD, RetTy, CGM);
 
     // MSVC always returns structs indirectly from C++ instance methods.
     isIndirectReturn = !isTrivialForABI || FI.isInstanceMethod();
-  } else if (isa<VectorType>(FI.getReturnType())) {
-    // On x86, MSVC seems to only return vector types indirectly from non-
-    // vectorcall C++ instance methods.
-    isIndirectReturn =
-        CGM.getTarget().getTriple().isX86() && FI.isInstanceMethod() &&
-        FI.getCallingConvention() != llvm::CallingConv::X86_VectorCall &&
-        // Clang <= 21.0 did not do this.
-        getContext().getLangOpts().getClangABICompat() >
-            LangOptions::ClangABI::Ver21;
+  } else if (isa<VectorType>(RetTy) &&
+             getContext().getLangOpts().getClangABICompat() >
+                 LangOptions::ClangABI::Ver21) {
+    // On x86, MSVC usually returns vector types indirectly from C++ instance
+    // methods. (Clang <= 21.0 always returned vector types directly.)
+    if (CGM.getTarget().getTriple().isX86() && FI.isInstanceMethod()) {
+      // However, MSVC returns vector types > 64 bits directly from vectorcall
+      // instance methods.
+      if (FI.getCallingConvention() == llvm::CallingConv::X86_VectorCall)
+        isIndirectReturn = getContext().getTypeSize(RetTy) == 64;
+      else
+        isIndirectReturn = true;
+    }
   }
 
   if (isIndirectReturn) {
-    CharUnits Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
+    CharUnits Align = CGM.getContext().getTypeAlignInChars(RetTy);
     FI.getReturnInfo() = ABIArgInfo::getIndirect(
         Align, /*AddrSpace=*/CGM.getDataLayout().getAllocaAddrSpace(),
         /*ByVal=*/false);
