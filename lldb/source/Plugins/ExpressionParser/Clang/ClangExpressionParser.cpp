@@ -97,6 +97,7 @@
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 #include "lldb/Utility/XcodeSDK.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <cctype>
 #include <memory>
@@ -550,6 +551,7 @@ static void SetupLangOpts(CompilerInstance &compiler,
         lldb_private::Language::GetNameForLanguageType(language));
 
   lldb::LanguageType language_for_note = language;
+  llvm::StringRef language_fallback_reason;
 
   LangOptions &lang_opts = compiler.getLangOpts();
 
@@ -564,14 +566,20 @@ static void SetupLangOpts(CompilerInstance &compiler,
     // family language, because the expression parser uses features of C++ to
     // capture values.
     lang_opts.CPlusPlus = true;
+
     language_for_note = lldb::eLanguageTypeC_plus_plus;
+    language_fallback_reason =
+        "Expression evaluation in pure C not supported. ";
     break;
   case lldb::eLanguageTypeObjC:
     lang_opts.ObjC = true;
     // FIXME: the following language option is a temporary workaround,
     // to "ask for ObjC, get ObjC++" (see comment above).
     lang_opts.CPlusPlus = true;
+
     language_for_note = lldb::eLanguageTypeObjC_plus_plus;
+    language_fallback_reason =
+        "Expression evaluation in pure Objective-C not supported. ";
 
     // Clang now sets as default C++14 as the default standard (with
     // GNU extensions), so we do the same here to avoid mismatches that
@@ -613,26 +621,18 @@ static void SetupLangOpts(CompilerInstance &compiler,
     lang_opts.CPlusPlus = true;
     lang_opts.CPlusPlus11 = true;
     compiler.getHeaderSearchOpts().UseLibcxx = true;
+
+    language_for_note = lldb::eLanguageTypeObjC_plus_plus;
+    language_fallback_reason = "Using default language. ";
     break;
   }
 
-  if (language_for_note != language)
-    diagnostic_manager.AddDiagnostic(
-        llvm::formatv(
-            "Requested expression evaluation in '{0}' is not supported. Used "
-            "'{1}' instead.",
-            lldb_private::Language::GetDisplayNameForLanguageType(language),
-            lldb_private::Language::GetDisplayNameForLanguageType(
-                language_for_note))
-            .str(),
-        lldb::Severity::eSeverityInfo, DiagnosticOrigin::eDiagnosticOriginLLDB);
-  else
-    diagnostic_manager.AddDiagnostic(
-        llvm::formatv(
-            "Requested expression evaluation as '{0}'.",
-            lldb_private::Language::GetDisplayNameForLanguageType(language))
-            .str(),
-        lldb::Severity::eSeverityInfo, DiagnosticOrigin::eDiagnosticOriginLLDB);
+  diagnostic_manager.AddDiagnostic(
+      llvm::formatv("{0}Ran expression as '{1}'.", language_fallback_reason,
+                    lldb_private::Language::GetDisplayNameForLanguageType(
+                        language_for_note))
+          .str(),
+      lldb::Severity::eSeverityInfo, DiagnosticOrigin::eDiagnosticOriginLLDB);
 
   lang_opts.Bool = true;
   lang_opts.WChar = true;
