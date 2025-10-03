@@ -51,6 +51,9 @@ STAT_COUNTER(NumFunctionTopLevel, "The # of functions at top level.");
 ALWAYS_ENABLED_STATISTIC(NumFunctionsAnalyzed,
                          "The # of functions and blocks analyzed (as top level "
                          "with inlining turned on).");
+ALWAYS_ENABLED_STATISTIC(
+    NumFunctionsAnalyzedSyntaxOnly,
+    "The # of functions analyzed by syntax checkers only.");
 ALWAYS_ENABLED_STATISTIC(NumBlocksInAnalyzedFunctions,
                          "The # of basic blocks in the analyzed functions.");
 ALWAYS_ENABLED_STATISTIC(
@@ -598,10 +601,10 @@ void AnalysisConsumer::runAnalysisOnTranslationUnit(ASTContext &C) {
   // If the user wanted to analyze a specific function and the number of basic
   // blocks analyzed is zero, than the user might not specified the function
   // name correctly.
-  // FIXME: The user might have analyzed the requested function in Syntax mode,
-  // but we are unaware of that.
-  if (!Opts.AnalyzeSpecificFunction.empty() && NumFunctionsAnalyzed == 0)
+  if (!Opts.AnalyzeSpecificFunction.empty() && NumFunctionsAnalyzed == 0 &&
+      NumFunctionsAnalyzedSyntaxOnly == 0) {
     reportAnalyzerFunctionMisuse(Opts, *Ctx);
+  }
 }
 
 void AnalysisConsumer::reportAnalyzerProgress(StringRef S) {
@@ -736,6 +739,7 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
       SyntaxCheckTimer->startTimer();
     }
     checkerMgr->runCheckersOnASTBody(D, *Mgr, BR);
+    ++NumFunctionsAnalyzedSyntaxOnly;
     if (SyntaxCheckTimer) {
       SyntaxCheckTimer->stopTimer();
       llvm::TimeRecord CheckerEndTime = SyntaxCheckTimer->getTotalTime();
