@@ -7011,7 +7011,7 @@ extern const internal::VariadicDynCastAllOfMatcher<
 ///   const S<char>::t2* var2;
 /// \endcode
 /// typedefTypeLoc()
-///   matches `t1` (in the declaration of var1) and `C<char>::t2`.
+///   matches `t1` (in the declaration of var1) and `S<char>::t2`.
 extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, TypedefTypeLoc>
     typedefTypeLoc;
 
