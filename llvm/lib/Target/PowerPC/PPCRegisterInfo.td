@@ -814,14 +814,14 @@ def PPCS32ImmAsmOperand : AsmOperandClass {
   let RenderMethod = "addImmOperands";
 }
 def s32imm : Operand<i64> {
-  let PrintMethod = "printS32ImmOperand";
+  let PrintMethod = "printSImmOperand<32>";
   let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_imm32>";
   let ParserMatchClass = PPCS32ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<32>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def s32imm_pcrel : Operand<i64> {
-  let PrintMethod = "printS32ImmOperand";
+  let PrintMethod = "printSImmOperand<32>";
   let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_pcrel32>";
   let ParserMatchClass = PPCS32ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<32>";
@@ -833,14 +833,14 @@ def PPCS34ImmAsmOperand : AsmOperandClass {
   let RenderMethod = "addImmOperands";
 }
 def s34imm : Operand<i64> {
-  let PrintMethod = "printS34ImmOperand";
+  let PrintMethod = "printSImmOperand<34>";
   let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_imm34>";
   let ParserMatchClass = PPCS34ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<34>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def s34imm_pcrel : Operand<i64> {
-  let PrintMethod = "printS34ImmOperand";
+  let PrintMethod = "printSImmOperand<34>";
   let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_pcrel34>";
   let ParserMatchClass = PPCS34ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<34>";
