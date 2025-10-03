@@ -1423,6 +1423,8 @@ __m128d test_mm_sqrt_pd(__m128d A) {
   return _mm_sqrt_pd(A);
 }
 
+TEST_CONSTEXPR(match_m128d(_mm_sqrt_pd(_mm_set_pd(4.0,4.0)), 2.0, 2.0));
+
 __m128d test_mm_sqrt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_sqrt_sd
   // CHECK: extractelement <2 x double> %{{.*}}, i64 0
@@ -1430,6 +1432,7 @@ __m128d test_mm_sqrt_sd(__m128d A, __m128d B) {
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i64 0
   return _mm_sqrt_sd(A, B);
 }
+
 
 __m128i test_mm_sra_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_sra_epi16

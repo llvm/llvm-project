@@ -64,6 +64,7 @@
 #include "llvm/Support/SipHash.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cmath>
 #include <cstring>
 #include <functional>
 #include <limits>
@@ -12233,6 +12234,45 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         ResultElements.push_back(SourceDst.getVectorElt(EltNum));
     }
 
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_sqrtpd:
+  case X86::BI__builtin_ia32_sqrtps:
+  case X86::BI__builtin_ia32_sqrtpd256:
+  case X86::BI__builtin_ia32_sqrtps256:
+  case X86::BI__builtin_ia32_sqrtps512:
+  case X86::BI__builtin_ia32_sqrtpd512: {
+    APValue Source;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    const llvm::fltSemantics &Semantics =
+        Info.Ctx.getFloatTypeSemantics(DestEltTy);
+    unsigned SourceLen = Source.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      APValue CurrentEle = Source.getVectorElt(EltNum);
+      if (DestEltTy->isFloatingType()) {
+        llvm::APFloat Value = CurrentEle.getFloat();
+        if (Value.isNegative() && !Value.isZero()) {
+          Value = llvm::APFloat::getQNaN(Value.getSemantics());
+        } else {
+          double DoubleValue = Value.convertToDouble();
+          double SqrtValue = sqrt(DoubleValue);
+          llvm::APFloat TempValue(SqrtValue);
+          bool LosesInfo;
+          TempValue.convert(Semantics, llvm::RoundingMode::NearestTiesToEven,
+                            &LosesInfo);
+          Value = TempValue;
+        }
+        ResultElements.push_back(APValue(Value));
+      } else {
+        return false;
+      }
+    }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
   }
