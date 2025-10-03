@@ -5193,8 +5193,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
 
 // Compute a SHA1 hash of the callsite and alloc version information of clone I
 // in the summary, to use in detection of duplicate clones.
-std::string ComputeHash(StringMap<Function *> &HashToFunc, FunctionSummary *FS,
-                        unsigned I) {
+uint64_t ComputeHash(const FunctionSummary *FS, unsigned I) {
   SHA1 Hasher;
   // Update hash with any callsites that call non-default (non-zero) callee
   // versions.
@@ -5207,7 +5206,7 @@ std::string ComputeHash(StringMap<Function *> &HashToFunc, FunctionSummary *FS,
         "Callsite summary has fewer entries than other summaries in function");
     if (SN.Clones.size() <= I || !SN.Clones[I])
       continue;
-    uint8_t Data[4];
+    uint8_t Data[sizeof(SN.Clones[I])];
     support::endian::write32le(Data, SN.Clones[I]);
     Hasher.update(Data);
   }
@@ -5223,7 +5222,7 @@ std::string ComputeHash(StringMap<Function *> &HashToFunc, FunctionSummary *FS,
       continue;
     Hasher.update(ArrayRef<uint8_t>(&AN.Versions[I], 1));
   }
-  return toHex(Hasher.result());
+  return support::endian::read64le(Hasher.result().data());
 }
 
 static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
@@ -5274,16 +5273,15 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
   // (except for available_externally which are made declarations as they would
   // be aliases in the prevailing module, and available_externally aliases are
   // not well supported right now).
-  StringMap<Function *> HashToFunc;
+  DenseMap<uint64_t, Function *> HashToFunc;
 
   // Save the hash of the original function version.
-  auto Hash = ComputeHash(HashToFunc, FS, 0);
-  HashToFunc[Hash] = &F;
+  HashToFunc[ComputeHash(FS, 0)] = &F;
 
   for (unsigned I = 1; I < NumClones; I++) {
     VMaps.emplace_back(std::make_unique<ValueToValueMapTy>());
     std::string Name = getMemProfFuncName(F.getName(), I);
-    auto Hash = ComputeHash(HashToFunc, FS, I);
+    auto Hash = ComputeHash(FS, I);
     // If this clone would duplicate a previously seen clone, don't generate the
     // duplicate clone body, just make an alias to satisfy any (potentially
     // cross-module) references.
@@ -5540,6 +5538,8 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
       // below.
       auto CalleeOrigName = CalledFunction->getName();
       for (unsigned J = 0; J < StackNode.Clones.size(); J++) {
+        // If the VMap is empty, this clone was a duplicate of another and was
+        // created as an alias or a declaration.
         if (J > 0 && VMaps[J - 1]->empty())
           continue;
         // Do nothing if this version calls the original version of its
@@ -5718,6 +5718,8 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
 
           // Update the allocation types per the summary info.
           for (unsigned J = 0; J < AllocNode.Versions.size(); J++) {
+            // If the VMap is empty, this clone was a duplicate of another and
+            // was created as an alias or a declaration.
             if (J > 0 && VMaps[J - 1]->empty())
               continue;
             // Ignore any that didn't get an assigned allocation type.
@@ -5943,6 +5945,8 @@ void MemProfContextDisambiguation::performICP(
       // check.
       CallBase *CBClone = CB;
       for (unsigned J = 0; J < NumClones; J++) {
+        // If the VMap is empty, this clone was a duplicate of another and was
+        // created as an alias or a declaration.
         if (J > 0 && VMaps[J - 1]->empty())
           continue;
         // Copy 0 is the original function.
@@ -5990,6 +5994,8 @@ void MemProfContextDisambiguation::performICP(
     // TotalCount and the number promoted.
     CallBase *CBClone = CB;
     for (unsigned J = 0; J < NumClones; J++) {
+      // If the VMap is empty, this clone was a duplicate of another and was
+      // created as an alias or a declaration.
       if (J > 0 && VMaps[J - 1]->empty())
         continue;
       // Copy 0 is the original function.
