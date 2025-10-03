@@ -3454,6 +3454,18 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
         });
 
+  case clang::X86::BI__builtin_ia32_pmulhrsw128:
+  case clang::X86::BI__builtin_ia32_pmulhrsw256:
+  case clang::X86::BI__builtin_ia32_pmulhrsw512:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          unsigned Width = LHS.getBitWidth();
+          APInt Mul = llvm::APIntOps::mulhs(LHS, RHS);
+          Mul = Mul.relativeLShr(14);
+          Mul = Mul + APInt(Width, 1, true);
+          return Mul.relativeLShr(1);
+        });
+
   case clang::X86::BI__builtin_ia32_pavgb128:
   case clang::X86::BI__builtin_ia32_pavgw128:
   case clang::X86::BI__builtin_ia32_pavgb256:
