@@ -116,7 +116,7 @@ String gitPathEnv = (
 )
 String llvmProj = 'llvm-project', llvmProjRepo = llvmProj + '.git'
 String theUrl
-Boolean hasSourceChanges = true
+Boolean hasSourceChanges = true, isSkippableMerge = false
 Integer successStat = 0
 
 String jobName
@@ -286,13 +286,9 @@ try {
                             error 'Unexpected exit checking file activity.'
                         }
                         if (activeStat == 1) {
-                            if (timerTrigger) {
-                                echo(contTimerReason)
-                            } else {
-                                echo(skipStr)
-                                hasSourceChanges = false
-                                return // From stage
-                            }
+                            echo(skipStr)
+                            hasSourceChanges = false
+                            return // From stage
                         }
 
                         String mstat
@@ -320,14 +316,14 @@ try {
                                 echo(contTimerReason)
                             } else {
                                 echo(skipStr)
-                                hasSourceChanges = false
+                                isSkippableMerge = true
                                 return // From stage
                             }
                         }
                     }
                 }
             }
-            if (!timerTrigger && !hasSourceChanges) {
+            if (isSkippableMerge || !hasSourceChanges) {
                 cleanWs(
                     deleteDirs: true,
                     patterns: cleanExcludes
@@ -362,7 +358,7 @@ try {
                 }
             }
         }
-        if (!timerTrigger && !hasSourceChanges) {
+        if (isSkippableMerge || !hasSourceChanges) {
             return // From timeout
         }
         if (runDownstream) {
