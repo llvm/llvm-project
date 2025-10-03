@@ -310,3 +310,36 @@ struct MoreBFields {
 export void call13(int A) {
   MoreBFields MBF = (MoreBFields)A;
 }
+
+struct Inner {
+  int Z;
+  int Y : 25;
+};
+
+struct Outer {
+  int A;
+  Inner I;
+};
+
+// show usage of "extra" gep for struct containing bitfield
+// CHECK-LABEL: call14
+// CHECK: [[AA:%.*]] = alloca i32, align 4
+// CHECK-NEXT: [[O:%.*]] = alloca %struct.Outer, align 1
+// CHECK-NEXT: store i32 %A, ptr [[AA]], align 4
+// CHECK-NEXT: [[Z:%.*]] = load i32, ptr [[AA]], align 4
+// CHECK-NEXT: [[FieldA:%.*]] = getelementptr inbounds %struct.Outer, ptr [[O]], i32 0, i32 0
+// showing real usage of "extra gep". need Inner struct to generate access of its bitfield.
+// CHECK-NEXT: [[FieldI:%.*]] = getelementptr inbounds %struct.Outer, ptr [[O]], i32 0, i32 1
+// CHECK-NEXT: [[FieldY:%.*]] = getelementptr inbounds nuw %struct.Inner, ptr [[FieldI]], i32 0, i32 1
+// CHECK-NEXT: [[FieldZ:%.*]] = getelementptr inbounds %struct.Outer, ptr [[O]], i32 0, i32 1, i32 0
+// CHECK-NEXT: store i32 [[Z]], ptr [[FieldA]], align 4
+// CHECK-NEXT: store i32 [[Z]], ptr [[FieldZ]], align 4
+// CHECK-NEXT: [[BFL:%.*]] = load i32, ptr [[FieldY]], align 1
+// CHECK-NEXT: [[BFV:%.*]] = and i32 [[Z]], 33554431
+// CHECK-NEXT: [[BFC:%.*]] = and i32 [[BFL]], -33554432
+// CHECK-NEXT: [[BFS:%.*]] = or i32 [[BFC]], [[BFV]]
+// CHECK-NEXT: store i32 [[BFS]], ptr [[FieldY]], align 1
+// CHECK-NEXT: ret void
+export void call14(int A) {
+  Outer O = (Outer)A;
+}
