@@ -1571,34 +1571,41 @@ def : QCIMVCCIPat<SETUGE, QC_MVGEUI, uimm5nonzero>;
 }
 
 let Predicates = [HasVendorXqcicli, IsRV32] in {
-def : QCILICCPat<SETEQ,  QC_LIEQ>;
-def : QCILICCPat<SETNE,  QC_LINE>;
 def : QCILICCPat<SETLT,  QC_LILT>;
 def : QCILICCPat<SETGE,  QC_LIGE>;
 def : QCILICCPat<SETULT, QC_LILTU>;
 def : QCILICCPat<SETUGE, QC_LIGEU>;
 
-def : QCILICCIPat<SETEQ,  QC_LIEQI, simm5>;
-def : QCILICCIPat<SETNE,  QC_LINEI, simm5>;
 def : QCILICCIPat<SETLT,  QC_LILTI, simm5>;
 def : QCILICCIPat<SETGE,  QC_LIGEI, simm5>;
 def : QCILICCIPat<SETULT, QC_LILTUI, uimm5>;
 def : QCILICCIPat<SETUGE, QC_LIGEUI, uimm5>;
 
-def : QCILICCPatInv<SETNE,  QC_LIEQ>;
-def : QCILICCPatInv<SETEQ,  QC_LINE>;
 def : QCILICCPatInv<SETGE,  QC_LILT>;
 def : QCILICCPatInv<SETLT,  QC_LIGE>;
 def : QCILICCPatInv<SETUGE, QC_LILTU>;
 def : QCILICCPatInv<SETULT, QC_LIGEU>;
 
-def : QCILICCIPatInv<SETNE,  QC_LIEQI, simm5>;
-def : QCILICCIPatInv<SETEQ,  QC_LINEI, simm5>;
 def : QCILICCIPatInv<SETGE,  QC_LILTI, simm5>;
 def : QCILICCIPatInv<SETLT,  QC_LIGEI, simm5>;
 def : QCILICCIPatInv<SETUGE, QC_LILTUI, uimm5>;
 def : QCILICCIPatInv<SETULT, QC_LIGEUI, uimm5>;
 } // Predicates = [HasVendorXqcicli, IsRV32]
+
+// Prioritize Xqcics over these patterns.
+let Predicates = [HasVendorXqcicli, NoVendorXqcics, IsRV32] in {
+def : QCILICCPat<SETEQ,  QC_LIEQ>;
+def : QCILICCPat<SETNE,  QC_LINE>;
+
+def : QCILICCIPat<SETEQ,  QC_LIEQI, simm5>;
+def : QCILICCIPat<SETNE,  QC_LINEI, simm5>;
+
+def : QCILICCPatInv<SETNE,  QC_LIEQ>;
+def : QCILICCPatInv<SETEQ,  QC_LINE>;
+
+def : QCILICCIPatInv<SETNE,  QC_LIEQI, simm5>;
+def : QCILICCIPatInv<SETEQ,  QC_LINEI, simm5>;
+} // Predicates = [HasVendorXqcicli, NoVendorXqcics, IsRV32]
 
 let Predicates = [HasVendorXqcics, IsRV32] in {
 // (SELECT X, Y, Z) is canonicalised to `(riscv_selectcc x, 0, NE, y, z)`.
