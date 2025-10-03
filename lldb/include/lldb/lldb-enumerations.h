@@ -522,6 +522,16 @@ enum LanguageType {
   eLanguageTypeAssembly = 0x0031,
   eLanguageTypeC_sharp = 0x0032,
   eLanguageTypeMojo = 0x0033,
+  eLanguageTypeGLSL = 0x0034,
+  eLanguageTypeGLSL_ES = 0x0035,
+  eLanguageTypeHLSL = 0x0036,
+  eLanguageTypeOpenCL_CPP = 0x0037,
+  eLanguageTypeCppForOpenCL = 0x0038,
+  eLanguageTypeSycl = 0x0039,
+  eLanguageTypeMetal = 0x003d,
+  eLanguageTypeRuby = 0x0040,
+  eLanguageTypeMove = 0x0041,
+  eLanguageTypeHylo = 0x0042,
   eLanguageTypeLastStandardLanguage = eLanguageTypeMojo,
 
   // Vendor Extensions

@@ -244,6 +244,16 @@ struct language_name_pair language_names[] = {
     {"assembly", eLanguageTypeAssembly},
     {"c-sharp", eLanguageTypeC_sharp},
     {"mojo", eLanguageTypeMojo},
+    {"GLSL", eLanguageTypeGLSL},
+    {"GLSL_ES", eLanguageTypeGLSL_ES},
+    {"HLSL", eLanguageTypeHLSL},
+    {"OpenCL_CPP", eLanguageTypeOpenCL_CPP},
+    {"CPP_for_OpenCL", eLanguageTypeCppForOpenCL},
+    {"SYCL", eLanguageTypeSycl},
+    {"Metal", eLanguageTypeMetal},
+    {"Ruby", eLanguageTypeRuby},
+    {"Move", eLanguageTypeMove},
+    {"Hylo", eLanguageTypeHylo},
     // Vendor Extensions
     {"assembler", eLanguageTypeMipsAssembler},
     // Now synonyms, in arbitrary order
