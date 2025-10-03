@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=amdgpu-sw-lower-lds -S -amdgpu-asan-instrument-lds=false -mtriple=amdgcn-amd-amdhsa | FileCheck %s
 ; RUN: llc < %s -enable-new-pm -stop-after=amdgpu-sw-lower-lds -amdgpu-asan-instrument-lds=false -mtriple=amdgcn-amd-amdhsa | FileCheck %s
 
-; This test checks that named barriers in LDS and other LDS in moduleare lowered correctly by the
+; This test checks that named barriers in LDS and other LDS in module are lowered correctly by the
 ; amdgpu-sw-lower-lds pass.
 @bar2 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison
 @bar3 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison
