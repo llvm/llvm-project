@@ -2502,19 +2502,19 @@ class ToElementsOfBroadcast final : public OpRewritePattern<ToElementsOp> {
     //   //       %src_elems#2, %src_elems#3, %src_elems#2,
     //   //       %src_elems#3, %src_elems#2, %src_elems#3
 
-    SmallVector<int64_t> dstIdx(dstShape.size());
+    // Row-major strides for the destination shape.
+    SmallVector<int64_t> dstStrides = computeStrides(dstShape);
+    // Row-major strides for the source shape.
+    SmallVector<int64_t> srcStrides = computeStrides(srcShape);
+    SmallVector<int64_t> dstIdx(dstRank);
+    SmallVector<int64_t> srcIdx(srcRank);
     for (int64_t lin = 0; lin < dstCount; ++lin) {
-      int64_t temp = lin;
-      for (int64_t i = dstShape.size() - 1; i >= 0; --i) {
-        int64_t dim = dstShape[i];
-        dstIdx[i] = temp % dim;
-        temp /= dim;
-      }
-      int64_t srcLin = 0;
+      // Convert linear destination index to per-dimension indices.
+      dstIdx = delinearize(lin, dstStrides);
       for (int64_t k = 0; k < srcRank; ++k)
-        srcLin = srcLin * srcShape[k] +
-                 ((srcShape[k] == 1) ? 0 : dstIdx[dstRank - srcRank + k]);
-
+        srcIdx[k] = (srcShape[k] == 1) ? 0 : dstIdx[dstRank - srcRank + k];
+      // Convert per-dimension source indices back to a linear index.
+      int64_t srcLin = linearize(srcIdx, srcStrides);
       replacements.push_back(srcElems.getResult(srcLin));
     }
 
