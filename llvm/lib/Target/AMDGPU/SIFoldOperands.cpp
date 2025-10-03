@@ -722,7 +722,8 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
         return false;
     }
 
-    if (!MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
+    if (New->getReg().isVirtual() &&
+        !MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
       LLVM_DEBUG(dbgs() << "Cannot constrain " << printReg(New->getReg(), TRI)
                         << TRI->getRegClassName(ConstrainRC) << '\n');
       return false;
