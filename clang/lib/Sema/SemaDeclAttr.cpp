@@ -5204,25 +5204,55 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleDeviceKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
   bool IsFunctionTemplate = FD && FD->getDescribedFunctionTemplate();
-  if (S.getLangOpts().SYCLIsDevice) {
+  llvm::Triple Triple = S.getASTContext().getTargetInfo().getTriple();
+  const LangOptions &LangOpts = S.getLangOpts();
+
+  if (LangOpts.SYCLIsDevice) {
     if (!IsFunctionTemplate) {
       S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
           << AL << AL.isRegularKeywordAttribute() << "function templates";
+      AL.setInvalid();
+      return;
     } else {
       S.SYCL().handleKernelAttr(D, AL);
     }
   } else if (DeviceKernelAttr::isSYCLSpelling(AL)) {
     S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
-  } else if (S.getASTContext().getTargetInfo().getTriple().isNVPTX()) {
+    AL.setInvalid();
+
+    return;
+  } else if (Triple.isNVPTX()) {
     handleGlobalAttr(S, D, AL);
   } else {
     // OpenCL C++ will throw a more specific error.
-    if (!S.getLangOpts().OpenCLCPlusPlus && (!FD || IsFunctionTemplate)) {
+    if (!LangOpts.OpenCLCPlusPlus && (!FD || IsFunctionTemplate)) {
       S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type_str)
           << AL << AL.isRegularKeywordAttribute() << "functions";
+      AL.setInvalid();
+      return;
     }
     handleSimpleAttribute<DeviceKernelAttr>(S, D, AL);
   }
+  // TODO: isGPU() should probably return true for SPIR.
+  bool TargetDeviceEnvironment = Triple.isGPU() || Triple.isSPIR() ||
+                                 LangOpts.isTargetDevice() || LangOpts.OpenCL;
+  bool IsAMDGPUMismatch =
+      DeviceKernelAttr::isAMDGPUSpelling(AL) && !Triple.isAMDGPU();
+  bool IsNVPTXMismatch =
+      DeviceKernelAttr::isNVPTXSpelling(AL) && !Triple.isNVPTX();
+  if (IsAMDGPUMismatch || IsNVPTXMismatch || !TargetDeviceEnvironment) {
+    // While both are just different spellings of the same underlying
+    // attribute, it makes more sense to the user if amdgpu_kernel can only
+    // be used on AMDGPU and the equivalent for NVPTX, so warn and ignore
+    // the attribute if there's a mismatch.
+    // Also warn if this is not an environment where a device kernel makes
+    // sense.
+    S.Diag(AL.getLoc(), diag::warn_cconv_unsupported)
+        << AL << (int)Sema::CallingConventionIgnoredReason::ForThisTarget;
+    AL.setInvalid();
+    return;
+  }
+
   // Make sure we validate the CC with the target
   // and warn/error if necessary.
   handleCallConvAttr(S, D, AL);

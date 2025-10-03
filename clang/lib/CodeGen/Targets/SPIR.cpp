@@ -61,6 +61,8 @@ public:
       QualType SampledType, CodeGenModule &CGM) const;
   void
   setOCLKernelStubCallingConvention(const FunctionType *&FT) const override;
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &M) const override;
 };
 class SPIRVTargetCodeGenInfo : public CommonSPIRTargetCodeGenInfo {
 public:
@@ -240,6 +242,26 @@ void CommonSPIRTargetCodeGenInfo::setOCLKernelStubCallingConvention(
       FT, FT->getExtInfo().withCallingConv(CC_SpirFunction));
 }
 
+void CommonSPIRTargetCodeGenInfo::setTargetAttributes(
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (M.getLangOpts().OpenCL)
+    return;
+
+  if (GV->isDeclaration())
+    return;
+
+  llvm::Function *F = dyn_cast<llvm::Function>(GV);
+  if (!F)
+    return;
+
+  const FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
+  if (!FD)
+    return;
+
+  if (FD->hasAttr<DeviceKernelAttr>())
+    F->setCallingConv(getDeviceKernelCallingConv());
+}
+
 LangAS
 SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
                                                  const VarDecl *D) const {
@@ -264,9 +286,6 @@ SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
 
 void SPIRVTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-  if (!M.getLangOpts().HIP ||
-      M.getTarget().getTriple().getVendor() != llvm::Triple::AMD)
-    return;
   if (GV->isDeclaration())
     return;
 
@@ -277,6 +296,14 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
   auto FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD)
     return;
+
+  if (FD->hasAttr<DeviceKernelAttr>())
+    F->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
+
+  if (!M.getLangOpts().HIP ||
+      M.getTarget().getTriple().getVendor() != llvm::Triple::AMD)
+    return;
+
   if (!FD->hasAttr<CUDAGlobalAttr>())
     return;
 
