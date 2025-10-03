@@ -206,6 +206,7 @@ public:
   NODE(parser, CompilerDirective)
   NODE(CompilerDirective, AssumeAligned)
   NODE(CompilerDirective, IgnoreTKR)
+  NODE(CompilerDirective, IVDep)
   NODE(CompilerDirective, LoopCount)
   NODE(CompilerDirective, NameValue)
   NODE(CompilerDirective, Unrecognized)
