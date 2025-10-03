@@ -561,6 +561,8 @@ struct Derived : Base {
 
 } // namespace ns_retained_return_value
 
+SomeObj *allocObj();
+
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
@@ -582,6 +584,7 @@ struct Derived : Base {
   [self doWork:@"hello", RetainPtr<SomeObj> { provide() }.get(), RetainPtr<CFMutableArrayRef> { provide_cf() }.get(), OSObjectPtr { provide_dispatch() }.get()];
   [self doWork:__null];
   [self doWork:nil];
+  adoptNS([allocObj() init]);
 }
 
 - (SomeObj *)getSomeObj {
