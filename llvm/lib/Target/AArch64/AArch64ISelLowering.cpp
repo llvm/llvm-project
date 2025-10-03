@@ -30777,9 +30777,8 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
     SDValue WideAcc = DAG.getInsertSubvector(DL, ZeroVec, Acc, 0);
     SDValue Wide = DAG.getNode(Op.getOpcode(), DL, MVT::v4i32,
                                WideAcc, LHS, RHS);
-    SDValue Lo = DAG.getExtractSubvector(DL, MVT::v2i32, Wide, 0);
-    SDValue Hi = DAG.getExtractSubvector(DL, MVT::v2i32, Wide, 2);
-    return DAG.getNode(ISD::ADD, DL, ResultVT, Lo, Hi);
+    SDValue Reduced = DAG.getNode(AArch64ISD::ADDP, DL, MVT::v4i32, Wide, Wide);
+    return DAG.getExtractSubvector(DL, MVT::v2i32, Reduced, 0);
   }
 
   if (ConvertToScalable) {

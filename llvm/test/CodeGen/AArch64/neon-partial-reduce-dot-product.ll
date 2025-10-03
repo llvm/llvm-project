@@ -1483,8 +1483,8 @@ define <2 x i32> @udot_v16i8tov2i32(<2 x i32> %acc, <16 x i8> %input) {
 ; CHECK-DOT-NEXT:    movi v2.16b, #1
 ; CHECK-DOT-NEXT:    fmov d0, d0
 ; CHECK-DOT-NEXT:    udot v0.4s, v1.16b, v2.16b
-; CHECK-DOT-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-DOT-NEXT:    add v0.2s, v0.2s, v1.2s
+; CHECK-DOT-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-DOT-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: udot_v16i8tov2i32:
@@ -1492,8 +1492,8 @@ define <2 x i32> @udot_v16i8tov2i32(<2 x i32> %acc, <16 x i8> %input) {
 ; CHECK-DOT-I8MM-NEXT:    movi v2.16b, #1
 ; CHECK-DOT-I8MM-NEXT:    fmov d0, d0
 ; CHECK-DOT-I8MM-NEXT:    udot v0.4s, v1.16b, v2.16b
-; CHECK-DOT-I8MM-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-DOT-I8MM-NEXT:    add v0.2s, v0.2s, v1.2s
+; CHECK-DOT-I8MM-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-DOT-I8MM-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-DOT-I8MM-NEXT:    ret
 entry:
     %input.wide = zext <16 x i8> %input to <16 x i32>
