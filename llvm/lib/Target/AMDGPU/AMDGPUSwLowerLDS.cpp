@@ -304,18 +304,6 @@ void AMDGPUSwLowerLDS::getUsesOfLDSByNonKernels() {
   }
 }
 
-static void recordLDSAbsoluteAddress(Module &M, GlobalVariable *GV,
-                                     uint32_t Address) {
-  // Write the specified address into metadata where it can be retrieved by
-  // the assembler. Format is a half open range, [Address Address+1)
-  LLVMContext &Ctx = M.getContext();
-  auto *IntTy = M.getDataLayout().getIntPtrType(Ctx, AMDGPUAS::LOCAL_ADDRESS);
-  MDBuilder MDB(Ctx);
-  MDNode *MetadataNode = MDB.createRange(ConstantInt::get(IntTy, Address),
-                                         ConstantInt::get(IntTy, Address + 1));
-  GV->setMetadata(LLVMContext::MD_absolute_symbol, MetadataNode);
-}
-
 static void addLDSSizeAttribute(Function *Func, uint32_t Offset,
                                 bool IsDynLDS) {
   if (Offset != 0) {
@@ -378,10 +366,10 @@ void AMDGPUSwLowerLDS::populateSwLDSAttributeAndMetadata(Function *Func) {
   auto &LDSParams = FuncLDSAccessInfo.KernelToLDSParametersMap[Func];
   bool IsDynLDSUsed = LDSParams.SwDynLDS;
   uint32_t Offset = LDSParams.LDSSize;
-  recordLDSAbsoluteAddress(M, LDSParams.SwLDS, 0);
+  recordLDSAbsoluteAddress(&M, LDSParams.SwLDS, 0);
   addLDSSizeAttribute(Func, Offset, IsDynLDSUsed);
   if (LDSParams.SwDynLDS)
-    recordLDSAbsoluteAddress(M, LDSParams.SwDynLDS, Offset);
+    recordLDSAbsoluteAddress(&M, LDSParams.SwDynLDS, Offset);
 }
 
 void AMDGPUSwLowerLDS::populateSwMetadataGlobal(Function *Func) {
@@ -1160,6 +1148,21 @@ bool AMDGPUSwLowerLDS::run() {
 
   if (!LowerAllLDS)
     return Changed;
+
+  // Lower special LDS variables like named barriers.
+  if (LDSUsesInfo.HasSpecialGVs) {
+    // For each variable accessed through callees, which kernels access it
+    VariableFunctionMap LDSToKernelsThatNeedToAccessItIndirectly;
+    for (auto &K : LDSUsesInfo.indirect_access) {
+      Function *F = K.first;
+      assert(isKernelLDS(F));
+      for (GlobalVariable *GV : K.second) {
+        LDSToKernelsThatNeedToAccessItIndirectly[GV].insert(F);
+      }
+    }
+    Changed |= lowerSpecialLDSVariables(
+        M, LDSUsesInfo, LDSToKernelsThatNeedToAccessItIndirectly);
+  }
 
   // Utility to group LDS access into direct, indirect, static and dynamic.
   auto PopulateKernelStaticDynamicLDS = [&](FunctionVariableMap &LDSAccesses,
