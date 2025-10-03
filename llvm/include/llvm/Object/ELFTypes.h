@@ -252,7 +252,7 @@ struct Elf_Sym_Impl : Elf_Sym_Base<ELFT> {
     return getType() == ELF::STT_COMMON || st_shndx == ELF::SHN_COMMON;
   }
 
-  bool isLargeCommon() const { return st_shndx == ELF::SHN_AMD64_LCOMMON; }
+  bool isLargeCommon() const { return st_shndx == ELF::SHN_X86_64_LCOMMON; }
 
   bool isDefined() const { return !isUndefined(); }
 

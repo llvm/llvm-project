@@ -257,7 +257,7 @@ void MCELFStreamer::emitLargeCommonSymbol(MCSymbol *S, uint64_t Size,
   if (Symbol->declareCommon(Size, ByteAlignment))
     report_fatal_error(Twine("Symbol: ") + Symbol->getName() +
                        " redeclared as different type");
-  Symbol->setIsLargeCommon(true);
+  Symbol->setIsLargeCommon();
   Symbol->setSize(MCConstantExpr::create(Size, getContext()));
 }
 

@@ -546,7 +546,7 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
       if (!Shndx) {
         assert(!Local);
         if (Symbol.isLargeCommon())
-          Shndx = ELF::SHN_AMD64_LCOMMON;
+          Shndx = ELF::SHN_X86_64_LCOMMON;
         else
           Shndx = ELF::SHN_COMMON;
       }

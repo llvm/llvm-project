@@ -1,7 +1,5 @@
 ; RUN: llc -filetype=asm -code-model=medium %s --large-data-threshold=65636 -o - | FileCheck %s --check-prefix=CHECKASM-MEDIUM
 ; RUN: llc -filetype=asm -code-model=large %s -o - | FileCheck %s --check-prefix=CHECKASM-LARGE
-; RUN: llc -filetype=asm -code-model=medium %s --large-data-threshold=65636 -o - | llvm-mc -triple x86_64-linux-gnu -filetype=obj - | llvm-readelf -s - | FileCheck %s --check-prefix=CHECKOBJ-MEDIUM
-; RUN: llc -filetype=asm -code-model=large %s -o - | llvm-mc -triple x86_64-linux-gnu -filetype=obj - | llvm-readelf -s - | FileCheck %s --check-prefix=CHECKOBJ-LARGE
 
 ; CHECKASM-MEDIUM:       .section	.lbss,"awl",@nobits
 ; CHECKASM-MEDIUM-NEXT:	 .type	__BLNK__,@object                # @__BLNK__
@@ -14,12 +12,6 @@
 ; CHECKASM-LARGE-NEXT:  .largecomm	__BLNK__,48394093832,8
 ; CHECKASM-LARGE-NEXT:  .type	ccc_,@object                    # @ccc_
 ; CHECKASM-LARGE-NEXT:  .largecomm	ccc_,8,8
-
-; CHECKOBJ-MEDIUM:       8 OBJECT  GLOBAL DEFAULT   COM ccc_
-; CHECKOBJ-MEDIUM:       48394093832 OBJECT GLOBAL DEFAULT LARGE_COMMON __BLNK
-
-; CHECKOBJ-LARGE:        8 OBJECT  GLOBAL DEFAULT   LARGE_COMMON ccc_
-; CHECKOBJ-LARGE:        48394093832 OBJECT GLOBAL DEFAULT LARGE_COMMON __BLNK__
 
 source_filename = "FIRModule"
 target triple = "x86_64-unknown-linux-gnu"

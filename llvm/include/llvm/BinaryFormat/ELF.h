@@ -591,7 +591,7 @@ enum {
 
 // x86-64 speciifc section index
 enum {
-  SHN_AMD64_LCOMMON = 0xff02, // Large FORTRAN COMMON variables
+  SHN_X86_64_LCOMMON = 0xff02, // Large FORTRAN COMMON variables
 };
 
 // ELF Relocation types for Mips
