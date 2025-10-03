@@ -7414,38 +7414,6 @@ private:
     return ConstLength.getSExtValue() != 1;
   }
 
-  /// Emit an attach entry into \p CombinedInfo, using the information from \p
-  /// AttachInfo. For example, for a map of form `int *p; ... map(p[1:10])`,
-  /// an attach entry has the following form:
-  ///   &p, &p[1], sizeof(void*), ATTACH
-  void emitAttachEntry(CodeGenFunction &CGF, MapCombinedInfoTy &CombinedInfo,
-                       const AttachInfoTy &AttachInfo) const {
-    assert(AttachInfo.isValid() &&
-           "Expected valid attach pointer/pointee information!");
-
-    // Size is the size of the pointer itself - use pointer size, not BaseDecl
-    // size
-    llvm::Value *PointerSize = CGF.Builder.CreateIntCast(
-        llvm::ConstantInt::get(
-            CGF.CGM.SizeTy, CGF.getContext()
-                                .getTypeSizeInChars(CGF.getContext().VoidPtrTy)
-                                .getQuantity()),
-        CGF.Int64Ty, /*isSigned=*/true);
-
-    CombinedInfo.Exprs.emplace_back(AttachInfo.AttachPtrDecl,
-                                    AttachInfo.AttachMapExpr);
-    CombinedInfo.BasePointers.push_back(
-        AttachInfo.AttachPtrAddr.emitRawPointer(CGF));
-    CombinedInfo.DevicePtrDecls.push_back(nullptr);
-    CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
-    CombinedInfo.Pointers.push_back(
-        AttachInfo.AttachPteeAddr.emitRawPointer(CGF));
-    CombinedInfo.Sizes.push_back(PointerSize);
-    CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
-    CombinedInfo.Mappers.push_back(nullptr);
-    CombinedInfo.NonContigInfo.Dims.push_back(1);
-  }
-
   /// A helper class to copy structures with overlapped elements, i.e. those
   /// which have mappings of both "s" and "s.mem".  Consecutive elements that
   /// are not explicitly copied have mapping nodes synthesized for them,
