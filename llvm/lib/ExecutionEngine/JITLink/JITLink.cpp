@@ -280,6 +280,9 @@ std::vector<Block *> LinkGraph::splitBlockImpl(std::vector<Block *> Blocks,
 void LinkGraph::dump(raw_ostream &OS) {
   DenseMap<Block *, std::vector<Symbol *>> BlockSymbols;
 
+  OS << "LinkGraph \"" << getName()
+     << "\" (triple = " << getTargetTriple().str() << ")\n";
+
   // Map from blocks to the symbols pointing at them.
   for (auto *Sym : defined_symbols())
     BlockSymbols[&Sym->getBlock()].push_back(Sym);
