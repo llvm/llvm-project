@@ -20,6 +20,24 @@ namespace std {
   tuple<Args...> tie(Args&... args) {
     return tuple<Args...>(args...);
   }
+
+  template <typename Key, typename Value>
+  class unordered_map {
+  public:
+    using value_type = pair<Key, Value>;
+
+    class iterator {
+    public:
+      iterator& operator++();
+      bool operator!=(const iterator &other);
+      const value_type &operator*() const;
+      value_type operator*();
+      const value_type* operator->() const;
+    };
+
+    iterator begin() const;
+    iterator end() const;
+  };
 }
 
 template<typename T1, typename T2>
