@@ -651,3 +651,15 @@ void IgnoreDirectInit() {
     int y = P.second;
   }
 }
+
+void StdMapTestCases() {
+  for (auto p : std::unordered_map<int, int>()) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES: for (auto [x, y] : std::unordered_map<int, int>()) {
+    // CHECK-NEXT: // REMOVE
+    int x = p.first;
+    int y = p.second; // REMOVE
+    // CHECK-FIXES: // REMOVE
+  }
+}
+
