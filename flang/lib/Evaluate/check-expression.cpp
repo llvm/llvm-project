@@ -144,10 +144,11 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
                 characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry)) {
           // The value of the argument doesn't matter
         } else if (!arg) {
-          // Missing optional arguments are constant
-          if (!(dataDummy &&
-                  dataDummy->attrs.test(
-                      characteristics::DummyDataObject::Attr::Optional))) {
+          if (dataDummy &&
+              dataDummy->attrs.test(
+                  characteristics::DummyDataObject::Attr::Optional)) {
+            // Missing optional arguments are okay.
+          } else {
             return false;
           }
         } else if (const auto *expr{arg->UnwrapExpr()};
