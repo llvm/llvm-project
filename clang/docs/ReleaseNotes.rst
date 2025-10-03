@@ -610,6 +610,7 @@ OpenMP Support
 - Added support for ``defaultmap`` directive implicit-behavior ``private``.
 - Added parsing and semantic analysis support for ``groupprivate`` directive.
 - Added support for 'omp fuse' directive.
+- Partial support for the 'omp taskgraph' directive.
 
 Improvements
 ^^^^^^^^^^^^
