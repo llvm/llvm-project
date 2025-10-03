@@ -10,13 +10,13 @@
 ; RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/align-2.s -o %t/align-2.o
 ; RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/align-4.s -o %t/align-4.o
 
-; RUN: %lld -dylib -arch arm64 --deduplicate-strings --tail-merge-strings %t/first.o %t/align-1.o -o %t/align-1
+; RUN: %lld -dylib -arch arm64 --tail-merge-strings %t/first.o %t/align-1.o -o %t/align-1
 ; RUN: llvm-objdump --macho --section="__TEXT,__cstring" --syms %t/align-1 | FileCheck %s --check-prefixes=CHECK,ALIGN1
 
-; RUN: %lld -dylib -arch arm64 --deduplicate-strings --tail-merge-strings %t/first.o %t/align-2.o -o %t/align-2
+; RUN: %lld -dylib -arch arm64 --tail-merge-strings %t/first.o %t/align-2.o -o %t/align-2
 ; RUN: llvm-objdump --macho --section="__TEXT,__cstring" --syms %t/align-2 | FileCheck %s --check-prefixes=CHECK,ALIGN2
 
-; RUN: %lld -dylib -arch arm64 --deduplicate-strings --tail-merge-strings %t/first.o %t/align-4.o -o %t/align-4
+; RUN: %lld -dylib -arch arm64 --tail-merge-strings %t/first.o %t/align-4.o -o %t/align-4
 ; RUN: llvm-objdump --macho --section="__TEXT,__cstring" --syms %t/align-4 | FileCheck %s --check-prefixes=CHECK,ALIGN4
 
 ; CHECK: Contents of (__TEXT,__cstring) section

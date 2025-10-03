@@ -2,8 +2,8 @@
 ; RUN: rm -rf %t && split-file %s %t
 
 ; RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/a.s -o %t/a.o
-; RUN: %lld -dylib -arch arm64 --deduplicate-strings --no-tail-merge-strings -order_file %t/orderfile.txt %t/a.o -o - | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s
-; RUN: %lld -dylib -arch arm64 --deduplicate-strings --tail-merge-strings -order_file %t/orderfile.txt %t/a.o -o - | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=MERGED
+; RUN: %lld -dylib -arch arm64 --no-tail-merge-strings -order_file %t/orderfile.txt %t/a.o -o - | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s
+; RUN: %lld -dylib -arch arm64 --tail-merge-strings -order_file %t/orderfile.txt %t/a.o -o - | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=MERGED
 
 ; CHECK: _str2
 ; CHECK: _str1

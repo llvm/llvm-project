@@ -5,10 +5,10 @@
 ; ObjCSelRefsHelper::makeSelRef() still works correctly
 
 ; RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/a.s -o %t/a.o
-; RUN: %lld -dylib -arch arm64 --deduplicate-strings --tail-merge-strings %t/a.o -o %t/a
+; RUN: %lld -dylib -arch arm64 --tail-merge-strings %t/a.o -o %t/a
 ; RUN: llvm-objdump --macho --section="__TEXT,__objc_methname" %t/a | FileCheck %s --implicit-check-not=error
 
-; RUN: %lld -dylib -arch arm64 --deduplicate-strings --no-tail-merge-strings %t/a.o -o %t/nomerge
+; RUN: %lld -dylib -arch arm64 --no-tail-merge-strings %t/a.o -o %t/nomerge
 ; RUN: llvm-objdump --macho --section="__TEXT,__objc_methname" %t/nomerge | FileCheck %s --check-prefixes=CHECK,NOMERGE --implicit-check-not=error
 
 ; CHECK: withBar:error:
