@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Read the .gnu.property.note section.
+// Read the .note.gnu.property section.
 //
 //===----------------------------------------------------------------------===//
 
@@ -60,7 +60,7 @@ Error GNUPropertyRewriter::sectionInitializer() {
     if (!Cursor)
       return createStringError(
           errc::executable_format_error,
-          "out of bounds while reading .gnu.property.note section: %s",
+          "out of bounds while reading .note.gnu.property section: %s",
           toString(Cursor.takeError()).c_str());
 
     if (Type == ELF::NT_GNU_PROPERTY_TYPE_0 && Name.starts_with("GNU") &&
@@ -110,7 +110,7 @@ Expected<uint32_t> GNUPropertyRewriter::decodeGNUPropertyNote(StringRef Desc) {
     if (!Cursor)
       return createStringError(
           errc::executable_format_error,
-          "out of bounds while reading .gnu.property.note section: %s",
+          "out of bounds while reading .note.gnu.property section: %s",
           toString(Cursor.takeError()).c_str());
 
     if (PrType == llvm::ELF::GNU_PROPERTY_AARCH64_FEATURE_1_AND) {
@@ -125,7 +125,7 @@ Expected<uint32_t> GNUPropertyRewriter::decodeGNUPropertyNote(StringRef Desc) {
       if (!Tmp)
         return createStringError(
             errc::executable_format_error,
-            "failed to read property from .gnu.property.note section: %s",
+            "failed to read property from .note.gnu.property section: %s",
             toString(Tmp.takeError()).c_str());
       Features = Features ? (*Features | FeaturesItem) : FeaturesItem;
     }
@@ -134,7 +134,7 @@ Expected<uint32_t> GNUPropertyRewriter::decodeGNUPropertyNote(StringRef Desc) {
     if (!Cursor)
       return createStringError(errc::executable_format_error,
                                "out of bounds while reading property array in "
-                               ".gnu.property.note section: %s",
+                               ".note.gnu.property section: %s",
                                toString(Cursor.takeError()).c_str());
   }
   return Features.value_or(0u);
