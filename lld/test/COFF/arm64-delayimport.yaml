@@ -21,9 +21,9 @@
 # DISASM:  140001048:      aa1103e1        mov     x1, x17
 # DISASM:  14000104c:      b0000000        adrp    x0, 0x140002000
 # DISASM:  140001050:      91000000        add     x0, x0, #0
-# DISASM   140001054:      90000002        adrp    x2, 0x140001000 <.text>
-# DISASM   140001058:      91000042        add     x2, x2, #0
-# DISASM   14000105c:      d63f0040        blr     x2
+# DISASM:  140001054:      90000002        adrp    x2, 0x140001000 <.text>
+# DISASM:  140001058:      91000042        add     x2, x2, #0
+# DISASM:  14000105c:      d63f0040        blr     x2
 # DISASM:  140001060:      aa0003f0        mov     x16, x0
 # DISASM:  140001064:      ad459fe6        ldp     q6, q7, [sp, #176]
 # DISASM:  140001068:      ad4497e4        ldp     q4, q5, [sp, #144]
