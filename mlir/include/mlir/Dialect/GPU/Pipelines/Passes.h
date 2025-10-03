@@ -63,11 +63,11 @@ struct GPUToNVVMPipelineOptions
 // Options for the gpu to xevm pipeline.
 struct GPUToXeVMPipelineOptions
     : public PassPipelineOptions<GPUToXeVMPipelineOptions> {
-  // XeGPU op granularity selection: workgroup | subgroup | workitem
+  // XeGPU op granularity selection: workgroup | subgroup | lane
   PassOptions::Option<std::string> xegpuOpLevel{
       *this, "xegpu-op-level",
       llvm::cl::desc("Granularity of XeGPU operations to target: workgroup | "
-                     "subgroup | workitem"),
+                     "subgroup | lane"),
       llvm::cl::init("workgroup")};
   // General lowering controls.
   PassOptions::Option<bool> use64bitIndex{
