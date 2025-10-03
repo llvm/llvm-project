@@ -295,8 +295,10 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
 
   PerfProcessInfo BuildIDProcessInfo;
   launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
-  if (prepareToParse("buildid", BuildIDProcessInfo, WarningCallback))
-    return;
+  int ErrCode = prepareToParse("buildid", BuildIDProcessInfo, WarningCallback);
+  if (ErrCode != 0) {
+    exit(ErrCode);
+  }
 
   std::optional<StringRef> FileName = getFileNameForBuildID(FileBuildID);
   if (FileName && *FileName == sys::path::filename(BC->getFilename())) {
