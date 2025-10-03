@@ -109,8 +109,6 @@ PreservedAnalyses RegToMemPass::run(Function &F, FunctionAnalysisManager &AM) {
 
 namespace llvm {
 
-void initializeRegToMemWrapperPassPass(PassRegistry &);
-
 class RegToMemWrapperPass : public FunctionPass {
 public:
   static char ID;

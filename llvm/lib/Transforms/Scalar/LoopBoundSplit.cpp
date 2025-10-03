@@ -21,8 +21,7 @@
 
 #define DEBUG_TYPE "loop-bound-split"
 
-namespace llvm {
-
+using namespace llvm;
 using namespace PatternMatch;
 
 namespace {
@@ -486,5 +485,3 @@ PreservedAnalyses LoopBoundSplitPass::run(Loop &L, LoopAnalysisManager &AM,
 
   return getLoopPassPreservedAnalyses();
 }
-
-} // end namespace llvm

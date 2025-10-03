@@ -445,8 +445,18 @@ struct FusionCandidateCompare {
         "No dominance relationship between these fusion candidates!");
   }
 };
+} // namespace
 
 using LoopVector = SmallVector<Loop *, 4>;
+
+#ifndef NDEBUG
+static void printLoopVector(const LoopVector &LV) {
+  dbgs() << "****************************\n";
+  for (auto *L : LV)
+    printLoop(*L, dbgs());
+  dbgs() << "****************************\n";
+}
+#endif
 
 // Set of Control Flow Equivalent (CFE) Fusion Candidates, sorted in dominance
 // order. Thus, if FC0 comes *before* FC1 in a FusionCandidateSet, then FC0
@@ -462,8 +472,7 @@ using FusionCandidateSet = std::set<FusionCandidate, FusionCandidateCompare>;
 using FusionCandidateCollection = SmallVector<FusionCandidateSet, 4>;
 
 #if !defined(NDEBUG)
-static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                     const FusionCandidate &FC) {
+static raw_ostream &operator<<(raw_ostream &OS, const FusionCandidate &FC) {
   if (FC.isValid())
     OS << FC.Preheader->getName();
   else
@@ -472,8 +481,8 @@ static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
-static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                     const FusionCandidateSet &CandSet) {
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const FusionCandidateSet &CandSet) {
   for (const FusionCandidate &FC : CandSet)
     OS << FC << '\n';
 
@@ -497,6 +506,7 @@ printFusionCandidates(const FusionCandidateCollection &FusionCandidates) {
 /// This data structure collects all loops at the same nest level for a
 /// given function (specified by the LoopInfo object). It starts at the
 /// outermost level.
+namespace {
 struct LoopDepthTree {
   using LoopsOnLevelTy = SmallVector<LoopVector, 4>;
   using iterator = LoopsOnLevelTy::iterator;
@@ -549,15 +559,6 @@ private:
   /// Vector of loops at the current depth level that have the same parent loop
   LoopsOnLevelTy LoopsOnLevel;
 };
-
-#ifndef NDEBUG
-static void printLoopVector(const LoopVector &LV) {
-  dbgs() << "****************************\n";
-  for (auto *L : LV)
-    printLoop(*L, dbgs());
-  dbgs() << "****************************\n";
-}
-#endif
 
 struct LoopFuser {
 private:

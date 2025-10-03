@@ -434,10 +434,6 @@ private:
   int StoreCount = 0;
 };
 
-} // end anonymous namespace
-
-namespace llvm {
-
 struct ExactEqualsExpression {
   const Expression &E;
 
@@ -449,6 +445,10 @@ struct ExactEqualsExpression {
     return E.exactlyEquals(Other);
   }
 };
+
+} // end anonymous namespace
+
+namespace llvm {
 
 template <> struct DenseMapInfo<const Expression *> {
   static const Expression *getEmptyKey() {

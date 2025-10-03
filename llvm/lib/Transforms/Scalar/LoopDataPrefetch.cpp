@@ -134,7 +134,7 @@ public:
 
   bool runOnFunction(Function &F) override;
   };
-}
+  } // namespace
 
 char LoopDataPrefetchLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopDataPrefetchLegacyPass, "loop-data-prefetch",

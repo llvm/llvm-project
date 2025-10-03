@@ -75,8 +75,6 @@ static cl::opt<bool>
                                "expressed as branches by widenable conditions"),
                       cl::init(true));
 
-namespace {
-
 // Get the condition of \p I. It can either be a guard or a conditional branch.
 static Value *getCondition(Instruction *I) {
   if (IntrinsicInst *GI = dyn_cast<IntrinsicInst>(I)) {
@@ -130,6 +128,7 @@ findInsertionPointForWideCondition(Instruction *WCOrGuard) {
   return std::nullopt;
 }
 
+namespace {
 class GuardWideningImpl {
   DominatorTree &DT;
   PostDominatorTree *PDT;
@@ -328,7 +327,7 @@ public:
   /// The entry point for this pass.
   bool run();
 };
-}
+} // namespace
 
 static bool isSupportedGuardInstruction(const Instruction *Insn) {
   if (isGuard(Insn))
