@@ -5877,18 +5877,22 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   Constant *NumCases = ConstantInt::get(Offset->getType(),
                                         ContiguousCasesMax->getValue() -
                                             ContiguousCasesMin->getValue() + 1);
-
-  Value *Sub = SI->getCondition();
-  if (!Offset->isNullValue())
-    Sub = Builder.CreateAdd(Sub, Offset, Sub->getName() + ".off");
-
-  Value *Cmp;
+  BranchInst *NewBI;
+  if (NumCases->isOneValue()) {
+    assert(ContiguousCasesMax->getValue() == ContiguousCasesMin->getValue());
+    Value *Cmp = Builder.CreateICmpEQ(SI->getCondition(), ContiguousCasesMin);
+    NewBI = Builder.CreateCondBr(Cmp, ContiguousDest, OtherDest);
+  }
   // If NumCases overflowed, then all possible values jump to the successor.
-  if (NumCases->isNullValue() && !ContiguousCases->empty())
-    Cmp = ConstantInt::getTrue(SI->getContext());
-  else
-    Cmp = Builder.CreateICmpULT(Sub, NumCases, "switch");
-  BranchInst *NewBI = Builder.CreateCondBr(Cmp, ContiguousDest, OtherDest);
+  else if (NumCases->isNullValue() && !ContiguousCases->empty()) {
+    NewBI = Builder.CreateBr(ContiguousDest);
+  } else {
+    Value *Sub = SI->getCondition();
+    if (!Offset->isNullValue())
+      Sub = Builder.CreateAdd(Sub, Offset, Sub->getName() + ".off");
+    Value *Cmp = Builder.CreateICmpULT(Sub, NumCases, "switch");
+    NewBI = Builder.CreateCondBr(Cmp, ContiguousDest, OtherDest);
+  }
 
   // Update weight for the newly-created conditional branch.
   if (hasBranchWeightMD(*SI)) {

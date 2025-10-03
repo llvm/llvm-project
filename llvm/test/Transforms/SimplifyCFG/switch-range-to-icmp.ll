@@ -220,8 +220,7 @@ else:
 
 define i32 @wrapping_known_range_2(i8 range(i8 0, 6) %arg) {
 ; CHECK-LABEL: @wrapping_known_range_2(
-; CHECK-NEXT:    [[ARG_OFF:%.*]] = add i8 [[ARG:%.*]], -1
-; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[ARG_OFF]], 1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp eq i8 [[ARG:%.*]], 1
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[ELSE:%.*]], label [[IF:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[I0:%.*]], [[IF]] ], [ [[I1:%.*]], [[ELSE]] ]
@@ -338,8 +337,7 @@ else:
 define i32 @one_case_1(i32 %x) {
 ; CHECK-LABEL: @one_case_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X:%.*]], -10
-; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[X_OFF]], 1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp eq i32 [[X:%.*]], 10
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[TMP0:%.*]], [[B]] ], [ [[TMP1:%.*]], [[A]] ]
@@ -372,8 +370,7 @@ b:
 define i32 @one_case_2(i32 %x) {
 ; CHECK-LABEL: @one_case_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X:%.*]], -5
-; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[X_OFF]], 1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp eq i32 [[X:%.*]], 5
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[TMP0:%.*]], [[A]] ], [ [[TMP1:%.*]], [[B]] ]
