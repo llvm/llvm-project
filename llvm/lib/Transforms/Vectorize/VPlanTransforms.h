@@ -138,7 +138,7 @@ struct VPlanTransforms {
   /// widen recipes. Returns false if any VPInstructions could not be converted
   /// to a wide recipe if needed.
   LLVM_ABI_FOR_TEST static bool tryToConvertVPInstructionsToVPRecipes(
-      VPlanPtr &Plan,
+      VPlan &Plan,
       function_ref<const InductionDescriptor *(PHINode *)>
           GetIntOrFpInductionDescriptor,
       const TargetLibraryInfo &TLI);
