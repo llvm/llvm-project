@@ -156,13 +156,10 @@ struct NumericFindlocHelper {
     // NVCC inlines more aggressively which causes too many specializations of
     // this function to be inlined causing compiler timeouts. Set as
     // noinline to allow compilation to complete.
-#if defined(__CUDACC__)
-    __attribute__((noinline))
-#endif
-    RT_API_ATTRS void
-    operator()(TypeCategory targetCat, int targetKind, Descriptor &result,
-        const Descriptor &x, const Descriptor &target, int kind, int dim,
-        const Descriptor *mask, bool back, Terminator &terminator) const {
+    RT_API_ATTRS RT_DEVICE_NOINLINE void operator()(TypeCategory targetCat,
+        int targetKind, Descriptor &result, const Descriptor &x,
+        const Descriptor &target, int kind, int dim, const Descriptor *mask,
+        bool back, Terminator &terminator) const {
       switch (targetCat) {
       case TypeCategory::Integer:
       case TypeCategory::Unsigned:
