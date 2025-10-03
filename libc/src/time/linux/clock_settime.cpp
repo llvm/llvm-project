@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, clock_settime,
-                   (clockid_t clockid, const struct timespec *ts)) {
+                   (clockid_t clockid, const timespec *ts)) {
   auto result = internal::clock_settime(clockid, ts);
 
   // A negative return value indicates an error with the magnitude of the
