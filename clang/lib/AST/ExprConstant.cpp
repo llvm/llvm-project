@@ -12235,6 +12235,41 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+
+  case clang::X86::BI__builtin_ia32_vec_set_v4hi:
+  case clang::X86::BI__builtin_ia32_vec_set_v16qi:
+  case clang::X86::BI__builtin_ia32_vec_set_v8hi:
+  case clang::X86::BI__builtin_ia32_vec_set_v4si:
+  case clang::X86::BI__builtin_ia32_vec_set_v2di:
+  case clang::X86::BI__builtin_ia32_vec_set_v32qi:
+  case clang::X86::BI__builtin_ia32_vec_set_v16hi:
+  case clang::X86::BI__builtin_ia32_vec_set_v8si:
+  case clang::X86::BI__builtin_ia32_vec_set_v4di: {
+    APValue VecVal;
+    APSInt Scalar, IndexAPS;
+    if (!EvaluateVector(E->getArg(0), VecVal, Info) ||
+        !EvaluateInteger(E->getArg(1), Scalar, Info) ||
+        !EvaluateInteger(E->getArg(2), IndexAPS, Info))
+      return false;
+
+    QualType ElemTy = E->getType()->castAs<VectorType>()->getElementType();
+    unsigned ElemWidth = Info.Ctx.getIntWidth(ElemTy);
+    bool ElemUnsigned = ElemTy->isUnsignedIntegerOrEnumerationType();
+    Scalar.setIsUnsigned(ElemUnsigned);
+    APSInt ElemAPS = Scalar.extOrTrunc(ElemWidth);
+    APValue ElemAV(ElemAPS);
+
+    unsigned NumElems = VecVal.getVectorLength();
+    unsigned Index =
+        static_cast<unsigned>(IndexAPS.getZExtValue() & (NumElems - 1));
+
+    SmallVector<APValue, 4> Elems;
+    Elems.reserve(NumElems);
+    for (unsigned ElemNum = 0; ElemNum != NumElems; ++ElemNum)
+      Elems.push_back(ElemNum == Index ? ElemAV : VecVal.getVectorElt(ElemNum));
+
+    return Success(APValue(Elems.data(), NumElems), E);
+  }
   }
 }
 
@@ -14822,6 +14857,25 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return HandleMaskBinOp(
         [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
   }
+
+  case clang::X86::BI__builtin_ia32_vec_ext_v4hi:
+  case clang::X86::BI__builtin_ia32_vec_ext_v16qi:
+  case clang::X86::BI__builtin_ia32_vec_ext_v8hi:
+  case clang::X86::BI__builtin_ia32_vec_ext_v4si:
+  case clang::X86::BI__builtin_ia32_vec_ext_v2di:
+  case clang::X86::BI__builtin_ia32_vec_ext_v32qi:
+  case clang::X86::BI__builtin_ia32_vec_ext_v16hi:
+  case clang::X86::BI__builtin_ia32_vec_ext_v8si:
+  case clang::X86::BI__builtin_ia32_vec_ext_v4di: {
+    APValue Vec;
+    APSInt IdxAPS;
+    if (!EvaluateVector(E->getArg(0), Vec, Info) ||
+        !EvaluateInteger(E->getArg(1), IdxAPS, Info))
+      return false;
+    unsigned N = Vec.getVectorLength();
+    unsigned Idx = static_cast<unsigned>(IdxAPS.getZExtValue() & (N - 1));
+    return Success(Vec.getVectorElt(Idx).getInt(), E);
+  }
   }
 }
 
@@ -16637,6 +16691,17 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
     (void)Result.fusedMultiplyAdd(SourceY, SourceZ, RM);
     return true;
+  }
+
+  case clang::X86::BI__builtin_ia32_vec_ext_v4sf: {
+    APValue Vec;
+    APSInt IdxAPS;
+    if (!EvaluateVector(E->getArg(0), Vec, Info) ||
+        !EvaluateInteger(E->getArg(1), IdxAPS, Info))
+      return false;
+    unsigned N = Vec.getVectorLength();
+    unsigned Idx = static_cast<unsigned>(IdxAPS.getZExtValue() & (N - 1));
+    return Success(Vec.getVectorElt(Idx), E);
   }
   }
 }
