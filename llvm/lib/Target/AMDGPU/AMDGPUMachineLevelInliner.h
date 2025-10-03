@@ -27,6 +27,8 @@
 
 namespace llvm {
 
+class SIInstrInfo;
+
 class AMDGPUMachineLevelInliner : public MachineFunctionPass {
 public:
   static char ID; // Pass identification
@@ -44,6 +46,12 @@ private:
   bool shouldInlineCallsTo(const Function &Callee) {
     return Callee.getCallingConv() == CallingConv::AMDGPU_Gfx_WholeWave;
   }
+
+  void inlineMachineFunction(MachineFunction *CallerMF, MachineInstr *CallMI,
+                             MachineFunction *CalleeMF, const SIInstrInfo *TII);
+
+  void cleanupAfterInlining(MachineFunction *CallerMF, MachineInstr *CallMI,
+                            const SIInstrInfo *TII) const;
 };
 
 } // end namespace llvm

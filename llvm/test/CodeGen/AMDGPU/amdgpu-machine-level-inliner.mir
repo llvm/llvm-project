@@ -40,14 +40,29 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; CHECK-LABEL: name: inline_simple_wwf
-    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK: successors: %bb.2(0x80000000)
+    ; CHECK-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $sgpr32 = S_MOV_B32 0
     ; CHECK-NEXT: $vgpr41 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit $exec
     ; CHECK-NEXT: $vgpr40 = V_MOV_B32_e32 $vgpr1, implicit $exec, implicit $exec
-    ; CHECK-NEXT: renamable $sgpr1 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @simple_whole_wave_func
-    ; CHECK-NEXT: renamable $sgpr0 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @simple_whole_wave_func
-    ; CHECK-NEXT: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr0_sgpr1, @simple_whole_wave_func, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .2:
+    ; CHECK-NEXT: successors: %bb.1(0x80000000)
+    ; CHECK-NEXT: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT: $exec_lo = S_MOV_B32 -1
+    ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 42, killed $vgpr0, implicit $exec
+    ; CHECK-NEXT: $exec_lo = S_XOR_B32 $sgpr0, -1, implicit-def $scc
+    ; CHECK-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $vgpr0(tied-def 0)
+    ; CHECK-NEXT: $exec_lo = S_MOV_B32 $sgpr0
+    ; CHECK-NEXT: S_BRANCH %bb.1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .1:
+    ; CHECK-NEXT: liveins: $vgpr40_vgpr41, $vgpr0
+    ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: GLOBAL_STORE_DWORD killed renamable $vgpr40_vgpr41, killed renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.output, addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0
     $sgpr32 = S_MOV_B32 0
@@ -139,7 +154,8 @@ body:             |
     $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     $exec_lo = S_MOV_B32 -1
-    $vgpr0 = V_ADD_LSHL_U32_e64 killed $vgpr0, killed $vgpr1, 1, implicit $exec
+    $vgpr0 = V_ADD_U32_e32 42, killed $vgpr0, implicit $exec
+    $sgpr1 = S_MOV_B32 71
     $exec_lo = S_XOR_B32 $sgpr0, -1, implicit-def $scc
     $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $vgpr0(tied-def 0) :: (load (s32) from %stack.0, addrspace 5)
     $exec_lo = S_MOV_B32 $sgpr0
@@ -174,7 +190,8 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
 
     ; CHECK-LABEL: name: inline_multiple_wwf
-    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; CHECK: successors: %bb.2(0x80000000)
+    ; CHECK-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $sgpr32 = S_MOV_B32 0
     ; CHECK-NEXT: $vgpr41 = V_MOV_B32_e32 $vgpr5, implicit $exec, implicit $exec
@@ -183,15 +200,47 @@ body:             |
     ; CHECK-NEXT: $vgpr43 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit $exec
     ; CHECK-NEXT: $vgpr42 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit $exec
     ; CHECK-NEXT: $vgpr45 = V_MOV_B32_e32 $vgpr1, implicit $exec, implicit $exec
-    ; CHECK-NEXT: renamable $sgpr1 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @simple_whole_wave_func
-    ; CHECK-NEXT: renamable $sgpr0 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @simple_whole_wave_func
-    ; CHECK-NEXT: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr0_sgpr1, @simple_whole_wave_func, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .2:
+    ; CHECK-NEXT: successors: %bb.1(0x80000000)
+    ; CHECK-NEXT: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT: $exec_lo = S_MOV_B32 -1
+    ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 42, killed $vgpr0, implicit $exec
+    ; CHECK-NEXT: $exec_lo = S_XOR_B32 $sgpr0, -1, implicit-def $scc
+    ; CHECK-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $vgpr0(tied-def 0)
+    ; CHECK-NEXT: $exec_lo = S_MOV_B32 $sgpr0
+    ; CHECK-NEXT: S_BRANCH %bb.1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .1:
+    ; CHECK-NEXT: successors: %bb.4(0x80000000)
+    ; CHECK-NEXT: liveins: $vgpr40_vgpr41, $vgpr45, $vgpr42_vgpr43, $vgpr44, $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $sgpr1 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @dont_inline_non_wwf
+    ; CHECK-NEXT: renamable $sgpr0 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @dont_inline_non_wwf
     ; CHECK-NEXT: $vgpr46 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
-    ; CHECK-NEXT: renamable $sgpr1 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @another_whole_wave_func
-    ; CHECK-NEXT: renamable $sgpr0 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @another_whole_wave_func
     ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vgpr44, implicit $exec, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr45, implicit $exec, implicit $exec
-    ; CHECK-NEXT: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr0_sgpr1, @another_whole_wave_func, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit-def $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .4:
+    ; CHECK-NEXT: successors: %bb.3(0x80000000)
+    ; CHECK-NEXT: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT: $exec_lo = S_MOV_B32 -1
+    ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 42, killed $vgpr0, implicit $exec
+    ; CHECK-NEXT: $sgpr1 = S_MOV_B32 71
+    ; CHECK-NEXT: $exec_lo = S_XOR_B32 $sgpr0, -1, implicit-def $scc
+    ; CHECK-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $vgpr0(tied-def 0)
+    ; CHECK-NEXT: $exec_lo = S_MOV_B32 $sgpr0
+    ; CHECK-NEXT: S_BRANCH %bb.3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .3:
+    ; CHECK-NEXT: liveins: $vgpr40_vgpr41, $vgpr0, $vgpr42_vgpr43, $vgpr46
+    ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: GLOBAL_STORE_DWORD killed renamable $vgpr42_vgpr43, killed renamable $vgpr46, 0, 0, implicit $exec :: (store (s32) into %ir.out1, addrspace 1)
     ; CHECK-NEXT: GLOBAL_STORE_DWORD killed renamable $vgpr40_vgpr41, killed renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.out2, addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0
@@ -205,6 +254,8 @@ body:             |
     renamable $sgpr1 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @simple_whole_wave_func
     renamable $sgpr0 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @simple_whole_wave_func
     dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr0_sgpr1, @simple_whole_wave_func, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
+    renamable $sgpr1 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @dont_inline_non_wwf
+    renamable $sgpr0 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @dont_inline_non_wwf
     $vgpr46 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
     renamable $sgpr1 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @another_whole_wave_func
     renamable $sgpr0 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @another_whole_wave_func
