@@ -1733,6 +1733,18 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
 bool SIFoldOperandsImpl::tryFoldArithmetic(MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
 
+  auto replaceAndFold = [this](MachineOperand &NewOp, MachineOperand &OldOp,
+                               MachineInstr &MI) -> bool {
+    if (!(NewOp.isReg() && OldOp.isReg()))
+      return false;
+    Register OldReg = OldOp.getReg();
+    MRI->replaceRegWith(NewOp.getReg(), OldReg);
+    if (!OldOp.isKill())
+      MRI->clearKillFlags(OldReg);
+    MI.eraseFromParent();
+    return true;
+  };
+
   switch (Opc) {
     default:
       return false;
@@ -1742,17 +1754,21 @@ bool SIFoldOperandsImpl::tryFoldArithmetic(MachineInstr &MI) const {
       if (!Src0Imm || *Src0Imm != 0xffff || !MI.getOperand(2).isReg())
         return false;
 
-      Register Src1 = MI.getOperand(2).getReg();
-      MachineInstr *SrcDef = MRI->getVRegDef(Src1);
+      MachineOperand &Src1Op = MI.getOperand(2);
+      MachineInstr *SrcDef = MRI->getVRegDef(Src1Op.getReg());
       if (!ST->zeroesHigh16BitsOfDest(SrcDef->getOpcode()))
         return false;
 
-      Register Dst = MI.getOperand(0).getReg();
-      MRI->replaceRegWith(Dst, Src1);
-      if (!MI.getOperand(2).isKill())
-        MRI->clearKillFlags(Src1);
-      MI.eraseFromParent();
-      return true;
+      return replaceAndFold(MI.getOperand(0), Src1Op, MI);
+    }
+    case AMDGPU::V_ADD_U32_e64:
+    case AMDGPU::V_ADD_U32_e32: {
+      std::optional<int64_t> Src0Imm =
+          getImmOrMaterializedImm(MI.getOperand(1));
+      if (!Src0Imm || *Src0Imm != 0 || !MI.getOperand(2).isReg())
+        return false;
+
+      return replaceAndFold(MI.getOperand(0), MI.getOperand(2), MI);
     }
   }
 
