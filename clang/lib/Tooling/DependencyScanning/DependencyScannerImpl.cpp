@@ -31,7 +31,7 @@ public:
     for (const auto &File : getDependencies()) {
       CanonPath = File;
       llvm::sys::path::remove_dots(CanonPath, /*remove_dot_dot=*/true);
-      llvm::sys::fs::make_absolute(WorkingDirectory, CanonPath);
+      llvm::sys::path::make_absolute(WorkingDirectory, CanonPath);
       C.handleFileDependency(CanonPath);
     }
   }
@@ -415,7 +415,7 @@ bool DependencyScanningAction::runInvocation(
       any(Service.getOptimizeArgs() & ScanningOptimizations::VFS);
 
   // Create a new FileManager to match the invocation's FileSystemOptions.
-  auto *FileMgr = ScanInstance.createFileManager();
+  ScanInstance.createFileManager();
 
   // Use the dependency scanning optimized file system if requested to do so.
   if (DepFS) {
@@ -423,16 +423,17 @@ bool DependencyScanningAction::runInvocation(
     if (!ScanInstance.getHeaderSearchOpts().ModuleCachePath.empty()) {
       SmallString<256> ModulesCachePath;
       normalizeModuleCachePath(
-          *FileMgr, ScanInstance.getHeaderSearchOpts().ModuleCachePath,
-          ModulesCachePath);
+          ScanInstance.getFileManager(),
+          ScanInstance.getHeaderSearchOpts().ModuleCachePath, ModulesCachePath);
       DepFS->setBypassedPathPrefix(ModulesCachePath);
     }
 
     ScanInstance.setDependencyDirectivesGetter(
-        std::make_unique<ScanningDependencyDirectivesGetter>(*FileMgr));
+        std::make_unique<ScanningDependencyDirectivesGetter>(
+            ScanInstance.getFileManager()));
   }
 
-  ScanInstance.createSourceManager(*FileMgr);
+  ScanInstance.createSourceManager();
 
   // Create a collection of stable directories derived from the ScanInstance
   // for determining whether module dependencies would fully resolve from
