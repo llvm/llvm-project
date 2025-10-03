@@ -10,9 +10,5 @@ add_mlir_dialect_library(MLIRStandalone
         DEPENDS
         MLIRStandaloneOpsIncGen
         MLIRStandalonePassesIncGen
-
-        LINK_LIBS PUBLIC
-        MLIRIR
-        MLIRInferTypeOpInterface
-        MLIRFuncDialect
         )
+target_link_options(obj.MLIRStandalone PUBLIC --unresolved-symbols=ignore-all)
