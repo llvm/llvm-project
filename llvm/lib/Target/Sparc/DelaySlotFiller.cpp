@@ -206,8 +206,8 @@ Filler::findDelayInstr(MachineBasicBlock &MBB,
     if (!done)
       --I;
 
-    // Skip debug and meta instructions.
-    if (I->isDebugInstr() || I->isMetaInstruction())
+    // Skip meta instructions.
+    if (I->isMetaInstruction())
       continue;
 
     if (I->hasUnmodeledSideEffects() || I->isInlineAsm() || I->isPosition() ||
