@@ -2768,8 +2768,11 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstCastExpr>
 /// Example: Matches all four of the casts in
 /// \code
 ///   struct S { virtual void f(); };
-///   void* ptr = dynamic_cast<void*>(reinterpret_cast<S*>(
-///                    const_cast<int*>(static_cast<int*>(nullptr))));
+///   S* p = nullptr;
+///   S* ptr1 = static_cast<S*>(p);
+///   S* ptr2 = reinterpret_cast<S*>(p);
+///   S* ptr3 = dynamic_cast<S*>(p);
+///   S* ptr4 = const_cast<S*>(p);
 /// \endcode
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNamedCastExpr>
     cxxNamedCastExpr;
@@ -7003,9 +7006,9 @@ extern const internal::VariadicDynCastAllOfMatcher<
 /// Given
 /// \code
 ///   using t1 = int;
-///   template <typename T> class C { using t2 = int; };
+///   template <typename T> struct S { using t2 = int; };
 ///   t1 var1;
-///   const C<char>::t2* var2;
+///   const S<char>::t2* var2;
 /// \endcode
 /// typedefTypeLoc()
 ///   matches `t1` (in the declaration of var1) and `C<char>::t2`.
