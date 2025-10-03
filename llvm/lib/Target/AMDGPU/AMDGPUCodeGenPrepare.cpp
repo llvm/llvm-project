@@ -2089,21 +2089,16 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
   if (!Arg0C || !Arg1C || !Arg0C->isAllOnesValue() || !Arg1C->isZero())
     return false;
 
-  // Check reqd_work_group_size similar to mbcnt_hi case.
-  Function *F = I.getFunction();
-  if (!F)
+  // Abort if wave size is not known.
+  if (!ST.isWaveSizeKnown())
     return false;
 
-  unsigned Wave = 0;
-  if (ST.isWaveSizeKnown())
-    Wave = ST.getWavefrontSize();
+  unsigned Wave = ST.getWavefrontSize();
 
-  if (auto MaybeX = ST.getReqdWorkGroupSize(*F, 0)) {
+  if (auto MaybeX = ST.getReqdWorkGroupSize(F, 0)) {
     unsigned XLen = *MaybeX;
-    if (Wave == 0 && XLen == 32)
-      Wave = XLen;
 
-    if (Wave != 0 && XLen == Wave) {
+    if (XLen == Wave) {
       IRBuilder<> B(&I);
       CallInst *NewCall =
           B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
@@ -2115,8 +2110,8 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
     }
     // Handle bitmask case: when X dimension evenly splits into waves.
     // mbcnt.lo(~0, 0) = workitem.id.x() & (wave_size - 1).
-    if (ST.hasWavefrontsEvenlySplittingXDim(*F, /*RequiresUniformYZ=*/true)) {
-      if (Wave != 0 && isPowerOf2_32(Wave)) {
+    if (ST.hasWavefrontsEvenlySplittingXDim(F, /*RequiresUniformYZ=*/true)) {
+      if (isPowerOf2_32(Wave)) {
         IRBuilder<> B(&I);
         CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
         ST.makeLIDRangeMetadata(Tid);
@@ -2139,20 +2134,16 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) {
   // exec_hi is all 0, so this is just a copy on wave32.
   // However, only optimize if we have the same conditions as mbcnt.lo.
   if (ST.isWave32()) {
-    Function *F = I.getFunction();
-    if (!F)
+    // Abort if wave size is not known.
+    if (!ST.isWaveSizeKnown())
       return false;
 
-    unsigned Wave = 0;
-    if (ST.isWaveSizeKnown())
-      Wave = ST.getWavefrontSize();
+    unsigned Wave = ST.getWavefrontSize();
 
-    if (auto MaybeX = ST.getReqdWorkGroupSize(*F, 0)) {
+    if (auto MaybeX = ST.getReqdWorkGroupSize(F, 0)) {
       unsigned XLen = *MaybeX;
-      if (Wave == 0 && XLen == 32)
-        Wave = XLen;
 
-      if (Wave != 0 && XLen == Wave) {
+      if (XLen == Wave) {
         I.replaceAllUsesWith(I.getArgOperand(1));
         I.eraseFromParent();
         return true;
@@ -2184,20 +2175,16 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) {
 
   // Query reqd_work_group_size via subtarget helper and compare X to wave
   // size conservatively.
-  Function *F = I.getFunction();
-  if (!F)
+  // Abort if wave size is not known.
+  if (!ST.isWaveSizeKnown())
     return false;
 
-  unsigned Wave = 0;
-  if (ST.isWaveSizeKnown())
-    Wave = ST.getWavefrontSize();
+  unsigned Wave = ST.getWavefrontSize();
 
-  if (auto MaybeX = ST.getReqdWorkGroupSize(*F, 0)) {
+  if (auto MaybeX = ST.getReqdWorkGroupSize(F, 0)) {
     unsigned XLen = *MaybeX;
-    if (Wave == 0 && (XLen == 32 || XLen == 64))
-      Wave = XLen; // allow common sizes under test harness
 
-    if (Wave != 0 && XLen == Wave) {
+    if (XLen == Wave) {
       IRBuilder<> B(&I);
       CallInst *NewCall =
           B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
@@ -2212,18 +2199,17 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) {
     // replace lane-id computation with a bitmask when the wave is a
     // power-of-two. Use the Subtarget helper to conservatively decide
     // when per-wave tiling is preserved.
-    if (ST.hasWavefrontsEvenlySplittingXDim(*F, /*RequiresUniformYZ=*/true)) {
-      if (Wave != 0 && isPowerOf2_32(Wave)) {
+    if (ST.hasWavefrontsEvenlySplittingXDim(F, /*RequiresUniformYZ=*/true)) {
+      if (isPowerOf2_32(Wave)) {
         // Construct: tid = workitem.id.x(); mask = Wave-1; res = tid & mask
         IRBuilder<> B(&I);
         CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
-        Tid->takeName(&I);
+        ST.makeLIDRangeMetadata(Tid);
         IntegerType *ITy = cast<IntegerType>(Tid->getType());
         Constant *Mask = ConstantInt::get(ITy, Wave - 1);
         Instruction *AndInst = cast<Instruction>(B.CreateAnd(Tid, Mask));
         AndInst->takeName(&I);
-        // Attach range metadata for the result if possible.
-        ST.makeLIDRangeMetadata(AndInst);
+        // Note: Range metadata cannot be applied to 'and' instructions.
         I.replaceAllUsesWith(AndInst);
         I.eraseFromParent();
         return true;
@@ -2233,19 +2219,18 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) {
     // No reqd_work_group_size metadata: be conservative and only handle the
     // common test harness cases where reqd_work_group_size metadata exists
     // and equals 32/64.
-    if (auto *Node = F->getMetadata("reqd_work_group_size")) {
-      if (Node->getNumOperands() == 3) {
-        unsigned XLen =
-            mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
-        if (XLen == 32 || XLen == 64) {
-          IRBuilder<> B(&I);
-          CallInst *NewCall =
-              B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
-          NewCall->takeName(&I);
-          I.replaceAllUsesWith(NewCall);
-          I.eraseFromParent();
-          return true;
-        }
+    const MDNode *Node = F.getMetadata("reqd_work_group_size");
+    if (Node && Node->getNumOperands() == 3) {
+      unsigned XLen =
+          mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
+      if (XLen == Wave) {
+        IRBuilder<> B(&I);
+        CallInst *NewCall =
+            B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
+        NewCall->takeName(&I);
+        I.replaceAllUsesWith(NewCall);
+        I.eraseFromParent();
+        return true;
       }
     }
   }
