@@ -2624,6 +2624,48 @@ bool llvm::rewriteARMFrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   return Offset == 0;
 }
 
+// ARM supports MachineCombiner.
+bool ARMBaseInstrInfo::useMachineCombiner() const { return true; }
+
+/// Return true when Inst is associative and commutative so that it can be
+/// reassociated. If Invert is true, then the inverse of Inst operation must
+/// be checked.
+// TODO: There are many more machine instruction opcodes to match:
+//       1. Other data types (integer, vectors)
+//       2. Other math / logic operations (xor, or)
+//       3. Other forms of the same operation (intrinsics and other variants)
+bool ARMBaseInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
+                                                   bool Invert) const {
+  if (Invert)
+    return false;
+
+  // Don't reassociate if CPSR is defined and not dead
+  if (isCPSRDefined(Inst))
+    return false;
+
+  switch (Inst.getOpcode()) {
+  case ARM::ADDrr:
+  case ARM::tADDrr:
+  // FIXME: Unable to reassociate because it expects a rGPR register, but gets a
+  // GPRnopc register in reassociation.
+  // Fixing this requires splitting t2ADDrr because it has different rules
+  // depending on SP case ARM::t2ADDrr:
+  case ARM::ANDrr:
+  case ARM::tAND:
+  case ARM::t2ANDrr:
+  case ARM::ORRrr:
+  case ARM::tORR:
+  case ARM::t2ORRrr:
+  case ARM::EORrr:
+  case ARM::tEOR:
+  case ARM::t2EORrr:
+  case ARM::tMUL:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// analyzeCompare - For a comparison instruction, return the source registers
 /// in SrcReg and SrcReg2 if having two register operands, and the value it
 /// compares against in CmpValue. Return true if the comparison instruction
@@ -3286,11 +3328,10 @@ bool ARMBaseInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   UseMI.getOperand(1).setIsKill();
   UseMI.getOperand(2).ChangeToImmediate(SOImmValV2);
   DefMI.eraseFromParent();
-  // FIXME: t2ADDrr should be split, as different rulles apply when writing to SP.
-  // Just as t2ADDri, that was split to [t2ADDri, t2ADDspImm].
-  // Then the below code will not be needed, as the input/output register
-  // classes will be rgpr or gprSP.
-  // For now, we fix the UseMI operand explicitly here:
+  // FIXME: t2ADDrr should be split, as different rules apply when writing to
+  // SP. Just as t2ADDri, that was split to [t2ADDri, t2ADDspImm]. Then the
+  // below code will not be needed, as the input/output register classes will be
+  // rgpr or gprSP. For now, we fix the UseMI operand explicitly here:
   switch(NewUseOpc){
     case ARM::t2ADDspImm:
     case ARM::t2SUBspImm:
