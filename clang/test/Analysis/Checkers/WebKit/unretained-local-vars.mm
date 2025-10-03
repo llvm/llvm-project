@@ -535,6 +535,18 @@ unsigned foo() {
 
 } // namespace ns_retained_return_value
 
+namespace autoreleased {
+
+NSString *provideAutoreleased() __attribute__((ns_returns_autoreleased));
+void consume(NSString *);
+
+void foo() {
+  auto *string = provideAutoreleased();
+  consume(string);
+}
+
+} // autoreleased
+
 bool doMoreWorkOpaque(OtherObj*);
 SomeObj* provide();
 
