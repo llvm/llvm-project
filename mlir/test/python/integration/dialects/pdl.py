@@ -274,7 +274,7 @@ def get_pdl_pattern_expand():
         cst = values[0].value
         c1 = cst // 2
         c2 = cst - c1
-        with rewriter.ip():
+        with rewriter.ip:
             op1 = Operation.create(
                 "myint.constant",
                 results=[i32],
