@@ -23,8 +23,6 @@ using namespace mlir;
 
 DEFINE_C_API_PTR_METHODS(MlirTransformOptions, transform::TransformOptions)
 
-extern "C" {
-
 MlirTransformOptions mlirTransformOptionsCreate() {
   return wrap(new transform::TransformOptions);
 }
@@ -79,5 +77,4 @@ MlirLogicalResult mlirMergeSymbolsIntoFromClone(MlirOperation target,
   LogicalResult result = transform::detail::mergeSymbolsInto(
       unwrap(target), std::move(otherOwning));
   return wrap(result);
-}
 }

@@ -65,7 +65,8 @@ add_mlir_python_common_capi_library(StandalonePythonCAPI
   DECLARED_SOURCES
     StandalonePythonSources
     MLIRPythonSources.Core
-    MLIRPythonSources.Dialects.builtin
+  EMBED_LIBS
+    MLIRCAPIQuant
 )
 
 ################################################################################
@@ -138,6 +139,8 @@ set(_declared_sources
   StandalonePythonSources
   MLIRPythonSources.Core
   MLIRPythonSources.Dialects.builtin
+  MLIRPythonSources.Dialects.arith
+  MLIRPythonSources.Dialects.quant
 )
 # For an external projects build, the MLIRPythonExtension.Core.type_stub_gen
 # target already exists and can just be added to DECLARED_SOURCES.
