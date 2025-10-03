@@ -2934,32 +2934,6 @@ static Instruction *foldSelectWithSRem(SelectInst &SI, InstCombinerImpl &IC,
   return nullptr;
 }
 
-static Value *foldSelectWithFrozenICmp(SelectInst &Sel, InstCombiner::BuilderTy &Builder) {
-  FreezeInst *FI = dyn_cast<FreezeInst>(Sel.getCondition());
-  if (!FI)
-    return nullptr;
-
-  Value *Cond = FI->getOperand(0);
-  Value *TrueVal = Sel.getTrueValue(), *FalseVal = Sel.getFalseValue();
-
-  //   select (freeze(x == y)), x, y --> y
-  //   select (freeze(x != y)), x, y --> x
-  // The freeze should be only used by this select. Otherwise, remaining uses of
-  // the freeze can observe a contradictory value.
-  //   c = freeze(x == y)   ; Let's assume that y = poison & x = 42; c is 0 or 1
-  //   a = select c, x, y   ;
-  //   f(a, c)              ; f(poison, 1) cannot happen, but if a is folded
-  //                        ; to y, this can happen.
-  CmpPredicate Pred;
-  if (FI->hasOneUse() &&
-      match(Cond, m_c_ICmp(Pred, m_Specific(TrueVal), m_Specific(FalseVal))) &&
-      (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE)) {
-    return Pred == ICmpInst::ICMP_EQ ? FalseVal : TrueVal;
-  }
-
-  return nullptr;
-}
-
 /// Given that \p CondVal is known to be \p CondIsTrue, try to simplify \p SI.
 static Value *simplifyNestedSelectsUsingImpliedCond(SelectInst &SI,
                                                     Value *CondVal,
@@ -4445,9 +4419,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (Instruction *PN = foldSelectToPhi(SI, DT, Builder))
     return replaceInstUsesWith(SI, PN);
-
-  if (Value *Fr = foldSelectWithFrozenICmp(SI, Builder))
-    return replaceInstUsesWith(SI, Fr);
 
   if (Value *V = foldRoundUpIntegerWithPow2Alignment(SI, Builder))
     return replaceInstUsesWith(SI, V);
