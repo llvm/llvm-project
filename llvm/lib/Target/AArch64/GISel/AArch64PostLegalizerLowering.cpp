@@ -75,6 +75,31 @@ struct ShuffleVectorPseudo {
   ShuffleVectorPseudo() = default;
 };
 
+/// Return true if a G_FCONSTANT instruction is known to be better-represented
+/// as a G_CONSTANT.
+bool matchFConstantToConstant(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
+  Register DstReg = MI.getOperand(0).getReg();
+  const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
+  if (DstSize != 16 && DstSize != 32 && DstSize != 64)
+    return false;
+
+  // When we're storing a value, it doesn't matter what register bank it's on.
+  // Since not all floating point constants can be materialized using a fmov,
+  // it makes more sense to just use a GPR.
+  return all_of(MRI.use_nodbg_instructions(DstReg),
+                [](const MachineInstr &Use) { return Use.mayStore(); });
+}
+
+/// Change a G_FCONSTANT into a G_CONSTANT.
+void applyFConstantToConstant(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
+  MachineIRBuilder MIB(MI);
+  const APFloat &ImmValAPF = MI.getOperand(1).getFPImm()->getValueAPF();
+  MIB.buildConstant(MI.getOperand(0).getReg(), ImmValAPF.bitcastToAPInt());
+  MI.eraseFromParent();
+}
+
 /// Check if a G_EXT instruction can handle a shuffle mask \p M when the vector
 /// sources of the shuffle are different.
 std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
