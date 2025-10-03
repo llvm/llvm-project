@@ -752,6 +752,8 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::exp, GL::Exp);
   case TargetOpcode::G_FEXP2:
     return selectExtInst(ResVReg, ResType, I, CL::exp2, GL::Exp2);
+  case TargetOpcode::G_FMODF:
+    return selectModf(ResVReg, ResType, I);
 
   case TargetOpcode::G_FLOG:
     return selectExtInst(ResVReg, ResType, I, CL::log, GL::Log);
@@ -1073,7 +1075,8 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
                      .addDef(ResVReg)
                      .addUse(GR.getSPIRVTypeID(ResType))
                      .addImm(static_cast<uint32_t>(Set))
-                     .addImm(Opcode);
+                     .addImm(Opcode)
+                     .setMIFlags(I.getFlags());
       const unsigned NumOps = I.getNumOperands();
       unsigned Index = 1;
       if (Index < NumOps &&
@@ -2629,6 +2632,7 @@ bool SPIRVInstructionSelector::selectCmp(Register ResVReg,
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(Cmp0)
       .addUse(Cmp1)
+      .setMIFlags(I.getFlags())
       .constrainAllUses(TII, TRI, RBI);
 }
 
@@ -3451,9 +3455,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_discard: {
     return selectDiscard(ResVReg, ResType, I);
   }
-  case Intrinsic::modf: {
-    return selectModf(ResVReg, ResType, I);
-  }
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
@@ -4266,6 +4267,7 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
         PtrTyReg,
         LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Function),
                      GR.getPointerSize()));
+
     // Assign SPIR-V type of the pointer type of the alloca variable to the
     // new register.
     GR.assignSPIRVTypeToVReg(PtrType, PtrTyReg, MIRBuilder.getMF());
@@ -4278,10 +4280,7 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
             .addUse(GR.getSPIRVTypeID(PtrType))
             .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function));
     Register Variable = AllocaMIB->getOperand(0).getReg();
-    // Modf must have 4 operands, the first two are the 2 parts of the result,
-    // the third is the operand, and the last one is the floating point value.
-    assert(I.getNumOperands() == 4 &&
-           "Expected 4 operands for modf instruction");
+
     MachineBasicBlock &BB = *I.getParent();
     // Create the OpenCLLIB::modf instruction.
     auto MIB =
@@ -4291,8 +4290,8 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
             .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::OpenCL_std))
             .addImm(CL::modf)
             .setMIFlags(I.getFlags())
-            .add(I.getOperand(3)) // Floating point value.
-            .addUse(Variable);    // Pointer to integral part.
+            .add(I.getOperand(I.getNumExplicitDefs())) // Floating point value.
+            .addUse(Variable); // Pointer to integral part.
     // Assign the integral part stored in the ptr to the second element of the
     // result.
     Register IntegralPartReg = I.getOperand(1).getReg();
