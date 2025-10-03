@@ -68,13 +68,12 @@ entry:
 }
 
 ; SVE calling conventions
-; Predicate register spills end up in FP region, currently. This can be
-; mitigated with the -aarch64-enable-zpr-predicate-spills option.
+; Padding is placed between predicate and fpr/zpr register spills, so only emit remarks when hazard padding is off.
+; Note: The -aarch64-enable-zpr-predicate-spills option is deprecated (and will be removed soon).
 
 define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, i16 %P4) #2 {
 ; CHECK: remark: <unknown>:0:0: stack hazard in 'svecc_call': PPR stack object at [SP-64-258 * vscale] is too close to FPR stack object at [SP-64-256 * vscale]
 ; CHECK: remark: <unknown>:0:0: stack hazard in 'svecc_call': FPR stack object at [SP-64-16 * vscale] is too close to GPR stack object at [SP-64]
-; CHECK-PADDING: remark: <unknown>:0:0: stack hazard in 'svecc_call': PPR stack object at [SP-1088-258 * vscale] is too close to FPR stack object at [SP-1088-256 * vscale]
 ; CHECK-PADDING-NOT: remark: <unknown>:0:0: stack hazard in 'svecc_call':
 ; CHECK-ZPR-PRED-SPILLS-NOT: <unknown>:0:0: stack hazard in 'svecc_call': PPR stack object at {{.*}} is too close to FPR stack object
 ; CHECK-ZPR-PRED-SPILLS: <unknown>:0:0: stack hazard in 'svecc_call': FPR stack object at [SP-64-16 * vscale] is too close to GPR stack object at [SP-64]
@@ -89,7 +88,6 @@ entry:
 define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, i16 %P4) #2 {
 ; CHECK: remark: <unknown>:0:0: stack hazard in 'svecc_alloca_call': PPR stack object at [SP-64-258 * vscale] is too close to FPR stack object at [SP-64-256 * vscale]
 ; CHECK: remark: <unknown>:0:0: stack hazard in 'svecc_alloca_call': FPR stack object at [SP-64-16 * vscale] is too close to GPR stack object at [SP-64]
-; CHECK-PADDING: remark: <unknown>:0:0: stack hazard in 'svecc_alloca_call': PPR stack object at [SP-1088-258 * vscale] is too close to FPR stack object at [SP-1088-256 * vscale]
 ; CHECK-PADDING-NOT: remark: <unknown>:0:0: stack hazard in 'svecc_alloca_call':
 ; CHECK-ZPR-PRED-SPILLS-NOT: <unknown>:0:0: stack hazard in 'svecc_call': PPR stack object at {{.*}} is too close to FPR stack object
 ; CHECK-ZPR-PRED-SPILLS: <unknown>:0:0: stack hazard in 'svecc_alloca_call': FPR stack object at [SP-64-16 * vscale] is too close to GPR stack object at [SP-64]

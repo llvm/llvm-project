@@ -282,7 +282,7 @@ static cl::opt<bool> OrderFrameObjects("aarch64-order-frame-objects",
 static cl::opt<bool>
     SplitSVEObjects("aarch64-split-sve-objects",
                     cl::desc("Split allocation of ZPR & PPR objects"),
-                    cl::init(false), cl::Hidden);
+                    cl::init(true), cl::Hidden);
 
 cl::opt<bool> EnableHomogeneousPrologEpilog(
     "homogeneous-prolog-epilog", cl::Hidden,

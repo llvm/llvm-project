@@ -259,22 +259,23 @@ void mlirIRRewriterDestroy(MlirRewriterBase rewriter) {
 /// RewritePatternSet and FrozenRewritePatternSet API
 //===----------------------------------------------------------------------===//
 
-inline mlir::RewritePatternSet &unwrap(MlirRewritePatternSet module) {
+static inline mlir::RewritePatternSet &unwrap(MlirRewritePatternSet module) {
   assert(module.ptr && "unexpected null module");
   return *(static_cast<mlir::RewritePatternSet *>(module.ptr));
 }
 
-inline MlirRewritePatternSet wrap(mlir::RewritePatternSet *module) {
+static inline MlirRewritePatternSet wrap(mlir::RewritePatternSet *module) {
   return {module};
 }
 
-inline mlir::FrozenRewritePatternSet *
+static inline mlir::FrozenRewritePatternSet *
 unwrap(MlirFrozenRewritePatternSet module) {
   assert(module.ptr && "unexpected null module");
   return static_cast<mlir::FrozenRewritePatternSet *>(module.ptr);
 }
 
-inline MlirFrozenRewritePatternSet wrap(mlir::FrozenRewritePatternSet *module) {
+static inline MlirFrozenRewritePatternSet
+wrap(mlir::FrozenRewritePatternSet *module) {
   return {module};
 }
 
@@ -321,12 +322,12 @@ inline MlirPatternRewriter wrap(mlir::PatternRewriter *rewriter) {
 //===----------------------------------------------------------------------===//
 
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
-inline mlir::PDLPatternModule *unwrap(MlirPDLPatternModule module) {
+static inline mlir::PDLPatternModule *unwrap(MlirPDLPatternModule module) {
   assert(module.ptr && "unexpected null module");
   return static_cast<mlir::PDLPatternModule *>(module.ptr);
 }
 
-inline MlirPDLPatternModule wrap(mlir::PDLPatternModule *module) {
+static inline MlirPDLPatternModule wrap(mlir::PDLPatternModule *module) {
   return {module};
 }
 

@@ -56,6 +56,7 @@ class OptimizationRemarkEmitter;
 class PHINode;
 class TargetLibraryInfo;
 class Value;
+class IntrinsicInst;
 /// A private "module" namespace for types and utilities used by GVN. These
 /// are implementation details and should not be used by clients.
 namespace LLVM_LIBRARY_VISIBILITY_NAMESPACE gvn {
@@ -349,6 +350,7 @@ private:
 
   // Helper functions of redundant load elimination.
   bool processLoad(LoadInst *L);
+  bool processMaskedLoad(IntrinsicInst *I);
   bool processNonLocalLoad(LoadInst *L);
   bool processAssumeIntrinsic(AssumeInst *II);
 
