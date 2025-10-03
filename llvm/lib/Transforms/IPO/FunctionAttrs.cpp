@@ -142,10 +142,6 @@ static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
     ME |= MemoryEffects::argMemOnly(MR);
   ME |= MemoryEffects(IRMemLocation::ErrnoMem, MR);
   ME |= MemoryEffects(IRMemLocation::Other, MR);
-  // Should also set the other Target Memory Locations as MR.
-  // To compares with MemoryEffects::unknown() in addMemoryAttrs
-  ME |= MemoryEffects(IRMemLocation::TargetMem0, MR);
-  ME |= MemoryEffects(IRMemLocation::TargetMem1, MR);;
 }
 
 static void addArgLocs(MemoryEffects &ME, const CallBase *Call,
@@ -289,8 +285,15 @@ static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
         checkFunctionMemoryAccess(*F, F->hasExactDefinition(), AAR, SCCNodes);
     ME |= FnME;
     RecursiveArgME |= FnRecursiveArgME;
+    // If no Target Memory location is specified, default to ModRef.
+    // This preserves the same behavior as before Target Memory was introduced,
+    // since Target Memory is never set at this point.
+    MemoryEffects METarget = ME;
+    if (ME.getModRef(IRMemLocation::TargetMem0) == ModRefInfo::NoModRef and
+        ME.getModRef(IRMemLocation::TargetMem1) == ModRefInfo::NoModRef)
+      METarget |= ME.setTargetMemLocationModRef(ModRefInfo::ModRef);
     // Reached bottom of the lattice, we will not be able to improve the result.
-    if (ME == MemoryEffects::unknown())
+    if (ME == MemoryEffects::unknown() or METarget == MemoryEffects::unknown())
       return;
   }
 

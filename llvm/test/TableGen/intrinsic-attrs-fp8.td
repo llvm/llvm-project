@@ -47,8 +47,7 @@ def int_aarch64_get_fpmr_set_za   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [In
 // CHECK-NEXT:      // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, TargetMem0: Mod, TargetMem1: NoModRef
 // CHECK-NEXT:      Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(512)),
 
-// CHECK: static constexpr uint16_t IntrinsicsToAttributesMap[] = {
-// CHECK-NEXT:    0 << 1 | 0, // llvm.aarch64.get.fpmr.set.za
+// CHECK:    0 << 1 | 0, // llvm.aarch64.get.fpmr.set.za
 // CHECK-NEXT:    1 << 1 | 0, // llvm.aarch64.get.za.2
 // CHECK-NEXT:    2 << 1 | 0, // llvm.aarch64.set.fpmr.2
 // CHECK-NEXT:};

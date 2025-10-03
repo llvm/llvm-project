@@ -663,3 +663,90 @@ define void @memset_large_offset_nonzero_size(ptr %dst) {
   call void @llvm.memset.p0.i64(ptr %offset, i8 0, i64 3, i1 false)
   ret void
 }
+
+
+; Check Target Memory Location keeps the attributes correct with volatile
+
+define void @mem_target_f1(ptr %p){
+; CHECK-LABEL: define void @mem_target_f1(
+; CHECK-SAME: ptr readnone captures(address) [[P:%.*]]) {
+; CHECK-NEXT:    call void @target0_no_read_write(ptr [[P]])
+; CHECK-NEXT:    store volatile i32 0, ptr undef, align 4
+; CHECK-NEXT:    ret void
+;
+  call void @target0_no_read_write(ptr %p)
+  store volatile i32 0, ptr undef, align 4
+  ret void
+}
+
+define void @mem_target_f2(ptr %p){
+; CHECK-LABEL: define void @mem_target_f2(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @targets_read_write(ptr [[P]])
+; CHECK-NEXT:    store volatile i32 0, ptr undef, align 4
+; CHECK-NEXT:    ret void
+;
+  call void @targets_read_write(ptr %p)
+  store volatile i32 0, ptr undef, align 4
+  ret void
+}
+
+define void @mem_target_f3(ptr %p){
+; CHECK: Function Attrs: memory(readwrite)
+; CHECK-LABEL: define void @mem_target_f3(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-NEXT:    call void @target_read_or_write(ptr [[P]])
+; CHECK-NEXT:    store volatile i32 0, ptr undef, align 4
+; CHECK-NEXT:    ret void
+;
+  call void @target_read_or_write(ptr %p)
+  store volatile i32 0, ptr undef, align 4
+  ret void
+}
+
+
+; Without volatile
+
+; Check Target Memory Location keeps the attributes correct with volatile
+define void @mem_target_f4(ptr %p){
+; CHECK: Function Attrs: memory(write, inaccessiblemem: none)
+; CHECK-LABEL: define void @mem_target_f4(
+; CHECK-SAME: ptr readnone captures(address) [[P:%.*]]) #[[ATTR8:[0-9]+]] {
+; CHECK-NEXT:    call void @target0_no_read_write(ptr [[P]])
+; CHECK-NEXT:    store i32 0, ptr undef, align 4
+; CHECK-NEXT:    ret void
+;
+  call void @target0_no_read_write(ptr %p)
+  store i32 0, ptr undef, align 4
+  ret void
+}
+
+define void @mem_target_f5(ptr %p){
+; CHECK: Function Attrs: memory(write, inaccessiblemem: none, target_mem0: readwrite, target_mem1: readwrite)
+; CHECK-LABEL: define void @mem_target_f5(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR9:[0-9]+]] {
+; CHECK-NEXT:    call void @targets_read_write(ptr [[P]])
+; CHECK-NEXT:    store i32 0, ptr undef, align 4
+; CHECK-NEXT:    ret void
+;
+  call void @targets_read_write(ptr %p)
+  store i32 0, ptr undef, align 4
+  ret void
+}
+
+define void @mem_target_f6(ptr %p){
+; CHECK: Function Attrs: memory(write, inaccessiblemem: none, target_mem1: readwrite)
+; CHECK-LABEL: define void @mem_target_f6(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR10:[0-9]+]] {
+; CHECK-NEXT:    call void @target_read_or_write(ptr [[P]])
+; CHECK-NEXT:    store i32 0, ptr undef, align 4
+; CHECK-NEXT:    ret void
+;
+  call void @target_read_or_write(ptr %p)
+  store i32 0, ptr undef, align 4
+  ret void
+}
+
+declare void @target0_no_read_write(ptr) memory(target_mem0: none, target_mem1: none);
+declare void @targets_read_write(ptr %p)memory(target_mem0: readwrite, target_mem1: readwrite);
+declare void @target_read_or_write(ptr) memory(target_mem0: none, target_mem1: readwrite);
