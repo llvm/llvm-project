@@ -913,7 +913,7 @@ private:
     // SLPVectorizer.
     // TODO: Thread the switch partially before reaching the threshold.
     uint64_t NumOrigInst = 0;
-    for (auto &[BB, _] : DuplicateMap)
+    for (auto *BB : DuplicateMap.keys())
       NumOrigInst += range_size(*BB);
     if (double(NumClonedInst) / double(NumOrigInst) > MaxClonedRate) {
       LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, too much "
