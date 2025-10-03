@@ -333,7 +333,9 @@ static const uint8_t tailMergeARM64[] = {
     0xe1, 0x03, 0x11, 0xaa, // mov     x1, x17
     0x00, 0x00, 0x00, 0x90, // adrp    x0, #0     DELAY_IMPORT_DESCRIPTOR
     0x00, 0x00, 0x00, 0x91, // add     x0, x0, #0 :lo12:DELAY_IMPORT_DESCRIPTOR
-    0x00, 0x00, 0x00, 0x94, // bl      #0 __delayLoadHelper2
+    0x02, 0x00, 0x00, 0x90, // adrp    x2, #0     __delayLoadHelper2
+    0x42, 0x00, 0x00, 0x91, // add     x2, x2, #0 :lo12:__delayLoadHelper2
+    0x40, 0x00, 0x3f, 0xd6, // blr     x2
     0xf0, 0x03, 0x00, 0xaa, // mov     x16, x0
     0xe6, 0x9f, 0x45, 0xad, // ldp     q6, q7, [sp, #176]
     0xe4, 0x97, 0x44, 0xad, // ldp     q4, q5, [sp, #144]
@@ -556,8 +558,10 @@ public:
     memcpy(buf, tailMergeARM64, sizeof(tailMergeARM64));
     applyArm64Addr(buf + 44, desc->getRVA(), rva + 44, 12);
     applyArm64Imm(buf + 48, desc->getRVA() & 0xfff, 0);
-    if (helper)
-      applyArm64Branch26(buf + 52, helper->getRVA() - rva - 52);
+    if (helper) {
+      applyArm64Addr(buf + 52, helper->getRVA(), rva + 52, 12);
+      applyArm64Imm(buf + 56, helper->getRVA() & 0xfff, 0);
+    }
   }
 
   Chunk *desc = nullptr;
