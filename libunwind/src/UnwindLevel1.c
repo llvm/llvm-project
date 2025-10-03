@@ -607,7 +607,7 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
   unw_word_t result;
   __unw_get_reg(cursor, UNW_REG_IP, &result);
 
-#if defined(__ARM64E__)
+#if defined(__arm64e__)
   // If we are in an arm64e frame, then the PC should have been signed with the
   // sp
   {

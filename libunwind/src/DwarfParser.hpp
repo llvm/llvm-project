@@ -405,7 +405,7 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
           // schema. If we could guarantee the encoding of the personality we
           // could avoid this by simply giving resultAddr the correct ptrauth
           // schema and performing an assignment.
-#ifdef __ARM64E__
+#if defined(__arm64e__)
           const auto oldDiscriminator = resultAddr;
 #else
           const auto oldDiscriminator = ptrauth_blend_discriminator(
