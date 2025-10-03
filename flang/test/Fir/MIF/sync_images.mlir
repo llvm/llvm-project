@@ -11,10 +11,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %5 = fir.alloca i32 {bindc_name = "sync_status", uniq_name = "_QFEsync_status"}
     %6:2 = hlfir.declare %5 {uniq_name = "_QFEsync_status"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %7 = fir.embox %2#0 : (!fir.ref<!fir.char<1,128>>) -> !fir.box<!fir.char<1,128>>
-    mif.sync_images stat(%6#0 : !fir.ref<i32>) errmsg(%7 : !fir.box<!fir.char<1,128>>)
+    mif.sync_images stat %6#0 errmsg %7 : (!fir.ref<i32>, !fir.box<!fir.char<1,128>>) -> ()
     %8 = fir.embox %2#0 : (!fir.ref<!fir.char<1,128>>) -> !fir.box<!fir.char<1,128>>
     %9 = fir.embox %4#0 : (!fir.ref<i32>) -> !fir.box<i32>
-    mif.sync_images image_set(%9 : !fir.box<i32>) stat(%6#0 : !fir.ref<i32>) errmsg(%8 : !fir.box<!fir.char<1,128>>)
+    mif.sync_images image_set %9 stat %6#0 errmsg %8 : (!fir.box<i32>, !fir.ref<i32>, !fir.box<!fir.char<1,128>>) -> ()
     %10 = fir.embox %2#0 : (!fir.ref<!fir.char<1,128>>) -> !fir.box<!fir.char<1,128>>
     %11 = fir.address_of(@_QQro.1xi4.0) : !fir.ref<!fir.array<1xi32>>
     %c1 = arith.constant 1 : index
@@ -22,17 +22,17 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %13:2 = hlfir.declare %11(%12) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.1xi4.0"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
     %14 = fir.shape %c1 : (index) -> !fir.shape<1>
     %15 = fir.embox %13#0(%14) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
-    mif.sync_images image_set(%15 : !fir.box<!fir.array<1xi32>>) stat(%6#0 : !fir.ref<i32>) errmsg(%10 : !fir.box<!fir.char<1,128>>)
-    mif.sync_images
+    mif.sync_images image_set %15 stat %6#0 errmsg %10 : (!fir.box<!fir.array<1xi32>>, !fir.ref<i32>, !fir.box<!fir.char<1,128>>) -> ()
+    mif.sync_images : () -> ()
     %16 = fir.embox %4#0 : (!fir.ref<i32>) -> !fir.box<i32>
-    mif.sync_images image_set(%16 : !fir.box<i32>)
+    mif.sync_images image_set %16 : (!fir.box<i32>) -> ()
     %17 = fir.address_of(@_QQro.1xi4.0) : !fir.ref<!fir.array<1xi32>>
     %c1_0 = arith.constant 1 : index
     %18 = fir.shape %c1_0 : (index) -> !fir.shape<1>
     %19:2 = hlfir.declare %17(%18) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.1xi4.0"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
     %20 = fir.shape %c1_0 : (index) -> !fir.shape<1>
     %21 = fir.embox %19#0(%20) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
-    mif.sync_images image_set(%21 : !fir.box<!fir.array<1xi32>>)
+    mif.sync_images image_set %21 : (!fir.box<!fir.array<1xi32>>) -> ()
     return
   }
   fir.global internal @_QFEerror_message : !fir.char<1,128> {

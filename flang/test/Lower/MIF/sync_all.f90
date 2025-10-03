@@ -10,18 +10,18 @@ program test_sync_all
   integer sync_status
   character(len=128) :: error_message
 
-  ! COARRAY: mif.sync_all
+  ! COARRAY: mif.sync_all : ()
   sync all
 
-  ! COARRAY: mif.sync_all stat(%[[STAT]]#0 : !fir.ref<i32>)
+  ! COARRAY: mif.sync_all stat %[[STAT]]#0 : (!fir.ref<i32>)
   sync all(stat=sync_status)
   
   ! COARRAY: %[[VAL_1:.*]] = fir.embox %[[ERRMSG]]#0 : (!fir.ref<!fir.char<1,128>>) -> !fir.box<!fir.char<1,128>>
-  ! COARRAY: mif.sync_all errmsg(%[[VAL_1]] : !fir.box<!fir.char<1,128>>)
+  ! COARRAY: mif.sync_all errmsg %[[VAL_1]] : (!fir.box<!fir.char<1,128>>)
   sync all(                  errmsg=error_message)
   
   ! COARRAY: %[[VAL_2:.*]] = fir.embox %[[ERRMSG]]#0 : (!fir.ref<!fir.char<1,128>>) -> !fir.box<!fir.char<1,128>>
-  ! COARRAY: mif.sync_all stat(%[[STAT]]#0 : !fir.ref<i32>) errmsg(%[[VAL_2]] : !fir.box<!fir.char<1,128>>)
+  ! COARRAY: mif.sync_all stat %[[STAT]]#0 errmsg %[[VAL_2]] : (!fir.ref<i32>, !fir.box<!fir.char<1,128>>)
   sync all(stat=sync_status, errmsg=error_message)
 
 end program test_sync_all

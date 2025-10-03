@@ -8,12 +8,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %2:2 = hlfir.declare %1 typeparams %c128 {uniq_name = "_QFEerror_message"} : (!fir.ref<!fir.char<1,128>>, index) -> (!fir.ref<!fir.char<1,128>>, !fir.ref<!fir.char<1,128>>)
     %3 = fir.alloca i32 {bindc_name = "sync_status", uniq_name = "_QFEsync_status"}
     %4:2 = hlfir.declare %3 {uniq_name = "_QFEsync_status"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-    mif.sync_all
-    mif.sync_all stat(%4#0 : !fir.ref<i32>)
+    mif.sync_all : () -> ()
+    mif.sync_all stat %4#0 : (!fir.ref<i32>) -> ()
     %5 = fir.embox %2#0 : (!fir.ref<!fir.char<1,128>>) -> !fir.box<!fir.char<1,128>>
-    mif.sync_all errmsg(%5 : !fir.box<!fir.char<1,128>>)
+    mif.sync_all errmsg %5 : (!fir.box<!fir.char<1,128>>) -> ()
     %6 = fir.embox %2#0 : (!fir.ref<!fir.char<1,128>>) -> !fir.box<!fir.char<1,128>>
-    mif.sync_all stat(%4#0 : !fir.ref<i32>) errmsg(%6 : !fir.box<!fir.char<1,128>>)
+    mif.sync_all stat %4#0 errmsg %6 : (!fir.ref<i32>, !fir.box<!fir.char<1,128>>) -> ()
     return
   }
   fir.global internal @_QFEerror_message : !fir.char<1,128> {

@@ -12,28 +12,28 @@ program test_sync_images
   character(len=128) :: error_message
 
   ! COARRAY: %[[VAL_1:.*]] = fir.embox %[[ERRMSG]]#0 : (!fir.ref<!fir.char<1,128>>) -> !fir.box<!fir.char<1,128>>
-  ! COARRAY: mif.sync_images stat(%[[STAT]]#0 : !fir.ref<i32>) errmsg(%[[VAL_1]] : !fir.box<!fir.char<1,128>>)
+  ! COARRAY: mif.sync_images stat %[[STAT]]#0 errmsg %[[VAL_1]] : (!fir.ref<i32>, !fir.box<!fir.char<1,128>>)
   sync images(*, stat=sync_status, errmsg=error_message)
 
   ! COARRAY: %[[VAL_2:.*]] = fir.embox %[[ERRMSG]]#0 : (!fir.ref<!fir.char<1,128>>) -> !fir.box<!fir.char<1,128>>
   ! COARRAY: %[[VAL_3:.*]] = fir.embox %[[ME]]#0 : (!fir.ref<i32>) -> !fir.box<i32>
-  ! COARRAY: mif.sync_images image_set(%[[VAL_3]] : !fir.box<i32>) stat(%[[STAT]]#0 : !fir.ref<i32>) errmsg(%[[VAL_2]] : !fir.box<!fir.char<1,128>>)
+  ! COARRAY: mif.sync_images image_set %[[VAL_3]] stat %[[STAT]]#0 errmsg %[[VAL_2]] : (!fir.box<i32>, !fir.ref<i32>, !fir.box<!fir.char<1,128>>)
   sync images(me,   stat=sync_status, errmsg=error_message)
 
   ! COARRAY: %[[VAL_4:.*]] = fir.embox %[[ERRMSG]]#0 : (!fir.ref<!fir.char<1,128>>) -> !fir.box<!fir.char<1,128>>
   ! COARRAY: %[[VAL_5:.*]] = fir.embox %[[IMG_SET:.*]]#0(%[[SHAPE_1:.*]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
-  ! COARRAY: mif.sync_images image_set(%[[VAL_5]] : !fir.box<!fir.array<1xi32>>) stat(%[[STAT]]#0 : !fir.ref<i32>) errmsg(%[[VAL_4]] : !fir.box<!fir.char<1,128>>)
+  ! COARRAY: mif.sync_images image_set %[[VAL_5]] stat %[[STAT]]#0 errmsg %[[VAL_4]] : (!fir.box<!fir.array<1xi32>>, !fir.ref<i32>, !fir.box<!fir.char<1,128>>)
   sync images([1],  stat=sync_status, errmsg=error_message)
   
-  ! COARRAY: mif.sync_images
+  ! COARRAY: mif.sync_images : ()
   sync images(*)
   
   ! COARRAY: %[[VAL_6:.*]] = fir.embox %[[ME]]#0 : (!fir.ref<i32>) -> !fir.box<i32>
-  ! COARRAY: mif.sync_images image_set(%[[VAL_6]] : !fir.box<i32>)
+  ! COARRAY: mif.sync_images image_set %[[VAL_6]] : (!fir.box<i32>)
   sync images(me)
   
   ! COARRAY: %[[VAL_7:.*]] = fir.embox %[[IMG_SET:.*]]#0(%[[SHAPE_3:.*]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
-  ! COARRAY: mif.sync_images image_set(%[[VAL_7]] : !fir.box<!fir.array<1xi32>>)
+  ! COARRAY: mif.sync_images image_set %[[VAL_7]] : (!fir.box<!fir.array<1xi32>>)
   sync images([1])
 
 end program test_sync_images

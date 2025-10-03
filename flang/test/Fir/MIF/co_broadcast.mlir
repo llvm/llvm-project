@@ -34,35 +34,35 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %24:2 = hlfir.declare %23 {uniq_name = "_QFEstatus"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %c1_i32 = arith.constant 1 : i32
     %25 = fir.embox %18#0 : (!fir.ref<i32>) -> !fir.box<i32>
-    mif.co_broadcast %25 : !fir.box<i32> source(%c1_i32 : i32)
+    mif.co_broadcast %25 source %c1_i32 : (!fir.box<i32>, i32)
     %c1_i32_3 = arith.constant 1 : i32
     %26 = fir.embox %14#0 : (!fir.ref<complex<f32>>) -> !fir.box<complex<f32>>
-    mif.co_broadcast %26 : !fir.box<complex<f32>> source(%c1_i32_3 : i32) stat(%24#0 : !fir.ref<i32>)
+    mif.co_broadcast %26 source %c1_i32_3 stat %24#0 : (!fir.box<complex<f32>>, i32, !fir.ref<i32>)
     %c1_i32_4 = arith.constant 1 : i32
     %27 = fir.embox %16#0 : (!fir.ref<f64>) -> !fir.box<f64>
     %28 = fir.embox %20#0 : (!fir.ref<!fir.char<1>>) -> !fir.box<!fir.char<1>>
-    mif.co_broadcast %27 : !fir.box<f64> source(%c1_i32_4 : i32) stat(%24#0 : !fir.ref<i32>) errmsg(%28 : !fir.box<!fir.char<1>>)
+    mif.co_broadcast %27 source %c1_i32_4 stat %24#0 errmsg %28 : (!fir.box<f64>, i32, !fir.ref<i32>, !fir.box<!fir.char<1>>)
     %c1_i32_5 = arith.constant 1 : i32
     %29 = fir.embox %22#0 : (!fir.ref<f32>) -> !fir.box<f32>
     %30 = fir.embox %20#0 : (!fir.ref<!fir.char<1>>) -> !fir.box<!fir.char<1>>
-    mif.co_broadcast %29 : !fir.box<f32> source(%c1_i32_5 : i32) stat(%24#0 : !fir.ref<i32>) errmsg(%30 : !fir.box<!fir.char<1>>)
+    mif.co_broadcast %29 source %c1_i32_5 stat %24#0 errmsg %30 : (!fir.box<f32>, i32, !fir.ref<i32>, !fir.box<!fir.char<1>>)
     %c1_i32_6 = arith.constant 1 : i32
     %31 = fir.shape %c2_1 : (index) -> !fir.shape<1>
     %32 = fir.embox %9#0(%31) : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xi32>>
-    mif.co_broadcast %32 : !fir.box<!fir.array<2xi32>> source(%c1_i32_6 : i32)
+    mif.co_broadcast %32 source %c1_i32_6 : (!fir.box<!fir.array<2xi32>>, i32)
     %c1_i32_7 = arith.constant 1 : i32
     %33 = fir.shape %c2 : (index) -> !fir.shape<1>
     %34 = fir.embox %3#0(%33) : (!fir.ref<!fir.array<2xcomplex<f32>>>, !fir.shape<1>) -> !fir.box<!fir.array<2xcomplex<f32>>>
-    mif.co_broadcast %34 : !fir.box<!fir.array<2xcomplex<f32>>> source(%c1_i32_7 : i32)
+    mif.co_broadcast %34 source %c1_i32_7 : (!fir.box<!fir.array<2xcomplex<f32>>>, i32)
     %c1_i32_8 = arith.constant 1 : i32
     %35 = fir.shape %c2_0 : (index) -> !fir.shape<1>
     %36 = fir.embox %6#0(%35) : (!fir.ref<!fir.array<2xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<2xf64>>
-    mif.co_broadcast %36 : !fir.box<!fir.array<2xf64>> source(%c1_i32_8 : i32) stat(%24#0 : !fir.ref<i32>)
+    mif.co_broadcast %36 source %c1_i32_8 stat %24#0 : (!fir.box<!fir.array<2xf64>>, i32, !fir.ref<i32>)
     %c1_i32_9 = arith.constant 1 : i32
     %37 = fir.shape %c2_2 : (index) -> !fir.shape<1>
     %38 = fir.embox %12#0(%37) : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xf32>>
     %39 = fir.embox %20#0 : (!fir.ref<!fir.char<1>>) -> !fir.box<!fir.char<1>>
-    mif.co_broadcast %38 : !fir.box<!fir.array<2xf32>> source(%c1_i32_9 : i32) stat(%24#0 : !fir.ref<i32>) errmsg(%39 : !fir.box<!fir.char<1>>)
+    mif.co_broadcast %38 source %c1_i32_9 stat %24#0 errmsg %39 : (!fir.box<!fir.array<2xf32>>, i32, !fir.ref<i32>, !fir.box<!fir.char<1>>)
     return
   }
 }

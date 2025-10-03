@@ -1,4 +1,4 @@
-//===-- MIFOps.td - MIF operation definitions ------*- tablegen -*-===//
+//===-- MIFOps.td - MIF operation definitions --------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -64,9 +64,9 @@ def mif_NumImagesOp : mif_Op<"num_images", [AttrSizedOperandSegments]> {
 
   let hasVerifier = 1;
   let assemblyFormat = [{
-    ( `team_number` `(` $team_number^ `:` type($team_number) `)` )? 
-    ( `team` `(` $team^ `:` type($team) `)` )? 
-    attr-dict `->` type($res)
+    ( `team_number` $team_number^ )? 
+    ( `team` $team^ )? 
+    attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -106,10 +106,10 @@ def mif_ThisImageOp : mif_Op<"this_image", [AttrSizedOperandSegments]> {
 
   let hasVerifier = 1;
   let assemblyFormat = [{
-    ( `coarray` `(` $coarray^ `:` type($coarray) `)` )? 
-    ( `team` `(` $team^ `:` type($team) `)` )? 
-    ( `dim` `(` $dim^ `:` type($dim) `)` )? 
-    attr-dict `->` type($res)
+    ( `coarray` $coarray^ )? 
+    ( `team` $team^ )? 
+    ( `dim` $dim^ )? 
+    attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -125,9 +125,9 @@ def mif_SyncAllOp : mif_Op<"sync_all", [AttrSizedOperandSegments,
   let arguments = (ins Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
                        Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
   let assemblyFormat = [{
-    (`stat` `(` $stat^ `:` type($stat) `)` )?
-    (`errmsg` `(` $errmsg^ `:` type($errmsg) `)` )? 
-    attr-dict
+    (`stat` $stat^ )?
+    (`errmsg` $errmsg^ )? 
+    attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -146,10 +146,10 @@ def mif_SyncImagesOp : mif_Op<"sync_images", [AttrSizedOperandSegments,
                        Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
   let hasVerifier = 1;
   let assemblyFormat = [{
-    (`image_set` `(` $image_set^ `:` type($image_set) `)` )? 
-    (`stat` `(` $stat^ `:` type($stat) `)` )?
-    (`errmsg` `(` $errmsg^ `:` type($errmsg) `)` )? 
-    attr-dict
+    (`image_set` $image_set^ )? 
+    (`stat` $stat^ )?
+    (`errmsg` $errmsg^ )? 
+    attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -164,9 +164,9 @@ def mif_SyncMemoryOp : mif_Op<"sync_memory", [AttrSizedOperandSegments,
   let arguments = (ins Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
                        Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
   let assemblyFormat = [{
-    (`stat` `(` $stat^ `:` type($stat) `)` )?
-    (`errmsg` `(` $errmsg^ `:` type($errmsg) `)` )? 
-    attr-dict
+    (`stat` $stat^ )?
+    (`errmsg` $errmsg^ )? 
+    attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -187,11 +187,10 @@ def mif_CoBroadcastOp : mif_Op<"co_broadcast", [AttrSizedOperandSegments,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
 
   let assemblyFormat = [{
-    $a `:` qualified(type($a)) 
-    `source` `(` $source_image `:` type($source_image) `)`
-    (`stat`  `(` $stat^ `:` type($stat) `)` )?
-    (`errmsg` `(` $errmsg^ `:` type($errmsg) `)` )? 
-    attr-dict
+    $a `source` $source_image
+    (`stat`  $stat^ )?
+    (`errmsg` $errmsg^ )? 
+    attr-dict `:` `(` type(operands) `)`
   }];
 }
 
@@ -210,11 +209,10 @@ def mif_CoMaxOp
 
   let hasVerifier = 1;
   let assemblyFormat = [{
-    $a `:`  qualified(type($a))
-    (`result` `(` $result_image^ `:` type($result_image) `)` )? 
-    (`stat` `(` $stat^ `:` type($stat) `)` )?
-    (`errmsg` `(` $errmsg^ `:` type($errmsg) `)` )? 
-    attr-dict
+    $a (`result` $result_image^ )? 
+    (`stat` $stat^ )?
+    (`errmsg` $errmsg^ )? 
+    attr-dict `:` `(` type(operands) `)`
   }];
 }
 
@@ -233,11 +231,10 @@ def mif_CoMinOp
 
   let hasVerifier = 1;
   let assemblyFormat = [{
-    $a `:`  qualified(type($a))
-    (`result` `(` $result_image^ `:` type($result_image) `)` )? 
-    (`stat` `(` $stat^ `:` type($stat) `)` )?
-    (`errmsg` `(` $errmsg^ `:` type($errmsg) `)` )? 
-    attr-dict
+    $a (`result` $result_image^ )? 
+    (`stat` $stat^ )?
+    (`errmsg` $errmsg^ )? 
+    attr-dict `:` `(` type(operands) `)`
   }];
 }
 
@@ -256,11 +253,10 @@ def mif_CoSumOp
 
   let hasVerifier = 1;
   let assemblyFormat = [{
-    $a `:`  qualified(type($a))
-    (`result` `(` $result_image^ `:` type($result_image) `)` )? 
-    (`stat` `(` $stat^ `:` type($stat) `)` )?
-    (`errmsg` `(` $errmsg^ `:` type($errmsg) `)` )? 
-    attr-dict
+    $a (`result` $result_image^ )? 
+    (`stat` $stat^ )?
+    (`errmsg` $errmsg^ )? 
+    attr-dict `:` `(` type(operands) `)`
   }];
 }
 

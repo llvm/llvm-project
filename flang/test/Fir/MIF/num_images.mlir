@@ -7,10 +7,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %2:2 = hlfir.declare %1 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %3 = fir.alloca i32 {bindc_name = "team_number", uniq_name = "_QFEteam_number"}
     %4:2 = hlfir.declare %3 {uniq_name = "_QFEteam_number"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-    %5 = mif.num_images -> i32
+    %5 = mif.num_images : () -> i32
     hlfir.assign %5 to %2#0 : i32, !fir.ref<i32>
     %6 = fir.load %4#0 : !fir.ref<i32>
-    %7 = mif.num_images team_number(%6 : i32) -> i32
+    %7 = mif.num_images team_number %6 : (i32) -> i32
     hlfir.assign %7 to %2#0 : i32, !fir.ref<i32>
     return
   }
