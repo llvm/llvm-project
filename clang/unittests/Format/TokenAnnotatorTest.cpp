@@ -1929,6 +1929,37 @@ TEST_F(TokenAnnotatorTest, UnderstandsObjCMethodExpr) {
   ASSERT_EQ(Tokens.size(), 20u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::l_square, TT_ObjCMethodExpr);
   EXPECT_TOKEN(Tokens[15], tok::greater, TT_BinaryOperator);
+
+  Tokens = annotate("a = @selector(name:);");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_ObjCSelector);
+
+  Tokens =
+      annotate("[object respondsToSelector:@selector(name:param1:param2:)\n"
+               "        respondsToSelector:@selector(name:param1:param2:)];");
+  ASSERT_EQ(Tokens.size(), 29u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_ObjCMethodExpr);
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_ObjCMethodExpr);
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[8], tok::colon, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[10], tok::colon, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[12], tok::colon, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[13], tok::r_paren, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[15], tok::colon, TT_ObjCMethodExpr);
+  EXPECT_TOKEN(Tokens[18], tok::l_paren, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[20], tok::colon, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[22], tok::colon, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[24], tok::colon, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[25], tok::r_paren, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[26], tok::r_square, TT_ObjCMethodExpr);
+
+  Tokens = annotate("[a b:c];");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_ObjCMethodExpr);
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_ObjCMethodExpr);
+  EXPECT_TOKEN(Tokens[5], tok::r_square, TT_ObjCMethodExpr);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsObjCMethodDecl) {

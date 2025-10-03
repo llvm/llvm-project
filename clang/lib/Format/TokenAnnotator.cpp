@@ -321,13 +321,13 @@ private:
       return parseUntouchableParens();
     }
 
-    bool StartsObjCMethodExpr = false;
+    bool StartsObjCSelector = false;
     if (!Style.isVerilog()) {
       if (FormatToken *MaybeSel = OpeningParen.Previous) {
         // @selector( starts a selector.
         if (MaybeSel->is(tok::objc_selector) && MaybeSel->Previous &&
             MaybeSel->Previous->is(tok::at)) {
-          StartsObjCMethodExpr = true;
+          StartsObjCSelector = true;
         }
       }
     }
@@ -451,10 +451,8 @@ private:
       }
     }
 
-    if (StartsObjCMethodExpr) {
-      Contexts.back().ColonIsObjCMethodExpr = true;
-      OpeningParen.setType(TT_ObjCMethodExpr);
-    }
+    if (StartsObjCSelector)
+      OpeningParen.setType(TT_ObjCSelector);
 
     // MightBeFunctionType and ProbablyFunctionType are used for
     // function pointer and reference types as well as Objective-C
@@ -513,8 +511,8 @@ private:
           }
         }
 
-        if (StartsObjCMethodExpr) {
-          CurrentToken->setType(TT_ObjCMethodExpr);
+        if (StartsObjCSelector) {
+          CurrentToken->setType(TT_ObjCSelector);
           if (Contexts.back().FirstObjCSelectorName) {
             Contexts.back().FirstObjCSelectorName->LongestObjCSelectorName =
                 Contexts.back().LongestObjCSelectorName;
@@ -1449,7 +1447,7 @@ private:
                    Next->Next->is(tok::colon)))) {
         // This handles a special macro in ObjC code where selectors including
         // the colon are passed as macro arguments.
-        Tok->setType(TT_ObjCMethodExpr);
+        Tok->setType(TT_ObjCSelector);
       }
       break;
     case tok::pipe:
@@ -4608,7 +4606,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return false;
   }
   if (Left.is(tok::colon))
-    return Left.isNot(TT_ObjCMethodExpr);
+    return Left.isNoneOf(TT_ObjCSelector, TT_ObjCMethodExpr);
   if (Left.is(tok::coloncolon))
     return false;
   if (Left.is(tok::less) || Right.isOneOf(tok::greater, tok::less)) {
@@ -5464,7 +5462,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // `private:` and `public:`.
     if (!Right.getNextNonComment())
       return false;
-    if (Right.is(TT_ObjCMethodExpr))
+    if (Right.isOneOf(TT_ObjCSelector, TT_ObjCMethodExpr))
       return false;
     if (Left.is(tok::question))
       return false;
@@ -6288,6 +6286,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return Style.BreakInheritanceList == FormatStyle::BILS_AfterColon;
   if (Right.is(TT_InheritanceColon))
     return Style.BreakInheritanceList != FormatStyle::BILS_AfterColon;
+  // When the method parameter has no name, allow breaking before the colon.
   if (Right.is(TT_ObjCMethodExpr) && Right.isNot(tok::r_square) &&
       Left.isNot(TT_SelectorName)) {
     return true;

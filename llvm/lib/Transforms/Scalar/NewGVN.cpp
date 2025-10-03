@@ -1646,10 +1646,6 @@ NewGVN::performSymbolicPredicateInfoEvaluation(BitCastInst *I) const {
 // Evaluate read only and pure calls, and create an expression result.
 NewGVN::ExprResult NewGVN::performSymbolicCallEvaluation(Instruction *I) const {
   auto *CI = cast<CallInst>(I);
-  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    if (auto *ReturnedValue = II->getReturnedArgOperand())
-      return ExprResult::some(createVariableOrConstant(ReturnedValue));
-  }
 
   // FIXME: Currently the calls which may access the thread id may
   // be considered as not accessing the memory. But this is
