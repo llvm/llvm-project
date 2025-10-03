@@ -52,7 +52,7 @@ def emms : X86Builtin<"void()"> {
   let Features = "mmx";
 }
 
-let Attributes = [NoThrow, Const, RequiredVectorWidth<64>], Features = "sse" in {
+let Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<64>], Features = "sse" in {
   def vec_ext_v4hi : X86Builtin<"short(_Vector<4, short>, _Constant int)">;
   def vec_set_v4hi : X86Builtin<"_Vector<4, short>(_Vector<4, short>, short, _Constant int)">;
 }
@@ -92,13 +92,6 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
     def cmpsd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Constant char)">;
   }
 
-  let Features = "sse2" in {
-    def vec_ext_v2di : X86Builtin<"long long int(_Vector<2, long long int>, _Constant int)">;
-    def vec_ext_v4si : X86Builtin<"int(_Vector<4, int>, _Constant int)">;
-    def vec_ext_v4sf : X86Builtin<"float(_Vector<4, float>, _Constant int)">;
-    def vec_ext_v8hi : X86Builtin<"short(_Vector<8, short>, _Constant int)">;
-    def vec_set_v8hi : X86Builtin<"_Vector<8, short>(_Vector<8, short>, short, _Constant int)">;
-  }
 
   let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
     def pavgb128 : X86Builtin<"_Vector<16, unsigned char>(_Vector<16, unsigned char>, _Vector<16, unsigned char>)">;
@@ -108,6 +101,12 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
     def packsswb128 : X86Builtin<"_Vector<16, char>(_Vector<8, short>, _Vector<8, short>)">;
     def packssdw128 : X86Builtin<"_Vector<8, short>(_Vector<4, int>, _Vector<4, int>)">;
     def packuswb128 : X86Builtin<"_Vector<16, char>(_Vector<8, short>, _Vector<8, short>)">;
+
+    def vec_ext_v2di : X86Builtin<"long long int(_Vector<2, long long int>, _Constant int)">;
+    def vec_ext_v4si : X86Builtin<"int(_Vector<4, int>, _Constant int)">;
+    def vec_ext_v4sf : X86Builtin<"float(_Vector<4, float>, _Constant int)">;
+    def vec_ext_v8hi : X86Builtin<"short(_Vector<8, short>, _Constant int)">;
+    def vec_set_v8hi : X86Builtin<"_Vector<8, short>(_Vector<8, short>, short, _Constant int)">;
   }
 
   let Features = "sse3" in {
@@ -323,9 +322,6 @@ let Features = "sse4.1", Attributes = [NoThrow, Const, RequiredVectorWidth<128>]
   def ptestnzc128 : X86Builtin<"int(_Vector<2, long long int>, _Vector<2, long long int>)">;
   def mpsadbw128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>, _Vector<16, char>, _Constant char)">;
   def phminposuw128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>)">;
-  def vec_ext_v16qi : X86Builtin<"char(_Vector<16, char>, _Constant int)">;
-  def vec_set_v16qi : X86Builtin<"_Vector<16, char>(_Vector<16, char>, char, _Constant int)">;
-  def vec_set_v4si : X86Builtin<"_Vector<4, int>(_Vector<4, int>, int, _Constant int)">;
 }
 
 let Features = "sse4.1", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
@@ -338,6 +334,10 @@ let Features = "sse4.1", Attributes = [NoThrow, Const, Constexpr, RequiredVector
 
   def pmuldq128 : X86Builtin<"_Vector<2, long long int>(_Vector<4, int>, _Vector<4, int>)">;
   def packusdw128 : X86Builtin<"_Vector<8, short>(_Vector<4, int>, _Vector<4, int>)">;
+
+  def vec_ext_v16qi : X86Builtin<"char(_Vector<16, char>, _Constant int)">;
+  def vec_set_v16qi : X86Builtin<"_Vector<16, char>(_Vector<16, char>, char, _Constant int)">;
+  def vec_set_v4si : X86Builtin<"_Vector<4, int>(_Vector<4, int>, int, _Constant int)">;
 }
 
 let Features = "sse4.2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -560,7 +560,7 @@ let Features = "avx", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
   def maskstoreps : X86Builtin<"void(_Vector<4, float *>, _Vector<4, int>, _Vector<4, float>)">;
 }
 
-let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def vec_ext_v32qi : X86Builtin<"char(_Vector<32, char>, _Constant int)">;
   def vec_ext_v16hi : X86Builtin<"short(_Vector<16, short>, _Constant int)">;
   def vec_ext_v8si : X86Builtin<"int(_Vector<8, int>, _Constant int)">;
