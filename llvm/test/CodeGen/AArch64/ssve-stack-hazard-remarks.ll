@@ -68,7 +68,7 @@ entry:
 }
 
 ; SVE calling conventions
-; Padding is placed predicate and fpr/zpr register spills, so only emit remarks when hazard padding is off.
+; Padding is placed between predicate and fpr/zpr register spills, so only emit remarks when hazard padding is off.
 ; Note: The -aarch64-enable-zpr-predicate-spills option is deprecated (and will be removed soon).
 
 define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, i16 %P4) #2 {
