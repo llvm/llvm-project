@@ -21,6 +21,7 @@ Sections:
     Type:    SHT_NOTE
     Flags:   [ SHF_ALLOC ]
     Content: 040000000800000003000000474e5500abb50d82b6bdc861
+    AddressAlign: 4
 ProgramHeaders:
   - Type:     PT_NOTE
     Flags:    [ PF_R ]

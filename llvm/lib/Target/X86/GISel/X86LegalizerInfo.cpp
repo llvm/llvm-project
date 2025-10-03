@@ -149,6 +149,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         });
   }
 
+  getActionDefinitionsBuilder({G_UMIN, G_UMAX, G_SMIN, G_SMAX})
+      .widenScalarToNextPow2(0, /*Min=*/32)
+      .lower();
+
   // integer addition/subtraction
   getActionDefinitionsBuilder({G_ADD, G_SUB})
       .legalFor({s8, s16, s32})
@@ -913,6 +917,7 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
     int FieldVal = X86::getRoundingModeX86(RM);
 
     if (FieldVal == X86::rmInvalid) {
+      FieldVal = X86::rmToNearest;
       LLVMContext &C = MF.getFunction().getContext();
       C.diagnose(DiagnosticInfoUnsupported(
           MF.getFunction(), "rounding mode is not supported by X86 hardware",

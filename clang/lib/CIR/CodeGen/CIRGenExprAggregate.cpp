@@ -131,12 +131,9 @@ public:
                      std::string("AggExprEmitter::VisitStmt: ") +
                          s->getStmtClassName());
   }
-  void VisitParenExpr(ParenExpr *pe) {
-    cgf.cgm.errorNYI(pe->getSourceRange(), "AggExprEmitter: VisitParenExpr");
-  }
+  void VisitParenExpr(ParenExpr *pe) { Visit(pe->getSubExpr()); }
   void VisitGenericSelectionExpr(GenericSelectionExpr *ge) {
-    cgf.cgm.errorNYI(ge->getSourceRange(),
-                     "AggExprEmitter: VisitGenericSelectionExpr");
+    Visit(ge->getResultExpr());
   }
   void VisitCoawaitExpr(CoawaitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCoawaitExpr");
@@ -213,9 +210,7 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitAbstractConditionalOperator");
   }
-  void VisitChooseExpr(const ChooseExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitChooseExpr");
-  }
+  void VisitChooseExpr(const ChooseExpr *e) { Visit(e->getChosenSubExpr()); }
   void VisitCXXParenListInitExpr(CXXParenListInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXParenListInitExpr");

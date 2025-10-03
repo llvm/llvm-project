@@ -642,8 +642,12 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   SmallVector<std::pair<MachineInstr *, unsigned>, 8> Ops;
   VirtRegInfo RI = AnalyzeVirtRegInBundle(MI, VirtReg.reg(), &Ops);
 
-  if (!RI.Reads)
+  // Defs without reads will be deleted if unused after remat is
+  // completed for other users of the virtual register.
+  if (!RI.Reads) {
+    LLVM_DEBUG(dbgs() << "\tskipping remat of def " << MI);
     return false;
+  }
 
   SlotIndex UseIdx = LIS.getInstructionIndex(MI).getRegSlot(true);
   VNInfo *ParentVNI = VirtReg.getVNInfoAt(UseIdx.getBaseIndex());
@@ -657,8 +661,13 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
     return true;
   }
 
-  if (SnippetCopies.count(&MI))
+  // Snippets copies are ignored for remat, and will be deleted if they
+  // don't feed a live user after rematerialization completes.
+  if (SnippetCopies.count(&MI)) {
+    LLVM_DEBUG(dbgs() << "\tskipping remat snippet copy for " << UseIdx << '\t'
+                      << MI);
     return false;
+  }
 
   LiveInterval &OrigLI = LIS.getInterval(Original);
   VNInfo *OrigVNI = OrigLI.getVNInfoAt(UseIdx);
