@@ -67,6 +67,8 @@
 ; CHECK-O1-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-O-NEXT: Running pass: GlobalSplitPass
 ; CHECK-O-NEXT: Running pass: WholeProgramDevirtPass
+; CHECK-O-NEXT: Running pass: StackProtectRefinementPass
+; CHECK-O-NEXT: Running analysis: StackSafetyGlobalAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: CoroEarlyPass
 ; CHECK-O1-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O23SZ-NEXT: Running pass: GlobalOptPass

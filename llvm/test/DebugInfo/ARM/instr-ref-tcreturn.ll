@@ -1,4 +1,4 @@
-; RUN: llc %s -o - -stop-after=finalize-isel -verify-machineinstrs -experimental-debug-variable-locations | FileCheck %s
+; RUN: llc %s -o - -optimize-ssp=false -stop-after=finalize-isel -verify-machineinstrs -experimental-debug-variable-locations | FileCheck %s
 
 ; In the sequence below, the sdiv is converted to a function call to __divsi3,
 ; which is then tail call optimised. The dbg.value is suddenly stuck between

@@ -1,4 +1,4 @@
-; RUN: llc -enable-machine-outliner -mtriple=x86_64-apple-darwin < %s | FileCheck %s
+; RUN: llc -optimize-ssp=false -enable-machine-outliner -mtriple=x86_64-apple-darwin < %s | FileCheck %s
 ; Ensure that the outliner doesn't outline from any functions that use a redzone.
 
 declare ptr @llvm.stacksave() #1
