@@ -26,6 +26,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/LambdaCapture.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/VTableBuilder.h"
@@ -1903,46 +1904,61 @@ CGDebugInfo::createInlinedSubprogram(StringRef FuncName,
   return SP;
 }
 
+llvm::StringRef
+CGDebugInfo::GetLambdaCaptureName(const LambdaCapture &Capture) {
+  if (Capture.capturesThis())
+    return CGM.getCodeGenOpts().EmitCodeView ? "__this" : "this";
+
+  assert(Capture.capturesVariable());
+
+  const ValueDecl *CaptureDecl = Capture.getCapturedVar();
+  assert(CaptureDecl && "Expected valid decl for captured variable.");
+
+  return CaptureDecl->getName();
+}
+
 void CGDebugInfo::CollectRecordLambdaFields(
     const CXXRecordDecl *CXXDecl, SmallVectorImpl<llvm::Metadata *> &elements,
     llvm::DIType *RecordTy) {
   // For C++11 Lambdas a Field will be the same as a Capture, but the Capture
   // has the name and the location of the variable so we should iterate over
   // both concurrently.
-  const ASTRecordLayout &layout = CGM.getContext().getASTRecordLayout(CXXDecl);
   RecordDecl::field_iterator Field = CXXDecl->field_begin();
   unsigned fieldno = 0;
   for (CXXRecordDecl::capture_const_iterator I = CXXDecl->captures_begin(),
                                              E = CXXDecl->captures_end();
        I != E; ++I, ++Field, ++fieldno) {
-    const LambdaCapture &C = *I;
-    if (C.capturesVariable()) {
-      SourceLocation Loc = C.getLocation();
-      assert(!Field->isBitField() && "lambdas don't have bitfield members!");
-      ValueDecl *V = C.getCapturedVar();
-      StringRef VName = V->getName();
-      llvm::DIFile *VUnit = getOrCreateFile(Loc);
-      auto Align = getDeclAlignIfRequired(V, CGM.getContext());
-      llvm::DIType *FieldType = createFieldType(
-          VName, Field->getType(), Loc, Field->getAccess(),
-          layout.getFieldOffset(fieldno), Align, VUnit, RecordTy, CXXDecl);
-      elements.push_back(FieldType);
-    } else if (C.capturesThis()) {
+    const LambdaCapture &Capture = *I;
+    const uint64_t FieldOffset =
+        CGM.getContext().getASTRecordLayout(CXXDecl).getFieldOffset(fieldno);
+
+    assert(!Field->isBitField() && "lambdas don't have bitfield members!");
+
+    SourceLocation Loc;
+    uint32_t Align = 0;
+
+    if (Capture.capturesThis()) {
       // TODO: Need to handle 'this' in some way by probably renaming the
       // this of the lambda class and having a field member of 'this' or
       // by using AT_object_pointer for the function and having that be
       // used as 'this' for semantic references.
-      FieldDecl *f = *Field;
-      llvm::DIFile *VUnit = getOrCreateFile(f->getLocation());
-      QualType type = f->getType();
-      StringRef ThisName =
-          CGM.getCodeGenOpts().EmitCodeView ? "__this" : "this";
-      llvm::DIType *fieldType = createFieldType(
-          ThisName, type, f->getLocation(), f->getAccess(),
-          layout.getFieldOffset(fieldno), VUnit, RecordTy, CXXDecl);
+      Loc = Field->getLocation();
+    } else if (Capture.capturesVariable()) {
+      Loc = Capture.getLocation();
 
-      elements.push_back(fieldType);
+      const ValueDecl *CaptureDecl = Capture.getCapturedVar();
+      assert(CaptureDecl && "Expected valid decl for captured variable.");
+
+      Align = getDeclAlignIfRequired(CaptureDecl, CGM.getContext());
+    } else {
+      continue;
     }
+
+    llvm::DIFile *VUnit = getOrCreateFile(Loc);
+
+    elements.push_back(createFieldType(
+        GetLambdaCaptureName(Capture), Field->getType(), Loc,
+        Field->getAccess(), FieldOffset, Align, VUnit, RecordTy, CXXDecl));
   }
 }
 
@@ -2177,24 +2193,47 @@ static bool isFunctionLocalClass(const CXXRecordDecl *RD) {
   return false;
 }
 
+llvm::StringRef
+CGDebugInfo::GetMethodLinkageName(const CXXMethodDecl *Method) const {
+  assert(Method);
+
+  const bool IsCtorOrDtor =
+      isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method);
+
+  if (IsCtorOrDtor && !CGM.getCodeGenOpts().DebugStructorDeclLinkageNames)
+    return {};
+
+  // In some ABIs (particularly Itanium) a single ctor/dtor
+  // corresponds to multiple functions. Attach a "unified"
+  // linkage name for those (which is the convention GCC uses).
+  // Otherwise, attach no linkage name.
+  if (IsCtorOrDtor && !CGM.getTarget().getCXXABI().hasConstructorVariants())
+    return {};
+
+  if (const auto *Ctor = llvm::dyn_cast<CXXConstructorDecl>(Method))
+    return CGM.getMangledName(GlobalDecl(Ctor, CXXCtorType::Ctor_Unified));
+
+  if (const auto *Dtor = llvm::dyn_cast<CXXDestructorDecl>(Method))
+    return CGM.getMangledName(GlobalDecl(Dtor, CXXDtorType::Dtor_Unified));
+
+  return CGM.getMangledName(Method);
+}
+
 llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     const CXXMethodDecl *Method, llvm::DIFile *Unit, llvm::DIType *RecordTy) {
-  bool IsCtorOrDtor =
-      isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method);
+  assert(Method);
 
   StringRef MethodName = getFunctionName(Method);
   llvm::DISubroutineType *MethodTy = getOrCreateMethodType(Method, Unit);
 
-  // Since a single ctor/dtor corresponds to multiple functions, it doesn't
-  // make sense to give a single ctor/dtor a linkage name.
   StringRef MethodLinkageName;
   // FIXME: 'isFunctionLocalClass' seems like an arbitrary/unintentional
   // property to use here. It may've been intended to model "is non-external
   // type" but misses cases of non-function-local but non-external classes such
   // as those in anonymous namespaces as well as the reverse - external types
   // that are function local, such as those in (non-local) inline functions.
-  if (!IsCtorOrDtor && !isFunctionLocalClass(Method->getParent()))
-    MethodLinkageName = CGM.getMangledName(Method);
+  if (!isFunctionLocalClass(Method->getParent()))
+    MethodLinkageName = GetMethodLinkageName(Method);
 
   // Get the location for the method.
   llvm::DIFile *MethodDefUnit = nullptr;
@@ -2634,10 +2673,20 @@ StringRef CGDebugInfo::getVTableName(const CXXRecordDecl *RD) {
 // existing information in the DWARF. The type is assumed to be 'void *'.
 void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
                                    const CXXRecordDecl *RD) {
-  if (!CGM.getTarget().getCXXABI().isItaniumFamily() ||
-      CGM.getTarget().getTriple().isOSBinFormatCOFF())
+  if (!CGM.getTarget().getCXXABI().isItaniumFamily())
     return;
   if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
+    return;
+
+  // On COFF platform, we shouldn't emit a reference to an external entity (i.e.
+  // VTable) into debug info, which is constructed within a discardable section.
+  // If that entity ends up implicitly dllimported from another DLL, the linker
+  // may produce a runtime pseudo-relocation for it (BFD-ld only. LLD prohibits
+  // to emit such relocation). If the debug section is stripped, the runtime
+  // pseudo-relocation points to memory space outside of the module, causing an
+  // access violation.
+  if (CGM.getTarget().getTriple().isOSBinFormatCOFF() &&
+      VTable->isDeclarationForLinker())
     return;
 
   ASTContext &Context = CGM.getContext();

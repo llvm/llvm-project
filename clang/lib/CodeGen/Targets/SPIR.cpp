@@ -132,13 +132,14 @@ ABIArgInfo SPIRVABIInfo::classifyReturnType(QualType RetTy) const {
 }
 
 ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
-  if (getContext().getLangOpts().CUDAIsDevice) {
+  if (getContext().getLangOpts().isTargetDevice()) {
     // Coerce pointer arguments with default address space to CrossWorkGroup
-    // pointers for HIPSPV/CUDASPV. When the language mode is HIP/CUDA, the
-    // SPIRTargetInfo maps cuda_device to SPIR-V's CrossWorkGroup address space.
+    // pointers for target devices as default address space kernel arguments
+    // are not allowed. We use the opencl_global language address space which
+    // always maps to CrossWorkGroup.
     llvm::Type *LTy = CGT.ConvertType(Ty);
     auto DefaultAS = getContext().getTargetAddressSpace(LangAS::Default);
-    auto GlobalAS = getContext().getTargetAddressSpace(LangAS::cuda_device);
+    auto GlobalAS = getContext().getTargetAddressSpace(LangAS::opencl_global);
     auto *PtrTy = llvm::dyn_cast<llvm::PointerType>(LTy);
     if (PtrTy && PtrTy->getAddressSpace() == DefaultAS) {
       LTy = llvm::PointerType::get(PtrTy->getContext(), GlobalAS);
@@ -485,6 +486,12 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
       return getSPIRVImageTypeFromHLSLResource(ResAttrs, ContainedTy, CGM);
     }
 
+    if (ResAttrs.IsCounter) {
+      llvm::Type *ElemType = llvm::Type::getInt32Ty(Ctx);
+      uint32_t StorageClass = /* StorageBuffer storage class */ 12;
+      return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer", {ElemType},
+                                      {StorageClass, true});
+    }
     llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
     llvm::ArrayType *RuntimeArrayType = llvm::ArrayType::get(ElemType, 0);
     uint32_t StorageClass = /* StorageBuffer storage class */ 12;

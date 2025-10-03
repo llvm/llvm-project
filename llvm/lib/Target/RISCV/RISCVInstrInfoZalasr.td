@@ -63,13 +63,14 @@ defm SD : SRL_r_aq_rl<0b011, "sd">;
 //===----------------------------------------------------------------------===//
 
 class PatLAQ<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
-    : Pat<(vt (OpNode (vt GPRMemZeroOffset:$rs1))), (Inst GPRMemZeroOffset:$rs1)>;
+    : Pat<(vt (OpNode (XLenVT GPRMemZeroOffset:$rs1))),
+          (Inst GPRMemZeroOffset:$rs1)>;
 
 // n.b. this switches order of arguments
 //  to deal with the fact that SRL has addr, data
 //  while atomic_store has data, addr
 class PatSRL<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
-    : Pat<(OpNode (vt GPR:$rs2), (vt GPRMemZeroOffset:$rs1)),
+    : Pat<(OpNode (vt GPR:$rs2), (XLenVT GPRMemZeroOffset:$rs1)),
           (Inst GPRMemZeroOffset:$rs1, GPR:$rs2)>;
 
 
@@ -97,16 +98,15 @@ let Predicates = [HasStdExtZalasr] in {
 let Predicates = [HasStdExtZalasr, IsRV32] in {
   def : PatLAQ<acquiring_load<atomic_load_nonext_32>, LW_AQ>;
   def : PatLAQ<seq_cst_load<atomic_load_nonext_32>, LW_AQ>;
-
-} // Predicates = [HasStdExtZalasr, IsRV64]
+} // Predicates = [HasStdExtZalasr, IsRV32]
 
 let Predicates = [HasStdExtZalasr, IsRV64] in {
-  def : PatLAQ<acquiring_load<atomic_load_asext_32>, LW_AQ>;
-  def : PatLAQ<seq_cst_load<atomic_load_asext_32>, LW_AQ>;
+  def : PatLAQ<acquiring_load<atomic_load_asext_32>, LW_AQ, i64>;
+  def : PatLAQ<seq_cst_load<atomic_load_asext_32>, LW_AQ, i64>;
 
-  def : PatLAQ<acquiring_load<atomic_load_nonext_64>, LD_AQ>;
-  def : PatLAQ<seq_cst_load<atomic_load_nonext_64>, LD_AQ>;
+  def : PatLAQ<acquiring_load<atomic_load_nonext_64>, LD_AQ, i64>;
+  def : PatLAQ<seq_cst_load<atomic_load_nonext_64>, LD_AQ, i64>;
 
-  def : PatSRL<releasing_store<atomic_store_64>, SD_RL>;
-  def : PatSRL<seq_cst_store<atomic_store_64>, SD_RL>;
+  def : PatSRL<releasing_store<atomic_store_64>, SD_RL, i64>;
+  def : PatSRL<seq_cst_store<atomic_store_64>, SD_RL, i64>;
 } // Predicates = [HasStdExtZalasr, IsRV64]

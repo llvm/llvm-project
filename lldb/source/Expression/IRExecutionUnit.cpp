@@ -723,7 +723,7 @@ private:
 /// Returns address of the function referred to by the special function call
 /// label \c label.
 static llvm::Expected<lldb::addr_t>
-ResolveFunctionCallLabel(const FunctionCallLabel &label,
+ResolveFunctionCallLabel(FunctionCallLabel &label,
                          const lldb_private::SymbolContext &sc,
                          bool &symbol_was_missing_weak) {
   symbol_was_missing_weak = false;
@@ -751,7 +751,12 @@ ResolveFunctionCallLabel(const FunctionCallLabel &label,
   sc_list.Append(*sc_or_err);
 
   LoadAddressResolver resolver(*sc.target_sp, symbol_was_missing_weak);
-  return resolver.Resolve(sc_list).value_or(LLDB_INVALID_ADDRESS);
+  lldb::addr_t resolved_addr =
+      resolver.Resolve(sc_list).value_or(LLDB_INVALID_ADDRESS);
+  if (resolved_addr == LLDB_INVALID_ADDRESS)
+    return llvm::createStringError("couldn't resolve address for function");
+
+  return resolved_addr;
 }
 
 lldb::addr_t

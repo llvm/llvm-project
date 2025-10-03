@@ -90,9 +90,9 @@ TEST(SPSWrapperFunctionUtilsTest, TestVoidNoop) {
   EXPECT_TRUE(Ran);
 }
 
-static void add_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
-                            orc_rt_WrapperFunctionReturn Return,
-                            orc_rt_WrapperFunctionBuffer ArgBytes) {
+static void add_via_lambda_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+                                       orc_rt_WrapperFunctionReturn Return,
+                                       orc_rt_WrapperFunctionBuffer ArgBytes) {
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
       Session, CallCtx, Return, ArgBytes,
       [](move_only_function<void(int32_t)> Return, int32_t X, int32_t Y) {
@@ -100,10 +100,121 @@ static void add_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
       });
 }
 
-TEST(SPSWrapperFunctionUtilsTest, TestAdd) {
+TEST(SPSWrapperFunctionUtilsTest, TestBinaryOpViaLambda) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      DirectCaller(nullptr, add_sps_wrapper),
+      DirectCaller(nullptr, add_via_lambda_sps_wrapper),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
   EXPECT_EQ(Result, 42);
+}
+
+static void add_via_function(move_only_function<void(int32_t)> Return,
+                             int32_t X, int32_t Y) {
+  Return(X + Y);
+}
+
+static void
+add_via_function_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+                             orc_rt_WrapperFunctionReturn Return,
+                             orc_rt_WrapperFunctionBuffer ArgBytes) {
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
+      Session, CallCtx, Return, ArgBytes, add_via_function);
+}
+
+TEST(SPSWrapperFunctionUtilsTest, TestBinaryOpViaFunction) {
+  int32_t Result = 0;
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
+      DirectCaller(nullptr, add_via_function_sps_wrapper),
+      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+  EXPECT_EQ(Result, 42);
+}
+
+static void
+add_via_function_pointer_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+                                     orc_rt_WrapperFunctionReturn Return,
+                                     orc_rt_WrapperFunctionBuffer ArgBytes) {
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
+      Session, CallCtx, Return, ArgBytes, &add_via_function);
+}
+
+TEST(SPSWrapperFunctionUtilsTest, TestBinaryOpViaFunctionPointer) {
+  int32_t Result = 0;
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
+      DirectCaller(nullptr, add_via_function_pointer_sps_wrapper),
+      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+  EXPECT_EQ(Result, 42);
+}
+
+static void improbable_feat_sps_wrapper(orc_rt_SessionRef Session,
+                                        void *CallCtx,
+                                        orc_rt_WrapperFunctionReturn Return,
+                                        orc_rt_WrapperFunctionBuffer ArgBytes) {
+  SPSWrapperFunction<SPSError(bool)>::handle(
+      Session, CallCtx, Return, ArgBytes,
+      [](move_only_function<void(Error)> Return, bool LuckyHat) {
+        if (LuckyHat)
+          Return(Error::success());
+        else
+          Return(make_error<StringError>("crushed by boulder"));
+      });
+}
+
+TEST(SPSWrapperFunctionUtilsTest, TestFunctionReturningErrorSuccessCase) {
+  bool DidRun = false;
+  SPSWrapperFunction<SPSError(bool)>::call(
+      DirectCaller(nullptr, improbable_feat_sps_wrapper),
+      [&](Expected<Error> E) {
+        DidRun = true;
+        cantFail(cantFail(std::move(E)));
+      },
+      true);
+
+  EXPECT_TRUE(DidRun);
+}
+
+TEST(SPSWrapperFunctionUtilsTest, TestFunctionReturningErrorFailureCase) {
+  std::string ErrMsg;
+  SPSWrapperFunction<SPSError(bool)>::call(
+      DirectCaller(nullptr, improbable_feat_sps_wrapper),
+      [&](Expected<Error> E) { ErrMsg = toString(cantFail(std::move(E))); },
+      false);
+
+  EXPECT_EQ(ErrMsg, "crushed by boulder");
+}
+
+static void halve_number_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+                                     orc_rt_WrapperFunctionReturn Return,
+                                     orc_rt_WrapperFunctionBuffer ArgBytes) {
+  SPSWrapperFunction<SPSExpected<int32_t>(int32_t)>::handle(
+      Session, CallCtx, Return, ArgBytes,
+      [](move_only_function<void(Expected<int32_t>)> Return, int N) {
+        if (N % 2 == 0)
+          Return(N >> 1);
+        else
+          Return(make_error<StringError>("N is not a multiple of 2"));
+      });
+}
+
+TEST(SPSWrapperFunctionUtilsTest, TestFunctionReturningExpectedSuccessCase) {
+  int32_t Result = 0;
+  SPSWrapperFunction<SPSExpected<int32_t>(int32_t)>::call(
+      DirectCaller(nullptr, halve_number_sps_wrapper),
+      [&](Expected<Expected<int32_t>> R) {
+        Result = cantFail(cantFail(std::move(R)));
+      },
+      2);
+
+  EXPECT_EQ(Result, 1);
+}
+
+TEST(SPSWrapperFunctionUtilsTest, TestFunctionReturningExpectedFailureCase) {
+  std::string ErrMsg;
+  SPSWrapperFunction<SPSExpected<int32_t>(int32_t)>::call(
+      DirectCaller(nullptr, halve_number_sps_wrapper),
+      [&](Expected<Expected<int32_t>> R) {
+        ErrMsg = toString(cantFail(std::move(R)).takeError());
+      },
+      3);
+
+  EXPECT_EQ(ErrMsg, "N is not a multiple of 2");
 }

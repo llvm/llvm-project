@@ -39,7 +39,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %vec.ind = phi <vscale x 1 x i64> [ %1, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %accum = phi <vscale x 1 x i64> [ zeroinitializer, %vector.ph ], [ %accum.next, %vector.body ]
   %2 = getelementptr inbounds %struct.foo, ptr %a, <vscale x 1 x i64> %vec.ind, i32 3
-  %gather = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> %2, i32 8, <vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> undef)
+  %gather = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> %2, i32 8, <vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> poison)
   %accum.next = add <vscale x 1 x i64> %accum, %gather
   %index.next = add nuw i64 %index, %0
   %vec.ind.next = add <vscale x 1 x i64> %vec.ind, %.splat
@@ -135,7 +135,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %vec.ind = phi <vscale x 1 x i64> [ %1, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %accum = phi <vscale x 1 x i64> [ zeroinitializer, %vector.ph ], [ %accum.next, %vector.body ]
   %2 = getelementptr inbounds %struct.foo, ptr %a, <vscale x 1 x i64> %vec.ind, i32 3
-  %gather = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> %2, i32 8, <vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> undef)
+  %gather = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> %2, i32 8, <vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> poison)
   %accum.next = add <vscale x 1 x i64> %accum, %gather
 
   %b.gep = getelementptr i64, ptr %b, i64 %index
@@ -188,7 +188,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %vec.ind.shl = shl <vscale x 1 x i64> %vec.ind.add, splat (i64 2)
 
   %2 = getelementptr inbounds %struct.foo, ptr %a, <vscale x 1 x i64> %vec.ind.shl, i32 3
-  %gather = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> %2, i32 8, <vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> undef)
+  %gather = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> %2, i32 8, <vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> poison)
   %accum.next = add <vscale x 1 x i64> %accum, %gather
 
   %b.gep = getelementptr i64, ptr %b, i64 %index
@@ -249,7 +249,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %accum = phi <vscale x 1 x i64> [ zeroinitializer, %vector.ph ], [ %accum.next, %vector.body ]
   %vec.ind.shl = shl <vscale x 1 x i64> %vec.ind, %scale.splat
   %2 = getelementptr inbounds %struct.foo, ptr %a, <vscale x 1 x i64> %vec.ind.shl, i32 3
-  %gather = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> %2, i32 8, <vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> undef)
+  %gather = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> %2, i32 8, <vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> poison)
   %accum.next = add <vscale x 1 x i64> %accum, %gather
   %index.next = add nuw i64 %index, %0
   %vec.ind.next = add <vscale x 1 x i64> %vec.ind, %.splat
