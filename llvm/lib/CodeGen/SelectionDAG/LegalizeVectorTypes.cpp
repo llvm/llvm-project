@@ -7024,7 +7024,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_PARTIAL_REDUCE_MLA(SDNode *N) {
                                          HalfVT.getVectorMinNumElements());
     WidenedRes = DAG.getNode(ISD::ADD, DL, HalfVT, Lo, Hi);
   }
-  return DAG.getInsertSubvector(DL, Zero, WidenedRes, 0);
+  return DAG.getInsertSubvector(DL, DAG.getPOISON(WideAccVT), WidenedRes, 0);
 }
 
 //===----------------------------------------------------------------------===//
