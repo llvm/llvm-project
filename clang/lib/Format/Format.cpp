@@ -2435,7 +2435,7 @@ private:
       const auto *NextLine = I + 1 == End ? nullptr : I[1];
       for (const auto *Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
-        if (!Token->Optional || !Token->isOneOf(tok::l_brace, tok::r_brace))
+        if (!Token->Optional || Token->isNoneOf(tok::l_brace, tok::r_brace))
           continue;
         auto *Next = Token->Next;
         assert(Next || Token == Line->Last);

@@ -246,8 +246,6 @@ Non-comprehensive list of changes in this release
 
 - ``__builtin_assume_dereferenceable`` now accepts non-constant size operands.
 
-- Fixed a crash when the second argument to ``__builtin_assume_aligned`` was not constant (#GH161314)
-
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
@@ -363,7 +361,7 @@ Bug Fixes in This Version
   first parameter. (#GH113323).
 - Fixed a crash with incompatible pointer to integer conversions in designated
   initializers involving string literals. (#GH154046)
-- Fix crash on CTAD for alias template. (#GH131342)
+- Fix crash on CTAD for alias template. (#GH131342), (#GH131408)
 - Clang now emits a frontend error when a function marked with the `flatten` attribute
   calls another function that requires target features not enabled in the caller. This
   prevents a fatal error in the backend.
