@@ -1072,7 +1072,7 @@ public:
       __emplace_hint_unique__sfinae(
           integral_constant< bool, std::is_copy_constructible_v<decltype(__value.first)> >(),
           __p,
-          std::move(__value.first),
+          __value.first,
           std::move(__value.second));
     } else
 #endif
