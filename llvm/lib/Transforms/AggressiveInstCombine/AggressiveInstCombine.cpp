@@ -28,8 +28,12 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -38,6 +42,10 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "aggressive-instcombine"
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 STATISTIC(NumAnyOrAllBitsSet, "Number of any/all-bits-set patterns folded");
 STATISTIC(NumGuardedRotates,
@@ -598,6 +606,19 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
     // produce the value from the table.
     auto Cmp = B.CreateICmpEQ(X1, ConstantInt::get(XType, 0));
     auto Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Cttz);
+
+    // Attach heuristic branch weigths to the newly 'select' instruction that
+    // handles the cttz(0) edge case The assumpltion is tht the input to a cttz
+    // operation is rarely 0, so we add a strong 100-to-1 bias weights to the
+    // 'false' path.
+    // The 'ProfcheckDisableMetadataFixes' flag is a testing utility to disable
+    // this specific behavior.
+    if (!ProfcheckDisableMetadataFixes) {
+      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
+        SelectI->setMetadata(
+            LLVMContext::MD_prof,
+            MDBuilder(SelectI->getContext()).createBranchWeights(1, 100));
+    }
 
     // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
     // it should be handled as: `cttz(x) & (typeSize - 1)`.
