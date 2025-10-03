@@ -301,18 +301,22 @@ static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
     llvm_unreachable("Unknown BuiltinID for wave reduction");
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_add_u32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_add_u64:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_add_f32:
     return Intrinsic::amdgcn_wave_reduce_add;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_u32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_u64:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_f32:
     return Intrinsic::amdgcn_wave_reduce_sub;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i64:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_f32:
     return Intrinsic::amdgcn_wave_reduce_min;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_u32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_u64:
     return Intrinsic::amdgcn_wave_reduce_umin;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i64:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_f32:
     return Intrinsic::amdgcn_wave_reduce_max;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_u32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_u64:
