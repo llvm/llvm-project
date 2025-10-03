@@ -1278,6 +1278,10 @@ public:
                            ArrayRef<ConstraintInfo> OutputConstraints,
                            unsigned &Index) const;
 
+  std::string
+  simplifyConstraint(StringRef Constraint,
+                     SmallVectorImpl<ConstraintInfo> *OutCons = nullptr) const;
+
   // Constraint parm will be left pointing at the last character of
   // the constraint.  In practice, it won't be changed unless the
   // constraint is longer than one character.

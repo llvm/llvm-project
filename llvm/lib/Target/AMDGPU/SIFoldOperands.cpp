@@ -722,7 +722,8 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
         return false;
     }
 
-    if (!MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
+    if (New->getReg().isVirtual() &&
+        !MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
       LLVM_DEBUG(dbgs() << "Cannot constrain " << printReg(New->getReg(), TRI)
                         << TRI->getRegClassName(ConstrainRC) << '\n');
       return false;
@@ -1313,6 +1314,15 @@ void SIFoldOperandsImpl::foldOperand(
       if (MovSrcRC) {
         if (UseSubReg)
           MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);
+
+        // FIXME: We should be able to directly check immediate operand legality
+        // for all cases, but gfx908 hacks break.
+        if (MovOp == AMDGPU::AV_MOV_B32_IMM_PSEUDO &&
+            (!OpToFold.isImm() ||
+             !TII->isImmOperandLegal(MovDesc, SrcIdx,
+                                     *OpToFold.getEffectiveImmVal())))
+          break;
+
         if (!MRI->constrainRegClass(SrcReg, MovSrcRC))
           break;
 
