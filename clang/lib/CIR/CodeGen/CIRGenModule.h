@@ -274,6 +274,8 @@ public:
     llvm_unreachable("unknown visibility!");
   }
 
+  llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 

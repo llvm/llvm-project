@@ -815,6 +815,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::CompoundLiteralExprClass:
     return emitCompoundLiteralLValue(cast<CompoundLiteralExpr>(e));
+  case Expr::PredefinedExprClass:
+    return emitPredefinedLValue(cast<PredefinedExpr>(e));
   case Expr::BinaryOperatorClass:
     return emitBinaryOperatorLValue(cast<BinaryOperator>(e));
   case Expr::CompoundAssignOperatorClass: {
