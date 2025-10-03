@@ -243,7 +243,6 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
                        [&](RetainedKnowledge RK, Instruction *Assume, auto) {
                          if (!isValidAssumeForContext(Assume, CtxI, DT))
                            return false;
-                         assert(RK.AttrKind == Attribute::Dereferenceable);
                          if (StartPtrV->canBeFreed() &&
                              !willNotFreeBetween(Assume, CtxI))
                            return false;
