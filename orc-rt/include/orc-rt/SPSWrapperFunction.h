@@ -21,8 +21,10 @@ namespace orc_rt {
 namespace detail {
 
 template <typename... SPSArgTs> struct WFSPSHelper {
-  template <typename... ArgTs>
-  std::optional<WrapperFunctionBuffer> serialize(const ArgTs &...Args) {
+private:
+  template <typename... SerializableArgTs>
+  std::optional<WrapperFunctionBuffer>
+  serializeImpl(const SerializableArgTs &...Args) {
     auto R =
         WrapperFunctionBuffer::allocate(SPSArgList<SPSArgTs...>::size(Args...));
     SPSOutputBuffer OB(R.data(), R.size());
@@ -31,16 +33,61 @@ template <typename... SPSArgTs> struct WFSPSHelper {
     return std::move(R);
   }
 
+  template <typename T> static const T &toSerializable(const T &Arg) noexcept {
+    return Arg;
+  }
+
+  static SPSSerializableError toSerializable(Error Err) noexcept {
+    return SPSSerializableError(std::move(Err));
+  }
+
+  template <typename T>
+  static SPSSerializableExpected<T> toSerializable(Expected<T> Arg) noexcept {
+    return SPSSerializableExpected<T>(std::move(Arg));
+  }
+
+  template <typename... Ts> struct DeserializableTuple;
+
+  template <typename... Ts> struct DeserializableTuple<std::tuple<Ts...>> {
+    typedef std::tuple<
+        std::decay_t<decltype(toSerializable(std::declval<Ts>()))>...>
+        type;
+  };
+
+  template <typename... Ts>
+  using DeserializableTuple_t = typename DeserializableTuple<Ts...>::type;
+
+  template <typename T> static T fromSerializable(T &&Arg) noexcept {
+    return Arg;
+  }
+
+  static Error fromSerializable(SPSSerializableError Err) noexcept {
+    return Err.toError();
+  }
+
+  template <typename T>
+  static Expected<T> fromSerializable(SPSSerializableExpected<T> Val) noexcept {
+    return Val.toExpected();
+  }
+
+public:
+  template <typename... ArgTs>
+  std::optional<WrapperFunctionBuffer> serialize(ArgTs &&...Args) {
+    return serializeImpl(toSerializable(std::forward<ArgTs>(Args))...);
+  }
+
   template <typename ArgTuple>
   std::optional<ArgTuple> deserialize(WrapperFunctionBuffer ArgBytes) {
     assert(!ArgBytes.getOutOfBandError() &&
            "Should not attempt to deserialize out-of-band error");
     SPSInputBuffer IB(ArgBytes.data(), ArgBytes.size());
-    ArgTuple Args;
-    if (!SPSSerializationTraits<SPSTuple<SPSArgTs...>, ArgTuple>::deserialize(
-            IB, Args))
+    DeserializableTuple_t<ArgTuple> Args;
+    if (!SPSSerializationTraits<SPSTuple<SPSArgTs...>,
+                                decltype(Args)>::deserialize(IB, Args))
       return std::nullopt;
-    return Args;
+    return std::apply(
+        [](auto &&...A) { return ArgTuple(fromSerializable(A)...); },
+        std::move(Args));
   }
 };
 

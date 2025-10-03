@@ -168,7 +168,8 @@ struct ResultDeserializer<std::tuple<Expected<T>>, Serializer> {
                                  Serializer &S) {
     if (auto Val = S.result().template deserialize<std::tuple<T>>(
             std::move(ResultBytes)))
-      return std::move(std::get<0>(*Val));
+      return Expected<T>(std::move(std::get<0>(*Val)),
+                         ForceExpectedSuccessValue());
     else
       return make_error<StringError>("Could not deserialize result");
   }
