@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++98 %s readability-redundant-typename %t \
+// RUN: %check_clang_tidy -std=c++98,c++03 %s readability-redundant-typename %t \
 // RUN:   -- -- -fno-delayed-template-parsing
 
 struct NotDependent {
