@@ -1,0 +1,12 @@
+---
+TpiStream:
+  Records:
+    - Kind:            LF_ALIAS
+      Alias:
+        UnderlyingType:  32
+        Name:            u8
+    - Kind:            LF_ALIAS
+      Alias:
+        UnderlyingType:  19
+        Name:            i64
+...
