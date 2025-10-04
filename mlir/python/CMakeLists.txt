@@ -528,6 +528,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
 
     # Dialects
     MLIRCAPIFunc
+    MLIRCAPIArith
 )
 
 # This extension exposes an API to register all dialects, extensions, and passes

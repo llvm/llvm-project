@@ -3,14 +3,13 @@
 # RUN: -DCMAKE_CXX_COMPILER=%host_cxx -DCMAKE_C_COMPILER=%host_cc \
 # RUN: -DLLVM_ENABLE_LIBCXX=%enable_libcxx -DMLIR_DIR=%mlir_cmake_dir \
 # RUN: -DLLVM_USE_LINKER=%llvm_use_linker \
-# RUN: -DMLIR_PYTHON_PACKAGE_PREFIX=mlir_standalone \
+# RUN: -DMLIR_PYTHON_PACKAGE_PREFIX=mlir \
+# RUN: -DMLIR_STANDALONE_REALLY=ON \
 # RUN: -DPython3_EXECUTABLE=%python \
 # RUN: -DPython_EXECUTABLE=%python | tee %t
-# RUN: "%cmake_exe" --build . --target check-standalone | tee -a %t
+# RUN: "%cmake_exe" --build . --target StandReallyAlonePythonModules | tee -a %t
+# RUN: %python "%mlir_src_root/examples/standalone/test/python/smoketest_really_alone.py" | tee -a %t
 # RUN: FileCheck --input-file=%t %s
 
-# Note: The number of checked tests is not important. The command will fail
-# if any fail.
-# CHECK: Passed
-# CHECK-NOT: Failed
-# UNSUPPORTED: target={{.*(android).*}}
+# CHECK: %[[C:.*]] = arith.constant 2 : i32
+# CHECK: standalone.foo %[[C]] : i32
