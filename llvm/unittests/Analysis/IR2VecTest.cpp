@@ -320,7 +320,7 @@ protected:
     RetInst = ReturnInst::Create(Ctx, AddInst, BB);
   }
   void TearDown() override {
-    delete V ;
+    delete V;
     V = nullptr;
   }
 };
