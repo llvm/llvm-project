@@ -75,7 +75,7 @@ struct VectorMaskedLoadOpConverter final
           [&](OpBuilder &builder, Location loc) {
             auto loadedValue = memref::LoadOp::create(
                 builder, loc, base, indices, /*nontemporal=*/false,
-                llvm::MaybeAlign(maskedLoadOp.getAlignment().value_or(0)));
+                maskedLoadOp.getMaybeAlign());
             auto combinedValue =
                 vector::InsertOp::create(builder, loc, loadedValue, iValue, i);
             scf::YieldOp::create(builder, loc, combinedValue.getResult());
@@ -143,9 +143,8 @@ struct VectorMaskedStoreOpConverter final
       auto ifOp = scf::IfOp::create(rewriter, loc, maskBit, /*else=*/false);
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
       auto extractedValue = vector::ExtractOp::create(rewriter, loc, value, i);
-      memref::StoreOp::create(
-          rewriter, loc, extractedValue, base, indices, nontemporal,
-          llvm::MaybeAlign(maskedStoreOp.getAlignment().value_or(0)));
+      memref::StoreOp::create(rewriter, loc, extractedValue, base, indices,
+                              nontemporal, maskedStoreOp.getMaybeAlign());
 
       rewriter.setInsertionPointAfter(ifOp);
       indices.back() =
