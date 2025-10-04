@@ -12,7 +12,6 @@
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munlock.h"
 #include "src/sys/mman/munmap.h"
-#include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -21,6 +20,9 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcMincoreTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
+// TODO: Replace with sysconf call once the function is properly implemented.
+constexpr size_t PAGE_SIZE = 4096;
+
 TEST_F(LlvmLibcMincoreTest, UnMappedMemory) {
   unsigned char vec;
   int res = LIBC_NAMESPACE::mincore(nullptr, 1, &vec);
@@ -28,7 +30,7 @@ TEST_F(LlvmLibcMincoreTest, UnMappedMemory) {
 }
 
 TEST_F(LlvmLibcMincoreTest, UnalignedAddr) {
-  unsigned long page_size = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+  unsigned long page_size = PAGE_SIZE;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
@@ -39,7 +41,7 @@ TEST_F(LlvmLibcMincoreTest, UnalignedAddr) {
 }
 
 TEST_F(LlvmLibcMincoreTest, InvalidVec) {
-  unsigned long page_size = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+  unsigned long page_size = PAGE_SIZE;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, 4 * page_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
@@ -49,7 +51,7 @@ TEST_F(LlvmLibcMincoreTest, InvalidVec) {
 }
 
 TEST_F(LlvmLibcMincoreTest, NoError) {
-  unsigned long page_size = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+  unsigned long page_size = PAGE_SIZE;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
@@ -61,7 +63,7 @@ TEST_F(LlvmLibcMincoreTest, NoError) {
 }
 
 TEST_F(LlvmLibcMincoreTest, NegativeLength) {
-  unsigned long page_size = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+  unsigned long page_size = PAGE_SIZE;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
@@ -73,7 +75,7 @@ TEST_F(LlvmLibcMincoreTest, NegativeLength) {
 }
 
 TEST_F(LlvmLibcMincoreTest, PageOut) {
-  unsigned long page_size = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+  unsigned long page_size = PAGE_SIZE;
   unsigned char vec;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ | PROT_WRITE,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
