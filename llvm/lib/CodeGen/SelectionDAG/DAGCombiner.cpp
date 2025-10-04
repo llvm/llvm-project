@@ -7498,6 +7498,69 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
+  // Optimize (Constant XOR a) & b & ~c -> (Constant XOR a) & (b & ~c)
+  // This allows the andn operation to be done in parallel with the xor
+  if (TLI.hasAndNot(N1) || TLI.hasAndNot(N0)) {
+    // Look for pattern: AND(AND(XOR(Constant, a), b), NOT(c))
+    // Transform to: AND(XOR(Constant, a), AND(b, NOT(c)))
+    
+    // Handle both operand orders: N0=AND, N1=NOT and N0=NOT, N1=AND
+    SDValue AndOp, NotOp;
+    if (N0.getOpcode() == ISD::AND && 
+        N1.getOpcode() == ISD::XOR && 
+        DAG.isConstantIntBuildVectorOrConstantInt(N1.getOperand(1)) &&
+        isAllOnesConstant(N1.getOperand(1))) {
+      AndOp = N0;
+      NotOp = N1;
+    } else if (N1.getOpcode() == ISD::AND &&
+               N0.getOpcode() == ISD::XOR && 
+               DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1)) &&
+               isAllOnesConstant(N0.getOperand(1))) {
+      AndOp = N1;
+      NotOp = N0;
+    } else {
+      goto skip_optimization;
+    }
+    
+    // Prevent infinite loops: only apply if the AND node has one use
+    if (!AndOp.hasOneUse())
+      goto skip_optimization;
+    
+    SDValue AndOp0 = AndOp.getOperand(0);
+    SDValue AndOp1 = AndOp.getOperand(1);
+    
+    // Check if one operand of AndOp is XOR(Constant, a)
+    SDValue XorOp, OtherOp;
+    if (AndOp0.getOpcode() == ISD::XOR) {
+      XorOp = AndOp0;
+      OtherOp = AndOp1;
+    } else if (AndOp1.getOpcode() == ISD::XOR) {
+      XorOp = AndOp1;
+      OtherOp = AndOp0;
+    } else {
+      goto skip_optimization;
+    }
+    
+    // Check if XOR has a constant operand (and not all-ones constant to avoid NOT)
+    if ((DAG.isConstantIntBuildVectorOrConstantInt(XorOp.getOperand(0)) &&
+         !isAllOnesConstant(XorOp.getOperand(0))) ||
+        (DAG.isConstantIntBuildVectorOrConstantInt(XorOp.getOperand(1)) &&
+         !isAllOnesConstant(XorOp.getOperand(1)))) {
+      // Prevent infinite loops: only apply if OtherOp is not also a NOT
+      if (OtherOp.getOpcode() == ISD::XOR && 
+          DAG.isConstantIntBuildVectorOrConstantInt(OtherOp.getOperand(1)) &&
+          isAllOnesConstant(OtherOp.getOperand(1))) {
+        goto skip_optimization;
+      }
+      // Transform: AND(AND(XOR(Constant, a), b), NOT(c))
+      // To: AND(XOR(Constant, a), AND(b, NOT(c)))
+      // This allows the andn (b & ~c) to be done in parallel with the xor
+      SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, OtherOp, NotOp);
+      return DAG.getNode(ISD::AND, DL, VT, XorOp, NewAnd);
+    }
+  }
+skip_optimization:
+
   // reassociate and
   if (SDValue RAND = reassociateOps(ISD::AND, DL, N0, N1, N->getFlags()))
     return RAND;
