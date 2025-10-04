@@ -54,6 +54,7 @@ private:
   void nameAsRegularOperation(mlir::Operation* op, llvm::SmallPtrSet<const mlir::Operation *, 32> &visited);
   bool hasOnlyImmediateOperands(mlir::Operation* op);
   void SetDeterministicNames(Block &block);
+  llvm::SetVector<int> getOutputFootprint(mlir::Operation* op, llvm::SmallPtrSet<const mlir::Operation *, 32> &visited);
 };
 } // namespace
 
@@ -61,11 +62,6 @@ void NormalizePass::runOnOperation() {
   ModuleOp module = getOperation();
 
   for (Operation &op : module.getOps()) {
-
-    // for (Region &region : op.getRegions())
-    //   for (Block &block : region)
-    //     SetDeterministicNames(block);
-
     SmallVector<Operation *, 16> Outputs;
 
     for (Region &region : op.getRegions())
@@ -74,7 +70,7 @@ void NormalizePass::runOnOperation() {
 
     reorderOperations(Outputs);
 
-    // RenameOperations(Outputs);
+    RenameOperations(Outputs);
   }
 }
 
@@ -172,25 +168,18 @@ void NormalizePass::nameAsInitialOperation(mlir::Operation* op) {
   uint64_t opcodeHash = kernel_hash(op->getName().getStringRef().str());
   Hash = llvm::hashing::detail::hash_16_bytes(Hash, opcodeHash);
 
-  SmallPtrSet<const Instruction *, 32> Visited;
-  // Get output footprint for I.
-  SetVector<int> OutputFootprint = getOutputFootprint(I, Visited);
+  SmallPtrSet<const mlir::Operation *, 32> Visited;
+  SetVector<int> OutputFootprint = getOutputFootprint(op, Visited);
 
-  // Consider output footprint in the hash.
   for (const int &Output : OutputFootprint)
     Hash = llvm::hashing::detail::hash_16_bytes(Hash, Output);
 
-  // Base instruction name.
   SmallString<256> Name;
   Name.append("vl" + std::to_string(Hash).substr(0, 5));
 
-  // In case of CallInst, consider callee in the instruction name.
-  if (const auto *CI = dyn_cast<CallInst>(I)) {
-    Function *F = CI->getCalledFunction();
-
-    if (F != nullptr) {
-      Name.append(F->getName());
-    }
+  if (auto call = mlir::dyn_cast<mlir::func::CallOp>(op)) {
+    llvm::StringRef callee = call.getCallee();
+    Name.append(callee.str());
   }
 
   Name.append("(");
@@ -202,11 +191,71 @@ void NormalizePass::nameAsInitialOperation(mlir::Operation* op) {
   }
   Name.append(")");
 
-  I->setName(Name);
+  mlir::OpBuilder b(op->getContext());
+  mlir::StringAttr sat = b.getStringAttr(Name);
+  mlir::Location newLoc = mlir::NameLoc::get(sat, op->getLoc());
+  op->setLoc(newLoc);
 }
 
 void NormalizePass::nameAsRegularOperation(mlir::Operation* op, llvm::SmallPtrSet<const mlir::Operation *, 32> &visited) {
+  SmallVector<SmallString<64>, 4> Operands;
+  for (mlir::Value operand : op->getOperands()) {
+    if (mlir::Operation *defOp = operand.getDefiningOp()) {
+      RenameOperation(defOp, visited);
 
+      std::string TextRepresentation;
+      mlir::AsmState state(defOp);
+      llvm::raw_string_ostream Stream(TextRepresentation);
+      defOp->print(Stream, state);
+      Operands.push_back(StringRef(Stream.str()));
+    } else {
+      std::string TextRepresentation;
+      mlir::AsmState state(op);
+      llvm::raw_string_ostream Stream(TextRepresentation);
+      operand.print(Stream, state);
+      Operands.push_back(StringRef(Stream.str()));
+    }
+  }
+
+  if (op->hasTrait<OpTrait::IsCommutative>()) llvm::sort(Operands);
+
+  uint64_t Hash = MagicHashConstant;
+
+  uint64_t opcodeHash = kernel_hash(op->getName().getStringRef().str());
+  Hash = llvm::hashing::detail::hash_16_bytes(Hash, opcodeHash);
+
+  SmallVector<uint64_t, 4> OperandsOpcodes;
+
+  for (mlir::Value operand : op->getOperands())
+    if (mlir::Operation *defOp = operand.getDefiningOp())
+      OperandsOpcodes.push_back(kernel_hash(defOp->getName().getStringRef().str()));
+
+  if (op->hasTrait<OpTrait::IsCommutative>()) llvm::sort(OperandsOpcodes.begin(), OperandsOpcodes.end());
+
+  for (const uint64_t Code : OperandsOpcodes)
+    Hash = llvm::hashing::detail::hash_16_bytes(Hash, Code);
+
+  SmallString<512> Name;
+  Name.append("op" + std::to_string(Hash).substr(0, 5));
+
+  if (auto call = mlir::dyn_cast<mlir::func::CallOp>(op)) {
+    llvm::StringRef callee = call.getCallee();
+    Name.append(callee.str());
+  }
+
+  Name.append("(");
+  for (unsigned long i = 0; i < Operands.size(); ++i) {
+    Name.append(Operands[i]);
+
+    if (i < Operands.size() - 1)
+      Name.append(", ");
+  }
+  Name.append(")");
+
+  mlir::OpBuilder b(op->getContext());
+  mlir::StringAttr sat = b.getStringAttr(Name);
+  mlir::Location newLoc = mlir::NameLoc::get(sat, op->getLoc());
+  op->setLoc(newLoc);
 }
 
 void NormalizePass::reorderOperations(SmallVector<Operation *, 16> &Outputs) {
@@ -238,14 +287,10 @@ void NormalizePass::reorderOperation(
   }
 }
 
-void NormalizePass::collectOutputOperations(
-    Block &block, SmallVector<Operation *, 16> &Outputs) {
-  llvm::SmallPtrSet<const mlir::Operation *, 32> visited;
-  for (Operation &innerOp : block) {
-    RenameOperation(&innerOp, visited);
+void NormalizePass::collectOutputOperations(Block &block, SmallVector<Operation *, 16> &Outputs) {
+  for (Operation &innerOp : block)
     if (isOutput(innerOp))
       Outputs.emplace_back(&innerOp);
-  }
 }
 
 bool NormalizePass::isOutput(Operation &op) {
@@ -261,4 +306,36 @@ bool NormalizePass::isOutput(Operation &op) {
   }
 
   return false;
+}
+
+llvm::SetVector<int> NormalizePass::getOutputFootprint(mlir::Operation* op, llvm::SmallPtrSet<const mlir::Operation *, 32> &visited) {
+  llvm::SetVector<int> Outputs;
+  if (!visited.count(op)) {
+    visited.insert(op);
+
+    if (isOutput(*op)) {
+      mlir::func::FuncOp func = op->getParentOfType<mlir::func::FuncOp>();
+
+      unsigned Count = 0;
+        for (Block &block : func.getRegion())
+          for(mlir::Operation &innerOp : block){
+            if(&innerOp==op)
+              Outputs.insert(Count);
+            Count++;
+        }
+
+      return Outputs;
+    }
+
+    for (mlir::OpOperand &use : op->getUses()) {
+      mlir::Operation *useOp = use.getOwner();
+      if (useOp) {
+        llvm::SetVector<int> OutputsUsingUop = getOutputFootprint(useOp, visited);
+
+        Outputs.insert(OutputsUsingUop.begin(), OutputsUsingUop.end());
+      }
+    }
+  }
+
+  return Outputs;
 }
