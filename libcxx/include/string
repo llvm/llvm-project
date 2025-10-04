@@ -2585,7 +2585,7 @@ inline const bool __is_transparently_comparable_v<_Comparator,
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
-          class _CharT     = __iter_value_type<_InputIterator>,
+          class _CharT     = __iterator_value_type<_InputIterator>,
           class _Allocator = allocator<_CharT>,
           class            = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
           class            = enable_if_t<__is_allocator_v<_Allocator>>>
