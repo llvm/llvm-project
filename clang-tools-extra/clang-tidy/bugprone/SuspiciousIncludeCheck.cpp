@@ -41,7 +41,8 @@ SuspiciousIncludeCheck::SuspiciousIncludeCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       HeaderFileExtensions(Context->getHeaderFileExtensions()),
       ImplementationFileExtensions(Context->getImplementationFileExtensions()),
-      IgnoredRegex(Options.get("IgnoredRegex")) {}
+      IgnoredRegexString(Options.get("IgnoredRegex")),
+      IgnoredRegex(IgnoredRegexString.value_or(StringRef{})) {}
 
 void SuspiciousIncludeCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
@@ -50,8 +51,8 @@ void SuspiciousIncludeCheck::registerPPCallbacks(
 }
 
 void SuspiciousIncludeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  if (IgnoredRegex.has_value())
-    Options.store(Opts, "IgnoredRegex", IgnoredRegex.value());
+  if (IgnoredRegexString.has_value())
+    Options.store(Opts, "IgnoredRegex", IgnoredRegexString.value());
 }
 
 void SuspiciousIncludePPCallbacks::InclusionDirective(
@@ -62,9 +63,10 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
   if (IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import)
     return;
 
-  if (Check.IgnoredRegex.has_value())
-    if (llvm::Regex Regex{Check.IgnoredRegex.value()}; Regex.match(FileName))
-      return;
+  if (Check.IgnoredRegexString.has_value() &&
+      Check.IgnoredRegex.match(FileName)) {
+    return;
+  }
 
   SourceLocation DiagLoc = FilenameRange.getBegin().getLocWithOffset(1);
 

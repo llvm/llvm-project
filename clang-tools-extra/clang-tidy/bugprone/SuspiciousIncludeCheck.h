@@ -31,7 +31,8 @@ public:
 
   FileExtensionsSet HeaderFileExtensions;
   FileExtensionsSet ImplementationFileExtensions;
-  std::optional<StringRef> IgnoredRegex;
+  std::optional<StringRef> IgnoredRegexString;
+  llvm::Regex IgnoredRegex;
 };
 
 } // namespace clang::tidy::bugprone
