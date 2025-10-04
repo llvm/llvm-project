@@ -1,4 +1,6 @@
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-host -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-host -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-device -verify %s
 
 // These tests validate parsing of the sycl_kernel_entry_point argument list
@@ -8,6 +10,10 @@
 template<int> struct ST; // #ST-decl
 template<int N> using TTA = ST<N>; // #TTA-decl
 
+// A launcher function definition required for host code synthesis to silence
+// complains.
+template <typename KernelName, typename... Tys>
+void sycl_kernel_launch(const char *, Tys &&...Args) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Valid declarations.

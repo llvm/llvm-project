@@ -28,34 +28,44 @@ namespace clang {
 /// of such a function specifies the statements to be executed on a SYCL device
 /// to invoke a SYCL kernel with a particular set of kernel arguments. The
 /// SYCLKernelCallStmt associates an original statement (the compound statement
-/// that is the function body) with an OutlinedFunctionDecl that holds the
-/// kernel parameters and the transformed body. During code generation, the
-/// OutlinedFunctionDecl is used to emit an offload kernel entry point suitable
-/// for invocation from a SYCL library implementation. If executed, the
-/// SYCLKernelCallStmt behaves as a no-op; no code generation is performed for
-/// it.
+/// that is the function body) with a kernel launch statement to execute on a
+/// SYCL host and an OutlinedFunctionDecl that holds the kernel parameters and
+/// the transformed body to execute on a SYCL device. During code generation,
+/// the OutlinedFunctionDecl is used to emit an offload kernel entry point
+/// suitable for invocation from a SYCL library implementation.
 class SYCLKernelCallStmt : public Stmt {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
 private:
   Stmt *OriginalStmt = nullptr;
+  Stmt *KernelLaunchStmt = nullptr;
   OutlinedFunctionDecl *OFDecl = nullptr;
 
 public:
   /// Construct a SYCL kernel call statement.
-  SYCLKernelCallStmt(CompoundStmt *CS, OutlinedFunctionDecl *OFD)
-      : Stmt(SYCLKernelCallStmtClass), OriginalStmt(CS), OFDecl(OFD) {}
+  SYCLKernelCallStmt(CompoundStmt *CS, Stmt *S, OutlinedFunctionDecl *OFD)
+      : Stmt(SYCLKernelCallStmtClass), OriginalStmt(CS), KernelLaunchStmt(S),
+        OFDecl(OFD) {}
 
   /// Construct an empty SYCL kernel call statement.
   SYCLKernelCallStmt(EmptyShell Empty) : Stmt(SYCLKernelCallStmtClass, Empty) {}
 
-  /// Retrieve the model statement.
+  /// Retrieve the original statement.
   CompoundStmt *getOriginalStmt() { return cast<CompoundStmt>(OriginalStmt); }
   const CompoundStmt *getOriginalStmt() const {
     return cast<CompoundStmt>(OriginalStmt);
   }
+
+  /// Set the original statement.
   void setOriginalStmt(CompoundStmt *CS) { OriginalStmt = CS; }
+
+  /// Retrieve the kernel launch statement.
+  Stmt *getKernelLaunchStmt() { return KernelLaunchStmt; }
+  const Stmt *getKernelLaunchStmt() const { return KernelLaunchStmt; }
+
+  /// Set the kernel launch statement.
+  void setKernelLaunchStmt(Stmt *S) { KernelLaunchStmt = S; }
 
   /// Retrieve the outlined function declaration.
   OutlinedFunctionDecl *getOutlinedFunctionDecl() { return OFDecl; }
@@ -80,6 +90,59 @@ public:
     return T->getStmtClass() == SYCLKernelCallStmtClass;
   }
 
+  child_range children() {
+    return child_range(&OriginalStmt, &OriginalStmt + 1);
+  }
+
+  const_child_range children() const {
+    return const_child_range(&OriginalStmt, &OriginalStmt + 1);
+  }
+};
+
+// UnresolvedSYCLKernelCallStmt represents an invocation of a SYCL kernel in
+// a dependent context for which lookup of the sycl_enqueue_kernel_launch
+// identifier cannot be performed. These statements are transformed to
+// SYCLKernelCallStmt during template instantiation.
+class UnresolvedSYCLKernelCallStmt : public Stmt {
+  friend class ASTStmtReader;
+  Stmt *OriginalStmt = nullptr;
+  // KernelLaunchIdExpr stores an UnresolvedLookupExpr or UnresolvedMemberExpr
+  // corresponding to the SYCL kernel launch function for which a call
+  // will be synthesized during template instantiation.
+  Expr *KernelLaunchIdExpr = nullptr;
+  UnresolvedSYCLKernelCallStmt(CompoundStmt *CS, Expr *IdExpr)
+      : Stmt(UnresolvedSYCLKernelCallStmtClass), OriginalStmt(CS),
+        KernelLaunchIdExpr(IdExpr) {}
+
+  void setKernelLaunchIdExpr(Expr *IdExpr) { KernelLaunchIdExpr = IdExpr; }
+  void setOriginalStmt(CompoundStmt *CS) { OriginalStmt = CS; }
+
+public:
+  static UnresolvedSYCLKernelCallStmt *
+  Create(const ASTContext &C, CompoundStmt *CS, Expr *IdExpr) {
+    return new (C) UnresolvedSYCLKernelCallStmt(CS, IdExpr);
+  }
+
+  static UnresolvedSYCLKernelCallStmt *CreateEmpty(const ASTContext &C) {
+    return new (C) UnresolvedSYCLKernelCallStmt(nullptr, nullptr);
+  }
+
+  Expr *getKernelLaunchIdExpr() const { return KernelLaunchIdExpr; }
+  CompoundStmt *getOriginalStmt() { return cast<CompoundStmt>(OriginalStmt); }
+  const CompoundStmt *getOriginalStmt() const {
+    return cast<CompoundStmt>(OriginalStmt);
+  }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getOriginalStmt()->getBeginLoc();
+  }
+
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getOriginalStmt()->getEndLoc();
+  }
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == UnresolvedSYCLKernelCallStmtClass;
+  }
   child_range children() {
     return child_range(&OriginalStmt, &OriginalStmt + 1);
   }
