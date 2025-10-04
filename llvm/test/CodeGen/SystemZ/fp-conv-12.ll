@@ -7,18 +7,36 @@
 ; they were added in z196 as the Convert to Logical family of instructions.
 ; Convert via signed i64s instead.
 
+; Test f16->i64. Converted to signed as the max float value is smaller than
+; the signed integer range.
+define i64 @f0(half %f) {
+; CHECK-LABEL: f0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    .cfi_offset %r14, -48
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    aghi %r15, -160
+; CHECK-NEXT:    .cfi_def_cfa_offset 320
+; CHECK-NEXT:    brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT:    cgebr %r2, 5, %f0
+; CHECK-NEXT:    lmg %r14, %r15, 272(%r15)
+; CHECK-NEXT:    br %r14
+  %conv = fptoui half %f to i64
+  ret i64 %conv
+}
+
 ; Test f32->i64.
 define i64 @f1(float %f) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    larl %r1, .LCPI0_0
+; CHECK-NEXT:    larl %r1, .LCPI1_0
 ; CHECK-NEXT:    le %f1, 0(%r1)
 ; CHECK-NEXT:    cebr %f0, %f1
-; CHECK-NEXT:    jnl .LBB0_2
+; CHECK-NEXT:    jnl .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    cgebr %r2, 5, %f0
 ; CHECK-NEXT:    br %r14
-; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    sebr %f0, %f1
 ; CHECK-NEXT:    cgebr %r2, 5, %f0
 ; CHECK-NEXT:    xihf %r2, 2147483648
@@ -31,14 +49,14 @@ define i64 @f1(float %f) {
 define i64 @f2(double %f) {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    larl %r1, .LCPI1_0
+; CHECK-NEXT:    larl %r1, .LCPI2_0
 ; CHECK-NEXT:    ld %f1, 0(%r1)
 ; CHECK-NEXT:    cdbr %f0, %f1
-; CHECK-NEXT:    jnl .LBB1_2
+; CHECK-NEXT:    jnl .LBB2_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    cgdbr %r2, 5, %f0
 ; CHECK-NEXT:    br %r14
-; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    sdbr %f0, %f1
 ; CHECK-NEXT:    cgdbr %r2, 5, %f0
 ; CHECK-NEXT:    xihf %r2, 2147483648
@@ -53,14 +71,14 @@ define i64 @f3(ptr %src) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld %f0, 0(%r2)
 ; CHECK-NEXT:    ld %f2, 8(%r2)
-; CHECK-NEXT:    larl %r1, .LCPI2_0
+; CHECK-NEXT:    larl %r1, .LCPI3_0
 ; CHECK-NEXT:    lxeb %f1, 0(%r1)
 ; CHECK-NEXT:    cxbr %f0, %f1
-; CHECK-NEXT:    jnl .LBB2_2
+; CHECK-NEXT:    jnl .LBB3_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    cgxbr %r2, 5, %f0
 ; CHECK-NEXT:    br %r14
-; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    sxbr %f0, %f1
 ; CHECK-NEXT:    cgxbr %r2, 5, %f0
 ; CHECK-NEXT:    xihf %r2, 2147483648

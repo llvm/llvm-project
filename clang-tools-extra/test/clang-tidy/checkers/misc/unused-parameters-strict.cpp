@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s misc-unused-parameters %t -- \
-// RUN:   -config="{CheckOptions: {StrictMode: true}}" --
+// RUN:   -config="{CheckOptions: {misc-unused-parameters.StrictMode: true}}" --
 
 // Warn on empty function bodies in StrictMode.
 namespace strict_mode {

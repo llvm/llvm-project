@@ -31,8 +31,9 @@ public:
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) override;
 
-  llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const override {
-    return llvm::SmallVector<llvm::StringLiteral>({"get_thread_info"});
+  llvm::SmallVector<AbstractMethodRequirement>
+  GetAbstractMethodRequirements() const override {
+    return llvm::SmallVector<AbstractMethodRequirement>({{"get_thread_info"}});
   }
 
   StructuredData::DictionarySP CreateThread(lldb::tid_t tid,
@@ -43,6 +44,8 @@ public:
   StructuredData::DictionarySP GetRegisterInfo() override;
 
   std::optional<std::string> GetRegisterContextForTID(lldb::tid_t tid) override;
+
+  std::optional<bool> DoesPluginReportAllThreads() override;
 
   static void Initialize();
 

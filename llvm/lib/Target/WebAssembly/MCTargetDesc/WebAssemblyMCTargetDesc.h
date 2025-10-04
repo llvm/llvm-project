@@ -39,13 +39,6 @@ createWebAssemblyWasmObjectWriter(bool Is64Bit, bool IsEmscripten);
 
 namespace WebAssembly {
 
-// Exception handling / setjmp-longjmp handling command-line options
-extern cl::opt<bool> WasmEnableEmEH;   // asm.js-style EH
-extern cl::opt<bool> WasmEnableEmSjLj; // asm.js-style SjLJ
-extern cl::opt<bool> WasmEnableEH;     // EH using Wasm EH instructions
-extern cl::opt<bool> WasmEnableSjLj;   // SjLj using Wasm EH instructions
-extern cl::opt<bool> WasmEnableExnref; // EH using new Wasm EH (exnref)
-
 enum OperandType {
   /// Basic block label in a branch construct.
   OPERAND_BASIC_BLOCK = MCOI::OPERAND_FIRST_TARGET,
@@ -87,6 +80,8 @@ enum OperandType {
   OPERAND_BRLIST,
   /// 32-bit unsigned table number.
   OPERAND_TABLE,
+  /// A list of catch clauses for try_table.
+  OPERAND_CATCH_LIST,
 };
 } // end namespace WebAssembly
 
@@ -119,6 +114,10 @@ enum TOF {
   // address relative the __table_base wasm global.
   // Only applicable to function symbols.
   MO_TABLE_BASE_REL,
+
+  // On a block signature operand this indicates that this is a destination
+  // block of a (catch_ref) clause in try_table.
+  MO_CATCH_BLOCK_SIG,
 };
 
 } // end namespace WebAssemblyII
@@ -462,6 +461,38 @@ inline bool isMarker(unsigned Opc) {
   case WebAssembly::TRY_S:
   case WebAssembly::END_TRY:
   case WebAssembly::END_TRY_S:
+  case WebAssembly::TRY_TABLE:
+  case WebAssembly::TRY_TABLE_S:
+  case WebAssembly::END_TRY_TABLE:
+  case WebAssembly::END_TRY_TABLE_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool isEndMarker(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::END_BLOCK:
+  case WebAssembly::END_BLOCK_S:
+  case WebAssembly::END_LOOP:
+  case WebAssembly::END_LOOP_S:
+  case WebAssembly::END_TRY:
+  case WebAssembly::END_TRY_S:
+  case WebAssembly::END_TRY_TABLE:
+  case WebAssembly::END_TRY_TABLE_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool isTry(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::TRY:
+  case WebAssembly::TRY_S:
+  case WebAssembly::TRY_TABLE:
+  case WebAssembly::TRY_TABLE_S:
     return true;
   default:
     return false;
@@ -470,10 +501,32 @@ inline bool isMarker(unsigned Opc) {
 
 inline bool isCatch(unsigned Opc) {
   switch (Opc) {
+  case WebAssembly::CATCH_LEGACY:
+  case WebAssembly::CATCH_LEGACY_S:
+  case WebAssembly::CATCH_ALL_LEGACY:
+  case WebAssembly::CATCH_ALL_LEGACY_S:
   case WebAssembly::CATCH:
   case WebAssembly::CATCH_S:
+  case WebAssembly::CATCH_REF:
+  case WebAssembly::CATCH_REF_S:
   case WebAssembly::CATCH_ALL:
   case WebAssembly::CATCH_ALL_S:
+  case WebAssembly::CATCH_ALL_REF:
+  case WebAssembly::CATCH_ALL_REF_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool isCatchAll(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::CATCH_ALL_LEGACY:
+  case WebAssembly::CATCH_ALL_LEGACY_S:
+  case WebAssembly::CATCH_ALL:
+  case WebAssembly::CATCH_ALL_S:
+  case WebAssembly::CATCH_ALL_REF:
+  case WebAssembly::CATCH_ALL_REF_S:
     return true;
   default:
     return false;

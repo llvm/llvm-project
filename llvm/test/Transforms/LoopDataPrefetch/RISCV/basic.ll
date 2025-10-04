@@ -4,19 +4,23 @@
 
 define void @foo(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: define void @foo(
-; CHECK-SAME: ptr nocapture [[A:%.*]], ptr nocapture readonly [[B:%.*]]) {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 64
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP4]], 64
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    call void @llvm.prefetch.p0(ptr [[SCEVGEP]], i32 0, i32 3, i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], 1.000000e+00
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    call void @llvm.prefetch.p0(ptr [[SCEVGEP1]], i32 1, i32 3, i32 1)
 ; CHECK-NEXT:    store double [[ADD]], ptr [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1600

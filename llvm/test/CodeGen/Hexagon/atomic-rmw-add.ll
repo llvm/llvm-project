@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK: .LBB0_1:
 ; CHECK:      [[R1:r[0-9]+]] = memw_locked(r0)

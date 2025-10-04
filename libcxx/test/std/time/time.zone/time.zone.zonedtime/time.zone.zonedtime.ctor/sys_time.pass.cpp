@@ -20,6 +20,7 @@
 // zoned_time(const sys_time<Duration>& st);
 
 #include <chrono>
+#include <cassert>
 #include <concepts>
 #include <type_traits>
 

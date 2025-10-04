@@ -8,7 +8,6 @@
 
 #include "InterpFrame.h"
 #include "Boolean.h"
-#include "Floating.h"
 #include "Function.h"
 #include "InterpStack.h"
 #include "InterpState.h"
@@ -22,6 +21,10 @@
 
 using namespace clang;
 using namespace clang::interp;
+
+InterpFrame::InterpFrame(InterpState &S)
+    : Caller(nullptr), S(S), Depth(0), Func(nullptr), RetPC(CodePtr()),
+      ArgSize(0), Args(nullptr), FrameOffset(0) {}
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
@@ -55,15 +58,12 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC,
   // If the fuction has a This pointer, that one is next.
   // Then follow the actual arguments (but those are handled
   // in getParamPointer()).
-  if (Func->hasRVO())
-    RVOPtr = stackRef<Pointer>(0);
-
-  if (Func->hasThisPointer()) {
-    if (Func->hasRVO())
-      This = stackRef<Pointer>(sizeof(Pointer));
-    else
-      This = stackRef<Pointer>(0);
+  if (Func->hasRVO()) {
+    // RVO pointer offset is always 0.
   }
+
+  if (Func->hasThisPointer())
+    ThisPointerOffset = Func->hasRVO() ? sizeof(Pointer) : 0;
 }
 
 InterpFrame::~InterpFrame() {
@@ -73,11 +73,15 @@ InterpFrame::~InterpFrame() {
   // When destroying the InterpFrame, call the Dtor for all block
   // that haven't been destroyed via a destroy() op yet.
   // This happens when the execution is interruped midway-through.
-  if (Func) {
-    for (auto &Scope : Func->scopes()) {
-      for (auto &Local : Scope.locals()) {
-        S.deallocate(localBlock(Local.Offset));
-      }
+  destroyScopes();
+}
+
+void InterpFrame::destroyScopes() {
+  if (!Func)
+    return;
+  for (auto &Scope : Func->scopes()) {
+    for (auto &Local : Scope.locals()) {
+      S.deallocate(localBlock(Local.Offset));
     }
   }
 }
@@ -91,84 +95,52 @@ void InterpFrame::initScope(unsigned Idx) {
 }
 
 void InterpFrame::destroy(unsigned Idx) {
-  for (auto &Local : Func->getScope(Idx).locals()) {
+  for (auto &Local : Func->getScope(Idx).locals_reverse()) {
     S.deallocate(localBlock(Local.Offset));
   }
-}
-
-void InterpFrame::popArgs() {
-  for (PrimType Ty : Func->args_reverse())
-    TYPE_SWITCH(Ty, S.Stk.discard<T>());
 }
 
 template <typename T>
 static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
                   QualType Ty) {
-  V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+  if constexpr (std::is_same_v<Pointer, T>) {
+    if (Ty->isPointerOrReferenceType())
+      V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+    else {
+      if (std::optional<APValue> RValue = V.toRValue(ASTCtx, Ty))
+        RValue->printPretty(OS, ASTCtx, Ty);
+      else
+        OS << "...";
+    }
+  } else {
+    V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+  }
 }
 
-template <>
-void print(llvm::raw_ostream &OS, const Pointer &P, ASTContext &Ctx,
-           QualType Ty) {
-  if (P.isZero()) {
-    OS << "nullptr";
-    return;
-  }
+static bool shouldSkipInBacktrace(const Function *F) {
+  if (F->isLambdaStaticInvoker())
+    return true;
 
-  auto printDesc = [&OS, &Ctx](const Descriptor *Desc) {
-    if (const auto *D = Desc->asDecl()) {
-      // Subfields or named values.
-      if (const auto *VD = dyn_cast<ValueDecl>(D)) {
-        OS << *VD;
-        return;
-      }
-      // Base classes.
-      if (isa<RecordDecl>(D))
-        return;
-    }
-    // Temporary expression.
-    if (const auto *E = Desc->asExpr()) {
-      E->printPretty(OS, nullptr, Ctx.getPrintingPolicy());
-      return;
-    }
-    llvm_unreachable("Invalid descriptor type");
-  };
+  const FunctionDecl *FD = F->getDecl();
+  if (FD->getDeclName().getCXXOverloadedOperator() == OO_New ||
+      FD->getDeclName().getCXXOverloadedOperator() == OO_Array_New)
+    return true;
 
-  if (!Ty->isReferenceType())
-    OS << "&";
-  llvm::SmallVector<Pointer, 2> Levels;
-  for (Pointer F = P; !F.isRoot();) {
-    Levels.push_back(F);
-    F = F.isArrayElement() ? F.getArray().expand() : F.getBase();
-  }
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+      MD && MD->getParent()->isAnonymousStructOrUnion())
+    return true;
 
-  // Drop the first pointer since we print it unconditionally anyway.
-  if (!Levels.empty())
-    Levels.erase(Levels.begin());
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD);
+      Ctor && Ctor->isDefaulted() && Ctor->isTrivial() &&
+      Ctor->isCopyOrMoveConstructor() && Ctor->inits().empty())
+    return true;
 
-  printDesc(P.getDeclDesc());
-  for (const auto &It : Levels) {
-    if (It.inArray()) {
-      OS << "[" << It.expand().getIndex() << "]";
-      continue;
-    }
-    if (auto Index = It.getIndex()) {
-      OS << " + " << Index;
-      continue;
-    }
-    OS << ".";
-    printDesc(It.getFieldDesc());
-  }
+  return false;
 }
 
 void InterpFrame::describe(llvm::raw_ostream &OS) const {
-  // We create frames for builtin functions as well, but we can't reliably
-  // diagnose them. The 'in call to' diagnostics for them add no value to the
-  // user _and_ it doesn't generally work since the argument types don't always
-  // match the function prototype. Just ignore them.
-  // Similarly, for lambda static invokers, we would just print __invoke().
-  if (const auto *F = getFunction();
-      F && (F->isBuiltin() || F->isLambdaStaticInvoker()))
+  // For lambda static invokers, we would just print __invoke().
+  if (const auto *F = getFunction(); F && shouldSkipInBacktrace(F))
     return;
 
   const Expr *CallExpr = Caller->getExpr(getRetPC());
@@ -179,7 +151,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
       const Expr *Object = MCE->getImplicitObjectArgument();
       Object->printPretty(OS, /*Helper=*/nullptr,
-                          S.getCtx().getPrintingPolicy(),
+                          S.getASTContext().getPrintingPolicy(),
                           /*Indentation=*/0);
       if (Object->getType()->isPointerType())
         OS << "->";
@@ -188,18 +160,18 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
     } else if (const auto *OCE =
                    dyn_cast_if_present<CXXOperatorCallExpr>(CallExpr)) {
       OCE->getArg(0)->printPretty(OS, /*Helper=*/nullptr,
-                                  S.getCtx().getPrintingPolicy(),
+                                  S.getASTContext().getPrintingPolicy(),
                                   /*Indentation=*/0);
       OS << ".";
     } else if (const auto *M = dyn_cast<CXXMethodDecl>(F)) {
-      print(OS, This, S.getCtx(),
-            S.getCtx().getLValueReferenceType(
-                S.getCtx().getRecordType(M->getParent())));
+      print(OS, getThis(), S.getASTContext(),
+            S.getASTContext().getLValueReferenceType(
+                S.getASTContext().getCanonicalTagType(M->getParent())));
       OS << ".";
     }
   }
 
-  F->getNameForDiagnostic(OS, S.getCtx().getPrintingPolicy(),
+  F->getNameForDiagnostic(OS, S.getASTContext().getPrintingPolicy(),
                           /*Qualified=*/false);
   OS << '(';
   unsigned Off = 0;
@@ -212,18 +184,12 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
     PrimType PrimTy = S.Ctx.classify(Ty).value_or(PT_Ptr);
 
-    TYPE_SWITCH(PrimTy, print(OS, stackRef<T>(Off), S.getCtx(), Ty));
+    TYPE_SWITCH(PrimTy, print(OS, stackRef<T>(Off), S.getASTContext(), Ty));
     Off += align(primSize(PrimTy));
     if (I + 1 != N)
       OS << ", ";
   }
   OS << ")";
-}
-
-Frame *InterpFrame::getCaller() const {
-  if (Caller->Caller)
-    return Caller;
-  return S.getSplitFrame();
 }
 
 SourceRange InterpFrame::getCallRange() const {
@@ -232,7 +198,17 @@ SourceRange InterpFrame::getCallRange() const {
       return NullRange;
     return S.EvalLocation;
   }
-  return S.getRange(Caller->Func, RetPC - sizeof(uintptr_t));
+
+  // Move up to the frame that has a valid location for the caller.
+  for (const InterpFrame *C = this; C; C = C->Caller) {
+    if (!C->RetPC)
+      continue;
+    SourceRange CallRange =
+        S.getRange(C->Caller->Func, C->RetPC - sizeof(uintptr_t));
+    if (CallRange.isValid())
+      return CallRange;
+  }
+  return S.EvalLocation;
 }
 
 const FunctionDecl *InterpFrame::getCallee() const {
@@ -246,10 +222,16 @@ Pointer InterpFrame::getLocalPointer(unsigned Offset) const {
   return Pointer(localBlock(Offset));
 }
 
+Block *InterpFrame::getLocalBlock(unsigned Offset) const {
+  return localBlock(Offset);
+}
+
 Pointer InterpFrame::getParamPointer(unsigned Off) {
   // Return the block if it was created previously.
   if (auto Pt = Params.find(Off); Pt != Params.end())
     return Pointer(reinterpret_cast<Block *>(Pt->second.get()));
+
+  assert(!isBottomFrame());
 
   // Allocate memory to store the parameter and the block metadata.
   const auto &Desc = Func->getParamDescriptor(Off);
@@ -266,32 +248,56 @@ Pointer InterpFrame::getParamPointer(unsigned Off) {
   return Pointer(B);
 }
 
+static bool funcHasUsableBody(const Function *F) {
+  assert(F);
+
+  if (F->isConstructor() || F->isDestructor())
+    return true;
+
+  return !F->getDecl()->isImplicit();
+}
+
 SourceInfo InterpFrame::getSource(CodePtr PC) const {
   // Implicitly created functions don't have any code we could point at,
   // so return the call site.
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+  if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getSource(RetPC);
 
-  return S.getSource(Func, PC);
+  // Similarly, if the resulting source location is invalid anyway,
+  // point to the caller instead.
+  SourceInfo Result = S.getSource(Func, PC);
+  if (Result.getLoc().isInvalid() && Caller)
+    return Caller->getSource(RetPC);
+  return Result;
 }
 
 const Expr *InterpFrame::getExpr(CodePtr PC) const {
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+  if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getExpr(RetPC);
 
   return S.getExpr(Func, PC);
 }
 
 SourceLocation InterpFrame::getLocation(CodePtr PC) const {
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+  if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getLocation(RetPC);
 
   return S.getLocation(Func, PC);
 }
 
 SourceRange InterpFrame::getRange(CodePtr PC) const {
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+  if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getRange(RetPC);
 
   return S.getRange(Func, PC);
+}
+
+bool InterpFrame::isStdFunction() const {
+  if (!Func)
+    return false;
+  for (const DeclContext *DC = Func->getDecl(); DC; DC = DC->getParent())
+    if (DC->isStdNamespace())
+      return true;
+
+  return false;
 }

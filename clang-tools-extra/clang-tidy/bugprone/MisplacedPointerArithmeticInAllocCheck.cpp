@@ -1,4 +1,4 @@
-//===--- MisplacedPointerArithmeticInAllocCheck.cpp - clang-tidy-----------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -76,8 +76,8 @@ void MisplacedPointerArithmeticInAllocCheck::check(
     } else {
       const auto *CtrE = New->getConstructExpr();
       if (!CtrE || !CtrE->getArg(CtrE->getNumArgs() - 1)
-                                     ->getType()
-                                     ->isIntegralOrEnumerationType())
+                        ->getType()
+                        ->isIntegralOrEnumerationType())
         return;
       CallName = "operator new";
     }

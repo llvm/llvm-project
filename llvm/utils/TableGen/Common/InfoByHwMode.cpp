@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InfoByHwMode.h"
+#include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -28,10 +29,11 @@ std::string llvm::getModeName(unsigned Mode) {
   return (Twine('m') + Twine(Mode)).str();
 }
 
-ValueTypeByHwMode::ValueTypeByHwMode(Record *R, const CodeGenHwModes &CGH) {
+ValueTypeByHwMode::ValueTypeByHwMode(const Record *R,
+                                     const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.insert({P.first, MVT(llvm::getValueType(P.second))});
+    auto I = Map.try_emplace(P.first, MVT(llvm::getValueType(P.second)));
     assert(I.second && "Duplicate entry?");
     (void)I;
   }
@@ -39,7 +41,8 @@ ValueTypeByHwMode::ValueTypeByHwMode(Record *R, const CodeGenHwModes &CGH) {
     PtrAddrSpace = R->getValueAsInt("AddrSpace");
 }
 
-ValueTypeByHwMode::ValueTypeByHwMode(Record *R, MVT T) : ValueTypeByHwMode(T) {
+ValueTypeByHwMode::ValueTypeByHwMode(const Record *R, MVT T)
+    : ValueTypeByHwMode(T) {
   if (R->isSubClassOf("PtrValueType"))
     PtrAddrSpace = R->getValueAsInt("AddrSpace");
 }
@@ -69,9 +72,9 @@ MVT &ValueTypeByHwMode::getOrCreateTypeForMode(unsigned Mode, MVT Type) {
   // make a copy of it for Mode and return it.
   auto D = Map.begin();
   if (D != Map.end() && D->first == DefaultMode)
-    return Map.insert(std::pair(Mode, D->second)).first->second;
+    return Map.try_emplace(Mode, D->second).first->second;
   // If default mode is not present either, use provided Type.
-  return Map.insert(std::pair(Mode, Type)).first->second;
+  return Map.try_emplace(Mode, Type).first->second;
 }
 
 StringRef ValueTypeByHwMode::getMVTName(MVT T) {
@@ -102,7 +105,7 @@ void ValueTypeByHwMode::writeToStream(raw_ostream &OS) const {
 LLVM_DUMP_METHOD
 void ValueTypeByHwMode::dump() const { dbgs() << *this << '\n'; }
 
-ValueTypeByHwMode llvm::getValueTypeByHwMode(Record *Rec,
+ValueTypeByHwMode llvm::getValueTypeByHwMode(const Record *Rec,
                                              const CodeGenHwModes &CGH) {
 #ifndef NDEBUG
   if (!Rec->isSubClassOf("ValueType"))
@@ -115,7 +118,7 @@ ValueTypeByHwMode llvm::getValueTypeByHwMode(Record *Rec,
   return ValueTypeByHwMode(Rec, llvm::getValueType(Rec));
 }
 
-RegSizeInfo::RegSizeInfo(Record *R) {
+RegSizeInfo::RegSizeInfo(const Record *R) {
   RegSize = R->getValueAsInt("RegSize");
   SpillSize = R->getValueAsInt("SpillSize");
   SpillAlignment = R->getValueAsInt("SpillAlignment");
@@ -136,10 +139,11 @@ void RegSizeInfo::writeToStream(raw_ostream &OS) const {
      << ']';
 }
 
-RegSizeInfoByHwMode::RegSizeInfoByHwMode(Record *R, const CodeGenHwModes &CGH) {
+RegSizeInfoByHwMode::RegSizeInfoByHwMode(const Record *R,
+                                         const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.insert({P.first, RegSizeInfo(P.second)});
+    auto I = Map.try_emplace(P.first, RegSizeInfo(P.second));
     assert(I.second && "Duplicate entry?");
     (void)I;
   }
@@ -183,45 +187,57 @@ void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
   OS << '}';
 }
 
-SubRegRange::SubRegRange(Record *R) {
+RegClassByHwMode::RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
+                                   const CodeGenRegBank &RegBank) {
+  const HwModeSelect &MS = CGH.getHwModeSelect(R);
+
+  for (auto [ModeID, RegClassRec] : MS.Items) {
+    assert(RegClassRec && RegClassRec->isSubClassOf("RegisterClass") &&
+           "Register class must subclass RegisterClass");
+    const CodeGenRegisterClass *RegClass = RegBank.getRegClass(RegClassRec);
+    if (!Map.try_emplace(ModeID, RegClass).second)
+      llvm_unreachable("duplicate entry");
+  }
+}
+
+SubRegRange::SubRegRange(const Record *R) {
   Size = R->getValueAsInt("Size");
   Offset = R->getValueAsInt("Offset");
 }
 
-SubRegRangeByHwMode::SubRegRangeByHwMode(Record *R, const CodeGenHwModes &CGH) {
+SubRegRangeByHwMode::SubRegRangeByHwMode(const Record *R,
+                                         const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.insert({P.first, SubRegRange(P.second)});
+    auto I = Map.try_emplace(P.first, SubRegRange(P.second));
     assert(I.second && "Duplicate entry?");
     (void)I;
   }
 }
 
-EncodingInfoByHwMode::EncodingInfoByHwMode(Record *R,
+EncodingInfoByHwMode::EncodingInfoByHwMode(const Record *R,
                                            const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
     assert(P.second && P.second->isSubClassOf("InstructionEncoding") &&
            "Encoding must subclass InstructionEncoding");
-    auto I = Map.insert({P.first, P.second});
+    auto I = Map.try_emplace(P.first, P.second);
     assert(I.second && "Duplicate entry?");
     (void)I;
   }
 }
 
-namespace llvm {
-raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {
   T.writeToStream(OS);
   return OS;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const RegSizeInfo &T) {
   T.writeToStream(OS);
   return OS;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T) {
   T.writeToStream(OS);
   return OS;
 }
-} // namespace llvm

@@ -11,6 +11,7 @@
 
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/Support/Compiler.h"
 
 //===----------------------------------------------------------------------===//
 //                               ValueLatticeElement
@@ -467,9 +468,27 @@ public:
   // Compares this symbolic value with Other using Pred and returns either
   /// true, false or undef constants, or nullptr if the comparison cannot be
   /// evaluated.
-  Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
-                       const ValueLatticeElement &Other,
-                       const DataLayout &DL) const;
+  LLVM_ABI Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
+                                const ValueLatticeElement &Other,
+                                const DataLayout &DL) const;
+
+  /// Combine two sets of facts about the same value into a single set of
+  /// facts.  Note that this method is not suitable for merging facts along
+  /// different paths in a CFG; that's what the mergeIn function is for.  This
+  /// is for merging facts gathered about the same value at the same location
+  /// through two independent means.
+  /// Notes:
+  /// * This method does not promise to return the most precise possible lattice
+  ///   value implied by A and B.  It is allowed to return any lattice element
+  ///   which is at least as strong as *either* A or B (unless our facts
+  ///   conflict, see below).
+  /// * Due to unreachable code, the intersection of two lattice values could be
+  ///   contradictory.  If this happens, we return some valid lattice value so
+  ///   as not confuse the rest of LVI.  Ideally, we'd always return Undefined,
+  ///   but we do not make this guarantee.  TODO: This would be a useful
+  ///   enhancement.
+  LLVM_ABI ValueLatticeElement
+  intersect(const ValueLatticeElement &Other) const;
 
   unsigned getNumRangeExtensions() const { return NumRangeExtensions; }
   void setNumRangeExtensions(unsigned N) { NumRangeExtensions = N; }
@@ -478,6 +497,7 @@ public:
 static_assert(sizeof(ValueLatticeElement) <= 40,
               "size of ValueLatticeElement changed unexpectedly");
 
-raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const ValueLatticeElement &Val);
 } // end namespace llvm
 #endif

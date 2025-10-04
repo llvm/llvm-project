@@ -104,7 +104,7 @@ public:
                           SynTensorBoundSetter synSetter = nullptr);
 
   /// Generates code to compute an affine expression whose variables are
-  /// `LoopId`s (i.e., `a.cast<AffineDimExpr>().getPosition()` is a valid
+  /// `LoopId`s (i.e., `cast<AffineDimExpr>(a).getPosition()` is a valid
   /// `LoopId`).
   Value genAffine(OpBuilder &builder, Location loc, AffineExpr a);
 
@@ -435,6 +435,17 @@ private:
 
   std::vector<std::vector<Value>> spIterVals;
 };
+
+//
+// Utils functions to generate sparse loops.
+//
+
+// Generate a while loop that co-iterates over a set of iterators.
+std::pair<Operation *, Value> genCoIteration(OpBuilder &builder, Location loc,
+                                             ArrayRef<SparseIterator *> iters,
+                                             MutableArrayRef<Value> reduc,
+                                             Value uniIdx,
+                                             bool userReducFirst = false);
 
 } // namespace sparse_tensor
 } // namespace mlir

@@ -814,11 +814,7 @@ static_assert(invalid<int> also here ; // expected-error{{use of undeclared iden
 
 int foo() {
     bool b;
-    b = invalid<int> not just in declarations; // expected-error{{expected ';' after expression}}
-                                               // expected-error@-1{{use of undeclared identifier 'invalid'}}
-                                               // expected-error@-2{{expected ';' after expression}}
-                                               // expected-error@-3{{use of undeclared identifier 'just'}}
-                                               // expected-error@-4{{unknown type name 'in'}}
+    b = invalid<int> not just in declarations; // expected-error{{use of undeclared identifier 'invalid'}}
     return b;
 }
 } // namespace GH48182
@@ -1006,7 +1002,7 @@ template<class>
 concept Irrelevant = false;
 
 template <typename T>
-concept ErrorRequires = requires(ErrorRequires auto x) { x; };
+concept ErrorRequires = requires(ErrorRequires auto x) { x; }; //#GH54678-ill-formed-concept
 // expected-error@-1 {{a concept definition cannot refer to itself}} \
 // expected-error@-1 {{'auto' not allowed in requires expression parameter}} \
 // expected-note@-1 {{declared here}}
@@ -1027,8 +1023,7 @@ template<class T> void eee(T t) // expected-note {{candidate template ignored: c
 requires (Irrelevant<T> || Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'long' does not satisfy 'False'}}
 
 template<class T> void fff(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
-requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{'unsigned long' does not satisfy 'False'}}
-
+requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{because 'unsigned long' does not satisfy 'False'}}
 void test() {
     aaa(42); // expected-error {{no matching function}}
     bbb(42L); // expected-error{{no matching function}}
@@ -1148,6 +1143,194 @@ int test() {
     S{}.f(); // expected-error{{call to member function 'f' is ambiguous}}
     S{}.g(); // expected-error{{call to member function 'g' is ambiguous}}
     S{}.h();
+}
+
+}
+
+namespace GH109780 {
+
+template <typename T>
+concept Concept; // expected-error {{expected '='}}
+
+bool val = Concept<int>;
+
+template <typename T>
+concept C = invalid; // expected-error {{use of undeclared identifier 'invalid'}}
+
+bool val2 = C<int>;
+
+} // namespace GH109780
+
+namespace GH121980 {
+
+template <class>
+concept has_member_difference_type; // expected-error {{expected '='}}
+
+template <has_member_difference_type> struct incrementable_traits; // expected-note {{declared here}}
+
+template <has_member_difference_type Tp>
+struct incrementable_traits<Tp>; // expected-error {{not more specialized than the primary}}
+
+}
+
+namespace InjectedClassNameType {
+
+template <class, class _Err> class expected {
+public:
+  template <class...>
+  expected(...);
+
+  template <class _T2, class _E2>
+  friend bool operator==(expected x, expected<_T2, _E2>)
+    requires requires {
+      { x };
+    }
+  {
+    return true;
+  }
+};
+
+bool test_val_types() {
+  return expected<void, int>() == 1;
+}
+
+}
+
+namespace CWG2369_Regression {
+
+enum class KindEnum {
+  Unknown = 0,
+  Foo = 1,
+};
+
+template <typename T>
+concept KnownKind = T::kind() != KindEnum::Unknown;
+
+template <KnownKind T> struct KnownType;
+
+struct Type {
+  KindEnum kind() const;
+
+  static Type f(Type t);
+
+  template <KnownKind T> static KnownType<T> f(T t);
+
+  static void g() {
+    Type t;
+    f(t);
+  }
+};
+
+template <KnownKind T> struct KnownType {
+  static constexpr KindEnum kind() { return KindEnum::Foo; }
+};
+
+}
+
+namespace CWG2369_Regression_2 {
+
+template <typename T>
+concept HasFastPropertyForAttribute =
+    requires(T element, int name) { element.propertyForAttribute(name); };
+
+template <typename OwnerType>
+struct SVGPropertyOwnerRegistry {
+  static int fastAnimatedPropertyLookup() {
+    static_assert (HasFastPropertyForAttribute<OwnerType>);
+    return 1;
+  }
+};
+
+class SVGCircleElement {
+  friend SVGPropertyOwnerRegistry<SVGCircleElement>;
+  void propertyForAttribute(int);
+};
+
+int i = SVGPropertyOwnerRegistry<SVGCircleElement>::fastAnimatedPropertyLookup();
+
+}
+
+namespace GH61824 {
+
+template<typename T, typename U = typename T::type> // #T_Type
+concept C = true;
+
+constexpr bool f(C auto) { // #GH61824_f
+  return true;
+}
+
+C auto x = 0;
+// expected-error@#T_Type {{type 'int' cannot be used prior to '::'}} \
+// expected-note@-1 {{in instantiation of default argument}}
+
+static_assert(f(0));
+
+}
+
+namespace GH149986 {
+template <typename T> concept PerfectSquare = [](){} // expected-note 2{{here}}
+([](auto) { return true; }) < PerfectSquare <class T>;
+// expected-error@-1 {{declaration of 'T' shadows template parameter}} \
+// expected-error@-1 {{a concept definition cannot refer to itself}}
+
+}
+namespace GH61811{
+template <class T> struct A { static const int x = 42; };
+template <class Ta> concept A42 = A<Ta>::x == 42;
+template <class Tv> concept Void = __is_same_as(Tv, void);
+template <class Tb, class Ub> concept A42b = Void<Tb> || A42<Ub>;
+template <class Tc> concept R42c = A42b<Tc, Tc&>;
+static_assert (R42c<void>);
+}
+
+namespace parameter_mapping_regressions {
+
+namespace case1 {
+
+template <template <class> class> using __meval = struct __q;
+template <template <class> class _Tp>
+concept __mvalid = requires { typename __meval<_Tp>; };
+template <class _Fn>
+concept __minvocable = __mvalid<_Fn::template __f>;
+template <class...> struct __mdefer_;
+template <class _Fn, class... _Args>
+  requires __minvocable<_Fn>
+struct __mdefer_<_Fn, _Args...> {};
+template <class = __q> struct __mtransform {
+  template <class> using __f = int;
+};
+struct __completion_domain_or_none_ : __mdefer_<__mtransform<>> {};
+
+}
+
+namespace case2 {
+
+template<auto& Q, class P> concept C = Q.template operator()<P>();
+template<class P> concept E = C<[]<class Ty>{ return false; }, P>;
+static_assert(!E<int>);
+
+}
+
+
+namespace case3 {
+template <class> constexpr bool is_move_constructible_v = false;
+
+template <class _Tp>
+concept __cpp17_move_constructible = is_move_constructible_v<_Tp>; // #is_move_constructible_v
+
+template <class _Tp>
+concept __cpp17_copy_constructible = __cpp17_move_constructible<_Tp>; // #__cpp17_move_constructible
+
+template <class _Iter>
+concept __cpp17_iterator = __cpp17_copy_constructible<_Iter>; // #__cpp17_copy_constructible
+
+struct not_move_constructible {};
+static_assert(__cpp17_iterator<not_move_constructible>); \
+// expected-error {{static assertion failed}} \
+// expected-note {{because 'not_move_constructible' does not satisfy '__cpp17_iterator'}} \
+// expected-note@#__cpp17_copy_constructible {{because 'not_move_constructible' does not satisfy '__cpp17_copy_constructible'}} \
+// expected-note@#__cpp17_move_constructible {{because 'parameter_mapping_regressions::case3::not_move_constructible' does not satisfy '__cpp17_move_constructible'}} \
+// expected-note@#is_move_constructible_v {{because 'is_move_constructible_v<parameter_mapping_regressions::case3::not_move_constructible>' evaluated to false}}
 }
 
 }

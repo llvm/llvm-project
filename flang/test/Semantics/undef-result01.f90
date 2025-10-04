@@ -1,6 +1,6 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -Werror
 
-!WARNING: Function result is never defined
+!WARNING: Function result is never defined [-Wundefined-function-result]
 function basic()
 end
 
@@ -29,7 +29,7 @@ function defdByIntentInPtr()
   end
 end
 
-!WARNING: Function result is never defined
+!WARNING: Function result is never defined [-Wundefined-function-result]
 function notDefdByCall()
   call intentin(notDefdByCall)
  contains
@@ -38,7 +38,7 @@ function notDefdByCall()
   end
 end
 
-!WARNING: Function result is never defined
+!WARNING: Function result is never defined [-Wundefined-function-result]
 function basicAlloc()
   real, allocatable :: basicAlloc
   allocate(basicAlloc)
@@ -117,7 +117,7 @@ function defdByNamelist()
 end
 
 character(4) function defdByWrite()
-  write(defdByWrite) 'abcd'
+  write(defdByWrite,*) 'abcd'
 end
 
 integer function defdBySize()
@@ -134,7 +134,7 @@ character(20) function defdByInquire()
   inquire(6,status=defdByInquire)
 end
 
-!WARNING: Function result is never defined
+!WARNING: Function result is never defined [-Wundefined-function-result]
 character(20) function notDefdByInquire()
   inquire(file=notDefdByInquire)
 end
@@ -147,4 +147,9 @@ function defdByAssociate()
   associate(s => defdByAssociate)
     s = 1.
   end associate
+end
+
+function defdByElementArgToImplicit() result(r)
+  real r(1)
+  call define(r(1))
 end

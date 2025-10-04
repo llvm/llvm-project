@@ -17,9 +17,9 @@ define dso_local void @multiple_stores() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    lui a0, %hi(s)
 ; CHECK-NEXT:    addi a0, a0, %lo(s)
 ; CHECK-NEXT:    li a1, 10
+; CHECK-NEXT:    li a2, 20
 ; CHECK-NEXT:    sw a1, 160(a0)
-; CHECK-NEXT:    li a1, 20
-; CHECK-NEXT:    sw a1, 164(a0)
+; CHECK-NEXT:    sw a2, 164(a0)
 ; CHECK-NEXT:    ret
 entry:
   store i32 10, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 1), align 4
@@ -306,8 +306,8 @@ define void @self_store() {
 ; RV32-LABEL: self_store:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, %hi(f)
-; RV32-NEXT:    addi a1, a0, %lo(f)
-; RV32-NEXT:    sw a1, %lo(f+4)(a0)
+; RV32-NEXT:    addi a0, a0, %lo(f)
+; RV32-NEXT:    sw a0, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: self_store:

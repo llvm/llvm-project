@@ -411,9 +411,9 @@ public:
   /// Build DeclarationFragments for a macro.
   ///
   /// \param Name name of the macro.
-  /// \param MD the associated MacroDirective.
+  /// \param MI the associated MacroInfo.
   static DeclarationFragments getFragmentsForMacro(StringRef Name,
-                                                   const MacroDirective *MD);
+                                                   const MacroInfo *MI);
 
   /// Build DeclarationFragments for a typedef \p TypedefNameDecl.
   static DeclarationFragments
@@ -440,9 +440,8 @@ private:
                                                   DeclarationFragments &);
 
   /// Build DeclarationFragments for a NestedNameSpecifier.
-  static DeclarationFragments getFragmentsForNNS(const NestedNameSpecifier *,
-                                                 ASTContext &,
-                                                 DeclarationFragments &);
+  static DeclarationFragments
+  getFragmentsForNNS(NestedNameSpecifier, ASTContext &, DeclarationFragments &);
 
   /// Build DeclarationFragments for Qualifiers.
   static DeclarationFragments getFragmentsForQualifiers(const Qualifiers quals);

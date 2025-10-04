@@ -17,7 +17,9 @@
 #include "test/UnitTest/Test.h"
 
 #include "hdr/math_macros.h"
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
+
+using LIBC_NAMESPACE::Sign;
 
 template <typename T>
 class LdExpTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {

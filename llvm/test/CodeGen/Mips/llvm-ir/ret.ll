@@ -7,23 +7,23 @@
 ; affects it and it's undesirable to repeat the non-pointer returns for each
 ; relocation model.
 
-; RUN: llc -march=mips   -mcpu=mips32   -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR32,NO-MTHC1,NOT-R6
-; RUN: llc -march=mips   -mcpu=mips32r2 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR32,MTHC1,NOT-R6
-; RUN: llc -march=mips   -mcpu=mips32r3 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR32,MTHC1,NOT-R6
-; RUN: llc -march=mips   -mcpu=mips32r5 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR32,MTHC1,NOT-R6
-; RUN: llc -march=mips   -mcpu=mips32r6 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR32,MTHC1,R6C
-; RUN: llc -march=mips64 -mcpu=mips4    -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR64,DMTC1,NOT-R6
-; RUN: llc -march=mips64 -mcpu=mips64   -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR64,DMTC1,NOT-R6
-; RUN: llc -march=mips64 -mcpu=mips64r2 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR64,DMTC1,NOT-R6
-; RUN: llc -march=mips64 -mcpu=mips64r3 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR64,DMTC1,NOT-R6
-; RUN: llc -march=mips64 -mcpu=mips64r5 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR64,DMTC1,NOT-R6
+; RUN: llc -mtriple=mips   -mcpu=mips32   -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR32,NO-MTHC1,NOT-R6
+; RUN: llc -mtriple=mips   -mcpu=mips32r2 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR32,MTHC1,NOT-R6
+; RUN: llc -mtriple=mips   -mcpu=mips32r3 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR32,MTHC1,NOT-R6
+; RUN: llc -mtriple=mips   -mcpu=mips32r5 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR32,MTHC1,NOT-R6
+; RUN: llc -mtriple=mips   -mcpu=mips32r6 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR32,MTHC1,R6C
+; RUN: llc -mtriple=mips64 -mcpu=mips4    -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR64,DMTC1,NOT-R6
+; RUN: llc -mtriple=mips64 -mcpu=mips64   -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR64,DMTC1,NOT-R6
+; RUN: llc -mtriple=mips64 -mcpu=mips64r2 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR64,DMTC1,NOT-R6
+; RUN: llc -mtriple=mips64 -mcpu=mips64r3 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR64,DMTC1,NOT-R6
+; RUN: llc -mtriple=mips64 -mcpu=mips64r5 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,GPR64,DMTC1,NOT-R6
 
 ; FIXME: for the test ret_double_0x0, the delay slot of jr cannot be filled
 ;        as mthc1 has unmodeled side effects. This is an artifact of our backend.
 ;        Force the delay slot filler off to check that the sequence jr $ra; nop is
 ;        turned into jic 0, $ra.
 
-; RUN: llc -march=mips64 -mcpu=mips64r6 -asm-show-inst -disable-mips-delay-filler < %s | FileCheck %s -check-prefixes=ALL,GPR64,DMTC1,R6C
+; RUN: llc -mtriple=mips64 -mcpu=mips64r6 -asm-show-inst -disable-mips-delay-filler < %s | FileCheck %s -check-prefixes=ALL,GPR64,DMTC1,R6C
 
 define void @ret_void() {
 ; ALL-LABEL: ret_void:

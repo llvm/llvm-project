@@ -8,15 +8,14 @@ target triple = "s390x-ibm-linux"
 @1 = internal global i64 9, align 8
 @g_1042 = external dso_local global [5 x i16], align 2
 
+declare void @dummy()
+
 ; CHECK-LABEL: @main()
 ; Function Attrs: nounwind
 define dso_local void @main() #0 {
   call void @func_1()
   unreachable
 }
-
-; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 ; Function Attrs: nounwind
 define dso_local void @func_1() #0 {
@@ -31,7 +30,7 @@ define dso_local void @func_1() #0 {
   %7 = load i64, ptr @1, align 8, !tbaa !5
   %8 = and i64 %7, %6
   store i64 %8, ptr @1, align 8, !tbaa !5
-  call void @llvm.lifetime.end.p0(i64 4, ptr undef) #2
+  call void @dummy()
   unreachable
 
 ; <label>:9:                                      ; preds = %0

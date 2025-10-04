@@ -14,7 +14,6 @@
 
 #include "clang/Rewrite/Frontend/FixItRewriter.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -200,10 +199,8 @@ void FixItRewriter::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 /// Emit a diagnostic via the adapted diagnostic client.
 void FixItRewriter::Diag(SourceLocation Loc, unsigned DiagID) {
   // When producing this diagnostic, we temporarily bypass ourselves,
-  // clear out any current diagnostic, and let the downstream client
-  // format the diagnostic.
+  // and let the downstream client format the diagnostic.
   Diags.setClient(Client, false);
-  Diags.Clear();
   Diags.Report(Loc, DiagID);
   Diags.setClient(this, false);
 }

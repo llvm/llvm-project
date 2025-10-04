@@ -87,12 +87,13 @@ TEST_F(LlvmLibcCbrtTest, InDoubleRange) {
 
 TEST_F(LlvmLibcCbrtTest, SpecialValues) {
   constexpr double INPUTS[] = {
-      0x1.4f61672324c8p-1028, 0x1.00152f57068b7p-1, 0x1.006509cda9886p-1,
-      0x1.018369b92e523p-1,   0x1.10af932ef2bf9p-1, 0x1.1a41117939fdbp-1,
-      0x1.2ae8076520d9ap-1,   0x1.a202bfc89ddffp-1, 0x1.a6bb8c803147bp-1,
-      0x1.000197b499b1bp+0,   0x1.00065ed266c6cp+0, 0x1.d4306c202c4c2p+0,
-      0x1.8fd409efe4851p+1,   0x1.95fd0eb31cc4p+1,  0x1.7cef1d276e335p+2,
-      0x1.94910c4fc98p+2,     0x1.a0cc1327bb4c4p+2, 0x1.e7d6ebed549c4p+2,
+      0x1.4f61672324c8p-1028, -0x1.fffffffffffffp-1021, 0x1.00152f57068b7p-1,
+      0x1.006509cda9886p-1,   0x1.018369b92e523p-1,     0x1.10af932ef2bf9p-1,
+      0x1.1a41117939fdbp-1,   0x1.2ae8076520d9ap-1,     0x1.a202bfc89ddffp-1,
+      0x1.a6bb8c803147bp-1,   0x1.000197b499b1bp+0,     0x1.00065ed266c6cp+0,
+      0x1.d4306c202c4c2p+0,   0x1.8fd409efe4851p+1,     0x1.95fd0eb31cc4p+1,
+      0x1.7cef1d276e335p+2,   0x1.94910c4fc98p+2,       0x1.a0cc1327bb4c4p+2,
+      0x1.e7d6ebed549c4p+2,
   };
   for (double v : INPUTS) {
     double x = FPBits(v).get_val();

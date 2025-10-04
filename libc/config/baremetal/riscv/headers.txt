@@ -1,13 +1,20 @@
 set(TARGET_PUBLIC_HEADERS
     libc.include.assert
+    libc.include.complex
     libc.include.ctype
-    libc.include.fenv
     libc.include.errno
+    libc.include.features
+    libc.include.fenv
     libc.include.float
-    libc.include.stdint
     libc.include.inttypes
+    libc.include.limits
+    libc.include.locale
     libc.include.math
+    libc.include.setjmp
+    libc.include.stdbit
+    libc.include.stdckdint
     libc.include.stdfix
+    libc.include.stdint
     libc.include.stdio
     libc.include.stdlib
     libc.include.string
@@ -15,4 +22,6 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_queue
     libc.include.time
     libc.include.uchar
+    libc.include.wchar
+    libc.include.wctype
 )

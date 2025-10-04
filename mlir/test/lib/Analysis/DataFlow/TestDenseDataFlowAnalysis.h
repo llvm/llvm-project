@@ -76,7 +76,7 @@ public:
     }
 
     size_t sizeBefore = accesses.size();
-    accesses.insert(other.accesses.begin(), other.accesses.end());
+    accesses.insert_range(other.accesses);
     return accesses.size() == sizeBefore ? ChangeResult::NoChange
                                          : ChangeResult::Change;
   }
@@ -206,7 +206,7 @@ public:
   /// At an entry point, the underlying value of a value is itself.
   void setToEntryState(UnderlyingValueLattice *lattice) override {
     propagateIfChanged(lattice,
-                       lattice->join(UnderlyingValue{lattice->getPoint()}));
+                       lattice->join(UnderlyingValue{lattice->getAnchor()}));
   }
 
   /// Look for the most underlying value of a value.

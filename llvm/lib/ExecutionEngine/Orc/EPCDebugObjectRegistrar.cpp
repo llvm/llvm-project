@@ -9,9 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
-#include "llvm/Support/BinaryStreamWriter.h"
 
 namespace llvm {
 namespace orc {
@@ -22,7 +19,7 @@ Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
   auto &EPC = ES.getExecutorProcessControl();
 
   if (!RegistrationFunctionDylib) {
-    if (auto D = EPC.loadDylib(nullptr))
+    if (auto D = EPC.getDylibMgr().loadDylib(nullptr))
       RegistrationFunctionDylib = *D;
     else
       return D.takeError();
@@ -36,8 +33,8 @@ Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
   SymbolLookupSet RegistrationSymbols;
   RegistrationSymbols.add(RegisterFn);
 
-  auto Result =
-      EPC.lookupSymbols({{*RegistrationFunctionDylib, RegistrationSymbols}});
+  auto Result = EPC.getDylibMgr().lookupSymbols(
+      {{*RegistrationFunctionDylib, RegistrationSymbols}});
   if (!Result)
     return Result.takeError();
 

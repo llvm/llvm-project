@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/Fortran.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
@@ -31,34 +32,20 @@ public:
 };
 } // namespace
 
-uint64_t getAllocaAddressSpace(Operation *op) {
-  mlir::ModuleOp module = mlir::dyn_cast_or_null<mlir::ModuleOp>(op);
-  if (!module)
-    module = op->getParentOfType<mlir::ModuleOp>();
-
-  if (mlir::Attribute addrSpace =
-          mlir::DataLayout(module).getAllocaMemorySpace())
-    return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
-  return 0;
-}
-
 void StackReclaimPass::runOnOperation() {
   auto *op = getOperation();
-  auto *context = &getContext();
-  mlir::OpBuilder builder(context);
-  mlir::Type voidPtr =
-      mlir::LLVM::LLVMPointerType::get(context, getAllocaAddressSpace(op));
+  fir::FirOpBuilder builder(op, fir::getKindMapping(op));
 
   op->walk([&](fir::DoLoopOp loopOp) {
     mlir::Location loc = loopOp.getLoc();
 
     if (!loopOp.getRegion().getOps<fir::AllocaOp>().empty()) {
       builder.setInsertionPointToStart(&loopOp.getRegion().front());
-      auto stackSaveOp = builder.create<LLVM::StackSaveOp>(loc, voidPtr);
+      mlir::Value sp = builder.genStackSave(loc);
 
       auto *terminator = loopOp.getRegion().back().getTerminator();
       builder.setInsertionPoint(terminator);
-      builder.create<LLVM::StackRestoreOp>(loc, stackSaveOp);
+      builder.genStackRestore(loc, sp);
     }
   });
 }

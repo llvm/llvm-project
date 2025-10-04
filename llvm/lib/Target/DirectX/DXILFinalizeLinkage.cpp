@@ -18,23 +18,43 @@
 using namespace llvm;
 
 static bool finalizeLinkage(Module &M) {
-  SmallPtrSet<Function *, 8> EntriesAndExports;
+  bool MadeChange = false;
 
-  // Find all entry points and export functions
-  for (Function &EF : M.functions()) {
-    if (!EF.hasFnAttribute("hlsl.shader") && !EF.hasFnAttribute("hlsl.export"))
-      continue;
-    EntriesAndExports.insert(&EF);
-  }
-
-  for (Function &F : M.functions()) {
-    if (F.getLinkage() == GlobalValue::ExternalLinkage &&
-        !EntriesAndExports.contains(&F)) {
-      F.setLinkage(GlobalValue::InternalLinkage);
+  // Convert private globals and external globals with no usage to internal
+  // linkage.
+  for (GlobalVariable &GV : M.globals()) {
+    GV.removeDeadConstantUsers();
+    if (GV.hasPrivateLinkage() || (GV.hasExternalLinkage() && GV.use_empty())) {
+      GV.setLinkage(GlobalValue::InternalLinkage);
+      MadeChange = true;
     }
   }
 
-  return false;
+  SmallVector<Function *> Funcs;
+
+  // Collect non-entry and non-exported functions to set to internal linkage.
+  for (Function &EF : M.functions()) {
+    if (EF.isIntrinsic())
+      continue;
+    if (EF.hasExternalLinkage() && EF.hasDefaultVisibility())
+      continue;
+    if (EF.hasFnAttribute("hlsl.shader"))
+      continue;
+    Funcs.push_back(&EF);
+  }
+
+  for (Function *F : Funcs) {
+    if (F->getLinkage() == GlobalValue::ExternalLinkage) {
+      F->setLinkage(GlobalValue::InternalLinkage);
+      MadeChange = true;
+    }
+    if (F->isDefTriviallyDead()) {
+      M.getFunctionList().erase(F);
+      MadeChange = true;
+    }
+  }
+
+  return MadeChange;
 }
 
 PreservedAnalyses DXILFinalizeLinkage::run(Module &M,

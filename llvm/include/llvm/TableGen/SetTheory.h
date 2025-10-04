@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements the SetTheory class that computes ordered sets of
-// Records from DAG expressions.  Operators for standard set operations are
+// Records from DAG expressions. Operators for standard set operations are
 // predefined, and it is possible to add special purpose set operators as well.
 //
 // The user may define named sets as Records of predefined classes. Set
@@ -64,8 +64,8 @@ class Record;
 
 class SetTheory {
 public:
-  using RecVec = std::vector<Record *>;
-  using RecSet = SmallSetVector<Record *, 16>;
+  using RecVec = std::vector<const Record *>;
+  using RecSet = SmallSetVector<const Record *, 16>;
 
   /// Operator - A callback representing a DAG operator.
   class Operator {
@@ -112,7 +112,7 @@ public:
   void addExpander(StringRef ClassName, std::unique_ptr<Expander>);
 
   /// addFieldExpander - Add an expander for ClassName that simply evaluates
-  /// FieldName in the Record to get the set elements.  That is all that is
+  /// FieldName in the Record to get the set elements. That is all that is
   /// needed for a class like:
   ///
   ///   class Set<dag d> {
@@ -134,7 +134,7 @@ public:
       evaluate(*begin++, Elts, Loc);
   }
 
-  /// expand - Expand a record into a set of elements if possible.  Return a
+  /// expand - Expand a record into a set of elements if possible. Return a
   /// pointer to the expanded elements, or NULL if Set cannot be expanded
   /// further.
   const RecVec *expand(const Record *Set);

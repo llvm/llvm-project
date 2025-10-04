@@ -13,7 +13,9 @@
 #ifndef LLVM_CLANG_SEMA_SEMAARM_H
 #define LLVM_CLANG_SEMA_SEMAARM_H
 
-#include "clang/AST/ASTFwd.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/Expr.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/StringRef.h"
 #include <tuple>
@@ -40,15 +42,21 @@ public:
                             /// flags. Do Sema checks for the runtime mode.
   };
 
-  bool CheckARMBuiltinExclusiveCall(unsigned BuiltinID, CallExpr *TheCall,
-                                    unsigned MaxWidth);
+  bool CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy, unsigned ArgIdx,
+                         unsigned EltBitWidth, unsigned VecBitWidth);
+  bool CheckARMBuiltinExclusiveCall(const TargetInfo &TI, unsigned BuiltinID,
+                                    CallExpr *TheCall);
   bool CheckNeonBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                     CallExpr *TheCall);
+  bool PerformNeonImmChecks(
+      CallExpr *TheCall,
+      SmallVectorImpl<std::tuple<int, int, int, int>> &ImmChecks,
+      int OverloadType = -1);
+  bool
+  PerformSVEImmChecks(CallExpr *TheCall,
+                      SmallVectorImpl<std::tuple<int, int, int>> &ImmChecks);
   bool CheckMVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool
-  ParseSVEImmChecks(CallExpr *TheCall,
-                    llvm::SmallVector<std::tuple<int, int, int>, 3> &ImmChecks);
   bool CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckCDEBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                    CallExpr *TheCall);
@@ -71,6 +79,23 @@ public:
   void handleNewAttr(Decl *D, const ParsedAttr &AL);
   void handleCmseNSEntryAttr(Decl *D, const ParsedAttr &AL);
   void handleInterruptAttr(Decl *D, const ParsedAttr &AL);
+  void handleInterruptSaveFPAttr(Decl *D, const ParsedAttr &AL);
+
+  void CheckSMEFunctionDefAttributes(const FunctionDecl *FD);
+
+  /// Return true if the given types are an SVE builtin and a VectorType that
+  /// is a fixed-length representation of the SVE builtin for a specific
+  /// vector-length.
+  bool areCompatibleSveTypes(QualType FirstType, QualType SecondType);
+
+  /// Return true if the given vector types are lax-compatible SVE vector types,
+  /// false otherwise.
+  bool areLaxCompatibleSveTypes(QualType FirstType, QualType SecondType);
+
+  bool checkTargetVersionAttr(const StringRef Str, const SourceLocation Loc);
+  bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Params,
+                             SmallVectorImpl<SourceLocation> &Locs,
+                             SmallVectorImpl<SmallString<64>> &NewParams);
 };
 
 SemaARM::ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD);

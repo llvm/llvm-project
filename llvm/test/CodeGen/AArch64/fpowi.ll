@@ -36,6 +36,29 @@ entry:
   ret half %c
 }
 
+define fp128 @powi_fp128(fp128 %a, i32 %b) {
+; CHECK-LABEL: powi_fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b __powitf2
+entry:
+  %c = call fp128 @llvm.powi.fp128.i32(fp128 %a, i32 %b)
+  ret fp128 %c
+}
+
+define <1 x double> @powi_v1f64(<1 x double> %a, i32 %b) {
+; CHECK-LABEL: powi_v1f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    bl __powidf2
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %c = call <1 x double> @llvm.powi.v1f64.i32(<1 x double> %a, i32 %b)
+  ret <1 x double> %c
+}
+
 define <2 x double> @powi_v2f64(<2 x double> %a, i32 %b) {
 ; CHECK-SD-LABEL: powi_v2f64:
 ; CHECK-SD:       // %bb.0: // %entry
@@ -869,22 +892,22 @@ define <4 x half> @powi_v4f16(<4 x half> %a, i32 %b) {
 ; CHECK-GI-NEXT:    fcvt s1, h9
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    mov w0, w19
-; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl __powisf2
 ; CHECK-GI-NEXT:    fcvt s1, h10
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    mov w0, w19
-; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl __powisf2
-; CHECK-GI-NEXT:    ldp q2, q1, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q3, q2, [sp] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
+; CHECK-GI-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldr d10, [sp, #48] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr d10, [sp, #48] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
@@ -1406,9 +1429,56 @@ entry:
   ret <16 x half> %c
 }
 
+define <2 x fp128> @powi_v2fp128(<2 x fp128> %a, i32 %b) {
+; CHECK-SD-LABEL: powi_v2fp128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    sub sp, sp, #48
+; CHECK-SD-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-SD-NEXT:    .cfi_offset w19, -8
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    mov w19, w0
+; CHECK-SD-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    bl __powitf2
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    mov w0, w19
+; CHECK-SD-NEXT:    bl __powitf2
+; CHECK-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    add sp, sp, #48
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: powi_v2fp128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub sp, sp, #48
+; CHECK-GI-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-GI-NEXT:    .cfi_offset w19, -8
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov w19, w0
+; CHECK-GI-NEXT:    bl __powitf2
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov w0, w19
+; CHECK-GI-NEXT:    bl __powitf2
+; CHECK-GI-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    add sp, sp, #48
+; CHECK-GI-NEXT:    ret
+entry:
+  %c = call <2 x fp128> @llvm.powi.v2fp128.i32(<2 x fp128> %a, i32 %b)
+  ret <2 x fp128> %c
+}
+
+declare <1 x double> @llvm.powi.v1f64.i32(<1 x double>, i32)
 declare <16 x half> @llvm.powi.v16f16.i32(<16 x half>, i32)
 declare <2 x double> @llvm.powi.v2f64.i32(<2 x double>, i32)
 declare <2 x float> @llvm.powi.v2f32.i32(<2 x float>, i32)
+declare <2 x fp128> @llvm.powi.v2fp128.i32(<2 x fp128>, i32)
 declare <3 x double> @llvm.powi.v3f64.i32(<3 x double>, i32)
 declare <3 x float> @llvm.powi.v3f32.i32(<3 x float>, i32)
 declare <4 x double> @llvm.powi.v4f64.i32(<4 x double>, i32)
@@ -1419,4 +1489,5 @@ declare <8 x float> @llvm.powi.v8f32.i32(<8 x float>, i32)
 declare <8 x half> @llvm.powi.v8f16.i32(<8 x half>, i32)
 declare double @llvm.powi.f64.i32(double, i32)
 declare float @llvm.powi.f32.i32(float, i32)
+declare fp128 @llvm.powi.fp128.i32(fp128, i32)
 declare half @llvm.powi.f16.i32(half, i32)

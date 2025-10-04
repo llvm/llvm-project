@@ -520,9 +520,36 @@ TEST_F(FormatTestComments, AlignsBlockComments) {
 
 TEST_F(FormatTestComments, CommentReflowingCanBeTurnedOff) {
   FormatStyle Style = getLLVMStyleWithColumns(20);
-  Style.ReflowComments = false;
+  Style.ReflowComments = FormatStyle::RCS_Never;
   verifyFormat("// aaaaaaaaa aaaaaaaaaa aaaaaaaaaa", Style);
   verifyFormat("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa */", Style);
+  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+                 "aaaaaaaaa*/",
+                 Style);
+  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+                 "    aaaaaaaaa*/",
+                 Style);
+  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+                 " *    aaaaaaaaa*/",
+                 Style);
+}
+
+TEST_F(FormatTestComments, CommentReflowingCanApplyOnlyToIndents) {
+  FormatStyle Style = getLLVMStyleWithColumns(20);
+  Style.ReflowComments = FormatStyle::RCS_IndentOnly;
+  verifyFormat("// aaaaaaaaa aaaaaaaaaa aaaaaaaaaa", Style);
+  verifyFormat("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa */", Style);
+  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+                 "aaaaaaaaa*/",
+                 Style);
+  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+                 "    aaaaaaaaa*/",
+                 Style);
+  verifyFormat("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+               " * aaaaaaaaa*/",
+               "/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+               "      * aaaaaaaaa*/",
+               Style);
 }
 
 TEST_F(FormatTestComments, CorrectlyHandlesLengthOfBlockComments) {
@@ -720,16 +747,14 @@ TEST_F(FormatTestComments, DontSplitLineCommentsWithEscapedNewlines) {
                    "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
                    "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
                    getLLVMStyleWithColumns(50)));
-  // FIXME: One day we might want to implement adjustment of leading whitespace
-  // of the consecutive lines in this kind of comment:
-  EXPECT_EQ("double\n"
-            "    a; // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
-            "          // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
-            "          // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-            format("double a; // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
-                   "          // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
-                   "          // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-                   getLLVMStyleWithColumns(49)));
+  verifyFormat("double\n"
+               "    a; // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
+               "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
+               "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+               "double a; // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
+               "          // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
+               "          // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+               getLLVMStyleWithColumns(49));
 }
 
 TEST_F(FormatTestComments, DontIntroduceMultilineComments) {
@@ -1095,11 +1120,11 @@ TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
                    "  }\n"
                    "}"));
 
-  const StringRef Code("void func() {\n"
-                       "  // clang-format off\n"
-                       "  #define KV(value) #value, value\n"
-                       "  // clang-format on\n"
-                       "}");
+  constexpr StringRef Code("void func() {\n"
+                           "  // clang-format off\n"
+                           "  #define KV(value) #value, value\n"
+                           "  // clang-format on\n"
+                           "}");
   verifyNoChange(Code);
 
   auto Style = getLLVMStyle();
@@ -2459,7 +2484,7 @@ TEST_F(FormatTestComments, BlockComments) {
   EXPECT_EQ("/*\n"
             "**\n"
             "* aaaaaa\n"
-            "*aaaaaa\n"
+            "* aaaaaa\n"
             "*/",
             format("/*\n"
                    "**\n"

@@ -13,7 +13,7 @@ define void @f() {
 ; CHECK-LABEL: define void @f() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__llvm_profile_sampling, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[TMP0]], 3000
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[TMP0]], 2999
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB2:.*]], label %[[BB4:.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       [[BB2]]:
 ; CHECK-NEXT:    [[PGOCOUNT:%.*]] = load i64, ptr @__profc_f, align 8
@@ -40,6 +40,6 @@ entry:
 
 declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
 ;.
-; CHECK: [[PROF0]] = !{!"branch_weights", i32 3000, i32 997020}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1000019}
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 3000, i32 997019}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1000018}
 ;.

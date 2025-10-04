@@ -15,10 +15,9 @@
 //                                      `
 // Constraints: extents_type::rank() == OtherExtents::rank() is true.
 
-#include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <cstddef>
+#include <mdspan>
 
 #include "test_macros.h"
 

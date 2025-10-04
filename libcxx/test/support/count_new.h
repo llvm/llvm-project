@@ -24,14 +24,13 @@
 
 namespace detail
 {
-   TEST_NORETURN
-   inline void throw_bad_alloc_helper() {
+[[noreturn]] inline void throw_bad_alloc_helper() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-       throw std::bad_alloc();
+  throw std::bad_alloc();
 #else
        std::abort();
 #endif
-   }
+}
 }
 
 class MemCounter
@@ -627,7 +626,11 @@ struct RequireAllocationGuard {
     void requireExactly(std::size_t N) { m_req_alloc = N; m_exactly = true; }
 
     ~RequireAllocationGuard() {
+#ifdef ALLOW_MISMATCHING_LIBRRARY_INTERNAL_ALLOCATIONS
+        ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(globalMemCounter.checkOutstandingNewEq(static_cast<int>(m_outstanding_new_on_init)));
+#else
         assert(globalMemCounter.checkOutstandingNewEq(static_cast<int>(m_outstanding_new_on_init)));
+#endif
         std::size_t Expect = m_new_count_on_init + m_req_alloc;
         assert(globalMemCounter.checkNewCalledEq(static_cast<int>(Expect)) ||
                (!m_exactly && globalMemCounter.checkNewCalledGreaterThan(static_cast<int>(Expect))));

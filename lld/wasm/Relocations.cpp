@@ -22,13 +22,13 @@ static bool requiresGOTAccess(const Symbol *sym) {
   if (sym->isShared())
     return true;
   if (!ctx.isPic &&
-      config->unresolvedSymbols != UnresolvedPolicy::ImportDynamic)
+      ctx.arg.unresolvedSymbols != UnresolvedPolicy::ImportDynamic)
     return false;
   if (sym->isHidden() || sym->isLocal())
     return false;
   // With `-Bsymbolic` (or when building an executable) as don't need to use
   // the GOT for symbols that are defined within the current module.
-  if (sym->isDefined() && (!config->shared || config->bsymbolic))
+  if (sym->isDefined() && (!ctx.arg.shared || ctx.arg.bsymbolic))
     return false;
   return true;
 }
@@ -38,15 +38,15 @@ static bool allowUndefined(const Symbol* sym) {
   // link time.
   if (sym->isImported())
     return true;
-  if (isa<UndefinedFunction>(sym) && config->importUndefined)
+  if (isa<UndefinedFunction>(sym) && ctx.arg.importUndefined)
     return true;
 
-  return config->allowUndefinedSymbols.count(sym->getName()) != 0;
+  return ctx.arg.allowUndefinedSymbols.count(sym->getName()) != 0;
 }
 
 static void reportUndefined(ObjFile *file, Symbol *sym) {
   if (!allowUndefined(sym)) {
-    switch (config->unresolvedSymbols) {
+    switch (ctx.arg.unresolvedSymbols) {
     case UnresolvedPolicy::ReportError:
       error(toString(file) + ": undefined symbol: " + toString(*sym));
       break;
@@ -63,8 +63,8 @@ static void reportUndefined(ObjFile *file, Symbol *sym) {
 
     if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
       if (!f->stubFunction &&
-          config->unresolvedSymbols != UnresolvedPolicy::ImportDynamic &&
-          !config->importUndefined) {
+          ctx.arg.unresolvedSymbols != UnresolvedPolicy::ImportDynamic &&
+          !ctx.arg.importUndefined) {
         f->stubFunction = symtab->createUndefinedStub(*f->getSignature());
         f->stubFunction->markLive();
         // Mark the function itself as a stub which prevents it from being
@@ -125,7 +125,7 @@ void scanRelocations(InputChunk *chunk) {
       // In single-threaded builds TLS is lowered away and TLS data can be
       // merged with normal data and allowing TLS relocation in non-TLS
       // segments.
-      if (config->sharedMemory) {
+      if (ctx.arg.sharedMemory) {
         if (!sym->isTLS()) {
           error(toString(file) + ": relocation " +
                 relocTypeToString(reloc.Type) +
@@ -144,9 +144,9 @@ void scanRelocations(InputChunk *chunk) {
       break;
     }
 
-    if (ctx.isPic ||
+    if (ctx.isPic || sym->isShared() ||
         (sym->isUndefined() &&
-         config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic)) {
+         ctx.arg.unresolvedSymbols == UnresolvedPolicy::ImportDynamic)) {
       switch (reloc.Type) {
       case R_WASM_TABLE_INDEX_SLEB:
       case R_WASM_TABLE_INDEX_SLEB64:
@@ -173,9 +173,25 @@ void scanRelocations(InputChunk *chunk) {
       }
     }
 
-    if (sym->isUndefined() && !config->relocatable && !sym->isWeak()) {
-      // Report undefined symbols
-      reportUndefined(file, sym);
+    if (!ctx.arg.relocatable && sym->isUndefined()) {
+      switch (reloc.Type) {
+      case R_WASM_TABLE_INDEX_REL_SLEB:
+      case R_WASM_TABLE_INDEX_REL_SLEB64:
+      case R_WASM_MEMORY_ADDR_REL_SLEB:
+      case R_WASM_MEMORY_ADDR_REL_SLEB64:
+        // These relocation types are for symbols that exists relative to
+        // `__memory_base` or `__table_base` and as such only make sense for
+        // defined symbols.
+        error(toString(file) + ": relocation " + relocTypeToString(reloc.Type) +
+              " is not supported against an undefined symbol `" +
+              toString(*sym) + "`");
+        break;
+      }
+
+      if (!sym->isWeak()) {
+        // Report undefined symbols
+        reportUndefined(file, sym);
+      }
     }
   }
 }

@@ -115,11 +115,7 @@ void Float2IntPass::findRoots(Function &F, const DominatorTree &DT) {
 // Helper - mark I as having been traversed, having range R.
 void Float2IntPass::seen(Instruction *I, ConstantRange R) {
   LLVM_DEBUG(dbgs() << "F2I: " << *I << ":" << R << "\n");
-  auto IT = SeenInsts.find(I);
-  if (IT != SeenInsts.end())
-    IT->second = std::move(R);
-  else
-    SeenInsts.insert(std::make_pair(I, std::move(R)));
+  SeenInsts.insert_or_assign(I, std::move(R));
 }
 
 // Helper - get a range representing a poison value.
@@ -315,16 +311,17 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
   bool MadeChange = false;
 
   // Iterate over every disjoint partition of the def-use graph.
-  for (auto It = ECs.begin(), E = ECs.end(); It != E; ++It) {
+  for (const auto &E : ECs) {
+    if (!E->isLeader())
+      continue;
+
     ConstantRange R(MaxIntegerBW + 1, false);
     bool Fail = false;
     Type *ConvertedToTy = nullptr;
 
     // For every member of the partition, union all the ranges together.
-    for (auto MI = ECs.member_begin(It), ME = ECs.member_end();
-         MI != ME; ++MI) {
-      Instruction *I = *MI;
-      auto SeenI = SeenInsts.find(I);
+    for (Instruction *I : ECs.members(*E)) {
+      auto *SeenI = SeenInsts.find(I);
       if (SeenI == SeenInsts.end())
         continue;
 
@@ -352,8 +349,8 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
 
     // If the set was empty, or we failed, or the range is poisonous,
     // bail out.
-    if (ECs.member_begin(It) == ECs.member_end() || Fail ||
-        R.isFullSet() || R.isSignWrappedSet())
+    if (ECs.member_begin(*E) == ECs.member_end() || Fail || R.isFullSet() ||
+        R.isSignWrappedSet())
       continue;
     assert(ConvertedToTy && "Must have set the convertedtoty by this point!");
 
@@ -392,9 +389,8 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
       }
     }
 
-    for (auto MI = ECs.member_begin(It), ME = ECs.member_end();
-         MI != ME; ++MI)
-      convert(*MI, Ty);
+    for (Instruction *I : ECs.members(*E))
+      convert(I, Ty);
     MadeChange = true;
   }
 
@@ -402,9 +398,9 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
 }
 
 Value *Float2IntPass::convert(Instruction *I, Type *ToTy) {
-  if (ConvertedInsts.contains(I))
+  if (auto It = ConvertedInsts.find(I); It != ConvertedInsts.end())
     // Already converted this instruction.
-    return ConvertedInsts[I];
+    return It->second;
 
   SmallVector<Value*,4> NewOperands;
   for (Value *V : I->operands()) {

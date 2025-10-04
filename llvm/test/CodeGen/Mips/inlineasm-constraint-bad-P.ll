@@ -3,7 +3,7 @@
 ; A constant in the range of 1 to 655535 inclusive.
 ; Our example uses the positive value 655536.
 ;
-; RUN: not llc -march=mipsel < %s  2> %t
+; RUN: not llc -mtriple=mipsel < %s  2> %t
 ; RUN: FileCheck --check-prefix=CHECK-ERRORS < %t %s
 
 define i32 @main() nounwind {

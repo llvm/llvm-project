@@ -21,6 +21,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include <cassert>
 #include <cstddef>
@@ -81,11 +82,12 @@ public:
   /// Note that \p SectionKind is used as a hint to guess the unit type
   /// for DWARF formats prior to DWARFv5. In DWARFv5 the unit type is
   /// explicitly defined in the header and the hint is ignored.
-  Error extract(DWARFContext &Context, const DWARFDataExtractor &debug_info,
-                uint64_t *offset_ptr, DWARFSectionKind SectionKind);
+  LLVM_ABI Error extract(DWARFContext &Context,
+                         const DWARFDataExtractor &debug_info,
+                         uint64_t *offset_ptr, DWARFSectionKind SectionKind);
   // For units in DWARF Package File, remember the index entry and update
   // the abbreviation offset read by extract().
-  Error applyIndexEntry(const DWARFUnitIndex::Entry *Entry);
+  LLVM_ABI Error applyIndexEntry(const DWARFUnitIndex::Entry *Entry);
   uint64_t getOffset() const { return Offset; }
   const dwarf::FormParams &getFormParams() const { return FormParams; }
   uint16_t getVersion() const { return FormParams.Version; }
@@ -118,8 +120,8 @@ public:
   }
 };
 
-const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
-                                        DWARFSectionKind Kind);
+LLVM_ABI const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
+                                                 DWARFSectionKind Kind);
 
 bool isCompileUnit(const std::unique_ptr<DWARFUnit> &U);
 
@@ -140,26 +142,28 @@ public:
   using compile_unit_range =
       decltype(make_filter_range(std::declval<iterator_range>(), isCompileUnit));
 
-  DWARFUnit *getUnitForOffset(uint64_t Offset) const;
-  DWARFUnit *getUnitForIndexEntry(const DWARFUnitIndex::Entry &E);
+  LLVM_ABI DWARFUnit *getUnitForOffset(uint64_t Offset) const;
+  LLVM_ABI DWARFUnit *getUnitForIndexEntry(const DWARFUnitIndex::Entry &E);
 
   /// Read units from a .debug_info or .debug_types section.  Calls made
   /// before finishedInfoUnits() are assumed to be for .debug_info sections,
   /// calls after finishedInfoUnits() are for .debug_types sections.  Caller
   /// must not mix calls to addUnitsForSection and addUnitsForDWOSection.
-  void addUnitsForSection(DWARFContext &C, const DWARFSection &Section,
-                          DWARFSectionKind SectionKind);
+  LLVM_ABI void addUnitsForSection(DWARFContext &C, const DWARFSection &Section,
+                                   DWARFSectionKind SectionKind);
   /// Read units from a .debug_info.dwo or .debug_types.dwo section.  Calls
   /// made before finishedInfoUnits() are assumed to be for .debug_info.dwo
   /// sections, calls after finishedInfoUnits() are for .debug_types.dwo
   /// sections.  Caller must not mix calls to addUnitsForSection and
   /// addUnitsForDWOSection.
-  void addUnitsForDWOSection(DWARFContext &C, const DWARFSection &DWOSection,
-                             DWARFSectionKind SectionKind, bool Lazy = false);
+  LLVM_ABI void addUnitsForDWOSection(DWARFContext &C,
+                                      const DWARFSection &DWOSection,
+                                      DWARFSectionKind SectionKind,
+                                      bool Lazy = false);
 
   /// Add an existing DWARFUnit to this UnitVector. This is used by the DWARF
   /// verifier to process unit separately.
-  DWARFUnit *addUnit(std::unique_ptr<DWARFUnit> Unit);
+  LLVM_ABI DWARFUnit *addUnit(std::unique_ptr<DWARFUnit> Unit);
 
   /// Returns number of all units held by this instance.
   unsigned getNumUnits() const { return size(); }
@@ -204,11 +208,11 @@ struct StrOffsetsContributionDescriptor {
   /// Determine whether a contribution to the string offsets table is
   /// consistent with the relevant section size and that its length is
   /// a multiple of the size of one of its entries.
-  Expected<StrOffsetsContributionDescriptor>
+  LLVM_ABI Expected<StrOffsetsContributionDescriptor>
   validateContributionSize(DWARFDataExtractor &DA);
 };
 
-class DWARFUnit {
+class LLVM_ABI DWARFUnit {
   DWARFContext &Context;
   /// Section containing this DWARFUnit.
   const DWARFSection &InfoSection;

@@ -75,7 +75,7 @@ std::string MakeAbsolutePath(StringRef CurrentDir, StringRef Path) {
     return "";
   llvm::SmallString<128> InitialDirectory(CurrentDir);
   llvm::SmallString<128> AbsolutePath(Path);
-  llvm::sys::fs::make_absolute(InitialDirectory, AbsolutePath);
+  llvm::sys::path::make_absolute(InitialDirectory, AbsolutePath);
   return CleanPath(std::move(AbsolutePath));
 }
 
@@ -464,7 +464,7 @@ getUsedDecls(const HelperDeclRefGraph *RG,
   for (const auto *D : Decls) {
     auto Result = RG->getReachableNodes(
         HelperDeclRGBuilder::getOutmostClassOrFunDecl(D));
-    Nodes.insert(Result.begin(), Result.end());
+    Nodes.insert_range(Result);
   }
   llvm::DenseSet<const Decl *> Results;
   for (const auto *Node : Nodes)

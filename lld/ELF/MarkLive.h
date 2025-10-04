@@ -10,9 +10,9 @@
 #define LLD_ELF_MARKLIVE_H
 
 namespace lld::elf {
+struct Ctx;
 
-template <class ELFT> void markLive();
-
+template <class ELFT> void markLive(Ctx &);
 }
 
 #endif // LLD_ELF_MARKLIVE_H

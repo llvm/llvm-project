@@ -13,8 +13,8 @@
 
 ; CHECK-DAG: [[I32Ty:%.*]] = OpTypeInt 32 0
 ; CHECK-DAG: [[PtrI32Ty:%.*]] = OpTypePointer Function [[I32Ty]]
-;; Device scope is encoded with constant 1
-; CHECK-DAG: [[SCOPE:%.*]] = OpConstant [[I32Ty]] 1
+;; AllSvmDevices scope is encoded with constant 0
+; CHECK-DAG: [[SCOPE:%.*]] = OpConstantNull [[I32Ty]]
 ;; "sequentially consistent" maps to constant 16
 ; CHECK-DAG: [[SEQ:%.*]] = OpConstant [[I32Ty]] 16
 

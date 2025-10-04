@@ -26,14 +26,12 @@
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/MD5.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/xxhash.h"
 #include <functional>
@@ -397,7 +395,7 @@ public:
   void mangleBits(llvm::APInt Number);
   void mangleTagTypeKind(TagTypeKind TK);
   void mangleArtificialTagType(TagTypeKind TK, StringRef UnqualifiedName,
-                               ArrayRef<StringRef> NestedNames = std::nullopt);
+                               ArrayRef<StringRef> NestedNames = {});
   void mangleAddressSpaceType(QualType T, Qualifiers Quals, SourceRange Range);
   void mangleType(QualType T, SourceRange Range,
                   QualifierMangleMode QMM = QMM_Mangle);
@@ -407,6 +405,8 @@ public:
                           bool MangleExceptionSpec = true);
   void mangleSourceName(StringRef Name);
   void mangleNestedName(GlobalDecl GD);
+
+  void mangleAutoReturnType(QualType T, QualifierMangleMode QMM);
 
 private:
   bool isStructorDecl(const NamedDecl *ND) const {
@@ -430,6 +430,7 @@ private:
   void mangleRefQualifier(RefQualifierKind RefQualifier);
   void manglePointerCVQualifiers(Qualifiers Quals);
   void manglePointerExtQualifiers(Qualifiers Quals, QualType PointeeType);
+  void manglePointerAuthQualifier(Qualifiers Quals);
 
   void mangleUnscopedTemplateName(GlobalDecl GD);
   void
@@ -477,6 +478,11 @@ private:
                           SourceRange Range);
   void mangleObjCKindOfType(const ObjCObjectType *T, Qualifiers Quals,
                             SourceRange Range);
+
+  void mangleAutoReturnType(const MemberPointerType *T, Qualifiers Quals);
+  void mangleAutoReturnType(const PointerType *T, Qualifiers Quals);
+  void mangleAutoReturnType(const LValueReferenceType *T, Qualifiers Quals);
+  void mangleAutoReturnType(const RValueReferenceType *T, Qualifiers Quals);
 };
 }
 
@@ -690,7 +696,7 @@ void MicrosoftCXXNameMangler::mangleVariableEncoding(const VarDecl *VD) {
       mangleQualifiers(MPT->getPointeeType().getQualifiers(), true);
       // Member pointers are suffixed with a back reference to the member
       // pointer's class name.
-      mangleName(MPT->getClass()->getAsCXXRecordDecl());
+      mangleName(MPT->getMostRecentCXXRecordDecl());
     } else
       mangleQualifiers(Ty->getPointeeType().getQualifiers(), false);
   } else if (const ArrayType *AT = getASTContext().getAsArrayType(Ty)) {
@@ -1009,6 +1015,7 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_x87DoubleExtended: Out << 'X'; break;
   case APFloat::S_IEEEquad: Out << 'Y'; break;
   case APFloat::S_PPCDoubleDouble: Out << 'Z'; break;
+  case APFloat::S_PPCDoubleDoubleLegacy:
   case APFloat::S_Float8E5M2:
   case APFloat::S_Float8E4M3:
   case APFloat::S_Float8E4M3FN:
@@ -1017,6 +1024,7 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_Float8E4M3B11FNUZ:
   case APFloat::S_Float8E3M4:
   case APFloat::S_FloatTF32:
+  case APFloat::S_Float8E8M0FNU:
   case APFloat::S_Float6E3M2FN:
   case APFloat::S_Float6E2M3FN:
   case APFloat::S_Float4E2M1FN:
@@ -1155,9 +1163,17 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
                   ->getTemplatedDecl()
                   ->hasAttr<CUDAGlobalAttr>())) &&
             GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
+        bool IsOCLDeviceStub =
+            ND && isa<FunctionDecl>(ND) &&
+            DeviceKernelAttr::isOpenCLSpelling(
+                ND->getAttr<DeviceKernelAttr>()) &&
+            GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
         if (IsDeviceStub)
           mangleSourceName(
               (llvm::Twine("__device_stub__") + II->getName()).str());
+        else if (IsOCLDeviceStub)
+          mangleSourceName(
+              (llvm::Twine("__clang_ocl_kern_imp_") + II->getName()).str());
         else
           mangleSourceName(II->getName());
         break;
@@ -1282,8 +1298,7 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
         Name += "<unnamed-type-";
         Name += TND->getName();
       } else if (isa<EnumDecl>(TD) &&
-                 cast<EnumDecl>(TD)->enumerator_begin() !=
-                     cast<EnumDecl>(TD)->enumerator_end()) {
+                 !cast<EnumDecl>(TD)->enumerators().empty()) {
         // Anonymous non-empty enums mangle in the first enumerator.
         auto *ED = cast<EnumDecl>(TD);
         Name += "<unnamed-enum-";
@@ -1389,7 +1404,7 @@ void MicrosoftCXXNameMangler::mangleNestedName(GlobalDecl GD) {
           Stream << '_' << Discriminator;
         if (ParameterDiscriminator)
           Stream << '_' << ParameterDiscriminator;
-        return Stream.str();
+        return Buffer;
       };
 
       unsigned Discriminator = BD->getBlockManglingNumber();
@@ -1481,6 +1496,8 @@ void MicrosoftCXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   // it.
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
+  case Dtor_Unified:
+    llvm_unreachable("not expecting a unified dtor type");
   }
   llvm_unreachable("Unsupported dtor type?");
 }
@@ -1790,17 +1807,16 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
   case TemplateArgument::Declaration: {
     const NamedDecl *ND = TA.getAsDecl();
     if (isa<FieldDecl>(ND) || isa<IndirectFieldDecl>(ND)) {
-      mangleMemberDataPointer(cast<CXXRecordDecl>(ND->getDeclContext())
-                                  ->getMostRecentNonInjectedDecl(),
-                              cast<ValueDecl>(ND),
-                              cast<NonTypeTemplateParmDecl>(Parm),
-                              TA.getParamTypeForDecl());
+      mangleMemberDataPointer(
+          cast<CXXRecordDecl>(ND->getDeclContext())->getMostRecentDecl(),
+          cast<ValueDecl>(ND), cast<NonTypeTemplateParmDecl>(Parm),
+          TA.getParamTypeForDecl());
     } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(ND)) {
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
       if (MD && MD->isInstance()) {
-        mangleMemberFunctionPointer(
-            MD->getParent()->getMostRecentNonInjectedDecl(), MD,
-            cast<NonTypeTemplateParmDecl>(Parm), TA.getParamTypeForDecl());
+        mangleMemberFunctionPointer(MD->getParent()->getMostRecentDecl(), MD,
+                                    cast<NonTypeTemplateParmDecl>(Parm),
+                                    TA.getParamTypeForDecl());
       } else {
         mangleFunctionPointer(FD, cast<NonTypeTemplateParmDecl>(Parm),
                               TA.getParamTypeForDecl());
@@ -2006,7 +2022,7 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
             if (RD->isAnonymousStructOrUnion())
               continue;
         } else {
-          ET = getASTContext().getRecordType(cast<CXXRecordDecl>(D));
+          ET = getASTContext().getCanonicalTagType(cast<CXXRecordDecl>(D));
           // Bug in MSVC: fully qualified name of base class should be used for
           // mangling to prevent collisions e.g. on base classes with same names
           // in different namespaces.
@@ -2327,6 +2343,17 @@ void MicrosoftCXXNameMangler::manglePointerExtQualifiers(Qualifiers Quals,
     Out << 'F';
 }
 
+void MicrosoftCXXNameMangler::manglePointerAuthQualifier(Qualifiers Quals) {
+  PointerAuthQualifier PointerAuth = Quals.getPointerAuth();
+  if (!PointerAuth)
+    return;
+
+  Out << "__ptrauth";
+  mangleNumber(PointerAuth.getKey());
+  mangleNumber(PointerAuth.isAddressDiscriminated());
+  mangleNumber(PointerAuth.getExtraDiscriminator());
+}
+
 void MicrosoftCXXNameMangler::manglePointerCVQualifiers(Qualifiers Quals) {
   // <pointer-cv-qualifiers> ::= P  # no qualifiers
   //                         ::= Q  # const
@@ -2492,6 +2519,57 @@ void MicrosoftCXXNameMangler::mangleAddressSpaceType(QualType T,
   Extra.mangleType(T, Range, QMM_Escape);
   mangleQualifiers(Qualifiers(), false);
   mangleArtificialTagType(TagTypeKind::Struct, ASMangling, {"__clang"});
+}
+
+void MicrosoftCXXNameMangler::mangleAutoReturnType(QualType T,
+                                                   QualifierMangleMode QMM) {
+  assert(getASTContext().getLangOpts().isCompatibleWithMSVC(
+             LangOptions::MSVC2019) &&
+         "Cannot mangle MSVC 2017 auto return types!");
+
+  if (isa<AutoType>(T)) {
+    const auto *AT = T->getContainedAutoType();
+    Qualifiers Quals = T.getLocalQualifiers();
+
+    if (QMM == QMM_Result)
+      Out << '?';
+    if (QMM != QMM_Drop)
+      mangleQualifiers(Quals, false);
+    Out << (AT->isDecltypeAuto() ? "_T" : "_P");
+    return;
+  }
+
+  T = T.getDesugaredType(getASTContext());
+  Qualifiers Quals = T.getLocalQualifiers();
+
+  switch (QMM) {
+  case QMM_Drop:
+  case QMM_Result:
+    break;
+  case QMM_Mangle:
+    mangleQualifiers(Quals, false);
+    break;
+  default:
+    llvm_unreachable("QMM_Escape unexpected");
+  }
+
+  const Type *ty = T.getTypePtr();
+  switch (ty->getTypeClass()) {
+  case Type::MemberPointer:
+    mangleAutoReturnType(cast<MemberPointerType>(ty), Quals);
+    break;
+  case Type::Pointer:
+    mangleAutoReturnType(cast<PointerType>(ty), Quals);
+    break;
+  case Type::LValueReference:
+    mangleAutoReturnType(cast<LValueReferenceType>(ty), Quals);
+    break;
+  case Type::RValueReference:
+    mangleAutoReturnType(cast<RValueReferenceType>(ty), Quals);
+    break;
+  default:
+    llvm_unreachable("Invalid type expected");
+  }
 }
 
 void MicrosoftCXXNameMangler::mangleType(QualType T, SourceRange Range,
@@ -2734,6 +2812,10 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     mangleArtificialTagType(TagTypeKind::Struct, "__bf16", {"__clang"});
     break;
 
+  case BuiltinType::MFloat8:
+    mangleArtificialTagType(TagTypeKind::Struct, "__mfp8", {"__clang"});
+    break;
+
 #define WASM_REF_TYPE(InternalName, MangledName, Id, SingletonId, AS)          \
   case BuiltinType::Id:                                                        \
     mangleArtificialTagType(TagTypeKind::Struct, MangledName);                 \
@@ -2748,47 +2830,19 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
-#define SVE_TYPE(Name, Id, SingletonId) \
-  case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
-#define PPC_VECTOR_TYPE(Name, Id, Size) \
-  case BuiltinType::Id:
-#include "clang/Basic/PPCTypes.def"
-#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/RISCVVTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/AMDGPUTypes.def"
-  case BuiltinType::ShortAccum:
-  case BuiltinType::Accum:
-  case BuiltinType::LongAccum:
-  case BuiltinType::UShortAccum:
-  case BuiltinType::UAccum:
-  case BuiltinType::ULongAccum:
-  case BuiltinType::ShortFract:
-  case BuiltinType::Fract:
-  case BuiltinType::LongFract:
-  case BuiltinType::UShortFract:
-  case BuiltinType::UFract:
-  case BuiltinType::ULongFract:
-  case BuiltinType::SatShortAccum:
-  case BuiltinType::SatAccum:
-  case BuiltinType::SatLongAccum:
-  case BuiltinType::SatUShortAccum:
-  case BuiltinType::SatUAccum:
-  case BuiltinType::SatULongAccum:
-  case BuiltinType::SatShortFract:
-  case BuiltinType::SatFract:
-  case BuiltinType::SatLongFract:
-  case BuiltinType::SatUShortFract:
-  case BuiltinType::SatUFract:
-  case BuiltinType::SatULongFract:
-  case BuiltinType::Ibm128:
-  case BuiltinType::Float128: {
+#define SVE_TYPE(Name, Id, SingletonId)                                        \
+  case BuiltinType::Id:                                                        \
+    mangleArtificialTagType(TagTypeKind::Struct, #Name, {"__clang"});          \
+    break;
+#define SVE_SCALAR_TYPE(Name, MangledName, Id, SingletonId, Bits)
+#include "clang/Basic/AArch64ACLETypes.def"
+
+    // Issue an error for any type not explicitly handled.
+  default:
     Error(Range.getBegin(), "built-in type: ",
           T->getName(Context.getASTContext().getPrintingPolicy()))
         << Range;
     break;
-  }
   }
 }
 
@@ -2907,17 +2961,59 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
       // can differ by their calling convention and are typically deduced.  So
       // we make sure that this type gets mangled properly.
       mangleType(ResultType, Range, QMM_Result);
-    } else if (const auto *AT = dyn_cast_or_null<AutoType>(
-                   ResultType->getContainedAutoType())) {
-      Out << '?';
-      mangleQualifiers(ResultType.getLocalQualifiers(), /*IsMember=*/false);
-      Out << '?';
+    } else if (IsInLambda) {
+      if (const auto *AT = ResultType->getContainedAutoType()) {
+        assert(AT->getKeyword() != AutoTypeKeyword::GNUAutoType &&
+               "shouldn't need to mangle __auto_type!");
+        Out << '?';
+        mangleQualifiers(ResultType.getLocalQualifiers(), /*IsMember=*/false);
+        Out << '?';
+        mangleSourceName(AT->isDecltypeAuto() ? "<decltype-auto>" : "<auto>");
+        Out << '@';
+      } else {
+        Out << '@';
+      }
+    } else if (const auto *AT = ResultType->getContainedAutoType()) {
       assert(AT->getKeyword() != AutoTypeKeyword::GNUAutoType &&
              "shouldn't need to mangle __auto_type!");
-      mangleSourceName(AT->isDecltypeAuto() ? "<decltype-auto>" : "<auto>");
-      Out << '@';
-    } else if (IsInLambda) {
-      Out << '@';
+
+      // If we have any pointer types with the clang address space extension
+      // then defer to the custom clang mangling to keep backwards
+      // compatibility. See `mangleType(const PointerType *T, Qualifiers Quals,
+      // SourceRange Range)` for details.
+      auto UseClangMangling = [](QualType ResultType) {
+        QualType T = ResultType;
+        while (isa<PointerType>(T.getTypePtr())) {
+          T = T->getPointeeType();
+          if (T.getQualifiers().hasAddressSpace())
+            return true;
+        }
+        return false;
+      };
+
+      if (getASTContext().getLangOpts().isCompatibleWithMSVC(
+              LangOptions::MSVC2019) &&
+          !UseClangMangling(ResultType)) {
+        if (D && !D->getPrimaryTemplate()) {
+          Out << '@';
+        } else {
+          if (D && D->getPrimaryTemplate()) {
+            const FunctionProtoType *FPT = D->getPrimaryTemplate()
+                                               ->getTemplatedDecl()
+                                               ->getFirstDecl()
+                                               ->getType()
+                                               ->castAs<FunctionProtoType>();
+            ResultType = FPT->getReturnType();
+          }
+          mangleAutoReturnType(ResultType, QMM_Result);
+        }
+      } else {
+        Out << '?';
+        mangleQualifiers(ResultType.getLocalQualifiers(), /*IsMember=*/false);
+        Out << '?';
+        mangleSourceName(AT->isDecltypeAuto() ? "<decltype-auto>" : "<auto>");
+        Out << '@';
+      }
     } else {
       if (ResultType->isVoidType())
         ResultType = ResultType.getUnqualifiedType();
@@ -3152,13 +3248,17 @@ void MicrosoftCXXNameMangler::mangleTagTypeKind(TagTypeKind TTK) {
 }
 void MicrosoftCXXNameMangler::mangleType(const EnumType *T, Qualifiers,
                                          SourceRange) {
-  mangleType(cast<TagType>(T)->getDecl());
+  mangleType(cast<TagType>(T)->getOriginalDecl());
 }
 void MicrosoftCXXNameMangler::mangleType(const RecordType *T, Qualifiers,
                                          SourceRange) {
-  mangleType(cast<TagType>(T)->getDecl());
+  mangleType(cast<TagType>(T)->getOriginalDecl());
 }
 void MicrosoftCXXNameMangler::mangleType(const TagDecl *TD) {
+  // MSVC chooses the tag kind of the definition if it exists, otherwise it
+  // always picks the first declaration.
+  const auto *Def = TD->getDefinition();
+  TD = Def ? Def : TD->getFirstDecl();
   mangleTagTypeKind(TD->getTagKind());
   mangleName(TD);
 }
@@ -3233,7 +3333,7 @@ void MicrosoftCXXNameMangler::mangleArrayType(const ArrayType *T) {
       const DependentSizedArrayType *DSAT =
         getASTContext().getAsDependentSizedArrayType(ElementTy);
       Error(DSAT->getSizeExpr()->getExprLoc(), "dependent-length")
-          << DSAT->getBracketsRange();
+          << DSAT->getSizeExpr()->getSourceRange();
       return;
     } else {
       break;
@@ -3262,23 +3362,36 @@ void MicrosoftCXXNameMangler::mangleType(const MemberPointerType *T,
   manglePointerExtQualifiers(Quals, PointeeType);
   if (const FunctionProtoType *FPT = PointeeType->getAs<FunctionProtoType>()) {
     Out << '8';
-    mangleName(T->getClass()->castAs<RecordType>()->getDecl());
+    mangleName(T->getMostRecentCXXRecordDecl());
     mangleFunctionType(FPT, nullptr, true);
   } else {
     mangleQualifiers(PointeeType.getQualifiers(), true);
-    mangleName(T->getClass()->castAs<RecordType>()->getDecl());
+    mangleName(T->getMostRecentCXXRecordDecl());
     mangleType(PointeeType, Range, QMM_Drop);
   }
 }
 
 void MicrosoftCXXNameMangler::mangleType(const TemplateTypeParmType *T,
                                          Qualifiers, SourceRange Range) {
-  Error(Range.getBegin(), "template type parameter type") << Range;
+  Out << '?';
+
+  llvm::SmallString<64> Name;
+  Name += "<TTPT_";
+  Name += llvm::utostr(T->getDepth());
+  Name += "_";
+  Name += llvm::utostr(T->getIndex());
+  Name += ">";
+  mangleSourceName(Name);
 }
 
 void MicrosoftCXXNameMangler::mangleType(const SubstTemplateTypeParmPackType *T,
                                          Qualifiers, SourceRange Range) {
   Error(Range.getBegin(), "substituted parameter pack") << Range;
+}
+
+void MicrosoftCXXNameMangler::mangleType(const SubstBuiltinTemplatePackType *T,
+                                         Qualifiers, SourceRange Range) {
+  Error(Range.getBegin(), "substituted builtin template pack") << Range;
 }
 
 // <type> ::= <pointer-type>
@@ -3289,6 +3402,7 @@ void MicrosoftCXXNameMangler::mangleType(const PointerType *T, Qualifiers Quals,
   QualType PointeeType = T->getPointeeType();
   manglePointerCVQualifiers(Quals);
   manglePointerExtQualifiers(Quals, PointeeType);
+  manglePointerAuthQualifier(Quals);
 
   // For pointer size address spaces, go down the same type mangling path as
   // non address space types.
@@ -3439,7 +3553,21 @@ void MicrosoftCXXNameMangler::mangleType(const DependentSizedExtVectorType *T,
 
 void MicrosoftCXXNameMangler::mangleType(const ConstantMatrixType *T,
                                          Qualifiers quals, SourceRange Range) {
-  Error(Range.getBegin(), "matrix type") << Range;
+  QualType EltTy = T->getElementType();
+
+  llvm::SmallString<64> TemplateMangling;
+  llvm::raw_svector_ostream Stream(TemplateMangling);
+  MicrosoftCXXNameMangler Extra(Context, Stream);
+
+  Stream << "?$";
+
+  Extra.mangleSourceName("__matrix");
+  Extra.mangleType(EltTy, Range, QMM_Escape);
+
+  Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumRows()));
+  Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumColumns()));
+
+  mangleArtificialTagType(TagTypeKind::Struct, TemplateMangling, {"__clang"});
 }
 
 void MicrosoftCXXNameMangler::mangleType(const DependentSizedMatrixType *T,
@@ -3525,12 +3653,6 @@ void MicrosoftCXXNameMangler::mangleType(const TemplateSpecializationType *T,
 void MicrosoftCXXNameMangler::mangleType(const DependentNameType *T, Qualifiers,
                                          SourceRange Range) {
   Error(Range.getBegin(), "dependent name type") << Range;
-}
-
-void MicrosoftCXXNameMangler::mangleType(
-    const DependentTemplateSpecializationType *T, Qualifiers,
-    SourceRange Range) {
-  Error(Range.getBegin(), "dependent template specialization type") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const PackExpansionType *T, Qualifiers,
@@ -3651,6 +3773,16 @@ void MicrosoftCXXNameMangler::mangleType(const BitIntType *T, Qualifiers,
 void MicrosoftCXXNameMangler::mangleType(const DependentBitIntType *T,
                                          Qualifiers, SourceRange Range) {
   Error(Range.getBegin(), "DependentBitInt type") << Range;
+}
+
+void MicrosoftCXXNameMangler::mangleType(const HLSLAttributedResourceType *T,
+                                         Qualifiers, SourceRange Range) {
+  llvm_unreachable("HLSL uses Itanium name mangling");
+}
+
+void MicrosoftCXXNameMangler::mangleType(const HLSLInlineSpirvType *T,
+                                         Qualifiers, SourceRange Range) {
+  llvm_unreachable("HLSL uses Itanium name mangling");
 }
 
 // <this-adjustment> ::= <no-adjustment> | <static-adjustment> |
@@ -4218,6 +4350,57 @@ void MicrosoftMangleContextImpl::mangleStringLiteral(const StringLiteral *SL,
   }
 
   Mangler.getStream() << '@';
+}
+
+void MicrosoftCXXNameMangler::mangleAutoReturnType(const MemberPointerType *T,
+                                                   Qualifiers Quals) {
+  QualType PointeeType = T->getPointeeType();
+  manglePointerCVQualifiers(Quals);
+  manglePointerExtQualifiers(Quals, PointeeType);
+  if (const FunctionProtoType *FPT = PointeeType->getAs<FunctionProtoType>()) {
+    Out << '8';
+    mangleName(T->getMostRecentCXXRecordDecl());
+    mangleFunctionType(FPT, nullptr, true);
+  } else {
+    mangleQualifiers(PointeeType.getQualifiers(), true);
+    mangleName(T->getMostRecentCXXRecordDecl());
+    mangleAutoReturnType(PointeeType, QMM_Drop);
+  }
+}
+
+void MicrosoftCXXNameMangler::mangleAutoReturnType(const PointerType *T,
+                                                   Qualifiers Quals) {
+  QualType PointeeType = T->getPointeeType();
+  assert(!PointeeType.getQualifiers().hasAddressSpace() &&
+         "Unexpected address space mangling required");
+
+  manglePointerCVQualifiers(Quals);
+  manglePointerExtQualifiers(Quals, PointeeType);
+
+  if (const FunctionProtoType *FPT = PointeeType->getAs<FunctionProtoType>()) {
+    Out << '6';
+    mangleFunctionType(FPT);
+  } else {
+    mangleAutoReturnType(PointeeType, QMM_Mangle);
+  }
+}
+
+void MicrosoftCXXNameMangler::mangleAutoReturnType(const LValueReferenceType *T,
+                                                   Qualifiers Quals) {
+  QualType PointeeType = T->getPointeeType();
+  assert(!Quals.hasConst() && !Quals.hasVolatile() && "unexpected qualifier!");
+  Out << 'A';
+  manglePointerExtQualifiers(Quals, PointeeType);
+  mangleAutoReturnType(PointeeType, QMM_Mangle);
+}
+
+void MicrosoftCXXNameMangler::mangleAutoReturnType(const RValueReferenceType *T,
+                                                   Qualifiers Quals) {
+  QualType PointeeType = T->getPointeeType();
+  assert(!Quals.hasConst() && !Quals.hasVolatile() && "unexpected qualifier!");
+  Out << "$$Q";
+  manglePointerExtQualifiers(Quals, PointeeType);
+  mangleAutoReturnType(PointeeType, QMM_Mangle);
 }
 
 MicrosoftMangleContext *MicrosoftMangleContext::create(ASTContext &Context,

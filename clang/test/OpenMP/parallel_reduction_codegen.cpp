@@ -354,9 +354,9 @@ int main() {
 // CHECK1-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[TMP0]], i64 0
+// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP0]], i64 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i64 0
+// CHECK1-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP1]], i64 0
 // CHECK1-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[ARRAYIDX1]] to i64
 // CHECK1-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
 // CHECK1-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP2]], [[TMP3]]
@@ -1632,9 +1632,9 @@ int main() {
 // CHECK3-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK3-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[TMP0]], i64 0
+// CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP0]], i64 0
 // CHECK3-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK3-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i64 0
+// CHECK3-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP1]], i64 0
 // CHECK3-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[ARRAYIDX1]] to i64
 // CHECK3-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
 // CHECK3-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP2]], [[TMP3]]
@@ -2142,9 +2142,9 @@ int main() {
 // CHECK4-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK4-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
 // CHECK4-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[TMP0]], i64 0
+// CHECK4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP0]], i64 0
 // CHECK4-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK4-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i64 0
+// CHECK4-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP1]], i64 0
 // CHECK4-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[ARRAYIDX1]] to i64
 // CHECK4-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
 // CHECK4-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP2]], [[TMP3]]

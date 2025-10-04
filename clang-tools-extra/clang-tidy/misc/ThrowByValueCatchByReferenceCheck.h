@@ -1,4 +1,4 @@
-//===--- ThrowByValueCatchByReferenceCheck.h - clang-tidy--------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,7 @@
 
 namespace clang::tidy::misc {
 
-///checks for locations that do not throw by value
+/// Checks for locations that do not throw by value
 // or catch by reference.
 // The check is C++ only. It checks that all throw locations
 // throw by value and not by pointer. Additionally it

@@ -386,8 +386,8 @@ define <4 x i16> @test_build_illegal(<4 x i32> %in) {
 ;
 ; CHECK-GI-LABEL: test_build_illegal:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov s0, v0[3]
-; CHECK-GI-NEXT:    mov.h v0[3], v0[0]
+; CHECK-GI-NEXT:    mov.s w8, v0[3]
+; CHECK-GI-NEXT:    mov.h v0[3], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %val = extractelement <4 x i32> %in, i32 3
@@ -401,16 +401,10 @@ define <4 x i16> @test_build_illegal(<4 x i32> %in) {
 ; SelectionDAGBuilder here. We then added a DUPLANE on top of that, preventing
 ; the formation of an indexed-by-7 MLS.
 define <4 x i16> @test_high_splat(<4 x i16> %a, <4 x i16> %b, <8 x i16> %v) #0 {
-; CHECK-SD-LABEL: test_high_splat:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mls.4h v0, v1, v2[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_high_splat:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup.8h v2, v2[7]
-; CHECK-GI-NEXT:    mls.4h v0, v2, v1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_high_splat:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mls.4h v0, v1, v2[7]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %mul = mul <4 x i16> %shuffle, %b
@@ -712,5 +706,5 @@ define <4 x i16> @dup_i16_v4i16_constant() {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI50_0
 ; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI50_0]
 ; CHECK-GI-NEXT:    ret
-    ret <4 x i16> <i16 9211, i16 9211, i16 9211, i16 9211>
+  ret <4 x i16> <i16 9211, i16 9211, i16 9211, i16 9211>
 }

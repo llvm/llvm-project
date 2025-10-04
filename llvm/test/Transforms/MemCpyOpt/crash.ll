@@ -85,7 +85,7 @@ define void @test2(i32 %cmd) nounwind {
 
 define void @inttoptr_constexpr_crash(ptr %p) {
 ; CHECK-LABEL: @inttoptr_constexpr_crash(
-; CHECK-NEXT:    store <1 x ptr> inttoptr (<1 x i16> bitcast (<2 x i8> <i8 ptrtoint (ptr @g to i8), i8 ptrtoint (ptr @g to i8)> to <1 x i16>) to <1 x ptr>), ptr [[P:%.*]], align 1
+; CHECK-NEXT:    store <1 x ptr> <ptr inttoptr (i16 extractelement (<1 x i16> bitcast (<2 x i8> <i8 ptrtoint (ptr @g to i8), i8 ptrtoint (ptr @g to i8)> to <1 x i16>), i32 0) to ptr)>, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   store <1 x ptr> inttoptr (<1 x i16> bitcast (<2 x i8> <i8 ptrtoint (ptr @g to i8), i8 ptrtoint (ptr @g to i8)> to <1 x i16>) to <1 x ptr>), ptr %p, align 1

@@ -47,7 +47,6 @@ Function Name  Available  RPC Required
 bcmp           |check|
 bcopy          |check|
 bzero          |check|
-index          |check|
 memccpy        |check|
 memchr         |check|
 memcmp         |check|
@@ -57,11 +56,8 @@ memmove        |check|
 mempcpy        |check|
 memrchr        |check|
 memset         |check|
-rindex         |check|
 stpcpy         |check|
 stpncpy        |check|
-strcasecmp     |check|
-strcasestr     |check|
 strcat         |check|
 strchr         |check|
 strchrnul      |check|
@@ -74,7 +70,6 @@ strerror       |check|
 strlcat        |check|
 strlcpy        |check|
 strlen         |check|
-strncasecmp    |check|
 strncat        |check|
 strncmp        |check|
 strncpy        |check|
@@ -88,6 +83,21 @@ strstr         |check|
 strtok         |check|
 strtok_r       |check|
 strxfrm        |check|
+=============  =========  ============
+
+strings.h
+---------
+
+=============  =========  ============
+Function Name  Available  RPC Required
+=============  =========  ============
+bcmp           |check|
+bcopy          |check|
+bzero          |check|
+strcasecmp     |check|
+strcasestr     |check|
+index          |check|
+rindex         |check|
 =============  =========  ============
 
 stdbit.h
@@ -176,6 +186,7 @@ atol           |check|
 atoll          |check|
 exit           |check|    |check|
 abort          |check|    |check|
+system         |check|    |check|
 labs           |check|
 llabs          |check|
 div            |check|
@@ -229,6 +240,7 @@ fputs          |check|    |check|
 fputc          |check|    |check|
 fwrite         |check|    |check|
 remove         |check|    |check|
+rename         |check|    |check|
 putc           |check|    |check|
 printf         |check|    |check|
 vprintf        |check|    |check|
@@ -239,8 +251,8 @@ snprintf       |check|
 vsprintf       |check|
 vsnprintf      |check|
 sscanf         |check|
-scanf          |check|
-fscanf         |check|
+scanf          |check|    |check|
+fscanf         |check|    |check|
 putchar        |check|    |check|
 fclose         |check|    |check|
 fopen          |check|    |check|
@@ -256,6 +268,8 @@ Function Name  Available  RPC Required
 clock          |check|
 clock_gettime  |check|
 nanosleep      |check|
+strftime       |check|
+strftime_l     |check|
 =============  =========  ============
 
 assert.h

@@ -20,24 +20,15 @@
 
 #include "NVPTX.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 using namespace llvm;
-
-namespace llvm {
-void initializeNVPTXProxyRegErasurePass(PassRegistry &);
-}
 
 namespace {
 
 struct NVPTXProxyRegErasure : public MachineFunctionPass {
   static char ID;
-  NVPTXProxyRegErasure() : MachineFunctionPass(ID) {
-    initializeNVPTXProxyRegErasurePass(*PassRegistry::getPassRegistry());
-  }
+  NVPTXProxyRegErasure() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -67,18 +58,20 @@ bool NVPTXProxyRegErasure::runOnMachineFunction(MachineFunction &MF) {
   for (auto &BB : MF) {
     for (auto &MI : BB) {
       switch (MI.getOpcode()) {
-      case NVPTX::ProxyRegI1:
-      case NVPTX::ProxyRegI16:
-      case NVPTX::ProxyRegI32:
-      case NVPTX::ProxyRegI64:
-      case NVPTX::ProxyRegF32:
-      case NVPTX::ProxyRegF64: {
+      case NVPTX::ProxyRegB1:
+      case NVPTX::ProxyRegB16:
+      case NVPTX::ProxyRegB32:
+      case NVPTX::ProxyRegB64: {
         auto &InOp = *MI.uses().begin();
         auto &OutOp = *MI.defs().begin();
         assert(InOp.isReg() && "ProxyReg input should be a register.");
         assert(OutOp.isReg() && "ProxyReg output should be a register.");
         RemoveList.push_back(&MI);
-        RAUWBatch.try_emplace(OutOp.getReg(), InOp.getReg());
+        Register replacement = InOp.getReg();
+        // Check if the replacement itself has been replaced.
+        if (auto it = RAUWBatch.find(replacement); it != RAUWBatch.end())
+          replacement = it->second;
+        RAUWBatch.try_emplace(OutOp.getReg(), replacement);
         break;
       }
       }
