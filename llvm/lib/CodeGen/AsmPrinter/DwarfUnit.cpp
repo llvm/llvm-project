@@ -1669,8 +1669,7 @@ void DwarfUnit::constructGenericSubrangeDIE(DIE &Buffer,
         addDIEEntry(DwGenericSubrange, Attr, *VarDIE);
     } else if (auto *BE = dyn_cast_if_present<DIExpression *>(Bound)) {
       if (BE->isConstant() &&
-          DIExpression::SignedOrUnsignedConstant::SignedConstant ==
-              *BE->isConstant()) {
+          SignedOrUnsignedConstant::SignedConstant == *BE->isConstant()) {
         if (Attr != dwarf::DW_AT_lower_bound || DefaultLowerBound == -1 ||
             static_cast<int64_t>(BE->getElement(1)) != DefaultLowerBound)
           addSInt(DwGenericSubrange, Attr, dwarf::DW_FORM_sdata,
