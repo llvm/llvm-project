@@ -143,3 +143,22 @@ func.func @array_declare_unlimited_polymorphic_boxaddr(%arg0: !fir.ref<!fir.clas
 // CHECK-LABEL: func.func @array_declare_unlimited_polymorphic_boxaddr(
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x?xnone>>>>) {
 // CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x?xnone>>>>) -> !fir.ref<!fir.class<!fir.ptr<!fir.array<?x?xnone>>>>
+
+// CHECK-LABEL:   func.func @vars_within_physical_storage() {
+// CHECK:           %[[VAL_2:.*]] = fir.address_of(@block_) : !fir.ref<!fir.array<8xi8>>
+// CHECK:           %[[VAL_6:.*]] = fir.declare %{{.*}} storage(%[[VAL_2]][0]) {uniq_name = "a"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+// CHECK:           %[[VAL_9:.*]] = fir.declare %{{.*}} storage(%[[VAL_2]][4]) {uniq_name = "b"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+fir.global common @block_(dense<0> : vector<8xi8>) {alignment = 4 : i64} : !fir.array<8xi8>
+func.func @vars_within_physical_storage() {
+  %c4 = arith.constant 4 : index
+  %c0 = arith.constant 0 : index
+  %1 = fir.address_of(@block_) : !fir.ref<!fir.array<8xi8>>
+  %2 = fir.convert %1 : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+  %3 = fir.coordinate_of %2, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  %4 = fir.convert %3 : (!fir.ref<i8>) -> !fir.ref<f32>
+  %5 = fir.declare %4 storage (%1[0]) {uniq_name = "a"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+  %6 = fir.coordinate_of %2, %c4 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  %7 = fir.convert %6 : (!fir.ref<i8>) -> !fir.ref<f32>
+  %8 = fir.declare %7 storage (%1[4]) {uniq_name = "b"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+  return
+}

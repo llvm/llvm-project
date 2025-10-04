@@ -56,7 +56,7 @@ define float @v_rcp_f32_ieee_unsafe(float %x) #4 {
 ; R600:       ; %bb.0:
 ; R600-NEXT:    CF_END
 ; R600-NEXT:    PAD
-  %rcp = fdiv float 1.0, %x
+  %rcp = fdiv afn float 1.0, %x
   ret float %rcp
 }
 
@@ -1411,10 +1411,10 @@ define amdgpu_kernel void @s_div_arcp_neg_k_x_pat_f32_daz(ptr addrspace(1) %out)
 declare float @llvm.fabs.f32(float) #1
 declare float @llvm.sqrt.f32(float) #1
 
-attributes #0 = { nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #2 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #3 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
-attributes #4 = { nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="ieee,ieee" }
+attributes #4 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
 
 !0 = !{float 2.500000e+00}

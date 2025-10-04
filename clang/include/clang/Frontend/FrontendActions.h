@@ -329,6 +329,18 @@ public:
       : ModuleName(ModuleName) {}
 };
 
+//===----------------------------------------------------------------------===//
+// HLSL Specific Actions
+//===----------------------------------------------------------------------===//
+
+class HLSLFrontendAction : public WrapperFrontendAction {
+protected:
+  void ExecuteAction() override;
+
+public:
+  HLSLFrontendAction(std::unique_ptr<FrontendAction> WrappedAction);
+};
+
 }  // end namespace clang
 
 #endif

@@ -13,7 +13,7 @@ subroutine openacc_clause_validity
   !$acc parallel
   !$acc loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     !ERROR: RETURN statement is not allowed in a PARALLEL construct
     return
   end do
@@ -21,21 +21,21 @@ subroutine openacc_clause_validity
 
   !$acc parallel loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     !ERROR: RETURN statement is not allowed in a PARALLEL LOOP construct
     return
   end do
 
   !$acc serial loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     !ERROR: RETURN statement is not allowed in a SERIAL LOOP construct
     return
   end do
 
   !$acc kernels loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     !ERROR: RETURN statement is not allowed in a KERNELS LOOP construct
     return
   end do
@@ -43,7 +43,7 @@ subroutine openacc_clause_validity
   !$acc parallel
   !$acc loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     if(i == N-1) THEN
       exit
     end if
@@ -81,7 +81,7 @@ subroutine openacc_clause_validity
         exit fortname
         !$acc loop
           do i = 1, N
-            a(i) = 3.14
+            a(i) = 3.14d0
             if(i == N-1) THEN
               !ERROR: EXIT to construct 'name1' outside of PARALLEL construct is not allowed
               exit name1
@@ -89,7 +89,7 @@ subroutine openacc_clause_validity
           end do
 
           loop2: do i = 1, N
-            a(i) = 3.33
+            a(i) = 3.33d0
             !ERROR: EXIT to construct 'thisblk' outside of PARALLEL construct is not allowed
             exit thisblk
           end do loop2
@@ -102,7 +102,7 @@ subroutine openacc_clause_validity
   !$acc parallel
   !$acc loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     ifname: if (i == 2) then
       ! This is allowed.
       exit ifname
@@ -113,7 +113,7 @@ subroutine openacc_clause_validity
   !$acc parallel
   !$acc loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     if(i == N-1) THEN
       stop 999 ! no error
     end if
@@ -122,7 +122,7 @@ subroutine openacc_clause_validity
 
   !$acc kernels
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     !ERROR: RETURN statement is not allowed in a KERNELS construct
     return
   end do
@@ -130,7 +130,7 @@ subroutine openacc_clause_validity
 
   !$acc kernels
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     if(i == N-1) THEN
       exit
     end if
@@ -139,7 +139,7 @@ subroutine openacc_clause_validity
 
   !$acc kernels
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     if(i == N-1) THEN
       stop 999 ! no error
     end if
@@ -148,7 +148,7 @@ subroutine openacc_clause_validity
 
   !$acc serial
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     !ERROR: RETURN statement is not allowed in a SERIAL construct
     return
   end do
@@ -156,7 +156,7 @@ subroutine openacc_clause_validity
 
   !$acc serial
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     if(i == N-1) THEN
       exit
     end if
@@ -168,7 +168,7 @@ subroutine openacc_clause_validity
   do i = 1, N
     ifname: if (.true.) then
       print *, "LGTM"
-    a(i) = 3.14
+    a(i) = 3.14d0
     if(i == N-1) THEN
         !ERROR: EXIT to construct 'name2' outside of SERIAL construct is not allowed
         exit name2
@@ -181,7 +181,7 @@ subroutine openacc_clause_validity
 
   !$acc serial
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     if(i == N-1) THEN
       stop 999 ! no error
     end if

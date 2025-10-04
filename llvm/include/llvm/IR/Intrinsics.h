@@ -104,12 +104,6 @@ namespace Intrinsic {
   LLVM_ABI Function *getOrInsertDeclaration(Module *M, ID id,
                                             ArrayRef<Type *> Tys = {});
 
-  LLVM_DEPRECATED("Use getOrInsertDeclaration instead",
-                  "getOrInsertDeclaration")
-  inline Function *getDeclaration(Module *M, ID id, ArrayRef<Type *> Tys = {}) {
-    return getOrInsertDeclaration(M, id, Tys);
-  }
-
   /// Look up the Function declaration of the intrinsic \p id in the Module
   /// \p M and return it if it exists. Otherwise, return nullptr. This version
   /// supports non-overloaded intrinsics.
@@ -283,8 +277,15 @@ namespace Intrinsic {
   // or of the wrong kind will be renamed by adding ".renamed" to the name.
   LLVM_ABI std::optional<Function *> remangleIntrinsicFunction(Function *F);
 
-} // End Intrinsic namespace
+  /// Returns the corresponding llvm.vector.interleaveN intrinsic for factor N.
+  LLVM_ABI Intrinsic::ID getInterleaveIntrinsicID(unsigned Factor);
 
-} // End llvm namespace
+  /// Returns the corresponding llvm.vector.deinterleaveN intrinsic for factor
+  /// N.
+  LLVM_ABI Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor);
+
+  } // namespace Intrinsic
+
+  } // namespace llvm
 
 #endif

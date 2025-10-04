@@ -195,9 +195,10 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     if (DS.getTypeSpecType() == DeclSpec::TST_error)
       return false;
 
-    QualType Type = Actions.ActOnPackIndexingType(
-        DS.getRepAsType().get(), DS.getPackIndexingExpr(), DS.getBeginLoc(),
-        DS.getEllipsisLoc());
+    QualType Pattern = Sema::GetTypeFromParser(DS.getRepAsType());
+    QualType Type =
+        Actions.ActOnPackIndexingType(Pattern, DS.getPackIndexingExpr(),
+                                      DS.getBeginLoc(), DS.getEllipsisLoc());
 
     if (Type.isNull())
       return false;
@@ -1298,7 +1299,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     Diag(Tok, getLangOpts().CPlusPlus23
                   ? diag::warn_cxx20_compat_decl_attrs_on_lambda
                   : diag::ext_decl_attrs_on_lambda)
-        << Tok.getIdentifierInfo() << Tok.isRegularKeywordAttribute();
+        << Tok.isRegularKeywordAttribute() << Tok.getIdentifierInfo();
     MaybeParseCXX11Attributes(D);
   }
 
@@ -2355,8 +2356,10 @@ bool Parser::ParseUnqualifiedIdTemplateId(
 
   // Constructor and destructor names.
   TypeResult Type = Actions.ActOnTemplateIdType(
-      getCurScope(), SS, TemplateKWLoc, Template, Name, NameLoc, LAngleLoc,
-      TemplateArgsPtr, RAngleLoc, /*IsCtorOrDtorName=*/true);
+      getCurScope(), ElaboratedTypeKeyword::None,
+      /*ElaboratedKeywordLoc=*/SourceLocation(), SS, TemplateKWLoc, Template,
+      Name, NameLoc, LAngleLoc, TemplateArgsPtr, RAngleLoc,
+      /*IsCtorOrDtorName=*/true);
   if (Type.isInvalid())
     return true;
 

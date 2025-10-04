@@ -120,7 +120,7 @@ define void @f(i32* %p1, i32* %p2, i64 %i) {
   EXPECT_TRUE(canReplacePointersInUseIfEqual(IcmpUse, P2, DL));
 }
 
-TEST(LoadsTest, IsDerefReadOnlyLoop) {
+TEST(LoadsTest, IsReadOnlyLoop) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C,
                                       R"IR(
@@ -183,7 +183,8 @@ loop.end:
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
 
-  auto IsDerefReadOnlyLoop = [&TLI](Function *F) -> bool {
+  auto IsReadOnlyLoop =
+      [&TLI](Function *F, SmallVector<LoadInst *, 4> &NonDerefLoads) -> bool {
     AssumptionCache AC(*F);
     DominatorTree DT(*F);
     LoopInfo LI(DT);
@@ -195,9 +196,13 @@ loop.end:
     assert(Header->getName() == "loop");
     Loop *L = LI.getLoopFor(Header);
 
-    return isDereferenceableReadOnlyLoop(L, &SE, &DT, &AC);
+    return isReadOnlyLoop(L, &SE, &DT, &AC, NonDerefLoads);
   };
 
-  ASSERT_TRUE(IsDerefReadOnlyLoop(F1));
-  ASSERT_FALSE(IsDerefReadOnlyLoop(F2));
+  SmallVector<LoadInst *, 4> NonDerefLoads;
+  ASSERT_TRUE(IsReadOnlyLoop(F1, NonDerefLoads));
+  ASSERT_TRUE(NonDerefLoads.empty());
+  ASSERT_TRUE(IsReadOnlyLoop(F2, NonDerefLoads));
+  ASSERT_TRUE((NonDerefLoads.size() == 1) &&
+              (NonDerefLoads[0]->getName() == "ld1"));
 }

@@ -22,6 +22,8 @@ using namespace llvm::memprof;
 
 #define DEBUG_TYPE "memory-profile-info"
 
+namespace llvm {
+
 cl::opt<bool> MemProfReportHintedSizes(
     "memprof-report-hinted-sizes", cl::init(false), cl::Hidden,
     cl::desc("Report total allocation sizes of hinted allocations"));
@@ -51,6 +53,8 @@ cl::opt<unsigned> MinCallsiteColdBytePercent(
 cl::opt<unsigned> MinPercentMaxColdSize(
     "memprof-min-percent-max-cold-size", cl::init(100), cl::Hidden,
     cl::desc("Min percent of max cold bytes for critical cold context"));
+
+} // end namespace llvm
 
 bool llvm::memprof::metadataIncludesAllContextSizeInfo() {
   return MemProfReportHintedSizes || MinClonedColdBytePercent < 100;

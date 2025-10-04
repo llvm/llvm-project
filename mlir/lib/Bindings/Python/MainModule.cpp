@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "Globals.h"
 #include "IRModule.h"
 #include "NanobindUtils.h"
@@ -44,7 +43,32 @@ NB_MODULE(_mlir, m) {
       .def("_register_operation_impl", &PyGlobals::registerOperationImpl,
            "operation_name"_a, "operation_class"_a, nb::kw_only(),
            "replace"_a = false,
-           "Testing hook for directly registering an operation");
+           "Testing hook for directly registering an operation")
+      .def("loc_tracebacks_enabled",
+           [](PyGlobals &self) {
+             return self.getTracebackLoc().locTracebacksEnabled();
+           })
+      .def("set_loc_tracebacks_enabled",
+           [](PyGlobals &self, bool enabled) {
+             self.getTracebackLoc().setLocTracebacksEnabled(enabled);
+           })
+      .def("loc_tracebacks_frame_limit",
+           [](PyGlobals &self) {
+             return self.getTracebackLoc().locTracebackFramesLimit();
+           })
+      .def("set_loc_tracebacks_frame_limit",
+           [](PyGlobals &self, std::optional<int> n) {
+             self.getTracebackLoc().setLocTracebackFramesLimit(
+                 n.value_or(PyGlobals::TracebackLoc::kMaxFrames));
+           })
+      .def("register_traceback_file_inclusion",
+           [](PyGlobals &self, const std::string &filename) {
+             self.getTracebackLoc().registerTracebackFileInclusion(filename);
+           })
+      .def("register_traceback_file_exclusion",
+           [](PyGlobals &self, const std::string &filename) {
+             self.getTracebackLoc().registerTracebackFileExclusion(filename);
+           });
 
   // Aside from making the globals accessible to python, having python manage
   // it is necessary to make sure it is destroyed (and releases its python
@@ -117,7 +141,7 @@ NB_MODULE(_mlir, m) {
   populateRewriteSubmodule(rewriteModule);
 
   // Define and populate PassManager submodule.
-  auto passModule =
+  auto passManagerModule =
       m.def_submodule("passmanager", "MLIR Pass Management Bindings");
-  populatePassManagerSubmodule(passModule);
+  populatePassManagerSubmodule(passManagerModule);
 }

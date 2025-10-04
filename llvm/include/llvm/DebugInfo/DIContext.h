@@ -209,6 +209,7 @@ struct DIDumpOptions {
   bool IsEH = false;
   bool DumpNonSkeleton = false;
   bool ShowAggregateErrors = false;
+  bool PrintRegisterOnly = false;
   std::string JsonErrSummaryFile;
   std::function<llvm::StringRef(uint64_t DwarfRegNum, bool IsEH)>
       GetNameForDWARFReg;

@@ -1086,16 +1086,17 @@ TEST_F(MemorySSATest, TestStoreMayAlias) {
 
 TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   // Example code:
-  // define void @a(i8* %foo) {
-  //   %bar = getelementptr i8, i8* %foo, i64 1
-  //   %baz = getelementptr i8, i8* %foo, i64 2
-  //   store i8 0, i8* %foo
-  //   store i8 0, i8* %bar
-  //   call void @llvm.lifetime.end.p0i8(i64 3, i8* %foo)
-  //   call void @llvm.lifetime.start.p0i8(i64 3, i8* %foo)
-  //   store i8 0, i8* %foo
-  //   store i8 0, i8* %bar
-  //   call void @llvm.memset.p0i8(i8* %baz, i8 0, i64 1)
+  // define void @a() {
+  //   %foo = alloca i32
+  //   %bar = getelementptr i8, ptr %foo, i64 1
+  //   %baz = getelementptr i8, ptr %foo, i64 2
+  //   store i8 0, ptr %foo
+  //   store i8 0, ptr %bar
+  //   call void @llvm.lifetime.end.p0(ptr %foo)
+  //   call void @llvm.lifetime.start.p0(ptr %foo)
+  //   store i8 0, ptr %foo
+  //   store i8 0, ptr %bar
+  //   call void @llvm.memset.p0i8(ptr %baz, i8 0, i64 1)
   //   ret void
   // }
   //
@@ -1104,14 +1105,14 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   // it.
 
   IRBuilder<> B(C);
-  F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
 
   // Make blocks
   BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
 
   B.SetInsertPoint(Entry);
-  Value *Foo = &*F->arg_begin();
+  Value *Foo = B.CreateAlloca(B.getInt32Ty());
 
   Value *Bar = B.CreatePtrAdd(Foo, B.getInt64(1), "bar");
   Value *Baz = B.CreatePtrAdd(Foo, B.getInt64(2), "baz");
@@ -1119,14 +1120,8 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   B.CreateStore(B.getInt8(0), Foo);
   B.CreateStore(B.getInt8(0), Bar);
 
-  auto GetLifetimeIntrinsic = [&](Intrinsic::ID ID) {
-    return Intrinsic::getOrInsertDeclaration(&M, ID, {Foo->getType()});
-  };
-
-  B.CreateCall(GetLifetimeIntrinsic(Intrinsic::lifetime_end),
-               {B.getInt64(3), Foo});
-  Instruction *LifetimeStart = B.CreateCall(
-      GetLifetimeIntrinsic(Intrinsic::lifetime_start), {B.getInt64(3), Foo});
+  B.CreateLifetimeEnd(Foo);
+  Instruction *LifetimeStart = B.CreateLifetimeStart(Foo);
 
   Instruction *FooStore = B.CreateStore(B.getInt8(0), Foo);
   Instruction *BarStore = B.CreateStore(B.getInt8(0), Bar);

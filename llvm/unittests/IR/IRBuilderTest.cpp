@@ -466,15 +466,11 @@ TEST_F(IRBuilderTest, Lifetime) {
 
   CallInst *Start1 = Builder.CreateLifetimeStart(Var1);
   CallInst *Start2 = Builder.CreateLifetimeStart(Var2);
-  CallInst *Start3 = Builder.CreateLifetimeStart(Var3, Builder.getInt64(100));
+  CallInst *Start3 = Builder.CreateLifetimeStart(Var3);
 
-  EXPECT_EQ(Start1->getArgOperand(0), Builder.getInt64(-1));
-  EXPECT_EQ(Start2->getArgOperand(0), Builder.getInt64(-1));
-  EXPECT_EQ(Start3->getArgOperand(0), Builder.getInt64(100));
-
-  EXPECT_EQ(Start1->getArgOperand(1), Var1);
-  EXPECT_EQ(Start2->getArgOperand(1)->stripPointerCasts(), Var2);
-  EXPECT_EQ(Start3->getArgOperand(1), Var3);
+  EXPECT_EQ(Start1->getArgOperand(0), Var1);
+  EXPECT_EQ(Start2->getArgOperand(0), Var2);
+  EXPECT_EQ(Start3->getArgOperand(0), Var3);
 
   Value *End1 = Builder.CreateLifetimeEnd(Var1);
   Builder.CreateLifetimeEnd(Var2);

@@ -3712,8 +3712,9 @@ define <vscale x 1 x float> @vector_deinterleave_nxv1f32_nxv8f32_oneactive(<vsca
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs4r.v v8, (a0)
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vlseg8e32.v v8, (a0)
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vsetvli a2, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a0), a1
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
@@ -3732,9 +3733,11 @@ define <vscale x 1 x float> @vector_deinterleave_nxv1f32_nxv8f32_oneactive2(<vsc
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    addi a1, sp, 36
 ; CHECK-NEXT:    vs4r.v v8, (a0)
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vlseg8e32.v v3, (a0)
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetvli a2, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a1), a0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0

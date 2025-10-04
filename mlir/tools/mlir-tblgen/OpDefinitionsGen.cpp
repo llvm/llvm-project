@@ -36,6 +36,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -1127,7 +1128,7 @@ static void genPropertyVerifier(
     body << formatv(fetchProperty, varName, getterName,
                     prop.prop.getInterfaceType());
     auto uniquedFn = staticVerifierEmitter.getPropConstraintFn(prop.prop);
-    if (uniquedFn.has_value())
+    if (uniquedFn.has_value() && emitHelper.isEmittingForOp())
       body << formatv(verifyPropertyUniqued, *uniquedFn, varName, prop.name);
     else
       body << formatv(
@@ -3104,8 +3105,8 @@ void OpEmitter::genBuilder() {
     std::optional<StringRef> body = builder.getBody();
     auto properties = body ? Method::Static : Method::StaticDeclaration;
     auto *method = opClass.addMethod("void", "build", properties, arguments);
-    if (body)
-      ERROR_IF_PRUNED(method, "build", op);
+
+    ERROR_IF_PRUNED(method, "build", op);
 
     if (method)
       method->setDeprecated(builder.getDeprecatedMessage());
@@ -3849,9 +3850,9 @@ void OpEmitter::genTypeInterfaceMethods() {
     const InferredResultType &infer = op.getInferredResultType(i);
     if (!infer.isArg())
       continue;
-    Operator::OperandOrAttribute arg =
-        op.getArgToOperandOrAttribute(infer.getIndex());
-    if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
+    Operator::OperandAttrOrProp arg =
+        op.getArgToOperandAttrOrProp(infer.getIndex());
+    if (arg.kind() == Operator::OperandAttrOrProp::Kind::Operand) {
       maxAccessedIndex =
           std::max(maxAccessedIndex, arg.operandOrAttributeIndex());
     }
@@ -3877,17 +3878,16 @@ void OpEmitter::genTypeInterfaceMethods() {
       if (infer.isArg()) {
         // If this is an operand, just index into operand list to access the
         // type.
-        Operator::OperandOrAttribute arg =
-            op.getArgToOperandOrAttribute(infer.getIndex());
-        if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
+        Operator::OperandAttrOrProp arg =
+            op.getArgToOperandAttrOrProp(infer.getIndex());
+        if (arg.kind() == Operator::OperandAttrOrProp::Kind::Operand) {
           typeStr = ("operands[" + Twine(arg.operandOrAttributeIndex()) +
                      "].getType()")
                         .str();
 
           // If this is an attribute, index into the attribute dictionary.
-        } else {
-          auto *attr =
-              cast<NamedAttribute *>(op.getArg(arg.operandOrAttributeIndex()));
+        } else if (auto *attr = dyn_cast<NamedAttribute *>(
+                       op.getArg(arg.operandOrAttributeIndex()))) {
           body << "  ::mlir::TypedAttr odsInferredTypeAttr" << inferredTypeIdx
                << " = ";
           if (op.getDialect().usePropertiesForAttributes()) {
@@ -3907,6 +3907,9 @@ void OpEmitter::genTypeInterfaceMethods() {
           typeStr =
               ("odsInferredTypeAttr" + Twine(inferredTypeIdx) + ".getType()")
                   .str();
+        } else {
+          llvm::PrintFatalError(&op.getDef(),
+                                "Properties cannot be used for type inference");
         }
       } else if (std::optional<StringRef> builder =
                      op.getResult(infer.getResultIndex())
@@ -4764,6 +4767,7 @@ void OpOperandAdaptorEmitter::addVerification() {
 
   FmtContext verifyCtx;
   populateSubstitutions(emitHelper, verifyCtx);
+  genPropertyVerifier(emitHelper, verifyCtx, body, staticVerifierEmitter);
   genAttributeVerifier(emitHelper, verifyCtx, body, staticVerifierEmitter,
                        useProperties);
 
@@ -4852,7 +4856,7 @@ static void emitOpClassDecls(const RecordKeeper &records,
   }
 
   // Emit the op class declarations.
-  IfDefScope scope("GET_OP_CLASSES", os);
+  IfDefEmitter scope(os, "GET_OP_CLASSES");
   if (defs.empty())
     return;
   StaticVerifierFunctionEmitter staticVerifierEmitter(os, records);
@@ -4895,7 +4899,7 @@ static bool emitOpDecls(const RecordKeeper &records, raw_ostream &os) {
     return false;
 
   Dialect dialect = Operator(defs.front()).getDialect();
-  NamespaceEmitter ns(os, dialect);
+  DialectNamespaceEmitter ns(os, dialect);
 
   const char *const opRegistrationHook =
       "void register{0}Operations{1}({2}::{0} *dialect);\n";
@@ -4918,7 +4922,7 @@ static void emitOpDefShard(const RecordKeeper &records,
   std::string shardGuard = "GET_OP_DEFS_";
   std::string indexStr = std::to_string(shardIndex);
   shardGuard += indexStr;
-  IfDefScope scope(shardGuard, os);
+  IfDefEmitter scope(os, shardGuard);
 
   // Emit the op registration hook in the first shard.
   const char *const opRegistrationHook =
@@ -4959,14 +4963,14 @@ static bool emitOpDefs(const RecordKeeper &records, raw_ostream &os) {
   // If no shard was requested, emit the regular op list and class definitions.
   if (shardedDefs.size() == 1) {
     {
-      IfDefScope scope("GET_OP_LIST", os);
+      IfDefEmitter scope(os, "GET_OP_LIST");
       interleave(
           defs, os,
           [&](const Record *def) { os << Operator(def).getQualCppClassName(); },
           ",\n");
     }
     {
-      IfDefScope scope("GET_OP_CLASSES", os);
+      IfDefEmitter scope(os, "GET_OP_CLASSES");
       emitOpClassDefs(records, defs, os);
     }
     return false;

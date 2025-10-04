@@ -234,6 +234,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPInterchangeDirectiveClass:
     EmitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*S));
     break;
+  case Stmt::OMPFuseDirectiveClass:
+    EmitOMPFuseDirective(cast<OMPFuseDirective>(*S));
+    break;
   case Stmt::OMPForDirectiveClass:
     EmitOMPForDirective(cast<OMPForDirective>(*S));
     break;
@@ -1088,7 +1091,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   JumpDest LoopExit = getJumpDestInCurrentScope("while.end");
 
   // Store the blocks to use for break and continue.
-  BreakContinueStack.push_back(BreakContinue(LoopExit, LoopHeader));
+  BreakContinueStack.push_back(BreakContinue(S, LoopExit, LoopHeader));
 
   // C++ [stmt.while]p2:
   //   When the condition of a while statement is a declaration, the
@@ -1207,7 +1210,7 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   uint64_t ParentCount = getCurrentProfileCount();
 
   // Store the blocks to use for break and continue.
-  BreakContinueStack.push_back(BreakContinue(LoopExit, LoopCond));
+  BreakContinueStack.push_back(BreakContinue(S, LoopExit, LoopCond));
 
   // Emit the body of the loop.
   llvm::BasicBlock *LoopBody = createBasicBlock("do.body");
@@ -1291,7 +1294,9 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
                                   ArrayRef<const Attr *> ForAttrs) {
   JumpDest LoopExit = getJumpDestInCurrentScope("for.end");
 
-  LexicalScope ForScope(*this, S.getSourceRange());
+  std::optional<LexicalScope> ForScope;
+  if (getLangOpts().C99 || getLangOpts().CPlusPlus)
+    ForScope.emplace(*this, S.getSourceRange());
 
   // Evaluate the first part before the loop.
   if (S.getInit())
@@ -1328,7 +1333,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     Continue = CondDest;
   else if (!S.getConditionVariable())
     Continue = getJumpDestInCurrentScope("for.inc");
-  BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
+  BreakContinueStack.push_back(BreakContinue(S, LoopExit, Continue));
 
   if (S.getCond()) {
     // If the for statement has a condition scope, emit the local variable
@@ -1350,7 +1355,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
     // If there are any cleanups between here and the loop-exit scope,
     // create a block to stage a loop exit along.
-    if (ForScope.requiresCleanups())
+    if (ForScope && ForScope->requiresCleanups())
       ExitBlock = createBasicBlock("for.cond.cleanup");
 
     // As long as the condition is true, iterate the loop.
@@ -1419,7 +1424,8 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   EmitStopPoint(&S);
   EmitBranch(CondBlock);
 
-  ForScope.ForceCleanup();
+  if (ForScope)
+    ForScope->ForceCleanup();
 
   LoopStack.pop();
 
@@ -1510,7 +1516,7 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   JumpDest Continue = getJumpDestInCurrentScope("for.inc");
 
   // Store the blocks to use for break and continue.
-  BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
+  BreakContinueStack.push_back(BreakContinue(S, LoopExit, Continue));
 
   {
     // Create a separate cleanup scope for the loop variable and body.
@@ -1732,6 +1738,20 @@ void CodeGenFunction::EmitDeclStmt(const DeclStmt &S) {
     EmitDecl(*I, /*EvaluateConditionDecl=*/true);
 }
 
+auto CodeGenFunction::GetDestForLoopControlStmt(const LoopControlStmt &S)
+    -> const BreakContinue * {
+  if (!S.hasLabelTarget())
+    return &BreakContinueStack.back();
+
+  const Stmt *LoopOrSwitch = S.getNamedLoopOrSwitch();
+  assert(LoopOrSwitch && "break/continue target not set?");
+  for (const BreakContinue &BC : llvm::reverse(BreakContinueStack))
+    if (BC.LoopOrSwitch == LoopOrSwitch)
+      return &BC;
+
+  llvm_unreachable("break/continue target not found");
+}
+
 void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
   assert(!BreakContinueStack.empty() && "break stmt not in a loop or switch!");
 
@@ -1742,7 +1762,7 @@ void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
     EmitStopPoint(&S);
 
   ApplyAtomGroup Grp(getDebugInfo());
-  EmitBranchThroughCleanup(BreakContinueStack.back().BreakBlock);
+  EmitBranchThroughCleanup(GetDestForLoopControlStmt(S)->BreakBlock);
 }
 
 void CodeGenFunction::EmitContinueStmt(const ContinueStmt &S) {
@@ -1755,7 +1775,7 @@ void CodeGenFunction::EmitContinueStmt(const ContinueStmt &S) {
     EmitStopPoint(&S);
 
   ApplyAtomGroup Grp(getDebugInfo());
-  EmitBranchThroughCleanup(BreakContinueStack.back().ContinueBlock);
+  EmitBranchThroughCleanup(GetDestForLoopControlStmt(S)->ContinueBlock);
 }
 
 /// EmitCaseStmtRange - If case statement range is not too big then
@@ -2384,7 +2404,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   if (!BreakContinueStack.empty())
     OuterContinue = BreakContinueStack.back().ContinueBlock;
 
-  BreakContinueStack.push_back(BreakContinue(SwitchExit, OuterContinue));
+  BreakContinueStack.push_back(BreakContinue(S, SwitchExit, OuterContinue));
 
   // Emit switch body.
   EmitStmt(S.getBody());
@@ -2452,56 +2472,6 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   SwitchWeights = SavedSwitchWeights;
   SwitchLikelihood = SavedSwitchLikelihood;
   CaseRangeBlock = SavedCRBlock;
-}
-
-static std::string
-SimplifyConstraint(const char *Constraint, const TargetInfo &Target,
-                 SmallVectorImpl<TargetInfo::ConstraintInfo> *OutCons=nullptr) {
-  std::string Result;
-
-  while (*Constraint) {
-    switch (*Constraint) {
-    default:
-      Result += Target.convertConstraint(Constraint);
-      break;
-    // Ignore these
-    case '*':
-    case '?':
-    case '!':
-    case '=': // Will see this and the following in mult-alt constraints.
-    case '+':
-      break;
-    case '#': // Ignore the rest of the constraint alternative.
-      while (Constraint[1] && Constraint[1] != ',')
-        Constraint++;
-      break;
-    case '&':
-    case '%':
-      Result += *Constraint;
-      while (Constraint[1] && Constraint[1] == *Constraint)
-        Constraint++;
-      break;
-    case ',':
-      Result += "|";
-      break;
-    case 'g':
-      Result += "imr";
-      break;
-    case '[': {
-      assert(OutCons &&
-             "Must pass output names to constraints with a symbolic name");
-      unsigned Index;
-      bool result = Target.resolveSymbolicName(Constraint, *OutCons, Index);
-      assert(result && "Could not resolve symbolic name"); (void)result;
-      Result += llvm::utostr(Index);
-      break;
-    }
-    }
-
-    Constraint++;
-  }
-
-  return Result;
 }
 
 /// AddVariableConstraints - Look at AsmExpr and if it is a variable declared
@@ -2882,8 +2852,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
     // Simplify the output constraint.
     std::string OutputConstraint(S.getOutputConstraint(i));
-    OutputConstraint = SimplifyConstraint(OutputConstraint.c_str() + 1,
-                                          getTarget(), &OutputConstraintInfos);
+    OutputConstraint = getTarget().simplifyConstraint(
+        StringRef(OutputConstraint).substr(1), &OutputConstraintInfos);
 
     const Expr *OutExpr = S.getOutputExpr(i);
     OutExpr = OutExpr->IgnoreParenNoopCasts(getContext());
@@ -3045,8 +3015,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
     // Simplify the input constraint.
     std::string InputConstraint(S.getInputConstraint(i));
-    InputConstraint = SimplifyConstraint(InputConstraint.c_str(), getTarget(),
-                                         &OutputConstraintInfos);
+    InputConstraint =
+        getTarget().simplifyConstraint(InputConstraint, &OutputConstraintInfos);
 
     InputConstraint = AddVariableConstraints(
         InputConstraint, *InputExpr->IgnoreParenNoopCasts(getContext()),
@@ -3279,7 +3249,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
 LValue CodeGenFunction::InitCapturedStruct(const CapturedStmt &S) {
   const RecordDecl *RD = S.getCapturedRecordDecl();
-  QualType RecordTy = getContext().getRecordType(RD);
+  CanQualType RecordTy = getContext().getCanonicalTagType(RD);
 
   // Initialize the captured struct.
   LValue SlotLV =
@@ -3359,7 +3329,7 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
 
   // Initialize variable-length arrays.
   LValue Base = MakeNaturalAlignRawAddrLValue(
-      CapturedStmtInfo->getContextValue(), Ctx.getTagDeclType(RD));
+      CapturedStmtInfo->getContextValue(), Ctx.getCanonicalTagType(RD));
   for (auto *FD : RD->fields()) {
     if (FD->hasCapturedVLAType()) {
       auto *ExprArg =

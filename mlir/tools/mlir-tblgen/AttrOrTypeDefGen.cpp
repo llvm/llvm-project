@@ -10,12 +10,12 @@
 #include "CppGenUtilities.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Class.h"
-#include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
@@ -71,14 +71,14 @@ public:
 
   void emitDecl(raw_ostream &os) const {
     if (storageCls && def.genStorageClass()) {
-      NamespaceEmitter ns(os, def.getStorageNamespace());
+      llvm::NamespaceEmitter ns(os, def.getStorageNamespace());
       os << "struct " << def.getStorageClassName() << ";\n";
     }
     defCls.writeDeclTo(os);
   }
   void emitDef(raw_ostream &os) const {
     if (storageCls && def.genStorageClass()) {
-      NamespaceEmitter ns(os, def.getStorageNamespace());
+      llvm::NamespaceEmitter ns(os, def.getStorageNamespace());
       storageCls->writeDeclTo(os); // everything is inline
     }
     defCls.writeDefTo(os);
@@ -495,7 +495,7 @@ void DefGen::emitCheckedBuilder() {
   MethodBody &body = m->body().indent();
   auto scope = body.scope("return Base::getChecked(emitError, context", ");");
   for (const auto &param : params)
-    body << ", " << param.getName();
+    body << ", std::move(" << param.getName() << ")";
 }
 
 static SmallVector<MethodParameter>
@@ -513,14 +513,57 @@ getCustomBuilderParams(std::initializer_list<MethodParameter> prefix,
   return builderParams;
 }
 
+static std::string getSignature(const Method &m) {
+  std::string signature;
+  llvm::raw_string_ostream os(signature);
+  raw_indented_ostream indentedOs(os);
+  m.writeDeclTo(indentedOs);
+  return signature;
+}
+
+static void emitDuplicatedBuilderError(const Method &currentMethod,
+                                       StringRef methodName,
+                                       const Class &defCls,
+                                       const AttrOrTypeDef &def) {
+
+  // Try to search for method that makes `get` redundant.
+  auto loc = def.getDef()->getFieldLoc("builders");
+  for (auto &method : defCls.getMethods()) {
+    if (method->getName() == methodName &&
+        method->makesRedundant(currentMethod)) {
+      PrintError(loc, llvm::Twine("builder `") + methodName +
+                          "` conflicts with an existing builder. ");
+      PrintFatalNote(llvm::Twine("A new builder with signature:\n") +
+                     getSignature(currentMethod) +
+                     "\nis shadowed by an existing builder with signature:\n" +
+                     getSignature(*method) +
+                     "\nPlease remove one of the conflicting "
+                     "definitions.");
+    }
+  }
+
+  // This code shouldn't be reached, but leaving this here for potential future
+  // use.
+  PrintFatalError(loc, "Failed to generate builder " + methodName);
+}
+
 void DefGen::emitCustomBuilder(const AttrOrTypeBuilder &builder) {
   // Don't emit a body if there isn't one.
   auto props = builder.getBody() ? Method::Static : Method::StaticDeclaration;
   StringRef returnType = def.getCppClassName();
   if (std::optional<StringRef> builderReturnType = builder.getReturnType())
     returnType = *builderReturnType;
-  Method *m = defCls.addMethod(returnType, "get", props,
-                               getCustomBuilderParams({}, builder));
+
+  llvm::StringRef methodName = "get";
+  const auto parameters = getCustomBuilderParams({}, builder);
+  Method *m = defCls.addMethod(returnType, methodName, props, parameters);
+
+  // If method is pruned, report error and terminate.
+  if (!m) {
+    auto curMethod = Method(returnType, methodName, props, parameters);
+    emitDuplicatedBuilderError(curMethod, methodName, defCls, def);
+  }
+
   if (!builder.getBody())
     return;
 
@@ -547,11 +590,19 @@ void DefGen::emitCheckedCustomBuilder(const AttrOrTypeBuilder &builder) {
   StringRef returnType = def.getCppClassName();
   if (std::optional<StringRef> builderReturnType = builder.getReturnType())
     returnType = *builderReturnType;
-  Method *m = defCls.addMethod(
-      returnType, "getChecked", props,
-      getCustomBuilderParams(
-          {{"::llvm::function_ref<::mlir::InFlightDiagnostic()>", "emitError"}},
-          builder));
+
+  llvm::StringRef methodName = "getChecked";
+  auto parameters = getCustomBuilderParams(
+      {{"::llvm::function_ref<::mlir::InFlightDiagnostic()>", "emitError"}},
+      builder);
+  Method *m = defCls.addMethod(returnType, methodName, props, parameters);
+
+  // If method is pruned, report error and terminate.
+  if (!m) {
+    auto curMethod = Method(returnType, methodName, props, parameters);
+    emitDuplicatedBuilderError(curMethod, methodName, defCls, def);
+  }
+
   if (!builder.getBody())
     return;
 
@@ -799,7 +850,7 @@ class AsmPrinter;
 
 bool DefGenerator::emitDecls(StringRef selectedDialect) {
   emitSourceFileHeader((defType + "Def Declarations").str(), os);
-  IfDefScope scope("GET_" + defType.upper() + "DEF_CLASSES", os);
+  llvm::IfDefEmitter scope(os, "GET_" + defType.upper() + "DEF_CLASSES");
 
   // Output the common "header".
   os << typeDefDeclHeader;
@@ -809,7 +860,7 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
   if (defs.empty())
     return false;
   {
-    NamespaceEmitter nsEmitter(os, defs.front().getDialect());
+    DialectNamespaceEmitter nsEmitter(os, defs.front().getDialect());
 
     // Declare all the def classes first (in case they reference each other).
     for (const AttrOrTypeDef &def : defs) {
@@ -841,7 +892,7 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
 //===----------------------------------------------------------------------===//
 
 void DefGenerator::emitTypeDefList(ArrayRef<AttrOrTypeDef> defs) {
-  IfDefScope scope("GET_" + defType.upper() + "DEF_LIST", os);
+  llvm::IfDefEmitter scope(os, "GET_" + defType.upper() + "DEF_LIST");
   auto interleaveFn = [&](const AttrOrTypeDef &def) {
     os << def.getDialect().getCppNamespace() << "::" << def.getCppClassName();
   };
@@ -1032,11 +1083,11 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
     return false;
   emitTypeDefList(defs);
 
-  IfDefScope scope("GET_" + defType.upper() + "DEF_CLASSES", os);
+  llvm::IfDefEmitter scope(os, "GET_" + defType.upper() + "DEF_CLASSES");
   emitParsePrintDispatch(defs);
   for (const AttrOrTypeDef &def : defs) {
     {
-      NamespaceEmitter ns(os, def.getDialect());
+      DialectNamespaceEmitter ns(os, def.getDialect());
       DefGen gen(def);
       gen.emitDef(os);
     }
@@ -1051,7 +1102,7 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
 
   // Emit the default parser/printer for Attributes if the dialect asked for it.
   if (isAttrGenerator && firstDialect.useDefaultAttributePrinterParser()) {
-    NamespaceEmitter nsEmitter(os, firstDialect);
+    DialectNamespaceEmitter nsEmitter(os, firstDialect);
     if (firstDialect.isExtensible()) {
       os << llvm::formatv(dialectDefaultAttrPrinterParserDispatch,
                           firstDialect.getCppClassName(),
@@ -1065,7 +1116,7 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
 
   // Emit the default parser/printer for Types if the dialect asked for it.
   if (!isAttrGenerator && firstDialect.useDefaultTypePrinterParser()) {
-    NamespaceEmitter nsEmitter(os, firstDialect);
+    DialectNamespaceEmitter nsEmitter(os, firstDialect);
     if (firstDialect.isExtensible()) {
       os << llvm::formatv(dialectDefaultTypePrinterParserDispatch,
                           firstDialect.getCppClassName(),
