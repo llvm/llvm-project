@@ -7957,9 +7957,9 @@ bool VPRecipeBuilder::getScaledReductions(
   auto CollectExtInfo = [this, &Exts, &ExtOpTypes,
                          &ExtKinds](SmallVectorImpl<Value *> &Ops) -> bool {
     for (const auto &[I, OpI] : enumerate(Ops)) {
-      auto *CI = dyn_cast<ConstantInt>(OpI);
-      if (I > 0 && CI &&
-          canConstantBeExtended(CI, ExtOpTypes[0], ExtKinds[0])) {
+      const APInt *C;
+      if (I > 0 && match(OpI, m_APInt(C)) &&
+          canConstantBeExtended(C, ExtOpTypes[0], ExtKinds[0])) {
         ExtOpTypes[I] = ExtOpTypes[0];
         ExtKinds[I] = ExtKinds[0];
         continue;
