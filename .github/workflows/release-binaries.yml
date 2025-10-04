@@ -286,8 +286,8 @@ jobs:
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
         mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
 
-   - name: Enable long paths
-     run: reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f
+    - name: Enable long paths
+      run: reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f
 
     # There is an issue with building on Windows with bash so we use power shell.
     # ninja: error: mkdir(tools/clang/tools/extra/clang-tidy/misc/ConfusableTable/CMakeFiles/clang-tidy-confusable-chars-gen.dir/C_/actions-runner/llvm-project/llvm-project/llvm): No such file or directory
