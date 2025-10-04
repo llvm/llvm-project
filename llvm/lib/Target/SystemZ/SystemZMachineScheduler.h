@@ -5,14 +5,24 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+// -------------------------- Pre RA scheduling ----------------------------- //
+//
+// SystemZPreRASchedStrategy tries to reduce register pressure by applying
+// OOO heuristics and then also in certain regions reduces latency. Tiny
+// regions are mostly left alone as the input order is usually then preferred
+// (due to copys involving physregs and comparison elimination
+// opportunities).
 //
 // -------------------------- Post RA scheduling ---------------------------- //
+//
 // SystemZPostRASchedStrategy is a scheduling strategy which is plugged into
 // the MachineScheduler. It has a sorted Available set of SUs and a pickNode()
 // implementation that looks to optimize decoder grouping and balance the
 // usage of processor resources. Scheduler states are saved for the end
 // region of each MBB, so that a successor block can learn from it.
-//===----------------------------------------------------------------------===//
+//
+//----------------------------------------------------------------------------//
 
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H
@@ -23,6 +33,58 @@
 #include <set>
 
 namespace llvm {
+
+/// A MachineSchedStrategy implementation for SystemZ pre RA scheduling.
+class SystemZPreRASchedStrategy : public GenericScheduler {
+  // A TinyRegion has up to 10 instructions and is scheduled less
+  // aggressively. Reordering these are more likely to disrupt copy /
+  // comparison elimination while the potential benefit is less than in
+  // bigger regions.
+  bool TinyRegion;
+
+  // Num instructions left to schedule.
+  unsigned NumLeft;
+
+  // True if there are many more SUs than the overall height of the DAG.
+  bool IsWideDAG;
+
+  // True if the region has many instructions in def-use sequences and would
+  // likely benefit from latency reduction.
+  bool HasDataSequences;
+
+  // Return true if the scheduled latency should be minimized.
+  bool shouldReduceLatency(SchedBoundary *Zone) const;
+
+  // Only call computeRemLatency() once before each scheduled node.
+  mutable unsigned RemLat;
+  unsigned getRemLat(SchedBoundary *Zone) const;
+
+  // Make sure a large group of stores do not all end up at the bottom.
+  std::set<const SUnit *> StoresGroup;
+  bool FirstStoreInGroupScheduled;
+  void initializeStoresGroup();
+
+  // Compute the effect on register liveness by scheduling C next. An
+  // instruction that defines a live register without causing any other
+  // register to become live reduces liveness, while a store of a non-live
+  // register would increase it.
+  int computeSULivenessScore(SchedCandidate &C, ScheduleDAGMILive *DAG,
+                             SchedBoundary *Zone) const;
+
+protected:
+  bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                    SchedBoundary *Zone) const override;
+
+public:
+  SystemZPreRASchedStrategy(const MachineSchedContext *C)
+      : GenericScheduler(C) {}
+
+  void initPolicy(MachineBasicBlock::iterator Begin,
+                  MachineBasicBlock::iterator End,
+                  unsigned NumRegionInstrs) override;
+  void initialize(ScheduleDAGMI *dag) override;
+  void schedNode(SUnit *SU, bool IsTopNode) override;
+};
 
 /// A MachineSchedStrategy implementation for SystemZ post RA scheduling.
 class SystemZPostRASchedStrategy : public MachineSchedStrategy {

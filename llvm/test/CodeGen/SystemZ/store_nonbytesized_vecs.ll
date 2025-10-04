@@ -172,13 +172,13 @@ define void @fun2(<8 x i32> %src, ptr %p)
 define void @fun3(ptr %src, ptr %p)
 ; CHECK-LABEL: fun3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgbm %v0, 0
-; CHECK-NEXT:    vleg %v0, 0(%r2), 1
 ; CHECK-NEXT:    vgbm %v1, 0
-; CHECK-NEXT:    vlef %v1, 8(%r2), 3
+; CHECK-NEXT:    vleg %v1, 0(%r2), 1
+; CHECK-NEXT:    vgbm %v0, 0
+; CHECK-NEXT:    vlef %v0, 8(%r2), 3
 ; CHECK-NEXT:    vrepib %v2, 32
-; CHECK-NEXT:    vslb %v0, %v0, %v2
-; CHECK-NEXT:    vo %v0, %v1, %v0
+; CHECK-NEXT:    vslb %v1, %v1, %v2
+; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vstef %v0, 8(%r3), 3
 ; CHECK-NEXT:    vsrlb %v0, %v0, %v2
 ; CHECK-NEXT:    vsteg %v0, 0(%r3), 1

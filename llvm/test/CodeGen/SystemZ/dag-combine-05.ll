@@ -9,17 +9,17 @@
 define void @fun(i16 %arg0, ptr %src, ptr %dst) {
 ; CHECK-LABEL: fun:
 ; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    llh %r1, 0(%r3)
 ; CHECK-NEXT:    llhr %r0, %r2
-; CHECK-NEXT:    llh %r2, 0(%r3)
 ; CHECK-NEXT:    chi %r0, 9616
-; CHECK-NEXT:    lhi %r1, 0
-; CHECK-NEXT:    lochil %r1, 1
-; CHECK-NEXT:    afi %r2, 65535
-; CHECK-NEXT:    llhr %r3, %r2
 ; CHECK-NEXT:    lhi %r0, 0
-; CHECK-NEXT:    cr %r3, %r2
-; CHECK-NEXT:    lochilh %r0, 1
-; CHECK-NEXT:    ar %r0, %r1
+; CHECK-NEXT:    lochil %r0, 1
+; CHECK-NEXT:    afi %r1, 65535
+; CHECK-NEXT:    llhr %r2, %r1
+; CHECK-NEXT:    lhi %r3, 0
+; CHECK-NEXT:    cr %r2, %r1
+; CHECK-NEXT:    lochilh %r3, 1
+; CHECK-NEXT:    ar %r0, %r3
 ; CHECK-NEXT:    st %r0, 0(%r4)
 ; CHECK-NEXT:    br %r14
 bb:
