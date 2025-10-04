@@ -288,6 +288,7 @@ const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureFlatForGlobal,
     AMDGPU::FeaturePromoteAlloca, AMDGPU::FeatureUnalignedScratchAccess,
     AMDGPU::FeatureUnalignedAccessMode,
+    AMDGPU::FeatureDisableAggressiveFMAFusion,
 
     AMDGPU::FeatureAutoWaitcntBeforeBarrier,
 
