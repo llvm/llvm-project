@@ -6,3 +6,6 @@ needs post merge ingtegration
 [NFC][LLVM] Use ListSeparator in AsmWriter (#161422)
 [NFC][LLVM] Misc code cleanup in AsmWriter.cpp (#161522)
 ---
+breaks sles/almalinux AFAR build of rocm-bandwidth-test
+e9972debc98c [Clang] Normalize constraints before checking for satisfaction (#161671)
+---
