@@ -810,7 +810,7 @@ def s17imm64 : Operand<i64> {
 }
 def PPCS32ImmAsmOperand : AsmOperandClass {
   let Name = "S32Imm";
-  let PredicateMethod = "isS32Imm";
+  let PredicateMethod = "isSImmExpr<32>";
   let RenderMethod = "addImmOperands";
 }
 def s32imm : Operand<i64> {
@@ -829,7 +829,7 @@ def s32imm_pcrel : Operand<i64> {
 }
 def PPCS34ImmAsmOperand : AsmOperandClass {
   let Name = "S34Imm";
-  let PredicateMethod = "isS34Imm";
+  let PredicateMethod = "isSImmExpr<34>";
   let RenderMethod = "addImmOperands";
 }
 def s34imm : Operand<i64> {
@@ -933,7 +933,7 @@ def ptr_rc_nor0 : RegisterOperand<ptr_rc_nor0_by_hwmode> {
 
 // New addressing modes with 34 bit immediates.
 def PPCDispRI34Operand : AsmOperandClass {
-  let Name = "DispRI34"; let PredicateMethod = "isS34Imm";
+  let Name = "DispRI34"; let PredicateMethod = "isSImmExpr<34>";
   let RenderMethod = "addImmOperands";
 }
 def dispRI34 : Operand<iPTR> {
