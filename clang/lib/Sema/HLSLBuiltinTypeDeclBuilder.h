@@ -95,6 +95,8 @@ public:
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
 
+  BuiltinTypeDeclBuilder &addGetDimensionsMethodForBuffer();
+
 private:
   BuiltinTypeDeclBuilder &addResourceMember(StringRef MemberName,
                                             ResourceClass RC, bool IsROV,
