@@ -425,6 +425,22 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   endif()
 endif()
 
+# Install build-generated Clang configuration files (if presented).
+install(DIRECTORY ${LLVM_BINARY_DIR}/bin/
+  TYPE BIN
+  COMPONENT clang-configs
+  FILES_MATCHING
+  PATTERN "*.cfg"
+  )
+add_custom_target(clang-configs DEPENDS clang)
+set_target_properties(clang-configs PROPERTIES FOLDER "Clang/Configurations")
+if(NOT LLVM_ENABLE_IDE)
+  # Add a dummy target so this can be used with LLVM_DISTRIBUTION_COMPONENTS.
+  add_llvm_install_targets(install-clang-configs
+                           DEPENDS clang-configs
+                           COMPONENT clang-configs)
+endif()
+
 option(CLANG_BUILD_TOOLS
   "Build the Clang tools. If OFF, just generate build targets." ON)
 
