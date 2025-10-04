@@ -3,12 +3,11 @@
 ; REQUIRES: asserts
 
 ; Parallelization of detected matrix-multiplication.
-; Currently, this is not supported. Due to Packed_A/Packed_B not private
-; per-thread the outer loops cannot be parallelized and a
-; '#pragma omp parallel for' on an inner loop may impose too much overhead.
+; The outer loop should be parallelized.
+; AST: // 1st level tiling - Tiles
+; AST-NEXT: #pragma omp parallel for
 
-target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-windows-msvc19.16.27034"
+; CODEGEN: polly.parallel.for
 
 define i32 @foo(ptr nocapture readonly %A, ptr nocapture readonly %B, ptr nocapture %C) {
 entry:
@@ -53,8 +52,3 @@ for.body8:
   %exitcond = icmp eq i64 %indvars.iv.next, 1536
   br i1 %exitcond, label %for.cond.cleanup7, label %for.body8
 }
-
-
-; AST-NOT: parallel
-
-; CODEGEN-NOT: subfunc
