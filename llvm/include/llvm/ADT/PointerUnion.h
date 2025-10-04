@@ -31,7 +31,7 @@ namespace pointer_union_detail {
   /// Determine the number of bits required to store integers with values < n.
   /// This is ceil(log2(n)).
   constexpr int bitsRequired(unsigned n) {
-    return n > 1 ? 1 + bitsRequired((n + 1) / 2) : 0;
+    return n == 0 ? 0 : llvm::bit_width_constexpr(n - 1);
   }
 
   template <typename... Ts> constexpr int lowBitsAvailable() {

@@ -932,7 +932,9 @@ static MachineOperand *lookUpCopyChain(const SIInstrInfo &TII,
   for (MachineInstr *SubDef = MRI.getVRegDef(SrcReg);
        SubDef && TII.isFoldableCopy(*SubDef);
        SubDef = MRI.getVRegDef(Sub->getReg())) {
-    MachineOperand &SrcOp = SubDef->getOperand(1);
+    unsigned SrcIdx = TII.getFoldableCopySrcIdx(*SubDef);
+    MachineOperand &SrcOp = SubDef->getOperand(SrcIdx);
+
     if (SrcOp.isImm())
       return &SrcOp;
     if (!SrcOp.isReg() || SrcOp.getReg().isPhysical())

@@ -428,6 +428,32 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitUnaryFPBuiltin<cir::ATanOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_cos:
     return emitUnaryFPBuiltin<cir::CosOp>(*this, *e);
+  case Builtin::BI__builtin_coro_id:
+  case Builtin::BI__builtin_coro_promise:
+  case Builtin::BI__builtin_coro_resume:
+  case Builtin::BI__builtin_coro_noop:
+  case Builtin::BI__builtin_coro_destroy:
+  case Builtin::BI__builtin_coro_done:
+  case Builtin::BI__builtin_coro_alloc:
+  case Builtin::BI__builtin_coro_begin:
+  case Builtin::BI__builtin_coro_end:
+  case Builtin::BI__builtin_coro_suspend:
+  case Builtin::BI__builtin_coro_align:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_id like NYI");
+    return getUndefRValue(e->getType());
+
+  case Builtin::BI__builtin_coro_frame: {
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_frame NYI");
+    assert(!cir::MissingFeatures::coroutineFrame());
+    return getUndefRValue(e->getType());
+  }
+  case Builtin::BI__builtin_coro_free:
+  case Builtin::BI__builtin_coro_size: {
+    cgm.errorNYI(e->getSourceRange(),
+                 "BI__builtin_coro_free, BI__builtin_coro_size NYI");
+    assert(!cir::MissingFeatures::coroSizeBuiltinCall());
+    return getUndefRValue(e->getType());
+  }
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit

@@ -3298,10 +3298,11 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo);
 
     Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
-
+    bool UsedByLoadStoreAddress = isUsedByLoadStoreAddress(this);
     InstructionCost ScalarCost =
         ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(
-                              PtrTy, &Ctx.SE, nullptr, Ctx.CostKind);
+                              PtrTy, UsedByLoadStoreAddress ? nullptr : &Ctx.SE,
+                              nullptr, Ctx.CostKind);
     if (isSingleScalar())
       return ScalarCost;
 
@@ -3312,7 +3313,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // vectorized addressing or the loaded value is used as part of an address
     // of another load or store.
     bool PreferVectorizedAddressing = Ctx.TTI.prefersVectorizedAddressing();
-    if (PreferVectorizedAddressing || !isUsedByLoadStoreAddress(this)) {
+    if (PreferVectorizedAddressing || !UsedByLoadStoreAddress) {
       bool EfficientVectorLoadStore =
           Ctx.TTI.supportsEfficientVectorElementLoadStore();
       if (!(IsLoad && !PreferVectorizedAddressing) &&

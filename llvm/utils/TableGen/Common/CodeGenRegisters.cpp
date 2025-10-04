@@ -857,17 +857,6 @@ unsigned CodeGenRegisterClass::getWeight(const CodeGenRegBank &RegBank) const {
   return (*Members.begin())->getWeight(RegBank);
 }
 
-namespace llvm {
-
-raw_ostream &operator<<(raw_ostream &OS, const CodeGenRegisterClass::Key &K) {
-  OS << "{ " << K.RSI;
-  for (const auto R : *K.Members)
-    OS << ", " << R->getName();
-  return OS << " }";
-}
-
-} // end namespace llvm
-
 // This is a simple lexicographical order that can be used to search for sets.
 // It is not the same as the topological order provided by TopoOrderRC.
 bool CodeGenRegisterClass::Key::operator<(

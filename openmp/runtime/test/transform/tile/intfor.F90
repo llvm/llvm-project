@@ -10,6 +10,7 @@
 ! RUN: %t-ub18.exe | FileCheck %s --match-full-lines
 
 program tile_intfor_1d
+  implicit none
   integer i
   print *, 'do'
 
