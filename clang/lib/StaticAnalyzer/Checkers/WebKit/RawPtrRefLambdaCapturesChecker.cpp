@@ -52,7 +52,7 @@ public:
       llvm::DenseSet<const ValueDecl *> ProtectedThisDecls;
       llvm::DenseSet<const CallExpr *> CallToIgnore;
       llvm::DenseSet<const CXXConstructExpr *> ConstructToIgnore;
-      llvm::DenseMap<const VarDecl*, const LambdaExpr*> LambdaOwnerMap;
+      llvm::DenseMap<const VarDecl *, const LambdaExpr *> LambdaOwnerMap;
 
       QualType ClsType;
 
@@ -248,8 +248,7 @@ public:
             }
           }
           checkParameters(CE, Callee);
-        }
-        else if (auto *CalleeE = CE->getCallee()) {
+        } else if (auto *CalleeE = CE->getCallee()) {
           if (auto *DRE = dyn_cast<DeclRefExpr>(CalleeE->IgnoreParenCasts())) {
             if (auto *Callee = dyn_cast_or_null<FunctionDecl>(DRE->getDecl()))
               checkParameters(CE, Callee);
@@ -459,7 +458,7 @@ public:
 
   void visitLambdaExpr(const LambdaExpr *L, bool shouldCheckThis,
                        const QualType T,
-                        bool ignoreParamVarDecl = false) const {
+                       bool ignoreParamVarDecl = false) const {
     if (TFA.isTrivial(L->getBody()))
       return;
     for (const LambdaCapture &C : L->captures()) {
