@@ -3061,8 +3061,19 @@ mlir::LogicalResult CIRToLLVMComplexImagOpLowering::matchAndRewrite(
     cir::ComplexImagOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
-  rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
-      op, resultLLVMTy, adaptor.getOperand(), llvm::ArrayRef<std::int64_t>{1});
+  mlir::Value operand = adaptor.getOperand();
+  mlir::Location loc = op.getLoc();
+
+  if (mlir::isa<cir::ComplexType>(op.getOperand().getType())) {
+    operand = mlir::LLVM::ExtractValueOp::create(
+        rewriter, loc, resultLLVMTy, operand, llvm::ArrayRef<std::int64_t>{1});
+  } else {
+    mlir::TypedAttr zeroAttr = rewriter.getZeroAttr(resultLLVMTy);
+    operand =
+        mlir::LLVM::ConstantOp::create(rewriter, loc, resultLLVMTy, zeroAttr);
+  }
+
+  rewriter.replaceOp(op, operand);
   return mlir::success();
 }
 
