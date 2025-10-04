@@ -1766,24 +1766,14 @@ define i32 @sqdmlsl_lane_1s(i32 %A, i16 %B, <4 x i16> %C) nounwind {
 declare i32 @llvm.aarch64.neon.sqsub.i32(i32, i32)
 
 define i32 @sqadd_lane1_sqdmull4s(i32 %A, <4 x i16> %B, <4 x i16> %C) nounwind {
-; CHECK-SD-LABEL: sqadd_lane1_sqdmull4s:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sqdmull v0.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    fmov s1, w8
-; CHECK-SD-NEXT:    sqadd s0, s0, s1
-; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sqadd_lane1_sqdmull4s:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sqdmull v0.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    mov s0, v0.s[1]
-; CHECK-GI-NEXT:    sqadd s0, s1, s0
-; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sqadd_lane1_sqdmull4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmull v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    mov s0, v0.s[1]
+; CHECK-NEXT:    sqadd s0, s1, s0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
   %prod.vec = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %B, <4 x i16> %C)
   %prod = extractelement <4 x i32> %prod.vec, i32 1
   %res = call i32 @llvm.aarch64.neon.sqadd.i32(i32 %A, i32 %prod)
@@ -1791,24 +1781,14 @@ define i32 @sqadd_lane1_sqdmull4s(i32 %A, <4 x i16> %B, <4 x i16> %C) nounwind {
 }
 
 define i32 @sqsub_lane1_sqdmull4s(i32 %A, <4 x i16> %B, <4 x i16> %C) nounwind {
-; CHECK-SD-LABEL: sqsub_lane1_sqdmull4s:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sqdmull v0.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    fmov s1, w8
-; CHECK-SD-NEXT:    sqsub s0, s0, s1
-; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sqsub_lane1_sqdmull4s:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sqdmull v0.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    mov s0, v0.s[1]
-; CHECK-GI-NEXT:    sqsub s0, s1, s0
-; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sqsub_lane1_sqdmull4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmull v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    mov s0, v0.s[1]
+; CHECK-NEXT:    sqsub s0, s1, s0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
   %prod.vec = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %B, <4 x i16> %C)
   %prod = extractelement <4 x i32> %prod.vec, i32 1
   %res = call i32 @llvm.aarch64.neon.sqsub.i32(i32 %A, i32 %prod)
