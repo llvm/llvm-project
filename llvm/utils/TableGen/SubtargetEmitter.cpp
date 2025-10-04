@@ -1588,16 +1588,17 @@ static void emitPredicates(const CodeGenSchedTransition &T,
 
       if (Rec->isSubClassOf("FeatureSchedPredicate")) {
         const Record *FR = Rec->getValueAsDef("Feature");
-        if (PE.shouldExpandForMC())
+        if (PE.shouldExpandForMC()) {
           // MC version of this predicate will be emitted into
           // resolveVariantSchedClassImpl, which accesses MCSubtargetInfo
           // through argument STI.
           SS << "STI.";
-        else
+        } else {
           // Otherwise, this predicate will be emitted directly into
           // TargetGenSubtargetInfo::resolveSchedClass, which can just access
           // TargetSubtargetInfo / MCSubtargetInfo through `this`.
           SS << "this->";
+        }
         SS << "hasFeature(" << PE.getTargetName() << "::" << FR->getName()
            << ")";
         continue;
