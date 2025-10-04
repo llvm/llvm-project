@@ -6808,12 +6808,13 @@ public:
   /// they were computed by collectAttachPtrExprInfo(), if they are semantically
   /// different.
   struct AttachPtrExprComparator {
-    const MappableExprsHandler *Handler = nullptr;
+    const MappableExprsHandler &Handler;
     // Cache of previous equality comparison results.
     mutable llvm::DenseMap<std::pair<const Expr *, const Expr *>, bool>
         CachedEqualityComparisons;
 
-    AttachPtrExprComparator(const MappableExprsHandler *H) : Handler(H) {}
+    AttachPtrExprComparator(const MappableExprsHandler &H) : Handler(H) {}
+    AttachPtrExprComparator() = delete;
 
     // Return true iff LHS is "less than" RHS.
     bool operator()(const Expr *LHS, const Expr *RHS) const {
@@ -6821,15 +6822,15 @@ public:
         return false;
 
       // First, compare by complexity (depth)
-      const auto ItLHS = Handler->AttachPtrComponentDepthMap.find(LHS);
-      const auto ItRHS = Handler->AttachPtrComponentDepthMap.find(RHS);
+      const auto ItLHS = Handler.AttachPtrComponentDepthMap.find(LHS);
+      const auto ItRHS = Handler.AttachPtrComponentDepthMap.find(RHS);
 
       std::optional<size_t> DepthLHS =
-          (ItLHS != Handler->AttachPtrComponentDepthMap.end()) ? ItLHS->second
-                                                               : std::nullopt;
+          (ItLHS != Handler.AttachPtrComponentDepthMap.end()) ? ItLHS->second
+                                                              : std::nullopt;
       std::optional<size_t> DepthRHS =
-          (ItRHS != Handler->AttachPtrComponentDepthMap.end()) ? ItRHS->second
-                                                               : std::nullopt;
+          (ItRHS != Handler.AttachPtrComponentDepthMap.end()) ? ItRHS->second
+                                                              : std::nullopt;
 
       // std::nullopt (no attach pointer) has lowest complexity
       if (!DepthLHS.has_value() && !DepthRHS.has_value()) {
@@ -6877,8 +6878,8 @@ public:
     /// Returns true iff LHS was computed before RHS by
     /// collectAttachPtrExprInfo().
     bool wasComputedBefore(const Expr *LHS, const Expr *RHS) const {
-      const size_t &OrderLHS = Handler->AttachPtrComputationOrderMap.at(LHS);
-      const size_t &OrderRHS = Handler->AttachPtrComputationOrderMap.at(RHS);
+      const size_t &OrderLHS = Handler.AttachPtrComputationOrderMap.at(LHS);
+      const size_t &OrderRHS = Handler.AttachPtrComputationOrderMap.at(RHS);
 
       return OrderLHS < OrderRHS;
     }
@@ -6897,7 +6898,7 @@ public:
       if (!LHS || !RHS)
         return false;
 
-      ASTContext &Ctx = Handler->CGF.getContext();
+      ASTContext &Ctx = Handler.CGF.getContext();
       // Strip away parentheses and no-op casts to get to the core expression
       LHS = LHS->IgnoreParenNoopCasts(Ctx);
       RHS = RHS->IgnoreParenNoopCasts(Ctx);
@@ -7246,6 +7247,10 @@ private:
   llvm::DenseMap<const Expr *, size_t> AttachPtrComputationOrderMap = {
       {nullptr, 0}};
 
+  /// An instance of attach-ptr-expr comparator that can be used throughout the
+  /// lifetime of this handler.
+  AttachPtrExprComparator AttachPtrComparator;
+
   llvm::Value *getExprTypeSize(const Expr *E) const {
     QualType ExprTy = E->getType().getCanonicalType();
 
@@ -7411,6 +7416,38 @@ private:
 
     llvm::APSInt ConstLength = Result.Val.getInt();
     return ConstLength.getSExtValue() != 1;
+  }
+
+  /// Emit an attach entry into \p CombinedInfo, using the information from \p
+  /// AttachInfo. For example, for a map of form `int *p; ... map(p[1:10])`,
+  /// an attach entry has the following form:
+  ///   &p, &p[1], sizeof(void*), ATTACH
+  void emitAttachEntry(CodeGenFunction &CGF, MapCombinedInfoTy &CombinedInfo,
+                       const AttachInfoTy &AttachInfo) const {
+    assert(AttachInfo.isValid() &&
+           "Expected valid attach pointer/pointee information!");
+
+    // Size is the size of the pointer itself - use pointer size, not BaseDecl
+    // size
+    llvm::Value *PointerSize = CGF.Builder.CreateIntCast(
+        llvm::ConstantInt::get(
+            CGF.CGM.SizeTy, CGF.getContext()
+                                .getTypeSizeInChars(CGF.getContext().VoidPtrTy)
+                                .getQuantity()),
+        CGF.Int64Ty, /*isSigned=*/true);
+
+    CombinedInfo.Exprs.emplace_back(AttachInfo.AttachPtrDecl,
+                                    AttachInfo.AttachMapExpr);
+    CombinedInfo.BasePointers.push_back(
+        AttachInfo.AttachPtrAddr.emitRawPointer(CGF));
+    CombinedInfo.DevicePtrDecls.push_back(nullptr);
+    CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
+    CombinedInfo.Pointers.push_back(
+        AttachInfo.AttachPteeAddr.emitRawPointer(CGF));
+    CombinedInfo.Sizes.push_back(PointerSize);
+    CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+    CombinedInfo.Mappers.push_back(nullptr);
+    CombinedInfo.NonContigInfo.Dims.push_back(1);
   }
 
   /// A helper class to copy structures with overlapped elements, i.e. those
@@ -8963,7 +9000,7 @@ private:
 
 public:
   MappableExprsHandler(const OMPExecutableDirective &Dir, CodeGenFunction &CGF)
-      : CurDir(&Dir), CGF(CGF) {
+      : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {
     // Extract firstprivate clause information.
     for (const auto *C : Dir.getClausesOfKind<OMPFirstprivateClause>())
       for (const auto *D : C->varlist())
@@ -9009,7 +9046,7 @@ public:
 
   /// Constructor for the declare mapper directive.
   MappableExprsHandler(const OMPDeclareMapperDecl &Dir, CodeGenFunction &CGF)
-      : CurDir(&Dir), CGF(CGF) {}
+      : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {}
 
   /// Generate code for the combined entry if we have a partially mapped struct
   /// and take care of the mapping flags of the arguments corresponding to
@@ -9248,6 +9285,156 @@ public:
       OpenMPOffloadMappingFlags MemberOfFlag =
           OMPBuilder.getMemberOfFlag(TgtIdx);
       OMPBuilder.setCorrectMemberOfFlag(Types[I], MemberOfFlag);
+    }
+  }
+
+  /// On a target construct, if there's an implicit map on a struct, or that of
+  /// this[:], and an explicit map with a member of that struct/class as the
+  /// base-pointer, we need to make sure that base-pointer is implicitly mapped,
+  /// to make sure we don't map the full struct/class. For example:
+  ///
+  /// \code
+  ///   struct S {
+  ///     int dummy[10000];
+  ///     int *p;
+  ///     void f1() {
+  ///       #pragma omp target map(p[0:1])
+  ///       (void)this;
+  ///     }
+  ///   }; S s;
+  ///
+  ///   void f2() {
+  ///     #pragma omp target map(s.p[0:10])
+  ///     (void)s;
+  ///   }
+  /// \endcode
+  ///
+  /// Only `this-p` and `s.p` should be mapped in the two cases above.
+  //
+  // OpenMP 6.0: 7.9.6 map clause, pg 285
+  // If a list item with an implicitly determined data-mapping attribute does
+  // not have any corresponding storage in the device data environment prior to
+  // a task encountering the construct associated with the map clause, and one
+  // or more contiguous parts of the original storage are either list items or
+  // base pointers to list items that are explicitly mapped on the construct,
+  // only those parts of the original storage will have corresponding storage in
+  // the device data environment as a result of the map clauses on the
+  // construct.
+  void addImplicitMapForAttachPtrBaseIfMemberOfCapturedVD(
+      const ValueDecl *CapturedVD, MapDataArrayTy &DeclComponentLists,
+      SmallVectorImpl<
+          SmallVector<OMPClauseMappableExprCommon::MappableComponent, 8>>
+          &ComponentVectorStorage) const {
+    bool IsThisCapture = CapturedVD == nullptr;
+
+    for (const auto &ComponentsAndAttachPtr : AttachPtrExprMap) {
+      OMPClauseMappableExprCommon::MappableExprComponentListRef
+          ComponentsWithAttachPtr = ComponentsAndAttachPtr.first;
+      const Expr *AttachPtrExpr = ComponentsAndAttachPtr.second;
+      if (!AttachPtrExpr)
+        continue;
+
+      const auto *ME = dyn_cast<MemberExpr>(AttachPtrExpr);
+      if (!ME)
+        continue;
+
+      const Expr *Base = ME->getBase()->IgnoreParenImpCasts();
+
+      // If we are handling a "this" capture, then we are looking for
+      // attach-ptrs of form `this->p`, either explicitly or implicitly.
+      if (IsThisCapture && !ME->isImplicitCXXThis() && !isa<CXXThisExpr>(Base))
+        continue;
+
+      if (!IsThisCapture && (!isa<DeclRefExpr>(Base) ||
+                             cast<DeclRefExpr>(Base)->getDecl() != CapturedVD))
+        continue;
+
+      // For non-this captures, we are looking for attach-ptrs of form
+      // `s.p`.
+      // For non-this captures, we are looking for attach-ptrs like `s.p`.
+      if (!IsThisCapture && (ME->isArrow() || !isa<DeclRefExpr>(Base) ||
+                             cast<DeclRefExpr>(Base)->getDecl() != CapturedVD))
+        continue;
+
+      // Check if we have an existing map on either:
+      // this[:], s, this->p, or s.p, in which case, we don't need to add
+      // an implicit one for the attach-ptr s.p/this->p.
+      bool FoundExistingMap = false;
+      for (const MapData &ExistingL : DeclComponentLists) {
+        OMPClauseMappableExprCommon::MappableExprComponentListRef
+            ExistingComponents = std::get<0>(ExistingL);
+
+        if (ExistingComponents.empty())
+          continue;
+
+        // First check if we have a map like map(this->p) or map(s.p).
+        const auto &FirstComponent = ExistingComponents.front();
+        const Expr *FirstExpr = FirstComponent.getAssociatedExpression();
+
+        if (!FirstExpr)
+          continue;
+
+        // First check if we have a map like map(this->p) or map(s.p).
+        if (AttachPtrComparator.areEqual(FirstExpr, AttachPtrExpr)) {
+          FoundExistingMap = true;
+          break;
+        }
+
+        // Check if we have a map like this[0:1]
+        if (IsThisCapture) {
+          if (const auto *OASE = dyn_cast<ArraySectionExpr>(FirstExpr)) {
+            if (isa<CXXThisExpr>(OASE->getBase()->IgnoreParenImpCasts())) {
+              FoundExistingMap = true;
+              break;
+            }
+          }
+          continue;
+        }
+
+        // When the attach-ptr is something like `s.p`, check if
+        // `s` itself is mapped explicitly.
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(FirstExpr)) {
+          if (DRE->getDecl() == CapturedVD) {
+            FoundExistingMap = true;
+            break;
+          }
+        }
+      }
+
+      if (FoundExistingMap)
+        continue;
+
+      // If no base map is found, we need to create an implicit map for the
+      // attach-pointer expr.
+
+      ComponentVectorStorage.emplace_back();
+      auto &AttachPtrComponents = ComponentVectorStorage.back();
+
+      static const OpenMPMapModifierKind Unknown = OMPC_MAP_MODIFIER_unknown;
+      bool SeenAttachPtrComponent = false;
+      // For creating a map on the attach-ptr `s.p/this->p`, we copy all
+      // components from the component-list which has `s.p/this->p`
+      // as the attach-ptr, starting from the component which matches
+      // `s.p/this->p`. This way, we'll have component-lists of
+      // `s.p` -> `s`, and `this->p` -> `this`.
+      for (size_t i = 0; i < ComponentsWithAttachPtr.size(); ++i) {
+        const auto &Component = ComponentsWithAttachPtr[i];
+        const Expr *ComponentExpr = Component.getAssociatedExpression();
+
+        if (!SeenAttachPtrComponent && ComponentExpr != AttachPtrExpr)
+          continue;
+        SeenAttachPtrComponent = true;
+
+        AttachPtrComponents.emplace_back(Component.getAssociatedExpression(),
+                                         Component.getAssociatedDeclaration(),
+                                         Component.isNonContiguous());
+      }
+      assert(!AttachPtrComponents.empty() &&
+             "Could not populate component-lists for mapping attach-ptr");
+
+      DeclComponentLists.emplace_back(
+          AttachPtrComponents, OMPC_MAP_tofrom, Unknown,
+          /*IsImplicit=*/true, /*mapper=*/nullptr, AttachPtrExpr);
     }
   }
 
