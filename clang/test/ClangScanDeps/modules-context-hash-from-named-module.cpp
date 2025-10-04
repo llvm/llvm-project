@@ -1,6 +1,6 @@
-// Check that the driver-generated command line options for  C++ module inputs
-// do not unexpectedly change the context hash of imported Clang modules
-// compared to the command line for an otherwise equal non-module input.
+// Checks that driver-generated options for C++ module inputs preserve the
+// canonical module build commands compared to an equivalent non-module input,
+// and that they do not produce additional internal scanning PCMs.
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
@@ -28,12 +28,18 @@ module root { header "root.h" }
 //--- root.h
 // empty
 
-// RUN: %clang -std=c++23 -fmodules %t/main.cpp %t/A.cppm %t/B.cppm -fsyntax-only -fdriver-only -MJ %t/deps.json
-// RUN: sed -e '1s/^/[/' -e '$s/,$/]/' %t/deps.json | sed 's:\\\\\?:/:g' > %t/compile_commands.json
-// RUN: clang-scan-deps -compilation-database=%t/compile_commands.json -format experimental-full > %t/result.json
-// RUN: cat %t/result.json
-
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: %clang -std=c++23 -fmodules \
+// RUN:   -fmodules-cache-path=%t/modules-cache \
+// RUN:   %t/main.cpp %t/A.cppm %t/B.cppm \
+// RUN:   -fsyntax-only -fdriver-only -MJ %t/deps.json
+//
+// RUN: sed -e '1s/^/[/' -e '$s/,$/]/' -e 's:\\\\\?:/:g' %t/deps.json \
+// RUN:   > %t/compile_commands.json
+//
+// RUN: clang-scan-deps \
+// RUN:   -compilation-database=%t/compile_commands.json \
+// RUN:   -format experimental-full \
+// RUN:   | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
@@ -109,3 +115,7 @@ module root { header "root.h" }
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ]
 // CHECK-NEXT: }
+
+// This tests that the scanner doesn't produce multiple internal scanning PCMs
+// for our single Clang module (root).
+// RUN: find %t/modules-cache -name "*.pcm" | wc -l | grep 1
