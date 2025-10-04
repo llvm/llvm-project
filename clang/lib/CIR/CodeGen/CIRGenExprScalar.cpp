@@ -2159,16 +2159,16 @@ mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
 
   // __imag on a scalar returns zero. Emit the subexpr to ensure side
   // effects are evaluated, but not the actual value.
-  if (op->isGLValue())
-    cgf.emitLValue(op);
-  else if (!promotionTy.isNull())
-    cgf.emitPromotedScalarExpr(op, promotionTy);
-  else
-    cgf.emitScalarExpr(op);
-
-  mlir::Type valueTy =
-      cgf.convertType(promotionTy.isNull() ? e->getType() : promotionTy);
-  return builder.getNullValue(valueTy, loc);
+  mlir::Value operand;
+  if (op->isGLValue()) {
+    operand = cgf.emitLValue(op).getPointer();
+    operand = cir::LoadOp::create(builder, loc, operand);
+  } else if (!promotionTy.isNull()) {
+    operand = cgf.emitPromotedScalarExpr(op, promotionTy);
+  } else {
+    operand = cgf.emitScalarExpr(op);
+  }
+  return builder.createComplexImag(loc, operand);
 }
 
 /// Return the size or alignment of the type of argument of the sizeof
