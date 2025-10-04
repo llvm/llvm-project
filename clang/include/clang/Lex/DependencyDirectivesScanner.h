@@ -140,7 +140,7 @@ void printDependencyDirectivesAsSource(
 /// \param Source The input source buffer.
 ///
 /// \returns true if any C++20 named modules related directive was found.
-bool scanInputForCXX20ModulesUsage(StringRef Source);
+bool scanInputForCXXNamedModulesUsage(StringRef Source);
 
 /// Functor that returns the dependency directives for a given file.
 class DependencyDirectivesGetter {
