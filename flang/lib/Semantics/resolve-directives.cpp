@@ -625,7 +625,7 @@ public:
     for (const parser::OmpObject &obj : x.v) {
       auto *name{std::get_if<parser::Name>(&obj.u)};
       if (name && !name->symbol) {
-        Resolve(*name, currScope().MakeCommonBlock(name->source));
+        Resolve(*name, currScope().MakeCommonBlock(name->source, name->source));
       }
     }
   }
@@ -2421,10 +2421,18 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
 void OmpAttributeVisitor::CheckAssocLoopLevel(
     std::int64_t level, const parser::OmpClause *clause) {
   if (clause && level != 0) {
-    context_.Say(clause->source,
-        "The value of the parameter in the COLLAPSE or ORDERED clause must"
-        " not be larger than the number of nested loops"
-        " following the construct."_err_en_US);
+    switch (clause->Id()) {
+    case llvm::omp::OMPC_sizes:
+      context_.Say(clause->source,
+          "The SIZES clause has more entries than there are nested canonical loops."_err_en_US);
+      break;
+    default:
+      context_.Say(clause->source,
+          "The value of the parameter in the COLLAPSE or ORDERED clause must"
+          " not be larger than the number of nested loops"
+          " following the construct."_err_en_US);
+      break;
+    }
   }
 }
 
