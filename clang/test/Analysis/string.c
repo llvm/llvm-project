@@ -955,6 +955,14 @@ void strcmp_fn_l(char *x) {
   strcmp((char*)&strcmp_null_argument, x); // expected-warning{{Argument to string comparison function is the address of the function 'strcmp_null_argument', which is not a null-terminated string}}
 }
 
+void strcmp_assumptions(char *a, char *b) {
+  if (strcmp(a, b) == 0) {
+    // ...
+  }
+
+  clang_analyzer_eval(a == b); // expected-warning{{FALSE}}
+}
+
 //===----------------------------------------------------------------------===
 // strncmp()
 //===----------------------------------------------------------------------===
@@ -1068,6 +1076,14 @@ int strncmp_null_argument(char *a, size_t n) {
   char *b = 0;
   // Do not warn about the first argument!
   return strncmp(a, b, n); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
+}
+
+void strncmp_assumptions(char *a, char *b, size_t n) {
+  if (strncmp(a, b, n) == 0) {
+    // ...
+  }
+
+  clang_analyzer_eval(a == b); // expected-warning{{FALSE}}
 }
 
 //===----------------------------------------------------------------------===
