@@ -32,6 +32,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/LoweringHelpers.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -2308,11 +2309,9 @@ mlir::LogicalResult CIRToLLVMSelectOpLowering::matchAndRewrite(
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
                                  mlir::DataLayout &dataLayout) {
   converter.addConversion([&](cir::PointerType type) -> mlir::Type {
-    // Drop pointee type since LLVM dialect only allows opaque pointers.
-    assert(!cir::MissingFeatures::addressSpace());
-    unsigned targetAS = 0;
-
-    return mlir::LLVM::LLVMPointerType::get(type.getContext(), targetAS);
+    unsigned addrSpace =
+        type.getAddrSpace() ? type.getAddrSpace().getValue().getUInt() : 0;
+    return mlir::LLVM::LLVMPointerType::get(type.getContext(), addrSpace);
   });
   converter.addConversion([&](cir::VPtrType type) -> mlir::Type {
     assert(!cir::MissingFeatures::addressSpace());
@@ -3062,8 +3061,19 @@ mlir::LogicalResult CIRToLLVMComplexImagOpLowering::matchAndRewrite(
     cir::ComplexImagOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
-  rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
-      op, resultLLVMTy, adaptor.getOperand(), llvm::ArrayRef<std::int64_t>{1});
+  mlir::Value operand = adaptor.getOperand();
+  mlir::Location loc = op.getLoc();
+
+  if (mlir::isa<cir::ComplexType>(op.getOperand().getType())) {
+    operand = mlir::LLVM::ExtractValueOp::create(
+        rewriter, loc, resultLLVMTy, operand, llvm::ArrayRef<std::int64_t>{1});
+  } else {
+    mlir::TypedAttr zeroAttr = rewriter.getZeroAttr(resultLLVMTy);
+    operand =
+        mlir::LLVM::ConstantOp::create(rewriter, loc, resultLLVMTy, zeroAttr);
+  }
+
+  rewriter.replaceOp(op, operand);
   return mlir::success();
 }
 

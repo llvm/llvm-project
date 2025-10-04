@@ -5954,9 +5954,6 @@ bool Sema::BuiltinAssumeAligned(CallExpr *TheCall) {
     if (Result > Sema::MaximumAlignment)
       Diag(TheCall->getBeginLoc(), diag::warn_assume_aligned_too_great)
           << SecondArg->getSourceRange() << Sema::MaximumAlignment;
-
-    TheCall->setArg(1,
-                    ConstantExpr::Create(Context, SecondArg, APValue(Result)));
   }
 
   if (NumArgs > 2) {
