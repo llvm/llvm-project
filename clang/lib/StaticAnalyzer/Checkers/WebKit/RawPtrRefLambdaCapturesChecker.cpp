@@ -50,7 +50,9 @@ public:
       llvm::DenseSet<const DeclRefExpr *> DeclRefExprsToIgnore;
       llvm::DenseSet<const LambdaExpr *> LambdasToIgnore;
       llvm::DenseSet<const ValueDecl *> ProtectedThisDecls;
+      llvm::DenseSet<const CallExpr *> CallToIgnore;
       llvm::DenseSet<const CXXConstructExpr *> ConstructToIgnore;
+      llvm::DenseMap<const VarDecl*, const LambdaExpr*> LambdaOwnerMap;
 
       QualType ClsType;
 
@@ -101,10 +103,60 @@ public:
         auto *Init = VD->getInit();
         if (!Init)
           return true;
-        auto *L = dyn_cast_or_null<LambdaExpr>(Init->IgnoreParenCasts());
-        if (!L)
+        if (auto *L = dyn_cast_or_null<LambdaExpr>(Init->IgnoreParenCasts())) {
+          LambdasToIgnore.insert(L); // Evaluate lambdas in VisitDeclRefExpr.
           return true;
-        LambdasToIgnore.insert(L); // Evaluate lambdas in VisitDeclRefExpr.
+        }
+        if (!VD->hasLocalStorage())
+          return true;
+        if (auto *E = dyn_cast<ExprWithCleanups>(Init))
+          Init = E->getSubExpr();
+        if (auto *E = dyn_cast<CXXBindTemporaryExpr>(Init))
+          Init = E->getSubExpr();
+        if (auto *CE = dyn_cast<CallExpr>(Init)) {
+          if (auto *Callee = CE->getDirectCallee()) {
+            auto FnName = safeGetName(Callee);
+            unsigned ArgCnt = CE->getNumArgs();
+            if (FnName == "makeScopeExit" && ArgCnt == 1) {
+              auto *Arg = CE->getArg(0);
+              if (auto *E = dyn_cast<MaterializeTemporaryExpr>(Arg))
+                Arg = E->getSubExpr();
+              if (auto *L = dyn_cast<LambdaExpr>(Arg)) {
+                LambdaOwnerMap.insert(std::make_pair(VD, L));
+                CallToIgnore.insert(CE);
+                LambdasToIgnore.insert(L);
+              }
+            } else if (FnName == "makeVisitor") {
+              for (unsigned ArgIndex = 0; ArgIndex < ArgCnt; ++ArgIndex) {
+                auto *Arg = CE->getArg(ArgIndex);
+                if (auto *E = dyn_cast<MaterializeTemporaryExpr>(Arg))
+                  Arg = E->getSubExpr();
+                if (auto *L = dyn_cast<LambdaExpr>(Arg)) {
+                  LambdaOwnerMap.insert(std::make_pair(VD, L));
+                  CallToIgnore.insert(CE);
+                  LambdasToIgnore.insert(L);
+                }
+              }
+            }
+          }
+        } else if (auto *CE = dyn_cast<CXXConstructExpr>(Init)) {
+          if (auto *Ctor = CE->getConstructor()) {
+            if (auto *Cls = Ctor->getParent()) {
+              auto FnName = safeGetName(Cls);
+              unsigned ArgCnt = CE->getNumArgs();
+              if (FnName == "ScopeExit" && ArgCnt == 1) {
+                auto *Arg = CE->getArg(0);
+                if (auto *E = dyn_cast<MaterializeTemporaryExpr>(Arg))
+                  Arg = E->getSubExpr();
+                if (auto *L = dyn_cast<LambdaExpr>(Arg)) {
+                  LambdaOwnerMap.insert(std::make_pair(VD, L));
+                  ConstructToIgnore.insert(CE);
+                  LambdasToIgnore.insert(L);
+                }
+              }
+            }
+          }
+        }
         return true;
       }
 
@@ -114,6 +166,12 @@ public:
         auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl());
         if (!VD)
           return true;
+        if (auto It = LambdaOwnerMap.find(VD); It != LambdaOwnerMap.end()) {
+          auto *L = It->second;
+          Checker->visitLambdaExpr(L, shouldCheckThis() && !hasProtectedThis(L),
+                                   ClsType);
+          return true;
+        }
         auto *Init = VD->getInit();
         if (!Init)
           return true;
@@ -167,9 +225,30 @@ public:
       }
 
       bool VisitCallExpr(CallExpr *CE) override {
+        if (CallToIgnore.contains(CE))
+          return true;
         checkCalleeLambda(CE);
-        if (auto *Callee = CE->getDirectCallee())
+        if (auto *Callee = CE->getDirectCallee()) {
+          if (auto *Ns = Callee->getParent()) {
+            auto NsName = safeGetName(Ns);
+            bool IsVisitFn = safeGetName(Callee) == "visit";
+            bool ArgCnt = CE->getNumArgs();
+            if (IsVisitFn && ArgCnt && (NsName == "WTF" || NsName == "std")) {
+              if (auto *Arg = CE->getArg(0)) {
+                Arg = Arg->IgnoreParenCasts();
+                if (auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
+                  if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+                    if (LambdaOwnerMap.contains(VD)) {
+                      DeclRefExprsToIgnore.insert(DRE);
+                      return true;
+                    }
+                  }
+                }
+              }
+            }
+          }
           checkParameters(CE, Callee);
+        }
         else if (auto *CalleeE = CE->getCallee()) {
           if (auto *DRE = dyn_cast<DeclRefExpr>(CalleeE->IgnoreParenCasts())) {
             if (auto *Callee = dyn_cast_or_null<FunctionDecl>(DRE->getDecl()))
@@ -280,7 +359,7 @@ public:
         LambdasToIgnore.insert(L);
       }
 
-      bool hasProtectedThis(LambdaExpr *L) {
+      bool hasProtectedThis(const LambdaExpr *L) {
         for (const LambdaCapture &OtherCapture : L->captures()) {
           if (!OtherCapture.capturesVariable())
             continue;
@@ -378,8 +457,9 @@ public:
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
-  void visitLambdaExpr(LambdaExpr *L, bool shouldCheckThis, const QualType T,
-                       bool ignoreParamVarDecl = false) const {
+  void visitLambdaExpr(const LambdaExpr *L, bool shouldCheckThis,
+                       const QualType T,
+                        bool ignoreParamVarDecl = false) const {
     if (TFA.isTrivial(L->getBody()))
       return;
     for (const LambdaCapture &C : L->captures()) {
@@ -410,7 +490,7 @@ public:
   }
 
   void reportBug(const LambdaCapture &Capture, ValueDecl *CapturedVar,
-                 const QualType T, LambdaExpr *L) const {
+                 const QualType T, const LambdaExpr *L) const {
     assert(CapturedVar);
 
     auto Location = Capture.getLocation();
