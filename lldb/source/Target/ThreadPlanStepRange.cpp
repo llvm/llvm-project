@@ -487,6 +487,7 @@ bool ThreadPlanStepRange::NextRangeBreakpointExplainsStop(
             "next range breakpoint which has %" PRIu64
             " constituents - explains stop: %u.",
             (uint64_t)num_constituents, explains_stop);
+  ClearNextBranchBreakpoint();
   return explains_stop;
 }
 
