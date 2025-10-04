@@ -679,7 +679,8 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // then further split one of those live ranges.
   if (!DefMI) {
     markValueUsed(&VirtReg, ParentVNI);
-    LLVM_DEBUG(dbgs() << "\tcannot remat missing def for " << UseIdx << '\t' << MI);
+    LLVM_DEBUG(dbgs() << "\tcannot remat missing def for " << UseIdx << '\t'
+                      << MI);
     return false;
   }
 
