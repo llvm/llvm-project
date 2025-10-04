@@ -628,6 +628,7 @@ public:
 // 2. AppleClang is not yet using clang >= 20.x, which has "fixed" this issue
 // 3. A few others like FreeBSD/amd64, AArch64, AIX
 // FIXME: when AppleClang is based off of clang >= 20.x
+// FIXME: when Clang-based CI is using clang >= 20.x
 #if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 2000) ||                                                        \
     (defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 2000)
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~__tree_node() {}
