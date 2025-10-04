@@ -6808,12 +6808,13 @@ public:
   /// they were computed by collectAttachPtrExprInfo(), if they are semantically
   /// different.
   struct AttachPtrExprComparator {
-    const MappableExprsHandler *Handler = nullptr;
+    const MappableExprsHandler &Handler;
     // Cache of previous equality comparison results.
     mutable llvm::DenseMap<std::pair<const Expr *, const Expr *>, bool>
         CachedEqualityComparisons;
 
-    AttachPtrExprComparator(const MappableExprsHandler *H) : Handler(H) {}
+    AttachPtrExprComparator(const MappableExprsHandler &H) : Handler(H) {}
+    AttachPtrExprComparator() = delete;
 
     // Return true iff LHS is "less than" RHS.
     bool operator()(const Expr *LHS, const Expr *RHS) const {
@@ -6821,15 +6822,15 @@ public:
         return false;
 
       // First, compare by complexity (depth)
-      const auto ItLHS = Handler->AttachPtrComponentDepthMap.find(LHS);
-      const auto ItRHS = Handler->AttachPtrComponentDepthMap.find(RHS);
+      const auto ItLHS = Handler.AttachPtrComponentDepthMap.find(LHS);
+      const auto ItRHS = Handler.AttachPtrComponentDepthMap.find(RHS);
 
       std::optional<size_t> DepthLHS =
-          (ItLHS != Handler->AttachPtrComponentDepthMap.end()) ? ItLHS->second
-                                                               : std::nullopt;
+          (ItLHS != Handler.AttachPtrComponentDepthMap.end()) ? ItLHS->second
+                                                              : std::nullopt;
       std::optional<size_t> DepthRHS =
-          (ItRHS != Handler->AttachPtrComponentDepthMap.end()) ? ItRHS->second
-                                                               : std::nullopt;
+          (ItRHS != Handler.AttachPtrComponentDepthMap.end()) ? ItRHS->second
+                                                              : std::nullopt;
 
       // std::nullopt (no attach pointer) has lowest complexity
       if (!DepthLHS.has_value() && !DepthRHS.has_value()) {
@@ -6877,8 +6878,8 @@ public:
     /// Returns true iff LHS was computed before RHS by
     /// collectAttachPtrExprInfo().
     bool wasComputedBefore(const Expr *LHS, const Expr *RHS) const {
-      const size_t &OrderLHS = Handler->AttachPtrComputationOrderMap.at(LHS);
-      const size_t &OrderRHS = Handler->AttachPtrComputationOrderMap.at(RHS);
+      const size_t &OrderLHS = Handler.AttachPtrComputationOrderMap.at(LHS);
+      const size_t &OrderRHS = Handler.AttachPtrComputationOrderMap.at(RHS);
 
       return OrderLHS < OrderRHS;
     }
@@ -6897,7 +6898,7 @@ public:
       if (!LHS || !RHS)
         return false;
 
-      ASTContext &Ctx = Handler->CGF.getContext();
+      ASTContext &Ctx = Handler.CGF.getContext();
       // Strip away parentheses and no-op casts to get to the core expression
       LHS = LHS->IgnoreParenNoopCasts(Ctx);
       RHS = RHS->IgnoreParenNoopCasts(Ctx);
@@ -7245,6 +7246,10 @@ private:
   /// collectAttachPtrExprInfo().
   llvm::DenseMap<const Expr *, size_t> AttachPtrComputationOrderMap = {
       {nullptr, 0}};
+
+  /// An instance of attach-ptr-expr comparator that can be used throughout the
+  /// lifetime of this handler.
+  AttachPtrExprComparator AttachPtrComparator;
 
   llvm::Value *getExprTypeSize(const Expr *E) const {
     QualType ExprTy = E->getType().getCanonicalType();
@@ -8963,7 +8968,7 @@ private:
 
 public:
   MappableExprsHandler(const OMPExecutableDirective &Dir, CodeGenFunction &CGF)
-      : CurDir(&Dir), CGF(CGF) {
+      : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {
     // Extract firstprivate clause information.
     for (const auto *C : Dir.getClausesOfKind<OMPFirstprivateClause>())
       for (const auto *D : C->varlist())
@@ -9009,7 +9014,7 @@ public:
 
   /// Constructor for the declare mapper directive.
   MappableExprsHandler(const OMPDeclareMapperDecl &Dir, CodeGenFunction &CGF)
-      : CurDir(&Dir), CGF(CGF) {}
+      : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {}
 
   /// Generate code for the combined entry if we have a partially mapped struct
   /// and take care of the mapping flags of the arguments corresponding to
