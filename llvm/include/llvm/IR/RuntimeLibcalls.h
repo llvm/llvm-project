@@ -225,8 +225,7 @@ private:
 
   /// Return true if the target has sincosf/sincos/sincosl functions
   static bool hasSinCos(const Triple &TT) {
-    return TT.isGNUEnvironment() || TT.isOSFuchsia() ||
-           (TT.isAndroid() && !TT.isAndroidVersionLT(9));
+    return TT.isGNUEnvironment() || TT.isOSFuchsia() || TT.isAndroid();
   }
 
   static bool hasSinCos_f32_f64(const Triple &TT) {
