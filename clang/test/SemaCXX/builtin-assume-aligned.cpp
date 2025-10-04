@@ -47,3 +47,16 @@ constexpr void *s1 = __builtin_assume_aligned(x, 32);
 constexpr void *s2 = __builtin_assume_aligned(x, 32, 5);
 constexpr void *s3 = __builtin_assume_aligned(x, 32, -1);
 
+void (*f)();
+// expected-error@+1 {{cannot initialize a parameter of type 'const void *' with an lvalue of type 'void (*)()'}}
+constexpr void * f1 = __builtin_assume_aligned(f, 32); 
+
+void foo();
+// expected-error@+1 {{cannot initialize a parameter of type 'const void *' with an lvalue of type 'void ()'}}
+constexpr void * f2 = __builtin_assume_aligned(foo, 32);
+
+constexpr void * null_ptr1 = __builtin_assume_aligned(0, 32);
+constexpr void * null_ptr2 = __builtin_assume_aligned(nullptr, 32);
+
+// expected-error@+1 {{cannot initialize a parameter of type 'const void *' with an rvalue of type 'int'}}
+constexpr void * not_null_ptr = __builtin_assume_aligned(1, 32);

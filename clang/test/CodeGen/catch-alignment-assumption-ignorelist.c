@@ -24,11 +24,13 @@ void *dont_ignore_volatile_ptrs(void * volatile x) {
 
 // CHECK-LABEL: ignore_volatiles
 void *ignore_volatiles(volatile void * x) {
+  // CHECK: call void @__ubsan_handle_alignment_assumption(
   return __builtin_assume_aligned(x, 1);
 }
 
 // CHECK-LABEL: ignore_array_volatiles
 void *ignore_array_volatiles() {
   volatile int arr[] = {1};
+  // CHECK: call void @__ubsan_handle_alignment_assumption(
   return __builtin_assume_aligned(arr, 4);
 }
