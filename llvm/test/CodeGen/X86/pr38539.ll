@@ -28,7 +28,6 @@ define void @f() nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzbl (%eax), %eax
 ; X86-NEXT:    movzbl (%eax), %ecx
-; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-NEXT:    divb %cl
 ; X86-NEXT:    movl %edi, %eax
