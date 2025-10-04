@@ -933,7 +933,8 @@ def ptr_rc_nor0 : RegisterOperand<ptr_rc_nor0_by_hwmode> {
 
 // New addressing modes with 34 bit immediates.
 def PPCDispRI34Operand : AsmOperandClass {
-  let Name = "DispRI34"; let PredicateMethod = "isSImmExpr<34>";
+  let Name = "DispRI34";
+  let PredicateMethod = "isSImmExpr<34>";
   let RenderMethod = "addImmOperands";
 }
 def dispRI34 : Operand<iPTR> {
