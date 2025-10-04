@@ -175,8 +175,12 @@ static cl::opt<bool>
 ViewISelDAGs("view-isel-dags", cl::Hidden,
           cl::desc("Pop up a window to show isel dags as they are selected"));
 static cl::opt<bool>
-ViewSchedDAGs("view-sched-dags", cl::Hidden,
-          cl::desc("Pop up a window to show sched dags as they are processed"));
+    WriteDAGsToFile("write-dags-to-file", cl::Hidden,
+                    cl::desc("Write dags as they are selected to DOT files "
+                             "instead of opening viewer"));
+static cl::opt<bool> ViewSchedDAGs(
+    "view-sched-dags", cl::Hidden,
+    cl::desc("Pop up a window to show sched dags as they are processed"));
 static cl::opt<bool>
 ViewSUnitDAGs("view-sunit-dags", cl::Hidden,
       cl::desc("Pop up a window to show SUnit dags after they are processed"));
@@ -184,7 +188,8 @@ ViewSUnitDAGs("view-sunit-dags", cl::Hidden,
 static const bool ViewDAGCombine1 = false, ViewLegalizeTypesDAGs = false,
                   ViewDAGCombineLT = false, ViewLegalizeDAGs = false,
                   ViewDAGCombine2 = false, ViewISelDAGs = false,
-                  ViewSchedDAGs = false, ViewSUnitDAGs = false;
+                  WriteDAGsToFile = false, ViewSchedDAGs = false,
+                  ViewSUnitDAGs = false;
 #endif
 
 #ifndef NDEBUG
@@ -957,7 +962,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 #endif
 
   if (ViewDAGCombine1 && MatchFilterBB)
-    CurDAG->viewGraph("dag-combine1 input for " + BlockName);
+    CurDAG->viewGraph("dag-combine1 input for " + BlockName, WriteDAGsToFile);
 
   // Run the DAG combiner in pre-legalize mode.
   {
@@ -979,7 +984,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   // Second step, hack on the DAG until it only uses operations and types that
   // the target supports.
   if (ViewLegalizeTypesDAGs && MatchFilterBB)
-    CurDAG->viewGraph("legalize-types input for " + BlockName);
+    CurDAG->viewGraph("legalize-types input for " + BlockName, WriteDAGsToFile);
 
   bool Changed;
   {
@@ -1003,7 +1008,8 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
   if (Changed) {
     if (ViewDAGCombineLT && MatchFilterBB)
-      CurDAG->viewGraph("dag-combine-lt input for " + BlockName);
+      CurDAG->viewGraph("dag-combine-lt input for " + BlockName,
+                        WriteDAGsToFile);
 
     // Run the DAG combiner in post-type-legalize mode.
     {
@@ -1057,7 +1063,8 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 #endif
 
     if (ViewDAGCombineLT && MatchFilterBB)
-      CurDAG->viewGraph("dag-combine-lv input for " + BlockName);
+      CurDAG->viewGraph("dag-combine-lv input for " + BlockName,
+                        WriteDAGsToFile);
 
     // Run the DAG combiner in post-type-legalize mode.
     {
@@ -1078,7 +1085,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   }
 
   if (ViewLegalizeDAGs && MatchFilterBB)
-    CurDAG->viewGraph("legalize input for " + BlockName);
+    CurDAG->viewGraph("legalize input for " + BlockName, WriteDAGsToFile);
 
   {
     NamedRegionTimer T("legalize", "DAG Legalization", GroupName,
@@ -1097,7 +1104,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 #endif
 
   if (ViewDAGCombine2 && MatchFilterBB)
-    CurDAG->viewGraph("dag-combine2 input for " + BlockName);
+    CurDAG->viewGraph("dag-combine2 input for " + BlockName, WriteDAGsToFile);
 
   // Run the DAG combiner in post-legalize mode.
   {
@@ -1120,7 +1127,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     ComputeLiveOutVRegInfo();
 
   if (ViewISelDAGs && MatchFilterBB)
-    CurDAG->viewGraph("isel input for " + BlockName);
+    CurDAG->viewGraph("isel input for " + BlockName, WriteDAGsToFile);
 
   // Third, instruction select all of the operations to machine code, adding the
   // code to the MachineBasicBlock.
@@ -1136,7 +1143,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
             CurDAG->dump(DumpSortedDAG));
 
   if (ViewSchedDAGs && MatchFilterBB)
-    CurDAG->viewGraph("scheduler input for " + BlockName);
+    CurDAG->viewGraph("scheduler input for " + BlockName, WriteDAGsToFile);
 
   // Schedule machine code.
   ScheduleDAGSDNodes *Scheduler = CreateScheduler();
