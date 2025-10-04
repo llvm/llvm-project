@@ -11,6 +11,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "AmbiguousSmartptrResetCallCheck.h"
 #include "AvoidConstParamsInDecls.h"
+#include "AvoidDefaultLambdaCaptureCheck.h"
 #include "AvoidNestedConditionalOperatorCheck.h"
 #include "AvoidReturnWithVoidValueCheck.h"
 #include "AvoidUnconditionalPreprocessorIfCheck.h"
@@ -93,6 +94,8 @@ public:
         "readability-container-size-empty");
     CheckFactories.registerCheck<ConvertMemberFunctionsToStatic>(
         "readability-convert-member-functions-to-static");
+    CheckFactories.registerCheck<AvoidDefaultLambdaCaptureCheck>(
+        "readability-avoid-default-lambda-capture");
     CheckFactories.registerCheck<DeleteNullPointerCheck>(
         "readability-delete-null-pointer");
     CheckFactories.registerCheck<DuplicateIncludeCheck>(
