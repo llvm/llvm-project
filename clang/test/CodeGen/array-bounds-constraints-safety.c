@@ -69,8 +69,10 @@ int test_extern_array(int i) {
 }
 
 // CHECK-LABEL: define {{.*}} @test_local_constant_array
+void init_array(int *arr);
 int test_local_constant_array(int i) {
   int arr[10];
+  init_array(arr);  // Initialize to avoid UB from uninitialized read.
   // CHECK: call void @llvm.assume
   // This will generate bounds constraints.
   // We know the exact size of this alloca array.
