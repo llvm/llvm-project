@@ -29,7 +29,7 @@ namespace {
 class PyPatternRewriter {
 public:
   PyPatternRewriter(MlirPatternRewriter rewriter)
-      : rewriter(rewriter), base(mlirPatternRewriterAsBase(rewriter)),
+      : base(mlirPatternRewriterAsBase(rewriter)),
         ctx(PyMlirContext::forContext(mlirRewriterBaseGetContext(base))) {}
 
   PyInsertionPoint getInsertionPoint() const {
@@ -46,7 +46,6 @@ public:
   }
 
 private:
-  MlirPatternRewriter rewriter [[maybe_unused]];
   MlirRewriterBase base;
   PyMlirContextRef ctx;
 };
