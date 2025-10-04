@@ -571,7 +571,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   SwiftError->setFunction(mf);
   const Function &Fn = mf.getFunction();
 
-  bool InstrRef = mf.shouldUseDebugInstrRef();
+  bool InstrRef = mf.useDebugInstrRef();
 
   FuncInfo->set(MF->getFunction(), *MF, CurDAG);
 
