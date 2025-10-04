@@ -2035,6 +2035,17 @@ void addInstrRequirements(const MachineInstr &MI,
     // TODO: Add UntypedPointersKHR when implemented.
     break;
   }
+  case SPIRV::OpPredicatedLoadINTEL:
+  case SPIRV::OpPredicatedStoreINTEL: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_predicated_io))
+      report_fatal_error(
+          "OpPredicated[Load/Store]INTEL instructions require "
+          "the following SPIR-V extension: SPV_INTEL_predicated_io",
+          false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_predicated_io);
+    Reqs.addCapability(SPIRV::Capability::PredicatedIOINTEL);
+    break;
+  }
 
   default:
     break;

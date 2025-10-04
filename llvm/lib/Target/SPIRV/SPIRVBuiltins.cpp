@@ -1131,6 +1131,24 @@ static bool buildPipeInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
   }
 }
 
+// Helper function for building Intel's predicated load/store instructions.
+static bool buildPredicatedLoadStoreInst(const SPIRV::IncomingCall *Call,
+                                          unsigned Opcode,
+                                          MachineIRBuilder &MIRBuilder,
+                                          SPIRVGlobalRegistry *GR) {
+  // Generate SPIRV instruction accordingly.
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
+
+  auto MIB = MIRBuilder.buildInstr(Opcode)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+  for (unsigned i = 0; i < Call->Arguments.size(); ++i)
+    MIB.addUse(Call->Arguments[i]);
+
+  return true;
+}
+
 static unsigned getNumComponentsForDim(SPIRV::Dim::Dim dim) {
   switch (dim) {
   case SPIRV::Dim::DIM_1D:
@@ -2419,6 +2437,16 @@ static bool generatePipeInst(const SPIRV::IncomingCall *Call,
   return buildPipeInst(Call, Opcode, Scope, MIRBuilder, GR);
 }
 
+static bool generatePredicatedLoadStoreInst(const SPIRV::IncomingCall *Call, 
+                                            MachineIRBuilder &MIRBuilder,
+                                            SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  return buildPredicatedLoadStoreInst(Call, Opcode, MIRBuilder, GR);
+}
+
 static bool buildNDRange(const SPIRV::IncomingCall *Call,
                          MachineIRBuilder &MIRBuilder,
                          SPIRVGlobalRegistry *GR) {
@@ -3019,6 +3047,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generate2DBlockIOINTELInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Pipe:
     return generatePipeInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::PredicatedLoadStore:
+    return generatePredicatedLoadStoreInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }
