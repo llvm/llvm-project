@@ -4164,6 +4164,10 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
       return ConstantInt::get(RetTy, Pred == CmpInst::FCMP_UNO);
   }
 
+  if (std::optional<bool> Res =
+          isImpliedByDomCondition(Pred, LHS, RHS, Q.CxtI, Q.DL))
+    return ConstantInt::getBool(RetTy, *Res);
+
   const APFloat *C = nullptr;
   match(RHS, m_APFloatAllowPoison(C));
   std::optional<KnownFPClass> FullKnownClassLHS;
