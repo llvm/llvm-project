@@ -1,12 +1,12 @@
 ; This file contains exception section testing for when debug information is present.
-; The 32-bit test should not print exception auxilliary entries because they are a 64-bit only feature.
-; Exception auxilliary entries are present in the 64-bit tests because 64-bit && debug enabled are the requirements.
+; The 32-bit test should not print exception auxiliary entries because they are a 64-bit only feature.
+; Exception auxiliary entries are present in the 64-bit tests because 64-bit && debug enabled are the requirements.
 ; RUN: llc -mtriple=powerpc-ibm-aix-xcoff -mcpu=ppc -filetype=obj -o %t_32.o < %s
 ; RUN: llvm-readobj --syms %t_32.o | FileCheck %s --check-prefix=SYMS32
 ; RUN: llc -mtriple=powerpc64-unknown-aix -mcpu=ppc -filetype=obj -o %t_32.o < %s
 ; RUN: llvm-readobj --syms %t_32.o | FileCheck %s --check-prefix=SYMS64
 
-; If any debug information is included in a module and is XCOFF64, exception auxilliary entries are emitted
+; If any debug information is included in a module and is XCOFF64, exception auxiliary entries are emitted
 
 !llvm.module.flags = !{!0, !1}
 !llvm.dbg.cu = !{!2}
