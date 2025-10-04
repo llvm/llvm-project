@@ -28,164 +28,112 @@ class Metadata;
 namespace hlsl {
 namespace rootsig {
 
+enum class RSErrorKind {
+  Validation,
+  AppendAfterUnboundedRange,
+  ShaderRegisterOverflow,
+  OffsetOverflow,
+  SamplerMixin,
+  GenericMetadata,
+  InvalidMetadataFormat,
+  InvalidMetadataValue
+};
+
 template <typename T>
-class RootSignatureValidationError
-    : public ErrorInfo<RootSignatureValidationError<T>> {
-public:
-  static char ID;
-  StringRef ParamName;
-  T Value;
+void formatImpl(raw_string_ostream &Buff,
+                std::integral_constant<RSErrorKind, RSErrorKind::Validation>,
+                StringRef ParamName, T Value);
 
-  RootSignatureValidationError(StringRef ParamName, T Value)
-      : ParamName(ParamName), Value(Value) {}
+void formatImpl(
+    raw_string_ostream &Buff,
+    std::integral_constant<RSErrorKind, RSErrorKind::AppendAfterUnboundedRange>,
+    dxil::ResourceClass Type, uint32_t Register, uint32_t Space);
 
-  void log(raw_ostream &OS) const override {
-    OS << "Invalid value for " << ParamName << ": " << Value;
+void formatImpl(
+    raw_string_ostream &Buff,
+    std::integral_constant<RSErrorKind, RSErrorKind::ShaderRegisterOverflow>,
+    dxil::ResourceClass Type, uint32_t Register, uint32_t Space);
+
+void formatImpl(
+    raw_string_ostream &Buff,
+    std::integral_constant<RSErrorKind, RSErrorKind::OffsetOverflow>,
+    dxil::ResourceClass Type, uint32_t Register, uint32_t Space);
+
+void formatImpl(raw_string_ostream &Buff,
+                std::integral_constant<RSErrorKind, RSErrorKind::SamplerMixin>,
+                dxil::ResourceClass Type, uint32_t Location);
+
+void formatImpl(
+    raw_string_ostream &Buff,
+    std::integral_constant<RSErrorKind, RSErrorKind::InvalidMetadataFormat>,
+    StringRef ElementName);
+
+void formatImpl(
+    raw_string_ostream &Buff,
+    std::integral_constant<RSErrorKind, RSErrorKind::InvalidMetadataValue>,
+    StringRef ParamName);
+
+void formatImpl(
+    raw_string_ostream &Buff,
+    std::integral_constant<RSErrorKind, RSErrorKind::GenericMetadata>,
+    StringRef Message, MDNode *MD);
+
+template <typename... ArgsTs>
+inline void formatImpl(raw_string_ostream &Buff, RSErrorKind Kind,
+                       ArgsTs... Args) {
+  switch (Kind) {
+  case RSErrorKind::Validation:
+    return formatImpl(
+        Buff, std::integral_constant<RSErrorKind, RSErrorKind::Validation>(),
+        Args...);
+  case RSErrorKind::AppendAfterUnboundedRange:
+    return formatImpl(
+        Buff,
+        std::integral_constant<RSErrorKind,
+                               RSErrorKind::AppendAfterUnboundedRange>(),
+        Args...);
+  case RSErrorKind::ShaderRegisterOverflow:
+    return formatImpl(
+        Buff,
+        std::integral_constant<RSErrorKind,
+                               RSErrorKind::ShaderRegisterOverflow>(),
+        Args...);
+  case RSErrorKind::OffsetOverflow:
+    return formatImpl(
+        Buff,
+        std::integral_constant<RSErrorKind, RSErrorKind::OffsetOverflow>(),
+        Args...);
+  case RSErrorKind::SamplerMixin:
+    return formatImpl(
+        Buff, std::integral_constant<RSErrorKind, RSErrorKind::SamplerMixin>(),
+        Args...);
+  case RSErrorKind::InvalidMetadataFormat:
+    return formatImpl(
+        Buff,
+        std::integral_constant<RSErrorKind,
+                               RSErrorKind::InvalidMetadataFormat>(),
+        Args...);
+  case RSErrorKind::InvalidMetadataValue:
+    return formatImpl(
+        Buff,
+        std::integral_constant<RSErrorKind,
+                               RSErrorKind::InvalidMetadataValue>(),
+        Args...);
+  case RSErrorKind::GenericMetadata:
+    return formatImpl(
+        Buff,
+        std::integral_constant<RSErrorKind, RSErrorKind::GenericMetadata>(),
+        Args...);
   }
+}
 
-  std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
-  }
-};
-
-class OffsetAppendAfterOverflow : public ErrorInfo<OffsetAppendAfterOverflow> {
-public:
-  static char ID;
-  dxil::ResourceClass Type;
-  uint32_t Register;
-  uint32_t Space;
-
-  OffsetAppendAfterOverflow(dxil::ResourceClass Type, uint32_t Register,
-                            uint32_t Space)
-      : Type(Type), Register(Register), Space(Space) {}
-
-  void log(raw_ostream &OS) const override {
-    OS << "Range " << getResourceClassName(Type) << "(register=" << Register
-       << ", space=" << Space << ") "
-       << "cannot be appended after an unbounded range ";
-  }
-
-  std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
-  }
-};
-
-class ShaderRegisterOverflowError
-    : public ErrorInfo<ShaderRegisterOverflowError> {
-public:
-  static char ID;
-  dxil::ResourceClass Type;
-  uint32_t Register;
-  uint32_t Space;
-
-  ShaderRegisterOverflowError(dxil::ResourceClass Type, uint32_t Register,
-                              uint32_t Space)
-      : Type(Type), Register(Register), Space(Space) {}
-
-  void log(raw_ostream &OS) const override {
-    OS << "Overflow for shader register range: " << getResourceClassName(Type)
-       << "(register=" << Register << ", space=" << Space << ").";
-  }
-
-  std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
-  }
-};
-
-class OffsetOverflowError : public ErrorInfo<OffsetOverflowError> {
-public:
-  static char ID;
-  dxil::ResourceClass Type;
-  uint32_t Register;
-  uint32_t Space;
-
-  OffsetOverflowError(dxil::ResourceClass Type, uint32_t Register,
-                      uint32_t Space)
-      : Type(Type), Register(Register), Space(Space) {}
-
-  void log(raw_ostream &OS) const override {
-    OS << "Offset overflow for descriptor range: " << getResourceClassName(Type)
-       << "(register=" << Register << ", space=" << Space << ").";
-  }
-
-  std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
-  }
-};
-
-class TableSamplerMixinError : public ErrorInfo<TableSamplerMixinError> {
-public:
-  static char ID;
-  dxil::ResourceClass Type;
-  uint32_t Location;
-
-  TableSamplerMixinError(dxil::ResourceClass Type, uint32_t Location)
-      : Type(Type), Location(Location) {}
-
-  void log(raw_ostream &OS) const override {
-    OS << "Samplers cannot be mixed with other "
-       << "resource types in a descriptor table, " << getResourceClassName(Type)
-       << "(location=" << Location << ")";
-  }
-
-  std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
-  }
-};
-
-class GenericRSMetadataError : public ErrorInfo<GenericRSMetadataError> {
-public:
-  LLVM_ABI static char ID;
-  StringRef Message;
-  MDNode *MD;
-
-  GenericRSMetadataError(StringRef Message, MDNode *MD)
-      : Message(Message), MD(MD) {}
-
-  void log(raw_ostream &OS) const override {
-    OS << Message;
-    if (MD) {
-      OS << "\n";
-      MD->printTree(OS);
-    }
-  }
-
-  std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
-  }
-};
-
-class InvalidRSMetadataFormat : public ErrorInfo<InvalidRSMetadataFormat> {
-public:
-  LLVM_ABI static char ID;
-  StringRef ElementName;
-
-  InvalidRSMetadataFormat(StringRef ElementName) : ElementName(ElementName) {}
-
-  void log(raw_ostream &OS) const override {
-    OS << "Invalid format for  " << ElementName;
-  }
-
-  std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
-  }
-};
-
-class InvalidRSMetadataValue : public ErrorInfo<InvalidRSMetadataValue> {
-public:
-  LLVM_ABI static char ID;
-  StringRef ParamName;
-
-  InvalidRSMetadataValue(StringRef ParamName) : ParamName(ParamName) {}
-
-  void log(raw_ostream &OS) const override {
-    OS << "Invalid value for " << ParamName;
-  }
-
-  std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
-  }
-};
+template <typename... ArgsTs>
+static llvm::Error createRSError(RSErrorKind Kind, ArgsTs... Args) {
+  std::string Msg;
+  raw_string_ostream Buff(Msg);
+  formatImpl(Buff, Kind, Args...);
+  return createStringError(std::move(Buff.str()), inconvertibleErrorCode());
+}
 
 class MetadataBuilder {
 public:
