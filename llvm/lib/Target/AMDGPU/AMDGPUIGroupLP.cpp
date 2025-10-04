@@ -2391,6 +2391,59 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
   if (MI.isMetaInstruction())
     Result = false;
 
+  else if (MI.isInlineAsm()) {
+    auto &TRI = TII->getRegisterInfo();
+    auto &MRI = MI.getParent()->getParent()->getRegInfo();
+    bool SGPR_used = false, VGPR_used = false, VMFMA_used = false,
+         MayLoad = MI.mayLoad(), MayStore = MI.mayStore();
+    for (const MachineOperand &Operand : MI.operands())
+      if (Operand.isReg()) {
+        auto &RegClass = *TRI.getRegClassForOperandReg(MRI, Operand);
+        if (TRI.isVGPRClass(&RegClass))
+          VGPR_used = true;
+        if (TRI.isAGPRClass(&RegClass) || TRI.getRegSizeInBits(RegClass) > 128)
+          VMFMA_used = true;
+        if (TRI.isSGPRClass(&RegClass))
+          SGPR_used = true;
+      }
+
+    unsigned long InlineAsmMask = 0;
+    if (VGPR_used && !VMFMA_used && !MayLoad && !MayStore)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::VALU;
+    if (VMFMA_used)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::MFMA;
+    if (VGPR_used && MayLoad)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::VMEM_READ;
+    if (VGPR_used && MayStore)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::VMEM_WRITE;
+    if (!VGPR_used && MayLoad)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::DS_READ;
+    if (!VGPR_used && MayStore)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::DS_WRITE;
+    if (InlineAsmMask & (unsigned long)SchedGroupMask::VALU ||
+        InlineAsmMask & (unsigned long)SchedGroupMask::SALU)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::ALU;
+    if (InlineAsmMask & (unsigned long)SchedGroupMask::DS_READ ||
+        InlineAsmMask & (unsigned long)SchedGroupMask::DS_WRITE)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::DS;
+    if (InlineAsmMask & (unsigned long)SchedGroupMask::VMEM_READ ||
+        InlineAsmMask & (unsigned long)SchedGroupMask::VMEM_WRITE)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::VMEM;
+
+    Result = ((unsigned long)SGMask & InlineAsmMask) != 0;
+
+    // Original implementation
+#if 0
+    StringRef Text = MI.getOperand(0).getSymbolName();
+    if (Text.find("SGMASK:") != std::string::npos) {
+      Text = Text.substr(Text.find("SGMASK:") + strlen("SGMASK:"));
+      Text = Text.substr(0, Text.find_first_of(" \t\r\n"));
+      unsigned long InlineAsmMask = std::stoul(Text.str(), nullptr, 0);
+      Result = ((unsigned long)SGMask & InlineAsmMask) != 0;
+    }
+#endif
+  }
+
   else if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&
            (TII->isVALU(MI) || TII->isMFMAorWMMA(MI) || TII->isSALU(MI) ||
             TII->isTRANS(MI)))
