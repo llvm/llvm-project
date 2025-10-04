@@ -367,19 +367,6 @@ def SCC_CLASS : SIRegisterClass<"AMDGPU", [i1], 1, (add SCC)> {
   let BaseClassOrder = 10000;
 }
 
-def M0_CLASS : SIRegisterClass<"AMDGPU", [i32], 32, (add M0)> {
-  let CopyCost = 1;
-  let isAllocatable = 0;
-  let HasSGPR = 1;
-}
-
-def M0_CLASS_LO16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16, (add M0_LO16)> {
-  let CopyCost = 1;
-  let Size = 16;
-  let isAllocatable = 0;
-  let HasSGPR = 1;
-}
-
 // TODO: Do we need to set DwarfRegAlias on register tuples?
 
 def SGPR_LO16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
@@ -797,7 +784,7 @@ def SReg_LO16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
    TMA_LO_LO16, TMA_HI_LO16, TBA_LO_LO16, TBA_HI_LO16, SRC_SHARED_BASE_LO_LO16,
    SRC_SHARED_LIMIT_LO_LO16, SRC_PRIVATE_BASE_LO_LO16, SRC_PRIVATE_LIMIT_LO_LO16,
    SRC_POPS_EXITING_WAVE_ID_LO16, SRC_VCCZ_LO16, SRC_EXECZ_LO16, SRC_SCC_LO16,
-   EXEC_LO_LO16, EXEC_HI_LO16, M0_CLASS_LO16, SRC_FLAT_SCRATCH_BASE_LO_LO16,
+   EXEC_LO_LO16, EXEC_HI_LO16, M0_LO16, SRC_FLAT_SCRATCH_BASE_LO_LO16,
    SRC_FLAT_SCRATCH_BASE_HI_LO16)> {
   let Size = 16;
   let isAllocatable = 0;
@@ -805,7 +792,7 @@ def SReg_LO16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
 }
 
 def SReg_32_XEXEC : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16, i1], 32,
-  (add SReg_32_XM0_XEXEC, M0_CLASS)> {
+  (add SReg_32_XM0_XEXEC, M0)> {
   let AllocationPriority = 0;
 }
 
@@ -830,7 +817,7 @@ def APERTURE_Class : SIRegisterClass<"AMDGPU", Reg64Types.types, 32,
 
 // Register class for all scalar registers (SGPRs + Special Registers)
 def SReg_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16, i1], 32,
-  (add SReg_32_XM0, M0_CLASS)> {
+  (add SReg_32_XM0, M0)> {
   let AllocationPriority = 0;
   let HasSGPR = 1;
   let BaseClassOrder = 32;

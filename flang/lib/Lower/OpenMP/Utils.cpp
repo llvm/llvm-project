@@ -14,16 +14,18 @@
 
 #include "ClauseFinder.h"
 #include "flang/Evaluate/fold.h"
-#include "flang/Lower/OpenMP/Clauses.h"
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertExprToHLFIR.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/DirectivesCommon.h>
 #include <flang/Lower/OpenMP/Clauses.h>
 #include <flang/Lower/PFTBuilder.h>
-#include <flang/Lower/StatementContext.h>
+//<<<<<<< HEAD
+//#include <flang/Lower/StatementContext.h>
+//#include <flang/Lower/Support/PrivateReductionUtils.h>
+//#include <flang/Lower/SymbolMap.h>
+//=======
 #include <flang/Lower/Support/PrivateReductionUtils.h>
-#include <flang/Lower/SymbolMap.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Builder/Todo.h>
 #include <flang/Parser/openmp-utils.h>
