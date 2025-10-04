@@ -50,6 +50,9 @@
 using namespace llvm;
 using namespace PatternMatch;
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 /// Replace a select operand based on an equality comparison with the identity
 /// constant of a binop.
@@ -2934,32 +2937,6 @@ static Instruction *foldSelectWithSRem(SelectInst &SI, InstCombinerImpl &IC,
   return nullptr;
 }
 
-static Value *foldSelectWithFrozenICmp(SelectInst &Sel, InstCombiner::BuilderTy &Builder) {
-  FreezeInst *FI = dyn_cast<FreezeInst>(Sel.getCondition());
-  if (!FI)
-    return nullptr;
-
-  Value *Cond = FI->getOperand(0);
-  Value *TrueVal = Sel.getTrueValue(), *FalseVal = Sel.getFalseValue();
-
-  //   select (freeze(x == y)), x, y --> y
-  //   select (freeze(x != y)), x, y --> x
-  // The freeze should be only used by this select. Otherwise, remaining uses of
-  // the freeze can observe a contradictory value.
-  //   c = freeze(x == y)   ; Let's assume that y = poison & x = 42; c is 0 or 1
-  //   a = select c, x, y   ;
-  //   f(a, c)              ; f(poison, 1) cannot happen, but if a is folded
-  //                        ; to y, this can happen.
-  CmpPredicate Pred;
-  if (FI->hasOneUse() &&
-      match(Cond, m_c_ICmp(Pred, m_Specific(TrueVal), m_Specific(FalseVal))) &&
-      (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE)) {
-    return Pred == ICmpInst::ICMP_EQ ? FalseVal : TrueVal;
-  }
-
-  return nullptr;
-}
-
 /// Given that \p CondVal is known to be \p CondIsTrue, try to simplify \p SI.
 static Value *simplifyNestedSelectsUsingImpliedCond(SelectInst &SI,
                                                     Value *CondVal,
@@ -4446,9 +4423,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Instruction *PN = foldSelectToPhi(SI, DT, Builder))
     return replaceInstUsesWith(SI, PN);
 
-  if (Value *Fr = foldSelectWithFrozenICmp(SI, Builder))
-    return replaceInstUsesWith(SI, Fr);
-
   if (Value *V = foldRoundUpIntegerWithPow2Alignment(SI, Builder))
     return replaceInstUsesWith(SI, V);
 
@@ -4521,8 +4495,21 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   auto FoldSelectWithAndOrCond = [&](bool IsAnd, Value *A,
                                      Value *B) -> Instruction * {
     if (Value *V = simplifySelectInst(B, TrueVal, FalseVal,
-                                      SQ.getWithInstruction(&SI)))
-      return SelectInst::Create(A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V);
+                                      SQ.getWithInstruction(&SI))) {
+      Value *NewTrueVal = IsAnd ? V : TrueVal;
+      Value *NewFalseVal = IsAnd ? FalseVal : V;
+
+      // If the True and False values don't change, then preserve the branch
+      // metadata of the original select as the net effect of this change is to
+      // simplify the conditional.
+      Instruction *MDFrom = nullptr;
+      if (NewTrueVal == TrueVal && NewFalseVal == FalseVal &&
+          !ProfcheckDisableMetadataFixes) {
+        MDFrom = &SI;
+      }
+      return SelectInst::Create(A, NewTrueVal, NewFalseVal, "", nullptr,
+                                MDFrom);
+    }
 
     // Is (select B, T, F) a SPF?
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {

@@ -435,16 +435,16 @@ define void @test_first_order_recurrence_tried_to_scalarized(ptr %dst, i1 %c, i3
 ; CHECK-LABEL: @test_first_order_recurrence_tried_to_scalarized(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = select i1 [[C:%.*]], i32 8, i32 9
-; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[FOR:%.*]] = phi i32 [ 4, [[SCALAR_PH]] ], [ [[IV]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 10, [[FOR]]
-; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i32 [[IV]]
-; CHECK-NEXT:    store i32 [[SUB]], ptr [[GEP_DST]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi i32 [ 4, [[ENTRY]] ], [ [[TMP18]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[TMP18]], 1
+; CHECK-NEXT:    [[TMP16:%.*]] = sub nsw i32 10, [[TMP15]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i32 [[TMP18]]
+; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

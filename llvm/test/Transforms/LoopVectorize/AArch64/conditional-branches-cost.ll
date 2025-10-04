@@ -362,8 +362,9 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 104
 ; PRED-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
-; PRED-NEXT:    br [[EXIT:label %.*]]
-; PRED:       [[SCALAR_PH:.*:]]
+; PRED-NEXT:    br label %[[EXIT:.*]]
+; PRED:       [[EXIT]]:
+; PRED-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -585,8 +586,9 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP15]], true
 ; PRED-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
-; PRED-NEXT:    br [[EXIT:label %.*]]
-; PRED:       [[SCALAR_PH:.*:]]
+; PRED-NEXT:    br label %[[EXIT:.*]]
+; PRED:       [[EXIT]]:
+; PRED-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -609,20 +611,19 @@ exit:
 }
 
 define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
-;
 ; COMMON-LABEL: define void @low_trip_count_fold_tail_scalarized_store(
 ; COMMON-SAME: ptr [[DST:%.*]]) {
 ; COMMON-NEXT:  [[ENTRY:.*]]:
-; COMMON-NEXT:    br label %[[EXIT1:.*]]
-; COMMON:       [[EXIT1]]:
-; COMMON-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[EXIT1]] ]
+; COMMON-NEXT:    br label %[[EXIT:.*]]
+; COMMON:       [[EXIT]]:
+; COMMON-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[EXIT]] ]
 ; COMMON-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i8
 ; COMMON-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
 ; COMMON-NEXT:    store i8 [[IV_TRUNC]], ptr [[GEP]], align 1
 ; COMMON-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; COMMON-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 7
-; COMMON-NEXT:    br i1 [[EC]], label %[[SCALAR_PH1:.*]], label %[[EXIT1]]
-; COMMON:       [[SCALAR_PH1]]:
+; COMMON-NEXT:    br i1 [[EC]], label %[[SCALAR_PH:.*]], label %[[EXIT]]
+; COMMON:       [[SCALAR_PH]]:
 ; COMMON-NEXT:    ret void
 ;
 entry:
@@ -1115,8 +1116,9 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; PRED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
 ; PRED-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
-; PRED-NEXT:    br [[EXIT:label %.*]]
-; PRED:       [[SCALAR_PH:.*:]]
+; PRED-NEXT:    br label %[[EXIT:.*]]
+; PRED:       [[EXIT]]:
+; PRED-NEXT:    ret void
 ;
 entry:
   br label %loop.header
