@@ -723,7 +723,7 @@ define void @also_empty() {
 
 define amdgpu_kernel void @indirect_call_known_callees(i1 %cond) {
 ; GFX9-LABEL: define amdgpu_kernel void @indirect_call_known_callees(
-; GFX9-SAME: i1 [[COND:%.*]]) #[[ATTR3:[0-9]+]] {
+; GFX9-SAME: i1 [[COND:%.*]]) #[[ATTR0]] {
 ; GFX9-NEXT:    [[FPTR:%.*]] = select i1 [[COND]], ptr @empty, ptr @also_empty
 ; GFX9-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FPTR]], @also_empty
 ; GFX9-NEXT:    br i1 [[TMP1]], label %[[BB2:.*]], label %[[BB3:.*]]
@@ -741,7 +741,7 @@ define amdgpu_kernel void @indirect_call_known_callees(i1 %cond) {
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @indirect_call_known_callees(
-; GFX10-SAME: i1 [[COND:%.*]]) #[[ATTR3:[0-9]+]] {
+; GFX10-SAME: i1 [[COND:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    [[FPTR:%.*]] = select i1 [[COND]], ptr @empty, ptr @also_empty
 ; GFX10-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FPTR]], @also_empty
 ; GFX10-NEXT:    br i1 [[TMP1]], label %[[BB2:.*]], label %[[BB3:.*]]
@@ -767,13 +767,13 @@ declare i32 @llvm.amdgcn.workgroup.id.x()
 
 define void @use_intrinsic_workitem_id_x() {
 ; GFX9-LABEL: define void @use_intrinsic_workitem_id_x(
-; GFX9-SAME: ) #[[ATTR5:[0-9]+]] {
+; GFX9-SAME: ) #[[ATTR4:[0-9]+]] {
 ; GFX9-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX9-NEXT:    store volatile i32 [[VAL]], ptr addrspace(1) null, align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @use_intrinsic_workitem_id_x(
-; GFX10-SAME: ) #[[ATTR5:[0-9]+]] {
+; GFX10-SAME: ) #[[ATTR4:[0-9]+]] {
 ; GFX10-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX10-NEXT:    store volatile i32 [[VAL]], ptr addrspace(1) null, align 4
 ; GFX10-NEXT:    ret void
@@ -803,12 +803,12 @@ define amdgpu_kernel void @use_intrinsic_workitem_id_x_cc_kernel() {
 
 define void @call_use_intrinsic_workitem_id_x() {
 ; GFX9-LABEL: define void @call_use_intrinsic_workitem_id_x(
-; GFX9-SAME: ) #[[ATTR5]] {
+; GFX9-SAME: ) #[[ATTR4]] {
 ; GFX9-NEXT:    call void @use_intrinsic_workitem_id_x()
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @call_use_intrinsic_workitem_id_x(
-; GFX10-SAME: ) #[[ATTR5]] {
+; GFX10-SAME: ) #[[ATTR4]] {
 ; GFX10-NEXT:    call void @use_intrinsic_workitem_id_x()
 ; GFX10-NEXT:    ret void
 ;
@@ -818,12 +818,12 @@ define void @call_use_intrinsic_workitem_id_x() {
 
 define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel() {
 ; GFX9-LABEL: define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel(
-; GFX9-SAME: ) #[[ATTR5]] {
+; GFX9-SAME: ) #[[ATTR4]] {
 ; GFX9-NEXT:    call void @use_intrinsic_workitem_id_x()
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel(
-; GFX10-SAME: ) #[[ATTR5]] {
+; GFX10-SAME: ) #[[ATTR4]] {
 ; GFX10-NEXT:    call void @use_intrinsic_workitem_id_x()
 ; GFX10-NEXT:    ret void
 ;
@@ -851,12 +851,12 @@ define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(ptr addrspace(3) %ptr) 
 
 define amdgpu_kernel void @with_inline_asm() {
 ; GFX9-LABEL: define amdgpu_kernel void @with_inline_asm(
-; GFX9-SAME: ) #[[ATTR3]] {
+; GFX9-SAME: ) #[[ATTR0]] {
 ; GFX9-NEXT:    call void asm sideeffect "
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @with_inline_asm(
-; GFX10-SAME: ) #[[ATTR3]] {
+; GFX10-SAME: ) #[[ATTR0]] {
 ; GFX10-NEXT:    call void asm sideeffect "
 ; GFX10-NEXT:    ret void
 ;
@@ -865,19 +865,17 @@ define amdgpu_kernel void @with_inline_asm() {
 }
 
 ;.
-; GFX9: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
-; GFX9: attributes #[[ATTR1]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
+; GFX9: attributes #[[ATTR0]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
+; GFX9: attributes #[[ATTR1]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
 ; GFX9: attributes #[[ATTR2]] = { "target-cpu"="gfx900" "uniform-work-group-size"="false" }
-; GFX9: attributes #[[ATTR3]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
-; GFX9: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx900" }
-; GFX9: attributes #[[ATTR5]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
+; GFX9: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx900" }
+; GFX9: attributes #[[ATTR4]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
 ;.
-; GFX10: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
-; GFX10: attributes #[[ATTR1]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
+; GFX10: attributes #[[ATTR0]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
+; GFX10: attributes #[[ATTR1]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
 ; GFX10: attributes #[[ATTR2]] = { "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
-; GFX10: attributes #[[ATTR3]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
-; GFX10: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx1010" }
-; GFX10: attributes #[[ATTR5]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
+; GFX10: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx1010" }
+; GFX10: attributes #[[ATTR4]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
 ;.
 ; GFX9: [[META0]] = !{i32 2, i32 10}
 ; GFX9: [[META1]] = !{i32 1, i32 2, i32 3, i32 10}
