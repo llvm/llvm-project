@@ -752,14 +752,10 @@ public:
   static StringRef guessLibraryShortName(StringRef Name, bool &isFramework,
                                          StringRef &Suffix);
 
-  static Triple::ArchType getArch(uint32_t CPUType, uint32_t CPUSubType) {
-    return MachO::getArch(CPUType, CPUSubType);
-  }
+  static Triple::ArchType getArch(uint32_t CPUType, uint32_t CPUSubType);
   static Triple getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
                               const char **McpuDefault = nullptr,
-                              const char **ArchFlag = nullptr) {
-    return MachO::getArchTriple(CPUType, CPUSubType, McpuDefault, ArchFlag);
-  }
+                              const char **ArchFlag = nullptr);
   static bool isValidArch(StringRef ArchFlag);
   static ArrayRef<StringRef> getValidArchs();
   static Triple getHostArch();
