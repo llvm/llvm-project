@@ -7,8 +7,10 @@
 
 // CHECK-LABEL: define {{.*}} @test_simple_array
 // NO-FLAG-LABEL: define {{.*}} @test_simple_array
+void init_array(int *arr);
 int test_simple_array(int i) {
   int arr[10];  // C arrays are 0-based: valid indices are [0, 9]
+  init_array(arr);  // Initialize to avoid UB from uninitialized read.
   // CHECK: %{{.*}} = icmp ult i32 %i, 10
   // CHECK: call void @llvm.assume(i1 %{{.*}})
   // NO-FLAG-NOT: call void @llvm.assume
@@ -18,6 +20,7 @@ int test_simple_array(int i) {
 // CHECK-LABEL: define {{.*}} @test_multidimensional_array
 int test_multidimensional_array(int i, int j) {
   int arr[5][8];  // Valid indices: i in [0, 4], j in [0, 7]
+  init_array(arr[0]);  // Initialize to avoid UB from uninitialized read.
   // CHECK: %{{.*}} = icmp ult i32 %i, 5
   // CHECK: call void @llvm.assume(i1 %{{.*}})
   // CHECK: %{{.*}} = icmp ult i32 %j, 8
@@ -28,6 +31,7 @@ int test_multidimensional_array(int i, int j) {
 // CHECK-LABEL: define {{.*}} @test_unsigned_index
 int test_unsigned_index(unsigned int i) {
   int arr[10];
+  init_array(arr);  // Initialize to avoid UB from uninitialized read.
   // CHECK: %{{.*}} = icmp ult i32 %i, 10
   // CHECK: call void @llvm.assume(i1 %{{.*}})
   return arr[i];
