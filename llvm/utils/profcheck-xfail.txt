@@ -81,6 +81,7 @@ CodeGen/Hexagon/loop-idiom/memmove-rt-check.ll
 CodeGen/NVPTX/lower-ctor-dtor.ll
 CodeGen/PowerPC/P10-stack-alignment.ll
 CodeGen/RISCV/zmmul.ll
+CodeGen/SPIRV/hlsl-resources/UniqueImplicitBindingNumber.ll
 CodeGen/WebAssembly/memory-interleave.ll
 CodeGen/X86/masked_gather_scatter.ll
 CodeGen/X86/nocfivalue.ll
@@ -780,6 +781,8 @@ Transforms/GlobalOpt/shrink-global-to-bool-check-debug.ll
 Transforms/GlobalOpt/shrink-global-to-bool-opaque-ptrs.ll
 Transforms/GVN/debugloc-load-select.ll
 Transforms/GVN/load-through-select-dbg.ll
+Transforms/GVN/masked-load-store-no-mem-dep.ll
+Transforms/GVN/masked-load-store.ll
 Transforms/GVN/opaque-ptr.ll
 Transforms/GVN/pr69301.ll
 Transforms/GVN/pre-invalid-prof-metadata.ll
