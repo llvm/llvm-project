@@ -244,6 +244,15 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
     return getOperation()->emitError("could not infer memory space");
   }
 
+  // Note: Only rely on TensorLikeType::getBufferType() if memref layout is
+  // explicitly specified by the user. Otherwise, the default behavior is to
+  // return a fully dynamic layout map which is the opposite of the default
+  // behavior of this function.
+  if (options.constructMemRefLayoutFn) {
+    return cast<TensorLikeType>(getType()).getBufferType(
+        options, [&]() { return emitError(); });
+  }
+
   return cast<BufferLikeType>(
       getMemRefTypeWithStaticIdentityLayout(getType(), memorySpace));
 }
