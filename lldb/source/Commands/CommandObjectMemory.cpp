@@ -459,7 +459,8 @@ protected:
       if (frame)
         search_first = frame->GetSymbolContext(eSymbolContextModule).module_sp;
       TypeQuery query(lookup_type_name.GetStringRef(),
-                      TypeQueryOptions::e_find_one);
+                      TypeQueryOptions::e_find_one |
+                          TypeQueryOptions::e_search_by_mangled_name);
       TypeResults results;
       target->GetImages().FindTypes(search_first.get(), query, results);
       TypeSP type_sp = results.GetFirstType();
