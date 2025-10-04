@@ -2763,6 +2763,20 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDynamicCastExpr>
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstCastExpr>
     cxxConstCastExpr;
 
+/// Matches any named cast expression.
+///
+/// Example: Matches all four of the casts in
+/// \code
+///   struct S { virtual void f(); };
+///   S* p = nullptr;
+///   S* ptr1 = static_cast<S*>(p);
+///   S* ptr2 = reinterpret_cast<S*>(p);
+///   S* ptr3 = dynamic_cast<S*>(p);
+///   S* ptr4 = const_cast<S*>(p);
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNamedCastExpr>
+    cxxNamedCastExpr;
+
 /// Matches a C-style cast expression.
 ///
 /// Example: Matches (int) 2.2f in
@@ -6986,6 +7000,20 @@ AST_MATCHER_P(ReferenceTypeLoc, hasReferentLoc, internal::Matcher<TypeLoc>,
 extern const internal::VariadicDynCastAllOfMatcher<
     TypeLoc, TemplateSpecializationTypeLoc>
     templateSpecializationTypeLoc;
+
+/// Matches `TypedefTypeLoc`s.
+///
+/// Given
+/// \code
+///   using t1 = int;
+///   template <typename T> struct S { using t2 = int; };
+///   t1 var1;
+///   const S<char>::t2* var2;
+/// \endcode
+/// typedefTypeLoc()
+///   matches `t1` (in the declaration of var1) and `S<char>::t2`.
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, TypedefTypeLoc>
+    typedefTypeLoc;
 
 /// Matches template specialization `TypeLoc`s, class template specializations,
 /// variable template specializations, and function template specializations

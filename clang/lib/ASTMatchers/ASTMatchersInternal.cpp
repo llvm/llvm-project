@@ -810,6 +810,8 @@ const internal::VariadicDynCastAllOfMatcher<TypeLoc, ReferenceTypeLoc>
 const internal::VariadicDynCastAllOfMatcher<TypeLoc,
                                             TemplateSpecializationTypeLoc>
     templateSpecializationTypeLoc;
+const internal::VariadicDynCastAllOfMatcher<TypeLoc, TypedefTypeLoc>
+    typedefTypeLoc;
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryExprOrTypeTraitExpr>
     unaryExprOrTypeTraitExpr;
@@ -1009,6 +1011,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDynamicCastExpr>
     cxxDynamicCastExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstCastExpr>
     cxxConstCastExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNamedCastExpr>
+    cxxNamedCastExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CStyleCastExpr>
     cStyleCastExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ExplicitCastExpr>
