@@ -8,17 +8,38 @@
 
 #include "PassDetail.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/Path.h"
 
 #include <memory>
 
 using namespace mlir;
 using namespace cir;
+
+static SmallString<128> getTransformedFileName(mlir::ModuleOp mlirModule) {
+  SmallString<128> fileName;
+
+  if (mlirModule.getSymName())
+    fileName = llvm::sys::path::filename(mlirModule.getSymName()->str());
+
+  if (fileName.empty())
+    fileName = "<null>";
+
+  for (size_t i = 0; i < fileName.size(); ++i) {
+    // Replace everything that's not [a-zA-Z0-9._] with a _. This set happens
+    // to be the set of C preprocessing numbers.
+    if (!clang::isPreprocessingNumberBody(fileName[i]))
+      fileName[i] = '_';
+  }
+
+  return fileName;
+}
 
 namespace {
 struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
@@ -30,8 +51,15 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void lowerComplexDivOp(cir::ComplexDivOp op);
   void lowerComplexMulOp(cir::ComplexMulOp op);
   void lowerUnaryOp(cir::UnaryOp op);
+  void lowerGlobalOp(cir::GlobalOp op);
   void lowerArrayDtor(cir::ArrayDtor op);
   void lowerArrayCtor(cir::ArrayCtor op);
+
+  /// Build the function that initializes the specified global
+  cir::FuncOp buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op);
+
+  /// Build a module init function that calls all the dynamic initializers.
+  void buildCXXGlobalInitFunc();
 
   cir::FuncOp buildRuntimeFunction(
       mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
@@ -46,6 +74,10 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
 
   /// Tracks current module.
   mlir::ModuleOp mlirModule;
+
+  /// Tracks existing dynamic initializers.
+  llvm::StringMap<uint32_t> dynamicInitializerNames;
+  llvm::SmallVector<cir::FuncOp> dynamicInitializers;
 
   void setASTContext(clang::ASTContext *c) { astCtx = c; }
 };
@@ -589,6 +621,111 @@ void LoweringPreparePass::lowerUnaryOp(cir::UnaryOp op) {
   op.erase();
 }
 
+cir::FuncOp
+LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
+  // TODO(cir): Store this in the GlobalOp.
+  // This should come from the MangleContext, but for now I'm hardcoding it.
+  SmallString<256> fnName("__cxx_global_var_init");
+  // Get a unique name
+  uint32_t cnt = dynamicInitializerNames[fnName]++;
+  if (cnt)
+    fnName += "." + llvm::Twine(cnt).str();
+
+  // Create a variable initialization function.
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op);
+  auto fnType = cir::FuncType::get({}, builder.getVoidTy());
+  FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
+                                  cir::GlobalLinkageKind::InternalLinkage);
+
+  // Move over the initialzation code of the ctor region.
+  mlir::Block *entryBB = f.addEntryBlock();
+  if (!op.getCtorRegion().empty()) {
+    mlir::Block &block = op.getCtorRegion().front();
+    entryBB->getOperations().splice(entryBB->begin(), block.getOperations(),
+                                    block.begin(), std::prev(block.end()));
+  }
+
+  // Register the destructor call with __cxa_atexit
+  mlir::Region &dtorRegion = op.getDtorRegion();
+  if (!dtorRegion.empty()) {
+    assert(!cir::MissingFeatures::opGlobalDtorLowering());
+    llvm_unreachable("dtor region lowering is NYI");
+  }
+
+  // Replace cir.yield with cir.return
+  builder.setInsertionPointToEnd(entryBB);
+  mlir::Operation *yieldOp = nullptr;
+  if (!op.getCtorRegion().empty()) {
+    mlir::Block &block = op.getCtorRegion().front();
+    yieldOp = &block.getOperations().back();
+  } else {
+    assert(!cir::MissingFeatures::opGlobalDtorLowering());
+    llvm_unreachable("dtor region lowering is NYI");
+  }
+
+  assert(isa<YieldOp>(*yieldOp));
+  cir::ReturnOp::create(builder, yieldOp->getLoc());
+  return f;
+}
+
+void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
+  mlir::Region &ctorRegion = op.getCtorRegion();
+  mlir::Region &dtorRegion = op.getDtorRegion();
+
+  if (!ctorRegion.empty() || !dtorRegion.empty()) {
+    // Build a variable initialization function and move the initialzation code
+    // in the ctor region over.
+    cir::FuncOp f = buildCXXGlobalVarDeclInitFunc(op);
+
+    // Clear the ctor and dtor region
+    ctorRegion.getBlocks().clear();
+    dtorRegion.getBlocks().clear();
+
+    assert(!cir::MissingFeatures::astVarDeclInterface());
+    dynamicInitializers.push_back(f);
+  }
+
+  assert(!cir::MissingFeatures::opGlobalAnnotations());
+}
+
+void LoweringPreparePass::buildCXXGlobalInitFunc() {
+  if (dynamicInitializers.empty())
+    return;
+
+  assert(!cir::MissingFeatures::opGlobalCtorList());
+
+  SmallString<256> fnName;
+  // Include the filename in the symbol name. Including "sub_" matches gcc
+  // and makes sure these symbols appear lexicographically behind the symbols
+  // with priority (TBD).  Module implementation units behave the same
+  // way as a non-modular TU with imports.
+  // TODO: check CXX20ModuleInits
+  if (astCtx->getCurrentNamedModule() &&
+      !astCtx->getCurrentNamedModule()->isModuleImplementation()) {
+    llvm::raw_svector_ostream out(fnName);
+    std::unique_ptr<clang::MangleContext> mangleCtx(
+        astCtx->createMangleContext());
+    cast<clang::ItaniumMangleContext>(*mangleCtx)
+        .mangleModuleInitializer(astCtx->getCurrentNamedModule(), out);
+  } else {
+    fnName += "_GLOBAL__sub_I_";
+    fnName += getTransformedFileName(mlirModule);
+  }
+
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
+  auto fnType = cir::FuncType::get({}, builder.getVoidTy());
+  cir::FuncOp f =
+      buildRuntimeFunction(builder, fnName, mlirModule.getLoc(), fnType,
+                           cir::GlobalLinkageKind::ExternalLinkage);
+  builder.setInsertionPointToStart(f.addEntryBlock());
+  for (cir::FuncOp &f : dynamicInitializers)
+    builder.createCallOp(f.getLoc(), f, {});
+
+  cir::ReturnOp::create(builder, f.getLoc());
+}
+
 static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
                                        clang::ASTContext *astCtx,
                                        mlir::Operation *op, mlir::Type eltTy,
@@ -691,6 +828,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerComplexDivOp(complexDiv);
   else if (auto complexMul = mlir::dyn_cast<cir::ComplexMulOp>(op))
     lowerComplexMulOp(complexMul);
+  else if (auto glob = mlir::dyn_cast<cir::GlobalOp>(op))
+    lowerGlobalOp(glob);
   else if (auto unary = mlir::dyn_cast<cir::UnaryOp>(op))
     lowerUnaryOp(unary);
 }
@@ -704,12 +843,15 @@ void LoweringPreparePass::runOnOperation() {
 
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
-                  cir::ComplexMulOp, cir::ComplexDivOp, cir::UnaryOp>(op))
+                  cir::ComplexMulOp, cir::ComplexDivOp, cir::GlobalOp,
+                  cir::UnaryOp>(op))
       opsToTransform.push_back(op);
   });
 
   for (mlir::Operation *o : opsToTransform)
     runOnOp(o);
+
+  buildCXXGlobalInitFunc();
 }
 
 std::unique_ptr<Pass> mlir::createLoweringPreparePass() {
