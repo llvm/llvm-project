@@ -20,6 +20,7 @@
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
+#include <iterator>
 #include <utility>
 
 //===----------------------------------------------------------------------===//
@@ -69,6 +70,8 @@ class PrepareForOMPOffloadPrivatizationPass
       ModuleOp mod = targetOp->getParentOfType<ModuleOp>();
       OperandRange privateVars = targetOp.getPrivateVars();
       SmallVector<mlir::Value> newPrivVars;
+      Value fakeDependVar;
+      omp::TaskOp cleanupTaskOp;
 
       newPrivVars.reserve(privateVars.size());
       std::optional<ArrayAttr> privateSyms = targetOp.getPrivateSyms();
@@ -92,6 +95,42 @@ class PrepareForOMPOffloadPrivatizationPass
         if (mapInfoOp.getMapCaptureType() == omp::VariableCaptureKind::ByCopy) {
           newPrivVars.push_back(privVar);
           continue;
+        }
+
+        // For deferred target tasks (!$omp target nowait), we need to keep
+        // a copy of the original, i.e. host variable being privatized so
+        // that it is available when the target task is eventually executed.
+        // We do this by first allocating as much heap memory as is needed by
+        // the original variable. Then, we use the init and copy regions of the
+        // privatizer, an instance of omp::PrivateClauseOp to set up the heap-
+        // allocated copy.
+        // After the target task is done, we need to use the dealloc region
+        // of the privatizer to clean up everything. We also need to free
+        // the heap memory we allocated. But due to the deferred nature
+        // of the target task, we cannot simply deallocate right after the
+        // omp.target operation else we may end up freeing memory before
+        // its eventual use by the target task. So, we create a dummy
+        // dependence between the target task and new omp.task. In the omp.task,
+        // we do all the cleanup. So, we end up with the following structure
+        //
+        // omp.target map_entries(..) ... nowait depend(out:fakeDependVar) {
+        //   ...
+        //   omp.terminator
+        // }
+        // omp.task depend(in: fakeDependVar) {
+        //   /*cleanup_code*/
+        //   omp.terminator
+        // }
+        bool needsCleanupTask = !privatizer.getDeallocRegion().empty();
+        if (needsCleanupTask && !fakeDependVar) {
+          Region *targetParentRegion = targetOp->getParentRegion();
+          rewriter.setInsertionPointToStart(&*targetParentRegion->begin());
+          Location loc = targetParentRegion->getLoc();
+          Type i32Ty = rewriter.getI32Type();
+          Type llvmPtrTy = LLVM::LLVMPointerType::get(targetOp->getContext());
+          Value constOne = rewriter.create<LLVM::ConstantOp>(loc, i32Ty, 1);
+          fakeDependVar =
+              LLVM::AllocaOp::create(rewriter, loc, llvmPtrTy, i32Ty, constOne);
         }
 
         // Allocate heap memory that corresponds to the type of memory
@@ -173,10 +212,10 @@ class PrepareForOMPOffloadPrivatizationPass
         // it.
         auto createAlwaysInlineFuncAndCallIt =
             [&](Region &region, llvm::StringRef funcName,
-                llvm::ArrayRef<Value> args) -> Value {
+                llvm::ArrayRef<Value> args, bool returnsValue) -> Value {
           assert(!region.empty() && "region cannot be empty");
           LLVM::LLVMFuncOp func =
-              createFuncOpForRegion(loc, mod, region, funcName, rewriter);
+              createFuncOpForRegion(loc, mod, region, funcName, rewriter, returnsValue);
           auto call = rewriter.create<LLVM::CallOp>(loc, func, args);
           return call.getResult();
         };
@@ -195,7 +234,7 @@ class PrepareForOMPOffloadPrivatizationPass
           initializedVal = createAlwaysInlineFuncAndCallIt(
               privatizer.getInitRegion(),
               llvm::formatv("{0}_{1}", privatizer.getSymName(), "init").str(),
-              {moldArg, newArg});
+              {moldArg, newArg}, /*returnsValue=*/true);
         else
           initializedVal = newArg;
 
@@ -203,7 +242,7 @@ class PrepareForOMPOffloadPrivatizationPass
           initializedVal = createAlwaysInlineFuncAndCallIt(
               privatizer.getCopyRegion(),
               llvm::formatv("{0}_{1}", privatizer.getSymName(), "copy").str(),
-              {moldArg, initializedVal});
+              {moldArg, initializedVal}, /*returnsValue=*/true);
 
         if (isPrivatizedByValue)
           (void)rewriter.create<LLVM::StoreOp>(loc, initializedVal, heapMem);
@@ -254,11 +293,55 @@ class PrepareForOMPOffloadPrivatizationPass
                                                           varType, heapMem);
           newPrivVars.push_back(newPrivVar);
         }
+
+        // Deallocate
+        if (needsCleanupTask) {
+          if (!cleanupTaskOp) {
+            assert(fakeDependVar && "Need a valid value to set up a dependency");
+            rewriter.setInsertionPointAfter(targetOp);
+            omp::TaskOperands taskOperands;
+            auto inDepend = omp::ClauseTaskDependAttr::get(
+                rewriter.getContext(), omp::ClauseTaskDepend::taskdependin);
+            taskOperands.dependKinds.push_back(inDepend);
+            taskOperands.dependVars.push_back(fakeDependVar);
+            cleanupTaskOp = omp::TaskOp::create(rewriter, loc, taskOperands);
+            Block *taskBlock = rewriter.createBlock(&cleanupTaskOp.getRegion());
+            rewriter.setInsertionPointToEnd(taskBlock);
+            rewriter.create<omp::TerminatorOp>(cleanupTaskOp.getLoc());
+          }
+          rewriter.setInsertionPointToStart(
+              &*cleanupTaskOp.getRegion().getBlocks().begin());
+          (void)createAlwaysInlineFuncAndCallIt(
+              privatizer.getDeallocRegion(),
+              llvm::formatv("{0}_{1}", privatizer.getSymName(), "dealloc")
+                  .str(),
+              {initializedVal}, /*returnsValue=*/false);
+          llvm::FailureOr<LLVM::LLVMFuncOp> freeFunc =
+              LLVM::lookupOrCreateFreeFn(rewriter, mod);
+          assert(llvm::succeeded(freeFunc) &&
+                 "Could not find free in the module");
+          (void)rewriter.create<LLVM::CallOp>(loc, freeFunc.value(),
+                                              ValueRange{heapMem});
+        }
       }
       assert(newPrivVars.size() == privateVars.size() &&
              "The number of private variables must match before and after "
              "transformation");
-
+      if (fakeDependVar) {
+        omp::ClauseTaskDependAttr outDepend = omp::ClauseTaskDependAttr::get(
+            rewriter.getContext(), omp::ClauseTaskDepend::taskdependout);
+        SmallVector<Attribute> newDependKinds;
+        if (!targetOp.getDependVars().empty()) {
+          std::optional<ArrayAttr> dependKinds = targetOp.getDependKinds();
+          assert(dependKinds && "bad depend clause in omp::TargetOp");
+          llvm::copy(*dependKinds, std::back_inserter(newDependKinds));
+        }
+        newDependKinds.push_back(outDepend);
+        ArrayAttr newDependKindsAttr =
+            ArrayAttr::get(rewriter.getContext(), newDependKinds);
+        targetOp.getDependVarsMutable().append(fakeDependVar);
+        targetOp.setDependKindsAttr(newDependKindsAttr);
+      }
       rewriter.setInsertionPoint(targetOp);
       Operation *newOp = rewriter.clone(*targetOp.getOperation());
       omp::TargetOp newTargetOp = cast<omp::TargetOp>(newOp);
@@ -361,13 +444,15 @@ private:
   }
 
   // Create a function for srcRegion and attribute it to be always_inline.
-  // The big assumption here is that srcRegion is one of init or copy regions
-  // of a omp::PrivateClauseop. Accordingly, the return type is assumed
-  // to be the same as the types of the two arguments of the region itself.
+  // The big assumption here is that srcRegion is one of init, copy or dealloc
+  // regions of a omp::PrivateClauseop. Accordingly, the return type is assumed
+  // to either be the same as the types of the two arguments of the region (for
+  // init and copy regions) or void as would be the case for dealloc regions.
   LLVM::LLVMFuncOp createFuncOpForRegion(Location loc, ModuleOp mod,
                                          Region &srcRegion,
                                          llvm::StringRef funcName,
-                                         IRRewriter &rewriter) {
+                                         IRRewriter &rewriter,
+                                         bool returnsValue = false) {
 
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(mod.getBody(), mod.getBody()->end());
@@ -377,7 +462,9 @@ private:
 
     SmallVector<Type> paramTypes;
     llvm::copy(srcRegion.getArgumentTypes(), std::back_inserter(paramTypes));
-    Type resultType = srcRegion.getArgument(0).getType();
+    Type resultType = returnsValue
+                          ? srcRegion.getArgument(0).getType()
+                          : LLVM::LLVMVoidType::get(rewriter.getContext());
     LLVM::LLVMFunctionType funcType =
         LLVM::LLVMFunctionType::get(resultType, paramTypes);
 
@@ -390,9 +477,8 @@ private:
       if (isa<omp::YieldOp>(block.getTerminator())) {
         omp::YieldOp yieldOp = cast<omp::YieldOp>(block.getTerminator());
         rewriter.setInsertionPoint(yieldOp);
-        if (!isa<LLVM::LLVMVoidType>(resultType))
-          rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(yieldOp, TypeRange(),
-                                                      yieldOp.getOperands());
+        rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(yieldOp, TypeRange(),
+                                                    yieldOp.getOperands());
       }
     }
     return func;
