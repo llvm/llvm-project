@@ -430,3 +430,53 @@ TYPED_TEST(RepeatTests, Repeat) {
     RunRepeatTest<TypeParam>(t.ncopies, t.input, t.output);
   }
 }
+
+// Test SPLIT()
+template <typename CHAR>
+using SplitFunction = std::function<std::size_t(const CHAR *, std::size_t,
+    const CHAR *, std::size_t, std::size_t, bool, const char *, int)>;
+using SplitFunctions = CharTypedFunctions<SplitFunction>;
+template <typename CHAR> struct SplitTests : public ::testing::Test {};
+TYPED_TEST_SUITE(SplitTests, CharacterTypes, );
+
+struct SplitTestCase {
+  const char *x, *y;
+  std::size_t pos;
+  bool back;
+  std::size_t expect;
+};
+
+template <typename CHAR>
+void RunSplitTests(const std::vector<SplitTestCase> &testCases,
+    const SplitFunction<CHAR> &function) {
+  for (const auto &t : testCases) {
+    // Convert default character to desired kind
+    std::size_t xLen{std::strlen(t.x)}, yLen{std::strlen(t.y)};
+    std::basic_string<CHAR> x{t.x, t.x + xLen};
+    std::basic_string<CHAR> y{t.y, t.y + yLen};
+    auto got{function(x.data(), xLen, y.data(), yLen, t.pos, t.back, "", 0)};
+    ASSERT_EQ(got, t.expect)
+        << "SPLIT('" << t.x << "','" << t.y << "',pos=" << t.pos
+        << ",back=" << t.back << ") for CHARACTER(kind=" << sizeof(CHAR)
+        << "): got " << got << ", expected " << t.expect;
+  }
+}
+
+TYPED_TEST(SplitTests, Split) {
+  static SplitFunctions functions{
+      RTNAME(Split1), RTNAME(Split2), RTNAME(Split4)};
+  static std::vector<SplitTestCase> testcases{
+      {" one,last example,", ", ", 0, false, 1},
+      {" one,last example,", ", ", 1, false, 5},
+      {" one,last example,", ", ", 5, false, 10},
+      {" one,last example,", ", ", 10, false, 18},
+      {" one,last example,", ", ", 18, false, 19},
+      {" one,last example,", ", ", 19, true, 18},
+      {" one,last example,", ", ", 18, true, 10},
+      {" one,last example,", ", ", 10, true, 5},
+      {" one,last example,", ", ", 5, true, 1},
+      {" one,last example,", ", ", 1, true, 0},
+  };
+  RunSplitTests<TypeParam>(
+      testcases, std::get<SplitFunction<TypeParam>>(functions));
+}

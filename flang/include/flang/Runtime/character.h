@@ -127,6 +127,16 @@ std::size_t RTDECL(Verify4)(const char32_t *, std::size_t, const char32_t *set,
 void RTDECL(Verify)(Descriptor &result, const Descriptor &string,
     const Descriptor &set, const Descriptor *back /*can be null*/, int kind,
     const char *sourceFile = nullptr, int sourceLine = 0);
+
+std::size_t RTDECL(Split1)(const char *, std::size_t, const char *set,
+    std::size_t, std::size_t, bool back = false,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+std::size_t RTDECL(Split2)(const char16_t *, std::size_t, const char16_t *set,
+    std::size_t, std::size_t, bool back = false,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+std::size_t RTDECL(Split4)(const char32_t *, std::size_t, const char32_t *set,
+    std::size_t, std::size_t, bool back = false,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 }
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_CHARACTER_H_

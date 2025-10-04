@@ -290,3 +290,34 @@ mlir::Value fir::runtime::genVerify(fir::FirOpBuilder &builder,
                                             stringLen, setBase, setLen, back);
   return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
+
+mlir::Value fir::runtime::genSplit(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, int kind,
+                                   mlir::Value stringBase,
+                                   mlir::Value stringLen, mlir::Value setBase,
+                                   mlir::Value setLen, mlir::Value pos,
+                                   mlir::Value back) {
+  mlir::func::FuncOp func;
+  switch (kind) {
+  case 1:
+    func = fir::runtime::getRuntimeFunc<mkRTKey(Split1)>(loc, builder);
+    break;
+  case 2:
+    func = fir::runtime::getRuntimeFunc<mkRTKey(Split2)>(loc, builder);
+    break;
+  case 4:
+    func = fir::runtime::getRuntimeFunc<mkRTKey(Split4)>(loc, builder);
+    break;
+  default:
+    fir::emitFatalError(
+        loc, "unsupported CHARACTER kind value. Runtime expects 1, 2, or 4.");
+  }
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(7));
+  auto args = fir::runtime::createArguments(builder, loc, fTy, stringBase,
+                                            stringLen, setBase, setLen, pos,
+                                            back, sourceFile, sourceLine);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
+}

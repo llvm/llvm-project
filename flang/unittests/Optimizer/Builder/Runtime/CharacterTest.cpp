@@ -209,3 +209,26 @@ TEST_F(RuntimeCallTest, genVerifyTest) {
   checkGenVerify(*firBuilder, "_FortranAVerify2", 2);
   checkGenVerify(*firBuilder, "_FortranAVerify4", 4);
 }
+
+void checkGenSplit(
+    fir::FirOpBuilder &builder, llvm::StringRef fctName, unsigned kind) {
+  auto loc = builder.getUnknownLoc();
+  mlir::Type charTy = fir::CharacterType::get(builder.getContext(), kind, 10);
+  mlir::Type boxTy = fir::BoxType::get(charTy);
+  mlir::Type i32Ty = IntegerType::get(builder.getContext(), 32);
+  mlir::Value stringBase = fir::UndefOp::create(builder, loc, boxTy);
+  mlir::Value stringLen = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value setBase = fir::UndefOp::create(builder, loc, boxTy);
+  mlir::Value setLen = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value pos = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value back = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value res = fir::runtime::genSplit(
+      builder, loc, kind, stringBase, stringLen, setBase, setLen, pos, back);
+  checkCallOp(res.getDefiningOp(), fctName, 6);
+}
+
+TEST_F(RuntimeCallTest, genSplitTest) {
+  checkGenSplit(*firBuilder, "_FortranASplit1", 1);
+  checkGenSplit(*firBuilder, "_FortranASplit2", 2);
+  checkGenSplit(*firBuilder, "_FortranASplit4", 4);
+}
