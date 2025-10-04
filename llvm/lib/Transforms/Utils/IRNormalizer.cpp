@@ -324,10 +324,7 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
       Name.append(F->getName());
 
   Name.append("(");
-  llvm::outs() << "BROOSKO SIZEO HEHEHE >>> " << Operands.size() << "\n";
-  llvm::outs() << "OPERANDO >> \n";
   for (size_t i = 0; i < Operands.size(); ++i) {
-    llvm::outs() << Operands[i] << "\n";
     Name.append(Operands[i]);
 
     if (i < Operands.size() - 1)

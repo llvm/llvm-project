@@ -22,6 +22,7 @@
 #include "llvm/ADT/Hashing.h"
 
 #include <sstream>
+#include <iomanip>
 
 namespace mlir {
 #define GEN_PASS_DEF_NORMALIZE
@@ -55,10 +56,13 @@ private:
   bool hasOnlyImmediateOperands(mlir::Operation* op);
   void SetDeterministicNames(Block &block);
   llvm::SetVector<int> getOutputFootprint(mlir::Operation* op, llvm::SmallPtrSet<const mlir::Operation *, 32> &visited);
+  mlir::OpPrintingFlags flags{};
 };
 } // namespace
 
 void NormalizePass::runOnOperation() {
+  flags.printNameLocAsPrefix(true);
+
   ModuleOp module = getOperation();
 
   for (Operation &op : module.getOps()) {
@@ -121,7 +125,15 @@ bool NormalizePass::hasOnlyImmediateOperands(mlir::Operation* op) {
   return true;
 }
 
-uint64_t kernel_hash(std::string data)
+std::string to_string(uint64_t const hash)
+{
+  std::ostringstream oss;
+  oss << std::hex << std::setw(16) << std::setfill('0') << hash;
+  std::string tmp = oss.str();
+  return tmp.substr(11, 5);
+}
+
+uint64_t kernel_hash(std::string_view data)
 {
     const uint64_t FNV_OFFSET = 0xcbf29ce484222325ULL;
     const uint64_t FNV_PRIME = 0x100000001b3ULL;
@@ -134,29 +146,63 @@ uint64_t kernel_hash(std::string data)
     return hash;
 }
 
+void replace(std::string& str, char from, char to) {
+  for(auto& it : str) {
+    if(it == from) it = to;
+  }
+}
+
+std::vector<std::string> split(std::string_view str, char delimiter) {
+  std::vector<std::string> outs{};
+  std::stringstream ss{ std::string {str} };
+  std::string item;
+  while(std::getline(ss, item, delimiter)) {
+    replace(item, ':', '_');
+    outs.emplace_back(item);
+  }
+  return outs;
+}
+
 void NormalizePass::nameAsInitialOperation(mlir::Operation* op) {
   SmallVector<SmallString<64>, 4> Operands;
 
   if(op->getNumOperands() == 0) {
-    std::string TextRepresentation;
-    mlir::AsmState state(op);
-    llvm::raw_string_ostream Stream(TextRepresentation);
-    op->print(Stream, state);
-    Operands.push_back(StringRef(Stream.str()));
+    /**
+     * INFO: Constant operations like arith.constant
+     */
+    if(auto call = mlir::dyn_cast<mlir::func::CallOp>(op)) {
+      Operands.push_back(StringRef(std::string{"void"}));
+    } else {
+      std::string TextRepresentation;
+      mlir::AsmState state(op, flags);
+      llvm::raw_string_ostream Stream(TextRepresentation);
+      op->print(Stream, state);
+      std::string hash = to_string(kernel_hash(split(Stream.str(), '=')[1]));
+      Operands.push_back(StringRef(hash));
+    }
   } else {
     for (mlir::Value operand : op->getOperands()) {
       if (mlir::Operation *defOp = operand.getDefiningOp()) {
+        /**
+         * INFO: Constant arguments like arith.constant
+         */
         std::string TextRepresentation;
-        mlir::AsmState state(defOp);
+        mlir::AsmState state(defOp, flags);
         llvm::raw_string_ostream Stream(TextRepresentation);
         defOp->print(Stream, state);
-        Operands.push_back(StringRef(Stream.str()));
+        std::string hash = to_string(kernel_hash(split(Stream.str(), '=')[1]));
+        Operands.push_back(StringRef(hash));
       } else {
+        /**
+         * INFO: Function Arguments
+         */
         std::string TextRepresentation;
-        mlir::AsmState state(op);
+        mlir::AsmState state(op, flags);
         llvm::raw_string_ostream Stream(TextRepresentation);
         operand.print(Stream, state);
-        Operands.push_back(StringRef(Stream.str()));
+        std::string argNum = split(Stream.str(), ':')[1];
+        argNum = argNum.substr(1, argNum.size() - 1);
+        Operands.push_back(StringRef(std::string("arg" + argNum)));
       }
     }
   }
@@ -174,7 +220,7 @@ void NormalizePass::nameAsInitialOperation(mlir::Operation* op) {
   for (const int &Output : OutputFootprint)
     Hash = llvm::hashing::detail::hash_16_bytes(Hash, Output);
 
-  SmallString<256> Name;
+  std::string Name{""};
   Name.append("vl" + std::to_string(Hash).substr(0, 5));
 
   if (auto call = mlir::dyn_cast<mlir::func::CallOp>(op)) {
@@ -182,14 +228,14 @@ void NormalizePass::nameAsInitialOperation(mlir::Operation* op) {
     Name.append(callee.str());
   }
 
-  Name.append("(");
+  Name.append(" $ ");
   for (unsigned long i = 0; i < Operands.size(); ++i) {
-    Name.append(Operands[i]);
+    Name.append(std::string(Operands[i]));
 
     if (i < Operands.size() - 1)
-      Name.append(", ");
+      Name.append(" -- ");
   }
-  Name.append(")");
+  Name.append(" $.$ ");
 
   mlir::OpBuilder b(op->getContext());
   mlir::StringAttr sat = b.getStringAttr(Name);
@@ -204,16 +250,21 @@ void NormalizePass::nameAsRegularOperation(mlir::Operation* op, llvm::SmallPtrSe
       RenameOperation(defOp, visited);
 
       std::string TextRepresentation;
-      mlir::AsmState state(defOp);
+      mlir::AsmState state(defOp, flags);
       llvm::raw_string_ostream Stream(TextRepresentation);
       defOp->print(Stream, state);
-      Operands.push_back(StringRef(Stream.str()));
+      Operands.push_back(StringRef(split(Stream.str(), '=')[0]));
     } else {
+      /**
+       * INFO: Function Arguments
+       */
       std::string TextRepresentation;
-      mlir::AsmState state(op);
+      mlir::AsmState state(op, flags);
       llvm::raw_string_ostream Stream(TextRepresentation);
       operand.print(Stream, state);
-      Operands.push_back(StringRef(Stream.str()));
+      std::string argNum = split(Stream.str(), ':')[1];
+      argNum = argNum.substr(1, argNum.size() - 1);
+      Operands.push_back(StringRef(std::string("arg" + argNum)));
     }
   }
 
@@ -243,14 +294,14 @@ void NormalizePass::nameAsRegularOperation(mlir::Operation* op, llvm::SmallPtrSe
     Name.append(callee.str());
   }
 
-  Name.append("(");
+  Name.append(" $ ");
   for (unsigned long i = 0; i < Operands.size(); ++i) {
     Name.append(Operands[i]);
 
     if (i < Operands.size() - 1)
-      Name.append(", ");
+      Name.append(" -- ");
   }
-  Name.append(")");
+  Name.append(" $.$ ");
 
   mlir::OpBuilder b(op->getContext());
   mlir::StringAttr sat = b.getStringAttr(Name);
@@ -304,6 +355,8 @@ bool NormalizePass::isOutput(Operation &op) {
       if (isa<MemoryEffects::Write>(effect.getEffect()))
         return true;
   }
+
+  if (auto call = mlir::dyn_cast<mlir::func::CallOp>(op)) return true;
 
   return false;
 }
