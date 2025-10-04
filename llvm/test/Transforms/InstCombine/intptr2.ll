@@ -12,10 +12,12 @@ define void @test1(ptr %a, ptr readnone %a_end, ptr %b.i) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_03:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[A]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[B_ADDR_02_IN:%.*]] = phi ptr [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[B_I]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR_02_IN]], align 4
+; CHECK-NEXT:    [[B_ADDR_02:%.*]] = ptrtoint ptr [[B_ADDR_02_IN]] to i64
+; CHECK-NEXT:    [[TMP:%.*]] = inttoptr i64 [[B_ADDR_02]] to ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[TMP]], align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], ptr [[A_ADDR_03]], align 4
-; CHECK-NEXT:    [[ADD]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_02_IN]], i64 4
+; CHECK-NEXT:    [[ADD]] = getelementptr inbounds nuw i8, ptr [[TMP]], i64 4
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_03]], i64 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[INCDEC_PTR]], [[A_END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]

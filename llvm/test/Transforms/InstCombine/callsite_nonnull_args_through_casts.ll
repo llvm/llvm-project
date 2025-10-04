@@ -87,7 +87,9 @@ define void @nonnullAfterPtr2Int() {
 ; CHECK-LABEL: define void @nonnullAfterPtr2Int() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @foo(ptr nonnull [[A]])
+; CHECK-NEXT:    [[P2I:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[I2P:%.*]] = inttoptr i64 [[P2I]] to ptr
+; CHECK-NEXT:    call void @foo(ptr nonnull [[I2P]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

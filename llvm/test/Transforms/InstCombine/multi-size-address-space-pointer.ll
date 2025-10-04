@@ -49,7 +49,9 @@ define i32 @test_as3(ptr addrspace(3) %a) {
 
 define i32 @test_combine_ptrtoint(ptr addrspace(2) %a) {
 ; CHECK-LABEL: @test_combine_ptrtoint(
-; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(2) [[A:%.*]], align 4
+; CHECK-NEXT:    [[CAST:%.*]] = ptrtoint ptr addrspace(2) [[A1:%.*]] to i8
+; CHECK-NEXT:    [[A:%.*]] = inttoptr i8 [[CAST]] to ptr addrspace(2)
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(2) [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
   %cast = ptrtoint ptr addrspace(2) %a to i8
@@ -70,7 +72,9 @@ define i8 @test_combine_inttoptr(i8 %a) {
 define i32 @test_combine_vector_ptrtoint(<2 x ptr addrspace(2)> %a) {
 ; CHECK-LABEL: @test_combine_vector_ptrtoint(
 ; CHECK-NEXT:    [[P:%.*]] = extractelement <2 x ptr addrspace(2)> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(2) [[P]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr addrspace(2) [[P]] to i8
+; CHECK-NEXT:    [[P1:%.*]] = inttoptr i8 [[TMP2]] to ptr addrspace(2)
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(2) [[P1]], align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
   %cast = ptrtoint <2 x ptr addrspace(2)> %a to <2 x i8>
