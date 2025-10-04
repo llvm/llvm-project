@@ -9477,6 +9477,8 @@ __m128i test_mm256_maskz_cvtepi64_epi32(__mmask8 __M, __m256i __A) {
   return _mm256_maskz_cvtepi64_epi32(__M, __A); 
 }
 
+TEST_CONSTEXPR(match_v4si(_mm256_maskz_cvtepi64_epi32( 0xA,(__m256i)(__v4di){1, -2, 3, -4}),0 , -2, 0, -4));
+
 void test_mm256_mask_cvtepi64_storeu_epi32(void * __P, __mmask8 __M, __m256i __A) {
   // CHECK-LABEL: test_mm256_mask_cvtepi64_storeu_epi32
   // CHECK: @llvm.x86.avx512.mask.pmov.qd.mem.256
