@@ -761,12 +761,6 @@ def Pseudo_SReg_128 : SIRegisterClass<"AMDGPU", Reg128Types.types, 32,
   let BaseClassOrder = 10000;
 }
 
-def LDS_DIRECT_CLASS : RegisterClass<"AMDGPU", [i32], 32,
-  (add LDS_DIRECT)> {
-  let isAllocatable = 0;
-  let CopyCost = -1;
-}
-
 let GeneratePressureSet = 0, HasSGPR = 1 in {
 // Subset of SReg_32 without M0 for SMRD instructions and alike.
 // See comments in SIInstructions.td for more info.
@@ -829,7 +823,7 @@ def SGPR_NULL256 : SIReg<"null">;
 
 let GeneratePressureSet = 0 in {
 def SRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
-  (add SReg_32, LDS_DIRECT_CLASS)> {
+  (add SReg_32, LDS_DIRECT)> {
   let isAllocatable = 0;
   let HasSGPR = 1;
   let Size = 32;
@@ -968,7 +962,7 @@ defm "" : SRegClass<32, Reg1024Types.types, SGPR_1024Regs>;
 }
 
 def VRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
-                                 (add VGPR_32, LDS_DIRECT_CLASS)> {
+                                 (add VGPR_32, LDS_DIRECT)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let Size = 32;
@@ -1083,21 +1077,21 @@ def VReg_1 : SIRegisterClass<"AMDGPU", [i1], 32, (add)> {
 }
 
 def VS_16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
-                          (add VGPR_16, SReg_32, LDS_DIRECT_CLASS)> {
+                          (add VGPR_16, SReg_32, LDS_DIRECT)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let Size = 16;
 }
 
 def VS_16_Lo128 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
-                          (add VGPR_16_Lo128, SReg_32, LDS_DIRECT_CLASS)> {
+                          (add VGPR_16_Lo128, SReg_32, LDS_DIRECT)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let Size = 16;
 }
 
 def VS_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
-                          (add VGPR_32, SReg_32, LDS_DIRECT_CLASS)> {
+                          (add VGPR_32, SReg_32, LDS_DIRECT)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
@@ -1105,7 +1099,7 @@ def VS_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v
 }
 
 def VS_32_Lo128 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
-                          (add VGPR_32_Lo128, SReg_32, LDS_DIRECT_CLASS)> {
+                          (add VGPR_32_Lo128, SReg_32, LDS_DIRECT)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
@@ -1113,7 +1107,7 @@ def VS_32_Lo128 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2
 }
 
 def VS_32_Lo256 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
-                                  (add VGPR_32_Lo256, SReg_32, LDS_DIRECT_CLASS)> {
+                                  (add VGPR_32_Lo256, SReg_32, LDS_DIRECT)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;

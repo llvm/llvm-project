@@ -1311,3 +1311,49 @@ void real_on_scalar_from_imag_with_type_promotion() {
 // OGCG: %[[A_IMAG_F32:.*]] = fpext half %[[A_IMAG]] to float
 // OGCG: %[[A_IMAG_F16:.*]] = fptrunc float %[[A_IMAG_F32]] to half
 // OGCG: store half %[[A_IMAG_F16]], ptr %[[B_ADDR]], align 2
+
+void complex_type_parameter(float _Complex a) {}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
+// CIR: cir.store %{{.*}}, %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+// Test will be updated when that is implemented
+
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: store { float, float } %{{.*}}, ptr %[[A_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: store <2 x float> %a.coerce, ptr %[[A_ADDR]], align 4
+
+void complex_type_argument() {
+  float _Complex a;
+  complex_type_parameter(a);
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR: %[[ARG_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["coerce"]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[TMP_A]], %[[ARG_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[TMP_ARG:.*]] = cir.load{{.*}} %[[ARG_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: cir.call @_Z22complex_type_parameterCf(%[[TMP_ARG]]) : (!cir.complex<!cir.float>) -> ()
+
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[ARG_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
+// LLVM: store { float, float } %[[TMP_A]], ptr %[[ARG_ADDR]], align 4
+// LLVM: %[[TMP_ARG:.*]] = load { float, float }, ptr %[[ARG_ADDR]], align 4
+// LLVM: call void @_Z22complex_type_parameterCf({ float, float } %[[TMP_ARG]])
+
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[ARG_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
+// OGCG: %[[ARG_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[ARG_ADDR]], i32 0, i32 0
+// OGCG: %[[ARG_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[ARG_ADDR]], i32 0, i32 1
+// OGCG: store float %[[A_REAL]], ptr %[[ARG_REAL_PTR]], align 4
+// OGCG: store float %[[A_IMAG]], ptr %[[ARG_IMAG_PTR]], align 4
+// OGCG: %[[TMP_ARG:.*]] = load <2 x float>, ptr %[[ARG_ADDR]], align 4
+// OGCG: call void @_Z22complex_type_parameterCf(<2 x float> noundef %[[TMP_ARG]])

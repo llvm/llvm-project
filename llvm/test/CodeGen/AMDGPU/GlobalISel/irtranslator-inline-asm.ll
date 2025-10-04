@@ -136,7 +136,7 @@ define float @test_multiple_register_outputs_same() #0 {
 define double @test_multiple_register_outputs_mixed() #0 {
   ; CHECK-LABEL: name: test_multiple_register_outputs_mixed
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   INLINEASM &"v_mov_b32 $0, 0; v_add_f64 $1, 0, 0", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def %8, 3473418 /* regdef:VReg_64 */, def %9
+  ; CHECK-NEXT:   INLINEASM &"v_mov_b32 $0, 0; v_add_f64 $1, 0, 0", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def %8, 3407882 /* regdef:VReg_64 */, def %9
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY %8
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY %9
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
