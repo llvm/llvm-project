@@ -8,6 +8,14 @@
 struct A{};
 struct B{ explicit operator bool() { return true; } };
 
+// This should be the first test case of this file.
+void IsActOnFinishFullExprCalled() {
+  // Do not add other test cases to this function.
+  // Make sure `ActOnFinishFullExpr` is called and creates `ExprWithCleanups`
+  // to avoid assertion failure.
+  [[assume(B{})]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
+}
+
 template <bool cond>
 void f() {
   [[assume(cond)]]; // ext-warning {{C++23 extension}}
@@ -119,13 +127,12 @@ struct F {
 
 template <typename T>
 constexpr int f5() requires C<T> { return 1; } // expected-note {{while checking the satisfaction}}
-                                               // expected-note@-1 {{while substituting template arguments}}
-                                               // expected-note@-2 {{candidate template ignored}}
+                                               // expected-note@-1 {{candidate template ignored}}
 
 template <typename T>
-constexpr int f5() requires (!C<T>) { return 2; } // expected-note 4 {{while checking the satisfaction}}
-                                                  // expected-note@-1 4 {{while substituting template arguments}}
-                                                  // expected-note@-2 {{candidate template ignored}}
+constexpr int f5() requires (!C<T>) { return 2; } // expected-note 4 {{while checking the satisfaction}} \
+                                                  // expected-note 4 {{while substituting template arguments}} \
+                                                  // expected-note {{candidate template ignored}}
 
 static_assert(f5<int>() == 1);
 static_assert(f5<D>() == 1); // expected-note 3 {{while checking constraint satisfaction}}

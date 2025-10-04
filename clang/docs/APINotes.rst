@@ -206,6 +206,17 @@ declaration kind), all of which are optional:
     - Name: tzdb
       SwiftCopyable: false
 
+  A non-copyable type can have a "destroy" operation, specified with
+  `SwiftDestroyOp`, which will be invoked on the instance when it is no
+  longer in use to free up resources.
+
+  ::
+
+    Tags:
+    - Name: WGPUAdapterInfo
+      SwiftCopyable: false
+      SwiftDestroyOp: wgpuAdapterInfoFreeMembers
+
 :SwiftConformsTo:
 
   Allows annotating a C++ class as conforming to a Swift protocol. Equivalent
@@ -217,6 +228,20 @@ declaration kind), all of which are optional:
     Tags:
     - Name: vector
       SwiftConformsTo: Cxx.CxxSequence
+
+:SwiftSafety:
+
+  Import a declaration as ``@safe`` or ``@unsafe`` to Swift.
+
+  ::
+
+    Tags:
+    - Name: UnsafeType
+      SwiftSafety: unsafe
+    - Name: span
+      Methods:
+        - Name: size
+          SwiftSafety: safe
 
 :Availability, AvailabilityMsg:
 

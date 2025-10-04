@@ -1,0 +1,32 @@
+name: Bazel Checks
+
+permissions:
+  contents: read
+
+on:
+  push:
+    paths:
+      - '.github/workflows/bazel-checks.yml'
+      - 'utils/bazel/**'
+    branches:
+      - main
+  pull_request:
+    paths:
+      - '.github/workflows/bazel-checks.yml'
+      - 'utils/bazel/**'
+
+jobs:
+  buildifier:
+    name: "Buildifier"
+    runs-on: ubuntu-24.04
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Setup Buildifier
+        run: |
+          sudo curl -L https://github.com/bazelbuild/buildtools/releases/download/v8.2.1/buildifier-linux-amd64 -o /usr/bin/buildifier
+          sudo chmod +x /usr/bin/buildifier
+      - name: Run Buildifier
+        run: |
+          buildifier --mode=check $(find ./utils/bazel -name *BUILD*)

@@ -165,6 +165,12 @@ def CIR_AnyIntOrFloatType : AnyTypeOf<[CIR_AnyFloatType, CIR_AnyIntType],
 
 def CIR_AnyComplexType : CIR_TypeBase<"::cir::ComplexType", "complex type">;
 
+def CIR_AnyComplexOrIntOrFloatType : AnyTypeOf<[
+    CIR_AnyComplexType, CIR_AnyFloatType, CIR_AnyIntType
+], "complex, integer or floating point type"> {
+    let cppFunctionName = "isComplexOrIntegerOrFloatingPointType";
+}
+
 //===----------------------------------------------------------------------===//
 // Array Type predicates
 //===----------------------------------------------------------------------===//
@@ -288,6 +294,14 @@ def CIR_AnyFloatOrVecOfFloatType
         "floating point or vector of floating point type"> {
     let cppFunctionName = "isFPOrVectorOfFPType";
 }
+
+//===----------------------------------------------------------------------===//
+// VPtr type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyVPtrType : CIR_TypeBase<"::cir::VPtrType", "vptr type">;
+
+def CIR_PtrToVPtr : CIR_PtrToType<CIR_AnyVPtrType>;
 
 //===----------------------------------------------------------------------===//
 // Scalar Type predicates

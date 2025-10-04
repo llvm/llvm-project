@@ -246,6 +246,8 @@ protected:
 
   ProcessGDBRemote(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
 
+  virtual std::shared_ptr<ThreadGDBRemote> CreateThread(lldb::tid_t tid);
+
   bool SupportsMemoryTagging() override;
 
   /// Broadcaster event bits definitions.

@@ -13,11 +13,11 @@ entry:
   br i1 %n, label %flag_true, label %flag_false
 
 flag_true:
-  call void @llvm.lifetime.start.p0(i64 8, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
   br label %merge
 
 flag_false:
-  call void @llvm.lifetime.start.p0(i64 8, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
   br label %merge
 
 merge:
@@ -36,7 +36,7 @@ cleanup:
   br label %suspend
 
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
@@ -49,9 +49,9 @@ declare void @llvm.coro.destroy(ptr)
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 declare void @print(ptr)
 declare noalias ptr @malloc(i32)

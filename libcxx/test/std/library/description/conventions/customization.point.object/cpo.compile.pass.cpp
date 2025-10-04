@@ -81,6 +81,10 @@ static_assert(test(std::ranges::rend, a));
 static_assert(test(std::ranges::size, a));
 static_assert(test(std::ranges::ssize, a));
 
+#if TEST_STD_VER >= 26
+// static_assert(test(std::views::reserve_hint, a));
+#endif
+
 // [range.factories]
 // views::empty<T> is not a CPO
 static_assert(test(std::views::iota, 1));

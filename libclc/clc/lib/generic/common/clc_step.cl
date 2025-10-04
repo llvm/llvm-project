@@ -6,7 +6,5 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
-
 #define __CLC_BODY <clc_step.inc>
 #include <clc/math/gentype.inc>

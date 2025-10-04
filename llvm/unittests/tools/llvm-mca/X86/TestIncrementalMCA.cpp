@@ -130,6 +130,10 @@ TEST_F(X86TestBase, TestInstructionRecycling) {
   mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM, /*CallLatency=*/100);
   IB.setInstRecycleCallback(GetRecycledInst);
 
+  // Setup a generic IPP that does not do anything (as it is not target
+  // specific) for testing purposes.
+  auto IPP = std::make_unique<InstrPostProcess>(*STI, *MCII);
+
   const SmallVector<mca::Instrument *> Instruments;
   // Tile size = 7
   for (unsigned i = 0U, E = MCIs.size(); i < E;) {
@@ -147,8 +151,10 @@ TEST_F(X86TestBase, TestInstructionRecycling) {
                                        });
         ASSERT_FALSE(bool(RemainingE));
         ASSERT_TRUE(RecycledInst);
+        IPP->postProcessInstruction(*RecycledInst, MCIs[i]);
         ISM.addRecycledInst(RecycledInst);
       } else {
+        IPP->postProcessInstruction(*InstOrErr.get(), MCIs[i]);
         ISM.addInst(std::move(InstOrErr.get()));
       }
     }
@@ -233,4 +239,28 @@ TEST_F(X86TestBase, TestVariantInstructionsSameAddress) {
   ISM.endOfStream();
   Expected<unsigned> Cycles = P->run();
   ASSERT_TRUE(static_cast<bool>(Cycles));
+}
+
+// Test customization of instruction latency with instruments
+TEST_F(X86TestBase, TestInstructionCustomization) {
+  const unsigned ExplicitLatency = 100;
+  SmallVector<MCInst> MCIs;
+  MCInst InstructionToAdd = MCInstBuilder(X86::XOR64rr)
+                                .addReg(X86::RAX)
+                                .addReg(X86::RBX)
+                                .addReg(X86::RCX);
+  MCIs.push_back(InstructionToAdd);
+  SmallVector<std::pair<StringRef, StringRef>> InstrDescs;
+  auto LatStr = std::to_string(ExplicitLatency);
+  InstrDescs.push_back(std::make_pair(StringRef("LATENCY"), StringRef(LatStr)));
+
+  // Run the baseline.
+  json::Object BaselineResult;
+  auto E = runBaselineMCA(BaselineResult, MCIs, {}, nullptr, InstrDescs);
+  ASSERT_FALSE(bool(E)) << "Failed to run baseline";
+  auto *BaselineObj = BaselineResult.getObject("SummaryView");
+  auto V = BaselineObj->getInteger("TotalCycles");
+  ASSERT_TRUE(V);
+  // Additional 3 cycles for Dispatch, Executed and Retired states
+  ASSERT_EQ(unsigned(*V), ExplicitLatency + 3) << "Total cycles do not match";
 }

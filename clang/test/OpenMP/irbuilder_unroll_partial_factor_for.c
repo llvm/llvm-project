@@ -79,7 +79,7 @@ void unroll_partial_heuristic_for(int n, float *a, float *b, float *c, float *d)
 // CHECK-NEXT:    br i1 [[OMP_FLOOR0_CMP]], label [[OMP_FLOOR0_BODY:%.*]], label [[OMP_FLOOR0_EXIT:%.*]]
 // CHECK:       omp_floor0.body:
 // CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[OMP_FLOOR0_IV]], [[TMP9]]
-// CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[TMP13]], [[OMP_FLOOR0_TRIPCOUNT]]
+// CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[TMP13]], [[TMP4]]
 // CHECK-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i32 [[TMP5]], i32 13
 // CHECK-NEXT:    br label [[OMP_TILE0_PREHEADER:%.*]]
 // CHECK:       omp_tile0.preheader:

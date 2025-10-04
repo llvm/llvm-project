@@ -230,6 +230,12 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
       __msan_set_origin(allocated, size, o.raw_id());
     }
   }
+
+  uptr actually_allocated_size = allocator.GetActuallyAllocatedSize(allocated);
+  // For compatibility, the allocator converted 0-sized allocations into 1 byte
+  if (size == 0 && actually_allocated_size > 0 && flags()->poison_in_malloc)
+    __msan_poison(allocated, 1);
+
   UnpoisonParam(2);
   RunMallocHooks(allocated, size);
   return allocated;

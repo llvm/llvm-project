@@ -12,8 +12,8 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Diagnostics.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
 
@@ -24,7 +24,7 @@ using namespace mlir;
 using namespace mlir::python;
 using namespace mlir::python::nanobind_adaptors;
 
-void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
+static void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
 
   //===--------------------------------------------------------------------===//
   // StructType
@@ -33,37 +33,53 @@ void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
   auto llvmStructType =
       mlir_type_subclass(m, "StructType", mlirTypeIsALLVMStructType);
 
-  llvmStructType.def_classmethod(
-      "get_literal",
-      [](nb::object cls, const std::vector<MlirType> &elements, bool packed,
-         MlirLocation loc) {
-        CollectDiagnosticsToStringScope scope(mlirLocationGetContext(loc));
+  llvmStructType
+      .def_classmethod(
+          "get_literal",
+          [](const nb::object &cls, const std::vector<MlirType> &elements,
+             bool packed, MlirLocation loc) {
+            CollectDiagnosticsToStringScope scope(mlirLocationGetContext(loc));
 
-        MlirType type = mlirLLVMStructTypeLiteralGetChecked(
-            loc, elements.size(), elements.data(), packed);
-        if (mlirTypeIsNull(type)) {
-          throw nb::value_error(scope.takeMessage().c_str());
-        }
-        return cls(type);
-      },
-      "cls"_a, "elements"_a, nb::kw_only(), "packed"_a = false,
-      "loc"_a.none() = nb::none());
+            MlirType type = mlirLLVMStructTypeLiteralGetChecked(
+                loc, elements.size(), elements.data(), packed);
+            if (mlirTypeIsNull(type)) {
+              throw nb::value_error(scope.takeMessage().c_str());
+            }
+            return cls(type);
+          },
+          "cls"_a, "elements"_a, nb::kw_only(), "packed"_a = false,
+          "loc"_a = nb::none())
+      .def_classmethod(
+          "get_literal_unchecked",
+          [](const nb::object &cls, const std::vector<MlirType> &elements,
+             bool packed, MlirContext context) {
+            CollectDiagnosticsToStringScope scope(context);
+
+            MlirType type = mlirLLVMStructTypeLiteralGet(
+                context, elements.size(), elements.data(), packed);
+            if (mlirTypeIsNull(type)) {
+              throw nb::value_error(scope.takeMessage().c_str());
+            }
+            return cls(type);
+          },
+          "cls"_a, "elements"_a, nb::kw_only(), "packed"_a = false,
+          "context"_a = nb::none());
 
   llvmStructType.def_classmethod(
       "get_identified",
-      [](nb::object cls, const std::string &name, MlirContext context) {
+      [](const nb::object &cls, const std::string &name, MlirContext context) {
         return cls(mlirLLVMStructTypeIdentifiedGet(
             context, mlirStringRefCreate(name.data(), name.size())));
       },
-      "cls"_a, "name"_a, nb::kw_only(), "context"_a.none() = nb::none());
+      "cls"_a, "name"_a, nb::kw_only(), "context"_a = nb::none());
 
   llvmStructType.def_classmethod(
       "get_opaque",
-      [](nb::object cls, const std::string &name, MlirContext context) {
+      [](const nb::object &cls, const std::string &name, MlirContext context) {
         return cls(mlirLLVMStructTypeOpaqueGet(
             context, mlirStringRefCreate(name.data(), name.size())));
       },
-      "cls"_a, "name"_a, "context"_a.none() = nb::none());
+      "cls"_a, "name"_a, "context"_a = nb::none());
 
   llvmStructType.def(
       "set_body",
@@ -79,14 +95,14 @@ void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
 
   llvmStructType.def_classmethod(
       "new_identified",
-      [](nb::object cls, const std::string &name,
+      [](const nb::object &cls, const std::string &name,
          const std::vector<MlirType> &elements, bool packed, MlirContext ctx) {
         return cls(mlirLLVMStructTypeIdentifiedNewGet(
             ctx, mlirStringRefCreate(name.data(), name.length()),
             elements.size(), elements.data(), packed));
       },
       "cls"_a, "name"_a, "elements"_a, nb::kw_only(), "packed"_a = false,
-      "context"_a.none() = nb::none());
+      "context"_a = nb::none());
 
   llvmStructType.def_property_readonly(
       "name", [](MlirType type) -> std::optional<std::string> {
@@ -123,7 +139,7 @@ void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
   mlir_type_subclass(m, "PointerType", mlirTypeIsALLVMPointerType)
       .def_classmethod(
           "get",
-          [](nb::object cls, std::optional<unsigned> addressSpace,
+          [](const nb::object &cls, std::optional<unsigned> addressSpace,
              MlirContext context) {
             CollectDiagnosticsToStringScope scope(context);
             MlirType type = mlirLLVMPointerTypeGet(
@@ -133,8 +149,8 @@ void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
             }
             return cls(type);
           },
-          "cls"_a, "address_space"_a.none() = nb::none(), nb::kw_only(),
-          "context"_a.none() = nb::none())
+          "cls"_a, "address_space"_a = nb::none(), nb::kw_only(),
+          "context"_a = nb::none())
       .def_property_readonly("address_space", [](MlirType type) {
         return mlirLLVMPointerTypeGetAddressSpace(type);
       });

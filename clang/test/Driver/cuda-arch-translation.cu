@@ -68,19 +68,19 @@
 
 // HIP: clang-offload-bundler
 
-// SM20:--image=profile=sm_20{{.*}}
-// SM21:--image=profile=sm_21{{.*}}
-// SM30:--image=profile=sm_30{{.*}}
-// SM32:--image=profile=sm_32{{.*}}
-// SM35:--image=profile=sm_35{{.*}}
-// SM37:--image=profile=sm_37{{.*}}
-// SM50:--image=profile=sm_50{{.*}}
-// SM52:--image=profile=sm_52{{.*}}
-// SM53:--image=profile=sm_53{{.*}}
-// SM60:--image=profile=sm_60{{.*}}
-// SM61:--image=profile=sm_61{{.*}}
-// SM62:--image=profile=sm_62{{.*}}
-// SM70:--image=profile=sm_70{{.*}}
+// SM20:--image3=kind=elf,sm=20{{.*}}
+// SM21:--image3=kind=elf,sm=21{{.*}}
+// SM30:--image3=kind=elf,sm=30{{.*}}
+// SM32:--image3=kind=elf,sm=32{{.*}}
+// SM35:--image3=kind=elf,sm=35{{.*}}
+// SM37:--image3=kind=elf,sm=37{{.*}}
+// SM50:--image3=kind=elf,sm=50{{.*}}
+// SM52:--image3=kind=elf,sm=52{{.*}}
+// SM53:--image3=kind=elf,sm=53{{.*}}
+// SM60:--image3=kind=elf,sm=60{{.*}}
+// SM61:--image3=kind=elf,sm=61{{.*}}
+// SM62:--image3=kind=elf,sm=62{{.*}}
+// SM70:--image3=kind=elf,sm=70{{.*}}
 // GFX600:-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx600
 // GFX601:-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx601
 // GFX602:-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx602

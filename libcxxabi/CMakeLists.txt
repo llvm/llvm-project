@@ -244,7 +244,7 @@ include(HandleLibcxxabiFlags)
 #===============================================================================
 
 # Configure target flags
-if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
@@ -458,7 +458,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LIBCXXABI_C_FLAGS}")
 
 # On AIX, avoid picking up VMX extensions(i.e. vec_malloc) which would change
 # the default alignment of the allocators here.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_definitions("-D_XOPEN_SOURCE=700")
 endif()
 

@@ -1251,10 +1251,10 @@ define void @mgather_nxv16i64(<vscale x 8 x ptr> %ptrs0, <vscale x 8 x ptr> %ptr
 ; RV64-NEXT:    vs8r.v v8, (a0)
 ; RV64-NEXT:    vs8r.v v24, (a2)
 ; RV64-NEXT:    ret
-  %p0 = call <vscale x 16 x ptr> @llvm.vector.insert.nxv8p0.nxv16p0(<vscale x 16 x ptr> undef, <vscale x 8 x ptr> %ptrs0, i64 0)
+  %p0 = call <vscale x 16 x ptr> @llvm.vector.insert.nxv8p0.nxv16p0(<vscale x 16 x ptr> poison, <vscale x 8 x ptr> %ptrs0, i64 0)
   %p1 = call <vscale x 16 x ptr> @llvm.vector.insert.nxv8p0.nxv16p0(<vscale x 16 x ptr> %p0, <vscale x 8 x ptr> %ptrs1, i64 8)
 
-  %pt0 = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %passthru0, i64 0)
+  %pt0 = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> poison, <vscale x 8 x i64> %passthru0, i64 0)
   %pt1 = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> %pt0, <vscale x 8 x i64> %passthru1, i64 8)
 
   %v = call <vscale x 16 x i64> @llvm.masked.gather.nxv16i64.nxv16p0(<vscale x 16 x ptr> %p1, i32 8, <vscale x 16 x i1> %m, <vscale x 16 x i64> %pt1)
@@ -2394,7 +2394,7 @@ define <4 x i32> @scalar_prefix(ptr %base, i32 signext %index, <4 x i32> %vecidx
 ; RV64-NEXT:    vluxei64.v v8, (a0), v10
 ; RV64-NEXT:    ret
   %gep = getelementptr [256 x i32], ptr %base, i32 %index, <4 x i32> %vecidx
-  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
   ret <4 x i32> %res
 }
 
@@ -2426,7 +2426,7 @@ define <4 x i32> @scalar_prefix_with_splat(ptr %base, i32 %index, <4 x i32> %vec
   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> poison, <4 x i32> zeroinitializer
 
   %gep = getelementptr [256 x i32], ptr %base, <4 x i32> %broadcast.splat, <4 x i32> %vecidx
-  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
   ret <4 x i32> %res
 }
 
@@ -2450,7 +2450,7 @@ define <4 x i32> @scalar_prefix_with_constant_splat(ptr %base, <4 x i32> %vecidx
 ; RV64-NEXT:    vluxei64.v v8, (a0), v10
 ; RV64-NEXT:    ret
   %gep = getelementptr [256 x i32], ptr %base, <4 x i32> splat (i32 20), <4 x i32> %vecidx
-  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
   ret <4 x i32> %res
 }
 
@@ -2478,7 +2478,7 @@ define <4 x i32> @reassociate(ptr %base, i32 %index, <4 x i32> %vecidx) {
 ; RV64-NEXT:    vluxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %gep = getelementptr [256 x i32], ptr %base, <4 x i32> %vecidx, i32 %index
-  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
   ret <4 x i32> %res
 }
 
@@ -2509,7 +2509,7 @@ define <4 x i32> @reassociate_with_splat(ptr %base, i32 %index, <4 x i32> %vecid
   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> poison, <4 x i32> zeroinitializer
 
   %gep = getelementptr [256 x i32], ptr %base, <4 x i32> %vecidx, <4 x i32> %broadcast.splat
-  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
   ret <4 x i32> %res
 }
 
@@ -2531,7 +2531,7 @@ define <4 x i32> @reassociate_with_constant_splat(ptr %base, i32 %index, <4 x i3
 ; RV64-NEXT:    vluxei64.v v8, (a0), v10
 ; RV64-NEXT:    ret
   %gep = getelementptr [256 x i32], ptr %base, <4 x i32> %vecidx, <4 x i32> splat (i32 20)
-  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
   ret <4 x i32> %res
 }
 
@@ -2558,7 +2558,7 @@ define <4 x i32> @diagonal(ptr %base, <4 x i64> %vecidx) {
 ; RV64-NEXT:    vluxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %gep = getelementptr inbounds nuw [256 x [256 x float]], ptr %base, i64 0, <4 x i64> %vecidx, <4 x i64> %vecidx
-  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
   ret <4 x i32> %res
 }
 
@@ -2585,7 +2585,7 @@ define <4 x i32> @diagonal_i32(ptr %base, <4 x i32> %vecidx) {
 ; RV64-NEXT:    vluxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %gep = getelementptr inbounds nuw [256 x [256 x float]], ptr %base, i64 0, <4 x i32> %vecidx, <4 x i32> %vecidx
-  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
   ret <4 x i32> %res
 }
 

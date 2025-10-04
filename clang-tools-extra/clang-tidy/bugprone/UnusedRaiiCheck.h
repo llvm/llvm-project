@@ -1,4 +1,4 @@
-//===--- UnusedRaiiCheck.h - clang-tidy -------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::bugprone {
 /// Finds temporaries that look like RAII objects.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unused-raii.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/unused-raii.html
 class UnusedRaiiCheck : public ClangTidyCheck {
 public:
   UnusedRaiiCheck(StringRef Name, ClangTidyContext *Context)

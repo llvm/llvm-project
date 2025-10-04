@@ -175,9 +175,12 @@ public:
   /// \param Loc The value of the location (pointer).
   /// \param Val The value which will be stored at the location Loc.
   /// \param S   The bind is performed while processing the statement S.
+  /// \param AtDeclInit Whether the bind is performed during declaration
+  ///                   initialization.
   ///
   /// check::Bind
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &) const {}
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &) const {}
 
   /// Called after a CFG edge is taken within a function.
   ///
@@ -258,6 +261,15 @@ public:
   /// functions have special meaning, which should be reflected in the program
   /// state. This callback allows a checker to provide domain specific knowledge
   /// about the particular functions it knows about.
+  ///
+  /// Note that to evaluate a call, the handler MUST bind the return value if
+  /// its a non-void function. Invalidate the arguments if necessary.
+  ///
+  /// Note that in general, user-provided functions should not be eval-called
+  /// because the checker can't predict the exact semantics/contract of the
+  /// callee, and by having the eval::Call callback, we also prevent it from
+  /// getting inlined, potentially regressing analysis quality.
+  /// Consider using check::PreCall or check::PostCall to allow inlining.
   ///
   /// \returns true if the call has been successfully evaluated
   /// and false otherwise. Note, that only one checker can evaluate a call. If

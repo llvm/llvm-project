@@ -535,9 +535,8 @@ void ARM::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
   }
 }
 
-StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
-  StringRef ArchName =
-      CPU.empty() ? TT.getArchName() : getArchName(parseCPUArch(CPU));
+StringRef ARM::computeDefaultTargetABI(const Triple &TT) {
+  StringRef ArchName = TT.getArchName();
 
   if (TT.isOSBinFormatMachO()) {
     if (TT.getEnvironment() == Triple::EABI ||
@@ -575,10 +574,9 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   }
 }
 
-ARM::ARMABI ARM::computeTargetABI(const Triple &TT, StringRef CPU,
-                                  StringRef ABIName) {
+ARM::ARMABI ARM::computeTargetABI(const Triple &TT, StringRef ABIName) {
   if (ABIName.empty())
-    ABIName = ARM::computeDefaultTargetABI(TT, CPU);
+    ABIName = ARM::computeDefaultTargetABI(TT);
 
   if (ABIName == "aapcs16")
     return ARM_ABI_AAPCS16;
