@@ -530,6 +530,9 @@ public:
 
   /// Pop up a GraphViz/gv window with the DAG rendered using 'dot'.
   LLVM_ABI void viewGraph(const std::string &Title);
+  /// Pop up a GraphViz/gv window with the DAG rendered using 'dot', or write
+  /// the file out instead.
+  LLVM_ABI void viewGraph(const std::string &Title, const bool WriteFile);
   LLVM_ABI void viewGraph();
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
