@@ -319,33 +319,35 @@ public:
   /// Determine if this APInt just has one word to store value.
   ///
   /// \returns true if the number of bits <= 64, false otherwise.
-  bool isSingleWord() const { return BitWidth <= APINT_BITS_PER_WORD; }
+  [[nodiscard]] bool isSingleWord() const {
+    return BitWidth <= APINT_BITS_PER_WORD;
+  }
 
   /// Determine sign of this APInt.
   ///
   /// This tests the high bit of this APInt to determine if it is set.
   ///
   /// \returns true if this APInt is negative, false otherwise
-  bool isNegative() const { return (*this)[BitWidth - 1]; }
+  [[nodiscard]] bool isNegative() const { return (*this)[BitWidth - 1]; }
 
   /// Determine if this APInt Value is non-negative (>= 0)
   ///
   /// This tests the high bit of the APInt to determine if it is unset.
-  bool isNonNegative() const { return !isNegative(); }
+  [[nodiscard]] bool isNonNegative() const { return !isNegative(); }
 
   /// Determine if sign bit of this APInt is set.
   ///
   /// This tests the high bit of this APInt to determine if it is set.
   ///
   /// \returns true if this APInt has its sign bit set, false otherwise.
-  bool isSignBitSet() const { return (*this)[BitWidth - 1]; }
+  [[nodiscard]] bool isSignBitSet() const { return (*this)[BitWidth - 1]; }
 
   /// Determine if sign bit of this APInt is clear.
   ///
   /// This tests the high bit of this APInt to determine if it is clear.
   ///
   /// \returns true if this APInt has its sign bit clear, false otherwise.
-  bool isSignBitClear() const { return !isSignBitSet(); }
+  [[nodiscard]] bool isSignBitClear() const { return !isSignBitSet(); }
 
   /// Determine if this APInt Value is positive.
   ///
@@ -353,22 +355,24 @@ public:
   /// that 0 is not a positive value.
   ///
   /// \returns true if this APInt is positive.
-  bool isStrictlyPositive() const { return isNonNegative() && !isZero(); }
+  [[nodiscard]] bool isStrictlyPositive() const {
+    return isNonNegative() && !isZero();
+  }
 
   /// Determine if this APInt Value is non-positive (<= 0).
   ///
   /// \returns true if this APInt is non-positive.
-  bool isNonPositive() const { return !isStrictlyPositive(); }
+  [[nodiscard]] bool isNonPositive() const { return !isStrictlyPositive(); }
 
   /// Determine if this APInt Value only has the specified bit set.
   ///
   /// \returns true if this APInt only has the specified bit set.
-  bool isOneBitSet(unsigned BitNo) const {
+  [[nodiscard]] bool isOneBitSet(unsigned BitNo) const {
     return (*this)[BitNo] && popcount() == 1;
   }
 
   /// Determine if all bits are set.  This is true for zero-width values.
-  bool isAllOnes() const {
+  [[nodiscard]] bool isAllOnes() const {
     if (BitWidth == 0)
       return true;
     if (isSingleWord())
@@ -377,7 +381,7 @@ public:
   }
 
   /// Determine if this value is zero, i.e. all bits are clear.
-  bool isZero() const {
+  [[nodiscard]] bool isZero() const {
     if (isSingleWord())
       return U.VAL == 0;
     return countLeadingZerosSlowCase() == BitWidth;
@@ -386,7 +390,7 @@ public:
   /// Determine if this is a value of 1.
   ///
   /// This checks to see if the value of this APInt is one.
-  bool isOne() const {
+  [[nodiscard]] bool isOne() const {
     if (isSingleWord())
       return U.VAL == 1;
     return countLeadingZerosSlowCase() == BitWidth - 1;
@@ -396,13 +400,13 @@ public:
   ///
   /// This checks to see if the value of this APInt is the maximum unsigned
   /// value for the APInt's bit width.
-  bool isMaxValue() const { return isAllOnes(); }
+  [[nodiscard]] bool isMaxValue() const { return isAllOnes(); }
 
   /// Determine if this is the largest signed value.
   ///
   /// This checks to see if the value of this APInt is the maximum signed
   /// value for the APInt's bit width.
-  bool isMaxSignedValue() const {
+  [[nodiscard]] bool isMaxSignedValue() const {
     if (isSingleWord()) {
       assert(BitWidth && "zero width values not allowed");
       return U.VAL == ((WordType(1) << (BitWidth - 1)) - 1);
@@ -414,13 +418,13 @@ public:
   ///
   /// This checks to see if the value of this APInt is the minimum unsigned
   /// value for the APInt's bit width.
-  bool isMinValue() const { return isZero(); }
+  [[nodiscard]] bool isMinValue() const { return isZero(); }
 
   /// Determine if this is the smallest signed value.
   ///
   /// This checks to see if the value of this APInt is the minimum signed
   /// value for the APInt's bit width.
-  bool isMinSignedValue() const {
+  [[nodiscard]] bool isMinSignedValue() const {
     if (isSingleWord()) {
       assert(BitWidth && "zero width values not allowed");
       return U.VAL == (WordType(1) << (BitWidth - 1));
@@ -429,15 +433,17 @@ public:
   }
 
   /// Check if this APInt has an N-bits unsigned integer value.
-  bool isIntN(unsigned N) const { return getActiveBits() <= N; }
+  [[nodiscard]] bool isIntN(unsigned N) const { return getActiveBits() <= N; }
 
   /// Check if this APInt has an N-bits signed integer value.
-  bool isSignedIntN(unsigned N) const { return getSignificantBits() <= N; }
+  [[nodiscard]] bool isSignedIntN(unsigned N) const {
+    return getSignificantBits() <= N;
+  }
 
   /// Check if this APInt's value is a power of two greater than zero.
   ///
   /// \returns true if the argument APInt value is a power of two > 0.
-  bool isPowerOf2() const {
+  [[nodiscard]] bool isPowerOf2() const {
     if (isSingleWord()) {
       assert(BitWidth && "zero width values not allowed");
       return isPowerOf2_64(U.VAL);
@@ -446,7 +452,7 @@ public:
   }
 
   /// Check if this APInt's negated value is a power of two greater than zero.
-  bool isNegatedPowerOf2() const {
+  [[nodiscard]] bool isNegatedPowerOf2() const {
     assert(BitWidth && "zero width values not allowed");
     if (isNonNegative())
       return false;
@@ -458,21 +464,21 @@ public:
 
   /// Checks if this APInt -interpreted as an address- is aligned to the
   /// provided value.
-  LLVM_ABI bool isAligned(Align A) const;
+  [[nodiscard]] LLVM_ABI bool isAligned(Align A) const;
 
   /// Check if the APInt's value is returned by getSignMask.
   ///
   /// \returns true if this is the value returned by getSignMask.
-  bool isSignMask() const { return isMinSignedValue(); }
+  [[nodiscard]] bool isSignMask() const { return isMinSignedValue(); }
 
   /// Convert APInt to a boolean value.
   ///
   /// This converts the APInt to a boolean value as a test against zero.
-  bool getBoolValue() const { return !isZero(); }
+  [[nodiscard]] bool getBoolValue() const { return !isZero(); }
 
   /// If this value is smaller than the specified limit, return it, otherwise
   /// return the limit value.  This causes the value to saturate to the limit.
-  uint64_t getLimitedValue(uint64_t Limit = UINT64_MAX) const {
+  [[nodiscard]] uint64_t getLimitedValue(uint64_t Limit = UINT64_MAX) const {
     return ugt(Limit) ? Limit : getZExtValue();
   }
 
@@ -481,11 +487,11 @@ public:
   /// e.g. 0x01010101 satisfies isSplat(8).
   /// \param SplatSizeInBits The size of the pattern in bits. Must divide bit
   /// width without remainder.
-  LLVM_ABI bool isSplat(unsigned SplatSizeInBits) const;
+  [[nodiscard]] LLVM_ABI bool isSplat(unsigned SplatSizeInBits) const;
 
   /// \returns true if this APInt value is a sequence of \param numBits ones
   /// starting at the least significant bit with the remainder zero.
-  bool isMask(unsigned numBits) const {
+  [[nodiscard]] bool isMask(unsigned numBits) const {
     assert(numBits != 0 && "numBits must be non-zero");
     assert(numBits <= BitWidth && "numBits out of range");
     if (isSingleWord())
@@ -498,7 +504,7 @@ public:
   /// \returns true if this APInt is a non-empty sequence of ones starting at
   /// the least significant bit with the remainder zero.
   /// Ex. isMask(0x0000FFFFU) == true.
-  bool isMask() const {
+  [[nodiscard]] bool isMask() const {
     if (isSingleWord())
       return isMask_64(U.VAL);
     unsigned Ones = countTrailingOnesSlowCase();
@@ -507,7 +513,7 @@ public:
 
   /// Return true if this APInt value contains a non-empty sequence of ones with
   /// the remainder zero.
-  bool isShiftedMask() const {
+  [[nodiscard]] bool isShiftedMask() const {
     if (isSingleWord())
       return isShiftedMask_64(U.VAL);
     unsigned Ones = countPopulationSlowCase();
@@ -566,7 +572,7 @@ public:
   /// This function returns a pointer to the internal storage of the APInt.
   /// This is useful for writing out the APInt in binary form without any
   /// conversions.
-  const uint64_t *getRawData() const {
+  [[nodiscard]] const uint64_t *getRawData() const {
     if (isSingleWord())
       return &U.VAL;
     return &U.pVal[0];
@@ -978,7 +984,7 @@ public:
   ///
   /// \returns a new APInt value containing the remainder result
   LLVM_ABI APInt urem(const APInt &RHS) const;
-  LLVM_ABI uint64_t urem(uint64_t RHS) const;
+  [[nodiscard]] LLVM_ABI uint64_t urem(uint64_t RHS) const;
 
   /// Function for signed remainder operation.
   ///
@@ -987,7 +993,7 @@ public:
   /// Note that this is a true remainder operation and not a modulo operation
   /// because the sign follows the sign of the dividend which is *this.
   LLVM_ABI APInt srem(const APInt &RHS) const;
-  LLVM_ABI int64_t srem(int64_t RHS) const;
+  [[nodiscard]] LLVM_ABI int64_t srem(int64_t RHS) const;
 
   /// Dual division/remainder interface.
   ///
@@ -1076,7 +1082,7 @@ public:
   /// relationship.
   ///
   /// \returns true if *this == Val
-  bool eq(const APInt &RHS) const { return (*this) == RHS; }
+  [[nodiscard]] bool eq(const APInt &RHS) const { return (*this) == RHS; }
 
   /// Inequality operator.
   ///
@@ -1100,7 +1106,7 @@ public:
   /// relationship.
   ///
   /// \returns true if *this != Val
-  bool ne(const APInt &RHS) const { return !((*this) == RHS); }
+  [[nodiscard]] bool ne(const APInt &RHS) const { return !((*this) == RHS); }
 
   /// Unsigned less than comparison
   ///
@@ -1108,7 +1114,7 @@ public:
   /// the validity of the less-than relationship.
   ///
   /// \returns true if *this < RHS when both are considered unsigned.
-  bool ult(const APInt &RHS) const { return compare(RHS) < 0; }
+  [[nodiscard]] bool ult(const APInt &RHS) const { return compare(RHS) < 0; }
 
   /// Unsigned less than comparison
   ///
@@ -1116,7 +1122,7 @@ public:
   /// the validity of the less-than relationship.
   ///
   /// \returns true if *this < RHS when considered unsigned.
-  bool ult(uint64_t RHS) const {
+  [[nodiscard]] bool ult(uint64_t RHS) const {
     // Only need to check active bits if not a single word.
     return (isSingleWord() || getActiveBits() <= 64) && getZExtValue() < RHS;
   }
@@ -1127,7 +1133,9 @@ public:
   /// validity of the less-than relationship.
   ///
   /// \returns true if *this < RHS when both are considered signed.
-  bool slt(const APInt &RHS) const { return compareSigned(RHS) < 0; }
+  [[nodiscard]] bool slt(const APInt &RHS) const {
+    return compareSigned(RHS) < 0;
+  }
 
   /// Signed less than comparison
   ///
@@ -1135,7 +1143,7 @@ public:
   /// the validity of the less-than relationship.
   ///
   /// \returns true if *this < RHS when considered signed.
-  bool slt(int64_t RHS) const {
+  [[nodiscard]] bool slt(int64_t RHS) const {
     return (!isSingleWord() && getSignificantBits() > 64)
                ? isNegative()
                : getSExtValue() < RHS;
@@ -1147,7 +1155,7 @@ public:
   /// validity of the less-or-equal relationship.
   ///
   /// \returns true if *this <= RHS when both are considered unsigned.
-  bool ule(const APInt &RHS) const { return compare(RHS) <= 0; }
+  [[nodiscard]] bool ule(const APInt &RHS) const { return compare(RHS) <= 0; }
 
   /// Unsigned less or equal comparison
   ///
@@ -1155,7 +1163,7 @@ public:
   /// the validity of the less-or-equal relationship.
   ///
   /// \returns true if *this <= RHS when considered unsigned.
-  bool ule(uint64_t RHS) const { return !ugt(RHS); }
+  [[nodiscard]] bool ule(uint64_t RHS) const { return !ugt(RHS); }
 
   /// Signed less or equal comparison
   ///
@@ -1163,7 +1171,9 @@ public:
   /// validity of the less-or-equal relationship.
   ///
   /// \returns true if *this <= RHS when both are considered signed.
-  bool sle(const APInt &RHS) const { return compareSigned(RHS) <= 0; }
+  [[nodiscard]] bool sle(const APInt &RHS) const {
+    return compareSigned(RHS) <= 0;
+  }
 
   /// Signed less or equal comparison
   ///
@@ -1171,7 +1181,7 @@ public:
   /// validity of the less-or-equal relationship.
   ///
   /// \returns true if *this <= RHS when considered signed.
-  bool sle(uint64_t RHS) const { return !sgt(RHS); }
+  [[nodiscard]] bool sle(uint64_t RHS) const { return !sgt(RHS); }
 
   /// Unsigned greater than comparison
   ///
@@ -1179,7 +1189,7 @@ public:
   /// the validity of the greater-than relationship.
   ///
   /// \returns true if *this > RHS when both are considered unsigned.
-  bool ugt(const APInt &RHS) const { return !ule(RHS); }
+  [[nodiscard]] bool ugt(const APInt &RHS) const { return !ule(RHS); }
 
   /// Unsigned greater than comparison
   ///
@@ -1187,7 +1197,7 @@ public:
   /// the validity of the greater-than relationship.
   ///
   /// \returns true if *this > RHS when considered unsigned.
-  bool ugt(uint64_t RHS) const {
+  [[nodiscard]] bool ugt(uint64_t RHS) const {
     // Only need to check active bits if not a single word.
     return (!isSingleWord() && getActiveBits() > 64) || getZExtValue() > RHS;
   }
@@ -1198,7 +1208,7 @@ public:
   /// validity of the greater-than relationship.
   ///
   /// \returns true if *this > RHS when both are considered signed.
-  bool sgt(const APInt &RHS) const { return !sle(RHS); }
+  [[nodiscard]] bool sgt(const APInt &RHS) const { return !sle(RHS); }
 
   /// Signed greater than comparison
   ///
@@ -1206,7 +1216,7 @@ public:
   /// the validity of the greater-than relationship.
   ///
   /// \returns true if *this > RHS when considered signed.
-  bool sgt(int64_t RHS) const {
+  [[nodiscard]] bool sgt(int64_t RHS) const {
     return (!isSingleWord() && getSignificantBits() > 64)
                ? !isNegative()
                : getSExtValue() > RHS;
@@ -1218,7 +1228,7 @@ public:
   /// validity of the greater-or-equal relationship.
   ///
   /// \returns true if *this >= RHS when both are considered unsigned.
-  bool uge(const APInt &RHS) const { return !ult(RHS); }
+  [[nodiscard]] bool uge(const APInt &RHS) const { return !ult(RHS); }
 
   /// Unsigned greater or equal comparison
   ///
@@ -1226,7 +1236,7 @@ public:
   /// the validity of the greater-or-equal relationship.
   ///
   /// \returns true if *this >= RHS when considered unsigned.
-  bool uge(uint64_t RHS) const { return !ult(RHS); }
+  [[nodiscard]] bool uge(uint64_t RHS) const { return !ult(RHS); }
 
   /// Signed greater or equal comparison
   ///
@@ -1234,7 +1244,7 @@ public:
   /// validity of the greater-or-equal relationship.
   ///
   /// \returns true if *this >= RHS when both are considered signed.
-  bool sge(const APInt &RHS) const { return !slt(RHS); }
+  [[nodiscard]] bool sge(const APInt &RHS) const { return !slt(RHS); }
 
   /// Signed greater or equal comparison
   ///
@@ -1242,11 +1252,11 @@ public:
   /// the validity of the greater-or-equal relationship.
   ///
   /// \returns true if *this >= RHS when considered signed.
-  bool sge(int64_t RHS) const { return !slt(RHS); }
+  [[nodiscard]] bool sge(int64_t RHS) const { return !slt(RHS); }
 
   /// This operation tests if there are any pairs of corresponding bits
   /// between this APInt and RHS that are both set.
-  bool intersects(const APInt &RHS) const {
+  [[nodiscard]] bool intersects(const APInt &RHS) const {
     assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
     if (isSingleWord())
       return (U.VAL & RHS.U.VAL) != 0;
@@ -1254,7 +1264,7 @@ public:
   }
 
   /// This operation checks that all bits set in this APInt are also set in RHS.
-  bool isSubsetOf(const APInt &RHS) const {
+  [[nodiscard]] bool isSubsetOf(const APInt &RHS) const {
     assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
     if (isSingleWord())
       return (U.VAL & ~RHS.U.VAL) == 0;
@@ -1477,22 +1487,22 @@ public:
 
   /// Return an APInt with the extracted bits [bitPosition,bitPosition+numBits).
   LLVM_ABI APInt extractBits(unsigned numBits, unsigned bitPosition) const;
-  LLVM_ABI uint64_t extractBitsAsZExtValue(unsigned numBits,
-                                           unsigned bitPosition) const;
+  [[nodiscard]] LLVM_ABI uint64_t
+  extractBitsAsZExtValue(unsigned numBits, unsigned bitPosition) const;
 
   /// @}
   /// \name Value Characterization Functions
   /// @{
 
   /// Return the number of bits in the APInt.
-  unsigned getBitWidth() const { return BitWidth; }
+  [[nodiscard]] unsigned getBitWidth() const { return BitWidth; }
 
   /// Get the number of words.
   ///
   /// Here one word's bitwidth equals to that of uint64_t.
   ///
   /// \returns the number of words to hold the integer value of this APInt.
-  unsigned getNumWords() const { return getNumWords(BitWidth); }
+  [[nodiscard]] unsigned getNumWords() const { return getNumWords(BitWidth); }
 
   /// Get the number of words.
   ///
@@ -1509,13 +1519,15 @@ public:
   /// This function returns the number of active bits which is defined as the
   /// bit width minus the number of leading zeros. This is used in several
   /// computations to see how "wide" the value is.
-  unsigned getActiveBits() const { return BitWidth - countl_zero(); }
+  [[nodiscard]] unsigned getActiveBits() const {
+    return BitWidth - countl_zero();
+  }
 
   /// Compute the number of active words in the value of this APInt.
   ///
   /// This is used in conjunction with getActiveData to extract the raw value of
   /// the APInt.
-  unsigned getActiveWords() const {
+  [[nodiscard]] unsigned getActiveWords() const {
     unsigned numActiveBits = getActiveBits();
     return numActiveBits ? whichWord(numActiveBits - 1) + 1 : 1;
   }
@@ -1528,7 +1540,7 @@ public:
   /// returns the smallest bit width that will retain the negative value. For
   /// example, -1 can be written as 0b1 or 0xFFFFFFFFFF. 0b1 is shorter and so
   /// for -1, this function will always return 1.
-  unsigned getSignificantBits() const {
+  [[nodiscard]] unsigned getSignificantBits() const {
     return BitWidth - getNumSignBits() + 1;
   }
 
@@ -1537,7 +1549,7 @@ public:
   /// This method attempts to return the value of this APInt as a zero extended
   /// uint64_t. The bitwidth must be <= 64 or the value must fit within a
   /// uint64_t. Otherwise an assertion will result.
-  uint64_t getZExtValue() const {
+  [[nodiscard]] uint64_t getZExtValue() const {
     if (isSingleWord())
       return U.VAL;
     assert(getActiveBits() <= 64 && "Too many bits for uint64_t");
@@ -1549,7 +1561,7 @@ public:
   /// This method attempts to return the value of this APInt as a zero extended
   /// uint64_t. The bitwidth must be <= 64 or the value must fit within a
   /// uint64_t. Otherwise no value is returned.
-  std::optional<uint64_t> tryZExtValue() const {
+  [[nodiscard]] std::optional<uint64_t> tryZExtValue() const {
     return (getActiveBits() <= 64) ? std::optional<uint64_t>(getZExtValue())
                                    : std::nullopt;
   };
@@ -1559,7 +1571,7 @@ public:
   /// This method attempts to return the value of this APInt as a sign extended
   /// int64_t. The bit width must be <= 64 or the value must fit within an
   /// int64_t. Otherwise an assertion will result.
-  int64_t getSExtValue() const {
+  [[nodiscard]] int64_t getSExtValue() const {
     if (isSingleWord())
       return SignExtend64(U.VAL, BitWidth);
     assert(getSignificantBits() <= 64 && "Too many bits for int64_t");
@@ -1571,7 +1583,7 @@ public:
   /// This method attempts to return the value of this APInt as a sign extended
   /// int64_t. The bitwidth must be <= 64 or the value must fit within an
   /// int64_t. Otherwise no value is returned.
-  std::optional<int64_t> trySExtValue() const {
+  [[nodiscard]] std::optional<int64_t> trySExtValue() const {
     return (getSignificantBits() <= 64) ? std::optional<int64_t>(getSExtValue())
                                         : std::nullopt;
   };
@@ -1595,7 +1607,7 @@ public:
   ///
   /// \returns BitWidth if the value is zero, otherwise returns the number of
   ///   zeros from the most significant bit to the first one bits.
-  unsigned countl_zero() const {
+  [[nodiscard]] unsigned countl_zero() const {
     if (isSingleWord()) {
       unsigned unusedBits = APINT_BITS_PER_WORD - BitWidth;
       return llvm::countl_zero(U.VAL) - unusedBits;
@@ -1603,7 +1615,7 @@ public:
     return countLeadingZerosSlowCase();
   }
 
-  unsigned countLeadingZeros() const { return countl_zero(); }
+  [[nodiscard]] unsigned countLeadingZeros() const { return countl_zero(); }
 
   /// Count the number of leading one bits.
   ///
@@ -1612,7 +1624,7 @@ public:
   ///
   /// \returns 0 if the high order bit is not set, otherwise returns the number
   /// of 1 bits from the most significant to the least
-  unsigned countl_one() const {
+  [[nodiscard]] unsigned countl_one() const {
     if (isSingleWord()) {
       if (LLVM_UNLIKELY(BitWidth == 0))
         return 0;
@@ -1621,11 +1633,11 @@ public:
     return countLeadingOnesSlowCase();
   }
 
-  unsigned countLeadingOnes() const { return countl_one(); }
+  [[nodiscard]] unsigned countLeadingOnes() const { return countl_one(); }
 
   /// Computes the number of leading bits of this APInt that are equal to its
   /// sign bit.
-  unsigned getNumSignBits() const {
+  [[nodiscard]] unsigned getNumSignBits() const {
     return isNegative() ? countl_one() : countl_zero();
   }
 
@@ -1636,7 +1648,7 @@ public:
   ///
   /// \returns BitWidth if the value is zero, otherwise returns the number of
   /// zeros from the least significant bit to the first one bit.
-  unsigned countr_zero() const {
+  [[nodiscard]] unsigned countr_zero() const {
     if (isSingleWord()) {
       unsigned TrailingZeros = llvm::countr_zero(U.VAL);
       return (TrailingZeros > BitWidth ? BitWidth : TrailingZeros);
@@ -1644,7 +1656,7 @@ public:
     return countTrailingZerosSlowCase();
   }
 
-  unsigned countTrailingZeros() const { return countr_zero(); }
+  [[nodiscard]] unsigned countTrailingZeros() const { return countr_zero(); }
 
   /// Count the number of trailing one bits.
   ///
@@ -1653,13 +1665,13 @@ public:
   ///
   /// \returns BitWidth if the value is all ones, otherwise returns the number
   /// of ones from the least significant bit to the first zero bit.
-  unsigned countr_one() const {
+  [[nodiscard]] unsigned countr_one() const {
     if (isSingleWord())
       return llvm::countr_one(U.VAL);
     return countTrailingOnesSlowCase();
   }
 
-  unsigned countTrailingOnes() const { return countr_one(); }
+  [[nodiscard]] unsigned countTrailingOnes() const { return countr_one(); }
 
   /// Count the number of bits set.
   ///
@@ -1667,7 +1679,7 @@ public:
   /// of 1 bits in the APInt value.
   ///
   /// \returns 0 if the value is zero, otherwise returns the number of set bits.
-  unsigned popcount() const {
+  [[nodiscard]] unsigned popcount() const {
     if (isSingleWord())
       return llvm::popcount(U.VAL);
     return countPopulationSlowCase();
@@ -1706,23 +1718,27 @@ public:
   LLVM_ABI APInt reverseBits() const;
 
   /// Converts this APInt to a double value.
-  LLVM_ABI double roundToDouble(bool isSigned) const;
+  [[nodiscard]] LLVM_ABI double roundToDouble(bool isSigned) const;
 
   /// Converts this unsigned APInt to a double value.
-  double roundToDouble() const { return roundToDouble(false); }
+  [[nodiscard]] double roundToDouble() const { return roundToDouble(false); }
 
   /// Converts this signed APInt to a double value.
-  double signedRoundToDouble() const { return roundToDouble(true); }
+  [[nodiscard]] double signedRoundToDouble() const {
+    return roundToDouble(true);
+  }
 
   /// Converts APInt bits to a double
   ///
   /// The conversion does not do a translation from integer to double, it just
   /// re-interprets the bits as a double. Note that it is valid to do this on
   /// any bit width. Exactly 64 bits will be translated.
-  double bitsToDouble() const { return llvm::bit_cast<double>(getWord(0)); }
+  [[nodiscard]] double bitsToDouble() const {
+    return llvm::bit_cast<double>(getWord(0));
+  }
 
 #ifdef HAS_IEE754_FLOAT128
-  float128 bitsToQuad() const {
+  [[nodiscard]] float128 bitsToQuad() const {
     __uint128_t ul = ((__uint128_t)U.pVal[1] << 64) + U.pVal[0];
     return llvm::bit_cast<float128>(ul);
   }
@@ -1733,7 +1749,7 @@ public:
   /// The conversion does not do a translation from integer to float, it just
   /// re-interprets the bits as a float. Note that it is valid to do this on
   /// any bit width. Exactly 32 bits will be translated.
-  float bitsToFloat() const {
+  [[nodiscard]] float bitsToFloat() const {
     return llvm::bit_cast<float>(static_cast<uint32_t>(getWord(0)));
   }
 
@@ -1758,10 +1774,10 @@ public:
   /// @{
 
   /// \returns the floor log base 2 of this APInt.
-  unsigned logBase2() const { return getActiveBits() - 1; }
+  [[nodiscard]] unsigned logBase2() const { return getActiveBits() - 1; }
 
   /// \returns the ceil log base 2 of this APInt.
-  unsigned ceilLogBase2() const {
+  [[nodiscard]] unsigned ceilLogBase2() const {
     APInt temp(*this);
     --temp;
     return temp.getActiveBits();
@@ -1776,11 +1792,11 @@ public:
   ///
   /// to get around any mathematical concerns resulting from
   /// referencing 2 in a space where 2 does no exist.
-  LLVM_ABI unsigned nearestLogBase2() const;
+  [[nodiscard]] LLVM_ABI unsigned nearestLogBase2() const;
 
   /// \returns the log base 2 of this APInt if its an exact power of two, -1
   /// otherwise
-  int32_t exactLogBase2() const {
+  [[nodiscard]] int32_t exactLogBase2() const {
     if (!isPowerOf2())
       return -1;
     return logBase2();
@@ -1929,7 +1945,7 @@ public:
 #endif
 
   /// Returns whether this instance allocated memory.
-  bool needsCleanup() const { return !isSingleWord(); }
+  [[nodiscard]] bool needsCleanup() const { return !isSingleWord(); }
 
 private:
   /// This union is used to store the integer value. When the
@@ -1998,7 +2014,7 @@ private:
 
   /// Get the word corresponding to a bit position
   /// \returns the corresponding word for the specified bit position.
-  uint64_t getWord(unsigned bitPosition) const {
+  [[nodiscard]] uint64_t getWord(unsigned bitPosition) const {
     return isSingleWord() ? U.VAL : U.pVal[whichWord(bitPosition)];
   }
 
@@ -2053,28 +2069,35 @@ private:
   LLVM_ABI void assignSlowCase(const APInt &RHS);
 
   /// out-of-line slow case for operator==
-  LLVM_ABI bool equalSlowCase(const APInt &RHS) const LLVM_READONLY;
+  [[nodiscard]] LLVM_ABI bool
+  equalSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for countLeadingZeros
-  LLVM_ABI unsigned countLeadingZerosSlowCase() const LLVM_READONLY;
+  [[nodiscard]] LLVM_ABI unsigned
+  countLeadingZerosSlowCase() const LLVM_READONLY;
 
   /// out-of-line slow case for countLeadingOnes.
-  LLVM_ABI unsigned countLeadingOnesSlowCase() const LLVM_READONLY;
+  [[nodiscard]] LLVM_ABI unsigned
+  countLeadingOnesSlowCase() const LLVM_READONLY;
 
   /// out-of-line slow case for countTrailingZeros.
-  LLVM_ABI unsigned countTrailingZerosSlowCase() const LLVM_READONLY;
+  [[nodiscard]] LLVM_ABI unsigned
+  countTrailingZerosSlowCase() const LLVM_READONLY;
 
   /// out-of-line slow case for countTrailingOnes
-  LLVM_ABI unsigned countTrailingOnesSlowCase() const LLVM_READONLY;
+  [[nodiscard]] LLVM_ABI unsigned
+  countTrailingOnesSlowCase() const LLVM_READONLY;
 
   /// out-of-line slow case for countPopulation
-  LLVM_ABI unsigned countPopulationSlowCase() const LLVM_READONLY;
+  [[nodiscard]] LLVM_ABI unsigned countPopulationSlowCase() const LLVM_READONLY;
 
   /// out-of-line slow case for intersects.
-  LLVM_ABI bool intersectsSlowCase(const APInt &RHS) const LLVM_READONLY;
+  [[nodiscard]] LLVM_ABI bool
+  intersectsSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for isSubsetOf.
-  LLVM_ABI bool isSubsetOfSlowCase(const APInt &RHS) const LLVM_READONLY;
+  [[nodiscard]] LLVM_ABI bool
+  isSubsetOfSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for setBits.
   LLVM_ABI void setBitsSlowCase(unsigned loBit, unsigned hiBit);
@@ -2099,11 +2122,12 @@ private:
 
   /// Unsigned comparison. Returns -1, 0, or 1 if this APInt is less than, equal
   /// to, or greater than RHS.
-  LLVM_ABI int compare(const APInt &RHS) const LLVM_READONLY;
+  [[nodiscard]] LLVM_ABI int compare(const APInt &RHS) const LLVM_READONLY;
 
   /// Signed comparison. Returns -1, 0, or 1 if this APInt is less than, equal
   /// to, or greater than RHS.
-  LLVM_ABI int compareSigned(const APInt &RHS) const LLVM_READONLY;
+  [[nodiscard]] LLVM_ABI int
+  compareSigned(const APInt &RHS) const LLVM_READONLY;
 
   /// @}
 };
