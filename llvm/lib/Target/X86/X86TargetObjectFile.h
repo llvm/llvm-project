@@ -56,6 +56,9 @@ namespace llvm {
                               const MCValue &MV, int64_t Offset,
                               MachineModuleInfo *MMI,
                               MCStreamer &Streamer) const override;
+
+    MCSection *LargeSectionForCommon(const GlobalObject *GO, SectionKind Kind,
+                                     const TargetMachine &TM) const override;
   };
 
 } // end namespace llvm

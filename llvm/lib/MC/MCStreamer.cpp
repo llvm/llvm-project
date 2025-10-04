@@ -1309,6 +1309,8 @@ void MCStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
                                         StringRef Name, bool KeepOriginalSym) {}
 void MCStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {}
+void MCStreamer::emitLargeCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+                                       Align ByteAlignment) {}
 void MCStreamer::emitZerofill(MCSection *, MCSymbol *, uint64_t, Align, SMLoc) {
 }
 void MCStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
