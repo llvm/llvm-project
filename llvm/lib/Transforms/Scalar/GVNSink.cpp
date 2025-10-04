@@ -78,18 +78,14 @@ using namespace llvm;
 
 STATISTIC(NumRemoved, "Number of instructions removed");
 
-namespace llvm {
-namespace GVNExpression {
+namespace llvm::GVNExpression {
 
 LLVM_DUMP_METHOD void Expression::dump() const {
   print(dbgs());
   dbgs() << "\n";
 }
 
-} // end namespace GVNExpression
-} // end namespace llvm
-
-namespace {
+} // end namespace llvm::GVNExpression
 
 static bool isMemoryInst(const Instruction *I) {
   return isa<LoadInst>(I) || isa<StoreInst>(I) ||
@@ -103,6 +99,7 @@ static bool isMemoryInst(const Instruction *I) {
 /// sink instructions, differing in the number of instructions sunk,
 /// the number of predecessors sunk from and the number of PHIs
 /// required.
+namespace {
 struct SinkingInstructionCandidate {
   unsigned NumBlocks;
   unsigned NumInstructions;
@@ -594,6 +591,7 @@ private:
     }
   }
 };
+} // namespace
 
 std::optional<SinkingInstructionCandidate>
 GVNSink::analyzeInstructionForSinking(LockstepReverseIterator<false> &LRI,
@@ -850,8 +848,6 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
 
   NumRemoved += Insts.size() - 1;
 }
-
-} // end anonymous namespace
 
 PreservedAnalyses GVNSinkPass::run(Function &F, FunctionAnalysisManager &AM) {
   GVNSink G;
