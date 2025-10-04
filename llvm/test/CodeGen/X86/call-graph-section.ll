@@ -1,7 +1,12 @@
 ;; Tests that we store the type identifiers in .callgraph section of the object file.
 
+; REQUIRES: x86-registered-target
+; REQUIRES: arm-registered-target
+
 ; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -filetype=obj -o - < %s | \
-; RUN: llvm-readelf -x .callgraph - | FileCheck %s
+; RUN: llvm-readelf -x .callgraph - | FileCheck --check-prefix=X64 %s
+; RUN: llc -mtriple=arm-unknown-linux --call-graph-section -filetype=obj -o - < %s | \
+; RUN: llvm-readelf -x .callgraph - | FileCheck --check-prefix=ARM32 %s
 
 declare !type !0 void @foo()
 
@@ -22,15 +27,23 @@ entry:
 
 ;; Check that the numeric type id (md5 hash) for the below type ids are emitted
 ;; to the callgraph section.
-
-; CHECK: Hex dump of section '.callgraph':
-
-; CHECK-DAG: 2444f731 f5eecb3e
 !0 = !{i64 0, !"_ZTSFvE.generalized"}
 !1 = !{!0}
-; CHECK-DAG: 5486bc59 814b8e30
 !2 = !{i64 0, !"_ZTSFicE.generalized"}
 !3 = !{!2}
-; CHECK-DAG: 7ade6814 f897fd77
 !4 = !{!5}
 !5 = !{i64 0, !"_ZTSFPvS_E.generalized"}
+
+;; Make sure following type IDs are in call graph section
+;; 0x5eecb3e2444f731f, 0x814b8e305486bc59, 0xf897fd777ade6814
+; X64:      Hex dump of section '.callgraph':
+; X64-NEXT: 0x00000000 00050000 00000000 00000000 00000000
+; X64-NEXT: 0x00000010 00000324 44f731f5 eecb3e54 86bc5981
+; X64-NEXT: 0x00000020 4b8e307a de6814f8 97fd77
+
+;; Make sure following type IDs are in call graph section
+;; 0x5eecb3e2444f731f, 0x814b8e305486bc59, 0xf897fd777ade6814
+; ARM32: Hex dump of section '.callgraph':
+; ARM32-NEXT: 0x00000000 00050000 00000000 00000000 00000324
+; ARM32-NEXT: 0x00000010 44f731f5 eecb3e54 86bc5981 4b8e307a
+; ARM32-NEXT: 0x00000020 de6814f8 97fd77
