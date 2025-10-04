@@ -803,6 +803,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuMemcpyHtoDAsync: %s");
   }
 
+  Error dataSubmitRectImpl(MemcpyRectTy TgtRect, MemcpyRectTy HstRect,
+                           uint32_t Size[3],
+                           AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                         "CUDA does not yet support 2D/3D copies");
+  }
+
   /// Retrieve data from the device (device to host transfer).
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
@@ -817,11 +824,25 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuMemcpyDtoHAsync: %s");
   }
 
+  Error dataRetrieveRectImpl(MemcpyRectTy HstRect, MemcpyRectTy TgtRect,
+                             uint32_t Size[3],
+                             AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                         "CUDA does not yet support 2D/3D copies");
+  }
+
   /// Exchange data between two devices directly. We may use peer access if
   /// the CUDA devices and driver allow them.
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+
+  Error dataExchangeRectImpl(MemcpyRectTy SrcRect, GenericDeviceTy &Dst,
+                             MemcpyRectTy DstRect, uint32_t Size[3],
+                             AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                         "CUDA does not yet support 2D/3D copies");
+  }
 
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,
