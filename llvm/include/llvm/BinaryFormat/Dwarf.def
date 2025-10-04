@@ -1111,6 +1111,8 @@ HANDLE_DW_ATE(0x12, ASCII, 5, DWARF)
 // HANDLE_DW_ATE(0x80, ALTIUM_fract, 2, ALTIUM) = DW_ATE_low_user
 // HANDLE_DW_ATE(0x81, ALTIUM_accum, 2, ALTIUM)
 
+HANDLE_DW_ATE(0x80, GNU_complex_signed, 4, GNU)
+
 HANDLE_DW_ATE(0x81, HP_complex_float, 2, HP)
 HANDLE_DW_ATE(0x82, HP_float128, 2, HP)
 HANDLE_DW_ATE(0x83, HP_complex_float128, 2, HP)
