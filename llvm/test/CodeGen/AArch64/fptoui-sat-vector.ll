@@ -31,8 +31,7 @@ define <1 x i32> @test_unsigned_v1f32_v1i32(<1 x float> %f) {
 ;
 ; CHECK-GI-LABEL: test_unsigned_v1f32_v1i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fcvtzu w8, s0
-; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    fcvtzu s0, s0
 ; CHECK-GI-NEXT:    ret
     %x = call <1 x i32> @llvm.fptoui.sat.v1f32.v1i32(<1 x float> %f)
     ret <1 x i32> %x
@@ -993,18 +992,24 @@ declare <7 x i32> @llvm.fptoui.sat.v7f16.v7i32 (<7 x half>)
 declare <8 x i32> @llvm.fptoui.sat.v8f16.v8i32 (<8 x half>)
 
 define <1 x i32> @test_unsigned_v1f16_v1i32(<1 x half> %f) {
-; CHECK-CVT-LABEL: test_unsigned_v1f16_v1i32:
-; CHECK-CVT:       // %bb.0:
-; CHECK-CVT-NEXT:    fcvt s0, h0
-; CHECK-CVT-NEXT:    fcvtzu w8, s0
-; CHECK-CVT-NEXT:    fmov s0, w8
-; CHECK-CVT-NEXT:    ret
+; CHECK-SD-CVT-LABEL: test_unsigned_v1f16_v1i32:
+; CHECK-SD-CVT:       // %bb.0:
+; CHECK-SD-CVT-NEXT:    fcvt s0, h0
+; CHECK-SD-CVT-NEXT:    fcvtzu w8, s0
+; CHECK-SD-CVT-NEXT:    fmov s0, w8
+; CHECK-SD-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: test_unsigned_v1f16_v1i32:
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    fcvtzu w8, h0
 ; CHECK-FP16-NEXT:    fmov s0, w8
 ; CHECK-FP16-NEXT:    ret
+;
+; CHECK-GI-CVT-LABEL: test_unsigned_v1f16_v1i32:
+; CHECK-GI-CVT:       // %bb.0:
+; CHECK-GI-CVT-NEXT:    fcvt s0, h0
+; CHECK-GI-CVT-NEXT:    fcvtzu s0, s0
+; CHECK-GI-CVT-NEXT:    ret
     %x = call <1 x i32> @llvm.fptoui.sat.v1f16.v1i32(<1 x half> %f)
     ret <1 x i32> %x
 }
