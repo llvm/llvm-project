@@ -2925,54 +2925,41 @@ static bool interp__builtin_ia32_pternlog(InterpState &S, CodePtr OpPC,
                                           const CallExpr *Call, bool MaskZ) {
   assert(Call->getNumArgs() == 5);
 
-  const VectorType *VecT = Call->getArg(0)->getType()->castAs<VectorType>();
-  const PrimType &DstElemT = *S.getContext().classify(VecT->getElementType());
-  unsigned DstLen = VecT->getNumElements();
-  bool DstUnsigned =
-      VecT->getElementType()->isUnsignedIntegerOrEnumerationType();
-
-  APInt U = popToAPSInt(S, Call->getArg(4));
-  APInt Imm = popToAPSInt(S, Call->getArg(3));
+  APInt U = popToAPSInt(S, Call->getArg(4));   // Lane mask
+  APInt Imm = popToAPSInt(S, Call->getArg(3)); // Ternary truth table
   const Pointer &C = S.Stk.pop<Pointer>();
   const Pointer &B = S.Stk.pop<Pointer>();
   const Pointer &A = S.Stk.pop<Pointer>();
-
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  for (unsigned I = 0; I < DstLen; ++I) {
-    APInt ALane;
-    APInt BLane;
-    APInt CLane;
-    INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
-      ALane = A.elem<T>(I).toAPSInt();
-      BLane = B.elem<T>(I).toAPSInt();
-      CLane = C.elem<T>(I).toAPSInt();
-    });
-    const unsigned BitWidth = ALane.getBitWidth();
-    APInt RLane(BitWidth, 0);
+  unsigned DstLen = A.getNumElems();
+  const QualType ElemQT = getElemType(A);
+  const OptPrimType ElemPT = S.getContext().classify(ElemQT);
+  unsigned LaneWidth = S.getASTContext().getTypeSize(ElemQT);
+  bool DstUnsigned = ElemQT->isUnsignedIntegerOrEnumerationType();
 
-    if (U[I]) { // If lane not masked, compute ternary logic
-      for (unsigned Bit = 0; Bit < BitWidth; ++Bit) {
-        unsigned ABit = ALane[Bit];
-        unsigned BBit = BLane[Bit];
-        unsigned CBit = CLane[Bit];
-
-        unsigned Idx = (ABit << 2) | (BBit << 1) | (CBit);
-        RLane.setBitVal(Bit, Imm[Idx]);
-      }
-      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+  INT_TYPE_SWITCH_NO_BOOL(*ElemPT, {
+    for (unsigned I = 0; I != DstLen; ++I) {
+      APInt ALane = A.elem<T>(I).toAPSInt();
+      APInt BLane = B.elem<T>(I).toAPSInt();
+      APInt CLane = C.elem<T>(I).toAPSInt();
+      APInt RLane(LaneWidth, 0);
+      if (U[I]) { // If lane not masked, compute ternary logic.
+        for (unsigned Bit = 0; Bit != LaneWidth; ++Bit) {
+          unsigned ABit = ALane[Bit];
+          unsigned BBit = BLane[Bit];
+          unsigned CBit = CLane[Bit];
+          unsigned Idx = (ABit << 2) | (BBit << 1) | (CBit);
+          RLane.setBitVal(Bit, Imm[Idx]);
+        }
         Dst.elem<T>(I) = static_cast<T>(APSInt(RLane, DstUnsigned));
-      });
-    } else if (MaskZ) { // If zero masked, zero the lane
-      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+      } else if (MaskZ) { // If zero masked, zero the lane.
         Dst.elem<T>(I) = static_cast<T>(APSInt(RLane, DstUnsigned));
-      });
-    } else { // Just masked, put in A lane
-      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+      } else { // Just masked, put in A lane.
         Dst.elem<T>(I) = static_cast<T>(APSInt(ALane, DstUnsigned));
-      });
+      }
     }
-  }
+  });
   Dst.initializeAllElements();
   return true;
 }
