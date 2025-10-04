@@ -158,6 +158,15 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTruncStoreAction(T, MVT::f16, Expand);
   }
 
+  // Overwrite settings for FMA, when we have relaxed simd.
+  if (Subtarget->hasRelaxedSIMD()) {
+    setOperationAction(ISD::FMA, MVT::v4f32, Legal);
+    setOperationAction(ISD::FMA, MVT::v2f64, Legal);
+    if (Subtarget->hasFP16()) {
+      setOperationAction(ISD::FMA, MVT::v8f16, Legal);
+    }
+  }
+
   // Expand unavailable integer operations.
   for (auto Op :
        {ISD::BSWAP, ISD::SMUL_LOHI, ISD::UMUL_LOHI, ISD::MULHS, ISD::MULHU,
@@ -990,6 +999,28 @@ bool WebAssemblyTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   return (ExtT == MVT::v8i16 && MemT == MVT::v8i8) ||
          (ExtT == MVT::v4i32 && MemT == MVT::v4i16) ||
          (ExtT == MVT::v2i64 && MemT == MVT::v2i32);
+}
+
+bool WebAssemblyTargetLowering::isFMAFasterThanFMulAndFAdd(
+    const MachineFunction &MF, EVT VT) const {
+  if (!Subtarget->hasRelaxedSIMD() || !VT.isVector())
+    return false;
+
+  VT = VT.getScalarType();
+  if (!VT.isSimple())
+    return false;
+
+  switch (VT.getSimpleVT().SimpleTy) {
+  default:
+    break;
+  case MVT::f16:
+    return Subtarget->hasFP16();
+  case MVT::f32:
+  case MVT::f64:
+    return true;
+  }
+
+  return false;
 }
 
 bool WebAssemblyTargetLowering::isOffsetFoldingLegal(

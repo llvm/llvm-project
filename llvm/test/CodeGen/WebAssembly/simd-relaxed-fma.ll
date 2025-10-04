@@ -28,7 +28,7 @@ define <4 x float> @fadd_fmul_contract_4xf32(<4 x float> %a, <4 x float> %b, <4 
 ; RELAXED-LABEL: fadd_fmul_contract_4xf32:
 ; RELAXED:         .functype fadd_fmul_contract_4xf32 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $2, $1, $0
+; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $1, $0, $2
 ; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fadd_fmul_contract_4xf32:
@@ -47,7 +47,7 @@ define <8 x half> @fadd_fmul_contract_8xf16(<8 x half> %a, <8 x half> %b, <8 x h
 ; RELAXED-LABEL: fadd_fmul_contract_8xf16:
 ; RELAXED:         .functype fadd_fmul_contract_8xf16 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f16x8.relaxed_madd $push0=, $2, $1, $0
+; RELAXED-NEXT:    f16x8.relaxed_madd $push0=, $1, $0, $2
 ; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fadd_fmul_contract_8xf16:
@@ -61,6 +61,39 @@ define <8 x half> @fadd_fmul_contract_8xf16(<8 x half> %a, <8 x half> %b, <8 x h
   ret <8 x half> %add
 }
 
+define <8 x half> @fmuladd_8xf16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; RELAXED-LABEL: fmuladd_8xf16:
+; RELAXED:         .functype fmuladd_8xf16 (v128, v128, v128) -> (v128)
+; RELAXED-NEXT:  # %bb.0:
+; RELAXED-NEXT:    f16x8.relaxed_madd $push0=, $0, $1, $2
+; RELAXED-NEXT:    return $pop0
+;
+; STRICT-LABEL: fmuladd_8xf16:
+; STRICT:         .functype fmuladd_8xf16 (v128, v128, v128) -> (v128)
+; STRICT-NEXT:  # %bb.0:
+; STRICT-NEXT:    f16x8.mul $push0=, $0, $1
+; STRICT-NEXT:    f16x8.add $push1=, $pop0, $2
+; STRICT-NEXT:    return $pop1
+  %fma = call <8 x half> @llvm.fmuladd(<8 x half> %a, <8 x half> %b, <8 x half> %c)
+  ret <8 x half> %fma
+}
+
+define <8 x half> @fmuladd_contract_8xf16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; RELAXED-LABEL: fmuladd_contract_8xf16:
+; RELAXED:         .functype fmuladd_contract_8xf16 (v128, v128, v128) -> (v128)
+; RELAXED-NEXT:  # %bb.0:
+; RELAXED-NEXT:    f16x8.relaxed_madd $push0=, $0, $1, $2
+; RELAXED-NEXT:    return $pop0
+;
+; STRICT-LABEL: fmuladd_contract_8xf16:
+; STRICT:         .functype fmuladd_contract_8xf16 (v128, v128, v128) -> (v128)
+; STRICT-NEXT:  # %bb.0:
+; STRICT-NEXT:    f16x8.mul $push0=, $0, $1
+; STRICT-NEXT:    f16x8.add $push1=, $pop0, $2
+; STRICT-NEXT:    return $pop1
+  %fma = call contract <8 x half> @llvm.fmuladd(<8 x half> %a, <8 x half> %b, <8 x half> %c)
+  ret <8 x half> %fma
+}
 
 define <4 x float> @fadd_fmul_4xf32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; RELAXED-LABEL: fadd_fmul_4xf32:
@@ -85,7 +118,7 @@ define <4 x float> @fmuladd_contract_4xf32(<4 x float> %a, <4 x float> %b, <4 x 
 ; RELAXED-LABEL: fmuladd_contract_4xf32:
 ; RELAXED:         .functype fmuladd_contract_4xf32 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $2, $0, $1
+; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $0, $1, $2
 ; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fmuladd_contract_4xf32:
@@ -103,9 +136,8 @@ define <4 x float> @fmuladd_4xf32(<4 x float> %a, <4 x float> %b, <4 x float> %c
 ; RELAXED-LABEL: fmuladd_4xf32:
 ; RELAXED:         .functype fmuladd_4xf32 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32x4.mul $push0=, $0, $1
-; RELAXED-NEXT:    f32x4.add $push1=, $pop0, $2
-; RELAXED-NEXT:    return $pop1
+; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $0, $1, $2
+; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fmuladd_4xf32:
 ; STRICT:         .functype fmuladd_4xf32 (v128, v128, v128) -> (v128)
@@ -121,27 +153,8 @@ define <4 x float> @fma_4xf32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; RELAXED-LABEL: fma_4xf32:
 ; RELAXED:         .functype fma_4xf32 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32x4.extract_lane $push2=, $0, 0
-; RELAXED-NEXT:    f32x4.extract_lane $push1=, $1, 0
-; RELAXED-NEXT:    f32x4.extract_lane $push0=, $2, 0
-; RELAXED-NEXT:    call $push3=, fmaf, $pop2, $pop1, $pop0
-; RELAXED-NEXT:    f32x4.splat $push4=, $pop3
-; RELAXED-NEXT:    f32x4.extract_lane $push7=, $0, 1
-; RELAXED-NEXT:    f32x4.extract_lane $push6=, $1, 1
-; RELAXED-NEXT:    f32x4.extract_lane $push5=, $2, 1
-; RELAXED-NEXT:    call $push8=, fmaf, $pop7, $pop6, $pop5
-; RELAXED-NEXT:    f32x4.replace_lane $push9=, $pop4, 1, $pop8
-; RELAXED-NEXT:    f32x4.extract_lane $push12=, $0, 2
-; RELAXED-NEXT:    f32x4.extract_lane $push11=, $1, 2
-; RELAXED-NEXT:    f32x4.extract_lane $push10=, $2, 2
-; RELAXED-NEXT:    call $push13=, fmaf, $pop12, $pop11, $pop10
-; RELAXED-NEXT:    f32x4.replace_lane $push14=, $pop9, 2, $pop13
-; RELAXED-NEXT:    f32x4.extract_lane $push17=, $0, 3
-; RELAXED-NEXT:    f32x4.extract_lane $push16=, $1, 3
-; RELAXED-NEXT:    f32x4.extract_lane $push15=, $2, 3
-; RELAXED-NEXT:    call $push18=, fmaf, $pop17, $pop16, $pop15
-; RELAXED-NEXT:    f32x4.replace_lane $push19=, $pop14, 3, $pop18
-; RELAXED-NEXT:    return $pop19
+; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $0, $1, $2
+; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fma_4xf32:
 ; STRICT:         .functype fma_4xf32 (v128, v128, v128) -> (v128)
@@ -176,9 +189,9 @@ define <8 x float> @fadd_fmul_contract_8xf32(<8 x float> %a, <8 x float> %b, <8 
 ; RELAXED-LABEL: fadd_fmul_contract_8xf32:
 ; RELAXED:         .functype fadd_fmul_contract_8xf32 (i32, v128, v128, v128, v128, v128, v128) -> ()
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $6, $4, $2
+; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $4, $2, $6
 ; RELAXED-NEXT:    v128.store 16($0), $pop0
-; RELAXED-NEXT:    f32x4.relaxed_madd $push1=, $5, $3, $1
+; RELAXED-NEXT:    f32x4.relaxed_madd $push1=, $3, $1, $5
 ; RELAXED-NEXT:    v128.store 0($0), $pop1
 ; RELAXED-NEXT:    return
 ;
@@ -202,7 +215,7 @@ define <2 x double> @fadd_fmul_contract_2xf64(<2 x double> %a, <2 x double> %b, 
 ; RELAXED-LABEL: fadd_fmul_contract_2xf64:
 ; RELAXED:         .functype fadd_fmul_contract_2xf64 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f64x2.relaxed_madd $push0=, $2, $1, $0
+; RELAXED-NEXT:    f64x2.relaxed_madd $push0=, $1, $0, $2
 ; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fadd_fmul_contract_2xf64:

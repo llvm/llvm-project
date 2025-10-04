@@ -27,7 +27,7 @@ define <4 x float> @fsub_fmul_contract_4xf32(<4 x float> %a, <4 x float> %b, <4 
 ; RELAXED-LABEL: fsub_fmul_contract_4xf32:
 ; RELAXED:         .functype fsub_fmul_contract_4xf32 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32x4.relaxed_nmadd $push0=, $2, $1, $0
+; RELAXED-NEXT:    f32x4.relaxed_nmadd $push0=, $1, $0, $2
 ; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fsub_fmul_contract_4xf32:
@@ -46,7 +46,7 @@ define <8 x half> @fsub_fmul_contract_8xf16(<8 x half> %a, <8 x half> %b, <8 x h
 ; RELAXED-LABEL: fsub_fmul_contract_8xf16:
 ; RELAXED:         .functype fsub_fmul_contract_8xf16 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f16x8.relaxed_nmadd $push0=, $2, $1, $0
+; RELAXED-NEXT:    f16x8.relaxed_nmadd $push0=, $1, $0, $2
 ; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fsub_fmul_contract_8xf16:
@@ -84,9 +84,9 @@ define <8 x float> @fsub_fmul_contract_8xf32(<8 x float> %a, <8 x float> %b, <8 
 ; RELAXED-LABEL: fsub_fmul_contract_8xf32:
 ; RELAXED:         .functype fsub_fmul_contract_8xf32 (i32, v128, v128, v128, v128, v128, v128) -> ()
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32x4.relaxed_nmadd $push0=, $6, $4, $2
+; RELAXED-NEXT:    f32x4.relaxed_nmadd $push0=, $4, $2, $6
 ; RELAXED-NEXT:    v128.store 16($0), $pop0
-; RELAXED-NEXT:    f32x4.relaxed_nmadd $push1=, $5, $3, $1
+; RELAXED-NEXT:    f32x4.relaxed_nmadd $push1=, $3, $1, $5
 ; RELAXED-NEXT:    v128.store 0($0), $pop1
 ; RELAXED-NEXT:    return
 ;
@@ -110,7 +110,7 @@ define <2 x double> @fsub_fmul_contract_2xf64(<2 x double> %a, <2 x double> %b, 
 ; RELAXED-LABEL: fsub_fmul_contract_2xf64:
 ; RELAXED:         .functype fsub_fmul_contract_2xf64 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f64x2.relaxed_nmadd $push0=, $2, $1, $0
+; RELAXED-NEXT:    f64x2.relaxed_nmadd $push0=, $1, $0, $2
 ; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fsub_fmul_contract_2xf64:
