@@ -580,6 +580,42 @@ define amdgpu_kernel void @earlyclobber_1() {
   ret void
 }
 
+define amdgpu_kernel void @physreg_a32__vreg_a256__vreg_a512() {
+; CHECK-LABEL: define amdgpu_kernel void @physreg_a32__vreg_a256__vreg_a512(
+; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0, $1, $2", "{a16},a,a"(i32 poison, <8 x i32> poison, <16 x i32> poison)
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @physreg_def_a32__def_vreg_a256__def_vreg_a512() {
+; CHECK-LABEL: define amdgpu_kernel void @physreg_def_a32__def_vreg_a256__def_vreg_a512(
+; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, <8 x i32>, <16 x i32> } asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call {i32, <8 x i32>, <16 x i32>} asm sideeffect "; def $0, $1, $2", "={a16},=a,=a"()
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @physreg_def_a32___def_vreg_a512_use_vreg_a256() {
+; CHECK-LABEL: define amdgpu_kernel void @physreg_def_a32___def_vreg_a512_use_vreg_a256(
+; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, <16 x i32> } asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call {i32, <16 x i32>} asm sideeffect "; def $0, $1, $2", "={a16},=a,a"(<8 x i32> poison)
+  call void @use_most()
+  ret void
+}
+
 attributes #0 = { "amdgpu-agpr-alloc"="0" }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
