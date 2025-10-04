@@ -124,7 +124,7 @@ TEST(TypeSwitchTest, DefaultUnreachableWithValue) {
   EXPECT_EQ(0, translate(DerivedA()));
 
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
-  EXPECT_DEATH((void)translate(DerivedD(DerivedD())), "Unhandled type");
+  EXPECT_DEATH((void)translate(DerivedD()), "Unhandled type");
 #endif
 }
 
@@ -139,6 +139,6 @@ TEST(TypeSwitchTest, DefaultUnreachableWithVoid) {
   EXPECT_EQ(0, translate(DerivedA()));
 
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
-  EXPECT_DEATH((void)translate(DerivedD(DerivedD())), "Unhandled type");
+  EXPECT_DEATH((void)translate(DerivedD()), "Unhandled type");
 #endif
 }
