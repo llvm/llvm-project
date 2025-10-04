@@ -2214,9 +2214,9 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       else
         PD << "expression";
 
-      if (Diag(Loc, PD, FD)
-          << false /*show bit size*/ << 0 << Ty << false /*return*/
-          << TI.getTriple().str()) {
+      if (Diag(Loc, PD) << false /*show bit size*/ << 0 << Ty
+                        << false /*return*/
+                        << TI.getTriple().str()) {
         if (D)
           D->setInvalidDecl();
       }
@@ -2233,14 +2233,13 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       else
         PD << "expression";
 
-      if (Diag(Loc, PD, FD)
-          << false /*show bit size*/ << 0 << Ty << true /*return*/
-          << TI.getTriple().str()) {
+      if (Diag(Loc, PD) << false /*show bit size*/ << 0 << Ty << true /*return*/
+                        << TI.getTriple().str()) {
         if (D)
           D->setInvalidDecl();
       }
       if (D)
-        targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
+        targetDiag(D->getLocation(), diag::note_defined_here) << D;
     }
 
     if (TI.hasRISCVVTypes() && Ty->isRVVSizelessBuiltinType() && FD) {
