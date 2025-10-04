@@ -57,7 +57,7 @@ TEST_F(LlvmLibcExpf16Test, Underflow) {
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
       zero,
-      LIBC_NAMESPACE::expbf16(LIBC_NAMESPACE::fputil::cast<bfloat16>(-92.5f)),
+      LIBC_NAMESPACE::expbf16(LIBC_NAMESPACE::fputil::cast<bfloat16>(-93.0f)),
       FE_UNDERFLOW | FE_INEXACT);
   EXPECT_MATH_ERRNO(ERANGE);
 }

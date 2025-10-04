@@ -104,8 +104,8 @@ LLVM_LIBC_FUNCTION(bfloat16, expbf16, (bfloat16 x)) {
       }
     }
 
-    // x <= -93
-    if (x_u >= 0xc2baU) {
+    // x <= -92.5
+    if (x_u >= 0xc2b9U) {
       // exp(-inf) = +0
       if (x_bits.is_inf())
         return FPBits::zero().get_val();
@@ -115,7 +115,10 @@ LLVM_LIBC_FUNCTION(bfloat16, expbf16, (bfloat16 x)) {
 
       switch (fputil::quick_get_round()) {
       case FE_UPWARD:
-        return FPBits::min_subnormal().get_val();
+      case FE_TONEAREST:
+        if (LIBC_UNLIKELY(x_u == 0xc2b9U))
+          return FPBits::min_subnormal().get_val();
+        return FPBits::zero().get_val();
       default:
         return FPBits::zero().get_val();
       }
@@ -145,7 +148,7 @@ LLVM_LIBC_FUNCTION(bfloat16, expbf16, (bfloat16 x)) {
   // For -93 < x < 89, we do the following range reduction:
   // x = hi + mid + lo
   // where,
-  //    hi / 2^3 is an integer
+  //    hi is an integer
   //    mid * 2^2 is an integer
   //    -2^3 <= lo <= 2^3
   // also, hi + mid = round(4 * x) / x
