@@ -40,13 +40,19 @@ SuspiciousIncludeCheck::SuspiciousIncludeCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       HeaderFileExtensions(Context->getHeaderFileExtensions()),
-      ImplementationFileExtensions(Context->getImplementationFileExtensions()) {
-}
+      ImplementationFileExtensions(Context->getImplementationFileExtensions()),
+      IgnoredRegexString(Options.get("IgnoredRegex")),
+      IgnoredRegex(IgnoredRegexString.value_or(StringRef{})) {}
 
 void SuspiciousIncludeCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   PP->addPPCallbacks(
       ::std::make_unique<SuspiciousIncludePPCallbacks>(*this, SM, PP));
+}
+
+void SuspiciousIncludeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  if (IgnoredRegexString.has_value())
+    Options.store(Opts, "IgnoredRegex", IgnoredRegexString.value());
 }
 
 void SuspiciousIncludePPCallbacks::InclusionDirective(
@@ -56,6 +62,11 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
     bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   if (IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import)
     return;
+
+  if (Check.IgnoredRegexString.has_value() &&
+      Check.IgnoredRegex.match(FileName)) {
+    return;
+  }
 
   SourceLocation DiagLoc = FilenameRange.getBegin().getLocWithOffset(1);
 
