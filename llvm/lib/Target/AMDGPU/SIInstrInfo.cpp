@@ -2144,11 +2144,17 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     Register DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
     Register DstHi = RI.getSubReg(Dst, AMDGPU::sub1);
 
+    MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+    auto *TRI = MRI.getTargetRegisterInfo();
+    const MCInstrDesc &Mov64Desc = get(AMDGPU::V_MOV_B64_e32);
+    const TargetRegisterClass *Mov64RC =
+        getRegClass(Mov64Desc, /*OpNum=*/0, TRI);
+
     const MachineOperand &SrcOp = MI.getOperand(1);
     // FIXME: Will this work for 64-bit floating point immediates?
     assert(!SrcOp.isFPImm());
-    if (ST.hasMovB64()) {
-      MI.setDesc(get(AMDGPU::V_MOV_B64_e32));
+    if (ST.hasMovB64() && Mov64RC->contains(Dst)) {
+      MI.setDesc(Mov64Desc);
       if (SrcOp.isReg() || isInlineConstant(MI, 1) ||
           isUInt<32>(SrcOp.getImm()) || ST.has64BitLiterals())
         break;
@@ -2157,17 +2163,22 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       APInt Imm(64, SrcOp.getImm());
       APInt Lo(32, Imm.getLoBits(32).getZExtValue());
       APInt Hi(32, Imm.getHiBits(32).getZExtValue());
-      if (ST.hasPkMovB32() && Lo == Hi && isInlineConstant(Lo)) {
-        BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), Dst)
-          .addImm(SISrcMods::OP_SEL_1)
-          .addImm(Lo.getSExtValue())
-          .addImm(SISrcMods::OP_SEL_1)
-          .addImm(Lo.getSExtValue())
-          .addImm(0)  // op_sel_lo
-          .addImm(0)  // op_sel_hi
-          .addImm(0)  // neg_lo
-          .addImm(0)  // neg_hi
-          .addImm(0); // clamp
+      const MCInstrDesc &PkMovDesc = get(AMDGPU::V_PK_MOV_B32);
+      const TargetRegisterClass *PkMovRC =
+          getRegClass(PkMovDesc, /*OpNum=*/0, TRI);
+
+      if (ST.hasPkMovB32() && Lo == Hi && isInlineConstant(Lo) &&
+          PkMovRC->contains(Dst)) {
+        BuildMI(MBB, MI, DL, PkMovDesc, Dst)
+            .addImm(SISrcMods::OP_SEL_1)
+            .addImm(Lo.getSExtValue())
+            .addImm(SISrcMods::OP_SEL_1)
+            .addImm(Lo.getSExtValue())
+            .addImm(0)  // op_sel_lo
+            .addImm(0)  // op_sel_hi
+            .addImm(0)  // neg_lo
+            .addImm(0)  // neg_hi
+            .addImm(0); // clamp
       } else {
         BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstLo)
           .addImm(Lo.getSExtValue())
@@ -5116,7 +5127,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     // aligned register constraint.
     // FIXME: We do not verify inline asm operands, but custom inline asm
     // verification is broken anyway
-    if (ST.needsAlignedVGPRs() && Opcode != AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
+    if (ST.needsAlignedVGPRs() && Opcode != AMDGPU::AV_MOV_B64_IMM_PSEUDO &&
+        Opcode != AMDGPU::V_MOV_B64_PSEUDO) {
       const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
       if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
         if (const TargetRegisterClass *SubRC =
@@ -6069,7 +6081,8 @@ SIInstrInfo::getRegClass(const MCInstrDesc &TID, unsigned OpNum,
     return nullptr;
   auto RegClass = TID.operands()[OpNum].RegClass;
   // Special pseudos have no alignment requirement.
-  if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO || isSpill(TID))
+  if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO ||
+      TID.getOpcode() == AMDGPU::V_MOV_B64_PSEUDO || isSpill(TID))
     return RI.getRegClass(RegClass);
 
   return adjustAllocatableRegClass(ST, RI, TID, RegClass);
