@@ -9590,7 +9590,10 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
                 }) &&
          "the canonical IV should only be used by its increment or "
          "ScalarIVSteps when resetting the start value");
-  IV->setOperand(0, VPV);
+  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  VPInstruction *Add = Builder.createNaryOp(Instruction::Add, {IV, VPV});
+  IV->replaceAllUsesWith(Add);
+  Add->setOperand(0, IV);
 
   DenseMap<Value *, Value *> ToFrozen;
   SmallVector<Instruction *> InstsToMove;
@@ -9624,17 +9627,18 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         ToFrozen[StartV] = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
             EPI.MainLoopIterationCountCheck);
 
-        // VPReductionPHIRecipe for FindFirstIV/FindLastIV reductions requires
-        // an adjustment to the resume value. The resume value is adjusted to
-        // the sentinel value when the final value from the main vector loop
-        // equals the start value. This ensures correctness when the start value
-        // might not be less than the minimum value of a monotonically
-        // increasing induction variable.
+        // VPReductionPHIRecipe for FindFirstIV/FindLastIV reductions
+        // requires an adjustment to the resume value. The resume value is
+        // adjusted to the sentinel value when the final value from the main
+        // vector loop equals the start value. This ensures correctness when
+        // the start value might not be less than the minimum value of a
+        // monotonically increasing induction variable.
         BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
         IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
         Value *Cmp = Builder.CreateICmpEQ(ResumeV, ToFrozen[StartV]);
         if (auto *I = dyn_cast<Instruction>(Cmp))
           InstsToMove.push_back(I);
+
         Value *Sentinel = RdxResult->getOperand(2)->getLiveInIRValue();
         ResumeV = Builder.CreateSelect(Cmp, Sentinel, ResumeV);
         if (auto *I = dyn_cast<Instruction>(ResumeV))
