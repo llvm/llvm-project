@@ -854,7 +854,7 @@ private:
       BasicBlock *VisitedBB = getClonedBB(BB, NextState, DuplicateMap);
       if (!VisitedBB) {
         Metrics.analyzeBasicBlock(BB, *TTI, EphValues);
-        NumClonedInst += range_size(*BB);
+        NumClonedInst += BB->sizeWithoutDebug();
         DuplicateMap[BB].push_back({BB, NextState});
       }
 
@@ -872,7 +872,7 @@ private:
         if (VisitedBB)
           continue;
         Metrics.analyzeBasicBlock(BB, *TTI, EphValues);
-        NumClonedInst += range_size(*BB);
+        NumClonedInst += BB->sizeWithoutDebug();
         DuplicateMap[BB].push_back({BB, NextState});
       }
 
@@ -914,7 +914,7 @@ private:
     // TODO: Thread the switch partially before reaching the threshold.
     uint64_t NumOrigInst = 0;
     for (auto *BB : DuplicateMap.keys())
-      NumOrigInst += range_size(*BB);
+      NumOrigInst += BB->sizeWithoutDebug();
     if (double(NumClonedInst) / double(NumOrigInst) > MaxClonedRate) {
       LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, too much "
                            "instructions wll be cloned\n");
