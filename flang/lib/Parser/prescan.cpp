@@ -147,6 +147,11 @@ void Prescanner::Statement() {
         directiveSentinel_[4] == '\0') {
       // CUDA conditional compilation line.
       condOffset = 5;
+    } else if (directiveSentinel_[0] == '@' && directiveSentinel_[1] == 'a' &&
+        directiveSentinel_[2] == 'c' && directiveSentinel_[3] == 'c' &&
+        directiveSentinel_[4] == '\0') {
+      // OpenACC conditional compilation line.
+      condOffset = 5;
     }
     if (condOffset && !preprocessingOnly_) {
       at_ += *condOffset, column_ += *condOffset;

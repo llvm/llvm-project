@@ -35,6 +35,10 @@ class OpenACCRecipeBuilderBase {
                                size_t numBounds,
                                llvm::ArrayRef<QualType> boundTypes);
 
+  void makeBoundsInit(mlir::Value alloca, mlir::Location loc,
+                      mlir::Block *block, const VarDecl *allocaDecl,
+                      QualType origType, bool isInitSection);
+
 protected:
   CIRGen::CIRGenFunction &cgf;
   CIRGen::CIRGenBuilderTy &builder;
@@ -60,14 +64,13 @@ protected:
   // doesn't restore it aftewards.
   void createReductionRecipeCombiner(mlir::Location loc, mlir::Location locEnd,
                                      mlir::Value mainOp,
-                                     mlir::acc::ReductionRecipeOp recipe);
-  void createPrivateInitRecipe(mlir::Location loc, mlir::Location locEnd,
-                               SourceRange exprRange, mlir::Value mainOp,
-                               mlir::acc::PrivateRecipeOp recipe,
-                               size_t numBounds,
-                               llvm::ArrayRef<QualType> boundTypes,
-                               const VarDecl *allocaDecl, QualType origType,
-                               const Expr *initExpr);
+                                     mlir::acc::ReductionRecipeOp recipe,
+                                     size_t numBounds);
+  void createInitRecipe(mlir::Location loc, mlir::Location locEnd,
+                        SourceRange exprRange, mlir::Value mainOp,
+                        mlir::Region &recipeInitRegion, size_t numBounds,
+                        llvm::ArrayRef<QualType> boundTypes,
+                        const VarDecl *allocaDecl, QualType origType);
 
   void createRecipeDestroySection(mlir::Location loc, mlir::Location locEnd,
                                   mlir::Value mainOp, CharUnits alignment,
@@ -208,15 +211,12 @@ public:
   OpenACCRecipeBuilder(CIRGen::CIRGenFunction &cgf,
                        CIRGen::CIRGenBuilderTy &builder)
       : OpenACCRecipeBuilderBase(cgf, builder) {}
-  RecipeTy getOrCreateRecipe(ASTContext &astCtx,
-                             mlir::OpBuilder::InsertPoint &insertLocation,
-                             const Expr *varRef, const VarDecl *varRecipe,
-                             const Expr *initExpr, const VarDecl *temporary,
-                             OpenACCReductionOperator reductionOp,
-                             DeclContext *dc, QualType origType,
-                             size_t numBounds,
-                             llvm::ArrayRef<QualType> boundTypes,
-                             QualType baseType, mlir::Value mainOp) {
+  RecipeTy getOrCreateRecipe(
+      ASTContext &astCtx, mlir::OpBuilder::InsertPoint &insertLocation,
+      const Expr *varRef, const VarDecl *varRecipe, const VarDecl *temporary,
+      OpenACCReductionOperator reductionOp, DeclContext *dc, QualType origType,
+      size_t numBounds, llvm::ArrayRef<QualType> boundTypes, QualType baseType,
+      mlir::Value mainOp) {
     assert(!varRecipe->getType()->isSpecificBuiltinType(
                BuiltinType::ArraySection) &&
            "array section shouldn't make it to recipe creation");
@@ -224,10 +224,10 @@ public:
     // TODO: OpenACC: This is a bit of a hackery to get this to not change for
     // the non-private recipes. This will be removed soon, when we get this
     // 'right' for firstprivate and reduction.
-    if constexpr (!std::is_same_v<RecipeTy, mlir::acc::PrivateRecipeOp>) {
+    if constexpr (std::is_same_v<RecipeTy, mlir::acc::FirstprivateRecipeOp>) {
       if (numBounds) {
         cgf.cgm.errorNYI(varRef->getSourceRange(),
-                         "firstprivate/reduction-init with bounds");
+                         "firstprivate-init with bounds");
       }
       boundTypes = {};
       numBounds = 0;
@@ -260,16 +260,23 @@ public:
     insertLocation = modBuilder.saveInsertionPoint();
 
     if constexpr (std::is_same_v<RecipeTy, mlir::acc::PrivateRecipeOp>) {
-      createPrivateInitRecipe(loc, locEnd, varRef->getSourceRange(), mainOp,
-                              recipe, numBounds, boundTypes, varRecipe,
-                              origType, initExpr);
+      createInitRecipe(loc, locEnd, varRef->getSourceRange(), mainOp,
+                       recipe.getInitRegion(), numBounds, boundTypes, varRecipe,
+                       origType);
+    } else if constexpr (std::is_same_v<RecipeTy,
+                                        mlir::acc::ReductionRecipeOp>) {
+      createInitRecipe(loc, locEnd, varRef->getSourceRange(), mainOp,
+                       recipe.getInitRegion(), numBounds, boundTypes, varRecipe,
+                       origType);
+      createReductionRecipeCombiner(loc, locEnd, mainOp, recipe, numBounds);
     } else {
+      static_assert(std::is_same_v<RecipeTy, mlir::acc::FirstprivateRecipeOp>);
+      // TODO: OpenACC: we probably want this to call createInitRecipe as well,
+      // but do so in a way that omits the 'initialization', so that we can do
+      // it separately, since it belongs in the 'copy' region. It also might
+      // need a way of getting the tempDeclEmission out of it for that purpose.
       createRecipeInitCopy(loc, locEnd, varRef->getSourceRange(), mainOp,
                            recipe, varRecipe, temporary);
-    }
-
-    if constexpr (std::is_same_v<RecipeTy, mlir::acc::ReductionRecipeOp>) {
-      createReductionRecipeCombiner(loc, locEnd, mainOp, recipe);
     }
 
     if (origType.isDestructedType())

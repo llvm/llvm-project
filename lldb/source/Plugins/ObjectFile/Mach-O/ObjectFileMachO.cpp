@@ -2843,9 +2843,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                 symbol_name, symbol_name_non_abi_mangled,
                                 type)) {
                           demangled_is_synthesized = true;
-                        } else if (nlist.n_value != 0) {
-                          symbol_section = section_info.GetSection(
-                              nlist.n_sect, nlist.n_value);
+                        } else {
+                          if (nlist.n_value != 0)
+                            symbol_section = section_info.GetSection(
+                                nlist.n_sect, nlist.n_value);
+
                           type = eSymbolTypeData;
                         }
                         break;
@@ -3330,10 +3332,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                   ::strstr(symbol_sect_name, "__objc") ==
                                       symbol_sect_name) {
                                 type = eSymbolTypeRuntime;
-                                demangled_is_synthesized =
-                                    TryParseV2ObjCMetadataSymbol(
+
+                                if (TryParseV2ObjCMetadataSymbol(
                                         symbol_name,
-                                        symbol_name_non_abi_mangled, type);
+                                        symbol_name_non_abi_mangled, type))
+                                  demangled_is_synthesized = true;
                               } else if (symbol_sect_name &&
                                          ::strstr(symbol_sect_name,
                                                   "__gcc_except_tab") ==
@@ -3643,9 +3646,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           if (TryParseV2ObjCMetadataSymbol(symbol_name,
                                            symbol_name_non_abi_mangled, type)) {
             demangled_is_synthesized = true;
-          } else if (nlist.n_value != 0) {
-            symbol_section =
-                section_info.GetSection(nlist.n_sect, nlist.n_value);
+          } else {
+            if (nlist.n_value != 0)
+              symbol_section =
+                  section_info.GetSection(nlist.n_sect, nlist.n_value);
+
             type = eSymbolTypeData;
           }
         } break;
@@ -4083,9 +4088,10 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                 if (symbol_sect_name &&
                     ::strstr(symbol_sect_name, "__objc") == symbol_sect_name) {
                   type = eSymbolTypeRuntime;
-                  demangled_is_synthesized = TryParseV2ObjCMetadataSymbol(
-                      symbol_name, symbol_name_non_abi_mangled, type);
 
+                  if (TryParseV2ObjCMetadataSymbol(
+                          symbol_name, symbol_name_non_abi_mangled, type))
+                    demangled_is_synthesized = true;
                 } else if (symbol_sect_name &&
                            ::strstr(symbol_sect_name, "__gcc_except_tab") ==
                                symbol_sect_name) {
