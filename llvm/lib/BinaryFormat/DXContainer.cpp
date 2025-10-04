@@ -18,6 +18,70 @@
 using namespace llvm;
 using namespace llvm::dxbc;
 
+#define ROOT_PARAMETER(Val, Enum)                                              \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidParameterType(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+bool llvm::dxbc::isValidRangeType(uint32_t V) {
+  return V <= llvm::to_underlying(dxil::ResourceClass::LastEntry);
+}
+
+#define SHADER_VISIBILITY(Val, Enum)                                           \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidShaderVisibility(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define FILTER(Val, Enum)                                                      \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidSamplerFilter(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define TEXTURE_ADDRESS_MODE(Val, Enum)                                        \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidAddress(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define COMPARISON_FUNC(Val, Enum)                                             \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidComparisonFunc(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define STATIC_BORDER_COLOR(Val, Enum)                                         \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidBorderColor(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
 dxbc::PartType dxbc::parsePartType(StringRef S) {
 #define CONTAINER_PART(PartName) .Case(#PartName, PartType::PartName)
   return StringSwitch<dxbc::PartType>(S)
