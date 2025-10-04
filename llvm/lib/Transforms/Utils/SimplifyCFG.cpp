@@ -7227,6 +7227,7 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
       Mod.getContext(), "switch.lookup", CommonDest->getParent(), CommonDest);
 
   BranchInst *RangeCheckBranch = nullptr;
+  BranchInst *CondBranch = nullptr;
 
   Builder.SetInsertPoint(SI);
   const bool GeneratingCoveredLookupTable = (MaxTableSize == TableSize);
@@ -7241,6 +7242,7 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
         TableIndex, ConstantInt::get(MinCaseVal->getType(), TableSize));
     RangeCheckBranch =
         Builder.CreateCondBr(Cmp, LookupBB, SI->getDefaultDest());
+    CondBranch = RangeCheckBranch;
     if (DTU)
       Updates.push_back({DominatorTree::Insert, BB, LookupBB});
   }
@@ -7279,7 +7281,7 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
     Value *Shifted = Builder.CreateLShr(TableMask, MaskIndex, "switch.shifted");
     Value *LoBit = Builder.CreateTrunc(
         Shifted, Type::getInt1Ty(Mod.getContext()), "switch.lobit");
-    Builder.CreateCondBr(LoBit, LookupBB, SI->getDefaultDest());
+    CondBranch = Builder.CreateCondBr(LoBit, LookupBB, SI->getDefaultDest());
     if (DTU) {
       Updates.push_back({DominatorTree::Insert, MaskBB, LookupBB});
       Updates.push_back({DominatorTree::Insert, MaskBB, SI->getDefaultDest()});
@@ -7319,19 +7321,32 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
   if (DTU)
     Updates.push_back({DominatorTree::Insert, LookupBB, CommonDest});
 
+  SmallVector<uint32_t> BranchWeights;
+  const bool HasBranchWeights = CondBranch && !ProfcheckDisableMetadataFixes &&
+                                extractBranchWeights(*SI, BranchWeights);
+  uint64_t ToLookupWeight = 0;
+  uint64_t ToDefaultWeight = 0;
+
   // Remove the switch.
   SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
-  for (unsigned i = 0, e = SI->getNumSuccessors(); i < e; ++i) {
-    BasicBlock *Succ = SI->getSuccessor(i);
+  for (unsigned I = 0, E = SI->getNumSuccessors(); I < E; ++I) {
+    BasicBlock *Succ = SI->getSuccessor(I);
 
-    if (Succ == SI->getDefaultDest())
+    if (Succ == SI->getDefaultDest()) {
+      if (HasBranchWeights)
+        ToDefaultWeight += BranchWeights[I];
       continue;
+    }
     Succ->removePredecessor(BB);
     if (DTU && RemovedSuccessors.insert(Succ).second)
       Updates.push_back({DominatorTree::Delete, BB, Succ});
+    if (HasBranchWeights)
+      ToLookupWeight += BranchWeights[I];
   }
   SI->eraseFromParent();
-
+  if (HasBranchWeights)
+    setFittedBranchWeights(*CondBranch, {ToLookupWeight, ToDefaultWeight},
+                           /*IsExpected=*/false);
   if (DTU)
     DTU->applyUpdates(Updates);
 
