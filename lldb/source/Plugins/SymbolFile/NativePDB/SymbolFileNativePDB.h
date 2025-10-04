@@ -140,6 +140,12 @@ public:
 
   std::optional<PdbCompilandSymId> FindSymbolScope(PdbCompilandSymId id);
 
+  /// Find the mangled name for a function
+  ///
+  /// \param id A symbol ID of a S_LPROC32/S_GPROC32 record
+  /// \returns The mangled name of the function (if available)
+  std::optional<llvm::StringRef> FindMangledFunctionName(PdbCompilandSymId id);
+
   void FindTypes(const lldb_private::TypeQuery &match,
                  lldb_private::TypeResults &results) override;
 
@@ -268,6 +274,11 @@ private:
 
   void CacheUdtDeclarations();
   llvm::Expected<Declaration> ResolveUdtDeclaration(PdbTypeSymId type_id);
+
+  std::optional<llvm::StringRef> FindMangledSymbol(SegmentOffset so);
+
+  llvm::StringRef StripMangledFunctionName(llvm::StringRef mangled,
+                                           PdbTypeSymId func_ty);
 
   llvm::BumpPtrAllocator m_allocator;
 
