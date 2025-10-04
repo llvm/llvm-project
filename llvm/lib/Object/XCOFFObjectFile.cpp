@@ -379,7 +379,7 @@ Expected<StringRef> XCOFFObjectFile::getSectionName(DataRefImpl Sec) const {
 }
 
 uint64_t XCOFFObjectFile::getSectionAddress(DataRefImpl Sec) const {
-  // Avoid ternary due to failure to convert the ubig32_t value to a unit64_t
+  // Avoid ternary due to failure to convert the ubig32_t value to a uint64_t
   // with MSVC.
   if (is64Bit())
     return toSection64(Sec)->VirtualAddress;
@@ -397,7 +397,7 @@ uint64_t XCOFFObjectFile::getSectionIndex(DataRefImpl Sec) const {
 }
 
 uint64_t XCOFFObjectFile::getSectionSize(DataRefImpl Sec) const {
-  // Avoid ternary due to failure to convert the ubig32_t value to a unit64_t
+  // Avoid ternary due to failure to convert the ubig32_t value to a uint64_t
   // with MSVC.
   if (is64Bit())
     return toSection64(Sec)->SectionSize;
