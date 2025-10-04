@@ -254,6 +254,7 @@ New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 - New option ``-fsanitize-debug-trap-reasons=`` added to control emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
+- New option ``-f[no-]strict-bool`` added to control whether Clang can assume that ``bool`` values loaded from memory cannot have a bit pattern other than 0 or 1.
 
 
 Lanai Support
