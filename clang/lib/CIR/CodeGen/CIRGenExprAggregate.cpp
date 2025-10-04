@@ -213,9 +213,11 @@ public:
   }
   void VisitChooseExpr(const ChooseExpr *e) { Visit(e->getChosenSubExpr()); }
   void VisitCXXParenListInitExpr(CXXParenListInitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitCXXParenListInitExpr");
+    visitCXXParenListOrInitListExpr(e, e->getInitExprs(),
+                                    e->getInitializedFieldInUnion(),
+                                    e->getArrayFiller());
   }
+
   void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *e,
                               llvm::Value *outerBegin = nullptr) {
     cgf.cgm.errorNYI(e->getSourceRange(),
