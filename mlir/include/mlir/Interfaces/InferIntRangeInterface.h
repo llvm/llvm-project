@@ -117,7 +117,8 @@ public:
   IntegerValueRange(ConstantIntRanges value) : value(std::move(value)) {}
 
   /// Create an integer value range lattice value.
-  IntegerValueRange(std::optional<ConstantIntRanges> value = std::nullopt)
+  explicit IntegerValueRange(
+      std::optional<ConstantIntRanges> value = std::nullopt)
       : value(std::move(value)) {}
 
   /// Whether the range is uninitialized. This happens when the state hasn't
