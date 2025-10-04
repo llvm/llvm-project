@@ -13295,6 +13295,8 @@ def note_safe_buffer_usage_suggestions_disabled : Note<
 def warn_unsafe_buffer_usage_in_container : Warning<
   "the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information">,
   InGroup<UnsafeBufferUsageInContainer>, DefaultIgnore;
+def warn_unsafe_buffer_usage_unique_ptr_array_access : Warning<"direct access using operator[] on std::unique_ptr<T[]> is unsafe due to lack of bounds checking">,
+  InGroup<UnsafeBufferUsageInUniquePtrArrayAccess>, DefaultIgnore;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).
