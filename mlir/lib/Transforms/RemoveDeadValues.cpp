@@ -297,6 +297,17 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
     return;
   }
 
+  // If a private function has neither users and function calls, it is a useless
+  // function.
+  SymbolTable::UseRange uses = *funcOp.getSymbolUses(module);
+  auto callSites = funcOp.getFunctionBody().getOps<CallOpInterface>();
+  if (uses.empty() && callSites.empty()) {
+    LDBG() << "Delete function op: "
+           << OpWithFlags(funcOp, OpPrintingFlags().skipRegions());
+    funcOp.erase();
+    return;
+  }
+
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
   SmallVector<Value> arguments(funcOp.getArguments());
   BitVector nonLiveArgs = markLives(arguments, nonLiveSet, la);
@@ -312,7 +323,6 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // Do (2). (Skip creating generic operand cleanup entries for call ops.
   // Call arguments will be removed in the call-site specific segment-aware
   // cleanup, avoiding generic eraseOperands bitvector mechanics.)
-  SymbolTable::UseRange uses = *funcOp.getSymbolUses(module);
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
@@ -881,9 +891,15 @@ void RemoveDeadValues::runOnOperation() {
   // end of this pass.
   RDVFinalCleanupList finalCleanupList;
 
+  // To delete the private function, the FunctionOpInterface is processed in
+  // advance.
+  module->walk([&](FunctionOpInterface op) {
+    processFuncOp(op, module, la, deadVals, finalCleanupList);
+  });
+
   module->walk([&](Operation *op) {
-    if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
-      processFuncOp(funcOp, module, la, deadVals, finalCleanupList);
+    if (isa<FunctionOpInterface>(op)) {
+      // The FunctionOpInterface has been processed in advance.
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
       processRegionBranchOp(regionBranchOp, la, deadVals, finalCleanupList);
     } else if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {

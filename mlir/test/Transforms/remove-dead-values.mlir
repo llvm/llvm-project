@@ -649,3 +649,18 @@ func.func @callee(%arg0: index, %arg1: index, %arg2: index) -> index {
   %res = call @mutl_parameter(%arg0, %arg1, %arg2) : (index, index, index) -> (index)
   return %res : index
 }
+
+// -----
+
+// CHECK-NOT: func private @single_private_func 
+func.func private @single_private_func(%arg0: i64) -> (i64) {
+    %c0_i64 = arith.constant 0 : i64
+    %2 = arith.cmpi eq, %arg0, %c0_i64 : i64
+    cf.cond_br %2, ^bb1, ^bb2
+  ^bb1:  // pred: ^bb0
+    %c1_i64 = arith.constant 1 : i64
+    return %c1_i64 : i64
+  ^bb2:  // pred: ^bb0
+    %c3_i64 = arith.constant 3 : i64
+    return %c3_i64 : i64
+}
