@@ -20,10 +20,6 @@
 
 #include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 
-namespace cir {
-inline constexpr uint32_t DefaultGlobalCtorDtorPriority = 65535;
-} // namespace cir
-
 //===----------------------------------------------------------------------===//
 // CIR Dialect Attrs
 //===----------------------------------------------------------------------===//

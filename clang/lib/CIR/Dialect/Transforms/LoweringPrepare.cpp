@@ -634,8 +634,7 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   // Create a variable initialization function.
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
-  auto voidTy = cir::VoidType::get(builder.getContext());
-  auto fnType = cir::FuncType::get({}, voidTy);
+  auto fnType = cir::FuncType::get({}, builder.getVoidTy());
   FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
                                   cir::GlobalLinkageKind::InternalLinkage);
 
@@ -648,7 +647,7 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   }
 
   // Register the destructor call with __cxa_atexit
-  auto &dtorRegion = op.getDtorRegion();
+  mlir::Region &dtorRegion = op.getDtorRegion();
   if (!dtorRegion.empty()) {
     assert(!cir::MissingFeatures::opGlobalDtorLowering());
     llvm_unreachable("dtor region lowering is NYI");
@@ -666,7 +665,7 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   }
 
   assert(isa<YieldOp>(*yieldOp));
-  builder.create<ReturnOp>(yieldOp->getLoc());
+  cir::ReturnOp::create(builder, yieldOp->getLoc());
   return f;
 }
 
@@ -716,8 +715,7 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
 
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
-  auto fnType =
-      cir::FuncType::get({}, cir::VoidType::get(builder.getContext()));
+  auto fnType = cir::FuncType::get({}, builder.getVoidTy());
   cir::FuncOp f =
       buildRuntimeFunction(builder, fnName, mlirModule.getLoc(), fnType,
                            cir::GlobalLinkageKind::ExternalLinkage);
@@ -725,7 +723,7 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   for (cir::FuncOp &f : dynamicInitializers)
     builder.createCallOp(f.getLoc(), f, {});
 
-  builder.create<ReturnOp>(f.getLoc());
+  cir::ReturnOp::create(builder, f.getLoc());
 }
 
 static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
