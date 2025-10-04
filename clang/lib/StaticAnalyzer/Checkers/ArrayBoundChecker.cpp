@@ -478,17 +478,6 @@ static Messages getNonTaintMsgs(const ASTContext &ACtx,
           std::string(Buf)};
 }
 
-static Messages getTaintMsgs(const MemSpaceRegion *Space,
-                             const SubRegion *Region, const char *OffsetName,
-                             bool AlsoMentionUnderflow) {
-  std::string RegName = getRegionName(Space, Region);
-  return {formatv("Potential out of bound access to {0} with tainted {1}",
-                  RegName, OffsetName),
-          formatv("Access of {0} with a tainted {1} that may be {2}too large",
-                  RegName, OffsetName,
-                  AlsoMentionUnderflow ? "negative or " : "")};
-}
-
 const NoteTag *StateUpdateReporter::createNoteTag(CheckerContext &C) const {
   // Don't create a note tag if we didn't assume anything:
   if (!AssumedNonNegative && !AssumedUpperBound)
@@ -686,37 +675,15 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
           C.addTransition(ExceedsUpperBound, SUR.createNoteTag(C));
           return;
         }
-
-        BadOffsetKind Problem = AlsoMentionUnderflow
-                                    ? BadOffsetKind::Indeterminate
-                                    : BadOffsetKind::Overflowing;
-        Messages Msgs =
-            getNonTaintMsgs(C.getASTContext(), Space, Reg, ByteOffset,
-                            *KnownSize, Location, Problem);
-        reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize);
-        return;
       }
-      // ...and it can be valid as well...
-      if (isTainted(State, ByteOffset)) {
-        // ...but it's tainted, so report an error.
 
-        // Diagnostic detail: saying "tainted offset" is always correct, but
-        // the common case is that 'idx' is tainted in 'arr[idx]' and then it's
-        // nicer to say "tainted index".
-        const char *OffsetName = "offset";
-        if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
-          if (isTainted(State, ASE->getIdx(), C.getLocationContext()))
-            OffsetName = "index";
-
-        Messages Msgs =
-            getTaintMsgs(Space, Reg, OffsetName, AlsoMentionUnderflow);
-        reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize,
-                  /*IsTaintBug=*/true);
-        return;
-      }
-      // ...and it isn't tainted, so the checker will (optimistically) assume
-      // that the offset is in bounds and mention this in the note tag.
-      SUR.recordUpperBoundAssumption(*KnownSize);
+      BadOffsetKind Problem = AlsoMentionUnderflow
+                                  ? BadOffsetKind::Indeterminate
+                                  : BadOffsetKind::Overflowing;
+      Messages Msgs = getNonTaintMsgs(C.getASTContext(), Space, Reg, ByteOffset,
+                                      *KnownSize, Location, Problem);
+      reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize);
+      return;
     }
 
     // Actually update the state. The "if" only fails in the extremely unlikely
@@ -758,7 +725,7 @@ void ArrayBoundChecker::reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
                                   std::optional<NonLoc> Extent,
                                   bool IsTaintBug /*=false*/) const {
 
-  ExplodedNode *ErrorNode = C.generateErrorNode(ErrorState);
+  ExplodedNode *ErrorNode = C.generateNonFatalErrorNode(ErrorState);
   if (!ErrorNode)
     return;
 
