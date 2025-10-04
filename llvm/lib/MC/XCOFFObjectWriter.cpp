@@ -946,15 +946,15 @@ void XCOFFWriter::writeSymbolEntryForCsectMemberLabel(
                      (is64Bit() && ExceptionSection.isDebugEnabled) ? 3 : 2);
     if (is64Bit() && ExceptionSection.isDebugEnabled) {
       // On 64 bit with debugging enabled, we have a csect, exception, and
-      // function auxilliary entries, so we must increment symbol index by 4.
+      // function auxiliary entries, so we must increment symbol index by 4.
       writeSymbolAuxExceptionEntry(
           ExceptionSection.FileOffsetToData +
               getExceptionOffset(Entry->second.FunctionSymbol),
           Entry->second.FunctionSize,
           SymbolIndexMap[Entry->second.FunctionSymbol] + 4);
     }
-    // For exception section entries, csect and function auxilliary entries
-    // must exist. On 64-bit there is also an exception auxilliary entry.
+    // For exception section entries, csect and function auxiliary entries
+    // must exist. On 64-bit there is also an exception auxiliary entry.
     writeSymbolAuxFunctionEntry(
         ExceptionSection.FileOffsetToData +
             getExceptionOffset(Entry->second.FunctionSymbol),
@@ -1015,7 +1015,7 @@ void XCOFFWriter::writeSymbolAuxFunctionEntry(uint32_t EntryOffset,
 void XCOFFWriter::writeSymbolAuxExceptionEntry(uint64_t EntryOffset,
                                                uint32_t FunctionSize,
                                                uint32_t EndIndex) {
-  assert(is64Bit() && "Exception auxilliary entries are 64-bit only.");
+  assert(is64Bit() && "Exception auxiliary entries are 64-bit only.");
   W.write<uint64_t>(EntryOffset);
   W.write<uint32_t>(FunctionSize);
   W.write<uint32_t>(EndIndex);
@@ -1348,7 +1348,7 @@ void XCOFFWriter::addExceptionEntry(const MCSymbol *Symbol,
                                     unsigned ReasonCode, unsigned FunctionSize,
                                     bool hasDebug) {
   // If a module had debug info, debugging is enabled and XCOFF emits the
-  // exception auxilliary entry.
+  // exception auxiliary entry.
   if (hasDebug)
     ExceptionSection.isDebugEnabled = true;
   auto Entry = ExceptionSection.ExceptionTable.find(Symbol->getName());
@@ -1474,8 +1474,8 @@ void XCOFFWriter::assignAddressesAndIndices(MCAssembler &Asm) {
           SymbolIndexMap[Sym.MCSym] = Sym.SymbolTableIndex;
           // 1 main and 1 auxiliary symbol table entry for each contained
           // symbol. For symbols with exception section entries, a function
-          // auxilliary entry is needed, and on 64-bit XCOFF with debugging
-          // enabled, an additional exception auxilliary entry is needed.
+          // auxiliary entry is needed, and on 64-bit XCOFF with debugging
+          // enabled, an additional exception auxiliary entry is needed.
           SymbolTableIndex += 2;
           if (hasExceptionSection() && hasExceptEntry) {
             if (is64Bit() && ExceptionSection.isDebugEnabled)
