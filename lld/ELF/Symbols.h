@@ -408,21 +408,23 @@ public:
 class CommonSymbol : public Symbol {
 public:
   CommonSymbol(Ctx &ctx, InputFile *file, StringRef name, uint8_t binding,
-               uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size)
+               uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size,
+               bool isLargeCommon = false)
       : Symbol(CommonKind, file, name, binding, stOther, type),
-        alignment(alignment), size(size) {
-  }
+        alignment(alignment), size(size), isLargeCommon(isLargeCommon) {}
   void overwrite(Symbol &sym) const {
     Symbol::overwrite(sym, CommonKind);
     auto &s = static_cast<CommonSymbol &>(sym);
     s.alignment = alignment;
     s.size = size;
+    s.isLargeCommon = isLargeCommon;
   }
 
   static bool classof(const Symbol *s) { return s->isCommon(); }
 
   uint32_t alignment;
   uint64_t size;
+  bool isLargeCommon;
 };
 
 class Undefined : public Symbol {
