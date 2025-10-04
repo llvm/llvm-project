@@ -6,7 +6,7 @@ import threading
 import socket
 import traceback
 from lldbsuite.support import seven
-from typing import Optional
+from typing import Optional, Literal
 
 
 def checksum(message):
@@ -521,10 +521,12 @@ class MockGDBServer:
     _receivedData = None
     _receivedDataOffset = None
     _shouldSendAck = True
+    packetLog: list[tuple[Literal["recv"] | Literal["send"], str | bytes]]
 
     def __init__(self, socket):
         self._socket = socket
         self.responder = MockGDBServerResponder()
+        self.packetLog = []
 
     def start(self):
         # Start a thread that waits for a client connection.
@@ -651,11 +653,13 @@ class MockGDBServer:
         # can start on the next packet the next time around
         self._receivedData = data[i:]
         self._receivedDataOffset = 0
+        self.packetLog.append(("recv", packet))
         return packet
 
     def _sendPacket(self, packet: str):
         assert self._socket is not None
         framed_packet = seven.bitcast_to_bytes(frame_packet(packet))
+        self.packetLog.append(("send", framed_packet))
         self._socket.sendall(framed_packet)
 
     def _handlePacket(self, packet):
