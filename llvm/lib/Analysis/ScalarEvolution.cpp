@@ -15857,12 +15857,17 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
         To = SE.getUMaxExpr(FromRewritten, RHS);
         if (auto *UMin = dyn_cast<SCEVUMinExpr>(FromRewritten))
           EnqueueOperands(UMin);
+        if (RHS->isOne())
+          ExprsToRewrite.push_back(From);
         break;
       case CmpInst::ICMP_SGT:
       case CmpInst::ICMP_SGE:
         To = SE.getSMaxExpr(FromRewritten, RHS);
-        if (auto *SMin = dyn_cast<SCEVSMinExpr>(FromRewritten))
+        if (auto *SMin = dyn_cast<SCEVSMinExpr>(FromRewritten)) {
           EnqueueOperands(SMin);
+        }
+        if (RHS->isOne())
+          ExprsToRewrite.push_back(From);
         break;
       case CmpInst::ICMP_EQ:
         if (isa<SCEVConstant>(RHS))
@@ -15993,7 +15998,22 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     for (const SCEV *Expr : ExprsToRewrite) {
       const SCEV *RewriteTo = Guards.RewriteMap[Expr];
       Guards.RewriteMap.erase(Expr);
-      Guards.RewriteMap.insert({Expr, Guards.rewrite(RewriteTo)});
+      const SCEV *Rewritten = Guards.rewrite(RewriteTo);
+
+      // Try to strengthen divisibility of SMax/UMax expressions coming from >=
+      // 1 conditions.
+      auto *Max = dyn_cast<SCEVMinMaxExpr>(Rewritten);
+      if (Max && isa<SCEVSMaxExpr, SCEVUMaxExpr>(Rewritten) &&
+          Rewritten->getType()->isIntegerTy() && Max->getOperand(0)->isOne()) {
+        APInt CommonMultiple = SE.getConstantMultiple(Max->getOperand(1));
+        for (const SCEV *Op : drop_begin(Max->operands(), 2)) {
+          CommonMultiple = APIntOps::GreatestCommonDivisor(
+              CommonMultiple, SE.getConstantMultiple(Op));
+        }
+        SmallVector<const SCEV *> Ops = {SE.getConstant(CommonMultiple), Max};
+        Rewritten = SE.getMinMaxExpr(Max->getSCEVType(), Ops);
+      }
+      Guards.RewriteMap.insert({Expr, Rewritten});
     }
   }
 }
