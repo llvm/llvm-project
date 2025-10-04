@@ -1243,29 +1243,34 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
     }
 
     for (StringRef Code : CI.Codes) {
+      unsigned RegCount = 0;
+
       if (Code.starts_with("a")) {
         // Virtual register, compute number of registers based on the type.
         //
         // We ought to be going through TargetLowering to get the number of
         // registers, but we should avoid the dependence on CodeGen here.
-        unsigned RegCount = divideCeil(DL.getTypeSizeInBits(Ty), 32);
-        if (CI.Type == InlineAsm::isOutput) {
-          AGPRDefCount += RegCount;
-          if (CI.isEarlyClobber)
-            AGPRUseCount += RegCount;
-        } else
-          AGPRUseCount += RegCount;
+        RegCount = divideCeil(DL.getTypeSizeInBits(Ty), 32);
       } else {
         // Physical register reference
         auto [Kind, RegIdx, NumRegs] = AMDGPU::parseAsmConstraintPhysReg(Code);
-        if (Kind == 'a')
+        if (Kind == 'a') {
+          RegCount = NumRegs;
           MaxPhysReg = std::max(MaxPhysReg, std::min(RegIdx + NumRegs, 256u));
+        }
       }
+
+      if (CI.Type == InlineAsm::isOutput) {
+        AGPRDefCount += RegCount;
+        if (CI.isEarlyClobber)
+          AGPRUseCount += RegCount;
+      } else
+        AGPRUseCount += RegCount;
     }
   }
 
   unsigned MaxVirtReg = std::max(AGPRUseCount, AGPRDefCount);
-  return std::min(MaxVirtReg + MaxPhysReg, 256u);
+  return std::min(std::max(MaxVirtReg, MaxPhysReg), 256u);
 }
 
 // TODO: Migrate to range merge of amdgpu-agpr-alloc.
