@@ -7368,8 +7368,7 @@ _mm256_cvtepi32_epi8(__m256i __A) {
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_mask_cvtepi32_epi8 (__m128i __O, __mmask8 __M, __m256i __A)
-{
+_mm256_mask_cvtepi32_epi8(__m128i __O, __mmask8 __M, __m256i __A) {
   return (__m128i) __builtin_ia32_pmovdb256_mask ((__v8si) __A,
               (__v16qi) __O, __M);
 }
@@ -7417,8 +7416,7 @@ _mm_mask_cvtepi32_storeu_epi16 (void * __P, __mmask8 __M, __m128i __A)
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_cvtepi32_epi16 (__m256i __A)
-{
+_mm256_cvtepi32_epi16(__m256i __A) {
   return (__m128i)__builtin_convertvector((__v8si)__A, __v8hi);
 }
 
@@ -7471,7 +7469,7 @@ _mm_mask_cvtepi64_storeu_epi8 (void * __P, __mmask8 __M, __m128i __A)
   __builtin_ia32_pmovqb128mem_mask ((__v16qi *) __P, (__v2di) __A, __M);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS256
+static __inline__ __m128i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepi64_epi8 (__m256i __A)
 {
   return (__m128i)__builtin_shufflevector(
