@@ -257,7 +257,9 @@ jobs:
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
         export PATH=C:\Strawberry\c\bin\:$PATH
-        $CMAKE -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
+        subst S: ${{ github.workspace }}
+        subst B: ${{ steps.setup-stage.outputs.build-prefix }}/build
+        $CMAKE -G Ninja -S S:\llvm -B B:\ \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
@@ -282,7 +284,7 @@ jobs:
       shell: bash
       if: runner.os != 'Windows'
       run: |
-        ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
+        ninja -v -C /b stage2-package
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
         mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
 
