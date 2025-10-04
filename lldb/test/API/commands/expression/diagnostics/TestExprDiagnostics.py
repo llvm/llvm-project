@@ -215,8 +215,12 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
 
             details = diags.GetValueForKey("details")
 
-            # Detail 1/2: undeclared 'a'
+            # Detail 1/3: note: requested expression language
             diag = details.GetItemAtIndex(0)
+            self.assertEqual(str(diag.GetValueForKey("severity")), "note")
+
+            # Detail 2/3: undeclared 'a'
+            diag = details.GetItemAtIndex(1)
 
             severity = diag.GetValueForKey("severity")
             message = diag.GetValueForKey("message")
@@ -234,8 +238,8 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
             self.assertFalse(hidden.GetBooleanValue())
             self.assertTrue(in_user_input.GetBooleanValue())
 
-            # Detail 1/2: undeclared 'b'
-            diag = details.GetItemAtIndex(1)
+            # Detail 3/3: undeclared 'b'
+            diag = details.GetItemAtIndex(2)
             message = diag.GetValueForKey("message")
             self.assertIn("undeclared identifier 'b'", str(message))
 
