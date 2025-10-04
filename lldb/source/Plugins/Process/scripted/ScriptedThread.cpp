@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ScriptedThread.h"
-#include "ScriptedFrame.h"
 
 #include "Plugins/Process/Utility/RegisterContextThreadMemory.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
+#include "lldb/Interpreter/ScriptedFrame.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -232,7 +232,8 @@ bool ScriptedThread::LoadArtificialStackFrames() {
     }
 
     auto frame_or_error =
-        ScriptedFrame::Create(*this, nullptr, object_sp->GetAsGeneric());
+        ScriptedFrame::Create(this->shared_from_this(), GetInterface(), nullptr,
+                              object_sp->GetAsGeneric());
 
     if (!frame_or_error) {
       ScriptedInterface::ErrorWithMessage<bool>(

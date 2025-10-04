@@ -1,0 +1,147 @@
+from abc import ABCMeta, abstractmethod
+
+import lldb
+
+
+class ScriptedFrameProvider(metaclass=ABCMeta):
+    """
+    The base class for a scripted frame provider.
+
+    A scripted frame provider allows you to provide custom stack frames for a
+    thread, which can be used to augment or replace the standard unwinding
+    mechanism. This is useful for:
+
+    - Providing frames for custom calling conventions or languages
+    - Reconstructing missing frames from crash dumps or core files
+    - Adding diagnostic or synthetic frames for debugging
+    - Visualizing state machines or async execution contexts
+
+    Most of the base class methods are `@abstractmethod` that need to be
+    overwritten by the inheriting class.
+
+    Example usage:
+
+    .. code-block:: python
+
+        # Attach a frame provider to a thread
+        thread = process.GetSelectedThread()
+        error = lldb.SBError()
+        thread.SetScriptedFrameProvider(
+            "my_module.MyFrameProvider",
+            lldb.SBStructuredData()
+        )
+    """
+
+    @abstractmethod
+    def __init__(self, thread, args):
+        """Construct a scripted frame provider.
+
+        Args:
+            thread (lldb.SBThread): The thread for which to provide frames.
+            args (lldb.SBStructuredData): A Dictionary holding arbitrary
+                key/value pairs used by the scripted frame provider.
+        """
+        self.thread = None
+        self.args = None
+        self.target = None
+        self.process = None
+
+        if isinstance(thread, lldb.SBThread) and thread.IsValid():
+            self.thread = thread
+            self.process = thread.GetProcess()
+            if self.process and self.process.IsValid():
+                self.target = self.process.GetTarget()
+
+        if isinstance(args, lldb.SBStructuredData) and args.IsValid():
+            self.args = args
+
+    def get_merge_strategy(self):
+        """Get the merge strategy for how scripted frames should be integrated.
+
+        The merge strategy determines how the scripted frames are combined with the
+        real unwound frames from the thread's normal unwinder.
+
+        Returns:
+            int: One of the following lldb.ScriptedFrameProviderMergeStrategy values:
+
+            - lldb.eScriptedFrameProviderMergeStrategyReplace: Replace the entire stack
+              with scripted frames. The thread will only show frames provided
+              by this provider.
+
+            - lldb.eScriptedFrameProviderMergeStrategyPrepend: Prepend scripted frames
+              before the real unwound frames. Useful for adding synthetic frames
+              at the top of the stack while preserving the actual callstack below.
+
+            - lldb.eScriptedFrameProviderMergeStrategyAppend: Append scripted frames
+              after the real unwound frames. Useful for showing additional context
+              after the actual callstack ends.
+
+            - lldb.eScriptedFrameProviderMergeStrategyReplaceByIndex: Replace specific
+              frames at given indices with scripted frames, keeping other real frames
+              intact. The idx field in each frame dictionary determines which real
+              frame to replace (e.g., idx=0 replaces frame 0, idx=2 replaces frame 2).
+
+        The default implementation returns Replace strategy.
+
+        Example:
+
+        .. code-block:: python
+
+            def get_merge_strategy(self):
+                # Only show our custom frames
+                return lldb.eScriptedFrameProviderMergeStrategyReplace
+
+            def get_merge_strategy(self):
+                # Add diagnostic frames on top of real stack
+                return lldb.eScriptedFrameProviderMergeStrategyPrepend
+
+            def get_merge_strategy(self):
+                # Replace frame 0 and frame 2 with custom frames, keep others
+                return lldb.eScriptedFrameProviderMergeStrategyReplaceByIndex
+        """
+        return lldb.eScriptedFrameProviderMergeStrategyReplace
+
+    @abstractmethod
+    def get_stackframes(self):
+        """Get the list of stack frames to provide.
+
+        This method is called when the thread's backtrace is requested
+        (e.g., via the 'bt' command). The returned frames will be integrated
+        with the real frames according to the mode returned by get_mode().
+
+        Returns:
+            List[Dict]: A list of frame dictionaries, where each dictionary
+                describes a single stack frame. Each dictionary should contain:
+
+            Required fields:
+            - idx (int): The frame index (0 for innermost/top frame)
+            - pc (int): The program counter address for this frame
+
+            Alternatively, you can return a list of ScriptedFrame objects
+            for more control over frame behavior.
+
+        Example:
+
+        .. code-block:: python
+
+            def get_stackframes(self):
+                frames = []
+
+                # Frame 0: Current function
+                frames.append({
+                    "idx": 0,
+                    "pc": 0x100001234,
+                })
+
+                # Frame 1: Caller
+                frames.append({
+                    "idx": 1,
+                    "pc": 0x100001000,
+                })
+
+                return frames
+
+        Note:
+            The frames are indexed from 0 (innermost/newest) to N (outermost/oldest).
+        """
+        pass
