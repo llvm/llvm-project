@@ -232,8 +232,8 @@ struct SearchPathConfig {
 class SearchPathResolver {
 public:
   SearchPathResolver(const SearchPathConfig &Cfg,
-                     StringRef placeholderPrefix = "")
-      : Kind(Cfg.type), placeholderPrefix(placeholderPrefix) {
+                     StringRef PlaceholderPrefix = "")
+      : Kind(Cfg.type), PlaceholderPrefix(PlaceholderPrefix) {
     for (auto &path : Cfg.Paths)
       Paths.emplace_back(path.str());
   }
@@ -246,7 +246,7 @@ public:
 private:
   std::vector<std::string> Paths;
   SearchPathType Kind;
-  std::string placeholderPrefix;
+  std::string PlaceholderPrefix;
 };
 
 class DylibResolverImpl {
@@ -256,8 +256,8 @@ public:
       : Substitutor(std::move(Substitutor)), Validator(Validator),
         Resolvers(std::move(Resolvers)) {}
 
-  std::optional<std::string> resolve(StringRef stem,
-                                     bool variateLibStem = false) const;
+  std::optional<std::string> resolve(StringRef Stem,
+                                     bool VariateLibStem = false) const;
 
 private:
   std::optional<std::string> tryWithExtensions(StringRef libstem) const;
@@ -287,10 +287,10 @@ public:
   }
 
   std::optional<std::string> resolve(StringRef libStem,
-                                     bool variateLibStem = false) const {
+                                     bool VariateLibStem = false) const {
     if (!impl_)
       return std::nullopt;
-    return impl_->resolve(libStem, variateLibStem);
+    return impl_->resolve(libStem, VariateLibStem);
   }
 
   static std::string resolvelinkerFlag(StringRef libStem,

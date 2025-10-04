@@ -219,8 +219,8 @@ bool DylibPathValidator::isSharedLibrary(StringRef Path) {
   LLVM_DEBUG(dbgs() << "Checking if path is a shared library: " << Path
                     << "\n";);
 
-  auto filetype = sys::fs::get_file_type(Path, /*Follow*/ true);
-  if (filetype != sys::fs::file_type::regular_file) {
+  auto FileType = sys::fs::get_file_type(Path, /*Follow*/ true);
+  if (FileType != sys::fs::file_type::regular_file) {
     LLVM_DEBUG(dbgs() << "File type is not a regular file for path: " << Path
                       << "\n";);
     return false;
@@ -303,13 +303,13 @@ void DylibSubstitutor::configure(StringRef LoaderPath) {
 std::optional<std::string>
 SearchPathResolver::resolve(StringRef Stem, const DylibSubstitutor &Subst,
                             DylibPathValidator &Validator) const {
-  for (const auto &searchPath : Paths) {
-    std::string Base = Subst.substitute(searchPath);
+  for (const auto &SP : Paths) {
+    std::string Base = Subst.substitute(SP);
 
     SmallString<512> FullPath(Base);
-    if (!placeholderPrefix.empty() &&
-        Stem.starts_with_insensitive(placeholderPrefix))
-      FullPath.append(Stem.drop_front(placeholderPrefix.size()));
+    if (!PlaceholderPrefix.empty() &&
+        Stem.starts_with_insensitive(PlaceholderPrefix))
+      FullPath.append(Stem.drop_front(PlaceholderPrefix.size()));
     else
       sys::path::append(FullPath, Stem);
 
@@ -341,24 +341,24 @@ DylibResolverImpl::tryWithExtensions(StringRef LibStem) const {
 #endif
 
   // Optionally try "lib" prefix if not already there
-  StringRef filename = sys::path::filename(LibStem);
+  StringRef FileName = sys::path::filename(LibStem);
   StringRef Base = sys::path::parent_path(LibStem);
-  if (!filename.starts_with("lib")) {
-    SmallString<256> withPrefix(Base);
-    if (!withPrefix.empty())
-      sys::path::append(withPrefix, ""); // ensure separator if needed
-    withPrefix += "lib";
-    withPrefix += filename;
+  if (!FileName.starts_with("lib")) {
+    SmallString<256> WithPrefix(Base);
+    if (!WithPrefix.empty())
+      sys::path::append(WithPrefix, ""); // ensure separator if needed
+    WithPrefix += "lib";
+    WithPrefix += FileName;
 
 #if defined(__APPLE__)
-    withPrefix += ".dylib";
+    WithPrefix += ".dylib";
 #elif defined(_WIN32)
-    withPrefix += ".dll";
+    WithPrefix += ".dll";
 #else
-    withPrefix += ".so";
+    WithPrefix += ".so";
 #endif
 
-    Candidates.push_back(std::move(withPrefix));
+    Candidates.push_back(std::move(WithPrefix));
   }
 
   LLVM_DEBUG({
@@ -373,8 +373,8 @@ DylibResolverImpl::tryWithExtensions(StringRef LibStem) const {
     LLVM_DEBUG(dbgs() << "  Trying candidate: " << Name << "\n";);
 
     for (const auto &R : Resolvers) {
-      if (auto result = R.resolve(Name, Substitutor, Validator))
-        return result;
+      if (auto Res = R.resolve(Name, Substitutor, Validator))
+        return Res;
     }
   }
 
@@ -384,7 +384,7 @@ DylibResolverImpl::tryWithExtensions(StringRef LibStem) const {
 }
 
 std::optional<std::string>
-DylibResolverImpl::resolve(StringRef LibStem, bool variateLibStem) const {
+DylibResolverImpl::resolve(StringRef LibStem, bool VariateLibStem) const {
   LLVM_DEBUG(dbgs() << "Resolving library stem: " << LibStem << "\n";);
 
   // If it is an absolute path, don't try iterate over the paths.
@@ -404,24 +404,24 @@ DylibResolverImpl::resolve(StringRef LibStem, bool variateLibStem) const {
 
   for (const auto &R : Resolvers) {
     LLVM_DEBUG(dbgs() << "  -> Resolving via search path ... \n";);
-    if (auto result = R.resolve(LibStem, Substitutor, Validator)) {
-      LLVM_DEBUG(dbgs() << "  -> Resolved via search path: " << *result
+    if (auto Result = R.resolve(LibStem, Substitutor, Validator)) {
+      LLVM_DEBUG(dbgs() << "  -> Resolved via search path: " << *Result
                         << "\n";);
 
-      return result;
+      return Result;
     }
   }
 
   // Expand libStem with paths, extensions, etc.
   // std::string foundName;
-  if (variateLibStem) {
+  if (VariateLibStem) {
     LLVM_DEBUG(dbgs() << "  -> Trying with extensions...\n";);
 
-    if (auto norm = tryWithExtensions(LibStem)) {
-      LLVM_DEBUG(dbgs() << "  -> Resolved via tryWithExtensions: " << *norm
+    if (auto Norm = tryWithExtensions(LibStem)) {
+      LLVM_DEBUG(dbgs() << "  -> Resolved via tryWithExtensions: " << *Norm
                         << "\n";);
 
-      return norm;
+      return Norm;
     }
   }
 
@@ -433,8 +433,8 @@ DylibResolverImpl::resolve(StringRef LibStem, bool variateLibStem) const {
 #ifndef _WIN32
 mode_t PathResolver::lstatCached(StringRef Path) {
   // If already cached - retun cached result
-  if (auto cache = LibPathCache->read_lstat(Path))
-    return *cache;
+  if (auto Cache = LibPathCache->read_lstat(Path))
+    return *Cache;
 
   // Not cached: perform lstat and store
   struct stat buf{};
@@ -447,8 +447,8 @@ mode_t PathResolver::lstatCached(StringRef Path) {
 
 std::optional<std::string> PathResolver::readlinkCached(StringRef Path) {
   // If already cached - retun cached result
-  if (auto cache = LibPathCache->read_link(Path))
-    return cache;
+  if (auto Cache = LibPathCache->read_link(Path))
+    return Cache;
 
   // If result not in cache - call system function and cache result
   char buf[PATH_MAX];
@@ -767,8 +767,8 @@ std::string LibraryScanHelper::resolveCanonical(StringRef Path,
 
 PathType LibraryScanHelper::classifyKind(StringRef Path) const {
   // Detect home directory
-  const char *home = getenv("HOME");
-  if (home && Path.find(home) == 0)
+  const char *Home = getenv("HOME");
+  if (Home && Path.find(Home) == 0)
     return PathType::User;
 
   static const std::array<std::string, 5> UserPrefixes = {

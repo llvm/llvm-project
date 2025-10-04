@@ -53,8 +53,7 @@ Triple getTargetTriple() {
 
 static bool CheckHostSupport() {
   auto Triple = getTargetTriple();
-  if (!Triple.isOSBinFormatMachO() &&
-      (!Triple.isOSBinFormatELF() || (!Triple.isX86() && !Triple.isAArch64())))
+  if (!Triple.isOSBinFormatMachO())
     return false;
 
   return true;
