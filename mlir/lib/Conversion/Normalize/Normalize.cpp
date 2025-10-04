@@ -12,18 +12,11 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/DebugLog.h"
-#include "llvm/ADT/Hashing.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_NORMALIZE
@@ -48,18 +41,15 @@ private:
         mlir::Operation *used,
         mlir::Operation *user,
         llvm::SmallPtrSet<const mlir::Operation *, 32> &visited);
-    void RenameOperations(Block &block, SmallVector<Operation*, 16>& Outputs);
+    void RenameOperations(Block &block);
 
 };
 } // namespace
-
-#include <iostream>
 
 void NormalizePass::runOnOperation() {
     ModuleOp module = getOperation();
 
     for (Operation &op : module.getOps()) {
-        llvm::outs() << "Operation name: " << op.getName() << "\n";
         SmallVector<Operation *, 16> Outputs;
 
         for (Region &region : op.getRegions()) {
@@ -67,32 +57,31 @@ void NormalizePass::runOnOperation() {
                 collectOutputOperations(block, Outputs);
             }
         }
-        for (auto& op : Outputs) llvm::outs() << op->getName() << "\n";
 
         reorderOperations(Outputs);
     }
 
     for (Operation &op : module.getOps()) {
-        llvm::outs() << "Operation name: " << op.getName() << "\n";
         SmallVector<Operation *, 16> Outputs;
 
         for (Region &region : op.getRegions()) {
             for (Block &block : region) {
-              RenameOperations(block, Outputs);
+              RenameOperations(block);
             }
         }
     }
 }
 
-void NormalizePass::RenameOperations(Block &block, SmallVector<Operation*, 16>& Outputs) {
+void NormalizePass::RenameOperations(Block &block) {
   static size_t VarCounter = 0;
-  for(Operation& innerOp : block) {
-    /**
-     * TODO: Renaming scheme
-     */
+
+  for (Operation &innerOp : block) {
+    mlir::OpBuilder  b(innerOp.getContext());
+    mlir::StringAttr sat = b.getStringAttr(llvm::formatv("v{0}", VarCounter++).str());
+    mlir::Location newLoc = mlir::NameLoc::get(sat, innerOp.getLoc());
+    innerOp.setLoc(newLoc);
   }
 }
-
 
 void NormalizePass::reorderOperations(SmallVector<Operation*, 16>& Outputs) {
   llvm::SmallPtrSet<const mlir::Operation *, 32> visited;
