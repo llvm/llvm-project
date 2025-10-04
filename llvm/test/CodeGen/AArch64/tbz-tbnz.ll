@@ -586,13 +586,12 @@ define ptr @tbnz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    tbz w0, #0, .LBB20_2
 ; CHECK-SD-NEXT:  // %bb.1:
-; CHECK-SD-NEXT:    tbnz wzr, #0, .LBB20_3
 ; CHECK-SD-NEXT:    b .LBB20_4
 ; CHECK-SD-NEXT:  .LBB20_2: // %opnfil.exit.thread
 ; CHECK-SD-NEXT:    mov w8, #1 // =0x1
 ; CHECK-SD-NEXT:    str wzr, [x1]
 ; CHECK-SD-NEXT:    tbz w8, #0, .LBB20_4
-; CHECK-SD-NEXT:  .LBB20_3: // %if.else25
+; CHECK-SD-NEXT:  // %bb.3: // %if.else25
 ; CHECK-SD-NEXT:    str wzr, [x1]
 ; CHECK-SD-NEXT:  .LBB20_4: // %common.ret
 ; CHECK-SD-NEXT:    mov x0, xzr
@@ -656,7 +655,7 @@ define ptr @tbz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ; CHECK-SD-NEXT:    b .LBB21_4
 ; CHECK-SD-NEXT:  .LBB21_2: // %opnfil.exit.thread
 ; CHECK-SD-NEXT:    str wzr, [x1]
-; CHECK-SD-NEXT:    tbz wzr, #0, .LBB21_4
+; CHECK-SD-NEXT:    b .LBB21_4
 ; CHECK-SD-NEXT:  .LBB21_3: // %if.else25
 ; CHECK-SD-NEXT:    str wzr, [x1]
 ; CHECK-SD-NEXT:  .LBB21_4: // %common.ret
@@ -716,13 +715,12 @@ define ptr @cbnz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    tbz w0, #0, .LBB22_2
 ; CHECK-SD-NEXT:  // %bb.1:
-; CHECK-SD-NEXT:    cbnz wzr, .LBB22_3
 ; CHECK-SD-NEXT:    b .LBB22_4
 ; CHECK-SD-NEXT:  .LBB22_2: // %opnfil.exit.thread
 ; CHECK-SD-NEXT:    mov w8, #10 // =0xa
 ; CHECK-SD-NEXT:    str wzr, [x1]
 ; CHECK-SD-NEXT:    cbz w8, .LBB22_4
-; CHECK-SD-NEXT:  .LBB22_3: // %if.else25
+; CHECK-SD-NEXT:  // %bb.3: // %if.else25
 ; CHECK-SD-NEXT:    str wzr, [x1]
 ; CHECK-SD-NEXT:  .LBB22_4: // %common.ret
 ; CHECK-SD-NEXT:    mov x0, xzr
@@ -784,7 +782,7 @@ define ptr @cbz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ; CHECK-SD-NEXT:    b .LBB23_4
 ; CHECK-SD-NEXT:  .LBB23_2: // %opnfil.exit.thread
 ; CHECK-SD-NEXT:    str wzr, [x1]
-; CHECK-SD-NEXT:    cbz wzr, .LBB23_4
+; CHECK-SD-NEXT:    b .LBB23_4
 ; CHECK-SD-NEXT:  .LBB23_3: // %if.else25
 ; CHECK-SD-NEXT:    str wzr, [x1]
 ; CHECK-SD-NEXT:  .LBB23_4: // %common.ret
@@ -848,12 +846,11 @@ define i1 @avifSequenceHeaderParse() {
 ; CHECK-SD-NEXT:  .LBB24_2: // %bb1
 ; CHECK-SD-NEXT:    cbz w8, .LBB24_4
 ; CHECK-SD-NEXT:  // %bb.3:
-; CHECK-SD-NEXT:    tbz xzr, #63, .LBB24_1
-; CHECK-SD-NEXT:    b .LBB24_5
+; CHECK-SD-NEXT:    b .LBB24_1
 ; CHECK-SD-NEXT:  .LBB24_4: // %bb2
 ; CHECK-SD-NEXT:    mov w8, #1 // =0x1
 ; CHECK-SD-NEXT:    tbz x8, #63, .LBB24_1
-; CHECK-SD-NEXT:  .LBB24_5: // %bb4
+; CHECK-SD-NEXT:  // %bb.5: // %bb4
 ; CHECK-SD-NEXT:    mov w8, #1 // =0x1
 ; CHECK-SD-NEXT:    mov w0, wzr
 ; CHECK-SD-NEXT:    ret
