@@ -3010,7 +3010,15 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     return nullptr;
   }
 
-  auto ParseCastOperand = [this](const DagInit *Dag, StringRef OpName) {
+  auto ParseCastOperand =
+      [this](const DagInit *Dag,
+             StringRef OpName) -> std::optional<TreePatternNodePtr> {
+    if (Dag->getNumArgs() == 0) {
+      PrintFatalError(
+          "This type cast has zero arguments. It takes only one operand!");
+      return std::nullopt;
+    }
+
     if (Dag->getNumArgs() != 1)
       error("Type cast only takes one operand!");
 
@@ -3023,7 +3031,10 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
   if (const ListInit *LI = dyn_cast<ListInit>(Dag->getOperator())) {
     // If the operator is a list (of value types), then this must be "type cast"
     // of a leaf node with multiple results.
-    TreePatternNodePtr New = ParseCastOperand(Dag, OpName);
+    auto MaybeNew = ParseCastOperand(Dag, OpName);
+    if (!MaybeNew)
+      return nullptr;
+    TreePatternNodePtr New = *MaybeNew;
 
     size_t NumTypes = New->getNumTypes();
     if (LI->empty() || LI->size() != NumTypes)
@@ -3048,7 +3059,10 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
   if (Operator->isSubClassOf("ValueType")) {
     // If the operator is a ValueType, then this must be "type cast" of a leaf
     // node.
-    TreePatternNodePtr New = ParseCastOperand(Dag, OpName);
+    auto MaybeNew = ParseCastOperand(Dag, OpName);
+    if (!MaybeNew)
+      return nullptr;
+    TreePatternNodePtr New = *MaybeNew;
 
     if (New->getNumTypes() != 1)
       error("ValueType cast can only have one type!");
