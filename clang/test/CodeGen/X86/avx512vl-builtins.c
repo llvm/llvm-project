@@ -9478,6 +9478,8 @@ __m128i test_mm_cvtepi64_epi16(__m128i __A) {
   return _mm_cvtepi64_epi16(__A); 
 }
 
+TEST_CONSTEXPR(match_v8hi(_mm_cvtepi64_epi16((__m128i)(__v2di){1, 2}),1, 2, 0, 0, 0, 0, 0, 0));
+
 __m128i test_mm_mask_cvtepi64_epi16(__m128i __O, __mmask8 __M, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_cvtepi64_epi16
   // CHECK: @llvm.x86.avx512.mask.pmov.qw.128
