@@ -51541,63 +51541,6 @@ static SDValue combineBMILogicOp(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// Optimize (Constant XOR a) & b & ~c -> (Constant XOR a) & (b & ~c)
-/// This allows the andn operation to be done in parallel with the xor
-static SDValue combineConstantXorAndAndNot(SDNode *N, const SDLoc &DL,
-                                           SelectionDAG &DAG,
-                                           const X86Subtarget &Subtarget) {
-  using namespace llvm::SDPatternMatch;
-
-  EVT VT = N->getValueType(0);
-  // Only handle scalar integer types that support BMI instructions
-  if (!Subtarget.hasBMI() || (VT != MVT::i32 && VT != MVT::i64))
-    return SDValue();
-
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-
-  // Check if N0 is AND(XOR(Constant, a), b)
-  if (N0.getOpcode() != ISD::AND)
-    return SDValue();
-
-  SDValue AndLHS = N0.getOperand(0);
-  SDValue AndRHS = N0.getOperand(1);
-
-  // Check if one operand is XOR(Constant, a)
-  SDValue XorOp, OtherOp;
-  if (AndLHS.getOpcode() == ISD::XOR) {
-    XorOp = AndLHS;
-    OtherOp = AndRHS;
-  } else if (AndRHS.getOpcode() == ISD::XOR) {
-    XorOp = AndRHS;
-    OtherOp = AndLHS;
-  } else {
-    return SDValue();
-  }
-
-  // Check if XOR has a constant operand
-  if (!isa<ConstantSDNode>(XorOp.getOperand(0)) &&
-      !isa<ConstantSDNode>(XorOp.getOperand(1))) {
-    return SDValue();
-  }
-
-  // Check if N1 is NOT(c) - i.e., XOR(c, -1)
-  SDValue NotOp;
-  if (N1.getOpcode() == ISD::XOR && isAllOnesConstant(N1.getOperand(1))) {
-    NotOp = N1.getOperand(0);
-  } else {
-    return SDValue();
-  }
-
-  // Transform: AND(AND(XOR(Constant, a), b), NOT(c))
-  // To: AND(XOR(Constant, a), AND(b, NOT(c)))
-  // This allows the andn (b & ~c) to be done in parallel with the xor
-
-  // Create AND(b, NOT(c)) - this will become andn
-  SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, OtherOp, N1);
-  // Create final AND(XOR(Constant, a), AND(b, NOT(c)))
-  return DAG.getNode(ISD::AND, DL, VT, XorOp, NewAnd);
-}
 
 /// Fold AND(Y, XOR(X, NEG(X))) -> ANDN(Y, BLSMSK(X)) if BMI is available.
 static SDValue combineAndXorSubWithBMI(SDNode *And, const SDLoc &DL,
@@ -51889,11 +51832,6 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     return R;
 
   if (SDValue R = combineAndNotOrIntoAndNotAnd(N, dl, DAG))
-    return R;
-
-  // Optimize (Constant XOR a) & b & ~c -> (Constant XOR a) & (b & ~c)
-  // This allows the andn operation to be done in parallel with the xor
-  if (SDValue R = combineConstantXorAndAndNot(N, dl, DAG, Subtarget))
     return R;
 
   // fold (and (mul x, c1), c2) -> (mul x, (and c1, c2))

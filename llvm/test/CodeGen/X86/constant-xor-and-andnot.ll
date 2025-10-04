@@ -52,8 +52,8 @@ define i64 @test_constant_xor_and_andnot_final_swapped(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: test_constant_xor_and_andnot_final_swapped:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorq $1234, %rdi # imm = 0x4D2
-; CHECK-NEXT:    andq %rsi, %rdi
-; CHECK-NEXT:    andnq %rdi, %rdx, %rax
+; CHECK-NEXT:    andnq %rsi, %rdx, %rax
+; CHECK-NEXT:    andq %rdi, %rax
 ; CHECK-NEXT:    retq
   %xor = xor i64 %a, 1234
   %and1 = and i64 %xor, %b
