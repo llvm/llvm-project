@@ -182,12 +182,8 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
       // Fill in applicable flags.
       Res += "0";
 
-      if (OpR->isSubClassOf("RegClassByHwMode")) {
+      if (OpR->isSubClassOf("RegClassByHwMode"))
         Res += "|(1<<MCOI::LookupRegClassByHwMode)";
-      } else if (OpR->isSubClassOf("PointerLikeRegClass")) {
-        // Ptr value whose register class is resolved via callback.
-        Res += "|(1<<MCOI::LookupPtrRegClass)";
-      }
 
       // Predicate operands.  Check to see if the original unexpanded operand
       // was of type PredicateOp.
