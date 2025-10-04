@@ -1568,7 +1568,7 @@ uint8_t XCOFFTracebackTable::getLanguageID() const {
 }
 
 bool XCOFFTracebackTable::isGlobalLinkage() const {
-  return GETBITWITHMASK(0, IsGlobaLinkageMask);
+  return GETBITWITHMASK(0, IsGlobalLinkageMask);
 }
 
 bool XCOFFTracebackTable::isOutOfLineEpilogOrPrologue() const {

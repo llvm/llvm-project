@@ -138,7 +138,7 @@ entry:
 ; COMMON-NEXT:  .vbyte  4, 0x00000000                   # Traceback table begin
 ; COMMON-NEXT:  .byte   0x00                            # Version = 0
 ; COMMON-NEXT:  .byte   0x09                            # Language = CPlusPlus
-; COMMON-NEXT:  .byte   0x22                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; COMMON-NEXT:  .byte   0x22                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; COMMON-NEXT:                                        # +HasTraceBackTableOffset, -IsInternalProcedure
 ; COMMON-NEXT:                                        # -HasControlledStorage, -IsTOCless
 ; COMMON-NEXT:                                        # +IsFloatingPointPresent
@@ -167,7 +167,7 @@ entry:
 ; COMMON-NEXT:  .vbyte  4, 0x00000000                   # Traceback table begin
 ; COMMON-NEXT:  .byte   0x00                            # Version = 0
 ; COMMON-NEXT:  .byte   0x09                            # Language = CPlusPlus
-; COMMON-NEXT:  .byte   0x22                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; COMMON-NEXT:  .byte   0x22                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; COMMON-NEXT:                                        # +HasTraceBackTableOffset, -IsInternalProcedure
 ; COMMON-NEXT:                                        # -HasControlledStorage, -IsTOCless
 ; COMMON-NEXT:                                        # +IsFloatingPointPresent
@@ -190,7 +190,7 @@ entry:
 ; COMMON:       .vbyte  4, 0x00000000                   # Traceback table begin
 ; COMMON-NEXT:  .byte   0x00                            # Version = 0
 ; COMMON-NEXT:  .byte   0x09                            # Language = CPlusPlus
-; COMMON-NEXT:  .byte   0x22                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; COMMON-NEXT:  .byte   0x22                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; COMMON-NEXT:                                        # +HasTraceBackTableOffset, -IsInternalProcedure
 ; COMMON-NEXT:                                        # -HasControlledStorage, -IsTOCless
 ; COMMON-NEXT:                                        # +IsFloatingPointPresent
@@ -217,7 +217,7 @@ entry:
 ; COMMON-NEXT:  .vbyte  4, 0x00000000                   # Traceback table begin
 ; COMMON-NEXT:  .byte   0x00                            # Version = 0
 ; COMMON-NEXT:  .byte   0x09                            # Language = CPlusPlus
-; COMMON-NEXT:  .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; COMMON-NEXT:  .byte   0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; COMMON-NEXT:                                        # +HasTraceBackTableOffset, -IsInternalProcedure
 ; COMMON-NEXT:                                        # -HasControlledStorage, -IsTOCless
 ; COMMON-NEXT:                                        # -IsFloatingPointPresent
