@@ -181,6 +181,7 @@ public:
     return Value;
   }
 
+  /// Declare default as unreachable, making sure that all cases were handled.
   [[nodiscard]] R DefaultUnreachable(
       const char *Message = "Fell off the end of a string-switch") {
     if (Result)
