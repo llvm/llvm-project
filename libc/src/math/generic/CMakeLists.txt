@@ -989,6 +989,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  rsqrtf
+  SRCS
+    rsqrtf.cpp
+  HDRS
+    ../rsqrtf.h
+  DEPENDS
+    libc.src.__support.math.rsqrtf
+)
+
+add_entrypoint_object(
   rsqrtf16
   SRCS
     rsqrtf16.cpp
