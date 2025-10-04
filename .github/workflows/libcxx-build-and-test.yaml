@@ -236,7 +236,7 @@ jobs:
             **/crash_diagnostics/*
 
   windows:
-    runs-on: windows-2022
+    runs-on: windows-2025
     needs: [ stage2 ]
     strategy:
       fail-fast: false
