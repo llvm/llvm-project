@@ -319,6 +319,10 @@ protected:
     AddInst = BinaryOperator::CreateAdd(Arg, Const, "add", BB);
     RetInst = ReturnInst::Create(Ctx, AddInst, BB);
   }
+  void TearDown() override {
+    delete V ;
+    V = nullptr;
+  }
 };
 
 TEST_F(IR2VecTestFixture, GetInstVecMap_Symbolic) {

@@ -59,6 +59,11 @@ public:
     ir2vec::ArgWeight = 1.0;
   }
 
+  ~FunctionPropertiesAnalysisTest() override {
+    delete IR2VecVocab;
+    IR2VecVocab = nullptr;
+  }
+
 private:
   float OriginalOpcWeight = ir2vec::OpcWeight;
   float OriginalTypeWeight = ir2vec::TypeWeight;
