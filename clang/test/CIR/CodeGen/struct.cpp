@@ -184,6 +184,20 @@ void generic_selection() {
 // OGCG:   %[[D_ADDR:.*]] = alloca %struct.CompleteS, align 4
 // OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[D_ADDR]], ptr align 4 %[[A_ADDR]], i64 8, i1 false)
 
+void unary_extension() {
+  CompleteS a = __extension__ CompleteS();
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a", init]
+// CIR: %[[ZERO_INIT:.*]] = cir.const #cir.zero : !rec_CompleteS
+// CIR: cir.store{{.*}} %[[ZERO_INIT]], %[[A_ADDR]] : !rec_CompleteS, !cir.ptr<!rec_CompleteS>
+
+// LLVM: %[[A_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
+// LLVM: store %struct.CompleteS zeroinitializer, ptr %[[A_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca %struct.CompleteS, align 4
+// OGCG: call void @llvm.memset.p0.i64(ptr align 4 %[[A_ADDR]], i8 0, i64 8, i1 false)
+
 void bin_comma() { 
   CompleteS a = (CompleteS(), CompleteS());
 }
