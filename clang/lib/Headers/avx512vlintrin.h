@@ -7525,12 +7525,11 @@ _mm_mask_cvtepi64_storeu_epi32 (void * __P, __mmask8 __M, __m128i __A)
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_cvtepi64_epi32 (__m256i __A)
-{
+_mm256_cvtepi64_epi32(__m256i __A) {
   return (__m128i)__builtin_convertvector((__v4di)__A, __v4si);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS256
+static __inline__ __m128i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_cvtepi64_epi32 (__m128i __O, __mmask8 __M, __m256i __A)
 {
   return (__m128i)__builtin_ia32_selectd_128((__mmask8)__M,

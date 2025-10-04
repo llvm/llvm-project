@@ -9468,6 +9468,8 @@ __m128i test_mm256_mask_cvtepi64_epi32(__m128i __O, __mmask8 __M, __m256i __A) {
   return _mm256_mask_cvtepi64_epi32(__O, __M, __A); 
 }
 
+TEST_CONSTEXPR(match_v4si(_mm256_mask_cvtepi64_epi32(_mm_set1_epi32(-777), 0xA,(__m256i)(__v4di){1, -2, 3, -4}), -777, -2, -777, -4));
+
 __m128i test_mm256_maskz_cvtepi64_epi32(__mmask8 __M, __m256i __A) {
   // CHECK-LABEL: test_mm256_maskz_cvtepi64_epi32
   // CHECK: trunc <4 x i64> %{{.*}} to <4 x i32>
