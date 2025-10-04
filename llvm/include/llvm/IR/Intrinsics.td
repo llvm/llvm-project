@@ -49,6 +49,16 @@ def IntrArgMemOnly : IntrinsicProperty;
 // accessible by the module being compiled. This is a weaker form of IntrNoMem.
 def IntrInaccessibleMemOnly : IntrinsicProperty;
 
+
+
+class IntrinsicMemoryLocation;
+// This should be added in the Target, but once in IntrinsicsAArch64.td
+def TargetMem0 : IntrinsicMemoryLocation;
+def TargetMem1 : IntrinsicMemoryLocation;
+// IntrInaccessible{Read|Write}MemOnly needs to set Location
+class IntrInaccessibleReadMemOnly<IntrinsicMemoryLocation idx> : IntrinsicProperty{IntrinsicMemoryLocation Loc=idx;}
+class IntrInaccessibleWriteMemOnly<IntrinsicMemoryLocation idx> : IntrinsicProperty{IntrinsicMemoryLocation Loc=idx;}
+
 // IntrInaccessibleMemOrArgMemOnly -- This intrinsic only accesses memory that
 // its pointer-typed arguments point to or memory that is not accessible
 // by the module being compiled. This is a weaker form of IntrArgMemOnly.
