@@ -186,11 +186,11 @@ constexpr float A_2x2_5x5[] = {
 
 /// Structure to keep information of constant transform matrices.
 struct TransformMatrix {
-  TransformMatrix(const float *table, int64_t rows, int64_t cols,
+  TransformMatrix(ArrayRef<float> table, int64_t rows, int64_t cols,
                   int64_t scalarFactor = 1)
       : table(table), rows(rows), cols(cols), scalarFactor(scalarFactor) {}
 
-  const float *table;
+  ArrayRef<float> table;
   int64_t rows;
   int64_t cols;
   int64_t scalarFactor;
@@ -198,15 +198,16 @@ struct TransformMatrix {
 
 /// Utility function to convert constant array to arith.constant Value.
 Value create2DTransformMatrix(OpBuilder &builder, Location loc,
-                              TransformMatrix transform, Type type) {
-  ArrayRef<float> constVec(transform.table, transform.rows * transform.cols);
-
+                              TransformMatrix transform) {
+  assert(transform.table.size() ==
+         static_cast<size_t>(transform.rows * transform.cols));
+  ArrayRef<float> constVec(transform.table.data(),
+                           transform.rows * transform.cols);
+  SmallVector<int64_t, 2> shape{transform.rows, transform.cols};
   return arith::ConstantOp::create(
       builder, loc,
       DenseFPElementsAttr::get(
-          RankedTensorType::get(
-              SmallVector<int64_t>{transform.rows, transform.cols}, type),
-          constVec));
+          RankedTensorType::get(shape, builder.getF32Type()), constVec));
 }
 
 /// Extract height x width data from 4D tensors.
@@ -404,7 +405,7 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
-      Value G = create2DTransformMatrix(builder, loc, GMatrix, elementType);
+      Value G = create2DTransformMatrix(builder, loc, GMatrix);
       // Multiply G x g.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{G, extractFilter},
@@ -427,7 +428,7 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
-      Value GT = create2DTransformMatrix(builder, loc, GTMatrix, elementType);
+      Value GT = create2DTransformMatrix(builder, loc, GTMatrix);
       // Multiply u = (G x g) x GT.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{matmulRetValue, GT},
@@ -551,8 +552,7 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
-      Value BT =
-          create2DTransformMatrix(builder, loc, BTMatrix, builder.getF32Type());
+      Value BT = create2DTransformMatrix(builder, loc, BTMatrix);
       // Multiply BT x d.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{BT, matmulRetValue},
@@ -574,8 +574,7 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
                        .getResult();
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
-      Value B =
-          create2DTransformMatrix(builder, loc, BMatrix, builder.getF32Type());
+      Value B = create2DTransformMatrix(builder, loc, BMatrix);
       // Multiply v = (BT x d) x B.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{matmulRetValue, B},
@@ -783,7 +782,7 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
         init = linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
       }
 
-      Value AT = create2DTransformMatrix(builder, loc, ATMatrix, elementType);
+      Value AT = create2DTransformMatrix(builder, loc, ATMatrix);
       // Multiply AT x m.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{AT, matmulRetValue},
@@ -802,7 +801,7 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
         init = linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
       }
 
-      Value A = create2DTransformMatrix(builder, loc, AMatrix, elementType);
+      Value A = create2DTransformMatrix(builder, loc, AMatrix);
       // Multiply y = (AT x m) x A.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{matmulRetValue, A},
