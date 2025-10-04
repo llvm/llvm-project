@@ -160,6 +160,58 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   return LastInst;
 }
 
+static Value *emitDXILGetDimensions(CodeGenFunction *CGF, Value *Handle,
+                                    Value *MipLevel, LValue *OutArg0,
+                                    LValue *OutArg1 = nullptr,
+                                    LValue *OutArg2 = nullptr,
+                                    LValue *OutArg3 = nullptr) {
+  assert(OutArg0 && "first output argument is required");
+
+  llvm::Type *I32 = CGF->Int32Ty;
+  StructType *RetTy = llvm::StructType::get(I32, I32, I32, I32);
+
+  CallInst *CI = CGF->Builder.CreateIntrinsic(
+      RetTy, llvm::Intrinsic::dx_resource_getdimensions,
+      ArrayRef<Value *>{Handle, MipLevel});
+
+  Value *LastInst = nullptr;
+  unsigned OutArgIndex = 0;
+  for (LValue *OutArg : {OutArg0, OutArg1, OutArg2, OutArg3}) {
+    if (OutArg) {
+      Value *OutArgVal = CGF->Builder.CreateExtractValue(CI, OutArgIndex);
+      LastInst = CGF->Builder.CreateStore(OutArgVal, OutArg->getAddress());
+    }
+    ++OutArgIndex;
+  }
+  assert(LastInst && "no output argument stored?");
+  return LastInst;
+}
+
+static Value *emitBufferGetDimensions(CodeGenFunction *CGF, Value *Handle,
+                                      LValue &Dim) {
+  // Generate the call to get the buffer dimension.
+  switch (CGF->CGM.getTarget().getTriple().getArch()) {
+  case llvm::Triple::dxil:
+    return emitDXILGetDimensions(CGF, Handle, PoisonValue::get(CGF->Int32Ty),
+                                 &Dim);
+    break;
+  case llvm::Triple::spirv:
+    llvm_unreachable("SPIR-V GetDimensions codegen not implemented yet.");
+  default:
+    llvm_unreachable("GetDimensions not supported by target architecture");
+  }
+}
+
+static Value *emitBufferStride(CodeGenFunction *CGF, const Expr *HandleExpr,
+                               LValue &Stride) {
+  // Figure out the stride of the buffer elements from the handle type.
+  auto *HandleTy =
+      cast<HLSLAttributedResourceType>(HandleExpr->getType().getTypePtr());
+  QualType ElementTy = HandleTy->getContainedType();
+  Value *StrideValue = CGF->getTypeSize(ElementTy);
+  return CGF->Builder.CreateStore(StrideValue, Stride.getAddress());
+}
+
 // Return dot product intrinsic that corresponds to the QT scalar type
 static Intrinsic::ID getDotProductIntrinsic(CGHLSLRuntime &RT, QualType QT) {
   if (QT->isFloatingType())
@@ -358,6 +410,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getNonUniformResourceIndexIntrinsic(),
         ArrayRef<Value *>{IndexOp});
+  }
+  case Builtin::BI__builtin_hlsl_buffer_getdimensions: {
+    Value *Handle = EmitScalarExpr(E->getArg(0));
+    LValue Dim = EmitLValue(E->getArg(1));
+    return emitBufferGetDimensions(this, Handle, Dim);
+  }
+  case Builtin::BI__builtin_hlsl_buffer_getstride: {
+    LValue Stride = EmitLValue(E->getArg(1));
+    return emitBufferStride(this, E->getArg(0), Stride);
   }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
