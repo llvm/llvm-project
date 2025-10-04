@@ -159,16 +159,22 @@ def CIR_AnyIntOrFloatType : AnyTypeOf<[CIR_AnyFloatType, CIR_AnyIntType],
     let cppFunctionName = "isAnyIntegerOrFloatingPointType";
 }
 
+def CIR_AnyIntOrBoolOrFloatType
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyFloatType, CIR_AnyIntType],
+                "integer, boolean or floating point type"> {
+  let cppFunctionName = "isAnyIntegerOrBooleanOrFloatingPointType";
+}
+
 //===----------------------------------------------------------------------===//
 // Complex Type predicates
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyComplexType : CIR_TypeBase<"::cir::ComplexType", "complex type">;
 
-def CIR_AnyComplexOrIntOrFloatType : AnyTypeOf<[
-    CIR_AnyComplexType, CIR_AnyFloatType, CIR_AnyIntType
-], "complex, integer or floating point type"> {
-    let cppFunctionName = "isComplexOrIntegerOrFloatingPointType";
+def CIR_AnyComplexOrIntOrBoolOrFloatType
+    : AnyTypeOf<[CIR_AnyComplexType, CIR_AnyIntOrBoolOrFloatType],
+                "complex, integer or floating point type"> {
+  let cppFunctionName = "isComplexOrIntegerOrBoolOrFloatingPointType";
 }
 
 //===----------------------------------------------------------------------===//
