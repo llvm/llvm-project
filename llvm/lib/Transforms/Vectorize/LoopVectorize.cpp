@@ -8393,6 +8393,7 @@ static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range) {
       using namespace llvm::VPlanPatternMatch;
       if (!match(U, m_ExtractLastElement(m_Specific(FOR))))
         continue;
+
       // For VF vscale x 1, if vscale = 1, we are unable to extract the
       // penultimate value of the recurrence. Instead we rely on the existing
       // extract of the last element from the result of
@@ -8999,7 +9000,11 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (FinalReductionResult == U || Parent->getParent())
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
-      if (match(U, m_ExtractLastElement(m_VPValue())))
+      if (match(U,
+                m_CombineOr(m_VPInstruction<VPInstruction::ExtractLastElement>(
+                                m_VPValue()),
+                            m_VPInstruction<VPInstruction::ExtractLane>(
+                                m_VPValue(), m_VPValue()))))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
     }
 
