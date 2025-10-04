@@ -5718,22 +5718,35 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
   return Changed;
 }
 
-static bool casesAreContiguous(Value *Condition,
-                               SmallVectorImpl<ConstantInt *> &Cases,
-                               ConstantInt *&ContiguousCasesMin,
-                               ConstantInt *&ContiguousCasesMax,
-                               bool &IsWrapping) {
+struct ContiguousCasesResult {
+  ConstantInt *Min;
+  ConstantInt *Max;
+  BasicBlock *Dest;
+  BasicBlock *OtherDest;
+  SmallVectorImpl<ConstantInt *> *Cases;
+  SmallVectorImpl<ConstantInt *> *OtherCases;
+};
+
+static std::optional<ContiguousCasesResult>
+findContiguousCases(Value *Condition, SmallVectorImpl<ConstantInt *> &Cases,
+                    SmallVectorImpl<ConstantInt *> &OtherCases,
+                    BasicBlock *Dest, BasicBlock *OtherDest) {
   assert(Cases.size() >= 1);
 
   array_pod_sort(Cases.begin(), Cases.end(), constantIntSortPredicate);
-  auto Min = Cases.back()->getValue();
-  auto Max = Cases.front()->getValue();
-  auto Offset = Max - Min;
-  auto ContiguousOffset = Cases.size() - 1;
+  APInt Min = Cases.back()->getValue();
+  APInt Max = Cases.front()->getValue();
+  APInt Offset = Max - Min;
+  size_t ContiguousOffset = Cases.size() - 1;
   if (Offset == ContiguousOffset) {
-    ContiguousCasesMin = Cases.back();
-    ContiguousCasesMax = Cases.front();
-    return true;
+    return ContiguousCasesResult{
+        /*Min=*/Cases.back(),
+        /*Max=*/Cases.front(),
+        /*Dest=*/Dest,
+        /*OtherDest=*/OtherDest,
+        /*Cases=*/&Cases,
+        /*OtherCases=*/&OtherCases,
+    };
   }
   ConstantRange CR = computeConstantRange(Condition, /*ForSigned=*/false);
   // If this is a wrapping contiguous range, that is, [Min, OtherMin] +
@@ -5747,20 +5760,24 @@ static bool casesAreContiguous(Value *Condition,
           return L->getValue() != R->getValue() + 1;
         });
     if (It == Cases.end())
-      return false;
-    auto *OtherMax = *It;
-    auto *OtherMin = *(It + 1);
+      return std::nullopt;
+    auto [OtherMax, OtherMin] = std::make_pair(*It, *std::next(It));
     if ((Max - OtherMax->getValue()) + (OtherMin->getValue() - Min) ==
         Cases.size() - 2) {
-      ContiguousCasesMin = cast<ConstantInt>(
-          ConstantInt::get(OtherMin->getType(), OtherMin->getValue() + 1));
-      ContiguousCasesMax = cast<ConstantInt>(
-          ConstantInt::get(OtherMax->getType(), OtherMax->getValue() - 1));
-      IsWrapping = true;
-      return true;
+      return ContiguousCasesResult{
+          /*Min=*/cast<ConstantInt>(
+              ConstantInt::get(OtherMin->getType(), OtherMin->getValue() + 1)),
+          /*Max=*/
+          cast<ConstantInt>(
+              ConstantInt::get(OtherMax->getType(), OtherMax->getValue() - 1)),
+          /*Dest=*/OtherDest,
+          /*OtherDest=*/Dest,
+          /*Cases=*/&OtherCases,
+          /*OtherCases=*/&Cases,
+      };
     }
   }
-  return false;
+  return std::nullopt;
 }
 
 static void createUnreachableSwitchDefault(SwitchInst *Switch,
@@ -5797,7 +5814,6 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   bool HasDefault = !SI->defaultDestUnreachable();
 
   auto *BB = SI->getParent();
-
   // Partition the cases into two sets with different destinations.
   BasicBlock *DestA = HasDefault ? SI->getDefaultDest() : nullptr;
   BasicBlock *DestB = nullptr;
@@ -5831,67 +5847,64 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   assert(!CasesA.empty() || HasDefault);
 
   // Figure out if one of the sets of cases form a contiguous range.
-  ConstantInt *ContiguousCasesMin = nullptr;
-  ConstantInt *ContiguousCasesMax = nullptr;
-  BasicBlock *ContiguousDest = nullptr;
-  BasicBlock *OtherDest = nullptr;
-  bool IsWrapping = false;
-  SmallVectorImpl<ConstantInt *> *ContiguousCases = &CasesA;
-  SmallVectorImpl<ConstantInt *> *OtherCases = &CasesB;
+  std::optional<ContiguousCasesResult> ContiguousCases;
 
   // Only one icmp is needed when there is only one case.
-  if (!HasDefault && CasesA.size() == 1) {
-    ContiguousCasesMax = CasesA[0];
-    ContiguousCasesMin = CasesA[0];
-    ContiguousDest = DestA;
-    OtherDest = DestB;
-  } else if (CasesB.size() == 1) {
-    ContiguousCasesMax = CasesB[0];
-    ContiguousCasesMin = CasesB[0];
-    ContiguousDest = DestB;
-    OtherDest = DestA;
-    std::swap(ContiguousCases, OtherCases);
-  }
+  if (!HasDefault && CasesA.size() == 1)
+    ContiguousCases = ContiguousCasesResult{
+        /*Min=*/CasesA[0],
+        /*Max=*/CasesA[0],
+        /*Dest=*/DestA,
+        /*OtherDest=*/DestB,
+        /*Cases=*/&CasesA,
+        /*OtherCases=*/&CasesB,
+    };
+  else if (CasesB.size() == 1)
+    ContiguousCases = ContiguousCasesResult{
+        /*Min=*/CasesB[0],
+        /*Max=*/CasesB[0],
+        /*Dest=*/DestB,
+        /*OtherDest=*/DestA,
+        /*Cases=*/&CasesB,
+        /*OtherCases=*/&CasesA,
+    };
+
   // Correctness: Cases to the default destination cannot be contiguous cases.
-  else if (!HasDefault && !CasesA.empty() &&
-           casesAreContiguous(SI->getCondition(), CasesA, ContiguousCasesMin,
-                              ContiguousCasesMax, IsWrapping)) {
-    ContiguousDest = DestA;
-    OtherDest = DestB;
-  } else if (casesAreContiguous(SI->getCondition(), CasesB, ContiguousCasesMin,
-                                ContiguousCasesMax, IsWrapping)) {
-    ContiguousDest = DestB;
-    OtherDest = DestA;
-    std::swap(ContiguousCases, OtherCases);
-  } else
+  if (!ContiguousCases && !HasDefault && !CasesA.empty())
+    if (auto Result = findContiguousCases(SI->getCondition(), CasesA, CasesB,
+                                          DestA, DestB))
+      ContiguousCases = *Result;
+
+  if (!ContiguousCases)
+    if (auto Result = findContiguousCases(SI->getCondition(), CasesB, CasesA,
+                                          DestB, DestA))
+      ContiguousCases = *Result;
+
+  if (!ContiguousCases)
     return false;
 
-  if (IsWrapping) {
-    std::swap(ContiguousDest, OtherDest);
-    std::swap(ContiguousCases, OtherCases);
-  }
+  auto [Min, Max, Dest, OtherDest, Cases, OtherCases] = *ContiguousCases;
 
   // Start building the compare and branch.
 
-  Constant *Offset = ConstantExpr::getNeg(ContiguousCasesMin);
+  Constant *Offset = ConstantExpr::getNeg(Min);
   Constant *NumCases = ConstantInt::get(Offset->getType(),
-                                        ContiguousCasesMax->getValue() -
-                                            ContiguousCasesMin->getValue() + 1);
+                                        Max->getValue() - Min->getValue() + 1);
   BranchInst *NewBI;
   if (NumCases->isOneValue()) {
-    assert(ContiguousCasesMax->getValue() == ContiguousCasesMin->getValue());
-    Value *Cmp = Builder.CreateICmpEQ(SI->getCondition(), ContiguousCasesMin);
-    NewBI = Builder.CreateCondBr(Cmp, ContiguousDest, OtherDest);
+    assert(Max->getValue() == Min->getValue());
+    Value *Cmp = Builder.CreateICmpEQ(SI->getCondition(), Min);
+    NewBI = Builder.CreateCondBr(Cmp, Dest, OtherDest);
   }
   // If NumCases overflowed, then all possible values jump to the successor.
-  else if (NumCases->isNullValue() && !ContiguousCases->empty()) {
-    NewBI = Builder.CreateBr(ContiguousDest);
+  else if (NumCases->isNullValue() && !Cases->empty()) {
+    NewBI = Builder.CreateBr(Dest);
   } else {
     Value *Sub = SI->getCondition();
     if (!Offset->isNullValue())
       Sub = Builder.CreateAdd(Sub, Offset, Sub->getName() + ".off");
     Value *Cmp = Builder.CreateICmpULT(Sub, NumCases, "switch");
-    NewBI = Builder.CreateCondBr(Cmp, ContiguousDest, OtherDest);
+    NewBI = Builder.CreateCondBr(Cmp, Dest, OtherDest);
   }
 
   // Update weight for the newly-created conditional branch.
@@ -5902,7 +5915,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
       uint64_t TrueWeight = 0;
       uint64_t FalseWeight = 0;
       for (size_t I = 0, E = Weights.size(); I != E; ++I) {
-        if (SI->getSuccessor(I) == ContiguousDest)
+        if (SI->getSuccessor(I) == Dest)
           TrueWeight += Weights[I];
         else
           FalseWeight += Weights[I];
@@ -5917,9 +5930,9 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   }
 
   // Prune obsolete incoming values off the successors' PHI nodes.
-  for (auto BBI = ContiguousDest->begin(); isa<PHINode>(BBI); ++BBI) {
-    unsigned PreviousEdges = ContiguousCases->size();
-    if (ContiguousDest == SI->getDefaultDest())
+  for (auto BBI = Dest->begin(); isa<PHINode>(BBI); ++BBI) {
+    unsigned PreviousEdges = Cases->size();
+    if (Dest == SI->getDefaultDest())
       ++PreviousEdges;
     for (unsigned I = 0, E = PreviousEdges - 1; I != E; ++I)
       cast<PHINode>(BBI)->removeIncomingValue(SI->getParent());
