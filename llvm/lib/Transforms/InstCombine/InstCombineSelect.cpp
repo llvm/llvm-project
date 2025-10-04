@@ -1403,8 +1403,8 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   }
 
   Value *CmpLHS = Cmp.getOperand(0), *CmpRHS = Cmp.getOperand(1);
-  auto ReplaceOldOpWithNewOp = [&](Value *OldOp, Value *NewOp,
-                                   uint32_t Direction) -> Instruction * {
+  auto ReplaceOldOpWithNewOp = [&](Value *OldOp,
+                                   Value *NewOp) -> Instruction * {
     // In X == Y ? f(X) : Z, try to evaluate f(Y) and replace the operand.
     // Take care to avoid replacing X == Y ? X : Z with X == Y ? Y : Z, as that
     // would lead to an infinite replacement cycle.
@@ -1452,12 +1452,12 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
 
   bool CanReplaceCmpLHSWithRHS = canReplacePointersIfEqual(CmpLHS, CmpRHS, DL);
   if (CanReplaceCmpLHSWithRHS) {
-    if (Instruction *R = ReplaceOldOpWithNewOp(CmpLHS, CmpRHS, 0))
+    if (Instruction *R = ReplaceOldOpWithNewOp(CmpLHS, CmpRHS))
       return R;
   }
   bool CanReplaceCmpRHSWithLHS = canReplacePointersIfEqual(CmpRHS, CmpLHS, DL);
   if (CanReplaceCmpRHSWithLHS) {
-    if (Instruction *R = ReplaceOldOpWithNewOp(CmpRHS, CmpLHS, 1))
+    if (Instruction *R = ReplaceOldOpWithNewOp(CmpRHS, CmpLHS))
       return R;
   }
 
