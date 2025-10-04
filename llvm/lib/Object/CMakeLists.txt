@@ -45,7 +45,6 @@ add_llvm_component_library(LLVMObject
 
   LINK_COMPONENTS
   BitReader
-  BinaryFormat
   Core
   MC
   IRReader
