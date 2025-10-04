@@ -1761,7 +1761,7 @@ void SubtargetEmitter::emitSchedModelHelpers(const std::string &ClassName,
      << "\n::resolveVariantSchedClass(unsigned SchedClass, const MCInst *MI,"
      << " const MCInstrInfo *MCII, unsigned CPUID) const {\n"
      << "  return " << Target << "_MC"
-     << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, CPUID);\n"
+     << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, *this, CPUID);\n"
      << "} // " << ClassName << "::resolveVariantSchedClass\n\n";
 
   STIPredicateExpander PE(Target, /*Indent=*/0);
@@ -1923,7 +1923,8 @@ void SubtargetEmitter::parseFeaturesFunction(raw_ostream &OS) {
 void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
   OS << "namespace " << Target << "_MC {\n"
      << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,\n"
-     << "    const MCInst *MI, const MCInstrInfo *MCII, unsigned CPUID) {\n";
+     << "    const MCInst *MI, const MCInstrInfo *MCII, "
+     << "const MCSubtargetInfo &STI, unsigned CPUID) {\n";
   emitSchedModelHelpersImpl(OS, /* OnlyExpandMCPredicates */ true);
   OS << "}\n";
   OS << "} // end namespace " << Target << "_MC\n\n";
@@ -1945,7 +1946,7 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
      << "      unsigned CPUID) const override {\n"
      << "    return " << Target << "_MC"
-     << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, CPUID);\n";
+     << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, *this, CPUID);\n";
   OS << "  }\n";
   if (TGT.getHwModes().getNumModeIds() > 1) {
     OS << "  unsigned getHwModeSet() const override;\n";
@@ -2073,7 +2074,8 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << "class DFAPacketizer;\n";
   OS << "namespace " << Target << "_MC {\n"
      << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,"
-     << " const MCInst *MI, const MCInstrInfo *MCII, unsigned CPUID);\n"
+     << " const MCInst *MI, const MCInstrInfo *MCII, "
+     << "const MCSubtargetInfo &STI, unsigned CPUID);\n"
      << "} // end namespace " << Target << "_MC\n\n";
   OS << "struct " << ClassName << " : public TargetSubtargetInfo {\n"
      << "  explicit " << ClassName << "(const Triple &TT, StringRef CPU, "
