@@ -7391,8 +7391,7 @@ _mm256_mask_cvtepi32_storeu_epi8 (void * __P, __mmask8 __M, __m256i __A)
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
-_mm_cvtepi32_epi16 (__m128i __A)
-{
+_mm_cvtepi32_epi16(__m128i __A) {
   return (__m128i)__builtin_shufflevector(
       __builtin_convertvector((__v4si)__A, __v4hi), (__v4hi){0, 0, 0, 0}, 0, 1,
       2, 3, 4, 5, 6, 7);
@@ -7446,7 +7445,7 @@ _mm256_mask_cvtepi32_storeu_epi16 (void *  __P, __mmask8 __M, __m256i __A)
   __builtin_ia32_pmovdw256mem_mask ((__v8hi *) __P, (__v8si) __A, __M);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_cvtepi64_epi8 (__m128i __A)
 {
   return (__m128i)__builtin_shufflevector(
