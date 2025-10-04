@@ -331,11 +331,11 @@ let isCall = 1, Uses = [RSP, SSP], SchedRW = [WriteJump] in {
                       Requires<[In64BitMode]>;
   def CALL64r       : I<0xFF, MRM2r, (outs), (ins GR64:$dst),
                         "call{q}\t{*}$dst", [(X86call GR64:$dst)]>,
-                      Requires<[In64BitMode,NotUseIndirectThunkCalls,ImportCallOptimizationDisabled]>;
+                      Requires<[In64BitMode,NotUseIndirectThunkCalls,ImportCallOptimizationDisabledOrCFGuardEnabled]>;
   def CALL64m       : I<0xFF, MRM2m, (outs), (ins i64mem:$dst),
                         "call{q}\t{*}$dst", [(X86call (loadi64 addr:$dst))]>,
                       Requires<[In64BitMode,FavorMemIndirectCall,
-                                NotUseIndirectThunkCalls]>;
+                                NotUseIndirectThunkCalls,ImportCallOptimizationDisabledOrCFGuardEnabled]>;
 
   // Non-tracking calls for IBT, use with caution.
   let isCodeGenOnly = 1 in {
@@ -433,9 +433,13 @@ let isPseudo = 1, isCall = 1, isCodeGenOnly = 1,
     PseudoI<(outs), (ins i64imm:$rvfunc, i64i32imm_brtarget:$dst), []>,
             Requires<[In64BitMode]>;
 
+  def CALL64_ImpCall :
+     PseudoI<(outs), (ins i64imm:$dst), [(X86imp_call tglobaladdr:$dst)]>,
+             Requires<[In64BitMode]>;
+
   def CALL64r_ImpCall :
     PseudoI<(outs), (ins GR64_A:$dst), [(X86call GR64_A:$dst)]>,
-            Requires<[In64BitMode,NotUseIndirectThunkCalls,ImportCallOptimizationEnabled]>;
+            Requires<[In64BitMode,NotUseIndirectThunkCalls,ImportCallOptimizationEnabledAndCFGuardDisabled]>;
 }
 
 // Conditional tail calls are similar to the above, but they are branches
