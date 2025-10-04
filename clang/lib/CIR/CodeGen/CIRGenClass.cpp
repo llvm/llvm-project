@@ -690,7 +690,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   // every temporary created in a default argument expression is sequenced
   // before the construction of the next array element, if any.
   {
-    assert(!cir::MissingFeatures::runCleanupsScope());
+    RunCleanupsScope scope(*this);
 
     // Evaluate the constructor and its arguments in a regular
     // partial-destroy cleanup.
