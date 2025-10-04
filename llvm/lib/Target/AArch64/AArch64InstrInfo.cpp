@@ -1503,6 +1503,13 @@ AArch64InstrInfo::canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
             getElementSizeForOpcode(PredOpcode))
       return PredOpcode;
 
+    // For PTEST_FIRST(PTRUE_ALL, WHILE), the PTEST_FIRST is redundant since
+    // WHILEcc performs an implicit PTEST with an all active mask, setting
+    // the N flag as the PTEST_FIRST would.
+    if (PTest->getOpcode() == AArch64::PTEST_PP_FIRST &&
+        isPTrueOpcode(MaskOpcode) && Mask->getOperand(1).getImm() == 31)
+      return PredOpcode;
+
     return {};
   }
 
@@ -5592,7 +5599,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
       Opc = AArch64::STR_PXI;
-      StackID = TargetStackID::ScalableVector;
+      StackID = TargetStackID::ScalablePredicateVector;
     }
     break;
   }
@@ -5607,7 +5614,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       Opc = AArch64::STRSui;
     else if (AArch64::PPR2RegClass.hasSubClassEq(RC)) {
       Opc = AArch64::STR_PPXI;
-      StackID = TargetStackID::ScalableVector;
+      StackID = TargetStackID::ScalablePredicateVector;
     }
     break;
   case 8:
@@ -5777,7 +5784,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(
       if (IsPNR)
         PNRReg = DestReg;
       Opc = AArch64::LDR_PXI;
-      StackID = TargetStackID::ScalableVector;
+      StackID = TargetStackID::ScalablePredicateVector;
     }
     break;
   }
@@ -5792,7 +5799,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(
       Opc = AArch64::LDRSui;
     else if (AArch64::PPR2RegClass.hasSubClassEq(RC)) {
       Opc = AArch64::LDR_PPXI;
-      StackID = TargetStackID::ScalableVector;
+      StackID = TargetStackID::ScalablePredicateVector;
     }
     break;
   case 8:
