@@ -6,13 +6,13 @@ program test
   integer :: team_number 
   type(team_type) :: team
 
-  ! CHECK: fir.call @_QMprifPprif_num_images
+  ! CHECK: mif.num_images : () -> i32
   i = num_images()
 
-  ! CHECK: fir.call @_QMprifPprif_num_images_with_team_number
+  ! CHECK: mif.num_images team_number %[[TEAM_NUMBER:.*]] : (i32) -> i32
   i = num_images(TEAM_NUMBER=team_number)
 
-  ! CHECK: fir.call @_QMprifPprif_num_images_with_team
+  ! CHECK: mif.num_images team %[[TEAM:.*]]#0 : ({{.*}}) -> i32
   i = num_images(TEAM=team)
 
 end program
