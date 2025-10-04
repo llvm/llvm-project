@@ -58,20 +58,6 @@ def FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO :
   let hasSideEffects = 0;
 }
 
-def SPILL_PPR_TO_ZPR_SLOT_PSEUDO :
-  Pseudo<(outs), (ins PPRorPNRAny:$Pt, GPR64sp:$Rn, simm9:$imm9), []>, Sched<[]>
-{
-  let mayStore = 1;
-  let hasSideEffects = 0;
-}
-
-def FILL_PPR_FROM_ZPR_SLOT_PSEUDO :
-  Pseudo<(outs PPRorPNRAny:$Pt), (ins GPR64sp:$Rn, simm9:$imm9), []>, Sched<[]>
-{
-  let mayLoad = 1;
-  let hasSideEffects = 0;
-}
-
 def SDTZALoadStore : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisInt<2>]>;
 // SME ZA loads and stores
 def AArch64SMELdr : SDNode<"AArch64ISD::SME_ZA_LDR", SDTZALoadStore,
