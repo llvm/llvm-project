@@ -85,6 +85,25 @@ bool MachineSSAContext::isConstantOrUndefValuePhi(const MachineInstr &Phi) {
 }
 
 template <>
+void MachineSSAContext::getPhiInputs(
+    const MachineInstr &Phi, SmallVectorImpl<Register> &Values,
+    SmallVectorImpl<const MachineBasicBlock *> &Blocks) const {
+  assert(Phi.isPHI());
+
+  const MachineRegisterInfo &MRI = Phi.getMF()->getRegInfo();
+  // const Register DstReg = Phi.getOperand(0).getReg();
+  for (unsigned Idx = 1, End = Phi.getNumOperands(); Idx < End; Idx += 2) {
+    Register Incoming = Phi.getOperand(Idx).getReg();
+    MachineInstr *Def = MRI.getVRegDef(Incoming);
+    // FIXME: should this also consider Incoming == DstReg undef?
+    if (Def && isUndef(*Def))
+      Incoming = ValueRefNull;
+    Values.push_back(Incoming);
+    Blocks.push_back(Phi.getOperand(Idx + 1).getMBB());
+  }
+}
+
+template <>
 Intrinsic::ID MachineSSAContext::getIntrinsicID(const MachineInstr &MI) {
   if (auto *GI = dyn_cast<GIntrinsic>(&MI))
     return GI->getIntrinsicID();
