@@ -194,14 +194,12 @@ static auto getVarInitWithMemberMatcher(
     StringRef PairName, StringRef MemberName, StringRef TypeName,
     StringRef BindingName,
     ast_matchers::internal::Matcher<VarDecl> ExtraMatcher) {
-  return varDecl(
-             ExtraMatcher,
-             hasInitializer(
-                 ignoringImpCasts(ignoringCopyCtorAndImplicitCast(memberExpr(
+  return varDecl(ExtraMatcher,
+                 hasInitializer(ignoringCopyCtorAndImplicitCast(memberExpr(
                      hasObjectExpression(ignoringImpCasts(declRefExpr(
                          to(equalsBoundNode(std::string(PairName)))))),
                      member(fieldDecl(hasName(MemberName),
-                                      hasType(qualType().bind(TypeName)))))))))
+                                      hasType(qualType().bind(TypeName))))))))
       .bind(BindingName);
 }
 
