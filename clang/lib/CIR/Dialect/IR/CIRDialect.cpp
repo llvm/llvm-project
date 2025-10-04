@@ -2389,9 +2389,8 @@ OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
 
 LogicalResult cir::ComplexRealOp::verify() {
   mlir::Type operandTy = getOperand().getType();
-  if (auto complexOperandTy = mlir::dyn_cast<cir::ComplexType>(operandTy)) {
+  if (auto complexOperandTy = mlir::dyn_cast<cir::ComplexType>(operandTy))
     operandTy = complexOperandTy.getElementType();
-  }
 
   if (getType() != operandTy) {
     emitOpError() << ": result type does not match operand type";
@@ -2419,14 +2418,14 @@ OpFoldResult cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
 
 LogicalResult cir::ComplexImagOp::verify() {
   mlir::Type operandTy = getOperand().getType();
-  if (auto complexOperandTy = mlir::dyn_cast<cir::ComplexType>(operandTy)) {
+  if (auto complexOperandTy = mlir::dyn_cast<cir::ComplexType>(operandTy))
     operandTy = complexOperandTy.getElementType();
-  }
 
   if (getType() != operandTy) {
     emitOpError() << ": result type does not match operand type";
     return failure();
   }
+
   return success();
 }
 
