@@ -189,19 +189,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
     if (NeedsDuplicating) {
       if (ScalarVFOnly)
         continue;
-      VPSingleDefRecipe *Clone;
-      if (auto *SinkCandidateRepR =
-              dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
-        // TODO: Handle converting to uniform recipes as separate transform,
-        // then cloning should be sufficient here.
-        Instruction *I = SinkCandidate->getUnderlyingInstr();
-        Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true,
-                                      nullptr /*Mask*/, *SinkCandidateRepR);
-        // TODO: add ".cloned" suffix to name of Clone's VPValue.
-      } else {
-        Clone = SinkCandidate->clone();
-      }
-
+      VPSingleDefRecipe *Clone = vputils::getSingleScalarClone(SinkCandidate);
       Clone->insertBefore(SinkCandidate);
       SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser &U, unsigned) {
         return cast<VPRecipeBase>(&U)->getParent() != SinkTo;
@@ -666,8 +654,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       if (!vputils::isSingleScalar(Def) && !vputils::onlyFirstLaneUsed(Def))
         continue;
 
-      auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
-                                          Def->operands(), /*IsUniform*/ true);
+      VPSingleDefRecipe *Clone = vputils::getSingleScalarClone(Def);
       Clone->insertAfter(Def);
       Def->replaceAllUsesWith(Clone);
     }
@@ -1308,15 +1295,14 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
       if (RepR && isa<StoreInst>(RepR->getUnderlyingInstr()) &&
           vputils::isSingleScalar(RepR->getOperand(1))) {
-        auto *Clone = new VPReplicateRecipe(
-            RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
-            true /*IsSingleScalar*/, nullptr /*Mask*/, *RepR /*Metadata*/);
+        auto *Clone =
+            cast<VPReplicateRecipe>(vputils::getSingleScalarClone(RepOrWidenR));
         Clone->insertBefore(RepOrWidenR);
         auto *Ext = new VPInstruction(VPInstruction::ExtractLastElement,
                                       {Clone->getOperand(0)});
         Ext->insertBefore(Clone);
         Clone->setOperand(0, Ext);
-        RepR->eraseFromParent();
+        RepOrWidenR->eraseFromParent();
         continue;
       }
 
@@ -1331,9 +1317,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
           }))
         continue;
 
-      auto *Clone = new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
-                                          RepOrWidenR->operands(),
-                                          true /*IsSingleScalar*/);
+      VPSingleDefRecipe *Clone = vputils::getSingleScalarClone(RepOrWidenR);
       Clone->insertBefore(RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
     }
