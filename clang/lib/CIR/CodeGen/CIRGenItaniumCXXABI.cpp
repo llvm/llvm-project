@@ -1573,7 +1573,7 @@ void CIRGenItaniumCXXABI::emitThrow(CIRGenFunction &cgf,
   // Get the RTTI symbol address.
   auto typeInfo = mlir::dyn_cast_if_present<cir::GlobalViewAttr>(
       cgm.getAddrOfRTTIDescriptor(subExprLoc, clangThrowType,
-                                  /*ForEH=*/true));
+                                  /*forEH=*/true));
   assert(typeInfo && "expected GlobalViewAttr typeinfo");
   assert(!typeInfo.getIndices() && "expected no indirection");
 
