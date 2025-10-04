@@ -99,7 +99,7 @@ struct RelationsRequest {
 
 struct ContainedRefsResult {
   /// The source location where the symbol is named.
-  SymbolLocation Location;
+  SymbolNameLocation Location;
   RefKind Kind = RefKind::Unknown;
   /// The ID of the symbol which is referred to
   SymbolID Symbol;
