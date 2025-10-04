@@ -648,6 +648,9 @@ LogicalResult MmaOp::verify() {
     expectedB.emplace_back(unitB, multiplicandFragType);
     allowedShapes.push_back({16, 8, kFactor});
     allowedShapes.push_back({16, 8, kFactor * 2});
+
+    if (resultPtxType() != accumPtxType())
+      return emitOpError("ctype does not match dtype");
   }
 
   // In the M=8 case, there is only 1 possible case per data type.
