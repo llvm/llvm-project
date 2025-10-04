@@ -309,7 +309,7 @@ public:
     offset_type NumEntries =
         endian::readNext<offset_type, llvm::endianness::little, aligned>(
             Buckets);
-    return std::make_pair(NumBuckets, NumEntries);
+    return {NumBuckets, NumEntries};
   }
 
   offset_type getNumBuckets() const { return NumBuckets; }

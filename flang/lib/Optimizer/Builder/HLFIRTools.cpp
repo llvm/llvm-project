@@ -676,6 +676,34 @@ mlir::Value hlfir::genLBound(mlir::Location loc, fir::FirOpBuilder &builder,
   return dimInfo.getLowerBound();
 }
 
+static bool
+getExprLengthParameters(mlir::Value expr,
+                        llvm::SmallVectorImpl<mlir::Value> &result) {
+  if (auto concat = expr.getDefiningOp<hlfir::ConcatOp>()) {
+    result.push_back(concat.getLength());
+    return true;
+  }
+  if (auto setLen = expr.getDefiningOp<hlfir::SetLengthOp>()) {
+    result.push_back(setLen.getLength());
+    return true;
+  }
+  if (auto elemental = expr.getDefiningOp<hlfir::ElementalOp>()) {
+    result.append(elemental.getTypeparams().begin(),
+                  elemental.getTypeparams().end());
+    return true;
+  }
+  if (auto evalInMem = expr.getDefiningOp<hlfir::EvaluateInMemoryOp>()) {
+    result.append(evalInMem.getTypeparams().begin(),
+                  evalInMem.getTypeparams().end());
+    return true;
+  }
+  if (auto apply = expr.getDefiningOp<hlfir::ApplyOp>()) {
+    result.append(apply.getTypeparams().begin(), apply.getTypeparams().end());
+    return true;
+  }
+  return false;
+}
+
 void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
                                 Entity entity,
                                 llvm::SmallVectorImpl<mlir::Value> &result) {
@@ -688,29 +716,14 @@ void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
     // Going through fir::ExtendedValue would create a temp,
     // which is not desired for an inquiry.
     // TODO: make this an interface when adding further character producing ops.
-    if (auto concat = expr.getDefiningOp<hlfir::ConcatOp>()) {
-      result.push_back(concat.getLength());
-      return;
-    } else if (auto concat = expr.getDefiningOp<hlfir::SetLengthOp>()) {
-      result.push_back(concat.getLength());
-      return;
-    } else if (auto asExpr = expr.getDefiningOp<hlfir::AsExprOp>()) {
+
+    if (auto asExpr = expr.getDefiningOp<hlfir::AsExprOp>()) {
       hlfir::genLengthParameters(loc, builder, hlfir::Entity{asExpr.getVar()},
                                  result);
       return;
-    } else if (auto elemental = expr.getDefiningOp<hlfir::ElementalOp>()) {
-      result.append(elemental.getTypeparams().begin(),
-                    elemental.getTypeparams().end());
-      return;
-    } else if (auto evalInMem =
-                   expr.getDefiningOp<hlfir::EvaluateInMemoryOp>()) {
-      result.append(evalInMem.getTypeparams().begin(),
-                    evalInMem.getTypeparams().end());
-      return;
-    } else if (auto apply = expr.getDefiningOp<hlfir::ApplyOp>()) {
-      result.append(apply.getTypeparams().begin(), apply.getTypeparams().end());
-      return;
     }
+    if (getExprLengthParameters(expr, result))
+      return;
     if (entity.isCharacter()) {
       result.push_back(hlfir::GetLengthOp::create(builder, loc, expr));
       return;
@@ -731,6 +744,36 @@ mlir::Value hlfir::genCharLength(mlir::Location loc, fir::FirOpBuilder &builder,
   genLengthParameters(loc, builder, entity, lenParams);
   assert(lenParams.size() == 1 && "characters must have one length parameters");
   return lenParams[0];
+}
+
+std::optional<std::int64_t> hlfir::getCharLengthIfConst(hlfir::Entity entity) {
+  if (!entity.isCharacter()) {
+    return std::nullopt;
+  }
+  if (mlir::isa<hlfir::ExprType>(entity.getType())) {
+    mlir::Value expr = entity;
+    if (auto reassoc = expr.getDefiningOp<hlfir::NoReassocOp>())
+      expr = reassoc.getVal();
+
+    if (auto asExpr = expr.getDefiningOp<hlfir::AsExprOp>())
+      return getCharLengthIfConst(hlfir::Entity{asExpr.getVar()});
+
+    llvm::SmallVector<mlir::Value> param;
+    if (getExprLengthParameters(expr, param)) {
+      assert(param.size() == 1 && "characters must have one length parameters");
+      return fir::getIntIfConstant(param.pop_back_val());
+    }
+    return std::nullopt;
+  }
+
+  // entity is a var
+  if (mlir::Value len = tryGettingNonDeferredCharLen(entity))
+    return fir::getIntIfConstant(len);
+  auto charType =
+      mlir::cast<fir::CharacterType>(entity.getFortranElementType());
+  if (charType.hasConstantLen())
+    return charType.getLen();
+  return std::nullopt;
 }
 
 mlir::Value hlfir::genRank(mlir::Location loc, fir::FirOpBuilder &builder,

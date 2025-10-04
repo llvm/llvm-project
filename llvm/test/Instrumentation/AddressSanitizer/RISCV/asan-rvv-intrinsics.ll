@@ -1256,7 +1256,31 @@ define <vscale x 1 x i32> @intrinsic_vloxei_v_nxv1i32_nxv1i32_nxv1i16(<vscale x 
 ; CHECK-LABEL: @intrinsic_vloxei_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vloxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> poison, ptr [[TMP0:%.*]], <vscale x 1 x i16> [[TMP1:%.*]], i64 [[TMP2:%.*]])
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 1 x i16> [[TMP1:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0:%.*]], <vscale x 1 x i64> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[TMP2:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP15:%.*]]
+; CHECK:       7:
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 [[TMP8]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[TMP14:%.*]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP14]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 1 x ptr> [[TMP5]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[TMP12]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP13]], i64 4)
+; CHECK-NEXT:    br label [[TMP14]]
+; CHECK:       14:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP9]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
+; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vloxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> poison, ptr [[TMP0]], <vscale x 1 x i16> [[TMP1]], i64 [[TMP2]])
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[A]]
 ;
 entry:
@@ -1281,7 +1305,31 @@ define <vscale x 1 x i32> @intrinsic_vloxei_mask_v_nxv1i32_nxv1i32_nxv1i16(<vsca
 ; CHECK-LABEL: @intrinsic_vloxei_mask_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vloxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1:%.*]], <vscale x 1 x i16> [[TMP2:%.*]], <vscale x 1 x i1> [[TMP3:%.*]], i64 [[TMP4:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <vscale x 1 x i16> [[TMP2:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1:%.*]], <vscale x 1 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i64 [[TMP4:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP17:%.*]]
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP4]], i64 [[TMP10]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP9]] ], [ [[IV_NEXT:%.*]], [[TMP16:%.*]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 1 x i1> [[TMP3:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP16]]
+; CHECK:       13:
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 1 x ptr> [[TMP7]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP14]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP15]], i64 4)
+; CHECK-NEXT:    br label [[TMP16]]
+; CHECK:       16:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP17]]
+; CHECK:       17:
+; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vloxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1]], <vscale x 1 x i16> [[TMP2]], <vscale x 1 x i1> [[TMP3]], i64 [[TMP4]], i64 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[A]]
 ;
 entry:
@@ -1305,7 +1353,31 @@ define <vscale x 1 x float> @intrinsic_vloxei_v_nxv1f32_nxv1f32_nxv1i16(<vscale 
 ; CHECK-LABEL: @intrinsic_vloxei_v_nxv1f32_nxv1f32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x float> @llvm.riscv.vloxei.nxv1f32.p0.nxv1i16.i64(<vscale x 1 x float> poison, ptr [[TMP0:%.*]], <vscale x 1 x i16> [[TMP1:%.*]], i64 [[TMP2:%.*]])
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 1 x i16> [[TMP1:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0:%.*]], <vscale x 1 x i64> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[TMP2:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP15:%.*]]
+; CHECK:       7:
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 [[TMP8]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[TMP14:%.*]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP14]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 1 x ptr> [[TMP5]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[TMP12]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP13]], i64 4)
+; CHECK-NEXT:    br label [[TMP14]]
+; CHECK:       14:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP9]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
+; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x float> @llvm.riscv.vloxei.nxv1f32.p0.nxv1i16.i64(<vscale x 1 x float> poison, ptr [[TMP0]], <vscale x 1 x i16> [[TMP1]], i64 [[TMP2]])
 ; CHECK-NEXT:    ret <vscale x 1 x float> [[A]]
 ;
 entry:
@@ -1328,7 +1400,31 @@ define <vscale x 1 x i32> @intrinsic_vluxei_v_nxv1i32_nxv1i32_nxv1i16(<vscale x 
 ; CHECK-LABEL: @intrinsic_vluxei_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vluxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> poison, ptr [[TMP0:%.*]], <vscale x 1 x i16> [[TMP1:%.*]], i64 [[TMP2:%.*]])
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 1 x i16> [[TMP1:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0:%.*]], <vscale x 1 x i64> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[TMP2:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP15:%.*]]
+; CHECK:       7:
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 [[TMP8]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[TMP14:%.*]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP14]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 1 x ptr> [[TMP5]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[TMP12]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP13]], i64 4)
+; CHECK-NEXT:    br label [[TMP14]]
+; CHECK:       14:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP9]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
+; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vluxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> poison, ptr [[TMP0]], <vscale x 1 x i16> [[TMP1]], i64 [[TMP2]])
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[A]]
 ;
 entry:
@@ -1353,7 +1449,31 @@ define <vscale x 1 x i32> @intrinsic_vluxei_mask_v_nxv1i32_nxv1i32_nxv1i16(<vsca
 ; CHECK-LABEL: @intrinsic_vluxei_mask_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vluxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1:%.*]], <vscale x 1 x i16> [[TMP2:%.*]], <vscale x 1 x i1> [[TMP3:%.*]], i64 [[TMP4:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <vscale x 1 x i16> [[TMP2:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1:%.*]], <vscale x 1 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i64 [[TMP4:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP17:%.*]]
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP4]], i64 [[TMP10]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP9]] ], [ [[IV_NEXT:%.*]], [[TMP16:%.*]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 1 x i1> [[TMP3:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP16]]
+; CHECK:       13:
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 1 x ptr> [[TMP7]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP14]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP15]], i64 4)
+; CHECK-NEXT:    br label [[TMP16]]
+; CHECK:       16:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP17]]
+; CHECK:       17:
+; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vluxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1]], <vscale x 1 x i16> [[TMP2]], <vscale x 1 x i1> [[TMP3]], i64 [[TMP4]], i64 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[A]]
 ;
 entry:
@@ -1377,7 +1497,31 @@ define void @intrinsic_vsoxei_v_nxv1i32_nxv1i32_nxv1i16(<vscale x 1 x i32> %0, <
 ; CHECK-LABEL: @intrinsic_vsoxei_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    call void @llvm.riscv.vsoxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1:%.*]], <vscale x 1 x i16> [[TMP2:%.*]], i64 [[TMP3:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <vscale x 1 x i16> [[TMP2:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP1:%.*]], <vscale x 1 x i64> [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[TMP3:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP16:%.*]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP9]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP8]] ], [ [[IV_NEXT:%.*]], [[TMP15:%.*]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP15]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 1 x ptr> [[TMP6]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[TMP13]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP14]], i64 4)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP16]]
+; CHECK:       16:
+; CHECK-NEXT:    call void @llvm.riscv.vsoxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1]], <vscale x 1 x i16> [[TMP2]], i64 [[TMP3]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1401,7 +1545,31 @@ define void @intrinsic_vsoxei_mask_v_nxv1i32_nxv1i32_nxv1i16(<vscale x 1 x i32> 
 ; CHECK-LABEL: @intrinsic_vsoxei_mask_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1:%.*]], <vscale x 1 x i16> [[TMP2:%.*]], <vscale x 1 x i1> [[TMP3:%.*]], i64 [[TMP4:%.*]])
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <vscale x 1 x i16> [[TMP2:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1:%.*]], <vscale x 1 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i64 [[TMP4:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP17:%.*]]
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP4]], i64 [[TMP10]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP9]] ], [ [[IV_NEXT:%.*]], [[TMP16:%.*]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 1 x i1> [[TMP3:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP16]]
+; CHECK:       13:
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 1 x ptr> [[TMP7]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP14]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP15]], i64 4)
+; CHECK-NEXT:    br label [[TMP16]]
+; CHECK:       16:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP17]]
+; CHECK:       17:
+; CHECK-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1]], <vscale x 1 x i16> [[TMP2]], <vscale x 1 x i1> [[TMP3]], i64 [[TMP4]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1425,7 +1593,31 @@ define void @intrinsic_vsuxei_v_nxv1i32_nxv1i32_nxv1i16(<vscale x 1 x i32> %0, <
 ; CHECK-LABEL: @intrinsic_vsuxei_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    call void @llvm.riscv.vsuxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1:%.*]], <vscale x 1 x i16> [[TMP2:%.*]], i64 [[TMP3:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <vscale x 1 x i16> [[TMP2:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP1:%.*]], <vscale x 1 x i64> [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[TMP3:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP16:%.*]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP9]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP8]] ], [ [[IV_NEXT:%.*]], [[TMP15:%.*]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP15]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 1 x ptr> [[TMP6]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[TMP13]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP14]], i64 4)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP16]]
+; CHECK:       16:
+; CHECK-NEXT:    call void @llvm.riscv.vsuxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1]], <vscale x 1 x i16> [[TMP2]], i64 [[TMP3]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1449,7 +1641,31 @@ define void @intrinsic_vsuxei_mask_v_nxv1i32_nxv1i32_nxv1i16(<vscale x 1 x i32> 
 ; CHECK-LABEL: @intrinsic_vsuxei_mask_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    call void @llvm.riscv.vsuxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1:%.*]], <vscale x 1 x i16> [[TMP2:%.*]], <vscale x 1 x i1> [[TMP3:%.*]], i64 [[TMP4:%.*]])
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <vscale x 1 x i16> [[TMP2:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1:%.*]], <vscale x 1 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i64 [[TMP4:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP17:%.*]]
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP4]], i64 [[TMP10]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP9]] ], [ [[IV_NEXT:%.*]], [[TMP16:%.*]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 1 x i1> [[TMP3:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP16]]
+; CHECK:       13:
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 1 x ptr> [[TMP7]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP14]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP15]], i64 4)
+; CHECK-NEXT:    br label [[TMP16]]
+; CHECK:       16:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP17]]
+; CHECK:       17:
+; CHECK-NEXT:    call void @llvm.riscv.vsuxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1]], <vscale x 1 x i16> [[TMP2]], <vscale x 1 x i1> [[TMP3]], i64 [[TMP4]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
