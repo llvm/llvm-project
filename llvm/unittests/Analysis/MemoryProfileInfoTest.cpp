@@ -230,7 +230,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   CallBase *Call = findCall(*Func, "call");
   Trie.buildAndAttachMIBMetadata(Call);
 
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasFnAttr("memprof"));
+  EXPECT_EQ(Call->getFnAttr("memprof").getValueAsString(), "ambiguous");
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
   ASSERT_EQ(MemProfMD->getNumOperands(), 2u);
@@ -279,7 +280,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   CallBase *Call = findCall(*Func, "call");
   Trie.buildAndAttachMIBMetadata(Call);
 
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasFnAttr("memprof"));
+  EXPECT_EQ(Call->getFnAttr("memprof").getValueAsString(), "ambiguous");
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
   ASSERT_EQ(MemProfMD->getNumOperands(), 2u);
@@ -333,7 +335,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   CallBase *Call = findCall(*Func, "call");
   Trie.buildAndAttachMIBMetadata(Call);
 
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasFnAttr("memprof"));
+  EXPECT_EQ(Call->getFnAttr("memprof").getValueAsString(), "ambiguous");
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
   ASSERT_EQ(MemProfMD->getNumOperands(), 2u);
@@ -392,7 +395,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   CallBase *Call = findCall(*Func, "call");
   Trie.buildAndAttachMIBMetadata(Call);
 
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasFnAttr("memprof"));
+  EXPECT_EQ(Call->getFnAttr("memprof").getValueAsString(), "ambiguous");
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
   ASSERT_EQ(MemProfMD->getNumOperands(), 2u);
@@ -463,7 +467,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   ASSERT_NE(Call, nullptr);
   Trie.buildAndAttachMIBMetadata(Call);
 
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasFnAttr("memprof"));
+  EXPECT_EQ(Call->getFnAttr("memprof").getValueAsString(), "ambiguous");
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
   EXPECT_THAT(MemProfMD, MemprofMetadataEquals(ExpectedVals));
@@ -536,7 +541,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   // Restore original option value.
   MemProfKeepAllNotColdContexts = OrigMemProfKeepAllNotColdContexts;
 
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasFnAttr("memprof"));
+  EXPECT_EQ(Call->getFnAttr("memprof").getValueAsString(), "ambiguous");
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
   EXPECT_THAT(MemProfMD, MemprofMetadataEquals(ExpectedVals));
@@ -664,7 +670,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   // The hot allocations will be converted to NotCold and pruned as they
   // are unnecessary to determine how to clone the cold allocation.
 
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasFnAttr("memprof"));
+  EXPECT_EQ(Call->getFnAttr("memprof").getValueAsString(), "ambiguous");
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
   ASSERT_EQ(MemProfMD->getNumOperands(), 2u);
