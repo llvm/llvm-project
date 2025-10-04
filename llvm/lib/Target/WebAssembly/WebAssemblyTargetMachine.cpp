@@ -20,6 +20,10 @@
 #include "WebAssemblyTargetObjectFile.h"
 #include "WebAssemblyTargetTransformInfo.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
@@ -92,6 +96,7 @@ LLVMInitializeWebAssemblyTarget() {
 
   // Register backend passes
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeGlobalISel(PR);
   initializeWebAssemblyAddMissingPrototypesPass(PR);
   initializeWebAssemblyLowerEmscriptenEHSjLjPass(PR);
   initializeLowerGlobalDtorsLegacyPassPass(PR);
@@ -445,6 +450,11 @@ public:
 
   // No reg alloc
   bool addRegAssignAndRewriteOptimized() override { return false; }
+
+  bool addIRTranslator() override;
+  bool addLegalizeMachineIR() override;
+  bool addRegBankSelect() override;
+  bool addGlobalInstructionSelect() override;
 };
 } // end anonymous namespace
 
@@ -662,6 +672,32 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 bool WebAssemblyPassConfig::addPreISel() {
   TargetPassConfig::addPreISel();
   addPass(createWebAssemblyLowerRefTypesIntPtrConv());
+  return false;
+}
+
+bool WebAssemblyPassConfig::addIRTranslator() {
+  addPass(new IRTranslator());
+  return false;
+}
+
+bool WebAssemblyPassConfig::addLegalizeMachineIR() {
+  addPass(new Legalizer());
+  return false;
+}
+
+bool WebAssemblyPassConfig::addRegBankSelect() {
+  addPass(new RegBankSelect());
+  return false;
+}
+
+bool WebAssemblyPassConfig::addGlobalInstructionSelect() {
+  addPass(new InstructionSelect(getOptLevel()));
+
+  addPass(createWebAssemblyArgumentMove());
+  addPass(createWebAssemblySetP2AlignOperands());
+  addPass(createWebAssemblyFixBrTableDefaults());
+  addPass(createWebAssemblyCleanCodeAfterTrap());
+
   return false;
 }
 
