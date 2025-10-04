@@ -13,13 +13,16 @@
 // class multimap
 
 // template <class C2>
-//   void merge(map<key_type, value_type, C2, allocator_type>& source);
+//   void merge(map<key_type, value_type, C2, allocator_type>& source); // constexpr since C++26
+
 // template <class C2>
-//   void merge(map<key_type, value_type, C2, allocator_type>&& source);
+//   void merge(map<key_type, value_type, C2, allocator_type>&& source); // constexpr since C++26
+
 // template <class C2>
-//   void merge(multimap<key_type, value_type, C2, allocator_type>& source);
+//   void merge(multimap<key_type, value_type, C2, allocator_type>& source); // constexpr since C++26
+
 // template <class C2>
-//   void merge(multimap<key_type, value_type, C2, allocator_type>&& source);
+//   void merge(multimap<key_type, value_type, C2, allocator_type>&& source); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -46,7 +49,8 @@ struct throw_comparator {
 };
 #endif
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   {
     std::multimap<int, int> src{{1, 0}, {3, 0}, {5, 0}};
     std::multimap<int, int> dst{{2, 0}, {4, 0}, {5, 0}};
@@ -135,5 +139,14 @@ int main(int, char**) {
       first.merge(std::move(second));
     }
   }
+
+  return true;
+}
+int main(int, char**) {
+  assert(test());
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

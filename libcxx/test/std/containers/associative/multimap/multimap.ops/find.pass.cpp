@@ -10,8 +10,9 @@
 
 // class multimap
 
-//       iterator find(const key_type& k);
-// const_iterator find(const key_type& k) const;
+//       iterator find(const key_type& k); // constexpr since C++26
+
+// const_iterator find(const key_type& k) const; // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -30,7 +31,8 @@ bool iter_in_range(Iter first, Iter last, Iter to_find) {
   return false;
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   typedef std::pair<const int, double> V;
   {
     typedef std::multimap<int, double> M;
@@ -186,5 +188,13 @@ int main(int, char**) {
   }
 #endif
 
+  return true;
+}
+int main(int, char**) {
+  assert(test());
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

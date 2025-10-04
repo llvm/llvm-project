@@ -10,7 +10,7 @@
 
 // class multimap
 
-// insert(...)
+// insert(...) // constexpr since C++26
 
 // UNSUPPORTED: c++03
 
@@ -20,9 +20,18 @@
 #include "container_test_types.h"
 #include "../../../map_allocator_requirement_test_templates.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   testMultimapInsert<TCT::multimap<> >();
   testMultimapInsertHint<TCT::multimap<> >();
 
+  return true;
+}
+int main(int, char**) {
+  assert(test());
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

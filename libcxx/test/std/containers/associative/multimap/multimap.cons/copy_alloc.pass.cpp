@@ -10,7 +10,7 @@
 
 // class multimap
 
-// multimap(const multimap& m, const allocator_type& a);
+// multimap(const multimap& m, const allocator_type& a); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -83,7 +83,8 @@ void test_alloc(const Alloc& new_alloc) {
   }
 }
 
-void test() {
+TEST_CONSTEXPR_CXX26
+bool test() {
   test_alloc(std::allocator<std::pair<const int, int> >());
   test_alloc(test_allocator<std::pair<const int, int> >(25)); // Make sure that the new allocator is actually used
   test_alloc(min_allocator<std::pair<const int, int> >());    // Make sure that fancy pointers work
@@ -102,10 +103,15 @@ void test() {
     assert(orig.size() == 3);
     assert(orig.key_comp() == test_less<int>(3));
   }
+  return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

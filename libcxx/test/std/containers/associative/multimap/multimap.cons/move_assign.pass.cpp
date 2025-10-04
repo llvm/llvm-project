@@ -12,7 +12,7 @@
 
 // class multimap
 
-// multimap& operator=(multimap&& m);
+// multimap& operator=(multimap&& m); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -23,7 +23,8 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   {
     typedef std::pair<MoveOnly, MoveOnly> V;
     typedef std::pair<const MoveOnly, MoveOnly> VC;
@@ -98,4 +99,13 @@ int main(int, char**) {
   }
 
   return 0;
+
+  return true;
+}
+int main(int, char**) {
+  assert(test());
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 }

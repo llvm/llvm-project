@@ -11,7 +11,7 @@
 // class multimap
 
 // template <class InputIterator>
-//   void insert(InputIterator first, InputIterator last);
+//   void insert(InputIterator first, InputIterator last); // constexpr since C++26
 
 #include <array>
 #include <cassert>
@@ -195,13 +195,18 @@ void test_alloc() {
   }
 }
 
-void test() {
+TEST_CONSTEXPR_CXX26
+bool test() {
   test_alloc<cpp17_input_iterator<std::pair<const int, int>*>, std::allocator<std::pair<const int, int> > >();
   test_alloc<cpp17_input_iterator<std::pair<const int, int>*>, min_allocator<std::pair<const int, int> > >();
+  return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

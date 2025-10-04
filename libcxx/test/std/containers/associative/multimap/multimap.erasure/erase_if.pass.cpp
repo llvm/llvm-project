@@ -11,7 +11,7 @@
 
 // template <class Key, class T, class Compare, class Allocator, class Predicate>
 //   typename multimap<Key, T, Compare, Allocator>::size_type
-//   erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);
+//   erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred); // constexpr since C++26
 
 #include <map>
 
@@ -74,7 +74,8 @@ void test() {
   test0<S>({1, 2, 3}, False, {1, 2, 3}, 0);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test_erase() {
   test<std::multimap<int, int>>();
   test<std::multimap<int, int, std::less<int>, min_allocator<std::pair<const int, int>>>>();
   test<std::multimap<int, int, std::less<int>, test_allocator<std::pair<const int, int>>>>();
@@ -82,5 +83,13 @@ int main(int, char**) {
   test<std::multimap<long, short>>();
   test<std::multimap<short, double>>();
 
+  return true;
+}
+int main(int, char**) {
+  assert(test_erase());
+
+#if TEST_STD_VER >= 26
+  static_assert(test_erase());
+#endif
   return 0;
 }

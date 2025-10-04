@@ -10,7 +10,7 @@
 
 // multimap(multimap&&)
 //        noexcept(is_nothrow_move_constructible<allocator_type>::value &&
-//                 is_nothrow_move_constructible<key_compare>::value);
+//                 is_nothrow_move_constructible<key_compare>::value); // constexpr since C++26
 
 // This tests a conforming extension
 
@@ -30,7 +30,8 @@ struct some_comp {
   bool operator()(const T&, const T&) const { return false; }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
 #if defined(_LIBCPP_VERSION)
   typedef std::pair<const MoveOnly, MoveOnly> V;
   {
@@ -52,4 +53,13 @@ int main(int, char**) {
   }
 
   return 0;
+
+  return true;
+}
+int main(int, char**) {
+  assert(test());
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 }

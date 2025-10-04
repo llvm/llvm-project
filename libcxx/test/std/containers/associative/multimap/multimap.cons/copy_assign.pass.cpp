@@ -10,7 +10,7 @@
 
 // class multimap
 
-// multimap& operator=(const multimap& m);
+// multimap& operator=(const multimap& m); // constexpr since C++26
 
 #include <algorithm>
 #include <cassert>
@@ -245,7 +245,8 @@ void test_alloc(const Alloc& lhs_alloc                   = Alloc(),
   check_alloc_invariant();
 }
 
-void test() {
+TEST_CONSTEXPR_CXX26
+bool test() {
   test_alloc<std::allocator<std::pair<const int, int> > >();
 #if TEST_STD_VER >= 11
   test_alloc<min_allocator<std::pair<const int, int> > >();
@@ -288,10 +289,14 @@ void test() {
     assert(orig.size() == 3);
     assert(orig.key_comp() == test_less<int>(3));
   }
+  return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

@@ -12,7 +12,7 @@
 
 // class multimap
 
-// multimap(initializer_list<value_type> il, const key_compare& comp = key_compare());
+// multimap(initializer_list<value_type> il, const key_compare& comp = key_compare()); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -20,7 +20,8 @@
 #include "../../../test_compare.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   {
     typedef test_less<int> Cmp;
     typedef std::multimap<int, double, Cmp> C;
@@ -61,4 +62,13 @@ int main(int, char**) {
   }
 
   return 0;
+
+  return true;
+}
+int main(int, char**) {
+  assert(test());
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 }

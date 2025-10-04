@@ -12,7 +12,7 @@
 
 // class multimap
 
-// iterator insert(node_type&&);
+// iterator insert(node_type&&); // constexpr since C++26
 
 #include <map>
 #include <type_traits>
@@ -64,11 +64,20 @@ void test(Container& c) {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test_insert_node_type() {
   std::multimap<int, int> m;
   test(m);
   std::multimap<int, int, std::less<int>, min_allocator<std::pair<const int, int>>> m2;
   test(m2);
 
+  return true;
+}
+int main(int, char**) {
+  assert(test_insert_node_type());
+
+#if TEST_STD_VER >= 26
+  static_assert(test_insert_node_type());
+#endif
   return 0;
 }

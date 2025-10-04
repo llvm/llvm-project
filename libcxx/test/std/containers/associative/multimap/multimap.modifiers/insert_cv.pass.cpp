@@ -10,7 +10,7 @@
 
 // class multimap
 
-// iterator insert(const value_type& v);
+// iterator insert(const value_type& v); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -53,7 +53,8 @@ void do_insert_test() {
   assert(r->second == 3.5);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   {
     typedef std::multimap<int, double> Container;
     do_insert_test<Container>();
@@ -65,5 +66,13 @@ int main(int, char**) {
   }
 #endif
 
+  return true;
+}
+int main(int, char**) {
+  assert(test());
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

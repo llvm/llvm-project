@@ -10,7 +10,7 @@
 
 // class value_compare
 
-// bool operator()( const value_type& lhs, const value_type& rhs ) const;
+// bool operator()( const value_type& lhs, const value_type& rhs ) const; // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -27,7 +27,8 @@ struct CallCompMember : MMap::value_compare {
   }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   typedef std::multimap<int, std::string> map_type;
 
   map_type m;
@@ -43,5 +44,13 @@ int main(int, char**) {
   assert(!vc(*i2, *i1));
   assert(!call_comp(*i2, *i1));
 
+  return true;
+}
+int main(int, char**) {
+  assert(test());
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }
