@@ -1982,8 +1982,7 @@ defm : FlatLoadPats <FLAT_LOAD_SSHORT, sextloadi16_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_SSHORT, atomic_load_sext_16_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_DWORDX3, load_flat, v3i32>;
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in {
+let True16Predicate = NotUseRealTrue16Insts in {
   defm : FlatLoadPats <FLAT_LOAD_UBYTE, extloadi8_flat, i16>;
   defm : FlatLoadPats <FLAT_LOAD_UBYTE, zextloadi8_flat, i16>;
   defm : FlatLoadPats <FLAT_LOAD_SBYTE, sextloadi8_flat, i16>;
@@ -2127,8 +2126,7 @@ defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, extloadi16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, zextloadi16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_SSHORT, sextloadi16_global, i32>;
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in {
+let True16Predicate = NotUseRealTrue16Insts in {
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, extloadi8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, zextloadi8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, sextloadi8_global, i16>;
@@ -2187,8 +2185,7 @@ defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE, truncstorei8_global, i32>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT, truncstorei16_global, i32>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_DWORDX3, store_global, v3i32>;
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let OtherPredicates = [HasFlatGlobalInsts], True16Predicate =  p in {
+let OtherPredicates = [HasFlatGlobalInsts], True16Predicate = NotUseRealTrue16Insts in {
 defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE, truncstorei8_global, i16>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT, store_global, i16>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE, atomic_store_8_global, i16>;
@@ -2356,8 +2353,7 @@ defm : ScratchFLATLoadPats <SCRATCH_LOAD_USHORT, extloadi16_private, i32>;
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_USHORT, zextloadi16_private, i32>;
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_SSHORT, sextloadi16_private, i32>;
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in {
+let True16Predicate = NotUseRealTrue16Insts in {
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_UBYTE, extloadi8_private, i16>;
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_UBYTE, zextloadi8_private, i16>;
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_SBYTE, sextloadi8_private, i16>;

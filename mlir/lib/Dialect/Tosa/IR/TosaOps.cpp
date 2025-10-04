@@ -1843,12 +1843,6 @@ LogicalResult MatMulOp::verify() {
       return emitOpError("expect quantized operands to have same widths, got ")
              << aQuantWidth << " and " << bQuantWidth;
     }
-  } else {
-    // non-quantized element types
-    if (aElementType != bElementType) {
-      return emitOpError("expect same element type for inputs a and b, got ")
-             << aElementType << " and " << bElementType;
-    }
   }
 
   // check a_zp and b_zp
