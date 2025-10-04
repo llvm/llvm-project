@@ -17,11 +17,9 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
-
-class Triple;
-
 namespace MachO {
 // Enums from <mach-o/loader.h>
 enum : uint32_t {
@@ -1709,6 +1707,11 @@ LLVM_ABI Expected<uint32_t> getCPUSubType(const Triple &T);
 LLVM_ABI Expected<uint32_t> getCPUSubType(const Triple &T,
                                           unsigned PtrAuthABIVersion,
                                           bool PtrAuthKernelABIVersion);
+
+LLVM_ABI Triple::ArchType getArch(uint32_t CPUType, uint32_t CPUSubType);
+LLVM_ABI Triple getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
+                              const char **McpuDefault = nullptr,
+                              const char **ArchFlag = nullptr);
 
 struct x86_thread_state32_t {
   uint32_t eax;
