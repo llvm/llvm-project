@@ -736,25 +736,6 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-/// rotateleft(value, amount)
-static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
-                                   const InterpFrame *Frame,
-                                   const CallExpr *Call, bool Right) {
-  APSInt Amount = popToAPSInt(S, Call->getArg(1));
-  APSInt Value = popToAPSInt(S, Call->getArg(0));
-
-  APSInt Result;
-  if (Right)
-    Result = APSInt(Value.rotr(Amount.urem(Value.getBitWidth())),
-                    /*IsUnsigned=*/true);
-  else // Left.
-    Result = APSInt(Value.rotl(Amount.urem(Value.getBitWidth())),
-                    /*IsUnsigned=*/true);
-
-  pushInteger(S, Result, Call->getType());
-  return true;
-}
-
 static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
                                 const InterpFrame *Frame,
                                 const CallExpr *Call) {
@@ -3164,7 +3145,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI_rotl64:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, [](const APSInt &A, const APSInt &B) -> APInt {
-          return A.rotl((unsigned)B.getLimitedValue());
+          return A.rotl(B.urem(A.getBitWidth()));
         });
 
   case Builtin::BI__builtin_rotateright8:
@@ -3178,7 +3159,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI_rotr64:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, [](const APSInt &A, const APSInt &B) -> APInt {
-          return A.rotr((unsigned)B.getLimitedValue());
+          return A.rotr(B.urem(A.getBitWidth()));
         });
 
   case Builtin::BI__builtin_ffs:
