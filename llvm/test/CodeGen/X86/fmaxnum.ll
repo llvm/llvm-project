@@ -653,5 +653,29 @@ define float @test_maxnum_const_nan(float %x) {
   ret float %r
 }
 
+; nnan maxnum(X, -inf) -> X
+define float @test_maxnum_neg_inf_nnan(float %x) nounwind {
+; CHECK-LABEL: test_maxnum_neg_inf_nnan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
+  %r = call nnan float @llvm.maxnum.f32(float %x, float 0xfff0000000000000)
+  ret float %r
+}
+
+; Test SNaN quieting
+define float @test_maxnum_snan(float %x) {
+; SSE-LABEL: test_maxnum_snan:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_maxnum_snan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    retq
+  %r = call float @llvm.maxnum.f32(float 0x7ff4000000000000, float %x)
+  ret float %r
+}
+
 attributes #0 = { "no-nans-fp-math"="true" }
 
